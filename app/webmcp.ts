@@ -1,4 +1,4 @@
-import { ITEMS, requestFor, type Save } from './game-data';
+import { ITEMS, MAYOR, REGIONS, requestFor, type Save } from './game-data';
 
 type Registry = {
   registerTool: (tool: {
@@ -31,7 +31,7 @@ export function registerIslandJournal(getSave: () => Save) {
           character: save.names[save.character],
           coins: save.coins,
           inventory: { ...save.bag },
-          picnicComplete: save.picnic,
+          picnicComplete: save.picnic, mayor: {name:MAYOR.name, met:save.mayorMet, rewardClaimed:save.explorationReward}, exploration:REGIONS.map(r=>({name:r.name, visited:save.explored.includes(r.id)})),
           requests: save.names.flatMap((name, index) => {
             if (index === save.character) return [];
             const request = requestFor(save.character, index);
@@ -47,3 +47,4 @@ export function registerIslandJournal(getSave: () => Save) {
   }
   return () => lifecycle.abort();
 }
+

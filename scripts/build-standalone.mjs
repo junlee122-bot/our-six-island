@@ -5,7 +5,7 @@ import { build } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/');
-const assets = ['island.png', 'friends-v2.png'];
+const assets = ['island-expanded.png', 'friends-v2.png', 'mayor-hohyeon.png'];
 const replacements = new Map(assets.map(name => [
   '/assets/' + name,
   'data:image/png;base64,' + fs.readFileSync(path.join(root, 'public/assets', name)).toString('base64'),
@@ -55,7 +55,7 @@ if (!css) throw new Error('Run the production build before packaging for Pages.'
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="도원, 강재, 민서, 승준, 민재, 재민과 함께하는 작은 섬 생활 게임. 산책하고, 낚시하고, 함께 소풍을 준비하세요.">
+<meta name="description" content="여섯 친구와 호현 촌장이 함께하는 섬 생활 게임. 커다란 섬의 숲, 과수원, 호수와 해변을 탐험하세요.">
 <title>우리들의 여섯섬</title><style>${css}</style></head>
 <body><div id="root"></div><noscript>게임을 실행하려면 브라우저에서 JavaScript를 켜주세요.</noscript>
 <script>${js.replaceAll('</script', '<\\/script')}</script></body></html>`;
@@ -64,3 +64,4 @@ fs.mkdirSync(directory, { recursive: true });
 fs.writeFileSync(path.join(directory, 'index.html'), html);
 fs.writeFileSync(path.join(directory, '.nojekyll'), '');
 console.log(`GitHub Pages / offline game: docs/index.html (${Buffer.byteLength(html)} bytes, ${inlined.size} embedded images)`);
+
