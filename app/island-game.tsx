@@ -6,6 +6,7 @@ import {Progress} from '@/components/ui/progress';
 import World,{type Target,type WorldApi} from './world';
 import {FRIENDS,ITEMS,NODES,SPOTS,DECOR,freshSave,hydrate,requestFor,handIn,buy,walkable,type Save,type Resource,type Point} from './game-data';
 import {chime,music} from './sound';
+import {registerIslandJournal} from './webmcp';
 type Panel='start'|'bag'|'journal'|'friends'|'dialogue'|'shop'|'home'|'fish'|'help'|'settings'|'picnic'|'celebrate'|null;
 const SAVE_KEY='our-six-island-v1';
 function Avatar({id,className='',style}:{id:number;className?:string;style?:React.CSSProperties}){return <span className={`avatar ${className}`} style={{backgroundImage:'var(--sprite-sheet)',backgroundPosition:`${(id%3)*50}% ${Math.floor(id/3)*100}%`,...style}} role="img" aria-label={`${FRIENDS[id].look} 캐릭터`}/>}
@@ -13,6 +14,7 @@ function PanelShell({open,title,description,children,onClose,wide=false}:{open:b
 export default function IslandGame(){
  const [save,setSave]=useState<Save>(freshSave),saveRef=useRef(save);saveRef.current=save;const [initialized,setInitialized]=useState(false),[panel,setPanel]=useState<Panel>('start'),[selected,setSelected]=useState(0),[hasSave,setHasSave]=useState(false),[worldEpoch,setWorldEpoch]=useState(0),[ready,setReady]=useState(false),[assetError,setAssetError]=useState(false),[near,setNear]=useState<Target|null>(null),[npc,setNpc]=useState(1),[message,setMessage]=useState(''),[zoom,setZoom]=useState(1),[night,setNight]=useState(false),[sound,setSound]=useState(false),[placing,setPlacing]=useState<string|null>(null),[saveStatus,setSaveStatus]=useState('이 기기에 자동 저장'),[fishPhase,setFishPhase]=useState<'ready'|'waiting'|'reel'|'success'|'miss'>('ready'),[fishCursor,setFishCursor]=useState(0),[fishMisses,setFishMisses]=useState(0),[clock,setClock]=useState('오후 2:30'),[journalOpen,setJournalOpen]=useState(true);
  const world=useRef<WorldApi|null>(null),soundRef=useRef(sound),fishStart=useRef(0),fishTimeout=useRef<ReturnType<typeof setTimeout>|null>(null);soundRef.current=sound;
+ useEffect(()=>registerIslandJournal(()=>saveRef.current),[]);
  useEffect(()=>{try{const previous=hydrate(localStorage.getItem(SAVE_KEY));if(previous){setSave(previous);setSelected(previous.character);setHasSave(true)}}catch{setSaveStatus('저장 공간을 사용할 수 없어요')}setInitialized(true)},[]);
  useEffect(()=>{if(!initialized||!hasSave)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(save));setSaveStatus('이 기기에 자동 저장')}catch{setSaveStatus('저장 공간이 부족해요 · 설정에서 백업')}},[save,initialized,hasSave]);
  useEffect(()=>{const persist=()=>{if(!hasSave)return;const p=world.current?.position();if(p)setSave(s=>({...s,position:p}))};const t=setInterval(persist,4000);const unload=()=>{if(!hasSave)return;try{localStorage.setItem(SAVE_KEY,JSON.stringify({...saveRef.current,position:world.current?.position()||saveRef.current.position}))}catch{}};window.addEventListener('pagehide',unload);return()=>{clearInterval(t);window.removeEventListener('pagehide',unload)}},[hasSave]);
@@ -76,5 +78,6 @@ export default function IslandGame(){
  </main>
 }
 function KeyboardShortcuts({panel,onOpen,onClose,onCancelPlace}:{panel:Panel;onOpen:(p:Panel)=>void;onClose:()=>void;onCancelPlace:()=>void}){useEffect(()=>{const handle=(e:KeyboardEvent)=>{if((e.target as HTMLElement).matches('input,textarea,select'))return;if(e.key==='Escape'){if(panel==='start')return;onCancelPlace();onClose()}if(panel!==null)return;if(e.key.toLowerCase()==='b')onOpen('bag');if(e.key.toLowerCase()==='j')onOpen('journal')};window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle)},[panel,onOpen,onClose,onCancelPlace]);return null}
+
 
 

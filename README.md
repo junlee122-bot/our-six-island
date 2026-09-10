@@ -2,6 +2,8 @@
 
 사진에서 출발한 여섯 친구가 함께 소풍을 준비하는 작은 브라우저 게임입니다.
 
+[바로 플레이](https://junlee122-bot.github.io/our-six-island/)
+
 - 이동: 방향키, WASD, 땅 클릭, 모바일 방향 패드
 - 상호작용: E 또는 스페이스, 가까운 대상 클릭
 - 주머니: B / 섬 수첩: J
@@ -12,8 +14,15 @@
 
 ## 개발
 
-`npm install`, `npm run dev`, `npm run build`
+Node.js 22에서 `npm ci`, `npm run dev`로 개발 서버를 실행합니다.
 
-게임 규칙 검사: `node --experimental-strip-types --test tests/game.test.mjs`
+게임 규칙 검사: `npm test` · 타입 검사: `npx tsc --noEmit`
 
-섬과 캐릭터 일러스트는 OpenAI 이미지 생성으로 제작했습니다. 원본 사진은 배포 파일에 포함되지 않습니다. 실제 사람의 성격이나 이름을 추정하지 않고 임시 별명과 게임 속 대사를 사용합니다.
+## GitHub Pages와 다운로드 실행
+
+`npm run build:pages`는 게임 코드, 스타일, 두 장의 일러스트를 모두 포함하는 `docs/index.html`을 만듭니다. GitHub Pages는 `main` 브랜치의 `/docs` 폴더를 게시합니다. 별도 서버, API 키, CDN은 필요하지 않습니다. 업데이트 후 빌드 결과와 소스를 함께 커밋하고 푸시하면 반영됩니다.
+
+`docs/index.html`을 다운로드한 뒤 브라우저로 열어도 실행할 수 있습니다. 저장 데이터는 브라우저와 주소별로 분리됩니다. 로컬 미리보기에서 GitHub Pages로 옮길 때는 설정의 저장 내보내기/불러오기를 사용하세요.
+
+섬과 캐릭터 일러스트는 OpenAI 이미지 생성으로 제작했습니다. 원본 사진은 배포 파일에 포함되지 않습니다. 도원·강재·민서·승준·민재·재민은 사용자가 제공한 이름입니다. 게임 속 대사와 부탁은 허구이며 실제 성격을 추정하지 않습니다.
+
