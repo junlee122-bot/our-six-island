@@ -43,7 +43,7 @@ export class IslandSession {
  private broadcast(message:unknown){return this.members.size<=1||this.room?.send('*',message)===true;}
  private addChat(line:ChatLine){this.update({messages:[...this.view.messages,line].slice(-60)});}
  private hostChat(name:string,text:string,system=false){const line={id:this.view.selfId+'-'+(++this.sequence),name,text,system};this.addChat(line);this.broadcast({v:1,type:'chat',line});}
- private world(){const island=this.callbacks.island();return readIsland({placed:island.placed.slice(0,50).map((p,i)=>({...p,id:'shared-'+i})),night:island.night})??{placed:[],night:island.night};}
+ private world(){const island=this.callbacks.island();return readIsland({placed:island.placed.slice(0,50).map((p,i)=>({...p,id:'shared-'+i})),roomPlaced:(island.roomPlaced??[]).slice(0,30).map((p,i)=>({...p,id:'room-'+i})),night:island.night})??{placed:[],roomPlaced:[],night:island.night};}
  private worldPacket(){return {v:1,type:'world',hostId:this.view.selfId,players:[...this.members.values()],island:this.world(),sentAt:Date.now()};}
  private stopDeadline(){if(this.deadline)clearTimeout(this.deadline);this.deadline=null;}
  leave(error=''){

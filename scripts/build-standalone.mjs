@@ -5,10 +5,12 @@ import { build } from 'vite';
 import react from '@vitejs/plugin-react';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/');
-const assets = ['island-expanded.png', 'friends-v2.png', 'mayor-hohyeon.png'];
+const manifest=fs.readFileSync(path.join(root,'app/game-assets.ts'),'utf8');
+const assets=[...manifest.matchAll(/\/assets\/([^']+)/g)].map(match=>match[1]);
+if(assets.length!==6)throw new Error('The game asset manifest must include all six atlases.');
 const replacements = new Map(assets.map(name => [
   '/assets/' + name,
-  'data:image/png;base64,' + fs.readFileSync(path.join(root, 'public/assets', name)).toString('base64'),
+  'data:image/'+(name.endsWith('.webp')?'webp':'png')+';base64,' + fs.readFileSync(path.join(root, 'public/assets', name)).toString('base64'),
 ]));
 const inlined = new Set();
 const built = await build({
@@ -19,7 +21,7 @@ const built = await build({
     name: 'inline-game-art',
     enforce: 'pre',
     transform(code, id) {
-      if (!/\/(world|sprite-sheet)\.tsx?$/.test(id)) return;
+      if (!/\/game-assets\.ts$/.test(id)) return;
       for (const [from, to] of replacements) {
         if (code.includes(from)) {
           inlined.add(from);
@@ -55,7 +57,7 @@ if (!css) throw new Error('Run the production build before packaging for Pages.'
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="여섯 친구와 호현 촌장이 함께하는 섬 생활 게임. 커다란 섬의 숲, 과수원, 호수와 해변을 탐험하세요.">
+<meta name="description" content="여섯 친구와 호현 촌장의 섬 생활. 집과 상점에 들어가고, 가구를 만들고, 텃밭과 박물관을 가꾸세요. 최대 6명 멀티플레이.">
 <title>우리들의 여섯섬</title><style>${css}</style></head>
 <body><div id="root"></div><noscript>게임을 실행하려면 브라우저에서 JavaScript를 켜주세요.</noscript>
 <script>${js.replaceAll('</script', '<\\/script')}</script></body></html>`;

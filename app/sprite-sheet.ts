@@ -1,3 +1,4 @@
+import {GAME_ASSETS} from './game-assets';
 // Remove a neutral background connected to the image edges. Interior details remain intact.
 const pending = new Map<string, Promise<HTMLImageElement>>();
 function loadCutout(path:string,variable:string,crop=false){
@@ -19,5 +20,5 @@ function loadCutout(path:string,variable:string,crop=false){
   }catch(error){reject(error)}};source.src=path;
  });pending.set(path,result);return result;
 }
-export const loadSpriteSheet=()=>loadCutout('/assets/friends-v2.png','--sprite-sheet');
-export const loadMayorSprite=()=>loadCutout('/assets/mayor-hohyeon.png','--mayor-sprite',true);
+export const loadSpriteSheet=()=>loadCutout(GAME_ASSETS.friends,'--sprite-sheet');
+export const loadMayorSprite=()=>loadCutout(GAME_ASSETS.mayor,'--mayor-sprite',true);

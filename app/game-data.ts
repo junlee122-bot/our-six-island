@@ -1,5 +1,7 @@
+import {DECOR,freshLife,hydrateLife,isRoom,roomWalkable,type RoomID,type LifeSave} from './life-data.ts';
+export {DECOR};
 export type Resource = 'apple'|'flower'|'wood'|'shell'|'fish';
-export type Point = {x:number;y:number};
+export type Point = {x:number;y:number;room?:RoomID};
 export const WORLD = {width:4800,height:3200,viewportWidth:1600,viewportHeight:1067};
 export const SPAWN:Point = {x:2400,y:1480};
 export const ITEMS: Record<Resource,{name:string;emoji:string;price:number}>={apple:{name:'사과',emoji:'🍎',price:4},flower:{name:'들꽃',emoji:'🌼',price:4},wood:{name:'나뭇가지',emoji:'🪵',price:3},shell:{name:'조개',emoji:'🐚',price:6},fish:{name:'물고기',emoji:'🐟',price:12}};
@@ -26,7 +28,6 @@ export const REQUESTS:{item:Resource;count:number;title:string;text:string}[]=[
  {item:'shell',count:2,title:'바다의 선물',text:'예쁜 조개 두 개로 우리 소풍 자리를 장식하자.'},
  {item:'fish',count:1,title:'오늘의 요리',text:'물고기 한 마리만 잡아 줄래? 맛있는 요리를 준비할게.'},
 ];
-export const DECOR=[{id:'plant',name:'꽃 화분',emoji:'🪴',price:24},{id:'chair',name:'소풍 의자',emoji:'🪑',price:32},{id:'lamp',name:'별빛 조명',emoji:'🏮',price:40},{id:'tent',name:'작은 텐트',emoji:'⛺',price:60}];
 export type Node = Point & {id:string;kind:Resource};
 const nodes=(prefix:string,kind:Resource,points:number[][]):Node[]=>points.map(([x,y],i)=>({x,y,id:`${prefix}${i}`,kind}));
 export const NODES:Node[]=[
@@ -40,8 +41,8 @@ export const NODES:Node[]=[
  ...nodes('beach-s','shell',[[1420,2330],[1820,2410],[2100,2460],[2440,2470],[2730,2440],[3200,2390],[3590,2340],[3800,2250]]),
 ];
 export const SPOTS=[{id:'shop',x:2870,y:1470,name:'도토리 상점',emoji:'🛒'},{id:'fish',x:3780,y:1400,name:'낚시터',emoji:'🎣'},{id:'home',x:1950,y:1500,name:'우리 집',emoji:'🏡'},{id:'picnic',x:2430,y:2080,name:'소풍 자리',emoji:'🧺'}];
-export type Save = {version:2;character:number;names:string[];coins:number;bag:Record<Resource,number>;picked:Record<string,number>;talked:number[];accepted:number[];done:number[];hearts:number[];decor:string[];placed:{id:string;kind:string;x:number;y:number}[];harvested:number;fishCaught:number;picnic:boolean;dayReward:boolean;position:Point;explored:string[];mayorMet:boolean;explorationReward:boolean};
-export function freshSave(character=0):Save{return {version:2,character,names:FRIENDS.map(f=>f.name),coins:30,bag:{apple:0,flower:0,wood:0,shell:0,fish:0},picked:{},talked:[],accepted:[],done:[],hearts:[0,0,0,0,0,0],decor:[],placed:[],harvested:0,fishCaught:0,picnic:false,dayReward:false,position:{...SPAWN},explored:[],mayorMet:false,explorationReward:false};}
+export type Save = {life:LifeSave;version:2;character:number;names:string[];coins:number;bag:Record<Resource,number>;picked:Record<string,number>;talked:number[];accepted:number[];done:number[];hearts:number[];decor:string[];placed:{id:string;kind:string;x:number;y:number}[];harvested:number;fishCaught:number;picnic:boolean;dayReward:boolean;position:Point;explored:string[];mayorMet:boolean;explorationReward:boolean};
+export function freshSave(character=0):Save{return {life:freshLife(),version:2,character,names:FRIENDS.map(f=>f.name),coins:30,bag:{apple:0,flower:0,wood:0,shell:0,fish:0},picked:{},talked:[],accepted:[],done:[],hearts:[0,0,0,0,0,0],decor:[],placed:[],harvested:0,fishCaught:0,picnic:false,dayReward:false,position:{...SPAWN},explored:[],mayorMet:false,explorationReward:false};}
 export function requestFor(character:number,npc:number){const ids=FRIENDS.map((_,i)=>i).filter(i=>i!==character);return REQUESTS[ids.indexOf(npc)]??REQUESTS[0];}
 export const distance=(a:Point,b:Point)=>Math.hypot(a.x-b.x,a.y-b.y);
 const SHORE = [[815,45],[1068,108],[1195,152],[1310,216],[1400,270],[1460,352],[1470,490],[1430,627],[1340,732],[1170,772],[960,805],[780,827],[620,775],[436,777],[286,742],[166,684],[123,600],[93,516],[67,427],[101,339],[167,256],[306,174],[394,103],[525,87],[661,49]].map(([x,y])=>({x:x*3.125,y:y*3.125}));
@@ -61,7 +62,7 @@ export function hydrate(raw:string|null):Save|null{
  try{
   if(!raw)return null;const s=JSON.parse(raw);
   if(![1,2].includes(s.version)||!Number.isInteger(s.character)||s.character<0||s.character>=FRIENDS.length)return null;
-  const d=freshSave(s.character),legacy=s.version===1;
+  const d=freshSave(s.character),legacy=s.version===1;d.life=hydrateLife(s.life);
   const finite=(v:unknown,max=999999)=>typeof v==='number'&&Number.isFinite(v)?Math.min(max,Math.max(0,Math.floor(v))):0;
   d.coins=finite(s.coins);for(const k of Object.keys(ITEMS) as Resource[])d.bag[k]=finite(s.bag?.[k]);
   const previousNames=['체리','모카','구름','소금','밤이','도토'];
@@ -78,7 +79,7 @@ export function hydrate(raw:string|null):Save|null{
    return [{id:p.id,kind:p.kind,...point}];
   }).slice(0,50-d.decor.length);
   d.harvested=finite(s.harvested);d.fishCaught=finite(s.fishCaught);d.picnic=s.picnic===true;d.dayReward=s.dayReward===true;
-  if(s.position&&Number.isFinite(s.position.x)&&Number.isFinite(s.position.y)){const p=migratePoint(s.position);if(walkable(p))d.position=p;}
+  if(s.position&&Number.isFinite(s.position.x)&&Number.isFinite(s.position.y)){const p=migratePoint(s.position);const room=s.position.room;if(!legacy&&isRoom(room)&&room!=='island'&&roomWalkable(p))d.position={...p,room};else if(walkable(p))d.position=p;}
   d.explored=Array.isArray(s.explored)?[...new Set<string>(s.explored.filter((id:unknown)=>REGIONS.some(r=>r.id===id)))]:[];
   d.mayorMet=s.mayorMet===true;d.explorationReward=s.explorationReward===true;
   return d;
@@ -108,5 +109,3 @@ export function findPath(start:Point,target:Point):Point[]{
  const first=gridPoint(begin);if(distance(start,first)>4)path.unshift(first);
  path.push({x:target.x,y:target.y});return path;
 }
-
-

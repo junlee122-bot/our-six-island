@@ -3,12 +3,13 @@ import assert from 'node:assert/strict';
 import WebSocket from 'ws';
 import {IslandSession} from '../app/multiplayer-session.ts';
 import {freshSave,SPAWN} from '../app/game-data.ts';
+import {visitingSpawn} from '../app/multiplayer-protocol.ts';
 globalThis.WebSocket=WebSocket;
 const sessions=[];
 const fixtures=[];
 function makePlayer(character){
  const save=freshSave(character),position={...SPAWN},index=sessions.length;let returned=0;
- const session=new IslandSession({local:()=>({...position,facing:1,character,name:save.names[character]}),island:()=>({placed:save.placed,night:false}),arrive:()=>{},exit:()=>{returned++;},diagnostic:message=>console.error(`Client ${index}: ${message}`)});
+ const session=new IslandSession({local:()=>({...position,facing:1,character,name:save.names[character]}),island:()=>({placed:save.placed,roomPlaced:save.life.roomPlaced,night:false}),arrive:host=>Object.assign(position,visitingSpawn(host)),exit:()=>{returned++;},diagnostic:message=>console.error(`Client ${index}: ${message}`)});
  sessions.push(session);const fixture={session,save,position,get returned(){return returned;}};fixtures.push(fixture);return fixture;
 }
 async function until(check,label,timeout=35000){const start=Date.now();while(!check()){if(Date.now()-start>timeout||sessions.some(s=>s.view.status==='error'))throw new Error(`${label}: ${sessions.map(s=>s.view.status+':'+s.view.error).join(' | ')}`);await new Promise(r=>setTimeout(r,50));}}
@@ -29,6 +30,11 @@ try{
  await until(()=>guest.session.scene.island?.placed[0]?.kind==='lamp'&&friend.session.scene.island?.placed[0]?.kind==='lamp','host furniture update');
  assert.deepEqual(guest.save.placed,[]);assert.deepEqual(friend.save.placed,[]);
  console.log('PASS: host furniture updates do not change guest saves.');
+ host.save.life.roomPlaced.push({id:'inside-chair',kind:'chair',x:400,y:400});
+ Object.assign(host.position,{x:550,y:550,room:'home'});Object.assign(guest.position,{x:650,y:550,room:'home'});
+ await until(()=>friend.session.scene.players.some(p=>p.id===host.session.view.selfId&&p.room==='home')&&guest.session.scene.island?.roomPlaced?.length===1,'indoor location and furniture broadcast');
+ assert.deepEqual(guest.save.life.roomPlaced,[]);assert.deepEqual(friend.save.life.roomPlaced,[]);
+ console.log('PASS: indoor locations and host room furniture sync without changing guest home saves.');
  const extra=[makePlayer(2),makePlayer(3),makePlayer(4)];
  for(const [index,player] of extra.entries()){
   await player.session.start('guest',code);

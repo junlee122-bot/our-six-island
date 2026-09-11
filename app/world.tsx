@@ -1,43 +1,116 @@
 'use client';
 import {useEffect,useRef} from 'react';
-import {DECOR,FRIENDS,MAYOR,REGIONS,WORLD,ITEMS,NODES,SPOTS,distance,findPath,walkable,type Point,type Save} from './game-data';
+import {DECOR,FRIENDS,MAYOR,REGIONS,WORLD,ITEMS,NODES,SPOTS,SPAWN,distance,findPath,walkable,type Point,type Save} from './game-data';
+import {FACILITIES,INSECTS,PLOTS,ROOMS,ROOM_ENTRY,ROOM_SIZE,COLLECTION,CROPS,cropProgress,isRoom,roomWalkable,type RoomID} from './life-data';
+import {GAME_ASSETS,loadArt} from './game-assets';
 import {loadSpriteSheet,loadMayorSprite} from './sprite-sheet';
-import {canvasPixelRatio,visibleMapCrop} from './canvas-resolution';
+import {canvasPixelRatio,interiorCamera,visibleMapCrop} from './canvas-resolution';
 import type {OnlinePlayer} from './multiplayer-protocol';
 import type {IslandSession} from './multiplayer-session';
-export type Target = Point & {id:string;type:'node'|'friend'|'spot'|'decor'|'mayor'|'region';label:string};
-export type WorldApi={go:(t:Target)=>boolean;key:(key:string,down:boolean)=>void;position:()=>Point;pose:()=>Point&{facing:number};teleport:(p:Point)=>void;snapshot:()=>string|null};
-export function targets(s:Save,canEditDecor=true):Target[]{return [...NODES.filter(n=>Date.now()-(s.picked[n.id]||0)>30000).map(n=>({...n,type:'node' as const,label:`${ITEMS[n.kind].name} 줍기`})),...FRIENDS.flatMap((f,i)=>i===s.character?[]:[{...f,id:String(i),type:'friend' as const,label:`${s.names[i]}와 대화`}]),{...MAYOR,type:'mayor' as const,label:'호현 촌장과 대화'},...REGIONS.map(p=>({...p,type:'region' as const,label:p.name})),...SPOTS.map(p=>({...p,type:'spot' as const,label:p.name})),...(canEditDecor?s.placed.map(p=>({...p,type:'decor' as const,label:'장식 회수'})):[])]}
-export default function World({save,paused,zoom,night,placing,onAct,onNear,onPlace,api,onReady,onRegion,network,visiting}:{save:Save;paused:boolean;zoom:number;night:boolean;placing:string|null;onAct:(t:Target)=>void;onNear:(t:Target|null)=>void;onPlace:(p:Point)=>void;api:React.RefObject<WorldApi|null>;onReady:(ok:boolean)=>void;onRegion:(id:string|null)=>void;network:IslandSession;visiting:boolean}){
- const canvas=useRef<HTMLCanvasElement>(null),state=useRef({save,paused,zoom,night,placing,onAct,onNear,onPlace,onReady,onRegion,network,visiting});state.current={save,paused,zoom,night,placing,onAct,onNear,onPlace,onReady,onRegion,network,visiting};
- useEffect(()=>{const c=canvas.current!;const ctx=c.getContext('2d')!;let alive=true,frame=0,last=0,clock=0;const pos={...state.current.save.position},camera={...pos},keys=new Set<string>();let path:Point[]=[],destination:Target|null=null,nearId='',regionId:string|null=null,scale=1,ox=0,oy=0,w=0,h=0,moving=false,facing=1,wasPaused=true;const bg=new Image();let sprites=new Image(),mayor=new Image();let loaded=0;const ready=()=>{loaded++;if(loaded===3&&alive)state.current.onReady(true)};bg.onload=()=>{document.documentElement.style.setProperty('--island-map',`url("${bg.src}")`);ready()};bg.onerror=()=>state.current.onReady(false);bg.src='/assets/island-expanded.png';loadMayorSprite().then(img=>{mayor=img;ready()}).catch(()=>state.current.onReady(false));loadSpriteSheet().then(img=>{sprites=img;ready()}).catch(()=>state.current.onReady(false));
- const resize=()=>{const rect=c.getBoundingClientRect();w=rect.width;h=rect.height;const dpr=canvasPixelRatio(w,h,devicePixelRatio||1);c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);ctx.setTransform(c.width/Math.max(1,w),0,0,c.height/Math.max(1,h),0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high'};const observer=new ResizeObserver(resize);observer.observe(c);resize();
- const go=(t:Target)=>{path=findPath(pos,t);destination=t;if(distance(pos,t)<72){path=[];destination=null;state.current.onAct(t);return true}return path.length>0};
- const remotePositions=new Map<string,Point>();
- api.current={go,key:(k,down)=>{if(down)keys.add(k);else keys.delete(k)},position:()=>({...pos}),pose:()=>({...pos,facing}),teleport:p=>{if(!walkable(p))return;Object.assign(pos,p);Object.assign(camera,p);keys.clear();path=[];destination=null;nearId='';regionId=null;state.current.onNear(null);},snapshot:()=>{try{return c.toDataURL('image/png')}catch{return null}}};
- const keyDown=(e:KeyboardEvent)=>{if((e.target as HTMLElement).matches('input,textarea,select')||state.current.paused)return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','e','shift'].includes(k)){e.preventDefault();keys.add(k);if((k==='e'||k===' ')&&!e.repeat){const t=targets(state.current.save,!state.current.visiting).sort((a,b)=>distance(pos,a)-distance(pos,b))[0];if(t&&distance(pos,t)<82)state.current.onAct(t)}}};
- const keyUp=(e:KeyboardEvent)=>keys.delete(e.key.toLowerCase());const blur=()=>keys.clear();window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);window.addEventListener('blur',blur);
- const click=(e:PointerEvent)=>{if(state.current.paused)return;const rect=c.getBoundingClientRect(),p={x:(e.clientX-rect.left-ox)/scale,y:(e.clientY-rect.top-oy)/scale};if(state.current.placing&&!state.current.visiting){if(walkable(p))state.current.onPlace(p);return;}const t=targets(state.current.save,!state.current.visiting).sort((a,b)=>distance(p,a)-distance(p,b))[0];if(t&&distance(p,t)<54){go(t);return}destination=null;path=findPath(pos,p)};c.addEventListener('pointerdown',click);
- const pill=(text:string,x:number,y:number,color='#fff9e9',fg='#39513f')=>{ctx.font='bold 15px "Malgun Gothic", sans-serif';const size=ctx.measureText(text).width+22;ctx.fillStyle='rgba(44,65,40,.11)';ctx.beginPath();ctx.roundRect(x-size/2,y-15,size,29,13);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x-size/2,y-17,size,28,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y-3)};
- const drawPerson=(i:number,x:number,y:number,bob=0,player=false,remote?:OnlinePlayer)=>{ctx.save();ctx.translate(x,y);ctx.fillStyle='rgba(36,75,46,.20)';ctx.beginPath();ctx.ellipse(0,-2,22,8,0,0,Math.PI*2);ctx.fill();if(player){ctx.strokeStyle='#fff9dc';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,28,10,0,0,Math.PI*2);ctx.stroke()}const sw=sprites.naturalWidth/3,sh=sprites.naturalHeight/2;if(sprites.complete&&sw){ctx.save();if(player||remote)ctx.scale(remote?.facing??facing,1);ctx.drawImage(sprites,(i%3)*sw,Math.floor(i/3)*sh,sw,sh,-47,-105+bob,94,110);ctx.restore()}ctx.restore();pill(remote?remote.name+' · 친구':state.current.save.names[i],x,y+22,remote?'#287a94':player?'#406b4c':'#fffaeb',remote||player?'#ffffff':'#435641');if(!player&&!remote&&!state.current.save.done.includes(i)){ctx.fillStyle='#fbca60';ctx.beginPath();ctx.arc(x+26,y-91+Math.sin(clock*2+i)*3,11,0,Math.PI*2);ctx.fill();ctx.fillStyle='#694a24';ctx.font='bold 15px sans-serif';ctx.fillText(state.current.save.accepted.includes(i)?'♥':'!',x+26,y-90+Math.sin(clock*2+i)*3)}};
- const render=(t:number)=>{if(!alive)return;const dt=Math.min((t-last)/1000||.016,.05);last=t;clock+=dt;const st=state.current;if(st.paused&&!wasPaused){keys.clear();path=[];destination=null}wasPaused=st.paused;moving=false;if(!st.paused){let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'));let followingPath=false;if(dx||dy){path=[];destination=null;}else if(path.length){followingPath=true;const q=path[0],dist=distance(pos,q);if(dist<8)path.shift();else{dx=(q.x-pos.x)/dist;dy=(q.y-pos.y)/dist;}}if(dx||dy){const len=Math.hypot(dx,dy),speed=keys.has('shift')?380:230,stride=followingPath?Math.min(speed*dt,distance(pos,path[0])):speed*dt,nx=pos.x+dx/len*stride,ny=pos.y+dy/len*stride;if(walkable({x:nx,y:pos.y}))pos.x=nx;if(walkable({x:pos.x,y:ny}))pos.y=ny;if(dx)facing=dx<0?-1:1;moving=true}if(destination&&distance(pos,destination)<65){const arrived=destination;destination=null;path=[];st.onAct(arrived)}const near=targets(st.save,!st.visiting).sort((a,b)=>distance(pos,a)-distance(pos,b))[0];const id=near&&distance(pos,near)<82?`${near.type}${near.id}`:'';if(id!==nearId){nearId=id;st.onNear(id?near:null)}const region=REGIONS.find(r=>distance(pos,r)<260)?.id??null;if(region!==regionId){regionId=region;st.onRegion(region)}}
- scale=Math.max(w/WORLD.viewportWidth,h/WORLD.viewportHeight)*st.zoom;camera.x+=(pos.x-camera.x)*Math.min(1,dt*4);camera.y+=(pos.y-camera.y)*Math.min(1,dt*4);ox=w/2-camera.x*scale;oy=h*.56-camera.y*scale;ox=Math.min(0,Math.max(w-WORLD.width*scale,ox));oy=Math.min(0,Math.max(h-WORLD.height*scale,oy));ctx.clearRect(0,0,w,h);ctx.fillStyle='#66bebe';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);if(bg.complete&&bg.naturalWidth){const crop=visibleMapCrop(w,h,ox,oy,scale,bg.naturalWidth,bg.naturalHeight);if(crop.dw>0&&crop.dh>0)ctx.drawImage(bg,crop.sx,crop.sy,crop.sw,crop.sh,crop.dx,crop.dy,crop.dw,crop.dh);}
- if(path.length){ctx.setLineDash([3,13]);ctx.lineWidth=3;ctx.strokeStyle='rgba(255,255,234,.65)';ctx.beginPath();ctx.moveTo(pos.x,pos.y);path.forEach(q=>ctx.lineTo(q.x,q.y));ctx.stroke();ctx.setLineDash([])}
- for(const n of NODES){if(Date.now()-(st.save.picked[n.id]||0)<30000)continue;const bob=Math.sin(clock*2+n.x)*2;ctx.fillStyle='rgba(44,75,38,.1)';ctx.beginPath();ctx.ellipse(n.x,n.y+5,17,6,0,0,Math.PI*2);ctx.fill();ctx.font='28px "Segoe UI Emoji"';ctx.textAlign='center';ctx.fillText(ITEMS[n.kind].emoji,n.x,n.y+bob);ctx.fillStyle='rgba(255,252,212,.85)';ctx.font='15px sans-serif';ctx.fillText('✦',n.x+17,n.y-18+Math.sin(clock*3)*3)}
- for(const p of SPOTS)pill(`${p.emoji} ${p.name}`,p.x,p.y-8,'#fff8e7');
- for(const p of (st.visiting?st.network.scene.island?.placed??[]:st.save.placed)){ctx.font='56px "Segoe UI Emoji"';ctx.textAlign='center';ctx.fillText(DECOR.find(d=>d.id===p.kind)?.emoji||'🪴',p.x,p.y)}
- const online=st.network.scene;
- const remote=online.players.filter(p=>p.id!==online.selfId).map(p=>{let smooth=remotePositions.get(p.id);if(!smooth){smooth={x:p.x,y:p.y};remotePositions.set(p.id,smooth);}const walking=distance(smooth,p)>2;if(distance(smooth,p)>600)Object.assign(smooth,{x:p.x,y:p.y});else{smooth.x+=(p.x-smooth.x)*Math.min(1,dt*12);smooth.y+=(p.y-smooth.y)*Math.min(1,dt*12);}return {i:p.character,x:smooth.x,y:smooth.y,remote:p,walking};});
- for(const id of remotePositions.keys())if(!online.players.some(p=>p.id===id))remotePositions.delete(id);
- const people:{i:number;x:number;y:number;remote?:OnlinePlayer;walking?:boolean}[]=[...FRIENDS.map((f,i)=>({i,x:i===st.save.character?pos.x:f.x,y:i===st.save.character?pos.y:f.y})),{i:6,x:MAYOR.x,y:MAYOR.y},...remote];
- people.sort((a,b)=>a.y-b.y).forEach(p=>{
-  if(p.remote){drawPerson(p.i,p.x,p.y,p.walking?Math.sin(clock*15)*5:0,false,p.remote);if(p.remote.emote&&Date.now()<(p.remote.emoteUntil||0))pill(p.remote.emote,p.x,p.y-133,'#ffffff');}
-  else if(p.i<6){drawPerson(p.i,p.x,p.y,p.i===st.save.character&&moving?Math.sin(clock*15)*5:Math.sin(clock*2+p.i)*1.5,p.i===st.save.character);if(p.i===st.save.character){const self=online.players.find(p=>p.id===online.selfId);if(self?.emote&&Date.now()<(self.emoteUntil||0))pill(self.emote,pos.x,pos.y-133,'#ffffff');}}
-  else{const bob=Math.sin(clock*2)*2;ctx.fillStyle='rgba(36,75,46,.2)';ctx.beginPath();ctx.ellipse(p.x,p.y,25,8,0,0,Math.PI*2);ctx.fill();if(mayor.naturalHeight){const width=mayor.naturalWidth/mayor.naturalHeight*128;ctx.drawImage(mayor,p.x-width/2,p.y-128+bob,width,128)}pill('촌장 호현',p.x,p.y+24,'#ffd979','#674823');if(!st.save.mayorMet||(!st.save.explorationReward&&st.save.explored.length===REGIONS.length))pill('!',p.x+30,p.y-125,'#ffd979');}
- });
- for(let i=0;i<13;i++){const x=(i*131+clock*(3+i%3))%4200+300,y=300+(i*173)%2100+Math.sin(clock+i)*11;ctx.fillStyle=`rgba(255,254,201,${.25+(Math.sin(clock+i)+1)*.2})`;ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill()}
- ctx.restore();if(st.visiting?st.network.scene.island?.night:st.night){ctx.fillStyle='rgba(35,37,94,.30)';ctx.fillRect(0,0,w,h);for(let i=0;i<28;i++){ctx.fillStyle=`rgba(255,243,144,${(Math.sin(clock*2+i)+1)*.4})`;ctx.beginPath();ctx.arc((i*97)%w,(i*83)%h,2,0,Math.PI*2);ctx.fill()}}frame=requestAnimationFrame(render)};frame=requestAnimationFrame(render);
- return()=>{alive=false;cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);window.removeEventListener('blur',blur);c.removeEventListener('pointerdown',click);api.current=null};
+export type Target = Point & {id:string;type:'node'|'friend'|'spot'|'decor'|'mayor'|'region'|'door'|'exit'|'service'|'plot'|'insect'|'facility';label:string};
+export type WorldApi={go:(t:Target)=>boolean;key:(key:string,down:boolean)=>void;position:()=>Point;pose:()=>Point&{facing:number};room:()=>RoomID;teleport:(p:Point)=>boolean;snapshot:()=>string|null};
+export function roomDoor(room:RoomID):Point{const door=[...SPOTS,...FACILITIES].find(p=>p.id===room);return door?{x:door.x,y:door.y+45,room:'island'}:{...SPAWN,room:'island'};}
+export function targets(s:Save,canEditDecor=true,room:RoomID='island'):Target[]{
+ if(room!=='island')return [{id:'exit',type:'exit',room,x:550,y:650,label:'문을 열고 밖으로 나가기'},{id:ROOMS[room].action,type:'service',room,x:550,y:335,label:ROOMS[room].label},...(room==='home'&&canEditDecor?s.life.roomPlaced.map(p=>({...p,room,type:'decor' as const,label:'가구 회수하기'})):[])];
+ return [...NODES.filter(n=>Date.now()-(s.picked[n.id]||0)>30000).map(n=>({...n,type:'node' as const,label:ITEMS[n.kind].name+' 줍기'})),
+ ...FRIENDS.flatMap((f,i)=>i===s.character?[]:[{...f,id:String(i),type:'friend' as const,label:s.names[i]+'와 대화'}]),{...MAYOR,type:'mayor' as const,label:'호현 촌장과 대화'},
+ ...REGIONS.map(p=>({...p,type:'region' as const,label:p.name})),
+ ...SPOTS.map(p=>({...p,type:p.id==='home'||p.id==='shop'?'door' as const:'spot' as const,label:p.name+(p.id==='home'||p.id==='shop'?' 들어가기':'')})),
+ ...FACILITIES.map(p=>({...p,type:p.id==='workshop'||p.id==='museum'?'door' as const:'facility' as const,label:p.name+(p.id==='workshop'||p.id==='museum'?' 들어가기':' 이용하기')})),
+ ...PLOTS.map(p=>({...p,type:'plot' as const,label:'텃밭 '+(Number(p.id)+1)+'번 돌보기'})),
+ ...INSECTS.filter(p=>Date.now()-(s.life.caughtAt[p.id]||0)>60000).map(p=>({...p,type:'insect' as const,label:(COLLECTION.find(c=>c.id===p.kind)?.name||'곤충')+' 잡기'})),
+ ...(canEditDecor?s.placed.map(p=>({...p,type:'decor' as const,label:'장식 회수'})):[])];
+}
+export default function World({save,paused,zoom,night,placing,onAct,onNear,onPlace,api,onReady,onRegion,onRoom,network,visiting}:{save:Save;paused:boolean;zoom:number;night:boolean;placing:string|null;onAct:(t:Target)=>void;onNear:(t:Target|null)=>void;onPlace:(p:Point)=>void;api:React.RefObject<WorldApi|null>;onReady:(ok:boolean)=>void;onRegion:(id:string|null)=>void;onRoom:(room:RoomID)=>void;network:IslandSession;visiting:boolean}){
+ const canvas=useRef<HTMLCanvasElement>(null),state=useRef({save,paused,zoom,night,placing,onAct,onNear,onPlace,onReady,onRegion,onRoom,network,visiting});state.current={save,paused,zoom,night,placing,onAct,onNear,onPlace,onReady,onRegion,onRoom,network,visiting};
+ useEffect(()=>{
+  const c=canvas.current!,ctx=c.getContext('2d')!;let alive=true,frame=0,last=0,clock=0;
+  let room:RoomID=state.current.save.position.room??'island';
+  const pos={x:state.current.save.position.x,y:state.current.save.position.y},camera={...pos},keys=new Set<string>();
+  let path:Point[]=[],destination:Target|null=null,nearId='',regionId:string|null=null,scale=1,ox=0,oy=0,w=0,h=0,moving=false,facing=1,wasPaused=true;
+  let bg:HTMLImageElement|undefined,sprites:HTMLImageElement|undefined,mayor:HTMLImageElement|undefined,interiors:HTMLImageElement|undefined,furniture:HTMLImageElement|undefined,facilities:HTMLImageElement|undefined;
+  Promise.all([loadArt(GAME_ASSETS.map),loadSpriteSheet(),loadMayorSprite(),loadArt(GAME_ASSETS.interiors),loadArt(GAME_ASSETS.furniture),loadArt(GAME_ASSETS.facilities)]).then(images=>{
+   if(!alive)return;[bg,sprites,mayor,interiors,furniture,facilities]=images;
+   document.documentElement.style.setProperty('--island-map','url("'+bg.src+'")');document.documentElement.style.setProperty('--furniture-sheet','url("'+furniture.src+'")');document.documentElement.style.setProperty('--interior-sheet','url("'+interiors.src+'")');state.current.onReady(true);
+  }).catch(()=>{if(alive)state.current.onReady(false);});
+  const resize=()=>{const rect=c.getBoundingClientRect();w=rect.width;h=rect.height;const dpr=canvasPixelRatio(w,h,devicePixelRatio||1);c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);ctx.setTransform(c.width/Math.max(1,w),0,0,c.height/Math.max(1,h),0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';};
+  const observer=new ResizeObserver(resize);observer.observe(c);resize();
+  const teleport=(p:Point)=>{
+   const next=isRoom(p.room)?p.room:'island';if(!(next==='island'?walkable(p):roomWalkable(p)))return false;
+   room=next;Object.assign(pos,{x:p.x,y:p.y});Object.assign(camera,pos);keys.clear();path=[];destination=null;nearId='';regionId=null;remotePositions.clear();state.current.onNear(null);state.current.onRoom(room);return true;
+  };
+  const canWalk=(p:Point)=>room==='island'?walkable(p):roomWalkable(p);
+  const go=(t:Target)=>{
+   const next=t.room??'island';if(next!==room)teleport(next==='island'?roomDoor(room):{...ROOM_ENTRY,room:next});
+   path=room==='island'?findPath(pos,t):canWalk(t)?[{x:t.x,y:t.y}]:[];destination=t;
+   if(distance(pos,t)<72){path=[];destination=null;state.current.onAct(t);return true;}return path.length>0;
+  };
+  const remotePositions=new Map<string,Point>();
+  api.current={go,key:(k,down)=>{if(down)keys.add(k);else keys.delete(k)},position:()=>({...pos,room}),pose:()=>({...pos,facing,room}),room:()=>room,teleport,snapshot:()=>{try{return c.toDataURL('image/png');}catch{return null;}}};
+  state.current.onRoom(room);
+  const currentTargets=()=>targets(state.current.save,!state.current.visiting,room);
+  const keyDown=(e:KeyboardEvent)=>{if((e.target as HTMLElement).matches('input,textarea,select')||state.current.paused)return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','e','shift'].includes(k)){e.preventDefault();keys.add(k);if((k==='e'||k===' ')&&!e.repeat){const t=currentTargets().sort((a,b)=>distance(pos,a)-distance(pos,b))[0];if(t&&distance(pos,t)<86)state.current.onAct(t);}}};
+  const keyUp=(e:KeyboardEvent)=>keys.delete(e.key.toLowerCase()),blur=()=>keys.clear();window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);window.addEventListener('blur',blur);
+  const click=(e:PointerEvent)=>{if(state.current.paused)return;const rect=c.getBoundingClientRect(),p={x:(e.clientX-rect.left-ox)/scale,y:(e.clientY-rect.top-oy)/scale,room};if(state.current.placing&&!state.current.visiting){if(canWalk(p))state.current.onPlace(p);return;}const t=currentTargets().sort((a,b)=>distance(p,a)-distance(p,b))[0];if(t&&distance(p,t)<56){go(t);return;}destination=null;path=room==='island'?findPath(pos,p):canWalk(p)?[p]:[];};c.addEventListener('pointerdown',click);
+  const pill=(text:string,x:number,y:number,color='#fff9e9',fg='#39513f')=>{ctx.font='bold 15px "Malgun Gothic", sans-serif';const size=ctx.measureText(text).width+22;ctx.fillStyle='rgba(44,65,40,.11)';ctx.beginPath();ctx.roundRect(x-size/2,y-15,size,29,13);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x-size/2,y-17,size,28,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y-3);};
+  const drawFurniture=(kind:string,x:number,y:number)=>{
+   if(!furniture)return;const i=DECOR.findIndex(d=>d.id===kind);if(i<0)return;const cellW=furniture.naturalWidth/4,cellH=furniture.naturalHeight/4;
+   const size=[80,95,95,165,130,145,130,155,140,145,125,155,80,115,140,160][i];ctx.drawImage(furniture,(i%4)*cellW,Math.floor(i/4)*cellH,cellW,cellH,x-size/2,y-size*.82,size,size);
+  };
+  const drawPerson=(i:number,x:number,y:number,bob=0,player=false,remote?:OnlinePlayer)=>{
+   ctx.save();ctx.translate(x,y);ctx.fillStyle='rgba(36,75,46,.20)';ctx.beginPath();ctx.ellipse(0,-2,22,8,0,0,Math.PI*2);ctx.fill();
+   if(player){ctx.strokeStyle='#fff9dc';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,28,10,0,0,Math.PI*2);ctx.stroke();}
+   if(sprites){const sw=sprites.naturalWidth/3,sh=sprites.naturalHeight/2;ctx.save();if(player||remote)ctx.scale(remote?.facing??facing,1);ctx.drawImage(sprites,(i%3)*sw,Math.floor(i/3)*sh,sw,sh,-47,-105+bob,94,110);ctx.restore();}
+   ctx.restore();pill(remote?remote.name+' · 친구':state.current.save.names[i],x,y+22,remote?'#287a94':player?'#406b4c':'#fffaeb',remote||player?'#ffffff':'#435641');
+   if(!player&&!remote&&!state.current.save.done.includes(i)){ctx.fillStyle='#fbca60';ctx.beginPath();ctx.arc(x+26,y-91+Math.sin(clock*2+i)*3,11,0,Math.PI*2);ctx.fill();ctx.fillStyle='#694a24';ctx.font='bold 15px sans-serif';ctx.fillText(state.current.save.accepted.includes(i)?'♥':'!',x+26,y-90+Math.sin(clock*2+i)*3);}
+  };
+  const render=(t:number)=>{
+   if(!alive)return;const dt=Math.min((t-last)/1000||.016,.05);last=t;clock+=dt;const st=state.current;
+   if(st.paused&&!wasPaused){keys.clear();path=[];destination=null;}wasPaused=st.paused;moving=false;
+   if(!st.paused){
+    let dx=Number(keys.has('d')||keys.has('arrowright'))-Number(keys.has('a')||keys.has('arrowleft')),dy=Number(keys.has('s')||keys.has('arrowdown'))-Number(keys.has('w')||keys.has('arrowup'));let followingPath=false;
+    if(dx||dy){path=[];destination=null;}else if(path.length){followingPath=true;const q=path[0],dist=distance(pos,q);if(dist<8)path.shift();else{dx=(q.x-pos.x)/dist;dy=(q.y-pos.y)/dist;}}
+    if(dx||dy){const len=Math.hypot(dx,dy),speed=keys.has('shift')?380:230,stride=followingPath?Math.min(speed*dt,distance(pos,path[0])):speed*dt,nx=pos.x+dx/len*stride,ny=pos.y+dy/len*stride;if(canWalk({x:nx,y:pos.y}))pos.x=nx;if(canWalk({x:pos.x,y:ny}))pos.y=ny;if(dx)facing=dx<0?-1:1;moving=true;}
+    if(destination&&distance(pos,destination)<68){const arrived=destination;destination=null;path=[];st.onAct(arrived);}
+    const near=currentTargets().sort((a,b)=>distance(pos,a)-distance(pos,b))[0],id=near&&distance(pos,near)<86?near.type+near.id:'';
+    if(id!==nearId){nearId=id;st.onNear(id?near:null);}
+    if(room==='island'){const region=REGIONS.find(r=>distance(pos,r)<260)?.id??null;if(region!==regionId){regionId=region;st.onRegion(region);}}
+   }
+   const outside=room==='island',size=outside?WORLD:ROOM_SIZE;
+   scale=(outside?Math.max(w/WORLD.viewportWidth,h/WORLD.viewportHeight):Math.max(w/1550,h/1100))*st.zoom;
+   camera.x+=(pos.x-camera.x)*Math.min(1,dt*4);camera.y+=(pos.y-camera.y)*Math.min(1,dt*4);
+   if(outside){ox=Math.min(0,Math.max(w-size.width*scale,w/2-camera.x*scale));oy=Math.min(0,Math.max(h-size.height*scale,h*.56-camera.y*scale));}
+   else{({ox,oy}=interiorCamera(w,h,scale,camera));}
+   ctx.clearRect(0,0,w,h);ctx.fillStyle=outside?'#66bebe':'#c7b293';ctx.fillRect(0,0,w,h);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+   if(outside&&bg){const crop=visibleMapCrop(w,h,ox,oy,scale,bg.naturalWidth,bg.naturalHeight);if(crop.dw>0&&crop.dh>0)ctx.drawImage(bg,crop.sx,crop.sy,crop.sw,crop.sh,crop.dx,crop.dy,crop.dw,crop.dh);}
+   if(!outside&&interiors){const index=ROOMS[room as Exclude<RoomID,'island'>].cell,sw=interiors.naturalWidth/2,sh=interiors.naturalHeight/2;ctx.drawImage(interiors,(index%2)*sw,Math.floor(index/2)*sh,sw,sh,0,0,size.width,size.height);}
+   if(path.length){ctx.setLineDash([3,13]);ctx.lineWidth=3;ctx.strokeStyle='rgba(255,255,234,.65)';ctx.beginPath();ctx.moveTo(pos.x,pos.y);path.forEach(q=>ctx.lineTo(q.x,q.y));ctx.stroke();ctx.setLineDash([]);}
+   if(outside){
+    if(facilities)for(const f of FACILITIES){const sw=facilities.naturalWidth/2,sh=facilities.naturalHeight/2,width=f.id==='garden'?390:330;ctx.drawImage(facilities,(f.cell%2)*sw,Math.floor(f.cell/2)*sh,sw,sh,f.x-width/2,f.y-width*.86,width,width);}
+    for(const n of NODES){if(Date.now()-(st.save.picked[n.id]||0)<30000)continue;ctx.font='28px "Segoe UI Emoji"';ctx.textAlign='center';ctx.fillText(ITEMS[n.kind].emoji,n.x,n.y+Math.sin(clock*2+n.x)*2);}
+    for(const insect of INSECTS){if(Date.now()-(st.save.life.caughtAt[insect.id]||0)<60000)continue;ctx.font='34px "Segoe UI Emoji"';ctx.fillText(COLLECTION.find(c=>c.id===insect.kind)?.emoji||'🦋',insect.x+Math.sin(clock*2)*8,insect.y+Math.sin(clock*3)*6);}
+    for(const p of [...SPOTS,...FACILITIES])pill(p.emoji+' '+p.name+(p.id==='home'||p.id==='shop'||p.id==='workshop'||p.id==='museum'?' ↳':''),p.x,p.y-5);
+    for(const plot of PLOTS){const planted=st.save.life.plots[Number(plot.id)],progress=cropProgress(planted);drawFurniture('planter',plot.x,plot.y);ctx.font='32px "Segoe UI Emoji"';ctx.textAlign='center';ctx.fillText(planted.crop?(progress>=1?CROPS[planted.crop].emoji:'🌱'):'＋',plot.x,plot.y-30);pill(planted.crop?(progress>=1?'수확!':Math.floor(progress*100)+'%'+(planted.watered?' 💧':'')):'심기',plot.x,plot.y+9,progress>=1?'#ffe299':'#fff9e9');}
+   }else{
+    const inside=ROOMS[room as Exclude<RoomID,'island'>];pill(inside.label+' · E',550,310,'#fff4ce');pill('밖으로 나가기 ↓',550,675);
+   }
+   const online=st.network.scene;
+   const remote=online.players.filter(p=>p.id!==online.selfId&&(p.room??'island')===room).map(p=>{let smooth=remotePositions.get(p.id);if(!smooth||smooth.room!==room){smooth={x:p.x,y:p.y,room};remotePositions.set(p.id,smooth);}const walking=distance(smooth,p)>2;if(distance(smooth,p)>600)Object.assign(smooth,{x:p.x,y:p.y});else{smooth.x+=(p.x-smooth.x)*Math.min(1,dt*12);smooth.y+=(p.y-smooth.y)*Math.min(1,dt*12);}return {i:p.character,x:smooth.x,y:smooth.y,remote:p,walking};});
+   for(const id of remotePositions.keys())if(!online.players.some(p=>p.id===id&&(p.room??'island')===room))remotePositions.delete(id);
+   const decor=outside?(st.visiting?online.island?.placed??[]:st.save.placed):room==='home'?(st.visiting?online.island?.roomPlaced??[]:st.save.life.roomPlaced):[];
+   type Entity={i:number;x:number;y:number;remote?:OnlinePlayer;walking?:boolean;kind?:string};
+   const people:Entity[]=[...(outside?FRIENDS.map((f,i)=>({i,x:i===st.save.character?pos.x:f.x,y:i===st.save.character?pos.y:f.y})):[{i:st.save.character,...pos}]),...(outside?[{i:6,x:MAYOR.x,y:MAYOR.y}]:[]),...remote,...decor.map(p=>({i:-1,x:p.x,y:p.y,kind:p.kind}))];
+   people.sort((a,b)=>a.y-b.y).forEach(p=>{
+    if(p.kind){drawFurniture(p.kind,p.x,p.y);return;}
+    if(p.remote){drawPerson(p.i,p.x,p.y,p.walking?Math.sin(clock*15)*5:0,false,p.remote);if(p.remote.emote&&Date.now()<(p.remote.emoteUntil||0))pill(p.remote.emote,p.x,p.y-133,'#ffffff');}
+    else if(p.i<6){drawPerson(p.i,p.x,p.y,p.i===st.save.character&&moving?Math.sin(clock*15)*5:Math.sin(clock*2+p.i)*1.5,p.i===st.save.character);if(p.i===st.save.character){const self=online.players.find(p=>p.id===online.selfId);if(self?.emote&&Date.now()<(self.emoteUntil||0))pill(self.emote,pos.x,pos.y-133,'#ffffff');}}
+    else{if(mayor){const width=mayor.naturalWidth/mayor.naturalHeight*128;ctx.drawImage(mayor,p.x-width/2,p.y-128+Math.sin(clock*2)*2,width,128);}pill('촌장 호현',p.x,p.y+24,'#ffd979','#674823');if(!st.save.mayorMet||(!st.save.explorationReward&&st.save.explored.length===REGIONS.length))pill('!',p.x+30,p.y-125,'#ffd979');}
+   });
+   if(st.placing&&!st.visiting)pill('클릭해서 가구 놓기',pos.x,pos.y-150,'#ffe299');
+   ctx.restore();if(outside&&(st.visiting?online.island?.night:st.night)){ctx.fillStyle='rgba(35,37,94,.30)';ctx.fillRect(0,0,w,h);for(let i=0;i<28;i++){ctx.fillStyle='rgba(255,243,144,.6)';ctx.beginPath();ctx.arc((i*97)%w,(i*83)%h,2,0,Math.PI*2);ctx.fill();}}
+   frame=requestAnimationFrame(render);
+  };frame=requestAnimationFrame(render);
+  return()=>{alive=false;cancelAnimationFrame(frame);observer.disconnect();window.removeEventListener('keydown',keyDown);window.removeEventListener('keyup',keyUp);window.removeEventListener('blur',blur);c.removeEventListener('pointerdown',click);api.current=null;};
  },[api]);
- return <canvas ref={canvas} className="world" aria-label="여섯섬 게임 지도. 방향키 또는 WASD로 이동하고 E로 상호작용합니다." tabIndex={0}/>;
+ return <canvas ref={canvas} className="world" aria-label="여섯섬 게임. 방향키 또는 WASD로 이동하고 E로 상호작용합니다." tabIndex={0}/>;
 }
