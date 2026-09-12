@@ -1,4 +1,7 @@
 export const GAME_ASSETS={
+ motion:'/assets/friends-motion.png',
+ accessories:'/assets/accessories.png',
+ nature:'/assets/nature-detail.png',
  map:'/assets/island-hd.webp',
  friends:'/assets/friends-v2.png',
  mayor:'/assets/mayor-hohyeon.png',

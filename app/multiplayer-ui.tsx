@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Copy,DoorOpen,Link,MessageCircle,Send,Users,Wifi} from 'lucide-react';
 import {EMOTES,inviteUrl,roomCode} from './multiplayer-protocol';
-import {FRIENDS} from './game-data';
+import {CharacterAvatar} from './character-avatar';
 import type {IslandSession,SessionView} from './multiplayer-session';
 
 export function MultiplayerPanel({session,view,initialCode,onHost,onJoin,onWalk}:{session:IslandSession;view:SessionView;initialCode:string;onHost:()=>void;onJoin:(code:string)=>void;onWalk:()=>void}){
@@ -26,7 +26,7 @@ export function MultiplayerPanel({session,view,initialCode,onHost,onJoin,onWalk}
   <div className="online-room-heading"><div><span className="online-dot"/> {view.role==='host'?'내 섬이 열려 있어요':'친구의 섬에 놀러 왔어요'}</div><b><Users size={16}/> {view.players.length} / 6</b></div>
   <div className="invite-card"><span>방 코드</span><strong>{view.room.slice(0,5)} {view.room.slice(5)}</strong><button onClick={copy} aria-label="초대 링크 복사"><Copy size={18}/> 초대 링크</button><input value={link} readOnly aria-label="공유할 초대 링크" onFocus={e=>e.target.select()}/></div>
   {notice&&<p className="online-notice" role="status">{notice}</p>}
-  <div className="online-members">{view.players.map(p=><div key={p.id} className={p.id===view.selfId?'is-you':''}><span className="avatar" role="img" aria-label={FRIENDS[p.character].look} style={{backgroundImage:'var(--sprite-sheet)',backgroundPosition:`${(p.character%3)*50}% ${Math.floor(p.character/3)*100}%`}}/><strong>{p.name}</strong><small>{p.id===view.selfId?'나':p.id.endsWith(view.room)?'방장':'친구'}</small></div>)}</div>
+  <div className="online-members">{view.players.map(p=><div key={p.id} className={p.id===view.selfId?'is-you':''}><CharacterAvatar id={p.character} appearance={p.appearance}/><strong>{p.name}</strong><small>{p.id===view.selfId?'나':p.id.endsWith(view.room)?'방장':'친구'}</small></div>)}</div>
   <div className="online-emotes" aria-label="이모티콘 보내기">{EMOTES.map(emote=><button key={emote} onClick={()=>session.sendEmote(emote)} aria-label={`${emote} 보내기`}>{emote}</button>)}</div>
   <div className="online-chat" ref={messages} role="log" aria-label="친구들과의 채팅" aria-live="polite">{view.messages.length?view.messages.map(line=><p key={line.id} className={line.system?'system-line':''}>{!line.system&&<strong>{line.name}</strong>}<span>{line.text}</span></p>):<p className="system-line">친구들에게 반가운 인사를 건네 보세요.</p>}</div>
   <form className="online-chat-form" onSubmit={send}><MessageCircle size={18}/><input aria-label="채팅 메시지" placeholder="친구에게 한마디…" maxLength={100} value={draft} onChange={e=>setDraft(e.target.value)} autoComplete="off"/><button type="submit" disabled={!draft.trim()} aria-label="메시지 보내기"><Send size={18}/></button></form>

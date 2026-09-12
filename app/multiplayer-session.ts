@@ -38,12 +38,12 @@ export class IslandSession {
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
  private notify(){for(const listener of this.listeners)listener();}
  private update(patch:Partial<SessionView>){this.view={...this.view,...patch};this.notify();}
- private roster(players:OnlinePlayer[]){this.scene.players=players;this.room?.retain(players.map(p=>p.id));const signature=JSON.stringify(players.map(p=>[p.id,p.name,p.character]));if(signature!==this.rosterSignature){this.rosterSignature=signature;this.update({players});}}
+ private roster(players:OnlinePlayer[]){this.scene.players=players;this.room?.retain(players.map(p=>p.id));const signature=JSON.stringify(players.map(p=>[p.id,p.name,p.character,p.appearance]));if(signature!==this.rosterSignature){this.rosterSignature=signature;this.update({players});}}
  private sendHost(message:unknown){return this.room?.send(PEER_PREFIX+this.view.room,message)??false;}
  private broadcast(message:unknown){return this.members.size<=1||this.room?.send('*',message)===true;}
  private addChat(line:ChatLine){this.update({messages:[...this.view.messages,line].slice(-60)});}
  private hostChat(name:string,text:string,system=false){const line={id:this.view.selfId+'-'+(++this.sequence),name,text,system};this.addChat(line);this.broadcast({v:1,type:'chat',line});}
- private world(){const island=this.callbacks.island();return readIsland({placed:island.placed.slice(0,50).map((p,i)=>({...p,id:'shared-'+i})),roomPlaced:(island.roomPlaced??[]).slice(0,30).map((p,i)=>({...p,id:'room-'+i})),night:island.night})??{placed:[],roomPlaced:[],night:island.night};}
+ private world(){const island=this.callbacks.island();return readIsland({placed:island.placed.slice(0,50).map((p,i)=>({...p,id:'shared-'+i})),roomPlaced:(island.roomPlaced??[]).slice(0,30).map((p,i)=>({...p,id:'room-'+i})),night:island.night,wardrobe:island.wardrobe})??{placed:[],roomPlaced:[],night:island.night};}
  private worldPacket(){return {v:1,type:'world',hostId:this.view.selfId,players:[...this.members.values()],island:this.world(),sentAt:Date.now()};}
  private stopDeadline(){if(this.deadline)clearTimeout(this.deadline);this.deadline=null;}
  leave(error=''){

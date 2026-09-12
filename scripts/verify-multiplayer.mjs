@@ -9,7 +9,7 @@ const sessions=[];
 const fixtures=[];
 function makePlayer(character){
  const save=freshSave(character),position={...SPAWN},index=sessions.length;let returned=0;
- const session=new IslandSession({local:()=>({...position,facing:1,character,name:save.names[character]}),island:()=>({placed:save.placed,roomPlaced:save.life.roomPlaced,night:false}),arrive:host=>Object.assign(position,visitingSpawn(host)),exit:()=>{returned++;},diagnostic:message=>console.error(`Client ${index}: ${message}`)});
+ const session=new IslandSession({local:()=>({...position,appearance:save.wardrobe[character],facing:1,character,name:save.names[character]}),island:()=>({placed:save.placed,roomPlaced:save.life.roomPlaced,wardrobe:save.wardrobe,night:false}),arrive:host=>Object.assign(position,visitingSpawn(host)),exit:()=>{returned++;},diagnostic:message=>console.error(`Client ${index}: ${message}`)});
  sessions.push(session);const fixture={session,save,position,get returned(){return returned;}};fixtures.push(fixture);return fixture;
 }
 async function until(check,label,timeout=35000){const start=Date.now();while(!check()){if(Date.now()-start>timeout||sessions.some(s=>s.view.status==='error'))throw new Error(`${label}: ${sessions.map(s=>s.view.status+':'+s.view.error).join(' | ')}`);await new Promise(r=>setTimeout(r,50));}}
@@ -23,6 +23,12 @@ try{
  await until(()=>host.session.scene.players.some(p=>p.id===guest.session.view.selfId&&p.x===guest.position.x)&&friend.session.scene.players.some(p=>p.id===guest.session.view.selfId&&p.x===guest.position.x),'position broadcast');
  assert.notEqual(guest.session.view.selfId,friend.session.view.selfId);
  console.log('PASS: same-character guests move independently and positions reach the other guest.');
+ guest.save.wardrobe[1]={hair:'honey',top:'ocean',hat:'straw',glasses:'sun',clip:true};guest.position.motion='run';
+ await until(()=>friend.session.scene.players.some(p=>p.id===guest.session.view.selfId&&p.appearance?.hat==='straw'&&p.motion==='run')&&host.session.view.players.some(p=>p.id===guest.session.view.selfId&&p.appearance?.hair==='honey'),'live appearance and motion');
+ assert.notEqual(friend.save.wardrobe[1].hat,'straw');guest.position.motion='idle';
+ await until(()=>host.session.scene.players.some(p=>p.id===guest.session.view.selfId&&p.motion==='idle'),'stopped animation');
+ host.save.wardrobe[2].hair='rose';await until(()=>guest.session.scene.island?.wardrobe?.[2]?.hair==='rose','host NPC appearance');assert.equal(guest.save.wardrobe[2].hair,'ink');
+ console.log('PASS: appearance updates while stationary, run/idle poses, and host NPC styles stay separate from guest saves.');
  assert.equal(guest.session.sendChat('강재가 놀러 왔어요!'),true);assert.equal(guest.session.sendChat('너무 빠른 두 번째 메시지'),false);await until(()=>sessions.every(s=>s.view.messages.some(m=>m.text==='강재가 놀러 왔어요!')),'chat broadcast');
  friend.session.sendEmote('👋');await until(()=>guest.session.scene.players.some(p=>p.id===friend.session.view.selfId&&p.emote==='👋'),'emote broadcast');
  console.log('PASS: chat and emotes travel between all three peers.');

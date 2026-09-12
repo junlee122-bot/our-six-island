@@ -1,11 +1,12 @@
 import {DECOR,FRIENDS,SPAWN,WORLD,walkable,type Point,type Save} from './game-data.ts';
 import {isRoom,roomWalkable,type PlacedFurniture} from './life-data.ts';
+import {readAppearance,readWardrobe,readMotion,type Appearance,type Motion} from './character-style.ts';
 
 export const MAX_PLAYERS=6;
 export const EMOTES=['👋','❤️','🎉','🎣','🌼','✨'] as const;
 export type Emote=typeof EMOTES[number];
-export type OnlinePlayer=Point & {id:string;name:string;character:number;facing:number;emote?:Emote;emoteUntil?:number};
-export type SharedIsland={placed:Save['placed'];roomPlaced?:PlacedFurniture[];night:boolean};
+export type OnlinePlayer=Point & {id:string;name:string;character:number;facing:number;appearance?:Appearance;motion?:Motion;emote?:Emote;emoteUntil?:number};
+export type SharedIsland={placed:Save['placed'];roomPlaced?:PlacedFurniture[];wardrobe?:Appearance[];night:boolean};
 export type ChatLine={id:string;name:string;text:string;system?:boolean};
 export type WorldPacket={v:1;type:'world';players:OnlinePlayer[];island:SharedIsland;hostId:string};
 export type PosePacket={v:1;type:'poses';players:OnlinePlayer[]};
@@ -22,15 +23,15 @@ export function readPlayer(value:unknown,id?:string):OnlinePlayer|null{
  if(p.room!==undefined&&(!isRoom(p.room)||(p.room!=='island'&&!roomWalkable(p))))return null;
  const key=id??p.id;if(typeof key!=='string'||!/^[a-zA-Z0-9_-]{1,100}$/.test(key))return null;
  const name=cleanText(p.name,12)||FRIENDS[p.character].name;
- return {id:key,name,character:p.character,x:p.x,y:p.y,...(p.room?{room:p.room}:{}),facing:p.facing===-1?-1:1,
+ return {id:key,name,character:p.character,x:p.x,y:p.y,...(p.room?{room:p.room}:{}),facing:p.facing===-1?-1:1,appearance:readAppearance(p.appearance,p.character),motion:readMotion(p.motion),
  ...(EMOTES.includes(p.emote as Emote)&&Number.isFinite(p.emoteUntil)?{emote:p.emote,emoteUntil:Math.min(p.emoteUntil!,Date.now()+5000)}:{})};
 }
 export function readIsland(value:unknown):SharedIsland|null{
  if(!value||typeof value!=='object')return null;const data=value as SharedIsland;if(!Array.isArray(data.placed)||data.placed.length>50||typeof data.night!=='boolean')return null;
  const placed:Save['placed']=[];const ids=new Set<string>();
  for(const p of data.placed){if(!validPoint(p)||!DECOR.some(d=>d.id===p.kind)||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]{1,64}$/.test(p.id)||ids.has(p.id))return null;ids.add(p.id);placed.push({id:p.id,kind:p.kind,x:p.x,y:p.y});}
- if(data.roomPlaced!==undefined){if(!Array.isArray(data.roomPlaced)||data.roomPlaced.length>30)return null;const inside:PlacedFurniture[]=[];const used=new Set<string>();for(const p of data.roomPlaced){if(!roomWalkable(p)||!DECOR.some(d=>d.id===p.kind)||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]{1,64}$/.test(p.id)||used.has(p.id))return null;used.add(p.id);inside.push({id:p.id,kind:p.kind,x:p.x,y:p.y});}return {placed,roomPlaced:inside,night:data.night};}
- return {placed,night:data.night};
+ if(data.roomPlaced!==undefined){if(!Array.isArray(data.roomPlaced)||data.roomPlaced.length>30)return null;const inside:PlacedFurniture[]=[];const used=new Set<string>();for(const p of data.roomPlaced){if(!roomWalkable(p)||!DECOR.some(d=>d.id===p.kind)||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]{1,64}$/.test(p.id)||used.has(p.id))return null;used.add(p.id);inside.push({id:p.id,kind:p.kind,x:p.x,y:p.y});}return {placed,roomPlaced:inside,night:data.night,...(data.wardrobe?{wardrobe:readWardrobe(data.wardrobe)}:{})};}
+ return {placed,night:data.night,...(data.wardrobe?{wardrobe:readWardrobe(data.wardrobe)}:{})};
 }
 export function readPlayers(value:unknown,sentAt?:unknown):OnlinePlayer[]|null{
  if(!Array.isArray(value)||value.length<1||value.length>MAX_PLAYERS)return null;
