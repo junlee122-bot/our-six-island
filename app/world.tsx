@@ -13,10 +13,11 @@ import {SCENERY,MEADOW,drawNature,drawWater} from './island-atmosphere';
 export type Target = Point & {id:string;type:'node'|'friend'|'spot'|'decor'|'mayor'|'region'|'door'|'exit'|'service'|'plot'|'insect'|'facility';label:string};
 export type WorldApi={go:(t:Target)=>boolean;key:(key:string,down:boolean)=>void;position:()=>Point;pose:()=>Point&{facing:number;motion:Motion};animate:(motion:Motion)=>void;room:()=>RoomID;teleport:(p:Point)=>boolean;snapshot:()=>string|null};
 export function roomDoor(room:RoomID):Point{const door=[...SPOTS,...FACILITIES].find(p=>p.id===room);return door?{x:door.x,y:door.y+45,room:'island'}:{...SPAWN,room:'island'};}
-export function targets(s:Save,canEditDecor=true,room:RoomID='island'):Target[]{
- if(room!=='island')return [{id:'exit',type:'exit',room,x:550,y:650,label:'문을 열고 밖으로 나가기'},{id:ROOMS[room].action,type:'service',room,x:550,y:335,label:ROOMS[room].label},...(room==='home'&&canEditDecor?s.life.roomPlaced.map(p=>({...p,room,type:'decor' as const,label:'가구 회수하기'})):[])];
+export function targets(s:Save,canEditDecor=true,room:RoomID='island',players:OnlinePlayer[]=[],selfId=''):Target[]{
+ const friends:Target[]=FRIENDS.flatMap((f,i)=>{if(i===s.character)return [];const online=players.find(p=>p.id!==selfId&&p.character===i);if((room!=='island'&&!online)||(online&&(online.room??'island')!==room))return [];return [{...f,...(online?{x:online.x,y:online.y,room:online.room}:{}),id:String(i),type:'friend' as const,label:s.names[i]+'와 대화'}];});
+ if(room!=='island')return [...friends,{id:'exit',type:'exit',room,x:550,y:650,label:'문을 열고 밖으로 나가기'},{id:ROOMS[room].action,type:'service',room,x:550,y:335,label:ROOMS[room].label},...(room==='home'&&canEditDecor?s.life.roomPlaced.map(p=>({...p,room,type:'decor' as const,label:'가구 회수하기'})):[])];
  return [...NODES.filter(n=>Date.now()-(s.picked[n.id]||0)>30000).map(n=>({...n,type:'node' as const,label:ITEMS[n.kind].name+' 줍기'})),
- ...FRIENDS.flatMap((f,i)=>i===s.character?[]:[{...f,id:String(i),type:'friend' as const,label:s.names[i]+'와 대화'}]),{...MAYOR,type:'mayor' as const,label:'호현 촌장과 대화'},
+ ...friends,{...MAYOR,type:'mayor' as const,label:'호현 촌장과 대화'},
  ...REGIONS.map(p=>({...p,type:'region' as const,label:p.name})),
  ...SPOTS.map(p=>({...p,type:p.id==='home'||p.id==='shop'?'door' as const:'spot' as const,label:p.name+(p.id==='home'||p.id==='shop'?' 들어가기':'')})),
  ...FACILITIES.map(p=>({...p,type:p.id==='workshop'||p.id==='museum'?'door' as const:'facility' as const,label:p.name+(p.id==='workshop'||p.id==='museum'?' 들어가기':' 이용하기')})),
@@ -48,6 +49,7 @@ export default function World({save,paused,zoom,night,placing,onAct,onNear,onPla
   };
   const canWalk=(p:Point)=>room==='island'?walkable(p):roomWalkable(p);
   const go=(t:Target)=>{
+   if(t.type==='friend'){const online=state.current.network.scene.players.find(p=>p.character===Number(t.id)&&p.id!==state.current.network.scene.selfId);if(online)t={...t,x:online.x,y:online.y,room:online.room??'island'};}
    const next=t.room??'island';if(next!==room)teleport(next==='island'?roomDoor(room):{...ROOM_ENTRY,room:next});
    path=room==='island'?findPath(pos,t):canWalk(t)?[{x:t.x,y:t.y}]:[];destination=t;
    if(distance(pos,t)<72){path=[];destination=null;state.current.onAct(t);return true;}return path.length>0;
@@ -55,7 +57,7 @@ export default function World({save,paused,zoom,night,placing,onAct,onNear,onPla
   const remotePositions=new Map<string,Point>();
   api.current={go,key:(k,down)=>{if(down)keys.add(k);else keys.delete(k)},position:()=>({...pos,room}),pose:()=>({...pos,facing,room,motion:Date.now()<actionUntil?action:state.current.paused?'idle':motion}),animate,room:()=>room,teleport,snapshot:()=>{try{return c.toDataURL('image/png');}catch{return null;}}};
   state.current.onRoom(room);
-  const currentTargets=()=>targets(state.current.save,!state.current.visiting,room);
+  const currentTargets=()=>targets(state.current.save,!state.current.visiting,room,state.current.network.scene.players,state.current.network.scene.selfId);
   const keyDown=(e:KeyboardEvent)=>{if((e.target as HTMLElement).matches('input,textarea,select')||state.current.paused)return;const k=e.key.toLowerCase();if(['arrowup','arrowdown','arrowleft','arrowright',' ','w','a','s','d','e','shift'].includes(k)){e.preventDefault();keys.add(k);if((k==='e'||k===' ')&&!e.repeat){const t=currentTargets().sort((a,b)=>distance(pos,a)-distance(pos,b))[0];if(t&&distance(pos,t)<86)state.current.onAct(t);}}};
   const keyUp=(e:KeyboardEvent)=>keys.delete(e.key.toLowerCase()),blur=()=>{keys.clear();path=[];destination=null;motion='idle';moving=false;actionUntil=0;};window.addEventListener('keydown',keyDown);window.addEventListener('keyup',keyUp);window.addEventListener('blur',blur);
   const click=(e:PointerEvent)=>{if(state.current.paused)return;const rect=c.getBoundingClientRect(),p={x:(e.clientX-rect.left-ox)/scale,y:(e.clientY-rect.top-oy)/scale,room};if(state.current.placing&&!state.current.visiting){if(canWalk(p))state.current.onPlace(p);return;}const t=currentTargets().sort((a,b)=>distance(p,a)-distance(p,b))[0];if(t&&distance(p,t)<56){go(t);return;}destination=null;path=room==='island'?findPath(pos,p):canWalk(p)?[p]:[];};c.addEventListener('pointerdown',click);
@@ -111,7 +113,7 @@ export default function World({save,paused,zoom,night,placing,onAct,onNear,onPla
    for(const id of remotePositions.keys())if(!online.players.some(p=>p.id===id&&(p.room??'island')===room))remotePositions.delete(id);
    const decor=outside?(st.visiting?online.island?.placed??[]:st.save.placed):room==='home'?(st.visiting?online.island?.roomPlaced??[]:st.save.life.roomPlaced):[];
    type Entity={i:number;x:number;y:number;remote?:OnlinePlayer;snap?:boolean;kind?:string;scenery?:typeof SCENERY[number]};
-   const people:Entity[]=[...(outside?FRIENDS.map((f,i)=>({i,x:i===st.save.character?pos.x:f.x,y:i===st.save.character?pos.y:f.y})):[{i:st.save.character,...pos}]),...(outside?[{i:6,x:MAYOR.x,y:MAYOR.y}]:[]),...remote,...decor.map(p=>({i:-1,x:p.x,y:p.y,kind:p.kind})),...(outside?SCENERY.map(p=>({i:-2,x:p.x,y:p.y,scenery:p})):[])];
+   const people:Entity[]=[...(outside?FRIENDS.flatMap((f,i)=>i!==st.save.character&&online.players.some(p=>p.id!==online.selfId&&p.character===i)?[]:[{i,x:i===st.save.character?pos.x:f.x,y:i===st.save.character?pos.y:f.y}]):[{i:st.save.character,...pos}]),...(outside?[{i:6,x:MAYOR.x,y:MAYOR.y}]:[]),...remote,...decor.map(p=>({i:-1,x:p.x,y:p.y,kind:p.kind})),...(outside?SCENERY.map(p=>({i:-2,x:p.x,y:p.y,scenery:p})):[])];
    people.sort((a,b)=>a.y-b.y).forEach(p=>{
     if(!visible(p))return;
     if(p.scenery){if(nature){const tree=p.scenery;ctx.save();ctx.fillStyle='rgba(28,69,46,.14)';ctx.beginPath();ctx.ellipse(p.x+25,p.y+1,tree.size*.25,tree.size*.08,-.15,0,Math.PI*2);ctx.fill();ctx.restore();drawNature(ctx,nature,tree.cell,tree.x,tree.y,tree.size,reduced?0:Math.sin(clock*.85+tree.phase)*.012);}return;}

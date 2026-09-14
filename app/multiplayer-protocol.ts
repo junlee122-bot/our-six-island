@@ -36,7 +36,7 @@ export function readIsland(value:unknown):SharedIsland|null{
 export function readPlayers(value:unknown,sentAt?:unknown):OnlinePlayer[]|null{
  if(!Array.isArray(value)||value.length<1||value.length>MAX_PLAYERS)return null;
  const list=value.map(p=>{if(p&&typeof p==='object'&&typeof sentAt==='number'&&Number.isFinite(sentAt)&&Number.isFinite(p.emoteUntil)){p={...p,emoteUntil:Date.now()+Math.max(0,Math.min(4000,p.emoteUntil-sentAt))};}return readPlayer(p);});
- if(list.some(p=>!p))return null;const players=list as OnlinePlayer[];return new Set(players.map(p=>p.id)).size===players.length?players:null;
+ if(list.some(p=>!p))return null;const players=list as OnlinePlayer[];return new Set(players.map(p=>p.id)).size===players.length&&new Set(players.map(p=>p.character)).size===players.length?players:null;
 }
 export function visitingSpawn(host:Point){for(const offset of [{x:75,y:45},{x:-75,y:45},{x:0,y:80},{x:0,y:0}]){const p={x:host.x+offset.x,y:host.y+offset.y,...(host.room?{room:host.room}:{})};if(host.room&&host.room!=='island'?roomWalkable(p):walkable(p))return p;}return {...SPAWN};}
 export function persistentPosition(home:Point|null,current:Point|undefined,fallback:Point){return {...(home??current??fallback)};}
