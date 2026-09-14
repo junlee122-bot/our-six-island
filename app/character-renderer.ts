@@ -7,7 +7,7 @@ let pending:Promise<CharacterRenderer>|null=null;
 const rgb=(hex:string)=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));
 export function loadCharacters():Promise<CharacterRenderer>{
  if(pending)return pending;
- pending=Promise.all([loadArt(GAME_ASSETS.motion),loadArt(GAME_ASSETS.accessories)]).then(([sheet,accessories])=>{
+ pending=Promise.all([loadArt(GAME_ASSETS.motion),loadArt(GAME_ASSETS.accessories),loadArt(GAME_ASSETS.jaeminCap)]).then(([sheet,accessories,jaeminCap])=>{
   const cache=new Map<string,Frame[]>(),baseFrames:ImageData[][]=[];
   const cell=256,pad=88;
   // Measured row bounds avoid clipping shoes or borrowing hair from the next row.
@@ -19,9 +19,18 @@ export function loadCharacters():Promise<CharacterRenderer>{
    const sx=sheet.width/1024,sy=sheet.height/1536;
    ctx.drawImage(sheet,(35+col*240)*sx,rows[row][0]*sy,240*sx,rows[row][1]*sy,0,0,cell,cell);const pixels=ctx.getImageData(0,0,cell,cell);removeConnectedBackdrop(pixels.data,cell,cell);baseFrames[row].push(pixels);
   }}
-  const accessoryCrops=Array.from({length:8},(_,i)=>{
+  // The generated cap has a baked neutral backdrop, just like the motion sheet.
+  // Remove it before downsampling so its edge stays clean at game scale.
+  const cleanCap=document.createElement('canvas');cleanCap.width=jaeminCap.width;cleanCap.height=jaeminCap.height;
+  const capCtx=cleanCap.getContext('2d',{willReadFrequently:true})!;capCtx.drawImage(jaeminCap,0,0);
+  const capPixels=capCtx.getImageData(0,0,cleanCap.width,cleanCap.height);
+  removeConnectedBackdrop(capPixels.data,cleanCap.width,cleanCap.height);capCtx.putImageData(capPixels,0,0);
+  const accessoryCrops=Array.from({length:9},(_,i)=>{
    const c=document.createElement('canvas');c.width=c.height=cell;const ctx=c.getContext('2d',{willReadFrequently:true})!;
-   ctx.drawImage(accessories,(i%4)*accessories.width/4,Math.floor(i/4)*accessories.height/2,accessories.width/4,accessories.height/2,0,0,cell,cell);
+   if(i===8){
+    const scale=cell/Math.max(jaeminCap.width,jaeminCap.height);
+    ctx.drawImage(cleanCap,0,0,jaeminCap.width*scale,jaeminCap.height*scale);
+   }else ctx.drawImage(accessories,(i%4)*accessories.width/4,Math.floor(i/4)*accessories.height/2,accessories.width/4,accessories.height/2,0,0,cell,cell);
    const {data}=ctx.getImageData(0,0,cell,cell);let x0=cell,y0=cell,x1=0,y1=0;
    for(let y=0;y<cell;y++)for(let x=0;x<cell;x++)if(data[(y*cell+x)*4+3]>24){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
    return {canvas:c,x:x0,y:y0,w:Math.max(1,x1-x0+1),h:Math.max(1,y1-y0+1)};
@@ -45,7 +54,12 @@ export function loadCharacters():Promise<CharacterRenderer>{
     const topY=hairTop<cell?hairTop:cell*.12;
     const add=(index:number,width:number,cx:number,cy:number)=>{const crop=accessoryCrops[index],height=width*crop.h/crop.w;ctx.drawImage(crop.canvas,crop.x,crop.y,crop.w,crop.h,pad+cx-width/2,pad+cy-height/2,width,height);};
     const hat=HATS.find(h=>h.id===a.hat)!.cell,glasses=GLASSES.find(g=>g.id===a.glasses)!.cell;
-    if(hat>=0)add(hat,headWidth*(hat===1?1.6:1.18),headX,topY+headWidth*.13);
+    if(id===5&&a.hat==='cap'){
+     // Jaemin's original embroidered cap sits on the crown instead of above it.
+     // Anchor to each pose's hairline so walking and waving keep the same fit.
+     const width=headWidth*1.03,height=width*accessoryCrops[8].h/accessoryCrops[8].w;
+     add(8,width,headX,topY-headWidth*.10+height/2);
+    }else if(hat>=0)add(hat,headWidth*(hat===1?1.6:1.18),headX,topY+headWidth*.13);
     if(glasses>=0)add(glasses,headWidth*.76,eyesX,eyesY);
     if(a.clip)add(7,headWidth*.28,headX+headWidth*.38,topY+headWidth*.3);
     return {canvas:c,foot:foot+pad,center:headX+pad};

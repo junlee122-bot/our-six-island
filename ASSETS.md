@@ -179,3 +179,35 @@ COLUMN 3: walking RIGHT FOOT FORWARD, LEFT ARM FORWARD with bent elbow, right ar
 COLUMN 4: cheerful ONE-HAND WAVE, one hand raised beside head palm open, other arm relaxed by side. Both feet planted on same neutral baseline.
 Within each row, hold the exact same head size, hair, identity, body scale and center; feet rest on baseline at 87% height of the cell. Poses visibly change the limbs without shifting whole character. 24 separate sprites, four columns six rows, no clipping. Use actual transparent alpha, not a visualization of transparency.
 ```
+
+## Jaemin original cap restoration (2026-09-14)
+
+- public/assets/jaemin-cap.png: 1683 × 935, AI-redrawn chestnut cap with cream/orange floral embroidery, referenced from Jaemin at bottom right of friends-v2.png.
+- Generated using built-in imagegen, followed by one focused crown/transparency correction. The delivered PNG is RGB with a painted neutral checkerboard, despite the transparency request. The character renderer removes its edge-connected neutral backdrop at native resolution before scaling, using the existing motion-sheet cleanup.
+- Only Jaemin wearing the cap uses this dedicated asset. It is fitted to each pose at 1.03 times the hair width and near the crown, replacing the generic 1.18-width raised cap. The brim stays above the eyes. Other hats, colors and all other characters are preserved. Saved cap appearances automatically use the updated art.
+
+### Initial generation prompt
+
+```text
+Use case: stylized-concept
+Asset type: one transparent game accessory sprite, replacement baseball cap for a chibi character.
+Primary request: Recreate ONLY the brown embroidered baseball cap worn by Jaemin, the boy at the BOTTOM RIGHT of reference image 1, as a single isolated cap. Restore his original design, with a snug LOW CROWN and compact curved brim. The hat must fit closely to a small round head, never look inflated, tall, oversized, or like a dome.
+Input images: Image 1 is the authoritative ORIGINAL design reference (bottom-right boy only). Image 2 is supporting style and camera reference for the bottom-row boy; do not draw the boy.
+Subject: one warm dark chestnut-brown baseball cap, softly worn cotton fabric, subtle stitched panels, tiny top button, compact gently curved brim. Preserve the original small cluster of delicate cream and muted-orange daisy embroidery on the front panel, slightly toward the viewer's left. Tiny understated flowers, no lettering, no branding.
+Style/medium: polished soft 3D chibi game illustration, matching the original cap's material, color, gentle highlights and lighting.
+Composition/framing: frontal view with only a very slight three-quarter turn like the original reference; near-horizontal brim that can overlay the frontal bottom-row head. Visibly low shallow crown. Total visible cap width divided by total visible cap height approximately 1.8 (between 1.7 and 1.9), including brim. One centered cap, full silhouette uncropped. Useful content fills most of a close landscape canvas with modest transparent margins.
+Scene/backdrop: genuine transparent RGBA background, clean antialiased alpha cutout; preserve actual transparency.
+Constraints: exactly ONE cap and no other assets. No head, face, ears, hair, neck, body, hands, mannequin, stand, floor, scenery, backdrop, shadow outside the cap, checkerboard pattern, lettering, watermark, or text. Do not reproduce any other character or accessory from either reference.
+```
+
+### Focused correction prompt
+
+```text
+Use case: precise-object-edit
+Asset type: ONE production-ready transparent PNG game accessory sprite.
+Edit target: the single brown embroidered cap in the reference image.
+Change only these two issues:
+1. Reduce the crown height enough that the visible cap silhouette width / total height is approximately 1.8. Flatten the crown into a snug low-profile baseball cap, maintaining natural seam curvature and a compact curved brim. Keep the chestnut brown material, frontal slight-three-quarter orientation, and small cream/orange daisy embroidery.
+2. REMOVE THE ENTIRE CHECKERBOARD BACKGROUND and replace it with REAL ALPHA TRANSPARENCY. The checkerboard visible in the input is unwanted painted pixels, NOT the desired background. Every pixel outside the cap must have alpha = 0. Generate an actual RGBA PNG with a genuine transparent background and antialiased alpha edges. Do not draw a checkerboard, gray/white squares, white background, or any backdrop.
+One cap only, centered in a tight landscape frame with modest transparent margin, full silhouette visible. No head, face, ears, hair, body, mannequin, floor, stand, exterior shadow, text, watermark or other object. Preserve the embroidered flower design and soft polished chibi game style, making the flower cluster a little smaller only if needed to remain comfortably inside the lower crown.
+```

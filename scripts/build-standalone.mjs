@@ -7,7 +7,7 @@ import react from '@vitejs/plugin-react';
 const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll('\\', '/');
 const manifest=fs.readFileSync(path.join(root,'app/game-assets.ts'),'utf8');
 const assets=[...manifest.matchAll(/\/assets\/([^']+)/g)].map(match=>match[1]);
-if(assets.length!==9||new Set(assets).size!==9)throw new Error('The game asset manifest must include all nine unique atlases.');
+if(assets.length!==10||new Set(assets).size!==10)throw new Error('The game asset manifest must include all ten unique images.');
 const replacements = new Map(assets.map(name => [
   '/assets/' + name,
   'data:image/'+(name.endsWith('.webp')?'webp':'png')+';base64,' + fs.readFileSync(path.join(root, 'public/assets', name)).toString('base64'),

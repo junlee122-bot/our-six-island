@@ -1,6 +1,7 @@
 export const GAME_ASSETS={
  motion:'/assets/friends-motion.png',
  accessories:'/assets/accessories.png',
+ jaeminCap:'/assets/jaemin-cap.png',
  nature:'/assets/nature-detail.png',
  map:'/assets/island-hd.webp',
  friends:'/assets/friends-v2.png',
