@@ -29,6 +29,7 @@ import { Wardrobe } from './lounge-wardrobe';
 import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
+import { SeotdaTable } from './lounge-seotda-table';
 import {
   LoungeRoom,
   GAME_INFO,
@@ -283,7 +284,7 @@ function RequestGame({
       view.players.filter((p) => p.id !== view.self).map((p) => p.id),
     );
   const needed =
-      game === 'poker' || game === 'blackjack'
+      game === 'poker' || game === 'blackjack' || game === 'seotda'
         ? pokerCount
         : GAME_INFO[game].players,
     reserved = gameReservation(game, stake),
@@ -329,7 +330,9 @@ function RequestGame({
                 ? '2인 · 한 수의 여유'
                 : k === 'gostop'
                   ? '3인 · 고와 스톱 사이'
-                  : '2–7인 · AI 딜러'}
+                  : k === 'seotda'
+                    ? '2–7인 · 두 장의 승부'
+                    : '2–7인 · AI 딜러'}
             </small>
           </button>
         ))}
@@ -339,7 +342,7 @@ function RequestGame({
           <label>
             {game === 'blackjack'
               ? '기본 베팅'
-              : game === 'poker'
+              : game === 'poker' || game === 'seotda'
                 ? '바이인'
                 : game === 'gostop'
                   ? '최대 손실'
@@ -356,7 +359,7 @@ function RequestGame({
               ))}
             </select>
           </label>
-          {(game === 'poker' || game === 'blackjack') && (
+          {(game === 'poker' || game === 'blackjack' || game === 'seotda') && (
             <label>
               정원
               <select
@@ -375,11 +378,13 @@ function RequestGame({
           <p>
             {game === 'blackjack'
               ? `기본 베팅 ${beom(stake)} · 최대 ${beom(reserved)} 예약. 스플릿·더블에 쓰지 않은 금액은 종료 시 반환합니다.`
-              : game === 'poker'
-                ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
-                : game === 'gostop'
-                  ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
-                  : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
+              : game === 'seotda'
+                ? '처음에 100범씩 냅니다. 바이인이 최대 손실이며, 재경기는 판돈을 유지하고 추가 참가비 없이 진행합니다.'
+                : game === 'poker'
+                  ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
+                  : game === 'gostop'
+                    ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
+                    : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
             내 사용 가능 잔액: {beom(view.wallet.balance)}
           </p>
         </div>
@@ -503,7 +508,7 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                   ? '기본 베팅 '
                   : r.game === 'gostop'
                     ? '최대 손실'
-                    : r.game === 'poker'
+                    : r.game === 'poker' || r.game === 'seotda'
                       ? '바이인'
                       : '판돈'}{' '}
                 {beom(r.stake)}
@@ -614,11 +619,13 @@ function GameScreen({
           <span>
             {kind === 'blackjack'
               ? '최대 예약금에서 실제 베팅과 딜러 배당을 정산합니다.'
-              : kind === 'poker'
-                ? '바이인과 팟을 공통 범 지갑으로 정산합니다.'
-                : kind === 'gostop'
-                  ? '1점 = 100범 · 초대장에서 합의한 최대 손실 적용'
-                  : '초대장에서 합의한 판돈 · 무승부는 전액 반환'}
+              : kind === 'seotda'
+                ? '기본금 100범 · 바이인 한도 · 재경기는 판돈 유지'
+                : kind === 'poker'
+                  ? '바이인과 팟을 공통 범 지갑으로 정산합니다.'
+                  : kind === 'gostop'
+                    ? '1점 = 100범 · 초대장에서 합의한 최대 손실 적용'
+                    : '초대장에서 합의한 판돈 · 무승부는 전액 반환'}
           </span>
           <b>
             <Coins size={14} /> {beom(view.wallet.balance)}
@@ -644,6 +651,20 @@ function GameScreen({
               }
               onResign={() =>
                 room.action({ kind: 'resign', id: view.chess!.id })
+              }
+            />
+          ) : kind === 'seotda' ? (
+            <SeotdaTable
+              match={view.seotda!}
+              seat={seat}
+              names={names}
+              onAction={(action) =>
+                room.action({
+                  kind: 'seotda',
+                  id: view.seotda!.id,
+                  revision: view.seotda!.revision,
+                  action,
+                })
               }
             />
           ) : kind === 'blackjack' ? (
@@ -725,9 +746,11 @@ function GameScreen({
               ? '지금 나가면 기권으로 처리됩니다.'
               : kind === 'blackjack'
                 ? '자리를 떠나면 남은 손을 자동 스탠드하고 정상적으로 범을 정산합니다. 게임으로 돌아와도 퇴장 결정을 취소할 수 없습니다.'
-                : kind === 'poker'
-                  ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
-                  : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
+                : kind === 'seotda'
+                  ? '자리를 떠나면 다음 행동 차례에 자동으로 다이합니다. 이미 올인했다면 재경기를 포함해 승부까지 참가하고 범을 정산합니다. 퇴장은 취소할 수 없습니다.'
+                  : kind === 'poker'
+                    ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
+                    : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
           </p>
           <div className="l-modal-actions">
             <button className="l-secondary" onClick={() => setLeave(false)}>
@@ -870,7 +893,7 @@ function RoomFloor({
       {(
         (area === 'casino'
           ? ['chess', 'poker', 'blackjack']
-          : ['gostop']) as GameKind[]
+          : ['seotda', 'gostop']) as GameKind[]
       ).map((kind) => (
         <button
           key={kind}
@@ -879,7 +902,7 @@ function RoomFloor({
           aria-label={GAME_INFO[kind].name + ' 테이블 열기'}
         >
           <span className="l-table-top">
-            {kind !== 'gostop' ? (
+            {kind !== 'gostop' && kind !== 'seotda' ? (
               kind === 'blackjack' ? (
                 <span className="l-mini-blackjack">21</span>
               ) : kind === 'poker' ? (
@@ -894,7 +917,9 @@ function RoomFloor({
               <span className="l-mini-hwatu">
                 <img src={LOUNGE_ASSETS['m01-01']} alt="" />
                 <img src={LOUNGE_ASSETS['m03-01']} alt="" />
-                <img src={LOUNGE_ASSETS['m08-01']} alt="" />
+                {kind === 'gostop' && (
+                  <img src={LOUNGE_ASSETS['m08-01']} alt="" />
+                )}
               </span>
             )}
           </span>
@@ -980,7 +1005,8 @@ export default function LoungeGame() {
     chessId = view.chess?.id,
     goId = view.gostop?.id,
     pokerId = view.poker?.id,
-    blackjackId = view.blackjack?.id;
+    blackjackId = view.blackjack?.id,
+    seotdaId = view.seotda?.id;
   useEffect(() => {
     if (view.status !== 'connected') {
       setGameScreen(null);
@@ -991,6 +1017,7 @@ export default function LoungeGame() {
       ['gostop', goId],
       ['poker', pokerId],
       ['blackjack', blackjackId],
+      ['seotda', seotdaId],
     ] as [GameKind, string | undefined][]) {
       if (id && !openedGames.current.has(id)) {
         openedGames.current.add(id);
@@ -1000,7 +1027,7 @@ export default function LoungeGame() {
         }
       }
     }
-  }, [chessId, goId, pokerId, blackjackId, view.status, view.self]);
+  }, [chessId, goId, pokerId, blackjackId, seotdaId, view.status, view.self]);
   const inviteStates = useRef(new Map<string, string>());
   useEffect(() => {
     document.querySelector('.l-app')?.scrollTo({ top: 0 });
@@ -1344,6 +1371,22 @@ export default function LoungeGame() {
                   </span>
                   <ArrowUpRight size={19} />
                 </button>
+                <button
+                  onClick={() => {
+                    setTab('lounge');
+                    openTable('seotda');
+                  }}
+                >
+                  <span className="l-game-symbol">
+                    <img src={LOUNGE_ASSETS['m01-01']} alt="" />
+                  </span>
+                  <span>
+                    <strong>섯다</strong>
+                    <small>단 두 장, 끝까지 모르는 승부.</small>
+                    <em>2–7명 · 화투와 범 베팅</em>
+                  </span>
+                  <ArrowUpRight size={19} />
+                </button>
                 <button onClick={() => openTable('gostop')}>
                   <span className="l-game-symbol">
                     <img src={LOUNGE_ASSETS['m03-01']} alt="" />
@@ -1472,7 +1515,7 @@ export default function LoungeGame() {
             <p>
               {view.wallet.held > 0
                 ? `게임에 예약한 금액 ${beom(view.wallet.held)}`
-                : '체스 · 고스톱 · 홀덤 · 블랙잭의 베팅과 정산에 사용해요.'}
+                : '체스 · 고스톱 · 섯다 · 홀덤 · 블랙잭의 베팅과 정산에 사용해요.'}
             </p>
           </div>
           <p className="l-help-text">
@@ -1596,8 +1639,8 @@ export default function LoungeGame() {
               을 수정 없이 사용했습니다.
             </p>
             <p>
-              게임 규칙은 3인 기본 룰입니다. 테이블 안 ‘기본 룰 보기’에서 적용된
-              규칙을 확인할 수 있어요.
+              고스톱은 3인 기본 룰, 섯다는 2–7인 두 장 섯다입니다. 각 테이블의
+              규칙 보기에서 특수 족보와 재경기 규칙을 확인할 수 있어요.
             </p>
           </div>
         </Modal>

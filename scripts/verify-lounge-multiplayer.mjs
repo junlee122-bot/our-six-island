@@ -373,6 +373,90 @@ try {
   console.log(
     'Seven-seat blackjack, dealer hole privacy, doubles and casino Beom settlement verified.',
   );
+  host.action({
+    kind: 'invite',
+    game: 'seotda',
+    players: guests.map((r) => r.view.self),
+    required: 7,
+    stake: 1000,
+  });
+  await wait(
+    () =>
+      guests.every((r) =>
+        r.view.invites.some(
+          (i) => i.game === 'seotda' && i.status === 'waiting',
+        ),
+      ),
+    'seotda invitation',
+  );
+  const sInvite = host.view.invites.find((i) => i.game === 'seotda');
+  for (const guest of guests)
+    guest.action({ kind: 'reply', id: sInvite.id, accept: true });
+  await wait(() => rooms.every((r) => r.view.seotda?.id), 'seven-seat seotda');
+  assert(rooms.every((r) => r.view.wallet.held === 1000));
+  const houseBefore = host.bank.ledger.houseBalance ?? 0;
+  let sActions = 0;
+  while (host.view.seotda.phase !== 'over') {
+    await wait(
+      () =>
+        rooms.every(
+          (r) => r.view.seotda.revision === host.view.seotda.revision,
+        ),
+      'seotda sync',
+    );
+    const state = host.view.seotda;
+    for (const r of rooms) {
+      assert(!('deck' in r.view.seotda));
+      assert(!('hands' in r.view.seotda));
+      assert.equal(r.view.seotda.hand.length, 2);
+      if (state.phase === 'betting')
+        assert.equal(r.view.seotda.revealed.length, 0);
+    }
+    if (state.phase !== 'betting') {
+      await wait(
+        () => host.view.seotda.revision > state.revision,
+        'seotda automatic showdown/replay',
+      );
+      continue;
+    }
+    const actor = rooms.find(
+      (r) => r.view.self === host.view.seats.seotda[state.turn],
+    );
+    const legal = actor.view.seotda.legal;
+    assert(++sActions < 100);
+    actor.action({
+      kind: 'seotda',
+      id: state.id,
+      revision: state.revision,
+      action: {
+        kind: legal.canRaise ? 'all-in' : legal.canCheck ? 'check' : 'call',
+      },
+    });
+    await wait(
+      () => host.view.seotda.revision > state.revision,
+      'seotda action',
+    );
+  }
+  await wait(
+    () =>
+      rooms.every(
+        (r) => r.view.seotda.phase === 'over' && r.view.wallet.held === 0,
+      ),
+    'seotda settlement',
+  );
+  assert.equal(host.bank.ledger.houseBalance ?? 0, houseBefore);
+  assert.equal(
+    rooms.reduce((n, r) => n + r.view.wallet.balance, 0) + houseBefore,
+    700000,
+  );
+  assert(
+    rooms.every((r) =>
+      r.view.wallet.history.some((h) => h.id === host.view.seotda.id),
+    ),
+  );
+  console.log(
+    'Seven-seat Seotda, private hwatu, automatic showdown/replays and shared Beom settlement verified.',
+  );
   for (let i = 0; i < 12; i++) {
     host.lastChat.clear();
     host.action({ kind: 'chat', text: '가'.repeat(120) });
@@ -419,6 +503,7 @@ try {
       goStopComplete: true,
       sevenSeatPoker: true,
       sevenSeatBlackjack: true,
+      sevenSeatSeotda: true,
       automaticDealer: true,
       sharedBeom: true,
       returningWallet: true,

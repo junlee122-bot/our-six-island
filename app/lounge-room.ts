@@ -4,6 +4,15 @@ import { readLook, type Look } from './lounge-look.ts';
 import { channelIdentity, channelKey, seal, unseal } from './lounge-crypto.ts';
 import { ACTORS } from './theater-data.ts';
 import {
+  newSeotda,
+  seotdaAction,
+  seotdaDeal,
+  seotdaView,
+  type SeotdaMatch,
+  type SeotdaView,
+  type SeotdaAction,
+} from './lounge-seotda.ts';
+import {
   newBlackjack,
   blackjackAction,
   blackjackDeal,
@@ -53,14 +62,21 @@ import {
   type GoView,
   type GoAction,
 } from './lounge-gostop.ts';
-export type GameKind = 'chess' | 'gostop' | 'poker' | 'blackjack';
+export type GameKind = 'chess' | 'gostop' | 'poker' | 'blackjack' | 'seotda';
 export const GAME_INFO = {
   chess: { name: '체스', symbol: '♞', players: 2, stake: 1000 },
   gostop: { name: '고스톱', symbol: '花', players: 3, stake: 10000 },
   poker: { name: '텍사스 홀덤', symbol: '♠', players: 3, stake: 10000 },
   blackjack: { name: '블랙잭', symbol: '21', players: 3, stake: 1000 },
+  seotda: { name: '섯다', symbol: '섯', players: 3, stake: 10000 },
 } as const;
-export const GAME_KINDS: GameKind[] = ['chess', 'gostop', 'poker', 'blackjack'];
+export const GAME_KINDS: GameKind[] = [
+  'chess',
+  'gostop',
+  'seotda',
+  'poker',
+  'blackjack',
+];
 export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
 export type GameInvite = {
@@ -94,11 +110,13 @@ export type LoungeWorld = {
     gostop: (string | null)[];
     poker: (string | null)[];
     blackjack: (string | null)[];
+    seotda: (string | null)[];
   };
   chess: ChessMatch | null;
   gostop: GoView | null;
   poker: PokerView | null;
   blackjack: BlackjackView | null;
+  seotda: SeotdaView | null;
   names: Record<GameKind, string[]>;
   wallet: ReturnType<LoungeBank['view']>;
   chat: { id: string; actor: number; text: string }[];
@@ -125,12 +143,14 @@ const empty = (): LoungeView => ({
     gostop: [null, null, null],
     poker: [null, null, null],
     blackjack: [null, null, null],
+    seotda: [null, null, null],
   },
   chess: null,
   gostop: null,
   poker: null,
   blackjack: null,
-  names: { chess: [], gostop: [], poker: [], blackjack: [] },
+  seotda: null,
+  names: { chess: [], gostop: [], poker: [], blackjack: [], seotda: [] },
   wallet: { balance: 0, held: 0, history: [] },
   chat: [],
   invites: [],
@@ -191,6 +211,7 @@ export type LoungeAction =
   | { kind: 'area'; area: 'lounge' | 'casino' }
   | { kind: 'poker'; id: string; revision: number; action: PokerAction }
   | { kind: 'blackjack'; id: string; revision: number; action: BlackjackAction }
+  | { kind: 'seotda'; id: string; revision: number; action: SeotdaAction }
   | { kind: 'reply'; id: string; accept: boolean }
   | { kind: 'cancel'; id: string }
   | { kind: 'stand'; game: GameKind }
@@ -222,6 +243,9 @@ export class LoungeRoom {
   private go: GoMatch | null = null;
   private poker: PokerMatch | null = null;
   private blackjack: BlackjackMatch | null = null;
+  private seotda: SeotdaMatch | null = null;
+  private seotdaAway = new Set<number>();
+  private seotdaTimer: ReturnType<typeof setTimeout> | null = null;
   private blackjackAway = new Set<number>();
   private blackjackTimer: ReturnType<typeof setTimeout> | null = null;
   private bank = new LoungeBank(null);
@@ -283,6 +307,9 @@ export class LoungeRoom {
         ? blackjackView(this.blackjack, this.view.seats.blackjack.indexOf(id))
         : null,
       names: this.view.names,
+      seotda: this.seotda
+        ? seotdaView(this.seotda, this.view.seats.seotda.indexOf(id))
+        : null,
       wallet: this.bank.view(this.wallets.get(id)),
     };
   }
@@ -310,12 +337,57 @@ export class LoungeRoom {
           )
         : null,
       wallet: this.bank.view(this.wallets.get(this.view.self)),
+      seotda: this.seotda
+        ? seotdaView(
+            this.seotda,
+            this.view.seats.seotda.indexOf(this.view.self),
+          )
+        : null,
     });
     for (const p of players)
       if (p.id !== this.view.self) this.send(p.id, this.packet(p.id));
     for (const id of this.challenges.keys()) this.lobby(id);
     this.scheduleDealer();
     this.scheduleBlackjack();
+    this.scheduleSeotda();
+  }
+  private scheduleSeotda() {
+    const g = this.seotda;
+    if (this.seotdaTimer || !g || g.phase === 'over') return;
+    const automatic = g.phase !== 'betting';
+    if (!automatic && !this.seotdaAway.has(g.turn)) return;
+    const { id, revision } = g,
+      generation = this.generation;
+    this.seotdaTimer = setTimeout(
+      () => {
+        this.seotdaTimer = null;
+        if (generation !== this.generation) return;
+        const current = this.seotda;
+        if (!current || current.id !== id || current.revision !== revision) {
+          this.scheduleSeotda();
+          return;
+        }
+        try {
+          const next = automatic
+            ? seotdaDeal(current)
+            : seotdaAction(current, current.turn, { kind: 'fold' });
+          if (next) {
+            this.settle('seotda', next);
+            this.seotda = next;
+            this.sync();
+          }
+        } catch (error) {
+          this.update({
+            error:
+              error instanceof Error
+                ? error.message
+                : '범 정산을 저장하지 못했습니다.',
+          });
+        }
+      },
+      automatic ? (g.phase === 'redeal' ? 2200 : 1500) : 600,
+    );
+    (this.seotdaTimer as unknown as { unref?: () => void }).unref?.();
   }
   private scheduleBlackjack() {
     const g = this.blackjack;
@@ -401,7 +473,7 @@ export class LoungeRoom {
   }
   private settle(
     kind: GameKind,
-    game: ChessMatch | GoMatch | PokerMatch | BlackjackMatch,
+    game: ChessMatch | GoMatch | PokerMatch | BlackjackMatch | SeotdaMatch,
   ) {
     const escrow = this.bank.ledger.games[game.id];
     if (!escrow || escrow.state !== 'reserved') return;
@@ -428,7 +500,7 @@ export class LoungeRoom {
               ),
         );
     } else {
-      const g = game as PokerMatch | BlackjackMatch;
+      const g = game as PokerMatch | BlackjackMatch | SeotdaMatch;
       if (g.phase === 'over')
         this.bank.commit(settleGame(this.bank.ledger, g.id, g.result));
     }
@@ -459,6 +531,10 @@ export class LoungeRoom {
     this.blackjackTimer = null;
     this.blackjack = null;
     this.blackjackAway.clear();
+    if (this.seotdaTimer) clearTimeout(this.seotdaTimer);
+    this.seotdaTimer = null;
+    this.seotda = null;
+    this.seotdaAway.clear();
     this.poker = null;
     this.pokerAway.clear();
     this.wallets.clear();
@@ -517,7 +593,7 @@ export class LoungeRoom {
     }, 25000);
     try {
       const [room, identity, wallet] = await Promise.all([
-        IslandRoom.create(role === 'host', code, 'hohyeon-lounge-v3:', 131072),
+        IslandRoom.create(role === 'host', code, 'hohyeon-lounge-v4:', 131072),
         channelIdentity(),
         this.walletIdentity ?? loadWalletIdentity(),
       ]);
@@ -660,7 +736,9 @@ export class LoungeRoom {
         ? !!this.go && this.go.phase !== 'over'
         : game === 'poker'
           ? !!this.poker && this.poker.phase !== 'over'
-          : !!this.blackjack && this.blackjack.phase !== 'over';
+          : game === 'seotda'
+            ? !!this.seotda && this.seotda.phase !== 'over'
+            : !!this.blackjack && this.blackjack.phase !== 'over';
   }
   private busy(id: string, except = '') {
     return (
@@ -686,7 +764,9 @@ export class LoungeRoom {
           ? newGo(id, shuffleCards())
           : request.game === 'poker'
             ? newPoker(id, deposits)
-            : newBlackjack(id, wallets.length, request.stake);
+            : request.game === 'seotda'
+              ? newSeotda(id, wallets.length, request.stake)
+              : newBlackjack(id, wallets.length, request.stake);
     let ledger = reserveGame(
       this.bank.ledger,
       id,
@@ -720,6 +800,9 @@ export class LoungeRoom {
     else if (request.game === 'poker') {
       this.poker = game as PokerMatch;
       this.pokerAway.clear();
+    } else if (request.game === 'seotda') {
+      this.seotda = game as SeotdaMatch;
+      this.seotdaAway.clear();
     } else {
       this.blackjack = game as BlackjackMatch;
       this.blackjackAway.clear();
@@ -728,13 +811,20 @@ export class LoungeRoom {
       const p = this.members.get(request.accepted[i])!;
       this.members.set(p.id, {
         ...p,
-        area: request.game === 'gostop' ? 'lounge' : 'casino',
+        area:
+          request.game === 'gostop' || request.game === 'seotda'
+            ? 'lounge'
+            : 'casino',
         x:
-          (request.game === 'chess'
-            ? 24
-            : request.game === 'blackjack'
-              ? 77
-              : 50) + (i === 0 ? -8 : i === 1 ? 8 : 0),
+          (request.game === 'seotda'
+            ? 31
+            : request.game === 'gostop'
+              ? 68
+              : request.game === 'chess'
+                ? 24
+                : request.game === 'blackjack'
+                  ? 77
+                  : 50) + (i === 0 ? -8 : i === 1 ? 8 : 0),
         y: i === 2 ? 78 : 64,
       });
     }
@@ -775,6 +865,21 @@ export class LoungeRoom {
       if (!next) return false;
       this.settle('blackjack', next);
       this.blackjack = next;
+    } else if (a.kind === 'seotda') {
+      const g = this.seotda,
+        seat = this.view.seats.seotda.indexOf(id);
+      if (
+        !g ||
+        seat < 0 ||
+        g.id !== a.id ||
+        g.revision !== a.revision ||
+        this.seotdaAway.has(seat)
+      )
+        return false;
+      const next = seotdaAction(g, seat, a.action);
+      if (!next) return false;
+      this.settle('seotda', next);
+      this.seotda = next;
     } else if (a.kind === 'move') {
       if (!Number.isFinite(a.x) || !Number.isFinite(a.y) || this.busy(id))
         return false;
@@ -814,7 +919,7 @@ export class LoungeRoom {
         return false;
       const stake = a.stake ?? GAME_INFO[a.game].stake;
       const required =
-        a.game === 'poker' || a.game === 'blackjack'
+        a.game === 'poker' || a.game === 'blackjack' || a.game === 'seotda'
           ? (a.required ?? 3)
           : GAME_INFO[a.game].players;
       if (
@@ -952,9 +1057,16 @@ export class LoungeRoom {
     const b = this.view.seats.blackjack.indexOf(id);
     if (b >= 0 && this.blackjack && this.blackjack.phase !== 'over')
       this.blackjackAway.add(b);
+    const s = this.view.seats.seotda.indexOf(id);
+    if (s >= 0 && this.seotda && this.seotda.phase !== 'over')
+      this.seotdaAway.add(s);
     this.update({
       seats: {
         chess: this.view.seats.chess.map((s) => (s === id ? null : s)),
+        seotda:
+          this.seotda?.phase === 'over'
+            ? this.view.seats.seotda.map((s) => (s === id ? null : s))
+            : this.view.seats.seotda,
         gostop: this.view.seats.gostop.map((s) => (s === id ? null : s)),
         poker:
           this.poker?.phase === 'over'
@@ -1192,6 +1304,9 @@ export class LoungeRoom {
           !Array.isArray(p.seats?.blackjack) ||
           p.seats.blackjack.length < 2 ||
           p.seats.blackjack.length > 7 ||
+          !Array.isArray(p.seats?.seotda) ||
+          p.seats.seotda.length < 2 ||
+          p.seats.seotda.length > 7 ||
           !p.wallet ||
           !Number.isSafeInteger(p.wallet.balance) ||
           p.wallet.balance < 0 ||
@@ -1211,6 +1326,7 @@ export class LoungeRoom {
           invites: p.invites,
           poker: p.poker,
           blackjack: p.blackjack,
+          seotda: p.seotda,
           names: p.names,
           wallet: p.wallet,
         });
