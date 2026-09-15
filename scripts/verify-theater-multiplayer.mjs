@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {TheaterRoom} from '../app/theater-room.ts';
+import {defaultCostume,freshTheater,newRun} from '../app/theater-data.ts';
+const rooms=[],sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const wait=async(fn,label)=>{const until=Date.now()+40000;while(!fn()){if(Date.now()>until)throw new Error(label+' timeout: '+JSON.stringify(rooms.map(r=>({status:r.view.status,error:r.view.error,players:r.view.players.length,claiming:r.view.claiming}))));await sleep(100);}};
+const add=()=>{const r=new TheaterRoom();rooms.push(r);return r;};
+try{
+ const host=add();await host.start('host','',6,defaultCostume(6));assert.equal(host.view.status,'connected');console.log('Host opened as Hohyeon');
+ const guests=Array.from({length:6},add);await Promise.all(guests.map((r,i)=>r.start('guest',host.view.code,i,defaultCostume(i))));await wait(()=>guests.every(r=>r.view.status==='selecting'),'seven-client lobby');
+ assert.equal(guests[0].claim(6,defaultCostume(6)),false);
+ guests[0].claim(0,defaultCostume(0));guests[1].claim(0,defaultCostume(0));await wait(()=>[guests[0],guests[1]].filter(r=>r.view.status==='connected').length===1&&[guests[0],guests[1]].some(r=>r.view.status==='selecting'&&r.view.claiming===null&&r.view.error),'atomic duplicate claim');
+ const first=[guests[0],guests[1]].find(r=>r.view.status==='connected'),second=[guests[0],guests[1]].find(r=>r!==first);second.claim(1,defaultCostume(1));for(let i=2;i<6;i++)guests[i].claim(i,defaultCostume(i));await wait(()=>rooms.every(r=>r.view.status==='connected'&&r.view.players.length===7),'all seven joined');assert.equal(new Set(host.view.players.map(p=>p.actor)).size,7);console.log('Seven unique roles; simultaneous duplicate selection rejected');
+ first.setCostume(0,{...defaultCostume(0),top:'chef',bottom:'skirt'});await wait(()=>host.view.players.find(p=>p.actor===0)?.costume.top==='chef','shared wardrobe');assert.equal(first.setCostume(6,{...defaultCostume(6),top:'chef'}),false);
+ const costumes=freshTheater().costumes;for(const p of host.view.players)costumes[p.actor]=p.costume;const run=newRun('trip',6,costumes);host.setRun(run);await wait(()=>rooms.every(r=>r.view.run?.id===run.id),'shared stage');assert.equal(first.choose(1),false);assert.equal(host.choose(0),true);await wait(()=>rooms.every(r=>r.view.run?.step===1),'first scene');assert.equal(first.choose(1),true);await wait(()=>rooms.every(r=>r.view.run?.step===2),'second scene');const actorTwo=guests.find(r=>r.view.players.find(p=>p.id===r.view.self)?.actor===2);assert.equal(actorTwo.choose(0),true);await wait(()=>rooms.every(r=>r.view.run?.step===3),'shared ending');console.log('Wardrobes and all three actor-owned scene choices synchronized');
+ first.leave();await wait(()=>host.view.players.length===6,'departure release');const late=add();await late.start('guest',host.view.code,0,defaultCostume(0));await wait(()=>late.view.status==='selecting','late lobby');assert.equal(late.claim(0,defaultCostume(0)),true);await wait(()=>late.view.status==='connected'&&host.view.players.length===7,'released role reclaimed');
+ host.leave();await wait(()=>rooms.filter(r=>r!==host&&r!==first).every(r=>r.view.status==='error'),'host departure');console.log(JSON.stringify({sevenClients:true,hohyeonPlayable:true,atomicCharacterClaims:true,costumeOwnership:true,sharedPerformance:true,turnOwnership:true,leaveReleasesRole:true,hostClose:true}));
+}finally{for(const r of rooms)r.leave();await sleep(600);}

@@ -211,3 +211,81 @@ Change only these two issues:
 2. REMOVE THE ENTIRE CHECKERBOARD BACKGROUND and replace it with REAL ALPHA TRANSPARENCY. The checkerboard visible in the input is unwanted painted pixels, NOT the desired background. Every pixel outside the cap must have alpha = 0. Generate an actual RGBA PNG with a genuine transparent background and antialiased alpha edges. Do not draw a checkerboard, gray/white squares, white background, or any backdrop.
 One cap only, centered in a tight landscape frame with modest transparent margin, full silhouette visible. No head, face, ears, hair, body, mannequin, floor, stand, exterior shadow, text, watermark or other object. Preserve the embroidered flower design and soft polished chibi game style, making the flower cluster a little smaller only if needed to remain comfortably inside the lower crown.
 ```
+
+
+## 우당탕 극장 에셋 (2026-09-15)
+
+OpenAI 내장 imagegen으로 새 에셋 세 장을 생성했습니다. 원본 사진은 배포하지 않습니다. 호현은 일곱 번째 남성 친구로 다시 그렸으며 수염, 콧수염, 턱수염, 수염 그림자를 넣지 않았습니다.
+
+| 파일 | 실제 해상도 | 처리 |
+| --- | --- | --- |
+| public/assets/hohyeon-friend.png | 1024 × 1536 | RGB의 그려진 체크 배경을 런타임에서 연결 영역으로 제거. 얼굴 비율을 유지하고 기존 여섯 친구와 크기를 맞춤. |
+| public/assets/theater-wardrobe.png | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종. |
+| public/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용. |
+
+기존 friends-motion.png, accessories.png, jaemin-cap.png를 재사용합니다. 신체와 의상은 Canvas에서 층별로 합성하며, 분리된 의상과 신발 사이의 발목은 연속된 도형으로 연결합니다. 얼굴, 머리, 의상과 배경 일러스트는 생성 에셋입니다. 분장 미리보기의 흔들기·인사·기쁨 모션은 합성 캐릭터의 이동/회전/배율 애니메이션입니다. 새로운 보행 스프라이트를 생성했다고 표기하지 않습니다.
+
+### hohyeon-friend 생성 프롬프트
+
+```text
+Use case: identity-preserve
+Asset type: ONE full-body chibi adult male actor sprite for a friendly sitcom dress-up game.
+Input images: Image 1 is HoHyeon's identity reference. Image 2 is the authoritative visual style and body proportion reference for his six equal friends. This is a redesign of ONLY the man in image 1.
+Primary request: Make HoHyeon the seventh equal friend, with a more handsome soft refined male face: warm skin, gentle symmetrical expressive brown eyes, neat natural eyebrows, a calm friendly closed-mouth smile. Youthful ADULT MAN, not a child. Preserve his recognizable identity while softening the heavy brows and facial shapes.
+CRITICAL face change: COMPLETELY CLEAN SHAVEN. Absolutely NO beard, moustache, stubble, goatee, cheek whiskers, hair flecks, dark moustache area, or facial-hair shadow. His entire upper lip, cheeks, chin and jaw are smooth warm skin.
+Style/medium: Match image 2's soft polished painterly 2.5D chibi game art, big expressive head with delicate face, warm soft lighting, small adult-styled body. Head including hair is about 42 percent of total full-body height.
+Hair: neat natural side-part hairstyle, short at sides, soft swept locks on top. Although his natural hair is black, render ALL hair using cobalt BLUE #3154ac as the main color for a runtime recolor mask. Only hair is blue; eyebrows stay dark and natural.
+Neutral costume: simple plain TEAL T-shirt #20b3ad for runtime recoloring, charcoal shorts, clean white low-top shoes. Neck visible. Arms relaxed straight down with hands well away from face, feet comfortably apart.
+Composition: one front-facing full-body figure, centered, entire head and both feet visible with modest surrounding margin. No action pose.
+Background: genuine transparent PNG with an actual ALPHA channel, every pixel outside the figure alpha 0. DO NOT DRAW the checkerboard from image 2 and do not draw white paper.
+Remove all original accessories: NO cap or hat, NO glasses, NO backpack, NO bag, NO ball, NO handheld props, NO jewelry. No other character, labels, letters, logos, frame, floor or external shadow.
+```
+
+### theater-wardrobe 생성 프롬프트
+
+```text
+Use case: stylized-concept
+Asset type: ONE modular paper-doll wardrobe atlas for a polished chibi dress-up game, 2048 by 2048 square canvas.
+Layout: EXACTLY FOUR COLUMNS and FOUR ROWS, sixteen equal square cells. Cells have NO drawn borders. Each piece is centered in its own square and entirely inside that square with approximately 15 percent margin. Read the ordering strictly left to right, then top to bottom.
+Style/medium: soft painterly 2.5D chibi game illustration, softly rounded forms, refined material textures, warm even lighting. Front camera with only slight elevation. All clothes have a SMALL ADULT CHIBI torso shape with short compact proportions, not tall adult proportions. Consistent perspective, centered symmetry, scale and lighting across atlas.
+Clothing presentation: garments alone, shaped as if worn on an INVISIBLE BODY, not flat-lay. Hollow neckline and open sleeve ends. No human body, mannequin, hanger, head, face, neck, hair, hands, arms, legs or skin anywhere.
+ROW 1 — FOUR UPPER BODY GARMENTS:
+Column 1: white casual short-sleeve T-shirt.
+Column 2: ochre roomy hoodie, hood resting behind collar, not raised.
+Column 3: navy suit jacket over a cream shirt.
+Column 4: chestnut detective trench-coat UPPER BODY ONLY, hem ending at the upper hips, with lapels and double-breasted buttons.
+ROW 2 — FOUR UPPER BODY GARMENTS:
+Column 1: white chef's double-breasted coat.
+Column 2: pastel lavender pajama shirt.
+Column 3: blue denim jacket over a white T-shirt.
+Column 4: crimson knit cardigan over a white T-shirt.
+All eight upper-body garments have the SAME shoulder location and their hems end at the SAME upper-hip height within their cells. Sleeves are visible, descend naturally at the sides in a relaxed pose; cuffs or sleeve holes are open with absolutely NO HANDS.
+ROW 3 — FOUR LOWER BODY GARMENTS:
+Column 1: charcoal straight trousers.
+Column 2: indigo denim shorts.
+Column 3: cream pleated skirt.
+Column 4: lavender pajama trousers.
+Lower garments only, waist visible, no legs, skin, shoes or feet.
+ROW 4 — FOUR PAIRS OF FOOTWEAR:
+Column 1: a pair of cream sneakers.
+Column 2: a pair of brown ankle boots.
+Column 3: a pair of red canvas trainers.
+Column 4: a pair of yellow soft slippers.
+Each footwear cell contains exactly ONE matching pair of shoes standing side by side facing the camera, without legs or feet.
+Background: actual transparent RGBA PNG. Every pixel outside the clothing pieces must have alpha 0, including all margins and space between cells. No white canvas or checkerboard pixels.
+Constraints: exactly sixteen complete clothing assets, no missing cells, no duplicate garments, materially distinct silhouettes rather than simple recolors. No labels, writing, logos, grid lines, humans, mannequins, stand, floor, room, background, or cast shadows outside the pieces.
+```
+
+### theater-backstage 생성 프롬프트
+
+```text
+Use case: stylized-concept
+Asset type: ONE original game backdrop, landscape 1536 by 1024 pixels, for a cozy chibi friends' rehearsal and dressing studio. This is a usable scene background, not a mockup.
+Scene: a colorful small theater rehearsal studio seen straight on in an almost orthographic front view with subtle depth. A muted teal back wall with one tall arched stage opening centered on the wall. Warm honey-colored wooden stage floor spans the full width of the bottom third.
+Composition: Reserve the BROAD CENTRAL 70 PERCENT OF THE IMAGE as visually calm open wall, unobstructed arch area and empty stage floor where chibi avatars and game interface can later be overlaid. Keep all furnishings at the extreme edges. No person or furniture blocks the central floor.
+Leftmost edge: a tall dressing-room mirror outlined by warm amber round bulb lights, partly tucked behind rich midnight-navy and raspberry-plum velvet curtain fabric.
+Rightmost edge: a small tasteful hanging clothes rack with a few colorful garments, tucked close to a raspberry-plum and midnight-navy velvet curtain at the outer frame.
+Lighting/mood: warm inviting theatrical light, soft broad amber spotlight landing on the clear central floor, gentle shadows and restrained detail, no harsh glare. Beautiful velvet fabric folds on far left and right.
+Style/medium: polished soft painterly 2.5D theatrical chibi game environment with rounded forms and tactile materials, charming and cozy, compatible with big-headed illustrated friend characters. Attractive harmonious muted teal, deep navy, raspberry plum and warm amber palette.
+Constraints: no people, characters, faces, silhouettes of people, text, numbers, letters, signs, logos, watermarks, UI panels, buttons, screenshots, foreground furniture, clutter, or props across the central floor. Only one scene; landscape full-bleed opaque illustration.
+```
