@@ -1,3 +1,31 @@
+# 현재 게임 라운지의 에셋 (2026-09-15)
+
+고스톱 테이블·패 뒷면·획득패 영역은 CSS로 직접 제작했습니다. 패 내기, 뒤집기, 수거, 상대 피 가져오기 모션은 기존 화투 SVG에 Web Animations를 적용하며, 원본 아트 파일은 변경하지 않습니다. 공개 카드 이동 기록만 각 클라이언트에 전달합니다.
+
+2D 전신 렌더러는 얼굴·몸·옷을 잘라 합성하지 않습니다. 기존 모션 스프라이트와 액세서리를 재사용하고, 의상 변경은 일곱 친구의 완전한 전신 그림을 교체합니다.
+
+| 파일 | 출처 / 실제 크기 | 용도 |
+| --- | --- | --- |
+| friends-motion.png, accessories.png, jaemin-cap.png, hohyeon-friend.png | 기존 생성 에셋 재사용 | 원래 전신·걷기·인사, 안경, 작은 모자, 호현 |
+| lounge-friends-classic.png | 내장 imagegen, 1774×887 | 4×2 배치의 일곱 친구 기본복 |
+| lounge-friends-street.png | classic을 참조한 imagegen, 1774×887 | 얼굴과 포즈를 유지한 스트리트룩 |
+| lounge-friends-smart.png | classic을 참조한 imagegen, 1774×887 | 얼굴과 포즈를 유지한 외출복 |
+| lounge-room.png | 내장 imagegen, 1536×1024 | 로비 배경 |
+| wK...wP, bK...bP.svg | Chessnut / Alexis Luengas, Apache-2.0 | 체스 기물 12개, 원본 그대로 |
+| m01-01...m12-04.svg | Spenĉjo, CC BY-SA 4.0 | 한국 화투 48장, 원본 그대로 |
+
+생성 시트의 순서: 도원·강재·민서·승준 / 민재·재민·호현·빈칸. 실제 배경은 #fb03fa 또는 #fa04fa에 가까운 마젠타여서 런타임에서 허용 범위로 제거합니다. 청색 머리는 런타임 염색 채널입니다. 시트별 생성은 한 번씩 실행했으며 요청한 2048×1024보다 작은 1774×887 결과를 사용합니다. 전체 프롬프트는 public/assets/lounge/*.prompt.txt에 있습니다. 원본 이미지를 생성 후 업스케일했다고 주장하지 않습니다.
+
+Chessnut 원본: https://github.com/LexLuengas/chessnut-pieces . LICENSE와 COPYRIGHT를 같은 폴더에 보관합니다. chess.js 1.4.0은 BSD-2-Clause이며 CHESS-JS-LICENSE.txt를 보관합니다.
+
+화투는 https://github.com/itsent-lab/hwatu/tree/main/apps/web/public/cards/hwatu 에서 다운로드했습니다. 제작 Spenĉjo, 디자인 Marcus Richert, Louie Mantia Jr.의 원안에 기반합니다. **아트 라이선스는 저장소 코드의 MIT가 아닌 CC BY-SA 4.0**입니다. https://creativecommons.org/licenses/by-sa/4.0/ . HWATU-ATTRIBUTION.txt와 hwatu-verification.json에 원저작물, 출처, 검증값을 보관합니다. 아트 변형은 없으며 SVG를 게임 화면 크기에 맞춰 표시합니다.
+
+기본 규칙 참고: chess.js 공식 저장소, 한게임 3인 고스톱 가이드, 피망 고스톱 가이드(개인 마지막 패의 특수 피 보너스 제외, 1~5피 피박). 지역별 차이가 있는 규칙은 README 및 게임 안 규칙 설명으로 명시합니다.
+
+아래는 보존된 섬·극장 에셋의 이전 기록입니다.
+
+---
+
 # 여섯섬 에셋 제작 기록
 
 2026-09-11 생활 확장판. 새 배경·가구·시설은 OpenAI 내장 `image_gen` 도구로 제작했습니다. 원본 사진은 게임 배포에 포함하지 않습니다.

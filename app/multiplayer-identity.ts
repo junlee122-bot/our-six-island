@@ -35,12 +35,13 @@ export class FrameVerifier {
  private room:string;
  private selfId:string;
  private host:boolean;
- constructor(room:string,selfId:string,host:boolean){this.room=room;this.selfId=selfId;this.host=host;}
+ private maxBody:number;
+ constructor(room:string,selfId:string,host:boolean,maxBody=24000){this.room=room;this.selfId=selfId;this.host=host;this.maxBody=maxBody;}
  retain(ids:string[]){this.active=new Set(ids);}
  async read(value:unknown):Promise<Body|null>{
   try{
    const frame=value as SignedFrame;
-   if(!frame||typeof frame.body!=='string'||frame.body.length>24000||typeof frame.signature!=='string'||frame.signature.length!==86||!frame.key||typeof frame.key.x!=='string'||typeof frame.key.y!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(frame.key.x)||!/^[A-Za-z0-9_-]{43}$/.test(frame.key.y))return null;
+   if(!frame||typeof frame.body!=='string'||frame.body.length>this.maxBody||typeof frame.signature!=='string'||frame.signature.length!==86||!frame.key||typeof frame.key.x!=='string'||typeof frame.key.y!=='string'||!/^[A-Za-z0-9_-]{43}$/.test(frame.key.x)||!/^[A-Za-z0-9_-]{43}$/.test(frame.key.y))return null;
    const body=JSON.parse(frame.body) as Body;
    if(!body||body.v!==1||body.room!==this.room||typeof body.from!=='string'||body.from===this.selfId||(body.to!==this.selfId&&body.to!=='*')||!Number.isSafeInteger(body.seq)||body.seq<1)return null;
    const hostId=PEER_PREFIX+this.room;

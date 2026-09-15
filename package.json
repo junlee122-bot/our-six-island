@@ -14,12 +14,14 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "lint": "oxlint",
     "format": "oxfmt",
-    "test:theater-multiplayer": "node --experimental-strip-types scripts/verify-theater-multiplayer.mjs"
+    "test:theater-multiplayer": "node --experimental-strip-types scripts/verify-theater-multiplayer.mjs",
+    "test:lounge-multiplayer": "node --experimental-strip-types scripts/verify-lounge-multiplayer.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
     "@shadcn/react": "0.3.0",
     "@supabase/realtime-js": "2.116.0",
+    "chess.js": "1.4.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",

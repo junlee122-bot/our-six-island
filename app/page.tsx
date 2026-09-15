@@ -1,3 +1,5 @@
 'use client';
-import TheaterGame from './theater-game';
-export default function Page() { return <TheaterGame/>; }
+import LoungeGame from './lounge-game';
+export default function Page() {
+  return <LoungeGame />;
+}

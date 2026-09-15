@@ -1,0 +1,92 @@
+import {
+  HAIR_COLORS,
+  TOP_COLORS,
+  HATS,
+  GLASSES,
+  type Appearance,
+} from './character-style.ts';
+export { HAIR_COLORS, TOP_COLORS, HATS, GLASSES };
+export type Look = Appearance & {
+  collection: 'original' | 'classic' | 'street' | 'smart';
+};
+export const COLLECTIONS = [
+  { id: 'original', name: '처음 만난 우리', note: '기존 캐릭터의 일상복' },
+  { id: 'classic', name: '우리다운 하루', note: '친구마다 다른 시그니처 룩' },
+  { id: 'street', name: '느긋한 주말', note: '후드와 여유로운 실루엣' },
+  { id: 'smart', name: '오늘의 약속', note: '셔츠 · 가디건 · 재킷' },
+] as const;
+export const defaultLook = (actor: number): Look => ({
+  collection: 'classic',
+  hair: actor === 0 ? 'wine' : 'ink',
+  top:
+    actor === 2 || actor === 3 ? 'cream' : actor === 6 ? 'ocean' : 'charcoal',
+  hat: actor === 5 ? 'cap' : 'none',
+  glasses:
+    actor === 1 || actor === 4 ? 'round' : actor === 2 ? 'silver' : 'none',
+  clip: false,
+});
+export function readLook(value: unknown, actor: number): Look {
+  const d = defaultLook(actor),
+    v = (value && typeof value === 'object' ? value : {}) as Partial<Look>;
+  return {
+    collection: COLLECTIONS.some((c) => c.id === v.collection)
+      ? v.collection!
+      : d.collection,
+    hair: HAIR_COLORS.some((c) => c.id === v.hair) ? v.hair! : d.hair,
+    top: TOP_COLORS.some((c) => c.id === v.top) ? v.top! : d.top,
+    hat: HATS.some((c) => c.id === v.hat) ? v.hat! : d.hat,
+    glasses: GLASSES.some((c) => c.id === v.glasses) ? v.glasses! : d.glasses,
+    clip: v.clip === true,
+  };
+}
+export const LOUNGE_SAVE_KEY = 'hohyeon-lounge-v1';
+export type LoungeSave = {
+  version: 1;
+  actor: number;
+  looks: Look[];
+  saved: { id: string; actor: number; look: Look; name: string }[];
+  visits: number;
+};
+export function freshLounge(): LoungeSave {
+  return {
+    version: 1,
+    actor: 6,
+    looks: Array.from({ length: 7 }, (_, i) => defaultLook(i)),
+    saved: [],
+    visits: 0,
+  };
+}
+export function readLounge(raw: string | null): LoungeSave {
+  try {
+    const s = JSON.parse(raw ?? 'null');
+    if (!s || s.version !== 1) return freshLounge();
+    return {
+      version: 1,
+      actor:
+        Number.isInteger(s.actor) && s.actor >= 0 && s.actor < 7 ? s.actor : 6,
+      looks: Array.from({ length: 7 }, (_, i) => readLook(s.looks?.[i], i)),
+      saved: Array.isArray(s.saved)
+        ? s.saved
+            .filter(
+              (x: any) =>
+                x &&
+                typeof x.id === 'string' &&
+                typeof x.name === 'string' &&
+                Number.isInteger(x.actor) &&
+                x.actor >= 0 &&
+                x.actor < 7,
+            )
+            .slice(0, 28)
+            .map((x: any) => ({
+              id: x.id.slice(0, 80),
+              actor: x.actor,
+              name: x.name.slice(0, 50),
+              look: readLook(x.look, x.actor),
+            }))
+        : [],
+      visits: Math.max(0, Math.min(1e5, Number(s.visits) || 0)),
+    };
+  } catch {
+    return freshLounge();
+  }
+}
