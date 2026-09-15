@@ -290,6 +290,89 @@ try {
   console.log(
     'Seven-seat poker, automatic dealer, private cards and shared Beom settlement verified.',
   );
+  host.action({
+    kind: 'invite',
+    game: 'blackjack',
+    players: guests.map((r) => r.view.self),
+    required: 7,
+    stake: 1000,
+  });
+  await wait(
+    () =>
+      guests.every((r) =>
+        r.view.invites.some(
+          (i) => i.game === 'blackjack' && i.status === 'waiting',
+        ),
+      ),
+    'blackjack invitation',
+  );
+  const bjInvite = host.view.invites.find((i) => i.game === 'blackjack');
+  for (const guest of guests)
+    guest.action({ kind: 'reply', id: bjInvite.id, accept: true });
+  await wait(
+    () => rooms.every((r) => r.view.blackjack?.id),
+    'seven-seat blackjack start',
+  );
+  assert(rooms.every((r) => r.view.wallet.held === 4000));
+  let bjActions = 0;
+  while (host.view.blackjack.phase !== 'over') {
+    await wait(
+      () =>
+        rooms.every(
+          (r) => r.view.blackjack.revision === host.view.blackjack.revision,
+        ),
+      'blackjack revision sync',
+    );
+    const state = host.view.blackjack;
+    for (const r of rooms) {
+      assert(!('deck' in r.view.blackjack));
+      if (['players', 'reveal'].includes(state.phase))
+        assert.equal(r.view.blackjack.dealer[1], null);
+    }
+    if (state.phase !== 'players') {
+      await wait(
+        () => host.view.blackjack.revision > state.revision,
+        'blackjack automatic dealer',
+      );
+      continue;
+    }
+    const actor = rooms.find(
+      (r) => r.view.self === host.view.seats.blackjack[state.turn],
+    );
+    const legal = actor.view.blackjack.legal;
+    const kind = legal.split ? 'split' : legal.double ? 'double' : 'stand';
+    assert(++bjActions < 80);
+    actor.action({
+      kind: 'blackjack',
+      id: state.id,
+      revision: state.revision,
+      action: { kind },
+    });
+    await wait(
+      () => host.view.blackjack.revision > state.revision,
+      'blackjack action',
+    );
+  }
+  await wait(
+    () =>
+      rooms.every(
+        (r) => r.view.blackjack.phase === 'over' && r.view.wallet.held === 0,
+      ),
+    'blackjack wallet settlement',
+  );
+  assert.equal(
+    rooms.reduce((n, r) => n + r.view.wallet.balance, 0) +
+      (host.bank.ledger.houseBalance ?? 0),
+    700000,
+  );
+  assert(
+    rooms.every((r) =>
+      r.view.wallet.history.some((h) => h.id === host.view.blackjack.id),
+    ),
+  );
+  console.log(
+    'Seven-seat blackjack, dealer hole privacy, doubles and casino Beom settlement verified.',
+  );
   for (let i = 0; i < 12; i++) {
     host.lastChat.clear();
     host.action({ kind: 'chat', text: '가'.repeat(120) });
@@ -335,6 +418,7 @@ try {
       chessCheckmate: true,
       goStopComplete: true,
       sevenSeatPoker: true,
+      sevenSeatBlackjack: true,
       automaticDealer: true,
       sharedBeom: true,
       returningWallet: true,

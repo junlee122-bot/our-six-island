@@ -3,7 +3,7 @@
 // This module alone does not provide durable storage or cross-host authority.
 export const INITIAL_BEOM = 100_000;
 export const BEOM_LABEL = '범';
-export type EconomyGame = 'chess' | 'gostop' | 'poker';
+export type EconomyGame = 'chess' | 'gostop' | 'poker' | 'blackjack';
 export type GameEscrow = {
   game: EconomyGame;
   wallets: string[];
@@ -16,6 +16,8 @@ export type LoungeLedger = {
   revision: number;
   accounts: Record<string, number>;
   games: Record<string, GameEscrow>;
+  // Optional only for legacy v1 ledgers. Casino net is the counterparty to blackjack.
+  houseBalance?: number;
 };
 const safe = (n: unknown): n is number =>
   typeof n === 'number' && Number.isSafeInteger(n);
@@ -33,6 +35,7 @@ export const newLoungeLedger = (): LoungeLedger => ({
   revision: 0,
   accounts: {},
   games: {},
+  houseBalance: 0,
 });
 
 export function validateLedger(value: unknown): asserts value is LoungeLedger {
@@ -58,12 +61,13 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
   for (const [id, amount] of accounts)
     if (!walletKey(id) || !safe(amount) || amount < 0)
       fail('유효하지 않은 지갑 잔액입니다.');
-  let held = 0;
+  let held = 0,
+    casinoNet = 0;
   for (const [id, g] of games) {
     if (
       !matchKey(id) ||
       !g ||
-      !['chess', 'gostop', 'poker'].includes(g.game) ||
+      !['chess', 'gostop', 'poker', 'blackjack'].includes(g.game) ||
       !['reserved', 'settled', 'void'].includes(g.state) ||
       !Array.isArray(g.wallets) ||
       !Array.isArray(g.deposits) ||
@@ -74,7 +78,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
       new Set(g.wallets).size !== g.wallets.length ||
       g.deposits.some((n) => !safe(n) || n < 0) ||
       g.result.some((n, i) => !safe(n) || n < -g.deposits[i]) ||
-      sum(g.result) !== 0 ||
+      (g.game !== 'blackjack' && sum(g.result) !== 0) ||
+      (g.game === 'blackjack' && g.result.some((n, i) => n > g.deposits[i])) ||
       ((g.state === 'reserved' || g.state === 'void') &&
         g.result.some((n) => n !== 0))
     )
@@ -89,10 +94,15 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
     )
       fail('게임의 참가 인원이 올바르지 않습니다.');
     if (g.state === 'reserved') held += sum(g.deposits);
+    if (g.game === 'blackjack' && g.state === 'settled')
+      casinoNet -= sum(g.result);
   }
+  const houseBalance = v.houseBalance === undefined ? 0 : v.houseBalance;
   if (
+    !safe(houseBalance) ||
+    houseBalance !== casinoNet ||
     !safe(held) ||
-    sum(accounts.map(([, amount]) => amount)) + held !==
+    sum(accounts.map(([, amount]) => amount)) + held + houseBalance !==
       accounts.length * INITIAL_BEOM
   )
     fail('공통 지갑 총액이 일치하지 않습니다.');
@@ -174,7 +184,9 @@ export function settleGame(
     !Array.isArray(result) ||
     result.length !== escrow.wallets.length ||
     result.some((n, i) => !safe(n) || n < -escrow.deposits[i]) ||
-    sum(result) !== 0 ||
+    (escrow.game !== 'blackjack' && sum(result) !== 0) ||
+    (escrow.game === 'blackjack' &&
+      result.some((n, i) => n > escrow.deposits[i])) ||
     (voided && result.some((n) => n !== 0))
   )
     fail('정산 금액이 올바르지 않습니다.');
@@ -185,6 +197,8 @@ export function settleGame(
     return ledger;
   }
   const next = changed(ledger);
+  if (escrow.game === 'blackjack')
+    next.houseBalance = (next.houseBalance ?? 0) - sum(result);
   next.games[id] = { ...next.games[id], state, result: [...result] };
   escrow.wallets.forEach((wallet, i) => {
     next.accounts[wallet] += escrow.deposits[i] + result[i];

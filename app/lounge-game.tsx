@@ -28,10 +28,12 @@ import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
 import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
+import { BlackjackTable } from './lounge-blackjack-table';
 import {
   LoungeRoom,
   GAME_INFO,
   GAME_KINDS,
+  gameReservation,
   type GameKind,
   type LoungeView,
   type LoungePlayer,
@@ -280,13 +282,17 @@ function RequestGame({
     [chosen, setChosen] = useState<string[]>(
       view.players.filter((p) => p.id !== view.self).map((p) => p.id),
     );
-  const needed = game === 'poker' ? pokerCount : GAME_INFO[game].players,
+  const needed =
+      game === 'poker' || game === 'blackjack'
+        ? pokerCount
+        : GAME_INFO[game].players,
+    reserved = gameReservation(game, stake),
     active = (k: GameKind) =>
       k === 'chess'
         ? !!view.chess && !view.chess.winner
         : k === 'gostop'
           ? !!view.gostop && view.gostop.phase !== 'over'
-          : !!view.poker && view.poker.phase !== 'over',
+          : !!view[k] && view[k].phase !== 'over',
     busy = (id: string) =>
       Object.entries(view.seats).some(
         ([k, seats]) => active(k as GameKind) && seats.includes(id),
@@ -331,11 +337,13 @@ function RequestGame({
       <div className="l-request-heading">
         <div className="l-money-settings">
           <label>
-            {game === 'poker'
-              ? '바이인'
-              : game === 'gostop'
-                ? '최대 손실'
-                : '판돈'}
+            {game === 'blackjack'
+              ? '기본 베팅'
+              : game === 'poker'
+                ? '바이인'
+                : game === 'gostop'
+                  ? '최대 손실'
+                  : '판돈'}
             <select
               aria-label="참가 금액"
               value={stake}
@@ -348,11 +356,11 @@ function RequestGame({
               ))}
             </select>
           </label>
-          {game === 'poker' && (
+          {(game === 'poker' || game === 'blackjack') && (
             <label>
               정원
               <select
-                aria-label="홀덤 정원"
+                aria-label={GAME_INFO[game].name + ' 정원'}
                 value={pokerCount}
                 onChange={(e) => setPokerCount(Number(e.target.value))}
               >
@@ -365,11 +373,13 @@ function RequestGame({
             </label>
           )}
           <p>
-            {game === 'poker'
-              ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
-              : game === 'gostop'
-                ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
-                : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
+            {game === 'blackjack'
+              ? `기본 베팅 ${beom(stake)} · 최대 ${beom(reserved)} 예약. 스플릿·더블에 쓰지 않은 금액은 종료 시 반환합니다.`
+              : game === 'poker'
+                ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
+                : game === 'gostop'
+                  ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
+                  : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
             내 사용 가능 잔액: {beom(view.wallet.balance)}
           </p>
         </div>
@@ -435,7 +445,7 @@ function RequestGame({
             unavailable ||
             busy(view.self) ||
             targets.length < needed - 1 ||
-            view.wallet.balance < stake
+            view.wallet.balance < reserved
           }
           onClick={() => {
             if (
@@ -489,12 +499,16 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                     ? '이번에는 쉬어 가기로 했어요.'
                     : '같이 한 판 할까요?'}{' '}
                 · {r.accepted.length}/{r.required}명 수락 ·{' '}
-                {r.game === 'gostop'
-                  ? '최대 손실'
-                  : r.game === 'poker'
-                    ? '바이인'
-                    : '판돈'}{' '}
+                {r.game === 'blackjack'
+                  ? '기본 베팅 '
+                  : r.game === 'gostop'
+                    ? '최대 손실'
+                    : r.game === 'poker'
+                      ? '바이인'
+                      : '판돈'}{' '}
                 {beom(r.stake)}
+                {r.game === 'blackjack' &&
+                  ` · 최대 ${beom(gameReservation(r.game, r.stake))} 예약`}
               </p>
             </div>
             {accepted ? (
@@ -508,12 +522,16 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
               <div>
                 <button
                   className="l-primary"
-                  disabled={view.wallet.balance < r.stake}
+                  disabled={
+                    view.wallet.balance < gameReservation(r.game, r.stake)
+                  }
                   onClick={() =>
                     room.action({ kind: 'reply', id: r.id, accept: true })
                   }
                 >
-                  {view.wallet.balance < r.stake ? '범 잔액 부족' : '참가하기'}
+                  {view.wallet.balance < gameReservation(r.game, r.stake)
+                    ? '범 잔액 부족'
+                    : '참가하기'}
                 </button>
                 <button
                   className="l-text"
@@ -562,13 +580,13 @@ function GameScreen({
         ? view.chess
         : kind === 'gostop'
           ? view.gostop
-          : view.poker,
+          : view[kind],
     ended =
       kind === 'chess'
         ? !!view.chess?.winner
         : kind === 'gostop'
           ? view.gostop?.phase === 'over'
-          : view.poker?.phase === 'over';
+          : view[kind]?.phase === 'over';
   return (
     <section className={'l-game-screen ' + kind}>
       <header>
@@ -594,11 +612,13 @@ function GameScreen({
       <div className="l-game-content">
         <div className="l-game-money">
           <span>
-            {kind === 'poker'
-              ? '바이인과 팟을 공통 범 지갑으로 정산합니다.'
-              : kind === 'gostop'
-                ? '1점 = 100범 · 초대장에서 합의한 최대 손실 적용'
-                : '초대장에서 합의한 판돈 · 무승부는 전액 반환'}
+            {kind === 'blackjack'
+              ? '최대 예약금에서 실제 베팅과 딜러 배당을 정산합니다.'
+              : kind === 'poker'
+                ? '바이인과 팟을 공통 범 지갑으로 정산합니다.'
+                : kind === 'gostop'
+                  ? '1점 = 100범 · 초대장에서 합의한 최대 손실 적용'
+                  : '초대장에서 합의한 판돈 · 무승부는 전액 반환'}
           </span>
           <b>
             <Coins size={14} /> {beom(view.wallet.balance)}
@@ -624,6 +644,20 @@ function GameScreen({
               }
               onResign={() =>
                 room.action({ kind: 'resign', id: view.chess!.id })
+              }
+            />
+          ) : kind === 'blackjack' ? (
+            <BlackjackTable
+              match={view.blackjack!}
+              seat={seat}
+              names={names}
+              onAction={(action) =>
+                room.action({
+                  kind: 'blackjack',
+                  id: view.blackjack!.id,
+                  revision: view.blackjack!.revision,
+                  action,
+                })
               }
             />
           ) : kind === 'poker' ? (
@@ -689,9 +723,11 @@ function GameScreen({
           <p className="l-modal-intro">
             {kind === 'chess'
               ? '지금 나가면 기권으로 처리됩니다.'
-              : kind === 'poker'
-                ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
-                : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
+              : kind === 'blackjack'
+                ? '자리를 떠나면 남은 손을 자동 스탠드하고 정상적으로 범을 정산합니다. 게임으로 돌아와도 퇴장 결정을 취소할 수 없습니다.'
+                : kind === 'poker'
+                  ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
+                  : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
           </p>
           <div className="l-modal-actions">
             <button className="l-secondary" onClick={() => setLeave(false)}>
@@ -832,7 +868,9 @@ function RoomFloor({
         </strong>
       </div>
       {(
-        (area === 'casino' ? ['chess', 'poker'] : ['gostop']) as GameKind[]
+        (area === 'casino'
+          ? ['chess', 'poker', 'blackjack']
+          : ['gostop']) as GameKind[]
       ).map((kind) => (
         <button
           key={kind}
@@ -842,7 +880,9 @@ function RoomFloor({
         >
           <span className="l-table-top">
             {kind !== 'gostop' ? (
-              kind === 'poker' ? (
+              kind === 'blackjack' ? (
+                <span className="l-mini-blackjack">21</span>
+              ) : kind === 'poker' ? (
                 <span className="l-mini-poker">
                   <i>A♠</i>
                   <i>K♥</i>
@@ -866,7 +906,7 @@ function RoomFloor({
                 ? view.chess
                 : kind === 'gostop'
                   ? view.gostop
-                  : view.poker)
+                  : view[kind])
                 ? '게임 보기'
                 : '초대하기'}
               <ArrowUpRight size={11} />
@@ -939,7 +979,8 @@ export default function LoungeGame() {
   const openedGames = useRef(new Set<string>()),
     chessId = view.chess?.id,
     goId = view.gostop?.id,
-    pokerId = view.poker?.id;
+    pokerId = view.poker?.id,
+    blackjackId = view.blackjack?.id;
   useEffect(() => {
     if (view.status !== 'connected') {
       setGameScreen(null);
@@ -949,6 +990,7 @@ export default function LoungeGame() {
       ['chess', chessId],
       ['gostop', goId],
       ['poker', pokerId],
+      ['blackjack', blackjackId],
     ] as [GameKind, string | undefined][]) {
       if (id && !openedGames.current.has(id)) {
         openedGames.current.add(id);
@@ -958,7 +1000,7 @@ export default function LoungeGame() {
         }
       }
     }
-  }, [chessId, goId, pokerId, view.status, view.self]);
+  }, [chessId, goId, pokerId, blackjackId, view.status, view.self]);
   const inviteStates = useRef(new Map<string, string>());
   useEffect(() => {
     document.querySelector('.l-app')?.scrollTo({ top: 0 });
@@ -1043,7 +1085,7 @@ export default function LoungeGame() {
         ? view.chess
         : kind === 'gostop'
           ? view.gostop
-          : view.poker)
+          : view[kind])
     )
       setGameScreen(kind);
     else requestGame(kind);
@@ -1279,6 +1321,20 @@ export default function LoungeGame() {
                   </span>
                   <ArrowUpRight size={19} />
                 </button>
+                <button
+                  onClick={() => {
+                    setTab('casino');
+                    openTable('blackjack');
+                  }}
+                >
+                  <span className="l-game-symbol blackjack">21</span>
+                  <span>
+                    <strong>블랙잭</strong>
+                    <small>딜러보다 높게, 21을 넘지 않게.</small>
+                    <em>2–7명 · 내추럴 3:2</em>
+                  </span>
+                  <ArrowUpRight size={19} />
+                </button>
                 <button onClick={() => openTable('chess')}>
                   <span className="l-game-symbol chess">♞</span>
                   <span>
@@ -1416,7 +1472,7 @@ export default function LoungeGame() {
             <p>
               {view.wallet.held > 0
                 ? `게임에 예약한 금액 ${beom(view.wallet.held)}`
-                : '체스 · 고스톱 · 홀덤의 판돈과 정산에 사용해요.'}
+                : '체스 · 고스톱 · 홀덤 · 블랙잭의 베팅과 정산에 사용해요.'}
             </p>
           </div>
           <p className="l-help-text">

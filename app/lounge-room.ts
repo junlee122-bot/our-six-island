@@ -4,6 +4,15 @@ import { readLook, type Look } from './lounge-look.ts';
 import { channelIdentity, channelKey, seal, unseal } from './lounge-crypto.ts';
 import { ACTORS } from './theater-data.ts';
 import {
+  newBlackjack,
+  blackjackAction,
+  blackjackDeal,
+  blackjackView,
+  type BlackjackMatch,
+  type BlackjackView,
+  type BlackjackAction,
+} from './lounge-blackjack.ts';
+import {
   newPoker,
   pokerAction,
   pokerDeal,
@@ -44,13 +53,16 @@ import {
   type GoView,
   type GoAction,
 } from './lounge-gostop.ts';
-export type GameKind = 'chess' | 'gostop' | 'poker';
+export type GameKind = 'chess' | 'gostop' | 'poker' | 'blackjack';
 export const GAME_INFO = {
   chess: { name: '체스', symbol: '♞', players: 2, stake: 1000 },
   gostop: { name: '고스톱', symbol: '花', players: 3, stake: 10000 },
   poker: { name: '텍사스 홀덤', symbol: '♠', players: 3, stake: 10000 },
+  blackjack: { name: '블랙잭', symbol: '21', players: 3, stake: 1000 },
 } as const;
-export const GAME_KINDS: GameKind[] = ['chess', 'gostop', 'poker'];
+export const GAME_KINDS: GameKind[] = ['chess', 'gostop', 'poker', 'blackjack'];
+export const gameReservation = (game: GameKind, stake: number) =>
+  game === 'blackjack' ? stake * 4 : stake;
 export type GameInvite = {
   id: string;
   game: GameKind;
@@ -81,10 +93,12 @@ export type LoungeWorld = {
     chess: (string | null)[];
     gostop: (string | null)[];
     poker: (string | null)[];
+    blackjack: (string | null)[];
   };
   chess: ChessMatch | null;
   gostop: GoView | null;
   poker: PokerView | null;
+  blackjack: BlackjackView | null;
   names: Record<GameKind, string[]>;
   wallet: ReturnType<LoungeBank['view']>;
   chat: { id: string; actor: number; text: string }[];
@@ -110,11 +124,13 @@ const empty = (): LoungeView => ({
     chess: [null, null],
     gostop: [null, null, null],
     poker: [null, null, null],
+    blackjack: [null, null, null],
   },
   chess: null,
   gostop: null,
   poker: null,
-  names: { chess: [], gostop: [], poker: [] },
+  blackjack: null,
+  names: { chess: [], gostop: [], poker: [], blackjack: [] },
   wallet: { balance: 0, held: 0, history: [] },
   chat: [],
   invites: [],
@@ -174,6 +190,7 @@ export type LoungeAction =
     }
   | { kind: 'area'; area: 'lounge' | 'casino' }
   | { kind: 'poker'; id: string; revision: number; action: PokerAction }
+  | { kind: 'blackjack'; id: string; revision: number; action: BlackjackAction }
   | { kind: 'reply'; id: string; accept: boolean }
   | { kind: 'cancel'; id: string }
   | { kind: 'stand'; game: GameKind }
@@ -204,6 +221,9 @@ export class LoungeRoom {
   private chess: ChessMatch | null = null;
   private go: GoMatch | null = null;
   private poker: PokerMatch | null = null;
+  private blackjack: BlackjackMatch | null = null;
+  private blackjackAway = new Set<number>();
+  private blackjackTimer: ReturnType<typeof setTimeout> | null = null;
   private bank = new LoungeBank(null);
   private wallets = new Map<string, string>();
   private walletIdentity: WalletIdentity | null = null;
@@ -259,6 +279,9 @@ export class LoungeRoom {
       poker: this.poker
         ? pokerView(this.poker, this.view.seats.poker.indexOf(id))
         : null,
+      blackjack: this.blackjack
+        ? blackjackView(this.blackjack, this.view.seats.blackjack.indexOf(id))
+        : null,
       names: this.view.names,
       wallet: this.bank.view(this.wallets.get(id)),
     };
@@ -280,12 +303,57 @@ export class LoungeRoom {
       poker: this.poker
         ? pokerView(this.poker, this.view.seats.poker.indexOf(this.view.self))
         : null,
+      blackjack: this.blackjack
+        ? blackjackView(
+            this.blackjack,
+            this.view.seats.blackjack.indexOf(this.view.self),
+          )
+        : null,
       wallet: this.bank.view(this.wallets.get(this.view.self)),
     });
     for (const p of players)
       if (p.id !== this.view.self) this.send(p.id, this.packet(p.id));
     for (const id of this.challenges.keys()) this.lobby(id);
     this.scheduleDealer();
+    this.scheduleBlackjack();
+  }
+  private scheduleBlackjack() {
+    const g = this.blackjack;
+    if (this.blackjackTimer || !g || g.phase === 'over') return;
+    const automatic = g.phase !== 'players';
+    if (!automatic && !this.blackjackAway.has(g.turn)) return;
+    const { id, revision } = g,
+      generation = this.generation;
+    this.blackjackTimer = setTimeout(
+      () => {
+        this.blackjackTimer = null;
+        if (generation !== this.generation) return;
+        const current = this.blackjack;
+        if (!current || current.id !== id || current.revision !== revision) {
+          this.scheduleBlackjack();
+          return;
+        }
+        try {
+          const next = automatic
+            ? blackjackDeal(current)
+            : blackjackAction(current, current.turn, { kind: 'stand' });
+          if (next) {
+            this.settle('blackjack', next);
+            this.blackjack = next;
+            this.sync();
+          }
+        } catch (error) {
+          this.update({
+            error:
+              error instanceof Error
+                ? error.message
+                : '범 정산을 저장하지 못했습니다.',
+          });
+        }
+      },
+      automatic ? 1100 : 600,
+    );
+    (this.blackjackTimer as any).unref?.();
   }
   private scheduleDealer() {
     if (this.dealerTimer || !this.poker || this.poker.phase === 'over') return;
@@ -331,7 +399,10 @@ export class LoungeRoom {
     );
     (this.dealerTimer as any).unref?.();
   }
-  private settle(kind: GameKind, game: ChessMatch | GoMatch | PokerMatch) {
+  private settle(
+    kind: GameKind,
+    game: ChessMatch | GoMatch | PokerMatch | BlackjackMatch,
+  ) {
     const escrow = this.bank.ledger.games[game.id];
     if (!escrow || escrow.state !== 'reserved') return;
     if (kind === 'chess') {
@@ -357,7 +428,7 @@ export class LoungeRoom {
               ),
         );
     } else {
-      const g = game as PokerMatch;
+      const g = game as PokerMatch | BlackjackMatch;
       if (g.phase === 'over')
         this.bank.commit(settleGame(this.bank.ledger, g.id, g.result));
     }
@@ -384,6 +455,10 @@ export class LoungeRoom {
     this.houseRelease = null;
     if (this.dealerTimer) clearTimeout(this.dealerTimer);
     this.dealerTimer = null;
+    if (this.blackjackTimer) clearTimeout(this.blackjackTimer);
+    this.blackjackTimer = null;
+    this.blackjack = null;
+    this.blackjackAway.clear();
     this.poker = null;
     this.pokerAway.clear();
     this.wallets.clear();
@@ -442,7 +517,7 @@ export class LoungeRoom {
     }, 25000);
     try {
       const [room, identity, wallet] = await Promise.all([
-        IslandRoom.create(role === 'host', code, 'hohyeon-lounge-v2:', 131072),
+        IslandRoom.create(role === 'host', code, 'hohyeon-lounge-v3:', 131072),
         channelIdentity(),
         this.walletIdentity ?? loadWalletIdentity(),
       ]);
@@ -583,7 +658,9 @@ export class LoungeRoom {
       ? !!this.chess && !this.chess.winner
       : game === 'gostop'
         ? !!this.go && this.go.phase !== 'over'
-        : !!this.poker && this.poker.phase !== 'over';
+        : game === 'poker'
+          ? !!this.poker && this.poker.phase !== 'over'
+          : !!this.blackjack && this.blackjack.phase !== 'over';
   }
   private busy(id: string, except = '') {
     return (
@@ -599,13 +676,17 @@ export class LoungeRoom {
   private launch(request: GameInvite) {
     const id = crypto.randomUUID(),
       wallets = request.accepted.map((p) => this.wallets.get(p)!);
-    const deposits = request.accepted.map(() => request.stake);
+    const deposits = request.accepted.map(() =>
+      gameReservation(request.game, request.stake),
+    );
     const game =
       request.game === 'chess'
         ? newChess(id)
         : request.game === 'gostop'
           ? newGo(id, shuffleCards())
-          : newPoker(id, deposits);
+          : request.game === 'poker'
+            ? newPoker(id, deposits)
+            : newBlackjack(id, wallets.length, request.stake);
     let ledger = reserveGame(
       this.bank.ledger,
       id,
@@ -636,9 +717,12 @@ export class LoungeRoom {
     });
     if (request.game === 'chess') this.chess = game as ChessMatch;
     else if (request.game === 'gostop') this.go = game as GoMatch;
-    else {
+    else if (request.game === 'poker') {
       this.poker = game as PokerMatch;
       this.pokerAway.clear();
+    } else {
+      this.blackjack = game as BlackjackMatch;
+      this.blackjackAway.clear();
     }
     for (let i = 0; i < request.accepted.length; i++) {
       const p = this.members.get(request.accepted[i])!;
@@ -646,8 +730,11 @@ export class LoungeRoom {
         ...p,
         area: request.game === 'gostop' ? 'lounge' : 'casino',
         x:
-          (request.game === 'chess' ? 31 : 68) +
-          (i === 0 ? -8 : i === 1 ? 8 : 0),
+          (request.game === 'chess'
+            ? 24
+            : request.game === 'blackjack'
+              ? 77
+              : 50) + (i === 0 ? -8 : i === 1 ? 8 : 0),
         y: i === 2 ? 78 : 64,
       });
     }
@@ -673,6 +760,21 @@ export class LoungeRoom {
       if (!next) return false;
       this.settle('poker', next);
       this.poker = next;
+    } else if (a.kind === 'blackjack') {
+      const g = this.blackjack,
+        seat = this.view.seats.blackjack.indexOf(id);
+      if (
+        !g ||
+        seat < 0 ||
+        g.id !== a.id ||
+        g.revision !== a.revision ||
+        this.blackjackAway.has(seat)
+      )
+        return false;
+      const next = blackjackAction(g, seat, a.action);
+      if (!next) return false;
+      this.settle('blackjack', next);
+      this.blackjack = next;
     } else if (a.kind === 'move') {
       if (!Number.isFinite(a.x) || !Number.isFinite(a.y) || this.busy(id))
         return false;
@@ -712,13 +814,16 @@ export class LoungeRoom {
         return false;
       const stake = a.stake ?? GAME_INFO[a.game].stake;
       const required =
-        a.game === 'poker' ? (a.required ?? 3) : GAME_INFO[a.game].players;
+        a.game === 'poker' || a.game === 'blackjack'
+          ? (a.required ?? 3)
+          : GAME_INFO[a.game].players;
       if (
         ![1000, 5000, 10000, 20000].includes(stake) ||
         !Number.isInteger(required) ||
         required < 2 ||
         required > 7 ||
-        this.bank.view(this.wallets.get(id)).balance < stake
+        this.bank.view(this.wallets.get(id)).balance <
+          gameReservation(a.game, stake)
       )
         return false;
       const invited = [...new Set(a.players)].filter(
@@ -760,7 +865,8 @@ export class LoungeRoom {
         if (
           this.busy(id, request.id) ||
           this.gameActive(request.game) ||
-          this.bank.view(this.wallets.get(id)).balance < request.stake
+          this.bank.view(this.wallets.get(id)).balance <
+            gameReservation(request.game, request.stake)
         )
           return false;
         request.accepted.push(id);
@@ -843,6 +949,9 @@ export class LoungeRoom {
     const p = this.view.seats.poker.indexOf(id);
     if (p >= 0 && this.poker && this.poker.phase !== 'over')
       this.pokerAway.add(p);
+    const b = this.view.seats.blackjack.indexOf(id);
+    if (b >= 0 && this.blackjack && this.blackjack.phase !== 'over')
+      this.blackjackAway.add(b);
     this.update({
       seats: {
         chess: this.view.seats.chess.map((s) => (s === id ? null : s)),
@@ -851,6 +960,10 @@ export class LoungeRoom {
           this.poker?.phase === 'over'
             ? this.view.seats.poker.map((s) => (s === id ? null : s))
             : this.view.seats.poker,
+        blackjack:
+          this.blackjack?.phase === 'over'
+            ? this.view.seats.blackjack.map((s) => (s === id ? null : s))
+            : this.view.seats.blackjack,
       },
     });
   }
@@ -1076,6 +1189,9 @@ export class LoungeRoom {
           !Array.isArray(p.seats?.poker) ||
           p.seats.poker.length < 2 ||
           p.seats.poker.length > 7 ||
+          !Array.isArray(p.seats?.blackjack) ||
+          p.seats.blackjack.length < 2 ||
+          p.seats.blackjack.length > 7 ||
           !p.wallet ||
           !Number.isSafeInteger(p.wallet.balance) ||
           p.wallet.balance < 0 ||
@@ -1094,6 +1210,7 @@ export class LoungeRoom {
           chat: p.chat.slice(-12),
           invites: p.invites,
           poker: p.poker,
+          blackjack: p.blackjack,
           names: p.names,
           wallet: p.wallet,
         });

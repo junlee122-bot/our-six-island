@@ -322,6 +322,12 @@ Constraints: exactly sixteen complete clothing assets, no missing cells, no dupl
 - 홀덤 카드 52장, 카드 뒷면, 칩, 펠트 테이블은 `app/lounge-poker-table.tsx`와 `app/lounge-casino.css`에서 직접 구현한 벡터/텍스트/CSS 그래픽입니다. 외부 카드 이미지를 복사하지 않았습니다. 딜러 아이콘은 기존 Lucide 의존성을 사용합니다.
 - 게임 규칙 참고: [PokerStars Texas Hold'em](https://www.pokerstars.com/poker/games/texas-holdem/), [Poker TDA 규칙 47 — 짧은 올인과 베팅 재개](https://www.pokertda.com/view-poker-tda-rules/). 규칙 엔진과 화폐 원장은 직접 구현했습니다.
 
+### 블랙잭 테이블
+
+- 기존 카지노 배경, `PokerCard` 카드 컴포넌트와 Lucide 딜러 아이콘을 재사용했습니다. 새 외부 이미지나 의존성을 추가하지 않았습니다.
+- `app/lounge-blackjack-table.tsx`와 `app/lounge-blackjack.css`에서 버건디 펠트, 공개 카드·합계, 여러 손, 딜러와 베팅 버튼을 구현했습니다. 이동 효과는 카드 배분 시 적용하고 동작 줄이기 설정을 따릅니다.
+- 기본 규칙 참고: [Bicycle — Blackjack](https://bicyclecards.com/how-to-play/blackjack). 이 게임의 6덱/S17/스플릿 1회/보험·서렌더 제외 조건은 게임 내 안내와 README에 명시합니다. 딜러와 정산은 자체 규칙 엔진이며 외부 AI API는 호출하지 않습니다.
+
 ### theater-backstage 생성 프롬프트
 
 ```text
