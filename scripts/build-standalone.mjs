@@ -79,7 +79,9 @@ if (
 }
 if (inlined.size !== assets.length)
   throw new Error('Some game images were not embedded.');
-const js = chunks[0].code;
+// Preserve Supabase's exact base64 whitespace alphabet while escaping the
+// minifier's literal tab/newline in the generated HTML source.
+const js = chunks[0].code.replaceAll('` \t\n\\r=`', '" \\t\\n\\r="');
 const licenses = {
   chessRules: fs.readFileSync(
     path.join(root, 'node_modules/chess.js/LICENSE'),

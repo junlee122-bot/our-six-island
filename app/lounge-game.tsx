@@ -31,7 +31,6 @@ import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
 import { SeotdaTable } from './lounge-seotda-table';
 import {
-  LoungeRoom,
   GAME_INFO,
   GAME_KINDS,
   gameReservation,
@@ -39,6 +38,11 @@ import {
   type LoungeView,
   type LoungePlayer,
 } from './lounge-room';
+import { CloudRoom as LoungeRoom } from './lounge-cloud-room';
+import { AccountGate, PasswordForm, RecoveryCard } from './lounge-account-ui';
+import { accountLogout } from './lounge-auth';
+import { accountSave, type AccountProfile } from './lounge-accounts';
+import { useCloudSave } from './lounge-cloud-save';
 import {
   defaultLook,
   freshLounge,
@@ -172,8 +176,8 @@ function Friends({
       ) : view.status === 'connected' ? (
         <>
           <p className="l-modal-intro">
-            같은 코드로 모여 함께 놀아요. 방장이 접속해 있는 동안 라운지가 열려
-            있어요.
+            같은 코드로 모여 함께 놀아요. 누가 방을 열었든 남은 친구들과 계속 놀
+            수 있어요.
           </p>
           <div className="l-invite">
             <span>우리의 초대 코드</span>
@@ -209,7 +213,7 @@ function Friends({
           </button>
           <button className="l-text danger" onClick={() => room.leave()}>
             <LogOut size={15} />
-            {view.role === 'host' ? '라운지 닫기' : '방 나가기'}
+            방 나가기
           </button>
         </>
       ) : (
@@ -226,7 +230,11 @@ function Friends({
           >
             <Users size={28} />
             <span>
-              <strong>새 라운지 열기</strong>
+              <strong>
+                {room.activeRoom
+                  ? '참가 중인 라운지로 돌아가기'
+                  : '새 라운지 열기'}
+              </strong>
               <small>{ACTORS[save.actor]}로 친구들을 초대해요</small>
             </span>
             <ArrowRight size={20} />
@@ -452,9 +460,9 @@ function RequestGame({
             targets.length < needed - 1 ||
             view.wallet.balance < reserved
           }
-          onClick={() => {
+          onClick={async () => {
             if (
-              room.action({
+              await room.action({
                 kind: 'invite',
                 game,
                 players: targets,
@@ -949,20 +957,37 @@ function RoomFloor({
   );
 }
 export default function LoungeGame() {
-  const [room] = useState(() => new LoungeRoom()),
+  return (
+    <AccountGate>
+      {(account, onLogout) => (
+        <AccountLounge key={account.id} account={account} onLogout={onLogout} />
+      )}
+    </AccountGate>
+  );
+}
+function AccountLounge({
+  account,
+  onLogout,
+}: {
+  account: AccountProfile;
+  onLogout: () => void;
+}) {
+  const cloudSave = useCloudSave(account),
+    { save, change: setSave } = cloudSave;
+  const [room] = useState(() => new LoungeRoom(account)),
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
-    [save, setSave] = useState<LoungeSave>(freshLounge),
     [ready, setReady] = useState(false),
     [tab, setTab] = useState<'lounge' | 'wardrobe' | 'casino'>('wardrobe'),
     [modal, setModal] = useState<
-      'friends' | 'credits' | 'reset' | 'request' | 'wallet' | null
+      'friends' | 'credits' | 'reset' | 'request' | 'wallet' | 'account' | null
     >(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
     [requestKind, setRequestKind] = useState<GameKind | null>(null),
     [toast, setToast] = useState(''),
     [chat, setChat] = useState(''),
     [sound, setSound] = useState(false),
-    [storageError, setStorageError] = useState(false),
+    [recoveryCode, setRecoveryCode] = useState(''),
+    [accountBusy, setAccountBusy] = useState(false),
     [localPos, setLocalPos] = useState({ x: 50, y: 79 }),
     [emote, setEmote] = useState({ emote: '', emoteAt: 0 });
   const audioRef = useRef<AudioContext | null>(null),
@@ -974,33 +999,17 @@ export default function LoungeGame() {
     toastTimer.current = setTimeout(() => setToast(''), 4000);
   }, []);
   useEffect(() => {
-    let raw: string | null = null;
-    try {
-      raw = localStorage.getItem(LOUNGE_SAVE_KEY);
-    } catch {
-      setStorageError(true);
-    }
-    const s = readLounge(raw);
-    setSave(s);
-    setTab(s.visits ? 'lounge' : 'wardrobe');
+    setTab(save.visits ? 'lounge' : 'wardrobe');
+    room.init();
     setReady(true);
     if (new URLSearchParams(location.hash.slice(1)).get('lounge'))
       setModal('friends');
     return () => {
-      room.leave();
+      room.dispose();
       if (toastTimer.current) clearTimeout(toastTimer.current);
       void audioRef.current?.close();
     };
   }, [room]);
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      localStorage.setItem(LOUNGE_SAVE_KEY, JSON.stringify(save));
-      setStorageError(false);
-    } catch {
-      setStorageError(true);
-    }
-  }, [save, ready]);
   const openedGames = useRef(new Set<string>()),
     chessId = view.chess?.id,
     goId = view.gostop?.id,
@@ -1051,7 +1060,6 @@ export default function LoungeGame() {
   const me = view.players.find((p) => p.id === view.self);
   useEffect(() => {
     if (view.status === 'connected' && me) {
-      setSave((s) => ({ ...s, actor: me.actor }));
       setTab(me.area);
     }
   }, [view.status, view.self, me?.actor, me?.area]);
@@ -1213,9 +1221,7 @@ export default function LoungeGame() {
             onClick={() => setModal('wallet')}
           >
             <Coins size={16} />
-            {view.status === 'connected'
-              ? beom(view.wallet.balance)
-              : '범 지갑'}
+            {beom(view.wallet.balance)}
           </button>
           <button
             className="l-friends-button"
@@ -1231,8 +1237,8 @@ export default function LoungeGame() {
           </button>
           <button
             className="l-profile"
-            onClick={() => setTab('wardrobe')}
-            title="내 옷장"
+            onClick={() => setModal('account')}
+            title="내 계정"
           >
             <AvatarView
               actor={save.actor}
@@ -1243,11 +1249,29 @@ export default function LoungeGame() {
           </button>
         </div>
       </header>
-      {storageError && (
-        <p role="alert" className="l-error">
-          브라우저 저장 공간을 사용할 수 없어요. 지금 설정은 이 탭을 닫으면
-          사라질 수 있습니다.
-        </p>
+      <div className="l-save-bar">
+        <span>
+          <b>{account.username}</b> · {cloudSave.status}
+        </span>
+        <button onClick={() => void cloudSave.flush()}>지금 저장</button>
+      </div>
+      {cloudSave.conflict && (
+        <div className="l-save-alert" role="alert">
+          <p>다른 창에서 코디가 저장됐어요. 어느 모습을 간직할까요?</p>
+          <button onClick={() => cloudSave.resolve(false)}>
+            서버의 코디 불러오기
+          </button>
+          <button onClick={() => cloudSave.resolve(true)}>
+            지금 코디로 덮어쓰기
+          </button>
+        </div>
+      )}
+      {cloudSave.draft && (
+        <div className="l-save-alert">
+          <p>이 기기에 아직 저장하지 못한 코디가 있어요.</p>
+          <button onClick={cloudSave.restoreDraft}>코디 복구하기</button>
+          <button onClick={cloudSave.dismissDraft}>서버의 코디 유지</button>
+        </div>
       )}
       {tab === 'wardrobe' && (
         <div className="l-wardrobe-invites">
@@ -1258,7 +1282,7 @@ export default function LoungeGame() {
         <Wardrobe
           save={save}
           onChange={changeSave}
-          locked={view.status === 'connected'}
+          locked
           entry={!save.visits}
           onEnter={enter}
           notice={notice}
@@ -1437,9 +1461,10 @@ export default function LoungeGame() {
                   <div ref={chatEnd} />
                 </div>
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault();
-                    if (room.action({ kind: 'chat', text: chat })) setChat('');
+                    if (await room.action({ kind: 'chat', text: chat }))
+                      setChat('');
                   }}
                 >
                   <input
@@ -1494,6 +1519,104 @@ export default function LoungeGame() {
           <button onClick={() => setModal('reset')}>초기화</button>
         </div>
       </footer>
+      {modal === 'account' && (
+        <Modal
+          title="내 계정"
+          onClose={() => {
+            if (!recoveryCode) setModal(null);
+          }}
+        >
+          {recoveryCode ? (
+            <RecoveryCard
+              username={account.username}
+              code={recoveryCode}
+              onDone={() => setRecoveryCode('')}
+            />
+          ) : (
+            <>
+              <div className="l-account-summary">
+                <AvatarView
+                  actor={account.actor}
+                  look={save.looks[account.actor]}
+                  portrait
+                />
+                <div>
+                  <h3>{ACTORS[account.actor]}</h3>
+                  <code>{account.username}</code>
+                  <p>{cloudSave.status}</p>
+                </div>
+              </div>
+              <div className="l-account-actions">
+                <button
+                  className="l-secondary"
+                  onClick={() => void cloudSave.flush()}
+                >
+                  지금 저장
+                </button>
+                <button
+                  className="l-secondary"
+                  onClick={() => {
+                    try {
+                      const old = readLounge(
+                        localStorage.getItem(LOUNGE_SAVE_KEY),
+                      );
+                      setSave((s) => ({
+                        ...s,
+                        looks: s.looks.map((look, i) =>
+                          i === account.actor ? old.looks[i] : look,
+                        ),
+                        saved: old.saved.filter(
+                          (c) => c.actor === account.actor,
+                        ),
+                      }));
+                      notice('이 기기의 이전 코디를 불러왔어요.');
+                    } catch {
+                      notice('이전 코디를 읽을 수 없어요.');
+                    }
+                  }}
+                >
+                  이 기기의 이전 코디 가져오기
+                </button>
+              </div>
+              <p className="l-help-text">
+                현재 코디가 이전 코디로 바뀝니다. 범 잔액과 지난 섬·극장 기록은
+                옮기지 않아요.
+              </p>
+              <details className="l-password-settings">
+                <summary>비밀번호 변경</summary>
+                <PasswordForm account={account} onChanged={setRecoveryCode} />
+              </details>
+              <button
+                className="l-text danger"
+                disabled={accountBusy}
+                onClick={async () => {
+                  setAccountBusy(true);
+                  try {
+                    if (!(await cloudSave.flush())) {
+                      notice(
+                        '저장을 마치거나 다른 창의 변경 사항을 먼저 확인해 주세요.',
+                      );
+                      return;
+                    }
+                    if (!(await room.leave())) return;
+                    await accountLogout(account.id);
+                    onLogout();
+                  } catch (e) {
+                    notice(
+                      e instanceof Error ? e.message : '로그아웃하지 못했어요.',
+                    );
+                  } finally {
+                    setAccountBusy(false);
+                  }
+                }}
+              >
+                <LogOut size={16} />
+                {accountBusy ? '저장 후 나가는 중…' : '저장하고 로그아웃'}
+              </button>
+            </>
+          )}
+        </Modal>
+      )}
       {modal === 'friends' && (
         <Friends
           room={room}
@@ -1507,11 +1630,7 @@ export default function LoungeGame() {
         <Modal title="내 범 지갑" onClose={() => setModal(null)}>
           <div className="l-wallet-info">
             <small>모든 게임에서 함께 쓰는 우리들의 화폐</small>
-            <strong>
-              {view.status === 'connected'
-                ? beom(view.wallet.balance)
-                : '처음 만나면 100,000 범'}
-            </strong>
+            <strong>{beom(view.wallet.balance)}</strong>
             <p>
               {view.wallet.held > 0
                 ? `게임에 예약한 금액 ${beom(view.wallet.held)}`
@@ -1519,9 +1638,9 @@ export default function LoungeGame() {
             </p>
           </div>
           <p className="l-help-text">
-            이 방장이 여는 방에서는 잔액이 이어집니다. 지갑은 브라우저에
-            저장되며 캐릭터 변경이나 옷장 초기화로 다시 지급되지 않아요. 다른
-            방장·기기·브라우저는 별도 지갑입니다.
+            {account.username} 계정의 공통 지갑이에요. 모든 방과 기기에서 잔액이
+            이어집니다. 게임 종료 시 서버에서 자동 정산되며 옷장 초기화로 다시
+            지급되지 않아요.
           </p>
           {view.wallet.history.length > 0 && (
             <ul className="l-wallet-history">
@@ -1555,8 +1674,8 @@ export default function LoungeGame() {
       {modal === 'reset' && (
         <Modal title="내 라운지를 처음부터" onClose={() => setModal(null)}>
           <p className="l-modal-intro">
-            이 브라우저의 캐릭터 설정과 보관한 코디를 지웁니다. 접속 중인
-            방에서는 나가게 됩니다.
+            내 계정의 코디와 보관한 의상을 초기화합니다. 접속 중인 방에서는
+            나가게 됩니다. 다른 친구의 기록은 바뀌지 않아요.
           </p>
           <p className="l-help-text">
             범 지갑과 지난 섬, 우당탕 극장의 저장 기록은 그대로 남아요.
@@ -1567,13 +1686,13 @@ export default function LoungeGame() {
             </button>
             <button
               className="l-primary"
-              onClick={() => {
-                room.leave();
-                setSave(freshLounge());
+              onClick={async () => {
+                if (!(await room.leave())) return;
+                setSave(accountSave(freshLounge(), account.actor));
                 setTab('wardrobe');
                 setModal(null);
                 setLocalPos({ x: 50, y: 79 });
-                notice('내 라운지를 초기화했어요.');
+                notice('코디를 초기화했어요. 서버 저장 상태를 확인해 주세요.');
               }}
             >
               내 라운지 초기화

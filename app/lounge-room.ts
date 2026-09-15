@@ -38,6 +38,7 @@ import {
   voidGame,
   chessBeomResult,
   goBeomResult,
+  type LoungeLedger,
 } from './lounge-economy.ts';
 import {
   LoungeBank,
@@ -155,6 +156,7 @@ const empty = (): LoungeView => ({
   chat: [],
   invites: [],
 });
+export { empty as emptyLoungeView };
 const actorValid = (v: unknown): v is number =>
   Number.isInteger(v) && Number(v) >= 0 && Number(v) < 7;
 const player = (id: string, actor: number, look: Look): LoungePlayer => ({
@@ -229,6 +231,32 @@ export type LoungeAction =
   | { kind: 'look'; look: Look }
   | { kind: 'chat'; text: string }
   | { kind: 'emote'; emote: string };
+// Private server snapshot, never returned to a browser. Public packets still
+// remove every other player's hand and the undealt deck.
+export type HostedRoomSnapshot = {
+  code: string;
+  host: string;
+  players: LoungePlayer[];
+  seats: LoungeWorld['seats'];
+  names: LoungeWorld['names'];
+  invites: GameInvite[];
+  chat: LoungeWorld['chat'];
+  chess: ChessMatch | null;
+  go: GoMatch | null;
+  poker: PokerMatch | null;
+  blackjack: BlackjackMatch | null;
+  seotda: SeotdaMatch | null;
+  pokerAway: number[];
+  blackjackAway: number[];
+  seotdaAway: number[];
+  lastChat: [string, number][];
+  due: Partial<
+    Record<
+      'poker' | 'blackjack' | 'seotda',
+      { id: string; revision: number; at: number }
+    >
+  >;
+};
 export class LoungeRoom {
   view = empty();
   private listeners = new Set<() => void>();
@@ -262,6 +290,224 @@ export class LoungeRoom {
   private incoming = Promise.resolve();
   private outgoing = Promise.resolve();
   private pending: { actor: number; look: Look } | null = null;
+  private serverMode = false;
+  private serverDue: HostedRoomSnapshot['due'] = {};
+  static hosted(
+    snapshot: HostedRoomSnapshot | null,
+    ledger: LoungeLedger,
+    code = '',
+    host = '',
+  ) {
+    const r = new LoungeRoom();
+    r.serverMode = true;
+    r.bank = new LoungeBank(null);
+    r.bank.commit(ledger);
+    r.view = {
+      ...empty(),
+      status: 'connected',
+      role: 'host',
+      code: snapshot?.code ?? code,
+      self: snapshot?.host ?? host,
+    };
+    if (snapshot) {
+      r.view = {
+        ...r.view,
+        seats: structuredClone(snapshot.seats),
+        names: structuredClone(snapshot.names),
+        invites: structuredClone(snapshot.invites),
+        chat: structuredClone(snapshot.chat),
+      };
+      r.members = new Map(
+        snapshot.players.map((p) => [p.id, structuredClone(p)]),
+      );
+      r.chess = structuredClone(snapshot.chess);
+      r.go = structuredClone(snapshot.go);
+      r.poker = structuredClone(snapshot.poker);
+      r.blackjack = structuredClone(snapshot.blackjack);
+      r.seotda = structuredClone(snapshot.seotda);
+      r.pokerAway = new Set(snapshot.pokerAway);
+      r.blackjackAway = new Set(snapshot.blackjackAway);
+      r.seotdaAway = new Set(snapshot.seotdaAway);
+      r.lastChat = new Map(snapshot.lastChat);
+      r.serverDue = structuredClone(snapshot.due);
+    }
+    for (const id of r.members.keys()) r.wallets.set(id, 'wallet-' + id);
+    r.sync();
+    return r;
+  }
+  hostedSnapshot(): HostedRoomSnapshot {
+    if (!this.serverMode) throw new Error('Server adapter required');
+    return structuredClone({
+      code: this.view.code,
+      host: this.view.self,
+      players: [...this.members.values()],
+      seats: this.view.seats,
+      names: this.view.names,
+      invites: this.view.invites,
+      chat: this.view.chat,
+      chess: this.chess,
+      go: this.go,
+      poker: this.poker,
+      blackjack: this.blackjack,
+      seotda: this.seotda,
+      pokerAway: [...this.pokerAway],
+      blackjackAway: [...this.blackjackAway],
+      seotdaAway: [...this.seotdaAway],
+      lastChat: [...this.lastChat],
+      due: this.serverDue,
+    });
+  }
+  hostedLedger() {
+    return this.bank.ledger;
+  }
+  hostedJoin(id: string, actor: number, look: Look) {
+    if (!this.serverMode || !actorValid(actor))
+      throw new Error('계정 정보를 확인해 주세요.');
+    const existing = this.members.get(id);
+    if (existing) {
+      if (existing.actor !== actor)
+        throw new Error('계정 캐릭터가 일치하지 않습니다.');
+      return;
+    }
+    if (
+      this.members.size >= 7 ||
+      [...this.members.values()].some((p) => p.actor === actor)
+    )
+      throw new Error('이미 접속한 계정이거나 방이 가득 찼습니다.');
+    const wallet = 'wallet-' + id;
+    this.bank.commit(registerWallet(this.bank.ledger, wallet));
+    this.wallets.set(id, wallet);
+    this.members.set(id, player(id, actor, look));
+    this.sync();
+  }
+  hostedAction(id: string, a: LoungeAction) {
+    if (!this.serverMode) throw new Error('Server adapter required');
+    return this.apply(id, a);
+  }
+  hostedDrop(id: string) {
+    if (!this.serverMode) throw new Error('Server adapter required');
+    this.drop(id);
+    if (this.view.self === id)
+      this.view = {
+        ...this.view,
+        self: this.members.keys().next().value ?? '',
+      };
+    this.sync();
+  }
+  hostedClose() {
+    if (!this.serverMode) throw new Error('Server adapter required');
+    for (const game of [
+      this.chess,
+      this.go,
+      this.poker,
+      this.blackjack,
+      this.seotda,
+    ])
+      if (game && this.bank.ledger.games[game.id]?.state === 'reserved')
+        this.bank.commit(voidGame(this.bank.ledger, game.id));
+  }
+  hostedPacket(id: string) {
+    if (!this.serverMode || !this.members.has(id))
+      throw new Error('이 라운지에 먼저 입장해 주세요.');
+    return this.packet(id);
+  }
+  hostedTick(now: number) {
+    if (!this.serverMode) throw new Error('Server adapter required');
+    this.view = {
+      ...this.view,
+      invites: this.view.invites.map((r) =>
+        r.status === 'waiting' && r.expires < now
+          ? { ...r, status: 'expired' }
+          : r,
+      ),
+    };
+    for (const kind of ['poker', 'blackjack', 'seotda'] as const) {
+      const spec = () => {
+        const g = this[kind];
+        if (!g || g.phase === 'over') return null;
+        const automatic =
+          kind === 'poker'
+            ? ['dealing', 'showdown'].includes(g.phase)
+            : kind === 'blackjack'
+              ? g.phase !== 'players'
+              : g.phase !== 'betting';
+        const away =
+          kind === 'poker'
+            ? this.pokerAway
+            : kind === 'blackjack'
+              ? this.blackjackAway
+              : this.seotdaAway;
+        return automatic || away.has(g.turn)
+          ? {
+              id: g.id,
+              revision: g.revision,
+              delay: automatic
+                ? kind === 'seotda'
+                  ? g.phase === 'redeal'
+                    ? 2200
+                    : 1500
+                  : 1100
+                : 600,
+              automatic,
+            }
+          : null;
+      };
+      const s = spec();
+      if (!s) {
+        delete this.serverDue[kind];
+        continue;
+      }
+      const due = this.serverDue[kind];
+      if (!due || due.id !== s.id || due.revision !== s.revision) {
+        this.serverDue[kind] = {
+          id: s.id,
+          revision: s.revision,
+          at: now + s.delay,
+        };
+        continue;
+      }
+      if (due.at > now) continue;
+      if (kind === 'poker') {
+        const g = this.poker!,
+          next = s.automatic
+            ? pokerDeal(g)
+            : pokerAction(g, g.turn, {
+                kind: pokerLegalActions(g, g.turn).canCheck ? 'check' : 'fold',
+              });
+        if (next) {
+          this.settle(kind, next);
+          this.poker = next;
+        }
+      } else if (kind === 'blackjack') {
+        const g = this.blackjack!,
+          next = s.automatic
+            ? blackjackDeal(g)
+            : blackjackAction(g, g.turn, { kind: 'stand' });
+        if (next) {
+          this.settle(kind, next);
+          this.blackjack = next;
+        }
+      } else {
+        const g = this.seotda!,
+          next = s.automatic
+            ? seotdaDeal(g)
+            : seotdaAction(g, g.turn, { kind: 'fold' });
+        if (next) {
+          this.settle(kind, next);
+          this.seotda = next;
+        }
+      }
+      const after = spec();
+      if (after)
+        this.serverDue[kind] = {
+          id: after.id,
+          revision: after.revision,
+          at: now + after.delay,
+        };
+      else delete this.serverDue[kind];
+    }
+    this.sync();
+  }
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
     return () => {
@@ -344,6 +590,7 @@ export class LoungeRoom {
           )
         : null,
     });
+    if (this.serverMode) return;
     for (const p of players)
       if (p.id !== this.view.self) this.send(p.id, this.packet(p.id));
     for (const id of this.challenges.keys()) this.lobby(id);

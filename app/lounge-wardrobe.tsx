@@ -112,11 +112,13 @@ export function Wardrobe({
         <div>
           <span className="l-kicker">MY LITTLE WARDROBE</span>
           <h1>
-            {entry ? '오늘은 누구로 만날까요?' : '내가 좋아하는 모습으로.'}
+            {entry
+              ? `${ACTORS[actor]}, 오늘은 어떤 모습으로?`
+              : '내가 좋아하는 모습으로.'}
           </h1>
           <p>
             {entry
-              ? '친구를 고르고, 옷을 입고, 우리만의 라운지로.'
+              ? '내 옷을 고르고, 우리만의 라운지로.'
               : '옷을 갈아입는 작은 재미. 마음에 든 코디는 보관해 두세요.'}
           </p>
         </div>
