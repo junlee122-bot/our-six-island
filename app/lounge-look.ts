@@ -1,22 +1,51 @@
 import {
   HAIR_COLORS,
   TOP_COLORS,
-  HATS,
+  HATS as ORIGINAL_HATS,
   GLASSES,
   type Appearance,
 } from './character-style.ts';
-export { HAIR_COLORS, TOP_COLORS, HATS, GLASSES };
+export { HAIR_COLORS, TOP_COLORS, GLASSES };
+export const HATS = [
+  ...ORIGINAL_HATS,
+  { id: 'hachimaki', name: '응원 머리띠', cell: 9 },
+] as const;
 export type Look = Appearance & {
-  collection: 'original' | 'classic' | 'street' | 'smart';
+  collection:
+    | 'original'
+    | 'classic'
+    | 'street'
+    | 'smart'
+    | 'wide-pants'
+    | 'denim'
+    | 'miku';
+  hairstyle: 'signature' | 'buns';
 };
 export const COLLECTIONS = [
   { id: 'original', name: '처음 만난 우리', note: '기존 캐릭터의 일상복' },
   { id: 'classic', name: '우리다운 하루', note: '친구마다 다른 시그니처 룩' },
   { id: 'street', name: '느긋한 주말', note: '후드와 여유로운 실루엣' },
   { id: 'smart', name: '오늘의 약속', note: '셔츠 · 가디건 · 재킷' },
+  {
+    id: 'wide-pants',
+    name: '와이드 팬츠',
+    note: '검정 긴바지 · 편안한 티셔츠',
+  },
+  { id: 'denim', name: '데님 산책', note: '청바지 · 캐주얼 재킷' },
+  { id: 'miku', name: '하츠네 미쿠', note: '민트 넥타이 · 플리츠 스커트' },
 ] as const;
+export const DAOWON_COLLECTIONS: readonly Look['collection'][] = [
+  'wide-pants',
+  'denim',
+  'miku',
+];
+export const collectionsFor = (actor: number) =>
+  COLLECTIONS.filter((c) => actor === 0 || !DAOWON_COLLECTIONS.includes(c.id));
+export const hatsFor = (actor: number) =>
+  HATS.filter((h) => actor === 0 || h.id !== 'hachimaki');
 export const defaultLook = (actor: number): Look => ({
   collection: 'classic',
+  hairstyle: 'signature',
   hair: actor === 0 ? 'wine' : 'ink',
   top:
     actor === 2 || actor === 3 ? 'cream' : actor === 6 ? 'ocean' : 'charcoal',
@@ -29,12 +58,13 @@ export function readLook(value: unknown, actor: number): Look {
   const d = defaultLook(actor),
     v = (value && typeof value === 'object' ? value : {}) as Partial<Look>;
   return {
-    collection: COLLECTIONS.some((c) => c.id === v.collection)
+    collection: collectionsFor(actor).some((c) => c.id === v.collection)
       ? v.collection!
       : d.collection,
+    hairstyle: actor === 0 && v.hairstyle === 'buns' ? 'buns' : 'signature',
     hair: HAIR_COLORS.some((c) => c.id === v.hair) ? v.hair! : d.hair,
     top: TOP_COLORS.some((c) => c.id === v.top) ? v.top! : d.top,
-    hat: HATS.some((c) => c.id === v.hat) ? v.hat! : d.hat,
+    hat: hatsFor(actor).some((c) => c.id === v.hat) ? v.hat! : d.hat,
     glasses: GLASSES.some((c) => c.id === v.glasses) ? v.glasses! : d.glasses,
     clip: v.clip === true,
   };

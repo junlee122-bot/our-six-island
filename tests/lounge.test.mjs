@@ -24,6 +24,7 @@ import {
   junkValue,
 } from '../app/lounge-gostop.ts';
 import { newChess, chessMove, chessBoard } from '../app/lounge-chess.ts';
+import { registerWallet } from '../app/lounge-economy.ts';
 function host() {
   const room = new LoungeRoom();
   room.view = {
@@ -33,7 +34,10 @@ function host() {
     self: 'p0',
     code: 'ABCDEFGHJK',
   };
-  for (let i = 0; i < 7; i++)
+  for (let i = 0; i < 7; i++) {
+    const wallet = 'wallet-' + String(i).repeat(24);
+    room.wallets.set('p' + i, wallet);
+    room.bank.commit(registerWallet(room.bank.ledger, wallet));
     room.members.set('p' + i, {
       id: 'p' + i,
       actor: i,
@@ -42,11 +46,92 @@ function host() {
       y: 70,
       emote: '',
       emoteAt: 0,
+      balance: 100000,
+      area: 'lounge',
     });
+  }
   room.sync();
   return room;
 }
 const apply = (r, id, a) => r.apply(id, a);
+test('three independent game invitations survive and share a single funded ledger', () => {
+  const r = host();
+  assert(apply(r, 'p0', { kind: 'invite', game: 'chess', players: ['p1'] }));
+  assert(
+    apply(r, 'p2', {
+      kind: 'invite',
+      game: 'poker',
+      players: ['p3'],
+      required: 2,
+    }),
+  );
+  assert(
+    apply(r, 'p4', { kind: 'invite', game: 'gostop', players: ['p5', 'p6'] }),
+  );
+  assert.equal(r.view.invites.length, 3);
+  for (const [game, ids] of [
+    ['chess', ['p1']],
+    ['poker', ['p3']],
+    ['gostop', ['p5', 'p6']],
+  ]) {
+    const invitation = r.view.invites.find((q) => q.game === game);
+    for (const id of ids)
+      assert(apply(r, id, { kind: 'reply', id: invitation.id, accept: true }));
+  }
+  assert(r.view.chess && r.view.gostop && r.view.poker);
+  assert.equal(r.view.poker.hand.length, 0);
+  assert.equal(r.packet('p2').poker.hand.length, 2);
+  assert.equal(r.packet('p4').poker.hand.length, 0);
+  const g = r.poker;
+  assert.equal(
+    apply(r, 'p2', {
+      kind: 'poker',
+      id: g.id,
+      revision: g.revision + 1,
+      action: { kind: 'fold' },
+    }),
+    false,
+  );
+  assert(
+    apply(r, 'p2', {
+      kind: 'poker',
+      id: g.id,
+      revision: g.revision,
+      action: { kind: 'fold' },
+    }),
+  );
+  assert.equal(r.bank.ledger.games[g.id].state, 'settled');
+  const before = JSON.stringify(r.bank.ledger);
+  r.settle('poker', r.poker);
+  assert.equal(JSON.stringify(r.bank.ledger), before);
+});
+test('failed reservation storage leaves pending invitation and game untouched', () => {
+  const r = host();
+  assert(
+    apply(r, 'p0', {
+      kind: 'invite',
+      game: 'poker',
+      players: ['p1'],
+      required: 2,
+    }),
+  );
+  const invite = r.view.invites[0],
+    before = JSON.stringify(r.bank.ledger);
+  r.bank.storage = {
+    getItem: () => r.bank.raw,
+    setItem: () => {
+      throw new Error('quota');
+    },
+  };
+  assert.throws(
+    () => apply(r, 'p1', { kind: 'reply', id: invite.id, accept: true }),
+    /quota/,
+  );
+  assert.equal(r.poker, null);
+  assert.equal(r.view.invites[0].status, 'waiting');
+  assert.deepEqual(r.view.invites[0].accepted, ['p0']);
+  assert.equal(JSON.stringify(r.bank.ledger), before);
+});
 test('lounge storage validates identity, collection and accessories without touching other saves', () => {
   const fresh = freshLounge();
   assert.equal(fresh.looks.length, 7);
@@ -57,6 +142,63 @@ test('lounge storage validates identity, collection and accessories without touc
   assert.equal(readLook({ collection: '3d', hair: 'bad' }, 0).hair, 'wine');
   assert.equal(readLook({ collection: '3d' }, 0).collection, 'classic');
   assert.equal(readLounge(JSON.stringify({ ...fresh, actor: 999 })).actor, 6);
+});
+test('old lounge wardrobes gain default hairstyles while preserving outfits and saved looks', () => {
+  const old = freshLounge();
+  old.actor = 0;
+  old.visits = 9;
+  old.looks[0] = {
+    collection: 'street',
+    hair: 'rose',
+    top: 'coral',
+    hat: 'bucket',
+    glasses: 'silver',
+    clip: true,
+  };
+  old.saved = [
+    { id: 'old-look', actor: 0, look: { ...old.looks[0] }, name: '예전 코디' },
+  ];
+  const restored = readLounge(JSON.stringify(old));
+  assert.equal(restored.visits, 9);
+  assert.deepEqual(restored.looks[0], {
+    ...old.looks[0],
+    hairstyle: 'signature',
+  });
+  assert.deepEqual(restored.saved[0].look, restored.looks[0]);
+});
+test('Daowon outfits, buns and hachimaki survive storage and host validation only for Daowon', () => {
+  const look = {
+    ...defaultLook(0),
+    collection: 'miku',
+    hairstyle: 'buns',
+    hat: 'hachimaki',
+    hair: 'wine',
+  };
+  for (const collection of ['wide-pants', 'denim', 'miku'])
+    assert.deepEqual(readLook({ ...look, collection }, 0), {
+      ...look,
+      collection,
+    });
+  const saved = freshLounge();
+  saved.actor = 0;
+  saved.looks[0] = look;
+  saved.saved = [{ id: 'miku-buns', actor: 0, look, name: '미쿠 코디' }];
+  const restored = readLounge(JSON.stringify(saved));
+  assert.deepEqual(restored.looks[0], look);
+  assert.deepEqual(restored.saved[0].look, look);
+  const r = host();
+  assert(apply(r, 'p0', { kind: 'look', look }));
+  assert.deepEqual(r.members.get('p0').look, look);
+  for (let actor = 1; actor < 7; actor++) {
+    const normalized = readLook(look, actor);
+    assert.equal(normalized.collection, 'classic');
+    assert.equal(normalized.hairstyle, 'signature');
+    assert.equal(normalized.hat, defaultLook(actor).hat);
+  }
+  assert.equal(
+    readLook({ hairstyle: 'bogus', hat: '<img>' }, 0).hairstyle,
+    'signature',
+  );
 });
 test('game invitations require consent, reject outsiders, reserve only accepted players, and start once', () => {
   const r = host();

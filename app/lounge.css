@@ -797,6 +797,66 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.l-outfit-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.l-outfit-filters button {
+  padding: 8px 17px;
+  border: 1px solid #d6dfd0;
+  border-radius: 20px;
+  background: transparent;
+  color: #60745d;
+  font-size: 13px;
+}
+.l-outfit-filters button[aria-pressed='true'] {
+  background: #41634c;
+  color: #fffdf1;
+  border-color: #41634c;
+}
+.l-hairstyles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.l-hairstyles > button {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  align-items: center;
+  padding: 13px;
+  gap: 10px;
+  background: #f4f3eb;
+  border: 1px solid #e0e4d6;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.l-hairstyles > button[aria-pressed='true'] {
+  border-color: #6b8b67;
+  box-shadow: inset 0 0 0 1px #6b8b67;
+  background: #edf0e3;
+}
+.l-hairstyles .avatar-view {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #e9eadd;
+  overflow: hidden;
+}
+.l-hairstyles > button > svg {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #52734d;
+}
+@media (min-width: 1000px) {
+  .l-daowon-wardrobe > .l-mirror {
+    position: sticky;
+    top: 108px;
+  }
+}
 .l-outfits > button {
   position: relative;
   background: #f6f4ed;

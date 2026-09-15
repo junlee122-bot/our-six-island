@@ -1,0 +1,7 @@
+Use case: stylized-concept
+Asset type: ONE separate game-accessory sprite: a white hachimaki cheering cloth headband, matching softly outlined chibi friend illustrations.
+Subject: a simple WHITE CLOTH forehead band with exactly ONE solid RED CIRCLE centered on the front. Subtle light-gray fabric folds, clean soft outlines, gently curved horizontally to fit a broad round chibi forehead. Front view, minimal perspective. The center band is wide and relatively shallow, about 6 times as wide as its height. A small unobtrusive side knot at the viewer's right has exactly TWO SHORT white cloth tails, both fully visible.
+Style/medium: soft outlined 2D illustrated game accessory with gentle painted shading, friendly and clean; not a photorealistic product or detailed fabric photograph.
+Composition: one centered accessory, entire band and short tails visible, modest clear margin. Only the visible front forehead band and side knot, no back-of-head loop, no mannequin.
+Background: produce a genuinely transparent RGBA PNG with actual alpha=0 outside the headband. Do NOT paint a checkerboard. If actual transparency is unavailable, use a perfectly flat solid MAGENTA #ff00ff background instead, never white or gray.
+Constraints: No head, face, hair, ears, body, hands, stand, floor, or external shadow. No text, characters, letters, calligraphy, logos, extra circles, rising-sun rays, flags on poles, or political imagery. Exactly one white cloth headband and one central red circle, no other assets.

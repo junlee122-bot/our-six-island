@@ -169,16 +169,110 @@ function figure(c: HTMLCanvasElement, eyes?: number): Figure {
   }
   return { c, eyes, cx, head, top };
 }
+function sheetFigure(
+  sheet: HTMLImageElement,
+  columns: number,
+  rows: number,
+  cell: number,
+  eyeLine?: number,
+) {
+  const c = canvas(
+    Math.floor(sheet.width / columns),
+    Math.floor(sheet.height / rows),
+  );
+  c.getContext('2d')!.drawImage(
+    sheet,
+    ((cell % columns) * sheet.width) / columns,
+    (Math.floor(cell / columns) * sheet.height) / rows,
+    sheet.width / columns,
+    sheet.height / rows,
+    0,
+    0,
+    c.width,
+    c.height,
+  );
+  const cleaned = clean(c, true),
+    b = bounds(cleaned),
+    f = canvas(400, 480),
+    scale = Math.min(356 / b.w, 450 / b.h);
+  f.getContext('2d')!.drawImage(
+    cleaned,
+    b.x,
+    b.y,
+    b.w,
+    b.h,
+    (400 - b.w * scale) / 2,
+    465 - b.h * scale,
+    b.w * scale,
+    b.h * scale,
+  );
+  return figure(f, eyeLine);
+}
+function bandAnchor(piece: Piece) {
+  const data = piece.c
+    .getContext('2d')!
+    .getImageData(0, 0, piece.c.width, piece.c.height).data;
+  let x = 0,
+    y = 0,
+    n = 0;
+  for (let j = 0; j < data.length; j += 4)
+    if (
+      data[j + 3] > 150 &&
+      data[j] > 115 &&
+      data[j] > data[j + 1] * 1.7 &&
+      data[j] > data[j + 2] * 1.5
+    ) {
+      x += (j / 4) % piece.c.width;
+      y += Math.floor(j / 4 / piece.c.width);
+      n++;
+    }
+  const cx = n ? x / n : piece.x + piece.w / 2,
+    cy = n ? y / n : piece.y + piece.h * 0.35;
+  let left = piece.x + piece.w,
+    right = piece.x;
+  for (let i = piece.x; i < piece.x + piece.w; i++)
+    if (data[(Math.round(cy) * piece.c.width + i) * 4 + 3] > 150) {
+      left = Math.min(left, i);
+      right = Math.max(right, i);
+    }
+  return {
+    cx,
+    cy,
+    width: Math.max(piece.w * 0.6, Math.min(right - left, 2 * (cx - left))),
+  };
+}
 let pending: Promise<Awaited<ReturnType<typeof prepare>>> | null = null;
 async function prepare() {
   const a = LOUNGE_ASSETS as Record<string, string>;
-  const [motion, accessories, cap, hohyeon, ...newSheets] = await Promise.all([
+  const [
+    motion,
+    accessories,
+    cap,
+    hohyeon,
+    classic,
+    street,
+    smart,
+    bunSheet,
+    outfitSheet,
+    hachimaki,
+  ] = await Promise.all([
     image(a.motion),
     image(a.accessories),
     image(a.jaeminCap),
     image(a.hohyeon),
     ...['classic', 'street', 'smart'].map((k) => image(a[k])),
+    image(a.daowonBuns),
+    image(a.daowonOutfits),
+    image(a.hachimaki),
   ]);
+  const newSheets = [classic, street, smart];
+  const bunFigures = Array.from({ length: 4 }, (_, i) =>
+    sheetFigure(bunSheet, 2, 2, i, [148,148,146,146][i]),
+  );
+  // Measured eye lines in the normalized 400×480 figures avoid mistaking a black shirt for eyes.
+  const outfitFigures = Array.from({ length: 6 }, (_, i) =>
+    sheetFigure(outfitSheet, 3, 2, i, [128,128,129,134,134,134][i]),
+  );
   const rows = [
       [20, 241],
       [264, 256],
@@ -286,13 +380,29 @@ async function prepare() {
     );
     return bounds(clean(c));
   });
+  const bandCanvas = canvas(hachimaki.width, hachimaki.height);
+  bandCanvas.getContext('2d')!.drawImage(hachimaki, 0, 0);
+  // Preserve genuine alpha; also support the generated magenta extraction background.
+  pieces.push(bounds(clean(clean(bandCanvas, true))));
+  const band = bandAnchor(pieces[9]);
   const cache = new Map<string, Piece>();
   function composed(actor: number, look: Look, frame: number) {
     const key = JSON.stringify([actor, look, frame]);
     if (cache.has(key)) return cache.get(key)!;
     const index = ['classic', 'street', 'smart'].indexOf(look.collection),
-      base =
-        index < 0
+      newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
+      bun = actor === 0 && look.hairstyle === 'buns',
+      special = actor === 0 && (bun || newOutfit >= 0),
+      legacy = !special && index < 0,
+      base = special
+        ? newOutfit >= 0
+          ? outfitFigures[newOutfit + (bun ? 3 : 0)]
+          : bunFigures[
+              ['classic', 'street', 'smart', 'original'].indexOf(
+                look.collection,
+              )
+            ]
+        : legacy
           ? original[actor][Math.min(frame, original[actor].length - 1)]
           : collections[index][actor],
       c = canvas(base.c.width + 120, base.c.height + 180),
@@ -308,7 +418,19 @@ async function prepare() {
       const r = p.data[k],
         g = p.data[k + 1],
         b = p.data[k + 2];
-      if (index >= 0 && !(b > Math.max(r, g) * 1.12)) continue;
+      // Blue jeans and costume trim are clothing, even when hair uses the same hue.
+      const hairRegion =
+        Math.floor(k / 4 / base.c.width) <=
+        Math.min(base.c.height * 0.48, base.eyes + base.head * 0.32);
+      if (special) {
+        const hairPixel = hairRegion && b > Math.max(r, g) * 1.12;
+        const originalTop =
+          look.collection === 'original' &&
+          !hairRegion &&
+          g >= b * 0.9 &&
+          Math.min(g, b) > r * 1.18;
+        if (!hairPixel && !originalTop) continue;
+      } else if (!legacy && !(b > Math.max(r, g) * 1.12)) continue;
       const color = dyePixel(r, g, b, hair, top);
       p.data[k] = color[0];
       p.data[k + 1] = color[1];
@@ -332,7 +454,21 @@ async function prepare() {
     };
     const hat = HATS.find((h) => h.id === look.hat)!.cell,
       glasses = GLASSES.find((g) => g.id === look.glasses)!.cell;
-    if (hat >= 0) {
+    if (hat === 9) {
+      const piece = pieces[9],
+        scale = (base.head * (bun ? 0.83 : 0.95)) / band.width;
+      ctx.drawImage(
+        piece.c,
+        piece.x,
+        piece.y,
+        piece.w,
+        piece.h,
+        60 + base.cx - (band.cx - piece.x) * scale,
+        150 + base.eyes - base.head * 0.2 - (band.cy - piece.y) * scale,
+        piece.w * scale,
+        piece.h * scale,
+      );
+    } else if (hat >= 0) {
       const i = actor === 5 && hat === 0 ? 8 : hat,
         w = base.head * (hat === 1 ? 1.35 : hat === 0 ? 0.92 : 1.03),
         h = (w * pieces[i].h) / pieces[i].w;
@@ -365,7 +501,7 @@ async function prepare() {
         f = composed(
           actor,
           look,
-          look.collection === 'original'
+          look.collection === 'original' && look.hairstyle === 'signature'
             ? motionFrame(motion, time, reduced)
             : 0,
         ),

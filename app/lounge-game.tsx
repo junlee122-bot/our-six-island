@@ -21,12 +21,17 @@ import {
   ArrowUpRight,
   LogOut,
   Check,
+  Coins,
+  Spade,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
 import { ChessBoard, GoBoard } from './lounge-boards';
+import { PokerTable, beom } from './lounge-poker-table';
 import {
   LoungeRoom,
+  GAME_INFO,
+  GAME_KINDS,
   type GameKind,
   type LoungeView,
   type LoungePlayer,
@@ -268,14 +273,20 @@ function RequestGame({
   notice: (s: string) => void;
 }) {
   const [game, setGame] = useState<GameKind>(initial ?? 'chess'),
+    [stake, setStake] = useState<number>(GAME_INFO[initial ?? 'chess'].stake),
+    [pokerCount, setPokerCount] = useState(
+      Math.max(2, Math.min(3, view.players.length)),
+    ),
     [chosen, setChosen] = useState<string[]>(
       view.players.filter((p) => p.id !== view.self).map((p) => p.id),
     );
-  const needed = game === 'chess' ? 2 : 3,
+  const needed = game === 'poker' ? pokerCount : GAME_INFO[game].players,
     active = (k: GameKind) =>
       k === 'chess'
         ? !!view.chess && !view.chess.winner
-        : !!view.gostop && view.gostop.phase !== 'over',
+        : k === 'gostop'
+          ? !!view.gostop && view.gostop.phase !== 'over'
+          : !!view.poker && view.poker.phase !== 'over',
     busy = (id: string) =>
       Object.entries(view.seats).some(
         ([k, seats]) => active(k as GameKind) && seats.includes(id),
@@ -296,15 +307,72 @@ function RequestGame({
         게임 화면으로 함께 이동합니다.
       </p>
       <div className="l-game-choices">
-        {(['chess', 'gostop'] as GameKind[]).map((k) => (
-          <button key={k} aria-pressed={game === k} onClick={() => setGame(k)}>
-            <span>{k === 'chess' ? '♞' : '花'}</span>
-            <strong>{k === 'chess' ? '체스' : '고스톱'}</strong>
+        {GAME_KINDS.map((k) => (
+          <button
+            key={k}
+            aria-pressed={game === k}
+            onClick={() => {
+              setGame(k);
+              setStake(GAME_INFO[k].stake);
+            }}
+          >
+            <span>{GAME_INFO[k].symbol}</span>
+            <strong>{GAME_INFO[k].name}</strong>
             <small>
-              {k === 'chess' ? '2인 · 한 수의 여유' : '3인 · 고와 스톱 사이'}
+              {k === 'chess'
+                ? '2인 · 한 수의 여유'
+                : k === 'gostop'
+                  ? '3인 · 고와 스톱 사이'
+                  : '2–7인 · AI 딜러'}
             </small>
           </button>
         ))}
+      </div>
+      <div className="l-request-heading">
+        <div className="l-money-settings">
+          <label>
+            {game === 'poker'
+              ? '바이인'
+              : game === 'gostop'
+                ? '최대 손실'
+                : '판돈'}
+            <select
+              aria-label="참가 금액"
+              value={stake}
+              onChange={(e) => setStake(Number(e.target.value))}
+            >
+              {[1000, 5000, 10000, 20000].map((n) => (
+                <option key={n} value={n}>
+                  {beom(n)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {game === 'poker' && (
+            <label>
+              정원
+              <select
+                aria-label="홀덤 정원"
+                value={pokerCount}
+                onChange={(e) => setPokerCount(Number(e.target.value))}
+              >
+                {[2, 3, 4, 5, 6, 7].map((n) => (
+                  <option value={n} key={n}>
+                    {n}명
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <p>
+            {game === 'poker'
+              ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
+              : game === 'gostop'
+                ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
+                : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
+            내 사용 가능 잔액: {beom(view.wallet.balance)}
+          </p>
+        </div>
       </div>
       <div className="l-request-heading">
         <h3>누구와 함께할까요?</h3>
@@ -364,10 +432,21 @@ function RequestGame({
         <button
           className="l-primary"
           disabled={
-            unavailable || busy(view.self) || targets.length < needed - 1
+            unavailable ||
+            busy(view.self) ||
+            targets.length < needed - 1 ||
+            view.wallet.balance < stake
           }
           onClick={() => {
-            if (room.action({ kind: 'invite', game, players: targets })) {
+            if (
+              room.action({
+                kind: 'invite',
+                game,
+                players: targets,
+                stake,
+                required: needed,
+              })
+            ) {
               onClose();
               notice('친구들의 참가 응답을 기다립니다.');
             }
@@ -395,15 +474,13 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
           sender = view.players.find((p) => p.id === r.from);
         return (
           <div key={r.id} className="l-invitation-card">
-            <span className="l-envelope">
-              {r.game === 'chess' ? '♞' : '花'}
-            </span>
+            <span className="l-envelope">{GAME_INFO[r.game].symbol}</span>
             <div>
               <strong>
                 {r.from === view.self
                   ? '내가 보낸'
                   : (sender ? ACTORS[sender.actor] : '친구') + '의'}{' '}
-                {r.game === 'chess' ? '체스' : '고스톱'} 초대장
+                {GAME_INFO[r.game].name} 초대장
               </strong>
               <p>
                 {accepted
@@ -411,7 +488,13 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                   : declined
                     ? '이번에는 쉬어 가기로 했어요.'
                     : '같이 한 판 할까요?'}{' '}
-                · {r.accepted.length}/{r.game === 'chess' ? 2 : 3}명 수락
+                · {r.accepted.length}/{r.required}명 수락 ·{' '}
+                {r.game === 'gostop'
+                  ? '최대 손실'
+                  : r.game === 'poker'
+                    ? '바이인'
+                    : '판돈'}{' '}
+                {beom(r.stake)}
               </p>
             </div>
             {accepted ? (
@@ -425,11 +508,12 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
               <div>
                 <button
                   className="l-primary"
+                  disabled={view.wallet.balance < r.stake}
                   onClick={() =>
                     room.action({ kind: 'reply', id: r.id, accept: true })
                   }
                 >
-                  참가하기
+                  {view.wallet.balance < r.stake ? '범 잔액 부족' : '참가하기'}
                 </button>
                 <button
                   className="l-text"
@@ -470,15 +554,21 @@ function GameScreen({
       const p = view.players.find((p) => p.id === id);
       return p
         ? ACTORS[p.actor]
-        : i === 0
-          ? '참가자 1'
-          : i === 1
-            ? '참가자 2'
-            : '참가자 3';
+        : (view.names[kind]?.[i] ??
+            (i === 0 ? '참가자 1' : i === 1 ? '참가자 2' : '참가자 3'));
     }),
-    match = kind === 'chess' ? view.chess : view.gostop,
+    match =
+      kind === 'chess'
+        ? view.chess
+        : kind === 'gostop'
+          ? view.gostop
+          : view.poker,
     ended =
-      kind === 'chess' ? !!view.chess?.winner : view.gostop?.phase === 'over';
+      kind === 'chess'
+        ? !!view.chess?.winner
+        : kind === 'gostop'
+          ? view.gostop?.phase === 'over'
+          : view.poker?.phase === 'over';
   return (
     <section className={'l-game-screen ' + kind}>
       <header>
@@ -487,7 +577,7 @@ function GameScreen({
         </button>
         <span>
           <small>HOHYEON GAME CLUB</small>
-          <strong>{kind === 'chess' ? '체스' : '고스톱'}</strong>
+          <strong>{GAME_INFO[kind].name}</strong>
         </span>
         <div>
           <span className="l-game-live">
@@ -502,6 +592,19 @@ function GameScreen({
         </div>
       </header>
       <div className="l-game-content">
+        <div className="l-game-money">
+          <span>
+            {kind === 'poker'
+              ? '바이인과 팟을 공통 범 지갑으로 정산합니다.'
+              : kind === 'gostop'
+                ? '1점 = 100범 · 초대장에서 합의한 최대 손실 적용'
+                : '초대장에서 합의한 판돈 · 무승부는 전액 반환'}
+          </span>
+          <b>
+            <Coins size={14} /> {beom(view.wallet.balance)}
+            {view.wallet.held > 0 ? ` · 예약 ${beom(view.wallet.held)}` : ''}
+          </b>
+        </div>
         <Invitations room={room} view={view} />
         {match ? (
           kind === 'chess' ? (
@@ -521,6 +624,20 @@ function GameScreen({
               }
               onResign={() =>
                 room.action({ kind: 'resign', id: view.chess!.id })
+              }
+            />
+          ) : kind === 'poker' ? (
+            <PokerTable
+              match={view.poker!}
+              seat={seat}
+              names={names}
+              onAction={(action) =>
+                room.action({
+                  kind: 'poker',
+                  id: view.poker!.id,
+                  revision: view.poker!.revision,
+                  action,
+                })
               }
             />
           ) : (
@@ -548,7 +665,7 @@ function GameScreen({
           </div>
         )}
         {ended &&
-          (kind === 'chess' ||
+          (kind !== 'gostop' ||
             displayedGoRevision === view.gostop?.revision) && (
             <div className="l-game-ending">
               <button
@@ -572,7 +689,9 @@ function GameScreen({
           <p className="l-modal-intro">
             {kind === 'chess'
               ? '지금 나가면 기권으로 처리됩니다.'
-              : '지금 나가면 이번 판은 점수 없이 종료됩니다.'}
+              : kind === 'poker'
+                ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
+                : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
           </p>
           <div className="l-modal-actions">
             <button className="l-secondary" onClick={() => setLeave(false)}>
@@ -639,12 +758,14 @@ function RoomFloor({
   onMove,
   onTable,
   view,
+  area = 'lounge',
 }: {
   players: LoungePlayer[];
   self: string;
   onMove: (x: number, y: number) => void;
   onTable: (kind: GameKind) => void;
   view: LoungeView;
+  area?: 'lounge' | 'casino';
 }) {
   const ref = useRef<HTMLDivElement>(null),
     lastMove = useRef(0);
@@ -694,26 +815,41 @@ function RoomFloor({
     >
       <img
         className="l-room-bg"
-        src={LOUNGE_ASSETS.room}
-        alt="창으로 햇살이 들어오는 호현지방의 아늑한 게임 라운지"
+        src={area === 'casino' ? LOUNGE_ASSETS.casino : LOUNGE_ASSETS.room}
+        alt={
+          area === 'casino'
+            ? '호현 카지노의 따뜻한 조명과 원목 게임 홀'
+            : '창으로 햇살이 들어오는 호현지방의 아늑한 게임 라운지'
+        }
         draggable={false}
       />
       <div className="l-room-plaque">
-        <span>HOHYEON</span>
-        <strong>우리, 한 판 할까?</strong>
+        <span>{area === 'casino' ? 'HOHYEON CASINO' : 'HOHYEON'}</span>
+        <strong>
+          {area === 'casino'
+            ? '오늘 밤, 좋은 패가 함께하길.'
+            : '우리, 한 판 할까?'}
+        </strong>
       </div>
-      {(['chess', 'gostop'] as GameKind[]).map((kind) => (
+      {(
+        (area === 'casino' ? ['chess', 'poker'] : ['gostop']) as GameKind[]
+      ).map((kind) => (
         <button
           key={kind}
           className={'l-world-table ' + kind}
           onClick={() => onTable(kind)}
-          aria-label={
-            kind === 'chess' ? '체스 테이블 열기' : '고스톱 테이블 열기'
-          }
+          aria-label={GAME_INFO[kind].name + ' 테이블 열기'}
         >
           <span className="l-table-top">
-            {kind === 'chess' ? (
-              <span className="l-mini-chess">♟</span>
+            {kind !== 'gostop' ? (
+              kind === 'poker' ? (
+                <span className="l-mini-poker">
+                  <i>A♠</i>
+                  <i>K♥</i>
+                </span>
+              ) : (
+                <span className="l-mini-chess">{GAME_INFO[kind].symbol}</span>
+              )
             ) : (
               <span className="l-mini-hwatu">
                 <img src={LOUNGE_ASSETS['m01-01']} alt="" />
@@ -723,10 +859,14 @@ function RoomFloor({
             )}
           </span>
           <span className="l-table-tag">
-            <b>{kind === 'chess' ? '체스' : '고스톱'}</b>
+            <b>{GAME_INFO[kind].name}</b>
             <small>
               {view.status === 'connected' &&
-              (kind === 'chess' ? view.chess : view.gostop)
+              (kind === 'chess'
+                ? view.chess
+                : kind === 'gostop'
+                  ? view.gostop
+                  : view.poker)
                 ? '게임 보기'
                 : '초대하기'}
               <ArrowUpRight size={11} />
@@ -734,9 +874,11 @@ function RoomFloor({
           </span>
         </button>
       ))}
-      {players.map((p) => (
-        <WorldFriend key={p.id} p={p} self={self} />
-      ))}
+      {players
+        .filter((p) => p.area === area)
+        .map((p) => (
+          <WorldFriend key={p.id} p={p} self={self} />
+        ))}
       <span className="l-scene-hint">바닥을 클릭해 이동 · 방향키 / WASD</span>
     </div>
   );
@@ -746,9 +888,9 @@ export default function LoungeGame() {
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
     [save, setSave] = useState<LoungeSave>(freshLounge),
     [ready, setReady] = useState(false),
-    [tab, setTab] = useState<'lounge' | 'wardrobe'>('wardrobe'),
+    [tab, setTab] = useState<'lounge' | 'wardrobe' | 'casino'>('wardrobe'),
     [modal, setModal] = useState<
-      'friends' | 'credits' | 'reset' | 'request' | null
+      'friends' | 'credits' | 'reset' | 'request' | 'wallet' | null
     >(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
     [requestKind, setRequestKind] = useState<GameKind | null>(null),
@@ -796,7 +938,8 @@ export default function LoungeGame() {
   }, [save, ready]);
   const openedGames = useRef(new Set<string>()),
     chessId = view.chess?.id,
-    goId = view.gostop?.id;
+    goId = view.gostop?.id,
+    pokerId = view.poker?.id;
   useEffect(() => {
     if (view.status !== 'connected') {
       setGameScreen(null);
@@ -805,6 +948,7 @@ export default function LoungeGame() {
     for (const [kind, id] of [
       ['chess', chessId],
       ['gostop', goId],
+      ['poker', pokerId],
     ] as [GameKind, string | undefined][]) {
       if (id && !openedGames.current.has(id)) {
         openedGames.current.add(id);
@@ -814,8 +958,11 @@ export default function LoungeGame() {
         }
       }
     }
-  }, [chessId, goId, view.status, view.self]);
+  }, [chessId, goId, pokerId, view.status, view.self]);
   const inviteStates = useRef(new Map<string, string>());
+  useEffect(() => {
+    document.querySelector('.l-app')?.scrollTo({ top: 0 });
+  }, [tab, gameScreen]);
   useEffect(() => {
     for (const invite of view.invites) {
       const prev = inviteStates.current.get(invite.id);
@@ -836,9 +983,9 @@ export default function LoungeGame() {
   useEffect(() => {
     if (view.status === 'connected' && me) {
       setSave((s) => ({ ...s, actor: me.actor }));
-      setTab('lounge');
+      setTab(me.area);
     }
-  }, [view.status, view.self, me?.actor]);
+  }, [view.status, view.self, me?.actor, me?.area]);
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: 'nearest' });
   }, [view.chat.length]);
@@ -892,7 +1039,11 @@ export default function LoungeGame() {
   const openTable = (kind: GameKind) => {
     if (
       view.status === 'connected' &&
-      (kind === 'chess' ? view.chess : view.gostop)
+      (kind === 'chess'
+        ? view.chess
+        : kind === 'gostop'
+          ? view.gostop
+          : view.poker)
     )
       setGameScreen(kind);
     else requestGame(kind);
@@ -909,6 +1060,14 @@ export default function LoungeGame() {
           y: [53, 79, 52, 77, 73, 75, 47][i],
           emote: '',
           emoteAt: 0,
+          balance: 0,
+          area: (i === save.actor
+            ? tab === 'casino'
+              ? 'casino'
+              : 'lounge'
+            : i % 2
+              ? 'casino'
+              : 'lounge') as 'casino' | 'lounge',
           ...(i === save.actor ? { ...localPos, ...emote } : {}),
         }));
   if (ready && gameScreen && view.status === 'connected')
@@ -951,10 +1110,25 @@ export default function LoungeGame() {
         <nav aria-label="주 메뉴">
           <button
             aria-pressed={tab === 'lounge'}
-            onClick={() => setTab('lounge')}
+            onClick={() => {
+              setTab('lounge');
+              if (view.status === 'connected')
+                room.action({ kind: 'area', area: 'lounge' });
+            }}
           >
             <Armchair size={17} />
             라운지
+          </button>
+          <button
+            aria-pressed={tab === 'casino'}
+            onClick={() => {
+              setTab('casino');
+              if (view.status === 'connected')
+                room.action({ kind: 'area', area: 'casino' });
+            }}
+          >
+            <Spade size={17} />
+            카지노
           </button>
           <button
             aria-pressed={tab === 'wardrobe'}
@@ -965,6 +1139,15 @@ export default function LoungeGame() {
           </button>
         </nav>
         <div className="l-header-right">
+          <button
+            className="l-wallet-button"
+            onClick={() => setModal('wallet')}
+          >
+            <Coins size={16} />
+            {view.status === 'connected'
+              ? beom(view.wallet.balance)
+              : '범 지갑'}
+          </button>
           <button
             className="l-friends-button"
             onClick={() => setModal('friends')}
@@ -1012,12 +1195,24 @@ export default function LoungeGame() {
           notice={notice}
         />
       ) : (
-        <section className="l-lounge">
+        <section className={'l-lounge' + (tab === 'casino' ? ' l-casino' : '')}>
           <div className="l-section-title">
             <div>
-              <span className="l-kicker">A PLACE FOR OUR SEVEN</span>
-              <h1>어서 와요, {ACTORS[save.actor]}.</h1>
-              <p>편한 옷으로 갈아입고, 좋아하는 사람들과 한 판.</p>
+              <span className="l-kicker">
+                {tab === 'casino'
+                  ? 'THE NIGHT IS STILL YOUNG'
+                  : 'A PLACE FOR OUR SEVEN'}
+              </span>
+              <h1>
+                {tab === 'casino'
+                  ? '호현 카지노'
+                  : `어서 와요, ${ACTORS[save.actor]}.`}
+              </h1>
+              <p>
+                {tab === 'casino'
+                  ? '친구들과 같은 테이블, 오늘 밤의 한 판.'
+                  : '편한 옷으로 갈아입고, 좋아하는 사람들과 한 판.'}
+              </p>
             </div>
             <button
               className="l-primary l-new-game"
@@ -1035,6 +1230,7 @@ export default function LoungeGame() {
                 onMove={move}
                 onTable={openTable}
                 view={view}
+                area={tab === 'casino' ? 'casino' : 'lounge'}
               />
               <div className="l-room-toolbar">
                 <span>오늘 기분은 어때요?</span>
@@ -1069,6 +1265,20 @@ export default function LoungeGame() {
               <div className="l-play-list">
                 <span className="l-kicker">WHAT SHALL WE PLAY?</span>
                 <h2>오늘의 한 판</h2>
+                <button
+                  onClick={() => {
+                    setTab('casino');
+                    openTable('poker');
+                  }}
+                >
+                  <span className="l-game-symbol chess">♠</span>
+                  <span>
+                    <strong>텍사스 홀덤</strong>
+                    <small>AI 딜러 루미와 함께하는 카지노.</small>
+                    <em>2–7명 · 공통 범 지갑</em>
+                  </span>
+                  <ArrowUpRight size={19} />
+                </button>
                 <button onClick={() => openTable('chess')}>
                   <span className="l-game-symbol chess">♞</span>
                   <span>
@@ -1194,6 +1404,46 @@ export default function LoungeGame() {
           notice={notice}
         />
       )}
+      {modal === 'wallet' && (
+        <Modal title="내 범 지갑" onClose={() => setModal(null)}>
+          <div className="l-wallet-info">
+            <small>모든 게임에서 함께 쓰는 우리들의 화폐</small>
+            <strong>
+              {view.status === 'connected'
+                ? beom(view.wallet.balance)
+                : '처음 만나면 100,000 범'}
+            </strong>
+            <p>
+              {view.wallet.held > 0
+                ? `게임에 예약한 금액 ${beom(view.wallet.held)}`
+                : '체스 · 고스톱 · 홀덤의 판돈과 정산에 사용해요.'}
+            </p>
+          </div>
+          <p className="l-help-text">
+            이 방장이 여는 방에서는 잔액이 이어집니다. 지갑은 브라우저에
+            저장되며 캐릭터 변경이나 옷장 초기화로 다시 지급되지 않아요. 다른
+            방장·기기·브라우저는 별도 지갑입니다.
+          </p>
+          {view.wallet.history.length > 0 && (
+            <ul className="l-wallet-history">
+              {view.wallet.history.map((h) => (
+                <li key={h.id}>
+                  <span>{GAME_INFO[h.game as GameKind]?.name ?? h.game}</span>
+                  <b>
+                    {h.delta > 0 ? '+' : ''}
+                    {beom(h.delta)}
+                  </b>
+                </li>
+              ))}
+            </ul>
+          )}
+          {view.status !== 'connected' && (
+            <button className="l-primary" onClick={() => setModal('friends')}>
+              친구들과 시작하기
+            </button>
+          )}
+        </Modal>
+      )}
       {modal === 'request' && (
         <RequestGame
           room={room}
@@ -1210,7 +1460,7 @@ export default function LoungeGame() {
             방에서는 나가게 됩니다.
           </p>
           <p className="l-help-text">
-            지난 섬과 우당탕 극장의 저장 기록은 그대로 남아요.
+            범 지갑과 지난 섬, 우당탕 극장의 저장 기록은 그대로 남아요.
           </p>
           <div className="l-modal-actions">
             <button className="l-secondary" onClick={() => setModal(null)}>

@@ -65,6 +65,7 @@ try {
     'seven peers',
   );
   console.log('Seven peers connected with exclusive characters.');
+  assert(rooms.every((r) => r.view.wallet.balance === 100000));
   guests[0].action({
     kind: 'look',
     look: { ...defaultLook(0), collection: 'street', hair: 'rose' },
@@ -77,6 +78,33 @@ try {
             .collection === 'street',
       ),
     'shared 2D outfit',
+  );
+  const daowon = rooms.find(
+    (r) => r.view.players.find((p) => p.id === r.view.self)?.actor === 0,
+  );
+  daowon.action({
+    kind: 'look',
+    look: {
+      ...defaultLook(0),
+      collection: 'miku',
+      hairstyle: 'buns',
+      hat: 'hachimaki',
+    },
+  });
+  await wait(
+    () =>
+      rooms.every((r) => {
+        const l = r.view.players.find((p) => p.id === daowon.view.self)?.look;
+        return (
+          l?.collection === 'miku' &&
+          l.hairstyle === 'buns' &&
+          l.hat === 'hachimaki'
+        );
+      }),
+    'Daowon costume and hairstyle synchronization',
+  );
+  console.log(
+    'Daowon costume, bun hair and hachimaki synchronized across all peers.',
   );
   assert(
     host.action({
@@ -93,11 +121,14 @@ try {
   guests[0].action({ kind: 'reply', id: goInvite.id, accept: true });
   guests[1].action({ kind: 'reply', id: goInvite.id, accept: true });
   await wait(() => rooms.every((r) => r.view.gostop?.id), 'Go start');
-  assert.deepEqual(host.view.seats.gostop, [
-    host.view.self,
-    guests[0].view.self,
-    guests[1].view.self,
-  ]);
+  assert.equal(host.view.seats.gostop[0], host.view.self);
+  // Guests are seated in the order their consent arrives over the network.
+  assert.deepEqual(
+    new Set(host.view.seats.gostop.slice(1)),
+    new Set([guests[0].view.self, guests[1].view.self]),
+  );
+  for (const r of rooms)
+    assert.deepEqual(r.view.seats.gostop, host.view.seats.gostop);
   assert.equal(guests[2].view.gostop.hand.length, 0);
   assert.equal(guests[0].view.gostop.hand.length, 7);
   assert.notDeepEqual(guests[0].view.gostop.hand, guests[1].view.gostop.hand);
@@ -178,6 +209,87 @@ try {
     'Go-Stop round completed through real encrypted player actions:',
     steps,
   );
+  assert(
+    host.action({
+      kind: 'invite',
+      game: 'poker',
+      players: guests.map((r) => r.view.self),
+      required: 7,
+      stake: 10000,
+    }),
+  );
+  await wait(
+    () =>
+      rooms.every((r) =>
+        r.view.invites.some(
+          (i) => i.game === 'poker' && i.status === 'waiting',
+        ),
+      ),
+    'poker invitation',
+  );
+  const pokerInvite = host.view.invites.find((i) => i.game === 'poker');
+  for (const guest of guests)
+    guest.action({ kind: 'reply', id: pokerInvite.id, accept: true });
+  await wait(
+    () => rooms.every((r) => r.view.poker?.id),
+    'seven-seat poker start',
+  );
+  assert(
+    rooms.every(
+      (r) => r.view.wallet.held === 10000 && r.view.poker.hand.length === 2,
+    ),
+  );
+  for (const r of rooms) {
+    assert(!('deck' in r.view.poker));
+    assert(!('hands' in r.view.poker));
+  }
+  let pokerActions = 0;
+  while (host.view.poker.phase !== 'over') {
+    const state = host.view.poker;
+    if (state.turn < 0) {
+      await wait(
+        () => host.view.poker.revision > state.revision,
+        'automatic dealer',
+      );
+      continue;
+    }
+    await wait(
+      () =>
+        rooms.every((r) => r.view.poker.revision === host.view.poker.revision),
+      'poker revision sync',
+    );
+    const actor = rooms.find(
+      (r) => r.view.self === host.view.seats.poker[host.view.poker.turn],
+    );
+    const g = actor.view.poker;
+    assert(++pokerActions < 100);
+    actor.action({
+      kind: 'poker',
+      id: g.id,
+      revision: g.revision,
+      action: { kind: g.legal.canCheck ? 'check' : 'call' },
+    });
+    await wait(() => host.view.poker.revision > g.revision, 'poker action');
+  }
+  await wait(
+    () =>
+      rooms.every(
+        (r) => r.view.poker.phase === 'over' && r.view.wallet.held === 0,
+      ),
+    'poker settlement',
+  );
+  assert.equal(
+    rooms.reduce((total, r) => total + r.view.wallet.balance, 0),
+    700000,
+  );
+  assert(
+    rooms.every((r) =>
+      r.view.wallet.history.some((h) => h.id === host.view.poker.id),
+    ),
+  );
+  console.log(
+    'Seven-seat poker, automatic dealer, private cards and shared Beom settlement verified.',
+  );
   for (let i = 0; i < 12; i++) {
     host.lastChat.clear();
     host.action({ kind: 'chat', text: '가'.repeat(120) });
@@ -187,14 +299,30 @@ try {
     () => rooms.every((r) => r.view.chat.length === 12),
     'maximum Korean chat snapshot',
   );
-  guests[5].leave();
+  const returning = guests[5],
+    priorBalance = returning.view.wallet.balance,
+    priorActor = returning.view.players.find(
+      (p) => p.id === returning.view.self,
+    ).actor;
+  returning.leave();
   await wait(() => host.view.players.length === 6, 'departed role release');
+  await returning.start(
+    'guest',
+    host.view.code,
+    priorActor,
+    defaultLook(priorActor),
+  );
+  await wait(
+    () => returning.view.status === 'selecting',
+    'returning wallet selection',
+  );
+  returning.claim(priorActor, defaultLook(priorActor));
+  await wait(() => returning.view.status === 'connected', 'returning wallet');
+  assert.equal(returning.view.wallet.balance, priorBalance);
   host.leave();
   await wait(
     () =>
-      rooms
-        .filter((r) => r !== host && r !== guests[5])
-        .every((r) => r.view.status === 'error'),
+      rooms.filter((r) => r !== host).every((r) => r.view.status === 'error'),
     'host close',
   );
   console.log(
@@ -206,6 +334,10 @@ try {
       concurrentGames: true,
       chessCheckmate: true,
       goStopComplete: true,
+      sevenSeatPoker: true,
+      automaticDealer: true,
+      sharedBeom: true,
+      returningWallet: true,
       privateHands: true,
       koreanChat: true,
       departures: true,

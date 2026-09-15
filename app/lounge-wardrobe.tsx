@@ -7,7 +7,9 @@ import {
   COLLECTIONS,
   HAIR_COLORS,
   TOP_COLORS,
-  HATS,
+  collectionsFor,
+  hatsFor,
+  DAOWON_COLLECTIONS,
   GLASSES,
   defaultLook,
   type LoungeSave,
@@ -33,6 +35,7 @@ export function Wardrobe({
   const actor = save.actor,
     look = save.looks[actor],
     [category, setCategory] = useState('outfit'),
+    [outfitGroup, setOutfitGroup] = useState('all'),
     [motion, setMotion] = useState<Motion>('idle');
   const change = (patch: Partial<Look>) =>
     onChange({
@@ -82,10 +85,22 @@ export function Wardrobe({
       ctx.fillText(ACTORS[actor], 500, 1095);
       ctx.font = '22px "Malgun Gothic",sans-serif';
       ctx.fillText('호현지방 · 오늘의 나', 500, 1140);
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        c.toBlob(
+          (value) =>
+            value ? resolve(value) : reject(new Error('PNG export failed')),
+          'image/png',
+        ),
+      );
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = c.toDataURL('image/png');
+      link.href = url;
       link.download = `호현지방-${ACTORS[actor]}-코디.png`;
+      link.hidden = true;
+      document.body.appendChild(link);
       link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
       notice('코디 사진을 저장했어요.');
     } catch {
       notice('사진을 저장하지 못했어요. 다시 시도해 주세요.');
@@ -107,7 +122,11 @@ export function Wardrobe({
         </div>
         <span className="l-note">일곱 친구, 각자의 취향.</span>
       </div>
-      <div className="l-wardrobe-grid">
+      <div
+        className={
+          'l-wardrobe-grid' + (actor === 0 ? ' l-daowon-wardrobe' : '')
+        }
+      >
         <aside className="l-friend-picker" aria-label="캐릭터 선택">
           {ACTORS.map((name, i) => (
             <button
@@ -204,27 +223,58 @@ export function Wardrobe({
           </div>
           {category === 'outfit' && (
             <>
+              {actor === 0 && (
+                <div className="l-outfit-filters" aria-label="의상 종류">
+                  {[
+                    ['all', '전체'],
+                    ['pants', '바지'],
+                    ['costume', '코스튬'],
+                  ].map(([id, name]) => (
+                    <button
+                      key={id}
+                      aria-pressed={outfitGroup === id}
+                      onClick={() => setOutfitGroup(id)}
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="l-outfits">
-                {COLLECTIONS.map((c) => (
-                  <button
-                    key={c.id}
-                    className={look.collection === c.id ? 'selected' : ''}
-                    aria-pressed={look.collection === c.id}
-                    onClick={() => change({ collection: c.id })}
-                  >
-                    <span className="l-outfit-art">
-                      <AvatarView
-                        actor={actor}
-                        look={{ ...look, collection: c.id }}
-                      />
-                    </span>
-                    <span>
-                      <strong>{c.name}</strong>
-                      <small>{c.note}</small>
-                    </span>
-                    {look.collection === c.id && <Check size={17} />}
-                  </button>
-                ))}
+                {collectionsFor(actor)
+                  .filter(
+                    (c) =>
+                      actor !== 0 ||
+                      outfitGroup === 'all' ||
+                      (outfitGroup === 'pants'
+                        ? c.id === 'wide-pants' || c.id === 'denim'
+                        : c.id === 'miku'),
+                  )
+                  .sort(
+                    (a, b) =>
+                      Number(DAOWON_COLLECTIONS.includes(b.id)) -
+                      Number(DAOWON_COLLECTIONS.includes(a.id)),
+                  )
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      className={look.collection === c.id ? 'selected' : ''}
+                      aria-pressed={look.collection === c.id}
+                      onClick={() => change({ collection: c.id })}
+                    >
+                      <span className="l-outfit-art">
+                        <AvatarView
+                          actor={actor}
+                          look={{ ...look, collection: c.id }}
+                        />
+                      </span>
+                      <span>
+                        <strong>{c.name}</strong>
+                        <small>{c.note}</small>
+                      </span>
+                      {look.collection === c.id && <Check size={17} />}
+                    </button>
+                  ))}
               </div>
               {look.collection === 'original' && (
                 <div className="l-colors">
@@ -244,35 +294,68 @@ export function Wardrobe({
                 </div>
               )}
               <p className="l-help-text">
-                ‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨
-                있어요.
+                {actor === 0
+                  ? '머리 탭에서 만두머리, 소품 탭에서 응원 머리띠를 함께 골라 보세요.'
+                  : '‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨 있어요.'}
               </p>
             </>
           )}
           {category === 'hair' && (
-            <div className="l-hair-options">
-              <h3>머리 색을 골라 주세요</h3>
-              <div>
-                {HAIR_COLORS.map((c) => (
-                  <button
-                    key={c.id}
-                    aria-pressed={look.hair === c.id}
-                    onClick={() => change({ hair: c.id })}
-                  >
-                    <span style={{ background: c.hex }}>
-                      {look.hair === c.id && <Check size={18} />}
-                    </span>
-                    {c.name}
-                  </button>
-                ))}
+            <>
+              {actor === 0 && (
+                <div className="l-hairstyles" aria-label="도원의 머리 모양">
+                  {(
+                    [
+                      ['signature', '기본 단발'],
+                      ['buns', '만두머리'],
+                    ] as const
+                  ).map(([id, name]) => (
+                    <button
+                      key={id}
+                      aria-pressed={look.hairstyle === id}
+                      onClick={() => change({ hairstyle: id })}
+                    >
+                      <AvatarView
+                        actor={actor}
+                        look={{
+                          ...look,
+                          hairstyle: id,
+                          hat: 'none',
+                          glasses: 'none',
+                          clip: false,
+                        }}
+                        portrait
+                      />
+                      <span>{name}</span>
+                      {look.hairstyle === id && <Check size={16} />}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="l-hair-options">
+                <h3>머리 색을 골라 주세요</h3>
+                <div>
+                  {HAIR_COLORS.map((c) => (
+                    <button
+                      key={c.id}
+                      aria-pressed={look.hair === c.id}
+                      onClick={() => change({ hair: c.id })}
+                    >
+                      <span style={{ background: c.hex }}>
+                        {look.hair === c.id && <Check size={18} />}
+                      </span>
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            </>
           )}
           {category === 'extras' && (
             <div className="l-extra-options">
-              <h3>모자</h3>
+              <h3>{actor === 0 ? '모자 · 머리띠' : '모자'}</h3>
               <div>
-                {HATS.map((c) => (
+                {hatsFor(actor).map((c) => (
                   <button
                     key={c.id}
                     aria-pressed={look.hat === c.id}

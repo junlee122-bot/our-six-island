@@ -1,18 +1,32 @@
 # 현재 게임 라운지의 에셋 (2026-09-15)
 
+## 도원 추가 코디
+
+내장 imagegen으로 기존 도원의 얼굴·전신 그림을 참조해 아래 에셋을 각각 1회 생성했습니다. 의상과 머리는 완전한 전신 그림으로 교체하고 응원 머리띠는 이마 위치에 맞춰 올립니다. 그림의 원본 파일은 보존하고, 머리 부분만 런타임에서 염색해 청바지·미쿠 복장의 색을 유지합니다.
+
+| 파일                                                          | 실제 크기 / 배치   | 내용                                                           |
+| ------------------------------------------------------------- | ------------------ | -------------------------------------------------------------- |
+| [daowon-outfits.png](public/assets/lounge/daowon-outfits.png) | 1536×1024 RGB, 3×2 | 와이드 팬츠·데님·하츠네 미쿠 복장, 윗줄 단발 / 아랫줄 만두머리 |
+| [daowon-buns.png](public/assets/lounge/daowon-buns.png)       | 1254×1254 RGB, 2×2 | 기존 클래식·스트리트 / 스마트·데일리 의상의 만두머리 버전      |
+| [hachimaki.png](public/assets/lounge/hachimaki.png)           | 1774×887 RGBA      | 흰 천·붉은 원의 일본 응원 머리띠, 실제 투명 배경               |
+
+정확한 프롬프트: [새 의상](public/assets/lounge/daowon-outfits.prompt.txt), [만두머리](public/assets/lounge/daowon-buns.prompt.txt), [하치마키](public/assets/lounge/hachimaki.prompt.txt). 춘리의 양쪽 만두머리와 하츠네 미쿠 복장을 참고한 생성 팬아트이며 공식 게임·캐릭터 이미지 파일을 다운로드한 것은 아닙니다.
+
+## 기존 라운지 에셋
+
 고스톱 테이블·패 뒷면·획득패 영역은 CSS로 직접 제작했습니다. 패 내기, 뒤집기, 수거, 상대 피 가져오기 모션은 기존 화투 SVG에 Web Animations를 적용하며, 원본 아트 파일은 변경하지 않습니다. 공개 카드 이동 기록만 각 클라이언트에 전달합니다.
 
 2D 전신 렌더러는 얼굴·몸·옷을 잘라 합성하지 않습니다. 기존 모션 스프라이트와 액세서리를 재사용하고, 의상 변경은 일곱 친구의 완전한 전신 그림을 교체합니다.
 
-| 파일 | 출처 / 실제 크기 | 용도 |
-| --- | --- | --- |
-| friends-motion.png, accessories.png, jaemin-cap.png, hohyeon-friend.png | 기존 생성 에셋 재사용 | 원래 전신·걷기·인사, 안경, 작은 모자, 호현 |
-| lounge-friends-classic.png | 내장 imagegen, 1774×887 | 4×2 배치의 일곱 친구 기본복 |
-| lounge-friends-street.png | classic을 참조한 imagegen, 1774×887 | 얼굴과 포즈를 유지한 스트리트룩 |
-| lounge-friends-smart.png | classic을 참조한 imagegen, 1774×887 | 얼굴과 포즈를 유지한 외출복 |
-| lounge-room.png | 내장 imagegen, 1536×1024 | 로비 배경 |
-| wK...wP, bK...bP.svg | Chessnut / Alexis Luengas, Apache-2.0 | 체스 기물 12개, 원본 그대로 |
-| m01-01...m12-04.svg | Spenĉjo, CC BY-SA 4.0 | 한국 화투 48장, 원본 그대로 |
+| 파일                                                                    | 출처 / 실제 크기                      | 용도                                       |
+| ----------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------ |
+| friends-motion.png, accessories.png, jaemin-cap.png, hohyeon-friend.png | 기존 생성 에셋 재사용                 | 원래 전신·걷기·인사, 안경, 작은 모자, 호현 |
+| lounge-friends-classic.png                                              | 내장 imagegen, 1774×887               | 4×2 배치의 일곱 친구 기본복                |
+| lounge-friends-street.png                                               | classic을 참조한 imagegen, 1774×887   | 얼굴과 포즈를 유지한 스트리트룩            |
+| lounge-friends-smart.png                                                | classic을 참조한 imagegen, 1774×887   | 얼굴과 포즈를 유지한 외출복                |
+| lounge-room.png                                                         | 내장 imagegen, 1536×1024              | 로비 배경                                  |
+| wK...wP, bK...bP.svg                                                    | Chessnut / Alexis Luengas, Apache-2.0 | 체스 기물 12개, 원본 그대로                |
+| m01-01...m12-04.svg                                                     | Spenĉjo, CC BY-SA 4.0                 | 한국 화투 48장, 원본 그대로                |
 
 생성 시트의 순서: 도원·강재·민서·승준 / 민재·재민·호현·빈칸. 실제 배경은 #fb03fa 또는 #fa04fa에 가까운 마젠타여서 런타임에서 허용 범위로 제거합니다. 청색 머리는 런타임 염색 채널입니다. 시트별 생성은 한 번씩 실행했으며 요청한 2048×1024보다 작은 1774×887 결과를 사용합니다. 전체 프롬프트는 public/assets/lounge/*.prompt.txt에 있습니다. 원본 이미지를 생성 후 업스케일했다고 주장하지 않습니다.
 
@@ -42,14 +56,14 @@ Chessnut 원본: https://github.com/LexLuengas/chessnut-pieces . LICENSE와 COPY
 
 ## 배포 파일
 
-| 경로 | 해상도 | 내용 |
-| --- | --- | --- |
-| `public/assets/island-hd.webp` | 6144×4096 | AI 업스케일한 전체 섬 지도 |
-| `public/assets/interiors-hd.webp` | 6144×4096 | 집·상점·공방·박물관, 2×2 배경 |
-| `public/assets/furniture.png` | 1254×1254 RGBA | 가구 16종, 4×4 투명 아틀라스 |
-| `public/assets/facilities.png` | 1254×1254 RGBA | 공방·박물관·텃밭·카페, 2×2 투명 아틀라스 |
-| `public/assets/friends-v2.png` | 기존 캐릭터 시트 | 도원·강재·민서·승준·민재·재민 |
-| `public/assets/mayor-hohyeon.png` | 기존 캐릭터 | 호현 촌장 |
+| 경로                              | 해상도           | 내용                                     |
+| --------------------------------- | ---------------- | ---------------------------------------- |
+| `public/assets/island-hd.webp`    | 6144×4096        | AI 업스케일한 전체 섬 지도               |
+| `public/assets/interiors-hd.webp` | 6144×4096        | 집·상점·공방·박물관, 2×2 배경            |
+| `public/assets/furniture.png`     | 1254×1254 RGBA   | 가구 16종, 4×4 투명 아틀라스             |
+| `public/assets/facilities.png`    | 1254×1254 RGBA   | 공방·박물관·텃밭·카페, 2×2 투명 아틀라스 |
+| `public/assets/friends-v2.png`    | 기존 캐릭터 시트 | 도원·강재·민서·승준·민재·재민            |
+| `public/assets/mayor-hohyeon.png` | 기존 캐릭터      | 호현 촌장                                |
 
 가구와 시설은 생성된 알파 채널을 그대로 보존합니다. 가구는 `naturalWidth / 4`의 소수점 셀 경계를 사용합니다. 일부 셀 가장자리에는 생성 이미지의 작은 그림자 흔적이 있습니다. 새 에셋은 프롬프트당 한 번 생성했고 추가 변형본은 만들지 않았습니다. 아래 프롬프트의 요청 해상도와 실제 생성 해상도가 다른 경우 위 표가 실제 파일 값입니다.
 
@@ -104,17 +118,15 @@ BOTTOM RIGHT: cozy village café, cream cottage with terracotta roof, centered w
 No large surrounding terrain or scenery, no landscape background, no opaque rectangles, no cast shadows reaching cell edges. Exactly four isolated assets suitable for overlaying on a painted island map. Preserve true transparent alpha.
 ```
 
-
-
 ## 2026-09-11 캐릭터 모션·꾸미기 확장
 
 내장 `image_gen`으로 걷기와 인사 자세, 착용 소품, 자연물 아틀라스를 추가 제작했습니다. 원본 파일은 보존하며, 머리색과 옷색 변경 및 소품 합성은 게임 실행 중 Canvas에서 수행합니다.
 
-| 게임 파일 | 실제 해상도 | 용도 |
-|---|---|---|
+| 게임 파일                          | 실제 해상도   | 용도                                       |
+| ---------------------------------- | ------------- | ------------------------------------------ |
 | `public/assets/friends-motion.png` | 1024×1536 RGB | 여섯 캐릭터 × 서기·왼발·오른발·인사 24자세 |
-| `public/assets/accessories.png` | 1774×887 RGBA | 모자 4종·안경 3종·꽃 머리핀 |
-| `public/assets/nature-detail.png` | 1774×887 RGBA | 나무·풀·꽃·돌·나비·갈매기 8종 |
+| `public/assets/accessories.png`    | 1774×887 RGBA | 모자 4종·안경 3종·꽃 머리핀                |
+| `public/assets/nature-detail.png`  | 1774×887 RGBA | 나무·풀·꽃·돌·나비·갈매기 8종              |
 
 캐릭터 생성 결과의 체크무늬는 실제 투명도가 아니어서 게임에서 가장자리에 연결된 중립색 배경만 제거합니다. 자세별 머리·눈·발 좌표를 측정해 정렬하고, 파란 머리와 청록색 옷의 색상 채널만 염색합니다. 자연물은 셀 경계의 희미한 선을 피하도록 안쪽을 사용합니다. 안경과 모자는 측정한 눈과 머리 위치에 맞추며, 기본 모습에는 도원의 붉은 머리, 강재의 긴 머리·둥근 안경, 재민의 갈색 모자를 적용합니다.
 
@@ -240,16 +252,15 @@ Change only these two issues:
 One cap only, centered in a tight landscape frame with modest transparent margin, full silhouette visible. No head, face, ears, hair, body, mannequin, floor, stand, exterior shadow, text, watermark or other object. Preserve the embroidered flower design and soft polished chibi game style, making the flower cluster a little smaller only if needed to remain comfortably inside the lower crown.
 ```
 
-
 ## 우당탕 극장 에셋 (2026-09-15)
 
 OpenAI 내장 imagegen으로 새 에셋 세 장을 생성했습니다. 원본 사진은 배포하지 않습니다. 호현은 일곱 번째 남성 친구로 다시 그렸으며 수염, 콧수염, 턱수염, 수염 그림자를 넣지 않았습니다.
 
-| 파일 | 실제 해상도 | 처리 |
-| --- | --- | --- |
-| public/assets/hohyeon-friend.png | 1024 × 1536 | RGB의 그려진 체크 배경을 런타임에서 연결 영역으로 제거. 얼굴 비율을 유지하고 기존 여섯 친구와 크기를 맞춤. |
-| public/assets/theater-wardrobe.png | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종. |
-| public/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용. |
+| 파일                                | 실제 해상도 | 처리                                                                                                       |
+| ----------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------- |
+| public/assets/hohyeon-friend.png    | 1024 × 1536 | RGB의 그려진 체크 배경을 런타임에서 연결 영역으로 제거. 얼굴 비율을 유지하고 기존 여섯 친구와 크기를 맞춤. |
+| public/assets/theater-wardrobe.png  | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종.                       |
+| public/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용.                                                                   |
 
 기존 friends-motion.png, accessories.png, jaemin-cap.png를 재사용합니다. 신체와 의상은 Canvas에서 층별로 합성하며, 분리된 의상과 신발 사이의 발목은 연속된 도형으로 연결합니다. 얼굴, 머리, 의상과 배경 일러스트는 생성 에셋입니다. 분장 미리보기의 흔들기·인사·기쁨 모션은 합성 캐릭터의 이동/회전/배율 애니메이션입니다. 새로운 보행 스프라이트를 생성했다고 표기하지 않습니다.
 
@@ -303,6 +314,13 @@ Each footwear cell contains exactly ONE matching pair of shoes standing side by 
 Background: actual transparent RGBA PNG. Every pixel outside the clothing pieces must have alpha 0, including all margins and space between cells. No white canvas or checkerboard pixels.
 Constraints: exactly sixteen complete clothing assets, no missing cells, no duplicate garments, materially distinct silhouettes rather than simple recolors. No labels, writing, logos, grid lines, humans, mannequins, stand, floor, room, background, or cast shadows outside the pieces.
 ```
+
+### 카지노 배경과 홀덤 테이블
+
+- `public/assets/lounge/casino-room.png`: 이미지 생성 도구로 새로 제작한 1536×1024 RGB 배경. 따뜻한 원목·녹색 벨벳·황동 조명과 빈 중앙 바닥. 인물·텍스트·로고 없음. 생성 1회, 원본 그대로 사용.
+- 정확한 생성 프롬프트: [casino-room.prompt.txt](public/assets/lounge/casino-room.prompt.txt).
+- 홀덤 카드 52장, 카드 뒷면, 칩, 펠트 테이블은 `app/lounge-poker-table.tsx`와 `app/lounge-casino.css`에서 직접 구현한 벡터/텍스트/CSS 그래픽입니다. 외부 카드 이미지를 복사하지 않았습니다. 딜러 아이콘은 기존 Lucide 의존성을 사용합니다.
+- 게임 규칙 참고: [PokerStars Texas Hold'em](https://www.pokerstars.com/poker/games/texas-holdem/), [Poker TDA 규칙 47 — 짧은 올인과 베팅 재개](https://www.pokertda.com/view-poker-tda-rules/). 규칙 엔진과 화폐 원장은 직접 구현했습니다.
 
 ### theater-backstage 생성 프롬프트
 

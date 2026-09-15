@@ -15,8 +15,8 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 68 || new Set(assets).size !== 68)
-  throw new Error('The lounge manifest must include all 68 unique images.');
+if (assets.length !== 72 || new Set(assets).size !== 72)
+  throw new Error('The lounge manifest must include all 72 unique images.');
 const replacements = new Map(
   assets.map((name) => [
     '/assets/' + name,
@@ -109,15 +109,21 @@ if (!css)
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="일곱 친구의 게임 라운지. 2D 캐릭터를 꾸미고, 초대장을 보내 함께 체스와 고스톱을 즐겨 보세요.">
+<meta name="description" content="일곱 친구의 게임 라운지와 카지노. 2D 캐릭터를 꾸미고 체스·고스톱·홀덤을 공통 화폐 범으로 함께 즐겨 보세요.">
 <title>호현지방 · 게임 라운지</title><style>${css}</style></head>
 <body><div id="root"></div><noscript>게임을 실행하려면 브라우저에서 JavaScript를 켜주세요.</noscript>
 <script type="application/json" id="third-party-licenses">${JSON.stringify(licenses).replaceAll('<', '\\u003c')}</script>
 <script>${js.replaceAll('</script', '<\\/script')}</script></body></html>`;
 const directory = path.join(root, 'docs');
 fs.mkdirSync(directory, { recursive: true });
-fs.writeFileSync(path.join(directory, 'index.html'), html);
-fs.writeFileSync(path.join(directory, '.nojekyll'), '');
+// Keep the last working page intact until the complete replacement is on disk.
+const nextPage=path.join(directory,`.index-${process.pid}.tmp`);
+fs.writeFileSync(nextPage,html);
+for(let attempt=0;;attempt++) {
+  try{fs.renameSync(nextPage,path.join(directory,'index.html'));break;}
+  catch(error){if(attempt>=19)throw error;await new Promise(resolve=>setTimeout(resolve,100));}
+}
+if(!fs.existsSync(path.join(directory,'.nojekyll')))fs.writeFileSync(path.join(directory, '.nojekyll'), '');
 console.log(
   `GitHub Pages / offline game: docs/index.html (${Buffer.byteLength(html)} bytes, ${inlined.size} embedded images)`,
 );
