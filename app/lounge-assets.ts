@@ -1,5 +1,12 @@
 // See public/assets/lounge/*ATTRIBUTION* and ASSETS.md.
 export const LOUNGE_ASSETS = {
+  loginDowon: '/assets/lounge/login/dowon.webp',
+  loginGangjae: '/assets/lounge/login/gangjae.webp',
+  loginMinseo: '/assets/lounge/login/minseo.webp',
+  loginSeungjun: '/assets/lounge/login/seungjun.webp',
+  loginMinjae: '/assets/lounge/login/minjae.webp',
+  loginJaemin: '/assets/lounge/login/jaemin.webp',
+  loginHohyeon: '/assets/lounge/login/hohyeon.webp',
   reaction_laugh: '/assets/lounge/reactions/laugh.png',
   reaction_wow: '/assets/lounge/reactions/wow.png',
   reaction_cry: '/assets/lounge/reactions/cry.png',

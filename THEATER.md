@@ -42,7 +42,7 @@
 - `npm test`: 저장·의상·분기·통신 규칙 검사
 - `npx tsc --noEmit`: 타입 검사
 - `npm run test:theater-multiplayer`: 실제 Supabase에 독립 클라이언트 7개를 연결해 동시 배역 선택, 의상 전달, 장면 소유권, 퇴장과 자리 재선택 검사
-- `npm run build:pages`: 현재 라운지의 `docs/index.html`과 별도 캐시 이미지 82개를 `docs/assets/`에 생성합니다. 보존된 극장 파일을 다시 생성하는 명령은 아닙니다.
+- `npm run build:pages`: 현재 라운지의 `docs/index.html`과 별도 캐시 이미지 89개를 `docs/assets/`에 생성합니다. 보존된 극장 파일을 다시 생성하는 명령은 아닙니다.
 
 GitHub Pages는 `main` 브랜치의 `/docs`를 게시합니다. 극장은 `docs/theater.html`의 기존 이미지 내장 파일로 보존됩니다. 이 극장 파일을 내려받아 여는 방식과 현재 라운지의 `docs/index.html`을 혼동하지 마세요. 극장 멀티플레이는 인터넷과 보안 컨텍스트가 필요하므로 GitHub Pages의 HTTPS 주소를 사용하세요. 극장 저장은 브라우저·주소별로 분리되며 자동으로 다른 기기에 이동하지 않습니다.
 

@@ -66,7 +66,7 @@
 
 ## GitHub Pages와 다운로드 실행
 
-기존 섬은 코드·스타일·이미지를 포함하는 `docs/island.html`에 보존했습니다. 현재 `npm run build:pages`는 라운지의 `docs/index.html`과 별도 캐시 이미지 82개를 `docs/assets/`에 생성하며 섬 파일을 다시 만들지 않습니다. GitHub Pages는 `main` 브랜치의 `/docs` 폴더를 게시합니다. 보존된 섬의 혼자 놀기는 별도 서버나 API 키 없이 실행하며 멀티플레이를 선택할 때만 외부 연결을 시작합니다.
+기존 섬은 코드·스타일·이미지를 포함하는 `docs/island.html`에 보존했습니다. 현재 `npm run build:pages`는 라운지의 `docs/index.html`과 별도 캐시 이미지 89개를 `docs/assets/`에 생성하며 섬 파일을 다시 만들지 않습니다. GitHub Pages는 `main` 브랜치의 `/docs` 폴더를 게시합니다. 보존된 섬의 혼자 놀기는 별도 서버나 API 키 없이 실행하며 멀티플레이를 선택할 때만 외부 연결을 시작합니다.
 
 이전 섬을 내려받아 실행할 때는 `docs/island.html`을 사용합니다. 현재 라운지의 `docs/index.html`은 별도 이미지와 온라인 계정 서버가 필요합니다. 섬 저장 데이터는 브라우저와 주소별로 분리됩니다. 로컬 미리보기에서 GitHub Pages로 옮길 때는 설정의 저장 내보내기/불러오기를 사용하세요.
 

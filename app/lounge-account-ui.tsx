@@ -18,8 +18,7 @@ import {
   cloud,
   fetchProfile,
 } from './lounge-auth';
-import { AvatarView } from './avatar-view';
-import { defaultLook } from './lounge-look';
+import { LoginCharacterPreview, LoginPortrait } from './lounge-login-preview';
 export function RecoveryCard({
   username,
   code,
@@ -274,25 +273,16 @@ export function AccountGate({
           <Armchair size={26} />
           <b>호현지방</b>
         </div>
-        <span className="l-kicker">OUR PLACE, OUR STORIES</span>
+        <span className="l-kicker">일곱 친구의 회관</span>
         <h1>
-          늘 같은 친구들.
+          같이 한 판,
           <br />
-          매일 다른 이야기.
+          오늘의 우리.
         </h1>
         <p>
-          옷장부터 게임 테이블까지,
-          <br />
-          이제 나의 아이디로 이어가요.
+          내 아이디를 고르고, 친구들을 만나러 가요.
         </p>
-        <div className="l-auth-friends">
-          {ACCOUNTS.map((a) => (
-            <div key={a.username}>
-              <AvatarView actor={a.actor} look={defaultLook(a.actor)} />
-              <span>{a.name}</span>
-            </div>
-          ))}
-        </div>
+        <LoginCharacterPreview actor={selected.actor} />
         <div className="l-auth-promise">
           <CloudCheck size={19} />
           <span>내 코디와 범 지갑을 안전하게 보관해요.</span>
@@ -328,7 +318,7 @@ export function AccountGate({
           />
         ) : (
           <>
-            <span className="l-kicker">WELCOME BACK, FRIEND</span>
+            <span className="l-kicker">우리 회관에 어서 와요</span>
             <h2>
               {mode === 'login'
                 ? '반가워요, 어서 와요.'
@@ -418,6 +408,7 @@ export function AccountGate({
                     aria-pressed={username === a.username}
                     onClick={() => setUsername(a.username)}
                   >
+                    <LoginPortrait actor={a.actor} />
                     <strong>{a.name}</strong>
                     <small>{a.username}</small>
                   </button>

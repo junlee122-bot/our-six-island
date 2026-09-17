@@ -22,9 +22,9 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 ## Pages 이미지 패키징
 
-`app/lounge-assets.ts`는 현재 **82개 고유 이미지**를 참조합니다. `scripts/build-standalone.mjs`는 각 파일의 SHA-256 앞 12자리를 파일명에 넣어 `docs/assets/`에 저장하고, 게임의 이미지 경로를 `./assets/...` 상대 URL로 바꿉니다. 코드와 스타일은 `docs/index.html`에 포함하지만 이미지는 Base64로 내장하지 않습니다. HTML과 해당 이미지 파일을 함께 게시해야 하며, 이미지별 캐시를 재사용하고 내용이 바뀐 파일은 새 URL로 받습니다. 별도의 서비스 워커나 오프라인 로그인 기능을 추가한 것은 아닙니다.
+`app/lounge-assets.ts`는 현재 **89개 고유 이미지**를 참조합니다. `scripts/build-standalone.mjs`는 각 파일의 SHA-256 앞 12자리를 파일명에 넣어 `docs/assets/`에 저장하고, 게임의 이미지 경로를 `./assets/...` 상대 URL로 바꿉니다. 코드와 스타일은 `docs/index.html`에 포함하지만 이미지는 Base64로 내장하지 않습니다. HTML과 해당 이미지 파일을 함께 게시해야 하며, 이미지별 캐시를 재사용하고 내용이 바뀐 파일은 새 URL로 받습니다. 별도의 서비스 워커나 오프라인 로그인 기능을 추가한 것은 아닙니다.
 
-82개는 현재 라운지의 참조 수입니다. `docs/assets/`에 남은 이전 버전의 해시 파일이나 보존된 `theater.html`·`island.html` 내부 이미지는 이 수에 포함하지 않습니다. 아래 과거 제작 기록의 생성 도구·해상도·프롬프트는 당시 원본에 대한 기록이며, 현재 공통 컬렉션과 방의 사용 경로는 위 WebP 표를 기준으로 합니다.
+89개는 현재 라운지의 참조 수입니다. `docs/assets/`에 남은 이전 버전의 해시 파일이나 보존된 `theater.html`·`island.html` 내부 이미지는 이 수에 포함하지 않습니다. 아래 과거 제작 기록의 생성 도구·해상도·프롬프트는 당시 원본에 대한 기록이며, 현재 공통 컬렉션과 방의 사용 경로는 위 WebP 표를 기준으로 합니다.
 
 ## 섯다 테이블
 
@@ -85,6 +85,10 @@ Chessnut 원본: https://github.com/LexLuengas/chessnut-pieces . LICENSE와 COPY
 - 모델 SHA256: `548a36f9c3f4ab8da56cd3b13badf23968bee207b396dad14d04b830e5f2ab2d`.
 - 모델/NCNN: BSD-3-Clause. 참고한 NCNN Vulkan 프런트엔드: MIT. 라이선스 원문은 `licenses/`에 보관합니다. 모델과 런타임은 웹 게임에 포함되지 않습니다.
 - 실제 신경망 추론, 원본/결과 크기와 해시 검사, 전체 지도와 확대 비교 이미지 육안 검사를 완료했습니다.
+
+## 로그인 미리보기
+
+`public/assets/lounge/login/*.webp`의 7개 전신은 기존 `loungeSprites().draw()`에 `defaultLook()`를 적용해 440×540 캔버스로 사전 렌더링한 파생 이미지입니다. 투명 lossless WebP 합계 667,580바이트이며 원본 캔버스와 알파·보이는 RGB 픽셀이 일치합니다. 새 AI 생성은 사용하지 않았습니다. 같은 파일을 계정 선택 얼굴과 전신 미리보기에 재사용하고, 등장·인사·대기 움직임은 CSS로 적용합니다. 로그인 전에는 전체 의상·소품 아틀라스를 다운로드하지 않습니다.
 
 ## 배포 파일
 
