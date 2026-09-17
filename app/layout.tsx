@@ -4,6 +4,7 @@ import './lounge.css';
 import './lounge-casino.css';
 import './lounge-blackjack.css';
 import './lounge-seotda.css';
+import './lounge-club.css';
 export const metadata: Metadata = {
   title: '호현지방 · 게임 라운지',
   description:

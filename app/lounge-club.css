@@ -1,0 +1,120 @@
+/* The clubhouse shell. Game tables keep their dedicated, readable play surfaces. */
+.l-app {
+  --accent: #345bce;
+  --line: #d5d9df;
+  --muted: #65717f;
+  --paper: #fafaf7;
+  background: #e9ebeb;
+  color: #202c3d;
+}
+.l-app .l-header {
+  height: 76px;
+  padding: 0 max(24px, calc((100vw - 1540px) / 2));
+  gap: 26px;
+  background: #fafaf7;
+  border-bottom: 1px solid #cbd1da;
+}
+.l-app .l-brand-icon { background: #24354e; color: #faf8ef; border-radius: 7px; }
+.l-app .l-brand strong { font-size: 20px; letter-spacing: -.7px; }
+.l-app .l-brand small { font-size: 10px; letter-spacing: 0; color: #6d7888; }
+.l-app .l-header nav button { padding: 0 20px; color: #626e7e; }
+.l-app .l-header nav button[aria-pressed='true'] { color: #345bce; border-color: #345bce; }
+.l-app .l-header-right { gap: 14px; }
+.l-app .l-wallet-button { background: #edf0f7; border-color: #d2d9e7; color: #253953; border-radius: 7px; }
+.l-app .l-friends-button { background: #fafaf7; border-color: #cbd2df; border-radius: 7px; }
+.l-app .l-profile .avatar-view { background: #d8deea; }
+.l-app .l-save-bar { background: #e0e4e9; border-bottom: 1px solid #d1d6df; color: #586577; min-height: 30px; padding: 5px max(24px, calc((100vw - 1540px) / 2)); font-size: 11px; }
+.l-app .l-save-bar button { color: #345bce; }
+.l-app .l-lounge { max-width: 1588px; padding: 24px 24px 12px; }
+.l-app .l-section-title { margin-bottom: 18px; }
+.l-app .l-lounge .l-section-title h1 { font-size: clamp(24px, 2.2vw, 32px); letter-spacing: -1.2px; }
+.l-app .l-kicker { color: #697b95; font-size: 10px; letter-spacing: .3px; margin-bottom: 5px; }
+.l-app .l-section-title p { margin-top: 6px; font-size: 12px; }
+.l-app .l-primary { background: #345bce; border-color: #345bce; border-radius: 7px; box-shadow: none; color: white; }
+.l-app .l-primary:hover { background: #274caf; }
+.l-app .l-secondary { background: #f5f6f8; border-color: #cdd5e0; color: #304564; border-radius: 7px; }
+.l-app .l-lounge-grid { grid-template-columns: minmax(0, 1fr) 268px; gap: 18px; align-items: start; }
+.l-app .l-room-wrap { border-radius: 9px; background: #f7f8f9; border: 1px solid #c8cfda; overflow: hidden; }
+.l-app .l-room-toolbar { background: #f7f8f9; min-height: 36px; padding: 5px 14px; color: #69778a; border-top: 1px solid #d4dbe5; }
+.l-app .l-play-list, .l-app .l-chat { border-radius: 8px; border: 1px solid #cfd6df; background: #f8f9f8; box-shadow: none; }
+.l-app .l-play-list { padding: 17px 16px 6px; }
+.l-app .l-play-list h2 { font-size: 17px; margin-bottom: 6px; }
+.l-app .l-play-list > button { padding: 13px 0; border-radius: 0; border-top: 1px solid #e0e4ea; gap: 10px; }
+.l-app .l-play-list strong { font-size: 12px; }
+.l-app .l-play-list small { display: none; }
+.l-app .l-play-list em { color: #788394; font-size: 10px; }
+.l-app .l-game-symbol { background: #e7ebf3; color: #39537d; border-radius: 5px; width: 35px; height: 39px; font-size: 23px; }
+.l-app .l-chat-header { border-color: #dce0e7; }
+.l-app .l-chat form { border-color: #d3dae5; background: #f5f7fa; }
+.l-app .l-chat form button { color: #345bce; }
+.l-app .l-chat-messages { height: 148px; }
+.l-app .l-closet-invitation { margin-top: 18px; border: 1px solid #ccd4df; border-radius: 8px; background: #e0e6ef; padding: 17px 21px; color: #344761; }
+.l-app .l-closet-invitation small { letter-spacing: .2px; color: #73819a; }
+.l-app .l-closet-invitation strong { font-size: 17px; }
+.l-app .l-footer { max-width: 1588px; color: #6a7587; padding: 20px 24px 26px; }
+.l-app .l-modal { background: #fafaf7; border-color: #d0d6df; border-radius: 12px; }
+.l-app .l-toast { background: #263954; color: #fff; }
+/* Reactions remain available without reserving a large empty panel every turn. */
+.l-app .l-reactions { margin: 0; border: 0; border-top: 1px solid #d4dbe5; border-radius: 0; background: #f8f9fa; padding: 9px 14px; }
+.l-app .l-reaction-bar small { display: none; }
+.l-app .l-reaction-bar b { font-size: 12px; color: #4b5b72; }
+.l-app .l-reaction-open { background: #e7edf8; color: #3154a8; border-color: #cdd7eb; }
+.l-app .l-reaction-feed { min-height: 0; padding: 0; gap: 8px; }
+.l-app .l-reaction-feed > p { display: none; }
+.l-app .l-reaction-feed:has(.l-reaction-card) { padding-top: 9px; }
+.l-app .l-reaction-card { min-width: 0; background: #fff; border-color: #d7dfea; border-radius: 8px; }
+.l-app .l-reaction-card img { width: 56px; height: 56px; }
+.l-app .l-reaction-status:empty { display: none; }
+.l-app .l-reaction-status:not(:empty) { margin-top: 5px; }
+/* The entry screen belongs to the same club; authentication behaviour is unchanged. */
+.l-app.l-auth-page { background: #f1f3f4 !important; }
+.l-app .l-auth-story { background: #24354e; color: #f5f5f0; }
+.l-app .l-auth-story .l-kicker, .l-app .l-auth-story > p, .l-app .l-auth-promise { color: #c3cedf; }
+.l-app .l-auth-story h1 { font-size: clamp(30px, 3.3vw, 50px) !important; }
+.l-app .l-auth-tabs button[aria-pressed='true'] { color: #345bce; border-color: #345bce; }
+.l-app .l-account-form input { background: #fff; border-color: #cbd3df; color: #253954; }
+.l-app .l-account-ids button { background: #e5eaf1; }
+.l-app .l-account-ids button[aria-pressed='true'] { background: #dbe5fb; border-color: #6b89cf; color: #234caa; }
+@media(max-width:1100px) {
+  .l-app .l-header { gap: 15px; padding: 0 18px; }
+  .l-app .l-header nav button { padding: 0 12px; }
+  .l-app .l-header-right { gap: 9px; }
+  .l-app .l-lounge-grid { grid-template-columns: minmax(0, 1fr) 230px; gap: 12px; }
+}
+@media(max-width:850px) {
+  .l-app .l-lounge-grid { grid-template-columns: 1fr; }
+  .l-app .l-lounge-sidebar { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .l-app .l-chat { min-width: 0; }
+  .l-app .l-header { height: auto; min-height: 104px; display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; padding: 12px 18px 0; }
+  .l-app .l-header-right { justify-content: flex-end; gap: 9px; }
+  .l-app .l-header nav { grid-column: 1 / -1; grid-row: 2; width: 100%; margin: 0; gap: 0; }
+  .l-app .l-header nav button { justify-content: center; flex: 1; min-height: 40px; padding: 6px; font-size: 13px; }
+  .l-app .l-brand strong { font-size: 17px; }
+  .l-app .l-brand-icon { width: 34px; height: 34px; }
+  .l-app .l-profile > span:last-child { display: none; }
+}
+@media(max-width:540px) {
+  .l-app .l-header { padding-inline: 12px; gap: 8px; }
+  .l-app .l-brand { gap: 7px; }
+  .l-app .l-brand small { font-size: 9px; }
+  .l-app .l-wallet-button { font-size: 10px; padding: 7px; gap: 4px; }
+  .l-app .l-friends-button { padding: 7px; font-size: 10px !important; gap: 4px; }
+  .l-app .l-header-right { gap: 5px; }
+  .l-app .l-profile .avatar-view { width: 29px; height: 29px; }
+  .l-app .l-save-bar { padding: 5px 12px; font-size: 10px; }
+  .l-app .l-lounge { padding: 18px 12px 8px; }
+  .l-app .l-section-title { gap: 9px; margin-bottom: 14px; }
+  .l-app .l-lounge .l-section-title h1 { font-size: 23px; }
+  .l-app .l-section-title p { font-size: 10px; }
+  .l-app .l-new-game { font-size: 12px; padding: 10px 11px; white-space: nowrap; }
+  .l-app .l-lounge-sidebar { grid-template-columns: 1fr; }
+  .l-app .l-play-list { padding: 14px; }
+  .l-app .l-play-list > button { min-height: 61px; }
+  .l-app .l-closet-invitation { padding: 14px; gap: 9px; }
+  .l-app .l-closet-invitation strong { font-size: 14px; }
+  .l-app .l-closet-invitation > span:last-child { font-size: 11px; }
+  .l-app .l-footer { padding: 18px 12px; gap: 15px; }
+  .l-app .l-reactions { padding: 8px 10px; }
+  .l-app .l-reaction-card img { width: 42px; height: 42px; }
+  .l-app .l-reaction-card { gap: 4px; padding: 5px; }
+}

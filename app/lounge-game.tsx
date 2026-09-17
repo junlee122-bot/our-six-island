@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
+import { RoomFloor } from './lounge-scene';
+import './lounge-club.css';
 import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
@@ -36,7 +38,6 @@ import {
   gameReservation,
   type GameKind,
   type LoungeView,
-  type LoungePlayer,
 } from './lounge-room';
 import { CloudRoom as LoungeRoom } from './lounge-cloud-room';
 import { AccountGate, PasswordForm, RecoveryCard } from './lounge-account-ui';
@@ -44,7 +45,6 @@ import { accountLogout } from './lounge-auth';
 import { accountSave, type AccountProfile } from './lounge-accounts';
 import { useCloudSave } from './lounge-cloud-save';
 import {
-  defaultLook,
   freshLounge,
   readLounge,
   LOUNGE_SAVE_KEY,
@@ -806,183 +806,6 @@ export function GameScreen({
     </section>
   );
 }
-function WorldFriend({ p, self }: { p: LoungePlayer; self: string }) {
-  const [walking, setWalking] = useState(false),
-    position = useRef({ x: p.x, y: p.y });
-  useEffect(() => {
-    if (position.current.x === p.x && position.current.y === p.y) return;
-    position.current = { x: p.x, y: p.y };
-    setWalking(true);
-    const timer = setTimeout(() => setWalking(false), 1000);
-    return () => clearTimeout(timer);
-  }, [p.x, p.y]);
-  return (
-    <div
-      className={'l-world-player ' + (p.id === self ? 'self' : '')}
-      style={{ left: p.x + '%', top: p.y + '%', zIndex: Math.round(p.y) }}
-    >
-      <div className="l-player-shadow" />
-      <AvatarView
-        actor={p.actor}
-        look={p.look}
-        animated
-        motion={
-          walking
-            ? 'walk'
-            : p.emote && Date.now() - p.emoteAt < 4500
-              ? 'wave'
-              : 'idle'
-        }
-      />
-      <span className="l-player-name">
-        {ACTORS[p.actor]}
-        {p.id === self && <small>나</small>}
-      </span>
-      {p.emote && Date.now() - p.emoteAt < 4500 && (
-        <span className="l-emote" key={p.emoteAt}>
-          {p.emote}
-        </span>
-      )}
-    </div>
-  );
-}
-function RoomFloor({
-  players,
-  self,
-  onMove,
-  onTable,
-  view,
-  area = 'lounge',
-}: {
-  players: LoungePlayer[];
-  self: string;
-  onMove: (x: number, y: number) => void;
-  onTable: (kind: GameKind) => void;
-  view: LoungeView;
-  area?: 'lounge' | 'casino';
-}) {
-  const ref = useRef<HTMLDivElement>(null),
-    lastMove = useRef(0);
-  const move = useCallback(
-    (dx: number, dy: number) => {
-      const p = players.find((p) => p.id === self);
-      if (p) onMove(p.x + dx, p.y + dy);
-    },
-    [players, self, onMove],
-  );
-  return (
-    <div
-      ref={ref}
-      className="l-room-scene"
-      tabIndex={0}
-      role="application"
-      aria-label="라운지. 바닥을 누르거나 방향키로 이동합니다."
-      onKeyDown={(e) => {
-        if (document.querySelector('dialog[open]')) return;
-        const d: Record<string, number[]> = {
-          ArrowLeft: [-3, 0],
-          a: [-3, 0],
-          ArrowRight: [3, 0],
-          d: [3, 0],
-          ArrowUp: [0, -3],
-          w: [0, -3],
-          ArrowDown: [0, 3],
-          s: [0, 3],
-        };
-        if (d[e.key]) {
-          e.preventDefault();
-          if (Date.now() - lastMove.current > 110) {
-            move(d[e.key][0], d[e.key][1]);
-            lastMove.current = Date.now();
-          }
-        }
-      }}
-      onPointerDown={(e) => {
-        if ((e.target as Element).closest('button')) return;
-        ref.current?.focus();
-        const r = e.currentTarget.getBoundingClientRect();
-        onMove(
-          ((e.clientX - r.left) / r.width) * 100,
-          ((e.clientY - r.top) / r.height) * 100,
-        );
-      }}
-    >
-      <img
-        className="l-room-bg"
-        src={area === 'casino' ? LOUNGE_ASSETS.casino : LOUNGE_ASSETS.room}
-        alt={
-          area === 'casino'
-            ? '호현 카지노의 따뜻한 조명과 원목 게임 홀'
-            : '창으로 햇살이 들어오는 호현지방의 아늑한 게임 라운지'
-        }
-        draggable={false}
-      />
-      <div className="l-room-plaque">
-        <span>{area === 'casino' ? 'HOHYEON CASINO' : 'HOHYEON'}</span>
-        <strong>
-          {area === 'casino'
-            ? '오늘 밤, 좋은 패가 함께하길.'
-            : '우리, 한 판 할까?'}
-        </strong>
-      </div>
-      {(
-        (area === 'casino'
-          ? ['chess', 'poker', 'blackjack']
-          : ['seotda', 'gostop']) as GameKind[]
-      ).map((kind) => (
-        <button
-          key={kind}
-          className={'l-world-table ' + kind}
-          onClick={() => onTable(kind)}
-          aria-label={GAME_INFO[kind].name + ' 테이블 열기'}
-        >
-          <span className="l-table-top">
-            {kind !== 'gostop' && kind !== 'seotda' ? (
-              kind === 'blackjack' ? (
-                <span className="l-mini-blackjack">21</span>
-              ) : kind === 'poker' ? (
-                <span className="l-mini-poker">
-                  <i>A♠</i>
-                  <i>K♥</i>
-                </span>
-              ) : (
-                <span className="l-mini-chess">{GAME_INFO[kind].symbol}</span>
-              )
-            ) : (
-              <span className="l-mini-hwatu">
-                <img src={LOUNGE_ASSETS['m01-01']} alt="" />
-                <img src={LOUNGE_ASSETS['m03-01']} alt="" />
-                {kind === 'gostop' && (
-                  <img src={LOUNGE_ASSETS['m08-01']} alt="" />
-                )}
-              </span>
-            )}
-          </span>
-          <span className="l-table-tag">
-            <b>{GAME_INFO[kind].name}</b>
-            <small>
-              {view.status === 'connected' &&
-              (kind === 'chess'
-                ? view.chess
-                : kind === 'gostop'
-                  ? view.gostop
-                  : view[kind])
-                ? '게임 보기'
-                : '초대하기'}
-              <ArrowUpRight size={11} />
-            </small>
-          </span>
-        </button>
-      ))}
-      {players
-        .filter((p) => p.area === area)
-        .map((p) => (
-          <WorldFriend key={p.id} p={p} self={self} />
-        ))}
-      <span className="l-scene-hint">바닥을 클릭해 이동 · 방향키 / WASD</span>
-    </div>
-  );
-}
 export default function LoungeGame() {
   return (
     <AccountGate>
@@ -1217,7 +1040,7 @@ function AccountLounge({
           </span>
           <span>
             <strong>호현지방</strong>
-            <small>PLAY, DRESS & HANG OUT</small>
+            <small>일곱 친구의 회관</small>
           </span>
         </button>
         <nav aria-label="주 메뉴">
@@ -1329,18 +1152,18 @@ function AccountLounge({
             <div>
               <span className="l-kicker">
                 {tab === 'casino'
-                  ? 'THE NIGHT IS STILL YOUNG'
-                  : 'A PLACE FOR OUR SEVEN'}
+                  ? '회관 02 · 카드룸'
+                  : '회관 01 · 우리 아지트'}
               </span>
               <h1>
                 {tab === 'casino'
-                  ? '호현 카지노'
-                  : `어서 와요, ${ACTORS[save.actor]}.`}
+                  ? '카지노'
+                  : '우리들의 회관'}
               </h1>
               <p>
                 {tab === 'casino'
-                  ? '친구들과 같은 테이블, 오늘 밤의 한 판.'
-                  : '편한 옷으로 갈아입고, 좋아하는 사람들과 한 판.'}
+                  ? '체스 · 텍사스 홀덤 · 블랙잭'
+                  : '고스톱 · 섯다 · 친구들과 수다'}
               </p>
             </div>
             <button
@@ -1362,7 +1185,7 @@ function AccountLounge({
                 area={tab === 'casino' ? 'casino' : 'lounge'}
               />
               <div className="l-room-toolbar">
-                <span>오늘 기분은 범티콘으로 전해요.</span>
+                <span>친구에게 한마디</span>
                 <button
                   className="l-icon"
                   aria-label={sound ? '효과음 끄기' : '효과음 켜기'}
@@ -1383,7 +1206,7 @@ function AccountLounge({
             </div>
             <aside className="l-lounge-sidebar">
               <div className="l-play-list">
-                <span className="l-kicker">WHAT SHALL WE PLAY?</span>
+                <span className="l-kicker">함께할 게임</span>
                 <h2>오늘의 한 판</h2>
                 <button
                   onClick={() => {
@@ -1518,7 +1341,7 @@ function AccountLounge({
           >
             <Shirt size={29} />
             <span>
-              <small>BE YOURSELF, IN YOUR OWN WAY</small>
+              <small>회관 03 · 분장실</small>
               <strong>다음 판은, 다른 옷으로?</strong>
             </span>
             <span>

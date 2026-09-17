@@ -1,0 +1,107 @@
+{
+  "title": "호현지방 — 일곱 친구의 회관",
+  "createdAt": "2026-09-17",
+  "provider": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "aspectRatio": "3:2",
+  "resolution": "2k",
+  "quality": "high",
+  "generatedImages": 6,
+  "creditsUsed": 18,
+  "direction": "Muted blue clubhouse with warm timber, matte illustrated backgrounds and layered 2D friends; no character 3D models.",
+  "entries": [
+    {
+      "name": "club-room",
+      "file": "club-room.webp",
+      "jobId": "6cef36d6-f022-49a8-9086-1f3dfcbcc243",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nEdit the supplied approved friends clubhouse environment into a production game background. Preserve exact camera and room framing. REMOVE the foreground table, every foreground chair and the character; reconstruct uninterrupted floor beneath them. Keep all fixed furniture along the rear wall only, leaving the lower 60% walkable and visually quiet. Exactly seven lockers, now ink-navy slim frames with pale gray doors. Make this feel like seven friends' cared-for game club: warm pale plywood floor, a few colorful tiny personal stickers on lockers, blank snapshots on a pinboard, game boxes, a small leafy plant, a cobalt-and-cream striped cushion on a low rear-wall bench. Restrained and pleasantly lived-in, not a school storage room, not cluttered. Soft natural light and warm wood against matte blue details. Doorways stay on the back wall. No freestanding foreground furniture, people, leg shadows, rug, UI, text, letters or logos. One landscape 3:2 room backdrop, floor-wall line at approximately 40% down, fixed elevated frontal view.",
+      "references": [
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ]
+    },
+    {
+      "name": "club-casino",
+      "file": "club-casino.webp",
+      "jobId": "30d822e8-2081-4c72-ac7d-e6142abb80c8",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nCreate the adjacent evening card room of the supplied friends clubhouse, same camera, building, material language, modest room size and furniture proportions. Empty broad warm plywood floor occupying the lower 60%, all fixed furniture flush against the BACK WALL. Deep ink navy lower wall panels, chalk-gray upper walls, warm amber pendant lamps, a slim rear counter with stacked playing-card boxes, a low upholstered bench, a small pinboard with blank paper, two doors of the same simple navy style. A few cobalt details and warm muted burgundy upholstery. Feels like a private friends' game club at dusk, not a lavish commercial casino. Keep enough ambient light to see people and game tables clearly. REMOVE all foreground tables and chairs, no people, no playing cards scattered on floor, no poker tables baked into background, no roulette, no slot machines, no signage, letters, UI or logos. The central and side walking floor must be completely clear so separate table sprites can be placed later. One 3:2 image.",
+      "references": [
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ]
+    },
+    {
+      "name": "club-table",
+      "file": "club-table.webp",
+      "jobId": "e32b22aa-330c-4c63-ba16-c445938ba497",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nAn isolated production game sprite of ONE rounded rectangular pale plywood game table on four slender ink navy metal legs, matching the table design in the supplied room reference. Fixed elevated front-facing orthographic camera, see broad tabletop and front apron and all four coherent legs; no rotated isometric diamond. Tabletop empty and smoothly shaded. Table fully visible, centered and fills about 90% of the width and 78% of height of a 3:2 canvas. No chairs, no people, no room, no floor, no ground shadow, no text or labels. True transparent alpha background. Clean cutout edges including transparent spaces between the legs. A 2D hand-painted table asset, not a photo and not a flat UI oval.",
+      "references": [
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ],
+      "background": "transparent"
+    },
+    {
+      "name": "club-friends-classic",
+      "file": "club-friends-classic.webp",
+      "jobId": "3f3adb93-2d47-4643-8599-d2a50318609c",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nRedraw the FIRST reference character sheet as a production 2D sprite sheet using the restrained hand-drawn linework and balanced approximately 2.8-heads-tall proportions of the red-haired character in the SECOND reference. EXACTLY seven full-body people in a uniform FOUR-COLUMN TWO-ROW invisible grid: top row four, bottom row three with bottom-right cell EMPTY. Preserve each person's exact cell, hairstyle, face identity, clothing design and clothing colors from FIRST reference. Every body, both shoes, all hair completely inside its own cell, generous magenta separation, no overlaps. Align head tops and foot baselines consistently within each row. IMPORTANT: All seven characters' hair must remain saturated cobalt BLUE exactly as the first sheet, because the game recolors this hair mask at runtime. Do not make any hair burgundy in the source sheet. Preserve short bob+banges top-left, masculine long-haired top-second, long-haired top-third, short hair top-fourth; masculine center-parted bottom-first, short hair bottom-second, clean-shaven handsome short hair bottom-third. Do not add glasses, hats, jewelry or facial hair; these are separate in-game layers. Preserve outfits from first reference without substituting the black outfit shown in the second. Flatten highlights into 2-3 clear tones with confident soft dark outlines; matte skin and hair, no glossy toy eyes, no plastic doll rendering. Front-facing relaxed standing poses, same camera across figures. SOLID EXACT FLAT #FF00FF background including every gap between limbs, no floor, no background shadows, no gradients, no checkers, no names, no letters, no decorative elements. One landscape 3:2 image.",
+      "references": [
+        {
+          "role": "image",
+          "value": "https://raw.githubusercontent.com/junlee122-bot/our-six-island/main/public/assets/lounge/lounge-friends-classic.png"
+        },
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ]
+    },
+    {
+      "name": "club-friends-street",
+      "file": "club-friends-street.webp",
+      "jobId": "e100486b-8e92-41d8-b4b2-263aaa3760d0",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nRedraw the FIRST reference character sheet as a production 2D sprite sheet using the restrained hand-drawn linework and balanced approximately 2.8-heads-tall proportions of the red-haired character in the SECOND reference. EXACTLY seven full-body people in a uniform FOUR-COLUMN TWO-ROW invisible grid: top row four, bottom row three with bottom-right cell EMPTY. Preserve each person's exact cell, hairstyle, face identity, clothing design and clothing colors from FIRST reference. Every body, both shoes, all hair completely inside its own cell, generous magenta separation, no overlaps. Align head tops and foot baselines consistently within each row. IMPORTANT: All seven characters' hair must remain saturated cobalt BLUE exactly as the first sheet, because the game recolors this hair mask at runtime. Do not make any hair burgundy in the source sheet. Preserve short bob+banges top-left, masculine long-haired top-second, long-haired top-third, short hair top-fourth; masculine center-parted bottom-first, short hair bottom-second, clean-shaven handsome short hair bottom-third. Do not add glasses, hats, jewelry or facial hair; these are separate in-game layers. Preserve outfits from first reference without substituting the black outfit shown in the second. Flatten highlights into 2-3 clear tones with confident soft dark outlines; matte skin and hair, no glossy toy eyes, no plastic doll rendering. Front-facing relaxed standing poses, same camera across figures. SOLID EXACT FLAT #FF00FF background including every gap between limbs, no floor, no background shadows, no gradients, no checkers, no names, no letters, no decorative elements. One landscape 3:2 image.",
+      "references": [
+        {
+          "role": "image",
+          "value": "https://raw.githubusercontent.com/junlee122-bot/our-six-island/main/public/assets/lounge/lounge-friends-street.png"
+        },
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ]
+    },
+    {
+      "name": "club-friends-smart",
+      "file": "club-friends-smart.webp",
+      "jobId": "78eeef47-b7c6-4158-a3da-04117690113f",
+      "prompt": "Hand-painted 2.5D game art with restrained cel shading, precise edges and simple buildable forms. Use matte steel, painted plaster, pale plywood, woven fabric and paper. Environment colors are chalk gray, ink navy and pale wood; cobalt marks interactive furniture, while burgundy character hair stays distinct. Soft upper-left daylight, small consistent contact shadows, lightly worn surfaces and a lived-in friendly mood. Maintain readable silhouettes, clear floor contact and one fixed elevated frontal orthographic view across every asset. No gloss, bloom or photorealistic textures.\nRedraw the FIRST reference character sheet as a production 2D sprite sheet using the restrained hand-drawn linework and balanced approximately 2.8-heads-tall proportions of the red-haired character in the SECOND reference. EXACTLY seven full-body people in a uniform FOUR-COLUMN TWO-ROW invisible grid: top row four, bottom row three with bottom-right cell EMPTY. Preserve each person's exact cell, hairstyle, face identity, clothing design and clothing colors from FIRST reference. Every body, both shoes, all hair completely inside its own cell, generous magenta separation, no overlaps. Align head tops and foot baselines consistently within each row. IMPORTANT: All seven characters' hair must remain saturated cobalt BLUE exactly as the first sheet, because the game recolors this hair mask at runtime. Do not make any hair burgundy in the source sheet. Preserve short bob+banges top-left, masculine long-haired top-second, long-haired top-third, short hair top-fourth; masculine center-parted bottom-first, short hair bottom-second, clean-shaven handsome short hair bottom-third. Do not add glasses, hats, jewelry or facial hair; these are separate in-game layers. Preserve outfits from first reference without substituting the black outfit shown in the second. Flatten highlights into 2-3 clear tones with confident soft dark outlines; matte skin and hair, no glossy toy eyes, no plastic doll rendering. Front-facing relaxed standing poses, same camera across figures. SOLID EXACT FLAT #FF00FF background including every gap between limbs, no floor, no background shadows, no gradients, no checkers, no names, no letters, no decorative elements. One landscape 3:2 image.",
+      "references": [
+        {
+          "role": "image",
+          "value": "https://raw.githubusercontent.com/junlee122-bot/our-six-island/main/public/assets/lounge/lounge-friends-smart.png"
+        },
+        {
+          "role": "image",
+          "value": "3549f2f9-7e07-4838-8d2d-d31957969745"
+        }
+      ]
+    }
+  ],
+  "reused": [
+    {
+      "name": "club-wardrobe",
+      "source": "Previously approved dressing-room concept",
+      "jobId": null
+    }
+  ],
+  "processing": "Backgrounds encoded WebP quality 88; keyed sprite sheets and transparent table encoded losslessly. Runtime separates seven characters and applies hair, clothes and accessory customization."
+}

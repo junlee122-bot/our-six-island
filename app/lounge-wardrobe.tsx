@@ -1,5 +1,7 @@
 'use client';
-import { useState } from 'react';
+/* Static GitHub Pages serves these versioned game assets without a Next image service. */
+/* oxlint-disable next/no-img-element */
+import { useId, useState } from 'react';
 import { Check, Bookmark, Download, RotateCcw, ArrowRight } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { ACTORS, ACTOR_COLORS } from './theater-data';
@@ -16,7 +18,16 @@ import {
   type Look,
 } from './lounge-look';
 import { loungeSprites } from './lounge-sprites';
+import { LOUNGE_ASSETS } from './lounge-assets';
 import type { Motion } from './character-style';
+import './lounge-wardrobe-club.css';
+
+const WARDROBE_CATEGORIES = [
+  ['outfit', '옷'],
+  ['hair', '머리'],
+  ['extras', '소품'],
+  ['saved', '보관함'],
+] as const;
 export function Wardrobe({
   save,
   onChange,
@@ -34,7 +45,11 @@ export function Wardrobe({
 }) {
   const actor = save.actor,
     look = save.looks[actor],
-    [category, setCategory] = useState('outfit'),
+    currentCollection = COLLECTIONS.find((c) => c.id === look.collection)!,
+    savedCount = save.saved.filter((s) => s.actor === actor).length,
+    tabsId = useId(),
+    [category, setCategory] =
+      useState<(typeof WARDROBE_CATEGORIES)[number][0]>('outfit'),
     [outfitGroup, setOutfitGroup] = useState('all'),
     [motion, setMotion] = useState<Motion>('idle');
   const change = (patch: Partial<Look>) =>
@@ -72,14 +87,14 @@ export function Wardrobe({
       c.width = 1000;
       c.height = 1200;
       const ctx = c.getContext('2d')!;
-      ctx.fillStyle = '#f5efe3';
+      ctx.fillStyle = '#e7e6e0';
       ctx.fillRect(0, 0, 1000, 1200);
       const a = document.createElement('canvas');
       a.width = 780;
       a.height = 900;
       (await loungeSprites()).draw(a, actor, look, motion, 0);
       ctx.drawImage(a, 110, 95);
-      ctx.fillStyle = '#263c3a';
+      ctx.fillStyle = '#202c3d';
       ctx.font = 'bold 52px "Malgun Gothic",sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(ACTORS[actor], 500, 1095);
@@ -110,26 +125,23 @@ export function Wardrobe({
     <section className="l-wardrobe">
       <div className="l-section-title">
         <div>
-          <span className="l-kicker">MY LITTLE WARDROBE</span>
-          <h1>
-            {entry
-              ? `${ACTORS[actor]}, 오늘은 어떤 모습으로?`
-              : '내가 좋아하는 모습으로.'}
-          </h1>
+          <h1>분장실</h1>
           <p>
             {entry
-              ? '내 옷을 고르고, 우리만의 라운지로.'
-              : '옷을 갈아입는 작은 재미. 마음에 든 코디는 보관해 두세요.'}
+              ? '오늘 입을 옷을 고르면, 친구들을 만나러 가요.'
+              : '입어 보고, 마음에 드는 코디를 보관하세요.'}
           </p>
         </div>
-        <span className="l-note">일곱 친구, 각자의 취향.</span>
       </div>
       <div
         className={
           'l-wardrobe-grid' + (actor === 0 ? ' l-daowon-wardrobe' : '')
         }
       >
-        <aside className="l-friend-picker" aria-label="캐릭터 선택">
+        <aside
+          className={'l-friend-picker' + (locked ? ' is-locked' : '')}
+          aria-label={locked ? '내 캐릭터' : '캐릭터 선택'}
+        >
           {ACTORS.map((name, i) => (
             <button
               key={name}
@@ -148,14 +160,22 @@ export function Wardrobe({
               {actor === i && <Check size={15} />}
             </button>
           ))}
-          {locked && <small>방에서 선택한 친구로 꾸미는 중</small>}
+          {locked && (
+            <small>이 계정은 {ACTORS[actor]}의 옷장을 사용해요.</small>
+          )}
         </aside>
         <div className="l-mirror">
           <div className="l-mirror-top">
-            <span>오늘의 {ACTORS[actor]}</span>
-            <span>2D</span>
+            <strong>{ACTORS[actor]}의 착용 미리보기</strong>
+            <span>{currentCollection.name}</span>
           </div>
           <div className="l-avatar-stage">
+            <img
+              className="l-wardrobe-backdrop"
+              src={LOUNGE_ASSETS.wardrobe}
+              alt=""
+              draggable={false}
+            />
             <div className="l-stage-oval" />
             <AvatarView actor={actor} look={look} motion={motion} animated />
           </div>
@@ -197,229 +217,263 @@ export function Wardrobe({
         </div>
         <div className="l-closet">
           <div className="l-closet-header">
-            <span className="l-kicker">DRESS YOUR DAY</span>
-            <h2>오늘의 옷장</h2>
+            <h2>내 옷장</h2>
+            <span className="l-current-look">
+              <small>착용 중</small>
+              <strong>{currentCollection.name}</strong>
+            </span>
           </div>
           <div className="l-tabs" role="tablist" aria-label="옷장 분류">
-            {[
-              ['outfit', '옷'],
-              ['hair', '머리'],
-              ['extras', '소품'],
-              ['saved', '보관함'],
-            ].map(([id, name]) => (
+            {WARDROBE_CATEGORIES.map(([id, name], index) => (
               <button
+                id={`${tabsId}-${id}`}
                 role="tab"
                 aria-selected={category === id}
+                aria-controls={`${tabsId}-panel`}
+                tabIndex={category === id ? 0 : -1}
                 key={id}
                 onClick={() => setCategory(id)}
+                onKeyDown={(event) => {
+                  const nextIndex =
+                    event.key === 'ArrowRight'
+                      ? (index + 1) % WARDROBE_CATEGORIES.length
+                      : event.key === 'ArrowLeft'
+                        ? (index + WARDROBE_CATEGORIES.length - 1) %
+                          WARDROBE_CATEGORIES.length
+                        : event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? WARDROBE_CATEGORIES.length - 1
+                            : null;
+                  if (nextIndex === null) return;
+                  event.preventDefault();
+                  const next = WARDROBE_CATEGORIES[nextIndex][0];
+                  setCategory(next);
+                  document.getElementById(`${tabsId}-${next}`)?.focus();
+                }}
               >
                 {name}
-                {id === 'saved' &&
-                  save.saved.filter((s) => s.actor === actor).length > 0 && (
-                    <small>
-                      {save.saved.filter((s) => s.actor === actor).length}
-                    </small>
-                  )}
+                {id === 'saved' && savedCount > 0 && (
+                  <small>{savedCount}</small>
+                )}
               </button>
             ))}
           </div>
-          {category === 'outfit' && (
-            <>
-              {actor === 0 && (
-                <div className="l-outfit-filters" aria-label="의상 종류">
-                  {[
-                    ['all', '전체'],
-                    ['pants', '바지'],
-                    ['costume', '코스튬'],
-                  ].map(([id, name]) => (
-                    <button
-                      key={id}
-                      aria-pressed={outfitGroup === id}
-                      onClick={() => setOutfitGroup(id)}
-                    >
-                      {name}
-                    </button>
-                  ))}
+          <div
+            className="l-closet-panel"
+            role="tabpanel"
+            id={`${tabsId}-panel`}
+            aria-labelledby={`${tabsId}-${category}`}
+            tabIndex={0}
+          >
+            {category === 'outfit' && (
+              <>
+                {actor === 0 && (
+                  <div className="l-outfit-filters" aria-label="의상 종류">
+                    {[
+                      ['all', '전체'],
+                      ['pants', '바지'],
+                      ['costume', '코스튬'],
+                    ].map(([id, name]) => (
+                      <button
+                        key={id}
+                        aria-pressed={outfitGroup === id}
+                        onClick={() => setOutfitGroup(id)}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="l-outfits">
+                  {collectionsFor(actor)
+                    .filter(
+                      (c) =>
+                        actor !== 0 ||
+                        outfitGroup === 'all' ||
+                        (outfitGroup === 'pants'
+                          ? c.id === 'wide-pants' || c.id === 'denim'
+                          : c.id === 'miku'),
+                    )
+                    .sort(
+                      (a, b) =>
+                        Number(DAOWON_COLLECTIONS.includes(b.id)) -
+                        Number(DAOWON_COLLECTIONS.includes(a.id)),
+                    )
+                    .map((c) => (
+                      <button
+                        key={c.id}
+                        className={look.collection === c.id ? 'selected' : ''}
+                        aria-pressed={look.collection === c.id}
+                        aria-label={`${c.name}${look.collection === c.id ? ' · 착용 중' : ''}`}
+                        onClick={() => change({ collection: c.id })}
+                      >
+                        <span className="l-outfit-art" aria-hidden="true">
+                          <AvatarView
+                            actor={actor}
+                            look={{ ...look, collection: c.id }}
+                          />
+                        </span>
+                        <span className="l-outfit-caption">
+                          <strong>{c.name}</strong>
+                          <small>{c.note}</small>
+                        </span>
+                        {look.collection === c.id && (
+                          <span className="l-outfit-selected">
+                            <Check size={13} /> 착용 중
+                          </span>
+                        )}
+                      </button>
+                    ))}
                 </div>
-              )}
-              <div className="l-outfits">
-                {collectionsFor(actor)
-                  .filter(
-                    (c) =>
-                      actor !== 0 ||
-                      outfitGroup === 'all' ||
-                      (outfitGroup === 'pants'
-                        ? c.id === 'wide-pants' || c.id === 'denim'
-                        : c.id === 'miku'),
-                  )
-                  .sort(
-                    (a, b) =>
-                      Number(DAOWON_COLLECTIONS.includes(b.id)) -
-                      Number(DAOWON_COLLECTIONS.includes(a.id)),
-                  )
-                  .map((c) => (
-                    <button
-                      key={c.id}
-                      className={look.collection === c.id ? 'selected' : ''}
-                      aria-pressed={look.collection === c.id}
-                      onClick={() => change({ collection: c.id })}
-                    >
-                      <span className="l-outfit-art">
+                {look.collection === 'original' && (
+                  <div className="l-colors">
+                    <h3>상의 색</h3>
+                    {TOP_COLORS.map((c) => (
+                      <button
+                        key={c.id}
+                        aria-label={c.name}
+                        title={c.name}
+                        aria-pressed={look.top === c.id}
+                        style={{ background: c.hex }}
+                        onClick={() => change({ top: c.id })}
+                      >
+                        {look.top === c.id && <Check size={17} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <p className="l-help-text">
+                  {actor === 0
+                    ? '머리 탭에서 만두머리, 소품 탭에서 응원 머리띠를 함께 골라 보세요.'
+                    : '‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨 있어요.'}
+                </p>
+              </>
+            )}
+            {category === 'hair' && (
+              <>
+                {actor === 0 && (
+                  <div className="l-hairstyles" aria-label="도원의 머리 모양">
+                    {(
+                      [
+                        ['signature', '기본 단발'],
+                        ['buns', '만두머리'],
+                      ] as const
+                    ).map(([id, name]) => (
+                      <button
+                        key={id}
+                        aria-pressed={look.hairstyle === id}
+                        onClick={() => change({ hairstyle: id })}
+                      >
                         <AvatarView
                           actor={actor}
-                          look={{ ...look, collection: c.id }}
+                          look={{
+                            ...look,
+                            hairstyle: id,
+                            hat: 'none',
+                            glasses: 'none',
+                            clip: false,
+                          }}
+                          portrait
                         />
-                      </span>
-                      <span>
-                        <strong>{c.name}</strong>
-                        <small>{c.note}</small>
-                      </span>
-                      {look.collection === c.id && <Check size={17} />}
-                    </button>
-                  ))}
-              </div>
-              {look.collection === 'original' && (
-                <div className="l-colors">
-                  <h3>상의 색</h3>
-                  {TOP_COLORS.map((c) => (
-                    <button
-                      key={c.id}
-                      aria-label={c.name}
-                      title={c.name}
-                      aria-pressed={look.top === c.id}
-                      style={{ background: c.hex }}
-                      onClick={() => change({ top: c.id })}
-                    >
-                      {look.top === c.id && <Check size={17} />}
-                    </button>
-                  ))}
+                        <span>{name}</span>
+                        {look.hairstyle === id && <Check size={16} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="l-hair-options">
+                  <h3>머리 색을 골라 주세요</h3>
+                  <div>
+                    {HAIR_COLORS.map((c) => (
+                      <button
+                        key={c.id}
+                        aria-pressed={look.hair === c.id}
+                        onClick={() => change({ hair: c.id })}
+                      >
+                        <span style={{ background: c.hex }}>
+                          {look.hair === c.id && <Check size={18} />}
+                        </span>
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              <p className="l-help-text">
-                {actor === 0
-                  ? '머리 탭에서 만두머리, 소품 탭에서 응원 머리띠를 함께 골라 보세요.'
-                  : '‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨 있어요.'}
-              </p>
-            </>
-          )}
-          {category === 'hair' && (
-            <>
-              {actor === 0 && (
-                <div className="l-hairstyles" aria-label="도원의 머리 모양">
-                  {(
-                    [
-                      ['signature', '기본 단발'],
-                      ['buns', '만두머리'],
-                    ] as const
-                  ).map(([id, name]) => (
-                    <button
-                      key={id}
-                      aria-pressed={look.hairstyle === id}
-                      onClick={() => change({ hairstyle: id })}
-                    >
-                      <AvatarView
-                        actor={actor}
-                        look={{
-                          ...look,
-                          hairstyle: id,
-                          hat: 'none',
-                          glasses: 'none',
-                          clip: false,
-                        }}
-                        portrait
-                      />
-                      <span>{name}</span>
-                      {look.hairstyle === id && <Check size={16} />}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="l-hair-options">
-                <h3>머리 색을 골라 주세요</h3>
+              </>
+            )}
+            {category === 'extras' && (
+              <div className="l-extra-options">
+                <h3>{actor === 0 ? '모자 · 머리띠' : '모자'}</h3>
                 <div>
-                  {HAIR_COLORS.map((c) => (
+                  {hatsFor(actor).map((c) => (
                     <button
                       key={c.id}
-                      aria-pressed={look.hair === c.id}
-                      onClick={() => change({ hair: c.id })}
+                      aria-pressed={look.hat === c.id}
+                      onClick={() => change({ hat: c.id })}
                     >
-                      <span style={{ background: c.hex }}>
-                        {look.hair === c.id && <Check size={18} />}
-                      </span>
                       {c.name}
                     </button>
                   ))}
                 </div>
-              </div>
-            </>
-          )}
-          {category === 'extras' && (
-            <div className="l-extra-options">
-              <h3>{actor === 0 ? '모자 · 머리띠' : '모자'}</h3>
-              <div>
-                {hatsFor(actor).map((c) => (
-                  <button
-                    key={c.id}
-                    aria-pressed={look.hat === c.id}
-                    onClick={() => change({ hat: c.id })}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              <h3>안경</h3>
-              <div>
-                {GLASSES.map((c) => (
-                  <button
-                    key={c.id}
-                    aria-pressed={look.glasses === c.id}
-                    onClick={() => change({ glasses: c.id })}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              <h3>작은 포인트</h3>
-              <button
-                aria-pressed={look.clip}
-                onClick={() => change({ clip: !look.clip })}
-              >
-                꽃 머리핀 {look.clip ? '✓' : ''}
-              </button>
-            </div>
-          )}
-          {category === 'saved' && (
-            <div className="l-saved-looks">
-              {!save.saved.some((s) => s.actor === actor) && (
-                <p>
-                  마음에 드는 모습을 찾으면
-                  <br />
-                  ‘코디 보관’을 눌러 주세요.
-                </p>
-              )}
-              {save.saved
-                .filter((s) => s.actor === actor)
-                .map((s) => (
-                  <div key={s.id}>
-                    <button onClick={() => change(s.look)}>
-                      <AvatarView actor={actor} look={s.look} />
-                      <strong>{s.name}</strong>
-                    </button>
+                <h3>안경</h3>
+                <div>
+                  {GLASSES.map((c) => (
                     <button
-                      className="l-text"
-                      onClick={() =>
-                        onChange({
-                          ...save,
-                          saved: save.saved.filter((v) => v.id !== s.id),
-                        })
-                      }
+                      key={c.id}
+                      aria-pressed={look.glasses === c.id}
+                      onClick={() => change({ glasses: c.id })}
                     >
-                      삭제
+                      {c.name}
                     </button>
-                  </div>
-                ))}
-            </div>
-          )}
+                  ))}
+                </div>
+                <h3>작은 포인트</h3>
+                <button
+                  aria-pressed={look.clip}
+                  onClick={() => change({ clip: !look.clip })}
+                >
+                  꽃 머리핀 {look.clip ? '✓' : ''}
+                </button>
+              </div>
+            )}
+            {category === 'saved' && (
+              <div className="l-saved-looks">
+                {!save.saved.some((s) => s.actor === actor) && (
+                  <p>
+                    마음에 드는 모습을 찾으면
+                    <br />
+                    ‘코디 보관’을 눌러 주세요.
+                  </p>
+                )}
+                {save.saved
+                  .filter((s) => s.actor === actor)
+                  .map((s) => (
+                    <div key={s.id}>
+                      <button
+                        aria-pressed={
+                          JSON.stringify(s.look) === JSON.stringify(look)
+                        }
+                        onClick={() => change(s.look)}
+                      >
+                        <AvatarView actor={actor} look={s.look} />
+                        <strong>{s.name}</strong>
+                      </button>
+                      <button
+                        className="l-text"
+                        onClick={() =>
+                          onChange({
+                            ...save,
+                            saved: save.saved.filter((v) => v.id !== s.id),
+                          })
+                        }
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
           <div className="l-closet-bottom">
             <span>
               <Check size={14} />

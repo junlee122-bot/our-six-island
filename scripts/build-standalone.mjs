@@ -1,8 +1,10 @@
 import fs from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/postcss';
 
 const root = fileURLToPath(new URL('../', import.meta.url)).replaceAll(
   '\\',
@@ -15,35 +17,34 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 80 || new Set(assets).size !== 80)
-  throw new Error('The lounge manifest must include all 80 unique images.');
+if (assets.length !== 82 || new Set(assets).size !== 82)
+  throw new Error('The lounge manifest must include all 82 unique images.');
+const assetDirectory = path.join(root, 'docs/assets');
+fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(
-  assets.map((name) => [
-    '/assets/' + name,
-    'data:image/' +
-      (name.endsWith('.svg')
-        ? 'svg+xml'
-        : name.endsWith('.webp')
-          ? 'webp'
-          : 'png') +
-      ';base64,' +
-      fs
-        .readFileSync(path.join(root, 'public/assets', name))
-        .toString('base64'),
-  ]),
+  assets.map((name) => {
+    const bytes = fs.readFileSync(path.join(root, 'public/assets', name));
+    const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+    const extension = path.extname(name);
+    const target = name.slice(0, -extension.length).replaceAll('/', '-') + '-' + hash + extension;
+    const destination = path.join(assetDirectory, target);
+    if (!fs.existsSync(destination)) fs.writeFileSync(destination, bytes);
+    return ['/assets/' + name, './assets/' + target];
+  }),
 );
 const inlined = new Set();
 const built = await build({
   configFile: false,
   root,
   publicDir: false,
+  css: { postcss: { plugins: [tailwindcss()] } },
   plugins: [
     react(),
     {
-      name: 'inline-game-art',
+      name: 'versioned-game-art',
       enforce: 'pre',
       transform(code, id) {
-        if (!/\/lounge-assets\.ts$/.test(id)) return;
+        if (!id.endsWith('/lounge-assets.ts')) return;
         for (const [from, to] of replacements) {
           if (code.includes(from)) {
             inlined.add(from);
@@ -78,7 +79,7 @@ if (
   );
 }
 if (inlined.size !== assets.length)
-  throw new Error('Some game images were not embedded.');
+  throw new Error('Some game images were not assigned a versioned asset URL.');
 // Preserve Supabase's exact base64 whitespace alphabet while escaping the
 // minifier's literal tab/newline in the generated HTML source.
 const js = chunks[0].code.replaceAll('` \t\n\\r=`', '" \\t\\n\\r="');
@@ -100,14 +101,12 @@ const licenses = {
     'utf8',
   ),
 };
-const cssRoot = path.join(root, 'dist/client/_next/static/css');
-const css = fs
-  .readdirSync(cssRoot)
-  .filter((name) => name.endsWith('.css'))
-  .map((name) => fs.readFileSync(path.join(cssRoot, name), 'utf8'))
+const css = output
+  .filter((item) => item.type === 'asset' && item.fileName.endsWith('.css'))
+  .map((item) => typeof item.source === 'string' ? item.source : Buffer.from(item.source).toString('utf8'))
   .join('\n');
 if (!css)
-  throw new Error('Run the production build before packaging for Pages.');
+  throw new Error('The standalone bundle must include the game styles.');
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,5 +132,5 @@ for (let attempt = 0; ; attempt++) {
 if (!fs.existsSync(path.join(directory, '.nojekyll')))
   fs.writeFileSync(path.join(directory, '.nojekyll'), '');
 console.log(
-  `GitHub Pages / offline game: docs/index.html (${Buffer.byteLength(html)} bytes, ${inlined.size} embedded images)`,
+  `GitHub Pages: docs/index.html (${Buffer.byteLength(html)} bytes, ${inlined.size} separately cached images in docs/assets)`,
 );

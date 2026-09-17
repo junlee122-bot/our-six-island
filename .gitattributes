@@ -1,0 +1,2 @@
+# Content-hashed public assets must retain their exact bytes on every platform.
+docs/assets/** -text

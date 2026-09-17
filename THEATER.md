@@ -37,13 +37,13 @@
 
 ## 개발 및 배포
 
-Node.js 22.13 이상에서 `npm ci` 후 `npm run dev`를 실행합니다.
+이 문서는 `docs/theater.html`에 보존된 이전 극장을 설명합니다. 현재 기본 앱은 게임 라운지이며, Node.js 22.13 이상에서 `npm ci` 후 `npm run dev`를 실행하면 현재 앱을 엽니다. 현재 배포 구성은 [README.md](README.md)를 기준으로 합니다.
 
 - `npm test`: 저장·의상·분기·통신 규칙 검사
 - `npx tsc --noEmit`: 타입 검사
 - `npm run test:theater-multiplayer`: 실제 Supabase에 독립 클라이언트 7개를 연결해 동시 배역 선택, 의상 전달, 장면 소유권, 퇴장과 자리 재선택 검사
-- `npm run build:pages`: 프로덕션 빌드 후 에셋 6장을 포함하는 단일 `docs/index.html` 생성
+- `npm run build:pages`: 현재 라운지의 `docs/index.html`과 별도 캐시 이미지 82개를 `docs/assets/`에 생성합니다. 보존된 극장 파일을 다시 생성하는 명령은 아닙니다.
 
-GitHub Pages는 `main` 브랜치의 `/docs`를 게시합니다. `docs/index.html`을 다운로드해 브라우저로 열어도 혼자 플레이할 수 있습니다. 멀티플레이는 인터넷과 보안 컨텍스트가 필요하므로 GitHub Pages의 HTTPS 주소를 사용하세요. 저장은 브라우저·주소별로 분리되며 자동으로 다른 기기에 이동하지 않습니다.
+GitHub Pages는 `main` 브랜치의 `/docs`를 게시합니다. 극장은 `docs/theater.html`의 기존 이미지 내장 파일로 보존됩니다. 이 극장 파일을 내려받아 여는 방식과 현재 라운지의 `docs/index.html`을 혼동하지 마세요. 극장 멀티플레이는 인터넷과 보안 컨텍스트가 필요하므로 GitHub Pages의 HTTPS 주소를 사용하세요. 극장 저장은 브라우저·주소별로 분리되며 자동으로 다른 기기에 이동하지 않습니다.
 
 이미지 생성 프롬프트, 해상도와 합성 방식은 [ASSETS.md](ASSETS.md)에 기록했습니다.
