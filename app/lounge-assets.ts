@@ -1,5 +1,13 @@
 // See public/assets/lounge/*ATTRIBUTION* and ASSETS.md.
 export const LOUNGE_ASSETS = {
+  reaction_laugh: '/assets/lounge/reactions/laugh.png',
+  reaction_wow: '/assets/lounge/reactions/wow.png',
+  reaction_cry: '/assets/lounge/reactions/cry.png',
+  reaction_love: '/assets/lounge/reactions/love.png',
+  reaction_cheer: '/assets/lounge/reactions/cheer.png',
+  reaction_think: '/assets/lounge/reactions/think.png',
+  reaction_sorry: '/assets/lounge/reactions/sorry.png',
+  reaction_hello: '/assets/lounge/reactions/hello.png',
   motion: '/assets/friends-motion.png',
   accessories: '/assets/accessories.png',
   jaeminCap: '/assets/jaemin-cap.png',

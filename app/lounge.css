@@ -4158,3 +4158,288 @@ button.g-card:focus-visible {
     padding: 0 14px;
   }
 }
+.l-reactions {
+  --reaction-ink: #493c36;
+  color: var(--reaction-ink);
+  background: #fffaf0;
+  border: 1px solid #e9dfcd;
+  border-radius: 16px;
+  margin: 12px 0;
+  padding: 12px 16px 8px;
+  min-width: 0;
+}
+.l-reaction-bar,
+.l-reaction-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.l-reaction-bar {
+  justify-content: space-between;
+}
+.l-reaction-bar > span {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.l-reaction-bar b {
+  font-size: 16px;
+}
+.l-reaction-bar small {
+  font-size: 14px;
+  color: #7d6a60;
+}
+.l-reaction-open,
+.l-reaction-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  border: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.l-reaction-open {
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 15px;
+  font-weight: 700;
+  background: #493c36;
+  color: #fffaf0;
+}
+.l-reaction-toggle {
+  width: 44px;
+  border-radius: 50%;
+  background: #f0e7d8;
+  color: #6a584c;
+}
+.l-reaction-feed {
+  min-height: 94px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+.l-reaction-feed > p {
+  font-size: 14px;
+  color: #8c786b;
+  margin: 0;
+}
+.l-reaction-card {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1 1 0;
+  max-width: 200px;
+  animation: l-sticker-pop 0.36s cubic-bezier(0.18, 0.8, 0.35, 1.25) both;
+}
+.l-reaction-card img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.l-reaction-card span {
+  display: grid;
+  gap: 4px;
+}
+.l-reaction-card b {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.l-reaction-card small {
+  font-size: 14px;
+  color: #8b6650;
+}
+.l-reaction-status {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #746258;
+}
+.l-reaction-status:empty {
+  display: none;
+}
+.l-reaction-picker {
+  margin: auto;
+  width: min(620px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  padding: 26px;
+  border: 1px solid #e8dac6;
+  border-radius: 24px;
+  background: #fffaf0;
+  color: #493c36;
+  overflow: auto;
+  box-shadow: 0 20px 80px #20150c44;
+}
+.l-reaction-picker::backdrop {
+  background: #20190fc2;
+  backdrop-filter: blur(4px);
+}
+.l-reaction-picker header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.l-reaction-picker header small {
+  color: #a87944;
+  letter-spacing: 2px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.l-reaction-picker h2 {
+  font-size: 25px;
+  margin: 6px 0 0;
+}
+.l-reaction-picker header button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #ede3d4;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.l-reaction-picker > p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #826f61;
+  margin: 14px 0 20px;
+}
+.l-reaction-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.l-reaction-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid #eadfce;
+  background: #fffcf7;
+  border-radius: 16px;
+  padding: 6px 4px 14px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+  color: #493c36;
+  min-width: 0;
+}
+.l-reaction-grid button:hover:enabled {
+  background: #ffebc7;
+  transform: translateY(-3px);
+}
+.l-reaction-grid button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.l-reaction-grid img {
+  width: 100%;
+  height: 106px;
+  object-fit: contain;
+}
+.l-reaction-grid b {
+  font-size: 16px;
+  margin: 3px 0 6px;
+}
+.l-reaction-grid small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #846a57;
+  text-align: center;
+}
+.l-reaction-picker-status {
+  display: block;
+  font-size: 14px;
+  min-height: 22px;
+  margin-top: 20px;
+  color: #846a57;
+  text-align: center;
+}
+.l-reactions button:focus-visible,
+.l-reaction-picker button:focus-visible {
+  outline: 3px solid #db9140;
+  outline-offset: 3px;
+}
+.l-game-content > .l-reactions {
+  max-width: 960px;
+  margin: 0 auto 16px;
+}
+.l-game-screen.poker .l-reactions,
+.l-game-screen.blackjack .l-reactions,
+.l-game-screen.seotda .l-reactions {
+  box-shadow: 0 3px 18px #0001;
+}
+@keyframes l-sticker-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.7) rotate(-5deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 600px) {
+  .l-reactions {
+    padding: 10px;
+  }
+  .l-reaction-bar > span {
+    display: grid;
+    gap: 4px;
+  }
+  .l-reaction-bar small {
+    font-size: 12px;
+  }
+  .l-reaction-bar > div {
+    gap: 5px;
+  }
+  .l-reaction-open {
+    padding: 0 12px;
+  }
+  .l-reaction-feed {
+    gap: 4px;
+    min-height: 100px;
+  }
+  .l-reaction-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  .l-reaction-card img {
+    width: 64px;
+    height: 64px;
+  }
+  .l-reaction-card span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .l-reaction-card b,
+  .l-reaction-card small {
+    font-size: 12px;
+  }
+  .l-reaction-picker {
+    padding: 20px 14px;
+  }
+  .l-reaction-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .l-reaction-grid img {
+    height: 112px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-reaction-card {
+    animation: none;
+  }
+  .l-reaction-grid button {
+    transition: none;
+  }
+}

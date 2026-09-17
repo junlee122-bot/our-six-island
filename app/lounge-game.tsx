@@ -52,6 +52,12 @@ import {
 } from './lounge-look';
 import { ACTORS, ACTOR_COLORS } from './theater-data';
 import { LOUNGE_ASSETS } from './lounge-assets';
+import { ReactionDock } from './lounge-reaction-ui';
+import {
+  REACTION_TTL,
+  type Reaction,
+  type ReactionId,
+} from './lounge-reactions';
 
 function Modal({
   title,
@@ -562,18 +568,22 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
     </div>
   );
 }
-function GameScreen({
+export function GameScreen({
   kind,
   room,
   view,
   onBack,
   onRequest,
+  reactionsHidden,
+  onReactionsHidden,
 }: {
   kind: GameKind;
   room: LoungeRoom;
   view: LoungeView;
   onBack: () => void;
   onRequest: (kind: GameKind) => void;
+  reactionsHidden: boolean;
+  onReactionsHidden: (value: boolean) => void;
 }) {
   const [leave, setLeave] = useState(false),
     [displayedGoRevision, setDisplayedGoRevision] = useState(
@@ -623,6 +633,23 @@ function GameScreen({
         </div>
       </header>
       <div className="l-game-content">
+        <ReactionDock
+          players={view.players}
+          self={view.self}
+          scope={kind}
+          matchId={match?.id}
+          connected
+          hidden={reactionsHidden}
+          onHidden={onReactionsHidden}
+          onSend={(id) =>
+            room.action({
+              kind: 'reaction',
+              id,
+              scope: kind,
+              matchId: match?.id,
+            })
+          }
+        />
         <div className="l-game-money">
           <span>
             {kind === 'blackjack'
@@ -989,7 +1016,8 @@ function AccountLounge({
     [recoveryCode, setRecoveryCode] = useState(''),
     [accountBusy, setAccountBusy] = useState(false),
     [localPos, setLocalPos] = useState({ x: 50, y: 79 }),
-    [emote, setEmote] = useState({ emote: '', emoteAt: 0 });
+    [localReaction, setLocalReaction] = useState<Reaction>(),
+    [reactionsHidden, setReactionsHidden] = useState(false);
   const audioRef = useRef<AudioContext | null>(null),
     toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null),
     chatEnd = useRef<HTMLDivElement>(null);
@@ -1090,10 +1118,15 @@ function AccountLounge({
     },
     [room, view.status],
   );
-  const greet = (value: string) => {
-    if (view.status === 'connected')
-      room.action({ kind: 'emote', emote: value });
-    else setEmote({ emote: value, emoteAt: Date.now() });
+  const greet = async (value: ReactionId) => {
+    const scope = tab === 'casino' ? 'casino' : 'lounge';
+    if (view.status === 'connected') {
+      if (!(await room.action({ kind: 'reaction', id: value, scope })))
+        return false;
+    } else {
+      const at = Date.now();
+      setLocalReaction({ id: value, scope, at, expiresAt: at + REACTION_TTL });
+    }
     if (sound) {
       const ac = audioRef.current ?? new AudioContext();
       audioRef.current = ac;
@@ -1101,13 +1134,14 @@ function AccountLounge({
       const o = ac.createOscillator(),
         g = ac.createGain();
       o.type = 'sine';
-      o.frequency.setValueAtTime(value === '♥' ? 523 : 659, ac.currentTime);
+      o.frequency.setValueAtTime(value === 'love' ? 523 : 659, ac.currentTime);
       g.gain.setValueAtTime(0.045, ac.currentTime);
       g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.3);
       o.connect(g).connect(ac.destination);
       o.start();
       o.stop(ac.currentTime + 0.3);
     }
+    return true;
   };
   const requestGame = (kind: GameKind | null) => {
     setRequestKind(kind);
@@ -1145,7 +1179,7 @@ function AccountLounge({
             : i % 2
               ? 'casino'
               : 'lounge') as 'casino' | 'lounge',
-          ...(i === save.actor ? { ...localPos, ...emote } : {}),
+          ...(i === save.actor ? { ...localPos, reaction: localReaction } : {}),
         }));
   if (ready && gameScreen && view.status === 'connected')
     return (
@@ -1157,6 +1191,8 @@ function AccountLounge({
           view={view}
           onBack={() => setGameScreen(null)}
           onRequest={requestGame}
+          reactionsHidden={reactionsHidden}
+          onReactionsHidden={setReactionsHidden}
         />
         {toast && (
           <div className="l-toast" role="status">
@@ -1326,25 +1362,7 @@ function AccountLounge({
                 area={tab === 'casino' ? 'casino' : 'lounge'}
               />
               <div className="l-room-toolbar">
-                <span>오늘 기분은 어때요?</span>
-                <div>
-                  {['👋', '♥', '✨', 'ㅋㅋ'].map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => greet(s)}
-                      aria-label={
-                        {
-                          '👋': '인사',
-                          '♥': '하트',
-                          '✨': '반짝',
-                          ㅋㅋ: '웃음',
-                        }[s]
-                      }
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+                <span>오늘 기분은 범티콘으로 전해요.</span>
                 <button
                   className="l-icon"
                   aria-label={sound ? '효과음 끄기' : '효과음 켜기'}
@@ -1353,6 +1371,15 @@ function AccountLounge({
                   {sound ? <Volume2 size={18} /> : <VolumeX size={18} />}
                 </button>
               </div>
+              <ReactionDock
+                players={players}
+                self={self}
+                scope={tab === 'casino' ? 'casino' : 'lounge'}
+                connected={view.status === 'connected'}
+                hidden={reactionsHidden}
+                onHidden={setReactionsHidden}
+                onSend={greet}
+              />
             </div>
             <aside className="l-lounge-sidebar">
               <div className="l-play-list">

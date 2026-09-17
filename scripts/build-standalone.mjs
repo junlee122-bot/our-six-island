@@ -15,8 +15,8 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 72 || new Set(assets).size !== 72)
-  throw new Error('The lounge manifest must include all 72 unique images.');
+if (assets.length !== 80 || new Set(assets).size !== 80)
+  throw new Error('The lounge manifest must include all 80 unique images.');
 const replacements = new Map(
   assets.map((name) => [
     '/assets/' + name,

@@ -219,7 +219,10 @@ export function cloudTransition(
           current = undefined;
         }
         if (command.op === 'action') {
-          if (!command.action || !r.hostedAction(member.id, command.action))
+          if (
+            !command.action ||
+            !r.hostedAction(member.id, command.action, now)
+          )
             throw new CloudError(
               '상태가 바뀌었어요. 참가 인원, 잔액과 차례를 확인해 주세요.',
               409,

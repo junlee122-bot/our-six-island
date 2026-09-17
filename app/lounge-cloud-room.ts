@@ -9,6 +9,7 @@ import type { AccountProfile } from './lounge-accounts';
 import type { CloudCommand } from './lounge-cloud-engine';
 import type { Look } from './lounge-look';
 import { roomCode } from './multiplayer-protocol';
+import { receiveReaction } from './lounge-reactions';
 type Response = {
   ok: boolean;
   error: string;
@@ -84,8 +85,21 @@ export class CloudRoom {
     this.epoch = r.epoch;
     this.activeRoom = r.activeRoom;
     if (r.packet && r.code) {
+      const localNow = Date.now();
+      const players = r.packet.players.map((p) => ({
+        ...p,
+        reaction: receiveReaction(
+          p.reaction,
+          this.view.code === r.code
+            ? this.view.players.find((old) => old.id === p.id)?.reaction
+            : undefined,
+          r.serverNow,
+          localNow,
+        ),
+      }));
       this.update({
         ...r.packet,
+        players,
         self: this.account.id,
         code: r.code,
         role: r.host === this.account.id ? 'host' : 'guest',

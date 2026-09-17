@@ -347,3 +347,10 @@ Lighting/mood: warm inviting theatrical light, soft broad amber spotlight landin
 Style/medium: polished soft painterly 2.5D theatrical chibi game environment with rounded forms and tactile materials, charming and cozy, compatible with big-headed illustrated friend characters. Attractive harmonious muted teal, deep navy, raspberry plum and warm amber palette.
 Constraints: no people, characters, faces, silhouettes of people, text, numbers, letters, signs, logos, watermarks, UI panels, buttons, screenshots, foreground furniture, clutter, or props across the central floor. Only one scene; landscape full-bleed opaque illustration.
 ```
+## 범티콘 감정 스티커 (2026-09-17)
+
+`public/assets/lounge/reactions/`에 웃음(laugh), 놀람(wow), 눈물(cry), 하트(love), 응원(cheer), 고민(think), 미안(sorry), 인사(hello) 8종을 추가했습니다. OpenAI 내장 imagegen으로 각 에셋을 개별 생성한 원본 1254 × 1254 RGBA PNG이며 투명 배경과 흰 스티커 테두리를 유지했습니다. 인터넷에서 가져온 캐릭터나 게임 원화는 사용하지 않았습니다.
+
+정확한 생성 프롬프트는 `public/assets/lounge/reactions/prompts.json`에 보관합니다. 공통 디자인은 따뜻한 주황색·크림색의 작은 호랑이, 갈색 외곽선, 평면 2D 메신저 스티커, 텍스트 없이 감정과 손동작으로 표현하는 방식입니다. 원본 PNG를 편집·크롭하지 않고 게임에 포함했습니다.
+
+로비·카지노 및 체스·고스톱·섯다·홀덤·블랙잭 화면의 **스티커** 버튼으로 전송합니다. 같은 방의 같은 공간/게임 화면에서 보낸 사람 이름과 함께 최대 3개를 표시하며, 각 반응은 6초 후 사라집니다. 1.8초 전송 간격, 표시 숨기기, 모션 줄이기 설정을 지원합니다. 유효 시간이 지난 스티커는 재접속 때 재생되지 않으며 계정 코디/지갑 기록을 변경하지 않습니다.

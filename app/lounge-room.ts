@@ -4,6 +4,14 @@ import { readLook, type Look } from './lounge-look.ts';
 import { channelIdentity, channelKey, seal, unseal } from './lounge-crypto.ts';
 import { ACTORS } from './theater-data.ts';
 import {
+  reactionId,
+  readReaction,
+  REACTION_COOLDOWN,
+  type Reaction,
+  type ReactionId,
+  type ReactionScope,
+} from './lounge-reactions.ts';
+import {
   newSeotda,
   seotdaAction,
   seotdaDeal,
@@ -101,6 +109,7 @@ export type LoungePlayer = {
   y: number;
   emote: string;
   emoteAt: number;
+  reaction?: Reaction;
   balance: number;
   area: 'lounge' | 'casino';
 };
@@ -195,6 +204,7 @@ function playersRead(value: unknown): LoungePlayer[] | null {
       y: p.y,
       emote: typeof p.emote === 'string' ? p.emote.slice(0, 16) : '',
       emoteAt: Number(p.emoteAt) || 0,
+      reaction: readReaction(p.reaction),
       balance:
         Number.isSafeInteger(p.balance) && p.balance >= 0 ? p.balance : 0,
       area: p.area === 'casino' ? 'casino' : 'lounge',
@@ -230,7 +240,13 @@ export type LoungeAction =
   | { kind: 'move'; x: number; y: number }
   | { kind: 'look'; look: Look }
   | { kind: 'chat'; text: string }
-  | { kind: 'emote'; emote: string };
+  | { kind: 'emote'; emote: string }
+  | {
+      kind: 'reaction';
+      id: ReactionId;
+      scope: ReactionScope;
+      matchId?: string;
+    };
 // Private server snapshot, never returned to a browser. Public packets still
 // remove every other player's hand and the undealt deck.
 export type HostedRoomSnapshot = {
@@ -380,9 +396,9 @@ export class LoungeRoom {
     this.members.set(id, player(id, actor, look));
     this.sync();
   }
-  hostedAction(id: string, a: LoungeAction) {
+  hostedAction(id: string, a: LoungeAction, now = Date.now()) {
     if (!this.serverMode) throw new Error('Server adapter required');
-    return this.apply(id, a);
+    return this.apply(id, a, now);
   }
   hostedDrop(id: string) {
     if (!this.serverMode) throw new Error('Server adapter required');
@@ -1076,7 +1092,7 @@ export class LoungeRoom {
       });
     }
   }
-  private apply(id: string, a: LoungeAction) {
+  private apply(id: string, a: LoungeAction, now = Date.now()) {
     const member = this.members.get(id);
     if (!member || !a || typeof a !== 'object') return false;
     if (a.kind === 'area') {
@@ -1137,7 +1153,29 @@ export class LoungeRoom {
       });
     } else if (a.kind === 'look')
       this.members.set(id, { ...member, look: readLook(a.look, member.actor) });
-    else if (a.kind === 'emote') {
+    else if (a.kind === 'reaction') {
+      if (
+        !reactionId(a.id) ||
+        (member.reaction && now - member.reaction.at < REACTION_COOLDOWN)
+      )
+        return false;
+      if (a.scope === 'lounge' || a.scope === 'casino') {
+        if (member.area !== a.scope || a.matchId !== undefined) return false;
+      } else {
+        if (!GAME_KINDS.includes(a.scope)) return false;
+        const match = a.scope === 'gostop' ? this.go : this[a.scope];
+        if (!match || match.id !== a.matchId) return false;
+      }
+      this.members.set(id, {
+        ...member,
+        reaction: {
+          id: a.id,
+          scope: a.scope,
+          at: now,
+          ...(a.matchId ? { matchId: a.matchId } : {}),
+        },
+      });
+    } else if (a.kind === 'emote') {
       if (!['👋', '♥', '✨', 'ㅋㅋ'].includes(a.emote)) return false;
       this.members.set(id, { ...member, emote: a.emote, emoteAt: Date.now() });
     } else if (a.kind === 'chat') {
