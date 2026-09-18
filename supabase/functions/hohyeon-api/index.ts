@@ -30,7 +30,7 @@ serve(async (b, req) => {
     return await rpc('hh_profile_save', {
       p_uid: m.user_id,
       p_expected: b.revision,
-      p_save: accountSave(b.save, m.actor),
+      p_save: accountSave(b.save, m.actor, m.save),
     });
   }
   if (b.op !== 'world' || !b.command || typeof b.command !== 'object')

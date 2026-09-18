@@ -1,0 +1,36 @@
+import { LOUNGE_ASSETS } from './lounge-assets';
+import type { RoomPropId } from './lounge-bedroom-data';
+
+export const BEDROOM_ART = {
+  background: LOUNGE_ASSETS.bedroomBackground,
+  props: {
+    'bed': LOUNGE_ASSETS.bedroom_bed,
+    'sofa': LOUNGE_ASSETS.bedroom_sofa,
+    'desk': LOUNGE_ASSETS.bedroom_desk,
+    'vanity': LOUNGE_ASSETS.bedroom_vanity,
+    'wardrobe': LOUNGE_ASSETS.bedroom_wardrobe,
+    'low-table': LOUNGE_ASSETS.bedroom_low_table,
+    'bookshelf': LOUNGE_ASSETS.bedroom_bookshelf,
+    'clothes-rack': LOUNGE_ASSETS.bedroom_clothes_rack,
+    'armchair': LOUNGE_ASSETS.bedroom_armchair,
+    'floor-lamp': LOUNGE_ASSETS.bedroom_floor_lamp,
+    'mirror': LOUNGE_ASSETS.bedroom_mirror,
+    'rug': LOUNGE_ASSETS.bedroom_rug,
+    'cat-plush': LOUNGE_ASSETS.bedroom_cat_plush,
+    'bunny-plush': LOUNGE_ASSETS.bedroom_bunny_plush,
+    'heart-cushion': LOUNGE_ASSETS.bedroom_heart_cushion,
+    'record-player': LOUNGE_ASSETS.bedroom_record_player,
+    'speaker': LOUNGE_ASSETS.bedroom_speaker,
+    'plant': LOUNGE_ASSETS.bedroom_plant,
+    'flowers': LOUNGE_ASSETS.bedroom_flowers,
+    'books': LOUNGE_ASSETS.bedroom_books,
+    'tea-set': LOUNGE_ASSETS.bedroom_tea_set,
+    'twin-tail-figure': LOUNGE_ASSETS.bedroom_twin_tail_figure,
+    'headband-display': LOUNGE_ASSETS.bedroom_headband_display,
+    'instant-camera': LOUNGE_ASSETS.bedroom_instant_camera,
+    'music-poster': LOUNGE_ASSETS.bedroom_music_poster,
+    'photo-string': LOUNGE_ASSETS.bedroom_photo_string,
+    'wall-clock': LOUNGE_ASSETS.bedroom_wall_clock,
+    'star-lights': LOUNGE_ASSETS.bedroom_star_lights,
+  } satisfies Record<RoomPropId, string>,
+};

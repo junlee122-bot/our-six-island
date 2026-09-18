@@ -5,6 +5,11 @@ import {
   GLASSES,
   type Appearance,
 } from './character-style.ts';
+import {
+  defaultBedroom,
+  readBedroom,
+  type Bedroom,
+} from './lounge-bedroom-data.ts';
 export { HAIR_COLORS, TOP_COLORS, GLASSES };
 export const HATS = [
   ...ORIGINAL_HATS,
@@ -76,24 +81,37 @@ export type LoungeSave = {
   looks: Look[];
   saved: { id: string; actor: number; look: Look; name: string }[];
   visits: number;
+  bedroom: Bedroom;
 };
-export function freshLounge(): LoungeSave {
+export function freshLounge(actor = 6): LoungeSave {
+  const identity =
+    Number.isInteger(actor) && actor >= 0 && actor < 7 ? actor : 6;
   return {
     version: 1,
-    actor: 6,
+    actor: identity,
     looks: Array.from({ length: 7 }, (_, i) => defaultLook(i)),
     saved: [],
     visits: 0,
+    bedroom: defaultBedroom(identity),
   };
 }
-export function readLounge(raw: string | null): LoungeSave {
+export function readLounge(
+  raw: string | null,
+  accountActor?: number,
+): LoungeSave {
+  const trustedActor =
+    Number.isInteger(accountActor) && accountActor! >= 0 && accountActor! < 7
+      ? accountActor
+      : undefined;
   try {
     const s = JSON.parse(raw ?? 'null');
-    if (!s || s.version !== 1) return freshLounge();
+    if (!s || s.version !== 1) return freshLounge(trustedActor);
+    const actor =
+      trustedActor ??
+      (Number.isInteger(s.actor) && s.actor >= 0 && s.actor < 7 ? s.actor : 6);
     return {
       version: 1,
-      actor:
-        Number.isInteger(s.actor) && s.actor >= 0 && s.actor < 7 ? s.actor : 6,
+      actor,
       looks: Array.from({ length: 7 }, (_, i) => readLook(s.looks?.[i], i)),
       saved: Array.isArray(s.saved)
         ? s.saved
@@ -115,8 +133,9 @@ export function readLounge(raw: string | null): LoungeSave {
             }))
         : [],
       visits: Math.max(0, Math.min(1e5, Number(s.visits) || 0)),
+      bedroom: readBedroom(s.bedroom, actor),
     };
   } catch {
-    return freshLounge();
+    return freshLounge(trustedActor);
   }
 }

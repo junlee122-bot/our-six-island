@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { accountSave, type AccountProfile } from './lounge-accounts';
 import { cloudCall } from './lounge-auth';
+import {
+  readAccountDraft,
+  restoreAccountDraft,
+  type AccountDraft,
+} from './lounge-cloud-draft';
 import type { LoungeSave } from './lounge-look';
 type SaveReply = {
   conflict: boolean;
@@ -13,7 +18,7 @@ export function useCloudSave(account: AccountProfile) {
   const [save, setSave] = useState(initial),
     [status, setStatus] = useState('서버에 저장됨'),
     [conflict, setConflict] = useState<SaveReply | null>(null),
-    [draft, setDraft] = useState<LoungeSave | null>(null);
+    [draft, setDraft] = useState<AccountDraft | null>(null);
   const state = useRef({
     current: initial,
     committed: JSON.stringify(initial),
@@ -29,8 +34,8 @@ export function useCloudSave(account: AccountProfile) {
     try {
       const raw = localStorage.getItem(draftKey);
       if (raw) {
-        const d = accountSave(JSON.parse(raw), account.actor);
-        if (JSON.stringify(d) !== current.committed)
+        const d = readAccountDraft(raw, account.actor, current.current);
+        if (JSON.stringify(d.save) !== current.committed)
           queueMicrotask(() => {
             if (!current.disposed) setDraft(d);
           });
@@ -139,9 +144,10 @@ export function useCloudSave(account: AccountProfile) {
     status,
     conflict,
     resolve,
-    draft,
+    draft: draft?.save ?? null,
     restoreDraft: () => {
-      if (draft) change(draft);
+      if (draft)
+        change((current) => restoreAccountDraft(draft, account.actor, current));
       setDraft(null);
     },
     dismissDraft: () => {

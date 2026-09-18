@@ -1,0 +1,510 @@
+{
+  "createdAt": "2026-09-18",
+  "provider": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "quality": "high",
+  "resolution": "4k",
+  "aspectRatio": "3:2",
+  "creditsEstimated": 18,
+  "reference": "https://raw.githubusercontent.com/junlee122-bot/our-six-island/main/public/assets/lounge/club-wardrobe.webp",
+  "images": [
+    {
+      "index": 1,
+      "name": "bedroom-background",
+      "prompt": "Production art for the Korean 2D social game Hohyeon Club. Match the supplied approved room illustration: delicate pencil-like clean edges, matte hand-painted surfaces, warm pale oak wood, indigo metal, cream and muted wine-red accents, restrained soft ambient shadows, natural believable proportions. Cozy contemporary Korean friend's bedroom. Carefully art-directed game illustration, NOT glossy 3D, NOT photographic, NOT generic kawaii pastel gradients. No people, no text, no letters, no watermarks, no UI. Paint ONLY AN EMPTY EDITABLE BEDROOM SHELL. Wide 3:2 canvas, straight-on camera elevated enough to clearly see the floor. Quiet creamy plaster back wall and two very narrow side walls. Pale oak horizontal floor planks. The single perfectly level horizontal wall/floor boundary MUST be at 44% of the image height; all below it is bare walkable floor. The back wall spans x=4% to96%, with narrow side walls only near the far edges. A small elegant navy-framed window occupies the upper left wall at x7-24%,y9-34%, with soft afternoon light. Simple neat navy baseboard. The upper right wall is empty for future posters. Spacious uncluttered composition. No furniture, no rug, no plant, no lamp, no shelves, no cabinets, no door crossing the floor, no hanging decor, no built-in desk, no raised platform, no text. All furnishings will be separate interactive assets; leave the wall and floor EMPTY. Same material rendering as reference, but more intimate private bedroom.",
+      "job_id": "170ab6be-91ba-426e-9067-72d5a32b62af",
+      "status": "completed",
+      "type": "image",
+      "model": "gpt_image_2_5",
+      "actualWidth": 3504,
+      "actualHeight": 2336
+    },
+    {
+      "index": 2,
+      "name": "bedroom-furniture-atlas",
+      "prompt": "Production art for the Korean 2D social game Hohyeon Club. Match the supplied approved room illustration: delicate pencil-like clean edges, matte hand-painted surfaces, warm pale oak wood, indigo metal, cream and muted wine-red accents, restrained soft ambient shadows, natural believable proportions. Cozy contemporary Korean friend's bedroom. Carefully art-directed game illustration, NOT glossy 3D, NOT photographic, NOT generic kawaii pastel gradients. No people, no text, no letters, no watermarks, no UI. CREATE A TECHNICAL TRANSPARENT GAME PROP ATLAS. EXACT 4 COLUMNS by 3 ROWS, equal-sized invisible rectangular cells. ONE isolated complete object per cell, 12 objects TOTAL, nothing outside these objects. Read order left to right, top to bottom MUST be:\n1. Low oak SINGLE BED facing camera slightly from above, cream duvet with thin wine-red edging, two cream pillows, tidy headboard. Bed only.\n2. Compact two-seat cream SOFA with wine-red piping, no cushions, slim oak legs.\n3. Clean navy-frame pale-oak WRITING DESK, empty tabletop, two narrow drawers, no chair, no accessories.\n4. Small oak VANITY with an attached simple round mirror and tiny drawers, no chair and no loose products.\n5. Slim two-door navy and cream WARDROBE, closed doors, oak handles.\n6. Low rectangular oak COFFEE TABLE with indigo legs, empty tabletop.\n7. Low freestanding BOOKSHELF with a few neatly integrated neutral-spine books, indigo frame, oak shelves.\n8. Minimal indigo CLOTHES RACK with three hanging garments in black, cream, and wine-red. No loose props.\n9. Small wine-red fabric ARMCHAIR with oak legs, no cushions.\n10. Elegant thin indigo FLOOR LAMP with a cream pleated shade. Entire lamp and base visible.\n11. Tall freestanding FULL-LENGTH MIRROR with navy frame and back support, simple muted pale reflection, no scene or person in mirror.\n12. Flat oval woven RUG with cream center and muted wine-red striped border, viewed slightly from above, no objects on it.\nRender each complete object centered in its own cell and large enough to fill 72% of that cell. Consistent front-facing slightly elevated camera, see the front and top surfaces, vertical edges straight. Suitable for placing individually in a front-view bedroom with a floor receding towards the back. Each object has its own correct small contact shadow only. Allow at least 12% transparent padding inside every cell on every side. Objects MUST NOT touch neighboring cells. No labels, no row lines, no visible grid, no floor plane, no room context, no connected props across cells. Real alpha-transparent background everywhere around and between objects. Never a visible checkerboard. The objects are individual layers for a drag-and-drop interior editor.",
+      "job_id": "1d2f2c2e-816c-40d7-aa0b-374a1b6fd840",
+      "status": "completed",
+      "type": "image",
+      "model": "gpt_image_2_5",
+      "actualWidth": 3504,
+      "actualHeight": 2336
+    },
+    {
+      "index": 3,
+      "name": "bedroom-objects-atlas",
+      "prompt": "Production art for the Korean 2D social game Hohyeon Club. Match the supplied approved room illustration: delicate pencil-like clean edges, matte hand-painted surfaces, warm pale oak wood, indigo metal, cream and muted wine-red accents, restrained soft ambient shadows, natural believable proportions. Cozy contemporary Korean friend's bedroom. Carefully art-directed game illustration, NOT glossy 3D, NOT photographic, NOT generic kawaii pastel gradients. No people, no text, no letters, no watermarks, no UI. CREATE A TECHNICAL TRANSPARENT GAME PROP ATLAS. EXACT 4 COLUMNS by 3 ROWS, equal-sized invisible rectangular cells. ONE isolated complete object per cell, 12 objects TOTAL, nothing outside these objects. Read order left to right, top to bottom MUST be:\n1. Adorable handmade CHARCOAL CAT PLUSH sitting upright, small cream muzzle, wine-red bow, fabric stitches.\n2. Soft CREAM BUNNY PLUSH sitting upright, long soft ears, tiny navy ribbon, fabric stitches.\n3. One WINE-RED HEART CUSHION, plush fabric, unbranded.\n4. Small vintage OAK RECORD PLAYER with navy platter, a black vinyl disc and one small tonearm.\n5. One compact NAVY BLUETOOTH SPEAKER with warm cream cloth grille, no logo.\n6. Leafy MONSTERA HOUSEPLANT in a warm cream ceramic pot.\n7. Small arrangement of cream daisies and muted pink flowers in a navy FLOWER VASE.\n8. A neat small STACK OF FIVE BOOKS, cream, navy and wine-red spines, no readable lettering.\n9. An OAK TEA TRAY with a simple cream teapot and two small cups, one unified tray object.\n10. A tiny collectible TURQUOISE TWIN-TAILED VIRTUAL SINGER FIGURINE on a round navy stand, charcoal and mint costume, cute matching 2D game render, no lettering.\n11. A small oak DISPLAY STAND holding a folded white Japanese cheering HEADBAND with a red circle, fabric ends draped naturally.\n12. A charming compact CREAM INSTANT CAMERA with a navy lens and wine-red wrist strap.\nRender each complete object centered in its own cell and large enough to fill 72% of that cell. Consistent front-facing slightly elevated camera, see the front and top surfaces, vertical edges straight. Suitable for placing individually in a front-view bedroom with a floor receding towards the back. Each object has its own correct small contact shadow only. Allow at least 12% transparent padding inside every cell on every side. Objects MUST NOT touch neighboring cells. No labels, no row lines, no visible grid, no floor plane, no room context, no connected props across cells. Real alpha-transparent background everywhere around and between objects. Never a visible checkerboard. The objects are individual layers for a drag-and-drop interior editor.",
+      "job_id": "eeb3970a-143e-4bf3-bc44-79dcde333bff",
+      "status": "completed",
+      "type": "image",
+      "model": "gpt_image_2_5",
+      "actualWidth": 3504,
+      "actualHeight": 2336
+    },
+    {
+      "index": 4,
+      "name": "bedroom-wall-atlas",
+      "prompt": "Production art for the Korean 2D social game Hohyeon Club. Match the supplied approved room illustration: delicate pencil-like clean edges, matte hand-painted surfaces, warm pale oak wood, indigo metal, cream and muted wine-red accents, restrained soft ambient shadows, natural believable proportions. Cozy contemporary Korean friend's bedroom. Carefully art-directed game illustration, NOT glossy 3D, NOT photographic, NOT generic kawaii pastel gradients. No people, no text, no letters, no watermarks, no UI. CREATE A TECHNICAL TRANSPARENT GAME PROP ATLAS. EXACT 2 COLUMNS by 2 ROWS, equal-sized invisible rectangular cells. ONE isolated complete object per cell, 4 objects TOTAL, nothing outside these objects. Read order left to right, top to bottom MUST be:\n1. A framed MUSIC POSTER: abstract wine-red vinyl record and cream geometric shapes on indigo paper, light oak frame. NO TEXT.\n2. A gently curved horizontal PHOTO GARLAND: five tiny neutral illustrated snapshot cards clipped to a thin string. Simple miniature landscapes and hearts only, no recognizable faces, no text.\n3. A round cream and indigo WALL CLOCK, simple hour markers instead of numerals, slender hands.\n4. A short decorative STRING OF FIVE warm cream STAR LIGHTS hanging in a gentle curve, small neat visible wire, muted amber glow limited tightly around each star.\nRender each complete object centered in its own cell and large enough to fill 72% of that cell. Consistent front-facing slightly elevated camera, see the front and top surfaces, vertical edges straight. Suitable for placing individually in a front-view bedroom with a floor receding towards the back. Each object has its own correct small contact shadow only. Allow at least 12% transparent padding inside every cell on every side. Objects MUST NOT touch neighboring cells. No labels, no row lines, no visible grid, no floor plane, no room context, no connected props across cells. Real alpha-transparent background everywhere around and between objects. Never a visible checkerboard. The objects are individual layers for a drag-and-drop interior editor.",
+      "job_id": "9829b336-08f2-413b-85b1-b463fa34e4cd",
+      "status": "completed",
+      "type": "image",
+      "model": "gpt_image_2_5",
+      "actualWidth": 3504,
+      "actualHeight": 2336
+    }
+  ],
+  "props": [
+    "bed",
+    "sofa",
+    "desk",
+    "vanity",
+    "wardrobe",
+    "low-table",
+    "bookshelf",
+    "clothes-rack",
+    "armchair",
+    "floor-lamp",
+    "mirror",
+    "rug",
+    "cat-plush",
+    "bunny-plush",
+    "heart-cushion",
+    "record-player",
+    "speaker",
+    "plant",
+    "flowers",
+    "books",
+    "tea-set",
+    "twin-tail-figure",
+    "headband-display",
+    "instant-camera",
+    "music-poster",
+    "photo-string",
+    "wall-clock",
+    "star-lights"
+  ],
+  "creditsSpent": 18,
+  "processing": "Atlas extraction (three cell edges adjusted at clear gaps), alpha-bound trimming with 6px padding (alpha > 4), WebP encoding. No illustration repainting.",
+  "assets": [
+    {
+      "id": "bed",
+      "source": "furniture",
+      "cell": 1,
+      "width": 721,
+      "height": 622,
+      "bytes": 101654,
+      "clearPercent": 39,
+      "crop": {
+        "left": 92,
+        "top": 140,
+        "width": 721,
+        "height": 622
+      }
+    },
+    {
+      "id": "sofa",
+      "source": "furniture",
+      "cell": 2,
+      "width": 777,
+      "height": 471,
+      "bytes": 98794,
+      "clearPercent": 43,
+      "crop": {
+        "left": 942,
+        "top": 225,
+        "width": 777,
+        "height": 471
+      }
+    },
+    {
+      "id": "desk",
+      "source": "furniture",
+      "cell": 3,
+      "width": 731,
+      "height": 475,
+      "bytes": 70294,
+      "clearPercent": 51,
+      "crop": {
+        "left": 1837,
+        "top": 265,
+        "width": 731,
+        "height": 475
+      }
+    },
+    {
+      "id": "vanity",
+      "source": "furniture",
+      "cell": 4,
+      "width": 506,
+      "height": 674,
+      "bytes": 80772,
+      "clearPercent": 61,
+      "crop": {
+        "left": 2797,
+        "top": 78,
+        "width": 506,
+        "height": 674
+      }
+    },
+    {
+      "id": "wardrobe",
+      "source": "furniture",
+      "cell": 5,
+      "width": 433,
+      "height": 689,
+      "bytes": 40586,
+      "clearPercent": 51,
+      "crop": {
+        "left": 247,
+        "top": 825,
+        "width": 433,
+        "height": 689
+      }
+    },
+    {
+      "id": "low-table",
+      "source": "furniture",
+      "cell": 6,
+      "width": 760,
+      "height": 332,
+      "bytes": 56380,
+      "clearPercent": 53,
+      "crop": {
+        "left": 944,
+        "top": 1084,
+        "width": 760,
+        "height": 332
+      }
+    },
+    {
+      "id": "bookshelf",
+      "source": "furniture",
+      "cell": 7,
+      "width": 607,
+      "height": 573,
+      "bytes": 78008,
+      "clearPercent": 44,
+      "crop": {
+        "left": 1901,
+        "top": 921,
+        "width": 607,
+        "height": 573
+      }
+    },
+    {
+      "id": "clothes-rack",
+      "source": "furniture",
+      "cell": 8,
+      "width": 589,
+      "height": 660,
+      "bytes": 106198,
+      "clearPercent": 54,
+      "crop": {
+        "left": 2761,
+        "top": 852,
+        "width": 589,
+        "height": 660
+      }
+    },
+    {
+      "id": "armchair",
+      "source": "furniture",
+      "cell": 9,
+      "width": 496,
+      "height": 558,
+      "bytes": 81274,
+      "clearPercent": 56,
+      "crop": {
+        "left": 242,
+        "top": 1666,
+        "width": 496,
+        "height": 558
+      }
+    },
+    {
+      "id": "floor-lamp",
+      "source": "furniture",
+      "cell": 10,
+      "width": 223,
+      "height": 671,
+      "bytes": 33154,
+      "clearPercent": 78,
+      "crop": {
+        "left": 1212,
+        "top": 1557,
+        "width": 223,
+        "height": 671
+      }
+    },
+    {
+      "id": "mirror",
+      "source": "furniture",
+      "cell": 11,
+      "width": 328,
+      "height": 682,
+      "bytes": 45052,
+      "clearPercent": 60,
+      "crop": {
+        "left": 2017,
+        "top": 1557,
+        "width": 328,
+        "height": 682
+      }
+    },
+    {
+      "id": "rug",
+      "source": "furniture",
+      "cell": 12,
+      "width": 776,
+      "height": 376,
+      "bytes": 122098,
+      "clearPercent": 60,
+      "crop": {
+        "left": 2645,
+        "top": 1761,
+        "width": 776,
+        "height": 376
+      }
+    },
+    {
+      "id": "cat-plush",
+      "source": "objects",
+      "cell": 1,
+      "width": 541,
+      "height": 618,
+      "bytes": 114116,
+      "clearPercent": 52,
+      "crop": {
+        "left": 185,
+        "top": 146,
+        "width": 541,
+        "height": 618
+      }
+    },
+    {
+      "id": "bunny-plush",
+      "source": "objects",
+      "cell": 2,
+      "width": 583,
+      "height": 625,
+      "bytes": 125194,
+      "clearPercent": 42,
+      "crop": {
+        "left": 995,
+        "top": 139,
+        "width": 583,
+        "height": 625
+      }
+    },
+    {
+      "id": "heart-cushion",
+      "source": "objects",
+      "cell": 3,
+      "width": 603,
+      "height": 534,
+      "bytes": 109562,
+      "clearPercent": 53,
+      "crop": {
+        "left": 1849,
+        "top": 196,
+        "width": 603,
+        "height": 534
+      }
+    },
+    {
+      "id": "record-player",
+      "source": "objects",
+      "cell": 4,
+      "width": 747,
+      "height": 485,
+      "bytes": 127246,
+      "clearPercent": 39,
+      "crop": {
+        "left": 2641,
+        "top": 257,
+        "width": 747,
+        "height": 485
+      }
+    },
+    {
+      "id": "speaker",
+      "source": "objects",
+      "cell": 5,
+      "width": 687,
+      "height": 462,
+      "bytes": 137196,
+      "clearPercent": 36,
+      "crop": {
+        "left": 147,
+        "top": 1018,
+        "width": 687,
+        "height": 462
+      }
+    },
+    {
+      "id": "plant",
+      "source": "objects",
+      "cell": 6,
+      "width": 632,
+      "height": 744,
+      "bytes": 177076,
+      "clearPercent": 39,
+      "crop": {
+        "left": 979,
+        "top": 810,
+        "width": 632,
+        "height": 744
+      }
+    },
+    {
+      "id": "flowers",
+      "source": "objects",
+      "cell": 7,
+      "width": 631,
+      "height": 713,
+      "bytes": 184698,
+      "clearPercent": 46,
+      "crop": {
+        "left": 1819,
+        "top": 844,
+        "width": 631,
+        "height": 713
+      }
+    },
+    {
+      "id": "books",
+      "source": "objects",
+      "cell": 8,
+      "width": 763,
+      "height": 579,
+      "bytes": 154880,
+      "clearPercent": 37,
+      "crop": {
+        "left": 2629,
+        "top": 938,
+        "width": 763,
+        "height": 579
+      }
+    },
+    {
+      "id": "tea-set",
+      "source": "objects",
+      "cell": 9,
+      "width": 841,
+      "height": 531,
+      "bytes": 139078,
+      "clearPercent": 33,
+      "crop": {
+        "left": 91,
+        "top": 1683,
+        "width": 841,
+        "height": 531
+      }
+    },
+    {
+      "id": "twin-tail-figure",
+      "source": "objects",
+      "cell": 10,
+      "width": 524,
+      "height": 687,
+      "bytes": 143098,
+      "clearPercent": 42,
+      "crop": {
+        "left": 1071,
+        "top": 1577,
+        "width": 524,
+        "height": 687
+      }
+    },
+    {
+      "id": "headband-display",
+      "source": "objects",
+      "cell": 11,
+      "width": 659,
+      "height": 494,
+      "bytes": 108044,
+      "clearPercent": 43,
+      "crop": {
+        "left": 1827,
+        "top": 1720,
+        "width": 659,
+        "height": 494
+      }
+    },
+    {
+      "id": "instant-camera",
+      "source": "objects",
+      "cell": 12,
+      "width": 646,
+      "height": 538,
+      "bytes": 108194,
+      "clearPercent": 51,
+      "crop": {
+        "left": 2735,
+        "top": 1692,
+        "width": 646,
+        "height": 538
+      }
+    },
+    {
+      "id": "music-poster",
+      "source": "wall",
+      "cell": 1,
+      "width": 672,
+      "height": 911,
+      "bytes": 163434,
+      "clearPercent": 58,
+      "crop": {
+        "left": 585,
+        "top": 185,
+        "width": 672,
+        "height": 911
+      }
+    },
+    {
+      "id": "photo-string",
+      "source": "wall",
+      "cell": 2,
+      "width": 1453,
+      "height": 595,
+      "bytes": 267240,
+      "clearPercent": 55,
+      "crop": {
+        "left": 1847,
+        "top": 385,
+        "width": 1453,
+        "height": 595
+      }
+    },
+    {
+      "id": "wall-clock",
+      "source": "wall",
+      "cell": 3,
+      "width": 832,
+      "height": 839,
+      "bytes": 150356,
+      "clearPercent": 59,
+      "crop": {
+        "left": 524,
+        "top": 1281,
+        "width": 832,
+        "height": 839
+      }
+    },
+    {
+      "id": "star-lights",
+      "source": "wall",
+      "cell": 4,
+      "width": 1421,
+      "height": 553,
+      "bytes": 213430,
+      "clearPercent": 54,
+      "crop": {
+        "left": 1851,
+        "top": 1453,
+        "width": 1421,
+        "height": 553
+      }
+    }
+  ]
+}

@@ -16,7 +16,7 @@
 
 ## 구성
 
-- 화면: GitHub Pages, main의 `docs/index.html`과 `docs/assets/`의 별도 캐시 이미지 89개. 이미지 파일명에는 내용 해시가 들어갑니다.
+- 화면: GitHub Pages, main의 `docs/index.html`과 `docs/assets/`의 별도 캐시 이미지 118개. 이미지 파일명에는 내용 해시가 들어갑니다.
 - 기존 Supabase 프로젝트: `ogfpeqeoaznwjbrbedbx`, 서울 리전.
 - `hohyeon-auth`: 개인 코드·비밀번호를 검증하는 공개 진입점. 계정/IP 요청 제한, 계정별 잠금, Supabase Auth password hashing과 서명된 세션을 사용합니다. 프로젝트의 다른 Auth 사용자는 게임 계정으로 인정하지 않습니다.
 - `hohyeon-api`: JWT 및 게임의 활성 세션 확인 후 프로필/원장/게임을 처리합니다. uid와 배역은 서버의 roster에서 결정합니다.
@@ -32,7 +32,7 @@
 1. `supabase/migrations`를 순서대로 적용합니다. 운영 DB에는 이미 적용했습니다. 기존 계정이나 원장을 초기화하는 작업을 배포 과정에 넣지 않습니다.
 2. `supabase/functions/deno.json`의 고정 npm 의존성과 루트 `app/*.ts` 엔진 의존성을 포함하여 `hohyeon-auth`, `hohyeon-api`를 배포합니다. API는 verify_jwt=true, auth는 자체 자격증명 검증 때문에 verify_jwt=false입니다.
 3. `npm test`, TypeScript, Edge Deno 검사, 프로덕션 빌드 후 `node scripts/build-standalone.mjs`를 순서대로 실행합니다.
-4. `docs/index.html`과 이 HTML이 참조하는 `docs/assets/`의 이미지 89개를 함께 게시합니다. 현재 라운지는 이미지를 HTML에 내장하지 않으므로 HTML만 배포하면 이미지가 누락됩니다. 기존 `docs/theater.html`·`docs/island.html`은 보존합니다.
+4. `docs/index.html`과 이 HTML이 참조하는 `docs/assets/`의 이미지 118개를 함께 게시합니다. 현재 라운지는 이미지를 HTML에 내장하지 않으므로 HTML만 배포하면 이미지가 누락됩니다. 기존 `docs/theater.html`·`docs/island.html`은 보존합니다.
 5. Pages 게시 후 배포 HTML의 SHA-256을 로컬 파일과 비교하고, HTML이 참조하는 해시 이미지 URL의 응답과 캐릭터·회관·분장실 표시를 확인합니다.
 
 비공개 계정 생성용 초기 설정 endpoint는 일곱 계정 준비 후 제거했습니다. 계정 추가는 고정 roster·배역 제한·서버 검증 변경을 동반해야 합니다. 소유자도 브라우저에서 다른 친구의 서버 잔액을 직접 수정하는 기능은 없습니다.
@@ -46,5 +46,7 @@
 보안 검사에서 전용 스키마의 ‘RLS 정책 없음’ 정보 항목은 위의 서버 전용 접근 설계에 해당합니다. 프로젝트 공통의 [유출 비밀번호 검사](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)는 기존 설정대로 비활성화되어 있으며 이번 작업에서 전역 Auth 설정은 바꾸지 않았습니다.
 
 ## 이전 기록
+
+2026-09-18 개인 방 저장을 위해 `hohyeon-api` v3을 배포했습니다. JWT 검증과 import map은 유지하고, 배포된 25개 소스 파일이 로컬 패키지와 일치함을 확인했습니다. 방은 기존 프로필 JSON 안에 저장되므로 DB/RLS 변경이나 기존 계정 초기화가 없습니다. 저장 호환성과 검증 범위는 [BEDROOM-SAVE.md](supabase/BEDROOM-SAVE.md)에 기록합니다.
 
 옷장 초기화는 현재 계정의 코디에만 적용합니다. 서버 범 지갑, 이전 섬/극장 파일, 기존 브라우저 지갑은 지우지 않습니다. `hohyeon-lounge-v1`의 본인 코디는 내 계정에서 명시적으로 가져올 수 있습니다. 이전 방장별 지갑 기록은 중복 가능성이 있어 자동 합산하지 않습니다.

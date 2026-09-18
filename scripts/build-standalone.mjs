@@ -17,8 +17,8 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 89 || new Set(assets).size !== 89)
-  throw new Error('The lounge manifest must include all 89 unique images.');
+if (assets.length !== 118 || new Set(assets).size !== 118)
+  throw new Error('The lounge manifest must include all 118 unique images.');
 const assetDirectory = path.join(root, 'docs/assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(
@@ -110,7 +110,7 @@ if (!css)
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="일곱 친구의 게임 라운지와 카지노. 2D 캐릭터를 꾸미고 체스·고스톱·섯다·홀덤·블랙잭을 공통 화폐 범으로 함께 즐겨 보세요.">
+<meta name="description" content="일곱 친구의 게임 라운지와 카지노. 캐릭터와 내 방을 꾸미고 체스·고스톱·섯다·홀덤·블랙잭을 공통 화폐 범으로 함께 즐겨 보세요.">
 <title>호현지방 · 게임 라운지</title><style>${css}</style></head>
 <body><div id="root"></div><noscript>게임을 실행하려면 브라우저에서 JavaScript를 켜주세요.</noscript>
 <script type="application/json" id="third-party-licenses">${JSON.stringify(licenses).replaceAll('<', '\\u003c')}</script>

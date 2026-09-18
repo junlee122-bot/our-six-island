@@ -23,9 +23,11 @@ import {
   Check,
   Coins,
   Spade,
+  House,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
+import { BedroomEditor } from './lounge-bedroom';
 import { RoomFloor } from './lounge-scene';
 import './lounge-club.css';
 import { ChessBoard, GoBoard } from './lounge-boards';
@@ -827,7 +829,7 @@ function AccountLounge({
   const [room] = useState(() => new LoungeRoom(account)),
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
     [ready, setReady] = useState(false),
-    [tab, setTab] = useState<'lounge' | 'wardrobe' | 'casino'>('wardrobe'),
+    [tab, setTab] = useState<'lounge' | 'wardrobe' | 'casino' | 'bedroom'>('wardrobe'),
     [modal, setModal] = useState<
       'friends' | 'credits' | 'reset' | 'request' | 'wallet' | 'account' | null
     >(null),
@@ -1073,6 +1075,13 @@ function AccountLounge({
             <Shirt size={17} />
             옷장
           </button>
+          <button
+            aria-pressed={tab === 'bedroom'}
+            onClick={() => setTab('bedroom')}
+          >
+            <House size={17} />
+            내 방
+          </button>
         </nav>
         <div className="l-header-right">
           <button
@@ -1116,28 +1125,30 @@ function AccountLounge({
       </div>
       {cloudSave.conflict && (
         <div className="l-save-alert" role="alert">
-          <p>다른 창에서 코디가 저장됐어요. 어느 모습을 간직할까요?</p>
+          <p>다른 창에서 저장 내용이 바뀌었어요. 어떤 내용을 간직할까요?</p>
           <button onClick={() => cloudSave.resolve(false)}>
-            서버의 코디 불러오기
+            서버의 저장 불러오기
           </button>
           <button onClick={() => cloudSave.resolve(true)}>
-            지금 코디로 덮어쓰기
+            지금 내용으로 덮어쓰기
           </button>
         </div>
       )}
       {cloudSave.draft && (
         <div className="l-save-alert">
-          <p>이 기기에 아직 저장하지 못한 코디가 있어요.</p>
-          <button onClick={cloudSave.restoreDraft}>코디 복구하기</button>
-          <button onClick={cloudSave.dismissDraft}>서버의 코디 유지</button>
+          <p>이 기기에 아직 저장하지 못한 코디나 방 꾸미기가 있어요.</p>
+          <button onClick={cloudSave.restoreDraft}>저장 내용 복구하기</button>
+          <button onClick={cloudSave.dismissDraft}>서버의 저장 유지</button>
         </div>
       )}
-      {tab === 'wardrobe' && (
+      {(tab === 'wardrobe' || tab === 'bedroom') && (
         <div className="l-wardrobe-invites">
           <Invitations room={room} view={view} />
         </div>
       )}
-      {tab === 'wardrobe' ? (
+      {tab === 'bedroom' ? (
+        <BedroomEditor save={save} onChange={setSave} notice={notice} />
+      ) : tab === 'wardrobe' ? (
         <Wardrobe
           save={save}
           onChange={changeSave}
@@ -1538,7 +1549,7 @@ function AccountLounge({
               className="l-primary"
               onClick={async () => {
                 if (!(await room.leave())) return;
-                setSave(accountSave(freshLounge(), account.actor));
+                setSave({ ...accountSave(freshLounge(), account.actor), bedroom: save.bedroom });
                 setTab('wardrobe');
                 setModal(null);
                 setLocalPos({ x: 50, y: 79 });
