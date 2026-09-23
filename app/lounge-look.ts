@@ -25,7 +25,8 @@ export type Look = Appearance & {
     | 'wide-pants'
     | 'denim'
     | 'miku'
-    | 'shampoo';
+    | 'shampoo'
+    | 'akatsuki';
   hairstyle: 'signature' | 'buns';
   hairColor?: string;
   skinColor?: string;
@@ -43,7 +44,13 @@ export const COLLECTIONS = [
   { id: 'denim', name: '데님 산책', note: '청바지 · 캐주얼 재킷' },
   { id: 'miku', name: '하츠네 미쿠', note: '민트 넥타이 · 플리츠 스커트' },
   { id: 'shampoo', name: '샴푸의 중국풍', note: '차이나 칼라 · 매듭 장식' },
+  { id: 'akatsuki', name: '아카츠키', note: '검은 망토 · 붉은 구름' },
 ] as const;
+export const COSTUME_COLLECTIONS: readonly Look['collection'][] = [
+  'miku',
+  'shampoo',
+  'akatsuki',
+];
 export const DAOWON_COLLECTIONS: readonly Look['collection'][] = [
   'wide-pants',
   'denim',

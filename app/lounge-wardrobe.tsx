@@ -12,6 +12,7 @@ import {
   collectionsFor,
   hatsFor,
   DAOWON_COLLECTIONS,
+  COSTUME_COLLECTIONS,
   GLASSES,
   defaultLook,
   readLook,
@@ -185,7 +186,9 @@ export function Wardrobe({
     [category, setCategory] =
       useState<(typeof WARDROBE_CATEGORIES)[number][0]>('outfit'),
     [outfitGroup, setOutfitGroup] = useState('all'),
-    [motion, setMotion] = useState<Motion>('idle');
+    [motion, setMotion] = useState<Motion>('idle'),
+    visibleOutfitGroup =
+      actor !== 0 && outfitGroup === 'pants' ? 'all' : outfitGroup;
   const change = (patch: Partial<Look>) =>
     onChange({
       ...save,
@@ -410,32 +413,31 @@ export function Wardrobe({
           >
             {category === 'outfit' && (
               <>
-                {actor === 0 && (
-                  <div className="l-outfit-filters" aria-label="의상 종류">
-                    {[
-                      ['all', '전체'],
-                      ['pants', '바지'],
-                      ['costume', '코스튬'],
-                    ].map(([id, name]) => (
+                <div className="l-outfit-filters" aria-label="의상 종류">
+                  {[
+                    ['all', '전체'],
+                    ['pants', '바지'],
+                    ['costume', '코스튬'],
+                  ]
+                    .filter(([id]) => actor === 0 || id !== 'pants')
+                    .map(([id, name]) => (
                       <button
                         key={id}
-                        aria-pressed={outfitGroup === id}
+                        aria-pressed={visibleOutfitGroup === id}
                         onClick={() => setOutfitGroup(id)}
                       >
                         {name}
                       </button>
                     ))}
-                  </div>
-                )}
+                </div>
                 <div className="l-outfits">
                   {collectionsFor(actor)
                     .filter(
                       (c) =>
-                        actor !== 0 ||
-                        outfitGroup === 'all' ||
-                        (outfitGroup === 'pants'
+                        visibleOutfitGroup === 'all' ||
+                        (visibleOutfitGroup === 'pants'
                           ? c.id === 'wide-pants' || c.id === 'denim'
-                          : c.id === 'miku' || c.id === 'shampoo'),
+                          : COSTUME_COLLECTIONS.includes(c.id)),
                     )
                     .sort(
                       (a, b) =>

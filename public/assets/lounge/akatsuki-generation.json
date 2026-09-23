@@ -1,0 +1,45 @@
+{
+  "model": "gpt_image_2_5",
+  "jobId": "ecaf0007-edca-4304-821e-8505800f91dd",
+  "createdAt": "2026-09-23",
+  "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GvlNWM4g0WFFzr7aU4tTQPXdqm/hf_20260923_112534_ecaf0007-edca-4304-821e-8505800f91dd.png",
+  "params": {
+    "model": "gpt_image_2_5",
+    "aspect_ratio": "3:2",
+    "quality": "high",
+    "resolution": "4k",
+    "count": 1,
+    "medias": [
+      {
+        "role": "image",
+        "value": "https://junlee122-bot.github.io/our-six-island/assets/lounge-club-friends-classic-81ef94405114.webp"
+      }
+    ],
+    "prompt": "Create a production-ready 2D game character sprite atlas by editing the attached existing seven-friends atlas. Preserve EXACTLY its soft hand-drawn anime/chibi art style, faces, large brown eyes, proportions, front-facing standing pose, and the seven distinct hairstyles. All hair is the same saturated BLUE marker color as the reference so our game can recolor it. Flat solid chroma-magenta #FF00FF background. Exactly 4 columns by 2 rows, 8 evenly spaced equal rectangular cells, no grid lines. Each full-body figure must fit entirely inside its own cell with ample empty padding, feet aligned to the same baseline; no shadows on background, no labels, no text, no logos, no extra props. TOP ROW cells 1-4 match the four top-row people in the reference in the same order. BOTTOM ROW cells 5-7 match the three bottom-row people in the reference in the same order. NEW cell 8 is the SAME person as cell 1 but with two high round Chun-Li-style hair buns and small cream ribbons, all bun hair also BLUE. Cell 2 is a MAN with shoulder-length hair; cell 5 is a MAN with medium-length bob hair. Keep each person's existing facial character and friendly expression. NO hats, glasses, headbands, facial hair or accessories baked into the art; the game draws these separately. Replace ALL eight outfits with the iconic Naruto Akatsuki outfit: elegant long BLACK cloak with very recognizable RED CLOUD emblems outlined in pale ivory, RED inner lining at high raised collar and visible hem slit, wide long sleeves reaching wrists. Cloak reaches mid-calf and shows black pants and black closed-toe shoes below. Keep arms gently away from the body with both small hands visible, natural quiet standing posture. Preserve the characteristic red clouds and black/red design faithfully, with crisp small-scale readable emblems, three clouds visible per cloak. The cloak must be black, never navy or blue (blue is reserved for hair). Keep the old face skin shade; preserve skin shading. The output is a single high-quality game asset sheet, NOT a poster or scene, and NOT 3D. All eight characters must be drawn complete, unique to their reference hairstyles, equally sized and consistently positioned."
+  },
+  "estimatedCredits": 4.25,
+  "output": {
+    "width": 3504,
+    "height": 2336,
+    "cells": {
+      "columns": 4,
+      "rows": 2,
+      "actors": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        0
+      ],
+      "lastCellHairstyle": "buns"
+    },
+    "sourceBytes": 7257051,
+    "runtimeFile": "akatsuki-atlas.webp",
+    "runtimeBytes": 951564,
+    "runtimeSha256": "25a42bf0896331d096f10d804cdf27d75c6582a02f507ffc164805c9c1bd2f0f",
+    "conversion": "WebP quality 95, effort 6; original 3504x2336 dimensions retained. Decoded colors differ from source PNG; eight keyed poses and skin/hair masks checked."
+  }
+}

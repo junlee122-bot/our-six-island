@@ -42,6 +42,8 @@ type Figure = {
     bareShoulders: boolean;
     collared: boolean;
     shortSleeveTunic?: boolean;
+    bareToes?: boolean;
+    darkHighCollar?: boolean;
   };
 };
 const canvas = (w: number, h: number) => {
@@ -290,6 +292,7 @@ async function prepare() {
     bunSheet,
     outfitSheet,
     shampooSheet,
+    akatsukiSheet,
     hachimaki,
   ] = await Promise.all([
     image(a.motion),
@@ -300,6 +303,7 @@ async function prepare() {
     image(a.daowonBuns),
     image(a.daowonOutfits),
     image(a.dowonShampoo),
+    image(a.akatsuki),
     image(a.hachimaki),
   ]);
   const newSheets = [classic, street, smart];
@@ -330,6 +334,21 @@ async function prepare() {
       true,
     );
     f.skinRegions.shortSleeveTunic = true;
+    return f;
+  });
+  const akatsukiFigures = Array.from({ length: 8 }, (_, i) => {
+    const f = sheetFigure(
+      akatsukiSheet,
+      4,
+      2,
+      i,
+      [136, 133, 136, 135, 139, 133, 138, 138][i],
+      false,
+      false,
+      true,
+    );
+    f.skinRegions.bareToes = true;
+    f.skinRegions.darkHighCollar = true;
     return f;
   });
   const rows = [
@@ -466,21 +485,24 @@ async function prepare() {
       newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
       bun = actor === 0 && look.hairstyle === 'buns',
       shampoo = actor === 0 && look.collection === 'shampoo',
+      akatsuki = look.collection === 'akatsuki',
       special = actor === 0 && (bun || newOutfit >= 0 || shampoo),
-      legacy = !special && index < 0,
-      base = special
-        ? shampoo
-          ? shampooFigures[bun ? 1 : 0]
-          : newOutfit >= 0
-            ? outfitFigures[newOutfit + (bun ? 3 : 0)]
-            : bunFigures[
-                ['classic', 'street', 'smart', 'original'].indexOf(
-                  look.collection,
-                )
-              ]
-        : legacy
-          ? original[actor][Math.min(frame, original[actor].length - 1)]
-          : collections[index][actor],
+      legacy = !akatsuki && !special && index < 0,
+      base = akatsuki
+        ? akatsukiFigures[bun ? 7 : actor]
+        : special
+          ? shampoo
+            ? shampooFigures[bun ? 1 : 0]
+            : newOutfit >= 0
+              ? outfitFigures[newOutfit + (bun ? 3 : 0)]
+              : bunFigures[
+                  ['classic', 'street', 'smart', 'original'].indexOf(
+                    look.collection,
+                  )
+                ]
+          : legacy
+            ? original[actor][Math.min(frame, original[actor].length - 1)]
+            : collections[index][actor],
       c = canvas(base.c.width + 120, base.c.height + 180),
       ctx = c.getContext('2d')!,
       p = base.c

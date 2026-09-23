@@ -38,6 +38,8 @@ type SkinAnchors = {
   bareShoulders?: boolean;
   collared?: boolean;
   shortSleeveTunic?: boolean;
+  bareToes?: boolean;
+  darkHighCollar?: boolean;
 };
 const luminance = (r: number, g: number, b: number) =>
   r * 0.21 + g * 0.72 + b * 0.07;
@@ -143,7 +145,10 @@ export function createSkinMask(
       : [...colorRgb(DEFAULT_SKIN_COLOR)];
   const sourceLight = luminance(reference[0], reference[1], reference[2]);
   const bodyHeight = Math.max(1, bottom - top);
-  const faceBottom = Math.min(top + bodyHeight * 0.4, eyes + head * 0.25);
+  const faceBottom = Math.min(
+    top + bodyHeight * (anchors.darkHighCollar ? 0.42 : 0.4),
+    eyes + head * (anchors.darkHighCollar ? 0.28 : 0.25),
+  );
   const warm = new Uint8Array(size),
     candidates = new Uint8Array(size);
   for (let i = 0; i < size; i++) {
@@ -273,24 +278,41 @@ export function createSkinMask(
     Math.min(
       height - 1,
       eyes +
-        head * (anchors.collared ? 0.32 : anchors.bareShoulders ? 0.4 : 0.34),
+        head *
+          (anchors.darkHighCollar
+            ? 0.36
+            : anchors.collared
+              ? 0.32
+              : anchors.bareShoulders
+                ? 0.4
+                : 0.34),
     );
     y++
   )
     for (
       let x = Math.max(
         0,
-        Math.floor(cx - head * (anchors.collared ? 0.075 : 0.12)),
+        Math.floor(
+          cx -
+            head * (anchors.collared && !anchors.darkHighCollar ? 0.075 : 0.12),
+        ),
       );
-      x <= Math.min(width - 1, cx + head * (anchors.collared ? 0.075 : 0.12));
+      x <=
+      Math.min(
+        width - 1,
+        cx +
+          head * (anchors.collared && !anchors.darkHighCollar ? 0.075 : 0.12),
+      );
       x++
     ) {
       const point = y * width + x,
         k = point * 4;
       if (
         warm[point] &&
-        data[k] - data[k + 1] >= (anchors.collared ? 28 : 18) &&
-        data[k + 1] - data[k + 2] >= (anchors.collared ? 25 : 17)
+        data[k] - data[k + 1] >=
+          (anchors.collared && !anchors.darkHighCollar ? 28 : 18) &&
+        data[k + 1] - data[k + 2] >=
+          (anchors.collared && !anchors.darkHighCollar ? 25 : 17)
       )
         pixels[point] = 1;
     }
@@ -402,6 +424,35 @@ export function createSkinMask(
         if (yellowStep <= redStep * 1.8) pixels[point] = 1;
       }
     }
+  }
+  if (anchors.bareToes) {
+    // The Akatsuki atlas uses open-toed sandals. Limit this optional mask to
+    // the very bottom of the pose so cloak clouds and trouser trim are untouched.
+    for (let y = Math.ceil(top + bodyHeight * 0.94); y <= bottom; y++)
+      for (
+        let x = Math.max(0, Math.floor(cx - head * 0.7));
+        x <= Math.min(width - 1, cx + head * 0.7);
+        x++
+      ) {
+        const point = y * width + x,
+          k = point * 4,
+          r = data[k],
+          g = data[k + 1],
+          b = data[k + 2];
+        // Toes have cream highlights and pink half-tones unlike the face.
+        // Within the sandal opening keep those attached to the chosen skin tone.
+        if (
+          warm[point] ||
+          (data[k + 3] >= 32 &&
+            r >= 120 &&
+            g >= 80 &&
+            b >= 40 &&
+            r > g &&
+            g >= b &&
+            r - b >= 6)
+        )
+          pixels[point] = 1;
+      }
   }
   return { pixels, luminance: sourceLight };
 }
