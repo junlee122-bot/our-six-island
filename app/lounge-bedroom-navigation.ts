@@ -16,6 +16,9 @@ export const WALK_FURNITURE: readonly WalkObstacle[] = [
   { id: 'desk', x: -2.95, z: 0.63, width: 1.3, depth: 0.85 },
   { id: 'shelf', x: -3.68, z: -1.48, width: 0.4, depth: 1.6 },
   { id: 'plant', x: 3.45, z: 2.55, width: 0.52, depth: 0.52 },
+  { id: 'chair', x: -2.95, z: 1.5, width: 0.65, depth: 0.65 },
+  { id: 'nightstand', x: 1.08, z: -1.6, width: 0.55, depth: 0.55 },
+  { id: 'wardrobe', x: 0.72, z: -2.83, width: 1.16, depth: 0.72 },
 ] as const;
 
 export function canWalk(point: WalkPoint): boolean {

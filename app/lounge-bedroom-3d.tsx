@@ -18,6 +18,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { loungeSprites } from './lounge-sprites';
 import { LOUNGE_MODELS } from './lounge-model-assets';
+import { LOUNGE_ASSETS } from './lounge-assets';
 import { defaultBedroom } from './lounge-bedroom-data';
 import type { LoungeSave } from './lounge-look';
 import { ACTORS } from './theater-data';
@@ -144,9 +145,9 @@ export function Bedroom3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     // Only static geometry casts shadows; a contact shadow follows the sprite.
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
@@ -227,8 +228,16 @@ export function Bedroom3D({
       return mesh;
     };
 
-    scene.add(new THREE.HemisphereLight('#fff5df', '#9d8174', 2.5));
-    const sun = new THREE.DirectionalLight('#fff0ce', 3.2);
+    const fallbacks = new Map<string, THREE.Group>();
+    const fallback = (id: string) => {
+      const group = new THREE.Group();
+      fallbacks.set(id, group);
+      scene.add(group);
+      return group;
+    };
+
+    scene.add(new THREE.HemisphereLight('#fff5df', '#8c8176', 1.8));
+    const sun = new THREE.DirectionalLight('#fff0ce', 2.65);
     sun.position.set(-3, 8, 3);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -306,10 +315,20 @@ export function Bedroom3D({
     for (const y of [1.44, 2.22, 3])
       box(2.33, 0.065, 0.13, -1.28, y, -3.1, '#f7efdc');
     box(2.72, 0.11, 0.32, -1.28, 1.37, -3.05, '#f1e4ce');
+    const curtainsFallback = fallback('curtains');
     for (const x of [-2.67, 0.1])
       for (let i = 0; i < 4; i++)
-        cylinder(0.082, 0.11, 1.85, x + i * 0.095, 2.12, -2.99, '#ede2cf');
-    box(3.18, 0.065, 0.1, -1.14, 3.12, -2.97, '#936f50');
+        cylinder(
+          0.082,
+          0.11,
+          1.85,
+          x + i * 0.095,
+          2.12,
+          -2.99,
+          '#ede2cf',
+          curtainsFallback,
+        );
+    box(3.18, 0.065, 0.1, -1.14, 3.12, -2.97, '#936f50', curtainsFallback);
     // Door in the left wall, with inset panels and a brass handle.
     box(0.12, 2.48, 1.16, -3.96, 1.25, 1.94, '#ac8661');
     box(0.15, 2.3, 0.98, -3.87, 1.2, 1.94, '#c5a77f');
@@ -320,63 +339,225 @@ export function Bedroom3D({
     const furniture = Object.fromEntries(
       WALK_FURNITURE.map((item) => [item.id, item]),
     );
-    const bed = furniture.bed;
-    box(1.85, 0.3, 2.65, bed.x, 0.24, bed.z, '#ab7959');
-    box(1.85, 1.05, 0.13, bed.x, 0.65, bed.z - 1.23, '#ac886a');
-    box(1.72, 0.27, 2.47, bed.x, 0.52, bed.z, '#f0e8d7');
-    box(1.77, 0.19, 1.78, bed.x, 0.72, bed.z + 0.33, '#bc9c96');
-    box(1.8, 0.08, 0.44, bed.x, 0.84, bed.z - 0.3, '#d4b6ae');
-    box(1.83, 0.44, 0.08, bed.x, 0.52, bed.z + 1.23, '#bc9c96');
-    for (const x of [bed.x - 0.4, bed.x + 0.4]) {
-      const pillow = sphere(0.38, x, 0.83, bed.z - 0.82, '#faf3e5');
-      pillow.scale.set(1, 0.27, 0.72);
-    }
-    // Wool rug, low table and a reading desk.
-    box(3.45, 0.028, 2.9, 0.07, 0.039, 0.95, '#d7c9a8');
-    for (let i = 0; i < 12; i++)
-      box(3.31, 0.007, 0.013, 0.07, 0.057, -0.38 + i * 0.24, '#c3b794');
-    const table = furniture.table;
-    box(table.width, 0.13, table.depth, table.x, 0.62, table.z, '#c59b6d');
+    const { bed, table, desk, shelf, chair, nightstand, wardrobe } = furniture;
+    // Keep these light placeholders until each individual model is ready.
+    // Hidden groups remain owned by the scene and are disposed on unmount.
+    const bedFallback = fallback('bed');
+    box(1.85, 0.3, 2.65, bed.x, 0.24, bed.z, '#ab7959', bedFallback);
+    box(1.85, 1.05, 0.13, bed.x, 0.65, bed.z - 1.23, '#ac886a', bedFallback);
+    box(1.72, 0.27, 2.47, bed.x, 0.52, bed.z, '#f0e8d7', bedFallback);
+    box(1.77, 0.19, 1.78, bed.x, 0.72, bed.z + 0.33, '#bc9c96', bedFallback);
+    const rugFallback = fallback('rug');
+    box(3.45, 0.028, 2.7, 0.07, 0.039, 0.95, '#d7c9a8', rugFallback);
+    const tableFallback = fallback('coffeeTable');
+    box(
+      table.width,
+      0.13,
+      table.depth,
+      table.x,
+      0.58,
+      table.z,
+      '#c59b6d',
+      tableFallback,
+    );
     for (const dx of [-0.58, 0.58])
       for (const dz of [-0.22, 0.22])
-        box(0.08, 0.52, 0.08, table.x + dx, 0.32, table.z + dz, '#a57e54');
-    box(0.36, 0.055, 0.26, table.x + 0.4, 0.73, table.z + 0.1, '#657a6d');
-    box(0.32, 0.045, 0.23, table.x + 0.36, 0.78, table.z + 0.12, '#d7b380');
-    const desk = furniture.desk;
-    box(desk.width, 0.12, desk.depth, desk.x, 1.01, desk.z, '#b88d62');
+        box(
+          0.08,
+          0.5,
+          0.08,
+          table.x + dx,
+          0.3,
+          table.z + dz,
+          '#a57e54',
+          tableFallback,
+        );
+    // A pair of books and a ceramic tea cup give the coffee table a lived-in feel.
+    box(0.36, 0.045, 0.26, table.x + 0.4, 0.675, table.z + 0.08, '#657a6d');
+    box(0.32, 0.035, 0.23, table.x + 0.36, 0.717, table.z + 0.08, '#d7b380');
+    cylinder(
+      0.073,
+      0.058,
+      0.11,
+      table.x + 0.05,
+      0.705,
+      table.z + 0.13,
+      '#e7dbbf',
+    );
+    cylinder(
+      0.057,
+      0.057,
+      0.003,
+      table.x + 0.05,
+      0.761,
+      table.z + 0.13,
+      '#705346',
+    );
+    const deskFallback = fallback('desk');
+    box(
+      desk.width,
+      0.12,
+      desk.depth,
+      desk.x,
+      0.7,
+      desk.z,
+      '#b88d62',
+      deskFallback,
+    );
     for (const dx of [-0.53, 0.53])
       for (const dz of [-0.31, 0.31])
-        box(0.07, 0.96, 0.07, desk.x + dx, 0.5, desk.z + dz, '#8a674a');
-    box(0.39, 0.018, 0.29, desk.x, 1.09, desk.z + 0.04, '#f2e8d3');
-    cylinder(0.12, 0.14, 0.055, desk.x - 0.4, 1.1, desk.z - 0.2, '#c59a57');
-    cylinder(0.018, 0.018, 0.5, desk.x - 0.4, 1.35, desk.z - 0.2, '#b78b4a');
-    cylinder(0.12, 0.23, 0.25, desk.x - 0.4, 1.62, desk.z - 0.2, '#e4cca0');
-    const lamp = new THREE.PointLight('#ffd58c', 1.4, 2.3);
-    lamp.position.set(desk.x - 0.4, 1.49, desk.z - 0.2);
-    scene.add(lamp);
-    const shelf = furniture.shelf;
-    box(0.1, 2.26, 1.58, -3.93, 1.15, shelf.z, '#ae8963');
-    for (const z of [shelf.z - 0.77, shelf.z + 0.77])
-      box(0.41, 2.26, 0.065, shelf.x, 1.15, z, '#bd976e');
-    for (const y of [0.16, 0.78, 1.4, 2.03, 2.28])
-      box(0.44, 0.07, 1.6, shelf.x, y, shelf.z, '#bd976e');
-    for (let row = 0; row < 3; row++)
-      for (let book = 0; book < 6; book++)
         box(
-          0.25,
-          0.29 + (book % 3) * 0.055,
-          0.105,
-          -3.62,
-          0.35 + row * 0.62,
-          -2.05 + book * 0.17,
-          ['#718679', '#b87767', '#d2b684', '#877d94'][book % 4],
+          0.07,
+          0.65,
+          0.07,
+          desk.x + dx,
+          0.36,
+          desk.z + dz,
+          '#8a674a',
+          deskFallback,
         );
+    // Writing mat, notebook and pencil sit on the imported desktop.
+    box(0.52, 0.012, 0.33, desk.x + 0.14, 0.754, desk.z + 0.05, '#8d9c8a');
+    box(0.23, 0.018, 0.27, desk.x + 0.19, 0.77, desk.z + 0.04, '#f5ead7');
+    const pencil = box(
+      0.017,
+      0.012,
+      0.22,
+      desk.x + 0.4,
+      0.773,
+      desk.z + 0.03,
+      '#be925e',
+    );
+    pencil.rotation.y = 0.2;
+    const shelfFallback = fallback('bookshelf');
+    box(0.38, 2.2, 1.05, shelf.x, 1.15, shelf.z, '#b38d69', shelfFallback);
+    const chairFallback = fallback('chair');
+    box(0.48, 0.12, 0.47, chair.x, 0.54, chair.z, '#747d75', chairFallback);
+    box(
+      0.48,
+      0.52,
+      0.08,
+      chair.x,
+      0.78,
+      chair.z + 0.22,
+      '#747d75',
+      chairFallback,
+    );
+    const nightstandFallback = fallback('nightstand');
+    box(
+      0.55,
+      0.58,
+      0.52,
+      nightstand.x,
+      0.35,
+      nightstand.z,
+      '#cab391',
+      nightstandFallback,
+    );
+    const wardrobeFallback = fallback('wardrobe');
+    box(
+      wardrobe.width,
+      1.95,
+      0.64,
+      wardrobe.x,
+      1.03,
+      wardrobe.z,
+      '#eee5d4',
+      wardrobeFallback,
+    );
+    const deskLight = new THREE.PointLight('#ffd79b', 1.25, 2);
+    deskLight.position.set(desk.x - 0.37, 1.02, desk.z - 0.12);
+    scene.add(deskLight);
+    const bedsideLight = new THREE.PointLight('#ffc77d', 1.6, 2.5);
+    bedsideLight.position.set(nightstand.x, 1.02, nightstand.z);
+    scene.add(bedsideLight);
     // Framed print and a small clock above the bed.
     box(0.8, 0.99, 0.075, 2.31, 2.43, -3.23, '#ad8664');
     box(0.67, 0.85, 0.018, 2.31, 2.43, -3.18, '#eee1c4');
-    const print = sphere(0.2, 2.32, 2.52, -3.15, '#d1a56e');
-    print.scale.z = 0.035;
-    box(0.42, 0.065, 0.015, 2.31, 2.17, -3.14, '#99a584');
+    // Existing illustrated decorations become wall surfaces in the 3D room.
+    const wallArt = async (
+      url: string,
+      width: number,
+      height: number,
+      x: number,
+      y: number,
+      z: number,
+      rotation: number,
+      id: string,
+    ) => {
+      const texture = await new THREE.TextureLoader().loadAsync(url);
+      if (disposed) {
+        texture.dispose();
+        return;
+      }
+      texture.colorSpace = THREE.SRGBColorSpace;
+      const art = new THREE.Mesh(
+        new THREE.PlaneGeometry(width, height),
+        new THREE.MeshStandardMaterial({
+          map: texture,
+          transparent: true,
+          alphaTest: 0.05,
+          roughness: 1,
+        }),
+      );
+      art.position.set(x, y, z);
+      art.rotation.y = rotation;
+      scene.add(art);
+      host.dataset[id] = 'loaded';
+    };
+    const artPromises = [
+      wallArt(
+        LOUNGE_ASSETS.bedroom_music_poster,
+        0.7,
+        0.95,
+        2.31,
+        2.43,
+        -3.145,
+        0,
+        'poster',
+      ),
+      wallArt(
+        LOUNGE_ASSETS.bedroom_photo_string,
+        1.72,
+        0.7,
+        -3.965,
+        2.04,
+        0.2,
+        Math.PI / 2,
+        'photos',
+      ),
+    ];
+    const lightPoints = Array.from(
+      { length: 11 },
+      (_, index) =>
+        new THREE.Vector3(
+          -3.94,
+          3.1 - Math.sin((index / 10) * Math.PI) * 0.19,
+          -2.9 + index * 0.54,
+        ),
+    );
+    const string = new THREE.Mesh(
+      new THREE.TubeGeometry(
+        new THREE.CatmullRomCurve3(lightPoints),
+        40,
+        0.009,
+        5,
+        false,
+      ),
+      material('#a78a65'),
+    );
+    scene.add(string);
+    const bulbShape = new THREE.SphereGeometry(0.037, 10, 8);
+    const bulbSurface = new THREE.MeshStandardMaterial({
+      color: '#ffdf9d',
+      emissive: '#ffc566',
+      emissiveIntensity: 1.3,
+    });
+    for (const point of lightPoints) {
+      const bulb = new THREE.Mesh(bulbShape, bulbSurface);
+      bulb.position.copy(point).add(new THREE.Vector3(0.012, -0.064, 0));
+      scene.add(bulb);
+    }
     const clockFace = new THREE.Mesh(
       new THREE.CircleGeometry(0.23, 40),
       material('#f0e7d5'),
@@ -411,6 +592,10 @@ export function Bedroom3D({
         maxWidth: number;
         maxDepth: number;
         maxHeight: number;
+        rotation?: number;
+        stretch?: boolean;
+        requireTexture?: boolean;
+        tints?: Record<string, string>;
       },
       id: string,
     ) => {
@@ -429,15 +614,17 @@ export function Bedroom3D({
           : [mesh.material]) {
           const surface = value as THREE.MeshStandardMaterial;
           const image = surface.map?.image as { width?: number } | undefined;
-          if (typeof image?.width === 'number' && image.width > 0) textured = true;
+          if (typeof image?.width === 'number' && image.width > 0)
+            textured = true;
         }
       });
       // GLTFLoader can resolve geometry after a texture request fails. These two
       // curated models both require their embedded colour maps to be complete.
-      if (!textured) {
+      if (target.requireTexture && !textured) {
         disposeObject(object);
         throw new Error('The room model colour texture could not be loaded.');
       }
+      object.rotation.y = target.rotation ?? 0;
       object.updateMatrixWorld(true);
       const bounds = new THREE.Box3().setFromObject(object),
         size = bounds.getSize(new THREE.Vector3());
@@ -446,7 +633,15 @@ export function Bedroom3D({
         target.maxDepth / Math.max(size.z, 0.001),
         target.maxHeight / Math.max(size.y, 0.001),
       );
-      object.scale.multiplyScalar(scale);
+      if (target.stretch)
+        object.scale.multiply(
+          new THREE.Vector3(
+            target.maxWidth / size.x,
+            target.maxHeight / size.y,
+            target.maxDepth / size.z,
+          ),
+        );
+      else object.scale.multiplyScalar(scale);
       object.updateMatrixWorld(true);
       const fitted = new THREE.Box3().setFromObject(object),
         center = fitted.getCenter(new THREE.Vector3());
@@ -463,16 +658,28 @@ export function Bedroom3D({
         if (mesh.isMesh) {
           mesh.castShadow = true;
           mesh.receiveShadow = true;
+          for (const surface of Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material]) {
+            const tint = target.tints?.[surface.name];
+            if (tint && surface instanceof THREE.MeshStandardMaterial)
+              surface.color.set(tint);
+          }
         }
       });
       scene.add(object);
       renderer.shadowMap.needsUpdate = true;
       host.dataset[id] = 'loaded';
-      host.dataset[id + 'Texture'] = 'loaded';
+      if (textured) host.dataset[id + 'Texture'] = 'loaded';
+      fallbacks.get(id)?.traverse((child) => {
+        child.visible = false;
+      });
+      host.dataset.modelsLoaded = String(
+        Number(host.dataset.modelsLoaded ?? 0) + 1,
+      );
     };
     const sofa = furniture.sofa;
-    const sofaFallback = new THREE.Group();
-    scene.add(sofaFallback);
+    const sofaFallback = fallback('sofa');
     box(2.68, 0.39, 1.04, sofa.x, 0.43, sofa.z, '#b3b9a2', sofaFallback);
     box(2.68, 0.6, 0.2, sofa.x, 0.88, sofa.z - 0.42, '#a4ad96', sofaFallback);
     for (const dx of [-1.25, 1.25])
@@ -487,26 +694,173 @@ export function Bedroom3D({
           maxWidth: 2.72,
           maxDepth: 1.12,
           maxHeight: 1.25,
+          requireTexture: true,
         },
         'sofa',
-      ).then(() => {
-        if (!disposed) {
-          scene.remove(sofaFallback);
-          disposeObject(sofaFallback);
-          renderer.shadowMap.needsUpdate = true;
-        }
-      }),
+      ),
       placeModel(
         LOUNGE_MODELS.tulips,
         {
           x: table.x - 0.28,
-          y: 0.7,
+          y: 0.65,
           z: table.z,
           maxWidth: 0.55,
           maxDepth: 0.48,
           maxHeight: 0.67,
+          requireTexture: true,
         },
         'tulips',
+      ),
+      placeModel(
+        LOUNGE_MODELS.bed,
+        {
+          x: bed.x,
+          y: 0.055,
+          z: bed.z,
+          maxWidth: bed.width,
+          maxDepth: bed.depth,
+          maxHeight: 1.35,
+          tints: {
+            fabricBlue: finishes.wall === 'blush' ? '#bd929b' : '#8daaa0',
+          },
+        },
+        'bed',
+      ),
+      placeModel(
+        LOUNGE_MODELS.desk,
+        {
+          x: desk.x,
+          y: 0.055,
+          z: desk.z,
+          maxWidth: desk.width,
+          maxDepth: desk.depth,
+          maxHeight: 0.82,
+        },
+        'desk',
+      ),
+      placeModel(
+        LOUNGE_MODELS.bookshelf,
+        {
+          x: shelf.x,
+          y: 0.055,
+          z: shelf.z,
+          maxWidth: shelf.width,
+          maxDepth: shelf.depth,
+          maxHeight: 2.26,
+          rotation: Math.PI / 2,
+        },
+        'bookshelf',
+      ),
+      placeModel(
+        LOUNGE_MODELS.rug,
+        {
+          x: 0.07,
+          y: 0.021,
+          z: 0.95,
+          maxWidth: 3.45,
+          maxDepth: 2.7,
+          maxHeight: 0.027,
+          stretch: true,
+        },
+        'rug',
+      ),
+      placeModel(
+        LOUNGE_MODELS.chair,
+        {
+          x: chair.x,
+          y: 0.055,
+          z: chair.z,
+          maxWidth: chair.width,
+          maxDepth: chair.depth,
+          maxHeight: 1.04,
+          rotation: Math.PI,
+        },
+        'chair',
+      ),
+      placeModel(
+        LOUNGE_MODELS.nightstand,
+        {
+          x: nightstand.x,
+          y: 0.055,
+          z: nightstand.z,
+          maxWidth: nightstand.width,
+          maxDepth: nightstand.depth,
+          maxHeight: 0.67,
+        },
+        'nightstand',
+      ),
+      placeModel(
+        LOUNGE_MODELS.wardrobe,
+        {
+          x: wardrobe.x,
+          y: 0.055,
+          z: wardrobe.z,
+          maxWidth: wardrobe.width,
+          maxDepth: wardrobe.depth,
+          maxHeight: 2.05,
+        },
+        'wardrobe',
+      ),
+      placeModel(
+        LOUNGE_MODELS.coffeeTable,
+        {
+          x: table.x,
+          y: 0.055,
+          z: table.z,
+          maxWidth: table.width,
+          maxDepth: table.depth,
+          maxHeight: 0.64,
+        },
+        'coffeeTable',
+      ),
+      placeModel(
+        LOUNGE_MODELS.curtains,
+        {
+          x: -1.22,
+          y: 1.22,
+          z: -2.99,
+          maxWidth: 3.18,
+          maxDepth: 0.18,
+          maxHeight: 1.97,
+          stretch: true,
+        },
+        'curtains',
+      ),
+      placeModel(
+        LOUNGE_MODELS.lamp,
+        {
+          x: desk.x - 0.37,
+          y: 0.754,
+          z: desk.z - 0.12,
+          maxWidth: 0.29,
+          maxDepth: 0.29,
+          maxHeight: 0.4,
+        },
+        'deskLamp',
+      ),
+      placeModel(
+        LOUNGE_MODELS.lamp,
+        {
+          x: nightstand.x,
+          y: 0.708,
+          z: nightstand.z,
+          maxWidth: 0.32,
+          maxDepth: 0.32,
+          maxHeight: 0.44,
+        },
+        'bedsideLamp',
+      ),
+      placeModel(
+        LOUNGE_MODELS.cushions,
+        {
+          x: bed.x + 0.12,
+          y: 0.76,
+          z: bed.z + 0.7,
+          maxWidth: 0.74,
+          maxDepth: 0.46,
+          maxHeight: 0.42,
+        },
+        'cushions',
       ),
     ];
 
@@ -561,25 +915,27 @@ export function Bedroom3D({
     const spritesPromise = loungeSprites().then((value) => {
       sprites = value;
     });
-    void Promise.allSettled([...modelPromises, spritesPromise]).then(
-      (results) => {
-        if (disposed || contextFailed) return;
-        if (results[2].status === 'rejected') {
-          setState('unavailable');
-          setMessage(
-            '캐릭터 그림을 불러오지 못했어요. 꾸미기로 돌아갔다가 다시 열어 주세요.',
-          );
-        } else if (results.some((result) => result.status === 'rejected')) {
-          setState('partial');
-          setMessage(
-            '일부 소품을 불러오지 못했어요. 기본 방에서 산책할 수 있어요.',
-          );
-        } else {
-          setState('ready');
-          setMessage('바닥을 누르면 그곳으로 걸어가요.');
-        }
-      },
-    );
+    void Promise.allSettled([
+      ...modelPromises,
+      ...artPromises,
+      spritesPromise,
+    ]).then((results) => {
+      if (disposed || contextFailed) return;
+      if (results.at(-1)?.status === 'rejected') {
+        setState('unavailable');
+        setMessage(
+          '캐릭터 그림을 불러오지 못했어요. 꾸미기로 돌아갔다가 다시 열어 주세요.',
+        );
+      } else if (results.some((result) => result.status === 'rejected')) {
+        setState('partial');
+        setMessage(
+          '일부 소품을 불러오지 못했어요. 기본 방에서 산책할 수 있어요.',
+        );
+      } else {
+        setState('ready');
+        setMessage('바닥을 누르면 그곳으로 걸어가요.');
+      }
+    });
 
     const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.06);
     const raycaster = new THREE.Raycaster();
@@ -772,7 +1128,7 @@ export function Bedroom3D({
           <h1>{ACTORS[save.actor]}의 햇살방</h1>
           <p>좋아하는 옷을 입고, 햇살 드는 방을 천천히 걸어 보세요.</p>
         </div>
-        <span className="b3-mode-label">입체 공간 · 2D 캐릭터</span>
+        <span className="b3-mode-label">햇살 드는 나의 아지트</span>
       </header>
       <div className="b3-scene-frame">
         {/* Keyboard focus is required for directional movement in this application surface. */}
@@ -880,7 +1236,15 @@ export function Bedroom3D({
         >
           kArchive
         </a>
-        의 3D 모델을 사용했어요. 출처: 쓰레드 dogfooter.
+        의 모델을 사용했어요. 출처: 쓰레드 dogfooter. 가구·커튼·쿠션은{' '}
+        <a
+          href="https://3dassets.dev/packs/bedroom-and-living-room-furniture"
+          target="_blank"
+          rel="noreferrer"
+        >
+          3DAssets.dev
+        </a>
+        의 CC0 모델입니다.
       </p>
     </section>
   );

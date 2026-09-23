@@ -1,0 +1,187 @@
+{
+  "provider": "3DAssets.dev",
+  "pack": "Bedroom and Living Room Furniture",
+  "packUrl": "https://3dassets.dev/packs/bedroom-and-living-room-furniture",
+  "manifest": "https://3dassets.dev/api/v1/packs/bedroom-and-living-room-furniture",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "downloadedAt": "2026-09-23",
+  "providerDisclosure": "AI generated geometry (Muse Spark via T3 Code). No new generation was requested.",
+  "modifications": "Original GLB bytes retained; runtime placement and optional material tinting only.",
+  "assets": [
+    {
+      "file": "bed.glb",
+      "id": 38770,
+      "title": "Double Bed Upholstered",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-double-bed-upholster-4c7d1e0e",
+      "source": "https://cdn.3dassets.dev/assets/38770/v1/model.glb",
+      "bytes": 81620,
+      "sha256": "086be35da80ceffd6528af9490136ccf3f25c10e67160fd2e37d4bb0a9d9e367",
+      "meshes": 5,
+      "materials": 5,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "desk.glb",
+      "id": 38795,
+      "title": "Desk Writing",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-desk-writing-2f6be817",
+      "source": "https://cdn.3dassets.dev/assets/38795/v1/model.glb",
+      "bytes": 47052,
+      "sha256": "29678a25099beed66d4b225b439e0c5fe05ecced4362791d130a15eeb7386146",
+      "meshes": 9,
+      "materials": 3,
+      "animations": [
+        "open",
+        "close"
+      ],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "bookshelf.glb",
+      "id": 38810,
+      "title": "Bookcase 5 Shelf",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-bookcase-5-shelf-8af13000",
+      "source": "https://cdn.3dassets.dev/assets/38810/v1/model.glb",
+      "bytes": 205540,
+      "sha256": "1d1153178630e74cc1e284d10b2be8224182fdd91cd44cfafa8c90fda73cbe94",
+      "meshes": 8,
+      "materials": 8,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "rug.glb",
+      "id": 38814,
+      "title": "Rug Wool Large",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-rug-wool-large-14b20ed0",
+      "source": "https://cdn.3dassets.dev/assets/38814/v1/model.glb",
+      "bytes": 56876,
+      "sha256": "cacd741f15426bbd8c4c367bf92a27c0730dba39b2533bb4c2b6c6de345a88d9",
+      "meshes": 3,
+      "materials": 3,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "chair.glb",
+      "id": 38786,
+      "title": "Desk Task Chair",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-desk-task-chair-e1320da0",
+      "source": "https://cdn.3dassets.dev/assets/38786/v1/model.glb",
+      "bytes": 68252,
+      "sha256": "9a1efb2112523ab1757ec7eed96dbb44c6001b1246004ce64bcd66da403e2dc6",
+      "meshes": 2,
+      "materials": 2,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "lamp.glb",
+      "id": 38799,
+      "title": "Table Lamp Dome",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-table-lamp-dome-0c974308",
+      "source": "https://cdn.3dassets.dev/assets/38799/v1/model.glb",
+      "bytes": 28884,
+      "sha256": "f66836ccb5e1bc62dadc20fae5803d4c4f4233194aec4be5bc4eaa4537b62a98",
+      "meshes": 3,
+      "materials": 3,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "nightstand.glb",
+      "id": 38794,
+      "title": "Side Table Square Drawer",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-side-table-square-dr-0e5df392",
+      "source": "https://cdn.3dassets.dev/assets/38794/v1/model.glb",
+      "bytes": 29116,
+      "sha256": "813b7a56329f3a760a0b1ea173c1135ac7719a3fc0bd09b16d975db8c3d89fb8",
+      "meshes": 5,
+      "materials": 4,
+      "animations": [
+        "open",
+        "close"
+      ],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "wardrobe.glb",
+      "id": 38805,
+      "title": "Wardrobe 2 Door",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-wardrobe-2-door-de288b64",
+      "source": "https://cdn.3dassets.dev/assets/38805/v1/model.glb",
+      "bytes": 41188,
+      "sha256": "21d0c8dbe1aa4cc0ab847f186fff2114bd2e397f72c7963883f07885a7c825fc",
+      "meshes": 8,
+      "materials": 5,
+      "animations": [
+        "open",
+        "close"
+      ],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "coffee-table.glb",
+      "id": 38790,
+      "title": "Coffee Table Rect",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-coffee-table-rect-2efbd4f9",
+      "source": "https://cdn.3dassets.dev/assets/38790/v1/model.glb",
+      "bytes": 21020,
+      "sha256": "1a1229be4269b3b05bbd79c455957a3512b008c596313577e603fc4555667c07",
+      "meshes": 2,
+      "materials": 2,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "curtains.glb",
+      "id": 38813,
+      "title": "Curtains Linen Pair",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-curtains-linen-pair-d22db984",
+      "source": "https://cdn.3dassets.dev/assets/38813/v1/model.glb",
+      "bytes": 39192,
+      "sha256": "0d079a1e57dc76dfa3881a7a0c027c8ae3c7ae29c7c8dd557bcbc3ecd49f6245",
+      "meshes": 2,
+      "materials": 2,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "file": "cushions.glb",
+      "id": 38816,
+      "title": "Cushion Set 4",
+      "page": "https://3dassets.dev/assets/bedroom-and-living-room-furniture-cushion-set-4-803ec432",
+      "source": "https://cdn.3dassets.dev/assets/38816/v1/model.glb",
+      "bytes": 40068,
+      "sha256": "b7e2196cbf9ee8fd168a14aa59ef652698ebcf438874a15752127b78e415827e",
+      "meshes": 4,
+      "materials": 4,
+      "animations": [],
+      "extensionsRequired": [
+        "KHR_mesh_quantization"
+      ]
+    }
+  ]
+}

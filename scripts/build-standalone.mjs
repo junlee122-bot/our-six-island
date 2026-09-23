@@ -26,8 +26,8 @@ const modelManifest = fs.readFileSync(
 const models = [...modelManifest.matchAll(/["']\/models\/([^'" ]+)["']/g)].map(
   (match) => match[1],
 );
-if (models.length !== 2 || new Set(models).size !== 2)
-  throw new Error('The room manifest must include both kArchive models.');
+if (models.length !== 13 || new Set(models).size !== 13)
+  throw new Error('The room manifest must include all 13 curated models.');
 const assetDirectory = path.join(root, 'docs/assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(

@@ -64,6 +64,30 @@ test('walking routes around the low table to open floor behind it', () => {
   }
 });
 
+test('new furniture blocks passage while key room areas remain reachable', () => {
+  for (const item of WALK_FURNITURE.filter(({ id }) =>
+    ['chair', 'nightstand', 'wardrobe'].includes(id),
+  ))
+    assert.equal(canWalk(item), false, item.id);
+
+  for (const target of [
+    { x: -3.25, z: 2.55 }, // entry
+    { x: 2.55, z: 0.35 }, // in front of the bed
+    { x: 0, z: 0.2 }, // room center
+    { x: -2.5, z: 2.2 }, // in front of the desk
+  ]) {
+    const path = findWalkPath(WALK_START, target);
+    assert.ok(path.length, JSON.stringify(target));
+    let previous = WALK_START;
+    for (const point of path) {
+      assert.ok(canWalk(point));
+      assert.ok(walkLineClear(previous, point), JSON.stringify({ previous, point }));
+      previous = point;
+    }
+    assert.deepEqual(path.at(-1), target);
+  }
+});
+
 test('invalid input cannot produce unbounded pathfinding or positions', () => {
   assert.equal(walkLineClear(WALK_START, { x: NaN, z: 0 }), false);
   assert.equal(walkLineClear({ x: Infinity, z: 0 }, WALK_START), false);
