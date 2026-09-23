@@ -1,5 +1,6 @@
 // See public/assets/lounge/*ATTRIBUTION* and ASSETS.md.
 export const LOUNGE_ASSETS = {
+  dowonShampoo: '/assets/lounge/dowon-shampoo-atlas.png',
   bedroomBackground: '/assets/lounge/bedroom/background.webp',
   bedroom_bed: '/assets/lounge/bedroom/bed.webp',
   bedroom_sofa: '/assets/lounge/bedroom/sofa.webp',

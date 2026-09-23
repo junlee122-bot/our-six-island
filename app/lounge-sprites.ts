@@ -14,6 +14,13 @@ import {
   readLook,
   type Look,
 } from './lounge-look';
+import {
+  colorRgb,
+  createHairMask,
+  createSkinMask,
+  dyeSkinPixel,
+  type SkinMask,
+} from './lounge-color';
 type Piece = {
   c: HTMLCanvasElement;
   x: number;
@@ -27,6 +34,15 @@ type Figure = {
   cx: number;
   head: number;
   top: number;
+  skin?: SkinMask;
+  hair?: Uint8Array;
+  skinRegions: {
+    raisedHands: boolean;
+    bareLegs: boolean;
+    bareShoulders: boolean;
+    collared: boolean;
+    shortSleeveTunic?: boolean;
+  };
 };
 const canvas = (w: number, h: number) => {
   const c = document.createElement('canvas');
@@ -129,7 +145,14 @@ function bounds(c: HTMLCanvasElement): Piece {
     }
   return { c, x, y, w: right - x + 1, h: bottom - y + 1 };
 }
-function figure(c: HTMLCanvasElement, eyes?: number): Figure {
+function figure(
+  c: HTMLCanvasElement,
+  eyes?: number,
+  raisedHands = false,
+  bareLegs = false,
+  bareShoulders = false,
+  collared = false,
+): Figure {
   const p = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
   let left = c.width,
     right = 0,
@@ -148,7 +171,9 @@ function figure(c: HTMLCanvasElement, eyes?: number): Figure {
   if (eyes === undefined) {
     let best = 0;
     eyes = c.height * 0.3;
-    for (let y = Math.round(c.height * 0.19); y < c.height * 0.43; y++) {
+    // All normalized collection faces put their eyes above the lower third.
+    // Looking farther down mistakes black hoodies and jacket collars for eyes.
+    for (let y = Math.round(c.height * 0.19); y < c.height * 0.34; y++) {
       let n = 0;
       for (let x = Math.round(cx - head * 0.3); x < cx + head * 0.3; x++) {
         const k = (y * c.width + x) * 4;
@@ -167,7 +192,14 @@ function figure(c: HTMLCanvasElement, eyes?: number): Figure {
       }
     }
   }
-  return { c, eyes, cx, head, top };
+  return {
+    c,
+    eyes,
+    cx,
+    head,
+    top,
+    skinRegions: { raisedHands, bareLegs, bareShoulders, collared },
+  };
 }
 function sheetFigure(
   sheet: HTMLImageElement,
@@ -175,6 +207,9 @@ function sheetFigure(
   rows: number,
   cell: number,
   eyeLine?: number,
+  bareLegs = false,
+  bareShoulders = false,
+  collared = false,
 ) {
   const c = canvas(
     Math.floor(sheet.width / columns),
@@ -206,7 +241,7 @@ function sheetFigure(
     b.w * scale,
     b.h * scale,
   );
-  return figure(f, eyeLine);
+  return figure(f, eyeLine, false, bareLegs, bareShoulders, collared);
 }
 function bandAnchor(piece: Piece) {
   const data = piece.c
@@ -254,6 +289,7 @@ async function prepare() {
     smart,
     bunSheet,
     outfitSheet,
+    shampooSheet,
     hachimaki,
   ] = await Promise.all([
     image(a.motion),
@@ -263,16 +299,39 @@ async function prepare() {
     ...['classic', 'street', 'smart'].map((k) => image(a[k])),
     image(a.daowonBuns),
     image(a.daowonOutfits),
+    image(a.dowonShampoo),
     image(a.hachimaki),
   ]);
   const newSheets = [classic, street, smart];
   const bunFigures = Array.from({ length: 4 }, (_, i) =>
-    sheetFigure(bunSheet, 2, 2, i, [148,148,146,146][i]),
+    sheetFigure(bunSheet, 2, 2, i, [148, 148, 146, 146][i], i === 0 || i === 3),
   );
   // Measured eye lines in the normalized 400×480 figures avoid mistaking a black shirt for eyes.
   const outfitFigures = Array.from({ length: 6 }, (_, i) =>
-    sheetFigure(outfitSheet, 3, 2, i, [128,128,129,134,134,134][i]),
+    sheetFigure(
+      outfitSheet,
+      3,
+      2,
+      i,
+      [128, 128, 129, 134, 134, 134][i],
+      i % 3 === 2,
+      i % 3 === 2,
+    ),
   );
+  const shampooFigures = Array.from({ length: 2 }, (_, i) => {
+    const f = sheetFigure(
+      shampooSheet,
+      2,
+      1,
+      i,
+      [113, 119][i],
+      false,
+      false,
+      true,
+    );
+    f.skinRegions.shortSleeveTunic = true;
+    return f;
+  });
   const rows = [
       [20, 241],
       [264, 256],
@@ -306,7 +365,14 @@ async function prepare() {
         320,
       );
       original[r].push(
-        figure(clean(c), ((eyes[r][col] - rows[r][0]) * 320) / rows[r][1]),
+        figure(
+          clean(c),
+          ((eyes[r][col] - rows[r][0]) * 320) / rows[r][1],
+          col === 3,
+          [0, 1, 2, 5].includes(r),
+          r === 1,
+          r === 2,
+        ),
       );
     }
   }
@@ -326,7 +392,7 @@ async function prepare() {
     450,
   );
   original[6] = [figure(h, ((356 - b.y) / b.h) * 450 + 15)];
-  const collections = newSheets.map((sheet) =>
+  const collections = newSheets.map((sheet, sheetIndex) =>
     Array.from({ length: 7 }, (_, i) => {
       const c = canvas(
         Math.floor(sheet.width / 4),
@@ -358,7 +424,14 @@ async function prepare() {
         b.w * scale,
         b.h * scale,
       );
-      return figure(f);
+      return figure(
+        f,
+        undefined,
+        false,
+        sheetIndex === 0 && [0, 1, 2, 5].includes(i),
+        sheetIndex === 0 && i === 1,
+        i === 2 || (sheetIndex === 2 && i === 3),
+      );
     }),
   );
   const pieces = Array.from({ length: 9 }, (_, i) => {
@@ -392,16 +465,19 @@ async function prepare() {
     const index = ['classic', 'street', 'smart'].indexOf(look.collection),
       newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
       bun = actor === 0 && look.hairstyle === 'buns',
-      special = actor === 0 && (bun || newOutfit >= 0),
+      shampoo = actor === 0 && look.collection === 'shampoo',
+      special = actor === 0 && (bun || newOutfit >= 0 || shampoo),
       legacy = !special && index < 0,
       base = special
-        ? newOutfit >= 0
-          ? outfitFigures[newOutfit + (bun ? 3 : 0)]
-          : bunFigures[
-              ['classic', 'street', 'smart', 'original'].indexOf(
-                look.collection,
-              )
-            ]
+        ? shampoo
+          ? shampooFigures[bun ? 1 : 0]
+          : newOutfit >= 0
+            ? outfitFigures[newOutfit + (bun ? 3 : 0)]
+            : bunFigures[
+                ['classic', 'street', 'smart', 'original'].indexOf(
+                  look.collection,
+                )
+              ]
         : legacy
           ? original[actor][Math.min(frame, original[actor].length - 1)]
           : collections[index][actor],
@@ -410,27 +486,46 @@ async function prepare() {
       p = base.c
         .getContext('2d')!
         .getImageData(0, 0, base.c.width, base.c.height);
-    const rgb = (hex: string) =>
-        [1, 3, 5].map((n) => parseInt(hex.slice(n, n + 2), 16)),
-      hair = rgb(HAIR_COLORS.find((h) => h.id === look.hair)!.hex),
-      top = rgb(TOP_COLORS.find((h) => h.id === look.top)!.hex);
+    const hair = colorRgb(
+        look.hairColor ?? HAIR_COLORS.find((h) => h.id === look.hair)!.hex,
+      ),
+      top = colorRgb(TOP_COLORS.find((h) => h.id === look.top)!.hex),
+      skin = look.skinColor ? colorRgb(look.skinColor) : null,
+      hairMask = (base.hair ??= createHairMask(
+        p.data,
+        base.c.width,
+        base.c.height,
+        {
+          cx: base.cx,
+          eyes: base.eyes,
+          head: base.head,
+        },
+      )),
+      skinMask = skin
+        ? (base.skin ??= createSkinMask(p.data, base.c.width, base.c.height, {
+            cx: base.cx,
+            eyes: base.eyes,
+            head: base.head,
+            ...base.skinRegions,
+          }))
+        : null;
     for (let k = 0; k < p.data.length; k += 4) {
       const r = p.data[k],
         g = p.data[k + 1],
         b = p.data[k + 2];
-      // Blue jeans and costume trim are clothing, even when hair uses the same hue.
-      const hairRegion =
-        Math.floor(k / 4 / base.c.width) <=
-        Math.min(base.c.height * 0.48, base.eyes + base.head * 0.32);
-      if (special) {
-        const hairPixel = hairRegion && b > Math.max(r, g) * 1.12;
-        const originalTop =
+      if (skin && skinMask?.pixels[k / 4]) {
+        const color = dyeSkinPixel(r, g, b, skin, skinMask.luminance);
+        p.data[k] = color[0];
+        p.data[k + 1] = color[1];
+        p.data[k + 2] = color[2];
+        continue;
+      }
+      const hairPixel = hairMask[k / 4] === 1,
+        originalTop =
           look.collection === 'original' &&
-          !hairRegion &&
           g >= b * 0.9 &&
           Math.min(g, b) > r * 1.18;
-        if (!hairPixel && !originalTop) continue;
-      } else if (!legacy && !(b > Math.max(r, g) * 1.12)) continue;
+      if (!hairPixel && !originalTop) continue;
       const color = dyePixel(r, g, b, hair, top);
       p.data[k] = color[0];
       p.data[k + 1] = color[1];

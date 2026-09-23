@@ -17,8 +17,12 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 118 || new Set(assets).size !== 118)
-  throw new Error('The lounge manifest must include all 118 unique images.');
+if (assets.length !== 119 || new Set(assets).size !== 119)
+  throw new Error('The lounge manifest must include all 119 unique images.');
+const modelManifest = fs.readFileSync(path.join(root, 'app/lounge-model-assets.ts'), 'utf8');
+const models = [...modelManifest.matchAll(/["']\/models\/([^'" ]+)["']/g)].map(match => match[1]);
+if (models.length !== 2 || new Set(models).size !== 2)
+  throw new Error('The room manifest must include both kArchive models.');
 const assetDirectory = path.join(root, 'docs/assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(
@@ -33,6 +37,15 @@ const replacements = new Map(
   }),
 );
 const inlined = new Set();
+for (const name of models) {
+  const bytes = fs.readFileSync(path.join(root, 'public/models', name));
+  if (bytes.toString('ascii', 0, 4) !== 'glTF' || bytes.readUInt32LE(8) !== bytes.length)
+    throw new Error('Invalid GLB: ' + name);
+  const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+  const target = 'model-' + name.replaceAll('/', '-').replace(/\.glb$/, '') + '-' + hash + '.glb';
+  fs.writeFileSync(path.join(assetDirectory, target), bytes);
+  replacements.set('/models/' + name, './assets/' + target);
+}
 const built = await build({
   configFile: false,
   root,
@@ -44,7 +57,7 @@ const built = await build({
       name: 'versioned-game-art',
       enforce: 'pre',
       transform(code, id) {
-        if (!id.endsWith('/lounge-assets.ts')) return;
+        if (!id.endsWith('/lounge-assets.ts') && !id.endsWith('/lounge-model-assets.ts')) return;
         for (const [from, to] of replacements) {
           if (code.includes(from)) {
             inlined.add(from);
@@ -78,12 +91,14 @@ if (
     'Standalone game must contain exactly one self-contained script.',
   );
 }
-if (inlined.size !== assets.length)
+if (inlined.size !== assets.length + models.length)
   throw new Error('Some game images were not assigned a versioned asset URL.');
 // Preserve Supabase's exact base64 whitespace alphabet while escaping the
 // minifier's literal tab/newline in the generated HTML source.
 const js = chunks[0].code.replaceAll('` \t\n\\r=`', '" \\t\\n\\r="');
 const licenses = {
+  three: fs.readFileSync(path.join(root, 'node_modules/three/LICENSE'), 'utf8'),
+  kArchive: fs.readFileSync(path.join(root, 'public/models/lounge/ATTRIBUTION.md'), 'utf8'),
   chessRules: fs.readFileSync(
     path.join(root, 'node_modules/chess.js/LICENSE'),
     'utf8',
@@ -132,5 +147,5 @@ for (let attempt = 0; ; attempt++) {
 if (!fs.existsSync(path.join(directory, '.nojekyll')))
   fs.writeFileSync(path.join(directory, '.nojekyll'), '');
 console.log(
-  `GitHub Pages: docs/index.html (${Buffer.byteLength(html)} bytes, ${inlined.size} separately cached images in docs/assets)`,
+  `GitHub Pages: docs/index.html (${Buffer.byteLength(html)} bytes, ${assets.length} images + ${models.length} models cached separately)`,
 );

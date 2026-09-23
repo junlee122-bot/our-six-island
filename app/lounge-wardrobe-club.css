@@ -245,7 +245,7 @@
 
 .l-wardrobe .l-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   margin: 0 0 20px;
   border-bottom: 1px solid var(--wc-line);
@@ -457,6 +457,103 @@
 .l-wardrobe .l-hair-options button[aria-pressed='true'] {
   color: var(--wc-ink);
   font-weight: 700;
+}
+
+.l-wardrobe .l-color-editor {
+  min-width: 0;
+  margin: 22px 0 0;
+  padding: 16px;
+  border: 1px solid var(--wc-line);
+  border-radius: 6px;
+  background: #f8f9f7;
+}
+
+.l-wardrobe .l-color-editor legend {
+  padding: 0 5px;
+  color: var(--wc-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.l-wardrobe .l-color-editor p {
+  margin: 0 0 14px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--wc-muted);
+}
+
+.l-wardrobe .l-color-inputs {
+  display: grid;
+  grid-template-columns: 48px minmax(92px, 1.8fr) repeat(3, minmax(42px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.l-wardrobe .l-color-inputs label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--wc-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.l-wardrobe .l-color-inputs input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px 6px;
+  border: 1px solid var(--wc-line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--wc-ink);
+  font:
+    12px ui-monospace,
+    monospace;
+}
+
+.l-wardrobe .l-color-inputs input[type='color'] {
+  padding: 3px;
+  cursor: pointer;
+}
+
+.l-wardrobe .l-color-inputs input[aria-invalid='true'] {
+  border-color: #b5413c;
+}
+
+.l-wardrobe .l-color-inputs input:focus-visible {
+  outline: 2px solid var(--wc-blue);
+  outline-offset: 2px;
+}
+
+.l-wardrobe .l-color-editor-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  color: var(--wc-muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.l-wardrobe .l-color-editor-footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid var(--wc-line);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--wc-ink);
+  font-size: 10px;
+}
+
+.l-wardrobe .l-color-editor-footer button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .l-wardrobe .l-extra-options > div {

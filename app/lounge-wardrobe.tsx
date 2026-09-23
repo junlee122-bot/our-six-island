@@ -14,9 +14,16 @@ import {
   DAOWON_COLLECTIONS,
   GLASSES,
   defaultLook,
+  readLook,
   type LoungeSave,
   type Look,
 } from './lounge-look';
+import {
+  colorRgb,
+  rgbColor,
+  readColorHex,
+  DEFAULT_SKIN_COLOR,
+} from './lounge-color';
 import { loungeSprites } from './lounge-sprites';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import type { Motion } from './character-style';
@@ -25,9 +32,136 @@ import './lounge-wardrobe-club.css';
 const WARDROBE_CATEGORIES = [
   ['outfit', '옷'],
   ['hair', '머리'],
+  ['skin', '피부'],
   ['extras', '소품'],
   ['saved', '보관함'],
 ] as const;
+
+function RgbChannel({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const invalid =
+    draft !== null &&
+    draft !== '' &&
+    (!/^\d{1,3}$/.test(draft) || Number(draft) > 255);
+  return (
+    <label className="l-rgb-channel">
+      <span>{label}</span>
+      <input
+        type="number"
+        min={0}
+        max={255}
+        step={1}
+        inputMode="numeric"
+        aria-invalid={invalid || undefined}
+        value={draft ?? value}
+        onFocus={() => setDraft(String(value))}
+        onChange={(event) => {
+          const next = event.target.value;
+          setDraft(next);
+          if (/^\d{1,3}$/.test(next) && Number(next) <= 255)
+            onChange(Number(next));
+        }}
+        onBlur={() => setDraft(null)}
+      />
+    </label>
+  );
+}
+
+function ColorEditor({
+  label,
+  color,
+  custom,
+  resetLabel,
+  onChange,
+  onReset,
+}: {
+  label: string;
+  color: string;
+  custom: boolean;
+  resetLabel: string;
+  onChange: (value: string) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const rgb = colorRgb(color);
+  const validDraft =
+    draft === null
+      ? color
+      : readColorHex(draft.startsWith('#') ? draft : '#' + draft);
+  return (
+    <fieldset className="l-color-editor">
+      <legend>{label}</legend>
+      <p>
+        {custom
+          ? '직접 지정한 색을 입고 있어요.'
+          : '원래 색을 입고 있어요. 원하는 색을 직접 골라 보세요.'}
+      </p>
+      <div className="l-color-inputs">
+        <label className="l-color-picker">
+          <span>색상</span>
+          <input
+            type="color"
+            value={color}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </label>
+        <label className="l-color-hex">
+          <span>HEX</span>
+          <input
+            type="text"
+            value={draft ?? color.toUpperCase()}
+            maxLength={7}
+            autoComplete="off"
+            spellCheck={false}
+            aria-invalid={!validDraft || undefined}
+            onFocus={() => setDraft(color.toUpperCase())}
+            onChange={(event) => {
+              const next = event.target.value;
+              setDraft(next);
+              const valid = readColorHex(
+                next.startsWith('#') ? next : '#' + next,
+              );
+              if (valid) onChange(valid);
+            }}
+            onBlur={() => setDraft(null)}
+          />
+        </label>
+        {(['R', 'G', 'B'] as const).map((channel, index) => (
+          <RgbChannel
+            key={channel}
+            label={channel}
+            value={rgb[index]}
+            onChange={(value) => {
+              const next = [...rgb];
+              next[index] = value;
+              onChange(rgbColor(next));
+            }}
+          />
+        ))}
+      </div>
+      <div className="l-color-editor-footer">
+        <span>
+          {validDraft
+            ? 'R · G · B는 0~255 사이로 입력하세요.'
+            : 'HEX는 #과 여섯 자리 숫자·A~F로 입력하세요.'}
+        </span>
+        <button type="button" disabled={!custom} onClick={onReset}>
+          <RotateCcw size={14} />
+          {resetLabel}
+        </button>
+      </div>
+    </fieldset>
+  );
+}
+
 export function Wardrobe({
   save,
   onChange,
@@ -55,7 +189,15 @@ export function Wardrobe({
   const change = (patch: Partial<Look>) =>
     onChange({
       ...save,
-      looks: save.looks.map((l, i) => (i === actor ? { ...l, ...patch } : l)),
+      looks: save.looks.map((l, i) =>
+        i === actor ? readLook({ ...l, ...patch }, i) : l,
+      ),
+    });
+  const replaceLook = (next: Look) =>
+    change({
+      ...next,
+      hairColor: next.hairColor,
+      skinColor: next.skinColor,
     });
   const bookmark = () => {
     if (
@@ -209,7 +351,7 @@ export function Wardrobe({
             <button
               title="이 친구의 기본 모습"
               aria-label="이 친구의 기본 모습"
-              onClick={() => change(defaultLook(actor))}
+              onClick={() => replaceLook(defaultLook(actor))}
             >
               <RotateCcw size={16} />
             </button>
@@ -293,7 +435,7 @@ export function Wardrobe({
                         outfitGroup === 'all' ||
                         (outfitGroup === 'pants'
                           ? c.id === 'wide-pants' || c.id === 'denim'
-                          : c.id === 'miku'),
+                          : c.id === 'miku' || c.id === 'shampoo'),
                     )
                     .sort(
                       (a, b) =>
@@ -388,17 +530,50 @@ export function Wardrobe({
                     {HAIR_COLORS.map((c) => (
                       <button
                         key={c.id}
-                        aria-pressed={look.hair === c.id}
-                        onClick={() => change({ hair: c.id })}
+                        aria-pressed={!look.hairColor && look.hair === c.id}
+                        onClick={() =>
+                          change({ hair: c.id, hairColor: undefined })
+                        }
                       >
                         <span style={{ background: c.hex }}>
-                          {look.hair === c.id && <Check size={18} />}
+                          {!look.hairColor && look.hair === c.id && (
+                            <Check size={18} />
+                          )}
                         </span>
                         {c.name}
                       </button>
                     ))}
                   </div>
                 </div>
+                <ColorEditor
+                  key={`hair-${actor}`}
+                  label="나만의 머리 색"
+                  color={
+                    look.hairColor ??
+                    HAIR_COLORS.find((c) => c.id === look.hair)!.hex
+                  }
+                  custom={!!look.hairColor}
+                  resetLabel="선택한 기본 색으로"
+                  onChange={(hairColor) => change({ hairColor })}
+                  onReset={() => change({ hairColor: undefined })}
+                />
+              </>
+            )}
+            {category === 'skin' && (
+              <>
+                <ColorEditor
+                  key={`skin-${actor}`}
+                  label="피부 색"
+                  color={look.skinColor ?? DEFAULT_SKIN_COLOR}
+                  custom={!!look.skinColor}
+                  resetLabel="원래 피부색으로"
+                  onChange={(skinColor) => change({ skinColor })}
+                  onReset={() => change({ skinColor: undefined })}
+                />
+                <p className="l-help-text">
+                  얼굴과 드러난 팔·다리의 색을 함께 바꿔요. 원래 피부색으로
+                  돌아가면 그림의 본래 색을 그대로 입어요.
+                </p>
               </>
             )}
             {category === 'extras' && (
@@ -453,7 +628,7 @@ export function Wardrobe({
                         aria-pressed={
                           JSON.stringify(s.look) === JSON.stringify(look)
                         }
-                        onClick={() => change(s.look)}
+                        onClick={() => replaceLook(s.look)}
                       >
                         <AvatarView actor={actor} look={s.look} />
                         <strong>{s.name}</strong>

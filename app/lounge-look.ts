@@ -10,6 +10,7 @@ import {
   readBedroom,
   type Bedroom,
 } from './lounge-bedroom-data.ts';
+import { readColorHex } from './lounge-color.ts';
 export { HAIR_COLORS, TOP_COLORS, GLASSES };
 export const HATS = [
   ...ORIGINAL_HATS,
@@ -23,8 +24,11 @@ export type Look = Appearance & {
     | 'smart'
     | 'wide-pants'
     | 'denim'
-    | 'miku';
+    | 'miku'
+    | 'shampoo';
   hairstyle: 'signature' | 'buns';
+  hairColor?: string;
+  skinColor?: string;
 };
 export const COLLECTIONS = [
   { id: 'original', name: '처음 만난 우리', note: '기존 캐릭터의 일상복' },
@@ -38,11 +42,13 @@ export const COLLECTIONS = [
   },
   { id: 'denim', name: '데님 산책', note: '청바지 · 캐주얼 재킷' },
   { id: 'miku', name: '하츠네 미쿠', note: '민트 넥타이 · 플리츠 스커트' },
+  { id: 'shampoo', name: '샴푸의 중국풍', note: '차이나 칼라 · 매듭 장식' },
 ] as const;
 export const DAOWON_COLLECTIONS: readonly Look['collection'][] = [
   'wide-pants',
   'denim',
   'miku',
+  'shampoo',
 ];
 export const collectionsFor = (actor: number) =>
   COLLECTIONS.filter((c) => actor === 0 || !DAOWON_COLLECTIONS.includes(c.id));
@@ -61,7 +67,9 @@ export const defaultLook = (actor: number): Look => ({
 });
 export function readLook(value: unknown, actor: number): Look {
   const d = defaultLook(actor),
-    v = (value && typeof value === 'object' ? value : {}) as Partial<Look>;
+    v = (value && typeof value === 'object' ? value : {}) as Partial<Look>,
+    hairColor = readColorHex(v.hairColor),
+    skinColor = readColorHex(v.skinColor);
   return {
     collection: collectionsFor(actor).some((c) => c.id === v.collection)
       ? v.collection!
@@ -72,6 +80,8 @@ export function readLook(value: unknown, actor: number): Look {
     hat: hatsFor(actor).some((c) => c.id === v.hat) ? v.hat! : d.hat,
     glasses: GLASSES.some((c) => c.id === v.glasses) ? v.glasses! : d.glasses,
     clip: v.clip === true,
+    ...(hairColor ? { hairColor } : {}),
+    ...(skinColor ? { skinColor } : {}),
   };
 }
 export const LOUNGE_SAVE_KEY = 'hohyeon-lounge-v1';

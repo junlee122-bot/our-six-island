@@ -39,6 +39,7 @@ import {
 } from './lounge-bedroom-data';
 import type { LoungeSave } from './lounge-look';
 import { ACTORS } from './theater-data';
+import { Bedroom3D } from './lounge-bedroom-3d';
 import './lounge-bedroom.css';
 
 const CATEGORIES: readonly ['all' | RoomCategory, string][] = [
@@ -132,7 +133,7 @@ function ResetBedroom({
   );
 }
 
-export function BedroomEditor({
+function BedroomDecorator({
   save,
   onChange,
   notice,
@@ -840,5 +841,38 @@ export function BedroomEditor({
         />
       )}
     </section>
+  );
+}
+
+export function BedroomEditor(props: {
+  save: LoungeSave;
+  onChange: (save: LoungeSave) => void;
+  notice: (message: string) => void;
+}) {
+  const [view, setView] = useState<'walk' | 'decorate'>('walk');
+  return (
+    <div className="b-bedroom-experience">
+      <nav className="b-bedroom-mode" aria-label="내 방 보기">
+        <button
+          type="button"
+          aria-pressed={view === 'walk'}
+          onClick={() => setView('walk')}
+        >
+          방 산책
+        </button>
+        <button
+          type="button"
+          aria-pressed={view === 'decorate'}
+          onClick={() => setView('decorate')}
+        >
+          내 방 꾸미기
+        </button>
+      </nav>
+      {view === 'walk' ? (
+        <Bedroom3D save={props.save} onDecorate={() => setView('decorate')} />
+      ) : (
+        <BedroomDecorator {...props} />
+      )}
+    </div>
   );
 }
