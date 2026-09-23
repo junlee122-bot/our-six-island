@@ -26,8 +26,8 @@ const modelManifest = fs.readFileSync(
 const models = [...modelManifest.matchAll(/["']\/models\/([^'" ]+)["']/g)].map(
   (match) => match[1],
 );
-if (models.length !== 13 || new Set(models).size !== 13)
-  throw new Error('The room manifest must include all 13 curated models.');
+if (models.length !== 18 || new Set(models).size !== 18)
+  throw new Error('The village and room manifest must include all 18 curated models.');
 const assetDirectory = path.join(root, 'docs/assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(
@@ -153,8 +153,8 @@ if (!css)
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="일곱 친구의 게임 라운지와 카지노. 캐릭터와 내 방을 꾸미고 체스·고스톱·섯다·홀덤·블랙잭을 공통 화폐 범으로 함께 즐겨 보세요.">
-<title>호현지방 · 게임 라운지</title><style>${css}</style></head>
+<meta name="description" content="일곱 친구가 사는 3D 마을, 범타듀 밸리. 주민들의 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.">
+<title>범타듀 밸리 · 일곱 친구의 마을</title><style>${css}</style></head>
 <body><div id="root"></div><noscript>게임을 실행하려면 브라우저에서 JavaScript를 켜주세요.</noscript>
 <script type="application/json" id="third-party-licenses">${JSON.stringify(licenses).replaceAll('<', '\\u003c')}</script>
 <script>${js.replaceAll('</script', '<\\/script')}</script></body></html>`;

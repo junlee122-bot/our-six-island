@@ -244,7 +244,7 @@ export function Wardrobe({
       ctx.textAlign = 'center';
       ctx.fillText(ACTORS[actor], 500, 1095);
       ctx.font = '22px "Malgun Gothic",sans-serif';
-      ctx.fillText('호현지방 · 오늘의 나', 500, 1140);
+      ctx.fillText('범타듀 밸리 · 오늘의 나', 500, 1140);
       const blob = await new Promise<Blob>((resolve, reject) =>
         c.toBlob(
           (value) =>
@@ -255,7 +255,7 @@ export function Wardrobe({
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `호현지방-${ACTORS[actor]}-코디.png`;
+      link.download = `범타듀 밸리-${ACTORS[actor]}-코디.png`;
       link.hidden = true;
       document.body.appendChild(link);
       link.click();

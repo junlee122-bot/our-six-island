@@ -24,12 +24,16 @@ import {
   Coins,
   Spade,
   House,
+  Trees,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
 import { BedroomEditor } from './lounge-bedroom';
 import { RoomFloor } from './lounge-scene';
+import { Village3D } from './lounge-village';
+import type { VillageDestination } from './lounge-village-layout';
 import './lounge-club.css';
+import './lounge-village-shell.css';
 import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
@@ -829,7 +833,7 @@ function AccountLounge({
   const [room] = useState(() => new LoungeRoom(account)),
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
     [ready, setReady] = useState(false),
-    [tab, setTab] = useState<'lounge' | 'wardrobe' | 'casino' | 'bedroom'>('wardrobe'),
+    [tab, setTab] = useState<'village' | 'lounge' | 'wardrobe' | 'casino' | 'bedroom'>('wardrobe'),
     [modal, setModal] = useState<
       'friends' | 'credits' | 'reset' | 'request' | 'wallet' | 'account' | null
     >(null),
@@ -845,14 +849,15 @@ function AccountLounge({
     [reactionsHidden, setReactionsHidden] = useState(false);
   const audioRef = useRef<AudioContext | null>(null),
     toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null),
-    chatEnd = useRef<HTMLDivElement>(null);
+    chatEnd = useRef<HTMLDivElement>(null),
+    connectedRoute = useRef(false);
   const notice = useCallback((s: string) => {
     setToast(s);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(''), 4000);
   }, []);
   useEffect(() => {
-    setTab(save.visits ? 'lounge' : 'wardrobe');
+    setTab(save.visits ? 'village' : 'wardrobe');
     room.init();
     setReady(true);
     if (new URLSearchParams(location.hash.slice(1)).get('lounge'))
@@ -912,10 +917,18 @@ function AccountLounge({
   }, [view.invites, view.self, notice]);
   const me = view.players.find((p) => p.id === view.self);
   useEffect(() => {
-    if (view.status === 'connected' && me) {
-      setTab(me.area);
+    // Only use server area for the first connected route. The server has no
+    // village/wardrobe/bedroom areas, so later lounge responses stay put.
+    if (view.status !== 'connected') {
+      connectedRoute.current = false;
+      return;
     }
-  }, [view.status, view.self, me?.actor, me?.area]);
+    if (!connectedRoute.current && me) {
+      connectedRoute.current = true;
+      if (me.area === 'casino' && tab !== 'wardrobe' && tab !== 'bedroom')
+        setTab('casino');
+    }
+  }, [view.status, view.self, me?.actor, me?.area, tab]);
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: 'nearest' });
   }, [view.chat.length]);
@@ -927,9 +940,14 @@ function AccountLounge({
     if (view.status === 'connected' && s.actor === me?.actor)
       room.action({ kind: 'look', look: s.looks[s.actor] });
   };
-  const enter = () => {
-    setSave((s) => ({ ...s, visits: s.visits + 1 }));
-    setTab('lounge');
+  const enter = (destination: VillageDestination | 'village' = 'village') => {
+    if (destination === 'village' && tab === 'wardrobe')
+      setSave((s) => ({ ...s, visits: s.visits + 1 }));
+    setTab(destination);
+    if (view.status === 'connected' && (destination === 'lounge' || destination === 'village'))
+      room.action({ kind: 'area', area: 'lounge' });
+    if (view.status === 'connected' && destination === 'casino')
+      room.action({ kind: 'area', area: 'casino' });
   };
   const move = useCallback(
     (x: number, y: number) => {
@@ -1006,6 +1024,10 @@ function AccountLounge({
               : 'lounge') as 'casino' | 'lounge',
           ...(i === save.actor ? { ...localPos, reaction: localReaction } : {}),
         }));
+  const villagePlayers =
+    tab === 'village' && view.status !== 'connected'
+      ? players.map((p) => ({ ...p, area: 'lounge' as const }))
+      : players;
   if (ready && gameScreen && view.status === 'connected')
     return (
       <main className="l-app">
@@ -1030,40 +1052,39 @@ function AccountLounge({
     return (
       <main className="l-app l-loading">
         <span className="l-spinner" />
-        <p>호현지방의 문을 여는 중…</p>
+        <p>범타듀 밸리의 문을 여는 중…</p>
       </main>
     );
   return (
     <main className="l-app">
       <header className="l-header">
-        <button className="l-brand" onClick={() => setTab('lounge')}>
+        <button className="l-brand" onClick={() => enter('village')}>
           <span className="l-brand-icon">
-            <Armchair size={24} />
+            <Trees size={24} />
           </span>
           <span>
-            <strong>호현지방</strong>
-            <small>일곱 친구의 회관</small>
+            <strong>범타듀 밸리</strong>
+            <small>일곱 친구가 사는 마을</small>
           </span>
         </button>
         <nav aria-label="주 메뉴">
           <button
+            aria-pressed={tab === 'village'}
+            onClick={() => enter('village')}
+          >
+            <House size={17} />
+            마을
+          </button>
+          <button
             aria-pressed={tab === 'lounge'}
-            onClick={() => {
-              setTab('lounge');
-              if (view.status === 'connected')
-                room.action({ kind: 'area', area: 'lounge' });
-            }}
+            onClick={() => enter('lounge')}
           >
             <Armchair size={17} />
-            라운지
+            회관
           </button>
           <button
             aria-pressed={tab === 'casino'}
-            onClick={() => {
-              setTab('casino');
-              if (view.status === 'connected')
-                room.action({ kind: 'area', area: 'casino' });
-            }}
+            onClick={() => enter('casino')}
           >
             <Spade size={17} />
             카지노
@@ -1073,11 +1094,11 @@ function AccountLounge({
             onClick={() => setTab('wardrobe')}
           >
             <Shirt size={17} />
-            옷장
+            분장실
           </button>
           <button
             aria-pressed={tab === 'bedroom'}
-            onClick={() => setTab('bedroom')}
+            onClick={() => enter('bedroom')}
           >
             <House size={17} />
             내 방
@@ -1146,7 +1167,67 @@ function AccountLounge({
           <Invitations room={room} view={view} />
         </div>
       )}
-      {tab === 'bedroom' ? (
+      {tab === 'village' ? (
+        <section className="l-village">
+          <Invitations room={room} view={view} />
+          <div className="l-village-content">
+            <div className="l-village-world">
+              <Village3D
+                save={save}
+                players={villagePlayers}
+                self={self}
+                onMove={move}
+                onEnter={enter}
+                onFriends={() => setModal('friends')}
+                onRequest={() => requestGame(null)}
+              />
+              <ReactionDock
+                players={villagePlayers}
+                self={self}
+                scope="lounge"
+                connected={view.status === 'connected'}
+                hidden={reactionsHidden}
+                onHidden={setReactionsHidden}
+                onSend={greet}
+              />
+            </div>
+            <aside className="l-village-sidebar">
+              <div className="l-village-shortcuts">
+                <span className="l-kicker">마을 안의 공간</span>
+                <button onClick={() => enter('lounge')}><Armchair size={18} /><span><strong>회관</strong><small>친구들과 이야기하고 게임해요</small></span><ArrowRight size={17} /></button>
+                <button onClick={() => enter('casino')}><Spade size={18} /><span><strong>카지노</strong><small>카드 게임을 즐겨요</small></span><ArrowRight size={17} /></button>
+                <button onClick={() => enter('wardrobe')}><Shirt size={18} /><span><strong>분장실</strong><small>옷과 모습을 바꿔요</small></span><ArrowRight size={17} /></button>
+                <button onClick={() => enter('bedroom')}><House size={18} /><span><strong>내 방</strong><small>나만의 방을 꾸며요</small></span><ArrowRight size={17} /></button>
+              </div>
+              <div className="l-chat l-village-chat">
+                <div>
+                  <h3>마을 수다</h3>
+                  <span>{view.status === 'connected' ? `${view.players.length}명` : '친구를 기다려요'}</span>
+                </div>
+                <div className="l-chat-messages" aria-live="polite">
+                  {view.chat.length ? view.chat.map((m) => (
+                    <p key={m.id}><b style={{ color: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b><span>{m.text}</span></p>
+                  )) : (
+                    <div className="l-chat-welcome">
+                      <Users size={23} />
+                      <p>{view.status === 'connected' ? '오늘의 첫 인사를 남겨 보세요.' : '친구를 초대하면 이곳에서 이야기할 수 있어요.'}</p>
+                      {view.status !== 'connected' && <button onClick={() => setModal('friends')}>초대하기 <ArrowRight size={13} /></button>}
+                    </div>
+                  )}
+                  <div ref={chatEnd} />
+                </div>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (await room.action({ kind: 'chat', text: chat })) setChat('');
+                }}>
+                  <input aria-label="채팅 메시지" disabled={view.status !== 'connected'} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="친구에게 한마디…" maxLength={120} />
+                  <button aria-label="보내기" disabled={view.status !== 'connected' || !chat.trim()}><Send size={17} /></button>
+                </form>
+              </div>
+            </aside>
+          </div>
+        </section>
+      ) : tab === 'bedroom' ? (
         <BedroomEditor save={save} onChange={setSave} notice={notice} />
       ) : tab === 'wardrobe' ? (
         <Wardrobe
@@ -1363,7 +1444,7 @@ function AccountLounge({
         </section>
       )}
       <footer className="l-footer">
-        <span>호현지방 · 일곱 친구의 작은 아지트</span>
+        <span>범타듀 밸리 · 일곱 친구가 사는 마을</span>
         <div>
           <a href="./theater.html">
             우당탕 극장
@@ -1562,7 +1643,7 @@ function AccountLounge({
         </Modal>
       )}
       {modal === 'credits' && (
-        <Modal title="함께 만든 호현지방" onClose={() => setModal(null)}>
+        <Modal title="함께 만든 범타듀 밸리" onClose={() => setModal(null)}>
           <div className="l-credits">
             <h3>친구들의 모습</h3>
             <p>

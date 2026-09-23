@@ -1,0 +1,1120 @@
+'use client';
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex */
+import { useEffect, useRef, useState } from 'react';
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  DoorOpen,
+  Footprints,
+  House,
+  Map as MapIcon,
+  Minus,
+  Plus,
+  LocateFixed,
+  Sun,
+  Users,
+  X,
+  Send,
+  Trees,
+} from 'lucide-react';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import type { LoungeSave } from './lounge-look';
+import type { LoungePlayer } from './lounge-room';
+import { ACTORS } from './theater-data';
+import { loungeSprites } from './lounge-sprites';
+import { LOUNGE_MODELS } from './lounge-model-assets';
+import { buildVillageWorld } from './lounge-village-world';
+import {
+  VILLAGE_PLACES,
+  VILLAGE_START,
+  VILLAGE_ORCHARD,
+  villageCanWalk,
+  villageFromNetwork,
+  villageToNetwork,
+  villagePath,
+  villageStep,
+  type VillageDestination,
+  type VillagePlace,
+  type VillagePoint,
+} from './lounge-village-layout';
+import './lounge-village.css';
+
+type Props = {
+  save: LoungeSave;
+  players: LoungePlayer[];
+  self: string;
+  onMove: (x: number, y: number) => void;
+  onEnter: (destination: VillageDestination) => void;
+  onFriends: () => void;
+  onRequest: () => void;
+};
+type Direction = 'up' | 'down' | 'left' | 'right';
+const KEYS: Record<string, Direction> = {
+  ArrowUp: 'up',
+  w: 'up',
+  ArrowDown: 'down',
+  s: 'down',
+  ArrowLeft: 'left',
+  a: 'left',
+  ArrowRight: 'right',
+  d: 'right',
+};
+const DIRECTIONS = [
+  ['up', ArrowUp, '위로 걷기'],
+  ['left', ArrowLeft, '왼쪽으로 걷기'],
+  ['down', ArrowDown, '아래로 걷기'],
+  ['right', ArrowRight, '오른쪽으로 걷기'],
+] as const;
+
+function disposeScene(root: THREE.Object3D) {
+  const geometry = new Set<THREE.BufferGeometry>(),
+    materials = new Set<THREE.Material>(),
+    textures = new Set<THREE.Texture>();
+  root.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (mesh.geometry) geometry.add(mesh.geometry);
+    if (mesh.material)
+      for (const material of Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material]) {
+        materials.add(material);
+        for (const value of Object.values(material))
+          if (value instanceof THREE.Texture) textures.add(value);
+      }
+  });
+  geometry.forEach((g) => g.dispose());
+  textures.forEach((t) => {
+    t.dispose();
+    if (
+      typeof ImageBitmap !== 'undefined' &&
+      t.source.data instanceof ImageBitmap
+    )
+      t.source.data.close();
+  });
+  materials.forEach((m) => m.dispose());
+}
+
+/** The village uses the existing shared position range; account and room saves are unchanged. */
+export function Village3D(props: Props) {
+  const latest = useRef(props);
+  latest.current = props;
+  const hostRef = useRef<HTMLDivElement>(null),
+    labelsRef = useRef<HTMLDivElement>(null);
+  const directions = useRef(new Set<Direction>());
+  const controls = useRef<{
+    go: (place: VillagePlace) => void;
+    zoom: (delta: number) => void;
+    home: () => void;
+    overview: () => void;
+  } | null>(null);
+  const [state, setState] = useState<
+    'loading' | 'ready' | 'partial' | 'unavailable'
+  >('loading');
+  const [selected, setSelected] = useState<VillagePlace | null>(null),
+    [directory, setDirectory] = useState(false);
+  const select = (place: VillagePlace) => {
+    setSelected(place);
+    setDirectory(false);
+    controls.current?.go(place);
+  };
+
+  useEffect(() => {
+    const host = hostRef.current!;
+    let disposed = false,
+      frame = 0,
+      visible = true,
+      contextLost = false,
+      assetsReady = false;
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'low-power',
+      });
+    } catch {
+      setState('unavailable');
+      return;
+    }
+    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.autoUpdate = false;
+    renderer.shadowMap.needsUpdate = true;
+    const canvas = renderer.domElement;
+    canvas.className = 'hv-canvas';
+    canvas.setAttribute('aria-hidden', 'true');
+    host.insertBefore(canvas, host.firstChild);
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight('#fff4d9', '#81936d', 2.25));
+    const sun = new THREE.DirectionalLight('#fff3d3', 3.0);
+    sun.position.set(-20, 34, 25);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    Object.assign(sun.shadow.camera, {
+      left: -37,
+      right: 37,
+      top: 34,
+      bottom: -34,
+      near: 1,
+      far: 110,
+    });
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.06;
+    scene.add(sun);
+    buildVillageWorld(scene);
+    const camera = new THREE.OrthographicCamera(-36, 36, 24, -24, 0.1, 180);
+    let target = new THREE.Vector3(0, 0, 0),
+      desiredTarget = target.clone();
+    let zoom = host.clientWidth < 600 ? 1.7 : 1.08,
+      desiredZoom = zoom;
+    let follow = host.clientWidth < 600;
+    const offset = new THREE.Vector3(34, 43, 52);
+    const me = latest.current.players.find((p) => p.id === latest.current.self);
+    const networkStart = me ? villageFromNetwork(me) : VILLAGE_START;
+    const safePosition = (point: VillagePoint): VillagePoint =>
+      villageCanWalk(point)
+        ? { ...point }
+        : (villagePath(VILLAGE_START, point).at(-1) ?? { ...VILLAGE_START });
+    let position: VillagePoint = safePosition(networkStart);
+    let path: VillagePoint[] = [];
+    let width = host.clientWidth,
+      height = host.clientHeight;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+    const marker = new THREE.Mesh(
+      new THREE.RingGeometry(0.33, 0.43, 40),
+      new THREE.MeshBasicMaterial({
+        color: '#fff2b5',
+        transparent: true,
+        opacity: 0.95,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    marker.rotation.x = -Math.PI / 2;
+    marker.visible = false;
+    scene.add(marker);
+    const goTo = (point: VillagePoint) => {
+      path = villagePath(position, point);
+      const end = path.at(-1);
+      marker.visible = !!end;
+      if (end) marker.position.set(end.x, 0.19, end.z);
+      host.focus({ preventScroll: true });
+    };
+    controls.current = {
+      go: (place) => {
+        goTo(place.entry);
+        follow = true;
+        desiredZoom = Math.max(
+          desiredZoom,
+          host.clientWidth < 600 ? 2.35 : 1.6,
+        );
+      },
+      zoom: (delta) => {
+        desiredZoom = THREE.MathUtils.clamp(desiredZoom + delta, 0.8, 3.5);
+      },
+      home: () => {
+        follow = true;
+        desiredZoom = host.clientWidth < 600 ? 2.45 : 2.05;
+      },
+      overview: () => {
+        follow = false;
+        desiredTarget.set(0, 0, 0);
+        desiredZoom = 1;
+      },
+    };
+
+    // Reuse the room's actual GLB furniture as an outdoor reading terrace.
+    const loader = new GLTFLoader();
+    const assets = [
+      {
+        id: 'sofa',
+        url: LOUNGE_MODELS.sofa,
+        x: -8.7,
+        z: 7.1,
+        y: 0.39,
+        w: 2.6,
+        h: 1.65,
+        d: 1.15,
+      },
+      {
+        id: 'table',
+        url: LOUNGE_MODELS.coffeeTable,
+        x: -8.7,
+        z: 8.55,
+        y: 0.39,
+        w: 1.65,
+        h: 0.76,
+        d: 0.8,
+      },
+      {
+        id: 'tulips',
+        url: LOUNGE_MODELS.tulips,
+        x: -8.95,
+        z: 8.55,
+        y: 1.01,
+        w: 0.46,
+        h: 0.6,
+        d: 0.45,
+      },
+      {
+        id: 'chair',
+        url: LOUNGE_MODELS.chair,
+        x: -6.4,
+        z: 8,
+        y: 0.39,
+        w: 0.85,
+        h: 1.4,
+        d: 0.85,
+        r: -Math.PI / 2,
+      },
+      {
+        id: 'bookshelf',
+        url: LOUNGE_MODELS.bookshelf,
+        x: -6.1,
+        z: 6.9,
+        y: 0.39,
+        w: 0.85,
+        h: 1.75,
+        d: 0.5,
+      },
+    ];
+    const modelJobs = assets.map(async (item) => {
+      const gltf = await loader.loadAsync(item.url);
+      if (disposed) {
+        disposeScene(gltf.scene);
+        return;
+      }
+      const object = gltf.scene;
+      object.rotation.y = item.r ?? 0;
+      object.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(object),
+        size = bounds.getSize(new THREE.Vector3());
+      const scale = Math.min(item.w / size.x, item.h / size.y, item.d / size.z);
+      if (!Number.isFinite(scale) || scale <= 0) {
+        disposeScene(object);
+        throw new Error('Invalid village prop');
+      }
+      object.scale.multiplyScalar(scale);
+      object.updateMatrixWorld(true);
+      bounds.setFromObject(object);
+      const center = bounds.getCenter(new THREE.Vector3());
+      object.position.set(
+        item.x - center.x,
+        item.y - bounds.min.y,
+        item.z - center.z,
+      );
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      scene.add(object);
+      renderer.shadowMap.needsUpdate = true;
+      host.dataset[item.id] = 'loaded';
+      host.dataset.modelsLoaded = String(
+        Number(host.dataset.modelsLoaded ?? 0) + 1,
+      );
+    });
+
+    type Figure = {
+      group: THREE.Group;
+      sprite: THREE.Sprite;
+      texture: THREE.CanvasTexture;
+      canvas: HTMLCanvasElement;
+      point: VillagePoint;
+      last: string;
+      drawn: number;
+      actor: number;
+      walking: boolean;
+    };
+    const figures = new Map<string, Figure>();
+    let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
+    const sourceModels = new Map<string, Promise<THREE.Group | null>>();
+    const placeOriginal = async (
+      url: string,
+      id: string,
+      point: VillagePoint,
+      w: number,
+      d: number,
+      h: number,
+      fallback?: string,
+    ) => {
+      let pending = sourceModels.get(url);
+      if (!pending) {
+        pending = loader.loadAsync(url).then((gltf) => {
+          if (disposed) {
+            disposeScene(gltf.scene);
+            return null;
+          }
+          return gltf.scene;
+        });
+        sourceModels.set(url, pending);
+      }
+      const source = await pending;
+      if (!source || disposed) return;
+      const object = source.clone(true);
+      const bounds = new THREE.Box3().setFromObject(object),
+        size = bounds.getSize(new THREE.Vector3());
+      const scale = Math.min(w / size.x, d / size.z, h / size.y);
+      if (!Number.isFinite(scale) || scale <= 0)
+        throw new Error('Invalid kArchive model bounds');
+      object.scale.multiplyScalar(scale);
+      object.updateMatrixWorld(true);
+      bounds.setFromObject(object);
+      const center = bounds.getCenter(new THREE.Vector3());
+      object.position.set(
+        point.x - center.x,
+        0.16 - bounds.min.y,
+        point.z - center.z,
+      );
+      object.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+      scene.add(object);
+      if (fallback) {
+        const original = scene.getObjectByName(fallback);
+        if (original) original.visible = false;
+      }
+      renderer.shadowMap.needsUpdate = true;
+      host.dataset[id] = 'loaded';
+      host.dataset.originalsLoaded = String(
+        Number(host.dataset.originalsLoaded ?? 0) + 1,
+      );
+    };
+    const houseModels = [
+      LOUNGE_MODELS.cornerHouse,
+      LOUNGE_MODELS.cottage,
+      LOUNGE_MODELS.courtyardHouse,
+    ];
+    const originalJobs = VILLAGE_PLACES.filter(
+      (place) => place.kind === 'home',
+    ).flatMap((place) => [
+      placeOriginal(
+        houseModels[place.actor! % 3],
+        `house${place.actor}`,
+        place,
+        place.width,
+        place.depth,
+        4.8,
+        'village-building-' + place.id,
+      ),
+      placeOriginal(
+        LOUNGE_MODELS.hydrangea,
+        `garden${place.actor}`,
+        { x: place.x + 1.85, z: place.z + 2.9 },
+        0.9,
+        0.8,
+        0.85,
+      ),
+    ]);
+    for (const [i, point] of VILLAGE_ORCHARD.entries())
+      originalJobs.push(
+        placeOriginal(
+          LOUNGE_MODELS.fruitTree,
+          `fruitTree${i}`,
+          point,
+          2.8,
+          2.8,
+          4,
+        ),
+      );
+    const spritesJob = loungeSprites().then((value) => {
+      if (!disposed) sprites = value;
+    });
+    void Promise.allSettled([...modelJobs, ...originalJobs, spritesJob]).then(
+      (results) => {
+        if (disposed || contextLost) return;
+        assetsReady = true;
+        setState(
+          results.at(-1)?.status === 'rejected'
+            ? 'unavailable'
+            : results.some((r) => r.status === 'rejected')
+              ? 'partial'
+              : 'ready',
+        );
+      },
+    );
+    const createFigure = (p: LoungePlayer): Figure => {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 320;
+      const texture = new THREE.CanvasTexture(c);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.minFilter = THREE.LinearFilter;
+      texture.generateMipmaps = false;
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          transparent: true,
+          alphaTest: 0.12,
+          depthWrite: true,
+          toneMapped: false,
+        }),
+      );
+      sprite.center.set(0.5, 0.03);
+      sprite.scale.set(1.5, 1.88, 1);
+      sprite.position.y = 0.18;
+      const shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(0.42, 20),
+        new THREE.MeshBasicMaterial({
+          color: '#45573c',
+          transparent: true,
+          opacity: 0.19,
+          depthWrite: false,
+        }),
+      );
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = 0.165;
+      shadow.scale.y = 0.65;
+      const group = new THREE.Group();
+      group.add(sprite, shadow);
+      scene.add(group);
+      const npc = p.id.startsWith('friend-');
+      const entry =
+        VILLAGE_PLACES.find((place) => place.actor === p.actor)?.entry ??
+        VILLAGE_START;
+      const point = npc ? entry : villageFromNetwork(p);
+      return {
+        group,
+        sprite,
+        texture,
+        canvas: c,
+        point: safePosition(point),
+        last: '',
+        drawn: -1000,
+        actor: p.actor,
+        walking: false,
+      };
+    };
+
+    const raycaster = new THREE.Raycaster(),
+      pointer = new THREE.Vector2();
+    const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.16),
+      hit = new THREE.Vector3();
+    let press: {
+      id: number;
+      x: number;
+      y: number;
+      startX: number;
+      startY: number;
+      dragged: boolean;
+    } | null = null;
+    const down = (e: PointerEvent) => {
+      if (e.button !== 0 || !e.isPrimary) return;
+      host.focus({ preventScroll: true });
+      canvas.setPointerCapture(e.pointerId);
+      press = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        startX: e.clientX,
+        startY: e.clientY,
+        dragged: false,
+      };
+    };
+    const drag = (e: PointerEvent) => {
+      if (!press || e.pointerId !== press.id) return;
+      if (Math.hypot(e.clientX - press.startX, e.clientY - press.startY) > 6)
+        press.dragged = true;
+      if (press.dragged) {
+        follow = false;
+        const units = (camera.top - camera.bottom) / camera.zoom / height;
+        const right = new THREE.Vector3().setFromMatrixColumn(
+          camera.matrixWorld,
+          0,
+        );
+        const up = new THREE.Vector3().setFromMatrixColumn(
+          camera.matrixWorld,
+          1,
+        );
+        desiredTarget.addScaledVector(right, -(e.clientX - press.x) * units);
+        desiredTarget.addScaledVector(up, (e.clientY - press.y) * units * 1.4);
+        desiredTarget.y = 0;
+        desiredTarget.x = THREE.MathUtils.clamp(desiredTarget.x, -23, 23);
+        desiredTarget.z = THREE.MathUtils.clamp(desiredTarget.z, -17, 17);
+      }
+      press.x = e.clientX;
+      press.y = e.clientY;
+    };
+    const up = (e: PointerEvent) => {
+      if (!press || e.pointerId !== press.id) return;
+      if (!press.dragged) {
+        const r = canvas.getBoundingClientRect();
+        pointer.set(
+          ((e.clientX - r.left) / r.width) * 2 - 1,
+          (-(e.clientY - r.top) / r.height) * 2 + 1,
+        );
+        raycaster.setFromCamera(pointer, camera);
+        if (
+          raycaster.ray.intersectPlane(floor, hit) &&
+          Math.abs(hit.x) <= 26 &&
+          Math.abs(hit.z) <= 20
+        )
+          goTo({ x: hit.x, z: hit.z });
+      }
+      press = null;
+    };
+    const cancel = () => {
+      press = null;
+    };
+    const keydown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof Element &&
+        e.target.closest('button,input,textarea,select')
+      )
+        return;
+      if (
+        e.altKey ||
+        e.ctrlKey ||
+        e.metaKey ||
+        document.querySelector('dialog[open]')
+      )
+        return;
+      const direction = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
+      if (direction) {
+        e.preventDefault();
+        directions.current.add(direction);
+        path = [];
+        marker.visible = false;
+        follow = true;
+      }
+    };
+    const keyup = (e: KeyboardEvent) => {
+      const d = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
+      if (d) directions.current.delete(d);
+    };
+    const blur = () => {
+      directions.current.clear();
+      press = null;
+    };
+    const loss = (e: Event) => {
+      e.preventDefault();
+      contextLost = true;
+      cancelAnimationFrame(frame);
+      setState('unavailable');
+    };
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', drag);
+    canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointercancel', cancel);
+    canvas.addEventListener('webglcontextlost', loss);
+    host.addEventListener('keydown', keydown);
+    host.addEventListener('focusout', blur);
+    window.addEventListener('keyup', keyup);
+    window.addEventListener('blur', blur);
+    const resize = () => {
+      width = host.clientWidth;
+      height = host.clientHeight;
+      if (!width || !height) return;
+      const aspect = width / height,
+        half = Math.max(22, 35 / aspect);
+      Object.assign(camera, {
+        left: -half * aspect,
+        right: half * aspect,
+        top: half,
+        bottom: -half,
+      });
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(host);
+    resize();
+    const visibility = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      if (!visible) blur();
+    });
+    visibility.observe(host);
+    let previous = performance.now(),
+      lastRender = -1000,
+      lastSend = -1000,
+      lastData = -1000;
+    let lastSent = { ...position },
+      wasWalking = false;
+    const projected = new THREE.Vector3();
+    const animate = (now: number) => {
+      if (disposed || contextLost) return;
+      frame = requestAnimationFrame(animate);
+      const dt = Math.min((now - previous) / 1000, 0.08);
+      previous = now;
+      // Let image decoding finish before compiling and drawing the full world.
+      // This avoids competing with asset loading on phones and software WebGL.
+      if (!assetsReady || !visible || document.hidden) return;
+      const before = position;
+      const h =
+        Number(directions.current.has('right')) -
+        Number(directions.current.has('left'));
+      const v =
+        Number(directions.current.has('down')) -
+        Number(directions.current.has('up'));
+      if (h || v) {
+        path = [];
+        marker.visible = false;
+        const len = Math.hypot(h, v),
+          speed = (5.2 * dt) / len;
+        // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
+        position = villageStep(
+          position,
+          (h * 0.837 + v * 0.547) * speed,
+          (v * 0.837 - h * 0.547) * speed,
+        );
+      } else if (path.length) {
+        const to = path[0],
+          dx = to.x - position.x,
+          dz = to.z - position.z,
+          distance = Math.hypot(dx, dz);
+        if (distance < 0.06) path.shift();
+        else {
+          const step = Math.min(distance, 5.2 * dt);
+          position = villageStep(
+            position,
+            (dx / distance) * step,
+            (dz / distance) * step,
+          );
+        }
+        if (!path.length) marker.visible = false;
+      }
+      const walking =
+        Math.hypot(position.x - before.x, position.z - before.z) > 0.0001;
+      if ((walking && now - lastSend > 180) || (!walking && wasWalking)) {
+        if (
+          Math.hypot(position.x - lastSent.x, position.z - lastSent.z) > 0.01
+        ) {
+          const net = villageToNetwork(position);
+          latest.current.onMove(net.x, net.y);
+          lastSent = { ...position };
+          lastSend = now;
+        }
+      }
+      wasWalking = walking;
+      if (follow) desiredTarget.set(position.x, 0, position.z - 1.2);
+      target.lerp(desiredTarget, reduced.matches ? 1 : Math.min(1, dt * 5));
+      zoom +=
+        (desiredZoom - zoom) * (reduced.matches ? 1 : Math.min(1, dt * 6));
+      camera.position.copy(target).add(offset);
+      camera.lookAt(target);
+      camera.zoom = zoom;
+      camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      const current = latest.current;
+      const residents = current.players.filter(
+        (p) => p.id === current.self || p.area === 'lounge',
+      );
+      const residentIds = new Set(residents.map((p) => p.id));
+      for (const [id, figure] of figures)
+        if (!residentIds.has(id)) {
+          scene.remove(figure.group);
+          disposeScene(figure.group);
+          figures.delete(id);
+        }
+      for (const p of residents) {
+        let figure = figures.get(p.id);
+        if (!figure) {
+          figure = createFigure(p);
+          figures.set(p.id, figure);
+        }
+        const own = p.id === current.self;
+        let moving = walking && own;
+        if (own) figure.point = position;
+        else if (!p.id.startsWith('friend-')) {
+          const point = villageFromNetwork(p);
+          if (villageCanWalk(point)) {
+            moving =
+              Math.hypot(point.x - figure.point.x, point.z - figure.point.z) >
+              0.08;
+            figure.point = villageStep(
+              figure.point,
+              (point.x - figure.point.x) * Math.min(1, dt * 9),
+              (point.z - figure.point.z) * Math.min(1, dt * 9),
+            );
+          }
+        }
+        const onBridge =
+          Math.abs(figure.point.x) < 2.4 &&
+          figure.point.z > 13.3 &&
+          figure.point.z < 16.7;
+        const elevation = onBridge
+          ? Math.min(
+              1,
+              (figure.point.z - 13.3) / 0.5,
+              (16.7 - figure.point.z) / 0.5,
+            ) * 0.53
+          : 0;
+        figure.group.position.set(figure.point.x, elevation, figure.point.z);
+        const key = JSON.stringify([p.actor, p.look]);
+        if (
+          sprites &&
+          (key !== figure.last || now - figure.drawn > (moving ? 70 : 300))
+        ) {
+          sprites.draw(
+            figure.canvas,
+            p.actor,
+            p.look,
+            moving ? 'walk' : 'idle',
+            now / 1000,
+            false,
+            reduced.matches,
+          );
+          figure.texture.needsUpdate = true;
+          figure.last = key;
+          figure.drawn = now;
+        }
+      }
+      if (now - lastData > 100) {
+        for (const place of VILLAGE_PLACES) {
+          const label = labelsRef.current?.querySelector<HTMLElement>(
+            `[data-place="${place.id}"]`,
+          );
+          if (!label) continue;
+          projected
+            .set(place.x, place.kind === 'home' ? 4.5 : 5.9, place.z)
+            .project(camera);
+          const x = ((projected.x + 1) * width) / 2,
+            y = ((1 - projected.y) * height) / 2;
+          label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
+          label.style.visibility =
+            projected.z < 1 &&
+            x > 20 &&
+            x < width - 20 &&
+            y > 10 &&
+            y < height - 60
+              ? 'visible'
+              : 'hidden';
+        }
+        const tag =
+          labelsRef.current?.querySelector<HTMLElement>('[data-self-label]');
+        if (tag) {
+          projected.set(position.x, 2.3, position.z).project(camera);
+          tag.style.transform = `translate(${((projected.x + 1) * width) / 2}px,${((1 - projected.y) * height) / 2}px) translate(-50%,-100%)`;
+        }
+        Object.assign(host.dataset, {
+          avatarX: position.x.toFixed(3),
+          avatarZ: position.z.toFixed(3),
+          walking: String(walking),
+          zoom: zoom.toFixed(2),
+          targetX: target.x.toFixed(3),
+          targetZ: target.z.toFixed(3),
+          residents: String(residents.length),
+        });
+        lastData = now;
+      }
+      if (
+        now - lastRender >
+        (walking || press || Math.abs(zoom - desiredZoom) > 0.01 ? 32 : 65)
+      ) {
+        renderer.render(scene, camera);
+        lastRender = now;
+        host.dataset.drawCalls = String(renderer.info.render.calls);
+      }
+    };
+    frame = requestAnimationFrame(animate);
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      controls.current = null;
+      directions.current.clear();
+      observer.disconnect();
+      visibility.disconnect();
+      canvas.removeEventListener('pointerdown', down);
+      canvas.removeEventListener('pointermove', drag);
+      canvas.removeEventListener('pointerup', up);
+      canvas.removeEventListener('pointercancel', cancel);
+      canvas.removeEventListener('webglcontextlost', loss);
+      host.removeEventListener('keydown', keydown);
+      host.removeEventListener('focusout', blur);
+      window.removeEventListener('keyup', keyup);
+      window.removeEventListener('blur', blur);
+      disposeScene(scene);
+      sun.shadow.dispose();
+      renderer.dispose();
+      renderer.forceContextLoss();
+      canvas.remove();
+    };
+  }, []);
+
+  const isMyHome =
+    selected?.kind === 'home' && selected.actor === props.save.actor;
+  return (
+    <section className="hv-village" aria-label="범타듀 밸리 마을">
+      <div className="hv-heading">
+        <div>
+          <span className="hv-eyebrow">
+            <Trees size={15} /> BEOMDEW VALLEY
+          </span>
+          <h1>범타듀 밸리</h1>
+          <p>작은 농장과 일곱 친구가 사는 골목.</p>
+        </div>
+        <span className="hv-weather">
+          <Sun size={20} />
+          <span>
+            산책하기 좋은 날<small>우리들의 범타듀 밸리</small>
+          </span>
+        </span>
+      </div>
+      <div className="hv-frame">
+        <div
+          ref={hostRef}
+          className="hv-scene"
+          role="application"
+          tabIndex={0}
+          aria-label="범타듀 밸리. 바닥을 눌러 걷기, 방향키와 WASD로 이동, 드래그로 지도 둘러보기"
+          data-testid="village-3d"
+          data-load-state={state}
+        >
+          <div ref={labelsRef} className="hv-labels">
+            {VILLAGE_PLACES.map((place) => (
+              <button
+                key={place.id}
+                type="button"
+                data-place={place.id}
+                className={`hv-place hv-place-${place.kind}${selected?.id === place.id ? ' is-selected' : ''}`}
+                onClick={() => select(place)}
+                aria-label={`${place.name} 둘러보기`}
+              >
+                <span
+                  className="hv-place-dot"
+                  style={{ background: place.roofColor }}
+                />
+                <span>{place.name}</span>
+                {place.actor === props.save.actor && <small>내 집</small>}
+              </button>
+            ))}
+            <span className="hv-self" data-self-label>
+              {ACTORS[props.save.actor]}
+              <small>나</small>
+            </span>
+          </div>
+          {state === 'loading' && (
+            <div className="hv-loading" role="status">
+              <span className="l-spinner" />
+              마을에 햇살을 들이는 중…
+            </div>
+          )}
+          {state === 'unavailable' && (
+            <div className="hv-fallback" role="status">
+              <Trees size={32} />
+              <h2>마을 안내소</h2>
+              <p>
+                이 기기에서는 입체 풍경을 열지 못했어요.
+                <br />
+                아래에서 원하는 장소로 바로 들어갈 수 있어요.
+              </p>
+              <div>
+                {[
+                  ['lounge', '회관'],
+                  ['casino', '카지노'],
+                  ['wardrobe', '분장실'],
+                  ['bedroom', '내 방'],
+                ].map(([id, name]) => (
+                  <button
+                    key={id}
+                    onClick={() => props.onEnter(id as VillageDestination)}
+                  >
+                    {name}
+                    <DoorOpen size={16} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="hv-top-tools">
+          <button
+            onClick={() => setDirectory(!directory)}
+            aria-expanded={directory}
+          >
+            <MapIcon size={17} />
+            마을 안내
+          </button>
+          <button onClick={props.onFriends}>
+            <Users size={17} />
+            <span>친구 초대</span>
+          </button>
+        </div>
+        {directory && (
+          <aside className="hv-directory" aria-label="마을 장소">
+            <header>
+              <strong>어디로 가볼까요?</strong>
+              <button
+                onClick={() => setDirectory(false)}
+                aria-label="마을 안내 닫기"
+              >
+                <X size={17} />
+              </button>
+            </header>
+            <span className="hv-directory-sub">함께 노는 곳</span>
+            {VILLAGE_PLACES.filter((p) => p.kind !== 'home').map((p) => (
+              <button key={p.id} onClick={() => select(p)}>
+                <span
+                  className="hv-place-dot"
+                  style={{ background: p.roofColor }}
+                />
+                <span>
+                  <strong>{p.name}</strong>
+                  <small>{p.subtitle}</small>
+                </span>
+                <ArrowRight size={15} />
+              </button>
+            ))}
+            <span className="hv-directory-sub">친구들의 골목</span>
+            <div className="hv-home-list">
+              {VILLAGE_PLACES.filter((p) => p.kind === 'home').map((p) => (
+                <button key={p.id} onClick={() => select(p)}>
+                  <House size={14} />
+                  {ACTORS[p.actor!]}
+                  {p.actor === props.save.actor && <small>나</small>}
+                </button>
+              ))}
+            </div>
+          </aside>
+        )}
+        <div className="hv-camera" aria-label="마을 화면 조절">
+          <button
+            onClick={() => controls.current?.zoom(0.45)}
+            aria-label="마을 확대"
+          >
+            <Plus size={18} />
+          </button>
+          <button
+            onClick={() => controls.current?.zoom(-0.45)}
+            aria-label="마을 축소"
+          >
+            <Minus size={18} />
+          </button>
+          <span />
+          <button
+            onClick={() => controls.current?.home()}
+            aria-label="내 위치 보기"
+          >
+            <LocateFixed size={18} />
+          </button>
+          <button
+            onClick={() => controls.current?.overview()}
+            aria-label="마을 전체 보기"
+          >
+            <MapIcon size={18} />
+          </button>
+        </div>
+        {state !== 'unavailable' && (
+          <div className="hv-pad" aria-label="마을 걷기">
+            {DIRECTIONS.map(([direction, Icon, label]) => (
+              <button
+                key={direction}
+                className={`hv-pad-${direction}`}
+                aria-label={label}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  directions.current.add(direction);
+                }}
+                onPointerUp={() => directions.current.delete(direction)}
+                onPointerCancel={() => directions.current.delete(direction)}
+                onLostPointerCapture={() =>
+                  directions.current.delete(direction)
+                }
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    directions.current.add(direction);
+                  }
+                }}
+                onKeyUp={() => directions.current.delete(direction)}
+                onBlur={() => directions.current.delete(direction)}
+              >
+                <Icon size={18} />
+              </button>
+            ))}
+          </div>
+        )}
+        {selected && (
+          <div className="hv-place-card" role="region" aria-label="선택한 장소">
+            <div
+              className="hv-place-monogram"
+              style={{ background: selected.color }}
+            >
+              {selected.kind === 'home' ? (
+                <House size={25} />
+              ) : (
+                <DoorOpen size={25} />
+              )}
+            </div>
+            <div>
+              <small>
+                {selected.kind === 'home'
+                  ? '친구들의 골목'
+                  : '광장 옆 작은 아지트'}
+              </small>
+              <h2>{selected.name}</h2>
+              <p>{selected.subtitle}</p>
+            </div>
+            <button
+              className="hv-enter"
+              onClick={() =>
+                selected.kind !== 'home' || isMyHome
+                  ? props.onEnter(selected.destination)
+                  : controls.current?.go(selected)
+              }
+            >
+              {selected.kind === 'home'
+                ? isMyHome
+                  ? '내 방 들어가기'
+                  : '집 앞에서 만나기'
+                : '들어가기'}
+              <ArrowRight size={16} />
+            </button>
+            <button
+              className="hv-card-close"
+              aria-label="장소 안내 닫기"
+              onClick={() => setSelected(null)}
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+        <div className="hv-map-caption" aria-hidden="true">
+          <span>BEOMDEW</span>
+          <small>작은 집들이 모여, 우리의 동네</small>
+        </div>
+      </div>
+      <div className="hv-bottom">
+        <span>
+          <Footprints size={15} />
+          바닥을 눌러 걷기 <i>·</i> 드래그로 둘러보기 <i>·</i> 방향키 / WASD
+        </span>
+        <button onClick={props.onRequest}>
+          <Send size={14} />
+          함께할 게임 초대
+        </button>
+      </div>
+      {state === 'partial' && (
+        <p className="hv-partial" role="status">
+          일부 마을 소품을 불러오지 못했어요. 마을 산책과 건물 입장은 이용할 수
+          있어요.
+        </p>
+      )}
+      <p className="hv-credit">
+        주택·과일나무·수국·소파·튤립 원본 모델:{' '}
+        <a
+          href="https://karchive.vibeline.co.kr/models"
+          target="_blank"
+          rel="noreferrer"
+        >
+          kArchive
+        </a>{' '}
+        · 출처: 쓰레드 dogfooter. 테라스 가구: 3DAssets.dev (CC0).
+      </p>
+    </section>
+  );
+}

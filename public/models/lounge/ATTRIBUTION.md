@@ -11,6 +11,18 @@ Downloaded and inspected 2026-09-18. Original GLB files are unmodified; the game
 
 Both models contain their own textures. No third-party model host is contacted during gameplay.
 
+## Village buildings and garden models
+
+Downloaded and inspected 2026-09-24 from the same provider and displayed usage terms above. The original GLB files are stored under `public/models/village/`; `assets.json` records the individual source pages, download URLs, sizes, hashes and texture metadata.
+
+- cottage.glb: https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-compact-normal
+- cornerHouse.glb: https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-corner-normal
+- courtyardHouse.glb: https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-courtyard-normal
+- fruitTree.glb: https://karchive.vibeline.co.kr/models/common-nature-small-fruit-tree-cottage-normal
+- hydrangea.glb: https://karchive.vibeline.co.kr/models/common-nature-flowering-hydrangea-bush-cottage-normal
+
+These five original files total 3,455,236 bytes and contain embedded textures and geometry. The game only changes placement, orientation and scale. They are credited in the village screen and bundled license notice. No original asset resale or Creative Commons license is asserted.
+
 # Bedroom furniture · 3DAssets.dev
 
 Pack: https://3dassets.dev/packs/bedroom-and-living-room-furniture

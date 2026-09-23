@@ -33,14 +33,14 @@ export function RecoveryCard({
     const url = URL.createObjectURL(
       new Blob(
         [
-          `호현지방 비밀번호 복구 코드\n아이디: ${username}\n복구 코드: ${code}\n\n다른 사람에게 공유하지 마세요. 비밀번호를 바꾸면 새 코드로 교체됩니다.\n`,
+          `범타듀 밸리 비밀번호 복구 코드\n아이디: ${username}\n복구 코드: ${code}\n\n다른 사람에게 공유하지 마세요. 비밀번호를 바꾸면 새 코드로 교체됩니다.\n`,
         ],
         { type: 'text/plain;charset=utf-8' },
       ),
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = `호현지방-${username}-복구코드.txt`;
+    a.download = `범타듀 밸리-${username}-복구코드.txt`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setCopied(true);
@@ -271,9 +271,9 @@ export function AccountGate({
       <section className="l-auth-story">
         <div className="l-auth-logo">
           <Armchair size={26} />
-          <b>호현지방</b>
+          <b>범타듀 밸리</b>
         </div>
-        <span className="l-kicker">일곱 친구의 회관</span>
+        <span className="l-kicker">일곱 친구의 마을</span>
         <h1>
           같이 한 판,
           <br />

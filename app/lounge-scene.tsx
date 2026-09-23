@@ -258,8 +258,8 @@ export function RoomFloor({
           src={area === 'casino' ? LOUNGE_ASSETS.casino : LOUNGE_ASSETS.room}
           alt={
             area === 'casino'
-              ? '은은한 조명의 호현 카지노 회관'
-              : '햇살과 생활감이 가득한 호현지방 회관'
+              ? '은은한 조명의 범타듀 카지노'
+              : '햇살과 생활감이 가득한 범타듀 밸리의 마을 회관'
           }
           draggable={false}
         />
@@ -267,7 +267,7 @@ export function RoomFloor({
           <span>
             {area === 'casino' ? '오늘 밤의 한 판' : '일곱 친구의 아지트'}
           </span>
-          <strong>{area === 'casino' ? '호현 카지노' : '호현 회관'}</strong>
+          <strong>{area === 'casino' ? '범타듀 카지노' : '범마을 회관'}</strong>
         </div>
         {layout.tables.map((table) => (
           <SceneGameTable

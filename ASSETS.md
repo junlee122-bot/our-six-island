@@ -417,3 +417,7 @@ Higgsfield의 `gpt_image_2_5`, high, 4K 설정, 3:2로 빈 방 1장과 소품 �
 원본 파일은 `public/models/lounge/furniture/`에 보존합니다. [assets.json](public/models/lounge/furniture/assets.json)에 개별 원본 주소·페이지·파일 크기·SHA-256·애니메이션/확장 정보를, [ATTRIBUTION.md](public/models/lounge/ATTRIBUTION.md)에 출처와 라이선스를 기록했습니다. 실제 파일의 GLB 버전·길이와 외부 버퍼/이미지 참조가 없음을 검사했습니다. 침대 천의 색, 방향과 크기만 런타임에서 조정하며 모든 모델은 자체 사이트에서 콘텐츠 해시 URL로 제공합니다.
 
 같은 조명 파일을 책상과 협탁에 재사용하므로 13개 GLB로 14개 모델 인스턴스를 표시합니다. 벽의 사진 줄과 음악 포스터는 기존 Higgsfield 2D 방 에셋을 텍스처로 재사용하고, 전구 줄·노트·컵은 간단한 Three.js 도형으로 제작했습니다. 새 의자·협탁·옷장의 충돌 영역을 이동 경로에 반영했습니다. 기존 2D 가구 저장 형식은 변경하지 않았습니다.
+
+## 범타듀 밸리 마을 · 2026-09-24
+
+주택 3종·과일나무·수국은 kArchive 원본 GLB를 그대로 사용합니다. 자료: kArchive / 출처: 쓰레드 dogfooter. 프로젝트 사용·수정 허용 및 출처 표기 필수, 원본 재판매 금지 조건입니다. 원본 URL·SHA256·바이트 크기는 public/models/village/assets.json, 상세 출처는 public/models/lounge/ATTRIBUTION.md에 보관합니다. 5종 합계 3,455,236바이트이며 외부 텍스처 요청 없이 자체 호스팅합니다. 회관·카지노·분장실 외관, 길·하천·다리·밭 등은 Three.js 지오메트리로 직접 구성합니다. 기존 소파·튤립·책장·의자·탁자는 야외 독서 테라스에 재사용합니다.

@@ -15,4 +15,9 @@ export const LOUNGE_MODELS = {
   coffeeTable: '/models/lounge/furniture/coffee-table.glb',
   curtains: '/models/lounge/furniture/curtains.glb',
   cushions: '/models/lounge/furniture/cushions.glb',
+  cottage: '/models/village/cottage.glb',
+  cornerHouse: '/models/village/cornerHouse.glb',
+  courtyardHouse: '/models/village/courtyardHouse.glb',
+  fruitTree: '/models/village/fruitTree.glb',
+  hydrangea: '/models/village/hydrangea.glb',
 } as const;

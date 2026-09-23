@@ -1,0 +1,144 @@
+.l-app {
+  background: #f6f3e9;
+  color: #46533a;
+}
+
+.l-app .l-header {
+  background: #fffdf5;
+  border-bottom: 1px solid #e4dec9;
+}
+
+.l-app .l-brand-icon {
+  background: #456a49;
+  color: #fffdf5;
+}
+
+.l-app .l-brand small {
+  color: #758269;
+}
+
+.l-app .l-header nav button[aria-pressed='true'] {
+  color: #416c49;
+  border-color: #66845d;
+}
+
+.l-app .l-wallet-button {
+  background: #eaf0dd;
+  border-color: #cfdbb9;
+  color: #46613f;
+}
+
+.l-village {
+  width: min(100%, 1680px);
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.l-village-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+.l-village-world {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.l-village-sidebar {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.l-village-world .hv-village {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.l-village-shortcuts,
+.l-village-chat {
+  overflow: hidden;
+  border: 1px solid rgba(89, 73, 49, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 252, 245, 0.88);
+  box-shadow: 0 12px 32px rgba(69, 58, 41, 0.07);
+}
+
+.l-village-shortcuts {
+  padding: 18px;
+}
+
+.l-village-shortcuts > .l-kicker {
+  display: block;
+  margin: 0 0 10px 4px;
+}
+
+.l-village-shortcuts > button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 5px;
+  border: 0;
+  border-top: 1px solid rgba(89, 73, 49, 0.1);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.l-village-shortcuts > button > svg:first-child {
+  flex: 0 0 auto;
+  color: #8a704b;
+}
+
+.l-village-shortcuts > button > svg:last-child {
+  flex: 0 0 auto;
+  margin-left: auto;
+  opacity: 0.55;
+}
+
+.l-village-shortcuts > button > span {
+  display: grid;
+  gap: 3px;
+}
+
+.l-village-shortcuts > button strong {
+  font-size: 14px;
+}
+
+.l-village-shortcuts > button small {
+  color: #807769;
+  font-size: 11px;
+}
+
+.l-village-shortcuts > button:hover {
+  color: #725638;
+}
+
+.l-village-chat {
+  margin-top: 0;
+}
+
+.l-village-chat .l-chat-messages {
+  min-height: 125px;
+  max-height: 205px;
+}
+
+@media (max-width: 900px) {
+  .l-village {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  .l-village-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

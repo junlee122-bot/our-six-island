@@ -1,0 +1,69 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "terms": "개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트 라이선스 화면·크레딧·설명란에 자료: kArchive / 출처: 쓰레드 dogfooter 필수.",
+  "modifications": "원본 GLB 바이트를 유지하며 게임 장면에서 위치·크기·방향만 적용합니다.",
+  "assets": [
+    {
+      "key": "cottage",
+      "id": "common-buildings-small-family-house-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-small-family-house-compact-normal.glb",
+      "file": "cottage.glb",
+      "bytes": 725532,
+      "sha256": "eac2680e00c74091feb15499784f6eddc96df2937e0a5fa4dbca20c9ac49aa9e",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": []
+    },
+    {
+      "key": "cornerHouse",
+      "id": "common-buildings-small-family-house-corner-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-corner-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-small-family-house-corner-normal.glb",
+      "file": "cornerHouse.glb",
+      "bytes": 760528,
+      "sha256": "dedb17b9b8e04fa7f9dcabd1e62977d43f98166f9b3cf6ed2fe9f43e636c6ea3",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": []
+    },
+    {
+      "key": "courtyardHouse",
+      "id": "common-buildings-small-family-house-courtyard-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-small-family-house-courtyard-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-small-family-house-courtyard-normal.glb",
+      "file": "courtyardHouse.glb",
+      "bytes": 732440,
+      "sha256": "ff48c81da79d72318872fb77cc415c3e15e5c58b834651b2b0f72953222ef749",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": []
+    },
+    {
+      "key": "fruitTree",
+      "id": "common-nature-small-fruit-tree-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-small-fruit-tree-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-small-fruit-tree-cottage-normal.glb",
+      "file": "fruitTree.glb",
+      "bytes": 576348,
+      "sha256": "b11629a4e00a134cd7a0129adf8442749f60f1bb5c0c969b4d9cfca7b881516a",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": []
+    },
+    {
+      "key": "hydrangea",
+      "id": "common-nature-flowering-hydrangea-bush-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-flowering-hydrangea-bush-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-flowering-hydrangea-bush-cottage-normal.glb",
+      "file": "hydrangea.glb",
+      "bytes": 660388,
+      "sha256": "dcb3b42f32cc4d4c288085b197d7afa2879cdc23531cf078811b5c4cb1f20dcb",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": []
+    }
+  ]
+}

@@ -159,7 +159,7 @@ export function SeotdaTable({
           <Flower2 size={25} />
         </span>
         <div>
-          <small>호현 화투방 · 두 장 섯다</small>
+          <small>범타듀 화투방 · 두 장 섯다</small>
           <p aria-live="polite">{message(g, names)}</p>
         </div>
         <b>
