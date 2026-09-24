@@ -4,6 +4,8 @@ import {
   VILLAGE_FARMLAND,
   VILLAGE_FARMLAND_ENTRY,
   VILLAGE_PLACES,
+  VILLAGE_RIVER,
+  VILLAGE_SCENIC_TREES,
   VILLAGE_TERRACE,
   type VillagePlace,
 } from './lounge-village-layout';
@@ -731,36 +733,115 @@ export function buildVillageWorld(scene: THREE.Scene): {
   box(scene, M.grassLight, 0, 0.008, 0, bw - 0.9, 0.035, bd - 0.9);
 
   // Stream bends through the north end; lighter banks and gravel edges frame it.
-  box(scene, M.bank, 0, 0.09, 15, 49, 0.15, 3.7);
-  box(scene, M.water, 0, 0.13, 15, 48.4, 0.12, 2.65);
+  const riverCenterZ = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2;
+  const riverDepth = VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ;
+  box(scene, M.bank, 0, 0.09, riverCenterZ, bw - 0.6, 0.15, riverDepth + 1.7);
+  box(scene, M.water, 0, 0.13, riverCenterZ, bw - 1.2, 0.12, riverDepth + 0.25);
   const stream = scene.children[scene.children.length - 1] as THREE.Mesh;
   stream.name = 'village-water';
   water.push(stream);
-  for (let x = -22; x <= 22; x += 2.1) {
-    if (Math.abs(x) < 2.8) continue;
-    const z = 14.95 + Math.sin(x * 0.42) * 0.18;
-    const peb = new THREE.Mesh(
-      sphereGeo,
-      Math.round(x) % 2 === 0 ? M.cream : M.stone,
-    );
-    peb.position.set(x, 0.2, z);
-    peb.scale.set(0.32, 0.12, 0.18);
-    peb.receiveShadow = true;
-    scene.add(peb);
+  // Pebbles are instanced to keep the longer river's draw-call count flat.
+  for (const [materialIndex, material] of [M.cream, M.stone].entries()) {
+    const xs = Array.from({ length: 40 }, (_, index) => -38.5 + index * 2);
+    const instances = new THREE.InstancedMesh(sphereGeo, material, xs.length);
+    const transform = new THREE.Object3D();
+    let count = 0;
+    for (const x of xs) {
+      if (Math.round((x + 38.5) / 2) % 2 !== materialIndex) continue;
+      if (VILLAGE_RIVER.bridges.some((bridge) => Math.abs(x - bridge.x) < 3.2))
+        continue;
+      transform.position.set(x, 0.2, riverCenterZ + Math.sin(x * 0.42) * 0.18);
+      transform.scale.set(0.32, 0.12, 0.18);
+      transform.updateMatrix();
+      instances.setMatrixAt(count++, transform.matrix);
+    }
+    instances.count = count;
+    instances.receiveShadow = true;
+    scene.add(instances);
   }
-  // Bridge deck, sleepers, end landings and timber balustrades across the stream.
-  box(scene, M.wood, 0, 0.38, 15, 5.55, 0.34, 3.05);
-  box(scene, M.woodLight, 0, 0.59, 15, 5.15, 0.12, 2.72);
-  for (let x = -2.35; x <= 2.36; x += 0.48)
-    box(scene, M.wood, x, 0.67, 15, 0.1, 0.1, 2.75);
-  for (const side of [-1, 1]) {
-    box(scene, M.wood, side * 2.45, 0.98, 15, 0.16, 0.82, 3.08);
-    box(scene, M.woodLight, side * 2.45, 1.4, 15, 0.25, 0.16, 3.18);
-    for (const z of [13.82, 14.4, 15, 15.6, 16.18])
-      box(scene, M.woodLight, side * 2.45, 1.13, z, 0.1, 0.45, 0.1);
+  // Three bridges align to the exact crossings used by player collision.
+  for (const { x: centerX, halfWidth } of VILLAGE_RIVER.bridges) {
+    const halfDeck = halfWidth + 0.3;
+    box(
+      scene,
+      M.wood,
+      centerX,
+      0.38,
+      riverCenterZ,
+      halfDeck * 2,
+      0.34,
+      riverDepth + 1.05,
+    );
+    box(
+      scene,
+      M.woodLight,
+      centerX,
+      0.59,
+      riverCenterZ,
+      halfDeck * 2 - 0.4,
+      0.12,
+      riverDepth + 0.72,
+    );
+    for (
+      let x = centerX - halfWidth + 0.15;
+      x <= centerX + halfWidth;
+      x += 0.48
+    )
+      box(scene, M.wood, x, 0.67, riverCenterZ, 0.1, 0.1, riverDepth + 0.75);
+    for (const side of [-1, 1]) {
+      const railX = centerX + side * (halfWidth - 0.05);
+      box(
+        scene,
+        M.wood,
+        railX,
+        0.98,
+        riverCenterZ,
+        0.16,
+        0.82,
+        riverDepth + 1.08,
+      );
+      box(
+        scene,
+        M.woodLight,
+        railX,
+        1.4,
+        riverCenterZ,
+        0.25,
+        0.16,
+        riverDepth + 1.18,
+      );
+      for (const z of [
+        VILLAGE_RIVER.minZ - 0.18,
+        riverCenterZ,
+        VILLAGE_RIVER.maxZ + 0.18,
+      ])
+        box(scene, M.woodLight, railX, 1.13, z, 0.1, 0.45, 0.1);
+    }
   }
   // Main walk network ties doors, shops and civic fronts to the fountain and bridge.
   const paths: [number, number, number, number, number][] = [
+    // Three crossings fan the expanded valley out from the civic green.
+    [-16, 10, -27, 10, 1.7],
+    [-27, 10, -27, 17.5, 1.55],
+    [-27, 17.5, -32, 5, 1.3],
+    [16, 10, 27, 10, 1.7],
+    [27, 10, 27, 17.5, 1.55],
+    [27, 10, 27, -1, 1.4],
+    [27, 17.5, 33, -5, 1.3],
+    [0, 13, 0, 20, 1.65],
+    [0, 20, 5, 24, 1.4],
+    [0, 20, -8, 24, 1.3],
+    [5, 24, 14, 24, 1.3],
+    // The eastern perimeter loops north to the forest walk and boardwalk.
+    [27, -1, 27, -25, 1.4],
+    [27, -25, 0, -25, 1.4],
+    [27, -5, 33, -5, 1.3],
+    // Existing homes remain connected to the long forest trail at the north edge.
+    [14, -9, 24, -9, 1.3],
+    [24, -9, 27, -12, 1.3],
+    // West orchard picnic loop from its dedicated bridge.
+    [-27, 5, -32, 5, 1.35],
+    [-32, 5, -32, 1, 1.25],
     // North green and crossing, with a walk around the fountain's rim.
     [0, 2.7, 0, 13.4, 2.55],
     [0, 2.7, -1.9, 2.05, 1.7],
@@ -982,6 +1063,9 @@ export function buildVillageWorld(scene: THREE.Scene): {
   treeCoords.forEach(([x, z, s], i) =>
     decorations.push(tree(scene, x, z, s, i)),
   );
+  VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) =>
+    decorations.push(tree(scene, x, z, scale, i + 3)),
+  );
   const shrubs: [number, number][] = [
     [-19, -11],
     [-18, -10],
@@ -1014,6 +1098,33 @@ export function buildVillageWorld(scene: THREE.Scene): {
     if (Math.abs(x) > 7 || Math.abs(z) > 4)
       shrub(scene, x, z, i % 3 === 0 ? M.leafLight : M.leaf);
   });
+  // New district gardens stay simple and repeatable; flower instances keep
+  // draw calls low while adding distinct orchard, camp, boardwalk and forest edges.
+  decorations.push(
+    flowers(scene, -32, 9, 12, 3),
+    flowers(scene, 5, 28, 10, 4),
+    flowers(scene, 33, -10, 12, 2),
+    flowers(scene, 0, -28, 14, 5),
+    lamp(scene, -29, 7),
+    lamp(scene, -35, 7),
+    lamp(scene, 2, 22),
+    lamp(scene, 8, 22),
+    lamp(scene, 30, -8),
+    lamp(scene, 36, -8),
+  );
+  // Short timber promenade at the eastern garden edge.
+  line(scene, M.woodLight, 29, -5, 38, -5, 1.7, 0.22);
+  line(scene, M.wood, 29, -5.95, 38, -5.95, 0.12, 0.3);
+  line(scene, M.wood, 29, -4.05, 38, -4.05, 0.12, 0.3);
+  for (let x = 29; x <= 38; x += 0.9)
+    box(scene, M.wood, x, 0.34, -5, 0.1, 0.08, 1.62);
+  for (const x of [29.2, 31.4, 33.6, 35.8, 38]) {
+    box(scene, M.wood, x, 0.62, -5.95, 0.1, 0.62, 0.1);
+    box(scene, M.woodLight, x, 0.94, -5.95, 0.1, 0.1, 0.1);
+    box(scene, M.wood, x, 0.62, -4.05, 0.1, 0.62, 0.1);
+    box(scene, M.woodLight, x, 0.94, -4.05, 0.1, 0.1, 0.1);
+  }
+  line(scene, M.woodLight, 27, -5, 29, -5, 1.45, 0.2);
   // Scenic flower beds around bridge heads and the front green.
   decorations.push(
     flowers(scene, -4, 12, 8, 2),

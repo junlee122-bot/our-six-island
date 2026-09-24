@@ -778,3 +778,106 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.hv-minimap {
+  position: absolute;
+  left: 22px;
+  bottom: 82px;
+  width: 156px;
+  padding: 10px;
+  border: 1px solid #fff9e7;
+  border-radius: 15px;
+  background: #fffdf0e8;
+  box-shadow: 0 5px 22px #344a3020;
+  color: #58664b;
+  cursor: pointer;
+}
+.hv-minimap > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.hv-minimap small {
+  margin-left: auto;
+  color: #8e9c79;
+  font-size: 8px;
+}
+.hv-minimap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hv-minimap > span svg {
+  width: 12px;
+  height: 12px;
+}
+.hv-route {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #fffdf2f2;
+  border: 1px solid white;
+  border-radius: 14px;
+  padding: 13px 15px;
+  box-shadow: 0 6px 22px #344a3020;
+  color: #596b48;
+}
+.hv-route strong {
+  font-size: 12px;
+}
+.hv-route output {
+  display: block;
+  font-size: 10px;
+  color: #8a927c;
+  margin-top: 4px;
+}
+.hv-route button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 6px;
+}
+.hv-self {
+  border: 1px solid #fff0ad;
+  font-weight: 750;
+  font-size: 12px;
+}
+.hv-self small {
+  background: #556e48;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+@media (max-width: 600px) {
+  .hv-minimap {
+    left: 12px;
+    bottom: 96px;
+    width: 114px;
+    padding: 7px;
+    border-radius: 12px;
+  }
+  .hv-minimap > span {
+    font-size: 8px;
+    gap: 3px;
+  }
+  .hv-minimap small {
+    display: none;
+  }
+  .hv-route {
+    left: 12px;
+    right: 12px;
+    bottom: 180px;
+    transform: none;
+    padding: 10px 12px;
+  }
+  .hv-route > div {
+    flex: 1;
+  }
+}

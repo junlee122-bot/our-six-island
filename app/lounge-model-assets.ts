@@ -20,4 +20,10 @@ export const LOUNGE_MODELS = {
   courtyardHouse: '/models/village/courtyardHouse.glb',
   fruitTree: '/models/village/fruitTree.glb',
   hydrangea: '/models/village/hydrangea.glb',
+  picnicTable: '/models/village/expansion/picnicTable.glb',
+  parkBench: '/models/village/expansion/parkBench.glb',
+  gardenLantern: '/models/village/expansion/gardenLantern.glb',
+  archiveBookcase: '/models/lounge/redesign/archiveBookcase.glb',
+  plantStand: '/models/lounge/redesign/plantStand.glb',
+  teaTable: '/models/lounge/redesign/teaTable.glb',
 } as const;

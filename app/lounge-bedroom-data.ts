@@ -1,3 +1,4 @@
+import { bedroomTheme } from './lounge-bedroom-themes.ts';
 /** Shared by browser and account API. No asset, DOM, or storage imports. */
 export type RoomCategory = 'furniture' | 'soft' | 'music' | 'small' | 'wall';
 export type RoomPlacement = 'floor' | 'wall' | 'rug';
@@ -226,6 +227,70 @@ export const ROOM_PROPS = [
     width: 33,
     layer: 0,
   },
+  {
+    id: 'miku-poster',
+    name: '미쿠 콘서트 포스터',
+    category: 'wall',
+    placement: 'wall',
+    width: 15,
+    layer: 0,
+  },
+  {
+    id: 'miku-records',
+    name: '미쿠 레코드 컬렉션',
+    category: 'wall',
+    placement: 'wall',
+    width: 20,
+    layer: 0,
+  },
+  {
+    id: 'miku-banner',
+    name: '미쿠 01 패브릭 배너',
+    category: 'wall',
+    placement: 'wall',
+    width: 11,
+    layer: 0,
+  },
+  {
+    id: 'miku-acrylic',
+    name: '미쿠 아크릴 스탠드',
+    category: 'small',
+    placement: 'floor',
+    width: 9,
+    layer: 2,
+  },
+  {
+    id: 'miku-light-stick',
+    name: '민트 응원봉 세트',
+    category: 'music',
+    placement: 'floor',
+    width: 9,
+    layer: 2,
+  },
+  {
+    id: 'miku-headphones',
+    name: '미쿠 헤드폰 거치대',
+    category: 'music',
+    placement: 'floor',
+    width: 11,
+    layer: 2,
+  },
+  {
+    id: 'miku-cushion',
+    name: '트윈테일 미쿠 쿠션',
+    category: 'soft',
+    placement: 'floor',
+    width: 12,
+    layer: 2,
+  },
+  {
+    id: 'miku-desk-mat',
+    name: '미쿠 01 민트 러그',
+    category: 'soft',
+    placement: 'rug',
+    width: 32,
+    layer: 1,
+  },
 ] as const satisfies readonly {
   id: string;
   name: string;
@@ -249,6 +314,8 @@ export type RoomItem = {
 };
 export type Bedroom = {
   version: 1;
+  /** The explicitly requested studio redesign; retained after later edits. */
+  designVersion?: 2;
   wall: 'cream' | 'sage' | 'blush' | 'blue';
   floor: 'oak' | 'walnut' | 'pale';
   /** Within each catalog layer, later items are displayed in front. */
@@ -273,8 +340,9 @@ export function roomItemBounds(prop: RoomPropId) {
   };
 }
 
-/** A cozy starter inspired by Dowon's interests; every account can use every prop. */
+/** Only new rooms and an explicitly confirmed preset use this layout. */
 export function defaultBedroom(actor = 0): Bedroom {
+  const theme = bedroomTheme(actor);
   const item = (
     prop: RoomPropId,
     x: number,
@@ -283,23 +351,50 @@ export function defaultBedroom(actor = 0): Bedroom {
   ): RoomItem => ({ id: 'starter-' + prop, prop, x, y, scale, flip: false });
   return {
     version: 1,
-    wall: actor === 0 ? 'blush' : 'cream',
-    floor: 'oak',
+    designVersion: 2,
+    wall: theme.wall,
+    floor: theme.floor,
     items: [
-      item('star-lights', 46, 17),
-      item('music-poster', 76, 27),
-      item('photo-string', 37, 35, 0.8),
-      item('rug', 48, 84),
-      item('bed', 24, 76),
-      item('vanity', 75, 68),
-      item('floor-lamp', 57, 66),
-      item('plant', 89, 78),
-      item('low-table', 51, 87, 0.8),
-      item('cat-plush', 31, 78),
-      item('heart-cushion', 16, 69),
-      item('twin-tail-figure', 75, 53, 0.8),
-      item('headband-display', 66, 55, 0.8),
-      item('tea-set', 52, 77, 0.8),
+      item('star-lights', 59, 12, 0.9),
+      item('photo-string', 42, 25, 0.7),
+      item('rug', 51, 86, 1.15),
+      item('bed', 80, 80, 0.92),
+      item('sofa', 28, 65, 0.85),
+      item('bookshelf', 9, 65, 0.72),
+      item('desk', 24, 89, 0.85),
+      item('floor-lamp', 53, 64, 0.85),
+      item('plant', 93, 92, 0.85),
+      item('low-table', 42, 74, 0.7),
+      item('tea-set', 43, 68, 0.65),
+      ...(actor === 0
+        ? [
+            item('miku-poster', 78, 23),
+            item('miku-records', 59, 28, 0.85),
+            item('miku-banner', 94, 26, 0.8),
+            item('miku-acrylic', 18, 74, 0.8),
+            item('miku-light-stick', 31, 76, 0.72),
+            item('miku-headphones', 26, 76, 0.75),
+            item('miku-cushion', 78, 70, 0.8),
+            item('miku-desk-mat', 54, 90, 0.8),
+            item('twin-tail-figure', 10, 48, 0.7),
+          ]
+        : theme.props.map((prop, index) => {
+            const points = [
+              [23, 76],
+              [43, 68],
+              [11, 49],
+              [79, 71],
+              [62, 79],
+            ];
+            const wallProp = ROOM_PROP_BY_ID[prop].placement === 'wall';
+            const placed = item(
+              prop,
+              wallProp ? 66 + (index % 3) * 12 : points[index][0],
+              wallProp ? 20 + (index % 2) * 12 : points[index][1],
+              0.8,
+            );
+            return { ...placed, id: placed.id + '-' + index };
+          })),
     ],
   };
 }
@@ -318,6 +413,8 @@ export function readBedroom(value: unknown, actor = 0): Bedroom {
   const fallback = defaultBedroom(actor),
     source = record(value);
   if (!source || source.version !== 1) return fallback;
+  // Each friend requested a fresh design. Run once, preserving every later edit.
+  if (source.designVersion !== 2) return fallback;
   const ids = new Set<string>();
   const items: RoomItem[] = [];
   if (Array.isArray(source.items)) {
@@ -361,6 +458,7 @@ export function readBedroom(value: unknown, actor = 0): Bedroom {
   }
   return {
     version: 1,
+    ...(source.designVersion === 2 ? { designVersion: 2 as const } : {}),
     wall: ['cream', 'sage', 'blush', 'blue'].includes(source.wall as string)
       ? (source.wall as Bedroom['wall'])
       : fallback.wall,

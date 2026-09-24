@@ -1,0 +1,97 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-24",
+  "terms": "개인·상업 프로젝트 사용 및 수정 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면·크레딧·설명란에 자료: kArchive / 출처: 쓰레드 dogfooter 필수.",
+  "modifications": "원본 GLB 바이트 유지. 런타임 크기·위치·방향만 적용.",
+  "assets": [
+    {
+      "key": "picnicTable",
+      "id": "common-furniture-hexagonal-picnic-table-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-hexagonal-picnic-table-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-hexagonal-picnic-table-cottage-normal.glb",
+      "file": "picnicTable.glb",
+      "bytes": 508008,
+      "sha256": "87b8f46d2203d5717337a709aae9c7baa183ca56e53cc49c2fb3388672c6f530",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.4013678729534149,
+          0,
+          -0.4000000059604645
+        ],
+        "max": [
+          0.4013678729534149,
+          0.2986580729484558,
+          0.4000000059604645
+        ],
+        "size": [
+          0.8027357459068298,
+          0.2986580729484558,
+          0.800000011920929
+        ]
+      }
+    },
+    {
+      "key": "parkBench",
+      "id": "common-furniture-l-shaped-park-bench-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-l-shaped-park-bench-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-l-shaped-park-bench-cottage-normal.glb",
+      "file": "parkBench.glb",
+      "bytes": 490760,
+      "sha256": "6d22f3a8ff7edc9f050de35bb0cda4b9b3e09e7e93b17cf50be075a48f1ba342",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.49471771717071533,
+          0,
+          -0.4000000059604645
+        ],
+        "max": [
+          0.49471771717071533,
+          0.42990338802337646,
+          0.4000000059604645
+        ],
+        "size": [
+          0.9894354343414307,
+          0.42990338802337646,
+          0.800000011920929
+        ]
+      }
+    },
+    {
+      "key": "gardenLantern",
+      "id": "angular-onsen-garden-lantern-candle-insert",
+      "source": "https://karchive.vibeline.co.kr/models/angular-onsen-garden-lantern-candle-insert",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-onsen-garden-lantern-candle-insert.glb",
+      "file": "gardenLantern.glb",
+      "bytes": 365956,
+      "sha256": "10e68157417d5d9ae8dad9c4630ef9e63614f1a25ae50b543bdec4ea18044935",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.23306581377983093,
+          0,
+          -0.21380147337913513
+        ],
+        "max": [
+          0.23306581377983093,
+          1.100000023841858,
+          0.21380147337913513
+        ],
+        "size": [
+          0.46613162755966187,
+          1.100000023841858,
+          0.42760294675827026
+        ]
+      }
+    }
+  ]
+}

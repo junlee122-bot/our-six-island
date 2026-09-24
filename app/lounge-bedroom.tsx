@@ -42,8 +42,10 @@ import { ACTORS } from './theater-data';
 import { Bedroom3D } from './lounge-bedroom-3d';
 import './lounge-bedroom.css';
 
-const CATEGORIES: readonly ['all' | RoomCategory, string][] = [
+type CatalogFilter = 'all' | 'miku' | RoomCategory;
+const CATEGORIES: readonly [CatalogFilter, string][] = [
   ['all', '전체'],
+  ['miku', '미쿠 컬렉션'],
   ['furniture', '가구'],
   ['soft', '패브릭·인형'],
   ['music', '음악'],
@@ -116,17 +118,17 @@ function ResetBedroom({
         onClose();
       }}
     >
-      <h2 id={`${id}-title`}>내 방을 처음 모습으로 되돌릴까요?</h2>
+      <h2 id={`${id}-title`}>새 스튜디오 배치를 적용할까요?</h2>
       <p id={`${id}-description`}>
-        방 배치와 벽·바닥을 처음 모습으로 되돌려요. 입은 옷과 보관한 코디는
-        그대로예요.
+        지금 배치를 새 가구와 소품 배치로 바꿔요. 적용 후 실행 취소로 돌아갈 수
+        있어요. 입은 옷과 보관한 코디는 그대로예요.
       </p>
       <div>
         <button type="button" data-cancel onClick={onClose}>
           취소
         </button>
         <button type="button" className="b-primary" onClick={onReset}>
-          방만 초기화
+          새 디자인 적용
         </button>
       </div>
     </dialog>
@@ -145,7 +147,7 @@ function BedroomDecorator({
   const room = save.bedroom ?? defaultBedroom(save.actor);
   const key = roomKey(room),
     editorId = useId();
-  const [category, setCategory] = useState<'all' | RoomCategory>('all');
+  const [category, setCategory] = useState<CatalogFilter>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preview, setPreview] = useState<RoomItem | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -420,7 +422,11 @@ function BedroomDecorator({
     setDraft(null);
   };
   const visibleProps = ROOM_PROPS.filter(
-    (prop) => category === 'all' || prop.category === category,
+    (prop) =>
+      category === 'all' ||
+      (category === 'miku'
+        ? prop.id.startsWith('miku-') || prop.id === 'twin-tail-figure'
+        : prop.category === category),
   );
   useEffect(() => {
     const editor = editorRef.current;
@@ -444,9 +450,9 @@ function BedroomDecorator({
     <section ref={editorRef} className="l-bedroom" aria-label="내 방 꾸미기">
       <header className="b-heading">
         <div>
-          <span>나만의 작은 공간</span>
+          <span>BEOMDEW ATELIER / 나만의 컬렉션</span>
           <h1>{ACTORS[save.actor]}의 방</h1>
-          <p>좋아하는 것들을 놓고, 편한 자리를 찾아보세요.</p>
+          <p>소품을 골라 옮기고, 좋아하는 것들로 나만의 공간을 완성해요.</p>
         </div>
         <button
           type="button"
@@ -456,7 +462,7 @@ function BedroomDecorator({
             setResetOpen(true);
           }}
         >
-          <RotateCcw size={15} />방 초기화
+          <RotateCcw size={15} />새 디자인 적용
         </button>
       </header>
       <div className="b-layout">
@@ -832,11 +838,11 @@ function BedroomDecorator({
           onReset={() => {
             commit(
               defaultBedroom(saveRef.current.actor),
-              '방을 처음 모습으로 되돌렸어요.',
+              '새 스튜디오 배치를 적용했어요. 실행 취소로 돌아갈 수 있어요.',
             );
             setSelectedId(null);
             setResetOpen(false);
-            notice('내 방을 처음 모습으로 되돌렸어요.');
+            notice('새 스튜디오 배치를 적용했어요.');
           }}
         />
       )}
@@ -869,7 +875,11 @@ export function BedroomEditor(props: {
         </button>
       </nav>
       {view === 'walk' ? (
-        <Bedroom3D save={props.save} onDecorate={() => setView('decorate')} />
+        <Bedroom3D
+          key={props.save.actor}
+          save={props.save}
+          onDecorate={() => setView('decorate')}
+        />
       ) : (
         <BedroomDecorator {...props} />
       )}

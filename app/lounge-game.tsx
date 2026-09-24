@@ -46,6 +46,13 @@ import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
 import { SeotdaTable } from './lounge-seotda-table';
+import { LoungePlayHub } from './lounge-play-hub';
+import {
+  gameFlow,
+  gameIsActive,
+  playerIsBusy,
+  eligibleGameFriends,
+} from './lounge-game-flow';
 import { RoundReady } from './lounge-round-ready';
 import {
   GAME_INFO,
@@ -325,33 +332,22 @@ function RequestGame({
     [chosen, setChosen] = useState<string[]>(
       view.players.filter((p) => p.id !== view.self).map((p) => p.id),
     );
+  const [pending, setPending] = useState(false),
+    [requestError, setRequestError] = useState('');
+  const submitting = useRef(false);
   const needed =
       game === 'poker' || game === 'blackjack' || game === 'seotda'
         ? pokerCount
         : GAME_INFO[game].players,
     reserved = gameReservation(game, stake),
-    active = (k: GameKind) =>
-      k === 'chess'
-        ? !!view.chess && !view.chess.winner
-        : k === 'gostop'
-          ? !!view.gostop && view.gostop.phase !== 'over'
-          : !!view[k] && view[k].phase !== 'over',
-    busy = (id: string) =>
-      Object.values(view.tables ?? {}).some((table) =>
-        table.members.includes(id),
-      ) ||
-      Object.entries(view.seats).some(
-        ([k, seats]) => active(k as GameKind) && seats.includes(id),
-      ) ||
-      view.invites.some(
-        (r) => r.status === 'waiting' && r.accepted.includes(id),
-      ),
+    active = (k: GameKind) => gameIsActive(view, k),
+    busy = (id: string) => playerIsBusy(view, id),
     unavailable =
       !!view.tables?.[game]?.members.length ||
       active(game) ||
       view.invites.some((r) => r.game === game && r.status === 'waiting'),
-    targets = chosen.filter(
-      (id) => view.players.some((p) => p.id === id) && !busy(id),
+    targets = chosen.filter((id) =>
+      eligibleGameFriends(view, game, stake).some((p) => p.id === id),
     );
   return (
     <Modal title="함께할 게임을 골라요" onClose={onClose}>
@@ -359,161 +355,197 @@ function RequestGame({
         게임과 친구를 고르면 로비에 초대장이 도착해요. 필요한 인원이 수락하면
         게임 화면으로 함께 이동합니다.
       </p>
-      <div className="l-game-choices">
-        {GAME_KINDS.map((k) => (
-          <button
-            key={k}
-            aria-pressed={game === k}
-            onClick={() => {
-              setGame(k);
-              setStake(GAME_INFO[k].stake);
-            }}
-          >
-            <span>{GAME_INFO[k].symbol}</span>
-            <strong>{GAME_INFO[k].name}</strong>
-            <small>
-              {k === 'chess'
-                ? '2인 · 한 수의 여유'
-                : k === 'gostop'
-                  ? '3인 · 고와 스톱 사이'
-                  : k === 'seotda'
-                    ? '2–7인 · 두 장의 승부'
-                    : '2–7인 · AI 딜러'}
-            </small>
-          </button>
-        ))}
-      </div>
-      <div className="l-request-heading">
-        <div className="l-money-settings">
-          <label>
-            {game === 'blackjack'
-              ? '기본 베팅'
-              : game === 'poker' || game === 'seotda'
-                ? '바이인'
-                : game === 'gostop'
-                  ? '최대 손실'
-                  : '판돈'}
-            <select
-              aria-label="참가 금액"
-              value={stake}
-              onChange={(e) => setStake(Number(e.target.value))}
+      <fieldset
+        disabled={pending}
+        style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+      >
+        <div className="l-game-choices">
+          {GAME_KINDS.map((k) => (
+            <button
+              key={k}
+              aria-pressed={game === k}
+              onClick={() => {
+                setGame(k);
+                setStake(GAME_INFO[k].stake);
+              }}
             >
-              {[1000, 5000, 10000, 20000].map((n) => (
-                <option key={n} value={n}>
-                  {beom(n)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {(game === 'poker' || game === 'blackjack' || game === 'seotda') && (
+              <span>{GAME_INFO[k].symbol}</span>
+              <strong>{GAME_INFO[k].name}</strong>
+              <small>
+                {k === 'chess'
+                  ? '2인 · 한 수의 여유'
+                  : k === 'gostop'
+                    ? '3인 · 고와 스톱 사이'
+                    : k === 'seotda'
+                      ? '2–7인 · 두 장의 승부'
+                      : '2–7인 · AI 딜러'}
+              </small>
+            </button>
+          ))}
+        </div>
+        <div className="l-request-heading">
+          <div className="l-money-settings">
             <label>
-              정원
+              {game === 'blackjack'
+                ? '기본 베팅'
+                : game === 'poker' || game === 'seotda'
+                  ? '바이인'
+                  : game === 'gostop'
+                    ? '최대 손실'
+                    : '판돈'}
               <select
-                aria-label={GAME_INFO[game].name + ' 정원'}
-                value={pokerCount}
-                onChange={(e) => setPokerCount(Number(e.target.value))}
+                aria-label="참가 금액"
+                value={stake}
+                onChange={(e) => setStake(Number(e.target.value))}
               >
-                {[2, 3, 4, 5, 6, 7].map((n) => (
-                  <option value={n} key={n}>
-                    {n}명
+                {[1000, 5000, 10000, 20000].map((n) => (
+                  <option key={n} value={n}>
+                    {beom(n)}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          <p>
-            {game === 'blackjack'
-              ? `기본 베팅 ${beom(stake)} · 최대 ${beom(reserved)} 예약. 스플릿·더블에 쓰지 않은 금액은 종료 시 반환합니다.`
-              : game === 'seotda'
-                ? '처음에 100범씩 냅니다. 바이인이 최대 손실이며, 재경기는 판돈을 유지하고 추가 참가비 없이 진행합니다.'
-                : game === 'poker'
-                  ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
-                  : game === 'gostop'
-                    ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
-                    : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
-            내 사용 가능 잔액: {beom(view.wallet.balance)}
-          </p>
+            {(game === 'poker' ||
+              game === 'blackjack' ||
+              game === 'seotda') && (
+              <label>
+                정원
+                <select
+                  aria-label={GAME_INFO[game].name + ' 정원'}
+                  value={pokerCount}
+                  onChange={(e) => setPokerCount(Number(e.target.value))}
+                >
+                  {[2, 3, 4, 5, 6, 7].map((n) => (
+                    <option value={n} key={n}>
+                      {n}명
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <p>
+              {game === 'blackjack'
+                ? `기본 베팅 ${beom(stake)} · 최대 ${beom(reserved)} 예약. 스플릿·더블에 쓰지 않은 금액은 종료 시 반환합니다.`
+                : game === 'seotda'
+                  ? '처음에 100범씩 냅니다. 바이인이 최대 손실이며, 재경기는 판돈을 유지하고 추가 참가비 없이 진행합니다.'
+                  : game === 'poker'
+                    ? '블라인드 100 / 200범. 바이인만큼의 칩으로 한 판을 진행합니다.'
+                    : game === 'gostop'
+                      ? '1점 = 100범. 선택한 최대 손실 안에서 정산합니다.'
+                      : '승자가 판돈을 가져가며, 무승부는 전액 돌려받습니다.'}{' '}
+              내 사용 가능 잔액: {beom(view.wallet.balance)}
+            </p>
+          </div>
         </div>
-      </div>
-      <div className="l-request-heading">
-        <h3>누구와 함께할까요?</h3>
-        <small>나 + 친구 {needed - 1}명</small>
-      </div>
-      <div className="l-invite-targets">
-        {view.players
-          .filter((p) => p.id !== view.self)
-          .map((p) => (
-            <button
-              key={p.id}
-              disabled={busy(p.id)}
-              aria-pressed={chosen.includes(p.id)}
-              onClick={() =>
-                setChosen((v) =>
-                  v.includes(p.id)
-                    ? v.filter((id) => id !== p.id)
-                    : [...v, p.id],
-                )
-              }
-            >
-              <AvatarView actor={p.actor} look={p.look} portrait />
-              <strong>{ACTORS[p.actor]}</strong>
-              <span>
-                {busy(p.id) ? (
-                  '게임 중'
-                ) : chosen.includes(p.id) ? (
-                  <Check size={17} />
-                ) : null}
-              </span>
-            </button>
-          ))}
-      </div>
-      {view.players.length < needed && (
+        <div className="l-request-heading">
+          <h3>누구와 함께할까요?</h3>
+          <small>나 + 친구 {needed - 1}명</small>
+        </div>
+        <div className="l-invite-targets">
+          {view.players
+            .filter((p) => p.id !== view.self)
+            .map((p) => (
+              <button
+                key={p.id}
+                disabled={
+                  busy(p.id) ||
+                  !eligibleGameFriends(view, game, stake).some(
+                    (friend) => friend.id === p.id,
+                  )
+                }
+                aria-pressed={chosen.includes(p.id)}
+                onClick={() =>
+                  setChosen((v) =>
+                    v.includes(p.id)
+                      ? v.filter((id) => id !== p.id)
+                      : [...v, p.id],
+                  )
+                }
+              >
+                <AvatarView actor={p.actor} look={p.look} portrait />
+                <strong>{ACTORS[p.actor]}</strong>
+                <span>
+                  {busy(p.id) ? (
+                    '다른 테이블 참가 중'
+                  ) : !eligibleGameFriends(view, game, stake).some(
+                      (friend) => friend.id === p.id,
+                    ) ? (
+                    '잔액 부족'
+                  ) : chosen.includes(p.id) ? (
+                    <Check size={17} />
+                  ) : null}
+                </span>
+              </button>
+            ))}
+        </div>
+        {targets.length < needed - 1 && (
+          <p className="l-help-text">
+            참가 가능한 친구를 {needed - 1}명 이상 선택해 주세요. 금액을
+            줄이거나 친구를 초대할 수 있어요.
+          </p>
+        )}
+        {unavailable && (
+          <p className="l-error">
+            이 게임은 이미 진행 중이거나 친구들의 수락을 기다리고 있어요.
+          </p>
+        )}
+        {busy(view.self) && (
+          <p className="l-error">
+            참가한 게임 또는 기다리는 초대가 있어요. 먼저 마친 뒤 요청해 주세요.
+          </p>
+        )}
         <p className="l-help-text">
-          접속한 친구가 더 필요해요. 초대 코드를 친구에게 전달해 주세요.
+          여러 명에게 보내면 먼저 수락한 {needed - 1}명과 시작합니다. 초대장은
+          90초 동안 유효해요.
+        </p>
+      </fieldset>
+      {requestError && (
+        <p className="l-error" role="alert">
+          {requestError}
         </p>
       )}
-      {unavailable && (
-        <p className="l-error">
-          이 게임은 이미 진행 중이거나 친구들의 수락을 기다리고 있어요.
-        </p>
-      )}
-      {busy(view.self) && (
-        <p className="l-error">
-          참가한 게임 또는 기다리는 초대가 있어요. 먼저 마친 뒤 요청해 주세요.
-        </p>
-      )}
-      <p className="l-help-text">
-        여러 명에게 보내면 먼저 수락한 {needed - 1}명과 시작합니다. 초대장은
-        90초 동안 유효해요.
-      </p>
       <div className="l-modal-actions">
-        <button className="l-secondary" onClick={onClose}>
+        <button className="l-secondary" onClick={onClose} disabled={pending}>
           다음에
         </button>
         <button
           className="l-primary"
           disabled={
+            pending ||
             unavailable ||
             busy(view.self) ||
             targets.length < needed - 1 ||
             view.wallet.balance < reserved
           }
           onClick={async () => {
-            if (
-              await room.action({
+            if (submitting.current) return;
+            submitting.current = true;
+            setPending(true);
+            setRequestError('');
+            try {
+              const ok = await room.action({
                 kind: 'invite',
                 game,
                 players: targets,
                 stake,
                 required: needed,
-              })
-            ) {
-              onClose();
-              notice('친구들의 참가 응답을 기다립니다.');
+              });
+              if (ok) {
+                onClose();
+                notice('친구들의 참가 응답을 기다립니다.');
+              } else
+                setRequestError(
+                  '초대를 보내지 못했어요. 접속 상태와 참가 가능 인원을 확인하고 다시 시도해 주세요.',
+                );
+            } catch {
+              setRequestError('연결이 잠시 끊겼어요. 다시 시도해 주세요.');
+            } finally {
+              submitting.current = false;
+              setPending(false);
             }
           }}
         >
-          초대장 보내기
+          {pending ? '초대 보내는 중…' : '초대장 보내기'}
           <Send size={15} />
         </button>
       </div>
@@ -521,6 +553,31 @@ function RequestGame({
   );
 }
 function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
+  const [pending, setPending] = useState<string | null>(null),
+    [error, setError] = useState('');
+  const inFlight = useRef(false);
+  const respond = async (id: string, accept?: boolean) => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setPending(id);
+    setError('');
+    try {
+      const ok = await room.action(
+        accept === undefined
+          ? { kind: 'cancel', id }
+          : { kind: 'reply', id, accept },
+      );
+      if (!ok)
+        setError(
+          '처리하지 못했어요. 초대 상태와 연결을 확인한 뒤 다시 눌러 주세요.',
+        );
+    } catch {
+      setError('연결이 잠시 끊겼어요. 다시 시도해 주세요.');
+    } finally {
+      inFlight.current = false;
+      setPending(null);
+    }
+  };
   const relevant = view.invites.filter(
     (r) =>
       (r.from === view.self || r.invited.includes(view.self)) &&
@@ -529,6 +586,11 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
   if (!relevant.length) return null;
   return (
     <div className="l-invitations" aria-live="polite">
+      {error && (
+        <p className="l-error" role="alert">
+          {error}
+        </p>
+      )}
       {relevant.map((r) => {
         const accepted = r.accepted.includes(view.self),
           declined = r.declined.includes(view.self),
@@ -565,7 +627,8 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
             {accepted ? (
               <button
                 className="l-text"
-                onClick={() => void room.action({ kind: 'cancel', id: r.id })}
+                disabled={!!pending}
+                onClick={() => void respond(r.id)}
               >
                 초대 취소
               </button>
@@ -574,11 +637,10 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                 <button
                   className="l-primary"
                   disabled={
+                    !!pending ||
                     view.wallet.balance < gameReservation(r.game, r.stake)
                   }
-                  onClick={() =>
-                    void room.action({ kind: 'reply', id: r.id, accept: true })
-                  }
+                  onClick={() => void respond(r.id, true)}
                 >
                   {view.wallet.balance < gameReservation(r.game, r.stake)
                     ? '범 잔액 부족'
@@ -586,9 +648,8 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                 </button>
                 <button
                   className="l-text"
-                  onClick={() =>
-                    void room.action({ kind: 'reply', id: r.id, accept: false })
-                  }
+                  disabled={!!pending}
+                  onClick={() => void respond(r.id, false)}
                 >
                   다음에
                 </button>
@@ -924,6 +985,8 @@ function AccountLounge({
       | 'credits'
       | 'reset'
       | 'request'
+      | 'games'
+      | 'invitations'
       | 'wallet'
       | 'account'
       | 'menu'
@@ -1031,7 +1094,7 @@ function AccountLounge({
       if (
         prev === 'waiting' &&
         (invite.status === 'cancelled' || invite.status === 'expired') &&
-        (invite.from === view.self || invite.accepted.includes(view.self))
+        (invite.from === view.self || invite.invited.includes(view.self))
       )
         notice(
           invite.status === 'expired'
@@ -1142,19 +1205,22 @@ function AccountLounge({
   };
   const requestGame = (kind: GameKind | null) => {
     setRequestKind(kind);
-    setModal(view.status === 'connected' ? 'request' : 'friends');
+    setModal(
+      view.status !== 'connected'
+        ? 'friends'
+        : !kind || playerIsBusy(view, view.self)
+          ? 'games'
+          : 'request',
+    );
   };
   const openTable = (kind: GameKind) => {
-    if (
-      view.status === 'connected' &&
-      (kind === 'chess'
-        ? view.chess
-        : kind === 'gostop'
-          ? view.gostop
-          : view[kind])
-    )
+    const flow = gameFlow(view, kind);
+    if (flow.canOpen) {
+      setModal(null);
       setGameScreen(kind);
-    else requestGame(kind);
+    } else if (flow.canShowInvitations) setModal('invitations');
+    else if (flow.canRequest) requestGame(kind);
+    else setModal(view.status === 'connected' ? 'games' : 'friends');
   };
   const self = view.status === 'connected' ? view.self : 'local';
   const players =
@@ -1865,6 +1931,27 @@ function AccountLounge({
               친구들과 시작하기
             </button>
           )}
+        </Modal>
+      )}
+      {modal === 'games' && (
+        <Modal title="함께할 게임" onClose={() => setModal(null)}>
+          <LoungePlayHub
+            view={view}
+            onOpen={openTable}
+            onRequest={requestGame}
+            onWaiting={() => setModal('invitations')}
+          />
+        </Modal>
+      )}
+      {modal === 'invitations' && (
+        <Modal title="초대와 참가 현황" onClose={() => setModal(null)}>
+          <Invitations room={room} view={view} />
+          <p className="l-help-text">
+            필요한 친구가 모두 수락하면 함께 게임으로 이동해요.
+          </p>
+          <button className="l-secondary" onClick={() => setModal('games')}>
+            게임 현황 보기
+          </button>
         </Modal>
       )}
       {modal === 'request' && (

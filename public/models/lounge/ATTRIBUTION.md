@@ -34,3 +34,23 @@ Downloaded and inspected 2026-09-23. Eleven original, self-contained GLB files a
 Included: Double Bed Upholstered, Desk Writing, Bookcase 5 Shelf, Rug Wool Large, Desk Task Chair, Table Lamp Dome, Side Table Square Drawer, Wardrobe 2 Door, Coffee Table Rect, Curtains Linen Pair and Cushion Set 4.
 
 Original bytes are unmodified. At runtime the game fits scale/orientation to room furniture bounds, adjusts the bed fabric color, and stretches the flat rug/curtains to their intended surfaces. The cabinet and drawer animation clips are not played. The files use material colors and embedded geometry, require no external texture/buffer requests, and are served from the game's own content-hashed asset URLs.
+
+## kArchive village expansion and room redesign · 2026-09-24
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Six original, self-contained GLB files were downloaded from the official model detail pages on 2026-09-24. Their original bytes are preserved; the game applies placement, scale and orientation at runtime. All six models contain one mesh and one embedded texture, with no external buffer/image URIs and no required extensions. Together they total 2,961,568 bytes.
+
+Village files under `public/models/village/expansion/`:
+
+- picnicTable.glb: https://karchive.vibeline.co.kr/models/common-furniture-hexagonal-picnic-table-cottage-normal
+- parkBench.glb: https://karchive.vibeline.co.kr/models/common-furniture-l-shaped-park-bench-cottage-normal
+- gardenLantern.glb: https://karchive.vibeline.co.kr/models/angular-onsen-garden-lantern-candle-insert
+
+Room files under `public/models/lounge/redesign/`:
+
+- archiveBookcase.glb: https://karchive.vibeline.co.kr/models/common-furniture-open-bookcase-cottage-normal
+- plantStand.glb: https://karchive.vibeline.co.kr/models/angular-common-furniture-plant-stand-three-pots
+- teaTable.glb: https://karchive.vibeline.co.kr/models/angular-common-furniture-coffee-table-tea-tray
+
+Each directory's `assets.json` records the official detail/download URLs, SHA-256, byte size and transformed bounds. The source detail pages display permission for personal/commercial projects and modification, mandatory attribution, and prohibition on resale of original assets. No Creative Commons license is asserted. Files are served from the game's own content-hashed URLs without contacting the provider during gameplay.

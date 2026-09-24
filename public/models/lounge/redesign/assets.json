@@ -1,0 +1,97 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-24",
+  "terms": "개인·상업 프로젝트 사용 및 수정 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면·크레딧·설명란에 자료: kArchive / 출처: 쓰레드 dogfooter 필수.",
+  "modifications": "원본 GLB 바이트 유지. 런타임 크기·위치·방향만 적용.",
+  "assets": [
+    {
+      "key": "archiveBookcase",
+      "id": "common-furniture-open-bookcase-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-open-bookcase-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-open-bookcase-cottage-normal.glb",
+      "file": "archiveBookcase.glb",
+      "bytes": 527108,
+      "sha256": "9e4cc58d47b28976c33ded90bb79f641ebf3300e3fd280de58ae484c4f7337ae",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.46041107177734375,
+          0,
+          -0.20216381549835205
+        ],
+        "max": [
+          0.46041107177734375,
+          1,
+          0.20216381549835205
+        ],
+        "size": [
+          0.9208221435546875,
+          1,
+          0.4043276309967041
+        ]
+      }
+    },
+    {
+      "key": "plantStand",
+      "id": "angular-common-furniture-plant-stand-three-pots",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-furniture-plant-stand-three-pots",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-furniture-plant-stand-three-pots.glb",
+      "file": "plantStand.glb",
+      "bytes": 674296,
+      "sha256": "fcf764d3f83a6485280b954589dc28242290c9e99ccf7373d017e0100998fb76",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.3499999940395355,
+          0,
+          -0.13824410736560822
+        ],
+        "max": [
+          0.3499999940395355,
+          0.855358362197876,
+          0.13824410736560822
+        ],
+        "size": [
+          0.699999988079071,
+          0.855358362197876,
+          0.27648821473121643
+        ]
+      }
+    },
+    {
+      "key": "teaTable",
+      "id": "angular-common-furniture-coffee-table-tea-tray",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-furniture-coffee-table-tea-tray",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-furniture-coffee-table-tea-tray.glb",
+      "file": "teaTable.glb",
+      "bytes": 395440,
+      "sha256": "a190988da8a57134e1c419636ec7d14c0e1078b6acedb494f0126f9fbe8585ba",
+      "meshes": 1,
+      "textures": 1,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.3082100749015808,
+          0,
+          -0.3075856864452362
+        ],
+        "max": [
+          0.3082100749015808,
+          0.4000000059604645,
+          0.3075856864452362
+        ],
+        "size": [
+          0.6164201498031616,
+          0.4000000059604645,
+          0.6151713728904724
+        ]
+      }
+    }
+  ]
+}

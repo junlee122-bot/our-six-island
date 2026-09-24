@@ -26,6 +26,7 @@ const item = (id, prop = 'bed', more = {}) => ({
 });
 const custom = {
   version: 1,
+  designVersion: 2,
   wall: 'blue',
   floor: 'walnut',
   items: [
@@ -71,6 +72,7 @@ test('room roundtrip keeps exact item order, flip, colors, and intentional empty
 test('untrusted item data cannot escape catalog, IDs, item limit, or numeric bounds', () => {
   const source = {
     version: 1,
+    designVersion: 2,
     wall: '<script>',
     floor: '__proto__',
     items: [
@@ -125,8 +127,8 @@ test('untrusted item data cannot escape catalog, IDs, item limit, or numeric bou
 });
 
 test('every approved prop is available to every account, with stable placement metadata', () => {
-  assert.equal(ROOM_PROPS.length, 28);
-  assert.equal(new Set(ROOM_PROPS.map((p) => p.id)).size, 28);
+  assert.equal(ROOM_PROPS.length, 36);
+  assert.equal(new Set(ROOM_PROPS.map((p) => p.id)).size, 36);
   for (let actor = 0; actor < 7; actor++) {
     const result = accountSave(
       {
@@ -138,7 +140,7 @@ test('every approved prop is available to every account, with stable placement m
       },
       actor,
     );
-    assert.equal(result.bedroom.items.length, 28);
+    assert.equal(result.bedroom.items.length, 36);
     for (const prop of ROOM_PROPS) {
       assert.ok(prop.width > 0 && ROOM_PROP_BY_ID[prop.id] === prop);
       assert.ok(['floor', 'wall', 'rug'].includes(prop.placement));
@@ -266,4 +268,37 @@ test('sanitized worst-case room and outfits fit below the existing 64 KiB jsonb 
   // Pretty-printed whitespace is larger than Postgres jsonb's separator spaces.
   assert.ok(Buffer.byteLength(JSON.stringify(safe, null, 2)) < 65536);
   assert.deepEqual(accountSave(safe, 0), safe);
+});
+
+test('the requested redesign replaces legacy rooms once for seven friends and preserves later edits', () => {
+  for (let actor = 0; actor < 7; actor++) {
+    const legacy = { ...custom };
+    delete legacy.designVersion;
+    assert.deepEqual(readBedroom(legacy, actor), defaultBedroom(actor));
+    const edited = {
+      ...defaultBedroom(actor),
+      wall: 'blue',
+      floor: 'walnut',
+      items: [item('my-miku', 'miku-acrylic', { x: 72, y: 61, scale: 0.9 })],
+    };
+    assert.deepEqual(readBedroom(edited, actor), edited);
+    assert.deepEqual(readBedroom({ ...edited, items: [] }, actor).items, []);
+    assert.equal(defaultBedroom(actor).designVersion, 2);
+    assert.equal(
+      new Set(defaultBedroom(actor).items.map((i) => i.id)).size,
+      defaultBedroom(actor).items.length,
+    );
+  }
+  assert.equal(
+    new Set(
+      Array.from({ length: 7 }, (_, actor) =>
+        JSON.stringify(defaultBedroom(actor)),
+      ),
+    ).size,
+    7,
+  );
+  assert.equal(
+    defaultBedroom(0).items.filter((i) => i.prop.startsWith('miku-')).length,
+    8,
+  );
 });

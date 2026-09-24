@@ -16,8 +16,66 @@ export type VillagePlace = {
   destination: VillageDestination;
 };
 
-export const VILLAGE_BOUNDS = { width: 50, depth: 38, radius: 0.35 } as const;
+export const VILLAGE_BOUNDS = { width: 80, depth: 60, radius: 0.35 } as const;
 export const VILLAGE_START: VillagePoint = { x: 0, z: 10 };
+
+export const VILLAGE_RIVER = {
+  minZ: 14,
+  maxZ: 16,
+  bridges: [
+    { x: -27, halfWidth: 2.5 },
+    { x: 0, halfWidth: 2.5 },
+    { x: 27, halfWidth: 2.5 },
+  ],
+} as const;
+
+export const VILLAGE_DISTRICTS = [
+  {
+    id: 'west-orchard',
+    name: '과수원 피크닉',
+    description: '서쪽 언덕의 과수원과 피크닉 자리',
+    point: { x: -32, z: 5 },
+    color: '#bc8153',
+  },
+  {
+    id: 'south-camp',
+    name: '강변 캠프',
+    description: '세 다리 아래 남쪽 강변 쉼터',
+    point: { x: 5, z: 24 },
+    color: '#668c68',
+  },
+  {
+    id: 'east-boardwalk',
+    name: '동쪽 산책길',
+    description: '정원과 강을 따라 이어지는 나무 데크',
+    point: { x: 33, z: -5 },
+    color: '#57918c',
+  },
+  {
+    id: 'north-forest',
+    name: '북쪽 숲길',
+    description: '마을 뒤편 숲속 산책로',
+    point: { x: 0, z: -26 },
+    color: '#547552',
+  },
+] as const;
+
+export const VILLAGE_SCENIC_TREES = [
+  { x: -30, z: -27, radius: 0.9, scale: 0.92 },
+  { x: -20, z: -28, radius: 0.85, scale: 0.86 },
+  { x: 20, z: -28, radius: 0.85, scale: 0.86 },
+  { x: 30, z: -27, radius: 0.9, scale: 0.92 },
+  { x: -38, z: -23, radius: 1.05, scale: 1.15 },
+  { x: -38, z: -16, radius: 0.85, scale: 0.95 },
+  { x: -38, z: 22, radius: 1, scale: 1.1 },
+  { x: 38, z: -22, radius: 1.05, scale: 1.15 },
+  { x: 38, z: -15, radius: 0.85, scale: 0.95 },
+  { x: 38, z: 22, radius: 1, scale: 1.1 },
+  { x: -20, z: 27, radius: 0.85, scale: 0.9 },
+  { x: -14, z: 28, radius: 0.8, scale: 0.84 },
+  { x: 18, z: 27, radius: 0.85, scale: 0.9 },
+  { x: 24, z: 26, radius: 0.8, scale: 0.86 },
+] as const;
 
 const homeNames = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'];
 const homePositions: readonly VillagePoint[] = [
@@ -124,6 +182,9 @@ export const VILLAGE_ORCHARD: readonly VillagePoint[] = [
   { x: 10, z: -17.7 },
   { x: 22, z: -13 },
   { x: 8, z: 12 },
+  { x: -36, z: -5 },
+  { x: -36, z: 5 },
+  { x: -36, z: 14 },
 ];
 export const VILLAGE_FARMLAND = {
   id: 'farmland',
@@ -134,8 +195,74 @@ export const VILLAGE_FARMLAND = {
 } as const;
 export const VILLAGE_FARMLAND_ENTRY: VillagePoint = { x: 8.75, z: 4.45 };
 
+/** Matching footprints keep imported kArchive props out of walking routes. */
+export const VILLAGE_FURNISHINGS = [
+  {
+    id: 'orchardPicnic',
+    model: 'picnicTable',
+    x: -32,
+    z: 1,
+    width: 3,
+    depth: 3,
+    height: 1.3,
+  },
+  {
+    id: 'campPicnic',
+    model: 'picnicTable',
+    x: 7,
+    z: 21,
+    width: 3,
+    depth: 3,
+    height: 1.3,
+  },
+  {
+    id: 'boardwalkBench',
+    model: 'parkBench',
+    x: 33,
+    z: -9,
+    width: 3,
+    depth: 2.5,
+    height: 1.4,
+  },
+  {
+    id: 'forestBench',
+    model: 'parkBench',
+    x: 5,
+    z: -26,
+    width: 3,
+    depth: 2.5,
+    height: 1.4,
+  },
+  {
+    id: 'eastLantern',
+    model: 'gardenLantern',
+    x: 29,
+    z: -5,
+    width: 0.8,
+    depth: 0.8,
+    height: 1.9,
+  },
+  {
+    id: 'orchardLantern',
+    model: 'gardenLantern',
+    x: -30,
+    z: 8,
+    width: 0.8,
+    depth: 0.8,
+    height: 1.9,
+  },
+  {
+    id: 'campLantern',
+    model: 'gardenLantern',
+    x: 3,
+    z: 21,
+    width: 0.8,
+    depth: 0.8,
+    height: 1.9,
+  },
+] as const;
+
 const FOUNTAIN = { x: 0, z: 0, radius: 2 } as const;
-const RIVER = { minZ: 14, maxZ: 16, bridgeHalfWidth: 2.5 } as const;
 
 export function villageCanWalk(point: VillagePoint): boolean {
   const { width, depth, radius } = VILLAGE_BOUNDS;
@@ -157,6 +284,11 @@ export function villageCanWalk(point: VillagePoint): boolean {
     Math.abs(point.z - VILLAGE_FARMLAND.z) <
       VILLAGE_FARMLAND.depth / 2 + radius;
   if (
+    VILLAGE_FURNISHINGS.some(
+      (prop) =>
+        Math.abs(point.x - prop.x) < prop.width / 2 + radius &&
+        Math.abs(point.z - prop.z) < prop.depth / 2 + radius,
+    ) ||
     blockedByPlace ||
     blockedByFarm ||
     (Math.abs(point.x - VILLAGE_TERRACE.x) <
@@ -169,6 +301,10 @@ export function villageCanWalk(point: VillagePoint): boolean {
   if (
     VILLAGE_ORCHARD.some(
       (tree) => Math.hypot(point.x - tree.x, point.z - tree.z) < 0.9,
+    ) ||
+    VILLAGE_SCENIC_TREES.some(
+      (tree) =>
+        Math.hypot(point.x - tree.x, point.z - tree.z) < tree.radius + radius,
     )
   )
     return false;
@@ -178,9 +314,12 @@ export function villageCanWalk(point: VillagePoint): boolean {
   if (dx * dx + dz * dz < (FOUNTAIN.radius + radius) ** 2) return false;
 
   const touchesRiver =
-    point.z + radius > RIVER.minZ && point.z - radius < RIVER.maxZ;
-  if (touchesRiver && Math.abs(point.x) + radius > RIVER.bridgeHalfWidth)
-    return false;
+    point.z + radius > VILLAGE_RIVER.minZ &&
+    point.z - radius < VILLAGE_RIVER.maxZ;
+  const onBridge = VILLAGE_RIVER.bridges.some(
+    (bridge) => Math.abs(point.x - bridge.x) + radius <= bridge.halfWidth,
+  );
+  if (touchesRiver && !onBridge) return false;
   return true;
 }
 
@@ -245,24 +384,85 @@ const GRID_WALKABLE = Uint8Array.from(GRID_POINTS, (point) =>
   Number(villageCanWalk(point)),
 );
 
+// Cache the static walkable graph once. Expanding bounds increases the grid
+// area; rebuilding collision/raycast checks inside every BFS would multiply cost.
+const GRID_NEIGHBORS = new Int32Array(COLS * ROWS * 8).fill(-1);
+const GRID_DEGREE = new Uint8Array(COLS * ROWS);
+for (let id = 0; id < COLS * ROWS; id++) {
+  if (!GRID_WALKABLE[id]) continue;
+  const x = id % COLS;
+  for (const offset of [
+    -COLS - 1,
+    -COLS,
+    -COLS + 1,
+    -1,
+    1,
+    COLS - 1,
+    COLS,
+    COLS + 1,
+  ]) {
+    const next = id + offset;
+    if (next < 0 || next >= COLS * ROWS || !GRID_WALKABLE[next]) continue;
+    const nextX = next % COLS;
+    if (Math.abs(nextX - x) > 1) continue;
+    if (
+      nextX !== x &&
+      Math.abs(offset) !== COLS &&
+      (!GRID_WALKABLE[id + (nextX > x ? 1 : -1)] ||
+        !GRID_WALKABLE[id + (offset > 0 ? COLS : -COLS)])
+    )
+      continue;
+    const slot = GRID_DEGREE[id] ?? 0;
+    GRID_NEIGHBORS[id * 8 + slot] = next;
+    GRID_DEGREE[id] = slot + 1;
+  }
+}
+
 function nearestWalkableId(
   point: VillagePoint,
   visibleFrom?: VillagePoint,
 ): number | null {
   let nearest = -1;
   let best = Number.POSITIVE_INFINITY;
-  for (let id = 0; id < COLS * ROWS; id++) {
-    if (!GRID_WALKABLE[id]) continue;
-    const candidate = GRID_POINTS[id];
-    if (!candidate) continue;
-    const distance =
-      (candidate.x - point.x) ** 2 + (candidate.z - point.z) ** 2;
-    if (distance >= best) continue;
-    if (visibleFrom && !villageLineClear(visibleFrom, candidate)) continue;
-    if (distance < best) {
-      best = distance;
-      nearest = id;
+  const centerCol = clamp(
+    Math.round((point.x + VILLAGE_BOUNDS.width / 2) / GRID),
+    0,
+    COLS - 1,
+  );
+  const centerRow = clamp(
+    Math.round((point.z + VILLAGE_BOUNDS.depth / 2) / GRID),
+    0,
+    ROWS - 1,
+  );
+  for (let ring = 0; ring < Math.max(COLS, ROWS); ring++) {
+    const minRow = Math.max(0, centerRow - ring);
+    const maxRow = Math.min(ROWS - 1, centerRow + ring);
+    const minCol = Math.max(0, centerCol - ring);
+    const maxCol = Math.min(COLS - 1, centerCol + ring);
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        if (
+          ring &&
+          row !== minRow &&
+          row !== maxRow &&
+          col !== minCol &&
+          col !== maxCol
+        )
+          continue;
+        const id = row * COLS + col;
+        if (!GRID_WALKABLE[id]) continue;
+        const candidate = GRID_POINTS[id];
+        if (!candidate) continue;
+        const distance =
+          (candidate.x - point.x) ** 2 + (candidate.z - point.z) ** 2;
+        if (distance >= best) continue;
+        if (visibleFrom && !villageLineClear(visibleFrom, candidate)) continue;
+        best = distance;
+        nearest = id;
+      }
     }
+    const nextRingMinimum = Math.max(0, ring + 0.5) * GRID;
+    if (nearest >= 0 && nextRingMinimum ** 2 > best) break;
   }
   return nearest < 0 ? null : nearest;
 }
@@ -292,31 +492,15 @@ export function villagePath(
   let tail = 0;
   parent[startId] = -1;
   queue[tail++] = startId;
-  const offsets = [
-    -COLS - 1,
-    -COLS,
-    -COLS + 1,
-    -1,
-    1,
-    COLS - 1,
-    COLS,
-    COLS + 1,
-  ];
-  while (head < tail && parent[targetId] === -2) {
+  const maxExpansions = total;
+  let expansions = 0;
+  while (head < tail && parent[targetId] === -2 && expansions < maxExpansions) {
     const current = queue[head++];
-    const x = current % COLS;
-    for (const offset of offsets) {
-      const next = current + offset;
-      if (next < 0 || next >= total || parent[next] !== -2) continue;
-      const nextX = next % COLS;
-      if (Math.abs(nextX - x) > 1 || !GRID_WALKABLE[next]) continue;
-      if (
-        nextX !== x &&
-        Math.abs(offset) !== COLS &&
-        (!GRID_WALKABLE[current + (nextX > x ? 1 : -1)] ||
-          !GRID_WALKABLE[current + (offset > 0 ? COLS : -COLS)])
-      )
-        continue;
+    expansions++;
+    const degree = GRID_DEGREE[current] ?? 0;
+    for (let index = 0; index < degree; index++) {
+      const next = GRID_NEIGHBORS[current * 8 + index];
+      if (next < 0 || parent[next] !== -2) continue;
       parent[next] = current;
       queue[tail++] = next;
       if (next === targetId) break;

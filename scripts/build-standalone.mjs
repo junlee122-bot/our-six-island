@@ -26,8 +26,8 @@ const modelManifest = fs.readFileSync(
 const models = [...modelManifest.matchAll(/["']\/models\/([^'" ]+)["']/g)].map(
   (match) => match[1],
 );
-if (models.length !== 18 || new Set(models).size !== 18)
-  throw new Error('The village and room manifest must include all 18 curated models.');
+if (models.length !== 24 || new Set(models).size !== 24)
+  throw new Error('The village and room manifest must include all 24 curated models.');
 const assetDirectory = path.join(root, 'docs/assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 const replacements = new Map(

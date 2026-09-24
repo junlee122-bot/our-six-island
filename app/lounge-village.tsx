@@ -31,6 +31,7 @@ import {
   type LocomotionState,
 } from './lounge-locomotion';
 import { LOUNGE_MODELS } from './lounge-model-assets';
+import { villageCameraFrame } from './lounge-village-camera';
 import { buildVillageWorld } from './lounge-village-world';
 import {
   villageCanEnterPlace,
@@ -38,9 +39,13 @@ import {
   type NearbyVillageEntrance,
 } from './lounge-village-entrance';
 import {
+  VILLAGE_BOUNDS,
+  VILLAGE_DISTRICTS,
+  VILLAGE_RIVER,
   VILLAGE_PLACES,
   VILLAGE_START,
   VILLAGE_ORCHARD,
+  VILLAGE_FURNISHINGS,
   villageCanWalk,
   villageFromNetwork,
   villageToNetwork,
@@ -116,6 +121,8 @@ export function Village3D(props: Props) {
   }, [props]);
   const hostRef = useRef<HTMLDivElement>(null),
     labelsRef = useRef<HTMLDivElement>(null);
+  const miniSelfRef = useRef<SVGCircleElement>(null);
+  const routeRef = useRef<HTMLOutputElement>(null);
   const requestedPlace = useRef<VillagePlace | null>(null);
   const directions = useRef(new Set<Direction>());
   const runToggle = useRef(false),
@@ -127,6 +134,8 @@ export function Village3D(props: Props) {
     zoom: (delta: number) => void;
     home: () => void;
     overview: () => void;
+    visit: (point: VillagePoint) => void;
+    stop: () => void;
   } | null>(null);
   const [state, setState] = useState<
     'loading' | 'ready' | 'partial' | 'unavailable'
@@ -134,9 +143,11 @@ export function Village3D(props: Props) {
   const [selected, setSelected] = useState<VillagePlace | null>(null),
     [directory, setDirectory] = useState(false),
     [nearby, setNearby] = useState<NearbyVillageEntrance | null>(null);
+  const [district, setDistrict] = useState<string | null>(null);
   const nearbyId = useRef<string | null>(null);
   const select = (place: VillagePlace) => {
     requestedPlace.current = place;
+    setDistrict(null);
     setSelected(place);
     setDirectory(false);
     controls.current?.go(place);
@@ -196,10 +207,10 @@ export function Village3D(props: Props) {
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     Object.assign(sun.shadow.camera, {
-      left: -37,
-      right: 37,
-      top: 34,
-      bottom: -34,
+      left: -55,
+      right: 55,
+      top: 48,
+      bottom: -48,
       near: 1,
       far: 110,
     });
@@ -210,9 +221,15 @@ export function Village3D(props: Props) {
     const camera = new THREE.OrthographicCamera(-36, 36, 24, -24, 0.1, 180);
     const target = new THREE.Vector3(0, 0, 0),
       desiredTarget = target.clone();
-    let zoom = host.clientWidth < 600 ? 2.15 : 1,
+    let followZoom = villageCameraFrame(
+      host.clientWidth,
+      host.clientHeight,
+      VILLAGE_BOUNDS.width,
+      VILLAGE_BOUNDS.depth,
+    ).followZoom;
+    let zoom = followZoom,
       desiredZoom = zoom;
-    let follow = host.clientWidth < 600;
+    let follow = true;
     const offset = new THREE.Vector3(34, 43, 52);
     const me = latest.current.players.find((p) => p.id === latest.current.self);
     const networkStart = me ? villageFromNetwork(me) : VILLAGE_START;
@@ -223,6 +240,8 @@ export function Village3D(props: Props) {
     let position: VillagePoint = safePosition(
       latest.current.initialPosition ?? networkStart,
     );
+    target.set(position.x, 0, position.z - 1.2);
+    desiredTarget.copy(target);
     let path: VillagePoint[] = [];
     let entryIntent: VillagePlace | null = null;
     let lastEntranceCheck = -1000;
@@ -254,18 +273,25 @@ export function Village3D(props: Props) {
       marker.visible = !!end;
       if (end) marker.position.set(end.x, 0.19, end.z);
       follow = true;
-      desiredZoom = Math.max(desiredZoom, host.clientWidth < 600 ? 2.35 : 1.6);
+      desiredZoom = Math.max(desiredZoom, followZoom);
       host.focus({ preventScroll: true });
     };
     controls.current = {
+      visit: (point) => {
+        requestedPlace.current = null;
+        goTo(point);
+      },
+      stop: () => {
+        path = [];
+        entryIntent = null;
+        requestedPlace.current = null;
+        marker.visible = false;
+      },
       go: (place) => {
         requestedPlace.current = place;
         goTo(place.entry);
         follow = true;
-        desiredZoom = Math.max(
-          desiredZoom,
-          host.clientWidth < 600 ? 2.35 : 1.6,
-        );
+        desiredZoom = Math.max(desiredZoom, followZoom);
       },
       enter: (place) => {
         requestedPlace.current = place;
@@ -273,17 +299,18 @@ export function Village3D(props: Props) {
           goTo(place.entry, place);
         else goTo(place.entry);
         follow = true;
-        desiredZoom = Math.max(
-          desiredZoom,
-          host.clientWidth < 600 ? 2.35 : 1.6,
-        );
+        desiredZoom = Math.max(desiredZoom, followZoom);
       },
       zoom: (delta) => {
-        desiredZoom = THREE.MathUtils.clamp(desiredZoom + delta, 0.8, 3.5);
+        desiredZoom = THREE.MathUtils.clamp(
+          desiredZoom + delta,
+          0.8,
+          Math.max(8, followZoom * 1.7),
+        );
       },
       home: () => {
         follow = true;
-        desiredZoom = host.clientWidth < 600 ? 2.45 : 2.05;
+        desiredZoom = followZoom;
       },
       overview: () => {
         follow = false;
@@ -493,6 +520,17 @@ export function Village3D(props: Props) {
           4,
         ),
       );
+    for (const prop of VILLAGE_FURNISHINGS)
+      originalJobs.push(
+        placeOriginal(
+          LOUNGE_MODELS[prop.model],
+          prop.id,
+          prop,
+          prop.width,
+          prop.depth,
+          prop.height,
+        ),
+      );
     const spritesJob = loungeSprites().then(async (value) => {
       if (!disposed) sprites = value;
       if (
@@ -552,6 +590,20 @@ export function Village3D(props: Props) {
       shadow.scale.y = 0.65;
       const group = new THREE.Group();
       group.add(sprite, shadow);
+      if (p.id === latest.current.self) {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.49, 0.63, 40),
+          new THREE.MeshBasicMaterial({
+            color: '#ffe4a0',
+            transparent: true,
+            opacity: 0.95,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.18;
+        group.add(ring);
+      }
       scene.add(group);
       const npc = p.id.startsWith('friend-');
       const entry =
@@ -617,8 +669,16 @@ export function Village3D(props: Props) {
         desiredTarget.addScaledVector(right, -(e.clientX - press.x) * units);
         desiredTarget.addScaledVector(up, (e.clientY - press.y) * units * 1.4);
         desiredTarget.y = 0;
-        desiredTarget.x = THREE.MathUtils.clamp(desiredTarget.x, -23, 23);
-        desiredTarget.z = THREE.MathUtils.clamp(desiredTarget.z, -17, 17);
+        desiredTarget.x = THREE.MathUtils.clamp(
+          desiredTarget.x,
+          -VILLAGE_BOUNDS.width / 2,
+          VILLAGE_BOUNDS.width / 2,
+        );
+        desiredTarget.z = THREE.MathUtils.clamp(
+          desiredTarget.z,
+          -VILLAGE_BOUNDS.depth / 2,
+          VILLAGE_BOUNDS.depth / 2,
+        );
       }
       press.x = e.clientX;
       press.y = e.clientY;
@@ -636,8 +696,8 @@ export function Village3D(props: Props) {
         raycaster.setFromCamera(pointer, camera);
         if (
           raycaster.ray.intersectPlane(floor, hit) &&
-          Math.abs(hit.x) <= 26 &&
-          Math.abs(hit.z) <= 20
+          Math.abs(hit.x) <= VILLAGE_BOUNDS.width / 2 + 1 &&
+          Math.abs(hit.z) <= VILLAGE_BOUNDS.depth / 2 + 1
         )
           goTo({ x: hit.x, z: hit.z });
       }
@@ -684,10 +744,7 @@ export function Village3D(props: Props) {
         path = [];
         marker.visible = false;
         follow = true;
-        desiredZoom = Math.max(
-          desiredZoom,
-          host.clientWidth < 600 ? 2.35 : 1.6,
-        );
+        desiredZoom = Math.max(desiredZoom, followZoom);
       }
     };
     const keyup = (e: KeyboardEvent) => {
@@ -745,8 +802,17 @@ export function Village3D(props: Props) {
       width = host.clientWidth;
       height = host.clientHeight;
       if (!width || !height) return;
-      const aspect = width / height,
-        half = Math.max(22, 35 / aspect);
+      const aspect = width / height;
+      const framing = villageCameraFrame(
+        width,
+        height,
+        VILLAGE_BOUNDS.width,
+        VILLAGE_BOUNDS.depth,
+      );
+      const half = framing.half;
+      const wasDefault = Math.abs(desiredZoom - followZoom) < 0.01;
+      followZoom = framing.followZoom;
+      if (follow && wasDefault) zoom = desiredZoom = followZoom;
       Object.assign(camera, {
         left: -half * aspect,
         right: half * aspect,
@@ -793,10 +859,7 @@ export function Village3D(props: Props) {
         path = [];
         marker.visible = false;
         follow = true;
-        desiredZoom = Math.max(
-          desiredZoom,
-          host.clientWidth < 600 ? 2.35 : 1.6,
-        );
+        desiredZoom = Math.max(desiredZoom, followZoom);
         const len = Math.hypot(h, v),
           speed = ((run ? 5.2 * RUN_SPEED_MULTIPLIER : 5.2) * dt) / len;
         // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
@@ -853,7 +916,7 @@ export function Village3D(props: Props) {
           position,
           latest.current.save.actor,
         );
-        if (entrance?.place.id !== nearbyId.current) {
+        if ((entrance?.place.id ?? null) !== nearbyId.current) {
           nearbyId.current = entrance?.place.id ?? null;
           setNearby(entrance);
         }
@@ -944,14 +1007,16 @@ export function Village3D(props: Props) {
         }
         figure.walking = moving;
         const onBridge =
-          Math.abs(figure.point.x) < 2.4 &&
-          figure.point.z > 13.3 &&
-          figure.point.z < 16.7;
+          VILLAGE_RIVER.bridges.some(
+            (bridge) => Math.abs(figure.point.x - bridge.x) < bridge.halfWidth,
+          ) &&
+          figure.point.z > VILLAGE_RIVER.minZ - 0.7 &&
+          figure.point.z < VILLAGE_RIVER.maxZ + 0.7;
         const elevation = onBridge
           ? Math.min(
               1,
-              (figure.point.z - 13.3) / 0.5,
-              (16.7 - figure.point.z) / 0.5,
+              (figure.point.z - (VILLAGE_RIVER.minZ - 0.7)) / 0.5,
+              (VILLAGE_RIVER.maxZ + 0.7 - figure.point.z) / 0.5,
             ) * 0.53
           : 0;
         figure.group.position.set(figure.point.x, elevation, figure.point.z);
@@ -1002,7 +1067,18 @@ export function Village3D(props: Props) {
           projected.set(position.x, 2.3, position.z).project(camera);
           tag.style.transform = `translate(${((projected.x + 1) * width) / 2}px,${((1 - projected.y) * height) / 2}px) translate(-50%,-100%)`;
         }
+        miniSelfRef.current?.setAttribute('cx', String(position.x));
+        miniSelfRef.current?.setAttribute('cy', String(position.z));
+        if (routeRef.current)
+          routeRef.current.textContent = path.length
+            ? '길을 따라 이동 중 · 방향키로 직접 걷기'
+            : '도착했어요 · 주변을 자유롭게 둘러보세요';
         Object.assign(host.dataset, {
+          follow: String(follow),
+          actorPixels: (
+            (1.88 * zoom * height) /
+            (camera.top - camera.bottom)
+          ).toFixed(1),
           avatarX: position.x.toFixed(3),
           avatarZ: position.z.toFixed(3),
           walking: String(walking),
@@ -1067,7 +1143,7 @@ export function Village3D(props: Props) {
             <Trees size={15} /> BEOMDEW VALLEY
           </span>
           <h1>범타듀 밸리</h1>
-          <p>작은 농장과 일곱 친구가 사는 골목.</p>
+          <p>일곱 친구의 골목에서 숲과 강 너머까지.</p>
         </div>
         <span className="hv-weather">
           <Sun size={20} />
@@ -1160,7 +1236,90 @@ export function Village3D(props: Props) {
             <Users size={17} />
             <span>친구 초대</span>
           </button>
+          <button onClick={props.onRequest}>
+            <Send size={16} />
+            <span>게임 현황</span>
+          </button>
         </div>
+        <button
+          className="hv-minimap"
+          onClick={() => controls.current?.overview()}
+          aria-label="미니맵으로 전체 보기"
+        >
+          <span>
+            <MapIcon size={12} /> 범타듀 밸리 <small>내 위치</small>
+          </span>
+          <svg
+            viewBox={[
+              -VILLAGE_BOUNDS.width / 2 - 2,
+              -VILLAGE_BOUNDS.depth / 2 - 2,
+              VILLAGE_BOUNDS.width + 4,
+              VILLAGE_BOUNDS.depth + 4,
+            ].join(' ')}
+            aria-hidden="true"
+          >
+            <rect
+              x={-VILLAGE_BOUNDS.width / 2}
+              y={-VILLAGE_BOUNDS.depth / 2}
+              width={VILLAGE_BOUNDS.width}
+              height={VILLAGE_BOUNDS.depth}
+              rx="3"
+              fill="#dce3ba"
+            />
+            <path
+              d="M-32 5 H32 M0 -26 V26 M-27 5 V24 H27 V5"
+              fill="none"
+              stroke="#f7efd1"
+              strokeWidth="2"
+            />
+            <rect
+              x={-VILLAGE_BOUNDS.width / 2}
+              y={VILLAGE_RIVER.minZ}
+              width={VILLAGE_BOUNDS.width}
+              height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ}
+              fill="#96c9c2"
+            />
+            {VILLAGE_RIVER.bridges.map((b) => (
+              <rect
+                key={b.x}
+                x={b.x - b.halfWidth}
+                y={VILLAGE_RIVER.minZ - 0.4}
+                width={b.halfWidth * 2}
+                height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ + 0.8}
+                fill="#b58d58"
+              />
+            ))}
+            {VILLAGE_PLACES.map((p) => (
+              <rect
+                key={p.id}
+                x={p.x - p.width / 2}
+                y={p.z - p.depth / 2}
+                width={p.width}
+                height={p.depth}
+                rx="0.6"
+                fill={p.roofColor}
+              />
+            ))}
+            {VILLAGE_DISTRICTS.map((d) => (
+              <circle
+                key={d.id}
+                cx={d.point.x}
+                cy={d.point.z}
+                r="1.6"
+                fill={d.color}
+              />
+            ))}
+            <circle
+              ref={miniSelfRef}
+              cx={VILLAGE_START.x}
+              cy={VILLAGE_START.z}
+              r="2"
+              fill="#fff6dd"
+              stroke="#536642"
+              strokeWidth="1"
+            />
+          </svg>
+        </button>
         {directory && (
           <aside className="hv-directory" aria-label="마을 장소">
             <header>
@@ -1182,6 +1341,29 @@ export function Village3D(props: Props) {
                 <span>
                   <strong>{p.name}</strong>
                   <small>{p.subtitle}</small>
+                </span>
+                <ArrowRight size={15} />
+              </button>
+            ))}
+            <span className="hv-directory-sub">강 너머, 숲 가까이</span>
+            {VILLAGE_DISTRICTS.map((d) => (
+              <button
+                key={d.id}
+                data-district={d.id}
+                onClick={() => {
+                  setSelected(null);
+                  setDirectory(false);
+                  setDistrict(d.name);
+                  controls.current?.visit(d.point);
+                }}
+              >
+                <span
+                  className="hv-place-dot"
+                  style={{ background: d.color }}
+                />
+                <span>
+                  <strong>{d.name}</strong>
+                  <small>{d.description}</small>
                 </span>
                 <ArrowRight size={15} />
               </button>
@@ -1267,6 +1449,24 @@ export function Village3D(props: Props) {
               </button>
             ))}
           </div>
+        )}
+        {district && !nearby && (
+          <section className="hv-route" aria-label="산책 목적지">
+            <Trees size={18} />
+            <div>
+              <strong>{district}</strong>
+              <output ref={routeRef}>길을 따라 이동 중</output>
+            </div>
+            <button
+              aria-label="산책 경로 닫기"
+              onClick={() => {
+                controls.current?.stop();
+                setDistrict(null);
+              }}
+            >
+              <X size={16} />
+            </button>
+          </section>
         )}
         {nearby && state !== 'unavailable' && (
           <section

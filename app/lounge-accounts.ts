@@ -39,7 +39,7 @@ export function accountSave(
   const s = readLounge(raw, actor);
   const source =
     value !== null && typeof value === 'object' && !Array.isArray(value)
-      ? value
+      ? (value as Record<string, unknown>)
       : {};
   const previous =
     previousSave !== null &&
@@ -49,10 +49,23 @@ export function accountSave(
       : undefined;
   // Older clients know only outfits. Missing bedroom preserves the server's room;
   // an explicitly supplied null/invalid room is normalized as an intentional reset.
+  const incomingRoom = source.bedroom as
+    | { designVersion?: unknown; items?: unknown }
+    | null
+    | undefined;
+  const priorRoom = previous?.bedroom as
+    | { designVersion?: unknown; items?: unknown }
+    | null
+    | undefined;
+  const legacyRoomWrite =
+    priorRoom?.designVersion === 2 &&
+    Array.isArray(incomingRoom?.items) &&
+    incomingRoom?.designVersion !== 2;
   const bedroom =
-    !Object.prototype.hasOwnProperty.call(source, 'bedroom') &&
     previous &&
-    Object.prototype.hasOwnProperty.call(previous, 'bedroom')
+    (legacyRoomWrite ||
+      (!Object.prototype.hasOwnProperty.call(source, 'bedroom') &&
+        Object.prototype.hasOwnProperty.call(previous, 'bedroom')))
       ? readBedroom(previous.bedroom, actor)
       : s.bedroom;
   return {

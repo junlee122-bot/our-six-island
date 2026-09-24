@@ -1,9 +1,9 @@
 .l-bedroom {
-  --b-ink: #24354e;
-  --b-muted: #69758a;
-  --b-line: #d2d8df;
-  --b-paper: #f7f8f5;
-  --b-blue: #345bce;
+  --b-ink: #3f493f;
+  --b-muted: #85816e;
+  --b-line: #d9d4c5;
+  --b-paper: #f8f5ec;
+  --b-blue: #588778;
   max-width: 1588px;
   padding: 25px 24px 32px;
   margin: 0 auto;

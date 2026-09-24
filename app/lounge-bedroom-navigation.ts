@@ -7,18 +7,19 @@ export type WalkObstacle = {
   width: number;
   depth: number;
 };
-export const WALK_ROOM = { width: 8, depth: 6.6, radius: 0.22 } as const;
-export const WALK_START: WalkPoint = { x: 0.65, z: 2.15 };
+export const WALK_ROOM = { width: 10, depth: 8.2, radius: 0.22 } as const;
+export const WALK_START: WalkPoint = { x: 0.25, z: 2.65 };
 export const WALK_FURNITURE: readonly WalkObstacle[] = [
-  { id: 'sofa', x: -1.8, z: -2.25, width: 2.75, depth: 1.15 },
-  { id: 'bed', x: 2.55, z: -1.72, width: 1.85, depth: 2.65 },
-  { id: 'table', x: -1.35, z: -0.68, width: 1.5, depth: 0.75 },
-  { id: 'desk', x: -2.95, z: 0.63, width: 1.3, depth: 0.85 },
-  { id: 'shelf', x: -3.68, z: -1.48, width: 0.4, depth: 1.6 },
-  { id: 'plant', x: 3.45, z: 2.55, width: 0.52, depth: 0.52 },
-  { id: 'chair', x: -2.95, z: 1.5, width: 0.65, depth: 0.65 },
-  { id: 'nightstand', x: 1.08, z: -1.6, width: 0.55, depth: 0.55 },
-  { id: 'wardrobe', x: 0.72, z: -2.83, width: 1.16, depth: 0.72 },
+  { id: 'sofa', x: -2.1, z: -3.24, width: 2.85, depth: 1.15 },
+  { id: 'bed', x: 3.3, z: -2.05, width: 2.1, depth: 3.15 },
+  { id: 'table', x: -1.8, z: -1.3, width: 1.5, depth: 1.5 },
+  { id: 'desk', x: -3.63, z: 1, width: 1.8, depth: 0.9 },
+  { id: 'shelf', x: -4.45, z: -1.5, width: 0.66, depth: 1.6 },
+  { id: 'plant', x: 4.25, z: 3.12, width: 1.05, depth: 0.58 },
+  { id: 'chair', x: -3.63, z: 1.96, width: 0.65, depth: 0.65 },
+  { id: 'nightstand', x: 1.57, z: -2.3, width: 0.58, depth: 0.58 },
+  { id: 'wardrobe', x: 0.63, z: -3.65, width: 1.18, depth: 0.74 },
+  { id: 'display', x: 3.82, z: 0.9, width: 1.8, depth: 0.66 },
 ] as const;
 
 export function canWalk(point: WalkPoint): boolean {
@@ -78,11 +79,11 @@ export function walkStep(from: WalkPoint, dx: number, dz: number): WalkPoint {
 }
 
 const GRID = 0.2;
-const COLS = 39;
-const ROWS = 32;
+const COLS = 49;
+const ROWS = 40;
 const gridPoint = (id: number): WalkPoint => ({
-  x: -3.8 + (id % COLS) * GRID,
-  z: -3.1 + Math.floor(id / COLS) * GRID,
+  x: -4.8 + (id % COLS) * GRID,
+  z: -3.9 + Math.floor(id / COLS) * GRID,
 });
 const distanceSquared = (a: WalkPoint, b: WalkPoint) =>
   (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
@@ -99,8 +100,8 @@ export function findWalkPath(
   )
     return [];
   const target = {
-    x: Math.max(-3.77, Math.min(3.77, requested.x)),
-    z: Math.max(-3.07, Math.min(3.07, requested.z)),
+    x: Math.max(-4.77, Math.min(4.77, requested.x)),
+    z: Math.max(-3.87, Math.min(3.87, requested.z)),
   };
   if (walkLineClear(from, target))
     return distanceSquared(from, target) < 0.0001 ? [] : [target];

@@ -179,3 +179,26 @@
 - Ran the local synthetic lifecycle suites `lounge-rematch.test.mjs` and `lounge-rematch-cloud.test.mjs`: 15/15 passed across all five games. Coverage includes fixed-roster readiness, cancellation, one-time reservation, stale/retried actions, failed storage, explicit departure, short reconnect, and lease expiry.
 - A separate read-only review found no additional actionable lifecycle defect. Reviewed the fullscreen HUD's invitation/retained-table layering without finding a new concrete issue. No source, API, assets, account, saved game, or wallet changes were made; no paid generation or extra deployment is needed.
 - Next audit: rotate to save-conflict/draft recovery and small-screen alert usability using isolated synthetic accounts. Preserve the completed village and rematch work. Routine healthy state requires no user notification.
+
+## 2026-09-24 — 마을 확장·게임 현황·일곱 스튜디오 리디자인
+
+- 최신 사용자 확인대로 3D 자산 출처는 Spritegen이 아닌 **kArchive**를 사용했습니다. 원본 GLB 6종(피크닉 테이블·공원 벤치·정원등·책장·화분 선반·티 테이블)을 확보했으며 총 **2,961,568바이트**입니다. 내장 텍스처/버퍼와 SHA256을 검사했고 외부 리소스 참조가 없습니다. 원본 바이트를 유지하고 배치·크기만 조정합니다. 출처·조건은 `public/models/village/expansion/assets.json`, `public/models/lounge/redesign/assets.json`, 모델 ATTRIBUTION과 ASSETS.md에 기록했습니다.
+- 마을을 50×38에서 **80×60(약 2.53배)**로 넓혔습니다. 과수원 피크닉·강변 캠프·동쪽 산책길·북쪽 숲길, 세 다리와 이어지는 동선을 추가했습니다. 실제 가구의 발자국 크기를 보행 충돌과 공유하고, 정적 보행 그래프를 캐시해 반복 경로 탐색을 줄였습니다. 일곱 집과 공개 건물의 ID/입구를 유지했습니다.
+- 데스크톱과 모바일 모두 **내 캐릭터를 따라가는 확대 시점**으로 시작합니다. 화면 높이와 무관하게 캐릭터 스프라이트 높이를 약 76px/66px로 맞추며, 내 위치 링·이름표·미니맵·전체 보기를 제공합니다. 안내에서 새 구역을 선택하면 실제로 걸어갑니다. 지도 확대에 맞춰 패닝·바닥 선택 범위와 세 다리의 보행 높이도 갱신했습니다.
+- 다섯 게임의 현황을 한곳에서 확인합니다. 진행 중인 내 게임 이어 하기, 관전, 초대 응답, 다음 판 준비 테이블을 구분합니다. 끝난 과거 매치가 새 초대를 가로막던 입장을 수정했습니다. 최소 1,000범 기준의 초대 가능 여부와 블랙잭 예약액, 2인부터 가능한 세 게임을 검사합니다. 초대 보내기/응답/취소에 처리 중 잠금과 오류 표시를 추가하고, 수락 전 초대 수신자에게도 취소·만료를 알립니다. 미니게임 엔진·범 정산 규칙은 변경하지 않았습니다.
+- 일곱 친구의 방을 **10×8.2** 스튜디오로 새로 구성했습니다. 가구 15개 배치와 창문·패널 벽, 침대·작업대·휴식·컬렉션 구역을 사용합니다. 도원 미쿠 스튜디오, 강재 우드 리스닝룸, 민서 온실방, 승준 서재, 민재 밤빛 레코드룸, 재민 여행 아지트, 호현 게임 작업실로 테마와 장식을 구분합니다. 테마는 게임 내 창작 설정입니다.
+- 도원 방에는 트윈테일 피규어 진열, 포스터·레코드·배너·응원봉·헤드폰·키보드·쿠션 등 18개 테마 장식 요소를 배치했습니다. 꾸미기용 미쿠 테마 소품 **8종**도 추가했습니다. 새 팬 테마 장식은 코드로 제작한 원화/모형이며 공식 상품 에셋으로 표시하지 않습니다. 3D 산책방은 구성된 배치이고 자유로운 소품 이동은 별도 2D 꾸미기 화면에서 저장됩니다. 벽·바닥·코디는 두 화면에 적용되며 이 구분을 화면에서 설명합니다.
+- 사용자는 도원뿐 아니라 **모든 친구의 기존 방 배치 삭제·리디자인을 명시적으로 허용**했습니다. `designVersion: 2`가 없는 방은 새 계정별 기본 배치로 한 번 전환하고, 이후의 수정/빈 방 저장은 보존합니다. 서버는 이전 브라우저의 구버전 방 쓰기가 이미 수정한 v2 방을 덮어쓰지 않도록 보호합니다. 명시적 초기화는 유지합니다. 의상·보관 코디·계정·비밀번호·지갑은 바꾸지 않습니다. 실제 계정/DB를 직접 편집하지 않았습니다.
+- 첫 로그인 배경을 kArchive 4개 가구의 입체 거실로 교체했습니다. 선택한 2D 캐릭터는 즉시 표시하고 인사·다시 인사·움직임 감소를 유지합니다. 로그인 방은 로드/크기 변경 때만 렌더링하며 WebGL 실패 시 대체 배경으로 돌아갑니다. 인증 흐름은 그대로입니다.
+- 검증: 전체 **210/210 테스트**, 최종 TypeScript, 변경 범위 lint, diff 검사 통과. 마을 브라우저 8개 검사(네 구역 걷기와 데스크톱/390px 시점), 실제 로그인 폼 3개 화면과 7캐릭터 선택, 일곱 방 입장/15가구/보행/미쿠 추가 저장/모바일 10개 검사, 게임 초대 실패 재시도·수락·이어 하기·유지 테이블 준비 4개 검사를 통과했습니다. 모두 합성 계정과 격리된 localhost 환경에서 수행했고 런타임 오류·에셋 실패·외부 서비스 요청이 없습니다. 기록: `../outputs/{expanded-village,login-studio-browser,room-redesign-browser,game-hub-browser}/report.json`.
+- 검사 도중 인증용 로컬 서버의 CSP에 GLB 내장 이미지용 blob 연결 허용이 없어 실패한 것을 고쳤습니다(테스트 서버만 변경). 마을 GPU 초기화 시간 초과와 검사식의 음수/DOM 직렬화 오류를 수정한 뒤 최종 검사를 통과했습니다. 기존 브라우저 검사의 합성 계정 생성이 actor 0 기본 방을 다른 배우에게도 복사하는 문제는 별도 테마 확인으로 보완합니다. 실패를 성공으로 간주해 배포하지 않습니다.
+- 최종 Pages 빌드는 HTML **1,810,581바이트**, 이미지 127개 + GLB 24개 **151개 에셋**입니다. 서버 변경은 새 방 카탈로그·기본값·이전 클라이언트 저장 보호에 필요한 공유 모듈이며 DB 마이그레이션은 없습니다. 사용자 요청에 따라 커밋·푸시·배포 단계는 **gpt-6-luna** 에이전트가 담당합니다. 이 기록 시점에는 배포 전이며 아래에 공개 검증을 이어 기록합니다.
+
+### 다음 점검 우선순위
+
+1. 아래 공개 배포 검증과 최신 사용자 요청부터 읽습니다. 기존 방 전체 교체는 이번 designVersion 2에서만 수행하며 이후 사용자의 배치를 반복 초기화하지 않습니다.
+2. 저성능 기기의 큰 마을 초기 GPU 준비 시간과 모바일 안내/미니맵 겹침을 확인합니다.
+3. 현재 3D 산책방의 고정 가구 배치와 2D 꾸미기 배치를 서로 혼동하지 않도록 하고, 후속으로 3D 가구 편집/배치 저장을 별도 설계합니다.
+4. 실제 사용자 데이터 수정 없이 초대·재접속·다음 판 준비·범 정산을 계속 회귀 점검합니다.
+
+- 보완 테마 검증 완료: 합성 계정을 각 배우의 기본 방으로 올바르게 생성한 뒤 강재·민서·민재의 서로 다른 바닥/소품 테마와 15개 가구 로딩을 재확인했습니다. 세 검사 모두 통과하고 오류·외부 요청이 없습니다. 기록: `../outputs/room-theme-browser/report.json` 및 PNG. 최종 화면과 배포 소스의 안내 문구는 기존 방 보존을 주장하지 않으며, 새 배치 전환 후 꾸미기 저장 방식을 설명합니다.

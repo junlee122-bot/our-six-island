@@ -14,18 +14,18 @@ test('walk room has a valid starting point, solid furniture and bounded walls', 
   for (const item of WALK_FURNITURE)
     assert.equal(canWalk(item), false, item.id);
   for (const point of [
-    { x: 4, z: 0 },
-    { x: 0, z: 3.3 },
+    { x: 5, z: 0 },
+    { x: 0, z: 4.1 },
     { x: NaN, z: 0 },
   ])
     assert.equal(canWalk(point), false);
 });
 
 test('continuous movement cannot tunnel through furniture or walls', () => {
-  const from = { x: 2.55, z: 2 };
+  const from = { x: 3.3, z: 0.2 };
   const result = walkStep(from, 0, -4.5);
   assert.ok(canWalk(result));
-  assert.ok(result.z >= -0.175, JSON.stringify(result));
+  assert.ok(result.z >= -0.26, JSON.stringify(result));
   assert.ok(canWalk(walkStep(WALK_START, 12, 12)));
   assert.deepEqual(walkStep(WALK_START, Infinity, 0), WALK_START);
 });
@@ -51,8 +51,8 @@ test('a blocked click resolves to reachable floor and every segment avoids furni
 });
 
 test('walking routes around the low table to open floor behind it', () => {
-  const from = { x: -1.35, z: 0.7 },
-    target = { x: -1.35, z: -1.38 };
+  const from = { x: -1.8, z: 0.7 },
+    target = { x: -1.8, z: -2.35 };
   assert.equal(walkLineClear(from, target), false);
   const path = findWalkPath(from, target);
   assert.ok(path.length > 1);
@@ -71,17 +71,20 @@ test('new furniture blocks passage while key room areas remain reachable', () =>
     assert.equal(canWalk(item), false, item.id);
 
   for (const target of [
-    { x: -3.25, z: 2.55 }, // entry
-    { x: 2.55, z: 0.35 }, // in front of the bed
+    { x: -4.2, z: 3.2 }, // entry
+    { x: 3.3, z: 0.05 }, // in front of the bed
     { x: 0, z: 0.2 }, // room center
-    { x: -2.5, z: 2.2 }, // in front of the desk
+    { x: -3.1, z: 2.7 }, // in front of the desk
   ]) {
     const path = findWalkPath(WALK_START, target);
     assert.ok(path.length, JSON.stringify(target));
     let previous = WALK_START;
     for (const point of path) {
       assert.ok(canWalk(point));
-      assert.ok(walkLineClear(previous, point), JSON.stringify({ previous, point }));
+      assert.ok(
+        walkLineClear(previous, point),
+        JSON.stringify({ previous, point }),
+      );
       previous = point;
     }
     assert.deepEqual(path.at(-1), target);
