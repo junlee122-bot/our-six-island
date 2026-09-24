@@ -81,9 +81,11 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 | 파일                                                          | 실제 크기 / 배치   | 내용                                                           |
 | ------------------------------------------------------------- | ------------------ | -------------------------------------------------------------- |
-| [daowon-outfits.png](public/assets/lounge/daowon-outfits.png) | 1536×1024 RGB, 3×2 | 와이드 팬츠·데님·하츠네 미쿠 복장, 윗줄 단발 / 아랫줄 만두머리 |
+| [daowon-outfits.png](public/assets/lounge/daowon-outfits.png) | 3072×2048 RGB, 3×2 | 와이드 팬츠·데님·하츠네 미쿠 복장, 윗줄 단발 / 아랫줄 만두머리 |
 | [daowon-buns.png](public/assets/lounge/daowon-buns.png)       | 1254×1254 RGB, 2×2 | 기존 클래식·스트리트 / 스마트·데일리 의상의 만두머리 버전      |
 | [hachimaki.png](public/assets/lounge/hachimaki.png)           | 1774×887 RGBA      | 흰 천·붉은 원의 일본 응원 머리띠, 실제 투명 배경               |
+
+2026-09-24 미쿠 칸 재생성: 오른쪽 열(하츠네 미쿠 복장 2칸)만 Higgsfield GPT Image 2.5(2K, high, 16:9, 2.75 크레딧)로 다시 그렸습니다. 작업 ID: `10090d30-9144-4271-81d7-fe47049b6612`. 기존 아틀라스를 참고 이미지로 넣어 얼굴·자세·그림체를 유지하고, 손가락이 보이는 손, 토시와 팔 사이의 틈 제거, 선명한 외곽선을 요청했습니다. 마젠타 배경은 색차 키로 알파를 구한 뒤 가장자리 색을 역산해(스필 제거) 손끝의 분홍 번짐을 없애고 정확한 #ff00ff 위에 이진 경계로 다시 얹었습니다. 아틀라스는 3072×2048(1024px 칸)로 키웠고, 나머지 네 칸은 기존 512px 칸을 lanczos3로 2배 확대한 것입니다(런타임은 이미지 크기에서 칸 크기를 계산). 미쿠 칸의 눈높이는 `lounge-sprites.ts`에서 117/123으로 다시 쟀습니다.
 
 정확한 프롬프트: [새 의상](public/assets/lounge/daowon-outfits.prompt.txt), [만두머리](public/assets/lounge/daowon-buns.prompt.txt), [하치마키](public/assets/lounge/hachimaki.prompt.txt). 춘리의 양쪽 만두머리와 하츠네 미쿠 복장을 참고한 생성 팬아트이며 공식 게임·캐릭터 이미지 파일을 다운로드한 것은 아닙니다.
 
