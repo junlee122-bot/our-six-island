@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { Check, Send } from 'lucide-react';
+import { ArrowRight, Check, Send } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import {
   GAME_INFO,
@@ -17,6 +17,7 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { GAME_COPY } from './game-copy';
+import { TABLE_PLACE, tableLabel, tableState } from '../lounge-table-state';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -29,6 +30,7 @@ export function RequestGameModal({
   initial,
   notify,
   preselect,
+  onPick,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -36,6 +38,86 @@ export function RequestGameModal({
   initial: GameKind | null;
   notify: Notify;
   /** Friends to pre-select (e.g. "빈자리에 친구 초대"). */
+  preselect?: string[];
+  /** Games start at a table: picking one walks me to it (setup sheet). */
+  onPick?: (game: GameKind) => void;
+}) {
+  const fillTable =
+    initial && view.tables?.[initial]?.members.includes(view.self)
+      ? view.tables[initial]
+      : undefined;
+  if (!fillTable && onPick)
+    return <TablePicker view={view} onClose={onClose} onPick={onPick} />;
+  return (
+    <FillInvite
+      room={room}
+      view={view}
+      onClose={onClose}
+      initial={initial}
+      notify={notify}
+      preselect={preselect}
+    />
+  );
+}
+
+/** "게임 초대" from the menu: choose a table; I walk there and sit. */
+function TablePicker({
+  view,
+  onClose,
+  onPick,
+}: {
+  view: CloudRoomView;
+  onClose: () => void;
+  onPick: (game: GameKind) => void;
+}) {
+  return (
+    <Modal title="어느 테이블로 갈까요?" onClose={onClose}>
+      <p className="l-modal-intro">
+        게임은 테이블에 앉아서 시작해요. 고르면 그 테이블 옆으로 가서 판돈과
+        인원을 정하고, 앉은 뒤 친구를 불러요.
+      </p>
+      <ul className="l-table-picker">
+        {GAME_KINDS.map((k) => {
+          const state = tableState(view, k);
+          return (
+            <li key={k}>
+            <button onClick={() => onPick(k)} data-testid={`pick-${k}`}>
+              <span aria-hidden="true">{GAME_INFO[k].symbol}</span>
+              <span>
+                <strong>{GAME_INFO[k].name}</strong>
+                <small>
+                  {TABLE_PLACE[state.area]} · {GAME_COPY[k].players} ·{' '}
+                  {tableLabel(state).status}
+                </small>
+              </span>
+              <ArrowRight size={17} aria-hidden="true" />
+            </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="l-modal-actions">
+        <button className="l-secondary" onClick={onClose}>
+          닫기
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function FillInvite({
+  room,
+  view,
+  onClose,
+  initial,
+  notify,
+  preselect,
+}: {
+  room: CloudRoom;
+  view: CloudRoomView;
+  onClose: () => void;
+  initial: GameKind | null;
+  notify: Notify;
   preselect?: string[];
 }) {
   const first = initial ?? 'chess';

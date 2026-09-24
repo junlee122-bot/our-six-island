@@ -40,15 +40,23 @@ import { villageReturnPoint } from './lounge-village-entrance';
 import './lounge-club.css';
 import './lounge-village-shell.css';
 import './lounge-flow.css';
-import { sceneTableSide } from './lounge-scene-layout';
+import { sceneSeatPoint, sceneTableSide } from './lounge-scene-layout';
 import { LoungePlayHub } from './lounge-play-hub';
-import { gameFlow, playerIsBusy } from './lounge-game-flow';
+import { gameFlow } from './lounge-game-flow';
 import {
   AREA_DEFAULTS,
   GAME_INFO,
   GAME_KINDS,
+  TABLE_AREA,
   type GameKind,
 } from './lounge-games';
+import {
+  mySeat,
+  TABLE_PLACE,
+  tableAction,
+  tableState,
+} from './lounge-table-state';
+import { TableSheet, type SheetMode } from './lounge/TableSheet';
 import { loungeAudio } from './lounge-audio';
 import {
   BagModal,
@@ -91,7 +99,7 @@ import { WalletModal } from './lounge/WalletModal';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal } from './lounge/SettingsModal';
 import { CreditsModal } from './lounge/CreditsModal';
-import { TAB_TITLES, WorldHeader, type Tab } from './lounge/WorldHeader';
+import { WorldHeader, type Tab } from './lounge/WorldHeader';
 import { GameScreen, myTurn } from './lounge/GameScreen';
 import {
   Onboarding,
@@ -390,6 +398,11 @@ function AccountLounge({
     [modal, setModal] = useState<ModalName | null>(null),
     [confirm, setConfirm] = useState<Confirm | null>(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
+    // The table sheet I opened by walking up to a table (setup / join). The
+    // seated sheet follows my seat instead (see tableSheet below).
+    [sheet, setSheet] = useState<{ game: GameKind; call?: string[] } | null>(
+      null,
+    ),
     [request, setRequest] = useState<{
       kind: GameKind | null;
       preselect?: string[];
@@ -433,6 +446,7 @@ function AccountLounge({
     enterRoom: () => {},
     openGame: (_kind: GameKind) => {},
     openInvites: () => {},
+    goToTable: (_kind: GameKind) => {},
   });
   // Village music, ambience and UI clicks (start after the first gesture).
   useEffect(() => loungeAudio.attach(), []);
@@ -496,18 +510,23 @@ function AccountLounge({
       for (const kind of GAME_KINDS) {
         const id = v[kind]?.id;
         if (id && opened.get(kind) !== id && v.seats[kind].includes(v.self)) {
+          const first = opened.has(kind) || !!v[kind];
           opened.set(kind, id);
-          setGameScreen(kind);
+          setSheet(null);
           setModal(null);
           playCue('start');
+          // The table's last seat filled: the screen moves into the table view.
+          if (first) playFade(() => setGameScreen(kind));
+          else setGameScreen(kind);
         }
       }
     };
     check();
     return room.subscribe(check);
-  }, [room]);
+  }, [room, playFade]);
 
-  // Invite arrivals (attention) and endings (specific reasons).
+  // Invite arrivals (attention) and endings (specific reasons). A table-forming
+  // invite that calls me is a banner with [가기]: it walks me to the table.
   const inviteStates = useRef(new Map<string, GameInvite>());
   const previousPlayers = useRef<LoungePlayer[]>([]);
   useEffect(() => {
@@ -515,28 +534,62 @@ function AccountLounge({
       const prev = inviteStates.current.get(invite.id);
       const involved =
         invite.from === view.self || invite.invited.includes(view.self);
-      if (
-        !prev &&
+      const game = GAME_INFO[invite.game].name;
+      const calledNow =
         invite.status === 'waiting' &&
         invite.invited.includes(view.self) &&
-        invite.from !== view.self
-      ) {
-        const text = `${nameOf(invite.from, view.players)}의 ${GAME_INFO[invite.game].name} 초대가 왔어요.`;
+        !invite.accepted.includes(view.self) &&
+        !invite.declined.includes(view.self) &&
+        invite.from !== view.self;
+      const calledBefore =
+        !!prev &&
+        prev.invited.includes(view.self) &&
+        !prev.accepted.includes(view.self) &&
+        !prev.declined.includes(view.self);
+      if (calledNow && !calledBefore && !(prev && invite.table && prev.accepted.includes(view.self))) {
+        const from = nameOf(invite.from, view.players);
+        const text = invite.table
+          ? `${josa(from, '이/가')} ${TABLE_PLACE[TABLE_AREA[invite.game]]} ${game} 테이블로 불렀어요.`
+          : invite.fill
+            ? `${josa(from, '이/가')} ${game} 테이블 빈자리로 불렀어요.`
+            : `${from}의 ${game} 초대가 왔어요.`;
         attention('invite', text);
+        const kind = invite.game;
         pushBanner('invite', text, {
           key: 'invite-' + invite.id,
-          action: { label: '보기', run: () => flowRef.current.openInvites() },
+          action:
+            invite.table || invite.fill
+              ? { label: '가기', run: () => flowRef.current.goToTable(kind) }
+              : { label: '보기', run: () => flowRef.current.openInvites() },
         });
       }
       // Answered / ended: its banner is no longer news.
-      if (
-        prev?.status === 'waiting' &&
-        (invite.status !== 'waiting' ||
-          invite.accepted.includes(view.self) ||
-          (invite.declined ?? []).includes(view.self))
-      )
+      if (prev?.status === 'waiting' && !calledNow)
         dropBanner('invite-' + invite.id);
+      // Someone sat down at the table I sit at.
       if (
+        invite.table &&
+        invite.status === 'waiting' &&
+        prev &&
+        invite.accepted.includes(view.self) &&
+        prev.accepted.includes(view.self)
+      )
+        for (const id of invite.accepted)
+          if (!prev.accepted.includes(id) && id !== view.self)
+            pushBanner(
+              'info',
+              `${josa(nameOf(id, view.players), '이/가')} ${game} 테이블에 앉았어요 · ${invite.accepted.length}/${invite.required}명`,
+              { key: 'table-' + invite.id },
+            );
+      if (invite.table) {
+        // A forming table: standing up is my own choice; only its expiry is news.
+        if (
+          prev?.status === 'waiting' &&
+          invite.status === 'expired' &&
+          prev.accepted.includes(view.self)
+        )
+          notify(`${game} 테이블에 더 앉는 친구가 없어 자리를 정리했어요. 범은 빠지지 않았어요.`, 'info');
+      } else if (
         prev?.status === 'waiting' &&
         (invite.status === 'cancelled' || invite.status === 'expired') &&
         involved
@@ -585,22 +638,39 @@ function AccountLounge({
     view.tables?.[kind]?.members.includes(view.self),
   );
   const connected = view.status === 'connected';
+  // Old-style invites (from older clients) still get the invitations list;
+  // tables call friends with a banner and show themselves in the scene.
   const pendingInvites = connected
     ? view.invites.filter(
         (r) =>
           r.status === 'waiting' &&
+          !r.table &&
+          !r.fill &&
           (r.from === view.self || r.invited.includes(view.self)),
       ).length
     : 0;
+  // A friend called me to a table I have not walked up to yet.
+  const calledTo = connected
+    ? (view.invites.find(
+        (r) =>
+          r.status === 'waiting' &&
+          (!!r.table || !!r.fill) &&
+          r.invited.includes(view.self) &&
+          !r.accepted.includes(view.self) &&
+          !r.declined.includes(view.self),
+      ) ?? null)
+    : null;
+  const seat = connected ? mySeat(view) : null;
 
   // Contract #1: tell the server where I am whenever the tab changes.
   const sendArea = useCallback(
-    (next: Tab) => {
+    (next: Tab, at?: { x: number; y: number }) => {
       if (room.snapshot().status !== 'connected') return;
       if (next === 'village') {
         const p = villageToNetwork(villagePosition.current ?? VILLAGE_START);
         void room.area('village', p.x, p.y);
-      } else void room.area(TAB_AREA[next]);
+      } else if (at) void room.area(TAB_AREA[next], at.x, at.y);
+      else void room.area(TAB_AREA[next]);
     },
     [room],
   );
@@ -614,12 +684,39 @@ function AccountLounge({
     if (connected && s.actor === me?.actor)
       void room.action({ kind: 'look', look: s.looks[s.actor] });
   };
+  const move = useCallback(
+    (x: number, y: number) => {
+      if (room.snapshot().status === 'connected')
+        void room.action({ kind: 'move', x, y });
+      else {
+        const key =
+          tabRef.current === 'casino'
+            ? 'casino'
+            : tabRef.current === 'lounge'
+              ? 'lounge'
+              : 'village';
+        setLocalPos((all) => ({
+          ...all,
+          [key]: {
+            x: Math.max(15, Math.min(85, x)),
+            y: Math.max(42, Math.min(88, y)),
+          },
+        }));
+      }
+    },
+    [room],
+  );
   const enter = (
     destination: VillageDestination | 'village' = 'village',
     place?: VillagePlace,
+    /** Where to stand inside a hall / casino (e.g. beside a table). */
+    at?: { x: number; y: number },
+    then?: () => void,
   ) => {
-    const from = tab;
+    const from = visiting !== null ? 'village' : tab;
     const go = () => {
+      setVisiting(null);
+      setGameScreen(null);
       if (place) enteredPlace.current = place;
       if (destination === 'village' && from !== 'village') {
         const position = enteredPlace.current
@@ -637,8 +734,11 @@ function AccountLounge({
       if (destination === 'wardrobe')
         setWardrobeFrom(from === 'bedroom' ? 'bedroom' : 'village');
       setModal(null);
+      setSheet(null);
       setTab(destination);
-      if (destination !== from) sendArea(destination);
+      if (destination !== from || visiting !== null) sendArea(destination, at);
+      else if (at) move(at.x, at.y);
+      then?.();
     };
     if (destination === from) go();
     else {
@@ -671,28 +771,6 @@ function AccountLounge({
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, []);
-  const move = useCallback(
-    (x: number, y: number) => {
-      if (room.snapshot().status === 'connected')
-        void room.action({ kind: 'move', x, y });
-      else {
-        const key =
-          tabRef.current === 'casino'
-            ? 'casino'
-            : tabRef.current === 'lounge'
-              ? 'lounge'
-              : 'village';
-        setLocalPos((all) => ({
-          ...all,
-          [key]: {
-            x: Math.max(15, Math.min(85, x)),
-            y: Math.max(42, Math.min(88, y)),
-          },
-        }));
-      }
-    },
-    [room],
-  );
   const moveInVillage = useCallback(
     (x: number, y: number) => {
       villagePosition.current = villageFromNetwork({ x, y });
@@ -846,11 +924,84 @@ function AccountLounge({
     const kind = gameScreen;
     setGameScreen(null);
     const area = tab === 'lounge' ? 'lounge' : tab === 'casino' ? 'casino' : null;
-    if (kind && area && (area === 'casino') === ['poker', 'blackjack', 'chess'].includes(kind)) {
+    if (kind && area && TABLE_AREA[kind] === area) {
       const side = sceneTableSide(area, kind);
       move(side.x, side.y);
     }
   };
+  /**
+   * Go to a game's table (banner [가기], the old "게임 초대" menu, 다시 초대하기):
+   * into its hall / casino with the iris transition, beside the table, with
+   * the table's sheet open (setup at an empty table, join at a forming one).
+   */
+  const goToTable = (game: GameKind, call?: string[]) => {
+    const area = TABLE_AREA[game];
+    const side = sceneTableSide(area, game);
+    const state = tableState(room.snapshot(), game);
+    const kind = tableAction(state);
+    setModal(null);
+    const open = () => {
+      if (kind === 'watch' || kind === 'resume') setGameScreen(game);
+      else if (kind !== 'stand') setSheet({ game, call });
+    };
+    if (connected && seat && seat.game !== game) {
+      // Going to another table stands me up from the one I sit at.
+      void room.action({ kind: 'cancel', id: seat.id });
+      notify(`${GAME_INFO[seat.game].name} 테이블에서 일어났어요.`, 'info');
+    }
+    if (tab === area && visiting === null) {
+      setGameScreen(null);
+      move(side.x, side.y);
+      open();
+      return;
+    }
+    enter(
+      area,
+      VILLAGE_PLACES.find((p) => p.id === (area === 'lounge' ? 'hall' : 'casino')),
+      side,
+      open,
+    );
+  };
+  /** Beside a table after standing up from a forming seat. */
+  const standBeside = (game: GameKind) => {
+    const area = TABLE_AREA[game];
+    if (tabRef.current !== area) return;
+    const side = sceneTableSide(area, game);
+    move(side.x, side.y);
+  };
+  /** The action button / E next to a table in the scene. */
+  const tableAct = (game: GameKind) => {
+    const state = tableState(room.snapshot(), game);
+    const kind = tableAction(state);
+    if (kind === 'watch' || kind === 'resume') {
+      setSheet(null);
+      playFade(() => {
+        setModal(null);
+        setGameScreen(game);
+      });
+    } else if (kind === 'stand') {
+      if (state.invite)
+        void room
+          .action({ kind: 'cancel', id: state.invite.id })
+          .then((ok) => ok && standBeside(game));
+    } else
+      setSheet((current) => ({
+        game,
+        call: current?.game === game ? current.call : undefined,
+      }));
+  };
+  // Sitting at a forming table puts me on a seat around it.
+  const seatIndex = seat ? seat.accepted.indexOf(view.self) : -1,
+    seatGame = seat?.game ?? null,
+    seatRequired = seat?.required ?? 0,
+    seatId = seat?.id ?? '';
+  useEffect(() => {
+    if (!seatId || !seatGame || seatIndex < 0) return;
+    const area = TABLE_AREA[seatGame];
+    if (tabRef.current !== area) return;
+    const p = sceneSeatPoint(area, seatGame, seatIndex, seatRequired);
+    move(p.x, p.y);
+  }, [seatId, seatGame, seatIndex, seatRequired, move]);
   useLayoutEffect(() => {
     flowRef.current = {
       openMail: () => openMail(),
@@ -861,8 +1012,14 @@ function AccountLounge({
       },
       openGame,
       openInvites: () => setModal('invitations'),
+      goToTable: (kind) => goToTable(kind),
     };
   });
+  // The table came on screen (e.g. after the start transition): its turn
+  // banner is no longer news.
+  useEffect(() => {
+    if (inGame && gameScreen) dropBanner('turn-' + gameScreen);
+  }, [inGame, gameScreen, dropBanner]);
   // "내 차례": a banner with [가기] when the table is not on screen.
   const turnsRef = useRef(new Set<GameKind>());
   useEffect(() => {
@@ -930,24 +1087,36 @@ function AccountLounge({
     onPick: (tree: string) => void pickFruit(tree),
     onVisit: visitHouse,
   };
+  /**
+   * "게임 초대" (menu, header, play hub, 다시 초대하기): games start at a table,
+   * so this picks a game and walks me to its table. Only "빈자리에 친구 초대"
+   * (a short retained table I keep a seat at) still opens the invite dialog.
+   */
   const requestGame = (kind: GameKind | null, preselect?: string[]) => {
-    setRequest({ kind, preselect });
-    setModal(
-      !connected
-        ? 'friends'
-        : !kind || (playerIsBusy(view, view.self) && !preselect)
-          ? 'games'
-          : 'request',
-    );
+    if (!connected) {
+      setModal('friends');
+      return;
+    }
+    const retained = kind ? view.tables?.[kind] : undefined;
+    if (
+      kind &&
+      retained?.members.includes(view.self) &&
+      retained.members.length < retained.required
+    ) {
+      setRequest({ kind, preselect });
+      setModal('request');
+    } else if (kind) goToTable(kind, preselect);
+    else {
+      setRequest({ kind: null });
+      setModal('request');
+    }
   };
   const openTable = (kind: GameKind) => {
     const flow = gameFlow(view, kind);
-    if (flow.canOpen) {
+    if (flow.canOpen && (flow.ownTable || flow.ownSeat)) {
       setModal(null);
       setGameScreen(kind);
-    } else if (flow.canShowInvitations) setModal('invitations');
-    else if (flow.canRequest) requestGame(kind);
-    else setModal(connected ? 'games' : 'friends');
+    } else goToTable(kind);
   };
 
   const commitment = activeCommitment(view);
@@ -1061,6 +1230,26 @@ function AccountLounge({
       : myArea === 'casino'
         ? NAMES.chatCasino
         : NAMES.chatHall;
+  // The table sheet over the hall / casino: my seat (seated) wins; otherwise
+  // the table I walked up to (setup at an empty one, join at a forming one).
+  const interior = tab === 'lounge' || tab === 'casino' ? tab : null;
+  let tableSheet: { game: GameKind; mode: SheetMode; call?: string[] } | null =
+    null;
+  if (interior && !inGame && visiting === null && connected) {
+    if (seat && TABLE_AREA[seat.game] === interior)
+      tableSheet = { game: seat.game, mode: 'seated' };
+    else if (sheet && TABLE_AREA[sheet.game] === interior) {
+      const st = tableState(view, sheet.game);
+      const mode: SheetMode | null =
+        st.phase === 'empty'
+          ? 'setup'
+          : (st.phase === 'forming' && !st.seated) ||
+              (st.phase === 'retained' && st.fill)
+            ? 'join'
+            : null;
+      if (mode) tableSheet = { game: sheet.game, mode, call: sheet.call };
+    }
+  }
   return (
     <main
       ref={appRef}
@@ -1085,7 +1274,7 @@ function AccountLounge({
           room={room}
           view={view}
           onBack={closeGame}
-          place={TAB_TITLES[tab]}
+          place={TABLE_AREA[gameScreen] === 'casino' ? NAMES.casino : NAMES.hall}
           onRequest={requestGame}
           reactionsHidden={reactionsHidden}
           onReactionsHidden={setReactionsHidden}
@@ -1169,6 +1358,21 @@ function AccountLounge({
             <button onClick={cloudSave.restoreDraft}>저장 내용 복구하기</button>
             <button onClick={cloudSave.dismissDraft}>서버의 저장 유지</button>
           </div>
+        )}
+        {calledTo && !inGame && !(tab === TABLE_AREA[calledTo.game] && visiting === null) && (
+          // Called to a table: the banner said so once; this line keeps it in view.
+          <aside className="l-retained-table l-invite-pill" aria-label="친구가 부른 테이블" data-testid="called-pill">
+            <span>
+              <strong>
+                {josa(nameOf(calledTo.from, view.players), '이/가')}{' '}
+                {TABLE_PLACE[TABLE_AREA[calledTo.game]]} {GAME_INFO[calledTo.game].name} 테이블로 불렀어요
+              </strong>
+              <small>가면 테이블 옆에서 바로 앉을 수 있어요.</small>
+            </span>
+            <button className="l-primary" onClick={() => goToTable(calledTo.game)}>
+              가기 <ArrowRight size={15} />
+            </button>
+          </aside>
         )}
         {tab !== 'lounge' && tab !== 'casino' && pendingInvites > 0 && (
           // Arrivals come as a banner; this line only keeps the status in view.
@@ -1393,7 +1597,6 @@ function AccountLounge({
               <span aria-hidden="true">＋</span>게임 초대
             </button>
           </div>
-          <Invitations room={room} view={view} />
           <div className="l-lounge-grid">
             <div className="l-room-wrap">
               <ScreenBoundary
@@ -1411,12 +1614,37 @@ function AccountLounge({
                     players={players}
                     self={self}
                     onMove={move}
-                    onTable={openTable}
+                    onTable={tableAct}
                     view={view}
                     area={tab === 'casino' ? 'casino' : 'lounge'}
+                    seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
+                    sheetOpen={!!tableSheet}
                   />
                 </Suspense>
               </ScreenBoundary>
+              {tableSheet && (
+                <TableSheet
+                  key={tableSheet.game + ':' + tableSheet.mode}
+                  room={room}
+                  view={view}
+                  game={tableSheet.game}
+                  mode={tableSheet.mode}
+                  preselect={tableSheet.call}
+                  onClose={() => setSheet(null)}
+                  onStand={() => {
+                    setSheet(null);
+                    standBeside(tableSheet.game);
+                  }}
+                  onSat={() => {
+                    const game = tableSheet.game;
+                    // Filling a retained table's empty seat: its screen shows the ready check.
+                    if (tableState(room.snapshot(), game).phase === 'retained') {
+                      setSheet(null);
+                      setGameScreen(game);
+                    }
+                  }}
+                />
+              )}
               <ReactionDock
                 players={players}
                 self={self}
@@ -1663,6 +1891,7 @@ function AccountLounge({
           view={view}
           initial={request.kind}
           preselect={request.preselect}
+          onPick={(game) => goToTable(game)}
           onClose={() => setModal(null)}
           notify={notify}
         />

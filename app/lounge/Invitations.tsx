@@ -22,8 +22,12 @@ export function Invitations({
 }) {
   const [pending, setPending] = useState<string | null>(null);
   const inFlight = useRef(false);
+  // Tables (forming or filling seats) show in the scene and call with a
+  // banner; only old-style invites from older clients are listed here.
   const relevant = view.invites.filter(
     (r) =>
+      !r.table &&
+      !r.fill &&
       (r.from === view.self || r.invited.includes(view.self)) &&
       r.status === 'waiting',
   );

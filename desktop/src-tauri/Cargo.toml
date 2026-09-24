@@ -1,0 +1,34 @@
+[package]
+name = "beomtadew-valley"
+version = "0.1.0"
+description = "범타듀 밸리 · 일곱 친구의 마을 (데스크톱)"
+authors = ["범타듀 밸리 친구들"]
+edition = "2021"
+rust-version = "1.77.2"
+publish = false
+
+[lib]
+# `_lib` suffix avoids a name clash with the binary on Windows (cargo#8519).
+name = "beomtadew_valley_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+serde_json = "1"
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

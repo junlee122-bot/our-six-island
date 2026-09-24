@@ -17,7 +17,13 @@ export type ActionKind =
   | 'look'
   | 'dress'
   | 'decorate'
-  | 'guide';
+  | 'guide'
+  // Interior tables (step 2): games start by sitting down.
+  | 'sit'
+  | 'join'
+  | 'watch'
+  | 'resume'
+  | 'stand';
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   enter: '들어가기',
@@ -33,6 +39,11 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   dress: '옷 갈아입기',
   decorate: '꾸미기',
   guide: '내 텃밭 가기',
+  sit: '앉기',
+  join: '자리 잡기',
+  watch: '구경하기',
+  resume: '이어하기',
+  stand: '일어나기',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

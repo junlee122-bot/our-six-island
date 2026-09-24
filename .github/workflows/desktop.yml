@@ -1,0 +1,90 @@
+# Desktop installers (Tauri) for Windows and macOS → draft GitHub Release.
+#
+#   Run: push a tag  `git tag v0.1.1 && git push origin v0.1.1`
+#        or Actions → "Desktop app" → Run workflow.
+#   The release/tag name comes from package.json "version" (v__VERSION__),
+#   so bump it before tagging. Output: a DRAFT release with .msi + -setup.exe
+#   (Windows x64) and .dmg (macOS universal). Review it, then Publish.
+#
+# Optional secrets (see desktop/README.md):
+#   TAURI_SIGNING_PRIVATE_KEY, TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+#       updater signatures; only used once bundle.createUpdaterArtifacts=true.
+#   APPLE_* (certificate / notarization) and Windows code signing are
+#       commented out below until you have them.
+name: Desktop app
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: ''
+          - platform: macos-latest
+            args: '--target universal-apple-darwin'
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - run: npm ci
+
+      - name: Type check and tests
+        run: |
+          npx tsc --noEmit
+          npm test
+
+      # `tauri build` runs `npm run build:desktop` (beforeBuildCommand), which
+      # writes the static game to desktop/dist.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # macOS signing + notarization (Apple Developer Program, $99/yr):
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: .
+          tauriScript: npx tauri
+          args: ${{ matrix.args }}
+          tagName: v__VERSION__
+          releaseName: '범타듀 밸리 v__VERSION__'
+          releaseBody: |
+            친구들용 데스크톱 설치 파일이에요.
+            - Windows: `.msi` 또는 `-setup.exe` → "Windows의 PC 보호" 창이 뜨면 "추가 정보" → "실행".
+            - macOS: `.dmg` 열고 앱을 응용 프로그램 폴더로 끌어다 놓기 → 처음 실행이 막히면 시스템 설정 → 개인정보 보호 및 보안 → "그래도 열기".
+          releaseDraft: true
+          prerelease: false
+          # ASCII file names: GitHub rewrites non-ASCII asset names.
+          assetNamePattern: 'beomtadew-valley_[version]_[platform]_[arch][ext]'

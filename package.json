@@ -11,6 +11,7 @@
     "dev": "vinext dev",
     "build": "vinext build",
     "build:pages": "node scripts/build-standalone.mjs",
+    "build:desktop": "node scripts/build-standalone.mjs --out desktop/dist --site-url /",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "lint": "oxlint",
@@ -20,7 +21,10 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "test:multiplayer": "node --experimental-strip-types scripts/verify-multiplayer.mjs",
     "test:theater-multiplayer": "node --experimental-strip-types scripts/verify-theater-multiplayer.mjs",
-    "test:lounge-multiplayer": "node --experimental-strip-types scripts/verify-lounge-multiplayer.mjs"
+    "test:lounge-multiplayer": "node --experimental-strip-types scripts/verify-lounge-multiplayer.mjs",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@supabase/realtime-js": "2.116.0",
@@ -41,6 +45,7 @@
     "@gltf-transform/functions": "4.5.0",
     "@openai/sites-vite-plugin": "0.2.0",
     "@tailwindcss/postcss": "4.2.1",
+    "@tauri-apps/cli": "2.11.5",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",

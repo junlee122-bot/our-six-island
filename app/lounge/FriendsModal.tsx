@@ -78,8 +78,8 @@ export function FriendsModal({
       ) : connected ? (
         <>
           <p className="l-modal-intro">
-            로그인한 친구는 모두 같은 마을에서 만나요. 게임은 초대장으로
-            시작해요.
+            로그인한 친구는 모두 같은 마을에서 만나요. 게임은 회관과 카지노의
+            테이블에 앉아서 시작해요.
           </p>
           <ul className="l-online-list" aria-label="접속 중인 친구">
             {view.players.map((p) => (

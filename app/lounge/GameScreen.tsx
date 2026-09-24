@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Coins, Send } from 'lucide-react';
+import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from 'lucide-react';
 import { GAME_INFO, type GameKind } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { ReactionId } from '../lounge-reactions';
@@ -9,7 +9,6 @@ import { RoundReady } from '../lounge-round-ready';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY, leaveConsequence } from './game-copy';
-import { Invitations } from './Invitations';
 import { ConfirmModal } from './Modal';
 import { attention, playCue } from './feedback';
 import { ErrorState, ScreenBoundary } from './ErrorBoundary';
@@ -154,7 +153,26 @@ export function GameScreen({
   // Only while I hold a seat: once the table is dissolved (or I was dropped)
   // the old match's seat list still names me, but there is nothing to leave.
   const canLeave = belongs || (seat >= 0 && !table && !ended && !dissolved);
+  // Watching a table I do not sit at (구경하기).
+  const watching = !belongs && seat < 0 && !dissolved;
   if (leave && !canLeave && !leaving) setLeave(false);
+  // Esc while watching = 일어나기 (the global Esc skips the game screen).
+  const backRef = useRef(onBack);
+  useEffect(() => {
+    backRef.current = onBack;
+  });
+  useEffect(() => {
+    if (!watching) return;
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+      const t = e.target as HTMLElement | null;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      e.preventDefault();
+      backRef.current();
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [watching]);
   // Say it once as a toast too (the note stays under the result).
   useEffect(() => {
     if (dissolved) notify?.(dissolved.text, 'info');
@@ -200,22 +218,46 @@ export function GameScreen({
           <span className="l-back-more">{backLabel}</span>
         </button>
         <span>
-          <small>{table ? `${table.round}번째 판` : '친구와 한 판'}</small>
-          <strong>{GAME_INFO[kind].name}</strong>
+          <small data-testid="game-place">
+            {place} · {GAME_INFO[kind].name} 테이블
+          </small>
+          <strong>
+            {GAME_INFO[kind].name}
+            {table && table.round > 1 ? ` · ${table.round}번째 판` : ''}
+          </strong>
         </span>
         <div>
-          <span className={'l-game-live' + (turn ? ' is-turn' : '')}>
-            <i />
-            {turn
-              ? '내 차례'
-              : ended
-                ? belongs
-                  ? '다음 판 준비'
-                  : '게임 종료'
-                : seat < 0
-                  ? '관전 중'
+          {watching ? (
+            // 구경하기: one clear pill; 일어나기 puts me beside the table.
+            <span className="l-game-watch">
+              <Eye size={16} aria-hidden="true" />
+              <span data-testid="game-live">구경 중</span>
+              <button
+                onClick={onBack}
+                data-testid="game-watch-stand"
+                aria-keyshortcuts="Escape"
+                title="구경 그만하기 (Esc)"
+                aria-label={`구경 그만하고 일어나기 · ${josa(place, '으로/로')} 돌아가기`}
+              >
+                <ArrowUpFromLine size={15} aria-hidden="true" />
+                일어나기
+              </button>
+            </span>
+          ) : (
+            <span
+              className={'l-game-live' + (turn ? ' is-turn' : '')}
+              data-testid="game-live"
+            >
+              <i />
+              {turn
+                ? '내 차례'
+                : ended
+                  ? belongs
+                    ? '다음 판 준비'
+                    : '게임 종료'
                   : '대전 중'}
-          </span>
+            </span>
+          )}
           {canLeave && (
             <button
               className="l-text"
@@ -249,7 +291,6 @@ export function GameScreen({
               : ''}
           </b>
         </div>
-        <Invitations room={room} view={view} />
         <div
           ref={stage}
           className={'l-table-stage' + (turn ? ' is-my-turn' : '')}

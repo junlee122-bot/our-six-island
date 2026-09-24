@@ -377,3 +377,118 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------ tables as seats (flow step 2) */
+/* Who sits at a table: small portrait chips in its label, then empty seats. */
+.cf-table-seats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  max-width: 130px;
+  pointer-events: none;
+}
+.cf-seat {
+  position: relative;
+  width: clamp(18px, 2.3cqw, 26px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #efe3c8;
+  border: 1.5px solid #cdb88f;
+}
+.cf-seat .avatar-view,
+.cf-seat canvas {
+  width: 100%;
+  height: 100%;
+}
+.cf-seat.is-me {
+  border-color: #3f6a4a;
+}
+.cf-seat.is-empty {
+  background: transparent;
+  border: 1.5px dashed #a58f68;
+}
+.cf-seat.is-away {
+  background: #cdbf9f;
+}
+.cf-status-forming {
+  background: #d99a2b;
+  box-shadow: 0 0 0 2px #d99a2b2e;
+}
+.cf-table-cta {
+  margin-top: 1px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #3f6a4a;
+  color: #fffdf1;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.cf-game-table.is-playing .cf-table-cta,
+.cf-game-table.is-retained .cf-table-cta {
+  background: #7a4f2a;
+}
+/* A forming table glows softly; the table a friend called me to glows more. */
+.cf-game-table.is-forming .cf-table-art {
+  filter: drop-shadow(0 5px 3px #36281730) drop-shadow(0 0 7px #f2c14e99);
+}
+.cf-game-table.is-called .cf-table-art,
+.cf-game-table.is-mine .cf-table-art {
+  filter: drop-shadow(0 5px 3px #36281730) drop-shadow(0 0 12px #f2c14e);
+}
+.cf-game-table.is-called .cf-table-label {
+  border-color: #d99a2b;
+  box-shadow: 0 0 0 2px #f2c14e80;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cf-game-table.is-called .cf-table-art {
+    animation: cf-called 1.6s ease-in-out infinite alternate;
+  }
+  .cf-seat {
+    animation: cf-seat-in 200ms ease-out;
+  }
+  @keyframes cf-called {
+    from {
+      filter: drop-shadow(0 5px 3px #36281730) drop-shadow(0 0 5px #f2c14e80);
+    }
+    to {
+      filter: drop-shadow(0 5px 3px #36281730) drop-shadow(0 0 14px #f2c14e);
+    }
+  }
+  @keyframes cf-seat-in {
+    from {
+      transform: scale(0.6);
+      opacity: 0;
+    }
+  }
+}
+@container (max-width: 540px) {
+  .cf-table-seats {
+    gap: 2px;
+  }
+  .cf-seat {
+    width: 16px;
+  }
+  .cf-table-cta {
+    display: none;
+  }
+  .cf-scene-table-list button.is-forming span,
+  .cf-scene-table-list button.is-called span {
+    color: #8a5a12;
+    font-weight: 700;
+  }
+  .cf-scene-table-list button.is-called {
+    background: #fff1cf;
+  }
+}
+/* Hover names on the seat chips (desktop). */
+.cf-table-seats .cf-seat {
+  pointer-events: auto;
+}
+/* The label grows with its status line instead of clipping it. */
+.cf-table-label {
+  width: max-content;
+  max-width: 240px;
+}

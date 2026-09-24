@@ -21,6 +21,29 @@ export const GAME_KINDS: GameKind[] = [
 ];
 export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
+/** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
+export const FLEX_GAMES: readonly GameKind[] = ['poker', 'blackjack', 'seotda'];
+export const TABLE_STAKES = [1000, 5000, 10000, 20000] as const;
+/** Which interior holds each game's table (회관: 고스톱·섯다, 카지노: the rest). */
+export type TableArea = 'lounge' | 'casino';
+export const TABLE_AREA: Record<GameKind, TableArea> = {
+  seotda: 'lounge',
+  gostop: 'lounge',
+  chess: 'casino',
+  poker: 'casino',
+  blackjack: 'casino',
+};
+/** Interior table id carried by a table-forming invite (`invite.table`). */
+export const tableIdOf = (game: GameKind) => `${TABLE_AREA[game]}-${game}`;
+/** The game of an interior table id, or null when the id is unknown. */
+export const gameOfTable = (id: unknown): GameKind | null =>
+  (Object.keys(TABLE_AREA) as GameKind[]).find((g) => tableIdOf(g) === id) ??
+  null;
+/**
+ * A forming table (host seated, friends walking up) stays open this long;
+ * each new sit or call restarts it.
+ */
+export const TABLE_FORM_MS = 300_000;
 /** Server turn limits. On expiry the server acts for the seat (see hostedTick). */
 export const TURN_LIMIT_MS: Record<GameKind, number> = {
   poker: 60_000,

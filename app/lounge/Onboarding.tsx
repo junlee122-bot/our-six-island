@@ -50,8 +50,8 @@ const STEPS: readonly Step[] = [
   },
   {
     target: '[data-coach="invite"]',
-    title: '게임에 초대해요',
-    text: () => '게임과 친구를 고르면 초대장이 가요. 수락하면 함께 게임으로 이동해요.',
+    title: '테이블에 앉아 한 판',
+    text: () => '게임을 고르면 회관이나 카지노의 그 테이블로 가요. 앉은 뒤 친구를 부르고, 자리가 차면 바로 시작해요.',
   },
   {
     target: '[data-farm-label="mine"], [data-testid="simple-farm"]',

@@ -94,6 +94,11 @@ import {
   AREA_DEFAULTS,
   chatScope,
   validHomeOwner,
+  FLEX_GAMES,
+  TABLE_AREA,
+  TABLE_FORM_MS,
+  TABLE_STAKES,
+  tableIdOf,
   emptyLoungeView as empty,
   type GameKind,
   type Area,
@@ -137,6 +142,14 @@ export type GameInvite = {
    * Each friend who accepts joins that table (ready) for its next round.
    */
   fill?: string;
+  /**
+   * Set on a table-forming invite: the interior table id (`tableIdOf(game)`,
+   * e.g. 'lounge-seotda') the host sits at. `invited` are the friends called
+   * over; anyone standing in that interior may also sit (reply accept) without
+   * being called. Standing up (cancel / decline) only leaves the seat: the
+   * table stays open while anyone is seated, and the host seat passes on.
+   */
+  table?: string;
 };
 export type LoungeTable = {
   matchId: string;
@@ -249,6 +262,8 @@ export type LoungeAction =
       players: string[];
       stake?: number;
       required?: number;
+      /** Interior table id: sit down at that table (host) or call friends to it. */
+      table?: string;
     }
   | { kind: 'area'; area: Area; x?: number; y?: number; home?: number }
   | { kind: 'draw'; id: string; op: 'offer' | 'accept' | 'decline' }
@@ -322,6 +337,10 @@ export function snapshotNextDue(s: HostedRoomSnapshot) {
     ...Object.values(s.tables ?? {}).flatMap((t) =>
       t?.readyDeadline ? [t.readyDeadline] : [],
     ),
+    // A forming table that nobody completes closes on expiry.
+    ...(s.invites ?? []).flatMap((r) =>
+      r.status === 'waiting' && r.table && r.expires > 0 ? [r.expires] : [],
+    ),
     ...(s.pendingLooks?.length
       ? (s.lookAt ?? []).map(([, at]) => at + LOOK_THROTTLE_MS)
       : []),
@@ -350,6 +369,8 @@ export const REJECT = {
   daily: '오늘의 범은 이미 받았어요. 내일 다시 받을 수 있어요.',
   drawOffer: '지금은 무승부를 제안하거나 답할 수 없어요.',
   table: '다음 판 준비가 끝났거나 테이블이 정리됐어요.',
+  tableArea: '그 테이블이 있는 곳으로 먼저 가 주세요.',
+  tableFull: '테이블 자리가 모두 찼어요.',
 } as const;
 /** 나가리/redeal settle at zero; a winner collects points × 100범 up to each stake. */
 function goSettle(ledger: LoungeLedger, g: GoMatch, deposits: number[]) {
@@ -1506,6 +1527,15 @@ export class LoungeRoom {
       if (a.area === 'home') next.home = a.home ?? member.actor;
       else delete next.home;
       this.members.set(id, next);
+      // Walking out of the interior stands me up from a forming table there.
+      if (this.view.invites.some((r) => this.seatedForming(r, id) && TABLE_AREA[r.game] !== a.area))
+        this.update({
+          invites: this.view.invites.map((r) =>
+            this.seatedForming(r, id) && TABLE_AREA[r.game] !== a.area
+              ? this.standFromForming(r, id)
+              : r,
+          ),
+        });
     } else if (a.kind === 'poker') {
       const seat = turnGame('poker', a.id, a.revision);
       if (seat === false) return false;
@@ -1530,9 +1560,11 @@ export class LoungeRoom {
     } else if (a.kind === 'move') {
       if (!Number.isFinite(a.x) || !Number.isFinite(a.y))
         return this.reject(REJECT.invalid);
-      // Seated players stay at their table in the hall and casino.
+      // Seated players stay at their table in the hall and casino. At a
+      // forming table the client places me on my seat around it.
       if (
         this.busy(id) &&
+        !this.view.invites.some((r) => this.seatedForming(r, id)) &&
         (member.area === 'lounge' || member.area === 'casino')
       )
         return true;
@@ -1616,6 +1648,8 @@ export class LoungeRoom {
     } else if (a.kind === 'invite') {
       if (!GAME_KINDS.includes(a.game) || !Array.isArray(a.players) || a.players.length > 6)
         return this.reject(REJECT.invalid);
+      if (a.table !== undefined)
+        return this.inviteTable(id, member, a, now);
       const retained = this.view.tables[a.game];
       if (
         retained?.members.includes(id) &&
@@ -1677,6 +1711,7 @@ export class LoungeRoom {
         request = invites.find((r) => r.id === a.id);
       if (!request || request.status !== 'waiting' || now > request.expires)
         return this.reject(REJECT.invite);
+      if (request.table) return this.replyTable(id, member, invites, request, a.accept, now);
       if (
         !request.invited.includes(id) ||
         request.accepted.includes(id) ||
@@ -1746,7 +1781,10 @@ export class LoungeRoom {
         r = invites.find((r) => r.id === a.id);
       if (!r || r.status !== 'waiting') return this.reject(REJECT.invite);
       if (!r.accepted.includes(id)) return this.reject(REJECT.invalid);
-      if (r.from === id) r.status = 'cancelled';
+      if (r.table)
+        // Standing up from a forming table: only my seat goes.
+        invites[invites.indexOf(r)] = this.standFromForming(r, id);
+      else if (r.from === id) r.status = 'cancelled';
       else {
         // A guest who already accepted only withdraws themselves; the invite
         // stays open while enough friends can still join.
@@ -1854,6 +1892,158 @@ export class LoungeRoom {
       this.go = next;
     } else return this.reject(REJECT.invalid);
     this.sync();
+    return true;
+  }
+  private seatedForming(r: GameInvite, id: string) {
+    return !!r.table && r.status === 'waiting' && r.accepted.includes(id);
+  }
+  /**
+   * Leave a forming table's seat. The table stays open while anyone is
+   * seated; when the host stands, the next seated player hosts it.
+   */
+  private standFromForming(r: GameInvite, id: string): GameInvite {
+    const accepted = r.accepted.filter((p) => p !== id);
+    if (!accepted.length) return { ...r, accepted, status: 'cancelled' };
+    const from = r.from === id ? accepted[0] : r.from;
+    return {
+      ...r,
+      from,
+      accepted,
+      invited: [...new Set([...r.invited, ...(r.from === id ? [id] : [])])].filter(
+        (p) => p !== from,
+      ),
+      declined: [...new Set([...r.declined, id])],
+    };
+  }
+  /**
+   * Sit down at an empty interior table (table-forming invite), or, already
+   * seated there, call more friends over. Nothing is reserved until the
+   * required count sits (then launch reserves every stake at once).
+   */
+  private inviteTable(
+    id: string,
+    member: LoungePlayer,
+    a: Extract<LoungeAction, { kind: 'invite' }>,
+    now: number,
+  ) {
+    const game = a.game;
+    if (a.table !== tableIdOf(game)) return this.reject(REJECT.invalid);
+    const players = [...new Set(a.players)].filter(
+      (p): p is string => typeof p === 'string' && p !== id && this.members.has(p),
+    );
+    const mine = this.view.invites.find(
+      (r) => r.status === 'waiting' && r.game === game && r.table === a.table && r.accepted.includes(id),
+    );
+    if (mine) {
+      // "친구 부르기": call more friends to the table I sit at.
+      const called = players.filter(
+        (p) => !mine.accepted.includes(p) && !this.busy(p),
+      );
+      if (!called.length) return this.reject(REJECT.friends);
+      this.update({
+        invites: this.view.invites.map((r) =>
+          r.id === mine.id
+            ? {
+                ...r,
+                invited: [...new Set([...r.invited, ...called])],
+                // A friend called again may answer again.
+                declined: r.declined.filter((p) => !called.includes(p)),
+                expires: now + TABLE_FORM_MS,
+              }
+            : r,
+        ),
+      });
+      return true;
+    }
+    if (member.area !== TABLE_AREA[game]) return this.reject(REJECT.tableArea);
+    if (this.busy(id)) return this.reject(REJECT.busy);
+    if (this.gameActive(game)) return this.reject(REJECT.active);
+    if (this.view.tables[game]?.members.length) return this.reject(REJECT.retained);
+    if (this.view.invites.some((r) => r.game === game && r.status === 'waiting'))
+      return this.reject(REJECT.pending);
+    const stake = a.stake ?? GAME_INFO[game].stake;
+    const required = FLEX_GAMES.includes(game)
+      ? (a.required ?? GAME_INFO[game].players)
+      : GAME_INFO[game].players;
+    if (
+      !(TABLE_STAKES as readonly number[]).includes(stake) ||
+      !Number.isInteger(required) ||
+      required < 2 ||
+      required > 7
+    )
+      return this.reject(REJECT.stake);
+    if (this.bank.view(this.wallets.get(id), now).balance < gameReservation(game, stake))
+      return this.reject(REJECT.balance);
+    this.update({
+      invites: [
+        ...this.view.invites.filter((r) => r.status === 'waiting'),
+        {
+          id: crypto.randomUUID(),
+          game,
+          from: id,
+          invited: players.filter((p) => !this.busy(p)),
+          accepted: [id],
+          declined: [],
+          status: 'waiting',
+          expires: now + TABLE_FORM_MS,
+          matchId: null,
+          required,
+          stake,
+          table: a.table,
+        },
+      ],
+    });
+    return true;
+  }
+  /**
+   * Sit at (accept) or turn down (decline) a forming table. Anyone standing in
+   * the table's interior may sit, called or not; the last seat starts the game.
+   */
+  private replyTable(
+    id: string,
+    member: LoungePlayer,
+    invites: GameInvite[],
+    request: GameInvite,
+    accept: unknown,
+    now: number,
+  ) {
+    if (typeof accept !== 'boolean' || request.accepted.includes(id))
+      return this.reject(REJECT.invalid);
+    if (!accept) {
+      if (!request.invited.includes(id)) return this.reject(REJECT.invalid);
+      request.declined = [...new Set([...request.declined, id])];
+      this.update({ invites });
+      return true;
+    }
+    if (member.area !== TABLE_AREA[request.game]) return this.reject(REJECT.tableArea);
+    if (this.busy(id, request.id)) return this.reject(REJECT.busy);
+    if (this.gameActive(request.game)) return this.reject(REJECT.active);
+    if (this.view.tables[request.game]?.members.length) return this.reject(REJECT.retained);
+    if (request.accepted.length >= request.required) return this.reject(REJECT.tableFull);
+    if (
+      this.bank.view(this.wallets.get(id), now).balance <
+      gameReservation(request.game, request.stake)
+    )
+      return this.reject(REJECT.balance);
+    request.accepted.push(id);
+    if (!request.invited.includes(id)) request.invited.push(id);
+    request.declined = request.declined.filter((p) => p !== id);
+    request.expires = now + TABLE_FORM_MS;
+    if (request.accepted.length === request.required) {
+      // Everyone who could not pay any more stands up instead of failing launch.
+      const broke = request.accepted.filter(
+        (p) =>
+          !this.members.has(p) ||
+          this.bank.view(this.wallets.get(p), now).balance <
+            gameReservation(request.game, request.stake),
+      );
+      if (broke.length) {
+        let next = request;
+        for (const p of broke) next = this.standFromForming(next, p);
+        invites[invites.indexOf(request)] = next;
+      } else this.launch(request);
+    }
+    this.update({ invites });
     return true;
   }
   /** "빈자리에 친구 초대": invite friends into a short retained table. */
@@ -2029,6 +2219,13 @@ export class LoungeRoom {
     this.update({
       invites: this.view.invites.map((r) => {
         if (r.status !== 'waiting') return r;
+        if (r.table && r.accepted.includes(id)) return this.standFromForming(r, id);
+        if (r.table)
+          return {
+            ...r,
+            invited: r.invited.filter((p) => p !== id),
+            declined: r.declined.filter((p) => p !== id),
+          };
         if (r.accepted.includes(id)) return { ...r, status: 'cancelled' };
         const invited = r.invited.filter((p) => p !== id),
           declined = r.declined.filter((p) => p !== id);

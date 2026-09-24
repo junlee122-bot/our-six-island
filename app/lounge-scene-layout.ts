@@ -177,14 +177,18 @@ export function sceneNearestTable(
 }
 
 /**
- * Where I stand after standing up from a table (일어나기): on open floor just
- * in front of it (towards the camera), else beside it.
+ * Where I stand next to a table (walking up to it, [가기], 일어나기): on open
+ * floor at its front corner towards the room's middle, else in front or beside it.
  */
 export function sceneTableSide(area: SceneArea, game: GameKind): ScenePoint {
   const c = sceneColliders(area).find((t) => t.game === game);
   if (!c) return { x: 50, y: 80 };
   const gap = SCENE_PLAYER_RADIUS + 1;
+  // Front corner towards the room's middle first: the table's label (in its
+  // centre) stays visible above my head.
+  const toward = c.x < 50 ? 1 : -1;
   const tries: ScenePoint[] = [
+    { x: c.x + toward * c.rx, y: c.y + c.ry * 0.8 + gap },
     { x: c.x, y: c.y + c.ry + gap },
     { x: c.x + c.rx + gap, y: c.y },
     { x: c.x - c.rx - gap, y: c.y },
@@ -195,4 +199,29 @@ export function sceneTableSide(area: SceneArea, game: GameKind): ScenePoint {
     if (sceneCanWalk(p, area)) return p;
   }
   return { x: 50, y: 88 };
+}
+
+/**
+ * Where seat `index` of `count` sits at a table: along its back edge (left →
+ * right, wider round the sides for more seats), so the table top is drawn in
+ * front of the seated figure and its label stays readable.
+ */
+export function sceneSeatPoint(
+  area: SceneArea,
+  game: GameKind,
+  index: number,
+  count: number,
+): ScenePoint {
+  const c = sceneColliders(area).find((t) => t.game === game);
+  if (!c) return { x: 50, y: 80 };
+  const n = Math.max(1, Math.min(7, Math.round(count) || 1));
+  const i = Math.max(0, Math.min(n - 1, Math.round(index) || 0));
+  const span = Math.min(180, 45 * (n - 1));
+  const angle = ((270 - span / 2 + (n > 1 ? (i * span) / (n - 1) : 0)) * Math.PI) / 180;
+  const ax = c.rx + 1.2,
+    ay = c.ry + 6;
+  return {
+    x: clamp(c.x + ax * Math.cos(angle), 15, 85),
+    y: clamp(c.y + ay * Math.sin(angle), 42, 88),
+  };
 }

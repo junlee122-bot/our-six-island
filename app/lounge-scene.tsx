@@ -11,12 +11,19 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { ArrowUpRight, Footprints } from 'lucide-react';
+import { Footprints } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import type { LoungePlayer, LoungeView } from './lounge-room';
 import { ACTORS } from './lounge-roster';
+import {
+  TABLE_ACTION_LABEL,
+  tableAction,
+  tableLabel,
+  tableState,
+  type TableState,
+} from './lounge-table-state';
 import {
   SCENE_LAYOUT,
   projectPlayer,
@@ -24,6 +31,7 @@ import {
   sceneDepth,
   sceneStep,
   sceneNearestTable,
+  sceneTableSide,
   type SceneArea,
   type ScenePoint,
   type SceneTable,
@@ -35,42 +43,40 @@ type RoomFloorProps = {
   players: LoungePlayer[];
   self: string;
   onMove: (x: number, y: number) => void;
+  /** The table's action (앉기 / 자리 잡기 / 구경하기 / 이어하기), after walking up to it. */
   onTable: (kind: GameKind) => void;
   view: LoungeView;
   area?: SceneArea;
+  /** I sit at this forming table: walking is paused until I stand up. */
+  seatedAt?: GameKind | null;
+  /** A table sheet is open: its own buttons (and E) replace the action button. */
+  sheetOpen?: boolean;
 };
 
-function tableSummary(view: LoungeView, game: GameKind) {
-  const connected = view.status === 'connected';
-  const match = connected ? view[game] : null;
-  const ended =
-    game === 'chess' ? !!view.chess?.winner : view[game]?.phase === 'over';
-  const invite = connected
-    ? view.invites.find(
-        (item) => item.game === game && item.status === 'waiting',
-      )
-    : undefined;
-  const seats = connected ? view.seats[game] : [];
-  const capacity =
-    invite?.required ?? (seats.length || GAME_INFO[game].players);
-  const count = seats.filter(Boolean).length;
-  const names = seats.flatMap((id, index) => {
-    if (!id) return [];
-    const player = view.players.find((p) => p.id === id);
-    return [player ? ACTORS[player.actor] : view.names[game][index] || '친구'];
-  });
-  return {
-    status: match
-      ? ended
-        ? '결과 보기'
-        : '게임 중'
-      : invite
-        ? '초대 중'
-        : '함께하기',
-    active: !!match && !ended,
-    occupancy: `${count}/${capacity}명`,
-    detail: names.length ? names.join(', ') : '아직 빈 테이블이에요',
-  };
+/** Small portrait chips above a table: who sits there, then empty seats. */
+function SeatChips({ state, view }: { state: TableState; view: LoungeView }) {
+  if (state.phase === 'empty') return null;
+  const shown = Math.min(7, Math.max(state.required, state.occupants.length));
+  return (
+    <span className="cf-table-seats" aria-hidden="true" title="">
+      {Array.from({ length: shown }, (_, i) => {
+        const p = view.players.find((q) => q.id === state.occupants[i]);
+        return p ? (
+          <span
+            key={p.id}
+            className={'cf-seat' + (p.id === view.self ? ' is-me' : '')}
+            title={`${p.id === view.self ? '나' : ACTORS[p.actor]}${state.invite?.from === p.id ? ' · 테이블을 연 친구' : ''}`}
+          >
+            <AvatarView actor={p.actor} look={p.look} portrait />
+          </span>
+        ) : state.occupants[i] ? (
+          <span key={'away-' + i} className="cf-seat is-away" />
+        ) : (
+          <span key={'empty-' + i} className="cf-seat is-empty" title="빈자리" />
+        );
+      })}
+    </span>
+  );
 }
 
 function WorldFriend({
@@ -172,13 +178,14 @@ function WorldFriend({
 function SceneGameTable({
   table,
   view,
-  onTable,
+  onApproach,
 }: {
   table: SceneTable;
   view: LoungeView;
-  onTable: (kind: GameKind) => void;
+  onApproach: (kind: GameKind) => void;
 }) {
-  const summary = tableSummary(view, table.game);
+  const state = tableState(view, table.game);
+  const label = tableLabel(state);
   const style: CSSProperties = {
     left: `${table.foot.x}%`,
     top: `${table.foot.y}%`,
@@ -190,29 +197,33 @@ function SceneGameTable({
   return (
     <button
       type="button"
-      className={`cf-game-table cf-game-${table.game}`}
+      className={`cf-game-table cf-game-${table.game} is-${state.phase}${state.called || state.fill ? ' is-called' : ''}${state.seated ? ' is-mine' : ''}`}
       style={style}
-      onClick={() => onTable(table.game)}
-      aria-label={`${GAME_INFO[table.game].name} 테이블 열기 · ${summary.status} · ${summary.occupancy}`}
-      title={`${GAME_INFO[table.game].name} · ${summary.detail}`}
+      onClick={() => onApproach(table.game)}
+      aria-label={`${label.text} · 누르면 테이블로 걸어가요`}
+      title={label.text}
+      data-table={state.id}
+      data-phase={state.phase}
     >
       <img className="cf-table-art" src={art} alt="" draggable={false} />
       <span className="cf-table-label">
-        <strong>
-          {GAME_INFO[table.game].name}
-          <ArrowUpRight aria-hidden="true" size={12} />
-        </strong>
+        <strong>{GAME_INFO[table.game].name}</strong>
         <span className="cf-table-meta">
           <i
             className={
-              summary.active
+              state.phase === 'playing'
                 ? 'cf-status-dot cf-status-active'
-                : 'cf-status-dot'
+                : state.phase === 'forming'
+                  ? 'cf-status-dot cf-status-forming'
+                  : 'cf-status-dot'
             }
           />
-          {summary.status}
-          <span>{summary.occupancy}</span>
+          {label.status}
         </span>
+        <SeatChips state={state} view={view} />
+        {state.phase !== 'empty' && !state.seated && (
+          <span className="cf-table-cta">{label.text.split(' · ').pop()}</span>
+        )}
       </span>
     </button>
   );
@@ -238,6 +249,8 @@ export function RoomFloor({
   onTable,
   view,
   area = 'lounge',
+  seatedAt = null,
+  sheetOpen = false,
 }: RoomFloorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [runMode, setRunMode] = useState(false);
@@ -257,7 +270,18 @@ export function RoomFloor({
     target: null as ScenePoint | null,
     lastSent: null as ScenePoint | null,
     moving: false,
+    /** Walking up to this table; its action runs on arrival. */
+    approach: null as GameKind | null,
+    locked: false,
   });
+  useEffect(() => {
+    live.current.locked = !!seatedAt;
+    if (seatedAt) {
+      live.current.held.clear();
+      live.current.target = null;
+      live.current.approach = null;
+    }
+  }, [seatedAt]);
   const latest = useRef({ onMove, runMode, area, onTable });
   useEffect(() => {
     latest.current = { onMove, runMode, area, onTable };
@@ -305,10 +329,13 @@ export function RoomFloor({
           dy += d[1];
         }
       }
+      if (state.locked) dx = dy = 0;
       const running = state.shift || latest.current.runMode;
       const speed = SCENE_WALK_SPEED * (running ? 1.65 : 1) * dt;
-      if (dx || dy) state.target = null;
-      else if (state.target) {
+      if (dx || dy) {
+        state.target = null;
+        state.approach = null;
+      } else if (state.target && !state.locked) {
         dx = state.target.x - state.point.x;
         dy = state.target.y - state.point.y;
         if (Math.hypot(dx, dy) < 0.3) {
@@ -348,6 +375,12 @@ export function RoomFloor({
         }
       }
       wasMoving = moved;
+      if (!state.target && state.approach) {
+        const game = state.approach;
+        state.approach = null;
+        if (sceneNearestTable(state.point, latest.current.area)?.game === game)
+          latest.current.onTable(game);
+      }
       const table = sceneNearestTable(state.point, latest.current.area)?.game ?? null;
       if (table !== nearRef.current) {
         nearRef.current = table;
@@ -365,6 +398,15 @@ export function RoomFloor({
       window.removeEventListener('blur', release);
     };
   }, []);
+  // Tapping a table walks me up to it; its action runs when I arrive.
+  const approach = (game: GameKind) => {
+    const state = live.current;
+    if (state.locked || !state.point) return;
+    state.held.clear();
+    state.target = sceneTableSide(area, game);
+    state.approach = game;
+    ref.current?.focus({ preventScroll: true });
+  };
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
       <div
@@ -372,7 +414,7 @@ export function RoomFloor({
         className="cf-scene"
         tabIndex={0}
         role="application"
-        aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 누르거나 방향키와 WASD로 이동합니다. 탁자를 누르면 게임이 열립니다.`}
+        aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 누르거나 방향키와 WASD로 이동합니다. 테이블을 누르면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}
         onKeyDown={(e) => {
           if (
             document.querySelector('dialog[open]') ||
@@ -384,7 +426,7 @@ export function RoomFloor({
           live.current.shift = e.shiftKey;
           if (e.code === 'KeyE' || e.code === 'Enter') {
             if (e.target !== e.currentTarget) return;
-            if (nearRef.current) {
+            if (nearRef.current && !live.current.locked) {
               e.preventDefault();
               latest.current.onTable(nearRef.current);
             }
@@ -405,6 +447,7 @@ export function RoomFloor({
         }}
         onPointerDown={(e) => {
           if ((e.target as Element).closest('button') || e.button !== 0) return;
+          if (live.current.locked) return;
           ref.current?.focus({ preventScroll: true });
           const r = e.currentTarget.getBoundingClientRect();
           const point = {
@@ -414,6 +457,7 @@ export function RoomFloor({
           if (point.y < layout.floor.back - 5) return;
           const destination = unprojectFloor(point, area);
           live.current.target = destination;
+          live.current.approach = null;
         }}
       >
         <img
@@ -449,7 +493,7 @@ export function RoomFloor({
             key={table.game}
             table={table}
             view={view}
-            onTable={onTable}
+            onApproach={approach}
           />
         ))}
         {players
@@ -472,37 +516,33 @@ export function RoomFloor({
           바닥을 눌러 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
-      <ActionButton
-        className="cf-action"
-        kind={near ? 'look' : null}
-        detail={
-          near
-            ? `${GAME_INFO[near].name} 테이블 · ${tableSummary(view, near).status} · ${tableSummary(view, near).occupancy}`
-            : undefined
-        }
-        label={near ? `${GAME_INFO[near].name} 둘러보기` : undefined}
-        touch={touch}
-        onPress={() => {
-          if (near) onTable(near);
-        }}
-      />
+      {near && !seatedAt && !sheetOpen && (() => {
+        const state = tableState(view, near);
+        const kind = tableAction(state);
+        return (
+          <ActionButton
+            className="cf-action"
+            kind={kind}
+            detail={tableLabel(state).text}
+            label={`${GAME_INFO[near].name} ${TABLE_ACTION_LABEL[kind]}`}
+            touch={touch}
+            onPress={() => onTable(near)}
+          />
+        );
+      })()}
       <div className="cf-scene-table-list" aria-label="게임 테이블">
         {layout.tables.map(({ game }) => {
-          const summary = tableSummary(view, game);
+          const state = tableState(view, game);
           return (
             <button
               type="button"
               key={game}
-              onClick={() => onTable(game)}
-              title={summary.detail}
+              onClick={() => approach(game)}
+              className={`is-${state.phase}${state.called || state.fill ? ' is-called' : ''}`}
+              aria-label={`${tableLabel(state).text} · 누르면 테이블로 걸어가요`}
             >
-              <strong>
-                {GAME_INFO[game].name}
-                <ArrowUpRight size={13} aria-hidden="true" />
-              </strong>
-              <span>
-                {summary.status} · {summary.occupancy}
-              </span>
+              <strong>{GAME_INFO[game].name}</strong>
+              <span>{tableLabel(state).status}</span>
             </button>
           );
         })}

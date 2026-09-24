@@ -41,3 +41,6 @@ next-env.d.ts
 
 # Pages builds made outside docs/ (CI / Actions deploy)
 /_site/
+
+# admin economy reports (friends' balances; never commit)
+/supabase/admin/reports/

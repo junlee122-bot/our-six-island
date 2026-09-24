@@ -20,7 +20,7 @@
 - 기존 Supabase 프로젝트: `ogfpeqeoaznwjbrbedbx`, 서울 리전.
 - `hohyeon-auth`: 개인 코드·비밀번호를 검증하는 공개 진입점(verify_jwt=false). IP당 요청 제한(60회/분), (계정, IP) 조합의 **실패 누적 잠금**(아래 ‘보안 동작’), 동시 계정 작업을 막는 60초 계정 뮤텍스(`hh_account_lock`, 실패 잠금이 아님), Supabase Auth password hashing과 서명된 세션을 사용합니다. 프로젝트의 다른 Auth 사용자는 게임 계정으로 인정하지 않습니다.
 - `hohyeon-api`: (verify_jwt=true) JWT 및 게임의 활성 세션(30일 비활동 시 만료) 확인 후 프로필/원장/게임을 처리합니다. uid와 배역은 서버의 roster에서 결정합니다.
-- `hohyeon` 전용 스키마: members, sessions, world, rate_limits, auth_failures, auth_events, profile_history. RLS 활성화, anon/authenticated 접근 및 RPC 실행 권한 없음. service_role만 접근하는 설계라 클라이언트용 RLS 정책을 만들지 않습니다. 기존 public 투표 데이터는 보존합니다.
+- `hohyeon` 전용 스키마: members, sessions, world, world_snapshots, rate_limits, auth_failures, auth_events, profile_history. RLS 활성화, anon/authenticated 접근 및 RPC 실행 권한 없음. service_role만 접근하는 설계라 클라이언트용 RLS 정책을 만들지 않습니다. 기존 public 투표 데이터는 보존합니다.
 - 서버 키는 Edge 환경에서만 읽습니다. 브라우저에는 publishable key만 들어갑니다.
 
 프로필은 revision 비교 후 저장합니다. 여러 방의 비공개 게임 상태·공통 지갑·요청 영수증은 단일 world revision으로 원자적으로 확정합니다. 경합한 요청은 최신 DB 상태에서 다시 계산합니다. 사용자의 마지막 512개 변경 요청 영수증과 지속적인 접속 epoch로 재전송과 과거 연결의 부활을 막습니다. 같은 계정으로 다른 탭에 로그인하면 UI를 전환하며, 이미 대기 중인 저장과 게임 요청도 원래 uid와 토큰 uid가 일치해야 전송됩니다.
@@ -52,11 +52,47 @@
 3. 새 코드는 친구에게 1:1로 전달하고, 친구가 바로 ‘첫 로그인’을 하게 합니다.
 4. 확인: `select username, activated, activation_expires_at from hohyeon.members order by actor;`, `select * from hohyeon.auth_events order by at desc limit 50;`
 
+## 월드 백업과 복구
+
+방·게임·공통 지갑(원장)·텃밭/우편 같은 공유 상태는 모두 `hohyeon.world` 한 행에 있으므로, 그 행의 복사본 하나가 게임 전체의 일관된 백업입니다. 마이그레이션 `20260925090000_hohyeon_world_backup.sql`이 다음을 추가합니다(service_role 전용, RLS 활성화, anon/authenticated 권한 없음).
+
+- `hohyeon.world_snapshots(id, taken_at, revision, reason, state, bytes)`.
+- `public.hh_world_snapshot(p_reason)`: 현재 world를 복사합니다. 같은 revision의 스냅샷이 1시간 안에 있으면 새로 만들지 않고 그 스냅샷을 돌려줍니다(`skipped: true`). 만든 뒤 보존 정책으로 정리합니다.
+- 보존 정책(`hh_world_snapshot_prune()`): 최근 14일은 전부, 14–90일은 KST 하루에 1개(그날 마지막), 90일 이후는 주마다 1개를 남깁니다. `reason`이 `keep`으로 시작하는 스냅샷과 가장 최근 스냅샷은 지우지 않습니다.
+- `public.hh_world_restore_preview(p_id)`: 스냅샷 내용과 요약(지갑·방·생활 인원 수, 현재 revision과의 차이)을 읽기 전용으로 돌려줍니다.
+- **매일 04:00 KST(19:00 UTC)** pg_cron 작업 `hh-world-snapshot-daily`. 마이그레이션은 `cron` 스키마가 있을 때만 예약하고, 없으면 NOTICE만 남깁니다. 이때는 대시보드 → Database → Extensions에서 `pg_cron`을 켠 뒤 마이그레이션 끝의 `do $$ … $$` 블록을 SQL 편집기에서 다시 실행합니다. 확인: `select jobname, schedule, active from cron.job;`, `select * from cron.job_run_details order by start_time desc limit 5;`. pg_cron을 쓸 수 없다면 운영자가 직접 `select public.hh_world_snapshot('manual');`을 실행합니다.
+- 마이그레이션을 적용하는 순간 첫 스냅샷(`migration-20260925090000`)을 만듭니다.
+
+**위험한 관리 작업 전에는 항상 스냅샷을 먼저 만듭니다.** world 행을 SQL로 직접 고치기, world 형식을 바꾸는 마이그레이션이나 Edge 함수 배포, 계정·원장 일괄 정리 전에 `select public.hh_world_snapshot('pre-<작업 이름>');`을 실행합니다. 복구 스크립트는 복구 직전의 현재 world를 `pre-restore-<id>`로 자동 저장합니다. 오래 보관할 스냅샷은 `update hohyeon.world_snapshots set reason = 'keep:' || reason where id = <id>;`로 고정합니다.
+
+목록: `select id, taken_at at time zone 'Asia/Seoul', revision, reason, pg_size_pretty(bytes::bigint) from hohyeon.world_snapshots order by taken_at desc limit 30;` 용량: `select pg_size_pretty(pg_total_relation_size('hohyeon.world_snapshots'));` world는 최대 6MB이고 보존 정책상 약 90–110개가 남으므로, world가 커지면 스냅샷 용량(무료 플랜 DB 500MB)을 확인합니다.
+
+### 복구
+
+`supabase/admin/restore-world.sql`을 따릅니다(SQL 편집기, postgres 권한).
+
+1. 스냅샷을 고르고 `hh_world_restore_preview(<id>)`와 `economy-report.mjs --snapshot=<id>`로 내용을 확인합니다.
+2. **점검 공지**: 앱에는 점검 모드가 없으므로 단체방에 점검 시간과 "그 시각 이후의 게임·농사 기록은 되돌아간다"는 점을 알리고, 스크립트의 쿼리로 최근 3분 안에 방에 있던 사람이 없는지 확인합니다.
+3. 스크립트 맨 아래 `do` 블록의 스냅샷 id, 확인한 현재 revision, 모드(`full` 또는 `life`)를 채워 파일 전체를 실행합니다. 한 트랜잭션에서 world 행을 잠그고, revision이 바뀌었으면 거부하고, 현재 world를 `pre-restore-<id>`로 저장하고, 스냅샷의 형식과 원장 총액을 검증한 뒤 **revision을 현재 값 + 1로 올려** 씁니다(예전 revision으로 되돌리면 CAS 저장과 클라이언트 갱신이 어긋납니다). `full`은 현재 요청 영수증을 유지하고 모든 접속 epoch를 올려 오래된 탭이 다시 입장하게 합니다. `life`는 생활 상태만 되돌리고 원장·방은 그대로 둡니다. 원장만 따로 되돌리는 모드는 없습니다(예약금이 방과 맞아야 하므로).
+4. 결과는 `hohyeon.auth_events`에 `world_restore`로 남습니다. 경제 리포트의 총액 검증이 ‘일치’인지, 앱에서 지갑과 텃밭이 보이는지 확인하고 점검 종료를 알립니다. 되돌리려면 `pre-restore-<id>` 스냅샷으로 같은 절차를 다시 실행합니다.
+
+## 경제 대시보드
+
+관리자 전용입니다. 브라우저·Edge 함수·공개 페이지에는 노출하지 않습니다.
+
+- CLI(권장): `SUPABASE_ACCESS_TOKEN=… node --experimental-strip-types supabase/admin/economy-report.mjs [--out=supabase/admin/reports/2026-09-25.html|.md] [--days=7] [--snapshot=<id>] [--check-sql] [--json]`
+  - Supabase 개인 액세스 토큰(대시보드 → Account → Access Tokens)으로 Management API SQL 엔드포인트에서 world의 원장·생활 카운터와 계정 roster만 읽습니다(방의 비공개 카드, 우편, 방명록은 읽지 않음). 토큰은 환경 변수로만 전달하고 출력하지 않습니다. 프로젝트는 기본 `ogfpeqeoaznwjbrbedbx`(`SUPABASE_PROJECT_REF`/`--project`로 변경).
+  - 계산은 `app/lounge-economy-report.ts`(테스트: `tests/lounge-economy-report.test.mjs`)가 합니다: 계정별 잔액·예약금·합계·게임 손익(게임 종류별)·농사 수입·오늘의 범·상점 지출·오늘 판매액, 게임 종류별 진행/정산/무효 수·판돈·오간 금액·하우스 손익, 하우스 잔액, 통화량(잔액+예약), 초기 지급·누적 발행·누적 지출, 총액 검증(잔액+예약+하우스 = 지갑×100,000 + 발행), 최근 N일 주요 공급원/소비처, KST 일별 지급·지출.
+  - 한계: 사유별·일별 수치는 원장에 남는 최근 지갑 기록 200건 기준입니다(리포트에 기록 범위와 ‘전체와 일치’ 여부를 표시). 게임 정산에는 시각이 없고 오래된 게임(최근 500건 밖)은 계정별 합계로 접히므로 게임 손익은 전체 기간 누적이며, 접힌 부분은 ‘보관(종류 미상)’으로 나옵니다.
+  - `--out`의 파일에는 친구들의 잔액이 들어 있습니다. `supabase/admin/reports/`(git 무시)에 두고 저장소·대화방에 올리지 않습니다. `--input=<world.json>`으로 저장해 둔 world JSON을 오프라인으로 볼 수도 있습니다.
+  - 총액 검증이 불일치면 종료 코드 1입니다. `--check-sql`은 SQL 함수 결과와 JS 계산의 총계를 비교합니다.
+- SQL 편집기: `select jsonb_pretty(public.hh_economy_report(7));` — 같은 항목의 간단한 요약(service_role/postgres 전용).
+
 ## 배포 순서
 
 **새 클라이언트는 새 서버가 있어야 동작합니다.** 이번 화면은 private Realtime 채널(`config: { private: true }`), v3 방 저장(3D 꾸미기, `readBedroomStrict`), `world.life` 작업(텃밭·상점·우편·방명록·방 공개 설정), 친구 방 방문(`op: 'visit'`)과 `home` 접속 표시를 전제합니다. 예전 `hohyeon-api`는 v3 방을 v2 기본 방으로 되돌리고 이 작업들을 모르므로, 반드시 아래 순서를 지킵니다. 순서를 바꾸면 방 편집이 사라지거나 게임 알림이 오지 않습니다.
 
-1. **DB 마이그레이션** — `supabase/migrations`를 파일 이름 순서대로 적용합니다(`supabase db push` 또는 SQL 편집기). 이번에는 `20260924120000_hohyeon_hardening.sql`(Realtime 비공개 채널 RLS, 로그인 실패 잠금, 저장 이력 등)과 그보다 새 마이그레이션이 있다면 그것까지입니다. `20260915…` 두 개는 운영 DB에 이미 적용했습니다. 기존 계정이나 원장을 초기화하는 작업은 배포 과정에 넣지 않습니다. 새 마이그레이션은 예전 함수와도 호환됩니다.
+1. **DB 마이그레이션** — `supabase/migrations`를 파일 이름 순서대로 적용합니다(`supabase db push` 또는 SQL 편집기). 이번에는 `20260924120000_hohyeon_hardening.sql`(Realtime 비공개 채널 RLS, 로그인 실패 잠금, 저장 이력 등)과 `20260925090000_hohyeon_world_backup.sql`(world 스냅샷·매일 백업·경제 리포트 함수, 위 ‘월드 백업과 복구’)입니다. 백업 마이그레이션은 기존 객체를 바꾸지 않으며 Edge 함수 재배포가 필요 없습니다. `20260915…` 두 개는 운영 DB에 이미 적용했습니다. 기존 계정이나 원장을 초기화하는 작업은 배포 과정에 넣지 않습니다. 새 마이그레이션은 예전 함수와도 호환됩니다.
 2. **Edge 함수** — `supabase/config.toml` 설정대로 두 함수를 배포합니다: `supabase functions deploy hohyeon-auth hohyeon-api`.
    - `hohyeon-auth`: **verify_jwt=false** (자체 자격증명 검증), `hohyeon-api`: **verify_jwt=true**. import map은 둘 다 `supabase/functions/deno.json`(고정 npm 버전)입니다.
    - 번들에는 `supabase/functions/_shared/server.ts`와 루트 `app/*.ts` 공유 엔진 파일(`lounge-accounts.ts`, `lounge-look.ts`, `lounge-bedroom-*.ts`, `lounge-life.ts`, `lounge-room.ts`, `lounge-cloud-engine.ts`, `lounge-games.ts`, `lounge-reactions.ts` 등)이 상대 경로 import로 함께 들어갑니다. 이 파일들을 바꿨다면 두 함수를 다시 배포해야 서버에 반영됩니다.

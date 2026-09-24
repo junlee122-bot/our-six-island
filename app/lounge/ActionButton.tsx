@@ -3,6 +3,10 @@
 // and icon follow the nearest thing you can use; E always presses it.
 import {
   Apple,
+  Armchair,
+  ArrowUpFromLine,
+  Play,
+  UserPlus,
   DoorClosed,
   DoorOpen,
   Droplets,
@@ -30,6 +34,11 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   dress: Shirt,
   decorate: Palette,
   guide: Sprout,
+  sit: Armchair,
+  join: UserPlus,
+  watch: Eye,
+  resume: Play,
+  stand: ArrowUpFromLine,
 };
 
 export function ActionButton({
