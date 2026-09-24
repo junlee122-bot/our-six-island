@@ -171,3 +171,11 @@
 - 기능 커밋 `e05e82b64bc1118f3a385bbb653889255fb5de05`를 원격 main에 일반 push했습니다. GitHub Pages 작업 `35954674020`은 **success**입니다.
 - 공개 `https://junlee122-bot.github.io/our-six-island/?v=e05e82b`의 HTML **1,779,486바이트**가 최종 로컬 빌드와 정확히 일치합니다. **145개 에셋 전부 HTTP 200 및 SHA256** 검증과 단일 스크립트 문법 검사도 통과했습니다. 기록: `../outputs/immersive-village/live-report.json`.
 - API **v7**은 변경하지 않았습니다. 실제 사용자 계정·저장·화폐를 테스트에 쓰지 않았으며 격리된 검사 브라우저와 로컬 3136 서버는 종료했습니다. 기존에 열어 둔 게임은 새로고침하면 새 마을 진입 흐름이 적용됩니다.
+
+## 2026-09-24 04:15 UTC - Scheduled lifecycle audit
+
+- Read the latest fullscreen-village release notes and confirmed a clean checkout at `0d148ff` before auditing. No in-progress work or duplicate feature implementation was needed.
+- Public Pages returned HTTP 200; its 1,779,486-byte HTML exactly matched the deployed local package.
+- Ran the local synthetic lifecycle suites `lounge-rematch.test.mjs` and `lounge-rematch-cloud.test.mjs`: 15/15 passed across all five games. Coverage includes fixed-roster readiness, cancellation, one-time reservation, stale/retried actions, failed storage, explicit departure, short reconnect, and lease expiry.
+- A separate read-only review found no additional actionable lifecycle defect. Reviewed the fullscreen HUD's invitation/retained-table layering without finding a new concrete issue. No source, API, assets, account, saved game, or wallet changes were made; no paid generation or extra deployment is needed.
+- Next audit: rotate to save-conflict/draft recovery and small-screen alert usability using isolated synthetic accounts. Preserve the completed village and rematch work. Routine healthy state requires no user notification.
