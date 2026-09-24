@@ -222,7 +222,7 @@
   letter-spacing: -0.6px;
 }
 .l-immersive .l-brand small {
-  font-size: 10px;
+  font-size: 11px;
 }
 .l-immersive .l-brand-icon {
   width: 34px;
@@ -273,12 +273,12 @@
   right: max(20px, env(safe-area-inset-right));
 }
 .l-immersive .hv-top-tools button {
-  min-height: 42px;
+  min-height: 44px;
   padding: 8px 12px;
 }
 .l-immersive .hv-camera button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 .l-immersive .hv-directory {
   top: 140px;
@@ -536,7 +536,7 @@
     font-size: 14px;
   }
   .l-immersive .l-brand small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .l-app .l-world-header .l-header-right {
     gap: 2px;
@@ -545,7 +545,7 @@
     padding: 6px;
     border: 0;
     background: none;
-    font-size: 10px;
+    font-size: 11px;
     gap: 3px;
   }
   .l-world-menu-button {
@@ -562,7 +562,7 @@
     gap: 6px;
   }
   .l-immersive .hv-top-tools button {
-    min-height: 40px;
+    min-height: 44px;
     padding: 8px 10px;
     font-size: 11px;
   }
@@ -571,8 +571,8 @@
     top: 80px;
   }
   .l-immersive .hv-camera button {
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
   }
   .l-immersive .hv-directory {
     top: 128px;
@@ -582,13 +582,15 @@
   .l-immersive .hv-pad {
     right: 12px;
     bottom: max(38px, env(safe-area-inset-bottom));
-    grid-template-columns: repeat(3, 40px);
-    grid-template-rows: repeat(3, 40px);
+    grid-template-columns: repeat(3, 44px);
+    grid-template-rows: repeat(3, 44px);
   }
+  /* Above the minimap (bottom-left), never on top of it. */
   .l-immersive .hv-place-card {
     left: 12px;
     right: 12px;
-    bottom: 180px;
+    top: auto;
+    bottom: 216px;
     transform: none;
     max-width: none;
     width: auto;
@@ -596,7 +598,8 @@
   .l-immersive .hv-entry-prompt {
     left: 12px;
     right: 12px;
-    bottom: 180px;
+    top: auto;
+    bottom: 216px;
   }
   .l-world-social {
     left: 12px;
@@ -611,7 +614,7 @@
     padding: 0 10px;
   }
   .l-world-hint {
-    font-size: 10px;
+    font-size: 11px;
     left: 8px;
     right: 8px;
   }
@@ -645,5 +648,139 @@
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* P2: bag and mailbox in the header. */
+.l-header-icon {
+  position: relative;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  color: #516342;
+  background: transparent;
+  cursor: pointer;
+}
+.l-header-icon:hover {
+  background: #e8eed7;
+}
+.l-header-badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #d4574a;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+@media (max-width: 600px) {
+  .l-bag-button {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  /* Three dock buttons (수다 · 가방 · 스티커) must clear the D-pad: each is a
+     narrow icon-over-label tile, the same for all three. */
+  .l-world-social .l-world-chat-button,
+  .l-app .l-world-social .l-reaction-open {
+    width: 52px;
+    min-height: 48px;
+    height: auto;
+    padding: 4px 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+}
+
+/* While a modal is open the toast moves to the top edge so it never covers
+   the modal's own content (farm seeds, shop rows). */
+body:has(dialog[open]) .l-app .l-toast[popover] {
+  top: calc(12px + env(safe-area-inset-top));
+  bottom: auto;
+}
+
+/* Life loop as a list: simple graphics and the WebGL fallback. */
+.l-simple-life {
+  margin-top: 22px;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+.l-simple-life h2 {
+  font-size: 16px;
+  color: #3f5a3e;
+}
+.l-simple-life h3 {
+  font-size: 14px;
+  color: #4b5f45;
+  margin-top: 6px;
+}
+.l-simple-trees,
+.l-simple-homes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.l-simple-trees button,
+.l-simple-homes button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #dde3cf;
+  border-radius: 10px;
+  background: #fffdf5;
+  color: #3f5a3e;
+  font-size: 13px;
+}
+.l-simple-trees button small {
+  font-size: 11px;
+  color: #6b7a5f;
+}
+.l-simple-trees button:disabled {
+  opacity: 0.6;
+}
+.l-simple-homes button[aria-pressed='true'] {
+  border-color: #8aa874;
+  background: #eef4e2;
+}
+.l-simple-talk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fffaf0;
+  border: 1px solid #ecdfbf;
+  font-size: 13px;
+}
+.l-simple-talk .avatar-view {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+/* Touch screens have no keyboard: hide the arrow-key / E hints. */
+@media (hover: none) and (pointer: coarse) {
+  .l-world-hint span {
+    display: none;
   }
 }

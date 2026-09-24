@@ -69,7 +69,7 @@ export class IslandRoom {
   // Give an explicit departure a brief chance to flush. Heartbeats cover tab crashes.
   void Promise.race([this.outgoing,new Promise(r=>setTimeout(r,400))]).then(async()=>{
    this.disposed=true;
-   try{await this.client.removeAllChannels();}finally{this.client.disconnect();}
+   try{await this.client.removeAllChannels();}finally{void this.client.disconnect();}
   }).catch(()=>{});
  }
 }

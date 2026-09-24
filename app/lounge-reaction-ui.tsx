@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Smile, Eye, EyeOff, X } from 'lucide-react';
 import { LOUNGE_ASSETS } from './lounge-assets';
-import { ACTORS } from './theater-data';
+import { ACTORS } from './lounge-roster';
 import type { LoungePlayer } from './lounge-room';
 import {
   REACTIONS,
@@ -54,10 +54,22 @@ export function ReactionDock({
     .filter((p) => reactionVisible(p.reaction, scope, matchId, now))
     .sort((a, b) => b.reaction!.at - a.reaction!.at)
     .slice(0, 3);
+  // Re-render only when something visible changes: the next sticker expiry or
+  // the end of my cooldown (instead of a 4×/s interval).
+  const nextChange = Math.min(
+    ...players.map((p) => p.reaction?.expiresAt ?? 0).filter((at) => at > now),
+    cooldownUntil > now ? cooldownUntil : Infinity,
+  );
   useEffect(() => {
-    const timer = setInterval(() => setClock(Date.now()), 250);
-    return () => clearInterval(timer);
-  }, []);
+    const tick = () => setClock(Date.now());
+    if (!Number.isFinite(nextChange)) {
+      // A new reaction arrived through props: refresh the clock once.
+      const t = setTimeout(tick, 0);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(tick, Math.max(50, nextChange - Date.now() + 20));
+    return () => clearTimeout(t);
+  }, [nextChange, players]);
   useEffect(() => {
     if (!open) return;
     const d = dialog.current!;
@@ -175,7 +187,7 @@ export function ReactionDock({
         >
           <header>
             <div>
-              <small>HOHYEON FRIENDS</small>
+              <small>범티콘</small>
               <h2 id="reaction-picker-title">말 대신, 범티콘</h2>
             </div>
             <button

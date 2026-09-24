@@ -235,7 +235,7 @@
 
 .l-wardrobe .l-current-look small {
   color: var(--wc-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .l-wardrobe .l-current-look strong {
@@ -268,7 +268,7 @@
   color: var(--wc-blue);
   background: #e2e9fc;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .l-wardrobe .l-closet-panel {
@@ -352,7 +352,7 @@
 }
 
 .l-wardrobe .l-outfits small {
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   color: var(--wc-muted);
   margin-top: 5px;
@@ -369,7 +369,7 @@
   border-radius: 4px;
   background: var(--wc-blue);
   color: #fff;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .l-wardrobe .l-colors {
@@ -494,7 +494,7 @@
   min-width: 0;
   gap: 6px;
   color: var(--wc-muted);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -534,7 +534,7 @@
   gap: 10px;
   margin-top: 13px;
   color: var(--wc-muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -548,7 +548,7 @@
   border-radius: 4px;
   background: #fff;
   color: var(--wc-ink);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .l-wardrobe .l-color-editor-footer button:disabled {
@@ -613,7 +613,7 @@
 
 .l-wardrobe .l-saved-looks strong {
   padding: 7px 4px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
 }
 
@@ -633,7 +633,7 @@
 
 .l-wardrobe .l-closet-bottom > span {
   color: var(--wc-muted);
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .l-wardrobe .l-closet-bottom > .l-primary {
@@ -743,7 +743,7 @@
   }
 
   .l-wardrobe .l-mirror-top > span:last-child {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .l-wardrobe .l-pose-bar {

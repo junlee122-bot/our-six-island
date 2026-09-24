@@ -1,0 +1,16 @@
+# Supabase CLI settings for the HoHyeon Edge functions. Only the function
+# settings below are relied on; everything else uses CLI defaults.
+# Deploy order: migrations -> functions -> pages (see ACCOUNTS.md "배포").
+project_id = "ogfpeqeoaznwjbrbedbx"
+
+# Game API: the platform verifies the JWT before the function runs, then the
+# function checks the app session (hohyeon.sessions) itself.
+[functions.hohyeon-api]
+verify_jwt = true
+import_map = "./functions/deno.json"
+
+# Public auth entrypoint: callers are not logged in yet, so the function
+# verifies codes/passwords itself (rate limited, audited).
+[functions.hohyeon-auth]
+verify_jwt = false
+import_map = "./functions/deno.json"

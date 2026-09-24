@@ -1,0 +1,644 @@
+/* "범타듀의 하루" panels: farm, bag, shop, mail, guestbook, status, friend visit. */
+.l-life-modal h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 18px 0 10px;
+  font-size: 15px;
+  color: #3e5a44;
+}
+.l-life-modal h3 small {
+  font-weight: 400;
+  font-size: 11px;
+  color: #8a9480;
+}
+.l-life-modal button,
+.l-guestbook button,
+.l-status-form button,
+.l-visit-bar button {
+  min-height: 44px;
+}
+.l-life-modal button:disabled,
+.l-guestbook button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.l-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 6px 8px;
+  color: #4f6e50;
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.l-count {
+  display: block;
+  text-align: right;
+  font-size: 11px;
+  color: #8a9480;
+}
+
+/* Stepper */
+.l-stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d8e0cd;
+  border-radius: 9px;
+  background: #fff;
+}
+.l-stepper button {
+  width: 44px;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  background: none;
+  border: 0;
+  color: #42694f;
+  cursor: pointer;
+}
+.l-stepper output {
+  min-width: 26px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Farm */
+.l-farm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.l-farm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+.l-plot {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f5eedb, #e8dbbd);
+  border: 1px solid #d9c9a3;
+  font-size: 12px;
+}
+.l-plot[data-stage='3'] {
+  background: linear-gradient(180deg, #fff5cf, #f1dc98);
+  border-color: #e3bd52;
+}
+.l-plot-art {
+  font-size: 30px;
+  line-height: 1;
+}
+.l-plot strong {
+  font-size: 12px;
+  color: #4d4330;
+}
+.l-plot small {
+  font-size: 11px;
+  color: #7a6d52;
+}
+.l-plot-bar {
+  display: block;
+  width: 100%;
+  height: 7px;
+  border: 0;
+  border-radius: 4px;
+  background: #d8c8a2;
+  overflow: hidden;
+  appearance: none;
+}
+.l-plot-bar::-webkit-progress-bar {
+  background: #d8c8a2;
+}
+.l-plot-bar::-webkit-progress-value {
+  background: #6f9a4a;
+}
+.l-plot-bar::-moz-progress-bar {
+  background: #6f9a4a;
+}
+.l-seed-choices {
+  display: grid;
+  gap: 5px;
+}
+.l-seed-choices button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid #d8e0cd;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.l-seed-choices small {
+  color: #8a9480;
+  font-size: 11px;
+}
+
+/* Bag */
+.l-bag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.l-bag-chips li {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef2e4;
+  font-size: 12px;
+}
+.l-sell-cap {
+  font-size: 12px;
+  color: #56684e;
+  margin-bottom: 8px;
+}
+.l-sell-cap small {
+  color: #8a9480;
+  font-size: 11px;
+}
+.l-sell-list,
+.l-shop-list,
+.l-mail-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  list-style: none;
+}
+.l-sell-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f6f4ea;
+}
+/* Only the name block grows; the stepper keeps its own inline-flex. */
+.l-sell-list .l-sell-name {
+  display: grid;
+  flex: 1 1 140px;
+  gap: 2px;
+}
+.l-sell-buttons,
+.l-buy {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.l-buy {
+  flex-direction: column;
+  align-items: flex-end;
+}
+.l-app .l-why,
+.l-why {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: #9a5b3b;
+  text-align: right;
+}
+.l-buy .l-why {
+  flex-basis: auto;
+}
+.l-sell-cap {
+  display: grid;
+  gap: 2px;
+}
+.l-wallet-line {
+  position: relative;
+  font-weight: 600;
+}
+.l-coin-float {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  font-style: normal;
+  font-weight: 800;
+  color: #a4711a;
+  white-space: nowrap;
+  animation: l-coin-float 1.6s ease-out forwards;
+}
+@keyframes l-coin-float {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-coin-float {
+    animation: none;
+    opacity: 1;
+  }
+}
+/* After a harvest: what to do next. */
+.l-next-step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff4d6;
+  border: 1px solid #ecd49a;
+  font-size: 13px;
+  font-weight: 600;
+  color: #5b4520;
+}
+.l-next-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.l-plant-all {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #f1f5e8;
+  font-size: 13px;
+}
+.l-plant-all label {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 180px;
+}
+.l-plant-all select {
+  min-height: 44px;
+  border-radius: 9px;
+  border: 1px solid #d8e0cd;
+  padding: 0 8px;
+  background: #fff;
+  font: inherit;
+}
+.l-shop-list li[data-locked] .l-shop-art {
+  filter: grayscale(0.7);
+  opacity: 0.75;
+}
+.l-shop-art small {
+  font-size: 11px;
+  font-weight: 800;
+  color: #6b4b1f;
+  margin-top: -8px;
+}
+.l-sticker-chip span {
+  font-size: 14px;
+}
+.l-sell-list strong {
+  font-size: 13px;
+}
+.l-sell-list small {
+  font-size: 11px;
+  color: #8a9480;
+}
+
+/* Shop */
+.l-shop-list {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.l-shop-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f7f4e9;
+  border: 1px solid #e6dfc7;
+}
+.l-shop-list li[data-owned] {
+  background: #eef4e6;
+  border-color: #c9d9b7;
+}
+.l-shop-art {
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 30px;
+}
+.l-shop-art img {
+  width: 46px;
+  height: 50px;
+  object-fit: contain;
+}
+.l-shop-swatches {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 6px;
+}
+.l-shop-swatches i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.l-shop-text {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 120px;
+}
+.l-shop-text strong {
+  font-size: 13px;
+}
+.l-shop-text small {
+  font-size: 11px;
+  color: #8a9480;
+}
+.l-shop-text b {
+  font-size: 12px;
+  color: #6b4b1f;
+}
+.l-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #4f7a45;
+}
+
+/* Tabs / mail */
+.l-mail-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.l-mail-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #d8e0cd;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.l-mail-tabs button[aria-selected='true'] {
+  background: #42694f;
+  border-color: #42694f;
+  color: #fffdef;
+}
+.l-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #d4574a;
+  color: #fff;
+  font-size: 11px;
+}
+.l-mail-all {
+  margin-bottom: 10px;
+}
+.l-mail-list li {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f6f4ea;
+}
+.l-mail-list li[data-unread] {
+  background: #fff6de;
+  box-shadow: inset 3px 0 0 #e0a73c;
+}
+.l-mail-face {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e8ecdf;
+}
+.l-mail-list strong {
+  font-size: 13px;
+}
+.l-mail-list strong small {
+  font-weight: 400;
+  font-size: 11px;
+  color: #8a9480;
+}
+.l-new {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 11px;
+  color: #c0492f;
+}
+.l-mail-list p {
+  margin: 4px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.l-mail-extra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.l-sticker-chip,
+.l-gift-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #eef2e4;
+  font-size: 11px;
+}
+.l-mail-actions {
+  display: flex;
+  gap: 4px;
+}
+.l-mail-form {
+  display: grid;
+  gap: 12px;
+}
+.l-mail-form label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+.l-mail-form label small {
+  color: #8a9480;
+  font-size: 11px;
+}
+.l-mail-form select,
+.l-mail-form textarea,
+.l-guestbook input,
+.l-status-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #d8e0cd;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+}
+.l-sticker-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+}
+.l-sticker-pick legend {
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.l-sticker-pick button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 6px 12px;
+  border: 1px solid #d8e0cd;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.l-sticker-pick button[aria-pressed='true'] {
+  background: #fff1c6;
+  border-color: #e0b54a;
+}
+
+/* Status */
+.l-status-form {
+  display: grid;
+  gap: 6px;
+}
+
+/* Friend visit */
+.l-visit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 18px;
+  padding: 18px 24px 40px;
+}
+.l-visit-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.l-visit-bar p {
+  flex: 1 1 200px;
+  margin: 0;
+  font-size: 13px;
+  color: #56684e;
+}
+.l-visit-status {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fff8e2;
+  font-size: 13px;
+}
+.l-guestbook {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fffdf4;
+  border: 1px solid #e3e6d6;
+}
+.l-guestbook h2 {
+  font-size: 16px;
+}
+.l-guestbook form {
+  display: flex;
+  gap: 8px;
+}
+.l-guestbook ul {
+  display: grid;
+  gap: 6px;
+  padding: 0;
+  list-style: none;
+  max-height: 420px;
+  overflow: auto;
+}
+.l-guestbook li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #f6f4ea;
+  font-size: 13px;
+}
+.l-guestbook li small {
+  grid-column: 2;
+  font-size: 11px;
+  color: #8a9480;
+}
+.l-guestbook li span {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  .l-visit {
+    grid-template-columns: 1fr;
+    padding: 12px 16px 32px;
+  }
+  .l-farm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.l-guestbook form button {
+  flex: none;
+  white-space: nowrap;
+  padding-inline: 16px;
+}
+.l-plot[data-stage='empty'] .l-plot-art {
+  display: block;
+  width: 44px;
+  height: 26px;
+  border-radius: 8px;
+  background: repeating-linear-gradient(0deg, #8a5d3b 0 5px, #9c6c46 5px 10px);
+  opacity: 0.75;
+}
+.l-next-step > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.l-sticker-chip,
+.l-sticker-pick button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

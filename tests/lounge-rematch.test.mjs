@@ -175,8 +175,11 @@ test('readiness is cancellable, restricted to table members and fixed rosters bl
     false,
   );
   assert.equal(apply(room, people[0], { kind: 'stand', game: 'chess' }), true);
+  // A short finished table stays for its survivor (empty seats can be filled
+  // by invite until the ready check runs out); the last stand dissolves it.
   assert.deepEqual(room.view.tables.chess.members, [people[1]]);
-  assert.deepEqual(room.view.tables.chess.ready, []);
+  assert.equal(apply(room, people[1], { kind: 'stand', game: 'chess' }), true);
+  assert.equal(room.view.tables.chess, undefined);
 });
 
 test('reconnect snapshot retains a rematch table and legacy snapshots default to none', () => {

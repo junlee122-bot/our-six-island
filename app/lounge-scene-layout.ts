@@ -88,3 +88,64 @@ export function unprojectFloor(point: ScenePoint, area: SceneArea): ScenePoint {
 }
 
 export const sceneDepth = (footY: number) => Math.round(footY * 10);
+
+/** Walking radius of a player's feet, in server units. */
+export const SCENE_PLAYER_RADIUS = 2.2;
+export type SceneCollider = { game: GameKind; x: number; y: number; rx: number; ry: number };
+
+/**
+ * Each table blocks an ellipse around its ground footprint, in server units,
+ * derived from the same foot/width data the renderer uses.
+ */
+export function sceneColliders(area: SceneArea): SceneCollider[] {
+  const f = SCENE_LAYOUT[area].floor;
+  const perX = 70 / (f.right - f.left),
+    perY = 46 / (f.front - f.back);
+  return SCENE_LAYOUT[area].tables.map((table) => {
+    const foot = unprojectFloor(table.foot, area);
+    const rx = table.width * perX * 0.36,
+      ry = table.width * 0.16 * perY;
+    return { game: table.game, x: foot.x, y: foot.y - ry * 0.75, rx, ry };
+  });
+}
+
+export function sceneCanWalk(point: ScenePoint, area: SceneArea): boolean {
+  if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return false;
+  if (point.x < 15 || point.x > 85 || point.y < 42 || point.y > 88) return false;
+  return !sceneColliders(area).some(
+    (c) =>
+      ((point.x - c.x) / (c.rx + SCENE_PLAYER_RADIUS)) ** 2 +
+        ((point.y - c.y) / (c.ry + SCENE_PLAYER_RADIUS)) ** 2 <
+      1,
+  );
+}
+
+/** Substepped movement that slides along table edges, like the village. */
+export function sceneStep(
+  from: ScenePoint,
+  dx: number,
+  dy: number,
+  area: SceneArea,
+): ScenePoint {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return from;
+  const clampPoint = (p: ScenePoint) => ({
+    x: clamp(p.x, 15, 85),
+    y: clamp(p.y, 42, 88),
+  });
+  // A player standing inside a table (e.g. an old seat position) may walk out.
+  if (!sceneCanWalk(from, area)) return clampPoint({ x: from.x + dx, y: from.y + dy });
+  const distance = Math.hypot(dx, dy);
+  const count = Math.max(1, Math.ceil(distance / 0.4));
+  let point = { ...from };
+  for (let i = 0; i < count; i++) {
+    const next = clampPoint({ x: point.x + dx / count, y: point.y + dy / count });
+    if (sceneCanWalk(next, area)) point = next;
+    else {
+      const slideX = clampPoint({ x: next.x, y: point.y });
+      if (sceneCanWalk(slideX, area)) point = slideX;
+      const slideY = clampPoint({ x: point.x, y: next.y });
+      if (sceneCanWalk(slideY, area)) point = slideY;
+    }
+  }
+  return point;
+}

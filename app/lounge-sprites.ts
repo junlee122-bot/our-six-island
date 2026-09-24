@@ -1,6 +1,14 @@
 import { LOUNGE_ASSETS } from './lounge-assets';
-import { drawCostumeGait, gaitFrame } from './lounge-gait';
-import motionLayouts from './lounge-motion-layout.json';
+import { gaitFrame, rigPoseIndex, RIG_POSES } from './lounge-gait';
+import {
+  buildRigParts,
+  drawRigPose,
+  rigFrameMargins,
+  solveGait,
+  type RigParts,
+} from './lounge-rig';
+import { RIG_CELLS } from './lounge-rig-data';
+import { motionSheetFor, type MotionSheet } from './lounge-rig-frames';
 import {
   dyePixel,
   removeConnectedBackdrop,
@@ -39,6 +47,12 @@ type Figure = {
   skin?: SkinMask;
   hair?: Uint8Array;
   blueHairOnly?: boolean;
+  /** Row (figure px) below which only strongly blue pixels count as hair (see createHairMask). */
+  hairCollar?: number;
+  /** Key into RIG_CELLS for static full-body art that the cut-out rig can pose. */
+  rig?: string;
+  /** Opaque bounds of `c` (measured once, for mapping rig permille). */
+  body?: Piece;
   skinRegions: {
     raisedHands: boolean;
     movingHands?: boolean;
@@ -55,8 +69,56 @@ const canvas = (w: number, h: number) => {
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
+  // Almost every sprite canvas is read back with getImageData (cleaning,
+  // bounds, dyeing); the attribute only counts on the first getContext call.
+  c.getContext('2d', { willReadFrequently: true });
   return c;
 };
+
+/** Canvases that are only drawn from (rig parts and posed frames): no readback hint. */
+const drawCanvas = (w: number, h: number) => {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, w);
+  c.height = Math.max(1, h);
+  return c;
+};
+const placeholder = { width: 0, height: 0 } as HTMLCanvasElement;
+type RigFrame = Piece & { originX: number; originY: number; resolution: number };
+
+/** A cache bounded by approximate canvas bytes (w × h × 4), least recent evicted first. */
+class ByteLru<V extends { c: HTMLCanvasElement }> {
+  private map = new Map<string, V>();
+  private bytes = 0;
+  constructor(
+    private readonly limit: number,
+    private readonly measure: (value: V) => number = (value) =>
+      value.c.width * value.c.height * 4,
+  ) {}
+  get(key: string) {
+    const value = this.map.get(key);
+    if (value) {
+      this.map.delete(key);
+      this.map.set(key, value);
+    }
+    return value;
+  }
+  set(key: string, value: V) {
+    const old = this.map.get(key);
+    if (old) {
+      this.bytes -= this.measure(old);
+      this.map.delete(key);
+    }
+    this.map.set(key, value);
+    this.bytes += this.measure(value);
+    while (this.bytes > this.limit && this.map.size > 1) {
+      const [oldestKey, oldest] = this.map.entries().next().value!;
+      this.map.delete(oldestKey);
+      this.bytes -= this.measure(oldest);
+      // Release the backing store promptly (iOS counts total canvas memory).
+      oldest.c.width = oldest.c.height = 0;
+    }
+  }
+}
 const image = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const im = new Image();
@@ -64,7 +126,9 @@ const image = (url: string) =>
     im.onerror = () => reject(new Error('캐릭터 그림을 불러오지 못했어요.'));
     im.src = url;
   });
-function clean(c: HTMLCanvasElement, magenta = false) {
+/** Backdrop grey tolerance for art with warm off-white shoes (Hohyeon's original). */
+export const TIGHT_BACKDROP_SPREAD = 10;
+function clean(c: HTMLCanvasElement, magenta = false, backdropSpread?: number) {
   const ctx = c.getContext('2d', { willReadFrequently: true })!,
     p = ctx.getImageData(0, 0, c.width, c.height);
   if (magenta) {
@@ -82,7 +146,7 @@ function clean(c: HTMLCanvasElement, magenta = false) {
         p.data[k + 3] = 0;
     }
   } else if (!p.data.some((v, i) => i % 4 === 3 && v === 0))
-    removeConnectedBackdrop(p.data, c.width, c.height);
+    removeConnectedBackdrop(p.data, c.width, c.height, backdropSpread);
   ctx.putImageData(p, 0, 0);
   return c;
 }
@@ -336,6 +400,23 @@ function sheetFigure(
   );
   return figure(f, eyeLine, false, bareLegs, bareShoulders, collared);
 }
+/** Keep only the opaque region of a large source canvas (e.g. 6 MB cap art). */
+function cropPiece(piece: Piece): Piece {
+  const c = canvas(Math.max(1, piece.w), Math.max(1, piece.h));
+  c.getContext('2d')!.drawImage(
+    piece.c,
+    piece.x,
+    piece.y,
+    piece.w,
+    piece.h,
+    0,
+    0,
+    piece.w,
+    piece.h,
+  );
+  piece.c.width = piece.c.height = 0;
+  return { c, x: 0, y: 0, w: piece.w, h: piece.h };
+}
 function bandAnchor(piece: Piece) {
   const data = piece.c
     .getContext('2d')!
@@ -370,232 +451,328 @@ function bandAnchor(piece: Piece) {
   };
 }
 let pending: Promise<Awaited<ReturnType<typeof prepare>>> | null = null;
+type AtlasKey =
+  | 'original'
+  | 'hohyeon'
+  | 'classic'
+  | 'street'
+  | 'smart'
+  | 'buns'
+  | 'outfits'
+  | 'shampoo'
+  | 'akatsuki'
+  | 'accessories'
+  | 'cap'
+  | 'hachimaki';
+
+/** Which atlases a look needs; only these are downloaded and prepared. */
+export function spriteAtlasesFor(actor: number, input: Look): AtlasKey[] {
+  const look = readLook(input, actor);
+  const index = ['classic', 'street', 'smart'].indexOf(look.collection),
+    newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
+    bun = actor === 0 && look.hairstyle === 'buns',
+    shampoo = actor === 0 && look.collection === 'shampoo',
+    akatsuki = look.collection === 'akatsuki',
+    special = actor === 0 && (bun || newOutfit >= 0 || shampoo);
+  const keys = new Set<AtlasKey>();
+  if (akatsuki) keys.add('akatsuki');
+  else if (special)
+    keys.add(shampoo ? 'shampoo' : newOutfit >= 0 ? 'outfits' : 'buns');
+  else if (index < 0) keys.add(actor === 6 ? 'hohyeon' : 'original');
+  else keys.add(look.collection as 'classic' | 'street' | 'smart');
+  const hat = HATS.find((h) => h.id === look.hat)?.cell ?? -1;
+  const glasses = GLASSES.find((g) => g.id === look.glasses)?.cell ?? -1;
+  if (hat === 9) keys.add('hachimaki');
+  else if (hat >= 0) keys.add(actor === 5 && hat === 0 ? 'cap' : 'accessories');
+  if (glasses >= 0 || look.clip) keys.add('accessories');
+  return [...keys];
+}
+
 async function prepare() {
   const a = LOUNGE_ASSETS as Record<string, string>;
-  const [
-    motion,
-    accessories,
-    cap,
-    hohyeon,
-    classic,
-    street,
-    smart,
-    bunSheet,
-    outfitSheet,
-    shampooSheet,
-    akatsukiSheet,
-    hachimaki,
-  ] = await Promise.all([
-    image(a.motion),
-    image(a.accessories),
-    image(a.jaeminCap),
-    image(a.hohyeon),
-    ...['classic', 'street', 'smart'].map((k) => image(a[k])),
-    image(a.daowonBuns),
-    image(a.daowonOutfits),
-    image(a.dowonShampoo),
-    image(a.akatsuki),
-    image(a.hachimaki),
-  ]);
-  const newSheets = [classic, street, smart];
-  const bunFigures = Array.from({ length: 4 }, (_, i) =>
-    sheetFigure(bunSheet, 2, 2, i, [148, 148, 146, 146][i], i === 0 || i === 3),
-  );
-  // Measured eye lines in the normalized 400×480 figures avoid mistaking a black shirt for eyes.
-  const outfitFigures = Array.from({ length: 6 }, (_, i) =>
-    sheetFigure(
-      outfitSheet,
-      3,
-      2,
-      i,
-      [128, 128, 129, 134, 134, 134][i],
-      i % 3 === 2,
-      i % 3 === 2,
-    ),
-  );
-  const shampooFigures = Array.from({ length: 2 }, (_, i) => {
-    const f = sheetFigure(
-      shampooSheet,
-      2,
-      1,
-      i,
-      [113, 119][i],
-      false,
-      false,
-      true,
+  const atlases = new Map<AtlasKey, Promise<void>>();
+  const ready = new Set<AtlasKey>();
+  const failed = new Set<AtlasKey>();
+  let bunFigures: Figure[] = [],
+    outfitFigures: Figure[] = [],
+    shampooFigures: Figure[] = [],
+    akatsukiFigures: Figure[] = [];
+  const original: Figure[][] = [];
+  const collections: Figure[][] = [];
+  const pieces: Piece[] = [];
+  let band = { cx: 0, cy: 0, width: 1 };
+  const sheetCell = (sheet: HTMLImageElement, i: number) => {
+    const c = canvas(Math.floor(sheet.width / 4), Math.floor(sheet.height / 2));
+    c.getContext('2d')!.drawImage(
+      sheet,
+      ((i % 4) * sheet.width) / 4,
+      (Math.floor(i / 4) * sheet.height) / 2,
+      sheet.width / 4,
+      sheet.height / 2,
+      0,
+      0,
+      c.width,
+      c.height,
     );
-    f.skinRegions.shortSleeveTunic = true;
-    return f;
-  });
-  const akatsukiFigures = Array.from({ length: 8 }, (_, i) => {
-    const f = sheetFigure(
-      akatsukiSheet,
-      4,
-      2,
-      i,
-      [136, 133, 136, 135, 139, 133, 138, 138][i],
-      false,
-      false,
-      true,
+    const cleanCell = clean(c, true),
+      b = bounds(cleanCell),
+      f = canvas(400, 480),
+      scale = Math.min(356 / b.w, 450 / b.h);
+    f.getContext('2d')!.drawImage(
+      cleanCell,
+      b.x,
+      b.y,
+      b.w,
+      b.h,
+      (400 - b.w * scale) / 2,
+      465 - b.h * scale,
+      b.w * scale,
+      b.h * scale,
     );
-    f.skinRegions.bareToes = true;
-    f.skinRegions.darkHighCollar = true;
     return f;
-  });
-  const rows = [
-      [20, 241],
-      [264, 256],
-      [521, 248],
-      [771, 258],
-      [1030, 259],
-      [1289, 247],
-    ],
-    eyes = [
-      [108, 109, 108, 108],
-      [351, 348, 351, 348],
-      [608, 607, 607, 608],
-      [861, 861, 862, 861],
-      [1120, 1120, 1121, 1120],
-      [1371, 1372, 1372, 1369],
-    ],
-    original: Figure[][] = [];
-  for (let r = 0; r < 6; r++) {
-    original[r] = [];
-    for (let col = 0; col < 4; col++) {
-      const c = canvas(320, 320);
-      c.getContext('2d')!.drawImage(
-        motion,
-        35 + col * 240,
-        rows[r][0],
-        240,
-        rows[r][1],
-        0,
-        0,
-        320,
-        320,
-      );
-      original[r].push(
-        figure(
-          clean(c),
-          ((eyes[r][col] - rows[r][0]) * 320) / rows[r][1],
-          col === 3,
-          [0, 1, 2, 5].includes(r),
-          r === 1,
-          r === 2,
-        ),
-      );
-    }
-  }
-  const hc = canvas(hohyeon.width, hohyeon.height);
-  hc.getContext('2d')!.drawImage(hohyeon, 0, 0);
-  const b = bounds(keepPieces(clean(hc), 1)),
-    h = canvas(400, 480);
-  h.getContext('2d')!.drawImage(
-    hc,
-    b.x,
-    b.y,
-    b.w,
-    b.h,
-    (400 - (b.w / b.h) * 450) / 2,
-    15,
-    (b.w / b.h) * 450,
-    450,
-  );
-  original[6] = [figure(h, ((356 - b.y) / b.h) * 450 + 15)];
-  const collections = newSheets.map((sheet, sheetIndex) =>
-    Array.from({ length: 7 }, (_, i) => {
-      const c = canvas(
-        Math.floor(sheet.width / 4),
-        Math.floor(sheet.height / 2),
-      );
-      c.getContext('2d')!.drawImage(
-        sheet,
-        ((i % 4) * sheet.width) / 4,
-        (Math.floor(i / 4) * sheet.height) / 2,
-        sheet.width / 4,
-        sheet.height / 2,
-        0,
-        0,
-        c.width,
-        c.height,
-      );
-      const cleanCell = clean(c, true),
-        b = bounds(cleanCell),
-        f = canvas(400, 480),
-        scale = Math.min(356 / b.w, 450 / b.h);
-      f.getContext('2d')!.drawImage(
-        cleanCell,
+  };
+  const builders: Record<AtlasKey, () => Promise<void>> = {
+    async original() {
+      const motion = await image(a.motion);
+      const rows = [
+          [20, 241],
+          [264, 256],
+          [521, 248],
+          [771, 258],
+          [1030, 259],
+          [1289, 247],
+        ],
+        eyes = [
+          [108, 109, 108, 108],
+          [351, 348, 351, 348],
+          [608, 607, 607, 608],
+          [861, 861, 862, 861],
+          [1120, 1120, 1121, 1120],
+          [1371, 1372, 1372, 1369],
+        ];
+      for (let r = 0; r < 6; r++) {
+        original[r] = [];
+        for (let col = 0; col < 4; col++) {
+          const c = canvas(320, 320);
+          c.getContext('2d')!.drawImage(
+            motion,
+            35 + col * 240,
+            rows[r][0],
+            240,
+            rows[r][1],
+            0,
+            0,
+            320,
+            320,
+          );
+          const f = figure(
+            clean(c),
+            ((eyes[r][col] - rows[r][0]) * 320) / rows[r][1],
+            col === 3,
+            [0, 1, 2, 5].includes(r),
+            r === 1,
+            r === 2,
+          );
+          if (col === 0) f.rig = `original:${r}`;
+          original[r].push(f);
+        }
+      }
+    },
+    async hohyeon() {
+      const hohyeon = await image(a.hohyeon);
+      const hc = canvas(hohyeon.width, hohyeon.height);
+      hc.getContext('2d')!.drawImage(hohyeon, 0, 0);
+      // The checkerboard is pure grey, the sneakers a warm off-white that the
+      // default tolerance floods away, so this sheet keys with a tighter one.
+      const b = bounds(keepPieces(clean(hc, false, TIGHT_BACKDROP_SPREAD), 1)),
+        h = canvas(400, 480);
+      h.getContext('2d')!.drawImage(
+        hc,
         b.x,
         b.y,
         b.w,
         b.h,
-        (400 - b.w * scale) / 2,
-        465 - b.h * scale,
-        b.w * scale,
-        b.h * scale,
+        (400 - (b.w / b.h) * 450) / 2,
+        15,
+        (b.w / b.h) * 450,
+        450,
       );
-      return figure(
-        f,
-        undefined,
-        false,
-        sheetIndex === 0 && [0, 1, 2, 5].includes(i),
-        sheetIndex === 0 && i === 1,
-        i === 2 || (sheetIndex === 2 && i === 3),
+      original[6] = [figure(h, ((356 - b.y) / b.h) * 450 + 15)];
+      original[6][0].rig = 'hohyeon:0';
+    },
+    ...Object.fromEntries(
+      (['classic', 'street', 'smart'] as const).map((key, sheetIndex) => [
+        key,
+        async () => {
+          const sheet = await image(a[key]);
+          collections[sheetIndex] = Array.from({ length: 7 }, (_, i) => {
+            const f = figure(
+              sheetCell(sheet, i),
+              undefined,
+              false,
+              sheetIndex === 0 && [0, 1, 2, 5].includes(i),
+              sheetIndex === 0 && i === 1,
+              i === 2 || (sheetIndex === 2 && i === 3),
+            );
+            f.rig = `${key}:${i}`;
+            return f;
+          });
+        },
+      ]),
+    ) as Record<'classic' | 'street' | 'smart', () => Promise<void>>,
+    async buns() {
+      const bunSheet = await image(a.daowonBuns);
+      bunFigures = Array.from({ length: 4 }, (_, i) => {
+        const f = sheetFigure(
+          bunSheet,
+          2,
+          2,
+          i,
+          [148, 148, 146, 146][i],
+          i === 0 || i === 3,
+        );
+        f.rig = `buns:${i}`;
+        return f;
+      });
+    },
+    async outfits() {
+      const outfitSheet = await image(a.daowonOutfits);
+      // Measured eye lines in the normalized 400×480 figures avoid mistaking a black shirt for eyes.
+      outfitFigures = Array.from({ length: 6 }, (_, i) => {
+        const f = sheetFigure(
+          outfitSheet,
+          3,
+          2,
+          i,
+          [128, 128, 129, 134, 134, 134][i],
+          i % 3 === 2,
+          i % 3 === 2,
+        );
+        f.rig = `outfits:${i}`;
+        // Denim: the navy jacket collar touches the bob's tips. Below the chin
+        // only the saturated hair blue may join the hair mask.
+        if (i % 3 === 1) f.hairCollar = f.eyes + 42;
+        return f;
+      });
+    },
+    async shampoo() {
+      const shampooSheet = await image(a.dowonShampoo);
+      shampooFigures = Array.from({ length: 2 }, (_, i) => {
+        const f = sheetFigure(
+          shampooSheet,
+          2,
+          1,
+          i,
+          [113, 119][i],
+          false,
+          false,
+          true,
+        );
+        f.skinRegions.shortSleeveTunic = true;
+        f.rig = `shampoo:${i}`;
+        return f;
+      });
+    },
+    async akatsuki() {
+      const akatsukiSheet = await image(a.akatsuki);
+      akatsukiFigures = Array.from({ length: 8 }, (_, i) => {
+        const f = sheetFigure(
+          akatsukiSheet,
+          4,
+          2,
+          i,
+          [136, 133, 136, 135, 139, 133, 138, 138][i],
+          false,
+          false,
+          true,
+        );
+        f.skinRegions.bareToes = true;
+        f.skinRegions.darkHighCollar = true;
+        f.rig = `akatsuki:${i}`;
+        return f;
+      });
+    },
+    async accessories() {
+      const accessories = await image(a.accessories);
+      for (let i = 0; i < 8; i++) {
+        const c = canvas(accessories.width / 4, accessories.height / 2);
+        c.getContext('2d')!.drawImage(
+          accessories,
+          ((i % 4) * accessories.width) / 4,
+          (Math.floor(i / 4) * accessories.height) / 2,
+          c.width,
+          c.height,
+          0,
+          0,
+          c.width,
+          c.height,
+        );
+        pieces[i] = bounds(clean(c));
+      }
+    },
+    async cap() {
+      const cap = await image(a.jaeminCap);
+      const c = canvas(cap.width, cap.height);
+      c.getContext('2d')!.drawImage(cap, 0, 0);
+      pieces[8] = cropPiece(bounds(clean(c)));
+    },
+    async hachimaki() {
+      const hachimaki = await image(a.hachimaki);
+      const bandCanvas = canvas(hachimaki.width, hachimaki.height);
+      bandCanvas.getContext('2d')!.drawImage(hachimaki, 0, 0);
+      // Preserve genuine alpha; also support the generated magenta extraction background.
+      const piece = bounds(clean(clean(bandCanvas, true)));
+      band = bandAnchor(piece);
+      const cropped = cropPiece(piece);
+      band = {
+        cx: band.cx - piece.x,
+        cy: band.cy - piece.y,
+        width: band.width,
+      };
+      pieces[9] = cropped;
+    },
+  };
+  function loadAtlas(key: AtlasKey) {
+    let job = atlases.get(key);
+    if (!job) {
+      job = builders[key]().then(
+        () => {
+          ready.add(key);
+        },
+        (error: unknown) => {
+          failed.add(key);
+          atlases.delete(key);
+          throw error;
+        },
       );
-    }),
-  );
-  const pieces = Array.from({ length: 9 }, (_, i) => {
-    const src = i === 8 ? cap : accessories,
-      c = canvas(
-        i === 8 ? cap.width : accessories.width / 4,
-        i === 8 ? cap.height : accessories.height / 2,
-      );
-    c.getContext('2d')!.drawImage(
-      src,
-      i === 8 ? 0 : ((i % 4) * accessories.width) / 4,
-      i === 8 ? 0 : (Math.floor(i / 4) * accessories.height) / 2,
-      c.width,
-      c.height,
-      0,
-      0,
-      c.width,
-      c.height,
+      atlases.set(key, job);
+    }
+    return job;
+  }
+  function isReady(actor: number, look: Look) {
+    return spriteAtlasesFor(actor, look).every((key) => ready.has(key));
+  }
+  function ensure(actor: number, look: Look) {
+    return Promise.all(spriteAtlasesFor(actor, look).map(loadAtlas)).then(
+      () => undefined,
     );
-    return bounds(clean(c));
-  });
-  const bandCanvas = canvas(hachimaki.width, hachimaki.height);
-  bandCanvas.getContext('2d')!.drawImage(hachimaki, 0, 0);
-  // Preserve genuine alpha; also support the generated magenta extraction background.
-  pieces.push(bounds(clean(clean(bandCanvas, true))));
-  const band = bandAnchor(pieces[9]);
-  const motionFigures = new Map<number, { walk: Figure[]; run: Figure[] }>();
-  const motionLoads = new Map<number, Promise<void>>();
-  const motionFailures = new Set<number>();
-  const motionUrls = [
-    a.locomotionDowon,
-    a.locomotionGangjae,
-    a.locomotionMinseo,
-    a.locomotionSeungjun,
-    a.locomotionMinjae,
-    a.locomotionJaemin,
-    a.locomotionHohyeon,
-  ];
-  // Movement artwork is loaded per visible actor, after the essential wardrobe.
-  // A failed request leaves the existing customized-art gait fully usable.
-  function loadMotion(actor: number) {
-    if (!motionLoads.has(actor))
+  }
+  const motionFigures = new Map<string, { walk: Figure[]; run: Figure[] }>();
+  const motionLoads = new Map<string, Promise<void>>();
+  const motionFailures = new Set<string>();
+  // Movement artwork is loaded per visible look, after the essential wardrobe.
+  // A failed request leaves the cut-out rig fully usable.
+  function loadMotion(sheet: MotionSheet, skin: Figure['skinRegions']) {
+    if (!motionLoads.has(sheet.id))
       motionLoads.set(
-        actor,
-        image(motionUrls[actor])
-          .then((sheet) => {
-            const rows = motionLayouts[actor].rows;
-            const frames = (
-              rects: { x: number; y: number; w: number; h: number }[],
-            ) =>
+        sheet.id,
+        image(sheet.url)
+          .then((picture) => {
+            const frames = (rects: readonly { x: number; y: number; w: number; h: number }[]) =>
               rects.map((rect) => {
                 const c = canvas(rect.w, rect.h);
                 c.getContext('2d')!.drawImage(
-                  sheet,
+                  picture,
                   rect.x,
                   rect.y,
                   rect.w,
@@ -606,31 +783,29 @@ async function prepare() {
                   rect.h,
                 );
                 const f = figure(
-                  c,
+                  sheet.keying === 'magenta' ? clean(c, true) : c,
                   undefined,
                   false,
-                  [0, 1, 2, 5].includes(actor),
-                  actor === 1,
-                  actor === 2,
+                  skin.bareLegs,
+                  skin.bareShoulders,
+                  skin.collared,
                   true,
                 );
-                f.skinRegions.movingHands = true;
-                // Minseo's white/black outfit has no blue garment channel; detached
-                // wind-blown hair strands below the arm must keep the chosen hair dye.
-                f.blueHairOnly = actor === 2;
+                f.skinRegions = { ...skin, ...f.skinRegions, movingHands: true };
+                f.blueHairOnly = sheet.blueHairOnly;
                 return f;
               });
-            motionFigures.set(actor, {
-              walk: frames(rows.walk),
-              run: frames(rows.run),
+            motionFigures.set(sheet.id, {
+              walk: frames(sheet.walk),
+              run: frames(sheet.run),
             });
           })
           .catch((error) => {
-            motionFailures.add(actor);
+            motionFailures.add(sheet.id);
             throw error;
           }),
       );
-    return motionLoads.get(actor)!;
+    return motionLoads.get(sheet.id)!;
   }
   const motionCrops = new Map<
     string,
@@ -681,10 +856,10 @@ async function prepare() {
       );
     return result;
   }
-  function motionCrop(actor: number, look: Look) {
-    const key = JSON.stringify([actor, look.hat, look.glasses, look.clip]);
+  function motionCrop(sheet: MotionSheet, actor: number, look: Look) {
+    const key = JSON.stringify([sheet.id, look.hat, look.glasses, look.clip]);
     if (motionCrops.has(key)) return motionCrops.get(key)!;
-    const rows = motionFigures.get(actor)!;
+    const rows = motionFigures.get(sheet.id)!;
     let left = Infinity,
       top = Infinity,
       right = 0,
@@ -710,44 +885,59 @@ async function prepare() {
       motionCrops.delete(motionCrops.keys().next().value!);
     return result;
   }
-  const cache = new Map<string, Piece>();
-  const gaitCache = new Map<string, Piece>();
+  // Byte-bounded: a composed 520×660 figure is ~1.4 MB of canvas memory.
+  const cache = new ByteLru<Piece>(40 * 1024 * 1024);
+  // Rig parts (one set per actor × look) and their posed frames. Frames are
+  // rendered at the target's resolution bucket, so a village figure costs
+  // ~0.4 MB per pose; a miss only re-runs a handful of drawImage calls.
+  const rigPartsCache = new ByteLru<{ c: HTMLCanvasElement; parts: RigParts | null }>(
+    24 * 1024 * 1024,
+    (value) => value.parts?.bytes ?? 4,
+  );
+  const rigFrames = new ByteLru<RigFrame>(28 * 1024 * 1024);
+  const rigScratch = drawCanvas(1, 1);
   const lastDraw = new WeakMap<
     HTMLCanvasElement,
     { piece: Piece; key: string }
   >();
-  function composed(
-    actor: number,
-    look: Look,
-    frame: number,
-    generated?: 'walk' | 'run',
-  ) {
-    const key = JSON.stringify([actor, look, frame, generated]);
-    if (cache.has(key)) return cache.get(key)!;
+  /** The static figure a look shows (standing pose unless `frame` picks a legacy step). */
+  function staticFigure(actor: number, look: Look, frame: number) {
     const index = ['classic', 'street', 'smart'].indexOf(look.collection),
       newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
       bun = actor === 0 && look.hairstyle === 'buns',
       shampoo = actor === 0 && look.collection === 'shampoo',
       akatsuki = look.collection === 'akatsuki',
       special = actor === 0 && (bun || newOutfit >= 0 || shampoo),
-      legacy = !akatsuki && !special && index < 0,
+      legacy = !akatsuki && !special && index < 0;
+    return akatsuki
+      ? akatsukiFigures[bun ? 7 : actor]
+      : special
+        ? shampoo
+          ? shampooFigures[bun ? 1 : 0]
+          : newOutfit >= 0
+            ? outfitFigures[newOutfit + (bun ? 3 : 0)]
+            : bunFigures[
+                ['classic', 'street', 'smart', 'original'].indexOf(
+                  look.collection,
+                )
+              ]
+        : legacy
+          ? original[actor][Math.min(frame, original[actor].length - 1)]
+          : collections[index][actor];
+  }
+  function composed(
+    actor: number,
+    look: Look,
+    frame: number,
+    generated?: { sheet: MotionSheet; motion: 'walk' | 'run' },
+  ) {
+    const key = JSON.stringify([actor, look, frame, generated?.sheet.id, generated?.motion]);
+    const hit = cache.get(key);
+    if (hit) return hit;
+    const bun = actor === 0 && look.hairstyle === 'buns',
       base = generated
-        ? motionFigures.get(actor)![generated][frame]
-        : akatsuki
-          ? akatsukiFigures[bun ? 7 : actor]
-          : special
-            ? shampoo
-              ? shampooFigures[bun ? 1 : 0]
-              : newOutfit >= 0
-                ? outfitFigures[newOutfit + (bun ? 3 : 0)]
-                : bunFigures[
-                    ['classic', 'street', 'smart', 'original'].indexOf(
-                      look.collection,
-                    )
-                  ]
-            : legacy
-              ? original[actor][Math.min(frame, original[actor].length - 1)]
-              : collections[index][actor],
+        ? motionFigures.get(generated.sheet.id)![generated.motion][frame]
+        : staticFigure(actor, look, frame),
       c = canvas(base.c.width + 120, base.c.height + 180),
       ctx = c.getContext('2d')!,
       p = base.c
@@ -766,6 +956,7 @@ async function prepare() {
           cx: base.cx,
           eyes: base.eyes,
           head: base.head,
+          collar: base.hairCollar,
         },
       )),
       skinMask = skin
@@ -814,27 +1005,108 @@ async function prepare() {
         h,
       );
     }
-    const result = generated ? { c, ...motionCrop(actor, look) } : bounds(c);
+    const result = generated
+      ? { c, ...motionCrop(generated.sheet, actor, look) }
+      : bounds(c);
     cache.set(key, result);
-    if (cache.size > 64) cache.delete(cache.keys().next().value!);
     return result;
   }
+  function rigAvailable(actor: number, look: Look) {
+    const rig = staticFigure(actor, look, 0).rig;
+    return !!rig && !!RIG_CELLS[rig];
+  }
+  function rigParts(actor: number, look: Look) {
+    const key = JSON.stringify([actor, look]);
+    const hit = rigPartsCache.get(key);
+    if (hit) return hit.parts;
+    const base = staticFigure(actor, look, 0),
+      cell = base.rig ? RIG_CELLS[base.rig] : undefined;
+    let parts: RigParts | null = null;
+    if (cell) {
+      const piece = composed(actor, look, 0),
+        body = (base.body ??= bounds(base.c));
+      parts = buildRigParts(
+        drawCanvas,
+        piece.c,
+        { x: piece.x, y: piece.y, w: piece.w, h: piece.h },
+        { x: body.x + 60, y: body.y + 150, w: body.w, h: body.h },
+        cell,
+      );
+    }
+    rigPartsCache.set(key, { c: placeholder, parts });
+    return parts;
+  }
+  function rigFrame(
+    actor: number,
+    look: Look,
+    motion: 'walk' | 'run',
+    pose: number,
+    resolution: number,
+  ) {
+    const key = JSON.stringify([actor, look, motion, pose, resolution]);
+    const hit = rigFrames.get(key);
+    if (hit) return hit;
+    const parts = rigParts(actor, look);
+    if (!parts) return null;
+    const m = rigFrameMargins(parts),
+      { area } = parts;
+    const c = drawCanvas(
+      Math.ceil((area.w + m.side * 2) * resolution),
+      Math.ceil((area.h + m.top + m.bottom) * resolution),
+    );
+    const ctx = c.getContext('2d')!;
+    ctx.scale(resolution, resolution);
+    ctx.translate(m.side - area.x, m.top - area.y);
+    if (rigScratch.width < c.width || rigScratch.height < c.height) {
+      rigScratch.width = Math.max(rigScratch.width, c.width);
+      rigScratch.height = Math.max(rigScratch.height, c.height);
+    }
+    drawRigPose(
+      ctx,
+      parts,
+      solveGait(motion, (pose + 0.5) / RIG_POSES, parts.geometry),
+      rigScratch,
+    );
+    const frame: RigFrame = {
+      c,
+      x: 0,
+      y: 0,
+      w: c.width,
+      h: c.height,
+      originX: area.x - m.side,
+      originY: area.y - m.top,
+      resolution,
+    };
+    rigFrames.set(key, frame);
+    return frame;
+  }
   return {
-    loadMotion,
+    /** Downloads and prepares only the atlases this look needs. */
+    ensure(actor: number, input: Look) {
+      return ensure(actor, readLook(input, actor));
+    },
+    ready(actor: number, input: Look) {
+      return isReady(actor, readLook(input, actor));
+    },
     async warmMotion(actor: number, input: Look) {
       const look = readLook(input, actor);
-      if (look.collection !== 'classic' || look.hairstyle !== 'signature')
+      await ensure(actor, look);
+      const sheet = motionSheetFor(actor, look);
+      if (!sheet) {
+        // Cut the rig parts while the scene loads; poses are cheap afterwards.
+        rigParts(actor, look);
         return;
-      await loadMotion(actor);
+      }
+      await loadMotion(sheet, staticFigure(actor, look, 0).skinRegions);
       // Prepare the local player's color/accessory composites while the scene
       // loads, so the first input does not pay for decoding twelve new poses.
       for (const motion of ['walk', 'run'] as const)
         for (
           let frame = 0;
-          frame < motionFigures.get(actor)![motion].length;
+          frame < motionFigures.get(sheet.id)![motion].length;
           frame++
         )
-          composed(actor, look, frame, motion);
+          composed(actor, look, frame, { sheet, motion });
     },
     draw(
       target: HTMLCanvasElement,
@@ -847,20 +1119,35 @@ async function prepare() {
       options: { facing?: 1 | -1 } = {},
     ) {
       const look = readLook(input, actor);
+      if (!isReady(actor, look)) {
+        // The caller redraws on its own clock; nothing is drawn until the
+        // look's atlases arrive, so no placeholder art flashes.
+        void ensure(actor, look).catch(() => {
+          /* A failed atlas is retried on the next draw. */
+        });
+        return false;
+      }
       const locomotion =
         !portrait && !reduced && (motion === 'walk' || motion === 'run');
-      const motionArt =
-        locomotion &&
-        look.collection === 'classic' &&
-        look.hairstyle === 'signature';
-      if (motionArt && !motionFigures.has(actor))
-        void loadMotion(actor).catch(() => {
-          /* Existing artwork remains available offline. */
-        });
+      // Real hand-drawn frames win whenever the manifest has a sheet for the
+      // look; until it loads (or if it fails) the cut-out rig walks instead.
+      const sheet = locomotion ? motionSheetFor(actor, look) : undefined;
+      if (sheet && !motionFigures.has(sheet.id) && !motionFailures.has(sheet.id))
+        void loadMotion(sheet, staticFigure(actor, look, 0).skinRegions).catch(
+          () => {
+            /* The rig remains available offline. */
+          },
+        );
       const generated =
-        motionArt && motionFigures.has(actor)
-          ? (motion as 'walk' | 'run')
+        sheet && motionFigures.has(sheet.id)
+          ? { sheet, motion: motion as 'walk' | 'run' }
           : undefined;
+      const rigged = locomotion && !generated && rigAvailable(actor, look);
+      const legacySteps =
+        !rigged &&
+        !generated &&
+        look.collection === 'original' &&
+        look.hairstyle === 'signature';
       const base = composed(
           actor,
           look,
@@ -868,49 +1155,59 @@ async function prepare() {
             ? gaitFrame(
                 motion,
                 time,
-                motionFigures.get(actor)![generated].length,
+                motionFigures.get(sheet!.id)![generated.motion].length,
               )
-            : look.collection === 'original' && look.hairstyle === 'signature'
+            : legacySteps
               ? motionFrame(motion, time, reduced)
               : 0,
           generated,
         ),
         ctx = target.getContext('2d')!;
-      const customGait =
-        locomotion &&
-        !generated &&
-        (!motionArt || motionFailures.has(actor)) &&
-        !(
-          look.collection === 'original' &&
-          look.hairstyle === 'signature' &&
-          actor < 6
+      // The idle composite sets the scale for every motion, so starting and
+      // stopping never changes the figure's size or ground line.
+      const scale = portrait
+          ? target.width / (base.w * 0.94)
+          : Math.min(
+              (target.width * 0.92) / base.w,
+              (target.height * 0.94) / base.h,
+            ),
+        pose = {
+          ...motionTransform(motion, time, reduced || !!generated || rigged),
+        };
+      let f: Piece = base,
+        dx = (-base.w * scale) / 2,
+        dy = portrait ? 0 : -base.h * scale,
+        dw = base.w * scale,
+        dh = base.h * scale;
+      if (rigged) {
+        const resolution = Math.min(1, Math.ceil(scale * 4) / 4);
+        const frame = rigFrame(
+          actor,
+          look,
+          motion as 'walk' | 'run',
+          rigPoseIndex(motion, time),
+          resolution,
         );
-      let f = base;
-      if (customGait) {
-        const frame = gaitFrame(motion, time, 8),
-          key = JSON.stringify([actor, look, motion, frame]);
-        const cached = gaitCache.get(key);
-        if (cached) f = cached;
-        else {
-          const c = canvas(base.w, base.h);
-          drawCostumeGait(
-            c.getContext('2d')!,
-            base.c,
-            base,
-            frame,
-            motion === 'run',
-            look.collection === 'akatsuki',
-          );
-          f = { c, x: 0, y: 0, w: base.w, h: base.h };
-          gaitCache.set(key, f);
-          if (gaitCache.size > 56)
-            gaitCache.delete(gaitCache.keys().next().value!);
+        if (frame) {
+          f = frame;
+          dx += (frame.originX - base.x) * scale;
+          dy += (frame.originY - base.y) * scale;
+          dw = (frame.w / resolution) * scale;
+          dh = (frame.h / resolution) * scale;
         }
       }
-      const scale = portrait
-          ? target.width / (f.w * 0.94)
-          : Math.min((target.width * 0.92) / f.w, (target.height * 0.94) / f.h),
-        pose = motionTransform(motion, time, reduced || !!generated);
+      // Half-pixel / small-angle quantization: an unchanged pose skips the
+      // redraw and the GPU texture upload on the next frame.
+      pose.lift = Math.round(pose.lift * scale * 2) / 2 / scale;
+      pose.tilt = Math.round(pose.tilt * 400) / 400;
+      if (motion === 'idle' && !portrait && !reduced) {
+        // Idle breathing on a wall clock: a 0–1.5 px rise, quantized to half
+        // pixels so an unchanged pose skips the redraw and texture upload.
+        const breath = (Math.sin((performance.now() / 1000) * 2.1) + 1) * 0.75;
+        pose.lift = Math.round(breath * 2) / 2 / scale;
+        pose.scaleY = 1 + Math.round(breath * 2) * 0.0015;
+        pose.tilt = 0;
+      }
       const drawKey = [
         target.width,
         target.height,
@@ -936,17 +1233,7 @@ async function prepare() {
         pose.scaleX * (portrait ? 1 : (options.facing ?? 1)),
         pose.scaleY,
       );
-      ctx.drawImage(
-        f.c,
-        f.x,
-        f.y,
-        f.w,
-        f.h,
-        (-f.w * scale) / 2,
-        portrait ? 0 : -f.h * scale,
-        f.w * scale,
-        f.h * scale,
-      );
+      ctx.drawImage(f.c, f.x, f.y, f.w, f.h, dx, dy, dw, dh);
       ctx.restore();
       lastDraw.set(target, { piece: f, key: drawKey });
       return true;

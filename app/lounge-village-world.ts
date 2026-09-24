@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import {
+  VILLAGE_BOARDWALK,
   VILLAGE_BOUNDS,
+  VILLAGE_DECOR,
   VILLAGE_FARMLAND,
   VILLAGE_FARMLAND_ENTRY,
+  VILLAGE_PATHS,
   VILLAGE_PLACES,
   VILLAGE_RIVER,
-  VILLAGE_SCENIC_TREES,
   VILLAGE_TERRACE,
   type VillagePlace,
 } from './lounge-village-layout';
@@ -159,6 +161,16 @@ function line(
   o.rotation.y = Math.atan2(dx, dz);
   return o;
 }
+const doubleSidedCache = new WeakMap<THREE.Material, THREE.Material>();
+function doubleSided(material: THREE.Material) {
+  let value = doubleSidedCache.get(material);
+  if (!value) {
+    value = material.clone();
+    value.side = THREE.DoubleSide;
+    doubleSidedCache.set(material, value);
+  }
+  return value;
+}
 function roofPanel(
   parent: THREE.Object3D,
   material: THREE.Material,
@@ -171,14 +183,15 @@ function roofPanel(
   );
   geo.setIndex([0, 1, 2, 0, 2, 3]);
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, material);
-  mesh.material.side = THREE.DoubleSide;
+  // Clone once per material: mutating the shared material to DoubleSide would
+  // make every other box using it render both faces too.
+  const mesh = new THREE.Mesh(geo, doubleSided(material));
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   parent.add(mesh);
 }
 
-function buildHouse(scene: THREE.Scene, p: Place, index: number) {
+function buildHouse(scene: THREE.Object3D, p: Place, index: number) {
   const g = new THREE.Group();
   g.name = `village-building-${p.id}`;
   g.position.set(p.x, 0, p.z);
@@ -282,34 +295,10 @@ function buildHouse(scene: THREE.Scene, p: Place, index: number) {
   // Numbered colored name plaque and a little postbox identify each resident home.
   box(g, M.cream, 0, 3.0, front + 0.14, 0.8, 0.36, 0.11);
   box(g, accent, 0, 3.01, front + 0.22, 0.48, 0.13, 0.035);
-  const garden = new THREE.Group();
-  garden.name = `village-home-garden-${p.id}`;
-  garden.position.set(p.x, 0, p.z);
-  scene.add(garden);
-  cylinder(garden, M.wood, -2.83, 0.7, front + 1.0, 0.08, 0.08, 1.4, 7);
-  box(garden, accent, -2.83, 1.48, front + 1.0, 0.48, 0.38, 0.36);
-  box(garden, M.gold, -2.83, 1.55, front + 1.2, 0.23, 0.035, 0.03);
-  // Garden border, shrubs and two low fence runs stay beside the door approach.
-  for (const side of [-1, 1]) {
-    line(garden, M.woodLight, side * 2.95, 0.05, side * 2.95, 2.1, 0.12, 0.34);
-    for (let k = 0; k < 4; k++)
-      box(
-        garden,
-        M.white,
-        side * 2.95,
-        0.47,
-        0.25 + k * 0.55,
-        0.12,
-        0.38,
-        0.09,
-      );
-    sphere(garden, M.leaf, side * 2.9, 0.65, 1.52, 0.48, 0.7);
-    sphere(garden, M.leafLight, side * 3.06, 0.68, 1.78, 0.34, 0.7);
-  }
   return g;
 }
 
-function buildCivicHall(scene: THREE.Scene, p: Place, casino = false) {
+function buildCivicHall(scene: THREE.Object3D, p: Place, casino = false) {
   const g = new THREE.Group();
   g.name = casino ? 'village-building-casino' : 'village-building-hall';
   g.position.set(p.x, 0, p.z);
@@ -369,7 +358,7 @@ function buildCivicHall(scene: THREE.Scene, p: Place, casino = false) {
   return g;
 }
 
-function buildWardrobeShop(scene: THREE.Scene, p: Place) {
+function buildWardrobeShop(scene: THREE.Object3D, p: Place) {
   const g = new THREE.Group();
   g.name = 'village-building-wardrobe';
   g.position.set(p.x, 0, p.z);
@@ -430,38 +419,156 @@ function buildWardrobeShop(scene: THREE.Scene, p: Place) {
   return g;
 }
 
-function tree(
-  scene: THREE.Scene,
-  x: number,
-  z: number,
-  scale = 1,
-  variant = 0,
-) {
-  const g = new THREE.Group();
-  g.name = 'village-tree-placeholder';
-  g.position.set(x, 0, z);
-  g.scale.setScalar(scale);
-  scene.add(g);
-  cylinder(g, M.wood, 0, 0.85, 0, 0.24, 0.33, 1.7, 7);
-  const greens = [M.leaf, M.leafLight, M.leafDark];
-  for (let i = 0; i < 3; i++) {
-    const c = new THREE.Mesh(coneGeo, greens[(i + variant) % greens.length]);
-    c.position.set(i === 1 ? 0.17 : 0, 2.05 + i * 0.62, i === 2 ? -0.08 : 0);
-    c.scale.set(1.08 - i * 0.15, 1.5 - i * 0.16, 1.0 - i * 0.12);
-    c.castShadow = true;
-    c.receiveShadow = true;
-    g.add(c);
+/**
+ * Collects repeated decor parts and emits one InstancedMesh per
+ * geometry/material pair, so 30+ trees, lamps, hedges, fences and flower
+ * beds cost a handful of draw calls instead of hundreds.
+ */
+class Instancer {
+  private groups = new Map<
+    string,
+    {
+      geometry: THREE.BufferGeometry;
+      material: THREE.Material;
+      matrices: THREE.Matrix4[];
+      cast: boolean;
+    }
+  >();
+  private parent = new THREE.Matrix4();
+  private readonly local = new THREE.Matrix4();
+  private readonly q = new THREE.Quaternion();
+  private readonly e = new THREE.Euler();
+  private readonly v = new THREE.Vector3();
+  private readonly sv = new THREE.Vector3();
+  /** Subsequent parts are placed relative to this origin (x, z, yaw, uniform scale). */
+  at(x: number, z: number, rotationY = 0, scale = 1) {
+    this.parent.compose(
+      this.v.set(x, 0, z),
+      this.q.setFromEuler(this.e.set(0, rotationY, 0)),
+      this.sv.set(scale, scale, scale),
+    );
+    return this;
   }
-  sphere(g, greens[(variant + 1) % 3], 0.24, 2.64, 0.08, 0.46, 0.86);
-  return g;
+  add(
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    rotationZ = 0,
+    cast = true,
+    rotationY = 0,
+  ) {
+    const key = geometry.uuid + '|' + material.uuid + '|' + Number(cast);
+    let group = this.groups.get(key);
+    if (!group) {
+      group = { geometry, material, matrices: [], cast };
+      this.groups.set(key, group);
+    }
+    this.local.compose(
+      this.v.set(x, y, z),
+      this.q.setFromEuler(this.e.set(0, rotationY, rotationZ)),
+      this.sv.set(sx, sy, sz),
+    );
+    group.matrices.push(this.parent.clone().multiply(this.local));
+  }
+  box(
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    w: number,
+    h: number,
+    d: number,
+    rotationZ = 0,
+  ) {
+    this.add(boxGeo, material, x, y, z, w, h, d, rotationZ, h > 0.18);
+  }
+  sphere(
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    r: number,
+    scaleY = 1,
+  ) {
+    this.add(sphereGeo, material, x, y, z, r, r * scaleY, r);
+  }
+  cylinder(
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    rTop: number,
+    rBottom: number,
+    h: number,
+    sides = 8,
+  ) {
+    // Unit-height tapered cylinders keep radii exact while sharing geometry.
+    const key = `${(rTop / rBottom).toFixed(3)}|${sides}`;
+    let geometry = taperedCylinders.get(key);
+    if (!geometry) {
+      geometry = new THREE.CylinderGeometry(rTop / rBottom, 1, 1, sides);
+      taperedCylinders.set(key, geometry);
+    }
+    this.add(geometry, material, x, y, z, rBottom, h, rBottom);
+  }
+  cone(
+    material: THREE.Material,
+    x: number,
+    y: number,
+    z: number,
+    rx: number,
+    h: number,
+    rz: number,
+  ) {
+    this.add(coneGeo, material, x, y, z, rx, h, rz);
+  }
+  flush(parent: THREE.Object3D) {
+    for (const group of this.groups.values()) {
+      const mesh = new THREE.InstancedMesh(
+        group.geometry,
+        group.material,
+        group.matrices.length,
+      );
+      group.matrices.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+      mesh.castShadow = group.cast;
+      mesh.receiveShadow = true;
+      parent.add(mesh);
+    }
+    this.groups.clear();
+  }
 }
-function shrub(scene: THREE.Scene, x: number, z: number, color = M.leaf) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  scene.add(g);
+const taperedCylinders = new Map<string, THREE.CylinderGeometry>();
+const glowMaterial = new THREE.MeshBasicMaterial({ color: '#ffe2a3' });
+/** Shared lamp-glow material; the life layer brightens it at night. */
+export const VILLAGE_LAMP_GLOW = glowMaterial;
+
+function tree(set: Instancer, x: number, z: number, scale = 1, variant = 0) {
+  set.at(x, z, 0, scale);
+  set.cylinder(M.wood, 0, 0.85, 0, 0.24, 0.33, 1.7, 7);
+  const greens = [M.leaf, M.leafLight, M.leafDark];
   for (let i = 0; i < 3; i++)
-    sphere(
-      g,
+    set.cone(
+      greens[(i + variant) % greens.length],
+      i === 1 ? 0.17 : 0,
+      2.05 + i * 0.62,
+      i === 2 ? -0.08 : 0,
+      1.08 - i * 0.15,
+      1.5 - i * 0.16,
+      1.0 - i * 0.12,
+    );
+  set.sphere(greens[(variant + 1) % 3], 0.24, 2.64, 0.08, 0.46, 0.86);
+}
+function shrub(set: Instancer, x: number, z: number, color = M.leaf) {
+  set.at(x, z);
+  for (let i = 0; i < 3; i++)
+    set.sphere(
       i === 1 ? M.leafLight : color,
       (i - 1) * 0.34,
       0.43 + (i % 2) * 0.07,
@@ -469,53 +576,50 @@ function shrub(scene: THREE.Scene, x: number, z: number, color = M.leaf) {
       0.48,
       0.77,
     );
-  return g;
 }
-function flowers(
-  scene: THREE.Scene,
-  x: number,
-  z: number,
-  count = 6,
-  seed = 0,
-) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  scene.add(g);
+function flowers(set: Instancer, x: number, z: number, count = 6, seed = 0) {
+  set.at(x, z);
   const colors = [M.flowerPink, M.flowerYellow, M.flowerBlue];
-  const stemBatch = new THREE.InstancedMesh(cylinderGeo, M.leaf, count),
-    flowerBatches = colors.map(
-      (color) =>
-        new THREE.InstancedMesh(sphereGeo, color, Math.ceil(count / 3)),
-    );
-  const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     const a = seed + i * 2.399,
       r = 0.18 + 0.34 * (((i * 7) % 5) / 5),
       px = Math.cos(a) * r,
       pz = Math.sin(a) * r;
-    dummy.position.set(px, 0.14, pz);
-    dummy.scale.set(0.025, 0.14, 0.025);
-    dummy.updateMatrix();
-    stemBatch.setMatrixAt(i, dummy.matrix);
-    const colorIndex = (i + seed) % 3,
-      batch = flowerBatches[colorIndex],
-      batchIndex = Math.floor(i / 3);
-    dummy.position.set(px, 0.29, pz);
-    dummy.scale.set(0.105, 0.076, 0.105);
-    dummy.updateMatrix();
-    batch.setMatrixAt(batchIndex, dummy.matrix);
+    set.add(cylinderGeo, M.leaf, px, 0.14, pz, 0.025, 0.14, 0.025);
+    set.add(sphereGeo, colors[(i + seed) % 3], px, 0.29, pz, 0.105, 0.076, 0.105);
   }
-  stemBatch.castShadow = true;
-  stemBatch.receiveShadow = true;
-  g.add(stemBatch);
-  for (const batch of flowerBatches) {
-    batch.castShadow = true;
-    batch.receiveShadow = true;
-    g.add(batch);
-  }
-  return g;
 }
-function batchDirectMeshes(parent: THREE.Object3D, excludedName = '') {
+function lamp(set: Instancer, x: number, z: number) {
+  set.at(x, z);
+  set.cylinder(M.stoneDark, 0, 0.78, 0, 0.09, 0.12, 1.55, 8);
+  set.box(M.gold, 0, 1.5, 0, 0.4, 0.12, 0.4);
+  set.box(M.wood, 0, 1.82, 0, 0.3, 0.48, 0.3);
+  set.box(M.glass, 0, 1.82, 0.17, 0.19, 0.35, 0.035);
+  set.add(sphereGeo, glowMaterial, 0, 1.82, 0.2, 0.12, 0.12, 0.12, 0, false);
+}
+function bench(set: Instancer, x: number, z: number, rotation = 0) {
+  set.at(x, z, rotation);
+  set.box(M.woodLight, 0, 0.55, 0, 1.6, 0.16, 0.48);
+  set.box(M.wood, 0, 0.9, -0.19, 1.6, 0.62, 0.12);
+  for (const x0 of [-0.62, 0.62]) {
+    set.box(M.stoneDark, x0, 0.28, 0, 0.12, 0.52, 0.12);
+    set.box(M.gold, x0, 0.22, 0, 0.22, 0.08, 0.22);
+  }
+}
+function mailbox(set: Instancer, x: number, z: number, accent: THREE.Material) {
+  set.at(x, z);
+  set.cylinder(M.wood, 0, 0.7, 0, 0.08, 0.08, 1.4, 7);
+  set.box(accent, 0, 1.48, 0, 0.48, 0.38, 0.36);
+  set.box(M.gold, 0, 1.55, 0.2, 0.23, 0.035, 0.03);
+}
+function fence(set: Instancer, x: number, z: number, length: number) {
+  set.at(x, z);
+  set.box(M.woodLight, 0, 0.34, 0, 0.12, 0.11, length);
+  for (let k = -length / 2 + 0.2; k <= length / 2 - 0.1; k += 0.55)
+    set.box(M.white, 0, 0.47, k, 0.12, 0.38, 0.09);
+}
+
+export function batchDirectMeshes(parent: THREE.Object3D, excludedName = '') {
   const batches = new Map<
     string,
     {
@@ -597,36 +701,7 @@ function batchDirectMeshes(parent: THREE.Object3D, excludedName = '') {
     for (const geometry of batch.geometries) geometry.dispose();
   }
 }
-function lamp(scene: THREE.Scene, x: number, z: number) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  scene.add(g);
-  cylinder(g, M.stoneDark, 0, 0.78, 0, 0.09, 0.12, 1.55, 8);
-  box(g, M.gold, 0, 1.5, 0, 0.4, 0.12, 0.4);
-  box(g, M.wood, 0, 1.82, 0, 0.3, 0.48, 0.3);
-  box(g, M.glass, 0, 1.82, 0.17, 0.19, 0.35, 0.035);
-  const glow = new THREE.Mesh(
-    new THREE.SphereGeometry(0.12, 8, 6),
-    new THREE.MeshBasicMaterial({ color: '#ffe2a3' }),
-  );
-  glow.position.set(0, 1.82, 0.2);
-  g.add(glow);
-  return g;
-}
-function bench(scene: THREE.Scene, x: number, z: number, rotation = 0) {
-  const g = new THREE.Group();
-  g.position.set(x, 0, z);
-  g.rotation.y = rotation;
-  scene.add(g);
-  box(g, M.woodLight, 0, 0.55, 0, 1.6, 0.16, 0.48);
-  box(g, M.wood, 0, 0.9, -0.19, 1.6, 0.62, 0.12);
-  for (const x0 of [-0.62, 0.62]) {
-    box(g, M.stoneDark, x0, 0.28, 0, 0.12, 0.52, 0.12);
-    box(g, M.gold, x0, 0.22, 0, 0.22, 0.08, 0.22);
-  }
-  return g;
-}
-function fountain(scene: THREE.Scene) {
+function fountain(scene: THREE.Object3D) {
   const g = new THREE.Group();
   g.position.set(0, 0, 0);
   scene.add(g);
@@ -644,7 +719,7 @@ function fountain(scene: THREE.Scene) {
   g.add(spray);
   return g;
 }
-function kitchenGarden(scene: THREE.Scene) {
+function kitchenGarden(scene: THREE.Object3D) {
   const g = new THREE.Group();
   g.name = 'village-farmland';
   g.position.set(VILLAGE_FARMLAND.x, 0, VILLAGE_FARMLAND.z);
@@ -718,12 +793,46 @@ function kitchenGarden(scene: THREE.Scene) {
   return g;
 }
 
-export function buildVillageWorld(scene: THREE.Scene): {
-  water: THREE.Mesh[];
+function waterTexture() {
+  // A pale ripple strip multiplied by the water tint; its offset scrolls each frame.
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = 'rgb(232,244,244)';
+  ctx.fillRect(0, 0, 128, 32);
+  for (let i = 0; i < 9; i++) {
+    const y = 3 + ((i * 11) % 28),
+      x = (i * 37) % 128;
+    ctx.strokeStyle = i % 3 ? 'rgba(255,255,255,0.9)' : 'rgba(205,228,228,0.9)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for (let k = 0; k <= 40; k++) {
+      const px = x + k,
+        py = y + Math.sin(k / 6) * 1.2;
+      if (k === 0) ctx.moveTo(px % 128, py);
+      else ctx.lineTo(px % 128, py);
+    }
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(26, 1.2);
+  return texture;
+}
+
+export type VillageWorld = {
+  /** Scroll these offsets over time to animate the stream. */
+  water: THREE.Texture[];
   decorations: THREE.Object3D[];
-} {
-  const water: THREE.Mesh[] = [],
+};
+
+/** Builds the static village into `scene` (any Object3D root). */
+export function buildVillageWorld(scene: THREE.Object3D): VillageWorld {
+  const water: THREE.Texture[] = [],
     decorations: THREE.Object3D[] = [];
+  const set = new Instancer();
   const bw = VILLAGE_BOUNDS.width,
     bd = VILLAGE_BOUNDS.depth;
   // Layered beveled-looking island plinth with a fine inset grass lip.
@@ -736,28 +845,36 @@ export function buildVillageWorld(scene: THREE.Scene): {
   const riverCenterZ = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2;
   const riverDepth = VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ;
   box(scene, M.bank, 0, 0.09, riverCenterZ, bw - 0.6, 0.15, riverDepth + 1.7);
-  box(scene, M.water, 0, 0.13, riverCenterZ, bw - 1.2, 0.12, riverDepth + 0.25);
-  const stream = scene.children[scene.children.length - 1] as THREE.Mesh;
+  if (!M.water.map) M.water.map = waterTexture();
+  water.push(M.water.map);
+  const stream = box(
+    scene,
+    M.water,
+    0,
+    0.13,
+    riverCenterZ,
+    bw - 1.2,
+    0.12,
+    riverDepth + 0.25,
+  );
   stream.name = 'village-water';
-  water.push(stream);
-  // Pebbles are instanced to keep the longer river's draw-call count flat.
-  for (const [materialIndex, material] of [M.cream, M.stone].entries()) {
-    const xs = Array.from({ length: 40 }, (_, index) => -38.5 + index * 2);
-    const instances = new THREE.InstancedMesh(sphereGeo, material, xs.length);
-    const transform = new THREE.Object3D();
-    let count = 0;
-    for (const x of xs) {
-      if (Math.round((x + 38.5) / 2) % 2 !== materialIndex) continue;
-      if (VILLAGE_RIVER.bridges.some((bridge) => Math.abs(x - bridge.x) < 3.2))
-        continue;
-      transform.position.set(x, 0.2, riverCenterZ + Math.sin(x * 0.42) * 0.18);
-      transform.scale.set(0.32, 0.12, 0.18);
-      transform.updateMatrix();
-      instances.setMatrixAt(count++, transform.matrix);
-    }
-    instances.count = count;
-    instances.receiveShadow = true;
-    scene.add(instances);
+  // Pebbles line both banks without touching the bridge decks.
+  for (const x of Array.from({ length: 40 }, (_, index) => -38.5 + index * 2)) {
+    if (VILLAGE_RIVER.bridges.some((bridge) => Math.abs(x - bridge.x) < 3.2))
+      continue;
+    set.at(x, riverCenterZ + Math.sin(x * 0.42) * 0.18);
+    set.add(
+      sphereGeo,
+      Math.round((x + 38.5) / 2) % 2 ? M.stone : M.cream,
+      0,
+      0.2,
+      0,
+      0.32,
+      0.12,
+      0.18,
+      0,
+      false,
+    );
   }
   // Three bridges align to the exact crossings used by player collision.
   for (const { x: centerX, halfWidth } of VILLAGE_RIVER.bridges) {
@@ -818,102 +935,20 @@ export function buildVillageWorld(scene: THREE.Scene): {
         box(scene, M.woodLight, railX, 1.13, z, 0.1, 0.45, 0.1);
     }
   }
-  // Main walk network ties doors, shops and civic fronts to the fountain and bridge.
-  const paths: [number, number, number, number, number][] = [
-    // Three crossings fan the expanded valley out from the civic green.
-    [-16, 10, -27, 10, 1.7],
-    [-27, 10, -27, 17.5, 1.55],
-    [-27, 17.5, -32, 5, 1.3],
-    [16, 10, 27, 10, 1.7],
-    [27, 10, 27, 17.5, 1.55],
-    [27, 10, 27, -1, 1.4],
-    [27, 17.5, 33, -5, 1.3],
-    [0, 13, 0, 20, 1.65],
-    [0, 20, 5, 24, 1.4],
-    [0, 20, -8, 24, 1.3],
-    [5, 24, 14, 24, 1.3],
-    // The eastern perimeter loops north to the forest walk and boardwalk.
-    [27, -1, 27, -25, 1.4],
-    [27, -25, 0, -25, 1.4],
-    [27, -5, 33, -5, 1.3],
-    // Existing homes remain connected to the long forest trail at the north edge.
-    [14, -9, 24, -9, 1.3],
-    [24, -9, 27, -12, 1.3],
-    // West orchard picnic loop from its dedicated bridge.
-    [-27, 5, -32, 5, 1.35],
-    [-32, 5, -32, 1, 1.25],
-    // North green and crossing, with a walk around the fountain's rim.
-    [0, 2.7, 0, 13.4, 2.55],
-    [0, 2.7, -1.9, 2.05, 1.7],
-    [-1.9, 2.05, -2.7, 0.7, 1.7],
-    [-2.7, 0.7, -2.7, -0.7, 1.7],
-    [-2.7, -0.7, -1.9, -2.05, 1.7],
-    [-1.9, -2.05, 0, -2.7, 1.7],
-    [0, 2.7, 1.9, 2.05, 1.7],
-    [1.9, 2.05, 2.7, 0.7, 1.7],
-    [2.7, 0.7, 2.7, -0.7, 1.7],
-    [2.7, -0.7, 1.9, -2.05, 1.7],
-    [1.9, -2.05, 0, -2.7, 1.7],
-    // Back row cottage paths meet behind the wardrobe, then skirt its side walls.
-    [-14, -9.6, -14, -9, 1.5],
-    [-7, -9.6, -7, -9, 1.5],
-    [0, -9.6, 0, -9, 1.5],
-    [7, -9.6, 7, -9, 1.5],
-    [14, -9.6, 14, -9, 1.5],
-    [-14, -9, -7, -9, 1.5],
-    [-7, -9, 0, -9, 1.5],
-    [0, -9, 7, -9, 1.5],
-    [7, -9, 14, -9, 1.5],
-    [-7, -9, -7, -3.3, 1.45],
-    [7, -9, 7, -3.3, 1.45],
-    [-7, -3.3, -5, -3.3, 1.45],
-    [7, -3.3, 5, -3.3, 1.45],
-    [-5, -3.3, -3, -3.3, 1.45],
-    [5, -3.3, 3, -3.3, 1.45],
-    [-3, -3.3, 0, -2.7, 1.45],
-    [3, -3.3, 0, -2.7, 1.45],
-    // The two side cottages join the plaza from the south side of the fountain.
-    [-20, -2.6, -20, -1.1, 1.55],
-    [20, -2.6, 20, -1.1, 1.55],
-    [-20, -1.1, -7, -1.1, 1.5],
-    [20, -1.1, 7, -1.1, 1.5],
-    [-7, -1.1, -5, -2.2, 1.4],
-    [7, -1.1, 5, -2.2, 1.4],
-    [-5, -2.2, -3, -3.3, 1.4],
-    [5, -2.2, 3, -3.3, 1.4],
-    // Civic entrances connect along the open green in front of both buildings.
-    [-16, 10, -16, 9, 2.1],
-    [16, 10, 16, 9, 2.1],
-    [-16, 10, 16, 10, 2],
-    [-3.1, 10, 0, 2.7, 1.8],
-    [3.1, 10, 0, 2.7, 1.8],
-    // The kitchen plot opens south into a lane that feeds the eastern plaza rim.
-    [
-      VILLAGE_FARMLAND_ENTRY.x,
-      VILLAGE_FARMLAND_ENTRY.z,
-      VILLAGE_FARMLAND.x,
-      2.7,
-      1.2,
-    ],
-    [VILLAGE_FARMLAND.x, 2.7, 3.1, 2.7, 1.2],
-    // A narrow lane skirts the west edge of the café terrace and leaves its deck clear.
-    [-11.3, 10, -11.3, 8, 0.8],
-    [-11.3, 8, -10.7, 8, 0.7],
-    [-11.3, 8, -11.3, 4.1, 0.8],
-    [-11.3, 4.1, -3.1, 4.1, 1.45],
-  ];
-  for (const [x1, z1, x2, z2, w] of paths) {
+  // Main walk network (shared with collision tests and the minimap).
+  for (const [x1, z1, x2, z2, w] of VILLAGE_PATHS) {
     line(scene, M.path, x1, z1, x2, z2, w, 0.105);
-    // broken light stone insets make the main routes read as hand-laid paving.
+    // Broken light stone insets make the main routes read as hand-laid paving.
     if (w > 1.6) {
       const dx = x2 - x1,
         dz = z2 - z1,
         len = Math.hypot(dx, dz),
         n = Math.floor(len / 1.25);
+      set.at(0, 0);
       for (let i = 0; i <= n; i++) {
         const t = n ? i / n : 0.5;
-        box(
-          scene,
+        set.add(
+          boxGeo,
           M.pathLight,
           x1 + dx * t,
           0.171,
@@ -921,7 +956,9 @@ export function buildVillageWorld(scene: THREE.Scene): {
           w * 0.48,
           0.035,
           0.2,
-          Math.atan2(dz, dx),
+          0,
+          false,
+          Math.atan2(dx, dz),
         );
       }
     }
@@ -981,14 +1018,6 @@ export function buildVillageWorld(scene: THREE.Scene): {
   umbrella.rotation.y = 0.18;
   umbrella.castShadow = true;
   scene.add(umbrella);
-  for (const [x, z] of [
-    [terraceX - 2.8, terraceZ - 0.9],
-    [terraceX - 2.8, terraceZ + 0.9],
-    [terraceX + 2.8, terraceZ - 0.9],
-    [terraceX + 2.8, terraceZ + 0.9],
-  ] as [number, number][]) {
-    shrub(scene, x, z, M.leafLight);
-  }
 
   // Civic buildings and resident cottages use the coordinates from the shared layout.
   const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home');
@@ -1001,155 +1030,72 @@ export function buildVillageWorld(scene: THREE.Scene): {
   if (tailor) decorations.push(buildWardrobeShop(scene, tailor));
   decorations.push(kitchenGarden(scene));
 
-  // Fountain plaza with alternating paving arcs and intimate seating.
+  // Fountain plaza with alternating paving arcs.
   decorations.push(fountain(scene));
+  set.at(0, 0);
   for (let i = 0; i < 12; i++) {
     const a = (i * Math.PI) / 6,
-      r = 2.62,
-      x = Math.sin(a) * r,
-      z = Math.cos(a) * r;
-    box(scene, i % 2 ? M.pathLight : M.stone, x, 0.12, z, 0.76, 0.12, 0.42, a);
+      r = 2.62;
+    set.add(
+      boxGeo,
+      i % 2 ? M.pathLight : M.stone,
+      Math.sin(a) * r,
+      0.12,
+      Math.cos(a) * r,
+      0.76,
+      0.12,
+      0.42,
+      0,
+      false,
+      a,
+    );
   }
-  bench(scene, -3.65, -0.6, Math.PI / 2);
-  bench(scene, 3.65, 0.6, -Math.PI / 2);
-  bench(scene, 0, -3.5, 0);
-  decorations.push(
-    lamp(scene, -4.9, -1),
-    lamp(scene, 4.9, 1),
-    lamp(scene, -2.8, 3.3),
-    lamp(scene, 2.8, -3.3),
-  );
-  decorations.push(
-    flowers(scene, -3.1, 1.9, 7, 1),
-    flowers(scene, 3.15, -1.9, 7, 2),
-    flowers(scene, -1.4, -3.7, 6, 3),
-    flowers(scene, 1.5, 3.7, 6, 4),
-  );
 
-  // Resident garden borders / mailbox side for each home, flowering hedges beside paths.
-  for (let i = 0; i < 7; i++) {
-    const p = homes[i];
-    if (!p) continue;
-    shrub(scene, p.x - 3.0, p.z + 2.05, i % 2 ? M.leafLight : M.leaf);
-    flowers(scene, p.x + 2.9, p.z + 1.9, 4, i + 1);
+  // Every decoration below comes from VILLAGE_DECOR, the same list collision uses.
+  const accents = [
+    M.roofG,
+    M.roofA,
+    M.roofF,
+    M.roofB,
+    M.roofD,
+    M.roofE,
+    M.roofC,
+  ];
+  for (const item of VILLAGE_DECOR) {
+    if (item.kind === 'tree')
+      tree(set, item.x, item.z, item.scale ?? 1, item.variant ?? 0);
+    else if (item.kind === 'lamp') lamp(set, item.x, item.z);
+    else if (item.kind === 'bench') bench(set, item.x, item.z, item.rotation);
+    else if (item.kind === 'shrub')
+      shrub(set, item.x, item.z, (item.variant ?? 0) % 3 ? M.leaf : M.leafLight);
+    else if (item.kind === 'flowers')
+      flowers(set, item.x, item.z, item.scale ?? 6, item.variant ?? 0);
+    else if (item.kind === 'mailbox')
+      mailbox(set, item.x, item.z, accents[item.home ?? 0] ?? M.roofA);
+    else if (item.kind === 'fence' && item.collider?.shape === 'box')
+      fence(set, item.x, item.z, item.collider.d);
+    // Hydrangeas are kArchive models placed by the component; rails below.
   }
-  // Edge woodland planted in irregular clusters, leaving routes and building fronts open.
-  const treeCoords: [number, number, number][] = [
-    [-23, -16, 1.2],
-    [-22, -10, 0.9],
-    [-23, -3, 1.2],
-    [-22, 3, 0.95],
-    [-23, 10, 1.1],
-    [-22, 18, 0.95],
-    [23, -16, 1.1],
-    [22, -10, 0.92],
-    [23, -3, 1.16],
-    [22, 3, 0.95],
-    [23, 10, 1.1],
-    [22, 18, 0.92],
-    [-18, -17, 0.82],
-    [-10, -17, 0.74],
-    [-3, -17, 0.72],
-    [5, -17, 0.78],
-    [12, -17, 0.75],
-    [18, -17, 0.8],
-    [-18, 11, 0.76],
-    [-14, 11, 0.72],
-    [14, 11, 0.74],
-    [18, 11, 0.78],
-    [-19, 1, 0.76],
-    [19, 1, 0.72],
-  ];
-  treeCoords.forEach(([x, z, s], i) =>
-    decorations.push(tree(scene, x, z, s, i)),
-  );
-  VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) =>
-    decorations.push(tree(scene, x, z, scale, i + 3)),
-  );
-  const shrubs: [number, number][] = [
-    [-19, -11],
-    [-18, -10],
-    [-11, -11],
-    [-10, -10],
-    [-4, -11],
-    [-3, -10],
-    [4, -11],
-    [5, -10],
-    [11, -11],
-    [12, -10],
-    [18, -2],
-    [19, -1],
-    [-19, -2],
-    [-18, -1],
-    [-21, 8],
-    [-19, 10],
-    [20, 8],
-    [19, 10],
-    [-12, 3],
-    [-10, 4],
-    [10, 3],
-    [12, 4],
-    [-4, 7],
-    [4, 7],
-    [-18, 6],
-    [18, 6],
-  ];
-  shrubs.forEach(([x, z], i) => {
-    if (Math.abs(x) > 7 || Math.abs(z) > 4)
-      shrub(scene, x, z, i % 3 === 0 ? M.leafLight : M.leaf);
-  });
-  // New district gardens stay simple and repeatable; flower instances keep
-  // draw calls low while adding distinct orchard, camp, boardwalk and forest edges.
-  decorations.push(
-    flowers(scene, -32, 9, 12, 3),
-    flowers(scene, 5, 28, 10, 4),
-    flowers(scene, 33, -10, 12, 2),
-    flowers(scene, 0, -28, 14, 5),
-    lamp(scene, -29, 7),
-    lamp(scene, -35, 7),
-    lamp(scene, 2, 22),
-    lamp(scene, 8, 22),
-    lamp(scene, 30, -8),
-    lamp(scene, 36, -8),
-  );
+
   // Short timber promenade at the eastern garden edge.
-  line(scene, M.woodLight, 29, -5, 38, -5, 1.7, 0.22);
-  line(scene, M.wood, 29, -5.95, 38, -5.95, 0.12, 0.3);
-  line(scene, M.wood, 29, -4.05, 38, -4.05, 0.12, 0.3);
-  for (let x = 29; x <= 38; x += 0.9)
-    box(scene, M.wood, x, 0.34, -5, 0.1, 0.08, 1.62);
-  for (const x of [29.2, 31.4, 33.6, 35.8, 38]) {
-    box(scene, M.wood, x, 0.62, -5.95, 0.1, 0.62, 0.1);
-    box(scene, M.woodLight, x, 0.94, -5.95, 0.1, 0.1, 0.1);
-    box(scene, M.wood, x, 0.62, -4.05, 0.1, 0.62, 0.1);
-    box(scene, M.woodLight, x, 0.94, -4.05, 0.1, 0.1, 0.1);
-  }
-  line(scene, M.woodLight, 27, -5, 29, -5, 1.45, 0.2);
-  // Scenic flower beds around bridge heads and the front green.
-  decorations.push(
-    flowers(scene, -4, 12, 8, 2),
-    flowers(scene, 4, 12, 8, 5),
-    flowers(scene, -20, 11, 8, 4),
-    flowers(scene, 20, 11, 8, 1),
-  );
-  decorations.push(lamp(scene, -5.2, 11), lamp(scene, 5.2, 11));
+  const { x1, x2, z: deckZ, railZ } = VILLAGE_BOARDWALK;
+  line(scene, M.woodLight, x1, deckZ, x2, deckZ, 1.7, 0.22);
+  for (const z of railZ) line(scene, M.wood, x1, z, x2, z, 0.12, 0.3);
+  for (let x = x1; x <= x2; x += 0.9)
+    box(scene, M.wood, x, 0.34, deckZ, 0.1, 0.08, 1.62);
+  for (const x of [29.2, 31.4, 33.6, 35.8, 38])
+    for (const z of railZ) {
+      set.at(x, z);
+      set.box(M.wood, 0, 0.62, 0, 0.1, 0.62, 0.1);
+      set.box(M.woodLight, 0, 0.94, 0, 0.1, 0.1, 0.1);
+    }
+  set.flush(scene);
 
-  // Fold repeated static meshes into material batches while leaving replacement shells,
-  // gardens, the animated stream, and named tree placeholders independently addressable.
+  // Fold repeated static meshes into material batches while leaving the
+  // animated stream and instanced decor independently addressable.
   // oxlint-disable-next-line unicorn/no-useless-spread -- Batching replaces some top-level children during this pass.
-  for (const child of [...scene.children]) {
-    if (
-      child instanceof THREE.Group &&
-      (child.name.startsWith('village-building-') ||
-        child.name.startsWith('village-home-garden-'))
-    )
-      batchDirectMeshes(child);
-    else if (
-      child instanceof THREE.Group &&
-      !child.name.startsWith('village-tree-placeholder')
-    )
-      batchDirectMeshes(child);
-  }
+  for (const child of [...scene.children])
+    if (child instanceof THREE.Group) batchDirectMeshes(child);
   batchDirectMeshes(scene, 'village-water');
   return { water, decorations };
 }

@@ -309,6 +309,10 @@ function advance(g: PokerMatch, after: number) {
     event(g, 'showdown');
   } else g.phase = 'dealing';
 }
+/** Big blind scales with the buy-in: max(200, buyIn / 50) rounded to 100. */
+export function pokerBigBlind(buyIn: number) {
+  return Math.max(200, Math.round(buyIn / 50 / 100) * 100);
+}
 export function newPoker(
   id: string,
   buyIns: number[],

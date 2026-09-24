@@ -1,4 +1,49 @@
-# 현재 게임 라운지의 에셋 (2026-09-17)
+# 범타듀 밸리의 에셋
+
+이 문서는 게임에 쓰는 이미지·3D 모델의 출처, 라이선스, 제작 기록입니다. 맨 위 요약이 현재 기준이고, 그 아래 절은 제작 당시의 기록(프롬프트·해상도·해시)을 날짜순으로 보관한 것입니다.
+
+## 현재 요약 (2026-09-24)
+
+- 배포 대상은 매니페스트에 적힌 파일뿐입니다: 이미지 `app/lounge-assets.ts` **127개**(래스터 67 + 체스·화투 SVG 60), 3D 모델 `app/lounge-model-assets.ts` **24개**. 개수는 빌드 스크립트가 매니페스트에서 직접 읽어 검사하므로 문서와 코드를 따로 고칠 필요가 없습니다.
+- 캐릭터 아틀라스(`friends-motion`, `accessories`, `jaemin-cap`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
+- 범티콘 8장은 1254² PNG(장당 약 1MB)에서 **256px WebP(장당 약 20KB)** 로 줄였습니다.
+- GLB 24개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 7.5MB → 4.9MB. 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
+- 섬·극장 전용 원화 12개(`island*.png|webp`, `interiors-hd`, `furniture`, `facilities`, `friends*.png`, `mayor-hohyeon`, `nature-detail`, `theater-*`)는 `legacy/assets/`로 옮겼습니다. `docs/island.html`·`docs/theater.html`은 이미지를 내장한 단일 HTML이라 영향이 없습니다. 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
+- 공유 미리보기 `public/og-image.webp`(1200×630)는 로그인 전신 7장을 합성한 파생 이미지이고, `public/favicon.svg`와 `public/icons/*.png`는 직접 그린 잎 아이콘입니다. 새 AI 생성은 없습니다.
+- 재생성: `npm run optimize:assets` (원본에서 WebP·GLB·아이콘을 다시 만듦).
+
+### 출처별 목록
+
+| # | 출처 / 도구 | 만든 것 | 현재 파일 | 라이선스·조건 | 사용 |
+|---|---|---|---|---|---|
+| A | OpenAI 내장 이미지 생성(Codex imagegen) | 6인 캐릭터 모션·액세서리·재민 모자, 호현, 라운지 1기 시트, 도원 추가 코디·만두머리·하치마키, 범티콘 8종, 섬·극장 원화 | `public/assets/*.webp`, `lounge/daowon-*`, `lounge/hachimaki.*`, `lounge/reactions/*`, `legacy/assets/*` | 생성물. 원본 사진은 비배포 | 캐릭터·스티커 사용 중, 섬·극장 원화는 미사용 |
+| A+ | OpenAI 생성 + [Spritegen](https://github.com/aldegad/sprite-gen) v2.7.0 | 7인 걷기·달리기 84프레임 | `lounge/motion/*.webp` | 도구 라이선스 파일 보관 | 사용 중 |
+| B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
+| C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
+| D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블 — GLB 13개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `village/`, `village/expansion/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
+| E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
+| F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
+| G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
+| H | chess.js 1.4.0 | 체스 규칙 | npm | BSD-2 | 사용 중 |
+| I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부 | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`) | 자체 제작 | 사용 중 |
+| J | Canvas 런타임 가공 | 머리·피부 RGB 염색, 마젠타 배경 제거, 의상 보행 변형 | 코드(`lounge-color.ts`, `lounge-gait.ts`, `lounge-sprites.ts`) | 자체 제작 | 사용 중 |
+| — | 사운드 | 효과음 합성 코드만 있음 | — | — | 오디오 파일 0개 |
+
+배포 HTML에는 three.js, chess.js, Chessnut, hwatu, kArchive/3DAssets 고지를 JSON으로 함께 넣습니다(`#third-party-licenses`).
+
+### IP·라이선스 주의
+
+법률 자문이 아닌 일반 주의 사항입니다. 친구끼리 비상업으로 쓰는 한 위험은 낮지만, 대회 출품·홍보·수익화 전에는 아래를 먼저 정리합니다.
+
+| 대상 | 주의할 점 | 권장 |
+|---|---|---|
+| 하츠네 미쿠 코디·미쿠 테마 소품 | 크립톤 퓨처 미디어 캐릭터. 비상업 2차 창작 가이드라인 범위 확인 필요 | 비상업 유지, 공식 로고·이름 노출 최소화, 필요하면 오마주 디자인으로 교체 |
+| 아카츠키 망토 | 『나루토』 의상 디자인 | 비상업 유지, 공개 홍보·출품 시 교체 검토 |
+| 샴푸 중국풍·만두머리 | 『란마½』·『스트리트 파이터』 참조 | 일반적 의상 요소. 화면 이름에서 원작명 빼기 권장 |
+| 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
+| kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
+| 3DAssets CC0 | 제약 없음 | — |
+| 실존 친구 7명 | 이름과 사진 기반 캐릭터가 공개 저장소·공개 페이지에 있음 | 친구들 동의 확인, 필요하면 저장소 비공개 전환 |
 
 ## 회관과 분장실의 2D 아트
 
@@ -22,9 +67,7 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 ## Pages 이미지 패키징
 
-`app/lounge-assets.ts`는 현재 **119개 고유 이미지**를 참조합니다. `scripts/build-standalone.mjs`는 각 파일의 SHA-256 앞 12자리를 파일명에 넣어 `docs/assets/`에 저장하고, 게임의 이미지 경로를 `./assets/...` 상대 URL로 바꿉니다. 코드와 스타일은 `docs/index.html`에 포함하지만 이미지는 Base64로 내장하지 않습니다. HTML과 해당 이미지 파일을 함께 게시해야 하며, 이미지별 캐시를 재사용하고 내용이 바뀐 파일은 새 URL로 받습니다. 별도의 서비스 워커나 오프라인 로그인 기능을 추가한 것은 아닙니다.
-
-119개는 현재 라운지의 이미지 참조 수입니다. `docs/assets/`에 남은 이전 버전의 해시 파일이나 보존된 `theater.html`·`island.html` 내부 이미지는 이 수에 포함하지 않습니다. 아래 과거 제작 기록의 생성 도구·해상도·프롬프트는 당시 원본에 대한 기록이며, 현재 공통 컬렉션과 방의 사용 경로는 위 WebP 표를 기준으로 합니다.
+`scripts/build-standalone.mjs`는 두 매니페스트의 모든 경로를 읽어 파일이 있는지 확인하고, 각 파일의 SHA-256 앞 12자리를 넣은 이름으로 `<out>/assets/`에 저장한 뒤 게임 코드의 경로를 `./assets/...` 상대 URL로 바꿉니다. 앱 JS·CSS도 해시 파일로 분리되어 `index.html`은 작고, 에셋만 바뀐 배포에서는 코드 캐시를 재사용합니다. 이미지는 600KB 초과 시 경고, 3MB 초과 시 실패(예외 목록의 아틀라스 제외)이며, 모델은 1MB 경고·4MB 실패입니다. 이전 버전의 해시 파일과 보존된 `theater.html`·`island.html` 내부 이미지는 매니페스트 수에 포함하지 않습니다.
 
 ## 섯다 테이블
 
@@ -90,16 +133,16 @@ Chessnut 원본: https://github.com/LexLuengas/chessnut-pieces . LICENSE와 COPY
 
 `public/assets/lounge/login/*.webp`의 7개 전신은 기존 `loungeSprites().draw()`에 `defaultLook()`를 적용해 440×540 캔버스로 사전 렌더링한 파생 이미지입니다. 투명 lossless WebP 합계 667,580바이트이며 원본 캔버스와 알파·보이는 RGB 픽셀이 일치합니다. 새 AI 생성은 사용하지 않았습니다. 같은 파일을 계정 선택 얼굴과 전신 미리보기에 재사용하고, 등장·인사·대기 움직임은 CSS로 적용합니다. 로그인 전에는 전체 의상·소품 아틀라스를 다운로드하지 않습니다.
 
-## 배포 파일
+## 섬 게임 배포 파일 (legacy)
 
 | 경로                              | 해상도           | 내용                                     |
 | --------------------------------- | ---------------- | ---------------------------------------- |
-| `public/assets/island-hd.webp`    | 6144×4096        | AI 업스케일한 전체 섬 지도               |
-| `public/assets/interiors-hd.webp` | 6144×4096        | 집·상점·공방·박물관, 2×2 배경            |
-| `public/assets/furniture.png`     | 1254×1254 RGBA   | 가구 16종, 4×4 투명 아틀라스             |
-| `public/assets/facilities.png`    | 1254×1254 RGBA   | 공방·박물관·텃밭·카페, 2×2 투명 아틀라스 |
-| `public/assets/friends-v2.png`    | 기존 캐릭터 시트 | 도원·강재·민서·승준·민재·재민            |
-| `public/assets/mayor-hohyeon.png` | 기존 캐릭터      | 호현 촌장                                |
+| `legacy/assets/island-hd.webp`    | 6144×4096        | AI 업스케일한 전체 섬 지도               |
+| `legacy/assets/interiors-hd.webp` | 6144×4096        | 집·상점·공방·박물관, 2×2 배경            |
+| `legacy/assets/furniture.png`     | 1254×1254 RGBA   | 가구 16종, 4×4 투명 아틀라스             |
+| `legacy/assets/facilities.png`    | 1254×1254 RGBA   | 공방·박물관·텃밭·카페, 2×2 투명 아틀라스 |
+| `legacy/assets/friends-v2.png`    | 기존 캐릭터 시트 | 도원·강재·민서·승준·민재·재민            |
+| `legacy/assets/mayor-hohyeon.png` | 기존 캐릭터      | 호현 촌장                                |
 
 가구와 시설은 생성된 알파 채널을 그대로 보존합니다. 가구는 `naturalWidth / 4`의 소수점 셀 경계를 사용합니다. 일부 셀 가장자리에는 생성 이미지의 작은 그림자 흔적이 있습니다. 새 에셋은 프롬프트당 한 번 생성했고 추가 변형본은 만들지 않았습니다. 아래 프롬프트의 요청 해상도와 실제 생성 해상도가 다른 경우 위 표가 실제 파일 값입니다.
 
@@ -162,7 +205,7 @@ No large surrounding terrain or scenery, no landscape background, no opaque rect
 | ---------------------------------- | ------------- | ------------------------------------------ |
 | `public/assets/friends-motion.png` | 1024×1536 RGB | 여섯 캐릭터 × 서기·왼발·오른발·인사 24자세 |
 | `public/assets/accessories.png`    | 1774×887 RGBA | 모자 4종·안경 3종·꽃 머리핀                |
-| `public/assets/nature-detail.png`  | 1774×887 RGBA | 나무·풀·꽃·돌·나비·갈매기 8종              |
+| `legacy/assets/nature-detail.png`  | 1774×887 RGBA | 나무·풀·꽃·돌·나비·갈매기 8종              |
 
 캐릭터 생성 결과의 체크무늬는 실제 투명도가 아니어서 게임에서 가장자리에 연결된 중립색 배경만 제거합니다. 자세별 머리·눈·발 좌표를 측정해 정렬하고, 파란 머리와 청록색 옷의 색상 채널만 염색합니다. 자연물은 셀 경계의 희미한 선을 피하도록 안쪽을 사용합니다. 안경과 모자는 측정한 눈과 머리 위치에 맞추며, 기본 모습에는 도원의 붉은 머리, 강재의 긴 머리·둥근 안경, 재민의 갈색 모자를 적용합니다.
 
@@ -295,8 +338,8 @@ OpenAI 내장 imagegen으로 새 에셋 세 장을 생성했습니다. 원본 �
 | 파일                                | 실제 해상도 | 처리                                                                                                       |
 | ----------------------------------- | ----------- | ---------------------------------------------------------------------------------------------------------- |
 | public/assets/hohyeon-friend.png    | 1024 × 1536 | RGB의 그려진 체크 배경을 런타임에서 연결 영역으로 제거. 얼굴 비율을 유지하고 기존 여섯 친구와 크기를 맞춤. |
-| public/assets/theater-wardrobe.png  | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종.                       |
-| public/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용.                                                                   |
+| legacy/assets/theater-wardrobe.png  | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종.                       |
+| legacy/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용.                                                                   |
 
 기존 friends-motion.png, accessories.png, jaemin-cap.png를 재사용합니다. 신체와 의상은 Canvas에서 층별로 합성하며, 분리된 의상과 신발 사이의 발목은 연속된 도형으로 연결합니다. 얼굴, 머리, 의상과 배경 일러스트는 생성 에셋입니다. 분장 미리보기의 흔들기·인사·기쁨 모션은 합성 캐릭터의 이동/회전/배율 애니메이션입니다. 새로운 보행 스프라이트를 생성했다고 표기하지 않습니다.
 
@@ -381,7 +424,7 @@ Constraints: no people, characters, faces, silhouettes of people, text, numbers,
 
 `public/assets/lounge/reactions/`에 웃음(laugh), 놀람(wow), 눈물(cry), 하트(love), 응원(cheer), 고민(think), 미안(sorry), 인사(hello) 8종을 추가했습니다. OpenAI 내장 imagegen으로 각 에셋을 개별 생성한 원본 1254 × 1254 RGBA PNG이며 투명 배경과 흰 스티커 테두리를 유지했습니다. 인터넷에서 가져온 캐릭터나 게임 원화는 사용하지 않았습니다.
 
-정확한 생성 프롬프트는 `public/assets/lounge/reactions/prompts.json`에 보관합니다. 공통 디자인은 따뜻한 주황색·크림색의 작은 호랑이, 갈색 외곽선, 평면 2D 메신저 스티커, 텍스트 없이 감정과 손동작으로 표현하는 방식입니다. 원본 PNG를 편집·크롭하지 않고 게임에 포함했습니다.
+정확한 생성 프롬프트는 `public/assets/lounge/reactions/prompts.json`에 보관합니다. 공통 디자인은 따뜻한 주황색·크림색의 작은 호랑이, 갈색 외곽선, 평면 2D 메신저 스티커, 텍스트 없이 감정과 손동작으로 표현하는 방식입니다. 원본 PNG는 그대로 보관하고, 게임은 `scripts/optimize-assets.mjs`로 만든 256×256 WebP(장당 약 20KB)를 사용합니다(2026-09-24).
 
 로비·카지노 및 체스·고스톱·섯다·홀덤·블랙잭 화면의 **스티커** 버튼으로 전송합니다. 같은 방의 같은 공간/게임 화면에서 보낸 사람 이름과 함께 최대 3개를 표시하며, 각 반응은 6초 후 사라집니다. 1.8초 전송 간격, 표시 숨기기, 모션 줄이기 설정을 지원합니다. 유효 시간이 지난 스티커는 재접속 때 재생되지 않으며 계정 코디/지갑 기록을 변경하지 않습니다.
 

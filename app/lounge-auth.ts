@@ -98,6 +98,8 @@ export async function accountLogin(body: Record<string, unknown>) {
       session: { access_token: string; refresh_token: string };
       profile: AccountProfile;
       recoveryCode?: string;
+      /** Login succeeded with an HH-/HR-shaped password: ask the user to change it. */
+      passwordLooksLikeCode?: boolean;
     }>('hohyeon-auth', body, body.op === 'password');
     const { error } = await cloud.auth.setSession(result.session);
     if (error)
@@ -123,6 +125,18 @@ export async function accountLogout(expectedUid?: string) {
     const { data } = await cloud.auth.getSession();
     if (data.session && data.session.user.id !== expectedUid)
       throw new AccountError('다른 계정으로 전환됐어요.', 409);
+  }
+  await cloud.auth.signOut({ scope: 'local' });
+}
+/**
+ * Signs this account out everywhere: revokes every app session on the server
+ * (all devices/tabs) and all refresh tokens, then clears the local session.
+ */
+export async function accountLogoutAll(expectedUid?: string) {
+  try {
+    await cloudCall('hohyeon-auth', { op: 'logoutAll' }, true, expectedUid);
+  } catch (e) {
+    if (!(e instanceof AccountError) || e.status !== 401) throw e;
   }
   await cloud.auth.signOut({ scope: 'local' });
 }

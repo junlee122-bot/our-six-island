@@ -1,8 +1,9 @@
 'use client';
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- Canvas is the accessible image because its pixels are drawn locally. */
 import { memo, useEffect, useRef, useState } from 'react';
-import { ACTORS } from './theater-data';
+import { ACTORS } from './lounge-roster';
 import { loungeSprites } from './lounge-sprites';
+import { RUN_SPEED_MULTIPLIER } from './lounge-locomotion';
 import type { Look } from './lounge-look';
 import type { Motion } from './character-style';
 export const AvatarView = memo(function AvatarView({
@@ -70,7 +71,10 @@ export const AvatarView = memo(function AvatarView({
                 0.1,
                 Math.max(0, (timestamp - lastAnimationTime) / 1000),
               );
-        animationTime.current += delta;
+        // Previews use the same locomotion clock as the world: running covers
+        // ground 1.65× faster, so its stride phase advances that much faster.
+        animationTime.current +=
+          delta * (motion === 'run' ? RUN_SPEED_MULTIPLIER : 1);
         lastAnimationTime = timestamp;
         lastFrame = timestamp;
         drawOnce();
@@ -115,6 +119,11 @@ export const AvatarView = memo(function AvatarView({
     media.addEventListener('change', onMotionChange);
     document.addEventListener('visibilitychange', onVisibilityChange);
     loungeSprites()
+      .then(async (s) => {
+        // Only this look's atlases are downloaded (not every outfit sheet).
+        await s.ensure(actor, stableLook);
+        return s;
+      })
       .then((s) => {
         if (disposed) return;
         setError(false);

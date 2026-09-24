@@ -2,10 +2,11 @@ import {
   GAME_INFO,
   GAME_KINDS,
   gameReservation,
-  type GameInvite,
   type GameKind,
-} from './lounge-room.ts';
+} from './lounge-games.ts';
+import type { GameInvite } from './lounge-room.ts';
 import type { LoungeView } from './lounge-room.ts';
+import { formatBeom, josa } from './lounge-text.ts';
 
 /** Hub states describe the next safe action for one game, without performing it. */
 export type GameHubStatus =
@@ -39,6 +40,8 @@ export type GameFlow = {
   occupiedSeats: number;
   required: number;
   readyCount: number;
+  /** Server-clock end of the ready check, when one is running. */
+  readyDeadline: number | null;
   reservation: number;
   eligibleFriends: LoungeView['players'];
 };
@@ -150,6 +153,7 @@ export const gameFlow = (view: LoungeView, kind: GameKind): GameFlow => {
     occupiedSeats: seats.filter(Boolean).length,
     required,
     readyCount: table?.ready.length ?? 0,
+    readyDeadline: table?.readyDeadline ?? null,
     reservation,
     eligibleFriends,
     canOpen: false,
@@ -192,7 +196,8 @@ export const gameFlow = (view: LoungeView, kind: GameKind): GameFlow => {
           ...base,
           status: 'retained',
           statusLabel: '테이블 자리 유지 중',
-          detail: '기존 테이블이 정리되기 전까지 새 초대를 보낼 수 없어요.',
+          detail:
+            '다음 판 준비 확인이 끝나거나 1분이 지나면 새 초대를 보낼 수 있어요.',
           actionLabel: '테이블 보기',
           canOpen: true,
           disabledReason:
@@ -237,7 +242,7 @@ export const gameFlow = (view: LoungeView, kind: GameKind): GameFlow => {
   } else if (pendingInvites.length) {
     disabledReason = '이 게임은 다른 친구들의 참가 응답을 기다리고 있어요.';
   } else if (!fundsOkay) {
-    disabledReason = `최소 예약금 ${reservation.toLocaleString('ko-KR')}범이 필요해요.`;
+    disabledReason = `최소 예약금 ${josa(formatBeom(reservation), '이/가')} 필요해요.`;
   } else if (!enoughFriends) {
     disabledReason = `예약금이 있는 친구 ${minimumPlayers - 1}명이 필요해요.`;
   }

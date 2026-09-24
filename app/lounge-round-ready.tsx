@@ -1,37 +1,54 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Circle, LogOut, RotateCcw } from 'lucide-react';
+import { Check, Circle, LogOut, RotateCcw, UserPlus } from 'lucide-react';
 import { AvatarView } from './avatar-view';
-import { ACTORS } from './theater-data';
+import { ACTORS } from './lounge-roster';
 import {
   GAME_INFO,
+  READY_LIMIT_MS,
   gameReservation,
   type GameKind,
-  type LoungeView,
-} from './lounge-room';
-import { beom } from './lounge-poker-table';
+} from './lounge-games';
+import type { LoungeView } from './lounge-room';
+import { formatBeom, josa } from './lounge-text';
+import { GAME_COPY } from './lounge/game-copy';
+import { TurnTimer } from './lounge-turn-timer';
 import './lounge-round-ready.css';
+
+/** READY_LIMIT_MS as words, e.g. '1분' or '90초'. */
+const readyLimitText =
+  READY_LIMIT_MS % 60000 === 0
+    ? `${READY_LIMIT_MS / 60000}분`
+    : `${Math.round(READY_LIMIT_MS / 1000)}초`;
+
+/** Contract #2: the retained table (or the view) exposes readyDeadline (server ms). */
+function readyDeadlineOf(view: LoungeView, kind: GameKind): number | undefined {
+  const table = view.tables?.[kind] as { readyDeadline?: number } | undefined;
+  const value =
+    table?.readyDeadline ?? (view as { readyDeadline?: number }).readyDeadline;
+  return Number.isFinite(value) ? value : undefined;
+}
 
 export function RoundReady({
   kind,
   view,
   onReady,
   onLeave,
+  onInvite,
 }: {
   kind: GameKind;
   view: LoungeView;
   onReady: (ready: boolean) => Promise<boolean>;
   onLeave: () => void;
+  /** Opens the invite flow to fill empty seats. */
+  onInvite?: () => void;
 }) {
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState('');
   const panel = useRef<HTMLElement>(null);
+  const deadline = readyDeadlineOf(view, kind);
   useEffect(() => {
     const frame = requestAnimationFrame(() =>
-      panel.current?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'instant',
-      }),
+      panel.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' }),
     );
     return () => cancelAnimationFrame(frame);
   }, []);
@@ -44,17 +61,13 @@ export function RoundReady({
   const readyCount = table.members.filter((id) =>
     table.ready.includes(id),
   ).length;
+  const game = GAME_INFO[kind].name;
   const confirm = async () => {
     if (pending) return;
     setPending(true);
-    setError('');
     try {
-      if (!(await onReady(!confirmed)))
-        setError(
-          '준비 상태를 바꾸지 못했어요. 연결과 잔액을 확인한 뒤 다시 눌러 주세요.',
-        );
-    } catch {
-      setError('연결을 확인한 뒤 다시 눌러 주세요.');
+      // A refusal already shows the server's reason as a toast.
+      await onReady(!confirmed);
     } finally {
       setPending(false);
     }
@@ -73,12 +86,26 @@ export function RoundReady({
             {table.round}번째 판을 마쳤어요
           </span>
           <h2>다음 판도 함께할까요?</h2>
-          <p>자리는 그대로예요. 모두 체크하면 같은 친구들과 이어서 시작해요.</p>
+          <p>
+            모두 체크하면 같은 조건({GAME_COPY[kind].amountLabel}{' '}
+            {formatBeom(table.stake)}
+            {reservation !== table.stake &&
+              ` · 최대 ${formatBeom(reservation)} 예약`}
+            )으로 이어서 시작해요.
+          </p>
         </div>
-        <output className="l-round-count" aria-live="polite">
-          <Check size={17} />
-          {readyCount} / {table.members.length} 준비
-        </output>
+        <div className="l-round-side">
+          <TurnTimer
+            deadline={deadline}
+            total={READY_LIMIT_MS}
+            label="준비 확인"
+            mine={!confirmed}
+          />
+          <output className="l-round-count" aria-live="polite">
+            <Check size={17} />
+            {readyCount} / {table.members.length} 준비
+          </output>
+        </div>
       </div>
       <ul className="l-round-friends" aria-label="친구들의 준비 상태">
         {table.members.map((id) => {
@@ -103,7 +130,7 @@ export function RoundReady({
                     ? '준비 완료'
                     : short
                       ? '범 잔액 부족'
-                      : '확인 기다리는 중'}
+                      : '기다리는 중'}
                 </span>
               </span>
               {checked ? (
@@ -115,50 +142,43 @@ export function RoundReady({
           );
         })}
       </ul>
-      <p className="l-round-stake">
-        다음 {GAME_INFO[kind].name} 판도 같은 조건 ·{' '}
-        {kind === 'blackjack'
-          ? '최대 예약'
-          : kind === 'gostop'
-            ? '최대 손실'
-            : '참가금'}{' '}
-        {beom(reservation)}
-        <span>
-          전원 준비가 완료될 때 예약하며, 준비 체크만으로는 범을 차감하지
-          않아요.
-        </span>
-      </p>
       {missing > 0 && (
         <p className="l-round-message">
-          {GAME_INFO[kind].name}은 {table.required}명이 필요해요. {missing}명이
-          부족해 다음 판을 시작할 수 없어요. 새 구성으로 놀려면 테이블에서 나간
-          뒤 다시 초대해 주세요.
+          {josa(game, '은/는')} {table.required}명이 필요해요. {missing}자리가
+          비었어요.
         </p>
       )}
       {insufficient && !confirmed && (
         <p className="l-round-message">
-          다음 판 예약금이 부족해요. 현재 잔액은 {beom(view.wallet.balance)}
-          예요.
+          예약금이 부족해요. 지금 잔액은{' '}
+          {josa(formatBeom(view.wallet.balance), '이에요/예요')}.
         </p>
       )}
       <div className="l-round-actions">
-        <button
-          type="button"
-          className={
-            'l-primary l-round-confirm' + (confirmed ? ' is-ready' : '')
-          }
-          aria-pressed={confirmed}
-          disabled={pending || (!confirmed && (insufficient || missing > 0))}
-          onClick={() => void confirm()}
-          data-testid="continue-round"
-        >
-          {confirmed ? <Check size={19} /> : <RotateCcw size={18} />}
-          {pending
-            ? '확인 중…'
-            : confirmed
-              ? '준비 완료 · 누르면 취소'
-              : '계속 게임 진행하기'}
-        </button>
+        {missing > 0 && onInvite ? (
+          <button type="button" className="l-primary" onClick={onInvite}>
+            <UserPlus size={18} />
+            빈자리에 친구 초대
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={
+              'l-primary l-round-confirm' + (confirmed ? ' is-ready' : '')
+            }
+            aria-pressed={confirmed}
+            disabled={pending || (!confirmed && (insufficient || missing > 0))}
+            onClick={() => void confirm()}
+            data-testid="continue-round"
+          >
+            {confirmed ? <Check size={19} /> : <RotateCcw size={18} />}
+            {pending
+              ? '확인 중…'
+              : confirmed
+                ? '준비 완료 · 누르면 취소'
+                : '계속 게임 진행하기'}
+          </button>
+        )}
         <button
           type="button"
           className="l-secondary"
@@ -170,10 +190,11 @@ export function RoundReady({
         </button>
       </div>
       <output className="l-round-feedback" aria-live="polite">
-        {error ||
-          (confirmed
-            ? '체크가 확인됐어요. 다른 친구들이 준비하면 다음 판으로 넘어가요.'
-            : '나가기를 누르기 전에는 이 테이블의 참가자로 유지돼요.')}
+        {confirmed
+          ? '체크했어요. 모두 준비하면 다음 판으로 넘어가요.'
+          : deadline !== undefined
+            ? `${readyLimitText} 안에 준비하지 않으면 자리에서 빠지고, 인원이 모자라면 테이블이 정리돼요.`
+            : '체크만으로는 범이 빠지지 않아요.'}
       </output>
     </section>
   );

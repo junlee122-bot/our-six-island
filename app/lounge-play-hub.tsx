@@ -1,12 +1,9 @@
 'use client';
 
-import {
-  GAME_INFO,
-  GAME_KINDS,
-  type GameKind,
-  type LoungeView,
-} from './lounge-room';
+import { GAME_INFO, GAME_KINDS, type GameKind } from './lounge-games';
+import type { LoungeView } from './lounge-room';
 import { gameFlow } from './lounge-game-flow';
+import { formatBeom } from './lounge-text';
 import './lounge-play-hub.css';
 
 export type LoungePlayHubProps = {
@@ -90,10 +87,7 @@ const HubCard = ({
           </span>
         )}
       </div>
-      {flow.disabledReason && flow.status !== 'retained' && (
-        <p className="l-play-hub-reason">{flow.disabledReason}</p>
-      )}
-      {flow.status === 'retained' && (
+      {flow.disabledReason && flow.disabledReason !== flow.detail && (
         <p className="l-play-hub-reason">{flow.disabledReason}</p>
       )}
       {action}
@@ -109,14 +103,11 @@ export const LoungePlayHub = ({
   onWaiting,
   kinds = GAME_KINDS,
 }: LoungePlayHubProps) => (
-  <section className="l-play-hub" aria-labelledby="l-play-hub-title">
+  <section className="l-play-hub" aria-label="게임 현황">
     <header className="l-play-hub-intro">
-      <div>
-        <h2 id="l-play-hub-title">게임 현황</h2>
-        <p>참가 중인 테이블과 친구 초대를 한곳에서 확인해요.</p>
-      </div>
+      <p>참가 중인 테이블과 초대를 한곳에서 봐요.</p>
       <span className="l-play-hub-balance">
-        사용 가능 {view.wallet.balance.toLocaleString('ko-KR')}범
+        사용 가능 {formatBeom(view.wallet.balance)}
       </span>
     </header>
     <div className="l-play-hub-grid">

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { Bot, ChevronDown, Layers, Plus, Hand, ChevronsUp } from 'lucide-react';
 import { PokerCard, beom } from './lounge-poker-table';
 import {
@@ -7,6 +7,11 @@ import {
   type BlackjackView,
   type BlackjackAction,
 } from './lounge-blackjack';
+import { TURN_LIMIT_MS } from './lounge-games';
+import type { TurnTiming } from './lounge-room';
+import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import './lounge-poker-table.css';
+import './lounge-blackjack-table.css';
 const outcomes = {
   win: '승리',
   lose: '패배',
@@ -27,41 +32,60 @@ export function BlackjackTable({
   names,
   onAction,
 }: {
-  match: BlackjackView;
+  match: BlackjackView & TurnTiming;
   seat: number;
   names: string[];
-  onAction: (action: BlackjackAction) => void;
+  onAction: (action: BlackjackAction) => void | Promise<boolean>;
 }) {
   const [rules, setRules] = useState(false),
-    [sent, setSent] = useState<number | null>(null);
-  useEffect(() => {
+    [sent, setSent] = useState<number | null>(null),
+    inFlight = useRef<number | null>(null);
+  // A new deal or revision clears the local send lock (reset during render,
+  // not in an effect, so the buttons never flash a stale disabled state).
+  const viewKey = `${g.id}:${g.revision}`,
+    [seenKey, setSeenKey] = useState(viewKey);
+  if (seenKey !== viewKey) {
+    setSeenKey(viewKey);
     setSent(null);
-  }, [g.id, g.revision]);
-  useEffect(() => {
-    if (sent === null) return;
-    const t = setTimeout(() => setSent(null), 2500);
-    return () => clearTimeout(t);
-  }, [sent]);
+  }
   const act = (kind: BlackjackAction['kind']) => {
-    if (!g.legal[kind] || sent === g.revision) return;
+    // The ref also stops a second tap that lands before React re-renders.
+    if (!g.legal[kind] || sent === g.revision || inFlight.current === g.revision)
+      return;
+    inFlight.current = g.revision;
     setSent(g.revision);
-    onAction({ kind });
+    awaitAnswer(onAction({ kind }), () => {
+      inFlight.current = null;
+      setSent(null);
+    });
   };
   const hidden = g.dealer.some((c) => c === null),
     dealerCards = g.dealer.filter((c): c is number => c !== null),
     dealerValue = blackjackValue(dealerCards);
   const ended = g.phase === 'over',
     myTurn = g.legal.enabled,
-    hand = g.hands[seat]?.[g.hand];
+    hand = g.hands[seat]?.[g.hand],
+    away = (i: number) => !!g.away?.includes(i),
+    // A two-card 21 for the dealer is only visible once the hole card is open.
+    dealerNatural =
+      !hidden && dealerCards.length === 2 && dealerValue.total === 21;
   const message = ended
-    ? '모든 손의 승패와 범 정산을 마쳤어요.'
+    ? dealerNatural
+      ? '딜러 블랙잭! 블랙잭 손은 푸시, 나머지 손은 패배로 정산했어요.'
+      : '모든 손의 승패와 범 정산을 마쳤어요.'
     : g.phase === 'reveal'
-      ? '선택을 마쳤어요. 이제 딜러의 숨긴 카드를 공개합니다.'
-      : g.phase === 'dealer'
-        ? '딜러는 16 이하에서 히트하고, 소프트 17을 포함한 17 이상에서 멈춥니다.'
+      ? g.event.kind === 'deal'
+        ? '딜러가 첫 두 장을 확인했어요. 숨긴 카드를 바로 공개해요.'
+        : '선택을 마쳤어요. 이제 딜러의 숨긴 카드를 공개해요.'
+      : dealerNatural
+        ? '딜러 블랙잭! 블랙잭이 아닌 손은 패배, 블랙잭 손은 푸시예요.'
+        : g.phase === 'dealer'
+        ? '딜러는 16 이하에서 히트하고, 소프트 17을 포함한 17 이상에서 멈춰요.'
         : g.phase === 'settling'
           ? '각 손을 딜러와 비교하고 있어요.'
-          : `${names[g.turn]}${g.hands[g.turn]?.length === 2 ? ` · ${g.hand + 1}번 손` : ''}의 차례예요. 히트하거나 스탠드하세요.`;
+          : g.turn === seat
+            ? `내${g.hands[g.turn]?.length === 2 ? ` ${g.hand + 1}번 손` : ''} 차례예요. 히트하거나 스탠드해 주세요.`
+            : `${names[g.turn]}${g.hands[g.turn]?.length === 2 ? ` · ${g.hand + 1}번 손` : ''}의 차례예요. 선택을 기다려요.`;
   return (
     <div className="bj-club">
       <div className="p-dealer bj-announcement">
@@ -70,23 +94,23 @@ export function BlackjackTable({
         </span>
         <div>
           <small>
-            AI DEALER · 루미 <span>자동 진행</span>
+            딜러 루미 <span>자동 진행</span>
           </small>
           <p aria-live="polite">{message}</p>
         </div>
         <span className="bj-number">
-          TABLE 03
+          3번 테이블
           <br />
-          <b>BLACKJACK</b>
+          <b>블랙잭</b>
         </span>
       </div>
       <div className="bj-felt">
         <div className="bj-table-heading">
-          <span>HOHYEON CASINO</span>
+          <span>별빛 카지노</span>
           <h2>
-            BLACKJACK <i>21</i>
+            블랙잭 <i>21</i>
           </h2>
-          <p>BLACKJACK PAYS 3 TO 2 · DEALER STANDS ON ALL 17</p>
+          <p>블랙잭은 1.5배 지급 · 딜러는 17 이상에서 멈춰요</p>
         </div>
         <div className={'bj-house' + (!hidden ? ' revealed' : '')}>
           <div className="bj-seat-title">
@@ -112,7 +136,7 @@ export function BlackjackTable({
         </div>
         <div className="bj-table-rule">
           기본 베팅 <b>{beom(g.stake)}</b>
-          <span>6 DECKS · DOUBLE · SPLIT</span>
+          <span>6덱 · 더블 · 스플릿</span>
         </div>
         <div
           className="bj-players"
@@ -139,7 +163,9 @@ export function BlackjackTable({
                 <span>
                   {ended
                     ? signed(g.result[i])
-                    : g.turn === i
+                    : away(i)
+                      ? AWAY_LABEL
+                      : g.turn === i
                       ? '진행 중'
                       : hands.every((h) => h.status !== 'playing')
                         ? '선택 완료'
@@ -209,6 +235,20 @@ export function BlackjackTable({
                 ? '21을 넘지 않게, 딜러보다 높게.'
                 : '친구들의 카드와 선택을 함께 볼 수 있어요.'}
             </span>
+            {g.phase === 'players' && g.turn >= 0 && (
+              <TurnTimer
+                deadline={g.turnDeadline}
+                total={TURN_LIMIT_MS.blackjack}
+                label={
+                  away(g.turn)
+                    ? AWAY_LABEL
+                    : myTurn
+                      ? '내 차례'
+                      : `${names[g.turn]} 차례`
+                }
+                mine={myTurn}
+              />
+            )}
           </div>
           <div className="bj-action-buttons">
             <button
@@ -248,7 +288,7 @@ export function BlackjackTable({
       )}
       {ended && (
         <div className="bj-result" aria-live="polite">
-          <span>ROUND COMPLETE</span>
+          <span>이번 판 끝</span>
           <h3>
             {seat < 0
               ? '테이블 정산 완료'
@@ -261,7 +301,7 @@ export function BlackjackTable({
           <strong>
             {seat >= 0 ? signed(g.result[seat]) : `${names.length}명 정산 완료`}
           </strong>
-          <p>사용하지 않은 예약금과 배당을 공통 범 지갑에 반영했습니다.</p>
+          <p>사용하지 않은 예약금과 배당을 공통 범 지갑에 반영했어요.</p>
         </div>
       )}
       <button
@@ -274,28 +314,27 @@ export function BlackjackTable({
       {rules && (
         <div className="p-rules bj-rules">
           <p>
-            A는 1 또는 11, 그림 카드는 10입니다. 21을 넘으면 즉시 버스트. 딜러도
-            버스트해도 먼저 버스트한 손은 패배합니다.
+            A는 1 또는 11, 그림 카드는 10이에요. 21을 넘으면 즉시 버스트. 딜러도
+            버스트해도 먼저 버스트한 손은 패배해요.
           </p>
           <p>
             일반 승리는 베팅의 1배, 최초 두 장의 내추럴 블랙잭은 1.5배를
-            순이익으로 받습니다. 동점은 푸시입니다. 딜러 내추럴은 행동 전에
-            확인하며, 서로 내추럴이면 푸시입니다.
+            순이익으로 받아요. 동점은 푸시예요. 딜러 내추럴은 행동 전에
+            확인하며, 서로 내추럴이면 푸시예요.
           </p>
           <p>
-            처음 두 장에서는 더블다운할 수 있습니다. 같은 값 두 장은 한 번만
-            스플릿하고, 나눈 손도 더블다운할 수 있습니다. 나눈 A는 한 장씩 받고
-            종료하며, 스플릿 후 21은 일반 21입니다. 보험·서렌더는 없습니다.
+            처음 두 장에서는 더블다운할 수 있어요. 같은 값 두 장은 한 번만
+            스플릿하고, 나눈 손도 더블다운할 수 있어요. 나눈 A는 한 장씩 받고
+            종료하며, 스플릿 후 21은 일반 21이에요. 보험·서렌더는 없어요.
           </p>
           <p>
-            기본 베팅의 4배를 미리 예약해 스플릿 후 양쪽 더블까지 지원합니다.
-            미사용 예약금은 종료 시 반환합니다. 나가면 남은 손은 자동 스탠드하고
-            정상 정산합니다. 딜러의 손익은 카지노 장부에 기록되며 친구의
-            지갑에서 대신 차감하지 않습니다.
+            기본 베팅의 4배를 미리 예약해 스플릿 후 양쪽 더블까지 지원해요.
+            미사용 예약금은 종료 시 반환해요. 딜러의 손익은 카지노 장부에
+            기록되며 친구의 지갑에서 대신 차감하지 않아요.
           </p>
           <p>
-            방장이 규칙과 지갑 저장을 담당합니다. 방장이 종료한 미완료판은 다음
-            방을 열 때 반환합니다.
+            차례마다 45초 안에 선택하지 않거나 자리를 떠나면 서버가 스탠드해요.
+            모두 방을 떠나도 딜러는 끝까지 진행하고 정상 정산해요.
           </p>
         </div>
       )}

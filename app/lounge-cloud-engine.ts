@@ -1,17 +1,34 @@
 // This module runs in the Edge Function and tests, never as a client authority.
 import {
   LoungeRoom,
+  snapshotNextDue,
+  REJECT,
   type HostedRoomSnapshot,
   type LoungeAction,
 } from './lounge-room.ts';
 import {
   validateLedger,
   registerWallet,
+  compactLedger,
+  voidGame,
+  claimDailyGrant,
+  dailyGrantInfo,
   type LoungeLedger,
 } from './lounge-economy.ts';
 import { LoungeBank } from './lounge-wallet.ts';
 import { roomCode } from './multiplayer-protocol.ts';
 import { defaultLook, type Look } from './lounge-look.ts';
+import {
+  ensureLifeMember,
+  isLifeAction,
+  lifeAction,
+  lifeView,
+  readLife,
+  LifeError,
+  mayEnterRoom,
+  type LifeState,
+} from './lounge-life.ts';
+import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
 export type CloudMember = { id: string; actor: number; username: string };
 type Lease = { connection: string; seen: number; sequence: number };
 type Room = { snapshot: HostedRoomSnapshot; leases: Record<string, Lease> };
@@ -28,6 +45,8 @@ export type CloudWorld = {
   rooms: Record<string, Room>;
   receipts: Record<string, Receipt[]>;
   epochs?: Record<string, number>;
+  /** Phase 2 life state (farms, bags, mail…). Absent in older worlds. */
+  life?: LifeState;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -65,10 +84,24 @@ export async function commandHash(c: CloudCommand) {
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
 }
-function wallet(ledger: LoungeLedger, id: string) {
+function wallet(ledger: LoungeLedger, id: string, now: number) {
   const bank = new LoungeBank(null);
   bank.commit(ledger);
-  return bank.view('wallet-' + id);
+  return bank.view('wallet-' + id, now);
+}
+/** Refund whatever a broken room still holds, so one room cannot wedge the world. */
+function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
+  let next = ledger;
+  for (const match of [
+    snapshot.chess,
+    snapshot.go,
+    snapshot.poker,
+    snapshot.blackjack,
+    snapshot.seotda,
+  ])
+    if (match && next.games[match.id]?.state === 'reserved')
+      next = voidGame(next, match.id);
+  return next;
 }
 export function cloudTransition(
   original: CloudWorld,
@@ -92,9 +125,12 @@ export function cloudTransition(
     member.actor > 6
   )
     throw new CloudError('등록된 계정이 아닙니다.', 403);
+  if (command.code !== undefined && typeof command.code !== 'string')
+    throw new CloudError('초대 코드를 확인해 주세요.', 400);
   const g = structuredClone(original),
     notifications = new Set<string>();
   g.epochs ??= {};
+  g.ledger = compactLedger(g.ledger);
   const saveRoom = (
     c: string,
     r: LoungeRoom,
@@ -104,20 +140,38 @@ export function cloudTransition(
     const snapshot = r.hostedSnapshot();
     if (snapshot.players.length) g.rooms[c] = { snapshot, leases };
     else {
-      r.hostedClose();
+      r.hostedClose(now);
       g.ledger = r.hostedLedger();
       delete g.rooms[c];
     }
   };
+  const lifeBefore = readLife(g.life),
+    mayStay = (owner: number, visitor: number) =>
+      mayEnterRoom(lifeBefore, owner, visitor);
   for (const [c, entry] of Object.entries(g.rooms)) {
-    const r = LoungeRoom.hosted(entry.snapshot, g.ledger);
-    for (const [id, lease] of Object.entries(entry.leases))
-      if (lease.seen < now - CLOUD_LEASE_MS) {
-        r.hostedDrop(id);
-        delete entry.leases[id];
+    const before = g.ledger;
+    try {
+      const r = LoungeRoom.hosted(entry.snapshot, g.ledger);
+      for (const [id, lease] of Object.entries(entry.leases))
+        if (lease.seen < now - CLOUD_LEASE_MS) {
+          r.hostedDrop(id, 'expired');
+          delete entry.leases[id];
+        }
+      // A room its owner has closed: visitors still inside go back to the village.
+      r.hostedEvictHomes(mayStay);
+      r.hostedTick(now);
+      saveRoom(c, r, entry.leases);
+    } catch (error) {
+      // Isolate the failing room: refund its reserved games and drop it.
+      console.error('lounge: room tick failed', c, error);
+      try {
+        g.ledger = isolateRoom(before, entry.snapshot);
+      } catch (refund) {
+        console.error('lounge: refund of failed room failed', c, refund);
+        g.ledger = before;
       }
-    r.hostedTick(now);
-    saveRoom(c, r, entry.leases);
+      delete g.rooms[c];
+    }
     if (JSON.stringify(original.rooms[c]) !== JSON.stringify(g.rooms[c]))
       notifications.add(c);
   }
@@ -163,7 +217,7 @@ export function cloudTransition(
         }
         if (!target) throw new CloudError('방을 찾을 수 없습니다.');
         if (command.op === 'join' && !g.rooms[target])
-          throw new CloudError('닫혔거나 없는 라운지입니다.', 404);
+          throw new CloudError('닫혔거나 없는 방이에요.', 404);
         const entry = g.rooms[target],
           r = LoungeRoom.hosted(
             entry?.snapshot ?? null,
@@ -190,13 +244,72 @@ export function cloudTransition(
         saveRoom(target, r, leases);
         current = target;
         notifications.add(target);
+        g.life = ensureLifeMember(readLife(g.life), member.id, member.actor);
+      } else if (command.op === 'action' && isLifeAction(command.action)) {
+        // Life actions work inside the village room and outside any room.
+        const entry = target ? g.rooms[target] : undefined,
+          lease = entry?.leases[member.id];
+        if (lease) {
+          if (lease.connection !== command.connection)
+            throw new CloudError(
+              '다른 창이나 기기에서 이 계정으로 입장했습니다. 여기서는 다시 입장해 주세요.',
+              409,
+            );
+          if (
+            !Number.isSafeInteger(command.sequence) ||
+            command.sequence! <= lease.sequence
+          )
+            throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
+          lease.sequence = command.sequence!;
+          lease.seen = now;
+        }
+        try {
+          const next = lifeAction(
+            readLife(g.life),
+            g.ledger,
+            member,
+            command.action,
+            now,
+          );
+          g.life = next.life;
+          g.ledger = next.ledger;
+        } catch (e) {
+          if (e instanceof LifeError) throw new CloudError(e.message, 409);
+          throw e;
+        }
+        // Farms, statuses, guestbooks and mail are visible to friends. Watering
+        // does not change a stage right away, so friends pick it up on their
+        // next read instead of a broadcast; batch plant/water is one hint.
+        if (!['sell', 'buy', 'pick', 'readMail', 'readGuestbook', 'water'].includes(command.action.kind))
+          for (const c of Object.keys(g.rooms)) notifications.add(c);
+        if (command.action.kind === 'room') {
+          // Closing my room moves visitors out in this same transition.
+          const life = readLife(g.life);
+          for (const [c, entry] of Object.entries(g.rooms)) {
+            const r = LoungeRoom.hosted(entry.snapshot, g.ledger);
+            if (r.hostedEvictHomes((owner, visitor) => mayEnterRoom(life, owner, visitor))) {
+              saveRoom(c, r, entry.leases);
+              notifications.add(c);
+            }
+          }
+        }
+      } else if (
+        command.op === 'action' &&
+        command.action?.kind === 'daily' &&
+        !(target && g.rooms[target]?.leases[member.id])
+      ) {
+        // The daily grant also works from the wallet outside any room.
+        const id = 'wallet-' + member.id;
+        if (!dailyGrantInfo(g.ledger, id, now).available)
+          throw new CloudError(REJECT.daily, 409);
+        g.ledger = claimDailyGrant(g.ledger, id, now);
       } else if (
         command.op === 'action' ||
         command.op === 'leave' ||
         command.op === 'read'
       ) {
         if (!target || !g.rooms[target]?.leases[member.id])
-          throw new CloudError('이 라운지에 먼저 입장해 주세요.', 404);
+          throw new CloudError('이 방에 먼저 들어와 주세요.', 404);
         const entry = g.rooms[target],
           lease = entry.leases[member.id];
         if (lease.connection !== command.connection)
@@ -218,19 +331,26 @@ export function cloudTransition(
           delete entry.leases[member.id];
           current = undefined;
         }
+        let quiet = command.op === 'read';
         if (command.op === 'action') {
-          if (
-            !command.action ||
-            !r.hostedAction(member.id, command.action, now)
-          )
-            throw new CloudError(
-              '상태가 바뀌었어요. 참가 인원, 잔액과 차례를 확인해 주세요.',
-              409,
-            );
+          if (!command.action || typeof command.action !== 'object')
+            throw new CloudError('요청 정보를 확인해 주세요.');
+          const action = command.action as { kind?: unknown; area?: unknown; home?: unknown };
+          // Walking into a friend's room ('home' + owner) honours their access setting.
+          if (action.kind === 'area' && action.area === 'home') {
+            const owner = action.home ?? member.actor;
+            if (!validHomeOwner(owner)) throw new CloudError(REJECT.area, 400);
+            if (!mayEnterRoom(readLife(g.life), owner, member.actor))
+              throw new CloudError(HOME_CLOSED, 403);
+          }
+          const reason = r.hostedAttempt(member.id, command.action, now);
+          if (reason) throw new CloudError(reason, 409);
+          // A coalesced look is applied by a later tick; no broadcast now.
+          quiet = r.hostedCoalesced;
         }
         r.hostedTick(now);
         saveRoom(target, r, entry.leases);
-        if (command.op !== 'read') notifications.add(target);
+        if (!quiet) notifications.add(target);
       } else if (command.op !== 'wallet')
         throw new CloudError('지원하지 않는 요청입니다.');
     } catch (e) {
@@ -258,11 +378,10 @@ export function cloudTransition(
     lease = entry?.leases[member.id];
   const allowed = !!entry && lease?.connection === command.connection;
   const runtime = allowed ? LoungeRoom.hosted(entry.snapshot, g.ledger) : null;
-  const packet = runtime ? runtime.hostedPacket(member.id) : null;
+  const life = lifeView(readLife(g.life), member.id, member.actor, now);
+  const packet = runtime ? { ...runtime.hostedPacket(member.id), life } : null;
   const nextDue =
-    entry && allowed
-      ? Math.min(...Object.values(entry.snapshot.due).map((d) => d.at))
-      : Infinity;
+    entry && allowed ? snapshotNextDue(entry.snapshot) : Infinity;
   const response = {
     ok,
     error,
@@ -270,7 +389,8 @@ export function cloudTransition(
     code: allowed ? target : '',
     host: allowed ? entry.snapshot.host : null,
     packet,
-    wallet: wallet(g.ledger, member.id),
+    wallet: wallet(g.ledger, member.id, now),
+    life,
     activeRoom: current ?? null,
     epoch: g.epochs[member.id] ?? 0,
     nextDue: Number.isFinite(nextDue) ? nextDue : null,

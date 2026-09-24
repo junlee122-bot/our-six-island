@@ -1,3 +1,7 @@
+# Web-optimized copies · 2026-09-24
+
+The GLB files served by the game are losslessly restructured copies (dedup, weld, prune), with vertex data quantized (`KHR_mesh_quantization`) and embedded textures re-encoded as WebP (`EXT_texture_webp`) by `scripts/optimize-assets.mjs`. The byte-for-byte originals described below (and hashed in each `assets.json`) are kept under `public/models/_originals/` with the same relative paths. Shapes, UVs, materials and credits are unchanged; kArchive's displayed terms permit modification with credit, and the 3DAssets.dev files are CC0.
+
 # kArchive models
 
 자료: kArchive · 출처: 쓰레드 dogfooter

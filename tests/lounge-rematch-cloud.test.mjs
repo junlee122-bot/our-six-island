@@ -189,7 +189,7 @@ test('last-ready receipt retries do not double-reserve; stale match IDs and reus
   assert.deepEqual(h.world.ledger, ledgerBeforeStale);
 });
 
-test('active games and nonparticipants cannot ready; seats persist until an explicit stand', async () => {
+test('active games and nonparticipants cannot ready; a short table waits for the ready check, then dissolves', async () => {
   const h = harness(),
     a = member(0),
     b = member(1),
@@ -213,7 +213,12 @@ test('active games and nonparticipants cannot ready; seats persist until an expl
 
   const stand = await h.run(a, 'action', { action: { kind: 'stand', game: 'chess' } });
   assert.equal(stand.response.ok, true);
+  // The survivor keeps the short table so an invite can fill the empty seat;
+  // when the ready check runs out unfilled, the table dissolves.
   assert.deepEqual(tableFor(h, a).members, [b.id]);
+  h.advance(61_000);
+  await h.run(b, 'read');
+  assert.equal(tableFor(h, a), undefined);
 });
 
 test('legacy hosted snapshots without tables reconstruct as empty tables', async () => {
@@ -283,7 +288,6 @@ test('an explicit leave removes its ended-table membership and lets the survivor
   const left = await h.run(b, 'leave');
   assert.equal(left.response.ok, true);
   assert.deepEqual(tableFor(h, a).members, [a.id]);
-  assert.deepEqual(tableFor(h, a).ready, []);
   assert.equal(h.world.rooms[a.code].leases[b.id], undefined);
 
   const stood = await h.run(a, 'action', {
@@ -307,7 +311,7 @@ test('an explicit leave removes its ended-table membership and lets the survivor
   assert.notEqual(roomSnapshot(h, a).chess.id, id);
 });
 
-test('a short reconnect preserves ready membership, then lease expiry removes idle members and clears readiness', async () => {
+test('a short reconnect preserves ready membership, then the ready deadline dissolves the idle table', async () => {
   const h = harness(),
     a = member(0),
     b = member(1);
@@ -316,7 +320,9 @@ test('a short reconnect preserves ready membership, then lease expiry removes id
   await finishChess(h, a, id);
   await h.run(a, 'action', { action: readyAction('chess', id) });
 
-  h.advance(CLOUD_LEASE_MS - 30000);
+  const deadline = tableFor(h, a).readyDeadline;
+  assert.equal(typeof deadline, 'number');
+  h.advance(30000);
   const reconnectedB = { ...b, connection: uuid() },
     rejoin = await h.run(reconnectedB, 'join', { code: a.code });
   assert.equal(rejoin.response.ok, true);
@@ -324,14 +330,16 @@ test('a short reconnect preserves ready membership, then lease expiry removes id
   assert.deepEqual(tableFor(h, a).members, [a.id, b.id]);
   assert.deepEqual(tableFor(h, a).ready, [a.id]);
 
-  // Keep A's lease alive while B remains idle past the three-minute lease.
-  await h.run(a, 'read');
-  h.advance(CLOUD_LEASE_MS - 30000);
-  await h.run(a, 'read');
+  assert.equal(tableFor(h, a).readyDeadline, deadline);
+  // B never readies: after 60 seconds the non-ready member is removed and the
+  // table, now below its required size, dissolves.
   h.advance(30001);
   const afterExpiry = await h.run(a, 'read');
   assert.equal(afterExpiry.response.ok, true);
-  assert.deepEqual(tableFor(h, a).members, [a.id]);
-  assert.deepEqual(tableFor(h, a).ready, []);
+  assert.equal(tableFor(h, a), undefined);
+  assert.equal(afterExpiry.response.packet.tables.chess, undefined);
+  // Lease expiry still removes the idle member from the room later on.
+  h.advance(CLOUD_LEASE_MS);
+  await h.run(a, 'read');
   assert.equal(h.world.rooms[a.code].leases[b.id], undefined);
 });

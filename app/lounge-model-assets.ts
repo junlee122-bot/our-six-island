@@ -1,5 +1,7 @@
 // kArchive (쓰레드 dogfooter) and 3DAssets.dev (CC0).
-// Exact sources and licenses: public/models/lounge/ATTRIBUTION.md.
+// Exact sources and licenses: public/models/lounge/ATTRIBUTION.md. These paths are the
+// web-optimized copies (quantized geometry, WebP textures — both decoded natively by
+// three's GLTFLoader); byte-exact originals live in public/models/_originals/.
 // Standalone builds rewrite these to content-hashed relative URLs for Pages.
 export const LOUNGE_MODELS = {
   sofa: '/models/lounge/sofa.glb',

@@ -1,0 +1,61 @@
+# OPTIONAL — not active for normal pushes.
+#
+# The live site is currently served by GitHub Pages from the committed `docs/`
+# folder (Settings → Pages → "Deploy from a branch", main /docs). This workflow
+# is the planned replacement: it builds the site in CI and deploys it as a Pages
+# artifact, so build output no longer has to be committed.
+#
+# To switch (see README "배포"):
+#   1. Settings → Pages → Source: "GitHub Actions".
+#   2. Run this workflow once by hand (Actions → Deploy Pages → Run workflow).
+#   3. Optionally add `push: branches: [main]` below, add `/docs/` to .gitignore
+#      and remove the committed docs/ build output in a separate commit.
+# Until step 1 is done, running it by hand fails at the deploy step and changes
+# nothing on the live site.
+name: Deploy Pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - name: Build site
+        run: node scripts/build-standalone.mjs --out _site
+      - name: Keep the legacy island/theater pages
+        run: |
+          for page in island.html theater.html; do
+            if [ -f "docs/$page" ]; then cp "docs/$page" "_site/$page"; fi
+          done
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

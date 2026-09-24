@@ -19,6 +19,19 @@ import {
   fetchProfile,
 } from './lounge-auth';
 import { LoginCharacterPreview, LoginPortrait } from './lounge-login-preview';
+import { josa, NAMES } from './lounge-text';
+import {
+  LAST_ACCOUNT_KEY,
+  PASSWORD_WARNING_KEY,
+  recall,
+  remember,
+} from './lounge-settings';
+import { friendlyError } from './lounge/feedback';
+
+const initialUsername = () => {
+  const last = recall(LAST_ACCOUNT_KEY);
+  return last && ACCOUNTS.some((a) => a.username === last) ? last : 'dowon';
+};
 export function RecoveryCard({
   username,
   code,
@@ -28,22 +41,24 @@ export function RecoveryCard({
   code: string;
   onDone: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false),
+    [saved, setSaved] = useState<'' | 'file' | 'copy'>('');
   const download = () => {
     const url = URL.createObjectURL(
       new Blob(
         [
-          `범타듀 밸리 비밀번호 복구 코드\n아이디: ${username}\n복구 코드: ${code}\n\n다른 사람에게 공유하지 마세요. 비밀번호를 바꾸면 새 코드로 교체됩니다.\n`,
+          `${NAMES.app} 비밀번호 복구 코드\n아이디: ${username}\n복구 코드: ${code}\n\n다른 사람에게 공유하지 마세요. 비밀번호를 바꾸면 새 코드로 바뀌어요.\n`,
         ],
         { type: 'text/plain;charset=utf-8' },
       ),
     );
     const a = document.createElement('a');
     a.href = url;
-    a.download = `범타듀 밸리-${username}-복구코드.txt`;
+    a.download = `${NAMES.app}-${username}-복구코드.txt`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setCopied(true);
+    setSaved('file');
   };
   return (
     <div className="l-recovery">
@@ -64,14 +79,22 @@ export function RecoveryCard({
             try {
               await navigator.clipboard.writeText(code);
               setCopied(true);
+              setSaved('copy');
             } catch {
               download();
             }
           }}
         >
-          복사
+          {saved === 'copy' ? '복사했어요' : '복사'}
         </button>
       </div>
+      <output className="l-help-text" aria-live="polite">
+        {saved === 'copy'
+          ? '복구 코드를 복사했어요. 메모장 같은 안전한 곳에 붙여 넣어 두세요.'
+          : saved === 'file'
+            ? '복구 코드 파일을 저장했어요.'
+            : '파일로 저장하거나 복사하면 계속할 수 있어요.'}
+      </output>
       <button className="l-primary" disabled={!copied} onClick={onDone}>
         저장했어요 · 계속하기 <ArrowRight size={17} />
       </button>
@@ -114,7 +137,7 @@ export function PasswordForm({
           });
           onChanged(r.recoveryCode!);
         } catch (e) {
-          setError(e instanceof Error ? e.message : '변경하지 못했어요.');
+          setError(friendlyError(e, '변경하지 못했어요.'));
         } finally {
           setBusy(false);
         }
@@ -176,15 +199,23 @@ export function AccountGate({
     [loading, setLoading] = useState(true),
     [loadError, setLoadError] = useState(''),
     [mode, setMode] = useState<'login' | 'activate' | 'recover'>('login'),
-    [username, setUsername] = useState('dowon'),
+    [username, setUsernameState] = useState(initialUsername),
     [password, setPassword] = useState(''),
     [confirm, setConfirm] = useState(''),
     [code, setCode] = useState(''),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false),
     [recovery, setRecovery] = useState('');
+  const setUsername = (value: string) => {
+    setUsernameState(value);
+    remember(LAST_ACCOUNT_KEY, value);
+  };
+  const [storyOpen, setStoryOpen] = useState(false);
   const sessionUid = useRef<string | null>(null),
-    loadGeneration = useRef(0);
+    loadGeneration = useRef(0),
+    // True while the login form's own request runs: its response already has
+    // the profile, so the SIGNED_IN event must not fetch it again.
+    loggingIn = useRef(false);
   const load = async () => {
     const generation = ++loadGeneration.current;
     setLoading(true);
@@ -201,9 +232,7 @@ export function AccountGate({
       }
     } catch (e) {
       if (generation === loadGeneration.current)
-        setLoadError(
-          e instanceof Error ? e.message : '계정을 불러오지 못했어요.',
-        );
+        setLoadError(friendlyError(e, '계정을 불러오지 못했어요.'));
     } finally {
       if (generation === loadGeneration.current) setLoading(false);
     }
@@ -238,6 +267,7 @@ export function AccountGate({
         session.user.id !== sessionUid.current
       ) {
         sessionUid.current = session.user.id;
+        if (loggingIn.current) return;
         loadGeneration.current++;
         setAccount(null);
         setLoading(true);
@@ -268,28 +298,14 @@ export function AccountGate({
   const selected = ACCOUNTS.find((a) => a.username === username)!;
   return (
     <main className="l-app l-auth-page">
-      <section className="l-auth-story">
-        <div className="l-auth-logo">
-          <Armchair size={26} />
-          <b>범타듀 밸리</b>
-        </div>
-        <span className="l-kicker">일곱 친구의 마을</span>
-        <h1>
-          같이 한 판,
-          <br />
-          오늘의 우리.
-        </h1>
-        <p>
-          내 아이디를 고르고, 친구들을 만나러 가요.
-        </p>
-        <LoginCharacterPreview actor={selected.actor} />
-        <div className="l-auth-promise">
-          <CloudCheck size={19} />
-          <span>내 코디와 범 지갑을 안전하게 보관해요.</span>
-        </div>
-      </section>
       <section className="l-auth-card">
-        {loadError ? (
+        {recovery && account ? (
+          <RecoveryCard
+            username={account.username}
+            code={recovery}
+            onDone={() => setRecovery('')}
+          />
+        ) : loadError ? (
           <div className="l-recovery">
             <h2>저장 기록을 불러오지 못했어요.</h2>
             <p role="alert">{loadError}</p>
@@ -310,15 +326,9 @@ export function AccountGate({
               로그인 화면으로
             </button>
           </div>
-        ) : recovery && account ? (
-          <RecoveryCard
-            username={account.username}
-            code={recovery}
-            onDone={() => setRecovery('')}
-          />
         ) : (
           <>
-            <span className="l-kicker">우리 회관에 어서 와요</span>
+            <span className="l-kicker">{NAMES.app}에 어서 와요</span>
             <h2>
               {mode === 'login'
                 ? '반가워요, 어서 와요.'
@@ -333,7 +343,11 @@ export function AccountGate({
                   ? '받은 개인 활성화 코드로 비밀번호를 정해 주세요.'
                   : '보관해 둔 복구 코드로 비밀번호를 바꿔요.'}
             </p>
-            <fieldset className="l-auth-tabs" aria-label="로그인 방법">
+            <div
+              className="l-auth-tabs"
+              role="tablist"
+              aria-label="로그인 방법"
+            >
               {(
                 [
                   ['login', '로그인'],
@@ -342,8 +356,10 @@ export function AccountGate({
                 ] as const
               ).map(([value, label]) => (
                 <button
+                  type="button"
                   key={value}
-                  aria-pressed={mode === value}
+                  role="tab"
+                  aria-selected={mode === value}
                   onClick={() => {
                     setMode(value);
                     setError('');
@@ -355,7 +371,7 @@ export function AccountGate({
                   {label}
                 </button>
               ))}
-            </fieldset>
+            </div>
             <form
               className="l-account-form"
               onSubmit={async (e) => {
@@ -374,6 +390,7 @@ export function AccountGate({
                 }
                 setBusy(true);
                 setError('');
+                loggingIn.current = true;
                 try {
                   const r = await accountLogin({
                     op: mode,
@@ -382,30 +399,61 @@ export function AccountGate({
                       ? { password }
                       : { code: code.trim(), newPassword: password }),
                   });
+                  if (r.passwordLooksLikeCode)
+                    remember(PASSWORD_WARNING_KEY, r.profile.id);
+                  sessionUid.current = r.profile.id;
+                  loadGeneration.current++;
+                  setLoadError('');
+                  setLoading(false);
                   setAccount(r.profile);
                   setRecovery(r.recoveryCode ?? '');
                   setPassword('');
                   setCode('');
                 } catch (e) {
-                  setError(
-                    e instanceof Error ? e.message : '로그인하지 못했어요.',
-                  );
+                  setError(friendlyError(e, '로그인하지 못했어요.'));
                 } finally {
+                  loggingIn.current = false;
                   setBusy(false);
                 }
               }}
             >
-              <label htmlFor="account-username">내 아이디</label>
-              <fieldset
+              <span className="l-field-label" id="account-id-label">
+                내 아이디
+              </span>
+              <div
                 className="l-account-ids"
                 id="account-id"
-                aria-label="고정 아이디"
+                role="radiogroup"
+                tabIndex={-1}
+                aria-labelledby="account-id-label"
+                onKeyDown={(e) => {
+                  const step =
+                    e.code === 'ArrowRight' || e.code === 'ArrowDown'
+                      ? 1
+                      : e.code === 'ArrowLeft' || e.code === 'ArrowUp'
+                        ? -1
+                        : 0;
+                  if (!step) return;
+                  e.preventDefault();
+                  const i = ACCOUNTS.findIndex((a) => a.username === username);
+                  const next =
+                    ACCOUNTS[(i + step + ACCOUNTS.length) % ACCOUNTS.length];
+                  setUsername(next.username);
+                  (
+                    e.currentTarget.querySelector(
+                      `[data-username="${next.username}"]`,
+                    ) as HTMLElement | null
+                  )?.focus();
+                }}
               >
                 {ACCOUNTS.map((a) => (
                   <button
                     type="button"
                     key={a.username}
-                    aria-pressed={username === a.username}
+                    role="radio"
+                    data-username={a.username}
+                    aria-checked={username === a.username}
+                    tabIndex={username === a.username ? 0 : -1}
                     onClick={() => setUsername(a.username)}
                   >
                     <LoginPortrait actor={a.actor} />
@@ -413,7 +461,7 @@ export function AccountGate({
                     <small>{a.username}</small>
                   </button>
                 ))}
-              </fieldset>
+              </div>
               <input
                 id="account-username"
                 name="username"
@@ -483,18 +531,51 @@ export function AccountGate({
               <button className="l-primary l-auth-submit" disabled={busy}>
                 {busy
                   ? '확인 중…'
-                  : `${selected.name}로 ${mode === 'login' ? '들어가기' : mode === 'activate' ? '시작하기' : '다시 들어가기'}`}
+                  : `${josa(selected.name, '으로/로')} ${mode === 'login' ? '들어가기' : mode === 'activate' ? '시작하기' : '다시 들어가기'}`}
                 <ArrowRight size={18} />
               </button>
             </form>
             <p className="l-auth-foot">
               <KeyRound size={15} />
               {mode === 'activate'
-                ? '개인 코드는 관리자 승준에게 받아 주세요.'
+                ? selected.username === 'seungjun'
+                  ? '관리자 계정은 직접 발급한 활성화 코드를 써 주세요.'
+                  : '개인 코드는 관리자 승준에게 받아 주세요.'
                 : '일곱 친구의 고정 계정 · 다른 기기에서도 이어서'}
             </p>
           </>
         )}
+      </section>
+      <section
+        className={'l-auth-story' + (storyOpen ? ' is-open' : '')}
+        hidden={!!(recovery && account)}
+      >
+        <div className="l-auth-logo">
+          <Armchair size={26} />
+          <b>{NAMES.app}</b>
+        </div>
+        <span className="l-kicker">일곱 친구의 마을</span>
+        <h1>
+          같이 한 판,
+          <br />
+          오늘의 우리.
+        </h1>
+        <p>내 아이디를 고르고, 친구들을 만나러 가요.</p>
+        <button
+          type="button"
+          className="l-auth-preview-toggle"
+          aria-expanded={storyOpen}
+          onClick={() => setStoryOpen(!storyOpen)}
+        >
+          {storyOpen ? '미리보기 접기' : `${selected.name}의 모습 미리보기`}
+        </button>
+        <div className="l-auth-preview">
+          <LoginCharacterPreview actor={selected.actor} open={storyOpen} />
+        </div>
+        <div className="l-auth-promise">
+          <CloudCheck size={19} />
+          <span>내 코디와 범 지갑을 안전하게 보관해요.</span>
+        </div>
       </section>
     </main>
   );

@@ -11,8 +11,11 @@ export const REACTIONS = [
 ] as const;
 export type ReactionId = (typeof REACTIONS)[number]['id'];
 export type ReactionScope =
+  | 'village'
   | 'lounge'
   | 'casino'
+  /** Someone's room (visitors and owner in the same 'home'). */
+  | 'home'
   | 'chess'
   | 'gostop'
   | 'poker'
@@ -39,8 +42,10 @@ export function readReaction(value: unknown): Reaction | undefined {
     !Number.isSafeInteger(r.at) ||
     Number(r.at) <= 0 ||
     ![
+      'village',
       'lounge',
       'casino',
+      'home',
       'chess',
       'gostop',
       'poker',
@@ -49,7 +54,11 @@ export function readReaction(value: unknown): Reaction | undefined {
     ].includes(r.scope ?? '')
   )
     return;
-  const game = r.scope !== 'lounge' && r.scope !== 'casino';
+  const game =
+    r.scope !== 'village' &&
+    r.scope !== 'lounge' &&
+    r.scope !== 'casino' &&
+    r.scope !== 'home';
   if (
     game &&
     (typeof r.matchId !== 'string' || !r.matchId || r.matchId.length > 100)

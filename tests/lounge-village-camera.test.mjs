@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { villageCameraFrame } from '../app/lounge-village-camera.ts';
+import {
+  VILLAGE_ACTOR_HEIGHT,
+  villageCameraFrame,
+} from '../app/lounge-village-camera.ts';
 for (const [width, height] of [
   [1440, 900],
   [1920, 1080],
@@ -9,7 +12,8 @@ for (const [width, height] of [
 ]) {
   test(`recognizable avatar and complete overview at ${width}x${height}`, () => {
     const { half, followZoom } = villageCameraFrame(width, height, 80, 60);
-    const projectedHeight = (1.88 * followZoom * height) / (2 * half);
+    const projectedHeight =
+      (VILLAGE_ACTOR_HEIGHT * followZoom * height) / (2 * half);
     assert.ok(projectedHeight >= 65 && projectedHeight <= 77);
     const ground = Math.hypot(34, 52),
       len = Math.hypot(ground, 43);

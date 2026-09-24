@@ -13,26 +13,69 @@ import {
   Minus,
   Plus,
   LocateFixed,
+  RotateCcw,
   Sun,
-  Users,
+  Moon,
+  Sunrise,
+  Sunset,
   X,
   Send,
   Trees,
+  Sprout,
+  Apple,
+  Store,
+  Mail,
+  MessageCircle,
 } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { LoungeSave } from './lounge-look';
 import type { LoungePlayer } from './lounge-room';
-import { ACTORS } from './theater-data';
+import { ACTORS } from './lounge-roster';
 import { loungeSprites } from './lounge-sprites';
+import { REACTIONS, REACTION_TTL } from './lounge-reactions';
 import {
   advanceLocomotion,
   RUN_SPEED_MULTIPLIER,
   type LocomotionState,
 } from './lounge-locomotion';
 import { LOUNGE_MODELS } from './lounge-model-assets';
-import { villageCameraFrame } from './lounge-village-camera';
-import { buildVillageWorld } from './lounge-village-world';
+import {
+  VILLAGE_ACTOR_HEIGHT,
+  villageCameraFrame,
+} from './lounge-village-camera';
+import {
+  buildVillageWorld,
+  VILLAGE_LAMP_GLOW,
+  type VillageWorld,
+} from './lounge-village-world';
+import { VillageLifeLayer } from './lounge-village-life-3d';
+import {
+  DAY_PHASE_LABEL,
+  FRUIT_TREE_POINTS,
+  NPC_TALK_REACH,
+  dayLighting,
+  farmBed,
+  farmBedRect,
+  farmFront,
+  nearFarm,
+  nearCommons,
+  nearMarket,
+  nearestFruitTree,
+  npcLine,
+  npcPose,
+  plotsForActor,
+  type DayPhase,
+} from './lounge-village-life';
+import {
+  FRUIT_TREES,
+  plotStage,
+  type LifeView,
+} from './lounge-life';
+import { loungeAudio } from './lounge-audio';
+import { lookFor, rememberLook } from './lounge/friend-looks';
+import { useServerClock } from './lounge/use-server-clock';
+import { VillageLifeList, isTouchDevice } from './lounge/VillageSimple';
 import {
   villageCanEnterPlace,
   villageNearbyEntrance,
@@ -40,14 +83,18 @@ import {
 } from './lounge-village-entrance';
 import {
   VILLAGE_BOUNDS,
+  VILLAGE_DECOR,
   VILLAGE_DISTRICTS,
   VILLAGE_RIVER,
+  VILLAGE_PATHS,
   VILLAGE_PLACES,
   VILLAGE_START,
   VILLAGE_ORCHARD,
   VILLAGE_FURNISHINGS,
+  VILLAGE_MARKET,
   villageCanWalk,
   villageFromNetwork,
+  villageHouseScale,
   villageToNetwork,
   villagePath,
   villageStep,
@@ -57,26 +104,51 @@ import {
 } from './lounge-village-layout';
 import './lounge-village.css';
 
+type ChatLine = { id: string; actor: number; text: string };
+/** Something "범타듀의 하루" you can do where you stand (E / tap). */
+export type VillageSpot =
+  | { kind: 'farm' }
+  /** The decorative shared field by the plaza: points to my own plots. */
+  | { kind: 'commons' }
+  | { kind: 'tree'; id: string; readyAt: number }
+  | { kind: 'market' }
+  | { kind: 'npc'; actor: number };
 type Props = {
   save: LoungeSave;
   players: LoungePlayer[];
   self: string;
   initialPosition?: VillagePoint;
+  /** Village-scope chat; the newest line per friend floats above their head. */
+  chat?: readonly ChatLine[];
   onMove: (x: number, y: number) => void;
   onEnter: (destination: VillageDestination, place: VillagePlace) => void;
-  onFriends: () => void;
+  /** Kept for compatibility; the header now owns the friends list. */
+  onFriends?: () => void;
   onRequest: () => void;
+  /** Life state (farms, fruit timers, mail, statuses) from the latest response. */
+  life?: LifeView | null;
+  /** Server clock minus local clock (NPC schedule and timers agree across clients). */
+  clockOffset?: number;
+  /** Village lighting follows KST time (settings toggle). */
+  dayNight?: boolean;
+  onFarm?: () => void;
+  onShop?: () => void;
+  onMail?: () => void;
+  onPick?: (tree: string) => void;
+  /** '놀러 가기' at a friend's door. */
+  onVisit?: (actor: number) => void;
 };
 type Direction = 'up' | 'down' | 'left' | 'right';
+// Physical key codes keep WASD working while a Korean IME is active.
 const KEYS: Record<string, Direction> = {
   ArrowUp: 'up',
-  w: 'up',
+  KeyW: 'up',
   ArrowDown: 'down',
-  s: 'down',
+  KeyS: 'down',
   ArrowLeft: 'left',
-  a: 'left',
+  KeyA: 'left',
   ArrowRight: 'right',
-  d: 'right',
+  KeyD: 'right',
 };
 const DIRECTIONS = [
   ['up', ArrowUp, '위로 걷기'],
@@ -84,36 +156,324 @@ const DIRECTIONS = [
   ['down', ArrowDown, '아래로 걷기'],
   ['right', ArrowRight, '오른쪽으로 걷기'],
 ] as const;
+const WALK_SPEED = 5.2;
+const CAMERA_OFFSET = new THREE.Vector3(34, 43, 52);
+/** Remote samples are replayed this far behind real time (cloud writes land ~every 500 ms). */
+const REMOTE_DELAY = 550;
+const BUBBLE_MS = 5000;
 
-function disposeScene(root: THREE.Object3D) {
-  const geometry = new Set<THREE.BufferGeometry>(),
-    materials = new Set<THREE.Material>(),
-    textures = new Set<THREE.Texture>();
+/* ------------------------------------------------------------------ */
+/* Module-level caches: re-entering the village reuses parsed models,  */
+/* the built world and one WebGL renderer instead of rebuilding all.   */
+/* ------------------------------------------------------------------ */
+
+let gltfLoader: GLTFLoader | null = null;
+const modelCache = new Map<string, Promise<THREE.Group>>();
+function loadModel(url: string) {
+  let job = modelCache.get(url);
+  if (!job) {
+    gltfLoader ??= new GLTFLoader();
+    job = gltfLoader.loadAsync(url).then((gltf) => gltf.scene);
+    job.catch(() => modelCache.delete(url));
+    modelCache.set(url, job);
+  }
+  return job;
+}
+
+type WorldState = {
+  root: THREE.Group;
+  world: VillageWorld;
+  /** Terrain + resident homes: the first frame waits only for these. */
+  houses: Promise<void>;
+  /** Everything else, added progressively; false when any prop failed. */
+  props: Promise<boolean>;
+  loaded: Record<string, string>;
+  listeners: Set<() => void>;
+  hemi: THREE.HemisphereLight;
+  sun: THREE.DirectionalLight;
+  life: VillageLifeLayer;
+};
+let villageWorld: WorldState | null = null;
+
+function fitModel(
+  source: THREE.Group,
+  point: VillagePoint,
+  size: { w: number; d: number; h: number },
+  baseY: number,
+  rotation = 0,
+) {
+  const object = source.clone(true);
+  object.rotation.y = rotation;
+  object.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(object),
+    measured = bounds.getSize(new THREE.Vector3());
+  const scale = Math.min(
+    size.w / measured.x,
+    size.h / measured.y,
+    size.d / measured.z,
+  );
+  if (!Number.isFinite(scale) || scale <= 0)
+    throw new Error('Invalid village model bounds');
+  object.scale.multiplyScalar(scale);
+  return placeOnGround(object, point, baseY);
+}
+function placeOnGround(
+  object: THREE.Object3D,
+  point: VillagePoint,
+  baseY: number,
+) {
+  object.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(object);
+  const center = bounds.getCenter(new THREE.Vector3());
+  object.position.x += point.x - center.x;
+  object.position.y += baseY - bounds.min.y;
+  object.position.z += point.z - center.z;
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  return object;
+}
+
+/** Grass top is ~0.026; props rest on it instead of floating at path height. */
+const GROUND_Y = 0.03;
+
+function getVillageWorld(): WorldState {
+  if (villageWorld) return villageWorld;
+  const root = new THREE.Group();
+  root.name = 'village-root';
+  const hemi = new THREE.HemisphereLight('#fff4d9', '#81936d', 2.25);
+  root.add(hemi);
+  const sun = new THREE.DirectionalLight('#fff3d3', 3.0);
+  sun.position.set(-20, 34, 25);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(1024, 1024);
+  Object.assign(sun.shadow.camera, {
+    left: -55,
+    right: 55,
+    top: 48,
+    bottom: -48,
+    near: 1,
+    far: 110,
+  });
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.06;
+  root.add(sun);
+  const world = buildVillageWorld(root);
+  const life = new VillageLifeLayer(root);
+  life.setLampGlowMaterial(VILLAGE_LAMP_GLOW);
+  const listeners = new Set<() => void>();
+  const loaded: Record<string, string> = {};
+  const changed = (id: string) => {
+    loaded[id] = 'loaded';
+    for (const listener of listeners) listener();
+  };
+  const add = (object: THREE.Object3D, id: string) => {
+    root.add(object);
+    changed(id);
+  };
+
+  // Resident homes: every model is scaled so its door is VILLAGE_DOOR_HEIGHT.
+  const houseUrls = {
+    cottage: LOUNGE_MODELS.cottage,
+    cornerHouse: LOUNGE_MODELS.cornerHouse,
+    courtyardHouse: LOUNGE_MODELS.courtyardHouse,
+  } as const;
+  const houseJobs = VILLAGE_PLACES.filter(
+    (place) => place.kind === 'home' && place.model,
+  ).map(async (place) => {
+    const source = await loadModel(houseUrls[place.model!]);
+    const object = source.clone(true);
+    object.scale.setScalar(villageHouseScale(place.model!));
+    placeOnGround(object, place, GROUND_Y);
+    add(object, `house${place.actor}`);
+    const fallback = root.getObjectByName('village-building-' + place.id);
+    if (fallback) fallback.visible = false;
+  });
+  const houses = Promise.allSettled(houseJobs).then(() => undefined);
+
+  // Everything else streams in after the first frame.
+  const terrace = [
+    { id: 'sofa', url: LOUNGE_MODELS.sofa, x: -8.7, z: 7.1, y: 0.39, w: 2.6, h: 1.65, d: 1.15 },
+    { id: 'table', url: LOUNGE_MODELS.coffeeTable, x: -8.7, z: 8.55, y: 0.39, w: 1.65, h: 0.76, d: 0.8 },
+    { id: 'tulips', url: LOUNGE_MODELS.tulips, x: -8.95, z: 8.55, y: 1.01, w: 0.46, h: 0.6, d: 0.45 },
+    { id: 'chair', url: LOUNGE_MODELS.chair, x: -6.4, z: 8, y: 0.39, w: 0.85, h: 1.4, d: 0.85, r: -Math.PI / 2 },
+    { id: 'bookshelf', url: LOUNGE_MODELS.bookshelf, x: -6.1, z: 6.9, y: 0.39, w: 0.85, h: 1.75, d: 0.5 },
+  ];
+  const propJobs = houses.then(() =>
+    Promise.allSettled([
+      ...terrace.map(async (item) => {
+        const source = await loadModel(item.url);
+        add(
+          fitModel(source, item, { w: item.w, d: item.d, h: item.h }, item.y, item.r),
+          item.id,
+        );
+      }),
+      ...VILLAGE_DECOR.filter((item) => item.kind === 'hydrangea').map(
+        async (item) => {
+          const source = await loadModel(LOUNGE_MODELS.hydrangea);
+          add(
+            fitModel(source, item, { w: 0.9, d: 0.8, h: 0.85 }, GROUND_Y),
+            `garden${item.home}`,
+          );
+        },
+      ),
+      ...VILLAGE_ORCHARD.map(async (point, i) => {
+        const source = await loadModel(LOUNGE_MODELS.fruitTree);
+        add(fitModel(source, point, { w: 2.8, d: 2.8, h: 4 }, GROUND_Y), `fruitTree${i}`);
+      }),
+      ...VILLAGE_FURNISHINGS.map(async (prop) => {
+        const source = await loadModel(LOUNGE_MODELS[prop.model]);
+        add(
+          fitModel(
+            source,
+            prop,
+            { w: prop.width, d: prop.depth, h: prop.height },
+            GROUND_Y,
+          ),
+          prop.id,
+        );
+      }),
+    ]),
+  );
+  const props = propJobs.then((results) =>
+    results.every((result) => result.status === 'fulfilled'),
+  );
+  villageWorld = {
+    root,
+    world,
+    houses,
+    props,
+    loaded,
+    listeners,
+    hemi,
+    sun,
+    life,
+  };
+  return villageWorld;
+}
+
+let sharedRenderer: THREE.WebGLRenderer | null = null;
+function acquireRenderer() {
+  if (sharedRenderer && !sharedRenderer.getContext().isContextLost())
+    return sharedRenderer;
+  if (sharedRenderer) {
+    sharedRenderer.dispose();
+    sharedRenderer = null;
+  }
+  const renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    alpha: true,
+    powerPreference: 'low-power',
+  });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+  const canvas = renderer.domElement;
+  canvas.className = 'hv-canvas';
+  canvas.setAttribute('aria-hidden', 'true');
+  sharedRenderer = renderer;
+  return renderer;
+}
+
+/* Upright character plane (yaw only), like the bedroom walk room: a
+   screen-facing Sprite leans back ~0.9 units and sinks into walls. */
+const CAMERA_UP_Y = Math.cos(
+  Math.atan2(CAMERA_OFFSET.y, Math.hypot(CAMERA_OFFSET.x, CAMERA_OFFSET.z)),
+);
+const FIGURE_CANVAS = { width: 256, height: 320 } as const;
+/** Vertical world height of the sprite canvas; projects to VILLAGE_ACTOR_HEIGHT on screen. */
+const FIGURE_HEIGHT = VILLAGE_ACTOR_HEIGHT / CAMERA_UP_Y;
+let figureGeometry: THREE.PlaneGeometry | null = null;
+function getFigureGeometry() {
+  if (!figureGeometry) {
+    figureGeometry = new THREE.PlaneGeometry(
+      VILLAGE_ACTOR_HEIGHT * (FIGURE_CANVAS.width / FIGURE_CANVAS.height),
+      FIGURE_HEIGHT,
+    );
+    // loungeSprites.draw places the soles at 97% of the canvas height.
+    figureGeometry.translate(0, FIGURE_HEIGHT * 0.47, 0);
+  }
+  return figureGeometry;
+}
+const FIGURE_YAW = Math.atan2(CAMERA_OFFSET.x, CAMERA_OFFSET.z);
+
+function disposeObject(root: THREE.Object3D) {
+  const shared = getFigureGeometry();
   root.traverse((object) => {
     const mesh = object as THREE.Mesh;
-    if (mesh.geometry) geometry.add(mesh.geometry);
+    if (mesh.geometry && mesh.geometry !== shared) mesh.geometry.dispose();
     if (mesh.material)
       for (const material of Array.isArray(mesh.material)
         ? mesh.material
         : [mesh.material]) {
-        materials.add(material);
         for (const value of Object.values(material))
-          if (value instanceof THREE.Texture) textures.add(value);
+          if (value instanceof THREE.Texture) value.dispose();
+        material.dispose();
       }
   });
-  geometry.forEach((g) => g.dispose());
-  textures.forEach((t) => {
-    t.dispose();
-    if (
-      typeof ImageBitmap !== 'undefined' &&
-      t.source.data instanceof ImageBitmap
-    )
-      t.source.data.close();
-  });
-  materials.forEach((m) => m.dispose());
 }
 
-/** The village uses the existing shared position range; account and room saves are unchanged. */
+/**
+ * Keeps the follow camera's ground footprint on the island (plus a small
+ * skirt) along the screen's own axes, while never letting the player leave
+ * the central 75% of the view.
+ */
+function clampFollowTarget(
+  target: THREE.Vector3,
+  player: VillagePoint,
+  halfWidth: number,
+  halfHeight: number,
+) {
+  const ground = Math.hypot(CAMERA_OFFSET.x, CAMERA_OFFSET.z);
+  const sinElevation = Math.sin(Math.acos(CAMERA_UP_Y));
+  // Screen-right and screen-up directions projected onto the ground (orthonormal).
+  const rx = CAMERA_OFFSET.z / ground,
+    rz = -CAMERA_OFFSET.x / ground,
+    fx = -CAMERA_OFFSET.x / ground,
+    fz = -CAMERA_OFFSET.z / ground;
+  const depth = halfHeight / sinElevation;
+  const margin = 3;
+  const w = VILLAGE_BOUNDS.width / 2,
+    d = VILLAGE_BOUNDS.depth / 2;
+  const extentA = w * Math.abs(rx) + d * Math.abs(rz) + margin,
+    extentB = w * Math.abs(fx) + d * Math.abs(fz) + margin;
+  let a = target.x * rx + target.z * rz,
+    b = target.x * fx + target.z * fz;
+  const limitA = Math.max(0, extentA - halfWidth),
+    limitB = Math.max(0, extentB - depth);
+  a = THREE.MathUtils.clamp(a, -limitA, limitA);
+  b = THREE.MathUtils.clamp(b, -limitB, limitB);
+  const pa = player.x * rx + player.z * rz,
+    pb = player.x * fx + player.z * fz;
+  a = THREE.MathUtils.clamp(a, pa - halfWidth * 0.75, pa + halfWidth * 0.75);
+  b = THREE.MathUtils.clamp(b, pb - depth * 0.75, pb + depth * 0.75);
+  target.x = a * rx + b * fx;
+  target.z = a * rz + b * fz;
+}
+
+/** NPC friends wait beside (not on) their own front step. */
+function npcPoint(actor: number): VillagePoint {
+  const place = VILLAGE_PLACES.find((item) => item.actor === actor);
+  if (!place) return { ...VILLAGE_START };
+  for (const dx of [1.3, -1.3, 2])
+    for (const dz of [0.4, 0.9]) {
+      const point = { x: place.entry.x + dx, z: place.entry.z + dz };
+      if (villageCanWalk(point)) return point;
+    }
+  return { ...place.entry };
+}
+
+type Sample = { t: number; x: number; z: number };
+
+/** Village presence uses the 'village' area; its coordinates map onto the island. */
 export function Village3D(props: Props) {
   const latest = useRef(props);
   useLayoutEffect(() => {
@@ -136,15 +496,50 @@ export function Village3D(props: Props) {
     overview: () => void;
     visit: (point: VillagePoint) => void;
     stop: () => void;
+    act: (spot: VillageSpot) => void;
   } | null>(null);
   const [state, setState] = useState<
-    'loading' | 'ready' | 'partial' | 'unavailable'
+    'loading' | 'ready' | 'partial' | 'unavailable' | 'lost'
   >('loading');
+  const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<VillagePlace | null>(null),
     [directory, setDirectory] = useState(false),
     [nearby, setNearby] = useState<NearbyVillageEntrance | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const nearbyId = useRef<string | null>(null);
+  const [spot, setSpot] = useState<VillageSpot | null>(null);
+  const [phase, setPhase] = useState<DayPhase>('day');
+  const [touch] = useState(isTouchDevice);
+  // Ready crops / ripe trees for the farm label and the directory, refreshed
+  // exactly when the next one becomes ready (server clock).
+  const lifeClock = useServerClock(
+    props.clockOffset ?? 0,
+    [
+      ...(props.life?.me.farm.map((p) => p.readyAt) ?? []),
+      ...FRUIT_TREES.map((t) => props.life?.me.fruitReadyAt?.[t] ?? 0),
+    ],
+    60_000,
+  );
+  const readyCount = (props.life?.me.farm ?? []).filter(
+    (p) => p.crop && (p.readyAt ?? Infinity) <= lifeClock,
+  ).length;
+  const ripeTrees = props.life
+    ? FRUIT_TREES.filter((t) => (props.life?.me.fruitReadyAt?.[t] ?? 0) <= lifeClock).length
+    : 0;
+  // Keep a friend's outfit for when they are offline (NPCs, mail avatars).
+  useEffect(() => {
+    for (const p of props.players)
+      if (!p.id.startsWith('friend-')) rememberLook(p.actor, p.look);
+  }, [props.players]);
+  // Onboarding / directory "내 텃밭으로 가 보기".
+  useEffect(() => {
+    const guide = () => {
+      const bed = farmBed(latest.current.save.actor);
+      if (bed) controls.current?.visit(farmFront(bed));
+    };
+    window.addEventListener('bumtadew:guide-farm', guide);
+    return () => window.removeEventListener('bumtadew:guide-farm', guide);
+  }, []);
   const select = (place: VillagePlace) => {
     requestedPlace.current = place;
     setDistrict(null);
@@ -167,6 +562,7 @@ export function Village3D(props: Props) {
 
   useEffect(() => {
     const host = hostRef.current!;
+    const labels = labelsRef.current!;
     const activeDirections = directions.current;
     let disposed = false,
       frame = 0,
@@ -175,11 +571,7 @@ export function Village3D(props: Props) {
       assetsReady = false;
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-        powerPreference: 'low-power',
-      });
+      renderer = acquireRenderer();
     } catch {
       queueMicrotask(() => {
         if (!disposed) setState('unavailable');
@@ -188,36 +580,20 @@ export function Village3D(props: Props) {
         disposed = true;
       };
     }
-    renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
-    renderer.shadowMap.autoUpdate = false;
-    renderer.shadowMap.needsUpdate = true;
     const canvas = renderer.domElement;
-    canvas.className = 'hv-canvas';
-    canvas.setAttribute('aria-hidden', 'true');
     host.insertBefore(canvas, host.firstChild);
+    const world = getVillageWorld();
     const scene = new THREE.Scene();
-    scene.add(new THREE.HemisphereLight('#fff4d9', '#81936d', 2.25));
-    const sun = new THREE.DirectionalLight('#fff3d3', 3.0);
-    sun.position.set(-20, 34, 25);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    Object.assign(sun.shadow.camera, {
-      left: -55,
-      right: 55,
-      top: 48,
-      bottom: -48,
-      near: 1,
-      far: 110,
-    });
-    sun.shadow.bias = -0.0005;
-    sun.shadow.normalBias = 0.06;
-    scene.add(sun);
-    buildVillageWorld(scene);
+    scene.add(world.root);
+    renderer.shadowMap.needsUpdate = true;
+    const syncLoaded = () => {
+      if (disposed) return;
+      renderer.shadowMap.needsUpdate = true;
+      Object.assign(host.dataset, world.loaded);
+      host.dataset.modelsLoaded = String(Object.keys(world.loaded).length);
+      needsRender = true;
+    };
+    world.listeners.add(syncLoaded);
     const camera = new THREE.OrthographicCamera(-36, 36, 24, -24, 0.1, 180);
     const target = new THREE.Vector3(0, 0, 0),
       desiredTarget = target.clone();
@@ -230,15 +606,15 @@ export function Village3D(props: Props) {
     let zoom = followZoom,
       desiredZoom = zoom;
     let follow = true;
-    const offset = new THREE.Vector3(34, 43, 52);
-    const me = latest.current.players.find((p) => p.id === latest.current.self);
-    const networkStart = me ? villageFromNetwork(me) : VILLAGE_START;
+    const zoomLimit = () => Math.max(8, followZoom * 1.7);
     const safePosition = (point: VillagePoint): VillagePoint =>
       villageCanWalk(point)
         ? { ...point }
         : (villagePath(VILLAGE_START, point).at(-1) ?? { ...VILLAGE_START });
+    // Spawn on the plaza, or just outside the building we are leaving; the
+    // server's stale presence coordinates are never used for our own start.
     let position: VillagePoint = safePosition(
-      latest.current.initialPosition ?? networkStart,
+      latest.current.initialPosition ?? VILLAGE_START,
     );
     target.set(position.x, 0, position.z - 1.2);
     desiredTarget.copy(target);
@@ -247,6 +623,7 @@ export function Village3D(props: Props) {
     let lastEntranceCheck = -1000;
     let width = host.clientWidth,
       height = host.clientHeight;
+    let needsRender = true;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
 
     const marker = new THREE.Mesh(
@@ -271,10 +648,13 @@ export function Village3D(props: Props) {
       const end = path.at(-1);
       if (!end) entryIntent = null;
       marker.visible = !!end;
-      if (end) marker.position.set(end.x, 0.19, end.z);
+      if (end) marker.position.set(end.x, 0.2, end.z);
       follow = true;
       desiredZoom = Math.max(desiredZoom, followZoom);
       host.focus({ preventScroll: true });
+    };
+    const setZoom = (value: number) => {
+      desiredZoom = THREE.MathUtils.clamp(value, 0.8, zoomLimit());
     };
     controls.current = {
       visit: (point) => {
@@ -290,24 +670,14 @@ export function Village3D(props: Props) {
       go: (place) => {
         requestedPlace.current = place;
         goTo(place.entry);
-        follow = true;
-        desiredZoom = Math.max(desiredZoom, followZoom);
       },
       enter: (place) => {
         requestedPlace.current = place;
         if (villageCanEnterPlace(place, latest.current.save.actor))
           goTo(place.entry, place);
         else goTo(place.entry);
-        follow = true;
-        desiredZoom = Math.max(desiredZoom, followZoom);
       },
-      zoom: (delta) => {
-        desiredZoom = THREE.MathUtils.clamp(
-          desiredZoom + delta,
-          0.8,
-          Math.max(8, followZoom * 1.7),
-        );
-      },
+      zoom: (delta) => setZoom(desiredZoom + delta),
       home: () => {
         follow = true;
         desiredZoom = followZoom;
@@ -317,282 +687,227 @@ export function Village3D(props: Props) {
         desiredTarget.set(0, 0, 0);
         desiredZoom = 1;
       },
+      act: (target) => act(target),
     };
-
-    // Reuse the room's actual GLB furniture as an outdoor reading terrace.
-    const loader = new GLTFLoader();
-    const assets = [
-      {
-        id: 'sofa',
-        url: LOUNGE_MODELS.sofa,
-        x: -8.7,
-        z: 7.1,
-        y: 0.39,
-        w: 2.6,
-        h: 1.65,
-        d: 1.15,
-      },
-      {
-        id: 'table',
-        url: LOUNGE_MODELS.coffeeTable,
-        x: -8.7,
-        z: 8.55,
-        y: 0.39,
-        w: 1.65,
-        h: 0.76,
-        d: 0.8,
-      },
-      {
-        id: 'tulips',
-        url: LOUNGE_MODELS.tulips,
-        x: -8.95,
-        z: 8.55,
-        y: 1.01,
-        w: 0.46,
-        h: 0.6,
-        d: 0.45,
-      },
-      {
-        id: 'chair',
-        url: LOUNGE_MODELS.chair,
-        x: -6.4,
-        z: 8,
-        y: 0.39,
-        w: 0.85,
-        h: 1.4,
-        d: 0.85,
-        r: -Math.PI / 2,
-      },
-      {
-        id: 'bookshelf',
-        url: LOUNGE_MODELS.bookshelf,
-        x: -6.1,
-        z: 6.9,
-        y: 0.39,
-        w: 0.85,
-        h: 1.75,
-        d: 0.5,
-      },
-    ];
-    const modelJobs = assets.map(async (item) => {
-      const gltf = await loader.loadAsync(item.url);
-      if (disposed) {
-        disposeScene(gltf.scene);
-        return;
-      }
-      const object = gltf.scene;
-      object.rotation.y = item.r ?? 0;
-      object.updateMatrixWorld(true);
-      const bounds = new THREE.Box3().setFromObject(object),
-        size = bounds.getSize(new THREE.Vector3());
-      const scale = Math.min(item.w / size.x, item.h / size.y, item.d / size.z);
-      if (!Number.isFinite(scale) || scale <= 0) {
-        disposeScene(object);
-        throw new Error('Invalid village prop');
-      }
-      object.scale.multiplyScalar(scale);
-      object.updateMatrixWorld(true);
-      bounds.setFromObject(object);
-      const center = bounds.getCenter(new THREE.Vector3());
-      object.position.set(
-        item.x - center.x,
-        item.y - bounds.min.y,
-        item.z - center.z,
-      );
-      object.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-      scene.add(object);
-      renderer.shadowMap.needsUpdate = true;
-      host.dataset[item.id] = 'loaded';
-      host.dataset.modelsLoaded = String(
-        Number(host.dataset.modelsLoaded ?? 0) + 1,
-      );
-    });
 
     type Figure = {
       group: THREE.Group;
-      sprite: THREE.Sprite;
+      body: THREE.MeshBasicMaterial;
       texture: THREE.CanvasTexture;
       canvas: HTMLCanvasElement;
       point: VillagePoint;
-      last: string;
       drawn: number;
-      actor: number;
       walking: boolean;
+      motion: 'walk' | 'run' | 'idle';
       phase: number;
       facing: 1 | -1;
+      speed: number;
+      samples: Sample[];
+      network: { x: number; y: number } | null;
+      tag: HTMLElement | null;
+      bubble: HTMLElement;
+      bubbleText: string;
     };
     const figures = new Map<string, Figure>();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
-    const sourceModels = new Map<string, Promise<THREE.Group | null>>();
-    const placeOriginal = async (
-      url: string,
-      id: string,
-      point: VillagePoint,
-      w: number,
-      d: number,
-      h: number,
-      fallback?: string,
-    ) => {
-      let pending = sourceModels.get(url);
-      if (!pending) {
-        pending = loader.loadAsync(url).then((gltf) => {
-          if (disposed) {
-            disposeScene(gltf.scene);
-            return null;
-          }
-          return gltf.scene;
-        });
-        sourceModels.set(url, pending);
-      }
-      const source = await pending;
-      if (!source || disposed) return;
-      const object = source.clone(true);
-      const bounds = new THREE.Box3().setFromObject(object),
-        size = bounds.getSize(new THREE.Vector3());
-      const scale = Math.min(w / size.x, d / size.z, h / size.y);
-      if (!Number.isFinite(scale) || scale <= 0)
-        throw new Error('Invalid kArchive model bounds');
-      object.scale.multiplyScalar(scale);
-      object.updateMatrixWorld(true);
-      bounds.setFromObject(object);
-      const center = bounds.getCenter(new THREE.Vector3());
-      object.position.set(
-        point.x - center.x,
-        0.16 - bounds.min.y,
-        point.z - center.z,
-      );
-      object.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-        }
-      });
-      scene.add(object);
-      if (fallback) {
-        const original = scene.getObjectByName(fallback);
-        if (original) original.visible = false;
-      }
-      renderer.shadowMap.needsUpdate = true;
-      host.dataset[id] = 'loaded';
-      host.dataset.originalsLoaded = String(
-        Number(host.dataset.originalsLoaded ?? 0) + 1,
-      );
-    };
-    const houseModels = [
-      LOUNGE_MODELS.cornerHouse,
-      LOUNGE_MODELS.cottage,
-      LOUNGE_MODELS.courtyardHouse,
-    ];
-    const originalJobs = VILLAGE_PLACES.filter(
-      (place) => place.kind === 'home',
-    ).flatMap((place) => [
-      placeOriginal(
-        houseModels[place.actor! % 3],
-        `house${place.actor}`,
-        place,
-        place.width,
-        place.depth,
-        4.8,
-        'village-building-' + place.id,
-      ),
-      placeOriginal(
-        LOUNGE_MODELS.hydrangea,
-        `garden${place.actor}`,
-        { x: place.x + 1.85, z: place.z + 2.9 },
-        0.9,
-        0.8,
-        0.85,
-      ),
-    ]);
-    for (const [i, point] of VILLAGE_ORCHARD.entries())
-      originalJobs.push(
-        placeOriginal(
-          LOUNGE_MODELS.fruitTree,
-          `fruitTree${i}`,
-          point,
-          2.8,
-          2.8,
-          4,
-        ),
-      );
-    for (const prop of VILLAGE_FURNISHINGS)
-      originalJobs.push(
-        placeOriginal(
-          LOUNGE_MODELS[prop.model],
-          prop.id,
-          prop,
-          prop.width,
-          prop.depth,
-          prop.height,
-        ),
-      );
     const spritesJob = loungeSprites().then(async (value) => {
-      if (!disposed) sprites = value;
-      if (
-        !disposed &&
-        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      ) {
-        const save = latest.current.save;
-        await value.warmMotion(save.actor, save.looks[save.actor]).catch(() => {
+      if (disposed) return;
+      sprites = value;
+      const save = latest.current.save;
+      await value.ensure(save.actor, save.looks[save.actor]);
+      if (!disposed && !reduced.matches)
+        void value.warmMotion(save.actor, save.looks[save.actor]).catch(() => {
           /* The existing wardrobe remains usable when optional motion art is offline. */
         });
-      }
     });
-    void Promise.allSettled([...modelJobs, ...originalJobs, spritesJob]).then(
-      (results) => {
-        if (disposed || contextLost) return;
-        assetsReady = true;
-        setState(
-          results.at(-1)?.status === 'rejected'
-            ? 'unavailable'
-            : results.some((r) => r.status === 'rejected')
-              ? 'partial'
-              : 'ready',
+    // First frame = terrain + resident homes + my own character's atlas.
+    void Promise.allSettled([world.houses, spritesJob]).then((results) => {
+      if (disposed || contextLost) return;
+      assetsReady = true;
+      needsRender = true;
+      renderer.shadowMap.needsUpdate = true;
+      setState(results[1]?.status === 'rejected' ? 'unavailable' : 'ready');
+      void world.props.then((complete) => {
+        if (!disposed && !complete) setState('partial');
+      });
+    });
+    syncLoaded();
+
+    // Offline friends appear as NPCs that wander on a shared, time-based schedule.
+    const npcPlayers = new Map<number, LoungePlayer>();
+    const npcPlayer = (actor: number): LoungePlayer => {
+      let player = npcPlayers.get(actor);
+      if (!player) {
+        player = {
+          id: `friend-${actor}`,
+          actor,
+          look: lookFor(actor),
+          x: 50,
+          y: 60,
+          emote: '',
+          emoteAt: 0,
+          balance: 0,
+          area: 'village',
+        };
+        npcPlayers.set(actor, player);
+      }
+      // The friend's last seen outfit (cached per device), else the default.
+      player.look = lookFor(actor);
+      return player;
+    };
+    const npcTalk = new Map<number, { text: string; until: number }>();
+    const serverNow = () => Date.now() + (latest.current.clockOffset ?? 0);
+    let currentSpot: VillageSpot | null = null,
+      spotKey = '';
+    const act = (target: VillageSpot) => {
+      const current = latest.current;
+      if (target.kind === 'farm') current.onFarm?.();
+      else if (target.kind === 'market') current.onShop?.();
+      else if (target.kind === 'tree') current.onPick?.(target.id);
+      else if (target.kind === 'npc') {
+        const status = Object.values(current.life?.statuses ?? {}).find(
+          (s) => s.actor === target.actor,
         );
-      },
-    );
+        npcTalk.set(target.actor, {
+          text: npcLine(target.actor, status?.text, serverNow()).slice(0, 48),
+          until: Date.now() + 6000,
+        });
+        host.dataset.talk = String(target.actor);
+        needsRender = true;
+      }
+    };
+    let lastLife: LifeView | null | undefined = undefined,
+      lastLight = -1e9,
+      lastAudio = -1e9,
+      lastElevation = -1;
+    const updateLife = () => {
+      const current = latest.current,
+        life = current.life,
+        me = current.save.actor,
+        at = serverNow();
+      const plots: Record<number, ReturnType<typeof plotsForActor>> = {};
+      for (let a = 0; a < ACTORS.length; a++)
+        plots[a] = plotsForActor(life, a, me);
+      if (life?.me.farm?.length)
+        plots[me] = life.me.farm.map((plot) => ({
+          crop: plot.crop,
+          stage: plot.crop ? plotStage(plot, at) : 0,
+        }));
+      const changed = world.life.update({
+        plots,
+        watered: life?.me.farm?.map((plot) => plot.wateredAt !== null) ?? [],
+        selfActor: me,
+        ripeTrees: life
+          ? FRUIT_TREES.filter((t) => (life.me.fruitReadyAt?.[t] ?? 0) <= at)
+          : [],
+        unreadMail: (life?.me.mailUnread ?? 0) > 0,
+      });
+      if (!changed) return;
+      host.dataset.plots = String(
+        Object.values(plots).reduce(
+          (n, list) => n + list.filter((plot) => plot.crop).length,
+          0,
+        ),
+      );
+      needsRender = true;
+    };
+    const noon = dayLighting(Date.UTC(2026, 0, 1, 3));
+    // Sprites are unlit (toneMapped: false); at night they take a cool tint
+    // so the characters do not glow against the dark village.
+    const figureTint = new THREE.Color('#ffffff'),
+      nightTint = new THREE.Color('#c9d0ff');
+    let lastSky = '';
+    const applyLight = () => {
+      const light =
+        latest.current.dayNight === false ? noon : dayLighting(serverNow());
+      world.hemi.color.set(light.hemiSky);
+      world.hemi.groundColor.set(light.hemiGround);
+      world.hemi.intensity = light.hemiIntensity;
+      world.sun.color.set(light.sun);
+      world.sun.intensity = light.sunIntensity;
+      world.sun.position.set(-20, 12 + 22 * light.elevation, 25);
+      if (Math.abs(light.elevation - lastElevation) > 0.01) {
+        lastElevation = light.elevation;
+        renderer.shadowMap.needsUpdate = true;
+      }
+      renderer.toneMappingExposure = light.exposure;
+      world.life.setNight(light.lamps);
+      if (light.sky !== lastSky) {
+        lastSky = light.sky;
+        host.style.background = `linear-gradient(180deg, ${light.sky}, ${light.sky}ee)`;
+        needsRender = true;
+      }
+      host.dataset.phase = light.phase;
+      host.dataset.lamps = light.lamps.toFixed(2);
+      setPhase(light.phase);
+      const tint = new THREE.Color('#ffffff').lerp(nightTint, Math.min(1, light.lamps) * 0.85);
+      if (!tint.equals(figureTint)) {
+        figureTint.copy(tint);
+        for (const figure of figures.values()) figure.body.color.copy(figureTint);
+        needsRender = true;
+      }
+      return light;
+    };
+    let night = false;
+
     const createFigure = (p: LoungePlayer): Figure => {
+      const own = p.id === latest.current.self;
       const c = document.createElement('canvas');
-      c.width = 256;
-      c.height = 320;
+      c.width = FIGURE_CANVAS.width;
+      c.height = FIGURE_CANVAS.height;
       const texture = new THREE.CanvasTexture(c);
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.minFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
-      const sprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({
-          map: texture,
-          transparent: true,
-          alphaTest: 0.12,
-          depthWrite: true,
-          toneMapped: false,
-        }),
-      );
-      sprite.center.set(0.5, 0.03);
-      sprite.scale.set(1.5, 1.88, 1);
-      sprite.position.y = 0.18;
+      const bodyMaterial = new THREE.MeshBasicMaterial({
+        map: texture,
+        color: figureTint,
+        transparent: true,
+        alphaTest: 0.12,
+        depthWrite: true,
+        toneMapped: false,
+      });
+      const body = new THREE.Mesh(getFigureGeometry(), bodyMaterial);
+      body.rotation.y = FIGURE_YAW;
+      const group = new THREE.Group();
+      group.add(body);
+      if (own) {
+        // Occluded silhouette: drawn only where something nearer hides the
+        // figure (GreaterDepth), so the player never vanishes behind a roof.
+        const ghost = new THREE.Mesh(
+          getFigureGeometry(),
+          new THREE.MeshBasicMaterial({
+            map: texture,
+            color: '#3d5a86',
+            transparent: true,
+            opacity: 0.42,
+            alphaTest: 0.12,
+            depthWrite: false,
+            depthFunc: THREE.GreaterDepth,
+            toneMapped: false,
+          }),
+        );
+        ghost.rotation.y = FIGURE_YAW;
+        ghost.renderOrder = 10;
+        group.add(ghost);
+      }
       const shadow = new THREE.Mesh(
-        new THREE.CircleGeometry(0.42, 20),
+        new THREE.CircleGeometry(0.32, 20),
         new THREE.MeshBasicMaterial({
           color: '#45573c',
           transparent: true,
-          opacity: 0.19,
+          opacity: 0.2,
           depthWrite: false,
         }),
       );
       shadow.rotation.x = -Math.PI / 2;
-      shadow.position.y = 0.165;
+      // Above the paving insets (top 0.19) so the shadow never disappears.
+      shadow.position.y = 0.205;
       shadow.scale.y = 0.65;
-      const group = new THREE.Group();
-      group.add(sprite, shadow);
-      if (p.id === latest.current.self) {
+      group.add(shadow);
+      if (own) {
         const ring = new THREE.Mesh(
-          new THREE.RingGeometry(0.49, 0.63, 40),
+          new THREE.RingGeometry(0.4, 0.5, 40),
           new THREE.MeshBasicMaterial({
             color: '#ffe4a0',
             transparent: true,
@@ -601,29 +916,60 @@ export function Village3D(props: Props) {
           }),
         );
         ring.rotation.x = -Math.PI / 2;
-        ring.position.y = 0.18;
+        ring.position.y = 0.21;
         group.add(ring);
       }
       scene.add(group);
       const npc = p.id.startsWith('friend-');
-      const entry =
-        VILLAGE_PLACES.find((place) => place.actor === p.actor)?.entry ??
-        VILLAGE_START;
-      const point = npc ? entry : villageFromNetwork(p);
+      const point = own
+        ? position
+        : safePosition(npc ? npcPoint(p.actor) : villageFromNetwork(p));
+      let tag: HTMLElement | null = null;
+      const bubble = document.createElement('span');
+      bubble.className = 'hv-bubble';
+      bubble.hidden = true;
+      bubble.setAttribute('aria-hidden', 'true');
+      if (!own) {
+        tag = document.createElement('span');
+        tag.className = 'hv-tag';
+        tag.textContent = ACTORS[p.actor] ?? '친구';
+        tag.dataset.player = p.id;
+        labels.appendChild(tag);
+      }
+      labels.appendChild(bubble);
       return {
         group,
-        sprite,
+        body: bodyMaterial,
         texture,
         canvas: c,
-        point: safePosition(point),
-        last: '',
+        point,
         drawn: -1000,
-        actor: p.actor,
         walking: false,
+        motion: 'idle',
         phase: 0,
         facing: 1,
+        speed: 0,
+        samples: [{ t: performance.now(), ...point }],
+        network: own || npc ? null : { x: p.x, y: p.y },
+        tag,
+        bubble,
+        bubbleText: '',
       };
     };
+    const removeFigure = (id: string, figure: Figure) => {
+      scene.remove(figure.group);
+      disposeObject(figure.group);
+      figure.tag?.remove();
+      figure.bubble.remove();
+      figures.delete(id);
+    };
+
+    // Newest chat line per friend becomes a speech bubble for a few seconds.
+    const seenChat = new Set<string>(
+      (latest.current.chat ?? []).map((line) => line.id),
+    );
+    const chatBubbles = new Map<number, { text: string; until: number; at: number }>();
+    let lastChat: readonly ChatLine[] | undefined = latest.current.chat;
 
     const raycaster = new THREE.Raycaster(),
       pointer = new THREE.Vector2();
@@ -637,8 +983,22 @@ export function Village3D(props: Props) {
       startY: number;
       dragged: boolean;
     } | null = null;
+    // Two-finger pinch zoom (touch) shares the canvas with drag and tap.
+    const touches = new Map<number, { x: number; y: number }>();
+    let pinch: { distance: number; zoom: number } | null = null;
+    const pinchDistance = () => {
+      const [a, b] = [...touches.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+    };
     let locomotion: LocomotionState = { phase: 0, facing: 1 };
     const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || e.pointerType === 'pen')
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size >= 2) {
+        press = null;
+        pinch = { distance: pinchDistance(), zoom: desiredZoom };
+        return;
+      }
       if (e.button !== 0 || !e.isPrimary) return;
       host.focus({ preventScroll: true });
       canvas.setPointerCapture(e.pointerId);
@@ -652,6 +1012,15 @@ export function Village3D(props: Props) {
       };
     };
     const drag = (e: PointerEvent) => {
+      if (touches.has(e.pointerId))
+        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pinch && touches.size >= 2) {
+        const distance = pinchDistance();
+        if (pinch.distance > 0 && distance > 0)
+          setZoom(pinch.zoom * (distance / pinch.distance));
+        needsRender = true;
+        return;
+      }
       if (!press || e.pointerId !== press.id) return;
       if (Math.hypot(e.clientX - press.startX, e.clientY - press.startY) > 6)
         press.dragged = true;
@@ -683,9 +1052,15 @@ export function Village3D(props: Props) {
       press.x = e.clientX;
       press.y = e.clientY;
     };
+    const releaseTouch = (e: PointerEvent) => {
+      touches.delete(e.pointerId);
+      if (touches.size < 2) pinch = null;
+    };
     const up = (e: PointerEvent) => {
+      const wasPinching = !!pinch;
+      releaseTouch(e);
       if (!press || e.pointerId !== press.id) return;
-      if (!press.dragged) {
+      if (!press.dragged && !wasPinching) {
         entryIntent = null;
         requestedPlace.current = null;
         const r = canvas.getBoundingClientRect();
@@ -703,11 +1078,19 @@ export function Village3D(props: Props) {
       }
       press = null;
     };
-    const cancel = () => {
+    const cancel = (e: PointerEvent) => {
+      releaseTouch(e);
       press = null;
     };
     const lostCapture = (e: PointerEvent) => {
       if (press?.id === e.pointerId) press = null;
+    };
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // Trackpad pinch arrives as ctrl+wheel with small deltas.
+      const scale = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
+      setZoom(desiredZoom * scale);
+      needsRender = true;
     };
     const keydown = (e: KeyboardEvent) => {
       if (
@@ -722,7 +1105,7 @@ export function Village3D(props: Props) {
         document.querySelector('dialog[open]')
       )
         return;
-      if (e.key === 'Enter' || e.key.toLowerCase() === 'e') {
+      if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') {
         const entrance = villageNearbyEntrance(
           position,
           latest.current.save.actor,
@@ -732,10 +1115,20 @@ export function Village3D(props: Props) {
           entryIntent = null;
           requestedPlace.current = entrance.place;
           latest.current.onEnter(entrance.place.destination, entrance.place);
+        } else if (
+          entrance?.place.kind === 'home' &&
+          entrance.place.actor !== undefined &&
+          latest.current.onVisit
+        ) {
+          e.preventDefault();
+          latest.current.onVisit(entrance.place.actor);
+        } else if (currentSpot) {
+          e.preventDefault();
+          act(currentSpot);
         }
         return;
       }
-      const direction = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
+      const direction = KEYS[e.code];
       if (direction) {
         e.preventDefault();
         entryIntent = null;
@@ -748,7 +1141,7 @@ export function Village3D(props: Props) {
       }
     };
     const keyup = (e: KeyboardEvent) => {
-      const d = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
+      const d = KEYS[e.code];
       if (d) directions.current.delete(d);
       if (e.key === 'Shift') {
         shiftHeld.current = false;
@@ -781,17 +1174,33 @@ export function Village3D(props: Props) {
       if (document.hidden) blur();
     };
     const loss = (e: Event) => {
+      // preventDefault allows the browser to restore the context later.
       e.preventDefault();
       contextLost = true;
       cancelAnimationFrame(frame);
-      setState('unavailable');
+      setState('lost');
+    };
+    const restored = () => {
+      if (disposed) return;
+      contextLost = false;
+      renderer.shadowMap.needsUpdate = true;
+      for (const figure of figures.values()) {
+        figure.texture.needsUpdate = true;
+        figure.drawn = -1000;
+      }
+      needsRender = true;
+      setState(assetsReady ? 'ready' : 'loading');
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(animate);
     };
     canvas.addEventListener('pointerdown', down);
     canvas.addEventListener('pointermove', drag);
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', cancel);
     canvas.addEventListener('lostpointercapture', lostCapture);
+    canvas.addEventListener('wheel', wheel, { passive: false });
     canvas.addEventListener('webglcontextlost', loss);
+    canvas.addEventListener('webglcontextrestored', restored);
     host.addEventListener('keydown', keydown);
     host.addEventListener('keydown', keyrun);
     host.addEventListener('focusout', blur);
@@ -821,6 +1230,7 @@ export function Village3D(props: Props) {
       });
       camera.updateProjectionMatrix();
       renderer.setSize(width, height, false);
+      needsRender = true;
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);
@@ -830,20 +1240,52 @@ export function Village3D(props: Props) {
       if (!visible) blur();
     });
     visibility.observe(host);
+    // Tell friends where I actually am right away (not the server's default).
+    queueMicrotask(() => {
+      if (disposed) return;
+      const net = villageToNetwork(position);
+      latest.current.onMove(net.x, net.y);
+    });
+
+    const placeLabels = VILLAGE_PLACES.map((place) => ({
+      place,
+      element: labels.querySelector<HTMLElement>(`[data-place="${place.id}"]`),
+    }));
+    const selfTag = labels.querySelector<HTMLElement>('[data-self-label]');
+    const farmLabel = labels.querySelector<HTMLElement>('[data-farm-label]');
+    const myBed = farmBed(latest.current.save.actor);
+    // Bottom edge of the floating header card, in scene pixels (L1).
+    let topLimit = 10;
+    const measureTop = () => {
+      const header = document.querySelector('.l-world-header');
+      if (!header) return;
+      const bottom =
+        header.getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+      topLimit = Math.max(10, Math.min(height / 2, bottom));
+    };
+    measureTop();
+    const projected = new THREE.Vector3();
+    const project = (x: number, y: number, z: number) => {
+      projected.set(x, y, z).project(camera);
+      return {
+        x: ((projected.x + 1) * width) / 2,
+        y: ((1 - projected.y) * height) / 2,
+        inFront: projected.z < 1,
+      };
+    };
     let previous = 0,
       lastRender = -1000,
       lastSend = -1000,
       lastData = -1000;
     let lastSent = { ...position },
       wasWalking = false;
-    const projected = new THREE.Vector3();
     const animate = (now: number) => {
       if (disposed || contextLost) return;
       frame = requestAnimationFrame(animate);
-      const dt = previous ? Math.min((now - previous) / 1000, 0.08) : 0;
+      // Movement is substepped by villageStep, so a long frame (slow phone)
+      // moves the right distance instead of slowing the world down.
+      const dt = previous ? Math.min((now - previous) / 1000, 0.25) : 0;
       previous = now;
-      // Let image decoding finish before compiling and drawing the full world.
-      // This avoids competing with asset loading on phones and software WebGL.
       if (!assetsReady || !visible || document.hidden) return;
       const before = position;
       const h =
@@ -861,7 +1303,8 @@ export function Village3D(props: Props) {
         follow = true;
         desiredZoom = Math.max(desiredZoom, followZoom);
         const len = Math.hypot(h, v),
-          speed = ((run ? 5.2 * RUN_SPEED_MULTIPLIER : 5.2) * dt) / len;
+          speed =
+            ((run ? WALK_SPEED * RUN_SPEED_MULTIPLIER : WALK_SPEED) * dt) / len;
         // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
         position = villageStep(
           position,
@@ -869,21 +1312,28 @@ export function Village3D(props: Props) {
           (v * 0.837 - h * 0.547) * speed,
         );
       } else if (path.length) {
-        const to = path[0],
-          dx = to.x - position.x,
-          dz = to.z - position.z,
-          distance = Math.hypot(dx, dz);
-        if (distance < 0.06) path.shift();
-        else {
-          const step = Math.min(
-            distance,
-            5.2 * (run ? RUN_SPEED_MULTIPLIER : 1) * dt,
-          );
-          position = villageStep(
+        let budget = WALK_SPEED * (run ? RUN_SPEED_MULTIPLIER : 1) * dt;
+        while (path.length && budget > 0) {
+          const to = path[0],
+            dx = to.x - position.x,
+            dz = to.z - position.z,
+            distance = Math.hypot(dx, dz);
+          if (distance < 0.06) {
+            path.shift();
+            continue;
+          }
+          const step = Math.min(distance, budget);
+          const next = villageStep(
             position,
             (dx / distance) * step,
             (dz / distance) * step,
           );
+          budget -= step;
+          if (Math.hypot(next.x - position.x, next.z - position.z) < 1e-4) {
+            path = [];
+            break;
+          }
+          position = next;
         }
         if (!path.length) marker.visible = false;
       }
@@ -896,7 +1346,7 @@ export function Village3D(props: Props) {
           locomotion,
           { distance: moved, horizontal },
           run ? 'run' : 'walk',
-          5.2,
+          WALK_SPEED,
         );
       locomotion = playerMotion.state;
       if ((walking && now - lastSend > 180) || (!walking && wasWalking)) {
@@ -920,6 +1370,43 @@ export function Village3D(props: Props) {
           nearbyId.current = entrance?.place.id ?? null;
           setNearby(entrance);
         }
+        let nextSpot: VillageSpot | null = null;
+        if (!entrance) {
+          const current = latest.current;
+          if (nearFarm(position, current.save.actor)) nextSpot = { kind: 'farm' };
+          else if (nearMarket(position)) nextSpot = { kind: 'market' };
+          else if (nearCommons(position)) nextSpot = { kind: 'commons' };
+          else {
+            const tree = nearestFruitTree(position);
+            if (tree)
+              nextSpot = {
+                kind: 'tree',
+                id: tree.id,
+                readyAt: current.life?.me.fruitReadyAt?.[tree.id] ?? 0,
+              };
+            else {
+              let best = NPC_TALK_REACH;
+              for (const [id, figure] of figures) {
+                if (!id.startsWith('friend-')) continue;
+                const d = Math.hypot(
+                  figure.point.x - position.x,
+                  figure.point.z - position.z,
+                );
+                if (d < best) {
+                  best = d;
+                  nextSpot = { kind: 'npc', actor: Number(id.slice(7)) };
+                }
+              }
+            }
+          }
+        }
+        const nextKey = nextSpot ? JSON.stringify(nextSpot) : '';
+        currentSpot = nextSpot;
+        if (nextKey !== spotKey) {
+          spotKey = nextKey;
+          setSpot(nextSpot);
+        }
+        host.dataset.spot = nextSpot?.kind ?? '';
         host.dataset.nearbyPlace = entrance?.place.id ?? '';
         host.dataset.entryReady = String(entrance?.canEnter ?? false);
         host.dataset.destination =
@@ -937,26 +1424,84 @@ export function Village3D(props: Props) {
           latest.current.onEnter(place.destination, place);
         }
       }
-      if (follow) desiredTarget.set(position.x, 0, position.z - 1.2);
+      // Camera: follow with a clamp so the island edge never fills half the view.
+      if (follow) {
+        desiredTarget.set(position.x, 0, position.z - 1.2);
+        clampFollowTarget(
+          desiredTarget,
+          position,
+          camera.right / desiredZoom,
+          camera.top / desiredZoom,
+        );
+      }
+      const cameraMoving =
+        Math.abs(zoom - desiredZoom) > 0.002 ||
+        target.distanceToSquared(desiredTarget) > 0.00001;
       target.lerp(desiredTarget, reduced.matches ? 1 : Math.min(1, dt * 5));
       zoom +=
         (desiredZoom - zoom) * (reduced.matches ? 1 : Math.min(1, dt * 6));
-      camera.position.copy(target).add(offset);
+      camera.position.copy(target).add(CAMERA_OFFSET);
       camera.lookAt(target);
       camera.zoom = zoom;
       camera.updateProjectionMatrix();
       camera.updateMatrixWorld();
+
       const current = latest.current;
-      const residents = current.players.filter(
-        (p) => p.id === current.self || p.area === 'lounge',
+      // Contract: the village shows only village presences (plus me and NPCs).
+      const present = new Set(
+        current.players
+          .filter((p) => !p.id.startsWith('friend-'))
+          .map((p) => p.actor),
       );
+      const residents = [
+        ...current.players.filter(
+          (p) => p.id === current.self || (p.area as string) === 'village',
+        ),
+        ...ACTORS.map((_, actor) => actor)
+          .filter((actor) => actor !== current.save.actor && !present.has(actor))
+          .map(npcPlayer),
+      ];
+      if (current.life !== lastLife) {
+        lastLife = current.life;
+        updateLife();
+      }
+      if (now - lastLight > 1500) {
+        lastLight = now;
+        measureTop();
+        const light = applyLight();
+        night = light.phase === 'night' || light.phase === 'evening';
+        updateLife();
+      }
+      if (now - lastAudio > 700) {
+        lastAudio = now;
+        loungeAudio.setScene({
+          village: true,
+          night,
+          water: Math.max(
+            0,
+            1 -
+              Math.abs(position.z - (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2) /
+                9,
+          ),
+        });
+      }
+      if (walking) loungeAudio.footstep(run);
       const residentIds = new Set(residents.map((p) => p.id));
       for (const [id, figure] of figures)
-        if (!residentIds.has(id)) {
-          scene.remove(figure.group);
-          disposeScene(figure.group);
-          figures.delete(id);
-        }
+        if (!residentIds.has(id)) removeFigure(id, figure);
+      if (current.chat !== lastChat) {
+        lastChat = current.chat;
+        for (const line of current.chat ?? [])
+          if (!seenChat.has(line.id)) {
+            seenChat.add(line.id);
+            chatBubbles.set(line.actor, {
+              text: line.text.slice(0, 40),
+              at: Date.now(),
+              until: Date.now() + BUBBLE_MS,
+            });
+          }
+      }
+      let anyWalking = walking;
       for (const p of residents) {
         let figure = figures.get(p.id);
         if (!figure) {
@@ -964,48 +1509,99 @@ export function Village3D(props: Props) {
           figures.set(p.id, figure);
         }
         const own = p.id === current.self;
-        let moving = walking && own,
-          motion: 'walk' | 'run' | 'idle' =
-            own && walking ? playerMotion.motion : 'idle',
-          phase = own ? locomotion.phase : figure.phase,
-          facing: 1 | -1 = own ? locomotion.facing : figure.facing;
-        if (own) figure.point = position;
-        else if (!p.id.startsWith('friend-')) {
-          const point = villageFromNetwork(p);
-          if (villageCanWalk(point)) {
-            const beforeRemote = figure.point;
-            figure.point = villageStep(
-              figure.point,
-              (point.x - figure.point.x) * Math.min(1, dt * 9),
-              (point.z - figure.point.z) * Math.min(1, dt * 9),
-            );
-            const remoteX = figure.point.x - beforeRemote.x,
-              remoteZ = figure.point.z - beforeRemote.z,
-              remoteDistance = Math.hypot(remoteX, remoteZ),
-              remoteMotion = advanceLocomotion(
-                { phase: figure.phase, facing: figure.facing },
-                {
-                  distance: remoteDistance,
-                  horizontal: remoteX * 0.837 - remoteZ * 0.547,
-                },
-                remoteDistance / Math.max(dt, 0.001) > 5.2 * 1.3
-                  ? 'run'
-                  : 'walk',
-                5.2,
-              );
-            moving = remoteMotion.motion !== 'idle';
-            phase = remoteMotion.state.phase;
-            facing = remoteMotion.state.facing;
-            figure.phase = phase;
-            figure.facing = facing;
-            motion = remoteMotion.motion;
-          }
-        }
         if (own) {
+          figure.point = position;
+          figure.walking = walking;
+          figure.motion = walking ? playerMotion.motion : 'idle';
           figure.phase = locomotion.phase;
           figure.facing = locomotion.facing;
+        } else if (p.id.startsWith('friend-')) {
+          const pose = npcPose(p.actor, serverNow());
+          const beforeNpc = figure.point;
+          figure.point = pose.point;
+          const npcX = pose.point.x - beforeNpc.x,
+            npcZ = pose.point.z - beforeNpc.z,
+            npcDistance = Math.hypot(npcX, npcZ);
+          const npcMotion = advanceLocomotion(
+            { phase: figure.phase, facing: figure.facing },
+            {
+              // A teleport (first frame, clock jump) is not a stride.
+              distance: npcDistance < 2 ? npcDistance : 0,
+              horizontal: npcX * 0.837 - npcZ * 0.547,
+            },
+            'walk',
+            WALK_SPEED,
+          );
+          figure.phase = npcMotion.state.phase;
+          figure.facing = npcMotion.state.facing;
+          figure.walking = pose.walking;
+          figure.motion = pose.walking ? 'walk' : 'idle';
+        } else if (figure.network) {
+          // Remote: replay a timestamped buffer without collision (the sender
+          // already walked a valid route), snapping only on teleports.
+          if (figure.network.x !== p.x || figure.network.y !== p.y) {
+            figure.network = { x: p.x, y: p.y };
+            const next = villageFromNetwork(p);
+            const last = figure.samples.at(-1)!;
+            const jump = Math.hypot(next.x - last.x, next.z - last.z);
+            const elapsed = Math.max(0.001, (now - last.t) / 1000);
+            if (
+              jump > 12 ||
+              (jump > 3 &&
+                jump / Math.min(elapsed, 0.6) >
+                  WALK_SPEED * RUN_SPEED_MULTIPLIER * 1.6)
+            )
+              figure.samples = [{ t: now - REMOTE_DELAY, ...next }];
+            else {
+              // After a pause, start the new leg now rather than in the past.
+              last.t = Math.max(last.t, now - 500);
+              figure.samples.push({ t: now, ...next });
+              if (figure.samples.length > 12) figure.samples.shift();
+            }
+          }
+          const renderAt = now - REMOTE_DELAY;
+          const samples = figure.samples;
+          while (samples.length > 1 && samples[1].t <= renderAt) samples.shift();
+          const a = samples[0],
+            b = samples[1];
+          const beforeRemote = figure.point;
+          figure.point =
+            b && renderAt > a.t
+              ? {
+                  x: a.x + (b.x - a.x) * ((renderAt - a.t) / (b.t - a.t)),
+                  z: a.z + (b.z - a.z) * ((renderAt - a.t) / (b.t - a.t)),
+                }
+              : { x: a.x, z: a.z };
+          const remoteX = figure.point.x - beforeRemote.x,
+            remoteZ = figure.point.z - beforeRemote.z,
+            remoteDistance = Math.hypot(remoteX, remoteZ);
+          // Smoothed speed with hysteresis avoids walk/run/idle flicker.
+          const instant = dt > 0 ? remoteDistance / dt : 0;
+          figure.speed += (instant - figure.speed) * Math.min(1, dt * 6);
+          const running =
+            figure.motion === 'run'
+              ? figure.speed > WALK_SPEED * 1.18
+              : figure.speed > WALK_SPEED * 1.32;
+          figure.motion =
+            figure.speed < (figure.motion === 'idle' ? 0.6 : 0.3)
+              ? 'idle'
+              : running
+                ? 'run'
+                : 'walk';
+          const remoteMotion = advanceLocomotion(
+            { phase: figure.phase, facing: figure.facing },
+            {
+              distance: remoteDistance,
+              horizontal: remoteX * 0.837 - remoteZ * 0.547,
+            },
+            figure.motion === 'run' ? 'run' : 'walk',
+            WALK_SPEED,
+          );
+          figure.phase = remoteMotion.state.phase;
+          figure.facing = remoteMotion.state.facing;
+          figure.walking = figure.motion !== 'idle';
         }
-        figure.walking = moving;
+        if (figure.walking) anyWalking = true;
         const onBridge =
           VILLAGE_RIVER.bridges.some(
             (bridge) => Math.abs(figure.point.x - bridge.x) < bridge.halfWidth,
@@ -1020,53 +1616,116 @@ export function Village3D(props: Props) {
             ) * 0.53
           : 0;
         figure.group.position.set(figure.point.x, elevation, figure.point.z);
-        const key = JSON.stringify([p.actor, p.look, motion, facing]);
-        if (
-          sprites &&
-          (key !== figure.last || now - figure.drawn > (moving ? 70 : 300))
-        ) {
+        // Redraw on the gait clock while moving (draw() skips unchanged
+        // poses), and a few times a second at rest for idle breathing.
+        if (sprites && (figure.walking || now - figure.drawn > 140)) {
           const changed = sprites.draw(
             figure.canvas,
             p.actor,
             p.look,
-            motion,
-            phase,
+            figure.motion,
+            figure.phase,
             false,
             reduced.matches,
-            { facing },
+            { facing: figure.facing },
           );
-          if (changed) figure.texture.needsUpdate = true;
-          figure.last = key;
+          if (changed) {
+            figure.texture.needsUpdate = true;
+            needsRender = true;
+          }
           figure.drawn = now;
         }
+        // Speech bubble: newest of chat line or sticker reaction.
+        let text = '';
+        let startedAt = 0;
+        const reaction = p.reaction;
+        if (reaction) {
+          const expires = reaction.expiresAt ?? reaction.at + REACTION_TTL;
+          if (Date.now() < expires) {
+            text = REACTIONS.find((item) => item.id === reaction.id)?.label ?? '';
+            startedAt = reaction.at;
+          }
+        }
+        const said = chatBubbles.get(p.actor);
+        if (said && Date.now() < said.until && said.at >= startedAt)
+          text = said.text;
+        if (p.id.startsWith('friend-')) {
+          const talk = npcTalk.get(p.actor);
+          if (talk && Date.now() < talk.until) text = talk.text;
+          else if (talk) npcTalk.delete(p.actor);
+        }
+        if (text !== figure.bubbleText) {
+          figure.bubbleText = text;
+          figure.bubble.textContent = text;
+          figure.bubble.hidden = !text;
+        }
       }
-      if (now - lastData > 100) {
-        for (const place of VILLAGE_PLACES) {
-          const label = labelsRef.current?.querySelector<HTMLElement>(
-            `[data-place="${place.id}"]`,
-          );
-          if (!label) continue;
-          projected
-            .set(place.x, place.kind === 'home' ? 4.5 : 5.9, place.z)
-            .project(camera);
-          const x = ((projected.x + 1) * width) / 2,
-            y = ((1 - projected.y) * height) / 2;
-          label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
-          label.style.visibility =
-            projected.z < 1 &&
-            x > 20 &&
-            x < width - 20 &&
-            y > 10 &&
-            y < height - 60
+      const shouldRender =
+        needsRender ||
+        anyWalking ||
+        cameraMoving ||
+        !!press ||
+        !!pinch ||
+        // Idle frames only move the river ripple; a slower tick saves battery.
+        now - lastRender > 250;
+      if (shouldRender) {
+        // Gentle stream: the ripple texture drifts downstream.
+        for (const texture of world.world.water)
+          texture.offset.x = (now / 1000) * -0.05;
+        renderer.render(scene, camera);
+        lastRender = now;
+        needsRender = false;
+        // Labels are projected on every rendered frame so they never lag.
+        for (const { place, element } of placeLabels) {
+          if (!element) continue;
+          const at = project(place.x, place.kind === 'home' ? 5.2 : 5.9, place.z);
+          element.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
+          // Labels never slide under the header card (their box is ~30px tall).
+          element.style.visibility =
+            at.inFront &&
+            at.x > 20 &&
+            at.x < width - 20 &&
+            at.y > topLimit + 30 &&
+            at.y < height - 60
               ? 'visible'
               : 'hidden';
         }
-        const tag =
-          labelsRef.current?.querySelector<HTMLElement>('[data-self-label]');
-        if (tag) {
-          projected.set(position.x, 2.3, position.z).project(camera);
-          tag.style.transform = `translate(${((projected.x + 1) * width) / 2}px,${((1 - projected.y) * height) / 2}px) translate(-50%,-100%)`;
+        if (farmLabel && myBed) {
+          const r = farmBedRect(myBed);
+          const at = project(r.x, 1.1, r.z - r.d / 2);
+          farmLabel.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
+          farmLabel.style.visibility =
+            at.inFront &&
+            at.x > 20 &&
+            at.x < width - 20 &&
+            at.y > topLimit + 30 &&
+            at.y < height - 60
+              ? 'visible'
+              : 'hidden';
         }
+        const headY = FIGURE_HEIGHT * 0.98;
+        if (selfTag) {
+          const at = project(position.x, headY, position.z);
+          selfTag.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
+        }
+        for (const [id, figure] of figures) {
+          const own = id === current.self;
+          const at = project(
+            figure.point.x,
+            figure.group.position.y + headY,
+            figure.point.z,
+          );
+          const show =
+            at.inFront && at.x > -40 && at.x < width + 40 && at.y > -20 && at.y < height + 20;
+          if (figure.tag) {
+            figure.tag.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
+            figure.tag.style.visibility = show ? 'visible' : 'hidden';
+          }
+          if (!figure.bubble.hidden)
+            figure.bubble.style.transform = `translate(${at.x}px,${at.y - (own ? 30 : 26)}px) translate(-50%,-100%)`;
+        }
+      }
+      if (now - lastData > 300) {
         miniSelfRef.current?.setAttribute('cx', String(position.x));
         miniSelfRef.current?.setAttribute('cy', String(position.z));
         if (routeRef.current)
@@ -1076,7 +1735,7 @@ export function Village3D(props: Props) {
         Object.assign(host.dataset, {
           follow: String(follow),
           actorPixels: (
-            (1.88 * zoom * height) /
+            (VILLAGE_ACTOR_HEIGHT * zoom * height) /
             (camera.top - camera.bottom)
           ).toFixed(1),
           avatarX: position.x.toFixed(3),
@@ -1089,66 +1748,93 @@ export function Village3D(props: Props) {
           targetZ: target.z.toFixed(3),
           overview: String(zoom < 1.5),
           residents: String(residents.length),
+          drawCalls: String(renderer.info.render.calls),
         });
         lastData = now;
-      }
-      if (
-        now - lastRender >
-        (walking ||
-        [...figures.values()].some((figure) => figure.walking) ||
-        press ||
-        Math.abs(zoom - desiredZoom) > 0.01 ||
-        target.distanceToSquared(desiredTarget) > 0.0001
-          ? 32
-          : 250)
-      ) {
-        renderer.render(scene, camera);
-        lastRender = now;
-        host.dataset.drawCalls = String(renderer.info.render.calls);
       }
     };
     frame = requestAnimationFrame(animate);
     return () => {
       disposed = true;
+      loungeAudio.setScene({ village: false });
       cancelAnimationFrame(frame);
       controls.current = null;
       activeDirections.clear();
       observer.disconnect();
       visibility.disconnect();
+      world.listeners.delete(syncLoaded);
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointermove', drag);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointercancel', cancel);
       canvas.removeEventListener('lostpointercapture', lostCapture);
+      canvas.removeEventListener('wheel', wheel);
       canvas.removeEventListener('webglcontextlost', loss);
+      canvas.removeEventListener('webglcontextrestored', restored);
       host.removeEventListener('keydown', keydown);
       host.removeEventListener('keydown', keyrun);
       host.removeEventListener('focusout', blur);
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
       document.removeEventListener('visibilitychange', visibilityChanged);
-      disposeScene(scene);
-      sun.shadow.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
+      for (const [id, figure] of figures) removeFigure(id, figure);
+      scene.remove(world.root);
+      disposeObject(marker);
       canvas.remove();
+      // The renderer and the built world are kept for a fast return; a lost
+      // context is discarded so the next visit (or retry) starts cleanly.
+      if (contextLost || renderer.getContext().isContextLost()) {
+        renderer.dispose();
+        if (sharedRenderer === renderer) sharedRenderer = null;
+      } else renderer.renderLists.dispose();
     };
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    if (sharedRenderer?.getContext().isContextLost()) {
+      sharedRenderer.dispose();
+      sharedRenderer = null;
+    }
+    setState('loading');
+    setAttempt((value) => value + 1);
+  };
+
+  const minimapRoads = VILLAGE_PATHS.map(([x1, z1, x2, z2, w]) => (
+    <line
+      key={`${x1},${z1},${x2},${z2}`}
+      x1={x1}
+      y1={z1}
+      x2={x2}
+      y2={z2}
+      stroke="#f7efd1"
+      strokeWidth={Math.max(0.9, w * 0.8)}
+      strokeLinecap="round"
+    />
+  ));
 
   return (
     <section className="hv-village" aria-label="범타듀 밸리 마을">
       <div className="hv-heading">
         <div>
           <span className="hv-eyebrow">
-            <Trees size={15} /> BEOMDEW VALLEY
+            <Trees size={15} /> 우리들의 마을
           </span>
           <h1>범타듀 밸리</h1>
           <p>일곱 친구의 골목에서 숲과 강 너머까지.</p>
         </div>
-        <span className="hv-weather">
-          <Sun size={20} />
+        <span className="hv-weather" data-phase={phase}>
+          {phase === 'night' ? (
+            <Moon size={20} />
+          ) : phase === 'morning' ? (
+            <Sunrise size={20} />
+          ) : phase === 'evening' ? (
+            <Sunset size={20} />
+          ) : (
+            <Sun size={20} />
+          )}
           <span>
-            산책하기 좋은 날<small>우리들의 범타듀 밸리</small>
+            {props.dayNight === false ? '산책하기 좋은 날' : DAY_PHASE_LABEL[phase]}
+            <small>우리들의 범타듀 밸리</small>
           </span>
         </span>
       </div>
@@ -1184,6 +1870,22 @@ export function Village3D(props: Props) {
                 {place.actor === props.save.actor && <small>내 집</small>}
               </button>
             ))}
+            {farmBed(props.save.actor) && (
+              <button
+                type="button"
+                className="hv-place hv-farm-label"
+                data-farm-label="mine"
+                onClick={() => {
+                  const bed = farmBed(props.save.actor);
+                  if (bed) controls.current?.visit(farmFront(bed));
+                }}
+                aria-label={`${ACTORS[props.save.actor]}의 텃밭으로 걸어가기`}
+              >
+                <Sprout size={13} aria-hidden="true" />
+                <span>{ACTORS[props.save.actor]}의 텃밭</span>
+                {readyCount > 0 && <small>수확 {readyCount}</small>}
+              </button>
+            )}
             <span className="hv-self" data-self-label>
               {ACTORS[props.save.actor]}
               <small>나</small>
@@ -1195,7 +1897,7 @@ export function Village3D(props: Props) {
               마을에 햇살을 들이는 중…
             </output>
           )}
-          {state === 'unavailable' && (
+          {(state === 'unavailable' || state === 'lost') && (
             <section
               className="hv-fallback"
               aria-live="polite"
@@ -1204,10 +1906,15 @@ export function Village3D(props: Props) {
               <Trees size={32} />
               <h2 id="hv-fallback-title">마을 안내소</h2>
               <p>
-                이 기기에서는 입체 풍경을 열지 못했어요.
+                {state === 'lost'
+                  ? '입체 화면 연결이 잠시 끊겼어요. 다시 시도하면 마을로 돌아가요.'
+                  : '이 브라우저에서 입체 그래픽(WebGL)을 켜지 못했어요.'}
                 <br />
-                아래에서 원하는 장소로 바로 들어갈 수 있어요.
+                아래에서 원하는 장소로 바로 들어갈 수도 있어요.
               </p>
+              <button type="button" className="hv-retry" onClick={retry}>
+                <RotateCcw size={16} /> 다시 시도
+              </button>
               <div>
                 {VILLAGE_PLACES.filter((place) =>
                   villageCanEnterPlace(place, props.save.actor),
@@ -1221,6 +1928,19 @@ export function Village3D(props: Props) {
                   </button>
                 ))}
               </div>
+              <VillageLifeList
+                actor={props.save.actor}
+                life={props.life}
+                clockOffset={props.clockOffset}
+                onFarm={props.onFarm}
+                onShop={props.onShop}
+                onMail={props.onMail}
+                onPick={props.onPick}
+                onVisit={props.onVisit}
+                online={props.players
+                  .filter((p) => !p.id.startsWith('friend-'))
+                  .map((p) => p.actor)}
+              />
             </section>
           )}
         </div>
@@ -1231,14 +1951,6 @@ export function Village3D(props: Props) {
           >
             <MapIcon size={17} />
             마을 안내
-          </button>
-          <button onClick={props.onFriends}>
-            <Users size={17} />
-            <span>친구 초대</span>
-          </button>
-          <button onClick={props.onRequest}>
-            <Send size={16} />
-            <span>게임 현황</span>
           </button>
         </div>
         <button
@@ -1266,12 +1978,7 @@ export function Village3D(props: Props) {
               rx="3"
               fill="#dce3ba"
             />
-            <path
-              d="M-32 5 H32 M0 -26 V26 M-27 5 V24 H27 V5"
-              fill="none"
-              stroke="#f7efd1"
-              strokeWidth="2"
-            />
+            {minimapRoads}
             <rect
               x={-VILLAGE_BOUNDS.width / 2}
               y={VILLAGE_RIVER.minZ}
@@ -1300,6 +2007,14 @@ export function Village3D(props: Props) {
                 fill={p.roofColor}
               />
             ))}
+            <rect
+              x={VILLAGE_MARKET.x - VILLAGE_MARKET.width / 2}
+              y={VILLAGE_MARKET.z - VILLAGE_MARKET.depth / 2}
+              width={VILLAGE_MARKET.width}
+              height={VILLAGE_MARKET.depth}
+              rx="0.4"
+              fill="#e56b5d"
+            />
             {VILLAGE_DISTRICTS.map((d) => (
               <circle
                 key={d.id}
@@ -1331,6 +2046,50 @@ export function Village3D(props: Props) {
                 <X size={17} />
               </button>
             </header>
+            <span className="hv-directory-sub">범타듀의 하루</span>
+            {farmBed(props.save.actor) && (
+              <button
+                data-district="farm"
+                onClick={() => {
+                  const bed = farmBed(props.save.actor);
+                  setSelected(null);
+                  setDirectory(false);
+                  setDistrict(`${ACTORS[props.save.actor]}의 텃밭`);
+                  if (bed) controls.current?.visit(farmFront(bed));
+                }}
+              >
+                <span className="hv-place-dot" style={{ background: '#8a6242' }} />
+                <span>
+                  <strong>{ACTORS[props.save.actor]}의 텃밭</strong>
+                  <small>
+                    내 집 앞 6칸 · {readyCount ? `수확할 작물 ${readyCount}개` : '씨앗 심기 · 물 주기'}
+                  </small>
+                </span>
+                <ArrowRight size={15} />
+              </button>
+            )}
+            <button
+              data-district="orchard"
+              onClick={() => {
+                setSelected(null);
+                setDirectory(false);
+                setDistrict('과일나무');
+                const ripe = FRUIT_TREES.find(
+                  (t) => (props.life?.me.fruitReadyAt?.[t] ?? 0) <= lifeClock,
+                );
+                const p = FRUIT_TREE_POINTS[ripe ?? FRUIT_TREES[0]];
+                if (p) controls.current?.visit({ x: p.x + 1.2, z: p.z + 1.4 });
+              }}
+            >
+              <span className="hv-place-dot" style={{ background: '#e04a3a' }} />
+              <span>
+                <strong>과일나무</strong>
+                <small>
+                  {ripeTrees ? `지금 딸 수 있는 나무 ${ripeTrees}그루` : '6시간마다 다시 익어요'}
+                </small>
+              </span>
+              <ArrowRight size={15} />
+            </button>
             <span className="hv-directory-sub">함께 노는 곳</span>
             {VILLAGE_PLACES.filter((p) => p.kind !== 'home').map((p) => (
               <button key={p.id} onClick={() => select(p)}>
@@ -1345,6 +2104,25 @@ export function Village3D(props: Props) {
                 <ArrowRight size={15} />
               </button>
             ))}
+            <button
+              data-district="market"
+              onClick={() => {
+                setSelected(null);
+                setDirectory(false);
+                setDistrict(VILLAGE_MARKET.name);
+                controls.current?.visit({
+                  x: VILLAGE_MARKET.x,
+                  z: VILLAGE_MARKET.z + VILLAGE_MARKET.depth / 2 + 0.8,
+                });
+              }}
+            >
+              <span className="hv-place-dot" style={{ background: '#e56b5d' }} />
+              <span>
+                <strong>{VILLAGE_MARKET.name}</strong>
+                <small>씨앗 · 희귀 소품 · 수확물 팔기</small>
+              </span>
+              <ArrowRight size={15} />
+            </button>
             <span className="hv-directory-sub">강 너머, 숲 가까이</span>
             {VILLAGE_DISTRICTS.map((d) => (
               <button
@@ -1407,7 +2185,7 @@ export function Village3D(props: Props) {
             <MapIcon size={18} />
           </button>
         </div>
-        {state !== 'unavailable' && (
+        {state !== 'unavailable' && state !== 'lost' && (
           <div className="hv-pad" aria-label="마을 걷기와 달리기">
             <button
               type="button"
@@ -1450,7 +2228,7 @@ export function Village3D(props: Props) {
             ))}
           </div>
         )}
-        {district && !nearby && (
+        {district && !nearby && !spot && (
           <section className="hv-route" aria-label="산책 목적지">
             <Trees size={18} />
             <div>
@@ -1468,7 +2246,7 @@ export function Village3D(props: Props) {
             </button>
           </section>
         )}
-        {nearby && state !== 'unavailable' && (
+        {nearby && state !== 'unavailable' && state !== 'lost' && (
           <section
             className="hv-entry-prompt"
             aria-label={`${nearby.place.name} 입구`}
@@ -1481,10 +2259,31 @@ export function Village3D(props: Props) {
               <strong>{nearby.place.name}</strong>
               <small>
                 {nearby.canEnter
-                  ? 'E 또는 Enter를 눌러 들어가기'
-                  : '주민의 집이에요. 집 앞에서 인사해요.'}
+                  ? touch
+                    ? '버튼을 눌러 들어가기'
+                    : 'E 또는 Enter를 눌러 들어가기'
+                  : props.onVisit
+                    ? touch
+                      ? '버튼을 눌러 놀러 가기 · 방명록'
+                      : 'E 또는 버튼을 눌러 놀러 가기 · 방명록'
+                    : '주민의 집이에요. 집 앞에서 인사해요.'}
               </small>
             </div>
+            {nearby.place.kind === 'home' &&
+              nearby.place.actor === props.save.actor &&
+              props.onMail && (
+                <button
+                  type="button"
+                  className="hv-prompt-secondary"
+                  onClick={props.onMail}
+                  data-testid="village-mailbox"
+                >
+                  <Mail size={15} /> 우편함
+                  {(props.life?.me.mailUnread ?? 0) > 0 && (
+                    <b className="hv-count">{props.life?.me.mailUnread}</b>
+                  )}
+                </button>
+              )}
             {nearby.canEnter ? (
               <button
                 type="button"
@@ -1492,12 +2291,41 @@ export function Village3D(props: Props) {
               >
                 들어가기 <ArrowRight size={15} />
               </button>
-            ) : (
-              <span>방문 불가</span>
-            )}
+            ) : nearby.place.kind === 'home' &&
+              nearby.place.actor !== undefined &&
+              props.onVisit ? (
+              <button
+                type="button"
+                data-testid="village-visit"
+                onClick={() => props.onVisit?.(nearby.place.actor!)}
+              >
+                놀러 가기 <ArrowRight size={15} />
+              </button>
+            ) : null}
           </section>
         )}
-        {selected && !nearby && (
+        {spot && !nearby && state !== 'unavailable' && state !== 'lost' && (
+          <section
+            className="hv-entry-prompt hv-spot-prompt"
+            aria-live="polite"
+            data-testid="village-spot-prompt"
+            data-spot={spot.kind}
+          >
+            <SpotPrompt
+              spot={spot}
+              life={props.life ?? null}
+              clockOffset={props.clockOffset ?? 0}
+              touch={touch}
+              actor={props.save.actor}
+              onAct={() => controls.current?.act(spot)}
+              onGuide={() => {
+                const bed = farmBed(props.save.actor);
+                if (bed) controls.current?.visit(farmFront(bed));
+              }}
+            />
+          </section>
+        )}
+        {selected && !nearby && !spot && (
           <section className="hv-place-card" aria-label="선택한 장소">
             <div
               className="hv-place-monogram"
@@ -1541,14 +2369,20 @@ export function Village3D(props: Props) {
           </section>
         )}
         <div className="hv-map-caption" aria-hidden="true">
-          <span>BEOMDEW</span>
+          <span>범타듀</span>
           <small>작은 집들이 모여, 우리의 동네</small>
         </div>
       </div>
       <div className="hv-bottom">
         <span>
           <Footprints size={15} />
-          바닥을 눌러 걷기 <i>·</i> 드래그로 둘러보기 <i>·</i> 방향키 / WASD
+          바닥을 눌러 걷기 <i>·</i> 드래그로 둘러보기
+          {!touch && (
+            <>
+              {' '}
+              <i>·</i> 방향키 / WASD
+            </>
+          )}
         </span>
         <button onClick={props.onRequest}>
           <Send size={14} />
@@ -1577,5 +2411,143 @@ export function Village3D(props: Props) {
         · 출처: 쓰레드 dogfooter. 테라스 가구: 3DAssets.dev (CC0).
       </p>
     </section>
+  );
+}
+
+function remaining(ms: number) {
+  const minutes = Math.max(1, Math.ceil(ms / 60_000));
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)}시간 ${minutes % 60 ? (minutes % 60) + '분' : ''}`.trim()
+    : `${minutes}분`;
+}
+
+/** The E / tap prompt for farm, market, fruit trees and wandering friends. */
+function SpotPrompt({
+  spot,
+  life,
+  clockOffset,
+  touch,
+  actor,
+  onAct,
+  onGuide,
+}: {
+  spot: VillageSpot;
+  life: LifeView | null;
+  clockOffset: number;
+  touch: boolean;
+  actor: number;
+  onAct: () => void;
+  onGuide: () => void;
+}) {
+  // Server clock that also wakes exactly when a crop or this tree is ready.
+  const clock = useServerClock(
+    clockOffset,
+    spot.kind === 'farm'
+      ? (life?.me.farm.map((p) => p.readyAt) ?? [])
+      : spot.kind === 'tree'
+        ? [life?.me.fruitReadyAt?.[spot.id] ?? spot.readyAt]
+        : [],
+  );
+  const key = touch ? '' : 'E로 ';
+  if (spot.kind === 'farm') {
+    const farm = life?.me.farm ?? [];
+    const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;
+    const empty = farm.filter((p) => !p.crop).length;
+    const thirsty = farm.filter(
+      (p) => p.crop && p.wateredAt === null && (p.readyAt ?? Infinity) > clock,
+    ).length;
+    return (
+      <>
+        <div>
+          <strong>
+            <Sprout size={14} /> {ACTORS[actor]}의 텃밭
+          </strong>
+          <small>
+            {!life
+              ? '마을에 연결되면 돌볼 수 있어요'
+              : ready
+                ? `수확할 작물 ${ready}개 · ${key}돌보기`
+                : empty
+                  ? `빈 밭 ${empty}칸 · ${key}씨앗 심기`
+                  : thirsty
+                    ? `물 줄 작물 ${thirsty}칸 · ${key}물 주기`
+                    : '물을 다 줬어요 · 쑥쑥 자라는 중'}
+          </small>
+        </div>
+        <button type="button" onClick={onAct} data-testid="village-farm">
+          텃밭 돌보기 <ArrowRight size={15} />
+        </button>
+      </>
+    );
+  }
+  if (spot.kind === 'commons')
+    return (
+      <>
+        <div>
+          <strong>
+            <Sprout size={14} /> 마을 공동 밭
+          </strong>
+          <small>함께 가꾸는 밭이에요 · 내 텃밭은 {ACTORS[actor]}의 집 앞에 있어요</small>
+        </div>
+        <button type="button" onClick={onGuide} data-testid="village-guide-farm">
+          내 텃밭으로 <ArrowRight size={15} />
+        </button>
+      </>
+    );
+  if (spot.kind === 'market')
+    return (
+      <>
+        <div>
+          <strong>
+            <Store size={14} /> 범타듀 상점
+          </strong>
+          <small>씨앗 · 희귀 소품 · 머리색 팔레트</small>
+        </div>
+        <button type="button" onClick={onAct} data-testid="village-shop">
+          상점 열기 <ArrowRight size={15} />
+        </button>
+      </>
+    );
+  if (spot.kind === 'tree') {
+    const readyAt = life?.me.fruitReadyAt?.[spot.id] ?? spot.readyAt;
+    const ready = !readyAt || readyAt <= clock;
+    const index = Object.keys(FRUIT_TREE_POINTS).indexOf(spot.id) + 1;
+    return (
+      <>
+        <div>
+          <strong>
+            <Apple size={14} /> {index}번 과일나무
+          </strong>
+          <small>
+            {!life
+              ? '마을에 연결되면 딸 수 있어요'
+              : ready
+                ? `잘 익은 과일이 달렸어요 · ${key}따기`
+                : `${remaining(readyAt - clock)} 뒤에 다시 익어요`}
+          </small>
+        </div>
+        <button
+          type="button"
+          onClick={onAct}
+          disabled={!life || !ready}
+          data-testid="village-pick"
+        >
+          과일 따기 <ArrowRight size={15} />
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      <div>
+        <strong>
+          <MessageCircle size={14} /> {ACTORS[spot.actor]}
+        </strong>
+        <small>산책 중이에요{touch ? '' : ' · E로 말 걸기'}</small>
+      </div>
+      <button type="button" onClick={onAct} data-testid="village-talk">
+        말 걸기 <ArrowRight size={15} />
+      </button>
+    </>
   );
 }

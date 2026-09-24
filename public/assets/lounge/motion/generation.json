@@ -26,16 +26,17 @@
   "exportPrep": "For each actor, canonical sprite-gen connected-component extraction measured all 12 source poses. One uniform scale per actor, min(288/max_component_width,368/max_component_height,1), was applied to every component in both rows before canonical extraction; components were bottom-centered in their original six-slot strip. Originals were copied to each run raw-original directory and SHA256 recorded in common-scale-prep.json.",
   "runtime": {
     "generatedCollections": [
-      "classic/signature"
+      "classic/signature (plus any EXTRA_MOTION_SHEETS entry in app/lounge-rig-frames.ts)"
     ],
-    "otherCollections": "Existing customized artwork uses a cached continuous eight-phase gait; legacy original outfits keep existing step frames.",
+    "otherCollections": "Every other look walks and runs with the cut-out rig: scripts/build-lounge-rig.mjs segments each static atlas cell offline into torso, legs (thigh/shin) and forearms (app/lounge-rig-data.ts); app/lounge-rig.ts poses the dyed composite with 8 cached poses per cycle (app/lounge-gait.ts). Legacy original step frames are replaced by the rig while moving.",
     "frameLayout": "app/lounge-motion-layout.json",
     "walkClockFps": 8,
     "runClockFps": 9,
     "runDistanceMultiplier": 1.65,
     "scaling": "one actor-wide source scale and one runtime cycle crop",
     "load": "local classic motion prewarmed during 3D scene loading; other actors on first visible movement",
-    "fallback": "existing classic artwork while an atlas is pending; customized-art gait if its optional motion image cannot load"
+    "fallback": "cut-out rig while a hand-drawn sheet is pending or if it fails to load",
+    "frameClock": "app/lounge-gait.ts GAIT_CYCLES_PER_PHASE (walk 8/6, run 9/6 cycles per locomotion phase unit); hand-drawn frames and rig poses share it"
   },
   "limitations": "Input illustrations contain some near-repeated poses and crouch/head-size variation. Extractor warnings are not motion-cycle validation; stride, foot contacts, and loop continuity are unverified.",
   "actors": [

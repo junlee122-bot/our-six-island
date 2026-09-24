@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 2.1px;
   font-weight: 700;
   color: #7c8c68;
@@ -43,7 +43,7 @@
 .hv-weather small {
   display: block;
   color: #9aa08f;
-  font-size: 10px;
+  font-size: 11px;
   margin-top: 4px;
 }
 .hv-frame {
@@ -119,7 +119,7 @@
   background: #284d36;
 }
 .hv-place small {
-  font-size: 8px;
+  font-size: 11px;
   background: #e4edd8;
   color: #526742;
   padding: 2px 4px;
@@ -143,13 +143,13 @@
   padding: 4px 8px;
   border-radius: 10px;
   background: #fff9e4;
-  font-size: 10px;
+  font-size: 11px;
   color: #4b593d;
   white-space: nowrap;
   box-shadow: 0 2px 6px #253b2828;
 }
 .hv-self small {
-  font-size: 8px;
+  font-size: 11px;
   color: #8b9e69;
 }
 .hv-top-tools {
@@ -212,7 +212,7 @@
   letter-spacing: 4px;
 }
 .hv-map-caption small {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 1px;
   margin-top: 7px;
 }
@@ -298,7 +298,7 @@
 .hv-entry-prompt small,
 .hv-entry-prompt > span {
   color: #8a927d;
-  font-size: 10px;
+  font-size: 11px;
 }
 .hv-entry-prompt button {
   display: inline-flex;
@@ -345,7 +345,7 @@
   flex-shrink: 0;
 }
 .hv-place-card small {
-  font-size: 9px;
+  font-size: 11px;
   color: #9a9f8b;
   letter-spacing: 0.8px;
 }
@@ -418,7 +418,7 @@
 }
 .hv-directory-sub {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: #99a085;
   letter-spacing: 1px;
   margin: 18px 0 8px;
@@ -446,7 +446,7 @@
 .hv-directory small {
   display: block;
   margin-top: 4px;
-  font-size: 10px;
+  font-size: 11px;
   color: #939b83;
 }
 .hv-home-list {
@@ -470,7 +470,7 @@
   display: inline;
   margin: 0;
   margin-left: auto;
-  font-size: 8px;
+  font-size: 11px;
 }
 .hv-bottom {
   display: flex;
@@ -590,16 +590,16 @@
   }
   .hv-map-caption {
     bottom: 115px;
-    font-size: 9px;
+    font-size: 11px;
   }
   .hv-weather {
-    font-size: 10px;
+    font-size: 11px;
   }
   .hv-heading p {
     font-size: 12px;
   }
   .hv-bottom > span {
-    font-size: 10px;
+    font-size: 11px;
   }
 }
 @media (max-width: 600px) {
@@ -617,7 +617,7 @@
     font-size: 11px;
   }
   .hv-eyebrow {
-    font-size: 8px;
+    font-size: 11px;
     letter-spacing: 1.7px;
   }
   .hv-weather {
@@ -660,19 +660,19 @@
     max-width: calc(100% - 65px);
   }
   .hv-place-home {
-    font-size: 9px;
+    font-size: 11px;
     padding: 4px 7px;
     gap: 4px;
   }
   .hv-place:not(.hv-place-home) {
-    font-size: 10px;
+    font-size: 11px;
     padding: 6px 9px;
   }
   .hv-place small {
     display: none;
   }
   .hv-self {
-    font-size: 9px;
+    font-size: 11px;
   }
   .hv-pad {
     right: 12px;
@@ -683,11 +683,11 @@
     bottom: 24px;
   }
   .hv-map-caption > span {
-    font-size: 9px;
+    font-size: 11px;
     letter-spacing: 2px;
   }
   .hv-map-caption small {
-    font-size: 8px;
+    font-size: 11px;
     letter-spacing: 0;
     margin-top: 5px;
   }
@@ -717,25 +717,25 @@
   }
   .hv-entry-prompt small,
   .hv-entry-prompt > span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .hv-entry-prompt button {
     min-height: 34px;
     padding: 7px 9px;
-    font-size: 10px;
+    font-size: 11px;
     white-space: nowrap;
   }
   .hv-place-card h2 {
     font-size: 16px;
   }
   .hv-place-card p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .hv-place-card small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .hv-enter {
-    font-size: 10px;
+    font-size: 11px;
     padding: 10px;
     gap: 5px;
   }
@@ -746,7 +746,7 @@
   }
   .hv-bottom > span {
     justify-content: center;
-    font-size: 9px;
+    font-size: 11px;
     gap: 4px;
   }
   .hv-bottom button {
@@ -769,7 +769,7 @@
 }
 .hv-credit {
   margin: 2px 6px 8px;
-  font-size: 9px;
+  font-size: 11px;
   color: #a0a78f;
   line-height: 1.6;
 }
@@ -795,14 +795,14 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   margin-bottom: 5px;
 }
 .hv-minimap small {
   margin-left: auto;
   color: #8e9c79;
-  font-size: 8px;
+  font-size: 11px;
 }
 .hv-minimap svg {
   display: block;
@@ -833,7 +833,7 @@
 }
 .hv-route output {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: #8a927c;
   margin-top: 4px;
 }
@@ -864,7 +864,7 @@
     border-radius: 12px;
   }
   .hv-minimap > span {
-    font-size: 8px;
+    font-size: 11px;
     gap: 3px;
   }
   .hv-minimap small {
@@ -880,4 +880,220 @@
   .hv-route > div {
     flex: 1;
   }
+}
+
+/* Remote friends' name tags and speech bubbles (projected every frame). */
+.hv-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #fffbeede;
+  color: #4b593d;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px #253b2820;
+  pointer-events: none;
+  visibility: hidden;
+}
+.hv-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 180px;
+  padding: 6px 10px;
+  border: 1px solid #e5e1c9;
+  border-radius: 12px;
+  background: #fffef8;
+  color: #3f4c37;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px #253b2826;
+  pointer-events: none;
+}
+.hv-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  background: inherit;
+  border-right: 1px solid #e5e1c9;
+  border-bottom: 1px solid #e5e1c9;
+  transform: translateX(-50%) rotate(45deg);
+}
+.hv-bubble[hidden] {
+  display: none;
+}
+.hv-retry {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px !important;
+  min-height: 44px;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+/* Touch targets: every control is at least 44 × 44 px. */
+.hv-top-tools button {
+  min-height: 44px;
+}
+.hv-camera button {
+  width: 44px;
+  height: 44px;
+}
+.hv-pad {
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+}
+.hv-entry-prompt button,
+.hv-enter,
+.hv-fallback button {
+  min-height: 44px;
+}
+.hv-card-close,
+.hv-route button,
+.hv-directory header button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.hv-card-close {
+  right: 0;
+  top: 0;
+}
+.hv-directory > button,
+.hv-home-list button {
+  min-height: 44px;
+}
+.hv-place {
+  min-height: 30px;
+}
+
+/* The place card and prompts never cover the minimap (bottom-left). */
+@media (max-width: 900px) {
+  .hv-place-card,
+  .hv-entry-prompt,
+  .hv-route {
+    left: 194px;
+    right: auto;
+    transform: none;
+    min-width: 0;
+    max-width: calc(100% - 194px - 172px);
+  }
+}
+@media (max-width: 600px) {
+  .hv-camera button {
+    width: 44px;
+    height: 44px;
+  }
+  .hv-place-card,
+  .hv-entry-prompt,
+  .hv-route {
+    bottom: 216px;
+    left: 12px;
+    right: 12px;
+    max-width: none;
+    transform: none;
+  }
+  .hv-pad {
+    right: 10px;
+    bottom: 10px;
+    gap: 3px;
+  }
+}
+
+/* ---------------------------------------------------------------- P2: 범타듀의 하루 */
+.hv-entry-prompt button {
+  min-height: 44px;
+}
+.hv-entry-prompt button:disabled {
+  background: #a9b39c;
+  cursor: default;
+}
+.hv-entry-prompt .hv-prompt-secondary {
+  background: #f1ead2;
+  color: #4f5f3c;
+}
+.hv-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #d4574a;
+  color: #fff;
+  font-size: 11px;
+}
+.hv-spot-prompt strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.hv-scene {
+  transition: background 1.2s ease;
+}
+.hv-scene[data-phase='night'] .hv-place,
+.hv-scene[data-phase='night'] .hv-tag {
+  box-shadow: 0 0 0 1px #ffffff55, 0 4px 14px #0006;
+}
+.hv-weather[data-phase='night'] {
+  background: #2f3854;
+  color: #f3eed8;
+}
+.hv-weather[data-phase='night'] small {
+  color: #c9cbe0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hv-scene {
+    transition: none;
+  }
+}
+@media (max-width: 600px) {
+  .hv-entry-prompt {
+    flex-wrap: wrap;
+  }
+  .hv-entry-prompt button {
+    min-height: 44px;
+  }
+}
+
+/* "승준의 텃밭": my own plots are always labelled (gold) so they are not
+   mistaken for paving or the decorative shared field by the plaza. */
+.hv-place.hv-farm-label {
+  padding: 5px 10px;
+  font-size: 12px;
+  background: #fff3c9;
+  color: #6b4b1f;
+  border: 1px solid #e0b64c;
+  box-shadow: 0 3px 10px #8a6a2030;
+}
+.hv-place.hv-farm-label:hover {
+  background: #ffe9a6;
+}
+.hv-place.hv-farm-label small {
+  display: inline;
+  background: #5f9a3f;
+  color: #fff;
+}
+/* The WebGL fallback can hold the whole life list; let it scroll. */
+.hv-fallback {
+  overflow-y: auto;
+  justify-content: safe center;
+}
+.hv-fallback > .l-simple-life {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: min(640px, 100%);
+}
+.hv-fallback .l-simple-life button {
+  gap: 8px;
+  justify-content: flex-start;
+  padding: 10px 12px;
 }

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { accountSave, type AccountProfile } from './lounge-accounts';
-import { cloudCall } from './lounge-auth';
+import { AccountError, cloudCall } from './lounge-auth';
 import {
   readAccountDraft,
   restoreAccountDraft,
   type AccountDraft,
 } from './lounge-cloud-draft';
 import type { LoungeSave } from './lounge-look';
+import { friendlyError } from './lounge/feedback';
 type SaveReply = {
   conflict: boolean;
   save: LoungeSave;
@@ -18,7 +19,9 @@ export function useCloudSave(account: AccountProfile) {
   const [save, setSave] = useState(initial),
     [status, setStatus] = useState('서버에 저장됨'),
     [conflict, setConflict] = useState<SaveReply | null>(null),
-    [draft, setDraft] = useState<AccountDraft | null>(null);
+    [draft, setDraft] = useState<AccountDraft | null>(null),
+    /** 409 (app outdated / server behind) or 413 (too large): retrying won't help. */
+    [blocked, setBlocked] = useState('');
   const state = useRef({
     current: initial,
     committed: JSON.stringify(initial),
@@ -26,6 +29,7 @@ export function useCloudSave(account: AccountProfile) {
     conflict: null as SaveReply | null,
     pending: null as Promise<boolean> | null,
     disposed: false,
+    blocked: false,
   });
   const draftKey = 'hohyeon-draft-' + account.id;
   useEffect(() => {
@@ -63,7 +67,7 @@ export function useCloudSave(account: AccountProfile) {
   const flush = useCallback(async () => {
     const s = state.current;
     if (s.pending) return s.pending;
-    if (s.conflict || s.disposed) return false;
+    if (s.conflict || s.disposed || s.blocked) return false;
     const run = async () => {
       try {
         while (JSON.stringify(s.current) !== s.committed) {
@@ -97,11 +101,18 @@ export function useCloudSave(account: AccountProfile) {
         } catch {}
         return true;
       } catch (e) {
-        setStatus(
-          e instanceof Error
-            ? e.message
-            : '저장하지 못했어요. 다시 시도해 주세요.',
-        );
+        if (
+          e instanceof AccountError &&
+          (e.status === 409 || e.status === 413)
+        ) {
+          s.blocked = true;
+          setBlocked(friendlyError(e, '저장할 수 없어요. 새로고침해 주세요.'));
+          setStatus('저장 멈춤 · 새로고침 필요');
+          return false;
+        }
+        // Keep the status short; raw (possibly English) details go to the console.
+        friendlyError(e);
+        setStatus('저장하지 못했어요 · 다시 시도해 주세요');
         return false;
       } finally {
         s.pending = null;
@@ -143,6 +154,7 @@ export function useCloudSave(account: AccountProfile) {
     flush,
     status,
     conflict,
+    blocked,
     resolve,
     draft: draft?.save ?? null,
     restoreDraft: () => {

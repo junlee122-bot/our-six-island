@@ -48,24 +48,29 @@ const luminance = (r: number, g: number, b: number) =>
 
 // Each sheet encodes dyeable hair in blue. Follow that silhouette from the head,
 // rather than changing every blue pixel (denim, jackets and costume ties are blue too).
+// `collar` (optional, per cell): from this row down, the flood only continues
+// through strongly blue hair pixels. A navy jacket collar that touches the hair
+// tips is a duller blue, so it no longer joins the head's component.
+export const HAIR_COLLAR_RATIO = 1.8;
 export function createHairMask(
   data: Uint8ClampedArray,
   width: number,
   height: number,
-  anchors: Pick<SkinAnchors, 'cx' | 'eyes' | 'head'>,
+  anchors: Pick<SkinAnchors, 'cx' | 'eyes' | 'head'> & { collar?: number },
 ): Uint8Array {
   const size = width * height,
     pixels = new Uint8Array(size),
     seen = new Uint8Array(size),
-    queue = new Int32Array(size);
+    queue = new Int32Array(size),
+    strictFrom = anchors.collar === undefined ? size : Math.max(0, Math.ceil(anchors.collar)) * width;
+  const blue = (p: number) => {
+    const k = p * 4;
+    if (data[k + 3] === 0) return false;
+    const other = Math.max(data[k], data[k + 1]);
+    return data[k + 2] > other * (p >= strictFrom ? HAIR_COLLAR_RATIO : 1.12);
+  };
   for (let start = 0; start < size; start++) {
-    const k = start * 4;
-    if (
-      seen[start] ||
-      data[k + 3] === 0 ||
-      data[k + 2] <= Math.max(data[k], data[k + 1]) * 1.12
-    )
-      continue;
+    if (seen[start] || !blue(start)) continue;
     let count = 1,
       attached = false,
       maxY = 0;
@@ -79,13 +84,7 @@ export function createHairMask(
       if (y <= anchors.eyes && Math.abs(x - anchors.cx) <= anchors.head * 0.65)
         attached = true;
       const visit = (next: number) => {
-        if (next < 0 || next >= size || seen[next]) return;
-        const q = next * 4;
-        if (
-          data[q + 3] === 0 ||
-          data[q + 2] <= Math.max(data[q], data[q + 1]) * 1.12
-        )
-          return;
+        if (next < 0 || next >= size || seen[next] || !blue(next)) return;
         seen[next] = 1;
         queue[count++] = next;
       };

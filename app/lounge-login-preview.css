@@ -14,8 +14,8 @@
   letter-spacing: 0.4px;
   color: #68786b;
 }
-.l-app .l-auth-story h1 {
-  font-size: clamp(27px, 2.8vw, 40px) !important;
+.l-app.l-app .l-auth-story h1 {
+  font-size: clamp(27px, 2.8vw, 40px);
   margin: 8px 0 12px;
   line-height: 1.35;
 }
@@ -43,6 +43,8 @@
   position: relative;
   isolation: isolate;
   aspect-ratio: 5 / 4;
+  /* Short desktop windows (e.g. 1440×900) keep the caption and replay button visible. */
+  max-height: max(260px, calc(100dvh - 420px));
   overflow: hidden;
   background: #e9eadc;
 }
@@ -348,7 +350,7 @@
   }
   .l-login-room-label {
     inset: 13px 14px auto;
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-login-room-label small {
     font-size: 7px;
@@ -379,7 +381,7 @@
     font-size: 13px;
   }
   .l-login-caption small {
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-app .l-auth-card {
     padding: 24px 24px 36px;

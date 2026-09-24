@@ -1,13 +1,19 @@
 'use client';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { Bot, ChevronDown, Coins, Crown, Spade } from 'lucide-react';
 import {
   POKER_RANKS,
   POKER_SUITS,
+  pokerRank,
   type PokerView,
   type PokerAction,
 } from './lounge-poker';
-export const beom = (amount: number) => amount.toLocaleString('ko-KR') + ' 범';
+import { TURN_LIMIT_MS } from './lounge-games';
+import type { TurnTiming } from './lounge-room';
+import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import { formatBeom, josa } from './lounge-text';
+import './lounge-poker-table.css';
+export const beom = (amount: number) => formatBeom(amount);
 const STREETS = {
   preflop: '프리플롭',
   flop: '플롭',
@@ -82,11 +88,11 @@ function eventText(g: PokerView, names: string[]) {
     return '베팅을 마쳤어요. 다음 커뮤니티 카드를 열게요.';
   if (!e) return '카드를 나눠 드릴게요. 좋은 패가 함께하길!';
   if (e.kind === 'raise')
-    return `${who}, ${beom(e.amount)}을 더 걸었어요. 다음 선택을 기다립니다.`;
+    return `${who}, ${josa(beom(e.amount), '을/를')} 더 걸었어요. 다음 선택을 기다려요.`;
   if (e.kind === 'call') return `${who}, ${beom(e.amount)} 콜.`;
-  if (e.kind === 'fold') return `${who}의 폴드. 남은 친구들과 계속할게요.`;
+  if (e.kind === 'fold') return `${who} 폴드. 남은 친구들과 계속할게요.`;
   if (e.kind === 'check') return `${who}, 체크. 다음 친구 차례예요.`;
-  return `${STREETS[g.street]}입니다. ${names[g.turn] ?? '친구'}의 선택을 기다릴게요.`;
+  return `${josa(STREETS[g.street], '이에요/예요')}. ${names[g.turn] ?? '친구'}의 선택을 기다릴게요.`;
 }
 export function PokerTable({
   match: g,
@@ -94,25 +100,46 @@ export function PokerTable({
   names,
   onAction,
 }: {
-  match: PokerView;
+  match: PokerView & TurnTiming;
   seat: number;
   names: string[];
-  onAction: (action: PokerAction) => void;
+  onAction: (action: PokerAction) => void | Promise<boolean>;
 }) {
+  const away = (i: number) => !!g.away?.includes(i);
+  // Current best hand once the flop is out (the view holds only my cards).
+  const myRank =
+    seat >= 0 && g.hand.length === 2 && g.board.length >= 3 && !g.folded[seat]
+      ? pokerRank([...g.hand, ...g.board]).label
+      : '';
+  // Pots with identical eligibility read as one pot for the player.
+  const contested = g.pots.filter((p) => !p.refund),
+    sidePots =
+      new Set(contested.map((p) => [...p.eligible].sort((a, b) => a - b).join(','))).size > 1;
   const [raise, setRaise] = useState(g.legal.minTo),
     [rules, setRules] = useState(false),
-    [sent, setSent] = useState<number | null>(null);
-  useEffect(() => {
+    [sent, setSent] = useState<number | null>(null),
+    inFlight = useRef<number | null>(null);
+  // A new revision resets the raise input and the send lock during render
+  // (React's "adjust state when a prop changes" pattern, no effect needed).
+  const viewKey = `${g.id}:${g.revision}:${g.legal.minTo}`,
+    [seenKey, setSeenKey] = useState(viewKey);
+  if (seenKey !== viewKey) {
+    setSeenKey(viewKey);
     setRaise(g.legal.minTo);
     setSent(null);
-  }, [g.id, g.revision, g.legal.minTo]);
+  }
   const locked = sent === g.revision,
     legal = g.legal,
     pot = g.committed.reduce((a, b) => a + b, 0),
     act = (a: PokerAction) => {
-      if (!legal.enabled || locked) return;
+      // The ref also stops a second tap that lands before React re-renders.
+      if (!legal.enabled || locked || inFlight.current === g.revision) return;
+      inFlight.current = g.revision;
       setSent(g.revision);
-      onAction(a);
+      awaitAnswer(onAction(a), () => {
+        inFlight.current = null;
+        setSent(null);
+      });
     },
     point = (i: number) =>
       positions[
@@ -126,12 +153,6 @@ export function PokerTable({
     allIn =
       legal.canRaise ||
       (legal.enabled && legal.call > 0 && legal.call === g.stacks[seat]);
-  // Retry is possible when a host rejected a stale action without advancing state.
-  useEffect(() => {
-    if (sent === null) return;
-    const t = setTimeout(() => setSent(null), 2500);
-    return () => clearTimeout(t);
-  }, [sent]);
   return (
     <div className="p-club">
       <div className="p-dealer">
@@ -141,29 +162,29 @@ export function PokerTable({
         </span>
         <div>
           <small>
-            AI DEALER · 루미 <span>자동 진행</span>
+            딜러 루미 <span>자동 진행</span>
           </small>
           <p aria-live="polite">{eventText(g, names)}</p>
         </div>
         <span className="p-table-number">
-          TABLE
+          테이블
           <br />
-          <b>01</b>
+          <b>1번</b>
         </span>
       </div>
       <div className="p-table-wrap">
         <div className="p-table-grain" />
         <div className="p-felt">
           <span className="p-felt-brand">
-            HOHYEON CASINO<span>NO LIMIT · TEXAS HOLD'EM</span>
+            별빛 카지노<span>노 리밋 · 텍사스 홀덤</span>
           </span>
         </div>
         <div className="p-community">
           <span className="p-street">
             {g.phase === 'over'
-              ? 'HAND COMPLETE'
+              ? '핸드 종료'
               : g.phase === 'showdown'
-                ? 'SHOWDOWN'
+                ? '쇼다운'
                 : STREETS[g.street]}
           </span>
           <div className="p-board">
@@ -180,7 +201,7 @@ export function PokerTable({
           <div className="p-pot">
             <Coins size={19} />
             <span>
-              {g.phase === 'over' ? '정산한 팟' : 'TOTAL POT'}
+              {g.phase === 'over' ? '정산한 팟' : '전체 팟'}
               <b>{beom(pot)}</b>
             </span>
           </div>
@@ -213,7 +234,7 @@ export function PokerTable({
                     small={!self}
                   />
                 ))}
-                {g.folded[i] && <span className="p-fold-stamp">FOLD</span>}
+                {g.folded[i] && <span className="p-fold-stamp">폴드</span>}
               </div>
               <div className="p-seat-label">
                 <span className="p-seat-initial">
@@ -232,9 +253,12 @@ export function PokerTable({
                   </small>
                 </span>
                 {stack === 0 && g.phase !== 'over' && !g.folded[i] && (
-                  <em>ALL IN</em>
+                  <em>올인</em>
                 )}
               </div>
+              {away(i) && g.phase !== 'over' && (
+                <span className="seat-away">{AWAY_LABEL}</span>
+              )}
               {g.bets[i] > 0 && g.phase !== 'over' && (
                 <span className="p-seat-bet">
                   <i /> {beom(g.bets[i])}
@@ -286,9 +310,9 @@ export function PokerTable({
                 반환
               </small>
             ))}
-          {g.pots.filter((p) => !p.refund).length > 1 && (
+          {sidePots && (
             <small>
-              메인 팟과 사이드 팟은 각 팟에 참가한 친구들끼리 따로 정산했습니다.
+              메인 팟과 사이드 팟은 각 팟에 참가한 친구들끼리 따로 정산했어요.
             </small>
           )}
         </div>
@@ -298,10 +322,10 @@ export function PokerTable({
           <div className="p-turn-copy">
             <span>
               {seat < 0
-                ? 'SPECTATING'
+                ? '관전 중'
                 : legal.enabled
-                  ? 'YOUR TURN'
-                  : 'AT THE TABLE'}
+                  ? '내 차례'
+                  : '자리에 앉음'}
             </span>
             <strong>
               {seat < 0
@@ -314,7 +338,22 @@ export function PokerTable({
             </strong>
             <small>
               블라인드 {beom(g.smallBlind)} / {beom(g.bigBlind)}
+              {myRank && ` · 내 패: ${myRank}`}
             </small>
+            {g.turn >= 0 && (
+              <TurnTimer
+                deadline={g.turnDeadline}
+                total={TURN_LIMIT_MS.poker}
+                label={
+                  away(g.turn)
+                    ? AWAY_LABEL
+                    : g.turn === seat
+                      ? '내 차례'
+                      : `${names[g.turn]} 차례`
+                }
+                mine={g.turn === seat}
+              />
+            )}
           </div>
           {seat >= 0 && (
             <div className="p-actions">
@@ -373,7 +412,11 @@ export function PokerTable({
                     act({ kind: legal.canCheck ? 'check' : 'call' })
                   }
                 >
-                  {legal.canCheck ? '체크' : `콜 ${beom(legal.call)}`}
+                  {!legal.enabled
+                    ? '체크/콜'
+                    : legal.canCheck
+                      ? '체크'
+                      : `콜 ${beom(legal.call)}`}
                 </button>
                 <button
                   className="p-raise"
@@ -410,24 +453,25 @@ export function PokerTable({
       {rules && (
         <div className="p-rules">
           <p>
-            내 카드 2장과 공개 카드 5장 중 가장 좋은 5장으로 겨룹니다. 프리플롭
+            내 카드 2장과 공개 카드 5장 중 가장 좋은 5장으로 겨뤄요. 프리플롭
             → 플롭 → 턴 → 리버 순서로 베팅하며, 규칙 기반 AI 딜러가 카드 배분과
-            승패·사이드 팟을 자동 처리합니다.
+            승패·사이드 팟을 자동 처리해요.
           </p>
           <p>
-            최소 레이즈는 직전의 온전한 레이즈 이상입니다. 부족한 칩의 올인은
-            가능하며, 동점은 팟을 나눕니다. 상대가 받지 않은 베팅은
-            돌려드립니다.
+            최소 레이즈는 직전의 온전한 레이즈 이상이에요. 부족한 칩의 올인은
+            가능하며, 동점은 팟을 나눠요. 상대가 받지 않은 베팅은
+            돌려드려요.
           </p>
           <p>
-            바이인은 범 지갑에서 예약됩니다. 이번 판이 끝나면 남은 칩과 획득한
-            팟을 같은 지갑으로 정산합니다. 자리를 떠나면 이후 차례는 체크가
-            가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지
-            참가합니다.
+            바이인은 범 지갑에서 예약돼요. 이번 판이 끝나면 남은 칩과 획득한
+            팟을 같은 지갑으로 정산해요. 블라인드는 바이인에 맞춰 정해지고
+            (빅 블라인드 = 바이인의 1/50, 최소 200범), 딜러 버튼은 판마다 한
+            자리씩 돌아가요.
           </p>
           <p>
-            지갑은 이 방장이 여는 모든 게임에서 공유합니다. 방장 연결이 끝난
-            미완료 판은 방장이 다음 방을 열 때 예약금을 반환합니다.
+            차례마다 60초 안에 선택하지 않거나 자리를 떠나면 서버가 체크가
+            가능할 때 체크, 그 외에는 폴드해요. 이미 올인했다면 쇼다운까지
+            참가해요. 모두 방을 떠나도 판은 끝까지 진행되어 정산돼요.
           </p>
         </div>
       )}

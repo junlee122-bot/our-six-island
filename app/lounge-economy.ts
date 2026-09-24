@@ -11,14 +11,44 @@ export type GameEscrow = {
   state: 'reserved' | 'settled' | 'void';
   result: number[];
 };
+/** House → account (`grant`, minted) or account → house (`spend`). */
+export type LedgerEntry = {
+  id: string;
+  type: 'grant' | 'spend';
+  wallet: string;
+  amount: number;
+  at: number;
+  reason: string;
+};
+/** Totals folded out of the hot `games` map (see `compactLedger`). */
+export type LedgerArchive = {
+  games: number;
+  /** Casino net of archived blackjack rounds. */
+  houseNet: number;
+  accounts: Record<string, { games: number; net: number }>;
+};
 export type LoungeLedger = {
   version: 1;
   revision: number;
   accounts: Record<string, number>;
   games: Record<string, GameEscrow>;
-  // Optional only for legacy v1 ledgers. Casino net is the counterparty to blackjack.
+  // Optional only for legacy v1 ledgers. Casino net is the counterparty to blackjack
+  // plus every `spend` entry.
   houseBalance?: number;
+  /** Total minted by `grant` entries (daily bonus / bankruptcy relief). */
+  granted?: number;
+  /** Total moved account → house by `spend` entries. */
+  spent?: number;
+  /** Most recent grant/spend entries (older ones stay in the totals). */
+  entries?: LedgerEntry[];
+  /** Last claimed KST day number per wallet for the daily grant. */
+  daily?: Record<string, number>;
+  archive?: LedgerArchive;
 };
+/** Settled/void games kept in hot state; older ones are folded into `archive`. */
+export const LEDGER_HOT_GAMES = 500;
+const LEDGER_ENTRY_LIMIT = 200;
+const LEDGER_GAME_SANITY_LIMIT = 100_000;
 const safe = (n: unknown): n is number =>
   typeof n === 'number' && Number.isSafeInteger(n);
 const walletKey = (id: unknown): id is string =>
@@ -56,7 +86,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
     fail('공통 지갑 기록을 읽을 수 없습니다.');
   const accounts = Object.entries(v.accounts),
     games = Object.entries(v.games);
-  if (accounts.length > 512 || games.length > 10_000)
+  // Settled games are archived by compactLedger, so only a corrupt world gets here.
+  if (accounts.length > 512 || games.length > LEDGER_GAME_SANITY_LIMIT)
     fail('공통 지갑의 저장 한도에 도달했습니다.');
   for (const [id, amount] of accounts)
     if (!walletKey(id) || !safe(amount) || amount < 0)
@@ -97,12 +128,44 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
     if (g.game === 'blackjack' && g.state === 'settled')
       casinoNet -= sum(g.result);
   }
-  const houseBalance = v.houseBalance === undefined ? 0 : v.houseBalance;
+  const houseBalance = v.houseBalance === undefined ? 0 : v.houseBalance,
+    granted = v.granted ?? 0,
+    spent = v.spent ?? 0,
+    archive = v.archive ?? { games: 0, houseNet: 0, accounts: {} };
+  if (
+    !safe(granted) ||
+    granted < 0 ||
+    !safe(spent) ||
+    spent < 0 ||
+    !archive ||
+    !safe(archive.games) ||
+    archive.games < 0 ||
+    !safe(archive.houseNet) ||
+    !archive.accounts ||
+    typeof archive.accounts !== 'object' ||
+    Object.values(archive.accounts).some(
+      (a) => !a || !safe(a.games) || !safe(a.net),
+    ) ||
+    (v.entries !== undefined &&
+      (!Array.isArray(v.entries) ||
+        v.entries.some(
+          (e) =>
+            !e ||
+            !['grant', 'spend'].includes(e.type) ||
+            !safe(e.amount) ||
+            e.amount <= 0,
+        ))) ||
+    (v.daily !== undefined &&
+      (typeof v.daily !== 'object' ||
+        Object.values(v.daily).some((d) => !safe(d))))
+  )
+    fail('공통 지갑 기록을 읽을 수 없습니다.');
+  // Invariant: balances + reservations + house − minted grants = initial total.
   if (
     !safe(houseBalance) ||
-    houseBalance !== casinoNet ||
+    houseBalance !== casinoNet + archive.houseNet + spent ||
     !safe(held) ||
-    sum(accounts.map(([, amount]) => amount)) + held + houseBalance !==
+    sum(accounts.map(([, amount]) => amount)) + held + houseBalance - granted !==
       accounts.length * INITIAL_BEOM
   )
     fail('공통 지갑 총액이 일치하지 않습니다.');
@@ -203,6 +266,135 @@ export function settleGame(
   escrow.wallets.forEach((wallet, i) => {
     next.accounts[wallet] += escrow.deposits[i] + result[i];
   });
+  const compact = compactLedger(next);
+  validateLedger(compact);
+  return compact;
+}
+/**
+ * Keep every reserved game plus the most recent `keep` settled/void games.
+ * Older finished games fold into per-account counters and the archived casino
+ * net, so validateLedger's totals are unchanged. Returns the same object when
+ * nothing needs archiving.
+ */
+export function compactLedger(
+  ledger: LoungeLedger,
+  keep = LEDGER_HOT_GAMES,
+): LoungeLedger {
+  const finished = Object.entries(ledger.games).filter(
+    ([, g]) => g.state !== 'reserved',
+  );
+  if (finished.length <= keep) return ledger;
+  const next = structuredClone(ledger),
+    archive = (next.archive ??= { games: 0, houseNet: 0, accounts: {} });
+  for (const [id, g] of finished.slice(0, finished.length - keep)) {
+    archive.games++;
+    if (g.game === 'blackjack' && g.state === 'settled')
+      archive.houseNet -= sum(g.result);
+    g.wallets.forEach((wallet, i) => {
+      const a = (archive.accounts[wallet] ??= { games: 0, net: 0 });
+      a.games++;
+      a.net += g.result[i];
+    });
+    delete next.games[id];
+  }
+  return next;
+}
+function entry(
+  ledger: LoungeLedger,
+  type: LedgerEntry['type'],
+  wallet: string,
+  amount: number,
+  id: string,
+  at: number,
+  reason: string,
+) {
+  validateLedger(ledger);
+  if (!walletKey(wallet) || !own(ledger.accounts, wallet))
+    fail('지갑 식별자가 올바르지 않습니다.');
+  if (!safe(amount) || amount <= 0) fail('금액이 올바르지 않습니다.');
+  if (ledger.entries?.some((e) => e.id === id))
+    fail('이미 처리한 지갑 기록입니다.');
+  const next = changed(ledger);
+  if (type === 'grant') {
+    next.accounts[wallet] += amount;
+    next.granted = (next.granted ?? 0) + amount;
+  } else {
+    if (next.accounts[wallet] < amount) fail('잔액이 부족해요.');
+    next.accounts[wallet] -= amount;
+    next.houseBalance = (next.houseBalance ?? 0) + amount;
+    next.spent = (next.spent ?? 0) + amount;
+  }
+  next.entries = [
+    ...(next.entries ?? []),
+    { id, type, wallet, amount, at, reason: reason.slice(0, 40) },
+  ].slice(-LEDGER_ENTRY_LIMIT);
+  validateLedger(next);
+  return next;
+}
+/** House → account. The minted amount is tracked in `granted`. */
+export const grantBeom = (
+  ledger: LoungeLedger,
+  wallet: string,
+  amount: number,
+  id: string,
+  at: number,
+  reason = 'grant',
+) => entry(ledger, 'grant', wallet, amount, id, at, reason);
+/** Account → house (a purchase or fee). */
+export const spendBeom = (
+  ledger: LoungeLedger,
+  wallet: string,
+  amount: number,
+  id: string,
+  at: number,
+  reason = 'spend',
+) => entry(ledger, 'spend', wallet, amount, id, at, reason);
+export const DAILY_GRANT = 3_000;
+export const DAILY_RELIEF_BELOW = 5_000;
+export const DAILY_RELIEF_TO = 10_000;
+const KST_OFFSET = 9 * 3_600_000,
+  DAY = 86_400_000;
+/** Day number in Korea Standard Time (UTC+9, no DST). */
+export const kstDay = (now: number) => Math.floor((now + KST_OFFSET) / DAY);
+/** Next KST midnight after `now`, as an epoch in ms. */
+export const nextKstMidnight = (now: number) =>
+  (kstDay(now) + 1) * DAY - KST_OFFSET;
+export function dailyGrantInfo(
+  ledger: LoungeLedger,
+  wallet: string | undefined,
+  now: number,
+) {
+  const balance = wallet ? (ledger.accounts[wallet] ?? 0) : 0,
+    claimed = !!wallet && ledger.daily?.[wallet] === kstDay(now),
+    amount =
+      balance < DAILY_RELIEF_BELOW ? DAILY_RELIEF_TO - balance : DAILY_GRANT;
+  return {
+    available: !!wallet && own(ledger.accounts, wallet) && !claimed,
+    amount,
+    nextAt: claimed ? nextKstMidnight(now) : now,
+  };
+}
+/**
+ * Once per KST day: 3,000범, or a top-up to 10,000범 when the available
+ * balance (reservations excluded) is below 5,000범.
+ */
+export function claimDailyGrant(
+  ledger: LoungeLedger,
+  wallet: string,
+  now: number,
+): LoungeLedger {
+  const info = dailyGrantInfo(ledger, wallet, now);
+  if (!info.available) fail('오늘의 범은 이미 받았어요. 내일 다시 받을 수 있어요.');
+  const day = kstDay(now),
+    next = grantBeom(
+      ledger,
+      wallet,
+      info.amount,
+      `daily-${day}-${wallet}`,
+      now,
+      info.amount === DAILY_GRANT ? 'daily' : 'daily-relief',
+    );
+  next.daily = { ...next.daily, [wallet]: day };
   validateLedger(next);
   return next;
 }

@@ -1,0 +1,500 @@
+/* Loaded with the table chunk (split out of the entry CSS). */
+.s-club {
+  max-width: 1050px;
+  margin: 0 auto;
+  color: #2f3d36;
+}
+.s-host {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: #fffaf2;
+  border: 1px solid #e4dac9;
+  border-radius: 18px 18px 0 0;
+}
+.s-host > span {
+  display: grid;
+  place-items: center;
+  background: #a44437;
+  color: #fff0d6;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.s-host > div {
+  flex: 1;
+  min-width: 0;
+}
+.s-host small {
+  color: #93836c;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+.s-host p {
+  margin: 5px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.s-host > b {
+  font:
+    28px Georgia,
+    serif;
+  color: #a34636;
+  text-align: center;
+}
+.s-host > b small {
+  display: block;
+  font: 11px sans-serif;
+  letter-spacing: 2px;
+}
+.s-table {
+  padding: 26px 30px 22px;
+  border: 9px solid #654c3d;
+  border-top-width: 5px;
+  border-radius: 0 0 36px 36px;
+  background: radial-gradient(ellipse at 50% 45%, #456751, #223e32);
+  box-shadow:
+    inset 0 0 45px #142e3180,
+    0 8px 20px #312f2418;
+}
+.s-opponents {
+  display: grid;
+  gap: 16px;
+  align-items: stretch;
+}
+.s-seat {
+  min-width: 0;
+  padding: 11px 10px;
+  background: #1b30234d;
+  border: 1px solid #b1bc9f30;
+  border-radius: 14px;
+  color: #f2eadb;
+  text-align: center;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.s-seat.current {
+  border: 2px solid #eac27c;
+  padding: 10px 9px;
+  background: #93aa6030;
+  box-shadow: 0 0 0 3px #eac27c12;
+}
+.s-seat.winner {
+  border-color: #ffcc76;
+  background: #b08e3638;
+}
+.s-seat.folded {
+  opacity: 0.55;
+}
+.s-seat-name {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 13px;
+}
+.s-seat-name strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.s-seat-name em {
+  font-size: 11px;
+  font-style: normal;
+  padding: 1px 4px;
+  background: #d8c096;
+  color: #283d30;
+  border-radius: 3px;
+}
+.s-seat-name > span {
+  font-size: 11px;
+  color: #cec7ae;
+}
+.s-seat.current .s-seat-name > span {
+  color: #ffdc91;
+}
+.s-hand {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  min-height: 96px;
+  margin: 12px 0 8px;
+}
+.s-card {
+  width: 55px;
+  height: 86px;
+  display: inline-flex;
+  position: relative;
+  border: 2px solid #e7dfc7;
+  border-radius: 5px;
+  background: #fffdf3;
+  box-shadow: 1px 4px 3px #0004;
+  overflow: hidden;
+  flex-shrink: 0;
+  animation: s-deal 0.42s both;
+}
+.s-card:nth-child(2) {
+  animation-delay: 0.08s;
+  transform: rotate(4deg);
+}
+.s-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+.s-card small {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: #fffdf2ed;
+  font-size: 11px;
+  font-weight: 800;
+  color: #493a2d;
+}
+.s-card.back {
+  color: #e8b99e;
+  justify-content: center;
+  align-items: center;
+  background: repeating-linear-gradient(45deg, #8c322c 0 3px, #973a31 3px 6px);
+  border-color: #bf6350;
+}
+.s-card.back::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid #e19e79aa;
+  border-radius: 2px;
+}
+.s-rank {
+  display: block;
+  font-size: 12px;
+  color: #f2cc85;
+  min-height: 18px;
+}
+.s-seat-money {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.s-seat-money small {
+  font-size: 11px;
+  color: #bfc9b6;
+}
+.s-pot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 13px;
+  align-items: center;
+  justify-content: center;
+  color: #efd6a2;
+  padding: 21px 6px;
+  text-align: left;
+}
+.s-pot small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.s-pot strong {
+  font-size: 28px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.s-pot > span {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 11px;
+  color: #c2cbb6;
+}
+.s-seat.self {
+  max-width: 390px;
+  margin: auto;
+  padding: 13px 22px;
+}
+.s-seat.self .s-card {
+  width: 78px;
+  height: 121px;
+}
+.s-seat.self .s-hand {
+  margin: 12px 0;
+}
+.s-seat.self .s-card small {
+  font-size: 11px;
+}
+.s-seat.self .s-rank {
+  font-size: 16px;
+}
+.s-out,
+.s-spectator {
+  color: #c2cbb6;
+  font-size: 12px;
+  text-align: center;
+}
+.s-controls {
+  padding: 18px 0 12px;
+}
+.s-turn {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 13px;
+  text-align: center;
+  color: #626556;
+}
+.s-action-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 9px;
+}
+.s-controls button {
+  border: 1px solid #d9cbb7;
+  border-radius: 9px;
+  min-height: 48px;
+  background: #fffaf0;
+  font-weight: 800;
+  color: #584d3d;
+  cursor: pointer;
+  font-size: 14px;
+}
+.s-controls button small {
+  display: block;
+  font-weight: 500;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.s-controls button.s-call {
+  background: #31543f;
+  border-color: #31543f;
+  color: #fff4d7;
+}
+.s-controls button.s-fold {
+  color: #a2483a;
+}
+.s-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.s-controls button:focus-visible,
+.s-rules summary:focus-visible {
+  outline: 3px solid #ad7030;
+  outline-offset: 2px;
+}
+.s-raise-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 2fr) 1fr 1fr 1.3fr;
+  align-items: end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.s-raise-row label {
+  font-size: 11px;
+  color: #8b7961;
+}
+.s-raise-row input {
+  display: block;
+  width: 100%;
+  height: 43px;
+  margin-top: 4px;
+  border: 1px solid #d9cbb7;
+  border-radius: 8px;
+  padding: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: #fffdf8;
+}
+.s-raise-row button {
+  min-height: 43px;
+  font-size: 12px;
+}
+.s-controls .s-raise {
+  background: #a64c39;
+  border-color: #a64c39;
+  color: white;
+}
+.s-raise-help {
+  display: block;
+  margin: 8px 0;
+  font-size: 11px;
+  color: #8b7961;
+  line-height: 1.6;
+}
+.s-result {
+  padding: 24px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #93672c;
+}
+.s-result > span {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #697163;
+}
+.s-rules,
+.s-history {
+  padding: 16px 18px;
+  margin-top: 10px;
+  background: #fffaf2;
+  border: 1px solid #e4dac9;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.s-rules summary,
+.s-history summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+.s-rules p {
+  margin: 14px 0;
+  color: #6f715f;
+}
+.s-rank-list {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 4px 16px;
+  background: #f3eddf;
+  padding: 12px;
+  border-radius: 8px;
+}
+.s-history > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.s-history .s-hand {
+  margin: 5px 0;
+}
+@media (max-width: 600px) {
+  .s-host {
+    gap: 9px;
+    padding: 12px 10px;
+  }
+  .s-host > span {
+    width: 32px;
+    height: 32px;
+  }
+  .s-host p {
+    font-size: 11px;
+  }
+  .s-host small {
+    font-size: 11px;
+  }
+  .s-table {
+    padding: 13px 9px;
+    border-width: 5px;
+    border-radius: 0 0 24px 24px;
+  }
+  .s-opponents {
+    gap: 6px;
+  }
+  .s-seat {
+    padding: 7px 5px;
+    border-radius: 9px;
+  }
+  .s-seat.current {
+    padding: 6px 4px;
+  }
+  .s-seat-name {
+    font-size: 11px;
+  }
+  .s-seat-name > span {
+    font-size: 11px;
+  }
+  .s-hand {
+    gap: 4px;
+    margin: 9px 0 5px;
+    min-height: 56px;
+  }
+  .s-card {
+    width: 34px;
+    height: 53px;
+    border-width: 1px;
+    border-radius: 3px;
+  }
+  .s-card small {
+    font-size: 11px;
+    padding: 0 1px;
+    right: 0;
+    bottom: 0;
+  }
+  .s-card.back svg {
+    width: 15px;
+  }
+  .s-rank {
+    font-size: 11px;
+  }
+  .s-seat-money {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .s-seat-money small {
+    font-size: 11px;
+  }
+  .s-pot {
+    padding: 13px 0;
+    gap: 3px 9px;
+  }
+  .s-pot strong {
+    font-size: 22px;
+  }
+  .s-pot > span {
+    font-size: 11px;
+  }
+  .s-seat.self {
+    max-width: 270px;
+    padding: 10px 16px;
+  }
+  .s-seat.self .s-card {
+    width: 66px;
+    height: 103px;
+  }
+  .s-seat.self .s-hand {
+    margin: 8px 0;
+  }
+  .s-seat.self .s-seat-money {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .s-controls {
+    padding-top: 13px;
+  }
+  .s-turn {
+    font-size: 11px;
+  }
+  .s-raise-row {
+    grid-template-columns: minmax(88px, 1.6fr) 0.8fr 0.8fr 1fr;
+    gap: 5px;
+  }
+  .s-rules,
+  .s-history {
+    padding: 12px;
+    font-size: 11px;
+  }
+  .s-rank-list {
+    gap: 6px;
+    padding: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .s-card {
+    animation: none;
+  }
+}

@@ -1,4 +1,5 @@
 import {
+  dailyGrantInfo,
   newLoungeLedger,
   readLoungeLedger,
   validateLedger,
@@ -200,12 +201,13 @@ export class LoungeBank {
       if (g.state === 'reserved') next = voidGame(next, id);
     this.commit(next);
   }
-  view(wallet: string | undefined) {
+  view(wallet: string | undefined, now = Date.now()) {
     if (!wallet)
       return {
         balance: 0,
         held: 0,
         history: [] as { id: string; game: string; delta: number }[],
+        daily: dailyGrantInfo(this.ledger, undefined, now),
       };
     let held = 0;
     const history: { id: string; game: string; delta: number }[] = [];
@@ -219,6 +221,7 @@ export class LoungeBank {
       balance: this.ledger.accounts[wallet] ?? 0,
       held,
       history: history.slice(-8).reverse(),
+      daily: dailyGrantInfo(this.ledger, wallet, now),
     };
   }
 }

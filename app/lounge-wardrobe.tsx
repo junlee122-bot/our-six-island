@@ -4,7 +4,8 @@
 import { useId, useState } from 'react';
 import { Check, Bookmark, Download, RotateCcw, ArrowRight } from 'lucide-react';
 import { AvatarView } from './avatar-view';
-import { ACTORS, ACTOR_COLORS } from './theater-data';
+import { ACTORS, ACTOR_COLORS } from './lounge-roster';
+import { PALETTES, SHOP_BY_ID } from './lounge-life';
 import {
   COLLECTIONS,
   HAIR_COLORS,
@@ -27,6 +28,7 @@ import {
 } from './lounge-color';
 import { loungeSprites } from './lounge-sprites';
 import { LOUNGE_ASSETS } from './lounge-assets';
+import { josa, NAMES } from './lounge-text';
 import type { Motion } from './character-style';
 import './lounge-wardrobe-club.css';
 
@@ -170,6 +172,7 @@ export function Wardrobe({
   entry,
   onEnter,
   notice,
+  unlocks = [],
 }: {
   save: LoungeSave;
   onChange: (save: LoungeSave) => void;
@@ -177,6 +180,8 @@ export function Wardrobe({
   entry: boolean;
   onEnter: () => void;
   notice: (s: string) => void;
+  /** Shop unlocks ('palette-pastel', 'palette-neon' add hair swatch rows). */
+  unlocks?: readonly string[];
 }) {
   const actor = save.actor,
     look = save.looks[actor],
@@ -237,7 +242,9 @@ export function Wardrobe({
       const a = document.createElement('canvas');
       a.width = 780;
       a.height = 900;
-      (await loungeSprites()).draw(a, actor, look, motion, 0);
+      const sprites = await loungeSprites();
+      await sprites.ensure(actor, look);
+      sprites.draw(a, actor, look, motion, 0);
       ctx.drawImage(a, 110, 95);
       ctx.fillStyle = '#202c3d';
       ctx.font = 'bold 52px "Malgun Gothic",sans-serif';
@@ -547,6 +554,33 @@ export function Wardrobe({
                     ))}
                   </div>
                 </div>
+                {(Object.keys(PALETTES) as (keyof typeof PALETTES)[])
+                  .filter((id) => unlocks.includes(id))
+                  .map((id) => (
+                    <div className="l-hair-options l-hair-palette" key={id}>
+                      <h3>
+                        {SHOP_BY_ID[id]?.name ?? '팔레트'}
+                        <small> · 상점에서 산 색</small>
+                      </h3>
+                      <div>
+                        {PALETTES[id].map((hex, i) => (
+                          <button
+                            key={hex}
+                            aria-pressed={look.hairColor?.toLowerCase() === hex}
+                            aria-label={`${SHOP_BY_ID[id]?.name ?? '팔레트'} ${i + 1}번 색`}
+                            onClick={() => change({ hairColor: hex })}
+                          >
+                            <span style={{ background: hex }}>
+                              {look.hairColor?.toLowerCase() === hex && (
+                                <Check size={18} />
+                              )}
+                            </span>
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 <ColorEditor
                   key={`hair-${actor}`}
                   label="나만의 머리 색"
@@ -657,7 +691,7 @@ export function Wardrobe({
               자동으로 저장돼요
             </span>
             <button className="l-primary" onClick={onEnter}>
-              {entry ? '이 모습으로 입장' : '마을로 나가기'}
+              {entry ? '이 모습으로 입장' : `${josa(NAMES.village, '으로/로')} 돌아가기`}
               <ArrowRight size={18} />
             </button>
           </div>

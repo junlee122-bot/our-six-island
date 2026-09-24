@@ -38,7 +38,7 @@ test('nearby entrance requires proximity and clear walkable ground', () => {
     null,
   );
 
-  const throughWall = { x: home.entry.x, z: home.entry.z - 6.4 };
+  const throughWall = { x: home.entry.x, z: home.z - home.depth / 2 - 0.9 };
   assert.equal(villageCanWalk(throughWall), true);
   assert.equal(villageNearbyEntrance(throughWall, 0, 7), null);
 });

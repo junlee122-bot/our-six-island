@@ -87,32 +87,32 @@ export function resolveSeotda(hands: { seat: number; cards: string[] }[]) {
     return {
       winners: special('assassin').map((h) => h.seat),
       replay: false,
-      reason: '암행어사가 13·18광땡을 잡았습니다.',
+      reason: '암행어사가 13·18광땡을 잡았어요.',
     };
   // A 38 bright pair and a ten pair cannot be caught or replayed by lower specials.
   if (high <= 29 && special('mung').length)
     return {
       winners: [],
       replay: true,
-      reason: '멍텅구리 구사! 9땡 이하이므로 재경기합니다.',
+      reason: '멍텅구리 구사! 9땡 이하이므로 재경기해요.',
     };
   if (high >= 21 && high <= 29 && special('catcher').length)
     return {
       winners: special('catcher').map((h) => h.seat),
       replay: false,
-      reason: '땡잡이가 1~9땡을 잡았습니다.',
+      reason: '땡잡이가 1~9땡을 잡았어요.',
     };
   if (high <= 20 && special('gusa').length)
     return {
       winners: [],
       replay: true,
-      reason: '구사! 알리 이하이므로 재경기합니다.',
+      reason: '구사! 알리 이하이므로 재경기해요.',
     };
   if (best.length > 1)
     return {
       winners: [],
       replay: true,
-      reason: `${best[0].rank.label} 동률! 다이하지 않은 친구들이 재경기합니다.`,
+      reason: `${best[0].rank.label} 동률! 다이하지 않은 친구들이 재경기해요.`,
     };
   return {
     winners: [best[0].seat],
@@ -199,7 +199,7 @@ function finish(g: SeotdaMatch, winners: number[], reason: string) {
 function advance(g: SeotdaMatch, after: number) {
   const remaining = alive(g);
   if (remaining.length === 1) {
-    finish(g, remaining, '다른 친구들이 다이했습니다.');
+    finish(g, remaining, '다른 친구들이 다이했어요.');
     return;
   }
   const canAct = active(g);
@@ -247,6 +247,7 @@ export function newSeotda(
   count: number,
   buyIn: number,
   deck = shuffleSeotdaCards(),
+  first = 0,
 ): SeotdaMatch {
   if (
     typeof id !== 'string' ||
@@ -258,7 +259,10 @@ export function newSeotda(
     !Number.isSafeInteger(buyIn) ||
     buyIn < 100 ||
     buyIn > 1_000_000_000 ||
-    !validDeck(deck)
+    !validDeck(deck) ||
+    !Number.isInteger(first) ||
+    first < 0 ||
+    first >= count
   )
     throw new Error('섯다 테이블 설정이 올바르지 않습니다.');
   const zero = () => Array(count).fill(0);
@@ -267,7 +271,7 @@ export function newSeotda(
     revision: 0,
     phase: 'betting',
     round: 1,
-    first: 0,
+    first,
     ante: 100,
     buyIn,
     stacks: Array(count).fill(buyIn),
@@ -291,7 +295,7 @@ export function newSeotda(
   for (let i = 0; i < count; i++) commit(g, i, g.ante);
   g.bets = zero(); // The ante is in the pot, not a bet to call this round.
   event(g, 'deal', -1, count * g.ante);
-  advance(g, -1);
+  advance(g, first - 1);
   return g;
 }
 export function seotdaLegal(g: SeotdaMatch, seat: number) {

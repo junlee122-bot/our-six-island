@@ -38,3 +38,6 @@ next-env.d.ts
 /work/
 *.tsbuildinfo
 /supabase/.temp/
+
+# Pages builds made outside docs/ (CI / Actions deploy)
+/_site/

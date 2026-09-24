@@ -92,6 +92,8 @@ export type GoMotionStep =
   | { kind: 'steal'; cards: { card: string; from: number }[] }
   | { kind: 'announce'; text: string };
 export type GoMotion = { seq: number; actor: number; steps: GoMotionStep[] };
+/** A public caption for the latest turn. `seat` is the acting player, -1 for the dealer. */
+export type GoEvent = { seat: number; text: string };
 export type GoMatch = {
   id: string;
   hands: string[][];
@@ -107,11 +109,21 @@ export type GoMatch = {
   winner: number | null;
   reason: string;
   result: number[];
-  events: string[];
+  events: GoEvent[];
   last: string[];
   ply: number;
   revision: number;
   motion: GoMotion | null;
+  /** Seat that played first this round (older snapshots: 0). */
+  first?: number;
+  /** Cards shown to every seat, e.g. the four cards of a 총통 hand. */
+  revealed?: { seat: number; cards: string[] }[];
+  /** Per-seat reservation (the maximum loss) agreed for this round. */
+  stake?: number;
+  /** Actual 범 settlement, filled in by the room when the round is settled. */
+  beom?: number[];
+  /** True when at least one loser paid less than the points because of the stake cap. */
+  capped?: boolean;
 };
 export type GoView = Omit<GoMatch, 'hands' | 'deck'> & {
   hand: string[];
@@ -128,11 +140,22 @@ export function shuffleCards() {
   }
   return deck;
 }
-export function newGo(id: string, deck: string[]): GoMatch {
+/** Upgrade snapshots stored before events carried a seat or `first` existed. */
+export function normalizeGo(g: GoMatch): GoMatch {
+  const events = (g.events as unknown[]).map((e) =>
+    typeof e === 'string'
+      ? { seat: -1, text: e }
+      : (e as GoEvent),
+  );
+  return { ...g, events, first: g.first ?? 0 };
+}
+export const GO_POINT_BEOM = 100;
+export function newGo(id: string, deck: string[], first = 0): GoMatch {
   if (
     deck.length !== 48 ||
     new Set(deck).size !== 48 ||
-    deck.some((c) => !CARD_INFO.has(c))
+    deck.some((c) => !CARD_INFO.has(c)) ||
+    ![0, 1, 2].includes(first)
   )
     throw new Error('Invalid 48-card deck');
   const hands = [deck.slice(0, 7), deck.slice(7, 14), deck.slice(14, 21)],
@@ -143,7 +166,8 @@ export function newGo(id: string, deck: string[]): GoMatch {
       deck: deck.slice(27),
       floor,
       captured: [[], [], []],
-      turn: 0,
+      turn: first,
+      first,
       phase: 'play',
       options: [],
       pending: null,
@@ -152,20 +176,25 @@ export function newGo(id: string, deck: string[]): GoMatch {
       winner: null,
       reason: '',
       result: [0, 0, 0],
-      events: ['한 사람당 7장, 바닥 6장으로 시작합니다.'],
+      events: [{ seat: -1, text: '한 사람당 7장, 바닥 6장으로 시작합니다.' }],
       last: [],
       ply: 0,
       revision: 0,
       motion: null,
     };
-  const four = (cards: string[]) =>
-      Array.from({ length: 12 }, (_, i) => i + 1).some(
-        (m) => cards.filter((c) => cardInfo(c).month === m).length === 4,
-      ),
-    winners = hands.map((h, i) => (four(h) ? i : -1)).filter((i) => i >= 0);
-  if (four(floor) || winners.length > 1) {
+  const fourOf = (cards: string[]) => {
+      for (let m = 1; m <= 12; m++) {
+        const same = cards.filter((c) => cardInfo(c).month === m);
+        if (same.length === 4) return same;
+      }
+      return null;
+    },
+    winners = hands.map((h, i) => (fourOf(h) ? i : -1)).filter((i) => i >= 0);
+  // Every seat sees the four cards that ended the round.
+  g.revealed = winners.map((seat) => ({ seat, cards: fourOf(hands[seat])! }));
+  if (fourOf(floor) || winners.length > 1) {
     g.phase = 'over';
-    g.reason = '같은 월 네 장 · 다시 섞기';
+    g.reason = '같은 월 네 장 · 이번 판은 무효예요. 준비하면 새로 섞어요.';
   } else if (winners.length === 1) {
     g.phase = 'over';
     g.winner = winners[0];
@@ -173,6 +202,7 @@ export function newGo(id: string, deck: string[]): GoMatch {
     g.result = [-5, -5, -5];
     g.result[g.winner] = 10;
   }
+  if (!g.revealed.length) delete g.revealed;
   return g;
 }
 export function goView(g: GoMatch, seat: number): GoView {
@@ -198,13 +228,19 @@ function normalCard(g: GoMatch, card: string, target: string | null) {
   else if (matches.length === 3) {
     take(g, card, matches);
     g.pending!.steals++;
-    g.events.push('뻑 묶음을 가져왔어요.');
+    say(g, '뻑 묶음을 가져왔어요.');
   } else {
     if (!target || !matches.includes(target))
       throw new Error('Capture choice required');
     take(g, card, [target]);
   }
 }
+function say(g: GoMatch, text: string) {
+  g.events.push({ seat: g.turn, text });
+}
+// The last card in a player's own hand never steals pi (house rule), so the
+// caption must not announce a steal that will not happen.
+const lastHandCard = (g: GoMatch) => g.hands[g.turn].length === 0;
 function stealJunk(g: GoMatch, times: number) {
   for (let n = 0; n < times; n++)
     for (let p = 0; p < 3; p++)
@@ -218,27 +254,65 @@ function stealJunk(g: GoMatch, times: number) {
         }
       }
 }
-function stop(g: GoMatch) {
-  const win = g.turn,
-    scores = g.captured.map(goScore),
+export type GoStopProjection = {
+  /** Winner's points after go bonus/multiplier and 멍따. */
+  points: number;
+  base: number;
+  go: number;
+  mungtta: boolean;
+  /** Points each seat pays (0 for the winner). */
+  owed: number[];
+  pibak: boolean[];
+  gwangbak: boolean[];
+  result: number[];
+};
+/**
+ * Settlement if `win` stopped now. 1·2고 add one point each; from 3고 the
+ * formula is (score + go) × 2^(go − 2): e.g. 4 points → 3고 14, 4고 32.
+ * 멍따 (7+ animals) doubles, and each loser doubles again for 피박 (1–5 pi
+ * while the winner scores pi) and 광박 (no bright while the winner scores
+ * bright).
+ */
+export function goStopProjection(
+  captured: string[][],
+  goCounts: number[],
+  win: number,
+): GoStopProjection {
+  const scores = captured.map(goScore),
     s = scores[win],
-    go = g.go[win],
+    go = goCounts[win] ?? 0,
+    mungtta = s.animalCount >= 7,
     points =
-      (go < 3 ? s.total + go : s.total * 2 ** (go - 2)) *
-      (s.animalCount >= 7 ? 2 : 1);
-  g.phase = 'over';
-  g.winner = win;
-  g.reason = `${points}점 스톱${go ? ` · ${go}고` : ''}`;
-  g.result = [0, 0, 0];
+      (go < 3 ? s.total + go : (s.total + go) * 2 ** (go - 2)) *
+      (mungtta ? 2 : 1),
+    owed = [0, 0, 0],
+    pibak = [false, false, false],
+    gwangbak = [false, false, false],
+    result = [0, 0, 0];
   for (let i = 0; i < 3; i++)
     if (i !== win) {
       let amount = points;
-      if (s.junk > 0 && scores[i].junkCount > 0 && scores[i].junkCount <= 5)
+      if (s.junk > 0 && scores[i].junkCount > 0 && scores[i].junkCount <= 5) {
         amount *= 2;
-      if (s.bright > 0 && scores[i].brightCount === 0) amount *= 2;
-      g.result[i] = -amount;
-      g.result[win] += amount;
+        pibak[i] = true;
+      }
+      if (s.bright > 0 && scores[i].brightCount === 0) {
+        amount *= 2;
+        gwangbak[i] = true;
+      }
+      owed[i] = amount;
+      result[i] = -amount;
+      result[win] += amount;
     }
+  return { points, base: s.total, go, mungtta, owed, pibak, gwangbak, result };
+}
+function stop(g: GoMatch) {
+  const win = g.turn,
+    p = goStopProjection(g.captured, g.go, win);
+  g.phase = 'over';
+  g.winner = win;
+  g.reason = `${p.points}점 스톱${p.go ? ` · ${p.go}고` : ''}${p.mungtta ? ' · 멍따' : ''}`;
+  g.result = p.result;
 }
 function nextTurn(g: GoMatch) {
   if (g.hands.every((h) => h.length === 0)) {
@@ -255,9 +329,14 @@ function finish(g: GoMatch) {
   const p = g.pending!;
   if (p.captured && g.floor.length === 0) {
     p.steals++;
-    g.events.push('쓸! 바닥을 모두 가져왔어요.');
+    say(
+      g,
+      lastHandCard(g)
+        ? '바닥을 모두 가져왔어요.'
+        : '쓸! 바닥을 모두 가져왔어요.',
+    );
   }
-  if (g.hands[g.turn].length) stealJunk(g, p.steals);
+  if (!lastHandCard(g)) stealJunk(g, p.steals);
   g.pending = null;
   g.options = [];
   g.ply++;
@@ -279,15 +358,20 @@ function drawAndResolve(g: GoMatch) {
       g.captured[g.turn].push(p.played, drawn);
       p.captured = true;
       p.steals++;
-      g.events.push('쪽! 같은 월 두 장을 만났어요.');
+      say(
+        g,
+        lastHandCard(g)
+          ? '같은 월 두 장을 만나 가져왔어요.'
+          : '쪽! 같은 월 두 장을 만났어요.',
+      );
     } else if (matches.length === 1) {
       g.floor.push(p.played, drawn);
-      g.events.push('뻑! 세 장이 바닥에 남았어요.');
+      say(g, '뻑! 세 장이 바닥에 남았어요.');
     } else if (matches.length === 2) {
       take(g, p.played, matches);
       g.captured[g.turn].push(drawn);
       p.steals++;
-      g.events.push('따닥! 같은 월 네 장을 가져왔어요.');
+      say(g, '따닥! 같은 월 네 장을 가져왔어요.');
     } else throw new Error('Impossible fifth card');
     finish(g);
     return;
@@ -298,6 +382,11 @@ function drawAndResolve(g: GoMatch) {
     return;
   }
   const drawMatches = matching(g.floor, drawn);
+  if (drawMatches.length === 2 && equivalent(drawMatches)) {
+    normalCard(g, drawn, drawMatches[0]);
+    finish(g);
+    return;
+  }
   if (drawMatches.length === 2) {
     p.stage = 'draw';
     g.options = drawMatches;
@@ -307,6 +396,12 @@ function drawAndResolve(g: GoMatch) {
   normalCard(g, drawn, null);
   finish(g);
 }
+// Two floor options of the same kind and pi value lead to the same score, so
+// the engine picks for the player instead of asking.
+const equivalent = (options: string[]) =>
+  options.length === 2 &&
+  cardInfo(options[0]).type === cardInfo(options[1]).type &&
+  junkValue(options[0]) === junkValue(options[1]);
 export type GoAction =
   | { kind: 'play'; card: string }
   | { kind: 'pick'; card: string }
@@ -321,6 +416,8 @@ function applyGoAction(
   const g = structuredClone(state);
   if (action.kind === 'play') {
     if (g.phase !== 'play' || !g.hands[seat].includes(action.card)) return null;
+    // Captions describe only the current turn.
+    g.events = [];
     g.hands[seat] = g.hands[seat].filter((c) => c !== action.card);
     g.pending = {
       played: action.card,
@@ -331,10 +428,13 @@ function applyGoAction(
       steals: 0,
     };
     const matches = matching(g.floor, action.card);
-    if (matches.length === 2) {
+    if (matches.length === 2 && !equivalent(matches)) {
       g.phase = 'choose';
       g.options = matches;
-    } else drawAndResolve(g);
+    } else {
+      if (matches.length === 2) g.pending.target = matches[0];
+      drawAndResolve(g);
+    }
     return g;
   }
   if (action.kind === 'pick') {
@@ -357,7 +457,7 @@ function applyGoAction(
   if (action.kind === 'go' && g.hands[seat].length) {
     g.go[seat]++;
     g.lastGoScore[seat] = goScore(g.captured[seat]).total;
-    g.events.push(`${g.go[seat]}고! 한 번 더 도전합니다.`);
+    say(g, `${g.go[seat]}고! 한 번 더 도전합니다.`);
     nextTurn(g);
     return g;
   }

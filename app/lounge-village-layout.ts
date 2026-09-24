@@ -14,10 +14,48 @@ export type VillagePlace = {
   roofColor: string;
   entry: VillagePoint;
   destination: VillageDestination;
+  /** kArchive model used for a resident home (procedural shell is the fallback). */
+  model?: VillageHouseModel;
 };
 
 export const VILLAGE_BOUNDS = { width: 80, depth: 60, radius: 0.35 } as const;
 export const VILLAGE_START: VillagePoint = { x: 0, z: 10 };
+
+/**
+ * Door height every resident home is normalized to. The walking figure is
+ * `VILLAGE_ACTOR_HEIGHT` (lounge-village-camera.ts) tall, i.e. about 0.9 of a
+ * door, so homes, civic buildings and the character share one scale.
+ */
+export const VILLAGE_DOOR_HEIGHT = 1.45;
+
+/**
+ * Real bounding boxes of the curated kArchive house GLBs (model units, +z is
+ * the front door side) and their measured door height / horizontal door offset.
+ * tests/lounge-village.test.mjs re-reads the GLB accessors to keep these honest.
+ */
+export const VILLAGE_HOUSE_MODELS = {
+  cottage: { width: 2.9687, height: 2.5253, depth: 3, door: 0.79, doorX: 0 },
+  cornerHouse: {
+    width: 3.2,
+    height: 2.4142,
+    depth: 2.7471,
+    door: 0.724,
+    doorX: -0.6,
+  },
+  courtyardHouse: {
+    width: 3.2,
+    height: 1.6486,
+    depth: 2.3623,
+    door: 0.6,
+    doorX: 0,
+  },
+} as const;
+export type VillageHouseModel = keyof typeof VILLAGE_HOUSE_MODELS;
+
+/** Scale that brings a model's door to `VILLAGE_DOOR_HEIGHT`. */
+export function villageHouseScale(model: VillageHouseModel) {
+  return VILLAGE_DOOR_HEIGHT / VILLAGE_HOUSE_MODELS[model].door;
+}
 
 export const VILLAGE_RIVER = {
   minZ: 14,
@@ -87,6 +125,17 @@ const homePositions: readonly VillagePoint[] = [
   { x: -20, z: -6 },
   { x: 20, z: -6 },
 ];
+// The five-house row alternates the two narrower models; the wide courtyard
+// house sits on the roomier side lots.
+const homeModels: readonly VillageHouseModel[] = [
+  'cornerHouse',
+  'cottage',
+  'cornerHouse',
+  'cottage',
+  'cornerHouse',
+  'courtyardHouse',
+  'courtyardHouse',
+];
 const homeColors = [
   '#f2c789',
   '#e9b9a7',
@@ -106,28 +155,44 @@ const roofColors = [
   '#a56851',
 ];
 
-const makePlace = (place: Omit<VillagePlace, 'entry'>): VillagePlace => ({
+const round = (n: number) => Math.round(n * 1000) / 1000;
+
+const makePlace = (
+  place: Omit<VillagePlace, 'entry'>,
+  doorX = 0,
+): VillagePlace => ({
   ...place,
   // All entrances face the plaza (+z) and include a small step beyond the wall.
-  entry: { x: place.x, z: place.z + place.depth / 2 + 1 },
+  entry: {
+    x: round(place.x + doorX),
+    z: round(place.z + place.depth / 2 + 1),
+  },
 });
 
 export const VILLAGE_PLACES: readonly VillagePlace[] = [
-  ...homePositions.map((point, actor) =>
-    makePlace({
-      id: `home-${actor}`,
-      name: `${homeNames[actor]}의 집`,
-      subtitle: '주민의 집',
-      kind: 'home',
-      actor,
-      ...point,
-      width: 4.8,
-      depth: 4.8,
-      color: homeColors[actor],
-      roofColor: roofColors[actor],
-      destination: 'bedroom',
-    }),
-  ),
+  ...homePositions.map((point, actor) => {
+    const model = homeModels[actor];
+    const spec = VILLAGE_HOUSE_MODELS[model],
+      scale = villageHouseScale(model);
+    return makePlace(
+      {
+        id: `home-${actor}`,
+        name: `${homeNames[actor]}의 집`,
+        subtitle: '주민의 집',
+        kind: 'home',
+        actor,
+        ...point,
+        // Colliders follow the scaled model's real footprint.
+        width: round(spec.width * scale + 0.1),
+        depth: round(spec.depth * scale + 0.1),
+        color: homeColors[actor],
+        roofColor: roofColors[actor],
+        destination: 'bedroom',
+        model,
+      },
+      spec.doorX * scale,
+    );
+  }),
   makePlace({
     id: 'hall',
     name: '범마을 회관',
@@ -194,6 +259,15 @@ export const VILLAGE_FARMLAND = {
   depth: 3,
 } as const;
 export const VILLAGE_FARMLAND_ENTRY: VillagePoint = { x: 8.75, z: 4.45 };
+/** "범타듀 상점": a small market stall west of the plaza (faces +z). */
+export const VILLAGE_MARKET = {
+  id: 'market',
+  name: '범타듀 상점',
+  x: -11,
+  z: -4.4,
+  width: 2.4,
+  depth: 1.4,
+} as const;
 
 /** Matching footprints keep imported kArchive props out of walking routes. */
 export const VILLAGE_FURNISHINGS = [
@@ -228,16 +302,17 @@ export const VILLAGE_FURNISHINGS = [
     id: 'forestBench',
     model: 'parkBench',
     x: 5,
-    z: -26,
+    z: -27.2,
     width: 3,
     depth: 2.5,
     height: 1.4,
   },
   {
+    // Beside (not on) the boardwalk mouth so its 1.9-wide deck stays open.
     id: 'eastLantern',
     model: 'gardenLantern',
-    x: 29,
-    z: -5,
+    x: 28.9,
+    z: -3.2,
     width: 0.8,
     depth: 0.8,
     height: 1.9,
@@ -245,8 +320,8 @@ export const VILLAGE_FURNISHINGS = [
   {
     id: 'orchardLantern',
     model: 'gardenLantern',
-    x: -30,
-    z: 8,
+    x: -34.2,
+    z: 7.2,
     width: 0.8,
     depth: 0.8,
     height: 1.9,
@@ -254,15 +329,412 @@ export const VILLAGE_FURNISHINGS = [
   {
     id: 'campLantern',
     model: 'gardenLantern',
-    x: 3,
-    z: 21,
+    x: 3.3,
+    z: 20.9,
     width: 0.8,
     depth: 0.8,
     height: 1.9,
   },
 ] as const;
 
+/** Walking routes drawn by the world builder and the minimap: [x1, z1, x2, z2, width]. */
+export type VillagePathSegment = readonly [number, number, number, number, number];
+const homeSpurs: VillagePathSegment[] = VILLAGE_PLACES.filter(
+  (place) => place.kind === 'home',
+).map((place) =>
+  place.z < -10
+    ? ([place.entry.x, place.entry.z - 0.4, place.entry.x, -9, 1.3] as const)
+    : ([place.entry.x, place.entry.z - 0.4, place.entry.x, -1.1, 1.45] as const),
+);
+export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
+  // Three crossings fan the expanded valley out from the civic green.
+  [-16, 10, -27, 10, 1.7],
+  [-27, 10, -27, 17.5, 1.55],
+  [-27, 17.5, -32, 5, 1.3],
+  [16, 10, 27, 10, 1.7],
+  [27, 10, 27, 17.5, 1.55],
+  [27, 10, 27, -1, 1.4],
+  [27, 17.5, 33, -5, 1.3],
+  [0, 13, 0, 20, 1.65],
+  [0, 20, 5, 24, 1.4],
+  [0, 20, -8, 24, 1.3],
+  [5, 24, 14, 24, 1.3],
+  // The eastern perimeter loops north to the forest walk and boardwalk.
+  [27, -1, 27, -25, 1.4],
+  [27, -25, 0, -25, 1.4],
+  [27, -5, 29, -5, 1.45],
+  // Existing homes remain connected to the long forest trail at the north edge.
+  [14, -9, 24, -9, 1.3],
+  [24, -9, 27, -12, 1.3],
+  // West orchard picnic loop from its dedicated bridge.
+  [-27, 5, -32, 5, 1.35],
+  [-32, 5, -32, 3.2, 1.25],
+  // North green and crossing, with a walk around the fountain's rim.
+  [0, 2.7, 0, 13.4, 2.55],
+  [0, 2.7, -1.9, 2.05, 1.7],
+  [-1.9, 2.05, -2.7, 0.7, 1.7],
+  [-2.7, 0.7, -2.7, -0.7, 1.7],
+  [-2.7, -0.7, -1.9, -2.05, 1.7],
+  [-1.9, -2.05, 0, -2.7, 1.7],
+  [0, 2.7, 1.9, 2.05, 1.7],
+  [1.9, 2.05, 2.7, 0.7, 1.7],
+  [2.7, 0.7, 2.7, -0.7, 1.7],
+  [2.7, -0.7, 1.9, -2.05, 1.7],
+  [1.9, -2.05, 0, -2.7, 1.7],
+  // Door spurs are generated from each home's real entrance.
+  ...homeSpurs,
+  [-15.2, -9, -7, -9, 1.5],
+  [-7, -9, 0, -9, 1.5],
+  [0, -9, 7, -9, 1.5],
+  [7, -9, 14, -9, 1.5],
+  [-7, -9, -7, -3.3, 1.45],
+  [7, -9, 7, -3.3, 1.45],
+  [-7, -3.3, -5, -3.3, 1.45],
+  [7, -3.3, 5, -3.3, 1.45],
+  [-5, -3.3, -3, -3.3, 1.45],
+  [5, -3.3, 3, -3.3, 1.45],
+  [-3, -3.3, 0, -2.7, 1.45],
+  [3, -3.3, 0, -2.7, 1.45],
+  // The two side cottages join the plaza from the south side of the fountain.
+  [-20, -1.1, -7, -1.1, 1.5],
+  [20, -1.1, 7, -1.1, 1.5],
+  [-7, -1.1, -5, -2.2, 1.4],
+  [7, -1.1, 5, -2.2, 1.4],
+  [-5, -2.2, -3, -3.3, 1.4],
+  [5, -2.2, 3, -3.3, 1.4],
+  // Civic entrances connect along the open green in front of both buildings.
+  [-16, 10, -16, 9, 2.1],
+  [16, 10, 16, 9, 2.1],
+  [-16, 10, 16, 10, 2],
+  [-3.1, 10, 0, 2.7, 1.8],
+  [3.1, 10, 0, 2.7, 1.8],
+  // The kitchen plot opens south into a lane that feeds the eastern plaza rim.
+  [
+    VILLAGE_FARMLAND_ENTRY.x,
+    VILLAGE_FARMLAND_ENTRY.z,
+    VILLAGE_FARMLAND.x,
+    2.7,
+    1.2,
+  ],
+  [VILLAGE_FARMLAND.x, 2.7, 3.1, 2.7, 1.2],
+  // A narrow lane skirts the west edge of the café terrace and leaves its deck clear.
+  [-11.3, 10, -11.3, 8, 0.8],
+  [-11.3, 8, -10.7, 8, 0.7],
+  [-11.3, 8, -11.3, 4.1, 0.8],
+  [-11.3, 4.1, -3.1, 4.1, 1.45],
+];
+
+/** Boardwalk deck and its two rails at the eastern garden edge. */
+export const VILLAGE_BOARDWALK = {
+  x1: 29,
+  x2: 38,
+  z: -5,
+  railZ: [-5.95, -4.05],
+} as const;
+
+export type VillageDecorKind =
+  | 'tree'
+  | 'lamp'
+  | 'bench'
+  | 'shrub'
+  | 'flowers'
+  | 'fence'
+  | 'mailbox'
+  | 'hydrangea'
+  | 'rail';
+export type VillageCollider =
+  | { shape: 'circle'; r: number }
+  | { shape: 'box'; w: number; d: number };
+export type VillageDecor = {
+  id: string;
+  kind: VillageDecorKind;
+  x: number;
+  z: number;
+  /** Visual scale (trees) or item count (flowers). */
+  scale?: number;
+  rotation?: number;
+  variant?: number;
+  /** Home the prop belongs to (garden props follow the resident's colors). */
+  home?: number;
+  collider: VillageCollider | null;
+};
+
+const circle = (r: number): VillageCollider => ({ shape: 'circle', r });
+const boxCollider = (w: number, d: number): VillageCollider => ({
+  shape: 'box',
+  w,
+  d,
+});
+
+const decor: VillageDecor[] = [];
+const addTree = (x: number, z: number, scale: number, variant: number) =>
+  decor.push({
+    id: `tree-${decor.length}`,
+    kind: 'tree',
+    x,
+    z,
+    scale,
+    variant,
+    // Trunk plus the low part of the canopy; the character may brush leaves.
+    collider: circle(0.34 * scale + 0.08),
+  });
+// Edge woodland planted in irregular clusters, leaving routes and fronts open.
+(
+  [
+    [-23, -16, 1.2],
+    [-22, -10.6, 0.9],
+    [-24.8, -2.2, 1.2],
+    [-22, 3, 0.95],
+    [-23.5, 6.8, 1.1],
+    [-22, 18, 0.95],
+    [23, -16, 1.1],
+    [22, -10.6, 0.92],
+    [24.8, -2.2, 1.16],
+    [22, 3, 0.95],
+    [23.5, 6.8, 1.1],
+    [22, 18, 0.92],
+    [-18, -18.3, 0.82],
+    [-3.5, -18.3, 0.72],
+    [4.5, -18.3, 0.78],
+    [13, -18.6, 0.75],
+    [18, -18.3, 0.8],
+    [-18, 12.3, 0.76],
+    [-14, 12.3, 0.72],
+    [14, 12.3, 0.74],
+    [18, 12.3, 0.78],
+    [-19, 1, 0.76],
+    [19, 1, 0.72],
+  ] as const
+).forEach(([x, z, s], i) => addTree(x, z, s, i));
+VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) => addTree(x, z, scale, i + 3));
+
+// Lamps light the plaza, bridge heads and districts; none stand on a route.
+(
+  [
+    [-4.9, -1],
+    [4.9, 1],
+    [-2.4, 3.4],
+    [2.4, 3.4],
+    [-29, 7],
+    [9.6, 21.6],
+    [30, -8],
+    [36, -8],
+    [-5.2, 11.6],
+    [5.2, 11.6],
+  ] as const
+).forEach(([x, z], i) =>
+  decor.push({ id: `lamp-${i}`, kind: 'lamp', x, z, collider: circle(0.2) }),
+);
+
+// Plaza benches face the fountain from its east and west rims.
+decor.push(
+  {
+    id: 'bench-west',
+    kind: 'bench',
+    x: -3.95,
+    z: -0.6,
+    rotation: Math.PI / 2,
+    collider: boxCollider(0.55, 1.65),
+  },
+  {
+    id: 'bench-east',
+    kind: 'bench',
+    x: 3.95,
+    z: 0.6,
+    rotation: -Math.PI / 2,
+    collider: boxCollider(0.55, 1.65),
+  },
+);
+
+// Hedges: a shrub is ~1.4 wide but only its dense core blocks walking.
+(
+  [
+    [-19, -11],
+    [-18.5, -10.8],
+    [18.5, -10.8],
+    [-21, 8],
+    [-19.6, 11.4],
+    [20.6, 8],
+    [19.6, 11.4],
+    [-11.4, 1.5],
+    [11.4, 1.5],
+    [-4, 7],
+    [4, 7],
+  ] as const
+).forEach(([x, z], i) =>
+  decor.push({
+    id: `shrub-${i}`,
+    kind: 'shrub',
+    x,
+    z,
+    variant: i,
+    collider: circle(0.55),
+  }),
+);
+
+// Flower beds are ankle-high and stay walkable.
+(
+  [
+    [-3.1, 1.9, 7, 1],
+    [3.15, -1.9, 7, 2],
+    [-1.4, -3.7, 6, 3],
+    [1.5, 3.7, 6, 4],
+    [-32, 9, 12, 3],
+    [5, 28, 10, 4],
+    [33, -10.9, 12, 2],
+    [0, -28, 14, 5],
+    [-4, 12, 8, 2],
+    [4, 12, 8, 5],
+    [-20, 12.6, 8, 4],
+    [20, 12.6, 8, 1],
+  ] as const
+).forEach(([x, z, count, seed], i) =>
+  decor.push({
+    id: `flowers-${i}`,
+    kind: 'flowers',
+    x,
+    z,
+    scale: count,
+    variant: seed,
+    collider: null,
+  }),
+);
+
+// Resident front gardens are derived from each home's real footprint.
+for (const place of VILLAGE_PLACES) {
+  if (place.kind !== 'home' || place.actor === undefined) continue;
+  const front = place.z + place.depth / 2,
+    half = place.width / 2,
+    home = place.actor;
+  decor.push(
+    {
+      id: `mailbox-${home}`,
+      kind: 'mailbox',
+      x: place.entry.x - 1.35,
+      z: front + 0.55,
+      home,
+      collider: circle(0.22),
+    },
+    {
+      id: `hydrangea-${home}`,
+      kind: 'hydrangea',
+      x: place.entry.x + 1.5,
+      z: front + 0.55,
+      home,
+      collider: circle(0.42),
+    },
+    {
+      id: `garden-flowers-${home}`,
+      kind: 'flowers',
+      x: place.x + (place.entry.x < place.x ? half - 0.6 : -half + 0.6),
+      z: front + 0.45,
+      scale: 4,
+      variant: home + 1,
+      home,
+      collider: null,
+    },
+  );
+  for (const side of [-1, 1])
+    decor.push({
+      id: `fence-${home}-${side}`,
+      kind: 'fence',
+      x: place.x + side * (half + 0.18),
+      z: front - 1.2,
+      home,
+      collider: boxCollider(0.14, 2.3),
+    });
+}
+
+// Boardwalk rails are solid; the deck between them stays 1.9 wide.
+for (const railZ of VILLAGE_BOARDWALK.railZ)
+  decor.push({
+    id: `rail-${railZ}`,
+    kind: 'rail',
+    x: (VILLAGE_BOARDWALK.x1 + VILLAGE_BOARDWALK.x2) / 2 + 0.1,
+    z: railZ,
+    collider: boxCollider(VILLAGE_BOARDWALK.x2 - VILLAGE_BOARDWALK.x1 + 0.2, 0.14),
+  });
+
+/** Single source for decorative placement: the world builder and collision share it. */
+export const VILLAGE_DECOR: readonly VillageDecor[] = decor;
+
+type SolidCollider = {
+  id: string;
+  x: number;
+  z: number;
+  collider: VillageCollider;
+  rotation: number;
+};
+/** Every solid thing a walker can bump into, besides places, water and bounds. */
+export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
+  ...VILLAGE_DECOR.flatMap((item) =>
+    item.collider
+      ? [
+          {
+            id: item.id,
+            x: item.x,
+            z: item.z,
+            collider: item.collider,
+            rotation: item.kind === 'bench' ? 0 : (item.rotation ?? 0),
+          },
+        ]
+      : [],
+  ),
+  ...VILLAGE_ORCHARD.map((tree, i) => ({
+    id: `fruitTree-${i}`,
+    x: tree.x,
+    z: tree.z,
+    collider: circle(0.55),
+    rotation: 0,
+  })),
+  ...VILLAGE_FURNISHINGS.map((prop) => ({
+    id: prop.id,
+    x: prop.x,
+    z: prop.z,
+    collider: boxCollider(prop.width, prop.depth),
+    rotation: 0,
+  })),
+  {
+    id: VILLAGE_TERRACE.id,
+    x: VILLAGE_TERRACE.x,
+    z: VILLAGE_TERRACE.z,
+    collider: boxCollider(VILLAGE_TERRACE.width, VILLAGE_TERRACE.depth),
+    rotation: 0,
+  },
+  {
+    id: VILLAGE_MARKET.id,
+    x: VILLAGE_MARKET.x,
+    z: VILLAGE_MARKET.z,
+    collider: boxCollider(VILLAGE_MARKET.width, VILLAGE_MARKET.depth),
+    rotation: 0,
+  },
+  {
+    id: VILLAGE_FARMLAND.id,
+    x: VILLAGE_FARMLAND.x,
+    z: VILLAGE_FARMLAND.z,
+    collider: boxCollider(VILLAGE_FARMLAND.width, VILLAGE_FARMLAND.depth),
+    rotation: 0,
+  },
+];
+
 const FOUNTAIN = { x: 0, z: 0, radius: 2 } as const;
+
+function blockedByCollider(point: VillagePoint, radius: number) {
+  for (const item of VILLAGE_COLLIDERS) {
+    const dx = point.x - item.x,
+      dz = point.z - item.z;
+    const c = item.collider;
+    if (c.shape === 'circle') {
+      const r = c.r + radius;
+      if (dx * dx + dz * dz < r * r) return true;
+    } else if (
+      Math.abs(dx) < c.w / 2 + radius &&
+      Math.abs(dz) < c.d / 2 + radius
+    )
+      return true;
+  }
+  return false;
+}
 
 export function villageCanWalk(point: VillagePoint): boolean {
   const { width, depth, radius } = VILLAGE_BOUNDS;
@@ -273,41 +745,15 @@ export function villageCanWalk(point: VillagePoint): boolean {
   )
     return false;
 
-  const blockedByPlace = VILLAGE_PLACES.some(
-    (place) =>
-      Math.abs(point.x - place.x) < place.width / 2 + radius &&
-      Math.abs(point.z - place.z) < place.depth / 2 + radius,
-  );
-  const blockedByFarm =
-    Math.abs(point.x - VILLAGE_FARMLAND.x) <
-      VILLAGE_FARMLAND.width / 2 + radius &&
-    Math.abs(point.z - VILLAGE_FARMLAND.z) <
-      VILLAGE_FARMLAND.depth / 2 + radius;
   if (
-    VILLAGE_FURNISHINGS.some(
-      (prop) =>
-        Math.abs(point.x - prop.x) < prop.width / 2 + radius &&
-        Math.abs(point.z - prop.z) < prop.depth / 2 + radius,
-    ) ||
-    blockedByPlace ||
-    blockedByFarm ||
-    (Math.abs(point.x - VILLAGE_TERRACE.x) <
-      VILLAGE_TERRACE.width / 2 + radius &&
-      Math.abs(point.z - VILLAGE_TERRACE.z) <
-        VILLAGE_TERRACE.depth / 2 + radius)
-  )
-    return false;
-
-  if (
-    VILLAGE_ORCHARD.some(
-      (tree) => Math.hypot(point.x - tree.x, point.z - tree.z) < 0.9,
-    ) ||
-    VILLAGE_SCENIC_TREES.some(
-      (tree) =>
-        Math.hypot(point.x - tree.x, point.z - tree.z) < tree.radius + radius,
+    VILLAGE_PLACES.some(
+      (place) =>
+        Math.abs(point.x - place.x) < place.width / 2 + radius &&
+        Math.abs(point.z - place.z) < place.depth / 2 + radius,
     )
   )
     return false;
+  if (blockedByCollider(point, radius)) return false;
 
   const dx = point.x - FOUNTAIN.x;
   const dz = point.z - FOUNTAIN.z;
@@ -532,10 +978,13 @@ export function villagePath(
   }
   const snappedTarget = reverse[reverse.length - 1];
   if (villageLineClear(anchor, to)) {
+    // Drop the snapped grid point only when the exact target is still in
+    // clear view from the waypoint before it.
     if (
       path.length > 0 &&
       path[path.length - 1].x === snappedTarget.x &&
-      path[path.length - 1].z === snappedTarget.z
+      path[path.length - 1].z === snappedTarget.z &&
+      villageLineClear(path.length > 1 ? path[path.length - 2] : from, to)
     )
       path.pop();
     path.push(to);
@@ -546,16 +995,34 @@ export function villagePath(
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
+/*
+ * Village presence coordinates reuse the server's existing move range
+ * (x 15..85, y 42..88). The mapping is piecewise linear so the server's
+ * default village position (50, 60) lands on the plaza (VILLAGE_START).
+ */
+const NET = { minX: 15, maxX: 85, minY: 42, plazaY: 60, maxY: 88 } as const;
 export function villageToNetwork(point: VillagePoint): {
   x: number;
   y: number;
 } {
   const { width, depth } = VILLAGE_BOUNDS;
-  const x = Number.isFinite(point.x) ? point.x : 0;
-  const z = Number.isFinite(point.z) ? point.z : 0;
+  const x = clamp(Number.isFinite(point.x) ? point.x : 0, -width / 2, width / 2);
+  const z = clamp(
+    Number.isFinite(point.z) ? point.z : VILLAGE_START.z,
+    -depth / 2,
+    depth / 2,
+  );
+  const y =
+    z <= VILLAGE_START.z
+      ? NET.minY +
+        ((z + depth / 2) / (VILLAGE_START.z + depth / 2)) *
+          (NET.plazaY - NET.minY)
+      : NET.plazaY +
+        ((z - VILLAGE_START.z) / (depth / 2 - VILLAGE_START.z)) *
+          (NET.maxY - NET.plazaY);
   return {
-    x: 15 + ((clamp(x, -width / 2, width / 2) + width / 2) / width) * 70,
-    y: 42 + ((clamp(z, -depth / 2, depth / 2) + depth / 2) / depth) * 46,
+    x: NET.minX + ((x + width / 2) / width) * (NET.maxX - NET.minX),
+    y,
   };
 }
 
@@ -564,10 +1031,22 @@ export function villageFromNetwork(point: {
   y: number;
 }): VillagePoint {
   const { width, depth } = VILLAGE_BOUNDS;
-  const x = Number.isFinite(point.x) ? point.x : 50;
-  const y = Number.isFinite(point.y) ? point.y : 65;
+  const x = clamp(Number.isFinite(point.x) ? point.x : 50, NET.minX, NET.maxX);
+  const y = clamp(
+    Number.isFinite(point.y) ? point.y : NET.plazaY,
+    NET.minY,
+    NET.maxY,
+  );
+  const z =
+    y <= NET.plazaY
+      ? -depth / 2 +
+        ((y - NET.minY) / (NET.plazaY - NET.minY)) *
+          (VILLAGE_START.z + depth / 2)
+      : VILLAGE_START.z +
+        ((y - NET.plazaY) / (NET.maxY - NET.plazaY)) *
+          (depth / 2 - VILLAGE_START.z);
   return {
-    x: clamp(((x - 15) / 70) * width - width / 2, -width / 2, width / 2),
-    z: clamp(((y - 42) / 46) * depth - depth / 2, -depth / 2, depth / 2),
+    x: ((x - NET.minX) / (NET.maxX - NET.minX)) * width - width / 2,
+    z,
   };
 }

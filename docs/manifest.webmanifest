@@ -1,0 +1,31 @@
+{
+  "name": "범타듀 밸리 · 일곱 친구의 마을",
+  "short_name": "범타듀 밸리",
+  "description": "일곱 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdf6e3",
+  "theme_color": "#5f8a55",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

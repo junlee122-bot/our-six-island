@@ -78,7 +78,7 @@
 .l-round-friends strong small {
   margin-left: 6px;
   color: #859475;
-  font-size: 10px;
+  font-size: 11px;
 }
 .l-round-friends li > span > span {
   display: block;
@@ -120,9 +120,9 @@
 .l-round-confirm {
   min-width: 220px;
 }
-.l-round-confirm.is-ready {
-  background: #dae8ca !important;
-  color: #3f6133 !important;
+.l-app .l-round-confirm.is-ready {
+  background: #dae8ca;
+  color: #3f6133;
 }
 .l-round-feedback {
   display: block;
@@ -205,5 +205,16 @@
   }
   .l-retained-table button {
     width: 100%;
+  }
+}
+
+.l-round-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+@media (max-width: 540px) {
+  .l-round-heading {
+    flex-wrap: wrap;
   }
 }

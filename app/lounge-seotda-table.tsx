@@ -1,20 +1,32 @@
 'use client';
 /* oxlint-disable next/no-img-element -- GitHub Pages embeds the existing SVG cards without an image server. */
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Coins, Crown, Flower2 } from 'lucide-react';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { beom } from './lounge-poker-table';
 import type { SeotdaAction, SeotdaView } from './lounge-seotda';
+import { HWATU_CARDS } from './hwatu-cards';
+import { TURN_LIMIT_MS } from './lounge-games';
+import type { TurnTiming } from './lounge-room';
+import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import './lounge-seotda-table.css';
 
+const TYPE_LABEL: Record<string, string> = {
+  bright: '광',
+  animal: '열끗',
+  ribbon: '띠',
+  junk: '피',
+};
+// Label from the card metadata: 8월 기러기(m08-02) is 열끗, not 띠.
+const cardType = (card: string) =>
+  TYPE_LABEL[HWATU_CARDS.find((c) => c.id === card)?.type ?? ''] ?? '';
 function Hwatu({ card }: { card?: string }) {
   const bright = card && ['m01-01', 'm03-01', 'm08-01'].includes(card);
   return (
     <span
       className={'s-card' + (card ? '' : ' back')}
       aria-label={
-        card
-          ? `${Number(card.slice(1, 3))}월 ${bright ? '광' : card.endsWith('01') ? '열끗' : '띠'}`
-          : '비공개 화투'
+        card ? `${Number(card.slice(1, 3))}월 ${cardType(card)}` : '비공개 화투'
       }
     >
       {card ? (
@@ -32,10 +44,13 @@ function Hwatu({ card }: { card?: string }) {
 }
 function message(g: SeotdaView, names: string[]) {
   if (g.phase === 'over')
-    return `${g.winners.map((i) => names[i]).join(' · ')} 승리! ${g.reason}`;
+    // The reason already ends in "승리!" for a single named hand.
+    return g.reason.endsWith('승리!')
+      ? `${g.winners.map((i) => names[i]).join(' · ')} · ${g.reason}`
+      : `${g.winners.map((i) => names[i]).join(' · ')} 승리! ${g.reason}`;
   if (g.phase === 'redeal') return g.reason;
   if (g.phase === 'showdown')
-    return '패를 공개합니다. 두 장에 담긴 승부를 확인하세요.';
+    return '패를 공개해요. 두 장에 담긴 승부를 확인해 보세요.';
   const e = g.events.at(-1),
     who = e && names[e.seat];
   const action =
@@ -47,8 +62,8 @@ function message(g: SeotdaView, names: string[]) {
           ? `${who}, 다이.`
           : e?.kind === 'check'
             ? `${who}, 체크.`
-            : '두 장씩 나눴습니다.';
-  return `${action} ${names[g.turn]} 차례입니다.`;
+            : '두 장씩 나눴어요.';
+  return `${action} ${names[g.turn]} 차례예요.`;
 }
 export function SeotdaTable({
   match: g,
@@ -56,29 +71,30 @@ export function SeotdaTable({
   names,
   onAction,
 }: {
-  match: SeotdaView;
+  match: SeotdaView & TurnTiming;
   seat: number;
   names: string[];
-  onAction: (a: SeotdaAction) => void;
+  onAction: (a: SeotdaAction) => void | Promise<boolean>;
 }) {
   const version = `${g.id}:${g.revision}`;
   const [bet, setBet] = useState({ version, value: g.legal.minTo }),
-    [sent, setSent] = useState<string | null>(null);
+    [sent, setSent] = useState<string | null>(null),
+    inFlight = useRef<string | null>(null);
   const raise = bet.version === version ? bet.value : g.legal.minTo;
   const setRaise = (value: number) => setBet({ version, value });
-  useEffect(() => {
-    if (sent === null) return;
-    const timer = setTimeout(() => setSent(null), 2500);
-    return () => clearTimeout(timer);
-  }, [sent]);
   const legal = g.legal,
     locked = sent === version,
     pot = g.committed.reduce((a, b) => a + b, 0),
     over = g.phase === 'over';
   const act = (a: SeotdaAction) => {
-    if (!legal.enabled || locked) return;
+    // The ref also stops a second tap that lands before React re-renders.
+    if (!legal.enabled || locked || inFlight.current === version) return;
+    inFlight.current = version;
     setSent(version);
-    onAction(a);
+    awaitAnswer(onAction(a), () => {
+      inFlight.current = null;
+      setSent(null);
+    });
   };
   const allIn =
     legal.canRaise ||
@@ -93,6 +109,7 @@ export function SeotdaTable({
         ),
       ),
     );
+  const away = (i: number) => !!g.away?.includes(i);
   const player = (i: number, self = false) => {
     const opened = g.revealed.find((h) => h.seat === i),
       cards = self ? g.hand : opened?.cards,
@@ -118,7 +135,9 @@ export function SeotdaTable({
             {self && <em>나</em>}
           </strong>
           <span>
-            {current
+            {away(i) && !over && !folded
+              ? AWAY_LABEL
+              : current
               ? '선택 중'
               : folded
                 ? '다이'
@@ -161,11 +180,28 @@ export function SeotdaTable({
         <div>
           <small>범타듀 화투방 · 두 장 섯다</small>
           <p aria-live="polite">{message(g, names)}</p>
+          {g.phase === 'betting' && g.turn >= 0 && (
+            <TurnTimer
+              deadline={g.turnDeadline}
+              total={TURN_LIMIT_MS.seotda}
+              label={
+                away(g.turn)
+                  ? AWAY_LABEL
+                  : g.turn === seat
+                    ? '내 차례'
+                    : `${names[g.turn]} 차례`
+              }
+              mine={g.turn === seat}
+            />
+          )}
         </div>
-        <b>
-          {g.round}
-          <small>ROUND</small>
-        </b>
+        {/* g.round counts redeals within this 판 (the header shows the 판 number). */}
+        {g.round > 1 && (
+          <b className="s-rematch">
+            {g.round - 1}
+            <small>재경기</small>
+          </b>
+        )}
       </div>
       <div className="s-table">
         <div
@@ -194,7 +230,7 @@ export function SeotdaTable({
           player(seat, true)
         ) : (
           <p className="s-spectator">
-            관전 중 · 친구들의 패는 승부할 때 공개됩니다.
+            관전 중 · 친구들의 패는 승부할 때 공개돼요.
           </p>
         )}
       </div>
@@ -204,14 +240,14 @@ export function SeotdaTable({
             {locked
               ? '선택을 전달하는 중…'
               : legal.enabled
-                ? '당신의 차례예요. 두 장을 믿어볼까요?'
+                ? '내 차례예요. 두 장을 믿어 볼까요?'
                 : g.phase === 'redeal'
-                  ? '다이하지 않은 친구들에게 곧 새 패를 나눕니다.'
+                  ? '다이하지 않은 친구들에게 곧 새 패를 나눠요.'
                   : g.phase === 'showdown'
                     ? '승부를 확인하는 중…'
                     : g.folded[seat]
-                      ? '다이했습니다. 남은 친구들의 승부를 기다려요.'
-                      : `${names[g.turn] ?? '친구'}의 선택을 기다립니다.`}
+                      ? '다이했어요. 남은 친구들의 승부를 기다려요.'
+                      : `${names[g.turn] ?? '친구'}의 선택을 기다려요.`}
           </output>
           <div className="s-action-row">
             <button
@@ -226,10 +262,12 @@ export function SeotdaTable({
               disabled={!legal.enabled || locked}
               onClick={() => act({ kind: legal.canCheck ? 'check' : 'call' })}
             >
-              {legal.canCheck ? '체크' : '콜'}
-              <small>
-                {legal.canCheck ? '추가 베팅 없이' : beom(legal.call)}
-              </small>
+              {!legal.enabled ? '체크/콜' : legal.canCheck ? '체크' : '콜'}
+              {legal.enabled && (
+                <small>
+                  {legal.canCheck ? '추가 베팅 없이' : beom(legal.call)}
+                </small>
+              )}
             </button>
             <button
               disabled={!allIn || locked}
@@ -240,7 +278,7 @@ export function SeotdaTable({
           </div>
           <div className="s-raise-row">
             <label>
-              이번 판 베팅 총액
+              이번 베팅 라운드 총액
               <input
                 aria-label="섯다 레이즈 총액"
                 type="number"
@@ -316,9 +354,9 @@ export function SeotdaTable({
       <details className="s-rules">
         <summary>족보와 이 테이블의 규칙</summary>
         <p>
-          1~10월 화투를 두 장씩, 총 20장 사용합니다. 두 장을 모두 받은 뒤 한
-          번의 베팅으로 승부하며, 모두 같은 바이인으로 시작합니다. 처음에
-          100범씩 내고 더 잃을 수 있는 한도는 남은 칩만큼입니다.
+          1~10월 화투를 두 장씩, 총 20장 사용해요. 두 장을 모두 받은 뒤 한
+          번의 베팅으로 승부하며, 모두 같은 바이인으로 시작해요. 처음에
+          100범씩 내고 더 잃을 수 있는 한도는 남은 칩만큼이에요.
         </p>
         <div className="s-rank-list">
           <b>38광땡</b>
@@ -336,27 +374,29 @@ export function SeotdaTable({
         </div>
         <p>
           <b>암행어사</b>는 4월 열끗+7월 열끗으로, 최고 패가 13·18광땡일 때
-          잡습니다. 그 외에는 1끗입니다. <b>땡잡이</b>는 3월 광+7월 열끗으로,
-          최고 패가 1~9땡일 때 잡고 그 외에는 망통입니다. 38광땡과 장땡은 잡지
-          못합니다.
+          잡아요. 그 외에는 1끗이에요. <b>땡잡이</b>는 3월 광+7월 열끗으로,
+          최고 패가 1~9땡일 때 잡고 그 외에는 망통이에요. 38광땡과 장땡은 잡지
+          못해요.
         </p>
         <p>
           <b>멍텅구리 구사</b>(4월 열끗+9월 열끗)는 최고 패가 9땡 이하일 때,
-          다른 <b>구사</b>(4+9)는 알리 이하일 때 재경기합니다. 멍텅구리 구사와
-          땡잡이가 함께 나오면 재경기를 우선합니다. 최고 족보가 동률이어도
-          재경기합니다.
+          다른 <b>구사</b>(4+9)는 알리 이하일 때 재경기해요. 멍텅구리 구사와
+          땡잡이가 함께 나오면 재경기를 우선해요. 최고 족보가 동률이어도
+          재경기해요.
         </p>
         <p>
           <b>우리 화투방의 재경기:</b> 다이하지 않은 친구 모두가 남은 칩과
-          판돈을 유지하고 새 패를 받습니다. 추가 기본금과 다이 복귀는 없으며
-          선은 다음 자리로 이동합니다. 남은 칩이 있으면 다시 베팅하고, 모두
-          올인했으면 자동으로 패를 열어 승부합니다.
+          판돈을 유지하고 새 패를 받아요. 추가 기본금과 다이 복귀는 없으며
+          선은 다음 자리로 이동해요. 남은 칩이 있으면 다시 베팅하고, 모두
+          올인했으면 자동으로 패를 열어 승부해요.
         </p>
         <p>
-          체크는 추가 베팅 없이 넘기기, 콜은 앞선 베팅 맞추기, 레이즈는 현재
-          최고 베팅보다 최소 직전 인상액(첫 100범)만큼 더 올리기입니다. 올인은
-          남은 칩 전부를 겁니다. 다이하면 이미 건 돈은 돌려받지 못합니다.
-          수수료는 없습니다.
+          차례마다 60초 안에 선택하지 않거나 자리를 떠나면 서버가 체크가
+          가능할 때 체크, 그 외에는 다이해요. 선은 판마다 한 자리씩
+          돌아가요. 체크는 추가 베팅 없이 넘기기, 콜은 앞선 베팅 맞추기, 레이즈는 현재
+          최고 베팅보다 최소 직전 인상액(첫 100범)만큼 더 올리기예요. 올인은
+          남은 칩 전부를 걸어요. 다이하면 이미 건 돈은 돌려받지 못해요.
+          수수료는 없어요.
         </p>
       </details>
     </div>

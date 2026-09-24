@@ -6,8 +6,10 @@ import {
   type Appearance,
 } from './character-style.ts';
 import {
+  BedroomError,
   defaultBedroom,
   readBedroom,
+  readBedroomStrict,
   type Bedroom,
 } from './lounge-bedroom-data.ts';
 import { readColorHex } from './lounge-color.ts';
@@ -112,47 +114,138 @@ export function freshLounge(actor = 6): LoungeSave {
     bedroom: defaultBedroom(identity),
   };
 }
+/** Current `LoungeSave.version`. Bump it together with a LOUNGE_MIGRATIONS entry. */
+export const LOUNGE_SAVE_VERSION = 1;
+/**
+ * Upgrade steps keyed by the version they upgrade FROM. Each step receives a
+ * plain object at version `n` and must return an object at version `n + 1`.
+ * Example for a future v2: `1: (s) => ({ ...s, version: 2, pets: [] })`.
+ * Steps must be pure and total; the server rejects a save no step can reach.
+ */
+export const LOUNGE_MIGRATIONS: Readonly<
+  Record<number, (save: Record<string, unknown>) => Record<string, unknown>>
+> = {};
+/** Thrown by the strict reader. `reason` tells callers what to report. */
+export class LoungeSaveError extends Error {
+  /** 'room': a v3 room is present but malformed (see readBedroomStrict). */
+  reason: 'parse' | 'version' | 'newer' | 'room';
+  constructor(reason: 'parse' | 'version' | 'newer' | 'room', message: string) {
+    super(message);
+    this.name = 'LoungeSaveError';
+    this.reason = reason;
+  }
+}
+/**
+ * Brings a parsed save up to LOUNGE_SAVE_VERSION. Throws LoungeSaveError for a
+ * non-object, a missing/unknown version, a version newer than this build, or a
+ * migration chain with a gap.
+ */
+export function migrateLoungeSave(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new LoungeSaveError('parse', 'Save is not an object');
+  let s = value as Record<string, unknown>;
+  const version = s.version;
+  if (!Number.isSafeInteger(version) || (version as number) < 1)
+    throw new LoungeSaveError('version', 'Unknown save version');
+  if ((version as number) > LOUNGE_SAVE_VERSION)
+    throw new LoungeSaveError('newer', 'Save is newer than this build');
+  for (let v = version as number; v < LOUNGE_SAVE_VERSION; v++) {
+    const step = LOUNGE_MIGRATIONS[v];
+    if (!step) throw new LoungeSaveError('version', 'No migration from v' + v);
+    s = step(s);
+    if (!s || typeof s !== 'object' || s.version !== v + 1)
+      throw new LoungeSaveError('version', 'Migration from v' + v + ' failed');
+  }
+  return s;
+}
+/** An untrusted saved-look entry; every field is checked before use. */
+type RawSaved = { id?: unknown; name?: unknown; actor?: unknown; look?: unknown };
+type CheckedSaved = { id: string; name: string; actor: number; look?: unknown };
+const isSavedEntry = (x: RawSaved | null | undefined): x is CheckedSaved =>
+  !!x &&
+  typeof x.id === 'string' &&
+  typeof x.name === 'string' &&
+  Number.isInteger(x.actor) &&
+  (x.actor as number) >= 0 &&
+  (x.actor as number) < 7;
+function normalizeLounge(
+  s: Record<string, unknown>,
+  trustedActor: number | undefined,
+  strict = false,
+): LoungeSave {
+  const rawActor = s.actor,
+    looks = Array.isArray(s.looks) ? (s.looks as unknown[]) : [];
+  const actor =
+    trustedActor ??
+    (Number.isInteger(rawActor) && (rawActor as number) >= 0 && (rawActor as number) < 7
+      ? (rawActor as number)
+      : 6);
+  return {
+    version: 1,
+    actor,
+    looks: Array.from({ length: 7 }, (_, i) => readLook(looks[i], i)),
+    saved: Array.isArray(s.saved)
+      ? (s.saved as (RawSaved | null)[])
+          .filter(isSavedEntry)
+          .slice(0, 28)
+          .map((x) => ({
+            id: x.id.slice(0, 80),
+            actor: x.actor,
+            name: x.name.slice(0, 50),
+            look: readLook(x.look, x.actor),
+          }))
+      : [],
+    visits: Math.max(0, Math.min(1e5, Number(s.visits) || 0)),
+    bedroom: strict
+      ? readBedroomStrict(s.bedroom, actor)
+      : readBedroom(s.bedroom, actor),
+  };
+}
+const trusted = (accountActor?: number) =>
+  Number.isInteger(accountActor) && accountActor! >= 0 && accountActor! < 7
+    ? accountActor
+    : undefined;
+/**
+ * Fail-closed reader for the SERVER save path. Parse failures, unknown or newer
+ * versions throw LoungeSaveError instead of silently becoming a fresh save.
+ */
+export function readLoungeStrict(
+  raw: string | null,
+  accountActor?: number,
+): LoungeSave {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw ?? 'null');
+  } catch {
+    throw new LoungeSaveError('parse', 'Save is not valid JSON');
+  }
+  const s = migrateLoungeSave(parsed);
+  try {
+    return normalizeLounge(s, trusted(accountActor), true);
+  } catch (e) {
+    if (e instanceof BedroomError)
+      throw new LoungeSaveError('room', 'Room is malformed: ' + e.message);
+    throw new LoungeSaveError('parse', 'Save could not be normalized');
+  }
+}
+/**
+ * Lenient reader for local/legacy browser data: anything unreadable becomes a
+ * fresh save. Never use it to decide what the server stores.
+ */
 export function readLounge(
   raw: string | null,
   accountActor?: number,
 ): LoungeSave {
-  const trustedActor =
-    Number.isInteger(accountActor) && accountActor! >= 0 && accountActor! < 7
-      ? accountActor
-      : undefined;
   try {
-    const s = JSON.parse(raw ?? 'null');
-    if (!s || s.version !== 1) return freshLounge(trustedActor);
-    const actor =
-      trustedActor ??
-      (Number.isInteger(s.actor) && s.actor >= 0 && s.actor < 7 ? s.actor : 6);
-    return {
-      version: 1,
-      actor,
-      looks: Array.from({ length: 7 }, (_, i) => readLook(s.looks?.[i], i)),
-      saved: Array.isArray(s.saved)
-        ? s.saved
-            .filter(
-              (x: any) =>
-                x &&
-                typeof x.id === 'string' &&
-                typeof x.name === 'string' &&
-                Number.isInteger(x.actor) &&
-                x.actor >= 0 &&
-                x.actor < 7,
-            )
-            .slice(0, 28)
-            .map((x: any) => ({
-              id: x.id.slice(0, 80),
-              actor: x.actor,
-              name: x.name.slice(0, 50),
-              look: readLook(x.look, x.actor),
-            }))
-        : [],
-      visits: Math.max(0, Math.min(1e5, Number(s.visits) || 0)),
-      bedroom: readBedroom(s.bedroom, actor),
-    };
-  } catch {
-    return freshLounge(trustedActor);
+    return readLoungeStrict(raw, accountActor);
+  } catch (e) {
+    // A malformed room alone must not wipe looks and saved outfits.
+    if (e instanceof LoungeSaveError && e.reason === 'room')
+      try {
+        return normalizeLounge(migrateLoungeSave(JSON.parse(raw ?? 'null')), trusted(accountActor));
+      } catch {
+        /* fall through to a fresh save */
+      }
+    return freshLounge(trusted(accountActor));
   }
 }

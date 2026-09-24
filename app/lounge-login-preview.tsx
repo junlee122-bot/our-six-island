@@ -1,12 +1,30 @@
 'use client';
 /* These small, pre-rendered sprites also run on static GitHub Pages. */
 /* oxlint-disable next/no-img-element */
-import { useState } from 'react';
+import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
 import { Hand, RotateCcw } from 'lucide-react';
 import { ACCOUNTS } from './lounge-accounts';
 import { LOUNGE_ASSETS } from './lounge-assets';
-import { LoginStudio } from './lounge-login-studio';
+import { ScreenBoundary } from './lounge/ErrorBoundary';
 import './lounge-login-preview.css';
+
+// three.js and the room models load after the login form is interactive, and
+// only when the preview is on screen (phones hide it behind a toggle). A failed
+// chunk just leaves the 2D preview: decoration never blocks logging in.
+// LoginPortrait (used elsewhere) stays a plain image with no 3D dependency.
+const LoginStudio = lazy(() =>
+  import('./lounge-login-studio').then((module) => ({
+    default: module.LoginStudio,
+  })),
+);
+// Keep in sync with the login layout breakpoint in lounge.css.
+const WIDE_LOGIN = '(min-width: 801px) and (min-height: 521px)';
+function subscribeWide(change: () => void) {
+  const query = matchMedia(WIDE_LOGIN);
+  query.addEventListener('change', change);
+  return () => query.removeEventListener('change', change);
+}
+const wideLogin = () => matchMedia(WIDE_LOGIN).matches;
 
 const LOGIN_FIGURES = [
   LOUNGE_ASSETS.loginDowon,
@@ -26,16 +44,30 @@ export function LoginPortrait({ actor }: { actor: number }) {
   );
 }
 
-export function LoginCharacterPreview({ actor }: { actor: number }) {
+export function LoginCharacterPreview({
+  actor,
+  open = false,
+}: {
+  actor: number;
+  /** The phone layout's "미리보기" toggle is open (the preview is visible). */
+  open?: boolean;
+}) {
   const [replay, setReplay] = useState(0);
+  const wide = useSyncExternalStore(subscribeWide, wideLogin, () => false);
   const friend = ACCOUNTS[actor];
   return (
     <div className="l-login-preview" data-actor={actor}>
       <div className="l-login-stage">
         <div className="l-login-room-label">
-          <span /> 우리들의 거실 <small>BEOMDEW HOME</small>
+          <span /> 우리들의 거실
         </div>
-        <LoginStudio />
+        {(wide || open) && (
+          <ScreenBoundary name="login-studio" fallback={null}>
+            <Suspense fallback={null}>
+              <LoginStudio />
+            </Suspense>
+          </ScreenBoundary>
+        )}
         <span className="l-login-shadow" aria-hidden="true" />
         <div className="l-login-entrance" key={`${actor}-${replay}`}>
           <img

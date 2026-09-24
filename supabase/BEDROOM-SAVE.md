@@ -31,9 +31,17 @@ Deploy the updated **hohyeon-api** Edge Function before releasing the bedroom UI
 An old deployed function strips the new bedroom field through its older
 `readLounge`, so frontend-only deployment would silently lose room edits.
 Include the new `app/lounge-bedroom-data.ts` in the function dependency closure.
-The existing `work/collect-account-function.mjs hohyeon-api` collector follows
-relative imports and includes it automatically. Keep current JWT verification and
-the existing `supabase/functions/deno.json` import map unchanged.
+The Supabase CLI (`supabase functions deploy hohyeon-api`, settings in
+`supabase/config.toml`) follows relative imports and includes it automatically.
+(The earlier `work/collect-account-function.mjs` collector was never committed.)
+Keep JWT verification on and the `supabase/functions/deno.json` import map.
+
+Since the 2026-09 hardening migration the server path is fail-closed: an
+unknown/newer `version` or unreadable save is rejected with 409 instead of being
+normalized to a fresh save, and every successful save is kept in
+`hohyeon.profile_history` (last 20 revisions). Add future fields by bumping
+`LOUNGE_SAVE_VERSION` with a `LOUNGE_MIGRATIONS` step in `app/lounge-look.ts`,
+and deploy migrations -> functions -> pages.
 
 Other Edge Functions do not process profile saves and need no deployment for this
 feature. On 2026-09-18, `hohyeon-api` version 3 was deployed with JWT verification

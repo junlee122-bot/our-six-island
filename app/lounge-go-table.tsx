@@ -1,16 +1,23 @@
 'use client';
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Expand, Layers, X, ArrowRight, Volume2, VolumeX } from 'lucide-react';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import {
   cardInfo,
   goScore,
+  goStopProjection,
   junkValue,
   MONTHS,
+  GO_POINT_BEOM,
   type GoAction,
   type GoView,
 } from './lounge-gostop';
 import { playGoMotion } from './lounge-go-motion';
+import type { TurnTiming } from './lounge-room';
+import { TURN_LIMIT_MS } from './lounge-games';
+import { AWAY_LABEL, TurnTimer } from './lounge-turn-timer';
+import { formatBeom, josa } from './lounge-text';
+import { loungeAudio } from './lounge-audio';
 const groups = [
   ['bright', '광'],
   ['animal', '열끗'],
@@ -65,6 +72,7 @@ function Captures({
   name,
   mine,
   active,
+  away,
   onInspect,
 }: {
   g: GoView;
@@ -72,6 +80,7 @@ function Captures({
   name: string;
   mine: boolean;
   active: boolean;
+  away: boolean;
   onInspect: () => void;
 }) {
   const score = goScore(g.captured[player]);
@@ -85,13 +94,14 @@ function Captures({
       <header>
         <div>
           <span className="g-seat-label">
-            {mine ? 'MY SEAT' : `PLAYER ${player + 1}`}
+            {mine ? '내 자리' : `${player + 1}번 자리`}
           </span>
           <strong>
             {name}
             {mine && <small>나</small>}
             {active && <i />}
           </strong>
+          {away && <span className="seat-away">{AWAY_LABEL}</span>}
         </div>
         <div className="g-score">
           <b>{score.total}</b>
@@ -222,12 +232,26 @@ export function GoBoard({
   names,
   onDisplayChange,
 }: {
-  match: GoView;
+  match: GoView & TurnTiming;
   seat: number;
-  onAction: (a: GoAction) => void;
+  /** Resolves false when the server refused the action (unlocks the hand). */
+  onAction: (a: GoAction) => Promise<boolean> | void;
   names: string[];
   onDisplayChange?: (revision: number) => void;
 }) {
+  // One action per server revision: a quick double tap sends only once.
+  // (A ref, so even two taps inside one frame send only once.)
+  const sent = useRef<string | null>(null),
+    sentKey = `${g.id}:${g.revision}`;
+  const act = (a: GoAction) => {
+    if (sent.current === sentKey) return;
+    sent.current = sentKey;
+    const answer = onAction(a);
+    if (answer)
+      void answer.then((ok) => {
+        if (!ok && sent.current === sentKey) sent.current = null;
+      });
+  };
   const [shown, setShown] = useState(g),
     [playing, setPlaying] = useState(false),
     [actionText, setActionText] = useState(''),
@@ -243,9 +267,14 @@ export function GoBoard({
     controller = useRef<AbortController | null>(null),
     generation = useRef(0),
     soundRef = useRef(false),
-    audio = useRef<AudioContext | null>(null);
-  latest.current = g;
-  soundRef.current = sound;
+    namesRef = useRef(names);
+  // Mirror the latest props for the async playback loop. A layout effect runs
+  // before the playback effect below, so the loop always sees this render's view.
+  useLayoutEffect(() => {
+    latest.current = g;
+    namesRef.current = names;
+    soundRef.current = sound;
+  });
   const snap = (value: GoView) => {
     current.current = value;
     setShown(value);
@@ -253,31 +282,23 @@ export function GoBoard({
   const tap = () => {
     if (!soundRef.current) return;
     try {
-      const ac = audio.current ?? new AudioContext();
-      audio.current = ac;
-      void ac.resume();
-      const o = ac.createOscillator(),
-        gain = ac.createGain();
-      o.type = 'triangle';
-      o.frequency.setValueAtTime(310, ac.currentTime);
-      o.frequency.exponentialRampToValueAtTime(100, ac.currentTime + 0.075);
-      gain.gain.setValueAtTime(0.055, ac.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.09);
-      o.connect(gain).connect(ac.destination);
-      o.start();
-      o.stop(ac.currentTime + 0.1);
+      // The shared lounge audio engine (one AudioContext for the whole app).
+      loungeAudio.tap();
     } catch {}
   };
+  // Keyed by the view's id and revision only: the loop plays each new server
+  // revision once, reading the view itself from `latest` (set just above).
   useEffect(() => {
-    const id = `${g.id}:${g.revision}`;
+    const view = latest.current,
+      id = `${view.id}:${view.revision}`;
     if (id === seen.current) return;
     seen.current = id;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (
-      g.id !== current.current.id ||
+      view.id !== current.current.id ||
       document.hidden ||
       reduced ||
-      (g.phase === 'over' && g.motion?.steps.length === 0)
+      (view.phase === 'over' && view.motion?.steps.length === 0)
     ) {
       generation.current++;
       controller.current?.abort();
@@ -285,10 +306,10 @@ export function GoBoard({
       running.current = false;
       setPlaying(false);
       setActionText('');
-      snap(g);
+      snap(view);
       return;
     }
-    queue.current.push(g);
+    queue.current.push(view);
     if (running.current) return;
     running.current = true;
     const epoch = generation.current;
@@ -307,7 +328,7 @@ export function GoBoard({
             await playGoMotion(
               stage.current,
               next.motion,
-              names,
+              namesRef.current,
               c.signal,
               (text) => {
                 if (epoch !== generation.current) return;
@@ -337,11 +358,15 @@ export function GoBoard({
     })();
   }, [g.id, g.revision]);
   useEffect(() => {
+    // Cancels any playback in flight (the generation bump ends the loop).
+    const stopPlayback = () => {
+      generation.current++;
+      controller.current?.abort();
+      queue.current = [];
+    };
     const hidden = () => {
       if (document.hidden) {
-        generation.current++;
-        controller.current?.abort();
-        queue.current = [];
+        stopPlayback();
         running.current = false;
         current.current = latest.current;
         setShown(latest.current);
@@ -351,11 +376,8 @@ export function GoBoard({
     };
     document.addEventListener('visibilitychange', hidden);
     return () => {
-      generation.current++;
-      controller.current?.abort();
-      queue.current = [];
+      stopPlayback();
       document.removeEventListener('visibilitychange', hidden);
-      void audio.current?.close();
     };
   }, []);
   useEffect(() => {
@@ -378,6 +400,20 @@ export function GoBoard({
         )
       : [],
     floorCards = [...shown.floor, ...picked];
+  const away = (i: number) => !!g.away?.includes(i),
+    lastEvent = shown.events.at(-1),
+    eventText = lastEvent
+      ? typeof lastEvent === 'string'
+        ? lastEvent
+        : lastEvent.seat >= 0 && names[lastEvent.seat]
+          ? `${names[lastEvent.seat]} · ${lastEvent.text}`
+          : lastEvent.text
+      : '',
+    projection =
+      seat >= 0 && shown.phase === 'decide'
+        ? goStopProjection(shown.captured, shown.go, seat)
+        : null,
+    stake = shown.stake;
   const status = playing
     ? actionText || '패를 정리하고 있어요'
     : shown.phase === 'over'
@@ -407,6 +443,20 @@ export function GoBoard({
         >
           {sound ? <Volume2 size={18} /> : <VolumeX size={18} />}
         </button>
+        {shown.phase !== 'over' && ready && (
+          <TurnTimer
+            deadline={g.turnDeadline}
+            total={TURN_LIMIT_MS.gostop}
+            label={
+              away(shown.turn)
+                ? AWAY_LABEL
+                : shown.turn === seat
+                  ? '내 차례'
+                  : `${names[shown.turn]} 차례`
+            }
+            mine={shown.turn === seat}
+          />
+        )}
       </div>
       <div className="g-table-shell" ref={stage} aria-busy={playing}>
         <div className="g-opponents">
@@ -416,6 +466,7 @@ export function GoBoard({
             name={names[left]}
             mine={false}
             active={shown.turn === left && shown.phase !== 'over'}
+            away={away(left)}
             onInspect={() => setInspect(left)}
           />
           <Captures
@@ -424,6 +475,7 @@ export function GoBoard({
             name={names[right]}
             mine={false}
             active={shown.turn === right && shown.phase !== 'over'}
+            away={away(right)}
             onInspect={() => setInspect(right)}
           />
         </div>
@@ -463,7 +515,7 @@ export function GoBoard({
                         disabled={!active || !waiting}
                         onClick={
                           active && waiting && shown.options.includes(c)
-                            ? () => onAction({ kind: 'pick', card: c })
+                            ? () => act({ kind: 'pick', card: c })
                             : undefined
                         }
                       />
@@ -482,7 +534,7 @@ export function GoBoard({
             </>
           ) : (
             <>
-              {shown.events.at(-1)}
+              {eventText}
               <span>
                 {shown.phase !== 'over' && (
                   <>
@@ -527,7 +579,7 @@ export function GoBoard({
                           (f) => cardInfo(f).month === cardInfo(c).month,
                         )
                       }
-                      onClick={() => onAction({ kind: 'play', card: c })}
+                      onClick={() => act({ kind: 'play', card: c })}
                     />
                   ))}
               </div>
@@ -541,20 +593,36 @@ export function GoBoard({
                     花
                   </span>
                 ))}
-                <small>손패는 공개되지 않습니다</small>
+                <small>손패는 공개되지 않아요</small>
               </div>
             )}
             {active && shown.phase === 'decide' && (
               <div className="l-go-decision">
                 <button
                   className="l-primary"
-                  onClick={() => onAction({ kind: 'stop' })}
+                  onClick={() => act({ kind: 'stop' })}
                 >
-                  스톱 · {goScore(shown.captured[seat]).total}점으로 마치기
+                  스톱 · {projection?.points ?? goScore(shown.captured[seat]).total}
+                  점으로 마치기
+                  {projection && (
+                    <small>
+                      {[0, 1, 2]
+                        .filter((i) => i !== seat)
+                        .map((i) => {
+                          const tags = [
+                            projection.pibak[i] ? '피박' : '',
+                            projection.gwangbak[i] ? '광박' : '',
+                          ].filter(Boolean);
+                          const owed = projection.owed[i] * GO_POINT_BEOM;
+                          return `${names[i]} ${projection.owed[i]}점${tags.length ? `(${tags.join('·')})` : ''} · ${formatBeom(stake ? Math.min(stake, owed) : owed)}`;
+                        })
+                        .join(' / ')}
+                    </small>
+                  )}
                 </button>
                 <button
                   className="l-secondary"
-                  onClick={() => onAction({ kind: 'go' })}
+                  onClick={() => act({ kind: 'go' })}
                 >
                   고! 한 번 더
                 </button>
@@ -567,20 +635,40 @@ export function GoBoard({
             name={names[anchor]}
             mine={seat >= 0}
             active={shown.turn === anchor && shown.phase !== 'over'}
+            away={away(anchor)}
             onInspect={() => setInspect(anchor)}
           />
         </div>
       </div>
       {shown.phase === 'over' && (
         <div className="l-go-result">
-          {shown.result.map((score, i) => (
-            <span key={i}>
-              {names[i]}{' '}
-              <b>
-                {score > 0 ? '+' : ''}
-                {score}점
-              </b>
-            </span>
+          {shown.result.map((score, i) => {
+            const amount = shown.beom?.[i];
+            return (
+              <span key={i}>
+                {names[i]}{' '}
+                <b>
+                  {amount !== undefined
+                    ? `${amount > 0 ? '+' : ''}${formatBeom(amount)}`
+                    : `${score > 0 ? '+' : ''}${score}점`}
+                </b>
+                {amount !== undefined && score !== 0 && (
+                  <small>
+                    {score > 0 ? '+' : ''}
+                    {score}점
+                  </small>
+                )}
+              </span>
+            );
+          })}
+          {shown.capped && <small>(최대 손실 한도 적용)</small>}
+          {shown.revealed?.map((r) => (
+            <div key={r.seat} className="g-revealed" aria-label={`${josa(names[r.seat], '이/가')} 공개한 패`}>
+              <small>{names[r.seat]} · 총통 공개</small>
+              {r.cards.map((c) => (
+                <Card key={c} id={c} />
+              ))}
+            </div>
           ))}
         </div>
       )}
@@ -594,17 +682,26 @@ export function GoBoard({
         <div className="l-rules">
           <p>
             손패 7장, 바닥 6장. 같은 월의 패를 가져와 3점부터 고 또는 스톱을
-            선택합니다. 다시 고를 외치려면 기본 점수가 올라야 해요.
+            선택해요. 다시 고를 외치려면 기본 점수가 올라야 해요.
           </p>
           <p>
             광 · 열끗 · 띠 · 피, 고도리, 홍단/청단/초단, 쪽/뻑/따닥/쓸,
-            피박/광박/멍따를 반영합니다. 국진의 술잔은 열끗으로 고정합니다.
+            피박/광박/멍따를 반영해요. 국진의 술잔은 열끗으로 고정해요.
           </p>
           <p>
-            1·2고는 각 1점 추가, 3고부터 배수를 적용합니다. 흔들기 · 폭탄 · 고박
-            · 나가리 다음 판 배수는 적용하지 않습니다. 총통은 5점씩, 피박은 피
-            1~5장입니다. 개인의 마지막 손패에는 특수 피 빼앗기 보너스가
-            없습니다. 점수만 주고받는 친선 게임입니다.
+            1·2고는 각 1점을 더해요. 3고부터는 (점수 + 고 횟수) × 2^(고−2)로
+            계산해요. 예: 4점에서 3고 14점, 4고 32점. 멍따(열끗 7장 이상)는
+            2배, 상대가 피박(피 1~5장)·광박(광 0장)이면 그 상대만 각각 2배를
+            내요. 흔들기 · 폭탄 · 고박 · 나가리 다음 판 배수는 적용하지
+            않아요. 총통은 5점씩이고 네 장을 모두에게 공개해요. 개인의
+            마지막 손패에는 특수 피 빼앗기 보너스가 없어요. 같은 종류의 피 두
+            장 중 고를 때는 자동으로 가져와요.
+          </p>
+          <p>
+            1점은 {formatBeom(GO_POINT_BEOM)}이고, 한 사람이 잃는 범은 초대장에서
+            정한 판돈(최대 손실 한도)을 넘지 않아요. 차례마다 45초 안에 내지
+            않거나 자리를 떠나면 서버가 대신 패를 내며 판은 끝까지 정산돼요.
+            다음 판의 선은 직전 판의 승자이고, 나가리면 그대로예요.
           </p>
         </div>
       )}

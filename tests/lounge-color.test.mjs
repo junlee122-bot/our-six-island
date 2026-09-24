@@ -253,6 +253,36 @@ test('hair dye follows long hair below the shoulders but leaves blue clothing di
     assert.equal(mask[y * width + x], 0, `clothing or background ${x},${y}`);
 });
 
+test('a navy collar touching the hair tips stays undyed when the cell sets a collar row', () => {
+  const width = 80,
+    height = 120,
+    data = new Uint8ClampedArray(width * height * 4);
+  const fill = (x, y, w, h, color) => {
+    for (let j = y; j < y + h; j++)
+      for (let i = x; i < x + w; i++) data.set([...color, 255], (j * width + i) * 4);
+  };
+  fill(18, 8, 44, 14, [57, 77, 175]); // crown
+  fill(18, 22, 9, 30, [57, 77, 175]); // bob sides down to the chin
+  fill(53, 22, 9, 30, [30, 44, 110]); // shadowed hair tips
+  fill(14, 50, 52, 50, [45, 65, 101]); // navy jacket, touching both tips
+  const anchors = { cx: 40, eyes: 38, head: 44 };
+  const loose = createHairMask(data, width, height, anchors);
+  assert.equal(loose[70 * width + 40], 1, 'without a collar row the jacket floods');
+  const mask = createHairMask(data, width, height, { ...anchors, collar: 46 });
+  for (const [x, y] of [
+    [20, 15],
+    [20, 49],
+    [58, 49],
+  ])
+    assert.equal(mask[y * width + x], 1, `hair ${x},${y}`);
+  for (const [x, y] of [
+    [40, 70],
+    [16, 60],
+    [60, 95],
+  ])
+    assert.equal(mask[y * width + x], 0, `jacket ${x},${y}`);
+});
+
 test('custom colors survive local restore, account save validation, and saved outfit restore', () => {
   const save = freshLounge(0);
   const look = readLook(

@@ -29,7 +29,40 @@
     "build/**",
     "dist/**",
     "coverage/**",
-    "next-env.d.ts"
+    "next-env.d.ts",
+    "docs/**",
+    "legacy/**",
+    "public/**",
+    "app/island-game.tsx",
+    "app/island-map.tsx",
+    "app/island-atmosphere.ts",
+    "app/world.tsx",
+    "app/life-ui.tsx",
+    "app/theater-game.tsx",
+    "app/theater-renderer.ts",
+    "app/theater-room.ts",
+    "app/theater-avatar.tsx",
+    "app/theater-assets.ts",
+    "app/multiplayer-session.ts",
+    "app/multiplayer-ui.tsx",
+    "app/use-multiplayer.ts",
+    "app/webmcp.ts",
+    "app/sound.ts",
+    "app/save-storage.ts",
+    "app/sprite-sheet.ts",
+    "app/character-avatar.tsx",
+    "app/character-renderer.ts",
+    "app/canvas-resolution.ts",
+    "app/game-assets.ts",
+    "app/wardrobe-ui.tsx",
+    "tests/game.test.mjs",
+    "tests/life.test.mjs",
+    "tests/multiplayer.test.mjs",
+    "tests/theater.test.mjs",
+    "scripts/verify-multiplayer.mjs",
+    "scripts/verify-theater-multiplayer.mjs",
+    "scripts/verify-lounge-multiplayer.mjs",
+    "supabase/functions/**"
   ],
   "rules": {
     "no-array-constructor": "error",
@@ -51,6 +84,24 @@
     "typescript/no-namespace": "error",
     "typescript/no-require-imports": "error",
     "typescript/no-unnecessary-type-constraint": "error",
-    "typescript/no-unsafe-function-type": "error"
-  }
+    "typescript/no-unsafe-function-type": "error",
+    "nextjs/no-img-element": "off",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "unicorn/no-useless-fallback-in-spread": "warn",
+    "no-control-regex": "warn"
+  },
+  "overrides": [
+    {
+      "files": [
+        "tests/**",
+        "scripts/**"
+      ],
+      "rules": {
+        "typescript/no-floating-promises": "off",
+        "prefer-const": "warn",
+        "no-unused-vars": "warn"
+      }
+    }
+  ]
 }

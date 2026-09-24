@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Tests
+        run: npm test
+      - name: Lint
+        run: npm run lint
+      - name: Pages build (scratch output, docs/ untouched)
+        run: node scripts/build-standalone.mjs --out /tmp/pages
+      - name: Build size summary
+        run: |
+          du -sh /tmp/pages /tmp/pages/assets
+          ls -S -l /tmp/pages/assets/*.js /tmp/pages/assets/*.css | head -20

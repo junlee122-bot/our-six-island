@@ -1,0 +1,994 @@
+// "범타듀의 하루" life engine: farming, fruit, selling/buying, guestbook,
+// mail and status text. Pure functions with injected `now`; the Edge function
+// (lounge-cloud-engine.ts) stores the result in `world.life`. Safe to import in
+// the client for catalog data and helpers (no room or chess imports).
+import {
+  grantBeom,
+  spendBeom,
+  kstDay,
+  nextKstMidnight,
+  type LoungeLedger,
+} from './lounge-economy.ts';
+
+export type Crop = 'carrot' | 'tomato' | 'pumpkin' | 'strawberry';
+export const CROPS: Crop[] = ['carrot', 'tomato', 'pumpkin', 'strawberry'];
+const MIN = 60_000,
+  HOUR = 3_600_000;
+/*
+ * Economy (documented in GAME_PROGRESS / POLISH-B notes; tests pin it):
+ * - Start 100,000범, daily grant 3,000범, table stakes ~10,000범.
+ * - Profit per hour with all 6 plots watered rises with the crop's length, so
+ *   the "twice a day" rhythm (long crops) beats clicking carrots every few
+ *   minutes: carrot 2,000/h < tomato 2,800/h < pumpkin ~4,300/h < strawberry
+ *   5,000/h. One overnight strawberry bed = 30,000범 (3 table stakes).
+ * - The daily sell cap (40,000범) bounds how much new 범 farming prints.
+ * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
+ *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
+ */
+export const CROP_INFO: Record<
+  Crop,
+  { name: string; growMs: number; seed: number; sell: number; emoji: string }
+> = {
+  carrot: { name: '당근', growMs: 30 * MIN, seed: 100, sell: 200, emoji: '🥕' },
+  tomato: { name: '토마토', growMs: HOUR, seed: 200, sell: 480, emoji: '🍅' },
+  pumpkin: { name: '호박', growMs: 3 * HOUR, seed: 500, sell: 1_800, emoji: '🎃' },
+  strawberry: {
+    name: '딸기',
+    growMs: 8 * HOUR,
+    seed: 1_000,
+    sell: 5_000,
+    emoji: '🍓',
+  },
+};
+export const FRUIT_SELL = 150;
+/** Watering makes the remaining growth 40% shorter (runs at 1/0.6 speed). */
+export const WATER_SPEEDUP = 0.4;
+export const PLOTS_PER_USER = 6;
+export const FRUIT_TREES = [
+  'tree-1',
+  'tree-2',
+  'tree-3',
+  'tree-4',
+  'tree-5',
+  'tree-6',
+] as const;
+export type FruitTree = (typeof FRUIT_TREES)[number];
+export const FRUIT_COOLDOWN_MS = 6 * HOUR;
+export const SELL_CAP_PER_DAY = 40_000;
+export const GUESTBOOK_MAX = 30;
+export const GUESTBOOK_TEXT_MAX = 80;
+export const MAIL_MAX = 30;
+export const MAIL_TEXT_MAX = 80;
+export const STATUS_TEXT_MAX = 40;
+export const TEXT_COOLDOWN_MS = 3_000;
+export const SELL_MAX_N = 999;
+export const BUY_MAX_N = 20;
+export const GIFT_MAX_N = 99;
+const BAG_MAX = 99_999;
+const MAX_USERS = 16;
+export const STARTER_SEEDS: Partial<Record<Crop, number>> = {
+  carrot: 3,
+  tomato: 2,
+};
+
+/** What a milestone counts: harvested crops or picked fruit. */
+export type HarvestKind = Crop | 'fruit';
+export const HARVEST_KINDS: HarvestKind[] = [...CROPS, 'fruit'];
+export type ShopItem = {
+  id: string;
+  name: string;
+  price: number;
+  kind: 'seed' | 'bundle' | 'trophy' | 'palette';
+  crop?: Crop;
+  /** Seeds per purchase ('bundle' only). */
+  seeds?: number;
+  /** Harvest milestone that must be reached before buying. */
+  requires?: { kind: HarvestKind; n: number };
+  /** Another unlock that must be owned first (palette tiers). */
+  after?: string;
+  description: string;
+};
+/** Korean thousands format without importing UI helpers into the engine. */
+const beom = (n: number) => n.toLocaleString('en-US') + '범';
+const growText = (crop: Crop) =>
+  CROP_INFO[crop].growMs >= HOUR
+    ? CROP_INFO[crop].growMs / HOUR + '시간'
+    : CROP_INFO[crop].growMs / MIN + '분';
+const trophy = (
+  id: string,
+  name: string,
+  price: number,
+  kind: HarvestKind,
+  n: number,
+): ShopItem => ({
+  id,
+  name,
+  price,
+  kind: 'trophy',
+  requires: { kind, n },
+  description: `내 방에 놓는 희귀 소품 · ${kind === 'fruit' ? '과일' : CROP_INFO[kind].name} ${n}개를 ${kind === 'fruit' ? '따면' : '수확하면'} 살 수 있어요`,
+});
+/** Seed bundles: six seeds (one full bed) at 10% off. */
+export const BUNDLE_SEEDS = 6;
+export const SHOP: ShopItem[] = [
+  ...CROPS.map(
+    (crop): ShopItem => ({
+      id: 'seed-' + crop,
+      name: CROP_INFO[crop].name + ' 씨앗',
+      price: CROP_INFO[crop].seed,
+      kind: 'seed',
+      crop,
+      description: `${growText(crop)} 뒤 수확 · ${beom(CROP_INFO[crop].sell)}에 팔려요`,
+    }),
+  ),
+  ...(['pumpkin', 'strawberry'] as const).map(
+    (crop): ShopItem => ({
+      id: 'bundle-' + crop,
+      name: CROP_INFO[crop].name + ' 씨앗 꾸러미',
+      price: Math.round((CROP_INFO[crop].seed * BUNDLE_SEEDS * 0.9) / 10) * 10,
+      kind: 'bundle',
+      crop,
+      seeds: BUNDLE_SEEDS,
+      description: `밭 한 판(${BUNDLE_SEEDS}칸)을 10% 싸게 · 씨앗 ${BUNDLE_SEEDS}개`,
+    }),
+  ),
+  trophy('trophy-carrot', '황금 당근 트로피', 20_000, 'carrot', 30),
+  trophy('trophy-tomato', '루비 토마토 트로피', 40_000, 'tomato', 30),
+  trophy('trophy-pumpkin', '대왕 호박 트로피', 80_000, 'pumpkin', 24),
+  trophy('trophy-strawberry', '별빛 딸기 트로피', 150_000, 'strawberry', 24),
+  trophy('fruit-basket', '과일 바구니', 30_000, 'fruit', 40),
+  {
+    id: 'palette-pastel',
+    name: '파스텔 팔레트',
+    price: 30_000,
+    kind: 'palette',
+    description: '머리색에 파스텔 색 한 줄이 더 생겨요',
+  },
+  {
+    id: 'palette-neon',
+    name: '네온 팔레트',
+    price: 80_000,
+    kind: 'palette',
+    after: 'palette-pastel',
+    description: '머리색에 네온 색 한 줄 · 파스텔 팔레트 다음 단계',
+  },
+  {
+    id: 'palette-sunset',
+    name: '노을 팔레트',
+    price: 150_000,
+    kind: 'palette',
+    after: 'palette-neon',
+    description: '머리색에 노을빛 한 줄 · 네온 팔레트 다음 단계',
+  },
+];
+export const SHOP_BY_ID: Record<string, ShopItem> = Object.fromEntries(
+  SHOP.map((s) => [s.id, s]),
+);
+export const UNLOCK_IDS = SHOP.filter(
+  (s) => s.kind === 'trophy' || s.kind === 'palette',
+).map((s) => s.id);
+export const PALETTES: Record<
+  'palette-pastel' | 'palette-neon' | 'palette-sunset',
+  string[]
+> = {
+  'palette-pastel': ['#f7c6d9', '#c9e4f5', '#d7f2c8', '#fff1b8', '#e3d4f7'],
+  'palette-neon': ['#ff2e88', '#00e5ff', '#39ff14', '#ffe600', '#b026ff'],
+  'palette-sunset': ['#ff7e5f', '#feb47b', '#c94b4b', '#7b4397', '#f9d423'],
+};
+/** Why an unlock cannot be bought yet (null = buyable apart from 범). */
+export function shopLock(
+  item: ShopItem,
+  owned: readonly string[],
+  harvested: Partial<Record<HarvestKind, number>>,
+): string | null {
+  if (item.after && !owned.includes(item.after))
+    return `${SHOP_BY_ID[item.after]?.name ?? '이전 단계'}부터 사야 해요`;
+  if (item.requires) {
+    const have = harvested[item.requires.kind] ?? 0;
+    if (have < item.requires.n) {
+      const what =
+        item.requires.kind === 'fruit' ? '과일' : CROP_INFO[item.requires.kind].name;
+      return `${what} ${have}/${item.requires.n}개 ${item.requires.kind === 'fruit' ? '땀' : '수확'}`;
+    }
+  }
+  return null;
+}
+
+export type Plot = { crop: Crop | null; plantedAt: number; wateredAt: number | null };
+export type Bag = {
+  seeds: Record<Crop, number>;
+  produce: Record<Crop, number>;
+  fruit: number;
+};
+export type GuestEntry = { from: string; actor: number; text: string; at: number };
+export type Gift =
+  | { kind: 'produce'; crop: Crop; n: number }
+  | { kind: 'fruit'; n: number };
+export type MailItem = {
+  id: string;
+  from: string;
+  actor: number;
+  text: string;
+  sticker?: string;
+  gift?: Gift;
+  at: number;
+  read: boolean;
+};
+export type LifeState = {
+  farms: Record<string, Plot[]>;
+  bag: Record<string, Bag>;
+  fruitPickedAt: Record<string, Record<string, number>>;
+  unlocks: Record<string, string[]>;
+  guestbook: Record<string, GuestEntry[]>;
+  mail: Record<string, MailItem[]>;
+  status: Record<string, { text: string; at: number }>;
+  /** uid → actor for everyone who has used the life engine. */
+  actors: Record<string, number>;
+  /** 범 sold per user on a KST day (daily sell cap). */
+  sold: Record<string, { day: number; amount: number }>;
+  /** Last guestbook/mail/status write per user (3s rate limit). */
+  lastText: Record<string, number>;
+  /** Monotonic counter for unique ledger entry and mail ids. */
+  seq: number;
+  /**
+   * Each member's room: who may walk in, and a revision the owner bumps after
+   * saving decoration edits so visitors refetch the room. Optional in older worlds.
+   */
+  rooms?: Record<string, RoomState>;
+  /** When each owner last opened their guestbook (entries after it are unread). */
+  guestbookSeen?: Record<string, number>;
+  /** Lifetime harvest/pick counts per user (trophy milestones). Optional. */
+  harvested?: Record<string, Partial<Record<HarvestKind, number>>>;
+};
+export type RoomAccess = 'public' | 'friends' | 'closed';
+export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
+export type RoomState = { access: RoomAccess; rev: number };
+export type LifeAction =
+  | { kind: 'plant'; plot: number; crop: Crop }
+  | { kind: 'water'; plot: number }
+  | { kind: 'harvest'; plot: number }
+  | { kind: 'pick'; tree: string }
+  | { kind: 'sell'; crop: Crop | 'fruit'; n: number }
+  | { kind: 'buy'; item: string; n?: number }
+  | { kind: 'guestbook'; owner: number | string; text: string }
+  | {
+      kind: 'mail';
+      to: number | string;
+      text: string;
+      sticker?: string;
+      gift?: Gift;
+    }
+  | { kind: 'readMail'; id: string }
+  | { kind: 'status'; text: string }
+  /** Room access setting and/or "my room changed" revision bump (owner only). */
+  | { kind: 'room'; access?: RoomAccess }
+  /** The owner looked at their guestbook (clears the unread badge). */
+  | { kind: 'readGuestbook' };
+export const LIFE_ACTION_KINDS = [
+  'plant',
+  'water',
+  'harvest',
+  'pick',
+  'sell',
+  'buy',
+  'guestbook',
+  'mail',
+  'readMail',
+  'status',
+  'room',
+  'readGuestbook',
+] as const;
+export const isLifeAction = (a: unknown): a is LifeAction =>
+  !!a &&
+  typeof a === 'object' &&
+  (LIFE_ACTION_KINDS as readonly string[]).includes(
+    (a as { kind?: unknown }).kind as string,
+  );
+
+export const LIFE_REJECT = {
+  invalid: '요청을 처리할 수 없어요. 화면을 새로 고친 뒤 다시 시도해 주세요.',
+  plot: '밭 칸을 확인해 주세요.',
+  occupied: '이미 작물이 자라고 있는 칸이에요.',
+  noSeed: '씨앗이 없어요. 상점에서 씨앗을 사 주세요.',
+  empty: '비어 있는 칸이에요.',
+  watered: '이미 물을 줬어요.',
+  grown: '이미 다 자랐어요. 수확해 주세요.',
+  notReady: '아직 다 자라지 않았어요.',
+  nothingReady: '수확할 작물이 없어요.',
+  tree: '과일나무를 확인해 주세요.',
+  treeWait: '이 나무의 과일은 아직 익지 않았어요. 나중에 다시 와 주세요.',
+  notEnough: '가방에 그만큼 없어요.',
+  sellCap: `오늘 팔 수 있는 한도(${SELL_CAP_PER_DAY.toLocaleString('en-US')}범)를 넘어요.`,
+  noEmpty: '빈 칸이 없어요.',
+  nothingToWater: '물을 줄 작물이 없어요.',
+  locked: '아직 살 수 없는 물건이에요.',
+  item: '상점에 없는 물건이에요.',
+  owned: '이미 가지고 있는 물건이에요.',
+  balance: '잔액이 부족해요.',
+  text: '글자를 확인해 주세요.',
+  textLong: '글이 너무 길어요.',
+  textRate: '잠시 후에 다시 써 주세요.',
+  friend: '아직 마을에 온 적 없는 친구예요.',
+  self: '나에게는 편지를 보낼 수 없어요.',
+  mail: '편지를 찾을 수 없어요.',
+  sticker: '스티커를 확인해 주세요.',
+  gift: '선물을 확인해 주세요.',
+} as const;
+export class LifeError extends Error {
+  status = 409;
+}
+function fail(message: string): never {
+  throw new LifeError(message);
+}
+
+// ---------------------------------------------------------------- helpers
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const safe = (n: unknown): n is number =>
+  typeof n === 'number' && Number.isSafeInteger(n);
+const time = (n: unknown) => (safe(n) && n >= 0 ? n : 0);
+const count = (n: unknown) =>
+  safe(n) && n >= 0 ? Math.min(n, BAG_MAX) : 0;
+const isCrop = (c: unknown): c is Crop => CROPS.includes(c as Crop);
+const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+// C0/C1 controls, line/paragraph separators, bidi overrides/isolates, BOM.
+const CONTROL = new RegExp(
+  // oxlint-disable-next-line no-control-regex -- rejecting control characters is the point.
+  '[\\u0000-\\u001f\\u007f-\\u009f\\u200b\\u200e\\u200f\\u2028-\\u202e\\u2060-\\u206f\\ufeff]',
+);
+const cropCounts = (): Record<Crop, number> => ({
+  carrot: 0,
+  tomato: 0,
+  pumpkin: 0,
+  strawberry: 0,
+});
+const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0, wateredAt: null });
+export const emptyBag = (): Bag => ({
+  seeds: cropCounts(),
+  produce: cropCounts(),
+  fruit: 0,
+});
+const starterBag = (): Bag => {
+  const bag = emptyBag();
+  for (const crop of CROPS) bag.seeds[crop] = STARTER_SEEDS[crop] ?? 0;
+  return bag;
+};
+export const emptyLife = (): LifeState => ({
+  farms: {},
+  bag: {},
+  fruitPickedAt: {},
+  unlocks: {},
+  guestbook: {},
+  mail: {},
+  status: {},
+  actors: {},
+  sold: {},
+  lastText: {},
+  seq: 0,
+});
+/** Text for guestbook/mail/status: trimmed, bounded, no control characters. */
+export function lifeText(value: unknown, max: number, allowEmpty = false) {
+  if (typeof value !== 'string') return fail(LIFE_REJECT.text);
+  const text = value.trim().replace(/\s+/g, ' ');
+  if (!text && !allowEmpty) return fail(LIFE_REJECT.text);
+  if (CONTROL.test(value.trim())) return fail(LIFE_REJECT.text);
+  if (Array.from(text).length > max) return fail(LIFE_REJECT.textLong);
+  return text;
+}
+const cleanText = (value: unknown, max: number) =>
+  typeof value === 'string'
+    ? Array.from(value.replace(new RegExp(CONTROL.source, 'g'), '').trim())
+        .slice(0, max)
+        .join('')
+    : '';
+
+// ---------------------------------------------------------------- growth
+/** When a planted crop is ready (server clock), or null for an empty plot. */
+export function plotReadyAt(plot: Plot): number | null {
+  if (!plot.crop) return null;
+  const grow = CROP_INFO[plot.crop].growMs,
+    w = plot.wateredAt;
+  if (w === null || w < plot.plantedAt) return plot.plantedAt + grow;
+  const done = w - plot.plantedAt;
+  if (done >= grow) return plot.plantedAt + grow;
+  // After watering, the remaining growth runs 40% shorter.
+  return w + Math.ceil((grow - done) * (1 - WATER_SPEEDUP));
+}
+export function plotProgress(plot: Plot, now: number) {
+  const ready = plotReadyAt(plot);
+  if (ready === null) return 0;
+  if (now >= ready) return 1;
+  const total = ready - plot.plantedAt;
+  return total <= 0 ? 1 : Math.max(0, (now - plot.plantedAt) / total);
+}
+/** 0 = empty or just planted, 1 = sprout, 2 = growing, 3 = ready. */
+export function plotStage(plot: Plot, now: number): 0 | 1 | 2 | 3 {
+  if (!plot.crop) return 0;
+  const p = plotProgress(plot, now);
+  return p >= 1 ? 3 : p >= 2 / 3 ? 2 : p >= 1 / 3 ? 1 : 0;
+}
+/** Deterministic 1–3 fruit per pick (no RNG in the pure engine). */
+function fruitYield(uid: string, tree: string, now: number, seq: number) {
+  let h = 2166136261;
+  for (const ch of `${uid}:${tree}:${now}:${seq}`) {
+    h ^= ch.charCodeAt(0);
+    h = Math.imul(h, 16777619);
+  }
+  return ((h >>> 0) % 3) + 1;
+}
+
+// ---------------------------------------------------------------- loading
+function readPlot(value: unknown): Plot {
+  const p = (value ?? {}) as Partial<Plot>;
+  if (!isCrop(p.crop)) return emptyPlot();
+  return {
+    crop: p.crop,
+    plantedAt: time(p.plantedAt),
+    wateredAt: p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt),
+  };
+}
+function readBag(value: unknown): Bag {
+  const b = (value ?? {}) as Partial<Bag>,
+    bag = emptyBag();
+  for (const crop of CROPS) {
+    bag.seeds[crop] = count(b.seeds?.[crop]);
+    bag.produce[crop] = count(b.produce?.[crop]);
+  }
+  bag.fruit = count(b.fruit);
+  return bag;
+}
+function readGift(value: unknown): Gift | undefined {
+  const g = value as Partial<{ kind: string; crop: unknown; n: unknown }> | null;
+  if (!g || typeof g !== 'object' || !safe(g.n) || g.n < 1 || g.n > GIFT_MAX_N)
+    return;
+  if (g.kind === 'fruit') return { kind: 'fruit', n: g.n };
+  if (g.kind === 'produce' && isCrop(g.crop))
+    return { kind: 'produce', crop: g.crop, n: g.n };
+}
+const obj = (v: unknown): Record<string, unknown> =>
+  v && typeof v === 'object' && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : {};
+function users<T>(
+  value: unknown,
+  read: (v: unknown) => T | undefined,
+): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const [k, v] of Object.entries(obj(value)).slice(0, MAX_USERS * 2)) {
+    if (!UUID.test(k) || Object.keys(out).length >= MAX_USERS) continue;
+    const r = read(v);
+    if (r !== undefined) out[k] = r;
+  }
+  return out;
+}
+/** Room access/revision per member; omitted when empty (older worlds stay equal). */
+function guestbookSeenOf(value: unknown): { guestbookSeen?: Record<string, number> } {
+  const seen = users(value, (t) => (safe(t) && t > 0 ? t : undefined));
+  return Object.keys(seen).length ? { guestbookSeen: seen } : {};
+}
+function roomsOf(value: unknown): { rooms?: Record<string, RoomState> } {
+  const rooms = users(value, (r) => {
+    const x = obj(r);
+    return ROOM_ACCESS_VALUES.includes(x.access as RoomAccess)
+      ? { access: x.access as RoomAccess, rev: safe(x.rev) && x.rev >= 0 ? x.rev : 0 }
+      : undefined;
+  });
+  return Object.keys(rooms).length ? { rooms } : {};
+}
+/**
+ * Normalizes `world.life` (absent in older worlds → empty). Everything is
+ * bounded so a corrupt or hostile value cannot grow the world row.
+ */
+export function readLife(value: unknown): LifeState {
+  const v = obj(value);
+  const entry = (e: unknown): GuestEntry | null => {
+    const x = obj(e);
+    if (typeof x.from !== 'string' || !UUID.test(x.from) || !actorValid(x.actor))
+      return null;
+    const text = cleanText(x.text, GUESTBOOK_TEXT_MAX);
+    return text ? { from: x.from, actor: x.actor, text, at: time(x.at) } : null;
+  };
+  const mail = (e: unknown): MailItem | null => {
+    const x = obj(e);
+    if (
+      typeof x.id !== 'string' ||
+      !/^[A-Za-z0-9-]{1,64}$/.test(x.id) ||
+      typeof x.from !== 'string' ||
+      !UUID.test(x.from) ||
+      !actorValid(x.actor)
+    )
+      return null;
+    const gift = readGift(x.gift),
+      sticker =
+        typeof x.sticker === 'string' && /^[a-z0-9-]{1,24}$/.test(x.sticker)
+          ? x.sticker
+          : undefined;
+    return {
+      id: x.id,
+      from: x.from,
+      actor: x.actor,
+      text: cleanText(x.text, MAIL_TEXT_MAX),
+      ...(sticker ? { sticker } : {}),
+      ...(gift ? { gift } : {}),
+      at: time(x.at),
+      read: x.read === true,
+    };
+  };
+  return {
+    farms: users(v.farms, (f) =>
+      Array.from({ length: PLOTS_PER_USER }, (_, i) =>
+        readPlot(Array.isArray(f) ? f[i] : null),
+      ),
+    ),
+    bag: users(v.bag, readBag),
+    fruitPickedAt: users(v.fruitPickedAt, (t) => {
+      const out: Record<string, number> = {};
+      for (const tree of FRUIT_TREES) {
+        const at = obj(t)[tree];
+        if (safe(at) && at > 0) out[tree] = at;
+      }
+      return out;
+    }),
+    unlocks: users(v.unlocks, (u) =>
+      Array.isArray(u)
+        ? [...new Set(u.filter((id) => UNLOCK_IDS.includes(id)))]
+        : [],
+    ),
+    guestbook: users(v.guestbook, (g) =>
+      Array.isArray(g)
+        ? g
+            .slice(-GUESTBOOK_MAX)
+            .map(entry)
+            .filter((e): e is GuestEntry => !!e)
+        : [],
+    ),
+    mail: users(v.mail, (m) =>
+      Array.isArray(m)
+        ? m
+            .slice(-MAIL_MAX)
+            .map(mail)
+            .filter((e): e is MailItem => !!e)
+        : [],
+    ),
+    status: users(v.status, (s) => {
+      const x = obj(s),
+        text = cleanText(x.text, STATUS_TEXT_MAX);
+      return text ? { text, at: time(x.at) } : undefined;
+    }),
+    actors: users(v.actors, (a) => (actorValid(a) ? a : undefined)),
+    sold: users(v.sold, (s) => {
+      const x = obj(s);
+      return safe(x.day) && safe(x.amount) && x.amount >= 0
+        ? { day: x.day, amount: x.amount }
+        : undefined;
+    }),
+    lastText: users(v.lastText, (t) => (safe(t) && t > 0 ? t : undefined)),
+    seq: safe(v.seq) && v.seq >= 0 ? v.seq : 0,
+    ...roomsOf(v.rooms),
+    ...guestbookSeenOf(v.guestbookSeen),
+    ...harvestedOf(v.harvested),
+  };
+}
+function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
+  const harvested = users(value, (h) => {
+    const x = obj(h),
+      out: Partial<Record<HarvestKind, number>> = {};
+    for (const kind of HARVEST_KINDS) {
+      const n = count(x[kind]);
+      if (n > 0) out[kind] = n;
+    }
+    return Object.keys(out).length ? out : undefined;
+  });
+  return Object.keys(harvested).length ? { harvested } : {};
+}
+const countHarvest = (life: LifeState, uid: string, kind: HarvestKind, n: number) => {
+  const mine = ((life.harvested ??= {})[uid] ??= {});
+  mine[kind] = addCount(mine[kind] ?? 0, n);
+};
+/** Registers a member: actor mapping, starter seeds and an empty farm. */
+export function ensureLifeMember(
+  life: LifeState,
+  uid: string,
+  actor: number,
+): LifeState {
+  if (!UUID.test(uid) || !actorValid(actor)) fail(LIFE_REJECT.invalid);
+  if (
+    life.actors[uid] === actor &&
+    life.bag[uid] &&
+    life.farms[uid]?.length === PLOTS_PER_USER
+  )
+    return life;
+  const next = structuredClone(life);
+  // One uid per actor: a re-created account replaces the old mapping.
+  for (const [id, a] of Object.entries(next.actors))
+    if (a === actor && id !== uid) delete next.actors[id];
+  next.actors[uid] = actor;
+  next.bag[uid] ??= starterBag();
+  next.farms[uid] ??= Array.from({ length: PLOTS_PER_USER }, emptyPlot);
+  return next;
+}
+const uidOf = (life: LifeState, target: unknown): string | null => {
+  if (typeof target === 'string' && UUID.test(target))
+    return target in life.actors ? target : null;
+  if (!actorValid(target)) return null;
+  return (
+    Object.entries(life.actors).find(([, a]) => a === target)?.[0] ?? null
+  );
+};
+export function sellCapLeft(life: LifeState, uid: string, now: number) {
+  const s = life.sold[uid];
+  return SELL_CAP_PER_DAY - (s && s.day === kstDay(now) ? s.amount : 0);
+}
+const plotIndex = (plot: unknown) =>
+  safe(plot) && plot >= 0 && plot < PLOTS_PER_USER
+    ? plot
+    : fail(LIFE_REJECT.plot);
+const pushBounded = <T>(list: T[] | undefined, item: T, max: number) =>
+  [...(list ?? []), item].slice(-max);
+const addCount = (n: number, add: number) => Math.min(BAG_MAX, n + add);
+
+// ---------------------------------------------------------------- actions
+/**
+ * Applies one life action for `member`. Returns new state and ledger (inputs
+ * are not mutated). Throws LifeError with a Korean message on rejection.
+ */
+export function lifeAction(
+  original: LifeState,
+  ledger: LoungeLedger,
+  member: { id: string; actor: number },
+  action: LifeAction,
+  now: number,
+): { life: LifeState; ledger: LoungeLedger } {
+  if (!isLifeAction(action)) fail(LIFE_REJECT.invalid);
+  const life = structuredClone(ensureLifeMember(original, member.id, member.actor));
+  const uid = member.id,
+    wallet = 'wallet-' + uid,
+    bag = life.bag[uid],
+    farm = life.farms[uid],
+    a = action as LifeAction;
+  const textGate = () => {
+    if (now - (life.lastText[uid] ?? 0) < TEXT_COOLDOWN_MS)
+      fail(LIFE_REJECT.textRate);
+    life.lastText[uid] = now;
+  };
+  const nextId = (prefix: string) => `${prefix}-${uid}-${++life.seq}`;
+  let nextLedger = ledger;
+  switch (a.kind) {
+    case 'plant': {
+      // plot -1 plants every empty plot (as many as there are seeds): one
+      // request and one friend broadcast instead of six.
+      if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
+      if (a.plot === -1) {
+        const empty = farm.flatMap((p, i) => (p.crop ? [] : [i]));
+        if (!empty.length) fail(LIFE_REJECT.noEmpty);
+        if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
+        for (const i of empty.slice(0, bag.seeds[a.crop])) {
+          bag.seeds[a.crop] -= 1;
+          farm[i] = { crop: a.crop, plantedAt: now, wateredAt: null };
+        }
+        break;
+      }
+      const i = plotIndex(a.plot);
+      if (farm[i].crop) fail(LIFE_REJECT.occupied);
+      if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
+      bag.seeds[a.crop] -= 1;
+      farm[i] = { crop: a.crop, plantedAt: now, wateredAt: null };
+      break;
+    }
+    case 'water': {
+      if (a.plot === -1) {
+        let watered = 0;
+        for (const plot of farm)
+          if (plot.crop && plot.wateredAt === null && now < plotReadyAt(plot)!) {
+            plot.wateredAt = now;
+            watered++;
+          }
+        if (!watered) fail(LIFE_REJECT.nothingToWater);
+        break;
+      }
+      const i = plotIndex(a.plot),
+        plot = farm[i];
+      if (!plot.crop) fail(LIFE_REJECT.empty);
+      if (plot.wateredAt !== null) fail(LIFE_REJECT.watered);
+      if (now >= plotReadyAt(plot)!) fail(LIFE_REJECT.grown);
+      plot.wateredAt = now;
+      break;
+    }
+    case 'harvest': {
+      if (a.plot !== -1) plotIndex(a.plot);
+      const targets =
+        a.plot === -1 ? farm.map((_, i) => i) : [a.plot as number];
+      let harvested = 0;
+      for (const i of targets) {
+        const plot = farm[i];
+        if (!plot.crop) {
+          if (a.plot !== -1) fail(LIFE_REJECT.empty);
+          continue;
+        }
+        if (now < plotReadyAt(plot)!) {
+          if (a.plot !== -1) fail(LIFE_REJECT.notReady);
+          continue;
+        }
+        bag.produce[plot.crop] = addCount(bag.produce[plot.crop], 1);
+        countHarvest(life, uid, plot.crop, 1);
+        farm[i] = emptyPlot();
+        harvested++;
+      }
+      if (!harvested) fail(LIFE_REJECT.nothingReady);
+      break;
+    }
+    case 'pick': {
+      if (!(FRUIT_TREES as readonly string[]).includes(a.tree))
+        fail(LIFE_REJECT.tree);
+      const picked = (life.fruitPickedAt[uid] ??= {});
+      if (now - (picked[a.tree] ?? -Infinity) < FRUIT_COOLDOWN_MS)
+        fail(LIFE_REJECT.treeWait);
+      picked[a.tree] = now;
+      const got = fruitYield(uid, a.tree, now, ++life.seq);
+      bag.fruit = addCount(bag.fruit, got);
+      countHarvest(life, uid, 'fruit', got);
+      break;
+    }
+    case 'sell': {
+      const fruit = a.crop === 'fruit';
+      if (!fruit && !isCrop(a.crop)) fail(LIFE_REJECT.invalid);
+      if (!safe(a.n) || a.n < 1 || a.n > SELL_MAX_N) fail(LIFE_REJECT.invalid);
+      const have = fruit ? bag.fruit : bag.produce[a.crop as Crop];
+      if (have < a.n) fail(LIFE_REJECT.notEnough);
+      const amount = a.n * (fruit ? FRUIT_SELL : CROP_INFO[a.crop as Crop].sell),
+        left = sellCapLeft(life, uid, now);
+      if (amount > left)
+        fail(`오늘은 ${beom(Math.max(0, left))}어치까지만 더 팔 수 있어요.`);
+      if (fruit) bag.fruit -= a.n;
+      else bag.produce[a.crop as Crop] -= a.n;
+      const day = kstDay(now),
+        prev = life.sold[uid];
+      life.sold[uid] = {
+        day,
+        amount: (prev?.day === day ? prev.amount : 0) + amount,
+      };
+      nextLedger = grantBeom(
+        ledger,
+        wallet,
+        amount,
+        nextId('life-sell'),
+        now,
+        'sell-' + a.crop,
+      );
+      break;
+    }
+    case 'buy': {
+      const item = typeof a.item === 'string' ? SHOP_BY_ID[a.item] : undefined;
+      if (!item) fail(LIFE_REJECT.item);
+      const n = a.n ?? 1;
+      const stacks = item!.kind === 'seed' || item!.kind === 'bundle';
+      if (!safe(n) || n < 1 || n > (stacks ? BUY_MAX_N : 1))
+        fail(LIFE_REJECT.invalid);
+      const owned = (life.unlocks[uid] ??= []);
+      if (!stacks && owned.includes(item!.id)) fail(LIFE_REJECT.owned);
+      if (shopLock(item!, owned, life.harvested?.[uid] ?? {}))
+        fail(LIFE_REJECT.locked);
+      const price = item!.price * n;
+      if ((ledger.accounts[wallet] ?? 0) < price) fail(LIFE_REJECT.balance);
+      nextLedger = spendBeom(
+        ledger,
+        wallet,
+        price,
+        nextId('life-buy'),
+        now,
+        'buy-' + item!.id,
+      );
+      if (stacks)
+        bag.seeds[item!.crop!] = addCount(
+          bag.seeds[item!.crop!],
+          n * (item!.seeds ?? 1),
+        );
+      else owned.push(item!.id);
+      break;
+    }
+    case 'guestbook': {
+      const owner = uidOf(life, a.owner);
+      if (!owner) fail(LIFE_REJECT.friend);
+      const text = lifeText(a.text, GUESTBOOK_TEXT_MAX);
+      textGate();
+      life.guestbook[owner!] = pushBounded(
+        life.guestbook[owner!],
+        { from: uid, actor: member.actor, text, at: now },
+        GUESTBOOK_MAX,
+      );
+      break;
+    }
+    case 'mail': {
+      const to = uidOf(life, a.to);
+      if (!to) fail(LIFE_REJECT.friend);
+      if (to === uid) fail(LIFE_REJECT.self);
+      const text = lifeText(a.text, MAIL_TEXT_MAX, !!a.gift || !!a.sticker);
+      if (
+        a.sticker !== undefined &&
+        (typeof a.sticker !== 'string' || !/^[a-z0-9-]{1,24}$/.test(a.sticker))
+      )
+        fail(LIFE_REJECT.sticker);
+      let gift: Gift | undefined;
+      if (a.gift !== undefined) {
+        gift = readGift(a.gift);
+        if (!gift) fail(LIFE_REJECT.gift);
+        const theirs = (life.bag[to] ??= starterBag());
+        if (gift!.kind === 'fruit') {
+          if (bag.fruit < gift!.n) fail(LIFE_REJECT.notEnough);
+          bag.fruit -= gift!.n;
+          theirs.fruit = addCount(theirs.fruit, gift!.n);
+        } else {
+          const crop = gift!.crop;
+          if (bag.produce[crop] < gift!.n) fail(LIFE_REJECT.notEnough);
+          bag.produce[crop] -= gift!.n;
+          theirs.produce[crop] = addCount(theirs.produce[crop], gift!.n);
+        }
+      }
+      textGate();
+      life.mail[to] = pushBounded(
+        life.mail[to],
+        {
+          id: `m${now.toString(36)}-${++life.seq}`,
+          from: uid,
+          actor: member.actor,
+          text,
+          ...(a.sticker ? { sticker: a.sticker } : {}),
+          ...(gift ? { gift } : {}),
+          at: now,
+          read: false,
+        },
+        MAIL_MAX,
+      );
+      break;
+    }
+    case 'readMail': {
+      const box = life.mail[uid] ?? [];
+      if (a.id === 'all') for (const m of box) m.read = true;
+      else {
+        const m = box.find((m) => m.id === a.id);
+        if (!m) fail(LIFE_REJECT.mail);
+        m!.read = true;
+      }
+      life.mail[uid] = box;
+      break;
+    }
+    case 'readGuestbook': {
+      (life.guestbookSeen ??= {})[uid] = now;
+      break;
+    }
+    case 'room': {
+      if (a.access !== undefined && !ROOM_ACCESS_VALUES.includes(a.access))
+        fail(LIFE_REJECT.invalid);
+      const rooms = (life.rooms ??= {}),
+        prev = rooms[uid] ?? { access: 'friends', rev: 0 };
+      rooms[uid] = {
+        access: a.access ?? prev.access,
+        rev: (prev.rev + 1) % Number.MAX_SAFE_INTEGER,
+      };
+      break;
+    }
+    case 'status': {
+      const text = lifeText(a.text, STATUS_TEXT_MAX, true);
+      textGate();
+      if (text) life.status[uid] = { text, at: now };
+      else delete life.status[uid];
+      break;
+    }
+  }
+  return { life, ledger: nextLedger };
+}
+
+// ---------------------------------------------------------------- views
+export type PlotView = Plot & {
+  readyAt: number | null;
+  stage: 0 | 1 | 2 | 3;
+  ready: boolean;
+};
+export type LifeView = {
+  me: {
+    farm: PlotView[];
+    bag: Bag;
+    unlocks: string[];
+    mailUnread: number;
+    /** Guestbook entries friends wrote since I last opened it. */
+    guestbookUnread: number;
+    mail: MailItem[];
+    status: { text: string; at: number } | null;
+    guestbook: GuestEntry[];
+    fruitReadyAt: Record<string, number>;
+    /** Lifetime harvest/pick counts (trophy milestones). */
+    harvested: Partial<Record<HarvestKind, number>>;
+  };
+  statuses: Record<string, { actor: number; text: string; at: number }>;
+  housesPlotsPublic: Record<string, { crop: Crop | null; stage: 0 | 1 | 2 | 3 }[]>;
+  actors: Record<string, number>;
+  /** Room access and revision per owner actor (absent = 'friends', rev 0). */
+  rooms: Record<number, RoomState>;
+  sellCapLeft: number;
+  sellCapResetAt: number;
+  serverNow: number;
+};
+export function lifeView(
+  state: LifeState,
+  uid: string,
+  actor: number,
+  now: number,
+): LifeView {
+  const life =
+    UUID.test(uid) && actorValid(actor)
+      ? ensureLifeMember(state, uid, actor)
+      : state;
+  const farm = life.farms[uid] ?? [];
+  const mail = life.mail[uid] ?? [];
+  const picked = life.fruitPickedAt[uid] ?? {};
+  const statuses: LifeView['statuses'] = {};
+  for (const [id, s] of Object.entries(life.status))
+    if (id in life.actors)
+      statuses[id] = { actor: life.actors[id], text: s.text, at: s.at };
+  const housesPlotsPublic: LifeView['housesPlotsPublic'] = {};
+  for (const [id, plots] of Object.entries(life.farms))
+    housesPlotsPublic[id] = plots.map((p) => ({
+      crop: p.crop,
+      stage: plotStage(p, now),
+    }));
+  return {
+    me: {
+      farm: farm.map((p) => {
+        const readyAt = plotReadyAt(p);
+        return {
+          ...p,
+          readyAt,
+          stage: plotStage(p, now),
+          ready: readyAt !== null && now >= readyAt,
+        };
+      }),
+      bag: structuredClone(life.bag[uid] ?? emptyBag()),
+      unlocks: [...(life.unlocks[uid] ?? [])],
+      harvested: { ...life.harvested?.[uid] },
+      mailUnread: mail.filter((m) => !m.read).length,
+      guestbookUnread: (life.guestbook[uid] ?? []).filter(
+        (g) => g.from !== uid && g.at > (life.guestbookSeen?.[uid] ?? 0),
+      ).length,
+      mail: structuredClone(mail),
+      status: life.status[uid] ? { ...life.status[uid] } : null,
+      guestbook: structuredClone(life.guestbook[uid] ?? []),
+      fruitReadyAt: Object.fromEntries(
+        FRUIT_TREES.map((t) => [
+          t,
+          picked[t] && now - picked[t] < FRUIT_COOLDOWN_MS
+            ? picked[t] + FRUIT_COOLDOWN_MS
+            : 0,
+        ]),
+      ),
+    },
+    statuses,
+    housesPlotsPublic,
+    actors: { ...life.actors },
+    rooms: Object.fromEntries(
+      Object.entries(life.rooms ?? {})
+        .filter(([id]) => id in life.actors)
+        .map(([id, room]) => [life.actors[id], { ...room }]),
+    ),
+    sellCapLeft: Math.max(0, sellCapLeft(life, uid, now)),
+    sellCapResetAt: nextKstMidnight(now),
+    serverNow: now,
+  };
+}
+/** Read-only parts of a friend's life shown when visiting their room. */
+export function friendLife(state: LifeState, actor: number) {
+  const uid = uidOf(state, actor);
+  return {
+    guestbook: uid ? structuredClone(state.guestbook[uid] ?? []) : [],
+    status: uid && state.status[uid] ? { ...state.status[uid] } : null,
+    unlocks: uid ? [...(state.unlocks[uid] ?? [])] : [],
+    access: roomAccessOf(state, actor),
+  };
+}
+/** Who may enter `owner`'s room right now (default: all friends). */
+export function roomAccessOf(state: LifeState, owner: number): RoomAccess {
+  const uid = uidOf(state, owner);
+  return (uid && state.rooms?.[uid]?.access) || 'friends';
+}
+/** Whether `visitor` may walk into `owner`'s room. The owner always may. */
+export const mayEnterRoom = (state: LifeState, owner: number, visitor: number) =>
+  owner === visitor || roomAccessOf(state, owner) !== 'closed';

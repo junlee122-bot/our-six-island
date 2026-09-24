@@ -60,7 +60,7 @@ function finishAfterDeparture(kind, fixture) {
   let now = Date.now();
   for (let step = 0; step < 100; step += 1) {
     const current = view(players[1]);
-    if (!gameIsActive(current, kind)) return;
+    if (!gameIsActive(current, kind)) return now;
     const match = current[kind];
     const canAct =
       kind === 'poker'
@@ -103,21 +103,23 @@ for (const kind of ['poker', 'blackjack', 'seotda']) {
     assert.equal(flow.canRequest, false);
   });
 
-  test(`${kind}: a departed player is not ready for the survivor's retained table`, () => {
+  test(`${kind}: after a departure the short table waits for a fill, then dissolves and a new invite is possible`, () => {
     const fixture = departedGame(kind);
-    finishAfterDeparture(kind, fixture);
-    const current = fixture.view();
+    const end = finishAfterDeparture(kind, fixture);
+    let current = fixture.view();
     assert.equal(current[kind].phase, 'over');
     assert.equal(current.seats[kind].includes(fixture.players[0]), true);
+    // The survivor keeps the short table until the ready check runs out.
     assert.deepEqual(current.tables[kind].members, [fixture.players[1]]);
     assert.equal(playerIsBusy(current, fixture.players[0]), false);
+    fixture.room.hostedTick(end + 61_000);
+    current = fixture.view();
+    assert.equal(current.tables[kind], undefined);
 
     const flow = gameFlow(current, kind);
-    assert.equal(flow.status, 'retained');
+    assert.equal(flow.retained, false);
     assert.equal(flow.ownTable, false);
-    assert.equal(flow.ownSeat, false);
-    assert.equal(flow.canOpen, true);
-    assert.equal(flow.canRequest, false);
+    assert.equal(flow.canRequest, true);
   });
 }
 

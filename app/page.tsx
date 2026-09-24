@@ -1,5 +1,11 @@
 'use client';
 import LoungeGame from './lounge-game';
+import { RootBoundary } from './lounge/ErrorBoundary';
+
 export default function Page() {
-  return <LoungeGame />;
+  return (
+    <RootBoundary>
+      <LoungeGame />
+    </RootBoundary>
+  );
 }

@@ -1,7 +1,17 @@
+:root {
+  /* z-index scale for the lounge UI (native <dialog> modals use the top layer). */
+  --z-base: 1;
+  --z-raised: 2;
+  --z-sticky: 20;
+  --z-hud: 30;
+  --z-overlay: 40;
+  --z-coach: 900;
+  --z-toast: 1000;
+}
 .l-auth-page {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(400px, 0.9fr);
-  background: #f8f6ef !important;
+  background: #f1f3f4;
 }
 .l-auth-story {
   background: #244e45;
@@ -29,7 +39,7 @@
   letter-spacing: 3px;
 }
 .l-auth-story h1 {
-  font-size: clamp(32px, 3.4vw, 54px) !important;
+  font-size: clamp(32px, 3.4vw, 54px);
   line-height: 1.4;
   margin: 22px 0;
 }
@@ -37,23 +47,6 @@
   color: #d2ded1;
   line-height: 1.9;
   font-size: 16px;
-}
-.l-auth-friends {
-  display: flex;
-  align-items: end;
-  margin: 48px -24px 35px;
-}
-.l-auth-friends > div {
-  width: 14.28%;
-  text-align: center;
-}
-.l-auth-friends .avatar-view {
-  width: 100%;
-  height: 145px;
-}
-.l-auth-friends span {
-  font-size: 12px;
-  color: #dbdfc9;
 }
 .l-auth-promise {
   display: flex;
@@ -94,7 +87,7 @@
   font-size: 13px;
   border-bottom: 2px solid transparent;
 }
-.l-auth-tabs button[aria-pressed='true'] {
+.l-auth-tabs button[aria-selected='true'] {
   color: #315c50;
   border-color: #315c50;
   font-weight: 700;
@@ -141,7 +134,7 @@
   gap: 5px;
   align-items: center;
 }
-.l-account-ids button[aria-pressed='true'] {
+.l-account-ids button[aria-checked='true'] {
   background: #e4eddf;
   border-color: #557e60;
   color: #244e45;
@@ -150,7 +143,7 @@
   font-size: 13px;
 }
 .l-account-ids small {
-  font-size: 10px;
+  font-size: 11px;
   color: #7a8477;
 }
 .l-account-form .l-selected-id {
@@ -202,7 +195,7 @@
   gap: 9px;
 }
 .l-account-actions button {
-  font-size: 12px !important;
+  font-size: 12px;
 }
 .l-save-bar {
   max-width: 1400px;
@@ -223,6 +216,51 @@
   color: #456550;
   padding: 6px 11px;
   border-radius: 7px;
+}
+/* Auto-save indicator: hidden while saved; a small cloud while saving. */
+.l-save-status {
+  position: fixed;
+  left: max(12px, env(safe-area-inset-left));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: var(--z-hud);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border: 1px solid #dfe5d4;
+  border-radius: 999px;
+  background: #fffef8f0;
+  color: #5d7a55;
+  font-size: 12px;
+  box-shadow: 0 4px 14px #30462118;
+  pointer-events: none;
+}
+.l-save-status.is-saving svg {
+  animation: l-save-pulse 1.2s ease-in-out infinite;
+}
+.l-save-status.is-problem {
+  border-color: #e3c39a;
+  background: #fff6e6;
+  color: #8a5a1c;
+  pointer-events: auto;
+}
+.l-save-status button {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1dfbf;
+  color: #6b4514;
+  font-size: 12px;
+}
+@keyframes l-save-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-save-status.is-saving svg {
+    animation: none;
+  }
 }
 .l-save-alert {
   max-width: 1320px;
@@ -282,20 +320,14 @@
   }
   .l-auth-story .l-kicker {
     margin-top: 34px;
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-auth-story h1 {
-    font-size: 29px !important;
+    font-size: 29px;
     margin: 12px 0;
   }
   .l-auth-story > p {
     display: none;
-  }
-  .l-auth-friends {
-    margin: 20px -8px 10px;
-  }
-  .l-auth-friends .avatar-view {
-    height: 95px;
   }
   .l-auth-promise {
     display: none;
@@ -331,7 +363,7 @@
   --paper: #fffef8;
   font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
 }
-.l-app button {
+:where(.l-app) button {
   font: inherit;
 }
 .l-app h1,
@@ -391,7 +423,7 @@
 }
 .l-brand small {
   display: block;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.6px;
   color: #8a9385;
   margin-top: 3px;
@@ -421,30 +453,12 @@
   gap: 22px;
   align-items: center;
 }
-.l-friends-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fffef8;
-  font-size: 12px !important;
-}
-.l-friends-button i,
-.l-room-badge i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #709873;
-  display: inline-block;
-}
 .l-profile {
   background: none;
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 12px !important;
+  font-size: 12px;
 }
 .l-profile .avatar-view {
   width: 35px;
@@ -485,7 +499,7 @@
 }
 .l-kicker {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 2px;
   font-weight: 700;
   color: #8b987f;
@@ -495,15 +509,6 @@
   color: var(--muted);
   font-size: 12px;
   margin-top: 9px;
-}
-.l-room-badge {
-  font-size: 11px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid var(--line);
-  padding: 10px 13px;
-  border-radius: 30px;
 }
 .l-lounge-grid {
   display: grid;
@@ -516,216 +521,6 @@
   overflow: hidden;
   background: var(--paper);
   border: 1px solid #dcdccf;
-}
-.l-room-scene {
-  aspect-ratio: 1.5;
-  position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-  background: #cfdbcd;
-}
-.l-room-bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-}
-.l-room-plaque {
-  position: absolute;
-  left: 41%;
-  top: 9%;
-  width: 22%;
-  text-align: center;
-  color: #f8efce;
-  text-shadow: 0 1px 2px #365248;
-}
-.l-room-plaque span {
-  font-size: clamp(6px, 0.7vw, 10px);
-  display: block;
-  letter-spacing: 4px;
-}
-.l-room-plaque strong {
-  display: block;
-  font-size: clamp(9px, 1.2vw, 18px);
-  letter-spacing: -1px;
-  margin-top: 3px;
-}
-.l-world-table {
-  position: absolute;
-  width: 22%;
-  height: 24%;
-  top: 52%;
-  transform: translate(-50%, -50%);
-  background: none;
-  z-index: 30;
-}
-.l-world-table:active:not(:disabled) {
-  transform: translate(-50%, -48%);
-}
-.l-world-table.chess {
-  left: 31%;
-}
-.l-world-table.gostop {
-  left: 68%;
-}
-.l-table-top {
-  height: 76%;
-  display: grid;
-  place-items: center;
-  border: 7px solid #c29668;
-  border-bottom-width: 15px;
-  background: #4b7468;
-  border-radius: 50%;
-  box-shadow:
-    0 10px 0 #8d653f,
-    0 20px 13px #47332940;
-}
-.l-mini-chess {
-  width: 52%;
-  height: 80%;
-  display: grid;
-  place-items: center;
-  background: repeating-conic-gradient(#d7d1b1 0% 25%, #617768 0% 50%) 50%/25%
-    25%;
-  color: #f9f5dc;
-  font-size: clamp(16px, 4vw, 45px);
-  text-shadow: 0 2px 3px #183a32;
-  transform: rotate(-9deg) scaleY(0.85);
-  border: 2px solid #e6e2cc;
-}
-.l-mini-hwatu {
-  display: flex;
-  justify-content: center;
-  height: 65%;
-  gap: 3px;
-  transform: rotate(-9deg);
-}
-.l-mini-hwatu img {
-  height: 100%;
-  box-shadow: 0 2px 2px #11292080;
-  border-radius: 2px;
-}
-.l-mini-hwatu img:first-child {
-  transform: rotate(-12deg);
-}
-.l-mini-hwatu img:last-child {
-  transform: rotate(12deg);
-}
-.l-table-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: 6px;
-  background: #fffdf2;
-  box-shadow: 0 3px 10px #66563530;
-  padding: 6px 10px;
-  position: relative;
-  margin-top: -2px;
-  white-space: nowrap;
-}
-.l-table-tag b {
-  font-size: 11px;
-}
-.l-table-tag small {
-  font-size: 8px;
-  color: #7a8577;
-  display: flex;
-  align-items: center;
-}
-.l-world-player {
-  position: absolute;
-  width: 10%;
-  height: 23%;
-  transform: translate(-50%, -100%);
-  pointer-events: none;
-  transition:
-    left 1s linear,
-    top 1s linear;
-}
-.l-world-player > .avatar-view {
-  height: 100%;
-  width: 100%;
-  position: relative;
-}
-.l-player-shadow {
-  position: absolute;
-  bottom: 2%;
-  left: 14%;
-  width: 72%;
-  height: 9%;
-  border-radius: 50%;
-  background: #5b624036;
-  filter: blur(2px);
-}
-.l-player-name {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 3px 8px;
-  border-radius: 5px;
-  background: #fffdf3e8;
-  font-size: 9px;
-  white-space: nowrap;
-}
-.l-player-name small {
-  font-size: 7px;
-  padding-left: 4px;
-  color: #bd7350;
-}
-.l-world-player.self .l-player-name {
-  background: #3a6558;
-  color: #fff8e9;
-}
-.l-world-player.self .l-player-name small {
-  color: #f9cd7c;
-}
-.l-emote {
-  position: absolute;
-  bottom: 89%;
-  left: 64%;
-  font-size: 19px;
-  padding: 5px 8px;
-  background: #fffdf3;
-  border-radius: 12px 12px 12px 1px;
-  animation: l-emote 4s both;
-}
-.l-scene-hint {
-  position: absolute;
-  bottom: 12px;
-  left: 16px;
-  font-size: 9px;
-  color: #536b5c;
-  background: #fffaf0c7;
-  padding: 5px 9px;
-  border-radius: 4px;
-}
-.l-room-toolbar {
-  height: 58px;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.l-room-toolbar > span {
-  font-size: 11px;
-  color: var(--muted);
-}
-.l-room-toolbar > div {
-  display: flex;
-  gap: 8px;
-}
-.l-room-toolbar > div button {
-  width: 31px;
-  height: 31px;
-  background: #f1f0e6;
-  border-radius: 8px;
-  font-size: 17px;
-}
-.l-room-toolbar > .l-icon {
-  margin-left: auto;
 }
 .l-icon {
   width: 34px;
@@ -773,14 +568,14 @@
 }
 .l-play-list small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: #8b9488;
   margin-top: 6px;
 }
 .l-play-list em {
   display: block;
   font-style: normal;
-  font-size: 9px;
+  font-size: 11px;
   color: #909889;
   margin-top: 8px;
 }
@@ -822,7 +617,7 @@
   font-size: 13px;
 }
 .l-chat > div:first-child > span {
-  font-size: 9px;
+  font-size: 11px;
   color: #94a08d;
 }
 .l-chat-messages {
@@ -863,7 +658,7 @@
 .l-chat-welcome button {
   display: inline-flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   background: none;
   margin: 13px auto 0;
   color: #527664;
@@ -881,7 +676,7 @@
   width: 100%;
   border: 0;
   background: none;
-  font-size: 10px;
+  font-size: 11px;
   outline-offset: 1px;
   padding: 3px;
 }
@@ -910,7 +705,7 @@
   letter-spacing: -0.6px;
 }
 .l-closet-invitation small {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.5px;
   color: #8a9780;
 }
@@ -928,7 +723,7 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  font-size: 9px;
+  font-size: 11px;
   color: #959d8f;
 }
 .l-footer > div {
@@ -942,14 +737,8 @@
   gap: 4px;
   align-items: center;
   background: none;
-  font-size: 9px;
+  font-size: 11px;
   padding: 0;
-}
-.l-note {
-  font-family: serif;
-  font-style: italic;
-  color: #999f8c;
-  font-size: 13px;
 }
 .l-wardrobe-grid {
   display: grid;
@@ -983,7 +772,7 @@
   flex: 1;
 }
 .l-friend-picker > small {
-  font-size: 10px;
+  font-size: 11px;
   color: #8e9887;
   padding: 7px;
 }
@@ -1013,7 +802,7 @@
   font-size: 12px;
 }
 .l-mirror-top > span:last-child {
-  font-size: 8px;
+  font-size: 11px;
   border: 1px solid #b1b49f;
   border-radius: 3px;
   padding: 2px 4px;
@@ -1047,7 +836,7 @@
   margin-top: 14px;
 }
 .l-pose-bar button {
-  font-size: 10px;
+  font-size: 11px;
   padding: 8px 9px;
   background: none;
   color: #949c88;
@@ -1066,7 +855,7 @@
   padding-top: 16px;
 }
 .l-look-tools button {
-  font-size: 10px;
+  font-size: 11px;
   background: none;
   display: flex;
   gap: 6px;
@@ -1107,7 +896,7 @@
 }
 .l-tabs small {
   background: #e5eadb;
-  font-size: 8px;
+  font-size: 11px;
   padding: 2px 5px;
   border-radius: 5px;
   margin-left: 4px;
@@ -1210,7 +999,7 @@
 }
 .l-outfits small {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: #8c9583;
   margin-top: 4px;
   line-height: 1.5;
@@ -1262,7 +1051,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  font-size: 10px;
+  font-size: 11px;
   background: none;
 }
 .l-hair-options button > span {
@@ -1324,7 +1113,7 @@
 }
 .l-saved-looks strong {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   padding: 10px 5px;
 }
 .l-closet-bottom {
@@ -1339,7 +1128,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 9px;
+  font-size: 11px;
   color: #89977d;
 }
 .l-primary,
@@ -1350,7 +1139,7 @@
   gap: 9px;
   border-radius: 7px;
   padding: 12px 17px;
-  font-size: 12px !important;
+  font-size: 12px;
   min-height: 41px;
 }
 .l-primary {
@@ -1369,7 +1158,7 @@
   background: none;
   color: #7c8b71;
   padding: 11px 4px;
-  font-size: 11px !important;
+  font-size: 11px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1379,7 +1168,7 @@
   color: #a87666;
 }
 .l-help-text {
-  font-size: 10px;
+  font-size: 11px;
   color: #98a18e;
   line-height: 1.8;
   margin-top: 13px;
@@ -1424,30 +1213,6 @@
   justify-content: flex-end;
   gap: 10px;
   margin-top: 26px;
-}
-.l-host-card {
-  width: 100%;
-  padding: 23px;
-  display: flex;
-  align-items: center;
-  gap: 17px;
-  background: #e9efdf;
-  border: 1px solid #d5dfc7;
-  border-radius: 10px;
-  text-align: left;
-}
-.l-host-card > span {
-  flex: 1;
-}
-.l-host-card strong {
-  display: block;
-  font-size: 15px;
-}
-.l-host-card small {
-  display: block;
-  font-size: 11px;
-  color: #93a280;
-  margin-top: 8px;
 }
 .l-join-form {
   margin-top: 26px;
@@ -1524,36 +1289,8 @@
   font-size: 12px;
 }
 .l-online-list span:last-child {
-  font-size: 9px;
+  font-size: 11px;
   color: #9aa68a;
-}
-.l-claim-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-.l-claim-list > button {
-  padding: 7px;
-  background: #f2f3e8;
-  border: 1px solid #dce2cd;
-  border-radius: 10px;
-}
-.l-claim-list .avatar-view {
-  height: 115px;
-}
-.l-claim-list strong {
-  display: block;
-  font-size: 12px;
-  margin-top: 4px;
-}
-.l-claim-list > button > span:last-child {
-  display: block;
-  font-size: 9px;
-  color: #97a483;
-  margin: 7px;
-}
-.l-claim-list button:disabled {
-  opacity: 0.4;
 }
 .l-error {
   background: #f8e7dd;
@@ -1580,62 +1317,6 @@
   line-height: 1.9;
   margin: 15px auto 22px;
 }
-.l-table-mode {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-.l-table-mode > button {
-  padding: 9px 17px;
-  background: #f0f2e6;
-  font-size: 11px;
-  border-radius: 6px;
-  color: #96a17f;
-}
-.l-table-mode > button[aria-pressed='true'] {
-  background: #dfe8cf;
-  color: #4f7048;
-  font-weight: 700;
-}
-.l-seats {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-.l-seats > button {
-  flex: 1;
-  border: 1px dashed #b7c6a1;
-  border-radius: 8px;
-  background: #f3f5e7;
-  padding: 13px;
-  text-align: left;
-  opacity: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.l-seats > button:disabled {
-  color: #7f8e6d;
-  border-style: solid;
-}
-.l-seats > button.mine {
-  background: #e7efd8;
-  border-color: #83a46c;
-}
-.l-seats span,
-.l-seats small {
-  font-size: 10px;
-}
-.l-seats strong {
-  font-size: 13px;
-}
-.l-seat-tools {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
 .l-inline-confirm {
   display: flex;
   align-items: center;
@@ -1647,12 +1328,7 @@
   background: #dfe7d1;
   border-radius: 4px;
   padding: 7px 10px;
-  font-size: 10px;
-}
-.l-practice-note {
   font-size: 11px;
-  color: #93a27f;
-  margin-bottom: 18px;
 }
 .l-chess-layout {
   display: grid;
@@ -1722,7 +1398,7 @@
 }
 .l-chessboard small {
   position: absolute;
-  font-size: 9px;
+  font-size: 11px;
   opacity: 0.7;
   line-height: 1;
   z-index: 2;
@@ -1750,6 +1426,32 @@
   line-height: 1.8;
   color: #99a68a;
 }
+.l-chess-settlement {
+  grid-column: 1 / -1;
+  white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #e3dcc8;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.l-chess-settlement small {
+  font-size: 12px;
+  color: #7d735f;
+}
+.l-chess-settlement b {
+  font-size: 17px;
+  color: #4b4b3e;
+}
+.l-chess-settlement b.is-win {
+  color: #2f7a4a;
+}
+.l-chess-settlement b.is-lose {
+  color: #b0433a;
+}
 .l-move-log {
   background: #f3f5e9;
   padding: 15px;
@@ -1766,7 +1468,7 @@
   font-size: 11px;
 }
 .l-move-log > p {
-  font-size: 10px;
+  font-size: 11px;
   color: #a7b295;
 }
 .l-move-log > div {
@@ -1800,153 +1502,11 @@
   border-radius: 6px;
   padding: 6px;
 }
-.l-go-scores {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 17px;
-  align-items: start;
-}
-.l-go-scores details {
-  border: 1px solid #d6e0c2;
-  border-radius: 8px;
-  padding: 13px;
-  min-width: 0;
-  background: #f5f6e8;
-}
-.l-go-scores details.active {
-  border-color: #82a859;
-  background: #ecf3da;
-}
-.l-go-scores summary {
-  cursor: pointer;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  list-style: none;
-}
-.l-go-scores summary > span:first-child {
-  font-size: 12px;
-  font-weight: 700;
-  flex: 1;
-}
-.l-go-scores summary > strong {
-  font-size: 23px;
-}
-.l-go-scores summary small {
-  font-size: 10px;
-  padding-left: 4px;
-  font-weight: 400;
-}
-.l-go-scores summary > span:last-child {
-  display: block;
-  width: 100%;
-  font-size: 10px;
-  color: #99ab80;
-}
-.l-go-scores p {
-  font-size: 10px;
-  color: #8ca06f;
-  margin-top: 12px;
-}
-.l-captured {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-.l-hwatu {
-  display: inline-block;
-  width: clamp(38px, 5.4vw, 58px);
-  aspect-ratio: 0.625;
-  border: 2px solid #e7dfc2;
-  background: #fffdf5;
-  border-radius: 4px;
-  position: relative;
-  padding: 1px;
-  box-shadow: 0 2px 2px #24331f30;
-  flex-shrink: 0;
-  vertical-align: top;
-}
-.l-hwatu img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-  pointer-events: none;
-}
-.l-hwatu small {
-  position: absolute;
-  bottom: -2px;
-  right: -2px;
-  min-width: 14px;
-  text-align: center;
-  padding: 2px 3px;
-  background: #fff9dd;
-  font-size: 8px;
-  border-radius: 3px;
-  color: #56713c;
-}
-.l-hwatu.selected {
-  outline: 3px solid #ffc852;
-  outline-offset: 3px;
-}
-.l-captured .l-hwatu {
-  width: 28px;
-}
-.l-go-floor {
-  display: flex;
-  gap: 25px;
-  align-items: center;
-  min-height: 210px;
-  background: #416653;
-  border: 8px solid #c7b382;
-  border-radius: 12px;
-  padding: 22px;
-  box-shadow: inset 0 0 30px #204d3730;
-}
-.l-deck {
-  width: 70px;
-  flex-shrink: 0;
-  text-align: center;
-  color: #e6dfc4;
-}
-.l-deck > span {
-  display: grid;
-  place-items: center;
-  width: 53px;
-  height: 82px;
-  border: 3px solid #e4d9af;
-  border-radius: 5px;
-  background: repeating-linear-gradient(
-    45deg,
-    #993c31 0px,
-    #993c31 3px,
-    #a4493b 3px,
-    #a4493b 5px
-  );
-  box-shadow:
-    3px 2px 0 #dacfa9,
-    6px 4px 0 #a79364;
-  margin: 0 auto 12px;
-  font-family: serif;
-  font-size: 25px;
-}
-.l-deck small {
-  font-size: 9px;
-}
 .l-floor-cards {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   flex: 1;
-}
-.l-go-event {
-  font-size: 11px;
-  color: #9aaa85;
-  margin: 13px 0;
-  text-align: center;
 }
 .l-go-hand {
   display: flex;
@@ -1976,21 +1536,8 @@
   font-size: 12px;
 }
 .l-hand-title span {
-  font-size: 10px;
+  font-size: 11px;
   color: #9aa988;
-}
-.l-last-cards {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 9px 0;
-}
-.l-last-cards > span {
-  font-size: 10px;
-  color: #91a37a;
-}
-.l-last-cards .l-hwatu {
-  width: 33px;
 }
 .l-go-decision {
   display: flex;
@@ -2042,7 +1589,7 @@
   background: #355740;
   color: #fffee7;
   box-shadow: 0 8px 30px #30462122;
-  z-index: 1000;
+  z-index: var(--z-toast);
   font-size: 12px;
   padding: 14px 21px;
   border-radius: 9px;
@@ -2117,9 +1664,6 @@
   .l-play-list {
     padding: 19px 15px 10px;
   }
-  .l-room-toolbar > span {
-    display: none;
-  }
   .l-wardrobe-grid {
     grid-template-columns: 100px minmax(230px, 1fr) minmax(320px, 1.1fr);
     gap: 14px;
@@ -2146,9 +1690,6 @@
   .l-closet-bottom > .l-primary {
     margin-left: auto;
   }
-  .l-room-plaque strong {
-    font-size: 12px;
-  }
 }
 @media (max-width: 850px) {
   .l-header {
@@ -2168,9 +1709,6 @@
   }
   .l-header-right {
     gap: 8px;
-  }
-  .l-friends-button {
-    padding: 9px 12px;
   }
   .l-lounge,
   .l-wardrobe {
@@ -2196,9 +1734,6 @@
   .l-play-list h2 {
     margin-bottom: 10px;
   }
-  .l-room-plaque strong {
-    font-size: 18px;
-  }
   .l-wardrobe-grid {
     grid-template-columns: 1fr 1.15fr;
   }
@@ -2216,7 +1751,7 @@
     min-height: 66px;
   }
   .l-friend-picker strong {
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-friend-picker > small {
     grid-column: 1/-1;
@@ -2234,9 +1769,6 @@
     top: 15px;
     padding: 35px 15px 16px;
   }
-  .l-note {
-    display: none;
-  }
   .l-footer {
     padding: 20px;
     flex-wrap: wrap;
@@ -2244,12 +1776,6 @@
   .l-chess-layout {
     grid-template-columns: minmax(0, 1fr) 180px;
     gap: 16px;
-  }
-  .l-room-toolbar > span {
-    display: block;
-  }
-  .l-world-player {
-    width: 10%;
   }
 }
 @media (max-width: 600px) {
@@ -2286,18 +1812,6 @@
   .l-header-right {
     gap: 3px;
   }
-  .l-friends-button {
-    border: 0;
-    padding: 8px;
-    background: none;
-  }
-  .l-friends-button > span {
-    font-size: 0;
-  }
-  .l-friends-button > span:after {
-    content: '초대';
-    font-size: 11px;
-  }
   .l-profile .avatar-view {
     width: 29px;
     height: 29px;
@@ -2319,96 +1833,11 @@
     max-width: 260px;
   }
   .l-kicker {
-    font-size: 8px;
+    font-size: 11px;
     letter-spacing: 1.6px;
-  }
-  .l-room-badge {
-    font-size: 8px;
-    padding: 7px;
-    gap: 5px;
-    margin-top: 23px;
-    white-space: nowrap;
   }
   .l-room-wrap {
     border-radius: 10px;
-  }
-  .l-room-scene {
-    aspect-ratio: 1.25;
-  }
-  .l-room-bg {
-    object-fit: fill;
-  }
-  .l-room-plaque {
-    top: 10%;
-    left: 40%;
-    width: 25%;
-  }
-  .l-room-plaque strong {
-    font-size: 11px;
-  }
-  .l-room-plaque span {
-    font-size: 6px;
-    letter-spacing: 2px;
-  }
-  .l-world-player {
-    width: 13%;
-    height: 25%;
-  }
-  .l-player-name {
-    font-size: 8px;
-    padding: 2px 5px;
-  }
-  .l-player-name small {
-    font-size: 6px;
-  }
-  .l-world-table {
-    width: 25%;
-    height: 22%;
-  }
-  .l-table-top {
-    border-width: 4px;
-    border-bottom-width: 9px;
-    box-shadow:
-      0 6px 0 #8d653f,
-      0 13px 9px #47332930;
-  }
-  .l-table-tag {
-    padding: 4px 6px;
-    gap: 4px;
-    border-radius: 4px;
-  }
-  .l-table-tag b {
-    font-size: 9px;
-  }
-  .l-table-tag small {
-    font-size: 7px;
-  }
-  .l-table-tag small svg {
-    display: none;
-  }
-  .l-mini-chess {
-    font-size: 26px;
-  }
-  .l-scene-hint {
-    font-size: 8px;
-    bottom: 8px;
-    left: 9px;
-  }
-  .l-room-toolbar {
-    height: 50px;
-    padding: 0 13px;
-    gap: 9px;
-  }
-  .l-room-toolbar > span {
-    font-size: 9px;
-  }
-  .l-room-toolbar > div {
-    gap: 5px;
-  }
-  .l-room-toolbar > div button {
-    width: 28px;
-    height: 28px;
-    font-size: 15px;
   }
   .l-lounge-sidebar {
     grid-template-columns: 1fr;
@@ -2423,7 +1852,7 @@
     font-size: 11px;
   }
   .l-play-list em {
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-play-list h2 {
     font-size: 21px;
@@ -2441,7 +1870,7 @@
     font-size: 14px;
   }
   .l-closet-invitation small {
-    font-size: 6px;
+    font-size: 11px;
     letter-spacing: 1px;
   }
   .l-closet-invitation > svg {
@@ -2452,7 +1881,7 @@
     gap: 0;
   }
   .l-footer {
-    font-size: 8px;
+    font-size: 11px;
     margin-top: 18px;
     padding: 19px 14px 24px;
   }
@@ -2475,7 +1904,7 @@
     height: 31px;
   }
   .l-friend-picker strong {
-    font-size: 9px;
+    font-size: 11px;
   }
   .l-mirror {
     position: relative;
@@ -2512,10 +1941,10 @@
     padding-top: 25px;
   }
   .l-closet-bottom > span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .l-closet-bottom > .l-primary {
-    font-size: 11px !important;
+    font-size: 11px;
     padding: 11px 14px;
   }
   .l-tabs {
@@ -2544,10 +1973,6 @@
     font-size: 12px;
     margin-bottom: 20px;
   }
-  .l-host-card {
-    padding: 18px;
-    gap: 14px;
-  }
   .l-join-form {
     grid-template-columns: 1fr;
   }
@@ -2558,19 +1983,6 @@
     font-size: 23px;
     letter-spacing: 3px;
   }
-  .l-claim-list {
-    gap: 7px;
-  }
-  .l-claim-list .avatar-view {
-    height: 90px;
-  }
-  .l-claim-list strong {
-    font-size: 11px;
-  }
-  .l-claim-list > button > span:last-child {
-    font-size: 8px;
-    margin: 6px 0;
-  }
   .l-chess-layout {
     grid-template-columns: 1fr;
     gap: 17px;
@@ -2579,7 +1991,7 @@
     border-width: 5px;
   }
   .l-chessboard small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .l-game-aside {
     display: grid;
@@ -2599,103 +2011,28 @@
     min-height: 90px;
     max-height: 120px;
   }
-  .l-seats {
-    gap: 7px;
-    flex-wrap: wrap;
-  }
-  .l-seats > button {
-    padding: 10px 7px;
-    gap: 6px;
-    flex-direction: column;
-    min-width: 60px;
-  }
-  .l-seats strong {
-    font-size: 11px;
-  }
-  .l-seats span,
-  .l-seats small {
-    font-size: 9px;
-  }
-  .l-seat-tools {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .l-go-scores {
-    gap: 7px;
-  }
-  .l-go-scores details {
-    padding: 9px;
-  }
-  .l-go-scores summary > span:first-child {
-    font-size: 10px;
-  }
-  .l-go-scores summary > strong {
-    font-size: 19px;
-  }
-  .l-go-scores summary > span:last-child {
-    font-size: 8px;
-  }
-  .l-go-floor {
-    padding: 12px 9px;
-    gap: 13px;
-    min-height: 185px;
-    border-width: 5px;
-  }
-  .l-deck {
-    width: 42px;
-  }
-  .l-deck > span {
-    width: 32px;
-    height: 52px;
-    font-size: 18px;
-    border-width: 2px;
-    box-shadow:
-      2px 1px 0 #dacfa9,
-      4px 3px 0 #a79364;
-  }
-  .l-deck small {
-    font-size: 7px;
-  }
   .l-floor-cards {
     gap: 8px;
-  }
-  .l-hwatu {
-    width: 37px;
   }
   .l-go-hand {
     padding: 14px 8px;
     gap: 7px;
     min-height: 95px;
   }
-  .l-go-hand .l-hwatu {
-    width: calc((100% - 42px) /7);
-    max-width: 45px;
-    min-width: 31px;
-  }
   .l-go-decision {
     gap: 8px;
   }
   .l-go-decision .l-primary,
   .l-go-decision .l-secondary {
-    font-size: 10px !important;
+    font-size: 11px;
     padding: 10px;
   }
   .l-hand-title span {
-    font-size: 9px;
+    font-size: 11px;
   }
   .l-game-status {
     font-size: 11px;
     padding: 11px 12px;
-  }
-  .l-go-event {
-    font-size: 10px;
-  }
-  .l-captured .l-hwatu {
-    width: 24px;
-  }
-  .l-table-mode > button {
-    font-size: 10px;
-    padding: 8px 15px;
   }
   .l-toast {
     font-size: 11px;
@@ -2733,7 +2070,7 @@
   border-radius: 10px;
   padding: 20px;
 }
-.l-game-choices > button[aria-pressed='true'] {
+.l-game-choices > button[aria-checked='true'] {
   border: 2px solid #759367;
   background: #edf2df;
   padding: 19px;
@@ -2748,7 +2085,7 @@
   font-size: 16px;
 }
 .l-game-choices small {
-  font-size: 10px;
+  font-size: 11px;
   color: #94a381;
 }
 .l-request-heading {
@@ -2761,7 +2098,7 @@
   font-size: 14px;
 }
 .l-request-heading small {
-  font-size: 10px;
+  font-size: 11px;
   color: #9caa8a;
 }
 .l-invite-targets {
@@ -2794,7 +2131,7 @@
 }
 .l-invite-targets > button > span:last-child {
   margin-left: auto;
-  font-size: 9px;
+  font-size: 11px;
   color: #899e73;
 }
 .l-invitations {
@@ -2812,17 +2149,6 @@
   background: #fffdf1;
   box-shadow: 0 4px 18px #687b4410;
 }
-.l-envelope {
-  font-size: 32px;
-  background: #e9efd9;
-  width: 53px;
-  height: 53px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  color: #608443;
-  font-family: serif;
-}
 .l-invitation-card > div:nth-child(2) {
   flex: 1;
 }
@@ -2830,8 +2156,8 @@
   font-size: 14px;
 }
 .l-invitation-card p {
-  font-size: 11px;
-  color: #91a27c;
+  font-size: 12px;
+  color: #4f5f3c;
   margin-top: 7px;
 }
 .l-invitation-card > div:last-child {
@@ -2859,7 +2185,7 @@
   gap: 6px;
 }
 .l-game-screen > header small {
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 2px;
   color: #9aa689;
 }
@@ -2876,7 +2202,7 @@
   background: #edf1e3;
   padding: 10px 16px;
   border-radius: 7px;
-  font-size: 12px !important;
+  font-size: 12px;
   color: #667f53;
 }
 .l-game-live {
@@ -2937,72 +2263,8 @@
 .l-game-screen .l-game-aside h3 {
   font-size: 23px;
 }
-.l-game-screen .l-go-scores {
-  gap: 20px;
-  margin-bottom: 22px;
-}
-.l-game-screen .l-go-scores details {
-  background: #fffef5;
-  padding: 18px 22px;
-  border-radius: 10px;
-}
-.l-game-screen .l-go-scores details.active {
-  box-shadow: 0 0 0 2px #729258;
-  background: #edf3df;
-}
-.l-game-screen .l-go-scores summary > span:first-child {
-  font-size: 16px;
-}
-.l-game-screen .l-go-scores summary > strong {
-  font-size: 32px;
-}
-.l-game-screen .l-go-scores summary > span:last-child {
-  font-size: 12px;
-}
-.l-game-screen .l-go-floor {
-  background: radial-gradient(ellipse at 50% 30%, #4e7660, #294c3c);
-  min-height: 290px;
-  border: 10px solid #b49b6e;
-  border-bottom-width: 17px;
-  border-radius: 20px;
-  padding: 30px 35px;
-  gap: 44px;
-  box-shadow:
-    0 7px 0 #886c43,
-    0 16px 30px #273f2420;
-}
 .l-game-screen .l-floor-cards {
   gap: 20px;
-}
-.l-game-screen .l-hwatu {
-  width: 78px;
-  border: 2px solid #e6d7b5;
-  border-radius: 5px;
-  box-shadow: 0 3px 6px #18392460;
-}
-.l-game-screen .l-hwatu small {
-  font-size: 10px;
-  min-width: 20px;
-  padding: 3px 5px;
-}
-.l-game-screen .l-hwatu.selected {
-  outline: 3px solid #e5b554;
-  outline-offset: 4px;
-}
-.l-game-screen .l-deck {
-  width: 92px;
-}
-.l-game-screen .l-deck > span {
-  width: 70px;
-  height: 112px;
-  font-size: 37px;
-  box-shadow:
-    3px 2px 0 #c3ae80,
-    6px 4px 0 #eee4c9,
-    9px 6px 0 #a68c63;
-}
-.l-game-screen .l-deck > small {
-  font-size: 11px;
 }
 .l-game-screen .l-hand-title {
   margin: 24px 0 14px;
@@ -3021,37 +2283,8 @@
   border: 1px solid #d3dcc3;
   border-radius: 13px;
 }
-.l-game-screen .l-go-hand .l-hwatu {
-  width: 86px;
-  max-width: none;
-}
 .l-game-screen .l-go-hand button:disabled {
   opacity: 0.8;
-}
-.l-game-screen .l-go-event {
-  font-size: 13px;
-  margin: 22px 0 10px;
-}
-.l-game-screen .l-last-cards {
-  min-height: 63px;
-  padding: 8px 0;
-  justify-content: center;
-  gap: 13px;
-}
-.l-game-screen .l-last-cards > span {
-  font-size: 11px;
-}
-.l-game-screen .l-last-cards .l-hwatu {
-  width: 37px;
-  box-shadow: 0 2px 3px #687e4230;
-}
-.l-game-screen .l-captured .l-hwatu {
-  width: 38px;
-  box-shadow: 0 1px 2px #637a4330;
-}
-.l-game-screen .l-captured {
-  gap: 8px;
-  margin-top: 15px;
 }
 .l-game-screen .l-go-decision {
   padding: 18px;
@@ -3063,7 +2296,7 @@
 .l-game-screen .l-go-decision .l-primary,
 .l-game-screen .l-go-decision .l-secondary {
   padding: 16px 26px;
-  font-size: 15px !important;
+  font-size: 15px;
 }
 .l-game-screen .l-go-result {
   font-size: 17px;
@@ -3075,6 +2308,29 @@
   gap: 16px;
   justify-content: center;
   margin: 28px 0;
+  flex-wrap: wrap;
+}
+.l-game-ending-note {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: #6b6150;
+}
+.l-game-screen.is-dark .l-game-ending-note {
+  color: #d9dfe8;
+}
+/* "← 마을" on phones, "← 마을로 돌아가기" where there is room. */
+.l-back-short {
+  display: none;
+}
+@media (max-width: 700px) {
+  .l-back-more {
+    display: none;
+  }
+  .l-back-short {
+    display: inline;
+  }
 }
 .l-game-screen .l-rules p {
   font-size: 12px;
@@ -3104,37 +2360,10 @@
   .l-game-screen .l-floor-cards {
     gap: 14px;
   }
-  .l-game-screen .l-go-floor {
-    padding: 23px;
-    gap: 25px;
-    min-height: 270px;
-  }
-  .l-game-screen .l-hwatu {
-    width: 62px;
-  }
-  .l-game-screen .l-go-hand .l-hwatu {
-    width: 68px;
-  }
   .l-game-screen .l-go-hand {
     gap: 15px;
     min-height: 145px;
     padding: 20px;
-  }
-  .l-game-screen .l-go-scores details {
-    padding: 14px 18px;
-  }
-  .l-game-screen .l-deck {
-    width: 74px;
-  }
-  .l-game-screen .l-deck > span {
-    width: 55px;
-    height: 88px;
-  }
-  .l-game-screen .l-go-scores summary > span:first-child {
-    font-size: 14px;
-  }
-  .l-game-screen .l-go-scores summary > strong {
-    font-size: 27px;
   }
 }
 @media (max-width: 650px) {
@@ -3150,21 +2379,21 @@
     font-size: 18px;
   }
   .l-game-screen > header small {
-    font-size: 6px;
+    font-size: 11px;
     letter-spacing: 1px;
   }
   .l-game-screen > header > div {
     gap: 9px;
   }
   .l-game-live {
-    font-size: 9px;
+    font-size: 11px;
     gap: 5px;
   }
   .l-game-screen > header .l-text {
-    font-size: 9px !important;
+    font-size: 11px;
   }
   .l-game-back {
-    font-size: 10px !important;
+    font-size: 11px;
     padding: 8px 11px;
   }
   .l-game-content {
@@ -3183,7 +2412,7 @@
     border-width: 6px;
   }
   .l-game-screen .l-chessboard small {
-    font-size: 9px;
+    font-size: 11px;
   }
   .l-game-screen .l-game-aside {
     display: grid;
@@ -3198,70 +2427,13 @@
   .l-game-screen .l-game-aside > p {
     font-size: 11px;
   }
-  .l-game-screen .l-go-scores {
-    gap: 8px;
-    margin-bottom: 18px;
-  }
-  .l-game-screen .l-go-scores details {
-    padding: 11px 10px;
-    border-radius: 8px;
-  }
-  .l-game-screen .l-go-scores summary > span:first-child {
-    font-size: 11px;
-  }
-  .l-game-screen .l-go-scores summary > strong {
-    font-size: 23px;
-  }
-  .l-game-screen .l-go-scores summary > span:last-child {
-    font-size: 9px;
-  }
-  .l-game-screen .l-go-floor {
-    min-height: 240px;
-    padding: 17px 11px;
-    gap: 15px;
-    border-width: 6px;
-    border-bottom-width: 11px;
-    border-radius: 12px;
-  }
   .l-game-screen .l-floor-cards {
     gap: 10px;
-  }
-  .l-game-screen .l-hwatu {
-    width: 43px;
-  }
-  .l-game-screen .l-hwatu small {
-    min-width: 15px;
-    font-size: 8px;
-    padding: 2px 3px;
-  }
-  .l-game-screen .l-deck {
-    width: 42px;
-  }
-  .l-game-screen .l-deck > span {
-    width: 35px;
-    height: 57px;
-    font-size: 20px;
-    box-shadow:
-      2px 1px 0 #c3ae80,
-      4px 2px 0 #eee4c9,
-      6px 3px 0 #a68c63;
-  }
-  .l-game-screen .l-deck > small {
-    font-size: 8px;
-  }
-  .l-game-screen .l-go-event {
-    font-size: 11px;
-    margin-top: 19px;
   }
   .l-game-screen .l-go-hand {
     padding: 20px 9px;
     gap: 7px;
     min-height: 108px;
-  }
-  .l-game-screen .l-go-hand .l-hwatu {
-    width: calc((100% - 42px) /7);
-    max-width: 55px;
-    min-width: 30px;
   }
   .l-game-screen .l-hand-title {
     margin: 17px 0 12px;
@@ -3270,19 +2442,7 @@
     font-size: 13px;
   }
   .l-game-screen .l-hand-title span {
-    font-size: 9px;
-  }
-  .l-game-screen .l-last-cards .l-hwatu {
-    width: 29px;
-  }
-  .l-game-screen .l-last-cards > span {
-    font-size: 10px;
-  }
-  .l-game-screen .l-captured .l-hwatu {
-    width: 24px;
-  }
-  .l-game-screen .l-captured {
-    gap: 4px;
+    font-size: 11px;
   }
   .l-game-screen .l-go-decision {
     gap: 10px;
@@ -3290,7 +2450,7 @@
   }
   .l-game-screen .l-go-decision .l-primary,
   .l-game-screen .l-go-decision .l-secondary {
-    font-size: 11px !important;
+    font-size: 11px;
     padding: 11px;
   }
   .l-game-screen .l-go-result {
@@ -3309,7 +2469,7 @@
   }
   .l-new-game {
     padding: 10px 12px;
-    font-size: 11px !important;
+    font-size: 11px;
     margin-top: 19px;
     white-space: nowrap;
   }
@@ -3321,16 +2481,11 @@
     gap: 12px;
     flex-wrap: wrap;
   }
-  .l-envelope {
-    width: 39px;
-    height: 39px;
-    font-size: 25px;
-  }
   .l-invitation-card strong {
     font-size: 12px;
   }
   .l-invitation-card p {
-    font-size: 10px;
+    font-size: 11px;
   }
   .l-invitation-card > div:last-child {
     margin-left: auto;
@@ -3338,7 +2493,7 @@
   }
   .l-invitation-card .l-primary {
     padding: 9px 13px;
-    font-size: 11px !important;
+    font-size: 11px;
   }
   .l-invite-targets .avatar-view {
     width: 32px;
@@ -3347,11 +2502,11 @@
   .l-game-choices > button {
     padding: 14px;
   }
-  .l-game-choices > button[aria-pressed='true'] {
+  .l-game-choices > button[aria-checked='true'] {
     padding: 13px;
   }
   .l-game-choices small {
-    font-size: 9px;
+    font-size: 11px;
   }
   .l-invite-targets > button {
     padding: 9px;
@@ -3361,40 +2516,8 @@
     font-size: 11px;
   }
   .l-request-heading small {
-    font-size: 9px;
+    font-size: 11px;
   }
-}
-.l-table-top {
-  position: relative;
-}
-.l-mini-hwatu {
-  position: absolute;
-  top: 18%;
-  left: 20%;
-  width: 60%;
-  height: 60%;
-  max-height: none;
-}
-.l-mini-hwatu img {
-  width: 30%;
-  max-width: 30%;
-  height: 100%;
-  object-fit: contain;
-}
-.l-room-toolbar > div button {
-  white-space: nowrap;
-}
-.l-room-toolbar > div button:last-child {
-  font-size: 12px;
-}
-
-.l-wardrobe-invites {
-  max-width: 1400px;
-  padding: 0 30px;
-  margin: 22px auto -20px;
-}
-.l-wardrobe-invites:empty {
-  display: none;
 }
 /* Three seats share one felt table; every captured card stays visible. */
 .g-game {
@@ -3469,7 +2592,7 @@
 }
 .g-seat-label {
   display: block;
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 1.7px;
   color: #b8c9b2;
   margin-bottom: 3px;
@@ -3481,7 +2604,7 @@
   gap: 7px;
 }
 .g-player-area strong small {
-  font-size: 9px;
+  font-size: 11px;
   background: #f0d999;
   color: #36513f;
   padding: 2px 5px;
@@ -3506,7 +2629,7 @@
   color: #ffe5a2;
 }
 .g-score span {
-  font-size: 10px;
+  font-size: 11px;
   color: #ccd4bd;
   white-space: nowrap;
 }
@@ -3554,7 +2677,7 @@
 }
 .g-opponent-hand small {
   color: #c7d1bb;
-  font-size: 10px;
+  font-size: 11px;
 }
 .g-capture-zone {
   display: grid;
@@ -3568,12 +2691,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: 11px;
   color: #c7d1b8;
   margin-bottom: 5px;
 }
 .g-capture-category b {
-  font-size: 10px;
+  font-size: 11px;
   color: #f2e8c9;
   font-weight: 500;
 }
@@ -3617,7 +2740,7 @@
   padding: 1px 3px;
   background: #142c27dd;
   color: white;
-  font-size: 8px;
+  font-size: 11px;
   line-height: 12px;
   border-radius: 3px 0 1px 0;
 }
@@ -3667,7 +2790,7 @@ button.g-card:focus-visible {
   margin-top: 7px;
 }
 .g-sets span {
-  font-size: 9px;
+  font-size: 11px;
   border-radius: 4px;
   color: #ffe2a1;
   background: #d6b56720;
@@ -3700,10 +2823,10 @@ button.g-card:focus-visible {
 }
 .g-deck strong small {
   margin-left: 3px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .g-deck > span {
-  font-size: 9px;
+  font-size: 11px;
   color: #b7c9b0;
 }
 .l-game-screen .g-floor-layout.l-floor-cards {
@@ -3760,7 +2883,7 @@ button.g-card:focus-visible {
   align-items: center;
   gap: 7px;
   color: #b3c6a9;
-  font-size: 10px;
+  font-size: 11px;
 }
 .g-bottom {
   display: grid;
@@ -3781,7 +2904,7 @@ button.g-card:focus-visible {
   font-size: 13px;
 }
 .l-game-screen .g-game .l-hand-title span {
-  font-size: 10px;
+  font-size: 11px;
   color: #c5d0b8;
 }
 .l-game-screen .g-game .l-go-hand {
@@ -3812,7 +2935,7 @@ button.g-card:focus-visible {
   min-height: 100px;
 }
 .g-spectator-hand small {
-  font-size: 10px;
+  font-size: 11px;
   color: #b5c5ac;
 }
 .l-game-screen .g-game .l-go-decision {
@@ -3829,7 +2952,7 @@ button.g-card:focus-visible {
 }
 .g-table-footer > span {
   color: #778474;
-  font-size: 10px;
+  font-size: 11px;
 }
 .g-inspect {
   max-width: 700px;
@@ -3869,7 +2992,7 @@ button.g-card:focus-visible {
 .g-motion-layer {
   position: absolute;
   inset: 0;
-  z-index: 40;
+  z-index: var(--z-overlay);
   pointer-events: none;
   perspective: 900px;
 }
@@ -3984,7 +3107,7 @@ button.g-card:focus-visible {
     gap: 4px;
   }
   .g-seat-label {
-    font-size: 6px;
+    font-size: 11px;
     letter-spacing: 1px;
   }
   .g-score {
@@ -3994,7 +3117,7 @@ button.g-card:focus-visible {
     font-size: 20px;
   }
   .g-score span {
-    font-size: 7px;
+    font-size: 11px;
   }
   .g-player-area > header > button {
     width: 22px;
@@ -4012,11 +3135,11 @@ button.g-card:focus-visible {
   .g-opponent-hand .g-card-back {
     width: 18px;
     border-width: 1px;
-    font-size: 10px;
+    font-size: 11px;
     margin-right: -9px;
   }
   .g-opponent-hand small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .g-capture-zone {
     gap: 5px;
@@ -4027,13 +3150,13 @@ button.g-card:focus-visible {
   }
   .g-capture-category > div:first-child,
   .g-capture-category b {
-    font-size: 8px;
+    font-size: 11px;
   }
   .g-sets {
     margin-top: 4px;
   }
   .g-sets span {
-    font-size: 7px;
+    font-size: 11px;
     padding: 1px 3px;
   }
   .g-middle {
@@ -4056,10 +3179,10 @@ button.g-card:focus-visible {
     font-size: 16px;
   }
   .g-deck strong small {
-    font-size: 8px;
+    font-size: 11px;
   }
   .g-deck > span {
-    font-size: 7px;
+    font-size: 11px;
   }
   .l-game-screen .g-floor-layout.l-floor-cards {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4072,24 +3195,24 @@ button.g-card:focus-visible {
     padding-right: 23px;
   }
   .g-month-label {
-    font-size: 9px;
+    font-size: 11px;
   }
   .g-card {
     border-width: 1px;
   }
   .g-card small {
-    font-size: 7px;
+    font-size: 11px;
     min-width: 12px;
     padding: 0 2px;
     line-height: 11px;
   }
   .g-action-caption {
-    font-size: 9px;
+    font-size: 11px;
     min-height: 25px;
     padding-bottom: 8px;
   }
   .g-action-caption > span {
-    font-size: 8px;
+    font-size: 11px;
     gap: 4px;
   }
   .g-bottom {
@@ -4109,7 +3232,7 @@ button.g-card:focus-visible {
     font-size: 12px;
   }
   .l-game-screen .g-game .l-hand-title span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .l-game-screen .g-game .l-go-hand {
     min-height: 79px;
@@ -4138,10 +3261,10 @@ button.g-card:focus-visible {
     margin-top: 12px;
   }
   .g-table-footer .l-text {
-    font-size: 10px !important;
+    font-size: 11px;
   }
   .g-table-footer > span {
-    font-size: 8px;
+    font-size: 11px;
   }
   .g-inspect {
     padding: 20px;
@@ -4151,11 +3274,6 @@ button.g-card:focus-visible {
   }
   .g-spectator-hand {
     min-height: 68px;
-  }
-}
-@media (max-width: 600px) {
-  .l-wardrobe-invites {
-    padding: 0 14px;
   }
 }
 .l-reactions {
@@ -4442,4 +3560,920 @@ button.g-card:focus-visible {
   .l-reaction-grid button {
     transition: none;
   }
+}
+
+/* ───────────── WS4: shared lobby components ───────────── */
+.l-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.l-plain-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.l-screen-loading {
+  min-height: 50dvh;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+}
+/* Failure states: a message plus actions, never a spinner. */
+.l-error-state h3 {
+  color: #3f5534;
+  font-size: 17px;
+}
+.l-error-state p {
+  max-width: 34ch;
+  margin: 6px auto 16px;
+  color: #6f7f63;
+  font-size: 13px;
+}
+.l-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.l-root-error {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+/* Danger actions (reset, leave with a seat, logout with a seat). */
+.l-app .l-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 12px 17px;
+  border-radius: 7px;
+  background: #b53d2e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.l-app .l-danger:hover {
+  background: #97301f;
+}
+.l-app .l-text.danger,
+.l-app .l-world-menu-links .danger {
+  color: #a1402f;
+}
+.l-consequences {
+  display: grid;
+  gap: 8px;
+  margin: -8px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.l-consequences li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fbeae4;
+  color: #7c2f22;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.l-consequences svg {
+  margin-top: 2px;
+}
+.l-more {
+  display: inline;
+  min-height: 0;
+  padding: 0 2px;
+  background: none;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.l-details .l-help-text {
+  margin-top: -14px;
+  margin-bottom: 16px;
+}
+/* Toasts: success / info / error (error has role=alert and a warning icon). */
+.l-app .l-toast.is-info {
+  background: #263954;
+}
+.l-app .l-toast.is-error {
+  background: #8f2d20;
+  color: #fff;
+}
+.l-app .l-toast span {
+  line-height: 1.5;
+}
+/* Invite cards: countdown ring, per-friend chips. */
+.l-countdown {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  color: #3f6a4a;
+}
+.l-countdown svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+.l-countdown circle {
+  fill: none;
+  stroke-width: 4;
+}
+.l-countdown-track {
+  stroke: #e3e8d8;
+}
+.l-countdown-bar {
+  stroke: currentColor;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear;
+}
+.l-countdown b {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.l-countdown.is-urgent {
+  color: #b53d2e;
+}
+.l-invite-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-invite-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: #eef1e8;
+  color: #4a5842;
+  font-size: 12px;
+}
+.l-invite-chips li.is-accepted {
+  background: #dcebd3;
+  color: #2f5a2c;
+}
+.l-invite-chips li.is-declined {
+  background: #f6e1db;
+  color: #8a3526;
+  text-decoration: line-through;
+}
+.l-invite-note {
+  font-size: 12px;
+  color: #5d6752;
+}
+.l-app .l-invitation-card .l-invite-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+/* Header: presence row, invite, wallet + daily grant. */
+.l-app .l-world-header .l-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid #d7dfc6;
+  border-radius: 12px;
+  background: #fbfcf4;
+  color: #3f5436;
+}
+.l-presence-label {
+  display: grid;
+  line-height: 1.15;
+  text-align: left;
+}
+.l-presence-label small {
+  font-size: 11px;
+  color: #5f6d55;
+}
+.l-presence-label b {
+  font-size: 14px;
+}
+.l-presence-faces {
+  display: flex;
+  align-items: center;
+}
+.l-presence-face {
+  width: 30px;
+  height: 30px;
+  margin-left: -8px;
+  overflow: hidden;
+  border: 2px solid #fffdf2;
+  border-radius: 50%;
+  background: #e7ecdc;
+}
+.l-presence-face:first-child {
+  margin-left: 0;
+}
+.l-presence-face .avatar-view {
+  width: 100%;
+  height: 100%;
+}
+.l-presence-more {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.l-presence.is-offline {
+  color: #8f3a2b;
+}
+.l-app .l-world-header .l-invite-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.l-wallet-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.l-app .l-wallet-button {
+  min-height: 44px;
+}
+.l-app .l-daily-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: #fff1c9;
+  color: #6b4b00;
+  font-size: 12px;
+  font-weight: 700;
+}
+.l-app .l-daily {
+  width: 100%;
+  margin: 4px 0 12px;
+}
+.l-daily-wait,
+.l-wallet-low {
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: #5d6752;
+}
+.l-wallet-low {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff5d9;
+  color: #634a0d;
+  line-height: 1.6;
+}
+.l-wallet-history .is-loss {
+  color: #9b3a2a;
+}
+.l-app .l-profile,
+.l-app .l-world-menu-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.l-connection-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #fff1ec;
+  border: 1px solid #efc8bb;
+  color: #7c2f22;
+}
+.l-connection-alert span {
+  display: grid;
+  gap: 3px;
+}
+.l-connection-alert small {
+  font-size: 12px;
+}
+/* Friends modal. */
+.l-app .l-online-list {
+  padding: 0;
+  list-style: none;
+}
+.l-online-list > li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.l-online-list li span:last-child {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: #5f6d55;
+}
+.l-host-badge {
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: #ffe7a8;
+  color: #6b4b00;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 700;
+}
+.l-advanced {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid #e3e6da;
+}
+.l-advanced > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #5d6752;
+  font-size: 13px;
+}
+.l-advanced-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+.l-account-danger {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+/* Settings. */
+.l-settings {
+  display: grid;
+  gap: 4px;
+}
+.l-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eceee4;
+}
+.l-setting span {
+  display: grid;
+  gap: 3px;
+}
+.l-setting strong {
+  font-size: 14px;
+}
+.l-setting small {
+  font-size: 12px;
+  color: #5f6d55;
+  line-height: 1.5;
+}
+.l-setting input[type='checkbox'] {
+  appearance: none;
+  flex-shrink: 0;
+  width: 46px;
+  height: 28px;
+  border-radius: 99px;
+  background: #cfd5c4;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.l-setting input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px #0003;
+  transition: transform 0.15s;
+}
+.l-setting input[type='checkbox']:checked {
+  background: var(--accent);
+}
+.l-setting input[type='checkbox']:checked::after {
+  transform: translateX(18px);
+}
+.l-setting input[type='checkbox']:focus-visible {
+  outline: 3px solid #d99556;
+  outline-offset: 3px;
+}
+.l-setting-range input {
+  width: 160px;
+}
+/* First-login coach marks. */
+.l-coach {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-coach);
+  pointer-events: none;
+}
+.l-coach-ring {
+  position: fixed;
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 4px #ffd36b,
+    0 0 0 9999px #1b2a2166;
+  transition: all 0.2s;
+}
+.l-coach-card {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100vw - 32px));
+  padding: 18px;
+  border-radius: 16px;
+  background: #fffdf5;
+  color: #2d3e33;
+  box-shadow: 0 16px 50px #1b2a2140;
+  pointer-events: auto;
+}
+.l-coach-card small {
+  font-size: 12px;
+  color: #5f6d55;
+}
+.l-coach-card h2 {
+  margin: 4px 0 6px;
+  font-size: 18px;
+}
+.l-coach-card p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.l-coach-card > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+/* Simple (2D) village. */
+.l-simple-village {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 96px 16px 40px;
+}
+.l-simple-village > header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  color: #3f5a3e;
+}
+.l-simple-village h1 {
+  font-size: 22px;
+}
+.l-simple-village header p {
+  font-size: 13px;
+  color: #5f6d55;
+}
+.l-simple-places {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.l-simple-places button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 12px 14px;
+  border: 1px solid #dde3cf;
+  border-radius: 12px;
+  background: #fffdf5;
+  text-align: left;
+}
+.l-simple-places i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.l-simple-places span {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+.l-simple-places small {
+  font-size: 12px;
+  color: #5f6d55;
+}
+.l-simple-friends {
+  margin-top: 22px;
+}
+.l-simple-friends h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.l-simple-friends ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0;
+  list-style: none;
+}
+.l-simple-friends li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.l-simple-friends .avatar-view {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+/* Game screens: sticky action bars, my-turn highlight, floating stickers. */
+.l-app .l-game-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.l-game-live.is-turn {
+  color: #b86b00;
+  font-weight: 700;
+}
+.l-game-live.is-turn i {
+  background: #f0a020;
+  box-shadow: 0 0 0 4px #f0a02033;
+}
+.l-table-stage {
+  position: relative;
+  border-radius: 14px;
+  transition: box-shadow 0.25s;
+}
+.l-table-stage.is-my-turn {
+  box-shadow: 0 0 0 3px #f0b44b;
+}
+/* Tables (WS2) keep their controls; on my turn (phones) the stage pins them to
+   the viewport bottom. Otherwise they stay in the flow so they never cover my
+   cards, seat or the result. */
+.l-table-stage :is(.p-controls, .s-controls, .bj-controls, .l-action-bar) {
+  position: static;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (max-width: 899px) {
+  .l-table-stage.is-my-turn
+    :is(.p-controls, .s-controls, .bj-controls, .l-action-bar) {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-sticky);
+  }
+}
+/* Dark casino screens: the sticker bar stays in the flow (never over buttons). */
+.l-sticker-float .l-reactions {
+  width: auto;
+  max-width: 960px;
+  margin: 0 auto 12px;
+  padding: 6px 10px;
+  border: 1px solid #ffffff26;
+  border-radius: 16px;
+  background: #101a2ae6;
+  color: #eef2f7;
+  box-shadow: 0 8px 26px #0006;
+}
+.l-app .l-sticker-float .l-reactions {
+  border-top: 1px solid #ffffff26;
+  background: #101a2ae6;
+  padding: 6px 10px;
+  --reaction-ink: #eef2f7;
+}
+.l-app .l-sticker-float .l-reaction-bar > span,
+.l-app .l-sticker-float .l-reaction-bar b {
+  color: #eef2f7;
+}
+.l-app .l-sticker-float .l-reaction-bar small {
+  color: #b9c3d3;
+}
+.l-app .l-sticker-float .l-reaction-open,
+.l-app .l-sticker-float .l-reaction-toggle {
+  min-height: 44px;
+  background: #22324a;
+  color: #eef2f7;
+  border-color: #3a4d6b;
+}
+.l-app .l-sticker-float .l-reaction-card {
+  background: #1b2940;
+  color: #eef2f7;
+  border-color: #33466a;
+}
+/* Coarse pointers: 44px touch targets for lobby buttons. */
+@media (pointer: coarse) {
+  .l-app
+    :is(
+      .l-primary,
+      .l-secondary,
+      .l-text,
+      .l-icon,
+      .l-daily-chip,
+      .l-world-chat-button
+    ) {
+    min-height: 44px;
+  }
+  .l-app .l-icon {
+    min-width: 44px;
+  }
+}
+/* Login: form first on phones, preview collapsible; columns scroll on desktop. */
+.l-app .l-selected-id {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  border: 0;
+  padding: 0;
+}
+.l-field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.l-auth-preview-toggle {
+  display: none;
+}
+@media (min-width: 801px) {
+  .l-app.l-auth-page {
+    grid-template-areas: 'story card';
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .l-app.l-auth-page > .l-auth-story {
+    grid-area: story;
+    min-height: 0;
+    max-height: 100dvh;
+    overflow-y: auto;
+    justify-content: safe center;
+  }
+  .l-app.l-auth-page > .l-auth-card {
+    grid-area: card;
+    max-height: 100dvh;
+    overflow-y: auto;
+  }
+}
+@media (max-width: 800px), (max-height: 520px) {
+  .l-app.l-auth-page {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .l-app.l-auth-page > .l-auth-card {
+    order: -1;
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding-top: max(20px, env(safe-area-inset-top));
+  }
+  .l-app.l-auth-page > .l-auth-story {
+    min-height: 0;
+    padding: 16px 20px 28px;
+  }
+  .l-app .l-auth-story > h1,
+  .l-app .l-auth-story > .l-kicker,
+  .l-app .l-auth-story > p {
+    display: none;
+  }
+  .l-app .l-auth-preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin: 4px auto 8px;
+    padding: 0 16px;
+    border-radius: 99px;
+    background: #ffffff1f;
+    color: inherit;
+    font-size: 13px;
+  }
+  .l-app .l-auth-story:not(.is-open) .l-auth-preview {
+    display: none;
+  }
+}
+@media (max-height: 520px) and (min-width: 600px) {
+  .l-app .l-account-ids {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+}
+/* Mobile header: keep presence + invite readable with 44px targets. */
+@media (max-width: 600px) {
+  .l-presence-label small,
+  .l-app .l-world-header .l-invite-button span,
+  .l-app .l-profile > span:last-child {
+    display: none;
+  }
+  .l-presence-face:nth-child(n + 4) {
+    display: none;
+  }
+  .l-app .l-world-header .l-presence {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+  .l-app .l-world-header .l-invite-button {
+    width: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  .l-app .l-daily-chip,
+  .l-app.l-immersive .l-world-header .l-profile {
+    display: none;
+  }
+  /* The daily grant lives in the wallet modal on phones; a dot hints at it. */
+  .l-wallet-group:has(.l-daily-chip) .l-wallet-button {
+    position: relative;
+  }
+  .l-wallet-group:has(.l-daily-chip) .l-wallet-button::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e8a317;
+  }
+  .l-app.l-immersive .l-world-header .l-brand strong {
+    display: none;
+  }
+  .l-app.l-immersive .l-world-header .l-brand {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .l-app.l-immersive .l-wallet-button {
+    font-size: 12px;
+    min-height: 44px;
+  }
+  .l-app .l-world-header .l-header-right {
+    gap: 4px;
+  }
+  .l-presence-face:nth-child(n + 3) {
+    display: none;
+  }
+  .l-presence-label b {
+    white-space: nowrap;
+  }
+  .l-invitation-card .l-countdown {
+    width: 40px;
+    height: 40px;
+  }
+}
+.l-app dialog.l-modal:focus,
+.l-app dialog.l-modal:focus-visible {
+  outline: none;
+}
+.l-app .l-modal-intro {
+  color: #5c6a52;
+}
+.l-app .l-help-text {
+  color: #66725c;
+}
+.l-app .l-invitation-card {
+  flex-wrap: wrap;
+}
+.l-app .l-invitation-card > div:nth-child(2) {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .l-app .l-invitation-card .l-invite-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .l-app .l-invitation-card .l-invite-actions .l-primary {
+    flex: 1;
+  }
+}
+.l-app .l-game-screen .l-game-money span {
+  font-size: 12px;
+}
+.l-app .l-table-stage .s-controls {
+  background: #fbf8efef;
+  box-shadow: 0 -8px 18px #3a2d1a14;
+  border-radius: 14px 14px 0 0;
+}
+.l-app .l-table-stage :is(.p-controls, .bj-controls) {
+  background: #0f1a2cf2;
+  box-shadow: 0 -8px 18px #0005;
+  border-radius: 14px 14px 0 0;
+}
+@media (max-width: 800px), (max-height: 520px) {
+  .l-app.l-auth-page > * {
+    flex-shrink: 0;
+  }
+}
+@media (max-height: 520px) {
+  .l-app.l-auth-page > .l-auth-card {
+    padding-top: 12px;
+    padding-bottom: 16px;
+  }
+  .l-app .l-auth-card > .l-kicker,
+  .l-app .l-auth-card > h2,
+  .l-app .l-auth-card > .l-auth-intro,
+  .l-app .l-auth-card .l-account-ids small {
+    display: none;
+  }
+  .l-app .l-auth-card .l-auth-tabs {
+    margin: 0 0 10px;
+  }
+  .l-app .l-auth-card .l-account-ids button {
+    min-height: 44px;
+    padding: 4px;
+  }
+  .l-app .l-auth-card .l-account-ids .l-login-portrait,
+  .l-app .l-auth-card .l-account-ids img {
+    max-height: 28px;
+  }
+}
+.l-app .l-toast[popover] {
+  inset: auto auto 28px 50%;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+}
+.l-app.l-immersive .l-toast[popover] {
+  bottom: max(180px, env(safe-area-inset-bottom));
+}
+.l-app .l-chat form input,
+.l-app .l-chat form button {
+  min-height: 44px;
+}
+.l-app .l-chat form button {
+  min-width: 44px;
+}
+.l-app.l-immersive .l-world-header .l-brand small {
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .l-app .l-world-header .l-brand > span:last-child,
+  .l-app .l-world-header .l-profile {
+    display: none;
+  }
+  .l-app .l-world-header .l-brand {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+@media (pointer: coarse) {
+  .l-app
+    :is(
+      .l-footer button,
+      .l-footer a,
+      .l-save-bar button,
+      .l-world-menu-links a,
+      .l-world-menu-links button
+    ) {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+.l-simple-village .l-simple-chat {
+  margin-top: 18px;
+}
+
+/* P2: palette rows bought in the 범타듀 상점 (wardrobe hair colors). */
+.l-hair-palette h3 small {
+  font-size: 11px;
+  font-weight: 400;
+}
+/* A game screen covers the shell; the shell (and the paused 3D village) stays
+   mounted underneath so closing the game is instant. Dialogs and toasts stay. */
+.l-app.l-in-game > :not(.l-game-screen, dialog, .l-toast, .l-save-status) {
+  display: none !important;
+}
+/* Legacy page sizes in the menu stay readable (min 11px). */
+.l-app .l-world-menu-links small {
+  font-size: 11px;
+}
+.l-recovery output.l-help-text {
+  display: block;
+  margin-top: 8px;
 }

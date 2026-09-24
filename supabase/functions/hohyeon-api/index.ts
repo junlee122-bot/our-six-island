@@ -1,4 +1,16 @@
-import { accountSave } from '../../../app/lounge-accounts.ts';
+import {
+  ACCOUNT_IDS,
+  friendVisitView,
+  VISIT_BAD_OWNER,
+  visitOwnerValid,
+  AccountSaveError,
+  casBackoffMs,
+  lifeUnlocksOf,
+  jsonbTextBytes,
+  PROFILE_SAVE_MAX_BYTES,
+  SAVE_TOO_LARGE,
+  serverAccountSave,
+} from '../../../app/lounge-accounts.ts';
 import {
   cloudTransition,
   commandHash,
@@ -7,6 +19,7 @@ import {
 import {
   HttpError,
   key,
+  log,
   member,
   profile,
   rate,
@@ -15,28 +28,82 @@ import {
   url,
 } from '../_shared/server.ts';
 declare const EdgeRuntime: { waitUntil: (task: Promise<unknown>) => void };
-serve(async (b, req) => {
+const CAS_ATTEMPTS = 12;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+serve('hohyeon-api', async (b, req, ctx) => {
   const { m } = await member(req);
   await rate('api:' + m.user_id, 300);
   if (b.op === 'profile') return { profile: profile(m) };
+  if (b.op === 'visit') {
+    // Read-only friend room visit: bedroom + look from the friend's profile
+    // save, guestbook/status from the world. Only the 7 roster members exist.
+    if (!visitOwnerValid(b.owner)) throw new HttpError(VISIT_BAD_OWNER);
+    const friend = await rpc('hh_member', {
+        p_username: ACCOUNT_IDS[b.owner],
+      }),
+      world = await rpc('hh_world_read');
+    return {
+      visit: friendVisitView(
+        b.owner,
+        friend?.activated ? friend.save : null,
+        world?.state?.life,
+      ),
+    };
+  }
   if (b.op === 'save') {
     if (
       !Number.isSafeInteger(b.revision) ||
       b.revision < 0 ||
       !b.save ||
-      typeof b.save !== 'object'
+      typeof b.save !== 'object' ||
+      Array.isArray(b.save)
     )
       throw new HttpError('저장 정보를 확인해 주세요.');
+    // Shop unlocks live in the world's life state; rare room props need them.
+    const world = await rpc('hh_world_read'),
+      unlocks = lifeUnlocksOf(world?.state?.life, m.user_id);
+    let save;
+    try {
+      // Fail closed: an unreadable or unknown-version save is rejected (409),
+      // never normalized into a blank save that would overwrite the account.
+      save = serverAccountSave(b.save, m.actor, m.save, unlocks);
+    } catch (e) {
+      if (e instanceof AccountSaveError) {
+        log('warn', 'save_rejected', {
+          ...ctx,
+          uid: m.user_id,
+          version: (b.save as { version?: unknown }).version,
+        });
+        throw new HttpError(e.message, e.status);
+      }
+      throw e;
+    }
+    if (jsonbTextBytes(save) > PROFILE_SAVE_MAX_BYTES)
+      throw new HttpError(SAVE_TOO_LARGE, 413);
+    // hh_profile_save also appends to hohyeon.profile_history (last 20).
     return await rpc('hh_profile_save', {
       p_uid: m.user_id,
       p_expected: b.revision,
-      p_save: accountSave(b.save, m.actor, m.save),
+      p_save: save,
     });
   }
-  if (b.op !== 'world' || !b.command || typeof b.command !== 'object')
+  if (
+    b.op !== 'world' ||
+    !b.command ||
+    typeof b.command !== 'object' ||
+    Array.isArray(b.command)
+  )
     throw new HttpError('지원하지 않는 요청입니다.');
+  const code = (b.command as { code?: unknown }).code;
+  if (
+    code !== undefined &&
+    code !== null &&
+    (typeof code !== 'string' || code.length > 512)
+  )
+    throw new HttpError('방 코드를 확인해 주세요.');
   const hash = await commandHash(b.command);
-  for (let attempt = 0; attempt < 12; attempt++) {
+  for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
+    if (attempt) await sleep(casBackoffMs(attempt - 1));
     const row = await rpc('hh_world_read');
     let transition;
     try {
@@ -58,25 +125,45 @@ serve(async (b, req) => {
         })
       : row.revision;
     if (revision === null) continue;
+    if (attempt >= 3)
+      log('warn', 'cas_contention', { ...ctx, attempts: attempt + 1 });
     if (transition.notifications.length) {
       // A hint only. Clients fetch their own authenticated, redacted snapshot.
+      // Private channel: only authenticated members of the room may receive it
+      // (RLS on realtime.messages, see *_hohyeon_hardening.sql), and clients
+      // cannot publish. Clients must subscribe with { config: { private: true } }.
       const task = fetch(url + '/realtime/v1/api/broadcast', {
         method: 'POST',
-        headers: { apikey: key, 'Content-Type': 'application/json' },
+        headers: {
+          apikey: key,
+          Authorization: 'Bearer ' + key,
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           messages: transition.notifications.map((code) => ({
             topic: 'hh-cloud-' + code,
             event: 'revision',
             payload: { revision },
-            private: false,
+            private: true,
           })),
         }),
-      }).catch(() => {});
+      })
+        .then((r) => {
+          if (!r.ok)
+            log('warn', 'broadcast_failed', { ...ctx, status: r.status });
+        })
+        .catch((e) =>
+          log('warn', 'broadcast_failed', {
+            ...ctx,
+            message: e instanceof Error ? e.message : String(e),
+          }),
+        );
       if (typeof EdgeRuntime !== 'undefined') EdgeRuntime.waitUntil(task);
       else await task;
     }
     return { ...transition.response, revision };
   }
+  log('warn', 'cas_exhausted', { ...ctx, attempts: CAS_ATTEMPTS });
   throw new HttpError(
     '다른 친구의 요청을 반영 중이에요. 다시 시도해 주세요.',
     503,

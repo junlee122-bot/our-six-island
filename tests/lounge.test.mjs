@@ -209,7 +209,7 @@ test('game invitations require consent, reject outsiders, reserve only accepted 
       players: ['p1', 'p2', 'p3'],
     }),
   );
-  let id = r.view.invites[0].id;
+  const id = r.view.invites[0].id;
   assert.equal(r.go, null);
   assert(!apply(r, 'p4', { kind: 'reply', id, accept: true }));
   assert(apply(r, 'p1', { kind: 'reply', id, accept: true }));
@@ -236,11 +236,15 @@ test('chess and Go-Stop can run concurrently with independent seats and departur
   assert(apply(r, 'p3', { kind: 'reply', id, accept: true }));
   assert(apply(r, 'p4', { kind: 'reply', id, accept: true }));
   const chessId = r.chess.id;
+  const goRevision = r.go.revision,
+    goPhase = r.go.phase;
   assert(apply(r, 'p3', { kind: 'stand', game: 'gostop' }));
-  assert.equal(r.go.phase, 'over');
-  assert.equal(r.go.winner, null);
-  assert.equal(r.go.revision, 1);
-  assert.deepEqual(r.go.motion.steps, []);
+  // Leaving no longer voids the round: the seat is marked away and played
+  // automatically by the server until the round ends.
+  assert.equal(r.go.phase, goPhase);
+  assert.equal(r.go.revision, goRevision);
+  assert.deepEqual(r.view.seats.gostop, ['p2', 'p3', 'p4']);
+  assert.equal(r.goAway.has(1), goPhase !== 'over');
   assert.equal(r.chess.id, chessId);
   assert.equal(r.chess.winner, null);
   assert(apply(r, 'p1', { kind: 'stand', game: 'chess' }));
@@ -280,6 +284,26 @@ test('expired invitations and double booking cannot start games', () => {
   assert(!apply(r, 'p2', { kind: 'reply', id: exp.id, accept: true }));
   r.tick();
   assert.equal(r.view.invites.find((i) => i.id === exp.id).status, 'expired');
+});
+test('a guest who accepted can withdraw without cancelling the invite for everyone', () => {
+  const r = host();
+  apply(r, 'p0', {
+    kind: 'invite',
+    game: 'gostop',
+    players: ['p1', 'p2', 'p3'],
+  });
+  const id = r.view.invites[0].id;
+  assert(apply(r, 'p1', { kind: 'reply', id, accept: true }));
+  assert(apply(r, 'p1', { kind: 'cancel', id }));
+  let invite = r.view.invites.find((i) => i.id === id);
+  assert.equal(invite.status, 'waiting');
+  assert(!invite.accepted.includes('p1'));
+  assert(invite.declined.includes('p1'));
+  // Once too few friends are left, the withdrawal ends the invite.
+  assert(apply(r, 'p2', { kind: 'reply', id, accept: true }));
+  assert(apply(r, 'p2', { kind: 'cancel', id }));
+  invite = r.view.invites.find((i) => i.id === id);
+  assert.equal(invite.status, 'cancelled');
 });
 test('hidden hands are recipient-specific and authenticated encryption rejects another player', async () => {
   const a = await channelIdentity(),
@@ -447,7 +471,7 @@ test('ppuk leaves three cards on the table while ttadak collects exactly four', 
     t.motion.steps.map((s) => s.kind),
     ['draw', 'collect'],
   );
-  assert.deepEqual([...t.motion.steps[1].cards].sort(), [
+  assert.deepEqual([...t.motion.steps[1].cards].sort((a, b) => a.localeCompare(b)), [
     'm01-01',
     'm01-02',
     'm01-03',

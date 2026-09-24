@@ -1,37 +1,203 @@
+/**
+ * The walk room: a fixed architectural shell (floor, two walls, window,
+ * curtains, door) plus every item of the saved v3 room. Items are synced
+ * incrementally (`setRoom`) so 꾸미기 모드 edits appear instantly.
+ * GLB templates and textures are cached per session (re-entering the room
+ * does not download or parse them again).
+ */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LOUNGE_MODELS } from './lounge-model-assets';
-import { LOUNGE_ASSETS } from './lounge-assets';
-import { bedroomTheme, bedroomThemePoster } from './lounge-bedroom-themes';
-import { MIKU_ROOM_ART } from './lounge-bedroom-collection';
-import { WALK_FURNITURE } from './lounge-bedroom-navigation';
-import { defaultBedroom } from './lounge-bedroom-data';
-import type { LoungeSave } from './lounge-look';
+import {
+  ROOM,
+  catalogEntry,
+  itemFootprint,
+  wallSpan,
+  type Bedroom,
+  type CatalogEntry,
+  type RoomItem,
+} from './lounge-bedroom-data';
+import { MODEL_FILES, PROP_ART } from './lounge-bedroom-art';
+import { buildMiku } from './lounge-bedroom-miku3d';
 
-export const BEDROOM_WALL_COLOR = {
+export const BEDROOM_WALL_COLOR: Record<Bedroom['wall'], string> = {
   cream: '#eee6d7',
   sage: '#cbd1bd',
-  blush: '#e3ccc2',
+  blush: '#e8d3cb',
   blue: '#c9d8d6',
+  mint: '#d3e8df',
+  dusk: '#a9a2b8',
 };
-export const BEDROOM_FLOOR_COLOR = {
+export const BEDROOM_FLOOR_COLOR: Record<Bedroom['floor'], string> = {
   oak: '#c3a579',
   walnut: '#8d7057',
   pale: '#e0d1b7',
+  ash: '#cfc7bb',
+};
+/** The fixed camera looks in from here (front-right, elevated). */
+export const ROOM_CAMERA = { x: 11, y: 10, z: 13 } as const;
+export const CAMERA_YAW = Math.atan2(ROOM_CAMERA.x, ROOM_CAMERA.z);
+const DEG = Math.PI / 180;
+
+// ------------------------------------------------------------ caches
+const loader = new GLTFLoader();
+const gltfCache = new Map<string, Promise<THREE.Object3D>>();
+const textureCache = new Map<string, THREE.Texture>();
+const texturePromises = new Map<string, Promise<THREE.Texture>>();
+const markShared = (root: THREE.Object3D) =>
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry.userData.shared = true;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+      m.userData.shared = true;
+  });
+function gltf(url: string) {
+  let p = gltfCache.get(url);
+  if (!p) {
+    p = loader.loadAsync(url).then((g) => {
+      markShared(g.scene);
+      return g.scene;
+    });
+    p.catch(() => gltfCache.delete(url));
+    gltfCache.set(url, p);
+  }
+  return p;
+}
+/** A texture that fills in once its image arrives (cached, never disposed). */
+function textureNow(url: string, onLoad?: () => void): THREE.Texture {
+  let texture = textureCache.get(url);
+  if (!texture) {
+    texture = new THREE.TextureLoader().load(url, () => onLoad?.());
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    texture.userData.shared = true;
+    textureCache.set(url, texture);
+  } else if (!texture.image && onLoad) {
+    // Still loading elsewhere: refresh when it lands.
+    textureAsync(url).then(onLoad, () => {});
+  }
+  return texture;
+}
+function textureAsync(url: string): Promise<THREE.Texture> {
+  let p = texturePromises.get(url);
+  if (!p) {
+    p = new Promise<THREE.Texture>((resolve, reject) => {
+      const cached = textureCache.get(url);
+      if (cached?.image) return resolve(cached);
+      const texture = new THREE.TextureLoader().load(url, resolve, undefined, reject);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 4;
+      texture.userData.shared = true;
+      if (!cached) textureCache.set(url, texture);
+    }).then(() => textureCache.get(url)!);
+    p.catch(() => texturePromises.delete(url));
+    texturePromises.set(url, p);
+  }
+  return p;
+}
+/** Fitted, centred template of a catalog GLB (cached per ref). */
+const templates = new Map<string, Promise<THREE.Object3D>>();
+function modelTemplate(entry: CatalogEntry) {
+  let p = templates.get(entry.ref);
+  if (!p) {
+    p = gltf(MODEL_FILES[entry.ref]).then((source) => {
+      const object = source.clone(true);
+      object.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(object),
+        size = bounds.getSize(new THREE.Vector3());
+      const flat = entry.mount === 'rug';
+      const ratio = new THREE.Vector3(
+        entry.w / Math.max(size.x, 0.001),
+        entry.h / Math.max(size.y, 0.001),
+        entry.d / Math.max(size.z, 0.001),
+      );
+      if (flat) object.scale.multiply(ratio);
+      else object.scale.multiplyScalar(Math.min(ratio.x, ratio.y, ratio.z));
+      object.updateMatrixWorld(true);
+      const fitted = new THREE.Box3().setFromObject(object),
+        center = fitted.getCenter(new THREE.Vector3());
+      object.position.sub(new THREE.Vector3(center.x, fitted.min.y, center.z));
+      const wrap = new THREE.Group();
+      wrap.add(object);
+      wrap.traverse((child) => {
+        const mesh = child as THREE.Mesh;
+        if (mesh.isMesh) {
+          mesh.castShadow = !flat;
+          mesh.receiveShadow = true;
+        }
+      });
+      return wrap;
+    });
+    p.catch(() => templates.delete(entry.ref));
+    templates.set(entry.ref, p);
+  }
+  return p;
+}
+function disposeOwned(root: THREE.Object3D) {
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh && !(child as THREE.LineSegments).isLineSegments) return;
+    if (!mesh.geometry.userData.shared) mesh.geometry.dispose();
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material])
+      if (!m.userData.shared) m.dispose();
+  });
+}
+
+// ------------------------------------------------------------ shared bits
+let blobTexture: THREE.CanvasTexture | null = null;
+function blob() {
+  if (!blobTexture) {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const c = canvas.getContext('2d')!,
+      g = c.createRadialGradient(32, 32, 3, 32, 32, 31);
+    g.addColorStop(0, 'rgba(62, 49, 31, 0.34)');
+    g.addColorStop(0.5, 'rgba(62, 49, 31, 0.15)');
+    g.addColorStop(1, 'rgba(62, 49, 31, 0)');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 64, 64);
+    blobTexture = new THREE.CanvasTexture(canvas);
+    blobTexture.colorSpace = THREE.SRGBColorSpace;
+    blobTexture.userData.shared = true;
+  }
+  return blobTexture;
+}
+const blobMaterial = () => {
+  const m = new THREE.MeshBasicMaterial({
+    map: blob(),
+    transparent: true,
+    depthWrite: false,
+    toneMapped: false,
+  });
+  m.userData.shared = true;
+  return m;
+};
+let sharedBlob: THREE.MeshBasicMaterial | null = null;
+const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
+hitMaterial.userData.shared = true;
+
+type Node = {
+  item: RoomItem;
+  group: THREE.Group;
+  content: THREE.Group;
+  hit: THREE.Mesh;
+  /** Card height/width, known once the image loaded. */
+  aspect?: number;
+  loaded: Promise<unknown>;
 };
 
-/** A curated walkable studio. Its architectural layout never rewrites the saved decoration canvas. */
+export type RoomScene = ReturnType<typeof createBedroomScene>;
+
+/** Builds the room into `scene`. `onChange` is called whenever something new is visible. */
 export function createBedroomScene(
   scene: THREE.Scene,
   renderer: THREE.WebGLRenderer,
-  save: LoungeSave,
+  initial: Bedroom,
   host: HTMLElement,
-  isDisposed: () => boolean,
+  onChange: () => void,
 ) {
-  const room = save.bedroom ?? defaultBedroom(save.actor),
-    miku = save.actor === 0,
-    theme = bedroomTheme(save.actor);
-  host.dataset.theme = theme.tag;
+  let disposed = false;
   const materials = new Map<string, THREE.MeshStandardMaterial>();
   const surface = (color: string) => {
     let value = materials.get(color);
@@ -41,6 +207,9 @@ export function createBedroomScene(
     }
     return value;
   };
+  const shell = new THREE.Group();
+  shell.name = 'shell';
+  scene.add(shell);
   const box = (
     w: number,
     h: number,
@@ -49,7 +218,7 @@ export function createBedroomScene(
     y: number,
     z: number,
     color: string | THREE.Material,
-    parent: THREE.Object3D = scene,
+    parent: THREE.Object3D = shell,
   ) => {
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(w, h, d),
@@ -61,70 +230,28 @@ export function createBedroomScene(
     parent.add(mesh);
     return mesh;
   };
-  const cylinder = (
-    r: number,
-    height: number,
-    x: number,
-    y: number,
-    z: number,
-    color: string,
-    parent: THREE.Object3D = scene,
-  ) => {
-    const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(r, r, height, 20),
-      surface(color),
-    );
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    parent.add(mesh);
-    return mesh;
-  };
-  const sphere = (
-    r: number,
-    x: number,
-    y: number,
-    z: number,
-    color: string,
-    parent: THREE.Object3D = scene,
-  ) => {
-    const mesh = new THREE.Mesh(
-      new THREE.SphereGeometry(r, 16, 12),
-      surface(color),
-    );
-    mesh.position.set(x, y, z);
-    mesh.castShadow = true;
-    parent.add(mesh);
-    return mesh;
-  };
-  const promises: Promise<unknown>[] = [];
-  const fallback = new Map<string, THREE.Group>();
-  const placeholder = (id: string) => {
-    const g = new THREE.Group();
-    scene.add(g);
-    fallback.set(id, g);
-    return g;
-  };
-  const furniture = Object.fromEntries(
-    WALK_FURNITURE.map((item) => [item.id, item]),
-  );
   const wall = new THREE.MeshStandardMaterial({
-    color: BEDROOM_WALL_COLOR[room.wall],
+    color: BEDROOM_WALL_COLOR[initial.wall],
     roughness: 1,
   });
   const floors = Array.from(
     { length: 5 },
-    (_, index) =>
-      new THREE.MeshStandardMaterial({
-        color: new THREE.Color(BEDROOM_FLOOR_COLOR[room.floor]).offsetHSL(
-          0,
-          0,
-          ((index % 3) - 1) * 0.018,
-        ),
-        roughness: 0.91,
-      }),
+    () => new THREE.MeshStandardMaterial({ roughness: 0.91 }),
   );
-  scene.add(new THREE.HemisphereLight('#fff7e7', '#928e79', 2));
+  const setPaint = (wallColor: Bedroom['wall'], floor: Bedroom['floor']) => {
+    wall.color.set(BEDROOM_WALL_COLOR[wallColor]);
+    floors.forEach((material, index) =>
+      material.color
+        .set(BEDROOM_FLOOR_COLOR[floor])
+        .offsetHSL(0, 0, ((index % 3) - 1) * 0.018),
+    );
+    const dusk = wallColor === 'dusk';
+    hemi.intensity = dusk ? 1.55 : 2;
+    sun.color.set(dusk ? '#ffd9b8' : '#ffefd5');
+    onChange();
+  };
+  const hemi = new THREE.HemisphereLight('#fff7e7', '#928e79', 2);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight('#ffefd5', 2.3);
   sun.position.set(-4, 9, 5);
   sun.castShadow = true;
@@ -143,8 +270,10 @@ export function createBedroomScene(
   const fill = new THREE.DirectionalLight('#e4eee6', 1.1);
   fill.position.set(7, 5, 1);
   scene.add(fill);
+  setPaint(initial.wall, initial.floor);
 
-  // Light oak planks, wainscoting and a picture rail make one coherent shell.
+  // Plank floor, wainscoting and a picture rail make one coherent shell.
+  const { minX, minZ } = ROOM;
   box(10.28, 0.3, 8.48, 0, -0.2, 0, '#937a5a');
   const plankGeometry = new THREE.BoxGeometry(1.99, 0.065, 0.29);
   floors.forEach((material, color) => {
@@ -154,682 +283,366 @@ export function createBedroomScene(
         if ((row + col * 2) % floors.length === color)
           matrices.push(
             new THREE.Matrix4().makeTranslation(
-              -4 + col * 2,
+              -4 + col * 2 + ((row % 2) - 0.5) * 0.5,
               -0.016,
-              -4.2 + row * 0.3 + 0.15,
+              minZ + row * 0.3 + 0.15,
             ),
           );
-    const planks = new THREE.InstancedMesh(
-      plankGeometry,
-      material,
-      matrices.length,
-    );
+    const planks = new THREE.InstancedMesh(plankGeometry, material, matrices.length);
     matrices.forEach((matrix, index) => planks.setMatrixAt(index, matrix));
     planks.receiveShadow = true;
-    scene.add(planks);
+    shell.add(planks);
   });
-  box(10.23, 3.8, 0.16, 0, 1.85, -4.17, wall);
-  box(0.16, 3.8, 8.3, -5.08, 1.85, 0, wall);
-  box(10.1, 0.77, 0.055, 0, 0.47, -4.045, '#d8d9c8');
-  box(0.055, 0.77, 8.16, -4.955, 0.47, 0, '#d8d9c8');
+  box(10.23, 3.8, 0.16, 0, 1.85, minZ - 0.08, wall);
+  box(0.16, 3.8, 8.3, minX - 0.08, 1.85, 0, wall);
+  const wainscot = '#d8d9c8';
+  box(10.1, 0.77, 0.03, 0, 0.47, minZ + 0.015, wainscot);
+  box(0.03, 0.77, 8.16, minX + 0.015, 0.47, 0, wainscot);
   for (const y of [0.13, 0.88, 3.68]) {
-    box(10.16, 0.07, 0.13, 0, y, -4.03, '#f4eddf');
-    box(0.13, 0.07, 8.23, -4.95, y, 0, '#f4eddf');
+    box(10.16, 0.07, 0.06, 0, y, minZ + 0.03, '#f4eddf');
+    box(0.06, 0.07, 8.23, minX + 0.03, y, 0, '#f4eddf');
   }
-  for (let i = 0; i < 12; i++)
-    box(0.027, 0.67, 0.07, -4.8 + i * 0.85, 0.49, -4.005, '#c3c7b4');
-  for (let i = 0; i < 10; i++)
-    box(0.07, 0.67, 0.027, -4.915, 0.49, -3.85 + i * 0.83, '#c3c7b4');
-  // The window stays directly over the seating nook; all circulation is in front.
-  box(2.95, 1.9, 0.12, -2.1, 2.49, -4.045, '#ac9471');
+  // Window over the desk nook.
+  const win = ROOM.window,
+    wx = (win.x0 + win.x1) / 2,
+    wy = (win.y0 + win.y1) / 2;
+  box(win.x1 - win.x0 + 0.1, win.y1 - win.y0 + 0.02, 0.08, wx, wy, minZ + 0.02, '#ac9471');
   box(
-    2.7,
-    1.64,
-    0.13,
-    -2.1,
-    2.49,
-    -3.97,
+    win.x1 - win.x0 - 0.16,
+    win.y1 - win.y0 - 0.24,
+    0.05,
+    wx,
+    wy,
+    minZ + 0.05,
     new THREE.MeshBasicMaterial({ color: '#d4e5d3' }),
   );
-  for (const x of [-3.46, -2.1, -0.74])
-    box(0.065, 1.77, 0.16, x, 2.49, -3.89, '#faf2df');
-  for (const y of [1.65, 2.49, 3.33])
-    box(2.8, 0.065, 0.16, -2.1, y, -3.89, '#faf2df');
-  box(3.15, 0.1, 0.36, -2.1, 1.56, -3.83, '#f3e8d2');
-  const curtainGroup = placeholder('curtains');
-  for (const side of [-3.73, -0.66])
-    for (let fold = 0; fold < 4; fold++)
-      cylinder(
-        0.07,
-        2.13,
-        side + fold * 0.09,
-        2.4,
-        -3.82,
-        '#e8dcc5',
-        curtainGroup,
-      );
-  box(3.63, 0.06, 0.08, -2.08, 3.49, -3.77, '#9b805a', curtainGroup);
-  // Recessed entry door at the open front end of the left wall.
-  box(0.1, 2.63, 1.23, -4.93, 1.37, 2.94, '#a98e6a');
-  box(0.11, 2.43, 1.04, -4.86, 1.28, 2.94, '#c9b58f');
+  for (const x of [win.x0 + 0.1, wx, win.x1 - 0.1])
+    box(0.065, win.y1 - win.y0 - 0.12, 0.06, x, wy, minZ + 0.1, '#faf2df');
+  for (const y of [win.y0 + 0.1, wy, win.y1 - 0.1])
+    box(win.x1 - win.x0 - 0.1, 0.065, 0.06, wx, y, minZ + 0.1, '#faf2df');
+  box(win.x1 - win.x0 + 0.2, 0.08, 0.2, wx, win.y0 - 0.02, minZ + 0.12, '#f3e8d2');
+  // Door at the front end of the left wall.
+  const door = ROOM.door,
+    dz = (door.z0 + door.z1) / 2;
+  box(0.06, door.height, door.z1 - door.z0, minX + 0.02, door.height / 2, dz, '#a98e6a');
+  box(0.07, door.height - 0.2, door.z1 - door.z0 - 0.19, minX + 0.06, door.height / 2 - 0.08, dz, '#c9b58f');
   for (const y of [0.68, 1.72])
-    box(0.015, 0.8, 0.78, -4.795, y, 2.94, '#dfcdaa');
-  sphere(0.052, -4.72, 1.23, 3.28, '#b09557');
-
-  const {
-    sofa,
-    bed,
-    desk,
-    table,
-    shelf,
-    chair,
-    nightstand,
-    wardrobe,
-    display,
-    plant,
-  } = furniture;
-  const fallbackSpecs = [
-    ['sofa', sofa, 1.03, '#a1b6a4'],
-    ['bed', bed, 0.67, '#c8bbb0'],
-    ['desk', desk, 0.77, '#c5a477'],
-    ['bookshelf', shelf, 1.85, '#c2a67f'],
-    ['coffeeTable', table, 0.55, '#baa17b'],
-    ['chair', chair, 0.62, '#859582'],
-    ['nightstand', nightstand, 0.62, '#d4c5aa'],
-    ['wardrobe', wardrobe, 2.12, '#e8e2d2'],
-    ['plantStand', plant, 0.77, '#9faf83'],
-  ] as const;
-  for (const [id, point, height, color] of fallbackSpecs)
-    box(
-      point.width,
-      height,
-      point.depth,
-      point.x,
-      height / 2 + 0.04,
-      point.z,
-      color,
-      placeholder(id),
-    );
-  box(4.3, 0.025, 3.2, 0.2, 0.029, 1.27, '#d3d9c1', placeholder('rug'));
-  const rugStripe = surface('#b5bea4');
-  for (const x of [-1.75, 2.15])
-    box(0.035, 0.012, 2.85, x, 0.056, 1.27, rugStripe);
-
-  const loader = new GLTFLoader();
-  const disposeLoaded = (root: THREE.Object3D) => {
-    const textures = new Set<THREE.Texture>();
-    root.traverse((child) => {
-      const mesh = child as THREE.Mesh;
-      if (!mesh.isMesh) return;
-      mesh.geometry.dispose();
-      for (const material of Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material]) {
-        for (const value of Object.values(material))
-          if (value instanceof THREE.Texture) textures.add(value);
-        material.dispose();
-      }
-    });
-    for (const texture of textures) {
-      texture.dispose();
-      const image = texture.source.data;
-      if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap)
-        image.close();
+    box(0.015, 0.8, 0.78, minX + 0.1, y, dz, '#dfcdaa');
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 8), surface('#b09557'));
+  knob.position.set(minX + 0.14, 1.23, dz + 0.34);
+  shell.add(knob);
+  const doormat = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.62, 1.05),
+    surface('#b8a58a'),
+  );
+  doormat.rotation.x = -Math.PI / 2;
+  doormat.position.set(minX + 0.4, 0.035, dz);
+  doormat.receiveShadow = true;
+  shell.add(doormat);
+  // Curtains belong to the window (not a placeable item).
+  const curtainFallback = new THREE.Group();
+  shell.add(curtainFallback);
+  for (const side of [win.x0 - 0.15, win.x1 + 0.08])
+    for (let fold = 0; fold < 3; fold++) {
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.13, 10), surface('#e8dcc5'));
+      c.position.set(side + fold * 0.07, 2.4, minZ + 0.2);
+      curtainFallback.add(c);
     }
+  box(win.x1 - win.x0 + 0.7, 0.06, 0.08, wx, win.y1 + 0.06, minZ + 0.25, '#9b805a');
+  const shellLoads: Promise<unknown>[] = [
+    gltf(LOUNGE_MODELS.curtains).then((source) => {
+      if (disposed) return;
+      const object = source.clone(true);
+      object.updateMatrixWorld(true);
+      const bounds = new THREE.Box3().setFromObject(object),
+        size = bounds.getSize(new THREE.Vector3());
+      object.scale.multiply(
+        new THREE.Vector3((win.x1 - win.x0 + 0.66) / size.x, 2.2 / size.y, 0.18 / size.z),
+      );
+      object.updateMatrixWorld(true);
+      const fitted = new THREE.Box3().setFromObject(object),
+        center = fitted.getCenter(new THREE.Vector3());
+      object.position.add(new THREE.Vector3(wx - center.x, 1.3 - fitted.min.y, minZ + 0.28 - center.z));
+      shell.add(object);
+      curtainFallback.visible = false;
+      renderer.shadowMap.needsUpdate = true;
+      onChange();
+    }),
+  ];
+
+  // ---------------------------------------------------------- items
+  const itemsRoot = new THREE.Group();
+  itemsRoot.name = 'items';
+  scene.add(itemsRoot);
+  const nodes = new Map<string, Node>();
+  const refresh = () => {
+    if (disposed) return;
+    renderer.shadowMap.needsUpdate = true;
+    onChange();
   };
-  const model = (
-    key: keyof typeof LOUNGE_MODELS,
-    id: string,
-    x: number,
-    z: number,
-    width: number,
-    depth: number,
-    height: number,
-    y = 0.05,
-    rotation = 0,
-    stretch = false,
-  ) => {
-    promises.push(
-      loader.loadAsync(LOUNGE_MODELS[key]).then((gltf) => {
-        const object = gltf.scene;
-        if (isDisposed()) {
-          disposeLoaded(object);
-          return;
-        }
-        object.rotation.y = rotation;
-        object.updateMatrixWorld(true);
-        const bounds = new THREE.Box3().setFromObject(object),
-          size = bounds.getSize(new THREE.Vector3());
-        const ratio = new THREE.Vector3(
-          width / Math.max(size.x, 0.001),
-          height / Math.max(size.y, 0.001),
-          depth / Math.max(size.z, 0.001),
-        );
-        if (stretch) object.scale.multiply(ratio);
-        else object.scale.multiplyScalar(Math.min(ratio.x, ratio.y, ratio.z));
-        object.updateMatrixWorld(true);
-        const fitted = new THREE.Box3().setFromObject(object),
-          center = fitted.getCenter(new THREE.Vector3());
-        object.position.add(
-          new THREE.Vector3(x - center.x, y - fitted.min.y, z - center.z),
-        );
-        object.name = id;
-        object.traverse((child) => {
-          const mesh = child as THREE.Mesh;
-          if (mesh.isMesh) {
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-          }
+  const place = (node: Node) => {
+    const { item, group, content } = node;
+    const entry = catalogEntry(item.ref)!;
+    group.scale.setScalar(item.scale);
+    if (entry.mount === 'wall') {
+      const left = item.wall === 'left';
+      group.position.set(left ? minX + 0.035 : item.x, item.y ?? 2, left ? item.z : minZ + 0.035);
+      group.rotation.set(0, left ? Math.PI / 2 : 0, 0);
+      return;
+    }
+    group.position.set(item.x, item.y ?? 0, item.z);
+    if (entry.kind === 'prop' && entry.mount !== 'rug') {
+      // Painted cards always face the camera; 180° mirrors them.
+      group.rotation.set(0, CAMERA_YAW, 0);
+      const flip = item.rotY > 90 && item.rotY < 270;
+      content.scale.x = flip ? -1 : 1;
+    } else group.rotation.set(0, item.rotY * DEG, 0);
+  };
+  const cardHeight = (node: Node, entry: CatalogEntry) =>
+    node.aspect ? entry.w * node.aspect : entry.h;
+  const sizeHit = (node: Node) => {
+    const entry = catalogEntry(node.item.ref)!;
+    const h = entry.kind === 'prop' ? cardHeight(node, entry) : entry.h;
+    node.hit.scale.set(
+      entry.w,
+      Math.max(h, 0.12),
+      entry.kind === 'prop' && entry.mount !== 'rug' ? Math.max(0.2, entry.d) : Math.max(entry.d, 0.08),
+    );
+    node.hit.position.set(0, entry.mount === 'wall' ? 0 : Math.max(h, 0.12) / 2, entry.mount === 'wall' ? 0.05 : 0);
+  };
+  const build = (item: RoomItem): Node => {
+    const entry = catalogEntry(item.ref)!;
+    const group = new THREE.Group(),
+      content = new THREE.Group();
+    group.name = 'item-' + item.id;
+    group.add(content);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), hitMaterial);
+    hit.userData.itemId = item.id;
+    group.add(hit);
+    const node: Node = { item, group, content, hit, loaded: Promise.resolve() };
+    // Soft contact shadow under everything that stands on something.
+    if (entry.mount === 'floor' || entry.mount === 'small') {
+      sharedBlob ??= blobMaterial();
+      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), sharedBlob);
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = 0.012;
+      shadow.scale.set(entry.w * 1.15, entry.d * 1.3 + 0.1, 1);
+      shadow.renderOrder = 1;
+      content.add(shadow);
+    }
+    const miku = entry.kind === 'model' ? buildMiku(entry.ref, (url) => textureNow(url, refresh)) : null;
+    if (miku) {
+      content.add(miku);
+    } else if (entry.kind === 'model') {
+      node.loaded = modelTemplate(entry).then((template) => {
+        if (disposed) return;
+        content.add(template.clone(true));
+        refresh();
+      });
+    } else {
+      node.loaded = textureAsync(PROP_ART[entry.ref]).then((texture) => {
+        if (disposed) return;
+        const image = texture.image as { width: number; height: number };
+        node.aspect = image.height / Math.max(1, image.width);
+        const material = new THREE.MeshStandardMaterial({
+          map: texture,
+          transparent: true,
+          alphaTest: 0.12,
+          roughness: 1,
+          side: THREE.DoubleSide,
         });
-        scene.add(object);
-        if (fallback.has(id)) fallback.get(id)!.visible = false;
-        renderer.shadowMap.needsUpdate = true;
-        host.dataset[id] = 'loaded';
-        host.dataset.modelsLoaded = String(
-          Number(host.dataset.modelsLoaded ?? 0) + 1,
-        );
-      }),
-    );
-  };
-  model('sofa', 'sofa', sofa.x, sofa.z, sofa.width, sofa.depth, 1.28);
-  model('bed', 'bed', bed.x, bed.z, bed.width, bed.depth, 1.4);
-  model('desk', 'desk', desk.x, desk.z, desk.width, desk.depth, 0.74);
-  model(
-    'archiveBookcase',
-    'bookshelf',
-    shelf.x,
-    shelf.z,
-    shelf.width,
-    shelf.depth,
-    2.12,
-    0.05,
-    Math.PI / 2,
-  );
-  model(
-    'teaTable',
-    'coffeeTable',
-    table.x,
-    table.z,
-    table.width,
-    table.depth,
-    0.66,
-  );
-  model(
-    'plantStand',
-    'plantStand',
-    plant.x,
-    plant.z,
-    plant.width,
-    plant.depth,
-    1.45,
-    0.05,
-    -0.18,
-  );
-  model(
-    'chair',
-    'chair',
-    chair.x,
-    chair.z,
-    chair.width,
-    chair.depth,
-    1.06,
-    0.05,
-    Math.PI,
-  );
-  model(
-    'nightstand',
-    'nightstand',
-    nightstand.x,
-    nightstand.z,
-    nightstand.width,
-    nightstand.depth,
-    0.66,
-  );
-  model(
-    'wardrobe',
-    'wardrobe',
-    wardrobe.x,
-    wardrobe.z,
-    wardrobe.width,
-    wardrobe.depth,
-    2.1,
-  );
-  model('rug', 'rug', 0.2, 1.27, 4.3, 3.2, 0.025, 0.025, 0, true);
-  model('curtains', 'curtains', -2.07, -3.82, 3.63, 0.18, 2.2, 1.3, 0, true);
-  model('lamp', 'deskLamp', desk.x - 0.52, desk.z - 0.13, 0.3, 0.3, 0.44, 0.79);
-  model(
-    'lamp',
-    'bedsideLamp',
-    nightstand.x,
-    nightstand.z,
-    0.33,
-    0.33,
-    0.46,
-    0.7,
-  );
-  model(
-    'cushions',
-    'cushions',
-    bed.x + 0.15,
-    bed.z + 0.72,
-    0.88,
-    0.5,
-    0.4,
-    0.8,
-  );
-  model('tulips', 'tulips', -2.9, -3.82, 0.36, 0.33, 0.49, 1.58);
-  const bedside = new THREE.PointLight('#ffddb0', 1.15, 2.8);
-  bedside.position.set(nightstand.x, 1.15, nightstand.z);
-  scene.add(bedside);
-  // A low oak collector's cabinet is also a physical edge, never in the central aisle.
-  box(
-    display.width,
-    0.12,
-    display.depth,
-    display.x,
-    0.16,
-    display.z,
-    '#ab9270',
-  );
-  box(
-    display.width,
-    0.12,
-    display.depth,
-    display.x,
-    0.86,
-    display.z,
-    '#d5c3a0',
-  );
-  box(display.width, 0.07, display.depth, display.x, 0.5, display.z, '#d5c3a0');
-  box(display.width, 0.73, 0.055, display.x, 0.48, display.z - 0.3, '#ccdbcf');
-  for (const dx of [-0.86, 0.86])
-    box(0.075, 0.77, display.depth, display.x + dx, 0.48, display.z, '#baa17b');
-  const recordColors = ['#a4c7b9', '#d2b69b', '#ceaea2', '#788d8c'];
-  for (let i = 0; i < 8; i++)
-    box(
-      0.07,
-      0.23,
-      0.29,
-      display.x - 0.64 + i * 0.11,
-      0.33,
-      display.z + 0.02,
-      recordColors[i % 4],
-    );
-
-  const art = (
-    url: string,
-    w: number,
-    h: number,
-    x: number,
-    y: number,
-    z: number,
-    rotation = 0,
-  ) => {
-    promises.push(
-      new THREE.TextureLoader().loadAsync(url).then((texture) => {
-        if (isDisposed()) {
-          texture.dispose();
-          return;
+        let plane: THREE.Mesh;
+        if (entry.mount === 'rug') {
+          plane = new THREE.Mesh(new THREE.PlaneGeometry(entry.w, entry.d), material);
+          plane.rotation.x = -Math.PI / 2;
+          plane.position.y = 0.02;
+          material.depthWrite = false;
+          plane.renderOrder = 1;
+          plane.receiveShadow = true;
+        } else if (entry.mount === 'wall') {
+          plane = new THREE.Mesh(new THREE.PlaneGeometry(entry.w, entry.h), material);
+          plane.position.z = 0.012;
+          plane.receiveShadow = true;
+        } else {
+          const h = cardHeight(node, entry);
+          const geometry = new THREE.PlaneGeometry(entry.w, h);
+          geometry.translate(0, h / 2, 0);
+          plane = new THREE.Mesh(geometry, material);
+          // Cards look like paper standees when lit from the side; keep them evenly lit.
+          material.emissive.set('#3a342c');
+          material.emissiveMap = texture;
+          material.emissiveIntensity = 0.35;
         }
-        texture.colorSpace = THREE.SRGBColorSpace;
-        const image = new THREE.Mesh(
-          new THREE.PlaneGeometry(w, h),
-          new THREE.MeshStandardMaterial({
-            map: texture,
-            transparent: true,
-            alphaTest: 0.04,
-            roughness: 1,
-            side: THREE.DoubleSide,
-          }),
-        );
-        image.position.set(x, y, z);
-        image.rotation.y = rotation;
-        scene.add(image);
-      }),
-    );
+        plane.name = 'art';
+        content.add(plane);
+        sizeHit(node);
+        refresh();
+      });
+    }
+    sizeHit(node);
+    place(node);
+    itemsRoot.add(group);
+    return node;
   };
-  // A real shelf of small collectible figures, with sculpted twin tails and costume details.
-  const figure = (
-    x: number,
-    y: number,
-    z: number,
-    scale: number,
-    hair = '#65bbae',
-  ) => {
-    const group = new THREE.Group();
-    group.position.set(x, y, z);
-    group.scale.setScalar(scale);
-    scene.add(group);
-    cylinder(0.18, 0.04, 0, 0.02, 0, '#c5ded2', group);
-    for (const side of [-1, 1]) {
-      box(0.045, 0.2, 0.055, side * 0.058, 0.15, 0, '#394b50', group);
-      box(0.062, 0.038, 0.09, side * 0.058, 0.053, 0.02, '#293d43', group);
-      const tail = sphere(0.11, side * 0.18, 0.47, -0.03, hair, group);
-      tail.scale.set(0.52, 2.05, 0.55);
-      tail.rotation.z = side * 0.17;
-      box(0.065, 0.025, 0.065, side * 0.15, 0.63, 0, '#c6859a', group);
+  let loads: Promise<unknown>[] = [];
+  const setRoom = (room: Bedroom) => {
+    const seen = new Set<string>();
+    for (const item of room.items) {
+      if (!catalogEntry(item.ref)) continue;
+      seen.add(item.id);
+      const current = nodes.get(item.id);
+      if (current && current.item.ref === item.ref) {
+        current.item = item;
+        place(current);
+        continue;
+      }
+      if (current) {
+        itemsRoot.remove(current.group);
+        disposeOwned(current.group);
+      }
+      const node = build(item);
+      nodes.set(item.id, node);
+      loads.push(node.loaded);
     }
-    const skirt = cylinder(0.145, 0.135, 0, 0.26, 0, '#384b4d', group);
-    skirt.scale.set(1, 1, 0.65);
-    box(0.18, 0.16, 0.105, 0, 0.37, 0, '#e6ded1', group);
-    box(0.027, 0.13, 0.012, 0, 0.37, 0.059, hair, group);
-    sphere(0.116, 0, 0.56, 0, '#f1d4b9', group);
-    const crown = sphere(0.123, 0, 0.612, -0.022, hair, group);
-    crown.scale.set(1, 0.67, 1);
-    for (const side of [-1, 1]) {
-      box(0.012, 0.027, 0.014, side * 0.04, 0.557, 0.11, '#355859', group);
-      const arm = box(
-        0.042,
-        0.19,
-        0.045,
-        side * 0.126,
-        0.36,
-        0,
-        '#495e61',
-        group,
-      );
-      arm.rotation.z = side * -0.28;
-    }
-    return group;
+    for (const [id, node] of nodes)
+      if (!seen.has(id)) {
+        itemsRoot.remove(node.group);
+        disposeOwned(node.group);
+        nodes.delete(id);
+      }
+    host.dataset.items = String(nodes.size);
+    refresh();
   };
-  if (miku) {
-    host.dataset.collection = 'miku';
-    host.dataset.collectionProps = '18';
-    // Framed key art and two sleeve designs form a single gallery over the bed.
-    art(MIKU_ROOM_ART['miku-poster'], 1.12, 1.5, 3.02, 2.66, -4.055);
-    art(MIKU_ROOM_ART['miku-records'], 1.1, 0.95, 1.5, 2.73, -4.04);
-    art(MIKU_ROOM_ART['miku-banner'], 0.68, 0.83, 4.33, 2.75, -4.04);
-    art(
-      MIKU_ROOM_ART['miku-banner'],
-      0.76,
-      0.95,
-      -4.97,
-      2.52,
-      0.06,
-      Math.PI / 2,
-    );
-    figure(display.x - 0.56, 0.93, display.z, 1.04);
-    figure(display.x, 0.93, display.z, 0.88, '#72c9bc');
-    figure(display.x + 0.58, 0.93, display.z, 0.97, '#78b6b3');
-    // Acrylic stand on the desk, paired light sticks and a headphone stand.
-    art(
-      MIKU_ROOM_ART['miku-acrylic'],
-      0.48,
-      0.48,
-      desk.x + 0.43,
-      1.04,
-      desk.z - 0.13,
-    );
-    cylinder(0.105, 0.028, desk.x + 0.41, 0.8, desk.z - 0.13, '#bad4c3');
-    cylinder(0.085, 0.075, desk.x + 0.05, 0.83, desk.z - 0.17, '#f0e5ce');
-    for (const dx of [-0.04, 0.04]) {
-      const stick = cylinder(
-        0.023,
-        0.29,
-        desk.x + 0.05 + dx,
-        1.01,
-        desk.z - 0.17,
-        '#84d4b5',
-      );
-      stick.rotation.z = dx * 2;
+  setRoom(initial);
+  const ready = Promise.allSettled([...shellLoads, ...loads]).then((results) => {
+    loads = [];
+    return results.filter((r) => r.status === 'rejected').length;
+  });
+
+  /** Moves one item live (dragging) without touching the saved room. */
+  const preview = (item: RoomItem) => {
+    const node = nodes.get(item.id);
+    if (!node) return;
+    node.item = item;
+    place(node);
+    onChange();
+  };
+
+  // ---------------------------------------------------------- selection
+  const selection = new THREE.Group();
+  selection.visible = false;
+  selection.renderOrder = 5;
+  scene.add(selection);
+  const outlineMaterial = new THREE.LineBasicMaterial({ color: '#2fbfa8', depthTest: false, transparent: true });
+  const fillMaterial = new THREE.MeshBasicMaterial({ color: '#2fbfa8', transparent: true, opacity: 0.3, depthWrite: false, depthTest: false, side: THREE.DoubleSide });
+  const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(1, 1)), outlineMaterial);
+  const fillPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), fillMaterial);
+  outline.renderOrder = fillPlane.renderOrder = 6;
+  selection.add(fillPlane, outline);
+  let selected: string | null = null,
+    selectedConflict = false;
+  const drawSelection = () => {
+    const node = selected ? nodes.get(selected) : undefined;
+    if (!node) {
+      selection.visible = false;
+      return;
     }
-    cylinder(0.11, 0.027, desk.x - 0.15, 0.8, desk.z + 0.03, '#a6b5a3');
-    box(0.025, 0.3, 0.025, desk.x - 0.15, 0.96, desk.z + 0.03, '#7e8b7b');
-    const headphones = new THREE.Mesh(
-      new THREE.TorusGeometry(0.115, 0.023, 8, 20, Math.PI),
-      surface('#4d7772'),
-    );
-    headphones.position.set(desk.x - 0.15, 1.065, desk.z + 0.03);
-    scene.add(headphones);
-    for (const side of [-1, 1])
-      box(
-        0.052,
-        0.1,
-        0.055,
-        desk.x - 0.15 + side * 0.115,
-        1.04,
-        desk.z + 0.03,
-        '#8ccdbc',
+    const color = selectedConflict ? '#e0605e' : '#2fbfa8';
+    outlineMaterial.color.set(color);
+    fillMaterial.color.set(color);
+    selection.visible = true;
+    const entry = catalogEntry(node.item.ref)!;
+    if (entry.mount === 'wall') {
+      const span = wallSpan(node.item)!;
+      const w = span.a1 - span.a0 + 0.08,
+        h = span.y1 - span.y0 + 0.08;
+      selection.rotation.set(0, span.wall === 'left' ? Math.PI / 2 : 0, 0);
+      selection.position.set(
+        span.wall === 'left' ? minX + 0.06 : (span.a0 + span.a1) / 2,
+        (span.y0 + span.y1) / 2,
+        span.wall === 'left' ? (span.a0 + span.a1) / 2 : minZ + 0.06,
       );
-    box(0.72, 0.016, 0.33, desk.x + 0.12, 0.8, desk.z + 0.11, '#8db9a5');
-    for (let i = 0; i < 10; i++)
-      box(
-        0.043,
-        0.012,
-        0.17,
-        desk.x - 0.15 + i * 0.061,
-        0.815,
-        desk.z + 0.1,
-        i % 3 ? '#eee7d6' : '#496766',
-      );
-    const cushion = sphere(0.24, bed.x - 0.2, 0.89, bed.z + 0.4, '#80b5a2');
-    cushion.scale.set(1, 0.35, 0.8);
-    art(
-      MIKU_ROOM_ART['miku-cushion'],
-      0.45,
-      0.45,
-      bed.x - 0.2,
-      1.01,
-      bed.z + 0.5,
+      selection.scale.set(w, h, 1);
+    } else {
+      const f = itemFootprint(node.item)!;
+      selection.rotation.set(-Math.PI / 2, 0, 0);
+      selection.position.set((f.x0 + f.x1) / 2, (node.item.y ?? 0) + 0.03, (f.z0 + f.z1) / 2);
+      selection.scale.set(f.x1 - f.x0 + 0.08, f.z1 - f.z0 + 0.08, 1);
+    }
+  };
+  const setSelection = (id: string | null, conflict = false) => {
+    selected = id;
+    selectedConflict = conflict;
+    drawSelection();
+    onChange();
+  };
+
+  const raycaster = new THREE.Raycaster();
+  /** The item under a ray (hit boxes only), topmost first. */
+  const pick = (ray: THREE.Ray): string | null => {
+    raycaster.ray.copy(ray);
+    const hits = raycaster.intersectObjects(
+      [...nodes.values()].map((n) => n.hit),
+      false,
     );
-    // A soft gallery rail and small hanging lights echo concert colours without glare.
-    box(3.9, 0.04, 0.075, 2.9, 1.7, -3.96, '#6c9c8a');
-    const bulbMaterial = new THREE.MeshStandardMaterial({
-      color: '#c7e8c6',
-      emissive: '#82b79c',
-      emissiveIntensity: 0.32,
+    // Prefer small/wall things over the big furniture they sit on.
+    hits.sort((a, b) => {
+      const ea = catalogEntry(nodes.get(a.object.userData.itemId)?.item.ref ?? '')!,
+        eb = catalogEntry(nodes.get(b.object.userData.itemId)?.item.ref ?? '')!;
+      const rank = (e: CatalogEntry) => (e.mount === 'small' ? 0 : e.mount === 'wall' ? 1 : e.mount === 'floor' ? 2 : 3);
+      return rank(ea) - rank(eb) || a.distance - b.distance;
     });
-    for (let i = 0; i < 9; i++) {
-      const bulb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.03, 8, 6),
-        bulbMaterial,
-      );
-      bulb.position.set(1.04 + i * 0.46, 1.62, -3.94);
-      scene.add(bulb);
-    }
-  } else {
-    art(bedroomThemePoster(save.actor), 1.14, 1.52, 3.2, 2.65, -4.04);
-    art(LOUNGE_ASSETS.bedroom_photo_string, 1.5, 0.66, 1.4, 2.7, -4.04);
-    art(
-      LOUNGE_ASSETS.bedroom_photo_string,
-      1.55,
-      0.68,
-      -4.97,
-      2.38,
-      0.02,
-      Math.PI / 2,
-    );
-    for (let i = 0; i < 3; i++)
-      box(
-        0.26,
-        0.34,
-        0.11,
-        display.x - 0.6 + i * 0.6,
-        1.09,
-        display.z,
-        recordColors[i],
-      );
-    cylinder(0.1, 0.18, desk.x + 0.5, 0.9, desk.z - 0.1, '#e1c9aa');
-    box(0.55, 0.015, 0.33, desk.x + 0.1, 0.8, desk.z + 0.1, '#93a890');
-    box(0.23, 0.025, 0.27, desk.x + 0.1, 0.824, desk.z + 0.1, '#f5ecd9');
-  }
-  // Distinct objects make each friend's studio recognizable beyond wall colour.
-  const potted = (x: number, y: number, z: number, scale = 1) => {
-    cylinder(0.115 * scale, 0.17 * scale, x, y + 0.085 * scale, z, '#c8ad89');
-    for (let i = 0; i < 4; i++) {
-      const leaf = sphere(
-        0.09 * scale,
-        x + Math.cos(i * 2.2) * 0.07 * scale,
-        y + 0.24 * scale + (i % 2) * 0.1 * scale,
-        z + Math.sin(i * 2.2) * 0.06 * scale,
-        '#839d70',
-      );
-      leaf.scale.set(0.7, 1.4, 0.65);
-    }
+    return (hits[0]?.object.userData.itemId as string | undefined) ?? null;
   };
-  const turntable = () => {
-    box(0.57, 0.065, 0.39, desk.x + 0.12, 0.84, desk.z, '#9a7a5d');
-    cylinder(0.148, 0.012, desk.x + 0.06, 0.881, desk.z, '#344448');
-    cylinder(0.039, 0.014, desk.x + 0.06, 0.89, desk.z, theme.accent);
-    const arm = box(
-      0.017,
-      0.019,
-      0.25,
-      desk.x + 0.3,
-      0.891,
-      desk.z + 0.03,
-      '#b8bca7',
-    );
-    arm.rotation.y = 0.4;
-    for (const dx of [-0.67, 0.67]) {
-      box(0.2, 0.29, 0.18, desk.x + dx, 0.94, desk.z - 0.16, '#72695b');
-      const cone = new THREE.Mesh(
-        new THREE.CircleGeometry(0.059, 20),
-        surface('#344447'),
-      );
-      cone.position.set(desk.x + dx, 0.95, desk.z - 0.063);
-      scene.add(cone);
-    }
+
+  return {
+    sun,
+    ready,
+    setPaint,
+    setRoom: (room: Bedroom) => {
+      setRoom(room);
+      drawSelection();
+    },
+    preview: (item: RoomItem) => {
+      preview(item);
+      drawSelection();
+    },
+    setSelection,
+    pick,
+    /** World-space top centre of an item (for labels). */
+    itemTop(id: string) {
+      const node = nodes.get(id);
+      if (!node) return null;
+      const box = new THREE.Box3().setFromObject(node.group);
+      return new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y, (box.min.z + box.max.z) / 2);
+    },
+    dispose() {
+      disposed = true;
+      for (const node of nodes.values()) disposeOwned(node.group);
+      nodes.clear();
+      disposeOwned(shell);
+      for (const m of materials.values()) m.dispose();
+      wall.dispose();
+      floors.forEach((m) => m.dispose());
+      outline.geometry.dispose();
+      fillPlane.geometry.dispose();
+      outlineMaterial.dispose();
+      fillMaterial.dispose();
+      sun.shadow.dispose();
+    },
   };
-  if (save.actor === 1 || save.actor === 4) {
-    turntable();
-    for (let i = 0; i < 3; i++) {
-      box(
-        0.33,
-        0.36,
-        0.035,
-        display.x - 0.57 + i * 0.56,
-        1.08,
-        display.z,
-        recordColors[i],
-      );
-      const record = new THREE.Mesh(
-        new THREE.CircleGeometry(0.107, 24),
-        surface('#435257'),
-      );
-      record.position.set(display.x - 0.57 + i * 0.56, 1.09, display.z + 0.022);
-      scene.add(record);
-    }
-    if (save.actor === 4) {
-      const warm = new THREE.PointLight('#e6b3a3', 0.6, 3.1);
-      warm.position.set(display.x, 1.6, display.z);
-      scene.add(warm);
-    }
-  }
-  if (save.actor === 2) {
-    potted(display.x - 0.6, 0.93, display.z, 0.85);
-    potted(display.x, 0.93, display.z, 1.2);
-    potted(display.x + 0.6, 0.93, display.z, 0.85);
-    potted(desk.x + 0.4, 0.82, desk.z, 1.0);
-    potted(-3.1, 1.61, -3.82, 0.75);
-  }
-  if (save.actor === 3) {
-    for (let i = 0; i < 5; i++)
-      box(
-        0.38,
-        0.055,
-        0.28,
-        display.x - 0.45,
-        0.95 + i * 0.055,
-        display.z,
-        recordColors[i % 4],
-      );
-    box(0.63, 0.025, 0.33, desk.x + 0.07, 0.82, desk.z, '#eee4ce');
-    box(0.012, 0.03, 0.33, desk.x + 0.07, 0.843, desk.z, '#aabbaa');
-    cylinder(0.07, 0.11, desk.x + 0.61, 0.867, desk.z + 0.1, '#eee2c9');
-    potted(display.x + 0.48, 0.93, display.z, 0.9);
-  }
-  if (save.actor === 5) {
-    box(0.35, 0.23, 0.15, display.x, 0.99, display.z, '#5e665b');
-    const lens = cylinder(
-      0.075,
-      0.09,
-      display.x,
-      1,
-      display.z + 0.11,
-      '#344c4a',
+}
+
+/** One 3D catalog item on its own (tools: catalog thumbnails, previews). */
+export async function itemPreview(ref: string): Promise<THREE.Object3D | null> {
+  const entry = catalogEntry(ref);
+  if (!entry || entry.kind !== 'model') return null;
+  const miku = buildMiku(ref, (url) => textureNow(url));
+  if (miku) {
+    await Promise.all(
+      [...textureCache.keys()].map((url) => textureAsync(url).catch(() => null)),
     );
-    lens.rotation.x = Math.PI / 2;
-    for (const dx of [-0.6, 0.6])
-      box(
-        0.27,
-        0.33,
-        0.045,
-        display.x + dx,
-        1.07,
-        display.z,
-        dx < 0 ? '#d5be8e' : '#97b69d',
-      );
-    box(0.38, 0.06, 0.28, desk.x + 0.26, 0.837, desk.z, '#b79f78');
-    box(0.31, 0.022, 0.24, desk.x + 0.25, 0.88, desk.z, '#e9e0c8');
-    potted(display.x + 0.7, 0.93, display.z, 0.6);
+    return miku;
   }
-  if (save.actor === 6) {
-    const board = box(
-      0.63,
-      0.04,
-      0.45,
-      display.x - 0.32,
-      0.95,
-      display.z,
-      '#c5b288',
-    );
-    for (let row = 0; row < 4; row++)
-      for (let col = 0; col < 6; col++)
-        if ((row + col) % 2 === 0)
-          box(
-            0.101,
-            0.003,
-            0.109,
-            board.position.x - 0.25 + col * 0.1,
-            0.972,
-            display.z - 0.168 + row * 0.111,
-            '#697e70',
-          );
-    for (const dx of [-0.18, 0, 0.18]) {
-      cylinder(
-        0.032,
-        0.09,
-        display.x - 0.32 + dx,
-        1.02,
-        display.z + 0.11,
-        '#ece0bc',
-      );
-      sphere(0.032, display.x - 0.32 + dx, 1.075, display.z + 0.11, '#ece0bc');
-    }
-    const controller = box(
-      0.34,
-      0.08,
-      0.17,
-      desk.x + 0.2,
-      0.854,
-      desk.z,
-      '#e4e1cd',
-    );
-    controller.rotation.y = 0.1;
-    for (const dx of [-0.12, 0.12]) {
-      const handle = sphere(
-        0.08,
-        desk.x + 0.2 + dx,
-        0.836,
-        desk.z + 0.06,
-        theme.accent,
-      );
-      handle.scale.set(0.8, 0.7, 1.35);
-    }
-    cylinder(0.026, 0.025, desk.x + 0.3, 0.912, desk.z, '#ad888c');
-    box(0.048, 0.015, 0.048, desk.x + 0.1, 0.906, desk.z, '#65867a');
-  }
-  // Wall clock, two botanical stems, and a plain cotton throw finish the room.
-  const clock = new THREE.Mesh(
-    new THREE.CircleGeometry(0.22, 32),
-    surface('#f4edda'),
-  );
-  clock.position.set(-0.24, 2.75, -4.045);
-  scene.add(clock);
-  box(0.019, 0.15, 0.018, -0.24, 2.81, -4.02, '#6e7767');
-  box(0.12, 0.019, 0.018, -0.19, 2.75, -4.02, '#6e7767');
-  box(0.84, 0.045, 0.91, bed.x + 0.49, 0.77, bed.z + 0.85, theme.accent);
-  host.dataset.design = 'studio-v2';
-  return { promises, paint: { wall, floor: floors }, sun };
+  return (await modelTemplate(entry)).clone(true);
 }

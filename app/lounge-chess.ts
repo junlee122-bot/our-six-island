@@ -4,7 +4,12 @@ export type ChessMatch = {
   moves: string[];
   winner: 'w' | 'b' | 'draw' | null;
   reason: string;
+  /** Seat (0 white, 1 black) with a pending draw offer. Absent in old snapshots. */
+  drawOffer?: number | null;
+  /** Ply at which each seat last offered a draw; one offer per seat per ply. */
+  drawOfferPly?: [number, number];
 };
+export const CHESS_MOVE_MS = 120_000;
 export const newChess = (id: string): ChessMatch => ({
   id,
   moves: [],
@@ -40,8 +45,10 @@ export function chessMove(
   try {
     const m = c.move({ from: from as Square, to: to as Square, promotion });
     if (!m) return null;
+    // Moving answers a pending offer with a decline.
     const next = {
       ...game,
+      drawOffer: null,
       moves: [...game.moves, m.from + m.to + (m.promotion ?? '')],
     };
     if (c.isCheckmate())
@@ -71,6 +78,55 @@ export function chessResign(game: ChessMatch, seat: number): ChessMatch | null {
   return game.winner || ![0, 1].includes(seat)
     ? null
     : { ...game, winner: seat === 0 ? 'b' : 'w', reason: '기권' };
+}
+export function chessOfferDraw(
+  game: ChessMatch,
+  seat: number,
+): ChessMatch | null {
+  if (game.winner || ![0, 1].includes(seat)) return null;
+  const plies = game.drawOfferPly ?? [-1, -1];
+  if (
+    (game.drawOffer !== undefined && game.drawOffer !== null) ||
+    plies[seat] === game.moves.length
+  )
+    return null;
+  const drawOfferPly: [number, number] = [...plies] as [number, number];
+  drawOfferPly[seat] = game.moves.length;
+  return { ...game, drawOffer: seat, drawOfferPly };
+}
+export function chessAnswerDraw(
+  game: ChessMatch,
+  seat: number,
+  accept: boolean,
+): ChessMatch | null {
+  if (
+    game.winner ||
+    ![0, 1].includes(seat) ||
+    game.drawOffer === undefined ||
+    game.drawOffer === null ||
+    game.drawOffer === seat
+  )
+    return null;
+  return accept
+    ? { ...game, drawOffer: null, winner: 'draw', reason: '무승부 합의' }
+    : { ...game, drawOffer: null };
+}
+/** Side to move ran out of time. A lone king (or king + one minor) cannot win. */
+export function chessTimeout(game: ChessMatch): ChessMatch | null {
+  if (game.winner) return null;
+  const c = chessBoard(game),
+    loser = c.turn(),
+    winner = loser === 'w' ? 'b' : 'w';
+  const pieces = c
+    .board()
+    .flat()
+    .filter((p) => p && p.color === winner && p.type !== 'k');
+  const cannotMate =
+    pieces.length === 0 ||
+    (pieces.length === 1 && ['n', 'b'].includes(pieces[0]!.type));
+  return cannotMate
+    ? { ...game, drawOffer: null, winner: 'draw', reason: '시간 초과 · 기물 부족' }
+    : { ...game, drawOffer: null, winner, reason: '시간 초과' };
 }
 export function chessPracticeMove(game: ChessMatch) {
   const c = chessBoard(game),

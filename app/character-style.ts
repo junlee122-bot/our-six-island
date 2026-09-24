@@ -39,10 +39,12 @@ export function dyePixel(r:number,g:number,b:number,hair:readonly number[],top:r
 
 // Some generated RGB sheets contain a neutral checkerboard. Remove only its
 // edge-connected pixels at load time, preserving enclosed whites and colors.
-export function removeConnectedBackdrop(data:Uint8ClampedArray,width:number,height:number){
+// `maxSpread` is how far from grey (max-min channel) a backdrop pixel may be.
+// Art whose warm off-white shoes touch the checkerboard passes a tighter value.
+export function removeConnectedBackdrop(data:Uint8ClampedArray,width:number,height:number,maxSpread=26){
  const seen=new Uint8Array(width*height),queue=new Int32Array(width*height);let tail=0;
  const visit=(p:number)=>{if(p<0||p>=seen.length||seen[p])return;seen[p]=1;const k=p*4,r=data[k],g=data[k+1],b=data[k+2];
-  if(data[k+3]===0||(Math.min(r,g,b)>174&&Math.max(r,g,b)-Math.min(r,g,b)<26)){data[k+3]=0;queue[tail++]=p;}
+  if(data[k+3]===0||(Math.min(r,g,b)>174&&Math.max(r,g,b)-Math.min(r,g,b)<maxSpread)){data[k+3]=0;queue[tail++]=p;}
  };
  for(let x=0;x<width;x++){visit(x);visit((height-1)*width+x);}for(let y=0;y<height;y++){visit(y*width);visit(y*width+width-1);}
  for(let head=0;head<tail;head++){const p=queue[head],x=p%width;if(x>0)visit(p-1);if(x<width-1)visit(p+1);visit(p-width);visit(p+width);}
