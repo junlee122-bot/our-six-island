@@ -7,8 +7,11 @@ import {
   ArrowRight,
   ArrowUp,
   DoorOpen,
+  Dices,
   Footprints,
   House,
+  Landmark,
+  Compass,
   Map as MapIcon,
   Minus,
   Plus,
@@ -22,6 +25,7 @@ import {
   Send,
   Trees,
   Sprout,
+  Shirt,
   Apple,
   Store,
   Mail,
@@ -105,6 +109,45 @@ import {
 import './lounge-village.css';
 
 type ChatLine = { id: string; actor: number; text: string };
+
+/** Compact overview / minimap name: "도원", "회관", "카지노", "분장실". */
+const PLACE_SHORT: Record<VillagePlace['kind'], string> = {
+  home: '',
+  hall: '회관',
+  casino: '카지노',
+  wardrobe: '분장실',
+};
+function placeShortName(place: VillagePlace) {
+  return place.kind === 'home' ? ACTORS[place.actor ?? 0] : PLACE_SHORT[place.kind];
+}
+function PlaceIcon({ place, size = 12 }: { place: VillagePlace; size?: number }) {
+  const Icon =
+    place.kind === 'home'
+      ? House
+      : place.kind === 'hall'
+        ? Landmark
+        : place.kind === 'casino'
+          ? Dices
+          : Shirt;
+  return (
+    <Icon
+      className="hv-place-icon"
+      size={size}
+      aria-hidden="true"
+      style={{ color: place.roofColor }}
+    />
+  );
+}
+const MINI_BOX = {
+  x: -VILLAGE_BOUNDS.width / 2 - 2,
+  y: -VILLAGE_BOUNDS.depth / 2 - 2,
+  w: VILLAGE_BOUNDS.width + 4,
+  h: VILLAGE_BOUNDS.depth + 4,
+};
+/** Building labels (walking): only the nearest place within this many world
+ *  units of its footprint is named; the next one takes over past HANDOFF. */
+const LABEL_NEAR = 4.2,
+  LABEL_HANDOFF = 0.8;
 /** Something "범타듀의 하루" you can do where you stand (E / tap). */
 export type VillageSpot =
   | { kind: 'farm' }
@@ -510,6 +553,14 @@ export function Village3D(props: Props) {
   const [spot, setSpot] = useState<VillageSpot | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
   const [touch] = useState(isTouchDevice);
+  // Phones start with the minimap folded into a small button.
+  const [miniOpen, setMiniOpen] = useState(
+    () =>
+      typeof window === 'undefined' ||
+      !window.matchMedia?.('(max-width: 600px)').matches,
+  );
+  /** Nearest building (minimap highlight), updated only when it changes. */
+  const [nearestPlace, setNearestPlace] = useState<string | null>(null);
   // Ready crops / ripe trees for the farm label and the directory, refreshed
   // exactly when the next one becomes ready (server clock).
   const lifeClock = useServerClock(
@@ -1247,20 +1298,101 @@ export function Village3D(props: Props) {
       latest.current.onMove(net.x, net.y);
     });
 
-    const placeLabels = VILLAGE_PLACES.map((place) => ({
-      place,
-      element: labels.querySelector<HTMLElement>(`[data-place="${place.id}"]`),
-    }));
     const selfTag = labels.querySelector<HTMLElement>('[data-self-label]');
-    const farmLabel = labels.querySelector<HTMLElement>('[data-farm-label]');
     const myBed = farmBed(latest.current.save.actor);
+    /**
+     * Building name chips. While walking only the building you are about to
+     * enter, the one you are heading to and the nearest one within LABEL_NEAR
+     * are named (fading in/out); the zoomed-out map names every place with a
+     * compact chip. Nothing is named while the camera sweeps fast.
+     */
+    type PlaceLabel = {
+      id: string;
+      element: HTMLElement | null;
+      /** Footprint centre and half extents (world units). */
+      x: number;
+      z: number;
+      hw: number;
+      hd: number;
+      /** Anchor above the roof. */
+      ax: number;
+      ay: number;
+      az: number;
+      shown: boolean;
+      w: number;
+      h: number;
+    };
+    const placeLabels: PlaceLabel[] = VILLAGE_PLACES.map((place) => ({
+      id: place.id,
+      element: labels.querySelector<HTMLElement>(`[data-place="${place.id}"]`),
+      x: place.x,
+      z: place.z,
+      hw: place.width / 2,
+      hd: place.depth / 2,
+      ax: place.x,
+      ay: place.kind === 'home' ? 3.4 : 4.4,
+      az: place.z,
+      shown: false,
+      w: 0,
+      h: 0,
+    }));
+    if (myBed) {
+      const r = farmBedRect(myBed);
+      placeLabels.push({
+        id: 'farm',
+        element: labels.querySelector<HTMLElement>('[data-farm-label]'),
+        x: r.x,
+        z: r.z,
+        hw: r.w / 2,
+        hd: r.d / 2,
+        ax: r.x,
+        ay: 1.1,
+        az: r.z - r.d / 2,
+        shown: false,
+        w: 0,
+        h: 0,
+      });
+    }
+    let labelMode: 'walk' | 'overview' | '' = '',
+      labelNearest: string | null = null,
+      reportedNearest: string | null = null,
+      labelsMeasured = -1e9,
+      cameraCalmSince = 0,
+      cameraSpeed = 0;
+    const measureLabels = () => {
+      for (const label of placeLabels)
+        if (label.element) {
+          label.w = label.element.offsetWidth;
+          label.h = label.element.offsetHeight;
+        }
+    };
+    const footprintDistance = (label: PlaceLabel) =>
+      Math.hypot(
+        Math.max(0, Math.abs(position.x - label.x) - label.hw),
+        Math.max(0, Math.abs(position.z - label.z) - label.hd),
+      );
     // Bottom edge of the floating header card, in scene pixels (L1).
     let topLimit = 10;
+    /** On-screen HUD controls (scene pixels) that name chips keep clear of. */
+    let hud: { l: number; r: number; t: number; b: number }[] = [];
     const measureTop = () => {
+      const origin = host.getBoundingClientRect();
+      hud = [
+        ...document.querySelectorAll(
+          '.hv-top-tools, .hv-camera, .hv-minimap, .hv-pad, .l-world-social',
+        ),
+      ]
+        .map((element) => element.getBoundingClientRect())
+        .filter((r) => r.width > 0)
+        .map((r) => ({
+          l: r.left - origin.left - 4,
+          r: r.right - origin.left + 4,
+          t: r.top - origin.top - 4,
+          b: r.bottom - origin.top + 4,
+        }));
       const header = document.querySelector('.l-world-header');
       if (!header) return;
-      const bottom =
-        header.getBoundingClientRect().bottom - host.getBoundingClientRect().top;
+      const bottom = header.getBoundingClientRect().bottom - origin.top;
       topLimit = Math.max(10, Math.min(height / 2, bottom));
     };
     measureTop();
@@ -1406,6 +1538,21 @@ export function Village3D(props: Props) {
           spotKey = nextKey;
           setSpot(nextSpot);
         }
+        // The minimap highlights the nearest building (any distance).
+        let near: string | null = null,
+          nearDistance = Infinity;
+        for (const label of placeLabels) {
+          if (label.id === 'farm') continue;
+          const d = footprintDistance(label);
+          if (d < nearDistance) {
+            nearDistance = d;
+            near = label.id;
+          }
+        }
+        if (near !== reportedNearest) {
+          reportedNearest = near;
+          setNearestPlace(near);
+        }
         host.dataset.spot = nextSpot?.kind ?? '';
         host.dataset.nearbyPlace = entrance?.place.id ?? '';
         host.dataset.entryReady = String(entrance?.canEnter ?? false);
@@ -1437,9 +1584,23 @@ export function Village3D(props: Props) {
       const cameraMoving =
         Math.abs(zoom - desiredZoom) > 0.002 ||
         target.distanceToSquared(desiredTarget) > 0.00001;
+      const beforeX = target.x,
+        beforeZ = target.z,
+        beforeZoom = zoom;
       target.lerp(desiredTarget, reduced.matches ? 1 : Math.min(1, dt * 5));
       zoom +=
         (desiredZoom - zoom) * (reduced.matches ? 1 : Math.min(1, dt * 6));
+      if (dt > 0) {
+        // Screen-space camera speed (px/s) plus relative zoom speed; smoothed
+        // so one long frame does not flash the labels.
+        const pixels = (zoom * height) / (camera.top - camera.bottom);
+        const pan = (Math.hypot(target.x - beforeX, target.z - beforeZ) * pixels) / dt;
+        const scale = (Math.abs(zoom - beforeZoom) / zoom / dt) * 400;
+        cameraSpeed += (pan + scale - cameraSpeed) * Math.min(1, dt * 12);
+        // Faster than a run (the follow camera's top speed) counts as a sweep.
+        const fast = cameraSpeed > WALK_SPEED * RUN_SPEED_MULTIPLIER * pixels * 1.3 + 40;
+        if (fast) cameraCalmSince = now;
+      }
       camera.position.copy(target).add(CAMERA_OFFSET);
       camera.lookAt(target);
       camera.zoom = zoom;
@@ -1676,32 +1837,129 @@ export function Village3D(props: Props) {
         lastRender = now;
         needsRender = false;
         // Labels are projected on every rendered frame so they never lag.
-        for (const { place, element } of placeLabels) {
-          if (!element) continue;
-          const at = project(place.x, place.kind === 'home' ? 5.2 : 5.9, place.z);
-          element.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
-          // Labels never slide under the header card (their box is ~30px tall).
-          element.style.visibility =
-            at.inFront &&
-            at.x > 20 &&
-            at.x < width - 20 &&
-            at.y > topLimit + 30 &&
-            at.y < height - 60
-              ? 'visible'
-              : 'hidden';
+        const mode = zoom < 1.5 ? 'overview' : 'walk';
+        if (mode !== labelMode) {
+          labelMode = mode;
+          labels.dataset.mode = mode;
+          labelsMeasured = -1e9;
         }
-        if (farmLabel && myBed) {
-          const r = farmBedRect(myBed);
-          const at = project(r.x, 1.1, r.z - r.d / 2);
-          farmLabel.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
-          farmLabel.style.visibility =
+        if (now - labelsMeasured > 1500) {
+          labelsMeasured = now;
+          measureLabels();
+        }
+        const calm = now - cameraCalmSince > 160;
+        const door = nearbyId.current,
+          heading = requestedPlace.current?.id ?? null;
+        if (mode === 'walk') {
+          // Nearest building within reach, with a little hand-off margin.
+          let best: PlaceLabel | null = null,
+            bestDistance = LABEL_NEAR;
+          for (const label of placeLabels) {
+            const d = footprintDistance(label);
+            if (d < bestDistance) {
+              best = label;
+              bestDistance = d;
+            }
+          }
+          const held = placeLabels.find((label) => label.id === labelNearest);
+          if (
+            held &&
+            best !== held &&
+            footprintDistance(held) < LABEL_NEAR + LABEL_HANDOFF &&
+            footprintDistance(held) < bestDistance + LABEL_HANDOFF
+          )
+            best = held;
+          // At a door that building is the one worth naming.
+          labelNearest = door ?? best?.id ?? null;
+        }
+        const bottomLimit = height - (width < 600 ? 150 : 90),
+          // The zoom / locate column sits on the right edge.
+          rightLimit = width - (width < 600 ? 60 : 74);
+        const mine = `home-${current.save.actor}`;
+        const rank = (label: PlaceLabel) =>
+          label.id === door
+            ? 0
+            : label.id === heading
+              ? 1
+              : label.id === labelNearest
+                ? 2
+                : label.id === mine
+                  ? 3
+                  : label.id.startsWith('home-')
+                    ? 6
+                    : label.id === 'farm'
+                      ? 5
+                      : 4;
+        // Chips never overlap each other or my own name tag: higher-priority
+        // ones win, the rest wait (hidden) until there is room.
+        // On the whole-village map chips sit centred on their anchor and may
+        // touch; while walking they sit above the roof, clear of my name tag.
+        const overview = mode === 'overview';
+        const selfAt = project(position.x, FIGURE_HEIGHT * 0.98, position.z);
+        const taken = overview
+          ? [...hud]
+          : [...hud, { l: selfAt.x - 34, r: selfAt.x + 34, t: selfAt.y - 28, b: selfAt.y }];
+        const order = [...placeLabels].sort((a, b) => rank(a) - rank(b));
+        for (const label of order) {
+          const element = label.element;
+          if (!element) continue;
+          const at = project(label.ax, label.ay, label.az);
+          const inView =
             at.inFront &&
-            at.x > 20 &&
-            at.x < width - 20 &&
-            at.y > topLimit + 30 &&
-            at.y < height - 60
-              ? 'visible'
-              : 'hidden';
+            at.x > -20 &&
+            at.x < width + 20 &&
+            at.y > topLimit &&
+            at.y < height + 10;
+          let want =
+            inView &&
+            (label.id === door ||
+              (calm &&
+                ((mode === 'overview' && label.id !== 'farm') ||
+                  label.id === heading ||
+                  label.id === labelNearest)));
+          // Keep the whole chip inside the scene (below the header card).
+          const halfW = label.w / 2 + 6;
+          let x = Math.min(Math.max(at.x, halfW), Math.max(halfW, rightLimit - halfW));
+          const baseY = Math.min(
+            Math.max(at.y, topLimit + label.h + 6),
+            Math.max(topLimit + label.h + 6, bottomLimit),
+          );
+          let y = baseY;
+          if (want) {
+            // On the map a crowded chip may shift a little to make room.
+            const pad = overview ? -3 : 3,
+              v = label.h * 0.75,
+              u = label.w * 0.6,
+              shifts: [number, number][] = overview
+                ? [[0, 0], [0, -v], [0, v], [u, 0], [-u, 0]]
+                : [[0, 0]];
+            let placed = false;
+            for (const [dx, shift] of shifts) {
+              const top = (overview ? baseY - label.h / 2 : baseY - label.h) + shift;
+              const box = {
+                l: x + dx - label.w / 2 - pad,
+                r: x + dx + label.w / 2 + pad,
+                t: top - pad,
+                b: top + label.h + pad,
+              };
+              const hits = (o: { l: number; r: number; t: number; b: number }) =>
+                o.l < box.r && box.l < o.r && o.t < box.b && box.t < o.b;
+              // The door's own chip may touch other chips, never the controls.
+              if (label.id === door ? !hud.some(hits) : !taken.some(hits)) {
+                taken.push(box);
+                x += dx;
+                y = baseY + shift;
+                placed = true;
+                break;
+              }
+            }
+            want = placed;
+          }
+          if (want !== label.shown) {
+            label.shown = want;
+            element.dataset.show = String(want);
+          }
+          element.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) translate(-50%,${overview ? -50 : -100}%)`;
         }
         const headY = FIGURE_HEIGHT * 0.98;
         if (selfTag) {
@@ -1747,6 +2005,8 @@ export function Village3D(props: Props) {
           targetX: target.x.toFixed(3),
           targetZ: target.z.toFixed(3),
           overview: String(zoom < 1.5),
+          labelNearest: labelNearest ?? '',
+          labelsShown: placeLabels.filter((l) => l.shown).map((l) => l.id).join(','),
           residents: String(residents.length),
           drawCalls: String(renderer.info.render.calls),
         });
@@ -1861,12 +2121,11 @@ export function Village3D(props: Props) {
                 className={`hv-place hv-place-${place.kind}${selected?.id === place.id ? ' is-selected' : ''}`}
                 onClick={() => select(place)}
                 aria-label={`${place.name} 둘러보기`}
+                data-show="false"
               >
-                <span
-                  className="hv-place-dot"
-                  style={{ background: place.roofColor }}
-                />
-                <span>{place.name}</span>
+                <PlaceIcon place={place} />
+                <span className="hv-place-full">{place.name}</span>
+                <span className="hv-place-short">{placeShortName(place)}</span>
                 {place.actor === props.save.actor && <small>내 집</small>}
               </button>
             ))}
@@ -1880,9 +2139,11 @@ export function Village3D(props: Props) {
                   if (bed) controls.current?.visit(farmFront(bed));
                 }}
                 aria-label={`${ACTORS[props.save.actor]}의 텃밭으로 걸어가기`}
+                data-show="false"
               >
-                <Sprout size={13} aria-hidden="true" />
-                <span>{ACTORS[props.save.actor]}의 텃밭</span>
+                <Sprout size={12} aria-hidden="true" />
+                <span className="hv-place-full">{ACTORS[props.save.actor]}의 텃밭</span>
+                <span className="hv-place-short">텃밭</span>
                 {readyCount > 0 && <small>수확 {readyCount}</small>}
               </button>
             )}
@@ -1953,88 +2214,149 @@ export function Village3D(props: Props) {
             마을 안내
           </button>
         </div>
-        <button
-          className="hv-minimap"
-          onClick={() => controls.current?.overview()}
-          aria-label="미니맵으로 전체 보기"
+        <div
+          className={`hv-minimap${miniOpen ? ' is-open' : ''}`}
+          data-testid="minimap"
         >
-          <span>
-            <MapIcon size={12} /> 범타듀 밸리 <small>내 위치</small>
-          </span>
-          <svg
-            viewBox={[
-              -VILLAGE_BOUNDS.width / 2 - 2,
-              -VILLAGE_BOUNDS.depth / 2 - 2,
-              VILLAGE_BOUNDS.width + 4,
-              VILLAGE_BOUNDS.depth + 4,
-            ].join(' ')}
-            aria-hidden="true"
+          <button
+            type="button"
+            className="hv-minimap-toggle"
+            data-testid="minimap-toggle"
+            aria-expanded={miniOpen}
+            aria-controls="hv-minimap-body"
+            onClick={() => setMiniOpen(!miniOpen)}
+            aria-label={miniOpen ? '미니맵 접기' : '미니맵 펼치기'}
           >
-            <rect
-              x={-VILLAGE_BOUNDS.width / 2}
-              y={-VILLAGE_BOUNDS.depth / 2}
-              width={VILLAGE_BOUNDS.width}
-              height={VILLAGE_BOUNDS.depth}
-              rx="3"
-              fill="#dce3ba"
-            />
-            {minimapRoads}
-            <rect
-              x={-VILLAGE_BOUNDS.width / 2}
-              y={VILLAGE_RIVER.minZ}
-              width={VILLAGE_BOUNDS.width}
-              height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ}
-              fill="#96c9c2"
-            />
-            {VILLAGE_RIVER.bridges.map((b) => (
-              <rect
-                key={b.x}
-                x={b.x - b.halfWidth}
-                y={VILLAGE_RIVER.minZ - 0.4}
-                width={b.halfWidth * 2}
-                height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ + 0.8}
-                fill="#b58d58"
-              />
-            ))}
-            {VILLAGE_PLACES.map((p) => (
-              <rect
-                key={p.id}
-                x={p.x - p.width / 2}
-                y={p.z - p.depth / 2}
-                width={p.width}
-                height={p.depth}
-                rx="0.6"
-                fill={p.roofColor}
-              />
-            ))}
-            <rect
-              x={VILLAGE_MARKET.x - VILLAGE_MARKET.width / 2}
-              y={VILLAGE_MARKET.z - VILLAGE_MARKET.depth / 2}
-              width={VILLAGE_MARKET.width}
-              height={VILLAGE_MARKET.depth}
-              rx="0.4"
-              fill="#e56b5d"
-            />
-            {VILLAGE_DISTRICTS.map((d) => (
-              <circle
-                key={d.id}
-                cx={d.point.x}
-                cy={d.point.z}
-                r="1.6"
-                fill={d.color}
-              />
-            ))}
-            <circle
-              ref={miniSelfRef}
-              cx={VILLAGE_START.x}
-              cy={VILLAGE_START.z}
-              r="2"
-              fill="#fff6dd"
-              stroke="#536642"
-              strokeWidth="1"
-            />
-          </svg>
-        </button>
+            <Compass size={17} aria-hidden="true" />
+            <span>지도</span>
+            {miniOpen && <X size={14} aria-hidden="true" />}
+          </button>
+          {miniOpen && (
+            <div id="hv-minimap-body" className="hv-minimap-body">
+              <div className="hv-minimap-map">
+                <button
+                  type="button"
+                  className="hv-minimap-overview"
+                  onClick={() => controls.current?.overview()}
+                  aria-label="미니맵으로 전체 보기"
+                >
+                  <svg
+                    viewBox={[
+                      MINI_BOX.x,
+                      MINI_BOX.y,
+                      MINI_BOX.w,
+                      MINI_BOX.h,
+                    ].join(' ')}
+                    aria-hidden="true"
+                  >
+                    <rect
+                      x={-VILLAGE_BOUNDS.width / 2}
+                      y={-VILLAGE_BOUNDS.depth / 2}
+                      width={VILLAGE_BOUNDS.width}
+                      height={VILLAGE_BOUNDS.depth}
+                      rx="3"
+                      fill="#dce3ba"
+                    />
+                    {minimapRoads}
+                    <rect
+                      x={-VILLAGE_BOUNDS.width / 2}
+                      y={VILLAGE_RIVER.minZ}
+                      width={VILLAGE_BOUNDS.width}
+                      height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ}
+                      fill="#96c9c2"
+                    />
+                    {VILLAGE_RIVER.bridges.map((b) => (
+                      <rect
+                        key={b.x}
+                        x={b.x - b.halfWidth}
+                        y={VILLAGE_RIVER.minZ - 0.4}
+                        width={b.halfWidth * 2}
+                        height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ + 0.8}
+                        fill="#b58d58"
+                      />
+                    ))}
+                    {VILLAGE_PLACES.map((p) => (
+                      <rect
+                        key={p.id}
+                        x={p.x - p.width / 2}
+                        y={p.z - p.depth / 2}
+                        width={p.width}
+                        height={p.depth}
+                        rx="0.6"
+                        fill={p.roofColor}
+                        stroke={p.id === nearestPlace ? '#fff7d6' : 'none'}
+                        strokeWidth="0.9"
+                      />
+                    ))}
+                    <rect
+                      x={VILLAGE_MARKET.x - VILLAGE_MARKET.width / 2}
+                      y={VILLAGE_MARKET.z - VILLAGE_MARKET.depth / 2}
+                      width={VILLAGE_MARKET.width}
+                      height={VILLAGE_MARKET.depth}
+                      rx="0.4"
+                      fill="#e56b5d"
+                    />
+                    {VILLAGE_DISTRICTS.map((d) => (
+                      <circle
+                        key={d.id}
+                        cx={d.point.x}
+                        cy={d.point.z}
+                        r="1.6"
+                        fill={d.color}
+                      />
+                    ))}
+                    <circle
+                      ref={miniSelfRef}
+                      cx={VILLAGE_START.x}
+                      cy={VILLAGE_START.z}
+                      r="2"
+                      fill="#fff6dd"
+                      stroke="#536642"
+                      strokeWidth="1"
+                    />
+                  </svg>
+                </button>
+                {VILLAGE_PLACES.map((p) => {
+                  const named =
+                    p.kind !== 'home' ||
+                    p.actor === props.save.actor ||
+                    p.id === nearestPlace ||
+                    p.id === selected?.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className="hv-minimap-place"
+                      data-minimap-place={p.id}
+                      data-named={String(named)}
+                      data-nearest={String(p.id === nearestPlace)}
+                      style={{
+                        left: `${((p.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`,
+                        top: `${((p.z - MINI_BOX.y) / MINI_BOX.h) * 100}%`,
+                      }}
+                      onClick={() => {
+                        select(p);
+                        // On a phone the open map would hide the walk; fold it.
+                        if (window.matchMedia?.('(max-width: 600px)').matches)
+                          setMiniOpen(false);
+                      }}
+                      aria-label={`${p.name}${p.id === nearestPlace ? ' (가장 가까운 곳)' : ''} 걸어가기`}
+                    >
+                      <span aria-hidden="true">
+                        {p.actor === props.save.actor ? '내 집' : placeShortName(p)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <small className="hv-minimap-note">
+                {nearestPlace
+                  ? `가까운 곳 · ${VILLAGE_PLACES.find((p) => p.id === nearestPlace)?.name ?? ''}`
+                  : '건물을 누르면 걸어가요'}
+              </small>
+            </div>
+          )}
+        </div>
         {directory && (
           <aside className="hv-directory" aria-label="마을 장소">
             <header>

@@ -178,6 +178,38 @@ const TAB_AREA: Record<Tab, Area> = {
   bedroom: 'home',
 };
 
+const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
+/**
+ * First visit only: a short "how to walk" note under the header for a few
+ * seconds (after the coach marks), then never again on this device.
+ */
+function VillageHint({ paused }: { paused: boolean }) {
+  const [show, setShow] = useState(() => {
+    try {
+      return localStorage.getItem(VILLAGE_HINT_KEY) === null;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (!show || paused) return;
+    try {
+      localStorage.setItem(VILLAGE_HINT_KEY, 'seen');
+    } catch {
+      // Private mode: the hint simply shows again next time.
+    }
+    const timer = window.setTimeout(() => setShow(false), 6500);
+    return () => window.clearTimeout(timer);
+  }, [show, paused]);
+  if (!show || paused) return null;
+  return (
+    <output className="l-world-hint">
+      바닥을 눌러 걷고, 마을 안내에서 장소를 찾아요
+      <span> · 방향키 / WASD · Shift 달리기 · E 입장</span>
+    </output>
+  );
+}
+
 function Loading({ text }: { text: string }) {
   return (
     <div className="l-empty l-screen-loading">
@@ -916,12 +948,7 @@ function AccountLounge({
                     onSend={greet}
                   />
                 </div>
-                <p className="l-world-hint">
-                  건물 이름을 눌러 걸어가요{' '}
-                  <span>
-                    · 방향키 / WASD · Shift 달리기 · E 입장·텃밭·상점
-                  </span>
-                </p>
+                <VillageHint paused={coach || !!modal} />
               </div>
             )}
           </div>

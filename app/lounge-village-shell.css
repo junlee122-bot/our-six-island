@@ -287,8 +287,8 @@
   z-index: 12;
 }
 .l-immersive .hv-pad {
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(38px, env(safe-area-inset-bottom));
+  right: max(20px, calc(env(safe-area-inset-right) + 8px));
+  bottom: max(38px, calc(env(safe-area-inset-bottom) + 8px));
 }
 .l-immersive .hv-place-card {
   bottom: 80px;
@@ -371,18 +371,49 @@
   width: 220px;
   font-size: 11px;
 }
+/* First-visit hint: a small pill under the header, never over the controls. */
 .l-world-hint {
   position: absolute;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  left: 20px;
-  right: 20px;
+  z-index: 7;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 360px);
   margin: 0;
+  padding: 8px 14px;
+  border: 1px solid #fffdf2;
+  border-radius: 999px;
+  background: #fffcf1f2;
+  box-shadow: 0 4px 14px #3b58241a;
   text-align: center;
-  color: #6e7e5b;
-  font-size: 11px;
+  color: #4f5f45;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
   pointer-events: none;
 }
-.l-immersive:has(.hv-place-card) .l-world-hint {
+.l-world-hint span {
+  color: #7d8a6d;
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-world-hint {
+    animation: world-hint 6.5s ease both;
+  }
+  @keyframes world-hint {
+    0% {
+      opacity: 0;
+    }
+    6%,
+    90% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+}
+.l-immersive:has(.hv-place-card, .hv-directory) .l-world-hint {
   visibility: hidden;
 }
 .l-immersive .l-world-alerts {
@@ -503,11 +534,6 @@
 }
 
 @media (max-width: 600px) {
-  .l-immersive
-    .hv-scene[data-overview='true']
-    .hv-place-home:not([data-owned='true']) {
-    display: none;
-  }
   .l-app .l-world-header {
     padding: 8px 12px;
     gap: 7px;
@@ -580,8 +606,8 @@
     max-width: calc(100vw - 70px);
   }
   .l-immersive .hv-pad {
-    right: 12px;
-    bottom: max(38px, env(safe-area-inset-bottom));
+    right: max(12px, calc(env(safe-area-inset-right) + 8px));
+    bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px));
     grid-template-columns: repeat(3, 44px);
     grid-template-rows: repeat(3, 44px);
   }
@@ -602,9 +628,9 @@
     bottom: 216px;
   }
   .l-world-social {
-    left: 12px;
-    bottom: max(38px, env(safe-area-inset-bottom));
-    gap: 5px;
+    left: max(12px, calc(env(safe-area-inset-left) + 8px));
+    bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px));
+    gap: 4px;
   }
   .l-world-chat-button {
     padding: 0 10px;
@@ -614,9 +640,14 @@
     padding: 0 10px;
   }
   .l-world-hint {
+    top: 136px;
+    left: 12px;
+    right: 64px;
+    transform: none;
+    max-width: none;
+    padding: 7px 12px;
+    border-radius: 12px;
     font-size: 11px;
-    left: 8px;
-    right: 8px;
   }
   .l-world-hint span {
     display: none;
@@ -693,10 +724,10 @@
      narrow icon-over-label tile, the same for all three. */
   .l-world-social .l-world-chat-button,
   .l-app .l-world-social .l-reaction-open {
-    width: 52px;
-    min-height: 48px;
+    width: 46px;
+    min-height: 46px;
     height: auto;
-    padding: 4px 0;
+    padding: 3px 0;
     flex-direction: column;
     justify-content: center;
     gap: 2px;
@@ -782,5 +813,24 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
 @media (hover: none) and (pointer: coarse) {
   .l-world-hint span {
     display: none;
+  }
+}
+
+/* Phones: the header row must fit the screen (1 friend face, no overflow),
+   and form fields stay at 16px so iOS Safari never zooms the page in on
+   focus (a zoomed page cut the D-pad off at the right edge). */
+@media (max-width: 420px) {
+  .l-app.l-immersive .l-world-header .l-header-right {
+    min-width: 0;
+  }
+  .l-app.l-immersive .l-presence-face:nth-child(n + 2) {
+    display: none;
+  }
+}
+@media (hover: none) and (pointer: coarse) {
+  .l-app input:not([type='checkbox'], [type='radio'], [type='range']),
+  .l-app textarea,
+  .l-app select {
+    font-size: 16px !important;
   }
 }

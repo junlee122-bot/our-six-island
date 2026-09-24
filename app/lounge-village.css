@@ -81,49 +81,94 @@
   pointer-events: none;
   overflow: hidden;
 }
+/* Building name chips: small and calm. Only a few are shown at a time
+   (data-show, set by the render loop), fading in and out. */
 .hv-place {
   position: absolute;
   top: 0;
   left: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid #fefcf3cc;
-  border-radius: 20px;
-  padding: 5px 10px;
-  background: #fffcf1e8;
-  color: #4f5c48;
-  box-shadow: 0 3px 8px #435d3520;
-  font-size: 11px;
+  gap: 5px;
+  min-height: 26px;
+  border: 1px solid #fffdf4;
+  border-radius: 999px;
+  padding: 3px 10px 3px 8px;
+  background: #fffcf1e6;
+  color: #4a5842;
+  box-shadow: 0 2px 6px #34542f1f;
+  font-size: 12px;
   font-weight: 650;
+  line-height: 1.2;
   white-space: nowrap;
   pointer-events: auto;
   cursor: pointer;
+  opacity: 0;
   visibility: hidden;
-  transition: background 0.15s;
+  will-change: transform, opacity;
+  transition:
+    opacity 0.28s ease,
+    visibility 0s linear 0.28s,
+    background 0.15s;
+}
+.hv-place[data-show='true'] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.28s ease,
+    visibility 0s,
+    background 0.15s;
 }
 .hv-place:hover,
 .hv-place.is-selected {
   background: #fff;
-  box-shadow: 0 3px 10px #34542f40;
-}
-.hv-place:not(.hv-place-home) {
-  padding: 7px 12px;
-  font-size: 12px;
-  background: #425f49;
-  color: #fff8df;
-  border-color: #648669;
-}
-.hv-place:not(.hv-place-home):hover,
-.hv-place:not(.hv-place-home).is-selected {
-  background: #284d36;
+  box-shadow: 0 3px 10px #34542f33;
 }
 .hv-place small {
   font-size: 11px;
   background: #e4edd8;
   color: #526742;
-  padding: 2px 4px;
+  padding: 1px 4px;
   border-radius: 5px;
+}
+.hv-place-icon {
+  flex-shrink: 0;
+}
+.hv-place-short {
+  display: none;
+}
+/* Zoomed-out map: every place gets a compact icon + short name chip. */
+.hv-labels[data-mode='overview'] .hv-place {
+  gap: 3px;
+  min-height: 22px;
+  padding: 2px 7px 2px 5px;
+  font-size: 11px;
+  background: #fffcf1d9;
+}
+.hv-labels[data-mode='overview'] .hv-place-full,
+.hv-labels[data-mode='overview'] .hv-place small {
+  display: none;
+}
+.hv-labels[data-mode='overview'] .hv-place-short {
+  display: inline;
+}
+/* A phone's whole-village view is small: homes are just a house icon (mine
+   filled green); the minimap and 마을 안내 name them. */
+@media (max-width: 600px) {
+  .hv-labels[data-mode='overview'] .hv-place-home {
+    padding: 3px;
+    min-height: 0;
+  }
+  .hv-labels[data-mode='overview'] .hv-place-home .hv-place-short {
+    display: none;
+  }
+  .hv-labels[data-mode='overview'] .hv-place-home[data-owned='true'] {
+    background: #556e48;
+    border-color: #fff3c4;
+  }
+  .hv-labels[data-mode='overview'] .hv-place-home[data-owned='true'] svg {
+    color: #fff8e4 !important;
+  }
 }
 .hv-place-dot {
   height: 7px;
@@ -659,14 +704,10 @@
     width: 260px;
     max-width: calc(100% - 65px);
   }
-  .hv-place-home {
+  .hv-place {
     font-size: 11px;
-    padding: 4px 7px;
+    padding: 3px 9px 3px 7px;
     gap: 4px;
-  }
-  .hv-place:not(.hv-place-home) {
-    font-size: 11px;
-    padding: 6px 9px;
   }
   .hv-place small {
     display: none;
@@ -778,40 +819,116 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* Minimap: a panel on desktop, folded into a small button on phones. Tap a
+   building to walk there; the nearest one is highlighted and named. */
 .hv-minimap {
   position: absolute;
   left: 22px;
-  bottom: 82px;
-  width: 156px;
-  padding: 10px;
-  border: 1px solid #fff9e7;
-  border-radius: 15px;
-  background: #fffdf0e8;
-  box-shadow: 0 5px 22px #344a3020;
+  bottom: 92px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 6px;
   color: #58664b;
+}
+.hv-minimap-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 13px;
+  border: 1px solid #dbe0c6;
+  border-radius: 12px;
+  background: #fffcf1f0;
+  color: #536648;
+  box-shadow: 0 3px 10px #3b582410;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
 }
-.hv-minimap > span {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 700;
-  margin-bottom: 5px;
+.hv-minimap-toggle:hover {
+  background: #fff;
 }
-.hv-minimap small {
-  margin-left: auto;
-  color: #8e9c79;
-  font-size: 11px;
+.hv-minimap.is-open {
+  z-index: 7;
 }
-.hv-minimap svg {
+.hv-minimap-body {
+  width: 280px;
+  padding: 8px;
+  border: 1px solid #fff9e7;
+  border-radius: 15px;
+  background: #fffdf0ee;
+  box-shadow: 0 5px 22px #344a3020;
+}
+.hv-minimap-map {
+  position: relative;
+}
+.hv-minimap-overview {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-out;
+}
+.hv-minimap-overview svg {
   display: block;
   width: 100%;
   height: auto;
 }
-.hv-minimap > span svg {
-  width: 12px;
-  height: 12px;
+.hv-minimap-place {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #3f4f37;
+  cursor: pointer;
+}
+.hv-minimap-place > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #fffdf3e6;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hv-minimap-place[data-named='false'] > span {
+  display: none;
+}
+.hv-minimap-place:hover > span,
+.hv-minimap-place:focus-visible > span {
+  display: block;
+  z-index: 1;
+}
+.hv-minimap-place[data-nearest='true'] > span {
+  background: #4f6b45;
+  color: #fff8e4;
+  z-index: 1;
+}
+.hv-minimap-place:focus-visible {
+  outline: 2px solid #b5bd69;
+  outline-offset: 0;
+}
+.hv-minimap-note {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: #6f7d60;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .hv-route {
   position: absolute;
@@ -857,18 +974,30 @@
 }
 @media (max-width: 600px) {
   .hv-minimap {
-    left: 12px;
-    bottom: 96px;
-    width: 114px;
-    padding: 7px;
+    left: max(12px, calc(env(safe-area-inset-left) + 8px));
+    bottom: max(80px, calc(env(safe-area-inset-bottom) + 64px));
+  }
+  .hv-minimap-toggle {
+    padding: 0 11px;
+    font-size: 11px;
+  }
+  /* Opened on a phone, the map gets the full width (it folds again as soon
+     as a building is picked), with every building named. */
+  .hv-minimap-body {
+    width: min(360px, calc(100vw - 24px));
+    /* Opens above the D-pad, never over it. */
+    margin-bottom: 40px;
+    padding: 6px;
     border-radius: 12px;
   }
-  .hv-minimap > span {
-    font-size: 11px;
-    gap: 3px;
+  /* Friends' name tags would crowd the tiny whole-village view. */
+  .hv-scene[data-overview='true'] .hv-tag {
+    visibility: hidden !important;
   }
-  .hv-minimap small {
-    display: none;
+  .hv-minimap-place[data-named='false'] > span {
+    display: block;
+    background: #fffdf3b3;
+    font-weight: 600;
   }
   .hv-route {
     left: 12px;
@@ -971,9 +1100,6 @@
 .hv-home-list button {
   min-height: 44px;
 }
-.hv-place {
-  min-height: 30px;
-}
 
 /* The place card and prompts never cover the minimap (bottom-left). */
 @media (max-width: 900px) {
@@ -1067,8 +1193,6 @@
 /* "승준의 텃밭": my own plots are always labelled (gold) so they are not
    mistaken for paving or the decorative shared field by the plaza. */
 .hv-place.hv-farm-label {
-  padding: 5px 10px;
-  font-size: 12px;
   background: #fff3c9;
   color: #6b4b1f;
   border: 1px solid #e0b64c;

@@ -245,7 +245,7 @@ begin
     raise notice 'realtime.messages not found; skipping HoHyeon Realtime policies';
     return;
   end if;
-  execute 'alter table realtime.messages enable row level security';
+  -- RLS is already enabled on realtime.messages (owned by supabase_realtime_admin); postgres may only add policies.
   execute 'drop policy if exists "hh cloud members receive" on realtime.messages';
   execute 'drop policy if exists "hh cloud receive guard" on realtime.messages';
   execute 'drop policy if exists "hh cloud no client send" on realtime.messages';
