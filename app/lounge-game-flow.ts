@@ -116,7 +116,9 @@ export const gameFlow = (view: LoungeView, kind: GameKind): GameFlow => {
   const ended = Boolean(match) && !active;
   const retained = Boolean(table?.members.length);
   const ownTable = Boolean(table?.members.includes(view.self));
-  const ownsSeat = seats.includes(view.self);
+  // Departed players keep settlement seats. Table membership determines whether
+  // they can still play; snapshots from before tables existed use seat fallback.
+  const ownsSeat = seats.includes(view.self) && (!table || ownTable);
   const selfOwnsGame = ownTable || ownsSeat;
   const pendingInvites = waitingInvites(view, kind);
   const incomingInvite = pendingInvites.find(
