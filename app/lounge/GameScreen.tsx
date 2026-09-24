@@ -82,6 +82,7 @@ export function GameScreen({
   reactionsHidden,
   onReactionsHidden,
   notify,
+  place = NAMES.village,
 }: {
   kind: GameKind;
   room: CloudRoom;
@@ -92,7 +93,10 @@ export function GameScreen({
   onReactionsHidden: (value: boolean) => void;
   /** Toasts (e.g. when the ready deadline dissolves my table). */
   notify?: Notify;
+  /** Where closing the table returns to (회관, 카지노, 마을…). */
+  place?: string;
 }) {
+  const backLabel = `${josa(place, '으로/로')} 돌아가기`;
   const [leave, setLeave] = useState(false),
     [leaveError, setLeaveError] = useState(''),
     [displayedGoRevision, setDisplayedGoRevision] = useState(
@@ -188,13 +192,12 @@ export function GameScreen({
         <button
           className="l-game-back"
           onClick={onBack}
-          title="마을을 둘러보는 동안에도 테이블 자리는 유지돼요"
+          title="둘러보는 동안에도 테이블 자리는 유지돼요"
+          aria-label={backLabel}
         >
           <ArrowLeft size={17} aria-hidden="true" />
-          <span className="l-back-short">{NAMES.village}</span>
-          <span className="l-back-more">
-            {josa(NAMES.village, '으로/로')} 돌아가기
-          </span>
+          <span className="l-back-short">{place}</span>
+          <span className="l-back-more">{backLabel}</span>
         </button>
         <span>
           <small>{table ? `${table.round}번째 판` : '친구와 한 판'}</small>
@@ -214,8 +217,12 @@ export function GameScreen({
                   : '대전 중'}
           </span>
           {canLeave && (
-            <button className="l-text" onClick={() => setLeave(true)}>
-              게임 나가기
+            <button
+              className="l-text"
+              onClick={() => setLeave(true)}
+              data-testid="game-stand"
+            >
+              일어나기
             </button>
           )}
         </div>
@@ -261,7 +268,7 @@ export function GameScreen({
                 retryLabel={chunk ? '새로 고치기' : '다시 불러오기'}
                 onRetry={chunk ? () => location.reload() : retry}
                 onBack={onBack}
-                backLabel={`${josa(NAMES.village, '으로/로')} 돌아가기`}
+                backLabel={backLabel}
               />
             )}
           >
@@ -351,7 +358,7 @@ export function GameScreen({
                 <div className="l-empty">
                   <h2>아직 시작된 게임이 없어요.</h2>
                   <button className="l-primary" onClick={onBack}>
-                    {josa(NAMES.village, '으로/로')} 돌아가기
+                    {backLabel}
                   </button>
                 </div>
               )}
@@ -406,18 +413,18 @@ export function GameScreen({
                 <Send size={16} />
               </button>
               <button className="l-secondary" onClick={onBack}>
-                {josa(NAMES.village, '으로/로')} 돌아가기
+                일어나기
               </button>
             </div>
           )}
       </div>
       {leave && (
         <ConfirmModal
-          title={`${GAME_INFO[kind].name}에서 나갈까요?`}
+          title={`${GAME_INFO[kind].name} 테이블에서 일어날까요?`}
           body={leaveConsequence(kind, ended)}
-          consequences={ended ? [] : ['나가면 되돌릴 수 없어요.']}
-          confirmLabel="게임 나가기"
-          busyLabel="나가는 중…"
+          consequences={ended ? [] : ['일어나면 되돌릴 수 없어요.']}
+          confirmLabel="일어나기"
+          busyLabel="일어나는 중…"
           cancelLabel="테이블에 남기"
           danger={!ended}
           onClose={() => {
@@ -434,7 +441,7 @@ export function GameScreen({
               return true;
             }
             setLeaving(false);
-            setLeaveError('나가기를 처리하지 못했어요. 다시 눌러 주세요.');
+            setLeaveError('일어나기를 처리하지 못했어요. 다시 눌러 주세요.');
             return false;
           }}
         />

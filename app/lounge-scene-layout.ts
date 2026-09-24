@@ -149,3 +149,50 @@ export function sceneStep(
   }
   return point;
 }
+
+/** The action button offers a table ("둘러보기") within this many units of its edge. */
+export const SCENE_TABLE_REACH = 5;
+
+/** Approximate distance (server units) from a point to a table's walk edge. */
+export function sceneTableDistance(point: ScenePoint, c: SceneCollider) {
+  const ax = c.rx + SCENE_PLAYER_RADIUS,
+    ay = c.ry + SCENE_PLAYER_RADIUS;
+  const norm = Math.hypot((point.x - c.x) / ax, (point.y - c.y) / ay);
+  return Math.max(0, (norm - 1) * ((ax + ay) / 2));
+}
+
+/** The table closest to `point` within reach (the hall's action button). */
+export function sceneNearestTable(
+  point: ScenePoint,
+  area: SceneArea,
+  reach = SCENE_TABLE_REACH,
+): { game: GameKind; distance: number } | null {
+  let best: { game: GameKind; distance: number } | null = null;
+  for (const c of sceneColliders(area)) {
+    const distance = sceneTableDistance(point, c);
+    if (distance <= reach && (!best || distance < best.distance))
+      best = { game: c.game, distance };
+  }
+  return best;
+}
+
+/**
+ * Where I stand after standing up from a table (일어나기): on open floor just
+ * in front of it (towards the camera), else beside it.
+ */
+export function sceneTableSide(area: SceneArea, game: GameKind): ScenePoint {
+  const c = sceneColliders(area).find((t) => t.game === game);
+  if (!c) return { x: 50, y: 80 };
+  const gap = SCENE_PLAYER_RADIUS + 1;
+  const tries: ScenePoint[] = [
+    { x: c.x, y: c.y + c.ry + gap },
+    { x: c.x + c.rx + gap, y: c.y },
+    { x: c.x - c.rx - gap, y: c.y },
+    { x: c.x, y: c.y - c.ry - gap },
+  ];
+  for (const t of tries) {
+    const p = { x: clamp(t.x, 15, 85), y: clamp(t.y, 42, 88) };
+    if (sceneCanWalk(p, area)) return p;
+  }
+  return { x: 50, y: 88 };
+}

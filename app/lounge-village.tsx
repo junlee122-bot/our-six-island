@@ -57,15 +57,10 @@ import { VillageLifeLayer } from './lounge-village-life-3d';
 import {
   DAY_PHASE_LABEL,
   FRUIT_TREE_POINTS,
-  NPC_TALK_REACH,
   dayLighting,
   farmBed,
   farmBedRect,
   farmFront,
-  nearFarm,
-  nearCommons,
-  nearMarket,
-  nearestFruitTree,
   npcLine,
   npcPose,
   plotsForActor,
@@ -77,6 +72,13 @@ import {
   type LifeView,
 } from './lounge-life';
 import { loungeAudio } from './lounge-audio';
+import {
+  villageAction,
+  villageActionKey,
+  type VillageAction,
+  type VillageSpot,
+} from './lounge-village-actions';
+import { ActionButton } from './lounge/ActionButton';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
 import { VillageLifeList, isTouchDevice } from './lounge/VillageSimple';
@@ -148,14 +150,6 @@ const MINI_BOX = {
  *  units of its footprint is named; the next one takes over past HANDOFF. */
 const LABEL_NEAR = 4.2,
   LABEL_HANDOFF = 0.8;
-/** Something "범타듀의 하루" you can do where you stand (E / tap). */
-export type VillageSpot =
-  | { kind: 'farm' }
-  /** The decorative shared field by the plaza: points to my own plots. */
-  | { kind: 'commons' }
-  | { kind: 'tree'; id: string; readyAt: number }
-  | { kind: 'market' }
-  | { kind: 'npc'; actor: number };
 type Props = {
   save: LoungeSave;
   players: LoungePlayer[];
@@ -180,6 +174,10 @@ type Props = {
   onPick?: (tree: string) => void;
   /** '놀러 가기' at a friend's door. */
   onVisit?: (actor: number) => void;
+  /** People inside each building (place id → count), for "회관 · 안에 N명". */
+  areaCounts?: Readonly<Record<string, number>>;
+  /** The door within reach changed: preload that building's scene. */
+  onNear?: (place: VillagePlace | null) => void;
 };
 type Direction = 'up' | 'down' | 'left' | 'right';
 // Physical key codes keep WASD working while a Korean IME is active.
@@ -282,6 +280,11 @@ function placeOnGround(
 
 /** Grass top is ~0.026; props rest on it instead of floating at path height. */
 const GROUND_Y = 0.03;
+
+/** Starts building the village (models, terrain) before it is shown. */
+export function preloadVillage() {
+  getVillageWorld();
+}
 
 function getVillageWorld(): WorldState {
   if (villageWorld) return villageWorld;
@@ -539,7 +542,7 @@ export function Village3D(props: Props) {
     overview: () => void;
     visit: (point: VillagePoint) => void;
     stop: () => void;
-    act: (spot: VillageSpot) => void;
+    act: (action: VillageAction) => void;
   } | null>(null);
   const [state, setState] = useState<
     'loading' | 'ready' | 'partial' | 'unavailable' | 'lost'
@@ -550,7 +553,7 @@ export function Village3D(props: Props) {
     [nearby, setNearby] = useState<NearbyVillageEntrance | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const nearbyId = useRef<string | null>(null);
-  const [spot, setSpot] = useState<VillageSpot | null>(null);
+  const [action, setAction] = useState<VillageAction | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
   const [touch] = useState(isTouchDevice);
   // Phones start with the minimap folded into a small button.
@@ -591,6 +594,33 @@ export function Village3D(props: Props) {
     window.addEventListener('bumtadew:guide-farm', guide);
     return () => window.removeEventListener('bumtadew:guide-farm', guide);
   }, []);
+  // The door prompt ("회관 · 안에 2명") and the action button's context.
+  const doorPlace =
+    action?.target.type === 'door'
+      ? action.target.entrance.place
+      : !action
+        ? (nearby?.place ?? null)
+        : null;
+  const doorCount =
+    doorPlace && props.areaCounts ? (props.areaCounts[doorPlace.id] ?? 0) : undefined;
+  const actionDetail = doorPlace
+    ? doorPlace.name + (doorCount ? ` · 안에 ${doorCount}명` : '')
+    : action?.target.type === 'spot' && action.target.spot.kind === 'npc'
+      ? ACTORS[action.target.spot.actor]
+      : undefined;
+  const actionDisabled =
+    action?.target.type === 'spot' &&
+    action.target.spot.kind === 'tree' &&
+    (!props.life ||
+      (props.life.me.fruitReadyAt?.[action.target.spot.id] ??
+        action.target.spot.readyAt) > lifeClock);
+  // Preload the building I am about to enter (chunk + art).
+  const nearPlaceId = nearby?.place.id ?? null;
+  useEffect(() => {
+    latest.current.onNear?.(
+      nearPlaceId ? (VILLAGE_PLACES.find((p) => p.id === nearPlaceId) ?? null) : null,
+    );
+  }, [nearPlaceId]);
   const select = (place: VillagePlace) => {
     requestedPlace.current = place;
     setDistrict(null);
@@ -808,14 +838,31 @@ export function Village3D(props: Props) {
     };
     const npcTalk = new Map<number, { text: string; until: number }>();
     const serverNow = () => Date.now() + (latest.current.clockOffset ?? 0);
-    let currentSpot: VillageSpot | null = null,
-      spotKey = '';
-    const act = (target: VillageSpot) => {
+    let currentAction: VillageAction | null = null,
+      actionKey = '';
+    const act = (action: VillageAction) => {
       const current = latest.current;
+      const t = action.target;
+      if (t.type === 'door') {
+        const { place, canEnter } = t.entrance;
+        entryIntent = null;
+        requestedPlace.current = place;
+        if (canEnter) current.onEnter(place.destination, place);
+        else if (place.kind === 'home' && place.actor !== undefined)
+          current.onVisit?.(place.actor);
+        return;
+      }
+      const target = t.spot;
       if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
-      else if (target.kind === 'tree') current.onPick?.(target.id);
-      else if (target.kind === 'npc') {
+      else if (target.kind === 'mailbox') current.onMail?.();
+      else if (target.kind === 'commons') {
+        const bed = farmBed(current.save.actor);
+        if (bed) goTo(farmFront(bed));
+      } else if (target.kind === 'tree') {
+        const readyAt = current.life?.me.fruitReadyAt?.[target.id] ?? target.readyAt;
+        if (current.life && readyAt <= serverNow()) current.onPick?.(target.id);
+      } else if (target.kind === 'npc') {
         const status = Object.values(current.life?.statuses ?? {}).find(
           (s) => s.actor === target.actor,
         );
@@ -1157,25 +1204,10 @@ export function Village3D(props: Props) {
       )
         return;
       if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') {
-        const entrance = villageNearbyEntrance(
-          position,
-          latest.current.save.actor,
-        );
-        if (entrance?.canEnter) {
+        // The one action button: E always presses it.
+        if (currentAction) {
           e.preventDefault();
-          entryIntent = null;
-          requestedPlace.current = entrance.place;
-          latest.current.onEnter(entrance.place.destination, entrance.place);
-        } else if (
-          entrance?.place.kind === 'home' &&
-          entrance.place.actor !== undefined &&
-          latest.current.onVisit
-        ) {
-          e.preventDefault();
-          latest.current.onVisit(entrance.place.actor);
-        } else if (currentSpot) {
-          e.preventDefault();
-          act(currentSpot);
+          act(currentAction);
         }
         return;
       }
@@ -1502,41 +1534,21 @@ export function Village3D(props: Props) {
           nearbyId.current = entrance?.place.id ?? null;
           setNearby(entrance);
         }
-        let nextSpot: VillageSpot | null = null;
-        if (!entrance) {
-          const current = latest.current;
-          if (nearFarm(position, current.save.actor)) nextSpot = { kind: 'farm' };
-          else if (nearMarket(position)) nextSpot = { kind: 'market' };
-          else if (nearCommons(position)) nextSpot = { kind: 'commons' };
-          else {
-            const tree = nearestFruitTree(position);
-            if (tree)
-              nextSpot = {
-                kind: 'tree',
-                id: tree.id,
-                readyAt: current.life?.me.fruitReadyAt?.[tree.id] ?? 0,
-              };
-            else {
-              let best = NPC_TALK_REACH;
-              for (const [id, figure] of figures) {
-                if (!id.startsWith('friend-')) continue;
-                const d = Math.hypot(
-                  figure.point.x - position.x,
-                  figure.point.z - position.z,
-                );
-                if (d < best) {
-                  best = d;
-                  nextSpot = { kind: 'npc', actor: Number(id.slice(7)) };
-                }
-              }
-            }
-          }
-        }
-        const nextKey = nextSpot ? JSON.stringify(nextSpot) : '';
-        currentSpot = nextSpot;
-        if (nextKey !== spotKey) {
-          spotKey = nextKey;
-          setSpot(nextSpot);
+        const npcs: { actor: number; point: VillagePoint }[] = [];
+        for (const [id, figure] of figures)
+          if (id.startsWith('friend-'))
+            npcs.push({ actor: Number(id.slice(7)), point: figure.point });
+        const nextAction = villageAction(position, latest.current.save.actor, {
+          life: latest.current.life,
+          now: serverNow(),
+          npcs,
+          canVisit: !!latest.current.onVisit,
+        });
+        const nextKey = villageActionKey(nextAction);
+        currentAction = nextAction;
+        if (nextKey !== actionKey) {
+          actionKey = nextKey;
+          setAction(nextAction);
         }
         // The minimap highlights the nearest building (any distance).
         let near: string | null = null,
@@ -1553,7 +1565,9 @@ export function Village3D(props: Props) {
           reportedNearest = near;
           setNearestPlace(near);
         }
-        host.dataset.spot = nextSpot?.kind ?? '';
+        host.dataset.spot =
+          nextAction?.target.type === 'spot' ? nextAction.target.spot.kind : '';
+        host.dataset.action = nextAction?.kind ?? '';
         host.dataset.nearbyPlace = entrance?.place.id ?? '';
         host.dataset.entryReady = String(entrance?.canEnter ?? false);
         host.dataset.destination =
@@ -2550,7 +2564,7 @@ export function Village3D(props: Props) {
             ))}
           </div>
         )}
-        {district && !nearby && !spot && (
+        {district && !nearby && !action && (
           <section className="hv-route" aria-label="산책 목적지">
             <Trees size={18} />
             <div>
@@ -2568,86 +2582,70 @@ export function Village3D(props: Props) {
             </button>
           </section>
         )}
-        {nearby && state !== 'unavailable' && state !== 'lost' && (
+        {(action || nearby) && state !== 'unavailable' && state !== 'lost' && (
           <section
-            className="hv-entry-prompt"
-            aria-label={`${nearby.place.name} 입구`}
+            className={
+              'hv-entry-prompt' +
+              (action?.target.type === 'spot' ? ' hv-spot-prompt' : '')
+            }
             aria-live="polite"
-            data-testid="village-entry-prompt"
-            data-place={nearby.place.id}
-            data-entry-ready={String(nearby.canEnter)}
+            data-testid={
+              action?.target.type === 'spot'
+                ? 'village-spot-prompt'
+                : 'village-entry-prompt'
+            }
+            data-place={doorPlace?.id}
+            data-spot={
+              action?.target.type === 'spot' ? action.target.spot.kind : undefined
+            }
+            data-entry-ready={doorPlace ? String(!!nearby?.canEnter) : undefined}
           >
-            <div>
-              <strong>{nearby.place.name}</strong>
-              <small>
-                {nearby.canEnter
-                  ? touch
-                    ? '버튼을 눌러 들어가기'
-                    : 'E 또는 Enter를 눌러 들어가기'
-                  : props.onVisit
-                    ? touch
-                      ? '버튼을 눌러 놀러 가기 · 방명록'
-                      : 'E 또는 버튼을 눌러 놀러 가기 · 방명록'
-                    : '주민의 집이에요. 집 앞에서 인사해요.'}
-              </small>
-            </div>
-            {nearby.place.kind === 'home' &&
-              nearby.place.actor === props.save.actor &&
-              props.onMail && (
-                <button
-                  type="button"
-                  className="hv-prompt-secondary"
-                  onClick={props.onMail}
-                  data-testid="village-mailbox"
-                >
-                  <Mail size={15} /> 우편함
-                  {(props.life?.me.mailUnread ?? 0) > 0 && (
-                    <b className="hv-count">{props.life?.me.mailUnread}</b>
+            {action?.target.type === 'spot' ? (
+              <SpotPrompt
+                spot={action.target.spot}
+                life={props.life ?? null}
+                clockOffset={props.clockOffset ?? 0}
+                touch={touch}
+                actor={props.save.actor}
+              />
+            ) : doorPlace ? (
+              <div>
+                <strong>
+                  {doorPlace.name}
+                  {doorCount !== undefined && (
+                    <span className="hv-inside" data-testid="door-count">
+                      {' · '}
+                      {doorCount > 0 ? `안에 ${doorCount}명` : '안에 아무도 없어요'}
+                    </span>
                   )}
-                </button>
-              )}
-            {nearby.canEnter ? (
-              <button
-                type="button"
-                onClick={() => controls.current?.enter(nearby.place)}
-              >
-                들어가기 <ArrowRight size={15} />
-              </button>
-            ) : nearby.place.kind === 'home' &&
-              nearby.place.actor !== undefined &&
-              props.onVisit ? (
-              <button
-                type="button"
-                data-testid="village-visit"
-                onClick={() => props.onVisit?.(nearby.place.actor!)}
-              >
-                놀러 가기 <ArrowRight size={15} />
-              </button>
+                </strong>
+                <small>
+                  {action
+                    ? doorPlace.kind === 'home' &&
+                      doorPlace.actor !== props.save.actor
+                      ? `놀러 가서 방명록을 남겨요${touch ? '' : ' · E'}`
+                      : touch
+                        ? '오른쪽 아래 버튼으로 들어가요'
+                        : 'E 또는 오른쪽 아래 버튼으로 들어가요'
+                    : '주민의 집이에요. 집 앞에서 인사해요.'}
+                </small>
+              </div>
             ) : null}
           </section>
         )}
-        {spot && !nearby && state !== 'unavailable' && state !== 'lost' && (
-          <section
-            className="hv-entry-prompt hv-spot-prompt"
-            aria-live="polite"
-            data-testid="village-spot-prompt"
-            data-spot={spot.kind}
-          >
-            <SpotPrompt
-              spot={spot}
-              life={props.life ?? null}
-              clockOffset={props.clockOffset ?? 0}
-              touch={touch}
-              actor={props.save.actor}
-              onAct={() => controls.current?.act(spot)}
-              onGuide={() => {
-                const bed = farmBed(props.save.actor);
-                if (bed) controls.current?.visit(farmFront(bed));
-              }}
-            />
-          </section>
+        {state !== 'unavailable' && state !== 'lost' && (
+          <ActionButton
+            className="hv-action"
+            kind={action?.kind ?? null}
+            detail={actionDetail}
+            touch={touch}
+            disabled={actionDisabled}
+            onPress={() => {
+              if (action) controls.current?.act(action);
+            }}
+          />
         )}
-        {selected && !nearby && !spot && (
+        {selected && !nearby && !action && (
           <section className="hv-place-card" aria-label="선택한 장소">
             <div
               className="hv-place-monogram"
@@ -2743,23 +2741,19 @@ function remaining(ms: number) {
     : `${minutes}분`;
 }
 
-/** The E / tap prompt for farm, market, fruit trees and wandering friends. */
+/** What the action button will do here (farm, market, trees, mailbox, friends). */
 function SpotPrompt({
   spot,
   life,
   clockOffset,
   touch,
   actor,
-  onAct,
-  onGuide,
 }: {
   spot: VillageSpot;
   life: LifeView | null;
   clockOffset: number;
   touch: boolean;
   actor: number;
-  onAct: () => void;
-  onGuide: () => void;
 }) {
   // Server clock that also wakes exactly when a crop or this tree is ready.
   const clock = useServerClock(
@@ -2770,7 +2764,7 @@ function SpotPrompt({
         ? [life?.me.fruitReadyAt?.[spot.id] ?? spot.readyAt]
         : [],
   );
-  const key = touch ? '' : 'E로 ';
+  const key = touch ? '' : ' · E';
   if (spot.kind === 'farm') {
     const farm = life?.me.farm ?? [];
     const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;
@@ -2779,97 +2773,81 @@ function SpotPrompt({
       (p) => p.crop && p.wateredAt === null && (p.readyAt ?? Infinity) > clock,
     ).length;
     return (
-      <>
-        <div>
-          <strong>
-            <Sprout size={14} /> {ACTORS[actor]}의 텃밭
-          </strong>
-          <small>
-            {!life
-              ? '마을에 연결되면 돌볼 수 있어요'
-              : ready
-                ? `수확할 작물 ${ready}개 · ${key}돌보기`
-                : empty
-                  ? `빈 밭 ${empty}칸 · ${key}씨앗 심기`
-                  : thirsty
-                    ? `물 줄 작물 ${thirsty}칸 · ${key}물 주기`
-                    : '물을 다 줬어요 · 쑥쑥 자라는 중'}
-          </small>
-        </div>
-        <button type="button" onClick={onAct} data-testid="village-farm">
-          텃밭 돌보기 <ArrowRight size={15} />
-        </button>
-      </>
+      <div>
+        <strong>
+          <Sprout size={14} /> {ACTORS[actor]}의 텃밭
+        </strong>
+        <small>
+          {!life
+            ? '마을에 연결되면 돌볼 수 있어요'
+            : ready
+              ? `수확할 작물 ${ready}개${key}`
+              : empty
+                ? `빈 밭 ${empty}칸${key}`
+                : thirsty
+                  ? `물 줄 작물 ${thirsty}칸${key}`
+                  : '물을 다 줬어요 · 쑥쑥 자라는 중'}
+        </small>
+      </div>
     );
   }
   if (spot.kind === 'commons')
     return (
-      <>
-        <div>
-          <strong>
-            <Sprout size={14} /> 마을 공동 밭
-          </strong>
-          <small>함께 가꾸는 밭이에요 · 내 텃밭은 {ACTORS[actor]}의 집 앞에 있어요</small>
-        </div>
-        <button type="button" onClick={onGuide} data-testid="village-guide-farm">
-          내 텃밭으로 <ArrowRight size={15} />
-        </button>
-      </>
+      <div>
+        <strong>
+          <Sprout size={14} /> 마을 공동 밭
+        </strong>
+        <small>함께 가꾸는 밭이에요 · 내 텃밭은 {ACTORS[actor]}의 집 앞에 있어요</small>
+      </div>
     );
   if (spot.kind === 'market')
     return (
-      <>
-        <div>
-          <strong>
-            <Store size={14} /> 범타듀 상점
-          </strong>
-          <small>씨앗 · 희귀 소품 · 머리색 팔레트</small>
-        </div>
-        <button type="button" onClick={onAct} data-testid="village-shop">
-          상점 열기 <ArrowRight size={15} />
-        </button>
-      </>
+      <div>
+        <strong>
+          <Store size={14} /> 범타듀 상점
+        </strong>
+        <small>씨앗 · 희귀 소품 · 머리색 팔레트{key}</small>
+      </div>
     );
+  if (spot.kind === 'mailbox') {
+    const unread = life?.me.mailUnread ?? 0;
+    return (
+      <div>
+        <strong>
+          <Mail size={14} /> {ACTORS[actor]}의 우편함
+        </strong>
+        <small>
+          {unread ? `읽지 않은 편지 ${unread}통` : '새 편지가 없어요'}
+          {key}
+        </small>
+      </div>
+    );
+  }
   if (spot.kind === 'tree') {
     const readyAt = life?.me.fruitReadyAt?.[spot.id] ?? spot.readyAt;
     const ready = !readyAt || readyAt <= clock;
     const index = Object.keys(FRUIT_TREE_POINTS).indexOf(spot.id) + 1;
     return (
-      <>
-        <div>
-          <strong>
-            <Apple size={14} /> {index}번 과일나무
-          </strong>
-          <small>
-            {!life
-              ? '마을에 연결되면 딸 수 있어요'
-              : ready
-                ? `잘 익은 과일이 달렸어요 · ${key}따기`
-                : `${remaining(readyAt - clock)} 뒤에 다시 익어요`}
-          </small>
-        </div>
-        <button
-          type="button"
-          onClick={onAct}
-          disabled={!life || !ready}
-          data-testid="village-pick"
-        >
-          과일 따기 <ArrowRight size={15} />
-        </button>
-      </>
+      <div>
+        <strong>
+          <Apple size={14} /> {index}번 과일나무
+        </strong>
+        <small>
+          {!life
+            ? '마을에 연결되면 딸 수 있어요'
+            : ready
+              ? `잘 익은 과일이 달렸어요${key}`
+              : `${remaining(readyAt - clock)} 뒤에 다시 익어요`}
+        </small>
+      </div>
     );
   }
   return (
-    <>
-      <div>
-        <strong>
-          <MessageCircle size={14} /> {ACTORS[spot.actor]}
-        </strong>
-        <small>산책 중이에요{touch ? '' : ' · E로 말 걸기'}</small>
-      </div>
-      <button type="button" onClick={onAct} data-testid="village-talk">
-        말 걸기 <ArrowRight size={15} />
-      </button>
-    </>
+    <div>
+      <strong>
+        <MessageCircle size={14} /> {ACTORS[spot.actor]}
+      </strong>
+      <small>산책 중이에요{key}</small>
+    </div>
   );
 }

@@ -61,6 +61,6 @@ export const GAME_COPY: Record<GameKind, Copy> = {
 /** Text for the "leave this game" confirmation. */
 export function leaveConsequence(kind: GameKind, ended: boolean) {
   if (ended)
-    return `${josa(GAME_INFO[kind].name, '은/는')} 이번 판 정산이 끝났어요. 나가면 다음 판 참가자에서 빠져요.`;
+    return `${josa(GAME_INFO[kind].name, '은/는')} 이번 판 정산이 끝났어요. 일어나면 다음 판 참가자에서 빠져요.`;
   return GAME_COPY[kind].leaveActive;
 }

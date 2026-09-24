@@ -17,9 +17,33 @@ import type { Notify } from './Toast';
 import { useNow } from './use-now';
 import './life.css';
 
+const loadBedroom3D = () => import('../lounge-bedroom-3d');
 const Bedroom3D = lazy(() =>
-  import('../lounge-bedroom-3d').then((m) => ({ default: m.Bedroom3D })),
+  loadBedroom3D().then((m) => ({ default: m.Bedroom3D })),
 );
+
+/**
+ * Walking up to a friend's door starts loading their room (the room chunk and
+ * the visit data), so going in plays the transition instead of a spinner.
+ * A prefetched visit is reused for a short while only.
+ */
+const prefetched = new Map<number, { at: number; job: Promise<FriendVisit> }>();
+const PREFETCH_MS = 20_000;
+export function prefetchVisit(owner: number) {
+  void loadBedroom3D().catch(() => {});
+  const hit = prefetched.get(owner);
+  if (hit && Date.now() - hit.at < PREFETCH_MS) return hit.job;
+  const job = visitFriend(owner);
+  job.catch(() => prefetched.delete(owner));
+  prefetched.set(owner, { at: Date.now(), job });
+  return job;
+}
+function takeVisit(owner: number, fresh: boolean) {
+  const hit = prefetched.get(owner);
+  prefetched.delete(owner);
+  if (!fresh && hit && Date.now() - hit.at < PREFETCH_MS) return hit.job;
+  return visitFriend(owner);
+}
 
 /** Live presence for a room from the cloud view (players, room chat, my moves). */
 export function roomPresence(room: CloudRoom, view: CloudRoomView) {
@@ -62,7 +86,7 @@ export function FriendVisitScreen({
   const guestbookRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let live = true;
-    visitFriend(owner).then(
+    takeVisit(owner, reload > 0).then(
       (visit) => {
         if (!live) return;
         // Their outfit also shows on village NPCs and mail avatars.
@@ -117,8 +141,8 @@ export function FriendVisitScreen({
   return (
     <section className="l-visit b3-visit" aria-label={`${name}의 방`} data-testid="friend-visit">
       <div className="l-visit-bar b3-visit-bar">
-        <button className="l-secondary b3-visit-back" onClick={onBack} data-testid="visit-back" aria-label="마을로 돌아가기 (Esc)">
-          <ArrowLeft size={18} /> 마을로
+        <button className="l-secondary b3-visit-back" onClick={onBack} data-testid="visit-back" aria-label="나가기 · 마을로 (Esc)">
+          <ArrowLeft size={18} /> 나가기
         </button>
         <p>
           {here.length
@@ -144,9 +168,10 @@ export function FriendVisitScreen({
           </button>
         </div>
       ) : !data ? (
-        <div className="l-empty l-screen-loading">
-          <span className="l-spinner" />
-          <p>{josa(name, '을/를')} 만나러 가는 중…</p>
+        <div className="l-scene-wait">
+          <p>
+            <span className="l-spinner" /> {josa(name, '을/를')} 만나러 가는 중…
+          </p>
         </div>
       ) : (
         <>
@@ -158,15 +183,17 @@ export function FriendVisitScreen({
             )}
             <Suspense
               fallback={
-                <div className="l-empty l-screen-loading">
-                  <span className="l-spinner" />
-                  <p>방을 여는 중…</p>
+                <div className="l-scene-wait">
+                  <p>
+                    <span className="l-spinner" /> 방을 여는 중…
+                  </p>
                 </div>
               }
             >
               <Bedroom3D
                 key={owner}
                 save={save}
+                onExit={onBack}
                 visit={{ owner, ownerLook: data.look, bedroom: data.bedroom }}
                 presence={roomPresence(room, view)}
               />

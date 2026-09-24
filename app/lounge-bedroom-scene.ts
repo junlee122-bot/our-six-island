@@ -96,6 +96,20 @@ function textureAsync(url: string): Promise<THREE.Texture> {
   }
   return p;
 }
+/**
+ * Warms the caches for a room (GLB templates, prop art) so walking in through
+ * the door shows the furniture right after the transition.
+ */
+export function preloadRoomAssets(room: { items: readonly { ref: string }[] }) {
+  for (const ref of new Set(room.items.map((item) => item.ref))) {
+    const entry = catalogEntry(ref);
+    if (!entry) continue;
+    if (entry.kind === 'model' && MODEL_FILES[ref])
+      void modelTemplate(entry).catch(() => {});
+    else if (entry.kind === 'prop' && PROP_ART[ref])
+      void textureAsync(PROP_ART[ref]).catch(() => {});
+  }
+}
 /** Fitted, centred template of a catalog GLB (cached per ref). */
 const templates = new Map<string, Promise<THREE.Object3D>>();
 function modelTemplate(entry: CatalogEntry) {

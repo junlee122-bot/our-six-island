@@ -39,6 +39,8 @@ import {
 import { villageReturnPoint } from './lounge-village-entrance';
 import './lounge-club.css';
 import './lounge-village-shell.css';
+import './lounge-flow.css';
+import { sceneTableSide } from './lounge-scene-layout';
 import { LoungePlayHub } from './lounge-play-hub';
 import { gameFlow, playerIsBusy } from './lounge-game-flow';
 import {
@@ -55,7 +57,7 @@ import {
   ShopModal,
   StatusModal,
 } from './lounge/LifePanels';
-import { FriendVisitScreen } from './lounge/FriendVisit';
+import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
 import { CloudRoom, type Area, type CloudRoomView } from './lounge-cloud-room';
 import { AccountGate } from './lounge-account-ui';
@@ -71,7 +73,7 @@ import {
   type Reaction,
   type ReactionId,
 } from './lounge-reactions';
-import { josa, NAMES } from './lounge-text';
+import { formatBeom, josa, NAMES } from './lounge-text';
 import {
   PASSWORD_WARNING_KEY,
   recall,
@@ -79,7 +81,8 @@ import {
   useSettings,
 } from './lounge-settings';
 import { Modal, ConfirmModal } from './lounge/Modal';
-import { Toast, useToast } from './lounge/Toast';
+import { Toast, useBanners } from './lounge/Toast';
+import { dailyOf } from './lounge/WalletModal';
 import { ChatPanel } from './lounge/ChatPanel';
 import { FriendsModal } from './lounge/FriendsModal';
 import { Invitations } from './lounge/Invitations';
@@ -88,9 +91,13 @@ import { WalletModal } from './lounge/WalletModal';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal } from './lounge/SettingsModal';
 import { CreditsModal } from './lounge/CreditsModal';
-import { WorldHeader, type Tab } from './lounge/WorldHeader';
-import { GameScreen } from './lounge/GameScreen';
-import { Onboarding, shouldOnboard } from './lounge/Onboarding';
+import { TAB_TITLES, WorldHeader, type Tab } from './lounge/WorldHeader';
+import { GameScreen, myTurn } from './lounge/GameScreen';
+import {
+  Onboarding,
+  shouldOnboard,
+  shouldOnboardRoom,
+} from './lounge/Onboarding';
 import { VillageSimple } from './lounge/VillageSimple';
 import {
   ErrorState,
@@ -109,18 +116,132 @@ import {
 
 // Heavy screens load on demand (WS5 enables code splitting in the build).
 // lazyRetry reloads once when a chunk vanished after a redeploy.
+const loadVillage = () => import('./lounge-village');
+const loadBedroom = () => import('./lounge-bedroom');
+const loadWardrobe = () => import('./lounge-wardrobe');
+const loadScene = () => import('./lounge-scene');
 const Village3D = lazyRetry(() =>
-  import('./lounge-village').then((m) => ({ default: m.Village3D })),
+  loadVillage().then((m) => ({ default: m.Village3D })),
 );
 const BedroomEditor = lazyRetry(() =>
-  import('./lounge-bedroom').then((m) => ({ default: m.BedroomEditor })),
+  loadBedroom().then((m) => ({ default: m.BedroomEditor })),
 );
 const Wardrobe = lazyRetry(() =>
-  import('./lounge-wardrobe').then((m) => ({ default: m.Wardrobe })),
+  loadWardrobe().then((m) => ({ default: m.Wardrobe })),
 );
 const RoomFloor = lazyRetry(() =>
-  import('./lounge-scene').then((m) => ({ default: m.RoomFloor })),
+  loadScene().then((m) => ({ default: m.RoomFloor })),
 );
+
+/**
+ * Walking up to a door starts loading what is behind it (the lazy chunk and
+ * its art), so going in plays the short transition instead of a spinner.
+ */
+const warmed = new Set<string>();
+function preloadTab(tab: Tab, save?: LoungeSave) {
+  const quiet = (job: Promise<unknown>) => void job.catch(() => {});
+  if (tab === 'village')
+    quiet(loadVillage().then((m) => m.preloadVillage()));
+  else if (tab === 'bedroom')
+    quiet(loadBedroom().then((m) => save && m.preloadBedroom(save)));
+  else if (tab === 'wardrobe') quiet(loadWardrobe());
+  else {
+    quiet(loadScene());
+    for (const url of [
+      tab === 'casino' ? LOUNGE_ASSETS.casino : LOUNGE_ASSETS.room,
+      LOUNGE_ASSETS.clubTable,
+    ]) {
+      if (warmed.has(url)) continue;
+      warmed.add(url);
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = url;
+    }
+  }
+}
+
+/**
+ * The ~300 ms scene change: an iris closes to black, the place changes, the
+ * iris opens again (a quick dim crossfade under reduced motion). Web
+ * Animations keep it independent of the reduced-motion CSS reset.
+ */
+function useSceneFade() {
+  const ref = useRef<HTMLDivElement>(null);
+  const busy = useRef(false);
+  const play = useCallback((run: () => void) => {
+    const el = ref.current;
+    const iris = el?.firstElementChild as HTMLElement | null;
+    if (!el || !iris || busy.current || typeof el.animate !== 'function') {
+      run();
+      return;
+    }
+    busy.current = true;
+    let reduced = false;
+    try {
+      reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch {}
+    const half = reduced ? 110 : 150;
+    // power1.inOut
+    const easing = 'cubic-bezier(0.45, 0, 0.55, 1)';
+    el.classList.add('is-active');
+    el.classList.toggle('is-plain', reduced);
+    el.dataset.state = 'closing';
+    const shut = reduced
+      ? [{ opacity: 0 }, { opacity: 0.85 }]
+      : [{ opacity: 1 }, { opacity: 1 }];
+    el.animate(shut, { duration: half, fill: 'forwards', easing });
+    const irisFrames = [
+      { width: '150vmax', height: '150vmax' },
+      { width: '0px', height: '0px' },
+    ];
+    if (!reduced)
+      iris.animate(irisFrames, { duration: half, fill: 'forwards', easing });
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      el.dataset.state = 'opening';
+      const open = el.animate(
+        reduced ? [{ opacity: 0.85 }, { opacity: 0 }] : [{ opacity: 1 }, { opacity: 1 }],
+        { duration: half, fill: 'forwards', easing },
+      );
+      if (!reduced)
+        iris.animate([...irisFrames].reverse(), {
+          duration: half,
+          fill: 'forwards',
+          easing,
+        });
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        el.getAnimations().forEach((a) => a.cancel());
+        iris.getAnimations().forEach((a) => a.cancel());
+        // Hidden (display: none) whenever idle, whatever the animations did.
+        el.classList.remove('is-active');
+        el.dataset.state = '';
+        busy.current = false;
+      };
+      open.onfinish = cleanup;
+      setTimeout(cleanup, half + 400);
+    };
+    setTimeout(() => {
+      try {
+        run();
+      } finally {
+        // Two frames for the new place to paint (its chunk was preloaded).
+        requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(finish, 40)));
+        setTimeout(finish, 700);
+      }
+    }, half);
+  }, []);
+  const node = (
+    <div ref={ref} className="l-scene-fade" aria-hidden="true" data-testid="scene-fade">
+      <i />
+    </div>
+  );
+  return [node, play] as const;
+}
 
 /** Failure screen for a lazily loaded place: retry (or reload) and a way out. */
 function ScreenError({
@@ -145,7 +266,7 @@ function ScreenError({
       retryLabel={chunk ? '새로 고치기' : '다시 시도'}
       onRetry={chunk ? () => location.reload() : retry}
       onBack={onBack}
-      backLabel={`${josa(NAMES.village, '으로/로')} 돌아가기`}
+      backLabel="나가기"
     />
   );
 }
@@ -205,16 +326,18 @@ function VillageHint({ paused }: { paused: boolean }) {
   return (
     <output className="l-world-hint">
       바닥을 눌러 걷고, 마을 안내에서 장소를 찾아요
-      <span> · 방향키 / WASD · Shift 달리기 · E 입장</span>
+      <span> · 방향키 / WASD · Shift 달리기 · E 오른쪽 아래 버튼</span>
     </output>
   );
 }
 
+/** Still loading after the transition: a calm backdrop; the spinner shows only if it takes long. */
 function Loading({ text }: { text: string }) {
   return (
-    <div className="l-empty l-screen-loading">
-      <span className="l-spinner" />
-      <p>{text}</p>
+    <div className="l-empty l-screen-loading l-scene-wait">
+      <p>
+        <span className="l-spinner" /> {text}
+      </p>
     </div>
   );
 }
@@ -257,8 +380,13 @@ function AccountLounge({
   const [room] = useState(() => new CloudRoom(account)),
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
     [settings, updateSettings] = useSettings(),
-    [toast, notify] = useToast(),
-    [tab, setTab] = useState<Tab>('village'),
+    banners = useBanners(),
+    { notify, push: pushBanner, drop: dropBanner } = banners,
+    // The day starts in my own room, next to the bed.
+    [tab, setTab] = useState<Tab>('bedroom'),
+    [roomSpawn, setRoomSpawn] = useState<'bed' | 'door'>('bed'),
+    // The wardrobe opened from my room ("옷 갈아입기") returns there.
+    [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom'>('village'),
     [modal, setModal] = useState<ModalName | null>(null),
     [confirm, setConfirm] = useState<Confirm | null>(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
@@ -279,9 +407,13 @@ function AccountLounge({
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
     [localReaction, setLocalReaction] = useState<Reaction>(),
     [villageSpawn, setVillageSpawn] = useState<VillagePoint>(),
-    [coach, setCoach] = useState(false);
+    [coach, setCoach] = useState<'room' | 'village' | null>(null);
+  const [fade, playFade] = useSceneFade();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
-    enteredPlace = useRef<VillagePlace | null>(null),
+    // Leaving my room at the start of the day comes out of my own front door.
+    enteredPlace = useRef<VillagePlace | null>(
+      VILLAGE_PLACES.find((p) => p.id === `home-${account.actor}`) ?? null,
+    ),
     lookRef = useRef(save.looks[save.actor]),
     tabRef = useRef(tab);
   const myLook = save.looks[save.actor];
@@ -295,6 +427,13 @@ function AccountLounge({
     [updateSettings],
   );
 
+  // Banner buttons run whatever is current when they are pressed.
+  const flowRef = useRef({
+    openMail: () => {},
+    enterRoom: () => {},
+    openGame: (_kind: GameKind) => {},
+    openInvites: () => {},
+  });
   // Village music, ambience and UI clicks (start after the first gesture).
   useEffect(() => loungeAudio.attach(), []);
 
@@ -303,11 +442,14 @@ function AccountLounge({
   const lastUnread = useRef<number | null>(null);
   useEffect(() => {
     if (lastUnread.current !== null && unread > lastUnread.current) {
-      notify(`새 편지가 ${unread - lastUnread.current}통 왔어요. 우편함을 열어 보세요.`, 'info');
+      pushBanner('mail', `새 편지가 ${unread - lastUnread.current}통 왔어요.`, {
+        key: 'mail',
+        action: { label: '보기', run: () => flowRef.current.openMail() },
+      });
       loungeAudio.chime('mail');
     }
     lastUnread.current = unread;
-  }, [unread, notify]);
+  }, [unread, pushBanner]);
 
   // Join the always-on village (or the room of an invite link) right after login.
   useEffect(() => {
@@ -324,7 +466,8 @@ function AccountLounge({
           '비밀번호가 받은 코드와 비슷해요. 내 계정에서 비밀번호를 바꿔 주세요.',
           'error',
         );
-      } else if (shouldOnboard()) setCoach(true);
+      } else if (shouldOnboard())
+        setCoach(shouldOnboardRoom() && tabRef.current === 'bedroom' ? 'room' : 'village');
     }, 1200);
     return () => {
       clearTimeout(first);
@@ -377,11 +520,22 @@ function AccountLounge({
         invite.status === 'waiting' &&
         invite.invited.includes(view.self) &&
         invite.from !== view.self
+      ) {
+        const text = `${nameOf(invite.from, view.players)}의 ${GAME_INFO[invite.game].name} 초대가 왔어요.`;
+        attention('invite', text);
+        pushBanner('invite', text, {
+          key: 'invite-' + invite.id,
+          action: { label: '보기', run: () => flowRef.current.openInvites() },
+        });
+      }
+      // Answered / ended: its banner is no longer news.
+      if (
+        prev?.status === 'waiting' &&
+        (invite.status !== 'waiting' ||
+          invite.accepted.includes(view.self) ||
+          (invite.declined ?? []).includes(view.self))
       )
-        attention(
-          'invite',
-          `${nameOf(invite.from, view.players)}의 ${GAME_INFO[invite.game].name} 초대가 왔어요.`,
-        );
+        dropBanner('invite-' + invite.id);
       if (
         prev?.status === 'waiting' &&
         (invite.status === 'cancelled' || invite.status === 'expired') &&
@@ -401,9 +555,12 @@ function AccountLounge({
     }
     const ids = new Set(view.invites.map((invite) => invite.id));
     for (const id of inviteStates.current.keys())
-      if (!ids.has(id)) inviteStates.current.delete(id);
+      if (!ids.has(id)) {
+        inviteStates.current.delete(id);
+        dropBanner('invite-' + id);
+      }
     previousPlayers.current = view.players;
-  }, [view.invites, view.players, view.self, notify]);
+  }, [view.invites, view.players, view.self, notify, pushBanner, dropBanner]);
 
   // A game screen covers the shell (the village stays mounted and paused), and
   // closing it restores the shell's scroll position (e.g. in the hall).
@@ -428,6 +585,13 @@ function AccountLounge({
     view.tables?.[kind]?.members.includes(view.self),
   );
   const connected = view.status === 'connected';
+  const pendingInvites = connected
+    ? view.invites.filter(
+        (r) =>
+          r.status === 'waiting' &&
+          (r.from === view.self || r.invited.includes(view.self)),
+      ).length
+    : 0;
 
   // Contract #1: tell the server where I am whenever the tab changes.
   const sendArea = useCallback(
@@ -454,21 +618,59 @@ function AccountLounge({
     destination: VillageDestination | 'village' = 'village',
     place?: VillagePlace,
   ) => {
-    if (place) enteredPlace.current = place;
-    if (destination === 'village' && tab !== 'village') {
-      const position = enteredPlace.current
-        ? villageReturnPoint(enteredPlace.current)
-        : villagePosition.current;
-      setVillageSpawn(position);
-      villagePosition.current = position;
-      enteredPlace.current = null;
+    const from = tab;
+    const go = () => {
+      if (place) enteredPlace.current = place;
+      if (destination === 'village' && from !== 'village') {
+        const position = enteredPlace.current
+          ? villageReturnPoint(enteredPlace.current)
+          : villagePosition.current;
+        setVillageSpawn(position);
+        villagePosition.current = position;
+        enteredPlace.current = null;
+      }
+      if (destination === 'village' && from === 'wardrobe')
+        setSave((s) => ({ ...s, visits: s.visits + 1 }));
+      // Walking in from the village: at the door. Back from the wardrobe: by the bed.
+      if (destination === 'bedroom')
+        setRoomSpawn(from === 'wardrobe' ? 'bed' : 'door');
+      if (destination === 'wardrobe')
+        setWardrobeFrom(from === 'bedroom' ? 'bedroom' : 'village');
+      setModal(null);
+      setTab(destination);
+      if (destination !== from) sendArea(destination);
+    };
+    if (destination === from) go();
+    else {
+      preloadTab(destination, save);
+      playFade(go);
     }
-    if (destination === 'village' && tab === 'wardrobe')
-      setSave((s) => ({ ...s, visits: s.visits + 1 }));
-    setModal(null);
-    setTab(destination);
-    if (destination !== tab) sendArea(destination);
   };
+  /** 나가기 from an interior: the wardrobe opened from my room goes back there. */
+  const leaveInterior = () =>
+    enter(tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? 'bedroom' : 'village');
+  const backTo =
+    tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : NAMES.village;
+  // Esc in the hall, the casino, the wardrobe or my room = 나가기.
+  const leaveRef = useRef(leaveInterior);
+  useLayoutEffect(() => {
+    leaveRef.current = leaveInterior;
+  });
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (tabRef.current === 'village' || document.querySelector('dialog[open], .l-coach'))
+        return;
+      const t = e.target as HTMLElement | null;
+      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+      // My room handles its own keys (꾸미기 uses Esc to deselect).
+      if (t?.closest('.b3-scene') || document.querySelector('.b3-room[data-editing]')) return;
+      if (document.querySelector('.l-in-game, [data-testid=friend-visit]')) return;
+      leaveRef.current();
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, []);
   const move = useCallback(
     (x: number, y: number) => {
       if (room.snapshot().status === 'connected')
@@ -530,7 +732,7 @@ function AccountLounge({
   const visitHouse = (actor: number) => {
     if (actor === save.actor) {
       setVisiting(null);
-      enter('bedroom');
+      enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${actor}`));
       return;
     }
     if (view.life?.rooms?.[actor]?.access === 'closed') {
@@ -538,26 +740,58 @@ function AccountLounge({
       return;
     }
     setModal(null);
-    setVisiting(actor);
-    if (connected)
-      void room
-        .area('home', AREA_DEFAULTS.home.x, AREA_DEFAULTS.home.y, actor)
-        .then((ok) => {
-          if (!ok) leaveVisit(actor);
-        });
+    if (connected) void prefetchVisit(actor).catch(() => {});
+    playFade(() => {
+      setVisiting(actor);
+      if (connected)
+        void room
+          .area('home', AREA_DEFAULTS.home.x, AREA_DEFAULTS.home.y, actor)
+          .then((ok) => {
+            if (!ok) leaveVisit(actor);
+          });
+    });
   };
   const leaveVisit = (owner = visiting) => {
-    setVisiting(null);
-    // Back out through their front door.
-    const place = VILLAGE_PLACES.find((p) => p.id === `home-${owner}`);
-    const spot = place ? villageReturnPoint(place) : villagePosition.current;
-    if (spot) {
-      villagePosition.current = spot;
-      setVillageSpawn(spot);
-    }
-    if (tabRef.current !== 'village') setTab('village');
-    sendArea('village');
+    playFade(() => {
+      setVisiting(null);
+      // Back out through their front door.
+      const place = VILLAGE_PLACES.find((p) => p.id === `home-${owner}`);
+      const spot = place ? villageReturnPoint(place) : villagePosition.current;
+      if (spot) {
+        villagePosition.current = spot;
+        setVillageSpawn(spot);
+      }
+      if (tabRef.current !== 'village') setTab('village');
+      sendArea('village');
+    });
   };
+  // Walking up to a door: load what is behind it (chunk, art, a friend's room).
+  const preloadPlace = (place: VillagePlace | null) => {
+    if (!place) return;
+    if (place.kind === 'home' && place.actor !== save.actor) {
+      if (place.actor !== undefined && room.snapshot().status === 'connected')
+        void prefetchVisit(place.actor).catch(() => {});
+      return;
+    }
+    preloadTab(place.destination, save);
+  };
+  // Who is inside each building, for the door prompt ("회관 · 안에 2명").
+  const areaCounts: Record<string, number> = {};
+  if (connected)
+    for (const p of view.players) {
+      if (p.id === view.self) continue;
+      const id =
+        p.area === 'lounge'
+          ? 'hall'
+          : p.area === 'casino'
+            ? 'casino'
+            : p.area === 'wardrobe'
+              ? 'wardrobe'
+              : p.area === 'home'
+                ? `home-${p.home ?? p.actor}`
+                : null;
+      if (id) areaCounts[id] = (areaCounts[id] ?? 0) + 1;
+    }
   // Someone walked into my room / wrote in my guestbook: tell me.
   const roomGuests = useRef<Set<string> | null>(null);
   useEffect(() => {
@@ -568,16 +802,28 @@ function AccountLounge({
     if (known)
       for (const p of here)
         if (!known.has(p.id))
-          notify(`${josa(ACTORS[p.actor], '이/가')} 내 방에 놀러 왔어요.`, 'info');
+          pushBanner('guest', `${josa(ACTORS[p.actor], '이/가')} 내 방에 놀러 왔어요.`, {
+            key: 'guest-' + p.id,
+            action:
+              tabRef.current === 'bedroom'
+                ? undefined
+                : { label: '가기', run: () => flowRef.current.enterRoom() },
+          });
     roomGuests.current = new Set(here.map((p) => p.id));
-  }, [view.players, view.self, save.actor, notify]);
+  }, [view.players, view.self, save.actor, pushBanner]);
   const guestbookUnread = view.life?.me.guestbookUnread ?? 0;
   const lastGuestbook = useRef<number | null>(null);
   useEffect(() => {
     if (lastGuestbook.current !== null && guestbookUnread > lastGuestbook.current)
-      notify(`방명록에 새 글이 ${guestbookUnread}개 있어요. 내 방에서 읽어 보세요.`, 'info');
+      pushBanner('guest', `방명록에 새 글이 ${guestbookUnread}개 있어요.`, {
+        key: 'guestbook',
+        action:
+          tabRef.current === 'bedroom'
+            ? undefined
+            : { label: '가기', run: () => flowRef.current.enterRoom() },
+      });
     lastGuestbook.current = guestbookUnread;
-  }, [guestbookUnread, notify]);
+  }, [guestbookUnread, pushBanner]);
   // Visitors refetch my room shortly after I save a decoration change.
   const decoratedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomDecorated = () => {
@@ -590,6 +836,89 @@ function AccountLounge({
     setMailTo(to);
     setModal('mail');
   };
+  // Opens a table screen (banner [가기], retained-table button).
+  const openGame = (kind: GameKind) => {
+    setModal(null);
+    setGameScreen(kind);
+  };
+  // Closing a table started in the hall/casino puts me beside that table there.
+  const closeGame = () => {
+    const kind = gameScreen;
+    setGameScreen(null);
+    const area = tab === 'lounge' ? 'lounge' : tab === 'casino' ? 'casino' : null;
+    if (kind && area && (area === 'casino') === ['poker', 'blackjack', 'chess'].includes(kind)) {
+      const side = sceneTableSide(area, kind);
+      move(side.x, side.y);
+    }
+  };
+  useLayoutEffect(() => {
+    flowRef.current = {
+      openMail: () => openMail(),
+      enterRoom: () => {
+        if (visiting !== null) leaveVisit();
+        if (tabRef.current !== 'bedroom')
+          enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`));
+      },
+      openGame,
+      openInvites: () => setModal('invitations'),
+    };
+  });
+  // "내 차례": a banner with [가기] when the table is not on screen.
+  const turnsRef = useRef(new Set<GameKind>());
+  useEffect(() => {
+    for (const kind of GAME_KINDS) {
+      const seat = view.seats[kind].indexOf(view.self);
+      const now = connected && seat >= 0 && myTurn(kind, view, seat);
+      const was = turnsRef.current.has(kind);
+      if (now && !was) {
+        turnsRef.current.add(kind);
+        if (!(inGame && gameScreen === kind)) {
+          const text = `${GAME_INFO[kind].name} · 내 차례예요.`;
+          attention('turn', text);
+          pushBanner('turn', text, {
+            key: 'turn-' + kind,
+            action: { label: '가기', run: () => flowRef.current.openGame(kind) },
+          });
+        }
+      } else if (!now && was) {
+        turnsRef.current.delete(kind);
+        dropBanner('turn-' + kind);
+      }
+    }
+  });
+  // The day starts in my room: one line about today's grant / new mail.
+  const greeted = useRef(false);
+  useEffect(() => {
+    if (greeted.current || !connected) return;
+    const timer = setTimeout(() => {
+      if (greeted.current) return;
+      greeted.current = true;
+      const v = room.snapshot();
+      const daily = dailyOf(v),
+        letters = v.life?.me.mailUnread ?? 0;
+      const parts: string[] = [];
+      if (daily?.available) parts.push(`오늘의 범 ${josa(formatBeom(daily.amount), '이/가')} 기다려요`);
+      if (letters) parts.push(`새 편지 ${letters}통`);
+      if (daily?.available)
+        pushBanner('daily', parts.join(' · '), {
+          key: 'daily',
+          action: {
+            label: '받기',
+            run: () =>
+              void room.daily().then((ok) => {
+                if (ok)
+                  notify(`오늘의 범 ${josa(formatBeom(daily.amount), '을/를')} 받았어요.`);
+              }),
+          },
+        });
+      else if (letters)
+        pushBanner('mail', parts.join(' · ') + '이 와 있어요.', {
+          key: 'mail',
+          action: { label: '보기', run: () => flowRef.current.openMail() },
+        });
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [connected, room, pushBanner, notify]);
   // Life loop entries for the simple / fallback village (no 3D scene).
   const simpleLife = {
     life: view.life,
@@ -755,7 +1084,8 @@ function AccountLounge({
           kind={gameScreen}
           room={room}
           view={view}
-          onBack={() => setGameScreen(null)}
+          onBack={closeGame}
+          place={TAB_TITLES[tab]}
           onRequest={requestGame}
           reactionsHidden={reactionsHidden}
           onReactionsHidden={setReactionsHidden}
@@ -768,9 +1098,8 @@ function AccountLounge({
         room={room}
         view={view}
         notify={notify}
-        onBrand={() =>
-          tab === 'village' ? setModal('menu') : enter('village')
-        }
+        onBrand={() => (tab === 'village' ? setModal('menu') : leaveInterior())}
+        backTo={backTo}
         onPresence={() => setModal('friends')}
         onInvite={() => requestGame(null)}
         onWallet={() => setModal('wallet')}
@@ -811,7 +1140,7 @@ function AccountLounge({
             </span>
             <button
               className="l-primary"
-              onClick={() => setGameScreen(retainedTable)}
+              onClick={() => openGame(retainedTable)}
             >
               게임으로 돌아가기 <ArrowRight size={15} />
             </button>
@@ -841,8 +1170,17 @@ function AccountLounge({
             <button onClick={cloudSave.dismissDraft}>서버의 저장 유지</button>
           </div>
         )}
-        {tab !== 'lounge' && tab !== 'casino' && (
-          <Invitations room={room} view={view} />
+        {tab !== 'lounge' && tab !== 'casino' && pendingInvites > 0 && (
+          // Arrivals come as a banner; this line only keeps the status in view.
+          <aside className="l-retained-table l-invite-pill" aria-label="진행 중인 초대">
+            <span>
+              <strong>진행 중인 초대 {pendingInvites}건</strong>
+              <small>친구들의 답을 기다리고 있어요.</small>
+            </span>
+            <button className="l-secondary" onClick={() => setModal('invitations')}>
+              보기 <ArrowRight size={15} />
+            </button>
+          </aside>
         )}
       </div>
       {visiting !== null ? (
@@ -917,6 +1255,8 @@ function AccountLounge({
                       onMail={() => openMail()}
                       onPick={(tree) => void pickFruit(tree)}
                       onVisit={visitHouse}
+                      areaCounts={areaCounts}
+                      onNear={preloadPlace}
                     />
                   </Suspense>
                 </ScreenBoundary>
@@ -948,7 +1288,7 @@ function AccountLounge({
                     onSend={greet}
                   />
                 </div>
-                <VillageHint paused={coach || !!modal} />
+                <VillageHint paused={!!coach || !!modal} />
               </div>
             )}
           </div>
@@ -971,6 +1311,11 @@ function AccountLounge({
             }
           >
             <BedroomEditor
+              key={roomSpawn}
+              spawn={roomSpawn}
+              onExit={() => enter('village')}
+              onDress={() => enter('wardrobe')}
+              onNearDoor={() => preloadTab('village')}
               save={save}
               onChange={setSave}
               notice={(s) => notify(s)}
@@ -1010,7 +1355,7 @@ function AccountLounge({
               what={NAMES.wardrobe}
               retry={retry}
               chunk={chunk}
-              onBack={() => enter('village')}
+              onBack={leaveInterior}
             />
           )}
         >
@@ -1024,7 +1369,7 @@ function AccountLounge({
               onChange={changeSave}
               locked
               entry={false}
-              onEnter={() => enter('village')}
+              onEnter={leaveInterior}
               notice={(s) => notify(s)}
               unlocks={view.life?.me.unlocks}
             />
@@ -1136,7 +1481,7 @@ function AccountLounge({
               <strong>다음에는 어디로 걸어갈까요?</strong>
             </span>
             <span>
-              {josa(NAMES.village, '으로/로')} 돌아가기
+              나가기
               <ArrowRight size={18} />
             </span>
           </button>
@@ -1237,7 +1582,7 @@ function AccountLounge({
             <button
               onClick={() => {
                 setModal(null);
-                setCoach(true);
+                setCoach(tab === 'bedroom' ? 'room' : 'village');
               }}
             >
               처음 안내 다시 보기
@@ -1419,10 +1764,20 @@ function AccountLounge({
           onConfirm={reset}
         />
       )}
-      {coach && tab === 'village' && visiting === null && !modal && (
-        <Onboarding onDone={() => setCoach(false)} />
+      {coach === 'village' && tab === 'village' && visiting === null && !modal && (
+        <Onboarding onDone={() => setCoach(null)} />
       )}
-      <Toast toast={toast} />
+      {coach === 'room' && tab === 'bedroom' && visiting === null && !modal && (
+        <Onboarding
+          place="room"
+          onDone={() => {
+            // The village's own coach marks follow on the first walk outside.
+            setCoach(shouldOnboard() ? 'village' : null);
+          }}
+        />
+      )}
+      <Toast banners={banners} />
+      {fade}
     </main>
   );
 }

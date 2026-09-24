@@ -1,0 +1,299 @@
+/* Game flow (step 1): the one action button, the one top banner, scene
+   transitions and the door prompt's head count. */
+
+/* ------------------------------------------------------------ action button */
+.l-action-button {
+  position: absolute;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 140px;
+  min-height: 56px;
+  padding: 8px 16px;
+  border: 2px solid #fffdf1;
+  border-radius: 18px;
+  background: #3f6a4a;
+  color: #fffdf1;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  box-shadow: 0 8px 22px #1f35244d;
+  cursor: pointer;
+  touch-action: manipulation;
+  white-space: nowrap;
+}
+.l-action-button:hover {
+  background: #355c3f;
+}
+.l-action-button:focus-visible {
+  outline: 3px solid #f2c14e;
+  outline-offset: 3px;
+}
+.l-action-button:disabled {
+  background: #8f9a86;
+  cursor: default;
+}
+.l-action-button[data-action='enter'],
+.l-action-button[data-action='exit'] {
+  background: #7a4f2a;
+}
+.l-action-button[data-action='enter']:hover,
+.l-action-button[data-action='exit']:hover {
+  background: #683f1f;
+}
+.l-action-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #ffffff2e;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-action-button {
+    animation: l-action-in 160ms ease-out;
+  }
+  @keyframes l-action-in {
+    from {
+      transform: translateY(6px) scale(0.96);
+      opacity: 0.4;
+    }
+  }
+}
+
+/* Village: right above the D-pad (bottom-right). */
+.hv-action {
+  right: max(20px, calc(env(safe-area-inset-right) + 8px));
+  bottom: calc(max(38px, calc(env(safe-area-inset-bottom) + 8px)) + 150px);
+}
+.hv-inside {
+  font-weight: 700;
+  color: #7a4f2a;
+}
+/* The prompt is information only now (the action is on the button). */
+.hv-entry-prompt {
+  pointer-events: none;
+}
+@media (max-width: 600px) {
+  .hv-action {
+    right: max(12px, calc(env(safe-area-inset-right) + 8px));
+    bottom: calc(max(24px, calc(env(safe-area-inset-bottom) + 8px)) + 150px);
+  }
+  .l-immersive .hv-entry-prompt {
+    right: 164px;
+    bottom: 174px;
+  }
+}
+
+/* Room / friend's room: bottom-right of the scene, left of the D-pad. */
+.b3-action {
+  z-index: 3;
+  right: 18px;
+  bottom: 64px;
+}
+.b3-pad ~ .b3-action {
+  right: 176px;
+}
+@media (max-width: 650px) {
+  .b3-pad {
+    justify-content: start !important;
+    padding-left: 16px !important;
+  }
+  .b3-action,
+  .b3-pad ~ .b3-action {
+    right: 14px;
+    bottom: 96px;
+    min-width: 128px;
+  }
+}
+
+/* Hall / casino: over the scene's bottom-right corner; on narrow scenes a
+   full-width row under the room so it never covers a table or a player. */
+.cf-scene-shell {
+  position: relative;
+}
+.cf-action {
+  right: 14px;
+  bottom: 14px;
+}
+@container (max-width: 540px) {
+  .cf-action {
+    position: static;
+    width: calc(100% - 16px);
+    margin: 8px;
+  }
+}
+
+/* ------------------------------------------------------------ top banner */
+.l-app .l-banner,
+.l-app .l-banner[popover],
+.l-app.l-immersive .l-banner[popover] {
+  position: fixed;
+  inset: calc(max(16px, env(safe-area-inset-top)) + 64px) auto auto 50%;
+  bottom: auto;
+  transform: translateX(-50%);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 24px));
+  min-height: 48px;
+  padding: 4px 4px 4px 16px;
+  border: 0;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: visible;
+  box-shadow: 0 10px 30px #1b2a3a40;
+}
+.l-app .l-banner > span {
+  flex: 1;
+  min-width: 0;
+}
+.l-app .l-banner.is-invite,
+.l-app .l-banner.is-turn {
+  background: #7a4f2a;
+  color: #fff;
+}
+.l-app .l-banner.is-mail,
+.l-app .l-banner.is-guest,
+.l-app .l-banner.is-daily {
+  background: #3f6a4a;
+  color: #fff;
+}
+.l-banner-more {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: #ffffff2e;
+  font-size: 11px;
+  font-weight: 700;
+}
+.l-banner-action {
+  flex: none;
+  min-width: 56px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 11px;
+  background: #fffdf1;
+  color: #2c3b2c;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.l-banner-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.l-banner-close:hover,
+.l-banner-action:hover {
+  filter: brightness(0.95);
+}
+@media (max-width: 600px) {
+  .l-app .l-banner,
+  .l-app .l-banner[popover],
+  .l-app.l-immersive .l-banner[popover] {
+    inset: calc(max(12px, env(safe-area-inset-top)) + 58px) 12px auto 12px;
+    transform: none;
+    width: auto;
+    max-width: none;
+    font-size: 12px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-app .l-banner {
+    animation: l-banner-in 180ms ease-out;
+  }
+  @keyframes l-banner-in {
+    from {
+      opacity: 0;
+      translate: 0 -8px;
+    }
+  }
+}
+
+/* ------------------------------------------------------------ scene transition */
+.l-scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+}
+.l-scene-fade:not(.is-active) {
+  display: none;
+}
+.l-scene-fade.is-active {
+  pointer-events: auto;
+}
+.l-scene-fade > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 150vmax #12161b;
+}
+.l-scene-fade.is-plain > i {
+  width: 0;
+  height: 0;
+  box-shadow: none;
+}
+.l-scene-fade.is-plain {
+  background: #12161b;
+}
+/* A place that is still loading after the transition: calm dark backdrop,
+   the spinner only appears if loading takes long. */
+.l-scene-wait {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+  color: #6b7a66;
+  font-size: 13px;
+}
+.l-scene-wait > * {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-scene-wait > * {
+    animation: l-scene-wait 200ms ease 1200ms forwards;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-scene-wait > * {
+    opacity: 1;
+  }
+}
+@keyframes l-scene-wait {
+  to {
+    opacity: 1;
+  }
+}
+
+/* Header icons keep a full 44px target when the daily chip squeezes the row. */
+.l-world-header .l-header-icon,
+.l-world-header .l-invite-button {
+  min-width: 44px;
+  flex-shrink: 0;
+}

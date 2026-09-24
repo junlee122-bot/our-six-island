@@ -6,6 +6,7 @@ import {
   itemFootprint,
   type Bedroom,
 } from './lounge-bedroom-data.ts';
+import { pickAction, type ActionKind } from './lounge-flow.ts';
 
 export type WalkPoint = { x: number; z: number };
 export type WalkObstacle = {
@@ -245,4 +246,93 @@ export function findWalkPath(
     i = next + 1;
   }
   return result;
+}
+
+/* ------------------------------------------------------------ flow helpers */
+
+/** The action button offers "나가기" this close to the door. */
+export const ROOM_DOOR_REACH = 1.1;
+/** "옷 갈아입기" this close to the wardrobe or the mirror. */
+export const ROOM_DRESS_REACH = 0.9;
+const DRESS_REFS = new Set(['wardrobe', 'mirror']);
+
+/**
+ * Where I appear when the day starts in my room: on the floor beside the bed
+ * (the side facing the room's middle), else just inside the door.
+ */
+export function besideBed(
+  room: Pick<Bedroom, 'items'>,
+  obstacles: readonly WalkObstacle[] = roomObstacles(room),
+): WalkPoint {
+  const bed = room.items.find((item) => item.ref === 'bed');
+  const box = bed ? itemFootprint(bed) : null;
+  if (box) {
+    const cx = (box.x0 + box.x1) / 2,
+      cz = (box.z0 + box.z1) / 2;
+    const gap = WALK_ROOM.radius + 0.12;
+    const sides: WalkPoint[] = [
+      { x: box.x1 + gap, z: cz },
+      { x: cx, z: box.z1 + gap },
+      { x: box.x0 - gap, z: cz },
+      { x: cx, z: box.z0 - gap },
+    ].sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z));
+    for (const side of sides) if (canWalk(side, obstacles)) return side;
+    const near = nearestWalkable({ x: cx, z: box.z1 + gap }, obstacles);
+    if (near) return near;
+  }
+  return nearestWalkable(WALK_START, obstacles) ?? { ...WALK_START };
+}
+
+/** Pressing out through the door (walking into the left wall at the doorway). */
+export function leavingThroughDoor(point: WalkPoint, dx: number) {
+  return (
+    dx < 0 &&
+    point.x <= ROOM.minX + WALK_ROOM.radius + 0.08 &&
+    point.z > ROOM.door.z0 + 0.12 &&
+    point.z < ROOM.door.z1 - 0.12
+  );
+}
+
+const rectDistance = (p: WalkPoint, box: { x0: number; x1: number; z0: number; z1: number }) =>
+  Math.hypot(
+    Math.max(0, box.x0 - p.x, p.x - box.x1),
+    Math.max(0, box.z0 - p.z, p.z - box.z1),
+  );
+
+/**
+ * The room's action button: 나가기 at the door, 옷 갈아입기 at the wardrobe or
+ * mirror (my room), otherwise 꾸미기 in my own room (nothing in a friend's).
+ */
+export function roomAction(
+  point: WalkPoint,
+  room: Pick<Bedroom, 'items'>,
+  {
+    own,
+    canExit = true,
+    canDress = own,
+  }: { own: boolean; canExit?: boolean; canDress?: boolean },
+): { kind: ActionKind; item?: string } | null {
+  const candidates = [];
+  if (canExit)
+    candidates.push({
+      kind: 'exit' as const,
+      distance: Math.hypot(point.x - ROOM_DOOR_POINT.x, point.z - ROOM_DOOR_POINT.z),
+      reach: ROOM_DOOR_REACH,
+      door: true,
+    });
+  if (own && canDress)
+    for (const item of room.items) {
+      if (!DRESS_REFS.has(item.ref)) continue;
+      const box = itemFootprint(item);
+      if (!box) continue;
+      candidates.push({
+        kind: 'dress' as const,
+        distance: rectDistance(point, box),
+        reach: ROOM_DRESS_REACH,
+        target: item.id,
+      });
+    }
+  if (own) candidates.push({ kind: 'decorate' as const, distance: 0, reach: 1, fallback: true });
+  const best = pickAction<string>(candidates);
+  return best ? { kind: best.kind, item: best.target } : null;
 }

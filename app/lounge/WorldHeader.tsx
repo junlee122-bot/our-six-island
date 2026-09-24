@@ -92,6 +92,7 @@ export function WorldHeader({
   onMenu,
   onMail,
   onBag,
+  backTo = NAMES.village,
 }: {
   tab: Tab;
   save: LoungeSave;
@@ -106,6 +107,8 @@ export function WorldHeader({
   onMenu: () => void;
   onMail?: () => void;
   onBag?: () => void;
+  /** Where the interior's 나가기 leads (마을, or 내 방 from the wardrobe). */
+  backTo?: string;
 }) {
   const village = tab === 'village';
   const unread = view.life?.me.mailUnread ?? 0;
@@ -118,7 +121,7 @@ export function WorldHeader({
         aria-label={
           village
             ? `${NAMES.app} 메뉴`
-            : `${josa(NAMES.village, '으로/로')} 돌아가기`
+            : `나가기 · ${josa(backTo, '으로/로')} (Esc)`
         }
       >
         <span className="l-brand-icon">
@@ -126,14 +129,12 @@ export function WorldHeader({
         </span>
         <span>
           <strong>
-            {village ? NAMES.app : `${josa(NAMES.village, '으로/로')} 돌아가기`}
+            {village ? NAMES.app : '나가기'}
           </strong>
           <small>
             {village
               ? '일곱 친구가 사는 마을'
-              : tab === 'bedroom'
-                ? `${ACTORS[save.actor]}의 집`
-                : TAB_TITLES[tab]}
+              : `${tab === 'bedroom' ? `${ACTORS[save.actor]}의 집` : TAB_TITLES[tab]} → ${backTo}`}
           </small>
         </span>
       </button>

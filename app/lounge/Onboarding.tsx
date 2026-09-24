@@ -17,14 +17,31 @@ type Step = {
   /** Optional extra action shown on the card. */
   action?: { label: string; event: string };
 };
+/** The day starts in my room: two short marks before the first walk outside. */
+const ROOM_STEPS: readonly Step[] = [
+  {
+    target: '[data-testid="bedroom-3d"]',
+    title: '내 방에서 하루를 시작해요',
+    text: (t) =>
+      t
+        ? '바닥을 누르거나 아래 방향 버튼으로 걸어요. 왼쪽 문으로 걸어 나가면 마을이에요.'
+        : '바닥을 누르거나 방향키·WASD로 걸어요. 왼쪽 문으로 걸어 나가거나 Esc를 누르면 마을이에요.',
+  },
+  {
+    target: '[data-testid="action-button"]',
+    title: '할 수 있는 일은 버튼 하나로',
+    text: (t) =>
+      `오른쪽 아래 버튼이 가까이 있는 것에 맞춰 바뀌어요. 문 앞에서는 “나가기”, 방 안에서는 “꾸미기”.${t ? '' : ' 키보드는 언제나 E예요.'}`,
+  },
+];
 const STEPS: readonly Step[] = [
   {
     target: '.l-village-world, .l-simple-village',
     title: '마을을 걸어요',
     text: (t) =>
       t
-        ? '바닥을 누르면 그곳까지 걸어가요. 건물 이름을 누르면 문 앞까지 가요.'
-        : '건물 이름을 누르면 문 앞까지 걸어가요. 키보드는 방향키나 WASD를 써요.',
+        ? '바닥을 누르면 그곳까지 걸어가요. 문 앞이나 밭 앞에 서면 오른쪽 아래 버튼이 “들어가기”, “심기”처럼 바뀌어요.'
+        : '방향키나 WASD로 걸어요. 문 앞이나 밭 앞에 서면 오른쪽 아래 버튼이 바뀌고, E로 눌러요.',
   },
   {
     target: '[data-coach="presence"]',
@@ -40,14 +57,14 @@ const STEPS: readonly Step[] = [
     target: '[data-farm-label="mine"], [data-testid="simple-farm"]',
     title: '내 집 앞 텃밭',
     text: (t) =>
-      `금색 테두리가 내 텃밭 6칸이에요. 가까이 가서 ${t ? '“텃밭 돌보기”를 누르면' : 'E를 누르면'} 씨앗을 심고 물을 줄 수 있어요. 광장 옆 큰 밭은 마을 공동 밭이에요.`,
+      `금색 테두리가 내 텃밭 6칸이에요. 가까이 가서 ${t ? '오른쪽 아래 “심기” 버튼을 누르면' : 'E를 누르면'} 씨앗을 심고 물을 줄 수 있어요. 광장 옆 큰 밭은 마을 공동 밭이에요.`,
     action: { label: '내 텃밭으로 가 보기', event: 'bumtadew:guide-farm' },
   },
   {
     target: '[data-testid="dock-bag"]',
     title: '가방 · 상점 · 친구 집',
     text: (t) =>
-      `수확물은 가방에서 팔고, 광장 옆 범타듀 상점에서 씨앗과 희귀 소품을 사요. 친구 집 앞에서 ${t ? '“놀러 가기”를 누르면' : 'E를 누르면'} 놀러 가서 방명록을 남길 수 있어요.`,
+      `수확물은 가방에서 팔고, 광장 옆 범타듀 상점에서 씨앗과 희귀 소품을 사요. 친구 집 앞에서 ${t ? '“들어가기”를 누르면' : 'E를 누르면'} 놀러 가서 방명록을 남길 수 있어요.`,
   },
 ];
 
@@ -56,14 +73,26 @@ type Rect = { top: number; left: number; width: number; height: number };
 export function shouldOnboard() {
   return recall(ONBOARDING_KEY) !== 'done';
 }
+const ROOM_ONBOARDING_KEY = 'bumtadew-onboarding-room-v1';
+export function shouldOnboardRoom() {
+  return recall(ROOM_ONBOARDING_KEY) !== 'done';
+}
 
 /** First-login coach marks (walk → 친구 모이기 → 게임 초대 → 텃밭·상점·친구 집), stored in localStorage. */
-export function Onboarding({ onDone }: { onDone: () => void }) {
+export function Onboarding({
+  onDone,
+  place = 'village',
+}: {
+  onDone: () => void;
+  /** 'room': the two marks in my room at the start of the day. */
+  place?: 'village' | 'room';
+}) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
-  const current = STEPS[step];
+  const steps = place === 'room' ? ROOM_STEPS : STEPS;
+  const current = steps[step];
   const finish = () => {
-    remember(ONBOARDING_KEY, 'done');
+    remember(place === 'room' ? ROOM_ONBOARDING_KEY : ONBOARDING_KEY, 'done');
     onDone();
   };
   useLayoutEffect(() => {
@@ -122,7 +151,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         }
       >
         <small>
-          {step + 1} / {STEPS.length}
+          {step + 1} / {steps.length}
         </small>
         <h2 id="l-coach-title">{current.title}</h2>
         <p>{current.text(touch())}</p>
@@ -144,10 +173,10 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
           <button
             className="l-primary"
             onClick={() =>
-              step + 1 < STEPS.length ? setStep(step + 1) : finish()
+              step + 1 < steps.length ? setStep(step + 1) : finish()
             }
           >
-            {step + 1 < STEPS.length ? '다음' : '시작하기'}
+            {step + 1 < steps.length ? '다음' : '시작하기'}
           </button>
         </div>
       </div>

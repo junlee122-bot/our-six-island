@@ -28,7 +28,6 @@ import {
 } from './lounge-color';
 import { loungeSprites } from './lounge-sprites';
 import { LOUNGE_ASSETS } from './lounge-assets';
-import { josa, NAMES } from './lounge-text';
 import type { Motion } from './character-style';
 import './lounge-wardrobe-club.css';
 
@@ -691,7 +690,7 @@ export function Wardrobe({
               자동으로 저장돼요
             </span>
             <button className="l-primary" onClick={onEnter}>
-              {entry ? '이 모습으로 입장' : `${josa(NAMES.village, '으로/로')} 돌아가기`}
+              {entry ? '이 모습으로 입장' : '나가기'}
               <ArrowRight size={18} />
             </button>
           </div>

@@ -23,10 +23,12 @@ import {
   unprojectFloor,
   sceneDepth,
   sceneStep,
+  sceneNearestTable,
   type SceneArea,
   type ScenePoint,
   type SceneTable,
 } from './lounge-scene-layout';
+import { ActionButton } from './lounge/ActionButton';
 import './lounge-scene.css';
 
 type RoomFloorProps = {
@@ -256,10 +258,18 @@ export function RoomFloor({
     lastSent: null as ScenePoint | null,
     moving: false,
   });
-  const latest = useRef({ onMove, runMode, area });
+  const latest = useRef({ onMove, runMode, area, onTable });
   useEffect(() => {
-    latest.current = { onMove, runMode, area };
-  }, [onMove, runMode, area]);
+    latest.current = { onMove, runMode, area, onTable };
+  }, [onMove, runMode, area, onTable]);
+  // The one action button: the nearest table within reach ("둘러보기", E).
+  const [near, setNear] = useState<GameKind | null>(null);
+  const nearRef = useRef<GameKind | null>(null);
+  const [touch] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches,
+  );
   // Adopt server positions (entering, seats after a game) while standing still.
   useEffect(() => {
     if (!me) return;
@@ -338,6 +348,11 @@ export function RoomFloor({
         }
       }
       wasMoving = moved;
+      const table = sceneNearestTable(state.point, latest.current.area)?.game ?? null;
+      if (table !== nearRef.current) {
+        nearRef.current = table;
+        setNear(table);
+      }
     };
     frame = requestAnimationFrame(tick);
     const release = () => {
@@ -367,6 +382,14 @@ export function RoomFloor({
           )
             return;
           live.current.shift = e.shiftKey;
+          if (e.code === 'KeyE' || e.code === 'Enter') {
+            if (e.target !== e.currentTarget) return;
+            if (nearRef.current) {
+              e.preventDefault();
+              latest.current.onTable(nearRef.current);
+            }
+            return;
+          }
           // Physical key codes: WASD also works with a Korean IME active.
           if (!SCENE_KEYS[e.code]) return;
           e.preventDefault();
@@ -449,6 +472,20 @@ export function RoomFloor({
           바닥을 눌러 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
+      <ActionButton
+        className="cf-action"
+        kind={near ? 'look' : null}
+        detail={
+          near
+            ? `${GAME_INFO[near].name} 테이블 · ${tableSummary(view, near).status} · ${tableSummary(view, near).occupancy}`
+            : undefined
+        }
+        label={near ? `${GAME_INFO[near].name} 둘러보기` : undefined}
+        touch={touch}
+        onPress={() => {
+          if (near) onTable(near);
+        }}
+      />
       <div className="cf-scene-table-list" aria-label="게임 테이블">
         {layout.tables.map(({ game }) => {
           const summary = tableSummary(view, game);

@@ -186,7 +186,7 @@ export function RoundReady({
           disabled={pending}
         >
           <LogOut size={16} />
-          게임 나가기
+          일어나기
         </button>
       </div>
       <output className="l-round-feedback" aria-live="polite">

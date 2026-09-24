@@ -63,6 +63,9 @@ import { ACTORS } from './lounge-roster';
 import { josa } from './lounge-text';
 import {
   WALK_START,
+  besideBed,
+  leavingThroughDoor,
+  roomAction,
   findWalkPath,
   nearestWalkable,
   roomObstacles,
@@ -71,6 +74,8 @@ import {
   type WalkObstacle,
   type WalkPoint,
 } from './lounge-bedroom-navigation';
+import { ActionButton } from './lounge/ActionButton';
+import type { ActionKind } from './lounge-flow';
 import './lounge-bedroom-3d.css';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -130,6 +135,10 @@ export function Bedroom3D({
   presence,
   unlocks = [],
   notice,
+  onExit,
+  onDress,
+  spawn = 'door',
+  onNearDoor,
 }: {
   save: LoungeSave;
   /** Owner only: saves room edits (꾸미기 모드 is unavailable without it). */
@@ -143,6 +152,14 @@ export function Bedroom3D({
   presence?: RoomPresence;
   unlocks?: readonly string[];
   notice?: (message: string) => void;
+  /** Walking out of the door / 나가기 / Esc (my room): back to the village. */
+  onExit?: () => void;
+  /** 옷 갈아입기 at the wardrobe or mirror (my room). */
+  onDress?: () => void;
+  /** Where I appear: at the door (walked in) or beside the bed (day start). */
+  spawn?: 'door' | 'bed';
+  /** I am near the door: preload the village. */
+  onNearDoor?: () => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLDivElement>());
@@ -159,6 +176,10 @@ export function Bedroom3D({
     [visit, save.bedroom, save.actor],
   );
   const canEdit = !visit && !!onChange;
+  const canEditRef = useRef(canEdit);
+  useLayoutEffect(() => {
+    canEditRef.current = canEdit;
+  });
   const [editing, setEditing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<RoomItem | null>(null);
@@ -180,7 +201,36 @@ export function Bedroom3D({
     latest.current = { save, room, visit, presence, editing, selectedId, draft };
   });
   const studioRef = useRef<RoomScene | null>(null);
-  const positionRef = useRef<WalkPoint>({ ...WALK_START });
+  const positionRef = useRef<WalkPoint>(
+    spawn === 'bed' && !visit
+      ? besideBed(save.bedroom ?? defaultBedroom(save.actor))
+      : { ...WALK_START },
+  );
+  const [action, setAction] = useState<{ kind: ActionKind; item?: string } | null>(null);
+  const [touch] = useState(
+    () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches,
+  );
+  const flow = useRef({ onExit, onDress, onNearDoor });
+  useLayoutEffect(() => {
+    flow.current = { onExit, onDress, onNearDoor };
+  });
+  const exited = useRef(false);
+  const runAction = (kind: ActionKind | undefined) => {
+    if (kind === 'exit') {
+      if (exited.current) return;
+      exited.current = true;
+      flow.current.onExit?.();
+    } else if (kind === 'dress') flow.current.onDress?.();
+    else if (kind === 'decorate' && canEditRef.current) {
+      setEditing(true);
+      hostRef.current?.focus({ preventScroll: true });
+    }
+  };
+  const runActionRef = useRef(runAction);
+  useLayoutEffect(() => {
+    runActionRef.current = runAction;
+  });
+  const actionRef = useRef<{ kind: ActionKind; item?: string } | null>(null);
   const historyRef = useRef(history);
   useLayoutEffect(() => {
     historyRef.current = history;
@@ -649,6 +699,19 @@ export function Bedroom3D({
         }
         return;
       }
+      if (event.code === 'KeyE' && !event.ctrlKey && !event.metaKey) {
+        // The one action button: E always presses it.
+        if (actionRef.current) {
+          event.preventDefault();
+          runActionRef.current(actionRef.current.kind);
+        }
+        return;
+      }
+      if (event.key === 'Escape' && !latest.current.visit && flow.current.onExit) {
+        event.preventDefault();
+        runActionRef.current('exit');
+        return;
+      }
       const direction = KEYS[event.code];
       if (!direction || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
@@ -774,7 +837,10 @@ export function Bedroom3D({
           const length = Math.hypot(horizontal, vertical);
           horizontal /= length;
           vertical /= length;
-          position = walkStep(position, (horizontal + vertical) * Math.SQRT1_2 * speed * dt, (vertical - horizontal) * Math.SQRT1_2 * speed * dt);
+          const stepX = (horizontal + vertical) * Math.SQRT1_2 * speed * dt;
+          position = walkStep(position, stepX, (vertical - horizontal) * Math.SQRT1_2 * speed * dt);
+          if (leavingThroughDoor(position, stepX) && flow.current.onExit)
+            queueMicrotask(() => runActionRef.current('exit'));
         } else if (path.length) {
           const next = path[0],
             dx = next.x - position.x,
@@ -862,6 +928,22 @@ export function Bedroom3D({
           top.project(camera);
           host.dataset.selectedAt = `${Math.round(((top.x + 1) / 2) * host.clientWidth)},${Math.round(((1 - top.y) / 2) * host.clientHeight)}`;
         } else delete host.dataset.selectedAt;
+        const nextAction = latest.current.editing
+          ? null
+          : roomAction(position, latest.current.room, {
+              own: canEditRef.current,
+              canExit: !!flow.current.onExit,
+              canDress: !!flow.current.onDress,
+            });
+        if (
+          nextAction?.kind !== actionRef.current?.kind ||
+          nextAction?.item !== actionRef.current?.item
+        ) {
+          if (nextAction?.kind === 'exit') flow.current.onNearDoor?.();
+          actionRef.current = nextAction;
+          setAction(nextAction);
+        }
+        host.dataset.action = nextAction?.kind ?? '';
         host.dataset.avatarX = position.x.toFixed(3);
         host.dataset.avatarZ = position.z.toFixed(3);
         host.dataset.walking = String(walking);
@@ -1160,6 +1242,14 @@ export function Bedroom3D({
             </div>
           )
         )}
+        {!editing && state !== 'unavailable' && (
+          <ActionButton
+            className="b3-action"
+            kind={action?.kind ?? null}
+            touch={touch}
+            onPress={() => runAction(action?.kind)}
+          />
+        )}
         <div className="b3-scene-footer">
           <span>
             {editing ? (
@@ -1174,19 +1264,6 @@ export function Bedroom3D({
               </>
             )}
           </span>
-          {canEdit && !editing && (
-            <button
-              type="button"
-              className="b3-decorate"
-              onClick={() => {
-                setEditing(true);
-                hostRef.current?.focus({ preventScroll: true });
-              }}
-              data-testid="room-decorate"
-            >
-              <Palette size={16} /> 꾸미기 모드
-            </button>
-          )}
         </div>
       </div>
       {state === 'partial' && <output className="b3-status">{message}</output>}

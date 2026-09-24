@@ -93,9 +93,13 @@ export function farmFront(bed: FarmBed): VillagePoint {
 }
 
 export const FARM_REACH = 1.3;
-export function nearFarm(point: VillagePoint, actor: number, reach = FARM_REACH) {
+/** Distance from `point` to the edge of `actor`'s farm bed (Infinity if none). */
+export function farmDistance(point: VillagePoint, actor: number) {
   const bed = farmBed(actor);
-  return !!bed && rectDistance(point, farmBedRect(bed)) <= reach;
+  return bed ? rectDistance(point, farmBedRect(bed)) : Infinity;
+}
+export function nearFarm(point: VillagePoint, actor: number, reach = FARM_REACH) {
+  return farmDistance(point, actor) <= reach;
 }
 
 /**
@@ -103,13 +107,15 @@ export function nearFarm(point: VillagePoint, actor: number, reach = FARM_REACH)
  * decoration). Standing by it shows a sign that points to your own plots.
  */
 export const COMMONS_REACH = 1.2;
-export const nearCommons = (point: VillagePoint, reach = COMMONS_REACH) =>
+export const commonsDistance = (point: VillagePoint) =>
   rectDistance(point, {
     x: VILLAGE_FARMLAND.x,
     z: VILLAGE_FARMLAND.z,
     w: VILLAGE_FARMLAND.width,
     d: VILLAGE_FARMLAND.depth,
-  }) <= reach;
+  });
+export const nearCommons = (point: VillagePoint, reach = COMMONS_REACH) =>
+  commonsDistance(point) <= reach;
 
 /* ------------------------------------------------------------ fruit trees */
 
@@ -143,22 +149,27 @@ export function nearestFruitTree(point: VillagePoint, reach = TREE_REACH) {
 /* ------------------------------------------------------------ market, mail */
 
 export const MARKET_REACH = 1.6;
-export const nearMarket = (point: VillagePoint, reach = MARKET_REACH) =>
+export const marketDistance = (point: VillagePoint) =>
   rectDistance(point, {
     x: VILLAGE_MARKET.x,
     z: VILLAGE_MARKET.z,
     w: VILLAGE_MARKET.width,
     d: VILLAGE_MARKET.depth,
-  }) <= reach;
+  });
+export const nearMarket = (point: VillagePoint, reach = MARKET_REACH) =>
+  marketDistance(point) <= reach;
 
 export function mailboxPoint(actor: number): VillagePoint | null {
   const item = VILLAGE_DECOR.find((d) => d.id === `mailbox-${actor}`);
   return item ? { x: item.x, z: item.z } : null;
 }
 export const MAILBOX_REACH = 1.25;
-export function nearMailbox(point: VillagePoint, actor: number) {
+export function mailboxDistance(point: VillagePoint, actor: number) {
   const m = mailboxPoint(actor);
-  return !!m && Math.hypot(point.x - m.x, point.z - m.z) <= MAILBOX_REACH;
+  return m ? Math.hypot(point.x - m.x, point.z - m.z) : Infinity;
+}
+export function nearMailbox(point: VillagePoint, actor: number) {
+  return mailboxDistance(point, actor) <= MAILBOX_REACH;
 }
 
 /* ------------------------------------------------------------ plot stages */

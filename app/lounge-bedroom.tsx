@@ -9,6 +9,14 @@ import type { RoomAccess } from './lounge-bedroom-data';
 import type { CloudRoom, CloudRoomView } from './lounge-cloud-room';
 import { Bedroom3D, type RoomPresence } from './lounge-bedroom-3d';
 import { OwnerGuestbook } from './lounge/FriendVisit';
+import { preloadRoomAssets } from './lounge-bedroom-scene';
+import { defaultBedroom } from './lounge-bedroom-data';
+
+/** Called when I walk up to my door: the room's models start loading. */
+export function preloadBedroom(save: LoungeSave) {
+  preloadRoomAssets(save.bedroom ?? defaultBedroom(save.actor));
+}
+
 
 export function BedroomEditor(props: {
   save: LoungeSave;
@@ -22,6 +30,10 @@ export function BedroomEditor(props: {
   view?: CloudRoomView;
   onChat?: () => void;
   stickers?: ReactNode;
+  onExit?: () => void;
+  onDress?: () => void;
+  spawn?: 'door' | 'bed';
+  onNearDoor?: () => void;
 }) {
   return (
     <div className="b3-bedroom-experience">
@@ -34,6 +46,10 @@ export function BedroomEditor(props: {
         presence={props.presence}
         onDecorated={props.onDecorated}
         onAccess={props.onAccess}
+        onExit={props.onExit}
+        onDress={props.onDress}
+        spawn={props.spawn}
+        onNearDoor={props.onNearDoor}
       />
       {(props.onChat || props.stickers || (props.room && props.view)) && (
         <div className="b3-owner-bar">
