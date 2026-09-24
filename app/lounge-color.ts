@@ -34,6 +34,8 @@ type SkinAnchors = {
   eyes: number;
   head: number;
   raisedHands?: boolean;
+  movingHands?: boolean;
+  faceBottom?: number;
   bareLegs?: boolean;
   bareShoulders?: boolean;
   collared?: boolean;
@@ -145,10 +147,12 @@ export function createSkinMask(
       : [...colorRgb(DEFAULT_SKIN_COLOR)];
   const sourceLight = luminance(reference[0], reference[1], reference[2]);
   const bodyHeight = Math.max(1, bottom - top);
-  const faceBottom = Math.min(
-    top + bodyHeight * (anchors.darkHighCollar ? 0.42 : 0.4),
-    eyes + head * (anchors.darkHighCollar ? 0.28 : 0.25),
-  );
+  const faceBottom =
+    anchors.faceBottom ??
+    Math.min(
+      top + bodyHeight * (anchors.darkHighCollar ? 0.42 : 0.4),
+      eyes + head * (anchors.darkHighCollar ? 0.28 : 0.25),
+    );
   const warm = new Uint8Array(size),
     candidates = new Uint8Array(size);
   for (let i = 0; i < size; i++) {
@@ -377,6 +381,25 @@ export function createSkinMask(
         )
         .sort((a, b) => b.points.length - a.points.length)[0];
       if (raised) expand(raised);
+    }
+  }
+  if (anchors.movingHands) {
+    // In the generated gait, bent fists pass in front of the chest. The usual
+    // outer-wrist mask deliberately excludes this area. Select small detached
+    // skin components, retaining the size limits that exclude cream shirts.
+    const hands = components(
+      candidates,
+      (_x, y) => y > faceBottom + head * 0.08 && y < top + bodyHeight * 0.78,
+    );
+    for (const hand of hands) {
+      if (
+        hand.points.length >= head * head * 0.002 &&
+        hand.y < top + bodyHeight * 0.64 &&
+        hand.points.length <= head * head * 0.14 &&
+        hand.maxX - hand.minX < head * 0.42 &&
+        hand.maxY - hand.minY < head * 0.65
+      )
+        expand(hand);
     }
   }
   if (anchors.bareLegs) {

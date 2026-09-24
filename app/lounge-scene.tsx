@@ -78,21 +78,50 @@ function WorldFriend({
   p,
   self,
   area,
+  forceRun = false,
 }: {
   p: LoungePlayer;
   self: string;
   area: SceneArea;
+  forceRun?: boolean;
 }) {
-  const [walking, setWalking] = useState(false);
+  const [movement, setMovement] = useState<'walk' | 'run' | null>(null);
+  const [facing, setFacing] = useState<1 | -1>(1);
   const [expiredEmoteAt, setExpiredEmoteAt] = useState(0);
   const position = useRef({ x: p.x, y: p.y });
+  const lastMoveAt = useRef(0);
+  const fastStepCount = useRef(0);
+  const movementTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (position.current.x === p.x && position.current.y === p.y) return;
+    const previous = { ...p, ...position.current };
+    const previousFoot = projectPlayer(previous, area);
+    const nextFoot = projectPlayer(p, area);
+    const distance = Math.hypot(
+      p.x - position.current.x,
+      p.y - position.current.y,
+    );
+    const now = Date.now();
+    const elapsed = now - lastMoveAt.current;
+    // Keyboard run emits repeated 1.65x steps (~4.95 units) at ~110 ms.
+    // A floor click is a single destination jump, so it must not imply running.
+    const fastStep =
+      elapsed >= 60 && elapsed <= 220 && distance >= 4.1 && distance <= 8.2;
+    fastStepCount.current = fastStep ? fastStepCount.current + 1 : 0;
     position.current = { x: p.x, y: p.y };
-    setWalking(true);
-    const timer = setTimeout(() => setWalking(false), 800);
-    return () => clearTimeout(timer);
-  }, [p.x, p.y]);
+    lastMoveAt.current = now;
+    if (Math.abs(nextFoot.x - previousFoot.x) > 0.01)
+      setFacing(nextFoot.x < previousFoot.x ? -1 : 1);
+    setMovement(forceRun || fastStepCount.current >= 2 ? 'run' : 'walk');
+    if (movementTimer.current) clearTimeout(movementTimer.current);
+    movementTimer.current = setTimeout(() => setMovement(null), 800);
+  }, [p, p.x, p.y, area, forceRun]);
+  useEffect(
+    () => () => {
+      if (movementTimer.current) clearTimeout(movementTimer.current);
+    },
+    [],
+  );
   useEffect(() => {
     const remaining = p.emote ? p.emoteAt + 4500 - Date.now() : 0;
     const timer = setTimeout(
@@ -112,13 +141,16 @@ function WorldFriend({
         zIndex: sceneDepth(foot.y),
       }}
       data-player={p.id}
+      data-motion={movement ?? (waving ? 'wave' : 'idle')}
+      data-facing={facing}
     >
       <span className="cf-player-shadow" aria-hidden="true" />
       <AvatarView
         actor={p.actor}
         look={p.look}
         animated
-        motion={walking ? 'walk' : waving ? 'wave' : 'idle'}
+        facing={facing}
+        motion={movement ?? (waving ? 'wave' : 'idle')}
       />
       <span className="cf-player-name">
         {ACTORS[p.actor]}
@@ -194,17 +226,33 @@ export function RoomFloor({
 }: RoomFloorProps) {
   const ref = useRef<HTMLDivElement>(null);
   const lastMove = useRef(0);
+  const runTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [runMode, setRunMode] = useState(false);
+  const [keyboardRun, setKeyboardRun] = useState(false);
   const layout = SCENE_LAYOUT[area];
+  const requestRun = useCallback(() => {
+    setKeyboardRun(true);
+    if (runTimer.current) clearTimeout(runTimer.current);
+    runTimer.current = setTimeout(() => setKeyboardRun(false), 800);
+  }, []);
+  useEffect(
+    () => () => {
+      if (runTimer.current) clearTimeout(runTimer.current);
+    },
+    [],
+  );
   const move = useCallback(
-    (dx: number, dy: number) => {
+    (dx: number, dy: number, running = false) => {
       const p = players.find((p) => p.id === self);
-      if (p)
+      if (p) {
+        if (running) requestRun();
         onMove(
           Math.max(15, Math.min(85, p.x + dx)),
           Math.max(42, Math.min(88, p.y + dy)),
         );
+      }
     },
-    [players, self, onMove],
+    [players, self, onMove, requestRun],
   );
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
@@ -236,7 +284,12 @@ export function RoomFloor({
           if (!direction) return;
           e.preventDefault();
           if (Date.now() - lastMove.current > 110) {
-            move(...direction);
+            const multiplier = e.shiftKey ? 1.65 : 1;
+            move(
+              direction[0] * multiplier,
+              direction[1] * multiplier,
+              e.shiftKey,
+            );
             lastMove.current = Date.now();
           }
         }}
@@ -250,7 +303,11 @@ export function RoomFloor({
           };
           if (point.y < layout.floor.back - 5) return;
           const destination = unprojectFloor(point, area);
-          onMove(destination.x, destination.y);
+          const p = players.find((player) => player.id === self);
+          if (p) {
+            if (runMode) requestRun();
+            onMove(destination.x, destination.y);
+          }
         }}
       >
         <img
@@ -269,6 +326,18 @@ export function RoomFloor({
           </span>
           <strong>{area === 'casino' ? '범타듀 카지노' : '범마을 회관'}</strong>
         </div>
+        <button
+          type="button"
+          className="cf-run-toggle"
+          aria-pressed={runMode}
+          onClick={(event) => {
+            event.stopPropagation();
+            setRunMode((running) => !running);
+          }}
+        >
+          <Footprints size={14} aria-hidden="true" />
+          달리기 {runMode ? '켜짐' : '꺼짐'}
+        </button>
         {layout.tables.map((table) => (
           <SceneGameTable
             key={table.game}
@@ -280,7 +349,13 @@ export function RoomFloor({
         {players
           .filter((p) => p.area === area)
           .map((p) => (
-            <WorldFriend key={p.id} p={p} self={self} area={area} />
+            <WorldFriend
+              key={p.id}
+              p={p}
+              self={self}
+              area={area}
+              forceRun={p.id === self && (runMode || keyboardRun)}
+            />
           ))}
         <span className="cf-scene-hint">
           <Footprints size={12} aria-hidden="true" />

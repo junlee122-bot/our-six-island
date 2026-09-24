@@ -1,0 +1,562 @@
+{
+  "date": "2026-09-24",
+  "project": "https://event.wanted.co.kr/ai-championship/2026/projects/1641",
+  "projectApi": "https://event.wanted.co.kr/champion-api/api/v1/projects/1641",
+  "service": "https://spritegen.kumastudio.app",
+  "processor": {
+    "name": "aldegad/sprite-gen",
+    "repository": "https://github.com/aldegad/sprite-gen",
+    "version": "2.7.0",
+    "commit": "d8a1ce178e0399ad8c97f70efda41f815836c5bb",
+    "license": "Apache-2.0"
+  },
+  "provider": "Codex built-in image generation; sprite-gen provider/generation commands were not invoked",
+  "reference": {
+    "path": "../club-friends-classic.webp",
+    "sha256": "81ef9440511428953f05a41b3e123401dda1ffc34cb91544ec79d6e48d60dba6"
+  },
+  "generationBrief": "Generate one horizontal six-pose walk row and one six-pose run row for each existing classic character. Preserve reference identity, clothing, blue hair dye channel, full body and transparency; alternate foot contacts and opposing arm swings. Minjae run was regenerated using his walk row to preserve the center-part bob instead of bangs. This is a summary of generation instructions, not an exact prompt transcript.",
+  "pipeline": [
+    "canonical sprite-gen prepare",
+    "canonical sprite-gen component extraction",
+    "canonical sprite-gen compose-atlas",
+    "canonical sprite-gen inspect",
+    "Pillow lossless WebP encoding with decoded RGBA pixel-equality verification"
+  ],
+  "exportPrep": "For each actor, canonical sprite-gen connected-component extraction measured all 12 source poses. One uniform scale per actor, min(288/max_component_width,368/max_component_height,1), was applied to every component in both rows before canonical extraction; components were bottom-centered in their original six-slot strip. Originals were copied to each run raw-original directory and SHA256 recorded in common-scale-prep.json.",
+  "runtime": {
+    "generatedCollections": [
+      "classic/signature"
+    ],
+    "otherCollections": "Existing customized artwork uses a cached continuous eight-phase gait; legacy original outfits keep existing step frames.",
+    "frameLayout": "app/lounge-motion-layout.json",
+    "walkClockFps": 8,
+    "runClockFps": 9,
+    "runDistanceMultiplier": 1.65,
+    "scaling": "one actor-wide source scale and one runtime cycle crop",
+    "load": "local classic motion prewarmed during 3D scene loading; other actors on first visible movement",
+    "fallback": "existing classic artwork while an atlas is pending; customized-art gait if its optional motion image cannot load"
+  },
+  "limitations": "Input illustrations contain some near-repeated poses and crouch/head-size variation. Extractor warnings are not motion-cycle validation; stride, foot contacts, and loop continuity are unverified.",
+  "actors": [
+    {
+      "actor": 0,
+      "name": "dowon",
+      "file": "dowon.webp",
+      "bytes": 798868,
+      "sha256": "457bbc4837e3448e5fd8d9734ae625d670913200ca038f3e9b1b7c965f50e163",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.6072607260726073,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-51a00e59-8a3f-4edd-86c4-4d88d396b019.png",
+          "sha256": "1d54d836d566239097763bce4a9cff3c0a0ca656e5fd59c4863701521653f0d7",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-1a05e769-a2ae-4492-8268-1b81ae8acdea.png",
+          "sha256": "232b4f2d267238ef4080c72a6e30da285f95ec89b35c3bb0e22d638a1ffe5cb3",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "dowon",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "dowon",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 1,
+      "name": "gangjae",
+      "file": "gangjae.webp",
+      "bytes": 810934,
+      "sha256": "97c664b2da16abb4df05aea705f315f39816cb8dc7e3cc767685185a9f590e38",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.5888,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-b3075d10-2d0a-44d3-8371-3458b6f5fc45.png",
+          "sha256": "21bae12550578f93d85554a7ebecebb5cc0743e03369f9304bc79355e85c267c",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-7b7aaab5-fa49-415c-95f6-fa42513b88fa.png",
+          "sha256": "9586ac25031cc24359163c56a65ccba4a5ca4c5de24fe2fa53fe2499688a6af2",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "gangjae",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "gangjae",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 2,
+      "name": "minseo",
+      "file": "minseo.webp",
+      "bytes": 964262,
+      "sha256": "1ec3b65ebc5eb834cfc78bee530023400c57480d406d6148dec4a6793791d6da",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.6032786885245902,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-de54e7f8-0940-424d-856a-6e3ea3bf4bbb.png",
+          "sha256": "9de560719ec05c9c08fe241d73d6d3db237775ab2908c2f0462676d4f2c86912",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-6121ae88-f866-4c38-b469-33025d3e18d2.png",
+          "sha256": "c9d9481acac3d7c8f3fec0355dd5b884733039ced2a5a6685a95439cda1bfe14",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "minseo",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "minseo",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 3,
+      "name": "seungjun",
+      "file": "seungjun.webp",
+      "bytes": 805734,
+      "sha256": "7e4d3222529af6aa071d828c9292dfa599217bf074e9d360866d5b5832894b84",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.6082644628099173,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-5005353c-7e97-4822-a976-ed678ef2c9f2.png",
+          "sha256": "48a6b825a5517b1ccbcac14fd2fb009436148addf597dc14007eb3cdcc1efa58",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-807d073f-5e9f-4374-bf81-6daf0e64b53d.png",
+          "sha256": "3a33aa65d57b465e0454c36745a327800a1e604162b60855c601d5e759a9c12d",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "seungjun",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "seungjun",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 4,
+      "name": "minjae",
+      "file": "minjae.webp",
+      "bytes": 811436,
+      "sha256": "5745552fb8bf08fc3edc9383487dd67fa4ac02ac201e12f862bae975125c3109",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.5916398713826366,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-6378b77c-d9f4-4671-a94e-5a528c43aa63.png",
+          "sha256": "7a365215c7fe4f70320105232c6d6a4e4c38a3fb8ea5b0933ba24d0f03a8b3d3",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-34261936-7747-4930-a8be-2fbab4ac3e1e.png",
+          "sha256": "dc69300d417e4bd145b60fb6184e58fd69defb27dadd6974050b47530f601baf",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "minjae",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "minjae",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 1
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot.",
+            "Repeated poses retain all source frame durations; no frames were removed."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 5,
+      "name": "jaemin",
+      "file": "jaemin.webp",
+      "bytes": 747168,
+      "sha256": "4e94a7b6a22d0d9dc64f77ab0b018264fe2ac63054e58e22f8521e0f1f9ad30d",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.5859872611464968,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-96a4f65d-bc9d-422b-bccb-f6d646b8712a.png",
+          "sha256": "73796ffe21cb99bf85770962a6847571bfbfc6535786bf2f1613f942387e8977",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-ecbfb7fa-d389-4a18-814b-34ef2f9a4eb0.png",
+          "sha256": "9e745c88a6557fdc23babc998c874d0d05baa50012c8fb7ef7f07be4e2de05e3",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "jaemin",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "jaemin",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    },
+    {
+      "actor": 6,
+      "name": "hohyeon",
+      "file": "hohyeon.webp",
+      "bytes": 792536,
+      "sha256": "4d951e5523a5641022a7f41476e1f6baa927adb725d7179a84ec622803b39997",
+      "size": [
+        1920,
+        800
+      ],
+      "losslessPixelsEqual": true,
+      "sourceScale": 0.5777080062794349,
+      "sourceRows": {
+        "walk": {
+          "generationFile": "exec-24a2835c-481a-4589-9a23-1dc29b62c9c5.png",
+          "sha256": "f53c9bddb726ba471f548665f6eff3855161d373322ef21756f45cda396a6c68",
+          "size": [
+            2172,
+            724
+          ]
+        },
+        "run": {
+          "generationFile": "exec-d080ff4c-fe43-4a2a-b388-ab830924b8c8.png",
+          "sha256": "ca262535f8e901dfa40965e35c796b087ce94309b739192e533c38cbe090e993",
+          "size": [
+            2172,
+            724
+          ]
+        }
+      },
+      "extractorWarnings": [],
+      "motionInspection": [
+        {
+          "actor": "hohyeon",
+          "state": "walk",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        },
+        {
+          "actor": "hohyeon",
+          "state": "run",
+          "status": "needs-review",
+          "frame_count": 6,
+          "duration_seconds": 0.75,
+          "duplicate_frames": {
+            "exact": 0,
+            "adjacent_exact": 0,
+            "exact_silhouette": 0,
+            "near_silhouette": 0
+          },
+          "changed_transitions": 5,
+          "silhouette_changed_transitions": 5,
+          "stride_verified": false,
+          "stride_px_per_second": null,
+          "warnings": [
+            "Ground contact is unknown: provide both manual contacts and a single-foot ROI; silhouette bottoms do not identify a planted foot."
+          ]
+        }
+      ]
+    }
+  ]
+}

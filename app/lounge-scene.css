@@ -58,6 +58,9 @@
   font-size: clamp(12px, 2.4cqw, 20px);
   line-height: 1.2;
 }
+.cf-run-toggle {
+  display: none;
+}
 .cf-scene-casino .cf-room-caption {
   color: #ffe8b8;
   border-color: #af8d4f;
@@ -248,6 +251,36 @@
   }
 }
 @container (max-width: 540px) {
+  .cf-run-toggle {
+    position: absolute;
+    z-index: 1501;
+    top: 3%;
+    right: 3%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 34px;
+    padding: 5px 9px;
+    border: 1px solid #c9b990;
+    border-radius: 18px;
+    background: #fff8e9ed;
+    color: #584330;
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cf-run-toggle[aria-pressed='true'] {
+    border-color: #62794f;
+    background: #455c45;
+    color: #fff7e8;
+  }
+  .cf-run-toggle:focus-visible {
+    outline: 2px solid #edb54f;
+    outline-offset: 2px;
+  }
   .cf-room-caption {
     padding: 5px 8px 6px;
     gap: 2px;

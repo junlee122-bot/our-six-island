@@ -222,7 +222,7 @@
   bottom: 19px;
   display: grid;
   grid-template-columns: repeat(3, 36px);
-  grid-template-rows: repeat(2, 36px);
+  grid-template-rows: repeat(3, 36px);
   gap: 4px;
 }
 .hv-pad button {
@@ -254,6 +254,21 @@
 .hv-pad-right {
   grid-column: 3;
   grid-row: 2;
+}
+.hv-pad-run {
+  grid-column: 1 / 4;
+  grid-row: 3;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.hv-pad-run[aria-pressed='true'] {
+  color: #fff8e9;
+  background: #627b4e;
+  border-color: #536a42;
 }
 .hv-place-card {
   position: absolute;

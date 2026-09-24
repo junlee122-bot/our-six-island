@@ -20,6 +20,11 @@ import { loungeSprites } from './lounge-sprites';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { defaultBedroom } from './lounge-bedroom-data';
+import {
+  advanceLocomotion,
+  RUN_SPEED_MULTIPLIER,
+  type LocomotionState,
+} from './lounge-locomotion';
 import type { LoungeSave } from './lounge-look';
 import { ACTORS } from './theater-data';
 import {
@@ -86,6 +91,9 @@ export function Bedroom3D({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const directions = useRef(new Set<Direction>());
+  const runToggle = useRef(false),
+    shiftHeld = useRef(false);
+  const [runPressed, setRunPressed] = useState(false);
   const latest = useRef(save);
   useLayoutEffect(() => {
     latest.current = save;
@@ -142,12 +150,17 @@ export function Bedroom3D({
     const camera = new THREE.OrthographicCamera(-6, 6, 4.8, -4.8, 0.1, 60);
     camera.position.set(10, 8.8, 12);
     camera.lookAt(0, 1.08, 0);
+    camera.updateMatrixWorld();
+    const cameraRight = new THREE.Vector3().setFromMatrixColumn(
+      camera.matrixWorld,
+      0,
+    );
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     // Only static geometry casts shadows; a contact shadow follows the sprite.
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
@@ -911,9 +924,19 @@ export function Bedroom3D({
     scene.add(destination);
     let position = { ...WALK_START },
       path: WalkPoint[] = [];
+    let locomotion: LocomotionState = { phase: 0, facing: 1 };
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
-    const spritesPromise = loungeSprites().then((value) => {
+    const spritesPromise = loungeSprites().then(async (value) => {
       sprites = value;
+      if (
+        !disposed &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        const save = latest.current;
+        await value.warmMotion(save.actor, save.looks[save.actor]).catch(() => {
+          /* Retain the existing wardrobe when optional motion art is offline. */
+        });
+      }
     });
     void Promise.allSettled([
       ...modelPromises,
@@ -974,11 +997,29 @@ export function Bedroom3D({
       path = [];
       destination.visible = false;
     };
+    const runKeydown = (event: KeyboardEvent) => {
+      if (event.key !== 'Shift' || event.repeat) return;
+      shiftHeld.current = true;
+      setRunPressed(true);
+    };
     const keyup = (event: KeyboardEvent) => {
       const direction = KEYS[event.key] ?? KEYS[event.key.toLowerCase()];
       if (direction) pressed.delete(direction);
+      if (event.key === 'Shift') {
+        shiftHeld.current = false;
+        setRunPressed(runToggle.current);
+      }
     };
-    const blur = () => pressed.clear();
+    const blur = () => {
+      pressed.clear();
+      shiftHeld.current = false;
+      setRunPressed(runToggle.current);
+      path = [];
+      destination.visible = false;
+    };
+    const visibilityChanged = () => {
+      if (document.hidden) blur();
+    };
     const contextLost = (event: Event) => {
       event.preventDefault();
       if (!disposed) {
@@ -993,8 +1034,10 @@ export function Bedroom3D({
     canvas.addEventListener('pointerdown', onPointer);
     canvas.addEventListener('webglcontextlost', contextLost);
     host.addEventListener('keydown', keydown);
+    host.addEventListener('keydown', runKeydown);
     window.addEventListener('keyup', keyup);
     window.addEventListener('blur', blur);
+    document.addEventListener('visibilitychange', visibilityChanged);
     host.addEventListener('focusout', blur);
     const resize = () => {
       const width = host.clientWidth,
@@ -1023,6 +1066,8 @@ export function Bedroom3D({
       lastSprite = -100,
       lastRender = -100,
       lastData = -100;
+    let lastMotion: 'walk' | 'run' | 'idle' = 'idle',
+      lastFacing: 1 | -1 = 1;
     const animate = (now: number) => {
       if (disposed) return;
       frame = requestAnimationFrame(animate);
@@ -1031,6 +1076,8 @@ export function Bedroom3D({
       if (!visible || document.hidden) return;
       const before = position;
       const held = pressed;
+      const running = runToggle.current || shiftHeld.current,
+        speed = 2.25 * (running ? RUN_SPEED_MULTIPLIER : 1);
       let horizontal = Number(held.has('right')) - Number(held.has('left'));
       let vertical = Number(held.has('down')) - Number(held.has('up'));
       if (horizontal || vertical) {
@@ -1041,15 +1088,15 @@ export function Bedroom3D({
         vertical /= length;
         position = walkStep(
           position,
-          (horizontal + vertical) * Math.SQRT1_2 * 2.25 * dt,
-          (vertical - horizontal) * Math.SQRT1_2 * 2.25 * dt,
+          (horizontal + vertical) * Math.SQRT1_2 * speed * dt,
+          (vertical - horizontal) * Math.SQRT1_2 * speed * dt,
         );
       } else if (path.length) {
         const next = path[0],
           dx = next.x - position.x,
           dz = next.z - position.z,
           distance = Math.hypot(dx, dz),
-          step = Math.min(distance, 2.25 * dt);
+          step = Math.min(distance, speed * dt);
         if (distance < 0.025) path.shift();
         else
           position = walkStep(
@@ -1061,26 +1108,49 @@ export function Bedroom3D({
       }
       const walking =
         Math.hypot(position.x - before.x, position.z - before.z) > 0.0001;
+      const movedX = position.x - before.x,
+        movedZ = position.z - before.z,
+        moved = Math.hypot(movedX, movedZ),
+        playerMotion = advanceLocomotion(
+          locomotion,
+          {
+            distance: moved,
+            horizontal: movedX * cameraRight.x + movedZ * cameraRight.z,
+          },
+          running ? 'run' : 'walk',
+          2.25,
+        );
+      locomotion = playerMotion.state;
       sprite.position.set(position.x, 0.065, position.z);
       shadow.position.set(position.x, 0.066, position.z);
-      if (sprites && now - lastSprite > (walking ? 40 : 80)) {
+      if (
+        sprites &&
+        (playerMotion.motion !== lastMotion ||
+          locomotion.facing !== lastFacing ||
+          now - lastSprite > (walking ? 40 : 80))
+      ) {
         const current = latest.current;
-        sprites.draw(
+        const changed = sprites.draw(
           spriteCanvas,
           current.actor,
           current.looks[current.actor],
-          walking ? 'walk' : 'idle',
-          now / 1000,
+          playerMotion.motion,
+          locomotion.phase,
           false,
           reduced.matches,
+          { facing: locomotion.facing },
         );
-        spriteTexture.needsUpdate = true;
+        if (changed) spriteTexture.needsUpdate = true;
         lastSprite = now;
+        lastMotion = playerMotion.motion;
+        lastFacing = locomotion.facing;
       }
       if (now - lastData > 150) {
         host.dataset.avatarX = position.x.toFixed(3);
         host.dataset.avatarZ = position.z.toFixed(3);
         host.dataset.walking = String(walking);
+        host.dataset.motion = playerMotion.motion;
+        host.dataset.facing = String(locomotion.facing);
         lastData = now;
       }
       if (now - lastRender > (walking ? 33 : 80)) {
@@ -1099,9 +1169,11 @@ export function Bedroom3D({
       canvas.removeEventListener('pointerdown', onPointer);
       canvas.removeEventListener('webglcontextlost', contextLost);
       host.removeEventListener('keydown', keydown);
+      host.removeEventListener('keydown', runKeydown);
       host.removeEventListener('focusout', blur);
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
+      document.removeEventListener('visibilitychange', visibilityChanged);
       disposeObject(scene);
       sun.shadow.dispose();
       renderer.dispose();
@@ -1138,7 +1210,7 @@ export function Bedroom3D({
           className="b3-scene"
           tabIndex={0}
           role="application"
-          aria-label="입체 방. 클릭 또는 방향키와 WASD로 이동"
+          aria-label="입체 방. 클릭 또는 방향키와 WASD로 이동하고 Shift 또는 달리기 버튼으로 달립니다"
           data-testid="bedroom-3d"
           data-load-state={state}
         >
@@ -1163,6 +1235,18 @@ export function Bedroom3D({
           )}
           {state !== 'unavailable' && (
             <div className="b3-pad" aria-label="걷기 방향">
+              <button
+                type="button"
+                className="b3-pad-run"
+                aria-label="달리기 전환"
+                aria-pressed={runPressed}
+                onClick={() => {
+                  runToggle.current = !runToggle.current;
+                  setRunPressed(runToggle.current || shiftHeld.current);
+                }}
+              >
+                <Footprints size={15} /> {runPressed ? '달리기 켬' : '달리기'}
+              </button>
               {(
                 [
                   ['up', ArrowUp, '위로 걷기'],
@@ -1207,7 +1291,7 @@ export function Bedroom3D({
         <div className="b3-scene-footer">
           <span>
             <Footprints size={15} /> 바닥을 눌러 이동
-            <span className="b3-key-help"> · 방향키 / WASD</span>
+            <span className="b3-key-help"> · 방향키 / WASD · Shift 달리기</span>
           </span>
           <span className="b3-garden-tag">
             <i /> 나만의 산책

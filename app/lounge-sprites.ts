@@ -1,4 +1,6 @@
 import { LOUNGE_ASSETS } from './lounge-assets';
+import { drawCostumeGait, gaitFrame } from './lounge-gait';
+import motionLayouts from './lounge-motion-layout.json';
 import {
   dyePixel,
   removeConnectedBackdrop,
@@ -36,8 +38,11 @@ type Figure = {
   top: number;
   skin?: SkinMask;
   hair?: Uint8Array;
+  blueHairOnly?: boolean;
   skinRegions: {
     raisedHands: boolean;
+    movingHands?: boolean;
+    faceBottom?: number;
     bareLegs: boolean;
     bareShoulders: boolean;
     collared: boolean;
@@ -154,6 +159,7 @@ function figure(
   bareLegs = false,
   bareShoulders = false,
   collared = false,
+  movingPose = false,
 ): Figure {
   const p = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
   let left = c.width,
@@ -168,14 +174,85 @@ function figure(
         top = Math.min(top, y);
       }
     }
-  const head = Math.max(40, right - left),
+  let head = Math.max(40, right - left),
     cx = (left + right) / 2;
+  let detectedFaceBottom: number | undefined;
+  if (movingPose) {
+    // Wind-blown hair is asymmetric. Anchor glasses to the exposed face rather
+    // than the entire hair silhouette, which can trail far to one side.
+    let faceLeft = c.width,
+      faceRight = 0,
+      samples = 0;
+    const faceRows: { y: number; width: number; samples: number }[] = [];
+    for (
+      let y = Math.max(0, Math.floor(top + head * 0.25));
+      y < Math.min(c.height, top + head * 0.75);
+      y++
+    ) {
+      let rowLeft = c.width,
+        rowRight = 0,
+        rowSamples = 0;
+      for (
+        let x = Math.max(0, Math.floor(cx - head * 0.6));
+        x < Math.min(c.width, cx + head * 0.6);
+        x++
+      ) {
+        const k = (y * c.width + x) * 4;
+        const r = p[k],
+          g = p[k + 1],
+          b = p[k + 2];
+        if (p[k + 3] > 100 && r > 140 && g > 80 && r - g > 18 && g - b > 10) {
+          faceLeft = Math.min(faceLeft, x);
+          faceRight = Math.max(faceRight, x);
+          samples++;
+          rowLeft = Math.min(rowLeft, x);
+          rowRight = Math.max(rowRight, x);
+          rowSamples++;
+        }
+      }
+      faceRows.push({ y, width: rowRight - rowLeft, samples: rowSamples });
+    }
+    if (samples > 100 && faceRight - faceLeft > head * 0.3) {
+      cx = (faceLeft + faceRight) / 2;
+      head = (faceRight - faceLeft) / 0.82;
+      const faceWidth = faceRight - faceLeft;
+      detectedFaceBottom = faceRows
+        .filter(
+          (row) =>
+            row.width > faceWidth * 0.28 && row.samples > faceWidth * 0.14,
+        )
+        .at(-1)?.y;
+    }
+  }
   if (eyes === undefined) {
     let best = 0;
     eyes = c.height * 0.3;
     // All normalized collection faces put their eyes above the lower third.
     // Looking farther down mistakes black hoodies and jacket collars for eyes.
-    for (let y = Math.round(c.height * 0.19); y < c.height * 0.34; y++) {
+    const eyeStart = movingPose
+      ? Math.max(top + head * 0.32, (detectedFaceBottom ?? 0) - head * 0.38)
+      : c.height * 0.19;
+    const eyeEnd = movingPose
+      ? Math.min(
+          c.height * 0.6,
+          detectedFaceBottom !== undefined
+            ? detectedFaceBottom - head * 0.1
+            : top + head * 0.72,
+        )
+      : c.height * 0.34;
+    const warmAt = (x: number, y: number) => {
+      if (x < 0 || y < 0 || x >= c.width || y >= c.height) return false;
+      const k = (y * c.width + x) * 4;
+      return (
+        p[k + 3] > 100 &&
+        p[k] > 140 &&
+        p[k + 1] > 80 &&
+        p[k] - p[k + 1] > 18 &&
+        p[k + 1] - p[k + 2] > 10
+      );
+    };
+    const eyeRadius = Math.max(4, Math.round(head * 0.05));
+    for (let y = Math.round(eyeStart); y < eyeEnd; y++) {
       let n = 0;
       for (let x = Math.round(cx - head * 0.3); x < cx + head * 0.3; x++) {
         const k = (y * c.width + x) * 4;
@@ -184,7 +261,15 @@ function figure(
           p[k] < 105 &&
           p[k + 1] < 95 &&
           p[k + 2] < 95 &&
-          p[k] >= p[k + 2] * 0.88
+          p[k] >= p[k + 2] * 0.88 &&
+          // Pupils sit inside warm face pixels. Dark hair outlines are not eyes.
+          (!movingPose ||
+            [
+              warmAt(x - eyeRadius, y),
+              warmAt(x + eyeRadius, y),
+              warmAt(x, y - eyeRadius),
+              warmAt(x, y + eyeRadius),
+            ].filter(Boolean).length >= 2)
         )
           n++;
       }
@@ -200,7 +285,13 @@ function figure(
     cx,
     head,
     top,
-    skinRegions: { raisedHands, bareLegs, bareShoulders, collared },
+    skinRegions: {
+      raisedHands,
+      bareLegs,
+      bareShoulders,
+      collared,
+      faceBottom: detectedFaceBottom,
+    },
   };
 }
 function sheetFigure(
@@ -477,9 +568,161 @@ async function prepare() {
   // Preserve genuine alpha; also support the generated magenta extraction background.
   pieces.push(bounds(clean(clean(bandCanvas, true))));
   const band = bandAnchor(pieces[9]);
+  const motionFigures = new Map<number, { walk: Figure[]; run: Figure[] }>();
+  const motionLoads = new Map<number, Promise<void>>();
+  const motionFailures = new Set<number>();
+  const motionUrls = [
+    a.locomotionDowon,
+    a.locomotionGangjae,
+    a.locomotionMinseo,
+    a.locomotionSeungjun,
+    a.locomotionMinjae,
+    a.locomotionJaemin,
+    a.locomotionHohyeon,
+  ];
+  // Movement artwork is loaded per visible actor, after the essential wardrobe.
+  // A failed request leaves the existing customized-art gait fully usable.
+  function loadMotion(actor: number) {
+    if (!motionLoads.has(actor))
+      motionLoads.set(
+        actor,
+        image(motionUrls[actor])
+          .then((sheet) => {
+            const rows = motionLayouts[actor].rows;
+            const frames = (
+              rects: { x: number; y: number; w: number; h: number }[],
+            ) =>
+              rects.map((rect) => {
+                const c = canvas(rect.w, rect.h);
+                c.getContext('2d')!.drawImage(
+                  sheet,
+                  rect.x,
+                  rect.y,
+                  rect.w,
+                  rect.h,
+                  0,
+                  0,
+                  rect.w,
+                  rect.h,
+                );
+                const f = figure(
+                  c,
+                  undefined,
+                  false,
+                  [0, 1, 2, 5].includes(actor),
+                  actor === 1,
+                  actor === 2,
+                  true,
+                );
+                f.skinRegions.movingHands = true;
+                // Minseo's white/black outfit has no blue garment channel; detached
+                // wind-blown hair strands below the arm must keep the chosen hair dye.
+                f.blueHairOnly = actor === 2;
+                return f;
+              });
+            motionFigures.set(actor, {
+              walk: frames(rows.walk),
+              run: frames(rows.run),
+            });
+          })
+          .catch((error) => {
+            motionFailures.add(actor);
+            throw error;
+          }),
+      );
+    return motionLoads.get(actor)!;
+  }
+  const motionCrops = new Map<
+    string,
+    { x: number; y: number; w: number; h: number }
+  >();
+  function attachments(base: Figure, look: Look, actor: number, bun: boolean) {
+    const result: {
+      piece: Piece;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }[] = [];
+    const add = (i: number, w: number, x: number, y: number) => {
+      const piece = pieces[i],
+        h = (w * piece.h) / piece.w;
+      result.push({ piece, x: x - w / 2, y: y - h / 2, w, h });
+    };
+    const hat = HATS.find((h) => h.id === look.hat)!.cell;
+    const glasses = GLASSES.find((g) => g.id === look.glasses)!.cell;
+    if (hat === 9) {
+      const piece = pieces[9],
+        scale = (base.head * (bun ? 0.83 : 0.95)) / band.width;
+      result.push({
+        piece,
+        x: base.cx - (band.cx - piece.x) * scale,
+        y: base.eyes - base.head * 0.2 - (band.cy - piece.y) * scale,
+        w: piece.w * scale,
+        h: piece.h * scale,
+      });
+    } else if (hat >= 0) {
+      const i = actor === 5 && hat === 0 ? 8 : hat;
+      const w = base.head * (hat === 1 ? 1.35 : hat === 0 ? 0.92 : 1.03);
+      add(
+        i,
+        w,
+        base.cx,
+        base.eyes - base.head * 0.19 - (w * pieces[i].h) / pieces[i].w / 2,
+      );
+    }
+    if (glasses >= 0) add(glasses, base.head * 0.76, base.cx, base.eyes);
+    if (look.clip)
+      add(
+        7,
+        base.head * 0.25,
+        base.cx + base.head * 0.38,
+        base.top + base.head * 0.3,
+      );
+    return result;
+  }
+  function motionCrop(actor: number, look: Look) {
+    const key = JSON.stringify([actor, look.hat, look.glasses, look.clip]);
+    if (motionCrops.has(key)) return motionCrops.get(key)!;
+    const rows = motionFigures.get(actor)!;
+    let left = Infinity,
+      top = Infinity,
+      right = 0,
+      bottom = 0;
+    for (const f of [...rows.walk, ...rows.run]) {
+      for (const r of [bounds(f.c), ...attachments(f, look, actor, false)]) {
+        left = Math.min(left, r.x);
+        top = Math.min(top, r.y);
+        right = Math.max(right, r.x + r.w);
+        bottom = Math.max(bottom, r.y + r.h);
+      }
+    }
+    // One crop for the entire cycle prevents changing pose bounds from zooming
+    // the head and shifting the ground contact on every frame.
+    const result = {
+      x: Math.floor(left) + 60,
+      y: Math.floor(top) + 150,
+      w: Math.ceil(right) - Math.floor(left),
+      h: Math.ceil(bottom) - Math.floor(top),
+    };
+    motionCrops.set(key, result);
+    if (motionCrops.size > 56)
+      motionCrops.delete(motionCrops.keys().next().value!);
+    return result;
+  }
   const cache = new Map<string, Piece>();
-  function composed(actor: number, look: Look, frame: number) {
-    const key = JSON.stringify([actor, look, frame]);
+  const gaitCache = new Map<string, Piece>();
+  const lastDraw = new WeakMap<
+    HTMLCanvasElement,
+    { piece: Piece; key: string }
+  >();
+  function composed(
+    actor: number,
+    look: Look,
+    frame: number,
+    generated?: 'walk' | 'run',
+  ) {
+    const key = JSON.stringify([actor, look, frame, generated]);
     if (cache.has(key)) return cache.get(key)!;
     const index = ['classic', 'street', 'smart'].indexOf(look.collection),
       newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
@@ -488,21 +731,23 @@ async function prepare() {
       akatsuki = look.collection === 'akatsuki',
       special = actor === 0 && (bun || newOutfit >= 0 || shampoo),
       legacy = !akatsuki && !special && index < 0,
-      base = akatsuki
-        ? akatsukiFigures[bun ? 7 : actor]
-        : special
-          ? shampoo
-            ? shampooFigures[bun ? 1 : 0]
-            : newOutfit >= 0
-              ? outfitFigures[newOutfit + (bun ? 3 : 0)]
-              : bunFigures[
-                  ['classic', 'street', 'smart', 'original'].indexOf(
-                    look.collection,
-                  )
-                ]
-          : legacy
-            ? original[actor][Math.min(frame, original[actor].length - 1)]
-            : collections[index][actor],
+      base = generated
+        ? motionFigures.get(actor)![generated][frame]
+        : akatsuki
+          ? akatsukiFigures[bun ? 7 : actor]
+          : special
+            ? shampoo
+              ? shampooFigures[bun ? 1 : 0]
+              : newOutfit >= 0
+                ? outfitFigures[newOutfit + (bun ? 3 : 0)]
+                : bunFigures[
+                    ['classic', 'street', 'smart', 'original'].indexOf(
+                      look.collection,
+                    )
+                  ]
+            : legacy
+              ? original[actor][Math.min(frame, original[actor].length - 1)]
+              : collections[index][actor],
       c = canvas(base.c.width + 120, base.c.height + 180),
       ctx = c.getContext('2d')!,
       p = base.c
@@ -542,7 +787,9 @@ async function prepare() {
         p.data[k + 2] = color[2];
         continue;
       }
-      const hairPixel = hairMask[k / 4] === 1,
+      const hairPixel =
+          hairMask[k / 4] === 1 ||
+          (base.blueHairOnly && b > Math.max(r, g) * 1.17),
         originalTop =
           look.collection === 'original' &&
           g >= b * 0.9 &&
@@ -554,57 +801,41 @@ async function prepare() {
       p.data[k + 2] = color[2];
     }
     ctx.putImageData(p, 60, 150);
-    const add = (i: number, w: number, x: number, y: number) => {
-      const piece = pieces[i],
-        h = (w * piece.h) / piece.w;
+    for (const { piece, x, y, w, h } of attachments(base, look, actor, bun)) {
       ctx.drawImage(
         piece.c,
         piece.x,
         piece.y,
         piece.w,
         piece.h,
-        60 + x - w / 2,
-        150 + y - h / 2,
+        60 + x,
+        150 + y,
         w,
         h,
       );
-    };
-    const hat = HATS.find((h) => h.id === look.hat)!.cell,
-      glasses = GLASSES.find((g) => g.id === look.glasses)!.cell;
-    if (hat === 9) {
-      const piece = pieces[9],
-        scale = (base.head * (bun ? 0.83 : 0.95)) / band.width;
-      ctx.drawImage(
-        piece.c,
-        piece.x,
-        piece.y,
-        piece.w,
-        piece.h,
-        60 + base.cx - (band.cx - piece.x) * scale,
-        150 + base.eyes - base.head * 0.2 - (band.cy - piece.y) * scale,
-        piece.w * scale,
-        piece.h * scale,
-      );
-    } else if (hat >= 0) {
-      const i = actor === 5 && hat === 0 ? 8 : hat,
-        w = base.head * (hat === 1 ? 1.35 : hat === 0 ? 0.92 : 1.03),
-        h = (w * pieces[i].h) / pieces[i].w;
-      add(i, w, base.cx, base.eyes - base.head * 0.19 - h / 2);
     }
-    if (glasses >= 0) add(glasses, base.head * 0.76, base.cx, base.eyes);
-    if (look.clip)
-      add(
-        7,
-        base.head * 0.25,
-        base.cx + base.head * 0.38,
-        base.top + base.head * 0.3,
-      );
-    const result = bounds(c);
+    const result = generated ? { c, ...motionCrop(actor, look) } : bounds(c);
     cache.set(key, result);
     if (cache.size > 64) cache.delete(cache.keys().next().value!);
     return result;
   }
   return {
+    loadMotion,
+    async warmMotion(actor: number, input: Look) {
+      const look = readLook(input, actor);
+      if (look.collection !== 'classic' || look.hairstyle !== 'signature')
+        return;
+      await loadMotion(actor);
+      // Prepare the local player's color/accessory composites while the scene
+      // loads, so the first input does not pay for decoding twelve new poses.
+      for (const motion of ['walk', 'run'] as const)
+        for (
+          let frame = 0;
+          frame < motionFigures.get(actor)![motion].length;
+          frame++
+        )
+          composed(actor, look, frame, motion);
+    },
     draw(
       target: HTMLCanvasElement,
       actor: number,
@@ -613,21 +844,86 @@ async function prepare() {
       time = 0,
       portrait = false,
       reduced = false,
+      options: { facing?: 1 | -1 } = {},
     ) {
-      const look = readLook(input, actor),
-        f = composed(
+      const look = readLook(input, actor);
+      const locomotion =
+        !portrait && !reduced && (motion === 'walk' || motion === 'run');
+      const motionArt =
+        locomotion &&
+        look.collection === 'classic' &&
+        look.hairstyle === 'signature';
+      if (motionArt && !motionFigures.has(actor))
+        void loadMotion(actor).catch(() => {
+          /* Existing artwork remains available offline. */
+        });
+      const generated =
+        motionArt && motionFigures.has(actor)
+          ? (motion as 'walk' | 'run')
+          : undefined;
+      const base = composed(
           actor,
           look,
-          look.collection === 'original' && look.hairstyle === 'signature'
-            ? motionFrame(motion, time, reduced)
-            : 0,
+          generated
+            ? gaitFrame(
+                motion,
+                time,
+                motionFigures.get(actor)![generated].length,
+              )
+            : look.collection === 'original' && look.hairstyle === 'signature'
+              ? motionFrame(motion, time, reduced)
+              : 0,
+          generated,
         ),
         ctx = target.getContext('2d')!;
-      ctx.clearRect(0, 0, target.width, target.height);
+      const customGait =
+        locomotion &&
+        !generated &&
+        (!motionArt || motionFailures.has(actor)) &&
+        !(
+          look.collection === 'original' &&
+          look.hairstyle === 'signature' &&
+          actor < 6
+        );
+      let f = base;
+      if (customGait) {
+        const frame = gaitFrame(motion, time, 8),
+          key = JSON.stringify([actor, look, motion, frame]);
+        const cached = gaitCache.get(key);
+        if (cached) f = cached;
+        else {
+          const c = canvas(base.w, base.h);
+          drawCostumeGait(
+            c.getContext('2d')!,
+            base.c,
+            base,
+            frame,
+            motion === 'run',
+            look.collection === 'akatsuki',
+          );
+          f = { c, x: 0, y: 0, w: base.w, h: base.h };
+          gaitCache.set(key, f);
+          if (gaitCache.size > 56)
+            gaitCache.delete(gaitCache.keys().next().value!);
+        }
+      }
       const scale = portrait
           ? target.width / (f.w * 0.94)
           : Math.min((target.width * 0.92) / f.w, (target.height * 0.94) / f.h),
-        pose = motionTransform(motion, time, reduced);
+        pose = motionTransform(motion, time, reduced || !!generated);
+      const drawKey = [
+        target.width,
+        target.height,
+        portrait,
+        options.facing ?? 1,
+        pose.lift,
+        pose.tilt,
+        pose.scaleX,
+        pose.scaleY,
+      ].join('|');
+      const previous = lastDraw.get(target);
+      if (previous?.piece === f && previous.key === drawKey) return false;
+      ctx.clearRect(0, 0, target.width, target.height);
       ctx.save();
       ctx.translate(
         target.width / 2,
@@ -636,7 +932,10 @@ async function prepare() {
           : target.height * 0.97 - pose.lift * scale,
       );
       ctx.rotate(pose.tilt);
-      ctx.scale(pose.scaleX, pose.scaleY);
+      ctx.scale(
+        pose.scaleX * (portrait ? 1 : (options.facing ?? 1)),
+        pose.scaleY,
+      );
       ctx.drawImage(
         f.c,
         f.x,
@@ -649,6 +948,8 @@ async function prepare() {
         f.h * scale,
       );
       ctx.restore();
+      lastDraw.set(target, { piece: f, key: drawKey });
+      return true;
     },
   };
 }

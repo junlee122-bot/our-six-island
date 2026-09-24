@@ -25,6 +25,11 @@ import type { LoungeSave } from './lounge-look';
 import type { LoungePlayer } from './lounge-room';
 import { ACTORS } from './theater-data';
 import { loungeSprites } from './lounge-sprites';
+import {
+  advanceLocomotion,
+  RUN_SPEED_MULTIPLIER,
+  type LocomotionState,
+} from './lounge-locomotion';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { buildVillageWorld } from './lounge-village-world';
 import {
@@ -106,6 +111,9 @@ export function Village3D(props: Props) {
   const hostRef = useRef<HTMLDivElement>(null),
     labelsRef = useRef<HTMLDivElement>(null);
   const directions = useRef(new Set<Direction>());
+  const runToggle = useRef(false),
+    shiftHeld = useRef(false);
+  const [runPressed, setRunPressed] = useState(false);
   const controls = useRef<{
     go: (place: VillagePlace) => void;
     zoom: (delta: number) => void;
@@ -342,6 +350,8 @@ export function Village3D(props: Props) {
       drawn: number;
       actor: number;
       walking: boolean;
+      phase: number;
+      facing: 1 | -1;
     };
     const figures = new Map<string, Figure>();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
@@ -437,8 +447,17 @@ export function Village3D(props: Props) {
           4,
         ),
       );
-    const spritesJob = loungeSprites().then((value) => {
+    const spritesJob = loungeSprites().then(async (value) => {
       if (!disposed) sprites = value;
+      if (
+        !disposed &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        const save = latest.current.save;
+        await value.warmMotion(save.actor, save.looks[save.actor]).catch(() => {
+          /* The existing wardrobe remains usable when optional motion art is offline. */
+        });
+      }
     });
     void Promise.allSettled([...modelJobs, ...originalJobs, spritesJob]).then(
       (results) => {
@@ -503,6 +522,8 @@ export function Village3D(props: Props) {
         drawn: -1000,
         actor: p.actor,
         walking: false,
+        phase: 0,
+        facing: 1,
       };
     };
 
@@ -518,6 +539,7 @@ export function Village3D(props: Props) {
       startY: number;
       dragged: boolean;
     } | null = null;
+    let locomotion: LocomotionState = { phase: 0, facing: 1 };
     const down = (e: PointerEvent) => {
       if (e.button !== 0 || !e.isPrimary) return;
       host.focus({ preventScroll: true });
@@ -576,6 +598,9 @@ export function Village3D(props: Props) {
     const cancel = () => {
       press = null;
     };
+    const lostCapture = (e: PointerEvent) => {
+      if (press?.id === e.pointerId) press = null;
+    };
     const keydown = (e: KeyboardEvent) => {
       if (
         e.target instanceof Element &&
@@ -601,10 +626,25 @@ export function Village3D(props: Props) {
     const keyup = (e: KeyboardEvent) => {
       const d = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
       if (d) directions.current.delete(d);
+      if (e.key === 'Shift') {
+        shiftHeld.current = false;
+        setRunPressed(runToggle.current);
+      }
     };
     const blur = () => {
       activeDirections.clear();
+      shiftHeld.current = false;
+      setRunPressed(runToggle.current);
+      path = [];
       press = null;
+    };
+    const keyrun = (e: KeyboardEvent) => {
+      if (e.key !== 'Shift' || e.repeat) return;
+      shiftHeld.current = true;
+      setRunPressed(true);
+    };
+    const visibilityChanged = () => {
+      if (document.hidden) blur();
     };
     const loss = (e: Event) => {
       e.preventDefault();
@@ -616,11 +656,14 @@ export function Village3D(props: Props) {
     canvas.addEventListener('pointermove', drag);
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', cancel);
+    canvas.addEventListener('lostpointercapture', lostCapture);
     canvas.addEventListener('webglcontextlost', loss);
     host.addEventListener('keydown', keydown);
+    host.addEventListener('keydown', keyrun);
     host.addEventListener('focusout', blur);
     window.addEventListener('keyup', keyup);
     window.addEventListener('blur', blur);
+    document.addEventListener('visibilitychange', visibilityChanged);
     const resize = () => {
       width = host.clientWidth;
       height = host.clientHeight;
@@ -666,11 +709,12 @@ export function Village3D(props: Props) {
       const v =
         Number(directions.current.has('down')) -
         Number(directions.current.has('up'));
+      const run = runToggle.current || shiftHeld.current;
       if (h || v) {
         path = [];
         marker.visible = false;
         const len = Math.hypot(h, v),
-          speed = (5.2 * dt) / len;
+          speed = ((run ? 5.2 * RUN_SPEED_MULTIPLIER : 5.2) * dt) / len;
         // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
         position = villageStep(
           position,
@@ -684,7 +728,10 @@ export function Village3D(props: Props) {
           distance = Math.hypot(dx, dz);
         if (distance < 0.06) path.shift();
         else {
-          const step = Math.min(distance, 5.2 * dt);
+          const step = Math.min(
+            distance,
+            5.2 * (run ? RUN_SPEED_MULTIPLIER : 1) * dt,
+          );
           position = villageStep(
             position,
             (dx / distance) * step,
@@ -693,8 +740,18 @@ export function Village3D(props: Props) {
         }
         if (!path.length) marker.visible = false;
       }
-      const walking =
-        Math.hypot(position.x - before.x, position.z - before.z) > 0.0001;
+      const movedX = position.x - before.x,
+        movedZ = position.z - before.z,
+        moved = Math.hypot(movedX, movedZ),
+        walking = moved > 0.0001,
+        horizontal = movedX * 0.837 - movedZ * 0.547,
+        playerMotion = advanceLocomotion(
+          locomotion,
+          { distance: moved, horizontal },
+          run ? 'run' : 'walk',
+          5.2,
+        );
+      locomotion = playerMotion.state;
       if ((walking && now - lastSend > 180) || (!walking && wasWalking)) {
         if (
           Math.hypot(position.x - lastSent.x, position.z - lastSent.z) > 0.01
@@ -733,21 +790,48 @@ export function Village3D(props: Props) {
           figures.set(p.id, figure);
         }
         const own = p.id === current.self;
-        let moving = walking && own;
+        let moving = walking && own,
+          motion: 'walk' | 'run' | 'idle' =
+            own && walking ? playerMotion.motion : 'idle',
+          phase = own ? locomotion.phase : figure.phase,
+          facing: 1 | -1 = own ? locomotion.facing : figure.facing;
         if (own) figure.point = position;
         else if (!p.id.startsWith('friend-')) {
           const point = villageFromNetwork(p);
           if (villageCanWalk(point)) {
-            moving =
-              Math.hypot(point.x - figure.point.x, point.z - figure.point.z) >
-              0.08;
+            const beforeRemote = figure.point;
             figure.point = villageStep(
               figure.point,
               (point.x - figure.point.x) * Math.min(1, dt * 9),
               (point.z - figure.point.z) * Math.min(1, dt * 9),
             );
+            const remoteX = figure.point.x - beforeRemote.x,
+              remoteZ = figure.point.z - beforeRemote.z,
+              remoteDistance = Math.hypot(remoteX, remoteZ),
+              remoteMotion = advanceLocomotion(
+                { phase: figure.phase, facing: figure.facing },
+                {
+                  distance: remoteDistance,
+                  horizontal: remoteX * 0.837 - remoteZ * 0.547,
+                },
+                remoteDistance / Math.max(dt, 0.001) > 5.2 * 1.3
+                  ? 'run'
+                  : 'walk',
+                5.2,
+              );
+            moving = remoteMotion.motion !== 'idle';
+            phase = remoteMotion.state.phase;
+            facing = remoteMotion.state.facing;
+            figure.phase = phase;
+            figure.facing = facing;
+            motion = remoteMotion.motion;
           }
         }
+        if (own) {
+          figure.phase = locomotion.phase;
+          figure.facing = locomotion.facing;
+        }
+        figure.walking = moving;
         const onBridge =
           Math.abs(figure.point.x) < 2.4 &&
           figure.point.z > 13.3 &&
@@ -760,21 +844,22 @@ export function Village3D(props: Props) {
             ) * 0.53
           : 0;
         figure.group.position.set(figure.point.x, elevation, figure.point.z);
-        const key = JSON.stringify([p.actor, p.look]);
+        const key = JSON.stringify([p.actor, p.look, motion, facing]);
         if (
           sprites &&
           (key !== figure.last || now - figure.drawn > (moving ? 70 : 300))
         ) {
-          sprites.draw(
+          const changed = sprites.draw(
             figure.canvas,
             p.actor,
             p.look,
-            moving ? 'walk' : 'idle',
-            now / 1000,
+            motion,
+            phase,
             false,
             reduced.matches,
+            { facing },
           );
-          figure.texture.needsUpdate = true;
+          if (changed) figure.texture.needsUpdate = true;
           figure.last = key;
           figure.drawn = now;
         }
@@ -810,6 +895,8 @@ export function Village3D(props: Props) {
           avatarX: position.x.toFixed(3),
           avatarZ: position.z.toFixed(3),
           walking: String(walking),
+          motion: playerMotion.motion,
+          facing: String(locomotion.facing),
           zoom: zoom.toFixed(2),
           targetX: target.x.toFixed(3),
           targetZ: target.z.toFixed(3),
@@ -820,6 +907,7 @@ export function Village3D(props: Props) {
       if (
         now - lastRender >
         (walking ||
+        [...figures.values()].some((figure) => figure.walking) ||
         press ||
         Math.abs(zoom - desiredZoom) > 0.01 ||
         target.distanceToSquared(desiredTarget) > 0.0001
@@ -843,11 +931,14 @@ export function Village3D(props: Props) {
       canvas.removeEventListener('pointermove', drag);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointercancel', cancel);
+      canvas.removeEventListener('lostpointercapture', lostCapture);
       canvas.removeEventListener('webglcontextlost', loss);
       host.removeEventListener('keydown', keydown);
+      host.removeEventListener('keydown', keyrun);
       host.removeEventListener('focusout', blur);
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
+      document.removeEventListener('visibilitychange', visibilityChanged);
       disposeScene(scene);
       sun.shadow.dispose();
       renderer.dispose();
@@ -881,7 +972,7 @@ export function Village3D(props: Props) {
           className="hv-scene"
           role="application"
           tabIndex={0}
-          aria-label="범타듀 밸리. 바닥을 눌러 걷기, 방향키와 WASD로 이동, 드래그로 지도 둘러보기"
+          aria-label="범타듀 밸리. 바닥을 눌러 걷기, 방향키와 WASD로 이동, Shift 또는 달리기 버튼으로 달리기, 드래그로 지도 둘러보기"
           data-testid="village-3d"
           data-load-state={state}
         >
@@ -1024,7 +1115,19 @@ export function Village3D(props: Props) {
           </button>
         </div>
         {state !== 'unavailable' && (
-          <div className="hv-pad" aria-label="마을 걷기">
+          <div className="hv-pad" aria-label="마을 걷기와 달리기">
+            <button
+              type="button"
+              className="hv-pad-run"
+              aria-label="달리기 전환"
+              aria-pressed={runPressed}
+              onClick={() => {
+                runToggle.current = !runToggle.current;
+                setRunPressed(runToggle.current || shiftHeld.current);
+              }}
+            >
+              <Footprints size={15} /> {runPressed ? '달리기 켬' : '달리기'}
+            </button>
             {DIRECTIONS.map(([direction, Icon, label]) => (
               <button
                 key={direction}

@@ -20,6 +20,32 @@ import {
 import { accountSave } from '../app/lounge-accounts.ts';
 import { LoungeRoom } from '../app/lounge-room.ts';
 import { newLoungeLedger } from '../app/lounge-economy.ts';
+
+test('moving fists in front of the chest inherit skin color while a cream shirt stays untouched', () => {
+  const width = 200,
+    height = 300,
+    data = new Uint8ClampedArray(width * height * 4);
+  const fill = (x0, y0, w, h, rgb) => {
+    for (let y = y0; y < y0 + h; y++)
+      for (let x = x0; x < x0 + w; x++)
+        data.set([...rgb, 255], (y * width + x) * 4);
+  };
+  fill(40, 10, 120, 90, [20, 60, 180]);
+  fill(65, 50, 70, 55, [224, 166, 126]);
+  fill(65, 112, 75, 100, [241, 228, 198]);
+  fill(70, 212, 60, 78, [35, 35, 40]);
+  fill(94, 142, 14, 14, [224, 166, 126]);
+  const anchors = { cx: 100, eyes: 75, head: 100 };
+  const still = createSkinMask(data, width, height, anchors);
+  const moving = createSkinMask(data, width, height, {
+    ...anchors,
+    movingHands: true,
+  });
+  assert.equal(still.pixels[148 * width + 100], 0);
+  assert.equal(moving.pixels[148 * width + 100], 1);
+  assert.equal(moving.pixels[180 * width + 100], 0);
+  assert.equal(moving.pixels[240 * width + 100], 0);
+});
 import {
   readAccountDraft,
   restoreAccountDraft,

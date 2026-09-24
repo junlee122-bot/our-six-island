@@ -218,7 +218,7 @@
   bottom: 18px;
   display: grid;
   grid-template-columns: repeat(3, 39px);
-  grid-template-rows: repeat(2, 37px);
+  grid-template-rows: repeat(3, 37px);
   gap: 4px;
   z-index: 2;
 }
@@ -255,6 +255,21 @@
 .b3-pad-right {
   grid-column: 3;
   grid-row: 2;
+}
+.b3-pad-run {
+  grid-column: 1 / 4;
+  grid-row: 3;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.b3-pad-run[aria-pressed='true'] {
+  color: #fffaf0 !important;
+  background: #75805a !important;
+  border-color: #65704e !important;
 }
 .b3-room-caption {
   display: flex;
@@ -323,7 +338,7 @@
     right: 12px;
     bottom: 14px;
     grid-template-columns: repeat(3, 42px);
-    grid-template-rows: repeat(2, 40px);
+    grid-template-rows: repeat(3, 40px);
   }
   .b3-scene-footer {
     padding: 12px;

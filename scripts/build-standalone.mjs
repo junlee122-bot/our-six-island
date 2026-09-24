@@ -17,8 +17,8 @@ const manifest = fs.readFileSync(
 const assets = [...manifest.matchAll(/["']\/assets\/([^'"]+)["']/g)].map(
   (match) => match[1],
 );
-if (assets.length !== 120 || new Set(assets).size !== 120)
-  throw new Error('The lounge manifest must include all 120 unique images.');
+if (assets.length !== 127 || new Set(assets).size !== 127)
+  throw new Error('The lounge manifest must include all 127 unique images.');
 const modelManifest = fs.readFileSync(
   path.join(root, 'app/lounge-model-assets.ts'),
   'utf8',
