@@ -38,6 +38,7 @@ export function LoginStudio() {
   const [state, setState] = useState('loading');
   useEffect(() => {
     const host = hostRef.current!;
+    const stage = host.closest<HTMLElement>('.l-login-stage');
     let disposed = false;
     let contextFailed = false;
     let frame = 0;
@@ -189,7 +190,8 @@ export function LoginStudio() {
           : [mesh.material]) {
           const material = surface as THREE.MeshStandardMaterial;
           const image = material.map?.image as { width?: number } | undefined;
-          if (typeof image?.width === 'number' && image.width > 0) textured = true;
+          if (typeof image?.width === 'number' && image.width > 0)
+            textured = true;
         }
       });
       if (!textured) {
@@ -253,6 +255,27 @@ export function LoginStudio() {
       camera.top = half;
       camera.bottom = -half;
       camera.updateProjectionMatrix();
+      camera.updateMatrixWorld();
+      // Keep the immediately visible DOM figure on the rug, at furniture scale.
+      const foot = new THREE.Vector3(0.9, 0.06, 1.05);
+      const projectedFoot = foot.clone().project(camera);
+      const projectedTop = foot
+        .clone()
+        .add(new THREE.Vector3(0, 1.9, 0))
+        .project(camera);
+      const avatarHeight = ((projectedTop.y - projectedFoot.y) * height) / 2;
+      const shadowWidth = (0.66 * height) / (half * 2);
+      const viewDirection = camera.getWorldDirection(new THREE.Vector3());
+      const properties = {
+        '--login-avatar-x': `${(projectedFoot.x + 1) * 50}%`,
+        '--login-avatar-y': `${(1 - projectedFoot.y) * 50}%`,
+        '--login-avatar-width': `${(avatarHeight * 440) / 540}px`,
+        '--login-avatar-height': `${avatarHeight}px`,
+        '--login-shadow-width': `${shadowWidth}px`,
+        '--login-shadow-height': `${shadowWidth * Math.abs(viewDirection.y)}px`,
+      };
+      for (const [property, value] of Object.entries(properties))
+        stage?.style.setProperty(property, value);
       renderer.setSize(width, height, false);
       requestRender();
     };

@@ -131,10 +131,12 @@
 }
 .l-login-entrance {
   position: absolute;
-  left: 40%;
-  bottom: 17.5%;
-  width: 31%;
-  height: 51%;
+  left: var(--login-avatar-x, 51%);
+  top: var(--login-avatar-y, 66%);
+  width: var(--login-avatar-width, 12.4%);
+  height: var(--login-avatar-height, 19%);
+  /* The exported image's feet sit at 97% of its full canvas height. */
+  translate: -50% -97%;
   transform-origin: 50% 97%;
   animation: login-arrive 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -151,25 +153,35 @@
 }
 .l-login-shadow {
   position: absolute;
-  left: 47%;
-  bottom: 17.5%;
-  width: 17%;
-  height: 2.4%;
+  left: var(--login-avatar-x, 51%);
+  top: var(--login-avatar-y, 66%);
+  width: var(--login-shadow-width, 5.8%);
+  height: var(--login-shadow-height, 3%);
+  translate: -50% -50%;
   border-radius: 50%;
-  background: #3d4c342b;
-  filter: blur(3px);
+  background: radial-gradient(
+    ellipse,
+    #3d4c343d 0%,
+    #3d4c341c 40%,
+    #3d4c3400 72%
+  );
+  pointer-events: none;
 }
 .l-login-wave {
   position: absolute;
-  right: -8%;
+  right: -24%;
   top: 28%;
-  padding: 8px;
+  padding: 5px;
   border-radius: 50%;
   background: #fffaf0;
   color: #517d67;
   box-shadow: 0 2px 8px #455b3924;
   transform-origin: 50% 100%;
   animation: login-wave 1.15s 0.25s ease-in-out both;
+}
+.l-login-wave svg {
+  width: 15px;
+  height: 15px;
 }
 .l-login-greeting {
   position: absolute;
@@ -258,7 +270,7 @@
 }
 @keyframes login-arrive {
   from {
-    transform: translateX(-18px) translateY(6px);
+    transform: translateX(-12px);
   }
   to {
     transform: none;
@@ -271,20 +283,20 @@
   }
   25%,
   65% {
-    transform: rotate(-3deg) translateY(-3px);
+    transform: rotate(-2deg);
   }
   45%,
   85% {
-    transform: rotate(3deg) translateY(-3px);
+    transform: rotate(2deg);
   }
 }
 @keyframes login-breathe {
   0%,
   100% {
-    transform: translateY(0) scaleY(1);
+    transform: scaleY(1);
   }
   50% {
-    transform: translateY(-2px) scaleY(1.006);
+    transform: scaleY(1.006);
   }
 }
 @keyframes login-wave {
@@ -334,12 +346,6 @@
   .l-login-stage {
     aspect-ratio: 5 / 4;
   }
-  .l-login-entrance {
-    width: 33%;
-    height: 54%;
-    left: 39%;
-    bottom: 17.5%;
-  }
   .l-login-room-label {
     inset: 13px 14px auto;
     font-size: 10px;
@@ -360,12 +366,11 @@
     font-size: 11px;
   }
   .l-login-wave {
-    padding: 6px;
-    right: -9%;
+    padding: 4px;
   }
   .l-login-wave svg {
-    width: 19px;
-    height: 19px;
+    width: 13px;
+    height: 13px;
   }
   .l-login-caption {
     padding: 10px 12px;

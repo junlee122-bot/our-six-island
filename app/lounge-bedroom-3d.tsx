@@ -186,8 +186,23 @@ export function Bedroom3D({
     spriteTexture.colorSpace = THREE.SRGBColorSpace;
     spriteTexture.minFilter = THREE.LinearFilter;
     spriteTexture.generateMipmaps = false;
-    const sprite = new THREE.Sprite(
-      new THREE.SpriteMaterial({
+    // Keep the 2D art upright in world space. A screen-facing Sprite leans toward
+    // this elevated camera, so its upper body can overlap furniture in front.
+    const avatarHeight = 1.82;
+    const cameraUp = new THREE.Vector3().setFromMatrixColumn(
+      camera.matrixWorld,
+      1,
+    );
+    const avatarGeometry = new THREE.PlaneGeometry(
+      // Compensate for the elevated view so the original drawing keeps its ratio.
+      avatarHeight * cameraUp.y * (spriteCanvas.width / spriteCanvas.height),
+      avatarHeight,
+    );
+    // loungeSprites.draw places the soles at 97% of the texture's height.
+    avatarGeometry.translate(0, avatarHeight * 0.47, 0);
+    const sprite = new THREE.Mesh(
+      avatarGeometry,
+      new THREE.MeshBasicMaterial({
         map: spriteTexture,
         transparent: true,
         alphaTest: 0.12,
@@ -196,20 +211,36 @@ export function Bedroom3D({
         toneMapped: false,
       }),
     );
-    sprite.center.set(0.5, 0.03);
-    sprite.scale.set(1.58, 1.94, 1);
+    sprite.rotation.y = Math.atan2(camera.position.x, camera.position.z);
     scene.add(sprite);
+    const shadowCanvas = document.createElement('canvas');
+    shadowCanvas.width = shadowCanvas.height = 64;
+    const shadowContext = shadowCanvas.getContext('2d')!;
+    const shadowGradient = shadowContext.createRadialGradient(
+      32,
+      32,
+      4,
+      32,
+      32,
+      31,
+    );
+    shadowGradient.addColorStop(0, 'rgba(62, 49, 31, 0.3)');
+    shadowGradient.addColorStop(0.45, 'rgba(62, 49, 31, 0.16)');
+    shadowGradient.addColorStop(1, 'rgba(62, 49, 31, 0)');
+    shadowContext.fillStyle = shadowGradient;
+    shadowContext.fillRect(0, 0, 64, 64);
+    const shadowTexture = new THREE.CanvasTexture(shadowCanvas);
+    shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadow = new THREE.Mesh(
-      new THREE.CircleGeometry(0.27, 32),
+      new THREE.PlaneGeometry(0.72, 0.52),
       new THREE.MeshBasicMaterial({
-        color: '#514834',
+        map: shadowTexture,
         transparent: true,
-        opacity: 0.18,
         depthWrite: false,
+        toneMapped: false,
       }),
     );
     shadow.rotation.x = -Math.PI / 2;
-    shadow.scale.set(1, 0.6, 1);
     scene.add(shadow);
     const destination = new THREE.Mesh(
       new THREE.RingGeometry(0.13, 0.17, 32),
@@ -350,7 +381,7 @@ export function Bedroom3D({
       if (!width || !height) return;
       const aspect = width / height;
       // Include the high rear wall corner, not just the floor footprint.
-      const halfHeight = Math.max(5.7, 7.1 / aspect);
+      const halfHeight = Math.max(5.9, 7.1 / aspect);
       camera.left = -halfHeight * aspect;
       camera.right = halfHeight * aspect;
       camera.top = halfHeight;
