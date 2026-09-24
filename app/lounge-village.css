@@ -270,6 +270,55 @@
   background: #627b4e;
   border-color: #536a42;
 }
+.hv-entry-prompt {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 9px 12px 9px 17px;
+  border: 1px solid #fff;
+  border-radius: 15px;
+  background: #fffdf4f5;
+  box-shadow: 0 8px 28px #314b3430;
+  color: #465b42;
+  white-space: nowrap;
+}
+.hv-entry-prompt > div {
+  display: grid;
+  gap: 4px;
+}
+.hv-entry-prompt strong {
+  font-size: 13px;
+}
+.hv-entry-prompt small,
+.hv-entry-prompt > span {
+  color: #8a927d;
+  font-size: 10px;
+}
+.hv-entry-prompt button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #4f6e50;
+  color: #fffbe8;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.hv-entry-prompt button:focus-visible {
+  outline: 3px solid #b5bd69;
+  outline-offset: 2px;
+}
 .hv-place-card {
   position: absolute;
   left: 50%;
@@ -651,6 +700,30 @@
     gap: 10px;
     padding: 13px 25px 13px 12px;
     border-radius: 14px;
+  }
+  .hv-entry-prompt {
+    left: 11px;
+    right: 58px;
+    bottom: 90px;
+    transform: none;
+    gap: 8px;
+    min-height: 52px;
+    padding: 7px 8px 7px 11px;
+    border-radius: 12px;
+    white-space: normal;
+  }
+  .hv-entry-prompt strong {
+    font-size: 11px;
+  }
+  .hv-entry-prompt small,
+  .hv-entry-prompt > span {
+    font-size: 9px;
+  }
+  .hv-entry-prompt button {
+    min-height: 34px;
+    padding: 7px 9px;
+    font-size: 10px;
+    white-space: nowrap;
   }
   .hv-place-card h2 {
     font-size: 16px;

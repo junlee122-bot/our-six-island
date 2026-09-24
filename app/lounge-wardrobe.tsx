@@ -657,7 +657,7 @@ export function Wardrobe({
               자동으로 저장돼요
             </span>
             <button className="l-primary" onClick={onEnter}>
-              {entry ? '이 모습으로 입장' : '라운지로 돌아가기'}
+              {entry ? '이 모습으로 입장' : '마을로 나가기'}
               <ArrowRight size={18} />
             </button>
           </div>

@@ -33,6 +33,11 @@ import {
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { buildVillageWorld } from './lounge-village-world';
 import {
+  villageCanEnterPlace,
+  villageNearbyEntrance,
+  type NearbyVillageEntrance,
+} from './lounge-village-entrance';
+import {
   VILLAGE_PLACES,
   VILLAGE_START,
   VILLAGE_ORCHARD,
@@ -51,8 +56,9 @@ type Props = {
   save: LoungeSave;
   players: LoungePlayer[];
   self: string;
+  initialPosition?: VillagePoint;
   onMove: (x: number, y: number) => void;
-  onEnter: (destination: VillageDestination) => void;
+  onEnter: (destination: VillageDestination, place: VillagePlace) => void;
   onFriends: () => void;
   onRequest: () => void;
 };
@@ -110,12 +116,14 @@ export function Village3D(props: Props) {
   }, [props]);
   const hostRef = useRef<HTMLDivElement>(null),
     labelsRef = useRef<HTMLDivElement>(null);
+  const requestedPlace = useRef<VillagePlace | null>(null);
   const directions = useRef(new Set<Direction>());
   const runToggle = useRef(false),
     shiftHeld = useRef(false);
   const [runPressed, setRunPressed] = useState(false);
   const controls = useRef<{
     go: (place: VillagePlace) => void;
+    enter: (place: VillagePlace) => void;
     zoom: (delta: number) => void;
     home: () => void;
     overview: () => void;
@@ -124,12 +132,27 @@ export function Village3D(props: Props) {
     'loading' | 'ready' | 'partial' | 'unavailable'
   >('loading');
   const [selected, setSelected] = useState<VillagePlace | null>(null),
-    [directory, setDirectory] = useState(false);
+    [directory, setDirectory] = useState(false),
+    [nearby, setNearby] = useState<NearbyVillageEntrance | null>(null);
+  const nearbyId = useRef<string | null>(null);
   const select = (place: VillagePlace) => {
+    requestedPlace.current = place;
     setSelected(place);
     setDirectory(false);
     controls.current?.go(place);
   };
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (
+        !document.querySelector('dialog[open]') &&
+        (!active || active === document.body || !active.isConnected)
+      )
+        hostRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current!;
@@ -187,7 +210,7 @@ export function Village3D(props: Props) {
     const camera = new THREE.OrthographicCamera(-36, 36, 24, -24, 0.1, 180);
     const target = new THREE.Vector3(0, 0, 0),
       desiredTarget = target.clone();
-    let zoom = host.clientWidth < 600 ? 1.7 : 1.08,
+    let zoom = host.clientWidth < 600 ? 2.15 : 1,
       desiredZoom = zoom;
     let follow = host.clientWidth < 600;
     const offset = new THREE.Vector3(34, 43, 52);
@@ -197,8 +220,12 @@ export function Village3D(props: Props) {
       villageCanWalk(point)
         ? { ...point }
         : (villagePath(VILLAGE_START, point).at(-1) ?? { ...VILLAGE_START });
-    let position: VillagePoint = safePosition(networkStart);
+    let position: VillagePoint = safePosition(
+      latest.current.initialPosition ?? networkStart,
+    );
     let path: VillagePoint[] = [];
+    let entryIntent: VillagePlace | null = null;
+    let lastEntranceCheck = -1000;
     let width = host.clientWidth,
       height = host.clientHeight;
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -216,16 +243,35 @@ export function Village3D(props: Props) {
     marker.rotation.x = -Math.PI / 2;
     marker.visible = false;
     scene.add(marker);
-    const goTo = (point: VillagePoint) => {
+    const goTo = (
+      point: VillagePoint,
+      enterWhenNear: VillagePlace | null = null,
+    ) => {
+      entryIntent = enterWhenNear;
       path = villagePath(position, point);
       const end = path.at(-1);
+      if (!end) entryIntent = null;
       marker.visible = !!end;
       if (end) marker.position.set(end.x, 0.19, end.z);
+      follow = true;
+      desiredZoom = Math.max(desiredZoom, host.clientWidth < 600 ? 2.35 : 1.6);
       host.focus({ preventScroll: true });
     };
     controls.current = {
       go: (place) => {
+        requestedPlace.current = place;
         goTo(place.entry);
+        follow = true;
+        desiredZoom = Math.max(
+          desiredZoom,
+          host.clientWidth < 600 ? 2.35 : 1.6,
+        );
+      },
+      enter: (place) => {
+        requestedPlace.current = place;
+        if (villageCanEnterPlace(place, latest.current.save.actor))
+          goTo(place.entry, place);
+        else goTo(place.entry);
         follow = true;
         desiredZoom = Math.max(
           desiredZoom,
@@ -580,6 +626,8 @@ export function Village3D(props: Props) {
     const up = (e: PointerEvent) => {
       if (!press || e.pointerId !== press.id) return;
       if (!press.dragged) {
+        entryIntent = null;
+        requestedPlace.current = null;
         const r = canvas.getBoundingClientRect();
         pointer.set(
           ((e.clientX - r.left) / r.width) * 2 - 1,
@@ -614,13 +662,32 @@ export function Village3D(props: Props) {
         document.querySelector('dialog[open]')
       )
         return;
+      if (e.key === 'Enter' || e.key.toLowerCase() === 'e') {
+        const entrance = villageNearbyEntrance(
+          position,
+          latest.current.save.actor,
+        );
+        if (entrance?.canEnter) {
+          e.preventDefault();
+          entryIntent = null;
+          requestedPlace.current = entrance.place;
+          latest.current.onEnter(entrance.place.destination, entrance.place);
+        }
+        return;
+      }
       const direction = KEYS[e.key] ?? KEYS[e.key.toLowerCase()];
       if (direction) {
         e.preventDefault();
+        entryIntent = null;
+        requestedPlace.current = null;
         directions.current.add(direction);
         path = [];
         marker.visible = false;
         follow = true;
+        desiredZoom = Math.max(
+          desiredZoom,
+          host.clientWidth < 600 ? 2.35 : 1.6,
+        );
       }
     };
     const keyup = (e: KeyboardEvent) => {
@@ -631,11 +698,21 @@ export function Village3D(props: Props) {
         setRunPressed(runToggle.current);
       }
     };
-    const blur = () => {
+    const blur = (event?: Event) => {
+      if (
+        event?.type === 'focusout' &&
+        event instanceof FocusEvent &&
+        event.relatedTarget instanceof Node &&
+        host.contains(event.relatedTarget)
+      )
+        return;
       activeDirections.clear();
       shiftHeld.current = false;
       setRunPressed(runToggle.current);
       path = [];
+      entryIntent = null;
+      requestedPlace.current = null;
+      marker.visible = false;
       press = null;
     };
     const keyrun = (e: KeyboardEvent) => {
@@ -687,7 +764,7 @@ export function Village3D(props: Props) {
       if (!visible) blur();
     });
     visibility.observe(host);
-    let previous = performance.now(),
+    let previous = 0,
       lastRender = -1000,
       lastSend = -1000,
       lastData = -1000;
@@ -697,7 +774,7 @@ export function Village3D(props: Props) {
     const animate = (now: number) => {
       if (disposed || contextLost) return;
       frame = requestAnimationFrame(animate);
-      const dt = Math.min((now - previous) / 1000, 0.08);
+      const dt = previous ? Math.min((now - previous) / 1000, 0.08) : 0;
       previous = now;
       // Let image decoding finish before compiling and drawing the full world.
       // This avoids competing with asset loading on phones and software WebGL.
@@ -711,8 +788,15 @@ export function Village3D(props: Props) {
         Number(directions.current.has('up'));
       const run = runToggle.current || shiftHeld.current;
       if (h || v) {
+        entryIntent = null;
+        requestedPlace.current = null;
         path = [];
         marker.visible = false;
+        follow = true;
+        desiredZoom = Math.max(
+          desiredZoom,
+          host.clientWidth < 600 ? 2.35 : 1.6,
+        );
         const len = Math.hypot(h, v),
           speed = ((run ? 5.2 * RUN_SPEED_MULTIPLIER : 5.2) * dt) / len;
         // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
@@ -763,6 +847,33 @@ export function Village3D(props: Props) {
         }
       }
       wasWalking = walking;
+      if (now - lastEntranceCheck > 80) {
+        lastEntranceCheck = now;
+        const entrance = villageNearbyEntrance(
+          position,
+          latest.current.save.actor,
+        );
+        if (entrance?.place.id !== nearbyId.current) {
+          nearbyId.current = entrance?.place.id ?? null;
+          setNearby(entrance);
+        }
+        host.dataset.nearbyPlace = entrance?.place.id ?? '';
+        host.dataset.entryReady = String(entrance?.canEnter ?? false);
+        host.dataset.destination =
+          entryIntent?.destination ??
+          requestedPlace.current?.destination ??
+          entrance?.place.destination ??
+          '';
+        if (
+          entryIntent &&
+          entrance?.canEnter &&
+          entrance.place.id === entryIntent.id
+        ) {
+          const place = entryIntent;
+          entryIntent = null;
+          latest.current.onEnter(place.destination, place);
+        }
+      }
       if (follow) desiredTarget.set(position.x, 0, position.z - 1.2);
       target.lerp(desiredTarget, reduced.matches ? 1 : Math.min(1, dt * 5));
       zoom +=
@@ -900,6 +1011,7 @@ export function Village3D(props: Props) {
           zoom: zoom.toFixed(2),
           targetX: target.x.toFixed(3),
           targetZ: target.z.toFixed(3),
+          overview: String(zoom < 1.5),
           residents: String(residents.length),
         });
         lastData = now;
@@ -947,8 +1059,6 @@ export function Village3D(props: Props) {
     };
   }, []);
 
-  const isMyHome =
-    selected?.kind === 'home' && selected.actor === props.save.actor;
   return (
     <section className="hv-village" aria-label="범타듀 밸리 마을">
       <div className="hv-heading">
@@ -975,6 +1085,9 @@ export function Village3D(props: Props) {
           aria-label="범타듀 밸리. 바닥을 눌러 걷기, 방향키와 WASD로 이동, Shift 또는 달리기 버튼으로 달리기, 드래그로 지도 둘러보기"
           data-testid="village-3d"
           data-load-state={state}
+          data-nearby-place=""
+          data-entry-ready="false"
+          data-destination=""
         >
           <div ref={labelsRef} className="hv-labels">
             {VILLAGE_PLACES.map((place) => (
@@ -982,6 +1095,7 @@ export function Village3D(props: Props) {
                 key={place.id}
                 type="button"
                 data-place={place.id}
+                data-owned={String(place.actor === props.save.actor)}
                 className={`hv-place hv-place-${place.kind}${selected?.id === place.id ? ' is-selected' : ''}`}
                 onClick={() => select(place)}
                 aria-label={`${place.name} 둘러보기`}
@@ -1019,17 +1133,14 @@ export function Village3D(props: Props) {
                 아래에서 원하는 장소로 바로 들어갈 수 있어요.
               </p>
               <div>
-                {[
-                  ['lounge', '회관'],
-                  ['casino', '카지노'],
-                  ['wardrobe', '분장실'],
-                  ['bedroom', '내 방'],
-                ].map(([id, name]) => (
+                {VILLAGE_PLACES.filter((place) =>
+                  villageCanEnterPlace(place, props.save.actor),
+                ).map((place) => (
                   <button
-                    key={id}
-                    onClick={() => props.onEnter(id as VillageDestination)}
+                    key={place.id}
+                    onClick={() => props.onEnter(place.destination, place)}
                   >
-                    {name}
+                    {place.name}
                     <DoorOpen size={16} />
                   </button>
                 ))}
@@ -1157,7 +1268,36 @@ export function Village3D(props: Props) {
             ))}
           </div>
         )}
-        {selected && (
+        {nearby && state !== 'unavailable' && (
+          <section
+            className="hv-entry-prompt"
+            aria-label={`${nearby.place.name} 입구`}
+            aria-live="polite"
+            data-testid="village-entry-prompt"
+            data-place={nearby.place.id}
+            data-entry-ready={String(nearby.canEnter)}
+          >
+            <div>
+              <strong>{nearby.place.name}</strong>
+              <small>
+                {nearby.canEnter
+                  ? 'E 또는 Enter를 눌러 들어가기'
+                  : '주민의 집이에요. 집 앞에서 인사해요.'}
+              </small>
+            </div>
+            {nearby.canEnter ? (
+              <button
+                type="button"
+                onClick={() => controls.current?.enter(nearby.place)}
+              >
+                들어가기 <ArrowRight size={15} />
+              </button>
+            ) : (
+              <span>방문 불가</span>
+            )}
+          </section>
+        )}
+        {selected && !nearby && (
           <section className="hv-place-card" aria-label="선택한 장소">
             <div
               className="hv-place-monogram"
@@ -1180,17 +1320,15 @@ export function Village3D(props: Props) {
             </div>
             <button
               className="hv-enter"
-              onClick={() =>
-                selected.kind !== 'home' || isMyHome
-                  ? props.onEnter(selected.destination)
-                  : controls.current?.go(selected)
-              }
+              onClick={() => {
+                if (!villageCanEnterPlace(selected, props.save.actor)) {
+                  controls.current?.go(selected);
+                } else controls.current?.enter(selected);
+              }}
             >
-              {selected.kind === 'home'
-                ? isMyHome
-                  ? '내 방 들어가기'
-                  : '집 앞에서 만나기'
-                : '들어가기'}
+              {!villageCanEnterPlace(selected, props.save.actor)
+                ? '집 앞에서 만나기'
+                : '걸어서 들어가기'}
               <ArrowRight size={16} />
             </button>
             <button

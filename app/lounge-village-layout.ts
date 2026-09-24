@@ -73,7 +73,7 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
   makePlace({
     id: 'hall',
     name: '범마을 회관',
-    subtitle: '체스 · 고스톱 · 섯다',
+    subtitle: '고스톱 · 섯다 · 친구들과 수다',
     kind: 'hall',
     x: -16,
     z: 5,
@@ -86,7 +86,7 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
   makePlace({
     id: 'casino',
     name: '별빛 카지노',
-    subtitle: '홀덤 · 블랙잭 · AI 딜러',
+    subtitle: '체스 · 홀덤 · 블랙잭',
     kind: 'casino',
     x: 16,
     z: 5,

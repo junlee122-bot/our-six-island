@@ -142,3 +142,508 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The village is the game surface; utilities float above it like a small HUD. */
+.l-app.l-immersive {
+  overflow: hidden;
+  height: 100dvh;
+  isolation: isolate;
+  background: #e6edcf;
+}
+.l-immersive .l-village,
+.l-immersive .l-village-content,
+.l-immersive .l-village-world,
+.l-immersive .hv-village,
+.l-immersive .hv-frame,
+.l-immersive .hv-scene {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.l-immersive .l-village {
+  position: absolute;
+  inset: 0;
+}
+.l-immersive .l-village-content,
+.l-immersive .l-village-world {
+  display: block;
+}
+.l-immersive .hv-frame {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.l-immersive .hv-heading,
+.l-immersive .hv-bottom,
+.l-immersive .hv-credit,
+.l-immersive .hv-map-caption,
+.l-immersive > .l-footer,
+.l-immersive > .l-save-bar {
+  display: none;
+}
+.l-app .l-world-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68px;
+  height: auto;
+  gap: 12px;
+  padding: 10px 24px;
+}
+.l-immersive .l-world-header {
+  position: absolute;
+  z-index: 8;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(20px, env(safe-area-inset-left));
+  right: max(20px, env(safe-area-inset-right));
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+.l-immersive .l-world-header > * {
+  pointer-events: auto;
+}
+.l-immersive .l-brand {
+  gap: 9px;
+  padding: 8px 13px 8px 9px;
+  border: 1px solid #f8f9e5e0;
+  border-radius: 16px;
+  background: #fffdeeeb;
+  box-shadow: 0 3px 12px #43523310;
+}
+.l-immersive .l-brand strong {
+  font-size: 17px;
+  letter-spacing: -0.6px;
+}
+.l-immersive .l-brand small {
+  font-size: 10px;
+}
+.l-immersive .l-brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+.l-app .l-world-header .l-header-right {
+  gap: 8px;
+}
+.l-immersive .l-header-right {
+  padding: 5px;
+  border: 1px solid #f8f9e5e0;
+  border-radius: 15px;
+  background: #fffdeeeb;
+  box-shadow: 0 3px 12px #43523310;
+}
+.l-immersive .l-friends-button {
+  display: none;
+}
+.l-immersive .l-profile > span:last-child {
+  display: none;
+}
+.l-immersive .l-profile .avatar-view {
+  width: 34px;
+  height: 34px;
+}
+.l-world-menu-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  color: #516342;
+  background: transparent;
+  cursor: pointer;
+}
+.l-world-menu-button:hover {
+  background: #e8eed7;
+}
+.l-immersive .hv-top-tools {
+  top: 90px;
+  left: max(20px, env(safe-area-inset-left));
+}
+.l-immersive .hv-camera {
+  top: 90px;
+  right: max(20px, env(safe-area-inset-right));
+}
+.l-immersive .hv-top-tools button {
+  min-height: 42px;
+  padding: 8px 12px;
+}
+.l-immersive .hv-camera button {
+  width: 40px;
+  height: 40px;
+}
+.l-immersive .hv-directory {
+  top: 140px;
+  max-height: calc(100dvh - 230px);
+  overflow-y: auto;
+  z-index: 12;
+}
+.l-immersive .hv-pad {
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(38px, env(safe-area-inset-bottom));
+}
+.l-immersive .hv-place-card {
+  bottom: 80px;
+  z-index: 6;
+}
+.l-immersive .hv-entry-prompt {
+  bottom: 90px;
+}
+.l-immersive .hv-loading {
+  z-index: 4;
+}
+.l-immersive .hv-partial {
+  position: absolute;
+  top: 140px;
+  left: 20px;
+  width: min(330px, calc(100% - 90px));
+}
+.l-immersive .hv-fallback {
+  padding-top: 160px;
+}
+.l-world-social {
+  position: absolute;
+  z-index: 7;
+  bottom: max(38px, env(safe-area-inset-bottom));
+  left: max(20px, env(safe-area-inset-left));
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.l-world-chat-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #d5ddbf;
+  border-radius: 12px;
+  background: #fffcf1f0;
+  color: #536648;
+  box-shadow: 0 3px 10px #3b582410;
+  cursor: pointer;
+}
+.l-app .l-world-social .l-reactions {
+  position: static;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.l-world-social .l-reaction-bar > span {
+  display: none;
+}
+.l-world-social .l-reaction-bar > div {
+  gap: 0;
+}
+.l-world-social .l-reaction-toggle {
+  display: none;
+}
+.l-app .l-world-social .l-reaction-open {
+  height: 44px;
+  border-color: #d5ddbf;
+  border-radius: 12px;
+  background: #fffcf1f0;
+  color: #536648;
+}
+.l-app .l-world-social .l-reaction-feed {
+  position: absolute;
+  left: 0;
+  bottom: 53px;
+  flex-direction: column;
+  max-width: 225px;
+  padding: 0;
+  pointer-events: none;
+}
+.l-world-social .l-reaction-status {
+  position: absolute;
+  bottom: 50px;
+  left: 0;
+  width: 220px;
+  font-size: 11px;
+}
+.l-world-hint {
+  position: absolute;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 20px;
+  right: 20px;
+  margin: 0;
+  text-align: center;
+  color: #6e7e5b;
+  font-size: 11px;
+  pointer-events: none;
+}
+.l-immersive:has(.hv-place-card) .l-world-hint {
+  visibility: hidden;
+}
+.l-immersive .l-world-alerts {
+  position: absolute;
+  z-index: 9;
+  top: 142px;
+  left: max(20px, env(safe-area-inset-left));
+  width: min(330px, calc(100vw - 95px));
+  max-height: calc(100dvh - 325px);
+  overflow-y: auto;
+  pointer-events: none;
+}
+.l-world-alerts > * {
+  pointer-events: auto;
+}
+.l-world-alerts:empty {
+  display: none;
+}
+.l-immersive .l-retained-table {
+  margin: 0 0 10px;
+  padding: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-radius: 14px;
+}
+.l-immersive .l-retained-table small {
+  display: none;
+}
+.l-immersive .l-save-alert {
+  margin: 0 0 10px;
+  padding: 12px;
+  border-radius: 14px;
+}
+.l-immersive .l-invitations {
+  margin: 0;
+}
+.l-immersive .l-invitation-card {
+  margin-bottom: 8px;
+  padding: 12px;
+  grid-template-columns: 32px 1fr;
+}
+.l-immersive .l-invitation-card > div:last-child {
+  grid-column: 1/-1;
+}
+.l-world-menu-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+.l-world-menu-summary .avatar-view {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e5ecd6;
+}
+.l-world-menu-summary strong {
+  display: block;
+  margin-bottom: 5px;
+}
+.l-world-menu-summary small {
+  display: block;
+  color: #78836d;
+}
+.l-world-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.l-world-menu-grid button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  padding: 14px;
+  border: 1px solid #dbe0cf;
+  border-radius: 12px;
+  background: #f5f6ed;
+  color: #4b6044;
+  cursor: pointer;
+  text-align: left;
+}
+.l-world-menu-grid button:hover {
+  background: #e9efd9;
+}
+.l-world-menu-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 22px 0 8px;
+  color: #79826c;
+  font-size: 12px;
+}
+.l-world-menu-links a {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.l-world-menu-links button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.l-modal .l-village-chat {
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  background: none;
+}
+.l-modal .l-village-chat .l-chat-messages {
+  max-height: min(50dvh, 480px);
+  min-height: 160px;
+}
+.l-immersive .l-toast {
+  bottom: max(180px, env(safe-area-inset-bottom));
+}
+
+@media (max-width: 600px) {
+  .l-immersive
+    .hv-scene[data-overview='true']
+    .hv-place-home:not([data-owned='true']) {
+    display: none;
+  }
+  .l-app .l-world-header {
+    padding: 8px 12px;
+    gap: 7px;
+    min-height: 60px;
+  }
+  .l-immersive .l-world-header {
+    left: 12px;
+    right: 12px;
+    top: max(12px, env(safe-area-inset-top));
+    min-height: 0;
+    padding: 0;
+    gap: 5px;
+  }
+  .l-immersive .l-brand {
+    padding: 6px 9px;
+    gap: 7px;
+    border-radius: 12px;
+  }
+  .l-immersive .l-brand-icon {
+    width: 28px;
+    height: 32px;
+    background: none;
+    color: #456a49;
+  }
+  .l-immersive .l-brand strong {
+    font-size: 14px;
+  }
+  .l-immersive .l-brand small {
+    font-size: 8px;
+  }
+  .l-app .l-world-header .l-header-right {
+    gap: 2px;
+  }
+  .l-immersive .l-wallet-button {
+    padding: 6px;
+    border: 0;
+    background: none;
+    font-size: 10px;
+    gap: 3px;
+  }
+  .l-world-menu-button {
+    width: 36px;
+    height: 38px;
+  }
+  .l-immersive .l-profile .avatar-view {
+    width: 28px;
+    height: 28px;
+  }
+  .l-immersive .hv-top-tools {
+    left: 12px;
+    top: 80px;
+    gap: 6px;
+  }
+  .l-immersive .hv-top-tools button {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .l-immersive .hv-camera {
+    right: 12px;
+    top: 80px;
+  }
+  .l-immersive .hv-camera button {
+    width: 38px;
+    height: 38px;
+  }
+  .l-immersive .hv-directory {
+    top: 128px;
+    left: 12px;
+    max-width: calc(100vw - 70px);
+  }
+  .l-immersive .hv-pad {
+    right: 12px;
+    bottom: max(38px, env(safe-area-inset-bottom));
+    grid-template-columns: repeat(3, 40px);
+    grid-template-rows: repeat(3, 40px);
+  }
+  .l-immersive .hv-place-card {
+    left: 12px;
+    right: 12px;
+    bottom: 180px;
+    transform: none;
+    max-width: none;
+    width: auto;
+  }
+  .l-immersive .hv-entry-prompt {
+    left: 12px;
+    right: 12px;
+    bottom: 180px;
+  }
+  .l-world-social {
+    left: 12px;
+    bottom: max(38px, env(safe-area-inset-bottom));
+    gap: 5px;
+  }
+  .l-world-chat-button {
+    padding: 0 10px;
+    gap: 5px;
+  }
+  .l-app .l-world-social .l-reaction-open {
+    padding: 0 10px;
+  }
+  .l-world-hint {
+    font-size: 10px;
+    left: 8px;
+    right: 8px;
+  }
+  .l-world-hint span {
+    display: none;
+  }
+  .l-immersive .l-world-alerts {
+    top: 130px;
+    left: 12px;
+    width: calc(100vw - 70px);
+    max-height: calc(100dvh - 330px);
+  }
+  .l-world-menu-grid button {
+    padding: 12px;
+    font-size: 12px;
+    min-height: 58px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-interior > .l-lounge,
+  .l-interior > .l-wardrobe,
+  .l-interior > .b-bedroom {
+    animation: world-enter 180ms ease-out;
+  }
+  @keyframes world-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

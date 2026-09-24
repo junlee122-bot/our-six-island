@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from 'react';
 import {
-  Armchair,
   Shirt,
   Users,
   ArrowRight,
@@ -25,13 +24,22 @@ import {
   Spade,
   House,
   Trees,
+  Menu,
+  MessageCircle,
+  ArrowLeft,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { Wardrobe } from './lounge-wardrobe';
 import { BedroomEditor } from './lounge-bedroom';
 import { RoomFloor } from './lounge-scene';
 import { Village3D } from './lounge-village';
-import type { VillageDestination } from './lounge-village-layout';
+import {
+  villageFromNetwork,
+  type VillageDestination,
+  type VillagePlace,
+  type VillagePoint,
+} from './lounge-village-layout';
+import { villageReturnPoint } from './lounge-village-entrance';
 import './lounge-club.css';
 import './lounge-village-shell.css';
 import { ChessBoard, GoBoard } from './lounge-boards';
@@ -910,9 +918,17 @@ function AccountLounge({
     [ready, setReady] = useState(false),
     [tab, setTab] = useState<
       'village' | 'lounge' | 'wardrobe' | 'casino' | 'bedroom'
-    >(() => (save.visits ? 'village' : 'wardrobe')),
+    >('village'),
     [modal, setModal] = useState<
-      'friends' | 'credits' | 'reset' | 'request' | 'wallet' | 'account' | null
+      | 'friends'
+      | 'credits'
+      | 'reset'
+      | 'request'
+      | 'wallet'
+      | 'account'
+      | 'menu'
+      | 'chat'
+      | null
     >(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
     [requestKind, setRequestKind] = useState<GameKind | null>(null),
@@ -923,11 +939,13 @@ function AccountLounge({
     [accountBusy, setAccountBusy] = useState(false),
     [localPos, setLocalPos] = useState({ x: 50, y: 79 }),
     [localReaction, setLocalReaction] = useState<Reaction>(),
-    [reactionsHidden, setReactionsHidden] = useState(false);
+    [reactionsHidden, setReactionsHidden] = useState(false),
+    [villageSpawn, setVillageSpawn] = useState<VillagePoint>();
   const audioRef = useRef<AudioContext | null>(null),
     toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null),
     chatEnd = useRef<HTMLDivElement>(null),
-    connectedRoute = useRef(false);
+    villagePosition = useRef<VillagePoint | undefined>(undefined),
+    enteredPlace = useRef<VillagePlace | null>(null);
   const notice = useCallback((s: string) => {
     setToast(s);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -1031,30 +1049,8 @@ function AccountLounge({
     view.tables?.[kind]?.members.includes(view.self),
   );
   useEffect(() => {
-    let active = true;
-    // Only use server area for the first connected route. The server has no
-    // village/wardrobe/bedroom areas, so later lounge responses stay put.
-    if (view.status !== 'connected') {
-      connectedRoute.current = false;
-      return () => {
-        active = false;
-      };
-    }
-    if (!connectedRoute.current && me) {
-      queueMicrotask(() => {
-        if (!active) return;
-        connectedRoute.current = true;
-        if (me.area === 'casino' && tab !== 'wardrobe' && tab !== 'bedroom')
-          setTab('casino');
-      });
-    }
-    return () => {
-      active = false;
-    };
-  }, [view.status, view.self, me, tab]);
-  useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: 'nearest' });
-  }, [view.chat.length]);
+  }, [view.chat.length, modal]);
   useEffect(() => {
     let active = true;
     if (view.error)
@@ -1070,9 +1066,22 @@ function AccountLounge({
     if (view.status === 'connected' && s.actor === me?.actor)
       void room.action({ kind: 'look', look: s.looks[s.actor] });
   };
-  const enter = (destination: VillageDestination | 'village' = 'village') => {
+  const enter = (
+    destination: VillageDestination | 'village' = 'village',
+    place?: VillagePlace,
+  ) => {
+    if (place) enteredPlace.current = place;
+    if (destination === 'village' && tab !== 'village') {
+      const position = enteredPlace.current
+        ? villageReturnPoint(enteredPlace.current)
+        : villagePosition.current;
+      setVillageSpawn(position);
+      villagePosition.current = position;
+      enteredPlace.current = null;
+    }
     if (destination === 'village' && tab === 'wardrobe')
       setSave((s) => ({ ...s, visits: s.visits + 1 }));
+    setModal(null);
     setTab(destination);
     if (
       view.status === 'connected' &&
@@ -1098,6 +1107,13 @@ function AccountLounge({
         });
     },
     [room, view.status],
+  );
+  const moveInVillage = useCallback(
+    (x: number, y: number) => {
+      villagePosition.current = villageFromNetwork({ x, y });
+      move(x, y);
+    },
+    [move],
   );
   const greet = async (value: ReactionId) => {
     const scope = tab === 'casino' ? 'casino' : 'lounge';
@@ -1174,7 +1190,11 @@ function AccountLounge({
           kind={gameScreen}
           room={room}
           view={view}
-          onBack={() => setGameScreen(null)}
+          onBack={() => {
+            if (tab === 'village' && villagePosition.current)
+              setVillageSpawn(villagePosition.current);
+            setGameScreen(null);
+          }}
           onRequest={requestGame}
           reactionsHidden={reactionsHidden}
           onReactionsHidden={setReactionsHidden}
@@ -1194,54 +1214,41 @@ function AccountLounge({
       </main>
     );
   return (
-    <main className="l-app">
-      <header className="l-header">
-        <button className="l-brand" onClick={() => enter('village')}>
+    <main
+      className={`l-app ${tab === 'village' ? 'l-immersive' : 'l-interior'}`}
+      data-space={tab}
+    >
+      <header className="l-header l-world-header">
+        <button
+          className="l-brand"
+          onClick={() =>
+            tab === 'village' ? setModal('menu') : enter('village')
+          }
+          data-testid={
+            tab === 'village' ? 'village-menu-brand' : 'village-return'
+          }
+          aria-label={tab === 'village' ? '범타듀 밸리 메뉴' : '마을로 나가기'}
+        >
           <span className="l-brand-icon">
-            <Trees size={24} />
+            {tab === 'village' ? <Trees size={24} /> : <ArrowLeft size={22} />}
           </span>
           <span>
-            <strong>범타듀 밸리</strong>
-            <small>일곱 친구가 사는 마을</small>
+            <strong>
+              {tab === 'village' ? '범타듀 밸리' : '마을로 나가기'}
+            </strong>
+            <small>
+              {tab === 'village'
+                ? '일곱 친구가 사는 마을'
+                : tab === 'bedroom'
+                  ? `${ACTORS[save.actor]}의 집`
+                  : tab === 'wardrobe'
+                    ? '분장실 · 나만의 코디'
+                    : tab === 'casino'
+                      ? '별빛 카지노'
+                      : '범마을 회관'}
+            </small>
           </span>
         </button>
-        <nav aria-label="주 메뉴">
-          <button
-            aria-pressed={tab === 'village'}
-            onClick={() => enter('village')}
-          >
-            <House size={17} />
-            마을
-          </button>
-          <button
-            aria-pressed={tab === 'lounge'}
-            onClick={() => enter('lounge')}
-          >
-            <Armchair size={17} />
-            회관
-          </button>
-          <button
-            aria-pressed={tab === 'casino'}
-            onClick={() => enter('casino')}
-          >
-            <Spade size={17} />
-            카지노
-          </button>
-          <button
-            aria-pressed={tab === 'wardrobe'}
-            onClick={() => setTab('wardrobe')}
-          >
-            <Shirt size={17} />
-            분장실
-          </button>
-          <button
-            aria-pressed={tab === 'bedroom'}
-            onClick={() => enter('bedroom')}
-          >
-            <House size={17} />
-            내 방
-          </button>
-        </nav>
         <div className="l-header-right">
           <button
             className="l-wallet-button"
@@ -1266,6 +1273,7 @@ function AccountLounge({
             className="l-profile"
             onClick={() => setModal('account')}
             title="내 계정"
+            aria-label="내 계정"
           >
             <AvatarView
               actor={save.actor}
@@ -1274,51 +1282,64 @@ function AccountLounge({
             />
             <span>{ACTORS[save.actor]}</span>
           </button>
+          <button
+            className="l-world-menu-button"
+            aria-label="마을 메뉴"
+            onClick={() => setModal('menu')}
+          >
+            <Menu size={20} />
+          </button>
         </div>
       </header>
-      <div className="l-save-bar">
+      <div className="l-save-bar" hidden={tab === 'village'}>
         <span>
           <b>{account.username}</b> · {cloudSave.status}
         </span>
         <button onClick={() => void cloudSave.flush()}>지금 저장</button>
       </div>
-      {retainedTable && view.status === 'connected' && (
-        <aside className="l-retained-table" aria-label="유지 중인 게임 테이블">
-          <span>
-            <strong>
-              {GAME_INFO[retainedTable].name} 테이블에 자리가 있어요
-            </strong>
-            <small>
-              로비를 둘러봐도 참가 상태는 유지돼요. 다음 판 준비는 게임 화면에서
-              확인해 주세요.
-            </small>
-          </span>
-          <button
-            className="l-primary"
-            onClick={() => setGameScreen(retainedTable)}
+      <div className="l-world-alerts">
+        {retainedTable && view.status === 'connected' && (
+          <aside
+            className="l-retained-table"
+            aria-label="유지 중인 게임 테이블"
           >
-            게임으로 돌아가기 <ArrowRight size={15} />
-          </button>
-        </aside>
-      )}
-      {cloudSave.conflict && (
-        <div className="l-save-alert" role="alert">
-          <p>다른 창에서 저장 내용이 바뀌었어요. 어떤 내용을 간직할까요?</p>
-          <button onClick={() => cloudSave.resolve(false)}>
-            서버의 저장 불러오기
-          </button>
-          <button onClick={() => cloudSave.resolve(true)}>
-            지금 내용으로 덮어쓰기
-          </button>
-        </div>
-      )}
-      {cloudSave.draft && (
-        <div className="l-save-alert">
-          <p>이 기기에 아직 저장하지 못한 코디나 방 꾸미기가 있어요.</p>
-          <button onClick={cloudSave.restoreDraft}>저장 내용 복구하기</button>
-          <button onClick={cloudSave.dismissDraft}>서버의 저장 유지</button>
-        </div>
-      )}
+            <span>
+              <strong>
+                {GAME_INFO[retainedTable].name} 테이블에 자리가 있어요
+              </strong>
+              <small>
+                로비를 둘러봐도 참가 상태는 유지돼요. 다음 판 준비는 게임
+                화면에서 확인해 주세요.
+              </small>
+            </span>
+            <button
+              className="l-primary"
+              onClick={() => setGameScreen(retainedTable)}
+            >
+              게임으로 돌아가기 <ArrowRight size={15} />
+            </button>
+          </aside>
+        )}
+        {cloudSave.conflict && (
+          <div className="l-save-alert" role="alert">
+            <p>다른 창에서 저장 내용이 바뀌었어요. 어떤 내용을 간직할까요?</p>
+            <button onClick={() => cloudSave.resolve(false)}>
+              서버의 저장 불러오기
+            </button>
+            <button onClick={() => cloudSave.resolve(true)}>
+              지금 내용으로 덮어쓰기
+            </button>
+          </div>
+        )}
+        {cloudSave.draft && (
+          <div className="l-save-alert">
+            <p>이 기기에 아직 저장하지 못한 코디나 방 꾸미기가 있어요.</p>
+            <button onClick={cloudSave.restoreDraft}>저장 내용 복구하기</button>
+            <button onClick={cloudSave.dismissDraft}>서버의 저장 유지</button>
+          </div>
+        )}
+        {tab === 'village' && <Invitations room={room} view={view} />}
+      </div>
       {(tab === 'wardrobe' || tab === 'bedroom') && (
         <div className="l-wardrobe-invites">
           <Invitations room={room} view={view} />
@@ -1326,124 +1347,42 @@ function AccountLounge({
       )}
       {tab === 'village' ? (
         <section className="l-village">
-          <Invitations room={room} view={view} />
           <div className="l-village-content">
             <div className="l-village-world">
               <Village3D
                 save={save}
                 players={villagePlayers}
                 self={self}
-                onMove={move}
+                initialPosition={villageSpawn}
+                onMove={moveInVillage}
                 onEnter={enter}
                 onFriends={() => setModal('friends')}
                 onRequest={() => requestGame(null)}
               />
-              <ReactionDock
-                players={villagePlayers}
-                self={self}
-                scope="lounge"
-                connected={view.status === 'connected'}
-                hidden={reactionsHidden}
-                onHidden={setReactionsHidden}
-                onSend={greet}
-              />
-            </div>
-            <aside className="l-village-sidebar">
-              <div className="l-village-shortcuts">
-                <span className="l-kicker">마을 안의 공간</span>
-                <button onClick={() => enter('lounge')}>
-                  <Armchair size={18} />
-                  <span>
-                    <strong>회관</strong>
-                    <small>친구들과 이야기하고 게임해요</small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-                <button onClick={() => enter('casino')}>
-                  <Spade size={18} />
-                  <span>
-                    <strong>카지노</strong>
-                    <small>카드 게임을 즐겨요</small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-                <button onClick={() => enter('wardrobe')}>
-                  <Shirt size={18} />
-                  <span>
-                    <strong>분장실</strong>
-                    <small>옷과 모습을 바꿔요</small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-                <button onClick={() => enter('bedroom')}>
-                  <House size={18} />
-                  <span>
-                    <strong>내 방</strong>
-                    <small>나만의 방을 꾸며요</small>
-                  </span>
-                  <ArrowRight size={17} />
-                </button>
-              </div>
-              <div className="l-chat l-village-chat">
-                <div>
-                  <h3>마을 수다</h3>
-                  <span>
-                    {view.status === 'connected'
-                      ? `${view.players.length}명`
-                      : '친구를 기다려요'}
-                  </span>
-                </div>
-                <div className="l-chat-messages" aria-live="polite">
-                  {view.chat.length ? (
-                    view.chat.map((m) => (
-                      <p key={m.id}>
-                        <b style={{ color: ACTOR_COLORS[m.actor] }}>
-                          {ACTORS[m.actor]}
-                        </b>
-                        <span>{m.text}</span>
-                      </p>
-                    ))
-                  ) : (
-                    <div className="l-chat-welcome">
-                      <Users size={23} />
-                      <p>
-                        {view.status === 'connected'
-                          ? '오늘의 첫 인사를 남겨 보세요.'
-                          : '친구를 초대하면 이곳에서 이야기할 수 있어요.'}
-                      </p>
-                      {view.status !== 'connected' && (
-                        <button onClick={() => setModal('friends')}>
-                          초대하기 <ArrowRight size={13} />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  <div ref={chatEnd} />
-                </div>
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    if (await room.action({ kind: 'chat', text: chat }))
-                      setChat('');
-                  }}
+              <div className="l-world-social">
+                <button
+                  className="l-world-chat-button"
+                  aria-label="마을 수다 열기"
+                  onClick={() => setModal('chat')}
                 >
-                  <input
-                    aria-label="채팅 메시지"
-                    disabled={view.status !== 'connected'}
-                    value={chat}
-                    onChange={(e) => setChat(e.target.value)}
-                    placeholder="친구에게 한마디…"
-                    maxLength={120}
-                  />
-                  <button
-                    aria-label="보내기"
-                    disabled={view.status !== 'connected' || !chat.trim()}
-                  >
-                    <Send size={17} />
-                  </button>
-                </form>
+                  <MessageCircle size={19} />
+                  <span>수다</span>
+                </button>
+                <ReactionDock
+                  players={villagePlayers}
+                  self={self}
+                  scope="lounge"
+                  connected={view.status === 'connected'}
+                  hidden={reactionsHidden}
+                  onHidden={setReactionsHidden}
+                  onSend={greet}
+                />
               </div>
-            </aside>
+              <p className="l-world-hint">
+                건물 이름을 눌러 걸어가요{' '}
+                <span>· 방향키 / WASD · Shift 달리기 · E 입장</span>
+              </p>
+            </div>
           </div>
         </section>
       ) : tab === 'bedroom' ? (
@@ -1453,7 +1392,7 @@ function AccountLounge({
           save={save}
           onChange={changeSave}
           locked
-          entry={!save.visits}
+          entry={false}
           onEnter={enter}
           notice={notice}
         />
@@ -1515,72 +1454,50 @@ function AccountLounge({
               <div className="l-play-list">
                 <span className="l-kicker">함께할 게임</span>
                 <h2>오늘의 한 판</h2>
-                <button
-                  onClick={() => {
-                    setTab('casino');
-                    openTable('poker');
-                  }}
-                >
-                  <span className="l-game-symbol chess">♠</span>
-                  <span>
-                    <strong>텍사스 홀덤</strong>
-                    <small>AI 딜러 루미와 함께하는 카지노.</small>
-                    <em>2–7명 · 공통 범 지갑</em>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </button>
-                <button
-                  onClick={() => {
-                    setTab('casino');
-                    openTable('blackjack');
-                  }}
-                >
-                  <span className="l-game-symbol blackjack">21</span>
-                  <span>
-                    <strong>블랙잭</strong>
-                    <small>딜러보다 높게, 21을 넘지 않게.</small>
-                    <em>2–7명 · 내추럴 3:2</em>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </button>
-                <button onClick={() => openTable('chess')}>
-                  <span className="l-game-symbol chess">♞</span>
-                  <span>
-                    <strong>체스</strong>
-                    <small>친구에게 초대장을 보내요.</small>
-                    <em>2명 · 관전 가능</em>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </button>
-                <button
-                  onClick={() => {
-                    setTab('lounge');
-                    openTable('seotda');
-                  }}
-                >
-                  <span className="l-game-symbol">
-                    {/* oxlint-disable-next-line nextjs/no-img-element -- Local decorative card art stays an intrinsic-size icon. */}
-                    <img src={LOUNGE_ASSETS['m01-01']} alt="" />
-                  </span>
-                  <span>
-                    <strong>섯다</strong>
-                    <small>단 두 장, 끝까지 모르는 승부.</small>
-                    <em>2–7명 · 화투와 범 베팅</em>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </button>
-                <button onClick={() => openTable('gostop')}>
-                  <span className="l-game-symbol">
-                    {/* oxlint-disable-next-line nextjs/no-img-element -- Local decorative card art stays an intrinsic-size icon. */}
-                    <img src={LOUNGE_ASSETS['m03-01']} alt="" />
-                  </span>
-                  <span>
-                    <strong>고스톱</strong>
-                    <small>셋이 함께, 고 아니면 스톱.</small>
-                    <em>3명 · 기본 룰</em>
-                  </span>
-                  <ArrowUpRight size={19} />
-                </button>
+                {(tab === 'casino'
+                  ? (['poker', 'blackjack', 'chess'] as const)
+                  : (['seotda', 'gostop'] as const)
+                ).map((kind) => (
+                  <button key={kind} onClick={() => openTable(kind)}>
+                    <span
+                      className={
+                        'l-game-symbol' + (tab === 'casino' ? ' chess' : '')
+                      }
+                    >
+                      {kind === 'gostop' || kind === 'seotda' ? (
+                        // oxlint-disable-next-line nextjs/no-img-element -- Local decorative card art.
+                        <img
+                          src={
+                            LOUNGE_ASSETS[
+                              kind === 'gostop' ? 'm03-01' : 'm01-01'
+                            ]
+                          }
+                          alt=""
+                        />
+                      ) : kind === 'chess' ? (
+                        '♞'
+                      ) : kind === 'poker' ? (
+                        '♠'
+                      ) : (
+                        '♣'
+                      )}
+                    </span>
+                    <span>
+                      <strong>{GAME_INFO[kind].name}</strong>
+                      <small>친구에게 초대장을 보내요.</small>
+                      <em>
+                        {kind === 'chess'
+                          ? '2명 · 관전 가능'
+                          : kind === 'gostop'
+                            ? '3명 · 화투와 범 베팅'
+                            : kind === 'seotda'
+                              ? '2–7명 · 두 장의 승부'
+                              : '2–7명 · AI 딜러'}
+                      </em>
+                    </span>
+                    <ArrowUpRight size={19} />
+                  </button>
+                ))}
               </div>
               <div className="l-chat">
                 <div>
@@ -1646,15 +1563,15 @@ function AccountLounge({
           </div>
           <button
             className="l-closet-invitation"
-            onClick={() => setTab('wardrobe')}
+            onClick={() => enter('village')}
           >
             <Shirt size={29} />
             <span>
-              <small>회관 03 · 분장실</small>
-              <strong>다음 판은, 다른 옷으로?</strong>
+              <small>범타듀 밸리</small>
+              <strong>다음에는 어디로 걸어갈까요?</strong>
             </span>
             <span>
-              내 옷장 열기
+              마을로 나가기
               <ArrowRight size={18} />
             </span>
           </button>
@@ -1680,6 +1597,133 @@ function AccountLounge({
           <button onClick={() => setModal('reset')}>초기화</button>
         </div>
       </footer>
+      {modal === 'chat' && (
+        <Modal title="마을 수다" onClose={() => setModal(null)}>
+          <div className="l-chat l-village-chat">
+            <div>
+              <h3>마을 수다</h3>
+              <span>
+                {view.status === 'connected'
+                  ? `${view.players.length}명`
+                  : '친구를 기다려요'}
+              </span>
+            </div>
+            <div className="l-chat-messages" aria-live="polite">
+              {view.chat.length ? (
+                view.chat.map((m) => (
+                  <p key={m.id}>
+                    <b style={{ color: ACTOR_COLORS[m.actor] }}>
+                      {ACTORS[m.actor]}
+                    </b>
+                    <span>{m.text}</span>
+                  </p>
+                ))
+              ) : (
+                <div className="l-chat-welcome">
+                  <Users size={23} />
+                  <p>
+                    {view.status === 'connected'
+                      ? '오늘의 첫 인사를 남겨 보세요.'
+                      : '친구를 초대하면 이곳에서 이야기할 수 있어요.'}
+                  </p>
+                  {view.status !== 'connected' && (
+                    <button onClick={() => setModal('friends')}>
+                      초대하기 <ArrowRight size={13} />
+                    </button>
+                  )}
+                </div>
+              )}
+              <div ref={chatEnd} />
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (await room.action({ kind: 'chat', text: chat }))
+                  setChat('');
+              }}
+            >
+              <input
+                aria-label="채팅 메시지"
+                disabled={view.status !== 'connected'}
+                value={chat}
+                onChange={(e) => setChat(e.target.value)}
+                placeholder="친구에게 한마디…"
+                maxLength={120}
+              />
+              <button
+                aria-label="보내기"
+                disabled={view.status !== 'connected' || !chat.trim()}
+              >
+                <Send size={17} />
+              </button>
+            </form>
+          </div>
+        </Modal>
+      )}
+      {modal === 'menu' && (
+        <Modal title="범타듀 밸리" onClose={() => setModal(null)}>
+          <div className="l-world-menu-summary">
+            <AvatarView
+              actor={save.actor}
+              look={save.looks[save.actor]}
+              portrait
+            />
+            <div>
+              <strong>{ACTORS[save.actor]}</strong>
+              <small>
+                {account.username} · {cloudSave.status}
+              </small>
+            </div>
+          </div>
+          <p className="l-modal-intro">
+            건물 이름을 누르면 문 앞으로 걸어가요. 입구에 도착하면 E 키 또는
+            들어가기 버튼을 눌러 주세요.
+          </p>
+          <div className="l-world-menu-grid">
+            <button onClick={() => setModal('friends')}>
+              <Users size={20} />
+              <span>친구들과 만나기</span>
+            </button>
+            <button onClick={() => requestGame(null)}>
+              <Spade size={20} />
+              <span>게임 초대하기</span>
+            </button>
+            <button onClick={() => void cloudSave.flush()}>
+              <Check size={20} />
+              <span>지금 저장</span>
+            </button>
+            <button onClick={() => setModal('account')}>
+              <House size={20} />
+              <span>내 계정</span>
+            </button>
+            <button aria-pressed={sound} onClick={() => setSound(!sound)}>
+              {sound ? <Volume2 size={20} /> : <VolumeX size={20} />}
+              <span>효과음 {sound ? '켜짐' : '꺼짐'}</span>
+            </button>
+            <button onClick={() => setModal('credits')}>
+              <Info size={20} />
+              <span>만든 이야기 · 출처</span>
+            </button>
+          </div>
+          <div className="l-world-menu-links">
+            <button
+              aria-pressed={!reactionsHidden}
+              onClick={() => setReactionsHidden(!reactionsHidden)}
+            >
+              친구 스티커 {reactionsHidden ? '숨김' : '표시 중'}
+            </button>
+            {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- Static legacy game pages. */}
+            <a href="./theater.html">
+              우당탕 극장 <ArrowUpRight size={12} />
+            </a>
+            {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- Static legacy game pages. */}
+            <a href="./island.html">
+              지난 섬으로 <ArrowUpRight size={12} />
+            </a>
+            <button onClick={() => setModal('reset')}>코디 초기화</button>
+          </div>
+        </Modal>
+      )}
       {modal === 'account' && (
         <Modal
           title="내 계정"
@@ -1856,6 +1900,9 @@ function AccountLounge({
                 setTab('wardrobe');
                 setModal(null);
                 setLocalPos({ x: 50, y: 79 });
+                villagePosition.current = undefined;
+                enteredPlace.current = null;
+                setVillageSpawn(undefined);
                 notice('코디를 초기화했어요. 서버 저장 상태를 확인해 주세요.');
               }}
             >
@@ -1867,6 +1914,37 @@ function AccountLounge({
       {modal === 'credits' && (
         <Modal title="함께 만든 범타듀 밸리" onClose={() => setModal(null)}>
           <div className="l-credits">
+            <h3>마을과 방</h3>
+            <p>
+              <a
+                href="https://karchive.vibeline.co.kr/models"
+                target="_blank"
+                rel="noreferrer"
+              >
+                kArchive
+              </a>{' '}
+              · 출처: 쓰레드 dogfooter. 주택·과일나무·수국·소파·튤립 원본 모델을
+              사용했습니다. 테라스와 방의 가구는 3DAssets.dev (CC0)입니다.
+            </p>
+            <p>
+              공간을 걸으며 기능을 만나는 구성은{' '}
+              <a
+                href="https://www.stardewvalley.net/"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Stardew Valley
+              </a>
+              와{' '}
+              <a
+                href="https://support.gather.town/articles/5874848981-objects-overview"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Gather
+              </a>
+              의 공간·상호작용 방식을 참고했습니다.
+            </p>
             <h3>친구들의 모습</h3>
             <p>
               도원 · 강재 · 민서 · 승준 · 민재 · 재민 · 호현. 기존 캐릭터 모션과
