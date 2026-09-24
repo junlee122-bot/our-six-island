@@ -528,6 +528,7 @@ function batchDirectMeshes(parent: THREE.Object3D, excludedName = '') {
   const inverse = new THREE.Matrix4();
   if (parent instanceof THREE.Group || parent instanceof THREE.Scene)
     inverse.copy(parent.matrixWorld).invert();
+  // oxlint-disable-next-line unicorn/no-useless-spread -- Keep a stable snapshot because this batch removes children.
   for (const child of [...parent.children]) {
     const mesh = child as THREE.Mesh;
     if (
@@ -1024,6 +1025,7 @@ export function buildVillageWorld(scene: THREE.Scene): {
 
   // Fold repeated static meshes into material batches while leaving replacement shells,
   // gardens, the animated stream, and named tree placeholders independently addressable.
+  // oxlint-disable-next-line unicorn/no-useless-spread -- Batching replaces some top-level children during this pass.
   for (const child of [...scene.children]) {
     if (
       child instanceof THREE.Group &&

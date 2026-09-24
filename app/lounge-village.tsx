@@ -1,6 +1,6 @@
 'use client';
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowLeft,
@@ -100,7 +100,9 @@ function disposeScene(root: THREE.Object3D) {
 /** The village uses the existing shared position range; account and room saves are unchanged. */
 export function Village3D(props: Props) {
   const latest = useRef(props);
-  latest.current = props;
+  useLayoutEffect(() => {
+    latest.current = props;
+  }, [props]);
   const hostRef = useRef<HTMLDivElement>(null),
     labelsRef = useRef<HTMLDivElement>(null);
   const directions = useRef(new Set<Direction>());
@@ -123,6 +125,7 @@ export function Village3D(props: Props) {
 
   useEffect(() => {
     const host = hostRef.current!;
+    const activeDirections = directions.current;
     let disposed = false,
       frame = 0,
       visible = true,
@@ -136,15 +139,19 @@ export function Village3D(props: Props) {
         powerPreference: 'low-power',
       });
     } catch {
-      setState('unavailable');
-      return;
+      queueMicrotask(() => {
+        if (!disposed) setState('unavailable');
+      });
+      return () => {
+        disposed = true;
+      };
     }
     renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.shadowMap.autoUpdate = false;
     renderer.shadowMap.needsUpdate = true;
     const canvas = renderer.domElement;
@@ -170,7 +177,7 @@ export function Village3D(props: Props) {
     scene.add(sun);
     buildVillageWorld(scene);
     const camera = new THREE.OrthographicCamera(-36, 36, 24, -24, 0.1, 180);
-    let target = new THREE.Vector3(0, 0, 0),
+    const target = new THREE.Vector3(0, 0, 0),
       desiredTarget = target.clone();
     let zoom = host.clientWidth < 600 ? 1.7 : 1.08,
       desiredZoom = zoom;
@@ -596,7 +603,7 @@ export function Village3D(props: Props) {
       if (d) directions.current.delete(d);
     };
     const blur = () => {
-      directions.current.clear();
+      activeDirections.clear();
       press = null;
     };
     const loss = (e: Event) => {
@@ -812,7 +819,12 @@ export function Village3D(props: Props) {
       }
       if (
         now - lastRender >
-        (walking || press || Math.abs(zoom - desiredZoom) > 0.01 ? 32 : 65)
+        (walking ||
+        press ||
+        Math.abs(zoom - desiredZoom) > 0.01 ||
+        target.distanceToSquared(desiredTarget) > 0.0001
+          ? 32
+          : 250)
       ) {
         renderer.render(scene, camera);
         lastRender = now;
@@ -824,7 +836,7 @@ export function Village3D(props: Props) {
       disposed = true;
       cancelAnimationFrame(frame);
       controls.current = null;
-      directions.current.clear();
+      activeDirections.clear();
       observer.disconnect();
       visibility.disconnect();
       canvas.removeEventListener('pointerdown', down);
@@ -897,15 +909,19 @@ export function Village3D(props: Props) {
             </span>
           </div>
           {state === 'loading' && (
-            <div className="hv-loading" role="status">
+            <output className="hv-loading" aria-live="polite" aria-busy="true">
               <span className="l-spinner" />
               마을에 햇살을 들이는 중…
-            </div>
+            </output>
           )}
           {state === 'unavailable' && (
-            <div className="hv-fallback" role="status">
+            <section
+              className="hv-fallback"
+              aria-live="polite"
+              aria-labelledby="hv-fallback-title"
+            >
               <Trees size={32} />
-              <h2>마을 안내소</h2>
+              <h2 id="hv-fallback-title">마을 안내소</h2>
               <p>
                 이 기기에서는 입체 풍경을 열지 못했어요.
                 <br />
@@ -927,7 +943,7 @@ export function Village3D(props: Props) {
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
           )}
         </div>
         <div className="hv-top-tools">
@@ -1039,7 +1055,7 @@ export function Village3D(props: Props) {
           </div>
         )}
         {selected && (
-          <div className="hv-place-card" role="region" aria-label="선택한 장소">
+          <section className="hv-place-card" aria-label="선택한 장소">
             <div
               className="hv-place-monogram"
               style={{ background: selected.color }}
@@ -1081,7 +1097,7 @@ export function Village3D(props: Props) {
             >
               <X size={16} />
             </button>
-          </div>
+          </section>
         )}
         <div className="hv-map-caption" aria-hidden="true">
           <span>BEOMDEW</span>
@@ -1099,10 +1115,14 @@ export function Village3D(props: Props) {
         </button>
       </div>
       {state === 'partial' && (
-        <p className="hv-partial" role="status">
+        <output
+          className="hv-partial"
+          aria-live="polite"
+          style={{ display: 'block' }}
+        >
           일부 마을 소품을 불러오지 못했어요. 마을 산책과 건물 입장은 이용할 수
           있어요.
-        </p>
+        </output>
       )}
       <p className="hv-credit">
         주택·과일나무·수국·소파·튤립 원본 모델:{' '}

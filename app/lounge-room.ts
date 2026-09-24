@@ -101,6 +101,15 @@ export type GameInvite = {
   required: number;
   stake: number;
 };
+export type LoungeTable = {
+  matchId: string;
+  round: number;
+  stake: number;
+  required: number;
+  members: string[];
+  ready: string[];
+};
+export type LoungeTables = Partial<Record<GameKind, LoungeTable>>;
 export type LoungePlayer = {
   id: string;
   actor: number;
@@ -131,6 +140,7 @@ export type LoungeWorld = {
   wallet: ReturnType<LoungeBank['view']>;
   chat: { id: string; actor: number; text: string }[];
   invites: GameInvite[];
+  tables: LoungeTables;
 };
 export type LoungeView = LoungeWorld & {
   status: 'offline' | 'connecting' | 'selecting' | 'connected' | 'error';
@@ -164,6 +174,7 @@ const empty = (): LoungeView => ({
   wallet: { balance: 0, held: 0, history: [] },
   chat: [],
   invites: [],
+  tables: {},
 });
 export { empty as emptyLoungeView };
 const actorValid = (v: unknown): v is number =>
@@ -226,7 +237,8 @@ export type LoungeAction =
   | { kind: 'seotda'; id: string; revision: number; action: SeotdaAction }
   | { kind: 'reply'; id: string; accept: boolean }
   | { kind: 'cancel'; id: string }
-  | { kind: 'stand'; game: GameKind }
+  | { kind: 'stand'; game: GameKind; id?: string }
+  | { kind: 'ready'; game: GameKind; id: string; ready: boolean }
   | {
       kind: 'chess';
       id: string;
@@ -256,6 +268,7 @@ export type HostedRoomSnapshot = {
   seats: LoungeWorld['seats'];
   names: LoungeWorld['names'];
   invites: GameInvite[];
+  tables?: LoungeTables;
   chat: LoungeWorld['chat'];
   chess: ChessMatch | null;
   go: GoMatch | null;
@@ -332,6 +345,7 @@ export class LoungeRoom {
         names: structuredClone(snapshot.names),
         invites: structuredClone(snapshot.invites),
         chat: structuredClone(snapshot.chat),
+        tables: structuredClone(snapshot.tables ?? {}),
       };
       r.members = new Map(
         snapshot.players.map((p) => [p.id, structuredClone(p)]),
@@ -360,6 +374,7 @@ export class LoungeRoom {
       seats: this.view.seats,
       names: this.view.names,
       invites: this.view.invites,
+      tables: this.view.tables,
       chat: this.view.chat,
       chess: this.chess,
       go: this.go,
@@ -562,6 +577,7 @@ export class LoungeRoom {
         : null,
       chat: this.view.chat,
       invites: this.view.invites,
+      tables: this.view.tables,
       poker: this.poker
         ? pokerView(this.poker, this.view.seats.poker.indexOf(id))
         : null,
@@ -585,6 +601,7 @@ export class LoungeRoom {
     this.transport?.retain(players.map((p) => p.id));
     this.update({
       players,
+      tables: this.view.tables,
       chess: this.chess,
       gostop: this.go
         ? goView(this.go, this.view.seats.gostop.indexOf(this.view.self))
@@ -688,7 +705,7 @@ export class LoungeRoom {
       },
       automatic ? 1100 : 600,
     );
-    (this.blackjackTimer as any).unref?.();
+    (this.blackjackTimer as unknown as { unref?: () => void }).unref?.();
   }
   private scheduleDealer() {
     if (this.dealerTimer || !this.poker || this.poker.phase === 'over') return;
@@ -732,7 +749,7 @@ export class LoungeRoom {
       },
       automatic ? 1100 : 600,
     );
-    (this.dealerTimer as any).unref?.();
+    (this.dealerTimer as unknown as { unref?: () => void }).unref?.();
   }
   private settle(
     kind: GameKind,
@@ -1005,6 +1022,9 @@ export class LoungeRoom {
   }
   private busy(id: string, except = '') {
     return (
+      Object.values(this.view.tables).some((table) =>
+        table?.members.includes(id),
+      ) ||
       GAME_KINDS.some(
         (game) => this.gameActive(game) && this.view.seats[game].includes(id),
       ) ||
@@ -1014,7 +1034,7 @@ export class LoungeRoom {
       )
     );
   }
-  private launch(request: GameInvite) {
+  private launch(request: GameInvite, round = 1) {
     const id = crypto.randomUUID(),
       wallets = request.accepted.map((p) => this.wallets.get(p)!);
     const deposits = request.accepted.map(() =>
@@ -1051,6 +1071,17 @@ export class LoungeRoom {
     request.matchId = id;
     this.update({
       seats,
+      tables: {
+        ...this.view.tables,
+        [request.game]: {
+          matchId: id,
+          round,
+          stake: request.stake,
+          required: request.required,
+          members: [...request.accepted],
+          ready: [],
+        },
+      },
       names: {
         ...this.view.names,
         [request.game]: request.accepted.map(
@@ -1197,6 +1228,7 @@ export class LoungeRoom {
         a.players.length > 6 ||
         this.busy(id) ||
         this.gameActive(a.game) ||
+        !!this.view.tables[a.game]?.members.length ||
         this.view.invites.some(
           (r) => r.game === a.game && r.status === 'waiting',
         )
@@ -1255,6 +1287,7 @@ export class LoungeRoom {
         if (
           this.busy(id, request.id) ||
           this.gameActive(request.game) ||
+          !!this.view.tables[request.game]?.members.length ||
           this.bank.view(this.wallets.get(id)).balance <
             gameReservation(request.game, request.stake)
         )
@@ -1278,10 +1311,78 @@ export class LoungeRoom {
       r.status = 'cancelled';
       this.update({ invites });
     } else if (a.kind === 'stand') {
-      if (!GAME_KINDS.includes(a.game) || !this.view.seats[a.game].includes(id))
+      if (!GAME_KINDS.includes(a.game)) return false;
+      const table = this.view.tables[a.game];
+      const currentMatchId =
+        a.game === 'gostop' ? this.go?.id : this[a.game]?.id;
+      if (
+        (a.id !== undefined &&
+          (a.id !== currentMatchId || (table && a.id !== table.matchId))) ||
+        (!this.view.seats[a.game].includes(id) && !table?.members.includes(id))
+      )
         return false;
       this.removeSeat(id);
       this.members.set(id, { ...member, x: 48, y: 79 });
+    } else if (a.kind === 'ready') {
+      if (!GAME_KINDS.includes(a.game)) return false;
+      const table = this.view.tables[a.game];
+      const matchId = a.game === 'gostop' ? this.go?.id : this[a.game]?.id;
+      if (
+        !table ||
+        table.matchId !== a.id ||
+        matchId !== a.id ||
+        !table.members.includes(id) ||
+        this.gameActive(a.game) ||
+        typeof a.ready !== 'boolean'
+      )
+        return false;
+      if (
+        a.ready &&
+        this.bank.view(this.wallets.get(id)).balance <
+          gameReservation(a.game, table.stake)
+      )
+        return false;
+      const ready = a.ready
+        ? [...new Set([...table.ready, id])]
+        : table.ready.filter((memberId) => memberId !== id);
+      if (
+        ready.length === table.required &&
+        table.members.length === table.required &&
+        table.members.every((memberId) => ready.includes(memberId))
+      ) {
+        if (
+          table.members.some(
+            (memberId) =>
+              !this.members.has(memberId) ||
+              this.bank.view(this.wallets.get(memberId)).balance <
+                gameReservation(a.game, table.stake),
+          )
+        )
+          return false;
+        const request: GameInvite = {
+          id: crypto.randomUUID(),
+          game: a.game,
+          from: table.members[0],
+          invited: table.members.slice(1),
+          accepted: [...table.members],
+          declined: [],
+          status: 'waiting',
+          expires: 0,
+          matchId: null,
+          required: table.required,
+          stake: table.stake,
+        };
+        // launch commits escrow before changing table or match state. Failed
+        // storage writes leave the previous ended round and readiness intact.
+        this.launch(request, table.round + 1);
+      } else {
+        this.update({
+          tables: {
+            ...this.view.tables,
+            [a.game]: { ...table, ready },
+          },
+        });
+      }
     } else if (a.kind === 'chess') {
       const g = this.chess,
         seat = this.view.seats.chess.indexOf(id);
@@ -1345,7 +1446,17 @@ export class LoungeRoom {
     const s = this.view.seats.seotda.indexOf(id);
     if (s >= 0 && this.seotda && this.seotda.phase !== 'over')
       this.seotdaAway.add(s);
+    const tables = { ...this.view.tables };
+    for (const game of GAME_KINDS) {
+      const table = tables[game];
+      if (!table?.members.includes(id)) continue;
+      const members = table.members.filter((memberId) => memberId !== id);
+      if (members.length) {
+        tables[game] = { ...table, members, ready: [] };
+      } else delete tables[game];
+    }
     this.update({
+      tables,
       seats: {
         chess: this.view.seats.chess.map((s) => (s === id ? null : s)),
         seotda:
@@ -1420,6 +1531,8 @@ export class LoungeRoom {
   }
   private async receive(from: string, value: unknown) {
     if (!value || typeof value !== 'object') return;
+    // The legacy wire envelope is validated per message below and after unseal.
+    // oxlint-disable-next-line typescript/no-explicit-any
     let p = value as any;
     if (p.v !== 1) return;
     const generation = this.generation;
@@ -1604,6 +1717,7 @@ export class LoungeRoom {
         this.finishConnecting();
         this.update({
           players,
+          tables: p.tables && typeof p.tables === 'object' ? p.tables : {},
           seats: p.seats,
           chess: p.chess,
           gostop: p.gostop,

@@ -38,6 +38,7 @@ import { ChessBoard, GoBoard } from './lounge-boards';
 import { PokerTable, beom } from './lounge-poker-table';
 import { BlackjackTable } from './lounge-blackjack-table';
 import { SeotdaTable } from './lounge-seotda-table';
+import { RoundReady } from './lounge-round-ready';
 import {
   GAME_INFO,
   GAME_KINDS,
@@ -83,12 +84,20 @@ function Modal({
     return () => d.close();
   }, []);
   return (
+    // Native dialog handles Escape; its click handler only dismisses the backdrop.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={ref}
       className={'l-modal ' + (wide ? 'wide' : '')}
       onCancel={(e) => {
         e.preventDefault();
         onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -255,7 +264,12 @@ function Friends({
             className="l-join-form"
             onSubmit={(e) => {
               e.preventDefault();
-              room.start('guest', input, save.actor, save.looks[save.actor]);
+              void room.start(
+                'guest',
+                input,
+                save.actor,
+                save.looks[save.actor],
+              );
             }}
           >
             <label htmlFor="room-code">초대받은 라운지에 참가</label>
@@ -315,6 +329,9 @@ function RequestGame({
           ? !!view.gostop && view.gostop.phase !== 'over'
           : !!view[k] && view[k].phase !== 'over',
     busy = (id: string) =>
+      Object.values(view.tables ?? {}).some((table) =>
+        table.members.includes(id),
+      ) ||
       Object.entries(view.seats).some(
         ([k, seats]) => active(k as GameKind) && seats.includes(id),
       ) ||
@@ -322,6 +339,7 @@ function RequestGame({
         (r) => r.status === 'waiting' && r.accepted.includes(id),
       ),
     unavailable =
+      !!view.tables?.[game]?.members.length ||
       active(game) ||
       view.invites.some((r) => r.game === game && r.status === 'waiting'),
     targets = chosen.filter(
@@ -539,7 +557,7 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
             {accepted ? (
               <button
                 className="l-text"
-                onClick={() => room.action({ kind: 'cancel', id: r.id })}
+                onClick={() => void room.action({ kind: 'cancel', id: r.id })}
               >
                 초대 취소
               </button>
@@ -551,7 +569,7 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                     view.wallet.balance < gameReservation(r.game, r.stake)
                   }
                   onClick={() =>
-                    room.action({ kind: 'reply', id: r.id, accept: true })
+                    void room.action({ kind: 'reply', id: r.id, accept: true })
                   }
                 >
                   {view.wallet.balance < gameReservation(r.game, r.stake)
@@ -561,7 +579,7 @@ function Invitations({ room, view }: { room: LoungeRoom; view: LoungeView }) {
                 <button
                   className="l-text"
                   onClick={() =>
-                    room.action({ kind: 'reply', id: r.id, accept: false })
+                    void room.action({ kind: 'reply', id: r.id, accept: false })
                   }
                 >
                   다음에
@@ -592,11 +610,15 @@ export function GameScreen({
   onReactionsHidden: (value: boolean) => void;
 }) {
   const [leave, setLeave] = useState(false),
+    [leaving, setLeaving] = useState(false),
+    [leaveError, setLeaveError] = useState(''),
     [displayedGoRevision, setDisplayedGoRevision] = useState(
       view.gostop?.revision,
     ),
+    table = view.tables?.[kind],
+    belongs = table?.members.includes(view.self),
     seats = view.seats[kind],
-    seat = seats.indexOf(view.self),
+    seat = table && !belongs ? -1 : seats.indexOf(view.self),
     names = seats.map((id, i) => {
       const p = view.players.find((p) => p.id === id);
       return p
@@ -619,19 +641,31 @@ export function GameScreen({
   return (
     <section className={'l-game-screen ' + kind}>
       <header>
-        <button className="l-game-back" onClick={onBack}>
-          ← 로비
+        <button
+          className="l-game-back"
+          onClick={onBack}
+          title="로비를 둘러보는 동안에도 테이블 자리는 유지됩니다"
+        >
+          ← 로비 보기
         </button>
         <span>
-          <small>HOHYEON GAME CLUB</small>
+          <small>
+            BEOMDEW GAME CLUB{table ? ` · ${table.round}번째 판` : ''}
+          </small>
           <strong>{GAME_INFO[kind].name}</strong>
         </span>
         <div>
           <span className="l-game-live">
             <i />
-            {ended ? '게임 종료' : seat < 0 ? '관전 중' : '친구와 대전 중'}
+            {ended
+              ? belongs
+                ? '다음 판 준비'
+                : '게임 종료'
+              : seat < 0
+                ? '관전 중'
+                : '친구와 대전 중'}
           </span>
-          {seat >= 0 && !ended && (
+          {(belongs || seat >= 0) && (
             <button className="l-text" onClick={() => setLeave(true)}>
               게임 나가기
             </button>
@@ -681,7 +715,7 @@ export function GameScreen({
               seat={seat}
               names={names}
               onMove={(from, to, promotion) =>
-                room.action({
+                void room.action({
                   kind: 'chess',
                   id: view.chess!.id,
                   ply: view.chess!.moves.length,
@@ -691,7 +725,7 @@ export function GameScreen({
                 })
               }
               onResign={() =>
-                room.action({ kind: 'resign', id: view.chess!.id })
+                void room.action({ kind: 'resign', id: view.chess!.id })
               }
             />
           ) : kind === 'seotda' ? (
@@ -700,7 +734,7 @@ export function GameScreen({
               seat={seat}
               names={names}
               onAction={(action) =>
-                room.action({
+                void room.action({
                   kind: 'seotda',
                   id: view.seotda!.id,
                   revision: view.seotda!.revision,
@@ -714,7 +748,7 @@ export function GameScreen({
               seat={seat}
               names={names}
               onAction={(action) =>
-                room.action({
+                void room.action({
                   kind: 'blackjack',
                   id: view.blackjack!.id,
                   revision: view.blackjack!.revision,
@@ -728,7 +762,7 @@ export function GameScreen({
               seat={seat}
               names={names}
               onAction={(action) =>
-                room.action({
+                void room.action({
                   kind: 'poker',
                   id: view.poker!.id,
                   revision: view.poker!.revision,
@@ -743,7 +777,7 @@ export function GameScreen({
               names={names}
               onDisplayChange={setDisplayedGoRevision}
               onAction={(action) =>
-                room.action({
+                void room.action({
                   kind: 'gostop',
                   id: view.gostop!.id,
                   ply: view.gostop!.ply,
@@ -761,6 +795,20 @@ export function GameScreen({
           </div>
         )}
         {ended &&
+          belongs &&
+          (kind !== 'gostop' ||
+            displayedGoRevision === view.gostop?.revision) && (
+            <RoundReady
+              kind={kind}
+              view={view}
+              onReady={(ready) =>
+                room.action({ kind: 'ready', game: kind, id: match!.id, ready })
+              }
+              onLeave={() => setLeave(true)}
+            />
+          )}
+        {ended &&
+          !belongs &&
           (kind !== 'gostop' ||
             displayedGoRevision === view.gostop?.revision) && (
             <div className="l-game-ending">
@@ -783,30 +831,57 @@ export function GameScreen({
       {leave && (
         <Modal title="게임에서 나갈까요?" onClose={() => setLeave(false)}>
           <p className="l-modal-intro">
-            {kind === 'chess'
-              ? '지금 나가면 기권으로 처리됩니다.'
-              : kind === 'blackjack'
-                ? '자리를 떠나면 남은 손을 자동 스탠드하고 정상적으로 범을 정산합니다. 게임으로 돌아와도 퇴장 결정을 취소할 수 없습니다.'
-                : kind === 'seotda'
-                  ? '자리를 떠나면 다음 행동 차례에 자동으로 다이합니다. 이미 올인했다면 재경기를 포함해 승부까지 참가하고 범을 정산합니다. 퇴장은 취소할 수 없습니다.'
-                  : kind === 'poker'
-                    ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
-                    : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
+            {ended
+              ? '이번 판의 정산은 이미 끝났어요. 나가면 다음 판 참가자에서 빠지고 준비 체크가 해제돼요.'
+              : kind === 'chess'
+                ? '지금 나가면 기권으로 처리됩니다.'
+                : kind === 'blackjack'
+                  ? '자리를 떠나면 남은 손을 자동 스탠드하고 정상적으로 범을 정산합니다. 게임으로 돌아와도 퇴장 결정을 취소할 수 없습니다.'
+                  : kind === 'seotda'
+                    ? '자리를 떠나면 다음 행동 차례에 자동으로 다이합니다. 이미 올인했다면 재경기를 포함해 승부까지 참가하고 범을 정산합니다. 퇴장은 취소할 수 없습니다.'
+                    : kind === 'poker'
+                      ? '자리를 떠나면 이후 차례는 체크가 가능할 때 체크, 그 외에는 폴드합니다. 이미 올인했다면 쇼다운까지 참가하고 범을 정산합니다.'
+                      : '지금 나가면 이번 판은 점수 없이 종료되고 예약금을 돌려받습니다.'}
           </p>
           <div className="l-modal-actions">
-            <button className="l-secondary" onClick={() => setLeave(false)}>
-              계속하기
+            <button
+              className="l-secondary"
+              disabled={leaving}
+              onClick={() => setLeave(false)}
+            >
+              테이블에 남기
             </button>
             <button
               className="l-primary"
-              onClick={() => {
-                room.action({ kind: 'stand', game: kind });
-                onBack();
+              disabled={leaving}
+              onClick={async () => {
+                if (leaving) return;
+                setLeaving(true);
+                setLeaveError('');
+                try {
+                  if (
+                    await room.action({
+                      kind: 'stand',
+                      game: kind,
+                      id: match?.id,
+                    })
+                  )
+                    onBack();
+                  else
+                    setLeaveError(
+                      '나가기 요청을 처리하지 못했어요. 연결을 확인한 뒤 다시 눌러 주세요.',
+                    );
+                } catch {
+                  setLeaveError('연결을 확인한 뒤 다시 눌러 주세요.');
+                } finally {
+                  setLeaving(false);
+                }
               }}
             >
-              게임 나가기
+              {leaving ? '나가는 중…' : '게임 나가기'}
             </button>
           </div>
+          {leaveError && <p role="alert">{leaveError}</p>}
         </Modal>
       )}
     </section>
@@ -833,7 +908,9 @@ function AccountLounge({
   const [room] = useState(() => new LoungeRoom(account)),
     view = useSyncExternalStore(room.subscribe, room.snapshot, room.snapshot),
     [ready, setReady] = useState(false),
-    [tab, setTab] = useState<'village' | 'lounge' | 'wardrobe' | 'casino' | 'bedroom'>('wardrobe'),
+    [tab, setTab] = useState<
+      'village' | 'lounge' | 'wardrobe' | 'casino' | 'bedroom'
+    >(() => (save.visits ? 'village' : 'wardrobe')),
     [modal, setModal] = useState<
       'friends' | 'credits' | 'reset' | 'request' | 'wallet' | 'account' | null
     >(null),
@@ -857,28 +934,38 @@ function AccountLounge({
     toastTimer.current = setTimeout(() => setToast(''), 4000);
   }, []);
   useEffect(() => {
-    setTab(save.visits ? 'village' : 'wardrobe');
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      setReady(true);
+      if (new URLSearchParams(location.hash.slice(1)).get('lounge'))
+        setModal('friends');
+    });
     room.init();
-    setReady(true);
-    if (new URLSearchParams(location.hash.slice(1)).get('lounge'))
-      setModal('friends');
     return () => {
+      active = false;
       room.dispose();
       if (toastTimer.current) clearTimeout(toastTimer.current);
       void audioRef.current?.close();
     };
   }, [room]);
-  const openedGames = useRef(new Set<string>()),
+  const openedGames = useRef(new Map<GameKind, string>()),
     chessId = view.chess?.id,
     goId = view.gostop?.id,
     pokerId = view.poker?.id,
     blackjackId = view.blackjack?.id,
     seotdaId = view.seotda?.id;
   useEffect(() => {
+    let active = true;
     if (view.status !== 'connected') {
-      setGameScreen(null);
-      return;
+      queueMicrotask(() => {
+        if (active) setGameScreen(null);
+      });
+      return () => {
+        active = false;
+      };
     }
+    const toOpen: [GameKind, string][] = [];
     for (const [kind, id] of [
       ['chess', chessId],
       ['gostop', goId],
@@ -886,15 +973,36 @@ function AccountLounge({
       ['blackjack', blackjackId],
       ['seotda', seotdaId],
     ] as [GameKind, string | undefined][]) {
-      if (id && !openedGames.current.has(id)) {
-        openedGames.current.add(id);
-        if (view.seats[kind].includes(view.self)) {
+      if (
+        id &&
+        openedGames.current.get(kind) !== id &&
+        view.seats[kind].includes(view.self)
+      )
+        toOpen.push([kind, id]);
+    }
+    if (toOpen.length)
+      queueMicrotask(() => {
+        if (!active) return;
+        for (const [kind, id] of toOpen) {
+          if (openedGames.current.get(kind) === id) continue;
+          openedGames.current.set(kind, id);
           setGameScreen(kind);
           setModal(null);
         }
-      }
-    }
-  }, [chessId, goId, pokerId, blackjackId, seotdaId, view.status, view.self]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    chessId,
+    goId,
+    pokerId,
+    blackjackId,
+    seotdaId,
+    view.seats,
+    view.status,
+    view.self,
+  ]);
   const inviteStates = useRef(new Map<string, string>());
   useEffect(() => {
     document.querySelector('.l-app')?.scrollTo({ top: 0 });
@@ -914,45 +1022,75 @@ function AccountLounge({
         );
       inviteStates.current.set(invite.id, invite.status);
     }
+    const currentIds = new Set(view.invites.map((invite) => invite.id));
+    for (const id of inviteStates.current.keys())
+      if (!currentIds.has(id)) inviteStates.current.delete(id);
   }, [view.invites, view.self, notice]);
   const me = view.players.find((p) => p.id === view.self);
+  const retainedTable = GAME_KINDS.find((kind) =>
+    view.tables?.[kind]?.members.includes(view.self),
+  );
   useEffect(() => {
+    let active = true;
     // Only use server area for the first connected route. The server has no
     // village/wardrobe/bedroom areas, so later lounge responses stay put.
     if (view.status !== 'connected') {
       connectedRoute.current = false;
-      return;
+      return () => {
+        active = false;
+      };
     }
     if (!connectedRoute.current && me) {
-      connectedRoute.current = true;
-      if (me.area === 'casino' && tab !== 'wardrobe' && tab !== 'bedroom')
-        setTab('casino');
+      queueMicrotask(() => {
+        if (!active) return;
+        connectedRoute.current = true;
+        if (me.area === 'casino' && tab !== 'wardrobe' && tab !== 'bedroom')
+          setTab('casino');
+      });
     }
-  }, [view.status, view.self, me?.actor, me?.area, tab]);
+    return () => {
+      active = false;
+    };
+  }, [view.status, view.self, me, tab]);
   useEffect(() => {
     chatEnd.current?.scrollIntoView({ block: 'nearest' });
   }, [view.chat.length]);
   useEffect(() => {
-    if (view.error) notice(view.error);
+    let active = true;
+    if (view.error)
+      queueMicrotask(() => {
+        if (active) notice(view.error);
+      });
+    return () => {
+      active = false;
+    };
   }, [view.error, notice]);
   const changeSave = (s: LoungeSave) => {
     setSave(s);
     if (view.status === 'connected' && s.actor === me?.actor)
-      room.action({ kind: 'look', look: s.looks[s.actor] });
+      void room.action({ kind: 'look', look: s.looks[s.actor] });
   };
   const enter = (destination: VillageDestination | 'village' = 'village') => {
     if (destination === 'village' && tab === 'wardrobe')
       setSave((s) => ({ ...s, visits: s.visits + 1 }));
     setTab(destination);
-    if (view.status === 'connected' && (destination === 'lounge' || destination === 'village'))
-      room.action({ kind: 'area', area: 'lounge' });
-    if (view.status === 'connected' && destination === 'casino')
-      room.action({ kind: 'area', area: 'casino' });
+    if (
+      view.status === 'connected' &&
+      !retainedTable &&
+      (destination === 'lounge' || destination === 'village')
+    )
+      void room.action({ kind: 'area', area: 'lounge' });
+    if (
+      view.status === 'connected' &&
+      !retainedTable &&
+      destination === 'casino'
+    )
+      void room.action({ kind: 'area', area: 'casino' });
   };
   const move = useCallback(
     (x: number, y: number) => {
       if (view.status === 'connected') {
-        room.action({ kind: 'move', x, y });
+        void room.action({ kind: 'move', x, y });
       } else
         setLocalPos({
           x: Math.max(15, Math.min(85, x)),
@@ -1032,7 +1170,7 @@ function AccountLounge({
     return (
       <main className="l-app">
         <GameScreen
-          key={gameScreen}
+          key={gameScreen + ':' + (view[gameScreen]?.id ?? 'waiting')}
           kind={gameScreen}
           room={room}
           view={view}
@@ -1042,9 +1180,9 @@ function AccountLounge({
           onReactionsHidden={setReactionsHidden}
         />
         {toast && (
-          <div className="l-toast" role="status">
+          <output className="l-toast" aria-live="polite">
             {toast}
-          </div>
+          </output>
         )}
       </main>
     );
@@ -1144,6 +1282,25 @@ function AccountLounge({
         </span>
         <button onClick={() => void cloudSave.flush()}>지금 저장</button>
       </div>
+      {retainedTable && view.status === 'connected' && (
+        <aside className="l-retained-table" aria-label="유지 중인 게임 테이블">
+          <span>
+            <strong>
+              {GAME_INFO[retainedTable].name} 테이블에 자리가 있어요
+            </strong>
+            <small>
+              로비를 둘러봐도 참가 상태는 유지돼요. 다음 판 준비는 게임 화면에서
+              확인해 주세요.
+            </small>
+          </span>
+          <button
+            className="l-primary"
+            onClick={() => setGameScreen(retainedTable)}
+          >
+            게임으로 돌아가기 <ArrowRight size={15} />
+          </button>
+        </aside>
+      )}
       {cloudSave.conflict && (
         <div className="l-save-alert" role="alert">
           <p>다른 창에서 저장 내용이 바뀌었어요. 어떤 내용을 간직할까요?</p>
@@ -1194,34 +1351,96 @@ function AccountLounge({
             <aside className="l-village-sidebar">
               <div className="l-village-shortcuts">
                 <span className="l-kicker">마을 안의 공간</span>
-                <button onClick={() => enter('lounge')}><Armchair size={18} /><span><strong>회관</strong><small>친구들과 이야기하고 게임해요</small></span><ArrowRight size={17} /></button>
-                <button onClick={() => enter('casino')}><Spade size={18} /><span><strong>카지노</strong><small>카드 게임을 즐겨요</small></span><ArrowRight size={17} /></button>
-                <button onClick={() => enter('wardrobe')}><Shirt size={18} /><span><strong>분장실</strong><small>옷과 모습을 바꿔요</small></span><ArrowRight size={17} /></button>
-                <button onClick={() => enter('bedroom')}><House size={18} /><span><strong>내 방</strong><small>나만의 방을 꾸며요</small></span><ArrowRight size={17} /></button>
+                <button onClick={() => enter('lounge')}>
+                  <Armchair size={18} />
+                  <span>
+                    <strong>회관</strong>
+                    <small>친구들과 이야기하고 게임해요</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </button>
+                <button onClick={() => enter('casino')}>
+                  <Spade size={18} />
+                  <span>
+                    <strong>카지노</strong>
+                    <small>카드 게임을 즐겨요</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </button>
+                <button onClick={() => enter('wardrobe')}>
+                  <Shirt size={18} />
+                  <span>
+                    <strong>분장실</strong>
+                    <small>옷과 모습을 바꿔요</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </button>
+                <button onClick={() => enter('bedroom')}>
+                  <House size={18} />
+                  <span>
+                    <strong>내 방</strong>
+                    <small>나만의 방을 꾸며요</small>
+                  </span>
+                  <ArrowRight size={17} />
+                </button>
               </div>
               <div className="l-chat l-village-chat">
                 <div>
                   <h3>마을 수다</h3>
-                  <span>{view.status === 'connected' ? `${view.players.length}명` : '친구를 기다려요'}</span>
+                  <span>
+                    {view.status === 'connected'
+                      ? `${view.players.length}명`
+                      : '친구를 기다려요'}
+                  </span>
                 </div>
                 <div className="l-chat-messages" aria-live="polite">
-                  {view.chat.length ? view.chat.map((m) => (
-                    <p key={m.id}><b style={{ color: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b><span>{m.text}</span></p>
-                  )) : (
+                  {view.chat.length ? (
+                    view.chat.map((m) => (
+                      <p key={m.id}>
+                        <b style={{ color: ACTOR_COLORS[m.actor] }}>
+                          {ACTORS[m.actor]}
+                        </b>
+                        <span>{m.text}</span>
+                      </p>
+                    ))
+                  ) : (
                     <div className="l-chat-welcome">
                       <Users size={23} />
-                      <p>{view.status === 'connected' ? '오늘의 첫 인사를 남겨 보세요.' : '친구를 초대하면 이곳에서 이야기할 수 있어요.'}</p>
-                      {view.status !== 'connected' && <button onClick={() => setModal('friends')}>초대하기 <ArrowRight size={13} /></button>}
+                      <p>
+                        {view.status === 'connected'
+                          ? '오늘의 첫 인사를 남겨 보세요.'
+                          : '친구를 초대하면 이곳에서 이야기할 수 있어요.'}
+                      </p>
+                      {view.status !== 'connected' && (
+                        <button onClick={() => setModal('friends')}>
+                          초대하기 <ArrowRight size={13} />
+                        </button>
+                      )}
                     </div>
                   )}
                   <div ref={chatEnd} />
                 </div>
-                <form onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (await room.action({ kind: 'chat', text: chat })) setChat('');
-                }}>
-                  <input aria-label="채팅 메시지" disabled={view.status !== 'connected'} value={chat} onChange={(e) => setChat(e.target.value)} placeholder="친구에게 한마디…" maxLength={120} />
-                  <button aria-label="보내기" disabled={view.status !== 'connected' || !chat.trim()}><Send size={17} /></button>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (await room.action({ kind: 'chat', text: chat }))
+                      setChat('');
+                  }}
+                >
+                  <input
+                    aria-label="채팅 메시지"
+                    disabled={view.status !== 'connected'}
+                    value={chat}
+                    onChange={(e) => setChat(e.target.value)}
+                    placeholder="친구에게 한마디…"
+                    maxLength={120}
+                  />
+                  <button
+                    aria-label="보내기"
+                    disabled={view.status !== 'connected' || !chat.trim()}
+                  >
+                    <Send size={17} />
+                  </button>
                 </form>
               </div>
             </aside>
@@ -1247,11 +1466,7 @@ function AccountLounge({
                   ? '회관 02 · 카드룸'
                   : '회관 01 · 우리 아지트'}
               </span>
-              <h1>
-                {tab === 'casino'
-                  ? '카지노'
-                  : '우리들의 회관'}
-              </h1>
+              <h1>{tab === 'casino' ? '카지노' : '우리들의 회관'}</h1>
               <p>
                 {tab === 'casino'
                   ? '체스 · 텍사스 홀덤 · 블랙잭'
@@ -1344,6 +1559,7 @@ function AccountLounge({
                   }}
                 >
                   <span className="l-game-symbol">
+                    {/* oxlint-disable-next-line nextjs/no-img-element -- Local decorative card art stays an intrinsic-size icon. */}
                     <img src={LOUNGE_ASSETS['m01-01']} alt="" />
                   </span>
                   <span>
@@ -1355,6 +1571,7 @@ function AccountLounge({
                 </button>
                 <button onClick={() => openTable('gostop')}>
                   <span className="l-game-symbol">
+                    {/* oxlint-disable-next-line nextjs/no-img-element -- Local decorative card art stays an intrinsic-size icon. */}
                     <img src={LOUNGE_ASSETS['m03-01']} alt="" />
                   </span>
                   <span>
@@ -1446,10 +1663,12 @@ function AccountLounge({
       <footer className="l-footer">
         <span>범타듀 밸리 · 일곱 친구가 사는 마을</span>
         <div>
+          {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- This static sibling page is published as a standalone HTML route. */}
           <a href="./theater.html">
             우당탕 극장
             <ArrowUpRight size={12} />
           </a>
+          {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- This static sibling page is published as a standalone HTML route. */}
           <a href="./island.html">
             지난 섬으로
             <ArrowUpRight size={12} />
@@ -1630,7 +1849,10 @@ function AccountLounge({
               className="l-primary"
               onClick={async () => {
                 if (!(await room.leave())) return;
-                setSave({ ...accountSave(freshLounge(), account.actor), bedroom: save.bedroom });
+                setSave({
+                  ...accountSave(freshLounge(), account.actor),
+                  bedroom: save.bedroom,
+                });
                 setTab('wardrobe');
                 setModal(null);
                 setLocalPos({ x: 50, y: 79 });
@@ -1707,10 +1929,10 @@ function AccountLounge({
         </Modal>
       )}
       {toast && (
-        <div className="l-toast" role="status">
+        <output className="l-toast" aria-live="polite">
           <Check size={16} />
           {toast}
-        </div>
+        </output>
       )}
     </main>
   );

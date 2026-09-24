@@ -302,6 +302,11 @@ test('leaving auto-folds on next turn and settles once; all-in departure keeps s
     const before = JSON.stringify(r.bank.ledger);
     r.settle('seotda', r.seotda);
     assert.equal(JSON.stringify(r.bank.ledger), before);
+    // The remaining player now keeps the table after settlement. Leave it
+    // explicitly before this test starts a separate all-in departure scenario.
+    assert.deepEqual(r.view.tables.seotda.members, ['p1']);
+    assert(r.apply('p1', { kind: 'stand', game: 'seotda', id }));
+    assert.equal(r.view.tables.seotda, undefined);
     const nextId = invite(r);
     r.seotda = newSeotda(nextId, 2, 1000, deck([hand(3, 8), hand(1, 2)]));
     r.sync();
