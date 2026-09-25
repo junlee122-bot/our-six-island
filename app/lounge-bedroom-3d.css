@@ -152,67 +152,6 @@
   font-weight: 700;
   white-space: nowrap;
 }
-.b3-pad {
-  /* Sits over the scene's empty front corner on wide screens; on phones it
-     moves below the room so it never covers furniture. */
-  position: absolute;
-  right: 18px;
-  bottom: 64px;
-  display: grid;
-  grid-template-columns: repeat(3, 44px);
-  grid-template-rows: repeat(3, 44px);
-  gap: 4px;
-  z-index: 2;
-}
-.b3-pad button {
-  display: grid;
-  place-items: center;
-  padding: 0;
-  background: #fffaf0d9;
-  border: 1px solid #cfc4b0;
-  border-radius: 9px;
-  color: #938468;
-  box-shadow: 0 2px 5px #62523a14;
-  touch-action: none;
-  cursor: pointer;
-  user-select: none;
-}
-.b3-pad button:active {
-  background: #dce0c3;
-  color: #626d44;
-  transform: translateY(1px);
-}
-.b3-pad-up {
-  grid-column: 2;
-  grid-row: 1;
-}
-.b3-pad-left {
-  grid-column: 1;
-  grid-row: 2;
-}
-.b3-pad-down {
-  grid-column: 2;
-  grid-row: 2;
-}
-.b3-pad-right {
-  grid-column: 3;
-  grid-row: 2;
-}
-.b3-pad-run {
-  grid-column: 1 / 4;
-  grid-row: 3;
-  display: flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-}
-.b3-pad-run[aria-pressed='true'] {
-  color: #fffaf0 !important;
-  background: #75805a !important;
-  border-color: #65704e !important;
-}
 .b3-credit {
   padding: 0 0 22px;
   margin: 0;
@@ -229,42 +168,6 @@
   background: #eee9d7;
   color: #807252;
   font-size: 12px;
-}
-@media (max-width: 650px) {
-  .b3-bedroom-experience {
-    padding: 14px 12px 0;
-  }
-  .b3-heading {
-    margin-bottom: 17px;
-  }
-  .b3-heading h1 {
-    font-size: 27px;
-  }
-  .b3-heading p {
-    font-size: 11px;
-    max-width: 280px;
-  }
-  .b3-mode-label {
-    display: none;
-  }
-  .b3-scene {
-    height: clamp(300px, 92vw, 420px);
-  }
-  .b3-pad {
-    position: static;
-    justify-content: center;
-    padding: 10px 0 4px;
-    grid-template-columns: repeat(3, 48px);
-    grid-template-rows: repeat(3, 46px);
-    background: #f2ebde;
-  }
-  .b3-scene-footer {
-    padding: 12px;
-    font-size: 11px;
-  }
-  .b3-key-help {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .b3-loading svg {
@@ -390,7 +293,7 @@
 }
 /* Wide screens: the edit tools float over the bottom of the room so they
    are always in view while dragging. */
-@media (min-width: 651px) {
+/* was @media (min-width: 651px): always on for PC (1280px+) */
   .b3-edit-dock {
     position: absolute;
     left: 12px;
@@ -415,7 +318,6 @@
   .b3-room[data-editing] .b3-toolbar-title {
     grid-column: 1 / -1;
   }
-}
 .b3-editbar {
   display: flex;
   flex-wrap: wrap;
@@ -792,37 +694,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-@media (max-width: 650px) {
-  .b3-heading-side {
-    display: none;
-  }
-  .b3-catalog,
-  .b3-settings {
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    max-height: 72%;
-    border-radius: 16px 16px 0 0;
-  }
-  .b3-catalog-grid {
-    grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
-  }
-  .b3-editbar .b3-done {
-    margin-left: 0;
-  }
-  .b3-editbar button {
-    flex: 1 1 auto;
-  }
-  .b3-scene-footer {
-    flex-wrap: wrap;
-  }
-  .b3-decorate {
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-}
 
 /* ---------- shared rooms: owner bar, visits ---------- */
 .b3-owner-bar {
@@ -910,20 +781,4 @@
 }
 .b3-guestbook-fab {
   display: none;
-}
-@media (max-width: 760px) {
-  .b3-guestbook-fab {
-    position: fixed;
-    right: 14px;
-    bottom: calc(14px + env(safe-area-inset-bottom));
-    z-index: 20;
-    display: inline-flex;
-    box-shadow: 0 6px 18px #4c3f2e33;
-    background: #3e9f90;
-    border-color: #33877a;
-    color: #fff;
-  }
-  .b3-visit-guestbook {
-    scroll-margin-top: 64px;
-  }
 }

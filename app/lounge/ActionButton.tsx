@@ -61,7 +61,7 @@ export function ActionButton({
   label,
   detail,
   disabled,
-  touch,
+  shortcut,
   onPress,
   className = '',
 }: {
@@ -71,13 +71,15 @@ export function ActionButton({
   /** Screen-reader context, e.g. "회관 · 안에 2명". */
   detail?: string;
   disabled?: boolean;
-  touch?: boolean;
+  /** Key cap for the action key (E unless rebound in 설정 → 조작). */
+  shortcut?: string;
   onPress: () => void;
   className?: string;
 }) {
   if (!kind) return null;
   const Icon = ICON[kind];
   const text = label ?? ACTION_LABEL[kind];
+  const key = shortcut ?? 'E';
   return (
     <button
       type="button"
@@ -85,17 +87,15 @@ export function ActionButton({
       data-testid="action-button"
       data-action={kind}
       disabled={disabled}
-      aria-label={`${text}${detail ? ` · ${detail}` : ''}${touch ? '' : ' (E)'}`}
-      aria-keyshortcuts="E"
+      aria-label={`${text}${detail ? ` · ${detail}` : ''} (${key})`}
+      aria-keyshortcuts={key}
       onClick={onPress}
     >
       <Icon size={22} aria-hidden="true" />
       <span>{text}</span>
-      {!touch && (
-        <kbd aria-hidden="true" className="l-action-key">
-          E
-        </kbd>
-      )}
+      <kbd aria-hidden="true" className="l-action-key">
+        {key}
+      </kbd>
     </button>
   );
 }

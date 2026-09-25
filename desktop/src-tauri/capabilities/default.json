@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permissions for the game window: fullscreen/title, OS notifications, external links, updates.",
+  "description": "Permissions for the game window: fullscreen/title, close (save first), OS notifications, external links, updates.",
   "windows": ["main"],
   "platforms": ["windows", "macOS", "linux"],
   "permissions": [
@@ -12,6 +12,8 @@
     "core:window:allow-set-focus",
     "core:window:allow-unminimize",
     "core:window:allow-request-user-attention",
+    "core:window:allow-destroy",
+    "core:window:allow-close",
     "notification:default",
     "opener:default",
     "updater:default",

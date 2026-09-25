@@ -93,7 +93,7 @@ export function CollectionBook({
     </aside>
   ) : (
     <aside className="l-dex-detail">
-      <p className="l-help-text">칸을 누르면 어디서 만나는지, 누가 처음 기증했는지 볼 수 있어요.</p>
+      <p className="l-help-text">칸을 클릭하면 어디서 만나는지, 누가 처음 기증했는지 볼 수 있어요.</p>
     </aside>
   );
   return (

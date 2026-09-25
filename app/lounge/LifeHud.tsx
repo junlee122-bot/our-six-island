@@ -3,6 +3,9 @@
 // tooltip, today's dish buff, and the 1–9 hotbar. Desktop first: hover and
 // keyboard focus show the details; nothing here blocks the world below.
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
+import { hotbarIndexForCode, keyLabel, type BindAction } from '../lounge-keybinds';
+import { getSettings, useSettings } from '../lounge-settings';
+import { globalKeyTarget } from '../lounge-scene-keys';
 import {
   CalendarDays,
   Cloud,
@@ -221,8 +224,9 @@ export function Hotbar({
     }
   };
   const me = life?.me;
+  const [{ keys }] = useSettings();
   return (
-    <div className={`l-hotbar ${className}`} role="toolbar" aria-label="핫바 (1–9)" data-testid="hotbar">
+    <div className={`l-hotbar ${className}`} role="toolbar" aria-label="핫바" data-testid="hotbar">
       {Array.from({ length: HOTBAR_SIZE }, (_, i) => {
         const ref = hotbar.slots[i] ?? '';
         const count = hotbarCount(me, ref);
@@ -235,7 +239,8 @@ export function Hotbar({
             className="l-hotbar-slot"
             aria-pressed={active}
             aria-label={`${i + 1}번 칸${name ? ` · ${name}` : ' · 비어 있음'}${count !== null ? ` · ${count}개` : ''}`}
-            title={name ? `${name}${count !== null ? ` · ${count}개` : ''}` : '인벤토리(I)에서 끌어다 놓아요'}
+            data-tip={name ? `${name}${count !== null ? ` · ${count}개` : ''}` : '가방에서 끌어다 놓아요'}
+            data-bind={`hotbar${i + 1}`}
             data-slot={i}
             data-ref={ref}
             data-over={over === i || undefined}
@@ -257,7 +262,7 @@ export function Hotbar({
             onDragLeave={() => setOver((o) => (o === i ? null : o))}
             onDrop={drop(i)}
           >
-            <kbd aria-hidden="true">{i + 1}</kbd>
+            <kbd aria-hidden="true">{keyLabel(keys[`hotbar${i + 1}` as BindAction])}</kbd>
             {ref ? <ItemIcon id={ref} size={30} /> : null}
             {count !== null && ref ? <b className="l-hotbar-count">{count}</b> : null}
           </button>
@@ -280,12 +285,10 @@ export function useHotbarKeys(hotbar: HotbarState, enabled: boolean, onUse?: (re
     if (!enabled) return;
     const key = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
-      const m = /^Digit([1-9])$/.exec(e.code);
-      if (!m) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-      if (document.querySelector('dialog[open], .l-coach')) return;
-      const i = Number(m[1]) - 1;
+      // Slot keys follow 설정 → 조작 (1–9 by default).
+      const i = hotbarIndexForCode(getSettings().keys, e.code);
+      if (i < 0) return;
+      if (document.querySelector('.l-coach') || !globalKeyTarget(e)) return;
       const { hotbar: h, onUse: runSlot } = ref.current;
       const slot = h.slots[i];
       if (h.selected === i && slot) runSlot?.(slot);

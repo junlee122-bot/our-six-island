@@ -18,15 +18,3 @@
     translate: 0 0;
   }
 }
-@media (max-width: 600px) {
-  .l-game-screen.seotda > header {
-    padding: 12px 14px;
-    gap: 10px;
-  }
-  .l-game-screen.seotda > header button {
-    white-space: nowrap;
-  }
-  .l-game-screen.seotda .l-game-content {
-    padding: 12px 10px;
-  }
-}

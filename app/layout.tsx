@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: '범타듀 밸리 · 일곱 친구의 마을',
   description:
     '일곱 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.',
-  icons: { icon: '/favicon.svg', apple: '/icons/apple-touch-icon.png' },
+  icons: { icon: '/favicon.svg' },
   openGraph: {
     title: '범타듀 밸리',
     description:
@@ -23,7 +23,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  viewportFit: 'cover',
   themeColor: '#5f8a55',
 };
 export default function RootLayout({

@@ -2,6 +2,12 @@
 import { getSettings } from '../lounge-settings';
 import { loungeAudio } from '../lounge-audio';
 import { NAMES } from '../lounge-text';
+import {
+  desktopNotify,
+  isDesktopApp,
+  requestDesktopAttention,
+  setDesktopTitle,
+} from '../desktop-bridge';
 
 export type Cue =
   | 'invite'
@@ -33,7 +39,7 @@ export function playCue(cue: Cue) {
     const { notes, step, type } = CUES[cue];
     // Volume is applied by the engine's master gain (one AudioContext for
     // music, village sounds and cues; iOS allows only a few contexts).
-    loungeAudio.cue(notes, step, type, 0.09);
+    loungeAudio.cue(notes, step, type, 0.09, 'ui');
   } catch {}
 }
 
@@ -47,15 +53,18 @@ let titleListenerInstalled = false;
 
 function renderTitle() {
   if (typeof document === 'undefined') return;
-  document.title =
+  const title =
     unseen > 0 ? `(${unseen}) ${titleLabel} · ${BASE_TITLE}` : BASE_TITLE;
+  // The app's OS title bar does not always mirror document.title.
+  if (isDesktopApp()) void setDesktopTitle(title);
+  else document.title = title;
 }
 
 function installTitleReset() {
   if (titleListenerInstalled || typeof document === 'undefined') return;
   titleListenerInstalled = true;
   const reset = () => {
-    if (document.visibilityState === 'visible') {
+    if (!gameInBackground()) {
       unseen = 0;
       renderTitle();
     }
@@ -71,34 +80,49 @@ export function tabHidden() {
 }
 
 /**
- * Calls for attention: sound always (if enabled); when the tab is hidden also
- * updates document.title, shows a Notification (if permitted) and vibrates.
+ * The player is not looking at the game: the tab is hidden, or the window is
+ * behind another app. A desktop window (and a browser window) behind others
+ * still reports visibilityState 'visible', so focus is checked too.
+ */
+export function gameInBackground() {
+  if (typeof document === 'undefined') return false;
+  if (tabHidden()) return true;
+  try {
+    return !document.hasFocus();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Calls for attention: sound always (if enabled); when the game is in the
+ * background also updates the title, flashes the taskbar (desktop app) and
+ * shows a desktop notification (if permitted).
  */
 export function attention(kind: 'invite' | 'turn', body: string) {
   playCue(kind);
   const settings = getSettings();
-  try {
-    if (settings.vibrate)
-      navigator.vibrate?.(kind === 'invite' ? [120, 60, 120] : 90);
-  } catch {}
-  if (!tabHidden()) return;
+  if (!gameInBackground()) return;
   installTitleReset();
   unseen++;
   titleLabel = kind === 'invite' ? '초대 도착' : '내 차례';
   renderTitle();
+  const title = kind === 'invite' ? '초대 도착' : '내 차례예요';
+  if (isDesktopApp()) {
+    if (settings.attention) void requestDesktopAttention();
+    if (settings.notifications) void desktopNotify(title, body);
+    return;
+  }
   if (
     settings.notifications &&
     typeof Notification !== 'undefined' &&
     Notification.permission === 'granted'
   ) {
     try {
-      const n = new Notification(
-        kind === 'invite' ? '초대 도착' : '내 차례예요',
-        {
-          body,
-          tag: 'bumtadew-' + kind,
-        },
-      );
+      const n = new Notification(title, {
+        body,
+        tag: 'bumtadew-' + kind,
+      });
       n.onclick = () => {
         globalThis.focus?.();
         n.close();

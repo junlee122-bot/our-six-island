@@ -6,6 +6,7 @@ import {THEATER_ASSETS} from './theater-assets';
 import {GarmentArt,TheaterAvatar,TheaterArtReady} from './theater-avatar';
 import {loadTheaterArt} from './theater-renderer';
 import {TheaterRoom} from './theater-room';
+import {WEB_URL,isDesktopApp} from './desktop-bridge';
 
 function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}){const ref=useRef<HTMLDialogElement>(null);useEffect(()=>{const d=ref.current;d?.showModal();return()=>d?.close();},[]);return <dialog ref={ref} className="t-modal" aria-label={title} onCancel={e=>{e.preventDefault();onClose();}}><header><h2>{title}</h2><button className="t-icon" aria-label="닫기" onClick={onClose}><X size={20}/></button></header>{children}</dialog>;}
 const poseNames:{id:Pose;name:string}[]=[{id:'idle',name:'차렷'},{id:'sway',name:'두근두근'},{id:'bow',name:'꾸벅'},{id:'cheer',name:'신난다!'}];
@@ -31,7 +32,8 @@ export default function TheaterGame(){
  const backToDress=()=>{if(connected&&online.role==='host')room.setRun(null);setRun(null);setReplay(null);setView('dress');};
  const favorite=(id:string)=>setSave(s=>({...s,favorites:s.favorites.includes(id)?s.favorites.filter(i=>i!==id):[...s.favorites,id]}));
  const poster=async(savedRun:Run|null=run)=>{try{const art=await loadTheaterArt(),c=document.createElement('canvas');c.width=1600;c.height=1000;const ctx=c.getContext('2d')!;ctx.drawImage(art.backdrop,0,0,c.width,c.height);ctx.fillStyle='#101521b8';ctx.fillRect(0,0,1600,160);ctx.textAlign='center';ctx.fillStyle='#f7e7c7';ctx.font='bold 46px "Malgun Gothic",sans-serif';ctx.fillText('호현지방 · 우당탕 극장',800,66);ctx.font='26px "Malgun Gothic",sans-serif';ctx.fillText(savedRun?.step===3?endingFor(savedRun):'일곱 친구의 오늘 분장',800,115);const looks=savedRun?.costumes??costumes;ACTORS.forEach((name,i)=>{art.actor(ctx,i,looks[i],140+i*220,850,290,'idle',0,true);ctx.fillStyle='#fff5e2';ctx.font='bold 24px "Malgun Gothic",sans-serif';ctx.fillText(name,140+i*220,900);});const blob=await new Promise<Blob|null>(resolve=>c.toBlob(resolve,'image/png'));if(!blob)throw new Error();const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='호현지방-우당탕극장-'+Date.now()+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);setToast('일곱 친구의 기념사진을 저장했어요.');}catch{setToast('사진을 저장하지 못했어요. 다시 시도해 주세요.');}};
- const invite=typeof location!=='undefined'?`${location.href.split('#')[0]}#theater=${online.code}`:'';
+ // In the desktop app location is tauri://localhost: link the public theater page instead.
+ const invite=typeof location!=='undefined'?`${isDesktopApp()?new URL(location.pathname.replace(/^\/+/,''),WEB_URL).href:location.href.split('#')[0]}#theater=${online.code}`:'';
  const copyInvite=async()=>{try{await navigator.clipboard.writeText(invite);setToast('초대 링크를 복사했어요.');}catch{setToast('초대 링크를 길게 눌러 복사해 주세요.');}};
  const liveEpisode=EPISODES.find(e=>e.id===(run?.episode??episode))!,active=run?run.cast[Math.min(2,run.step)]:selected,canAct=!connected||!!replay||room.canChoose();
  if(!loaded)return <main className="theater-app t-loading"><Clapperboard/><p>분장실 문을 여는 중…</p></main>;

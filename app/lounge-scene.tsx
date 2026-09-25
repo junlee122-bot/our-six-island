@@ -38,6 +38,7 @@ import {
 } from './lounge-scene-layout';
 import { ActionButton } from './lounge/ActionButton';
 import './lounge-scene.css';
+import { boundAction } from './lounge-scene-keys';
 
 type RoomFloorProps = {
   players: LoungePlayer[];
@@ -200,7 +201,7 @@ function SceneGameTable({
       className={`cf-game-table cf-game-${table.game} is-${state.phase}${state.called || state.fill ? ' is-called' : ''}${state.seated ? ' is-mine' : ''}`}
       style={style}
       onClick={() => onApproach(table.game)}
-      aria-label={`${label.text} · 누르면 테이블로 걸어가요`}
+      aria-label={`${label.text} · 클릭하면 테이블로 걸어가요`}
       title={label.text}
       data-table={state.id}
       data-phase={state.phase}
@@ -289,11 +290,7 @@ export function RoomFloor({
   // The one action button: the nearest table within reach ("둘러보기", E).
   const [near, setNear] = useState<GameKind | null>(null);
   const nearRef = useRef<GameKind | null>(null);
-  const [touch] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches,
-  );
+
   // Adopt server positions (entering, seats after a game) while standing still.
   useEffect(() => {
     if (!me) return;
@@ -414,7 +411,7 @@ export function RoomFloor({
         className="cf-scene"
         tabIndex={0}
         role="application"
-        aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 누르거나 방향키와 WASD로 이동합니다. 테이블을 누르면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}
+        aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 클릭하거나 방향키와 WASD로 이동해요. 테이블을 클릭하면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}
         onKeyDown={(e) => {
           if (
             document.querySelector('dialog[open]') ||
@@ -424,7 +421,7 @@ export function RoomFloor({
           )
             return;
           live.current.shift = e.shiftKey;
-          if (e.code === 'KeyE' || e.code === 'Enter') {
+          if (boundAction(e.nativeEvent) === 'action' || e.code === 'Enter') {
             if (e.target !== e.currentTarget) return;
             if (nearRef.current && !live.current.locked) {
               e.preventDefault();
@@ -513,7 +510,7 @@ export function RoomFloor({
           )}
         <span className="cf-scene-hint">
           <Footprints size={12} aria-hidden="true" />
-          바닥을 눌러 이동<span> · 방향키 / WASD</span>
+          클릭해서 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
       {near && !seatedAt && !sheetOpen && (() => {
@@ -525,7 +522,6 @@ export function RoomFloor({
             kind={kind}
             detail={tableLabel(state).text}
             label={`${GAME_INFO[near].name} ${TABLE_ACTION_LABEL[kind]}`}
-            touch={touch}
             onPress={() => onTable(near)}
           />
         );
@@ -539,7 +535,7 @@ export function RoomFloor({
               key={game}
               onClick={() => approach(game)}
               className={`is-${state.phase}${state.called || state.fill ? ' is-called' : ''}`}
-              aria-label={`${tableLabel(state).text} · 누르면 테이블로 걸어가요`}
+              aria-label={`${tableLabel(state).text} · 클릭하면 테이블로 걸어가요`}
             >
               <strong>{GAME_INFO[game].name}</strong>
               <span>{tableLabel(state).status}</span>

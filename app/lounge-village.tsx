@@ -2,10 +2,7 @@
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  ArrowDown,
-  ArrowLeft,
   ArrowRight,
-  ArrowUp,
   DoorOpen,
   Dices,
   Footprints,
@@ -99,8 +96,11 @@ import {
 import { ActionButton } from './lounge/ActionButton';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
-import { sceneKeyTarget } from './lounge-scene-keys';
-import { VillageLifeList, isTouchDevice } from './lounge/VillageSimple';
+import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
+import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lounge-settings';
+import { keyLabel } from './lounge-keybinds';
+import { villageHoverTarget } from './lounge-village-hover';
+import { VillageLifeList } from './lounge/VillageSimple';
 import {
   villageCanEnterPlace,
   villageNearbyEntrance,
@@ -219,23 +219,6 @@ type Props = {
   seasonFx?: boolean;
 };
 type Direction = 'up' | 'down' | 'left' | 'right';
-// Physical key codes keep WASD working while a Korean IME is active.
-const KEYS: Record<string, Direction> = {
-  ArrowUp: 'up',
-  KeyW: 'up',
-  ArrowDown: 'down',
-  KeyS: 'down',
-  ArrowLeft: 'left',
-  KeyA: 'left',
-  ArrowRight: 'right',
-  KeyD: 'right',
-};
-const DIRECTIONS = [
-  ['up', ArrowUp, '위로 걷기'],
-  ['left', ArrowLeft, '왼쪽으로 걷기'],
-  ['down', ArrowDown, '아래로 걷기'],
-  ['right', ArrowRight, '오른쪽으로 걷기'],
-] as const;
 const WALK_SPEED = 5.2;
 const CAMERA_OFFSET = new THREE.Vector3(34, 43, 52);
 /** Remote samples are replayed this far behind real time (cloud writes land ~every 500 ms). */
@@ -456,11 +439,12 @@ function acquireRenderer() {
     alpha: true,
     powerPreference: 'low-power',
   });
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  const quality = qualityProfile(getSettings().quality);
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, quality.pixelRatio));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.12;
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = quality.shadows;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
@@ -573,9 +557,7 @@ export function Village3D(props: Props) {
   const routeRef = useRef<HTMLOutputElement>(null);
   const requestedPlace = useRef<VillagePlace | null>(null);
   const directions = useRef(new Set<Direction>());
-  const runToggle = useRef(false),
-    shiftHeld = useRef(false);
-  const [runPressed, setRunPressed] = useState(false);
+  const shiftHeld = useRef(false);
   const controls = useRef<{
     go: (place: VillagePlace) => void;
     enter: (place: VillagePlace) => void;
@@ -594,16 +576,16 @@ export function Village3D(props: Props) {
     [directory, setDirectory] = useState(false),
     [nearby, setNearby] = useState<NearbyVillageEntrance | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
+  const panels = useRef({ directory: false, selected: false });
+  useLayoutEffect(() => {
+    panels.current = { directory, selected: !!selected };
+  });
   const nearbyId = useRef<string | null>(null);
   const [action, setAction] = useState<VillageAction | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
-  const [touch] = useState(isTouchDevice);
-  // Phones start with the minimap folded into a small button.
-  const [miniOpen, setMiniOpen] = useState(
-    () =>
-      typeof window === 'undefined' ||
-      !window.matchMedia?.('(max-width: 600px)').matches,
-  );
+  const [miniOpen, setMiniOpen] = useState(true);
+  const [{ keys }] = useSettings();
+  const actionKey = keyLabel(keys.action);
   /** Nearest building (minimap highlight), updated only when it changes. */
   const [nearestPlace, setNearestPlace] = useState<string | null>(null);
   // Ready crops / ripe trees for the farm label and the directory, refreshed
@@ -640,9 +622,23 @@ export function Village3D(props: Props) {
       if (p && Number.isFinite(p.x) && Number.isFinite(p.z)) controls.current?.visit(p);
     };
     window.addEventListener('bumtadew:go', go);
+    // M (마을 안내) from the app-wide keys.
+    const directoryKey = () => setDirectory((open) => !open);
+    window.addEventListener('bumtadew:directory', directoryKey);
+    // Esc closes an open panel here before the Esc menu opens.
+    const escape = (e: Event) => {
+      const open = panels.current;
+      if (!open.directory && !open.selected) return;
+      e.preventDefault();
+      if (open.directory) setDirectory(false);
+      else setSelected(null);
+    };
+    window.addEventListener('bumtadew:escape', escape);
     return () => {
+      window.removeEventListener('bumtadew:escape', escape);
       window.removeEventListener('bumtadew:guide-farm', guide);
       window.removeEventListener('bumtadew:go', go);
+      window.removeEventListener('bumtadew:directory', directoryKey);
     };
   }, []);
   // The door prompt ("회관 · 안에 2명") and the action button's context.
@@ -1164,22 +1160,36 @@ export function Village3D(props: Props) {
       startY: number;
       dragged: boolean;
     } | null = null;
-    // Two-finger pinch zoom (touch) shares the canvas with drag and tap.
-    const touches = new Map<number, { x: number; y: number }>();
-    let pinch: { distance: number; zoom: number } | null = null;
-    const pinchDistance = () => {
-      const [a, b] = [...touches.values()];
-      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
-    };
     let locomotion: LocomotionState = { phase: 0, facing: 1 };
+    /** Floor point under the mouse (or null off the village). */
+    const floorAt = (clientX: number, clientY: number) => {
+      const r = canvas.getBoundingClientRect();
+      pointer.set(
+        ((clientX - r.left) / r.width) * 2 - 1,
+        (-(clientY - r.top) / r.height) * 2 + 1,
+      );
+      raycaster.setFromCamera(pointer, camera);
+      return raycaster.ray.intersectPlane(floor, hit) &&
+        Math.abs(hit.x) <= VILLAGE_BOUNDS.width / 2 + 1 &&
+        Math.abs(hit.z) <= VILLAGE_BOUNDS.depth / 2 + 1
+        ? { x: hit.x, z: hit.z }
+        : null;
+    };
+    /** What the mouse is over: buildings, friends and village spots get a pointer. */
+    const hoverAt = (point: VillagePoint | null) => {
+      if (!point) return null;
+      const people: VillagePoint[] = [];
+      for (const [id, figure] of figures)
+        if (id !== latest.current.self) people.push(figure.point);
+      return villageHoverTarget(point, { people });
+    };
+    let hoverKind = '';
+    const setCursor = (kind: string) => {
+      if (kind === hoverKind) return;
+      hoverKind = kind;
+      host.dataset.hover = kind;
+    };
     const down = (e: PointerEvent) => {
-      if (e.pointerType === 'touch' || e.pointerType === 'pen')
-        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (touches.size >= 2) {
-        press = null;
-        pinch = { distance: pinchDistance(), zoom: desiredZoom };
-        return;
-      }
       if (e.button !== 0 || !e.isPrimary) return;
       host.focus({ preventScroll: true });
       canvas.setPointerCapture(e.pointerId);
@@ -1193,19 +1203,14 @@ export function Village3D(props: Props) {
       };
     };
     const drag = (e: PointerEvent) => {
-      if (touches.has(e.pointerId))
-        touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (pinch && touches.size >= 2) {
-        const distance = pinchDistance();
-        if (pinch.distance > 0 && distance > 0)
-          setZoom(pinch.zoom * (distance / pinch.distance));
-        needsRender = true;
+      if (!press || e.pointerId !== press.id) {
+        if (!press) setCursor(hoverAt(floorAt(e.clientX, e.clientY))?.kind ?? '');
         return;
       }
-      if (!press || e.pointerId !== press.id) return;
       if (Math.hypot(e.clientX - press.startX, e.clientY - press.startY) > 6)
         press.dragged = true;
       if (press.dragged) {
+        setCursor('drag');
         follow = false;
         const units = (camera.top - camera.bottom) / camera.zoom / height;
         const right = new THREE.Vector3().setFromMatrixColumn(
@@ -1233,35 +1238,32 @@ export function Village3D(props: Props) {
       press.x = e.clientX;
       press.y = e.clientY;
     };
-    const releaseTouch = (e: PointerEvent) => {
-      touches.delete(e.pointerId);
-      if (touches.size < 2) pinch = null;
-    };
     const up = (e: PointerEvent) => {
-      const wasPinching = !!pinch;
-      releaseTouch(e);
       if (!press || e.pointerId !== press.id) return;
-      if (!press.dragged && !wasPinching) {
+      if (!press.dragged) {
         entryIntent = null;
         requestedPlace.current = null;
-        const r = canvas.getBoundingClientRect();
-        pointer.set(
-          ((e.clientX - r.left) / r.width) * 2 - 1,
-          (-(e.clientY - r.top) / r.height) * 2 + 1,
-        );
-        raycaster.setFromCamera(pointer, camera);
-        if (
-          raycaster.ray.intersectPlane(floor, hit) &&
-          Math.abs(hit.x) <= VILLAGE_BOUNDS.width / 2 + 1 &&
-          Math.abs(hit.z) <= VILLAGE_BOUNDS.depth / 2 + 1
-        )
-          goTo({ x: hit.x, z: hit.z });
+        const point = floorAt(e.clientX, e.clientY);
+        const target = hoverAt(point);
+        const place =
+          target?.kind === 'place'
+            ? VILLAGE_PLACES.find((p) => p.id === target.id)
+            : undefined;
+        // A click on a building walks to its door (like its name tag).
+        if (place) {
+          requestedPlace.current = place;
+          goTo(place.entry);
+        } else if (point) goTo(point);
       }
       press = null;
+      setCursor(hoverAt(floorAt(e.clientX, e.clientY))?.kind ?? '');
     };
-    const cancel = (e: PointerEvent) => {
-      releaseTouch(e);
+    const cancel = () => {
       press = null;
+      setCursor('');
+    };
+    const leave = () => {
+      if (!press) setCursor('');
     };
     const lostCapture = (e: PointerEvent) => {
       if (press?.id === e.pointerId) press = null;
@@ -1277,16 +1279,17 @@ export function Village3D(props: Props) {
       // Heard on window (focus may be on body or a dock button after a dialog).
       const at = sceneKeyTarget(e, host);
       if (!at || e.altKey || e.ctrlKey || e.metaKey) return;
-      if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') {
-        // The one action button: E always presses it (Enter on a focused
-        // button stays that button's).
-        if (currentAction && (at === 'scene' || e.code === 'KeyE')) {
+      const bound = boundAction(e);
+      if (e.code === 'Enter' || e.code === 'NumpadEnter' || bound === 'action') {
+        // The one action button: its key (E) always presses it (Enter on a
+        // focused button stays that button's).
+        if (currentAction && (at === 'scene' || bound === 'action')) {
           e.preventDefault();
           act(currentAction);
         }
         return;
       }
-      const direction = KEYS[e.code];
+      const direction = boundDirection(e);
       if (direction) {
         e.preventDefault();
         entryIntent = null;
@@ -1299,12 +1302,9 @@ export function Village3D(props: Props) {
       }
     };
     const keyup = (e: KeyboardEvent) => {
-      const d = KEYS[e.code];
+      const d = boundDirection(e);
       if (d) directions.current.delete(d);
-      if (e.key === 'Shift') {
-        shiftHeld.current = false;
-        setRunPressed(runToggle.current);
-      }
+      if (e.key === 'Shift') shiftHeld.current = false;
     };
     const blur = (event?: Event) => {
       if (
@@ -1316,7 +1316,6 @@ export function Village3D(props: Props) {
         return;
       activeDirections.clear();
       shiftHeld.current = false;
-      setRunPressed(runToggle.current);
       path = [];
       entryIntent = null;
       requestedPlace.current = null;
@@ -1326,7 +1325,6 @@ export function Village3D(props: Props) {
     const keyrun = (e: KeyboardEvent) => {
       if (e.key !== 'Shift' || e.repeat || !sceneKeyTarget(e, host)) return;
       shiftHeld.current = true;
-      setRunPressed(true);
     };
     const visibilityChanged = () => {
       if (document.hidden) blur();
@@ -1356,6 +1354,7 @@ export function Village3D(props: Props) {
     canvas.addEventListener('pointerup', up);
     canvas.addEventListener('pointercancel', cancel);
     canvas.addEventListener('lostpointercapture', lostCapture);
+    canvas.addEventListener('pointerleave', leave);
     canvas.addEventListener('wheel', wheel, { passive: false });
     canvas.addEventListener('webglcontextlost', loss);
     canvas.addEventListener('webglcontextrestored', restored);
@@ -1392,7 +1391,36 @@ export function Village3D(props: Props) {
     };
     const observer = new ResizeObserver(resize);
     observer.observe(host);
-    resize();
+    // 설정 → 그래픽: pixel ratio and shadows follow the quality preset live.
+    const applyQuality = () => {
+      const q = qualityProfile(getSettings().quality);
+      const ratio = Math.min(devicePixelRatio || 1, q.pixelRatio);
+      if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
+      if (renderer.shadowMap.enabled !== q.shadows) {
+        renderer.shadowMap.enabled = q.shadows;
+        // Shadow support is compiled into each material's program.
+        scene.traverse((object) => {
+          const material = (object as THREE.Mesh).material;
+          for (const m of Array.isArray(material) ? material : material ? [material] : [])
+            m.needsUpdate = true;
+        });
+      }
+      renderer.shadowMap.needsUpdate = true;
+      resize();
+    };
+    applyQuality();
+    const offSettings = onSettingsChange(applyQuality);
+    // The Esc menu stops my walk (the shared world itself keeps going).
+    const pause = (e: Event) => {
+      if (!(e as CustomEvent<boolean>).detail) return;
+      activeDirections.clear();
+      shiftHeld.current = false;
+      path = [];
+      entryIntent = null;
+      marker.visible = false;
+      press = null;
+    };
+    window.addEventListener('bumtadew:pause', pause);
     const visibility = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (!visible) blur();
@@ -1486,7 +1514,7 @@ export function Village3D(props: Props) {
       const origin = host.getBoundingClientRect();
       hud = [
         ...document.querySelectorAll(
-          '.hv-top-tools, .hv-camera, .hv-minimap, .hv-pad, .l-world-social',
+          '.hv-top-tools, .hv-camera, .hv-minimap, .l-world-social, .l-village-hotbar',
         ),
       ]
         .map((element) => element.getBoundingClientRect())
@@ -1518,9 +1546,14 @@ export function Village3D(props: Props) {
       lastData = -1000;
     let lastSent = { ...position },
       wasWalking = false;
+    let lastTick = 0;
     const animate = (now: number) => {
       if (disposed || contextLost) return;
       frame = requestAnimationFrame(animate);
+      // 프레임 제한: skip display frames; dt below still covers the whole gap.
+      const cap = getSettings().fpsCap;
+      if (cap && now - lastTick < 1000 / cap - 2) return;
+      lastTick = now;
       // Movement is substepped by villageStep, so a long frame (slow phone)
       // moves the right distance instead of slowing the world down.
       const dt = previous ? Math.min((now - previous) / 1000, 0.25) : 0;
@@ -1533,7 +1566,7 @@ export function Village3D(props: Props) {
       const v =
         Number(directions.current.has('down')) -
         Number(directions.current.has('up'));
-      const run = runToggle.current || shiftHeld.current;
+      const run = shiftHeld.current;
       if (h || v) {
         entryIntent = null;
         requestedPlace.current = null;
@@ -1943,7 +1976,6 @@ export function Village3D(props: Props) {
         anyWalking ||
         cameraMoving ||
         !!press ||
-        !!pinch ||
         // Idle frames only move the river ripple; a slower tick saves battery.
         now - lastRender > 250;
       if (shouldRender) {
@@ -2138,10 +2170,13 @@ export function Village3D(props: Props) {
       controls.current = null;
       activeDirections.clear();
       observer.disconnect();
+      offSettings();
+      window.removeEventListener('bumtadew:pause', pause);
       visibility.disconnect();
       world.listeners.delete(syncLoaded);
       canvas.removeEventListener('pointerdown', down);
       canvas.removeEventListener('pointermove', drag);
+      canvas.removeEventListener('pointerleave', leave);
       canvas.removeEventListener('pointerup', up);
       canvas.removeEventListener('pointercancel', cancel);
       canvas.removeEventListener('lostpointercapture', lostCapture);
@@ -2221,7 +2256,7 @@ export function Village3D(props: Props) {
           className="hv-scene"
           role="application"
           tabIndex={0}
-          aria-label="범타듀 밸리. 바닥을 눌러 걷기, 방향키와 WASD로 이동, Shift 또는 달리기 버튼으로 달리기, 드래그로 지도 둘러보기"
+          aria-label="범타듀 밸리. 클릭해서 걷기, 방향키와 WASD로 이동, Shift로 달리기, 드래그로 지도 둘러보기, Esc로 메뉴"
           data-testid="village-3d"
           data-load-state={state}
           data-nearby-place=""
@@ -2481,7 +2516,7 @@ export function Village3D(props: Props) {
               <small className="hv-minimap-note">
                 {nearestPlace
                   ? `가까운 곳 · ${VILLAGE_PLACES.find((p) => p.id === nearestPlace)?.name ?? ''}`
-                  : '건물을 누르면 걸어가요'}
+                  : '건물을 클릭하면 걸어가요'}
               </small>
             </div>
           )}
@@ -2691,49 +2726,6 @@ export function Village3D(props: Props) {
             <MapIcon size={18} />
           </button>
         </div>
-        {state !== 'unavailable' && state !== 'lost' && (
-          <div className="hv-pad" aria-label="마을 걷기와 달리기">
-            <button
-              type="button"
-              className="hv-pad-run"
-              aria-label="달리기 전환"
-              aria-pressed={runPressed}
-              onClick={() => {
-                runToggle.current = !runToggle.current;
-                setRunPressed(runToggle.current || shiftHeld.current);
-              }}
-            >
-              <Footprints size={15} /> {runPressed ? '달리기 켬' : '달리기'}
-            </button>
-            {DIRECTIONS.map(([direction, Icon, label]) => (
-              <button
-                key={direction}
-                className={`hv-pad-${direction}`}
-                aria-label={label}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                  directions.current.add(direction);
-                }}
-                onPointerUp={() => directions.current.delete(direction)}
-                onPointerCancel={() => directions.current.delete(direction)}
-                onLostPointerCapture={() =>
-                  directions.current.delete(direction)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    directions.current.add(direction);
-                  }
-                }}
-                onKeyUp={() => directions.current.delete(direction)}
-                onBlur={() => directions.current.delete(direction)}
-              >
-                <Icon size={18} />
-              </button>
-            ))}
-          </div>
-        )}
         {district && !nearby && !action && (
           <section className="hv-route" aria-label="산책 목적지">
             <Trees size={18} />
@@ -2775,7 +2767,7 @@ export function Village3D(props: Props) {
                 spot={action.target.spot}
                 life={props.life ?? null}
                 clockOffset={props.clockOffset ?? 0}
-                touch={touch}
+                actionKey={actionKey}
                 actor={props.save.actor}
               />
             ) : doorPlace ? (
@@ -2793,10 +2785,8 @@ export function Village3D(props: Props) {
                   {action
                     ? doorPlace.kind === 'home' &&
                       doorPlace.actor !== props.save.actor
-                      ? `놀러 가서 방명록을 남겨요${touch ? '' : ' · E'}`
-                      : touch
-                        ? '오른쪽 아래 버튼으로 들어가요'
-                        : 'E 또는 오른쪽 아래 버튼으로 들어가요'
+                      ? `놀러 가서 방명록을 남겨요 · ${actionKey}`
+                      : `${actionKey} 또는 오른쪽 아래 버튼으로 들어가요`
                     : '주민의 집이에요. 집 앞에서 인사해요.'}
                 </small>
               </div>
@@ -2809,7 +2799,7 @@ export function Village3D(props: Props) {
             kind={action?.kind ?? null}
             label={action?.label}
             detail={actionDetail}
-            touch={touch}
+            shortcut={actionKey}
             disabled={actionDisabled || !!action?.disabled}
             onPress={() => {
               if (action) controls.current?.act(action);
@@ -2867,13 +2857,9 @@ export function Village3D(props: Props) {
       <div className="hv-bottom">
         <span>
           <Footprints size={15} />
-          바닥을 눌러 걷기 <i>·</i> 드래그로 둘러보기
-          {!touch && (
-            <>
-              {' '}
-              <i>·</i> 방향키 / WASD
-            </>
-          )}
+          클릭해서 걷기 <i>·</i> 드래그로 둘러보기 <i>·</i> 휠로 확대{' '}
+          <i>·</i> 방향키 / {[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')}{' '}
+          <i>·</i> Esc 메뉴
         </span>
         <button onClick={props.onRequest}>
           <Send size={14} />
@@ -2917,13 +2903,14 @@ function SpotPrompt({
   spot,
   life,
   clockOffset,
-  touch,
+  actionKey,
   actor,
 }: {
   spot: VillageSpot;
   life: LifeView | null;
   clockOffset: number;
-  touch: boolean;
+  /** Label of the action key (E unless rebound). */
+  actionKey: string;
   actor: number;
 }) {
   // Server clock that also wakes exactly when a crop or this tree is ready.
@@ -2935,7 +2922,7 @@ function SpotPrompt({
         ? [life?.me.fruitReadyAt?.[spot.id] ?? spot.readyAt]
         : [],
   );
-  const key = touch ? '' : ' · E';
+  const key = ' · ' + actionKey;
   if (spot.kind === 'farm') {
     const farm = life?.me.farm ?? [];
     const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;

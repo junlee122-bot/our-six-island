@@ -2,8 +2,7 @@
    Header (56px) on top; the table column on the left fits the height (it only
    scrolls inside as a last resort, with the host strip pinned by its own
    sticky rule); money, stickers and the next-round panel sit in a side column
-   so they never push my cards or the action buttons below the fold.
-   Phones and narrow windows keep the stacked page layout. */
+   so they never push my cards or the action buttons below the fold. */
 @media (min-width: 1024px) {
   .l-app.l-in-game {
     overflow: hidden;

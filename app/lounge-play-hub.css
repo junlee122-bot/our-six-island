@@ -167,18 +167,3 @@
 .l-play-hub-secondary:hover:not(:disabled) {
   background: #e9edde;
 }
-@media (max-width: 580px) {
-  .l-play-hub-intro {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .l-play-hub-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-  }
-  .l-play-hub-card {
-    gap: 8px;
-    padding: 12px;
-  }
-}

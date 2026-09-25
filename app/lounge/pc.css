@@ -1,0 +1,425 @@
+/* PC game layer: settings tabs, Esc menu, controls help, tooltips, canvas
+   cursors, UI / text size and the "PC 게임이에요" screen. */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------- UI and text size
+   --hud-zoom / --dialog-zoom come from 설정 → 화면 (lounge-display.ts). The 3D
+   canvas is never zoomed; only the HUD pieces over it and the dialogs are. */
+.l-app .l-world-header > *,
+.l-app .l-world-social,
+.l-app .l-village-hotbar,
+.l-life-hud,
+.l-app .l-world-alerts > *,
+.l-app .hv-camera,
+.l-app .hv-minimap,
+.l-app .hv-top-tools,
+.l-app .hv-route,
+.l-app .hv-place-card,
+.l-app .hv-entry-prompt,
+.l-app .l-action-button,
+.l-app .b3-scene-footer {
+  zoom: var(--hud-zoom, 1);
+}
+dialog.l-modal {
+  zoom: var(--dialog-zoom, 1);
+  width: min(620px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+  max-height: calc((100dvh - 40px) / var(--dialog-zoom, 1));
+}
+dialog.l-modal.wide {
+  width: min(1020px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+}
+
+/* ---------------------------------------------------------- canvas cursors */
+.hv-scene .hv-canvas,
+.b3-scene canvas {
+  cursor: default;
+}
+.hv-scene[data-hover='place'] .hv-canvas,
+.hv-scene[data-hover='person'] .hv-canvas,
+.hv-scene[data-hover='spot'] .hv-canvas,
+.b3-scene[data-hover='place'] canvas,
+.b3-scene[data-hover='spot'] canvas {
+  cursor: pointer;
+}
+.b3-scene[data-hover='grab'] canvas {
+  cursor: grab;
+}
+.hv-scene[data-hover='drag'] .hv-canvas,
+.b3-scene[data-hover='drag'] canvas {
+  cursor: grabbing;
+}
+
+/* ---------------------------------------------------------- tooltip */
+.l-tooltip {
+  position: fixed;
+  inset: 0 auto auto 0;
+  margin: 0;
+  z-index: var(--z-toast, 1000);
+  display: none;
+  align-items: center;
+  gap: 8px;
+  max-width: 280px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #24372c;
+  color: #fffdf0;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 6px 20px #1a2a2033;
+  pointer-events: none;
+  overflow: visible;
+}
+.l-tooltip[data-open='true'] {
+  display: inline-flex;
+  animation: l-tooltip-in 120ms ease-out;
+}
+.l-tooltip kbd {
+  padding: 1px 6px;
+  border: 1px solid #ffffff40;
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: #ffffff14;
+  font: 700 12px/1.4 inherit;
+}
+@keyframes l-tooltip-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-tooltip[data-open='true'] {
+    animation: none;
+  }
+}
+
+/* ---------------------------------------------------------- key caps */
+.l-app kbd,
+.l-modal kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 2px 7px;
+  border: 1px solid #cfd6c2;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #fbfcf6;
+  color: #3c5040;
+  font: 700 12px/1.4 inherit;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- settings */
+.l-settings-layout {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 24px;
+  min-height: 430px;
+}
+.l-settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 16px;
+  border-right: 1px solid #eceee4;
+}
+.l-settings-tabs > button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: none;
+  color: #5c6c55;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.l-settings-tabs > button:hover {
+  background: #f1f4e8;
+}
+.l-settings-tabs > button[aria-selected='true'] {
+  background: #e4ecd6;
+  color: #2f4a37;
+  font-weight: 700;
+}
+.l-settings-tabs > button:focus-visible {
+  outline: 3px solid #d99556;
+  outline-offset: 1px;
+}
+.l-settings-panel {
+  min-width: 0;
+}
+.l-setting-choice {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid #eceee4;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+.l-segment {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 10px;
+  background: #edf0e5;
+}
+.l-segment label {
+  position: relative;
+  min-width: 58px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #5e765b;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.l-segment label:hover {
+  color: #2f4a37;
+}
+.l-segment label[data-checked='true'] {
+  background: #fffef8;
+  color: #2f4a37;
+  font-weight: 700;
+  box-shadow: 0 1px 4px #3a4b3222;
+}
+.l-segment input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.l-segment label:has(input:focus-visible) {
+  outline: 3px solid #d99556;
+  outline-offset: 1px;
+}
+.l-range-row {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 10px;
+}
+.l-range-row output {
+  min-width: 42px;
+  color: #5f6d55;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Key bindings */
+.l-keys-intro {
+  margin: 0 0 8px;
+}
+.l-keys-group h3 {
+  margin: 14px 0 6px;
+  color: #4b6044;
+  font-size: 13px;
+}
+.l-keys-group ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-keys-group li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 13px;
+  color: #304438;
+}
+.l-keycap-button {
+  min-width: 96px;
+  min-height: 34px;
+  padding: 4px 10px;
+  border: 1px solid #dbe0cf;
+  border-radius: 8px;
+  background: #f5f6ed;
+  color: #4b6044;
+  font-size: 12px;
+  cursor: pointer;
+}
+.l-keycap-button:hover {
+  background: #e9efd9;
+}
+.l-keycap-button[aria-pressed='true'] {
+  border-color: #d99556;
+  background: #fff4e3;
+  color: #7a4f2a;
+  font-weight: 700;
+}
+.l-keys-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+.l-keys-note {
+  min-height: 20px;
+  margin: 0;
+  color: #5f6d55;
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------- Esc menu */
+dialog.l-system-menu.l-modal {
+  width: min(420px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+}
+.l-system-note {
+  font-size: 13px;
+}
+.l-system-list {
+  display: grid;
+  gap: 8px;
+}
+.l-system-list button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 12px 16px;
+  border: 1px solid #dbe0cf;
+  border-radius: 12px;
+  background: #f5f6ed;
+  color: #3f5638;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 150ms;
+}
+.l-system-list button > span {
+  flex: 1;
+}
+.l-system-list button:hover {
+  background: #e9efd9;
+}
+.l-system-list button:focus-visible {
+  outline: 3px solid #d99556;
+  outline-offset: 2px;
+}
+.l-system-list .l-system-primary {
+  background: #42694f;
+  border-color: #42694f;
+  color: #fffdef;
+  font-weight: 700;
+}
+.l-system-list .l-system-primary:hover {
+  background: #315b42;
+}
+.l-system-list .l-system-primary kbd {
+  background: #ffffff1c;
+  border-color: #ffffff55;
+  color: #fffdef;
+}
+.l-system-list .l-system-danger {
+  color: #9b3b2f;
+}
+
+/* ---------------------------------------------------------- controls help */
+.l-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 32px;
+}
+.l-controls-grid h3 {
+  margin: 8px 0 6px;
+  color: #4b6044;
+  font-size: 13px;
+}
+.l-controls-grid dl {
+  margin: 0;
+}
+.l-controls-grid dl > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+  font-size: 13px;
+}
+.l-controls-grid dd {
+  margin: 0;
+  color: #304438;
+}
+
+/* ---------------------------------------------------------- PC-only screen */
+.l-pc-only {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: 32px 20px;
+  background: linear-gradient(#f5f1dc, #e4ecd3);
+  color: #304438;
+  font-family: inherit;
+}
+.l-pc-only-card {
+  width: min(440px, 100%);
+  padding: 28px 24px;
+  border: 1px solid #dadfcd;
+  border-radius: 18px;
+  background: #fffdf5;
+  box-shadow: 0 18px 60px #20312622;
+  text-align: center;
+}
+.l-pc-only-card > svg {
+  display: block;
+  margin: 0 auto;
+  color: #42694f;
+}
+.l-pc-only-card h1 {
+  margin: 12px 0 8px;
+  font-size: 22px;
+  letter-spacing: -0.4px;
+}
+.l-pc-only-card p {
+  margin: 0 0 18px;
+  color: #56654f;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.l-pc-only-links {
+  display: grid;
+  gap: 10px;
+}
+.l-pc-only-links a,
+.l-pc-only-links button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.l-pc-only-links a {
+  background: #42694f;
+  color: #fffdef;
+}
+.l-pc-only-links button {
+  border: 1px solid #d8e0cd;
+  background: #edf0e5;
+  color: #3f5638;
+}
+.l-pc-only small {
+  display: block;
+  margin-top: 16px;
+  color: #6b7563;
+  font-size: 13px;
+}

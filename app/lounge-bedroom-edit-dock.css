@@ -1,6 +1,6 @@
 /* Desktop 꾸미기 (H3): the room fills the window and every tool lives in a
    slim dock on the right, so nothing covers the floor while placing and
-   dragging. Phones and narrow windows keep the in-room tools. */
+   dragging. */
 @media (min-width: 1024px) {
   .b3-room[data-editing] .b3-scene-frame {
     position: fixed;

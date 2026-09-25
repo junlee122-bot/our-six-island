@@ -131,17 +131,7 @@
   max-height: 205px;
 }
 
-@media (max-width: 900px) {
-  .l-village {
-    padding: 12px;
-  }
-}
 
-@media (max-width: 600px) {
-  .l-village-sidebar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 
 /* The village is the game surface; utilities float above it like a small HUD. */
 .l-app.l-immersive {
@@ -197,9 +187,9 @@
 .l-immersive .l-world-header {
   position: absolute;
   z-index: 8;
-  top: max(16px, env(safe-area-inset-top));
-  left: max(20px, env(safe-area-inset-left));
-  right: max(20px, env(safe-area-inset-right));
+  top: 16px;
+  left: 20px;
+  right: 20px;
   min-height: 0;
   padding: 0;
   border: 0;
@@ -266,11 +256,11 @@
 }
 .l-immersive .hv-top-tools {
   top: 90px;
-  left: max(20px, env(safe-area-inset-left));
+  left: 20px;
 }
 .l-immersive .hv-camera {
   top: 90px;
-  right: max(20px, env(safe-area-inset-right));
+  right: 20px;
 }
 .l-immersive .hv-top-tools button {
   min-height: 44px;
@@ -285,10 +275,6 @@
   max-height: calc(100dvh - 230px);
   overflow-y: auto;
   z-index: 12;
-}
-.l-immersive .hv-pad {
-  right: max(20px, calc(env(safe-area-inset-right) + 8px));
-  bottom: max(38px, calc(env(safe-area-inset-bottom) + 8px));
 }
 .l-immersive .hv-place-card {
   bottom: 80px;
@@ -312,8 +298,8 @@
 .l-world-social {
   position: absolute;
   z-index: 7;
-  bottom: max(38px, env(safe-area-inset-bottom));
-  left: max(20px, env(safe-area-inset-left));
+  bottom: 38px;
+  left: 20px;
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -420,7 +406,7 @@
   position: absolute;
   z-index: 9;
   top: 142px;
-  left: max(20px, env(safe-area-inset-left));
+  left: 20px;
   width: min(330px, calc(100vw - 95px));
   max-height: calc(100dvh - 325px);
   overflow-y: auto;
@@ -530,140 +516,9 @@
   min-height: 160px;
 }
 .l-immersive .l-toast {
-  bottom: max(180px, env(safe-area-inset-bottom));
+  bottom: 180px;
 }
 
-@media (max-width: 600px) {
-  .l-app .l-world-header {
-    padding: 8px 12px;
-    gap: 7px;
-    min-height: 60px;
-  }
-  .l-immersive .l-world-header {
-    left: 12px;
-    right: 12px;
-    top: max(12px, env(safe-area-inset-top));
-    min-height: 0;
-    padding: 0;
-    gap: 5px;
-  }
-  .l-immersive .l-brand {
-    padding: 6px 9px;
-    gap: 7px;
-    border-radius: 12px;
-  }
-  .l-immersive .l-brand-icon {
-    width: 28px;
-    height: 32px;
-    background: none;
-    color: #456a49;
-  }
-  .l-immersive .l-brand strong {
-    font-size: 14px;
-  }
-  .l-immersive .l-brand small {
-    font-size: 11px;
-  }
-  .l-app .l-world-header .l-header-right {
-    gap: 2px;
-  }
-  .l-immersive .l-wallet-button {
-    padding: 6px;
-    border: 0;
-    background: none;
-    font-size: 11px;
-    gap: 3px;
-  }
-  .l-world-menu-button {
-    width: 36px;
-    height: 38px;
-  }
-  .l-immersive .l-profile .avatar-view {
-    width: 28px;
-    height: 28px;
-  }
-  .l-immersive .hv-top-tools {
-    left: 12px;
-    top: 80px;
-    gap: 6px;
-  }
-  .l-immersive .hv-top-tools button {
-    min-height: 44px;
-    padding: 8px 10px;
-    font-size: 11px;
-  }
-  .l-immersive .hv-camera {
-    right: 12px;
-    top: 80px;
-  }
-  .l-immersive .hv-camera button {
-    width: 44px;
-    height: 44px;
-  }
-  .l-immersive .hv-directory {
-    top: 128px;
-    left: 12px;
-    max-width: calc(100vw - 70px);
-  }
-  .l-immersive .hv-pad {
-    right: max(12px, calc(env(safe-area-inset-right) + 8px));
-    bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px));
-    grid-template-columns: repeat(3, 44px);
-    grid-template-rows: repeat(3, 44px);
-  }
-  /* Above the minimap (bottom-left), never on top of it. */
-  .l-immersive .hv-place-card {
-    left: 12px;
-    right: 12px;
-    top: auto;
-    bottom: 216px;
-    transform: none;
-    max-width: none;
-    width: auto;
-  }
-  .l-immersive .hv-entry-prompt {
-    left: 12px;
-    right: 12px;
-    top: auto;
-    bottom: 216px;
-  }
-  .l-world-social {
-    left: max(12px, calc(env(safe-area-inset-left) + 8px));
-    bottom: max(24px, calc(env(safe-area-inset-bottom) + 8px));
-    gap: 4px;
-  }
-  .l-world-chat-button {
-    padding: 0 10px;
-    gap: 5px;
-  }
-  .l-app .l-world-social .l-reaction-open {
-    padding: 0 10px;
-  }
-  .l-world-hint {
-    top: 136px;
-    left: 12px;
-    right: 64px;
-    transform: none;
-    max-width: none;
-    padding: 7px 12px;
-    border-radius: 12px;
-    font-size: 11px;
-  }
-  .l-world-hint span {
-    display: none;
-  }
-  .l-immersive .l-world-alerts {
-    top: 130px;
-    left: 12px;
-    width: calc(100vw - 70px);
-    max-height: calc(100dvh - 330px);
-  }
-  .l-world-menu-grid button {
-    padding: 12px;
-    font-size: 12px;
-    min-height: 58px;
-  }
-}
 @media (prefers-reduced-motion: no-preference) {
   .l-interior > .l-lounge,
   .l-interior > .l-wardrobe,
@@ -714,32 +569,11 @@
   font-size: 11px;
   line-height: 1;
 }
-@media (max-width: 600px) {
-  .l-bag-button {
-    display: none;
-  }
-}
-@media (max-width: 600px) {
-  /* Three dock buttons (수다 · 가방 · 스티커) must clear the D-pad: each is a
-     narrow icon-over-label tile, the same for all three. */
-  .l-world-social .l-world-chat-button,
-  .l-app .l-world-social .l-reaction-open {
-    width: 46px;
-    min-height: 46px;
-    height: auto;
-    padding: 3px 0;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-    font-size: 11px;
-    line-height: 1.1;
-  }
-}
 
 /* While a modal is open the toast moves to the top edge so it never covers
    the modal's own content (farm seeds, shop rows). */
 body:has(dialog[open]) .l-app .l-toast[popover] {
-  top: calc(12px + env(safe-area-inset-top));
+  top: 12px;
   bottom: auto;
 }
 
@@ -809,28 +643,4 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
   border-radius: 50%;
 }
 
-/* Touch screens have no keyboard: hide the arrow-key / E hints. */
-@media (hover: none) and (pointer: coarse) {
-  .l-world-hint span {
-    display: none;
-  }
-}
 
-/* Phones: the header row must fit the screen (1 friend face, no overflow),
-   and form fields stay at 16px so iOS Safari never zooms the page in on
-   focus (a zoomed page cut the D-pad off at the right edge). */
-@media (max-width: 420px) {
-  .l-app.l-immersive .l-world-header .l-header-right {
-    min-width: 0;
-  }
-  .l-app.l-immersive .l-presence-face:nth-child(n + 2) {
-    display: none;
-  }
-}
-@media (hover: none) and (pointer: coarse) {
-  .l-app input:not([type='checkbox'], [type='radio'], [type='range']),
-  .l-app textarea,
-  .l-app select {
-    font-size: 16px !important;
-  }
-}

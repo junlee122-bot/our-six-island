@@ -13,6 +13,9 @@ import { formatBeom, josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
 import { ItemIcon } from './ItemIcon';
 import type { Notify } from './Toast';
+import { boundAction } from '../lounge-scene-keys';
+import { keyLabel } from '../lounge-keybinds';
+import { getSettings } from '../lounge-settings';
 import './life-plus.css';
 
 export type FishingPhase = 'casting' | 'wait' | 'bite' | 'reeling' | 'result';
@@ -150,7 +153,7 @@ export function FishingOverlay({
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (document.querySelector('dialog[open]')) return;
-      if (e.code === 'KeyE' || e.code === 'Space' || e.key === 'Enter') {
+      if (boundAction(e) === 'action' || e.code === 'Space' || e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
         if (!e.repeat) act(e.timeStamp);
@@ -222,7 +225,7 @@ export function FishingOverlay({
           )}
           <div className="l-fish-actions">
             <button ref={actRef} type="button" className="l-primary" onClick={(e) => act(e.timeStamp)} data-testid="fish-again" autoFocus>
-              <RotateCcw size={15} /> 다시 던지기 <kbd>E</kbd>
+              <RotateCcw size={15} /> 다시 던지기 <kbd>{keyLabel(getSettings().keys.action)}</kbd>
             </button>
             <button type="button" className="l-secondary" onClick={onClose}>
               그만하기 <kbd>Esc</kbd>

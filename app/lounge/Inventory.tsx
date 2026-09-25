@@ -171,7 +171,7 @@ export function InventoryPanel({
         </ul>
         <aside className="l-inv-detail" aria-live="polite" data-testid="inv-detail">
           {!entry ? (
-            <p className="l-help-text">칸을 누르면 여기서 팔거나, 먹거나, 선물할 수 있어요. 씨앗·도구·요리는 아래 핫바로 끌어다 놓아요.</p>
+            <p className="l-help-text">칸을 클릭하면 여기서 팔거나, 먹거나, 선물할 수 있어요. 씨앗·도구·요리는 아래 핫바로 끌어다 놓아요.</p>
           ) : (
             <>
               <div className="l-inv-detail-head">

@@ -144,7 +144,6 @@ const siteFiles = {
   'favicon.svg': 'public/favicon.svg',
   'icons/icon-192.png': 'public/icons/icon-192.png',
   'icons/icon-512.png': 'public/icons/icon-512.png',
-  'icons/apple-touch-icon.png': 'public/icons/apple-touch-icon.png',
 };
 for (const [target, source] of Object.entries(siteFiles)) {
   fs.mkdirSync(path.dirname(path.join(outDirectory, target)), { recursive: true });
@@ -152,27 +151,8 @@ for (const [target, source] of Object.entries(siteFiles)) {
 }
 const ogBytes = fs.readFileSync(path.join(root, 'public/og-image.webp'));
 const ogImage = writeOnce(hashed(ogBytes, 'og-image.webp'), ogBytes);
-const webManifest = {
-  name: TITLE,
-  short_name: '범타듀 밸리',
-  description: DESCRIPTION,
-  lang: 'ko',
-  start_url: './',
-  scope: './',
-  display: 'standalone',
-  orientation: 'any',
-  background_color: '#fdf6e3',
-  theme_color: THEME_COLOR,
-  icons: [
-    { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
-  ],
-};
-fs.writeFileSync(
-  path.join(outDirectory, 'manifest.webmanifest'),
-  JSON.stringify(webManifest, null, 2) + '\n',
-);
+// No web manifest / home-screen metadata: 범타듀 밸리 is a PC game (phones see
+// the PC-only screen), and the desktop app is the installable version.
 
 // ---- bundle --------------------------------------------------------------
 const rewritten = new Set();
@@ -275,15 +255,11 @@ const escapeAttribute = (value) =>
 const absolute = (relative) => (siteUrl !== '/' ? siteUrl + relative.replace(/^\.\//, '') : relative);
 const html = `<!doctype html>
 <html lang="ko"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${TITLE}</title>
 <meta name="description" content="${escapeAttribute(DESCRIPTION)}">
 <meta name="theme-color" content="${THEME_COLOR}">
 <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="범타듀 밸리">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ko_KR">
 <meta property="og:site_name" content="범타듀 밸리">

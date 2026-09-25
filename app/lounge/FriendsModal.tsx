@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { shareableInviteUrl } from '../desktop-bridge';
 import { ArrowRight, Copy, LogOut, RotateCcw } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import {
@@ -54,11 +55,8 @@ export function FriendsModal({
       notify('복사하지 못했어요. 표시된 코드를 직접 전달해 주세요.', 'error');
     }
   };
-  const link = () => {
-    const u = new URL(location.href);
-    u.hash = 'lounge=' + view.code;
-    return u.href;
-  };
+  // In the desktop app location is tauri://localhost: link the public site.
+  const link = () => shareableInviteUrl('lounge', view.code);
   const run = async (task: () => Promise<boolean>) => {
     if (busy) return;
     setBusy(true);

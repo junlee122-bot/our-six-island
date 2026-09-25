@@ -181,51 +181,9 @@
   outline: 3px solid #abbb72;
   outline-offset: 3px;
 }
-@media (max-width: 600px) {
-  .l-round-ready {
-    margin: 15px 0;
-    padding: 18px 14px;
-    border-radius: 15px;
-  }
-  .l-round-heading {
-    display: block;
-  }
-  .l-round-heading h2 {
-    font-size: 21px;
-  }
-  .l-round-count {
-    display: inline-flex;
-    margin-top: 12px;
-  }
-  .l-round-friends {
-    grid-template-columns: 1fr;
-    gap: 7px;
-    margin: 15px 0;
-  }
-  .l-round-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-  .l-round-confirm {
-    min-width: 0;
-  }
-  .l-retained-table {
-    margin: 10px 12px;
-    padding: 13px;
-    flex-wrap: wrap;
-  }
-  .l-retained-table button {
-    width: 100%;
-  }
-}
 
 .l-round-side {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-@media (max-width: 540px) {
-  .l-round-heading {
-    flex-wrap: wrap;
-  }
 }

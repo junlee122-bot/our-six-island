@@ -250,47 +250,6 @@
     white-space: nowrap;
   }
 }
-@media (max-width: 600px) {
-  .l-header {
-    padding-inline: 14px;
-  }
-  .l-header-right .l-profile {
-    display: none;
-  }
-  .l-header nav button svg {
-    display: block;
-  }
-}
-@media (max-width: 360px) {
-  .l-header-right {
-    gap: 4px;
-  }
-  .l-brand strong {
-    font-size: 14px;
-  }
-  .l-friends-button {
-    gap: 5px;
-    padding-inline: 5px;
-  }
-}
-@media (max-width: 760px) {
-  .l-game-screen.poker .l-game-content {
-    padding: 12px 8px 25px;
-  }
-  .l-wallet-button {
-    font-size: 11px;
-    padding: 7px 9px;
-  }
-  .l-game-money {
-    font-size: 11px;
-    margin: 0 5px 12px;
-    align-items: flex-start;
-  }
-  .l-game-money b {
-    font-size: 12px;
-    white-space: nowrap;
-  }
-}
 /* Server turn countdown (lounge-turn-timer.tsx) and auto-played seats. */
 .turn-timer {
   position: relative;

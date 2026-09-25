@@ -5,8 +5,10 @@
 // - footsteps while walking and soft UI clicks.
 // Starts only after the first user gesture, suspends while the tab is hidden,
 // and follows the sound / music / volume settings in lounge-settings.ts.
-// This is the app's single AudioContext: UI cues (feedback.ts playCue) and
-// the go-table stone tap play through its sfx bus. The music box fades out at
+// The Esc menu (scene.paused) ducks music and ambience while it is open.
+// This is the app's single AudioContext. Channels under the master volume:
+// music (music box + ambience), sfx (footsteps, tables, life cues) and ui
+// (feedback.ts playCue, button clicks), each with its own settings level. The music box fades out at
 // game tables (scene.game) and comes back in the village.
 import {
   getSettings,
@@ -22,6 +24,8 @@ type Scene = {
   water: number;
   /** A game table is showing: the music box steps aside for game sounds. */
   game: boolean;
+  /** The Esc menu is open: ambience and music step back (the world goes on). */
+  paused: boolean;
 };
 
 const DAY_SCALE = [0, 2, 4, 7, 9]; // major pentatonic
@@ -35,6 +39,8 @@ class LoungeAudio {
   private ambient: GainNode | null = null;
   private waterGain: GainNode | null = null;
   private sfx: GainNode | null = null;
+  /** UI cues and clicks (settings 소리 → 알림·버튼 소리). */
+  private ui: GainNode | null = null;
   private noise: AudioBuffer | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private nextNote = 0;
@@ -44,7 +50,7 @@ class LoungeAudio {
   private lastStep = 0;
   private attached = 0;
   private gestured = false;
-  private scene: Scene = { village: false, night: false, water: 0, game: false };
+  private scene: Scene = { village: false, night: false, water: 0, game: false, paused: false };
   private cleanup: (() => void) | null = null;
   /** Running water loop (only while the village is showing). */
   private waterNodes: { source: AudioBufferSourceNode; lfo: OscillatorNode } | null =
@@ -92,7 +98,7 @@ class LoungeAudio {
     this.timer = null;
     void this.ctx?.close().catch(() => {});
     this.ctx = null;
-    this.master = this.music = this.ambient = this.sfx = this.waterGain = null;
+    this.master = this.music = this.ambient = this.sfx = this.ui = this.waterGain = null;
     this.waterNodes = null;
     this.applied = '';
   }
@@ -106,6 +112,7 @@ class LoungeAudio {
       before.village === this.scene.village &&
       before.night === this.scene.night &&
       before.game === this.scene.game &&
+      before.paused === this.scene.paused &&
       Math.abs(before.water - this.scene.water) < 0.02
     )
       return;
@@ -142,6 +149,8 @@ class LoungeAudio {
         this.ambient.connect(this.master);
         this.sfx = ctx.createGain();
         this.sfx.connect(this.master);
+        this.ui = ctx.createGain();
+        this.ui.connect(this.master);
         this.noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
         const data = this.noise.getChannelData(0);
         for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -166,12 +175,17 @@ class LoungeAudio {
     const t = ctx.currentTime;
     const musicOn = audible && settings.music;
     const ambientOn = musicOn && this.scene.village && !this.scene.game;
+    // The Esc menu ducks music and ambience; the shared world keeps going.
+    const duck = this.scene.paused ? 0.35 : 1;
     const targets = [
       audible ? settings.volume : 0,
-      musicOn && !this.scene.game ? (this.scene.night ? 0.16 : 0.2) : 0,
-      ambientOn ? 1 : 0,
+      musicOn && !this.scene.game
+        ? (this.scene.night ? 0.16 : 0.2) * settings.musicVolume * duck
+        : 0,
+      ambientOn ? settings.musicVolume * duck : 0,
       Math.round(Math.max(0, Math.min(1, this.scene.water)) * 50) / 50,
-      audible ? 1 : 0,
+      audible ? settings.effectsVolume : 0,
+      audible ? settings.uiVolume : 0,
     ];
     const key = targets.join(',');
     if (key !== this.applied) {
@@ -181,6 +195,7 @@ class LoungeAudio {
       this.ambient!.gain.setTargetAtTime(targets[2], t, 0.4);
       this.waterGain?.gain.setTargetAtTime(0.05 + 0.3 * targets[3], t, 0.5);
       this.sfx!.gain.setTargetAtTime(targets[4], t, 0.02);
+      this.ui!.gain.setTargetAtTime(targets[5], t, 0.02);
     }
     // The water loop (noise + filter + LFO) only runs in the village.
     if (ambientOn && !this.waterNodes) this.startWater();
@@ -393,18 +408,26 @@ class LoungeAudio {
     o.frequency.exponentialRampToValueAtTime(900, t + 0.03);
     g.gain.setValueAtTime(0.035, t);
     g.gain.exponentialRampToValueAtTime(0.0004, t + 0.05);
-    o.connect(g).connect(this.sfx!);
+    o.connect(g).connect(this.ui!);
     o.start(t);
     o.stop(t + 0.06);
   }
   /**
-   * A short UI cue (invites, turns, results) on the shared sfx bus. `peak` is
-   * before the master volume. Returns false when audio is not running yet.
+   * A short cue on the shared engine: world sounds on the sfx bus, UI cues
+   * (invites, turns, results; `bus: 'ui'`) on the UI bus. `peak` is before
+   * the channel and master volume. Returns false when audio is not running yet.
    */
-  cue(notes: readonly number[], step: number, type: OscillatorType, peak = 0.09) {
+  cue(
+    notes: readonly number[],
+    step: number,
+    type: OscillatorType,
+    peak = 0.09,
+    bus: 'sfx' | 'ui' = 'sfx',
+  ) {
     this.ensure();
     const ctx = this.ctx;
-    if (!ctx || !this.sfx) return false;
+    const out = bus === 'ui' ? this.ui : this.sfx;
+    if (!ctx || !out) return false;
     if (ctx.state !== 'running') void ctx.resume().catch(() => {});
     notes.forEach((frequency, i) => {
       const o = ctx.createOscillator(),
@@ -415,7 +438,7 @@ class LoungeAudio {
       g.gain.setValueAtTime(0, t);
       g.gain.linearRampToValueAtTime(peak, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0008, t + 0.35);
-      o.connect(g).connect(this.sfx!);
+      o.connect(g).connect(out);
       o.start(t);
       o.stop(t + 0.4);
     });

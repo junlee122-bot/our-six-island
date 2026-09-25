@@ -2,9 +2,15 @@
 import {
   Component,
   lazy,
+  useState,
   type ComponentType,
   type ReactNode,
 } from 'react';
+import {
+  checkForDesktopUpdate,
+  isDesktopApp,
+  relaunchDesktopApp,
+} from '../desktop-bridge';
 
 const RELOAD_KEY = 'bumtadew-chunk-reload-v1';
 /** A second automatic reload is allowed only after this long (no reload loops). */
@@ -21,9 +27,12 @@ export function isChunkError(error: unknown) {
 
 /**
  * Reloads the page once so an old tab picks up the new deployment's files.
- * Returns false (and does nothing) when it already reloaded a moment ago.
+ * Returns false (and does nothing) when it already reloaded a moment ago, and
+ * always in the desktop app: its files are installed, so a reload would load
+ * the same broken set (DesktopRecovery offers an update check instead).
  */
 export function reloadOnce() {
+  if (isDesktopApp()) return false;
   try {
     const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0);
     if (Date.now() - last < RELOAD_COOLDOWN_MS) return false;
@@ -91,6 +100,89 @@ export function lazyRetry<T extends ComponentType<never>>(
   return LazyRetry as unknown as T & { preload: () => void };
 }
 
+/**
+ * Starts the game over: reloads the page (web and app alike; in the app this
+ * reloads the installed files, which is what a stuck save or a script error
+ * needs). A missing code file in the app needs DesktopRecovery instead.
+ */
+export function restartGame() {
+  location.reload();
+}
+
+/**
+ * Desktop app, a code file failed to load: the install is incomplete or
+ * outdated. Check for an update (and install it), else restart the app.
+ */
+export function DesktopRecovery() {
+  const [state, setState] = useState<
+    | { step: 'idle' }
+    | { step: 'checking' }
+    | { step: 'available'; version: string }
+    | { step: 'installing' }
+    | { step: 'none' }
+    | { step: 'error' }
+  >({ step: 'idle' });
+  const check = async () => {
+    setState({ step: 'checking' });
+    const result = await checkForDesktopUpdate();
+    if (result.status === 'available') setState({ step: 'available', version: result.version });
+    else if (result.status === 'error') setState({ step: 'error' });
+    else setState({ step: 'none' });
+  };
+  return (
+    <div className="l-error-actions" data-testid="desktop-recovery">
+      {state.step === 'available' ? (
+        <button
+          type="button"
+          className="l-primary"
+          onClick={() => {
+            setState({ step: 'installing' });
+            void checkForDesktopUpdate(true).then((r) => {
+              if (r.status === 'error') setState({ step: 'error' });
+            });
+          }}
+        >
+          새 버전 {state.version} 설치하고 다시 시작
+        </button>
+      ) : state.step === 'none' || state.step === 'error' ? (
+        <>
+          <p className="l-help-text">
+            {state.step === 'none'
+              ? '이미 최신 버전이에요. 앱을 다시 시작해도 안 되면 설치 파일을 다시 받아 주세요.'
+              : '업데이트를 확인하지 못했어요. 인터넷 연결을 확인하거나 앱을 다시 시작해 주세요.'}
+          </p>
+          <button type="button" className="l-primary" onClick={() => void relaunchDesktopApp()}>
+            앱 다시 시작
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="l-primary"
+          disabled={state.step !== 'idle'}
+          onClick={() => void check()}
+        >
+          {state.step === 'checking' ? '확인 중…' : state.step === 'installing' ? '설치 중…' : '업데이트 확인'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Retry props for a screen whose code file failed to load: a reload on the
+ * web (picks up the new deployment), an update check in the desktop app.
+ */
+export function chunkRecovery(): {
+  onRetry?: () => void;
+  retryLabel?: string;
+  extra?: ReactNode;
+} {
+  return isDesktopApp()
+    ? { extra: <DesktopRecovery /> }
+    : { onRetry: restartGame, retryLabel: '새로 고치기' };
+}
+
 /** A failure message with actions (no spinner, so it never looks like loading). */
 export function ErrorState({
   title,
@@ -100,6 +192,7 @@ export function ErrorState({
   onBack,
   backLabel,
   compact,
+  extra,
 }: {
   title: string;
   body?: string;
@@ -108,6 +201,8 @@ export function ErrorState({
   onBack?: () => void;
   backLabel?: string;
   compact?: boolean;
+  /** Extra actions (e.g. DesktopRecovery). */
+  extra?: ReactNode;
 }) {
   return (
     <div
@@ -130,6 +225,7 @@ export function ErrorState({
           )}
         </div>
       )}
+      {extra}
     </div>
   );
 }
@@ -164,11 +260,11 @@ export class ScreenBoundary extends Component<
 /** Last-resort boundary for the whole app: a Korean message and a reload button. */
 export class RootBoundary extends Component<
   { children: ReactNode },
-  { failed: boolean }
+  { failed: boolean; chunk: boolean }
 > {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
+  state = { failed: false, chunk: false };
+  static getDerivedStateFromError(error: unknown) {
+    return { failed: true, chunk: isChunkError(error) };
   }
   componentDidCatch(error: unknown) {
     console.error('[범타듀 밸리] 앱 오류:', error);
@@ -176,13 +272,19 @@ export class RootBoundary extends Component<
   }
   render() {
     if (!this.state.failed) return this.props.children;
+    const desktopChunk = this.state.chunk && isDesktopApp();
     return (
       <main className="l-app l-root-error">
         <ErrorState
           title="화면을 여는 중에 문제가 생겼어요."
-          body="새 버전이 올라왔거나 연결이 잠깐 끊겼을 수 있어요. 새로 고치면 저장된 내용은 그대로예요."
-          retryLabel="새로 고치기"
-          onRetry={() => location.reload()}
+          body={
+            desktopChunk
+              ? '게임 파일 하나를 열지 못했어요. 업데이트를 확인해 볼게요. 저장된 내용은 그대로예요.'
+              : '새 버전이 올라왔거나 연결이 잠깐 끊겼을 수 있어요. 다시 시작해도 저장된 내용은 그대로예요.'
+          }
+          {...(desktopChunk
+            ? chunkRecovery()
+            : { retryLabel: '다시 시작', onRetry: restartGame })}
         />
       </main>
     );

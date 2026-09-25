@@ -5,19 +5,20 @@
 // which exposes `window.__TAURI__` (tauri.conf.json → app.withGlobalTauri).
 // Nothing here imports @tauri-apps/api, so the web bundle does not grow.
 //
-// Not wired into the game yet. Integration points (see desktop/README.md):
-//   - app/lounge/feedback.ts `attention()` → `desktopNotify()` when
-//     `isDesktopApp()` (and `desktopWindowFocused()` instead of tabHidden()).
-//   - app/lounge/feedback.ts `renderTitle()` → `setDesktopTitle()`.
-//   - app/lounge/SettingsModal.tsx notification toggle →
-//     `requestDesktopNotificationPermission()`.
-//   - app/lounge/FriendsModal.tsx `link()` and app/multiplayer-ui.tsx →
-//     `shareableInviteUrl('lounge', code)` (tauri://localhost links are useless
-//     to friends).
-//   - app/lounge/SettingsModal.tsx → a "전체 화면 (F11)" button calling
-//     `toggleDesktopFullscreen()` and an "업데이트 확인" button calling
-//     `checkForDesktopUpdate()`.
-//   - scripts/standalone-entry.tsx → `installDesktopShortcuts()` once at start
+// Where the game uses it (see desktop/README.md):
+//   - app/lounge/feedback.ts `attention()`: desktopNotify(),
+//     requestDesktopAttention() and setDesktopTitle() while the window is in
+//     the background (document.hasFocus()).
+//   - app/lounge/SettingsModal.tsx: requestDesktopNotificationPermission();
+//     app/lounge-display.ts: the fullscreen helpers (설정 → 화면, Esc 메뉴, F11).
+//   - app/lounge/FriendsModal.tsx and app/multiplayer-ui.tsx:
+//     shareableInviteUrl() (tauri://localhost links are useless to friends).
+//   - app/lounge-cloud-save.ts: onDesktopCloseRequested() saves before the
+//     window closes; the Esc menu's 게임 끝내기 calls closeDesktopWindow().
+//   - app/lounge/ErrorBoundary.tsx: checkForDesktopUpdate() and
+//     relaunchDesktopApp() instead of reloading for a missing file.
+//   - app/lounge-game.tsx: onDesktopDeepLink() for beomtadew://lounge/<code>.
+//   - scripts/standalone-entry.tsx: installDesktopShortcuts() once at start
 //     (the shell already injects F11; this is the fallback).
 
 /** Public web build; invite links from the desktop app point here. */
@@ -36,6 +37,10 @@ interface TauriWindowHandle {
   onFocusChanged(
     handler: (event: { payload: boolean }) => void,
   ): Promise<Unlisten>;
+  onCloseRequested?(
+    handler: (event: { preventDefault(): void }) => void | Promise<void>,
+  ): Promise<Unlisten>;
+  close?(): Promise<void>;
 }
 
 interface TauriUpdate {
@@ -61,6 +66,8 @@ declare global {
     __TAURI__?: TauriGlobal;
     /** Set by desktop/src-tauri/src/desktop-init.js or installDesktopShortcuts(). */
     __BEOMTADEW_DESKTOP_KEYS__?: boolean;
+    /** Invite deep link that launched (or reached) the app, set by src-tauri/src/lib.rs. */
+    __BEOMTADEW_LAUNCH_LINK__?: string;
   }
 }
 
@@ -91,6 +98,17 @@ export async function toggleDesktopFullscreen(): Promise<boolean | null> {
     const next = !(await win.isFullscreen());
     await win.setFullscreen(next);
     return next;
+  } catch {
+    return null;
+  }
+}
+
+/** Current fullscreen state of the app window, or null outside the app. */
+export async function desktopIsFullscreen(): Promise<boolean | null> {
+  const win = currentWindow();
+  if (!win) return null;
+  try {
+    return await win.isFullscreen();
   } catch {
     return null;
   }
@@ -166,8 +184,8 @@ export async function requestDesktopNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * OS notification (Windows toast / macOS Notification Center) plus a taskbar
- * flash / dock bounce. Returns false outside the app or without permission so
+ * OS notification (Windows toast / macOS Notification Center). The taskbar
+ * flash is separate (requestDesktopAttention). Returns false outside the app or without permission so
  * callers can fall back to the web Notification API.
  */
 export async function desktopNotify(
@@ -177,16 +195,20 @@ export async function desktopNotify(
   const api = tauri()?.notification;
   if (!api) return false;
   try {
-    // 1 = UserAttentionType.Critical, 2 = Informational.
-    void currentWindow()
-      ?.requestUserAttention(2)
-      .catch(() => {});
     if (!(await api.isPermissionGranted())) return false;
     api.sendNotification({ title, body });
     return true;
   } catch {
     return false;
   }
+}
+
+/** Flashes the taskbar button (Windows) or bounces the Dock icon (macOS). */
+export async function requestDesktopAttention(): Promise<void> {
+  try {
+    // 1 = UserAttentionType.Critical, 2 = Informational.
+    await currentWindow()?.requestUserAttention(2);
+  } catch {}
 }
 
 /** Brings the game window to the front (e.g. after a notification click). */
@@ -249,6 +271,57 @@ export function installDesktopShortcuts(): Unlisten {
   };
 }
 
+/** Restarts the desktop app (the web version reloads the page instead). */
+export async function relaunchDesktopApp(): Promise<void> {
+  try {
+    const process = tauri()?.process;
+    if (process) {
+      await process.relaunch();
+      return;
+    }
+  } catch {}
+  if (typeof location !== 'undefined') location.reload();
+}
+
+/**
+ * Runs `beforeClose` (e.g. saving a draft) when the player closes the app
+ * window, then lets it close. Outside the app it does nothing (the page keeps
+ * its beforeunload guard). Returns an unsubscribe function.
+ */
+export function onDesktopCloseRequested(beforeClose: () => unknown): Unlisten {
+  const win = currentWindow();
+  if (!win?.onCloseRequested) return () => {};
+  let unlisten: Unlisten | null = null;
+  let cancelled = false;
+  win
+    .onCloseRequested(async () => {
+      // Tauri awaits this handler and closes the window afterwards unless
+      // the event is prevented; saving gets a few seconds at most.
+      try {
+        await Promise.race([
+          Promise.resolve(beforeClose()),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      } catch {}
+    })
+    .then((stop) => {
+      if (cancelled) stop();
+      else unlisten = stop;
+    })
+    .catch(() => {});
+  return () => {
+    cancelled = true;
+    unlisten?.();
+  };
+}
+
+/** Closes the game window (the close handler above saves first). */
+export async function closeDesktopWindow(): Promise<void> {
+  try {
+    await currentWindow()?.close?.();
+  } catch {}
+}
+
 export type DesktopUpdateResult =
   | { status: 'web' }
   | { status: 'none' }
@@ -279,4 +352,57 @@ export async function checkForDesktopUpdate(
       message: error instanceof Error ? error.message : String(error),
     };
   }
+}
+
+/** Custom URL scheme registered by the desktop app (tauri-plugin-deep-link). */
+export const DEEP_LINK_SCHEME = 'beomtadew';
+
+/**
+ * The village room code in an invite deep link, or null. Accepts
+ * `beomtadew://lounge/<code>`, `beomtadew://lounge=<code>` and any web invite
+ * link with `#lounge=<code>` (a pasted https link works too).
+ */
+export function deepLinkCode(url: string): string | null {
+  const text = String(url ?? '').trim();
+  const clean = (value: string) => {
+    let code = value;
+    try {
+      code = decodeURIComponent(value);
+    } catch {}
+    code = code.trim().toUpperCase();
+    return /^[A-Z0-9]{4,16}$/.test(code) ? code : null;
+  };
+  const scheme = new RegExp('^' + DEEP_LINK_SCHEME + '://lounge[/=]([^/?#&]+)', 'i').exec(text);
+  if (scheme) return clean(scheme[1]);
+  const hash = /[#&]lounge=([^&#]+)/.exec(text);
+  return hash ? clean(hash[1]) : null;
+}
+
+/**
+ * Invite deep links that arrive while the app runs (the shell dispatches a
+ * 'beomtadew:deep-link' window event, see desktop/src-tauri/src/lib.rs).
+ * Links that launch the app arrive as index.html#lounge=<code> instead.
+ */
+export function onDesktopDeepLink(handler: (code: string) => void): Unlisten {
+  if (typeof window === 'undefined') return () => {};
+  const listener = (event: Event) => {
+    const detail = (event as CustomEvent<unknown>).detail;
+    const code = typeof detail === 'string' ? deepLinkCode(detail) : null;
+    // Handled here, so the next login does not use it again.
+    delete window.__BEOMTADEW_LAUNCH_LINK__;
+    if (code) handler(code);
+  };
+  window.addEventListener('beomtadew:deep-link', listener);
+  return () => window.removeEventListener('beomtadew:deep-link', listener);
+}
+
+/**
+ * The invite code of a deep link that launched the app (or arrived before
+ * login), once: it is cleared after reading. Null in a browser.
+ */
+export function takeDesktopLaunchCode(): string | null {
+  if (typeof window === 'undefined' || !window.__BEOMTADEW_LAUNCH_LINK__) return null;
+  const code = deepLinkCode(window.__BEOMTADEW_LAUNCH_LINK__);
+  delete window.__BEOMTADEW_LAUNCH_LINK__;
+  return code;
 }

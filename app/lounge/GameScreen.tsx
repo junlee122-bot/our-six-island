@@ -12,7 +12,7 @@ import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY, leaveConsequence } from './game-copy';
 import { ConfirmModal } from './Modal';
 import { attention, playCue } from './feedback';
-import { ErrorState, ScreenBoundary } from './ErrorBoundary';
+import { ErrorState, ScreenBoundary, chunkRecovery } from './ErrorBoundary';
 import {
   BlackjackTable,
   ChessBoard,
@@ -325,11 +325,10 @@ export function GameScreen({
                 title="테이블을 불러오지 못했어요."
                 body={
                   chunk
-                    ? '새 버전이 올라왔을 수 있어요. 새로 고치면 자리는 그대로 유지돼요.'
+                    ? '새 버전이 올라왔을 수 있어요. 다시 불러와도 자리는 그대로 유지돼요.'
                     : '잠시 뒤 다시 불러와 주세요. 자리는 그대로 유지돼요.'
                 }
-                retryLabel={chunk ? '새로 고치기' : '다시 불러오기'}
-                onRetry={chunk ? () => location.reload() : retry}
+                {...(chunk ? chunkRecovery() : { retryLabel: '다시 불러오기', onRetry: retry })}
                 onBack={onBack}
                 backLabel={backLabel}
               />

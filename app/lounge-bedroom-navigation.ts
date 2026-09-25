@@ -258,6 +258,8 @@ const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white']);
 /** Tables and the hearth double as the kitchen counter / workbench (요리·만들기). */
 export const ROOM_COOK_REACH = 0.9;
 export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace']);
+/** Furniture with its own action in my room (the pointer cursor shows over it). */
+export const roomItemUsable = (ref: string) => DRESS_REFS.has(ref) || COOK_REFS.has(ref);
 
 /**
  * Where I appear when the day starts in my room: on the floor beside the bed

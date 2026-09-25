@@ -8,6 +8,7 @@ import {
 } from './lounge-cloud-draft';
 import type { LoungeSave } from './lounge-look';
 import { friendlyError } from './lounge/feedback';
+import { isDesktopApp, onDesktopCloseRequested } from './desktop-bridge';
 type SaveReply = {
   conflict: boolean;
   save: LoungeSave;
@@ -127,11 +128,22 @@ export function useCloudSave(account: AccountProfile) {
     const timer = setTimeout(() => void flush(), 900);
     return () => clearTimeout(timer);
   }, [save, flush]);
+  const flushRef = useRef(flush);
   useEffect(() => {
+    flushRef.current = flush;
+  }, [flush]);
+  useEffect(() => {
+    const dirty = () =>
+      JSON.stringify(state.current.current) !== state.current.committed;
+    // Desktop app: the webview may skip beforeunload when the window closes,
+    // so the close request waits for the save instead (the draft in
+    // localStorage is the fallback either way).
+    if (isDesktopApp())
+      return onDesktopCloseRequested(async () => {
+        if (dirty()) await flushRef.current();
+      });
     const warn = (e: BeforeUnloadEvent) => {
-      if (JSON.stringify(state.current.current) !== state.current.committed) {
-        e.preventDefault();
-      }
+      if (dirty()) e.preventDefault();
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);

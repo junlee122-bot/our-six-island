@@ -406,120 +406,6 @@
 .bj-rules {
   color: #d6c6b9;
 }
-@media (max-width: 850px) {
-  .bj-players {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .bj-felt {
-    padding: 22px 15px;
-    border-width: 7px;
-    border-radius: 50px 50px 24px 24px;
-  }
-}
-@media (max-width: 600px) {
-  .bj-felt {
-    padding: 12px 8px 14px;
-    border-width: 5px;
-    border-radius: 35px 35px 20px 20px;
-  }
-  .bj-table-heading > span {
-    display: none;
-  }
-  .bj-table-heading p {
-    font-size: 11px;
-    letter-spacing: 0;
-    margin: 0 0 10px;
-  }
-  .bj-house {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 5px 10px;
-  }
-  .bj-house .bj-seat-title {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    margin: 0;
-  }
-  .bj-house .bj-cards {
-    min-height: 76px;
-  }
-  .bj-table-rule {
-    padding: 10px 0;
-    margin-top: 12px;
-  }
-  .bj-table-rule > span {
-    display: none;
-  }
-  .bj-players {
-    gap: 10px 7px;
-  }
-  .bj-seat {
-    padding: 10px 5px 5px;
-  }
-  .bj-seat-title {
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-  .bj-seat-title strong {
-    font-size: 13px;
-    gap: 4px;
-  }
-  .bj-seat-title > span {
-    font-size: 11px;
-  }
-  .bj-hand-meta {
-    font-size: 11px;
-    flex-wrap: wrap;
-  }
-  .bj-cards {
-    justify-content: flex-start;
-    overflow-x: auto;
-    padding: 6px 1px;
-  }
-  .bj-dealer-cards {
-    justify-content: center;
-  }
-  .bj-hand .bj-dealt + .bj-dealt {
-    margin-left: -22px;
-  }
-  .bj-club .p-card,
-  .bj-club .p-card.small {
-    width: 44px;
-    height: 64px;
-  }
-  .bj-club .p-card-corner {
-    font-size: 11px;
-  }
-  .bj-club .p-card-corner i {
-    font-size: 11px;
-  }
-  .bj-club .p-card-pip {
-    font-size: 18px;
-  }
-  .bj-outcome {
-    flex-direction: column;
-    gap: 2px;
-  }
-  .bj-turn {
-    flex-direction: column;
-    gap: 4px;
-    align-items: flex-start;
-  }
-  .bj-controls {
-    padding-top: 12px;
-  }
-  .bj-action-buttons {
-    gap: 6px;
-  }
-  .bj-action-buttons strong {
-    font-size: 12px;
-  }
-  .bj-action-buttons small {
-    font-size: 11px;
-  }
-}
 /* Desktop at 900px tall: a slimmer felt keeps the dealer, the hands and the
    result on one screen. */
 @media (min-width: 851px) and (max-height: 1000px) {
@@ -538,14 +424,6 @@
   }
   .bj-cards {
     min-height: 78px;
-  }
-}
-@media (max-width: 600px) {
-  .bj-report li {
-    grid-template-columns: 1fr auto;
-  }
-  .bj-report li small {
-    grid-column: 1 / -1;
   }
 }
 @media (prefers-reduced-motion: reduce) {

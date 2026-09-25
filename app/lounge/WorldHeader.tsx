@@ -121,7 +121,7 @@ export function WorldHeader({
         aria-label={
           village
             ? `${NAMES.app} 메뉴`
-            : `나가기 · ${josa(backTo, '으로/로')} (Esc)`
+            : `나가기 · ${josa(backTo, '으로/로')}${tab === 'bedroom' ? '' : ' (Esc)'}`
         }
       >
         <span className="l-brand-icon">
@@ -165,7 +165,7 @@ export function WorldHeader({
             className="l-header-icon l-bag-button"
             onClick={onBag}
             aria-label="가방 열기"
-            title="가방"
+            data-bind="inventory"
             data-coach="life"
           >
             <Backpack size={19} aria-hidden="true" />
@@ -176,7 +176,7 @@ export function WorldHeader({
             className="l-header-icon l-mail-button"
             onClick={onMail}
             aria-label={unread ? `우편함, 읽지 않은 편지 ${unread}통` : '우편함'}
-            title="우편함"
+            data-tip={unread ? `우편함 · 읽지 않은 편지 ${unread}통` : '우편함'}
             data-testid="header-mail"
           >
             <Mail size={19} aria-hidden="true" />
@@ -190,7 +190,7 @@ export function WorldHeader({
         <button
           className="l-profile"
           onClick={onAccount}
-          title="내 계정"
+          data-tip="내 계정"
           aria-label="내 계정"
         >
           <AvatarView
@@ -202,7 +202,7 @@ export function WorldHeader({
         </button>
         <button
           className="l-world-menu-button"
-          aria-label="메뉴"
+          aria-label="마을 메뉴"
           onClick={onMenu}
         >
           <Menu size={20} />

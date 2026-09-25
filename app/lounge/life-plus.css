@@ -1462,19 +1462,6 @@ li[data-done] .l-ach-icon {
     transition: none;
   }
 }
-@media (max-width: 900px) {
-  .l-inv-body,
-  .l-dex,
-  .l-kitchen-body,
-  .l-board-body,
-  .l-bonds-body {
-    grid-template-columns: 1fr;
-  }
-  .l-life-hud {
-    left: 12px;
-    top: 84px;
-  }
-}
 
 /* ------------------------------------------------------------ village layout with the hotbar */
 /* The spot / door prompt sits above the hotbar; fishing takes its place. */

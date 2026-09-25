@@ -5,10 +5,6 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   Footprints,
   LoaderCircle,
   Lock,
@@ -21,6 +17,7 @@ import { loungeSprites } from './lounge-sprites';
 import {
   BEDROOM_LIMITS,
   ROOM,
+  ROOM_DOOR_POINT,
   catalogEntry,
   defaultBedroom,
   readBedroom,
@@ -62,8 +59,10 @@ import { reactionVisible, REACTIONS } from './lounge-reactions';
 import { ACTORS } from './lounge-roster';
 import { josa } from './lounge-text';
 import {
+  ROOM_DOOR_REACH,
   WALK_START,
   besideBed,
+  roomItemUsable,
   leavingThroughDoor,
   roomAction,
   besideCookTable,
@@ -77,22 +76,13 @@ import {
 } from './lounge-bedroom-navigation';
 import { ActionButton } from './lounge/ActionButton';
 import type { ActionKind } from './lounge-flow';
-import { sceneKeyTarget } from './lounge-scene-keys';
+import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
+import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lounge-settings';
+import { keyLabel } from './lounge-keybinds';
 import './lounge-bedroom-3d.css';
 import './lounge-bedroom-edit-dock.css';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
-// Physical key codes keep WASD working while a Korean IME is active.
-const KEYS: Record<string, Direction> = {
-  ArrowUp: 'up',
-  KeyW: 'up',
-  ArrowDown: 'down',
-  KeyS: 'down',
-  ArrowLeft: 'left',
-  KeyA: 'left',
-  ArrowRight: 'right',
-  KeyD: 'right',
-};
 
 /** A friend's room opened with '놀러 가기' (walk, chat; no decorating). */
 export type BedroomVisit = {
@@ -178,9 +168,7 @@ export function Bedroom3D({
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLDivElement>());
   const directions = useRef(new Set<Direction>());
-  const runToggle = useRef(false),
-    shiftHeld = useRef(false);
-  const [runPressed, setRunPressed] = useState(false);
+  const shiftHeld = useRef(false);
   const roomActor = visit ? visit.owner : save.actor;
   const room = useMemo(
     () =>
@@ -222,9 +210,7 @@ export function Bedroom3D({
       : { ...WALK_START },
   );
   const [action, setAction] = useState<{ kind: ActionKind; item?: string } | null>(null);
-  const [touch] = useState(
-    () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches,
-  );
+  const [{ keys }] = useSettings();
   const flow = useRef({ onExit, onDress, onNearDoor, onCook });
   useLayoutEffect(() => {
     flow.current = { onExit, onDress, onNearDoor, onCook };
@@ -460,11 +446,12 @@ export function Bedroom3D({
       });
       return { right: span(r), up: span(u) };
     })();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    const quality = qualityProfile(getSettings().quality);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     // Only static geometry casts shadows; a contact shadow follows the sprite.
     renderer.shadowMap.autoUpdate = false;
@@ -571,7 +558,7 @@ export function Bedroom3D({
         setMessage('일부 소품을 불러오지 못했어요. 방은 그대로 둘러볼 수 있어요.');
       } else {
         setState('ready');
-        setMessage('바닥을 누르면 그곳으로 걸어가요.');
+        setMessage('바닥을 클릭하면 그곳으로 걸어가요.');
       }
     });
 
@@ -661,8 +648,29 @@ export function Bedroom3D({
       if (last) destination.position.set(last.x, 0.07, last.z);
       dirty = true;
     };
+    /** Cursor: grab over furniture while decorating, pointer over the door and usable furniture. */
+    let hoverKind = '';
+    const hoverAt = (event: PointerEvent) => {
+      if (contextFailed) return '';
+      const ray = rayFrom(event);
+      const current = latest.current;
+      if (current.editing) return studio.pick(ray, current.selectedId) ? 'grab' : '';
+      floorPlane.constant = 0;
+      const hit = ray.intersectPlane(floorPlane, hitPoint);
+      if (hit && Math.hypot(hit.x - ROOM_DOOR_POINT.x, hit.z - ROOM_DOOR_POINT.z) < ROOM_DOOR_REACH && !current.visit)
+        return 'place';
+      const id = studio.pick(ray, null);
+      const ref = id ? current.room.items.find((i) => i.id === id)?.ref : undefined;
+      return ref && !current.visit && roomItemUsable(ref) ? 'spot' : '';
+    };
     const onPointerMove = (event: PointerEvent) => {
-      if (drag && event.pointerId === drag.pointer) dragTo(event);
+      if (drag && event.pointerId === drag.pointer) {
+        dragTo(event);
+        if (hoverKind !== 'drag') host.dataset.hover = hoverKind = 'drag';
+        return;
+      }
+      const kind = hoverAt(event);
+      if (kind !== hoverKind) host.dataset.hover = hoverKind = kind;
     };
     const endDrag = (event: PointerEvent, cancel = false) => {
       if (!drag || event.pointerId !== drag.pointer) return;
@@ -727,7 +735,8 @@ export function Bedroom3D({
         }
         return;
       }
-      if (event.code === 'KeyE' && !event.ctrlKey && !event.metaKey) {
+      const bound = boundAction(event);
+      if (bound === 'action' && !event.ctrlKey && !event.metaKey) {
         // The one action button: E always presses it.
         if (actionRef.current) {
           event.preventDefault();
@@ -735,12 +744,8 @@ export function Bedroom3D({
         }
         return;
       }
-      if (event.key === 'Escape' && at === 'scene' && !latest.current.visit && flow.current.onExit) {
-        event.preventDefault();
-        runActionRef.current('exit');
-        return;
-      }
-      const direction = KEYS[event.code];
+      // Esc (menu) is app-wide now: lounge-game.tsx opens the Esc menu.
+      const direction = boundDirection(event);
       if (!direction || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
       pressed.add(direction);
@@ -750,20 +755,17 @@ export function Bedroom3D({
     const runKeydown = (event: KeyboardEvent) => {
       if (event.key !== 'Shift' || event.repeat || !sceneKeyTarget(event, host)) return;
       shiftHeld.current = true;
-      setRunPressed(true);
     };
     const keyup = (event: KeyboardEvent) => {
-      const direction = KEYS[event.code];
+      const direction = boundDirection(event);
       if (direction) pressed.delete(direction);
       if (event.key === 'Shift') {
         shiftHeld.current = false;
-        setRunPressed(runToggle.current);
       }
     };
     const blur = () => {
       pressed.clear();
       shiftHeld.current = false;
-      setRunPressed(runToggle.current);
       path = [];
       destination.visible = false;
     };
@@ -785,7 +787,7 @@ export function Bedroom3D({
       renderer.shadowMap.needsUpdate = true;
       me.drawnAt = -1000;
       setState('ready');
-      setMessage('바닥을 누르면 그곳으로 걸어가요.');
+      setMessage('바닥을 클릭하면 그곳으로 걸어가요.');
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(animate);
     };
@@ -831,7 +833,29 @@ export function Bedroom3D({
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(host);
-    resize();
+    // 설정 → 그래픽: pixel ratio and shadows follow the quality preset live.
+    const applyQuality = () => {
+      const q = qualityProfile(getSettings().quality);
+      const ratio = Math.min(window.devicePixelRatio || 1, q.pixelRatio);
+      if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
+      if (renderer.shadowMap.enabled !== q.shadows) {
+        renderer.shadowMap.enabled = q.shadows;
+        scene.traverse((object) => {
+          const material = (object as THREE.Mesh).material;
+          for (const m of Array.isArray(material) ? material : material ? [material] : [])
+            m.needsUpdate = true;
+        });
+      }
+      renderer.shadowMap.needsUpdate = true;
+      resize();
+    };
+    applyQuality();
+    const offSettings = onSettingsChange(applyQuality);
+    // The Esc menu stops my walk (friends in the room keep moving).
+    const pause = (e: Event) => {
+      if ((e as CustomEvent<boolean>).detail) blur();
+    };
+    window.addEventListener('bumtadew:pause', pause);
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (!visible) blur();
@@ -857,16 +881,21 @@ export function Bedroom3D({
       place('self', me.pos);
       for (const [id, f] of others) place(id, f.pos);
     };
+    let lastTick = 0;
     const animate = (t: number) => {
       if (disposed) return;
       frame = requestAnimationFrame(animate);
+      // 프레임 제한 (설정 → 그래픽).
+      const cap = getSettings().fpsCap;
+      if (cap && t - lastTick < 1000 / cap - 2) return;
+      lastTick = t;
       const dt = Math.min((t - previous) / 1000, 0.25);
       previous = t;
       if (!visible || document.hidden) return;
       // Me.
       const before = positionRef.current;
       let position = before;
-      const running = runToggle.current || shiftHeld.current,
+      const running = shiftHeld.current,
         speed = 2.25 * (running ? RUN_SPEED_MULTIPLIER : 1);
       if (!latest.current.editing) {
         let horizontal = Number(pressed.has('right')) - Number(pressed.has('left'));
@@ -1006,6 +1035,8 @@ export function Bedroom3D({
       pressed.clear();
       studioRef.current = null;
       resizeObserver.disconnect();
+      offSettings();
+      window.removeEventListener('bumtadew:pause', pause);
       visibilityObserver.disconnect();
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onPointerMove);
@@ -1035,18 +1066,11 @@ export function Bedroom3D({
     };
   }, [attempt]);
 
-  // The canvas takes touch drags only while decorating (scrolling stays natural otherwise).
   useEffect(() => {
-    const canvas = hostRef.current?.querySelector('canvas');
-    if (canvas) canvas.style.touchAction = editing ? 'none' : '';
     const host = hostRef.current;
     if (host) host.dataset.editing = String(editing);
   }, [editing, attempt, state]);
 
-  const holdDirection = (direction: Direction, target: HTMLButtonElement, pointerId: number) => {
-    target.setPointerCapture(pointerId);
-    directions.current.add(direction);
-  };
   const theme = BEDROOM_THEMES.find((t) => t.id === room.theme) ?? bedroomTheme(roomActor);
   const ownerName = ACTORS[roomActor];
   const closed = (room.access ?? 'friends') === 'closed';
@@ -1117,8 +1141,8 @@ export function Bedroom3D({
           role="application"
           aria-label={
             editing
-              ? '꾸미기 모드. 소품을 눌러 고르고 끌어서 옮겨요. R 회전, Delete 치우기, 방향키로 조금씩 옮기기.'
-              : `${ownerName}의 입체 방. 바닥을 누르거나 방향키와 WASD로 걸어요. Shift로 달려요.`
+              ? '꾸미기 모드. 소품을 클릭해 고르고 끌어서 옮겨요. R 회전, Delete 치우기, 방향키로 조금씩 옮기기.'
+              : `${ownerName}의 입체 방. 바닥을 클릭하거나 방향키와 WASD로 걸어요. Shift로 달리고 Esc로 메뉴를 열어요.`
           }
           data-testid="bedroom-3d"
           data-load-state={state}
@@ -1242,61 +1266,12 @@ export function Bedroom3D({
               }}
             />
           </div>
-        ) : (
-          state !== 'unavailable' && (
-            <div className="b3-pad" aria-label="걷기 방향">
-              <button
-                type="button"
-                className="b3-pad-run"
-                aria-label="달리기 전환"
-                aria-pressed={runPressed}
-                onClick={() => {
-                  runToggle.current = !runToggle.current;
-                  setRunPressed(runToggle.current || shiftHeld.current);
-                }}
-              >
-                <Footprints size={15} /> {runPressed ? '달리기 켬' : '달리기'}
-              </button>
-              {(
-                [
-                  ['up', ArrowUp, '위로 걷기'],
-                  ['left', ArrowLeft, '왼쪽으로 걷기'],
-                  ['down', ArrowDown, '아래로 걷기'],
-                  ['right', ArrowRight, '오른쪽으로 걷기'],
-                ] as const
-              ).map(([direction, Icon, text]) => (
-                <button
-                  key={direction}
-                  type="button"
-                  className={`b3-pad-${direction}`}
-                  aria-label={text}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    holdDirection(direction, event.currentTarget, event.pointerId);
-                  }}
-                  onPointerUp={() => directions.current.delete(direction)}
-                  onPointerCancel={() => directions.current.delete(direction)}
-                  onLostPointerCapture={() => directions.current.delete(direction)}
-                  onKeyDown={(event) => {
-                    if (event.key === ' ' || event.key === 'Enter') {
-                      event.preventDefault();
-                      directions.current.add(direction);
-                    }
-                  }}
-                  onKeyUp={() => directions.current.delete(direction)}
-                  onBlur={() => directions.current.delete(direction)}
-                >
-                  <Icon size={18} />
-                </button>
-              ))}
-            </div>
-          )
-        )}
+        ) : null}
         {!editing && state !== 'unavailable' && (
           <ActionButton
             className="b3-action"
             kind={action?.kind ?? null}
-            touch={touch}
+            shortcut={keyLabel(keys.action)}
             onPress={() => runAction(action?.kind)}
           />
         )}
@@ -1304,13 +1279,13 @@ export function Bedroom3D({
           <span>
             {editing ? (
               <>
-                <Palette size={15} /> 소품을 눌러 고르고 끌어서 옮겨요
+                <Palette size={15} /> 소품을 클릭해 고르고 끌어서 옮겨요
                 <span className="b3-key-help"> · R 회전 · Delete 치우기 · Ctrl+Z 되돌리기</span>
               </>
             ) : (
               <>
-                <Footprints size={15} /> 바닥을 눌러 이동
-                <span className="b3-key-help"> · 방향키 / WASD · Shift 달리기</span>
+                <Footprints size={15} /> 클릭해서 이동
+                <span className="b3-key-help"> · 방향키 / {[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')} · Shift 달리기 · Esc 메뉴</span>
               </>
             )}
           </span>

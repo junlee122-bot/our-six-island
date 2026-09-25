@@ -1,66 +1,149 @@
-// Per-device player preferences for 범타듀 밸리 (sound, stickers, alerts, graphics).
+// Per-device player preferences for 범타듀 밸리 (sound, graphics, display,
+// keys, notifications).
 // Stored in localStorage; every read/write tolerates blocked storage.
 import { useSyncExternalStore } from 'react';
+import { DEFAULT_KEYBINDS, readKeybinds, type Keybinds } from './lounge-keybinds.ts';
+
+export type GraphicsQuality = 'low' | 'mid' | 'high';
+export const FPS_CAPS = [0, 30, 60, 144] as const;
+export type FpsCap = (typeof FPS_CAPS)[number];
+export const UI_SCALES = [90, 100, 110, 125] as const;
+export const TEXT_SCALES = [100, 115, 130] as const;
 
 export type LoungeSettings = {
-  /** Short WebAudio tones for invites, my turn, game start and results. */
+  /** Storage shape version (2 = PC settings: channels, graphics, keys). */
+  version: 2;
+  /** All game sound on/off (the master switch). */
   sound: boolean;
-  /** 0..1 master volume for the tones (low by default). */
+  /** 0..1 master volume (the v1 "소리 크기"). */
   volume: number;
-  /** Hide friends' reaction stickers everywhere. */
-  reactionsHidden: boolean;
-  /** Browser notifications while the tab is hidden (permission asked from the settings toggle only). */
-  notifications: boolean;
-  /** Vibrate on phones for invites and my turn. */
-  vibrate: boolean;
-  /** 2D village guide instead of the 3D scene (low-end devices). */
-  simpleGraphics: boolean;
   /** Background music-box loop and ambient water/birds (needs `sound`). */
   music: boolean;
+  /** 0..1 music and ambience level under the master volume. */
+  musicVolume: number;
+  /** 0..1 world sounds: footsteps, cards, fishing, cooking. */
+  effectsVolume: number;
+  /** 0..1 UI cues: invites, my turn, game start and results. */
+  uiVolume: number;
+  /** Hide friends' reaction stickers everywhere. */
+  reactionsHidden: boolean;
+  /** Desktop notifications while the game window is not in front (permission asked from the toggle only). */
+  notifications: boolean;
+  /** Flash the taskbar / bounce the dock icon for invites and my turn. */
+  attention: boolean;
+  /** 2D village guide instead of the 3D scene (low-end devices). */
+  simpleGraphics: boolean;
   /** Village lighting follows the real KST time (morning/day/evening/night). */
   dayNight: boolean;
   /** Seasonal weather effects in the village (rain, snow, falling leaves). */
   seasonFx: boolean;
+  /** Render quality preset: pixel ratio, shadows and particle effects. */
+  quality: GraphicsQuality;
+  /** Frame rate limit for the 3D scenes (0 = follow the display). */
+  fpsCap: FpsCap;
+  /** Start the desktop app in fullscreen (the last choice is kept). */
+  fullscreen: boolean;
+  /** HUD and dialog size, percent. */
+  uiScale: (typeof UI_SCALES)[number];
+  /** Extra size for reading text (dialogs, chat, panels), percent. */
+  textScale: (typeof TEXT_SCALES)[number];
+  /** Rebindable keys for the village and my room. */
+  keys: Keybinds;
 };
 
 export const SETTINGS_KEY = 'bumtadew-settings-v1';
-export const DEFAULT_SETTINGS: LoungeSettings = {
+export const DEFAULT_SETTINGS: LoungeSettings = Object.freeze({
+  version: 2,
   sound: true,
   volume: 0.35,
+  music: true,
+  musicVolume: 1,
+  effectsVolume: 1,
+  uiVolume: 1,
   reactionsHidden: false,
   notifications: false,
-  vibrate: true,
+  attention: true,
   simpleGraphics: false,
-  music: true,
   dayNight: true,
   seasonFx: true,
-};
+  quality: 'mid',
+  fpsCap: 0,
+  fullscreen: false,
+  uiScale: 100,
+  textScale: 100,
+  keys: DEFAULT_KEYBINDS,
+}) as LoungeSettings;
 
+/** Pixel ratio cap, shadows and particles for a quality preset. */
+export function qualityProfile(quality: GraphicsQuality) {
+  return quality === 'low'
+    ? { pixelRatio: 1, shadows: false, effects: false }
+    : quality === 'high'
+      ? { pixelRatio: 2, shadows: true, effects: true }
+      : { pixelRatio: 1.5, shadows: true, effects: true };
+}
+
+/**
+ * Parses stored settings (any version) into the current shape. Version 1
+ * (sound, volume, music, vibrate, …) keeps its values; `vibrate` is dropped
+ * (phones are not supported) and the new PC options start at their defaults.
+ */
 export function readSettings(raw: string | null | undefined): LoungeSettings {
-  let value: Partial<Record<keyof LoungeSettings, unknown>> = {};
+  let value: Record<string, unknown> = {};
   try {
     const parsed: unknown = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object') value = parsed as typeof value;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      value = parsed as Record<string, unknown>;
   } catch {}
   const bool = (key: keyof LoungeSettings) =>
     typeof value[key] === 'boolean'
       ? (value[key] as boolean)
       : (DEFAULT_SETTINGS[key] as boolean);
-  const volume = Number(value.volume);
+  const level = (key: keyof LoungeSettings) => {
+    const n = typeof value[key] === 'number' ? (value[key] as number) : NaN;
+    return Number.isFinite(n) && n >= 0 && n <= 1
+      ? n
+      : (DEFAULT_SETTINGS[key] as number);
+  };
+  const oneOf = <T,>(key: keyof LoungeSettings, options: readonly T[]): T =>
+    options.includes(value[key] as T)
+      ? (value[key] as T)
+      : (DEFAULT_SETTINGS[key] as T);
   return {
+    version: 2,
     sound: bool('sound'),
-    volume:
-      Number.isFinite(volume) && volume >= 0 && volume <= 1
-        ? volume
-        : DEFAULT_SETTINGS.volume,
+    volume: level('volume'),
+    music: bool('music'),
+    musicVolume: level('musicVolume'),
+    effectsVolume: level('effectsVolume'),
+    uiVolume: level('uiVolume'),
     reactionsHidden: bool('reactionsHidden'),
     notifications: bool('notifications'),
-    vibrate: bool('vibrate'),
+    attention: bool('attention'),
     simpleGraphics: bool('simpleGraphics'),
-    music: bool('music'),
     dayNight: bool('dayNight'),
     seasonFx: bool('seasonFx'),
+    quality: oneOf('quality', ['low', 'mid', 'high'] as const),
+    fpsCap: oneOf('fpsCap', FPS_CAPS),
+    fullscreen: bool('fullscreen'),
+    uiScale: oneOf('uiScale', UI_SCALES),
+    textScale: oneOf('textScale', TEXT_SCALES),
+    keys: readKeybinds(value.keys),
   };
+}
+
+/** True when stored settings predate the current shape (version 2). */
+export function needsMigration(raw: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return (
+      !!parsed &&
+      typeof parsed === 'object' &&
+      (parsed as { version?: unknown }).version !== 2
+    );
+  } catch {
+    return false;
+  }
 }
 
 let current: LoungeSettings | null = null;
@@ -73,6 +156,11 @@ export function getSettings(): LoungeSettings {
       raw = globalThis.localStorage?.getItem(SETTINGS_KEY) ?? null;
     } catch {}
     current = readSettings(raw);
+    // Older shapes are rewritten once in the current one (see readSettings).
+    if (raw && needsMigration(raw))
+      try {
+        globalThis.localStorage?.setItem(SETTINGS_KEY, JSON.stringify(current));
+      } catch {}
   }
   return current;
 }

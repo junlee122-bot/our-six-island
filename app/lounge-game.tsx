@@ -113,7 +113,18 @@ import { Invitations } from './lounge/Invitations';
 import { RequestGameModal } from './lounge/RequestGameModal';
 import { WalletModal } from './lounge/WalletModal';
 import { AccountModal } from './lounge/AccountModal';
-import { SettingsModal } from './lounge/SettingsModal';
+import { SettingsModal, type SettingsTab } from './lounge/SettingsModal';
+import { ControlsHelp, SystemMenu } from './lounge/SystemMenu';
+import { useTooltips } from './lounge/tooltips';
+import { toggleFullscreen, useDisplaySettings } from './lounge-display';
+import { boundAction, globalKeyTarget } from './lounge-scene-keys';
+import type { BindAction } from './lounge-keybinds';
+import {
+  closeDesktopWindow,
+  isDesktopApp,
+  onDesktopDeepLink,
+  takeDesktopLaunchCode,
+} from './desktop-bridge';
 import { CreditsModal } from './lounge/CreditsModal';
 import { WorldHeader, type Tab } from './lounge/WorldHeader';
 import { GameScreen, myTurn } from './lounge/GameScreen';
@@ -125,7 +136,9 @@ import {
 import { VillageSimple } from './lounge/VillageSimple';
 import {
   ErrorState,
+  chunkRecovery,
   lazyRetry,
+  restartGame,
   ScreenBoundary,
 } from './lounge/ErrorBoundary';
 import { SaveStatus } from './lounge/SaveStatus';
@@ -295,11 +308,10 @@ function ScreenError({
       title={`${josa(what, '을/를')} 열지 못했어요.`}
       body={
         chunk
-          ? '새 버전이 올라왔을 수 있어요. 새로 고치면 저장된 내용은 그대로예요.'
+          ? '새 버전이 올라왔을 수 있어요. 다시 불러와도 저장된 내용은 그대로예요.'
           : '잠시 뒤 다시 시도해 주세요. 저장된 내용은 그대로예요.'
       }
-      retryLabel={chunk ? '새로 고치기' : '다시 시도'}
-      onRetry={chunk ? () => location.reload() : retry}
+      {...(chunk ? chunkRecovery() : { retryLabel: '다시 시도', onRetry: retry })}
       onBack={onBack}
       backLabel="나가기"
     />
@@ -331,7 +343,10 @@ type ModalName =
   | 'bonds'
   | 'memories'
   | 'digest'
-  | 'lifeRequest';
+  | 'lifeRequest'
+  // PC: the Esc menu and 조작 안내.
+  | 'system'
+  | 'help';
 type Confirm = 'leaveRoom' | 'logout' | 'logoutAll' | 'reset';
 
 const TAB_AREA: Record<Tab, Area> = {
@@ -368,8 +383,8 @@ function VillageHint({ paused }: { paused: boolean }) {
   if (!show || paused) return null;
   return (
     <output className="l-world-hint">
-      바닥을 눌러 걷고, 마을 안내에서 장소를 찾아요
-      <span> · 방향키 / WASD · Shift 달리기 · E 오른쪽 아래 버튼</span>
+      클릭해서 걷고, 마을 안내(M)에서 장소를 찾아요
+      <span> · 방향키 / WASD · Shift 달리기 · E 행동 · Esc 메뉴 · F1 조작 안내</span>
     </output>
   );
 }
@@ -402,6 +417,9 @@ function activeCommitment(view: CloudRoomView): {
 }
 
 export default function LoungeGame() {
+  // PC layer for every screen (login included): UI size, fullscreen, tooltips.
+  useDisplaySettings();
+  useTooltips();
   return (
     <AccountGate>
       {(account, onLogout) => (
@@ -431,6 +449,8 @@ function AccountLounge({
     // The wardrobe opened from my room ("옷 갈아입기") returns there.
     [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom'>('village'),
     [modal, setModal] = useState<ModalName | null>(null),
+    [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
+    [bondsInitial, setBondsInitial] = useState<number | undefined>(undefined),
     [confirm, setConfirm] = useState<Confirm | null>(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
     // The table sheet I opened by walking up to a table (setup / join). The
@@ -514,6 +534,8 @@ function AccountLounge({
     try {
       invite = new URLSearchParams(location.hash.slice(1)).get('lounge');
     } catch {}
+    // Desktop app: an invite link (beomtadew://lounge/<code>) that opened it.
+    invite ??= takeDesktopLaunchCode();
     room.init(lookRef.current, invite);
     const first = setTimeout(() => {
       if (recall(PASSWORD_WARNING_KEY) === account.id) {
@@ -802,7 +824,12 @@ function AccountLounge({
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      if (tabRef.current === 'village' || document.querySelector('dialog[open], .l-coach'))
+      // The village and my room open the Esc menu instead (see the PC keys below).
+      if (
+        tabRef.current === 'village' ||
+        tabRef.current === 'bedroom' ||
+        document.querySelector('dialog[open], .l-coach')
+      )
         return;
       const t = e.target as HTMLElement | null;
       if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
@@ -1260,31 +1287,101 @@ function AccountLounge({
     }, 2500);
     return () => clearTimeout(timer);
   }, [connected]);
-  // Desktop keys: I 가방, K 도감, L 추억 앨범, 1–9 핫바 (village).
-  const lifeKeys = useRef({ open: (_m: ModalName) => {} });
+  // PC keys (설정 → 조작, lounge-keybinds.ts) in the village and my room:
+  // Esc 메뉴, F1 조작 안내, I 가방, K 도감, L 친구 사이, J 오늘의 부탁,
+  // M 마을 안내, B 게시판. 1–9 (핫바) and moving are the scenes' own.
+  const pcKeys = useRef<{ run: (a: BindAction) => boolean }>({ run: () => false });
   useLayoutEffect(() => {
-    lifeKeys.current = {
-      open: (m) => {
-        setAtMuseum(false);
-        setModal(m);
+    pcKeys.current = {
+      run: (a) => {
+        const place = tabRef.current;
+        if (visiting === null && place !== 'village' && place !== 'bedroom') return false;
+        switch (a) {
+          case 'menu': {
+            // Open panels on the scene (마을 안내, a place card) close first.
+            const panel = new Event('bumtadew:escape', { cancelable: true });
+            if (!window.dispatchEvent(panel)) return true;
+            setModal('system');
+            return true;
+          }
+          case 'help':
+            setModal('help');
+            return true;
+          case 'inventory':
+            setModal('bag');
+            return true;
+          case 'collection':
+            setAtMuseum(false);
+            setModal('collection');
+            return true;
+          case 'bonds':
+            setBondsInitial(undefined);
+            setModal('bonds');
+            return true;
+          case 'tasks': {
+            const open = view.life?.me.requests?.find((r) => !r.done);
+            if (!open) notify('오늘은 남은 부탁이 없어요. 친구 사이에서 하트를 확인해 봐요.', 'info');
+            setBondsInitial(open?.from);
+            setModal('bonds');
+            return true;
+          }
+          case 'map':
+            if (settings.simpleGraphics) return false;
+            if (place === 'village' && visiting === null)
+              window.dispatchEvent(new Event('bumtadew:directory'));
+            else
+              enter('village', undefined, undefined, () =>
+                setTimeout(() => window.dispatchEvent(new Event('bumtadew:directory')), 600),
+              );
+            return true;
+          case 'board':
+            if (settings.simpleGraphics) setModal('board');
+            else walkTo(BOARD_FRONT);
+            return true;
+          default:
+            return false;
+        }
       },
     };
   });
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
-      if (document.querySelector('dialog[open], .l-coach, .l-in-game, [data-testid=fishing]')) return;
+      // Coach marks, game tables and the fishing overlay keep their own keys (Esc included).
+      if (document.querySelector('.l-coach, .l-in-game, [data-testid=fishing]')) return;
       if (document.querySelector('.b3-room[data-editing]')) return;
-      const m: ModalName | null = e.code === 'KeyI' ? 'bag' : e.code === 'KeyK' ? 'collection' : e.code === 'KeyL' ? 'memories' : null;
-      if (!m) return;
-      e.preventDefault();
-      lifeKeys.current.open(m);
+      if (!globalKeyTarget(e)) return;
+      const action = boundAction(e);
+      if (!action || /^(up|down|left|right|action|hotbar\d)$/.test(action)) return;
+      if (pcKeys.current.run(action)) e.preventDefault();
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, []);
+  // The Esc menu: my walk stops and the music steps back (the world goes on).
+  const paused = modal === 'system';
+  useEffect(() => {
+    loungeAudio.setScene({ paused });
+    window.dispatchEvent(new CustomEvent('bumtadew:pause', { detail: paused }));
+    document.documentElement.dataset.paused = String(paused);
+  }, [paused]);
+  // Desktop app: an invite link (beomtadew://lounge/<code>) opened while playing.
+  const deepLink = useRef((_code: string) => {});
+  useLayoutEffect(() => {
+    deepLink.current = (code) => {
+      if (code === view.code) {
+        notify('이미 그 마을에 있어요.', 'info');
+        return;
+      }
+      if (inGame || activeCommitment(view).kind) {
+        notify('게임 중이라 초대 링크를 바로 열 수 없어요. 게임을 마친 뒤 다시 열어 주세요.', 'error');
+        return;
+      }
+      notify('초대받은 마을로 가는 중이에요…', 'info');
+      void room.switchTo(code, lookRef.current);
+    };
+  });
+  useEffect(() => onDesktopDeepLink((code) => deepLink.current(code)), []);
   useHotbarKeys(hotbar, tab === 'village' && visiting === null && !inGame && !fishing, eatFromSlot);
   // "어제 마을 소식" once on the first login of the day.
   const digestDue = lifeEvents.digestDue;
@@ -1563,7 +1660,7 @@ function AccountLounge({
         {cloudSave.blocked && (
           <div className="l-save-alert" role="alert">
             <p>{cloudSave.blocked}</p>
-            <button onClick={() => location.reload()}>새로고침</button>
+            <button onClick={restartGame}>다시 시작</button>
           </div>
         )}
         {cloudSave.conflict && (
@@ -1720,7 +1817,7 @@ function AccountLounge({
                       onTalk={talkTo}
                       tool={hotbar.tool}
                       fishing={fishing}
-                      seasonFx={settings.seasonFx}
+                      seasonFx={settings.seasonFx && settings.quality !== 'low'}
                     />
                   </Suspense>
                 </ScreenBoundary>
@@ -1738,6 +1835,7 @@ function AccountLounge({
                     aria-label="가방 열기"
                     onClick={() => setModal('bag')}
                     data-testid="dock-bag"
+                    data-bind="inventory"
                   >
                     <Backpack size={19} />
                     <span>가방</span>
@@ -1979,7 +2077,12 @@ function AccountLounge({
       <footer className="l-footer">
         <span>{NAMES.app} · 일곱 친구가 사는 마을</span>
         <div>
-          <button onClick={() => setModal('settings')}>
+          <button
+            onClick={() => {
+              setSettingsTab('graphics');
+              setModal('settings');
+            }}
+          >
             <Settings size={12} /> 설정
           </button>
           <button onClick={() => setModal('credits')}>
@@ -2015,7 +2118,7 @@ function AccountLounge({
           </div>
           {!settings.simpleGraphics && (
             <p className="l-modal-intro">
-              건물 이름을 누르면 문 앞까지 걸어가요.
+              건물이나 이름을 클릭하면 문 앞까지 걸어가요.
             </p>
           )}
           <div className="l-world-menu-grid">
@@ -2048,15 +2151,15 @@ function AccountLounge({
             </button>
             <button onClick={() => setModal('bonds')} data-testid="menu-bonds">
               <Heart size={20} />
-              <span>친구 사이</span>
+              <span>친구 사이 (L)</span>
             </button>
             <button onClick={() => setModal('memories')} data-testid="menu-memories">
               <Sparkles size={20} />
-              <span>추억 앨범 (L)</span>
+              <span>추억 앨범</span>
             </button>
             <button onClick={() => walkTo(BOARD_FRONT)} data-testid="menu-board">
               <ClipboardList size={20} />
-              <span>마을 게시판</span>
+              <span>마을 게시판 (B)</span>
             </button>
             <button onClick={openKitchen} data-testid="menu-kitchen">
               <CookingPot size={20} />
@@ -2082,7 +2185,12 @@ function AccountLounge({
               <House size={20} />
               <span>내 계정</span>
             </button>
-            <button onClick={() => setModal('settings')}>
+            <button
+            onClick={() => {
+              setSettingsTab('graphics');
+              setModal('settings');
+            }}
+          >
               <Settings size={20} />
               <span>설정</span>
             </button>
@@ -2181,7 +2289,50 @@ function AccountLounge({
           notify={notify}
         />
       )}
-      {modal === 'settings' && <SettingsModal onClose={() => setModal(null)} />}
+      {modal === 'settings' && (
+        <SettingsModal key={settingsTab} initialTab={settingsTab} onClose={() => setModal(null)} />
+      )}
+      {modal === 'system' && (
+        <SystemMenu
+          onClose={() => setModal(null)}
+          onSettings={() => {
+            setSettingsTab('graphics');
+            setModal('settings');
+          }}
+          onHelp={() => setModal('help')}
+          onFullscreen={() => void toggleFullscreen()}
+          onVillageMenu={() => setModal('menu')}
+          onLeaveRoom={
+            tab === 'bedroom' && visiting === null
+              ? () => {
+                  setModal(null);
+                  enter('village');
+                }
+              : undefined
+          }
+          onLogout={() => {
+            setModal(null);
+            setConfirm('logout');
+          }}
+          onQuit={
+            isDesktopApp()
+              ? () => {
+                  setModal(null);
+                  void cloudSave.flush().finally(() => void closeDesktopWindow());
+                }
+              : undefined
+          }
+        />
+      )}
+      {modal === 'help' && (
+        <ControlsHelp
+          onClose={() => setModal(null)}
+          onEdit={() => {
+            setSettingsTab('controls');
+            setModal('settings');
+          }}
+        />
+      )}
       {modal === 'farm' && (
         <FarmModal
           room={room}
@@ -2236,6 +2387,7 @@ function AccountLounge({
           view={view}
           notify={notify}
           selfActor={save.actor}
+          initial={bondsInitial}
           onGift={giftTo}
           onVisit={visitHouse}
           onClose={() => setModal(null)}

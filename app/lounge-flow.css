@@ -70,8 +70,8 @@
 
 /* Village: right above the D-pad (bottom-right). */
 .hv-action {
-  right: max(20px, calc(env(safe-area-inset-right) + 8px));
-  bottom: calc(max(38px, calc(env(safe-area-inset-bottom) + 8px)) + 150px);
+  right: 20px;
+  bottom: calc(38px + 150px);
 }
 .hv-inside {
   font-weight: 700;
@@ -81,37 +81,12 @@
 .hv-entry-prompt {
   pointer-events: none;
 }
-@media (max-width: 600px) {
-  .hv-action {
-    right: max(12px, calc(env(safe-area-inset-right) + 8px));
-    bottom: calc(max(24px, calc(env(safe-area-inset-bottom) + 8px)) + 150px);
-  }
-  .l-immersive .hv-entry-prompt {
-    right: 164px;
-    bottom: 174px;
-  }
-}
 
 /* Room / friend's room: bottom-right of the scene, left of the D-pad. */
 .b3-action {
   z-index: 3;
   right: 18px;
   bottom: 64px;
-}
-.b3-pad ~ .b3-action {
-  right: 176px;
-}
-@media (max-width: 650px) {
-  .b3-pad {
-    justify-content: start !important;
-    padding-left: 16px !important;
-  }
-  .b3-action,
-  .b3-pad ~ .b3-action {
-    right: 14px;
-    bottom: 96px;
-    min-width: 128px;
-  }
 }
 
 /* Hall / casino: over the scene's bottom-right corner; on narrow scenes a
@@ -136,7 +111,7 @@
 .l-app .l-banner[popover],
 .l-app.l-immersive .l-banner[popover] {
   position: fixed;
-  inset: calc(max(16px, env(safe-area-inset-top)) + 64px) auto auto 50%;
+  inset: calc(16px + 64px) auto auto 50%;
   bottom: auto;
   transform: translateX(-50%);
   margin: 0;
@@ -206,17 +181,6 @@
 .l-banner-close:hover,
 .l-banner-action:hover {
   filter: brightness(0.95);
-}
-@media (max-width: 600px) {
-  .l-app .l-banner,
-  .l-app .l-banner[popover],
-  .l-app.l-immersive .l-banner[popover] {
-    inset: calc(max(12px, env(safe-area-inset-top)) + 58px) 12px auto 12px;
-    transform: none;
-    width: auto;
-    max-width: none;
-    font-size: 12px;
-  }
 }
 @media (prefers-reduced-motion: no-preference) {
   .l-app .l-banner {
@@ -300,7 +264,7 @@
 
 /* ------------------------------------------------------------ table sheet (step 2) */
 /* Sitting at a hall / casino table: a compact sheet over the scene
-   (bottom-left card on wide screens, a bottom sheet on phones). */
+   (a bottom-left card). */
 .l-app .l-room-wrap {
   position: relative;
 }
@@ -586,19 +550,6 @@
   background: #fff;
   color: #3a3226;
 }
-@media (max-width: 600px) {
-  .l-table-sheet {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    max-height: 72vh;
-    padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 -10px 30px #2a1f1233;
-  }
-}
 /* The old-menu table picker ("어느 테이블로 갈까요?"). */
 .l-table-picker {
   display: grid;
@@ -673,12 +624,6 @@
   margin: -4px 0 0;
   font-size: 11px;
   color: #8a7a5d;
-}
-@media (hover: none) {
-  .l-sheet-key,
-  .l-sheet-keys {
-    display: none;
-  }
 }
 /* Game header buttons (일어나기, 구경 중 · 일어나기) keep a full 44px target. */
 .l-game-screen > header button {

@@ -26,18 +26,6 @@ import { NAMES } from '../lounge-text';
 import { lookFor, rememberLook } from './friend-looks';
 import { useServerClock } from './use-server-clock';
 
-/** Phones and tablets: prompts say "눌러서" instead of "E로". */
-export function isTouchDevice() {
-  try {
-    return (
-      typeof matchMedia !== 'undefined' &&
-      matchMedia('(hover: none) and (pointer: coarse)').matches
-    );
-  } catch {
-    return false;
-  }
-}
-
 function remaining(ms: number) {
   const minutes = Math.max(1, Math.ceil(ms / 60_000));
   return minutes >= 60
@@ -240,12 +228,13 @@ export function VillageSimple({
     <section
       className="l-simple-village"
       aria-labelledby="l-simple-village-title"
+      data-testid="village-simple"
     >
       <header>
         <Trees size={28} aria-hidden="true" />
         <div>
           <h1 id="l-simple-village-title">{NAMES.app} 안내판</h1>
-          <p>가고 싶은 곳을 눌러 바로 들어가요.</p>
+          <p>가고 싶은 곳을 클릭하면 바로 들어가요.</p>
         </div>
       </header>
       <div className="l-simple-places">

@@ -2,6 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import {Check,Copy,DoorOpen,Link,LockKeyhole,MessageCircle,Send,Users,Wifi} from 'lucide-react';
 import {EMOTES,inviteUrl,roomCode} from './multiplayer-protocol';
+import {WEB_URL,isDesktopApp} from './desktop-bridge';
 import {CharacterAvatar} from './character-avatar';
 import type {IslandSession,SessionView} from './multiplayer-session';
 import {FRIENDS,type Save} from './game-data';
@@ -12,7 +13,8 @@ export function MultiplayerPanel({session,view,save,initialCode,onHost,onJoin,on
  const [choice,setChoice]=useState<number|null>(save.character);
  useEffect(()=>{setChoice(save.character);},[view.selfId,save.character]);
  useEffect(()=>{if(view.status==='selecting'&&view.claiming===null)setChoice(current=>view.players.some(p=>p.character===current)?null:current);},[view.status,view.players,view.claiming]);
- useEffect(()=>{if(view.room)setLink(inviteUrl(window.location.href,view.room));},[view.room]);
+ // The desktop app's own address (tauri://localhost) is useless to friends: link the public site.
+ useEffect(()=>{if(view.room)setLink(inviteUrl(isDesktopApp()?new URL(location.pathname.replace(/^\/+/,''),WEB_URL).href:window.location.href,view.room));},[view.room]);
  useEffect(()=>{if(initialCode)setCode(initialCode);},[initialCode]);
  useEffect(()=>{messages.current?.scrollTo({top:messages.current.scrollHeight,behavior:'smooth'});},[view.messages.at(-1)?.id]);
  const copy=async()=>{try{await navigator.clipboard.writeText(link);setNotice('초대 링크를 복사했어요. 친구에게 보내 주세요.');}catch{setNotice('아래 초대 링크를 선택해 직접 복사해 주세요.');}};

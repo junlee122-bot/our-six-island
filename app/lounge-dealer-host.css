@@ -164,22 +164,6 @@
     transform: rotate(-6deg);
   }
 }
-@media (max-width: 760px) {
-  .dh-host {
-    padding: 8px 10px;
-    gap: 9px;
-  }
-  .dh-portrait {
-    width: 42px;
-    height: 42px;
-  }
-  .dh-line {
-    font-size: 12.5px;
-  }
-  .dh-table-number {
-    display: none;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .dh-line,
   .dh-aside,
