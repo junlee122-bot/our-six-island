@@ -52,6 +52,7 @@ export const MODEL_FILES: Record<string, string> = {
   cushions: LOUNGE_MODELS.cushions,
   'plant-stand': LOUNGE_MODELS.plantStand,
   tulips: LOUNGE_MODELS.tulips,
+  'furn-rocking-chair': LOUNGE_MODELS.rockingChair,
 };
 
 /** Catalog thumbnails: rendered previews of the 3D models, and the prop art itself. */
@@ -73,4 +74,5 @@ export const THUMBNAILS: Record<string, string> = {
   cushions: LOUNGE_ASSETS.bedroom_thumb_cushions,
   'plant-stand': LOUNGE_ASSETS.bedroom_thumb_plant_stand,
   tulips: LOUNGE_ASSETS.bedroom_thumb_tulips,
+  'furn-rocking-chair': LOUNGE_ASSETS.bedroom_thumb_rocking_chair,
 };

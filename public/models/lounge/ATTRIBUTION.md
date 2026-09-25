@@ -58,3 +58,35 @@ Room files under `public/models/lounge/redesign/`:
 - teaTable.glb: https://karchive.vibeline.co.kr/models/angular-common-furniture-coffee-table-tea-tray
 
 Each directory's `assets.json` records the official detail/download URLs, SHA-256, byte size and transformed bounds. The source detail pages display permission for personal/commercial projects and modification, mandatory attribution, and prohibition on resale of original assets. No Creative Commons license is asserted. Files are served from the game's own content-hashed URLs without contacting the provider during gameplay.
+
+## kArchive civic set: village, hall, casino and room · 2026-09-25
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Fifteen original, self-contained GLB files were downloaded from the official model detail pages on 2026-09-25 (`https://karchive-assets.vibeline.co.kr/models/v1/<collection>/<id>.glb`). Terms displayed on the detail pages and the pre-download consent dialog that day, recorded verbatim in each `assets.json`: personal and commercial projects may use and modify the models; AI training is allowed; resale of the original assets is prohibited; the credit "자료: kArchive / 출처: 쓰레드 dogfooter" is required on a license screen, credits or description. There is no separate terms page and no Creative Commons license is asserted. Each model has one mesh and one embedded JPEG texture (1024²), no external URIs and no required extensions; together the originals total 7,880,560 bytes (web copies 4,556,676 bytes).
+
+Village files under `public/models/village/civic/` (`assets.json` there):
+
+- greenhouse.glb: https://karchive.vibeline.co.kr/models/common-buildings-greenhouse-building-compact-normal
+- noticeBoard.glb: https://karchive.vibeline.co.kr/models/common-infrastructure-public-notice-board-civic-normal
+- museumLibrary.glb: https://karchive.vibeline.co.kr/models/common-buildings-public-library-compact-normal
+- hanokHall.glb: https://karchive.vibeline.co.kr/models/dongji-12
+- festivalStage.glb: https://karchive.vibeline.co.kr/models/newyear-11
+- wisteriaPergola.glb: https://karchive.vibeline.co.kr/models/angular-onsen-wisteria-pergola
+- vegetableBed.glb: https://karchive.vibeline.co.kr/models/angular-common-nature-vegetable-bed-soil-empty
+- timberDeck.glb: https://karchive.vibeline.co.kr/models/angular-common-infrastructure-timber-deck-flat
+- harborFence.glb: https://karchive.vibeline.co.kr/models/common-fences-harbor-bollard-chain-fence-straight-normal
+- picketFence.glb: https://karchive.vibeline.co.kr/models/common-fences-rounded-wooden-picket-fence-straight-normal
+
+Hall and casino files under `public/models/lounge/club/` (`assets.json` there):
+
+- cardTable.glb: https://karchive.vibeline.co.kr/models/common-furniture-square-card-table-heritage-normal
+- banquetChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-round-back-banquet-chair-cottage-normal
+- barStool.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-bar-stool-cushion
+- queueRope.glb: https://karchive.vibeline.co.kr/models/restaurant-restaurant-queue-rope-post-heritage-normal
+
+Room file under `public/models/lounge/redesign/` (entry added to that `assets.json`):
+
+- rockingChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-rocking-chair-cottage-normal
+
+Modifications: the served copies are the web-optimized versions described at the top of this file (the fences, deck tile, bed frame, notice board, banquet chair, bar stool and rope post textures are reduced to 512²). At runtime the game sets position, orientation and (partly non-uniform) scale, draws the card-table blanket, bundle papers and crops with its own geometry, and, outside winter, recolors the snow texels of the hanok's roof and stone base with a shader. The room catalog thumbnail `public/assets/lounge/bedroom/thumbs/rocking-chair.webp` is a render of the rocking chair made for this project. Files are served from the game's own content-hashed URLs; the provider is not contacted during gameplay.

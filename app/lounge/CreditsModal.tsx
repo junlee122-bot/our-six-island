@@ -15,7 +15,9 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
           >
             kArchive
           </a>{' '}
-          · 출처: 쓰레드 dogfooter. 주택·과일나무·수국·소파·튤립 원본 모델을
+          · 출처: 쓰레드 dogfooter. 주택·과일나무·수국·소파·튤립, 회관 한옥·온실·
+          박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크, 회관과
+          카지노의 카드 테이블·의자·바 의자·차단봉, 흔들의자 원본 모델을
           사용했습니다. 테라스와 방의 가구는 3DAssets.dev (CC0)입니다.
         </p>
         <p>

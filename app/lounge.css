@@ -2633,18 +2633,6 @@ button.g-card:focus-visible {
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
-@media (max-width: 560px) {
-  /* Five stickers: 3 + 2 on phones so 아뇨아뇨아뇨 still fits. */
-  .l-reaction-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .l-reaction-grid button {
-    grid-column: span 2;
-  }
-  .l-reaction-grid button:nth-child(4) {
-    grid-column: 2 / span 2;
-  }
-}
 .l-reaction-grid button {
   display: flex;
   flex-direction: column;
@@ -2684,6 +2672,25 @@ button.g-card:focus-visible {
   line-height: 1.4;
   color: #846a57;
   text-align: center;
+}
+@media (max-width: 560px) {
+  /* Five stickers: 3 + 2 on phones so 아뇨아뇨아뇨 still fits. */
+  .l-reaction-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .l-reaction-grid button {
+    grid-column: span 2;
+  }
+  .l-reaction-grid button:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
+  .l-reaction-grid b {
+    font-size: 14px;
+    letter-spacing: -0.04em;
+  }
+  .l-reaction-picker {
+    padding: 22px 18px;
+  }
 }
 .l-reaction-picker-status {
   display: block;

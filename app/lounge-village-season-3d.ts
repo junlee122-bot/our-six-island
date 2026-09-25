@@ -13,6 +13,7 @@ import {
   VILLAGE_PIER,
   VILLAGE_POND,
   VILLAGE_TERRACE,
+  VILLAGE_PLACES,
   type VillagePoint,
 } from './lounge-village-layout';
 import { VILLAGE_SEASON_MATERIALS, batchDirectMeshes } from './lounge-village-world';
@@ -198,6 +199,8 @@ export type SeasonUpdate = {
   effects: boolean;
   /** Bundle notice board papers: done state per bundle. */
   bundlesDone: readonly boolean[];
+  /** 집 확장 tier per actor (3: front garden, 4: second floor + nameplate). */
+  houses?: Readonly<Record<number, number>>;
 };
 export type FishingState = {
   phase: 'none' | 'wait' | 'bite' | 'caught';
@@ -257,6 +260,7 @@ export class VillageSeasonLayer {
     this.buildBoard();
     this.buildGreenhouse();
     this.buildFlagTouches();
+    this.buildProjectTouches();
     const fishing = this.buildBobber();
     this.bobber = fishing.bobber;
     this.ripple = fishing.ripple;
@@ -375,6 +379,7 @@ export class VillageSeasonLayer {
     this.root.add(g);
     // Museum flag: a second floor (and the roof moves up).
     const floor2 = new THREE.Group();
+    floor2.name = 'village-museum-floor2';
     box(floor2, MAT.cream, x, 1.95, z, w * 0.7, 0.9, d * 0.7);
     box(floor2, MAT.glass, x, 1.95, z + d * 0.35 + 0.01, w * 0.5, 0.5, 0.02);
     const roof2 = new THREE.Mesh(GEO.cone, MAT.roof2);
@@ -426,6 +431,7 @@ export class VillageSeasonLayer {
     batchDirectMeshes(g);
     this.root.add(g);
     const glass = new THREE.Group();
+    glass.name = 'village-greenhouse-glass';
     for (const sz of [-1, 1]) {
       const pane = box(glass, MAT.glass, x, 0.7, z + (sz * d) / 2, w, 1.26, 0.02);
       pane.castShadow = false;
@@ -484,6 +490,139 @@ export class VillageSeasonLayer {
     cyl(market, MAT.woodDark, mx, 0.65, mz + 0.4, 0.04, 1.3);
     batchDirectMeshes(market);
     this.addFlagged('market', market);
+  }
+
+  /** 마을 공사 2차 (ECON-2): what each finished project adds to the village. */
+  private buildProjectTouches() {
+    const glow = new THREE.MeshBasicMaterial({ color: '#ffe7a0' });
+    // 다리 등불: lantern posts along the sea deck.
+    const lights = new THREE.Group();
+    lights.name = 'village-project-lights';
+    const { x: px, z: pz, width: pw } = VILLAGE_PIER;
+    for (let i = 0; i < 4; i++)
+      for (const s of [-1, 1]) {
+        const lx = px - 1.2 + i * 1.6,
+          lz = pz + s * (pw / 2 - 0.05);
+        cyl(lights, MAT.woodDark, lx, 0.8, lz, 0.04, 1.0);
+        const bulb = new THREE.Mesh(GEO.sphere, glow);
+        bulb.position.set(lx, 1.38, lz);
+        bulb.scale.setScalar(0.12);
+        lights.add(bulb);
+      }
+    const lightSign = signSprite('다리 등불', 0.42);
+    lightSign.position.set(px - 1.2, 2.0, pz);
+    lights.add(lightSign);
+    this.addFlagged('lights', lights);
+    // 광장 대분수: a higher tier of jets over the plaza fountain.
+    const plaza = new THREE.Group();
+    plaza.name = 'village-project-plaza';
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      cyl(plaza, MAT.jet, Math.sin(a) * 0.95, 1.2, Math.cos(a) * 0.95, 0.04, 1.3).castShadow = false;
+    }
+    cyl(plaza, MAT.jet, 0, 2.3, 0, 0.1, 2.2).castShadow = false;
+    const plazaSign = signSprite('광장 대분수', 0.42);
+    plazaSign.position.set(0, 3.7, 0);
+    plaza.add(plazaSign);
+    this.addFlagged('plaza', plaza);
+    // 카지노 VIP룸: a gold awning and sign on the casino.
+    const casino = VILLAGE_PLACES.find((p) => p.kind === 'casino');
+    if (casino) {
+      const vip = new THREE.Group();
+      vip.name = 'village-project-vip';
+      const gold = mat('#d9b25a', { metalness: 0.4, roughness: 0.4 });
+      box(vip, gold, casino.x, 2.55, casino.z + casino.depth / 2 + 0.35, casino.width * 0.55, 0.08, 0.8);
+      const sign = signSprite('카지노 VIP룸', 0.5);
+      sign.position.set(casino.x, 3.3, casino.z + casino.depth / 2 + 0.4);
+      vip.add(sign);
+      this.addFlagged('vip', vip);
+    }
+    // 온실 2동: a second glass house beside the first.
+    const gh = new THREE.Group();
+    gh.name = 'village-project-greenhouse2';
+    const { x: gx, z: gz, width: gw, depth: gd } = VILLAGE_GREENHOUSE;
+    const g2x = gx + gw + 0.5;
+    box(gh, MAT.stone, g2x, 0.06, gz, gw * 0.8, 0.12, gd).castShadow = false;
+    box(gh, MAT.glass, g2x, 0.7, gz, gw * 0.8, 1.26, gd).castShadow = false;
+    for (let i = 0; i < 3; i++) {
+      const plant = new THREE.Mesh(GEO.sphere, MAT.leaf);
+      plant.position.set(g2x - 0.4 + i * 0.4, 0.3, gz);
+      plant.scale.set(0.18, 0.22, 0.18);
+      gh.add(plant);
+    }
+    const ghSign = signSprite('온실 2동', 0.4);
+    ghSign.position.set(g2x, 2.0, gz + gd / 2);
+    gh.add(ghSign);
+    this.addFlagged('greenhouse2', gh);
+    // 마을 축제 무대: a ring of festival lights over the plaza.
+    const fest = new THREE.Group();
+    fest.name = 'village-project-festival';
+    const colors = [glow, new THREE.MeshBasicMaterial({ color: '#f7a8c9' }), new THREE.MeshBasicMaterial({ color: '#9fd8f0' })];
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      const b = new THREE.Mesh(GEO.sphere, colors[i % 3]);
+      b.position.set(Math.sin(a) * 4.5, 3.0 + Math.sin(i * 0.9) * 0.1, Math.cos(a) * 4.5);
+      b.scale.setScalar(0.09);
+      fest.add(b);
+    }
+    const festSign = signSprite('마을 축제', 0.5);
+    festSign.position.set(0, 4.3, -4.2);
+    fest.add(festSign);
+    this.addFlagged('festival', fest);
+  }
+
+  /** 집 확장 tiers 3–4 outside each friend's house (rebuilt when tiers change). */
+  private houseGroup: THREE.Group | null = null;
+  private houseKey = '';
+  private updateHouses(houses: Readonly<Record<number, number>> | undefined) {
+    const key = JSON.stringify(houses ?? {});
+    if (key === this.houseKey) return;
+    this.houseKey = key;
+    if (this.houseGroup) {
+      this.root.remove(this.houseGroup);
+      this.houseGroup.traverse((o) => {
+        if (o instanceof THREE.Sprite) {
+          o.material.map?.dispose();
+          o.material.dispose();
+        }
+      });
+    }
+    const g = new THREE.Group();
+    g.name = 'village-house-tiers';
+    for (const place of VILLAGE_PLACES) {
+      if (place.kind !== 'home' || place.actor === undefined) continue;
+      const tier = houses?.[place.actor] ?? 0;
+      if (tier < 3) continue;
+      const fz = place.z + place.depth / 2 + 0.4;
+      // Tier 3: a flower bed and two garden lanterns in front of the house.
+      for (let i = 0; i < 5; i++) {
+        const f = new THREE.Mesh(GEO.sphere, [MAT.flag1, MAT.flag2, MAT.flag3][i % 3]);
+        f.position.set(place.x - place.width / 2 + 0.3 + i * 0.22, 0.14, fz);
+        f.scale.setScalar(0.1);
+        g.add(f);
+      }
+      for (const s of [-1, 1]) {
+        cyl(g, MAT.woodDark, place.x + s * (place.width / 2 + 0.2), 0.45, fz, 0.035, 0.9);
+        const bulb = new THREE.Mesh(GEO.sphere, new THREE.MeshBasicMaterial({ color: '#ffe7a0' }));
+        bulb.position.set(place.x + s * (place.width / 2 + 0.2), 0.95, fz);
+        bulb.scale.setScalar(0.09);
+        g.add(bulb);
+      }
+      // Tier 4: a pennant pole and a nameplate over the door.
+      if (tier >= 4) {
+        const poleX = place.x + place.width / 2 + 0.5;
+        cyl(g, MAT.woodDark, poleX, 1.5, place.z, 0.04, 3.0);
+        const flag = new THREE.Mesh(GEO.box, MAT.flag2);
+        flag.position.set(poleX + 0.3, 2.8, place.z);
+        flag.scale.set(0.55, 0.32, 0.02);
+        g.add(flag);
+        const plate = signSprite(`${place.name.replace(/의 집$/, '')}의 2층집`, 0.42);
+        plate.position.set(place.x, 3.6, fz - 0.2);
+        g.add(plate);
+      }
+    }
+    this.houseGroup = g;
+    this.root.add(g);
   }
 
   private buildMarkers(kind: 'forage' | 'bug') {
@@ -566,9 +705,10 @@ export class VillageSeasonLayer {
 
   /** Season, weather, flags and today's spawns (returns true when something changed). */
   update(u: SeasonUpdate): boolean {
-    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone]);
+    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone, u.houses ?? {}]);
     if (key === this.lastKey) return false;
     this.lastKey = key;
+    this.updateHouses(u.houses);
     this.effects = u.effects && !this.reduced;
     // Season tint (winter frost, autumn gold…): a blend over the original colours.
     const tint = SEASON_TINT[u.season];

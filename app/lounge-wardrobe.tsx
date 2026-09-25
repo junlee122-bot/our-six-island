@@ -11,6 +11,7 @@ import {
   HAIR_COLORS,
   TOP_COLORS,
   collectionsFor,
+  ORIGINAL_ACTORS,
   hatsFor,
   DAOWON_COLLECTIONS,
   COSTUME_COLLECTIONS,
@@ -496,7 +497,9 @@ export function Wardrobe({
                 <p className="l-help-text">
                   {actor === 0
                     ? '머리 탭에서 만두머리, 소품 탭에서 응원 머리띠를 함께 골라 보세요.'
-                    : '‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨 있어요.'}
+                    : ORIGINAL_ACTORS.includes(actor)
+                      ? '‘처음 만난 우리’에는 익숙한 원래 그림과 걷기·인사 모션이 담겨 있어요.'
+                      : '고른 코디는 마을과 방, 회관과 카지노에서도 그대로 보여요.'}
                 </p>
               </>
             )}

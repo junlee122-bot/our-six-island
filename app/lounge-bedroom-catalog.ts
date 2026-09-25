@@ -85,6 +85,8 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
   e('cushions', 'model', '쿠션 세트', 'soft', 'small', 1.08, 0.66, 0.6),
   e('plant-stand', 'model', '화분 선반', 'plant', 'floor', 1.18, 0.48, 1.44),
   e('tulips', 'model', '튤립 화분', 'plant', 'small', 0.89, 0.46, 1.01),
+  // Furniture shop piece (lounge-items FURNITURE): a kArchive 3D model, owned copies only.
+  e('furn-rocking-chair', 'model', '흔들의자', 'furniture', 'floor', 0.91, 1.2, 1.25, { unlock: 'furn-rocking-chair', premium: true }),
   // Painted props (Higgsfield art) shown as upright cards.
   e('vanity', 'prop', '화장대', 'furniture', 'floor', 1.32, 0.6, 1.8),
   e('clothes-rack', 'prop', '옷걸이 행거', 'furniture', 'floor', 1.5, 0.6, 1.92),

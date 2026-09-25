@@ -28,4 +28,21 @@ export const LOUNGE_MODELS = {
   archiveBookcase: '/models/lounge/redesign/archiveBookcase.glb',
   plantStand: '/models/lounge/redesign/plantStand.glb',
   teaTable: '/models/lounge/redesign/teaTable.glb',
+  rockingChair: '/models/lounge/redesign/rockingChair.glb',
+  // kArchive civic set (2026-09-25): village buildings and props, placed by
+  // lounge-village-karchive.ts; hall/casino furniture in lounge-interior-scene.ts.
+  greenhouse: '/models/village/civic/greenhouse.glb',
+  noticeBoard: '/models/village/civic/noticeBoard.glb',
+  museumLibrary: '/models/village/civic/museumLibrary.glb',
+  hanokHall: '/models/village/civic/hanokHall.glb',
+  festivalStage: '/models/village/civic/festivalStage.glb',
+  wisteriaPergola: '/models/village/civic/wisteriaPergola.glb',
+  vegetableBed: '/models/village/civic/vegetableBed.glb',
+  timberDeck: '/models/village/civic/timberDeck.glb',
+  harborFence: '/models/village/civic/harborFence.glb',
+  picketFence: '/models/village/civic/picketFence.glb',
+  cardTable: '/models/lounge/club/cardTable.glb',
+  banquetChair: '/models/lounge/club/banquetChair.glb',
+  barStool: '/models/lounge/club/barStool.glb',
+  queueRope: '/models/lounge/club/queueRope.glb',
 } as const;

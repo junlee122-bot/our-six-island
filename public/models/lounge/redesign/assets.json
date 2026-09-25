@@ -92,6 +92,42 @@
           0.6151713728904724
         ]
       }
+    },
+    {
+      "key": "rockingChair",
+      "id": "common-furniture-rocking-chair-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-rocking-chair-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-rocking-chair-cottage-normal.glb",
+      "file": "rockingChair.glb",
+      "bytes": 481632,
+      "sha256": "0eb4a85c660e55d53d65e4119b024f40087ad2e8835d80788593d14e284b5c87",
+      "webBytes": 306448,
+      "meshes": 1,
+      "triangles": 6104,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.304,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.304,
+          0.832,
+          0.4
+        ],
+        "size": [
+          0.608,
+          0.832,
+          0.8
+        ]
+      },
+      "use": "방 가구 카탈로그 \"흔들의자\"",
+      "downloaded": "2026-09-25",
+      "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-25 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님."
     }
   ]
 }

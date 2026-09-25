@@ -11,6 +11,7 @@ import {
   GAME_KINDS,
   TABLE_STAKES,
   gameReservation,
+  stakeLock,
   tableIdOf,
   type GameKind,
 } from '../lounge-games';
@@ -159,7 +160,9 @@ export function TableSheet({
   const invite = state.invite;
   const tableStake = mode === 'setup' ? stake : (state.stake ?? stake);
   const reservation = gameReservation(game, tableStake);
-  const short = view.wallet.balance < reservation;
+  // High-roller tiers (50,000 / VIP 100,000) open with the wallet and 마을 공사.
+  const lockOf = (n: number) => stakeLock(n, view.wallet.balance, view.life?.flags ?? []);
+  const short = view.wallet.balance < reservation || (mode === 'setup' && !!lockOf(stake));
   const run = async (fn: () => Promise<boolean>) => {
     if (busyRef.current) return false;
     busyRef.current = true;
@@ -262,7 +265,7 @@ export function TableSheet({
       }
       if (mode === 'setup' && digit && !e.shiftKey) {
         const n = TABLE_STAKES[Number(digit) - 1];
-        if (!n) return false;
+        if (!n || lockOf(n)) return false;
         setStake(n);
         return true;
       }
@@ -413,7 +416,9 @@ export function TableSheet({
                   role="radio"
                   aria-checked={stake === n}
                   aria-keyshortcuts={String(i + 1)}
-                  title={`${formatBeom(n)} (${i + 1})`}
+                  title={lockOf(n) ?? `${formatBeom(n)} (${i + 1})`}
+                  disabled={!!lockOf(n)}
+                  data-testid={`stake-${n}`}
                   onClick={() => setStake(n)}
                 >
                   {formatBeom(n)}

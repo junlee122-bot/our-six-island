@@ -1,11 +1,12 @@
 'use client';
 /* oxlint-disable next/no-img-element -- GitHub Pages embeds the existing SVG cards without an image server. */
-import { useRef, useState } from 'react';
-import { Coins, Crown, Flower2 } from 'lucide-react';
+import { useId, useRef, useState } from 'react';
+import { BookOpen, Coins, Crown, Flower2, X } from 'lucide-react';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { beom } from './lounge-poker-table';
 import type { SeotdaAction, SeotdaView } from './lounge-seotda';
 import { HWATU_CARDS } from './hwatu-cards';
+import { SEOTDA_CHART, seotdaChartRow } from './lounge-seotda-chart';
 import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
@@ -44,6 +45,54 @@ function Hwatu({ card }: { card?: string }) {
     </span>
   );
 }
+/** 족보표: every rank from the top with its cards; my current hand is marked. */
+function SeotdaChart({
+  id,
+  mine,
+  onClose,
+}: {
+  id: string;
+  mine: string | null;
+  onClose: () => void;
+}) {
+  const row = mine ? seotdaChartRow(mine) : undefined;
+  const list = (special: boolean) =>
+    SEOTDA_CHART.filter((r) => !!r.special === special).map((r) => (
+      <li
+        key={r.id}
+        className={r.id === row?.id ? 'mine' : undefined}
+        aria-current={r.id === row?.id ? 'true' : undefined}
+        data-testid={`seotda-chart-${r.id}`}
+      >
+        <span className="s-chart-cards" aria-hidden="true">
+          {r.cards.map((c) => (
+            <img key={c} src={LOUNGE_ASSETS[c as keyof typeof LOUNGE_ASSETS]} alt="" />
+          ))}
+        </span>
+        <span className="s-chart-text">
+          <b>
+            {r.name}
+            {r.id === row?.id && <em>내 패</em>}
+          </b>
+          <small>{r.note}</small>
+        </span>
+      </li>
+    ));
+  return (
+    <aside id={id} className="s-chart" aria-label="섯다 족보표" data-testid="seotda-chart">
+      <header>
+        <strong>족보표</strong>
+        <span>위에서부터 높은 패예요</span>
+        <button type="button" onClick={onClose} aria-label="족보표 닫기">
+          <X size={16} />
+        </button>
+      </header>
+      <ol className="s-chart-ranks">{list(false)}</ol>
+      <h4>특수 족보</h4>
+      <ul className="s-chart-special">{list(true)}</ul>
+    </aside>
+  );
+}
 export function SeotdaTable({
   match: g,
   seat,
@@ -65,6 +114,8 @@ export function SeotdaTable({
   const [bet, setBet] = useState({ version, value: g.legal.minTo }),
     [sent, setSent] = useState<string | null>(null),
     inFlight = useRef<string | null>(null);
+  const [chartOpen, setChartOpen] = useState(false),
+    chartId = useId();
   const raise = bet.version === version ? bet.value : g.legal.minTo;
   const setRaise = (value: number) => setBet({ version, value });
   const legal = g.legal,
@@ -95,6 +146,14 @@ export function SeotdaTable({
       ),
     );
   const away = (i: number) => !!g.away?.includes(i);
+  // 내 패: my two cards' rank and where it sits on the chart.
+  const myRank = seat >= 0 && g.hand.length === 2 ? (g.rank?.label ?? null) : null,
+    myRow = myRank ? seotdaChartRow(myRank) : undefined,
+    myPlace = myRow
+      ? myRow.special
+        ? '특수 족보'
+        : `위에서 ${SEOTDA_CHART.indexOf(myRow) + 1}번째`
+      : '';
   const player = (i: number, self = false) => {
     const opened = g.revealed.find((h) => h.seat === i),
       cards = self ? g.hand : opened?.cards,
@@ -164,13 +223,33 @@ export function SeotdaTable({
         aside={aside}
         className="s-host"
         side={
-          // g.round counts redeals within this 판 (the header shows the 판 number).
-          g.round > 1 && (
-            <b className="s-rematch">
-              {g.round - 1}
-              <small>재경기</small>
-            </b>
-          )
+          <div className="s-chart-bar">
+            {
+              // g.round counts redeals within this 판 (the header shows the 판 number).
+              g.round > 1 && (
+                <b className="s-rematch">
+                  {g.round - 1}
+                  <small>재경기</small>
+                </b>
+              )
+            }
+            {myRank && (
+              <span className="s-my-rank" data-testid="seotda-my-rank">
+                내 패: <b>{myRank}</b>
+                <small>{myPlace}</small>
+              </span>
+            )}
+            <button
+              type="button"
+              className="s-chart-toggle"
+              aria-expanded={chartOpen}
+              aria-controls={chartId}
+              onClick={() => setChartOpen((open) => !open)}
+              data-testid="seotda-chart-toggle"
+            >
+              <BookOpen size={15} /> 족보 {chartOpen ? '닫기' : '보기'}
+            </button>
+          </div>
         }
       >
         {g.phase === 'betting' && g.turn >= 0 && (
@@ -189,6 +268,9 @@ export function SeotdaTable({
         )}
       </DealerHost>
       <div className="s-table">
+        {chartOpen && (
+          <SeotdaChart id={chartId} mine={myRank} onClose={() => setChartOpen(false)} />
+        )}
         <div
           className="s-opponents"
           style={{
@@ -343,20 +425,10 @@ export function SeotdaTable({
           번의 베팅으로 승부하며, 모두 같은 바이인으로 시작해요. 처음에
           100범씩 내고 더 잃을 수 있는 한도는 남은 칩만큼이에요.
         </p>
-        <div className="s-rank-list">
-          <b>38광땡</b>
-          <span>가장 높은 족보</span>
-          <b>13·18광땡</b>
-          <span>실제 광 두 장끼리만 성립</span>
-          <b>장땡 → 삥땡</b>
-          <span>같은 월 두 장 · 10땡부터 1땡</span>
-          <b>알리 · 독사 · 구삥</b>
-          <span>1+2 / 1+4 / 1+9</span>
-          <b>장삥 · 장사 · 세륙</b>
-          <span>1+10 / 4+10 / 4+6</span>
-          <b>갑오 → 망통</b>
-          <span>두 월을 더한 끝자리 · 9끗부터 0끗</span>
-        </div>
+        <p>
+          족보는 위쪽의 <b>족보 보기</b>에서 화투 그림과 함께 높은 순서대로 볼
+          수 있어요.
+        </p>
         <p>
           <b>암행어사</b>는 4월 열끗+7월 열끗으로, 최고 패가 13·18광땡일 때
           잡아요. 그 외에는 1끗이에요. <b>땡잡이</b>는 3월 광+7월 열끗으로,

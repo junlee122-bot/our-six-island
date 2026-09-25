@@ -1,0 +1,350 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-25",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-25 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/ 같은 경로에 보관. 런타임에는 크기·위치·방향(일부 비균일 스케일)과, 회관 한옥(hanokHall)은 겨울이 아닐 때 지붕·기단의 눈 텍셀만 셰이더에서 기와·돌 색으로 바꿈.",
+  "assets": [
+    {
+      "key": "greenhouse",
+      "id": "common-buildings-greenhouse-building-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-greenhouse-building-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-greenhouse-building-compact-normal.glb",
+      "file": "greenhouse.glb",
+      "bytes": 922920,
+      "sha256": "29fb8ec2c7d2f35bb7c53c24de0595eae298ee739220dbd3451b5050a2a665d2",
+      "webBytes": 604508,
+      "meshes": 1,
+      "triangles": 8911,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.6,
+          0,
+          -1.172
+        ],
+        "max": [
+          1.6,
+          2.367,
+          1.172
+        ],
+        "size": [
+          3.2,
+          2.367,
+          2.344
+        ]
+      },
+      "use": "마을 온실(공사 greenhouse 완료 후). 절차 생성 온실 대체"
+    },
+    {
+      "key": "noticeBoard",
+      "id": "common-infrastructure-public-notice-board-civic-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-infrastructure-public-notice-board-civic-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-infrastructure-public-notice-board-civic-normal.glb",
+      "file": "noticeBoard.glb",
+      "bytes": 432848,
+      "sha256": "8c9086b3047375692d594b5d4545c89f93f7e7bf4446b1dba9df53197c549b6a",
+      "webBytes": 213876,
+      "meshes": 1,
+      "triangles": 6063,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.254
+        ],
+        "max": [
+          0.6,
+          1.09,
+          0.254
+        ],
+        "size": [
+          1.2,
+          1.09,
+          0.509
+        ]
+      },
+      "use": "마을 게시판(꾸러미 종이는 코드로 표시)"
+    },
+    {
+      "key": "museumLibrary",
+      "id": "common-buildings-public-library-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-public-library-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-public-library-compact-normal.glb",
+      "file": "museumLibrary.glb",
+      "bytes": 708924,
+      "sha256": "bb31e53cccc8b6db9eadd17feb24aa7329597bb7c50ebe790d0fdc958e22d2ae",
+      "webBytes": 468512,
+      "meshes": 1,
+      "triangles": 9469,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.338,
+          0,
+          -1.5
+        ],
+        "max": [
+          1.338,
+          2.209,
+          1.5
+        ],
+        "size": [
+          2.677,
+          2.209,
+          3
+        ]
+      },
+      "use": "마을 박물관 건물"
+    },
+    {
+      "key": "hanokHall",
+      "id": "dongji-12",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-12",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-12.glb",
+      "file": "hanokHall.glb",
+      "bytes": 714724,
+      "sha256": "19f21b7238108ca82aefc68d83b4955bdc5c573f30f83dc6d5ac4d8bf6cad463",
+      "webBytes": 463540,
+      "meshes": 1,
+      "triangles": 6099,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.653
+        ],
+        "max": [
+          1,
+          1.57,
+          0.653
+        ],
+        "size": [
+          2,
+          1.57,
+          1.307
+        ]
+      },
+      "use": "범마을 회관 외관(한옥). 겨울 외에는 눈 텍셀을 셰이더로 기와·돌 색으로 바꿈"
+    },
+    {
+      "key": "festivalStage",
+      "id": "newyear-11",
+      "source": "https://karchive.vibeline.co.kr/models/newyear-11",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/newyear-11.glb",
+      "file": "festivalStage.glb",
+      "bytes": 449036,
+      "sha256": "211c39fd82a9a446bdc6a1b0eb99d670d8c190ffae0298128f5f5338902aaf9f",
+      "webBytes": 286456,
+      "meshes": 1,
+      "triangles": 4960,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.92,
+          0,
+          -1
+        ],
+        "max": [
+          0.92,
+          1.418,
+          1
+        ],
+        "size": [
+          1.84,
+          1.418,
+          2
+        ]
+      },
+      "use": "축제 무대(공사 stage 완료 후, 이전에는 공사장)"
+    },
+    {
+      "key": "wisteriaPergola",
+      "id": "angular-onsen-wisteria-pergola",
+      "source": "https://karchive.vibeline.co.kr/models/angular-onsen-wisteria-pergola",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-onsen-wisteria-pergola.glb",
+      "file": "wisteriaPergola.glb",
+      "bytes": 883184,
+      "sha256": "2c0c30e971edf0f45e1e5a4cb572ac0d32477b5d5247d6d8c05144359075e3a3",
+      "webBytes": 610496,
+      "meshes": 1,
+      "triangles": 7314,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.092,
+          0,
+          -1.25
+        ],
+        "max": [
+          1.092,
+          1.777,
+          1.25
+        ],
+        "size": [
+          2.183,
+          1.777,
+          2.5
+        ]
+      },
+      "use": "동쪽 정원 등나무 쉼터(기둥만 충돌)"
+    },
+    {
+      "key": "vegetableBed",
+      "id": "angular-common-nature-vegetable-bed-soil-empty",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-nature-vegetable-bed-soil-empty",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-nature-vegetable-bed-soil-empty.glb",
+      "file": "vegetableBed.glb",
+      "bytes": 470748,
+      "sha256": "9cf3a988f01ca9ea6cfabbdc7ceeeabebe022e92295da119b726871557dbffd5",
+      "webBytes": 219836,
+      "meshes": 1,
+      "triangles": 5072,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.388
+        ],
+        "max": [
+          0.6,
+          0.431,
+          0.388
+        ],
+        "size": [
+          1.2,
+          0.431,
+          0.777
+        ]
+      },
+      "use": "친구 7명의 텃밭 틀(작물·흙 칸은 코드)"
+    },
+    {
+      "key": "timberDeck",
+      "id": "angular-common-infrastructure-timber-deck-flat",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-infrastructure-timber-deck-flat",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-infrastructure-timber-deck-flat.glb",
+      "file": "timberDeck.glb",
+      "bytes": 397792,
+      "sha256": "50ee0e56c464e70b548b45023604f5a06c78f7dbe424dd8506aa5b2e50ea06a3",
+      "webBytes": 195676,
+      "meshes": 1,
+      "triangles": 3828,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.5
+        ],
+        "max": [
+          0.5,
+          0.08,
+          0.5
+        ],
+        "size": [
+          1,
+          0.08,
+          1
+        ]
+      },
+      "use": "바다 낚시 데크 바닥 타일(공사 bridge 완료 후)"
+    },
+    {
+      "key": "harborFence",
+      "id": "common-fences-harbor-bollard-chain-fence-straight-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-fences-harbor-bollard-chain-fence-straight-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-fences-harbor-bollard-chain-fence-straight-normal.glb",
+      "file": "harborFence.glb",
+      "bytes": 296368,
+      "sha256": "609aba075087820b20dd739def35176ff9d524b2630e74b0353cefe2d86d6e4b",
+      "webBytes": 126736,
+      "meshes": 1,
+      "triangles": 2598,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.08
+        ],
+        "max": [
+          0.5,
+          1.2,
+          0.08
+        ],
+        "size": [
+          1,
+          1.2,
+          0.16
+        ]
+      },
+      "use": "바다 데크 난간"
+    },
+    {
+      "key": "picketFence",
+      "id": "common-fences-rounded-wooden-picket-fence-straight-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-fences-rounded-wooden-picket-fence-straight-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-fences-rounded-wooden-picket-fence-straight-normal.glb",
+      "file": "picketFence.glb",
+      "bytes": 262044,
+      "sha256": "414b9e35a13be67d794ee1771b30cb4479944ffa7babf404e2301c88e5354d1e",
+      "webBytes": 107896,
+      "meshes": 1,
+      "triangles": 2539,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.08
+        ],
+        "max": [
+          0.5,
+          1.2,
+          0.08
+        ],
+        "size": [
+          1,
+          1.2,
+          0.16
+        ]
+      },
+      "use": "주민 집 옆 울타리"
+    }
+  ]
+}

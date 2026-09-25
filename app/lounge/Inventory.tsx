@@ -25,6 +25,8 @@ import type { Notify } from './Toast';
 import { ItemIcon, QualityStar } from './ItemIcon';
 import { Hotbar, HOTBAR_DRAG_TYPE, type HotbarState } from './LifeHud';
 import { useLifeAction } from './LifePanels';
+import { sellQuote } from '../lounge-life-plus';
+import { useServerClock } from './use-server-clock';
 import './life-plus.css';
 
 function EntryTip({ entry, museum }: { entry: InvEntry; museum: boolean }) {
@@ -79,6 +81,8 @@ export function InventoryPanel({
   // One floating tooltip (fixed to the viewport) so the scrolling grid never clips it.
   const [tip, setTip] = useState<{ key: string; x: number; y: number; below: boolean } | null>(null);
   const entries = useMemo(() => (life ? inventoryEntries(life.me) : []), [life]);
+  // Sell quotes follow the server clock (demand resets at the KST day).
+  const clock = useServerClock(view.clockOffset ?? 0);
   if (!life)
     return (
       <Modal title="가방" onClose={onClose}>
@@ -96,7 +100,13 @@ export function InventoryPanel({
   const have = crop && split ? split[q] : (entry?.n ?? 0);
   const price = crop ? cropPrice(crop, q) : (entry?.sell ?? 0);
   const count = Math.max(1, Math.min(n, have, SELL_MAX_N));
-  const total = price * count;
+  // Demand curves (ECON-2): the server pays less for each extra unit sold today.
+  const quote = (k: number) => (entry && price > 0 ? sellQuote(life, entry.id, q, k, clock).total : price * k);
+  const total = quote(count);
+  // "최대": as many as can be sold right now — the bag, the per-sale limit and
+  // what today's cap still allows at the quoted (demand-adjusted) price.
+  let most = price > 0 ? Math.min(have, SELL_MAX_N) : 0;
+  while (most > 0 && quote(most) > cap) most--;
   const donated = !!(entry && life.museum?.[entry.id]);
   const sell = async () => {
     if (!entry) return;
@@ -204,22 +214,45 @@ export function InventoryPanel({
               )}
               {price > 0 && have > 0 && (
                 <div className="l-inv-sell">
-                  <label>
-                    <span>팔 개수</span>
-                    <input
-                      type="range"
-                      min={1}
-                      max={Math.max(1, Math.min(have, SELL_MAX_N))}
-                      value={count}
-                      onChange={(e) => setN(Number(e.target.value))}
-                      aria-valuetext={`${count}개`}
-                    />
-                    <output>{count}개</output>
-                  </label>
+                  <div className="l-inv-sell-row">
+                    <label>
+                      <span>팔 개수</span>
+                      <input
+                        type="range"
+                        min={1}
+                        max={Math.max(1, Math.min(have, SELL_MAX_N))}
+                        value={count}
+                        onChange={(e) => setN(Number(e.target.value))}
+                        aria-valuetext={`${count}개`}
+                      />
+                      <output>{count}개</output>
+                    </label>
+                    <button
+                      type="button"
+                      className="l-secondary l-inv-max"
+                      disabled={most < 1 || count === most}
+                      onClick={() => setN(most)}
+                      title={most < 1 ? '오늘 판매 한도를 다 채웠어요' : `지금 팔 수 있는 최대 ${most}개`}
+                      data-testid="inv-sell-max"
+                    >
+                      최대
+                    </button>
+                  </div>
                   <button className="l-primary" disabled={busy || total > cap} onClick={() => void sell()} data-testid="inv-sell">
                     <Coins size={15} /> {formatBeom(total)}에 팔기
                   </button>
-                  {total > cap && <small className="l-why">오늘 판매 한도를 넘어요</small>}
+                  {total < price * count && (
+                    <small className="l-help-text" data-testid="inv-sell-demand">
+                      오늘 많이 팔아서 값이 내려갔어요 ({Math.round((total / (price * count)) * 100)}%). 자정에 시세가 돌아와요.
+                    </small>
+                  )}
+                  {most < 1 ? (
+                    <small className="l-why" data-testid="inv-sell-why">
+                      오늘 판매 한도를 다 채웠어요. 자정(한국 시간)에 다시 팔 수 있어요.
+                    </small>
+                  ) : (
+                    total > cap && <small className="l-why">오늘 판매 한도를 넘어요. 지금은 {most}개까지 팔 수 있어요.</small>
+                  )}
                 </div>
               )}
               <div className="l-inv-actions">

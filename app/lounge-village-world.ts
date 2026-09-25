@@ -612,12 +612,6 @@ function mailbox(set: Instancer, x: number, z: number, accent: THREE.Material) {
   set.box(accent, 0, 1.48, 0, 0.48, 0.38, 0.36);
   set.box(M.gold, 0, 1.55, 0.2, 0.23, 0.035, 0.03);
 }
-function fence(set: Instancer, x: number, z: number, length: number) {
-  set.at(x, z);
-  set.box(M.woodLight, 0, 0.34, 0, 0.12, 0.11, length);
-  for (let k = -length / 2 + 0.2; k <= length / 2 - 0.1; k += 0.55)
-    set.box(M.white, 0, 0.47, k, 0.12, 0.38, 0.09);
-}
 
 export function batchDirectMeshes(parent: THREE.Object3D, excludedName = '') {
   const batches = new Map<
@@ -1072,9 +1066,8 @@ export function buildVillageWorld(scene: THREE.Object3D): VillageWorld {
       flowers(set, item.x, item.z, item.scale ?? 6, item.variant ?? 0);
     else if (item.kind === 'mailbox')
       mailbox(set, item.x, item.z, accents[item.home ?? 0] ?? M.roofA);
-    else if (item.kind === 'fence' && item.collider?.shape === 'box')
-      fence(set, item.x, item.z, item.collider.d);
-    // Hydrangeas are kArchive models placed by the component; rails below.
+    // Hydrangeas and the homes' picket fences are kArchive models placed by
+    // the component (lounge-village-karchive.ts); rails below.
   }
 
   // Short timber promenade at the eastern garden edge.

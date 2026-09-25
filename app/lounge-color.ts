@@ -42,6 +42,7 @@ type SkinAnchors = {
   shortSleeveTunic?: boolean;
   bareToes?: boolean;
   darkHighCollar?: boolean;
+  sleevelessTop?: boolean;
 };
 const luminance = (r: number, g: number, b: number) =>
   r * 0.21 + g * 0.72 + b * 0.07;
@@ -423,6 +424,22 @@ export function createSkinMask(
     );
     for (const shoulder of shoulders)
       if (shoulder.points.length > head * head * 0.002) expand(shoulder);
+  }
+  if (anchors.sleevelessTop) {
+    // Neck and shoulders are lit differently from the face, so the strict
+    // face-ratio test misses them. Between the chin and the chest every warm
+    // pixel is skin here: the shirt is grey, the tie teal and the hair source
+    // blue. Take the warm parts themselves (no bounding-box fill).
+    const bare = components(
+      warm,
+      (x, y) =>
+        Math.abs(x - cx) <= head * 0.64 &&
+        y >= faceBottom &&
+        y <= top + bodyHeight * 0.5,
+    );
+    for (const part of bare)
+      if (part.points.length >= head * head * 0.001)
+        for (const point of part.points) pixels[point] = 1;
   }
   if (anchors.shortSleeveTunic) {
     // The Shampoo atlas has pale trousers joined to its gold side trim by a few

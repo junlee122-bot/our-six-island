@@ -1,0 +1,146 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-25",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-25 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/ 같은 경로에 보관. 런타임에는 크기·위치·방향(일부 비균일 스케일)과, 회관 한옥(hanokHall)은 겨울이 아닐 때 지붕·기단의 눈 텍셀만 셰이더에서 기와·돌 색으로 바꿈.",
+  "assets": [
+    {
+      "key": "cardTable",
+      "id": "common-furniture-square-card-table-heritage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-square-card-table-heritage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-square-card-table-heritage-normal.glb",
+      "file": "cardTable.glb",
+      "bytes": 514968,
+      "sha256": "85b0a708d0d86cb1e8967b9df98126f4c7ee457e9cf21030fa10c6fdd2a08bfc",
+      "webBytes": 331908,
+      "meshes": 1,
+      "triangles": 5702,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.401,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.401,
+          0.523,
+          0.4
+        ],
+        "size": [
+          0.802,
+          0.523,
+          0.8
+        ]
+      },
+      "use": "회관 섯다·고스톱 테이블(천·패는 코드)"
+    },
+    {
+      "key": "banquetChair",
+      "id": "common-furniture-round-back-banquet-chair-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-round-back-banquet-chair-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-round-back-banquet-chair-cottage-normal.glb",
+      "file": "banquetChair.glb",
+      "bytes": 397588,
+      "sha256": "03ce8842c745582341943a908718f7378e1dc7e6a73b0c665e7e47faee12e5c4",
+      "webBytes": 194080,
+      "meshes": 1,
+      "triangles": 6100,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.292,
+          0,
+          -0.328
+        ],
+        "max": [
+          0.292,
+          1,
+          0.328
+        ],
+        "size": [
+          0.585,
+          1,
+          0.656
+        ]
+      },
+      "use": "회관·카지노 게임 테이블 의자(좌석 높이 SEAT_HEIGHT에 맞춤)"
+    },
+    {
+      "key": "barStool",
+      "id": "angular-restaurant-bar-stool-cushion",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-bar-stool-cushion",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-bar-stool-cushion.glb",
+      "file": "barStool.glb",
+      "bytes": 487112,
+      "sha256": "6fb94030746b4ebd20f9b0191b33c4c38165c660d580bc1f3b682ada5aa4375a",
+      "webBytes": 207932,
+      "meshes": 1,
+      "triangles": 4440,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.185,
+          0,
+          -0.184
+        ],
+        "max": [
+          0.185,
+          0.8,
+          0.184
+        ],
+        "size": [
+          0.37,
+          0.8,
+          0.367
+        ]
+      },
+      "use": "카지노 바 의자"
+    },
+    {
+      "key": "queueRope",
+      "id": "restaurant-restaurant-queue-rope-post-heritage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/restaurant-restaurant-queue-rope-post-heritage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/restaurant-restaurant-queue-rope-post-heritage-normal.glb",
+      "file": "queueRope.glb",
+      "bytes": 460672,
+      "sha256": "b3736af68c722a4bb21d738dc10b50e73cf774cd8a930adb7178915eb7c412b3",
+      "webBytes": 218776,
+      "meshes": 1,
+      "triangles": 6184,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.253,
+          0,
+          -0.325
+        ],
+        "max": [
+          0.253,
+          0.953,
+          0.325
+        ],
+        "size": [
+          0.506,
+          0.953,
+          0.65
+        ]
+      },
+      "use": "카지노 입구·VIP룸 차단봉"
+    }
+  ]
+}

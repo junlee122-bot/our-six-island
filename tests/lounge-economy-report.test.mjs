@@ -14,6 +14,7 @@ import {
   kstDay,
 } from '../app/lounge-economy.ts';
 import { emptyLife, lifeAction } from '../app/lounge-life.ts';
+import { sellTotal } from '../app/lounge-life-plus.ts';
 import {
   economyReport,
   formatEconomyReport,
@@ -30,6 +31,8 @@ const uids = ['a', 'b', 'c'].map((s) => `${s.repeat(8)}-0000-4000-8000-${s.repea
 const w = (i) => 'wallet-' + uids[i];
 const NOW = Date.UTC(2026, 8, 24, 3, 0, 0); // 2026-09-24 12:00 KST
 const DAY = 86_400_000;
+/** Ten fruit sold at once (ECON-2 demand curve). */
+const FRUIT10 = sellTotal('fruit', 150, 0, 10);
 const members = uids.map((uid, actor) => ({ uid, actor, username: ['dowon', 'gangjae', 'minseo'][actor] }));
 
 function world() {
@@ -64,7 +67,7 @@ test('report totals match the ledger invariant and per-account rows', () => {
   assert.equal(r.totals.initial, 3 * INITIAL_BEOM);
   assert.equal(r.totals.reserved, 5000);
   assert.equal(r.totals.houseBalance, -200 + 1200); // blackjack house lost 200, shop +1200
-  assert.equal(r.totals.granted, 3000 + 3000 + 1500);
+  assert.equal(r.totals.granted, 3000 + 3000 + FRUIT10);
   assert.equal(r.totals.spent, 1200);
   assert.equal(r.totals.supply, r.totals.initial + r.totals.granted);
   assert.ok(r.totals.invariantOk);
@@ -80,8 +83,8 @@ test('report totals match the ledger invariant and per-account rows', () => {
   const b = r.accounts.find((x) => x.uid === uids[1]);
   assert.equal(b.reserved, 2000);
   assert.equal(b.gamblingNet, -1300);
-  assert.equal(b.farmEarned, 1500);
-  assert.equal(b.soldToday, 1500);
+  assert.equal(b.farmEarned, FRUIT10);
+  assert.equal(b.soldToday, FRUIT10);
   assert.ok(b.harvested >= 1);
   const c = r.accounts.find((x) => x.uid === uids[2]);
   assert.equal(c.shopSpent, 1200);
@@ -111,19 +114,19 @@ test('game summary, sources/sinks, recent window and daily totals', () => {
     r.sources.map((s) => [s.reason, s.kind, s.count, s.amount]),
     [
       ['daily', 'daily', 2, 6000],
-      ['sell-fruit', 'farm', 1, 1500],
+      ['sell-fruit', 'farm', 1, FRUIT10],
     ],
   );
   assert.deepEqual(r.sinks.map((s) => [s.label, s.amount]), [['상점: 당근 씨앗', 1200]]);
   // The grant from 10 days ago falls outside the 7-day window.
-  assert.equal(r.recent.granted, 3000 + 1500);
+  assert.equal(r.recent.granted, 3000 + FRUIT10);
   assert.equal(r.recent.spent, 1200);
   assert.equal(r.recent.sources[0].reason, 'daily');
   assert.equal(r.recent.sources[0].amount, 3000);
 
   assert.equal(r.daily[0].date, '2026-09-24');
   assert.equal(r.daily[0].daily, 3000);
-  assert.equal(r.daily[0].farm, 1500);
+  assert.equal(r.daily[0].farm, FRUIT10);
   const yesterday = r.daily.find((d) => d.date === '2026-09-23');
   assert.equal(yesterday.shop, 1200);
   assert.equal(yesterday.net, -1200);
@@ -131,7 +134,7 @@ test('game summary, sources/sinks, recent window and daily totals', () => {
 
   const narrow = economyReport({ state: world(), now: NOW, members, days: 1 });
   assert.equal(narrow.recent.spent, 1200); // exactly 24h ago is inside the window
-  assert.equal(narrow.recent.granted, 4500);
+  assert.equal(narrow.recent.granted, 3000 + FRUIT10);
 });
 
 test('names fall back to life.actors, then to a short id', () => {

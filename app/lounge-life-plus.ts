@@ -572,28 +572,28 @@ export const villageGrowSpeed = (life: LifeState) => (hasFlag(life, 'greenhouse2
 /** Lowest share of the price a flooded item still fetches. */
 export const DEMAND_FLOOR = 0.15;
 /** Seasonal crops sell for this much more in their own season. */
-export const SEASON_PREMIUM = 1.15;
+export const SEASON_PREMIUM = 1.1;
 /**
  * Units of the same thing (per friend, per KST day) after which the price has
  * halved. Short-growing base crops take more before they sag; strawberries
  * and watermelons sag fast, so a varied field (and seasonal crops) pays.
  */
+export const DEMAND_HALF_LIFE: Readonly<Record<string, number>> = {
+  carrot: 12,
+  tomato: 10,
+  pumpkin: 6,
+  strawberry: 4,
+  watermelon: 3,
+  potato: 6,
+  spinach: 5,
+  corn: 6,
+  sweetpotato: 5,
+  cabbage: 5,
+  fruit: 20,
+};
 export function demandHalfLife(id: string): number {
-  switch (id) {
-    case 'carrot':
-      return 16;
-    case 'tomato':
-      return 12;
-    case 'pumpkin':
-      return 8;
-    case 'strawberry':
-      return 5;
-    case 'watermelon':
-      return 5;
-    case 'fruit':
-      return 30;
-  }
-  if (isCropId(id)) return 8;
+  if (Object.hasOwn(DEMAND_HALF_LIFE, id)) return DEMAND_HALF_LIFE[id];
+  if (isCropId(id)) return 5;
   const def = ITEM_BY_ID[id];
   if (!def) return 6;
   if (def.kind === 'fish') {
@@ -607,11 +607,53 @@ export function demandHalfLife(id: string): number {
 /** Price multiplier of the k-th unit (0-based) of `id` sold today. */
 export const demandMult = (id: string, k: number) =>
   Math.max(DEMAND_FLOOR, 0.5 ** (Math.max(0, k) / demandHalfLife(id)));
-/** 범 for selling n more units at `unit` each after `sold` today. */
-export function sellTotal(id: string, unit: number, sold: number, n: number) {
+/**
+ * Market saturation: once a friend has sold MARKET_SOFT범 today (all goods
+ * together), each further 범 of sales pays 0.5^(over / MARKET_HALF). Casual
+ * days never reach it; it only tapers very long selling days (no hard stop).
+ */
+export const MARKET_SOFT = 30_000;
+export const MARKET_HALF = 20_000;
+export const marketMult = (soldBeom: number) =>
+  soldBeom <= MARKET_SOFT ? 1 : 0.5 ** ((soldBeom - MARKET_SOFT) / MARKET_HALF);
+/**
+ * 범 for selling n more units at `unit` each after `sold` units of the same
+ * thing and `soldBeom` 범 of everything today.
+ */
+export function sellTotal(id: string, unit: number, sold: number, n: number, soldBeom = 0) {
   let total = 0;
-  for (let i = 0; i < n; i++) total += Math.max(1, Math.round(unit * demandMult(id, sold + i)));
+  for (let i = 0; i < n; i++)
+    total += Math.max(1, Math.round(unit * demandMult(id, sold + i) * marketMult(soldBeom + total)));
   return total;
+}
+/**
+ * Client-side quote for the sell UI from a life view: 범 for n units of `id`
+ * (crops: quality q), the undamped unit price and the price of the next unit.
+ * Mirrors the server (same helpers); older servers without `demand` in the
+ * view simply quote the full price.
+ */
+export function sellQuote(
+  view: { me: { demand?: Record<string, number> }; soldToday?: number; flags?: readonly string[] },
+  id: string,
+  q: Quality,
+  n: number,
+  now: number,
+) {
+  const unit = sellUnit(id, q, now, view.flags ?? []),
+    sold = view.me.demand?.[id] ?? 0,
+    soldBeom = view.soldToday ?? 0;
+  return {
+    unit,
+    total: n > 0 ? sellTotal(id, unit, sold, n, soldBeom) : 0,
+    next: sellTotal(id, unit, sold, 1, soldBeom),
+    /** Share of the full price the next unit fetches (demand × market). */
+    share: unit > 0 ? sellTotal(id, unit, sold, 1, soldBeom) / unit : 1,
+  };
+}
+/** 범 this friend has sold today (all goods). */
+export function soldBeomToday(life: LifeState, uid: string, now: number) {
+  const s = life.sold[uid];
+  return s && s.day === kstDay(now) ? s.amount : 0;
 }
 /**
  * Full (undamped) price of one unit: crops by quality (+SEASON_PREMIUM in
@@ -1384,7 +1426,13 @@ export function plusAction(
       if (!safe(a.n) || a.n < 1 || a.n > 999) fail(LIFE_REJECT.invalid);
       if (invCount(life, uid, def!.id) < a.n) fail(LIFE_REJECT.notEnough);
       // Demand curve per item (fish per species): see demandMult.
-      const amount = sellTotal(def!.id, sellUnit(def!.id, 0, now, life.flags ?? []), demandSold(life, uid, now, def!.id), a.n),
+      const amount = sellTotal(
+          def!.id,
+          sellUnit(def!.id, 0, now, life.flags ?? []),
+          demandSold(life, uid, now, def!.id),
+          a.n,
+          soldBeomToday(life, uid, now),
+        ),
         left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);

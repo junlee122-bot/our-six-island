@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  DAILY_GRANT,
+  DAILY_RELIEF,
   INITIAL_BEOM,
   LEDGER_HOT_GAMES,
   claimDailyGrant,
@@ -15,6 +17,7 @@ import {
   settleGame,
   spendBeom,
   validateLedger,
+  voidGame,
 } from '../app/lounge-economy.ts';
 import { LoungeBank } from '../app/lounge-wallet.ts';
 import {
@@ -103,7 +106,7 @@ test('grant and spend entries keep the invariant; tampering is rejected', () => 
   assert.throws(() => validateLedger(hidden));
 });
 
-test('daily grant: once per KST day, 3,000 normally, top-up to 10,000 when low', () => {
+test('daily grant: once per KST day, 3,000 normally, flat relief when truly broke', () => {
   const beforeMidnight = Date.UTC(2026, 8, 24, 14, 59, 59); // 23:59:59 KST
   const afterMidnight = beforeMidnight + 1000; // 00:00:00 KST next day
   assert.equal(kstDay(afterMidnight), kstDay(beforeMidnight) + 1);
@@ -120,19 +123,30 @@ test('daily grant: once per KST day, 3,000 normally, top-up to 10,000 when low',
   assert.equal(dailyGrantInfo(l, A, beforeMidnight).nextAt, afterMidnight);
   l = claimDailyGrant(l, A, afterMidnight);
   assert.equal(l.accounts[A], INITIAL_BEOM + 6000);
-  // Bankruptcy relief counts only the available balance (not reservations).
+  // ECON-2: relief counts the whole wealth. Money parked in a reserved game
+  // (or goods in the bag, `extraWealth`) is not "broke": no relief.
   l = reserveGame(l, 'big', 'chess', [A, B], [INITIAL_BEOM + 3000, 1000]);
   assert.equal(l.accounts[A], 3000);
-  const relief = dailyGrantInfo(l, A, afterMidnight + 86_400_000);
-  assert.equal(relief.amount, 7000);
-  l = claimDailyGrant(l, A, afterMidnight + 86_400_000);
-  assert.equal(l.accounts[A], 10_000);
+  const day3 = afterMidnight + 86_400_000;
+  assert.equal(dailyGrantInfo(l, A, day3).amount, DAILY_GRANT);
+  l = voidGame(l, 'big');
+  // Spending down to 3,000 but holding 20,000범 of crops: still the normal grant.
+  l = spendBeom(l, A, INITIAL_BEOM + 3000, 'shop-1', day3, 'furn');
+  assert.equal(l.accounts[A], 3000);
+  assert.equal(dailyGrantInfo(l, A, day3, 20_000).amount, DAILY_GRANT);
+  // Truly broke (wealth < 10,000): a flat relief, never a top-up.
+  const relief = dailyGrantInfo(l, A, day3, 1_000);
+  assert.equal(relief.amount, DAILY_RELIEF);
+  l = claimDailyGrant(l, A, day3, 1_000);
+  assert.equal(l.accounts[A], 3000 + DAILY_RELIEF);
+  assert.equal(l.entries.at(-1).reason, 'daily-relief');
   validateLedger(l);
   // Wallet views expose the daily state.
   const bank = new LoungeBank(null);
   bank.commit(l);
-  assert.equal(bank.view(A, afterMidnight + 86_400_000).daily.available, false);
+  assert.equal(bank.view(A, day3).daily.available, false);
   assert.equal(bank.view(B, afterMidnight).daily.available, true);
+  assert.equal(bank.view(B, afterMidnight, 50_000).daily.amount, DAILY_GRANT);
 });
 
 // ---- Cloud engine ----

@@ -16,6 +16,7 @@ import {
   type ScenePoint,
 } from './lounge-scene-layout.ts';
 import type { GameKind } from './lounge-games.ts';
+import { slideSubstep } from './lounge-walk-slide.ts';
 
 export type InteriorWorld = { x: number; z: number };
 
@@ -122,7 +123,7 @@ export function interiorCanWalk(p: ScenePoint, area: SceneArea): boolean {
   );
 }
 
-/** Substepped walking that slides along tables and hosts (like sceneStep). */
+/** Substepped walking that slides along and around tables and hosts. */
 export function interiorStep(
   from: ScenePoint,
   dx: number,
@@ -138,15 +139,14 @@ export function interiorStep(
   if (!interiorCanWalk(from, area)) return clampPoint({ x: from.x + dx, y: from.y + dy });
   const count = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 0.4));
   let point = { ...from };
+  // Clamped edges count as walls, so pressing into them slides along too.
+  const ok = (x: number, y: number) =>
+    x >= 15 && x <= 85 && y >= 42 && y <= 88 && interiorCanWalk({ x, y }, area);
   for (let i = 0; i < count; i++) {
-    const next = clampPoint({ x: point.x + dx / count, y: point.y + dy / count });
-    if (interiorCanWalk(next, area)) point = next;
-    else {
-      const slideX = clampPoint({ x: next.x, y: point.y });
-      if (interiorCanWalk(slideX, area)) point = slideX;
-      const slideY = clampPoint({ x: point.x, y: next.y });
-      if (interiorCanWalk(slideY, area)) point = slideY;
-    }
+    const target = clampPoint({ x: point.x + dx / count, y: point.y + dy / count });
+    const next = slideSubstep(point.x, point.y, target.x - point.x, target.y - point.y, ok);
+    if (!next) break;
+    point = { x: next[0], y: next[1] };
   }
   return point;
 }

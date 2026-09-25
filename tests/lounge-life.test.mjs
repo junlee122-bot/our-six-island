@@ -4,7 +4,6 @@ import {
   CROP_INFO,
   CROPS,
   FRUIT_COOLDOWN_MS,
-  FRUIT_SELL,
   FRUIT_TREES,
   GUESTBOOK_MAX,
   LIFE_REJECT,
@@ -25,10 +24,20 @@ import {
 } from '../app/lounge-life.ts';
 import {
   INITIAL_BEOM,
+  kstDay,
   newLoungeLedger,
   registerWallet,
   validateLedger,
 } from '../app/lounge-economy.ts';
+import {
+  DEMAND_FLOOR,
+  MARKET_HALF,
+  MARKET_SOFT,
+  demandMult,
+  marketMult,
+  sellQuote,
+  sellUnit,
+} from '../app/lounge-life-plus.ts';
 
 const uuid = () => crypto.randomUUID();
 const T0 = Date.UTC(2026, 8, 24, 3, 0, 0); // 12:00 KST
@@ -180,27 +189,76 @@ test('fruit trees give 1–3 fruit once per 6 hours per user', () => {
   assert.equal(v.me.fruitReadyAt[FRUIT_TREES[2]], 0);
 });
 
-test('selling grants 범 through the ledger and respects the daily KST cap', () => {
+test('selling grants 범 through the ledger; demand curves per crop recover at KST midnight', () => {
   const s = world(1),
     [m] = s.members;
-  s.life.bag[m.id].produce.strawberry = 20;
+  s.life.bag[m.id].produce.strawberry = 30;
+  s.life.bag[m.id].produce.carrot = 10;
   s.life.bag[m.id].fruit = 5;
   s.act(m, { kind: 'sell', crop: 'fruit', n: 2 }, T0);
-  assert.equal(s.balance(m), INITIAL_BEOM + 2 * FRUIT_SELL);
+  // Fruit sags slowly (half-life 20): 150 + round(150 × 0.5^(1/20)).
+  assert.equal(s.balance(m), INITIAL_BEOM + 150 + Math.round(150 * 0.5 ** (1 / 20)));
   assert.equal(s.ledger.entries.at(-1).type, 'grant');
   s.fails(m, { kind: 'sell', crop: 'fruit', n: 4 }, T0, LIFE_REJECT.notEnough);
   s.fails(m, { kind: 'sell', crop: 'fruit', n: 0 }, T0);
   s.fails(m, { kind: 'sell', crop: 'fruit', n: 1.5 }, T0);
-  // 40,000 − 300 = 39,700 left → 7 strawberries (35,000) fit, 8 do not.
-  s.fails(m, { kind: 'sell', crop: 'strawberry', n: 8 }, T0);
-  s.act(m, { kind: 'sell', crop: 'strawberry', n: 7 }, T0);
-  assert.equal(lifeView(s.life, m.id, 0, T0).sellCapLeft, 4_700);
-  s.fails(m, { kind: 'sell', crop: 'strawberry', n: 1 }, T0 + 1);
-  // Next KST day (00:00 KST = 15:00 UTC) the cap resets.
+  // Strawberries: each one sold today pays less (half-life 4).
+  const one = (k) => Math.round(4_500 * demandMult('strawberry', k));
+  let before = s.balance(m);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 4 }, T0);
+  assert.equal(s.balance(m) - before, one(0) + one(1) + one(2) + one(3));
+  assert.equal(one(4), 2_250);
+  before = s.balance(m);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 1 }, T0 + 1);
+  assert.equal(s.balance(m) - before, 2_250);
+  // Another crop has its own demand: the first carrot is full price.
+  before = s.balance(m);
+  s.act(m, { kind: 'sell', crop: 'carrot', n: 1 }, T0 + 2);
+  assert.equal(s.balance(m) - before, CROP_INFO.carrot.sell);
+  // Flooding one crop bottoms out at DEMAND_FLOOR (below the seed price).
+  before = s.balance(m);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 20 }, T0 + 3);
+  const tail = s.balance(m) - before;
+  assert.ok(tail < 20 * 4_500 * 0.4, String(tail));
+  assert.equal(Math.round(4_500 * demandMult('strawberry', 40)), Math.round(4_500 * DEMAND_FLOOR));
+  assert.ok(4_500 * DEMAND_FLOOR < CROP_INFO.strawberry.seed);
+  const v = lifeView(s.life, m.id, 0, T0 + 3);
+  assert.equal(v.me.demand.strawberry, 25);
+  assert.equal(v.soldToday, SELL_CAP_PER_DAY - v.sellCapLeft);
+  // Next KST day (00:00 KST = 15:00 UTC) demand and the ceiling reset.
   const tomorrow = Date.UTC(2026, 8, 24, 15, 0, 0);
-  assert.equal(lifeView(s.life, m.id, 0, tomorrow - 1).sellCapLeft, 4_700);
   assert.equal(lifeView(s.life, m.id, 0, tomorrow).sellCapLeft, SELL_CAP_PER_DAY);
+  assert.deepEqual(lifeView(s.life, m.id, 0, tomorrow).me.demand, {});
+  before = s.balance(m);
   s.act(m, { kind: 'sell', crop: 'strawberry', n: 1 }, tomorrow);
+  assert.equal(s.balance(m) - before, 4_500);
+  invariant(s.ledger);
+});
+
+test('market saturation tapers very long selling days; the safety ceiling still holds', () => {
+  assert.equal(marketMult(MARKET_SOFT), 1);
+  assert.equal(marketMult(MARKET_SOFT + MARKET_HALF), 0.5);
+  // Quote helper = what the server pays.
+  const s = world(1),
+    [m] = s.members;
+  s.life.ext = { [m.id]: { inv: { carp: 50, crucian: 50, koi: 20 } } };
+  const view = () => lifeView(s.life, m.id, 0, T0);
+  const q = sellQuote(view(), 'koi', 0, 20, T0);
+  const before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 20 }, T0);
+  assert.equal(s.balance(m) - before, q.total);
+  // Rare fish sag fast (half-life 2): the 3rd koi pays half.
+  assert.equal(view().me.demand.koi, 20);
+  assert.equal(
+    sellQuote(view(), 'koi', 0, 1, T0).next,
+    Math.round(sellUnit('koi', 0, T0) * DEMAND_FLOOR * marketMult(view().soldToday)),
+  );
+  // Past MARKET_SOFT범 everything tapers.
+  s.life.sold[m.id] = { day: kstDay(T0), amount: MARKET_SOFT + MARKET_HALF };
+  const carp = sellQuote(view(), 'carp', 0, 1, T0);
+  assert.equal(carp.next, Math.round(sellUnit('carp', 0, T0) * 0.5));
+  s.life.sold[m.id] = { day: kstDay(T0), amount: SELL_CAP_PER_DAY - 100 };
+  s.fails(m, { kind: 'sellItem', item: 'carp', n: 50 }, T0);
   invariant(s.ledger);
 });
 
@@ -367,7 +425,7 @@ test('crop and shop catalog match the contract', () => {
       ['carrot', 30, 100, 200],
       ['tomato', 60, 200, 480],
       ['pumpkin', 180, 500, 1800],
-      ['strawberry', 480, 1000, 5000],
+      ['strawberry', 480, 1000, 4500],
       ['potato', 120, 300, 900],
       ['spinach', 240, 600, 2200],
       ['corn', 360, 800, 2400],
@@ -382,9 +440,11 @@ test('crop and shop catalog match the contract', () => {
     (c) => (6 * (CROP_INFO[c].sell - CROP_INFO[c].seed)) / ((CROP_INFO[c].growMs * 0.6) / 3_600_000),
   );
   for (let i = 1; i < perHour.length; i++) assert.ok(perHour[i] > perHour[i - 1], String(perHour));
-  // One overnight strawberry bed is worth about three table stakes (10,000).
-  assert.equal(6 * CROP_INFO.strawberry.sell, 30_000);
-  assert.equal(SELL_CAP_PER_DAY, 40_000);
+  // ECON-2: one strawberry bed sold on one day pays less than 6 × the price
+  // (demand curve), and the flat cap became a 100,000 safety ceiling.
+  const bed = [0, 1, 2, 3, 4, 5].reduce((n, k) => n + Math.round(4_500 * demandMult('strawberry', k)), 0);
+  assert.ok(bed < 6 * CROP_INFO.strawberry.sell && bed > 15_000, String(bed));
+  assert.equal(SELL_CAP_PER_DAY, 100_000);
   // Every trophy has a harvest milestone and costs at least two table stakes.
   for (const id of ['trophy-carrot', 'trophy-tomato', 'trophy-pumpkin', 'trophy-strawberry', 'fruit-basket']) {
     const item = SHOP.find((i) => i.id === id);
@@ -396,9 +456,14 @@ test('crop and shop catalog match the contract', () => {
       ['palette-pastel', 30_000, null],
       ['palette-neon', 80_000, 'palette-pastel'],
       ['palette-sunset', 150_000, 'palette-neon'],
+      ['palette-pearl', 250_000, 'palette-sunset'],
+      ['palette-aurora', 500_000, 'palette-pearl'],
+      ['palette-fountain', 300_000, null],
     ],
   );
-  // All unlocks cost far more than the 100,000 starting 범.
+  // The fountain dye needs the 광장 대분수 project.
+  assert.equal(SHOP.find((i) => i.id === 'palette-fountain').flag, 'plaza');
+  // All unlocks cost far more than the 100,000 starting 범 (ECON-2 dyes: +1.05M).
   const unlocks = SHOP.filter((i) => i.kind === 'trophy' || i.kind === 'palette');
-  assert.equal(unlocks.reduce((n, i) => n + i.price, 0), 580_000);
+  assert.equal(unlocks.reduce((n, i) => n + i.price, 0), 1_630_000);
 });

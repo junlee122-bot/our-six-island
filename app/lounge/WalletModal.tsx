@@ -65,7 +65,7 @@ export function DailyButton({
       {compact
         ? '오늘의 범'
         : daily.amount > 3000
-          ? '긴급 지원 · 10,000범까지 채워 드려요'
+          ? `긴급 지원 받기 · +${formatBeom(daily.amount)}`
           : `오늘의 범 받기 · +${formatBeom(daily.amount)}`}
     </button>
   );
@@ -84,7 +84,7 @@ export function WalletModal({
   notify: Notify;
   onClose: () => void;
 }) {
-  const low = view.wallet.balance < 5000;
+  const low = view.wallet.balance < 10_000;
   return (
     <Modal title="내 범 지갑" onClose={onClose}>
       <div className="l-wallet-info">
@@ -99,8 +99,8 @@ export function WalletModal({
       <DailyButton room={room} view={view} notify={notify} />
       {low && (
         <p className="l-wallet-low" role="note">
-          잔액이 5,000범보다 적으면 오늘의 범이 10,000범까지 채워져요. 파산해도
-          하루 한 번 다시 시작할 수 있어요.
+          가진 범과 가방 속 물건을 모두 합쳐 10,000범이 안 되면 오늘의 범이 긴급 지원
+          6,000범으로 바뀌어요. 파산해도 하루 한 번 다시 시작할 수 있어요.
         </p>
       )}
       <Details summary={`${username} 계정의 공통 지갑이에요.`}>

@@ -58,6 +58,7 @@ import {
 } from './lounge-village-world';
 import { VillageLifeLayer } from './lounge-village-life-3d';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
+import { VillageKarchiveLayer } from './lounge-village-karchive';
 import {
   BOARD_FRONT,
   MUSEUM_FRONT,
@@ -261,6 +262,8 @@ type WorldState = {
   sun: THREE.DirectionalLight;
   life: VillageLifeLayer;
   season: VillageSeasonLayer;
+  /** kArchive civic set (greenhouse, museum, hall, stage, pier…). */
+  karchive: VillageKarchiveLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -339,6 +342,7 @@ function getVillageWorld(): WorldState {
   const life = new VillageLifeLayer(root);
   life.setLampGlowMaterial(VILLAGE_LAMP_GLOW);
   const season = new VillageSeasonLayer(root);
+  const karchive = new VillageKarchiveLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -411,6 +415,7 @@ function getVillageWorld(): WorldState {
           prop.id,
         );
       }),
+      ...karchive.load(loadModel, changed),
     ]),
   );
   const props = propJobs.then((results) =>
@@ -427,6 +432,7 @@ function getVillageWorld(): WorldState {
     sun,
     life,
     season,
+    karchive,
   };
   return villageWorld;
 }
@@ -961,8 +967,17 @@ export function Village3D(props: Props) {
             spawns: life.me.spawns ?? [],
             effects: current.seasonFx !== false,
             bundlesDone: (life.bundles ?? []).map((b) => b.done),
+            houses: life.houses,
           })
         : false;
+      const civicChanged = world.karchive.update({
+        season: life?.calendar?.season ?? null,
+        flags: life?.flags ?? [],
+      });
+      if (civicChanged && !seasonChanged) {
+        renderer.shadowMap.needsUpdate = true;
+        needsRender = true;
+      }
       if (seasonChanged) {
         host.dataset.season = life?.calendar?.season ?? '';
         host.dataset.weather = life?.weather?.today ?? '';
@@ -1668,7 +1683,12 @@ export function Village3D(props: Props) {
             (dz / distance) * step,
           );
           budget -= step;
-          if (Math.hypot(next.x - position.x, next.z - position.z) < 1e-4) {
+          // Blocked only when the step made no headway (a tiny leftover
+          // budget at a bend is not a wall).
+          if (
+            Math.hypot(next.x - position.x, next.z - position.z) <
+            Math.min(1e-4, step * 0.5)
+          ) {
             path = [];
             break;
           }
@@ -2995,7 +3015,8 @@ export function Village3D(props: Props) {
         </output>
       )}
       <p className="hv-credit">
-        주택·과일나무·수국·소파·튤립 원본 모델:{' '}
+        주택·과일나무·수국·소파·튤립·회관·온실·박물관·게시판·무대·쉼터·울타리·데크
+        원본 모델:{' '}
         <a
           href="https://karchive.vibeline.co.kr/models"
           target="_blank"

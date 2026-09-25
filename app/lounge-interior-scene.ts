@@ -2,11 +2,19 @@
  * The 3D hall (회관) and casino (카지노) interiors: a warm low-poly shell
  * (floor, walls, door, windows, lamps, plants) and one table per game with a
  * floor sign, low chairs pulled up to every seat and floor rings that show
- * who sits where. Everything is built from primitives and small canvas
- * textures (no downloads); all of it is owned by this scene and disposed with
- * it. The table hosts are illustrated billboards (lounge-interior-hosts.ts).
+ * who sits where. The shell is built from primitives and small canvas
+ * textures. kArchive models (자료: kArchive · 출처: 쓰레드 dogfooter) stream in
+ * afterwards and replace their primitive stand-ins: round-back banquet chairs
+ * at every table, square card tables under the hwatu blankets, bar stools and
+ * rope posts in the casino and its VIP corner (shown once the village's
+ * '카지노 VIP룸' project is done; a small construction site before). All of it
+ * is owned by this scene and disposed with it. The table hosts are
+ * illustrated billboards (lounge-interior-hosts.ts).
  */
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { LOUNGE_MODELS } from './lounge-model-assets';
+import { BAR_STOOL_Z, CLUB_MODELS, VIP_CORNER, type ClubModel } from './lounge-karchive-club';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import { NAMES } from './lounge-text';
 import type { SceneArea } from './lounge-scene-layout';
@@ -26,6 +34,9 @@ export const TABLE_HEIGHT = 0.78;
  * seated friend's hips rest on it with the feet near the floor.
  */
 export const SEAT_HEIGHT = 0.36;
+
+/** The chair model scaled so its cushion is the seat height seated figures use. */
+export const CLUB_CHAIR_SCALE = SEAT_HEIGHT / CLUB_MODELS.banquetChair.seat;
 
 type Palette = {
   wall: string;
@@ -105,15 +116,32 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
 
 export type InteriorScene = ReturnType<typeof createInteriorScene>;
 
+/** A copy of a club model (shares geometry and material with the loaded one). */
+function clubCopy(source: THREE.Group, scale: number | [number, number, number], rotation = 0) {
+  const copy = source.clone(true);
+  if (typeof scale === 'number') copy.scale.setScalar(scale);
+  else copy.scale.set(...scale);
+  copy.rotation.y = rotation;
+  copy.traverse((child) => {
+    if ((child as THREE.Mesh).isMesh) child.castShadow = child.receiveShadow = true;
+  });
+  return copy;
+}
+
 export function createInteriorScene(
   scene: THREE.Scene,
   area: SceneArea,
-  options: { lights: boolean },
+  options: { lights: boolean; vip?: boolean },
 ) {
   const pal = PALETTE[area];
   const root = new THREE.Group();
   root.name = 'interior-' + area;
   scene.add(root);
+  let disposed = false;
+  /** Loaded kArchive models (shared by their clones in this scene). */
+  const models: Partial<Record<ClubModel, THREE.Group>> = {};
+  /** Set when a model arrived; refresh() reports it so the view re-renders. */
+  let modelsChanged = false;
   scene.background = new THREE.Color(pal.background);
   const materials = new Map<string, THREE.MeshStandardMaterial>();
   const surface = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) => {
@@ -168,6 +196,7 @@ export function createInteriorScene(
     return mesh;
   };
   const textures: THREE.Texture[] = [];
+  const doorPosts: THREE.Mesh[] = [];
 
   // ---------------------------------------------------------- lights
   const hemi = new THREE.HemisphereLight(pal.hemi[0], pal.hemi[1], pal.hemi[2]);
@@ -391,10 +420,10 @@ export function createInteriorScene(
       box(0.04, 0.5, 0.56, maxX - 0.87, 1.1, z, surface('#fff0c4', { emissive: '#ffcf6b', emissiveIntensity: 0.9 }), root, false);
       cylinder(0.03, 0.03, 0.4, maxX - 0.45, 1.7, z + 0.28, pal.trim);
     }
-    // Velvet rope posts by the door.
+    // Velvet rope posts by the door (kArchive queue posts replace them).
     for (const z of [1.6, 5.0]) {
-      cylinder(0.05, 0.08, 0.9, minX + 1.3, 0.45, z, pal.trim);
-      cylinder(0.12, 0.12, 0.04, minX + 1.3, 0.02, z, pal.trim);
+      doorPosts.push(cylinder(0.05, 0.08, 0.9, minX + 1.3, 0.45, z, pal.trim));
+      doorPosts.push(cylinder(0.12, 0.12, 0.04, minX + 1.3, 0.02, z, pal.trim));
     }
   }
   // Potted plants in the corners.
@@ -419,6 +448,10 @@ export function createInteriorScene(
     seats: THREE.Group;
     hit: THREE.Mesh;
     key: string;
+    /** The seats last shown (rebuilt when the chair model arrives). */
+    last: SeatShow[];
+    /** Primitive table body a kArchive card table replaces (hwatu tables). */
+    body: THREE.Mesh[];
   };
   const nodes = new Map<GameKind, TableNode>();
   const hitMaterial = new THREE.MeshBasicMaterial({ visible: false });
@@ -442,7 +475,12 @@ export function createInteriorScene(
     const chair = new THREE.Group();
     chair.position.set(at.x, 0, at.z);
     chair.rotation.y = face;
-    if (area === 'lounge') {
+    const model = models.banquetChair;
+    if (model) {
+      // The kArchive banquet chair: its back on the far side from the table,
+      // its cushion at SEAT_HEIGHT where a seated figure's hips rest.
+      chair.add(clubCopy(model, CLUB_CHAIR_SCALE));
+    } else if (area === 'lounge') {
       const top = new THREE.Mesh(seatGeometry.stool, cushion);
       top.position.y = SEAT_HEIGHT - 0.05;
       top.castShadow = true;
@@ -519,6 +557,7 @@ export function createInteriorScene(
     const felt = surface(FELT[table.game], { roughness: 1 });
     const wood = surface(area === 'casino' ? '#4a2a1e' : '#8e6540');
     const { rx, rz } = table;
+    const body: THREE.Mesh[] = [];
     if (table.game === 'poker' || table.game === 'blackjack') {
       const half = table.game === 'blackjack';
       const top = new THREE.Mesh(
@@ -570,10 +609,10 @@ export function createInteriorScene(
       }
     } else {
       // Hwatu tables: a wooden table with a thick blanket and a few cards.
-      box(rx * 1.75, 0.1, rz * 1.8, 0, TABLE_HEIGHT - 0.04, 0, wood, group);
+      body.push(box(rx * 1.75, 0.1, rz * 1.8, 0, TABLE_HEIGHT - 0.04, 0, wood, group));
       box(rx * 1.6, 0.04, rz * 1.62, 0, TABLE_HEIGHT + 0.03, 0, felt, group);
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
-        box(0.12, TABLE_HEIGHT - 0.08, 0.12, x * rx * 0.76, (TABLE_HEIGHT - 0.08) / 2, z * rz * 0.78, wood, group);
+        body.push(box(0.12, TABLE_HEIGHT - 0.08, 0.12, x * rx * 0.76, (TABLE_HEIGHT - 0.08) / 2, z * rz * 0.78, wood, group));
       for (let i = 0; i < 6; i++) {
         const card = box(0.13, 0.012, 0.2, -0.55 + i * 0.22, TABLE_HEIGHT + 0.058, (i % 2 ? -0.18 : 0.14), i % 3 ? '#b8322f' : '#f5ecd6', group, false);
         card.rotation.y = (i - 2.5) * 0.12;
@@ -590,7 +629,7 @@ export function createInteriorScene(
     const seats = new THREE.Group();
     seats.name = 'seats-' + table.game;
     root.add(seats);
-    nodes.set(table.game, { table, group, seats, hit, key: '' });
+    nodes.set(table.game, { table, group, seats, hit, key: '', last: [], body });
   };
   tables.forEach(buildTable);
 
@@ -601,6 +640,7 @@ export function createInteriorScene(
     const key = seats.map((s) => `${s.world.x.toFixed(2)},${s.world.z.toFixed(2)},${s.state}`).join('|');
     if (key === node.key) return false;
     node.key = key;
+    node.last = seats;
     node.seats.clear();
     for (const s of seats) {
       // Chairs are pulled up to the table's edge (lounge-interior-layout.ts);
@@ -616,17 +656,206 @@ export function createInteriorScene(
     return true;
   };
 
+  // ---------------------------------------------------------- VIP corner
+  // Casino only: a carpeted corner behind a queue-rope line once the
+  // village's VIP project is done, a small construction site before.
+  const vip = new THREE.Group(),
+    vipSite = new THREE.Group();
+  vip.name = 'vip-corner';
+  vipSite.name = 'vip-site';
+  if (area === 'casino') {
+    const { x0, x1, z0, z1 } = VIP_CORNER,
+      cx = (x0 + x1) / 2,
+      cz = (z0 + z1) / 2;
+    const carpet = canvasTexture(256, 112, (c) => {
+      c.fillStyle = '#5a1726';
+      c.fillRect(0, 0, 256, 112);
+      c.strokeStyle = '#d9b25a';
+      c.lineWidth = 6;
+      c.strokeRect(8, 8, 240, 96);
+      c.fillStyle = '#7a2334';
+      for (let i = 0; i < 8; i++) c.fillRect(22 + i * 29, 50, 14, 14);
+    });
+    textures.push(carpet);
+    const rug = new THREE.Mesh(
+      new THREE.PlaneGeometry(x1 - x0, z1 - z0),
+      new THREE.MeshStandardMaterial({ map: carpet, roughness: 1 }),
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(cx, 0.012, cz);
+    rug.receiveShadow = true;
+    vip.add(rug);
+    const plate = canvasTexture(256, 96, (c) => {
+      roundRect(c, 4, 4, 248, 88, 18);
+      c.fillStyle = '#2a1720';
+      c.fill();
+      c.lineWidth = 6;
+      c.strokeStyle = '#e0b85a';
+      c.stroke();
+      c.fillStyle = '#ffd98a';
+      c.font = `900 58px ${FONT}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('VIP', 128, 52);
+    });
+    textures.push(plate);
+    const sign = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.3, 0.49),
+      new THREE.MeshStandardMaterial({ map: plate, roughness: 0.8, emissive: '#ffffff', emissiveMap: plate, emissiveIntensity: 0.5 }),
+    );
+    sign.position.set(cx + 0.9, 2.05, minZ + 0.07);
+    vip.add(sign);
+    // A low round table for two.
+    cylinder(0.42, 0.42, 0.05, cx - 0.2, 0.62, cz - 0.1, '#3a2418', vip, 24);
+    cylinder(0.06, 0.2, 0.6, cx - 0.2, 0.3, cz - 0.1, pal.trim, vip, 12);
+    cylinder(0.05, 0.05, 0.22, cx - 0.2, 0.76, cz - 0.1, '#d9b25a', vip, 10);
+    // Construction site: taped posts, a plank stack and a sign.
+    for (const x of [x0 + 0.2, x1 - 0.2]) box(0.08, 0.9, 0.08, x, 0.45, z1, '#f1ede3', vipSite);
+    for (const y of [0.5, 0.75]) box(x1 - x0 - 0.4, 0.05, 0.02, cx, y, z1, '#f2b632', vipSite, false);
+    for (let i = 0; i < 3; i++)
+      box(1.2, 0.07, 0.3, cx - 0.6, 0.06 + i * 0.08, cz - 0.2, i % 2 ? '#c79a62' : '#8b6440', vipSite);
+    const note = canvasTexture(320, 110, (c) => {
+      roundRect(c, 4, 4, 312, 102, 16);
+      c.fillStyle = '#fff3cf';
+      c.fill();
+      c.lineWidth = 6;
+      c.strokeStyle = '#5b3d25';
+      c.stroke();
+      c.fillStyle = '#6a3f23';
+      c.font = `800 40px ${FONT}`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('VIP룸 공사 중', 160, 58);
+    });
+    textures.push(note);
+    const noteMesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.2, 0.41),
+      new THREE.MeshStandardMaterial({ map: note, roughness: 0.9 }),
+    );
+    noteMesh.position.set(cx + 0.5, 1.05, z1 + 0.02);
+    vipSite.add(noteMesh);
+    root.add(vip, vipSite);
+  }
+  let vipShown: boolean | null = null;
+  const setVip = (on: boolean) => {
+    if (on === vipShown) return false;
+    vipShown = on;
+    vip.visible = on;
+    vipSite.visible = !on;
+    return true;
+  };
+  setVip(!!options.vip);
+
+  // ---------------------------------------------------------- kArchive models
+  const placeModel: Record<ClubModel, (model: THREE.Group) => void> = {
+    banquetChair: (model) => {
+      // Rebuild every table's chairs with the model.
+      for (const node of nodes.values()) {
+        node.key = '';
+        setSeats(node.table.game, node.last);
+      }
+      if (area !== 'casino') return;
+      // Two chairs at the VIP table, facing it.
+      const { x0, x1, z0, z1 } = VIP_CORNER,
+        cx = (x0 + x1) / 2 - 0.2,
+        cz = (z0 + z1) / 2 - 0.1;
+      for (const side of [-1, 1]) {
+        const chair = clubCopy(model, CLUB_CHAIR_SCALE, (-side * Math.PI) / 2);
+        chair.position.set(cx + side * 0.75, 0, cz);
+        vip.add(chair);
+      }
+    },
+    cardTable: (model) => {
+      // Hwatu tables: the card table carries the blanket and the cards; its
+      // top meets the blanket (TABLE_HEIGHT + 0.01).
+      const size = CLUB_MODELS.cardTable;
+      for (const node of nodes.values()) {
+        if (!node.body.length) continue;
+        for (const mesh of node.body) mesh.visible = false;
+        const { rx, rz } = node.table;
+        node.group.add(
+          clubCopy(model, [(rx * 1.75) / size.w, (TABLE_HEIGHT + 0.01) / size.top, (rz * 1.8) / size.d]),
+        );
+      }
+    },
+    barStool: (model) => {
+      // Four stools along the bar counter (behind the walkable floor).
+      const scale = 0.62 / CLUB_MODELS.barStool.seat;
+      for (let i = 0; i < 4; i++) {
+        const stool = clubCopy(model, scale, Math.PI);
+        stool.position.set(-5.55 + i * 0.9, 0, BAR_STOOL_Z);
+        root.add(stool);
+      }
+    },
+    queueRope: (model) => {
+      // Door posts: a short rope from each post toward the other.
+      for (const mesh of doorPosts) mesh.visible = false;
+      for (const z of [1.6, 5.0]) {
+        const post = clubCopy(model, 1, z < 3 ? Math.PI / 2 : -Math.PI / 2);
+        post.position.set(minX + 1.3, 0, z);
+        root.add(post);
+      }
+      // The VIP line along the corner's front edge.
+      const { x0, x1, z1 } = VIP_CORNER,
+        reach = CLUB_MODELS.queueRope.reach,
+        count = Math.floor((x1 - x0) / reach);
+      for (let i = 0; i <= count; i++) {
+        const post = clubCopy(model, 1, Math.PI);
+        post.position.set(x0 + i * reach, 0, z1 + 0.05);
+        vip.add(post);
+      }
+    },
+  };
+  const wanted: ClubModel[] =
+    area === 'lounge' ? ['banquetChair', 'cardTable'] : ['banquetChair', 'barStool', 'queueRope'];
+  const loaded: THREE.Group[] = [];
+  const disposeModel = (model: THREE.Group) =>
+    model.traverse((child) => {
+      const mesh = child as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.geometry.dispose();
+      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        (m as THREE.MeshStandardMaterial).map?.dispose();
+        m.dispose();
+      }
+    });
+  const loader = new GLTFLoader();
+  for (const key of wanted)
+    loader
+      .loadAsync(LOUNGE_MODELS[key])
+      .then((gltf) => {
+        if (disposed) return disposeModel(gltf.scene);
+        loaded.push(gltf.scene);
+        models[key] = gltf.scene;
+        placeModel[key](gltf.scene);
+        modelsChanged = true;
+      })
+      // The primitive stand-ins stay when a model cannot be loaded.
+      .catch(() => {});
+
   return {
     sun,
     tables,
     setSeats,
+    /**
+     * Applies the VIP project state; true when the view should re-render
+     * (that changed, or a kArchive model has just been placed).
+     */
+    refresh(vipOn: boolean) {
+      const changed = setVip(vipOn) || modelsChanged;
+      modelsChanged = false;
+      return changed;
+    },
+
     /** Invisible table boxes (pointer hits carry `userData.game`). */
     hits: () => [...nodes.values()].map((n) => n.hit),
     setLights(on: boolean) {
       for (const lamp of lamps) lamp.visible = on;
     },
     dispose() {
+      disposed = true;
       scene.remove(root, hemi, sun, fill, ...lamps);
+      for (const model of loaded) disposeModel(model);
       root.traverse((child) => {
         const mesh = child as THREE.Mesh;
         if (!mesh.isMesh) return;

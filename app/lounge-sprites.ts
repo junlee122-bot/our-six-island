@@ -63,6 +63,7 @@ type Figure = {
     shortSleeveTunic?: boolean;
     bareToes?: boolean;
     darkHighCollar?: boolean;
+    sleevelessTop?: boolean;
   };
 };
 const canvas = (w: number, h: number) => {
@@ -652,6 +653,9 @@ async function prepare() {
         // Denim: the navy jacket collar touches the bob's tips. Below the chin
         // only the saturated hair blue may join the hair mask.
         if (i % 3 === 1) f.hairCollar = f.eyes + 42;
+        // Miku: the neck and bare shoulders between the sleeveless shirt and
+        // the detached sleeves follow the chosen skin colour too.
+        if (i % 3 === 2) f.skinRegions.sleevelessTop = true;
         return f;
       });
     },

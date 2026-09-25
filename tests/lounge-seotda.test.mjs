@@ -399,3 +399,19 @@ test('Seotda uses shared zero-sum wallet and cannot mint money or settle twice',
   assert.deepEqual(Object.values(l.accounts), [99100, 100900]);
   validateLedger(l);
 });
+
+test('족보표 examples score as their rows, from the top rank down', async () => {
+  const { SEOTDA_CHART, seotdaChartRow } = await import('../app/lounge-seotda-chart.ts');
+  const { seotdaRank } = await import('../app/lounge-seotda.ts');
+  let previous = Infinity;
+  for (const row of SEOTDA_CHART) {
+    const rank = seotdaRank(row.cards);
+    assert.equal(seotdaChartRow(rank.label)?.id, row.id, `${row.name}: ${rank.label}`);
+    if (!row.special) {
+      assert.ok(rank.value < previous, `${row.name} is below the row above`);
+      previous = rank.value;
+    }
+  }
+  for (const label of ['장땡', '삥땡', '구땡', '1끗', '8끗', '13광땡', '18광땡'])
+    assert.ok(seotdaChartRow(label), label);
+});

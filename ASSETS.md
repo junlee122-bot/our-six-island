@@ -4,10 +4,10 @@
 
 ## 현재 요약 (2026-09-24)
 
-- 배포 대상은 매니페스트에 적힌 파일뿐입니다: 이미지 `app/lounge-assets.ts` **127개**(래스터 67 + 체스·화투 SVG 60), 3D 모델 `app/lounge-model-assets.ts` **24개**. 개수는 빌드 스크립트가 매니페스트에서 직접 읽어 검사하므로 문서와 코드를 따로 고칠 필요가 없습니다.
+- 배포 대상은 매니페스트에 적힌 파일뿐입니다: 이미지 `app/lounge-assets.ts` **127개**(래스터 67 + 체스·화투 SVG 60), 3D 모델 `app/lounge-model-assets.ts` **39개**. 개수는 빌드 스크립트가 매니페스트에서 직접 읽어 검사하므로 문서와 코드를 따로 고칠 필요가 없습니다.
 - 캐릭터 아틀라스(`friends-motion`, `accessories`, `jaemin-cap`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
 - 범티콘 8장은 1254² PNG(장당 약 1MB)에서 **256px WebP(장당 약 20KB)** 로 줄였습니다.
-- GLB 24개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 7.5MB → 4.9MB. 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
+- GLB 39개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 15.8MB → 9.7MB(2026-09-25 kArchive 공공시설 15종 포함). 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
 - 섬·극장 전용 원화 12개(`island*.png|webp`, `interiors-hd`, `furniture`, `facilities`, `friends*.png`, `mayor-hohyeon`, `nature-detail`, `theater-*`)는 `legacy/assets/`로 옮겼습니다. `docs/island.html`·`docs/theater.html`은 이미지를 내장한 단일 HTML이라 영향이 없습니다. 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
 - 공유 미리보기 `public/og-image.webp`(1200×630)는 로그인 전신 7장을 합성한 파생 이미지이고, `public/favicon.svg`와 `public/icons/*.png`는 직접 그린 잎 아이콘입니다. 새 AI 생성은 없습니다.
 - 재생성: `npm run optimize:assets` (원본에서 WebP·GLB·아이콘을 다시 만듦).
@@ -20,7 +20,7 @@
 | A+ | OpenAI 생성 + [Spritegen](https://github.com/aldegad/sprite-gen) v2.7.0 | 7인 걷기·달리기 84프레임 | `lounge/motion/*.webp` | 도구 라이선스 파일 보관 | 사용 중 |
 | B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
 | C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
-| D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블 — GLB 13개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `village/`, `village/expansion/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
+| D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) — GLB 28개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `village/`, `village/expansion/`, `village/civic/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
@@ -489,3 +489,30 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 - [host-maehwa.png](public/assets/lounge/host-maehwa.png): 화투방 진행자 매화. 분홍 저고리·자주 치마·매화 비녀 차림입니다.
 
 두 시트 모두 1320×1320 RGBA, 3×2 칸(440×660)입니다. 칸 순서는 차분·미소·패 돌리기 / 집중·놀람·미안함이고, 모든 칸의 발끝은 648px 선에 맞췄습니다. 마젠타 배경은 색차 키로 알파를 구하고 가장자리 색을 역산해 스필을 제거했습니다. 머리카락 사이의 좁은 마젠타 틈은 주변 색으로 채운 뒤 투명 배경으로 다시 저장했습니다. 웹용 WebP(q90, 알파 100)는 `scripts/optimize-assets.mjs`가 PNG에서 만듭니다. 테이블 위 대사 초상화도 같은 시트에서 잘라 씁니다(`app/lounge-host-sprites.ts`).
+
+## kArchive 공공시설 세트 · 2026-09-25
+
+조사 보고서의 추천 15종을 [kArchive](https://karchive.vibeline.co.kr/models) 상세 페이지 주소 그대로 받았습니다. 자료: kArchive · 출처: 쓰레드 dogfooter. 받은 날 상세 페이지와 다운로드 동의 창의 문구(개인·상업 프로젝트 사용 및 수정 가능, AI 학습 가능, 원본 재판매 금지, 라이선스 화면·크레딧·설명란에 출처 표기 필수, 별도 약관 페이지 없음, CC 아님)를 `public/models/village/civic/assets.json`, `public/models/lounge/club/assets.json`, `public/models/lounge/redesign/assets.json`의 `terms`에 그대로 적었습니다. 각 항목에 원본 주소·SHA-256·바이트·삼각형 수·원본 바운딩 박스·웹 사본 크기가 있습니다. 새 유료 생성은 없습니다.
+
+| 모델(파일) | 원본 → 웹 사본(바이트) | 텍스처 | 쓰는 곳 |
+|---|---|---|---|
+| 온실 `village/civic/greenhouse.glb` | 922,920 → 604,508 | 1024² | 강 북쪽 둑(-10, 12.6). 공사 'greenhouse' 전에는 공사장 |
+| 게시판 `noticeBoard.glb` | 432,848 → 213,876 | 512² | 광장 게시판. 꾸러미 종이 8장은 코드로 판에 붙임 |
+| 박물관(공공도서관) `museumLibrary.glb` | 708,924 → 468,512 | 1024² | 마을 박물관. 'museum' 완공 시 입구 깃발 |
+| 회관 한옥 `hanokHall.glb` (dongji-12) | 714,724 → 463,540 | 1024² | 범마을 회관 외관(폭 7.9). 겨울판이라 겨울이 아닐 때는 셰이더가 흰 눈 텍셀만 기와(위)·돌(아래) 색으로 바꿈 |
+| 축제 무대 `festivalStage.glb` (newyear-11) | 449,036 → 286,456 | 1024² | 강변 캠프(12, 21.3). 'stage' 전에는 공사장, 'festival'이면 전구 줄 |
+| 등나무 쉼터 `wisteriaPergola.glb` | 883,184 → 610,496 | 1024² | 동쪽 정원(34.8, 1.4). 기둥 4개만 충돌, 아래로 지나갈 수 있음 |
+| 텃밭 틀 `vegetableBed.glb` | 470,748 → 219,836 | 512² | 친구 7명의 밭 틀. 흙 칸·작물은 기존 코드 |
+| 데크 타일 `timberDeck.glb` | 397,792 → 195,676 | 512² | 바다 낚시 데크('bridge' 완공 후) 1.5 m 타일 4장 |
+| 계류주 난간 `harborFence.glb` | 296,368 → 126,736 | 512² | 데크 양옆과 끝(바다 위에만) |
+| 나무 울타리 `picketFence.glb` | 262,044 → 107,896 | 512² | 주민 집 양옆 울타리(인스턴싱 56개) |
+| 카드 테이블 `lounge/club/cardTable.glb` | 514,968 → 331,908 | 1024² | 회관 섯다·고스톱 테이블 몸체. 천·패는 코드 |
+| 연회 의자 `banquetChair.glb` | 397,588 → 194,080 | 512² | 회관·카지노 모든 테이블 의자. 방석 높이 = `SEAT_HEIGHT`(0.36) |
+| 바 의자 `barStool.glb` | 487,112 → 207,932 | 512² | 카지노 바 앞 4개 |
+| 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후. 전에는 공사장) |
+| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 방 가구 카탈로그 '흔들의자'. 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
+
+- 원본 합계 7,880,560바이트 → 배포 사본 4,556,676바이트(+ 썸네일 14,834). 원본은 `public/models/_originals/` 같은 경로에 보관하고 `npm run optimize:assets`로 다시 만듭니다. 작게 보이는 반복 소품 8종은 `scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`로 512²까지 줄였습니다(기본 1024²).
+- GPU 텍스처 메모리(RGBA8, 밉맵 포함): 1024² 7장 × 5.3MB + 512² 8장 × 1.3MB ≈ 48MB. 장면별로는 마을 ≈ 33MB, 회관 ≈ 6.7MB, 카지노 ≈ 4MB, 방은 흔들의자를 놓을 때 5.3MB입니다. 모든 모델은 그 장면을 열 때만 받고(회관·카지노 가구는 실내 화면 청크에서), 모델이 도착하기 전에는 기존 도형이 대신 보입니다.
+- 배치·충돌: `app/lounge-village-karchive-layout.ts`(위치·측정 크기·둥근 충돌 영역), `app/lounge-village-karchive.ts`(three.js 레이어), `app/lounge-karchive-club.ts`(실내 측정값·VIP 구역). 온실·박물관의 충돌 상자는 모델 크기에 맞췄고, 무대는 원형, 쉼터는 기둥 4개만 막습니다. `tests/lounge-karchive-civic.test.mjs`가 GLB 원본에서 크기·방석 높이·흙 높이를 다시 재고, 모든 입구·지구·새 시설까지 실제 걷기 속도로 걸어 멈춤(끼임)이 없는지 확인합니다.
+- 화면 크레딧: 마을 하단 크레딧, 설정의 '함께 만든 범타듀 밸리', 배포 HTML의 `#third-party-licenses`(ATTRIBUTION.md 전문)에 표기합니다.

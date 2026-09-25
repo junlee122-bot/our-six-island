@@ -492,6 +492,19 @@ body:has(.b3-room[data-editing]) .l-life-hud {
   font-size: 13px;
   text-align: right;
 }
+.l-inv-sell-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.l-inv-sell-row label {
+  flex: 1;
+}
+.l-inv-max {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+}
 .l-inv-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1514,4 +1527,33 @@ body:has([data-testid='fishing']) .hv-village .hv-action {
 .l-hud-tip :is(p, li, small) > svg {
   display: inline-block;
   vertical-align: -0.15em;
+}
+
+/* ECON-2: 마을 축제 기금 souvenir card and locked style swatches. */
+.l-festival-souvenir {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border-radius: 12px;
+  background: rgba(255, 244, 214, 0.55);
+}
+.l-festival-souvenir img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+.l-festival-souvenir span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.l-house-tiers li[data-owned] {
+  opacity: 0.72;
+}
+.l-demand {
+  color: #a0522d;
+  font-style: normal;
+  margin-left: 4px;
 }

@@ -25,6 +25,7 @@ import {
   noteDemand,
   sellTotal,
   sellUnit,
+  soldBeomToday,
   hasFlag,
   bump,
   discover,
@@ -79,7 +80,8 @@ const MIN = 60_000,
  *   demand. The k-th unit of the same thing sold today pays
  *   unit × max(DEMAND_FLOOR, 0.5^(k / half-life)), recovering at KST midnight
  *   (lounge-life-plus.ts demandMult). Selling a mix pays; one crop in bulk
- *   soon drops below its seed price. Seasonal crops pay +15% in season.
+ *   soon drops below its seed price. Seasonal crops pay +10% in season.
+ *   Past MARKET_SOFT범 of sales in a day everything tapers (marketMult).
  *   SELL_CAP_PER_DAY is now only a safety ceiling. Quality: silver ×1.25, gold ×1.5.
  * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
  *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
@@ -1035,6 +1037,7 @@ export function lifeAction(
         flags = life.flags ?? [];
       let amount = 0,
         sold = demandSold(life, uid, now, id);
+      const soldBeom = soldBeomToday(life, uid, now);
       const tiers: number[] = fruit
         ? [a.n, 0, 0]
         : q === undefined
@@ -1044,7 +1047,7 @@ export function lifeAction(
       else if (q !== undefined) addCropQ(life, uid, a.crop as Crop, q, -a.n);
       tiers.forEach((n, t) => {
         if (!n) return;
-        amount += sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n);
+        amount += sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount);
         sold += n;
       });
       const left = sellCapLeft(life, uid, now);
@@ -1233,6 +1236,8 @@ export type LifeView = {
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
   sellCapLeft: number;
+  /** 범 sold today (all goods; drives the market saturation, see marketMult). */
+  soldToday: number;
   sellCapResetAt: number;
   serverNow: number;
 } & PlusView;
@@ -1307,6 +1312,7 @@ export function lifeView(
         .map(([id, room]) => [life.actors[id], { ...room }]),
     ),
     sellCapLeft: Math.max(0, sellCapLeft(life, uid, now)),
+    soldToday: soldBeomToday(life, uid, now),
     sellCapResetAt: nextKstMidnight(now),
     serverNow: now,
   };

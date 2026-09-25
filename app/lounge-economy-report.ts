@@ -211,6 +211,7 @@ export const BUCKET_LABEL: Record<string, string> = {
   'bundle-done': '꾸러미 완성 보상',
   'casino-night': '금요 카지노의 밤',
   'grant-other': '기타 지급',
+  'sell-crop': '농작물 판매',
   seeds: '씨앗',
   trophy: '트로피',
   palette: '팔레트·염색',

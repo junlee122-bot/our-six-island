@@ -7,6 +7,7 @@ import {
   type Bedroom,
 } from './lounge-bedroom-data.ts';
 import { pickAction, type ActionCandidate, type ActionKind } from './lounge-flow.ts';
+import { slideSubstep } from './lounge-walk-slide.ts';
 
 export type WalkPoint = { x: number; z: number };
 export type WalkObstacle = {
@@ -94,7 +95,7 @@ export function walkLineClear(
   return true;
 }
 
-/** Substeps prevent tunnelling, and axis sliding makes furniture edges forgiving. */
+/** Substeps prevent tunnelling, and sliding (lounge-walk-slide) makes furniture edges and corners forgiving. */
 export function walkStep(
   from: WalkPoint,
   dx: number,
@@ -108,15 +109,11 @@ export function walkStep(
   if (distance > 20) return from;
   const count = Math.max(1, Math.ceil(distance / 0.07));
   let result = { ...from };
+  const ok = (x: number, z: number) => canWalk({ x, z }, obstacles);
   for (let i = 0; i < count; i++) {
-    const next = { x: result.x + dx / count, z: result.z + dz / count };
-    if (canWalk(next, obstacles)) result = next;
-    else {
-      const slideX = { x: next.x, z: result.z };
-      if (canWalk(slideX, obstacles)) result = slideX;
-      const slideZ = { x: result.x, z: next.z };
-      if (canWalk(slideZ, obstacles)) result = slideZ;
-    }
+    const next = slideSubstep(result.x, result.z, dx / count, dz / count, ok);
+    if (!next) break;
+    result = { x: next[0], z: next[1] };
   }
   return result;
 }

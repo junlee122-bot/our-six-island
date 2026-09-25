@@ -123,6 +123,8 @@ type Props = {
   seatedAt?: GameKind | null;
   /** A table sheet is open: its own buttons (and E) replace the action button. */
   sheetOpen?: boolean;
+  /** The village's '카지노 VIP룸' project is done (the casino shows its VIP corner). */
+  vip?: boolean;
   /** WebGL is not available (or the player chose the simple screen). */
   onUnavailable: () => void;
 };
@@ -161,6 +163,7 @@ export function Interior3D({
   onNearDoor,
   seatedAt = null,
   sheetOpen = false,
+  vip = false,
   onUnavailable,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -243,6 +246,11 @@ export function Interior3D({
     approach: null as GameKind | null,
     locked: false,
   });
+  // The casino's VIP corner follows the village project ('vip' flag).
+  const vipRef = useRef(vip);
+  useLayoutEffect(() => {
+    vipRef.current = vip;
+  }, [vip]);
   const actionRef = useRef<InteriorAction | null>(null);
   const exited = useRef(false);
   const runAction = (next: InteriorAction | null) => {
@@ -348,7 +356,7 @@ export function Interior3D({
       .add(new THREE.Vector3(Math.sin(YAW) * Math.cos(pitch), Math.sin(pitch), Math.cos(YAW) * Math.cos(pitch)).multiplyScalar(40));
     camera.lookAt(target);
     camera.updateMatrixWorld();
-    const studio = createInteriorScene(scene, area, { lights: quality.effects });
+    const studio = createInteriorScene(scene, area, { lights: quality.effects, vip: vipRef.current });
 
     // Frame the floor and the back wall (with its name banner) as large as the
     // window allows, leaving room at the top for the HUD.
@@ -908,6 +916,11 @@ export function Interior3D({
         host.dataset.walking = String(l.moving);
         host.dataset.others = String(others.size);
         lastData = t;
+      }
+      // kArchive furniture arriving, or the VIP project finishing.
+      if (studio.refresh(vipRef.current)) {
+        renderer.shadowMap.needsUpdate = true;
+        dirty = true;
       }
       if (l.moving || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);

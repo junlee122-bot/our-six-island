@@ -4,6 +4,7 @@
 // aspect follows the catalog size, because the room draws props as cards of
 // width w and height w × aspect (rugs: w × d from above).
 import { catalogEntry } from './lounge-bedroom-catalog.ts';
+import { LOUNGE_ASSETS } from './lounge-assets.ts';
 
 const W = 200;
 const OUT = '#5a4636';
@@ -337,3 +338,5 @@ export const FURNITURE_ART: Record<string, string> = Object.fromEntries(
     return [ref, svg(h, draw(h))];
   }),
 );
+// The kArchive rocking chair is a 3D model: the shop shows its rendered thumbnail.
+FURNITURE_ART['furn-rocking-chair'] = LOUNGE_ASSETS.bedroom_thumb_rocking_chair;

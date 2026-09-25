@@ -1,3 +1,5 @@
+import { KARCHIVE_COLLIDERS } from './lounge-village-karchive-layout.ts';
+
 export type VillageDestination = 'lounge' | 'casino' | 'wardrobe' | 'bedroom';
 export type VillagePoint = { x: number; z: number };
 export type VillagePlace = {
@@ -280,13 +282,15 @@ export const VILLAGE_MARKET = {
 export const VILLAGE_POND = { id: 'pond', name: '연못', x: -29, z: -17, radius: 2.6 } as const;
 /** Sea pier off the south-east edge; fishing stands at its root (x ≤ 39.6). */
 export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 39, z: 24, width: 1.5 } as const;
+// Museum and greenhouse footprints follow their kArchive models
+// (lounge-village-karchive-layout.ts: KARCHIVE_MUSEUM, KARCHIVE_GREENHOUSE).
 export const VILLAGE_MUSEUM = {
   id: 'museum',
   name: '마을 박물관',
   x: -9.2,
-  z: 1.6,
+  z: 1.5,
   width: 2.6,
-  depth: 1.5,
+  depth: 2.91,
 } as const;
 export const VILLAGE_BOARD = {
   id: 'board',
@@ -299,10 +303,10 @@ export const VILLAGE_BOARD = {
 export const VILLAGE_GREENHOUSE = {
   id: 'greenhouse',
   name: '마을 온실',
-  x: -3.2,
+  x: -10,
   z: 12.6,
-  width: 2,
-  depth: 1.5,
+  width: 3.2,
+  depth: 2.35,
 } as const;
 
 /** Matching footprints keep imported kArchive props out of walking routes. */
@@ -559,7 +563,7 @@ VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) => addTree(x, z, scale, i + 3)
     [5.2, 11.6],
   ] as const
 ).forEach(([x, z], i) =>
-  decor.push({ id: `lamp-${i}`, kind: 'lamp', x, z, collider: circle(0.2) }),
+  decor.push({ id: `lamp-${i}`, kind: 'lamp', x, z, collider: circle(0.15) }),
 );
 
 // Plaza benches face the fountain from its east and west rims.
@@ -649,7 +653,8 @@ for (const place of VILLAGE_PLACES) {
       x: place.entry.x - 1.35,
       z: front + 0.55,
       home,
-      collider: circle(0.22),
+      // The post is thin; the box sits above head height.
+      collider: circle(0.14),
     },
     {
       id: `hydrangea-${home}`,
@@ -657,7 +662,7 @@ for (const place of VILLAGE_PLACES) {
       x: place.entry.x + 1.5,
       z: front + 0.55,
       home,
-      collider: circle(0.42),
+      collider: circle(0.38),
     },
     {
       id: `garden-flowers-${home}`,
@@ -720,7 +725,8 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
     id: `fruitTree-${i}`,
     x: tree.x,
     z: tree.z,
-    collider: circle(0.55),
+    // Trunk only: the canopy is overhead.
+    collider: circle(0.45),
     rotation: 0,
   })),
   ...VILLAGE_FURNISHINGS.map((prop) => ({
@@ -765,58 +771,165 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
     collider: boxCollider(b.width, b.depth),
     rotation: 0,
   })),
+  // kArchive civic set: the festival stage and the pergola's four posts.
+  ...KARCHIVE_COLLIDERS,
 ];
 
 const FOUNTAIN = { x: 0, z: 0, radius: 2 } as const;
 
-function blockedByCollider(point: VillagePoint, radius: number) {
-  for (const item of VILLAGE_COLLIDERS) {
-    const dx = point.x - item.x,
-      dz = point.z - item.z;
+/** Nearest solid surface: signed distance (negative inside) and its outward normal. */
+type Contact = { d: number; nx: number; nz: number; small: boolean };
+
+// Signed distance to an axis-aligned box (rounded outside its corners, so a
+// walker slides around a corner instead of catching on it).
+function boxDistance(dx: number, dz: number, hw: number, hd: number): number {
+  const qx = Math.abs(dx) - hw,
+    qz = Math.abs(dz) - hd;
+  return (
+    Math.hypot(Math.max(qx, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, qz), 0)
+  );
+}
+
+// The river is solid between (and beyond) the bridges: one box per stretch.
+const RIVER_STRETCHES = (() => {
+  const edges = [-VILLAGE_BOUNDS.width, VILLAGE_BOUNDS.width];
+  const cuts = [...VILLAGE_RIVER.bridges]
+    .sort((a, b) => a.x - b.x)
+    .flatMap((b) => [b.x - b.halfWidth, b.x + b.halfWidth]);
+  const xs = [edges[0], ...cuts, edges[1]];
+  const out: { x: number; hw: number }[] = [];
+  for (let i = 0; i < xs.length; i += 2)
+    out.push({ x: (xs[i] + xs[i + 1]) / 2, hw: (xs[i + 1] - xs[i]) / 2 });
+  return out;
+})();
+const RIVER_Z = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2,
+  RIVER_HD = (VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ) / 2;
+
+/** Props small enough that walking straight into them should steer around. */
+const SMALL_PROP = 0.8;
+
+type Solid =
+  | { shape: 'circle'; x: number; z: number; r: number; small: boolean }
+  | {
+      shape: 'box';
+      x: number;
+      z: number;
+      hw: number;
+      hd: number;
+      cos: number;
+      sin: number;
+      small: boolean;
+    };
+const SOLIDS: Solid[] = [
+  ...VILLAGE_PLACES.map(
+    (place): Solid => ({
+      shape: 'box',
+      x: place.x,
+      z: place.z,
+      hw: place.width / 2,
+      hd: place.depth / 2,
+      cos: 1,
+      sin: 0,
+      small: false,
+    }),
+  ),
+  ...VILLAGE_COLLIDERS.map((item): Solid => {
     const c = item.collider;
-    if (c.shape === 'circle') {
-      const r = c.r + radius;
-      if (dx * dx + dz * dz < r * r) return true;
-    } else if (
-      Math.abs(dx) < c.w / 2 + radius &&
-      Math.abs(dz) < c.d / 2 + radius
-    )
-      return true;
+    return c.shape === 'circle'
+      ? { shape: 'circle', x: item.x, z: item.z, r: c.r, small: c.r <= SMALL_PROP }
+      : {
+          shape: 'box',
+          x: item.x,
+          z: item.z,
+          hw: c.w / 2,
+          hd: c.d / 2,
+          cos: Math.cos(item.rotation),
+          sin: Math.sin(item.rotation),
+          small: Math.max(c.w, c.d) <= SMALL_PROP * 2.1,
+        };
+  }),
+  { shape: 'circle', x: FOUNTAIN.x, z: FOUNTAIN.z, r: FOUNTAIN.radius, small: false },
+  ...RIVER_STRETCHES.map(
+    (stretch): Solid => ({
+      shape: 'box',
+      x: stretch.x,
+      z: RIVER_Z,
+      hw: stretch.hw,
+      hd: RIVER_HD,
+      cos: 1,
+      sin: 0,
+      small: false,
+    }),
+  ),
+];
+
+// Spatial buckets: each cell lists the solids within REACH of it, so every
+// distance below REACH (all that walking and contact need) is exact.
+const CELL = 2,
+  REACH = 0.6;
+const CELL_COLS = Math.ceil(VILLAGE_BOUNDS.width / CELL) + 1,
+  CELL_ROWS = Math.ceil(VILLAGE_BOUNDS.depth / CELL) + 1;
+const cellOf = (x: number, z: number) =>
+  Math.min(CELL_ROWS - 1, Math.max(0, Math.floor((z + VILLAGE_BOUNDS.depth / 2) / CELL))) *
+    CELL_COLS +
+  Math.min(CELL_COLS - 1, Math.max(0, Math.floor((x + VILLAGE_BOUNDS.width / 2) / CELL)));
+const BUCKETS: Solid[][] = Array.from({ length: CELL_COLS * CELL_ROWS }, () => []);
+for (const solid of SOLIDS) {
+  const extent =
+    solid.shape === 'circle' ? solid.r : Math.hypot(solid.hw, solid.hd);
+  const x0 = solid.x - extent - REACH,
+    x1 = solid.x + extent + REACH,
+    z0 = solid.z - extent - REACH,
+    z1 = solid.z + extent + REACH;
+  for (let z = z0; z < z1 + CELL; z += CELL)
+    for (let x = x0; x < x1 + CELL; x += CELL) {
+      const bucket = BUCKETS[cellOf(Math.min(x, x1), Math.min(z, z1))];
+      if (!bucket.includes(solid)) bucket.push(solid);
+    }
+}
+
+function solidDistance(x: number, z: number): { d: number; small: boolean } {
+  const { width, depth } = VILLAGE_BOUNDS;
+  let d = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z), REACH),
+    small = false;
+  for (const solid of BUCKETS[cellOf(x, z)]) {
+    let value: number;
+    if (solid.shape === 'circle')
+      value = Math.hypot(x - solid.x, z - solid.z) - solid.r;
+    else {
+      const dx = x - solid.x,
+        dz = z - solid.z;
+      value = boxDistance(
+        dx * solid.cos - dz * solid.sin,
+        dx * solid.sin + dz * solid.cos,
+        solid.hw,
+        solid.hd,
+      );
+    }
+    if (value < d) {
+      d = value;
+      small = solid.small;
+    }
   }
-  return false;
+  return { d, small };
+}
+
+function contactAt(point: VillagePoint): Contact {
+  const e = 0.002;
+  const here = solidDistance(point.x, point.z);
+  const gx =
+      solidDistance(point.x + e, point.z).d -
+      solidDistance(point.x - e, point.z).d,
+    gz =
+      solidDistance(point.x, point.z + e).d -
+      solidDistance(point.x, point.z - e).d,
+    length = Math.hypot(gx, gz) || 1;
+  return { d: here.d, nx: gx / length, nz: gz / length, small: here.small };
 }
 
 export function villageCanWalk(point: VillagePoint): boolean {
-  const { width, depth, radius } = VILLAGE_BOUNDS;
   if (!Number.isFinite(point.x) || !Number.isFinite(point.z)) return false;
-  if (
-    Math.abs(point.x) > width / 2 - radius ||
-    Math.abs(point.z) > depth / 2 - radius
-  )
-    return false;
-
-  if (
-    VILLAGE_PLACES.some(
-      (place) =>
-        Math.abs(point.x - place.x) < place.width / 2 + radius &&
-        Math.abs(point.z - place.z) < place.depth / 2 + radius,
-    )
-  )
-    return false;
-  if (blockedByCollider(point, radius)) return false;
-
-  const dx = point.x - FOUNTAIN.x;
-  const dz = point.z - FOUNTAIN.z;
-  if (dx * dx + dz * dz < (FOUNTAIN.radius + radius) ** 2) return false;
-
-  const touchesRiver =
-    point.z + radius > VILLAGE_RIVER.minZ &&
-    point.z - radius < VILLAGE_RIVER.maxZ;
-  const onBridge = VILLAGE_RIVER.bridges.some(
-    (bridge) => Math.abs(point.x - bridge.x) + radius <= bridge.halfWidth,
-  );
-  if (touchesRiver && !onBridge) return false;
-  return true;
+  return solidDistance(point.x, point.z).d >= VILLAGE_BOUNDS.radius;
 }
 
 export function villageLineClear(
@@ -841,6 +954,25 @@ export function villageLineClear(
   return true;
 }
 
+/** Pushes a slightly overlapping point back out along the surface normal. */
+function pushOut(point: VillagePoint): VillagePoint | null {
+  let p = point;
+  for (let i = 0; i < 4; i++) {
+    const c = contactAt(p);
+    if (c.d >= VILLAGE_BOUNDS.radius) return p;
+    const depth = VILLAGE_BOUNDS.radius - c.d + 1e-4;
+    p = { x: p.x + c.nx * depth, z: p.z + c.nz * depth };
+  }
+  return villageCanWalk(p) ? p : null;
+}
+
+/**
+ * Collide-and-slide: each substep moves, then resolves any overlap by pushing
+ * out along the obstacle's normal, which leaves the tangential part of the
+ * move (sliding along walls and around round props). Walking almost straight
+ * into a small prop (lamp, tree trunk, mailbox) steers around it instead of
+ * stopping dead; large walls and water still stop you.
+ */
 export function villageStep(
   from: VillagePoint,
   dx: number,
@@ -850,17 +982,62 @@ export function villageStep(
     return from;
   const distance = Math.hypot(dx, dz);
   if (distance > 20) return from;
-  const count = Math.max(1, Math.ceil(distance / 0.08));
+  const count = Math.max(1, Math.ceil(distance / 0.06));
+  const sx = dx / count,
+    sz = dz / count,
+    stepLength = distance / count;
   let point = { ...from };
   for (let i = 0; i < count; i++) {
-    const next = { x: point.x + dx / count, z: point.z + dz / count };
-    if (villageCanWalk(next)) point = next;
-    else {
-      const slideX = { x: next.x, z: point.z };
-      if (villageCanWalk(slideX)) point = slideX;
-      const slideZ = { x: point.x, z: next.z };
-      if (villageCanWalk(slideZ)) point = slideZ;
+    const next = { x: point.x + sx, z: point.z + sz };
+    if (villageCanWalk(next)) {
+      point = next;
+      continue;
     }
+    let best: VillagePoint | null = null,
+      progress = -Infinity;
+    const consider = (candidate: VillagePoint | null) => {
+      if (!candidate) return;
+      const mx = candidate.x - point.x,
+        mz = candidate.z - point.z;
+      // Never move farther than the step itself (no pops through thin props).
+      if (Math.hypot(mx, mz) > stepLength * 1.05 + 1e-6) return;
+      const along = mx * sx + mz * sz;
+      if (along > progress) {
+        progress = along;
+        best = candidate;
+      }
+    };
+    const slid = pushOut(next);
+    consider(slid);
+    const contact = contactAt(next);
+    // Head-on into a small prop: the pushed-out point barely advances, so
+    // walk along the prop's tangent (on the side the walker leans toward).
+    if (
+      contact.small &&
+      (progress < stepLength * stepLength * 0.5 || !best)
+    ) {
+      let tx = -contact.nz,
+        tz = contact.nx;
+      if (tx * sx + tz * sz < 0 || (tx * sx + tz * sz === 0 && tx < 0)) {
+        tx = -tx;
+        tz = -tz;
+      }
+      const around = pushOut({
+        x: point.x + tx * stepLength * 0.9,
+        z: point.z + tz * stepLength * 0.9,
+      });
+      if (around) {
+        best = around;
+        progress = (around.x - point.x) * sx + (around.z - point.z) * sz;
+      }
+    }
+    if (!best) {
+      // Legacy axis slides (e.g. squeezed between two props).
+      consider(villageCanWalk({ x: next.x, z: point.z }) ? { x: next.x, z: point.z } : null);
+      consider(villageCanWalk({ x: point.x, z: next.z }) ? { x: point.x, z: next.z } : null);
+    }
+    if (!best || progress < -1e-9) break;
+    point = best;
   }
   return point;
 }

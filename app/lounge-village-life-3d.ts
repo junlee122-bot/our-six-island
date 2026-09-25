@@ -381,12 +381,16 @@ export class VillageLifeLayer {
     this.root.name = 'village-life';
     parent.add(this.root);
     // Bed frames are static; soil tiles and crops are instanced batches.
+    // (Named: the kArchive bed frames in lounge-village-karchive.ts replace them.)
+    const frames = new THREE.Group();
+    frames.name = 'village-farm-frames';
+    this.root.add(frames);
     for (const bed of FARM_BEDS) {
       const r = farmBedRect(bed);
-      box(this.root, MAT.frame, r.x, 0.08, r.z, r.w + 0.08, 0.16, r.d + 0.08).castShadow = false;
+      box(frames, MAT.frame, r.x, 0.08, r.z, r.w + 0.08, 0.16, r.d + 0.08).castShadow = false;
     }
     // Seven identical frames → one draw call.
-    batchDirectMeshes(this.root);
+    batchDirectMeshes(frames);
     this.mineMarker = new THREE.Mesh(GEO.box, MAT.mine);
     this.mineMarker.visible = false;
     this.root.add(this.mineMarker);

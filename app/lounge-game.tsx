@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -55,6 +56,7 @@ import {
   GAME_INFO,
   GAME_KINDS,
   TABLE_AREA,
+  VIP_FLAG,
   type GameKind,
 } from './lounge-games';
 import {
@@ -1623,8 +1625,20 @@ function AccountLounge({
   };
 
   const self = connected ? view.self : 'local';
+  // My own figure and avatar wear the outfit saved on this device. The
+  // server's echo lags a wardrobe change and an older server build may drop a
+  // newer accessory (e.g. the 응원 머리띠); friends still see the server's.
+  const serverPlayers = useMemo(
+    () =>
+      view.players.map((p) =>
+        p.id === view.self && p.actor === save.actor && p.look !== myLook
+          ? { ...p, look: myLook }
+          : p,
+      ),
+    [view.players, view.self, save.actor, myLook],
+  );
   const players: LoungePlayer[] = connected
-    ? view.players
+    ? serverPlayers
     : [
         {
           id: 'local',
@@ -2109,6 +2123,7 @@ function AccountLounge({
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
                 sheetOpen={!!tableSheet}
+                vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 onUnavailable={() => {
                   setInteriorFlat(true);
                   notify('이 기기에서는 입체 화면을 열 수 없어 간단한 화면으로 보여 드려요.', 'info');

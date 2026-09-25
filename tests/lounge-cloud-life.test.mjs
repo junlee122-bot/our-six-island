@@ -15,6 +15,7 @@ import { freshLounge, defaultLook } from '../app/lounge-look.ts';
 import { TURN_LIMIT_MS, GAME_INFO } from '../app/lounge-games.ts';
 import { CHESS_MOVE_MS } from '../app/lounge-chess.ts';
 import * as room from '../app/lounge-room.ts';
+import { SELL_CAP_PER_DAY } from '../app/lounge-life.ts';
 
 const uuid = () => crypto.randomUUID();
 const member = (actor) => ({
@@ -156,7 +157,9 @@ test('sell and mail gifts through the cloud keep the ledger valid', async () => 
   const sold = await h.run(a, 'action', { action: { kind: 'sell', crop: 'fruit', n: 1 } });
   assert.equal(sold.response.ok, true);
   assert.equal(balance(h, a), INITIAL_BEOM + 150);
-  assert.equal(sold.response.life.sellCapLeft, 40_000 - 150);
+  assert.equal(sold.response.life.sellCapLeft, SELL_CAP_PER_DAY - 150);
+  assert.equal(sold.response.life.soldToday, 150);
+  assert.equal(sold.response.life.me.demand.fruit, 1);
   h.world.life.bag[a.id].fruit = 3;
   {
     const mailed = await h.run(a, 'action', {

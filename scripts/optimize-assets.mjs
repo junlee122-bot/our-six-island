@@ -43,6 +43,21 @@ const REACTIONS = [
 
 const kb = (n) => `${Math.round(n / 1024)}KB`;
 
+// Baked-texture kArchive props that stay small on screen (fences, deck tiles,
+// bed frames, chairs, stools, rope posts): a 512² texture is what the GPU
+// samples at their on-screen size anyway (mip level 1), at a quarter of the
+// memory. Everything else keeps the 1024² cap. Paths are relative to public/models.
+const MODEL_TEXTURE_SIZE = {
+  'village/civic/picketFence.glb': 512,
+  'village/civic/harborFence.glb': 512,
+  'village/civic/timberDeck.glb': 512,
+  'village/civic/vegetableBed.glb': 512,
+  'village/civic/noticeBoard.glb': 512,
+  'lounge/club/banquetChair.glb': 512,
+  'lounge/club/barStool.glb': 512,
+  'lounge/club/queueRope.glb': 512,
+};
+
 async function sameRgba(a, b) {
   const [x, y] = await Promise.all(
     [a, b].map((file) =>
@@ -168,12 +183,13 @@ async function models() {
       fs.copyFileSync(file, original);
     }
     const document = await io.read(original);
+    const size = MODEL_TEXTURE_SIZE[relative.split(path.sep).join('/')] ?? 1024;
     await document.transform(
       dedup(),
       weld(),
       resample(),
       prune(),
-      textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 88, resize: [1024, 1024] }),
+      textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 88, resize: [size, size] }),
       quantize({ quantizePosition: 14, quantizeNormal: 10, quantizeTexcoord: 12 }),
     );
     await io.write(file, document);

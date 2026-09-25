@@ -56,6 +56,7 @@ export const LOUNGE_ASSETS = {
   bedroom_thumb_cushions: '/assets/lounge/bedroom/thumbs/cushions.webp',
   bedroom_thumb_plant_stand: '/assets/lounge/bedroom/thumbs/plant-stand.webp',
   bedroom_thumb_tulips: '/assets/lounge/bedroom/thumbs/tulips.webp',
+  bedroom_thumb_rocking_chair: '/assets/lounge/bedroom/thumbs/rocking-chair.webp',
   loginDowon: '/assets/lounge/login/dowon.webp',
   loginGangjae: '/assets/lounge/login/gangjae.webp',
   loginMinseo: '/assets/lounge/login/minseo.webp',

@@ -59,8 +59,20 @@ export const DAOWON_COLLECTIONS: readonly Look['collection'][] = [
   'miku',
   'shampoo',
 ];
+/**
+ * '처음 만난 우리' is kept only where its art holds up: the six legacy chibi
+ * figures (actors 0–5, one shared motion sheet) have oversized heads and a
+ * different drawing style from every other collection, and their walk is a
+ * stiff cut-out. Their saved or remote looks read as '우리다운 하루' instead.
+ * 호현 (6) has his own full-proportion drawing and keeps it.
+ */
+export const ORIGINAL_ACTORS: readonly number[] = [6];
 export const collectionsFor = (actor: number) =>
-  COLLECTIONS.filter((c) => actor === 0 || !DAOWON_COLLECTIONS.includes(c.id));
+  COLLECTIONS.filter(
+    (c) =>
+      (actor === 0 || !DAOWON_COLLECTIONS.includes(c.id)) &&
+      (c.id !== 'original' || ORIGINAL_ACTORS.includes(actor)),
+  );
 export const hatsFor = (actor: number) =>
   HATS.filter((h) => actor === 0 || h.id !== 'hachimaki');
 export const defaultLook = (actor: number): Look => ({

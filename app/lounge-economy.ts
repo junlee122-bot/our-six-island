@@ -63,7 +63,7 @@ export type LedgerFlows = {
   days: FlowDay[];
 };
 /** Days of per-day flow totals kept in the ledger (bounded world row). */
-export const LEDGER_FLOW_DAYS = 120;
+export const LEDGER_FLOW_DAYS = 90;
 const FLOW_BUCKETS_MAX = 48;
 /** Settled/void games kept in hot state; older ones are folded into `archive`. */
 export const LEDGER_HOT_GAMES = 500;
@@ -167,6 +167,9 @@ function addFlow(
     } else o[key] = (o[key] ?? 0) + amount;
   };
   bump(flows.total[side]);
+  // Per day, crop sales share one bucket so a day stays small (the lifetime
+  // totals keep them per crop).
+  const dayKey = type === 'grant' && key.startsWith('sell-') && !DAY_SELL_KEYS.has(key) ? 'sell-crop' : key;
   let today = flows.days.find((d) => d.d === day);
   if (!today) {
     today = { d: day, g: {}, s: {} };
@@ -175,8 +178,19 @@ function addFlow(
     if (flows.days.length > LEDGER_FLOW_DAYS)
       flows.days = flows.days.slice(-LEDGER_FLOW_DAYS);
   }
-  bump(today[side]);
+  const o = today[side];
+  o[dayKey] = (o[dayKey] ?? 0) + amount;
 }
+/** Item sale buckets kept apart per day (everything else 'sell-*' is a crop). */
+const DAY_SELL_KEYS = new Set([
+  'sell-fish',
+  'sell-bug',
+  'sell-forage',
+  'sell-flower',
+  'sell-material',
+  'sell-dish',
+  'sell-fruit',
+]);
 
 export function validateLedger(value: unknown): asserts value is LoungeLedger {
   const v = value as LoungeLedger;

@@ -54,6 +54,7 @@ import {
   recordVisit,
   requestsFor,
   shopStock,
+  demandMult,
 } from '../app/lounge-life-plus.ts';
 import {
   INITIAL_BEOM,
@@ -276,7 +277,11 @@ test('farming: regrowing corn, quality stars from fertilizer, quality sell price
   assert.equal(s.balance(m) - before, 1_800 * QUALITY_MULT[2]);
   before = s.balance(m);
   s.act(m, { kind: 'sell', crop: 'pumpkin', n: 2 }, t);
-  assert.equal(s.balance(m) - before, 1_800 + 1_800 * QUALITY_MULT[1]);
+  // Units 2 and 3 of pumpkin today: the demand curve (half-life 6) applies.
+  assert.equal(
+    s.balance(m) - before,
+    Math.round(1_800 * demandMult('pumpkin', 1)) + Math.round(1_800 * QUALITY_MULT[1] * demandMult('pumpkin', 2)),
+  );
   assert.equal(s.life.bag[m.id].produce.pumpkin, 0);
   assert.equal(s.life.ext[m.id].q1, undefined);
   s.fails(m, { kind: 'sell', crop: 'pumpkin', n: 1, quality: 1 }, t, LIFE_REJECT.notEnough);

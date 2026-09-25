@@ -179,7 +179,7 @@ export const CROP_SELL_REF: Record<string, number> = {
   carrot: 200,
   tomato: 480,
   pumpkin: 1_800,
-  strawberry: 5_000,
+  strawberry: 4_500,
   potato: 900,
   corn: 2_400,
   watermelon: 8_000,
@@ -322,6 +322,8 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-rug-lilac', name: '라일락 울 러그', price: 15_000 },
   { ref: 'furn-bookcase-walnut', name: '월넛 5단 책장', price: 25_000 },
   { ref: 'furn-wardrobe-white', name: '화이트 옷장', price: 28_000 },
+  // kArchive 3D model (lounge-bedroom-catalog.ts 'model' entry).
+  { ref: 'furn-rocking-chair', name: '흔들의자', price: 26_000 },
   // Seasonal limited.
   { ref: 'furn-cherry-vase', name: '벚꽃 가지 화병', price: 12_000, season: 'spring' },
   { ref: 'furn-fan', name: '레트로 선풍기', price: 14_000, season: 'summer' },
@@ -459,7 +461,7 @@ export const LIGHTS_RARE_BOOST = 1.3;
  * (Monday). When the week's goal is met, everyone who gave at least
  * FESTIVAL_SOUVENIR_MIN that week gets the week's souvenir (rotating).
  */
-export const FESTIVAL_GOAL = 350_000;
+export const FESTIVAL_GOAL = 200_000;
 export const FESTIVAL_SOUVENIR_MIN = 20_000;
 export const FESTIVAL_SOUVENIRS = [
   'furn-festival-lantern',
