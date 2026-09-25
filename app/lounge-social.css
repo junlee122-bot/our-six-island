@@ -579,7 +579,8 @@
   opacity: 1;
 }
 .l-app .l-sheet-chips > button[aria-checked='true'] .l-sheet-key {
-  background: #ffffff33;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #fffdf180;
   color: #fffdf1;
 }
 /* Disabled buttons: grey with dark grey text instead of a faded colour
