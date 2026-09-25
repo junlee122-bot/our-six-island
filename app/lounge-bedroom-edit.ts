@@ -198,6 +198,53 @@ export function placeNew(
   }
   return moveFloorItem(room, base, near.x, near.z);
 }
+/**
+ * A new catalog item on open floor: like placeNew, but floor furniture and
+ * small things also keep a little clearance from other furniture and from
+ * the people in the room, and never land on top of another piece (so the
+ * next click grabs the new item, not the bed behind it). Wall art and rugs
+ * use placeNew.
+ */
+export function placeOpen(
+  room: Bedroom,
+  ref: string,
+  near: { x: number; z: number },
+  avoid: readonly { x: number; z: number }[] = [],
+  id = newItemId(),
+): RoomItem | null {
+  const entry = catalogEntry(ref);
+  if (!entry) return null;
+  if (entry.mount === 'wall' || entry.mount === 'rug') return placeNew(room, ref, near, id);
+  const others = room.items.flatMap((i) => {
+    const e = catalogEntry(i.ref);
+    const box = e && (e.mount === 'floor' || e.mount === 'small') ? itemFootprint(i, e) : null;
+    return box ? [box] : [];
+  });
+  const gap = 0.25,
+    personGap = 0.6;
+  const open = (c: RoomItem) => {
+    if ((c.y ?? 0) > 0.05) return false;
+    const f = itemFootprint(c, entry);
+    if (!f) return false;
+    const touches = others.some(
+      (b) => f.x0 - gap < b.x1 && b.x0 < f.x1 + gap && f.z0 - gap < b.z1 && b.z0 < f.z1 + gap,
+    );
+    const onPerson = avoid.some(
+      (p) => p.x > f.x0 - personGap && p.x < f.x1 + personGap && p.z > f.z0 - personGap && p.z < f.z1 + personGap,
+    );
+    return !touches && !onPerson && !blocking(room, c) && !doorBlocked(c);
+  };
+  const base: RoomItem = { id, kind: entry.kind, ref, x: near.x, z: near.z, rotY: 0, scale: 1 };
+  for (let ring = 0; ring < 20; ring++) {
+    const steps = Math.max(1, ring * 8);
+    for (let k = 0; k < steps; k++) {
+      const a = (k / steps) * Math.PI * 2;
+      const candidate = moveFloorItem(room, base, near.x + Math.cos(a) * ring * 0.25, near.z + Math.sin(a) * ring * 0.25);
+      if (open(candidate)) return candidate;
+    }
+  }
+  return placeNew(room, ref, near, id);
+}
 const doorBlocked = (item: RoomItem) => {
   const f = itemFootprint(item);
   return (

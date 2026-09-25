@@ -12,8 +12,14 @@ import {
   ArrowRight,
   ArrowUpRight,
   Backpack,
+  BookOpen,
   Check,
+  ClipboardList,
+  CookingPot,
+  Heart,
   House,
+  Newspaper,
+  Sparkles,
   Info,
   Mail,
   MessageCircle,
@@ -59,12 +65,26 @@ import {
 import { TableSheet, type SheetMode } from './lounge/TableSheet';
 import { loungeAudio } from './lounge-audio';
 import {
-  BagModal,
   FarmModal,
   MailModal,
   ShopModal,
   StatusModal,
+  type ShopTab,
 } from './lounge/LifePanels';
+import { InventoryPanel } from './lounge/Inventory';
+import { CalendarChip, Hotbar, useHotbar, useHotbarKeys } from './lounge/LifeHud';
+import { FishingOverlay, type FishingPhase } from './lounge/Fishing';
+import { CollectionBook, type BookTab } from './lounge/Collection';
+import { KitchenPanel } from './lounge/Kitchen';
+import { BundleBoard } from './lounge/Bundles';
+import { DigestCard, FriendsLife, MemoriesAlbum, RequestCard } from './lounge/Bonds';
+import { Celebration, useLifeEvents } from './lounge/use-life-events';
+import { lifeSfx } from './lounge-audio-life';
+import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
+import { itemName } from './lounge-life-plus';
+import { DISH_BY_ID, BUFF_INFO, type Spot } from './lounge-items';
+import type { Crop } from './lounge-life';
+import { BOARD_FRONT, MUSEUM_FRONT } from './lounge-village-spots';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
 import { CloudRoom, type Area, type CloudRoomView } from './lounge-cloud-room';
@@ -296,7 +316,15 @@ type ModalName =
   | 'bag'
   | 'shop'
   | 'mail'
-  | 'status';
+  | 'status'
+  // Life expansion (LIFE-B).
+  | 'collection'
+  | 'kitchen'
+  | 'board'
+  | 'bonds'
+  | 'memories'
+  | 'digest'
+  | 'lifeRequest';
 type Confirm = 'leaveRoom' | 'logout' | 'logoutAll' | 'reset';
 
 const TAB_AREA: Record<Tab, Area> = {
@@ -422,6 +450,14 @@ function AccountLounge({
     [villageSpawn, setVillageSpawn] = useState<VillagePoint>(),
     [coach, setCoach] = useState<'room' | 'village' | null>(null);
   const [fade, playFade] = useSceneFade();
+  // Life expansion (LIFE-B): panels, the hotbar and fishing.
+  const [bookTab, setBookTab] = useState<BookTab>('fish'),
+    [atMuseum, setAtMuseum] = useState(false),
+    [shopTab, setShopTab] = useState<ShopTab>('seeds'),
+    [mailGift, setMailGift] = useState<string | undefined>(undefined),
+    [requestFrom, setRequestFrom] = useState<number | null>(null),
+    [fishing, setFishing] = useState<{ spot: Spot; phase: FishingPhase } | null>(null);
+  const hotbar = useHotbar();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
     // Leaving my room at the start of the day comes out of my own front door.
     enteredPlace = useRef<VillagePlace | null>(
@@ -806,6 +842,130 @@ function AccountLounge({
       loungeAudio.chime('harvest');
     }
   };
+  /* ---------------------------------------------------------- life expansion */
+  const lifeRun = async (
+    action: Parameters<typeof room.life>[0],
+    done: string,
+    sfx?: Parameters<typeof lifeSfx>[0],
+  ) => {
+    const ok = await room.life(action);
+    if (ok) {
+      if (done) notify(done);
+      if (sfx) lifeSfx(sfx);
+    }
+    return ok;
+  };
+  const openBook = (bookTabNext: BookTab, museum = false) => {
+    setBookTab(bookTabNext);
+    setAtMuseum(museum);
+    setModal('collection');
+  };
+  const openShop = (next: ShopTab = 'seeds') => {
+    setShopTab(next);
+    setModal('shop');
+  };
+  const giftItem = (item: string) => {
+    setMailTo(undefined);
+    setMailGift(item);
+    setModal('mail');
+  };
+  const giftTo = (actor: number) => {
+    setMailGift(undefined);
+    setMailTo(actor);
+    setModal('mail');
+  };
+  /** E at my farm: the selected hotbar seed / fertilizer / can acts at once. */
+  const farmAct = () => {
+    const life = room.snapshot().life;
+    const now = Date.now() + room.snapshot().clockOffset;
+    const quick = life
+      ? farmToolAction(life.me.farm, life.me, hotbar.tool, now, life.calendar?.season ?? 'spring', !!life.flags?.includes('greenhouse'))
+      : null;
+    if (!quick) {
+      setModal('farm');
+      return;
+    }
+    if (quick.kind === 'water')
+      void lifeRun({ kind: 'water', plot: -1 }, `${quick.n}칸에 물을 줬어요. 더 빨리 자라요!`).then((ok) => ok && loungeAudio.chime('water'));
+    else if (quick.kind === 'plant') {
+      const crop = hotbar.tool.slice(5) as Crop;
+      void lifeRun({ kind: 'plant', plot: -1, crop }, `${itemName(crop)} ${quick.n}칸을 심었어요.`).then(
+        (ok) => ok && loungeAudio.chime('plant'),
+      );
+    } else
+      void lifeRun(
+        { kind: 'fertilize', plot: -1, item: hotbar.tool },
+        `${quick.n}칸에 ${itemName(hotbar.tool)}를 줬어요.`,
+        'pickup',
+      );
+  };
+  const startFishing = (spot: Spot) => {
+    setModal(null);
+    setFishing({ spot, phase: 'casting' });
+  };
+  const fishPhase = useCallback((phase: FishingPhase | null) => {
+    setFishing((f) => (f && phase ? (f.phase === phase ? f : { ...f, phase }) : f));
+  }, []);
+  const gather = async (spot: string, mode: 'forage' | 'bug', item: string) => {
+    const before = room.snapshot().life?.me.inv?.[item] ?? 0;
+    const ok = await room.life({ kind: mode === 'bug' ? 'catch' : 'forage', spot });
+    if (!ok) return;
+    const got = Math.max(1, (room.snapshot().life?.me.inv?.[item] ?? before + 1) - before);
+    notify(`${josa(itemName(item), '을/를')} ${got > 1 ? `${got}개 ` : ''}${mode === 'bug' ? '잡았어요' : '주웠어요'}! 가방에 담았어요.`);
+    lifeSfx(mode === 'bug' ? 'catch' : 'pickup');
+  };
+  const waterFriend = (actor: number) =>
+    void lifeRun(
+      { kind: 'waterFriend', owner: actor, plot: -1 },
+      `${ACTORS[actor]}의 밭에 물을 줬어요. 추억이 쌓였어요!`,
+    ).then((ok) => ok && loungeAudio.chime('water'));
+  const wish = async () => {
+    const before = room.snapshot().wallet.balance;
+    if (await room.life({ kind: 'wish' })) {
+      const got = room.snapshot().wallet.balance - before;
+      notify(`분수에 소원을 빌었어요${got > 0 ? ` · ${formatBeom(got)}이 반짝!` : ''}`);
+      lifeSfx('donate');
+    }
+  };
+  const talkTo = (actor: number) => {
+    const req = room.snapshot().life?.me.requests?.find((r) => r.from === actor && !r.done);
+    if (!req) return;
+    setTimeout(() => {
+      setRequestFrom(actor);
+      setModal('lifeRequest');
+    }, 700);
+  };
+  /** A second press on a selected hotbar dish eats it. */
+  const eatFromSlot = (ref: string) => {
+    const dish = DISH_BY_ID[ref];
+    if (!dish?.buff) return;
+    void lifeRun({ kind: 'eat', item: ref }, `${josa(dish.name, '을/를')} 먹었어요. 오늘은 ${BUFF_INFO[dish.buff].name}!`, 'eat');
+  };
+  /** 요리·만들기 happens at a table in my room: walk there (going home first). */
+  const openKitchen = () => {
+    setModal(null);
+    const go = () => {
+      window.dispatchEvent(new CustomEvent('bumtadew:room-go', { detail: 'cook' }));
+      notify('책상으로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
+    };
+    if (tabRef.current === 'bedroom' && visiting === null) go();
+    else enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`), undefined, () => setTimeout(go, 900));
+  };
+  const walkTo = (point: VillagePoint) => {
+    setModal(null);
+    const go = () => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: point }));
+    if (tabRef.current === 'village' && visiting === null) go();
+    else enter('village', undefined, undefined, () => setTimeout(go, 600));
+  };
+  const lifeEvents = useLifeEvents({
+    view,
+    room,
+    push: pushBanner,
+    notify,
+    selfActor: save.actor,
+    onAchievements: () => openBook('achievements'),
+    onGiftTo: giftTo,
+  });
   // Friends' rooms are shared: everyone in 'home' + owner sees each other.
   const visitHouse = (actor: number) => {
     if (actor === save.actor) {
@@ -1076,6 +1236,47 @@ function AccountLounge({
     }, 900);
     return () => clearTimeout(timer);
   }, [connected, room, pushBanner, notify]);
+  // Desktop keys: I 가방, K 도감, L 추억 앨범, 1–9 핫바 (village).
+  const lifeKeys = useRef({ open: (_m: ModalName) => {} });
+  useLayoutEffect(() => {
+    lifeKeys.current = {
+      open: (m) => {
+        setAtMuseum(false);
+        setModal(m);
+      },
+    };
+  });
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+      if (document.querySelector('dialog[open], .l-coach, .l-in-game, [data-testid=fishing]')) return;
+      if (document.querySelector('.b3-room[data-editing]')) return;
+      const m: ModalName | null = e.code === 'KeyI' ? 'bag' : e.code === 'KeyK' ? 'collection' : e.code === 'KeyL' ? 'memories' : null;
+      if (!m) return;
+      e.preventDefault();
+      lifeKeys.current.open(m);
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, []);
+  useHotbarKeys(hotbar, tab === 'village' && visiting === null && !inGame && !fishing, eatFromSlot);
+  // "어제 마을 소식" once on the first login of the day.
+  const digestDue = lifeEvents.digestDue;
+  const markDigest = useRef(lifeEvents.markDigest);
+  useLayoutEffect(() => {
+    markDigest.current = lifeEvents.markDigest;
+  });
+  useEffect(() => {
+    if (!digestDue || modal || coach || !connected || inGame) return;
+    const timer = setTimeout(() => {
+      markDigest.current();
+      setModal('digest');
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [digestDue, modal, coach, connected, inGame]);
+
   // Life loop entries for the simple / fallback village (no 3D scene).
   const simpleLife = {
     life: view.life,
@@ -1387,6 +1588,29 @@ function AccountLounge({
           </aside>
         )}
       </div>
+      {!inGame && (tab === 'village' || tab === 'bedroom') && connected && view.life?.calendar && (
+        <div className="l-life-hud" data-place={tab === 'village' && visiting === null ? 'village' : 'interior'}>
+          <CalendarChip life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('digest')} />
+        </div>
+      )}
+      {!inGame && tab === 'village' && visiting === null && !settings.simpleGraphics && connected && view.life && (
+        <div className="l-village-hotbar">
+          <Hotbar hotbar={hotbar} life={view.life} onUse={eatFromSlot} />
+        </div>
+      )}
+      {fishing && tab === 'village' && visiting === null && !inGame && (
+        <FishingOverlay
+          room={room}
+          view={view}
+          spot={fishing.spot}
+          notify={notify}
+          onClose={() => setFishing(null)}
+          onPhase={fishPhase}
+        />
+      )}
+      {lifeEvents.celebration && (
+        <Celebration name={lifeEvents.celebration.name} text={lifeEvents.celebration.text} />
+      )}
       {visiting !== null ? (
         <FriendVisitScreen
           room={room}
@@ -1454,13 +1678,23 @@ function AccountLounge({
                       life={view.life}
                       clockOffset={view.clockOffset}
                       dayNight={settings.dayNight}
-                      onFarm={() => setModal('farm')}
-                      onShop={() => setModal('shop')}
+                      onFarm={farmAct}
+                      onShop={() => openShop('seeds')}
                       onMail={() => openMail()}
                       onPick={(tree) => void pickFruit(tree)}
                       onVisit={visitHouse}
                       areaCounts={areaCounts}
                       onNear={preloadPlace}
+                      onFish={startFishing}
+                      onSpawn={(spot, mode, item) => void gather(spot, mode, item)}
+                      onMuseum={() => openBook('museum', true)}
+                      onBoard={() => setModal('board')}
+                      onWaterFriend={waterFriend}
+                      onWish={() => void wish()}
+                      onTalk={talkTo}
+                      tool={hotbar.tool}
+                      fishing={fishing}
+                      seasonFx={settings.seasonFx}
                     />
                   </Suspense>
                 </ScreenBoundary>
@@ -1519,11 +1753,12 @@ function AccountLounge({
               spawn={roomSpawn}
               onExit={() => enter('village')}
               onDress={() => enter('wardrobe')}
+              onCook={() => setModal('kitchen')}
               onNearDoor={() => preloadTab('village')}
               save={save}
               onChange={setSave}
               notice={(s) => notify(s)}
-              unlocks={view.life?.me.unlocks}
+              unlocks={[...(view.life?.me.unlocks ?? []), ...furnitureUnlocks(view.life?.me.furniture)]}
               presence={{
                 players: connected ? view.players : [],
                 self: view.self,
@@ -1762,9 +1997,9 @@ function AccountLounge({
               <Users size={20} />
               <span>마을 친구들</span>
             </button>
-            <button onClick={() => setModal('bag')}>
+            <button onClick={() => setModal('bag')} data-testid="menu-bag">
               <Backpack size={20} />
-              <span>가방</span>
+              <span>가방 (I)</span>
             </button>
             <button onClick={() => openMail()}>
               <Mail size={20} />
@@ -1780,6 +2015,30 @@ function AccountLounge({
             <button onClick={() => setModal('farm')} data-testid="menu-farm">
               <Sprout size={20} />
               <span>내 텃밭</span>
+            </button>
+            <button onClick={() => openBook('fish')} data-testid="menu-book">
+              <BookOpen size={20} />
+              <span>도감 · 박물관 (K)</span>
+            </button>
+            <button onClick={() => setModal('bonds')} data-testid="menu-bonds">
+              <Heart size={20} />
+              <span>친구 사이</span>
+            </button>
+            <button onClick={() => setModal('memories')} data-testid="menu-memories">
+              <Sparkles size={20} />
+              <span>추억 앨범 (L)</span>
+            </button>
+            <button onClick={() => walkTo(BOARD_FRONT)} data-testid="menu-board">
+              <ClipboardList size={20} />
+              <span>마을 게시판</span>
+            </button>
+            <button onClick={openKitchen} data-testid="menu-kitchen">
+              <CookingPot size={20} />
+              <span>요리·만들기</span>
+            </button>
+            <button onClick={() => setModal('digest')} data-testid="menu-digest">
+              <Newspaper size={20} />
+              <span>어제 마을 소식</span>
             </button>
             <button onClick={() => setModal('status')} data-testid="menu-status">
               <MessageSquareQuote size={20} />
@@ -1908,12 +2167,14 @@ function AccountLounge({
         />
       )}
       {modal === 'bag' && (
-        <BagModal
+        <InventoryPanel
           room={room}
           view={view}
           notify={notify}
           onClose={() => setModal(null)}
-          onShop={() => setModal('shop')}
+          hotbar={hotbar}
+          onGift={giftItem}
+          onShop={() => openShop('seeds')}
         />
       )}
       {modal === 'shop' && (
@@ -1921,8 +2182,44 @@ function AccountLounge({
           room={room}
           view={view}
           notify={notify}
+          initialTab={shopTab}
           onClose={() => setModal(null)}
         />
+      )}
+      {modal === 'collection' && (
+        <CollectionBook
+          room={room}
+          view={view}
+          notify={notify}
+          initialTab={bookTab}
+          atMuseum={atMuseum}
+          onGo={() => walkTo(MUSEUM_FRONT)}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'kitchen' && (
+        <KitchenPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />
+      )}
+      {modal === 'board' && (
+        <BundleBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />
+      )}
+      {modal === 'bonds' && (
+        <FriendsLife
+          room={room}
+          view={view}
+          notify={notify}
+          selfActor={save.actor}
+          onGift={giftTo}
+          onVisit={visitHouse}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'memories' && (
+        <MemoriesAlbum view={view} selfActor={save.actor} onClose={() => setModal(null)} />
+      )}
+      {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)} />}
+      {modal === 'lifeRequest' && requestFrom !== null && (
+        <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />
       )}
       {modal === 'mail' && (
         <MailModal
@@ -1931,7 +2228,11 @@ function AccountLounge({
           notify={notify}
           selfActor={save.actor}
           initialTo={mailTo}
-          onClose={() => setModal(null)}
+          initialGift={mailGift}
+          onClose={() => {
+            setMailGift(undefined);
+            setModal(null);
+          }}
         />
       )}
       {modal === 'status' && (

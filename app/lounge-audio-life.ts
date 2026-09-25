@@ -1,0 +1,31 @@
+// Life-expansion sound cues (fishing, foraging, cooking, museum, bundles) on
+// the shared lounge audio engine's sfx bus (loungeAudio.cue / table): no second
+// AudioContext, silent when sound is off or before the first gesture.
+import { loungeAudio } from './lounge-audio';
+import { getSettings } from './lounge-settings';
+
+type LifeSfx = 'cast' | 'bite' | 'reel' | 'miss' | 'pickup' | 'catch' | 'cook' | 'donate' | 'fanfare' | 'eat';
+
+const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorType; peak?: number }> = {
+  // A soft whoosh-plop: falling triangle notes.
+  cast: { notes: [660, 440, 262], step: 0.07, type: 'triangle', peak: 0.05 },
+  // The bite: two quick high blips (plus a splash snap).
+  bite: { notes: [1318.5, 1567.98, 1318.5], step: 0.06, type: 'square', peak: 0.05 },
+  reel: { notes: [523.25, 659.25, 783.99, 1046.5], step: 0.07, type: 'sine', peak: 0.08 },
+  miss: { notes: [392, 329.63], step: 0.12, type: 'triangle', peak: 0.06 },
+  pickup: { notes: [880, 1174.66], step: 0.06, type: 'sine', peak: 0.06 },
+  catch: { notes: [987.77, 1318.5, 1760], step: 0.05, type: 'sine', peak: 0.06 },
+  cook: { notes: [587.33, 739.99, 880, 1174.66], step: 0.08, type: 'sine', peak: 0.07 },
+  donate: { notes: [659.25, 830.61, 987.77, 1318.5], step: 0.09, type: 'sine', peak: 0.07 },
+  fanfare: { notes: [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.5], step: 0.1, type: 'triangle', peak: 0.08 },
+  eat: { notes: [440, 554.37, 659.25], step: 0.09, type: 'sine', peak: 0.06 },
+};
+
+/** Plays one life cue (quietly does nothing when sound is off). */
+export function lifeSfx(kind: LifeSfx) {
+  if (!getSettings().sound) return;
+  const n = NOTES[kind];
+  loungeAudio.cue(n.notes, n.step, n.type, n.peak);
+  // A short paper-snap stands in for the splash of a cast or a bite.
+  if (kind === 'cast' || kind === 'bite') loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05);
+}

@@ -2,6 +2,26 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { X, TriangleAlert } from 'lucide-react';
 
+/** The walkable scene on screen (village or room), if any. */
+const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d]';
+
+/**
+ * After a dialog closes: focus its opener if it is still on screen, else the
+ * visible scene. Never steals focus from another dialog that is now open.
+ */
+function restoreFocus(opener: HTMLElement | null) {
+  if (document.querySelector('dialog[open]')) return;
+  const active = document.activeElement;
+  // Something else already took focus (e.g. the next screen's own field).
+  if (active instanceof HTMLElement && active !== document.body) return;
+  const visible = (e: Element | null): e is HTMLElement =>
+    e instanceof HTMLElement && e.isConnected && e.getClientRects().length > 0;
+  const target = visible(opener)
+    ? opener
+    : [...document.querySelectorAll(SCENES)].find(visible);
+  target?.focus({ preventScroll: true });
+}
+
 export function Modal({
   title,
   onClose,
@@ -21,10 +41,20 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = ref.current!;
+    // Whatever had focus before (a dock button, the 3D scene…) gets it back on
+    // close, so WASD walks again without clicking the scene first.
+    const opener =
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement !== document.body
+        ? document.activeElement
+        : null;
     d.showModal();
     // Focus the dialog itself so touch users don't see a focus ring on "닫기".
     d.focus();
-    return () => d.close();
+    return () => {
+      d.close();
+      restoreFocus(opener);
+    };
   }, []);
   const close = () => {
     if (closable) onClose();

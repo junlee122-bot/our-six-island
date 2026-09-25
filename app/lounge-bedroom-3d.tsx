@@ -3,7 +3,7 @@
 // This application surface must receive keyboard focus for directional walking.
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex */
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ArrowDown,
   ArrowLeft,
@@ -38,7 +38,7 @@ import {
   duplicateItem,
   moveFloorItem,
   moveWallItem,
-  placeNew,
+  placeOpen,
   rotateItem,
   scaleItem,
   withItem,
@@ -66,6 +66,7 @@ import {
   besideBed,
   leavingThroughDoor,
   roomAction,
+  besideCookTable,
   findWalkPath,
   nearestWalkable,
   roomObstacles,
@@ -76,7 +77,9 @@ import {
 } from './lounge-bedroom-navigation';
 import { ActionButton } from './lounge/ActionButton';
 import type { ActionKind } from './lounge-flow';
+import { sceneKeyTarget } from './lounge-scene-keys';
 import './lounge-bedroom-3d.css';
+import './lounge-bedroom-edit-dock.css';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 // Physical key codes keep WASD working while a Korean IME is active.
@@ -110,6 +113,14 @@ export type RoomPresence = {
 const HOST_SPOT = { x: 1.5, z: 2.5 } as const;
 const HOST_ID = 'host-npc';
 const BUBBLE_MS = 6500;
+/** Desktop 꾸미기: the room fills the window and the tools sit in a side dock. */
+const WIDE_EDIT = '(min-width: 1024px)';
+const subscribeWide = (change: () => void) => {
+  const query = window.matchMedia?.(WIDE_EDIT);
+  query?.addEventListener('change', change);
+  return () => query?.removeEventListener('change', change);
+};
+const wideNow = () => !!window.matchMedia?.(WIDE_EDIT).matches;
 
 type Occupant = { id: string; actor: number; look: Look; npc?: boolean };
 type History = { past: Bedroom[]; future: Bedroom[] };
@@ -137,6 +148,7 @@ export function Bedroom3D({
   notice,
   onExit,
   onDress,
+  onCook,
   spawn = 'door',
   onNearDoor,
 }: {
@@ -156,6 +168,8 @@ export function Bedroom3D({
   onExit?: () => void;
   /** 옷 갈아입기 at the wardrobe or mirror (my room). */
   onDress?: () => void;
+  /** 요리·만들기 at a table or the hearth (my room). */
+  onCook?: () => void;
   /** Where I appear: at the door (walked in) or beside the bed (day start). */
   spawn?: 'door' | 'bed';
   /** I am near the door: preload the village. */
@@ -185,6 +199,7 @@ export function Bedroom3D({
   const [draft, setDraft] = useState<RoomItem | null>(null);
   const [dragging, setDragging] = useState(false);
   const [panel, setPanel] = useState<'catalog' | 'settings' | null>(null);
+  const wideEdit = useSyncExternalStore(subscribeWide, wideNow, () => false);
   const [resetOpen, setResetOpen] = useState(false);
   const [history, setHistory] = useState<History>({ past: [], future: [] });
   const [announcement, setAnnouncement] = useState('');
@@ -210,9 +225,9 @@ export function Bedroom3D({
   const [touch] = useState(
     () => typeof window !== 'undefined' && !!window.matchMedia?.('(hover: none) and (pointer: coarse)').matches,
   );
-  const flow = useRef({ onExit, onDress, onNearDoor });
+  const flow = useRef({ onExit, onDress, onNearDoor, onCook });
   useLayoutEffect(() => {
-    flow.current = { onExit, onDress, onNearDoor };
+    flow.current = { onExit, onDress, onNearDoor, onCook };
   });
   const exited = useRef(false);
   const runAction = (kind: ActionKind | undefined) => {
@@ -221,6 +236,7 @@ export function Bedroom3D({
       exited.current = true;
       flow.current.onExit?.();
     } else if (kind === 'dress') flow.current.onDress?.();
+    else if (kind === 'cook') flow.current.onCook?.();
     else if (kind === 'decorate' && canEditRef.current) {
       setEditing(true);
       hostRef.current?.focus({ preventScroll: true });
@@ -325,6 +341,10 @@ export function Bedroom3D({
     apply(next, '변경을 다시 적용했어요.');
     if (!next.items.some((i) => i.id === latest.current.selectedId)) setSelectedId(null);
   };
+  /** Premium furniture: owned copies (one unlock entry each) minus placed copies. */
+  const premiumLeft = (ref: string, current: { items: readonly { ref: string }[] }) =>
+    !catalogEntry(ref)?.premium ||
+    unlocks.filter((u) => u === ref).length > current.items.filter((i) => i.ref === ref).length;
   const add = (ref: string) => {
     const current = latest.current.room,
       entry = catalogEntry(ref);
@@ -333,9 +353,14 @@ export function Bedroom3D({
       notice?.(`소품은 ${BEDROOM_LIMITS.maxItems}개까지 놓을 수 있어요.`);
       return;
     }
-    // Just in front of me (towards the camera), on the nearest free spot.
+    if (!premiumLeft(ref, current)) {
+      notice?.(`${josa(entry.name, '은/는')} 가진 만큼 모두 놓았어요.`);
+      return;
+    }
+    // Just in front of me (towards the camera), on the nearest open floor
+    // (not on the bed or under my feet, so the next drag grabs this one).
     const p = positionRef.current;
-    const item = placeNew(current, ref, { x: p.x + 0.9, z: p.z + 0.45 });
+    const item = placeOpen(current, ref, { x: p.x + 0.9, z: p.z + 0.45 }, [p]);
     if (!item) return;
     commitItem(item, `${josa(entry.name, '을/를')} 놓았어요. 끌어서 옮겨 보세요.`);
     setSelectedId(item.id);
@@ -611,7 +636,7 @@ export function Bedroom3D({
       host.focus({ preventScroll: true });
       const ray = rayFrom(event);
       if (latest.current.editing) {
-        const id = studio.pick(ray);
+        const id = studio.pick(ray, latest.current.selectedId);
         setters.current.setSelectedId(id);
         if (!id) return;
         const item = latest.current.room.items.find((i) => i.id === id)!;
@@ -659,9 +684,10 @@ export function Bedroom3D({
 
     // ---------------------------------------------------------- keys
     const keydown = (event: KeyboardEvent) => {
-      if (event.altKey || document.querySelector('dialog[open]')) return;
-      const target = event.target as HTMLElement | null;
-      if (target && target !== host && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(target.tagName)) return;
+      // Heard on window: after a dialog closes focus may sit on body or on the
+      // button that opened it, and WASD / Ctrl+Z should still reach the room.
+      const at = sceneKeyTarget(event, host);
+      if (!at || event.altKey) return;
       if (latest.current.editing) {
         if ((event.ctrlKey || event.metaKey) && event.code === 'KeyZ') {
           event.preventDefault();
@@ -674,6 +700,8 @@ export function Bedroom3D({
           editOps.current.redo();
           return;
         }
+        // Delete / R / arrows on a focused toolbar button stay that button's.
+        if (at !== 'scene') return;
         const id = latest.current.selectedId,
           item = id ? latest.current.room.items.find((i) => i.id === id) : undefined;
         if (!item) return;
@@ -707,7 +735,7 @@ export function Bedroom3D({
         }
         return;
       }
-      if (event.key === 'Escape' && !latest.current.visit && flow.current.onExit) {
+      if (event.key === 'Escape' && at === 'scene' && !latest.current.visit && flow.current.onExit) {
         event.preventDefault();
         runActionRef.current('exit');
         return;
@@ -720,7 +748,7 @@ export function Bedroom3D({
       destination.visible = false;
     };
     const runKeydown = (event: KeyboardEvent) => {
-      if (event.key !== 'Shift' || event.repeat) return;
+      if (event.key !== 'Shift' || event.repeat || !sceneKeyTarget(event, host)) return;
       shiftHeld.current = true;
       setRunPressed(true);
     };
@@ -767,8 +795,20 @@ export function Bedroom3D({
     canvas.addEventListener('pointercancel', onPointerCancel);
     canvas.addEventListener('webglcontextlost', contextLost);
     canvas.addEventListener('webglcontextrestored', contextRestored);
-    host.addEventListener('keydown', keydown);
-    host.addEventListener('keydown', runKeydown);
+    // "요리·만들기" from the menu (and tests): walk to a kitchen table / point.
+    const roomGo = (e: Event) => {
+      const detail = (e as CustomEvent<{ x: number; z: number } | 'cook'>).detail;
+      const target = detail === 'cook' ? besideCookTable(latest.current.room) : detail;
+      if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.z)) return;
+      path = findWalkPath(positionRef.current, target);
+      const last = path.at(-1);
+      destination.visible = Boolean(last);
+      if (last) destination.position.set(last.x, 0.07, last.z);
+      dirty = true;
+    };
+    window.addEventListener('bumtadew:room-go', roomGo);
+    window.addEventListener('keydown', keydown);
+    window.addEventListener('keydown', runKeydown);
     window.addEventListener('keyup', keyup);
     window.addEventListener('blur', blur);
     document.addEventListener('visibilitychange', visibilityChanged);
@@ -934,6 +974,7 @@ export function Bedroom3D({
               own: canEditRef.current,
               canExit: !!flow.current.onExit,
               canDress: !!flow.current.onDress,
+              canCook: !!flow.current.onCook,
             });
         if (
           nextAction?.kind !== actionRef.current?.kind ||
@@ -972,8 +1013,9 @@ export function Bedroom3D({
       canvas.removeEventListener('pointercancel', onPointerCancel);
       canvas.removeEventListener('webglcontextlost', contextLost);
       canvas.removeEventListener('webglcontextrestored', contextRestored);
-      host.removeEventListener('keydown', keydown);
-      host.removeEventListener('keydown', runKeydown);
+      window.removeEventListener('bumtadew:room-go', roomGo);
+      window.removeEventListener('keydown', keydown);
+      window.removeEventListener('keydown', runKeydown);
       host.removeEventListener('focusout', blur);
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
@@ -1019,6 +1061,19 @@ export function Bedroom3D({
   const selfBubble = bubbleFor(save.actor, selfPlayer?.reaction);
   const visitors = occupants.filter((o) => !o.npc);
 
+  // The open catalog / wall-and-floor panel: over the room on small screens,
+  // in the side dock on desktop (so it never covers the room).
+  const editPanel =
+    editing && panel === 'catalog' ? (
+      <EditCatalog room={room} unlocks={unlocks} onAdd={add} onClose={() => setPanel(null)} />
+    ) : editing && panel === 'settings' ? (
+      <RoomSettings
+        room={room}
+        onChange={commit}
+        onReset={() => setResetOpen(true)}
+        onClose={() => setPanel(null)}
+      />
+    ) : null;
   return (
     <section className="b3-room" aria-label="입체 방" data-editing={editing || undefined}>
       <header className="b3-heading">
@@ -1125,20 +1180,11 @@ export function Bedroom3D({
               </div>
             </div>
           )}
-          {editing && panel === 'catalog' && (
-            <EditCatalog room={room} unlocks={unlocks} onAdd={add} onClose={() => setPanel(null)} />
-          )}
-          {editing && panel === 'settings' && (
-            <RoomSettings
-              room={room}
-              onChange={commit}
-              onReset={() => setResetOpen(true)}
-              onClose={() => setPanel(null)}
-            />
-          )}
+          {!wideEdit && editPanel}
         </div>
         {editing ? (
           <div className="b3-edit-dock">
+            {wideEdit && editPanel}
             {selected && !panel && (
               <EditToolbar
                 item={selected}
@@ -1166,6 +1212,10 @@ export function Bedroom3D({
                 onDuplicate={() => {
                   if (room.items.length >= BEDROOM_LIMITS.maxItems) {
                     notice?.(`소품은 ${BEDROOM_LIMITS.maxItems}개까지 놓을 수 있어요.`);
+                    return;
+                  }
+                  if (!premiumLeft(selected.ref, room)) {
+                    notice?.('가진 가구를 모두 놓았어요. 가구 상점에서 더 살 수 있어요.');
                     return;
                   }
                   const copy = duplicateItem(room, selected);

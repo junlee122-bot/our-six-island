@@ -25,6 +25,21 @@ import {
 } from './lounge-village-life.ts';
 import type { VillagePoint } from './lounge-village-layout.ts';
 import type { LifeView } from './lounge-life.ts';
+import {
+  BOARD_REACH,
+  FISH_REACH,
+  FOUNTAIN_REACH,
+  MUSEUM_REACH,
+  SPAWN_REACH,
+  boardDistance,
+  fountainDistance,
+  museumDistance,
+  nearestFishSpot,
+  nearestSpawn,
+} from './lounge-village-spots.ts';
+import { SPOT_INFO, type Spot } from './lounge-items.ts';
+import { itemName } from './lounge-life-plus.ts';
+import { farmToolAction } from './lounge-life-ui.ts';
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
 export type VillageSpot =
@@ -34,7 +49,14 @@ export type VillageSpot =
   | { kind: 'tree'; id: string; readyAt: number }
   | { kind: 'market' }
   | { kind: 'npc'; actor: number }
-  | { kind: 'mailbox' };
+  | { kind: 'mailbox' }
+  // Life expansion (LIFE-B).
+  | { kind: 'fish'; spot: Spot }
+  | { kind: 'spawn'; spot: string; item: string; mode: 'forage' | 'bug' }
+  | { kind: 'museum' }
+  | { kind: 'board' }
+  | { kind: 'friendFarm'; actor: number }
+  | { kind: 'fountain' };
 
 export type VillageTarget =
   | { type: 'door'; entrance: NearbyVillageEntrance }
@@ -43,6 +65,10 @@ export type VillageTarget =
 export type VillageAction = {
   kind: ActionKind;
   target: VillageTarget;
+  /** Overrides the default label ("붕어 잡기", "토마토 심기 (3)"…). */
+  label?: string;
+  /** Shown but not usable right now (e.g. already watered today). */
+  disabled?: boolean;
 };
 
 export function villageAction(
@@ -53,12 +79,15 @@ export function villageAction(
     now,
     npcs = [],
     canVisit = true,
+    tool = '',
   }: {
     life?: LifeView | null;
     now: number;
     npcs?: readonly { actor: number; point: VillagePoint }[];
     /** Friends' doors lead to their rooms ('놀러 가기'). */
     canVisit?: boolean;
+    /** The selected hotbar item (seed / fertilizer / watering can). */
+    tool?: string;
   },
 ): VillageAction | null {
   const candidates: (ActionCandidate<VillageTarget> | null)[] = [];
@@ -71,12 +100,84 @@ export function villageAction(
       door: true,
       target: { type: 'door', entrance },
     });
+  const quick = life
+    ? farmToolAction(
+        life.me.farm,
+        life.me,
+        tool,
+        now,
+        life.calendar?.season ?? 'spring',
+        !!life.flags?.includes('greenhouse'),
+      )
+    : null;
   candidates.push({
-    kind: farmAction(life?.me.farm ?? [], now),
+    kind: quick ? (quick.kind === 'fertilize' ? 'tend' : quick.kind) : farmAction(life?.me.farm ?? [], now),
     distance: farmDistance(point, actor),
     reach: FARM_REACH,
     target: { type: 'spot', spot: { kind: 'farm' } },
   });
+  const labels = new Map<string, { label?: string; disabled?: boolean }>();
+  if (quick) labels.set('farm', { label: quick.label });
+  // Friends' farms: 물 주기 once per friend per day (their plots are public).
+  if (life)
+    for (const [id, plots] of Object.entries(life.housesPlotsPublic ?? {})) {
+      const owner = life.actors?.[id];
+      if (owner === undefined || owner === actor) continue;
+      const done = !!life.me.waterFriend?.includes(owner),
+        needs = plots.filter((p) => p.needsWater).length;
+      if (!done && !needs) continue;
+      const key = 'friendFarm:' + owner;
+      labels.set(key, done ? { label: '오늘 물 줬어요', disabled: true } : { label: '물 주기 (오늘 1번)' });
+      candidates.push({
+        kind: 'waterFriend',
+        distance: farmDistance(point, owner),
+        reach: FARM_REACH,
+        target: { type: 'spot', spot: { kind: 'friendFarm', actor: owner } },
+      });
+    }
+  const fishing = nearestFishSpot(point, FISH_REACH);
+  if (fishing) {
+    const flag = SPOT_INFO[fishing.spot].flag;
+    if (flag && !life?.flags?.includes(flag))
+      labels.set('fish:' + fishing.spot, { label: '데크 수리가 필요해요', disabled: true });
+    candidates.push({
+      kind: 'fish',
+      distance: fishing.distance,
+      reach: FISH_REACH,
+      target: { type: 'spot', spot: { kind: 'fish', spot: fishing.spot } },
+    });
+  }
+  const spawn = life ? nearestSpawn(point, life.me.spawns ?? [], SPAWN_REACH) : null;
+  if (spawn) {
+    labels.set('spawn:' + spawn.spot, {
+      label: `${itemName(spawn.item)} ${spawn.kind === 'bug' ? '잡기' : '줍기'}`,
+    });
+    candidates.push({
+      kind: spawn.kind === 'bug' ? 'catch' : 'forage',
+      distance: spawn.distance,
+      reach: SPAWN_REACH,
+      target: { type: 'spot', spot: { kind: 'spawn', spot: spawn.spot, item: spawn.item, mode: spawn.kind } },
+    });
+  }
+  candidates.push({
+    kind: 'museum',
+    distance: museumDistance(point),
+    reach: MUSEUM_REACH,
+    target: { type: 'spot', spot: { kind: 'museum' } },
+  });
+  candidates.push({
+    kind: 'board',
+    distance: boardDistance(point),
+    reach: BOARD_REACH,
+    target: { type: 'spot', spot: { kind: 'board' } },
+  });
+  if (life?.flags?.includes('fountain') && !life.me.wished)
+    candidates.push({
+      kind: 'wish',
+      distance: fountainDistance(point),
+      reach: FOUNTAIN_REACH,
+      target: { type: 'spot', spot: { kind: 'fountain' } },
+    });
   candidates.push({
     kind: 'mail',
     distance: mailboxDistance(point, actor),
@@ -118,7 +219,19 @@ export function villageAction(
       target: { type: 'spot', spot: { kind: 'npc', actor: npc.actor } },
     });
   const best = pickAction(candidates);
-  return best?.target ? { kind: best.kind, target: best.target } : null;
+  if (!best?.target) return null;
+  const t = best.target;
+  const key =
+    t.type === 'door'
+      ? ''
+      : t.spot.kind === 'friendFarm'
+        ? 'friendFarm:' + t.spot.actor
+        : t.spot.kind === 'fish'
+          ? 'fish:' + t.spot.spot
+          : t.spot.kind === 'spawn'
+            ? 'spawn:' + t.spot.spot
+            : t.spot.kind;
+  return { kind: best.kind, target: t, ...labels.get(key) };
 }
 
 /** Stable identity of an action (re-render only when it changes). */
@@ -128,6 +241,9 @@ export function villageActionKey(action: VillageAction | null) {
   return (
     action.kind +
     ':' +
-    (t.type === 'door' ? 'door:' + t.entrance.place.id : JSON.stringify(t.spot))
+    (t.type === 'door' ? 'door:' + t.entrance.place.id : JSON.stringify(t.spot)) +
+    ':' +
+    (action.label ?? '') +
+    (action.disabled ? ':off' : '')
   );
 }

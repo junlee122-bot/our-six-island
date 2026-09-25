@@ -6,8 +6,13 @@ import { useState } from 'react';
 import {
   Backpack,
   Check,
+  CloudRain,
   Droplets,
+  FlaskConical,
   Gift,
+  Grid2x2Plus,
+  Repeat,
+  Sofa,
   Mail,
   MailOpen,
   Minus,
@@ -24,6 +29,7 @@ import {
   CROPS,
   CROP_INFO,
   FRUIT_SELL,
+  cropInSeason,
   GUESTBOOK_TEXT_MAX,
   MAIL_TEXT_MAX,
   PALETTES,
@@ -39,7 +45,12 @@ import {
   type LifeView,
   type ShopItem,
 } from '../lounge-life';
-import { itemName } from '../lounge-life-plus';
+import { FARM_EXPAND_PRICE, ROD_PRICE, itemName } from '../lounge-life-plus';
+import { ITEM_BY_ID, ITEM_PRICES, FURNITURE_BY_REF } from '../lounge-items';
+import { SEASON_INFO } from '../lounge-calendar';
+import { giftTaste, tastesKnown } from '../lounge-life-ui';
+import { ItemIcon, QualityStar } from './ItemIcon';
+import { FURNITURE_ART } from '../lounge-furniture-art';
 import { REACTIONS } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
 import { TROPHY_ART, isTrophy } from '../lounge-trophy-art';
@@ -106,7 +117,7 @@ const STICKER_EMOJI: Record<string, string> = {
   sorry: '🙏',
   hello: '👋',
 };
-const cropLabel = (crop: Crop) => `${CROP_INFO[crop].emoji} ${CROP_INFO[crop].name}`;
+const cropLabel = (crop: Crop) => CROP_INFO[crop].name;
 export function giftText(gift: LifeGift | undefined) {
   if (!gift) return '';
   return gift.kind === 'fruit'
@@ -202,6 +213,7 @@ export function FarmModal({
   const [choosing, setChoosing] = useState<number | null>(null);
   const [seed, setSeed] = useState<Crop>(lastSeed);
   const [harvest, setHarvest] = useState('');
+  const [expand, setExpand] = useState(false);
   if (!life)
     return (
       <Modal title="내 텃밭" onClose={onClose}>
@@ -210,14 +222,26 @@ export function FarmModal({
     );
   const farm = life.me.farm;
   const seeds = life.me.bag.seeds;
+  const season = life.calendar?.season ?? 'spring';
+  const greenhouse = !!life.flags?.includes('greenhouse');
+  const plantable = (c: Crop) => greenhouse || cropInSeason(c, season);
   const ready = farm.filter((p) => p.crop && plotStage(p, now) === 3).length;
   const empty = farm.filter((p) => !p.crop).length;
   const thirsty = farm.filter(
-    (p) => p.crop && p.wateredAt === null && plotStage(p, now) < 3,
+    (p) => p.crop && p.wateredAt === null && !p.rained && plotStage(p, now) < 3,
   ).length;
-  const anySeeds = CROPS.some((c) => seeds[c] > 0);
-  const pick = anySeeds && !seeds[seed] ? CROPS.find((c) => seeds[c] > 0)! : seed;
-  const plantN = Math.min(empty, seeds[pick]);
+  const rained = farm.filter((p) => p.crop && p.rained && plotStage(p, now) < 3).length;
+  const anySeeds = CROPS.some((c) => seeds[c] > 0 && plantable(c));
+  const pick =
+    anySeeds && (!seeds[seed] || !plantable(seed))
+      ? CROPS.find((c) => seeds[c] > 0 && plantable(c))!
+      : seed;
+  const plantN = plantable(pick) ? Math.min(empty, seeds[pick]) : 0;
+  const inv = life.me.inv ?? {};
+  const fertTargets = (level: 1 | 2) =>
+    farm.filter((p) => p.crop && (p.fert ?? 0) < level && plotStage(p, now) < 3).length;
+  const size = life.me.plots ?? farm.length;
+  const nextSize = size === 6 ? 9 : size === 9 ? 12 : 0;
   const harvestAll = async () => {
     const before = room.snapshot().life;
     if (await run({ kind: 'harvest', plot: -1 }, '', 'harvest')) {
@@ -225,10 +249,15 @@ export function FarmModal({
       setHarvest(got || `작물 ${ready}개`);
     }
   };
+  const seasonNote = (c: Crop) =>
+    plantable(c)
+      ? ''
+      : `${(CROP_INFO[c].seasons ?? []).map((x) => SEASON_INFO[x].name).join('·')}에만 심어요`;
   return (
-    <Modal title="내 텃밭" onClose={onClose} className="l-life-modal">
+    <Modal title="내 텃밭" onClose={onClose} className="l-life-modal" wide>
       <p className="l-modal-intro">
-        씨앗을 심고 물을 주면 40% 빨리 자라요. 다 자라면 수확해서 가방에 담아요.
+        씨앗을 심고 물을 주면 40% 빨리 자라요. 비료를 주면 은별·금별 작물이 잘 나와요.
+        {greenhouse ? ' 마을 온실 덕분에 계절과 상관없이 심을 수 있어요.' : ` 지금은 ${SEASON_INFO[season].name}이에요.`}
       </p>
       {harvest && (
         <output className="l-next-step" data-testid="farm-next-step">
@@ -270,10 +299,38 @@ export function FarmModal({
         >
           <Droplets size={16} /> 모두 물 주기 {thirsty ? `(${thirsty})` : ''}
         </button>
+        {(['fertilizer', 'fertilizer-deluxe'] as const).map((item, i) => {
+          const level = (i + 1) as 1 | 2;
+          const n = Math.min(inv[item] ?? 0, fertTargets(level));
+          if (!(inv[item] ?? 0)) return null;
+          return (
+            <button
+              key={item}
+              className="l-secondary"
+              disabled={!n || busy}
+              onClick={() =>
+                void run(
+                  { kind: 'fertilize', plot: -1, item },
+                  `${n}칸에 ${ITEM_BY_ID[item].name}를 줬어요. 좋은 작물이 나올 거예요.`,
+                  'plant',
+                )
+              }
+              data-testid={`farm-fert-${level}`}
+            >
+              <FlaskConical size={16} /> {ITEM_BY_ID[item].name} 주기 {n ? `(${n})` : ''}
+              <small className="l-inline-count">{inv[item]}개</small>
+            </button>
+          );
+        })}
         <button className="l-secondary" onClick={onShop}>
-          <Store size={16} /> 씨앗 사러 가기
+          <Store size={16} /> 씨앗·비료 사기
         </button>
       </div>
+      {rained > 0 && (
+        <p className="l-rain-note">
+          <CloudRain size={15} aria-hidden="true" /> 오늘 비가 와서 {rained}칸은 물을 주지 않아도 돼요.
+        </p>
+      )}
       {empty > 0 && (
         <div className="l-plant-all" data-testid="farm-plant-all-row">
           {anySeeds ? (
@@ -289,8 +346,8 @@ export function FarmModal({
                   data-testid="farm-seed"
                 >
                   {CROPS.map((crop) => (
-                    <option key={crop} value={crop} disabled={!seeds[crop]}>
-                      {cropLabel(crop)} ({seeds[crop]}개)
+                    <option key={crop} value={crop} disabled={!seeds[crop] || !plantable(crop)}>
+                      {cropLabel(crop)} ({seeds[crop]}개){plantable(crop) ? '' : ` · ${seasonNote(crop)}`}
                     </option>
                   ))}
                 </select>
@@ -313,7 +370,7 @@ export function FarmModal({
             </>
           ) : (
             <>
-              <span>씨앗이 없어요.</span>
+              <span>지금 심을 수 있는 씨앗이 없어요.</span>
               <button className="l-primary" onClick={onShop} data-testid="farm-need-seeds">
                 <Store size={15} /> 씨앗 사러 가기
               </button>
@@ -321,7 +378,7 @@ export function FarmModal({
           )}
         </div>
       )}
-      <ol className="l-farm-grid" aria-label="텃밭 6칸">
+      <ol className="l-farm-grid" aria-label={`텃밭 ${farm.length}칸`} data-size={farm.length}>
         {farm.map((plot, i) => {
           const stage = plot.crop ? plotStage(plot, now) : 0;
           const readyAt = plot.readyAt ?? 0;
@@ -329,6 +386,7 @@ export function FarmModal({
           const progress = plot.crop
             ? Math.min(1, Math.max(0, (now - plot.plantedAt) / total))
             : 0;
+          const regrow = plot.crop ? CROP_INFO[plot.crop].regrow : undefined;
           return (
             <li
               key={i}
@@ -337,16 +395,17 @@ export function FarmModal({
               data-testid={`plot-${i}`}
             >
               <span className="l-plot-art" aria-hidden="true">
-                {plot.crop
-                  ? stage === 3
-                    ? CROP_INFO[plot.crop].emoji
-                    : stage === 0
-                      ? '🌱'
-                      : '🌿'
-                  : ''}
+                {plot.crop ? (
+                  stage === 3 ? (
+                    <ItemIcon id={plot.crop} size={34} quality={plot.quality} />
+                  ) : (
+                    <SproutArt stage={stage} />
+                  )
+                ) : null}
               </span>
               <strong>
                 {i + 1}번 밭 · {plot.crop ? CROP_INFO[plot.crop].name : '비어 있음'}
+                {plot.crop && plot.quality ? <QualityStar quality={plot.quality} /> : null}
               </strong>
               {plot.crop && (
                 <>
@@ -359,8 +418,18 @@ export function FarmModal({
                   <small>
                     {stage === 3
                       ? '다 자랐어요!'
-                      : `${duration(readyAt - now)} 뒤 수확${plot.wateredAt !== null ? ' · 물 줌 💧' : ''}`}
+                      : `${duration(readyAt - now)} 뒤 수확${plot.rained ? ' · 비가 물을 줬어요' : plot.wateredAt !== null ? ' · 물 줌' : ''}`}
                   </small>
+                  {(plot.fert || (regrow && plot.harvestsLeft > 1)) && (
+                    <span className="l-plot-tags">
+                      {plot.fert ? <em>{plot.fert === 2 ? '고급 비료' : '비료'}</em> : null}
+                      {regrow && plot.harvestsLeft > 1 ? (
+                        <em>
+                          <Repeat size={11} aria-hidden="true" /> {plot.harvestsLeft}번 더 수확
+                        </em>
+                      ) : null}
+                    </span>
+                  )}
                 </>
               )}
               {!plot.crop ? (
@@ -369,7 +438,8 @@ export function FarmModal({
                     {CROPS.map((crop) => (
                       <button
                         key={crop}
-                        disabled={!seeds[crop] || busy}
+                        disabled={!seeds[crop] || busy || !plantable(crop)}
+                        title={seasonNote(crop) || undefined}
                         onClick={() => {
                           setChoosing(null);
                           setSeed(crop);
@@ -381,7 +451,7 @@ export function FarmModal({
                           );
                         }}
                       >
-                        {cropLabel(crop)} <small>{seeds[crop]}개</small>
+                        <ItemIcon id={crop} size={18} /> {cropLabel(crop)} <small>{seeds[crop]}개</small>
                       </button>
                     ))}
                     {!anySeeds && (
@@ -399,7 +469,7 @@ export function FarmModal({
                     disabled={busy}
                     onClick={() => {
                       // One tap plants the remembered seed when there is one.
-                      if (seeds[pick] > 0)
+                      if (seeds[pick] > 0 && plantable(pick))
                         void run(
                           { kind: 'plant', plot: i, crop: pick },
                           `${josa(CROP_INFO[pick].name, '을/를')} 심었어요.`,
@@ -414,7 +484,7 @@ export function FarmModal({
                     data-testid={`plot-${i}-plant`}
                   >
                     <Sprout size={15} />{' '}
-                    {seeds[pick] > 0 ? `${CROP_INFO[pick].name} 심기` : '씨앗 심기'}
+                    {seeds[pick] > 0 && plantable(pick) ? `${CROP_INFO[pick].name} 심기` : '씨앗 심기'}
                   </button>
                 )
               ) : stage === 3 ? (
@@ -433,33 +503,73 @@ export function FarmModal({
               ) : (
                 <button
                   className="l-secondary"
-                  disabled={plot.wateredAt !== null || busy}
+                  disabled={plot.wateredAt !== null || plot.rained || busy}
                   onClick={() =>
                     void run({ kind: 'water', plot: i }, '물을 줬어요. 더 빨리 자라요!', 'water')
                   }
                   data-testid={`plot-${i}-water`}
                 >
-                  <Droplets size={15} /> {plot.wateredAt !== null ? '물 줌' : '물 주기'}
+                  <Droplets size={15} /> {plot.rained ? '비가 줬어요' : plot.wateredAt !== null ? '물 줌' : '물 주기'}
                 </button>
               )}
             </li>
           );
         })}
       </ol>
-      <p className="l-help-text">
-        가진 씨앗:{' '}
-        {CROPS.map((c) => `${CROP_INFO[c].name} ${seeds[c]}`).join(' · ')}
-        {empty > 0 && anySeeds && (
-          <>
-            {' '}
-            · 빈 칸의 “씨앗 심기”는 고른 씨앗({CROP_INFO[pick].name})을 바로 심어요.{' '}
-            <button className="l-link" onClick={() => setChoosing(farm.findIndex((p) => !p.crop))}>
-              다른 씨앗 고르기
-            </button>
-          </>
+      <div className="l-farm-footer">
+        <p className="l-help-text">
+          가진 씨앗:{' '}
+          {CROPS.filter((c) => seeds[c] > 0)
+            .map((c) => `${CROP_INFO[c].name} ${seeds[c]}`)
+            .join(' · ') || '없음'}
+          {empty > 0 && anySeeds && (
+            <>
+              {' '}
+              ·{' '}
+              <button className="l-link" onClick={() => setChoosing(farm.findIndex((p) => !p.crop))}>
+                다른 씨앗 고르기
+              </button>
+            </>
+          )}
+        </p>
+        {nextSize ? (
+          <button className="l-secondary" onClick={() => setExpand(true)} data-testid="farm-expand">
+            <Grid2x2Plus size={15} /> 밭 넓히기 · {nextSize}칸 {formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}
+          </button>
+        ) : (
+          <small className="l-help-text">밭을 가장 넓게(12칸) 넓혔어요.</small>
         )}
-      </p>
+      </div>
+      {expand && nextSize ? (
+        <ConfirmModal
+          title="밭을 넓힐까요?"
+          body={
+            <>
+              내 텃밭이 <b>{nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}</b>이 들어요.
+              지갑에 {formatBeom(view.wallet.balance)}이 있어요.
+            </>
+          }
+          confirmLabel="넓히기"
+          busyLabel="넓히는 중…"
+          cancelLabel="다음에"
+          onClose={() => setExpand(false)}
+          onConfirm={() => run({ kind: 'expandFarm' }, `텃밭이 ${nextSize}칸으로 넓어졌어요!`, 'harvest')}
+        />
+      ) : null}
     </Modal>
+  );
+}
+
+/** Growing plot art: a seed mound, then leaves (vector, no emoji). */
+function SproutArt({ stage }: { stage: number }) {
+  return (
+    <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
+      <ellipse cx="24" cy="40" rx="16" ry="5" fill="#8a6a4a" />
+      <path d="M24 40 V24" stroke="#4f8a3c" strokeWidth="3" strokeLinecap="round" />
+      <path d="M24 30 C16 28 12 22 12 16 C20 16 24 22 24 30Z" fill="#6aa84f" />
+      {stage >= 1 && <path d="M24 26 C32 24 36 18 36 12 C28 12 24 18 24 26Z" fill="#7dbb5d" />}
+      {stage >= 2 && <circle cx="24" cy="18" r="4" fill="#9cc271" />}
+    </svg>
   );
 }
 
@@ -491,13 +601,13 @@ export function BagModal({
       have: bag.produce[crop],
       price: CROP_INFO[crop].sell,
     })),
-    { id: 'fruit', name: '🍎 과일', have: bag.fruit, price: FRUIT_SELL },
+    { id: 'fruit', name: '과일', have: bag.fruit, price: FRUIT_SELL },
   ];
   const sell = async (row: (typeof rows)[number], n: number) => {
     const total = n * row.price;
     const ok = await run(
       { kind: 'sell', crop: row.id, n },
-      `${row.name.replace(/^\S+\s/, '')} ${n}개를 ${formatBeom(total)}에 팔았어요.`,
+      `${row.name} ${n}개를 ${formatBeom(total)}에 팔았어요.`,
       'coin',
     );
     if (ok) {
@@ -514,7 +624,7 @@ export function BagModal({
         <ul className="l-bag-chips">
           {CROPS.map((crop) => (
             <li key={crop}>
-              {cropLabel(crop)} <b>{bag.seeds[crop]}</b>
+              <ItemIcon id={'seed-' + crop} size={18} /> {cropLabel(crop)} <b>{bag.seeds[crop]}</b>
             </li>
           ))}
         </ul>
@@ -551,6 +661,7 @@ export function BagModal({
             const capped = !!row.have && total > cap;
             return (
               <li key={row.id} data-testid={`sell-${row.id}`}>
+                <ItemIcon id={row.id} size={30} />
                 <span className="l-sell-name">
                   <strong>{row.name}</strong>
                   <small>
@@ -607,7 +718,7 @@ function ShopArt({ item }: { item: ShopItem }) {
   if ((item.kind === 'seed' || item.kind === 'bundle') && item.crop)
     return (
       <span className="l-shop-art">
-        {CROP_INFO[item.crop].emoji}
+        <ItemIcon id={'seed-' + item.crop} size={40} />
         {item.kind === 'bundle' && <small>×{item.seeds}</small>}
       </span>
     );
@@ -626,12 +737,24 @@ function ShopArt({ item }: { item: ShopItem }) {
         <img src={TROPHY_ART[item.id]} alt="" />
       </span>
     );
-  return <span className="l-shop-art">🎁</span>;
+  return (
+    <span className="l-shop-art">
+      <Gift size={28} aria-hidden="true" />
+    </span>
+  );
 }
 
-export function ShopModal({ room, view, notify, onClose }: Base) {
+export type ShopTab = 'seeds' | 'tools' | 'furniture';
+export function ShopModal({
+  room,
+  view,
+  notify,
+  onClose,
+  initialTab = 'seeds',
+}: Base & { initialTab?: ShopTab }) {
   const life = view.life;
   const [run] = useLifeAction(room, notify);
+  const [tab, setTab] = useState<ShopTab>(initialTab);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [confirm, setConfirm] = useState<{ item: ShopItem; n: number } | null>(null);
   const balance = view.wallet.balance;
@@ -650,8 +773,21 @@ export function ShopModal({ room, view, notify, onClose }: Base) {
       <p className="l-modal-intro">
         내 지갑 <b>{formatBeom(balance)}</b> · 수확물은 가방에서 팔 수 있어요.
       </p>
+      <div className="l-mail-tabs" role="tablist" aria-label="상점">
+        <button role="tab" aria-selected={tab === 'seeds'} onClick={() => setTab('seeds')} data-testid="shop-tab-seeds">
+          <Sprout size={15} /> 씨앗·소품
+        </button>
+        <button role="tab" aria-selected={tab === 'tools'} onClick={() => setTab('tools')} data-testid="shop-tab-tools">
+          <FlaskConical size={15} /> 도구·비료
+        </button>
+        <button role="tab" aria-selected={tab === 'furniture'} onClick={() => setTab('furniture')} data-testid="shop-tab-furniture">
+          <Sofa size={15} /> 오늘의 가구
+        </button>
+      </div>
       {!life && <NoLife />}
-      {groups.map(([kind, title, hint]) => (
+      {tab === 'tools' && life && <ToolShop room={room} view={view} notify={notify} />}
+      {tab === 'furniture' && life && <FurnitureShop room={room} view={view} notify={notify} />}
+      {tab === 'seeds' && groups.map(([kind, title, hint]) => (
         <section key={kind} className="l-shop-group" aria-label={title}>
           <h3>
             {title} <small>{hint}</small>
@@ -673,7 +809,16 @@ export function ShopModal({ room, view, notify, onClose }: Base) {
                   <ShopArt item={item} />
                   <span className="l-shop-text">
                     <strong>{item.name}</strong>
-                    <small>{item.description}</small>
+                    <small>
+                      {item.description}
+                      {item.crop && CROP_INFO[item.crop].seasons
+                        ? ` · ${CROP_INFO[item.crop].seasons!.map((x) => SEASON_INFO[x].name).join('·')} 작물${
+                            life && !cropInSeason(item.crop, life.calendar?.season ?? 'spring') && !life.flags?.includes('greenhouse')
+                              ? ' (지금은 못 심어요)'
+                              : ''
+                          }`
+                        : ''}
+                    </small>
                     <b>{formatBeom(item.price)}</b>
                     {item.requires && !have && (
                       <progress
@@ -753,6 +898,187 @@ export function ShopModal({ room, view, notify, onClose }: Base) {
   );
 }
 
+/** 도구·비료: fertilizer, bait, the fishing rod and farm expansion. */
+function ToolShop({ room, view, notify }: Omit<Base, 'onClose'>) {
+  const life = view.life!;
+  const [run, busy] = useLifeAction(room, notify);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [rodConfirm, setRodConfirm] = useState(false);
+  const balance = view.wallet.balance;
+  const rod = life.me.fishing?.rod ?? 1;
+  const nextRod = rod < 3 ? ((rod + 1) as 2 | 3) : null;
+  return (
+    <section className="l-shop-group" aria-label="도구와 비료">
+      <h3>
+        소모품 <small>비료는 작물 품질을, 미끼는 희귀 물고기 확률을 올려요.</small>
+      </h3>
+      <ul className="l-shop-list">
+        {Object.entries(ITEM_PRICES).map(([id, price]) => {
+          const n = counts[id] ?? 1;
+          const def = ITEM_BY_ID[id];
+          return (
+            <li key={id} data-testid={`shop-${id}`}>
+              <span className="l-shop-art">
+                <ItemIcon id={id} size={40} />
+              </span>
+              <span className="l-shop-text">
+                <strong>{def?.name ?? itemName(id)}</strong>
+                <small>
+                  {def?.note} · 가진 개수 {life.me.inv?.[id] ?? 0}
+                </small>
+                <b>{formatBeom(price)}</b>
+              </span>
+              <Stepper label={`${def?.name ?? id} 개수`} value={n} max={20} onChange={(v) => setCounts((p) => ({ ...p, [id]: v }))} />
+              <span className="l-buy">
+                <button
+                  className="l-primary"
+                  disabled={busy || price * n > balance}
+                  onClick={() =>
+                    void run({ kind: 'buyItem', item: id, n }, `${def?.name ?? id} ${n}개를 샀어요.`, 'coin').then(
+                      (ok) => ok && setCounts((p) => ({ ...p, [id]: 1 })),
+                    )
+                  }
+                  data-testid={`buy-${id}`}
+                >
+                  {formatBeom(price * n)}
+                </button>
+                {price * n > balance && <small className="l-why">범이 모자라요</small>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <h3>
+        낚싯대 <small>좋은 낚싯대는 입질을 더 오래 기다려 줘요.</small>
+      </h3>
+      <ul className="l-shop-list">
+        <li data-testid="shop-rod">
+          <span className="l-shop-art">
+            <ItemIcon id="rod" size={40} />
+          </span>
+          <span className="l-shop-text">
+            <strong>
+              {rod}단계 낚싯대{nextRod ? ` → ${nextRod}단계` : ''}
+            </strong>
+            <small>
+              {nextRod
+                ? `입질 판정 ${nextRod === 2 ? '1.25' : '1.5'}배${nextRod === 3 ? ' · 희귀 물고기 1.5배' : ''}`
+                : '가장 좋은 낚싯대예요.'}
+            </small>
+            {nextRod && <b>{formatBeom(ROD_PRICE[nextRod])}</b>}
+          </span>
+          {nextRod ? (
+            <span className="l-buy">
+              <button className="l-primary" disabled={busy || ROD_PRICE[nextRod] > balance} onClick={() => setRodConfirm(true)} data-testid="buy-rod">
+                바꾸기
+              </button>
+              {ROD_PRICE[nextRod] > balance && <small className="l-why">범이 모자라요</small>}
+            </span>
+          ) : (
+            <span className="l-owned">
+              <Check size={15} /> 최고 단계
+            </span>
+          )}
+        </li>
+      </ul>
+      {rodConfirm && nextRod && (
+        <ConfirmModal
+          title="낚싯대를 바꿀까요?"
+          body={
+            <>
+              <b>{nextRod}단계 낚싯대</b>를 <b>{formatBeom(ROD_PRICE[nextRod])}</b>에 사요.
+            </>
+          }
+          confirmLabel="바꾸기"
+          busyLabel="바꾸는 중…"
+          cancelLabel="다음에"
+          onClose={() => setRodConfirm(false)}
+          onConfirm={() => run({ kind: 'upgradeRod' }, `${nextRod}단계 낚싯대로 바꿨어요!`, 'coin')}
+        />
+      )}
+    </section>
+  );
+}
+
+/** 오늘의 가구: today's rotating furniture stock (resets at KST midnight). */
+function FurnitureShop({ room, view, notify }: Omit<Base, 'onClose'>) {
+  const life = view.life!;
+  const [run] = useLifeAction(room, notify);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [confirm, setConfirm] = useState<{ ref: string; name: string; price: number; n: number } | null>(null);
+  const balance = view.wallet.balance;
+  const shop = life.shop;
+  const owned = life.me.furniture ?? {};
+  const now = useNow(true, 60_000) + view.clockOffset;
+  const hours = shop ? Math.max(0, Math.ceil((shop.resetAt - now) / 3_600_000)) : 0;
+  return (
+    <section className="l-shop-group" aria-label="오늘의 가구" data-testid="furniture-shop">
+      <h3>
+        오늘의 가구{' '}
+        <small>
+          매일 자정에 바뀌어요 (약 {hours}시간 뒤){shop?.discount ? ` · 일요 장터 ${shop.discount}% 할인` : ''}. 산 가구는 내 방 꾸미기의 “내 가구”에
+          생겨요.
+        </small>
+      </h3>
+      <ul className="l-shop-list l-furn-list">
+        {(shop?.items ?? []).map((item) => {
+          const n = counts[item.ref] ?? 1;
+          const total = item.price * n;
+          return (
+            <li key={item.ref} data-testid={`furn-${item.ref}`}>
+              <span className="l-shop-art l-furn-art">
+                {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
+                <img src={FURNITURE_ART[item.ref]} alt="" />
+              </span>
+              <span className="l-shop-text">
+                <strong>
+                  {item.name}
+                  {item.limited && <em className="l-limited">{item.limited === 'holiday' ? '명절 한정' : '계절 한정'}</em>}
+                </strong>
+                <small>
+                  {FURNITURE_BY_REF[item.ref]?.craft ? '공방에서 만들 수도 있어요 · ' : ''}가진 개수 {owned[item.ref] ?? 0}
+                </small>
+                <b>{formatBeom(item.price)}</b>
+              </span>
+              <Stepper label={`${item.name} 개수`} value={n} max={5} onChange={(v) => setCounts((p) => ({ ...p, [item.ref]: v }))} />
+              <span className="l-buy">
+                <button className="l-primary" disabled={total > balance} onClick={() => setConfirm({ ...item, n })} data-testid={`buy-${item.ref}`}>
+                  {n}개 사기
+                </button>
+                {total > balance && <small className="l-why">범이 모자라요</small>}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {confirm && (
+        <ConfirmModal
+          title="가구를 살까요?"
+          body={
+            <>
+              <b>{confirm.name}</b> {confirm.n}개를 <b>{formatBeom(confirm.price * confirm.n)}</b>에 사요. 지갑에{' '}
+              {formatBeom(balance - confirm.price * confirm.n)}이 남아요.
+            </>
+          }
+          confirmLabel="사기"
+          busyLabel="사는 중…"
+          cancelLabel="다음에"
+          onClose={() => setConfirm(null)}
+          onConfirm={async () => {
+            const ok = await run(
+              { kind: 'buyFurniture', ref: confirm.ref, n: confirm.n },
+              `${josa(confirm.name, '을/를')} 샀어요! 내 방 꾸미기의 “내 가구”에서 놓아 보세요.`,
+              'coin',
+            );
+            if (ok) setConfirm(null);
+            return ok;
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
 /* ------------------------------------------------------------------ mail */
 
 const others = (self: number) =>
@@ -765,16 +1091,18 @@ export function MailModal({
   onClose,
   selfActor,
   initialTo,
-}: Base & { selfActor: number; initialTo?: number }) {
+  initialGift,
+}: Base & { selfActor: number; initialTo?: number; initialGift?: string }) {
   const life = view.life;
   const now = useNow(true, 30_000) + view.clockOffset;
   const [tab, setTab] = useState<'inbox' | 'write' | 'guestbook'>(
-    initialTo === undefined ? 'inbox' : 'write',
+    initialTo === undefined && !initialGift ? 'inbox' : 'write',
   );
   const [to, setTo] = useState<number>(initialTo ?? others(selfActor)[0].actor);
   const [text, setText] = useState('');
   const [sticker, setSticker] = useState('');
-  const [giftKind, setGiftKind] = useState<'none' | Crop | 'fruit'>('none');
+  // 'none' | a crop id | 'fruit' | an inventory item id (fish, bugs, forage, dishes…).
+  const [giftKind, setGiftKind] = useState<string>(initialGift ?? 'none');
   const [giftN, setGiftN] = useState(1);
   const [run, busy] = useLifeAction(room, notify);
   if (!life)
@@ -785,15 +1113,35 @@ export function MailModal({
     );
   const mail = [...life.me.mail].reverse();
   const bag = life.me.bag;
+  const isCropGift = (CROPS as string[]).includes(giftKind);
   const giftMax =
-    giftKind === 'none' ? 0 : giftKind === 'fruit' ? bag.fruit : bag.produce[giftKind];
+    giftKind === 'none'
+      ? 0
+      : giftKind === 'fruit'
+        ? bag.fruit
+        : isCropGift
+          ? bag.produce[giftKind as Crop]
+          : (life.me.inv?.[giftKind] ?? 0);
+  const giftItems = Object.entries(life.me.inv ?? {}).filter(
+    ([id, n]) => n > 0 && ITEM_BY_ID[id] && ITEM_BY_ID[id].kind !== 'tool',
+  );
+  const myBond = life.me.bonds?.find((b) => b.actor === to);
+  const known = tastesKnown(myBond?.level ?? 0);
+  const tasteMark = (id: string) => {
+    if (!known) return '';
+    const t = giftTaste(to, id);
+    return t === 'like' ? ' · 좋아해요' : t === 'dislike' ? ' · 별로예요' : '';
+  };
   const send = async () => {
+    const n = Math.min(giftN, giftMax);
     const gift: LifeGift | undefined =
       giftKind === 'none'
         ? undefined
         : giftKind === 'fruit'
-          ? { kind: 'fruit', n: Math.min(giftN, giftMax) }
-          : { kind: 'produce', crop: giftKind, n: Math.min(giftN, giftMax) };
+          ? { kind: 'fruit', n }
+          : isCropGift
+            ? { kind: 'produce', crop: giftKind as Crop, n }
+            : { kind: 'item', item: giftKind, n };
     const ok = await run(
       {
         kind: 'mail',
@@ -993,16 +1341,38 @@ export function MailModal({
               data-testid="mail-gift"
             >
               <option value="none">선물 없음</option>
-              {CROPS.map((c) => (
-                <option key={c} value={c} disabled={!bag.produce[c]}>
-                  {CROP_INFO[c].name} ({bag.produce[c]}개)
+              <optgroup label="작물·과일">
+                {CROPS.filter((c) => bag.produce[c] > 0).map((c) => (
+                  <option key={c} value={c}>
+                    {CROP_INFO[c].name} ({bag.produce[c]}개){tasteMark(c)}
+                  </option>
+                ))}
+                <option value="fruit" disabled={!bag.fruit}>
+                  과일 ({bag.fruit}개){tasteMark('fruit')}
                 </option>
-              ))}
-              <option value="fruit" disabled={!bag.fruit}>
-                과일 ({bag.fruit}개)
-              </option>
+              </optgroup>
+              {giftItems.length > 0 && (
+                <optgroup label="물고기·곤충·채집물·요리">
+                  {giftItems.map(([id, n]) => (
+                    <option key={id} value={id}>
+                      {ITEM_BY_ID[id].name} ({n}개){tasteMark(id)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
             </select>
           </label>
+          <p className="l-help-text" data-testid="mail-tastes">
+            {known
+              ? `${josa(ACTORS[to], '은/는')} ${
+                  giftKind !== 'none' && giftTaste(to, giftKind) === 'like'
+                    ? '이 선물을 좋아해요. 추억이 두 배로 쌓여요.'
+                    : giftKind !== 'none' && giftTaste(to, giftKind) === 'dislike'
+                      ? '이 선물은 별로 안 좋아해요.'
+                      : '어떤 선물을 좋아할까요? 좋아하는 선물은 추억이 두 배예요.'
+                }`
+              : `${ACTORS[to]}의 취향은 하트가 하나 생기면 알 수 있어요.`}
+          </p>
           {giftKind !== 'none' && giftMax > 0 && (
             <Stepper label="선물 개수" value={Math.min(giftN, giftMax)} max={Math.min(99, giftMax)} onChange={setGiftN} />
           )}

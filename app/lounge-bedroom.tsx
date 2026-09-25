@@ -32,6 +32,7 @@ export function BedroomEditor(props: {
   stickers?: ReactNode;
   onExit?: () => void;
   onDress?: () => void;
+  onCook?: () => void;
   spawn?: 'door' | 'bed';
   onNearDoor?: () => void;
 }) {
@@ -48,6 +49,7 @@ export function BedroomEditor(props: {
         onAccess={props.onAccess}
         onExit={props.onExit}
         onDress={props.onDress}
+        onCook={props.onCook}
         spawn={props.spawn}
         onNearDoor={props.onNearDoor}
       />

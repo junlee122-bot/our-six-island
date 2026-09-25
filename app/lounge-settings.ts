@@ -19,6 +19,8 @@ export type LoungeSettings = {
   music: boolean;
   /** Village lighting follows the real KST time (morning/day/evening/night). */
   dayNight: boolean;
+  /** Seasonal weather effects in the village (rain, snow, falling leaves). */
+  seasonFx: boolean;
 };
 
 export const SETTINGS_KEY = 'bumtadew-settings-v1';
@@ -31,6 +33,7 @@ export const DEFAULT_SETTINGS: LoungeSettings = {
   simpleGraphics: false,
   music: true,
   dayNight: true,
+  seasonFx: true,
 };
 
 export function readSettings(raw: string | null | undefined): LoungeSettings {
@@ -56,6 +59,7 @@ export function readSettings(raw: string | null | undefined): LoungeSettings {
     simpleGraphics: bool('simpleGraphics'),
     music: bool('music'),
     dayNight: bool('dayNight'),
+    seasonFx: bool('seasonFx'),
   };
 }
 

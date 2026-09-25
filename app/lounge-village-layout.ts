@@ -271,9 +271,10 @@ export const VILLAGE_MARKET = {
 
 /**
  * Life expansion (LIFE-B) places. The pond and the pier are fishing spots
- * (the river is the third), the museum pavilion mirrors the market east of
- * the plaza, the notice board holds the village bundles, and the greenhouse
- * frame beside the east garden gets its glass once the 'greenhouse' bundle is
+ * (the river is the third), the museum pavilion stands west of the plaza
+ * (toward the hall), the notice board south-east of the fountain holds the
+ * village bundles, and the greenhouse
+ * frame on the river's north bank gets its glass once the 'greenhouse' bundle is
  * done. All are built from primitives in lounge-village-season-3d.ts.
  */
 export const VILLAGE_POND = { id: 'pond', name: '연못', x: -29, z: -17, radius: 2.6 } as const;
@@ -282,24 +283,24 @@ export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 39, z
 export const VILLAGE_MUSEUM = {
   id: 'museum',
   name: '마을 박물관',
-  x: 11.6,
-  z: -5.2,
+  x: -9.2,
+  z: 1.6,
   width: 2.6,
   depth: 1.5,
 } as const;
 export const VILLAGE_BOARD = {
   id: 'board',
   name: '마을 게시판',
-  x: -6.2,
-  z: 1.4,
+  x: 4.4,
+  z: 4.8,
   width: 1.4,
   depth: 0.3,
 } as const;
 export const VILLAGE_GREENHOUSE = {
   id: 'greenhouse',
   name: '마을 온실',
-  x: 23.4,
-  z: 0.7,
+  x: -3.2,
+  z: 12.6,
   width: 2,
   depth: 1.5,
 } as const;

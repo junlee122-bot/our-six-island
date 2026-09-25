@@ -635,6 +635,11 @@
   font-style: normal;
   font-weight: 800;
 }
+.b3-thumb em.b3-copies {
+  right: auto;
+  left: 4px;
+  background: #b0772f;
+}
 .b3-thumb-name {
   display: flex;
   align-items: center;

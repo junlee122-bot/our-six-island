@@ -2,6 +2,7 @@ import { LOUNGE_ASSETS } from './lounge-assets';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { MIKU_ROOM_ART } from './lounge-bedroom-collection';
 import { TROPHY_ART } from './lounge-trophy-art';
+import { FURNITURE_ART } from './lounge-furniture-art';
 
 /** Images drawn as upright cards (or flat rugs / wall art) in the room. */
 export const PROP_ART: Record<string, string> = {
@@ -30,6 +31,8 @@ export const PROP_ART: Record<string, string> = {
   'miku-poster': MIKU_ROOM_ART['miku-poster'],
   'miku-banner': MIKU_ROOM_ART['miku-banner'],
   ...TROPHY_ART,
+  // Premium furniture (life expansion): procedural SVG in the room's painted style.
+  ...FURNITURE_ART,
 };
 
 /** GLB furniture (kArchive and 3DAssets.dev CC0). */

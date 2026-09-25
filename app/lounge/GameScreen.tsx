@@ -21,6 +21,11 @@ import {
   SeotdaTable,
 } from './table-chunks';
 import type { Notify } from './Toast';
+import '../lounge-game-fit.css';
+
+/** Each table's action area (the part that must be on screen on my turn). */
+const TABLE_CONTROLS =
+  '.p-controls, .s-controls, .bj-controls, .l-action-bar, .l-go-decision, .l-go-hand';
 
 /** Dark casino screens get a dark sticker bar (chess is a light screen). */
 const DARK: GameKind[] = ['poker', 'blackjack'];
@@ -182,8 +187,15 @@ export function GameScreen({
     if (turn && !wasTurn.current) {
       attention('turn', `${GAME_INFO[kind].name} · 내 차례예요.`);
       // 'nearest': bring the action bar in without pushing the host's line
-      // (and the dealer's cards) off the top at 1440×900.
-      stage.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // (and the dealer's cards) off the top at 1440×900. On desktop the
+      // stage scrolls inside itself (if at all), so reveal its controls.
+      const bar = window.matchMedia('(min-width: 1024px)').matches
+        ? stage.current?.querySelector(TABLE_CONTROLS)
+        : null;
+      (bar ?? stage.current)?.scrollIntoView({
+        block: 'nearest',
+        behavior: 'smooth',
+      });
     }
     wasTurn.current = turn;
   }, [turn, kind]);

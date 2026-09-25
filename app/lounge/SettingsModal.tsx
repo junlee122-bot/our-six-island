@@ -81,6 +81,12 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           onChange={(dayNight) => update({ dayNight })}
         />
         <Toggle
+          label="계절 효과"
+          hint="마을에 비·눈이 내리고 가을엔 낙엽이, 봄엔 꽃잎이 날려요. 끄면 그래픽 부담이 줄어요. 동작 줄이기 설정에서는 자동으로 꺼져요."
+          checked={settings.seasonFx}
+          onChange={(seasonFx) => update({ seasonFx })}
+        />
+        <Toggle
           label="브라우저 알림"
           hint={
             supported

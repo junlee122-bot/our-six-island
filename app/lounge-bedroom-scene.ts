@@ -592,21 +592,27 @@ export function createBedroomScene(
   };
 
   const raycaster = new THREE.Raycaster();
-  /** The item under a ray (hit boxes only), topmost first. */
-  const pick = (ray: THREE.Ray): string | null => {
+  /**
+   * The item under a ray (hit boxes only), topmost first. `prefer` (the
+   * selected item) wins whenever the ray touches it, so dragging a piece that
+   * stands in front of the bed moves that piece, not the bed.
+   */
+  const pick = (ray: THREE.Ray, prefer?: string | null): string | null => {
     raycaster.ray.copy(ray);
     const hits = raycaster.intersectObjects(
       [...nodes.values()].map((n) => n.hit),
       false,
     );
     // Prefer small/wall things over the big furniture they sit on.
-    hits.sort((a, b) => {
-      const ea = catalogEntry(nodes.get(a.object.userData.itemId)?.item.ref ?? '')!,
-        eb = catalogEntry(nodes.get(b.object.userData.itemId)?.item.ref ?? '')!;
-      const rank = (e: CatalogEntry) => (e.mount === 'small' ? 0 : e.mount === 'wall' ? 1 : e.mount === 'floor' ? 2 : 3);
-      return rank(ea) - rank(eb) || a.distance - b.distance;
-    });
-    return (hits[0]?.object.userData.itemId as string | undefined) ?? null;
+    const rank = (id: string) => {
+      const e = catalogEntry(nodes.get(id)?.item.ref ?? '');
+      return e?.mount === 'small' ? 0 : e?.mount === 'wall' ? 1 : e?.mount === 'floor' ? 2 : 3;
+    };
+    hits.sort((a, b) => rank(a.object.userData.itemId) - rank(b.object.userData.itemId) || a.distance - b.distance);
+    const top = hits[0]?.object.userData.itemId as string | undefined;
+    // The selected piece keeps the grab unless something smaller sits on it.
+    if (prefer && top && hits.some((h) => h.object.userData.itemId === prefer) && rank(prefer) <= rank(top)) return prefer;
+    return top ?? null;
   };
 
   return {

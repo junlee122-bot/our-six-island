@@ -1099,3 +1099,17 @@ export function buildVillageWorld(scene: THREE.Object3D): VillageWorld {
   batchDirectMeshes(scene, 'village-water');
   return { water, decorations };
 }
+
+/**
+ * Shared ground and foliage materials the seasonal layer re-tints (spring
+ * blossom, summer green, autumn gold, winter frost). Base colours are kept so
+ * a season can always be derived from the original look.
+ */
+export const VILLAGE_SEASON_MATERIALS = {
+  grass: M.grass,
+  grassLight: M.grassLight,
+  leaf: M.leaf,
+  leafLight: M.leafLight,
+  leafDark: M.leafDark,
+  bank: M.bank,
+} as const;

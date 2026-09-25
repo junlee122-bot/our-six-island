@@ -1,0 +1,297 @@
+/* Desktop game screen = one viewport (no page scroll at 1440×900 / 1920×1080).
+   Header (56px) on top; the table column on the left fits the height (it only
+   scrolls inside as a last resort, with the host strip pinned by its own
+   sticky rule); money, stickers and the next-round panel sit in a side column
+   so they never push my cards or the action buttons below the fold.
+   Phones and narrow windows keep the stacked page layout. */
+@media (min-width: 1024px) {
+  .l-app.l-in-game {
+    overflow: hidden;
+  }
+  .l-app .l-game-screen {
+    height: 100dvh;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+  .l-app .l-game-screen > header {
+    height: 56px;
+    padding: 0 20px;
+    gap: 16px;
+  }
+  .l-app .l-game-screen > header > span {
+    gap: 2px;
+    align-items: center;
+  }
+  .l-app .l-game-screen > header strong {
+    font-size: 19px;
+    letter-spacing: 1px;
+  }
+  .l-app .l-game-screen > header small {
+    letter-spacing: 1px;
+  }
+  .l-app .l-game-screen .l-game-back {
+    padding-block: 6px;
+  }
+  .l-app .l-game-screen .l-game-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 21vw, 340px);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    align-content: start;
+    gap: 12px 18px;
+    width: 100%;
+    max-width: 1720px;
+    min-height: 0;
+    margin: 0 auto;
+    padding: 12px 20px 14px;
+  }
+  .l-app .l-game-screen .l-table-stage {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Tables size themselves against the stage height (cqh). */
+    container-type: size;
+  }
+  /* Side column: balance, stickers, then the result / next-round panel. */
+  .l-app .l-game-screen .l-game-money {
+    grid-column: 2;
+    grid-row: 1;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 4px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #e3dfcf;
+    border-radius: 12px;
+    background: #fffdf5;
+    line-height: 1.5;
+  }
+  .l-app .l-game-screen .l-game-money b {
+    justify-content: flex-start;
+  }
+  .l-app .l-game-screen.is-dark .l-game-money {
+    background: #162320;
+    border-color: #34413a;
+    color: #b9b39f;
+  }
+  .l-app .l-game-screen :is(.l-sticker-inline, .l-sticker-float) {
+    grid-column: 2;
+    grid-row: 2;
+    min-width: 0;
+  }
+  .l-app .l-game-screen :is(.l-sticker-inline, .l-sticker-float) .l-reactions {
+    margin: 0;
+    max-width: none;
+  }
+  .l-app .l-game-screen :is(.l-round-ready, .l-game-ending) {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+    max-height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    margin: 0;
+  }
+  .l-app .l-game-screen .l-round-ready {
+    padding: 16px;
+  }
+  .l-app .l-game-screen .l-round-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .l-app .l-game-screen .l-round-heading h2 {
+    font-size: 19px;
+  }
+  .l-app .l-game-screen .l-round-friends {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin: 12px 0;
+  }
+  .l-app .l-game-screen .l-round-friends li {
+    padding: 6px 10px;
+  }
+  .l-app .l-game-screen .l-round-friends li > .avatar-view {
+    width: 34px;
+    height: 42px;
+  }
+  .l-app .l-game-screen .l-round-actions {
+    flex-wrap: wrap;
+  }
+  .l-app .l-game-screen .l-game-ending {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* Chess: the board is as large as the stage height allows. */
+  .l-app .l-game-screen .l-chess-layout {
+    grid-template-columns: min(720px, calc(100cqh - 96px)) minmax(220px, 1fr);
+    gap: 24px;
+  }
+  .l-app .l-game-screen .l-game-status {
+    margin-bottom: 12px;
+  }
+  .l-app .l-game-screen .l-game-aside {
+    min-height: 0;
+    padding: 20px;
+  }
+  .l-app .l-game-screen .l-move-log {
+    max-height: calc(100cqh - 420px);
+    min-height: 80px;
+  }
+}
+
+/* The host strip stays pinned at the top of the table column. */
+@media (min-width: 1024px) {
+  .l-app .l-table-stage .dh-host {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+  }
+}
+
+/* Shorter stages (1440×900 and below): tighten the tables so my cards and
+   the action row fit without scrolling. Card faces keep their size. */
+@container (max-height: 1000px) {
+  .l-table-stage .dh-host {
+    padding-block: 6px;
+    gap: 12px;
+  }
+  .l-table-stage .dh-portrait {
+    width: 46px;
+    height: 46px;
+  }
+  .l-table-stage .dh-line {
+    margin-top: 2px;
+  }
+  /* 섯다 */
+  .l-table-stage .s-table {
+    padding: 12px 24px 12px;
+  }
+  .l-table-stage .s-seat {
+    padding-block: 7px;
+  }
+  .l-table-stage .s-hand {
+    min-height: 76px;
+    margin: 6px 0 4px;
+  }
+  .l-table-stage .s-seat:not(.self) .s-card {
+    width: 46px;
+    height: 72px;
+  }
+  .l-table-stage .s-pot {
+    padding: 6px;
+    gap: 2px 12px;
+  }
+  .l-table-stage .s-pot strong {
+    font-size: 24px;
+  }
+  .l-table-stage .s-seat.self {
+    padding-block: 8px;
+  }
+  .l-table-stage .s-seat.self .s-hand {
+    margin: 6px 0;
+  }
+  .l-table-stage .s-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+    gap: 6px 14px;
+    padding: 10px 0 0;
+  }
+  .l-table-stage :is(.s-turn, .s-raise-help) {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+  .l-table-stage .s-raise-row {
+    margin-top: 0;
+  }
+  .l-table-stage .s-result {
+    padding: 10px 12px;
+  }
+  /* 고스톱 */
+  .l-table-stage .g-game {
+    --card-size: 52px;
+  }
+  .l-table-stage .g-game-top {
+    margin-bottom: 8px;
+  }
+  .l-table-stage .g-game-top .l-game-status {
+    padding: 8px 16px;
+  }
+  .l-table-stage .g-table-shell {
+    padding: 12px 16px;
+  }
+  .l-table-stage .g-player-area > header {
+    margin-bottom: 4px;
+  }
+  .l-table-stage .g-opponent-hand {
+    margin-bottom: 4px;
+  }
+  .l-table-stage .g-middle {
+    padding: 8px 12px 4px;
+  }
+  .l-table-stage .g-action-caption {
+    padding-bottom: 4px;
+    min-height: 22px;
+  }
+  .l-table-stage .g-bottom {
+    padding-top: 8px;
+  }
+  .l-table-stage .g-bottom .g-capture-stack {
+    --pile-size: 34px;
+  }
+  .l-table-stage .g-game .l-hand-title {
+    margin-bottom: 6px;
+  }
+  .l-table-stage .g-table-footer {
+    margin-top: 8px;
+  }
+  .l-table-stage .l-go-result {
+    margin: 12px;
+    gap: 14px;
+  }
+  /* 홀덤: the oval shrinks with the stage (seats are placed by %). */
+  .l-table-stage .p-table-wrap {
+    height: clamp(440px, calc(100cqh - 300px), 580px);
+  }
+  /* 블랙잭 */
+  .l-table-stage .bj-felt {
+    padding: 14px 20px 16px;
+  }
+  .l-table-stage .bj-table-heading p {
+    margin: 4px 0 10px;
+  }
+  .l-table-stage .bj-table-rule {
+    padding: 8px 0;
+    margin-top: 10px;
+  }
+  .l-table-stage .bj-result {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: baseline;
+    column-gap: 14px;
+    padding: 10px 12px 6px;
+  }
+  .l-table-stage .bj-result > :is(span, p, ul) {
+    flex-basis: 100%;
+  }
+  .l-table-stage .bj-result h3 {
+    margin: 4px 0;
+  }
+  .l-table-stage .bj-result > strong {
+    font-size: 26px;
+  }
+  .l-table-stage .bj-result p.bj-verdict {
+    margin: 4px 0 8px;
+  }
+  .l-table-stage .bj-report {
+    gap: 3px;
+  }
+  .l-table-stage .bj-report li {
+    padding-block: 4px;
+  }
+}

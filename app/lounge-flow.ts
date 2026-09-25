@@ -56,9 +56,9 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   fish: '낚시하기',
   forage: '줍기',
   catch: '잡기',
-  museum: '박물관 둘러보기',
+  museum: '박물관 보기',
   board: '게시판 보기',
-  waterFriend: '물 주기 (오늘 1번)',
+  waterFriend: '물 주기',
   cook: '요리·만들기',
   wish: '소원 빌기',
 };

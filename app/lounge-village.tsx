@@ -30,6 +30,12 @@ import {
   Store,
   Mail,
   MessageCircle,
+  FishingRod,
+  Leaf,
+  Bug,
+  ClipboardList,
+  Droplets,
+  Sparkles,
 } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -54,6 +60,18 @@ import {
   type VillageWorld,
 } from './lounge-village-world';
 import { VillageLifeLayer } from './lounge-village-life-3d';
+import { VillageSeasonLayer } from './lounge-village-season-3d';
+import {
+  BOARD_FRONT,
+  MUSEUM_FRONT,
+  PIER_POINT,
+  POND_EDGE,
+  RIVER_BANK,
+  SPAWN_POINTS,
+  bobberPoint,
+} from './lounge-village-spots';
+import type { Spot } from './lounge-items';
+import { itemName } from './lounge-life-plus';
 import {
   DAY_PHASE_LABEL,
   FRUIT_TREE_POINTS,
@@ -81,6 +99,7 @@ import {
 import { ActionButton } from './lounge/ActionButton';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
+import { sceneKeyTarget } from './lounge-scene-keys';
 import { VillageLifeList, isTouchDevice } from './lounge/VillageSimple';
 import {
   villageCanEnterPlace,
@@ -98,6 +117,9 @@ import {
   VILLAGE_ORCHARD,
   VILLAGE_FURNISHINGS,
   VILLAGE_MARKET,
+  VILLAGE_POND,
+  VILLAGE_MUSEUM,
+  VILLAGE_BOARD,
   villageCanWalk,
   villageFromNetwork,
   villageHouseScale,
@@ -178,6 +200,23 @@ type Props = {
   areaCounts?: Readonly<Record<string, number>>;
   /** The door within reach changed: preload that building's scene. */
   onNear?: (place: VillagePlace | null) => void;
+  // Life expansion (LIFE-B).
+  /** 낚시하기 at the river, the pond or the sea pier. */
+  onFish?: (spot: Spot) => void;
+  /** 줍기 / 잡기 at today's forage or bug spawn. */
+  onSpawn?: (spot: string, mode: 'forage' | 'bug', item: string) => void;
+  onMuseum?: () => void;
+  onBoard?: () => void;
+  onWaterFriend?: (actor: number) => void;
+  onWish?: () => void;
+  /** Talking to an offline friend: true when they had something to ask (request card). */
+  onTalk?: (actor: number) => void;
+  /** The selected hotbar item (the farm action follows it). */
+  tool?: string;
+  /** The fishing bobber: where and in which phase. */
+  fishing?: { spot: Spot; phase: 'casting' | 'wait' | 'bite' | 'reeling' | 'result' } | null;
+  /** Weather particles and falling leaves (settings + reduced motion). */
+  seasonFx?: boolean;
 };
 type Direction = 'up' | 'down' | 'left' | 'right';
 // Physical key codes keep WASD working while a Korean IME is active.
@@ -233,6 +272,7 @@ type WorldState = {
   hemi: THREE.HemisphereLight;
   sun: THREE.DirectionalLight;
   life: VillageLifeLayer;
+  season: VillageSeasonLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -310,6 +350,7 @@ function getVillageWorld(): WorldState {
   const world = buildVillageWorld(root);
   const life = new VillageLifeLayer(root);
   life.setLampGlowMaterial(VILLAGE_LAMP_GLOW);
+  const season = new VillageSeasonLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -397,6 +438,7 @@ function getVillageWorld(): WorldState {
     hemi,
     sun,
     life,
+    season,
   };
   return villageWorld;
 }
@@ -592,7 +634,16 @@ export function Village3D(props: Props) {
       if (bed) controls.current?.visit(farmFront(bed));
     };
     window.addEventListener('bumtadew:guide-farm', guide);
-    return () => window.removeEventListener('bumtadew:guide-farm', guide);
+    // "가 보기" from the life panels (museum, board, fishing spots…).
+    const go = (e: Event) => {
+      const p = (e as CustomEvent<VillagePoint>).detail;
+      if (p && Number.isFinite(p.x) && Number.isFinite(p.z)) controls.current?.visit(p);
+    };
+    window.addEventListener('bumtadew:go', go);
+    return () => {
+      window.removeEventListener('bumtadew:guide-farm', guide);
+      window.removeEventListener('bumtadew:go', go);
+    };
   }, []);
   // The door prompt ("회관 · 안에 2명") and the action button's context.
   const doorPlace =
@@ -853,7 +904,14 @@ export function Village3D(props: Props) {
         return;
       }
       const target = t.spot;
-      if (target.kind === 'farm') current.onFarm?.();
+      if (action.disabled) return;
+      if (target.kind === 'fish') current.onFish?.(target.spot);
+      else if (target.kind === 'spawn') current.onSpawn?.(target.spot, target.mode, target.item);
+      else if (target.kind === 'museum') current.onMuseum?.();
+      else if (target.kind === 'board') current.onBoard?.();
+      else if (target.kind === 'friendFarm') current.onWaterFriend?.(target.actor);
+      else if (target.kind === 'fountain') current.onWish?.();
+      else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
       else if (target.kind === 'commons') {
@@ -872,8 +930,11 @@ export function Village3D(props: Props) {
         });
         host.dataset.talk = String(target.actor);
         needsRender = true;
+        current.onTalk?.(target.actor);
       }
     };
+    let lastFishKey = '',
+      fishFrom: VillagePoint = { x: 0, z: 0 };
     let lastLife: LifeView | null | undefined = undefined,
       lastLight = -1e9,
       lastAudio = -1e9,
@@ -891,6 +952,23 @@ export function Village3D(props: Props) {
           crop: plot.crop,
           stage: plot.crop ? plotStage(plot, at) : 0,
         }));
+      const seasonChanged = life?.calendar
+        ? world.season.update({
+            season: life.calendar.season,
+            weather: life.weather?.today ?? 'sunny',
+            flags: life.flags ?? [],
+            spawns: life.me.spawns ?? [],
+            effects: current.seasonFx !== false,
+            bundlesDone: (life.bundles ?? []).map((b) => b.done),
+          })
+        : false;
+      if (seasonChanged) {
+        host.dataset.season = life?.calendar?.season ?? '';
+        host.dataset.weather = life?.weather?.today ?? '';
+        host.dataset.spawns = String((life?.me.spawns ?? []).filter((sp) => !sp.taken).length);
+        renderer.shadowMap.needsUpdate = true;
+        needsRender = true;
+      }
       const changed = world.life.update({
         plots,
         watered: life?.me.farm?.map((plot) => plot.wateredAt !== null) ?? [],
@@ -1191,21 +1269,13 @@ export function Village3D(props: Props) {
       needsRender = true;
     };
     const keydown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof Element &&
-        e.target.closest('button,input,textarea,select')
-      )
-        return;
-      if (
-        e.altKey ||
-        e.ctrlKey ||
-        e.metaKey ||
-        document.querySelector('dialog[open]')
-      )
-        return;
+      // Heard on window (focus may be on body or a dock button after a dialog).
+      const at = sceneKeyTarget(e, host);
+      if (!at || e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'KeyE') {
-        // The one action button: E always presses it.
-        if (currentAction) {
+        // The one action button: E always presses it (Enter on a focused
+        // button stays that button's).
+        if (currentAction && (at === 'scene' || e.code === 'KeyE')) {
           e.preventDefault();
           act(currentAction);
         }
@@ -1249,7 +1319,7 @@ export function Village3D(props: Props) {
       press = null;
     };
     const keyrun = (e: KeyboardEvent) => {
-      if (e.key !== 'Shift' || e.repeat) return;
+      if (e.key !== 'Shift' || e.repeat || !sceneKeyTarget(e, host)) return;
       shiftHeld.current = true;
       setRunPressed(true);
     };
@@ -1284,8 +1354,8 @@ export function Village3D(props: Props) {
     canvas.addEventListener('wheel', wheel, { passive: false });
     canvas.addEventListener('webglcontextlost', loss);
     canvas.addEventListener('webglcontextrestored', restored);
-    host.addEventListener('keydown', keydown);
-    host.addEventListener('keydown', keyrun);
+    window.addEventListener('keydown', keydown);
+    window.addEventListener('keydown', keyrun);
     host.addEventListener('focusout', blur);
     window.addEventListener('keyup', keyup);
     window.addEventListener('blur', blur);
@@ -1543,6 +1613,7 @@ export function Village3D(props: Props) {
           now: serverNow(),
           npcs,
           canVisit: !!latest.current.onVisit,
+          tool: latest.current.tool,
         });
         const nextKey = villageActionKey(nextAction);
         currentAction = nextAction;
@@ -1835,6 +1906,29 @@ export function Village3D(props: Props) {
           figure.bubble.hidden = !text;
         }
       }
+      // Fishing bobber follows the overlay's phase (cast from where I stand).
+      const fishing = current.fishing ?? null;
+      const fishKey = fishing ? fishing.spot + ':' + fishing.phase : '';
+      if (fishKey !== lastFishKey) {
+        if (!fishing) world.season.setFishing(null);
+        else {
+          if (!lastFishKey) fishFrom = { ...position };
+          world.season.setFishing({
+            phase:
+              fishing.phase === 'bite'
+                ? 'bite'
+                : fishing.phase === 'result'
+                  ? 'caught'
+                  : 'wait',
+            from: fishFrom,
+            to: bobberPoint(fishing.spot, fishFrom),
+          });
+        }
+        lastFishKey = fishKey;
+        host.dataset.fishing = fishing?.phase ?? '';
+        needsRender = true;
+      }
+      if (world.season.tick(now, dt, target)) needsRender = true;
       const shouldRender =
         needsRender ||
         anyWalking ||
@@ -2045,8 +2139,8 @@ export function Village3D(props: Props) {
       canvas.removeEventListener('wheel', wheel);
       canvas.removeEventListener('webglcontextlost', loss);
       canvas.removeEventListener('webglcontextrestored', restored);
-      host.removeEventListener('keydown', keydown);
-      host.removeEventListener('keydown', keyrun);
+      window.removeEventListener('keydown', keydown);
+      window.removeEventListener('keydown', keyrun);
       host.removeEventListener('focusout', blur);
       window.removeEventListener('keyup', keyup);
       window.removeEventListener('blur', blur);
@@ -2279,6 +2373,18 @@ export function Village3D(props: Props) {
                       height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ}
                       fill="#96c9c2"
                     />
+                    <circle cx={VILLAGE_POND.x} cy={VILLAGE_POND.z} r={VILLAGE_POND.radius} fill="#96c9c2" />
+                    {[VILLAGE_MUSEUM, VILLAGE_BOARD].map((b) => (
+                      <rect
+                        key={b.id}
+                        x={b.x - b.width / 2}
+                        y={b.z - b.depth / 2 - (b.id === 'board' ? 0.3 : 0)}
+                        width={b.width}
+                        height={Math.max(0.8, b.depth)}
+                        rx="0.3"
+                        fill={b.id === 'museum' ? '#6f8fa3' : '#c9a06a'}
+                      />
+                    ))}
                     {VILLAGE_RIVER.bridges.map((b) => (
                       <rect
                         key={b.x}
@@ -2398,7 +2504,7 @@ export function Village3D(props: Props) {
                 <span>
                   <strong>{ACTORS[props.save.actor]}의 텃밭</strong>
                   <small>
-                    내 집 앞 6칸 · {readyCount ? `수확할 작물 ${readyCount}개` : '씨앗 심기 · 물 주기'}
+                    내 집 앞 {props.life?.me.farm.length ?? 6}칸 · {readyCount ? `수확할 작물 ${readyCount}개` : '씨앗 심기 · 물 주기'}
                   </small>
                 </span>
                 <ArrowRight size={15} />
@@ -2426,6 +2532,61 @@ export function Village3D(props: Props) {
               </span>
               <ArrowRight size={15} />
             </button>
+            {(
+              [
+                ['river', '강가 낚시터', '강을 따라 어디서나 낚시해요', '#5aa0b8', RIVER_BANK],
+                ['pond', '연못 낚시터', '서쪽 들판의 조용한 연못', '#79c3c8', POND_EDGE],
+                [
+                  'sea',
+                  '동쪽 바다 데크',
+                  props.life?.flags?.includes('bridge') ? '바다 물고기를 낚아요' : '데크 수리가 필요해요',
+                  '#3f7fa0',
+                  { x: PIER_POINT.x - 0.8, z: PIER_POINT.z },
+                ],
+                ['museum', '마을 박물관', '기증하고 이름을 남겨요', '#6f8fa3', MUSEUM_FRONT],
+                ['board', '마을 게시판', '함께 채우는 꾸러미', '#c9a06a', BOARD_FRONT],
+              ] as const
+            ).map(([id, name, sub, color, point]) => (
+              <button
+                key={id}
+                data-district={id}
+                onClick={() => {
+                  setSelected(null);
+                  setDirectory(false);
+                  setDistrict(name);
+                  controls.current?.visit(point);
+                }}
+              >
+                <span className="hv-place-dot" style={{ background: color }} />
+                <span>
+                  <strong>{name}</strong>
+                  <small>{sub}</small>
+                </span>
+                <ArrowRight size={15} />
+              </button>
+            ))}
+            {(props.life?.me.spawns ?? []).some((sp) => !sp.taken) && (
+              <button
+                data-district="spawns"
+                onClick={() => {
+                  setSelected(null);
+                  setDirectory(false);
+                  setDistrict('오늘의 채집');
+                  const open = (props.life?.me.spawns ?? []).find((sp) => !sp.taken);
+                  const p = open ? SPAWN_POINTS[open.spot] : null;
+                  if (p) controls.current?.visit(p);
+                }}
+              >
+                <span className="hv-place-dot" style={{ background: '#6aa84f' }} />
+                <span>
+                  <strong>오늘의 채집 · 곤충</strong>
+                  <small>
+                    남은 곳 {(props.life?.me.spawns ?? []).filter((sp) => !sp.taken).length}군데 · 가까운 곳으로
+                  </small>
+                </span>
+                <ArrowRight size={15} />
+              </button>
+            )}
             <span className="hv-directory-sub">함께 노는 곳</span>
             {VILLAGE_PLACES.filter((p) => p.kind !== 'home').map((p) => (
               <button key={p.id} onClick={() => select(p)}>
@@ -2637,9 +2798,10 @@ export function Village3D(props: Props) {
           <ActionButton
             className="hv-action"
             kind={action?.kind ?? null}
+            label={action?.label}
             detail={actionDetail}
             touch={touch}
-            disabled={actionDisabled}
+            disabled={actionDisabled || !!action?.disabled}
             onPress={() => {
               if (action) controls.current?.act(action);
             }}
@@ -2770,7 +2932,7 @@ function SpotPrompt({
     const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;
     const empty = farm.filter((p) => !p.crop).length;
     const thirsty = farm.filter(
-      (p) => p.crop && p.wateredAt === null && (p.readyAt ?? Infinity) > clock,
+      (p) => p.crop && p.wateredAt === null && !p.rained && (p.readyAt ?? Infinity) > clock,
     ).length;
     return (
       <div>
@@ -2842,12 +3004,88 @@ function SpotPrompt({
       </div>
     );
   }
+  if (spot.kind === 'fish') {
+    const locked = spot.spot === 'sea' && !life?.flags?.includes('bridge');
+    return (
+      <div>
+        <strong>
+          <FishingRod size={14} /> {spot.spot === 'river' ? '강가 낚시터' : spot.spot === 'pond' ? '연못 낚시터' : '동쪽 바다 데크'}
+        </strong>
+        <small>
+          {locked
+            ? '데크가 부서져 있어요 · 마을 게시판의 봄나물 꾸러미로 고칠 수 있어요'
+            : `찌가 쏙 들어가면 당겨요 · 미끼 ${life?.me.fishing?.bait ?? 0}개${key}`}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'spawn') {
+    const Icon = spot.mode === 'bug' ? Bug : Leaf;
+    return (
+      <div>
+        <strong>
+          <Icon size={14} /> {itemName(spot.item)}
+        </strong>
+        <small>
+          {spot.mode === 'bug' ? '살금살금 다가가서 잡아요' : '오늘 여기서 주울 수 있어요'}
+          {key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'museum')
+    return (
+      <div>
+        <strong>
+          <Landmark size={14} /> 마을 박물관
+        </strong>
+        <small>
+          처음 기증하면 이름이 남아요 · 기증 {Object.keys(life?.museum ?? {}).length}종{key}
+        </small>
+      </div>
+    );
+  if (spot.kind === 'board') {
+    const done = (life?.bundles ?? []).filter((b) => b.done).length;
+    return (
+      <div>
+        <strong>
+          <ClipboardList size={14} /> 마을 게시판
+        </strong>
+        <small>
+          함께 채우는 꾸러미 · {done}/{life?.bundles?.length ?? 8} 완성{key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'friendFarm') {
+    const done = !!life?.me.waterFriend?.includes(spot.actor);
+    return (
+      <div>
+        <strong>
+          <Droplets size={14} /> {ACTORS[spot.actor]}의 텃밭
+        </strong>
+        <small>{done ? '오늘은 이미 물을 줬어요 · 내일 또 도와줘요' : `친구 밭에 물 주기 · 하루 한 번 추억이 쌓여요${key}`}</small>
+      </div>
+    );
+  }
+  if (spot.kind === 'fountain')
+    return (
+      <div>
+        <strong>
+          <Sparkles size={14} /> 광장 분수
+        </strong>
+        <small>하루 한 번 소원을 빌 수 있어요{key}</small>
+      </div>
+    );
   return (
     <div>
       <strong>
         <MessageCircle size={14} /> {ACTORS[spot.actor]}
       </strong>
-      <small>산책 중이에요{key}</small>
+      <small>
+        {life?.me.requests?.some((r) => r.from === spot.actor && !r.done) ? '부탁이 있는 것 같아요' : '산책 중이에요'}
+        {key}
+      </small>
     </div>
   );
 }

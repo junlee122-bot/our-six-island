@@ -75,9 +75,15 @@ export function EditCatalog({
   onAdd: (ref: string) => void;
   onClose: () => void;
 }) {
-  const [category, setCategory] = useState<RoomCategory | 'all'>('all');
+  const [category, setCategory] = useState<RoomCategory | 'all' | 'premium'>('all');
   const owned = ROOM_CATALOG.filter((e) => !e.unlock || unlocks.includes(e.unlock));
-  const visible = owned.filter((e) => category === 'all' || e.category === category);
+  const visible = owned.filter((e) =>
+    category === 'all' ? true : category === 'premium' ? !!e.premium : e.category === category,
+  );
+  // Premium furniture: only as many copies as I own (one unlock entry per copy).
+  const copiesLeft = (ref: string) =>
+    unlocks.filter((u) => u === ref).length - room.items.filter((i) => i.ref === ref).length;
+  const hasPremium = owned.some((e) => e.premium);
   const full = room.items.length >= BEDROOM_LIMITS.maxItems;
   return (
     <section className="b3-catalog" aria-label="방에 놓을 것들" data-testid="room-catalog">
@@ -98,28 +104,43 @@ export function EditCatalog({
             {name}
           </button>
         ))}
+        {hasPremium && (
+          <button type="button" aria-pressed={category === 'premium'} onClick={() => setCategory('premium')} data-testid="catalog-premium">
+            내 가구
+          </button>
+        )}
       </fieldset>
       <div className="b3-catalog-grid">
-        {visible.map((entry) => (
-          <button
-            key={entry.ref}
-            type="button"
-            disabled={full}
-            aria-label={`${entry.name} 놓기`}
-            data-ref={entry.ref}
-            data-kind={entry.kind}
-            onClick={() => onAdd(entry.ref)}
-          >
-            <span className="b3-thumb">
-              <img src={THUMBNAILS[entry.ref]} alt="" loading="lazy" draggable={false} />
-              {entry.kind === 'model' && <em>3D</em>}
-            </span>
-            <span className="b3-thumb-name">
-              {entry.name}
-              <Plus size={14} aria-hidden="true" />
-            </span>
-          </button>
-        ))}
+        {visible.map((entry) => {
+          const left = entry.premium ? copiesLeft(entry.ref) : null;
+          return (
+            <button
+              key={entry.ref}
+              type="button"
+              disabled={full || (left !== null && left <= 0)}
+              aria-label={`${entry.name} 놓기${left !== null ? ` · ${left > 0 ? `${left}개 남음` : '모두 놓았어요'}` : ''}`}
+              data-ref={entry.ref}
+              data-kind={entry.kind}
+              data-left={left ?? undefined}
+              onClick={() => onAdd(entry.ref)}
+            >
+              <span className="b3-thumb">
+                <img src={THUMBNAILS[entry.ref]} alt="" loading="lazy" draggable={false} />
+                {entry.kind === 'model' && <em>3D</em>}
+                {left !== null && <em className="b3-copies">{left > 0 ? `${left}개` : '다 놓음'}</em>}
+              </span>
+              <span className="b3-thumb-name">
+                {entry.name}
+                <Plus size={14} aria-hidden="true" />
+              </span>
+            </button>
+          );
+        })}
+        {category === 'premium' && (
+          <p className="b3-empty-note">
+            가구 상점에서 산 가구와 공방에서 만든 가구예요. 가진 개수만큼 놓을 수 있어요.
+          </p>
+        )}
         {category === 'rare' && !visible.length && (
           <p className="b3-empty-note">
             아직 희귀 소품이 없어요. 마을 광장 옆 범타듀 상점에서 트로피와 과일 바구니를 살 수 있어요.

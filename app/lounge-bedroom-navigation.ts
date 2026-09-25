@@ -6,7 +6,7 @@ import {
   itemFootprint,
   type Bedroom,
 } from './lounge-bedroom-data.ts';
-import { pickAction, type ActionKind } from './lounge-flow.ts';
+import { pickAction, type ActionCandidate, type ActionKind } from './lounge-flow.ts';
 
 export type WalkPoint = { x: number; z: number };
 export type WalkObstacle = {
@@ -254,7 +254,10 @@ export function findWalkPath(
 export const ROOM_DOOR_REACH = 1.1;
 /** "옷 갈아입기" this close to the wardrobe or the mirror. */
 export const ROOM_DRESS_REACH = 0.9;
-const DRESS_REFS = new Set(['wardrobe', 'mirror']);
+const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white']);
+/** Tables and the hearth double as the kitchen counter / workbench (요리·만들기). */
+export const ROOM_COOK_REACH = 0.9;
+export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace']);
 
 /**
  * Where I appear when the day starts in my room: on the floor beside the bed
@@ -281,6 +284,29 @@ export function besideBed(
     if (near) return near;
   }
   return nearestWalkable(WALK_START, obstacles) ?? { ...WALK_START };
+}
+
+/** Walkable floor beside the first kitchen table / hearth (요리·만들기), or null. */
+export function besideCookTable(
+  room: Pick<Bedroom, 'items'>,
+  obstacles: readonly WalkObstacle[] = roomObstacles(room),
+): WalkPoint | null {
+  for (const item of room.items) {
+    if (!COOK_REFS.has(item.ref)) continue;
+    const box = itemFootprint(item);
+    if (!box) continue;
+    const cx = (box.x0 + box.x1) / 2,
+      cz = (box.z0 + box.z1) / 2;
+    const gap = WALK_ROOM.radius + 0.15;
+    for (const side of [
+      { x: cx, z: box.z1 + gap },
+      { x: box.x1 + gap, z: cz },
+      { x: box.x0 - gap, z: cz },
+      { x: cx, z: box.z0 - gap },
+    ])
+      if (canWalk(side, obstacles)) return side;
+  }
+  return null;
 }
 
 /** Pressing out through the door (walking into the left wall at the doorway). */
@@ -310,9 +336,10 @@ export function roomAction(
     own,
     canExit = true,
     canDress = own,
-  }: { own: boolean; canExit?: boolean; canDress?: boolean },
+    canCook = false,
+  }: { own: boolean; canExit?: boolean; canDress?: boolean; canCook?: boolean },
 ): { kind: ActionKind; item?: string } | null {
-  const candidates = [];
+  const candidates: ActionCandidate<string>[] = [];
   if (canExit)
     candidates.push({
       kind: 'exit' as const,
@@ -329,6 +356,18 @@ export function roomAction(
         kind: 'dress' as const,
         distance: rectDistance(point, box),
         reach: ROOM_DRESS_REACH,
+        target: item.id,
+      });
+    }
+  if (own && canCook)
+    for (const item of room.items) {
+      if (!COOK_REFS.has(item.ref)) continue;
+      const box = itemFootprint(item);
+      if (!box) continue;
+      candidates.push({
+        kind: 'cook' as const,
+        distance: rectDistance(point, box),
+        reach: ROOM_COOK_REACH,
         target: item.id,
       });
     }
