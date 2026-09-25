@@ -269,6 +269,41 @@ export const VILLAGE_MARKET = {
   depth: 1.4,
 } as const;
 
+/**
+ * Life expansion (LIFE-B) places. The pond and the pier are fishing spots
+ * (the river is the third), the museum pavilion mirrors the market east of
+ * the plaza, the notice board holds the village bundles, and the greenhouse
+ * frame beside the east garden gets its glass once the 'greenhouse' bundle is
+ * done. All are built from primitives in lounge-village-season-3d.ts.
+ */
+export const VILLAGE_POND = { id: 'pond', name: '연못', x: -29, z: -17, radius: 2.6 } as const;
+/** Sea pier off the south-east edge; fishing stands at its root (x ≤ 39.6). */
+export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 39, z: 24, width: 1.5 } as const;
+export const VILLAGE_MUSEUM = {
+  id: 'museum',
+  name: '마을 박물관',
+  x: 11.6,
+  z: -5.2,
+  width: 2.6,
+  depth: 1.5,
+} as const;
+export const VILLAGE_BOARD = {
+  id: 'board',
+  name: '마을 게시판',
+  x: -6.2,
+  z: 1.4,
+  width: 1.4,
+  depth: 0.3,
+} as const;
+export const VILLAGE_GREENHOUSE = {
+  id: 'greenhouse',
+  name: '마을 온실',
+  x: 23.4,
+  z: 0.7,
+  width: 2,
+  depth: 1.5,
+} as const;
+
 /** Matching footprints keep imported kArchive props out of walking routes. */
 export const VILLAGE_FURNISHINGS = [
   {
@@ -715,6 +750,20 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
     collider: boxCollider(VILLAGE_FARMLAND.width, VILLAGE_FARMLAND.depth),
     rotation: 0,
   },
+  {
+    id: VILLAGE_POND.id,
+    x: VILLAGE_POND.x,
+    z: VILLAGE_POND.z,
+    collider: circle(VILLAGE_POND.radius),
+    rotation: 0,
+  },
+  ...[VILLAGE_MUSEUM, VILLAGE_BOARD, VILLAGE_GREENHOUSE].map((b) => ({
+    id: b.id,
+    x: b.x,
+    z: b.z,
+    collider: boxCollider(b.width, b.depth),
+    rotation: 0,
+  })),
 ];
 
 const FOUNTAIN = { x: 0, z: 0, radius: 2 } as const;

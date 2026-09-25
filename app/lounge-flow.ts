@@ -23,7 +23,16 @@ export type ActionKind =
   | 'join'
   | 'watch'
   | 'resume'
-  | 'stand';
+  | 'stand'
+  // Life expansion (LIFE-B): fishing, foraging, bugs, museum, bundles, kitchen.
+  | 'fish'
+  | 'forage'
+  | 'catch'
+  | 'museum'
+  | 'board'
+  | 'waterFriend'
+  | 'cook'
+  | 'wish';
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   enter: '들어가기',
@@ -44,6 +53,14 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   watch: '구경하기',
   resume: '이어하기',
   stand: '일어나기',
+  fish: '낚시하기',
+  forage: '줍기',
+  catch: '잡기',
+  museum: '박물관 둘러보기',
+  board: '게시판 보기',
+  waterFriend: '물 주기 (오늘 1번)',
+  cook: '요리·만들기',
+  wish: '소원 빌기',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

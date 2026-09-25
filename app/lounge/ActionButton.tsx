@@ -4,6 +4,13 @@
 import {
   Apple,
   Armchair,
+  Bug,
+  ClipboardList,
+  CookingPot,
+  FishingRod,
+  Landmark,
+  Leaf,
+  Sparkles,
   ArrowUpFromLine,
   Play,
   UserPlus,
@@ -39,6 +46,14 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   watch: Eye,
   resume: Play,
   stand: ArrowUpFromLine,
+  fish: FishingRod,
+  forage: Leaf,
+  catch: Bug,
+  museum: Landmark,
+  board: ClipboardList,
+  waterFriend: Droplets,
+  cook: CookingPot,
+  wish: Sparkles,
 };
 
 export function ActionButton({
