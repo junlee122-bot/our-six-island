@@ -220,6 +220,81 @@ export function interiorTables(area: SceneArea): InteriorTable[] {
   });
 }
 
+/**
+ * Is a point (world units, relative to the table's centre) over the table's
+ * furniture? Matches what lounge-interior-scene.ts builds for each game.
+ */
+export function overTable(t: Pick<InteriorTable, 'game' | 'rx' | 'rz'>, x: number, z: number): boolean {
+  const { rx, rz } = t;
+  switch (t.game) {
+    case 'poker':
+      return (x / (rx + 0.07)) ** 2 + (z / (rz + 0.07)) ** 2 <= 1;
+    case 'blackjack':
+      // A half oval: the curve toward the back wall, the flat side forward.
+      return z <= rz * 0.35 + 0.07 && (x / (rx + 0.07)) ** 2 + ((z - rz * 0.35) / (rz + 0.07)) ** 2 <= 1;
+    case 'chess':
+      return Math.abs(x) <= rx * 0.85 && Math.abs(z) <= rz * 0.95;
+    default:
+      return Math.abs(x) <= rx * 0.875 && Math.abs(z) <= rz * 0.9;
+  }
+}
+
+/** Gap (world units) between the table's edge and a chair's centre. */
+export const CHAIR_GAP = 0.36;
+/** The blackjack curve is tight: its chairs sit a little further out so seven fit. */
+const chairGap = (game: GameKind) => (game === 'blackjack' ? 0.52 : CHAIR_GAP);
+
+/**
+ * Where a seat's chair stands: on the line from the table's centre to the
+ * seat spot, just off the table's edge (the seat spot itself is further out,
+ * where a standing player waits), and which way it faces (y rotation).
+ */
+export function seatChair(
+  t: Pick<InteriorTable, 'game' | 'rx' | 'rz' | 'center'>,
+  seat: InteriorWorld,
+): InteriorWorld & { face: number } {
+  const dx = seat.x - t.center.x,
+    dz = seat.z - t.center.z,
+    d = Math.hypot(dx, dz) || 1;
+  const ux = dx / d,
+    uz = dz / d;
+  let lo = 0,
+    hi = 6;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (overTable(t, ux * mid, uz * mid)) lo = mid;
+    else hi = mid;
+  }
+  const r = hi + chairGap(t.game);
+  const x = t.center.x + ux * r,
+    z = t.center.z + uz * r;
+  return { x, z, face: Math.atan2(t.center.x - x, t.center.z - z) };
+}
+
+/**
+ * Where the host is drawn: close to her table's end, or out at her spot
+ * (hostAt, which is also what blocks walking) while the table's end chairs
+ * are in use (five seats or more reach round to the ends).
+ */
+export function hostStand(
+  t: Pick<InteriorTable, 'game' | 'rx' | 'rz' | 'center' | 'hostAt'>,
+  seats: number,
+): InteriorWorld | null {
+  if (!t.hostAt) return null;
+  if (seats >= 5) return t.hostAt;
+  const dir = Math.sign(t.hostAt.x - t.center.x) || 1;
+  let lo = 0,
+    hi = 6;
+  for (let i = 0; i < 24; i++) {
+    const mid = (lo + hi) / 2;
+    if (overTable(t, dir * mid, 0)) lo = mid;
+    else hi = mid;
+  }
+  const x = t.center.x + dir * (hi + 0.42);
+  // Never further out than her own spot.
+  return { x: dir > 0 ? Math.min(x, t.hostAt.x) : Math.max(x, t.hostAt.x), z: t.hostAt.z };
+}
+
 /** A straight walk from a to b stays clear of tables and hosts. */
 export function segmentWalkable(a: ScenePoint, b: ScenePoint, area: SceneArea): boolean {
   const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 0.5));

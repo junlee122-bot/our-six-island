@@ -1,10 +1,10 @@
 /**
  * The 3D hall (회관) and casino (카지노) interiors: a warm low-poly shell
  * (floor, walls, door, windows, lamps, plants) and one table per game with a
- * floor sign, chairs on every seat, floor rings that show who sits where, and
- * the table host (루미 / 매화) standing at the dealer tables. Everything is
- * built from primitives and small canvas textures (no downloads); all of it
- * is owned by this scene and disposed with it.
+ * floor sign, low chairs pulled up to every seat and floor rings that show
+ * who sits where. Everything is built from primitives and small canvas
+ * textures (no downloads); all of it is owned by this scene and disposed with
+ * it. The table hosts are illustrated billboards (lounge-interior-hosts.ts).
  */
 import * as THREE from 'three';
 import { GAME_INFO, type GameKind } from './lounge-games';
@@ -14,12 +14,18 @@ import {
   INTERIOR_DOOR_Z,
   INTERIOR_ROOM,
   interiorTables,
+  seatChair,
   type InteriorTable,
   type InteriorWorld,
 } from './lounge-interior-layout';
 
 /** Table top height (world units). */
 export const TABLE_HEIGHT = 0.78;
+/**
+ * Chair seat height (world units): low, for the big-headed figures, so a
+ * seated friend's hips rest on it with the feet near the floor.
+ */
+export const SEAT_HEIGHT = 0.36;
 
 type Palette = {
   wall: string;
@@ -423,11 +429,12 @@ export function createInteriorScene(
     me: new THREE.MeshBasicMaterial({ color: '#f2c14e', transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide }),
     away: new THREE.MeshBasicMaterial({ color: '#b7ad9c', transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }),
   };
+  const legLength = SEAT_HEIGHT - 0.08;
   const seatGeometry = {
-    stool: new THREE.CylinderGeometry(0.24, 0.24, 0.1, 14),
-    leg: new THREE.CylinderGeometry(0.035, 0.035, 0.46, 6),
-    back: new THREE.BoxGeometry(0.5, 0.5, 0.08),
-    seat: new THREE.BoxGeometry(0.5, 0.1, 0.46),
+    stool: new THREE.CylinderGeometry(0.23, 0.23, 0.1, 14),
+    leg: new THREE.CylinderGeometry(0.035, 0.035, legLength, 6),
+    back: new THREE.BoxGeometry(0.46, 0.5, 0.08),
+    seat: new THREE.BoxGeometry(0.46, 0.1, 0.42),
   };
   const chairWood = surface(pal.chair);
   const cushion = surface(pal.cushion);
@@ -437,26 +444,27 @@ export function createInteriorScene(
     chair.rotation.y = face;
     if (area === 'lounge') {
       const top = new THREE.Mesh(seatGeometry.stool, cushion);
-      top.position.y = 0.5;
+      top.position.y = SEAT_HEIGHT - 0.05;
       top.castShadow = true;
       chair.add(top);
       for (let i = 0; i < 3; i++) {
         const a = (i / 3) * Math.PI * 2;
         const leg = new THREE.Mesh(seatGeometry.leg, chairWood);
-        leg.position.set(Math.cos(a) * 0.15, 0.23, Math.sin(a) * 0.15);
+        leg.position.set(Math.cos(a) * 0.15, legLength / 2, Math.sin(a) * 0.15);
         chair.add(leg);
       }
     } else {
       const seat = new THREE.Mesh(seatGeometry.seat, cushion);
-      seat.position.y = 0.5;
+      seat.position.y = SEAT_HEIGHT - 0.05;
       seat.castShadow = true;
       const back = new THREE.Mesh(seatGeometry.back, cushion);
-      back.position.set(0, 0.8, -0.22);
+      // The back is on the far side from the table (the chair faces +z locally).
+      back.position.set(0, SEAT_HEIGHT + 0.25, -0.19);
       back.castShadow = true;
       chair.add(seat, back);
-      for (const [x, z] of [[-0.2, -0.18], [0.2, -0.18], [-0.2, 0.18], [0.2, 0.18]] as const) {
+      for (const [x, z] of [[-0.18, -0.16], [0.18, -0.16], [-0.18, 0.16], [0.18, 0.16]] as const) {
         const leg = new THREE.Mesh(seatGeometry.leg, chairWood);
-        leg.position.set(x, 0.23, z);
+        leg.position.set(x, legLength / 2, z);
         chair.add(leg);
       }
     }
@@ -525,8 +533,8 @@ export function createInteriorScene(
         new THREE.TorusGeometry(1, 0.07, 8, 40, half ? Math.PI : Math.PI * 2),
         surface('#3a2418'),
       );
+      // The half rail follows the half top's curve (toward the back).
       rail.rotation.x = -Math.PI / 2;
-      if (half) rail.rotation.z = Math.PI;
       rail.scale.set(rx, rz, 1);
       rail.position.set(0, TABLE_HEIGHT + 0.05, half ? rz * 0.35 : 0);
       rail.castShadow = true;
@@ -586,47 +594,6 @@ export function createInteriorScene(
   };
   tables.forEach(buildTable);
 
-  // ---------------------------------------------------------- hosts
-  const hostMeshes: THREE.Group[] = [];
-  for (const table of tables) {
-    if (!table.host || !table.hostAt) continue;
-    const lumi = table.host === 'lumi';
-    const host = new THREE.Group();
-    host.name = 'host-' + table.host;
-    const outfit = surface(lumi ? '#34507a' : '#e7b7c3');
-    const skin = surface('#f5dcc6');
-    const hair = surface(lumi ? '#2e2c52' : '#231a1c');
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.9, 12), outfit);
-    body.position.y = 0.72;
-    body.castShadow = true;
-    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.36, 0.3, 12), surface(lumi ? '#22324d' : '#c9667f'));
-    skirt.position.y = 0.2;
-    skirt.castShadow = true;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), skin);
-    head.position.y = 1.4;
-    head.castShadow = true;
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hair);
-    cap.position.y = 1.43;
-    cap.rotation.x = -0.35;
-    const back = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.42, 12), hair);
-    back.position.set(0, 1.28, -0.08);
-    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.19, 0.08, 12), surface(lumi ? '#f4efe3' : '#fff6ef'));
-    collar.position.y = 1.18;
-    const pin = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07, 8, 6),
-      surface(lumi ? '#e9c46a' : '#f08aa5', { emissive: lumi ? '#6a4a10' : '#6a2030', emissiveIntensity: 0.4 }),
-    );
-    pin.position.set(0.16, 1.58, 0.1);
-    const eyes = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.02), surface('#3a2830'));
-    eyes.position.set(0, 1.42, 0.21);
-    host.add(body, skirt, head, cap, back, collar, pin, eyes);
-    host.position.set(table.hostAt.x, 0, table.hostAt.z);
-    // Face the table.
-    host.rotation.y = Math.atan2(table.center.x - table.hostAt.x, table.center.z - table.hostAt.z);
-    root.add(host);
-    hostMeshes.push(host);
-  }
-
   /** Rebuilds a table's chairs and seat rings when who sits there changes. */
   const setSeats = (game: GameKind, seats: SeatShow[]) => {
     const node = nodes.get(game);
@@ -636,15 +603,13 @@ export function createInteriorScene(
     node.key = key;
     node.seats.clear();
     for (const s of seats) {
-      const face = Math.atan2(node.table.center.x - s.world.x, node.table.center.z - s.world.z);
-      // Chairs sit a little behind the seat spot, away from the table.
-      const dx = s.world.x - node.table.center.x,
-        dz = s.world.z - node.table.center.z,
-        d = Math.hypot(dx, dz) || 1;
-      buildChair(node.seats, { x: s.world.x + (dx / d) * 0.28, z: s.world.z + (dz / d) * 0.28 }, face);
+      // Chairs are pulled up to the table's edge (lounge-interior-layout.ts);
+      // the ring under each shows who sits there.
+      const chair = seatChair(node.table, s.world);
+      buildChair(node.seats, chair, chair.face);
       const ring = new THREE.Mesh(ringGeometry, ringMaterials[s.state]);
       ring.rotation.x = -Math.PI / 2;
-      ring.position.set(s.world.x, 0.03, s.world.z);
+      ring.position.set(chair.x, 0.03, chair.z);
       ring.renderOrder = 1;
       node.seats.add(ring);
     }

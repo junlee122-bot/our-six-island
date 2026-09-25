@@ -31,12 +31,15 @@ import {
   interiorStep,
   interiorToWorld,
   interiorTables,
+  seatChair,
   seatCount,
   tableSeats,
   worldToInterior,
   type InteriorAction,
 } from './lounge-interior-layout';
-import { createInteriorScene, TABLE_HEIGHT, type SeatShow } from './lounge-interior-scene';
+import { createInteriorScene, SEAT_HEIGHT, TABLE_HEIGHT, type SeatShow } from './lounge-interior-scene';
+import { createInteriorHosts } from './lounge-interior-hosts';
+import type { TablePhase } from './lounge-table-state';
 import { advanceLocomotion, RUN_SPEED_MULTIPLIER, type LocomotionState } from './lounge-locomotion';
 import { ActionButton } from './lounge/ActionButton';
 import { DealerAvatar } from './lounge-dealer-host';
@@ -50,6 +53,34 @@ import './lounge-interior-3d.css';
 /** Server units per second (the floor is 70 × 46 units), as on the flat floor. */
 const WALK_SPEED = 16;
 const FIGURE_HEIGHT = 1.72;
+/** Figure canvas size (px); loungeSprites.draw puts the soles at 97% of its height. */
+const FIGURE_W = 440,
+  FIGURE_H = 540;
+/** World height of a figure-canvas row (y px from the top). */
+const rowHeight = (y: number) => ((FIGURE_H * 0.97 - y) / FIGURE_H) * FIGURE_HEIGHT;
+/**
+ * Seated figures: below this share of the figure's height are the legs; they
+ * are drawn shorter (the thighs point at the table, so only the shins show)
+ * and the hips rest on the chair.
+ */
+const LEG_LINE = 0.75;
+const LEG_SQUASH = 0.55;
+type Chair = { x: number; z: number; face: number };
+/** First and last rows with drawn pixels (null for an empty canvas). */
+function opaqueRows(canvas: HTMLCanvasElement) {
+  const c = canvas.getContext('2d');
+  if (!c) return null;
+  const { data, width, height } = c.getImageData(0, 0, canvas.width, canvas.height);
+  const filled = (y: number) => {
+    for (let x = 3 + y * width * 4, end = x + width * 4; x < end; x += 4) if (data[x] > 40) return true;
+    return false;
+  };
+  let top = 0,
+    bottom = height - 1;
+  while (top < height && !filled(top)) top++;
+  while (bottom > top && !filled(bottom)) bottom--;
+  return top < bottom ? { top, bottom } : null;
+}
 const BUBBLE_MS = 6500;
 /** The camera looks in from the front-right (like my room, a little flatter). */
 const YAW = (20 * Math.PI) / 180;
@@ -107,6 +138,14 @@ type Figure = {
   locomotion: LocomotionState;
   motion: 'walk' | 'run' | 'idle';
   drawnAt: number;
+  /** The chair this figure sits on (null: standing). */
+  chair: Chair | null;
+  /** A seated figure is posed from this standing drawing. */
+  standing: HTMLCanvasElement | null;
+  /** Opaque rows of the standing drawing (measured once per look). */
+  rows: { top: number; bottom: number } | null;
+  /** How far the figure is lowered (seated) — the name tag follows. */
+  lift: number;
 };
 
 export function Interior3D({
@@ -153,6 +192,15 @@ export function Interior3D({
         for (const s of t.seats) if (s.who && s.who !== self) map.set(s.who, s.at);
     return map;
   }, [tables, self]);
+  // The chair each seated player sits on (me too, while I sit at a table).
+  const seatedChair = useMemo(() => {
+    const map = new Map<string, Chair & { at: ScenePoint }>();
+    for (const t of tables)
+      if (t.state.phase !== 'empty')
+        for (const s of t.seats)
+          if (s.who && (s.who !== self || t.game === seatedAt)) map.set(s.who, { ...seatChair(t, s.world), at: s.at });
+    return map;
+  }, [tables, self, seatedAt]);
 
   // Speech bubbles and stickers over heads.
   const [openedAt] = useState(() => Date.now());
@@ -176,9 +224,9 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
@@ -341,7 +389,7 @@ export function Interior3D({
 
     // ---------------------------------------------------------- figures
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const figureGeometry = new THREE.PlaneGeometry(FIGURE_HEIGHT * cameraUp.y * (440 / 540), FIGURE_HEIGHT);
+    const figureGeometry = new THREE.PlaneGeometry(FIGURE_HEIGHT * cameraUp.y * (FIGURE_W / FIGURE_H), FIGURE_HEIGHT);
     // loungeSprites.draw places the soles at 97% of the texture's height.
     figureGeometry.translate(0, FIGURE_HEIGHT * 0.47, 0);
     const shadowCanvas = document.createElement('canvas');
@@ -361,10 +409,20 @@ export function Interior3D({
     shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false, toneMapped: false });
     const shadowGeometry = new THREE.PlaneGeometry(0.7, 0.5);
+    // The table hosts (루미 / 매화) stand at their tables' ends.
+    const hosts = createInteriorHosts(scene, studio.tables, {
+      yaw: YAW,
+      squash: cameraUp.y,
+      shadow: { geometry: shadowGeometry, material: shadowMaterial },
+      onLoad: () => {
+        dirty = true;
+      },
+    });
+    const hostTables = new Map<GameKind, { phase: TablePhase; seats: number }>();
     const makeFigure = (actor: number, look: Look, at: ScenePoint): Figure => {
       const c = document.createElement('canvas');
-      c.width = 440;
-      c.height = 540;
+      c.width = FIGURE_W;
+      c.height = FIGURE_H;
       const texture = new THREE.CanvasTexture(c);
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.minFilter = THREE.LinearFilter;
@@ -378,13 +436,29 @@ export function Interior3D({
       shadow.rotation.x = -Math.PI / 2;
       shadow.renderOrder = 1;
       scene.add(mesh, shadow);
-      return { canvas: c, texture, mesh, shadow, actor, look, pos: { ...at }, locomotion: { phase: 0, facing: 1 }, motion: 'idle', drawnAt: -1000 };
+      return {
+        canvas: c,
+        texture,
+        mesh,
+        shadow,
+        actor,
+        look,
+        pos: { ...at },
+        locomotion: { phase: 0, facing: 1 },
+        motion: 'idle',
+        drawnAt: -1000,
+        chair: null,
+        standing: null,
+        rows: null,
+        lift: 0,
+      };
     };
     const dropFigure = (f: Figure) => {
       scene.remove(f.mesh, f.shadow);
       (f.mesh.material as THREE.Material).dispose();
       f.texture.dispose();
       f.canvas.width = f.canvas.height = 0;
+      if (f.standing) f.standing.width = f.standing.height = 0;
     };
     const mine = makeFigure(latest.current.me.actor, latest.current.me.look, l.point);
     mine.mesh.name = 'me';
@@ -398,16 +472,63 @@ export function Interior3D({
     });
     const drawFigure = (f: Figure, t: number, force = false) => {
       if (!sprites || (!force && t - f.drawnAt < (f.motion === 'idle' ? 90 : 40))) return;
-      if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing })) {
-        f.texture.needsUpdate = true;
-        dirty = true;
-      }
       f.drawnAt = t;
+      if (!f.chair) {
+        if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing })) {
+          f.texture.needsUpdate = true;
+          dirty = true;
+        }
+        return;
+      }
+      // Seated: pose the standing drawing — the body as drawn, the legs shorter.
+      if (!f.standing) {
+        f.standing = document.createElement('canvas');
+        f.standing.width = FIGURE_W;
+        f.standing.height = FIGURE_H;
+      }
+      const facing = f.locomotion.facing;
+      if (!sprites.draw(f.standing, f.actor, f.look, 'idle', 0, false, reduced.matches, { facing }) && !force) return;
+      if (!f.rows) f.rows = opaqueRows(f.standing);
+      if (!f.rows) return;
+      const { top, bottom } = f.rows;
+      const cut = Math.round(top + (bottom - top) * LEG_LINE);
+      const c = f.canvas.getContext('2d');
+      if (!c) return;
+      c.clearRect(0, 0, FIGURE_W, FIGURE_H);
+      c.drawImage(f.standing, 0, 0, FIGURE_W, cut + 1, 0, 0, FIGURE_W, cut + 1);
+      c.drawImage(f.standing, 0, cut, FIGURE_W, bottom + 2 - cut, 0, cut, FIGURE_W, (bottom + 2 - cut) * LEG_SQUASH);
+      f.texture.needsUpdate = true;
+      // The hips (the cut line) rest on the seat.
+      f.lift = SEAT_HEIGHT + 0.015 - rowHeight(cut);
+      dirty = true;
     };
+    // The seated figure stands a little in front of its chair's middle (toward
+    // the camera), so the backrest stays behind and the table in front.
+    const toCamera = { x: Math.sin(YAW) * 0.1, z: Math.cos(YAW) * 0.1 };
     const placeFigure = (f: Figure) => {
+      if (f.chair) {
+        f.mesh.position.set(f.chair.x + toCamera.x, f.lift, f.chair.z + toCamera.z);
+        f.shadow.position.set(f.chair.x, 0.035, f.chair.z);
+        return;
+      }
       const w = interiorToWorld(f.pos);
       f.mesh.position.set(w.x, 0.03, w.z);
       f.shadow.position.set(w.x, 0.035, w.z);
+    };
+    /** Sit down on a chair (or stand up with null); the next draw re-poses. */
+    const seatFigure = (f: Figure, chair: Chair | null) => {
+      const same = f.chair && chair && f.chair.x === chair.x && f.chair.z === chair.z;
+      if (same || (!f.chair && !chair)) return false;
+      f.chair = chair ? { x: chair.x, z: chair.z, face: chair.face } : null;
+      f.lift = chair ? f.lift : 0;
+      if (chair) {
+        // Face the table's side of the screen (front-on for the far seats).
+        const toward = floorToScreenX(Math.sin(chair.face), Math.cos(chair.face));
+        f.locomotion = { ...f.locomotion, facing: Math.abs(toward) < 0.3 ? f.locomotion.facing : toward > 0 ? 1 : -1 };
+        f.motion = 'idle';
+      }
+      f.drawnAt = -1000;
+      return true;
     };
     void spritesJob.then(
       () => {
@@ -608,16 +729,18 @@ export function Interior3D({
     const projectLabels = () => {
       const w = host.clientWidth,
         h = host.clientHeight;
-      const at = interiorToWorld(mine.pos);
-      project('self', at.x, FIGURE_HEIGHT + 0.22, at.z, w, h);
-      for (const [id, f] of others) {
-        const p = interiorToWorld(f.pos);
-        project(id, p.x, FIGURE_HEIGHT + 0.22, p.z, w, h);
-      }
+      // Over the head: a seated figure's tag drops with it.
+      const tag = (id: string, f: Figure) => {
+        const p = f.chair ? { x: f.mesh.position.x, z: f.mesh.position.z } : interiorToWorld(f.pos);
+        project(id, p.x, FIGURE_HEIGHT + 0.22 + (f.chair ? f.lift - 0.03 : 0), p.z, w, h);
+      };
+      tag('self', mine);
+      for (const [id, f] of others) tag(id, f);
       for (const t of latest.current.tables) {
         // The table's sign hangs from its front edge; the host tag is over the host.
         project('table-' + t.game, t.center.x, TABLE_HEIGHT * 0.55, t.center.z + t.rz + 0.05, w, h, true);
-        if (t.hostAt) project('host-' + t.game, t.hostAt.x, 1.95, t.hostAt.z, w, h);
+        const stand = hosts.standAt(t.game);
+        if (stand) project('host-' + t.game, stand.x, 1.9, stand.z, w, h);
       }
     };
     let previous = performance.now(),
@@ -684,7 +807,12 @@ export function Interior3D({
         mine.actor = m.actor;
         mine.look = m.look;
         mine.drawnAt = -1000;
+        mine.rows = null;
       }
+      // Sitting at a table: on my chair once the game has put me at my seat.
+      const myChair = current.seatedChair.get(current.self);
+      if (seatFigure(mine, myChair && Math.hypot(myChair.at.x - l.point.x, myChair.at.y - l.point.y) < 0.6 ? myChair : null))
+        dirty = true;
       placeFigure(mine);
       drawFigure(mine, t, changed);
       // Tell the server where I am (throttled, and once more when I stop) —
@@ -725,6 +853,7 @@ export function Interior3D({
         if (f.look !== p.look) {
           f.look = p.look;
           f.drawnAt = -1000;
+          f.rows = null;
         }
         const gx = goal.x - f.pos.x,
           gy = goal.y - f.pos.y,
@@ -739,10 +868,15 @@ export function Interior3D({
         const fc = fl.motion !== f.motion || fl.state.facing !== f.locomotion.facing;
         f.locomotion = fl.state;
         f.motion = fl.motion;
+        // Arrived at a seat: sit on its chair.
+        const chair = current.seatedChair.get(p.id);
+        if (seatFigure(f, chair && Math.hypot(goal.x - f.pos.x, goal.y - f.pos.y) <= 0.1 ? chair : null)) dirty = true;
         placeFigure(f);
         drawFigure(f, t, fc);
         if (step) dirty = true;
       }
+      for (const table of current.tables) hostTables.set(table.game, { phase: table.state.phase, seats: table.seats.length });
+      if (hosts.update(t, hostTables, reduced.matches)) dirty = true;
       if (t - lastData > 150) {
         const next = interiorAction(l.point, area);
         const prev = actionRef.current;
@@ -803,6 +937,7 @@ export function Interior3D({
       dropFigure(mine);
       for (const f of others.values()) dropFigure(f);
       others.clear();
+      hosts.dispose();
       figureGeometry.dispose();
       shadowGeometry.dispose();
       shadowMaterial.dispose();

@@ -1,9 +1,9 @@
 'use client';
 // The table hosts on screen: 루미 (별빛 카지노 딜러) and 매화 (화투방 진행자).
-// A small inline-SVG portrait whose face follows the moment (DealerMood), the
+// A small round portrait cut from the host's pose sheet (DealerMood), the
 // host's line in a speech bubble, and a few table hooks (per-table memory for
 // streak lines, sticker replies, card sounds, the beginner-tip toggle).
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Lightbulb } from 'lucide-react';
 import {
   HOSTS,
@@ -15,63 +15,17 @@ import {
   type TableMemory,
   type TableReaction,
 } from './lounge-dealer-lines';
+import { HOST_CELL, HOST_PORTRAIT, HOST_SHEET, hostCell, type HostId } from './lounge-host-sprites';
 import { loungeAudio } from './lounge-audio';
 import { recall, remember } from './lounge-settings';
 import './lounge-dealer-host.css';
 
-export type HostId = keyof typeof HOSTS;
+export type { HostId };
 
-const EYES: Record<DealerMood, ReactNode> = {
-  calm: (
-    <>
-      <ellipse cx="25" cy="34" rx="2.1" ry="2.6" />
-      <ellipse cx="39" cy="34" rx="2.1" ry="2.6" />
-    </>
-  ),
-  smile: (
-    <g fill="none" strokeWidth="2" strokeLinecap="round">
-      <path d="M22.5 34.5q2.5-3 5 0" />
-      <path d="M36.5 34.5q2.5-3 5 0" />
-    </g>
-  ),
-  wow: (
-    <>
-      <circle cx="25" cy="33.5" r="3" />
-      <circle cx="39" cy="33.5" r="3" />
-      <circle cx="26" cy="32.5" r="0.9" fill="#fff" />
-      <circle cx="40" cy="32.5" r="0.9" fill="#fff" />
-    </>
-  ),
-  sorry: (
-    <>
-      <ellipse cx="25" cy="35" rx="1.9" ry="2.1" />
-      <ellipse cx="39" cy="35" rx="1.9" ry="2.1" />
-      <g fill="none" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M21.5 29.5l5.5-1.8" />
-        <path d="M42.5 29.5l-5.5-1.8" />
-      </g>
-    </>
-  ),
-  focus: (
-    <>
-      <ellipse cx="25" cy="34.5" rx="2" ry="2.2" />
-      <ellipse cx="39" cy="34.5" rx="2" ry="2.2" />
-      <g fill="none" strokeWidth="1.5" strokeLinecap="round">
-        <path d="M21.5 29.5h6" />
-        <path d="M36.5 29.5h6" />
-      </g>
-    </>
-  ),
-};
-const MOUTH: Record<DealerMood, ReactNode> = {
-  calm: <path d="M28.5 41.5q3.5 2.6 7 0" />,
-  smile: <path d="M27 40.5q5 5 10 0" />,
-  wow: <ellipse cx="32" cy="42" rx="2.2" ry="2.6" />,
-  sorry: <path d="M28.5 43q3.5-2.4 7 0" />,
-  focus: <path d="M29 42h6" />,
-};
-
-/** Small portrait: the face changes with the moment (no image assets). */
+/**
+ * Small round portrait: the host's head and shoulders cropped from the pose
+ * sheet (lounge-host-sprites.ts), so the face changes with the moment.
+ */
 export function DealerAvatar({
   host,
   mood,
@@ -79,7 +33,9 @@ export function DealerAvatar({
   host: HostId;
   mood: DealerMood;
 }) {
-  const lumi = host === 'lumi';
+  const clip = 'dh-clip' + useId().replace(/[^\w-]/g, '');
+  const cell = hostCell(mood);
+  const k = 64 / HOST_PORTRAIT.size;
   return (
     <svg
       className={'dh-face mood-' + mood}
@@ -87,84 +43,21 @@ export function DealerAvatar({
       aria-hidden="true"
       focusable="false"
     >
+      <defs>
+        <clipPath id={clip}>
+          <circle cx="32" cy="32" r="31" />
+        </clipPath>
+      </defs>
       <circle cx="32" cy="32" r="31" className="dh-backdrop" />
-      {/* hair behind */}
-      {lumi ? (
-        <path
-          d="M12 38c-2-17 7-27 20-27s22 10 20 27c-1 7-4 13-6 16H18c-2-3-5-9-6-16z"
-          fill="#2e2c52"
-        />
-      ) : (
-        <>
-          <circle cx="32" cy="10.5" r="7" fill="#231a1c" />
-          <path
-            d="M13 36c-1-15 7-24 19-24s20 9 19 24c-1 6-3 10-4 12H17c-1-2-3-6-4-12z"
-            fill="#231a1c"
-          />
-        </>
-      )}
-      {/* shoulders */}
-      {lumi ? (
-        <>
-          <path d="M10 64c2-10 11-14 22-14s20 4 22 14z" fill="#1f2c3f" />
-          <path d="M26 50l6 7 6-7z" fill="#f4efe3" />
-          <path d="M28.5 55.5l3.5 2 3.5-2-3.5 3z" fill="#a23b4a" />
-        </>
-      ) : (
-        <>
-          <path d="M10 64c2-10 11-14 22-14s20 4 22 14z" fill="#e7b7c3" />
-          <path d="M24 50l8 10 8-10" fill="none" stroke="#fff6ef" strokeWidth="3" />
-        </>
-      )}
-      {/* face */}
-      <ellipse cx="32" cy="35" rx="14.5" ry="15.5" fill="#f7dfcc" />
-      {/* bangs */}
-      {lumi ? (
-        <path
-          d="M17 31c1-10 7-15 15-15 8 0 14 5 15 15-4-3-7-7-8-10-3 4-9 7-15 8-3 0-5 1-7 2z"
-          fill="#2e2c52"
-        />
-      ) : (
-        <path
-          d="M17.5 31c1-9 7-14 14.5-14s13.5 5 14.5 14c-5-2-10-6-14.5-10-4 4-9.5 8-14.5 10z"
-          fill="#231a1c"
-        />
-      )}
-      {/* hair ornament: a gold star (루미) or a plum blossom (매화) */}
-      {lumi ? (
-        <path
-          d="M44 16.5l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.1 1.7.6-3.5-2.6-2.5 3.6-.5z"
-          fill="#e9c46a"
-          stroke="#8a6a2b"
-          strokeWidth=".6"
-        />
-      ) : (
-        <g fill="#f08aa5" stroke="#b44d6b" strokeWidth=".5">
-          <circle cx="44" cy="15" r="2.2" />
-          <circle cx="47.5" cy="17.5" r="2.2" />
-          <circle cx="46.2" cy="21.4" r="2.2" />
-          <circle cx="41.8" cy="21.4" r="2.2" />
-          <circle cx="40.5" cy="17.5" r="2.2" />
-          <circle cx="44" cy="18.6" r="1.2" fill="#f6d36b" stroke="none" />
-        </g>
-      )}
-      {(mood === 'smile' || mood === 'wow') && (
-        <g fill="#f29a9a" opacity=".45">
-          <ellipse cx="21.5" cy="40" rx="3" ry="1.8" />
-          <ellipse cx="42.5" cy="40" rx="3" ry="1.8" />
-        </g>
-      )}
-      <g fill="#3a2830" stroke="#3a2830">
-        {EYES[mood]}
-      </g>
-      <g
-        fill={mood === 'wow' ? '#7b3a3f' : 'none'}
-        stroke="#7b3a3f"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      >
-        {MOUTH[mood]}
-      </g>
+      <image
+        href={HOST_SHEET[host]}
+        x={-(cell.x + HOST_PORTRAIT.x) * k}
+        y={-(cell.y + HOST_PORTRAIT.y) * k}
+        width={HOST_CELL.w * HOST_CELL.cols * k}
+        height={HOST_CELL.h * HOST_CELL.rows * k}
+        preserveAspectRatio="none"
+        clipPath={`url(#${clip})`}
+      />
     </svg>
   );
 }

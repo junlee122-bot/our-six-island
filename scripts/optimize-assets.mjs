@@ -31,6 +31,8 @@ const LOSSLESS_ATLASES = [
   'lounge/daowon-outfits.png',
   'lounge/hachimaki.png',
 ];
+// Table host sheets (루미 / 매화): already keyed RGBA, never dyed, so lossy is fine.
+const HOST_SHEETS = ['lounge/host-lumi.png', 'lounge/host-maehwa.png'];
 const REACTIONS = ['laugh', 'wow', 'cry', 'love', 'cheer', 'think', 'sorry', 'hello'];
 
 const kb = (n) => `${Math.round(n / 1024)}KB`;
@@ -80,6 +82,12 @@ async function images() {
     console.log(
       `reactions/${id}.png -> 256px .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`,
     );
+  }
+  for (const name of HOST_SHEETS) {
+    const source = path.join(assets, name);
+    const target = source.replace(/\.png$/, '.webp');
+    await sharp(source).webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
+    console.log(`${name} -> .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`);
   }
   await socialImages();
 }

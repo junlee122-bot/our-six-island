@@ -81,6 +81,9 @@ export const LOUNGE_ASSETS = {
   daowonBuns: '/assets/lounge/daowon-buns.webp',
   daowonOutfits: '/assets/lounge/daowon-outfits.webp',
   hachimaki: '/assets/lounge/hachimaki.webp',
+  // Table hosts (루미 / 매화): keyed 3×2 pose sheets, see lounge-host-sprites.ts.
+  hostLumi: '/assets/lounge/host-lumi.webp',
+  hostMaehwa: '/assets/lounge/host-maehwa.webp',
   room: '/assets/lounge/club-room.webp',
   casino: '/assets/lounge/club-casino.webp',
   wardrobe: '/assets/lounge/club-wardrobe.webp',
