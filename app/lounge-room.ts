@@ -1,8 +1,8 @@
-import { IslandRoom } from './multiplayer-transport.ts';
-import { PEER_PREFIX, roomCode } from './multiplayer-protocol.ts';
-import { readLook, type Look } from './lounge-look.ts';
-import { channelIdentity, channelKey, seal, unseal } from './lounge-crypto.ts';
-import { ACTORS } from './theater-data.ts';
+import { IslandRoom } from "./multiplayer-transport.ts";
+import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
+import { readLook, type Look } from "./lounge-look.ts";
+import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
+import { ACTORS } from "./theater-data.ts";
 import {
   reactionId,
   readReaction,
@@ -10,7 +10,7 @@ import {
   type Reaction,
   type ReactionId,
   type ReactionScope,
-} from './lounge-reactions.ts';
+} from "./lounge-reactions.ts";
 import {
   newSeotda,
   seotdaAction,
@@ -20,16 +20,17 @@ import {
   type SeotdaMatch,
   type SeotdaView,
   type SeotdaAction,
-} from './lounge-seotda.ts';
+} from "./lounge-seotda.ts";
 import {
   newBlackjack,
   blackjackAction,
   blackjackDeal,
   blackjackView,
+  blackjackStepDelay,
   type BlackjackMatch,
   type BlackjackView,
   type BlackjackAction,
-} from './lounge-blackjack.ts';
+} from "./lounge-blackjack.ts";
 import {
   newPoker,
   pokerBigBlind,
@@ -37,10 +38,11 @@ import {
   pokerDeal,
   pokerView,
   pokerLegalActions,
+  pokerStepDelay,
   type PokerMatch,
   type PokerView,
   type PokerAction,
-} from './lounge-poker.ts';
+} from "./lounge-poker.ts";
 import {
   registerWallet,
   reserveGame,
@@ -51,7 +53,7 @@ import {
   claimDailyGrant,
   dailyGrantInfo,
   type LoungeLedger,
-} from './lounge-economy.ts';
+} from "./lounge-economy.ts";
 import {
   LoungeBank,
   loadWalletIdentity,
@@ -59,7 +61,7 @@ import {
   verifyWallet,
   acquireHouseLock,
   type WalletIdentity,
-} from './lounge-wallet.ts';
+} from "./lounge-wallet.ts";
 import {
   newChess,
   chessBoard,
@@ -69,7 +71,7 @@ import {
   chessAnswerDraw,
   chessTimeout,
   type ChessMatch,
-} from './lounge-chess.ts';
+} from "./lounge-chess.ts";
 import {
   newGo,
   normalizeGo,
@@ -81,8 +83,8 @@ import {
   type GoMatch,
   type GoView,
   type GoAction,
-} from './lounge-gostop.ts';
-import type { LifeAction } from './lounge-life.ts';
+} from "./lounge-gostop.ts";
+import type { LifeAction } from "./lounge-life.ts";
 import {
   GAME_INFO,
   GAME_KINDS,
@@ -103,7 +105,7 @@ import {
   type GameKind,
   type Area,
   type ChatScope,
-} from './lounge-games.ts';
+} from "./lounge-games.ts";
 export {
   GAME_INFO,
   GAME_KINDS,
@@ -131,7 +133,7 @@ export type GameInvite = {
   invited: string[];
   accepted: string[];
   declined: string[];
-  status: 'waiting' | 'started' | 'cancelled' | 'expired';
+  status: "waiting" | "started" | "cancelled" | "expired";
   expires: number;
   matchId: string | null;
   required: number;
@@ -191,7 +193,7 @@ export type LoungeWorld = {
   blackjack: (BlackjackView & TurnTiming) | null;
   seotda: (SeotdaView & TurnTiming) | null;
   names: Record<GameKind, string[]>;
-  wallet: ReturnType<LoungeBank['view']>;
+  wallet: ReturnType<LoungeBank["view"]>;
   chat: ChatLine[];
   invites: GameInvite[];
   tables: LoungeTables;
@@ -199,8 +201,8 @@ export type LoungeWorld = {
   host?: string;
 };
 export type LoungeView = LoungeWorld & {
-  status: 'offline' | 'connecting' | 'selecting' | 'connected' | 'error';
-  role: 'host' | 'guest' | null;
+  status: "offline" | "connecting" | "selecting" | "connected" | "error";
+  role: "host" | "guest" | null;
   code: string;
   self: string;
   error: string;
@@ -215,10 +217,10 @@ const player = (id: string, actor: number, look: Look): LoungePlayer => ({
   look: readLook(look, actor),
   x: 42 + actor * 3,
   y: 74,
-  emote: '',
+  emote: "",
   emoteAt: 0,
   balance: 0,
-  area: 'lounge',
+  area: "lounge",
 });
 function playersRead(value: unknown): LoungePlayer[] | null {
   if (!Array.isArray(value) || value.length > 7) return null;
@@ -229,7 +231,7 @@ function playersRead(value: unknown): LoungePlayer[] | null {
     if (
       !p ||
       !actorValid(p.actor) ||
-      typeof p.id !== 'string' ||
+      typeof p.id !== "string" ||
       p.id.length > 100 ||
       ids.has(p.id) ||
       actors.has(p.actor) ||
@@ -243,13 +245,13 @@ function playersRead(value: unknown): LoungePlayer[] | null {
       ...player(p.id, p.actor, p.look),
       x: p.x,
       y: p.y,
-      emote: typeof p.emote === 'string' ? p.emote.slice(0, 16) : '',
+      emote: typeof p.emote === "string" ? p.emote.slice(0, 16) : "",
       emoteAt: Number(p.emoteAt) || 0,
       reaction: readReaction(p.reaction),
       balance:
         Number.isSafeInteger(p.balance) && p.balance >= 0 ? p.balance : 0,
-      area: AREAS.includes(p.area) ? p.area : 'lounge',
-      ...(p.area === 'home' && validHomeOwner(p.home) ? { home: p.home } : {}),
+      area: AREAS.includes(p.area) ? p.area : "lounge",
+      ...(p.area === "home" && validHomeOwner(p.home) ? { home: p.home } : {}),
     });
   }
   return out;
@@ -257,7 +259,7 @@ function playersRead(value: unknown): LoungePlayer[] | null {
 export type LoungeAction =
   | LifeAction
   | {
-      kind: 'invite';
+      kind: "invite";
       game: GameKind;
       players: string[];
       stake?: number;
@@ -265,32 +267,32 @@ export type LoungeAction =
       /** Interior table id: sit down at that table (host) or call friends to it. */
       table?: string;
     }
-  | { kind: 'area'; area: Area; x?: number; y?: number; home?: number }
-  | { kind: 'draw'; id: string; op: 'offer' | 'accept' | 'decline' }
-  | { kind: 'daily' }
-  | { kind: 'poker'; id: string; revision: number; action: PokerAction }
-  | { kind: 'blackjack'; id: string; revision: number; action: BlackjackAction }
-  | { kind: 'seotda'; id: string; revision: number; action: SeotdaAction }
-  | { kind: 'reply'; id: string; accept: boolean }
-  | { kind: 'cancel'; id: string }
-  | { kind: 'stand'; game: GameKind; id?: string }
-  | { kind: 'ready'; game: GameKind; id: string; ready: boolean }
+  | { kind: "area"; area: Area; x?: number; y?: number; home?: number }
+  | { kind: "draw"; id: string; op: "offer" | "accept" | "decline" }
+  | { kind: "daily" }
+  | { kind: "poker"; id: string; revision: number; action: PokerAction }
+  | { kind: "blackjack"; id: string; revision: number; action: BlackjackAction }
+  | { kind: "seotda"; id: string; revision: number; action: SeotdaAction }
+  | { kind: "reply"; id: string; accept: boolean }
+  | { kind: "cancel"; id: string }
+  | { kind: "stand"; game: GameKind; id?: string }
+  | { kind: "ready"; game: GameKind; id: string; ready: boolean }
   | {
-      kind: 'chess';
+      kind: "chess";
       id: string;
       ply: number;
       from: string;
       to: string;
       promotion?: string;
     }
-  | { kind: 'resign'; id: string }
-  | { kind: 'gostop'; id: string; ply: number; action: GoAction }
-  | { kind: 'move'; x: number; y: number }
-  | { kind: 'look'; look: Look }
-  | { kind: 'chat'; text: string }
-  | { kind: 'emote'; emote: string }
+  | { kind: "resign"; id: string }
+  | { kind: "gostop"; id: string; ply: number; action: GoAction }
+  | { kind: "move"; x: number; y: number }
+  | { kind: "look"; look: Look }
+  | { kind: "chat"; text: string }
+  | { kind: "emote"; emote: string }
   | {
-      kind: 'reaction';
+      kind: "reaction";
       id: ReactionId;
       scope: ReactionScope;
       matchId?: string;
@@ -301,11 +303,11 @@ export type HostedRoomSnapshot = {
   code: string;
   host: string;
   players: LoungePlayer[];
-  seats: LoungeWorld['seats'];
-  names: LoungeWorld['names'];
+  seats: LoungeWorld["seats"];
+  names: LoungeWorld["names"];
   invites: GameInvite[];
   tables?: LoungeTables;
-  chat: LoungeWorld['chat'];
+  chat: LoungeWorld["chat"];
   chess: ChessMatch | null;
   go: GoMatch | null;
   poker: PokerMatch | null;
@@ -321,7 +323,7 @@ export type HostedRoomSnapshot = {
   lastChat: [string, number][];
   due: Partial<
     Record<
-      'poker' | 'blackjack' | 'seotda' | 'gostop',
+      "poker" | "blackjack" | "seotda" | "gostop",
       { id: string; revision: number; at: number }
     >
   >;
@@ -339,7 +341,7 @@ export function snapshotNextDue(s: HostedRoomSnapshot) {
     ),
     // A forming table that nobody completes closes on expiry.
     ...(s.invites ?? []).flatMap((r) =>
-      r.status === 'waiting' && r.table && r.expires > 0 ? [r.expires] : [],
+      r.status === "waiting" && r.table && r.expires > 0 ? [r.expires] : [],
     ),
     ...(s.pendingLooks?.length
       ? (s.lookAt ?? []).map(([, at]) => at + LOOK_THROTTLE_MS)
@@ -349,28 +351,28 @@ export function snapshotNextDue(s: HostedRoomSnapshot) {
 }
 /** Rejection messages returned by hostedAttempt (shown as error toasts). */
 export const REJECT = {
-  invalid: '요청을 처리할 수 없어요. 화면을 새로 고친 뒤 다시 시도해 주세요.',
-  stale: '화면이 최신 상태가 아니에요. 잠시 후 다시 시도해 주세요.',
-  notTurn: '지금은 내 차례가 아니에요.',
-  notSeated: '이 게임에 참가하고 있지 않아요.',
-  illegal: '지금은 할 수 없는 행동이에요.',
-  away: '자리를 비운 것으로 처리되어 자동으로 진행 중이에요.',
-  balance: '잔액이 부족해요.',
-  chat: '채팅은 잠시 후에 다시 보내 주세요.',
-  busy: '참가 중인 게임이나 수락한 초대를 먼저 마쳐 주세요.',
-  active: '이 게임은 이미 진행 중이에요.',
-  retained: '기존 테이블의 다음 판 준비가 끝날 때까지 기다려 주세요.',
-  pending: '이 게임의 초대 응답을 기다리고 있어요.',
-  friends: '함께할 수 있는 친구가 부족해요.',
-  stake: '판돈이나 인원 설정을 확인해 주세요.',
-  invite: '초대가 만료되었거나 취소됐어요.',
-  reaction: '리액션은 잠시 후에 다시 보낼 수 있어요.',
-  area: '갈 수 없는 장소예요.',
-  daily: '오늘의 범은 이미 받았어요. 내일 다시 받을 수 있어요.',
-  drawOffer: '지금은 무승부를 제안하거나 답할 수 없어요.',
-  table: '다음 판 준비가 끝났거나 테이블이 정리됐어요.',
-  tableArea: '그 테이블이 있는 곳으로 먼저 가 주세요.',
-  tableFull: '테이블 자리가 모두 찼어요.',
+  invalid: "요청을 처리할 수 없어요. 화면을 새로 고친 뒤 다시 시도해 주세요.",
+  stale: "화면이 최신 상태가 아니에요. 잠시 후 다시 시도해 주세요.",
+  notTurn: "지금은 내 차례가 아니에요.",
+  notSeated: "이 게임에 참가하고 있지 않아요.",
+  illegal: "지금은 할 수 없는 행동이에요.",
+  away: "자리를 비운 것으로 처리되어 자동으로 진행 중이에요.",
+  balance: "잔액이 부족해요.",
+  chat: "채팅은 잠시 후에 다시 보내 주세요.",
+  busy: "참가 중인 게임이나 수락한 초대를 먼저 마쳐 주세요.",
+  active: "이 게임은 이미 진행 중이에요.",
+  retained: "기존 테이블의 다음 판 준비가 끝날 때까지 기다려 주세요.",
+  pending: "이 게임의 초대 응답을 기다리고 있어요.",
+  friends: "함께할 수 있는 친구가 부족해요.",
+  stake: "판돈이나 인원 설정을 확인해 주세요.",
+  invite: "초대가 만료되었거나 취소됐어요.",
+  reaction: "리액션은 잠시 후에 다시 보낼 수 있어요.",
+  area: "갈 수 없는 장소예요.",
+  daily: "오늘의 범은 이미 받았어요. 내일 다시 받을 수 있어요.",
+  drawOffer: "지금은 무승부를 제안하거나 답할 수 없어요.",
+  table: "다음 판 준비가 끝났거나 테이블이 정리됐어요.",
+  tableArea: "그 테이블이 있는 곳으로 먼저 가 주세요.",
+  tableFull: "테이블 자리가 모두 찼어요.",
 } as const;
 /** 나가리/redeal settle at zero; a winner collects points × 100범 up to each stake. */
 function goSettle(ledger: LoungeLedger, g: GoMatch, deposits: number[]) {
@@ -412,27 +414,27 @@ export class LoungeRoom {
   private timer: ReturnType<typeof setInterval> | null = null;
   private deadline: ReturnType<typeof setTimeout> | null = null;
   private generation = 0;
-  private nonce = '';
+  private nonce = "";
   private hostSeen = 0;
   private incoming = Promise.resolve();
   private outgoing = Promise.resolve();
   private pending: { actor: number; look: Look } | null = null;
   private serverMode = false;
-  private serverDue: HostedRoomSnapshot['due'] = {};
+  private serverDue: HostedRoomSnapshot["due"] = {};
   private goAway = new Set<number>();
   private chessAway = new Set<number>();
-  private deadlines: NonNullable<HostedRoomSnapshot['deadlines']> = {};
+  private deadlines: NonNullable<HostedRoomSnapshot["deadlines"]> = {};
   private lookAt = new Map<string, number>();
   private pendingLooks = new Map<string, Look>();
   /** Server clock of the current hosted call (Date.now() in peer mode). */
   private now = 0;
-  private rejection = '';
+  private rejection = "";
   private coalesced = false;
   static hosted(
     snapshot: HostedRoomSnapshot | null,
     ledger: LoungeLedger,
-    code = '',
-    host = '',
+    code = "",
+    host = "",
   ) {
     const r = new LoungeRoom();
     r.serverMode = true;
@@ -440,8 +442,8 @@ export class LoungeRoom {
     r.bank.commit(ledger);
     r.view = {
       ...empty(),
-      status: 'connected',
-      role: 'host',
+      status: "connected",
+      role: "host",
       code: snapshot?.code ?? code,
       self: snapshot?.host ?? host,
     };
@@ -459,7 +461,7 @@ export class LoungeRoom {
           p.id,
           {
             ...structuredClone(p),
-            area: AREAS.includes(p.area) ? p.area : 'lounge',
+            area: AREAS.includes(p.area) ? p.area : "lounge",
           },
         ]),
       );
@@ -479,12 +481,12 @@ export class LoungeRoom {
       r.lookAt = new Map(snapshot.lookAt ?? []);
       r.pendingLooks = new Map(structuredClone(snapshot.pendingLooks ?? []));
     }
-    for (const id of r.members.keys()) r.wallets.set(id, 'wallet-' + id);
+    for (const id of r.members.keys()) r.wallets.set(id, "wallet-" + id);
     r.sync();
     return r;
   }
   hostedSnapshot(): HostedRoomSnapshot {
-    if (!this.serverMode) throw new Error('Server adapter required');
+    if (!this.serverMode) throw new Error("Server adapter required");
     return structuredClone({
       code: this.view.code,
       host: this.view.self,
@@ -516,19 +518,19 @@ export class LoungeRoom {
   }
   hostedJoin(id: string, actor: number, look: Look) {
     if (!this.serverMode || !actorValid(actor))
-      throw new Error('계정 정보를 확인해 주세요.');
+      throw new Error("계정 정보를 확인해 주세요.");
     const existing = this.members.get(id);
     if (existing) {
       if (existing.actor !== actor)
-        throw new Error('계정 캐릭터가 일치하지 않습니다.');
+        throw new Error("계정 캐릭터가 일치하지 않습니다.");
       return;
     }
     if (
       this.members.size >= 7 ||
       [...this.members.values()].some((p) => p.actor === actor)
     )
-      throw new Error('이미 접속한 계정이거나 방이 가득 찼습니다.');
-    const wallet = 'wallet-' + id;
+      throw new Error("이미 접속한 계정이거나 방이 가득 찼습니다.");
+    const wallet = "wallet-" + id;
     this.bank.commit(registerWallet(this.bank.ledger, wallet));
     this.wallets.set(id, wallet);
     this.members.set(id, player(id, actor, look));
@@ -539,22 +541,22 @@ export class LoungeRoom {
   }
   /** Boolean wrapper kept for callers that only need success. */
   hostedAction(id: string, a: LoungeAction, now = Date.now()) {
-    return this.hostedAttempt(id, a, now) === '';
+    return this.hostedAttempt(id, a, now) === "";
   }
   /**
    * Apply one member action. Returns '' on success, otherwise a specific
    * Korean reason for the rejection (never a generic "state changed").
    */
   hostedAttempt(id: string, a: LoungeAction, now = Date.now()): string {
-    if (!this.serverMode) throw new Error('Server adapter required');
+    if (!this.serverMode) throw new Error("Server adapter required");
     this.now = now;
-    this.rejection = '';
+    this.rejection = "";
     this.coalesced = false;
     const ok = this.apply(id, a, now);
     if (ok) {
       this.refreshTimers(now);
       this.sync();
-      return '';
+      return "";
     }
     return this.rejection || REJECT.invalid;
   }
@@ -566,13 +568,13 @@ export class LoungeRoom {
    * `expired` drops keep a running chess seat: the move clock, not the lost
    * connection, decides the game. Explicit leaves resign chess as before.
    */
-  hostedDrop(id: string, reason: 'left' | 'expired' = 'left') {
-    if (!this.serverMode) throw new Error('Server adapter required');
-    this.drop(id, reason === 'expired');
+  hostedDrop(id: string, reason: "left" | "expired" = "left") {
+    if (!this.serverMode) throw new Error("Server adapter required");
+    this.drop(id, reason === "expired");
     if (this.view.self === id)
       this.view = {
         ...this.view,
-        self: this.members.keys().next().value ?? '',
+        self: this.members.keys().next().value ?? "",
       };
     this.sync();
   }
@@ -582,33 +584,33 @@ export class LoungeRoom {
    * finish, which means a server bug, falls back to a refund.
    */
   hostedClose(now = this.now || Date.now()) {
-    if (!this.serverMode) throw new Error('Server adapter required');
+    if (!this.serverMode) throw new Error("Server adapter required");
     this.now = now;
     for (const kind of GAME_KINDS) {
-      const match = kind === 'gostop' ? this.go : this[kind];
-      if (!match || this.bank.ledger.games[match.id]?.state !== 'reserved')
+      const match = kind === "gostop" ? this.go : this[kind];
+      if (!match || this.bank.ledger.games[match.id]?.state !== "reserved")
         continue;
       try {
-        if (kind === 'chess') {
+        if (kind === "chess") {
           const c = this.chess!;
           const next = c.moves.length
             ? chessTimeout(c)
             : {
                 ...c,
-                winner: 'draw' as const,
-                reason: '첫 수 전에 모두 떠났어요',
+                winner: "draw" as const,
+                reason: "첫 수 전에 모두 떠났어요",
               };
           if (next) {
-            this.settle('chess', next);
+            this.settle("chess", next);
             this.chess = next;
           }
         } else
           for (let step = 0; step < 2000 && this.gameActive(kind); step++)
             if (!this.autoStep(kind, false)) break;
       } catch (error) {
-        console.error('lounge: auto-complete failed', kind, error);
+        console.error("lounge: auto-complete failed", kind, error);
       }
-      if (this.bank.ledger.games[match.id]?.state === 'reserved')
+      if (this.bank.ledger.games[match.id]?.state === "reserved")
         this.bank.commit(voidGame(this.bank.ledger, match.id));
     }
   }
@@ -620,7 +622,7 @@ export class LoungeRoom {
   }
   hostedPacket(id: string) {
     if (!this.serverMode || !this.members.has(id))
-      throw new Error('이 방에 먼저 들어와 주세요.');
+      throw new Error("이 방에 먼저 들어와 주세요.");
     return this.packet(id);
   }
   /**
@@ -629,11 +631,11 @@ export class LoungeRoom {
    * Returns whether anyone moved.
    */
   hostedEvictHomes(mayStay: (owner: number, visitor: number) => boolean) {
-    if (!this.serverMode) throw new Error('Server adapter required');
+    if (!this.serverMode) throw new Error("Server adapter required");
     let moved = false;
     for (const [id, member] of this.members) {
       if (
-        member.area !== 'home' ||
+        member.area !== "home" ||
         member.home === undefined ||
         member.home === member.actor ||
         mayStay(member.home, member.actor)
@@ -641,7 +643,7 @@ export class LoungeRoom {
         continue;
       const next: LoungePlayer = {
         ...member,
-        area: 'village',
+        area: "village",
         ...AREA_DEFAULTS.village,
       };
       delete next.home;
@@ -652,13 +654,13 @@ export class LoungeRoom {
     return moved;
   }
   hostedTick(now: number) {
-    if (!this.serverMode) throw new Error('Server adapter required');
+    if (!this.serverMode) throw new Error("Server adapter required");
     this.now = now;
     this.view = {
       ...this.view,
       invites: this.view.invites.map((r) =>
-        r.status === 'waiting' && r.expires < now
-          ? { ...r, status: 'expired' }
+        r.status === "waiting" && r.expires < now
+          ? { ...r, status: "expired" }
           : r,
       ),
     };
@@ -674,29 +676,33 @@ export class LoungeRoom {
     for (const id of this.lookAt.keys())
       if (!this.members.has(id)) this.lookAt.delete(id);
     // Automatic dealer steps and seats of players who left.
-    for (const kind of ['poker', 'blackjack', 'seotda', 'gostop'] as const) {
+    for (const kind of ["poker", "blackjack", "seotda", "gostop"] as const) {
       const spec = () => {
-        const g = kind === 'gostop' ? this.go : this[kind];
-        if (!g || g.phase === 'over') return null;
+        const g = kind === "gostop" ? this.go : this[kind];
+        if (!g || g.phase === "over") return null;
         const automatic =
-          kind === 'poker'
-            ? ['dealing', 'showdown'].includes(g.phase)
-            : kind === 'blackjack'
-              ? g.phase !== 'players'
-              : kind === 'seotda'
-                ? g.phase !== 'betting'
+          kind === "poker"
+            ? ["dealing", "showdown"].includes(g.phase)
+            : kind === "blackjack"
+              ? g.phase !== "players"
+              : kind === "seotda"
+                ? g.phase !== "betting"
                 : false;
         return automatic || this.awaySet(kind).has(g.turn)
           ? {
               id: g.id,
               revision: g.revision,
               delay: automatic
-                ? kind === 'seotda'
-                  ? g.phase === 'redeal'
+                ? kind === "seotda"
+                  ? g.phase === "redeal"
                     ? 2200
                     : 1500
-                  : 1100
-                : kind === 'gostop'
+                  : kind === "blackjack"
+                    ? (blackjackStepDelay(g as BlackjackMatch) ?? 1100)
+                    : kind === "poker"
+                      ? (pokerStepDelay(g as PokerMatch) ?? 1100)
+                      : 1100
+                : kind === "gostop"
                   ? 1200
                   : 600,
             }
@@ -751,34 +757,34 @@ export class LoungeRoom {
     this.sync();
   }
   private awaySet(kind: GameKind) {
-    return kind === 'poker'
+    return kind === "poker"
       ? this.pokerAway
-      : kind === 'blackjack'
+      : kind === "blackjack"
         ? this.blackjackAway
-        : kind === 'seotda'
+        : kind === "seotda"
           ? this.seotdaAway
-          : kind === 'gostop'
+          : kind === "gostop"
             ? this.goAway
             : this.chessAway;
   }
   /** Identifies one pending human decision; a new key restarts the clock. */
   private turnKey(kind: GameKind): string | null {
-    if (kind === 'chess')
+    if (kind === "chess")
       return this.chess && !this.chess.winner
         ? `${this.chess.id}:${this.chess.moves.length}`
         : null;
-    if (kind === 'gostop')
-      return this.go && this.go.phase !== 'over'
+    if (kind === "gostop")
+      return this.go && this.go.phase !== "over"
         ? `${this.go.id}:${this.go.revision}`
         : null;
     const g = this[kind];
     if (!g || g.turn < 0) return null;
     const deciding =
-      kind === 'poker'
-        ? ['preflop', 'flop', 'turn', 'river'].includes(g.phase)
-        : kind === 'blackjack'
-          ? g.phase === 'players'
-          : g.phase === 'betting';
+      kind === "poker"
+        ? ["preflop", "flop", "turn", "river"].includes(g.phase)
+        : kind === "blackjack"
+          ? g.phase === "players"
+          : g.phase === "betting";
     return deciding ? `${g.id}:${g.revision}` : null;
   }
   /** Start clocks for new decisions and ready checks; dissolve short tables. */
@@ -796,7 +802,10 @@ export class LoungeRoom {
       if (!table) continue;
       if (this.gameActive(kind)) {
         if (table.readyDeadline !== undefined) {
-          tables = { ...tables, [kind]: { ...table, readyDeadline: undefined } };
+          tables = {
+            ...tables,
+            [kind]: { ...table, readyDeadline: undefined },
+          };
           changed = true;
         }
         continue;
@@ -831,42 +840,42 @@ export class LoungeRoom {
    * go-stop; loss on time for chess). Returns false when nothing applied.
    */
   private autoStep(kind: GameKind, timeout: boolean): boolean {
-    if (kind === 'poker') {
+    if (kind === "poker") {
       const g = this.poker;
-      if (!g || g.phase === 'over') return false;
-      const next = ['dealing', 'showdown'].includes(g.phase)
+      if (!g || g.phase === "over") return false;
+      const next = ["dealing", "showdown"].includes(g.phase)
         ? pokerDeal(g)
         : pokerAction(g, g.turn, {
-            kind: pokerLegalActions(g, g.turn).canCheck ? 'check' : 'fold',
+            kind: pokerLegalActions(g, g.turn).canCheck ? "check" : "fold",
           });
       if (!next) return false;
       this.settle(kind, next);
       this.poker = next;
-    } else if (kind === 'blackjack') {
+    } else if (kind === "blackjack") {
       const g = this.blackjack;
-      if (!g || g.phase === 'over') return false;
+      if (!g || g.phase === "over") return false;
       const next =
-        g.phase === 'players'
-          ? blackjackAction(g, g.turn, { kind: 'stand' })
+        g.phase === "players"
+          ? blackjackAction(g, g.turn, { kind: "stand" })
           : blackjackDeal(g);
       if (!next) return false;
       this.settle(kind, next);
       this.blackjack = next;
-    } else if (kind === 'seotda') {
+    } else if (kind === "seotda") {
       const g = this.seotda;
-      if (!g || g.phase === 'over') return false;
+      if (!g || g.phase === "over") return false;
       const next =
-        g.phase === 'betting'
+        g.phase === "betting"
           ? seotdaAction(g, g.turn, {
-              kind: seotdaLegal(g, g.turn).canCheck ? 'check' : 'fold',
+              kind: seotdaLegal(g, g.turn).canCheck ? "check" : "fold",
             })
           : seotdaDeal(g);
       if (!next) return false;
       this.settle(kind, next);
       this.seotda = next;
-    } else if (kind === 'gostop') {
+    } else if (kind === "gostop") {
       const g = this.go;
-      if (!g || g.phase === 'over') return false;
+      if (!g || g.phase === "over") return false;
       const next = goAction(g, g.turn, goPracticeAction(goView(g, g.turn)));
       if (!next) return false;
       this.settle(kind, next);
@@ -922,28 +931,31 @@ export class LoungeRoom {
   private games(id: string) {
     const seat = (kind: GameKind) => this.view.seats[kind].indexOf(id);
     return {
-      chess: this.chess ? { ...this.chess, ...this.timing('chess') } : null,
+      chess: this.chess ? { ...this.chess, ...this.timing("chess") } : null,
       gostop: this.go
-        ? { ...goView(this.go, seat('gostop')), ...this.timing('gostop') }
+        ? { ...goView(this.go, seat("gostop")), ...this.timing("gostop") }
         : null,
       poker: this.poker
-        ? { ...pokerView(this.poker, seat('poker')), ...this.timing('poker') }
+        ? { ...pokerView(this.poker, seat("poker")), ...this.timing("poker") }
         : null,
       blackjack: this.blackjack
         ? {
-            ...blackjackView(this.blackjack, seat('blackjack')),
-            ...this.timing('blackjack'),
+            ...blackjackView(this.blackjack, seat("blackjack")),
+            ...this.timing("blackjack"),
           }
         : null,
       seotda: this.seotda
-        ? { ...seotdaView(this.seotda, seat('seotda')), ...this.timing('seotda') }
+        ? {
+            ...seotdaView(this.seotda, seat("seotda")),
+            ...this.timing("seotda"),
+          }
         : null,
     };
   }
   private chatFor(id: string) {
     const member = this.members.get(id),
-      scope = chatScope(member?.area ?? 'lounge', member?.home);
-    return this.view.chat.filter((c) => (c.scope ?? 'lounge') === scope);
+      scope = chatScope(member?.area ?? "lounge", member?.home);
+    return this.view.chat.filter((c) => (c.scope ?? "lounge") === scope);
   }
   private clock() {
     return this.serverMode ? this.now || Date.now() : Date.now();
@@ -951,7 +963,7 @@ export class LoungeRoom {
   private packet(id: string) {
     return {
       v: 1,
-      type: 'world',
+      type: "world",
       players: [...this.members.values()],
       seats: this.view.seats,
       ...this.games(id),
@@ -988,8 +1000,8 @@ export class LoungeRoom {
   }
   private scheduleSeotda() {
     const g = this.seotda;
-    if (this.seotdaTimer || !g || g.phase === 'over') return;
-    const automatic = g.phase !== 'betting';
+    if (this.seotdaTimer || !g || g.phase === "over") return;
+    const automatic = g.phase !== "betting";
     if (!automatic && !this.seotdaAway.has(g.turn)) return;
     const { id, revision } = g,
       generation = this.generation;
@@ -1005,9 +1017,9 @@ export class LoungeRoom {
         try {
           const next = automatic
             ? seotdaDeal(current)
-            : seotdaAction(current, current.turn, { kind: 'fold' });
+            : seotdaAction(current, current.turn, { kind: "fold" });
           if (next) {
-            this.settle('seotda', next);
+            this.settle("seotda", next);
             this.seotda = next;
             this.sync();
           }
@@ -1016,18 +1028,18 @@ export class LoungeRoom {
             error:
               error instanceof Error
                 ? error.message
-                : '범 정산을 저장하지 못했습니다.',
+                : "범 정산을 저장하지 못했습니다.",
           });
         }
       },
-      automatic ? (g.phase === 'redeal' ? 2200 : 1500) : 600,
+      automatic ? (g.phase === "redeal" ? 2200 : 1500) : 600,
     );
     (this.seotdaTimer as unknown as { unref?: () => void }).unref?.();
   }
   private scheduleBlackjack() {
     const g = this.blackjack;
-    if (this.blackjackTimer || !g || g.phase === 'over') return;
-    const automatic = g.phase !== 'players';
+    if (this.blackjackTimer || !g || g.phase === "over") return;
+    const automatic = g.phase !== "players";
     if (!automatic && !this.blackjackAway.has(g.turn)) return;
     const { id, revision } = g,
       generation = this.generation;
@@ -1041,11 +1053,12 @@ export class LoungeRoom {
           return;
         }
         try {
-          const next = automatic
-            ? blackjackDeal(current)
-            : blackjackAction(current, current.turn, { kind: 'stand' });
+          const next =
+            current.phase !== "players"
+              ? blackjackDeal(current)
+              : blackjackAction(current, current.turn, { kind: "stand" });
           if (next) {
-            this.settle('blackjack', next);
+            this.settle("blackjack", next);
             this.blackjack = next;
             this.sync();
           }
@@ -1054,20 +1067,20 @@ export class LoungeRoom {
             error:
               error instanceof Error
                 ? error.message
-                : '범 정산을 저장하지 못했습니다.',
+                : "범 정산을 저장하지 못했습니다.",
           });
         }
       },
-      automatic ? 1100 : 600,
+      automatic ? (blackjackStepDelay(g) ?? 1100) : 600,
     );
     (this.blackjackTimer as unknown as { unref?: () => void }).unref?.();
   }
   private scheduleDealer() {
-    if (this.dealerTimer || !this.poker || this.poker.phase === 'over') return;
+    if (this.dealerTimer || !this.poker || this.poker.phase === "over") return;
     const g = this.poker,
       id = g.id,
       revision = g.revision;
-    const automatic = ['dealing', 'showdown'].includes(g.phase);
+    const automatic = ["dealing", "showdown"].includes(g.phase);
     if (!automatic && !this.pokerAway.has(g.turn)) return;
     this.dealerTimer = setTimeout(
       () => {
@@ -1085,11 +1098,11 @@ export class LoungeRoom {
             ? pokerDeal(this.poker)
             : pokerAction(this.poker, this.poker.turn, {
                 kind: pokerLegalActions(this.poker, this.poker.turn).canCheck
-                  ? 'check'
-                  : 'fold',
+                  ? "check"
+                  : "fold",
               });
           if (next) {
-            this.settle('poker', next);
+            this.settle("poker", next);
             this.poker = next;
             this.sync();
           }
@@ -1098,11 +1111,11 @@ export class LoungeRoom {
             error:
               error instanceof Error
                 ? error.message
-                : '범 정산을 저장하지 못했습니다.',
+                : "범 정산을 저장하지 못했습니다.",
           });
         }
       },
-      automatic ? 1100 : 600,
+      automatic ? (pokerStepDelay(g) ?? 1100) : 600,
     );
     (this.dealerTimer as unknown as { unref?: () => void }).unref?.();
   }
@@ -1111,8 +1124,8 @@ export class LoungeRoom {
     game: ChessMatch | GoMatch | PokerMatch | BlackjackMatch | SeotdaMatch,
   ) {
     const escrow = this.bank.ledger.games[game.id];
-    if (!escrow || escrow.state !== 'reserved') return;
-    if (kind === 'chess') {
+    if (!escrow || escrow.state !== "reserved") return;
+    if (kind === "chess") {
       const c = game as ChessMatch;
       if (c.winner)
         this.bank.commit(
@@ -1122,30 +1135,30 @@ export class LoungeRoom {
             chessBeomResult(c.winner, escrow.deposits[0]),
           ),
         );
-    } else if (kind === 'gostop') {
+    } else if (kind === "gostop") {
       const g = game as GoMatch;
-      if (g.phase === 'over')
+      if (g.phase === "over")
         this.bank.commit(goSettle(this.bank.ledger, g, escrow.deposits));
     } else {
       const g = game as PokerMatch | BlackjackMatch | SeotdaMatch;
-      if (g.phase === 'over')
+      if (g.phase === "over")
         this.bank.commit(settleGame(this.bank.ledger, g.id, g.result));
     }
   }
-  private lobby(id: string, error = '') {
+  private lobby(id: string, error = "") {
     const c = this.challenges.get(id);
     if (c)
       this.transport?.send(id, {
         v: 1,
-        type: 'lobby',
+        type: "lobby",
         nonce: c.nonce,
         publicKey: this.identity!.publicKey,
         players: [...this.members.values()],
         error,
       });
   }
-  leave(error = '') {
-    if (this.view.role === 'host' && this.houseRelease) {
+  leave(error = "") {
+    if (this.view.role === "host" && this.houseRelease) {
       try {
         this.bank.recover();
       } catch {}
@@ -1181,46 +1194,46 @@ export class LoungeRoom {
     this.chess = null;
     this.go = null;
     this.pending = null;
-    this.nonce = '';
+    this.nonce = "";
     this.view = empty();
-    this.update({ status: error ? 'error' : 'offline', error });
+    this.update({ status: error ? "error" : "offline", error });
   }
   async start(
-    role: 'host' | 'guest',
+    role: "host" | "guest",
     input: string,
     actor: number,
     look: Look,
   ) {
     this.leave();
-    let code = '';
-    if (role === 'guest') {
+    let code = "";
+    if (role === "guest") {
       try {
-        const url = input.trim().startsWith('http') ? new URL(input) : null;
+        const url = input.trim().startsWith("http") ? new URL(input) : null;
         code =
           roomCode(
             url
-              ? (new URLSearchParams(url.hash.slice(1)).get('lounge') ?? '')
+              ? (new URLSearchParams(url.hash.slice(1)).get("lounge") ?? "")
               : input,
-          ) ?? '';
+          ) ?? "";
       } catch {}
       if (!code) {
         this.update({
-          status: 'error',
-          error: '10자리 초대 코드 또는 마을 초대 링크를 확인해 주세요.',
+          status: "error",
+          error: "10자리 초대 코드 또는 마을 초대 링크를 확인해 주세요.",
         });
         return;
       }
     }
     if (!actorValid(actor)) return;
     const generation = ++this.generation;
-    this.update({ status: 'connecting', role, code });
+    this.update({ status: "connecting", role, code });
     this.deadline = setTimeout(() => {
       if (generation === this.generation)
-        this.leave('연결하지 못했어요. 방장이 접속 중인지 확인해 주세요.');
+        this.leave("연결하지 못했어요. 방장이 접속 중인지 확인해 주세요.");
     }, 25000);
     try {
       const [room, identity, wallet] = await Promise.all([
-        IslandRoom.create(role === 'host', code, 'hohyeon-lounge-v4:', 131072),
+        IslandRoom.create(role === "host", code, "hohyeon-lounge-v4:", 131072),
         channelIdentity(),
         this.walletIdentity ?? loadWalletIdentity(),
       ]);
@@ -1231,7 +1244,7 @@ export class LoungeRoom {
       this.identity = identity;
       this.walletIdentity = wallet;
       this.transport = room;
-      if (role === 'host') {
+      if (role === "host") {
         const release = await acquireHouseLock();
         if (generation !== this.generation) {
           release();
@@ -1253,12 +1266,12 @@ export class LoungeRoom {
         },
         () => {
           if (generation === this.generation)
-            this.leave('실시간 연결이 끊겼어요. 다시 참가해 주세요.');
+            this.leave("실시간 연결이 끊겼어요. 다시 참가해 주세요.");
         },
       );
       if (generation !== this.generation) return;
       this.hostSeen = Date.now();
-      if (role === 'host') {
+      if (role === "host") {
         this.bank.commit(registerWallet(this.bank.ledger, wallet.id));
         this.wallets.set(room.id, wallet.id);
         this.members.set(room.id, player(room.id, actor, look));
@@ -1271,32 +1284,32 @@ export class LoungeRoom {
         this.leave(
           error instanceof Error
             ? error.message
-            : '마을에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.',
+            : "마을에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.",
         );
     }
   }
   private finishConnecting() {
     if (this.deadline) clearTimeout(this.deadline);
     this.deadline = null;
-    this.update({ status: 'connected', claiming: null, error: '' });
+    this.update({ status: "connected", claiming: null, error: "" });
   }
   private hello() {
     this.transport?.send(this.hostId(), {
       v: 1,
-      type: 'hello',
+      type: "hello",
       lounge: 1,
       publicKey: this.identity?.publicKey,
     });
   }
   claim(actor: number, look: Look) {
     if (
-      this.view.status !== 'selecting' ||
+      this.view.status !== "selecting" ||
       !actorValid(actor) ||
       this.view.players.some((p) => p.actor === actor)
     )
       return false;
     this.pending = { actor, look: readLook(look, actor) };
-    this.update({ claiming: actor, error: '' });
+    this.update({ claiming: actor, error: "" });
     void this.sendClaim();
     return true;
   }
@@ -1319,7 +1332,7 @@ export class LoungeRoom {
       )
         this.send(this.hostId(), {
           v: 1,
-          type: 'join',
+          type: "join",
           nonce,
           ...pending,
           wallet,
@@ -1328,15 +1341,15 @@ export class LoungeRoom {
       this.pending = null;
       this.update({
         claiming: null,
-        error: '지갑 소유 확인을 완료하지 못했습니다.',
+        error: "지갑 소유 확인을 완료하지 못했습니다.",
       });
     }
   }
   action(action: LoungeAction) {
-    if (this.view.status !== 'connected') return false;
-    if (this.view.role === 'host') {
+    if (this.view.status !== "connected") return false;
+    if (this.view.role === "host") {
       let ok = false;
-      this.rejection = '';
+      this.rejection = "";
       try {
         ok = this.apply(this.view.self, action);
       } catch (error) {
@@ -1344,28 +1357,28 @@ export class LoungeRoom {
           error:
             error instanceof Error
               ? error.message
-              : '범 지갑을 저장하지 못했습니다.',
+              : "범 지갑을 저장하지 못했습니다.",
         });
         return false;
       }
       if (!ok) this.update({ error: this.rejection || REJECT.invalid });
       return ok;
     }
-    this.send(this.hostId(), { v: 1, type: 'action', action });
+    this.send(this.hostId(), { v: 1, type: "action", action });
     return true;
   }
   private gameActive(game: GameKind) {
-    return game === 'chess'
+    return game === "chess"
       ? !!this.chess && !this.chess.winner
-      : game === 'gostop'
-        ? !!this.go && this.go.phase !== 'over'
-        : game === 'poker'
-          ? !!this.poker && this.poker.phase !== 'over'
-          : game === 'seotda'
-            ? !!this.seotda && this.seotda.phase !== 'over'
-            : !!this.blackjack && this.blackjack.phase !== 'over';
+      : game === "gostop"
+        ? !!this.go && this.go.phase !== "over"
+        : game === "poker"
+          ? !!this.poker && this.poker.phase !== "over"
+          : game === "seotda"
+            ? !!this.seotda && this.seotda.phase !== "over"
+            : !!this.blackjack && this.blackjack.phase !== "over";
   }
-  private busy(id: string, except = '') {
+  private busy(id: string, except = "") {
     return (
       Object.values(this.view.tables).some((table) =>
         table?.members.includes(id),
@@ -1375,7 +1388,7 @@ export class LoungeRoom {
       ) ||
       this.view.invites.some(
         (r) =>
-          r.id !== except && r.status === 'waiting' && r.accepted.includes(id),
+          r.id !== except && r.status === "waiting" && r.accepted.includes(id),
       )
     );
   }
@@ -1388,7 +1401,7 @@ export class LoungeRoom {
     const id = crypto.randomUUID(),
       n = request.accepted.length,
       order =
-        request.game === 'chess' && round % 2 === 0
+        request.game === "chess" && round % 2 === 0
           ? [...request.accepted].reverse()
           : [...request.accepted],
       wallets = order.map((p) => this.wallets.get(p)!);
@@ -1396,17 +1409,17 @@ export class LoungeRoom {
       gameReservation(request.game, request.stake),
     );
     let goFirst = 0;
-    if (request.game === 'gostop' && round > 1 && this.go) {
+    if (request.game === "gostop" && round > 1 && this.go) {
       const prev = this.go,
         seat = prev.winner ?? prev.first ?? 0;
-      goFirst = Math.max(0, order.indexOf(this.view.seats.gostop[seat] ?? ''));
+      goFirst = Math.max(0, order.indexOf(this.view.seats.gostop[seat] ?? ""));
     }
     const game =
-      request.game === 'chess'
+      request.game === "chess"
         ? newChess(id)
-        : request.game === 'gostop'
+        : request.game === "gostop"
           ? { ...newGo(id, shuffleCards(), goFirst), stake: request.stake }
-          : request.game === 'poker'
+          : request.game === "poker"
             ? newPoker(
                 id,
                 deposits,
@@ -1414,9 +1427,9 @@ export class LoungeRoom {
                 (round - 1) % n,
                 pokerBigBlind(request.stake),
               )
-            : request.game === 'seotda'
+            : request.game === "seotda"
               ? newSeotda(id, n, request.stake, undefined, (round - 1) % n)
-              : newBlackjack(id, n, request.stake);
+              : newBlackjack(id, n, request.stake, undefined, (round - 1) % n);
     let ledger = reserveGame(
       this.bank.ledger,
       id,
@@ -1424,12 +1437,12 @@ export class LoungeRoom {
       wallets,
       deposits,
     );
-    if (request.game === 'gostop' && (game as GoMatch).phase === 'over')
+    if (request.game === "gostop" && (game as GoMatch).phase === "over")
       ledger = goSettle(ledger, game as GoMatch, deposits);
     this.bank.commit(ledger);
     for (const id of request.accepted) this.removeSeat(id);
     const seats = { ...this.view.seats, [request.game]: order };
-    request.status = 'started';
+    request.status = "started";
     request.matchId = id;
     this.update({
       seats,
@@ -1450,16 +1463,16 @@ export class LoungeRoom {
       },
     });
     delete this.deadlines[request.game];
-    if (request.game === 'chess') {
+    if (request.game === "chess") {
       this.chess = game as ChessMatch;
       this.chessAway.clear();
-    } else if (request.game === 'gostop') {
+    } else if (request.game === "gostop") {
       this.go = game as GoMatch;
       this.goAway.clear();
-    } else if (request.game === 'poker') {
+    } else if (request.game === "poker") {
       this.poker = game as PokerMatch;
       this.pokerAway.clear();
-    } else if (request.game === 'seotda') {
+    } else if (request.game === "seotda") {
       this.seotda = game as SeotdaMatch;
       this.seotdaAway.clear();
     } else {
@@ -1471,17 +1484,17 @@ export class LoungeRoom {
       this.members.set(p.id, {
         ...p,
         area:
-          request.game === 'gostop' || request.game === 'seotda'
-            ? 'lounge'
-            : 'casino',
+          request.game === "gostop" || request.game === "seotda"
+            ? "lounge"
+            : "casino",
         x:
-          (request.game === 'seotda'
+          (request.game === "seotda"
             ? 31
-            : request.game === 'gostop'
+            : request.game === "gostop"
               ? 68
-              : request.game === 'chess'
+              : request.game === "chess"
                 ? 24
-                : request.game === 'blackjack'
+                : request.game === "blackjack"
                   ? 77
                   : 50) + (i === 0 ? -8 : i === 1 ? 8 : 0),
         y: i === 2 ? 78 : 64,
@@ -1490,9 +1503,10 @@ export class LoungeRoom {
   }
   private apply(id: string, a: LoungeAction, now = Date.now()) {
     const member = this.members.get(id);
-    if (!member || !a || typeof a !== 'object') return this.reject(REJECT.invalid);
+    if (!member || !a || typeof a !== "object")
+      return this.reject(REJECT.invalid);
     const turnGame = (
-      kind: 'poker' | 'blackjack' | 'seotda',
+      kind: "poker" | "blackjack" | "seotda",
       matchId: unknown,
       revision: unknown,
     ) => {
@@ -1505,10 +1519,10 @@ export class LoungeRoom {
       if (g.turn !== seat) return this.reject(REJECT.notTurn);
       return seat;
     };
-    if (a.kind === 'area') {
+    if (a.kind === "area") {
       if (!AREAS.includes(a.area)) return this.reject(REJECT.area);
       const coord = (v: unknown) =>
-        typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 100
+        typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 100
           ? v
           : null;
       const x = coord(a.x),
@@ -1516,7 +1530,7 @@ export class LoungeRoom {
         fallback = AREA_DEFAULTS[a.area];
       // 'home' + owner: everyone in the same friend's room shares presence.
       // (Entry permission is checked by the cloud engine, which knows world.life.)
-      if (a.area === 'home' && a.home !== undefined && !validHomeOwner(a.home))
+      if (a.area === "home" && a.home !== undefined && !validHomeOwner(a.home))
         return this.reject(REJECT.area);
       const next: LoungePlayer = {
         ...member,
@@ -1524,11 +1538,15 @@ export class LoungeRoom {
         x: x ?? fallback.x,
         y: y ?? fallback.y,
       };
-      if (a.area === 'home') next.home = a.home ?? member.actor;
+      if (a.area === "home") next.home = a.home ?? member.actor;
       else delete next.home;
       this.members.set(id, next);
       // Walking out of the interior stands me up from a forming table there.
-      if (this.view.invites.some((r) => this.seatedForming(r, id) && TABLE_AREA[r.game] !== a.area))
+      if (
+        this.view.invites.some(
+          (r) => this.seatedForming(r, id) && TABLE_AREA[r.game] !== a.area,
+        )
+      )
         this.update({
           invites: this.view.invites.map((r) =>
             this.seatedForming(r, id) && TABLE_AREA[r.game] !== a.area
@@ -1536,28 +1554,28 @@ export class LoungeRoom {
               : r,
           ),
         });
-    } else if (a.kind === 'poker') {
-      const seat = turnGame('poker', a.id, a.revision);
+    } else if (a.kind === "poker") {
+      const seat = turnGame("poker", a.id, a.revision);
       if (seat === false) return false;
       const next = pokerAction(this.poker!, seat, a.action);
       if (!next) return this.reject(REJECT.illegal);
-      this.settle('poker', next);
+      this.settle("poker", next);
       this.poker = next;
-    } else if (a.kind === 'blackjack') {
-      const seat = turnGame('blackjack', a.id, a.revision);
+    } else if (a.kind === "blackjack") {
+      const seat = turnGame("blackjack", a.id, a.revision);
       if (seat === false) return false;
       const next = blackjackAction(this.blackjack!, seat, a.action);
       if (!next) return this.reject(REJECT.illegal);
-      this.settle('blackjack', next);
+      this.settle("blackjack", next);
       this.blackjack = next;
-    } else if (a.kind === 'seotda') {
-      const seat = turnGame('seotda', a.id, a.revision);
+    } else if (a.kind === "seotda") {
+      const seat = turnGame("seotda", a.id, a.revision);
       if (seat === false) return false;
       const next = seotdaAction(this.seotda!, seat, a.action);
       if (!next) return this.reject(REJECT.illegal);
-      this.settle('seotda', next);
+      this.settle("seotda", next);
       this.seotda = next;
-    } else if (a.kind === 'move') {
+    } else if (a.kind === "move") {
       if (!Number.isFinite(a.x) || !Number.isFinite(a.y))
         return this.reject(REJECT.invalid);
       // Seated players stay at their table in the hall and casino. At a
@@ -1565,12 +1583,12 @@ export class LoungeRoom {
       if (
         this.busy(id) &&
         !this.view.invites.some((r) => this.seatedForming(r, id)) &&
-        (member.area === 'lounge' || member.area === 'casino')
+        (member.area === "lounge" || member.area === "casino")
       )
         return true;
       this.members.set(
         id,
-        member.area === 'village' || member.area === 'home'
+        member.area === "village" || member.area === "home"
           ? {
               ...member,
               x: Math.max(0, Math.min(100, a.x)),
@@ -1582,7 +1600,7 @@ export class LoungeRoom {
               y: Math.max(42, Math.min(88, a.y)),
             },
       );
-    } else if (a.kind === 'look') {
+    } else if (a.kind === "look") {
       const last = this.lookAt.get(id) ?? -Infinity;
       if (this.serverMode && now - last < LOOK_THROTTLE_MS) {
         // Coalesce rapid edits (colour drags): keep only the latest look.
@@ -1593,21 +1611,21 @@ export class LoungeRoom {
       this.pendingLooks.delete(id);
       this.lookAt.set(id, now);
       this.members.set(id, { ...member, look: readLook(a.look, member.actor) });
-    } else if (a.kind === 'reaction') {
+    } else if (a.kind === "reaction") {
       if (!reactionId(a.id)) return this.reject(REJECT.invalid);
       if (member.reaction && now - member.reaction.at < REACTION_COOLDOWN)
         return this.reject(REJECT.reaction);
       if (
-        a.scope === 'village' ||
-        a.scope === 'lounge' ||
-        a.scope === 'casino' ||
-        a.scope === 'home'
+        a.scope === "village" ||
+        a.scope === "lounge" ||
+        a.scope === "casino" ||
+        a.scope === "home"
       ) {
         if (member.area !== a.scope || a.matchId !== undefined)
           return this.reject(REJECT.invalid);
       } else {
         if (!GAME_KINDS.includes(a.scope)) return this.reject(REJECT.invalid);
-        const match = a.scope === 'gostop' ? this.go : this[a.scope];
+        const match = a.scope === "gostop" ? this.go : this[a.scope];
         if (!match || match.id !== a.matchId) return this.reject(REJECT.stale);
       }
       this.members.set(id, {
@@ -1619,37 +1637,47 @@ export class LoungeRoom {
           ...(a.matchId ? { matchId: a.matchId } : {}),
         },
       });
-    } else if (a.kind === 'emote') {
-      if (!['👋', '♥', '✨', 'ㅋㅋ'].includes(a.emote))
+    } else if (a.kind === "emote") {
+      if (!["👋", "♥", "✨", "ㅋㅋ"].includes(a.emote))
         return this.reject(REJECT.invalid);
       this.members.set(id, { ...member, emote: a.emote, emoteAt: now });
-    } else if (a.kind === 'chat') {
+    } else if (a.kind === "chat") {
       const text =
-        typeof a.text === 'string' ? a.text.trim().slice(0, 120) : '';
+        typeof a.text === "string" ? a.text.trim().slice(0, 120) : "";
       if (!text) return this.reject(REJECT.invalid);
       if (now - (this.lastChat.get(id) ?? 0) < 500)
         return this.reject(REJECT.chat);
       this.lastChat.set(id, now);
       const scope = chatScope(member.area, member.home),
-        line: ChatLine = { id: crypto.randomUUID(), actor: member.actor, text, scope };
+        line: ChatLine = {
+          id: crypto.randomUUID(),
+          actor: member.actor,
+          text,
+          scope,
+        };
       // Twelve recent lines per scope.
       const chat = [...this.view.chat, line];
       const kept = chat.filter(
         (c, i) =>
-          chat.slice(i + 1).filter((d) => (d.scope ?? 'lounge') === (c.scope ?? 'lounge'))
+          chat
+            .slice(i + 1)
+            .filter((d) => (d.scope ?? "lounge") === (c.scope ?? "lounge"))
             .length < 12,
       );
       this.update({ chat: kept });
-    } else if (a.kind === 'daily') {
+    } else if (a.kind === "daily") {
       const wallet = this.wallets.get(id);
       if (!wallet || !dailyGrantInfo(this.bank.ledger, wallet, now).available)
         return this.reject(REJECT.daily);
       this.bank.commit(claimDailyGrant(this.bank.ledger, wallet, now));
-    } else if (a.kind === 'invite') {
-      if (!GAME_KINDS.includes(a.game) || !Array.isArray(a.players) || a.players.length > 6)
+    } else if (a.kind === "invite") {
+      if (
+        !GAME_KINDS.includes(a.game) ||
+        !Array.isArray(a.players) ||
+        a.players.length > 6
+      )
         return this.reject(REJECT.invalid);
-      if (a.table !== undefined)
-        return this.inviteTable(id, member, a, now);
+      if (a.table !== undefined) return this.inviteTable(id, member, a, now);
       const retained = this.view.tables[a.game];
       if (
         retained?.members.includes(id) &&
@@ -1663,13 +1691,13 @@ export class LoungeRoom {
         return this.reject(REJECT.retained);
       if (
         this.view.invites.some(
-          (r) => r.game === a.game && r.status === 'waiting',
+          (r) => r.game === a.game && r.status === "waiting",
         )
       )
         return this.reject(REJECT.pending);
       const stake = a.stake ?? GAME_INFO[a.game].stake;
       const required =
-        a.game === 'poker' || a.game === 'blackjack' || a.game === 'seotda'
+        a.game === "poker" || a.game === "blackjack" || a.game === "seotda"
           ? (a.required ?? 3)
           : GAME_INFO[a.game].players;
       if (
@@ -1690,7 +1718,7 @@ export class LoungeRoom {
       if (invited.length < required - 1) return this.reject(REJECT.friends);
       this.update({
         invites: [
-          ...this.view.invites.filter((r) => r.status === 'waiting'),
+          ...this.view.invites.filter((r) => r.status === "waiting"),
           {
             id: crypto.randomUUID(),
             game: a.game,
@@ -1698,7 +1726,7 @@ export class LoungeRoom {
             invited,
             accepted: [id],
             declined: [],
-            status: 'waiting',
+            status: "waiting",
             expires: now + 90000,
             matchId: null,
             required,
@@ -1706,17 +1734,18 @@ export class LoungeRoom {
           },
         ],
       });
-    } else if (a.kind === 'reply') {
+    } else if (a.kind === "reply") {
       const invites = structuredClone(this.view.invites),
         request = invites.find((r) => r.id === a.id);
-      if (!request || request.status !== 'waiting' || now > request.expires)
+      if (!request || request.status !== "waiting" || now > request.expires)
         return this.reject(REJECT.invite);
-      if (request.table) return this.replyTable(id, member, invites, request, a.accept, now);
+      if (request.table)
+        return this.replyTable(id, member, invites, request, a.accept, now);
       if (
         !request.invited.includes(id) ||
         request.accepted.includes(id) ||
         request.declined.includes(id) ||
-        typeof a.accept !== 'boolean'
+        typeof a.accept !== "boolean"
       )
         return this.reject(REJECT.invalid);
       if (a.accept && request.fill) {
@@ -1738,7 +1767,7 @@ export class LoungeRoom {
         const members = [...table.members, id],
           full = members.length >= table.required;
         if (request.accepted.length === request.required || full) {
-          request.status = 'started';
+          request.status = "started";
           request.matchId = table.matchId;
         }
         const next: LoungeTable = {
@@ -1773,32 +1802,32 @@ export class LoungeRoom {
           1 + request.invited.length - request.declined.length <
           request.required
         )
-          request.status = 'cancelled';
+          request.status = "cancelled";
       }
       this.update({ invites });
-    } else if (a.kind === 'cancel') {
+    } else if (a.kind === "cancel") {
       const invites = structuredClone(this.view.invites),
         r = invites.find((r) => r.id === a.id);
-      if (!r || r.status !== 'waiting') return this.reject(REJECT.invite);
+      if (!r || r.status !== "waiting") return this.reject(REJECT.invite);
       if (!r.accepted.includes(id)) return this.reject(REJECT.invalid);
       if (r.table)
         // Standing up from a forming table: only my seat goes.
         invites[invites.indexOf(r)] = this.standFromForming(r, id);
-      else if (r.from === id) r.status = 'cancelled';
+      else if (r.from === id) r.status = "cancelled";
       else {
         // A guest who already accepted only withdraws themselves; the invite
         // stays open while enough friends can still join.
         r.accepted = r.accepted.filter((p) => p !== id);
         r.declined = [...new Set([...r.declined, id])];
         if (1 + r.invited.length - r.declined.length < r.required)
-          r.status = 'cancelled';
+          r.status = "cancelled";
       }
       this.update({ invites });
-    } else if (a.kind === 'stand') {
+    } else if (a.kind === "stand") {
       if (!GAME_KINDS.includes(a.game)) return this.reject(REJECT.invalid);
       const table = this.view.tables[a.game];
       const currentMatchId =
-        a.game === 'gostop' ? this.go?.id : this[a.game]?.id;
+        a.game === "gostop" ? this.go?.id : this[a.game]?.id;
       if (
         a.id !== undefined &&
         (a.id !== currentMatchId || (table && a.id !== table.matchId))
@@ -1809,11 +1838,11 @@ export class LoungeRoom {
       this.removeSeat(id);
       const back = AREA_DEFAULTS[member.area];
       this.members.set(id, { ...member, x: back.x - 2, y: back.y });
-    } else if (a.kind === 'ready') {
-      if (!GAME_KINDS.includes(a.game) || typeof a.ready !== 'boolean')
+    } else if (a.kind === "ready") {
+      if (!GAME_KINDS.includes(a.game) || typeof a.ready !== "boolean")
         return this.reject(REJECT.invalid);
       const table = this.view.tables[a.game];
-      const matchId = a.game === 'gostop' ? this.go?.id : this[a.game]?.id;
+      const matchId = a.game === "gostop" ? this.go?.id : this[a.game]?.id;
       if (
         !table ||
         table.matchId !== a.id ||
@@ -1833,7 +1862,7 @@ export class LoungeRoom {
         : table.ready.filter((memberId) => memberId !== id);
       const next = { ...table, ready };
       const started = this.startIfAllReady(a.game, next, now);
-      if (started === 'balance') return this.reject(REJECT.balance);
+      if (started === "balance") return this.reject(REJECT.balance);
       if (!started)
         this.update({
           tables: {
@@ -1841,7 +1870,7 @@ export class LoungeRoom {
             [a.game]: next,
           },
         });
-    } else if (a.kind === 'chess') {
+    } else if (a.kind === "chess") {
       const g = this.chess,
         seat = this.view.seats.chess.indexOf(id);
       if (!g || seat < 0) return this.reject(REJECT.notSeated);
@@ -1850,36 +1879,36 @@ export class LoungeRoom {
       const next = chessMove(g, seat, a.from, a.to, a.promotion);
       if (!next)
         return this.reject(
-          chessBoard(g).turn() !== (seat === 0 ? 'w' : 'b')
+          chessBoard(g).turn() !== (seat === 0 ? "w" : "b")
             ? REJECT.notTurn
             : REJECT.illegal,
         );
       this.chessAway.delete(seat);
-      this.settle('chess', next);
+      this.settle("chess", next);
       this.chess = next;
-    } else if (a.kind === 'draw') {
+    } else if (a.kind === "draw") {
       const g = this.chess,
         seat = this.view.seats.chess.indexOf(id);
       if (!g || seat < 0) return this.reject(REJECT.notSeated);
       if (a.id !== g.id) return this.reject(REJECT.stale);
       const next =
-        a.op === 'offer'
+        a.op === "offer"
           ? chessOfferDraw(g, seat)
-          : a.op === 'accept' || a.op === 'decline'
-            ? chessAnswerDraw(g, seat, a.op === 'accept')
+          : a.op === "accept" || a.op === "decline"
+            ? chessAnswerDraw(g, seat, a.op === "accept")
             : null;
       if (!next) return this.reject(REJECT.drawOffer);
-      this.settle('chess', next);
+      this.settle("chess", next);
       this.chess = next;
-    } else if (a.kind === 'resign') {
+    } else if (a.kind === "resign") {
       const seat = this.view.seats.chess.indexOf(id);
       if (!this.chess || seat < 0) return this.reject(REJECT.notSeated);
       if (a.id !== this.chess.id || this.chess.winner)
         return this.reject(REJECT.stale);
       const next = chessResign(this.chess, seat)!;
-      this.settle('chess', next);
+      this.settle("chess", next);
       this.chess = next;
-    } else if (a.kind === 'gostop') {
+    } else if (a.kind === "gostop") {
       const g = this.go,
         seat = this.view.seats.gostop.indexOf(id);
       if (!g || seat < 0) return this.reject(REJECT.notSeated);
@@ -1888,14 +1917,14 @@ export class LoungeRoom {
       if (g.turn !== seat) return this.reject(REJECT.notTurn);
       const next = goAction(g, seat, a.action);
       if (!next) return this.reject(REJECT.illegal);
-      this.settle('gostop', next);
+      this.settle("gostop", next);
       this.go = next;
     } else return this.reject(REJECT.invalid);
     this.sync();
     return true;
   }
   private seatedForming(r: GameInvite, id: string) {
-    return !!r.table && r.status === 'waiting' && r.accepted.includes(id);
+    return !!r.table && r.status === "waiting" && r.accepted.includes(id);
   }
   /**
    * Leave a forming table's seat. The table stays open while anyone is
@@ -1903,15 +1932,15 @@ export class LoungeRoom {
    */
   private standFromForming(r: GameInvite, id: string): GameInvite {
     const accepted = r.accepted.filter((p) => p !== id);
-    if (!accepted.length) return { ...r, accepted, status: 'cancelled' };
+    if (!accepted.length) return { ...r, accepted, status: "cancelled" };
     const from = r.from === id ? accepted[0] : r.from;
     return {
       ...r,
       from,
       accepted,
-      invited: [...new Set([...r.invited, ...(r.from === id ? [id] : [])])].filter(
-        (p) => p !== from,
-      ),
+      invited: [
+        ...new Set([...r.invited, ...(r.from === id ? [id] : [])]),
+      ].filter((p) => p !== from),
       declined: [...new Set([...r.declined, id])],
     };
   }
@@ -1923,16 +1952,21 @@ export class LoungeRoom {
   private inviteTable(
     id: string,
     member: LoungePlayer,
-    a: Extract<LoungeAction, { kind: 'invite' }>,
+    a: Extract<LoungeAction, { kind: "invite" }>,
     now: number,
   ) {
     const game = a.game;
     if (a.table !== tableIdOf(game)) return this.reject(REJECT.invalid);
     const players = [...new Set(a.players)].filter(
-      (p): p is string => typeof p === 'string' && p !== id && this.members.has(p),
+      (p): p is string =>
+        typeof p === "string" && p !== id && this.members.has(p),
     );
     const mine = this.view.invites.find(
-      (r) => r.status === 'waiting' && r.game === game && r.table === a.table && r.accepted.includes(id),
+      (r) =>
+        r.status === "waiting" &&
+        r.game === game &&
+        r.table === a.table &&
+        r.accepted.includes(id),
     );
     if (mine) {
       // "친구 부르기": call more friends to the table I sit at.
@@ -1958,8 +1992,11 @@ export class LoungeRoom {
     if (member.area !== TABLE_AREA[game]) return this.reject(REJECT.tableArea);
     if (this.busy(id)) return this.reject(REJECT.busy);
     if (this.gameActive(game)) return this.reject(REJECT.active);
-    if (this.view.tables[game]?.members.length) return this.reject(REJECT.retained);
-    if (this.view.invites.some((r) => r.game === game && r.status === 'waiting'))
+    if (this.view.tables[game]?.members.length)
+      return this.reject(REJECT.retained);
+    if (
+      this.view.invites.some((r) => r.game === game && r.status === "waiting")
+    )
       return this.reject(REJECT.pending);
     const stake = a.stake ?? GAME_INFO[game].stake;
     const required = FLEX_GAMES.includes(game)
@@ -1972,11 +2009,14 @@ export class LoungeRoom {
       required > 7
     )
       return this.reject(REJECT.stake);
-    if (this.bank.view(this.wallets.get(id), now).balance < gameReservation(game, stake))
+    if (
+      this.bank.view(this.wallets.get(id), now).balance <
+      gameReservation(game, stake)
+    )
       return this.reject(REJECT.balance);
     this.update({
       invites: [
-        ...this.view.invites.filter((r) => r.status === 'waiting'),
+        ...this.view.invites.filter((r) => r.status === "waiting"),
         {
           id: crypto.randomUUID(),
           game,
@@ -1984,7 +2024,7 @@ export class LoungeRoom {
           invited: players.filter((p) => !this.busy(p)),
           accepted: [id],
           declined: [],
-          status: 'waiting',
+          status: "waiting",
           expires: now + TABLE_FORM_MS,
           matchId: null,
           required,
@@ -2007,7 +2047,7 @@ export class LoungeRoom {
     accept: unknown,
     now: number,
   ) {
-    if (typeof accept !== 'boolean' || request.accepted.includes(id))
+    if (typeof accept !== "boolean" || request.accepted.includes(id))
       return this.reject(REJECT.invalid);
     if (!accept) {
       if (!request.invited.includes(id)) return this.reject(REJECT.invalid);
@@ -2015,11 +2055,14 @@ export class LoungeRoom {
       this.update({ invites });
       return true;
     }
-    if (member.area !== TABLE_AREA[request.game]) return this.reject(REJECT.tableArea);
+    if (member.area !== TABLE_AREA[request.game])
+      return this.reject(REJECT.tableArea);
     if (this.busy(id, request.id)) return this.reject(REJECT.busy);
     if (this.gameActive(request.game)) return this.reject(REJECT.active);
-    if (this.view.tables[request.game]?.members.length) return this.reject(REJECT.retained);
-    if (request.accepted.length >= request.required) return this.reject(REJECT.tableFull);
+    if (this.view.tables[request.game]?.members.length)
+      return this.reject(REJECT.retained);
+    if (request.accepted.length >= request.required)
+      return this.reject(REJECT.tableFull);
     if (
       this.bank.view(this.wallets.get(id), now).balance <
       gameReservation(request.game, request.stake)
@@ -2055,13 +2098,13 @@ export class LoungeRoom {
     now: number,
   ) {
     if (
-      this.view.invites.some((r) => r.game === game && r.status === 'waiting')
+      this.view.invites.some((r) => r.game === game && r.status === "waiting")
     )
       return this.reject(REJECT.pending);
     const missing = table.required - table.members.length;
     const invited = [...new Set(players)].filter(
       (p) =>
-        typeof p === 'string' &&
+        typeof p === "string" &&
         p !== id &&
         this.members.has(p) &&
         !table.members.includes(p) &&
@@ -2070,7 +2113,7 @@ export class LoungeRoom {
     if (!invited.length) return this.reject(REJECT.friends);
     this.update({
       invites: [
-        ...this.view.invites.filter((r) => r.status === 'waiting'),
+        ...this.view.invites.filter((r) => r.status === "waiting"),
         {
           id: crypto.randomUUID(),
           game,
@@ -2078,7 +2121,7 @@ export class LoungeRoom {
           invited,
           accepted: [id],
           declined: [],
-          status: 'waiting',
+          status: "waiting",
           expires: now + 90000,
           matchId: null,
           required: Math.min(missing, invited.length) + 1,
@@ -2102,7 +2145,7 @@ export class LoungeRoom {
     game: GameKind,
     table: LoungeTable,
     now: number,
-  ): boolean | 'balance' {
+  ): boolean | "balance" {
     if (
       table.ready.length !== table.required ||
       table.members.length !== table.required ||
@@ -2117,7 +2160,7 @@ export class LoungeRoom {
             gameReservation(game, table.stake),
       )
     )
-      return 'balance';
+      return "balance";
     const request: GameInvite = {
       id: crypto.randomUUID(),
       game,
@@ -2125,7 +2168,7 @@ export class LoungeRoom {
       invited: table.members.slice(1),
       accepted: [...table.members],
       declined: [],
-      status: 'waiting',
+      status: "waiting",
       expires: 0,
       matchId: null,
       required: table.required,
@@ -2140,7 +2183,7 @@ export class LoungeRoom {
   private cancelStaleFills() {
     let changed = false;
     const invites = this.view.invites.map((r) => {
-      if (r.status !== 'waiting' || !r.fill) return r;
+      if (r.status !== "waiting" || !r.fill) return r;
       const table = this.view.tables[r.game];
       if (
         table &&
@@ -2150,7 +2193,7 @@ export class LoungeRoom {
       )
         return r;
       changed = true;
-      return { ...r, status: 'cancelled' as const };
+      return { ...r, status: "cancelled" as const };
     });
     if (changed) this.view = { ...this.view, invites };
   }
@@ -2166,24 +2209,24 @@ export class LoungeRoom {
     if (chessRunning && keepChess) this.chessAway.add(c);
     else if (chessRunning) {
       const next = chessResign(this.chess!, c)!;
-      this.settle('chess', next);
+      this.settle("chess", next);
       this.chess = next;
     }
-    if (g >= 0 && this.go && this.go.phase !== 'over') this.goAway.add(g);
+    if (g >= 0 && this.go && this.go.phase !== "over") this.goAway.add(g);
     const p = this.view.seats.poker.indexOf(id);
-    if (p >= 0 && this.poker && this.poker.phase !== 'over')
+    if (p >= 0 && this.poker && this.poker.phase !== "over")
       this.pokerAway.add(p);
     const b = this.view.seats.blackjack.indexOf(id);
-    if (b >= 0 && this.blackjack && this.blackjack.phase !== 'over')
+    if (b >= 0 && this.blackjack && this.blackjack.phase !== "over")
       this.blackjackAway.add(b);
     const s = this.view.seats.seotda.indexOf(id);
-    if (s >= 0 && this.seotda && this.seotda.phase !== 'over')
+    if (s >= 0 && this.seotda && this.seotda.phase !== "over")
       this.seotdaAway.add(s);
     const tables = { ...this.view.tables };
     for (const game of GAME_KINDS) {
       const table = tables[game];
       if (!table?.members.includes(id)) continue;
-      if (game === 'chess' && chessRunning && keepChess) continue;
+      if (game === "chess" && chessRunning && keepChess) continue;
       const members = table.members.filter((memberId) => memberId !== id);
       // A finished table stays while anyone is left: its empty seats can be
       // filled by invite until the ready check runs out.
@@ -2197,13 +2240,13 @@ export class LoungeRoom {
     this.update({
       tables,
       seats: {
-        chess: keep('chess', chessRunning && keepChess),
-        seotda: keep('seotda', !!this.seotda && this.seotda.phase !== 'over'),
-        gostop: keep('gostop', !!this.go && this.go.phase !== 'over'),
-        poker: keep('poker', !!this.poker && this.poker.phase !== 'over'),
+        chess: keep("chess", chessRunning && keepChess),
+        seotda: keep("seotda", !!this.seotda && this.seotda.phase !== "over"),
+        gostop: keep("gostop", !!this.go && this.go.phase !== "over"),
+        poker: keep("poker", !!this.poker && this.poker.phase !== "over"),
         blackjack: keep(
-          'blackjack',
-          !!this.blackjack && this.blackjack.phase !== 'over',
+          "blackjack",
+          !!this.blackjack && this.blackjack.phase !== "over",
         ),
       },
     });
@@ -2218,15 +2261,16 @@ export class LoungeRoom {
     this.pendingLooks.delete(id);
     this.update({
       invites: this.view.invites.map((r) => {
-        if (r.status !== 'waiting') return r;
-        if (r.table && r.accepted.includes(id)) return this.standFromForming(r, id);
+        if (r.status !== "waiting") return r;
+        if (r.table && r.accepted.includes(id))
+          return this.standFromForming(r, id);
         if (r.table)
           return {
             ...r,
             invited: r.invited.filter((p) => p !== id),
             declined: r.declined.filter((p) => p !== id),
           };
-        if (r.accepted.includes(id)) return { ...r, status: 'cancelled' };
+        if (r.accepted.includes(id)) return { ...r, status: "cancelled" };
         const invited = r.invited.filter((p) => p !== id),
           declined = r.declined.filter((p) => p !== id);
         return {
@@ -2235,14 +2279,14 @@ export class LoungeRoom {
           declined,
           status:
             1 + invited.length - declined.length < r.required
-              ? 'cancelled'
-              : 'waiting',
+              ? "cancelled"
+              : "waiting",
         };
       }),
     });
   }
   private tick() {
-    if (this.view.role === 'host') {
+    if (this.view.role === "host") {
       for (const [id, t] of this.seen)
         if (Date.now() - t > 45000) this.drop(id);
       for (const [id, c] of this.challenges)
@@ -2252,19 +2296,19 @@ export class LoungeRoom {
         }
       this.update({
         invites: this.view.invites.map((r) =>
-          r.status === 'waiting' && r.expires < Date.now()
-            ? { ...r, status: 'expired' }
+          r.status === "waiting" && r.expires < Date.now()
+            ? { ...r, status: "expired" }
             : r,
         ),
       });
       this.sync();
     } else {
       if (Date.now() - this.hostSeen > 45000) {
-        this.leave('방장이 마을을 나갔어요. 내 옷장은 저장되어 있습니다.');
+        this.leave("방장이 마을을 나갔어요. 내 옷장은 저장되어 있습니다.");
         return;
       }
-      if (this.view.status === 'connected')
-        this.send(this.hostId(), { v: 1, type: 'ping' });
+      if (this.view.status === "connected")
+        this.send(this.hostId(), { v: 1, type: "ping" });
       else {
         this.hello();
         if (this.pending) void this.sendClaim();
@@ -2272,21 +2316,21 @@ export class LoungeRoom {
     }
   }
   private async receive(from: string, value: unknown) {
-    if (!value || typeof value !== 'object') return;
+    if (!value || typeof value !== "object") return;
     // The legacy wire envelope is validated per message below and after unseal.
     // oxlint-disable-next-line typescript/no-explicit-any
     let p = value as any;
     if (p.v !== 1) return;
     const generation = this.generation;
-    if (p.type === 'sealed') {
+    if (p.type === "sealed") {
       const key = this.keys.get(from);
       if (!key) return;
       p = await unseal(key, p);
       if (generation !== this.generation || p.v !== 1) return;
-    } else if (!['hello', 'join', 'lobby', 'closed', 'leave'].includes(p.type))
+    } else if (!["hello", "join", "lobby", "closed", "leave"].includes(p.type))
       return;
-    if (this.view.role === 'host') {
-      if (p.type === 'hello' && p.lounge === 1) {
+    if (this.view.role === "host") {
+      if (p.type === "hello" && p.lounge === 1) {
         if (this.members.has(from)) {
           this.seen.set(from, Date.now());
           this.send(from, this.packet(from));
@@ -2309,7 +2353,7 @@ export class LoungeRoom {
         this.lobby(from);
         return;
       }
-      if (p.type === 'join') {
+      if (p.type === "join") {
         if (this.members.has(from)) {
           this.send(from, this.packet(from));
           return;
@@ -2326,12 +2370,12 @@ export class LoungeRoom {
         if ([...this.members.values()].some((m) => m.actor === p.actor)) {
           this.lobby(
             from,
-            '다른 친구가 먼저 선택했어요. 남아 있는 친구를 골라 주세요.',
+            "다른 친구가 먼저 선택했어요. 남아 있는 친구를 골라 주세요.",
           );
           return;
         }
         if (this.members.size >= 7) {
-          this.lobby(from, '일곱 자리가 모두 찼어요.');
+          this.lobby(from, "일곱 자리가 모두 찼어요.");
           return;
         }
         const wallet = await verifyWallet(
@@ -2350,7 +2394,7 @@ export class LoungeRoom {
         ) {
           this.lobby(
             from,
-            '이미 접속한 지갑이거나 지갑 소유 확인에 실패했어요.',
+            "이미 접속한 지갑이거나 지갑 소유 확인에 실패했어요.",
           );
           return;
         }
@@ -2361,7 +2405,7 @@ export class LoungeRoom {
             from,
             error instanceof Error
               ? error.message
-              : '범 지갑을 저장하지 못했습니다.',
+              : "범 지갑을 저장하지 못했습니다.",
           );
           return;
         }
@@ -2374,13 +2418,13 @@ export class LoungeRoom {
       }
       if (!this.members.has(from)) return;
       this.seen.set(from, Date.now());
-      if (p.type === 'leave') {
+      if (p.type === "leave") {
         this.drop(from);
         this.sync();
-      } else if (p.type === 'action') {
+      } else if (p.type === "action") {
         let ok = false,
           error: string = REJECT.invalid;
-        this.rejection = '';
+        this.rejection = "";
         try {
           ok = this.apply(from, p.action);
           if (!ok && this.rejection) error = this.rejection;
@@ -2390,28 +2434,28 @@ export class LoungeRoom {
         if (!ok)
           this.send(from, {
             v: 1,
-            type: 'notice',
+            type: "notice",
             error,
           });
-      } else if (p.type === 'ping') this.send(from, this.packet(from));
+      } else if (p.type === "ping") this.send(from, this.packet(from));
     } else {
       this.hostSeen = Date.now();
-      if (p.type === 'closed') {
-        this.leave('방장이 마을을 나갔어요. 내 옷장은 저장되어 있습니다.');
+      if (p.type === "closed") {
+        this.leave("방장이 마을을 나갔어요. 내 옷장은 저장되어 있습니다.");
         return;
       }
-      if (p.type === 'notice') {
+      if (p.type === "notice") {
         this.update({
-          error: typeof p.error === 'string' ? p.error.slice(0, 150) : '',
+          error: typeof p.error === "string" ? p.error.slice(0, 150) : "",
         });
         return;
       }
       const players = playersRead(p.players);
       if (!players) return;
       if (
-        p.type === 'lobby' &&
-        this.view.status !== 'connected' &&
-        typeof p.nonce === 'string' &&
+        p.type === "lobby" &&
+        this.view.status !== "connected" &&
+        typeof p.nonce === "string" &&
         p.nonce.length < 80
       ) {
         const key = await channelKey(this.identity!.privateKey, p.publicKey);
@@ -2422,16 +2466,16 @@ export class LoungeRoom {
         this.deadline = null;
         if (p.error) this.pending = null;
         this.update({
-          status: 'selecting',
+          status: "selecting",
           players,
-          error: typeof p.error === 'string' ? p.error.slice(0, 150) : '',
+          error: typeof p.error === "string" ? p.error.slice(0, 150) : "",
           claiming: p.error ? null : this.view.claiming,
         });
-      } else if (p.type === 'world') {
+      } else if (p.type === "world") {
         if (!players.some((m) => m.id === this.view.self)) {
-          if (this.view.status === 'connected')
+          if (this.view.status === "connected")
             this.leave(
-              '오래 연결이 끊겨 자리가 해제됐어요. 다시 참가해 주세요.',
+              "오래 연결이 끊겨 자리가 해제됐어요. 다시 참가해 주세요.",
             );
           return;
         }
@@ -2461,7 +2505,7 @@ export class LoungeRoom {
         this.finishConnecting();
         this.update({
           players,
-          tables: p.tables && typeof p.tables === 'object' ? p.tables : {},
+          tables: p.tables && typeof p.tables === "object" ? p.tables : {},
           seats: p.seats,
           chess: p.chess,
           gostop: p.gostop,

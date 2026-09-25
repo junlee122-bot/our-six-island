@@ -438,6 +438,46 @@ class LoungeAudio {
     o.start(t);
     o.stop(t + 0.1);
   }
+  /**
+   * Card-table sounds (blackjack / hold'em): `deal` a soft card swish per
+   * card (`count` cards, `gap` seconds apart, matching the deal stagger),
+   * `flip` a short paper snap for a revealed hole card, `chips` a little
+   * clatter when a pot or payout moves. Quiet, and silent when sound is off.
+   */
+  table(kind: 'deal' | 'flip' | 'chips', count = 1, gap = 0.09) {
+    if (!getSettings().sound) return;
+    this.ensure();
+    const ctx = this.ctx;
+    if (!ctx || !this.sfx || !this.noise || ctx.state !== 'running') return;
+    const n = Math.max(1, Math.min(kind === 'chips' ? 5 : 10, count));
+    for (let i = 0; i < n; i++) {
+      const t = ctx.currentTime + i * (kind === 'chips' ? 0.045 : gap);
+      if (kind === 'chips') {
+        // Two bright partials, slightly detuned per chip.
+        const o = ctx.createOscillator(),
+          g = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = 2400 + ((i * 373) % 700);
+        g.gain.setValueAtTime(0.03, t);
+        g.gain.exponentialRampToValueAtTime(0.0004, t + 0.05);
+        o.connect(g).connect(this.sfx);
+        o.start(t);
+        o.stop(t + 0.06);
+        continue;
+      }
+      const source = ctx.createBufferSource(),
+        filter = ctx.createBiquadFilter(),
+        g = ctx.createGain(),
+        length = kind === 'flip' ? 0.05 : 0.09;
+      source.buffer = this.noise;
+      filter.type = kind === 'flip' ? 'highpass' : 'bandpass';
+      filter.frequency.value = kind === 'flip' ? 2600 : 1800 + ((i * 211) % 500);
+      g.gain.setValueAtTime(kind === 'flip' ? 0.09 : 0.05, t);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + length);
+      source.connect(filter).connect(g).connect(this.sfx);
+      source.start(t, (i * 0.137) % 1.5, length + 0.02);
+    }
+  }
   /** Little rewards: plant, water, harvest, coin. */
   chime(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail') {
     const ctx = this.ctx;

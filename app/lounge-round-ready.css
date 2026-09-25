@@ -8,6 +8,17 @@
   color: #354c3d;
   box-shadow: 0 12px 32px #172d1710;
 }
+.l-round-summary {
+  margin: -6px 0 16px;
+  padding: 9px 13px;
+  border-radius: 11px;
+  background: #f3efdf;
+  color: #4b4430;
+  font-size: 13.5px;
+  line-height: 1.55;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .l-round-heading {
   display: flex;
   align-items: flex-start;

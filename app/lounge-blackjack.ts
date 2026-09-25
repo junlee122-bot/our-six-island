@@ -20,7 +20,38 @@ export type BlackjackMatch = {
   turn: number;
   hand: number;
   result: number[];
-  event: { kind: string; seat: number; hand: number };
+  event: BlackjackEvent;
+  /** Seat that acts first this round (rotates per round). Absent in old snapshots = 0. */
+  first?: number;
+};
+/**
+ * What the last step did. Player steps: hit/stand/double/split. Dealer steps:
+ * reveal, dealer-hit (card, total), dealer-stand (total; settles the round),
+ * dealer-bust (card, total; settles), dealer-skip (every hand already busted
+ * or has a natural; settles). 'dealer' and 'settled' come from snapshots
+ * stored before the dealer steps were split and are still accepted.
+ */
+export type BlackjackEventKind =
+  | 'deal'
+  | 'hit'
+  | 'stand'
+  | 'double'
+  | 'split'
+  | 'reveal'
+  | 'dealer-hit'
+  | 'dealer-stand'
+  | 'dealer-bust'
+  | 'dealer-skip'
+  | 'dealer'
+  | 'settled';
+export type BlackjackEvent = {
+  kind: BlackjackEventKind | (string & {});
+  seat: number;
+  hand: number;
+  /** Dealer steps: the card just drawn (dealer-hit / dealer-bust). */
+  card?: number;
+  /** Dealer steps: the dealer total after this step. */
+  total?: number;
 };
 export type BlackjackView = Omit<BlackjackMatch, 'deck' | 'dealer'> & {
   dealer: (number | null)[];
@@ -71,7 +102,10 @@ function finishHand(h: BlackjackHand) {
     h.status = h.split ? 'stood' : h.cards.length === 2 ? 'blackjack' : 'stood';
 }
 function advanceTurn(g: BlackjackMatch) {
-  for (let i = 0; i < g.hands.length; i++) {
+  const n = g.hands.length,
+    first = g.first ?? 0;
+  for (let k = 0; k < n; k++) {
+    const i = (first + k) % n;
     const h = g.hands[i].findIndex((hand) => hand.status === 'playing');
     if (h >= 0) {
       g.turn = i;
@@ -88,9 +122,13 @@ export function newBlackjack(
   count: number,
   stake: number,
   deck = shuffleBlackjackCards(),
+  first = 0,
 ): BlackjackMatch {
   if (
     !Number.isInteger(count) ||
+    !Number.isInteger(first) ||
+    first < 0 ||
+    first >= count ||
     count < 2 ||
     count > 7 ||
     !Number.isSafeInteger(stake) ||
@@ -123,9 +161,12 @@ export function newBlackjack(
     hand: 0,
     result: Array(count).fill(0),
     event: { kind: 'deal', seat: -1, hand: -1 },
+    first,
   };
+  // Cards go out clockwise from the first seat, one at a time, dealer last.
   for (let round = 0; round < 2; round++) {
-    for (const hands of g.hands) hands[0].cards.push(draw(g));
+    for (let k = 0; k < count; k++)
+      g.hands[(first + k) % count][0].cards.push(draw(g));
     g.dealer.push(draw(g));
   }
   for (const hands of g.hands) finishHand(hands[0]);
@@ -202,57 +243,107 @@ export function blackjackAction(
   advanceTurn(next);
   return next;
 }
+/** True while every hand still in play needs the dealer to finish drawing. */
+function dealerNeeded(g: BlackjackMatch) {
+  return g.hands.some((hands) =>
+    hands.some((h) => h.status !== 'bust' && h.status !== 'blackjack'),
+  );
+}
+/** The dealer draws below 17 (S17) unless nothing is left to beat. */
+function dealerDraws(g: BlackjackMatch) {
+  return (
+    !natural(g.dealer) &&
+    dealerNeeded(g) &&
+    blackjackValue(g.dealer).total < 17
+  );
+}
+function settle(next: BlackjackMatch) {
+  const d = blackjackValue(next.dealer),
+    dealerNatural = natural(next.dealer);
+  next.result = next.hands.map((hands) =>
+    hands.reduce((total, h) => {
+      const v = blackjackValue(h.cards);
+      if (v.bust) {
+        h.result = -h.bet;
+        h.outcome = 'lose';
+      } else if (dealerNatural) {
+        h.result = h.status === 'blackjack' ? 0 : -h.bet;
+        h.outcome = h.result ? 'lose' : 'push';
+      } else if (h.status === 'blackjack') {
+        h.result = (h.bet * 3) / 2;
+        h.outcome = 'blackjack';
+      } else if (d.bust || v.total > d.total) {
+        h.result = h.bet;
+        h.outcome = 'win';
+      } else if (v.total < d.total) {
+        h.result = -h.bet;
+        h.outcome = 'lose';
+      } else {
+        h.result = 0;
+        h.outcome = 'push';
+      }
+      return total + h.result;
+    }, 0),
+  );
+  next.phase = 'over';
+}
+/**
+ * One automatic dealer step: reveal → (dealer-hit)* → dealer-stand |
+ * dealer-bust | dealer-skip. The round settles in the same step the dealer
+ * stops, so there is no idle "comparing" step. A stored 'settling' snapshot
+ * (older engine) still settles with a 'settled' event.
+ */
 export function blackjackDeal(g: BlackjackMatch): BlackjackMatch | null {
   if (!['reveal', 'dealer', 'settling'].includes(g.phase)) return null;
   const next = structuredClone(g);
   next.revision++;
-  next.event = { kind: 'dealer', seat: -1, hand: -1 };
+  const total = () => blackjackValue(next.dealer).total;
   if (g.phase === 'reveal') {
     next.phase = 'dealer';
-    next.event.kind = 'reveal';
+    next.event = { kind: 'reveal', seat: -1, hand: -1, total: total() };
   } else if (g.phase === 'dealer') {
-    const needsDealer = next.hands.some((hands) =>
-      hands.some((h) => h.status !== 'bust' && h.status !== 'blackjack'),
-    );
-    if (
-      !natural(next.dealer) &&
-      needsDealer &&
-      blackjackValue(next.dealer).total < 17
-    )
-      next.dealer.push(draw(next));
-    else next.phase = 'settling';
+    if (dealerDraws(next)) {
+      const card = draw(next);
+      next.dealer.push(card);
+      const bust = blackjackValue(next.dealer).bust;
+      next.event = {
+        kind: bust ? 'dealer-bust' : 'dealer-hit',
+        seat: -1,
+        hand: -1,
+        card,
+        total: total(),
+      };
+      if (bust) settle(next);
+    } else {
+      next.event = {
+        kind:
+          !natural(next.dealer) && !dealerNeeded(next)
+            ? 'dealer-skip'
+            : 'dealer-stand',
+        seat: -1,
+        hand: -1,
+        total: total(),
+      };
+      settle(next);
+    }
   } else {
-    const d = blackjackValue(next.dealer),
-      dealerNatural = natural(next.dealer);
-    next.result = next.hands.map((hands) =>
-      hands.reduce((total, h) => {
-        const v = blackjackValue(h.cards);
-        if (v.bust) {
-          h.result = -h.bet;
-          h.outcome = 'lose';
-        } else if (dealerNatural) {
-          h.result = h.status === 'blackjack' ? 0 : -h.bet;
-          h.outcome = h.result ? 'lose' : 'push';
-        } else if (h.status === 'blackjack') {
-          h.result = (h.bet * 3) / 2;
-          h.outcome = 'blackjack';
-        } else if (d.bust || v.total > d.total) {
-          h.result = h.bet;
-          h.outcome = 'win';
-        } else if (v.total < d.total) {
-          h.result = -h.bet;
-          h.outcome = 'lose';
-        } else {
-          h.result = 0;
-          h.outcome = 'push';
-        }
-        return total + h.result;
-      }, 0),
-    );
-    next.phase = 'over';
-    next.event.kind = 'settled';
+    settle(next);
+    next.event = { kind: 'settled', seat: -1, hand: -1, total: total() };
   }
   return next;
+}
+/**
+ * Suggested wait (ms) before the next automatic dealer step of `g`, so each
+ * beat has time to be read: the hole-card reveal, each hit, and the final
+ * stand/settle. Null when no automatic step is pending.
+ */
+export const BLACKJACK_DELAYS = { reveal: 900, hit: 800, settle: 700 } as const;
+export function blackjackStepDelay(g: BlackjackMatch): number | null {
+  if (g.phase === 'reveal') return BLACKJACK_DELAYS.reveal;
+  if (g.phase === 'dealer')
+    return dealerDraws(g) ? BLACKJACK_DELAYS.hit : BLACKJACK_DELAYS.settle;
+  if (g.phase === 'settling') return BLACKJACK_DELAYS.settle;
+  return null;
 }
 export function blackjackView(g: BlackjackMatch, seat: number): BlackjackView {
   // Build explicitly: no deck or hidden hole-card value, even for observers.
@@ -268,6 +359,7 @@ export function blackjackView(g: BlackjackMatch, seat: number): BlackjackView {
     hand: g.hand,
     result: [...g.result],
     event: { ...g.event },
+    ...(g.first !== undefined ? { first: g.first } : {}),
     legal: blackjackLegal(g, seat),
   };
 }

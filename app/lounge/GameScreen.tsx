@@ -6,6 +6,7 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { ReactionId } from '../lounge-reactions';
 import { ReactionDock } from '../lounge-reaction-ui';
 import { RoundReady } from '../lounge-round-ready';
+import { latestTableReaction } from '../lounge-dealer-lines';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY, leaveConsequence } from './game-copy';
@@ -180,7 +181,9 @@ export function GameScreen({
   useEffect(() => {
     if (turn && !wasTurn.current) {
       attention('turn', `${GAME_INFO[kind].name} · 내 차례예요.`);
-      stage.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      // 'nearest': bring the action bar in without pushing the host's line
+      // (and the dealer's cards) off the top at 1440×900.
+      stage.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }
     wasTurn.current = turn;
   }, [turn, kind]);
@@ -201,6 +204,13 @@ export function GameScreen({
   const sendReaction = (id: ReactionId) =>
     room.action({ kind: 'reaction', id, scope: kind, matchId: match?.id });
   const empty = table ? Math.max(0, table.required - table.members.length) : 0;
+  // The table host (루미 / 매화) greets by round and answers stickers.
+  const host = {
+    round: table?.round,
+    reaction: reactionsHidden
+      ? null
+      : latestTableReaction(view.players, seats, kind, match?.id),
+  };
   return (
     <section
       className={'l-game-screen ' + kind + (dark ? ' is-dark' : '')}
@@ -347,6 +357,7 @@ export function GameScreen({
                   />
                 ) : kind === 'seotda' ? (
                   <SeotdaTable
+                    {...host}
                     match={view.seotda!}
                     seat={seat}
                     names={names}
@@ -359,6 +370,7 @@ export function GameScreen({
                   />
                 ) : kind === 'blackjack' ? (
                   <BlackjackTable
+                    {...host}
                     match={view.blackjack!}
                     seat={seat}
                     names={names}
@@ -371,6 +383,7 @@ export function GameScreen({
                   />
                 ) : kind === 'poker' ? (
                   <PokerTable
+                    {...host}
                     match={view.poker!}
                     seat={seat}
                     names={names}
@@ -383,6 +396,7 @@ export function GameScreen({
                   />
                 ) : (
                   <GoBoard
+                    reaction={host.reaction}
                     match={view.gostop!}
                     seat={seat}
                     names={names}

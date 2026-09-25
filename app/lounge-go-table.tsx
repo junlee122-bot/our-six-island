@@ -18,6 +18,8 @@ import { TURN_LIMIT_MS } from './lounge-games';
 import { AWAY_LABEL, TurnTimer } from './lounge-turn-timer';
 import { formatBeom, josa } from './lounge-text';
 import { loungeAudio } from './lounge-audio';
+import { gostopHostLine, type TableReaction } from './lounge-dealer-lines';
+import { DealerHost, useReactionReply } from './lounge-dealer-host';
 const groups = [
   ['bright', '광'],
   ['animal', '열끗'],
@@ -231,6 +233,7 @@ export function GoBoard({
   onAction,
   names,
   onDisplayChange,
+  reaction,
 }: {
   match: GoView & TurnTiming;
   seat: number;
@@ -238,7 +241,10 @@ export function GoBoard({
   onAction: (a: GoAction) => Promise<boolean> | void;
   names: string[];
   onDisplayChange?: (revision: number) => void;
+  /** Newest sticker at this table, for the host's reply. */
+  reaction?: TableReaction | null;
 }) {
+  const hostAside = useReactionReply(g.id, reaction, names);
   // One action per server revision: a quick double tap sends only once.
   // (A ref, so even two taps inside one frame send only once.)
   const sent = useRef<string | null>(null),
@@ -425,6 +431,13 @@ export function GoBoard({
           : `${names[shown.turn]}의 차례`;
   return (
     <div className="g-game l-go-layout">
+      <DealerHost
+        host="maehwa"
+        compact
+        className="g-host"
+        line={gostopHostLine(shown, seat, names)}
+        aside={hostAside}
+      />
       <div className="g-game-top">
         <div className="l-game-status" aria-live="polite">
           <span className={playing ? 'g-status-moving' : ''} />

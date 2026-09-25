@@ -216,7 +216,10 @@ function roomHost() {
   r.sync();
   return r;
 }
-test('room reserves max four stakes and rejects stale/observer actions, leaving auto-stands', async () => {
+test('room reserves max four stakes and rejects stale/observer actions, leaving auto-stands', (t) => {
+  // Fake timers: the room's auto-stand and dealer timers are driven by hand,
+  // so the test never races real time under parallel `npm test` load.
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   const r = roomHost();
   try {
     assert(
@@ -232,6 +235,12 @@ test('room reserves max four stakes and rejects stale/observer actions, leaving 
       r.apply('p1', { kind: 'reply', id: r.view.invites[0].id, accept: true }),
     );
     const id = r.blackjack.id;
+    // The random launch deal can open on a dealer natural ('reveal'), which
+    // arms a dealer timer for that deal (same id, revision 0). Drop it before
+    // swapping in the fixed shoe, or it would fire as a dealer step on the new
+    // players' phase and swallow the away auto-stand (the old ~10% flake).
+    clearTimeout(r.blackjackTimer);
+    r.blackjackTimer = null;
     r.blackjack = newBlackjack(id, 2, 1000, shoe('8 T 6 8 9 T 8'));
     r.sync();
     assert.equal(r.view.wallet.held, 4000);
@@ -240,9 +249,11 @@ test('room reserves max four stakes and rejects stale/observer actions, leaving 
     assert.equal(r.apply('p0', bad), false);
     assert.equal(r.apply('p2', { ...bad, revision: 0 }), false);
     assert(r.apply('p0', { kind: 'stand', game: 'blackjack' }));
-    const until = Date.now() + 6000;
-    while (r.blackjack.turn === 0 && Date.now() < until)
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    // Leaving seat 0 stands it after the short away delay, not before.
+    t.mock.timers.tick(100);
+    assert.equal(r.blackjack.turn, 0);
+    for (let i = 0; i < 20 && r.blackjack.turn === 0; i++)
+      t.mock.timers.tick(100);
     assert.equal(r.blackjack.turn, 1);
     assert.equal(r.blackjack.hands[0][0].status, 'stood');
     assert.equal(r.view.seats.blackjack[0], 'p0');
@@ -254,9 +265,9 @@ test('room reserves max four stakes and rejects stale/observer actions, leaving 
         action: { kind: 'stand' },
       }),
     );
-    const end = Date.now() + 9000;
-    while (r.blackjack.phase !== 'over' && Date.now() < end)
-      await new Promise((resolve) => setTimeout(resolve, 50));
+    // Dealer steps run on the room timer: reveal, then stand/hit until over.
+    for (let i = 0; i < 100 && r.blackjack.phase !== 'over'; i++)
+      t.mock.timers.tick(100);
     assert.equal(r.blackjack.phase, 'over');
     assert.equal(r.bank.ledger.games[id].state, 'settled');
     assert.equal(r.view.wallet.held, 0);
@@ -266,6 +277,7 @@ test('room reserves max four stakes and rejects stale/observer actions, leaving 
     assert.equal(JSON.stringify(r.bank.ledger), before);
   } finally {
     r.leave();
+    t.mock.timers.reset();
   }
 });
 test('storage failure before launch leaves request and game unchanged', () => {

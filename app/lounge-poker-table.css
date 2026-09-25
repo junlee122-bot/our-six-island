@@ -21,67 +21,12 @@
   max-width: 1160px;
   margin: auto;
 }
-.p-dealer {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 15px 22px;
-  background: #1d2e28;
-  border: 1px solid #3c493b;
-  border-radius: 16px;
-  margin-bottom: 12px;
-}
-.p-dealer-avatar {
-  height: 48px;
-  width: 48px;
-  display: grid;
-  place-items: center;
-  background: #bfa265;
-  color: #20342c;
-  border-radius: 50%;
-  position: relative;
-  flex-shrink: 0;
-}
-.p-dealer-avatar i {
-  position: absolute;
-  bottom: 1px;
-  right: 0;
-  width: 10px;
-  height: 10px;
-  background: #91d3a2;
-  border: 2px solid #1d2e28;
-  border-radius: 50%;
-}
-.p-dealer small {
-  font-size: 11px;
-  letter-spacing: 1.5px;
-  color: #c4b485;
-  font-weight: 750;
-}
-.p-dealer small span {
-  font-weight: 400;
-  letter-spacing: 0;
-  margin-left: 8px;
-  color: #a6b5a6;
-}
-.p-dealer p {
-  margin: 5px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.p-table-number {
-  margin-left: auto;
-  padding-left: 16px;
-  border-left: 1px solid #465344;
-  font-size: 11px;
-  letter-spacing: 1px;
-  text-align: center;
-  color: #aaa186;
-}
-.p-table-number b {
-  font-size: 27px;
-  font-weight: 500;
-  letter-spacing: 2px;
+.p-host {
+  --dh-bg: #1d2e28;
+  --dh-border: #3c493b;
+  --dh-name: #d7c48e;
+  --dh-muted: #a6b5a6;
+  --dh-ring: #bfa265;
 }
 .p-table-wrap {
   height: 580px;
@@ -120,9 +65,10 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 25%;
+  /* Above the street label and board (it used to sit behind 리버/핸드 종료). */
+  top: 5%;
   text-align: center;
-  color: #d4c28a2b;
+  color: #d4c28a24;
   font-family: Georgia, serif;
   font-size: 21px;
   letter-spacing: 6px;
@@ -172,7 +118,73 @@
   vertical-align: middle;
 }
 .p-card {
-  animation: p-card-arrive 0.4s ease-out both;
+  animation: p-card-arrive 0.4s ease-out var(--deal-delay, 0ms) both;
+}
+/* A hand opened at showdown / all-in run-out turns over in place. */
+.p-card.p-flip {
+  animation: p-flip-in 0.45s ease-out both;
+}
+@keyframes p-flip-in {
+  from {
+    transform: rotateY(90deg);
+  }
+}
+/* The winning five cards. */
+.p-card.win-card {
+  box-shadow:
+    0 0 0 2px #f2cf7a,
+    0 0 16px #f2cf7a88;
+}
+/* Chips from the pot to each winner. */
+.p-chip-win {
+  position: absolute;
+  left: var(--to-x);
+  top: var(--to-y);
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  display: grid;
+  place-items: center;
+  border: 3px dashed #e8dba6;
+  background: #a88741;
+  color: #fff4c6;
+  border-radius: 50%;
+  font: bold 11px Georgia;
+  z-index: 5;
+  pointer-events: none;
+  animation: p-chip-to-winner 0.9s ease-in-out 0.2s both;
+}
+@keyframes p-chip-to-winner {
+  from {
+    left: 50%;
+    top: 57%;
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  15% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+.p-result-lines {
+  list-style: none;
+  margin: 6px 0 2px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13.5px;
+  color: #efe3c2;
+}
+.p-result-lines li:before {
+  content: "· ";
+  color: #c6a461;
 }
 .p-card.red {
   color: #b94349;
@@ -598,24 +610,6 @@
   padding: 12px 10px;
 }
 @media (max-width: 760px) {
-  .p-dealer {
-    padding: 12px;
-    gap: 9px;
-  }
-  .p-dealer p {
-    font-size: 11px;
-  }
-  .p-dealer small {
-    font-size: 11px;
-    letter-spacing: 1px;
-  }
-  .p-dealer-avatar {
-    width: 37px;
-    height: 37px;
-  }
-  .p-table-number {
-    display: none;
-  }
   .p-table-wrap {
     height: 590px;
     border-radius: 17px;
@@ -747,10 +741,12 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .p-card,
+  .p-card.p-flip,
   .p-chip-flight {
     animation: none;
   }
-  .p-chip-flight {
+  .p-chip-flight,
+  .p-chip-win {
     display: none;
   }
 }

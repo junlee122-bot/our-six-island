@@ -4,29 +4,11 @@
   margin: auto;
 }
 .bj-announcement {
-  padding: 8px 3px 17px;
-  background: #3b2833;
-  border-color: #6a4852;
-}
-.bj-announcement .p-dealer-avatar {
-  background: #684350;
-  border-color: #bd9665;
-}
-.bj-announcement p {
-  font-size: 14px;
-}
-.bj-number {
-  margin-left: auto;
-  text-align: right;
-  font:
-    12px/1.8 Georgia,
-    serif;
-  color: #c9b89a;
-  white-space: nowrap;
-}
-.bj-number b {
-  letter-spacing: 2px;
-  font-weight: normal;
+  --dh-bg: #3b2833;
+  --dh-border: #6a4852;
+  --dh-name: #e2c68f;
+  --dh-muted: #c8b1a6;
+  --dh-ring: #bd9665;
 }
 .bj-felt {
   background: radial-gradient(ellipse at 50% 20%, #7a3546, #4b2634 75%);
@@ -106,7 +88,71 @@
 }
 .bj-dealt {
   display: inline-flex;
-  animation: bj-deal 0.4s ease-out both;
+  position: relative;
+  /* Opening deal: one card at a time (the table sets --deal-delay). */
+  animation: bj-deal 0.4s ease-out var(--deal-delay, 0ms) both;
+}
+.bj-flip {
+  display: inline-flex;
+  perspective: 400px;
+}
+.bj-flip.is-open > .p-card {
+  animation: bj-flip-in 0.45s ease-out both;
+  backface-visibility: hidden;
+}
+@keyframes bj-flip-in {
+  from {
+    transform: rotateY(90deg);
+  }
+  to {
+    transform: none;
+  }
+}
+.bj-house .bj-seat-title > span.bust {
+  color: #ffb0a6;
+  font-weight: 700;
+}
+.bj-hand {
+  position: relative;
+}
+.bj-reason {
+  display: block;
+  text-align: center;
+  font-size: 11.5px;
+  color: #d9c5b6;
+  margin-top: 2px;
+}
+.bj-hand.paid {
+  background: #e7c37a14;
+}
+/* Payout: a chip slides from the dealer's tray to the winning hand. */
+.bj-payout-chip {
+  position: absolute;
+  right: 10px;
+  top: 34px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 3px dashed #e8dba6;
+  background: #a88741;
+  color: #fff4c6;
+  border-radius: 50%;
+  font: bold 11px Georgia;
+  animation: bj-payout 0.7s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+@keyframes bj-payout {
+  from {
+    opacity: 0;
+    transform: translate(-40px, -160px) scale(0.6);
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .bj-dealt + .bj-dealt {
   margin-left: -14px;
@@ -276,6 +322,16 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+/* While the dealer plays, nothing is pressable: no gold "히트" either. */
+.bj-controls.is-dealer .bj-action-buttons button,
+.bj-action-buttons[aria-disabled="true"] button:first-child:disabled {
+  background: #3d2a33;
+  color: #bca99d;
+  border-color: #6a5048;
+}
+.bj-controls.is-dealer .bj-action-buttons {
+  opacity: 0.6;
+}
 .bj-action-buttons strong {
   font-size: 14px;
 }
@@ -303,6 +359,50 @@
   font-size: 14px;
   color: #c9bab0;
 }
+.bj-result p.bj-verdict {
+  font-size: 15px;
+  color: #f4dfb6;
+  margin: 12px 0 10px;
+}
+.bj-report {
+  list-style: none;
+  margin: 0 auto 8px;
+  padding: 0;
+  max-width: 760px;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+}
+.bj-report li {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.1fr) minmax(110px, 1.2fr) 2fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: #2f222a;
+  font-size: 13px;
+}
+.bj-report li span {
+  color: #e7d6bf;
+}
+.bj-report li small {
+  color: #c2afa3;
+  font-size: 12px;
+}
+.bj-report li em {
+  font-style: normal;
+  font-weight: 700;
+  color: #cfb5a9;
+  font-variant-numeric: tabular-nums;
+}
+.bj-report li.win em,
+.bj-report li.blackjack em {
+  color: #ffdc88;
+}
+.bj-report li.lose em {
+  color: #f2a6a2;
+}
 .bj-rules {
   color: #d6c6b9;
 }
@@ -314,9 +414,6 @@
     padding: 22px 15px;
     border-width: 7px;
     border-radius: 50px 50px 24px 24px;
-  }
-  .bj-number {
-    display: none;
   }
 }
 @media (max-width: 600px) {
@@ -423,8 +520,38 @@
     font-size: 11px;
   }
 }
+/* Desktop at 900px tall: a slimmer felt keeps the dealer, the hands and the
+   result on one screen. */
+@media (min-width: 851px) and (max-height: 1000px) {
+  .bj-felt {
+    padding: 14px 22px 20px;
+  }
+  .l-app .bj-table-heading h2 {
+    display: none;
+  }
+  .bj-table-heading p {
+    margin: 4px 0 10px;
+  }
+  .bj-table-rule {
+    padding: 10px 0;
+    margin-top: 12px;
+  }
+  .bj-cards {
+    min-height: 78px;
+  }
+}
+@media (max-width: 600px) {
+  .bj-report li {
+    grid-template-columns: 1fr auto;
+  }
+  .bj-report li small {
+    grid-column: 1 / -1;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  .bj-dealt {
+  .bj-dealt,
+  .bj-flip.is-open > .p-card,
+  .bj-payout-chip {
     animation: none;
   }
 }

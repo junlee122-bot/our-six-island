@@ -9,6 +9,8 @@ import { HWATU_CARDS } from './hwatu-cards';
 import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import { seotdaLine, type TableReaction } from './lounge-dealer-lines';
+import { DealerHost, useReactionReply } from './lounge-dealer-host';
 import './lounge-seotda-table.css';
 
 const TYPE_LABEL: Record<string, string> = {
@@ -42,40 +44,23 @@ function Hwatu({ card }: { card?: string }) {
     </span>
   );
 }
-function message(g: SeotdaView, names: string[]) {
-  if (g.phase === 'over')
-    // The reason already ends in "승리!" for a single named hand.
-    return g.reason.endsWith('승리!')
-      ? `${g.winners.map((i) => names[i]).join(' · ')} · ${g.reason}`
-      : `${g.winners.map((i) => names[i]).join(' · ')} 승리! ${g.reason}`;
-  if (g.phase === 'redeal') return g.reason;
-  if (g.phase === 'showdown')
-    return '패를 공개해요. 두 장에 담긴 승부를 확인해 보세요.';
-  const e = g.events.at(-1),
-    who = e && names[e.seat];
-  const action =
-    e?.kind === 'raise'
-      ? `${who}, ${beom(e.amount)} 추가 베팅.`
-      : e?.kind === 'call'
-        ? `${who}, 콜.`
-        : e?.kind === 'fold'
-          ? `${who}, 다이.`
-          : e?.kind === 'check'
-            ? `${who}, 체크.`
-            : '두 장씩 나눴어요.';
-  return `${action} ${names[g.turn]} 차례예요.`;
-}
 export function SeotdaTable({
   match: g,
   seat,
   names,
   onAction,
+  reaction,
 }: {
   match: SeotdaView & TurnTiming;
   seat: number;
   names: string[];
   onAction: (a: SeotdaAction) => void | Promise<boolean>;
+  /** Table round (unused by 섯다's host; accepted like the casino tables). */
+  round?: number;
+  /** Newest sticker at this table, for the host's reply. */
+  reaction?: TableReaction | null;
 }) {
+  const aside = useReactionReply(g.id, reaction, names);
   const version = `${g.id}:${g.revision}`;
   const [bet, setBet] = useState({ version, value: g.legal.minTo }),
     [sent, setSent] = useState<string | null>(null),
@@ -173,36 +158,36 @@ export function SeotdaTable({
   };
   return (
     <div className="s-club">
-      <div className="s-host">
-        <span>
-          <Flower2 size={25} />
-        </span>
-        <div>
-          <small>범타듀 화투방 · 두 장 섯다</small>
-          <p aria-live="polite">{message(g, names)}</p>
-          {g.phase === 'betting' && g.turn >= 0 && (
-            <TurnTimer
-              deadline={g.turnDeadline}
-              total={TURN_LIMIT_MS.seotda}
-              label={
-                away(g.turn)
-                  ? AWAY_LABEL
-                  : g.turn === seat
-                    ? '내 차례'
-                    : `${names[g.turn]} 차례`
-              }
-              mine={g.turn === seat}
-            />
-          )}
-        </div>
-        {/* g.round counts redeals within this 판 (the header shows the 판 number). */}
-        {g.round > 1 && (
-          <b className="s-rematch">
-            {g.round - 1}
-            <small>재경기</small>
-          </b>
+      <DealerHost
+        host="maehwa"
+        line={seotdaLine(g, seat, names)}
+        aside={aside}
+        className="s-host"
+        side={
+          // g.round counts redeals within this 판 (the header shows the 판 number).
+          g.round > 1 && (
+            <b className="s-rematch">
+              {g.round - 1}
+              <small>재경기</small>
+            </b>
+          )
+        }
+      >
+        {g.phase === 'betting' && g.turn >= 0 && (
+          <TurnTimer
+            deadline={g.turnDeadline}
+            total={TURN_LIMIT_MS.seotda}
+            label={
+              away(g.turn)
+                ? AWAY_LABEL
+                : g.turn === seat
+                  ? '내 차례'
+                  : `${names[g.turn]} 차례`
+            }
+            mine={g.turn === seat}
+          />
         )}
-      </div>
+      </DealerHost>
       <div className="s-table">
         <div
           className="s-opponents"

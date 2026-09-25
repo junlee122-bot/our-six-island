@@ -30,10 +30,21 @@ export type PokerEvent = {
     | 'raise'
     | 'deal'
     | 'showdown'
+    | 'runout'
     | 'win';
   seat: number;
+  /**
+   * Chips moved by this event. raise: chips added now (not the new total);
+   * win: the contested pot total, excluding returned (uncalled) bets.
+   */
   amount: number;
   street: PokerStreet;
+  /** raise: the bet level this raise made (total bet on this street). */
+  to?: number;
+  /** raise/call/blind: this put the seat's last chip in. */
+  allIn?: boolean;
+  /** raise: the first bet on a post-flop street (a bet, not a raise). */
+  open?: boolean;
 };
 export type PokerMatch = {
   id: string;
@@ -161,6 +172,35 @@ export function pokerRank(cards: number[]): PokerRank {
           }
   return best!;
 }
+/**
+ * Best hand so far: a full rank from five cards on, and for an all-in
+ * reveal before the flop (2–4 cards) just the pairs/trips showing.
+ */
+export function pokerRankSoFar(cards: number[]): PokerRank {
+  if (cards.length >= 5) return pokerRank(cards);
+  const values = cards.map(rank).sort((a, b) => b - a),
+    groups = [...new Set(values)]
+      .map((r) => [values.filter((v) => v === r).length, r])
+      .sort((a, b) => b[0] - a[0] || b[1] - a[1]),
+    top = groups[0]?.[0] ?? 0,
+    category =
+      top === 4 ? 7 : top === 3 ? 3 : top === 2 ? (groups[1]?.[0] === 2 ? 2 : 1) : 0;
+  return {
+    category,
+    values: groups.map((g) => g[1]),
+    label: LABELS[category],
+    cards: [...cards],
+  };
+}
+export const POKER_DELAYS = { board: 1100, showdown: 1100 } as const;
+/** Suggested wait (ms) before the next automatic dealer step, or null. */
+export function pokerStepDelay(g: Pick<PokerMatch, 'phase'>): number | null {
+  return g.phase === 'dealing'
+    ? POKER_DELAYS.board
+    : g.phase === 'showdown'
+      ? POKER_DELAYS.showdown
+      : null;
+}
 export function shufflePokerCards(): number[] {
   const cards = Array.from({ length: 52 }, (_, i) => i),
     sample = new Uint32Array(1);
@@ -187,13 +227,20 @@ const nextSeat = (
   }
   return -1;
 };
-function event(g: PokerMatch, kind: PokerEvent['kind'], seat = -1, amount = 0) {
+function event(
+  g: PokerMatch,
+  kind: PokerEvent['kind'],
+  seat = -1,
+  amount = 0,
+  extra: Pick<PokerEvent, 'to' | 'allIn' | 'open'> = {},
+) {
   g.events.push({
     seq: (g.events.at(-1)?.seq ?? 0) + 1,
     kind,
     seat,
     amount,
     street: g.street,
+    ...extra,
   });
   g.events = g.events.slice(-24);
 }
@@ -222,15 +269,28 @@ function finish(g: PokerMatch) {
     awards = g.stacks.map(() => 0),
     pots: PokerPot[] = [];
   if (remaining.length === 1) {
-    const amount = g.committed.reduce((a, b) => a + b, 0);
-    awards[remaining[0]] = amount;
+    const seat = remaining[0],
+      total = g.committed.reduce((a, b) => a + b, 0),
+      called = Math.max(0, ...g.committed.filter((_, i) => i !== seat)),
+      // The part of the last bet nobody called goes back as a refund; only
+      // the rest was fought over (shown as the pot).
+      uncalled = Math.max(0, g.committed[seat] - called);
+    awards[seat] = total;
     pots.push({
-      amount,
-      cap: Math.max(...g.committed),
+      amount: total - uncalled,
+      cap: Math.min(g.committed[seat], called),
       eligible: remaining,
       winners: remaining,
       refund: false,
     });
+    if (uncalled > 0)
+      pots.push({
+        amount: uncalled,
+        cap: g.committed[seat],
+        eligible: remaining,
+        winners: remaining,
+        refund: true,
+      });
   } else {
     const ranks = new Map(
       remaining.map((i) => [i, pokerRank([...g.hands[i], ...g.board])]),
@@ -284,8 +344,14 @@ function finish(g: PokerMatch) {
     g,
     'win',
     g.winners.length === 1 ? g.winners[0] : -1,
-    g.committed.reduce((a, b) => a + b, 0),
+    pokerContested(g),
   );
+}
+/** Chips actually fought over: every pot except returned (uncalled) bets. */
+export function pokerContested(g: Pick<PokerMatch, 'pots' | 'committed' | 'phase'>) {
+  return g.phase === 'over' && g.pots.length
+    ? g.pots.filter((p) => !p.refund).reduce((a, p) => a + p.amount, 0)
+    : g.committed.reduce((a, b) => a + b, 0);
 }
 function advance(g: PokerMatch, after: number) {
   if (alive(g).length === 1) {
@@ -307,7 +373,16 @@ function advance(g: PokerMatch, after: number) {
     g.phase = 'showdown';
     g.reveal = true;
     event(g, 'showdown');
-  } else g.phase = 'dealing';
+  } else {
+    g.phase = 'dealing';
+    // All-in and nobody can bet any more: open every live hand now and run
+    // the board out (the table's most dramatic moment). Only when no further
+    // decision is possible, so no information can change a later choice.
+    if (!g.reveal && canAct.length <= 1) {
+      g.reveal = true;
+      event(g, 'runout');
+    }
+  }
 }
 /** Big blind scales with the buy-in: max(200, buyIn / 50) rounded to 100. */
 export function pokerBigBlind(buyIn: number) {
@@ -376,7 +451,7 @@ export function newPoker(
   ]) {
     const amount = Math.min(g.stacks[seat], blind);
     commit(g, seat, amount);
-    event(g, 'blind', seat, amount);
+    event(g, 'blind', seat, amount, g.stacks[seat] === 0 ? { allIn: true } : {});
   }
   advance(g, bb);
   return g;
@@ -437,14 +512,19 @@ export function pokerAction(
   } else if (a.kind === 'check') event(g, 'check', seat);
   else if (a.kind === 'call') {
     commit(g, seat, legal.call);
-    event(g, 'call', seat, legal.call);
+    event(g, 'call', seat, legal.call, g.stacks[seat] === 0 ? { allIn: true } : {});
   } else if (a.kind === 'raise') {
     const increment = a.to - g.currentBet,
-      amount = a.to - g.bets[seat];
+      amount = a.to - g.bets[seat],
+      open = g.currentBet === 0;
     commit(g, seat, amount);
     if (increment >= g.minRaise) g.minRaise = increment;
     g.currentBet = a.to;
-    event(g, 'raise', seat, amount);
+    event(g, 'raise', seat, amount, {
+      to: a.to,
+      ...(g.stacks[seat] === 0 ? { allIn: true } : {}),
+      ...(open ? { open: true } : {}),
+    });
   }
   g.actedAt[seat] = g.currentBet;
   g.revision++;
@@ -493,7 +573,7 @@ export function pokerView(game: PokerMatch, seat: number): PokerView {
       ? hands.flatMap((cards, i) =>
           game.folded[i]
             ? []
-            : [{ seat: i, cards, rank: pokerRank([...cards, ...game.board]) }],
+            : [{ seat: i, cards, rank: pokerRankSoFar([...cards, ...game.board]) }],
         )
       : [],
   };

@@ -1,9 +1,10 @@
 'use client';
 import { useRef, useState, type CSSProperties } from 'react';
-import { Bot, ChevronDown, Coins, Crown, Spade } from 'lucide-react';
+import { ChevronDown, Coins, Crown, Spade } from 'lucide-react';
 import {
   POKER_RANKS,
   POKER_SUITS,
+  pokerContested,
   pokerRank,
   type PokerView,
   type PokerAction,
@@ -11,7 +12,21 @@ import {
 import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
-import { formatBeom, josa } from './lounge-text';
+import { formatBeom } from './lounge-text';
+import {
+  POKER_RANK_TIPS,
+  pokerLine,
+  pokerResultLines,
+  sir,
+  type TableReaction,
+} from './lounge-dealer-lines';
+import {
+  DealerHost,
+  useDealerTips,
+  useReactionReply,
+  useTableMemory,
+  useTableSounds,
+} from './lounge-dealer-host';
 import './lounge-poker-table.css';
 export const beom = (amount: number) => formatBeom(amount);
 const STREETS = {
@@ -20,6 +35,8 @@ const STREETS = {
   turn: '턴',
   river: '리버',
 };
+/** Deal stagger between cards (hole cards one at a time, the flop 3 in a row). */
+const STAGGER_MS = 110;
 const positions = [
   [50, 86],
   [17, 77],
@@ -41,15 +58,21 @@ export function PokerCard({
   card,
   back = false,
   small = false,
+  className = '',
+  style,
 }: {
   card?: number;
   back?: boolean;
   small?: boolean;
+  className?: string;
+  style?: CSSProperties;
 }) {
+  const extra = (small ? ' small' : '') + (className ? ' ' + className : '');
   if (back || card === undefined)
     return (
       <span
-        className={'p-card p-card-back' + (small ? ' small' : '')}
+        className={'p-card p-card-back' + extra}
+        style={style}
         aria-label="비공개 카드"
       >
         <Spade size={17} />
@@ -60,7 +83,8 @@ export function PokerCard({
     red = [1, 2].includes(Math.floor(card / 13));
   return (
     <span
-      className={'p-card' + (red ? ' red' : '') + (small ? ' small' : '')}
+      className={'p-card' + (red ? ' red' : '') + extra}
+      style={style}
       aria-label={rank + suit}
     >
       <span className="p-card-corner">
@@ -77,35 +101,56 @@ export function PokerCard({
     </span>
   );
 }
-function eventText(g: PokerView, names: string[]) {
-  const e = g.events.at(-1),
-    who = e && e.seat >= 0 ? names[e.seat] : '친구';
-  if (g.phase === 'over')
-    return `${g.winners.map((i) => names[i]).join(' · ')}${g.winners.length > 1 ? ' 공동 승리' : ' 승리'}! 범 정산을 마쳤어요.`;
-  if (g.phase === 'showdown')
-    return '쇼다운! 남은 친구들의 패를 공개하고 팟별로 승자를 가릴게요.';
-  if (g.phase === 'dealing')
-    return '베팅을 마쳤어요. 다음 커뮤니티 카드를 열게요.';
-  if (!e) return '카드를 나눠 드릴게요. 좋은 패가 함께하길!';
-  if (e.kind === 'raise')
-    return `${who}, ${josa(beom(e.amount), '을/를')} 더 걸었어요. 다음 선택을 기다려요.`;
-  if (e.kind === 'call') return `${who}, ${beom(e.amount)} 콜.`;
-  if (e.kind === 'fold') return `${who} 폴드. 남은 친구들과 계속할게요.`;
-  if (e.kind === 'check') return `${who}, 체크. 다음 친구 차례예요.`;
-  return `${josa(STREETS[g.street], '이에요/예요')}. ${names[g.turn] ?? '친구'}의 선택을 기다릴게요.`;
-}
 export function PokerTable({
   match: g,
   seat,
   names,
   onAction,
+  round,
+  reaction,
 }: {
   match: PokerView & TurnTiming;
   seat: number;
   names: string[];
   onAction: (action: PokerAction) => void | Promise<boolean>;
+  /** Table round (1 = first 판), for the host's greeting. */
+  round?: number;
+  /** Newest sticker at this table, for the host's reply. */
+  reaction?: TableReaction | null;
 }) {
-  const away = (i: number) => !!g.away?.includes(i);
+  const away = (i: number) => !!g.away?.includes(i),
+    tips = useDealerTips(),
+    over = g.phase === 'over';
+  const memory = useTableMemory('poker', names, {
+    id: g.id,
+    over,
+    results: g.result,
+  });
+  const line = pokerLine(g, seat, names, { round, memory, tips: tips.on });
+  const aside = useReactionReply(g.id, reaction, names);
+  // Winning five cards (showdown): highlighted on the board and in the hands.
+  const winning = new Set(
+    over
+      ? g.revealed
+          .filter((r) => g.winners.includes(r.seat))
+          .flatMap((r) => r.rank.cards)
+      : [],
+  );
+  const n = g.stacks.length,
+    holeDelay = (i: number, j: number) =>
+      ({
+        '--deal-delay': `${(j * n + ((i - g.dealer - 1 + 2 * n) % n)) * STAGGER_MS}ms`,
+      }) as CSSProperties,
+    boardDelay = (i: number) =>
+      ({
+        '--deal-delay': `${(i < 3 ? i : 0) * STAGGER_MS}ms`,
+      }) as CSSProperties;
+  useTableSounds({
+    id: g.id,
+    cards: g.board.length + (g.hand.length ? n * 2 : 0),
+    flips: g.revealed.filter((r) => r.seat !== seat).length,
+    payout: over,
+  });
   // Current best hand once the flop is out (the view holds only my cards).
   const myRank =
     seat >= 0 && g.hand.length === 2 && g.board.length >= 3 && !g.folded[seat]
@@ -131,6 +176,8 @@ export function PokerTable({
   const locked = sent === g.revision,
     legal = g.legal,
     pot = g.committed.reduce((a, b) => a + b, 0),
+    // Settled pot: what was fought over (returned bets are shown apart).
+    shownPot = over ? pokerContested(g) : pot,
     act = (a: PokerAction) => {
       // The ref also stops a second tap that lands before React re-renders.
       if (!legal.enabled || locked || inFlight.current === g.revision) return;
@@ -155,23 +202,14 @@ export function PokerTable({
       (legal.enabled && legal.call > 0 && legal.call === g.stacks[seat]);
   return (
     <div className="p-club">
-      <div className="p-dealer">
-        <span className="p-dealer-avatar">
-          <Bot size={27} />
-          <i />
-        </span>
-        <div>
-          <small>
-            딜러 루미 <span>자동 진행</span>
-          </small>
-          <p aria-live="polite">{eventText(g, names)}</p>
-        </div>
-        <span className="p-table-number">
-          테이블
-          <br />
-          <b>1번</b>
-        </span>
-      </div>
+      <DealerHost
+        host="lumi"
+        line={line}
+        aside={aside}
+        className="p-host"
+        table={{ number: 1, game: '홀덤' }}
+        tips={tips}
+      />
       <div className="p-table-wrap">
         <div className="p-table-grain" />
         <div className="p-felt">
@@ -194,15 +232,20 @@ export function PokerTable({
                   ♠
                 </span>
               ) : (
-                <PokerCard key={g.board[i]} card={g.board[i]} />
+                <PokerCard
+                  key={g.board[i]}
+                  card={g.board[i]}
+                  style={boardDelay(i)}
+                  className={winning.has(g.board[i]) ? 'win-card' : ''}
+                />
               ),
             )}
           </div>
           <div className="p-pot">
             <Coins size={19} />
             <span>
-              {g.phase === 'over' ? '정산한 팟' : '전체 팟'}
-              <b>{beom(pot)}</b>
+              {over ? '정산한 팟' : '전체 팟'}
+              <b>{beom(shownPot)}</b>
             </span>
           </div>
         </div>
@@ -232,6 +275,11 @@ export function PokerTable({
                     card={c}
                     back={c === undefined}
                     small={!self}
+                    style={holeDelay(i, j)}
+                    className={
+                      (!self && c !== undefined ? 'p-flip' : '') +
+                      (c !== undefined && winning.has(c) ? ' win-card' : '')
+                    }
                   />
                 ))}
                 {g.folded[i] && <span className="p-fold-stamp">폴드</span>}
@@ -285,6 +333,22 @@ export function PokerTable({
             B
           </span>
         )}
+        {over &&
+          g.winners.map((w) => (
+            <span
+              key={'win-' + g.id + '-' + w}
+              aria-hidden="true"
+              className="p-chip-win"
+              style={
+                {
+                  '--to-x': point(w)[0] + '%',
+                  '--to-y': point(w)[1] + '%',
+                } as CSSProperties
+              }
+            >
+              B
+            </span>
+          ))}
       </div>
       {g.phase === 'over' && (
         <div className="p-settlement" aria-live="polite">
@@ -302,14 +366,11 @@ export function PokerTable({
               </span>
             ))}
           </div>
-          {g.pots
-            .filter((p) => p.refund)
-            .map((p, i) => (
-              <small key={i}>
-                매칭되지 않은 베팅 {beom(p.amount)} → {names[p.winners[0]]}에게
-                반환
-              </small>
+          <ul className="p-result-lines">
+            {pokerResultLines(g, names).map((text) => (
+              <li key={text}>{text}</li>
             ))}
+          </ul>
           {sidePots && (
             <small>
               메인 팟과 사이드 팟은 각 팟에 참가한 친구들끼리 따로 정산했어요.
@@ -333,12 +394,15 @@ export function PokerTable({
                 : legal.enabled
                   ? '어떻게 플레이할까요?'
                   : g.turn < 0
-                    ? '딜러가 다음 순서를 준비해요'
-                    : `${names[g.turn]}의 차례`}
+                    ? '루미가 다음 카드를 준비해요'
+                    : `${sir(names[g.turn])} 차례`}
             </strong>
             <small>
               블라인드 {beom(g.smallBlind)} / {beom(g.bigBlind)}
               {myRank && ` · 내 패: ${myRank}`}
+              {myRank && tips.on && POKER_RANK_TIPS[myRank]
+                ? ` (${POKER_RANK_TIPS[myRank]})`
+                : ''}
             </small>
             {g.turn >= 0 && (
               <TurnTimer
@@ -359,9 +423,9 @@ export function PokerTable({
             <div className="p-actions">
               <div className="p-raise-control">
                 <label>
-                  레이즈 총액{' '}
+                  {g.currentBet === 0 ? '베팅 금액' : '레이즈 총액'}{' '}
                   <input
-                    aria-label="레이즈 총액"
+                    aria-label={g.currentBet === 0 ? '베팅 금액' : '레이즈 총액'}
                     type="number"
                     min={legal.minTo}
                     max={legal.maxTo}
@@ -429,7 +493,7 @@ export function PokerTable({
                   }
                   onClick={() => act({ kind: 'raise', to: raise })}
                 >
-                  레이즈
+                  {g.currentBet === 0 ? '베팅' : '레이즈'}
                 </button>
                 <button
                   className="p-all-in"
