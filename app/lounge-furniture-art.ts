@@ -4,7 +4,6 @@
 // aspect follows the catalog size, because the room draws props as cards of
 // width w and height w × aspect (rugs: w × d from above).
 import { catalogEntry } from './lounge-bedroom-catalog.ts';
-import { LOUNGE_ASSETS } from './lounge-assets.ts';
 
 const W = 200;
 const OUT = '#5a4636';
@@ -169,6 +168,18 @@ const DRAW: Record<string, Draw> = {
   'furn-rug-lilac': rug('#d9c8ee', '#c3aee3', '#ece2f8'),
   'furn-bookcase-walnut': shelf('#6b4a33', '#3e2a1c', 5),
   'furn-wardrobe-white': wardrobe('#f6f2ea', '#c9a36a'),
+  // Shop icon of the kArchive rocking chair (the room shows the 3D model).
+  'furn-rocking-chair': (H) => `
+    <rect x="54" y="${H * 0.04}" width="92" height="${H * 0.5}" rx="16" fill="#e9a24b"/>
+    <rect x="64" y="${H * 0.08}" width="72" height="${H * 0.1}" rx="8" fill="#f6ecd6"/>
+    <rect x="64" y="${H * 0.18}" width="72" height="${H * 0.32}" rx="12" fill="#4f9a8a"/>
+    <rect x="40" y="${H * 0.46}" width="120" height="${H * 0.16}" rx="12" fill="#5aa594"/>
+    <rect x="30" y="${H * 0.36}" width="22" height="${H * 0.3}" rx="8" fill="#e9a24b"/>
+    <rect x="148" y="${H * 0.36}" width="22" height="${H * 0.3}" rx="8" fill="#e9a24b"/>
+    <circle cx="41" cy="${H * 0.4}" r="6" fill="#d9573f"/>
+    <path d="M52 ${H * 0.62} L46 ${H * 0.86} M148 ${H * 0.62} L154 ${H * 0.86}" stroke="#c9822f" stroke-width="9" fill="none"/>
+    <path d="M14 ${H * 0.8} Q100 ${H * 0.98} 186 ${H * 0.8}" stroke="#e9a24b" stroke-width="10" fill="none"/>
+    ${hi(64, H * 0.22, 64, H * 0.44)}`,
   'furn-cherry-vase': (H) => `
     <path d="M78 ${H * 0.62} C66 ${H * 0.72} 70 ${H * 0.96} 100 ${H * 0.96} C130 ${H * 0.96} 134 ${H * 0.72} 122 ${H * 0.62} V${H * 0.54} H78Z" fill="#8fb8d9"/>
     <path d="M100 ${H * 0.56} C96 ${H * 0.36} 72 ${H * 0.24} 56 ${H * 0.1} M100 ${H * 0.56} C108 ${H * 0.34} 130 ${H * 0.22} 150 ${H * 0.08} M100 ${H * 0.5} C102 ${H * 0.34} 98 ${H * 0.2} 102 ${H * 0.04}" stroke="#6b4222" stroke-width="4" fill="none"/>
@@ -338,5 +349,3 @@ export const FURNITURE_ART: Record<string, string> = Object.fromEntries(
     return [ref, svg(h, draw(h))];
   }),
 );
-// The kArchive rocking chair is a 3D model: the shop shows its rendered thumbnail.
-FURNITURE_ART['furn-rocking-chair'] = LOUNGE_ASSETS.bedroom_thumb_rocking_chair;

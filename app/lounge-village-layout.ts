@@ -866,7 +866,14 @@ const SOLIDS: Solid[] = [
 // Spatial buckets: each cell lists the solids within REACH of it, so every
 // distance below REACH (all that walking and contact need) is exact.
 const CELL = 2,
-  REACH = 0.6;
+  REACH = 1.1;
+/**
+ * Smooth union width: two surfaces closer than about the walker's diameter
+ * plus this leave a narrow niche (a wall and a shrub, a door and a
+ * hydrangea). Blending their distances fills that niche with a rounded
+ * fillet, so pressing into it slides out along the fillet instead of wedging.
+ */
+const FILLET = 0.6;
 const CELL_COLS = Math.ceil(VILLAGE_BOUNDS.width / CELL) + 1,
   CELL_ROWS = Math.ceil(VILLAGE_BOUNDS.depth / CELL) + 1;
 const cellOf = (x: number, z: number) =>
@@ -890,7 +897,8 @@ for (const solid of SOLIDS) {
 
 function solidDistance(x: number, z: number): { d: number; small: boolean } {
   const { width, depth } = VILLAGE_BOUNDS;
-  let d = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z), REACH),
+  let d = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z)),
+    nearest = d,
     small = false;
   for (const solid of BUCKETS[cellOf(x, z)]) {
     let value: number;
@@ -906,12 +914,14 @@ function solidDistance(x: number, z: number): { d: number; small: boolean } {
         solid.hd,
       );
     }
-    if (value < d) {
-      d = value;
+    if (value < nearest) {
+      nearest = value;
       small = solid.small;
     }
+    const h = Math.max(FILLET - Math.abs(d - value), 0) / FILLET;
+    d = Math.min(d, value) - (h * h * FILLET) / 4;
   }
-  return { d, small };
+  return { d: Math.min(d, REACH), small };
 }
 
 function contactAt(point: VillagePoint): Contact {

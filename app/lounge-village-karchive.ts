@@ -8,7 +8,8 @@
 // primitive version stays as the fallback). Village projects gate what they
 // build: the greenhouse ('greenhouse') and the festival stage ('stage') show a
 // small construction site until the project is done, the pier deck follows
-// 'bridge' (inside the season layer's pier group), the museum gets banners
+// 'bridge' (inside the season layer's pier group), 'greenhouse2' adds a second
+// greenhouse (replacing the economy pass's primitive one), the museum gets banners
 // with 'museum' and the stage gets string lights with 'festival'. Repeated
 // props (bed frames, fences, deck tiles, rails) are one InstancedMesh each.
 import * as THREE from 'three';
@@ -23,6 +24,7 @@ import { FARM_BEDS, farmBedRect } from './lounge-village-life';
 import {
   KARCHIVE_BOARD,
   KARCHIVE_GREENHOUSE,
+  KARCHIVE_GREENHOUSE2,
   KARCHIVE_HALL,
   KARCHIVE_MODEL_SIZE,
   KARCHIVE_MUSEUM,
@@ -232,6 +234,8 @@ export class VillageKarchiveLayer {
   private lastKey = '';
   private desnow = { value: 1 };
   private greenhouse: THREE.Object3D | null = null;
+  /** '온실 2동' (greenhouse2 project): a smaller copy beside the first. */
+  private greenhouse2: THREE.Object3D | null = null;
   private greenhouseSite: THREE.Object3D;
   private stage: THREE.Object3D | null = null;
   private stageSite: THREE.Object3D;
@@ -294,6 +298,7 @@ export class VillageKarchiveLayer {
     const key = JSON.stringify([
       this.season,
       has('greenhouse'),
+      has('greenhouse2'),
       has('stage'),
       has('festival'),
       has('museum'),
@@ -307,6 +312,7 @@ export class VillageKarchiveLayer {
       this.greenhouse.visible = has('greenhouse');
       this.greenhouseSite.visible = !has('greenhouse');
     }
+    if (this.greenhouse2) this.greenhouse2.visible = has('greenhouse') && has('greenhouse2');
     if (this.stage) {
       this.stage.visible = has('stage');
       this.stageSite.visible = !has('stage');
@@ -346,6 +352,18 @@ export class VillageKarchiveLayer {
     greenhouse.add(sign);
     this.greenhouse = greenhouse;
     this.root.add(greenhouse);
+    // The second house stands east of the first, clear of the plaza lamp.
+    const g2 = KARCHIVE_GREENHOUSE2,
+      f2 = karchiveFootprint('greenhouse', g2.scale);
+    const second = new THREE.Group();
+    second.name = 'karchive-greenhouse2';
+    second.add(placed(source, { x: g2.x, z: g2.z, scale: g2.scale }, 'karchive-greenhouse2-model'));
+    const sign2 = signSprite('온실 2동', 0.4);
+    sign2.position.set(g2.x, f2.h + 0.4, g2.z + f2.d / 2);
+    second.add(sign2);
+    this.greenhouse2 = second;
+    this.root.add(second);
+    this.scene.getObjectByName('village-project-greenhouse2')?.removeFromParent();
     // The primitive frame and its flagged glass are replaced for good.
     this.scene.getObjectByName('village-greenhouse')?.removeFromParent();
     this.scene.getObjectByName('village-greenhouse-glass')?.removeFromParent();

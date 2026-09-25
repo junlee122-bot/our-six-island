@@ -45,6 +45,13 @@ export const VEGETABLE_BED_SOIL = 0.36;
  * glass door (+x side) faces the crossing.
  */
 export const KARCHIVE_GREENHOUSE = { x: -10, z: 12.6, scale: 1 } as const;
+/**
+ * '온실 2동' (greenhouse2 project) replaces the economy pass's primitive glass
+ * box beside the greenhouse. It appears only once that project is done, so it
+ * adds no static collider (like the primitive it replaces); its lot is off
+ * every route.
+ */
+export const KARCHIVE_GREENHOUSE2 = { x: -7.0, z: 12.6, scale: 0.8 } as const;
 /** Museum pavilion: the public library model, door (+z) toward the plaza lane. */
 export const KARCHIVE_MUSEUM = { x: -9.2, z: 1.5, scale: 0.97 } as const;
 /** Notice board: posts span the board's collider width (1.4). */
