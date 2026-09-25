@@ -111,12 +111,15 @@ export function createInteriorHosts(
       u1 = (cell.x + HOST_CELL.w) / sheetW,
       top = 1 - cell.y / sheetH,
       bottom = 1 - (cell.y + HOST_CELL.h) / sheetH;
+    // A host at the table's left end is mirrored, so her dealing hand reaches
+    // toward the table.
+    const [l, r] = host.table.hostAt!.x < host.table.center.x ? [u1, u0] : [u0, u1];
     const uv = host.mesh.geometry.attributes.uv as THREE.BufferAttribute;
     // PlaneGeometry corners: top-left, top-right, bottom-left, bottom-right.
-    uv.setXY(0, u0, top);
-    uv.setXY(1, u1, top);
-    uv.setXY(2, u0, bottom);
-    uv.setXY(3, u1, bottom);
+    uv.setXY(0, l, top);
+    uv.setXY(1, r, top);
+    uv.setXY(2, l, bottom);
+    uv.setXY(3, r, bottom);
     uv.needsUpdate = true;
     host.pose = pose;
   };

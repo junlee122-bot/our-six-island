@@ -480,3 +480,12 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 [kArchive 공식 모델 목록](https://karchive.vibeline.co.kr/models)에서 육각 피크닉 테이블, ㄱ자 공원 벤치, 정원 랜턴, 오픈 책장, 화분 세 개가 놓인 스탠드, 티 트레이가 놓인 커피 테이블 등 원본 GLB 6종을 가져왔습니다. 자료: kArchive · 출처: 쓰레드 dogfooter. 합계는 2,961,568바이트이며 개인·상업 프로젝트 사용 및 수정 가능, 출처 표기 필수, 원본 재판매 금지 조건입니다. 새 유료 생성을 사용하지 않았습니다.
 
 야외 소품은 `public/models/village/expansion/`, 실내 소품은 `public/models/lounge/redesign/`에 저장합니다. 각 폴더의 `assets.json`에는 원본 페이지·다운로드 주소·SHA-256·파일 크기·바운딩 박스를 기록했습니다. GLB 버전·길이·내장 이미지/버퍼를 검증했고 외부 리소스 URI와 필수 확장이 없습니다. 원본 바이트는 그대로 유지하며 장면에서 크기·위치·방향만 조정합니다. 모든 GLB는 기존과 같이 콘텐츠 해시 URL로 자체 호스팅합니다.
+
+## 테이블 진행자 루미·매화 스프라이트 · 2026-09-25
+
+회관·카지노의 진행자를 도형 인형에서 2D 일러스트 빌보드로 바꿨습니다. Higgsfield GPT Image 2.5(2K, high, 3:2, 장당 2.75 크레딧)로 각 1회 생성했습니다. 작업 ID: 루미 `62ec4358-a541-43fb-aff3-20dd180cf8a4`, 매화 `36ba6703-8991-420b-9e15-450fbfe22985`. 참고 이미지는 [daowon-outfits.png](public/assets/lounge/daowon-outfits.png)의 오른쪽 위 칸(그림체·비율 참고용)입니다.
+
+- [host-lumi.png](public/assets/lounge/host-lumi.png): 카지노 딜러 루미. 청록 트윈테일과 회색·청록 배색에서 가상 가수풍 분위기를 따온 오리지널 캐릭터이며 조끼·나비넥타이·암밴드 차림입니다. 로고·숫자·상표는 넣지 않았습니다.
+- [host-maehwa.png](public/assets/lounge/host-maehwa.png): 화투방 진행자 매화. 분홍 저고리·자주 치마·매화 비녀 차림입니다.
+
+두 시트 모두 1320×1320 RGBA, 3×2 칸(440×660)입니다. 칸 순서는 차분·미소·패 돌리기 / 집중·놀람·미안함이고, 모든 칸의 발끝은 648px 선에 맞췄습니다. 마젠타 배경은 색차 키로 알파를 구하고 가장자리 색을 역산해 스필을 제거했습니다. 머리카락 사이의 좁은 마젠타 틈은 주변 색으로 채운 뒤 투명 배경으로 다시 저장했습니다. 웹용 WebP(q90, 알파 100)는 `scripts/optimize-assets.mjs`가 PNG에서 만듭니다. 테이블 위 대사 초상화도 같은 시트에서 잘라 씁니다(`app/lounge-host-sprites.ts`).

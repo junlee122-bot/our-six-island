@@ -6,6 +6,9 @@ import {
   INTERIOR_ROOM,
   TABLE_HOST,
   hostSpot,
+  hostStand,
+  overTable,
+  seatChair,
   interiorAction,
   interiorCanWalk,
   interiorHover,
@@ -179,4 +182,36 @@ test('clicked walks go around the tables in the way', () => {
         p = q;
       }
     }
+});
+
+test('chairs are pulled up to the table edge, clear of the table, each other and the host', () => {
+  for (const area of AREAS)
+    for (const t of interiorTables(area))
+      for (let n = 2; n <= 7; n++) {
+        const chairs = tableSeats(area, t.game, n, []).map((s) => ({ s, c: seatChair(t, s.world) }));
+        for (const { s, c } of chairs) {
+          // Off the table, but closer to it than the standing seat spot.
+          assert.ok(!overTable(t, c.x - t.center.x, c.z - t.center.z), `${t.game} chair over the table`);
+          const toChair = Math.hypot(c.x - t.center.x, c.z - t.center.z);
+          assert.ok(toChair <= Math.hypot(s.world.x - t.center.x, s.world.z - t.center.z) + 0.1);
+          // Facing the table's centre.
+          const f = Math.atan2(t.center.x - c.x, t.center.z - c.z);
+          assert.ok(Math.abs(f - c.face) < 1e-9);
+          assert.ok(c.x > INTERIOR_ROOM.minX + 0.3 && c.x < INTERIOR_ROOM.maxX - 0.3);
+          assert.ok(c.z > INTERIOR_ROOM.minZ + 0.3 && c.z < INTERIOR_ROOM.maxZ - 0.3);
+        }
+        for (let i = 1; i < chairs.length; i++) {
+          const a = chairs[i - 1].c,
+            b = chairs[i].c;
+          assert.ok(Math.hypot(a.x - b.x, a.z - b.z) >= 0.5, `${area} ${t.game} ${n} seats: chairs overlap`);
+        }
+        const stand = hostStand(t, n);
+        if (!t.hostAt) {
+          assert.equal(stand, null);
+          continue;
+        }
+        assert.ok(!overTable(t, stand.x - t.center.x, stand.z - t.center.z));
+        for (const { c } of chairs)
+          assert.ok(Math.hypot(c.x - stand.x, c.z - stand.z) >= 0.55, `${t.game} ${n}: host on a chair`);
+      }
 });
