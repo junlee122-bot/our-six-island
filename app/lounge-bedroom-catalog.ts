@@ -159,6 +159,23 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
       ['furn-jack-lantern', '호박 등불', 'small', 'small', 0.5, 0.5, 0.5],
       ['furn-xmas-tree', '크리스마스 트리', 'plant', 'floor', 1.2, 1.2, 2.4],
       ['furn-village-medal', '마을 복원 기념패', 'rare', 'wall', 0.6, 0.04, 0.7],
+      // 이번 주 명품 가구 (weekly luxury rotation).
+      ['furn-grand-piano', '그랜드 피아노', 'music', 'floor', 2.0, 1.6, 1.3],
+      ['furn-canopy-bed', '캐노피 침대', 'furniture', 'floor', 2.4, 3.0, 2.4, 0.74],
+      ['furn-aquarium', '대형 수족관', 'furniture', 'floor', 1.8, 0.6, 1.5, 1.5],
+      ['furn-crystal-lamp', '크리스탈 스탠드', 'small', 'small', 0.5, 0.5, 0.9],
+      ['furn-gold-mirror', '금테 전신 거울', 'furniture', 'floor', 0.8, 0.4, 2.1],
+      ['furn-arcade', '레트로 오락기', 'furniture', 'floor', 0.9, 0.8, 1.8],
+      ['furn-telescope', '별 보는 망원경', 'furniture', 'floor', 0.9, 0.9, 1.7],
+      ['furn-mother-pearl', '자개 병풍', 'rare', 'floor', 2.4, 0.3, 1.6],
+      ['furn-velvet-sofa', '벨벳 체스터필드 소파', 'furniture', 'floor', 2.4, 1.1, 1.0],
+      ['furn-bonsai', '명품 분재', 'plant', 'small', 0.7, 0.5, 0.8],
+      // 마을 공사 / 축제 rewards.
+      ['furn-project-plaque', '마을 공사 현판', 'rare', 'wall', 1.2, 0.04, 0.5],
+      ['furn-festival-lantern', '축제 청사초롱', 'rare', 'small', 0.45, 0.45, 0.9],
+      ['furn-festival-drum', '축제 북', 'rare', 'floor', 0.9, 0.9, 1.0],
+      ['furn-festival-kite', '축제 방패연', 'rare', 'wall', 0.8, 0.04, 1.0],
+      ['furn-festival-fan', '축제 부채', 'rare', 'wall', 0.9, 0.04, 0.6],
     ] as const
   ).map(([ref, name, category, mount, w, d, h, top]: readonly [string, string, RoomCategory, RoomMount, number, number, number, number?]) =>
     e(ref, 'prop', name, category, mount, w, d, h, { unlock: ref, premium: true, ...(top ? { top } : {}) }),

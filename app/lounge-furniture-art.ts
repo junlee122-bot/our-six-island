@@ -217,6 +217,105 @@ const DRAW: Record<string, Draw> = {
     <rect x="88" y="${H * 0.86}" width="24" height="${H * 0.12}" fill="#8a5a34"/>
     <path d="M100 2 l5 10 11 1 -8 7 3 11 -11 -6 -11 6 3 -11 -8 -7 11 -1z" fill="#f5c518" stroke-width="2"/>
     ${[[80, 0.3], [120, 0.44], [70, 0.56], [134, 0.66], [90, 0.72], [60, 0.8], [148, 0.8], [110, 0.24]].map(([x, y], i) => `<circle cx="${x}" cy="${H * y}" r="7" fill="${['#e2334a', '#f5c518', '#5b8fb9', '#fff'][i % 4]}" stroke-width="2"/>`).join('')}`,
+  // 이번 주 명품 가구.
+  'furn-grand-piano': (H) => `
+    <path d="M14 ${H * 0.34} H150 C190 ${H * 0.34} 196 ${H * 0.06} 150 ${H * 0.06} C110 ${H * 0.06} 96 ${H * 0.2} 60 ${H * 0.2} H14Z" fill="#22201f"/>
+    <rect x="10" y="${H * 0.34}" width="180" height="${H * 0.22}" rx="6" fill="#2d2a28"/>
+    <rect x="18" y="${H * 0.36}" width="118" height="${H * 0.08}" fill="#fbf8f0" stroke-width="2"/>
+    ${Array.from({ length: 10 }, (_, i) => `<rect x="${22 + i * 11.5}" y="${H * 0.36}" width="6" height="${H * 0.05}" fill="#22201f" stroke="none"/>`).join('')}
+    <path d="M30 ${H * 0.56} V${H * 0.96} M170 ${H * 0.56} V${H * 0.96} M100 ${H * 0.56} V${H * 0.9}" stroke="#22201f" stroke-width="9" fill="none"/>
+    <path d="M150 ${H * 0.06} L120 ${H * 0.3}" stroke="#c9a36a" stroke-width="3"/>
+    ${hi(40, H * 0.25, 130, H * 0.25)}`,
+  'furn-canopy-bed': (H) => `
+    <path d="M12 ${H * 0.06} H188" stroke="#c9a36a" stroke-width="8"/>
+    <path d="M16 ${H * 0.08} V${H * 0.96} M184 ${H * 0.08} V${H * 0.96}" stroke="#c9a36a" stroke-width="7"/>
+    <path d="M20 ${H * 0.08} Q40 ${H * 0.4} 22 ${H * 0.62} M180 ${H * 0.08} Q160 ${H * 0.4} 178 ${H * 0.62}" stroke="#f3d9e6" stroke-width="10" fill="none" opacity=".9"/>
+    <path d="M20 ${H * 0.08} Q100 ${H * 0.2} 180 ${H * 0.08}" fill="#f7e6ef"/>
+    <rect x="28" y="${H * 0.5}" width="144" height="${H * 0.28}" rx="10" fill="#fbf6f0"/>
+    <rect x="40" y="${H * 0.46}" width="46" height="${H * 0.1}" rx="8" fill="#fff"/><rect x="114" y="${H * 0.46}" width="46" height="${H * 0.1}" rx="8" fill="#fff"/>
+    <path d="M28 ${H * 0.6} H172 V${H * 0.8} Q100 ${H * 0.86} 28 ${H * 0.8}Z" fill="#d98fae"/>
+    <rect x="24" y="${H * 0.8}" width="152" height="${H * 0.1}" rx="5" fill="#c9a36a"/>`,
+  'furn-aquarium': (H) => `
+    <rect x="8" y="${H * 0.06}" width="184" height="${H * 0.62}" rx="6" fill="#8fd0e6"/>
+    <rect x="8" y="${H * 0.06}" width="184" height="${H * 0.1}" fill="#3d4a55"/>
+    <path d="M14 ${H * 0.6} Q60 ${H * 0.5} 100 ${H * 0.6} T186 ${H * 0.6} V${H * 0.66} H14Z" fill="#e9d8a6" stroke-width="2"/>
+    <path d="M40 ${H * 0.6} C36 ${H * 0.44} 50 ${H * 0.36} 44 ${H * 0.24} M150 ${H * 0.6} C156 ${H * 0.46} 144 ${H * 0.36} 152 ${H * 0.28}" stroke="#4f8a3c" stroke-width="5" fill="none"/>
+    <path d="M78 ${H * 0.34} q14 -10 28 0 q-14 10 -28 0z l-10 -6 v12z" fill="#f28c28" stroke-width="2"/>
+    <path d="M120 ${H * 0.46} q10 -7 20 0 q-10 7 -20 0z l-7 -4 v8z" fill="#f5c518" stroke-width="2"/>
+    <rect x="14" y="${H * 0.68}" width="172" height="${H * 0.3}" rx="4" fill="#6b4a33"/>
+    ${hi(20, H * 0.2, 20, H * 0.5)}`,
+  'furn-crystal-lamp': (H) => `
+    <path d="M56 ${H * 0.08} H144 L164 ${H * 0.42} H36Z" fill="#fdf7e8"/>
+    ${[60, 80, 100, 120, 140].map((x) => `<path d="M${x} ${H * 0.42} l-6 ${H * 0.1} 6 ${H * 0.06} 6 -${H * 0.06}z" fill="#dff3fb" stroke-width="2"/>`).join('')}
+    <rect x="94" y="${H * 0.5}" width="12" height="${H * 0.34}" fill="#c9a36a"/>
+    <ellipse cx="100" cy="${H * 0.9}" rx="44" ry="${H * 0.06}" fill="#c9a36a"/>
+    <ellipse cx="100" cy="${H * 0.3}" rx="92" ry="${H * 0.26}" fill="#fff3c0" opacity=".25" stroke="none"/>`,
+  'furn-gold-mirror': (H) => `
+    <ellipse cx="100" cy="${H * 0.46}" rx="80" ry="${H * 0.42}" fill="#d9b25a"/>
+    <ellipse cx="100" cy="${H * 0.46}" rx="64" ry="${H * 0.36}" fill="#dfeff4"/>
+    ${hi(70, H * 0.22, 60, H * 0.5)}${hi(84, H * 0.2, 76, H * 0.36)}
+    <path d="M60 ${H * 0.86} L50 ${H} M140 ${H * 0.86} L150 ${H}" stroke="#b08a3a" stroke-width="7"/>`,
+  'furn-arcade': (H) => `
+    <path d="M30 ${H * 0.04} H170 L160 ${H * 0.2} V${H * 0.98} H40 V${H * 0.2}Z" fill="#6c4bb8"/>
+    <rect x="48" y="${H * 0.08}" width="104" height="${H * 0.08}" rx="4" fill="#f5c518"/>
+    <rect x="52" y="${H * 0.22}" width="96" height="${H * 0.28}" rx="6" fill="#1f2a44"/>
+    <path d="M70 ${H * 0.42} h14 v-10 h10 v10 h14" stroke="#39ff14" stroke-width="3" fill="none"/>
+    <rect x="44" y="${H * 0.54}" width="112" height="${H * 0.1}" fill="#8a6ad0"/>
+    <circle cx="74" cy="${H * 0.59}" r="6" fill="#e2334a"/><circle cx="118" cy="${H * 0.59}" r="6" fill="#5b8fb9"/><circle cx="134" cy="${H * 0.59}" r="6" fill="#f5c518"/>
+    <rect x="80" y="${H * 0.74}" width="40" height="${H * 0.12}" rx="3" fill="#1f2a44"/>`,
+  'furn-telescope': (H) => `
+    <path d="M40 ${H * 0.36} L160 ${H * 0.08} L168 ${H * 0.2} L48 ${H * 0.48}Z" fill="#3f5a86"/>
+    <rect x="150" y="${H * 0.04}" width="26" height="${H * 0.2}" rx="4" fill="#c9a36a" transform="rotate(-13 163 ${H * 0.14})"/>
+    <circle cx="100" cy="${H * 0.34}" r="10" fill="#c9a36a"/>
+    <path d="M100 ${H * 0.36} L50 ${H * 0.96} M100 ${H * 0.36} L150 ${H * 0.96} M100 ${H * 0.36} V${H * 0.96}" stroke="#6b4a33" stroke-width="6" fill="none"/>
+    ${[[30, 0.1], [70, 0.06], [120, 0.3]].map(([x, y]) => `<path d="M${x} ${H * y} l3 6 7 1 -5 5 1 7 -6 -3 -6 3 1 -7 -5 -5 7 -1z" fill="#f5c518" stroke-width="1.5"/>`).join('')}`,
+  'furn-mother-pearl': (H) => `
+    ${[0, 1, 2, 3].map((i) => `<rect x="${6 + i * 47.5}" y="${H * 0.04}" width="44" height="${H * 0.9}" rx="3" fill="#1d1a22"/>
+    <rect x="${10 + i * 47.5}" y="${H * 0.08}" width="36" height="${H * 0.82}" fill="#2a2433" stroke="#c9a36a" stroke-width="2"/>
+    <circle cx="${28 + i * 47.5}" cy="${H * (0.3 + (i % 2) * 0.2)}" r="${H * 0.08}" fill="#d9f0ea" opacity=".85" stroke="#b9e3f0" stroke-width="2"/>
+    <path d="M${16 + i * 47.5} ${H * 0.72} q12 -${H * 0.1} 24 0" stroke="#e6d4f2" stroke-width="3" fill="none"/>`).join('')}`,
+  'furn-velvet-sofa': (H) => `
+    <rect x="12" y="${H * 0.12}" width="176" height="${H * 0.46}" rx="16" fill="#6b2d3f"/>
+    ${[40, 70, 100, 130, 160].map((x) => `<circle cx="${x}" cy="${H * 0.28}" r="3" fill="#3d1824" stroke="none"/><circle cx="${x - 15}" cy="${H * 0.42}" r="3" fill="#3d1824" stroke="none"/>`).join('')}
+    <rect x="2" y="${H * 0.34}" width="40" height="${H * 0.46}" rx="18" fill="#7a3448"/>
+    <rect x="158" y="${H * 0.34}" width="40" height="${H * 0.46}" rx="18" fill="#7a3448"/>
+    <rect x="36" y="${H * 0.52}" width="128" height="${H * 0.26}" rx="10" fill="#7a3448"/>
+    <rect x="22" y="${H * 0.8}" width="10" height="${H * 0.16}" fill="#c9a36a"/><rect x="168" y="${H * 0.8}" width="10" height="${H * 0.16}" fill="#c9a36a"/>`,
+  'furn-bonsai': (H) => `
+    <rect x="44" y="${H * 0.74}" width="112" height="${H * 0.2}" rx="6" fill="#3f5a86"/>
+    <path d="M100 ${H * 0.76} C92 ${H * 0.6} 120 ${H * 0.52} 104 ${H * 0.36} C96 ${H * 0.28} 80 ${H * 0.32} 70 ${H * 0.3}" stroke="#6b4a33" stroke-width="9" fill="none"/>
+    <ellipse cx="68" cy="${H * 0.24}" rx="40" ry="${H * 0.1}" fill="#4f8a3c"/>
+    <ellipse cx="126" cy="${H * 0.36}" rx="36" ry="${H * 0.09}" fill="#5e9d4c"/>
+    <ellipse cx="96" cy="${H * 0.12}" rx="30" ry="${H * 0.08}" fill="#6aa84f"/>`,
+  // 마을 공사 / 축제 rewards.
+  'furn-project-plaque': (H) => `
+    <rect x="6" y="${H * 0.12}" width="188" height="${H * 0.76}" rx="8" fill="#8a5a34"/>
+    <rect x="16" y="${H * 0.24}" width="168" height="${H * 0.52}" rx="4" fill="#e9c46a"/>
+    <path d="M40 ${H * 0.5} H160" stroke="#8a5a34" stroke-width="6"/>
+    <path d="M60 ${H * 0.36} H140 M60 ${H * 0.64} H140" stroke="#8a5a34" stroke-width="3"/>`,
+  'furn-festival-lantern': (H) => `
+    <path d="M100 0 V${H * 0.1}" stroke-width="3"/>
+    <rect x="70" y="${H * 0.1}" width="60" height="${H * 0.08}" rx="3" fill="#8a5a34"/>
+    <rect x="62" y="${H * 0.18}" width="76" height="${H * 0.28}" rx="10" fill="#d9313f"/>
+    <rect x="62" y="${H * 0.46}" width="76" height="${H * 0.28}" rx="10" fill="#3f5ab8"/>
+    <rect x="70" y="${H * 0.74}" width="60" height="${H * 0.06}" rx="3" fill="#8a5a34"/>
+    <path d="M86 ${H * 0.8} V${H * 0.98} M100 ${H * 0.8} V${H} M114 ${H * 0.8} V${H * 0.98}" stroke="#d9313f" stroke-width="3"/>`,
+  'furn-festival-drum': (H) => `
+    <ellipse cx="100" cy="${H * 0.28}" rx="80" ry="${H * 0.14}" fill="#fbeedd"/>
+    <path d="M20 ${H * 0.28} V${H * 0.72} Q100 ${H * 0.9} 180 ${H * 0.72} V${H * 0.28} Q100 ${H * 0.46} 20 ${H * 0.28}Z" fill="#d9313f"/>
+    <circle cx="100" cy="${H * 0.28}" r="${H * 0.08}" fill="#f5c518" stroke-width="2"/>
+    <path d="M30 ${H * 0.9} L60 ${H * 0.7} M170 ${H * 0.9} L140 ${H * 0.7}" stroke="#6b4a33" stroke-width="8"/>`,
+  'furn-festival-kite': (H) => `
+    <rect x="30" y="${H * 0.06}" width="140" height="${H * 0.78}" rx="4" fill="#fbf6ea"/>
+    <circle cx="100" cy="${H * 0.45}" r="${H * 0.12}" fill="none"/>
+    <path d="M30 ${H * 0.06} L170 ${H * 0.84} M170 ${H * 0.06} L30 ${H * 0.84} M100 ${H * 0.06} V${H * 0.84}" stroke-width="2" fill="none"/>
+    <path d="M30 ${H * 0.06} H170 V${H * 0.2} H30Z" fill="#d9313f"/>
+    <path d="M60 ${H * 0.84} Q70 ${H * 0.94} 56 ${H} M140 ${H * 0.84} Q130 ${H * 0.94} 144 ${H}" stroke="#3f5ab8" stroke-width="4" fill="none"/>`,
+  'furn-festival-fan': (H) => `
+    <path d="M100 ${H * 0.92} L8 ${H * 0.36} A100 ${H * 0.8} 0 0 1 192 ${H * 0.36}Z" fill="#f28bb5"/>
+    <path d="M100 ${H * 0.92} L30 ${H * 0.2} M100 ${H * 0.92} L70 ${H * 0.08} M100 ${H * 0.92} L130 ${H * 0.08} M100 ${H * 0.92} L170 ${H * 0.2}" stroke-width="2" fill="none"/>
+    <circle cx="100" cy="${H * 0.36}" r="${H * 0.14}" fill="#f5c518" stroke-width="2"/>
+    <rect x="94" y="${H * 0.84}" width="12" height="${H * 0.16}" fill="#6b4a33"/>`,
   'furn-village-medal': (H) => `
     <path d="M70 0 L86 ${H * 0.36} M130 0 L114 ${H * 0.36}" stroke="#5b8fb9" stroke-width="10"/>
     <circle cx="100" cy="${H * 0.62}" r="${H * 0.3}" fill="#e9c46a"/>

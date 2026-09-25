@@ -14,6 +14,7 @@
 //   gambling results are lifetime totals, not per day.
 import {
   INITIAL_BEOM,
+  flowBucket,
   kstDay,
   type EconomyGame,
   type LedgerEntry,
@@ -181,8 +182,52 @@ export type EconomyReport = {
   };
   /** Per KST day (retained entries), newest first. */
   daily: DayRow[];
+  /**
+   * Lifetime and per-day totals by source bucket from `ledger.flows` (kept
+   * for LEDGER_FLOW_DAYS days, independent of the 200-entry window). Null for
+   * ledgers written before the counters existed and not touched since.
+   */
+  flows: null | {
+    since: number;
+    /** The counters add up to every grant/spend since `since`. */
+    complete: boolean;
+    sources: FlowRow[];
+    sinks: FlowRow[];
+    days: { date: string; granted: number; spent: number; net: number; top: string }[];
+    /** Last `days` days (report window) from the day counters. */
+    recent: { granted: number; spent: number; sources: FlowRow[]; sinks: FlowRow[] };
+  };
   warnings: string[];
 };
+/** Korean label of a flow bucket (lounge-economy flowBucket). */
+export const BUCKET_LABEL: Record<string, string> = {
+  daily: '오늘의 범',
+  'daily-relief': '오늘의 범(구제)',
+  ach: '업적 보상',
+  request: '친구 부탁',
+  event: '명절·생일 선물',
+  wish: '분수 소원',
+  donate: '박물관 첫 기증',
+  'bundle-done': '꾸러미 완성 보상',
+  'casino-night': '금요 카지노의 밤',
+  'grant-other': '기타 지급',
+  seeds: '씨앗',
+  trophy: '트로피',
+  palette: '팔레트·염색',
+  consumable: '비료·미끼',
+  'farm-expand': '밭 넓히기',
+  rod: '낚싯대',
+  house: '집 확장',
+  furn: '오늘의 가구',
+  'furn-premium': '이번 주 명품 가구',
+  'shop-reroll': '가구 새로고침',
+  bundle: '마을 꾸러미 기부',
+  project: '마을 공사',
+  festival: '마을 축제 기금',
+  'spend-other': '기타 지출',
+};
+const bucketLabel = (key: string) =>
+  Object.hasOwn(BUCKET_LABEL, key) ? BUCKET_LABEL[key] : reasonLabel(key);
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj =>
@@ -235,6 +280,14 @@ const LIFE_REASONS: Record<string, string> = {
   event: '명절·생일 선물',
   wish: '분수 소원',
   'casino-night': '금요 카지노의 밤',
+  project: '마을 공사',
+  festival: '마을 축제 기금',
+  'furn-premium': '이번 주 명품 가구',
+  'shop-reroll': '가구 새로고침',
+  'house-1': '집 확장 1단계',
+  'house-2': '집 확장 2단계',
+  'house-3': '집 확장 3단계',
+  'house-4': '집 확장 4단계',
 };
 /** Korean label of a ledger entry reason ('sell-tomato' → '토마토 판매'). */
 export function reasonLabel(reason: string): string {
@@ -526,6 +579,7 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
 
   const archiveGames = int(archiveRaw.games),
     archiveHouseNet = int(archiveRaw.houseNet);
+  const flows = readFlows(L.flows, granted, spent, today - days + 1);
   return {
     generatedAt: now,
     source: input.source ?? 'live',
@@ -569,9 +623,78 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
       sinks: groupFlows(recentEntries, 'spend'),
     },
     daily: [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date)),
+    flows,
     warnings,
   };
 }
+function bucketRows(o: unknown, type: LedgerEntry['type']): FlowRow[] {
+  if (!isObj(o)) return [];
+  return Object.entries(o)
+    .map(([reason, n]) => ({
+      reason,
+      label: bucketLabel(reason),
+      kind: flowKind(type, bucketReason(type, reason)),
+      count: 0,
+      amount: int(n),
+    }))
+    .filter((r) => r.amount > 0)
+    .sort((a, b) => b.amount - a.amount || a.reason.localeCompare(b.reason));
+}
+/** A representative ledger reason for a bucket (so flowKind classifies it). */
+const bucketReason = (type: LedgerEntry['type'], key: string) =>
+  type === 'grant'
+    ? key
+    : ['seeds', 'trophy', 'palette', 'consumable'].includes(key)
+      ? 'buy-' + key
+      : key === 'farm-expand'
+        ? 'farm-9'
+        : key === 'rod'
+          ? 'rod-2'
+          : key;
+function mergeBuckets(list: unknown[]) {
+  const out: Record<string, number> = {};
+  for (const o of list)
+    if (isObj(o)) for (const [k, n] of Object.entries(o)) out[k] = (out[k] ?? 0) + int(n);
+  return out;
+}
+function readFlows(v: unknown, granted: number, spent: number, fromDay: number): EconomyReport['flows'] {
+  if (!isObj(v) || !isObj(v.total) || !isObj(v.base) || !Array.isArray(v.days)) return null;
+  const sum = (o: unknown) => (isObj(o) ? Object.values(o).reduce<number>((a, n) => a + int(n), 0) : 0);
+  const days = v.days.filter(isObj);
+  const complete =
+    sum(v.total.g) === granted - int(v.base.granted) && sum(v.total.s) === spent - int(v.base.spent);
+  const recent = days.filter((d) => int(d.d) >= fromDay);
+  const g = mergeBuckets(recent.map((d) => d.g)),
+    sp = mergeBuckets(recent.map((d) => d.s));
+  return {
+    since: int(v.since),
+    complete,
+    sources: bucketRows(v.total.g, 'grant'),
+    sinks: bucketRows(v.total.s, 'spend'),
+    days: days
+      .map((d) => {
+        const gs = sum(d.g),
+          ss = sum(d.s),
+          top = bucketRows(d.g, 'grant')[0];
+        return {
+          date: new Date(int(d.d) * DAY_MS).toISOString().slice(0, 10),
+          granted: gs,
+          spent: ss,
+          net: gs - ss,
+          top: top ? top.label : '',
+        };
+      })
+      .sort((a, b) => b.date.localeCompare(a.date)),
+    recent: {
+      granted: sum(g),
+      spent: sum(sp),
+      sources: bucketRows(g, 'grant'),
+      sinks: bucketRows(sp, 'spend'),
+    },
+  };
+}
+/** Bucket of an entry (re-exported for tools that group raw entries the same way). */
+export const entryBucket = (e: Pick<LedgerEntry, 'type' | 'reason'>) => flowBucket(e.type, e.reason);
 
 // ------------------------------------------------------------------ render
 /** 12,345범 / -1,200범 */
@@ -706,6 +829,34 @@ function tables(r: EconomyReport): Table[] {
         ],
       ],
     },
+    ...(r.flows
+      ? [
+          {
+            title: `일별 집계: 최근 ${r.recent.days}일 공급원 · 합계 ${beomText(r.flows.recent.granted)}`,
+            head: ['출처', '분류', '금액'],
+            right: [2],
+            rows: r.flows.recent.sources.map((f) => [f.label, FLOW_LABEL[f.kind], beomText(f.amount)]),
+          },
+          {
+            title: `일별 집계: 최근 ${r.recent.days}일 소비처 · 합계 ${beomText(r.flows.recent.spent)}`,
+            head: ['출처', '분류', '금액'],
+            right: [2],
+            rows: r.flows.recent.sinks.map((f) => [f.label, FLOW_LABEL[f.kind], beomText(f.amount)]),
+          },
+          {
+            title: `일별 집계: 날짜별 발행·회수 (${kstTime(r.flows.since)}부터${r.flows.complete ? '' : ', 일부 누락'})`,
+            head: ['날짜', '발행', '회수', '순증', '가장 큰 출처'],
+            right: [1, 2, 3],
+            rows: r.flows.days.map((d) => [d.date, beomText(d.granted), beomText(d.spent), signed(d.net), d.top]),
+          },
+          {
+            title: '일별 집계: 누적 공급원/소비처',
+            head: ['출처', '분류', '금액'],
+            right: [2],
+            rows: [...r.flows.sources, ...r.flows.sinks].map((f) => [f.label, FLOW_LABEL[f.kind], beomText(f.amount)]),
+          },
+        ]
+      : []),
     {
       title: `최근 ${r.recent.days}일 주요 공급원(발행) · 합계 ${beomText(r.recent.granted)}`,
       head: ['사유', '분류', '건수', '금액'],
