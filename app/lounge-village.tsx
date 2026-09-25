@@ -99,7 +99,11 @@ import { useServerClock } from './lounge/use-server-clock';
 import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
 import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lounge-settings';
 import { keyLabel } from './lounge-keybinds';
-import { villageHoverTarget } from './lounge-village-hover';
+import {
+  villageHoverTarget,
+  villagePlaceOnRay,
+  type VillageHover,
+} from './lounge-village-hover';
 import { VillageLifeList } from './lounge/VillageSimple';
 import {
   villageCanEnterPlace,
@@ -112,6 +116,7 @@ import {
   VILLAGE_DISTRICTS,
   VILLAGE_RIVER,
   VILLAGE_PATHS,
+  VILLAGE_DOOR_HEIGHT,
   VILLAGE_PLACES,
   VILLAGE_START,
   VILLAGE_ORCHARD,
@@ -1107,11 +1112,26 @@ export function Village3D(props: Props) {
       bubble.hidden = true;
       bubble.setAttribute('aria-hidden', 'true');
       if (!own) {
-        tag = document.createElement('span');
-        tag.className = 'hv-tag';
-        tag.textContent = ACTORS[p.actor] ?? '친구';
-        tag.dataset.player = p.id;
-        labels.appendChild(tag);
+        // Online friends get a green dot; friends who are not logged in walk
+        // their daily round as dimmed "쉬는 중" figures (not counted as online).
+        const el = document.createElement('span');
+        el.className = npc ? 'hv-tag is-away' : 'hv-tag is-online';
+        const dot = document.createElement('i');
+        dot.setAttribute('aria-hidden', 'true');
+        el.appendChild(dot);
+        el.appendChild(document.createTextNode(ACTORS[p.actor] ?? '친구'));
+        if (npc) {
+          const away = document.createElement('small');
+          away.textContent = '쉬는 중';
+          el.appendChild(away);
+        }
+        el.dataset.player = p.id;
+        el.dataset.presence = npc ? 'away' : 'online';
+        labels.appendChild(el);
+        tag = el;
+      }
+      if (npc) {
+        bodyMaterial.opacity = 0.72;
       }
       labels.appendChild(bubble);
       return {
@@ -1175,16 +1195,35 @@ export function Village3D(props: Props) {
         ? { x: hit.x, z: hit.z }
         : null;
     };
-    /** What the mouse is over: buildings, friends and village spots get a pointer. */
-    const hoverAt = (point: VillagePoint | null) => {
-      if (!point) return null;
-      const people: VillagePoint[] = [];
-      for (const [id, figure] of figures)
-        if (id !== latest.current.self) people.push(figure.point);
-      return villageHoverTarget(point, { people });
+    /**
+     * What the mouse is over: friends first (at the floor point), then the
+     * building the camera ray enters (roof and walls included, so a click on
+     * a roof never walks to the house behind it), then village spots.
+     */
+    const hoverAt = (clientX: number, clientY: number): VillageHover | null => {
+      const point = floorAt(clientX, clientY);
+      if (point)
+        for (const [id, figure] of figures)
+          if (
+            id !== latest.current.self &&
+            Math.hypot(point.x - figure.point.x, point.z - figure.point.z) < 0.7
+          )
+            return { kind: 'person' };
+      const building = villagePlaceOnRay(raycaster.ray.origin, raycaster.ray.direction);
+      if (building) return { kind: 'place', id: building };
+      return point ? villageHoverTarget(point) : null;
     };
     let hoverKind = '';
-    const setCursor = (kind: string) => {
+    /** The building under the mouse: its name chip shows while hovered. */
+    let hoverPlace: string | null = null;
+    const setCursor = (target: VillageHover | 'drag' | null) => {
+      const kind = target === 'drag' ? 'drag' : (target?.kind ?? '');
+      const place = target && target !== 'drag' && target.kind === 'place' ? target.id : null;
+      if (place !== hoverPlace) {
+        hoverPlace = place;
+        host.dataset.hoverPlace = place ?? '';
+        needsRender = true;
+      }
       if (kind === hoverKind) return;
       hoverKind = kind;
       host.dataset.hover = kind;
@@ -1204,7 +1243,7 @@ export function Village3D(props: Props) {
     };
     const drag = (e: PointerEvent) => {
       if (!press || e.pointerId !== press.id) {
-        if (!press) setCursor(hoverAt(floorAt(e.clientX, e.clientY))?.kind ?? '');
+        if (!press) setCursor(hoverAt(e.clientX, e.clientY));
         return;
       }
       if (Math.hypot(e.clientX - press.startX, e.clientY - press.startY) > 6)
@@ -1243,8 +1282,8 @@ export function Village3D(props: Props) {
       if (!press.dragged) {
         entryIntent = null;
         requestedPlace.current = null;
+        const target = hoverAt(e.clientX, e.clientY);
         const point = floorAt(e.clientX, e.clientY);
-        const target = hoverAt(point);
         const place =
           target?.kind === 'place'
             ? VILLAGE_PLACES.find((p) => p.id === target.id)
@@ -1256,14 +1295,14 @@ export function Village3D(props: Props) {
         } else if (point) goTo(point);
       }
       press = null;
-      setCursor(hoverAt(floorAt(e.clientX, e.clientY))?.kind ?? '');
+      setCursor(hoverAt(e.clientX, e.clientY));
     };
     const cancel = () => {
       press = null;
-      setCursor('');
+      setCursor(null);
     };
     const leave = () => {
-      if (!press) setCursor('');
+      if (!press) setCursor(null);
     };
     const lostCapture = (e: PointerEvent) => {
       if (press?.id === e.pointerId) press = null;
@@ -1488,6 +1527,34 @@ export function Village3D(props: Props) {
         h: 0,
       });
     }
+    /**
+     * Small fixed signs over each door (the owner's name on a house, the full
+     * name on the hall, casino and 분장실). They never pop in or out while
+     * walking: they are painted on the building and simply scroll with it.
+     * Hidden on the overview map (its chips name everything) and while that
+     * building's own name chip is up.
+     */
+    type Sign = {
+      id: string;
+      element: HTMLElement | null;
+      ax: number;
+      ay: number;
+      az: number;
+      shown: boolean;
+      w: number;
+      h: number;
+    };
+    const signs: Sign[] = VILLAGE_PLACES.map((place) => ({
+      id: place.id,
+      element: labels.querySelector<HTMLElement>(`[data-sign="${place.id}"]`),
+      ax: place.entry.x,
+      ay: VILLAGE_DOOR_HEIGHT + (place.kind === 'home' ? 0.42 : 0.95),
+      az: place.z + place.depth / 2 + 0.05,
+      shown: false,
+      w: 0,
+      h: 0,
+    }));
+    const signPointer = new THREE.Vector2();
     let labelMode: 'walk' | 'overview' | '' = '',
       labelNearest: string | null = null,
       reportedNearest: string | null = null,
@@ -1495,7 +1562,7 @@ export function Village3D(props: Props) {
       cameraCalmSince = 0,
       cameraSpeed = 0;
     const measureLabels = () => {
-      for (const label of placeLabels)
+      for (const label of [...placeLabels, ...signs])
         if (label.element) {
           label.w = label.element.offsetWidth;
           label.h = label.element.offsetHeight;
@@ -2028,7 +2095,9 @@ export function Village3D(props: Props) {
         const rank = (label: PlaceLabel) =>
           label.id === door
             ? 0
-            : label.id === heading
+            : label.id === hoverPlace
+              ? 0.5
+              : label.id === heading
               ? 1
               : label.id === labelNearest
                 ? 2
@@ -2062,6 +2131,7 @@ export function Village3D(props: Props) {
           let want =
             inView &&
             (label.id === door ||
+              label.id === hoverPlace ||
               (calm &&
                 ((mode === 'overview' && label.id !== 'farm') ||
                   label.id === heading ||
@@ -2110,6 +2180,42 @@ export function Village3D(props: Props) {
           }
           element.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0) translate(-50%,${overview ? -50 : -100}%)`;
         }
+        for (const sign of signs) {
+          const element = sign.element;
+          if (!element) continue;
+          const at = project(sign.ax, sign.ay, sign.az);
+          const box = {
+            l: at.x - sign.w / 2,
+            r: at.x + sign.w / 2,
+            t: at.y - sign.h / 2,
+            b: at.y + sign.h / 2,
+          };
+          const hits = (o: { l: number; r: number; t: number; b: number }) =>
+            o.l < box.r && box.l < o.r && o.t < box.b && box.t < o.b;
+          let want =
+            !overview &&
+            at.inFront &&
+            box.l > 0 &&
+            box.r < width &&
+            box.t > topLimit &&
+            box.b < height - 10 &&
+            !placeLabels.find((label) => label.id === sign.id)?.shown &&
+            !hud.some(hits);
+          if (want) {
+            // A house hidden behind another building keeps its sign hidden
+            // too (it would float on the wrong roof).
+            signPointer.set(projected.x, projected.y);
+            raycaster.setFromCamera(signPointer, camera);
+            const first = villagePlaceOnRay(raycaster.ray.origin, raycaster.ray.direction);
+            if (first && first !== sign.id) want = false;
+          }
+          if (want !== sign.shown) {
+            sign.shown = want;
+            element.dataset.show = String(want);
+          }
+          if (want)
+            element.style.transform = `translate3d(${at.x.toFixed(1)}px,${at.y.toFixed(1)}px,0) translate(-50%,-50%)`;
+        }
         const headY = FIGURE_HEIGHT * 0.98;
         if (selfTag) {
           const at = project(position.x, headY, position.z);
@@ -2156,6 +2262,7 @@ export function Village3D(props: Props) {
           overview: String(zoom < 1.5),
           labelNearest: labelNearest ?? '',
           labelsShown: placeLabels.filter((l) => l.shown).map((l) => l.id).join(','),
+          signsShown: signs.filter((l) => l.shown).map((l) => l.id).join(','),
           residents: String(residents.length),
           drawCalls: String(renderer.info.render.calls),
         });
@@ -2299,6 +2406,17 @@ export function Village3D(props: Props) {
                 {readyCount > 0 && <small>수확 {readyCount}</small>}
               </button>
             )}
+            {VILLAGE_PLACES.map((place) => (
+              <span
+                key={'sign-' + place.id}
+                className={`hv-sign hv-sign-${place.kind}`}
+                data-sign={place.id}
+                data-show="false"
+                aria-hidden="true"
+              >
+                {place.kind === 'home' ? placeShortName(place) : place.name}
+              </span>
+            ))}
             <span className="hv-self" data-self-label>
               {ACTORS[props.save.actor]}
               <small>나</small>

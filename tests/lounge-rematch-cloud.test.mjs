@@ -24,7 +24,8 @@ function harness(initial = null) {
   let world = structuredClone(
       initial ?? { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} },
     ),
-    now = Date.now();
+    // Fixed Tuesday noon KST so weekly events (Friday casino night) never pay.
+    now = Date.UTC(2026, 5, 9, 3);
   return {
     get world() {
       return world;

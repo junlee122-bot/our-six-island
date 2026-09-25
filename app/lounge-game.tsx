@@ -46,6 +46,7 @@ import { villageReturnPoint } from './lounge-village-entrance';
 import './lounge-club.css';
 import './lounge-village-shell.css';
 import './lounge-flow.css';
+import './lounge-social.css';
 import { sceneSeatPoint, sceneTableSide } from './lounge-scene-layout';
 import { LoungePlayHub } from './lounge-play-hub';
 import { gameFlow } from './lounge-game-flow';
@@ -80,7 +81,9 @@ import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
 import { DISH_BY_ID, BUFF_INFO, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
-import { BOARD_FRONT, MUSEUM_FRONT } from './lounge-village-spots';
+import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE } from './lounge-village-spots';
+import { farmBed, farmFront } from './lounge-village-life';
+import { othersOnline, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
 import { CloudRoom, type Area, type CloudRoomView } from './lounge-cloud-room';
@@ -99,11 +102,13 @@ import {
 } from './lounge-reactions';
 import { formatBeom, josa, NAMES } from './lounge-text';
 import {
+  getSettings,
   PASSWORD_WARNING_KEY,
   recall,
   remember,
   useSettings,
 } from './lounge-settings';
+import { INTERIOR_DOOR, INTERIOR_PLACE_EVENT } from './lounge-interior-layout';
 import { Modal, ConfirmModal } from './lounge/Modal';
 import { Toast, useBanners } from './lounge/Toast';
 import { dailyOf } from './lounge/WalletModal';
@@ -142,6 +147,7 @@ import {
   ScreenBoundary,
 } from './lounge/ErrorBoundary';
 import { SaveStatus } from './lounge/SaveStatus';
+import { offlineReason, shouldToastError } from './lounge-connection';
 import { GAME_COPY } from './lounge/game-copy';
 import { inviteEndReason, nameOf } from './lounge/invite-text';
 import {
@@ -169,6 +175,11 @@ const Wardrobe = lazyRetry(() =>
 const RoomFloor = lazyRetry(() =>
   loadScene().then((m) => ({ default: m.RoomFloor })),
 );
+// The walkable 3D hall / casino (the flat RoomFloor stays as 간단 그래픽).
+const loadInterior = () => import('./lounge-interior-3d');
+const Interior3D = lazyRetry(() =>
+  loadInterior().then((m) => ({ default: m.Interior3D })),
+);
 // Life-expansion panels (LIFE-B) load when first opened.
 const InventoryPanel = lazyRetry(() => import('./lounge/Inventory').then((m) => ({ default: m.InventoryPanel })));
 const FishingOverlay = lazyRetry(() => import('./lounge/Fishing').then((m) => ({ default: m.FishingOverlay })));
@@ -193,6 +204,7 @@ function preloadTab(tab: Tab, save?: LoungeSave) {
   else if (tab === 'bedroom')
     quiet(loadBedroom().then((m) => save && m.preloadBedroom(save)));
   else if (tab === 'wardrobe') quiet(loadWardrobe());
+  else if (!getSettings().simpleGraphics) quiet(loadInterior());
   else {
     quiet(loadScene());
     for (const url of [
@@ -475,6 +487,8 @@ function AccountLounge({
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
     [localReaction, setLocalReaction] = useState<Reaction>(),
     [villageSpawn, setVillageSpawn] = useState<VillagePoint>(),
+    // WebGL failed in the hall / casino: the flat floor for this session.
+    [interiorFlat, setInteriorFlat] = useState(false),
     [coach, setCoach] = useState<'room' | 'village' | null>(null);
   const [fade, playFade] = useSceneFade();
   // Life expansion (LIFE-B): panels, the hotbar and fishing.
@@ -510,6 +524,7 @@ function AccountLounge({
     openGame: (_kind: GameKind) => {},
     openInvites: () => {},
     goToTable: (_kind: GameKind) => {},
+    requestTable: () => {},
   });
   // Village music, ambience and UI clicks (start after the first gesture).
   useEffect(() => loungeAudio.attach(), []);
@@ -547,6 +562,7 @@ function AccountLounge({
         );
       } else if (shouldOnboard())
         setCoach(shouldOnboardRoom() && tabRef.current === 'bedroom' ? 'room' : 'village');
+      // (Both start the same hands-on tutorial; the first step works anywhere.)
     }, 1200);
     return () => {
       clearTimeout(first);
@@ -555,10 +571,50 @@ function AccountLounge({
     };
   }, [room, account.id, notify]);
 
-  // Server errors → error toast (errorSeq makes repeated messages show again).
+  // Server errors → error toast (errorSeq makes repeated messages show again,
+  // but the same text is shown once per 20 s so a lost connection does not
+  // flash the same red toast over and over; the header shows 연결 끊김).
+  const lastErrorToast = useRef<{ text: string; at: number } | null>(null);
   useEffect(() => {
-    if (view.errorSeq && view.error) notify(view.error, 'error');
+    if (!view.errorSeq || !view.error) return;
+    const now = Date.now();
+    if (!shouldToastError(lastErrorToast.current, view.error, now)) return;
+    lastErrorToast.current = { text: view.error, at: now };
+    notify(view.error, 'error');
   }, [view.errorSeq, view.error, notify]);
+  // "친구가 오면 알려 드릴게요" (invite window while alone): one heads-up.
+  const [watchFriends, setWatchFriends] = useState(false);
+  useEffect(() => {
+    if (!watchFriends) return;
+    return room.subscribe(() => {
+      const v = room.snapshot();
+      if (v.status !== 'connected' || othersOnline(v.players, v.self) === 0) return;
+      const first = v.players.find((p) => p.id !== v.self);
+      setWatchFriends(false);
+      playCue('invite');
+      pushBanner(
+        'guest',
+        first
+          ? `${josa(ACTORS[first.actor], '이/가')} 마을에 왔어요. 함께 놀아요!`
+          : '친구가 마을에 왔어요.',
+        {
+          key: 'friend-arrived',
+          action: { label: '게임 초대', run: () => flowRef.current.requestTable() },
+        },
+      );
+    });
+  }, [watchFriends, room, pushBanner]);
+  // Back online after a drop: say so once.
+  const linkState = view.link.state;
+  const wasOffline = useRef(false);
+  useEffect(() => {
+    if (linkState === 'offline') wasOffline.current = true;
+    else if (linkState === 'ok' && wasOffline.current) {
+      wasOffline.current = false;
+      lastErrorToast.current = null;
+      notify('다시 연결됐어요.', 'success');
+    }
+  }, [linkState, notify]);
 
   // Open a game screen when a new match seats me (subscribed to the room store,
   // so state changes happen in the store callback rather than during render).
@@ -771,6 +827,14 @@ function AccountLounge({
     },
     [room],
   );
+  /** Puts me at a spot in the hall / casino (the 3D scene hears it at once). */
+  const placeIn = useCallback(
+    (p: { x: number; y: number }) => {
+      move(p.x, p.y);
+      window.dispatchEvent(new CustomEvent(INTERIOR_PLACE_EVENT, { detail: { x: p.x, y: p.y } }));
+    },
+    [move],
+  );
   const enter = (
     destination: VillageDestination | 'village' = 'village',
     place?: VillagePlace,
@@ -779,6 +843,9 @@ function AccountLounge({
     then?: () => void,
   ) => {
     const from = visiting !== null ? 'village' : tab;
+    // Walking in from the village: just inside the hall's / casino's door.
+    if (!at && from === 'village' && (destination === 'lounge' || destination === 'casino'))
+      at = { ...INTERIOR_DOOR };
     const go = () => {
       setVisiting(null);
       setGameScreen(null);
@@ -816,7 +883,7 @@ function AccountLounge({
     enter(tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? 'bedroom' : 'village');
   const backTo =
     tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : NAMES.village;
-  // Esc in the hall, the casino, the wardrobe or my room = 나가기.
+  // Esc in the wardrobe = 나가기 (elsewhere it opens the Esc menu).
   const leaveRef = useRef(leaveInterior);
   useLayoutEffect(() => {
     leaveRef.current = leaveInterior;
@@ -824,10 +891,10 @@ function AccountLounge({
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
-      // The village and my room open the Esc menu instead (see the PC keys below).
+      // The village, my room, the hall and the casino open the Esc menu
+      // instead (see the PC keys below); only the wardrobe leaves on Esc.
       if (
-        tabRef.current === 'village' ||
-        tabRef.current === 'bedroom' ||
+        tabRef.current !== 'wardrobe' ||
         document.querySelector('dialog[open], .l-coach')
       )
         return;
@@ -1120,7 +1187,7 @@ function AccountLounge({
     const area = tab === 'lounge' ? 'lounge' : tab === 'casino' ? 'casino' : null;
     if (kind && area && TABLE_AREA[kind] === area) {
       const side = sceneTableSide(area, kind);
-      move(side.x, side.y);
+      placeIn(side);
     }
   };
   /**
@@ -1145,7 +1212,7 @@ function AccountLounge({
     }
     if (tab === area && visiting === null) {
       setGameScreen(null);
-      move(side.x, side.y);
+      placeIn(side);
       open();
       return;
     }
@@ -1161,7 +1228,7 @@ function AccountLounge({
     const area = TABLE_AREA[game];
     if (tabRef.current !== area) return;
     const side = sceneTableSide(area, game);
-    move(side.x, side.y);
+    placeIn(side);
   };
   /** The action button / E next to a table in the scene. */
   const tableAct = (game: GameKind) => {
@@ -1194,8 +1261,8 @@ function AccountLounge({
     const area = TABLE_AREA[seatGame];
     if (tabRef.current !== area) return;
     const p = sceneSeatPoint(area, seatGame, seatIndex, seatRequired);
-    move(p.x, p.y);
-  }, [seatId, seatGame, seatIndex, seatRequired, move]);
+    placeIn(p);
+  }, [seatId, seatGame, seatIndex, seatRequired, placeIn]);
   useLayoutEffect(() => {
     flowRef.current = {
       openMail: () => openMail(),
@@ -1207,6 +1274,7 @@ function AccountLounge({
       openGame,
       openInvites: () => setModal('invitations'),
       goToTable: (kind) => goToTable(kind),
+      requestTable: flowRef.current.requestTable,
     };
   });
   // The table came on screen (e.g. after the start transition): its turn
@@ -1287,7 +1355,7 @@ function AccountLounge({
     }, 2500);
     return () => clearTimeout(timer);
   }, [connected]);
-  // PC keys (설정 → 조작, lounge-keybinds.ts) in the village and my room:
+  // PC keys (설정 → 조작, lounge-keybinds.ts) in the village, my room, the hall and the casino:
   // Esc 메뉴, F1 조작 안내, I 가방, K 도감, L 친구 사이, J 오늘의 부탁,
   // M 마을 안내, B 게시판. 1–9 (핫바) and moving are the scenes' own.
   const pcKeys = useRef<{ run: (a: BindAction) => boolean }>({ run: () => false });
@@ -1295,7 +1363,7 @@ function AccountLounge({
     pcKeys.current = {
       run: (a) => {
         const place = tabRef.current;
-        if (visiting === null && place !== 'village' && place !== 'bedroom') return false;
+        if (visiting === null && place === 'wardrobe') return false;
         switch (a) {
           case 'menu': {
             // Open panels on the scene (마을 안내, a place card) close first.
@@ -1415,7 +1483,14 @@ function AccountLounge({
    * (a short retained table I keep a seat at) still opens the invite dialog.
    */
   const requestGame = (kind: GameKind | null, preselect?: string[]) => {
-    if (!connected) {
+    // Offline: the picker still opens (tables off with the reason, solo
+    // things on); a table shortcut says why it cannot go there now.
+    const off = offlineReason(view.link.state, view.status);
+    if (off && kind) {
+      notify(off, 'info');
+      return;
+    }
+    if (!connected && view.link.state !== 'offline') {
       setModal('friends');
       return;
     }
@@ -1431,6 +1506,34 @@ function AccountLounge({
     else {
       setRequest({ kind: null });
       setModal('request');
+    }
+  };
+  useLayoutEffect(() => {
+    flowRef.current.requestTable = () => requestGame(null);
+  });
+  /** "혼자 할 수 있는 것" in the invite window. */
+  const goSolo = (kind: SoloKind) => {
+    setModal(null);
+    if (kind === 'farm') {
+      const bed = farmBed(save.actor);
+      if (bed) walkTo(farmFront(bed));
+    } else if (kind === 'fish') walkTo(POND_EDGE);
+    else if (kind === 'museum') walkTo(MUSEUM_FRONT);
+    else if (kind === 'requests') {
+      const open = view.life?.me.requests?.find((r) => !r.done);
+      setBondsInitial(open?.from);
+      setModal('bonds');
+    } else if (kind === 'decorate') {
+      const decorate = () =>
+        window.dispatchEvent(new Event('bumtadew:room-decorate'));
+      if (tabRef.current === 'bedroom' && visiting === null) decorate();
+      else
+        enter(
+          'bedroom',
+          VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`),
+          undefined,
+          () => setTimeout(decorate, 900),
+        );
     }
   };
   const openTable = (kind: GameKind) => {
@@ -1572,13 +1675,49 @@ function AccountLounge({
       if (mode) tableSheet = { game: sheet.game, mode, call: sheet.call };
     }
   }
+  const sheetNode = tableSheet && (
+    <TableSheet
+      key={tableSheet.game + ':' + tableSheet.mode}
+      room={room}
+      view={view}
+      game={tableSheet.game}
+      mode={tableSheet.mode}
+      preselect={tableSheet.call}
+      notify={notify}
+      onClose={() => setSheet(null)}
+      onStand={() => {
+        setSheet(null);
+        standBeside(tableSheet.game);
+      }}
+      onSat={() => {
+        const game = tableSheet.game;
+        // Filling a retained table's empty seat: its screen shows the ready check.
+        if (tableState(room.snapshot(), game).phase === 'retained') {
+          setSheet(null);
+          setGameScreen(game);
+        }
+      }}
+    />
+  );
+  // The hall and the casino are walkable 3D rooms like the village (the flat
+  // floor stays for 간단 그래픽 and when WebGL is not available).
+  const interior3d = !!interior && visiting === null && !settings.simpleGraphics && !interiorFlat;
   return (
     <main
       ref={appRef}
       className={
         inGame
           ? 'l-app l-in-game'
-          : `l-app ${tab === 'village' && visiting === null ? 'l-immersive' : 'l-interior'}`
+          : `l-app ${
+              visiting !== null
+                ? 'l-interior'
+                : tab === 'village' || interior3d
+                  ? 'l-immersive'
+                  : // My room fills the window like the village (꾸미기 already did).
+                    tab === 'bedroom'
+                    ? 'l-immersive l-room-full'
+                    : 'l-interior'
+            }`
       }
       data-space={inGame ? 'game' : visiting === null ? tab : 'visit'}
       onScroll={
@@ -1709,8 +1848,8 @@ function AccountLounge({
           </aside>
         )}
       </div>
-      {!inGame && (tab === 'village' || tab === 'bedroom') && connected && view.life?.calendar && (
-        <div className="l-life-hud" data-place={tab === 'village' && visiting === null ? 'village' : 'interior'}>
+      {!inGame && (tab === 'village' || tab === 'bedroom' || interior3d) && connected && view.life?.calendar && (
+        <div className="l-life-hud" data-place={(tab === 'village' && visiting === null) || interior3d ? 'village' : 'interior'}>
           <CalendarChip life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('digest')} />
         </div>
       )}
@@ -1938,6 +2077,72 @@ function AccountLounge({
             />
           </Suspense>
         </ScreenBoundary>
+      ) : interior3d && interior ? (
+        <section className="l-hall3d" data-testid="hall-3d">
+          <ScreenBoundary
+            name="interior-3d"
+            fallback={(retry, chunk) => (
+              <ScreenError
+                what={interior === 'casino' ? NAMES.casino : NAMES.hall}
+                retry={retry}
+                chunk={chunk}
+                onBack={leaveInterior}
+              />
+            )}
+          >
+            <Suspense fallback={<Loading text="들어가는 중…" />}>
+              <Interior3D
+                key={interior}
+                area={interior}
+                players={players}
+                self={self}
+                me={{ actor: save.actor, look: myLook }}
+                view={view}
+                chat={view.chat.filter((line) => line.scope === interior)}
+                onMove={move}
+                onTable={tableAct}
+                onExit={leaveInterior}
+                onNearDoor={() => preloadTab('village')}
+                seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
+                sheetOpen={!!tableSheet}
+                onUnavailable={() => {
+                  setInteriorFlat(true);
+                  notify('이 기기에서는 입체 화면을 열 수 없어 간단한 화면으로 보여 드려요.', 'info');
+                }}
+              />
+            </Suspense>
+          </ScreenBoundary>
+          {sheetNode}
+          <div className="l-world-social">
+            <button
+              className="l-world-chat-button"
+              aria-label={`${chatTitle} 열기`}
+              onClick={() => setModal('chat')}
+              data-testid="interior-chat"
+            >
+              <MessageCircle size={19} />
+              <span>수다</span>
+            </button>
+            <button
+              className="l-world-chat-button"
+              aria-label="가방 열기"
+              onClick={() => setModal('bag')}
+              data-bind="inventory"
+            >
+              <Backpack size={19} />
+              <span>가방</span>
+            </button>
+            <ReactionDock
+              players={players}
+              self={self}
+              scope={interior}
+              connected={connected}
+              hidden={reactionsHidden}
+              onHidden={setReactionsHidden}
+              onSend={greet}
+            />
+          </div>
+        </section>
       ) : (
         <section className={'l-lounge' + (tab === 'casino' ? ' l-casino' : '')}>
           <div className="l-section-title">
@@ -1981,29 +2186,7 @@ function AccountLounge({
                   />
                 </Suspense>
               </ScreenBoundary>
-              {tableSheet && (
-                <TableSheet
-                  key={tableSheet.game + ':' + tableSheet.mode}
-                  room={room}
-                  view={view}
-                  game={tableSheet.game}
-                  mode={tableSheet.mode}
-                  preselect={tableSheet.call}
-                  onClose={() => setSheet(null)}
-                  onStand={() => {
-                    setSheet(null);
-                    standBeside(tableSheet.game);
-                  }}
-                  onSat={() => {
-                    const game = tableSheet.game;
-                    // Filling a retained table's empty seat: its screen shows the ready check.
-                    if (tableState(room.snapshot(), game).phase === 'retained') {
-                      setSheet(null);
-                      setGameScreen(game);
-                    }
-                  }}
-                />
-              )}
+              {sheetNode}
               <ReactionDock
                 players={players}
                 self={self}
@@ -2246,6 +2429,8 @@ function AccountLounge({
           onLeaveRoom={() => guarded('leaveRoom', () => void leaveRoom())}
           onInvite={() => requestGame(null)}
           onVisit={visitHouse}
+          onMail={(actor) => openMail(actor)}
+          selfActor={save.actor}
         />
       )}
       {modal === 'wallet' && (
@@ -2285,6 +2470,12 @@ function AccountLounge({
           initial={request.kind}
           preselect={request.preselect}
           onPick={(game) => goToTable(game)}
+          onSolo={goSolo}
+          watching={watchFriends}
+          onWatch={(on) => {
+            setWatchFriends(on);
+            if (on) notify('친구가 들어오면 알려 드릴게요.', 'info');
+          }}
           onClose={() => setModal(null)}
           notify={notify}
         />
@@ -2303,7 +2494,7 @@ function AccountLounge({
           onFullscreen={() => void toggleFullscreen()}
           onVillageMenu={() => setModal('menu')}
           onLeaveRoom={
-            tab === 'bedroom' && visiting === null
+            (tab === 'bedroom' || tab === 'lounge' || tab === 'casino') && visiting === null
               ? () => {
                   setModal(null);
                   enter('village');
@@ -2474,16 +2665,15 @@ function AccountLounge({
           onConfirm={reset}
         />
       )}
-      {coach === 'village' && tab === 'village' && visiting === null && !modal && (
-        <Onboarding onDone={() => setCoach(null)} />
-      )}
-      {coach === 'room' && tab === 'bedroom' && visiting === null && !modal && (
+      {coach && visiting === null && !inGame && (
+        // Hands-on first day: walk → door → bag → one seed (Onboarding.tsx).
         <Onboarding
-          place="room"
-          onDone={() => {
-            // The village's own coach marks follow on the first walk outside.
-            setCoach(shouldOnboard() ? 'village' : null);
-          }}
+          place={tab}
+          bagOpen={modal === 'bag'}
+          hidden={!!modal}
+          planted={(view.life?.me.farm ?? []).filter((plot) => plot.crop).length}
+          onGoFarm={() => goSolo('farm')}
+          onDone={() => setCoach(null)}
         />
       )}
       <Toast banners={banners} />

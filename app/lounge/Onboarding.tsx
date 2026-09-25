@@ -1,175 +1,199 @@
 'use client';
-import { useEffect, useLayoutEffect, useState } from 'react';
+// First-day tutorial: four things to actually do, each finished by doing it
+// (not by reading): walk, go through a door, open the bag, plant one seed.
+// A small card under the header says what to press using the player's own
+// key bindings (lounge-keybinds.ts); the scene keeps every key, so nothing
+// blocks the step it asks for. Skippable at any time.
+import { useEffect, useRef, useState } from 'react';
+import { Check } from 'lucide-react';
 import { ONBOARDING_KEY, getSettings, recall, remember } from '../lounge-settings';
-import { keyLabel } from '../lounge-keybinds';
+import { actionForCode, keyLabel } from '../lounge-keybinds';
+import {
+  TUTORIAL_STEPS,
+  tutorialNext,
+  tutorialStepDone,
+  type TutorialStep,
+} from '../lounge-tutorial';
 
-/** The action key as the player bound it (E by default). */
-const actionKey = () => keyLabel(getSettings().keys.action);
-type Step = {
-  target: string;
-  title: string;
-  text: (key: string) => string;
-  /** Optional extra action shown on the card. */
-  action?: { label: string; event: string };
-};
-/** The day starts in my room: two short marks before the first walk outside. */
-const ROOM_STEPS: readonly Step[] = [
-  {
-    target: '[data-testid="bedroom-3d"]',
-    title: '내 방에서 하루를 시작해요',
-    text: () =>
-      '바닥을 클릭하거나 방향키·WASD로 걸어요. 왼쪽 문으로 걸어 나가면 마을이에요. Esc를 누르면 메뉴가 열려요.',
-  },
-  {
-    target: '[data-testid="action-button"]',
-    title: '할 수 있는 일은 버튼 하나로',
-    text: (key) =>
-      `오른쪽 아래 버튼이 가까이 있는 것에 맞춰 바뀌어요. 문 앞에서는 “나가기”, 방 안에서는 “꾸미기”. 키보드는 언제나 ${key}예요.`,
-  },
-];
-const STEPS: readonly Step[] = [
-  {
-    target: '.l-village-world, .l-simple-village',
-    title: '마을을 걸어요',
-    text: (key) =>
-      `바닥을 클릭하거나 방향키·WASD로 걸어요. 문 앞이나 밭 앞에 서면 오른쪽 아래 버튼이 바뀌고, ${key}로 눌러요. F1은 조작 안내예요.`,
-  },
-  {
-    target: '[data-coach="presence"]',
-    title: '친구들은 여기 모여요',
-    text: () => '로그인한 친구는 모두 같은 마을에 들어와요. 누가 있는지 여기서 봐요.',
-  },
-  {
-    target: '[data-coach="invite"]',
-    title: '테이블에 앉아 한 판',
-    text: () => '게임을 고르면 회관이나 카지노의 그 테이블로 가요. 앉은 뒤 친구를 부르고, 자리가 차면 바로 시작해요.',
-  },
-  {
-    target: '[data-farm-label="mine"], [data-testid="simple-farm"]',
-    title: '내 집 앞 텃밭',
-    text: (key) =>
-      `금색 테두리가 내 텃밭 6칸이에요. 가까이 가서 ${key}를 누르면 씨앗을 심고 물을 줄 수 있어요. 광장 옆 큰 밭은 마을 공동 밭이에요.`,
-    action: { label: '내 텃밭으로 가 보기', event: 'bumtadew:guide-farm' },
-  },
-  {
-    target: '[data-testid="dock-bag"]',
-    title: '가방 · 상점 · 친구 집',
-    text: (key) =>
-      `수확물은 가방(I)에서 팔고, 광장 옆 범타듀 상점에서 씨앗과 희귀 소품을 사요. 친구 집 앞에서 ${key}를 누르면 놀러 가서 방명록을 남길 수 있어요.`,
-  },
-];
-
-type Rect = { top: number; left: number; width: number; height: number };
+const ROOM_ONBOARDING_KEY = 'bumtadew-onboarding-room-v1';
 
 export function shouldOnboard() {
   return recall(ONBOARDING_KEY) !== 'done';
 }
-const ROOM_ONBOARDING_KEY = 'bumtadew-onboarding-room-v1';
 export function shouldOnboardRoom() {
   return recall(ROOM_ONBOARDING_KEY) !== 'done';
 }
+/** Done or skipped: never start again on this device (menu can replay it). */
+function markDone() {
+  remember(ONBOARDING_KEY, 'done');
+  remember(ROOM_ONBOARDING_KEY, 'done');
+}
 
-/** First-login coach marks (walk → 친구 모이기 → 게임 초대 → 텃밭·상점·친구 집), stored in localStorage. */
+const MOVES = new Set(['up', 'down', 'left', 'right']);
+const ARROWS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+function Kbd({ children }: { children: string }) {
+  return <kbd className="l-tutorial-key">{children}</kbd>;
+}
+
 export function Onboarding({
+  place,
+  bagOpen,
+  hidden,
+  planted,
+  onGoFarm,
   onDone,
-  place = 'village',
 }: {
+  /** Where I am: 'bedroom' (my room), 'village', or an interior. */
+  place: string;
+  /** The bag window is open (step 3 is done by opening it). */
+  bagOpen: boolean;
+  /** Another window covers the scene: keep tracking, show nothing. */
+  hidden: boolean;
+  /** Plots on my farm with a crop (step 4 is done when this goes up). */
+  planted: number;
+  /** "내 텃밭으로 가기" on the last step. */
+  onGoFarm?: () => void;
   onDone: () => void;
-  /** 'room': the two marks in my room at the start of the day. */
-  place?: 'village' | 'room';
 }) {
-  const [step, setStep] = useState(0);
-  const [rect, setRect] = useState<Rect | null>(null);
-  const steps = place === 'room' ? ROOM_STEPS : STEPS;
-  const current = steps[step];
+  const [step, setStep] = useState<TutorialStep>('move');
+  const [cheer, setCheer] = useState(false);
+  const [moved, setMoved] = useState(false);
+  const index = TUTORIAL_STEPS.indexOf(step);
+  // Where the current step began (a door step is "somewhere else than here").
+  const [start, setStart] = useState({ place, planted });
   const finish = () => {
-    remember(place === 'room' ? ROOM_ONBOARDING_KEY : ONBOARDING_KEY, 'done');
+    markDone();
     onDone();
   };
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = [...document.querySelectorAll(current.target)].find(
-        (node) => getComputedStyle(node).visibility !== 'hidden',
-      );
-      if (!el) return setRect(null);
-      const r = el.getBoundingClientRect();
-      setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [current.target]);
+  const doneRef = useRef(onDone);
   useEffect(() => {
+    doneRef.current = onDone;
+  });
+  const snapshot = { moved, place, bagOpen, planted };
+  const stepDone = tutorialStepDone(step, snapshot, start);
+  // A finished step shows "잘했어요!" briefly, then the next one starts from
+  // the state at that moment.
+  const latest = useRef(snapshot);
+  useEffect(() => {
+    latest.current = { moved, place, bagOpen, planted };
+  });
+  useEffect(() => {
+    if (!stepDone) return;
+    const cheerTimer = setTimeout(() => setCheer(true), 0);
+    const timer = setTimeout(() => {
+      setCheer(false);
+      const next = tutorialNext(step);
+      if (!next) {
+        markDone();
+        doneRef.current();
+        return;
+      }
+      setStart({ place: latest.current.place, planted: latest.current.planted });
+      setStep(next);
+    }, 800);
+    return () => {
+      clearTimeout(cheerTimer);
+      clearTimeout(timer);
+    };
+  }, [stepDone, step]);
+  // Step 1: any walking input (bound keys, arrows, or a click on the floor).
+  useEffect(() => {
+    if (step !== 'move' || moved) return;
     const key = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') finish();
+      const action = actionForCode(getSettings().keys, e.code);
+      if ((action && MOVES.has(action)) || ARROWS.has(e.code)) setMoved(true);
+    };
+    const click = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest?.('[data-testid=village-3d] canvas, [data-testid=bedroom-3d] canvas'))
+        setMoved(true);
     };
     window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  });
-  const big = rect && rect.height > window.innerHeight * 0.5;
-  const below =
-    rect && !big && rect.top + rect.height < window.innerHeight * 0.55;
-  // A target in the lower part of the screen (the bag button on phones) gets
-  // the card above it so the card never covers what it points at.
-  const above = rect && !big && !below;
+    window.addEventListener('pointerdown', click);
+    return () => {
+      window.removeEventListener('keydown', key);
+      window.removeEventListener('pointerdown', click);
+    };
+  }, [step, moved]);
+
+  if (hidden) return null;
+  const keys = getSettings().keys;
+  const act = keyLabel(keys.action),
+    bag = keyLabel(keys.inventory),
+    walk = [keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('');
+  const inRoom = place === 'bedroom';
+  const body =
+    step === 'move' ? (
+      <>
+        <Kbd>{walk}</Kbd> 또는 방향키로 걸어 보세요. 바닥을 클릭해도 걸어가요.{' '}
+        <Kbd>Shift</Kbd>를 누르고 있으면 달려요.
+      </>
+    ) : step === 'door' ? (
+      inRoom ? (
+        <>
+          왼쪽 문 앞까지 걸어가서 <Kbd>{act}</Kbd>를 눌러 마을로 나가요.
+          오른쪽 아래 버튼이 “나가기”로 바뀌면 문 앞이에요.
+        </>
+      ) : (
+        <>
+          아무 집이나 건물 문 앞에 서서 <Kbd>{act}</Kbd>를 눌러 들어가 보세요.
+          <Kbd>Esc</Kbd> 메뉴나 “나가기”로 언제든 돌아와요.
+        </>
+      )
+    ) : step === 'bag' ? (
+      <>
+        <Kbd>{bag}</Kbd>를 눌러 가방을 열어요. 씨앗과 수확물이 여기 모여요.
+        다 보면 <Kbd>Esc</Kbd>로 닫아요.
+      </>
+    ) : (
+      <>
+        내 집 앞 금색 테두리 텃밭으로 가서 <Kbd>{act}</Kbd>를 누르고 씨앗을 하나
+        심어요.
+      </>
+    );
+  const title =
+    step === 'move'
+      ? '걸어 보기'
+      : step === 'door'
+        ? inRoom
+          ? '문으로 나가기'
+          : '문으로 들어가기'
+        : step === 'bag'
+          ? '가방 열기'
+          : '씨앗 하나 심기';
   return (
-    <aside className="l-coach" aria-labelledby="l-coach-title">
-      {rect && !big && (
-        <span
-          className="l-coach-ring"
-          style={{
-            top: rect.top - 6,
-            left: rect.left - 6,
-            width: rect.width + 12,
-            height: rect.height + 12,
-          }}
-          aria-hidden="true"
-        />
-      )}
-      <div
-        className="l-coach-card"
-        style={
-          below
-            ? {
-                top: Math.min(
-                  rect!.top + rect!.height + 14,
-                  window.innerHeight - 200,
-                ),
-              }
-            : above
-              ? { bottom: Math.max(24, window.innerHeight - rect!.top + 14) }
-              : { bottom: 'calc(24px + env(safe-area-inset-bottom))' }
-        }
-      >
+    <aside
+      className="l-tutorial"
+      aria-labelledby="l-tutorial-title"
+      data-testid="tutorial"
+      data-step={step}
+      data-cheer={cheer || undefined}
+    >
+      <div className="l-tutorial-head">
         <small>
-          {step + 1} / {steps.length}
+          처음 해 보기 · {index + 1}/{TUTORIAL_STEPS.length}
         </small>
-        <h2 id="l-coach-title">{current.title}</h2>
-        <p>{current.text(actionKey())}</p>
-        {current.action && (
-          <button
-            className="l-secondary l-coach-action"
-            onClick={() => {
-              window.dispatchEvent(new Event(current.action!.event));
-              setStep(step + 1);
-            }}
-          >
-            {current.action.label}
+        <ol className="l-tutorial-dots" aria-hidden="true">
+          {TUTORIAL_STEPS.map((s, i) => (
+            <li key={s} data-state={i < index ? 'done' : i === index ? 'now' : 'next'} />
+          ))}
+        </ol>
+      </div>
+      <h2 id="l-tutorial-title">
+        {cheer && <Check size={18} aria-hidden="true" />}
+        {cheer ? '잘했어요!' : title}
+      </h2>
+      <p aria-live="polite">{body}</p>
+      <div className="l-tutorial-actions">
+        {step === 'plant' && onGoFarm && !cheer && (
+          <button className="l-secondary" onClick={onGoFarm} data-testid="tutorial-farm">
+            내 텃밭으로 가기
           </button>
         )}
-        <div>
-          <button className="l-text" onClick={finish}>
-            건너뛰기
-          </button>
-          <button
-            className="l-primary"
-            onClick={() =>
-              step + 1 < steps.length ? setStep(step + 1) : finish()
-            }
-          >
-            {step + 1 < steps.length ? '다음' : '시작하기'}
-          </button>
-        </div>
+        <button className="l-text" onClick={finish} data-testid="tutorial-skip">
+          건너뛰기
+        </button>
       </div>
     </aside>
   );

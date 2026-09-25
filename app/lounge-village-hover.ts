@@ -56,3 +56,55 @@ export function villageHoverTarget(
     if (Math.hypot(p.x - tree.x, p.z - tree.z) < 1.1) return { kind: 'spot', id: 'tree' };
   return null;
 }
+
+/** Roof height (world units) of a building's click volume. */
+export function villagePlaceHeight(place: { kind: string }): number {
+  return place.kind === 'home' ? 3.2 : 4.2;
+}
+
+type Vec3 = { x: number; y: number; z: number };
+
+/**
+ * The building a camera ray points at: each place is a box (footprint ×
+ * roof height), and the nearest box the ray enters wins. A click on a roof
+ * or a wall then means that building, not the floor point behind it (which
+ * in the tilted view often belongs to the house further back).
+ */
+export function villagePlaceOnRay(origin: Vec3, dir: Vec3): string | null {
+  let best: string | null = null,
+    bestT = Infinity;
+  for (const place of VILLAGE_PLACES) {
+    const min = { x: place.x - place.width / 2, y: 0, z: place.z - place.depth / 2 },
+      max = { x: place.x + place.width / 2, y: villagePlaceHeight(place), z: place.z + place.depth / 2 };
+    let t0 = -Infinity,
+      t1 = Infinity;
+    let miss = false;
+    for (const axis of ['x', 'y', 'z'] as const) {
+      const o = origin[axis],
+        d = dir[axis];
+      if (Math.abs(d) < 1e-9) {
+        if (o < min[axis] || o > max[axis]) {
+          miss = true;
+          break;
+        }
+        continue;
+      }
+      let a = (min[axis] - o) / d,
+        b = (max[axis] - o) / d;
+      if (a > b) [a, b] = [b, a];
+      t0 = Math.max(t0, a);
+      t1 = Math.min(t1, b);
+      if (t0 > t1) {
+        miss = true;
+        break;
+      }
+    }
+    if (miss || t1 < 0) continue;
+    const t = Math.max(0, t0);
+    if (t < bestT) {
+      bestT = t;
+      best = place.id;
+    }
+  }
+  return best;
+}

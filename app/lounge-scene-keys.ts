@@ -32,11 +32,11 @@ export function sceneKeyTarget(
   return target.closest(PRESSABLE) ? 'button' : 'scene';
 }
 
-/** The walkable scene on screen (3D village or room), if any. */
+/** The walkable scene on screen (village, my room, hall or casino), if any. */
 export function visibleSceneHost(): HTMLElement | null {
   if (typeof document === 'undefined') return null;
   for (const el of document.querySelectorAll<HTMLElement>(
-    '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=village-simple]',
+    '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=village-simple], [data-testid=interior-3d], [data-testid=interior-simple]',
   ))
     if (el.isConnected && el.getClientRects().length) return el;
   return null;

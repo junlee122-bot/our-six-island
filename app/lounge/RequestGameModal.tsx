@@ -19,6 +19,10 @@ import { formatBeom, josa } from '../lounge-text';
 import { GAME_COPY } from './game-copy';
 import { TABLE_PLACE, tableLabel, tableState } from '../lounge-table-state';
 import { Modal } from './Modal';
+import { offlineReason } from '../lounge-connection';
+import { othersOnline, soloActivities, type SoloKind } from '../lounge-solo';
+import { keyLabel } from '../lounge-keybinds';
+import { getSettings } from '../lounge-settings';
 import type { Notify } from './Toast';
 
 const FLEX: GameKind[] = ['poker', 'blackjack', 'seotda'];
@@ -31,6 +35,9 @@ export function RequestGameModal({
   notify,
   preselect,
   onPick,
+  onSolo,
+  watching,
+  onWatch,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -41,13 +48,27 @@ export function RequestGameModal({
   preselect?: string[];
   /** Games start at a table: picking one walks me to it (setup sheet). */
   onPick?: (game: GameKind) => void;
+  /** Something to do alone (nobody online or offline). */
+  onSolo?: (kind: SoloKind) => void;
+  /** "친구가 오면 알려 드릴게요" is on. */
+  watching?: boolean;
+  onWatch?: (on: boolean) => void;
 }) {
   const fillTable =
     initial && view.tables?.[initial]?.members.includes(view.self)
       ? view.tables[initial]
       : undefined;
   if (!fillTable && onPick)
-    return <TablePicker view={view} onClose={onClose} onPick={onPick} />;
+    return (
+      <TablePicker
+        view={view}
+        onClose={onClose}
+        onPick={onPick}
+        onSolo={onSolo}
+        watching={watching}
+        onWatch={onWatch}
+      />
+    );
   return (
     <FillInvite
       room={room}
@@ -60,34 +81,103 @@ export function RequestGameModal({
   );
 }
 
-/** "게임 초대" from the menu: choose a table; I walk there and sit. */
+/**
+ * "게임 초대" from the menu: choose a table; I walk there and sit. With
+ * nobody else online it leads with things to do alone (every table needs two
+ * or more) and offers a heads-up when a friend logs in; offline, the tables
+ * are switched off with the reason.
+ */
 function TablePicker({
   view,
   onClose,
   onPick,
+  onSolo,
+  watching,
+  onWatch,
 }: {
   view: CloudRoomView;
   onClose: () => void;
   onPick: (game: GameKind) => void;
+  onSolo?: (kind: SoloKind) => void;
+  watching?: boolean;
+  onWatch?: (on: boolean) => void;
 }) {
+  const reason = offlineReason(view.link.state, view.status);
+  const alone = !reason && othersOnline(view.players, view.self) === 0;
+  const solo = soloActivities(view.life, keyLabel(getSettings().keys.action));
   return (
-    <Modal title="어느 테이블로 갈까요?" onClose={onClose}>
-      <p className="l-modal-intro">
-        게임은 테이블에 앉아서 시작해요. 고르면 그 테이블 옆으로 가서 판돈과
-        인원을 정하고, 앉은 뒤 친구를 불러요.
-      </p>
-      <ul className="l-table-picker">
+    <Modal
+      title={alone ? '지금은 혼자예요' : reason ? '테이블은 잠시 쉬어요' : '어느 테이블로 갈까요?'}
+      onClose={onClose}
+    >
+      {reason ? (
+        <p className="l-offline-note" role="status" data-testid="picker-offline">
+          {reason} 그동안 혼자 할 수 있는 것도 있어요.
+        </p>
+      ) : alone ? (
+        <p className="l-modal-intro" data-testid="picker-alone">
+          지금 접속한 친구가 없어요. 테이블 게임은 2명부터라, 혼자 할 수 있는
+          걸 골라 봤어요.
+        </p>
+      ) : (
+        <p className="l-modal-intro">
+          게임은 테이블에 앉아서 시작해요. 고르면 그 테이블 옆으로 가서 판돈과
+          인원을 정하고, 앉은 뒤 친구를 불러요.
+        </p>
+      )}
+      {(alone || reason) && onSolo && (
+        <ul className="l-solo-list" aria-label="혼자 할 수 있는 것">
+          {solo.map((a) => (
+            <li key={a.kind}>
+              <button
+                onClick={() => onSolo(a.kind)}
+                data-testid={`solo-${a.kind}`}
+                data-hot={a.hot || undefined}
+              >
+                <strong>{a.title}</strong>
+                <small>{a.detail}</small>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {alone && onWatch && (
+        <div className="l-watch-friends">
+          <label>
+            <input
+              type="checkbox"
+              checked={!!watching}
+              onChange={(e) => onWatch(e.target.checked)}
+              data-testid="watch-friends"
+            />
+            친구가 오면 알려 드릴게요
+          </label>
+          <small>누군가 로그인하면 알림을 한 번 보내요.</small>
+        </div>
+      )}
+      {(alone || reason) && (
+        <h3 className="l-picker-subtitle">
+          테이블{alone ? ' · 친구가 오면 함께해요' : ''}
+        </h3>
+      )}
+      <ul className="l-table-picker" data-muted={alone || !!reason || undefined}>
         {GAME_KINDS.map((k) => {
           const state = tableState(view, k);
           return (
             <li key={k}>
-            <button onClick={() => onPick(k)} data-testid={`pick-${k}`}>
+            <button
+              onClick={() => onPick(k)}
+              data-testid={`pick-${k}`}
+              disabled={!!reason}
+              title={reason ?? undefined}
+            >
               <span aria-hidden="true">{GAME_INFO[k].symbol}</span>
               <span>
                 <strong>{GAME_INFO[k].name}</strong>
                 <small>
                   {TABLE_PLACE[state.area]} · {GAME_COPY[k].players} ·{' '}
-                  {tableLabel(state).status}
+                  {reason ? '연결되면 열려요' : tableLabel(state).status}
                 </small>
               </span>
               <ArrowRight size={17} aria-hidden="true" />

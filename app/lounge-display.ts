@@ -61,6 +61,10 @@ export function displayVariables(settings: Pick<LoungeSettings, 'uiScale' | 'tex
   return {
     '--hud-zoom': String(hud),
     '--dialog-zoom': String(Math.round(hud * settings.textScale) / 100),
+    // Small HUD text over the scene (name tags, signs, header chips, room
+    // status bar) scales with 글자 크기 through font-size, not zoom, so the
+    // projected tags keep their positions.
+    '--text-scale': String(settings.textScale / 100),
   };
 }
 

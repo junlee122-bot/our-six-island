@@ -15,6 +15,8 @@ import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, NAMES, josa } from '../lounge-text';
 import { DailyButton } from './WalletModal';
+import { linkLabel, offlineReason } from '../lounge-connection';
+import { useNow } from './use-now';
 import type { Notify } from './Toast';
 
 export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'bedroom';
@@ -27,45 +29,66 @@ export const TAB_TITLES: Record<Tab, string> = {
   bedroom: NAMES.home,
 };
 
-/** "지금 마을에 있는 친구" avatar row with count. */
+/**
+ * "지금 접속" avatar row with count: only friends who are really online
+ * (resting friends walk the village as dimmed "쉬는 중" figures and are not
+ * counted). While the connection is down it turns into 연결 끊김 · 다시 연결
+ * 중 (n) and a click retries right away.
+ */
 export function PresenceRow({
   view,
   onClick,
+  onRetry,
 }: {
   view: CloudRoomView;
   onClick: () => void;
+  onRetry?: () => void;
 }) {
-  const connected = view.status === 'connected';
+  const offline = view.link.state === 'offline';
+  const now = useNow(offline);
+  const connected = view.status === 'connected' && !offline;
   const others = connected
     ? view.players.filter((p) => p.id !== view.self)
     : [];
-  const label = connected
-    ? others.length
-      ? `지금 마을에 있는 친구 ${others.length}명: ${others.map((p) => ACTORS[p.actor]).join(', ')}`
-      : '지금 마을에 있는 친구 없음'
-    : view.status === 'connecting'
-      ? '마을에 들어가는 중'
-      : '마을에 연결되지 않음';
+  const link = linkLabel(view.link, now);
+  const label = offline
+    ? `${link.title}. ${link.detail}. 누르면 바로 다시 연결해요.`
+    : connected
+      ? others.length
+        ? `지금 접속한 친구 ${others.length}명: ${others.map((p) => ACTORS[p.actor]).join(', ')}`
+        : '지금 접속한 친구 없음. 마을에 보이는 친구들은 쉬는 중이에요.'
+      : view.status === 'connecting'
+        ? '마을에 들어가는 중'
+        : '마을에 연결되지 않음';
   return (
     <button
-      className={'l-presence' + (connected ? '' : ' is-offline')}
-      onClick={onClick}
+      className={
+        'l-presence' +
+        (connected ? '' : ' is-offline') +
+        (offline ? ' is-retrying' : '')
+      }
+      onClick={offline && onRetry ? onRetry : onClick}
       aria-label={label}
+      data-tip={offline ? '지금 다시 연결' : undefined}
       data-coach="presence"
+      data-testid="presence"
+      data-link={view.link.state}
     >
       <span className="l-presence-label" aria-hidden="true">
-        <small>지금 마을에</small>
+        <small>{offline ? link.title : '지금 접속'}</small>
         <b>
-          {connected
-            ? `${others.length}명`
-            : view.status === 'connecting'
-              ? '…'
-              : '끊김'}
+          {offline
+            ? link.detail
+            : connected
+              ? `${others.length}명`
+              : view.status === 'connecting'
+                ? '…'
+                : '끊김'}
         </b>
       </span>
       <span className="l-presence-faces" aria-hidden="true">
         {others.slice(0, 5).map((p) => (
-          <span key={p.id} className="l-presence-face" title={ACTORS[p.actor]}>
+          <span key={p.id} className="l-presence-face" title={`${ACTORS[p.actor]} · 접속 중`}>
             <AvatarView actor={p.actor} look={p.look} portrait />
           </span>
         ))}
@@ -112,6 +135,8 @@ export function WorldHeader({
 }) {
   const village = tab === 'village';
   const unread = view.life?.me.mailUnread ?? 0;
+  // Tables need the server; the picker still opens (solo things to do).
+  const inviteOff = offlineReason(view.link.state, view.status);
   return (
     <header className="l-header l-world-header">
       <button
@@ -121,7 +146,7 @@ export function WorldHeader({
         aria-label={
           village
             ? `${NAMES.app} 메뉴`
-            : `나가기 · ${josa(backTo, '으로/로')}${tab === 'bedroom' ? '' : ' (Esc)'}`
+            : `나가기 · ${josa(backTo, '으로/로')}${tab === 'wardrobe' ? ' (Esc)' : ''}`
         }
       >
         <span className="l-brand-icon">
@@ -139,12 +164,17 @@ export function WorldHeader({
         </span>
       </button>
       <div className="l-header-right">
-        <PresenceRow view={view} onClick={onPresence} />
+        <PresenceRow
+          view={view}
+          onClick={onPresence}
+          onRetry={() => room.reconnect()}
+        />
         <button
-          className="l-invite-button"
+          className={'l-invite-button' + (inviteOff ? ' is-off' : '')}
           onClick={onInvite}
           data-coach="invite"
-          aria-label="게임 초대하기"
+          aria-label={inviteOff ? `게임 초대하기. ${inviteOff}` : '게임 초대하기'}
+          data-tip={inviteOff ?? undefined}
         >
           <Send size={17} aria-hidden="true" />
           <span>게임 초대</span>

@@ -1,0 +1,615 @@
+/* Presence, connection, solo, table calls, tutorial, full-window room and
+   village signs (PC friction fixes M1, M4–M7, M10, M11, H3 follow-up).
+   Small HUD text scales with 설정 → 글자 크기 through --text-scale. */
+
+/* ---------------------------------------------------------- header presence */
+.l-app .l-world-header .l-presence-label small {
+  font-size: calc(12px * var(--text-scale, 1));
+  color: #4d5a44;
+}
+.l-app .l-world-header .l-presence-label b {
+  font-size: calc(14px * var(--text-scale, 1));
+}
+/* A green dot on every face: these friends are really online. */
+.l-presence-face {
+  position: relative;
+  overflow: visible;
+}
+.l-presence-face .avatar-view {
+  border-radius: 50%;
+  overflow: hidden;
+}
+.l-presence-face::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fffdf2;
+  border-radius: 50%;
+  background: #2f9e55;
+}
+.l-app .l-world-header .l-presence.is-retrying {
+  border-color: #e3b3a6;
+  background: #fff3ee;
+  color: #8a2f20;
+  cursor: pointer;
+}
+.l-app .l-world-header .l-presence.is-retrying .l-presence-label small {
+  color: #8a2f20;
+  font-weight: 800;
+}
+.l-app .l-world-header .l-presence.is-retrying .l-presence-label b {
+  font-size: calc(13px * var(--text-scale, 1));
+  font-variant-numeric: tabular-nums;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-presence.is-retrying svg {
+    animation: l-spin-slow 1.6s linear infinite;
+  }
+}
+@keyframes l-spin-slow {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+/* The header invite while tables are off: still opens (solo list inside). */
+.l-app .l-world-header .l-invite-button.is-off {
+  background: #e4e2d8;
+  color: #3f3d35;
+}
+.l-app .l-world-header .l-header-badge {
+  background: #b93a2e;
+  font-size: calc(11px * var(--text-scale, 1));
+  font-weight: 800;
+}
+
+/* ---------------------------------------------------------- friends window */
+.l-online-title,
+.l-resting h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 14px 0 8px;
+  font-size: 14px;
+}
+.l-online-title small,
+.l-resting h3 small {
+  color: #56624b;
+  font-size: 12px;
+  font-weight: 600;
+}
+.l-online-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2f9e55;
+}
+.l-resting {
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #e4e7d8;
+}
+.l-online-list.is-resting li > strong {
+  color: #3e4638;
+}
+.l-online-list.is-resting li > span:not(.l-resting-actions) {
+  color: #5c6454;
+}
+.l-resting-face {
+  display: block;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  opacity: 0.72;
+  filter: grayscale(0.35);
+}
+.l-resting-face .avatar-view {
+  width: 100%;
+  height: 100%;
+}
+.l-resting-actions {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.l-resting-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------- invite window */
+.l-offline-note {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #e8c2b6;
+  border-radius: 10px;
+  background: #fff4ef;
+  color: #7c2d1f;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.l-solo-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.l-solo-list button {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  min-height: 62px;
+  padding: 10px 34px 10px 12px;
+  border: 1px solid #dfe5d1;
+  border-radius: 12px;
+  background: #fbfcf6;
+  color: #2f3a2a;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.l-solo-list button:hover {
+  background: #eef3e4;
+}
+.l-solo-list button[data-hot] {
+  border-color: #d8b24b;
+  background: #fff8df;
+}
+.l-solo-list strong {
+  font-size: 14px;
+}
+.l-solo-list small {
+  color: #56624b;
+  font-size: 12px;
+}
+.l-solo-list svg {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #55704a;
+}
+.l-watch-friends {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px dashed #b9c6a4;
+  border-radius: 12px;
+  background: #f6f9ee;
+}
+.l-watch-friends label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 750;
+  font-size: 14px;
+  cursor: pointer;
+}
+.l-watch-friends input {
+  width: 18px;
+  height: 18px;
+  accent-color: #3f6a4a;
+}
+.l-watch-friends small {
+  padding-left: 26px;
+  color: #56624b;
+  font-size: 12px;
+}
+.l-picker-subtitle {
+  margin: 4px 0 8px;
+  color: #3e4638;
+  font-size: 14px;
+}
+.l-table-picker[data-muted] button {
+  background: #f4f4ee;
+}
+.l-table-picker button:disabled {
+  cursor: not-allowed;
+  color: #55594d;
+}
+.l-table-picker button:disabled > span:first-child {
+  background: #8a8f80;
+}
+.l-table-picker small {
+  color: #56624b;
+}
+
+/* ---------------------------------------------------------- table calls */
+.l-sheet-seats li.is-called {
+  width: 92px;
+}
+.l-sheet-seats li.is-called .avatar-view {
+  opacity: 0.6;
+  box-shadow: 0 0 0 2px #fffdf4, 0 0 0 4px #d8b24b;
+}
+.l-sheet-seats li.is-called[data-call='coming'] .avatar-view {
+  opacity: 0.85;
+  box-shadow: 0 0 0 2px #fffdf4, 0 0 0 4px #2f9e55;
+}
+.l-sheet-seats li.is-called span {
+  display: grid;
+  justify-items: center;
+  line-height: 1.25;
+}
+.l-sheet-seats li.is-called small {
+  white-space: nowrap;
+  color: #6a4a12;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.l-sheet-seats li.is-called[data-call='coming'] small {
+  color: #1f6b39;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .l-sheet-seats li.is-called .avatar-view {
+    animation: l-call-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes l-call-pulse {
+  50% {
+    opacity: 0.9;
+  }
+}
+.l-sheet-declined {
+  margin: 6px 0 0;
+  color: #7c2d1f;
+  font-size: 12px;
+}
+.l-sheet-seats li {
+  color: #4d4132;
+}
+
+/* ---------------------------------------------------------- tutorial */
+.l-tutorial {
+  position: fixed;
+  z-index: var(--z-coach, 900);
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px 12px;
+  border: 1px solid #efe3b8;
+  border-radius: 16px;
+  background: #fffdf5f7;
+  color: #2d3e33;
+  box-shadow: 0 12px 36px #1b2a2133;
+  zoom: var(--dialog-zoom, 1);
+}
+.l-tutorial[data-cheer] {
+  border-color: #9bd1a8;
+  background: #f1fbf1f7;
+}
+.l-tutorial-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.l-tutorial-head small {
+  color: #4f5c46;
+  font-size: 12px;
+  font-weight: 700;
+}
+.l-tutorial-dots {
+  display: flex;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-tutorial-dots li {
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: #dcdcc9;
+}
+.l-tutorial-dots li[data-state='done'] {
+  background: #4b8a57;
+}
+.l-tutorial-dots li[data-state='now'] {
+  background: #d8a22b;
+}
+.l-tutorial h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 4px;
+  font-size: 18px;
+}
+.l-tutorial h2 svg {
+  color: #2f8a4a;
+}
+.l-tutorial p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.l-tutorial-key {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 6px;
+  border: 1px solid #c9bf9f;
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: #fff;
+  color: #2d3e33;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+.l-tutorial-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.l-tutorial-actions .l-text {
+  color: #4b5842;
+}
+
+/* ---------------------------------------------------------- full-window room */
+.l-room-full .b3-bedroom-experience {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.l-room-full .b3-room:not([data-editing]) .b3-scene-frame {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.l-room-full .b3-room:not([data-editing]) .b3-scene {
+  height: auto;
+  min-height: 0;
+}
+/* Title and theme blurb give way to the room; who is visiting stays as a
+   small chip under the header, like the village's top tools. */
+.l-room-full .b3-heading {
+  position: fixed;
+  z-index: 7;
+  top: 90px;
+  left: 20px;
+  margin: 0;
+  pointer-events: none;
+}
+.l-room-full .b3-heading > div:first-child {
+  display: none;
+}
+.l-room-full .b3-heading-side {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.l-room-full .b3-mode-label,
+.l-room-full .b3-visitors {
+  padding: 6px 10px;
+  border: 1px solid #f8f9e5e0;
+  border-radius: 10px;
+  background: #fffdeeeb;
+  color: #4a4234;
+  font-size: calc(12px * var(--text-scale, 1));
+  box-shadow: 0 3px 12px #43523310;
+}
+.l-room-full .b3-room[data-editing] .b3-heading {
+  display: none;
+}
+.l-room-full .b3-owner-bar {
+  position: fixed;
+  z-index: 7;
+  left: 20px;
+  bottom: 56px;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  max-width: calc(100vw - 280px);
+  padding: 0;
+}
+.l-room-full .b3-owner-bar > * {
+  flex: none;
+}
+.l-room-full .b3-status {
+  position: fixed;
+  z-index: 7;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+}
+
+/* The room's status bar: key help on the left, model credits on the right.
+   Both pass 4.5:1 on the bar colour and follow 글자 크기. */
+.l-app .b3-scene-footer {
+  color: #5a4e3c;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .b3-key-help {
+  color: #5a4e3c;
+}
+.l-app .b3-scene-footer .b3-credit {
+  padding: 0;
+  margin: 0 0 0 auto;
+  color: #5a4e3c;
+  font-size: calc(11px * var(--text-scale, 1));
+  text-align: right;
+}
+.l-app .b3-scene-footer .b3-credit a {
+  color: #4a3f2d;
+}
+.l-app .b3-eyebrow {
+  color: #6b5a40;
+}
+.l-app .b3-heading p {
+  color: #625849;
+}
+.l-app .b3-mode-label {
+  color: #5f5645;
+}
+
+/* ---------------------------------------------------------- village tags */
+.l-app .hv-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #34402c;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .hv-tag > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2f9e55;
+  box-shadow: 0 0 0 1.5px #fffbee;
+}
+.l-app .hv-tag.is-away {
+  background: #f1efe6d9;
+  color: #4a4d44;
+  font-weight: 600;
+}
+.l-app .hv-tag.is-away > i {
+  background: #9a9d92;
+}
+.l-app .hv-tag.is-away small {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #e2e0d5;
+  color: #4a4d44;
+  font-size: calc(10.5px * var(--text-scale, 1));
+  font-weight: 700;
+}
+.l-app .hv-self {
+  font-size: calc(12px * var(--text-scale, 1));
+}
+/* The farm chip's ripe count (was 3.4:1). */
+.l-app .hv-place small {
+  background: #3f6a34;
+  color: #fff;
+}
+.hv-labels .hv-place {
+  font-size: calc(12px * var(--text-scale, 1));
+}
+
+/* ---------------------------------------------------------- building signs */
+.l-app .hv-sign {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px 8px;
+  border: 1px solid #6e4f33;
+  border-radius: 4px;
+  background: #fbf1dc;
+  color: #3d2c1b;
+  box-shadow: 0 1px 0 #6e4f33, 0 2px 5px #2a1d1033;
+  font-size: calc(11px * var(--text-scale, 1));
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  white-space: nowrap;
+  pointer-events: none;
+  visibility: hidden;
+  will-change: transform;
+}
+.l-app .hv-sign[data-show='true'] {
+  visibility: visible;
+}
+.l-app .hv-sign-hall,
+.l-app .hv-sign-casino,
+.l-app .hv-sign-wardrobe {
+  padding: 3px 10px;
+  background: #5b3e27;
+  border-color: #3f2a18;
+  color: #fff6e3;
+  font-size: calc(12px * var(--text-scale, 1));
+  box-shadow: 0 1px 0 #3f2a18, 0 3px 8px #2a1d1044;
+}
+.hv-scene[data-phase='night'] .hv-sign {
+  box-shadow: 0 0 0 1px #ffe7a055, 0 3px 10px #0008;
+}
+/* A hovered building gets the hand cursor (canvas) and its name chip. */
+.hv-scene[data-hover-place]:not([data-hover-place='']) .hv-canvas {
+  cursor: pointer;
+}
+.l-room-full .b3-owner-guestbook {
+  flex: 0 1 auto;
+  width: 300px;
+}
+
+/* ---------------------------------------------------------- contrast (M10)
+   Small HUD text raised to at least 4.5:1 on its own background and sized
+   with 글자 크기. */
+.l-app .hv-place.hv-farm-label small {
+  background: #3f6a34;
+  color: #fff;
+}
+.l-app .l-world-header .l-brand small {
+  color: #4f5c46;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .l-hud-date small {
+  color: #525c4b;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .l-banner-more {
+  background: #00000033;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .hv-minimap-note {
+  color: #4f5c46;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .l-sheet-keys {
+  color: #5f5240;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+.l-app .l-sheet-key {
+  opacity: 1;
+}
+.l-app .l-sheet-chips > button[aria-checked='true'] .l-sheet-key {
+  background: #ffffff33;
+  color: #fffdf1;
+}
+/* Disabled buttons: grey with dark grey text instead of a faded colour
+   (the faded blue-green read as white on pale blue). */
+.l-app .l-primary:disabled,
+dialog.l-modal .l-primary:disabled {
+  opacity: 1;
+  background: #dcdfd3;
+  color: #474c42;
+}
+.l-app .l-secondary:disabled,
+dialog.l-modal .l-secondary:disabled {
+  opacity: 1;
+  color: #5a6053;
+}
+.l-app .l-table-picker button:disabled {
+  opacity: 1;
+}
+/* Quiet helper text and text buttons in windows (were 2.6–3.6:1). */
+dialog.l-modal .l-help-text,
+.l-app .l-help-text {
+  color: #5c6553;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+dialog.l-modal .l-text,
+.l-app .l-text {
+  color: #4f5e46;
+  font-size: calc(12px * var(--text-scale, 1));
+}
+dialog.l-modal .l-text.danger,
+.l-app .l-text.danger {
+  color: #8e4a39;
+}

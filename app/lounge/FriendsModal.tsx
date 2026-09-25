@@ -12,6 +12,7 @@ import type { Look } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { NAMES } from '../lounge-text';
 import { Modal } from './Modal';
+import { lookFor } from './friend-looks';
 import type { Notify } from './Toast';
 
 export const AREA_NAMES: Record<string, string> = {
@@ -31,6 +32,8 @@ export function FriendsModal({
   onLeaveRoom,
   onInvite,
   onVisit,
+  onMail,
+  selfActor,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -42,10 +45,22 @@ export function FriendsModal({
   onInvite: () => void;
   /** Walk into that friend's room (shared live with whoever is there). */
   onVisit?: (actor: number) => void;
+  /** Write a letter (friends who are resting get one instead of an invite). */
+  onMail?: (actor: number) => void;
+  /** My own actor, so the resting list leaves me out. */
+  selfActor?: number;
 }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const connected = view.status === 'connected';
+  const offline = view.link.state === 'offline';
+  const connected = view.status === 'connected' && !offline;
+  const online = new Set(view.players.map((p) => p.actor));
+  const me = selfActor ?? view.players.find((p) => p.id === view.self)?.actor;
+  // Friends who are not logged in: they walk their daily round in the village
+  // as "쉬는 중" figures. Letters and room visits work; games do not.
+  const resting = ACTORS.map((_, actor) => actor).filter(
+    (actor) => actor !== me && !online.has(actor),
+  );
   const inVillage = view.code === VILLAGE_CODE;
   const copy = async (text: string) => {
     try {
@@ -66,9 +81,50 @@ export function FriendsModal({
       setBusy(false);
     }
   };
+  const restingList = (connected || offline) && resting.length > 0 && (
+    <section className="l-resting" aria-labelledby="l-resting-title">
+      <h3 id="l-resting-title">
+        쉬는 중인 친구 <small>{resting.length}명 · 지금은 접속하지 않았어요</small>
+      </h3>
+      <ul className="l-online-list is-resting" aria-label="쉬는 중인 친구">
+        {resting.map((actor) => (
+          <li key={actor} data-testid={`resting-${actor}`}>
+            <span className="l-resting-face" aria-hidden="true">
+              <AvatarView actor={actor} look={lookFor(actor)} portrait />
+            </span>
+            <strong>{ACTORS[actor]}</strong>
+            <span>쉬는 중 · 마을을 산책해요</span>
+            <span className="l-resting-actions">
+              {onMail && (
+                <button className="l-secondary" onClick={() => onMail(actor)}>
+                  편지 쓰기
+                </button>
+              )}
+              {onVisit && (
+                <button className="l-text" onClick={() => onVisit(actor)}>
+                  방에 놀러 가기
+                </button>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
   return (
-    <Modal title="지금 마을에 있는 친구" onClose={onClose}>
-      {view.status === 'connecting' ? (
+    <Modal title="친구들" onClose={onClose}>
+      {offline ? (
+        <div className="l-empty">
+          <h3>연결이 끊겼어요.</h3>
+          <p className="l-help-text">
+            다시 연결되면 누가 접속했는지 보여요. 지금 보이는 친구들은 마지막
+            모습이에요.
+          </p>
+          <button className="l-primary" onClick={() => room.reconnect()}>
+            <RotateCcw size={16} /> 지금 다시 연결
+          </button>
+        </div>
+      ) : view.status === 'connecting' ? (
         <div className="l-empty">
           <span className="l-spinner" />
           <h3>마을에 들어가는 중이에요.</h3>
@@ -79,6 +135,10 @@ export function FriendsModal({
             로그인한 친구는 모두 같은 마을에서 만나요. 게임은 회관과 카지노의
             테이블에 앉아서 시작해요.
           </p>
+          <h3 className="l-online-title">
+            <i className="l-online-dot" aria-hidden="true" /> 지금 접속{' '}
+            <small>{Math.max(0, view.players.length - 1)}명</small>
+          </h3>
           <ul className="l-online-list" aria-label="접속 중인 친구">
             {view.players.map((p) => (
               <li key={p.id}>
@@ -112,6 +172,7 @@ export function FriendsModal({
               아직 혼자예요. 친구가 로그인하면 바로 여기에 나타나요.
             </p>
           )}
+          {restingList}
           <div className="l-modal-actions">
             <button className="l-secondary" onClick={onClose}>
               닫기

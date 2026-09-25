@@ -409,6 +409,7 @@ export function RoomFloor({
       <div
         ref={ref}
         className="cf-scene"
+        data-testid="interior-simple"
         tabIndex={0}
         role="application"
         aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 클릭하거나 방향키와 WASD로 이동해요. 테이블을 클릭하면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}

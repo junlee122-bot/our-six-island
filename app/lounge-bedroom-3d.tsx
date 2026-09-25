@@ -232,6 +232,12 @@ export function Bedroom3D({
   useLayoutEffect(() => {
     runActionRef.current = runAction;
   });
+  // "혼자 할 수 있는 것 → 방 꾸미기" from the invite window.
+  useEffect(() => {
+    const decorate = () => runActionRef.current('decorate');
+    window.addEventListener('bumtadew:room-decorate', decorate);
+    return () => window.removeEventListener('bumtadew:room-decorate', decorate);
+  }, []);
   const actionRef = useRef<{ kind: ActionKind; item?: string } | null>(null);
   const historyRef = useRef(history);
   useLayoutEffect(() => {
@@ -1289,6 +1295,18 @@ export function Bedroom3D({
               </>
             )}
           </span>
+          {/* Model credits live in the room's status bar (full-window room). */}
+          <small className="b3-credit">
+            가구 모델{' '}
+            <a href="https://karchive.vibeline.co.kr/models" target="_blank" rel="noreferrer">
+              kArchive
+            </a>
+            (출처: 쓰레드 dogfooter)·
+            <a href="https://3dassets.dev/packs/bedroom-and-living-room-furniture" target="_blank" rel="noreferrer">
+              3DAssets.dev
+            </a>{' '}
+            CC0 · 미쿠 테마 소품은 새로 그린 팬 아트예요
+          </small>
         </div>
       </div>
       {state === 'partial' && <output className="b3-status">{message}</output>}
@@ -1307,17 +1325,6 @@ export function Bedroom3D({
           }}
         />
       )}
-      <p className="b3-credit">
-        가구 모델은{' '}
-        <a href="https://karchive.vibeline.co.kr/models" target="_blank" rel="noreferrer">
-          kArchive
-        </a>
-        (출처: 쓰레드 dogfooter)와{' '}
-        <a href="https://3dassets.dev/packs/bedroom-and-living-room-furniture" target="_blank" rel="noreferrer">
-          3DAssets.dev
-        </a>
-        의 CC0 모델이에요. 미쿠 테마 소품은 이 게임을 위해 새로 그린 팬 아트예요.
-      </p>
     </section>
   );
 }

@@ -23,6 +23,17 @@ import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY } from './game-copy';
 import { AREA_NAMES } from './FriendsModal';
 import { SCENE_LAYOUT } from '../lounge-scene-layout';
+import { boundAction } from '../lounge-scene-keys';
+import {
+  CALL_LABEL,
+  callChanges,
+  callClock,
+  pendingCalls,
+  tableCalls,
+  type TableCall,
+} from '../lounge-table-calls';
+import { useNow } from './use-now';
+import type { Notify } from './Toast';
 
 export type SheetMode = 'setup' | 'join' | 'seated';
 
@@ -48,15 +59,20 @@ function SeatChips({
   view,
   occupants,
   required,
+  calls = [],
 }: {
   view: CloudRoomView;
   occupants: string[];
   required: number;
+  /** Friends called and not answered yet: they hold the empty seats. */
+  calls?: readonly TableCall[];
 }) {
+  const waiting = pendingCalls(calls).filter((c) => !occupants.includes(c.id));
   const seats = Array.from(
     { length: Math.max(required, occupants.length) },
     (_, i) => occupants[i] ?? null,
   );
+  let next = 0;
   return (
     <ul
       className="l-sheet-seats"
@@ -64,12 +80,28 @@ function SeatChips({
     >
       {seats.map((id, i) => {
         const p = id ? view.players.find((q) => q.id === id) : null;
+        const call = !p ? waiting[next++] : undefined;
+        const caller = call ? view.players.find((q) => q.id === call.id) : null;
         return (
-          <li key={id ?? 'empty-' + i} className={p ? 'is-taken' : 'is-empty'}>
+          <li
+            key={id ?? call?.id ?? 'empty-' + i}
+            className={p ? 'is-taken' : call ? 'is-called' : 'is-empty'}
+            data-call={call?.status}
+          >
             {p ? (
               <>
                 <AvatarView actor={p.actor} look={p.look} portrait />
                 <span>{p.id === view.self ? '나' : ACTORS[p.actor]}</span>
+              </>
+            ) : call && caller ? (
+              <>
+                <AvatarView actor={caller.actor} look={caller.look} portrait />
+                <span>
+                  {ACTORS[caller.actor]}
+                  <small>
+                    {CALL_LABEL[call.status]} · {callClock(call.leftMs)}
+                  </small>
+                </span>
               </>
             ) : (
               <>
@@ -93,6 +125,7 @@ export function TableSheet({
   onClose,
   onStand,
   onSat,
+  notify,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -105,6 +138,8 @@ export function TableSheet({
   onStand: () => void;
   /** Sat down (the server accepted my seat). */
   onSat?: () => void;
+  /** Toasts: "도원·호현을 불렀어요", "도원이 앉았어요". */
+  notify?: Notify;
 }) {
   const titleId = useId();
   const state = tableState(view, game);
@@ -162,6 +197,11 @@ export function TableSheet({
     });
   const call = () =>
     run(async () => {
+      const names = chosen
+        .map((id) => view.players.find((p) => p.id === id))
+        .filter((p): p is LoungePlayer => !!p)
+        .map((p) => ACTORS[p.actor])
+        .join('·');
       const ok = await room.action({
         kind: 'invite',
         game,
@@ -171,9 +211,33 @@ export function TableSheet({
       if (ok) {
         setCalling(false);
         setChosen([]);
+        if (names)
+          notify?.(`${josa(names, '을/를')} 불렀어요. 오면 알려 드릴게요.`, 'info');
       }
       return ok;
     });
+  // Called friends: pending seats with a timer, and a toast when one sits
+  // down or says no.
+  const hasCalls = mode === 'seated' && !!invite?.invited.length;
+  const clock = useNow(hasCalls);
+  const calls = tableCalls(
+    mode === 'seated' ? invite : null,
+    view.players,
+    state.area,
+    clock + (view.clockOffset ?? 0),
+  );
+  const lastCalls = useRef<TableCall[]>([]);
+  useEffect(() => {
+    const changes = callChanges(lastCalls.current, calls);
+    lastCalls.current = calls;
+    for (const change of changes) {
+      const p = view.players.find((q) => q.id === change.id);
+      const who = p ? ACTORS[p.actor] : '친구';
+      if (change.status === 'seated')
+        notify?.(`${josa(who, '이/가')} 와서 앉았어요.`, 'success');
+      else notify?.(`${josa(who, '은/는')} 다음에 함께한대요.`, 'info');
+    }
+  }, [calls, view.players, notify]);
   // Desktop keys (the sheet is not modal: the scene keeps its own keys):
   // E / Enter = 앉기 (or send the call), 1–4 = stake, Shift+2–7 = seats,
   // C = 친구 부르기, 1–7 toggle friends in the call list, Esc = close / stand up.
@@ -189,7 +253,7 @@ export function TableSheet({
         return true;
       }
       const onButton = (e.target as HTMLElement | null)?.closest?.('button, a');
-      if (e.code === 'KeyE' || (e.key === 'Enter' && !onButton)) {
+      if (boundAction(e) === 'action' || (e.key === 'Enter' && !onButton)) {
         if (mode === 'seated') {
           if (!calling || !chosen.length) return false;
           void call();
@@ -256,7 +320,7 @@ export function TableSheet({
       const active = document.activeElement;
       if (!active || active === document.body || sheet?.contains(active))
         document
-          .querySelector<HTMLElement>('.cf-scene')
+          .querySelector<HTMLElement>('[data-testid=interior-3d], .cf-scene')
           ?.focus({ preventScroll: true });
     };
   }, []);
@@ -320,7 +384,18 @@ export function TableSheet({
           view={view}
           occupants={state.occupants}
           required={state.required}
+          calls={calls}
         />
+      )}
+      {calls.some((c) => c.status === 'declined' || c.status === 'gone') && (
+        <p className="l-sheet-declined" data-testid="table-declined">
+          {calls
+            .filter((c) => c.status === 'declined' || c.status === 'gone')
+            .map((c) =>
+              `${c.actor === null ? '친구' : ACTORS[c.actor]} · ${c.status === 'declined' ? '다음에' : CALL_LABEL.gone}`,
+            )
+            .join(', ')}
+        </p>
       )}
       {mode === 'setup' && (
         <div className="l-sheet-setup">
@@ -400,8 +475,12 @@ export function TableSheet({
             {formatBeom(tableStake)}
           </strong>
           <span>
-            {left > 0 ? `${left}명 더 앉으면 시작해요.` : '곧 시작해요.'} 범은
-            시작할 때 예약돼요.
+            {left > 0
+              ? pendingCalls(calls).length
+                ? `${pendingCalls(calls).length}명을 기다리는 중 · ${left}명 더 앉으면 시작해요.`
+                : `${left}명 더 앉으면 시작해요.`
+              : '곧 시작해요.'}{' '}
+            범은 시작할 때 예약돼요.
           </span>
         </p>
       )}

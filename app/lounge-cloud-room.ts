@@ -10,6 +10,13 @@ import { receiveReaction } from './lounge-reactions';
 import { friendlyError } from './lounge/feedback';
 import { lastRoomKey, recall, remember } from './lounge-settings';
 import { setServerClockOffset } from './lounge-turn-timer';
+import {
+  LINK_OK,
+  isNetworkFailure,
+  nextLink,
+  retryDelay,
+  type Link,
+} from './lounge-connection';
 
 /**
  * The always-on village: every friend joins this well-known room after login,
@@ -59,6 +66,8 @@ export type CloudRoomView = LoungeView & {
   host?: string;
   /** Latest "범타듀의 하루" state from any response (null until the first one). */
   life: LifeView | null;
+  /** Connection health (lounge-connection.ts): 'offline' after two failed calls in a row. */
+  link: Link;
 };
 
 export class CloudRoom {
@@ -92,6 +101,7 @@ export class CloudRoom {
       lost: false,
       clockOffset: 0,
       life: null,
+      link: LINK_OK,
     };
   }
   subscribe = (fn: () => void) => {
@@ -121,6 +131,7 @@ export class CloudRoom {
       lost: false,
       clockOffset: this.view.clockOffset,
       life: this.view.life,
+      link: this.view.link,
       ...extra,
     };
   }
@@ -155,13 +166,21 @@ export class CloudRoom {
       void this.refresh();
     };
     const online = () => void this.refresh();
+    const offline = () => {
+      if (!this.stopped)
+        this.update({
+          link: nextLink(this.view.link, { kind: 'browser-offline', now: Date.now() }),
+        });
+    };
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('focus', wake);
     window.addEventListener('online', online);
+    window.addEventListener('offline', offline);
     this.detach = () => {
       document.removeEventListener('visibilitychange', wake);
       window.removeEventListener('focus', wake);
       window.removeEventListener('online', online);
+      window.removeEventListener('offline', offline);
     };
   }
   private schedule(ms = VISIBLE_POLL_MS) {
@@ -228,6 +247,7 @@ export class CloudRoom {
       return;
     this.revision = r.revision;
     this.epoch = r.epoch;
+    if (this.view.link !== LINK_OK) this.view = { ...this.view, link: LINK_OK };
     this.activeRoom = r.activeRoom;
     const clockOffset = Number.isFinite(r.serverNow)
       ? r.serverNow - Date.now()
@@ -315,6 +335,13 @@ export class CloudRoom {
     this.apply(result, generation);
     return result;
   }
+  /** "다시 연결" in the header: try right away instead of waiting for the countdown. */
+  reconnect() {
+    if (this.stopped) return;
+    if (this.view.link.state !== 'ok')
+      this.update({ link: { ...this.view.link, retryAt: Date.now() } });
+    void this.refresh();
+  }
   async refresh() {
     if (this.stopped || this.reading) return;
     this.reading = true;
@@ -329,9 +356,17 @@ export class CloudRoom {
         g,
       );
     } catch (e) {
-      if (!this.stopped && g === this.generation)
+      if (this.stopped || g !== this.generation) return;
+      if (isNetworkFailure(e)) {
+        // Background polls stay quiet: the header shows 연결 끊김 and the
+        // countdown to the next try instead of a toast every few seconds.
+        const link = nextLink(this.view.link, { kind: 'fail', now: Date.now() });
+        this.update({ link });
+        this.schedule(retryDelay(link.failures));
+      } else {
         this.fail(e, '연결을 확인해 주세요.');
-      this.schedule();
+        this.schedule();
+      }
     } finally {
       this.reading = false;
     }
@@ -352,7 +387,18 @@ export class CloudRoom {
       try {
         return (await this.send(body, g)).ok;
       } catch (e) {
-        if (g === this.generation) this.fail(e);
+        if (g !== this.generation) return false;
+        if (isNetworkFailure(e)) {
+          const link = nextLink(this.view.link, { kind: 'fail', now: Date.now() });
+          this.update({
+            link,
+            error:
+              link.state === 'offline'
+                ? '연결이 끊겨 있어요. 다시 연결되면 해 주세요.'
+                : friendlyError(e),
+          });
+          this.schedule(retryDelay(link.failures));
+        } else this.fail(e);
         return false;
       }
     });
@@ -441,6 +487,9 @@ export class CloudRoom {
   }
   /** Contract #1: tell the server which area I am in (and my village position). */
   area(area: Area, x?: number, y?: number, home?: number) {
+    // A move still waiting for its (debounced) send belongs to the place I am
+    // leaving: sent after this, it would put me at village coordinates inside.
+    this.movement = null;
     const action = {
       kind: 'area',
       area,
