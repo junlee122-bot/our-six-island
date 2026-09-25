@@ -29,6 +29,7 @@ import {
   type LifeState,
 } from './lounge-life.ts';
 import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
+import { recordTables, recordVisit } from './lounge-life-plus.ts';
 export type CloudMember = { id: string; actor: number; username: string };
 type Lease = { connection: string; seen: number; sequence: number };
 type Room = { snapshot: HostedRoomSnapshot; leases: Record<string, Lease> };
@@ -345,6 +346,17 @@ export function cloudTransition(
           }
           const reason = r.hostedAttempt(member.id, command.action, now);
           if (reason) throw new CloudError(reason, 409);
+          // Visiting a friend's room counts toward friendship and the digest.
+          if (
+            action.kind === 'area' &&
+            action.area === 'home' &&
+            validHomeOwner(action.home) &&
+            action.home !== member.actor
+          ) {
+            const before = readLife(g.life),
+              after = recordVisit(before, member, action.home as number, now);
+            if (after !== before) g.life = after;
+          }
           // A coalesced look is applied by a later tick; no broadcast now.
           quiet = r.hostedCoalesced;
         }
@@ -371,6 +383,21 @@ export function cloudTransition(
     error = receipt.error;
     status = ok ? 200 : 409;
     target = receipt.code || target;
+  }
+  // Table games that settled in this transition: friendship, stats, the
+  // Friday casino-night bonus and a digest line (life expansion).
+  const settled = Object.entries(g.ledger.games)
+    .filter(
+      ([id, game]) =>
+        game.state === 'settled' &&
+        original.ledger.games[id]?.state !== 'settled' &&
+        game.wallets.length > 1,
+    )
+    .map(([id, game]) => ({ id, wallets: game.wallets }));
+  if (settled.length) {
+    const next = recordTables(readLife(g.life), g.ledger, settled, now);
+    g.life = next.life;
+    g.ledger = next.ledger;
   }
   // No packet before the caller atomically commits g. A receipt returns a fresh
   // authorized view, never another connection's historical private response.

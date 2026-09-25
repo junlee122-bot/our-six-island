@@ -9,26 +9,87 @@ import {
   nextKstMidnight,
   type LoungeLedger,
 } from './lounge-economy.ts';
+import { dayStart, hash32, rainsOn, seasonOf, type Season } from './lounge-calendar.ts';
+import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
+// Cycle-safe: lounge-life-plus.ts imports this module back, so neither module
+// may use the other's bindings at the top level (only inside functions).
+import {
+  farmSizeOf,
+  plusAction,
+  plusView,
+  readLifeExt,
+  afterCoreAction,
+  plantSpeed,
+  hasFlag,
+  bump,
+  discover,
+  addCropQ,
+  cropQCount,
+  takeCrop,
+  invCount,
+  addInv,
+  onGift,
+  type LifeExt,
+  type PlusAction,
+  type PlusView,
+  type PlusMe,
+} from './lounge-life-plus.ts';
 
-export type Crop = 'carrot' | 'tomato' | 'pumpkin' | 'strawberry';
-export const CROPS: Crop[] = ['carrot', 'tomato', 'pumpkin', 'strawberry'];
+/** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
+export type Crop =
+  | 'carrot'
+  | 'tomato'
+  | 'pumpkin'
+  | 'strawberry'
+  | 'potato'
+  | 'spinach'
+  | 'corn'
+  | 'watermelon'
+  | 'sweetpotato'
+  | 'cabbage';
+export const BASE_CROPS: Crop[] = ['carrot', 'tomato', 'pumpkin', 'strawberry'];
+export const CROPS: Crop[] = [
+  ...BASE_CROPS,
+  'potato',
+  'spinach',
+  'corn',
+  'watermelon',
+  'sweetpotato',
+  'cabbage',
+];
 const MIN = 60_000,
   HOUR = 3_600_000;
 /*
- * Economy (documented in GAME_PROGRESS / POLISH-B notes; tests pin it):
+ * Economy (documented in GAME_PROGRESS / POLISH-B / LIFE-A notes; tests pin it):
  * - Start 100,000범, daily grant 3,000범, table stakes ~10,000범.
  * - Profit per hour with all 6 plots watered rises with the crop's length, so
  *   the "twice a day" rhythm (long crops) beats clicking carrots every few
  *   minutes: carrot 2,000/h < tomato 2,800/h < pumpkin ~4,300/h < strawberry
  *   5,000/h. One overnight strawberry bed = 30,000범 (3 table stakes).
- * - The daily sell cap (40,000범) bounds how much new 범 farming prints.
+ * - The four base crops grow in every season (old bags stay useful). The six
+ *   seasonal crops grow only in their seasons (or anywhere once the village
+ *   greenhouse is restored) and land in the same 3,000–5,400/h band; corn
+ *   regrows twice after the first harvest.
+ * - The daily sell cap (40,000범) bounds how much new 범 farming prints; fish,
+ *   bugs, forage and dishes share it. Quality: silver ×1.25, gold ×1.5.
  * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
  *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
+ *   The life expansion adds furniture (5k–40k each), fertilizer, farm
+ *   expansion (150k + 400k), rod upgrades (30k + 120k) and the shared village
+ *   bundles (1.6M범 in 범 slots) — see lounge-life-plus.ts.
  */
-export const CROP_INFO: Record<
-  Crop,
-  { name: string; growMs: number; seed: number; sell: number; emoji: string }
-> = {
+export type CropInfo = {
+  name: string;
+  growMs: number;
+  seed: number;
+  sell: number;
+  emoji: string;
+  /** Seasons it can be planted in (absent = every season). */
+  seasons?: readonly Season[];
+  /** Regrows after harvest: time to the next harvest and total harvests. */
+  regrow?: { ms: number; harvests: number };
+};
+export const CROP_INFO: Record<Crop, CropInfo> = {
   carrot: { name: '당근', growMs: 30 * MIN, seed: 100, sell: 200, emoji: '🥕' },
   tomato: { name: '토마토', growMs: HOUR, seed: 200, sell: 480, emoji: '🍅' },
   pumpkin: { name: '호박', growMs: 3 * HOUR, seed: 500, sell: 1_800, emoji: '🎃' },
@@ -39,11 +100,72 @@ export const CROP_INFO: Record<
     sell: 5_000,
     emoji: '🍓',
   },
+  potato: { name: '감자', growMs: 2 * HOUR, seed: 300, sell: 900, emoji: '🥔', seasons: ['spring'] },
+  spinach: {
+    name: '시금치',
+    growMs: 4 * HOUR,
+    seed: 600,
+    sell: 2_200,
+    emoji: '🥬',
+    seasons: ['winter', 'spring'],
+  },
+  corn: {
+    name: '옥수수',
+    growMs: 6 * HOUR,
+    seed: 800,
+    sell: 2_400,
+    emoji: '🌽',
+    seasons: ['summer', 'autumn'],
+    regrow: { ms: 3 * HOUR, harvests: 3 },
+  },
+  watermelon: {
+    name: '수박',
+    growMs: 12 * HOUR,
+    seed: 2_000,
+    sell: 8_000,
+    emoji: '🍉',
+    seasons: ['summer'],
+  },
+  sweetpotato: {
+    name: '고구마',
+    growMs: 6 * HOUR,
+    seed: 700,
+    sell: 3_000,
+    emoji: '🍠',
+    seasons: ['autumn'],
+  },
+  cabbage: {
+    name: '배추',
+    growMs: 8 * HOUR,
+    seed: 1_000,
+    sell: 3_600,
+    emoji: '🥬',
+    seasons: ['autumn', 'winter'],
+  },
 };
+/** Whether a crop can be planted in a season (base crops: always). */
+export const cropInSeason = (crop: Crop, season: Season) =>
+  !CROP_INFO[crop].seasons || CROP_INFO[crop].seasons!.includes(season);
+/** Quality stars: 0 normal, 1 silver, 2 gold. */
+export type Quality = 0 | 1 | 2;
+export const QUALITY_MULT: Record<Quality, number> = { 0: 1, 1: 1.25, 2: 1.5 };
+export const QUALITY_NAME: Record<Quality, string> = { 0: '', 1: '은별', 2: '금별' };
+/** [gold below, silver below] out of 100 per fertilizer level. */
+export const QUALITY_ODDS: Record<0 | 1 | 2, [number, number]> = {
+  0: [5, 25],
+  1: [15, 50],
+  2: [35, 80],
+};
+/** Deluxe fertilizer growth bonus (percent faster). */
+export const DELUXE_SPEED = 10;
+export const MAX_SPEED = 40;
 export const FRUIT_SELL = 150;
 /** Watering makes the remaining growth 40% shorter (runs at 1/0.6 speed). */
 export const WATER_SPEEDUP = 0.4;
 export const PLOTS_PER_USER = 6;
+/** Farm sizes: 6 plots, expandable to 9 and 12 (see FARM_EXPAND_PRICE). */
+export const FARM_SIZES = [6, 9, 12] as const;
+export type FarmSize = (typeof FARM_SIZES)[number];
 export const FRUIT_TREES = [
   'tree-1',
   'tree-2',
@@ -194,7 +316,17 @@ export function shopLock(
   return null;
 }
 
-export type Plot = { crop: Crop | null; plantedAt: number; wateredAt: number | null };
+export type Plot = {
+  crop: Crop | null;
+  plantedAt: number;
+  wateredAt: number | null;
+  /** Fertilizer level (quality odds; deluxe also grows faster). */
+  fert?: 1 | 2;
+  /** Percent faster growth (deluxe fertilizer, 초록 손 buff), ≤ MAX_SPEED. */
+  speed?: number;
+  /** Harvests already taken from a regrowing crop. */
+  n?: number;
+};
 export type Bag = {
   seeds: Record<Crop, number>;
   produce: Record<Crop, number>;
@@ -203,7 +335,9 @@ export type Bag = {
 export type GuestEntry = { from: string; actor: number; text: string; at: number };
 export type Gift =
   | { kind: 'produce'; crop: Crop; n: number }
-  | { kind: 'fruit'; n: number };
+  | { kind: 'fruit'; n: number }
+  /** Life-expansion items (fish, bugs, forage, dishes, materials). */
+  | { kind: 'item'; item: string; n: number };
 export type MailItem = {
   id: string;
   from: string;
@@ -239,7 +373,7 @@ export type LifeState = {
   guestbookSeen?: Record<string, number>;
   /** Lifetime harvest/pick counts per user (trophy milestones). Optional. */
   harvested?: Record<string, Partial<Record<HarvestKind, number>>>;
-};
+} & LifeExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -248,7 +382,7 @@ export type LifeAction =
   | { kind: 'water'; plot: number }
   | { kind: 'harvest'; plot: number }
   | { kind: 'pick'; tree: string }
-  | { kind: 'sell'; crop: Crop | 'fruit'; n: number }
+  | { kind: 'sell'; crop: Crop | 'fruit'; n: number; quality?: Quality }
   | { kind: 'buy'; item: string; n?: number }
   | { kind: 'guestbook'; owner: number | string; text: string }
   | {
@@ -263,7 +397,8 @@ export type LifeAction =
   /** Room access setting and/or "my room changed" revision bump (owner only). */
   | { kind: 'room'; access?: RoomAccess }
   /** The owner looked at their guestbook (clears the unread badge). */
-  | { kind: 'readGuestbook' };
+  | { kind: 'readGuestbook' }
+  | PlusAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -277,6 +412,7 @@ export const LIFE_ACTION_KINDS = [
   'status',
   'room',
   'readGuestbook',
+  ...PLUS_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -313,6 +449,9 @@ export const LIFE_REJECT = {
   mail: '편지를 찾을 수 없어요.',
   sticker: '스티커를 확인해 주세요.',
   gift: '선물을 확인해 주세요.',
+  season: '지금은 심을 수 없는 계절이에요.',
+  rained: '비가 와서 이미 촉촉해요.',
+  quality: '품질을 확인해 주세요.',
 } as const;
 export class LifeError extends Error {
   status = 409;
@@ -336,12 +475,8 @@ const CONTROL = new RegExp(
   // oxlint-disable-next-line no-control-regex -- rejecting control characters is the point.
   '[\\u0000-\\u001f\\u007f-\\u009f\\u200b\\u200e\\u200f\\u2028-\\u202e\\u2060-\\u206f\\ufeff]',
 );
-const cropCounts = (): Record<Crop, number> => ({
-  carrot: 0,
-  tomato: 0,
-  pumpkin: 0,
-  strawberry: 0,
-});
+const cropCounts = (): Record<Crop, number> =>
+  Object.fromEntries(CROPS.map((c) => [c, 0])) as Record<Crop, number>;
 const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0, wateredAt: null });
 export const emptyBag = (): Bag => ({
   seeds: cropCounts(),
@@ -383,19 +518,57 @@ const cleanText = (value: unknown, max: number) =>
     : '';
 
 // ---------------------------------------------------------------- growth
-/** When a planted crop is ready (server clock), or null for an empty plot. */
-export function plotReadyAt(plot: Plot): number | null {
+/** Growth time of this plot's current cycle (regrow cycles are shorter). */
+export function plotGrowMs(plot: Plot) {
+  if (!plot.crop) return 0;
+  const info = CROP_INFO[plot.crop],
+    base = (plot.n ?? 0) > 0 && info.regrow ? info.regrow.ms : info.growMs;
+  return Math.ceil((base * (100 - Math.min(MAX_SPEED, plot.speed ?? 0))) / 100);
+}
+/**
+ * When rain watered this plot (the start of the first rainy KST day on or
+ * after planting, never before planting), or null. Only rain that has begun
+ * by `now` counts; the forecast is deterministic (lounge-calendar weatherOf).
+ */
+export function plotRainAt(plot: Plot, now = Infinity): number | null {
   if (!plot.crop) return null;
-  const grow = CROP_INFO[plot.crop].growMs,
-    w = plot.wateredAt;
-  if (w === null || w < plot.plantedAt) return plot.plantedAt + grow;
+  const end = Math.min(now, plot.plantedAt + plotGrowMs(plot));
+  for (let d = kstDay(plot.plantedAt); d <= kstDay(end) && d <= kstDay(plot.plantedAt) + 3; d++)
+    if (rainsOn(d)) {
+      const at = Math.max(plot.plantedAt, dayStart(d));
+      return at <= end ? at : null;
+    }
+  return null;
+}
+/** Effective watering time: by hand or by rain, whichever came first. */
+export function plotWateredAt(plot: Plot, now = Infinity): number | null {
+  const rain = plotRainAt(plot, now),
+    hand = plot.wateredAt !== null && plot.wateredAt >= plot.plantedAt ? plot.wateredAt : null;
+  return rain === null ? hand : hand === null ? rain : Math.min(rain, hand);
+}
+/**
+ * When a planted crop is ready (server clock), or null for an empty plot.
+ * Rain that has started by `now` waters the plot (default: the whole forecast).
+ */
+export function plotReadyAt(plot: Plot, now = Infinity): number | null {
+  if (!plot.crop) return null;
+  const grow = plotGrowMs(plot),
+    w = plotWateredAt(plot, now);
+  if (w === null) return plot.plantedAt + grow;
   const done = w - plot.plantedAt;
   if (done >= grow) return plot.plantedAt + grow;
   // After watering, the remaining growth runs 40% shorter.
   return w + Math.ceil((grow - done) * (1 - WATER_SPEEDUP));
 }
+/** Quality this plot will give at harvest (deterministic per planting). */
+export function plotQuality(uid: string, index: number, plot: Plot): Quality {
+  if (!plot.crop) return 0;
+  const roll = hash32(`q:${uid}:${index}:${plot.plantedAt}:${plot.crop}`) % 100,
+    [gold, silver] = QUALITY_ODDS[plot.fert ?? 0];
+  return roll < gold ? 2 : roll < silver ? 1 : 0;
+}
 export function plotProgress(plot: Plot, now: number) {
-  const ready = plotReadyAt(plot);
+  const ready = plotReadyAt(plot, now);
   if (ready === null) return 0;
   if (now >= ready) return 1;
   const total = ready - plot.plantedAt;
@@ -421,12 +594,20 @@ function fruitYield(uid: string, tree: string, now: number, seq: number) {
 function readPlot(value: unknown): Plot {
   const p = (value ?? {}) as Partial<Plot>;
   if (!isCrop(p.crop)) return emptyPlot();
-  return {
+  const out: Plot = {
     crop: p.crop,
     plantedAt: time(p.plantedAt),
     wateredAt: p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt),
   };
+  if (p.fert === 1 || p.fert === 2) out.fert = p.fert;
+  if (safe(p.speed) && p.speed > 0) out.speed = Math.min(MAX_SPEED, p.speed);
+  const regrow = CROP_INFO[p.crop].regrow;
+  if (regrow && safe(p.n) && p.n > 0) out.n = Math.min(regrow.harvests - 1, p.n);
+  return out;
 }
+/** Farm length for a stored array (6, 9 or 12; anything else → 6). */
+const farmLength = (f: unknown) =>
+  Array.isArray(f) && (FARM_SIZES as readonly number[]).includes(f.length) ? f.length : PLOTS_PER_USER;
 function readBag(value: unknown): Bag {
   const b = (value ?? {}) as Partial<Bag>,
     bag = emptyBag();
@@ -444,6 +625,9 @@ function readGift(value: unknown): Gift | undefined {
   if (g.kind === 'fruit') return { kind: 'fruit', n: g.n };
   if (g.kind === 'produce' && isCrop(g.crop))
     return { kind: 'produce', crop: g.crop, n: g.n };
+  const item = (g as { item?: unknown }).item;
+  if (g.kind === 'item' && isItemId(item) && ITEM_BY_ID[item].kind !== 'tool')
+    return { kind: 'item', item, n: g.n };
 }
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v)
@@ -516,7 +700,7 @@ export function readLife(value: unknown): LifeState {
   };
   return {
     farms: users(v.farms, (f) =>
-      Array.from({ length: PLOTS_PER_USER }, (_, i) =>
+      Array.from({ length: farmLength(f) }, (_, i) =>
         readPlot(Array.isArray(f) ? f[i] : null),
       ),
     ),
@@ -567,6 +751,7 @@ export function readLife(value: unknown): LifeState {
     ...roomsOf(v.rooms),
     ...guestbookSeenOf(v.guestbookSeen),
     ...harvestedOf(v.harvested),
+    ...readLifeExt(v),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -592,22 +777,21 @@ export function ensureLifeMember(
   actor: number,
 ): LifeState {
   if (!UUID.test(uid) || !actorValid(actor)) fail(LIFE_REJECT.invalid);
-  if (
-    life.actors[uid] === actor &&
-    life.bag[uid] &&
-    life.farms[uid]?.length === PLOTS_PER_USER
-  )
+  const size = farmSizeOf(life, uid);
+  if (life.actors[uid] === actor && life.bag[uid] && life.farms[uid]?.length === size)
     return life;
-  const next = structuredClone(life);
+  const next = cloneLife(life);
   // One uid per actor: a re-created account replaces the old mapping.
   for (const [id, a] of Object.entries(next.actors))
     if (a === actor && id !== uid) delete next.actors[id];
   next.actors[uid] = actor;
   next.bag[uid] ??= starterBag();
-  next.farms[uid] ??= Array.from({ length: PLOTS_PER_USER }, emptyPlot);
+  const farm = (next.farms[uid] ??= []);
+  while (farm.length < size) farm.push(emptyPlot());
+  farm.length = size;
   return next;
 }
-const uidOf = (life: LifeState, target: unknown): string | null => {
+export const uidOf = (life: LifeState, target: unknown): string | null => {
   if (typeof target === 'string' && UUID.test(target))
     return target in life.actors ? target : null;
   if (!actorValid(target)) return null;
@@ -619,15 +803,31 @@ export function sellCapLeft(life: LifeState, uid: string, now: number) {
   const s = life.sold[uid];
   return SELL_CAP_PER_DAY - (s && s.day === kstDay(now) ? s.amount : 0);
 }
-const plotIndex = (plot: unknown) =>
-  safe(plot) && plot >= 0 && plot < PLOTS_PER_USER
-    ? plot
-    : fail(LIFE_REJECT.plot);
+const plotIndex = (plot: unknown, size: number) =>
+  safe(plot) && plot >= 0 && plot < size ? plot : fail(LIFE_REJECT.plot);
 const pushBounded = <T>(list: T[] | undefined, item: T, max: number) =>
   [...(list ?? []), item].slice(-max);
-const addCount = (n: number, add: number) => Math.min(BAG_MAX, n + add);
+export const addCount = (n: number, add: number) => Math.min(BAG_MAX, n + add);
 
 // ---------------------------------------------------------------- actions
+/**
+ * Copy of the life state for one transition. Mail, guestbooks and memories
+ * are only ever replaced (never mutated in place), so their per-user lists are
+ * shared; everything else is deep-copied. Keeps key order.
+ */
+const SHARED_KEYS = new Set(['mail', 'guestbook', 'memories']);
+export function cloneLife(life: LifeState): LifeState {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(life))
+    out[key] = SHARED_KEYS.has(key)
+      ? Array.isArray(value)
+        ? value
+        : { ...(value as object) }
+      : typeof value === 'object' && value !== null
+        ? structuredClone(value)
+        : value;
+  return out as LifeState;
+}
 /**
  * Applies one life action for `member`. Returns new state and ledger (inputs
  * are not mutated). Throws LifeError with a Korean message on rejection.
@@ -640,7 +840,7 @@ export function lifeAction(
   now: number,
 ): { life: LifeState; ledger: LoungeLedger } {
   if (!isLifeAction(action)) fail(LIFE_REJECT.invalid);
-  const life = structuredClone(ensureLifeMember(original, member.id, member.actor));
+  const life = cloneLife(ensureLifeMember(original, member.id, member.actor));
   const uid = member.id,
     wallet = 'wallet-' + uid,
     bag = life.bag[uid],
@@ -653,49 +853,72 @@ export function lifeAction(
   };
   const nextId = (prefix: string) => `${prefix}-${uid}-${++life.seq}`;
   let nextLedger = ledger;
+  const kind = a.kind as string;
+  if ((PLUS_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = plusAction(life, ledger, member, a as PlusAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  const size = farm.length;
+  const plantOk = (crop: Crop) => {
+    if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse'))
+      fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
+  };
+  const newPlot = (crop: Crop): Plot => {
+    const speed = plantSpeed(life, uid, now);
+    return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}) };
+  };
   switch (a.kind) {
     case 'plant': {
       // plot -1 plants every empty plot (as many as there are seeds): one
       // request and one friend broadcast instead of six.
       if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
+      plantOk(a.crop);
       if (a.plot === -1) {
         const empty = farm.flatMap((p, i) => (p.crop ? [] : [i]));
         if (!empty.length) fail(LIFE_REJECT.noEmpty);
         if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
         for (const i of empty.slice(0, bag.seeds[a.crop])) {
           bag.seeds[a.crop] -= 1;
-          farm[i] = { crop: a.crop, plantedAt: now, wateredAt: null };
+          farm[i] = newPlot(a.crop);
         }
         break;
       }
-      const i = plotIndex(a.plot);
+      const i = plotIndex(a.plot, size);
       if (farm[i].crop) fail(LIFE_REJECT.occupied);
       if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
       bag.seeds[a.crop] -= 1;
-      farm[i] = { crop: a.crop, plantedAt: now, wateredAt: null };
+      farm[i] = newPlot(a.crop);
       break;
     }
     case 'water': {
       if (a.plot === -1) {
         let watered = 0;
         for (const plot of farm)
-          if (plot.crop && plot.wateredAt === null && now < plotReadyAt(plot)!) {
+          if (
+            plot.crop &&
+            plot.wateredAt === null &&
+            plotRainAt(plot, now) === null &&
+            now < plotReadyAt(plot, now)!
+          ) {
             plot.wateredAt = now;
             watered++;
           }
         if (!watered) fail(LIFE_REJECT.nothingToWater);
+        bump(life, uid, 'water', watered);
         break;
       }
-      const i = plotIndex(a.plot),
+      const i = plotIndex(a.plot, size),
         plot = farm[i];
       if (!plot.crop) fail(LIFE_REJECT.empty);
       if (plot.wateredAt !== null) fail(LIFE_REJECT.watered);
-      if (now >= plotReadyAt(plot)!) fail(LIFE_REJECT.grown);
+      if (now >= plotReadyAt(plot, now)!) fail(LIFE_REJECT.grown);
+      if (plotRainAt(plot, now) !== null) fail(LIFE_REJECT.rained);
       plot.wateredAt = now;
+      bump(life, uid, 'water', 1);
       break;
     }
     case 'harvest': {
-      if (a.plot !== -1) plotIndex(a.plot);
+      if (a.plot !== -1) plotIndex(a.plot, size);
       const targets =
         a.plot === -1 ? farm.map((_, i) => i) : [a.plot as number];
       let harvested = 0;
@@ -705,13 +928,30 @@ export function lifeAction(
           if (a.plot !== -1) fail(LIFE_REJECT.empty);
           continue;
         }
-        if (now < plotReadyAt(plot)!) {
+        if (now < plotReadyAt(plot, now)!) {
           if (a.plot !== -1) fail(LIFE_REJECT.notReady);
           continue;
         }
-        bag.produce[plot.crop] = addCount(bag.produce[plot.crop], 1);
-        countHarvest(life, uid, plot.crop, 1);
-        farm[i] = emptyPlot();
+        const crop = plot.crop,
+          quality = plotQuality(uid, i, plot);
+        addCropQ(life, uid, crop, quality, 1);
+        countHarvest(life, uid, crop, 1);
+        bump(life, uid, 'harvest', 1);
+        if (quality === 2) bump(life, uid, 'gold', 1);
+        discover(life, uid, crop);
+        const regrow = CROP_INFO[crop].regrow,
+          n = (plot.n ?? 0) + 1;
+        farm[i] =
+          regrow && n < regrow.harvests
+            ? {
+                crop,
+                plantedAt: now,
+                wateredAt: null,
+                ...(plot.fert ? { fert: plot.fert } : {}),
+                ...(plot.speed ? { speed: plot.speed } : {}),
+                n,
+              }
+            : emptyPlot();
         harvested++;
       }
       if (!harvested) fail(LIFE_REJECT.nothingReady);
@@ -730,23 +970,45 @@ export function lifeAction(
       break;
     }
     case 'sell': {
+      // No quality: lowest stars first (older clients); a quality sells only that tier.
       const fruit = a.crop === 'fruit';
       if (!fruit && !isCrop(a.crop)) fail(LIFE_REJECT.invalid);
       if (!safe(a.n) || a.n < 1 || a.n > SELL_MAX_N) fail(LIFE_REJECT.invalid);
-      const have = fruit ? bag.fruit : bag.produce[a.crop as Crop];
+      const q = a.quality;
+      if (q !== undefined && q !== 0 && q !== 1 && q !== 2) fail(LIFE_REJECT.quality);
+      if (fruit && q) fail(LIFE_REJECT.quality);
+      const have = fruit
+        ? bag.fruit
+        : q === undefined
+          ? bag.produce[a.crop as Crop]
+          : cropQCount(life, uid, a.crop as Crop, q);
       if (have < a.n) fail(LIFE_REJECT.notEnough);
-      const amount = a.n * (fruit ? FRUIT_SELL : CROP_INFO[a.crop as Crop].sell),
-        left = sellCapLeft(life, uid, now);
+      let amount = 0;
+      if (fruit) {
+        amount = a.n * FRUIT_SELL;
+        bag.fruit -= a.n;
+      } else {
+        const crop = a.crop as Crop;
+        let tiers: number[];
+        if (q === undefined) tiers = takeCrop(life, uid, crop, a.n);
+        else {
+          addCropQ(life, uid, crop, q, -a.n);
+          tiers = [0, 1, 2].map((t) => (t === q ? a.n : 0));
+        }
+        tiers.forEach((n, t) => {
+          amount += n * Math.round(CROP_INFO[crop].sell * QUALITY_MULT[t as Quality]);
+        });
+      }
+      const left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${beom(Math.max(0, left))}어치까지만 더 팔 수 있어요.`);
-      if (fruit) bag.fruit -= a.n;
-      else bag.produce[a.crop as Crop] -= a.n;
       const day = kstDay(now),
         prev = life.sold[uid];
       life.sold[uid] = {
         day,
         amount: (prev?.day === day ? prev.amount : 0) + amount,
       };
+      bump(life, uid, 'earned', amount);
       nextLedger = grantBeom(
         ledger,
         wallet,
@@ -813,15 +1075,22 @@ export function lifeAction(
         gift = readGift(a.gift);
         if (!gift) fail(LIFE_REJECT.gift);
         const theirs = (life.bag[to] ??= starterBag());
-        if (gift!.kind === 'fruit') {
+        if (gift!.kind === 'item') {
+          const { item, n } = gift as { item: string; n: number };
+          if (invCount(life, uid, item) < n) fail(LIFE_REJECT.notEnough);
+          addInv(life, uid, item, -n);
+          addInv(life, to!, item, n);
+        } else if (gift!.kind === 'fruit') {
           if (bag.fruit < gift!.n) fail(LIFE_REJECT.notEnough);
           bag.fruit -= gift!.n;
           theirs.fruit = addCount(theirs.fruit, gift!.n);
         } else {
+          // Stars travel with the gift (lowest first).
           const crop = gift!.crop;
           if (bag.produce[crop] < gift!.n) fail(LIFE_REJECT.notEnough);
-          bag.produce[crop] -= gift!.n;
-          theirs.produce[crop] = addCount(theirs.produce[crop], gift!.n);
+          takeCrop(life, uid, crop, gift!.n).forEach((n, t) => {
+            if (n) addCropQ(life, to!, crop, t as Quality, n);
+          });
         }
       }
       textGate();
@@ -839,10 +1108,11 @@ export function lifeAction(
         },
         MAIL_MAX,
       );
+      if (gift) onGift(life, member, to!, gift, now);
       break;
     }
     case 'readMail': {
-      const box = life.mail[uid] ?? [];
+      const box = (life.mail[uid] ?? []).map((m) => ({ ...m }));
       if (a.id === 'all') for (const m of box) m.read = true;
       else {
         const m = box.find((m) => m.id === a.id);
@@ -875,7 +1145,7 @@ export function lifeAction(
       break;
     }
   }
-  return { life, ledger: nextLedger };
+  return afterCoreAction(life, nextLedger, member, now);
 }
 
 // ---------------------------------------------------------------- views
@@ -883,6 +1153,12 @@ export type PlotView = Plot & {
   readyAt: number | null;
   stage: 0 | 1 | 2 | 3;
   ready: boolean;
+  /** Watered by rain today (no watering can needed). */
+  rained: boolean;
+  /** Quality the harvest will have (0 normal, 1 silver, 2 gold). */
+  quality: Quality;
+  /** Harvests left including the next one (regrowing crops), else 1. */
+  harvestsLeft: number;
 };
 export type LifeView = {
   me: {
@@ -898,16 +1174,19 @@ export type LifeView = {
     fruitReadyAt: Record<string, number>;
     /** Lifetime harvest/pick counts (trophy milestones). */
     harvested: Partial<Record<HarvestKind, number>>;
-  };
+  } & PlusMe;
   statuses: Record<string, { actor: number; text: string; at: number }>;
-  housesPlotsPublic: Record<string, { crop: Crop | null; stage: 0 | 1 | 2 | 3 }[]>;
+  housesPlotsPublic: Record<
+    string,
+    { crop: Crop | null; stage: 0 | 1 | 2 | 3; needsWater: boolean }[]
+  >;
   actors: Record<string, number>;
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
   sellCapLeft: number;
   sellCapResetAt: number;
   serverNow: number;
-};
+} & PlusView;
 export function lifeView(
   state: LifeState,
   uid: string,
@@ -930,16 +1209,25 @@ export function lifeView(
     housesPlotsPublic[id] = plots.map((p) => ({
       crop: p.crop,
       stage: plotStage(p, now),
+      needsWater:
+        !!p.crop &&
+        p.wateredAt === null &&
+        plotRainAt(p, now) === null &&
+        now < plotReadyAt(p, now)!,
     }));
-  return {
+  const base = {
     me: {
-      farm: farm.map((p) => {
-        const readyAt = plotReadyAt(p);
+      farm: farm.map((p, i) => {
+        const readyAt = plotReadyAt(p, now),
+          regrow = p.crop ? CROP_INFO[p.crop].regrow : undefined;
         return {
           ...p,
           readyAt,
           stage: plotStage(p, now),
           ready: readyAt !== null && now >= readyAt,
+          rained: plotRainAt(p, now) !== null,
+          quality: plotQuality(uid, i, p),
+          harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
         };
       }),
       bag: structuredClone(life.bag[uid] ?? emptyBag()),
@@ -973,6 +1261,8 @@ export function lifeView(
     sellCapResetAt: nextKstMidnight(now),
     serverNow: now,
   };
+  const { me, ...plus } = plusView(life, uid, actor, now);
+  return { ...base, ...plus, me: { ...base.me, ...me } };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */
 export function friendLife(state: LifeState, actor: number) {

@@ -224,22 +224,32 @@ export const ROOM_ITEM_LOCKED =
   '아직 상점에서 사지 않은 소품이 방에 있어요. 새로고침한 뒤 다시 꾸며 주세요.';
 /**
  * Shop-locked items (catalog entries with `unlock`) the owner does not own.
- * Items already in `previous` (the stored room) are grandfathered per ref and
- * count, so a room saved before ownership was enforced still saves; only new
- * copies of a locked item are reported. Returns the offending refs.
+ * Premium furniture (`premium`) is counted: `unlocks` lists one entry per
+ * owned copy (lounge-accounts lifeUnlocksOf), and the room may hold at most
+ * that many. Items already in `previous` (the stored room) are grandfathered
+ * per ref and count, so a room saved before ownership was enforced still
+ * saves; only new copies of a locked item are reported. Returns the offending refs.
  */
 export function lockedRoomItems(
   room: Bedroom,
   unlocks: readonly string[],
   previous?: Bedroom | null,
 ): string[] {
-  const before = new Map<string, number>();
+  const before = new Map<string, number>(),
+    owned = new Map<string, number>();
   for (const item of previous?.items ?? [])
     before.set(item.ref, (before.get(item.ref) ?? 0) + 1);
+  for (const id of unlocks) owned.set(id, (owned.get(id) ?? 0) + 1);
   const locked: string[] = [];
   for (const item of room.items) {
-    const unlock = catalogEntry(item.ref)?.unlock;
-    if (!unlock || unlocks.includes(unlock)) continue;
+    const entry = catalogEntry(item.ref),
+      unlock = entry?.unlock;
+    if (!unlock) continue;
+    const have = owned.get(unlock) ?? 0;
+    if (entry.premium ? have > 0 : have > 0 || unlocks.includes(unlock)) {
+      if (entry.premium) owned.set(unlock, have - 1);
+      continue;
+    }
     const left = before.get(item.ref) ?? 0;
     if (left > 0) before.set(item.ref, left - 1);
     else locked.push(item.ref);

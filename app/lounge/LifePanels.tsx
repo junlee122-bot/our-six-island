@@ -39,6 +39,7 @@ import {
   type LifeView,
   type ShopItem,
 } from '../lounge-life';
+import { itemName } from '../lounge-life-plus';
 import { REACTIONS } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
 import { TROPHY_ART, isTrophy } from '../lounge-trophy-art';
@@ -110,7 +111,9 @@ export function giftText(gift: LifeGift | undefined) {
   if (!gift) return '';
   return gift.kind === 'fruit'
     ? `과일 ${gift.n}개`
-    : `${CROP_INFO[gift.crop].name} ${gift.n}개`;
+    : gift.kind === 'item'
+      ? `${itemName(gift.item)} ${gift.n}개`
+      : `${CROP_INFO[gift.crop].name} ${gift.n}개`;
 }
 
 function NoLife() {

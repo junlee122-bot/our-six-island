@@ -49,6 +49,11 @@ export type CatalogEntry = {
   top?: number;
   /** Shop unlock needed before it appears in the catalog. */
   unlock?: string;
+  /**
+   * Premium furniture bought in the rotating 가구 상점 (or crafted): the room
+   * may hold at most as many copies as the owner owns (`unlock` = its ref).
+   */
+  premium?: boolean;
 };
 
 const e = (
@@ -60,7 +65,7 @@ const e = (
   w: number,
   d: number,
   h: number,
-  extra: Partial<Pick<CatalogEntry, 'top' | 'unlock'>> = {},
+  extra: Partial<Pick<CatalogEntry, 'top' | 'unlock' | 'premium'>> = {},
 ): CatalogEntry => ({ ref, kind, name, category, mount, w, d, h, ...extra });
 
 export const ROOM_CATALOG: readonly CatalogEntry[] = [
@@ -120,6 +125,44 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
   e('trophy-pumpkin', 'prop', '대왕 호박 트로피', 'rare', 'small', 0.53, 0.36, 0.66, { unlock: 'trophy-pumpkin' }),
   e('trophy-strawberry', 'prop', '별빛 딸기 트로피', 'rare', 'small', 0.48, 0.36, 0.6, { unlock: 'trophy-strawberry' }),
   e('fruit-basket', 'prop', '과일 바구니', 'rare', 'small', 0.62, 0.43, 0.5, { unlock: 'fruit-basket' }),
+  // Premium furniture (life expansion, lounge-items.ts FURNITURE): owned copies only.
+  ...(
+    [
+      ['furn-plant', '꽃 화분', 'plant', 'small', 0.6, 0.5, 0.9],
+      ['furn-chair', '소풍 의자', 'furniture', 'floor', 0.8, 0.8, 1.0],
+      ['furn-lamp', '별빛 조명', 'small', 'small', 0.45, 0.45, 0.7],
+      ['furn-tent', '작은 텐트', 'furniture', 'floor', 2.2, 1.8, 1.8],
+      ['furn-table', '원목 식탁', 'furniture', 'floor', 1.6, 1.0, 0.9, 0.9],
+      ['furn-sofa', '푹신한 소파', 'furniture', 'floor', 2.2, 1.0, 1.1],
+      ['furn-bookshelf', '이야기 책장', 'furniture', 'floor', 1.3, 0.5, 2.0],
+      ['furn-logbed', '통나무 침대', 'furniture', 'floor', 2.3, 3.0, 1.2, 0.6],
+      ['furn-rug', '체크 피크닉 매트', 'soft', 'rug', 2.8, 2.0, 0.02],
+      ['furn-bench', '산책길 벤치', 'furniture', 'floor', 1.8, 0.6, 0.9],
+      ['furn-fence', '정원 울타리', 'plant', 'floor', 1.8, 0.2, 0.8],
+      ['furn-fountain', '작은 분수', 'plant', 'floor', 1.2, 1.2, 1.2],
+      ['furn-radio', '빈티지 라디오', 'music', 'small', 0.6, 0.3, 0.4],
+      ['furn-planter', '정원 화단', 'plant', 'floor', 1.4, 0.6, 0.7],
+      ['furn-fireplace', '따뜻한 벽난로', 'furniture', 'floor', 1.8, 0.7, 1.6],
+      ['furn-fruit-tree', '작은 귤나무', 'plant', 'floor', 1.0, 1.0, 1.8],
+      ['furn-bed-mint', '민트 침대', 'furniture', 'floor', 2.36, 3.02, 1.52, 0.74],
+      ['furn-sofa-rose', '로즈 벤치 소파', 'furniture', 'floor', 2.34, 1.14, 1.14],
+      ['furn-armchair-navy', '네이비 1인 소파', 'furniture', 'floor', 1.14, 0.9, 1.2],
+      ['furn-rug-lilac', '라일락 울 러그', 'soft', 'rug', 3.18, 2.46, 0.05],
+      ['furn-bookcase-walnut', '월넛 5단 책장', 'furniture', 'floor', 1.27, 0.48, 2.8],
+      ['furn-wardrobe-white', '화이트 옷장', 'furniture', 'floor', 1.68, 0.86, 2.8],
+      ['furn-cherry-vase', '벚꽃 가지 화병', 'plant', 'small', 0.45, 0.35, 0.8],
+      ['furn-fan', '레트로 선풍기', 'furniture', 'floor', 0.5, 0.4, 1.1],
+      ['furn-maple-garland', '단풍 가랜드', 'wall', 'wall', 2.0, 0.04, 0.6],
+      ['furn-snowman', '눈사람 인형', 'soft', 'small', 0.5, 0.5, 0.8],
+      ['furn-moon-lantern', '보름달 등', 'small', 'small', 0.5, 0.5, 0.7],
+      ['furn-lucky-pouch', '복주머니 장식', 'wall', 'wall', 0.6, 0.04, 0.8],
+      ['furn-jack-lantern', '호박 등불', 'small', 'small', 0.5, 0.5, 0.5],
+      ['furn-xmas-tree', '크리스마스 트리', 'plant', 'floor', 1.2, 1.2, 2.4],
+      ['furn-village-medal', '마을 복원 기념패', 'rare', 'wall', 0.6, 0.04, 0.7],
+    ] as const
+  ).map(([ref, name, category, mount, w, d, h, top]: readonly [string, string, RoomCategory, RoomMount, number, number, number, number?]) =>
+    e(ref, 'prop', name, category, mount, w, d, h, { unlock: ref, premium: true, ...(top ? { top } : {}) }),
+  ),
 ];
 export const CATALOG_BY_REF: Readonly<Record<string, CatalogEntry>> =
   Object.fromEntries(ROOM_CATALOG.map((entry) => [entry.ref, entry]));

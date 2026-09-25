@@ -20,6 +20,7 @@ import {
   type GuestEntry,
   type RoomAccess,
 } from './lounge-life.ts';
+import { furnitureOf } from './lounge-life-plus.ts';
 export const ACCOUNT_IDS = [
   'dowon',
   'gangjae',
@@ -78,8 +79,17 @@ export const serverAccountSave = (
   unlocks: readonly string[] = [],
 ) => accountSave(value, actor, previousSave, { strict: true, unlocks });
 /** A member's shop unlocks from the world's life state (server save path). */
-export const lifeUnlocksOf = (life: unknown, uid: string): string[] =>
-  readLife(life).unlocks[uid] ?? [];
+/**
+ * What the room-save validator may place: shop unlocks, plus one entry per
+ * owned copy of premium furniture ('furn-*', lounge-items FURNITURE).
+ */
+export const lifeUnlocksOf = (life: unknown, uid: string): string[] => {
+  const state = readLife(life),
+    furniture = Object.entries(furnitureOf(state, uid)).flatMap(([ref, n]) =>
+      Array.from({ length: Math.min(n, 40) }, () => ref),
+    );
+  return [...(state.unlocks[uid] ?? []), ...furniture];
+};
 /**
  * Normalizes a profile save for this account. Client-side (default) it is
  * lenient: unreadable data becomes a fresh save. With `strict` (the server's

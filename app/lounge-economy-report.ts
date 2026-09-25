@@ -204,12 +204,43 @@ export function flowKind(type: LedgerEntry['type'], reason: string): FlowKind {
     if (reason.startsWith('sell-')) return 'farm';
     return 'grantOther';
   }
-  return reason.startsWith('buy-') ? 'shop' : 'spendOther';
+  return reason.startsWith('buy-') ||
+    reason === 'furn' ||
+    reason.startsWith('farm-') ||
+    reason.startsWith('rod-')
+    ? 'shop'
+    : 'spendOther';
 }
+/** Life-expansion ledger reasons (lounge-life-plus.ts). */
+const LIFE_REASONS: Record<string, string> = {
+  'sell-fish': '물고기 판매',
+  'sell-bug': '곤충 판매',
+  'sell-forage': '채집물 판매',
+  'sell-flower': '꽃 판매',
+  'sell-material': '재료 판매',
+  'sell-dish': '요리 판매',
+  'buy-fertilizer': '상점: 비료',
+  'buy-fertilizer-deluxe': '상점: 고급 비료',
+  'buy-bait': '상점: 미끼',
+  furn: '가구 상점',
+  'farm-9': '밭 넓히기 (9칸)',
+  'farm-12': '밭 넓히기 (12칸)',
+  'rod-2': '낚싯대 강화 (2단계)',
+  'rod-3': '낚싯대 강화 (3단계)',
+  bundle: '마을 꾸러미 기부',
+  'bundle-done': '꾸러미 완성 보상',
+  ach: '업적 보상',
+  donate: '박물관 첫 기증',
+  request: '친구 부탁',
+  event: '명절·생일 선물',
+  wish: '분수 소원',
+  'casino-night': '금요 카지노의 밤',
+};
 /** Korean label of a ledger entry reason ('sell-tomato' → '토마토 판매'). */
 export function reasonLabel(reason: string): string {
   if (reason === 'daily') return FLOW_LABEL.daily;
   if (reason === 'daily-relief') return FLOW_LABEL.relief;
+  if (Object.hasOwn(LIFE_REASONS, reason)) return LIFE_REASONS[reason];
   if (reason.startsWith('sell-')) {
     const crop = reason.slice(5);
     if (crop === 'fruit') return '과일 판매';

@@ -72,7 +72,18 @@ test('new members start with 3 carrot + 2 tomato seeds and six empty plots', () 
   const v = lifeView(life, members[0].id, 0, T0);
   assert.equal(v.me.farm.length, PLOTS_PER_USER);
   assert.ok(v.me.farm.every((p) => p.crop === null && p.stage === 0));
-  assert.deepEqual(v.me.bag.seeds, { carrot: 3, tomato: 2, pumpkin: 0, strawberry: 0 });
+  assert.deepEqual(v.me.bag.seeds, {
+    carrot: 3,
+    tomato: 2,
+    pumpkin: 0,
+    strawberry: 0,
+    potato: 0,
+    spinach: 0,
+    corn: 0,
+    watermelon: 0,
+    sweetpotato: 0,
+    cabbage: 0,
+  });
   assert.equal(v.sellCapLeft, SELL_CAP_PER_DAY);
   assert.equal(v.actors[members[0].id], 0);
 });
@@ -124,6 +135,7 @@ test('harvest one plot or every ready plot (-1)', () => {
   assert.equal(s.life.bag[m.id].produce.carrot, 2);
   assert.equal(s.life.farms[m.id][2].crop, 'tomato'); // still growing
   s.act(m, { kind: 'harvest', plot: -1 }, T0 + 60 * MIN);
+  // bag.produce counts every quality (silver/gold are a subset in me.quality).
   assert.equal(s.life.bag[m.id].produce.tomato, 1);
   s.fails(m, { kind: 'harvest', plot: 2 }, T0 + 61 * MIN, LIFE_REJECT.empty);
   // Lifetime counters feed the trophy milestones.
@@ -356,11 +368,17 @@ test('crop and shop catalog match the contract', () => {
       ['tomato', 60, 200, 480],
       ['pumpkin', 180, 500, 1800],
       ['strawberry', 480, 1000, 5000],
+      ['potato', 120, 300, 900],
+      ['spinach', 240, 600, 2200],
+      ['corn', 360, 800, 2400],
+      ['watermelon', 720, 2000, 8000],
+      ['sweetpotato', 360, 700, 3000],
+      ['cabbage', 480, 1000, 3600],
     ],
   );
-  // Longer crops earn more per hour (watered, all six plots), so the
+  // Longer base crops earn more per hour (watered, all six plots), so the
   // "check in twice a day" rhythm beats clicking carrots all day.
-  const perHour = CROPS.map(
+  const perHour = CROPS.slice(0, 4).map(
     (c) => (6 * (CROP_INFO[c].sell - CROP_INFO[c].seed)) / ((CROP_INFO[c].growMs * 0.6) / 3_600_000),
   );
   for (let i = 1; i < perHour.length; i++) assert.ok(perHour[i] > perHour[i - 1], String(perHour));
