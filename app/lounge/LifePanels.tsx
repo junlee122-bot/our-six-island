@@ -399,13 +399,16 @@ export function FarmModal({
                   stage === 3 ? (
                     <ItemIcon id={plot.crop} size={34} quality={plot.quality} />
                   ) : (
-                    <SproutArt stage={stage} />
+                    <span className="l-plot-sprout">
+                      <SproutArt stage={stage} />
+                      {plot.quality ? <QualityStar quality={plot.quality} /> : null}
+                    </span>
                   )
                 ) : null}
               </span>
               <strong>
                 {i + 1}번 밭 · {plot.crop ? CROP_INFO[plot.crop].name : '비어 있음'}
-                {plot.crop && plot.quality ? <QualityStar quality={plot.quality} /> : null}
+                {plot.crop && plot.quality ? (plot.quality === 2 ? ' · 금별 예감' : ' · 은별 예감') : ''}
               </strong>
               {plot.crop && (
                 <>

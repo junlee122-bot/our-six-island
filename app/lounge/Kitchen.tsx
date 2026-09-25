@@ -161,7 +161,7 @@ export function KitchenPanel({
                   {'item' in need ? <ItemIcon id={need.item} size={24} /> : <span className="l-need-any" aria-hidden="true" />}
                   <span>{needLabel(need)}</span>
                   <b>
-                    {have}/{need.n * count}
+                    가진 {have.toLocaleString('ko-KR')} / 필요 {(need.n * count).toLocaleString('ko-KR')}
                   </b>
                 </li>
               );

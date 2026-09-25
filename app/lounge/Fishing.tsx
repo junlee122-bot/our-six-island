@@ -52,16 +52,26 @@ export function FishingOverlay({
     cb.current.onPhase(phase);
   }, [phase]);
   useEffect(() => () => cb.current.onPhase(null), []);
-  const serverNow = useCallback(() => Date.now() + room.snapshot().clockOffset, [room]);
+  const lead = useRef(0);
+  const shownAt = useRef<number | null>(null);
+  const serverNow = useCallback(() => Date.now() + room.snapshot().clockOffset + lead.current, [room]);
 
-  const reel = useCallback(async () => {
+  /** `pressedAt`: the input event's timeStamp (performance clock), when known. */
+  const reel = useCallback(async (pressedAt?: number) => {
     const p = token.current;
     if (!p || reelingRef.current) return;
     reelingRef.current = true;
     for (const t of timers.current) clearTimeout(t);
     timers.current = [];
     const before = room.snapshot().life?.me.dex ?? [];
-    const timingMs = reelTiming(p.biteAt, serverNow());
+    // Reaction time from when the "!" actually showed, so a slow frame or a
+    // late answer never counts against the player (the server still checks
+    // that the reel arrives inside the bite window + slack).
+    const timingMs =
+      shownAt.current !== null
+        ? Math.max(0, Math.round((pressedAt ?? performance.now()) - shownAt.current))
+        : reelTiming(p.biteAt, serverNow());
+    shownAt.current = null;
     setPhase('reeling');
     const ok = await room.life({ kind: 'reel', token: p.token, timingMs });
     token.current = null;
@@ -84,7 +94,11 @@ export function FishingOverlay({
     let cancelled = false;
     lifeSfx('cast');
     void (async () => {
+      const sent = performance.now();
       const ok = await room.life({ kind: 'cast', spot });
+      // The server clock offset is measured when the answer arrives (one trip
+      // late); half the round trip (capped) brings the bite back on time.
+      lead.current = Math.min(600, Math.max(0, (performance.now() - sent) / 2));
       if (cancelled) return;
       const pending = room.snapshot().life?.me.fishing?.pending;
       if (!ok || !pending) {
@@ -97,9 +111,14 @@ export function FishingOverlay({
       timers.current.push(
         setTimeout(() => {
           if (cancelled || phaseRef.current !== 'wait') return;
+          shownAt.current = performance.now();
           setPhase('bite');
           lifeSfx('bite');
-          requestAnimationFrame(() => actRef.current?.focus({ preventScroll: true }));
+          // The "!" is on screen from the next frame on.
+          requestAnimationFrame((t) => {
+            if (shownAt.current !== null) shownAt.current = t;
+            actRef.current?.focus({ preventScroll: true });
+          });
         }, toBite),
         // Missed the window: reel anyway so the server records it and clears the cast.
         setTimeout(() => {
@@ -117,9 +136,9 @@ export function FishingOverlay({
   useEffect(() => {
     rootRef.current?.focus({ preventScroll: true });
   }, []);
-  const act = useCallback(() => {
+  const act = useCallback((pressedAt?: number) => {
     const p = phaseRef.current;
-    if (p === 'bite' || p === 'wait') void reel();
+    if (p === 'bite' || p === 'wait') void reel(pressedAt);
     else if (p === 'result') {
       // Cast again: back to the casting pose before the new cast goes out.
       reelingRef.current = false;
@@ -134,7 +153,7 @@ export function FishingOverlay({
       if (e.code === 'KeyE' || e.code === 'Space' || e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        if (!e.repeat) act();
+        if (!e.repeat) act(e.timeStamp);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
@@ -202,7 +221,7 @@ export function FishingOverlay({
             </p>
           )}
           <div className="l-fish-actions">
-            <button ref={actRef} type="button" className="l-primary" onClick={act} data-testid="fish-again" autoFocus>
+            <button ref={actRef} type="button" className="l-primary" onClick={(e) => act(e.timeStamp)} data-testid="fish-again" autoFocus>
               <RotateCcw size={15} /> 다시 던지기 <kbd>E</kbd>
             </button>
             <button type="button" className="l-secondary" onClick={onClose}>
@@ -215,7 +234,7 @@ export function FishingOverlay({
           ref={actRef}
           type="button"
           className="l-fish-stage"
-          onClick={act}
+          onClick={(e) => act(e.timeStamp)}
           disabled={phase === 'casting' || phase === 'reeling'}
           data-testid="fish-act"
           aria-live="assertive"

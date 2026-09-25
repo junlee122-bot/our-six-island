@@ -49,6 +49,24 @@ export function farmBedRect(bed: FarmBed) {
     d: rows * PLOT_SIZE + (rows - 1) * PLOT_GAP + 0.2,
   };
 }
+/**
+ * Expanded farms (9 / 12 plots) keep the bed's footprint: the rows get
+ * shallower instead of the bed growing into the lane. Returns the centre of
+ * plot `index` and the plot depth scale (1 for a 6-plot farm).
+ */
+export function plotCenterIn(bed: FarmBed, index: number, total: number) {
+  const base = 6 / bed.cols,
+    rows = Math.max(base, Math.ceil(total / bed.cols)),
+    scale = base / rows,
+    col = index % bed.cols,
+    row = Math.floor(index / bed.cols),
+    step = PLOT_SIZE + PLOT_GAP;
+  return {
+    x: bed.x + (col - (bed.cols - 1) / 2) * step,
+    z: bed.z + (row - (rows - 1) / 2) * step * scale,
+    scale,
+  };
+}
 /** Centre of plot `index` (0..5), row-major from the back-left. */
 export function plotCenter(bed: FarmBed, index: number): VillagePoint {
   const rows = 6 / bed.cols,
@@ -197,8 +215,10 @@ export function plotsForActor(
     )?.[0];
     source = uid ? life.housesPlotsPublic?.[uid] : undefined;
   }
+  // Expanded farms (life expansion) have 9 or 12 plots.
   const out = empty();
-  source?.slice(0, 6).forEach((p, i) => {
+  for (let i = 6; i < Math.min(12, source?.length ?? 0); i++) out.push({ crop: null, stage: 0 });
+  source?.slice(0, 12).forEach((p, i) => {
     const stage = Math.max(0, Math.min(3, Math.floor(Number(p.stage) || 0)));
     out[i] = { crop: p.crop ?? null, stage: (p.crop ? stage : 0) as 0 | 1 | 2 | 3 };
   });

@@ -3,7 +3,7 @@
 // weekly events (once per day, with [받기] for claimable gifts), achievements
 // as they complete, village restorations (a small celebration), and the
 // "어제 마을 소식" digest on the first login of the day.
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { PartyPopper } from 'lucide-react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { ACHIEVEMENT_BY_ID, BUNDLES, VILLAGE_FLAGS } from '../lounge-items';
@@ -140,8 +140,15 @@ export function useLifeEvents({
 /** The restoration celebration card (confetti off under reduced motion). */
 export function Celebration({ name, text }: { name: string; text: string }) {
   const colors = ['#e2574c', '#f2c14e', '#5b8fb9', '#6aa84f', '#b07ab9'];
+  // A manual popover: shown above any open dialog (the board stays open).
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    try {
+      (ref.current as (HTMLDivElement & { showPopover?: () => void }) | null)?.showPopover?.();
+    } catch {}
+  }, []);
   return (
-    <div className="l-celebrate" role="status" aria-live="polite" data-testid="celebration">
+    <div ref={ref} popover="manual" className="l-celebrate" role="status" aria-live="polite" data-testid="celebration">
       {Array.from({ length: 28 }, (_, i) => (
         <i
           key={i}

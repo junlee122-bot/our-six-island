@@ -85,7 +85,7 @@ export function BundleBoard({
           </h3>
           {state?.done ? (
             <p className="l-bundle-done">
-              <Check size={16} aria-hidden="true" /> 완성! {def.reward}이(가) 마을에 생겼어요.
+              <Check size={16} aria-hidden="true" /> 완성! {josa(def.reward, '이/가')} 마을에 생겼어요.
             </p>
           ) : null}
           <ul className="l-bundle-slots">

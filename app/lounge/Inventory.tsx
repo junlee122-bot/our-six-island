@@ -76,6 +76,8 @@ export function InventoryPanel({
   const [n, setN] = useState(1);
   const [quality, setQuality] = useState<Quality | null>(null);
   const [run, busy] = useLifeAction(room, notify);
+  // One floating tooltip (fixed to the viewport) so the scrolling grid never clips it.
+  const [tip, setTip] = useState<{ key: string; x: number; y: number; below: boolean } | null>(null);
   const entries = useMemo(() => (life ? inventoryEntries(life.me) : []), [life]);
   if (!life)
     return (
@@ -119,7 +121,7 @@ export function InventoryPanel({
       </div>
       <div className="l-mail-tabs l-inv-tabs" role="tablist" aria-label="가방 칸">
         <button role="tab" aria-selected={group === 'all'} onClick={() => setGroup('all')}>
-          전체 <small>{entries.length}</small>
+          전체 <small>{entries.reduce((sum, e) => sum + e.n, 0)}</small>
         </button>
         {INV_GROUPS.map(([g, label]) => (
           <button key={g} role="tab" aria-selected={group === g} onClick={() => setGroup(g)} data-testid={`inv-tab-${g}`}>
@@ -148,12 +150,20 @@ export function InventoryPanel({
                   setQuality(null);
                   setN(1);
                 }}
+                onMouseEnter={(ev) => {
+                  const r = ev.currentTarget.getBoundingClientRect();
+                  setTip({ key: e.key, x: r.left + r.width / 2, y: r.top < 200 ? r.bottom : r.top, below: r.top < 200 });
+                }}
+                onFocus={(ev) => {
+                  const r = ev.currentTarget.getBoundingClientRect();
+                  setTip({ key: e.key, x: r.left + r.width / 2, y: r.top < 200 ? r.bottom : r.top, below: r.top < 200 });
+                }}
+                onMouseLeave={() => setTip((t) => (t?.key === e.key ? null : t))}
+                onBlur={() => setTip((t) => (t?.key === e.key ? null : t))}
+                aria-describedby={tip?.key === e.key ? 'l-inv-tip' : undefined}
               >
                 <ItemIcon id={e.id} size={40} quality={e.quality} />
                 <b className="l-item-count">{e.n}</b>
-                <span className="l-inv-tip" role="tooltip">
-                  <EntryTip entry={e} museum={!!life.museum?.[e.id]} />
-                </span>
               </button>
             </li>
           ))}
@@ -243,6 +253,18 @@ export function InventoryPanel({
           )}
         </aside>
       </div>
+      {tip && entries.find((x) => x.key === tip.key) && (
+        <div
+          id="l-inv-tip"
+          role="tooltip"
+          className="l-inv-tip"
+          data-below={tip.below || undefined}
+          data-testid="inv-tip"
+          style={{ left: tip.x, top: tip.y }}
+        >
+          <EntryTip entry={entries.find((x) => x.key === tip.key)!} museum={!!life.museum?.[tip.key.split('@')[0]]} />
+        </div>
+      )}
       <div className="l-inv-hotbar">
         <small>핫바: 씨앗·도구·요리를 끌어다 놓고 1–9로 골라요. 오른쪽 클릭하면 비워요.</small>
         <Hotbar hotbar={hotbar} life={life} />

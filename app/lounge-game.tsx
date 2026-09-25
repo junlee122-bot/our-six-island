@@ -71,13 +71,9 @@ import {
   StatusModal,
   type ShopTab,
 } from './lounge/LifePanels';
-import { InventoryPanel } from './lounge/Inventory';
 import { CalendarChip, Hotbar, useHotbar, useHotbarKeys } from './lounge/LifeHud';
-import { FishingOverlay, type FishingPhase } from './lounge/Fishing';
-import { CollectionBook, type BookTab } from './lounge/Collection';
-import { KitchenPanel } from './lounge/Kitchen';
-import { BundleBoard } from './lounge/Bundles';
-import { DigestCard, FriendsLife, MemoriesAlbum, RequestCard } from './lounge/Bonds';
+import type { FishingPhase } from './lounge/Fishing';
+import type { BookTab } from './lounge/Collection';
 import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
 import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
@@ -160,6 +156,17 @@ const Wardrobe = lazyRetry(() =>
 const RoomFloor = lazyRetry(() =>
   loadScene().then((m) => ({ default: m.RoomFloor })),
 );
+// Life-expansion panels (LIFE-B) load when first opened.
+const InventoryPanel = lazyRetry(() => import('./lounge/Inventory').then((m) => ({ default: m.InventoryPanel })));
+const FishingOverlay = lazyRetry(() => import('./lounge/Fishing').then((m) => ({ default: m.FishingOverlay })));
+const CollectionBook = lazyRetry(() => import('./lounge/Collection').then((m) => ({ default: m.CollectionBook })));
+const KitchenPanel = lazyRetry(() => import('./lounge/Kitchen').then((m) => ({ default: m.KitchenPanel })));
+const BundleBoard = lazyRetry(() => import('./lounge/Bundles').then((m) => ({ default: m.BundleBoard })));
+const loadBonds = () => import('./lounge/Bonds');
+const FriendsLife = lazyRetry(() => loadBonds().then((m) => ({ default: m.FriendsLife })));
+const MemoriesAlbum = lazyRetry(() => loadBonds().then((m) => ({ default: m.MemoriesAlbum })));
+const DigestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.DigestCard })));
+const RequestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.RequestCard })));
 
 /**
  * Walking up to a door starts loading what is behind it (the lazy chunk and
@@ -1236,6 +1243,23 @@ function AccountLounge({
     }, 900);
     return () => clearTimeout(timer);
   }, [connected, room, pushBanner, notify]);
+  // Warm the life panels' chunks shortly after connecting, so I / K / L and
+  // the first cast open without a wait.
+  useEffect(() => {
+    if (!connected) return;
+    const timer = setTimeout(() => {
+      for (const load of [
+        () => import('./lounge/Inventory'),
+        () => import('./lounge/Fishing'),
+        () => import('./lounge/Collection'),
+        () => import('./lounge/Kitchen'),
+        () => import('./lounge/Bundles'),
+        loadBonds,
+      ])
+        void load().catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [connected]);
   // Desktop keys: I 가방, K 도감, L 추억 앨범, 1–9 핫바 (village).
   const lifeKeys = useRef({ open: (_m: ModalName) => {} });
   useLayoutEffect(() => {
@@ -1599,6 +1623,7 @@ function AccountLounge({
         </div>
       )}
       {fishing && tab === 'village' && visiting === null && !inGame && (
+        <Suspense fallback={null}>
         <FishingOverlay
           room={room}
           view={view}
@@ -1607,6 +1632,7 @@ function AccountLounge({
           onClose={() => setFishing(null)}
           onPhase={fishPhase}
         />
+        </Suspense>
       )}
       {lifeEvents.celebration && (
         <Celebration name={lifeEvents.celebration.name} text={lifeEvents.celebration.text} />
@@ -2166,6 +2192,7 @@ function AccountLounge({
           onBag={() => setModal('bag')}
         />
       )}
+      <Suspense fallback={null}>
       {modal === 'bag' && (
         <InventoryPanel
           room={room}
@@ -2221,6 +2248,7 @@ function AccountLounge({
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />
       )}
+      </Suspense>
       {modal === 'mail' && (
         <MailModal
           room={room}

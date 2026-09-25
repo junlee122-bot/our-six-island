@@ -49,6 +49,10 @@
 }
 
 /* ------------------------------------------------------------ HUD calendar */
+/* The room's full-window edit mode owns the top of the screen. */
+body:has(.b3-room[data-editing]) .l-life-hud {
+  display: none;
+}
 .l-life-hud {
   position: fixed;
   z-index: var(--z-hud, 30);
@@ -367,13 +371,11 @@
   bottom: 4px;
 }
 .l-inv-tip {
-  position: absolute;
-  z-index: 5;
-  left: 50%;
-  bottom: calc(100% + 8px);
+  position: fixed;
+  z-index: 10;
   display: grid;
   gap: 3px;
-  width: 220px;
+  width: 230px;
   padding: 9px 11px;
   border-radius: 11px;
   background: #33402f;
@@ -381,17 +383,16 @@
   font-size: 12px;
   text-align: left;
   pointer-events: none;
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, 4px);
-  transition: opacity 200ms ease, transform 200ms ease, visibility 0s linear 200ms;
+  transform: translate(-50%, calc(-100% - 8px));
+  animation: l-tip-in 200ms ease-out;
 }
-.l-inv-slot:hover .l-inv-tip,
-.l-inv-slot:focus-visible .l-inv-tip {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
-  transition-delay: 120ms;
+.l-inv-tip[data-below] {
+  transform: translate(-50%, 8px);
+}
+@keyframes l-tip-in {
+  from {
+    opacity: 0;
+  }
 }
 .l-inv-tip small {
   color: #d8e4cf;
@@ -922,9 +923,9 @@ li[data-done] .l-ach-icon {
   cursor: pointer;
   transition: border-color 200ms ease, background 200ms ease;
 }
-.l-recipe-list button > span,
-.l-bundle-list button > span,
-.l-bond-list button > span {
+.l-recipe-list button > span:not(.l-item-icon),
+.l-bundle-list button > span:not(.l-bundle-pin),
+.l-bond-list button > span:not(.l-bond-face) {
   display: grid;
   gap: 2px;
   flex: 1;
@@ -983,7 +984,7 @@ li[data-done] .l-ach-icon {
 .l-needs li[data-enough] {
   background: #eef6e8;
 }
-.l-needs li span {
+.l-needs li > span:not(.l-item-icon) {
   flex: 1;
 }
 .l-needs li b {
@@ -1183,7 +1184,7 @@ li[data-done] .l-ach-icon {
   border-color: #cfe3c1;
   background: #eef6e8;
 }
-.l-request > span {
+.l-request > span:not(.l-item-icon) {
   display: grid;
   gap: 2px;
   flex: 1;
@@ -1451,6 +1452,9 @@ li[data-done] .l-ach-icon {
   .l-celebrate i {
     display: none;
   }
+  .l-inv-tip {
+    animation: none;
+  }
   .l-hud-chip,
   .l-inv-slot,
   .l-dex-cell,
@@ -1470,4 +1474,57 @@ li[data-done] .l-ach-icon {
     left: 12px;
     top: 84px;
   }
+}
+
+/* ------------------------------------------------------------ village layout with the hotbar */
+/* The spot / door prompt sits above the hotbar; fishing takes its place. */
+.l-app[data-space='village'] .hv-village .hv-entry-prompt {
+  bottom: 104px;
+}
+body:has([data-testid='fishing']) .hv-village .hv-entry-prompt,
+body:has([data-testid='fishing']) .hv-village .hv-action {
+  display: none;
+}
+.l-app[data-space='village'] .hv-village .hv-place-card {
+  bottom: 104px;
+}
+.l-bundle-list .l-bundle-pin {
+  flex: 0 0 30px;
+}
+.l-celebrate {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.l-plot-sprout {
+  position: relative;
+  display: inline-block;
+}
+.l-plot-sprout .l-q-star {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+}
+.l-digest .l-modal-intro,
+.l-board .l-modal-intro {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.l-digest .l-modal-intro svg,
+.l-board .l-modal-intro svg {
+  flex: none;
+}
+/* Tailwind's preflight makes svg block-level; icons inside text stay inline. */
+.l-life-modal :is(p, small, strong, b, em, label) > svg,
+.l-hud-tip :is(p, li, small) > svg {
+  display: inline-block;
+  vertical-align: -0.15em;
 }

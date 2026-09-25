@@ -10,7 +10,7 @@ import {
   PLOT_SIZE,
   farmBedRect,
   mailboxPoint,
-  plotCenter,
+  plotCenterIn,
   cropVisual,
   type FarmBed,
   type PublicPlot,
@@ -537,13 +537,15 @@ export class VillageLifeLayer {
       let readyBed: FarmBed | null = null;
       for (const bed of FARM_BEDS) {
         const plots = u.plots[bed.actor] ?? [];
-        for (let i = 0; i < 6; i++) {
-          const at = plotCenter(bed, i);
+        // 9 / 12-plot farms (life expansion) fit the same bed in shallower rows.
+        const total = Math.max(6, Math.min(12, plots.length));
+        for (let i = 0; i < total; i++) {
+          const at = plotCenterIn(bed, i, total);
           const mine = bed.actor === u.selfActor;
           soil.push({
             geo: GEO.box,
             mat: mine && u.watered[i] && plots[i]?.crop ? MAT.soilWet : MAT.soil,
-            m: matrix(at.x, 0.14, at.z, PLOT_SIZE, 0.12, PLOT_SIZE),
+            m: matrix(at.x, 0.14, at.z, PLOT_SIZE, 0.12, PLOT_SIZE * at.scale),
           });
           const plot = plots[i];
           if (plot?.crop) {

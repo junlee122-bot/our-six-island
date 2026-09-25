@@ -160,10 +160,10 @@ function particleTexture(kind: 'rain' | 'snow' | 'leaves' | 'petals') {
   const c = canvas.getContext('2d')!;
   if (kind === 'rain') {
     const g = c.createLinearGradient(16, 0, 16, 32);
-    g.addColorStop(0, 'rgba(210,230,245,0)');
-    g.addColorStop(1, 'rgba(210,230,245,0.9)');
+    g.addColorStop(0, 'rgba(255,255,255,0)');
+    g.addColorStop(1, 'rgba(255,255,255,1)');
     c.fillStyle = g;
-    c.fillRect(15, 0, 2, 32);
+    c.fillRect(14.5, 0, 3, 32);
   } else if (kind === 'snow') {
     const g = c.createRadialGradient(16, 16, 1, 16, 16, 12);
     g.addColorStop(0, 'rgba(255,255,255,1)');
@@ -209,9 +209,11 @@ export class VillageSeasonLayer {
   readonly root = new THREE.Group();
   private base: Record<keyof typeof VILLAGE_SEASON_MATERIALS, THREE.Color>;
   private flagged = new Map<string, THREE.Object3D[]>();
-  private markers = new Map<string, THREE.Sprite>();
-  private markerTex = { forage: null as THREE.Texture | null, bug: null as THREE.Texture | null };
-  private papers: THREE.Mesh[] = [];
+  /** Today's spawn markers: one Points object per kind (2 draw calls in all). */
+  private markers: Record<'forage' | 'bug', { points: THREE.Points; base: Float32Array }> | null = null;
+  private markerCount = 0;
+  /** Bundle papers on the board: one instanced mesh, coloured per bundle. */
+  private papers: THREE.InstancedMesh | null = null;
   private pierBroken: THREE.Group;
   private pierFixed: THREE.Group;
   private bobber: THREE.Group;
@@ -224,7 +226,10 @@ export class VillageSeasonLayer {
   private lastKey = '';
   private lastTick = 0;
   private effects = true;
-  private reduced = false;
+  private reducedQuery: MediaQueryList | null = null;
+  private get reduced() {
+    return !!this.reducedQuery?.matches;
+  }
   constructor(parent: THREE.Object3D) {
     this.root.name = 'village-season';
     parent.add(this.root);
@@ -258,7 +263,7 @@ export class VillageSeasonLayer {
     this.line = fishing.line;
     this.bite = fishing.bite;
     try {
-      this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
     } catch {}
   }
 
@@ -388,14 +393,22 @@ export class VillageSeasonLayer {
     box(g, MAT.cork, x, 1.05, z + 0.03, w, 0.8, 0.06);
     box(g, MAT.wood, x, 1.52, z, w + 0.24, 0.1, 0.3);
     batchDirectMeshes(g);
+    const papers = new THREE.InstancedMesh(GEO.box, new THREE.MeshStandardMaterial({ roughness: 0.9 }), 8);
+    const m = new THREE.Matrix4(),
+      q = new THREE.Quaternion(),
+      e = new THREE.Euler();
     for (let i = 0; i < 8; i++) {
-      const paper = new THREE.Mesh(GEO.box, MAT.paper);
-      paper.position.set(x - w / 2 + 0.2 + (i % 4) * ((w - 0.4) / 3), 1.25 - Math.floor(i / 4) * 0.36, z + 0.07);
-      paper.scale.set(0.24, 0.26, 0.01);
-      paper.rotation.z = ((i * 37) % 7) * 0.03 - 0.09;
-      this.papers.push(paper);
-      g.add(paper);
+      m.compose(
+        new THREE.Vector3(x - w / 2 + 0.2 + (i % 4) * ((w - 0.4) / 3), 1.25 - Math.floor(i / 4) * 0.36, z + 0.07),
+        q.setFromEuler(e.set(0, 0, ((i * 37) % 7) * 0.03 - 0.09)),
+        new THREE.Vector3(0.24, 0.26, 0.01),
+      );
+      papers.setMatrixAt(i, m);
+      papers.setColorAt(i, MAT.paper.color);
     }
+    papers.name = 'village-board-papers';
+    this.papers = papers;
+    g.add(papers);
     const sign = signSprite('마을 게시판', 0.5);
     sign.position.set(x, 2.05, z);
     g.add(sign);
@@ -471,6 +484,31 @@ export class VillageSeasonLayer {
     cyl(market, MAT.woodDark, mx, 0.65, mz + 0.4, 0.04, 1.3);
     batchDirectMeshes(market);
     this.addFlagged('market', market);
+  }
+
+  private buildMarkers(kind: 'forage' | 'bug') {
+    const n = 32,
+      base = new Float32Array(n * 3);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(n * 3), 3));
+    geometry.setDrawRange(0, 0);
+    const points = new THREE.Points(
+      geometry,
+      new THREE.PointsMaterial({
+        map: markerTexture(kind),
+        size: kind === 'bug' ? 30 : 28,
+        sizeAttenuation: false,
+        transparent: true,
+        depthWrite: false,
+        alphaTest: 0.05,
+        toneMapped: false,
+      }),
+    );
+    points.frustumCulled = false;
+    points.renderOrder = 15;
+    points.name = 'village-spawns-' + kind;
+    this.root.add(points);
+    return { points, base };
   }
 
   private addFlagged(flag: string, object: THREE.Object3D) {
@@ -549,34 +587,32 @@ export class VillageSeasonLayer {
     const bridge = u.flags.includes('bridge');
     this.pierFixed.visible = bridge;
     this.pierBroken.visible = !bridge;
-    this.papers.forEach((p, i) => {
-      p.material = u.bundlesDone[i] ? MAT.paperDone : MAT.paper;
-    });
-    // Spawn markers.
-    const wanted = new Set<string>();
-    for (const s of u.spawns) {
-      if (s.taken || !SPAWN_POINTS[s.spot]) continue;
-      const id = s.spot + ':' + s.kind;
-      wanted.add(id);
-      if (this.markers.has(id)) continue;
-      const texture = (this.markerTex[s.kind] ??= markerTexture(s.kind));
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false }));
-      const p = SPAWN_POINTS[s.spot];
-      const offset = s.kind === 'bug' ? 0.45 : -0.35;
-      sprite.position.set(p.x + offset, s.kind === 'bug' ? 1.2 : 0.45, p.z - 0.3);
-      sprite.scale.setScalar(s.kind === 'bug' ? 0.62 : 0.56);
-      sprite.renderOrder = 15;
-      sprite.userData.baseY = sprite.position.y;
-      sprite.name = 'spawn-' + id;
-      this.markers.set(id, sprite);
-      this.root.add(sprite);
+    if (this.papers) {
+      for (let i = 0; i < 8; i++) this.papers.setColorAt(i, u.bundlesDone[i] ? MAT.paperDone.color : MAT.paper.color);
+      if (this.papers.instanceColor) this.papers.instanceColor.needsUpdate = true;
     }
-    for (const [id, sprite] of this.markers)
-      if (!wanted.has(id)) {
-        this.root.remove(sprite);
-        (sprite.material as THREE.SpriteMaterial).dispose();
-        this.markers.delete(id);
-      }
+    // Spawn markers (points in world space, pixel-sized icons).
+    this.markers ??= {
+      forage: this.buildMarkers('forage'),
+      bug: this.buildMarkers('bug'),
+    };
+    this.markerCount = 0;
+    for (const kind of ['forage', 'bug'] as const) {
+      const list = u.spawns.filter((sp) => sp.kind === kind && !sp.taken && SPAWN_POINTS[sp.spot]);
+      const { points, base } = this.markers[kind];
+      const attr = points.geometry.getAttribute('position') as THREE.BufferAttribute;
+      list.slice(0, base.length / 3).forEach((sp, i) => {
+        const p = SPAWN_POINTS[sp.spot];
+        base[i * 3] = p.x + (kind === 'bug' ? 0.45 : -0.35);
+        base[i * 3 + 1] = kind === 'bug' ? 1.2 : 0.45;
+        base[i * 3 + 2] = p.z - 0.3;
+      });
+      (attr.array as Float32Array).set(base);
+      attr.needsUpdate = true;
+      points.geometry.setDrawRange(0, Math.min(list.length, base.length / 3));
+      points.visible = list.length > 0;
+      this.markerCount += list.length;
+    }
     // Ambience particles.
     const want = this.effects ? ambienceOf(u.season, u.weather) : null;
     if (this.particles?.kind !== want) {
@@ -608,8 +644,8 @@ export class VillageSeasonLayer {
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     const material = new THREE.PointsMaterial({
       map: particleTexture(kind),
-      color: kind === 'rain' ? '#dcebf5' : color,
-      size: kind === 'rain' ? 16 : kind === 'snow' ? 7 : 10,
+      color: kind === 'rain' ? '#b9d3e6' : color,
+      size: kind === 'rain' ? 22 : kind === 'snow' ? 7 : 10,
       sizeAttenuation: false,
       transparent: true,
       depthWrite: false,
@@ -648,7 +684,13 @@ export class VillageSeasonLayer {
 
   /** Animates particles, markers and the bobber; true when a frame should render. */
   tick(now: number, dt: number, center: THREE.Vector3): boolean {
-    const animated = !!this.particles || this.fishing.phase !== 'none' || (this.markers.size > 0 && !this.reduced);
+    // Reduced motion: nothing moves on its own (phase changes still render once).
+    if (this.reduced) {
+      if (this.particles) this.particles.points.visible = false;
+      return false;
+    }
+    if (this.particles) this.particles.points.visible = true;
+    const animated = !!this.particles || this.fishing.phase !== 'none' || this.markerCount > 0;
     if (!animated) return false;
     // ~30 fps is plenty for ambience; markers alone only need ~8 fps.
     const interval = this.particles || this.fishing.phase !== 'none' ? 33 : 125;
@@ -676,9 +718,14 @@ export class VillageSeasonLayer {
       attr.needsUpdate = true;
       points.position.set(center.x, 0, center.z);
     }
-    if (!this.reduced)
-      for (const sprite of this.markers.values())
-        sprite.position.y = (sprite.userData.baseY as number) + Math.sin(t * 2.4 + sprite.position.x) * 0.06;
+    if (this.markers)
+      for (const { points, base } of Object.values(this.markers)) {
+        if (!points.visible) continue;
+        const attr = points.geometry.getAttribute('position') as THREE.BufferAttribute;
+        const a = attr.array as Float32Array;
+        for (let i = 0; i < base.length; i += 3) a[i + 1] = base[i + 1] + Math.sin(t * 2.4 + base[i]) * 0.06;
+        attr.needsUpdate = true;
+      }
     if (this.fishing.phase !== 'none') {
       const since = (now - this.fishingSince) / 1000;
       const bite = this.fishing.phase === 'bite';

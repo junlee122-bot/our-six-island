@@ -3,7 +3,7 @@
 // room's painted style: warm outlines, soft fills and one highlight. The image
 // aspect follows the catalog size, because the room draws props as cards of
 // width w and height w × aspect (rugs: w × d from above).
-import { catalogEntry } from './lounge-bedroom-catalog';
+import { catalogEntry } from './lounge-bedroom-catalog.ts';
 
 const W = 200;
 const OUT = '#5a4636';

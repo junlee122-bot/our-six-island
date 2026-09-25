@@ -1001,6 +1001,11 @@ export function Village3D(props: Props) {
       world.hemi.intensity = light.hemiIntensity;
       world.sun.color.set(light.sun);
       world.sun.intensity = light.sunIntensity;
+      // Grey days are a little dimmer (rain, storms, clouds, snow).
+      const sky = latest.current.life?.weather?.today;
+      const dim = sky === 'storm' ? 0.72 : sky === 'rain' ? 0.82 : sky === 'cloudy' ? 0.9 : sky === 'snow' ? 0.94 : 1;
+      world.hemi.intensity *= dim;
+      world.sun.intensity *= dim * dim;
       world.sun.position.set(-20, 12 + 22 * light.elevation, 25);
       if (Math.abs(light.elevation - lastElevation) > 0.01) {
         lastElevation = light.elevation;
@@ -1638,6 +1643,10 @@ export function Village3D(props: Props) {
         }
         host.dataset.spot =
           nextAction?.target.type === 'spot' ? nextAction.target.spot.kind : '';
+        host.dataset.fishSpot =
+          nextAction?.target.type === 'spot' && nextAction.target.spot.kind === 'fish'
+            ? nextAction.target.spot.spot
+            : '';
         host.dataset.action = nextAction?.kind ?? '';
         host.dataset.nearbyPlace = entrance?.place.id ?? '';
         host.dataset.entryReady = String(entrance?.canEnter ?? false);

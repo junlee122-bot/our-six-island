@@ -29,6 +29,7 @@ import {
 } from '../lounge-life-ui';
 import { ItemIcon } from './ItemIcon';
 import { useNow } from './use-now';
+import './life-plus.css';
 
 export const SEASON_ICON: Record<Season, LucideIcon> = {
   spring: Flower2,
