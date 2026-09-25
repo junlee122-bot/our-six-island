@@ -33,7 +33,13 @@ const LOSSLESS_ATLASES = [
 ];
 // Table host sheets (루미 / 매화): already keyed RGBA, never dyed, so lossy is fine.
 const HOST_SHEETS = ['lounge/host-lumi.png', 'lounge/host-maehwa.png'];
-const REACTIONS = ['laugh', 'wow', 'cry', 'love', 'cheer', 'think', 'sorry', 'hello'];
+// Legacy pack (PNG sources in the repo) + current pack. The current pack's
+// 1024px PNG sources are kept out of the repository (not used at runtime), so
+// ids without a PNG next to the WebP are skipped and keep their committed WebP.
+const REACTIONS = [
+  'laugh', 'wow', 'cry', 'love', 'cheer', 'think', 'sorry', 'hello',
+  'jeje', 'yoi', 'eum', 'aye', 'nonono',
+];
 
 const kb = (n) => `${Math.round(n / 1024)}KB`;
 
@@ -75,6 +81,10 @@ async function images() {
   for (const id of REACTIONS) {
     const source = path.join(assets, 'lounge/reactions', `${id}.png`);
     const target = path.join(assets, 'lounge/reactions', `${id}.webp`);
+    if (!fs.existsSync(source)) {
+      console.log(`reactions/${id}.png missing, keeping committed .webp`);
+      continue;
+    }
     await sharp(source)
       .resize(256, 256, { kernel: 'lanczos3' })
       .webp({ quality: 88, alphaQuality: 100, effort: 6 })

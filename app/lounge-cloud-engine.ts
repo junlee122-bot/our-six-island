@@ -29,7 +29,7 @@ import {
   type LifeState,
 } from './lounge-life.ts';
 import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
-import { recordTables, recordVisit } from './lounge-life-plus.ts';
+import { lifeWealth, recordTables, recordVisit } from './lounge-life-plus.ts';
 export type CloudMember = { id: string; actor: number; username: string };
 type Lease = { connection: string; seen: number; sequence: number };
 type Room = { snapshot: HostedRoomSnapshot; leases: Record<string, Lease> };
@@ -85,10 +85,16 @@ export async function commandHash(c: CloudCommand) {
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
 }
-function wallet(ledger: LoungeLedger, id: string, now: number) {
+function wallet(ledger: LoungeLedger, id: string, now: number, life?: LifeState) {
   const bank = new LoungeBank(null);
   bank.commit(ledger);
-  return bank.view('wallet-' + id, now);
+  return bank.view('wallet-' + id, now, life ? lifeWealth(life, id) : 0);
+}
+/** Village context a hosted room needs: flags (VIP stakes) and bag wealth (relief). */
+function roomContext(r: LoungeRoom, life: LifeState) {
+  r.villageFlags = [...(life.flags ?? [])];
+  r.wealthOf = (w) => lifeWealth(life, w.replace(/^wallet-/, ''));
+  return r;
 }
 /** Refund whatever a broken room still holds, so one room cannot wedge the world. */
 function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
@@ -303,7 +309,7 @@ export function cloudTransition(
         const id = 'wallet-' + member.id;
         if (!dailyGrantInfo(g.ledger, id, now).available)
           throw new CloudError(REJECT.daily, 409);
-        g.ledger = claimDailyGrant(g.ledger, id, now);
+        g.ledger = claimDailyGrant(g.ledger, id, now, lifeWealth(readLife(g.life), member.id));
       } else if (
         command.op === 'action' ||
         command.op === 'leave' ||
@@ -326,7 +332,7 @@ export function cloudTransition(
           throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
         if (mutating) lease.sequence = command.sequence!;
         if (now - lease.seen > 15000 || mutating) lease.seen = now;
-        const r = LoungeRoom.hosted(entry.snapshot, g.ledger);
+        const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life));
         if (command.op === 'leave') {
           r.hostedDrop(member.id);
           delete entry.leases[member.id];
@@ -405,7 +411,8 @@ export function cloudTransition(
     lease = entry?.leases[member.id];
   const allowed = !!entry && lease?.connection === command.connection;
   const runtime = allowed ? LoungeRoom.hosted(entry.snapshot, g.ledger) : null;
-  const life = lifeView(readLife(g.life), member.id, member.actor, now);
+  const lifeState = readLife(g.life),
+    life = lifeView(lifeState, member.id, member.actor, now);
   const packet = runtime ? { ...runtime.hostedPacket(member.id), life } : null;
   const nextDue =
     entry && allowed ? snapshotNextDue(entry.snapshot) : Infinity;
@@ -416,7 +423,7 @@ export function cloudTransition(
     code: allowed ? target : '',
     host: allowed ? entry.snapshot.host : null,
     packet,
-    wallet: wallet(g.ledger, member.id, now),
+    wallet: wallet(g.ledger, member.id, now, lifeState),
     life,
     activeRoom: current ?? null,
     epoch: g.epochs[member.id] ?? 0,

@@ -2630,8 +2630,20 @@ button.g-card:focus-visible {
 }
 .l-reaction-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
+}
+@media (max-width: 560px) {
+  /* Five stickers: 3 + 2 on phones so 아뇨아뇨아뇨 still fits. */
+  .l-reaction-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .l-reaction-grid button {
+    grid-column: span 2;
+  }
+  .l-reaction-grid button:nth-child(4) {
+    grid-column: 2 / span 2;
+  }
 }
 .l-reaction-grid button {
   display: flex;
@@ -2663,6 +2675,8 @@ button.g-card:focus-visible {
 }
 .l-reaction-grid b {
   font-size: 16px;
+  word-break: keep-all;
+  text-align: center;
   margin: 3px 0 6px;
 }
 .l-reaction-grid small {

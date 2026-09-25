@@ -282,8 +282,13 @@ export type FurnitureDef = {
   season?: Season;
   /** Only in the shop within 3 days of this holiday key (lounge-calendar HOLIDAYS). */
   holiday?: string;
-  /** Not sold (craft / bundle reward only). */
+  /** Not sold (craft / bundle / project / festival reward only). */
   unsold?: boolean;
+  /**
+   * 이번 주 명품 가구: never in the daily rotation; two pieces are on sale
+   * each KST week (LUXURY_PER_WEEK), one copy per friend per week.
+   */
+  luxury?: boolean;
   /** Craft recipe (legacy island RECIPES: wood / flower / shell). */
   craft?: { wood: number; flower: number; shell: number };
 };
@@ -329,7 +334,25 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-xmas-tree', name: '크리스마스 트리', price: 40_000, holiday: 'christmas' },
   // Bundle reward (not sold).
   { ref: 'furn-village-medal', name: '마을 복원 기념패', price: 0, unsold: true },
+  // 이번 주 명품 가구 (weekly luxury rotation, a long-term 범 sink).
+  { ref: 'furn-grand-piano', name: '그랜드 피아노', price: 240_000, luxury: true },
+  { ref: 'furn-canopy-bed', name: '캐노피 침대', price: 280_000, luxury: true },
+  { ref: 'furn-aquarium', name: '대형 수족관', price: 200_000, luxury: true },
+  { ref: 'furn-crystal-lamp', name: '크리스탈 스탠드', price: 120_000, luxury: true },
+  { ref: 'furn-gold-mirror', name: '금테 전신 거울', price: 150_000, luxury: true },
+  { ref: 'furn-arcade', name: '레트로 오락기', price: 170_000, luxury: true },
+  { ref: 'furn-telescope', name: '별 보는 망원경', price: 160_000, luxury: true },
+  { ref: 'furn-mother-pearl', name: '자개 병풍', price: 220_000, luxury: true },
+  { ref: 'furn-velvet-sofa', name: '벨벳 체스터필드 소파', price: 190_000, luxury: true },
+  { ref: 'furn-bonsai', name: '명품 분재', price: 110_000, luxury: true },
+  // Project and festival rewards (not sold).
+  { ref: 'furn-project-plaque', name: '마을 공사 현판', price: 0, unsold: true },
+  { ref: 'furn-festival-lantern', name: '축제 청사초롱', price: 0, unsold: true },
+  { ref: 'furn-festival-drum', name: '축제 북', price: 0, unsold: true },
+  { ref: 'furn-festival-kite', name: '축제 방패연', price: 0, unsold: true },
+  { ref: 'furn-festival-fan', name: '축제 부채', price: 0, unsold: true },
 ];
+export const LUXURY_PER_WEEK = 2;
 export const FURNITURE_BY_REF: Readonly<Record<string, FurnitureDef>> = Object.fromEntries(FURNITURE.map((f) => [f.ref, f]));
 export const isFurnitureRef = (ref: unknown): ref is string =>
   typeof ref === 'string' && Object.prototype.hasOwnProperty.call(FURNITURE_BY_REF, ref);
@@ -396,7 +419,77 @@ export const VILLAGE_FLAGS: Record<string, string> = {
   museum: '박물관 2층 · 첫 기증 보상 2배',
   market: '장터 확장 · 가구 상점 매일 2종 더',
   dock: '선착장 · 여섯섬으로 가는 배 (다음 업데이트)',
+  // 마을 공사 2차 (PROJECTS): big shared 범 projects.
+  lights: '다리 등불 · 밤 바다 낚시 희귀 물고기 1.3배',
+  plaza: '광장 대분수 · 분수 물빛 팔레트를 살 수 있어요',
+  vip: '카지노 VIP룸 · 판돈 10만 범 테이블',
+  greenhouse2: '온실 2동 · 모든 작물이 10% 빨리 자라요',
+  festival: '축제 무대 조명 · 이번 주 명품 가구가 1종 더',
 };
+/**
+ * 마을 공사 2차: shared 범-only public projects. Friends contribute any
+ * amount (PROJECT_MIN_GIVE or what is left); when full the flag is set, the
+ * village changes and every contributor gets a 마을 공사 현판 (no 범 back —
+ * these are sinks). `requires`: a village flag that must exist first.
+ */
+export type ProjectDef = {
+  id: string;
+  name: string;
+  flag: string;
+  cost: number;
+  requires?: string;
+  /** Short description of the world change (board detail). */
+  note: string;
+};
+export const PROJECTS: readonly ProjectDef[] = [
+  { id: 'bridge-lights', name: '다리 보수와 등불', flag: 'lights', cost: 600_000, requires: 'bridge', note: '동쪽 다리 난간을 고치고 등불을 달아요. 밤바다가 환해져 희귀 물고기가 더 자주 와요.' },
+  { id: 'plaza-fountain', name: '광장 대분수', flag: 'plaza', cost: 900_000, requires: 'fountain', note: '광장 분수를 3단 대분수로 키워요. 분수 물빛 팔레트가 상점에 들어와요.' },
+  { id: 'greenhouse-wing', name: '온실 확장', flag: 'greenhouse2', cost: 1_200_000, requires: 'greenhouse', note: '온실 옆에 2동을 지어요. 마을 모든 밭의 작물이 10% 빨리 자라요.' },
+  { id: 'casino-vip', name: '카지노 VIP룸', flag: 'vip', cost: 1_500_000, note: '별빛 카지노에 VIP룸을 열어요. 판돈 10만 범 테이블을 만들 수 있어요.' },
+  { id: 'festival-stage', name: '마을 축제 무대', flag: 'festival', cost: 2_000_000, requires: 'stage', note: '광장 무대에 조명과 현수막을 달아요. 이번 주 명품 가구가 1종 더 들어와요.' },
+];
+export const PROJECT_BY_ID: Readonly<Record<string, ProjectDef>> = Object.fromEntries(PROJECTS.map((p) => [p.id, p]));
+export const PROJECT_MIN_GIVE = 1_000;
+/** Crop growth bonus (percent faster) once 온실 확장 is done. */
+export const GREENHOUSE2_SPEED = 10;
+/** Rare-fish weight multiplier at night on the sea deck once 다리 등불 is done. */
+export const LIGHTS_RARE_BOOST = 1.3;
+/**
+ * 주간 마을 축제 기금: a recurring shared sink that resets every KST week
+ * (Monday). When the week's goal is met, everyone who gave at least
+ * FESTIVAL_SOUVENIR_MIN that week gets the week's souvenir (rotating).
+ */
+export const FESTIVAL_GOAL = 350_000;
+export const FESTIVAL_SOUVENIR_MIN = 20_000;
+export const FESTIVAL_SOUVENIRS = [
+  'furn-festival-lantern',
+  'furn-festival-drum',
+  'furn-festival-kite',
+  'furn-festival-fan',
+] as const;
+/**
+ * 집 확장 단계 (per friend, bought in order, rising cost). Each tier unlocks
+ * room styles (`walls`/`floors`, see lounge-bedroom-data.ts) and/or changes
+ * the house outside in the village.
+ */
+export type HouseTier = {
+  tier: 1 | 2 | 3 | 4;
+  name: string;
+  price: number;
+  note: string;
+  walls?: readonly string[];
+  floors?: readonly string[];
+};
+export const HOUSE_TIERS: readonly HouseTier[] = [
+  { tier: 1, name: '벽지 리모델링', price: 150_000, note: '프리미엄 벽지 4종(샴페인 골드·밤바다 남색·로즈 스모크·깊은 숲)', walls: ['gold', 'navy', 'rose', 'forest'] },
+  { tier: 2, name: '바닥 시공', price: 400_000, note: '프리미엄 바닥 3종(대리석·헤링본·체리목)', floors: ['marble', 'herringbone', 'cherry'] },
+  { tier: 3, name: '앞마당 정원', price: 900_000, note: '마을의 내 집 앞에 꽃밭과 등불이 생기고, 벽지 2종(달빛 은색·노을 테라코타)이 더 열려요', walls: ['silver', 'terracotta'] },
+  { tier: 4, name: '2층 증축', price: 2_000_000, note: '마을의 내 집에 2층 다락과 명패가 올라가고, 벽지 “별밤 벨벳”과 바닥 “흑단”이 열려요', walls: ['velvet'], floors: ['ebony'] },
+];
+export const HOUSE_UNLOCK = (tier: number) => `house-${tier}`;
+/** 오늘의 가구 새로고침: price of the n-th reroll today (n from 0), at most SHOP_REROLL_MAX. */
+export const SHOP_REROLL_MAX = 5;
+export const shopRerollPrice = (n: number) => 3_000 * 2 ** n;
 export const BUNDLES: readonly BundleDef[] = [
   { id: 'spring-forage', name: '봄나물 꾸러미', flag: 'bridge', reward: '동쪽 다리 수리', slots: [it('mugwort', 5), it('shepherd', 5), it('wildgarlic', 3), it('azalea', 3), { beom: true, n: 100_000 }] },
   { id: 'summer-harvest', name: '여름 수확 꾸러미', flag: 'greenhouse', reward: '마을 온실', slots: [it('tomato', 10, 1), it('corn', 8), it('watermelon', 3), it('strawberry', 3, 2), { beom: true, n: 300_000 }] },
@@ -500,6 +593,10 @@ export const PLUS_ACTION_KINDS = [
   'deliver',
   'claimEvent',
   'wish',
+  'project',
+  'festival',
+  'upgradeHouse',
+  'rerollShop',
 ] as const;
 export type PlusActionKind = (typeof PLUS_ACTION_KINDS)[number];
 

@@ -12,7 +12,7 @@ import { GAME_INFO, type GameKind } from './lounge-games';
 import type { ChatLine, LoungePlayer, LoungeView } from './lounge-room';
 import type { Look } from './lounge-look';
 import { ACTORS } from './lounge-roster';
-import { reactionVisible, REACTIONS } from './lounge-reactions';
+import { reactionVisible, reactionInfo } from './lounge-reactions';
 import {
   TABLE_ACTION_LABEL,
   tableAction,
@@ -218,7 +218,7 @@ export function Interior3D({
   }, []);
   const bubbleFor = (p: LoungePlayer) => {
     if (p.reaction && reactionVisible(p.reaction, area, undefined, now))
-      return REACTIONS.find((r) => r.id === p.reaction!.id)?.label;
+      return reactionInfo(p.reaction.id)?.label;
     const b = bubbles[p.actor];
     return b && b.until > now ? b.text : undefined;
   };

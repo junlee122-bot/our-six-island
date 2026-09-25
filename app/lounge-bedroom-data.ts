@@ -53,8 +53,58 @@ export const WALL_COLORS = [
   'blue',
   'mint',
   'dusk',
+  // Premium walls (집 확장 tiers, lounge-items HOUSE_TIERS).
+  'gold',
+  'navy',
+  'rose',
+  'forest',
+  'silver',
+  'terracotta',
+  'velvet',
 ] as const;
-export const FLOOR_KINDS = ['oak', 'walnut', 'pale', 'ash'] as const;
+export const FLOOR_KINDS = [
+  'oak',
+  'walnut',
+  'pale',
+  'ash',
+  'marble',
+  'herringbone',
+  'cherry',
+  'ebony',
+] as const;
+/** Room styles that need a house tier ('house-N' unlock). */
+export const STYLE_UNLOCK: Readonly<Record<string, string>> = {
+  gold: 'house-1',
+  navy: 'house-1',
+  rose: 'house-1',
+  forest: 'house-1',
+  marble: 'house-2',
+  herringbone: 'house-2',
+  cherry: 'house-2',
+  silver: 'house-3',
+  terracotta: 'house-3',
+  velvet: 'house-4',
+  ebony: 'house-4',
+};
+/**
+ * Premium wall/floor styles the saver has not unlocked (a style the stored
+ * room already had stays allowed, like rare items).
+ */
+export function lockedRoomStyle(
+  room: Pick<Bedroom, 'wall' | 'floor'>,
+  unlocks: readonly string[],
+  previous?: Pick<Bedroom, 'wall' | 'floor'> | null,
+): string[] {
+  const out: string[] = [];
+  for (const [style, before] of [
+    [room.wall, previous?.wall],
+    [room.floor, previous?.floor],
+  ] as const) {
+    const need = Object.hasOwn(STYLE_UNLOCK, style) ? STYLE_UNLOCK[style] : null;
+    if (need && !unlocks.includes(need) && style !== before) out.push(style);
+  }
+  return out;
+}
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type BedroomThemeId = (typeof BEDROOM_THEMES)[number]['id'];

@@ -23,7 +23,30 @@ export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
 export const FLEX_GAMES: readonly GameKind[] = ['poker', 'blackjack', 'seotda'];
-export const TABLE_STAKES = [1000, 5000, 10000, 20000] as const;
+export const TABLE_STAKES = [1000, 5000, 10000, 20000, 50000, 100000] as const;
+/** High-roller tiers: 50,000 needs this much 범 in the wallet… */
+export const HIGH_STAKE_BALANCE = 250_000;
+/** …and 100,000 (VIP) also needs the village's '카지노 VIP룸' project. */
+export const VIP_STAKE_BALANCE = 500_000;
+export const VIP_FLAG = 'vip';
+/**
+ * Why the table creator cannot pick this stake (null = allowed). Lower tiers
+ * are always open; players joining only need the reservation itself.
+ */
+export function stakeLock(
+  stake: number,
+  balance: number,
+  flags: readonly string[] = [],
+): string | null {
+  if (stake >= 100_000) {
+    if (!flags.includes(VIP_FLAG))
+      return '마을 공사 ‘카지노 VIP룸’이 완성되면 열려요.';
+    if (balance < VIP_STAKE_BALANCE)
+      return `지갑에 ${VIP_STAKE_BALANCE.toLocaleString('en-US')}범 이상 있으면 열려요.`;
+  } else if (stake >= 50_000 && balance < HIGH_STAKE_BALANCE)
+    return `지갑에 ${HIGH_STAKE_BALANCE.toLocaleString('en-US')}범 이상 있으면 열려요.`;
+  return null;
+}
 /** Which interior holds each game's table (회관: 고스톱·섯다, 카지노: the rest). */
 export type TableArea = 'lounge' | 'casino';
 export const TABLE_AREA: Record<GameKind, TableArea> = {

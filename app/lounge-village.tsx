@@ -40,7 +40,7 @@ import type { LoungeSave } from './lounge-look';
 import type { LoungePlayer } from './lounge-room';
 import { ACTORS } from './lounge-roster';
 import { loungeSprites } from './lounge-sprites';
-import { REACTIONS, REACTION_TTL } from './lounge-reactions';
+import { reactionInfo, REACTION_TTL } from './lounge-reactions';
 import {
   advanceLocomotion,
   RUN_SPEED_MULTIPLIER,
@@ -1997,7 +1997,7 @@ export function Village3D(props: Props) {
         if (reaction) {
           const expires = reaction.expiresAt ?? reaction.at + REACTION_TTL;
           if (Date.now() < expires) {
-            text = REACTIONS.find((item) => item.id === reaction.id)?.label ?? '';
+            text = reactionInfo(reaction.id)?.label ?? '';
             startedAt = reaction.at;
           }
         }

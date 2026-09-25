@@ -27,12 +27,23 @@ export const BEDROOM_WALL_COLOR: Record<Bedroom['wall'], string> = {
   blue: '#c9d8d6',
   mint: '#d3e8df',
   dusk: '#a9a2b8',
+  gold: '#e9d8b0',
+  navy: '#5d6b86',
+  rose: '#d7b3b5',
+  forest: '#8fa58c',
+  silver: '#d4d8de',
+  terracotta: '#d39a7c',
+  velvet: '#4a3d63',
 };
 export const BEDROOM_FLOOR_COLOR: Record<Bedroom['floor'], string> = {
   oak: '#c3a579',
   walnut: '#8d7057',
   pale: '#e0d1b7',
   ash: '#cfc7bb',
+  marble: '#e8e4dd',
+  herringbone: '#a8825a',
+  cherry: '#9b5a45',
+  ebony: '#4a3a32',
 };
 /** The fixed camera looks in from here (front-right, elevated). */
 export const ROOM_CAMERA = { x: 11, y: 10, z: 13 } as const;
@@ -259,7 +270,7 @@ export function createBedroomScene(
         .set(BEDROOM_FLOOR_COLOR[floor])
         .offsetHSL(0, 0, ((index % 3) - 1) * 0.018),
     );
-    const dusk = wallColor === 'dusk';
+    const dusk = wallColor === 'dusk' || wallColor === 'navy' || wallColor === 'velvet';
     hemi.intensity = dusk ? 1.55 : 2;
     sun.color.set(dusk ? '#ffd9b8' : '#ffefd5');
     onChange();

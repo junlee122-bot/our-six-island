@@ -40,6 +40,7 @@ import {
   rememberRound,
   seotdaLine,
 } from '../app/lounge-dealer-lines.ts';
+import { REACTIONS } from '../app/lounge-reactions.ts';
 
 // Blackjack shoe: the listed ranks come first, in order.
 function shoe(ranks) {
@@ -363,15 +364,18 @@ test('line choice is deterministic per match, revision and event', () => {
 });
 test('sticker replies answer the newest seated sticker for this match', () => {
   const players = [
-    { id: 'a', reaction: { id: 'cheer', at: 10, scope: 'poker', matchId: 'm' } },
-    { id: 'b', reaction: { id: 'cry', at: 20, scope: 'poker', matchId: 'm' } },
-    { id: 'c', reaction: { id: 'laugh', at: 30, scope: 'village' } },
+    { id: 'a', reaction: { id: 'yoi', at: 10, scope: 'poker', matchId: 'm' } },
+    { id: 'b', reaction: { id: 'nonono', at: 20, scope: 'poker', matchId: 'm' } },
+    { id: 'c', reaction: { id: 'aye', at: 30, scope: 'village' } },
   ];
   const r = latestTableReaction(players, ['a', 'b', 'c'], 'poker', 'm');
-  assert.deepEqual(r, { seat: 1, id: 'cry', at: 20 });
+  assert.deepEqual(r, { seat: 1, id: 'nonono', at: 20 });
   assert.equal(latestTableReaction(players, ['a'], 'poker', 'other'), null);
   const text = reactionLine('m', r, NAMES);
-  assert.ok(DEALER_LINES.reaction.cry.includes(text));
+  assert.ok(DEALER_LINES.reaction.nonono.includes(text));
+  // Every current sticker gets a reply; legacy ids from old clients still do.
+  for (const { id } of REACTIONS)
+    assert.ok(reactionLine('m', { seat: 0, id, at: 1 }, NAMES), id);
   assert.equal(reactionLine('m', { seat: 0, id: 'hello', at: 1 }, NAMES).includes('도원 님'), true);
 });
 test('seotda host 매화 explains the win and the pot; go-stop host is light', () => {

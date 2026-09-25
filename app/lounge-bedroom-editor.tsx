@@ -20,6 +20,7 @@ import {
   BEDROOM_LIMITS,
   FLOOR_KINDS,
   ROOM_CATALOG,
+  STYLE_UNLOCK,
   WALL_COLORS,
   catalogEntry,
   type Bedroom,
@@ -51,12 +52,23 @@ export const WALL_NAMES: Record<Bedroom['wall'], string> = {
   blue: '하늘색',
   mint: '민트',
   dusk: '밤보라',
+  gold: '샴페인 골드',
+  navy: '밤바다 남색',
+  rose: '로즈 스모크',
+  forest: '깊은 숲',
+  silver: '달빛 은색',
+  terracotta: '노을 테라코타',
+  velvet: '별밤 벨벳',
 };
 export const FLOOR_NAMES: Record<Bedroom['floor'], string> = {
   oak: '내추럴 오크',
   walnut: '짙은 월넛',
   pale: '밝은 나무',
   ash: '회색 애쉬',
+  marble: '대리석',
+  herringbone: '헤링본',
+  cherry: '체리목',
+  ebony: '흑단',
 };
 export const ACCESS_NAMES: Record<RoomAccess, [string, string]> = {
   public: ['활짝 열기', '누구나 편하게 놀러 와요. 친구 목록에 “놀러 오세요”가 떠요.'],
@@ -304,13 +316,20 @@ export function EditBar({
   );
 }
 
+/** A premium style is usable when unlocked by the house tier (or already in the room). */
+const styleOpen = (id: string, current: string, unlocks: readonly string[]) =>
+  !Object.hasOwn(STYLE_UNLOCK, id) || unlocks.includes(STYLE_UNLOCK[id]) || id === current;
+const styleTier = (id: string) => STYLE_UNLOCK[id]?.replace('house-', '') ?? '';
+
 export function RoomSettings({
   room,
+  unlocks = [],
   onChange,
   onReset,
   onClose,
 }: {
   room: Bedroom;
+  unlocks?: readonly string[];
   onChange: (next: Bedroom, message: string) => void;
   onReset: () => void;
   onClose: () => void;
@@ -331,6 +350,9 @@ export function RoomSettings({
               key={id}
               type="button"
               aria-pressed={room.wall === id}
+              disabled={!styleOpen(id, room.wall, unlocks)}
+              title={styleOpen(id, room.wall, unlocks) ? undefined : `집 확장 ${styleTier(id)}단계에서 열려요`}
+              data-locked={styleOpen(id, room.wall, unlocks) ? undefined : true}
               onClick={() => onChange({ ...room, wall: id }, `벽을 ${josa(WALL_NAMES[id], '으로/로')} 바꿨어요.`)}
             >
               <i style={{ background: BEDROOM_WALL_COLOR[id] }}>{room.wall === id && <Check size={14} />}</i>
@@ -347,6 +369,9 @@ export function RoomSettings({
               key={id}
               type="button"
               aria-pressed={room.floor === id}
+              disabled={!styleOpen(id, room.floor, unlocks)}
+              title={styleOpen(id, room.floor, unlocks) ? undefined : `집 확장 ${styleTier(id)}단계에서 열려요`}
+              data-locked={styleOpen(id, room.floor, unlocks) ? undefined : true}
               onClick={() => onChange({ ...room, floor: id }, `바닥을 ${josa(FLOOR_NAMES[id], '으로/로')} 바꿨어요.`)}
             >
               <i style={{ background: BEDROOM_FLOOR_COLOR[id] }}>{room.floor === id && <Check size={14} />}</i>

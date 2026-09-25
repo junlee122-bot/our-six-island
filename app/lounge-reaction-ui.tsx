@@ -8,6 +8,7 @@ import type { LoungePlayer } from './lounge-room';
 import {
   REACTIONS,
   REACTION_COOLDOWN,
+  reactionInfo,
   REACTION_TTL,
   reactionVisible,
   type ReactionId,
@@ -154,14 +155,12 @@ export function ReactionDock({
             >
               <img
                 src={reactionImage(p.reaction!.id)}
-                alt={
-                  REACTIONS.find((r) => r.id === p.reaction!.id)!.description
-                }
+                alt={reactionInfo(p.reaction!.id)?.description ?? ''}
               />
               <span>
                 <b>{ACTORS[p.actor]}</b>
                 <small>
-                  {REACTIONS.find((r) => r.id === p.reaction!.id)!.label}
+                  {reactionInfo(p.reaction!.id)?.label}
                 </small>
               </span>
             </div>
@@ -170,7 +169,7 @@ export function ReactionDock({
           <p>
             {hidden
               ? '스티커를 숨겼어요. 눈 아이콘으로 다시 켤 수 있어요.'
-              : '좋은 수에는 나이스! 아쉬운 패에는 엉엉.'}
+              : '시작할 땐 요이! 아닐 땐 아뇨아뇨아뇨.'}
           </p>
         )}
       </div>

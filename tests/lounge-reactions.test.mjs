@@ -6,6 +6,8 @@ import { defaultLook } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import {
   REACTIONS,
+  LEGACY_REACTIONS,
+  reactionInfo,
   REACTION_TTL,
   REACTION_COOLDOWN,
   readReaction,
@@ -50,7 +52,7 @@ test('reaction allowlist rejects arbitrary content and constructs authoritative 
     assert.equal(
       r.hostedAction(
         'a',
-        { kind: 'reaction', id: 'hello', scope: 'lounge', ...bad },
+        { kind: 'reaction', id: 'jeje', scope: 'lounge', ...bad },
         now,
       ),
       false,
@@ -58,7 +60,7 @@ test('reaction allowlist rejects arbitrary content and constructs authoritative 
   assert.equal(
     r.hostedAction(
       'intruder',
-      { kind: 'reaction', id: 'hello', scope: 'lounge' },
+      { kind: 'reaction', id: 'jeje', scope: 'lounge' },
       now,
     ),
     false,
@@ -68,7 +70,7 @@ test('reaction allowlist rejects arbitrary content and constructs authoritative 
       'a',
       {
         kind: 'reaction',
-        id: 'hello',
+        id: 'jeje',
         scope: 'lounge',
         at: 1,
         expiresAt: Infinity,
@@ -80,7 +82,7 @@ test('reaction allowlist rejects arbitrary content and constructs authoritative 
     true,
   );
   assert.deepEqual(r.hostedPacket('b').players[0].reaction, {
-    id: 'hello',
+    id: 'jeje',
     scope: 'lounge',
     at: now,
   });
@@ -90,7 +92,7 @@ test('cooldown survives snapshot restore, limits cross-scope spam, and invalid r
   assert.equal(
     r.hostedAction(
       'a',
-      { kind: 'reaction', id: 'laugh', scope: 'lounge' },
+      { kind: 'reaction', id: 'yoi', scope: 'lounge' },
       now,
     ),
     true,
@@ -99,7 +101,7 @@ test('cooldown survives snapshot restore, limits cross-scope spam, and invalid r
   assert.equal(
     r.hostedAction(
       'reaction-test-member-000-a',
-      { kind: 'reaction', id: 'love', scope: 'lounge' },
+      { kind: 'reaction', id: 'aye', scope: 'lounge' },
       now + REACTION_COOLDOWN - 1,
     ),
     false,
@@ -107,7 +109,7 @@ test('cooldown survives snapshot restore, limits cross-scope spam, and invalid r
   assert.equal(
     r.hostedAction(
       'reaction-test-member-000-a',
-      { kind: 'reaction', id: 'love', scope: 'lounge' },
+      { kind: 'reaction', id: 'aye', scope: 'lounge' },
       now + REACTION_COOLDOWN,
     ),
     true,
@@ -123,7 +125,7 @@ test('cooldown survives snapshot restore, limits cross-scope spam, and invalid r
   assert.equal(
     r.hostedAction(
       'reaction-test-member-000-b',
-      { kind: 'reaction', id: 'love', scope: 'lounge' },
+      { kind: 'reaction', id: 'aye', scope: 'lounge' },
       now,
     ),
     true,
@@ -213,7 +215,7 @@ test('skewed clocks, expired events and duplicate packets cannot replay reaction
 });
 test('bounded latest reaction per seven friends and old saves remain compatible', () => {
   let r = room(7);
-  for (let j = 0; j < 8; j++)
+  for (let j = 0; j < REACTIONS.length; j++)
     for (let i = 0; i < 7; i++)
       assert.equal(
         r.hostedAction(
@@ -225,7 +227,7 @@ test('bounded latest reaction per seven friends and old saves remain compatible'
       );
   assert.equal(r.hostedPacket('a').players.length, 7);
   assert.ok(
-    r.hostedPacket('a').players.every((p) => p.reaction.id === 'hello'),
+    r.hostedPacket('a').players.every((p) => p.reaction.id === 'nonono'),
   );
   const old = r.hostedSnapshot();
   for (const p of old.players) delete p.reaction;
@@ -233,7 +235,7 @@ test('bounded latest reaction per seven friends and old saves remain compatible'
   assert.equal(
     r.hostedAction(
       'reaction-test-member-000-a',
-      { kind: 'reaction', id: 'hello', scope: 'lounge' },
+      { kind: 'reaction', id: 'jeje', scope: 'lounge' },
       now,
     ),
     true,
@@ -287,4 +289,35 @@ test('cloud reactions use server clock, retries are idempotent, stale connection
   );
   assert.equal(denied.response.ok, false);
   assert.equal(denied.response.packet, null);
+});
+
+test('picker offers exactly the five current stickers; legacy ids stay readable', () => {
+  assert.deepEqual(
+    REACTIONS.map((r) => r.label),
+    ['제제이야', '요이', '엄', '아 예?', '아뇨아뇨아뇨'],
+  );
+  assert.deepEqual(
+    REACTIONS.map((r) => r.id),
+    ['jeje', 'yoi', 'eum', 'aye', 'nonono'],
+  );
+  for (const legacy of LEGACY_REACTIONS) {
+    assert.equal(REACTIONS.some((r) => r.id === legacy.id), false);
+    assert.deepEqual(
+      readReaction({ id: legacy.id, at: now, scope: 'village' }),
+      { id: legacy.id, at: now, scope: 'village' },
+    );
+    assert.equal(reactionInfo(legacy.id)?.label, legacy.label);
+  }
+  assert.equal(readReaction({ id: 'bogus', at: now, scope: 'village' }), undefined);
+  assert.equal(reactionInfo('bogus'), undefined);
+  // An old client may still send an old id to the host.
+  const r = room();
+  assert.equal(
+    r.hostedAction('a', { kind: 'reaction', id: 'hello', scope: 'lounge' }, now),
+    true,
+  );
+  assert.equal(
+    r.hostedPacket('a').players.find((p) => p.reaction)?.reaction.id,
+    'hello',
+  );
 });

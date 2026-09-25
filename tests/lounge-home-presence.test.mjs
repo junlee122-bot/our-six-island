@@ -109,9 +109,9 @@ test('two friends in the same room see each other, chat and stickers stay in tha
   const villageChat = (await h.run(hohyeon, 'read')).packet.chat.map((c) => c.text);
   assert.deepEqual(villageChat, ['마을에서 안녕']);
   // Stickers with the 'home' scope only work while in a room.
-  r = await act(h, minseo, { kind: 'reaction', id: 'love', scope: 'home' });
+  r = await act(h, minseo, { kind: 'reaction', id: 'jeje', scope: 'home' });
   assert.equal(r.ok, true, r.error);
-  r = await act(h, hohyeon, { kind: 'reaction', id: 'love', scope: 'home' });
+  r = await act(h, hohyeon, { kind: 'reaction', id: 'jeje', scope: 'home' });
   assert.equal(r.ok, false);
   // Leaving the room drops the room tag.
   r = await act(h, minseo, { kind: 'area', area: 'village', x: 50, y: 60 });

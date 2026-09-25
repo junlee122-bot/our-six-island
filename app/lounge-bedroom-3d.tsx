@@ -55,7 +55,7 @@ import {
 } from './lounge-locomotion';
 import type { Look, LoungeSave } from './lounge-look';
 import type { ChatLine, LoungePlayer } from './lounge-room';
-import { reactionVisible, REACTIONS } from './lounge-reactions';
+import { reactionVisible, reactionInfo } from './lounge-reactions';
 import { ACTORS } from './lounge-roster';
 import { josa } from './lounge-text';
 import {
@@ -1082,7 +1082,7 @@ export function Bedroom3D({
   const closed = (room.access ?? 'friends') === 'closed';
   const bubbleFor = (actor: number, reaction?: LoungePlayer['reaction']) => {
     if (reaction && reactionVisible(reaction, 'home', undefined, now))
-      return REACTIONS.find((r) => r.id === reaction.id)?.label;
+      return reactionInfo(reaction.id)?.label;
     const b = bubbles[actor];
     return b && b.until > now ? b.text : undefined;
   };
@@ -1099,6 +1099,7 @@ export function Bedroom3D({
     ) : editing && panel === 'settings' ? (
       <RoomSettings
         room={room}
+        unlocks={unlocks}
         onChange={commit}
         onReset={() => setResetOpen(true)}
         onClose={() => setPanel(null)}

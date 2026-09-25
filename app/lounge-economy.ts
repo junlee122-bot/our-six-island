@@ -44,7 +44,27 @@ export type LoungeLedger = {
   /** Last claimed KST day number per wallet for the daily grant. */
   daily?: Record<string, number>;
   archive?: LedgerArchive;
+  /**
+   * Daily and lifetime grant/spend totals by source bucket (see `flowBucket`),
+   * so the economy report is not limited to the last 200 `entries`. Absent in
+   * older ledgers; created by the first grant/spend after the update (`base`
+   * records the lifetime totals at that moment).
+   */
+  flows?: LedgerFlows;
 };
+/** One KST day of grant (`g`) and spend (`s`) totals per bucket. */
+export type FlowDay = { d: number; g: Record<string, number>; s: Record<string, number> };
+export type LedgerFlows = {
+  /** When the counters started (older money is only in `base`). */
+  since: number;
+  base: { granted: number; spent: number };
+  total: { g: Record<string, number>; s: Record<string, number> };
+  /** Most recent KST days, oldest first (at most LEDGER_FLOW_DAYS). */
+  days: FlowDay[];
+};
+/** Days of per-day flow totals kept in the ledger (bounded world row). */
+export const LEDGER_FLOW_DAYS = 120;
+const FLOW_BUCKETS_MAX = 48;
 /** Settled/void games kept in hot state; older ones are folded into `archive`. */
 export const LEDGER_HOT_GAMES = 500;
 const LEDGER_ENTRY_LIMIT = 200;
@@ -67,6 +87,96 @@ export const newLoungeLedger = (): LoungeLedger => ({
   games: {},
   houseBalance: 0,
 });
+
+const bucketsOk = (o: unknown) =>
+  !!o &&
+  typeof o === 'object' &&
+  !Array.isArray(o) &&
+  Object.keys(o).length <= FLOW_BUCKETS_MAX &&
+  Object.entries(o).every(
+    ([k, n]) => /^[a-z0-9-]{1,24}$/.test(k) && safe(n) && n >= 0,
+  );
+function flowsOk(f: LedgerFlows) {
+  return (
+    !!f &&
+    typeof f === 'object' &&
+    safe(f.since) &&
+    !!f.base &&
+    safe(f.base.granted) &&
+    safe(f.base.spent) &&
+    !!f.total &&
+    bucketsOk(f.total.g) &&
+    bucketsOk(f.total.s) &&
+    Array.isArray(f.days) &&
+    f.days.length <= LEDGER_FLOW_DAYS &&
+    f.days.every((d) => !!d && safe(d.d) && bucketsOk(d.g) && bucketsOk(d.s))
+  );
+}
+/**
+ * Source/sink bucket of a grant/spend reason for the daily flow totals.
+ * Crop sales stay per crop ('sell-strawberry'); everything else is grouped so
+ * the key set stays small (FLOW_BUCKETS_MAX).
+ */
+export function flowBucket(type: LedgerEntry['type'], reason: string): string {
+  if (type === 'grant') {
+    if (reason === 'daily' || reason === 'daily-relief') return reason;
+    if (reason.startsWith('sell-')) return reason.slice(0, 24);
+    if (
+      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night'].includes(reason)
+    )
+      return reason;
+    return 'grant-other';
+  }
+  if (reason.startsWith('buy-seed') || reason.startsWith('buy-bundle')) return 'seeds';
+  if (reason.startsWith('buy-trophy') || reason === 'buy-fruit-basket') return 'trophy';
+  if (reason.startsWith('buy-palette')) return 'palette';
+  if (reason.startsWith('buy-')) return 'consumable';
+  if (reason.startsWith('farm-')) return 'farm-expand';
+  if (reason.startsWith('rod-')) return 'rod';
+  if (reason.startsWith('house-')) return 'house';
+  if (
+    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival'].includes(reason)
+  )
+    return reason;
+  return 'spend-other';
+}
+function addFlow(
+  ledger: LoungeLedger,
+  type: LedgerEntry['type'],
+  amount: number,
+  at: number,
+  reason: string,
+) {
+  const flows = (ledger.flows ??= {
+    since: at,
+    // Totals before this entry was applied (entry() updates granted/spent first).
+    base: {
+      granted: (ledger.granted ?? 0) - (type === 'grant' ? amount : 0),
+      spent: (ledger.spent ?? 0) - (type === 'spend' ? amount : 0),
+    },
+    total: { g: {}, s: {} },
+    days: [],
+  });
+  const key = flowBucket(type, reason),
+    side = type === 'grant' ? 'g' : 's',
+    day = kstDay(at);
+  const bump = (o: Record<string, number>) => {
+    if (!(key in o) && Object.keys(o).length >= FLOW_BUCKETS_MAX) {
+      const other = type === 'grant' ? 'grant-other' : 'spend-other';
+      o[other] = (o[other] ?? 0) + amount;
+    } else o[key] = (o[key] ?? 0) + amount;
+  };
+  bump(flows.total[side]);
+  let today = flows.days.find((d) => d.d === day);
+  if (!today) {
+    today = { d: day, g: {}, s: {} };
+    flows.days.push(today);
+    flows.days.sort((a, b) => a.d - b.d);
+    if (flows.days.length > LEDGER_FLOW_DAYS)
+      flows.days = flows.days.slice(-LEDGER_FLOW_DAYS);
+  }
+  bump(today[side]);
+}
 
 export function validateLedger(value: unknown): asserts value is LoungeLedger {
   const v = value as LoungeLedger;
@@ -157,7 +267,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
         ))) ||
     (v.daily !== undefined &&
       (typeof v.daily !== 'object' ||
-        Object.values(v.daily).some((d) => !safe(d))))
+        Object.values(v.daily).some((d) => !safe(d)))) ||
+    (v.flows !== undefined && !flowsOk(v.flows))
   )
     fail('공통 지갑 기록을 읽을 수 없습니다.');
   // Invariant: balances + reservations + house − minted grants = initial total.
@@ -328,6 +439,7 @@ function entry(
     ...(next.entries ?? []),
     { id, type, wallet, amount, at, reason: reason.slice(0, 40) },
   ].slice(-LEDGER_ENTRY_LIMIT);
+  addFlow(next, type, amount, at, reason);
   validateLedger(next);
   return next;
 }
@@ -350,8 +462,15 @@ export const spendBeom = (
   reason = 'spend',
 ) => entry(ledger, 'spend', wallet, amount, id, at, reason);
 export const DAILY_GRANT = 3_000;
-export const DAILY_RELIEF_BELOW = 5_000;
-export const DAILY_RELIEF_TO = 10_000;
+/**
+ * Relief: when a friend's whole wealth (available balance + table
+ * reservations + `extraWealth`, i.e. bag contents at sell value supplied by
+ * the life engine) is below this, the daily grant is DAILY_RELIEF instead.
+ * A flat amount (not a top-up), so spending down before claiming gains
+ * nothing but the 3,000범 difference, and only when truly broke.
+ */
+export const DAILY_RELIEF_BELOW = 10_000;
+export const DAILY_RELIEF = 6_000;
 const KST_OFFSET = 9 * 3_600_000,
   DAY = 86_400_000;
 /** Day number in Korea Standard Time (UTC+9, no DST). */
@@ -359,15 +478,29 @@ export const kstDay = (now: number) => Math.floor((now + KST_OFFSET) / DAY);
 /** Next KST midnight after `now`, as an epoch in ms. */
 export const nextKstMidnight = (now: number) =>
   (kstDay(now) + 1) * DAY - KST_OFFSET;
+/** 범 a wallet has locked in reserved (unsettled) games. */
+export function reservedOf(ledger: LoungeLedger, wallet: string) {
+  let held = 0;
+  for (const g of Object.values(ledger.games))
+    if (g.state === 'reserved') {
+      const i = g.wallets.indexOf(wallet);
+      if (i >= 0) held += g.deposits[i];
+    }
+  return held;
+}
 export function dailyGrantInfo(
   ledger: LoungeLedger,
   wallet: string | undefined,
   now: number,
+  extraWealth = 0,
 ) {
   const balance = wallet ? (ledger.accounts[wallet] ?? 0) : 0,
     claimed = !!wallet && ledger.daily?.[wallet] === kstDay(now),
-    amount =
-      balance < DAILY_RELIEF_BELOW ? DAILY_RELIEF_TO - balance : DAILY_GRANT;
+    wealth =
+      balance +
+      (wallet ? reservedOf(ledger, wallet) : 0) +
+      (safe(extraWealth) && extraWealth > 0 ? extraWealth : 0),
+    amount = wealth < DAILY_RELIEF_BELOW ? DAILY_RELIEF : DAILY_GRANT;
   return {
     available: !!wallet && own(ledger.accounts, wallet) && !claimed,
     amount,
@@ -375,15 +508,16 @@ export function dailyGrantInfo(
   };
 }
 /**
- * Once per KST day: 3,000범, or a top-up to 10,000범 when the available
- * balance (reservations excluded) is below 5,000범.
+ * Once per KST day: 3,000범, or a flat DAILY_RELIEF when the friend's whole
+ * wealth (see DAILY_RELIEF_BELOW) is low.
  */
 export function claimDailyGrant(
   ledger: LoungeLedger,
   wallet: string,
   now: number,
+  extraWealth = 0,
 ): LoungeLedger {
-  const info = dailyGrantInfo(ledger, wallet, now);
+  const info = dailyGrantInfo(ledger, wallet, now, extraWealth);
   if (!info.available) fail('오늘의 범은 이미 받았어요. 내일 다시 받을 수 있어요.');
   const day = kstDay(now),
     next = grantBeom(

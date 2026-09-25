@@ -16,6 +16,7 @@ import {
 import {
   ACTOR_NAMES,
   BIRTHDAY_GIFT_BONUS,
+  dayStart,
   CASINO_NIGHT_BONUS,
   FISH_DAY_BONUS,
   FRIEND_PROFILES,
@@ -51,6 +52,18 @@ import {
   DISHES,
   DISH_BY_ID,
   FERTILIZERS,
+  FESTIVAL_GOAL,
+  FESTIVAL_SOUVENIRS,
+  FESTIVAL_SOUVENIR_MIN,
+  GREENHOUSE2_SPEED,
+  HOUSE_TIERS,
+  LIGHTS_RARE_BOOST,
+  LUXURY_PER_WEEK,
+  PROJECTS,
+  PROJECT_BY_ID,
+  PROJECT_MIN_GIVE,
+  SHOP_REROLL_MAX,
+  shopRerollPrice,
   FISH,
   FISH_BY_ID,
   FISH_SPOTS,
@@ -82,6 +95,7 @@ import {
   DELUXE_SPEED,
   FARM_SIZES,
   FRUIT_SELL,
+  QUALITY_MULT,
   LIFE_REJECT,
   LifeError,
   MAX_SPEED,
@@ -173,10 +187,22 @@ export type UserExt = {
   ate?: string;
   wished?: boolean;
   buff?: { kind: DishBuff; dish: string; until: number };
+  /** Units sold today per crop/fruit/item id (demand curves; daily). */
+  dem?: Record<string, number>;
+  /** 오늘의 가구 rerolls today (daily). */
+  reroll?: number;
+  /** House tier bought (집 확장, 1–4). */
+  house?: 1 | 2 | 3 | 4;
+  /** Weekly luxury furniture bought this KST week. */
+  lux?: { w: number; refs: string[] };
 };
 export type Memory = { id: string; kind: string; actors: number[]; text: string; at: number };
 export type NewsLine = { key: string; kind: string; text: string; actors: number[] };
 export type BundleState = { got: number[]; by: Record<string, number>; doneAt?: number };
+/** 마을 공사: 범 given so far and 범 per actor. */
+export type ProjectState = { got: number; by: Record<string, number>; doneAt?: number };
+/** 주간 마을 축제 기금 of one KST week (Monday start). */
+export type FestivalState = { week: number; got: number; by: Record<string, number>; doneAt?: number };
 /** Optional life-expansion fields of `world.life` (absent in older worlds). */
 export type LifeExt = {
   ext?: Record<string, UserExt>;
@@ -190,6 +216,10 @@ export type LifeExt = {
   bonds?: Record<string, number>;
   /** Friendship sources already counted today. */
   bondDay?: { day: number; keys: string[] };
+  /** 마을 공사 2차 (PROJECTS). */
+  projects?: Record<string, ProjectState>;
+  /** This week's festival fund. */
+  festival?: FestivalState;
 };
 export type PlusAction =
   | { kind: 'fertilize'; plot: number; item: string }
@@ -210,7 +240,11 @@ export type PlusAction =
   | { kind: 'contribute'; bundle: string; slot: number; n: number }
   | { kind: 'deliver'; to: number }
   | { kind: 'claimEvent'; event: string }
-  | { kind: 'wish' };
+  | { kind: 'wish' }
+  | { kind: 'project'; project: string; n: number }
+  | { kind: 'festival'; n: number }
+  | { kind: 'upgradeHouse' }
+  | { kind: 'rerollShop' };
 
 export const PLUS_REJECT = {
   fert: '비료를 확인해 주세요.',
@@ -244,6 +278,15 @@ export const PLUS_REJECT = {
   claimed: '이미 받았어요.',
   wish: '광장 분수가 복원되면 소원을 빌 수 있어요.',
   wished: '오늘은 이미 소원을 빌었어요. 내일 또 와요.',
+  project: '마을 공사를 확인해 주세요.',
+  projectLocked: '먼저 마을 복원을 마쳐야 시작할 수 있는 공사예요.',
+  projectDone: '이미 끝난 공사예요.',
+  give: '보탤 범을 확인해 주세요.',
+  festivalDone: '이번 주 축제 기금은 다 모였어요. 다음 주 월요일에 새로 모아요.',
+  houseMax: '집을 끝까지 넓혔어요.',
+  rerollMax: '오늘은 더 새로 고칠 수 없어요. 내일 새 가구가 들어와요.',
+  luxuryBought: '이번 주에는 이미 산 명품 가구예요. 다음 주에 또 들어올 수도 있어요.',
+  luxuryOne: '명품 가구는 한 번에 하나씩 살 수 있어요.',
 } as const;
 function fail(message: string): never {
   throw new LifeError(message);
@@ -278,6 +321,13 @@ const idList = (v: unknown, max: number, ok: (s: string) => boolean = () => true
     : [];
 const isDexId = (id: string) => isCropId(id) || (isItemId(id) && ITEM_BY_ID[id].kind !== 'tool');
 const isMuseumId = (id: string) => isCropId(id) || (isItemId(id) && !!ITEM_BY_ID[id].museum);
+const isDemandId = (id: string) => isCropId(id) || id === 'fruit' || (isItemId(id) && ITEM_BY_ID[id].sell > 0);
+const readActorAmounts = (v: unknown) => {
+  const by: Record<string, number> = {};
+  for (const [a, n] of Object.entries(obj(v)))
+    if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = n;
+  return by;
+};
 
 function readPending(v: unknown): FishPending | undefined {
   const p = obj(v);
@@ -353,6 +403,15 @@ function readUserExt(v: unknown): UserExt | undefined {
     if (wf.length) out.wf = wf;
     if (typeof x.ate === 'string' && own(DISH_BY_ID, x.ate)) out.ate = x.ate;
     if (x.wished === true) out.wished = true;
+    const dem = counts(x.dem, isDemandId, DAILY_KEYS_MAX * 2);
+    if (nonEmpty(dem)) out.dem = dem as Record<string, number>;
+    if (safe(x.reroll) && x.reroll > 0) out.reroll = Math.min(SHOP_REROLL_MAX, x.reroll);
+  }
+  if (x.house === 1 || x.house === 2 || x.house === 3 || x.house === 4) out.house = x.house;
+  const lux = obj(x.lux);
+  if (safe(lux.w) && lux.w > 0) {
+    const refs = idList(lux.refs, 8, (r) => isFurnitureRef(r) && !!FURNITURE_BY_REF[r].luxury);
+    if (refs.length) out.lux = { w: lux.w, refs };
   }
   const b = obj(x.buff);
   if (
@@ -414,7 +473,29 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     if (got.some((n) => n > 0) || state.doneAt) bundles[def.id] = state;
   }
   if (nonEmpty(bundles)) out.bundles = bundles;
-  const flags = idList(v.flags, 16, (f) => own(VILLAGE_FLAGS, f));
+  const projects: Record<string, ProjectState> = {};
+  for (const def of PROJECTS) {
+    const p = obj(obj(v.projects)[def.id]);
+    if (!nonEmpty(p)) continue;
+    const state: ProjectState = {
+      got: safe(p.got) && p.got > 0 ? Math.min(def.cost, p.got) : 0,
+      by: readActorAmounts(p.by),
+    };
+    if (safe(p.doneAt) && p.doneAt > 0) state.doneAt = p.doneAt;
+    if (state.got > 0 || state.doneAt) projects[def.id] = state;
+  }
+  if (nonEmpty(projects)) out.projects = projects;
+  const fest = obj(v.festival);
+  if (safe(fest.week) && fest.week > 0) {
+    const state: FestivalState = {
+      week: fest.week,
+      got: safe(fest.got) && fest.got > 0 ? Math.min(FESTIVAL_GOAL, fest.got) : 0,
+      by: readActorAmounts(fest.by),
+    };
+    if (safe(fest.doneAt) && fest.doneAt > 0) state.doneAt = fest.doneAt;
+    out.festival = state;
+  }
+  const flags = idList(v.flags, 32, (f) => own(VILLAGE_FLAGS, f));
   if (flags.length) out.flags = flags;
   const memories = Array.isArray(v.memories)
     ? v.memories.slice(-MEMORY_MAX).map(readMemory).filter((m): m is Memory => !!m)
@@ -469,6 +550,8 @@ function todayExt(life: LifeState, uid: string, now: number): UserExt {
     delete x.wf;
     delete x.ate;
     delete x.wished;
+    delete x.dem;
+    delete x.reroll;
   }
   return x;
 }
@@ -482,6 +565,100 @@ const buffOf = (life: LifeState, uid: string, now: number) => {
 /** Growth bonus for crops planted or fertilized now (초록 손 buff). */
 export const plantSpeed = (life: LifeState, uid: string, now: number) =>
   buffOf(life, uid, now)?.kind === 'grow' ? GROW_BUFF_SPEED : 0;
+/** Village-wide growth bonus for newly planted crops (온실 확장). */
+export const villageGrowSpeed = (life: LifeState) => (hasFlag(life, 'greenhouse2') ? GREENHOUSE2_SPEED : 0);
+
+// ---------------------------------------------------------------- demand (ECON-2)
+/** Lowest share of the price a flooded item still fetches. */
+export const DEMAND_FLOOR = 0.15;
+/** Seasonal crops sell for this much more in their own season. */
+export const SEASON_PREMIUM = 1.15;
+/**
+ * Units of the same thing (per friend, per KST day) after which the price has
+ * halved. Short-growing base crops take more before they sag; strawberries
+ * and watermelons sag fast, so a varied field (and seasonal crops) pays.
+ */
+export function demandHalfLife(id: string): number {
+  switch (id) {
+    case 'carrot':
+      return 16;
+    case 'tomato':
+      return 12;
+    case 'pumpkin':
+      return 8;
+    case 'strawberry':
+      return 5;
+    case 'watermelon':
+      return 5;
+    case 'fruit':
+      return 30;
+  }
+  if (isCropId(id)) return 8;
+  const def = ITEM_BY_ID[id];
+  if (!def) return 6;
+  if (def.kind === 'fish') {
+    const w = FISH_BY_ID[id]?.weight ?? 20;
+    return w >= 20 ? 6 : w >= 10 ? 4 : 2;
+  }
+  if (def.kind === 'bug') return 5;
+  if (def.kind === 'dish') return 4;
+  return 10;
+}
+/** Price multiplier of the k-th unit (0-based) of `id` sold today. */
+export const demandMult = (id: string, k: number) =>
+  Math.max(DEMAND_FLOOR, 0.5 ** (Math.max(0, k) / demandHalfLife(id)));
+/** 범 for selling n more units at `unit` each after `sold` today. */
+export function sellTotal(id: string, unit: number, sold: number, n: number) {
+  let total = 0;
+  for (let i = 0; i < n; i++) total += Math.max(1, Math.round(unit * demandMult(id, sold + i)));
+  return total;
+}
+/**
+ * Full (undamped) price of one unit: crops by quality (+SEASON_PREMIUM in
+ * season), fruit, or an item (fish on 낚시의 날 get the weekly bonus).
+ */
+export function sellUnit(id: string, quality: Quality, now: number, flags: readonly string[] = []) {
+  if (id === 'fruit') return FRUIT_SELL;
+  if (isCropId(id)) {
+    const info = CROP_INFO[id],
+      premium = info.seasons && cropInSeason(id, seasonOf(now)) ? SEASON_PREMIUM : 1;
+    return Math.round(info.sell * QUALITY_MULT[quality] * premium);
+  }
+  const def = ITEM_BY_ID[id];
+  if (!def || def.sell <= 0) return 0;
+  const bonus =
+    def.kind === 'fish' && weeklyActive('fishing', now) ? FISH_DAY_BONUS * (flags.includes('stage') ? 2 : 1) : 0;
+  return Math.round(def.sell * (1 + bonus));
+}
+/** Units of `id` this friend already sold today. */
+export function demandSold(life: LifeState, uid: string, now: number, id: string) {
+  const x = life.ext?.[uid];
+  return x?.day === kstDay(now) ? (x.dem?.[id] ?? 0) : 0;
+}
+export function noteDemand(life: LifeState, uid: string, now: number, id: string, n: number) {
+  const x = todayExt(life, uid, now),
+    dem = (x.dem ??= {});
+  dem[id] = Math.min(COUNT_MAX, (dem[id] ?? 0) + n);
+}
+/**
+ * What a friend owns outside the ledger at base sell value (bag produce,
+ * fruit, items, seeds at seed price). Used by the daily relief so spending
+ * 범 on goods before claiming does not count as being broke.
+ */
+export function lifeWealth(life: LifeState, uid: string) {
+  const bag = life.bag[uid];
+  let total = 0;
+  if (bag) {
+    for (const c of CROPS) total += (bag.produce[c] ?? 0) * CROP_INFO[c].sell + (bag.seeds[c] ?? 0) * CROP_INFO[c].seed;
+    total += (bag.fruit ?? 0) * FRUIT_SELL;
+  }
+  for (const [id, n] of Object.entries(life.ext?.[uid]?.inv ?? {})) total += n * (ITEM_BY_ID[id]?.sell ?? 0);
+  return Math.min(Number.MAX_SAFE_INTEGER, total);
+}
+/** KST week (Monday start) of a KST day number. */
+export const weekOfDay = (day: number) => Math.floor((day + 3) / 7);
+/** When a KST week ends (next Monday 00:00 KST). */
+export const weekResetAt = (week: number) => dayStart(week * 7 + 4);
 export function bump(life: LifeState, uid: string, stat: StatKey, n: number) {
   if (n <= 0) return;
   const stats = (extOf(life, uid).stats ??= {});
@@ -686,33 +863,72 @@ const holidayNear = (key: string, day: number, span = 3) => {
   for (let d = day - span; d <= day + span; d++) if (holidaysOn(d).some((h) => h.key === key)) return true;
   return false;
 };
+export type ShopItemView = {
+  ref: string;
+  name: string;
+  price: number;
+  limited?: 'season' | 'holiday' | 'luxury';
+};
 export type ShopView = {
   day: number;
   resetAt: number;
   discount: number;
-  items: { ref: string; name: string; price: number; limited?: 'season' | 'holiday' }[];
+  items: ShopItemView[];
+  /** 이번 주 명품 가구 (one copy per friend per week). */
+  luxury?: ShopItemView[];
+  /** When the luxury rotation changes (next Monday 00:00 KST). */
+  luxuryResetAt?: number;
+  /** Luxury refs this friend already bought this week. */
+  luxuryBought?: string[];
+  /** Rerolls used today and the price of the next one (null = none left). */
+  rerolls?: number;
+  rerollPrice?: number | null;
 };
-/** Today's furniture stock: limited pieces always, then a daily rotation. */
-export function shopStock(life: LifeState, now: number): ShopView {
+/** This week's luxury pieces (weekly rarity; +1 with the 축제 무대 project). */
+export function luxuryStock(life: LifeState, now: number) {
+  const week = weekOfDay(kstDay(now));
+  return FURNITURE.filter((f) => f.luxury)
+    .sort((a, b) => hash32(`lux:${week}:${a.ref}`) - hash32(`lux:${week}:${b.ref}`))
+    .slice(0, LUXURY_PER_WEEK + (hasFlag(life, 'festival') ? 1 : 0));
+}
+/**
+ * Today's furniture stock: limited pieces always, then a daily rotation. With
+ * `uid`, the rotation follows that friend's rerolls today and the view adds
+ * the weekly luxury pieces.
+ */
+export function shopStock(life: LifeState, now: number, uid?: string): ShopView {
   const day = kstDay(now),
     season = seasonOfDay(day),
     sunday = weekdayOf(day) === 0,
     discount = sunday ? MARKET_DISCOUNT : 0,
     size = SHOP_DAILY_ITEMS + (sunday ? MARKET_EXTRA : 0) + (hasFlag(life, 'market') ? 2 : 0);
+  const x = uid ? life.ext?.[uid] : undefined,
+    rerolls = x?.day === day ? (x.reroll ?? 0) : 0,
+    seed = rerolls ? `shop:${day}:r${rerolls}:${uid}` : `shop:${day}`;
   const pool = FURNITURE.filter(
-    (f) => !f.unsold && (!f.season || f.season === season) && (!f.holiday || holidayNear(f.holiday, day)),
+    (f) => !f.unsold && !f.luxury && (!f.season || f.season === season) && (!f.holiday || holidayNear(f.holiday, day)),
   );
   const limited = pool.filter((f) => f.season || f.holiday),
     regular = pool
       .filter((f) => !f.season && !f.holiday)
-      .sort((a, b) => hash32(`shop:${day}:${a.ref}`) - hash32(`shop:${day}:${b.ref}`));
+      .sort((a, b) => hash32(`${seed}:${a.ref}`) - hash32(`${seed}:${b.ref}`));
+  const price = (p: number) => Math.round((p * (100 - discount)) / 100 / 100) * 100;
   const items = [...limited, ...regular].slice(0, Math.max(size, limited.length)).map((f) => ({
     ref: f.ref,
     name: f.name,
-    price: Math.round((f.price * (100 - discount)) / 100 / 100) * 100,
+    price: price(f.price),
     ...(f.holiday ? { limited: 'holiday' as const } : f.season ? { limited: 'season' as const } : {}),
   }));
-  return { day, resetAt: nextKstMidnight(now), discount, items };
+  const view: ShopView = { day, resetAt: nextKstMidnight(now), discount, items };
+  if (uid) {
+    const week = weekOfDay(day);
+    view.luxury = luxuryStock(life, now).map((f) => ({ ref: f.ref, name: f.name, price: f.price, limited: 'luxury' as const }));
+    view.luxuryResetAt = weekResetAt(week);
+    view.luxuryBought = x?.lux?.w === week ? [...x.lux.refs] : [];
+    view.rerolls = rerolls;
+    view.rerollPrice = rerolls < SHOP_REROLL_MAX ? shopRerollPrice(rerolls) : null;
+  }
+  return view;
 }
 
 // ---------------------------------------------------------------- spawns
@@ -930,12 +1146,108 @@ export function plusAction(
     }
     case 'buyFurniture': {
       const n = nInRange(a.n, SHOP_BUY_MAX_N),
-        stock = shopStock(life, now).items.find((i) => i.ref === a.ref);
+        view = shopStock(life, now, uid),
+        luxury = view.luxury?.find((i) => i.ref === a.ref),
+        stock = luxury ?? view.items.find((i) => i.ref === a.ref);
       if (!stock) fail(PLUS_REJECT.stock);
-      next = spend(next, life, uid, stock!.price * n, 'furn', now);
+      if (luxury) {
+        const week = weekOfDay(kstDay(now));
+        if (n !== 1) fail(PLUS_REJECT.luxuryOne);
+        if (x.lux?.w === week && x.lux.refs.includes(luxury.ref)) fail(PLUS_REJECT.luxuryBought);
+        next = spend(next, life, uid, luxury.price, 'furn-premium', now);
+        x.lux = { w: week, refs: [...(x.lux?.w === week ? x.lux.refs : []), luxury.ref] };
+        addNews(
+          life,
+          now,
+          `lux:${actor}:${luxury.ref}`,
+          'shop',
+          `${josaGa(nameOf(actor))} 이번 주 명품 가구 ${luxury.name}을(를) 들였어요`,
+          [actor],
+        );
+      } else next = spend(next, life, uid, stock!.price * n, 'furn', now);
       const furn = (x.furn ??= {});
       furn[stock!.ref] = Math.min(COUNT_MAX, (furn[stock!.ref] ?? 0) + n);
       bump(life, uid, 'furniture', n);
+      break;
+    }
+    case 'rerollShop': {
+      const used = x.reroll ?? 0;
+      if (used >= SHOP_REROLL_MAX) fail(PLUS_REJECT.rerollMax);
+      next = spend(next, life, uid, shopRerollPrice(used), 'shop-reroll', now);
+      x.reroll = used + 1;
+      break;
+    }
+    case 'upgradeHouse': {
+      const tier = HOUSE_TIERS.find((t) => t.tier === (x.house ?? 0) + 1);
+      if (!tier) fail(PLUS_REJECT.houseMax);
+      next = spend(next, life, uid, tier!.price, 'house-' + tier!.tier, now);
+      x.house = tier!.tier;
+      const text = `${josaGa(nameOf(actor))} 집을 넓혔어요 · ${tier!.name}`;
+      addNews(life, now, `house:${actor}:${tier!.tier}`, 'house', text, [actor]);
+      if (tier!.tier >= 3) addMemory(life, now, 'house', [actor], text);
+      break;
+    }
+    case 'project': {
+      const def = typeof a.project === 'string' && own(PROJECT_BY_ID, a.project) ? PROJECT_BY_ID[a.project] : undefined;
+      if (!def) fail(PLUS_REJECT.project);
+      if (def!.requires && !hasFlag(life, def!.requires)) fail(PLUS_REJECT.projectLocked);
+      const projects = (life.projects ??= {}),
+        state = (projects[def!.id] ??= { got: 0, by: {} });
+      if (state.doneAt || state.got >= def!.cost) fail(PLUS_REJECT.projectDone);
+      const left = def!.cost - state.got;
+      if (!safe(a.n) || a.n < Math.min(PROJECT_MIN_GIVE, left)) fail(PLUS_REJECT.give);
+      const amount = Math.min(a.n, left);
+      next = spend(next, life, uid, amount, 'project', now);
+      state.got += amount;
+      state.by[String(actor)] = Math.min(Number.MAX_SAFE_INTEGER, (state.by[String(actor)] ?? 0) + amount);
+      bump(life, uid, 'bundle', 1);
+      addNews(life, now, `proj:${def!.id}:${actor}`, 'bundle', `${josaGa(nameOf(actor))} 마을 공사 “${def!.name}”에 범을 보탰어요`, [actor]);
+      if (state.got >= def!.cost) {
+        state.doneAt = now;
+        if (!hasFlag(life, def!.flag)) (life.flags ??= []).push(def!.flag);
+        const helpers = Object.keys(state.by).map(Number).filter(actorValid).sort((p, q) => p - q);
+        for (const helper of helpers) {
+          const helperUid = uidOf(life, helper);
+          if (!helperUid) continue;
+          const furn = (extOf(life, helperUid).furn ??= {});
+          furn['furn-project-plaque'] = Math.min(COUNT_MAX, (furn['furn-project-plaque'] ?? 0) + 1);
+        }
+        const text = `마을 공사 “${def!.name}” 완공! ${VILLAGE_FLAGS[def!.flag].split(' · ')[0]}이(가) 생겼어요`;
+        addMemory(life, now, 'project', helpers, text);
+        addNews(life, now, `projdone:${def!.id}`, 'bundle', text, helpers);
+      }
+      break;
+    }
+    case 'festival': {
+      const week = weekOfDay(kstDay(now));
+      if (life.festival?.week !== week) life.festival = { week, got: 0, by: {} };
+      const fest = life.festival;
+      if (fest.doneAt || fest.got >= FESTIVAL_GOAL) fail(PLUS_REJECT.festivalDone);
+      const left = FESTIVAL_GOAL - fest.got;
+      if (!safe(a.n) || a.n < Math.min(PROJECT_MIN_GIVE, left)) fail(PLUS_REJECT.give);
+      const amount = Math.min(a.n, left);
+      next = spend(next, life, uid, amount, 'festival', now);
+      fest.got += amount;
+      fest.by[String(actor)] = Math.min(Number.MAX_SAFE_INTEGER, (fest.by[String(actor)] ?? 0) + amount);
+      addNews(life, now, `fest:${week}:${actor}`, 'bundle', `${josaGa(nameOf(actor))} 이번 주 마을 축제 기금에 범을 보탰어요`, [actor]);
+      if (fest.got >= FESTIVAL_GOAL) {
+        fest.doneAt = now;
+        const souvenir = festivalSouvenir(week),
+          helpers = Object.entries(fest.by)
+            .filter(([, n]) => n >= FESTIVAL_SOUVENIR_MIN)
+            .map(([a]) => Number(a))
+            .filter(actorValid)
+            .sort((p, q) => p - q);
+        for (const helper of helpers) {
+          const helperUid = uidOf(life, helper);
+          if (!helperUid) continue;
+          const furn = (extOf(life, helperUid).furn ??= {});
+          furn[souvenir] = Math.min(COUNT_MAX, (furn[souvenir] ?? 0) + 1);
+        }
+        const text = `이번 주 마을 축제 기금이 다 모였어요! 기념품 ${FURNITURE_BY_REF[souvenir].name}`;
+        addMemory(life, now, 'festival', helpers, text);
+        addNews(life, now, `festdone:${week}`, 'bundle', text, helpers);
+      }
       break;
     }
     case 'buyItem': {
@@ -966,7 +1278,8 @@ export function plusAction(
         token = hash32(`cast:${uid}:${seq}:${now}`).toString(36) + seq.toString(36);
       const found = fishCandidates(a.spot, season, weather, now),
         list = found.length ? found : FISH.filter((f) => f.spots.includes(a.spot) && f.weight >= 10);
-      const rareBoost = (luck ? 2 : 1) * (bait ? 2 : 1) * (rod === 3 ? 1.5 : 1);
+      const lights = a.spot === 'sea' && isNighttime(now) && hasFlag(life, 'lights');
+      const rareBoost = (luck ? 2 : 1) * (bait ? 2 : 1) * (rod === 3 ? 1.5 : 1) * (lights ? LIGHTS_RARE_BOOST : 1);
       const fish =
         pickWeighted(list, (f) => (f.weight < 10 ? f.weight * rareBoost : f.weight), `fish:${token}`) ??
         FISH_BY_ID.crucian;
@@ -1070,15 +1383,13 @@ export function plusAction(
       if (!def || def.sell <= 0) fail(PLUS_REJECT.noSell);
       if (!safe(a.n) || a.n < 1 || a.n > 999) fail(LIFE_REJECT.invalid);
       if (invCount(life, uid, def!.id) < a.n) fail(LIFE_REJECT.notEnough);
-      const bonus =
-        def!.kind === 'fish' && weeklyActive('fishing', now)
-          ? FISH_DAY_BONUS * (hasFlag(life, 'stage') ? 2 : 1)
-          : 0;
-      const amount = Math.round(def!.sell * (1 + bonus)) * a.n,
+      // Demand curve per item (fish per species): see demandMult.
+      const amount = sellTotal(def!.id, sellUnit(def!.id, 0, now, life.flags ?? []), demandSold(life, uid, now, def!.id), a.n),
         left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
       addInv(life, uid, def!.id, -a.n);
+      noteDemand(life, uid, now, def!.id, a.n);
       const day = kstDay(now),
         prev = life.sold[uid];
       life.sold[uid] = { day, amount: (prev?.day === day ? prev.amount : 0) + amount };
@@ -1227,6 +1538,9 @@ export function plusAction(
   return { life, ledger: next };
 }
 
+/** The souvenir furniture of a festival week (rotates through FESTIVAL_SOUVENIRS). */
+export const festivalSouvenir = (week: number) => FESTIVAL_SOUVENIRS[((week % 4) + 4) % 4];
+
 /** Friendship and news for a gift sent by mail (called by lounge-life's mail). */
 export function onGift(life: LifeState, member: { id: string; actor: number }, to: string, gift: Gift, now: number) {
   const toActor = life.actors[to];
@@ -1353,6 +1667,10 @@ export type PlusMe = {
   wished: boolean;
   claimed: string[];
   waterFriend: number[];
+  /** Units sold today per crop/fruit/item id (demand curves). */
+  demand: Record<string, number>;
+  /** House tier (0 = the starting house). */
+  house: number;
 };
 export type PlusView = {
   calendar: CalendarView;
@@ -1367,6 +1685,12 @@ export type PlusView = {
   records: Record<string, { actor: number; cm: number; at: number }>;
   /** Friendship between every pair of the seven ('a-b', a < b). */
   bondsAll: Record<string, number>;
+  /** 마을 공사 2차 (static defs: lounge-items PROJECTS, same order). */
+  projects: { id: string; got: number; done: boolean; doneAt?: number; open: boolean; by: Record<string, number> }[];
+  /** This week's festival fund. */
+  festival: { week: number; got: number; goal: number; done: boolean; by: Record<string, number>; souvenir: string; resetAt: number };
+  /** House tier per actor (houses in the village). */
+  houses: Record<number, number>;
 };
 export function plusView(life: LifeState, uid: string, actor: number, now: number): PlusView & { me: PlusMe } {
   const day = kstDay(now),
@@ -1441,13 +1765,17 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     wished: fresh && !!raw.wished,
     claimed: [...(raw.claimed ?? [])],
     waterFriend: fresh ? [...(raw.wf ?? [])] : [],
+    demand: fresh ? { ...raw.dem } : {},
+    house: raw.house ?? 0,
   };
+  const week = weekOfDay(day),
+    fest = life.festival?.week === week ? life.festival : null;
   const calendar = calendarOf(now);
   return {
     me,
     calendar,
     weather: { today: weatherOf(day), tomorrow: weatherOf(day + 1) },
-    shop: shopStock(life, now),
+    shop: shopStock(life, now, uid),
     museum: Object.fromEntries(Object.entries(life.museum ?? {}).map(([k, m]) => [k, { ...m }])),
     bundles: BUNDLES.map((b) => {
       const s = life.bundles?.[b.id];
@@ -1468,9 +1796,37 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     },
     records: Object.fromEntries(Object.entries(life.records ?? {}).map(([k, r]) => [k, { ...r }])),
     bondsAll: { ...life.bonds },
+    projects: PROJECTS.map((p) => {
+      const st = life.projects?.[p.id];
+      return {
+        id: p.id,
+        got: st?.got ?? 0,
+        done: !!st?.doneAt,
+        ...(st?.doneAt ? { doneAt: st.doneAt } : {}),
+        open: !p.requires || hasFlag(life, p.requires),
+        by: { ...st?.by },
+      };
+    }),
+    festival: {
+      week,
+      got: fest?.got ?? 0,
+      goal: FESTIVAL_GOAL,
+      done: !!fest?.doneAt,
+      by: { ...fest?.by },
+      souvenir: festivalSouvenir(week),
+      resetAt: weekResetAt(week),
+    },
+    houses: Object.fromEntries(
+      Object.entries(life.ext ?? {})
+        .filter(([id, x]) => x.house && id in life.actors)
+        .map(([id, x]) => [life.actors[id], x.house!]),
+    ),
   };
 }
 /** Owned premium furniture copies per ref (room-save validator input). */
 export const furnitureOf = (life: LifeState, uid: string): Record<string, number> => ({
   ...life.ext?.[uid]?.furn,
 });
+/** Room-style unlock ids ('house-1'…) from the friend's house tier. */
+export const houseUnlocksOf = (life: LifeState, uid: string): string[] =>
+  Array.from({ length: life.ext?.[uid]?.house ?? 0 }, (_, i) => `house-${i + 1}`);

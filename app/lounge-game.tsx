@@ -2021,7 +2021,11 @@ function AccountLounge({
               save={save}
               onChange={setSave}
               notice={(s) => notify(s)}
-              unlocks={[...(view.life?.me.unlocks ?? []), ...furnitureUnlocks(view.life?.me.furniture)]}
+              unlocks={[
+                ...(view.life?.me.unlocks ?? []),
+                ...Array.from({ length: view.life?.me.house ?? 0 }, (_, i) => `house-${i + 1}`),
+                ...furnitureUnlocks(view.life?.me.furniture),
+              ]}
               presence={{
                 players: connected ? view.players : [],
                 self: view.self,

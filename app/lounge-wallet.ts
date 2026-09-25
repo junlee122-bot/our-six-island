@@ -201,7 +201,7 @@ export class LoungeBank {
       if (g.state === 'reserved') next = voidGame(next, id);
     this.commit(next);
   }
-  view(wallet: string | undefined, now = Date.now()) {
+  view(wallet: string | undefined, now = Date.now(), extraWealth = 0) {
     if (!wallet)
       return {
         balance: 0,
@@ -221,7 +221,7 @@ export class LoungeBank {
       balance: this.ledger.accounts[wallet] ?? 0,
       held,
       history: history.slice(-8).reverse(),
-      daily: dailyGrantInfo(this.ledger, wallet, now),
+      daily: dailyGrantInfo(this.ledger, wallet, now, extraWealth),
     };
   }
 }

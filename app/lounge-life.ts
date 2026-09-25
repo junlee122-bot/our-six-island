@@ -20,6 +20,11 @@ import {
   readLifeExt,
   afterCoreAction,
   plantSpeed,
+  villageGrowSpeed,
+  demandSold,
+  noteDemand,
+  sellTotal,
+  sellUnit,
   hasFlag,
   bump,
   discover,
@@ -70,8 +75,12 @@ const MIN = 60_000,
  *   seasonal crops grow only in their seasons (or anywhere once the village
  *   greenhouse is restored) and land in the same 3,000–5,400/h band; corn
  *   regrows twice after the first harvest.
- * - The daily sell cap (40,000범) bounds how much new 범 farming prints; fish,
- *   bugs, forage and dishes share it. Quality: silver ×1.25, gold ×1.5.
+ * - ECON-2 (demand curves): every crop, fruit and item has its own daily
+ *   demand. The k-th unit of the same thing sold today pays
+ *   unit × max(DEMAND_FLOOR, 0.5^(k / half-life)), recovering at KST midnight
+ *   (lounge-life-plus.ts demandMult). Selling a mix pays; one crop in bulk
+ *   soon drops below its seed price. Seasonal crops pay +15% in season.
+ *   SELL_CAP_PER_DAY is now only a safety ceiling. Quality: silver ×1.25, gold ×1.5.
  * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
  *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
  *   The life expansion adds furniture (5k–40k each), fertilizer, farm
@@ -97,7 +106,7 @@ export const CROP_INFO: Record<Crop, CropInfo> = {
     name: '딸기',
     growMs: 8 * HOUR,
     seed: 1_000,
-    sell: 5_000,
+    sell: 4_500,
     emoji: '🍓',
   },
   potato: { name: '감자', growMs: 2 * HOUR, seed: 300, sell: 900, emoji: '🥔', seasons: ['spring'] },
@@ -176,7 +185,8 @@ export const FRUIT_TREES = [
 ] as const;
 export type FruitTree = (typeof FRUIT_TREES)[number];
 export const FRUIT_COOLDOWN_MS = 6 * HOUR;
-export const SELL_CAP_PER_DAY = 40_000;
+/** Safety ceiling of 범 from selling per KST day (demand curves do the pacing). */
+export const SELL_CAP_PER_DAY = 100_000;
 export const GUESTBOOK_MAX = 30;
 export const GUESTBOOK_TEXT_MAX = 80;
 export const MAIL_MAX = 30;
@@ -208,6 +218,8 @@ export type ShopItem = {
   requires?: { kind: HarvestKind; n: number };
   /** Another unlock that must be owned first (palette tiers). */
   after?: string;
+  /** A village flag (마을 공사) that must exist first. */
+  flag?: string;
   description: string;
 };
 /** Korean thousands format without importing UI helpers into the engine. */
@@ -282,6 +294,30 @@ export const SHOP: ShopItem[] = [
     after: 'palette-neon',
     description: '머리색에 노을빛 한 줄 · 네온 팔레트 다음 단계',
   },
+  {
+    id: 'palette-pearl',
+    name: '진주 팔레트',
+    price: 250_000,
+    kind: 'palette',
+    after: 'palette-sunset',
+    description: '은은한 진줏빛 한정 염색 · 노을 팔레트 다음 단계',
+  },
+  {
+    id: 'palette-aurora',
+    name: '오로라 팔레트',
+    price: 500_000,
+    kind: 'palette',
+    after: 'palette-pearl',
+    description: '오로라빛 명품 염색 · 진주 팔레트 다음 단계',
+  },
+  {
+    id: 'palette-fountain',
+    name: '분수 물빛 팔레트',
+    price: 300_000,
+    kind: 'palette',
+    flag: 'plaza',
+    description: '광장 대분수 물빛 염색 · 마을 공사 “광장 대분수”가 끝나면 열려요',
+  },
 ];
 export const SHOP_BY_ID: Record<string, ShopItem> = Object.fromEntries(
   SHOP.map((s) => [s.id, s]),
@@ -290,19 +326,30 @@ export const UNLOCK_IDS = SHOP.filter(
   (s) => s.kind === 'trophy' || s.kind === 'palette',
 ).map((s) => s.id);
 export const PALETTES: Record<
-  'palette-pastel' | 'palette-neon' | 'palette-sunset',
+  | 'palette-pastel'
+  | 'palette-neon'
+  | 'palette-sunset'
+  | 'palette-pearl'
+  | 'palette-aurora'
+  | 'palette-fountain',
   string[]
 > = {
   'palette-pastel': ['#f7c6d9', '#c9e4f5', '#d7f2c8', '#fff1b8', '#e3d4f7'],
   'palette-neon': ['#ff2e88', '#00e5ff', '#39ff14', '#ffe600', '#b026ff'],
   'palette-sunset': ['#ff7e5f', '#feb47b', '#c94b4b', '#7b4397', '#f9d423'],
+  'palette-pearl': ['#f4efe6', '#e8dfd3', '#dcd6e4', '#efe2e6', '#d9e4e2'],
+  'palette-aurora': ['#3ee0b0', '#5a8dee', '#9b6cf0', '#e46fd2', '#1c2f5e'],
+  'palette-fountain': ['#8fd0e6', '#5fb7d4', '#bfe8f2', '#3f8fb0', '#e6f7fb'],
 };
 /** Why an unlock cannot be bought yet (null = buyable apart from 범). */
 export function shopLock(
   item: ShopItem,
   owned: readonly string[],
   harvested: Partial<Record<HarvestKind, number>>,
+  flags: readonly string[] = [],
 ): string | null {
+  if (item.flag && !flags.includes(item.flag))
+    return '마을 공사가 끝나면 열려요';
   if (item.after && !owned.includes(item.after))
     return `${SHOP_BY_ID[item.after]?.name ?? '이전 단계'}부터 사야 해요`;
   if (item.requires) {
@@ -864,7 +911,7 @@ export function lifeAction(
       fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
   };
   const newPlot = (crop: Crop): Plot => {
-    const speed = plantSpeed(life, uid, now);
+    const speed = plantSpeed(life, uid, now) + villageGrowSpeed(life);
     return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}) };
   };
   switch (a.kind) {
@@ -983,25 +1030,27 @@ export function lifeAction(
           ? bag.produce[a.crop as Crop]
           : cropQCount(life, uid, a.crop as Crop, q);
       if (have < a.n) fail(LIFE_REJECT.notEnough);
-      let amount = 0;
-      if (fruit) {
-        amount = a.n * FRUIT_SELL;
-        bag.fruit -= a.n;
-      } else {
-        const crop = a.crop as Crop;
-        let tiers: number[];
-        if (q === undefined) tiers = takeCrop(life, uid, crop, a.n);
-        else {
-          addCropQ(life, uid, crop, q, -a.n);
-          tiers = [0, 1, 2].map((t) => (t === q ? a.n : 0));
-        }
-        tiers.forEach((n, t) => {
-          amount += n * Math.round(CROP_INFO[crop].sell * QUALITY_MULT[t as Quality]);
-        });
-      }
+      // Demand curve: each unit of the same crop sold today pays a bit less.
+      const id = a.crop as Crop | 'fruit',
+        flags = life.flags ?? [];
+      let amount = 0,
+        sold = demandSold(life, uid, now, id);
+      const tiers: number[] = fruit
+        ? [a.n, 0, 0]
+        : q === undefined
+          ? takeCrop(life, uid, a.crop as Crop, a.n)
+          : [0, 1, 2].map((t) => (t === q ? a.n : 0));
+      if (fruit) bag.fruit -= a.n;
+      else if (q !== undefined) addCropQ(life, uid, a.crop as Crop, q, -a.n);
+      tiers.forEach((n, t) => {
+        if (!n) return;
+        amount += sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n);
+        sold += n;
+      });
       const left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${beom(Math.max(0, left))}어치까지만 더 팔 수 있어요.`);
+      noteDemand(life, uid, now, id, a.n);
       const day = kstDay(now),
         prev = life.sold[uid];
       life.sold[uid] = {
@@ -1028,7 +1077,7 @@ export function lifeAction(
         fail(LIFE_REJECT.invalid);
       const owned = (life.unlocks[uid] ??= []);
       if (!stacks && owned.includes(item!.id)) fail(LIFE_REJECT.owned);
-      if (shopLock(item!, owned, life.harvested?.[uid] ?? {}))
+      if (shopLock(item!, owned, life.harvested?.[uid] ?? {}, life.flags ?? []))
         fail(LIFE_REJECT.locked);
       const price = item!.price * n;
       if ((ledger.accounts[wallet] ?? 0) < price) fail(LIFE_REJECT.balance);

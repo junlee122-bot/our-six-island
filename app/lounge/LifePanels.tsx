@@ -51,7 +51,7 @@ import { SEASON_INFO } from '../lounge-calendar';
 import { giftTaste, tastesKnown } from '../lounge-life-ui';
 import { ItemIcon, QualityStar } from './ItemIcon';
 import { FURNITURE_ART } from '../lounge-furniture-art';
-import { REACTIONS } from '../lounge-reactions';
+import { REACTIONS, reactionInfo } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
 import { TROPHY_ART, isTrophy } from '../lounge-trophy-art';
 import { formatBeom, josa } from '../lounge-text';
@@ -116,6 +116,11 @@ const STICKER_EMOJI: Record<string, string> = {
   think: '🤔',
   sorry: '🙏',
   hello: '👋',
+  jeje: '😎',
+  yoi: '🏁',
+  eum: '😑',
+  aye: '🤨',
+  nonono: '🙅',
 };
 const cropLabel = (crop: Crop) => CROP_INFO[crop].name;
 export function giftText(gift: LifeGift | undefined) {
@@ -1222,7 +1227,7 @@ export function MailModal({
           {!mail.length && <p className="l-help-text">아직 받은 편지가 없어요.</p>}
           <ul className="l-mail-list">
             {mail.map((m) => {
-              const reaction = REACTIONS.find((r) => r.id === m.sticker);
+              const reaction = reactionInfo(m.sticker);
               return (
                 <li key={m.id} data-unread={!m.read || undefined} data-testid="mail-item">
                   <span className="l-mail-face" aria-hidden="true">

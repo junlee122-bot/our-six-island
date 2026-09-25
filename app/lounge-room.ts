@@ -100,6 +100,7 @@ import {
   TABLE_AREA,
   TABLE_FORM_MS,
   TABLE_STAKES,
+  stakeLock,
   tableIdOf,
   emptyLoungeView as empty,
   type GameKind,
@@ -430,6 +431,10 @@ export class LoungeRoom {
   private now = 0;
   private rejection = "";
   private coalesced = false;
+  /** Village flags (world.life) for the VIP stake tier; set by the cloud engine. */
+  villageFlags: readonly string[] = [];
+  /** Non-ledger wealth (bag at sell value) for the daily relief; set by the cloud engine. */
+  wealthOf: (wallet: string) => number = () => 0;
   static hosted(
     snapshot: HostedRoomSnapshot | null,
     ledger: LoungeLedger,
@@ -1669,7 +1674,9 @@ export class LoungeRoom {
       const wallet = this.wallets.get(id);
       if (!wallet || !dailyGrantInfo(this.bank.ledger, wallet, now).available)
         return this.reject(REJECT.daily);
-      this.bank.commit(claimDailyGrant(this.bank.ledger, wallet, now));
+      this.bank.commit(
+        claimDailyGrant(this.bank.ledger, wallet, now, this.wealthOf(wallet)),
+      );
     } else if (a.kind === "invite") {
       if (
         !GAME_KINDS.includes(a.game) ||
@@ -1701,16 +1708,16 @@ export class LoungeRoom {
           ? (a.required ?? 3)
           : GAME_INFO[a.game].players;
       if (
-        ![1000, 5000, 10000, 20000].includes(stake) ||
+        !(TABLE_STAKES as readonly number[]).includes(stake) ||
         !Number.isInteger(required) ||
         required < 2 ||
         required > 7
       )
         return this.reject(REJECT.stake);
-      if (
-        this.bank.view(this.wallets.get(id), now).balance <
-        gameReservation(a.game, stake)
-      )
+      const balance = this.bank.view(this.wallets.get(id), now).balance;
+      const lock = stakeLock(stake, balance, this.villageFlags);
+      if (lock) return this.reject(lock);
+      if (balance < gameReservation(a.game, stake))
         return this.reject(REJECT.balance);
       const invited = [...new Set(a.players)].filter(
         (p) => p !== id && this.members.has(p) && !this.busy(p),
@@ -2009,10 +2016,10 @@ export class LoungeRoom {
       required > 7
     )
       return this.reject(REJECT.stake);
-    if (
-      this.bank.view(this.wallets.get(id), now).balance <
-      gameReservation(game, stake)
-    )
+    const balance = this.bank.view(this.wallets.get(id), now).balance;
+    const lock = stakeLock(stake, balance, this.villageFlags);
+    if (lock) return this.reject(lock);
+    if (balance < gameReservation(game, stake))
       return this.reject(REJECT.balance);
     this.update({
       invites: [

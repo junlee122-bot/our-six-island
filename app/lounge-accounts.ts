@@ -9,6 +9,7 @@ import {
   BEDROOM_INVALID,
   BEDROOM_VERSION,
   lockedRoomItems,
+  lockedRoomStyle,
   readBedroom,
   ROOM_ITEM_LOCKED,
 } from './lounge-bedroom-data.ts';
@@ -20,7 +21,7 @@ import {
   type GuestEntry,
   type RoomAccess,
 } from './lounge-life.ts';
-import { furnitureOf } from './lounge-life-plus.ts';
+import { furnitureOf, houseUnlocksOf } from './lounge-life-plus.ts';
 export const ACCOUNT_IDS = [
   'dowon',
   'gangjae',
@@ -88,7 +89,7 @@ export const lifeUnlocksOf = (life: unknown, uid: string): string[] => {
     furniture = Object.entries(furnitureOf(state, uid)).flatMap(([ref, n]) =>
       Array.from({ length: Math.min(n, 40) }, () => ref),
     );
-  return [...(state.unlocks[uid] ?? []), ...furniture];
+  return [...(state.unlocks[uid] ?? []), ...houseUnlocksOf(state, uid), ...furniture];
 };
 /**
  * Normalizes a profile save for this account. Client-side (default) it is
@@ -153,14 +154,13 @@ export function accountSave(
       : s.bedroom;
   // Shop rarities need ownership. Only checked when the caller knows the
   // saver's unlocks (the server); what the stored room already had is kept.
+  const priorBedroom =
+    options.unlocks && previous?.bedroom ? readBedroom(previous.bedroom, actor) : null;
   if (
     options.unlocks &&
     bedroom !== null &&
-    lockedRoomItems(
-      bedroom,
-      options.unlocks,
-      previous?.bedroom ? readBedroom(previous.bedroom, actor) : null,
-    ).length
+    (lockedRoomItems(bedroom, options.unlocks, priorBedroom).length ||
+      lockedRoomStyle(bedroom, options.unlocks, priorBedroom).length)
   )
     throw new AccountSaveError(ROOM_ITEM_LOCKED, 400);
   return {

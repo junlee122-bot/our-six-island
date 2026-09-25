@@ -133,7 +133,7 @@ export function newBlackjack(
     count > 7 ||
     !Number.isSafeInteger(stake) ||
     stake <= 0 ||
-    stake > 20000 ||
+    stake > 100000 ||
     stake % 2 ||
     deck.length !== 312 ||
     new Set(deck).size !== 312 ||
