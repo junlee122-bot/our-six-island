@@ -157,12 +157,15 @@ export const FOUNTAIN_REACH = 1.1;
 export const fountainDistance = (p: VillagePoint) => Math.max(0, Math.hypot(p.x, p.z) - 2);
 
 /**
- * The festival booth (C-6): south of the plaza fountain (clear of its rim), or in front of the
+ * The festival booth (C-6): south of the plaza fountain, or in front of the
  * 축제 무대 once the 'stage' project is built.
  */
+// Both points are chosen clear of the fountain rim and the stage's round
+// footprint, so click routes always arrive and 8-way key walking toward them
+// does not brush a collider (checked with scripts/village-walk-check.mjs).
 export const FETE_REACH = 1.4;
-export const FETE_PLAZA: VillagePoint = walkableNear({ x: 0, z: 4.6 });
-export const FETE_STAGE: VillagePoint = walkableNear({ x: KARCHIVE_STAGE.x, z: KARCHIVE_STAGE.z + KARCHIVE_STAGE.radius + 0.4 });
+export const FETE_PLAZA: VillagePoint = walkableNear({ x: 0.5, z: 4.8 });
+export const FETE_STAGE: VillagePoint = walkableNear({ x: KARCHIVE_STAGE.x, z: KARCHIVE_STAGE.z + KARCHIVE_STAGE.radius + 1.2 });
 export const feteSpot = (flags: readonly string[]) => (flags.includes('stage') ? FETE_STAGE : FETE_PLAZA);
 export const feteDistance = (p: VillagePoint, flags: readonly string[]) => {
   const at = feteSpot(flags);

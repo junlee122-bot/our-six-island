@@ -37,10 +37,10 @@ test('village places retain all resident homes and public destinations', () => {
     [0, 1, 2, 3, 4, 5, 6],
   );
   assert.deepEqual(
-    VILLAGE_PLACES.slice(-3).map((place) => place.destination),
-    ['lounge', 'casino', 'wardrobe'],
+    VILLAGE_PLACES.filter((place) => place.kind !== 'home').map((place) => place.destination),
+    ['lounge', 'casino', 'wardrobe', 'tavern', 'realty', 'furniture'],
   );
-  assert.equal(VILLAGE_PLACES.length, 10);
+  assert.equal(VILLAGE_PLACES.length, 13);
   assert.deepEqual(VILLAGE_TERRACE, {
     id: 'terrace',
     x: -8,
@@ -108,7 +108,7 @@ test('walk collision checks cover buildings, terrace, fountain, river and bounds
 test('expanded districts and all three bridges are reachable on both banks', () => {
   assert.deepEqual(
     VILLAGE_DISTRICTS.map(({ id }) => id),
-    ['west-orchard', 'south-camp', 'east-boardwalk', 'north-forest', 'north-falls', 'east-lake', 'south-beach'],
+    ['west-orchard', 'south-camp', 'east-boardwalk', 'north-forest', 'north-falls', 'east-lake', 'south-beach', 'shop-street'],
   );
   for (const district of VILLAGE_DISTRICTS) {
     assert.ok(

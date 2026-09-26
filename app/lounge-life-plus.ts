@@ -119,6 +119,8 @@ import {
   bondLastDay,
   decayedBond,
   grantHeartRewards,
+  legacyBond,
+  migrateBonds,
   museumStamped,
   readSocial,
   settleMuseum,
@@ -905,7 +907,7 @@ export const bondLevel = (points: number) => BOND_LEVELS.filter((t) => points >=
 export const bondPoints = (life: LifeState, a: number, b: number, now?: number) => {
   if (a === b) return 0;
   const key = pairKey(a, b),
-    points = life.bonds?.[key] ?? 0;
+    points = legacyBond(life, life.bonds?.[key] ?? 0);
   return now === undefined ? points : decayedBond(points, bondLastDay(life, key), kstDay(now));
 };
 /** Counts a friendship source once per `gate` key per KST day. Returns false when already counted. */
@@ -918,6 +920,7 @@ export function bondGate(life: LifeState, gate: string, now: number) {
 }
 export function addBond(life: LifeState, a: number, b: number, points: number, now: number) {
   if (a === b || !actorValid(a) || !actorValid(b) || points <= 0) return;
+  migrateBonds(life);
   const key = pairKey(a, b),
     stored = life.bonds?.[key] ?? 0,
     // Idle decay is applied lazily: first settle it, then add the new points.

@@ -122,7 +122,6 @@ export const TAVERN_MODELS = {
   doorway: '/models/lounge/tavern/doorway.glb',
   windowFrame: '/models/lounge/tavern/windowFrame.glb',
   audioConsole: '/models/lounge/tavern/audioConsole.glb',
-  bookcase: '/models/lounge/tavern/bookcase.glb',
   ticketRail: '/models/lounge/tavern/ticketRail.glb',
   cauldron: '/models/lounge/tavern/cauldron.glb',
   stove: '/models/lounge/tavern/stove.glb',
@@ -132,7 +131,10 @@ export const TAVERN_MODELS = {
   barrelRack: '/models/lounge/tavern/barrelRack.glb',
   chestnutRoaster: '/models/lounge/tavern/chestnutRoaster.glb',
 } as const;
-export type TavernModel = keyof typeof TAVERN_MODELS;
+/** Tavern props; 'bookcase' reuses the room's archive bookcase (same kArchive model). */
+export type TavernModel = keyof typeof TAVERN_MODELS | 'bookcase';
+export const tavernModelUrl = (key: TavernModel): string =>
+  key === 'bookcase' ? LOUNGE_MODELS.archiveBookcase : TAVERN_MODELS[key];
 
 /**
  * Village buildings of the tavern, 범마을 부동산 and 나무결 가구점 with their

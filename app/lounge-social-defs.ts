@@ -29,6 +29,13 @@ export const TALK_POINTS = 4;
 export const BOND_GRACE_DAYS = 3;
 /** Share kept per further idle day (only the part above BOND_DECAY_FLOOR fades). */
 export const BOND_DECAY_KEEP = 0.99;
+/**
+ * The heart curve before C-4 (♥10 = 2,000). Worlds from before it are
+ * migrated once (lounge-life-social migrateBonds): every pair keeps at least
+ * the hearts it showed, i.e. its points rise to the new threshold of its old
+ * level. Flag: world.life.social.bm.
+ */
+export const OLD_BOND_LEVELS = [30, 80, 150, 250, 400, 600, 850, 1_150, 1_500, 2_000] as const;
 /** Points (♥5) that never fade: early hearts are safe. */
 export const BOND_DECAY_FLOOR = 400;
 

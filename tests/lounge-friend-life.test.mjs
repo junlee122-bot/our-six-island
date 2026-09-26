@@ -584,3 +584,62 @@ test('tomorrow lines: weather always, festival eve, season change and my ripe cr
   assert.ok(tomorrowLines(s2.life, s2.members[0].id, 0, late).some((l) => l.includes('1칸')));
   void BOND_POINTS;
 });
+
+test('hearts: a world from the old curve migrates once, nobody loses visible hearts, rewards stay idempotent', () => {
+  const s = world(3),
+    [a, b, c] = s.members;
+  // Old curve: 1,500 = ♥9, 700 = ♥6, 200 = ♥3, 20 = ♥0.
+  s.life.bonds = { '0-1': 1_500, '0-2': 700, '1-2': 200, '1-3': 20 };
+  const hearts = (m, f, now) => s.view(m, now).me.bonds.find((x) => x.actor === f).level;
+  // Before any action the view already shows the old hearts.
+  assert.equal(hearts(a, 1, T0), 9);
+  assert.equal(hearts(a, 2, T0), 6);
+  assert.equal(hearts(b, 2, T0), 3);
+  s.act(c, { kind: 'status', text: '' }, T0);
+  assert.equal(s.life.social.bm, 1);
+  assert.deepEqual(s.life.bonds, { '0-1': BOND_LEVELS[8], '0-2': 700, '1-2': 200, '1-3': 20 }); // raised only where the new curve would show fewer hearts
+  assert.equal(hearts(a, 1, T0), 9);
+  assert.equal(hearts(a, 2, T0), 6);
+  // Runs once: new points on the new curve are never raised again.
+  s.life.bonds['1-3'] = 600; // old ♥6, new ♥5 — stays 600
+  s.act(a, { kind: 'npcTalk', to: 3 }, T0 + MIN);
+  assert.equal(s.life.bonds['1-3'], 600);
+  assert.equal(readLife(JSON.parse(JSON.stringify(s.life))).social.bm, 1);
+  // Rewards for the migrated levels arrive once.
+  s.act(a, { kind: 'status', text: '' }, T0 + 10_000);
+  s.act(a, { kind: 'status', text: '' }, T0 + 20_000);
+  assert.equal(s.life.social.hr['0>1'], 8);
+  assert.equal(s.life.mail[a.id].filter((m) => m.actor === 1).length, 1);
+  // A migration that starts inside addBond (a visit) gives the same result.
+  const t = world(2);
+  t.life.bonds = { '0-1': 1_150 };
+  t.life = recordVisit(t.life, t.members[0], 1, T0);
+  assert.equal(t.life.bonds['0-1'], BOND_LEVELS[7] + BOND_POINTS.visit);
+});
+
+test('festival booth spots: walkable, clear of the fountain rim and the stage, reachable from every place', async () => {
+  const { FETE_PLAZA, FETE_STAGE, FOUNTAIN_REACH, fountainDistance } = await import('../app/lounge-village-spots.ts');
+  const { villageCanWalk, villagePath, villageStep, VILLAGE_PLACES } = await import('../app/lounge-village-layout.ts');
+  const { KARCHIVE_STAGE } = await import('../app/lounge-village-karchive-layout.ts');
+  assert.ok(fountainDistance(FETE_PLAZA) > FOUNTAIN_REACH + 0.5, 'not on the fountain rim');
+  assert.ok(Math.hypot(FETE_STAGE.x - KARCHIVE_STAGE.x, FETE_STAGE.z - KARCHIVE_STAGE.z) > KARCHIVE_STAGE.radius + 1);
+  for (const spot of [FETE_PLAZA, FETE_STAGE]) {
+    assert.ok(villageCanWalk(spot));
+    for (const place of VILLAGE_PLACES) {
+      // Click-to-walk: follow the planned route with the village's stepping.
+      let p = { ...place.entry };
+      const path = villagePath(p, spot);
+      for (let f = 0; f < 3600 && path.length; f++) {
+        let budget = 5.2 / 60;
+        while (path.length && budget > 0) {
+          const t = path[0], dx = t.x - p.x, dz = t.z - p.z, d = Math.hypot(dx, dz);
+          if (d < 0.06) { path.shift(); continue; }
+          const s = Math.min(d, budget);
+          p = villageStep(p, (dx / d) * s, (dz / d) * s);
+          budget -= s;
+        }
+      }
+      assert.ok(Math.hypot(p.x - spot.x, p.z - spot.z) < 0.3, `${place.id} → booth`);
+    }
+  }
+});

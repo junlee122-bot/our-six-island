@@ -71,6 +71,8 @@ function finish(room, game) {
     room.yacht = { ...room.yacht, phase: 'over', turn: -1, result: [0, 0, 0] };
   else if (game === 'liar')
     room.liar = { ...room.liar, phase: 'over', turn: -1, winner: 'citizens' };
+  else if (game === 'liarsbar')
+    room.liarsbar = { ...room.liarsbar, phase: 'over', turn: -1, winner: 0, result: [0, 0, 0] };
   else room.seotda = { ...room.seotda, phase: 'over', result: [0, 0, 0] };
 }
 

@@ -47,7 +47,7 @@ export const TAVERN_MODEL_SIZE: Record<TavernModel, { w: number; h: number; d: n
 };
 
 /** Bar top height (the reception desk scaled ×1.1). */
-export const TAVERN_BAR = { scale: 1.1, z: -4.98, x: [-4.6, -2.6] as const, top: 0.91 * 1.1 } as const;
+export const TAVERN_BAR = { scale: 1.1, z: -5.06, x: [-4.6, -2.6] as const, top: 0.91 * 1.1 } as const;
 
 /** One placed copy: centre (world), height above the floor, turn, uniform scale. */
 export type TavernSpot = { x: number; z: number; y?: number; rot?: number; s: number };
@@ -82,9 +82,9 @@ export const TAVERN_SPOTS: Partial<Record<TavernModel, readonly TavernSpot[]>> =
   shelterBench: [S(-7.7, 1.05, 0.95, LEFT)],
   soban: [S(5.6, 4.9, 0.28)],
   // Lights tier 1–3.
-  stringLights: [S(-4.2, -5.9, 1.05, 0, 2.35), S(0, -5.9, 1.05, 0, 2.35), S(4.2, -5.9, 1.05, 0, 2.35)],
+  stringLights: [S(-5.4, -5.84, 1.05, 0, 2.35), S(5.9, -5.84, 1.05, 0, 2.35)],
   starLamp: [S(7.6, 3.2, 0.32, RIGHT)],
-  floorLamp: [S(-6.9, 4.85, 1), S(6.9, 4.85, 1)],
+  floorLamp: [S(-6.9, 4.9, 0.9), S(6.9, 4.9, 0.9)],
   // Walls and decor tier 1–3.
   coatStand: [S(-7.72, 2.15, 1, LEFT)],
   bambooPlanter: [S(7.6, 4.75, 1.1, RIGHT)],
@@ -116,9 +116,10 @@ export function tavernFootprint(model: TavernModel, spot: TavernSpot) {
 export const TAVERN_DECOR = {
   gramophone: { x: 7.45, z: -5.45 },
   dartboard: { x: 2.85, y: 2.05 },
+  /** On the left wall (z), above the jars and the bookcase. */
   posters: [
-    { x: -0.1, y: 2.3, title: '이달의 허풍왕' },
-    { x: 4.55, y: 2.3, title: '뻥총 조심' },
+    { z: -3.0, y: 2.05, title: '이달의 허풍왕' },
+    { z: -0.9, y: 2.05, title: '뻥총 조심' },
   ],
   /** Hanji lanterns hung over the 허풍 카드 table. */
   lanterns: [-1.2, 0, 1.2],

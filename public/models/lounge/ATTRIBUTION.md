@@ -154,3 +154,64 @@ Files under `public/models/village/forge/`:
 - workshopRuin.glb: https://karchive.vibeline.co.kr/models/common-buildings-community-workshop-compact-destroyed
 
 Modifications: web-optimized copies as described at the top of this file. At runtime the game sets position and scale; the ruined workshop stands in the village until the shared project “대장간 재건” is finished, then the rebuilt one. The village's material nodes (잡목·통나무 더미·바위) reuse the valley set's shrub, firewood and granite boulder.
+
+
+## kArchive 허풍 주점 · 범마을 부동산 · 나무결 가구점 · 2026-09-26
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Original, self-contained GLB files were downloaded from the official model URLs on 2026-09-26 (`https://karchive-assets.vibeline.co.kr/models/v1/<collection>/<id>.glb`). The displayed terms were checked again on a model page that day and were unchanged (personal and commercial use and modification allowed; AI training allowed; resale of the original assets prohibited; the credit "자료: kArchive / 출처: 쓰레드 dogfooter" is required; no Creative Commons license). They are recorded verbatim in each folder's `assets.json` with the file's source page, URL, SHA-256, byte size, triangle count, texture and bounds. Originals are kept under `public/models/_originals/` with the same paths.
+
+Files under `public/models/lounge/tavern/` (Interior props of 허풍 주점 (base set and every upgrade tier); 34 files, originals 20,799,680 bytes, web copies 7,148,168 bytes):
+
+- barCounter.glb: https://karchive.vibeline.co.kr/models/angular-onsen-reception-desk — 바 카운터(2개 이어 붙임) · 기본
+- wallShelf.glb: https://karchive.vibeline.co.kr/models/common-furniture-wall-shelf-unit-cottage-normal — 바 뒤 선반 · 기본
+- bottle.glb: https://karchive.vibeline.co.kr/models/newyear-06 — 선반 위 술병(반복) · 기본
+- keg.glb: https://karchive.vibeline.co.kr/models/onsen-mineral-dosing-barrel-cottage-normal — 막걸리 통(케그) · 기본
+- cafeTable.glb: https://karchive.vibeline.co.kr/models/common-furniture-round-cafe-table-cottage-normal — 허풍 카드 메인 테이블(확대) · 기본
+- saddleStool.glb: https://karchive.vibeline.co.kr/models/common-furniture-saddle-workshop-stool-cottage-normal — 테이블 안장 의자 · 기본
+- fireplace.glb: https://karchive.vibeline.co.kr/models/christmas-23 — 벽난로 · 기본
+- glass.glb: https://karchive.vibeline.co.kr/models/newyear-07 — 잔 · 업그레이드 바 1단계
+- cupTree.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-cup-tree-four-mugs — 머그 걸이 · 업그레이드 바 1단계
+- bottleCrate.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-bottle-crate-full-bottles — 병 상자 · 업그레이드 바 1단계
+- cornerCabinet.glb: https://karchive.vibeline.co.kr/models/common-furniture-corner-display-cabinet-cottage-normal — 코너 장식장 · 업그레이드 바 2단계
+- teaSideboard.glb: https://karchive.vibeline.co.kr/models/angular-onsen-tea-sideboard-open-stocked — 찻장 · 업그레이드 바 2단계
+- glassRack.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-glassware-rack-full-glasses — 잔 상자 · 업그레이드 바 2단계
+- sodaTap.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-soda-fountain-ready — 맥주 탭 · 업그레이드 바 3단계
+- beverageBar.glb: https://karchive.vibeline.co.kr/models/restaurant-beverage-bar — 음료 바 · 업그레이드 바 3단계
+- boothBench.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-booth-bench-seat-cushions — 관전석 부스 · 업그레이드 좌석 1단계
+- shelterBench.glb: https://karchive.vibeline.co.kr/models/common-furniture-backless-shelter-bench-cottage-normal — 지붕 벤치 · 업그레이드 좌석 2단계
+- soban.glb: https://karchive.vibeline.co.kr/models/dongji-05 — 소반 · 업그레이드 좌석 3단계
+- stringLights.glb: https://karchive.vibeline.co.kr/models/christmas-17 — 전구 줄 · 업그레이드 조명 1단계
+- starLamp.glb: https://karchive.vibeline.co.kr/models/christmas-18 — 별 등 · 업그레이드 조명 2단계
+- floorLamp.glb: https://karchive.vibeline.co.kr/models/restaurant-floor-lamp — 스탠드 등 · 업그레이드 조명 3단계
+- coatStand.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-coat-stand-coats-and-bags — 옷걸이 · 업그레이드 벽·장식 1단계
+- bambooPlanter.glb: https://karchive.vibeline.co.kr/models/angular-onsen-garden-planter-bamboo-planting — 대나무 화분 · 업그레이드 벽·장식 1단계
+- doorway.glb: https://karchive.vibeline.co.kr/models/angular-common-buildings-board-batten-doorway-2m — 판자 문틀 · 업그레이드 벽·장식 2단계
+- windowFrame.glb: https://karchive.vibeline.co.kr/models/angular-common-buildings-board-batten-window-2m — 판자 창틀 · 업그레이드 벽·장식 2단계
+- audioConsole.glb: https://karchive.vibeline.co.kr/models/common-furniture-audio-equipment-console-cottage-normal — 음향 콘솔 · 업그레이드 벽·장식 3단계
+- ticketRail.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-order-ticket-rail-five-blank-tickets — 주문표 걸이 · 업그레이드 벽·장식 3단계
+- cauldron.glb: https://karchive.vibeline.co.kr/models/dongji-03 — 국밥 가마솥 · 업그레이드 주방 1단계
+- stove.glb: https://karchive.vibeline.co.kr/models/dongji-10 — 아궁이 · 업그레이드 주방 1단계
+- teaUrn.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-tea-urn-open-filled — 보리차 통 · 업그레이드 주방 2단계
+- register.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-cash-register-closed — 계산대 · 업그레이드 주방 2단계
+- storageShelf.glb: https://karchive.vibeline.co.kr/models/rounded-restaurant-storage-shelf-fully-stocked — 식료품 선반 · 업그레이드 주방 3단계
+- barrelRack.glb: https://karchive.vibeline.co.kr/models/apocalypse-sand-filter-barrel-rack-cottage-normal — 술통 받침 · 업그레이드 주방 3단계
+- chestnutRoaster.glb: https://karchive.vibeline.co.kr/models/lp-wi-06 — 군밤 화로 · 업그레이드 주방 3단계
+Files under `public/models/village/tavern/` (허풍 주점 exteriors (base and upgrade tiers) and the entrance board; 5 files, originals 3,755,348 bytes, web copies 2,370,384 bytes):
+
+- tavernStall.glb: https://karchive.vibeline.co.kr/models/restaurant-ramen-stall-building-cottage-normal — 허풍 주점 외관 · 기본
+- menuBoard.glb: https://karchive.vibeline.co.kr/models/restaurant-allergen-pictogram-board-cottage-normal — 입구 칠판 ‘오늘의 카드: ?’ · 업그레이드 외관 1단계
+- dumplingShop.glb: https://karchive.vibeline.co.kr/models/restaurant-dumpling-shop-building-cottage-normal — 외관 2단계 ‘본채 새 단장’(대안 외관)
+- stallHeritage.glb: https://karchive.vibeline.co.kr/models/restaurant-ramen-stall-building-heritage-normal — 외관 3단계 ‘홍등 거리’(홍등이 가장 선명한 변형)
+- grillHut.glb: https://karchive.vibeline.co.kr/models/restaurant-seafood-grill-hut-cottage-normal — 외관 3단계 곁채 ‘항구 구이 좌판’
+Files under `public/models/village/shops/` (범마을 부동산 and 나무결 가구점 buildings (base and upgrade tiers); 4 files, originals 2,949,752 bytes, web copies 1,949,580 bytes):
+
+- realtyOffice.glb: https://karchive.vibeline.co.kr/models/common-buildings-office-reception-building-compact-normal — 범마을 부동산 외관 · 기본
+- realtyDuplex.glb: https://karchive.vibeline.co.kr/models/common-buildings-office-reception-building-duplex-normal — 부동산 외관 2단계 ‘2층 사무소’
+- furnitureShop.glb: https://karchive.vibeline.co.kr/models/convenience-corner-convenience-store-building-cottage-normal — 나무결 가구점 외관 · 기본
+- furnitureShowroom.glb: https://karchive.vibeline.co.kr/models/convenience-corner-convenience-store-building-heritage-normal — 가구점 외관 2단계 ‘쇼윈도 증축’
+
+Reused without new bytes: the room's archive bookcase (`redesign/archiveBookcase.glb`, the same kArchive model as the tavern's bookcase tier), the valley set's onggi, hanji lantern and firewood, and the friends' tables' service bell (the tavern's 거짓말! bell).
+
+Modifications: web-optimized copies as described at the top of this file (small props at 512² WebP textures, buildings and the main table at 1024²). At runtime the game sets position, orientation and scale (the holiday-set models, normalized to a 2 m longest side, are scaled down), tints the hanji lanterns' glow, and shows or swaps models by the shared shop upgrades (외관 · 바·카운터 · 좌석 · 조명 · 벽·장식 · 주방). The toy cork gun (뻥총), dartboard, gramophone, posters, rug and signs are drawn in code.

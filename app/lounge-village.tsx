@@ -3197,7 +3197,11 @@ export function Village3D(props: Props) {
               <small>
                 {selected.kind === 'home'
                   ? '친구들의 골목'
-                  : '광장 옆 작은 아지트'}
+                  : selected.kind === 'tavern'
+                    ? '밤 항구 옆 해변 언덕'
+                    : selected.kind === 'realty' || selected.kind === 'furniture'
+                      ? '서쪽 다리 건너 상점가'
+                      : '광장 옆 작은 아지트'}
               </small>
               <h2>{selected.name}</h2>
               <p>{selected.subtitle}</p>

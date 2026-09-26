@@ -459,6 +459,14 @@
 .l-fete-board .l-bond-face.small {
   margin: 0;
 }
+/* Portraits in the leaderboard / photo: a generic modal span padding
+   (7px 12px) squeezed the 28px face's content box to 0, so the portrait
+   canvas was blank. */
+.l-fete-board .l-bond-face,
+.l-fete-photo .l-bond-face {
+  display: block;
+  padding: 0;
+}
 .l-fete-rank {
   font-weight: 800;
   color: #b86a1c;

@@ -221,7 +221,7 @@ export class VillageShopsLayer {
       (source) => {
         this.sources.set(model, source);
         this.apply(true);
-        this.placed?.('shop-' + model);
+        this.placed?.('shop' + model[0].toUpperCase() + model.slice(1));
       },
       () => {
         this.sources.delete(model);

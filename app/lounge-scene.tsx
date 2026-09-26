@@ -13,6 +13,7 @@ import {
 } from 'react';
 import { Footprints } from 'lucide-react';
 import { AvatarView } from './avatar-view';
+import { VENUES } from './lounge-venues';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import type { LoungePlayer, LoungeView } from './lounge-room';
@@ -243,6 +244,31 @@ const SCENE_KEYS: Record<string, [number, number]> = {
 /** Server units per second; the floor is 70 × 46 units. */
 const SCENE_WALK_SPEED = 16;
 
+/** The flat (간단 그래픽) look of each interior; the tavern borrows the hall's art, tinted. */
+const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tagline: string; title: string }> = {
+  lounge: {
+    src: LOUNGE_ASSETS.room,
+    alt: '햇살과 생활감이 가득한 범타듀 밸리의 마을 회관',
+    short: '회관',
+    tagline: '일곱 친구의 아지트',
+    title: '범마을 회관',
+  },
+  casino: {
+    src: LOUNGE_ASSETS.casino,
+    alt: '은은한 조명의 범타듀 카지노',
+    short: '카지노',
+    tagline: '오늘 밤의 한 판',
+    title: '범타듀 카지노',
+  },
+  tavern: {
+    src: LOUNGE_ASSETS.room,
+    alt: '호박색 등불 아래 허풍 주점',
+    short: '주점',
+    tagline: VENUES.tavern.tagline,
+    title: VENUES.tavern.name,
+  },
+};
+
 export function RoomFloor({
   players,
   self,
@@ -412,7 +438,7 @@ export function RoomFloor({
         data-testid="interior-simple"
         tabIndex={0}
         role="application"
-        aria-label={`${area === 'casino' ? '카지노' : '회관'} 공간. 바닥을 클릭하거나 방향키와 WASD로 이동해요. 테이블을 클릭하면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}
+        aria-label={`${FLAT_ART[area].short} 공간. 바닥을 클릭하거나 방향키와 WASD로 이동해요. 테이블을 클릭하면 그 자리로 걸어가고, 가까이에서 E를 누르면 앉거나 구경해요.`}
         onKeyDown={(e) => {
           if (
             document.querySelector('dialog[open]') ||
@@ -460,19 +486,15 @@ export function RoomFloor({
       >
         <img
           className="cf-room-art"
-          src={area === 'casino' ? LOUNGE_ASSETS.casino : LOUNGE_ASSETS.room}
-          alt={
-            area === 'casino'
-              ? '은은한 조명의 범타듀 카지노'
-              : '햇살과 생활감이 가득한 범타듀 밸리의 마을 회관'
-          }
+          src={FLAT_ART[area].src}
+          alt={FLAT_ART[area].alt}
           draggable={false}
         />
         <div className="cf-room-caption" aria-hidden="true">
           <span>
-            {area === 'casino' ? '오늘 밤의 한 판' : '일곱 친구의 아지트'}
+            {FLAT_ART[area].tagline}
           </span>
-          <strong>{area === 'casino' ? '범타듀 카지노' : '범마을 회관'}</strong>
+          <strong>{FLAT_ART[area].title}</strong>
         </div>
         <button
           type="button"

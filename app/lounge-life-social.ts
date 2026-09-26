@@ -46,6 +46,7 @@ import {
   LANTERN_TEXT_MAX,
   MUSEUM_MILESTONES,
   MY_LINES_MAX,
+  OLD_BOND_LEVELS,
   MY_LINE_TEXT_MAX,
   RECIPE_GIFT_N,
   SONGPYEON_MISS_MS,
@@ -62,7 +63,7 @@ import {
 } from './lounge-social-defs.ts';
 import { FRIEND_LINES } from './lounge-friend-lines.ts';
 import { LifeError, MAIL_MAX, TEXT_COOLDOWN_MS, uidOf, CROP_INFO, plotReadyAt, type LifeState, type MailItem } from './lounge-life.ts';
-import { addBond, addInv, addMemory, addNews, bondGate, bondLevel, bondPoints, invCount } from './lounge-life-plus.ts';
+import { BOND_LEVELS, BOND_MAX, addBond, addInv, addMemory, addNews, bondGate, bondLevel, bondPoints, invCount } from './lounge-life-plus.ts';
 
 // ---------------------------------------------------------------- types
 export type FeteState = {
@@ -100,6 +101,8 @@ export type SocialState = {
   adapt?: Record<string, AdaptStepId[]>;
   /** The current (or last) participatory festival. */
   fete?: FeteState;
+  /** 1 once the bonds were migrated to the slower heart curve (runs once). */
+  bm?: 1;
 };
 export type SocialAction =
   | { kind: 'npcTalk'; to: number; topic?: number }
@@ -235,6 +238,7 @@ export function readSocial(value: unknown): SocialState | undefined {
   if (nonEmpty(adapt)) out.adapt = adapt;
   const fete = readFete(v.fete);
   if (fete) out.fete = fete;
+  if (v.bm === 1) out.bm = 1;
   return nonEmpty(out) ? out : undefined;
 }
 
@@ -288,6 +292,23 @@ function textGate(life: LifeState, uid: string, now: number) {
 }
 
 // ---------------------------------------------------------------- hearts
+/** Points after the one-time curve migration: at least the new threshold of the old level. */
+export function migratedPoints(points: number) {
+  const old = OLD_BOND_LEVELS.filter((t) => points >= t).length;
+  return old ? Math.max(points, BOND_LEVELS[old - 1]) : points;
+}
+/** A stored pair's points as they read before the world is migrated (views stay steady). */
+export const legacyBond = (life: LifeState, points: number) => (peek(life).bm ? points : migratedPoints(points));
+/**
+ * Once per world: raise every existing pair to the new curve's threshold of
+ * the hearts it showed on the old curve, so nobody loses visible hearts.
+ * Runs before the first friendship change (addBond) or on any action.
+ */
+export function migrateBonds(life: LifeState) {
+  if (peek(life).bm) return;
+  for (const [key, points] of Object.entries(life.bonds ?? {})) life.bonds![key] = Math.min(BOND_MAX, migratedPoints(points));
+  socialOf(life).bm = 1;
+}
 /** Points after decay: past BOND_GRACE_DAYS idle days, the part above ♥5 fades 1%/day. */
 export function decayedBond(points: number, lastDay: number | undefined, day: number) {
   if (lastDay === undefined || points <= BOND_DECAY_FLOOR) return points;
@@ -626,6 +647,7 @@ export function socialAction(
  */
 export function settleSocial(life: LifeState, ledger: LoungeLedger, member: { id: string; actor: number }, now: number) {
   if (!actorValid(member.actor)) return ledger;
+  if (life.bonds && nonEmpty(life.bonds)) migrateBonds(life);
   for (let b = 0; b < 7; b++) if (b !== member.actor) grantHeartRewards(life, member.actor, b, now);
   let next = settleFete(life, ledger, now);
   if (MUSEUM_MILESTONES.some((m) => Object.keys(life.museum ?? {}).length >= m.n)) next = settleMuseum(life, next, now);

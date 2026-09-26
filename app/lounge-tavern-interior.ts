@@ -10,7 +10,7 @@
  */
 import * as THREE from 'three';
 import type { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { LOUNGE_MODELS, TAVERN_MODELS, VALLEY_MODELS, type TavernModel } from './lounge-model-assets';
+import { LOUNGE_MODELS, VALLEY_MODELS, tavernModelUrl, type TavernModel } from './lounge-model-assets';
 import { FRIEND_MODELS, FRIEND_PROP_SIZE } from './lounge-friend-props';
 import { TAVERN_DECOR, TAVERN_MODEL_SIZE, TAVERN_SPOTS } from './lounge-tavern-layout';
 import { VALLEY_MODEL_SIZE } from './lounge-village-layout';
@@ -113,8 +113,6 @@ export function buildTavern(kit: Kit, options: { props: readonly TavernModel[] }
   rug.position.set(0, 0.02, -0.3);
   rug.receiveShadow = true;
   root.add(rug);
-  // Ceiling beams (dark walnut) across the back half.
-  for (const z of [-4.6, -1.8, 1.0]) box(16.8, 0.16, 0.16, 0, 3.5, z, '#3a2418', root, false);
   // Posters: "이달의 허풍왕" (wanted-poster style) and a warning.
   for (const p of TAVERN_DECOR.posters) {
     const tex = canvasTexture(200, 260, (c) => {
@@ -150,8 +148,8 @@ export function buildTavern(kit: Kit, options: { props: readonly TavernModel[] }
     });
     textures.push(tex);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.91), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
-    mesh.position.set(p.x, p.y, minZ + 0.05);
-    mesh.rotation.z = p.x < 1 ? -0.03 : 0.04;
+    mesh.position.set(INTERIOR_ROOM.minX + 0.05, p.y, p.z);
+    mesh.rotation.set(0, Math.PI / 2, p.z < -2 ? -0.03 : 0.04);
     root.add(mesh);
   }
   // Dartboard with three darts.
@@ -261,11 +259,13 @@ export function buildTavern(kit: Kit, options: { props: readonly TavernModel[] }
     root.add(group);
     groups.set(key, group);
   };
+  // The café table and the saddle stools are placed by the scene (no spots).
+  const sceneOwned = (key: TavernModel) => key === 'cafeTable' || key === 'saddleStool';
   const load = (key: TavernModel) => {
-    if (loaded.has(key) || !TAVERN_SPOTS[key]) return;
+    if (loaded.has(key) || (!TAVERN_SPOTS[key] && !sceneOwned(key))) return;
     loaded.set(key, 'loading');
     kit.loader
-      .loadAsync(TAVERN_MODELS[key])
+      .loadAsync(tavernModelUrl(key))
       .then((gltf) => {
         if (kit.isDisposed()) return kit.own(gltf.scene);
         kit.own(gltf.scene);

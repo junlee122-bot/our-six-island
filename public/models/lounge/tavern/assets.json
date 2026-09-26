@@ -891,40 +891,6 @@
       "use": "음향 콘솔 · 업그레이드 벽·장식 3단계"
     },
     {
-      "key": "bookcase",
-      "id": "common-furniture-open-bookcase-cottage-normal",
-      "source": "https://karchive.vibeline.co.kr/models/common-furniture-open-bookcase-cottage-normal",
-      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-open-bookcase-cottage-normal.glb",
-      "file": "bookcase.glb",
-      "bytes": 527108,
-      "sha256": "9e4cc58d47b28976c33ded90bb79f641ebf3300e3fd280de58ae484c4f7337ae",
-      "webBytes": 247128,
-      "meshes": 1,
-      "triangles": 5634,
-      "textures": 1,
-      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
-      "textureMax": 512,
-      "extensions": [],
-      "bounds": {
-        "min": [
-          -0.46,
-          0,
-          -0.202
-        ],
-        "max": [
-          0.46,
-          1,
-          0.202
-        ],
-        "size": [
-          0.92,
-          1,
-          0.404
-        ]
-      },
-      "use": "책장 · 업그레이드 벽·장식 3단계"
-    },
-    {
       "key": "ticketRail",
       "id": "angular-restaurant-order-ticket-rail-five-blank-tickets",
       "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-order-ticket-rail-five-blank-tickets",
@@ -1195,6 +1161,38 @@
         ]
       },
       "use": "군밤 화로 · 업그레이드 주방 3단계"
+    }
+  ],
+  "reused": [
+    {
+      "key": "bookcase",
+      "file": "../redesign/archiveBookcase.glb",
+      "id": "common-furniture-open-bookcase-cottage-normal",
+      "use": "책장 · 업그레이드 벽·장식 3단계 (이미 받은 방 꾸미기 책장을 다시 씀)"
+    },
+    {
+      "key": "onggi",
+      "file": "../../village/valley/onggi.glb",
+      "id": "dongji-06",
+      "use": "옹기(막걸리 항아리)"
+    },
+    {
+      "key": "hanjiLantern",
+      "file": "../../village/valley/hanjiLantern.glb",
+      "id": "dongji-11",
+      "use": "테이블 위 한지 등 · 입구 등"
+    },
+    {
+      "key": "firewood",
+      "file": "../../village/valley/firewood.glb",
+      "id": "dongji-09",
+      "use": "벽난로 옆 장작"
+    },
+    {
+      "key": "serviceBell",
+      "file": "../friends/serviceBell.glb",
+      "id": "rounded-restaurant-service-bell-ready",
+      "use": "거짓말! 벨"
     }
   ]
 }

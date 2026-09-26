@@ -115,7 +115,6 @@ const MODEL_TEXTURE_SIZE = {
   'lounge/tavern/doorway.glb': 512,
   'lounge/tavern/windowFrame.glb': 512,
   'lounge/tavern/audioConsole.glb': 512,
-  'lounge/tavern/bookcase.glb': 512,
   'lounge/tavern/ticketRail.glb': 512,
   'lounge/tavern/cauldron.glb': 512,
   'lounge/tavern/stove.glb': 512,

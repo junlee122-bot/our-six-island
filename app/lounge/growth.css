@@ -1026,9 +1026,6 @@ dialog.l-modal.l-prof-modal > header .l-icon {
     0 2px 0 rgb(61 43 29 / 0.25);
   transform: rotate(-6deg);
 }
-.l-research[data-compact] .l-research-chart {
-  max-height: 260px;
-}
 
 /* ------------------------------------------------------------ forge */
 .l-forge-body {

@@ -587,3 +587,9 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 ## kArchive 대장간 (성장 P1) · 2026-09-26
 
 마을 개척 “대장간 재건”을 위해 [kArchive 공식 모델 목록](https://karchive.vibeline.co.kr/models)에서 공방 건물 일반형(`common-buildings-community-workshop-compact-normal`)과 파괴형(`-destroyed`) 원본 GLB 2종을 받았습니다. 자료: kArchive · 출처: 쓰레드 dogfooter. 원본 1,817,216바이트(`public/models/_originals/village/forge/`), 웹 사본 1,219,536바이트(`public/models/village/forge/`). 개인·상업 프로젝트 사용 및 수정 가능, 출처 표기 필수, 원본 재판매 금지 조건(2026-09-25과 같은 문구, `assets.json`에 원문 기록)입니다. 완공 전에는 파괴형, 완공 뒤에는 일반형을 같은 자리에 둡니다. 마을 가장자리 재료(잡목·통나무 더미·바위)는 기존 계곡 세트의 관목·장작더미·화강암 바위를 다시 씁니다. GitHub CC0 에셋과 Higgsfield 유료 생성은 이번에 쓰지 않았습니다.
+
+## 허풍 주점 · 범마을 부동산 · 나무결 가구점 · 2026-09-26
+
+- **kArchive GLB 42개**(자료: kArchive · 출처: 쓰레드 dogfooter): 주점 실내 34개(`public/models/lounge/tavern/`, 기본 7 + 업그레이드 6분류 18단계), 주점 외관 5개(`village/tavern/`: 라멘 포장마차 기본, 칠판, 만두 가게·홍등 포장마차·생선구이 오두막 업그레이드), 가게 건물 4개(`village/shops/`: 부동산 사무소·2층 사무소, 가구점·쇼윈도 가구점). 약관 원문·URL·SHA-256·바이트·삼각형·바운드는 각 폴더 `assets.json`, 원본은 `_originals/`. 작은 소품은 512² WebP, 건물과 메인 테이블은 1024². 책장·옹기·한지 등·장작·알림종은 이미 받은 모델을 다시 씀(추가 0 KB). 주점 실내는 들어갈 때만 불러옵니다.
+- **Higgsfield GPT Image 2.5 2회(각 0.25 크레딧)**: 허 선장 6포즈 시트(`lounge/host-captain.*`, 프롬프트 `host-captain.prompt.txt`), 문 사장·결 목수 3포즈씩 한 장(`lounge/host-realtor.*`, `host-carpenter.*`, 프롬프트 `host-shopkeepers.prompt.txt`). 참조는 `host-maehwa.png`(스타일만). 마젠타 키잉 뒤 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 배치.
+- **코드로 그린 것**: 뻥총(장난감 코르크 리볼버, 약 400삼각형 + 인라인 SVG), 다트판, 축음기, 현상수배 포스터, 타원 러그, 주기(酒) 깃발, 간판, 카드 문양(범 왕관·학·보름달·도깨비 방망이), 주점 배경음(`lounge-music-score.ts` TAVERN: D 도리안 셔플 88 bpm)과 뻥총·벨·심장 박동 합성음. `tavern` 음악 슬롯에 파일을 넣으면 그 파일이 우선합니다(`/assets/lounge/music/tavern.ogg|mp3`).
