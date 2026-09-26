@@ -34,7 +34,10 @@ export type Look = Appearance & {
     | 'denim'
     | 'miku'
     | 'shampoo'
-    | 'akatsuki';
+    | 'akatsuki'
+    | 'gold-braid'
+    | 'cape-coat'
+    | 'maid';
   hairstyle: 'signature' | 'buns';
   hairColor?: string;
   skinColor?: string;
@@ -53,17 +56,27 @@ export const COLLECTIONS = [
   { id: 'miku', name: '하츠네 미쿠', note: '민트 넥타이 · 플리츠 스커트' },
   { id: 'shampoo', name: '샴푸의 중국풍', note: '차이나 칼라 · 매듭 장식' },
   { id: 'akatsuki', name: '아카츠키', note: '검은 망토 · 붉은 구름' },
+  { id: 'gold-braid', name: '금빛 브레이드', note: '검정 폴로 · 금빛 장식 끈' },
+  { id: 'cape-coat', name: '케이프 코트', note: '더블 코트 · 티어드 스커트' },
+  { id: 'maid', name: '메이드', note: '흰 러플 앞치마 · 긴 소매' },
 ] as const;
 export const COSTUME_COLLECTIONS: readonly Look['collection'][] = [
   'miku',
   'shampoo',
   'akatsuki',
+  'maid',
 ];
 export const DAOWON_COLLECTIONS: readonly Look['collection'][] = [
   'wide-pants',
   'denim',
   'miku',
   'shampoo',
+];
+/** 금빛 브레이드 · 케이프 코트: drawn only for 도원 (0) and 민서 (2). */
+export const FEMALE_ACTORS: readonly number[] = [0, 2];
+export const WOMEN_COLLECTIONS: readonly Look['collection'][] = [
+  'gold-braid',
+  'cape-coat',
 ];
 /**
  * '처음 만난 우리' is kept only where its art holds up: the six legacy chibi
@@ -77,6 +90,7 @@ export const collectionsFor = (actor: number) =>
   COLLECTIONS.filter(
     (c) =>
       (actor === 0 || !DAOWON_COLLECTIONS.includes(c.id)) &&
+      (FEMALE_ACTORS.includes(actor) || !WOMEN_COLLECTIONS.includes(c.id)) &&
       (c.id !== 'original' || ORIGINAL_ACTORS.includes(actor)),
   );
 export const hatsFor = (actor: number) =>

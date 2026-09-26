@@ -48,6 +48,12 @@ type Figure = {
   skin?: SkinMask;
   hair?: Uint8Array;
   blueHairOnly?: boolean;
+  /**
+   * Hair locks cut off by the arms (민서's long hair beside a black sleeve)
+   * still dye: any saturated blue is hair. Only for atlases whose garments
+   * carry no blue at all (금빛 브레이드, 케이프 코트, 메이드).
+   */
+  looseBlueHair?: boolean;
   /** Row (figure px) below which only strongly blue pixels count as hair (see createHairMask). */
   hairCollar?: number;
   /** Key into RIG_CELLS for static full-body art that the cut-out rig can pose. */
@@ -455,6 +461,9 @@ function bandAnchor(piece: Piece) {
   };
 }
 let pending: Promise<Awaited<ReturnType<typeof prepare>>> | null = null;
+/** Eye rows in the normalized 400×480 figures (ladies-outfits / maid atlases). */
+const LADIES_EYES = [133, 132, 130, 134, 132, 130];
+const MAID_EYES = [133, 129, 131, 135, 134, 137, 137, 134];
 type AtlasKey =
   | 'original'
   | 'hohyeon'
@@ -465,6 +474,8 @@ type AtlasKey =
   | 'outfits'
   | 'shampoo'
   | 'akatsuki'
+  | 'ladies'
+  | 'maid'
   | 'accessories'
   | 'hachimaki';
 
@@ -478,7 +489,10 @@ export function spriteAtlasesFor(actor: number, input: Look): AtlasKey[] {
     akatsuki = look.collection === 'akatsuki',
     special = actor === 0 && (bun || newOutfit >= 0 || shampoo);
   const keys = new Set<AtlasKey>();
-  if (akatsuki) keys.add('akatsuki');
+  if (look.collection === 'maid') keys.add('maid');
+  else if (look.collection === 'gold-braid' || look.collection === 'cape-coat')
+    keys.add('ladies');
+  else if (akatsuki) keys.add('akatsuki');
   else if (special)
     keys.add(shampoo ? 'shampoo' : newOutfit >= 0 ? 'outfits' : 'buns');
   else if (index < 0) keys.add(actor === 6 ? 'hohyeon' : 'original');
@@ -498,7 +512,9 @@ async function prepare() {
   let bunFigures: Figure[] = [],
     outfitFigures: Figure[] = [],
     shampooFigures: Figure[] = [],
-    akatsukiFigures: Figure[] = [];
+    akatsukiFigures: Figure[] = [],
+    ladiesFigures: Figure[] = [],
+    maidFigures: Figure[] = [];
   const original: Figure[][] = [];
   const collections: Figure[][] = [];
   const pieces: Piece[] = [];
@@ -694,6 +710,27 @@ async function prepare() {
         f.skinRegions.bareToes = true;
         f.skinRegions.darkHighCollar = true;
         f.rig = `akatsuki:${i}`;
+        return f;
+      });
+    },
+    async ladies() {
+      // 3×2: top row 금빛 브레이드, bottom row 케이프 코트; columns are
+      // 도원, 민서, 도원 (만두머리). Measured eye lines, as for the other atlases.
+      const sheet = await image(a.ladiesOutfits);
+      ladiesFigures = Array.from({ length: 6 }, (_, i) => {
+        const f = sheetFigure(sheet, 3, 2, i, LADIES_EYES[i], i < 3, false, true);
+        f.rig = `ladies:${i}`;
+        f.looseBlueHair = true;
+        return f;
+      });
+    },
+    async maid() {
+      // 4×2 like 아카츠키: the seven friends in actor order, then 도원's buns.
+      const sheet = await image(a.maid);
+      maidFigures = Array.from({ length: 8 }, (_, i) => {
+        const f = sheetFigure(sheet, 4, 2, i, MAID_EYES[i], false, false, true);
+        f.rig = `maid:${i}`;
+        f.looseBlueHair = true;
         return f;
       });
     },
@@ -932,6 +969,11 @@ async function prepare() {
       akatsuki = look.collection === 'akatsuki',
       special = actor === 0 && (bun || newOutfit >= 0 || shampoo),
       legacy = !akatsuki && !special && index < 0;
+    if (look.collection === 'maid') return maidFigures[bun ? 7 : actor];
+    if (look.collection === 'gold-braid' || look.collection === 'cape-coat')
+      return ladiesFigures[
+        (look.collection === 'cape-coat' ? 3 : 0) + (bun ? 2 : actor === 2 ? 1 : 0)
+      ];
     return akatsuki
       ? akatsukiFigures[bun ? 7 : actor]
       : special
@@ -1003,7 +1045,8 @@ async function prepare() {
       }
       const hairPixel =
           hairMask[k / 4] === 1 ||
-          (base.blueHairOnly && b > Math.max(r, g) * 1.17),
+          (base.blueHairOnly && b > Math.max(r, g) * 1.17) ||
+          (base.looseBlueHair && b > 70 && b > Math.max(r, g) * 1.4),
         originalTop =
           look.collection === 'original' &&
           g >= b * 0.9 &&

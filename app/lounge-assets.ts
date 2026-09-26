@@ -10,6 +10,8 @@ export const LOUNGE_ASSETS = {
   locomotionJaemin: '/assets/lounge/motion/jaemin.webp',
   locomotionHohyeon: '/assets/lounge/motion/hohyeon.webp',
   akatsuki: '/assets/lounge/akatsuki-atlas.webp',
+  ladiesOutfits: '/assets/lounge/ladies-outfits-atlas.webp',
+  maid: '/assets/lounge/maid-atlas.webp',
   dowonShampoo: '/assets/lounge/dowon-shampoo-atlas.webp',
   bedroomBackground: '/assets/lounge/bedroom/background.webp',
   bedroom_bed: '/assets/lounge/bedroom/bed.webp',

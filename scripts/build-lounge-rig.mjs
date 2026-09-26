@@ -495,11 +495,19 @@ const atlases = [
   ['outfits', () => sheetCells('/assets/lounge/daowon-outfits.webp', 3, 2, 6), (i) => (i % 3 === 2 ? 'hem' : 'legs')],
   ['shampoo', () => sheetCells('/assets/lounge/dowon-shampoo-atlas.webp', 2, 1, 2), 'hem'],
   ['akatsuki', () => sheetCells('/assets/lounge/akatsuki-atlas.webp', 4, 2, 8), 'hem'],
+  // 금빛 브레이드 (pleated skirt) / 케이프 코트 (tiered skirt): 도원, 민서, 도원 buns per row.
+  // A single swinging arm looks broken: 금빛 브레이드 keeps both arms or
+  // neither; the 케이프 코트 sleeves stay under the capelet.
+  ['ladies', () => sheetCells('/assets/lounge/ladies-outfits-atlas.webp', 3, 2, 6), 'hem', (i) => (i < 3 ? 'pair' : 'none')],
+  // 메이드: long dress (girls) or knee coat (boys) under the apron.
+  // The black coat panels beside the apron read as forearms, so the maid
+  // cells keep their arms on the torso (like 아카츠키's sleeves).
+  ['maid', () => sheetCells('/assets/lounge/maid-atlas.webp', 4, 2, 8), 'hem', 'none'],
 ];
 
 const cells = {};
 const report = [];
-for (const [atlas, load, hint] of atlases) {
+for (const [atlas, load, hint, armRule] of atlases) {
   const key = String(atlas);
   const list = await load();
   const hintOf = (i) => (typeof hint === 'function' ? hint(i) : hint);
@@ -510,6 +518,8 @@ for (const [atlas, load, hint] of atlases) {
   for (let i = 0; i < list.length; i++) {
     const name = `${key}:${i}`;
     let s = first[i];
+    const arms = typeof armRule === 'function' ? armRule(i) : armRule;
+    if (arms === 'none' || (arms === 'pair' && s.arms.length !== 2)) s = { ...s, arms: [] };
     if (!s.hem && fraction(s) > Math.max(0.88, median + 0.08))
       s = segment(list[i], name, hintOf(i), s.box.y + s.box.h * median);
     cells[name] = serialize(s);

@@ -29,6 +29,8 @@ const LOSSLESS_ATLASES = [
   'lounge/dowon-shampoo-atlas.png',
   'lounge/daowon-buns.png',
   'lounge/daowon-outfits.png',
+  'lounge/ladies-outfits-atlas.png',
+  'lounge/maid-atlas.png',
   'lounge/hachimaki.png',
 ];
 // Table host sheets (루미 / 매화): already keyed RGBA, never dyed, so lossy is fine.
