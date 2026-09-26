@@ -164,6 +164,8 @@ export type FishLast = {
   fish?: string;
   cm?: number;
   record?: boolean;
+  /** A new personal best for this fish. */
+  best?: boolean;
   at: number;
   reason?: 'early' | 'late' | 'timing';
 };
@@ -179,6 +181,8 @@ export type UserExt = {
   rod?: 2 | 3;
   pending?: FishPending;
   last?: FishLast;
+  /** Personal best length (cm) per fish id (VILL-2 fish card). */
+  best?: Record<string, number>;
   /** KST day of the daily fields below. */
   day?: number;
   taken?: string[];
@@ -258,6 +262,8 @@ export const PLUS_REJECT = {
   rodMax: '이미 가장 좋은 낚싯대예요.',
   spot: '갈 수 없는 곳이에요.',
   spotLocked: '아직 복원되지 않은 곳이에요. 마을 꾸러미를 채워 주세요.',
+  spotRod: '물살이 세서 낚싯대 2단계부터 던질 수 있어요.',
+  spotNight: '항구는 해가 진 뒤(저녁 7시~새벽 5시)에만 열려요.',
   token: '낚싯대를 다시 던져 주세요.',
   foraged: '여기는 오늘 이미 채집했어요. 내일 다시 와 주세요.',
   nothingHere: '지금은 여기에 아무것도 없어요.',
@@ -357,6 +363,7 @@ function readLast(v: unknown): FishLast | undefined {
   if (typeof l.fish === 'string' && own(FISH_BY_ID, l.fish)) out.fish = l.fish;
   if (safe(l.cm) && l.cm > 0) out.cm = l.cm;
   if (l.record === true) out.record = true;
+  if (l.best === true) out.best = true;
   if (l.reason === 'early' || l.reason === 'late' || l.reason === 'timing') out.reason = l.reason;
   return out;
 }
@@ -392,6 +399,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (pending) out.pending = pending;
   const last = readLast(x.last);
   if (last) out.last = last;
+  const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
+  if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {
     out.day = x.day;
     const taken = idList(x.taken, DAILY_KEYS_MAX, (s) => /^[a-z0-9:-]+$/.test(s));
@@ -1040,7 +1049,10 @@ function requestCandidates(life: LifeState, cat: ItemCategory, season: Season): 
         (f) =>
           f.seasons.includes(season) &&
           f.weight >= 5 &&
-          f.spots.some((s) => !SPOT_INFO[s].flag || hasFlag(life, SPOT_INFO[s].flag!)),
+          // Requests ask only for fish from spots anyone can use now (no rod / night gate).
+          f.spots.some(
+            (s) => (!SPOT_INFO[s].flag || hasFlag(life, SPOT_INFO[s].flag!)) && !SPOT_INFO[s].rod && !SPOT_INFO[s].night,
+          ),
       ).map((f) => f.id);
     case 'bug':
       return BUGS.filter((b) => b.seasons.includes(season) && b.weight >= 10).map((b) => b.id);
@@ -1095,10 +1107,22 @@ const nInRange = (n: unknown, max: number, def = 1) => {
   const v = n === undefined ? def : n;
   return safe(v) && v >= 1 && v <= max ? v : fail(LIFE_REJECT.invalid);
 };
-const expected = (spot: Spot, life: LifeState) => {
+const expected = (spot: Spot, life: LifeState, rod: number, now: number) => {
   if (!(FISH_SPOTS as readonly string[]).includes(spot)) fail(PLUS_REJECT.spot);
-  if (!spotOpen(life, SPOT_INFO[spot].flag)) fail(PLUS_REJECT.spotLocked);
+  const info = SPOT_INFO[spot];
+  if (!spotOpen(life, info.flag)) fail(PLUS_REJECT.spotLocked);
+  if (info.rod && rod < info.rod) fail(PLUS_REJECT.spotRod);
+  if (info.night && !isNighttime(now)) fail(PLUS_REJECT.spotNight);
 };
+/** Why a spot cannot be fished now ('' = open): flag, rod level or the clock. */
+export function spotBlock(spot: Spot, flags: readonly string[], rod: number, now: number): '' | 'flag' | 'rod' | 'night' {
+  const info = SPOT_INFO[spot];
+  if (!info) return 'flag';
+  if (info.flag && !flags.includes(info.flag)) return 'flag';
+  if (info.rod && rod < info.rod) return 'rod';
+  if (info.night && !isNighttime(now)) return 'night';
+  return '';
+}
 /**
  * Applies one life-expansion action for `member` on an already-cloned life
  * (lounge-life.ts lifeAction clones and registers the member first).
@@ -1308,7 +1332,7 @@ export function plusAction(
       break;
     }
     case 'cast': {
-      expected(a.spot, life);
+      expected(a.spot, life, x.rod ?? 1, now);
       const season = seasonOf(now),
         weather = weatherOf(kstDay(now)),
         rod = x.rod ?? 1,
@@ -1364,6 +1388,9 @@ export function plusAction(
       discover(life, uid, fish.id);
       const records = (life.records ??= {}),
         record = !records[fish.id] || p!.cm > records[fish.id].cm;
+      const best = (x.best ??= {}),
+        personal = !best[fish.id] || p!.cm > best[fish.id];
+      if (personal) best[fish.id] = p!.cm;
       if (record) {
         records[fish.id] = { actor, cm: p!.cm, at: now };
         bump(life, uid, 'record', 1);
@@ -1381,7 +1408,7 @@ export function plusAction(
         addMemory(life, now, 'legend', [actor], text);
         addNews(life, now, `legend:${fish.id}:${actor}`, 'legend', text, [actor]);
       }
-      x.last = { ok: true, fish: fish.id, cm: p!.cm, ...(record ? { record: true } : {}), at: now };
+      x.last = { ok: true, fish: fish.id, cm: p!.cm, ...(record ? { record: true } : {}), ...(personal ? { best: true } : {}), at: now };
       break;
     }
     case 'forage': {
@@ -1705,6 +1732,8 @@ export type PlusMe = {
     bait: number;
     pending: Omit<FishPending, 'fish' | 'cm'> | null;
     last: FishLast | null;
+    /** Personal best cm per fish id. */
+    best: Record<string, number>;
   };
   spawns: { spot: string; district: string; kind: 'forage' | 'bug'; item: string; taken: boolean }[];
   requests: RequestView[];
@@ -1795,6 +1824,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
           }
         : null,
       last: raw.last ? { ...raw.last } : null,
+      best: { ...(raw.best ?? {}) },
     },
     spawns,
     requests: actorValid(actor)

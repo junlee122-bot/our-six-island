@@ -765,6 +765,19 @@ async function prepare() {
     );
   }
   const motionFigures = new Map<string, { walk: Figure[]; run: Figure[] }>();
+  /** A strip's standing height: its tallest walk frame (source px). */
+  const motionStands = new Map<string, number>();
+  function motionStand(sheet: MotionSheet) {
+    let stand = motionStands.get(sheet.id);
+    if (stand === undefined) {
+      stand = Math.max(
+        1,
+        ...motionFigures.get(sheet.id)!.walk.map((f) => (f.body ??= bounds(f.c)).h),
+      );
+      motionStands.set(sheet.id, stand);
+    }
+    return stand;
+  }
   const motionLoads = new Map<string, Promise<void>>();
   const motionFailures = new Set<string>();
   // Movement artwork is loaded per visible look, after the essential wardrobe.
@@ -818,7 +831,24 @@ async function prepare() {
     string,
     { x: number; y: number; w: number; h: number }
   >();
-  function attachments(base: Figure, look: Look, actor: number, bun: boolean) {
+  /**
+   * Accessory size for a hand-drawn strip: the idle figure's head measure at
+   * the strip's standing height. Per-frame face widths vary between walk and
+   * run (and differ from the idle hair measure), which resized the hat.
+   */
+  function stripHead(sheet: MotionSheet, actor: number, look: Look) {
+    const idle = staticFigure(actor, look, 0),
+      body = (idle.body ??= bounds(idle.c));
+    return (idle.head / body.h) * motionStand(sheet);
+  }
+  function attachments(
+    figure: Figure,
+    look: Look,
+    actor: number,
+    bun: boolean,
+    head = figure.head,
+  ) {
+    const base = { cx: figure.cx, eyes: figure.eyes, top: figure.top, head };
     const result: {
       piece: Piece;
       x: number;
@@ -872,7 +902,10 @@ async function prepare() {
       right = 0,
       bottom = 0;
     for (const f of [...rows.walk, ...rows.run]) {
-      for (const r of [bounds(f.c), ...attachments(f, look, actor, false)]) {
+      for (const r of [
+        (f.body ??= bounds(f.c)),
+        ...attachments(f, look, actor, false, stripHead(sheet, actor, look)),
+      ]) {
         left = Math.min(left, r.x);
         top = Math.min(top, r.y);
         right = Math.max(right, r.x + r.w);
@@ -999,7 +1032,13 @@ async function prepare() {
       p.data[k + 2] = color[2];
     }
     ctx.putImageData(p, 60, 150);
-    for (const { piece, x, y, w, h } of attachments(base, look, actor, bun)) {
+    for (const { piece, x, y, w, h } of attachments(
+      base,
+      look,
+      actor,
+      bun,
+      generated ? stripHead(generated.sheet, actor, look) : base.head,
+    )) {
       ctx.drawImage(
         piece.c,
         piece.x,
@@ -1140,6 +1179,8 @@ async function prepare() {
         facing?: 1 | -1;
         /** Top share of the canvas kept free for hats (world canvases; see HAT_HEADROOM). */
         headroom?: number;
+        /** UI previews: a hat taller than the headroom is trimmed, never shrinks the body. */
+        trim?: boolean;
       } = {},
     ) {
       const look = readLook(input, actor);
@@ -1190,13 +1231,25 @@ async function prepare() {
       // The bare figure sets the scale and anchor for every motion and look,
       // so starting, stopping or putting on a hat never changes the figure's
       // size or ground line (figureFrame).
-      const frameBox = figureFrame(
-          target,
-          base.body,
-          base,
-          portrait,
-          options.headroom ?? 0,
-        ),
+      const frameOptions = {
+        portrait,
+        headroom: options.headroom ?? 0,
+        trim: options.trim,
+      };
+      // A hand-drawn strip is drawn at the idle figure's scale (matched by
+      // standing height), so starting or stopping never changes the size.
+      let stripScale: number | undefined;
+      if (generated) {
+        const idle = composed(actor, look, 0);
+        stripScale =
+          (figureFrame(target, idle.body, idle, frameOptions).scale *
+            idle.body.h) /
+          motionStand(generated.sheet);
+      }
+      const frameBox = figureFrame(target, base.body, base, {
+          ...frameOptions,
+          scale: stripScale,
+        }),
         scale = frameBox.scale,
         pose = {
           ...motionTransform(motion, time, reduced || !!generated || rigged),
@@ -1240,6 +1293,7 @@ async function prepare() {
         target.height,
         portrait,
         options.headroom ?? 0,
+        !!options.trim,
         options.facing ?? 1,
         pose.lift,
         pose.tilt,

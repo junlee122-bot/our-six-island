@@ -141,7 +141,7 @@ export const VILLAGE_SCENIC_TREES = [
   { x: -38, z: -23, radius: 1.05, scale: 1.15 },
   { x: -38, z: -16, radius: 0.85, scale: 0.95 },
   { x: -38, z: 22, radius: 1, scale: 1.1 },
-  { x: 38, z: -22, radius: 1.05, scale: 1.15 },
+  { x: 42.5, z: -20.5, radius: 1.05, scale: 1.15 },
   { x: 38, z: -15, radius: 0.85, scale: 0.95 },
   { x: 38, z: 22, radius: 1, scale: 1.1 },
   { x: -20, z: 27, radius: 0.85, scale: 0.9 },
@@ -159,8 +159,8 @@ const homePositions: readonly VillagePoint[] = [
   { x: 0, z: VILLAGE_HOME_ROW_Z },
   { x: 7, z: VILLAGE_HOME_ROW_Z },
   { x: 14, z: VILLAGE_HOME_ROW_Z },
-  { x: -22.2, z: VILLAGE_HOME_ROW_Z },
-  { x: 22.2, z: VILLAGE_HOME_ROW_Z },
+  { x: -23.2, z: VILLAGE_HOME_ROW_Z },
+  { x: 23.2, z: VILLAGE_HOME_ROW_Z },
 ];
 // The five middle houses alternate the two narrower models; the wide
 // courtyard houses close the row at both ends.
@@ -365,11 +365,12 @@ export const VILLAGE_ORCHARD: readonly VillagePoint[] = [
   { x: -36, z: 5 },
   { x: -36, z: 14 },
 ];
+// VILL-2: 0.6 narrower so a walkable gap (not a notch) separates it from the casino.
 export const VILLAGE_FARMLAND = {
   id: 'farmland',
-  x: 8.75,
+  x: 8.45,
   z: 6.5,
-  width: 5,
+  width: 4.4,
   depth: 3,
 } as const;
 export const VILLAGE_FARMLAND_ENTRY: VillagePoint = { x: 8.75, z: 4.45 };
@@ -391,7 +392,7 @@ export const VILLAGE_MARKET = {
  * frame on the river's north bank gets its glass once the 'greenhouse' bundle is
  * done. All are built from primitives in lounge-village-season-3d.ts.
  */
-export const VILLAGE_POND = { id: 'pond', name: '연못', x: -33, z: -15, radius: 2.6 } as const;
+export const VILLAGE_POND = { id: 'pond', name: '연못', x: -34, z: -15, radius: 2.6 } as const;
 /** Sea pier off the east edge; fishing stands at its root (x ≤ 47.6). */
 export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 47, z: 24, width: 1.5 } as const;
 
@@ -524,20 +525,21 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [0, 20, -8, 24, 1.3],
   [5, 24, 14, 24, 1.3],
   // The eastern perimeter loops north to the forest walk and boardwalk.
-  [27, -1, 27, -33, 1.4],
-  [27, -33, 0, -33, 1.4],
+  [27, -1, 27, -9, 1.4],
+  [28.5, -9, 28.5, -33, 1.4],
+  [28.5, -33, 0, -33, 1.4],
   [27, -5, 29, -5, 1.45],
   // The west perimeter mirrors it past the pond (VILL-2).
-  [0, -33, -27.5, -33, 1.4],
-  [-27.5, -33, -27.5, -9, 1.4],
+  [0, -33, -28.5, -33, 1.4],
+  [-28.5, -33, -28.5, -9, 1.4],
   [-27, -9, -27, 10, 1.4],
   // The yard lane runs the whole row and meets both perimeters.
-  [14, -9, 27, -9, 1.3],
-  [-27.5, -9, -15.2, -9, 1.5],
+  [14, -9, 28.5, -9, 1.3],
+  [-28.5, -9, -15.2, -9, 1.5],
   // New fishing spots: waterfall pool, lake dock, upstream rapids, sea pier,
   // and the south beach promenade to the rocks and the night harbor.
-  [-27.5, -33, -35.4, -31.6, 1.3],
-  [27, -26, 34.6, -26, 1.3],
+  [-28.5, -33, -36.6, -32.6, 1.3],
+  [28.5, -26, 34.6, -26, 1.3],
   [-27, 12.6, -40.6, 12.6, 1.2],
   [27, 17.5, 31, 24, 1.3],
   [31, 24, 46.6, 24, 1.3],
@@ -685,7 +687,7 @@ const addTree = (x: number, z: number, scale: number, variant: number) =>
     [21, -4.2, 0.96],
     [-37, -21, 1.05],
     [-43, -24, 0.9],
-    [37, -16, 1.0],
+    [34.5, -12.5, 1.0],
     [44, -18, 0.92],
     [42, -34, 0.9],
     [-42.5, 30, 0.95],
@@ -709,7 +711,8 @@ VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) => addTree(x, z, scale, i + 3)
     [-2.4, 3.4],
     [2.4, 3.4],
     [-29, 7],
-    [9.6, 21.6],
+    // Midway between the camp table and the stage (no pocket either side).
+    [9.4, 21.3],
     [30, -8],
     [36, -8],
     [-5.2, 11.6],
@@ -1331,9 +1334,12 @@ for (let id = 0; id < COLS * ROWS; id++) {
     if (next < 0 || next >= COLS * ROWS || !GRID_WALKABLE[next]) continue;
     const nextX = next % COLS;
     if (Math.abs(nextX - x) > 1) continue;
+    // Diagonal steps must not cut a blocked corner (straight steps never do,
+    // so one-cell-wide aisles between farm beds stay connected).
     if (
       nextX !== x &&
       Math.abs(offset) !== COLS &&
+      Math.abs(offset) !== 1 &&
       (!GRID_WALKABLE[id + (nextX > x ? 1 : -1)] ||
         !GRID_WALKABLE[id + (offset > 0 ? COLS : -COLS)])
     )

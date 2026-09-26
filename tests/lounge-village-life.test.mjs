@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import {
   FARM_BEDS,
   FRUIT_TREE_POINTS,
+  PLOT_GAP,
+  PLOT_SIZE,
+  farmBed,
+  farmBeds,
+  plotAt,
+  yardOwnerAt,
   NPC_SLOT_MS,
   NPC_SPEED,
   TREE_REACH,
@@ -31,10 +37,12 @@ import {
   VILLAGE_PATHS,
   VILLAGE_PLACES,
   VILLAGE_START,
+  VILLAGE_YARDS,
   villageCanWalk,
   villagePath,
 } from '../app/lounge-village-layout.ts';
 import { FRUIT_TREES } from '../app/lounge-life.ts';
+import { villageAction } from '../app/lounge-village-actions.ts';
 import {
   catalogEntry,
   readBedroomStrict,
@@ -55,34 +63,61 @@ const reachable = (point) =>
 // 12:00 KST on 2026-09-24 is 03:00 UTC.
 const kst = (h, m = 0) => Date.UTC(2026, 8, 24, h - 9, m);
 
-test('every friend has a 6-plot bed on open ground, off routes and buildings', () => {
-  assert.equal(FARM_BEDS.length, 7);
+test('every friend has a front-yard farm: two beds, 6/9/12 plots that never overlap, off routes', () => {
+  assert.equal(VILLAGE_YARDS.length, 7);
+  assert.equal(FARM_BEDS.length, 14);
   assert.deepEqual(
-    FARM_BEDS.map((b) => b.actor).sort((a, b) => a - b),
+    [...new Set(FARM_BEDS.map((b) => b.actor))].sort((a, b) => a - b),
     [0, 1, 2, 3, 4, 5, 6],
   );
-  for (const bed of FARM_BEDS) {
-    const r = farmBedRect(bed);
-    for (let i = 0; i <= 8; i++)
-      for (let j = 0; j <= 8; j++) {
-        const p = { x: r.x - r.w / 2 + (r.w * i) / 8, z: r.z - r.d / 2 + (r.d * j) / 8 };
-        assert.ok(villageCanWalk(p), `bed ${bed.actor} overlaps something at ${p.x},${p.z}`);
-        for (const s of VILLAGE_PATHS)
-          assert.ok(segmentDistance(p.x, p.z, s) >= s[4] / 2, `bed ${bed.actor} on a route`);
-      }
-    const front = farmFront(bed);
-    assert.ok(reachable(front), `bed ${bed.actor} front reachable`);
-    assert.ok(nearFarm(front, bed.actor));
-    assert.ok(!nearFarm(VILLAGE_START, bed.actor));
-    // Six distinct plot centres inside the bed.
-    const centres = Array.from({ length: 6 }, (_, i) => plotCenter(bed, i));
-    assert.equal(new Set(centres.map((c) => `${c.x},${c.z}`)).size, 6);
-    for (const c of centres)
-      assert.ok(Math.abs(c.x - r.x) < r.w / 2 && Math.abs(c.z - r.z) < r.d / 2);
-    // In front of (or beside) the friend's own home.
-    const home = VILLAGE_PLACES.find((p) => p.actor === bed.actor);
-    assert.ok(Math.hypot(home.entry.x - bed.x, home.entry.z - bed.z) < 7);
+  const allPlots = [];
+  for (const yard of VILLAGE_YARDS) {
+    const home = VILLAGE_PLACES.find((p) => p.actor === yard.actor);
+    // The yard sits in front of the friend's own door, between house and lane fence.
+    assert.ok(yard.pathX === home.entry.x && yard.x0 < home.entry.x && home.entry.x < yard.x1);
+    assert.ok(Math.abs(yard.z0 - (home.z + home.depth / 2)) < 0.01 && yard.z1 < -9.75);
+    for (const bed of yard.beds) {
+      assert.ok(bed.x - bed.w / 2 > yard.x0 && bed.x + bed.w / 2 < yard.x1, `bed of ${yard.actor} inside its yard`);
+      assert.ok(bed.z - bed.d / 2 > yard.z0 + 1 && bed.z + bed.d / 2 < yard.z1 - 1, `bed of ${yard.actor} leaves walkways`);
+      // Raised frames are solid, and never on a route.
+      assert.equal(villageCanWalk(bed), false);
+      for (const s of VILLAGE_PATHS)
+        assert.ok(
+          segmentDistance(bed.x, bed.z, s) >= s[4] / 2 + Math.min(bed.w, bed.d) / 2 - 0.01,
+          `bed of ${yard.actor} on route ${s.join(',')}`,
+        );
+    }
+    for (const total of [6, 9, 12]) {
+      const centres = Array.from({ length: total }, (_, i) => plotCenter(farmBed(yard.actor), i));
+      // Full-size plots: no two centres closer than one plot plus the gap.
+      for (let i = 0; i < total; i++)
+        for (let j = i + 1; j < total; j++)
+          assert.ok(
+            Math.max(Math.abs(centres[i].x - centres[j].x), Math.abs(centres[i].z - centres[j].z)) >= PLOT_SIZE + PLOT_GAP - 1e-6,
+            `${yard.actor}: plots ${i} and ${j} overlap at ${total}`,
+          );
+      centres.forEach((c, i) => {
+        const bed = yard.beds[i < 6 ? 0 : 1];
+        assert.ok(Math.abs(c.x - bed.x) + PLOT_SIZE / 2 <= bed.w / 2 && Math.abs(c.z - bed.z) + PLOT_SIZE / 2 <= bed.d / 2);
+        assert.deepEqual(plotAt(c), { actor: yard.actor, index: i });
+      });
+      if (total === 12) allPlots.push(...centres);
+    }
+    for (const bed of farmBeds(yard.actor)) {
+      const front = farmFront(bed);
+      assert.ok(reachable(front), `bed ${yard.actor}/${bed.part} front reachable`);
+      assert.ok(nearFarm(front, yard.actor));
+    }
+    assert.ok(!nearFarm(VILLAGE_START, yard.actor));
+    // The door, the mailbox and the lane stay out of farm reach (their prompts win).
+    assert.equal(villageAction(home.entry, yard.actor, { now: 0 })?.kind, 'enter', `door of ${yard.actor}`);
+    assert.ok(!nearFarm({ x: yard.pathX, z: -9 }, yard.actor));
+    assert.equal(yardOwnerAt(farmFront(farmBed(yard.actor))), yard.actor);
   }
+  // No plot of one friend overlaps another friend's.
+  for (let i = 0; i < allPlots.length; i++)
+    for (let j = i + 1; j < allPlots.length; j++)
+      assert.ok(Math.max(Math.abs(allPlots[i].x - allPlots[j].x), Math.abs(allPlots[i].z - allPlots[j].z)) >= PLOT_SIZE);
 });
 
 test('fruit trees map every FRUIT_TREES id to a reachable orchard tree', () => {
@@ -187,7 +222,7 @@ test('plot stages map for me (farm) and friends (public by uid)', () => {
   };
   const mine = plotsForActor(life, 3, 3);
   assert.equal(mine.length, 6);
-  assert.deepEqual(mine[0], { crop: 'carrot', stage: 3 });
+  assert.deepEqual(mine[0], { crop: 'carrot', stage: 3, thirsty: false });
   const friend = plotsForActor(life, 5, 3);
   assert.deepEqual(friend.slice(0, 4), [
     { crop: 'pumpkin', stage: 2 },

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { figureFrame, HAT_HEADROOM, withHatHeadroom } from '../app/lounge-figure-frame.ts';
+import { figureFrame, hatTagHeight, HAT_HEADROOM, PREVIEW_HEADROOM, withHatHeadroom } from '../app/lounge-figure-frame.ts';
 import { COLLECTIONS, GLASSES, HATS, collectionsFor, hatsFor, readLook, freshLounge, readLounge } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger } from '../app/lounge-economy.ts';
@@ -18,11 +18,11 @@ const hats = {
 
 test('a hat never changes the body size or ground line on world canvases', () => {
   const target = { width: 256, height: withHatHeadroom(320) };
-  const bare = figureFrame(target, body, body, false, HAT_HEADROOM);
+  const bare = figureFrame(target, body, body, { headroom: HAT_HEADROOM });
   // The body keeps the size it had on the old 256×320 canvas.
   assert.ok(Math.abs(bare.scale * body.h - 320 * 0.94) < 2);
   for (const [id, piece] of Object.entries(hats)) {
-    const f = figureFrame(target, body, piece, false, HAT_HEADROOM);
+    const f = figureFrame(target, body, piece, { headroom: HAT_HEADROOM });
     assert.equal(f.scale, bare.scale, id);
     // Soles stay on the anchor line; the hat's top stays inside the canvas.
     assert.ok(Math.abs(f.dy + (body.y + body.h - piece.y) * f.scale) < 1e-6, id);
@@ -46,14 +46,42 @@ test('without headroom an accessory only shrinks the figure as much as it must',
 
 test('portraits frame the face: a hat never pushes it out of a round crop', () => {
   const target = { width: 200, height: 200 };
-  const bare = figureFrame(target, body, body, true);
+  const bare = figureFrame(target, body, body, { portrait: true });
   for (const [id, piece] of Object.entries(hats)) {
-    const f = figureFrame(target, body, piece, true);
+    const f = figureFrame(target, body, piece, { portrait: true });
     assert.equal(f.scale, bare.scale, id);
     // The hair top (body top) moves down at most 8% of the frame.
     assert.ok(f.anchorY - bare.anchorY <= 16 + 1e-9, id);
     assert.ok(f.anchorY >= bare.anchorY, id);
   }
+});
+
+test('UI previews keep the body size and trim a tall crown instead of shrinking', () => {
+  const target = { width: 440, height: 540 };
+  const opts = { headroom: PREVIEW_HEADROOM, trim: true };
+  const bare = figureFrame(target, body, body, opts);
+  for (const [id, piece] of Object.entries(hats)) {
+    const f = figureFrame(target, body, piece, opts);
+    assert.equal(f.scale, bare.scale, id);
+    // The body itself always fits; only the hat's crown may leave the canvas.
+    assert.ok(f.anchorY - body.h * f.scale >= 0, id);
+  }
+});
+
+test('a walk strip drawn at a fixed scale keeps it (no size jump at walk start)', () => {
+  const target = { width: 256, height: withHatHeadroom(320) };
+  const strip = { x: 40, y: 20, w: 240, h: 380 };
+  const f = figureFrame(target, strip, strip, { headroom: HAT_HEADROOM, scale: 0.5 });
+  assert.equal(f.scale, 0.5);
+  // Still shrinks if the fixed scale would not fit the canvas at all.
+  assert.ok(figureFrame(target, strip, strip, { scale: 5 }).scale < 5);
+});
+
+test('name tags rise above a hat only when it would reach them', () => {
+  assert.equal(hatTagHeight(1.94, 1.62, 0, 2.26), 1.94);
+  const beanie = hatTagHeight(1.94, 1.62, 0.2, 2.26);
+  assert.ok(beanie > 1.62 + 0.2 * 2.26);
+  assert.ok(beanie > 1.94);
 });
 
 const member = (actor) => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });

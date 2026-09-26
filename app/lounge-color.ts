@@ -410,8 +410,48 @@ export function createSkinMask(
         y >= top + bodyHeight * 0.68 &&
         y <= top + bodyHeight * 0.91,
     );
-    for (const leg of legs)
-      if (leg.points.length > head * head * 0.006) expand(leg);
+    const chosen = legs.filter(
+      (leg) => leg.points.length > head * head * 0.006,
+    );
+    for (const leg of chosen) expand(leg);
+    if (anchors.sleevelessTop && chosen.length) {
+      // Miku: the thighs between the skirt and the boots are shaded deeper
+      // under the hem than the face-matched test allows, so bounding boxes
+      // left blocky undyed patches. Grow the chosen legs over every warm
+      // pixel they touch (skirt, boots and tie are never warm).
+      const queue: number[] = [];
+      for (const leg of chosen) for (const point of leg.points) queue.push(point);
+      const inLegs = (point: number) => {
+        const x = point % width,
+          y = Math.floor(point / width);
+        return (
+          Math.abs(x - cx) < head * 0.43 &&
+          y >= top + bodyHeight * 0.6 &&
+          y <= top + bodyHeight * 0.93
+        );
+      };
+      for (let n = 0; n < queue.length; n++) {
+        const point = queue[n],
+          x = point % width;
+        pixels[point] = 1;
+        for (const next of [
+          x > 0 ? point - 1 : -1,
+          x + 1 < width ? point + 1 : -1,
+          point - width,
+          point + width,
+        ])
+          if (
+            next >= 0 &&
+            next < size &&
+            warm[next] &&
+            !pixels[next] &&
+            inLegs(next)
+          ) {
+            pixels[next] = 1;
+            queue.push(next);
+          }
+      }
+    }
   }
   if (anchors.bareShoulders) {
     const shoulders = components(

@@ -8,7 +8,7 @@ import { Footprints, LoaderCircle, RotateCcw } from 'lucide-react';
 import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
 import { loungeSprites } from './lounge-sprites';
-import { HAT_HEADROOM, withHatHeadroom } from './lounge-figure-frame';
+import { HAT_HEADROOM, hatTagHeight, withHatHeadroom } from './lounge-figure-frame';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import type { ChatLine, LoungePlayer, LoungeView } from './lounge-room';
 import type { Look } from './lounge-look';
@@ -749,7 +749,9 @@ export function Interior3D({
       // Over the head: a seated figure's tag drops with it.
       const tag = (id: string, f: Figure) => {
         const p = f.chair ? { x: f.mesh.position.x, z: f.mesh.position.z } : interiorToWorld(f.pos);
-        project(id, p.x, FIGURE_HEIGHT + 0.22 + (f.chair ? f.lift - 0.03 : 0), p.z, w, h);
+        const rise = sprites ? sprites.hatRise(f.chair && f.standing ? f.standing : f.canvas) : 0;
+        const over = hatTagHeight(FIGURE_HEIGHT + 0.22, FIGURE_HEIGHT * 0.94, rise, (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H);
+        project(id, p.x, over + (f.chair ? f.lift - 0.03 : 0), p.z, w, h);
       };
       tag('self', mine);
       for (const [id, f] of others) tag(id, f);

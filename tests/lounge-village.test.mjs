@@ -49,12 +49,13 @@ test('village places retain all resident homes and public destinations', () => {
     depth: 3,
   });
   assert.equal(VILLAGE_ORCHARD.length, 8);
-  assert.deepEqual(VILLAGE_BOUNDS, { width: 80, depth: 60, radius: 0.35 });
+  // VILL-2: the valley grew to 96 × 76 for the front-yard farms and new fishing spots.
+  assert.deepEqual(VILLAGE_BOUNDS, { width: 96, depth: 76, radius: 0.35 });
   assert.deepEqual(VILLAGE_FARMLAND, {
     id: 'farmland',
-    x: 8.75,
+    x: 8.45,
     z: 6.5,
-    width: 5,
+    width: 4.4,
     depth: 3,
   });
   assert.ok(villageCanWalk(VILLAGE_FARMLAND_ENTRY));
@@ -107,7 +108,7 @@ test('walk collision checks cover buildings, terrace, fountain, river and bounds
 test('expanded districts and all three bridges are reachable on both banks', () => {
   assert.deepEqual(
     VILLAGE_DISTRICTS.map(({ id }) => id),
-    ['west-orchard', 'south-camp', 'east-boardwalk', 'north-forest'],
+    ['west-orchard', 'south-camp', 'east-boardwalk', 'north-forest', 'north-falls', 'east-lake', 'south-beach'],
   );
   for (const district of VILLAGE_DISTRICTS) {
     assert.ok(
@@ -181,8 +182,8 @@ test('paths begin at exact off-grid positions and clear irregular obstacle edges
 test('network conversion round-trips and clamps to existing server ranges', () => {
   for (const point of [
     VILLAGE_START,
-    { x: -39.5, z: -29.5 },
-    { x: 39.5, z: 29.5 },
+    { x: -47.5, z: -37.5 },
+    { x: 47.5, z: 37.5 },
   ]) {
     const converted = villageToNetwork(point);
     const roundTrip = villageFromNetwork(converted);
@@ -191,5 +192,5 @@ test('network conversion round-trips and clamps to existing server ranges', () =
   }
   assert.deepEqual(villageToNetwork({ x: -100, z: -100 }), { x: 15, y: 42 });
   assert.deepEqual(villageToNetwork({ x: 100, z: 100 }), { x: 85, y: 88 });
-  assert.deepEqual(villageFromNetwork({ x: -20, y: 100 }), { x: -40, z: 30 });
+  assert.deepEqual(villageFromNetwork({ x: -20, y: 100 }), { x: -48, z: 38 });
 });

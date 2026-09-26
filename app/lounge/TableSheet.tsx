@@ -307,20 +307,16 @@ export function TableSheet({
       }
       const onButton = (e.target as HTMLElement | null)?.closest?.('button, a');
       if (boundAction(e) === 'action' || (e.key === 'Enter' && !onButton)) {
+        // E on the focused 혼자 하기 button presses it (the sheet opened from
+        // "지금은 혼자예요" focuses it); otherwise E is 앉기 as before.
+        if (onButton?.matches('[data-testid=table-solo]')) {
+          if (e.key !== 'Enter') (onButton as HTMLButtonElement).click();
+          return e.key !== 'Enter';
+        }
         if (mode === 'seated') {
           if (!calling || !chosen.length) return false;
           void call();
         } else if (!short) void sit();
-        return true;
-      }
-      if (
-        e.code === 'KeyS' &&
-        !e.shiftKey &&
-        solo &&
-        (mode === 'setup' || (mode === 'seated' && !calling && !othersHere))
-      ) {
-        if (solo === 'dealer' && short) return false;
-        void playSolo();
         return true;
       }
       if (mode === 'setup' && digit && !e.shiftKey) {
@@ -421,7 +417,6 @@ export function TableSheet({
           disabled={pending || (solo === 'dealer' && short)}
           onClick={() => void playSolo()}
           data-testid="table-solo"
-          aria-keyshortcuts="S"
         >
           <Bot size={16} aria-hidden="true" />
           {solo === 'dealer'
@@ -429,9 +424,6 @@ export function TableSheet({
               ? '혼자 시작하기'
               : '혼자 하기 · 딜러와'
             : '연습 판 시작'}
-          <kbd className="l-sheet-key" aria-hidden="true">
-            S
-          </kbd>
         </button>
       </div>
     );
@@ -651,9 +643,9 @@ export function TableSheet({
         {mode === 'seated'
           ? calling
             ? '1–7 친구 고르기 · Enter 부르기 · Esc 닫기'
-            : `C 친구 부르기${solo && !othersHere ? ' · S 혼자 시작' : ''} · Esc 일어나기`
+            : 'C 친구 부르기 · Esc 일어나기'
           : mode === 'setup'
-            ? `E 앉기 · 1–4 판돈${flex ? ' · Shift+2–7 인원' : ''}${solo ? ' · S 혼자 하기' : ''} · Esc 닫기`
+            ? `E 앉기 · 1–4 판돈${flex ? ' · Shift+2–7 인원' : ''} · Esc 닫기`
             : 'E 앉기 · Esc 닫기'}
       </p>
       <div className="l-sheet-actions">

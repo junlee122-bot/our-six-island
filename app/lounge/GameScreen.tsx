@@ -1,7 +1,13 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from 'lucide-react';
-import { GAME_INFO, PRACTICE_NAMES, isPracticeAi, type GameKind } from '../lounge-games';
+import {
+  GAME_INFO,
+  PRACTICE_NAMES,
+  isPracticeAi,
+  tableIdOf,
+  type GameKind,
+} from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { ReactionId } from '../lounge-reactions';
 import { ReactionDock } from '../lounge-reaction-ui';
@@ -475,21 +481,40 @@ export function GameScreen({
               {dissolved && (
                 <output className="l-game-ending-note">{dissolved.text}</output>
               )}
-              <button
-                className="l-primary"
-                onClick={() => {
-                  onBack();
-                  onRequest(
-                    kind,
-                    dissolved?.members.filter((id) =>
-                      view.players.some((p) => p.id === id),
-                    ),
-                  );
-                }}
-              >
-                다시 초대하기
-                <Send size={16} />
-              </button>
+              {practice ? (
+                // 연습 판: nobody to invite; deal a fresh practice table.
+                <button
+                  className="l-primary"
+                  data-testid="game-practice-again"
+                  onClick={() =>
+                    void room.action({
+                      kind: 'invite',
+                      game: kind,
+                      players: [],
+                      table: tableIdOf(kind),
+                      practice: true,
+                    })
+                  }
+                >
+                  다시 연습하기
+                </button>
+              ) : (
+                <button
+                  className="l-primary"
+                  onClick={() => {
+                    onBack();
+                    onRequest(
+                      kind,
+                      dissolved?.members.filter((id) =>
+                        view.players.some((p) => p.id === id),
+                      ),
+                    );
+                  }}
+                >
+                  다시 초대하기
+                  <Send size={16} />
+                </button>
+              )}
               <button className="l-secondary" onClick={onBack}>
                 일어나기
               </button>

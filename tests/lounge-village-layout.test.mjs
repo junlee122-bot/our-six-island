@@ -90,10 +90,10 @@ test('spawn and the server default land on the plaza, never the bridge end', () 
   const net = villageToNetwork(VILLAGE_START);
   assert.ok(Math.abs(net.x - 50) < 1e-9 && Math.abs(net.y - 60) < 1e-9);
   for (const point of [
-    { x: -39, z: -29 },
+    { x: -47, z: -37 },
     { x: 12.3, z: -4.2 },
     { x: 0, z: 18.26 },
-    { x: 39, z: 29 },
+    { x: 47, z: 37 },
   ]) {
     const back = villageFromNetwork(villageToNetwork(point));
     assert.ok(Math.abs(back.x - point.x) < 1e-9 && Math.abs(back.z - point.z) < 1e-9);

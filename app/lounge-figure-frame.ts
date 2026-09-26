@@ -27,18 +27,35 @@ export const HAT_HEADROOM = 0.24;
 export const withHatHeadroom = (bodyHeight: number) =>
   Math.round(bodyHeight / (1 - HAT_HEADROOM));
 
+export type FrameOptions = {
+  portrait?: boolean;
+  /** Top share of the canvas kept free for hats (world canvases). */
+  headroom?: number;
+  /**
+   * Fixed source→canvas scale (walk/run strips use the idle figure's, so the
+   * character never changes size when it starts or stops moving).
+   */
+  scale?: number;
+  /**
+   * UI previews: keep the body size and let a tall hat's crown be cut at the
+   * top instead of shrinking the whole figure to fit it.
+   */
+  trim?: boolean;
+};
+/** Share of a UI preview canvas kept for hats (the rest is trimmed, not shrunk). */
+export const PREVIEW_HEADROOM = 0.1;
+
 export function figureFrame(
   target: { width: number; height: number },
   body: FrameBox,
   piece: FrameBox,
-  portrait = false,
-  headroom = 0,
+  options: FrameOptions = {},
 ): FigureFrame {
   const W = target.width,
     H = target.height,
     centre = body.x + body.w / 2,
     above = Math.max(0, body.y - piece.y);
-  if (portrait) {
+  if (options.portrait) {
     // Head-and-shoulders: the body's width fills the frame and the hair top
     // sits at 8%. A hat pushes the face down a little (never more than 8%)
     // and may be cut at the top, so the face stays in round avatar crops.
@@ -52,17 +69,16 @@ export function figureFrame(
       dy: (piece.y - body.y) * scale,
     };
   }
-  const room = Math.max(0, Math.min(0.9, headroom));
-  let scale = Math.min(
-    (W * 0.92) / body.w,
-    (H * 0.94 * (1 - room)) / body.h,
-  );
+  const room = Math.max(0, Math.min(0.9, options.headroom ?? 0));
+  let scale =
+    options.scale ??
+    Math.min((W * 0.92) / body.w, (H * 0.94 * (1 - room)) / body.h);
   // An accessory that still does not fit (no headroom, or an unusually tall
   // hat) shrinks the figure just enough to keep it inside the canvas.
   const half = Math.max(centre - piece.x, piece.x + piece.w - centre);
   scale = Math.min(
     scale,
-    (H * 0.96) / (body.h + above),
+    options.trim ? (H * 0.96) / body.h : (H * 0.96) / (body.h + above),
     half > 0 ? (W * 0.49) / half : scale,
   );
   return {
@@ -73,3 +89,16 @@ export function figureFrame(
     dy: (piece.y - (body.y + body.h)) * scale,
   };
 }
+
+/**
+ * World height for a name tag over a figure: its usual height, or just above
+ * the hat when the hat (rising `hatRise` of a `planeHeight`-tall canvas above
+ * the hair at `headTop`) would reach into the tag.
+ */
+export const hatTagHeight = (
+  tag: number,
+  headTop: number,
+  hatRise: number,
+  planeHeight: number,
+  gap = 0.08,
+) => Math.max(tag, headTop + hatRise * planeHeight + gap);

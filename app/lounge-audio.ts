@@ -238,7 +238,7 @@ class LoungeAudio {
     const ambientOn = musicOn && this.scene.village && !this.scene.game;
     // The Esc menu ducks music and ambience; the shared world keeps going.
     const duck = this.scene.paused ? 0.35 : 1;
-    // Fetch the place's track on first entry (the box plays meanwhile).
+    // Fetch the place's file on first entry (its synth piece plays meanwhile).
     if (musicOn && this.scene.place) this.loadTrack(this.scene.place);
     const mix = musicMix(
       this.scene,

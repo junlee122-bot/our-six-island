@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { ACTORS } from './lounge-roster';
 import { loungeSprites } from './lounge-sprites';
+import { PREVIEW_HEADROOM } from './lounge-figure-frame';
 import { RUN_SPEED_MULTIPLIER } from './lounge-locomotion';
 import type { Look } from './lounge-look';
 import type { Motion } from './character-style';
@@ -50,7 +51,9 @@ export const AvatarView = memo(function AvatarView({
         animationTime.current,
         portrait,
         media.matches,
-        { facing },
+        // Full-body previews keep the body size whatever hat is on: a small
+        // hat band, and a taller crown is trimmed rather than shrinking it.
+        portrait ? { facing } : { facing, headroom: PREVIEW_HEADROOM, trim: true },
       );
     };
     const stop = () => {

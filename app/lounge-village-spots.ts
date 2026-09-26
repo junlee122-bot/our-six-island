@@ -1,12 +1,18 @@
 // Where the life expansion happens in the village (pure geometry, no three.js):
-// fishing spots (river bank, pond edge, sea pier), today's forage / bug spawn
+// fishing spots (river, rapids, bridges, pond, falls, lake, sea pier, rocks, harbor), today's forage / bug spawn
 // markers, the museum pavilion, the bundle notice board and the fountain wish.
 import {
   VILLAGE_BOARD,
+  VILLAGE_BOUNDS,
+  VILLAGE_FALLS,
+  VILLAGE_HARBOR,
+  VILLAGE_LAKE,
   VILLAGE_MUSEUM,
   VILLAGE_PIER,
   VILLAGE_POND,
+  VILLAGE_RAPIDS,
   VILLAGE_RIVER,
+  VILLAGE_ROCKS,
   type VillagePoint,
 } from './lounge-village-layout.ts';
 import { walkableNear } from './lounge-village-life.ts';
@@ -20,39 +26,80 @@ const rectDistance = (p: VillagePoint, r: { x: number; z: number; width: number;
 
 /** Casting reach from the water's edge. */
 export const FISH_REACH = 1.25;
-/** Distance to the river's water (0 on a bridge over it). */
+const RIVER_MID = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2;
+/** The bridge deck `p` stands on (null when not on one). */
+function bridgeAt(p: VillagePoint) {
+  if (p.z < VILLAGE_RIVER.minZ - 0.3 || p.z > VILLAGE_RIVER.maxZ + 0.3) return null;
+  return VILLAGE_RIVER.bridges.find((b) => Math.abs(p.x - b.x) <= b.halfWidth) ?? null;
+}
+/** Distance to the river's water (Infinity on a bridge: that is the bridge spot). */
 export function riverDistance(p: VillagePoint) {
+  if (bridgeAt(p)) return Infinity;
   return Math.max(0, VILLAGE_RIVER.minZ - p.z, p.z - VILLAGE_RIVER.maxZ);
 }
-export const pondDistance = (p: VillagePoint) =>
-  Math.max(0, Math.hypot(p.x - VILLAGE_POND.x, p.z - VILLAGE_POND.z) - VILLAGE_POND.radius);
+const discDistance = (p: VillagePoint, w: { x: number; z: number; radius: number }) =>
+  Math.max(0, Math.hypot(p.x - w.x, p.z - w.z) - w.radius);
+export const pondDistance = (p: VillagePoint) => discDistance(p, VILLAGE_POND);
 /** The pier's root on the island edge (you fish from there). */
 export const PIER_POINT: VillagePoint = { x: VILLAGE_PIER.x, z: VILLAGE_PIER.z };
 export const seaDistance = (p: VillagePoint) =>
   Math.max(0, Math.hypot(p.x - PIER_POINT.x, p.z - PIER_POINT.z) - 0.6);
-/** The nearest fishing water within reach. */
-export function nearestFishSpot(p: VillagePoint, reach = FISH_REACH): { spot: Spot; distance: number } | null {
-  const all: { spot: Spot; distance: number }[] = [
-    { spot: 'river', distance: riverDistance(p) },
+/** The harbor dock's root on the south edge. */
+export const HARBOR_POINT: VillagePoint = { x: VILLAGE_HARBOR.x, z: VILLAGE_BOUNDS.depth / 2 - 0.4 };
+const harborDistance = (p: VillagePoint) => Math.max(0, Math.hypot(p.x - HARBOR_POINT.x, p.z - HARBOR_POINT.z) - 0.7);
+/** Upstream rapids: the river bank west of the last bridge. */
+const rapidsDistance = (p: VillagePoint) =>
+  p.x > VILLAGE_RAPIDS.x1 ? Infinity : Math.max(0, VILLAGE_RIVER.minZ - p.z, p.z - VILLAGE_RIVER.maxZ);
+type SpotDistance = { spot: Spot; distance: number };
+/** Every fishing water and how far `p` is from it (order breaks ties). */
+export function fishSpotDistances(p: VillagePoint): SpotDistance[] {
+  const onBridge = bridgeAt(p);
+  const rapids = rapidsDistance(p);
+  return [
+    { spot: 'bridge', distance: onBridge ? 0 : Infinity },
+    { spot: 'rapids', distance: rapids },
+    { spot: 'river', distance: Number.isFinite(rapids) ? Infinity : riverDistance(p) },
     { spot: 'pond', distance: pondDistance(p) },
+    { spot: 'falls', distance: discDistance(p, VILLAGE_FALLS) },
+    { spot: 'lake', distance: discDistance(p, VILLAGE_LAKE) },
+    { spot: 'rocks', distance: discDistance(p, VILLAGE_ROCKS) },
+    { spot: 'harbor', distance: harborDistance(p) },
     { spot: 'sea', distance: seaDistance(p) },
   ];
-  let best: { spot: Spot; distance: number } | null = null;
-  for (const c of all) if (c.distance <= reach && (!best || c.distance < best.distance)) best = c;
+}
+/** The nearest fishing water within reach. */
+export function nearestFishSpot(p: VillagePoint, reach = FISH_REACH): SpotDistance | null {
+  let best: SpotDistance | null = null;
+  for (const c of fishSpotDistances(p)) if (c.distance <= reach && (!best || c.distance < best.distance)) best = c;
   return best;
 }
+const intoDisc = (w: { x: number; z: number; radius: number }, p: VillagePoint, depth = 1.1) => {
+  const dx = w.x - p.x,
+    dz = w.z - p.z,
+    d = Math.hypot(dx, dz) || 1;
+  const into = Math.min(d - 0.4, Math.max(0.2, d - w.radius + depth));
+  return { x: p.x + (dx / d) * into, z: p.z + (dz / d) * into };
+};
 /** Where the bobber lands for a cast from `p` (a little into the water). */
 export function bobberPoint(spot: Spot, p: VillagePoint): VillagePoint {
-  if (spot === 'pond') {
-    const dx = VILLAGE_POND.x - p.x,
-      dz = VILLAGE_POND.z - p.z,
-      d = Math.hypot(dx, dz) || 1;
-    const into = Math.min(d - 0.4, Math.max(0.2, d - VILLAGE_POND.radius + 1.1));
-    return { x: p.x + (dx / d) * into, z: p.z + (dz / d) * into };
+  switch (spot) {
+    case 'pond':
+      return intoDisc(VILLAGE_POND, p);
+    case 'falls':
+      return intoDisc(VILLAGE_FALLS, p, 1.6);
+    case 'lake':
+      return intoDisc(VILLAGE_LAKE, p, 2.2);
+    case 'rocks':
+      return { x: p.x + 0.6, z: VILLAGE_BOUNDS.depth / 2 + 2.2 };
+    case 'harbor':
+      return { x: HARBOR_POINT.x + 0.9, z: HARBOR_POINT.z + 3.6 };
+    case 'sea':
+      return { x: PIER_POINT.x + 3.2, z: PIER_POINT.z + 0.2 };
+    case 'bridge':
+      return { x: p.x + 0.9, z: RIVER_MID + (p.z < RIVER_MID ? 0.55 : -0.55) };
+    default:
+      return { x: p.x + 0.4, z: p.z < RIVER_MID ? RIVER_MID - 0.35 : RIVER_MID + 0.35 };
   }
-  if (spot === 'sea') return { x: PIER_POINT.x + 3.2, z: PIER_POINT.z + 0.2 };
-  const mid = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2;
-  return { x: p.x + 0.4, z: p.z < mid ? mid - 0.35 : mid + 0.35 };
 }
 
 /** Today's spawn markers stand on the nearest walkable ground to each spot. */
@@ -85,6 +132,21 @@ export const MUSEUM_FRONT = walkableNear({ x: VILLAGE_MUSEUM.x, z: VILLAGE_MUSEU
 export const BOARD_FRONT = walkableNear({ x: VILLAGE_BOARD.x, z: VILLAGE_BOARD.z + 0.8 });
 export const POND_EDGE = walkableNear({ x: VILLAGE_POND.x, z: VILLAGE_POND.z + VILLAGE_POND.radius + 0.5 });
 export const RIVER_BANK: VillagePoint = walkableNear({ x: -12, z: VILLAGE_RIVER.minZ - 0.6 });
+/**
+ * Where to stand to fish each spot (directory "가 보기", NPC-free walkable
+ * ground within FISH_REACH of the water).
+ */
+export const FISH_STAND: Readonly<Record<Spot, VillagePoint>> = {
+  river: RIVER_BANK,
+  pond: POND_EDGE,
+  sea: walkableNear({ x: PIER_POINT.x + 0.2, z: PIER_POINT.z }),
+  rapids: walkableNear({ x: -41, z: VILLAGE_RIVER.minZ - 0.62 }),
+  falls: walkableNear({ x: -37, z: -32.9 }),
+  lake: walkableNear({ x: VILLAGE_LAKE.x - VILLAGE_LAKE.radius - 0.7, z: VILLAGE_LAKE.dockZ }),
+  rocks: walkableNear({ x: VILLAGE_ROCKS.x, z: VILLAGE_ROCKS.z - VILLAGE_ROCKS.radius - 0.55 }),
+  harbor: walkableNear({ x: HARBOR_POINT.x, z: HARBOR_POINT.z - 0.1 }),
+  bridge: { x: 0.9, z: RIVER_MID },
+};
 /** The plaza fountain (radius 2): wishes once the 'fountain' bundle is done. */
 export const FOUNTAIN_REACH = 1.1;
 export const fountainDistance = (p: VillagePoint) => Math.max(0, Math.hypot(p.x, p.z) - 2);
