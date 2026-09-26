@@ -100,7 +100,11 @@ export function villageAction(
       door: true,
       target: { type: 'door', entrance },
     });
-  const quick = life
+  // Ripe crops come first: E gathers them whatever the hotbar holds (VILL-2).
+  const ripe = life?.me.farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= now).length ?? 0;
+  const quick = ripe
+    ? null
+    : life
     ? farmToolAction(
         life.me.farm,
         life.me,
@@ -118,6 +122,7 @@ export function villageAction(
   });
   const labels = new Map<string, { label?: string; disabled?: boolean }>();
   if (quick) labels.set('farm', { label: quick.label });
+  else if (ripe) labels.set('farm', { label: `거두기 (${ripe})` });
   // Friends' farms: 물 주기 once per friend per day (their plots are public).
   if (life)
     for (const [id, plots] of Object.entries(life.housesPlotsPublic ?? {})) {
