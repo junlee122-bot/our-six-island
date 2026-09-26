@@ -249,9 +249,6 @@ const hasBatchim = (word: string) => {
 };
 const josaGa = (w: string) => w + (hasBatchim(w) ? '이' : '가');
 const josaWa = (w: string) => w + (hasBatchim(w) ? '과' : '와');
-const josaEul = (w: string) => w + (hasBatchim(w) ? '을' : '를');
-const itemLabel = (id: string) =>
-  own(CROP_INFO, id) ? CROP_INFO[id as keyof typeof CROP_INFO].name : (ITEM_BY_ID[id]?.name ?? FURNITURE_BY_REF[id]?.name ?? id);
 const walletOf = (uid: string) => 'wallet-' + uid;
 function grant(ledger: LoungeLedger, life: LifeState, uid: string, amount: number, reason: string, now: number) {
   if (amount <= 0 || !own(ledger.accounts, walletOf(uid))) return ledger;
@@ -482,7 +479,9 @@ function feteAction(
 ) {
   const slot = feteOn(kstDay(now));
   if (!slot) fail(SOCIAL_REJECT.noFete);
-  let { fete, ledger: next } = feteFor(life, ledger, slot!, now);
+  const opened = feteFor(life, ledger, slot!, now),
+    fete = opened.fete;
+  let next = opened.ledger;
   const def = FETES[fete.kind],
     key = String(member.actor);
   const needKind = (kind: FeteKind) => {

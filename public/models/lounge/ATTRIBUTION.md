@@ -123,3 +123,21 @@ Files under `public/models/village/valley/`:
 - stonePaver.glb: https://karchive.vibeline.co.kr/models/angular-common-infrastructure-stone-paver-flat
 
 Modifications: web-optimized copies as described at the top of this file; textures are reduced to 512² for the props up to about 1 m across (pump, gate, jar, crate, firewood, camp chair, cattail, paper lantern, rope fence, stump, grass, shrub, stone wall, paver) and to 1024² for the rest (including the three 2048² originals). At runtime the game sets position, orientation and (partly non-uniform) scale, and adds a warm emissive glow to the paper lanterns at night.
+
+## kArchive friends' tables (야추 · 라이어 게임) · 2026-09-26
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Seven original, self-contained GLB files were downloaded from the official model URLs on 2026-09-26 (`https://karchive-assets.vibeline.co.kr/models/v1/<collection>/<id>.glb`); the displayed terms were unchanged from 2026-09-25 and are recorded verbatim in `public/models/lounge/friends/assets.json` with each file's source page, URL, SHA-256, byte size, triangle count and bounds. Originals (2,756,920 bytes) are kept under `public/models/_originals/lounge/friends/`; web copies total 1,337,824 bytes (512² textures, 1024² for the oval table).
+
+Files under `public/models/lounge/friends/`:
+
+- ovalTable.glb: https://karchive.vibeline.co.kr/models/angular-common-furniture-oval-meeting-table-heritage-normal
+- serviceBell.glb: https://karchive.vibeline.co.kr/models/rounded-restaurant-service-bell-ready
+- serviceBellPressed.glb: https://karchive.vibeline.co.kr/models/rounded-restaurant-service-bell-button-pressed
+- lectern.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-menu-lectern-blank-menu-stack
+- ballotBox.glb: https://karchive.vibeline.co.kr/models/onsen-entrance-ticket-pedestal-heritage-normal
+- deskCalendar.glb: https://karchive.vibeline.co.kr/models/newyear-09
+- pencil.glb: https://karchive.vibeline.co.kr/models/exam-06
+
+Modifications: web-optimized copies as described at the top of this file. At runtime the game sets position, orientation and (partly non-uniform) scale; the holiday-set calendar and pencil (normalized to a 2 m longest side) are scaled down to desk size. The 야추 table reuses `club/cardTable.glb` and the 라이어 table reuses `club/banquetChair.glb` (no new bytes). Dice and the dice cup are drawn in code (three.js RoundedBoxGeometry / LatheGeometry).

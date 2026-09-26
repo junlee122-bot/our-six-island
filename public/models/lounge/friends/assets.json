@@ -1,0 +1,248 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-26",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-25 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/lounge/friends/에 보관. 런타임에는 크기·위치·방향(일부 비균일 스케일)만 바꿈.",
+  "assets": [
+    {
+      "key": "ovalTable",
+      "id": "angular-common-furniture-oval-meeting-table-heritage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-furniture-oval-meeting-table-heritage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-furniture-oval-meeting-table-heritage-normal.glb",
+      "file": "ovalTable.glb",
+      "bytes": 497488,
+      "sha256": "099b3bc35713cee2f0fbcaa86c8a0d0e5c24d2ca1c990b8a89f43d4c7fb035c4",
+      "webBytes": 321796,
+      "meshes": 1,
+      "triangles": 4829,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.377
+        ],
+        "max": [
+          0.6,
+          0.511,
+          0.377
+        ],
+        "size": [
+          1.2,
+          0.511,
+          0.754
+        ]
+      },
+      "use": "회관 라이어 게임 테이블 본체(의자는 club/banquetChair)"
+    },
+    {
+      "key": "serviceBell",
+      "id": "rounded-restaurant-service-bell-ready",
+      "source": "https://karchive.vibeline.co.kr/models/rounded-restaurant-service-bell-ready",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/rounded-restaurant-service-bell-ready.glb",
+      "file": "serviceBell.glb",
+      "bytes": 290632,
+      "sha256": "8177ef9cc26dc748584dc68f7d059fc4ec4b27a7266675247e358eb58d6c2dd7",
+      "webBytes": 134616,
+      "meshes": 1,
+      "triangles": 4146,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.05,
+          0,
+          -0.05
+        ],
+        "max": [
+          0.05,
+          0.08,
+          0.05
+        ],
+        "size": [
+          0.1,
+          0.08,
+          0.1
+        ]
+      },
+      "use": "라이어 테이블 가운데 지목 벨"
+    },
+    {
+      "key": "serviceBellPressed",
+      "id": "rounded-restaurant-service-bell-button-pressed",
+      "source": "https://karchive.vibeline.co.kr/models/rounded-restaurant-service-bell-button-pressed",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/rounded-restaurant-service-bell-button-pressed.glb",
+      "file": "serviceBellPressed.glb",
+      "bytes": 298540,
+      "sha256": "ff2d8cbeb51678a2429983c96fec14ae17e4ea2adc22f3c60ba47720745b7065",
+      "webBytes": 137712,
+      "meshes": 1,
+      "triangles": 4121,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.05,
+          0,
+          -0.05
+        ],
+        "max": [
+          0.05,
+          0.067,
+          0.05
+        ],
+        "size": [
+          0.1,
+          0.067,
+          0.1
+        ]
+      },
+      "use": "투표 중 눌린 벨"
+    },
+    {
+      "key": "lectern",
+      "id": "angular-restaurant-menu-lectern-blank-menu-stack",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-menu-lectern-blank-menu-stack",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-menu-lectern-blank-menu-stack.glb",
+      "file": "lectern.glb",
+      "bytes": 460116,
+      "sha256": "0fa61ed783cd480e02e8ad7e96577c6e814ca956fd0eaac21b45d5c7513b52fb",
+      "webBytes": 203964,
+      "meshes": 1,
+      "triangles": 4006,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.275,
+          0,
+          -0.172
+        ],
+        "max": [
+          0.275,
+          0.997,
+          0.172
+        ],
+        "size": [
+          0.55,
+          0.997,
+          0.344
+        ]
+      },
+      "use": "라이어 테이블 옆 발언대"
+    },
+    {
+      "key": "ballotBox",
+      "id": "onsen-entrance-ticket-pedestal-heritage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/onsen-entrance-ticket-pedestal-heritage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/onsen-entrance-ticket-pedestal-heritage-normal.glb",
+      "file": "ballotBox.glb",
+      "bytes": 509312,
+      "sha256": "20a4c2b6b443809f8d1280fd05f20229c5c5cbc4d75ae5eb37089d073664c620",
+      "webBytes": 237608,
+      "meshes": 1,
+      "triangles": 5806,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.303,
+          0,
+          -0.264
+        ],
+        "max": [
+          0.303,
+          1.1,
+          0.264
+        ],
+        "size": [
+          0.606,
+          1.1,
+          0.528
+        ]
+      },
+      "use": "라이어 테이블 옆 투표함(표 넣는 받침대)"
+    },
+    {
+      "key": "deskCalendar",
+      "id": "newyear-09",
+      "source": "https://karchive.vibeline.co.kr/models/newyear-09",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/newyear-09.glb",
+      "file": "deskCalendar.glb",
+      "bytes": 382380,
+      "sha256": "774cf8d88150cfe16f7b2ae3b333919496f873dfb88d58dca5132914e08db800",
+      "webBytes": 165340,
+      "meshes": 1,
+      "triangles": 3174,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.891,
+          0,
+          -0.684
+        ],
+        "max": [
+          0.891,
+          2,
+          0.684
+        ],
+        "size": [
+          1.782,
+          2,
+          1.367
+        ]
+      },
+      "use": "야추 점수표(탁상 달력, 2 m 정규화 → 런타임 축소)"
+    },
+    {
+      "key": "pencil",
+      "id": "exam-06",
+      "source": "https://karchive.vibeline.co.kr/models/exam-06",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/exam-06.glb",
+      "file": "pencil.glb",
+      "bytes": 318452,
+      "sha256": "ba1260e5b7c850c3a893a0fae82d6c0f80827593c9a510e32cb039647d08353d",
+      "webBytes": 136788,
+      "meshes": 1,
+      "triangles": 3349,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.293
+        ],
+        "max": [
+          1,
+          0.633,
+          0.293
+        ],
+        "size": [
+          2,
+          0.633,
+          0.586
+        ]
+      },
+      "use": "야추 점수표 옆 연필(2 m 정규화 → 런타임 축소)"
+    }
+  ]
+}

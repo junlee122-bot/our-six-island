@@ -31,6 +31,7 @@ import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { lookFor } from './friend-looks';
 import { useLifeAction } from './LifePanels';
+import { useNow } from './use-now';
 import './friend-life.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void; selfActor: number };
@@ -51,6 +52,7 @@ export function FestivalPanel({ room, view, notify, onClose, selfActor }: Base) 
   const fete = life?.social?.fete ?? null;
   const [run, busy] = useLifeAction(room, notify);
   const [playing, setPlaying] = useState<{ token: string } | null>(null);
+  const now = useNow(true, 30_000) + view.clockOffset;
   if (!life || !fete)
     return (
       <Modal title="마을 축제" onClose={onClose} className="l-life-modal l-fete">
@@ -62,7 +64,6 @@ export function FestivalPanel({ room, view, notify, onClose, selfActor }: Base) 
       </Modal>
     );
   const def = FETES[fete.kind];
-  const now = Date.now() + view.clockOffset;
   const night = ['evening', 'night'].includes(timeOfDay(now));
   const board = fete.board;
   const start = async () => {
@@ -314,12 +315,30 @@ function SongpyeonGame({ token, onDone, onCancel }: { token: string; onDone: (to
   const [marks, setMarks] = useState<number[]>([]);
   const [pos, setPos] = useState(0);
   const [flash, setFlash] = useState<string | null>(null);
-  const started = useRef(performance.now());
-  const roundAt = useRef(performance.now());
+  const started = useRef(0);
+  const roundAt = useRef(0);
   const sent = useRef(false);
-  const stepped = useRef(reducedMotion());
+  const [stepped] = useState(reducedMotion);
   const target = 0.3 + (hash32(`${token}:${round}`) % 400) / 1000;
   const done = marks.length >= SONGPYEON_ROUNDS;
+  const press = (forced?: number) => {
+    if (done || flash) return;
+    const miss = forced ?? Math.min(SONGPYEON_MISS_MS, Math.round(Math.abs(pos - target) * SONGPYEON_ROUND_MS));
+    const s = songpyeonRound(miss);
+    setMarks((m) => [...m, miss]);
+    setFlash(s >= 90 ? '완벽해요!' : s >= 60 ? '예쁘게 빚었어요' : s > 0 ? '조금 삐뚤어요' : '터졌어요');
+    setTimeout(() => {
+      setFlash(null);
+      setRound((r) => r + 1);
+    }, 700);
+  };
+  const pressRef = useRef(press);
+  useEffect(() => {
+    pressRef.current = press;
+  });
+  useEffect(() => {
+    started.current = performance.now();
+  }, []);
   // Marker: ping-pong 0 → 1 → 0, one way per SONGPYEON_ROUND_MS.
   useEffect(() => {
     if (done || flash) return;
@@ -329,13 +348,13 @@ function SongpyeonGame({ token, onDone, onCancel }: { token: string; onDone: (to
     const tick = () => {
       const t = (performance.now() - roundAt.current) / SONGPYEON_ROUND_MS;
       if (t > 4) {
-        press(SONGPYEON_MISS_MS);
+        pressRef.current(SONGPYEON_MISS_MS);
         return;
       }
       const p = t % 2 < 1 ? t % 1 : 1 - (t % 1);
-      setPos(stepped.current ? Math.round(p * 10) / 10 : p);
+      setPos(stepped ? Math.round(p * 10) / 10 : p);
     };
-    if (stepped.current) timer = window.setInterval(tick, 140);
+    if (stepped) timer = window.setInterval(tick, 140);
     else {
       const loop = () => {
         tick();
@@ -347,40 +366,32 @@ function SongpyeonGame({ token, onDone, onCancel }: { token: string; onDone: (to
       cancelAnimationFrame(raf);
       clearInterval(timer);
     };
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- restarts per round only.
-  }, [round, done, flash]);
+  }, [round, done, flash, stepped]);
   // Everything scored: wait out the minimum time (steaming), then submit.
+  const doneRef = useRef(onDone);
+  useEffect(() => {
+    doneRef.current = onDone;
+  });
   useEffect(() => {
     if (!done || sent.current) return;
     sent.current = true;
     const wait = Math.max(0, SONGPYEON_ROUNDS * SONGPYEON_ROUND_MS - (performance.now() - started.current)) + 200;
-    const t = setTimeout(() => onDone(token, marks), wait);
+    const all = marks;
+    const t = setTimeout(() => doneRef.current(token, all), wait);
     return () => clearTimeout(t);
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- once when done.
-  }, [done]);
-  function press(forced?: number) {
-    if (done || flash) return;
-    const miss = forced ?? Math.min(SONGPYEON_MISS_MS, Math.round(Math.abs(pos - target) * SONGPYEON_ROUND_MS));
-    const s = songpyeonRound(miss);
-    setMarks((m) => [...m, miss]);
-    setFlash(s >= 90 ? '완벽해요!' : s >= 60 ? '예쁘게 빚었어요' : s > 0 ? '조금 삐뚤어요' : '터졌어요');
-    setTimeout(() => {
-      setFlash(null);
-      setRound((r) => r + 1);
-    }, 700);
-  }
+  }, [done, marks, token]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.repeat) return;
       const bound = actionForCode(getSettings().keys, e.code);
       if (e.code === 'Space' || e.code === 'Enter' || bound === 'action') {
         e.preventDefault();
-        press();
+        pressRef.current();
       }
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  });
+  }, []);
   const total = marks.reduce((s, m) => s + songpyeonRound(m), 0);
   return (
     <div className="l-songpyeon" data-testid="songpyeon">

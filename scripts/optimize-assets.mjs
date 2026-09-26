@@ -61,6 +61,13 @@ const MODEL_TEXTURE_SIZE = {
   'lounge/club/banquetChair.glb': 512,
   'lounge/club/barStool.glb': 512,
   'lounge/club/queueRope.glb': 512,
+  // 야추 · 라이어 게임 table props (lounge/friends): small on screen.
+  'lounge/friends/serviceBell.glb': 512,
+  'lounge/friends/serviceBellPressed.glb': 512,
+  'lounge/friends/lectern.glb': 512,
+  'lounge/friends/ballotBox.glb': 512,
+  'lounge/friends/deskCalendar.glb': 512,
+  'lounge/friends/pencil.glb': 512,
   // VILL-2 valley props (village/valley): props up to about 1 m across.
   'village/valley/waterPump.glb': 512,
   'village/valley/picketGate.glb': 512,

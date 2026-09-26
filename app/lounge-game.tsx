@@ -83,9 +83,11 @@ import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
 import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
-import { DISH_BY_ID, BUFF_INFO, type Spot } from './lounge-items';
+import { DISH_BY_ID, BUFF_INFO, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
-import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE } from './lounge-village-spots';
+import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
+import { friendDialog, type DialogScript } from './lounge-friend-dialog';
+import { AdaptChecklist, FeteBanner, markAdaptLocal } from './lounge/SocialHud';
 import { farmBed, farmFront } from './lounge-village-life';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
@@ -195,6 +197,9 @@ const FriendsLife = lazyRetry(() => loadBonds().then((m) => ({ default: m.Friend
 const MemoriesAlbum = lazyRetry(() => loadBonds().then((m) => ({ default: m.MemoriesAlbum })));
 const DigestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.DigestCard })));
 const RequestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.RequestCard })));
+// Friend-life (C-3..C-10): NPC talk box and the festival panel.
+const FriendDialog = lazyRetry(() => import('./lounge/FriendDialog').then((m) => ({ default: m.FriendDialog })));
+const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({ default: m.FestivalPanel })));
 
 /**
  * Walking up to a door starts loading what is behind it (the lazy chunk and
@@ -360,6 +365,7 @@ type ModalName =
   | 'memories'
   | 'digest'
   | 'lifeRequest'
+  | 'fete'
   // PC: the Esc menu and 조작 안내.
   | 'system'
   | 'help';
@@ -503,6 +509,7 @@ function AccountLounge({
     [shopTab, setShopTab] = useState<ShopTab>('seeds'),
     [mailGift, setMailGift] = useState<string | undefined>(undefined),
     [requestFrom, setRequestFrom] = useState<number | null>(null),
+    [talk, setTalk] = useState<{ script: DialogScript; hearts: number } | null>(null),
     [fishing, setFishing] = useState<{ spot: Spot; phase: FishingPhase } | null>(null);
   const hotbar = useHotbar();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
@@ -1045,13 +1052,38 @@ function AccountLounge({
       lifeSfx('donate');
     }
   };
+  /** Talking to an offline friend's NPC (C-3): the dialog box with their lines. */
+  const talkVisits = useRef(new Map<number, number>());
   const talkTo = (actor: number) => {
-    const req = room.snapshot().life?.me.requests?.find((r) => r.from === actor && !r.done);
-    if (!req) return;
-    setTimeout(() => {
-      setRequestFrom(actor);
-      setModal('lifeRequest');
-    }, 700);
+    const life = room.snapshot().life;
+    if (!life || actor === save.actor) return;
+    const now = Date.now() + room.snapshot().clockOffset;
+    const visit = (talkVisits.current.get(actor) ?? 0) + 1;
+    talkVisits.current.set(actor, visit);
+    const tool = hotbar.tool;
+    const cal = life.calendar;
+    const hearts = life.me.bonds?.find((b) => b.actor === actor)?.level ?? 0;
+    const script = friendDialog({
+      friend: actor,
+      me: save.actor,
+      day: Math.floor((now + 9 * 3_600_000) / 86_400_000),
+      visit,
+      timeOfDay: cal?.timeOfDay ?? 'day',
+      season: cal?.season ?? 'spring',
+      weather: life.weather?.today ?? 'sunny',
+      hearts,
+      doing: fishing ? 'fish' : tool.startsWith('seed-') || tool.startsWith('fertilizer') || tool === 'can' ? 'farm' : null,
+      holding: tool && ITEM_BY_ID[tool] && !tool.startsWith('fertilizer') ? itemName(tool) : null,
+      news: life.digest?.lines ?? [],
+      birthdayFriend: !!cal?.events.some((e) => e.kind === 'birthday' && e.actor === actor),
+      birthdayMe: !!cal?.events.some((e) => e.kind === 'birthday' && e.actor === save.actor),
+      fete: life.social?.fete?.active ? life.social.fete.kind : null,
+      holiday: cal?.events.find((e) => e.kind === 'holiday')?.name ?? null,
+      custom: life.social?.lines?.[actor] ?? [],
+      talked: !!life.social?.talked?.includes(actor),
+      request: !!life.me.requests?.some((r) => r.from === actor && !r.done),
+    });
+    setTalk({ script, hearts });
   };
   /** A second press on a selected hotbar dish eats it. */
   const eatFromSlot = (ref: string) => {
@@ -1521,6 +1553,13 @@ function AccountLounge({
     }, 1800);
     return () => clearTimeout(timer);
   }, [digestDue, modal, coach, connected, inGame]);
+  // 마을 적응하기: the board and a table are only seen on this device.
+  useEffect(() => {
+    if (modal === 'board') markAdaptLocal('board');
+  }, [modal]);
+  useEffect(() => {
+    if (inGame) markAdaptLocal('table');
+  }, [inGame]);
 
   // Life loop entries for the simple / fallback village (no 3D scene).
   const simpleLife = {
@@ -2040,6 +2079,7 @@ function AccountLounge({
                       onBoard={() => setModal('board')}
                       onWaterFriend={waterFriend}
                       onWish={() => void wish()}
+                      onFete={() => setModal('fete')}
                       onTalk={talkTo}
                       tool={hotbar.tool}
                       fishing={fishing}
@@ -2077,6 +2117,13 @@ function AccountLounge({
                   />
                 </div>
                 <VillageHint paused={!!coach || !!modal} />
+                {!modal && !coach && !talk && (
+                  <FeteBanner
+                    view={view}
+                    onOpen={() => setModal('fete')}
+                    onGo={() => walkTo(feteSpot(view.life?.flags ?? []))}
+                  />
+                )}
               </div>
             )}
           </div>
@@ -2680,6 +2727,7 @@ function AccountLounge({
           initialTab={bookTab}
           atMuseum={atMuseum}
           onGo={() => walkTo(MUSEUM_FRONT)}
+          selfActor={save.actor}
           onClose={() => setModal(null)}
         />
       )}
@@ -2707,6 +2755,29 @@ function AccountLounge({
       {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)} />}
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />
+      )}
+      {modal === 'fete' && (
+        <FestivalPanel room={room} view={view} notify={notify} selfActor={save.actor} onClose={() => setModal(null)} />
+      )}
+      {talk && !modal && (
+        <FriendDialog
+          script={talk.script}
+          hearts={talk.hearts}
+          onTalk={(choice) => {
+            const first = !room.snapshot().life?.social?.talked?.includes(talk.script.friend);
+            void room.life({ kind: 'npcTalk', to: talk.script.friend }).then((ok) => {
+              if (ok && first) notify(`${ACTORS[talk.script.friend]}와 이야기를 나눴어요. 추억이 조금 쌓였어요.`);
+            });
+            void choice;
+          }}
+          onRequest={() => {
+            const from = talk.script.friend;
+            setTalk(null);
+            setRequestFrom(from);
+            setModal('lifeRequest');
+          }}
+          onClose={() => setTalk(null)}
+        />
       )}
       </Suspense>
       {modal === 'mail' && (
@@ -2781,6 +2852,10 @@ function AccountLounge({
           onClose={() => setConfirm(null)}
           onConfirm={reset}
         />
+      )}
+      {!coach && !shouldOnboard() && visiting === null && !inGame && (tab === 'village' || tab === 'bedroom') && (
+        // 마을 적응하기 (C-10): optional follow-up steps after the first-day tutorial.
+        <AdaptChecklist room={room} view={view} notify={notify} hidden={!!modal || !!talk} />
       )}
       {coach && visiting === null && !inGame && (
         // Hands-on first day: walk → door → bag → one seed (Onboarding.tsx).
