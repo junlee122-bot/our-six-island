@@ -19,6 +19,7 @@ import {
   AXE_TIER_MULT,
   AXE_TIER_WOOD,
   CATCH_UP,
+  CATCH_UP_GAP,
   COPPER_CHANCE,
   FIRST_TOOL_ROCKS,
   FORGE_READY_HOUR,
@@ -335,8 +336,17 @@ export function villageMedian(life: LifeState, skill: SkillId) {
     .sort((a, b) => a - b);
   return levels.length ? levels[(levels.length - 1) >> 1] : 1;
 }
-export const behindVillage = (life: LifeState, uid: string, skill: SkillId) => skillLevel(life, uid, skill) < villageMedian(life, skill);
+export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
+  skillLevel(life, uid, skill) <= villageMedian(life, skill) - CATCH_UP_GAP;
 
+/**
+ * The one hook other systems use to scale skill XP (e.g. the mood system's
+ * +10/+15% and −10% at 지쳤어요). Applied after the daily soft cap and before
+ * rested XP; the cap itself is unchanged. 1 = no change.
+ */
+export function xpMultiplier(_life: LifeState, _uid: string, _skill: SkillId, _now: number): number {
+  return 1;
+}
 /**
  * Adds XP from a life action: ×CATCH_UP when behind the village median, the
  * daily soft cap (SOFT_CAP in full, the rest at OVER_CAP_RATE), then rested XP
@@ -348,7 +358,8 @@ export function gainXp(life: LifeState, uid: string, skill: SkillId, base: numbe
   const raw = base * (behindVillage(life, uid, skill) ? CATCH_UP : 1);
   const used = u.dxp?.[skill] ?? 0;
   const full = Math.max(0, Math.min(raw, SOFT_CAP - used));
-  let gain = full + (raw - full) * OVER_CAP_RATE;
+  // Multipliers from other systems (mood…) apply on top; the cap counts raw XP only.
+  let gain = (full + (raw - full) * OVER_CAP_RATE) * xpMultiplier(life, uid, skill, now);
   (u.dxp ??= {})[skill] = tenth(Math.min(XP_MAX, used + raw));
   const rest = u.rest?.[skill] ?? 0;
   if (rest > 0 && gain > 0) {

@@ -25,13 +25,14 @@ export const levelOf = (xp: number) => {
   return lv;
 };
 /** XP a day counts in full per skill; past it each point counts OVER_CAP_RATE. */
-export const SOFT_CAP = 200;
+export const SOFT_CAP = 150;
 export const OVER_CAP_RATE = 0.2;
 /** Rested XP: per skill per day away, at most REST_MAX; while it lasts XP is doubled. */
 export const REST_PER_DAY = 100;
 export const REST_MAX = 300;
-/** Behind the village median level of a skill: XP ×CATCH_UP. */
+/** At least CATCH_UP_GAP levels behind the village median of a skill: XP ×CATCH_UP. */
 export const CATCH_UP = 1.5;
+export const CATCH_UP_GAP = 2;
 /** Retro XP from lifetime stats is capped at this level (professions stay a choice). */
 export const RETRO_LEVEL = 5;
 export const RETRO_PER: Record<string, number> = { harvest: 4, fish: 4, forage: 5, bug: 4, cook: 6, craft: 4 };
