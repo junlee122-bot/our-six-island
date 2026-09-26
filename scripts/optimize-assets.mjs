@@ -24,7 +24,6 @@ const mode = process.argv[2] ?? 'all';
 const LOSSLESS_ATLASES = [
   'friends-motion.png',
   'accessories.png',
-  'jaemin-cap.png',
   'hohyeon-friend.png',
   'lounge/dowon-shampoo-atlas.png',
   'lounge/daowon-buns.png',

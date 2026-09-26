@@ -39,7 +39,6 @@ import type { LoungeSave } from './lounge-look';
 import type { LoungePlayer } from './lounge-room';
 import { ACTORS } from './lounge-roster';
 import { loungeSprites } from './lounge-sprites';
-import { HAT_HEADROOM, withHatHeadroom } from './lounge-figure-frame';
 import { reactionInfo, REACTION_TTL } from './lounge-reactions';
 import {
   advanceLocomotion,
@@ -498,17 +497,12 @@ function acquireRenderer() {
 const CAMERA_UP_Y = Math.cos(
   Math.atan2(CAMERA_OFFSET.y, Math.hypot(CAMERA_OFFSET.x, CAMERA_OFFSET.z)),
 );
-/** Body part of the sprite canvas (px); a hat band of HAT_HEADROOM sits above it. */
+/** Sprite canvas (px); the body fills it (figures wear no hats, so no band above). */
 const FIGURE_BODY = { width: 256, height: 320 } as const;
-const FIGURE_CANVAS = {
-  width: FIGURE_BODY.width,
-  height: withHatHeadroom(FIGURE_BODY.height),
-} as const;
-/** Vertical world height of the body canvas; projects to VILLAGE_ACTOR_HEIGHT on screen. */
+const FIGURE_CANVAS = FIGURE_BODY;
+/** Vertical world height of the canvas; projects to VILLAGE_ACTOR_HEIGHT on screen. */
 const FIGURE_HEIGHT = VILLAGE_ACTOR_HEIGHT / CAMERA_UP_Y;
-/** The whole canvas (hat band included) at the same world scale. */
-const FIGURE_PLANE_HEIGHT =
-  (FIGURE_HEIGHT * FIGURE_CANVAS.height) / FIGURE_BODY.height;
+const FIGURE_PLANE_HEIGHT = FIGURE_HEIGHT;
 let figureGeometry: THREE.PlaneGeometry | null = null;
 function getFigureGeometry() {
   if (!figureGeometry) {
@@ -2109,7 +2103,7 @@ export function Village3D(props: Props) {
             figure.phase,
             false,
             reduced.matches,
-            { facing: figure.facing, headroom: HAT_HEADROOM },
+            { facing: figure.facing },
           );
           if (changed) {
             figure.texture.needsUpdate = true;
@@ -2345,18 +2339,15 @@ export function Village3D(props: Props) {
             element.style.transform = `translate3d(${at.x.toFixed(1)}px,${at.y.toFixed(1)}px,0) translate(-50%,-50%)`;
         }
         const headY = FIGURE_HEIGHT * 0.98;
-        // A hat rises into the canvas's hat band: lift that figure's tag above it.
-        const tagY = (figure: Figure | undefined) =>
-          headY + (figure && sprites ? sprites.hatRise(figure.canvas) * FIGURE_PLANE_HEIGHT : 0);
         if (selfTag) {
-          const at = project(position.x, tagY(figures.get(current.self)), position.z);
+          const at = project(position.x, headY, position.z);
           selfTag.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
         }
         for (const [id, figure] of figures) {
           const own = id === current.self;
           const at = project(
             figure.point.x,
-            figure.group.position.y + tagY(figure),
+            figure.group.position.y + headY,
             figure.point.z,
           );
           const show =

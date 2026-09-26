@@ -1,14 +1,18 @@
 export const HAIR_COLORS=[{id:'wine',name:'도원의 와인',hex:'#963d4e'},{id:'ink',name:'먹빛',hex:'#292e36'},{id:'brown',name:'밤색',hex:'#745044'},{id:'honey',name:'꿀빛',hex:'#c39754'},{id:'rose',name:'로즈',hex:'#d07a95'},{id:'blue',name:'바다색',hex:'#4e7998'},{id:'silver',name:'은빛',hex:'#b7bcc9'},{id:'forest',name:'숲빛',hex:'#527967'}] as const;
 export const TOP_COLORS=[{id:'charcoal',name:'차콜',hex:'#323b43'},{id:'cream',name:'크림',hex:'#e9dfc9'},{id:'coral',name:'코랄',hex:'#d97c64'},{id:'ocean',name:'바다',hex:'#4c91aa'},{id:'leaf',name:'풀잎',hex:'#71996a'},{id:'sun',name:'햇살',hex:'#ddb75f'},{id:'lavender',name:'라벤더',hex:'#a291b5'},{id:'berry',name:'베리',hex:'#b55d79'}] as const;
-export const HATS=[{id:'none',name:'벗기',cell:-1},{id:'cap',name:'탐험 모자',cell:0},{id:'straw',name:'밀짚모자',cell:1},{id:'bucket',name:'버킷햇',cell:2},{id:'beanie',name:'비니',cell:3}] as const;
+// Hats were removed from the game. `hat` stays in Appearance (always 'none')
+// so old saves, old clients and old servers that still send 'cap', 'straw',
+// 'bucket' or 'beanie' are read back as bare-headed, and an old
+// client that defaults a missing field (재민's cap) sees 'none' instead.
+export const HATS=[{id:'none',name:'벗기',cell:-1}] as const;
 export const GLASSES=[{id:'none',name:'벗기',cell:-1},{id:'round',name:'둥근 안경',cell:4},{id:'silver',name:'은테 안경',cell:5},{id:'sun',name:'선글라스',cell:6}] as const;
 export type Appearance={hair:string;top:string;hat:string;glasses:string;clip:boolean};
 export type Motion='idle'|'walk'|'run'|'wave'|'gather'|'celebrate';
 export const MOTIONS:Motion[]=['idle','walk','run','wave','gather','celebrate'];
-export function defaultAppearance(character:number):Appearance{return {hair:character===0?'wine':'ink',top:character===2||character===3?'cream':'charcoal',hat:character===5?'cap':'none',glasses:character===1||character===4?'round':character===2?'silver':'none',clip:false};}
+export function defaultAppearance(character:number):Appearance{return {hair:character===0?'wine':'ink',top:character===2||character===3?'cream':'charcoal',hat:'none',glasses:character===1||character===4?'round':character===2?'silver':'none',clip:false};}
 export function readAppearance(value:unknown,character=0):Appearance{
  const base=defaultAppearance(character),v=value&&typeof value==='object'?value as Partial<Appearance>:{};
- return {hair:HAIR_COLORS.some(c=>c.id===v.hair)?v.hair!:base.hair,top:TOP_COLORS.some(c=>c.id===v.top)?v.top!:base.top,hat:HATS.some(c=>c.id===v.hat)?v.hat!:base.hat,glasses:GLASSES.some(c=>c.id===v.glasses)?v.glasses!:base.glasses,clip:typeof v.clip==='boolean'?v.clip:base.clip};
+ return {hair:HAIR_COLORS.some(c=>c.id===v.hair)?v.hair!:base.hair,top:TOP_COLORS.some(c=>c.id===v.top)?v.top!:base.top,hat:'none',glasses:GLASSES.some(c=>c.id===v.glasses)?v.glasses!:base.glasses,clip:typeof v.clip==='boolean'?v.clip:base.clip};
 }
 export function readWardrobe(value:unknown):Appearance[]{return Array.from({length:6},(_,i)=>readAppearance(Array.isArray(value)?value[i]:undefined,i));}
 export function appearanceKey(character:number,a:Appearance){return [character,a.hair,a.top,a.hat,a.glasses,Number(a.clip)].join(':');}

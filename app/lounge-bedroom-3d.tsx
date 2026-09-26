@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import * as THREE from 'three';
 import { loungeSprites } from './lounge-sprites';
-import { HAT_HEADROOM, hatTagHeight, withHatHeadroom } from './lounge-figure-frame';
 import {
   BEDROOM_LIMITS,
   ROOM,
@@ -477,9 +476,8 @@ export function Bedroom3D({
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const avatarHeight = 1.82;
     const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-    // The figure canvas adds a hat band (HAT_HEADROOM) above the 440×540 body
-    // canvas that avatarHeight spans, so a hat never shrinks the figure.
-    const avatarCanvasHeight = withHatHeadroom(540),
+    // The 440×540 figure canvas spans avatarHeight (no hat band above it).
+    const avatarCanvasHeight = 540,
       avatarPlaneHeight = (avatarHeight * avatarCanvasHeight) / 540;
     const avatarGeometry = new THREE.PlaneGeometry(avatarHeight * cameraUp.y * (440 / 540), avatarPlaneHeight);
     // loungeSprites.draw places the soles at 97% of the texture's height.
@@ -552,7 +550,7 @@ export function Bedroom3D({
     });
     const drawFigure = (f: Figure, t: number, force = false) => {
       if (!sprites || (!force && t - f.drawnAt < (f.motion === 'idle' ? 90 : 40))) return;
-      if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing, headroom: HAT_HEADROOM })) {
+      if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing })) {
         f.texture.needsUpdate = true;
         dirty = true;
       }
@@ -886,8 +884,7 @@ export function Bedroom3D({
       const place = (id: string, p: WalkPoint, f: Figure) => {
         const el = labelsRef.current.get(id);
         if (!el) return;
-        const rise = sprites ? sprites.hatRise(f.canvas) : 0;
-        label.set(p.x, hatTagHeight(1.98, avatarHeight * 0.94, rise, avatarPlaneHeight), p.z).project(camera);
+        label.set(p.x, 1.98, p.z).project(camera);
         el.style.transform = `translate(${((label.x + 1) / 2) * w}px, ${((1 - label.y) / 2) * h}px) translate(-50%, -100%)`;
       };
       place('self', me.pos, me);

@@ -1,30 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { figureFrame, hatTagHeight, HAT_HEADROOM, PREVIEW_HEADROOM, withHatHeadroom } from '../app/lounge-figure-frame.ts';
-import { COLLECTIONS, GLASSES, HATS, collectionsFor, hatsFor, readLook, freshLounge, readLounge } from '../app/lounge-look.ts';
+import { figureFrame } from '../app/lounge-figure-frame.ts';
+import { COLLECTIONS, GLASSES, HATS, collectionsFor, defaultLook, hatsFor, readLook, freshLounge, readLounge } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger } from '../app/lounge-economy.ts';
 import { ACCOUNT_IDS, accountSave, friendVisitView } from '../app/lounge-accounts.ts';
 
-// A normalized figure (400×480 art placed at +60,+150) and hats of real sizes.
+// A normalized figure (400×480 art placed at +60,+150) and accessories of real sizes.
 const body = { x: 153, y: 165, w: 214, h: 450 };
-const hats = {
+const pieces = {
   none: body,
-  beanie: { x: 150, y: 165 - 132, w: 220, h: 450 + 132 },
-  straw: { x: 116, y: 165 - 116, w: 288, h: 450 + 116 },
+  glasses: { x: 180, y: 250, w: 160, h: 60 },
   // A headband knot sticks out on one side only.
   hachimaki: { x: 153, y: 165, w: 214 + 36, h: 450 },
 };
 
-test('a hat never changes the body size or ground line on world canvases', () => {
-  const target = { width: 256, height: withHatHeadroom(320) };
-  const bare = figureFrame(target, body, body, { headroom: HAT_HEADROOM });
-  // The body keeps the size it had on the old 256×320 canvas.
-  assert.ok(Math.abs(bare.scale * body.h - 320 * 0.94) < 2);
-  for (const [id, piece] of Object.entries(hats)) {
-    const f = figureFrame(target, body, piece, { headroom: HAT_HEADROOM });
+test('an accessory never changes the body size or ground line', () => {
+  const target = { width: 256, height: 320 };
+  const bare = figureFrame(target, body, body);
+  assert.equal(bare.scale, Math.min((256 * 0.92) / body.w, (320 * 0.94) / body.h));
+  for (const [id, piece] of Object.entries(pieces)) {
+    const f = figureFrame(target, body, piece);
     assert.equal(f.scale, bare.scale, id);
-    // Soles stay on the anchor line; the hat's top stays inside the canvas.
+    // Soles stay on the anchor line and nothing leaves the canvas.
     assert.ok(Math.abs(f.dy + (body.y + body.h - piece.y) * f.scale) < 1e-6, id);
     assert.ok(f.anchorY + f.dy >= 0, `${id} cut off at the top`);
     // The body is centred whatever sticks out on one side.
@@ -33,55 +31,33 @@ test('a hat never changes the body size or ground line on world canvases', () =>
   }
 });
 
-test('without headroom an accessory only shrinks the figure as much as it must', () => {
+test('something reaching above the hair only shrinks the figure as much as it must', () => {
   const target = { width: 440, height: 540 };
   const bare = figureFrame(target, body, body);
-  assert.equal(bare.scale, Math.min((440 * 0.92) / body.w, (540 * 0.94) / body.h));
-  const beanie = figureFrame(target, body, hats.beanie);
-  assert.ok(beanie.scale < bare.scale);
-  assert.ok(beanie.anchorY + beanie.dy >= 0);
+  const tall = figureFrame(target, body, { x: 150, y: 165 - 40, w: 220, h: 450 + 40 });
+  assert.ok(tall.scale < bare.scale);
+  assert.ok(tall.anchorY + tall.dy >= 0);
   // Glasses or a clip inside the body box leave it untouched.
   assert.equal(figureFrame(target, body, { ...body, w: body.w - 4 }).scale, bare.scale);
 });
 
-test('portraits frame the face: a hat never pushes it out of a round crop', () => {
+test('portraits frame the face at the same place whatever is worn', () => {
   const target = { width: 200, height: 200 };
   const bare = figureFrame(target, body, body, { portrait: true });
-  for (const [id, piece] of Object.entries(hats)) {
+  for (const [id, piece] of Object.entries(pieces)) {
     const f = figureFrame(target, body, piece, { portrait: true });
     assert.equal(f.scale, bare.scale, id);
-    // The hair top (body top) moves down at most 8% of the frame.
-    assert.ok(f.anchorY - bare.anchorY <= 16 + 1e-9, id);
-    assert.ok(f.anchorY >= bare.anchorY, id);
-  }
-});
-
-test('UI previews keep the body size and trim a tall crown instead of shrinking', () => {
-  const target = { width: 440, height: 540 };
-  const opts = { headroom: PREVIEW_HEADROOM, trim: true };
-  const bare = figureFrame(target, body, body, opts);
-  for (const [id, piece] of Object.entries(hats)) {
-    const f = figureFrame(target, body, piece, opts);
-    assert.equal(f.scale, bare.scale, id);
-    // The body itself always fits; only the hat's crown may leave the canvas.
-    assert.ok(f.anchorY - body.h * f.scale >= 0, id);
+    assert.equal(f.anchorY, bare.anchorY, id);
   }
 });
 
 test('a walk strip drawn at a fixed scale keeps it (no size jump at walk start)', () => {
-  const target = { width: 256, height: withHatHeadroom(320) };
+  const target = { width: 256, height: 320 };
   const strip = { x: 40, y: 20, w: 240, h: 380 };
-  const f = figureFrame(target, strip, strip, { headroom: HAT_HEADROOM, scale: 0.5 });
+  const f = figureFrame(target, strip, strip, { scale: 0.5 });
   assert.equal(f.scale, 0.5);
   // Still shrinks if the fixed scale would not fit the canvas at all.
   assert.ok(figureFrame(target, strip, strip, { scale: 5 }).scale < 5);
-});
-
-test('name tags rise above a hat only when it would reach them', () => {
-  assert.equal(hatTagHeight(1.94, 1.62, 0, 2.26), 1.94);
-  const beanie = hatTagHeight(1.94, 1.62, 0.2, 2.26);
-  assert.ok(beanie > 1.62 + 0.2 * 2.26);
-  assert.ok(beanie > 1.94);
 });
 
 const member = (actor) => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
@@ -100,7 +76,7 @@ function harness() {
     },
   };
 }
-/** Every accessory/look combination a player can pick (pairwise over hats × the rest). */
+/** Every accessory/look combination a player can pick (pairwise over headwear × the rest). */
 function allLooks(actor) {
   const out = [];
   const collections = collectionsFor(actor).map((c) => c.id);
@@ -116,14 +92,57 @@ function allLooks(actor) {
   return out;
 }
 
-test('every current hat, glasses, clip, collection and colour is on the allowlist', () => {
-  assert.ok(HATS.some((h) => h.id === 'hachimaki'));
+test('every current headband, glasses, clip, collection and colour is on the allowlist', () => {
+  assert.deepEqual(HATS.map((h) => h.id), ['none', 'hachimaki']);
   assert.equal(COLLECTIONS.length, 9);
   for (let actor = 0; actor < 7; actor++)
     for (const look of allLooks(actor)) assert.deepEqual(readLook(look, actor), look, JSON.stringify([actor, look]));
-  // The headband belongs to 도원's wardrobe only; others fall back to their default hat.
+  // The headband belongs to 도원's wardrobe only; others read it as bare-headed.
   assert.equal(readLook({ hat: 'hachimaki' }, 1).hat, 'none');
-  assert.equal(readLook({ hat: 'hachimaki' }, 5).hat, 'cap');
+  assert.equal(readLook({ hat: 'hachimaki' }, 5).hat, 'none');
+  assert.deepEqual(hatsFor(0).map((h) => h.id), ['none', 'hachimaki']);
+  for (let actor = 1; actor < 7; actor++) assert.deepEqual(hatsFor(actor).map((h) => h.id), ['none']);
+});
+
+const REMOVED_HATS = ['cap', 'straw', 'bucket', 'beanie'];
+
+test('removed hats read as bare-headed for every friend (saves, remote looks, old clients)', () => {
+  for (let actor = 0; actor < 7; actor++) {
+    assert.equal(defaultLook(actor).hat, 'none', `actor ${actor} default`);
+    // A look with no hat field at all (never a fallback to 재민's old cap).
+    assert.equal(readLook({ collection: 'classic' }, actor).hat, 'none');
+    for (const hat of REMOVED_HATS) {
+      const look = readLook({ hat, glasses: 'round', clip: true }, actor);
+      assert.equal(look.hat, 'none', `actor ${actor} ${hat}`);
+      // Everything else on the look survives the migration.
+      assert.equal(look.glasses, 'round');
+      assert.equal(look.clip, true);
+    }
+  }
+  // An old save with hats everywhere comes back without them, headband kept.
+  const old = freshLounge(5);
+  old.looks = old.looks.map((l, i) => ({ ...l, hat: i === 0 ? 'hachimaki' : REMOVED_HATS[i % 4] }));
+  old.saved = [{ id: 's', actor: 5, name: '모자', look: { ...old.looks[5], hat: 'cap' } }];
+  const back = readLounge(JSON.stringify(old), 5);
+  assert.deepEqual(back.looks.map((l) => l.hat), ['hachimaki', 'none', 'none', 'none', 'none', 'none', 'none']);
+  assert.equal(back.saved[0].look.hat, 'none');
+});
+
+test('the room server stores none when an old client sends a removed hat', async () => {
+  const h = harness(),
+    me = member(5),
+    friend = member(3);
+  await h.run(me, 'open', { look: { ...defaultLook(5), hat: 'cap' } });
+  friend.code = me.code;
+  const joined = await h.run(friend, 'join');
+  const seen = (packet) => packet.players.find((p) => p.actor === 5)?.look;
+  assert.equal(seen(joined.packet).hat, 'none');
+  h.advance(5000);
+  await h.run(me, 'action', { action: { kind: 'look', look: { ...defaultLook(5), hat: 'beanie', glasses: 'sun' } } });
+  h.advance(5000);
+  const r = await h.run(friend, 'read');
+  assert.equal(seen(r.packet).hat, 'none');
+  assert.equal(seen(r.packet).glasses, 'sun');
 });
 
 test('saves and friend-visit views keep every accessory', () => {

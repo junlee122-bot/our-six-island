@@ -40,7 +40,7 @@ test('Akatsuki is a shared costume and survives account, bookmark, local, and mu
     );
     assert.equal(look.collection, 'akatsuki');
     assert.equal(look.hairstyle, actor === 0 ? 'buns' : 'signature');
-    assert.equal(look.hat, 'cap');
+    assert.equal(look.hat, 'none'); // hats were removed; old values read as none
     assert.equal(look.glasses, 'round');
     const save = freshLounge(actor);
     save.looks[actor] = look;

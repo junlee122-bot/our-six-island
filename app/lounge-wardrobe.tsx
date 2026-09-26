@@ -686,18 +686,23 @@ export function Wardrobe({
             )}
             {category === 'extras' && (
               <div className="l-extra-options">
-                <h3>{actor === 0 ? '모자 · 머리띠' : '모자'}</h3>
-                <div>
-                  {hatsFor(actor).map((c) => (
-                    <button
-                      key={c.id}
-                      aria-pressed={look.hat === c.id}
-                      onClick={() => change({ hat: c.id })}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
+                {/* Headwear is only 도원's 응원 머리띠; other friends have no hats. */}
+                {hatsFor(actor).length > 1 && (
+                  <>
+                    <h3>머리띠</h3>
+                    <div>
+                      {hatsFor(actor).map((c) => (
+                        <button
+                          key={c.id}
+                          aria-pressed={look.hat === c.id}
+                          onClick={() => change({ hat: c.id })}
+                        >
+                          {c.name}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
                 <h3>안경</h3>
                 <div>
                   {GLASSES.map((c) => (

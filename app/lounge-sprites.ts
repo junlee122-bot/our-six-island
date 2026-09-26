@@ -466,7 +466,6 @@ type AtlasKey =
   | 'shampoo'
   | 'akatsuki'
   | 'accessories'
-  | 'cap'
   | 'hachimaki';
 
 /** Which atlases a look needs; only these are downloaded and prepared. */
@@ -487,7 +486,6 @@ export function spriteAtlasesFor(actor: number, input: Look): AtlasKey[] {
   const hat = HATS.find((h) => h.id === look.hat)?.cell ?? -1;
   const glasses = GLASSES.find((g) => g.id === look.glasses)?.cell ?? -1;
   if (hat === 9) keys.add('hachimaki');
-  else if (hat >= 0) keys.add(actor === 5 && hat === 0 ? 'cap' : 'accessories');
   if (glasses >= 0 || look.clip) keys.add('accessories');
   return [...keys];
 }
@@ -701,7 +699,8 @@ async function prepare() {
     },
     async accessories() {
       const accessories = await image(a.accessories);
-      for (let i = 0; i < 8; i++) {
+      // Cells 0–3 are the removed hats; only glasses (4–6) and the clip (7).
+      for (let i = 4; i < 8; i++) {
         const c = canvas(accessories.width / 4, accessories.height / 2);
         c.getContext('2d')!.drawImage(
           accessories,
@@ -716,12 +715,6 @@ async function prepare() {
         );
         pieces[i] = bounds(clean(c));
       }
-    },
-    async cap() {
-      const cap = await image(a.jaeminCap);
-      const c = canvas(cap.width, cap.height);
-      c.getContext('2d')!.drawImage(cap, 0, 0);
-      pieces[8] = cropPiece(bounds(clean(c)));
     },
     async hachimaki() {
       const hachimaki = await image(a.hachimaki);
@@ -844,7 +837,6 @@ async function prepare() {
   function attachments(
     figure: Figure,
     look: Look,
-    actor: number,
     bun: boolean,
     head = figure.head,
   ) {
@@ -861,7 +853,7 @@ async function prepare() {
         h = (w * piece.h) / piece.w;
       result.push({ piece, x: x - w / 2, y: y - h / 2, w, h });
     };
-    const hat = HATS.find((h) => h.id === look.hat)!.cell;
+    const hat = HATS.find((h) => h.id === look.hat)?.cell ?? -1;
     const glasses = GLASSES.find((g) => g.id === look.glasses)!.cell;
     if (hat === 9) {
       const piece = pieces[9],
@@ -873,15 +865,6 @@ async function prepare() {
         w: piece.w * scale,
         h: piece.h * scale,
       });
-    } else if (hat >= 0) {
-      const i = actor === 5 && hat === 0 ? 8 : hat;
-      const w = base.head * (hat === 1 ? 1.35 : hat === 0 ? 0.92 : 1.03);
-      add(
-        i,
-        w,
-        base.cx,
-        base.eyes - base.head * 0.19 - (w * pieces[i].h) / pieces[i].w / 2,
-      );
     }
     if (glasses >= 0) add(glasses, base.head * 0.76, base.cx, base.eyes);
     if (look.clip)
@@ -904,7 +887,7 @@ async function prepare() {
     for (const f of [...rows.walk, ...rows.run]) {
       for (const r of [
         (f.body ??= bounds(f.c)),
-        ...attachments(f, look, actor, false, stripHead(sheet, actor, look)),
+        ...attachments(f, look, false, stripHead(sheet, actor, look)),
       ]) {
         left = Math.min(left, r.x);
         top = Math.min(top, r.y);
@@ -938,7 +921,7 @@ async function prepare() {
   const rigScratch = drawCanvas(1, 1);
   const lastDraw = new WeakMap<
     HTMLCanvasElement,
-    { piece: Piece; key: string; top: number; bodyTop: number; bodyBottom: number }
+    { piece: Piece; key: string; bodyTop: number; bodyBottom: number }
   >();
   /** The static figure a look shows (standing pose unless `frame` picks a legacy step). */
   function staticFigure(actor: number, look: Look, frame: number) {
@@ -1035,7 +1018,6 @@ async function prepare() {
     for (const { piece, x, y, w, h } of attachments(
       base,
       look,
-      actor,
       bun,
       generated ? stripHead(generated.sheet, actor, look) : base.head,
     )) {
@@ -1177,10 +1159,6 @@ async function prepare() {
       reduced = false,
       options: {
         facing?: 1 | -1;
-        /** Top share of the canvas kept free for hats (world canvases; see HAT_HEADROOM). */
-        headroom?: number;
-        /** UI previews: a hat taller than the headroom is trimmed, never shrinks the body. */
-        trim?: boolean;
       } = {},
     ) {
       const look = readLook(input, actor);
@@ -1229,13 +1207,9 @@ async function prepare() {
         ),
         ctx = target.getContext('2d')!;
       // The bare figure sets the scale and anchor for every motion and look,
-      // so starting, stopping or putting on a hat never changes the figure's
-      // size or ground line (figureFrame).
-      const frameOptions = {
-        portrait,
-        headroom: options.headroom ?? 0,
-        trim: options.trim,
-      };
+      // so starting, stopping or putting on an accessory never changes the
+      // figure's size or ground line (figureFrame).
+      const frameOptions = { portrait };
       // A hand-drawn strip is drawn at the idle figure's scale (matched by
       // standing height), so starting or stopping never changes the size.
       let stripScale: number | undefined;
@@ -1292,8 +1266,6 @@ async function prepare() {
         target.width,
         target.height,
         portrait,
-        options.headroom ?? 0,
-        !!options.trim,
         options.facing ?? 1,
         pose.lift,
         pose.tilt,
@@ -1321,26 +1293,15 @@ async function prepare() {
       lastDraw.set(target, {
         piece: f,
         key: drawKey,
-        top: frameBox.anchorY + frameBox.dy,
         bodyTop,
         bodyBottom: bodyTop + base.body.h * scale,
       });
       return true;
     },
     /**
-     * Canvas rows of the last drawn figure's body (hat excluded), unlifted.
-     * Seated figures cut their legs relative to it, not to a hat's top.
+     * Canvas rows of the last drawn figure's body (accessories excluded),
+     * unlifted. Seated figures cut their legs relative to it.
      */
-    /**
-     * How far (share of the canvas height) the last drawn figure's hat rises
-     * above its hair; name tags are lifted by it so they never cover a hat.
-     */
-    hatRise(target: HTMLCanvasElement) {
-      const last = lastDraw.get(target);
-      return last && target.height
-        ? Math.max(0, last.bodyTop - last.top) / target.height
-        : 0;
-    },
     bodyRows(target: HTMLCanvasElement) {
       const last = lastDraw.get(target);
       return last ? { top: last.bodyTop, bottom: last.bodyBottom } : null;

@@ -79,7 +79,6 @@ export const LOUNGE_ASSETS = {
   reaction_nonono: '/assets/lounge/reactions/nonono.webp',
   motion: '/assets/friends-motion.webp',
   accessories: '/assets/accessories.webp',
-  jaeminCap: '/assets/jaemin-cap.webp',
   hohyeon: '/assets/hohyeon-friend.webp',
   classic: '/assets/lounge/club-friends-classic.webp',
   street: '/assets/lounge/club-friends-street.webp',

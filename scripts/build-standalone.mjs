@@ -53,7 +53,6 @@ const MODEL_FAIL_BYTES = 4 * KB * KB;
 const ATLAS_EXCEPTIONS = new Set([
   'friends-motion.webp',
   'accessories.webp',
-  'jaemin-cap.webp',
   'hohyeon-friend.webp',
   'lounge/akatsuki-atlas.webp',
   'lounge/dowon-shampoo-atlas.webp',

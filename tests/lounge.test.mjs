@@ -137,7 +137,7 @@ test('lounge storage validates identity, collection and accessories without touc
   assert.equal(fresh.looks.length, 7);
   assert.equal(fresh.actor, 6);
   assert.equal(defaultLook(1).glasses, 'round');
-  assert.equal(defaultLook(5).hat, 'cap');
+  assert.equal(defaultLook(5).hat, 'none');
   assert.deepEqual(readLounge('broken'), fresh);
   assert.equal(readLook({ collection: '3d', hair: 'bad' }, 0).hair, 'wine');
   assert.equal(readLook({ collection: '3d' }, 0).collection, 'classic');
@@ -160,8 +160,10 @@ test('old lounge wardrobes gain default hairstyles while preserving outfits and 
   ];
   const restored = readLounge(JSON.stringify(old));
   assert.equal(restored.visits, 9);
+  // Hats other than 도원's headband were removed: the old bucket hat is dropped.
   assert.deepEqual(restored.looks[0], {
     ...old.looks[0],
+    hat: 'none',
     hairstyle: 'signature',
   });
   assert.deepEqual(restored.saved[0].look, restored.looks[0]);
@@ -193,7 +195,7 @@ test('Daowon outfits, buns and hachimaki survive storage and host validation onl
     const normalized = readLook(look, actor);
     assert.equal(normalized.collection, 'classic');
     assert.equal(normalized.hairstyle, 'signature');
-    assert.equal(normalized.hat, defaultLook(actor).hat);
+    assert.equal(normalized.hat, 'none');
   }
   assert.equal(
     readLook({ hairstyle: 'bogus', hat: '<img>' }, 0).hairstyle,

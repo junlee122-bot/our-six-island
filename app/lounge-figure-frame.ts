@@ -1,10 +1,10 @@
 /**
  * Where loungeSprites.draw puts a composed figure on its target canvas.
  *
- * The body (the figure without hat, glasses or clip) alone sets the scale and
- * the anchor, so putting on a hat never shrinks the character or slides it
- * sideways (a headband's knot, a straw brim). Accessories extend past the
- * body; `headroom` is the top share of a world canvas kept free for them.
+ * The body (the figure without glasses or clip) alone sets the scale and the
+ * anchor, so putting on an accessory never shrinks the character or slides it
+ * sideways. Figures wear no hats, so no canvas keeps a band free above the
+ * head: the body fills the canvas as it did before accessories existed.
  * Pure: unit-tested in tests/lounge-accessories.test.mjs.
  */
 export type FrameBox = { x: number; y: number; w: number; h: number };
@@ -18,32 +18,14 @@ export type FigureFrame = {
   dy: number;
 };
 
-/**
- * Top share of a world figure canvas reserved for hats. The tallest hat
- * (a beanie on 민서) rises ~29% of the body height above the hair.
- */
-export const HAT_HEADROOM = 0.24;
-/** Canvas height that shows a `bodyHeight`-tall body canvas plus HAT_HEADROOM. */
-export const withHatHeadroom = (bodyHeight: number) =>
-  Math.round(bodyHeight / (1 - HAT_HEADROOM));
-
 export type FrameOptions = {
   portrait?: boolean;
-  /** Top share of the canvas kept free for hats (world canvases). */
-  headroom?: number;
   /**
    * Fixed source→canvas scale (walk/run strips use the idle figure's, so the
    * character never changes size when it starts or stops moving).
    */
   scale?: number;
-  /**
-   * UI previews: keep the body size and let a tall hat's crown be cut at the
-   * top instead of shrinking the whole figure to fit it.
-   */
-  trim?: boolean;
 };
-/** Share of a UI preview canvas kept for hats (the rest is trimmed, not shrunk). */
-export const PREVIEW_HEADROOM = 0.1;
 
 export function figureFrame(
   target: { width: number; height: number },
@@ -57,28 +39,24 @@ export function figureFrame(
     above = Math.max(0, body.y - piece.y);
   if (options.portrait) {
     // Head-and-shoulders: the body's width fills the frame and the hair top
-    // sits at 8%. A hat pushes the face down a little (never more than 8%)
-    // and may be cut at the top, so the face stays in round avatar crops.
-    const scale = W / (body.w * 0.94),
-      shift = Math.min(0.08 * H, Math.max(0, above * scale - 0.06 * H));
+    // sits at 8%, so the face stays in round avatar crops.
+    const scale = W / (body.w * 0.94);
     return {
       scale,
       anchorX: W / 2,
-      anchorY: H * 0.08 + shift,
+      anchorY: H * 0.08,
       dx: (piece.x - centre) * scale,
       dy: (piece.y - body.y) * scale,
     };
   }
-  const room = Math.max(0, Math.min(0.9, options.headroom ?? 0));
   let scale =
-    options.scale ??
-    Math.min((W * 0.92) / body.w, (H * 0.94 * (1 - room)) / body.h);
-  // An accessory that still does not fit (no headroom, or an unusually tall
-  // hat) shrinks the figure just enough to keep it inside the canvas.
+    options.scale ?? Math.min((W * 0.92) / body.w, (H * 0.94) / body.h);
+  // An accessory reaching past the body (a clip above the hair) shrinks the
+  // figure just enough to keep it inside the canvas.
   const half = Math.max(centre - piece.x, piece.x + piece.w - centre);
   scale = Math.min(
     scale,
-    options.trim ? (H * 0.96) / body.h : (H * 0.96) / (body.h + above),
+    (H * 0.96) / (body.h + above),
     half > 0 ? (W * 0.49) / half : scale,
   );
   return {
@@ -89,16 +67,3 @@ export function figureFrame(
     dy: (piece.y - (body.y + body.h)) * scale,
   };
 }
-
-/**
- * World height for a name tag over a figure: its usual height, or just above
- * the hat when the hat (rising `hatRise` of a `planeHeight`-tall canvas above
- * the hair at `headTop`) would reach into the tag.
- */
-export const hatTagHeight = (
-  tag: number,
-  headTop: number,
-  hatRise: number,
-  planeHeight: number,
-  gap = 0.08,
-) => Math.max(tag, headTop + hatRise * planeHeight + gap);

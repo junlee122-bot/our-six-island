@@ -14,6 +14,12 @@ import {
 } from './lounge-bedroom-data.ts';
 import { readColorHex } from './lounge-color.ts';
 export { HAIR_COLORS, TOP_COLORS, GLASSES };
+/**
+ * Headwear is only 도원's 응원 머리띠 now. The cap, straw hat, bucket hat,
+ * beanie and 재민's own cap were removed: readLook reads those old values
+ * (saves, remote players, old clients) as 'none'. The field is kept (not
+ * dropped) so an old client or server never falls back to a default hat.
+ */
 export const HATS = [
   ...ORIGINAL_HATS,
   { id: 'hachimaki', name: '응원 머리띠', cell: 9 },
@@ -81,7 +87,7 @@ export const defaultLook = (actor: number): Look => ({
   hair: actor === 0 ? 'wine' : 'ink',
   top:
     actor === 2 || actor === 3 ? 'cream' : actor === 6 ? 'ocean' : 'charcoal',
-  hat: actor === 5 ? 'cap' : 'none',
+  hat: 'none',
   glasses:
     actor === 1 || actor === 4 ? 'round' : actor === 2 ? 'silver' : 'none',
   clip: false,
@@ -98,7 +104,7 @@ export function readLook(value: unknown, actor: number): Look {
     hairstyle: actor === 0 && v.hairstyle === 'buns' ? 'buns' : 'signature',
     hair: HAIR_COLORS.some((c) => c.id === v.hair) ? v.hair! : d.hair,
     top: TOP_COLORS.some((c) => c.id === v.top) ? v.top! : d.top,
-    hat: hatsFor(actor).some((c) => c.id === v.hat) ? v.hat! : d.hat,
+    hat: hatsFor(actor).some((c) => c.id === v.hat) ? v.hat! : 'none',
     glasses: GLASSES.some((c) => c.id === v.glasses) ? v.glasses! : d.glasses,
     clip: v.clip === true,
     ...(hairColor ? { hairColor } : {}),
