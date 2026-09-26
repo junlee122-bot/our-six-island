@@ -10,6 +10,7 @@ import {
   type LoungeLedger,
 } from './lounge-economy.ts';
 import { dayStart, hash32, rainsOn, seasonOf, type Season } from './lounge-calendar.ts';
+import { cleanText, hasUnsafeText, textLength } from './text-clean.ts';
 import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
 // Cycle-safe: lounge-life-plus.ts imports this module back, so neither module
 // may use the other's bindings at the top level (only inside functions).
@@ -519,11 +520,6 @@ const count = (n: unknown) =>
   safe(n) && n >= 0 ? Math.min(n, BAG_MAX) : 0;
 const isCrop = (c: unknown): c is Crop => CROPS.includes(c as Crop);
 const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
-// C0/C1 controls, line/paragraph separators, bidi overrides/isolates, BOM.
-const CONTROL = new RegExp(
-  // oxlint-disable-next-line no-control-regex -- rejecting control characters is the point.
-  '[\\u0000-\\u001f\\u007f-\\u009f\\u200b\\u200e\\u200f\\u2028-\\u202e\\u2060-\\u206f\\ufeff]',
-);
 const cropCounts = (): Record<Crop, number> =>
   Object.fromEntries(CROPS.map((c) => [c, 0])) as Record<Crop, number>;
 const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0, wateredAt: null });
@@ -550,21 +546,19 @@ export const emptyLife = (): LifeState => ({
   lastText: {},
   seq: 0,
 });
-/** Text for guestbook/mail/status: trimmed, bounded, no control characters. */
+/**
+ * Text for guestbook/mail/status: trimmed, bounded, and REJECTED (not
+ * silently changed) when it holds control/bidi characters or a lone surrogate.
+ * Stored text is re-read with the shared lenient `cleanText` (text-clean.ts).
+ */
 export function lifeText(value: unknown, max: number, allowEmpty = false) {
   if (typeof value !== 'string') return fail(LIFE_REJECT.text);
   const text = value.trim().replace(/\s+/g, ' ');
   if (!text && !allowEmpty) return fail(LIFE_REJECT.text);
-  if (CONTROL.test(value.trim())) return fail(LIFE_REJECT.text);
-  if (Array.from(text).length > max) return fail(LIFE_REJECT.textLong);
+  if (hasUnsafeText(value.trim())) return fail(LIFE_REJECT.text);
+  if (textLength(text) > max) return fail(LIFE_REJECT.textLong);
   return text;
 }
-const cleanText = (value: unknown, max: number) =>
-  typeof value === 'string'
-    ? Array.from(value.replace(new RegExp(CONTROL.source, 'g'), '').trim())
-        .slice(0, max)
-        .join('')
-    : '';
 
 // ---------------------------------------------------------------- growth
 /** Growth time of this plot's current cycle (regrow cycles are shorter). */

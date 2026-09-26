@@ -20,7 +20,12 @@ import { GAME_COPY } from './game-copy';
 import { TABLE_PLACE, tableLabel, tableState } from '../lounge-table-state';
 import { Modal } from './Modal';
 import { offlineReason } from '../lounge-connection';
-import { othersOnline, soloActivities, type SoloKind } from '../lounge-solo';
+import {
+  othersOnline,
+  soloActivities,
+  SOLO_TABLES,
+  type SoloKind,
+} from '../lounge-solo';
 import { keyLabel } from '../lounge-keybinds';
 import { getSettings } from '../lounge-settings';
 import type { Notify } from './Toast';
@@ -116,14 +121,31 @@ function TablePicker({
         </p>
       ) : alone ? (
         <p className="l-modal-intro" data-testid="picker-alone">
-          지금 접속한 친구가 없어요. 테이블 게임은 2명부터라, 혼자 할 수 있는
-          걸 골라 봤어요.
+          지금 접속한 친구가 없어요. 블랙잭은 딜러와 혼자, 고스톱·체스는 AI와
+          연습 판으로 칠 수 있어요. 혼자 할 수 있는 것도 골라 봤어요.
         </p>
       ) : (
         <p className="l-modal-intro">
           게임은 테이블에 앉아서 시작해요. 고르면 그 테이블 옆으로 가서 판돈과
           인원을 정하고, 앉은 뒤 친구를 불러요.
         </p>
+      )}
+      {alone && onSolo && (
+        <>
+          <h3 className="l-picker-subtitle">테이블 · 혼자 하기</h3>
+          <ul className="l-solo-list is-tables" aria-label="혼자 하는 테이블 게임">
+            {SOLO_TABLES.map((a) => (
+              <li key={a.kind}>
+                <button onClick={() => onSolo(a.kind)} data-testid={`solo-${a.kind}`}>
+                  <strong>{a.title}</strong>
+                  <small>{a.detail}</small>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <h3 className="l-picker-subtitle">혼자 할 수 있는 것</h3>
+        </>
       )}
       {(alone || reason) && onSolo && (
         <ul className="l-solo-list" aria-label="혼자 할 수 있는 것">

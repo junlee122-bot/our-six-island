@@ -116,6 +116,22 @@ serve('hohyeon-api', async (b, req, ctx) => {
       );
     } catch (e) {
       if (e instanceof CloudError) throw new HttpError(e.message, e.status);
+      // D-8: an engine bug (TypeError…) is never stored as a receipt nor
+      // committed; log what was attempted (no tokens, no payload text) and let
+      // serve() answer a generic 500 with the stack in its own log line.
+      const action = b.command?.action;
+      log('error', 'engine_unexpected', {
+        ...ctx,
+        actor: m.actor,
+        op: typeof b.command?.op === 'string' ? b.command.op.slice(0, 16) : null,
+        kind:
+          action && typeof action.kind === 'string'
+            ? action.kind.slice(0, 32)
+            : null,
+        revision: row.revision,
+        name: e instanceof Error ? e.name : typeof e,
+        message: e instanceof Error ? e.message.slice(0, 200) : String(e).slice(0, 200),
+      });
       throw e;
     }
     const revision = transition.changed

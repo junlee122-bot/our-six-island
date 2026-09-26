@@ -66,7 +66,7 @@ export const KARCHIVE_HALL = { x: -16, front: 8, width: 7.9 } as const;
  * toward the camp lane and the camera. Before the project is done a small
  * construction site stands here instead (same round footprint).
  */
-export const KARCHIVE_STAGE = { x: 12, z: 21.3, scale: 1.5, radius: 1.45 } as const;
+export const KARCHIVE_STAGE = { x: 12, z: 21.3, scale: 1.75, radius: 1.7 } as const;
 /**
  * Wisteria pergola in the east garden by the boardwalk: you can walk under
  * it; only its four posts block (post centres ±0.82 × ±0.95 model units).

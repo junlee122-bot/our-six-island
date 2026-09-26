@@ -252,13 +252,14 @@ export function cloudTransition(
   const old = mutating
     ? g.receipts[member.id]?.find((r) => r.id === command.requestId)
     : null;
-  if (old && old.hash !== hash)
+  if (old && old.hash !== hash.slice(0, old.hash.length))
     throw new CloudError('이미 사용한 요청 번호입니다.', 409);
   const mark = g.sequences?.[member.id];
   if (
     mutating &&
     !old &&
-    mark?.connection === command.connection &&
+    mark &&
+    mark.connection === command.connection &&
     Number.isSafeInteger(command.sequence) &&
     command.sequence! <= mark.sequence
   )
@@ -446,7 +447,15 @@ export function cloudTransition(
       const list = g.receipts[member.id] ?? [];
       g.receipts[member.id] = [
         ...list,
-        { id: command.requestId!, hash, code: target ?? '', ok, error, at: now },
+        {
+          id: command.requestId!,
+          // 128 bits of the SHA-256 are plenty to tell a retry from reuse.
+          hash: hash.slice(0, 32),
+          code: target ?? '',
+          ok,
+          error,
+          at: now,
+        },
       ];
       if (Number.isSafeInteger(command.sequence)) {
         g.sequences ??= {};

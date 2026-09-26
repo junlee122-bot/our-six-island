@@ -113,7 +113,10 @@ test('public views omit dealer hole, deck and their values until reveal', () => 
   for (const seat of [-1, 1, 8, NaN, '0', 0.5])
     assert.equal(blackjackAction(g, seat, { kind: 'hit' }), null);
   assert.deepEqual(g, before);
-  assert.throws(() => newBlackjack('bad', 1, 1000));
+  assert.throws(() => newBlackjack('bad', 0, 1000));
+  assert.throws(() => newBlackjack('bad', 8, 1000));
+  // 혼자 하기: one seat against the dealer is a valid table.
+  assert.equal(newBlackjack('solo', 1, 1000).hands.length, 1);
   assert.throws(() => newBlackjack('odd', 2, 1001));
 });
 test('600 seeded games conserve 312 cards, terminate, and stay within reserved stakes', () => {

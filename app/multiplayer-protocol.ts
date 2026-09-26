@@ -1,3 +1,4 @@
+import {cleanText as sharedCleanText} from './text-clean.ts';
 import {DECOR,FRIENDS,SPAWN,WORLD,walkable,type Point,type Save} from './game-data.ts';
 import {isRoom,roomWalkable,type PlacedFurniture} from './life-data.ts';
 import {readAppearance,readWardrobe,readMotion,type Appearance,type Motion} from './character-style.ts';
@@ -15,7 +16,8 @@ const CODE_ALPHABET='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export function newRoomCode(){const bytes=new Uint8Array(10);crypto.getRandomValues(bytes);return Array.from(bytes,b=>CODE_ALPHABET[b%CODE_ALPHABET.length]).join('');}
 export function roomCode(input:string){let text=input.trim();try{if(/^https?:\/\//i.test(text)){const url=new URL(text);text=new URLSearchParams(url.hash.slice(1)).get('room')||'';}}catch{return null}text=text.toUpperCase().replace(/[\s-]/g,'');return /^[A-HJ-NP-Z2-9]{10}$/.test(text)?text:null;}
 export function inviteUrl(base:string,code:string){const url=new URL(base);url.hash=new URLSearchParams({room:code}).toString();return url.toString();}
-export function cleanText(value:unknown,max:number){return typeof value==='string'?value.replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,max):'';}
+/** Shared sanitizer (text-clean.ts) plus no angle brackets in peer-sent names. */
+export function cleanText(value:unknown,max:number){return typeof value==='string'?sharedCleanText(value.replace(/[<>]/g,''),max):'';}
 export function validPoint(value:unknown):value is Point{if(!value||typeof value!=='object')return false;const p=value as Point;return Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=WORLD.width&&p.y>=0&&p.y<=WORLD.height;}
 export function readPlayer(value:unknown,id?:string):OnlinePlayer|null{
  if(!value||typeof value!=='object')return null;const p=value as OnlinePlayer;

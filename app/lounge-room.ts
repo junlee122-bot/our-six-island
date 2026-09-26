@@ -1,3 +1,4 @@
+import { cleanText } from "./text-clean.ts";
 import { IslandRoom } from "./multiplayer-transport.ts";
 import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
 import { readLook, type Look } from "./lounge-look.ts";
@@ -1443,14 +1444,23 @@ export class LoungeRoom {
    * go-stop starts with the previous winner (kept after 나가리).
    */
   private launch(request: GameInvite, round = 1) {
+    const practice = !!request.practice,
+      // 연습 판: the practice AI takes the seats after mine.
+      ai = practice
+        ? (PRACTICE_NAMES[request.game] ?? []).map(
+            (_, i) => `ai:${request.game}:${i + 1}`,
+          )
+        : [],
+      seated = [...request.accepted, ...ai];
     const id = crypto.randomUUID(),
-      n = request.accepted.length,
+      n = seated.length,
       order =
         request.game === "chess" && round % 2 === 0
-          ? [...request.accepted].reverse()
-          : [...request.accepted],
-      wallets = order.map((p) => this.wallets.get(p)!);
-    const deposits = order.map(() =>
+          ? [...seated].reverse()
+          : seated,
+      humans = order.filter((p) => !isPracticeAi(p)),
+      wallets = humans.map((p) => this.wallets.get(p)!);
+    const deposits = humans.map(() =>
       gameReservation(request.game, request.stake),
     );
     let goFirst = 0;
@@ -1475,16 +1485,19 @@ export class LoungeRoom {
             : request.game === "seotda"
               ? newSeotda(id, n, request.stake, undefined, (round - 1) % n)
               : newBlackjack(id, n, request.stake, undefined, (round - 1) % n);
-    let ledger = reserveGame(
-      this.bank.ledger,
-      id,
-      request.game,
-      wallets,
-      deposits,
-    );
-    if (request.game === "gostop" && (game as GoMatch).phase === "over")
-      ledger = goSettle(ledger, game as GoMatch, deposits);
-    this.bank.commit(ledger);
+    // 연습 판 holds no escrow: settle() finds nothing to pay out.
+    if (!practice) {
+      let ledger = reserveGame(
+        this.bank.ledger,
+        id,
+        request.game,
+        wallets,
+        deposits,
+      );
+      if (request.game === "gostop" && (game as GoMatch).phase === "over")
+        ledger = goSettle(ledger, game as GoMatch, deposits);
+      this.bank.commit(ledger);
+    }
     for (const id of request.accepted) this.removeSeat(id);
     const seats = { ...this.view.seats, [request.game]: order };
     request.status = "started";
@@ -1500,11 +1513,16 @@ export class LoungeRoom {
           required: request.required,
           members: [...request.accepted],
           ready: [],
+          ...(practice ? { practice: true } : {}),
         },
       },
       names: {
         ...this.view.names,
-        [request.game]: order.map((p) => ACTORS[this.members.get(p)!.actor]),
+        [request.game]: order.map((p) =>
+          isPracticeAi(p)
+            ? (PRACTICE_NAMES[request.game]?.[ai.indexOf(p)] ?? "연습 상대")
+            : ACTORS[this.members.get(p)!.actor],
+        ),
       },
     });
     delete this.deadlines[request.game];
@@ -1525,7 +1543,8 @@ export class LoungeRoom {
       this.blackjackAway.clear();
     }
     for (let i = 0; i < order.length; i++) {
-      const p = this.members.get(order[i])!;
+      const p = this.members.get(order[i]);
+      if (!p) continue;
       this.members.set(p.id, {
         ...p,
         area:
@@ -1687,8 +1706,8 @@ export class LoungeRoom {
         return this.reject(REJECT.invalid);
       this.members.set(id, { ...member, emote: a.emote, emoteAt: now });
     } else if (a.kind === "chat") {
-      const text =
-        typeof a.text === "string" ? a.text.trim().slice(0, 120) : "";
+      // Shared sanitizer (D-9): no split emoji, controls or bidi overrides.
+      const text = cleanText(a.text, 120);
       if (!text) return this.reject(REJECT.invalid);
       if (now - (this.lastChat.get(id) ?? 0) < 500)
         return this.reject(REJECT.chat);
@@ -2004,6 +2023,13 @@ export class LoungeRoom {
   ) {
     const game = a.game;
     if (a.table !== tableIdOf(game)) return this.reject(REJECT.invalid);
+    const practice = a.practice === true;
+    // 연습 판 runs on the server's clock (hostedTick plays the AI seats).
+    if (
+      (a.practice !== undefined && typeof a.practice !== "boolean") ||
+      (practice && (!PRACTICE_GAMES.includes(game) || !this.serverMode))
+    )
+      return this.reject(REJECT.invalid);
     const players = [...new Set(a.players)].filter(
       (p): p is string =>
         typeof p === "string" && p !== id && this.members.has(p),
@@ -2015,7 +2041,7 @@ export class LoungeRoom {
         r.table === a.table &&
         r.accepted.includes(id),
     );
-    if (mine) {
+    if (mine && !practice) {
       // "친구 부르기": call more friends to the table I sit at.
       const called = players.filter(
         (p) => !mine.accepted.includes(p) && !this.busy(p),
@@ -2045,6 +2071,34 @@ export class LoungeRoom {
       this.view.invites.some((r) => r.game === game && r.status === "waiting")
     )
       return this.reject(REJECT.pending);
+    if (practice) {
+      // 연습 판: me and the practice AI, nothing staked; starts right away.
+      if (a.stake !== undefined && a.stake !== 0)
+        return this.reject(REJECT.stake);
+      const request: GameInvite = {
+        id: crypto.randomUUID(),
+        game,
+        from: id,
+        invited: [],
+        accepted: [id],
+        declined: [],
+        status: "waiting",
+        expires: now + TABLE_FORM_MS,
+        matchId: null,
+        required: 1,
+        stake: 0,
+        table: a.table,
+        practice: true,
+      };
+      this.launch(request);
+      this.update({
+        invites: [
+          ...this.view.invites.filter((r) => r.status === "waiting"),
+          request,
+        ],
+      });
+      return true;
+    }
     const stake = a.stake ?? GAME_INFO[game].stake;
     const required = FLEX_GAMES.includes(game)
       ? (a.required ?? GAME_INFO[game].players)
@@ -2052,7 +2106,7 @@ export class LoungeRoom {
     if (
       !(TABLE_STAKES as readonly number[]).includes(stake) ||
       !Number.isInteger(required) ||
-      required < 2 ||
+      required < minPlayers(game) ||
       required > 7
     )
       return this.reject(REJECT.stake);
@@ -2061,23 +2115,27 @@ export class LoungeRoom {
     if (lock) return this.reject(lock);
     if (balance < gameReservation(game, stake))
       return this.reject(REJECT.balance);
+    const request: GameInvite = {
+      id: crypto.randomUUID(),
+      game,
+      from: id,
+      // 혼자 하기 (blackjack vs the dealer): nobody else to call.
+      invited: required > 1 ? players.filter((p) => !this.busy(p)) : [],
+      accepted: [id],
+      declined: [],
+      status: "waiting",
+      expires: now + TABLE_FORM_MS,
+      matchId: null,
+      required,
+      stake,
+      table: a.table,
+    };
+    // A one-seat table is full as I sit: the round starts (and reserves) now.
+    if (required === 1) this.launch(request);
     this.update({
       invites: [
         ...this.view.invites.filter((r) => r.status === "waiting"),
-        {
-          id: crypto.randomUUID(),
-          game,
-          from: id,
-          invited: players.filter((p) => !this.busy(p)),
-          accepted: [id],
-          declined: [],
-          status: "waiting",
-          expires: now + TABLE_FORM_MS,
-          matchId: null,
-          required,
-          stake,
-          table: a.table,
-        },
+        request,
       ],
     });
     return true;
@@ -2220,6 +2278,7 @@ export class LoungeRoom {
       matchId: null,
       required: table.required,
       stake: table.stake,
+      ...(table.practice ? { practice: true } : {}),
     };
     // launch commits escrow before changing table or match state. Failed
     // storage writes leave the previous ended round and readiness intact.
@@ -2535,7 +2594,7 @@ export class LoungeRoom {
           p.seats.poker.length < 2 ||
           p.seats.poker.length > 7 ||
           !Array.isArray(p.seats?.blackjack) ||
-          p.seats.blackjack.length < 2 ||
+          p.seats.blackjack.length < 1 ||
           p.seats.blackjack.length > 7 ||
           !Array.isArray(p.seats?.seotda) ||
           p.seats.seotda.length < 2 ||

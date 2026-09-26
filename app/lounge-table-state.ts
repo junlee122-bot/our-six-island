@@ -33,6 +33,8 @@ export type TableState = {
   called: boolean;
   /** A retained table's fill invite that names me. */
   fill: GameInvite | null;
+  /** 연습 판 against the practice AI (no 범 at stake). */
+  practice: boolean;
 };
 
 type View = Pick<
@@ -83,6 +85,7 @@ export function tableState(view: View, game: GameKind): TableState {
     seated: false,
     called: false,
     member: false,
+    practice: !!table?.practice,
   };
   if (connected && active(view, game)) {
     const occupants = seats.filter((s): s is string => !!s);
@@ -165,9 +168,13 @@ export function tableLabel(state: TableState): {
     state.phase === 'forming'
       ? `${state.occupants.length}/${state.required}명 · ${stake}`
       : state.phase === 'playing'
-        ? '게임 중'
+        ? state.practice
+          ? '연습 중'
+          : '게임 중'
         : state.phase === 'retained'
-          ? `다음 판 준비 · ${state.occupants.length}/${state.required}명`
+          ? state.practice
+            ? '연습 · 다음 판 준비'
+            : `다음 판 준비 · ${state.occupants.length}/${state.required}명`
           : '빈 테이블';
   const action =
     state.phase === 'forming' && !state.seated

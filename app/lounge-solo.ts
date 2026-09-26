@@ -1,8 +1,45 @@
 // "혼자 할 수 있는 것": what the invite window suggests when nobody else is
-// online (every table game needs two or more people). Pure: the invite window
-// renders the list and lounge-game.tsx runs the chosen one.
+// online. Stake tables need friends, but blackjack can be played alone
+// against the dealer and chess / go-stop have a 연습 판 against the AI.
+// Pure: the invite window renders the list and lounge-game.tsx runs the chosen one.
 
-export type SoloKind = 'farm' | 'fish' | 'museum' | 'requests' | 'decorate';
+export type SoloTableKind = 'blackjack' | 'practice-gostop' | 'practice-chess';
+export type SoloKind =
+  | 'farm'
+  | 'fish'
+  | 'museum'
+  | 'requests'
+  | 'decorate'
+  | SoloTableKind;
+
+/** The table each 혼자 하기 entry walks to. */
+export const SOLO_TABLE_GAME: Record<SoloTableKind, 'blackjack' | 'gostop' | 'chess'> = {
+  blackjack: 'blackjack',
+  'practice-gostop': 'gostop',
+  'practice-chess': 'chess',
+};
+
+/** Table games playable alone (shown with the solo activities when nobody is on). */
+export const SOLO_TABLES: readonly SoloActivity[] = [
+  {
+    kind: 'blackjack',
+    title: '딜러 루미와 블랙잭',
+    detail: '카지노 · 혼자 1:1 · 범이 걸려요',
+    hot: false,
+  },
+  {
+    kind: 'practice-gostop',
+    title: '고스톱 연습 판',
+    detail: '회관 · 매화·루미(AI)와 · 범 없이',
+    hot: false,
+  },
+  {
+    kind: 'practice-chess',
+    title: '체스 연습 판',
+    detail: '카지노 · 루미(AI)와 · 범 없이',
+    hot: false,
+  },
+];
 
 export type SoloActivity = {
   kind: SoloKind;

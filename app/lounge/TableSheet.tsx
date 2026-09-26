@@ -3,12 +3,14 @@
 // setup (empty table: stake + seats → 앉기), join (a forming table → 앉기),
 // seated (N/M명 · 친구 부르기 · 일어나기). No separate page, no invitation card.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Armchair, ArrowUpFromLine, BellRing, Check, X } from 'lucide-react';
+import { Armchair, ArrowUpFromLine, BellRing, Bot, Check, X } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import {
   FLEX_GAMES,
   GAME_INFO,
   GAME_KINDS,
+  PRACTICE_GAMES,
+  PRACTICE_NAMES,
   TABLE_STAKES,
   gameReservation,
   stakeLock,
@@ -37,6 +39,19 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 
 export type SheetMode = 'setup' | 'join' | 'seated';
+
+/**
+ * 혼자 하기 at this table: blackjack against the dealer (real 범, one seat),
+ * chess / go-stop as a 연습 판 against the practice AI (no 범). Null for
+ * the games that need friends.
+ */
+export function soloKind(game: GameKind): 'dealer' | 'practice' | null {
+  return game === 'blackjack'
+    ? 'dealer'
+    : PRACTICE_GAMES.includes(game)
+      ? 'practice'
+      : null;
+}
 
 /** Where a friend is right now, for the "친구 부르기" list. */
 export function whereIs(view: CloudRoomView, p: LoungePlayer): string {
@@ -127,11 +142,14 @@ export function TableSheet({
   onStand,
   onSat,
   notify,
+  solo: soloFirst = false,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
   game: GameKind;
   mode: SheetMode;
+  /** Opened from "지금은 혼자예요": lead with 혼자 하기 (focus it). */
+  solo?: boolean;
   /** Friends to call as soon as I sit (e.g. "다시 초대하기" or the old menu). */
   preselect?: string[];
   onClose: () => void;
@@ -190,6 +208,34 @@ export function TableSheet({
           : Promise.resolve(false));
       if (ok) onSat?.();
       return ok;
+    });
+  // 혼자 하기: blackjack vs the dealer (1 seat) or a 연습 판 vs the AI. At a
+  // forming table nobody came to, I stand up from it first.
+  const solo = soloKind(game);
+  const playSolo = () =>
+    run(async () => {
+      if (!solo) return false;
+      if (mode === 'seated' && invite) {
+        if (!(await room.action({ kind: 'cancel', id: invite.id }))) return false;
+      }
+      return room.action(
+        solo === 'dealer'
+          ? {
+              kind: 'invite',
+              game,
+              players: [],
+              stake: tableStake,
+              required: 1,
+              table: tableIdOf(game),
+            }
+          : {
+              kind: 'invite',
+              game,
+              players: [],
+              table: tableIdOf(game),
+              practice: true,
+            },
+      );
     });
   const stand = () =>
     run(async () => {
@@ -263,6 +309,16 @@ export function TableSheet({
         } else if (!short) void sit();
         return true;
       }
+      if (
+        e.code === 'KeyS' &&
+        !e.shiftKey &&
+        solo &&
+        (mode === 'setup' || (mode === 'seated' && !calling && !othersHere))
+      ) {
+        if (solo === 'dealer' && short) return false;
+        void playSolo();
+        return true;
+      }
       if (mode === 'setup' && digit && !e.shiftKey) {
         const n = TABLE_STAKES[Number(digit) - 1];
         if (!n || lockOf(n)) return false;
@@ -313,9 +369,12 @@ export function TableSheet({
   // Move focus into the sheet when it opens or its mode changes.
   useEffect(() => {
     sheetRef.current
-      ?.querySelector<HTMLElement>('[data-autofocus]')
+      ?.querySelector<HTMLElement>(
+        soloFirst ? '[data-testid=table-solo], [data-autofocus]' : '[data-autofocus]',
+      )
       ?.focus({ preventScroll: true });
-  }, [mode]);
+    // Only when the mode changes (soloFirst is fixed for this sheet).
+  }, [mode, soloFirst]);
   // Closing gives the keyboard back to the scene (walking, E).
   useEffect(() => {
     const sheet = sheetRef.current;
@@ -340,6 +399,40 @@ export function TableSheet({
   const selectable = friends.filter(
     (p) => !playerIsBusy(view, p.id) && p.balance >= reservation,
   );
+  // Nobody else in the village: 친구 부르기 is a dead end, 혼자 하기 is not.
+  const othersHere = friends.length > 0;
+  const soloBlock = solo &&
+    (mode === 'setup' || (mode === 'seated' && !calling && !othersHere)) && (
+      <div
+        className={'l-sheet-solo' + (soloFirst || !othersHere ? ' is-lead' : '')}
+        data-testid="table-solo-block"
+      >
+        <p>
+          <strong>{solo === 'dealer' ? '혼자 하기' : '연습 판'}</strong>
+          {solo === 'dealer'
+            ? ` 딜러 루미와 1:1로 쳐요. 판돈 ${formatBeom(tableStake)} · 최대 ${formatBeom(reservation)} 예약, 정산은 테이블과 같아요.`
+            : ` ${(PRACTICE_NAMES[game] ?? []).join('·')}(AI)와 쳐요. 범은 오가지 않아요.`}
+        </p>
+        <button
+          type="button"
+          className="l-secondary"
+          disabled={pending || (solo === 'dealer' && short)}
+          onClick={() => void playSolo()}
+          data-testid="table-solo"
+          aria-keyshortcuts="S"
+        >
+          <Bot size={16} aria-hidden="true" />
+          {solo === 'dealer'
+            ? mode === 'seated'
+              ? '혼자 시작하기'
+              : '혼자 하기 · 딜러와'
+            : '연습 판 시작'}
+          <kbd className="l-sheet-key" aria-hidden="true">
+            S
+          </kbd>
+        </button>
+      </div>
+    );
   useEffect(() => {
     friendsRef.current = selectable.map((p) => p.id);
   });
@@ -544,17 +637,21 @@ export function TableSheet({
               })}
             </ul>
           ) : (
-            <p className="l-sheet-note">지금 마을에 다른 친구가 없어요.</p>
+            <p className="l-sheet-note">
+              지금 마을에 다른 친구가 없어요. 블랙잭은 딜러와 혼자, 체스·고스톱은
+              연습 판으로 할 수 있어요.
+            </p>
           )}
         </div>
       )}
+      {soloBlock}
       <p className="l-sheet-keys" aria-hidden="true">
         {mode === 'seated'
           ? calling
             ? '1–7 친구 고르기 · Enter 부르기 · Esc 닫기'
-            : 'C 친구 부르기 · Esc 일어나기'
+            : `C 친구 부르기${solo && !othersHere ? ' · S 혼자 시작' : ''} · Esc 일어나기`
           : mode === 'setup'
-            ? `E 앉기 · 1–4 판돈${flex ? ' · Shift+2–7 인원' : ''} · Esc 닫기`
+            ? `E 앉기 · 1–4 판돈${flex ? ' · Shift+2–7 인원' : ''}${solo ? ' · S 혼자 하기' : ''} · Esc 닫기`
             : 'E 앉기 · Esc 닫기'}
       </p>
       <div className="l-sheet-actions">

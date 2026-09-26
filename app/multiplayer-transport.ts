@@ -5,7 +5,6 @@ import {PEER_PREFIX} from './multiplayer-protocol.ts';
 // Frontend publishable key; no database, authentication or privileged API access.
 export const REALTIME_URL='wss://ogfpeqeoaznwjbrbedbx.supabase.co/realtime/v1';
 export const REALTIME_KEY='sb_publishable_qoHHUYiC5jBUSK3vpYPV2A_LOLiGR7L';
-const TOPIC='our-six-island-v2:';
 export class IslandRoom {
  readonly id:string;
  readonly code:string;
@@ -23,14 +22,14 @@ export class IslandRoom {
  private connectedOnce=false;
  private identity:Identity;
  private host:boolean;
- private constructor(identity:Identity,host:boolean,code:string,topic=TOPIC,maxBody=24000){
+ private constructor(identity:Identity,host:boolean,code:string,topic:string,maxBody=24000){
   this.identity=identity;this.host=host;
   this.id=identity.id;this.code=code;
   this.verifier=new FrameVerifier(code,this.id,host,maxBody);
   this.client=new RealtimeClient(REALTIME_URL,{params:{apikey:REALTIME_KEY},heartbeatIntervalMs:20000});
   this.channel=this.client.channel(topic+code,{config:{broadcast:{ack:false,self:false},private:false}});
  }
- static async create(host:boolean,code:string,topic=TOPIC,maxBody=24000){const identity=await createIdentity(host);return new IslandRoom(identity,host,host?identity.code:code,topic,maxBody);}
+ static async create(host:boolean,code:string,topic:string,maxBody=24000){const identity=await createIdentity(host);return new IslandRoom(identity,host,host?identity.code:code,topic,maxBody);}
  retain(ids:string[]){this.verifier.retain(ids);}
  connect(onMessage:(from:string,data:unknown)=>void,onError:(detail:string)=>void){
   return new Promise<void>((resolve,reject)=>{

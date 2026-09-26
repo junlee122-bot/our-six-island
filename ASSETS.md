@@ -8,7 +8,7 @@
 - 캐릭터 아틀라스(`friends-motion`, `accessories`, `jaemin-cap`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
 - 범티콘 8장은 1254² PNG(장당 약 1MB)에서 **256px WebP(장당 약 20KB)** 로 줄였습니다.
 - GLB 39개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 15.8MB → 9.7MB(2026-09-25 kArchive 공공시설 15종 포함). 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
-- 섬·극장 전용 원화 12개(`island*.png|webp`, `interiors-hd`, `furniture`, `facilities`, `friends*.png`, `mayor-hohyeon`, `nature-detail`, `theater-*`)는 `legacy/assets/`로 옮겼습니다. `docs/island.html`·`docs/theater.html`은 이미지를 내장한 단일 HTML이라 영향이 없습니다. 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
+- 극장 전용 원화(`theater-*`)는 `legacy/assets/`에 있습니다. `docs/theater.html`은 이미지를 내장한 단일 HTML이라 영향이 없습니다. 예전 섬 전용 원화 10개는 섬 페이지와 함께 삭제했습니다(git 기록에 남아 있음). 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
 - 공유 미리보기 `public/og-image.webp`(1200×630)는 로그인 전신 7장을 합성한 파생 이미지이고, `public/favicon.svg`와 `public/icons/*.png`는 직접 그린 잎 아이콘입니다. 새 AI 생성은 없습니다.
 - 재생성: `npm run optimize:assets` (원본에서 WebP·GLB·아이콘을 다시 만듦).
 
@@ -67,7 +67,7 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 ## Pages 이미지 패키징
 
-`scripts/build-standalone.mjs`는 두 매니페스트의 모든 경로를 읽어 파일이 있는지 확인하고, 각 파일의 SHA-256 앞 12자리를 넣은 이름으로 `<out>/assets/`에 저장한 뒤 게임 코드의 경로를 `./assets/...` 상대 URL로 바꿉니다. 앱 JS·CSS도 해시 파일로 분리되어 `index.html`은 작고, 에셋만 바뀐 배포에서는 코드 캐시를 재사용합니다. 이미지는 600KB 초과 시 경고, 3MB 초과 시 실패(예외 목록의 아틀라스 제외)이며, 모델은 1MB 경고·4MB 실패입니다. 이전 버전의 해시 파일과 보존된 `theater.html`·`island.html` 내부 이미지는 매니페스트 수에 포함하지 않습니다.
+`scripts/build-standalone.mjs`는 두 매니페스트의 모든 경로를 읽어 파일이 있는지 확인하고, 각 파일의 SHA-256 앞 12자리를 넣은 이름으로 `<out>/assets/`에 저장한 뒤 게임 코드의 경로를 `./assets/...` 상대 URL로 바꿉니다. 앱 JS·CSS도 해시 파일로 분리되어 `index.html`은 작고, 에셋만 바뀐 배포에서는 코드 캐시를 재사용합니다. 이미지는 600KB 초과 시 경고, 3MB 초과 시 실패(예외 목록의 아틀라스 제외)이며, 모델은 1MB 경고·4MB 실패입니다. 이전 버전의 해시 파일과 보존된 `theater.html` 내부 이미지는 매니페스트 수에 포함하지 않습니다.
 
 ## 섯다 테이블
 
@@ -496,11 +496,11 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 
 | 모델(파일) | 원본 → 웹 사본(바이트) | 텍스처 | 쓰는 곳 |
 |---|---|---|---|
-| 온실 `village/civic/greenhouse.glb` | 922,920 → 604,508 | 1024² | 강 북쪽 둑(-10, 12.6). 공사 'greenhouse' 전에는 공사장 |
+| 온실 `village/civic/greenhouse.glb` | 922,920 → 604,508 | 1024² | 강 북쪽 둑(-10, 12.6). 공사 'greenhouse' 전에는 공사장, 'greenhouse2'(온실 2동) 완공 시 0.8배 사본을 옆에(경제 패스의 도형 2동을 대체) |
 | 게시판 `noticeBoard.glb` | 432,848 → 213,876 | 512² | 광장 게시판. 꾸러미 종이 8장은 코드로 판에 붙임 |
 | 박물관(공공도서관) `museumLibrary.glb` | 708,924 → 468,512 | 1024² | 마을 박물관. 'museum' 완공 시 입구 깃발 |
 | 회관 한옥 `hanokHall.glb` (dongji-12) | 714,724 → 463,540 | 1024² | 범마을 회관 외관(폭 7.9). 겨울판이라 겨울이 아닐 때는 셰이더가 흰 눈 텍셀만 기와(위)·돌(아래) 색으로 바꿈 |
-| 축제 무대 `festivalStage.glb` (newyear-11) | 449,036 → 286,456 | 1024² | 강변 캠프(12, 21.3). 'stage' 전에는 공사장, 'festival'이면 전구 줄 |
+| 축제 무대 `festivalStage.glb` (newyear-11) | 449,036 → 286,456 | 1024² | 강변 캠프(12, 21.3), 1.75배. 'stage' 전에는 공사장, 'festival'이면 전구 줄 |
 | 등나무 쉼터 `wisteriaPergola.glb` | 883,184 → 610,496 | 1024² | 동쪽 정원(34.8, 1.4). 기둥 4개만 충돌, 아래로 지나갈 수 있음 |
 | 텃밭 틀 `vegetableBed.glb` | 470,748 → 219,836 | 512² | 친구 7명의 밭 틀. 흙 칸·작물은 기존 코드 |
 | 데크 타일 `timberDeck.glb` | 397,792 → 195,676 | 512² | 바다 낚시 데크('bridge' 완공 후) 1.5 m 타일 4장 |
@@ -509,8 +509,8 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 | 카드 테이블 `lounge/club/cardTable.glb` | 514,968 → 331,908 | 1024² | 회관 섯다·고스톱 테이블 몸체. 천·패는 코드 |
 | 연회 의자 `banquetChair.glb` | 397,588 → 194,080 | 512² | 회관·카지노 모든 테이블 의자. 방석 높이 = `SEAT_HEIGHT`(0.36) |
 | 바 의자 `barStool.glb` | 487,112 → 207,932 | 512² | 카지노 바 앞 4개 |
-| 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후. 전에는 공사장) |
-| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 방 가구 카탈로그 '흔들의자'. 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
+| 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후, 기둥 사이 벨벳 줄은 코드. 전에는 공사장) |
+| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 가구 상점 판매 품목 `furn-rocking-chair` '흔들의자'(26,000범, 산 개수만큼 방에 배치). 상점 아이콘은 같은 화풍의 SVG, 방 카탈로그 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
 
 - 원본 합계 7,880,560바이트 → 배포 사본 4,556,676바이트(+ 썸네일 14,834). 원본은 `public/models/_originals/` 같은 경로에 보관하고 `npm run optimize:assets`로 다시 만듭니다. 작게 보이는 반복 소품 8종은 `scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`로 512²까지 줄였습니다(기본 1024²).
 - GPU 텍스처 메모리(RGBA8, 밉맵 포함): 1024² 7장 × 5.3MB + 512² 8장 × 1.3MB ≈ 48MB. 장면별로는 마을 ≈ 33MB, 회관 ≈ 6.7MB, 카지노 ≈ 4MB, 방은 흔들의자를 놓을 때 5.3MB입니다. 모든 모델은 그 장면을 열 때만 받고(회관·카지노 가구는 실내 화면 청크에서), 모델이 도착하기 전에는 기존 도형이 대신 보입니다.

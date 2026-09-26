@@ -87,6 +87,6 @@ Hall and casino files under `public/models/lounge/club/` (`assets.json` there):
 
 Room file under `public/models/lounge/redesign/` (entry added to that `assets.json`):
 
-- rockingChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-rocking-chair-cottage-normal
+- rockingChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-rocking-chair-cottage-normal (sold in the furniture shop as 흔들의자)
 
 Modifications: the served copies are the web-optimized versions described at the top of this file (the fences, deck tile, bed frame, notice board, banquet chair, bar stool and rope post textures are reduced to 512²). At runtime the game sets position, orientation and (partly non-uniform) scale, draws the card-table blanket, bundle papers and crops with its own geometry, and, outside winter, recolors the snow texels of the hanok's roof and stone base with a shader. The room catalog thumbnail `public/assets/lounge/bedroom/thumbs/rocking-chair.webp` is a render of the rocking chair made for this project. Files are served from the game's own content-hashed URLs; the provider is not contacted during gameplay.

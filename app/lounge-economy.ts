@@ -245,7 +245,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
         ? n !== 2
         : g.game === 'gostop'
           ? n !== 3
-          : n < 2 || n > 7
+          : // Blackjack may be played alone against the dealer (혼자 하기).
+            n < (g.game === 'blackjack' ? 1 : 2) || n > 7
     )
       fail('게임의 참가 인원이 올바르지 않습니다.');
     if (g.state === 'reserved') held += sum(g.deposits);
@@ -385,9 +386,10 @@ export function settleGame(
     return ledger;
   }
   const next = changed(ledger);
+  // Canonical zeros: a -0 (e.g. from `-stake * 0`) must not leak into the ledger.
   if (escrow.game === 'blackjack')
-    next.houseBalance = (next.houseBalance ?? 0) - sum(result);
-  next.games[id] = { ...next.games[id], state, result: [...result] };
+    next.houseBalance = (next.houseBalance ?? 0) - sum(result) || 0;
+  next.games[id] = { ...next.games[id], state, result: result.map((n) => n || 0) };
   escrow.wallets.forEach((wallet, i) => {
     next.accounts[wallet] += escrow.deposits[i] + result[i];
   });

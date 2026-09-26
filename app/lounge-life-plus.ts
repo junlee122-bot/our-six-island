@@ -6,6 +6,7 @@
 //
 // Cycle-safe: lounge-life.ts imports this module and this module imports it
 // back, so neither may use the other's bindings at the top level.
+import { cleanText, clipText } from './text-clean.ts';
 import {
   grantBeom,
   spendBeom,
@@ -303,8 +304,6 @@ const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k)
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 const nonEmpty = <T extends object>(o: T) => Object.keys(o).length > 0;
-const cleanText = (v: unknown, max: number) =>
-  typeof v === 'string' ? Array.from(v.trim()).slice(0, max).join('') : '';
 const counts = <K extends string>(v: unknown, ok: (k: string) => boolean, limit = 500) => {
   const out: Record<string, number> = {};
   for (const [k, n] of Object.entries(obj(v)).slice(0, limit)) {
@@ -838,13 +837,13 @@ export function addNews(life: LifeState, now: number, key: string, kind: string,
   let today = news.find((d) => d.day === day);
   if (!today) news.push((today = { day, lines: [] }));
   if (!today.lines.some((l) => l.key === key) && today.lines.length < NEWS_DAY_MAX)
-    today.lines.push({ key, kind, text: text.slice(0, 80), actors });
+    today.lines.push({ key, kind, text: clipText(text, 80), actors });
   life.news = news;
 }
 export function addMemory(life: LifeState, now: number, kind: string, actors: number[], text: string) {
   life.memories = [
     ...(life.memories ?? []),
-    { id: `mem-${(++life.seq).toString(36)}`, kind, actors, text: text.slice(0, 80), at: now },
+    { id: `mem-${(++life.seq).toString(36)}`, kind, actors, text: clipText(text, 80), at: now },
   ].slice(-MEMORY_MAX);
 }
 export const pairKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`);

@@ -212,7 +212,12 @@ test('empty room: reserved games are auto-completed and settled, never voided', 
     r.hostedClose(now);
     assert.equal(state(r, g.id), 'settled');
     const escrow = r.hostedLedger().games[g.id];
-    assert.equal(r.hostedLedger().houseBalance, -escrow.result.reduce((a, b) => a + b, 0));
+    // `0 - sum`, not `-sum`: a push (sum 0) would expect -0, and strict equal
+    // (Object.is) tells -0 from the ledger's 0 — the old ~7% flake (D-5).
+    const houseNet = 0 - escrow.result.reduce((a, b) => a + b, 0);
+    assert.equal(r.hostedLedger().houseBalance, houseNet);
+    assert.ok(!Object.is(r.hostedLedger().houseBalance, -0));
+    assert.ok(!escrow.result.some((n) => Object.is(n, -0)));
     validateLedger(r.hostedLedger());
     break;
   }

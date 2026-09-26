@@ -85,7 +85,7 @@ import { DISH_BY_ID, BUFF_INFO, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE } from './lounge-village-spots';
 import { farmBed, farmFront } from './lounge-village-life';
-import { othersOnline, type SoloKind } from './lounge-solo';
+import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
 import { CloudRoom, type Area, type CloudRoomView } from './lounge-cloud-room';
@@ -469,7 +469,7 @@ function AccountLounge({
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
     // The table sheet I opened by walking up to a table (setup / join). The
     // seated sheet follows my seat instead (see tableSheet below).
-    [sheet, setSheet] = useState<{ game: GameKind; call?: string[] } | null>(
+    [sheet, setSheet] = useState<{ game: GameKind; call?: string[]; solo?: boolean } | null>(
       null,
     ),
     [request, setRequest] = useState<{
@@ -1197,7 +1197,7 @@ function AccountLounge({
    * into its hall / casino with the iris transition, beside the table, with
    * the table's sheet open (setup at an empty table, join at a forming one).
    */
-  const goToTable = (game: GameKind, call?: string[]) => {
+  const goToTable = (game: GameKind, call?: string[], solo?: boolean) => {
     const area = TABLE_AREA[game];
     const side = sceneTableSide(area, game);
     const state = tableState(room.snapshot(), game);
@@ -1205,7 +1205,7 @@ function AccountLounge({
     setModal(null);
     const open = () => {
       if (kind === 'watch' || kind === 'resume') setGameScreen(game);
-      else if (kind !== 'stand') setSheet({ game, call });
+      else if (kind !== 'stand') setSheet({ game, call, ...(solo ? { solo } : {}) });
     };
     if (connected && seat && seat.game !== game) {
       // Going to another table stands me up from the one I sit at.
@@ -1516,6 +1516,12 @@ function AccountLounge({
   /** "혼자 할 수 있는 것" in the invite window. */
   const goSolo = (kind: SoloKind) => {
     setModal(null);
+    // 혼자 하기 at a table: walk to it with its sheet leading with 혼자 하기.
+    const soloGame = SOLO_TABLE_GAME[kind as keyof typeof SOLO_TABLE_GAME];
+    if (soloGame) {
+      goToTable(soloGame, undefined, true);
+      return;
+    }
     if (kind === 'farm') {
       const bed = farmBed(save.actor);
       if (bed) walkTo(farmFront(bed));
@@ -1672,8 +1678,12 @@ function AccountLounge({
   // The table sheet over the hall / casino: my seat (seated) wins; otherwise
   // the table I walked up to (setup at an empty one, join at a forming one).
   const interior = tab === 'lounge' || tab === 'casino' ? tab : null;
-  let tableSheet: { game: GameKind; mode: SheetMode; call?: string[] } | null =
-    null;
+  let tableSheet: {
+    game: GameKind;
+    mode: SheetMode;
+    call?: string[];
+    solo?: boolean;
+  } | null = null;
   if (interior && !inGame && visiting === null && connected) {
     if (seat && TABLE_AREA[seat.game] === interior)
       tableSheet = { game: seat.game, mode: 'seated' };
@@ -1686,7 +1696,8 @@ function AccountLounge({
               (st.phase === 'retained' && st.fill)
             ? 'join'
             : null;
-      if (mode) tableSheet = { game: sheet.game, mode, call: sheet.call };
+      if (mode)
+        tableSheet = { game: sheet.game, mode, call: sheet.call, solo: sheet.solo };
     }
   }
   const sheetNode = tableSheet && (
@@ -1697,6 +1708,7 @@ function AccountLounge({
       game={tableSheet.game}
       mode={tableSheet.mode}
       preselect={tableSheet.call}
+      solo={tableSheet.solo}
       notify={notify}
       onClose={() => setSheet(null)}
       onStand={() => {
@@ -2413,10 +2425,6 @@ function AccountLounge({
             {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- Static legacy game pages. */}
             <a href="./theater.html">
               우당탕 극장 <small>약 16MB</small> <ArrowUpRight size={12} />
-            </a>
-            {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- Static legacy game pages. */}
-            <a href="./island.html">
-              지난 섬으로 <small>약 28MB</small> <ArrowUpRight size={12} />
             </a>
             <button className="danger" onClick={() => guarded('reset', reset)}>
               코디 초기화

@@ -31,6 +31,7 @@ import {
   dyeSkinPixel,
   type SkinMask,
 } from './lounge-color';
+import { figureFrame, type FrameBox } from './lounge-figure-frame';
 type Piece = {
   c: HTMLCanvasElement;
   x: number;
@@ -85,6 +86,8 @@ const drawCanvas = (w: number, h: number) => {
 };
 const placeholder = { width: 0, height: 0 } as HTMLCanvasElement;
 type RigFrame = Piece & { originX: number; originY: number; resolution: number };
+/** A dyed figure with its accessories; `body` is the bare figure's box (same space). */
+type Composite = Piece & { body: FrameBox };
 
 /** A cache bounded by approximate canvas bytes (w × h × 4), least recent evicted first. */
 class ByteLru<V extends { c: HTMLCanvasElement }> {
@@ -890,7 +893,7 @@ async function prepare() {
     return result;
   }
   // Byte-bounded: a composed 520×660 figure is ~1.4 MB of canvas memory.
-  const cache = new ByteLru<Piece>(40 * 1024 * 1024);
+  const cache = new ByteLru<Composite>(40 * 1024 * 1024);
   // Rig parts (one set per actor × look) and their posed frames. Frames are
   // rendered at the target's resolution bucket, so a village figure costs
   // ~0.4 MB per pose; a miss only re-runs a handful of drawImage calls.
@@ -902,7 +905,7 @@ async function prepare() {
   const rigScratch = drawCanvas(1, 1);
   const lastDraw = new WeakMap<
     HTMLCanvasElement,
-    { piece: Piece; key: string }
+    { piece: Piece; key: string; bodyTop: number; bodyBottom: number }
   >();
   /** The static figure a look shows (standing pose unless `frame` picks a legacy step). */
   function staticFigure(actor: number, look: Look, frame: number) {
@@ -934,7 +937,7 @@ async function prepare() {
     look: Look,
     frame: number,
     generated?: { sheet: MotionSheet; motion: 'walk' | 'run' },
-  ) {
+  ): Composite {
     const key = JSON.stringify([actor, look, frame, generated?.sheet.id, generated?.motion]);
     const hit = cache.get(key);
     if (hit) return hit;
@@ -1009,9 +1012,22 @@ async function prepare() {
         h,
       );
     }
-    const result = generated
-      ? { c, ...motionCrop(generated.sheet, actor, look) }
-      : bounds(c);
+    // The bare figure's box sets the drawn scale and anchor (see figureFrame),
+    // so accessories never resize or shift the character.
+    const bare = generated
+        ? motionCrop(generated.sheet, actor, {
+            ...look,
+            hat: 'none',
+            glasses: 'none',
+            clip: false,
+          })
+        : (base.body ??= bounds(base.c)),
+      body = generated
+        ? { x: bare.x, y: bare.y, w: bare.w, h: bare.h }
+        : { x: bare.x + 60, y: bare.y + 150, w: bare.w, h: bare.h };
+    const result: Composite = generated
+      ? { c, ...motionCrop(generated.sheet, actor, look), body }
+      : { ...bounds(c), body };
     cache.set(key, result);
     return result;
   }
@@ -1120,7 +1136,11 @@ async function prepare() {
       time = 0,
       portrait = false,
       reduced = false,
-      options: { facing?: 1 | -1 } = {},
+      options: {
+        facing?: 1 | -1;
+        /** Top share of the canvas kept free for hats (world canvases; see HAT_HEADROOM). */
+        headroom?: number;
+      } = {},
     ) {
       const look = readLook(input, actor);
       if (!isReady(actor, look)) {
@@ -1167,20 +1187,23 @@ async function prepare() {
           generated,
         ),
         ctx = target.getContext('2d')!;
-      // The idle composite sets the scale for every motion, so starting and
-      // stopping never changes the figure's size or ground line.
-      const scale = portrait
-          ? target.width / (base.w * 0.94)
-          : Math.min(
-              (target.width * 0.92) / base.w,
-              (target.height * 0.94) / base.h,
-            ),
+      // The bare figure sets the scale and anchor for every motion and look,
+      // so starting, stopping or putting on a hat never changes the figure's
+      // size or ground line (figureFrame).
+      const frameBox = figureFrame(
+          target,
+          base.body,
+          base,
+          portrait,
+          options.headroom ?? 0,
+        ),
+        scale = frameBox.scale,
         pose = {
           ...motionTransform(motion, time, reduced || !!generated || rigged),
         };
       let f: Piece = base,
-        dx = (-base.w * scale) / 2,
-        dy = portrait ? 0 : -base.h * scale,
+        dx = frameBox.dx,
+        dy = frameBox.dy,
         dw = base.w * scale,
         dh = base.h * scale;
       if (rigged) {
@@ -1216,6 +1239,7 @@ async function prepare() {
         target.width,
         target.height,
         portrait,
+        options.headroom ?? 0,
         options.facing ?? 1,
         pose.lift,
         pose.tilt,
@@ -1227,10 +1251,8 @@ async function prepare() {
       ctx.clearRect(0, 0, target.width, target.height);
       ctx.save();
       ctx.translate(
-        target.width / 2,
-        portrait
-          ? target.height * 0.08
-          : target.height * 0.97 - pose.lift * scale,
+        frameBox.anchorX,
+        frameBox.anchorY - (portrait ? 0 : pose.lift * scale),
       );
       ctx.rotate(pose.tilt);
       ctx.scale(
@@ -1239,8 +1261,24 @@ async function prepare() {
       );
       ctx.drawImage(f.c, f.x, f.y, f.w, f.h, dx, dy, dw, dh);
       ctx.restore();
-      lastDraw.set(target, { piece: f, key: drawKey });
+      const bodyTop = portrait
+        ? frameBox.anchorY
+        : frameBox.anchorY - base.body.h * scale;
+      lastDraw.set(target, {
+        piece: f,
+        key: drawKey,
+        bodyTop,
+        bodyBottom: bodyTop + base.body.h * scale,
+      });
       return true;
+    },
+    /**
+     * Canvas rows of the last drawn figure's body (hat excluded), unlifted.
+     * Seated figures cut their legs relative to it, not to a hat's top.
+     */
+    bodyRows(target: HTMLCanvasElement) {
+      const last = lastDraw.get(target);
+      return last ? { top: last.bodyTop, bottom: last.bodyBottom } : null;
     },
   };
 }

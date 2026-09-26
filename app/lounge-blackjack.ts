@@ -129,7 +129,8 @@ export function newBlackjack(
     !Number.isInteger(first) ||
     first < 0 ||
     first >= count ||
-    count < 2 ||
+    // One seat = 혼자 하기 against the dealer.
+    count < 1 ||
     count > 7 ||
     !Number.isSafeInteger(stake) ||
     stake <= 0 ||

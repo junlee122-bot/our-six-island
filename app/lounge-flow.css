@@ -554,6 +554,57 @@
   background: #fff;
   color: #3a3226;
 }
+.l-sheet-solo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px dashed #c9b88f;
+  border-radius: 12px;
+  background: #fbf6e9;
+}
+.l-sheet-solo.is-lead {
+  border-style: solid;
+  border-color: #3f6a4a;
+  background: #eef4e8;
+}
+.l-sheet-solo p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #5f5240;
+}
+.l-sheet-solo p strong {
+  color: #2f4a35;
+}
+.l-sheet-solo button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #3f6a4a;
+  border-radius: 12px;
+  background: #fff;
+  color: #2f4a35;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.l-sheet-solo button:hover {
+  background: #f3f8ee;
+}
+.l-sheet-solo button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.l-sheet-solo .l-sheet-key {
+  margin-left: 2px;
+}
 /* The old-menu table picker ("어느 테이블로 갈까요?"). */
 .l-table-picker {
   display: grid;
