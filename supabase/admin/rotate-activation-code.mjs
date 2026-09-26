@@ -10,9 +10,15 @@
 //    (default 7 days), revokes app + Auth sessions; --reset also returns an
 //    already-activated (hijacked) account to "not activated" and clears its
 //    recovery code;
-// 3. sets the Auth password to the code via the admin API;
-// 4. prints the code to THIS terminal only. Hand it over 1:1. Never paste it
-//    into an AI chat, a group chat, an issue or the repository.
+// 3. sets the Auth password to the code via the admin API. If this fails the
+//    rotation is ROLLED BACK: the stored hash is replaced by the hash of a
+//    discarded random value (so neither the new nor any old code activates the
+//    account) and the Auth password is scrambled to a random value, so an old
+//    (possibly leaked) code left as the Auth password cannot log in either.
+//    Re-run the script afterwards;
+// 4. prints the code to THIS terminal only (never on failure). Hand it over
+//    1:1. Never paste it into an AI chat, a group chat, an issue or the
+//    repository.
 //
 // Requires migration 20260924120000_hohyeon_hardening.sql. Never commit the
 // service role key; pass it through the environment only.
@@ -54,9 +60,33 @@ if (error || !uid) {
 }
 const { error: pwError } = await admin.auth.admin.updateUserById(uid, { password: code });
 if (pwError) {
-  // The stored hash already points at the new code but the password does not
-  // match it, so the account cannot be activated until this step succeeds.
-  console.error('Password update failed:', pwError.message, '- re-run this script.');
+  // The stored hash now points at the new code, but GoTrue may still hold the
+  // OLD code as the password. Roll back: point the hash at a discarded random
+  // value (nobody knows a matching code) and scramble the Auth password, so
+  // neither the new code nor an old leaked one can activate or log in. The
+  // hohyeon-auth login "repair" path also refuses code-shaped passwords (D-1).
+  console.error('Password update failed:', pwError.message);
+  const discard = randomBytes(32).toString('hex');
+  const { error: undoError } = await admin.rpc('hh_admin_rotate_activation', {
+    p_username: username,
+    p_hash: createHash('sha256').update(discard, 'utf8').digest('hex'),
+    p_days: 1,
+    p_reset: reset,
+  });
+  const { error: scrambleError } = await admin.auth.admin.updateUserById(uid, {
+    password: randomBytes(32).toString('base64url'),
+  });
+  if (undoError || scrambleError) {
+    console.error(
+      'ROLLBACK INCOMPLETE:',
+      undoError ? 'hash rollback failed (' + undoError.message + ')' : 'hash rolled back',
+      '/',
+      scrambleError ? 'password scramble failed (' + scrambleError.message + ')' : 'password scrambled',
+    );
+    console.error('Re-run this script now; until it succeeds, check hohyeon.auth_events for logins.');
+  } else {
+    console.error('Rotation rolled back (no code is valid). Re-run this script.');
+  }
   process.exit(1);
 }
 console.log('');

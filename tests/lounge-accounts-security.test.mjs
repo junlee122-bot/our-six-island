@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AccountSaveError,
+  activationCodeExpired,
+  unactivatedLoginProblem,
   accountSave,
   authFailureKey,
   authLockoutSeconds,
@@ -110,4 +112,25 @@ test('schema migration hook upgrades or refuses', () => {
   assert.throws(() => migrateLoungeSave([]), (e) => e.reason === 'parse');
   assert.throws(() => migrateLoungeSave({ version: -1 }), (e) => e.reason === 'version');
   assert.throws(() => migrateLoungeSave({ version: LOUNGE_SAVE_VERSION + 1 }), (e) => e.reason === 'newer');
+});
+
+test('D-1: login repair on an unactivated account refuses code-shaped passwords and expired codes', () => {
+  const now = Date.parse('2026-09-26T00:00:00Z');
+  const future = new Date(now + 3_600_000).toISOString();
+  const past = new Date(now - 1).toISOString();
+  // An old (leaked) code left as the Auth password by a half-finished rotation.
+  assert.equal(unactivatedLoginProblem(HH, future, now), 'repair_code_shaped');
+  assert.equal(unactivatedLoginProblem(' ' + HH.toUpperCase() + ' ', null, now), 'repair_code_shaped');
+  assert.equal(unactivatedLoginProblem(HR, null, now), 'repair_code_shaped');
+  // A legitimate repair: the friend's new (non-code) password, code not expired.
+  assert.equal(unactivatedLoginProblem('correct horse battery', future, now), null);
+  assert.equal(unactivatedLoginProblem('correct horse battery', null, now), null);
+  // Expired: refused even with a normal-looking password.
+  assert.equal(unactivatedLoginProblem('correct horse battery', past, now), 'repair_code_expired');
+  assert.equal(activationCodeExpired(new Date(now).toISOString(), now), true);
+  assert.equal(activationCodeExpired(future, now), false);
+  assert.equal(activationCodeExpired(null, now), false);
+  assert.equal(activationCodeExpired('not a date', now), true);
+  // Every password the repair path accepts is also one newPasswordProblem accepts.
+  assert.equal(newPasswordProblem(HH), PASSWORD_IS_CODE);
 });

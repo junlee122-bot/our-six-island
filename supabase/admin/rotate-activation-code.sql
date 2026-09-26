@@ -36,12 +36,16 @@ with params as (
   returning u.id
 )
 select r.value as new_activation_code,
-       (select count(*) from pw) = 1 as password_set,
+       -- Guard: if the Auth password was NOT set this divides by zero, which
+       -- aborts the whole statement, so the new hash (step 1+2) rolls back
+       -- too. No half-rotated state where GoTrue still holds an old code.
+       1 / (select count(*) from pw) = 1 as password_set,
        (select now() + make_interval(days => days) from params) as expires_about
   from rotated r;
 
--- If password_set is false, run the .mjs script instead (it uses the Auth
--- admin API) — the account then stays locked until the password matches.
+-- If this fails with "division by zero", NOTHING was changed (the statement is
+-- atomic): run the .mjs script instead (it uses the Auth admin API and rolls
+-- back on failure).
 --
 -- Optional checks afterwards:
 --   select username, activated, activation_expires_at, recovery_hash is not null as has_recovery
