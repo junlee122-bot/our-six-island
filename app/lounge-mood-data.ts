@@ -208,7 +208,7 @@ export const COZY_SCORE_MAX = 999;
 
 // ---------------------------------------------------------------- inspirations
 /** Gauge fills by (mood − 65) per active minute; full at 600 → one inspiration. */
-export const INSPIRATION_GAUGE = 600;
+export const INSPIRATION_GAUGE = 720;
 export const INSPIRATION_FROM = 65;
 export const INSPIRATIONS_PER_DAY = 1;
 export const INSPIRATIONS_PER_WEEK = 3;

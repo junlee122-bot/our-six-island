@@ -387,8 +387,9 @@ export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
 
 /**
  * The one hook other systems use to scale skill XP (e.g. the mood system's
- * +10/+15% and −10% at 지쳤어요). Applied after the daily soft cap and before
- * rested XP; the cap itself is unchanged. 1 = no change.
+ * +10/+15% and −10% at 지쳤어요). Applied to the raw gain before the daily
+ * soft cap, so a good mood only reaches the cap sooner (capped XP gets no
+ * bonus); the cap itself is unchanged. 1 = no change.
  */
 export function xpMultiplier(life: LifeState, uid: string, _skill: SkillId, now: number): number {
   return moodXpMult(life, uid, now);
@@ -403,10 +404,13 @@ export function gainXp(life: LifeState, uid: string, skill: SkillId, base: numbe
   const u = userToday(life, uid, now);
   const raw = base * (behindVillage(life, uid, skill) ? CATCH_UP : 1);
   const used = u.dxp?.[skill] ?? 0;
-  const full = Math.max(0, Math.min(raw, SOFT_CAP - used));
-  // Multipliers from other systems (mood…) apply on top; the cap counts raw XP only.
-  let gain = (full + (raw - full) * OVER_CAP_RATE) * xpMultiplier(life, uid, skill, now);
-  (u.dxp ??= {})[skill] = tenth(Math.min(XP_MAX, used + raw));
+  // Multipliers from other systems (mood…) scale only the part under the soft
+  // cap (it fills sooner); what spills over counts unmultiplied.
+  const mult = xpMultiplier(life, uid, skill, now);
+  const full = Math.max(0, Math.min(raw * mult, SOFT_CAP - used));
+  const over = Math.max(0, raw - full / mult);
+  let gain = full + over * OVER_CAP_RATE;
+  (u.dxp ??= {})[skill] = tenth(Math.min(XP_MAX, used + full + over));
   const rest = u.rest?.[skill] ?? 0;
   if (rest > 0 && gain > 0) {
     const bonus = Math.min(rest, gain);

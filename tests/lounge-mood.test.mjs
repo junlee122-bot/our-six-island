@@ -260,7 +260,7 @@ test('festival and talk raise the target; the shown mood follows one point a min
 });
 
 // ------------------------------------------------------------ XP multiplier
-test('XP multiplier: +15% / +10% / ×1 / −10% by tier; the daily soft cap counts unmultiplied XP', () => {
+test('XP multiplier: +15% / +10% / ×1 / −10% by tier, before the soft cap (reached sooner, never raised)', () => {
   const s = world(1);
   const [m] = s.members;
   s.act(m, { kind: 'status', text: '' }, T0);
@@ -271,26 +271,31 @@ test('XP multiplier: +15% / +10% / ×1 / −10% by tier; the daily soft cap coun
     assert.equal(xpMultiplier(s.life, m.id, 'fish', T0), mult);
     assert.equal(tierOf(v), ['great', 'good', 'ok', 'low', 'tired'][[90, 70, 50, 25, 17].indexOf(v)]);
   }
-  // Same raw XP at mood 90 and 50: ×1.15 gain, identical cap counters.
-  const run = (v) => {
+  const run = (v, gains) => {
     const t = world(1);
     const [p] = t.members;
     t.act(p, { kind: 'status', text: '' }, T0);
     t.mood(p).v = v;
-    gainXp(t.life, p.id, 'fish', 100, T0);
-    gainXp(t.life, p.id, 'fish', 100, T0);
+    const got = gains.map((g) => gainXp(t.life, p.id, 'fish', g, T0));
     const g = t.life.growth.u[p.id];
-    return { xp: g.xp.fish, dxp: g.dxp.fish };
+    return { xp: g.xp.fish, dxp: g.dxp.fish, got };
   };
-  const hi = run(90),
-    mid = run(50),
-    lo = run(17);
-  assert.equal(hi.dxp, mid.dxp, 'the cap counter ignores mood');
-  assert.equal(mid.dxp, 200);
-  const base = SOFT_CAP + (200 - SOFT_CAP) * OVER_CAP_RATE;
-  near(mid.xp, base, 0.11);
-  near(hi.xp, base * 1.15, 0.11);
-  near(lo.xp, base * 0.9, 0.11);
+  // Under the cap: ×1.15 / ×0.9.
+  const small = SOFT_CAP / 2;
+  near(run(90, [small]).xp, small * 1.15, 0.11);
+  near(run(50, [small]).xp, small, 0.11);
+  near(run(17, [small]).xp, small * 0.9, 0.11);
+  // Reaching the cap: everyone ends at the same cap; a good mood gets there with less play.
+  const hi = run(90, [SOFT_CAP, SOFT_CAP]),
+    mid = run(50, [SOFT_CAP, SOFT_CAP]);
+  assert.ok(hi.dxp >= SOFT_CAP && mid.dxp >= SOFT_CAP);
+  near(hi.xp - (hi.dxp - SOFT_CAP) * OVER_CAP_RATE, SOFT_CAP, 0.2);
+  near(mid.xp - (mid.dxp - SOFT_CAP) * OVER_CAP_RATE, SOFT_CAP, 0.2);
+  // Past the cap: capped XP gets no bonus (the same trickle at any mood).
+  const after = (v) => run(v, [SOFT_CAP * 2, 50]).got[1];
+  near(after(90), 50 * OVER_CAP_RATE, 0.11);
+  near(after(50), 50 * OVER_CAP_RATE, 0.11);
+  near(after(17), 50 * OVER_CAP_RATE, 0.11);
 });
 
 // ------------------------------------------------------------ inspirations

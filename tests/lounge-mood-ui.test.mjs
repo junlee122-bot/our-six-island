@@ -9,7 +9,7 @@ const HOUR = 3_600_000;
 function view(patch) {
   const me = crypto.randomUUID(),
     pal = crypto.randomUUID();
-  let life = ensureLifeMember(ensureLifeMember(emptyLife(), me, 3), pal, 6);
+  const life = ensureLifeMember(ensureLifeMember(emptyLife(), me, 3), pal, 6);
   life.mood = { [me]: { n: [70, 100, 60, 60], at: T0, v: 60, ...patch.me }, ...(patch.pal ? { [pal]: { n: [50, 50, 50, 50], at: T0, v: 50, ...patch.pal } } : {}) };
   return lifeView(life, me, 3, T0).mood;
 }
