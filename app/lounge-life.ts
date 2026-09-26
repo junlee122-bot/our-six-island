@@ -67,6 +67,19 @@ import {
   type GrowthView,
 } from './lounge-growth.ts';
 import { socialAction, socialView, type SocialAction, type SocialView } from './lounge-life-social.ts';
+// 무드(기분): same cycle rule (functions only); the action kinds come from the leaf data module.
+import { MOOD_ACTION_KINDS } from './lounge-mood-data.ts';
+import {
+  moodAction,
+  moodAfterLifeAction,
+  moodBeforeLifeAction,
+  moodHarvestQuality,
+  moodView,
+  readMood,
+  type MoodAction,
+  type MoodExt,
+  type MoodView,
+} from './lounge-mood.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
 export type Crop =
@@ -455,7 +468,8 @@ export type LifeState = {
   harvested?: Record<string, Partial<Record<HarvestKind, number>>>;
 } & LifeExt &
   GrowthExt &
-  VenueExt;
+  VenueExt &
+  MoodExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -486,7 +500,9 @@ export type LifeAction =
   /** Skills, blacksmith, 마을 개척, material nodes (lounge-growth.ts). */
   | GrowthAction
   /** 가게 업그레이드 (lounge-venue-upgrades.ts). */
-  | VenueAction;
+  | VenueAction
+  /** 무드: snack, bed rest, bar drink, 촌장님 찻잔, sharing, 응원하기 (lounge-mood.ts). */
+  | MoodAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -504,6 +520,7 @@ export const LIFE_ACTION_KINDS = [
   ...SOCIAL_ACTION_KINDS,
   ...GROWTH_ACTION_KINDS,
   ...VENUE_ACTION_KINDS,
+  ...MOOD_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -841,6 +858,7 @@ export function readLife(value: unknown): LifeState {
     ...readLifeExt(v),
     ...readGrowth(v.growth),
     ...readVenues(v.venues),
+    ...readMood(v.mood),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -928,6 +946,20 @@ export function lifeAction(
   action: LifeAction,
   now: number,
 ): { life: LifeState; ledger: LoungeLedger } {
+  // 무드: brought up to now first (XP multiplier, inspirations), then the
+  // events of what the action changed (lounge-mood.ts).
+  const before = moodBeforeLifeAction(original, member, now);
+  const next = lifeActionCore(before, ledger, member, action, now);
+  moodAfterLifeAction(before, next.life, member, action, now);
+  return next;
+}
+function lifeActionCore(
+  original: LifeState,
+  ledger: LoungeLedger,
+  member: { id: string; actor: number },
+  action: LifeAction,
+  now: number,
+): { life: LifeState; ledger: LoungeLedger } {
   if (!isLifeAction(action)) fail(LIFE_REJECT.invalid);
   const life = cloneLife(ensureLifeMember(original, member.id, member.actor));
   const uid = member.id,
@@ -955,6 +987,10 @@ export function lifeAction(
   }
   if ((PLUS_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = plusAction(life, ledger, member, a as PlusAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((MOOD_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = moodAction(life, ledger, member, a as MoodAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((SOCIAL_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1041,7 +1077,8 @@ export function lifeAction(
           continue;
         }
         const crop = plot.crop,
-          quality = plotQuality(uid, i, plot);
+          // 무드: 풍작 영감 lifts the plot one quality step.
+          quality = moodHarvestQuality(life, uid, plotQuality(uid, i, plot), now);
         addCropQ(life, uid, crop, quality, 1);
         countHarvest(life, uid, crop, 1);
         bump(life, uid, 'harvest', 1);
@@ -1314,6 +1351,8 @@ export type LifeView = {
   growth?: GrowthView;
   /** 가게 업그레이드 progress (static defs: VENUE_UPGRADES, same order; absent from older servers). */
   venues?: VenueUpgradeView[];
+  /** 무드: my mood (projected to serverNow, never written by a read) and friends' faces. */
+  mood?: MoodView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1403,6 +1442,7 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { social: socialView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
     venues: venuesView(life),
+    ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

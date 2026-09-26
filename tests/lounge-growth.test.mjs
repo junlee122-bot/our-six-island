@@ -21,6 +21,7 @@ import {
   forgeReadyAt,
   gainXp,
   growthMods,
+  xpMultiplier,
   nextSixAm,
   nodesFor,
   readGrowth,
@@ -147,17 +148,17 @@ test('fishing XP by rarity, 1 XP for a miss; forage 5, bugs 4; cooking 6 and cra
   assert.equal(s.xp(m, 'craft'), 2 * XP.craft);
 });
 
-test('daily soft cap: 200 in full, then 20%; resets at KST midnight', () => {
+test('daily soft cap: SOFT_CAP in full, then 20%; resets at KST midnight', () => {
   const s = world(1);
   const [m] = s.members;
   setXp(s, m, 'fish', 0);
-  gainXp(s.life, m.id, 'fish', 150, T0);
-  gainXp(s.life, m.id, 'fish', 150, T0 + 1000);
-  // 150 + 50 + 100 × 0.2
-  assert.equal(s.xp(m, 'fish'), 150 + 50 + 20);
+  assert.equal(SOFT_CAP, 150);
+  gainXp(s.life, m.id, 'fish', 100, T0);
+  gainXp(s.life, m.id, 'fish', 100, T0 + 1000);
+  // 150 in full + 50 × 0.2
+  assert.equal(s.xp(m, 'fish'), 150 + 10);
   gainXp(s.life, m.id, 'fish', 100, T0 + DAY);
-  assert.equal(s.xp(m, 'fish'), 320);
-  assert.equal(SOFT_CAP, 200);
+  assert.equal(s.xp(m, 'fish'), 260);
 });
 
 test('rested XP: 100 per skill per day away (max 300) doubles XP until spent', () => {
@@ -179,7 +180,7 @@ test('rested XP: 100 per skill per day away (max 300) doubles XP until spent', (
   assert.equal(t.life.growth.u[n.id].rest.fish, 100);
 });
 
-test('catch-up: ×1.5 XP while below the village median level of that skill', () => {
+test('catch-up: ×1.5 XP only when 2+ levels below the village median of that skill', () => {
   const s = world(3);
   const [a, b, c] = s.members;
   setXp(s, a, 'fish', LEVEL_XP[5]);
@@ -190,6 +191,11 @@ test('catch-up: ×1.5 XP while below the village median level of that skill', ()
   gainXp(s.life, a.id, 'fish', 10, T0);
   assert.equal(s.xp(a, 'fish'), LEVEL_XP[5] + 10);
   assert.equal(s.g(c, T0).skills.find((k) => k.id === 'fish').behind, true);
+  // One level behind (Lv5 vs median Lv6): no bonus.
+  setXp(s, c, 'fish', LEVEL_XP[4]);
+  gainXp(s.life, c.id, 'fish', 10, T0 + 1);
+  assert.equal(s.xp(c, 'fish'), LEVEL_XP[4] + 10);
+  assert.equal(xpMultiplier(s.life, c.id, 'fish', T0), 1);
 });
 
 test('retro XP from lifetime stats on first touch, capped at Lv5, never lowers XP', () => {

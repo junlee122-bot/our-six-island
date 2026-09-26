@@ -68,6 +68,8 @@ import {
 } from './lounge-growth-data.ts';
 import { LIFE_REJECT, LifeError, uidOf, type LifeState } from './lounge-life.ts';
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
+// 무드: the XP multiplier of the current mood (functions only, same cycle rule).
+import { moodXpMult } from './lounge-mood.ts';
 
 const DAY = 86_400_000,
   HOUR = 3_600_000;
@@ -344,8 +346,8 @@ export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
  * +10/+15% and −10% at 지쳤어요). Applied after the daily soft cap and before
  * rested XP; the cap itself is unchanged. 1 = no change.
  */
-export function xpMultiplier(_life: LifeState, _uid: string, _skill: SkillId, _now: number): number {
-  return 1;
+export function xpMultiplier(life: LifeState, uid: string, _skill: SkillId, now: number): number {
+  return moodXpMult(life, uid, now);
 }
 /**
  * Adds XP from a life action: ×CATCH_UP when behind the village median, the

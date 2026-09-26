@@ -31,7 +31,14 @@ import {
 import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
 import { lifeWealth, recordTables, recordVisit } from './lounge-life-plus.ts';
 import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } from './lounge-party.ts';
-export type CloudMember = { id: string; actor: number; username: string };
+import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
+export type CloudMember = {
+  id: string;
+  actor: number;
+  username: string;
+  /** 무드 아늑함: room score of the member's profile save (hohyeon-api), when known. */
+  room?: number;
+};
 type Lease = { connection: string; seen: number; sequence: number };
 type Room = { snapshot: HostedRoomSnapshot; leases: Record<string, Lease> };
 type Receipt = {
@@ -505,6 +512,24 @@ export function cloudTransition(
     const next = recordTables(readLife(g.life), g.ledger, settled, now);
     g.life = next.life;
     g.ledger = next.ledger;
+  }
+  // 무드 (lounge-mood.ts): only on a row that is written anyway — a new command
+  // or a read that refreshed its lease. A plain read never writes (D-3).
+  if (!receipt && g.life && (mutating || moodWritesAnyway(original.rooms, g.rooms, member.id, now))) {
+    const a = command.op === 'action' && ok ? (command.action as { kind?: unknown; area?: unknown; home?: unknown } | undefined) : undefined;
+    g.life = moodAfterCloud({
+      life: readLife(g.life),
+      before: lifeBefore,
+      member,
+      prevGames: original.ledger.games,
+      games: g.ledger.games,
+      prevRooms: original.rooms,
+      rooms: g.rooms,
+      leaseMs: CLOUD_LEASE_MS,
+      visited: a?.kind === 'area' && a.area === 'home' && validHomeOwner(a.home) ? (a.home as number) : null,
+      room: member.room,
+      now,
+    });
   }
   // No packet before the caller atomically commits g. A receipt returns a fresh
   // authorized view, never another connection's historical private response.

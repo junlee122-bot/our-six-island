@@ -133,6 +133,8 @@ import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 import { XP, fishXp } from './lounge-growth-data.ts';
 import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
+// 무드: 입질 영감 (functions only; see the cycle note above).
+import { moodBiteBoost } from './lounge-mood.ts';
 /** 오늘의 가구 rerolls a day (+2 with 나무결 가구점's 단골 손님 대접). */
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
@@ -1399,7 +1401,8 @@ export function plusAction(
         rod = x.rod ?? 1,
         luck = buffOf(life, uid, now)?.kind === 'luck',
         bait = invCount(life, uid, 'bait') > 0,
-        mods = growthMods(life, uid);
+        mods = growthMods(life, uid),
+        insp = moodBiteBoost(life, uid, now);
       // 성장: 미끼꾼 / 미끼 연구가 sometimes keep the bait.
       if (bait && !growthChance(life, uid, 'bait', mods.baitKeep, now)) addInv(life, uid, 'bait', -1);
       const seq = ++life.seq,
@@ -1412,6 +1415,7 @@ export function plusAction(
         (bait ? 2 : 1) *
         (rod === 3 ? 1.5 : 1) *
         (lights ? LIGHTS_RARE_BOOST : 1) *
+        insp.rare *
         (a.spot === 'sea' || a.spot === 'harbor' || a.spot === 'rocks' ? 1 + mods.seaRare : 1);
       const fish =
         pickWeighted(
@@ -1422,7 +1426,7 @@ export function plusAction(
       const [lo, hi] = fish.cm,
         cm = lo + (hash32(`cm:${token}`) % (hi - lo + 1)),
         biteAt = now + BITE_MIN_MS + (hash32(`bite:${token}`) % BITE_SPREAD_MS),
-        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * (luck ? 1.2 : 1) * (1 + mods.biteWindow));
+        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * (luck ? 1.2 : 1) * (1 + mods.biteWindow) * insp.window);
       x.pending = {
         token: token.slice(0, 24),
         spot: a.spot,

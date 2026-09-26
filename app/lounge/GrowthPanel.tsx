@@ -20,6 +20,7 @@ import {
   RESPEC_PRICE,
   SKILLS,
   SKILL_INFO,
+  SOFT_CAP,
   TIER_NAME,
   TOOLS,
   TOOL_INFO,
@@ -512,9 +513,9 @@ function SkillRow({
               : `${Math.floor(s.xp - s.from)} / ${span} XP`}
             <span
               className="l-skill-cap"
-              data-tip={`하루 ${200} XP까지는 온전히, 그 뒤는 20%만 쌓여요`}
+              data-tip={`하루 ${SOFT_CAP} XP까지는 온전히, 그 뒤는 20%만 쌓여요`}
             >
-              오늘 {Math.min(200, Math.round(s.today))}/200
+              오늘 {Math.min(SOFT_CAP, Math.round(s.today))}/{SOFT_CAP}
             </span>
             {s.rest > 0 && (
               <span
@@ -527,7 +528,7 @@ function SkillRow({
             {s.behind && (
               <span
                 className="l-skill-behind"
-                data-tip={`마을 친구들 가운데 레벨(Lv${s.median})보다 낮으면 XP ×1.5`}
+                data-tip={`마을 친구들 가운데 레벨(Lv${s.median})보다 2레벨 이상 낮으면 XP ×1.5`}
               >
                 선배의 가르침 ×1.5
               </span>
