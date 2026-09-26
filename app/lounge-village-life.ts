@@ -200,7 +200,12 @@ export function nearMailbox(point: VillagePoint, actor: number) {
 
 /* ------------------------------------------------------------ plot stages */
 
-export type PublicPlot = { crop: Crop | null; stage: 0 | 1 | 2 | 3 };
+export type PublicPlot = {
+  crop: Crop | null;
+  stage: 0 | 1 | 2 | 3;
+  /** Growing and not watered today (friends can water it); unknown = undefined. */
+  thirsty?: boolean;
+};
 /**
  * Plots to draw in front of `actor`'s home. My own farm comes from `me.farm`
  * (fresher, includes timers); friends' from `housesPlotsPublic` via the
@@ -216,7 +221,11 @@ export function plotsForActor(
   if (!life) return empty();
   let source: PublicPlot[] | undefined;
   if (actor === selfActor && life.me?.farm?.length)
-    source = life.me.farm.map((p) => ({ crop: p.crop, stage: p.stage }));
+    source = life.me.farm.map((p) => ({
+      crop: p.crop,
+      stage: p.stage,
+      thirsty: !!p.crop && p.stage < 3 && p.wateredAt === null && !p.rained,
+    }));
   else {
     const uid = Object.entries(life.actors ?? {}).find(
       ([, a]) => a === actor,
@@ -228,7 +237,12 @@ export function plotsForActor(
   for (let i = 6; i < Math.min(12, source?.length ?? 0); i++) out.push({ crop: null, stage: 0 });
   source?.slice(0, 12).forEach((p, i) => {
     const stage = Math.max(0, Math.min(3, Math.floor(Number(p.stage) || 0)));
-    out[i] = { crop: p.crop ?? null, stage: (p.crop ? stage : 0) as 0 | 1 | 2 | 3 };
+    const thirsty = 'needsWater' in p ? !!(p as { needsWater?: boolean }).needsWater : p.thirsty;
+    out[i] = {
+      crop: p.crop ?? null,
+      stage: (p.crop ? stage : 0) as 0 | 1 | 2 | 3,
+      ...(p.crop && thirsty !== undefined ? { thirsty } : {}),
+    };
   });
   return out;
 }

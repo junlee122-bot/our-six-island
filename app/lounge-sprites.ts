@@ -905,7 +905,7 @@ async function prepare() {
   const rigScratch = drawCanvas(1, 1);
   const lastDraw = new WeakMap<
     HTMLCanvasElement,
-    { piece: Piece; key: string; bodyTop: number; bodyBottom: number }
+    { piece: Piece; key: string; top: number; bodyTop: number; bodyBottom: number }
   >();
   /** The static figure a look shows (standing pose unless `frame` picks a legacy step). */
   function staticFigure(actor: number, look: Look, frame: number) {
@@ -1267,6 +1267,7 @@ async function prepare() {
       lastDraw.set(target, {
         piece: f,
         key: drawKey,
+        top: frameBox.anchorY + frameBox.dy,
         bodyTop,
         bodyBottom: bodyTop + base.body.h * scale,
       });
@@ -1276,6 +1277,16 @@ async function prepare() {
      * Canvas rows of the last drawn figure's body (hat excluded), unlifted.
      * Seated figures cut their legs relative to it, not to a hat's top.
      */
+    /**
+     * How far (share of the canvas height) the last drawn figure's hat rises
+     * above its hair; name tags are lifted by it so they never cover a hat.
+     */
+    hatRise(target: HTMLCanvasElement) {
+      const last = lastDraw.get(target);
+      return last && target.height
+        ? Math.max(0, last.bodyTop - last.top) / target.height
+        : 0;
+    },
     bodyRows(target: HTMLCanvasElement) {
       const last = lastDraw.get(target);
       return last ? { top: last.bodyTop, bottom: last.bodyBottom } : null;

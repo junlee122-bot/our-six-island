@@ -150,6 +150,10 @@ export function PokerTable({
     cards: g.board.length + (g.hand.length ? n * 2 : 0),
     flips: g.revealed.filter((r) => r.seat !== seat).length,
     payout: over,
+    // Stings: someone all-in during the hand, or my big pot at the end.
+    big: !over
+      ? g.stacks.some((stack, i) => stack === 0 && !g.folded[i]) ? 'allin' : null
+      : seat >= 0 && g.result[seat] >= 20 * g.bigBlind ? 'bigwin' : null,
   });
   // Current best hand once the flop is out (the view holds only my cards).
   const myRank =

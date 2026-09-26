@@ -472,20 +472,21 @@ export class VillageKarchiveLayer {
   }
 
   private placeFences(source: THREE.Group) {
-    // Resident side fences (VILLAGE_DECOR 'fence', each a z-run) as picket segments.
+    // Resident side fences (VILLAGE_DECOR 'fence' z-runs) and the yard fence
+    // along the lane (x-runs, VILL-2) as picket segments.
     const placements: Placement[] = [];
     for (const item of VILLAGE_DECOR) {
       if (item.kind !== 'fence' || item.collider?.shape !== 'box') continue;
-      const length = item.collider.d,
+      const alongX = item.collider.w > item.collider.d,
+        length = alongX ? item.collider.w : item.collider.d,
         count = Math.max(1, Math.round(length / 0.6)),
         seg = length / count;
       for (let i = 0; i < count; i++)
-        placements.push({
-          x: item.x,
-          z: item.z - length / 2 + seg * (i + 0.5),
-          scale: seg,
-          rot: Math.PI / 2,
-        });
+        placements.push(
+          alongX
+            ? { x: item.x - length / 2 + seg * (i + 0.5), z: item.z, scale: [seg, 0.62, seg] as const, rot: 0 }
+            : { x: item.x, z: item.z - length / 2 + seg * (i + 0.5), scale: seg, rot: Math.PI / 2 },
+        );
     }
     this.root.add(instanced(source, placements, 'karchive-fences'));
   }

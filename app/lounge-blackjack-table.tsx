@@ -121,6 +121,8 @@ export function BlackjackTable({
       g.hands.reduce((a, hs) => a + hs.reduce((b, h) => b + h.cards.length, 0), 0),
     flips: hidden ? 0 : 1,
     payout: ended && g.result.some((r) => r > 0),
+    live: !ended,
+    big: ended && g.hands[seat]?.some((h) => h.outcome === 'blackjack') ? 'blackjack' : null,
   });
   return (
     <div className={'bj-club' + (ended ? ' is-over' : '')}>

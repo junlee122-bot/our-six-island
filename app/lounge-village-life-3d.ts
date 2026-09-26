@@ -10,9 +10,7 @@ import {
   PLOT_SIZE,
   farmBedRect,
   mailboxPoint,
-  plotCenterIn,
   cropVisual,
-  type FarmBed,
   type PublicPlot,
 } from './lounge-village-life';
 import {
@@ -20,7 +18,13 @@ import {
   VILLAGE_FURNISHINGS,
   VILLAGE_MARKET,
   VILLAGE_PLACES,
+  VILLAGE_YARDS,
+  YARD_FENCE_Z,
+  villageYard,
+  yardPlotCenter,
+  type FarmYard,
 } from './lounge-village-layout';
+import { ACTORS } from './lounge-roster';
 import { batchDirectMeshes } from './lounge-village-world';
 
 const std = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) =>
@@ -29,6 +33,14 @@ const MAT = {
   frame: std('#8a6242'),
   soil: std('#7a5234'),
   soilWet: std('#4f3421'),
+  /** Fallow ground in a bed that is not tilled yet (farm expansion). */
+  fallow: std('#8fa968'),
+  fallowStake: std('#c9a36a'),
+  stone: std('#b9b2a2'),
+  stoneDark: std('#8d877a'),
+  water: std('#6fb2c4', { roughness: 0.25, metalness: 0.05 }),
+  rope: std('#d8c39a'),
+  hover: new THREE.MeshBasicMaterial({ color: '#fff2c4', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false }),
   mound: std('#6a452b'),
   leaf: std('#5e9a48'),
   leafDark: std('#3f7a3a'),
@@ -347,6 +359,109 @@ function buildMarket(root: THREE.Object3D) {
   return g;
 }
 
+/** A friend's yard name board: a painted plank on two stakes (canvas on a plane). */
+function yardSignTexture(name: string, color: string) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 112;
+  const c = canvas.getContext('2d')!;
+  // Plank with a darker rim and two grain strokes.
+  c.fillStyle = '#7a5334';
+  c.beginPath();
+  c.roundRect(2, 8, 252, 98, 16);
+  c.fill();
+  c.fillStyle = '#e9cf9e';
+  c.beginPath();
+  c.roundRect(10, 15, 236, 84, 11);
+  c.fill();
+  c.strokeStyle = 'rgba(122, 83, 52, 0.28)';
+  c.lineWidth = 3;
+  for (const y of [34, 80]) {
+    c.beginPath();
+    c.moveTo(22, y);
+    c.bezierCurveTo(90, y - 6, 160, y + 6, 234, y - 2);
+    c.stroke();
+  }
+  // Owner colour ribbon at the left, then the name.
+  c.fillStyle = color;
+  c.beginPath();
+  c.roundRect(20, 30, 16, 52, 5);
+  c.fill();
+  c.fillStyle = '#4a2f1d';
+  c.font = 'bold 42px "Pretendard", "Apple SD Gothic Neo", sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(`${name}네 텃밭`, 140, 58);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 4;
+  return texture;
+}
+
+/**
+ * Static yard dressing (VILL-2): the name board at each gate, a stone well
+ * with a little roof and bucket, and a kerb of stones marking the yard's
+ * sides. Named groups so kArchive models can replace them later.
+ */
+function buildYards(root: THREE.Object3D) {
+  const wells = new THREE.Group(),
+    kerbs = new THREE.Group(),
+    signs = new THREE.Group();
+  wells.name = 'village-yard-wells';
+  kerbs.name = 'village-yard-kerbs';
+  signs.name = 'village-yard-signs';
+  root.add(wells, kerbs, signs);
+  const plane = new THREE.PlaneGeometry(1, 1);
+  for (const yard of VILLAGE_YARDS) {
+    const home = VILLAGE_PLACES.find((p) => p.actor === yard.actor);
+    // Well: stone ring, dark water, two posts, a pitched roof and a bucket.
+    const { x, z } = yard.well;
+    const ring = new THREE.Mesh(GEO.cylinder, MAT.stone);
+    ring.position.set(x, 0.24, z);
+    ring.scale.set(0.3, 0.44, 0.3);
+    const water = new THREE.Mesh(GEO.cylinder, MAT.water);
+    water.position.set(x, 0.43, z);
+    water.scale.set(0.23, 0.04, 0.23);
+    wells.add(ring, water);
+    for (const s of [-1, 1]) box(wells, MAT.woodDark, x + s * 0.27, 0.72, z, 0.06, 1.0, 0.06);
+    for (const s of [-1, 1]) {
+      const roof = box(wells, MAT.wood, x, 1.28, z + s * 0.17, 0.74, 0.04, 0.4);
+      roof.rotation.x = s * 0.62;
+    }
+    box(wells, MAT.woodDark, x, 1.0, z, 0.56, 0.04, 0.04);
+    const bucket = new THREE.Mesh(GEO.cylinder, MAT.crate);
+    bucket.position.set(x + 0.36, 0.13, z + 0.22);
+    bucket.scale.set(0.1, 0.2, 0.1);
+    wells.add(bucket);
+    // Kerb stones along both yard sides (house front → fence), walkable.
+    for (const side of [yard.x0, yard.x1]) {
+      if (Math.abs(side) > 25.9) continue;
+      for (let zz = yard.z0 + 0.35; zz < yard.z1 - 0.2; zz += 0.42) {
+        const stone = new THREE.Mesh(GEO.sphere, (Math.round(zz * 2) & 1) ? MAT.stone : MAT.stoneDark);
+        stone.position.set(side, 0.05, zz);
+        stone.scale.set(0.16, 0.06, 0.13);
+        stone.receiveShadow = true;
+        kerbs.add(stone);
+      }
+    }
+    // Name board on two stakes, just inside the gate, facing the lane.
+    const sx = yard.sign.x + 0.55,
+      sz = YARD_FENCE_Z - 0.28;
+    for (const dx of [-0.42, 0.42]) box(signs, MAT.woodDark, sx + dx, 0.42, sz, 0.07, 0.84, 0.07);
+    const board = new THREE.Mesh(
+      plane,
+      new THREE.MeshStandardMaterial({ map: yardSignTexture(ACTORS[yard.actor] ?? '', home?.roofColor ?? '#8a6242'), roughness: 0.9 }),
+    );
+    board.position.set(sx, 0.78, sz + 0.05);
+    board.scale.set(1.1, 0.48, 1);
+    board.castShadow = true;
+    board.name = `yard-sign-${yard.actor}`;
+    signs.add(board);
+  }
+  batchDirectMeshes(wells);
+  batchDirectMeshes(kerbs);
+}
+
 export type LifeLayerUpdate = {
   plots: Record<number, PublicPlot[]>;
   /** Plots of mine that were watered (darker soil). */
@@ -366,8 +481,11 @@ export class VillageLifeLayer {
   private lastFruit = '';
   private readyBadge: THREE.Sprite;
   private mailBadge: THREE.Sprite;
-  /** Gold border under my own bed so it stands out from the neighbours'. */
-  private mineMarker: THREE.Mesh;
+  /** Gold rope around my own beds so they stand out from the neighbours'. */
+  private mineMarker: THREE.Group;
+  /** Soft highlight over the plot under the pointer. */
+  private hover: THREE.Mesh;
+  private hoverKey = '';
   private markedActor = -2;
   private night: {
     pools: THREE.InstancedMesh;
@@ -389,11 +507,18 @@ export class VillageLifeLayer {
       const r = farmBedRect(bed);
       box(frames, MAT.frame, r.x, 0.08, r.z, r.w + 0.08, 0.16, r.d + 0.08).castShadow = false;
     }
-    // Seven identical frames → one draw call.
+    // Fourteen identical frames → one draw call.
     batchDirectMeshes(frames);
-    this.mineMarker = new THREE.Mesh(GEO.box, MAT.mine);
+    buildYards(this.root);
+    // My yard: a thin gold rope around both beds (four flat strips).
+    this.mineMarker = new THREE.Group();
+    for (let i = 0; i < 4; i++) this.mineMarker.add(new THREE.Mesh(GEO.box, MAT.mine));
     this.mineMarker.visible = false;
     this.root.add(this.mineMarker);
+    this.hover = new THREE.Mesh(GEO.box, MAT.hover);
+    this.hover.visible = false;
+    this.hover.renderOrder = 5;
+    this.root.add(this.hover);
     const soilGroup = new THREE.Group(),
       cropGroup = new THREE.Group(),
       fruitGroup = new THREE.Group();
@@ -517,17 +642,43 @@ export class VillageLifeLayer {
       this.lampGlow.color.setRGB(1, 0.886 + 0.1 * level, 0.64 + 0.3 * level).multiplyScalar(1 + 1.2 * level);
   }
 
+  /** Highlights plot `index` of `actor`'s farm (null clears); true when it changed. */
+  setHover(target: { actor: number; index: number } | null) {
+    const key = target ? `${target.actor}:${target.index}` : '';
+    if (key === this.hoverKey) return false;
+    this.hoverKey = key;
+    const yard = target ? villageYard(target.actor) : null;
+    this.hover.visible = !!yard;
+    if (yard && target) {
+      const at = yardPlotCenter(yard, target.index);
+      this.hover.position.set(at.x, 0.215, at.z);
+      this.hover.scale.set(PLOT_SIZE + 0.06, 0.02, PLOT_SIZE + 0.06);
+    }
+    return true;
+  }
+
   /** Applies the latest life state; returns true when anything visible changed. */
   update(u: LifeLayerUpdate) {
     let changed = false;
     if (u.selfActor !== this.markedActor) {
       this.markedActor = u.selfActor;
-      const bed = FARM_BEDS.find((b) => b.actor === u.selfActor);
-      this.mineMarker.visible = !!bed;
-      if (bed) {
-        const r = farmBedRect(bed);
-        this.mineMarker.position.set(r.x, 0.035, r.z);
-        this.mineMarker.scale.set(r.w + 0.42, 0.05, r.d + 0.42);
+      const yard = villageYard(u.selfActor);
+      this.mineMarker.visible = !!yard;
+      if (yard) {
+        const [a, b] = yard.beds;
+        const x0 = Math.min(a.x - a.w / 2, b.x - b.w / 2) - 0.28,
+          x1 = Math.max(a.x + a.w / 2, b.x + b.w / 2) + 0.28,
+          z0 = Math.min(a.z - a.d / 2, b.z - b.d / 2) - 0.28,
+          z1 = Math.max(a.z + a.d / 2, b.z + b.d / 2) + 0.28;
+        const strips = this.mineMarker.children;
+        const set = (m: THREE.Object3D, x: number, z: number, w: number, d: number) => {
+          m.position.set(x, 0.04, z);
+          m.scale.set(w, 0.03, d);
+        };
+        set(strips[0], (x0 + x1) / 2, z0, x1 - x0, 0.07);
+        set(strips[1], (x0 + x1) / 2, z1, x1 - x0, 0.07);
+        set(strips[2], x0, (z0 + z1) / 2, 0.07, z1 - z0);
+        set(strips[3], x1, (z0 + z1) / 2, 0.07, z1 - z0);
       }
       changed = true;
     }
@@ -537,37 +688,40 @@ export class VillageLifeLayer {
       changed = true;
       const soil: Instance[] = [],
         crops: Instance[] = [];
-      let anyReady = false;
-      let readyBed: FarmBed | null = null;
-      for (const bed of FARM_BEDS) {
-        const plots = u.plots[bed.actor] ?? [];
-        // 9 / 12-plot farms (life expansion) fit the same bed in shallower rows.
+      let readyYard: FarmYard | null = null;
+      for (const yard of VILLAGE_YARDS) {
+        const plots = u.plots[yard.actor] ?? [];
+        // 6 / 9 / 12 plots: the back bed stays fallow until the farm grows.
         const total = Math.max(6, Math.min(12, plots.length));
-        for (let i = 0; i < total; i++) {
-          const at = plotCenterIn(bed, i, total);
-          const mine = bed.actor === u.selfActor;
+        const mine = yard.actor === u.selfActor;
+        for (let i = 0; i < 12; i++) {
+          const at = yardPlotCenter(yard, i);
+          if (i >= total) {
+            // Untilled: a grass tile with a small stake in its corner.
+            soil.push({ geo: GEO.box, mat: MAT.fallow, m: matrix(at.x, 0.13, at.z, PLOT_SIZE, 0.1, PLOT_SIZE) });
+            if (i % 3 === 1) soil.push({ geo: GEO.box, mat: MAT.fallowStake, m: matrix(at.x, 0.3, at.z, 0.05, 0.34, 0.05) });
+            continue;
+          }
+          const plot = plots[i];
+          const wet = mine ? !!(u.watered[i] && plot?.crop) : !!(plot?.crop && plot.thirsty === false);
           soil.push({
             geo: GEO.box,
-            mat: mine && u.watered[i] && plots[i]?.crop ? MAT.soilWet : MAT.soil,
-            m: matrix(at.x, 0.14, at.z, PLOT_SIZE, 0.12, PLOT_SIZE * at.scale),
+            mat: wet ? MAT.soilWet : MAT.soil,
+            m: matrix(at.x, 0.14, at.z, PLOT_SIZE, 0.12, PLOT_SIZE),
           });
-          const plot = plots[i];
           if (plot?.crop) {
-            cropInstances(crops, at, plot.crop, plot.stage, bed.actor * 1.7 + i);
-            if (mine && plot.stage === 3) {
-              anyReady = true;
-              readyBed = bed;
-            }
+            cropInstances(crops, at, plot.crop, plot.stage, yard.actor * 1.7 + i);
+            if (mine && plot.stage === 3) readyYard = yard;
           }
         }
       }
       this.soil.set(soil);
       this.crops.set(crops);
-      this.readyBadge.visible = anyReady;
-      if (readyBed) {
-        // Over the bed's back corner so it never covers the name tag.
-        const r = farmBedRect(readyBed);
-        this.readyBadge.position.set(r.x + r.w / 2, 1.05, r.z - r.d / 2);
+      this.readyBadge.visible = !!readyYard;
+      if (readyYard) {
+        // Over the front bed's back corner so it never covers the name board.
+        const r = readyYard.beds[0];
+        this.readyBadge.position.set(r.x + r.w / 2, 1.1, r.z - r.d / 2);
       }
     }
     const fruitKey = u.ripeTrees.join(',');

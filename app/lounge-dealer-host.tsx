@@ -17,6 +17,7 @@ import {
 } from './lounge-dealer-lines';
 import { HOST_CELL, HOST_PORTRAIT, HOST_SHEET, hostCell, type HostId } from './lounge-host-sprites';
 import { loungeAudio } from './lounge-audio';
+import type { StingKind } from './lounge-music-score';
 import { recall, remember } from './lounge-settings';
 import './lounge-dealer-host.css';
 
@@ -227,14 +228,27 @@ export function useReactionReply(
 /**
  * Card-table sounds driven by what is on the table: new cards dealt, hole
  * cards flipped, chips moving to a winner. Nothing plays for the first
- * render (joining mid-round is silent).
+ * render (joining mid-round is silent). While a hand is live (`live`, by
+ * default cards out and no payout yet) the room music adds its tension layer;
+ * a new `big` moment (all-in, blackjack, a big win) plays a short sting.
  */
 export function useTableSounds(state: {
   id: string;
   cards: number;
   flips: number;
   payout: boolean;
+  live?: boolean;
+  big?: StingKind | null;
 }) {
+  const live = state.live ?? (state.cards > 0 && !state.payout);
+  useEffect(() => loungeAudio.tableTension(live), [live]);
+  useEffect(() => () => loungeAudio.tableTension(false), []);
+  const moment = state.big ? state.id + ':' + state.big : '';
+  const lastMoment = useRef(moment);
+  useEffect(() => {
+    if (moment && moment !== lastMoment.current && state.big) loungeAudio.sting(state.big);
+    lastMoment.current = moment;
+  }, [moment, state.big]);
   const prev = useRef<typeof state | null>(null);
   useEffect(() => {
     const p = prev.current;

@@ -2246,15 +2246,18 @@ export function Village3D(props: Props) {
             element.style.transform = `translate3d(${at.x.toFixed(1)}px,${at.y.toFixed(1)}px,0) translate(-50%,-50%)`;
         }
         const headY = FIGURE_HEIGHT * 0.98;
+        // A hat rises into the canvas's hat band: lift that figure's tag above it.
+        const tagY = (figure: Figure | undefined) =>
+          headY + (figure && sprites ? sprites.hatRise(figure.canvas) * FIGURE_PLANE_HEIGHT : 0);
         if (selfTag) {
-          const at = project(position.x, headY, position.z);
+          const at = project(position.x, tagY(figures.get(current.self)), position.z);
           selfTag.style.transform = `translate(${at.x}px,${at.y}px) translate(-50%,-100%)`;
         }
         for (const [id, figure] of figures) {
           const own = id === current.self;
           const at = project(
             figure.point.x,
-            figure.group.position.y + headY,
+            figure.group.position.y + tagY(figure),
             figure.point.z,
           );
           const show =

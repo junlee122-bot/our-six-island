@@ -251,10 +251,10 @@ function melody(
   lo: number,
   hi: number,
   rng: Rng,
-  opts: { cadence?: boolean; chromatic?: boolean; strong: number },
+  opts: { cadence?: boolean; chromatic?: boolean; strong: number; tones?: number[] },
 ): NoteEvent[] {
   const out: NoteEvent[] = [];
-  const tones = pcsOf(chord);
+  const tones = opts.tones ?? pcsOf(chord);
   let cur = from,
     dir = rng() < 0.5 ? -1 : 1;
   rhythm.forEach(([step, dur], i) => {
@@ -504,6 +504,9 @@ export function hallBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[]
     f = fifthOf(chord),
     reeds = voicing(chord);
   const scale = hallScale(chord);
+  // Strong-beat targets: the chord tones the pentatonic shares.
+  const shared = pcsOf(chord).filter((pc) => scale.includes(pc));
+  const tones = shared.length ? shared : scale;
   // The noir bass, in 12/8.
   if (s === 'C') {
     ev.push({ step: 0, inst: 'bass', midi: 38, vel: 0.65, dur: 6 });
@@ -538,7 +541,7 @@ export function hallBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[]
     if (!line) {
       const cell =
         bar === 0 || bar === 4 ? HALL_RHYTHMS[0] : HALL_RHYTHMS[Math.floor(rng() * HALL_RHYTHMS.length)];
-      line = pluck(melody('gayageum', chord, cell, scale, state.lead, 62, 84, rng, { strong: 6 }));
+      line = pluck(melody('gayageum', chord, cell, scale, state.lead, 62, 84, rng, { strong: 6, tones }));
       state.motifs.set(key, line);
     }
     state.lead = last(line).midi;
@@ -546,18 +549,17 @@ export function hallBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[]
   } else if (s === 'A2') {
     const cell: Rhythm = bar === 6 ? HALL_RHYTHMS[3] : [[0, 3], [3, 9]];
     const line = pluck(
-      melody('gayageum', chord, cell, scale, state.lead, 62, 84, rng, { cadence: bar === 7, strong: 6 }),
+      melody('gayageum', chord, cell, scale, state.lead, 62, 84, rng, { cadence: bar === 7, strong: 6, tones }),
     );
     state.lead = last(line).midi;
     ev.push(...line);
   } else if (s === 'B') {
     // 가야금 accompaniment and a 대금 line above it.
-    const tones = voicing(chord, 64, 60, 76);
+    const arp = [...new Set(tones.map((pc) => nearest(64, [pc], 60, 76)))].sort((x, y) => x - y);
     [0, 3, 6, 9].forEach((step, i) =>
-      ev.push({ step, inst: 'gayageum', midi: tones[i % tones.length], vel: 0.32, dur: 3 }),
+      ev.push({ step, inst: 'gayageum', midi: arp[i % arp.length], vel: 0.32, dur: 3 }),
     );
-    const shared = pcsOf(chord).filter((pc) => scale.includes(pc));
-    state.high = nearest(state.high + (rng() < 0.5 ? -2 : 3), shared.length ? shared : scale, 69, 84);
+    state.high = nearest(state.high + (rng() < 0.5 ? -2 : 3), tones, 69, 84);
     if (bar % 4 === 3) {
       const second = stepScale(state.high, -1, scale, 69, 84);
       ev.push({ step: 0, inst: 'daegeum', midi: state.high, vel: 0.5, dur: 6 });
