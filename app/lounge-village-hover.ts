@@ -6,9 +6,13 @@ import {
   VILLAGE_MARKET,
   VILLAGE_MUSEUM,
   VILLAGE_ORCHARD,
+  VILLAGE_FALLS,
+  VILLAGE_HARBOR,
+  VILLAGE_LAKE,
   VILLAGE_PIER,
   VILLAGE_PLACES,
   VILLAGE_POND,
+  VILLAGE_ROCKS,
   type VillagePoint,
 } from './lounge-village-layout.ts';
 import { FARM_BEDS, farmBedRect } from './lounge-village-life.ts';
@@ -26,7 +30,8 @@ const SPOTS: readonly { id: string; rect: Rect }[] = [
   { id: 'market', rect: { x: VILLAGE_MARKET.x, z: VILLAGE_MARKET.z, w: VILLAGE_MARKET.width, d: VILLAGE_MARKET.depth } },
   { id: 'museum', rect: { x: VILLAGE_MUSEUM.x, z: VILLAGE_MUSEUM.z, w: VILLAGE_MUSEUM.width, d: VILLAGE_MUSEUM.depth } },
   { id: 'board', rect: { x: VILLAGE_BOARD.x, z: VILLAGE_BOARD.z, w: VILLAGE_BOARD.width, d: 0.9 } },
-  { id: 'pier', rect: { x: VILLAGE_PIER.x, z: VILLAGE_PIER.z, w: VILLAGE_PIER.width + 0.6, d: 6 } },
+  { id: 'pier', rect: { x: VILLAGE_PIER.x + 1.5, z: VILLAGE_PIER.z, w: 6, d: VILLAGE_PIER.width + 0.6 } },
+  { id: 'harbor', rect: { x: VILLAGE_HARBOR.x, z: VILLAGE_HARBOR.z + VILLAGE_HARBOR.length / 2, w: VILLAGE_HARBOR.width + 0.6, d: VILLAGE_HARBOR.length + 1 } },
   ...FARM_BEDS.map((bed) => {
     const r = farmBedRect(bed);
     return { id: 'farm-' + bed.actor, rect: { x: r.x, z: r.z, w: r.w, d: r.d } };
@@ -49,8 +54,8 @@ export function villageHoverTarget(
     if (inRect(p, { x: place.x, z: place.z, w: place.width, d: place.depth }, 0.15))
       return { kind: 'place', id: place.id };
   for (const spot of SPOTS) if (inRect(p, spot.rect, 0.2)) return { kind: 'spot', id: spot.id };
-  if (Math.hypot(p.x - VILLAGE_POND.x, p.z - VILLAGE_POND.z) < VILLAGE_POND.radius + 0.2)
-    return { kind: 'spot', id: 'pond' };
+  for (const w of [VILLAGE_POND, VILLAGE_LAKE, VILLAGE_FALLS, VILLAGE_ROCKS])
+    if (Math.hypot(p.x - w.x, p.z - w.z) < w.radius + 0.2) return { kind: 'spot', id: w.id };
   if (Math.hypot(p.x, p.z) < 2.1) return { kind: 'spot', id: 'fountain' };
   for (const tree of VILLAGE_ORCHARD)
     if (Math.hypot(p.x - tree.x, p.z - tree.z) < 1.1) return { kind: 'spot', id: 'tree' };

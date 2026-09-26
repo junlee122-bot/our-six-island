@@ -37,8 +37,8 @@ import {
   nearestFishSpot,
   nearestSpawn,
 } from './lounge-village-spots.ts';
-import { SPOT_INFO, type Spot } from './lounge-items.ts';
-import { itemName } from './lounge-life-plus.ts';
+import type { Spot } from './lounge-items.ts';
+import { itemName, spotBlock } from './lounge-life-plus.ts';
 import { farmToolAction } from './lounge-life-ui.ts';
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
@@ -137,9 +137,12 @@ export function villageAction(
     }
   const fishing = nearestFishSpot(point, FISH_REACH);
   if (fishing) {
-    const flag = SPOT_INFO[fishing.spot].flag;
-    if (flag && !life?.flags?.includes(flag))
-      labels.set('fish:' + fishing.spot, { label: '데크 수리가 필요해요', disabled: true });
+    const block = spotBlock(fishing.spot, life?.flags ?? [], life?.me.fishing?.rod ?? 1, now);
+    if (block)
+      labels.set('fish:' + fishing.spot, {
+        label: block === 'rod' ? '낚싯대 2단계가 필요해요' : block === 'night' ? '해가 지면 열려요' : '데크 수리가 필요해요',
+        disabled: true,
+      });
     candidates.push({
       kind: 'fish',
       distance: fishing.distance,

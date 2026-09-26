@@ -853,13 +853,14 @@ export function buildVillageWorld(scene: THREE.Object3D): VillageWorld {
   );
   stream.name = 'village-water';
   // Pebbles line both banks without touching the bridge decks.
-  for (const x of Array.from({ length: 40 }, (_, index) => -38.5 + index * 2)) {
+  const pebbleStart = -bw / 2 + 1.5;
+  for (const x of Array.from({ length: Math.floor((bw - 2) / 2) }, (_, index) => pebbleStart + index * 2)) {
     if (VILLAGE_RIVER.bridges.some((bridge) => Math.abs(x - bridge.x) < 3.2))
       continue;
     set.at(x, riverCenterZ + Math.sin(x * 0.42) * 0.18);
     set.add(
       sphereGeo,
-      Math.round((x + 38.5) / 2) % 2 ? M.stone : M.cream,
+      Math.round((x - pebbleStart) / 2) % 2 ? M.stone : M.cream,
       0,
       0.2,
       0,

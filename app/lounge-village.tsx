@@ -58,6 +58,7 @@ import {
   type VillageWorld,
 } from './lounge-village-world';
 import { VillageLifeLayer } from './lounge-village-life-3d';
+import { VillageWatersLayer } from './lounge-village-waters';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import {
@@ -75,18 +76,25 @@ import {
   DAY_PHASE_LABEL,
   FRUIT_TREE_POINTS,
   dayLighting,
+  FARM_REACH,
   farmBed,
   farmBedRect,
+  farmBeds,
+  farmDistance,
   farmFront,
+  plotAt,
   npcLine,
   npcPose,
   plotsForActor,
   type DayPhase,
 } from './lounge-village-life';
 import {
+  CROP_INFO,
   FRUIT_TREES,
   plotStage,
+  type Crop,
   type LifeView,
+  type Quality,
 } from './lounge-life';
 import { loungeAudio } from './lounge-audio';
 import {
@@ -96,6 +104,8 @@ import {
   type VillageSpot,
 } from './lounge-village-actions';
 import { ActionButton } from './lounge/ActionButton';
+import { CropStageArt, ItemIcon, QualityStar } from './lounge/ItemIcon';
+import './lounge/farm-fish.css';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
 import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
@@ -125,6 +135,15 @@ import {
   VILLAGE_FURNISHINGS,
   VILLAGE_MARKET,
   VILLAGE_POND,
+  VILLAGE_BEACH,
+  VILLAGE_FALLS,
+  VILLAGE_HARBOR,
+  VILLAGE_LAKE,
+  VILLAGE_PIER,
+  VILLAGE_ROCKS,
+  VILLAGE_YARDS,
+  villageYard,
+  yardPlotCenter,
   VILLAGE_MUSEUM,
   VILLAGE_BOARD,
   villageCanWalk,
@@ -140,6 +159,8 @@ import {
 import './lounge-village.css';
 
 type ChatLine = { id: string; actor: number; text: string };
+/** A harvested crop rising from its plot (screen px in the scene). */
+type HarvestPop = { id: string; crop: Crop; quality: Quality; x: number; y: number; delay: number };
 
 /** Compact overview / minimap name: "도원", "회관", "카지노", "분장실". */
 const PLACE_SHORT: Record<VillagePlace['kind'], string> = {
@@ -215,6 +236,8 @@ type Props = {
   onMuseum?: () => void;
   onBoard?: () => void;
   onWaterFriend?: (actor: number) => void;
+  /** VILL-2: a click on one of my plots within reach tends that plot. */
+  onPlot?: (index: number) => void;
   onWish?: () => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
   onTalk?: (actor: number) => void;
@@ -265,6 +288,8 @@ type WorldState = {
   season: VillageSeasonLayer;
   /** kArchive civic set (greenhouse, museum, hall, stage, pier…). */
   karchive: VillageKarchiveLayer;
+  /** VILL-2 fishing waters (falls, lake, rapids, beach, rocks, harbor). */
+  waters: VillageWatersLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -328,13 +353,14 @@ function getVillageWorld(): WorldState {
   sun.position.set(-20, 34, 25);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
+  // Covers the 96 × 76 valley (VILL-2) from the sun's slant.
   Object.assign(sun.shadow.camera, {
-    left: -55,
-    right: 55,
-    top: 48,
-    bottom: -48,
+    left: -64,
+    right: 64,
+    top: 56,
+    bottom: -56,
     near: 1,
-    far: 110,
+    far: 130,
   });
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.06;
@@ -344,6 +370,7 @@ function getVillageWorld(): WorldState {
   life.setLampGlowMaterial(VILLAGE_LAMP_GLOW);
   const season = new VillageSeasonLayer(root);
   const karchive = new VillageKarchiveLayer(root);
+  const waters = new VillageWatersLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -434,6 +461,7 @@ function getVillageWorld(): WorldState {
     life,
     season,
     karchive,
+    waters,
   };
   return villageWorld;
 }
@@ -604,6 +632,11 @@ export function Village3D(props: Props) {
   const [action, setAction] = useState<VillageAction | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
   const [miniOpen, setMiniOpen] = useState(true);
+  /** The plot under the mouse (wooden tag) and the harvest pops (VILL-2). */
+  const [plotTag, setPlotTag] = useState<{ actor: number; index: number } | null>(null);
+  const plotTagRef = useRef<HTMLDivElement>(null);
+  const [pops, setPops] = useState<HarvestPop[]>([]);
+  const uiFns = useRef({ setPlotTag, setPops });
   const [{ keys }] = useSettings();
   const actionKey = keyLabel(keys.action);
   /** Nearest building (minimap highlight), updated only when it changes. */
@@ -951,6 +984,7 @@ export function Village3D(props: Props) {
     };
     let lastFishKey = '',
       fishFrom: VillagePoint = { x: 0, z: 0 };
+    const lastRipe = new Map<number, { crop: Crop; quality: Quality }>();
     let lastLife: LifeView | null | undefined = undefined,
       lastLight = -1e9,
       lastAudio = -1e9,
@@ -993,6 +1027,36 @@ export function Village3D(props: Props) {
         host.dataset.spawns = String((life?.me.spawns ?? []).filter((sp) => !sp.taken).length);
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
+      }
+      // Harvest pops: a ripe plot of mine that is gone since the last update.
+      if (life?.me.farm) {
+        const born: HarvestPop[] = [];
+        const yard = villageYard(me);
+        for (const [i, was] of lastRipe) {
+          const now = life.me.farm[i];
+          if (now?.crop === was.crop && plotStage(now, at) === 3) continue;
+          if (!yard || !host.isConnected) continue;
+          const c = yardPlotCenter(yard, i);
+          const v = new THREE.Vector3(c.x, 0.7, c.z).project(camera);
+          if (Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) continue;
+          born.push({
+            id: `${Date.now()}-${i}`,
+            crop: was.crop,
+            quality: was.quality,
+            x: ((v.x + 1) / 2) * host.clientWidth,
+            y: ((1 - v.y) / 2) * host.clientHeight,
+            delay: born.length * 70,
+          });
+        }
+        lastRipe.clear();
+        life.me.farm.forEach((plot, i) => {
+          if (plot.crop && plotStage(plot, at) === 3) lastRipe.set(i, { crop: plot.crop, quality: plot.quality });
+        });
+        if (born.length) {
+          uiFns.current.setPops((list) => [...list.slice(-12), ...born]);
+          const ids = new Set(born.map((b) => b.id));
+          setTimeout(() => uiFns.current.setPops((list) => list.filter((b) => !ids.has(b.id))), 1500 + born.length * 70);
+        }
       }
       const changed = world.life.update({
         plots,
@@ -1038,6 +1102,7 @@ export function Village3D(props: Props) {
       }
       renderer.toneMappingExposure = light.exposure;
       world.life.setNight(light.lamps);
+      world.waters.setNight(light.lamps);
       if (light.sky !== lastSky) {
         lastSky = light.sky;
         host.style.background = `linear-gradient(180deg, ${light.sky}, ${light.sky}ee)`;
@@ -1265,9 +1330,31 @@ export function Village3D(props: Props) {
         dragged: false,
       };
     };
+    let hoverPlot = '';
+    /** Highlights the plot under the mouse and moves its wooden tag along. */
+    const plotHover = (clientX: number, clientY: number) => {
+      const point = floorAt(clientX, clientY);
+      const target = point ? plotAt(point) : null;
+      const tag = plotTagRef.current;
+      if (tag && target) {
+        const r = host.getBoundingClientRect();
+        tag.style.left = `${clientX - r.left}px`;
+        tag.style.top = `${clientY - r.top}px`;
+      }
+      const key = target ? `${target.actor}:${target.index}` : '';
+      if (key !== hoverPlot) {
+        hoverPlot = key;
+        if (world.life.setHover(target)) needsRender = true;
+        uiFns.current.setPlotTag(target);
+      }
+      return target;
+    };
     const drag = (e: PointerEvent) => {
       if (!press || e.pointerId !== press.id) {
-        if (!press) setCursor(hoverAt(e.clientX, e.clientY));
+        if (!press) {
+          setCursor(hoverAt(e.clientX, e.clientY));
+          plotHover(e.clientX, e.clientY);
+        }
         return;
       }
       if (Math.hypot(e.clientX - press.startX, e.clientY - press.startY) > 6)
@@ -1312,10 +1399,20 @@ export function Village3D(props: Props) {
           target?.kind === 'place'
             ? VILLAGE_PLACES.find((p) => p.id === target.id)
             : undefined;
+        const plot = point ? plotAt(point) : null;
+        const me = latest.current.save.actor;
         // A click on a building walks to its door (like its name tag).
         if (place) {
           requestedPlace.current = place;
           goTo(place.entry);
+        } else if (plot) {
+          // A plot: tend it when it is mine and in reach, water a thirsty
+          // friend's bed when in reach, otherwise walk to that bed.
+          const near = farmDistance(position, plot.actor) <= FARM_REACH;
+          const bed = farmBeds(plot.actor)[plot.index < 6 ? 0 : 1];
+          if (near && plot.actor === me) latest.current.onPlot?.(plot.index);
+          else if (near) latest.current.onWaterFriend?.(plot.actor);
+          else if (bed) goTo(farmFront(bed));
         } else if (point) goTo(point);
       }
       press = null;
@@ -1327,6 +1424,9 @@ export function Village3D(props: Props) {
     };
     const leave = () => {
       if (!press) setCursor(null);
+      hoverPlot = '';
+      if (world.life.setHover(null)) needsRender = true;
+      uiFns.current.setPlotTag(null);
     };
     const lostCapture = (e: PointerEvent) => {
       if (press?.id === e.pointerId) press = null;
@@ -2078,6 +2178,7 @@ export function Village3D(props: Props) {
         // Gentle stream: the ripple texture drifts downstream.
         for (const texture of world.world.water)
           texture.offset.x = (now / 1000) * -0.05;
+        world.waters.tick(now);
         renderer.render(scene, camera);
         lastRender = now;
         needsRender = false;
@@ -2402,6 +2503,30 @@ export function Village3D(props: Props) {
           data-entry-ready="false"
           data-destination=""
         >
+          <div ref={plotTagRef} className="hv-plot-anchor" aria-hidden={!plotTag}>
+            {plotTag && (
+              <PlotTag
+                actor={plotTag.actor}
+                index={plotTag.index}
+                me={props.save.actor}
+                life={props.life}
+                now={lifeClock}
+              />
+            )}
+          </div>
+          <div className="hv-pops" aria-hidden="true">
+            {pops.map((p) => (
+              <span
+                key={p.id}
+                className="hv-pop"
+                data-q={p.quality}
+                style={{ left: p.x, top: p.y, animationDelay: `${p.delay}ms` }}
+              >
+                <ItemIcon id={p.crop} size={44} quality={p.quality || undefined} />
+                <b>+1</b>
+              </span>
+            ))}
+          </div>
           <div ref={labelsRef} className="hv-labels">
             {VILLAGE_PLACES.map((place) => (
               <button
@@ -2559,6 +2684,24 @@ export function Village3D(props: Props) {
                       rx="3"
                       fill="#dce3ba"
                     />
+                    <rect
+                      x={-VILLAGE_BOUNDS.width / 2}
+                      y={VILLAGE_BEACH.z0}
+                      width={VILLAGE_BOUNDS.width}
+                      height={VILLAGE_BOUNDS.depth / 2 - VILLAGE_BEACH.z0}
+                      fill="#ecdcae"
+                    />
+                    {VILLAGE_YARDS.map((y) => (
+                      <rect
+                        key={'yard-' + y.actor}
+                        x={y.x0 + 0.25}
+                        y={y.z0}
+                        width={y.x1 - y.x0 - 0.5}
+                        height={y.z1 - y.z0}
+                        rx="0.5"
+                        fill={y.actor === props.save.actor ? '#e9d48f' : '#cfd9a6'}
+                      />
+                    ))}
                     {minimapRoads}
                     <rect
                       x={-VILLAGE_BOUNDS.width / 2}
@@ -2567,7 +2710,24 @@ export function Village3D(props: Props) {
                       height={VILLAGE_RIVER.maxZ - VILLAGE_RIVER.minZ}
                       fill="#96c9c2"
                     />
-                    <circle cx={VILLAGE_POND.x} cy={VILLAGE_POND.z} r={VILLAGE_POND.radius} fill="#96c9c2" />
+                    {[VILLAGE_POND, VILLAGE_LAKE, VILLAGE_FALLS].map((w) => (
+                      <circle key={w.id} cx={w.x} cy={w.z} r={w.radius} fill="#96c9c2" />
+                    ))}
+                    <circle cx={VILLAGE_ROCKS.x} cy={VILLAGE_ROCKS.z} r={VILLAGE_ROCKS.radius} fill="#9b958a" />
+                    <rect
+                      x={VILLAGE_HARBOR.x - VILLAGE_HARBOR.width / 2}
+                      y={VILLAGE_BOUNDS.depth / 2 - 1.2}
+                      width={VILLAGE_HARBOR.width}
+                      height={1.2}
+                      fill="#b58d58"
+                    />
+                    <rect
+                      x={VILLAGE_PIER.x - 1.2}
+                      y={VILLAGE_PIER.z - VILLAGE_PIER.width / 2}
+                      width={1.2}
+                      height={VILLAGE_PIER.width}
+                      fill="#b58d58"
+                    />
                     {[VILLAGE_MUSEUM, VILLAGE_BOARD].map((b) => (
                       <rect
                         key={b.id}
@@ -3235,6 +3395,81 @@ function SpotPrompt({
         {life?.me.requests?.some((r) => r.from === spot.actor && !r.done) ? '부탁이 있는 것 같아요' : '산책 중이에요'}
         {key}
       </small>
+    </div>
+  );
+}
+
+const STAGE_WORD = ['씨앗', '새싹', '자라는 중', '다 자랐어요'] as const;
+/** The wooden tag that follows the mouse over a plot (VILL-2). */
+function PlotTag({
+  actor,
+  index,
+  me,
+  life,
+  now,
+}: {
+  actor: number;
+  index: number;
+  me: number;
+  life?: LifeView | null;
+  now: number;
+}) {
+  const mine = actor === me;
+  const owner = ACTORS[actor] ?? '친구';
+  const where = `${owner === ACTORS[me] ? '내' : owner + '네'} ${index < 6 ? '앞' : '뒤'} 두둑 ${(index % 6) + 1}`;
+  const plots = mine
+    ? life?.me.farm
+    : (() => {
+        const uid = Object.entries(life?.actors ?? {}).find(([, a]) => a === actor)?.[0];
+        return uid ? life?.housesPlotsPublic?.[uid] : undefined;
+      })();
+  if (!plots || index >= plots.length)
+    return (
+      <div className="hv-plot-tag" data-testid="plot-tag">
+        <strong>풀밭</strong>
+        <span>{where}</span>
+        <span>{index < 9 ? '9칸' : '12칸'}으로 넓히면 갈아요</span>
+      </div>
+    );
+  const plot = plots[index];
+  if (!plot.crop)
+    return (
+      <div className="hv-plot-tag" data-testid="plot-tag">
+        <strong>빈 칸</strong>
+        <span>{where}</span>
+        {mine && <em>씨앗을 들고 클릭하면 심어요</em>}
+      </div>
+    );
+  const stage = mine && 'plantedAt' in plot ? plotStage(plot as LifeView['me']['farm'][number], now) : plot.stage;
+  const full = mine ? (plot as LifeView['me']['farm'][number]) : null;
+  const thirsty = full
+    ? stage < 3 && full.wateredAt === null && !full.rained
+    : 'needsWater' in plot && !!plot.needsWater;
+  return (
+    <div className="hv-plot-tag" data-testid="plot-tag" data-thirsty={thirsty || undefined}>
+      <strong>
+        <CropStageArt crop={plot.crop} stage={stage} size={26} />
+        {CROP_INFO[plot.crop].name}
+        {full?.quality ? <QualityStar quality={full.quality} size={12} /> : null}
+      </strong>
+      <span>
+        {where} · {STAGE_WORD[stage]}
+      </span>
+      {full && stage < 3 && full.readyAt ? <span>{remaining(full.readyAt - now)} 뒤 수확</span> : null}
+      {full?.fert ? <span>{full.fert === 2 ? '고급 비료' : '비료'} 줬어요</span> : null}
+      <em>
+        {stage === 3
+          ? mine
+            ? '클릭하면 거둬요'
+            : '다 익었어요'
+          : thirsty
+            ? mine
+              ? '목말라요 · 클릭해서 물 주기'
+              : '목말라요 · 가까이서 물 줄 수 있어요'
+            : full?.rained
+              ? '비가 물을 줬어요'
+              : '오늘 물 먹었어요'}
+      </em>
     </div>
   );
 }

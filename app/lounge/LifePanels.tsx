@@ -6,14 +6,10 @@ import { useState } from 'react';
 import {
   Backpack,
   Check,
-  CloudRain,
-  Droplets,
   FlaskConical,
   Gift,
-  Grid2x2Plus,
   House,
   RefreshCw,
-  Repeat,
   Sofa,
   Mail,
   MailOpen,
@@ -23,7 +19,6 @@ import {
   Send,
   Sprout,
   Store,
-  Wheat,
 } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
@@ -40,18 +35,17 @@ import {
   SHOP,
   STATUS_TEXT_MAX,
   shopLock,
-  plotStage,
   type Crop,
   type Gift as LifeGift,
   type LifeAction,
   type LifeView,
   type ShopItem,
 } from '../lounge-life';
-import { FARM_EXPAND_PRICE, ROD_PRICE, itemName, sellQuote } from '../lounge-life-plus';
+import { ROD_PRICE, itemName, sellQuote } from '../lounge-life-plus';
 import { ITEM_BY_ID, ITEM_PRICES, FURNITURE_BY_REF, HOUSE_TIERS } from '../lounge-items';
 import { SEASON_INFO } from '../lounge-calendar';
 import { giftTaste, tastesKnown } from '../lounge-life-ui';
-import { ItemIcon, QualityStar } from './ItemIcon';
+import { ItemIcon } from './ItemIcon';
 import { FURNITURE_ART } from '../lounge-furniture-art';
 import { REACTIONS, reactionInfo } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
@@ -62,8 +56,9 @@ import { defaultLook, type Look } from '../lounge-look';
 import { ConfirmModal, Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useNow } from './use-now';
-import { useServerClock } from './use-server-clock';
 import { lookFor } from './friend-looks';
+import { FarmLedger } from './FarmLedger';
+import type { VillagePoint } from '../lounge-village-layout';
 import './life.css';
 
 type Base = {
@@ -94,13 +89,6 @@ export function useLifeAction(room: CloudRoom, notify: Notify) {
   return [run, busy] as const;
 }
 
-function duration(ms: number) {
-  const minutes = Math.max(1, Math.ceil(ms / 60_000));
-  if (minutes < 60) return `${minutes}분`;
-  const h = Math.floor(minutes / 60),
-    m = minutes % 60;
-  return m ? `${h}시간 ${m}분` : `${h}시간`;
-}
 function when(at: number, now: number) {
   const ago = now - at;
   if (ago < 60_000) return '방금';
@@ -180,28 +168,10 @@ function Stepper({
 
 /* ------------------------------------------------------------------ farm */
 
-/** "🥕 당근 3 · 🍅 토마토 1" for what changed in the bag. */
-function producedText(before: LifeView | null | undefined, after: LifeView | null | undefined) {
-  if (!before || !after) return '';
-  return CROPS.map((c) => [c, after.me.bag.produce[c] - before.me.bag.produce[c]] as const)
-    .filter(([, n]) => n > 0)
-    .map(([c, n]) => `${cropLabel(c)} ${n}`)
-    .join(' · ');
-}
-const SEED_KEY = 'bumtadew-last-seed';
-function lastSeed(): Crop {
-  try {
-    const v = globalThis.localStorage?.getItem(SEED_KEY);
-    if (CROPS.includes(v as Crop)) return v as Crop;
-  } catch {}
-  return 'carrot';
-}
-function rememberSeed(crop: Crop) {
-  try {
-    globalThis.localStorage?.setItem(SEED_KEY, crop);
-  } catch {}
-}
-
+/**
+ * 내 텃밭 → 텃밭 장부 (VILL-2): the wooden notebook in FarmLedger.tsx. My
+ * actor comes from the life view when the caller does not pass it.
+ */
 export function FarmModal({
   room,
   view,
@@ -209,377 +179,25 @@ export function FarmModal({
   onClose,
   onShop,
   onBag,
-}: Base & { onShop: () => void; onBag?: () => void }) {
-  const life = view.life;
-  const now = useServerClock(
-    view.clockOffset,
-    life?.me.farm.map((p) => p.readyAt) ?? [],
-    5000,
-  );
-  const [run, busy] = useLifeAction(room, notify);
-  const [choosing, setChoosing] = useState<number | null>(null);
-  const [seed, setSeed] = useState<Crop>(lastSeed);
-  const [harvest, setHarvest] = useState('');
-  const [expand, setExpand] = useState(false);
-  if (!life)
-    return (
-      <Modal title="내 텃밭" onClose={onClose}>
-        <NoLife />
-      </Modal>
-    );
-  const farm = life.me.farm;
-  const seeds = life.me.bag.seeds;
-  const season = life.calendar?.season ?? 'spring';
-  const greenhouse = !!life.flags?.includes('greenhouse');
-  const plantable = (c: Crop) => greenhouse || cropInSeason(c, season);
-  const ready = farm.filter((p) => p.crop && plotStage(p, now) === 3).length;
-  const empty = farm.filter((p) => !p.crop).length;
-  const thirsty = farm.filter(
-    (p) => p.crop && p.wateredAt === null && !p.rained && plotStage(p, now) < 3,
-  ).length;
-  const rained = farm.filter((p) => p.crop && p.rained && plotStage(p, now) < 3).length;
-  const anySeeds = CROPS.some((c) => seeds[c] > 0 && plantable(c));
-  const pick =
-    anySeeds && (!seeds[seed] || !plantable(seed))
-      ? CROPS.find((c) => seeds[c] > 0 && plantable(c))!
-      : seed;
-  const plantN = plantable(pick) ? Math.min(empty, seeds[pick]) : 0;
-  const inv = life.me.inv ?? {};
-  const fertTargets = (level: 1 | 2) =>
-    farm.filter((p) => p.crop && (p.fert ?? 0) < level && plotStage(p, now) < 3).length;
-  const size = life.me.plots ?? farm.length;
-  const nextSize = size === 6 ? 9 : size === 9 ? 12 : 0;
-  const harvestAll = async () => {
-    const before = room.snapshot().life;
-    if (await run({ kind: 'harvest', plot: -1 }, '', 'harvest')) {
-      const got = producedText(before, room.snapshot().life);
-      setHarvest(got || `작물 ${ready}개`);
-    }
-  };
-  const seasonNote = (c: Crop) =>
-    plantable(c)
-      ? ''
-      : `${(CROP_INFO[c].seasons ?? []).map((x) => SEASON_INFO[x].name).join('·')}에만 심어요`;
+  onWalk,
+  actor,
+}: Base & {
+  onShop: () => void;
+  onBag?: () => void;
+  onWalk?: (point: VillagePoint) => void;
+  actor?: number;
+}) {
   return (
-    <Modal title="내 텃밭" onClose={onClose} className="l-life-modal" wide>
-      <p className="l-modal-intro">
-        씨앗을 심고 물을 주면 40% 빨리 자라요. 비료를 주면 은별·금별 작물이 잘 나와요.
-        {greenhouse ? ' 마을 온실 덕분에 계절과 상관없이 심을 수 있어요.' : ` 지금은 ${SEASON_INFO[season].name}이에요.`}
-      </p>
-      {harvest && (
-        <output className="l-next-step" data-testid="farm-next-step">
-          <span>
-            <Wheat size={15} aria-hidden="true" /> {harvest} → 가방에 담았어요
-          </span>
-          <span className="l-next-actions">
-            {onBag && (
-              <button className="l-primary" onClick={onBag} data-testid="farm-go-sell">
-                <Backpack size={15} /> 팔러 가기
-              </button>
-            )}
-            <button className="l-secondary" onClick={onShop}>
-              <Store size={15} /> 씨앗 사기
-            </button>
-          </span>
-        </output>
-      )}
-      <div className="l-farm-actions">
-        <button
-          className="l-primary"
-          disabled={!ready || busy}
-          onClick={() => void harvestAll()}
-          data-testid="farm-harvest-all"
-        >
-          <Wheat size={16} /> 모두 수확 {ready ? `(${ready})` : ''}
-        </button>
-        <button
-          className="l-secondary"
-          disabled={!thirsty || busy}
-          onClick={() =>
-            void run(
-              { kind: 'water', plot: -1 },
-              `${thirsty}칸에 물을 줬어요. 더 빨리 자라요!`,
-              'water',
-            )
-          }
-          data-testid="farm-water-all"
-        >
-          <Droplets size={16} /> 모두 물 주기 {thirsty ? `(${thirsty})` : ''}
-        </button>
-        {(['fertilizer', 'fertilizer-deluxe'] as const).map((item, i) => {
-          const level = (i + 1) as 1 | 2;
-          const n = Math.min(inv[item] ?? 0, fertTargets(level));
-          if (!(inv[item] ?? 0)) return null;
-          return (
-            <button
-              key={item}
-              className="l-secondary"
-              disabled={!n || busy}
-              onClick={() =>
-                void run(
-                  { kind: 'fertilize', plot: -1, item },
-                  `${n}칸에 ${ITEM_BY_ID[item].name}를 줬어요. 좋은 작물이 나올 거예요.`,
-                  'plant',
-                )
-              }
-              data-testid={`farm-fert-${level}`}
-            >
-              <FlaskConical size={16} /> {ITEM_BY_ID[item].name} 주기 {n ? `(${n})` : ''}
-              <small className="l-inline-count">{inv[item]}개</small>
-            </button>
-          );
-        })}
-        <button className="l-secondary" onClick={onShop}>
-          <Store size={16} /> 씨앗·비료 사기
-        </button>
-      </div>
-      {rained > 0 && (
-        <p className="l-rain-note">
-          <CloudRain size={15} aria-hidden="true" /> 오늘 비가 와서 {rained}칸은 물을 주지 않아도 돼요.
-        </p>
-      )}
-      {empty > 0 && (
-        <div className="l-plant-all" data-testid="farm-plant-all-row">
-          {anySeeds ? (
-            <>
-              <label>
-                <span>빈 칸 {empty}칸에</span>
-                <select
-                  value={pick}
-                  onChange={(e) => {
-                    setSeed(e.target.value as Crop);
-                    rememberSeed(e.target.value as Crop);
-                  }}
-                  data-testid="farm-seed"
-                >
-                  {CROPS.map((crop) => (
-                    <option key={crop} value={crop} disabled={!seeds[crop] || !plantable(crop)}>
-                      {cropLabel(crop)} ({seeds[crop]}개){plantable(crop) ? '' : ` · ${seasonNote(crop)}`}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                className="l-primary"
-                disabled={busy || !plantN}
-                onClick={() => {
-                  rememberSeed(pick);
-                  void run(
-                    { kind: 'plant', plot: -1, crop: pick },
-                    `${CROP_INFO[pick].name} ${plantN}칸을 심었어요.`,
-                    'plant',
-                  );
-                }}
-                data-testid="farm-plant-all"
-              >
-                <Sprout size={15} /> 모두 심기 ({plantN})
-              </button>
-            </>
-          ) : (
-            <>
-              <span>지금 심을 수 있는 씨앗이 없어요.</span>
-              <button className="l-primary" onClick={onShop} data-testid="farm-need-seeds">
-                <Store size={15} /> 씨앗 사러 가기
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      <ol className="l-farm-grid" aria-label={`텃밭 ${farm.length}칸`} data-size={farm.length}>
-        {farm.map((plot, i) => {
-          const stage = plot.crop ? plotStage(plot, now) : 0;
-          const readyAt = plot.readyAt ?? 0;
-          const total = plot.crop ? Math.max(1, readyAt - plot.plantedAt) : 1;
-          const progress = plot.crop
-            ? Math.min(1, Math.max(0, (now - plot.plantedAt) / total))
-            : 0;
-          const regrow = plot.crop ? CROP_INFO[plot.crop].regrow : undefined;
-          return (
-            <li
-              key={i}
-              className="l-plot"
-              data-stage={plot.crop ? stage : 'empty'}
-              data-testid={`plot-${i}`}
-            >
-              <span className="l-plot-art" aria-hidden="true">
-                {plot.crop ? (
-                  stage === 3 ? (
-                    <ItemIcon id={plot.crop} size={34} quality={plot.quality} />
-                  ) : (
-                    <span className="l-plot-sprout">
-                      <SproutArt stage={stage} />
-                      {plot.quality ? <QualityStar quality={plot.quality} /> : null}
-                    </span>
-                  )
-                ) : null}
-              </span>
-              <strong>
-                {i + 1}번 밭 · {plot.crop ? CROP_INFO[plot.crop].name : '비어 있음'}
-                {plot.crop && plot.quality ? (plot.quality === 2 ? ' · 금별 예감' : ' · 은별 예감') : ''}
-              </strong>
-              {plot.crop && (
-                <>
-                  <progress
-                    className="l-plot-bar"
-                    aria-label="자란 정도"
-                    max={100}
-                    value={Math.round(progress * 100)}
-                  />
-                  <small>
-                    {stage === 3
-                      ? '다 자랐어요!'
-                      : `${duration(readyAt - now)} 뒤 수확${plot.rained ? ' · 비가 물을 줬어요' : plot.wateredAt !== null ? ' · 물 줌' : ''}`}
-                  </small>
-                  {(plot.fert || (regrow && plot.harvestsLeft > 1)) && (
-                    <span className="l-plot-tags">
-                      {plot.fert ? <em>{plot.fert === 2 ? '고급 비료' : '비료'}</em> : null}
-                      {regrow && plot.harvestsLeft > 1 ? (
-                        <em>
-                          <Repeat size={11} aria-hidden="true" /> {plot.harvestsLeft}번 더 수확
-                        </em>
-                      ) : null}
-                    </span>
-                  )}
-                </>
-              )}
-              {!plot.crop ? (
-                choosing === i ? (
-                  <div className="l-seed-choices">
-                    {CROPS.map((crop) => (
-                      <button
-                        key={crop}
-                        disabled={!seeds[crop] || busy || !plantable(crop)}
-                        title={seasonNote(crop) || undefined}
-                        onClick={() => {
-                          setChoosing(null);
-                          setSeed(crop);
-                          rememberSeed(crop);
-                          void run(
-                            { kind: 'plant', plot: i, crop },
-                            `${josa(CROP_INFO[crop].name, '을/를')} 심었어요.`,
-                            'plant',
-                          );
-                        }}
-                      >
-                        <ItemIcon id={crop} size={18} /> {cropLabel(crop)} <small>{seeds[crop]}개</small>
-                      </button>
-                    ))}
-                    {!anySeeds && (
-                      <button className="l-link" onClick={onShop}>
-                        <Store size={14} /> 씨앗 사러 가기
-                      </button>
-                    )}
-                    <button className="l-link" onClick={() => setChoosing(null)}>
-                      취소
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    className="l-secondary"
-                    disabled={busy}
-                    onClick={() => {
-                      // One tap plants the remembered seed when there is one.
-                      if (seeds[pick] > 0 && plantable(pick))
-                        void run(
-                          { kind: 'plant', plot: i, crop: pick },
-                          `${josa(CROP_INFO[pick].name, '을/를')} 심었어요.`,
-                          'plant',
-                        );
-                      else setChoosing(i);
-                    }}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      setChoosing(i);
-                    }}
-                    data-testid={`plot-${i}-plant`}
-                  >
-                    <Sprout size={15} />{' '}
-                    {seeds[pick] > 0 && plantable(pick) ? `${CROP_INFO[pick].name} 심기` : '씨앗 심기'}
-                  </button>
-                )
-              ) : stage === 3 ? (
-                <button
-                  className="l-primary"
-                  disabled={busy}
-                  onClick={async () => {
-                    const before = room.snapshot().life;
-                    if (await run({ kind: 'harvest', plot: i }, '', 'harvest'))
-                      setHarvest(producedText(before, room.snapshot().life) || cropLabel(plot.crop!));
-                  }}
-                  data-testid={`plot-${i}-harvest`}
-                >
-                  <Wheat size={15} /> 수확
-                </button>
-              ) : (
-                <button
-                  className="l-secondary"
-                  disabled={plot.wateredAt !== null || plot.rained || busy}
-                  onClick={() =>
-                    void run({ kind: 'water', plot: i }, '물을 줬어요. 더 빨리 자라요!', 'water')
-                  }
-                  data-testid={`plot-${i}-water`}
-                >
-                  <Droplets size={15} /> {plot.rained ? '비가 줬어요' : plot.wateredAt !== null ? '물 줌' : '물 주기'}
-                </button>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-      <div className="l-farm-footer">
-        <p className="l-help-text">
-          가진 씨앗:{' '}
-          {CROPS.filter((c) => seeds[c] > 0)
-            .map((c) => `${CROP_INFO[c].name} ${seeds[c]}`)
-            .join(' · ') || '없음'}
-          {empty > 0 && anySeeds && (
-            <>
-              {' '}
-              ·{' '}
-              <button className="l-link" onClick={() => setChoosing(farm.findIndex((p) => !p.crop))}>
-                다른 씨앗 고르기
-              </button>
-            </>
-          )}
-        </p>
-        {nextSize ? (
-          <button className="l-secondary" onClick={() => setExpand(true)} data-testid="farm-expand">
-            <Grid2x2Plus size={15} /> 밭 넓히기 · {nextSize}칸 {formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}
-          </button>
-        ) : (
-          <small className="l-help-text">밭을 가장 넓게(12칸) 넓혔어요.</small>
-        )}
-      </div>
-      {expand && nextSize ? (
-        <ConfirmModal
-          title="밭을 넓힐까요?"
-          body={
-            <>
-              내 텃밭이 <b>{nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}</b>이 들어요.
-              지갑에 {formatBeom(view.wallet.balance)}이 있어요.
-            </>
-          }
-          confirmLabel="넓히기"
-          busyLabel="넓히는 중…"
-          cancelLabel="다음에"
-          onClose={() => setExpand(false)}
-          onConfirm={() => run({ kind: 'expandFarm' }, `텃밭이 ${nextSize}칸으로 넓어졌어요!`, 'harvest')}
-        />
-      ) : null}
-    </Modal>
-  );
-}
-
-/** Growing plot art: a seed mound, then leaves (vector, no emoji). */
-function SproutArt({ stage }: { stage: number }) {
-  return (
-    <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
-      <ellipse cx="24" cy="40" rx="16" ry="5" fill="#8a6a4a" />
-      <path d="M24 40 V24" stroke="#4f8a3c" strokeWidth="3" strokeLinecap="round" />
-      <path d="M24 30 C16 28 12 22 12 16 C20 16 24 22 24 30Z" fill="#6aa84f" />
-      {stage >= 1 && <path d="M24 26 C32 24 36 18 36 12 C28 12 24 18 24 26Z" fill="#7dbb5d" />}
-      {stage >= 2 && <circle cx="24" cy="18" r="4" fill="#9cc271" />}
-    </svg>
+    <FarmLedger
+      room={room}
+      view={view}
+      notify={notify}
+      onClose={onClose}
+      onShop={onShop}
+      onBag={onBag}
+      onWalk={onWalk}
+      actor={actor ?? view.life?.actors?.[view.self] ?? 0}
+    />
   );
 }
 

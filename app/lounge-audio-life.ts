@@ -4,7 +4,10 @@
 import { loungeAudio } from './lounge-audio';
 import { getSettings } from './lounge-settings';
 
-type LifeSfx = 'cast' | 'bite' | 'reel' | 'miss' | 'pickup' | 'catch' | 'cook' | 'donate' | 'fanfare' | 'eat';
+type LifeSfx =
+  | 'cast' | 'bite' | 'reel' | 'miss' | 'pickup' | 'catch' | 'cook' | 'donate' | 'fanfare' | 'eat'
+  // VILL-2: harvest pop, gold-star sparkle, reel clicks, a big-catch splash.
+  | 'pop' | 'sparkle' | 'tick' | 'splash';
 
 const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorType; peak?: number }> = {
   // A soft whoosh-plop: falling triangle notes.
@@ -19,6 +22,10 @@ const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorTy
   donate: { notes: [659.25, 830.61, 987.77, 1318.5], step: 0.09, type: 'sine', peak: 0.07 },
   fanfare: { notes: [523.25, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.5], step: 0.1, type: 'triangle', peak: 0.08 },
   eat: { notes: [440, 554.37, 659.25], step: 0.09, type: 'sine', peak: 0.06 },
+  pop: { notes: [392, 784], step: 0.045, type: 'triangle', peak: 0.07 },
+  sparkle: { notes: [1567.98, 2093, 2637.02, 3135.96], step: 0.05, type: 'sine', peak: 0.045 },
+  tick: { notes: [1318.5], step: 0.02, type: 'square', peak: 0.018 },
+  splash: { notes: [293.66, 220, 174.61], step: 0.06, type: 'triangle', peak: 0.06 },
 };
 
 /** Plays one life cue (quietly does nothing when sound is off). */
@@ -27,5 +34,5 @@ export function lifeSfx(kind: LifeSfx) {
   const n = NOTES[kind];
   loungeAudio.cue(n.notes, n.step, n.type, n.peak);
   // A short paper-snap stands in for the splash of a cast or a bite.
-  if (kind === 'cast' || kind === 'bite') loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05);
+  if (kind === 'cast' || kind === 'bite' || kind === 'splash') loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05);
 }

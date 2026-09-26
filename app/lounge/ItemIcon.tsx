@@ -108,7 +108,7 @@ const CROP_ART: Record<string, ReactNode> = {
 };
 
 /* ------------------------------------------------------------ fish */
-type FishLook = { shape: 'fish' | 'long' | 'flat' | 'round' | 'squid' | 'claw' | 'tiny'; body: string; belly?: string; mark?: string };
+type FishLook = { shape: 'fish' | 'long' | 'flat' | 'round' | 'squid' | 'claw' | 'tiny' | 'octo'; body: string; belly?: string; mark?: string };
 const FISH_LOOK: Record<string, FishLook> = {
   crucian: { shape: 'fish', body: '#8a8f5a', belly: '#c9c99a' },
   carp: { shape: 'fish', body: '#b9854a', belly: '#e3c08a' },
@@ -134,6 +134,29 @@ const FISH_LOOK: Record<string, FishLook> = {
   puffer: { shape: 'round', body: '#d8c07a', belly: '#fff6d6', mark: '#6f5a2a' },
   seabream: { shape: 'fish', body: '#e0655e', belly: '#ffd2c8' },
   goldcarp: { shape: 'fish', body: '#f2c14e', belly: '#fff1b0', mark: '#fffbe0' },
+  // VILL-2 spots.
+  kkeokji: { shape: 'fish', body: '#7d7a4a', belly: '#c9c08a', mark: '#4a4630' },
+  shiri: { shape: 'tiny', body: '#c9b36a', mark: '#3f4f7a' },
+  lenok: { shape: 'fish', body: '#a07e5a', belly: '#ecd2b8', mark: '#c2413a' },
+  beodeulchi: { shape: 'tiny', body: '#a89a6a', mark: '#6e6444' },
+  rainbow: { shape: 'fish', body: '#8fa7a2', belly: '#f1e6e6', mark: '#e0708a' },
+  mochi: { shape: 'tiny', body: '#d9c27a', mark: '#c9573f' },
+  bluegill: { shape: 'round', body: '#6d8a8f', belly: '#e9c46a', mark: '#2f4a5a' },
+  blackbass: { shape: 'fish', body: '#5f7a4a', belly: '#dfe2c0', mark: '#2f3f25' },
+  skygazer: { shape: 'fish', body: '#b9c7cf', belly: '#f4f7f8', mark: '#8a9aa8' },
+  greenling: { shape: 'fish', body: '#8a6a4a', belly: '#d9c29a', mark: '#5a4028' },
+  rockfish: { shape: 'fish', body: '#8a5a4a', belly: '#e0b8a0', mark: '#5a3024' },
+  jacopever: { shape: 'fish', body: '#5a5a52', belly: '#b9b4a4', mark: '#35352f' },
+  octopus: { shape: 'octo', body: '#c96a5a', mark: '#f2c4b4' },
+  blackbream: { shape: 'fish', body: '#5e6b78', belly: '#d9dfe4', mark: '#2c3640' },
+  horsemackerel: { shape: 'fish', body: '#6f93a8', belly: '#eef3f6', mark: '#d9c26a' },
+  hairtail: { shape: 'long', body: '#d9e2e8', belly: '#ffffff', mark: '#9fb3c2' },
+  conger: { shape: 'long', body: '#7a6a52', belly: '#d9ccb0', mark: '#4a3e2c' },
+  mitre: { shape: 'squid', body: '#f0c8b8' },
+  moonhairtail: { shape: 'long', body: '#f3e3a3', belly: '#fffbe8', mark: '#d9b64a' },
+  kkeuri: { shape: 'fish', body: '#8fa0a8', belly: '#eef0ea', mark: '#e08a4a' },
+  nuchi: { shape: 'fish', body: '#b3a37f', belly: '#efe6cf', mark: '#7d6e4f' },
+  bagrid: { shape: 'fish', body: '#b58a3f', belly: '#f0dca0', mark: '#4a3a1f' },
 };
 function fishArt(id: string): ReactNode {
   const f = FISH_LOOK[id];
@@ -187,6 +210,18 @@ function fishArt(id: string): ReactNode {
           <path d="M15 26 C13 34 10 38 8 44 M20 27 C19 35 18 40 17 45 M24 27 V45 M28 27 C29 35 30 40 31 45 M33 26 C35 34 38 38 40 44" stroke={f.body} strokeWidth="3" strokeLinecap="round" fill="none" />
           {eye(19, 21)}
           {eye(29, 21)}
+        </>
+      );
+    case 'octo':
+      return (
+        <>
+          <path d="M24 6 C35 6 38 16 36 23 C34 28 14 28 12 23 C10 16 13 6 24 6Z" fill={f.body} {...stroke} />
+          <path d="M14 25 C10 32 12 38 8 43 M19 27 C17 34 19 40 15 45 M24 27 V45 M29 27 C31 34 29 40 33 45 M34 25 C38 32 36 38 40 43" stroke={f.body} strokeWidth="3.4" strokeLinecap="round" fill="none" />
+          {[[18, 14], [29, 12], [31, 19]].map(([x, y]) => (
+            <circle key={x} cx={x} cy={y} r="1.6" fill={f.mark} />
+          ))}
+          {eye(20, 20)}
+          {eye(28, 20)}
         </>
       );
     case 'claw':
@@ -638,6 +673,117 @@ export function itemArt(id: string): ReactNode {
     );
   }
   return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? null;
+}
+
+/* ------------------------------------------------------------ growth stages */
+type Leaf = 'feather' | 'vine' | 'rosette' | 'stalk' | 'bush';
+const CROP_LEAF: Record<string, { leaf: Leaf; tone: string; dark: string; hint: string }> = {
+  carrot: { leaf: 'feather', tone: '#6fae4f', dark: '#4f8a3a', hint: '#f28c28' },
+  tomato: { leaf: 'vine', tone: '#5f9e48', dark: '#3f7a34', hint: '#9bc45a' },
+  pumpkin: { leaf: 'vine', tone: '#6aa54c', dark: '#4a8238', hint: '#f5c542' },
+  strawberry: { leaf: 'rosette', tone: '#4f9444', dark: '#357a35', hint: '#fff6d8' },
+  potato: { leaf: 'bush', tone: '#6aa54c', dark: '#4a8238', hint: '#f3eefc' },
+  spinach: { leaf: 'rosette', tone: '#3f8a3c', dark: '#2f6e2e', hint: '#57a64c' },
+  corn: { leaf: 'stalk', tone: '#7dbb5d', dark: '#5a9a45', hint: '#e8c65a' },
+  watermelon: { leaf: 'vine', tone: '#5a9a45', dark: '#3f7a34', hint: '#4f8f3c' },
+  sweetpotato: { leaf: 'vine', tone: '#6a9e4a', dark: '#6b4a7a', hint: '#b0587a' },
+  cabbage: { leaf: 'rosette', tone: '#8cc063', dark: '#5f9a48', hint: '#cfe7a8' },
+};
+function leaves(kind: Leaf, tone: string, dark: string, grow: number) {
+  const s = 0.55 + grow * 0.45;
+  const t = `translate(24 42) scale(${s}) translate(-24 -42)`;
+  switch (kind) {
+    case 'feather':
+      return (
+        <g transform={t} fill="none" strokeLinecap="round">
+          <path d="M24 42 C22 30 16 24 12 18 M24 42 C24 28 24 20 24 10 M24 42 C26 30 32 24 36 18" stroke={dark} strokeWidth="2.4" />
+          <path d="M14 22 l-3 -1 M13 19 l-3 1 M34 22 l3 -1 M35 19 l3 1 M22 16 l-3 -1 M26 16 l3 -1 M22 12 l-2 -2 M26 12 l2 -2" stroke={tone} strokeWidth="2.2" />
+        </g>
+      );
+    case 'stalk':
+      return (
+        <g transform={t}>
+          <path d="M24 42 V8" stroke={dark} strokeWidth="3" strokeLinecap="round" />
+          <path d="M24 34 C16 32 10 26 8 20 C16 22 22 26 24 32Z M24 26 C32 24 38 18 40 12 C32 14 26 18 24 24Z M24 18 C18 16 14 12 13 7 C19 9 23 12 24 16Z" fill={tone} />
+        </g>
+      );
+    case 'rosette':
+      return (
+        <g transform={t}>
+          <path d="M24 42 C12 42 6 34 8 26 C16 28 22 34 24 42Z" fill={dark} />
+          <path d="M24 42 C36 42 42 34 40 26 C32 28 26 34 24 42Z" fill={dark} />
+          <path d="M24 42 C16 34 16 22 22 14 C28 22 30 34 24 42Z" fill={tone} />
+          <path d="M24 42 C20 36 12 34 10 30 M24 42 C28 36 36 34 38 30" stroke="#dbeec8" strokeWidth="1" fill="none" opacity=".6" />
+        </g>
+      );
+    case 'bush':
+      return (
+        <g transform={t}>
+          <circle cx="17" cy="32" r="8" fill={dark} />
+          <circle cx="31" cy="32" r="8" fill={dark} />
+          <circle cx="24" cy="24" r="10" fill={tone} />
+          <path d="M24 42 V30" stroke={dark} strokeWidth="2.4" />
+        </g>
+      );
+    default:
+      return (
+        <g transform={t}>
+          <path d="M24 42 C20 34 26 28 22 20 C20 16 24 12 28 12" stroke={dark} strokeWidth="2.2" fill="none" strokeLinecap="round" />
+          <path d="M22 30 C12 32 8 24 10 18 C18 18 22 24 22 30Z" fill={tone} />
+          <path d="M24 22 C34 24 40 18 38 12 C30 12 25 16 24 22Z" fill={tone} />
+          <path d="M23 36 C31 38 36 34 36 28 C30 28 25 31 23 36Z" fill={dark} />
+        </g>
+      );
+  }
+}
+/**
+ * Growth art for a crop at a stage (0 seed, 1 sprout, 2 growing, 3 ripe):
+ * each crop keeps its own leaf shape, stage 2 shows what is coming (a green
+ * tomato, a strawberry flower, a corn tassel…) and stage 3 the produce.
+ */
+export function CropStageArt({ crop, stage, size = 40 }: { crop: string; stage: number; size?: number }) {
+  const look = CROP_LEAF[crop] ?? CROP_LEAF.carrot;
+  return (
+    <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true" className="l-stage-art" data-stage={stage}>
+      {stage <= 0 ? (
+        <>
+          <ellipse cx="24" cy="40" rx="11" ry="4" fill="#6a452b" />
+          <ellipse cx="21" cy="37.5" rx="2.2" ry="1.4" fill="#e7cf97" />
+          <ellipse cx="27" cy="38.5" rx="1.8" ry="1.2" fill="#e7cf97" />
+          <path d="M24 37 v-3" stroke={look.tone} strokeWidth="1.6" strokeLinecap="round" />
+        </>
+      ) : stage === 1 ? (
+        <>
+          <path d="M24 42 V30" stroke={look.dark} strokeWidth="2.4" strokeLinecap="round" />
+          <path d="M24 32 C18 32 14 28 14 24 C20 24 24 27 24 32Z" fill={look.tone} />
+          <path d="M24 32 C30 32 34 28 34 24 C28 24 24 27 24 32Z" fill={look.tone} />
+        </>
+      ) : stage === 2 ? (
+        <>
+          {leaves(look.leaf, look.tone, look.dark, 0.6)}
+          {crop === 'strawberry' || crop === 'potato' ? (
+            <g fill={look.hint}>
+              <circle cx="16" cy="26" r="2.6" />
+              <circle cx="31" cy="23" r="2.4" />
+              <circle cx="16" cy="26" r="0.9" fill="#f2c14e" />
+              <circle cx="31" cy="23" r="0.9" fill="#f2c14e" />
+            </g>
+          ) : crop === 'corn' ? (
+            <path d="M24 10 l-3 -5 M24 10 l0 -6 M24 10 l3 -5" stroke={look.hint} strokeWidth="1.8" strokeLinecap="round" />
+          ) : crop === 'carrot' ? (
+            <path d="M20 42 Q24 38 28 42Z" fill={look.hint} />
+          ) : (
+            <circle cx="30" cy="31" r="3.4" fill={look.hint} />
+          )}
+        </>
+      ) : (
+        <>
+          {leaves(look.leaf, look.tone, look.dark, 1)}
+          <g transform="translate(11 13) scale(.54)">{itemArt(crop)}</g>
+        </>
+      )}
+    </svg>
+  );
 }
 
 /** A 48×48 item icon (default 32px), with optional quality star and count. */

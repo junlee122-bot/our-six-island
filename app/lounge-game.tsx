@@ -993,10 +993,15 @@ function AccountLounge({
     setMailTo(actor);
     setModal('mail');
   };
-  /** E at my farm: the selected hotbar seed / fertilizer / can acts at once. */
+  /** E at my farm: ripe crops are gathered first (VILL-2), else the selected hotbar seed / fertilizer / can acts at once. */
   const farmAct = () => {
     const life = room.snapshot().life;
     const now = Date.now() + room.snapshot().clockOffset;
+    const ripe = life?.me.farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= now).length ?? 0;
+    if (ripe) {
+      void lifeRun({ kind: 'harvest', plot: -1 }, `${ripe}칸을 거뒀어요. 가방에 담았어요.`, 'pop').then((ok) => ok && loungeAudio.chime('harvest'));
+      return;
+    }
     const quick = life
       ? farmToolAction(life.me.farm, life.me, hotbar.tool, now, life.calendar?.season ?? 'spring', !!life.flags?.includes('greenhouse'))
       : null;
@@ -1017,6 +1022,23 @@ function AccountLounge({
         `${quick.n}칸에 ${itemName(hotbar.tool)}를 줬어요.`,
         'pickup',
       );
+  };
+  /** A click on one of my plots in the village (VILL-2): harvest, plant the held seed, water, fertilize, else the ledger. */
+  const plotAct = (i: number) => {
+    const life = room.snapshot().life;
+    const plot = life?.me.farm[i];
+    if (!life || !plot) return;
+    const now = Date.now() + room.snapshot().clockOffset;
+    const tool = hotbar.tool;
+    if (plot.crop && (plot.readyAt ?? Infinity) <= now)
+      void lifeRun({ kind: 'harvest', plot: i }, '', 'pop').then((ok) => ok && loungeAudio.chime('harvest'));
+    else if (!plot.crop && tool.startsWith('seed-') && (life.me.bag.seeds[tool.slice(5) as Crop] ?? 0) > 0)
+      void lifeRun({ kind: 'plant', plot: i, crop: tool.slice(5) as Crop }, '').then((ok) => ok && loungeAudio.chime('plant'));
+    else if (plot.crop && (tool === 'fertilizer' || tool === 'fertilizer-deluxe') && (life.me.inv?.[tool] ?? 0) > 0)
+      void lifeRun({ kind: 'fertilize', plot: i, item: tool }, `${itemName(tool)}를 뿌렸어요.`, 'pickup');
+    else if (plot.crop && plot.wateredAt === null && !plot.rained)
+      void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));
+    else setModal('farm');
   };
   const startFishing = (spot: Spot) => {
     setModal(null);
@@ -1999,6 +2021,7 @@ function AccountLounge({
                       clockOffset={view.clockOffset}
                       dayNight={settings.dayNight}
                       onFarm={farmAct}
+                      onPlot={plotAct}
                       onShop={() => openShop('seeds')}
                       onMail={() => openMail()}
                       onPick={(tree) => void pickFruit(tree)}
@@ -2628,6 +2651,8 @@ function AccountLounge({
           onClose={() => setModal(null)}
           onShop={() => setModal('shop')}
           onBag={() => setModal('bag')}
+          onWalk={walkTo}
+          actor={save.actor}
         />
       )}
       <Suspense fallback={null}>
