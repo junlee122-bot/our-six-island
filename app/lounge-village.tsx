@@ -2702,7 +2702,9 @@ export function Village3D(props: Props) {
                   (t) => (props.life?.me.fruitReadyAt?.[t] ?? 0) <= lifeClock,
                 );
                 const p = FRUIT_TREE_POINTS[ripe ?? FRUIT_TREES[0]];
-                if (p) controls.current?.visit({ x: p.x + 1.2, z: p.z + 1.4 });
+                // Stand on the tree's village side: south of the riverside
+                // tree the river bank is in reach and E would fish instead.
+                if (p) controls.current?.visit({ x: p.x + 1.2, z: p.z + (p.z > 0 ? -1.4 : 1.4) });
               }}
             >
               <span className="hv-place-dot" style={{ background: '#e04a3a' }} />

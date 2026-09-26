@@ -795,15 +795,29 @@ export function createInteriorScene(
         post.position.set(minX + 1.3, 0, z);
         root.add(post);
       }
-      // The VIP line along the corner's front edge.
+      // The VIP line along the corner's front edge: a post every ~1.25 m,
+      // joined by a sagging velvet rope (the model's own rope end hangs free).
       const { x0, x1, z1 } = VIP_CORNER,
-        reach = CLUB_MODELS.queueRope.reach,
-        count = Math.floor((x1 - x0) / reach);
-      for (let i = 0; i <= count; i++) {
-        const post = clubCopy(model, 1, Math.PI);
-        post.position.set(x0 + i * reach, 0, z1 + 0.05);
+        count = Math.max(2, Math.round((x1 - x0) / 1.25) + 1),
+        z = z1 + 0.05,
+        spots = Array.from({ length: count }, (_, i) => x0 + ((x1 - x0) * i) / (count - 1));
+      const velvet = surface('#a8323f', { roughness: 0.6 });
+      spots.forEach((x, i) => {
+        // Post centre is at +0.07 model x; the loose rope end points along the line.
+        const post = clubCopy(model, 1, 0);
+        post.position.set(x - CLUB_MODELS.queueRope.post, 0, z);
         vip.add(post);
-      }
+        if (i === 0) return;
+        const a = new THREE.Vector3(spots[i - 1], 0.84, z),
+          b = new THREE.Vector3(x, 0.84, z),
+          mid = a.clone().lerp(b, 0.5).setY(0.62);
+        const rope = new THREE.Mesh(
+          new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a, mid, b), 16, 0.025, 6),
+          velvet,
+        );
+        rope.castShadow = true;
+        vip.add(rope);
+      });
     },
   };
   const wanted: ClubModel[] =

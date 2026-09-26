@@ -40,7 +40,51 @@ export function roomObstacles(room: Pick<Bedroom, 'items'>): WalkObstacle[] {
       depth: box.z1 - box.z0,
     });
   }
-  return out;
+  return [...out, ...slotFillers(out)];
+}
+
+/**
+ * Gaps a walker cannot pass (between two pieces of furniture, or furniture
+ * and a wall) are closed, so walking along furniture never wedges into one.
+ */
+const SLOT = WALK_ROOM.radius * 2 + 0.1;
+function slotFillers(items: readonly WalkObstacle[]): WalkObstacle[] {
+  const fills: WalkObstacle[] = [];
+  const box = (o: WalkObstacle) => ({
+    x0: o.x - o.width / 2,
+    x1: o.x + o.width / 2,
+    z0: o.z - o.depth / 2,
+    z1: o.z + o.depth / 2,
+  });
+  const add = (id: string, x0: number, x1: number, z0: number, z1: number) => {
+    if (x1 - x0 > 1e-3 && z1 - z0 > 1e-3)
+      fills.push({ id, x: (x0 + x1) / 2, z: (z0 + z1) / 2, width: x1 - x0, depth: z1 - z0 });
+  };
+  const walls = { x0: ROOM.minX, x1: ROOM.maxX, z0: ROOM.minZ, z1: ROOM.maxZ };
+  items.forEach((item, i) => {
+    const a = box(item);
+    // Against the walls (the door stays open: nothing stands in its span).
+    if (a.x0 - walls.x0 > 0 && a.x0 - walls.x0 < SLOT && (a.z1 < ROOM.door.z0 || a.z0 > ROOM.door.z1))
+      add(`slot-${item.id}-w`, walls.x0, a.x0, a.z0, a.z1);
+    if (walls.x1 - a.x1 > 0 && walls.x1 - a.x1 < SLOT) add(`slot-${item.id}-e`, a.x1, walls.x1, a.z0, a.z1);
+    if (a.z0 - walls.z0 > 0 && a.z0 - walls.z0 < SLOT) add(`slot-${item.id}-n`, a.x0, a.x1, walls.z0, a.z0);
+    if (walls.z1 - a.z1 > 0 && walls.z1 - a.z1 < SLOT) add(`slot-${item.id}-s`, a.x0, a.x1, a.z1, walls.z1);
+    for (const other of items.slice(i + 1)) {
+      const b = box(other);
+      const zOverlap = Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0),
+        xOverlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+      const gapX = Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1),
+        gapZ = Math.max(a.z0, b.z0) - Math.min(a.z1, b.z1);
+      if (zOverlap > 0 && gapX > 0 && gapX < SLOT)
+        add(`slot-${item.id}-${other.id}`, Math.min(a.x1, b.x1), Math.max(a.x0, b.x0), Math.max(a.z0, b.z0), Math.min(a.z1, b.z1));
+      else if (xOverlap > 0 && gapZ > 0 && gapZ < SLOT)
+        add(`slot-${item.id}-${other.id}`, Math.max(a.x0, b.x0), Math.min(a.x1, b.x1), Math.min(a.z1, b.z1), Math.max(a.z0, b.z0));
+      else if (gapX > 0 && gapZ > 0 && Math.hypot(gapX, gapZ) < SLOT)
+        // Corner to corner: bridge the diagonal pinch.
+        add(`slot-${item.id}-${other.id}`, Math.min(a.x1, b.x1) - 0.05, Math.max(a.x0, b.x0) + 0.05, Math.min(a.z1, b.z1) - 0.05, Math.max(a.z0, b.z0) + 0.05);
+    }
+  });
+  return fills;
 }
 
 /** Obstacles of the room that is open right now (the walk loop uses these). */
@@ -314,7 +358,9 @@ export function leavingThroughDoor(point: WalkPoint, dx: number) {
     dx < 0 &&
     point.x <= ROOM.minX + WALK_ROOM.radius + 0.08 &&
     point.z > ROOM.door.z0 + 0.12 &&
-    point.z < ROOM.door.z1 - 0.12
+    // The door sits by the front corner: holding "left" (down-left on the
+    // floor) slides along the front wall into that corner, which counts too.
+    point.z < Math.max(ROOM.door.z1 - 0.12, ROOM.door.z1 + 0.8 >= ROOM.maxZ ? ROOM.maxZ : -Infinity)
   );
 }
 

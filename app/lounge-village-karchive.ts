@@ -212,8 +212,8 @@ function desnowMaterial(source: THREE.Material, roofFrom: number, uniform: { val
         {
           vec3 c = diffuseColor.rgb;
           float lo = min(min(c.r, c.g), c.b), hi = max(max(c.r, c.g), c.b);
-          float snow = smoothstep(0.62, 0.74, lo) * (1.0 - smoothstep(0.05, 0.1, hi - lo));
-          vec3 tile = vec3(0.035, 0.045, 0.085);
+          float snow = smoothstep(0.42, 0.6, lo) * (1.0 - smoothstep(0.08, 0.14, hi - lo));
+          vec3 tile = vec3(0.045, 0.055, 0.1);
           vec3 stone = vec3(0.30, 0.29, 0.28);
           vec3 fill = mix(stone, tile, step(kxRoofFrom, kxWorldY)) * (0.75 + 0.3 * lo);
           diffuseColor.rgb = mix(c, fill, snow * kxDesnow);

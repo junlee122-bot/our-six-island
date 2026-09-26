@@ -5,15 +5,15 @@
 /**
  * Measured kArchive club models (model units, origin at the bottom centre,
  * +z the front): the banquet chair's cushion top, the card table's top, the
- * bar stool's seat, and how far a queue post's rope reaches toward the next
- * post. public/models/lounge/club/assets.json records the full bounds;
+ * bar stool's seat, and the queue post's centre (its loose rope end hangs
+ * toward -x). public/models/lounge/club/assets.json records the full bounds;
  * tests/lounge-karchive-civic.test.mjs re-measures them from the GLBs.
  */
 export const CLUB_MODELS = {
   banquetChair: { seat: 0.56, w: 0.585, d: 0.656, h: 1 },
   cardTable: { top: 0.523, w: 0.802, d: 0.8 },
   barStool: { seat: 0.8 },
-  queueRope: { reach: 0.37 },
+  queueRope: { post: 0.07 },
 } as const;
 export type ClubModel = keyof typeof CLUB_MODELS;
 

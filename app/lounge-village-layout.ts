@@ -246,8 +246,8 @@ export const VILLAGE_TERRACE = {
 } as const;
 export const VILLAGE_ORCHARD: readonly VillagePoint[] = [
   { x: -22, z: -13 },
-  { x: -10, z: -17.7 },
-  { x: 10, z: -17.7 },
+  { x: -10, z: -18.3 },
+  { x: 10, z: -18.3 },
   { x: 22, z: -13 },
   { x: 8, z: 12 },
   { x: -36, z: -5 },
@@ -353,7 +353,7 @@ export const VILLAGE_FURNISHINGS = [
     id: 'eastLantern',
     model: 'gardenLantern',
     x: 28.9,
-    z: -3.2,
+    z: -2.5,
     width: 0.8,
     depth: 0.8,
     height: 1.9,
@@ -524,13 +524,13 @@ const addTree = (x: number, z: number, scale: number, variant: number) =>
   [
     [-23, -16, 1.2],
     [-22, -10.6, 0.9],
-    [-24.8, -2.2, 1.2],
+    [-25.3, -1.8, 1.2],
     [-22, 3, 0.95],
     [-23.5, 6.8, 1.1],
     [-22, 18, 0.95],
     [23, -16, 1.1],
     [22, -10.6, 0.92],
-    [24.8, -2.2, 1.16],
+    [25.3, -1.8, 1.16],
     [22, 3, 0.95],
     [23.5, 6.8, 1.1],
     [22, 18, 0.92],
@@ -543,8 +543,8 @@ const addTree = (x: number, z: number, scale: number, variant: number) =>
     [-14, 12.3, 0.72],
     [14, 12.3, 0.74],
     [18, 12.3, 0.78],
-    [-19, 1, 0.76],
-    [19, 1, 0.72],
+    [-19, 0.3, 0.76],
+    [19, 0.3, 0.72],
   ] as const
 ).forEach(([x, z, s], i) => addTree(x, z, s, i));
 VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) => addTree(x, z, scale, i + 3));
@@ -552,8 +552,8 @@ VILLAGE_SCENIC_TREES.forEach(({ x, z, scale }, i) => addTree(x, z, scale, i + 3)
 // Lamps light the plaza, bridge heads and districts; none stand on a route.
 (
   [
-    [-4.9, -1],
-    [4.9, 1],
+    [-5.25, -1.1],
+    [5.25, 1.1],
     [-2.4, 3.4],
     [2.4, 3.4],
     [-29, 7],
@@ -591,14 +591,14 @@ decor.push(
 (
   [
     [-19, -11],
-    [-18.5, -10.8],
-    [18.5, -10.8],
-    [-21, 8],
+    [-19.2, -10.75],
+    [19, -11],
+    [-21.5, 8.4],
     [-19.6, 11.4],
-    [20.6, 8],
+    [21.5, 8.4],
     [19.6, 11.4],
-    [-11.4, 1.5],
-    [11.4, 1.5],
+    [-13.2, 0.6],
+    [13.2, 0.6],
     [-4, 7],
     [4, 7],
   ] as const
@@ -651,8 +651,9 @@ for (const place of VILLAGE_PLACES) {
     {
       id: `mailbox-${home}`,
       kind: 'mailbox',
-      x: place.entry.x - 1.35,
-      z: front + 0.55,
+      x: place.entry.x - 1.2,
+      // A walker fits between the post and the wall (no dead-end niche).
+      z: front + 1.0,
       home,
       // The post is thin; the box sits above head height.
       collider: circle(0.14),
@@ -663,7 +664,9 @@ for (const place of VILLAGE_PLACES) {
       x: place.entry.x + 1.5,
       z: front + 0.55,
       home,
-      collider: circle(0.38),
+      // Knee-high: walkable like the flower beds (a collider here left a
+      // narrow niche against the wall that caught walkers).
+      collider: null,
     },
     {
       id: `garden-flowers-${home}`,
@@ -707,6 +710,57 @@ type SolidCollider = {
   collider: VillageCollider;
   rotation: number;
 };
+/**
+ * Fill the unusable slivers beside buildings. Two footprints less than
+ * NARROW_SLOT apart side by side (the terraced homes, the casino and the
+ * farm plot) leave a slot a walker cannot pass but can wedge into; the slot
+ * is closed flush with their fronts. A garden fence along an outer side wall
+ * becomes part of that wall over the house's whole depth, so walking along
+ * the wall never catches on the fence's end.
+ */
+const NARROW_SLOT = 1.3;
+const SIDE_FENCE = 0.25;
+const slotFillers: SolidCollider[] = (() => {
+  const rects = [
+    ...VILLAGE_PLACES.map((p) => ({ id: p.id, home: p.kind === 'home', x: p.x, z: p.z, hw: p.width / 2, hd: p.depth / 2 })),
+    { id: VILLAGE_FARMLAND.id, home: false, x: VILLAGE_FARMLAND.x, z: VILLAGE_FARMLAND.z, hw: VILLAGE_FARMLAND.width / 2, hd: VILLAGE_FARMLAND.depth / 2 },
+  ];
+  const out: SolidCollider[] = [];
+  const add = (id: string, x0: number, x1: number, z0: number, z1: number) =>
+    out.push({ id, x: (x0 + x1) / 2, z: (z0 + z1) / 2, collider: boxCollider(x1 - x0, z1 - z0), rotation: 0 });
+  for (const a of rects)
+    for (const side of [-1, 1]) {
+      const wall = a.x + side * a.hw;
+      const neighbour = rects.find(
+        (b) =>
+          b !== a &&
+          (b.x - a.x) * side > 0 &&
+          Math.abs(b.x - side * b.hw - wall) < NARROW_SLOT &&
+          b.z - b.hd < a.z + a.hd &&
+          b.z + b.hd > a.z - a.hd,
+      );
+      if (neighbour) {
+        // Once per pair: from the left footprint.
+        if (side === 1)
+          add(
+            `slot-${a.id}-${neighbour.id}`,
+            wall,
+            neighbour.x - neighbour.hw,
+            Math.max(a.z - a.hd, neighbour.z - neighbour.hd),
+            Math.min(a.z + a.hd, neighbour.z + neighbour.hd),
+          );
+      } else if (a.home)
+        add(
+          `fence-side-${a.id}-${side}`,
+          Math.min(wall, wall + side * SIDE_FENCE),
+          Math.max(wall, wall + side * SIDE_FENCE),
+          a.z - a.hd,
+          a.z + a.hd,
+        );
+    }
+  return out;
+})();
+
 /** Every solid thing a walker can bump into, besides places, water and bounds. */
 export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
   ...VILLAGE_DECOR.flatMap((item) =>
@@ -774,6 +828,7 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
   })),
   // kArchive civic set: the festival stage and the pergola's four posts.
   ...KARCHIVE_COLLIDERS,
+  ...slotFillers,
 ];
 
 const FOUNTAIN = { x: 0, z: 0, radius: 2 } as const;

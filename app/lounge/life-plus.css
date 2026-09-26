@@ -500,6 +500,9 @@ body:has(.b3-room[data-editing]) .l-life-hud {
 .l-inv-sell-row label {
   flex: 1;
 }
+.l-inv-sell-row label > span {
+  white-space: nowrap;
+}
 .l-inv-max {
   min-height: 32px;
   padding: 0 12px;

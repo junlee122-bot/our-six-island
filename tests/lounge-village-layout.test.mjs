@@ -50,17 +50,17 @@ test('no decoration or furnishing collider stands on a walking route', () => {
   }
 });
 
-test('every tree, lamp, bench, fence, hydrangea and rail blocks walking', () => {
+test('every tree, lamp, bench, fence and rail blocks walking; flowers and hydrangeas are knee-high', () => {
   const kinds = new Set();
   for (const item of VILLAGE_DECOR) {
     if (!item.collider) {
-      assert.equal(item.kind, 'flowers', `${item.id} needs a collider`);
+      assert.ok(['flowers', 'hydrangea'].includes(item.kind), `${item.id} needs a collider`);
       continue;
     }
     kinds.add(item.kind);
     assert.equal(villageCanWalk(item), false, `${item.id} must block walking`);
   }
-  for (const kind of ['tree', 'lamp', 'bench', 'fence', 'hydrangea', 'rail', 'mailbox', 'shrub'])
+  for (const kind of ['tree', 'lamp', 'bench', 'fence', 'rail', 'mailbox', 'shrub'])
     assert.ok(kinds.has(kind), `${kind} colliders exist`);
   // The former road trees at (±23, 10) and the lamp inside the camp picnic table are gone.
   for (const x of [-23, 23]) assert.ok(villageCanWalk({ x, z: 10 }));
