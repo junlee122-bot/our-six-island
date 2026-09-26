@@ -4,13 +4,22 @@
 import type { LoungeView } from './lounge-room.ts';
 /** Must equal CHESS_MOVE_MS in lounge-chess.ts (checked by a test). */
 const CHESS_MOVE_LIMIT_MS = 120_000;
-export type GameKind = 'chess' | 'gostop' | 'poker' | 'blackjack' | 'seotda';
+export type GameKind =
+  | 'chess'
+  | 'gostop'
+  | 'poker'
+  | 'blackjack'
+  | 'seotda'
+  | 'yacht'
+  | 'liar';
 export const GAME_INFO = {
   chess: { name: '체스', symbol: '♞', players: 2, stake: 1000 },
   gostop: { name: '고스톱', symbol: '花', players: 3, stake: 10000 },
   poker: { name: '텍사스 홀덤', symbol: '♠', players: 3, stake: 10000 },
   blackjack: { name: '블랙잭', symbol: '21', players: 3, stake: 1000 },
   seotda: { name: '섯다', symbol: '섯', players: 3, stake: 10000 },
+  yacht: { name: '야추', symbol: '⚄', players: 2, stake: 1000 },
+  liar: { name: '라이어 게임', symbol: '?', players: 4, stake: 0 },
 } as const;
 export const GAME_KINDS: GameKind[] = [
   'chess',
@@ -18,15 +27,40 @@ export const GAME_KINDS: GameKind[] = [
   'seotda',
   'poker',
   'blackjack',
+  'yacht',
+  'liar',
 ];
 export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
+/**
+ * Friend-only tables with no dealer (진행 strip instead of 루미 / 매화).
+ * 라이어 게임 never has 범 at stake; 야추 may (winner takes the pot).
+ */
+export const FRIEND_GAMES: readonly GameKind[] = ['yacht', 'liar'];
+/** Games that are always played without 범 (every round is a 파티 판). */
+export const NO_STAKE_GAMES: readonly GameKind[] = ['liar'];
+/**
+ * 파티 판: a friends' round with no 범 at stake, where crops from the bag can
+ * be eaten for small visible effects (lounge-party.ts). 연습 판 counts too.
+ */
+export const PARTY_GAMES: readonly GameKind[] = ['yacht', 'gostop', 'liar'];
+/** Seat range of each flexible table (the table sheet's 인원 chips). */
+export const SEAT_RANGE: Partial<Record<GameKind, readonly [number, number]>> = {
+  poker: [2, 7],
+  blackjack: [2, 7],
+  seotda: [2, 7],
+  yacht: [2, 4],
+  liar: [3, 7],
+};
 /**
  * 혼자 하기: blackjack can be played alone against the dealer (루미) with the
  * usual stake; chess and go-stop have a 연습 판 against the practice AI with
  * no 범 at stake. Everything else needs friends.
  */
-export const minPlayers = (game: GameKind) => (game === 'blackjack' ? 1 : 2);
+export const minPlayers = (game: GameKind) =>
+  game === 'blackjack' ? 1 : (SEAT_RANGE[game]?.[0] ?? 2);
+/** Most seats a table of this game can have. */
+export const maxPlayers = (game: GameKind) => SEAT_RANGE[game]?.[1] ?? 7;
 export const PRACTICE_GAMES: readonly GameKind[] = ['chess', 'gostop'];
 /** Seat ids of the practice AI (never a member id: those are UUIDs). */
 export const PRACTICE_AI_PREFIX = 'ai:';
@@ -38,7 +72,13 @@ export const PRACTICE_NAMES: Partial<Record<GameKind, readonly string[]>> = {
   gostop: ['매화', '루미'],
 };
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
-export const FLEX_GAMES: readonly GameKind[] = ['poker', 'blackjack', 'seotda'];
+export const FLEX_GAMES: readonly GameKind[] = [
+  'poker',
+  'blackjack',
+  'seotda',
+  'yacht',
+  'liar',
+];
 export const TABLE_STAKES = [1000, 5000, 10000, 20000, 50000, 100000] as const;
 /** High-roller tiers: 50,000 needs this much 범 in the wallet… */
 export const HIGH_STAKE_BALANCE = 250_000;
@@ -63,11 +103,13 @@ export function stakeLock(
     return `지갑에 ${HIGH_STAKE_BALANCE.toLocaleString('en-US')}범 이상 있으면 열려요.`;
   return null;
 }
-/** Which interior holds each game's table (회관: 고스톱·섯다, 카지노: the rest). */
+/** Which interior holds each game's table (회관: 고스톱·섯다·야추·라이어, 카지노: the rest). */
 export type TableArea = 'lounge' | 'casino';
 export const TABLE_AREA: Record<GameKind, TableArea> = {
   seotda: 'lounge',
   gostop: 'lounge',
+  yacht: 'lounge',
+  liar: 'lounge',
   chess: 'casino',
   poker: 'casino',
   blackjack: 'casino',
@@ -90,6 +132,9 @@ export const TURN_LIMIT_MS: Record<GameKind, number> = {
   blackjack: 45_000,
   gostop: 45_000,
   chess: CHESS_MOVE_LIMIT_MS,
+  yacht: 40_000,
+  // 라이어 게임: the hint turn; other phases have their own clocks (lounge-liar.ts).
+  liar: 40_000,
 };
 /** Ready check after a round; non-ready members are removed on expiry. */
 export const READY_LIMIT_MS = 60_000;
@@ -140,13 +185,25 @@ export const emptyLoungeView = (): LoungeView => ({
     poker: [null, null, null],
     blackjack: [null, null, null],
     seotda: [null, null, null],
+    yacht: [null, null],
+    liar: [null, null, null, null],
   },
   chess: null,
   gostop: null,
   poker: null,
   blackjack: null,
   seotda: null,
-  names: { chess: [], gostop: [], poker: [], blackjack: [], seotda: [] },
+  yacht: null,
+  liar: null,
+  names: {
+    chess: [],
+    gostop: [],
+    poker: [],
+    blackjack: [],
+    seotda: [],
+    yacht: [],
+    liar: [],
+  },
   wallet: {
     balance: 0,
     held: 0,

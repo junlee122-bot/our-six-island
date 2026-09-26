@@ -1,0 +1,39 @@
+/* 파티 판 switch in the table sheet (야추, 고스톱): no 범, crop effects. */
+.l-sheet-party {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px dashed #d9a55b;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #5f4630;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.l-sheet-party > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.l-sheet-party strong {
+  font-size: 13.5px;
+}
+.l-sheet-party small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #8a7658;
+}
+.l-sheet-party.is-on {
+  border-style: solid;
+  border-color: #e0a64f;
+  background: linear-gradient(160deg, #fff6df, #ffe9b8);
+  color: #7a4a14;
+}
+.l-sheet-party:focus-visible {
+  outline: 3px solid #e0a64f;
+  outline-offset: 2px;
+}

@@ -3,7 +3,13 @@
 // This module alone does not provide durable storage or cross-host authority.
 export const INITIAL_BEOM = 100_000;
 export const BEOM_LABEL = '범';
-export type EconomyGame = 'chess' | 'gostop' | 'poker' | 'blackjack' | 'seotda';
+export type EconomyGame =
+  | 'chess'
+  | 'gostop'
+  | 'poker'
+  | 'blackjack'
+  | 'seotda'
+  | 'yacht';
 export type GameEscrow = {
   game: EconomyGame;
   wallets: string[];
@@ -222,7 +228,7 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
     if (
       !matchKey(id) ||
       !g ||
-      !['chess', 'gostop', 'poker', 'blackjack', 'seotda'].includes(g.game) ||
+      !['chess', 'gostop', 'poker', 'blackjack', 'seotda', 'yacht'].includes(g.game) ||
       !['reserved', 'settled', 'void'].includes(g.state) ||
       !Array.isArray(g.wallets) ||
       !Array.isArray(g.deposits) ||
@@ -245,6 +251,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
         ? n !== 2
         : g.game === 'gostop'
           ? n !== 3
+          : g.game === 'yacht'
+            ? n < 2 || n > 4
           : // Blackjack may be played alone against the dealer (혼자 하기).
             n < (g.game === 'blackjack' ? 1 : 2) || n > 7
     )

@@ -4,7 +4,11 @@
 // deliver), the memories album (L) and "어제 마을 소식" (the daily digest).
 import { useState } from 'react';
 import {
+  CalendarClock,
   CalendarHeart,
+  Feather,
+  PartyPopper,
+  PenLine,
   Droplets,
   Fish,
   Gift,
@@ -30,7 +34,20 @@ import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { lookFor } from './friend-looks';
 import { useLifeAction } from './LifePanels';
+import { BOND_LEVELS } from '../lounge-life-plus';
+import {
+  BOND_GRACE_DAYS,
+  FRIEND_GIFTS,
+  HEART_REWARD_KIND,
+  HEART_REWARD_LABEL,
+  HEART_REWARD_LEVELS,
+  MY_LINES_MAX,
+  MY_LINE_TEXT_MAX,
+} from '../lounge-social-defs';
+import { FRIEND_LINES } from '../lounge-friend-lines';
+import { DISH_BY_ID, FURNITURE_BY_REF } from '../lounge-items';
 import './life-plus.css';
+import './social.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const dateText = (at: number) => {
@@ -63,6 +80,7 @@ export function FriendsLife({
   const life = view.life;
   const others = ACTORS.map((_, a) => a).filter((a) => a !== selfActor);
   const [actor, setActor] = useState(initial ?? others[0]);
+  const [writing, setWriting] = useState(false);
   const [run, busy] = useLifeAction(room, notify);
   if (!life)
     return (
@@ -80,14 +98,38 @@ export function FriendsLife({
   const birthday = life.calendar?.events.find((e) => e.kind === 'birthday' && e.actor === actor);
   return (
     <Modal title="친구 사이" onClose={onClose} className="l-life-modal l-bonds" wide>
+      {!!life.social?.titles?.length && (
+        <p className="l-modal-intro l-titles" data-testid="bond-titles">
+          <Trophy size={14} aria-hidden="true" /> 내 칭호 · {life.social.titles.join(', ')}
+        </p>
+      )}
       <div className="l-bonds-body">
         <ul className="l-bond-list" aria-label="친구">
+          <li>
+            <button type="button" aria-pressed={writing} onClick={() => setWriting(true)} data-testid="bond-my-lines">
+              <span className="l-bond-face" aria-hidden="true">
+                <PenLine size={18} />
+              </span>
+              <span>
+                <strong>내 대사 쓰기</strong>
+                <small>{life.social?.lines?.[selfActor]?.length ?? 0}/{MY_LINES_MAX}줄</small>
+              </span>
+            </button>
+          </li>
           {others.map((a) => {
             const b = life.me.bonds?.find((x) => x.actor === a);
             const req = life.me.requests?.find((r) => r.from === a && !r.done);
             return (
               <li key={a}>
-                <button type="button" aria-pressed={actor === a} onClick={() => setActor(a)} data-testid={`bond-${a}`}>
+                <button
+                  type="button"
+                  aria-pressed={!writing && actor === a}
+                  onClick={() => {
+                    setActor(a);
+                    setWriting(false);
+                  }}
+                  data-testid={`bond-${a}`}
+                >
                   <span className="l-bond-face" aria-hidden="true">
                     <AvatarView actor={a} look={lookFor(a)} portrait />
                   </span>
@@ -103,6 +145,14 @@ export function FriendsLife({
             );
           })}
         </ul>
+        {writing ? (
+          <MyLinesEditor
+            key={(life.social?.lines?.[selfActor] ?? []).join('\n')}
+            initial={life.social?.lines?.[selfActor] ?? []}
+            busy={busy}
+            onSave={(lines) => run({ kind: 'myLines', lines }, lines.length ? `내 NPC 대사 ${lines.length}줄을 저장했어요.` : '내 NPC 대사를 비웠어요.')}
+          />
+        ) : (
         <section className="l-bond-profile" aria-live="polite" data-testid="bond-profile">
           <header>
             <span className="l-bond-face big" aria-hidden="true">
@@ -166,12 +216,139 @@ export function FriendsLife({
               <Users size={15} /> 방에 놀러 가기
             </button>
           </div>
+          <HeartRewards
+            level={level}
+            points={bond?.points ?? 0}
+            friend={actor}
+            granted={life.social?.hearts?.[actor]?.granted ?? 0}
+            idle={life.social?.hearts?.[actor]?.idle ?? 0}
+            fading={!!life.social?.hearts?.[actor]?.fading}
+          />
           <p className="l-help-text">
-            선물(하루 한 번), 방 방문, 친구 밭에 물 주기, 테이블 한 판, 부탁 들어주기로 추억이 쌓여요. 하트가 늘 때마다 추억 앨범(L)에 남아요.
+            선물(하루 한 번), 방 방문, 친구 밭에 물 주기, 테이블 한 판, 부탁 들어주기, 마을에서 쉬고 있는 친구와 이야기하기로 추억이 쌓여요. 하트가 늘 때마다 추억 앨범(L)에 남아요.
           </p>
         </section>
+        )}
       </div>
     </Modal>
+  );
+}
+
+/** Heart progress and the rewards at ♥2 / 4 / 6 / 8 / 10 from this friend. */
+function HeartRewards({
+  level,
+  points,
+  friend,
+  granted,
+  idle,
+  fading,
+}: {
+  level: number;
+  points: number;
+  friend: number;
+  granted: number;
+  idle: number;
+  fading: boolean;
+}) {
+  const prev = level ? BOND_LEVELS[level - 1] : 0,
+    next = BOND_LEVELS[level] ?? null;
+  const share = next === null ? 1 : Math.max(0, Math.min(1, (points - prev) / (next - prev)));
+  const gifts = FRIEND_GIFTS[friend];
+  const what = (l: (typeof HEART_REWARD_LEVELS)[number]) => {
+    const kind = HEART_REWARD_KIND[l];
+    return kind === 'recipe'
+      ? `${DISH_BY_ID[gifts.dish]?.name ?? '요리'} 레시피 편지와 요리 2인분`
+      : kind === 'furniture'
+        ? `${FURNITURE_BY_REF[gifts.furniture]?.name ?? '가구'} (우편)`
+        : kind === 'room'
+          ? `${FURNITURE_BY_REF[gifts.room]?.name ?? '가구'}`
+          : kind === 'signature'
+            ? `${FURNITURE_BY_REF[gifts.signature]?.name ?? '선물'} · 칭호 “${FRIEND_LINES[friend]?.title ?? ''}”`
+            : HEART_REWARD_LABEL[kind];
+  };
+  return (
+    <div className="l-heart-track" data-testid="heart-rewards">
+      <div className="l-heart-bar">
+        <span>♥{level}</span>
+        <progress max={1} value={share} aria-label={next === null ? '하트를 모두 모았어요' : `다음 하트까지 ${next - points}`} />
+        <span>{next === null ? '최고' : `♥${level + 1}`}</span>
+      </div>
+      <ol className="l-heart-rewards">
+        {HEART_REWARD_LEVELS.map((l) => (
+          <li key={l} data-got={granted >= l || undefined} data-next={(granted < l && level < l && l === HEART_REWARD_LEVELS.find((x) => x > level)) || undefined}>
+            <b>♥{l}</b>
+            <span>{what(l)}</span>
+            <small>{granted >= l ? '받았어요' : level >= l ? '곧 도착해요' : ''}</small>
+          </li>
+        ))}
+      </ol>
+      {fading ? (
+        <p className="l-heart-fade" data-testid="heart-fading">
+          {idle}일째 소식이 없어서 추억이 조금씩 옅어지고 있어요. 이야기하거나 선물하면 멈춰요.
+        </p>
+      ) : (
+        <p className="l-help-text">♥6부터는 {BOND_GRACE_DAYS}일 넘게 함께한 일이 없으면 추억이 조금씩 옅어져요 (♥5 아래로는 내려가지 않아요).</p>
+      )}
+    </div>
+  );
+}
+
+/** "내 대사 쓰기": lines friends see when they talk to my NPC while I'm away. */
+function MyLinesEditor({ initial, busy, onSave }: { initial: readonly string[]; busy: boolean; onSave: (lines: string[]) => Promise<boolean> }) {
+  const [lines, setLines] = useState<string[]>(initial.length ? [...initial] : ['']);
+  const clean = lines.map((l) => l.trim()).filter(Boolean);
+  return (
+    <section className="l-bond-profile l-my-lines" data-testid="my-lines">
+      <header>
+        <span className="l-bond-face big" aria-hidden="true">
+          <Feather size={28} />
+        </span>
+        <div>
+          <h3>내 NPC 대사</h3>
+          <small>내가 쉬는 동안 친구가 내 NPC에게 말을 걸면 이 대사를 자주 들려줘요. 한 줄 {MY_LINE_TEXT_MAX}자, 최대 {MY_LINES_MAX}줄이에요.</small>
+        </div>
+      </header>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void onSave(clean);
+        }}
+      >
+        <ol className="l-my-lines-list">
+          {lines.map((line, i) => (
+            <li key={i}>
+              <label>
+                <span className="sr-only">{i + 1}번째 대사</span>
+                <input
+                  value={line}
+                  maxLength={MY_LINE_TEXT_MAX}
+                  placeholder={i === 0 ? '예: 오늘 밭에 물 줬어? 나는 벌써 줬지!' : '한 줄 더'}
+                  onChange={(e) => setLines((all) => all.map((l, j) => (j === i ? e.target.value : l)))}
+                  data-testid={`my-line-${i}`}
+                />
+              </label>
+              <button
+                type="button"
+                className="l-secondary"
+                aria-label={`${i + 1}번째 대사 지우기`}
+                onClick={() => setLines((all) => (all.length > 1 ? all.filter((_, j) => j !== i) : ['']))}
+              >
+                지우기
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="l-inv-actions">
+          <button type="button" className="l-secondary" disabled={lines.length >= MY_LINES_MAX} onClick={() => setLines((all) => [...all, ''])}>
+            <PenLine size={15} /> 줄 추가
+          </button>
+          <button type="submit" className="l-primary" disabled={busy} data-testid="my-lines-save">
+            저장하기
+          </button>
+        </div>
+      </form>
+      <p className="l-help-text">이모지나 특수 제어 문자는 저장되지 않아요. 친구를 속상하게 하는 말은 적지 않기로 해요.</p>
+    </section>
   );
 }
 
@@ -237,6 +414,9 @@ const MEMORY_ICON: Record<string, LucideIcon> = {
   bundle: Landmark,
   legend: Trophy,
   birthday: CalendarHeart,
+  festival: PartyPopper,
+  museum: Landmark,
+  adapt: Sparkles,
 };
 /** 추억 앨범 (L): hearts gained, bundles restored, legends and birthdays. */
 export function MemoriesAlbum({ view, onClose, selfActor }: { view: CloudRoomView; onClose: () => void; selfActor: number }) {
@@ -297,6 +477,7 @@ const DIGEST_ICON: Record<string, LucideIcon> = {
   legend: Trophy,
   request: Handshake,
   bond: Heart,
+  festival: PartyPopper,
 };
 /** "어제 마을 소식": yesterday's village lines, shown once a day on the first login. */
 export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: () => void }) {
@@ -326,6 +507,18 @@ export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: ()
             );
           })}
         </ul>
+      )}
+      {!!life?.social?.tomorrow?.length && (
+        <section className="l-digest-tomorrow" aria-label="내일 예고" data-testid="digest-tomorrow">
+          <h3>
+            <CalendarClock size={15} aria-hidden="true" /> 내일 예고
+          </h3>
+          <ul>
+            {life.social.tomorrow.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </section>
       )}
       <div className="l-modal-actions">
         <button type="button" className="l-primary" onClick={onClose} autoFocus data-testid="digest-close">

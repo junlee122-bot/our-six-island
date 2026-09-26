@@ -1,0 +1,426 @@
+/* 라이어 게임 (hall venue: cream paper, warm wood). Loaded with the table chunk. */
+.lg-club {
+  max-width: 1240px;
+  margin: 0 auto;
+  color: #3b2f28;
+}
+.lg-host-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lg-phases {
+  display: flex;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lg-phases li {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #f4e6cf;
+  font-size: 11.5px;
+  color: #93836c;
+  white-space: nowrap;
+}
+.lg-phases li.is-now {
+  background: #c98a3b;
+  color: #fff;
+  font-weight: 700;
+}
+.lg-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+.lg-main {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+/* ---------------------------------------------------------- role card */
+.lg-role {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 16px 20px 14px;
+  border: 8px solid #6b4a2e;
+  border-radius: 24px;
+  background:
+    radial-gradient(ellipse at 50% 30%, #fff8ea, #f6e3c1 80%);
+  box-shadow:
+    inset 0 0 0 2px #e2c28a,
+    0 10px 26px #3a2a1a22;
+  text-align: center;
+  animation: lg-flip 0.5s ease-out;
+}
+.lg-role small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #93836c;
+}
+.lg-role strong {
+  font-size: clamp(30px, 3.2vw, 44px);
+  line-height: 1.15;
+  color: #8a4b2a;
+  letter-spacing: 1px;
+}
+.lg-role span {
+  font-size: 13.5px;
+  color: #7a6a55;
+}
+.lg-role.is-liar {
+  border-color: #7d2230;
+  background: radial-gradient(ellipse at 50% 30%, #fff0ee, #f3cbc4 80%);
+  box-shadow:
+    inset 0 0 0 2px #e79a8f,
+    0 10px 26px #7d223033;
+}
+.lg-role .lg-role-liar {
+  color: #b0322a;
+}
+.lg-role.is-watcher {
+  border-color: #8f7d65;
+}
+@keyframes lg-flip {
+  from {
+    opacity: 0;
+    transform: rotateX(70deg);
+  }
+}
+/* ---------------------------------------------------------- seats */
+.lg-seats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lg-seats li {
+  min-width: 0;
+}
+.lg-seat,
+.lg-vote-target {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 62px;
+  padding: 8px 10px;
+  border: 1px solid #e4dac9;
+  border-radius: 14px;
+  background: #fffaf2;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+}
+.lg-vote-target {
+  position: relative;
+  cursor: pointer;
+  border: 2px dashed #c98a3b;
+  padding: 7px 9px;
+  transition:
+    transform 0.15s,
+    background 0.15s;
+}
+.lg-vote-target:hover:not(:disabled),
+.lg-vote-target:focus-visible {
+  background: #fff0d6;
+  transform: translateY(-2px);
+  outline: none;
+}
+.lg-vote-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #c98a3b;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lg-seats li.is-turn .lg-seat {
+  border: 2px solid #e0a64f;
+  padding: 7px 9px;
+  background: #fff3da;
+}
+.lg-seats li.is-liar .lg-seat,
+.lg-seats li.is-liar .lg-vote-target {
+  border: 2px solid #c0392b;
+  background: #fdebe8;
+}
+.lg-seats li.is-my-vote .lg-seat {
+  box-shadow: 0 0 0 3px #c98a3b55;
+}
+.lg-seats li.is-away {
+  opacity: 0.7;
+}
+.lg-seats .dh-seat-face {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #f4e6cf;
+  box-shadow: 0 0 0 2px #d9b98a;
+}
+.lg-seats .dh-seat-face .avatar-view {
+  width: 100%;
+  height: 100%;
+}
+.lg-seat-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.lg-seat-body strong {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+}
+.lg-seat-body em {
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #f0d9ae;
+  font-size: 11px;
+  font-style: normal;
+  color: #7a4a22;
+}
+.lg-seat-body em.lg-tag-liar {
+  background: #c0392b;
+  color: #fff;
+}
+.lg-seat-body em.lg-tag-wrong {
+  background: #8f7d65;
+  color: #fff;
+}
+.lg-hint {
+  position: relative;
+  padding: 4px 9px;
+  border-radius: 10px;
+  background: #f6ecdb;
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.lg-hint.is-pass {
+  color: #a2927a;
+  font-style: italic;
+}
+.lg-seat-side {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  color: #2f7a4a;
+}
+.lg-tally {
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #3b2f28;
+  color: #fff;
+  font-size: 12px;
+}
+.lg-points {
+  color: #2f7a4a;
+  font-size: 15px;
+}
+/* ---------------------------------------------------------- actions */
+.lg-hint-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #e0a64f;
+  border-radius: 16px;
+  background: #fff3da;
+}
+.lg-hint-form input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid #e4dac9;
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+}
+.lg-hint-form button,
+.lg-bar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.lg-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e4dac9;
+  border-radius: 14px;
+  background: #fffaf2;
+}
+.lg-bar p,
+.lg-bar-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13.5px;
+  color: #6b5a45;
+}
+.lg-bar-note {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fff3da;
+}
+.lg-guess {
+  padding: 12px;
+  border: 2px solid #c0392b;
+  border-radius: 16px;
+  background: #fdf1ee;
+}
+.lg-guess h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #8a2a22;
+}
+.lg-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+.lg-choices button {
+  min-height: 38px;
+  border: 1px solid #e3b6ad;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.lg-choices button:hover:not(:disabled) {
+  background: #ffe1da;
+}
+/* ---------------------------------------------------------- reveal */
+.lg-reveal {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 10px;
+  animation: lg-flip 0.5s ease-out;
+}
+.lg-reveal > div {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fffaf2;
+  border: 1px solid #e4dac9;
+}
+.lg-reveal small {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #93836c;
+}
+.lg-reveal strong {
+  font-size: 24px;
+  color: #8a4b2a;
+}
+.lg-reveal span {
+  font-size: 13px;
+  color: #7a6a55;
+}
+.lg-reveal .lg-reveal-liar {
+  border-color: #e79a8f;
+  background: #fdebe8;
+}
+.lg-reveal .lg-reveal-liar strong {
+  color: #b0322a;
+}
+.lg-reveal ol {
+  display: grid;
+  gap: 3px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.lg-reveal li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+.lg-reveal li span {
+  flex: 1;
+  color: #3b2f28;
+}
+.lg-ballots {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: #fffaf2;
+  font-size: 13px;
+  color: #6b5a45;
+}
+.lg-ballots summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.lg-ballots p {
+  margin: 6px 0 0;
+}
+/* ---------------------------------------------------------- chat */
+.lg-chat {
+  display: grid;
+  gap: 8px;
+  position: sticky;
+  top: 90px;
+}
+.lg-chat .lg-chat-panel {
+  max-height: min(460px, calc(100cqh - 180px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e4dac9;
+  border-radius: 16px;
+  background: #fffaf2;
+}
+.lg-chat .lg-chat-panel .l-chat-messages {
+  min-height: 160px;
+  flex: 1;
+}
+.lg-rules {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #93836c;
+}
+@media (max-width: 1100px) {
+  .lg-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .lg-chat {
+    position: static;
+  }
+  .lg-reveal {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-role,
+  .lg-reveal {
+    animation: none;
+  }
+}

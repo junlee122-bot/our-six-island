@@ -34,8 +34,16 @@ export const pickIndex = (key: string, n: number) => (n > 0 ? hash32(key) % n : 
 
 const mod = (a: number, n: number) => ((a % n) + n) % n;
 export const dayStart = (day: number) => day * DAY - KST;
-export const seasonOfDay = (day: number): Season =>
+/** The 7-day season cycle alone (festival scheduling uses this). */
+export const cycleSeasonOfDay = (day: number): Season =>
   SEASONS[mod(Math.floor((day - CALENDAR_ANCHOR_DAY) / SEASON_DAYS), 4)];
+/**
+ * The game season of a KST day. The 7-day cycle drifts against the real
+ * lunar holidays (2027 설날 and 추석 would land in the game's summer), so a
+ * holiday that carries a `season` pins its days to that season: 설날 is
+ * always winter and 추석 always autumn, whatever the cycle says.
+ */
+export const seasonOfDay = (day: number): Season => holidaySeasonOf(day) ?? cycleSeasonOfDay(day);
 export const seasonOf = (now: number) => seasonOfDay(kstDay(now));
 /** 0 = Sunday … 6 = Saturday (KST). Day 0 (1970-01-01) was a Thursday. */
 export const weekdayOf = (day: number) => mod(day + 4, 7);
@@ -124,6 +132,8 @@ type Holiday = {
   dates?: string[];
   /** Weather override while it lasts. */
   weather?: Weather;
+  /** Season override while it lasts (calendar drift fix, see seasonOfDay). */
+  season?: Season;
 };
 /** Lunar holidays are fixed tables for 2026–2028 (approximate, with the usual 3-day span). */
 export const HOLIDAYS: readonly Holiday[] = [
@@ -140,6 +150,7 @@ export const HOLIDAYS: readonly Holiday[] = [
       '2028-01-26', '2028-01-27', '2028-01-28',
     ],
     weather: 'sunny',
+    season: 'winter',
   },
   { key: 'samiljeol', name: '삼일절', emoji: '🇰🇷', text: '태극기를 다는 날', md: ['03-01'] },
   { key: 'childrensday', name: '어린이날', emoji: '🎈', text: '마음만은 어린이 · 용돈을 받아요', claim: 2_000, md: ['05-05'], weather: 'sunny' },
@@ -163,6 +174,7 @@ export const HOLIDAYS: readonly Holiday[] = [
       '2028-10-02', '2028-10-03', '2028-10-04',
     ],
     weather: 'sunny',
+    season: 'autumn',
   },
   { key: 'gaecheonjeol', name: '개천절', emoji: '⛰️', text: '하늘이 열린 날', md: ['10-03'] },
   { key: 'hangeul', name: '한글날', emoji: '📜', text: '한글로 방명록 한 줄 남기기 좋은 날', claim: 1_000, md: ['10-09'] },
@@ -175,6 +187,17 @@ export function holidaysOn(day: number): Holiday[] {
   const date = kstDate(day),
     md = date.slice(5);
   return HOLIDAYS.filter((h) => h.md?.includes(md) || h.dates?.includes(date));
+}
+const holidaySeasonCache = new Map<number, Season | null>();
+/** The season a holiday pins its day to (null = the normal cycle). */
+export function holidaySeasonOf(day: number): Season | null {
+  let season = holidaySeasonCache.get(day);
+  if (season === undefined) {
+    season = holidaysOn(day).find((h) => h.season)?.season ?? null;
+    if (holidaySeasonCache.size > 256) holidaySeasonCache.clear();
+    holidaySeasonCache.set(day, season);
+  }
+  return season;
 }
 /** Weekly village events (KST weekday). */
 export const WEEKLY_EVENTS = [
@@ -282,6 +305,8 @@ export type CalendarView = {
   timeOfDay: TimeOfDay;
   events: CalendarEvent[];
   seasonEndsAt: number;
+  /** Set on holiday days that pin the season (e.g. 추석 → autumn). */
+  seasonNote?: string;
 };
 export function calendarOf(now: number): CalendarView {
   const day = kstDay(now),
@@ -300,6 +325,9 @@ export function calendarOf(now: number): CalendarView {
     timeOfDay: timeOfDay(now),
     events: eventsOn(day, now),
     seasonEndsAt: dayStart(day + (SEASON_DAYS - seasonDay + 1)),
+    ...(holidaySeasonOf(day) && holidaySeasonOf(day) !== cycleSeasonOfDay(day)
+      ? { seasonNote: `${holidaysOn(day).find((h) => h.season)!.name} 동안은 ${SEASON_INFO[holidaySeasonOf(day)!].name} 풍경이에요` }
+      : {}),
   };
 }
 /** Claimable events today (holiday gifts; a birthday only for its person). */

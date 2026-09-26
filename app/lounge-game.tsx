@@ -2294,7 +2294,7 @@ function AccountLounge({
                 <h2>오늘의 한 판</h2>
                 {(tab === 'casino'
                   ? (['poker', 'blackjack', 'chess'] as const)
-                  : (['seotda', 'gostop'] as const)
+                  : (['seotda', 'gostop', 'yacht', 'liar'] as const)
                 ).map((kind) => (
                   <button key={kind} onClick={() => openTable(kind)}>
                     <span
@@ -2312,6 +2312,8 @@ function AccountLounge({
                           }
                           alt=""
                         />
+                      ) : kind === 'yacht' || kind === 'liar' ? (
+                        GAME_INFO[kind].symbol
                       ) : kind === 'chess' ? (
                         '♞'
                       ) : kind === 'poker' ? (

@@ -3,13 +3,16 @@
 // setup (empty table: stake + seats → 앉기), join (a forming table → 앉기),
 // seated (N/M명 · 친구 부르기 · 일어나기). No separate page, no invitation card.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Armchair, ArrowUpFromLine, BellRing, Bot, Check, X } from 'lucide-react';
+import { Armchair, ArrowUpFromLine, BellRing, Bot, Check, PartyPopper, X } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import {
   FLEX_GAMES,
   GAME_INFO,
   GAME_KINDS,
+  NO_STAKE_GAMES,
+  PARTY_GAMES,
   PRACTICE_GAMES,
+  SEAT_RANGE,
   PRACTICE_NAMES,
   TABLE_STAKES,
   gameReservation,
@@ -37,6 +40,7 @@ import {
 } from '../lounge-table-calls';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
+import './table-party.css';
 
 export type SheetMode = 'setup' | 'join' | 'seated';
 
@@ -164,10 +168,16 @@ export function TableSheet({
   const state = tableState(view, game);
   const name = GAME_INFO[game].name;
   const flex = FLEX_GAMES.includes(game);
-  const [stake, setStake] = useState<number>(GAME_INFO[game].stake),
+  const [lo, hi] = SEAT_RANGE[game] ?? [2, 7];
+  // 라이어 게임 is never staked; 야추 / 고스톱 may be a 파티 판 (no 범).
+  const noStake = NO_STAKE_GAMES.includes(game);
+  const partyOption = PARTY_GAMES.includes(game) && !noStake;
+  const [partyOn, setParty] = useState(false);
+  const party = noStake || (partyOption && partyOn);
+  const [stake, setStake] = useState<number>(GAME_INFO[game].stake || 1000),
     [count, setCount] = useState<number>(
       flex
-        ? Math.max(2, Math.min(3, view.players.length || 2))
+        ? Math.max(lo, Math.min(Math.max(lo, 3), hi, view.players.length || lo))
         : GAME_INFO[game].players,
     ),
     [calling, setCalling] = useState(false),
@@ -180,11 +190,14 @@ export function TableSheet({
   const othersHere = view.players.some(
     (p) => p.id !== view.self && !state.occupants.includes(p.id),
   );
-  const tableStake = mode === 'setup' ? stake : (state.stake ?? stake);
+  const tableStake = mode === 'setup' ? (party ? 0 : stake) : (state.stake ?? stake);
+  /** "판돈 5,000범" or, for a no-범 table, "파티 판 · 범 없이". */
+  const stakeText = tableStake > 0 ? `판돈 ${formatBeom(tableStake)}` : '파티 판 · 범 없이';
   const reservation = gameReservation(game, tableStake);
   // High-roller tiers (50,000 / VIP 100,000) open with the wallet and 마을 공사.
   const lockOf = (n: number) => stakeLock(n, view.wallet.balance, view.life?.flags ?? []);
-  const short = view.wallet.balance < reservation || (mode === 'setup' && !!lockOf(stake));
+  const short =
+    view.wallet.balance < reservation || (mode === 'setup' && !party && !!lockOf(stake));
   const run = async (fn: () => Promise<boolean>) => {
     if (busyRef.current) return false;
     busyRef.current = true;
@@ -203,7 +216,7 @@ export function TableSheet({
             kind: 'invite',
             game,
             players: preselect ?? [],
-            stake,
+            ...(party ? { party: true } : { stake }),
             required: flex ? count : GAME_INFO[game].players,
             table: tableIdOf(game),
           })
@@ -319,7 +332,11 @@ export function TableSheet({
         } else if (!short) void sit();
         return true;
       }
-      if (mode === 'setup' && digit && !e.shiftKey) {
+      if (mode === 'setup' && partyOption && e.code === 'KeyP') {
+        setParty((v) => !v);
+        return true;
+      }
+      if (mode === 'setup' && digit && !e.shiftKey && !party) {
         const n = TABLE_STAKES[Number(digit) - 1];
         if (!n || lockOf(n)) return false;
         setStake(n);
@@ -327,7 +344,7 @@ export function TableSheet({
       }
       if (mode === 'setup' && digit && e.shiftKey && flex) {
         const n = Number(digit);
-        if (n < 2 || n > 7) return false;
+        if (n < lo || n > hi) return false;
         setCount(n);
         return true;
       }
@@ -489,6 +506,27 @@ export function TableSheet({
       )}
       {mode === 'setup' && (
         <div className="l-sheet-setup">
+          {partyOption && (
+            <button
+              type="button"
+              className={'l-sheet-party' + (party ? ' is-on' : '')}
+              role="switch"
+              aria-checked={party}
+              aria-keyshortcuts="P"
+              onClick={() => setParty((v) => !v)}
+              data-testid="table-party"
+            >
+              <PartyPopper size={17} aria-hidden="true" />
+              <span>
+                <strong>파티 판 {party ? '켜짐' : '꺼짐'}</strong>
+                <small>범 없이 친구끼리 · 가방의 작물(딸기·당근·수박)을 먹어 효과를 써요</small>
+              </span>
+              <kbd className="l-sheet-key" aria-hidden="true">
+                P
+              </kbd>
+            </button>
+          )}
+          {!party && (
           <fieldset>
             <legend>{GAME_COPY[game].amountLabel}</legend>
             <div
@@ -516,6 +554,7 @@ export function TableSheet({
               ))}
             </div>
           </fieldset>
+          )}
           {flex && (
             <fieldset>
               <legend>인원</legend>
@@ -524,7 +563,7 @@ export function TableSheet({
                 role="radiogroup"
                 aria-label={`${name} 인원`}
               >
-                {[2, 3, 4, 5, 6, 7].map((n) => (
+                {Array.from({ length: hi - lo + 1 }, (_, i) => lo + i).map((n) => (
                   <button
                     type="button"
                     key={n}
@@ -541,8 +580,11 @@ export function TableSheet({
             </fieldset>
           )}
           <p className="l-sheet-note">
-            {GAME_COPY[game].moneyRule} 내 잔액{' '}
-            {formatBeom(view.wallet.balance)}
+            {party
+              ? noStake
+                ? GAME_COPY[game].moneyRule
+                : '파티 판: 범은 오가지 않아요. 작물은 한 판에 하나씩 먹을 수 있어요.'
+              : `${GAME_COPY[game].moneyRule} 내 잔액 ${formatBeom(view.wallet.balance)}`}
             {callNames ? ` 앉으면 ${josa(callNames, '을/를')} 불러요.` : ''}
           </p>
         </div>
@@ -551,7 +593,7 @@ export function TableSheet({
         <p className="l-sheet-note">
           {state.phase === 'retained'
             ? `빈자리에 앉으면 다음 판부터 함께해요.`
-            : `${host ? `${ACTORS[host.actor]}의 테이블 · ` : ''}${state.occupants.length}/${state.required}명 · 판돈 ${formatBeom(tableStake)}. ${state.required}명이 앉으면 바로 시작해요.`}
+            : `${host ? `${ACTORS[host.actor]}의 테이블 · ` : ''}${state.occupants.length}/${state.required}명 · ${stakeText}. ${state.required}명이 앉으면 바로 시작해요.`}
           {game === 'blackjack' &&
             ` 최대 ${formatBeom(reservation)}까지 예약돼요.`}
         </p>
@@ -563,8 +605,7 @@ export function TableSheet({
           data-testid="table-status"
         >
           <strong>
-            {state.occupants.length}/{state.required}명 · 판돈{' '}
-            {formatBeom(tableStake)}
+            {state.occupants.length}/{state.required}명 · {stakeText}
           </strong>
           <span>
             {left > 0
@@ -572,7 +613,7 @@ export function TableSheet({
                 ? `${pendingCalls(calls).length}명을 기다리는 중 · ${left}명 더 앉으면 시작해요.`
                 : `${left}명 더 앉으면 시작해요.`
               : '곧 시작해요.'}{' '}
-            범은 시작할 때 예약돼요.
+            {tableStake > 0 ? '범은 시작할 때 예약돼요.' : ''}
           </span>
         </p>
       )}
@@ -645,7 +686,7 @@ export function TableSheet({
             ? '1–7 친구 고르기 · Enter 부르기 · Esc 닫기'
             : 'C 친구 부르기 · Esc 일어나기'
           : mode === 'setup'
-            ? `E 앉기 · 1–4 판돈${flex ? ' · Shift+2–7 인원' : ''} · Esc 닫기`
+            ? `E 앉기${party ? '' : ' · 1–4 판돈'}${partyOption ? ' · P 파티 판' : ''}${flex ? ` · Shift+${lo}–${hi} 인원` : ''} · Esc 닫기`
             : 'E 앉기 · Esc 닫기'}
       </p>
       <div className="l-sheet-actions">
@@ -710,7 +751,7 @@ export function TableSheet({
                 ? '앉는 중…'
                 : short
                   ? `${josa(formatBeom(reservation), '이/가')} 필요해요`
-                  : `앉기 · 판돈 ${formatBeom(tableStake)}`}
+                  : `앉기 · ${stakeText}`}
             </button>
             <button type="button" className="l-secondary" onClick={onClose}>
               닫기

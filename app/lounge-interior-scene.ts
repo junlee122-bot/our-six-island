@@ -86,6 +86,8 @@ const FELT: Record<GameKind, string> = {
   poker: '#2f7552',
   blackjack: '#23615f',
   chess: '#d8c39a',
+  yacht: '#3f6fa3',
+  liar: '#c98a3b',
 };
 
 export type SeatShow = { world: InteriorWorld; state: 'empty' | 'taken' | 'me' | 'away' };
@@ -585,6 +587,37 @@ export function createInteriorScene(
       for (let i = 0; i < 4; i++)
         cylinder(0.07, 0.07, 0.05 + i * 0.03, -0.45 + i * 0.3, TABLE_HEIGHT + 0.06 + i * 0.015, half ? -rz * 0.05 : 0.05, chipColors[i], group, 12);
       for (let i = 0; i < 3; i++) box(0.16, 0.012, 0.23, -0.3 + i * 0.3, TABLE_HEIGHT + 0.05, half ? -rz * 0.35 : -rz * 0.35, '#fbf7ec', group, false);
+    } else if (table.game === 'yacht' || table.game === 'liar') {
+      // Friends' tables: a round wooden table; 야추 has a felt dice tray
+      // with five dice, 라이어 게임 a cloth with a question card and cups.
+      const top = cylinder(1, 1, 0.08, 0, TABLE_HEIGHT, 0, wood, group, 36);
+      top.scale.set(rx, 1, rz);
+      const cloth = cylinder(1, 1, 0.02, 0, TABLE_HEIGHT + 0.05, 0, felt, group, 36);
+      cloth.scale.set(rx * 0.86, 1, rz * 0.86);
+      cloth.castShadow = false;
+      cylinder(0.12, 0.2, TABLE_HEIGHT - 0.04, 0, (TABLE_HEIGHT - 0.04) / 2, 0, wood, group, 12);
+      cylinder(0.34, 0.4, 0.04, 0, 0.02, 0, wood, group, 16);
+      if (table.game === 'yacht') {
+        const tray = box(0.62, 0.05, 0.42, 0, TABLE_HEIGHT + 0.08, 0, '#6b4a2e', group);
+        tray.receiveShadow = true;
+        const pips = ['#fbf7ec', '#f7e7c8', '#fbf7ec', '#f2d9d0', '#fbf7ec'];
+        for (let i = 0; i < 5; i++) {
+          const d = box(0.1, 0.1, 0.1, -0.22 + i * 0.11, TABLE_HEIGHT + 0.16, (i % 2 ? 0.06 : -0.06), pips[i], group);
+          d.rotation.y = i * 0.5;
+        }
+        // A dice cup lying by the tray.
+        const cup = cylinder(0.09, 0.07, 0.2, rx * 0.5, TABLE_HEIGHT + 0.16, rz * 0.2, '#8e2f36', group, 14);
+        cup.rotation.z = Math.PI / 2.4;
+      } else {
+        const card = box(0.26, 0.012, 0.36, 0, TABLE_HEIGHT + 0.07, 0, '#fff4dd', group, false);
+        card.rotation.y = 0.2;
+        const mark = box(0.08, 0.014, 0.16, 0, TABLE_HEIGHT + 0.08, -0.02, '#c0392b', group, false);
+        mark.rotation.y = 0.2;
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          cylinder(0.045, 0.04, 0.1, Math.cos(a) * rx * 0.62, TABLE_HEIGHT + 0.11, Math.sin(a) * rz * 0.62, '#f2efe6', group, 10);
+        }
+      }
     } else if (table.game === 'chess') {
       box(rx * 1.7, 0.1, rz * 1.9, 0, TABLE_HEIGHT, 0, wood, group);
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)

@@ -20,12 +20,21 @@ export const SeotdaTable = lazyRetry(() =>
   import('../lounge-seotda-table').then((m) => ({ default: m.SeotdaTable })),
 );
 
+export const YachtTable = lazyRetry(() =>
+  import('../lounge-yacht-table').then((m) => ({ default: m.YachtTable })),
+);
+export const LiarTable = lazyRetry(() =>
+  import('../lounge-liar-table').then((m) => ({ default: m.LiarTable })),
+);
+
 const TABLES = {
   chess: ChessBoard,
   gostop: GoBoard,
   poker: PokerTable,
   blackjack: BlackjackTable,
   seotda: SeotdaTable,
+  yacht: YachtTable,
+  liar: LiarTable,
 } satisfies Record<GameKind, { preload: () => void }>;
 
 /**

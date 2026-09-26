@@ -25,7 +25,10 @@ import {
   GoBoard,
   PokerTable,
   SeotdaTable,
+  YachtTable,
+  LiarTable,
 } from './table-chunks';
+import { PartyBar } from '../lounge-party-bar';
 import type { Notify } from './Toast';
 import '../lounge-game-fit.css';
 import '../lounge-table-venue.css';
@@ -194,6 +197,8 @@ export function GameScreen({
   }, []);
   // 연습 판 (AI seats, no 범) and 혼자 하기 (blackjack alone vs the dealer).
   const practice = !!table?.practice || seats.some(isPracticeAi);
+  // 파티 판: friends, no 범 (라이어 게임 always); crops can be eaten.
+  const party = !practice && (!!table?.party || kind === 'liar');
   const alone = !practice && seats.length === 1 && seat === 0;
   // Say it once as a toast too (the note stays under the result).
   useEffect(() => {
@@ -268,6 +273,10 @@ export function GameScreen({
               </em>
             ) : alone ? (
               <em className="l-game-tag">혼자</em>
+            ) : party && kind !== 'liar' ? (
+              <em className="l-game-tag" data-testid="game-party">
+                파티
+              </em>
             ) : null}
             {table && table.round > 1 ? ` · ${table.round}번째 판` : ''}
           </strong>
@@ -331,6 +340,10 @@ export function GameScreen({
           <span>
             {practice
               ? `연습 판 · ${(PRACTICE_NAMES[kind] ?? []).join('·')}(AI)와 쳐요. 범은 오가지 않아요.`
+              : party
+                ? kind === 'liar'
+                  ? GAME_COPY[kind].moneyRule
+                  : '파티 판 · 범은 오가지 않아요. 가방의 작물을 먹어 볼 수 있어요.'
               : alone
                 ? `딜러와 혼자 치는 판이에요. ${GAME_COPY[kind].moneyRule}`
                 : GAME_COPY[kind].moneyRule}
@@ -396,6 +409,34 @@ export function GameScreen({
                     onDraw={(op) =>
                       void room.action({ kind: 'draw', id: view.chess!.id, op })
                     }
+                  />
+                ) : kind === 'yacht' ? (
+                  <YachtTable
+                    figures={figures}
+                    match={view.yacht!}
+                    seat={seat}
+                    names={names}
+                    onAction={act((action) => ({
+                      kind: 'yacht',
+                      id: view.yacht!.id,
+                      revision: view.yacht!.revision,
+                      action,
+                    }))}
+                  />
+                ) : kind === 'liar' ? (
+                  <LiarTable
+                    figures={figures}
+                    match={view.liar!}
+                    seat={seat}
+                    names={names}
+                    room={room}
+                    view={view}
+                    onAction={act((action) => ({
+                      kind: 'liar',
+                      id: view.liar!.id,
+                      revision: view.liar!.revision,
+                      action,
+                    }))}
                   />
                 ) : kind === 'seotda' ? (
                   <SeotdaTable
@@ -464,6 +505,9 @@ export function GameScreen({
             </Suspense>
           </ScreenBoundary>
         </div>
+        {(practice || party) && belongs && !ended && seat >= 0 && (
+          <PartyBar kind={kind} view={view} room={room} seat={seat} names={names} />
+        )}
         {ended &&
           belongs &&
           (kind !== 'gostop' ||
@@ -542,13 +586,15 @@ export function GameScreen({
           body={
             practice
               ? `연습 판이라 범은 오가지 않아요. ${kind === 'chess' ? '일어나면 기권으로 끝나요.' : '일어나면 남은 판은 AI가 마무리해요.'}`
-              : leaveConsequence(kind, ended)
+              : party && !ended
+                ? `범은 오가지 않는 판이에요. ${GAME_COPY[kind].leaveActive}`
+                : leaveConsequence(kind, ended)
           }
-          consequences={ended || practice ? [] : ['일어나면 되돌릴 수 없어요.']}
+          consequences={ended || practice || party ? [] : ['일어나면 되돌릴 수 없어요.']}
           confirmLabel="일어나기"
           busyLabel="일어나는 중…"
           cancelLabel="테이블에 남기"
-          danger={!ended && !practice}
+          danger={!ended && !practice && !party}
           onClose={() => {
             setLeave(false);
             setLeaveError('');

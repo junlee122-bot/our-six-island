@@ -56,6 +56,22 @@ export const GAME_COPY: Record<GameKind, Copy> = {
       '기본 베팅의 4배까지 예약하고, 쓰지 않은 금액은 끝나면 돌려받아요.',
     leaveActive: '블랙잭은 남은 손을 서버가 스탠드하고 결과대로 정산돼요.',
   },
+  yacht: {
+    players: '2–4명',
+    tagline: '주사위 다섯 개 · 딜러 없이',
+    amountLabel: '판돈',
+    moneyRule: '1등이 모든 판돈을 가져가고, 동점이면 나눠 가져요. 파티 판은 범 없이 쳐요.',
+    leaveActive:
+      '야추는 남은 차례를 서버가 대신 굴리고(가장 높은 칸에 기록) 결과대로 정산돼요.',
+  },
+  liar: {
+    players: '3–7명',
+    tagline: '거짓말쟁이를 찾아라 · 범 없이',
+    amountLabel: '판돈',
+    moneyRule: '범은 오가지 않아요. 점수만 겨뤄요.',
+    leaveActive:
+      '라이어 게임은 내 차례를 서버가 넘기고(힌트 패스·기권표) 끝까지 진행돼요.',
+  },
 };
 
 /** Text for the "leave this game" confirmation. */

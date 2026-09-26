@@ -53,6 +53,7 @@ import {
   goBeomResult,
   claimDailyGrant,
   dailyGrantInfo,
+  type EconomyGame,
   type LoungeLedger,
 } from "./lounge-economy.ts";
 import {
@@ -88,6 +89,40 @@ import {
 } from "./lounge-gostop.ts";
 import type { LifeAction } from "./lounge-life.ts";
 import {
+  newYacht,
+  yachtAction,
+  yachtAuto,
+  yachtRerollOne,
+  yachtView,
+  type YachtAction,
+  type YachtMatch,
+  type YachtView,
+} from "./lounge-yacht.ts";
+import {
+  newLiar,
+  liarAction,
+  liarAuto,
+  liarKey,
+  liarLimit,
+  liarView,
+  type LiarAction,
+  type LiarMatch,
+  type LiarView,
+} from "./lounge-liar.ts";
+import {
+  PARTY_EXTEND_MS,
+  PARTY_ITEMS,
+  PARTY_PEEK_MS,
+  PARTY_REJECT,
+  isPartyItem,
+  partyLine,
+  partyTable,
+  partyViewFor,
+  type PartyAction,
+  type PartyState,
+  type PartyView,
+} from "./lounge-party.ts";
+import {
   GAME_INFO,
   GAME_KINDS,
   gameReservation,
@@ -105,6 +140,9 @@ import {
   stakeLock,
   tableIdOf,
   minPlayers,
+  maxPlayers,
+  NO_STAKE_GAMES,
+  PARTY_GAMES,
   PRACTICE_GAMES,
   PRACTICE_NAMES,
   isPracticeAi,
@@ -157,6 +195,11 @@ export type GameInvite = {
    */
   practice?: boolean;
   /**
+   * 파티 판: friends only, nothing staked (stake 0, no escrow); crops from the
+   * bag may be eaten for small effects (lounge-party.ts). 라이어 게임 always.
+   */
+  party?: boolean;
+  /**
    * Set on a table-forming invite: the interior table id (`tableIdOf(game)`,
    * e.g. 'lounge-seotda') the host sits at. `invited` are the friends called
    * over; anyone standing in that interior may also sit (reply accept) without
@@ -176,6 +219,8 @@ export type LoungeTable = {
   readyDeadline?: number;
   /** 연습 판: the rest of the seats are the practice AI; nothing is staked. */
   practice?: boolean;
+  /** 파티 판: friends only, nothing staked (see GameInvite.party). */
+  party?: boolean;
 };
 export type LoungeTables = Partial<Record<GameKind, LoungeTable>>;
 export type LoungePlayer = {
@@ -200,12 +245,18 @@ export type LoungeWorld = {
     poker: (string | null)[];
     blackjack: (string | null)[];
     seotda: (string | null)[];
+    yacht: (string | null)[];
+    liar: (string | null)[];
   };
   chess: (ChessMatch & TurnTiming) | null;
   gostop: (GoView & TurnTiming) | null;
   poker: (PokerView & TurnTiming) | null;
   blackjack: (BlackjackView & TurnTiming) | null;
   seotda: (SeotdaView & TurnTiming) | null;
+  yacht: (YachtView & TurnTiming) | null;
+  liar: (LiarView & TurnTiming) | null;
+  /** 파티 판 state per table (who ate what; a peek only for the peeker). */
+  party?: Partial<Record<GameKind, PartyView>>;
   names: Record<GameKind, string[]>;
   wallet: ReturnType<LoungeBank["view"]>;
   chat: ChatLine[];
@@ -282,6 +333,8 @@ export type LoungeAction =
       table?: string;
       /** With `table`: a 연습 판 against the practice AI (chess, go-stop; no 범). */
       practice?: boolean;
+      /** With `table`: a 파티 판 among friends (no 범; crop effects allowed). */
+      party?: boolean;
     }
   | { kind: "area"; area: Area; x?: number; y?: number; home?: number }
   | { kind: "draw"; id: string; op: "offer" | "accept" | "decline" }
@@ -289,6 +342,9 @@ export type LoungeAction =
   | { kind: "poker"; id: string; revision: number; action: PokerAction }
   | { kind: "blackjack"; id: string; revision: number; action: BlackjackAction }
   | { kind: "seotda"; id: string; revision: number; action: SeotdaAction }
+  | { kind: "yacht"; id: string; revision: number; action: YachtAction }
+  | { kind: "liar"; id: string; revision: number; action: LiarAction }
+  | PartyAction
   | { kind: "reply"; id: string; accept: boolean }
   | { kind: "cancel"; id: string }
   | { kind: "stand"; game: GameKind; id?: string }
@@ -329,6 +385,11 @@ export type HostedRoomSnapshot = {
   poker: PokerMatch | null;
   blackjack: BlackjackMatch | null;
   seotda: SeotdaMatch | null;
+  yacht?: YachtMatch | null;
+  liar?: LiarMatch | null;
+  yachtAway?: number[];
+  liarAway?: number[];
+  party?: Partial<Record<GameKind, PartyState>>;
   pokerAway: number[];
   blackjackAway: number[];
   seotdaAway: number[];
@@ -339,7 +400,7 @@ export type HostedRoomSnapshot = {
   lastChat: [string, number][];
   due: Partial<
     Record<
-      "poker" | "blackjack" | "seotda" | "gostop" | "chess",
+      "poker" | "blackjack" | "seotda" | "gostop" | "chess" | "yacht" | "liar",
       { id: string; revision: number; at: number }
     >
   >;
@@ -389,6 +450,7 @@ export const REJECT = {
   table: "다음 판 준비가 끝났거나 테이블이 정리됐어요.",
   tableArea: "그 테이블이 있는 곳으로 먼저 가 주세요.",
   tableFull: "테이블 자리가 모두 찼어요.",
+  party: "파티 판은 범 없이 친구끼리만 할 수 있어요.",
 } as const;
 /** 나가리/redeal settle at zero; a winner collects points × 100범 up to each stake. */
 function goSettle(ledger: LoungeLedger, g: GoMatch, deposits: number[]) {
@@ -419,6 +481,11 @@ export class LoungeRoom {
   private seotda: SeotdaMatch | null = null;
   private seotdaAway = new Set<number>();
   private seotdaTimer: ReturnType<typeof setTimeout> | null = null;
+  private yacht: YachtMatch | null = null;
+  private liar: LiarMatch | null = null;
+  private yachtAway = new Set<number>();
+  private liarAway = new Set<number>();
+  private partyState: Partial<Record<GameKind, PartyState>> = {};
   private blackjackAway = new Set<number>();
   private blackjackTimer: ReturnType<typeof setTimeout> | null = null;
   private bank = new LoungeBank(null);
@@ -490,6 +557,22 @@ export class LoungeRoom {
       r.poker = structuredClone(snapshot.poker);
       r.blackjack = structuredClone(snapshot.blackjack);
       r.seotda = structuredClone(snapshot.seotda);
+      r.yacht = structuredClone(snapshot.yacht ?? null);
+      r.liar = structuredClone(snapshot.liar ?? null);
+      r.yachtAway = new Set(snapshot.yachtAway ?? []);
+      r.liarAway = new Set(snapshot.liarAway ?? []);
+      r.partyState = structuredClone(snapshot.party ?? {});
+      // Seat lists of the newer tables are missing from older snapshots.
+      r.view.seats = {
+        ...r.view.seats,
+        yacht: r.view.seats.yacht ?? [null, null],
+        liar: r.view.seats.liar ?? [null, null, null, null],
+      };
+      r.view.names = {
+        ...r.view.names,
+        yacht: r.view.names.yacht ?? [],
+        liar: r.view.names.liar ?? [],
+      };
       r.pokerAway = new Set(snapshot.pokerAway);
       r.blackjackAway = new Set(snapshot.blackjackAway);
       r.seotdaAway = new Set(snapshot.seotdaAway);
@@ -521,6 +604,11 @@ export class LoungeRoom {
       poker: this.poker,
       blackjack: this.blackjack,
       seotda: this.seotda,
+      yacht: this.yacht,
+      liar: this.liar,
+      yachtAway: [...this.yachtAway],
+      liarAway: [...this.liarAway],
+      party: this.partyState,
       pokerAway: [...this.pokerAway],
       blackjackAway: [...this.blackjackAway],
       seotdaAway: [...this.seotdaAway],
@@ -607,7 +695,7 @@ export class LoungeRoom {
     if (!this.serverMode) throw new Error("Server adapter required");
     this.now = now;
     for (const kind of GAME_KINDS) {
-      const match = kind === "gostop" ? this.go : this[kind];
+      const match = this.matchOf(kind);
       if (!match || this.bank.ledger.games[match.id]?.state !== "reserved")
         continue;
       try {
@@ -636,7 +724,15 @@ export class LoungeRoom {
   }
   /** Ids of every match that still holds reserved 범 (for error recovery). */
   hostedMatchIds() {
-    return [this.chess, this.go, this.poker, this.blackjack, this.seotda]
+    return [
+      this.chess,
+      this.go,
+      this.poker,
+      this.blackjack,
+      this.seotda,
+      this.yacht,
+      this.liar,
+    ]
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => m.id);
   }
@@ -755,6 +851,34 @@ export class LoungeRoom {
         };
       else delete this.serverDue[kind];
     }
+    // 야추 / 라이어: seats that are away are played by the server.
+    for (const kind of ["yacht", "liar"] as const) {
+      const g = this[kind];
+      const pending =
+        !!g &&
+        g.phase !== "over" &&
+        (kind === "yacht"
+          ? this.yachtAway.has((g as YachtMatch).turn)
+          : !!liarAuto(g as LiarMatch, this.liarAway, false));
+      if (!g || !pending) {
+        delete this.serverDue[kind];
+        continue;
+      }
+      const due = this.serverDue[kind];
+      if (!due || due.id !== g.id || due.revision !== g.revision)
+        this.serverDue[kind] = { id: g.id, revision: g.revision, at: now + 900 };
+      else if (due.at <= now) {
+        this.autoStep(kind, false);
+        delete this.serverDue[kind];
+        const next = this[kind];
+        if (next && next.phase !== "over")
+          this.serverDue[kind] = {
+            id: next.id,
+            revision: next.revision,
+            at: now + 900,
+          };
+      }
+    }
     // 연습 체스: the practice AI answers after a short think.
     const chess = this.chess,
       aiPly = chess && !chess.winner ? chess.moves.length : -1;
@@ -796,6 +920,8 @@ export class LoungeRoom {
     return isPracticeAi(this.view.seats[kind][seat]);
   }
   private awaySet(kind: GameKind) {
+    if (kind === "yacht") return this.yachtAway;
+    if (kind === "liar") return this.liarAway;
     return kind === "poker"
       ? this.pokerAway
       : kind === "blackjack"
@@ -816,6 +942,11 @@ export class LoungeRoom {
       return this.go && this.go.phase !== "over"
         ? `${this.go.id}:${this.go.revision}`
         : null;
+    if (kind === "yacht")
+      return this.yacht && this.yacht.phase !== "over"
+        ? `${this.yacht.id}:${this.yacht.revision}`
+        : null;
+    if (kind === "liar") return this.liar ? liarKey(this.liar) : null;
     const g = this[kind];
     if (!g || g.turn < 0) return null;
     const deciding =
@@ -832,7 +963,14 @@ export class LoungeRoom {
       const key = this.turnKey(kind);
       if (!key) delete this.deadlines[kind];
       else if (this.deadlines[kind]?.key !== key)
-        this.deadlines[kind] = { key, at: now + TURN_LIMIT_MS[kind] };
+        this.deadlines[kind] = {
+          key,
+          at:
+            now +
+            (kind === "liar" && this.liar
+              ? liarLimit(this.liar)
+              : TURN_LIMIT_MS[kind]),
+        };
     }
     let tables = this.view.tables,
       changed = false;
@@ -879,6 +1017,31 @@ export class LoungeRoom {
    * go-stop; loss on time for chess). Returns false when nothing applied.
    */
   private autoStep(kind: GameKind, timeout: boolean): boolean {
+    if (kind === "yacht") {
+      // A seat that ran out of time finishes its turn at once (roll if
+      // needed, then the best open category); an away seat step by step.
+      const start = this.yacht;
+      if (!start || start.phase === "over") return false;
+      let g: YachtMatch = start;
+      do {
+        const a = yachtAuto(g);
+        const next = a ? yachtAction(g, g.turn, a) : null;
+        if (!next) break;
+        g = next;
+      } while (timeout && g.phase !== "over" && g.turn === start.turn);
+      if (g === start) return false;
+      this.settle(kind, g);
+      this.yacht = g;
+      return true;
+    }
+    if (kind === "liar") {
+      const g = this.liar;
+      if (!g || g.phase === "over") return false;
+      const next = liarAuto(g, this.liarAway, timeout);
+      if (!next) return false;
+      this.liar = next;
+      return true;
+    }
     if (kind === "poker") {
       const g = this.poker;
       if (!g || g.phase === "over") return false;
@@ -996,7 +1159,33 @@ export class LoungeRoom {
             ...this.timing("seotda"),
           }
         : null,
+      yacht: this.yacht
+        ? { ...yachtView(this.yacht, seat("yacht")), ...this.timing("yacht") }
+        : null,
+      // Each seat sees only its own role: never the liar's seat or (for the
+      // liar and watchers) the word before the reveal.
+      liar: this.liar
+        ? {
+            ...liarView(
+              this.liar,
+              this.view.tables.liar && !this.view.tables.liar.members.includes(id)
+                ? -1
+                : seat("liar"),
+            ),
+            ...this.timing("liar"),
+          }
+        : null,
+      party: Object.fromEntries(
+        Object.entries(this.partyState).map(([k, v]) => [
+          k,
+          partyViewFor(v, id, this.clock()),
+        ]),
+      ) as Partial<Record<GameKind, PartyView>>,
     };
+  }
+  /** The running (or last) match of a game. */
+  private matchOf(kind: GameKind) {
+    return kind === "gostop" ? this.go : this[kind];
   }
   private chatFor(id: string) {
     const member = this.members.get(id),
@@ -1167,7 +1356,13 @@ export class LoungeRoom {
   }
   private settle(
     kind: GameKind,
-    game: ChessMatch | GoMatch | PokerMatch | BlackjackMatch | SeotdaMatch,
+    game:
+      | ChessMatch
+      | GoMatch
+      | PokerMatch
+      | BlackjackMatch
+      | SeotdaMatch
+      | YachtMatch,
   ) {
     const escrow = this.bank.ledger.games[game.id];
     if (!escrow || escrow.state !== "reserved") return;
@@ -1186,7 +1381,7 @@ export class LoungeRoom {
       if (g.phase === "over")
         this.bank.commit(goSettle(this.bank.ledger, g, escrow.deposits));
     } else {
-      const g = game as PokerMatch | BlackjackMatch | SeotdaMatch;
+      const g = game as PokerMatch | BlackjackMatch | SeotdaMatch | YachtMatch;
       if (g.phase === "over")
         this.bank.commit(settleGame(this.bank.ledger, g.id, g.result));
     }
@@ -1221,6 +1416,11 @@ export class LoungeRoom {
     this.seotdaTimer = null;
     this.seotda = null;
     this.seotdaAway.clear();
+    this.yacht = null;
+    this.liar = null;
+    this.yachtAway.clear();
+    this.liarAway.clear();
+    this.partyState = {};
     this.poker = null;
     this.pokerAway.clear();
     this.wallets.clear();
@@ -1422,7 +1622,11 @@ export class LoungeRoom {
           ? !!this.poker && this.poker.phase !== "over"
           : game === "seotda"
             ? !!this.seotda && this.seotda.phase !== "over"
-            : !!this.blackjack && this.blackjack.phase !== "over";
+            : game === "yacht"
+              ? !!this.yacht && this.yacht.phase !== "over"
+              : game === "liar"
+                ? !!this.liar && this.liar.phase !== "over"
+                : !!this.blackjack && this.blackjack.phase !== "over";
   }
   private busy(id: string, except = "") {
     return (
@@ -1445,6 +1649,8 @@ export class LoungeRoom {
    */
   private launch(request: GameInvite, round = 1) {
     const practice = !!request.practice,
+      // 파티 판 (and every 라이어 게임): nothing is reserved or settled.
+      party = !!request.party || NO_STAKE_GAMES.includes(request.game),
       // 연습 판: the practice AI takes the seats after mine.
       ai = practice
         ? (PRACTICE_NAMES[request.game] ?? []).map(
@@ -1484,13 +1690,27 @@ export class LoungeRoom {
               )
             : request.game === "seotda"
               ? newSeotda(id, n, request.stake, undefined, (round - 1) % n)
-              : newBlackjack(id, n, request.stake, undefined, (round - 1) % n);
-    // 연습 판 holds no escrow: settle() finds nothing to pay out.
-    if (!practice) {
+              : request.game === "yacht"
+                ? newYacht(id, n, party ? 0 : request.stake, (round - 1) % n)
+                : request.game === "liar"
+                  ? newLiar(
+                      id,
+                      n,
+                      (round - 1) % n,
+                      // The table's running score carries over its rounds.
+                      this.liar &&
+                        round > 1 &&
+                        this.view.seats.liar.join() === order.join()
+                        ? this.liar.totals
+                        : undefined,
+                    )
+                  : newBlackjack(id, n, request.stake, undefined, (round - 1) % n);
+    // 연습 판 / 파티 판 hold no escrow: settle() finds nothing to pay out.
+    if (!practice && !party) {
       let ledger = reserveGame(
         this.bank.ledger,
         id,
-        request.game,
+        request.game as EconomyGame,
         wallets,
         deposits,
       );
@@ -1514,6 +1734,7 @@ export class LoungeRoom {
           members: [...request.accepted],
           ready: [],
           ...(practice ? { practice: true } : {}),
+          ...(party && !practice ? { party: true } : {}),
         },
       },
       names: {
@@ -1538,13 +1759,35 @@ export class LoungeRoom {
     } else if (request.game === "seotda") {
       this.seotda = game as SeotdaMatch;
       this.seotdaAway.clear();
+    } else if (request.game === "yacht") {
+      this.yacht = game as YachtMatch;
+      this.yachtAway.clear();
+    } else if (request.game === "liar") {
+      this.liar = game as LiarMatch;
+      this.liarAway.clear();
     } else {
       this.blackjack = game as BlackjackMatch;
       this.blackjackAway.clear();
     }
+    // A fresh party log for the new round (파티 판 / 연습 판 only).
+    const partyState = { ...this.partyState };
+    if (practice || party)
+      partyState[request.game] = { matchId: id, used: [], log: [] };
+    else delete partyState[request.game];
+    this.partyState = partyState;
     for (let i = 0; i < order.length; i++) {
       const p = this.members.get(order[i]);
       if (!p) continue;
+      if (request.game === "yacht" || request.game === "liar") {
+        // Around the hall's two friend tables (the client seats me exactly).
+        this.members.set(p.id, {
+          ...p,
+          area: "lounge",
+          x: 50 + (i - (order.length - 1) / 2) * 3,
+          y: request.game === "yacht" ? 44 : 70,
+        });
+        continue;
+      }
       this.members.set(p.id, {
         ...p,
         area:
@@ -1570,7 +1813,7 @@ export class LoungeRoom {
     if (!member || !a || typeof a !== "object")
       return this.reject(REJECT.invalid);
     const turnGame = (
-      kind: "poker" | "blackjack" | "seotda",
+      kind: "poker" | "blackjack" | "seotda" | "yacht",
       matchId: unknown,
       revision: unknown,
     ) => {
@@ -1639,6 +1882,27 @@ export class LoungeRoom {
       if (!next) return this.reject(REJECT.illegal);
       this.settle("seotda", next);
       this.seotda = next;
+    } else if (a.kind === "yacht") {
+      const seat = turnGame("yacht", a.id, a.revision);
+      if (seat === false) return false;
+      const next = yachtAction(this.yacht!, seat, a.action);
+      if (!next) return this.reject(REJECT.illegal);
+      this.settle("yacht", next);
+      this.yacht = next;
+    } else if (a.kind === "liar") {
+      const g = this.liar,
+        seat = this.view.seats.liar.indexOf(id);
+      if (!g || seat < 0 || !this.view.tables.liar?.members.includes(id))
+        return this.reject(REJECT.notSeated);
+      // Votes are cast at the same time: only the match must match.
+      if (g.id !== a.id) return this.reject(REJECT.stale);
+      if (this.liarAway.has(seat)) return this.reject(REJECT.away);
+      const next = liarAction(g, seat, a.action);
+      if (typeof next === "string") return this.reject(next);
+      if (!next) return this.reject(REJECT.illegal);
+      this.liar = next;
+    } else if (a.kind === "party") {
+      if (!this.party(id, member, a, now)) return false;
     } else if (a.kind === "move") {
       if (!Number.isFinite(a.x) || !Number.isFinite(a.y))
         return this.reject(REJECT.invalid);
@@ -1689,7 +1953,7 @@ export class LoungeRoom {
           return this.reject(REJECT.invalid);
       } else {
         if (!GAME_KINDS.includes(a.scope)) return this.reject(REJECT.invalid);
-        const match = a.scope === "gostop" ? this.go : this[a.scope];
+        const match = this.matchOf(a.scope);
         if (!match || match.id !== a.matchId) return this.reject(REJECT.stale);
       }
       this.members.set(id, {
@@ -1761,16 +2025,22 @@ export class LoungeRoom {
         )
       )
         return this.reject(REJECT.pending);
-      const stake = a.stake ?? GAME_INFO[a.game].stake;
-      const required =
-        a.game === "poker" || a.game === "blackjack" || a.game === "seotda"
-          ? (a.required ?? 3)
-          : GAME_INFO[a.game].players;
+      const noStake = NO_STAKE_GAMES.includes(a.game) || a.party === true;
+      if (a.party !== undefined && typeof a.party !== "boolean")
+        return this.reject(REJECT.invalid);
+      if (a.party && !PARTY_GAMES.includes(a.game))
+        return this.reject(REJECT.party);
+      const stake = noStake ? 0 : (a.stake ?? GAME_INFO[a.game].stake);
+      const required = FLEX_GAMES.includes(a.game)
+        ? (a.required ?? Math.max(3, minPlayers(a.game)))
+        : GAME_INFO[a.game].players;
       if (
-        !(TABLE_STAKES as readonly number[]).includes(stake) ||
+        (noStake
+          ? a.stake !== undefined && a.stake !== 0
+          : !(TABLE_STAKES as readonly number[]).includes(stake)) ||
         !Number.isInteger(required) ||
-        required < 2 ||
-        required > 7
+        required < Math.max(2, minPlayers(a.game)) ||
+        required > maxPlayers(a.game)
       )
         return this.reject(REJECT.stake);
       const balance = this.bank.view(this.wallets.get(id), now).balance;
@@ -1797,6 +2067,7 @@ export class LoungeRoom {
             matchId: null,
             required,
             stake,
+            ...(noStake ? { party: true } : {}),
           },
         ],
       });
@@ -1892,8 +2163,7 @@ export class LoungeRoom {
     } else if (a.kind === "stand") {
       if (!GAME_KINDS.includes(a.game)) return this.reject(REJECT.invalid);
       const table = this.view.tables[a.game];
-      const currentMatchId =
-        a.game === "gostop" ? this.go?.id : this[a.game]?.id;
+      const currentMatchId = this.matchOf(a.game)?.id;
       if (
         a.id !== undefined &&
         (a.id !== currentMatchId || (table && a.id !== table.matchId))
@@ -1908,7 +2178,7 @@ export class LoungeRoom {
       if (!GAME_KINDS.includes(a.game) || typeof a.ready !== "boolean")
         return this.reject(REJECT.invalid);
       const table = this.view.tables[a.game];
-      const matchId = a.game === "gostop" ? this.go?.id : this[a.game]?.id;
+      const matchId = this.matchOf(a.game)?.id;
       if (
         !table ||
         table.matchId !== a.id ||
@@ -1987,6 +2257,95 @@ export class LoungeRoom {
       this.go = next;
     } else return this.reject(REJECT.invalid);
     this.sync();
+    return true;
+  }
+  /**
+   * 파티 판: eat one crop for its effect (the cloud engine checks and takes
+   * it from the bag after this succeeds). Never while 범 is staked, once per
+   * player per round, and every use goes to the table's log.
+   */
+  private party(
+    id: string,
+    member: LoungePlayer,
+    a: PartyAction,
+    now: number,
+  ): boolean {
+    if (!GAME_KINDS.includes(a.game) || !isPartyItem(a.item))
+      return this.reject(REJECT.invalid);
+    const game = a.game,
+      table = this.view.tables[game],
+      match = this.matchOf(game),
+      seat = this.view.seats[game].indexOf(id);
+    if (!table?.members.includes(id) || seat < 0)
+      return this.reject(REJECT.notSeated);
+    if (!match || match.id !== a.id || !this.gameActive(game))
+      return this.reject(REJECT.stale);
+    if (!partyTable(game, table, !!this.bank.ledger.games[match.id]))
+      return this.reject(PARTY_REJECT.staked);
+    if (!PARTY_ITEMS[a.item].games.includes(game))
+      return this.reject(PARTY_REJECT.game);
+    const state: PartyState =
+      this.partyState[game]?.matchId === match.id
+        ? structuredClone(this.partyState[game]!)
+        : { matchId: match.id, used: [], log: [] };
+    if (state.used.includes(id)) return this.reject(PARTY_REJECT.used);
+    const who = ACTORS[member.actor];
+    const nameOf = (s: number) => {
+      const p = this.members.get(this.view.seats[game][s] ?? "");
+      return p ? ACTORS[p.actor] : (this.view.names[game][s] ?? "상대");
+    };
+    let text = "";
+    if (a.item === "watermelon") {
+      const d = this.deadlines[game],
+        key = this.turnKey(game);
+      // My own clock (라이어 게임: the phase clock everyone shares).
+      const mine =
+        game === "liar" ||
+        (game === "chess"
+          ? this.chess!.moves.length % 2 === seat
+          : (match as { turn?: number }).turn === seat);
+      if (!d || !key || d.key !== key || !mine)
+        return this.reject(PARTY_REJECT.moment);
+      this.deadlines = {
+        ...this.deadlines,
+        [game]: { ...d, at: d.at + PARTY_EXTEND_MS },
+      };
+      text = partyLine("watermelon", who);
+    } else if (a.item === "carrot") {
+      const die = a.die ?? -1;
+      const next =
+        game === "yacht" ? yachtRerollOne(this.yacht!, seat, die) : null;
+      if (!next) return this.reject(PARTY_REJECT.moment);
+      text = partyLine(
+        "carrot",
+        who,
+        undefined,
+        `${this.yacht!.dice[die]} → ${next.dice[die]}`,
+      );
+      this.yacht = next;
+    } else {
+      const target = a.target ?? -1;
+      const hand =
+        game === "gostop" && this.go && target !== seat
+          ? this.go.hands[target]
+          : undefined;
+      if (!hand?.length) return this.reject(PARTY_REJECT.moment);
+      const pick = new Uint32Array(1);
+      crypto.getRandomValues(pick);
+      state.peek = {
+        by: id,
+        seat: target,
+        card: hand[pick[0] % hand.length],
+        until: now + PARTY_PEEK_MS,
+      };
+      text = partyLine("strawberry", who, nameOf(target));
+    }
+    state.used = [...state.used, id];
+    state.log = [
+      ...state.log,
+      { actor: member.actor, item: a.item, text, at: now },
+    ].slice(-10);
+    this.partyState = { ...this.partyState, [game]: state };
     return true;
   }
   private seatedForming(r: GameInvite, id: string) {
@@ -2099,15 +2458,25 @@ export class LoungeRoom {
       });
       return true;
     }
-    const stake = a.stake ?? GAME_INFO[game].stake;
+    // 파티 판: friends only, nothing staked (라이어 게임 always).
+    const noStake = NO_STAKE_GAMES.includes(game) || a.party === true;
+    if (a.party !== undefined && typeof a.party !== "boolean")
+      return this.reject(REJECT.invalid);
+    if (a.party && !PARTY_GAMES.includes(game))
+      return this.reject(REJECT.party);
+    const stake = noStake ? 0 : (a.stake ?? GAME_INFO[game].stake);
     const required = FLEX_GAMES.includes(game)
       ? (a.required ?? GAME_INFO[game].players)
       : GAME_INFO[game].players;
     if (
-      !(TABLE_STAKES as readonly number[]).includes(stake) ||
+      (noStake
+        ? a.stake !== undefined && a.stake !== 0
+        : !(TABLE_STAKES as readonly number[]).includes(stake)) ||
       !Number.isInteger(required) ||
       required < minPlayers(game) ||
-      required > 7
+      required > maxPlayers(game) ||
+      // A 파티 판 is for friends: never one seat.
+      (noStake && required < 2)
     )
       return this.reject(REJECT.stake);
     const balance = this.bank.view(this.wallets.get(id), now).balance;
@@ -2129,6 +2498,7 @@ export class LoungeRoom {
       required,
       stake,
       table: a.table,
+      ...(noStake ? { party: true } : {}),
     };
     // A one-seat table is full as I sit: the round starts (and reserves) now.
     if (required === 1) this.launch(request);
@@ -2279,6 +2649,7 @@ export class LoungeRoom {
       required: table.required,
       stake: table.stake,
       ...(table.practice ? { practice: true } : {}),
+      ...(table.party ? { party: true } : {}),
     };
     // launch commits escrow before changing table or match state. Failed
     // storage writes leave the previous ended round and readiness intact.
@@ -2328,6 +2699,12 @@ export class LoungeRoom {
     const s = this.view.seats.seotda.indexOf(id);
     if (s >= 0 && this.seotda && this.seotda.phase !== "over")
       this.seotdaAway.add(s);
+    const y = this.view.seats.yacht.indexOf(id);
+    if (y >= 0 && this.yacht && this.yacht.phase !== "over")
+      this.yachtAway.add(y);
+    const l = this.view.seats.liar.indexOf(id);
+    if (l >= 0 && this.liar && this.liar.phase !== "over")
+      this.liarAway.add(l);
     const tables = { ...this.view.tables };
     for (const game of GAME_KINDS) {
       const table = tables[game];
@@ -2354,6 +2731,8 @@ export class LoungeRoom {
           "blackjack",
           !!this.blackjack && this.blackjack.phase !== "over",
         ),
+        yacht: keep("yacht", !!this.yacht && this.yacht.phase !== "over"),
+        liar: keep("liar", !!this.liar && this.liar.phase !== "over"),
       },
     });
   }
@@ -2620,6 +2999,8 @@ export class LoungeRoom {
           poker: p.poker,
           blackjack: p.blackjack,
           seotda: p.seotda,
+          yacht: p.yacht ?? null,
+          liar: p.liar ?? null,
           names: p.names,
           wallet: p.wallet,
         });

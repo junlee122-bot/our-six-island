@@ -62,6 +62,9 @@ export const TABLE_HOST: Record<GameKind, 'lumi' | 'maehwa' | null> = {
   seotda: 'maehwa',
   gostop: 'maehwa',
   chess: null,
+  // Friends' tables: no host (the game shows a 진행 strip instead).
+  yacht: null,
+  liar: null,
 };
 
 /** Radius (network units) a standing host blocks. */
@@ -228,6 +231,8 @@ export function overTable(t: Pick<InteriorTable, 'game' | 'rx' | 'rz'>, x: numbe
   const { rx, rz } = t;
   switch (t.game) {
     case 'poker':
+    case 'yacht':
+    case 'liar':
       return (x / (rx + 0.07)) ** 2 + (z / (rz + 0.07)) ** 2 <= 1;
     case 'blackjack':
       // A half oval: the curve toward the back wall, the flat side forward.

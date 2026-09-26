@@ -65,6 +65,7 @@ import {
   validateLedger,
 } from '../app/lounge-economy.ts';
 import { accountSave, lifeUnlocksOf, ACCOUNT_IDS } from '../app/lounge-accounts.ts';
+import { CO_DONATION_GRANT } from '../app/lounge-social-defs.ts';
 import { catalogEntry, ROOM_CATALOG } from '../app/lounge-bedroom-catalog.ts';
 import { defaultBedroom, lockedRoomItems } from '../app/lounge-bedroom-data.ts';
 import { freshLounge } from '../app/lounge-look.ts';
@@ -518,7 +519,7 @@ test('foraging and bugs: daily deterministic spawns per district, per-user picku
 });
 
 // ------------------------------------------------------------ museum & achievements
-test('museum: first donor recorded, one per item; achievements grant once', () => {
+test('museum: first donor recorded, one stamp per friend per item; achievements grant once', () => {
   const s = world(2),
     [a, b] = s.members;
   s.give(a, 'crucian', 2);
@@ -527,7 +528,14 @@ test('museum: first donor recorded, one per item; achievements grant once', () =
   s.act(a, { kind: 'donate', item: 'crucian' }, T0);
   // First donation (300) + 첫 기증 achievement (500).
   assert.equal(s.balance(a) - before, FIRST_DONATION_GRANT + 500);
+  // The first donor cannot stamp the same item twice.
+  s.fails(a, { kind: 'donate', item: 'crucian' }, T0, PLUS_REJECT.donated);
+  // C-5: a friend may still donate it (co-donation stamp), the honor stays.
+  const bBefore = s.balance(b);
+  s.act(b, { kind: 'donate', item: 'crucian' }, T0);
+  assert.equal(s.balance(b) - bBefore, CO_DONATION_GRANT + 500);
   s.fails(b, { kind: 'donate', item: 'crucian' }, T0, PLUS_REJECT.donated);
+  assert.deepEqual(s.view(b, T0).social.museum.donors.crucian, [0, 1]);
   s.fails(a, { kind: 'donate', item: 'fertilizer' }, T0, PLUS_REJECT.noDonate);
   assert.deepEqual(s.view(b, T0).museum.crucian, { actor: 0, at: T0 });
   s.life.bag[a.id].produce.carrot = 1;

@@ -41,6 +41,8 @@ import {
   type PlusView,
   type PlusMe,
 } from './lounge-life-plus.ts';
+import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
+import { socialAction, socialView, type SocialAction, type SocialView } from './lounge-life-social.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
 export type Crop =
@@ -448,7 +450,9 @@ export type LifeAction =
   | { kind: 'room'; access?: RoomAccess }
   /** The owner looked at their guestbook (clears the unread badge). */
   | { kind: 'readGuestbook' }
-  | PlusAction;
+  | PlusAction
+  /** Friend NPC talk, my NPC lines, festivals, 마을 적응하기 (lounge-life-social.ts). */
+  | SocialAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -463,6 +467,7 @@ export const LIFE_ACTION_KINDS = [
   'room',
   'readGuestbook',
   ...PLUS_ACTION_KINDS,
+  ...SOCIAL_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -901,6 +906,10 @@ export function lifeAction(
     const next = plusAction(life, ledger, member, a as PlusAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
+  if ((SOCIAL_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = socialAction(life, ledger, member, a as SocialAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
   const size = farm.length;
   const plantOk = (crop: Crop) => {
     if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse'))
@@ -1234,6 +1243,8 @@ export type LifeView = {
   soldToday: number;
   sellCapResetAt: number;
   serverNow: number;
+  /** Friend-life view (absent from older servers). */
+  social?: SocialView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1311,7 +1322,12 @@ export function lifeView(
     serverNow: now,
   };
   const { me, ...plus } = plusView(life, uid, actor, now);
-  return { ...base, ...plus, me: { ...base.me, ...me } };
+  return {
+    ...base,
+    ...plus,
+    me: { ...base.me, ...me },
+    ...(UUID.test(uid) && actorValid(actor) ? { social: socialView(life, uid, actor, now) } : {}),
+  };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */
 export function friendLife(state: LifeState, actor: number) {

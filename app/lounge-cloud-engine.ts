@@ -30,6 +30,7 @@ import {
 } from './lounge-life.ts';
 import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
 import { lifeWealth, recordTables, recordVisit } from './lounge-life-plus.ts';
+import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } from './lounge-party.ts';
 export type CloudMember = { id: string; actor: number; username: string };
 type Lease = { connection: string; seen: number; sequence: number };
 type Room = { snapshot: HostedRoomSnapshot; leases: Record<string, Lease> };
@@ -157,6 +158,7 @@ function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
     snapshot.poker,
     snapshot.blackjack,
     snapshot.seotda,
+    snapshot.yacht,
   ])
     if (match && next.games[match.id]?.state === 'reserved')
       next = voidGame(next, match.id);
@@ -415,8 +417,22 @@ export function cloudTransition(
             if (!mayEnterRoom(readLife(g.life), owner, member.actor))
               throw new CloudError(HOME_CLOSED, 403);
           }
+          // 파티 판: the crop must be in the bag; it is eaten only on success.
+          let eat: PartyItem | null = null;
+          if (action.kind === 'party') {
+            const item = (command.action as { item?: unknown }).item;
+            if (!isPartyItem(item)) throw new CloudError(REJECT.invalid, 400);
+            if (partyCount(readLife(g.life).bag[member.id], item) < 1)
+              throw new CloudError(PARTY_REJECT.bag(item), 409);
+            eat = item;
+          }
           const reason = r.hostedAttempt(member.id, command.action, now);
           if (reason) throw new CloudError(reason, 409);
+          if (eat) {
+            const life = readLife(g.life);
+            life.bag[member.id] = eatPartyItem(life.bag[member.id], eat);
+            g.life = life;
+          }
           // Visiting a friend's room counts toward friendship and the digest.
           if (
             action.kind === 'area' &&

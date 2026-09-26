@@ -1,0 +1,501 @@
+/* 야추 (hall venue: warm wood, cream paper). Loaded with the table chunk. */
+.y-club {
+  max-width: 1180px;
+  margin: 0 auto;
+  color: #3b2f28;
+}
+.y-host-side {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.y-round {
+  display: grid;
+  text-align: center;
+  line-height: 1.1;
+}
+.y-round small {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #93836c;
+}
+.y-round b {
+  font-size: 20px;
+  color: #8a4b2a;
+}
+.y-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+/* ---------------------------------------------------------- players */
+.y-players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.y-players li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid #e4dac9;
+  border-radius: 14px;
+  background: #fffaf2;
+  min-width: 0;
+}
+.y-players li > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+.y-players strong {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.y-players strong em {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: #f0d9ae;
+  font-size: 11px;
+  font-style: normal;
+  color: #7a4a22;
+}
+.y-players small {
+  font-size: 12px;
+  color: #93836c;
+}
+.y-players li > b {
+  font-size: 20px;
+  color: #6b4f33;
+}
+.y-players li.is-turn {
+  border: 2px solid #e0a64f;
+  padding: 5px 9px 5px 5px;
+  background: #fff3da;
+  box-shadow: 0 0 0 3px #eac27c33;
+}
+.y-players li.is-winner {
+  border-color: #e7b53c;
+  background: linear-gradient(135deg, #fff5cf, #ffe7a1);
+}
+.y-players .dh-seat-face {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: #f4e6cf;
+  box-shadow: 0 0 0 2px #d9b98a;
+}
+.y-players .dh-seat-face .avatar-view {
+  width: 100%;
+  height: 100%;
+}
+/* ---------------------------------------------------------- tray */
+.y-tray {
+  position: relative;
+  padding: 26px 22px 20px;
+  border: 10px solid #6b4a2e;
+  border-radius: 28px;
+  background:
+    radial-gradient(ellipse at 50% 40%, #4f7fb2 0%, #3a6795 55%, #2c5179 100%);
+  box-shadow:
+    inset 0 0 0 2px #e2c28a55,
+    inset 0 0 50px #0f223a80,
+    0 14px 30px #3a2a1a2a;
+  color: #f6efe0;
+  min-height: 250px;
+}
+.y-tray.is-mine {
+  border-color: #8a5d35;
+  box-shadow:
+    inset 0 0 0 2px #ffd88a,
+    inset 0 0 50px #0f223a80,
+    0 0 0 4px #eac27c55,
+    0 14px 30px #3a2a1a2a;
+}
+.y-dice {
+  display: flex;
+  justify-content: center;
+  gap: clamp(10px, 2vw, 22px);
+  perspective: 700px;
+  padding: 10px 0 4px;
+}
+.y-die {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 6px 4px 4px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  transition: transform 0.18s;
+}
+.y-die:disabled {
+  cursor: default;
+}
+.y-die:not(:disabled):hover {
+  transform: translateY(-3px);
+}
+.y-die:focus-visible {
+  outline: 3px solid #ffd88a;
+  outline-offset: 2px;
+}
+.y-die.is-held {
+  transform: translateY(-8px);
+}
+.y-die-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 26px;
+  justify-content: center;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #0f223a66;
+  font-size: 12px;
+  font-weight: 700;
+  color: #dfe8f3;
+}
+.y-die.is-held .y-die-key {
+  background: #f2c14e;
+  color: #4a3208;
+}
+/* The cube: six faces, turned so the value faces the player. */
+.yd-cube {
+  --size: clamp(48px, 4.6vw, 64px);
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+  transform-style: preserve-3d;
+  transform: rotateX(-14deg) rotateY(12deg) var(--turn);
+  transition: transform 0.35s ease-out;
+}
+.yd-cube.is-blank {
+  opacity: 0.45;
+}
+.yd-cube.is-rolling {
+  animation: yd-tumble 0.75s cubic-bezier(0.2, 0.7, 0.25, 1);
+}
+.yd-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  padding: 16%;
+  gap: 4%;
+  border-radius: 18%;
+  background: radial-gradient(circle at 30% 25%, #ffffff, #f3ead8 70%, #e2d3b5);
+  box-shadow:
+    inset 0 0 0 1px #d8c6a2,
+    inset -3px -4px 8px #c9b38a55;
+  backface-visibility: hidden;
+}
+.yd-face i {
+  display: block;
+  border-radius: 50%;
+  place-self: center;
+  width: 78%;
+  height: 78%;
+}
+.yd-face i.on {
+  background: radial-gradient(circle at 35% 35%, #5a4a3e, #1f1712);
+}
+/* One pip is red, like a real die's 1. */
+.yd-front i.on {
+  width: 95%;
+  height: 95%;
+  background: radial-gradient(circle at 35% 35%, #e5584a, #9b1f1a);
+}
+.yd-cube.is-held .yd-face {
+  background: radial-gradient(circle at 30% 25%, #fffbea, #fbe7b0 70%, #edc978);
+  box-shadow:
+    inset 0 0 0 2px #e0a64f,
+    inset -3px -4px 8px #c9a15a55;
+}
+.yd-front {
+  transform: translateZ(calc(var(--size) / 2));
+}
+.yd-back {
+  transform: rotateY(180deg) translateZ(calc(var(--size) / 2));
+}
+.yd-right {
+  transform: rotateY(90deg) translateZ(calc(var(--size) / 2));
+}
+.yd-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--size) / 2));
+}
+.yd-top {
+  transform: rotateX(90deg) translateZ(calc(var(--size) / 2));
+}
+.yd-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--size) / 2));
+}
+@keyframes yd-tumble {
+  0% {
+    transform: translateY(-46px) rotateX(640deg) rotateY(420deg) rotateZ(90deg);
+  }
+  55% {
+    transform: translateY(6px) rotateX(-20deg) rotateY(30deg) var(--turn);
+  }
+  75% {
+    transform: translateY(-6px) rotateX(-14deg) rotateY(12deg) var(--turn);
+  }
+  100% {
+    transform: rotateX(-14deg) rotateY(12deg) var(--turn);
+  }
+}
+.y-rolls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+.y-rolls i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #dfe8f3aa;
+}
+.y-rolls i.used {
+  background: #f2c14e;
+  border-color: #f2c14e;
+}
+.y-rolls small {
+  margin-left: 6px;
+  font-size: 13px;
+  color: #dfe8f3;
+}
+.y-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.y-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+}
+.y-actions kbd {
+  padding: 0 6px;
+  border-radius: 6px;
+  background: #00000022;
+  font: 600 11px/18px ui-monospace, monospace;
+}
+.y-club .y-roll {
+  border-color: #e0a64f;
+  background: #f2c14e;
+  color: #3b2a10;
+  font-weight: 800;
+}
+.y-club .y-roll:hover:not(:disabled) {
+  background: #f6cd68;
+}
+.y-keys {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #93836c;
+  text-align: center;
+}
+/* ---------------------------------------------------------- result */
+.y-result {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #fffaf2;
+  color: #3b2f28;
+  box-shadow: 0 8px 20px #0f223a55;
+  animation: y-pop 0.35s ease-out;
+}
+.y-result h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #8a4b2a;
+}
+.y-result ol {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.y-result li {
+  display: grid;
+  grid-template-columns: 40px 1fr auto 90px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f6ecdb;
+  font-size: 14px;
+}
+.y-result li.is-winner {
+  background: linear-gradient(135deg, #fff1bd, #ffdd80);
+  font-weight: 700;
+}
+.y-result li span {
+  color: #93836c;
+}
+.y-result li em {
+  font-style: normal;
+  text-align: right;
+  color: #6b4f33;
+}
+.y-result p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #93836c;
+}
+@keyframes y-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+/* ---------------------------------------------------------- sheet */
+.y-sheet-wrap {
+  border: 1px solid #e4dac9;
+  border-radius: 16px;
+  background: #fffaf2;
+  overflow: hidden;
+}
+.y-sheet {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.y-sheet th,
+.y-sheet td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #efe5d3;
+  text-align: center;
+}
+.y-sheet thead th {
+  padding: 8px;
+  background: #f4e6cf;
+  font-size: 13px;
+  color: #6b4f33;
+  white-space: nowrap;
+}
+.y-sheet thead th.is-turn {
+  background: #f2c14e;
+  color: #3b2a10;
+}
+.y-sheet tbody th {
+  display: grid;
+  text-align: left;
+  font-weight: 700;
+  font-size: 13.5px;
+  line-height: 1.2;
+}
+.y-sheet tbody th small {
+  font-weight: 400;
+  font-size: 11px;
+  color: #a2927a;
+}
+.y-sheet td {
+  position: relative;
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+.y-sheet td.filled {
+  font-weight: 700;
+  color: #3b2f28;
+}
+.y-sheet td.potential {
+  color: #b27b2c;
+  font-style: italic;
+}
+.y-sheet td.potential.zero {
+  color: #c9b99f;
+}
+.y-sheet td.just {
+  animation: y-just 1.2s ease-out;
+}
+@keyframes y-just {
+  0% {
+    background: #ffe08a;
+  }
+}
+.y-sheet tr.is-pickable {
+  cursor: pointer;
+}
+.y-sheet tr.is-pickable:hover td,
+.y-sheet tr.is-pickable:hover th {
+  background: #fff1d2;
+}
+.y-sheet tr.is-cursor td,
+.y-sheet tr.is-cursor th {
+  background: #ffe7ad;
+}
+.y-sheet tr.is-cursor th {
+  box-shadow: inset 4px 0 #e0a64f;
+}
+.y-star {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 10px;
+  color: #e0a64f;
+}
+.y-bonus-row th,
+.y-bonus-row td {
+  background: #f8f0e2;
+  font-size: 12px;
+  color: #7a6a55;
+}
+.y-bonus-row td.got {
+  font-weight: 800;
+  color: #2f7a4a;
+}
+.y-total-row th,
+.y-total-row td {
+  border-bottom: 0;
+  background: #f4e6cf;
+  font-size: 16px;
+  font-weight: 800;
+  color: #6b4f33;
+}
+/* Fit one viewport at 1440×900: a slightly tighter sheet. */
+@media (min-width: 1024px) and (max-height: 960px) {
+  .y-sheet th,
+  .y-sheet td {
+    padding-block: 3px;
+  }
+  .y-sheet tbody th small {
+    display: none;
+  }
+}
+@media (max-width: 900px) {
+  .y-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yd-cube.is-rolling,
+  .y-result,
+  .y-sheet td.just {
+    animation: none;
+  }
+}

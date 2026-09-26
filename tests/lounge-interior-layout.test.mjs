@@ -22,6 +22,7 @@ import {
   tableSeats,
   worldToInterior,
 } from '../app/lounge-interior-layout.ts';
+import { maxPlayers } from '../app/lounge-games.ts';
 import {
   SCENE_LAYOUT,
   sceneCanWalk,
@@ -187,7 +188,8 @@ test('clicked walks go around the tables in the way', () => {
 test('chairs are pulled up to the table edge, clear of the table, each other and the host', () => {
   for (const area of AREAS)
     for (const t of interiorTables(area))
-      for (let n = 2; n <= 7; n++) {
+      // Up to the most seats the game's table can have (야추 is 2–4).
+      for (let n = 2; n <= maxPlayers(t.game); n++) {
         const chairs = tableSeats(area, t.game, n, []).map((s) => ({ s, c: seatChair(t, s.world) }));
         for (const { s, c } of chairs) {
           // Off the table, but closer to it than the standing seat spot.

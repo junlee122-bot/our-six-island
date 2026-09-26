@@ -30,6 +30,7 @@ export const ECONOMY_GAMES: readonly EconomyGame[] = [
   'poker',
   'blackjack',
   'seotda',
+  'yacht',
 ];
 export const GAME_LABEL: Record<EconomyGame, string> = {
   chess: '체스',
@@ -37,6 +38,7 @@ export const GAME_LABEL: Record<EconomyGame, string> = {
   poker: '홀덤',
   blackjack: '블랙잭',
   seotda: '섯다',
+  yacht: '야추',
 };
 export type ReportMember = { uid: string; username?: string; actor?: number };
 export type EconomyReportInput = {

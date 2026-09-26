@@ -35,6 +35,20 @@ export const SCENE_LAYOUT: Record<
         width: 30,
         imageAnchor: { x: 50, y: 91 },
       },
+      // The friends' tables (no host): 야추 at the back between the hwatu
+      // tables, 라이어 게임 round the front middle.
+      {
+        game: 'yacht',
+        foot: { x: 51, y: 64 },
+        width: 14,
+        imageAnchor: { x: 50, y: 91 },
+      },
+      {
+        game: 'liar',
+        foot: { x: 46, y: 86 },
+        width: 22,
+        imageAnchor: { x: 50, y: 91 },
+      },
     ],
   },
   casino: {

@@ -49,7 +49,9 @@ export type ReactionScope =
   | 'gostop'
   | 'poker'
   | 'blackjack'
-  | 'seotda';
+  | 'seotda'
+  | 'yacht'
+  | 'liar';
 export type Reaction = {
   id: ReactionId;
   at: number;
@@ -80,6 +82,8 @@ export function readReaction(value: unknown): Reaction | undefined {
       'poker',
       'blackjack',
       'seotda',
+      'yacht',
+      'liar',
     ].includes(r.scope ?? '')
   )
     return;

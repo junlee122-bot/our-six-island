@@ -114,6 +114,19 @@ import {
   type LifeState,
   type Quality,
 } from './lounge-life.ts';
+import {
+  addStamp,
+  bondLastDay,
+  decayedBond,
+  grantHeartRewards,
+  museumStamped,
+  readSocial,
+  settleMuseum,
+  settleSocial,
+  touchBond,
+  type SocialState,
+} from './lounge-life-social.ts';
+import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 
 // ---------------------------------------------------------------- constants
 /** 6 → 9 and 9 → 12 plots. */
@@ -135,8 +148,13 @@ export const WISH_MIN = 100;
 export const WISH_MAX = 1_000;
 /** Friendship points per source (gift: ×2 liked, ×0.2 disliked, ×3 on a birthday). */
 export const BOND_POINTS = { gift: 20, visit: 8, water: 5, table: 6, request: 25 } as const;
-/** Cumulative points for hearts 1..10. */
-export const BOND_LEVELS = [30, 80, 150, 250, 400, 600, 850, 1_150, 1_500, 2_000] as const;
+/**
+ * Cumulative points for hearts 1..10. The late hearts are slow on purpose
+ * (C-4: the 120-day simulation saturated every pair at ♥9.5 on the old
+ * 2,000-point curve); ♥6+ also fade a little after 3 idle days
+ * (lounge-life-social decayedBond) and ♥2/4/6/8/10 give rewards.
+ */
+export const BOND_LEVELS = [30, 80, 150, 250, 400, 650, 1_000, 1_600, 2_600, 4_000] as const;
 export const BOND_MAX = 9_999;
 export const MEMORY_MAX = 60;
 export const NEWS_DAY_MAX = 40;
@@ -225,6 +243,8 @@ export type LifeExt = {
   projects?: Record<string, ProjectState>;
   /** This week's festival fund. */
   festival?: FestivalState;
+  /** Friend-life state: NPC lines, heart rewards, museum stamps, festivals (lounge-life-social). */
+  social?: SocialState;
 };
 export type PlusAction =
   | { kind: 'fertilize'; plot: number; item: string }
@@ -269,7 +289,7 @@ export const PLUS_REJECT = {
   nothingHere: '지금은 여기에 아무것도 없어요.',
   caught: '여기 곤충은 이미 잡았어요. 다른 시간에 다시 와 주세요.',
   noSell: '팔 수 없는 물건이에요.',
-  donated: '이미 박물관에 있는 물건이에요.',
+  donated: '이미 기증한 물건이에요. 박물관에 내 도장이 찍혀 있어요.',
   noDonate: '박물관에 기증할 수 없는 물건이에요.',
   recipe: '레시피를 확인해 주세요.',
   recipeLocked: '아직 배우지 못한 레시피예요. 마을 복원이 필요해요.',
@@ -537,6 +557,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     if (m && Number(m[1]) < Number(m[2]) && safe(n) && n > 0) bonds[k] = Math.min(BOND_MAX, n);
   }
   if (nonEmpty(bonds)) out.bonds = bonds;
+  const social = readSocial(v.social);
+  if (social) out.social = social;
   const bd = obj(v.bondDay);
   if (safe(bd.day)) {
     const keys = idList(bd.keys, 200, (s) => /^[a-z0-9:>-]+$/.test(s));
@@ -857,10 +879,15 @@ export function addMemory(life: LifeState, now: number, kind: string, actors: nu
 }
 export const pairKey = (a: number, b: number) => (a < b ? `${a}-${b}` : `${b}-${a}`);
 export const bondLevel = (points: number) => BOND_LEVELS.filter((t) => points >= t).length;
-export const bondPoints = (life: LifeState, a: number, b: number) =>
-  a === b ? 0 : (life.bonds?.[pairKey(a, b)] ?? 0);
+/** Friendship points of a pair; with `now`, after idle decay (lounge-life-social decayedBond). */
+export const bondPoints = (life: LifeState, a: number, b: number, now?: number) => {
+  if (a === b) return 0;
+  const key = pairKey(a, b),
+    points = life.bonds?.[key] ?? 0;
+  return now === undefined ? points : decayedBond(points, bondLastDay(life, key), kstDay(now));
+};
 /** Counts a friendship source once per `gate` key per KST day. Returns false when already counted. */
-function bondGate(life: LifeState, gate: string, now: number) {
+export function bondGate(life: LifeState, gate: string, now: number) {
   const day = kstDay(now);
   if (life.bondDay?.day !== day) life.bondDay = { day, keys: [] };
   if (life.bondDay.keys.includes(gate) || life.bondDay.keys.length >= 200) return false;
@@ -870,9 +897,12 @@ function bondGate(life: LifeState, gate: string, now: number) {
 export function addBond(life: LifeState, a: number, b: number, points: number, now: number) {
   if (a === b || !actorValid(a) || !actorValid(b) || points <= 0) return;
   const key = pairKey(a, b),
-    before = life.bonds?.[key] ?? 0,
+    stored = life.bonds?.[key] ?? 0,
+    // Idle decay is applied lazily: first settle it, then add the new points.
+    before = decayedBond(stored, bondLastDay(life, key), kstDay(now)),
     after = Math.min(BOND_MAX, before + Math.round(points));
   (life.bonds ??= {})[key] = after;
+  touchBond(life, key, kstDay(now));
   const from = bondLevel(before),
     to = bondLevel(after);
   if (to > from) {
@@ -880,6 +910,9 @@ export function addBond(life: LifeState, a: number, b: number, points: number, n
     addMemory(life, now, 'bond', [a, b], text);
     addNews(life, now, `bond:${key}:${to}`, 'bond', text, [a, b]);
   }
+  // Heart-level rewards both ways (idempotent; lounge-life-social).
+  grantHeartRewards(life, a, b, now);
+  grantHeartRewards(life, b, a, now);
 }
 
 // ---------------------------------------------------------------- achievements
@@ -905,7 +938,8 @@ export function afterCoreAction(
   member: { id: string; actor: number },
   now: number,
 ) {
-  return { life, ledger: settleAchievements(life, ledger, member.id, now) };
+  const next = settleSocial(life, ledger, member, now);
+  return { life, ledger: settleAchievements(life, next, member.id, now) };
 }
 
 // ---------------------------------------------------------------- shop
@@ -1472,21 +1506,30 @@ export function plusAction(
       break;
     }
     case 'donate': {
+      // C-5 co-donation: the first donor keeps the honor (life.museum), and
+      // every friend may still stamp each item once for their own collection.
       if (typeof a.item !== 'string' || !isMuseumId(a.item)) fail(PLUS_REJECT.noDonate);
-      if (life.museum?.[a.item]) fail(PLUS_REJECT.donated);
+      if (museumStamped(life, actor, a.item)) fail(PLUS_REJECT.donated);
       takeItem(life, uid, a.item, 1);
-      (life.museum ??= {})[a.item] = { actor, at: now };
+      const first = !life.museum?.[a.item],
+        shown = Object.keys(life.museum ?? {}).length,
+        mult = hasFlag(life, 'museum') ? 2 : 1;
+      if (first) (life.museum ??= {})[a.item] = { actor, at: now };
+      else addStamp(life, actor, a.item);
       bump(life, uid, 'donate', 1);
       discover(life, uid, a.item);
-      next = grant(next, life, uid, FIRST_DONATION_GRANT * (hasFlag(life, 'museum') ? 2 : 1), 'donate', now);
+      next = grant(next, life, uid, (first ? FIRST_DONATION_GRANT : CO_DONATION_GRANT) * mult, 'donate', now);
       addNews(
         life,
         now,
-        `don:${a.item}`,
+        first ? `don:${a.item}` : `don:${a.item}:${actor}`,
         'museum',
-        `${josaGa(nameOf(actor))} 박물관에 ${itemName(a.item)}을(를) 처음 기증했어요`,
+        first
+          ? `${josaGa(nameOf(actor))} 박물관에 ${itemName(a.item)}을(를) 처음 기증했어요`
+          : `${josaGa(nameOf(actor))} 박물관 ${itemName(a.item)} 칸에 기증 도장을 찍었어요`,
         [actor],
       );
+      next = settleMuseum(life, next, now, shown);
       break;
     }
     case 'cook':
@@ -1833,7 +1876,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     bonds: [0, 1, 2, 3, 4, 5, 6]
       .filter((f) => f !== actor)
       .map((f) => {
-        const points = bondPoints(life, actor, f),
+        const points = bondPoints(life, actor, f, now),
           level = bondLevel(points);
         return { actor: f, points, level, next: BOND_LEVELS[level] ?? null };
       }),

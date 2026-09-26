@@ -142,7 +142,7 @@ export function CalendarChip({
           </li>
         </ul>
         <p className="l-hud-tip-line">
-          {SEASON_INFO[cal.season].name}이 {hoursLeft(cal.seasonEndsAt, now)} 뒤에 끝나요 · 한 계절은 7일이에요.
+          {cal.seasonNote ?? `${SEASON_INFO[cal.season].name}이 ${hoursLeft(cal.seasonEndsAt, now)} 뒤에 끝나요 · 한 계절은 7일이에요.`}
         </p>
         {events.length > 0 && (
           <ul className="l-hud-events">
