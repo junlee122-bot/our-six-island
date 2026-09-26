@@ -42,6 +42,21 @@ import {
   type PlusMe,
 } from './lounge-life-plus.ts';
 import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
+// 성장 P1 (skills, blacksmith, 마을 개척): same cycle rule as lounge-life-plus.
+import { GROWTH_ACTION_KINDS, XP } from './lounge-growth-data.ts';
+import {
+  gainXp,
+  growthAction,
+  growthMods,
+  growthNeedsSettle,
+  growthView,
+  readGrowth,
+  settleResearch,
+  touchGrowth,
+  type GrowthAction,
+  type GrowthExt,
+  type GrowthView,
+} from './lounge-growth.ts';
 import { socialAction, socialView, type SocialAction, type SocialView } from './lounge-life-social.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
@@ -378,6 +393,10 @@ export type Plot = {
   speed?: number;
   /** Harvests already taken from a regrowing crop. */
   n?: number;
+  /** 성장: gold-star chance +%p from the planter's hoe and farming (set at planting). */
+  g?: number;
+  /** 성장: watering speed-up +%p from the waterer's can (set when watered by hand). */
+  w?: number;
 };
 export type Bag = {
   seeds: Record<Crop, number>;
@@ -425,7 +444,8 @@ export type LifeState = {
   guestbookSeen?: Record<string, number>;
   /** Lifetime harvest/pick counts per user (trophy milestones). Optional. */
   harvested?: Record<string, Partial<Record<HarvestKind, number>>>;
-} & LifeExt;
+} & LifeExt &
+  GrowthExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -452,7 +472,9 @@ export type LifeAction =
   | { kind: 'readGuestbook' }
   | PlusAction
   /** Friend NPC talk, my NPC lines, festivals, 마을 적응하기 (lounge-life-social.ts). */
-  | SocialAction;
+  | SocialAction
+  /** Skills, blacksmith, 마을 개척, material nodes (lounge-growth.ts). */
+  | GrowthAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -468,6 +490,7 @@ export const LIFE_ACTION_KINDS = [
   'readGuestbook',
   ...PLUS_ACTION_KINDS,
   ...SOCIAL_ACTION_KINDS,
+  ...GROWTH_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -605,15 +628,16 @@ export function plotReadyAt(plot: Plot, now = Infinity): number | null {
   if (w === null) return plot.plantedAt + grow;
   const done = w - plot.plantedAt;
   if (done >= grow) return plot.plantedAt + grow;
-  // After watering, the remaining growth runs 40% shorter.
-  return w + Math.ceil((grow - done) * (1 - WATER_SPEEDUP));
+  // After watering, the remaining growth runs 40% shorter (+ the can's tier, 성장).
+  return w + Math.ceil((grow - done) * (1 - WATER_SPEEDUP - (plot.w ?? 0) / 100));
 }
 /** Quality this plot will give at harvest (deterministic per planting). */
 export function plotQuality(uid: string, index: number, plot: Plot): Quality {
   if (!plot.crop) return 0;
   const roll = hash32(`q:${uid}:${index}:${plot.plantedAt}:${plot.crop}`) % 100,
-    [gold, silver] = QUALITY_ODDS[plot.fert ?? 0];
-  return roll < gold ? 2 : roll < silver ? 1 : 0;
+    [gold, silver] = QUALITY_ODDS[plot.fert ?? 0],
+    bonus = plot.g ?? 0;
+  return roll < gold + bonus ? 2 : roll < silver + bonus ? 1 : 0;
 }
 export function plotProgress(plot: Plot, now: number) {
   const ready = plotReadyAt(plot, now);
@@ -651,6 +675,8 @@ function readPlot(value: unknown): Plot {
   if (safe(p.speed) && p.speed > 0) out.speed = Math.min(MAX_SPEED, p.speed);
   const regrow = CROP_INFO[p.crop].regrow;
   if (regrow && safe(p.n) && p.n > 0) out.n = Math.min(regrow.harvests - 1, p.n);
+  if (safe(p.g) && p.g > 0) out.g = Math.min(40, p.g);
+  if (safe(p.w) && p.w > 0) out.w = Math.min(30, p.w);
   return out;
 }
 /** Farm length for a stored array (6, 9 or 12; anything else → 6). */
@@ -800,6 +826,7 @@ export function readLife(value: unknown): LifeState {
     ...guestbookSeenOf(v.guestbookSeen),
     ...harvestedOf(v.harvested),
     ...readLifeExt(v),
+    ...readGrowth(v.growth),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -902,6 +929,12 @@ export function lifeAction(
   const nextId = (prefix: string) => `${prefix}-${uid}-${++life.seq}`;
   let nextLedger = ledger;
   const kind = a.kind as string;
+  // 성장: today's fields, rested/retro XP and finished 마을 개척 settle first.
+  touchGrowth(life, uid, now);
+  if ((GROWTH_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = growthAction(life, ledger, member, a as GrowthAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
   if ((PLUS_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = plusAction(life, ledger, member, a as PlusAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
@@ -911,13 +944,14 @@ export function lifeAction(
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   const size = farm.length;
+  const mods = growthMods(life, uid);
   const plantOk = (crop: Crop) => {
-    if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse'))
+    if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse') && !mods.offSeason)
       fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
   };
   const newPlot = (crop: Crop): Plot => {
-    const speed = plantSpeed(life, uid, now) + villageGrowSpeed(life);
-    return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}) };
+    const speed = Math.min(MAX_SPEED, plantSpeed(life, uid, now) + villageGrowSpeed(life) + mods.growSpeed);
+    return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
   };
   switch (a.kind) {
     case 'plant': {
@@ -953,10 +987,12 @@ export function lifeAction(
             now < plotReadyAt(plot, now)!
           ) {
             plot.wateredAt = now;
+            if (mods.waterPts) plot.w = mods.waterPts;
             watered++;
           }
         if (!watered) fail(LIFE_REJECT.nothingToWater);
         bump(life, uid, 'water', watered);
+        gainXp(life, uid, 'farm', XP.water * watered, now);
         break;
       }
       const i = plotIndex(a.plot, size),
@@ -966,7 +1002,9 @@ export function lifeAction(
       if (now >= plotReadyAt(plot, now)!) fail(LIFE_REJECT.grown);
       if (plotRainAt(plot, now) !== null) fail(LIFE_REJECT.rained);
       plot.wateredAt = now;
+      if (mods.waterPts) plot.w = mods.waterPts;
       bump(life, uid, 'water', 1);
+      gainXp(life, uid, 'farm', XP.water, now);
       break;
     }
     case 'harvest': {
@@ -991,6 +1029,13 @@ export function lifeAction(
         bump(life, uid, 'harvest', 1);
         if (quality === 2) bump(life, uid, 'gold', 1);
         discover(life, uid, crop);
+        gainXp(
+          life,
+          uid,
+          'farm',
+          (XP.harvestBase + Math.min(XP.harvestHourMax, plotGrowMs(plot) / HOUR)) * QUALITY_MULT[quality],
+          now,
+        );
         const regrow = CROP_INFO[crop].regrow,
           n = (plot.n ?? 0) + 1;
         farm[i] =
@@ -1050,7 +1095,9 @@ export function lifeAction(
       else if (q !== undefined) addCropQ(life, uid, a.crop as Crop, q, -a.n);
       tiers.forEach((n, t) => {
         if (!n) return;
-        amount += sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount);
+        // 성장: 장터 농부 / 명인 add a share on top (the demand curve stays the same).
+        const bonus = fruit ? 0 : mods.cropSell + (t > 0 ? mods.starSell : 0);
+        amount += Math.round(sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount) * (1 + bonus));
         sold += n;
       });
       const left = sellCapLeft(life, uid, now);
@@ -1245,6 +1292,8 @@ export type LifeView = {
   serverNow: number;
   /** Friend-life view (absent from older servers). */
   social?: SocialView;
+  /** 성장: skills, tools, 마을 개척, material nodes (absent from older servers). */
+  growth?: GrowthView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1252,10 +1301,15 @@ export function lifeView(
   actor: number,
   now: number,
 ): LifeView {
-  const life =
+  let life =
     UUID.test(uid) && actorValid(actor)
       ? ensureLifeMember(state, uid, actor)
       : state;
+  // 성장: finished 마을 개척 shows (flags) before anyone acts again.
+  if (growthNeedsSettle(life, now)) {
+    life = cloneLife(life);
+    settleResearch(life, now);
+  }
   const farm = life.farms[uid] ?? [];
   const mail = life.mail[uid] ?? [];
   const picked = life.fruitPickedAt[uid] ?? {};
@@ -1327,6 +1381,7 @@ export function lifeView(
     ...plus,
     me: { ...base.me, ...me },
     ...(UUID.test(uid) && actorValid(actor) ? { social: socialView(life, uid, actor, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

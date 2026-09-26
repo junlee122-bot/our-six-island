@@ -2,8 +2,11 @@
 // The one contextual action button (bottom-right, beside the D-pad): its label
 // and icon follow the nearest thing you can use; E always presses it.
 import {
+  Anvil,
   Apple,
   Armchair,
+  Axe,
+  Pickaxe,
   Bug,
   ClipboardList,
   CookingPot,
@@ -37,6 +40,9 @@ const GLYPH: Partial<Record<ActionKind, GlyphName>> = {
   harvest: 'basket',
   tend: 'leaf',
   fish: 'hook',
+  forge: 'anvil',
+  chop: 'axe',
+  smash: 'pickaxe',
 };
 
 const ICON: Record<ActionKind, typeof DoorOpen> = {
@@ -67,6 +73,9 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   cook: CookingPot,
   wish: Sparkles,
   fete: PartyPopper,
+  forge: Anvil,
+  chop: Axe,
+  smash: Pickaxe,
 };
 
 export function ActionButton({

@@ -83,7 +83,7 @@ export function Invitations({
                   : `${nameOf(r.from, view.players)}의 ${game} 초대`}
               </strong>
               <p>
-                {GAME_COPY[r.game].amountLabel} {formatBeom(r.stake)}
+                {r.stake > 0 ? `${GAME_COPY[r.game].amountLabel} ${formatBeom(r.stake)}` : '파티 판 · 범 없이'}
                 {r.game === 'blackjack' &&
                   ` · 최대 ${formatBeom(reservation)} 예약`}
                 {' · '}

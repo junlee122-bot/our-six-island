@@ -130,7 +130,7 @@ export function LiarTable({
         symbol={<VenetianMask size={28} strokeWidth={2.2} />}
         game="라이어 게임"
         line={line}
-        aside={g.log.length ? g.log[g.log.length - 1].text : undefined}
+        aside={!over && g.log.length ? g.log[g.log.length - 1].text : undefined}
         tone={over ? (iWon ? 'win' : 'calm') : g.legal.enabled ? 'turn' : g.phase === 'guess' ? 'alert' : 'calm'}
         side={
           <div className="lg-host-side">

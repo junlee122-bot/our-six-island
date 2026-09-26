@@ -7,7 +7,9 @@ import { getSettings } from './lounge-settings';
 type LifeSfx =
   | 'cast' | 'bite' | 'reel' | 'miss' | 'pickup' | 'catch' | 'cook' | 'donate' | 'fanfare' | 'eat'
   // VILL-2: harvest pop, gold-star sparkle, reel clicks, a big-catch splash.
-  | 'pop' | 'sparkle' | 'tick' | 'splash';
+  | 'pop' | 'sparkle' | 'tick' | 'splash'
+  // 성장 P1: a level-up flourish, chopping, breaking rock, the blacksmith's anvil.
+  | 'levelup' | 'chop' | 'smash' | 'anvil';
 
 const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorType; peak?: number }> = {
   // A soft whoosh-plop: falling triangle notes.
@@ -26,6 +28,10 @@ const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorTy
   sparkle: { notes: [1567.98, 2093, 2637.02, 3135.96], step: 0.05, type: 'sine', peak: 0.045 },
   tick: { notes: [1318.5], step: 0.02, type: 'square', peak: 0.018 },
   splash: { notes: [293.66, 220, 174.61], step: 0.06, type: 'triangle', peak: 0.06 },
+  levelup: { notes: [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093], step: 0.075, type: 'triangle', peak: 0.085 },
+  chop: { notes: [233.08, 196], step: 0.05, type: 'triangle', peak: 0.07 },
+  smash: { notes: [174.61, 138.59, 110], step: 0.04, type: 'square', peak: 0.04 },
+  anvil: { notes: [1760, 2349.32, 1760, 2349.32], step: 0.11, type: 'square', peak: 0.03 },
 };
 
 /** Plays one life cue (quietly does nothing when sound is off). */
@@ -35,4 +41,5 @@ export function lifeSfx(kind: LifeSfx) {
   loungeAudio.cue(n.notes, n.step, n.type, n.peak);
   // A short paper-snap stands in for the splash of a cast or a bite.
   if (kind === 'cast' || kind === 'bite' || kind === 'splash') loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05);
+  if (kind === 'chop' || kind === 'smash') loungeAudio.table('flip', kind === 'smash' ? 2 : 1, 0.06);
 }

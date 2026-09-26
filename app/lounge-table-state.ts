@@ -163,7 +163,8 @@ export function tableLabel(state: TableState): {
   text: string;
 } {
   const name = GAME_INFO[state.game].name;
-  const stake = state.stake !== null ? formatBeom(state.stake) : '';
+  // 파티 판 / 라이어 게임: nothing staked.
+  const stake = state.stake === 0 ? '파티 판' : state.stake !== null ? formatBeom(state.stake) : '';
   const status =
     state.phase === 'forming'
       ? `${state.occupants.length}/${state.required}명 · ${stake}`

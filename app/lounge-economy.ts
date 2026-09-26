@@ -140,6 +140,9 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('farm-')) return 'farm-expand';
   if (reason.startsWith('rod-')) return 'rod';
   if (reason.startsWith('house-')) return 'house';
+  // 성장 P1: blacksmith upgrades ('tool-pickaxe-2'), 마을 개척, profession respec.
+  if (reason.startsWith('tool-')) return 'tool';
+  if (reason === 'research' || reason === 'respec') return reason;
   if (
     ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival'].includes(reason)
   )

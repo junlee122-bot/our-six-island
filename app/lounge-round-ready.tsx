@@ -108,6 +108,9 @@ export function RoundReady({
           </h2>
           {table.practice ? (
             <p>연습 판이라 범은 오가지 않아요. 누르면 바로 다음 판을 시작해요.</p>
+          ) : table.stake === 0 ? (
+            // 파티 판 / 라이어 게임: nothing is staked.
+            <p>범 없이 같은 자리로 이어서 해요. 모두 체크하면 바로 시작해요.</p>
           ) : (
             <p>
               {table.required === 1 ? '누르면' : '모두 체크하면'} 같은 조건(

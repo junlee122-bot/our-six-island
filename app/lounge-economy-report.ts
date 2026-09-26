@@ -227,6 +227,9 @@ export const BUCKET_LABEL: Record<string, string> = {
   bundle: '마을 꾸러미 기부',
   project: '마을 공사',
   festival: '마을 축제 기금',
+  tool: '대장간 도구',
+  research: '마을 개척',
+  respec: '전문가 다시 고르기',
   'spend-other': '기타 지출',
 };
 const bucketLabel = (key: string) =>
@@ -291,7 +294,10 @@ const LIFE_REASONS: Record<string, string> = {
   'house-2': '집 확장 2단계',
   'house-3': '집 확장 3단계',
   'house-4': '집 확장 4단계',
+  research: '마을 개척',
+  respec: '전문가 다시 고르기',
 };
+const TOOL_LABEL: Record<string, string> = { can: '물뿌리개', hoe: '괭이', rod: '낚싯대', axe: '도끼', pickaxe: '곡괭이' };
 /** Korean label of a ledger entry reason ('sell-tomato' → '토마토 판매'). */
 export function reasonLabel(reason: string): string {
   if (reason === 'daily') return FLOW_LABEL.daily;
@@ -308,6 +314,9 @@ export function reasonLabel(reason: string): string {
       item = Object.hasOwn(SHOP_BY_ID, id) ? SHOP_BY_ID[id] : null;
     return '상점: ' + (item ? item.name : id);
   }
+  // 성장: 'tool-pickaxe-2' → '대장간: 곡괭이 2단계'.
+  const tool = /^tool-([a-z]+)-([2-5])$/.exec(reason);
+  if (tool) return `대장간: ${TOOL_LABEL[tool[1]] ?? tool[1]} ${tool[2]}단계`;
   return reason || '(사유 없음)';
 }
 /** KST calendar date (YYYY-MM-DD) of an epoch-ms time. */

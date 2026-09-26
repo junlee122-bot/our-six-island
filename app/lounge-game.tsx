@@ -83,6 +83,7 @@ import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
 import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
+import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
 import { DISH_BY_ID, BUFF_INFO, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
@@ -200,6 +201,10 @@ const RequestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.Reques
 // Friend-life (C-3..C-10): NPC talk box and the festival panel.
 const FriendDialog = lazyRetry(() => import('./lounge/FriendDialog').then((m) => ({ default: m.FriendDialog })));
 const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({ default: m.FestivalPanel })));
+// 성장 P1: the growth journal (T), the blacksmith and the level-up banner.
+const GrowthPanel = lazyRetry(() => import('./lounge/GrowthPanel').then((m) => ({ default: m.GrowthPanel })));
+const ForgePanel = lazyRetry(() => import('./lounge/Forge').then((m) => ({ default: m.ForgePanel })));
+const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) => ({ default: m.GrowthNotices })));
 
 /**
  * Walking up to a door starts loading what is behind it (the lazy chunk and
@@ -366,6 +371,9 @@ type ModalName =
   | 'digest'
   | 'lifeRequest'
   | 'fete'
+  // 성장 P1 (T): the growth journal and the blacksmith.
+  | 'growth'
+  | 'forge'
   // PC: the Esc menu and 조작 안내.
   | 'system'
   | 'help';
@@ -470,6 +478,8 @@ function AccountLounge({
     [roomSpawn, setRoomSpawn] = useState<'bed' | 'door'>('bed'),
     // The wardrobe opened from my room ("옷 갈아입기") returns there.
     [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom'>('village'),
+    // 성장 수첩: the skill a level-up banner opens it on.
+    [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
     [modal, setModal] = useState<ModalName | null>(null),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
     // 설정 / 조작 안내 opened from the Esc menu go back to it on close (Esc stack).
@@ -1039,6 +1049,20 @@ function AccountLounge({
     notify(`${josa(itemName(item), '을/를')} ${got > 1 ? `${got}개 ` : ''}${mode === 'bug' ? '잡았어요' : '주웠어요'}! 가방에 담았어요.`);
     lifeSfx(mode === 'bug' ? 'catch' : 'pickup');
   };
+  /** 성장 P1: chop a bush/log or break a rock at the village edge. */
+  const gatherNode = async (id: string, kind: NodeKind) => {
+    const inv = () => room.snapshot().life?.me.inv ?? {};
+    const before = { ...inv() };
+    const ok = await room.life({ kind: kind === 'rock' ? 'smash' : 'chop', node: id });
+    if (!ok) return;
+    const after = inv();
+    const got = ['wood', 'stone', 'copper']
+      .map((item) => [item, (after[item] ?? 0) - (before[item] ?? 0)] as const)
+      .filter(([, n]) => n > 0)
+      .map(([item, n]) => `${itemName(item)} ${n}`);
+    notify(`${NODE_INFO[kind].name}${kind === 'rock' ? '를 깼어요' : '를 베었어요'}! ${got.join(' · ')}${got.some((g) => g.startsWith('구리')) ? ' · 반짝!' : ''}`);
+    lifeSfx(kind === 'rock' ? 'smash' : 'chop');
+  };
   const waterFriend = (actor: number) =>
     void lifeRun(
       { kind: 'waterFriend', owner: actor, plot: -1 },
@@ -1458,6 +1482,10 @@ function AccountLounge({
           case 'board':
             if (settings.simpleGraphics) setModal('board');
             else walkTo(BOARD_FRONT);
+            return true;
+          case 'growth':
+            setGrowthSkill(undefined);
+            setModal((m) => (m === 'growth' ? null : 'growth'));
             return true;
           default:
             return false;
@@ -1998,6 +2026,20 @@ function AccountLounge({
       {lifeEvents.celebration && (
         <Celebration name={lifeEvents.celebration.name} text={lifeEvents.celebration.text} />
       )}
+      {connected && view.life?.growth && (
+        <Suspense fallback={null}>
+          <GrowthNotices
+            life={view.life}
+            uid={view.self}
+            notify={notify}
+            paused={inGame || !!fishing}
+            onOpen={(skill) => {
+              setGrowthSkill(skill);
+              setModal('growth');
+            }}
+          />
+        </Suspense>
+      )}
       {visiting !== null ? (
         <FriendVisitScreen
           room={room}
@@ -2080,6 +2122,8 @@ function AccountLounge({
                       onWaterFriend={waterFriend}
                       onWish={() => void wish()}
                       onFete={() => setModal('fete')}
+                      onForge={() => setModal('forge')}
+                      onNode={(id, kind) => void gatherNode(id, kind)}
                       onTalk={talkTo}
                       tool={hotbar.tool}
                       fishing={fishing}
@@ -2452,6 +2496,7 @@ function AccountLounge({
                 { id: 'kitchen', label: '요리·만들기', icon: <CookingPot size={18} />, onClick: openKitchen },
                 { id: 'book', label: '도감 · 박물관', icon: <BookOpen size={18} />, kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
                 { id: 'board', label: '마을 게시판', icon: <ClipboardList size={18} />, kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
+                { id: 'growth', label: '성장 수첩', icon: <Sparkles size={18} />, kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
                 { id: 'digest', label: '어제 마을 소식', icon: <Newspaper size={18} />, onClick: () => setModal('digest') },
                 { id: 'memories', label: '추억 앨범', icon: <Sparkles size={18} />, onClick: () => setModal('memories') },
               ],
@@ -2634,6 +2679,7 @@ function AccountLounge({
           }
           onFullscreen={() => void toggleFullscreen()}
           onVillageMenu={() => setModal('menu')}
+          onGrowth={inGame ? undefined : () => setModal('growth')}
           onLeaveRoom={
             inGame
               ? undefined
@@ -2758,6 +2804,20 @@ function AccountLounge({
       )}
       {modal === 'fete' && (
         <FestivalPanel room={room} view={view} notify={notify} selfActor={save.actor} onClose={() => setModal(null)} />
+      )}
+      {modal === 'growth' && (
+        <GrowthPanel
+          room={room}
+          view={view}
+          notify={notify}
+          simple={settings.simpleGraphics}
+          initialSkill={growthSkill}
+          onWalk={settings.simpleGraphics ? undefined : walkTo}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'forge' && (
+        <ForgePanel room={room} view={view} notify={notify} onGrowth={() => setModal('growth')} onClose={() => setModal(null)} />
       )}
       {talk && !modal && (
         <FriendDialog

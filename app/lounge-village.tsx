@@ -32,6 +32,9 @@ import {
   ClipboardList,
   Droplets,
   Sparkles,
+  Anvil,
+  Axe,
+  Pickaxe,
 } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -60,6 +63,8 @@ import { VillageWatersLayer } from './lounge-village-waters';
 import { VillageValleyLayer } from './lounge-village-valley';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
+import { VillageGrowthLayer } from './lounge-village-growth-3d';
+import { NODE_INFO, type NodeKind } from './lounge-growth-data';
 import {
   BOARD_FRONT,
   FISH_STAND,
@@ -240,6 +245,10 @@ type Props = {
   onWish?: () => void;
   /** The festival booth (C-6). */
   onFete?: () => void;
+  /** 성장 P1: the blacksmith's door (ruined before 대장간 재건). */
+  onForge?: () => void;
+  /** 성장 P1: chop / smash one of today's material nodes. */
+  onNode?: (id: string, kind: NodeKind) => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
   onTalk?: (actor: number) => void;
   /** The selected hotbar item (the farm action follows it). */
@@ -293,6 +302,8 @@ type WorldState = {
   waters: VillageWatersLayer;
   /** VILL-2 kArchive valley set (yard props, spot props, nature, 팔각정). */
   valley: VillageValleyLayer;
+  /** 성장 P1: the blacksmith and today's material nodes. */
+  growth: VillageGrowthLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -375,6 +386,7 @@ function getVillageWorld(): WorldState {
   const karchive = new VillageKarchiveLayer(root);
   const waters = new VillageWatersLayer(root);
   const valley = new VillageValleyLayer(root);
+  const growth = new VillageGrowthLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -449,6 +461,7 @@ function getVillageWorld(): WorldState {
       }),
       ...karchive.load(loadModel, changed),
       ...valley.loadAll(loadModel, changed),
+      ...growth.load(loadModel, changed),
     ]),
   );
   const props = propJobs.then((results) =>
@@ -468,6 +481,7 @@ function getVillageWorld(): WorldState {
     karchive,
     waters,
     valley,
+    growth,
   };
   return villageWorld;
 }
@@ -962,6 +976,8 @@ export function Village3D(props: Props) {
       else if (target.kind === 'friendFarm') current.onWaterFriend?.(target.actor);
       else if (target.kind === 'fountain') current.onWish?.();
       else if (target.kind === 'fete') current.onFete?.();
+      else if (target.kind === 'forge') current.onForge?.();
+      else if (target.kind === 'node') current.onNode?.(target.id, target.node);
       else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
@@ -1022,7 +1038,13 @@ export function Village3D(props: Props) {
         season: life?.calendar?.season ?? null,
         flags: life?.flags ?? [],
       });
-      if (civicChanged && !seasonChanged) {
+      const growthChanged = world.growth.update({
+        forgeOpen: !!life?.growth?.forgeOpen,
+        forgeReady: !!life?.growth?.forge?.ready,
+        nodes: life?.growth?.nodes ?? [],
+      });
+      if (growthChanged) host.dataset.nodes = String((life?.growth?.nodes ?? []).filter((n) => !n.taken).length);
+      if ((civicChanged || growthChanged) && !seasonChanged) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
       }
@@ -3428,6 +3450,39 @@ function SpotPrompt({
         <small>하루 한 번 소원을 빌 수 있어요{key}</small>
       </div>
     );
+  if (spot.kind === 'forge') {
+    const g = life?.growth;
+    return (
+      <div>
+        <strong>
+          <Anvil size={14} /> {g?.forgeOpen ? '대장간 · 무쇠 아저씨' : '무너진 공방'}
+        </strong>
+        <small>
+          {!g?.forgeOpen
+            ? '마을 개척 “대장간 재건”으로 다시 세워요'
+            : g.forge?.ready
+              ? '맡긴 도구가 다 됐대요'
+              : g.forge
+                ? '맡긴 도구를 두드리는 중 · 내일 아침 6시'
+                : '도구를 맡기면 다음 날 아침에 찾아요'}
+          {key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'node') {
+    const Icon = spot.node === 'rock' ? Pickaxe : Axe;
+    return (
+      <div>
+        <strong>
+          <Icon size={14} /> {NODE_INFO[spot.node].name}
+        </strong>
+        <small>
+          {spot.node === 'rock' ? '돌 · 가끔 구리 광석' : '나무'} · 오늘 한 번{key}
+        </small>
+      </div>
+    );
+  }
   if (spot.kind === 'fete') {
     const fete = life?.social?.fete;
     return (

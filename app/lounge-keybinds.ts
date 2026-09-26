@@ -19,6 +19,7 @@ export type BindAction =
   | 'tasks'
   | 'map'
   | 'board'
+  | 'growth'
   | 'help'
   | 'menu'
   | 'hotbar1'
@@ -45,6 +46,7 @@ export const DEFAULT_KEYBINDS: Readonly<Keybinds> = Object.freeze({
   tasks: 'KeyJ',
   map: 'KeyM',
   board: 'KeyB',
+  growth: 'KeyT',
   help: 'F1',
   menu: 'Escape',
   hotbar1: 'Digit1',
@@ -84,6 +86,7 @@ export const BIND_GROUPS: readonly {
       { action: 'tasks', label: '오늘의 부탁' },
       { action: 'map', label: '마을 안내' },
       { action: 'board', label: '마을 게시판 가기' },
+      { action: 'growth', label: '성장 (기술·도구·마을 개척)' },
       { action: 'help', label: '조작 안내' },
       { action: 'menu', label: '메뉴' },
     ],

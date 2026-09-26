@@ -34,7 +34,11 @@ export type ActionKind =
   | 'cook'
   | 'wish'
   // Participatory festivals (C-6).
-  | 'fete';
+  | 'fete'
+  // 성장 P1: the blacksmith and the material nodes at the village edge.
+  | 'forge'
+  | 'chop'
+  | 'smash';
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   enter: '들어가기',
@@ -64,6 +68,9 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   cook: '요리·만들기',
   wish: '소원 빌기',
   fete: '축제 참여하기',
+  forge: '대장간',
+  chop: '베기',
+  smash: '깨기',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

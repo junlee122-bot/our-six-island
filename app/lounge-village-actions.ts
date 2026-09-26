@@ -42,6 +42,8 @@ import {
 import type { Spot } from './lounge-items.ts';
 import { itemName, spotBlock } from './lounge-life-plus.ts';
 import { farmToolAction } from './lounge-life-ui.ts';
+import { FORGE_REACH, NODE_REACH, forgeDistance, nearestNode } from './lounge-village-growth.ts';
+import { NODE_INFO, type NodeKind } from './lounge-growth-data.ts';
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
 export type VillageSpot =
@@ -60,7 +62,11 @@ export type VillageSpot =
   | { kind: 'friendFarm'; actor: number }
   | { kind: 'fountain' }
   /** Today's festival booth (C-6). */
-  | { kind: 'fete' };
+  | { kind: 'fete' }
+  /** 성장 P1: the blacksmith (ruined until 마을 개척 “대장간 재건”). */
+  | { kind: 'forge' }
+  /** 성장 P1: today's bush / log / rock at the village edge. */
+  | { kind: 'node'; id: string; node: NodeKind };
 
 export type VillageTarget =
   | { type: 'door'; entrance: NearbyVillageEntrance }
@@ -197,6 +203,29 @@ export function villageAction(
       reach: FETE_REACH,
       target: { type: 'spot', spot: { kind: 'fete' } },
     });
+  // 성장 P1: the blacksmith's door and today's material nodes.
+  if (life?.growth) {
+    const ready = life.growth.forge?.ready;
+    labels.set('forge', {
+      label: !life.growth.forgeOpen ? '무너진 공방 보기' : ready ? '도구 찾기' : '대장간',
+    });
+    candidates.push({
+      kind: 'forge',
+      distance: forgeDistance(point),
+      reach: FORGE_REACH,
+      target: { type: 'spot', spot: { kind: 'forge' } },
+    });
+    const node = nearestNode(point, life.growth.nodes, NODE_REACH);
+    if (node) {
+      labels.set('node:' + node.id, { label: `${NODE_INFO[node.kind].name} ${NODE_INFO[node.kind].verb}` });
+      candidates.push({
+        kind: node.kind === 'rock' ? 'smash' : 'chop',
+        distance: node.distance,
+        reach: NODE_REACH,
+        target: { type: 'spot', spot: { kind: 'node', id: node.id, node: node.kind } },
+      });
+    }
+  }
   candidates.push({
     kind: 'mail',
     distance: mailboxDistance(point, actor),
@@ -249,7 +278,9 @@ export function villageAction(
           ? 'fish:' + t.spot.spot
           : t.spot.kind === 'spawn'
             ? 'spawn:' + t.spot.spot
-            : t.spot.kind;
+            : t.spot.kind === 'node'
+              ? 'node:' + t.spot.id
+              : t.spot.kind;
   return { kind: best.kind, target: t, ...labels.get(key) };
 }
 

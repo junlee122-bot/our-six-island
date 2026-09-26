@@ -89,8 +89,22 @@ export const KARCHIVE_PIER = {
   railFrom: 48.3,
 } as const;
 
+/**
+ * 대장간 (성장 P1): the kArchive community workshop below the north-west
+ * falls, door (+z) toward the village. Before 마을 개척 “대장간 재건” the
+ * ruined variant stands on the same footprint (both 2.9 × 3 model units).
+ */
+export const KARCHIVE_FORGE = { x: -31, z: -27.8, scale: 1.25, w: 3.4, d: 3.5 } as const;
+
 /** Every solid footprint the kArchive layer adds to village walking. */
 export const KARCHIVE_COLLIDERS: readonly KarchiveSolid[] = [
+  {
+    id: 'karchive-forge',
+    x: KARCHIVE_FORGE.x,
+    z: KARCHIVE_FORGE.z,
+    collider: { shape: 'box', w: KARCHIVE_FORGE.w, d: KARCHIVE_FORGE.d },
+    rotation: 0,
+  },
   {
     id: 'karchive-stage',
     x: KARCHIVE_STAGE.x,

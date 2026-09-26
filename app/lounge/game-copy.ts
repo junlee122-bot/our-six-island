@@ -60,7 +60,7 @@ export const GAME_COPY: Record<GameKind, Copy> = {
     players: '2–4명',
     tagline: '주사위 다섯 개 · 딜러 없이',
     amountLabel: '판돈',
-    moneyRule: '1등이 모든 판돈을 가져가고, 동점이면 나눠 가져요. 파티 판은 범 없이 쳐요.',
+    moneyRule: '1등이 모든 판돈을 가져가고, 동점이면 나눠 가져요.',
     leaveActive:
       '야추는 남은 차례를 서버가 대신 굴리고(가장 높은 칸에 기록) 결과대로 정산돼요.',
   },

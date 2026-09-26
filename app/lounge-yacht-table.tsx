@@ -138,7 +138,7 @@ export function YachtTable({
   };
   // Dice sounds: each throw rattles (one die for 당근), a written score clicks.
   const lastRoll = useRef(g.rollCount);
-  const one = g.held.filter((h) => !h).length === 1 && g.rolls > 0;
+  const one = g.rerolled != null || (g.held.filter((h) => !h).length === 1 && g.rolls > 0);
   useEffect(() => {
     if (g.rollCount > lastRoll.current)
       loungeAudio.sample(one ? 'die-throw' : 'dice-throw', () => loungeAudio.table('flip', 3, 0.05));
@@ -215,7 +215,7 @@ export function YachtTable({
   const aside = g.last
     ? `${names[g.last.seat]} 님이 ${YACHT_LABEL[g.last.category]}에 ${g.last.points}점을 적었어요.`
     : undefined;
-  const lastRolled = g.dice.map((_, i) => !g.held[i]);
+  const lastRolled = g.dice.map((_, i) => (g.rerolled != null ? i === g.rerolled : !g.held[i]));
   return (
     <div className="y-club" data-testid="yacht-table" data-phase={g.phase} data-my-turn={mine || undefined}>
       <FriendHost

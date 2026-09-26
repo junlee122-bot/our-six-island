@@ -3,6 +3,7 @@
 // forage/bug spots and the rotating furniture shop pool. Pure data + tiny
 // helpers; shared by the client and the hohyeon-api Edge function.
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
+import { ORE_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 export type Spot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
@@ -301,6 +302,8 @@ export const ITEMS: readonly ItemDef[] = [
   })),
   ...DISHES.map((d): ItemDef => ({ id: d.id, name: d.name, emoji: d.emoji, cat: 'dish', kind: 'dish', sell: d.sell, note: d.note, museum: true })),
   ...tools,
+  // 성장 P1: ores for the blacksmith (lounge-growth-data.ts); copper drops from village rocks.
+  ...ORE_ITEMS.map((o): ItemDef => ({ id: o.id, name: o.name, emoji: '', cat: 'material', kind: 'material', sell: o.sell, note: o.note })),
 ];
 export const ITEM_BY_ID: Readonly<Record<string, ItemDef>> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 export const isItemId = (id: unknown): id is string =>
@@ -472,6 +475,8 @@ export const VILLAGE_FLAGS: Record<string, string> = {
   vip: '카지노 VIP룸 · 판돈 10만 범 테이블',
   greenhouse2: '온실 2동 · 모든 작물이 10% 빨리 자라요',
   festival: '축제 무대 조명 · 이번 주 명품 가구가 1종 더',
+  // 마을 개척 연구 (lounge-growth-data.ts RESEARCH).
+  ...RESEARCH_FLAGS,
 };
 /**
  * 마을 공사 2차: shared 범-only public projects. Friends contribute any

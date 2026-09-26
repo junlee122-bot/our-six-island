@@ -80,8 +80,10 @@ export type YachtMatch = {
   rolls: number;
   /** Five dice (0 before the turn's first roll). */
   dice: number[];
-  /** Dice that did not move on the last throw (kept, or 당근's other dice). */
+  /** Dice kept on the last throw. */
   held: boolean[];
+  /** 당근: the one die thrown again since the last roll (null otherwise). */
+  rerolled?: number | null;
   /** Written scores per seat and category (null = still open). */
   sheet: (number | null)[][];
   phase: 'playing' | 'over';
@@ -251,6 +253,7 @@ export function yachtAction(
     g.held = held;
     g.rolls++;
     g.rollCount++;
+    g.rerolled = null;
   } else if (a.kind === 'score') {
     if (!legal.canScore || !YACHT_CATEGORIES.includes(a.category)) return null;
     const index = YACHT_CATEGORIES.indexOf(a.category);
@@ -261,6 +264,7 @@ export function yachtAction(
     g.last = { seat, category: a.category, points };
     say(g, seat, `${YACHT_LABEL[a.category]} ${points}점`);
     g.rolls = 0;
+    g.rerolled = null;
     g.dice = [0, 0, 0, 0, 0];
     g.held = [false, false, false, false, false];
     const next = (seat + 1) % g.n;
@@ -290,8 +294,8 @@ export function yachtRerollOne(
   const g = structuredClone(original);
   const before = g.dice[index];
   g.dice[index] = die();
-  // `held` = the dice that did not move on the last throw (only this one moved).
-  g.held = g.held.map((_, i) => i !== index);
+  g.held = g.held.map((h, i) => (i === index ? false : h));
+  g.rerolled = index;
   g.rollCount++;
   say(g, seat, `당근 한 입! 주사위 ${before} → ${g.dice[index]}`);
   g.revision++;

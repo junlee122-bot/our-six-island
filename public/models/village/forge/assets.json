@@ -1,0 +1,78 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-25 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "downloaded": "2026-09-26",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/ 같은 경로에 보관. 런타임에는 크기·위치만 바꾸고, 마을 개척 “대장간 재건” 전에는 파괴형(workshopRuin), 뒤에는 일반형(workshop)을 보여 줌.",
+  "assets": [
+    {
+      "key": "forgeWorkshop",
+      "id": "common-buildings-community-workshop-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-community-workshop-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-community-workshop-compact-normal.glb",
+      "file": "workshop.glb",
+      "bytes": 845320,
+      "sha256": "6b45cb07fdd928602affa11085f651e240aeae86c84a8834f89d64cec4c67058",
+      "webBytes": 561348,
+      "meshes": 1,
+      "triangles": 9477,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.447,
+          0,
+          -1.5
+        ],
+        "max": [
+          1.447,
+          2.277,
+          1.5
+        ],
+        "size": [
+          2.894,
+          2.277,
+          3.0
+        ]
+      },
+      "use": "대장간(성장 P1). 마을 개척 “대장간 재건” 완공 후 북서쪽 폭포 아래 (-31, -27.8)"
+    },
+    {
+      "key": "forgeRuin",
+      "id": "common-buildings-community-workshop-compact-destroyed",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-community-workshop-compact-destroyed",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-community-workshop-compact-destroyed.glb",
+      "file": "workshopRuin.glb",
+      "bytes": 971896,
+      "sha256": "375ba0d7398a5effbe6e25b48bbf414ec45943ff027f2b3efe879700c4ff3456",
+      "webBytes": 658188,
+      "meshes": 1,
+      "triangles": 9961,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.417,
+          0,
+          -1.5
+        ],
+        "max": [
+          1.417,
+          2.158,
+          1.5
+        ],
+        "size": [
+          2.834,
+          2.158,
+          3.0
+        ]
+      },
+      "use": "무너진 공방(대장간 재건 전). 같은 자리·같은 크기"
+    }
+  ]
+}

@@ -53,6 +53,9 @@ export const LOUNGE_MODELS = {
   ballotBox: '/models/lounge/friends/ballotBox.glb',
   deskCalendar: '/models/lounge/friends/deskCalendar.glb',
   pencil: '/models/lounge/friends/pencil.glb',
+  // 성장 P1 blacksmith (kArchive, 2026-09-26; village/forge/assets.json): ruined → rebuilt.
+  forgeWorkshop: '/models/village/forge/workshop.glb',
+  forgeRuin: '/models/village/forge/workshopRuin.glb',
 } as const;
 
 /**

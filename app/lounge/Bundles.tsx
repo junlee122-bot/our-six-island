@@ -3,7 +3,7 @@
 // who helped, and what each one restores in the village; 마을 공사 2차 (big
 // shared 범 projects) and this week's 마을 축제 기금 (ECON-2).
 import { useState } from 'react';
-import { Check, ClipboardList, Coins, Construction, Hammer, Lock, PartyPopper, Users } from 'lucide-react';
+import { Check, ClipboardList, Coins, Compass, Construction, Hammer, Lock, PartyPopper, Users } from 'lucide-react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
   BUNDLES,
@@ -23,12 +23,13 @@ import { Modal } from './Modal';
 import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { useLifeAction } from './LifePanels';
+import { ResearchBoard } from './GrowthResearch';
 import './life-plus.css';
 
 const BEOM_STEPS = [1_000, 10_000, 50_000];
 /** 마을 공사 / 축제 기금 give steps. */
 const GIVE_STEPS = [10_000, 50_000, 100_000];
-type BoardTab = 'bundles' | 'projects' | 'festival';
+type BoardTab = 'bundles' | 'projects' | 'festival' | 'research';
 const stepLabel = (v: number) => (v >= 10_000 ? `${v / 10_000}만` : `${v / 1_000}천`);
 const flagName = (flag: string) => VILLAGE_FLAGS[flag]?.split(' · ')[0] ?? flag;
 const byAmount = (by: Record<string, number>) =>
@@ -65,8 +66,19 @@ export function BundleBoard(props: {
         <button role="tab" aria-selected={tab === 'festival'} onClick={() => setTab('festival')} data-testid="board-tab-festival">
           <PartyPopper size={15} /> 축제 기금
         </button>
+        <button role="tab" aria-selected={tab === 'research'} onClick={() => setTab('research')} data-testid="board-tab-research">
+          <Compass size={15} /> 마을 개척
+        </button>
       </div>
-      {tab === 'bundles' ? <BundlePanel {...props} /> : tab === 'projects' ? <ProjectPanel {...props} /> : <FestivalPanel {...props} />}
+      {tab === 'bundles' ? (
+        <BundlePanel {...props} />
+      ) : tab === 'projects' ? (
+        <ProjectPanel {...props} />
+      ) : tab === 'festival' ? (
+        <FestivalPanel {...props} />
+      ) : (
+        <ResearchBoard room={props.room} view={props.view} notify={props.notify} />
+      )}
     </Modal>
   );
 }

@@ -127,6 +127,9 @@ import {
   type SocialState,
 } from './lounge-life-social.ts';
 import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
+// 성장 P1: XP and skill/tool effects (functions only; see the cycle note above).
+import { XP, fishXp } from './lounge-growth-data.ts';
+import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
 
 // ---------------------------------------------------------------- constants
 /** 6 → 9 and 9 → 12 plots. */
@@ -663,7 +666,12 @@ export function sellTotal(id: string, unit: number, sold: number, n: number, sol
  * view simply quote the full price.
  */
 export function sellQuote(
-  view: { me: { demand?: Record<string, number> }; soldToday?: number; flags?: readonly string[] },
+  view: {
+    me: { demand?: Record<string, number> };
+    soldToday?: number;
+    flags?: readonly string[];
+    growth?: { mods: { cropSell: number; starSell: number; fishSell: number; dishSell: number } };
+  },
   id: string,
   q: Quality,
   n: number,
@@ -671,14 +679,25 @@ export function sellQuote(
 ) {
   const unit = sellUnit(id, q, now, view.flags ?? []),
     sold = view.me.demand?.[id] ?? 0,
-    soldBeom = view.soldToday ?? 0;
+    soldBeom = view.soldToday ?? 0,
+    bonus = view.growth ? sellBonus(view.growth.mods, id, q) : 0;
   return {
     unit,
-    total: n > 0 ? sellTotal(id, unit, sold, n, soldBeom) : 0,
+    total: n > 0 ? Math.round(sellTotal(id, unit, sold, n, soldBeom) * (1 + bonus)) : 0,
     next: sellTotal(id, unit, sold, 1, soldBeom),
     /** Share of the full price the next unit fetches (demand × market). */
     share: unit > 0 ? sellTotal(id, unit, sold, 1, soldBeom) / unit : 1,
   };
+}
+/** 성장 sale bonus share for an item (crops by star, fish, dishes). */
+export function sellBonus(
+  mods: { cropSell: number; starSell: number; fishSell: number; dishSell: number },
+  id: string,
+  q: Quality = 0,
+) {
+  if (isCropId(id)) return mods.cropSell + (q > 0 ? mods.starSell : 0);
+  const kind = ITEM_BY_ID[id]?.kind;
+  return kind === 'fish' ? mods.fishSell : kind === 'dish' ? mods.dishSell : 0;
 }
 /** 범 this friend has sold today (all goods). */
 export function soldBeomToday(life: LifeState, uid: string, now: number) {
@@ -1232,6 +1251,7 @@ export function plusAction(
       for (const i of targets) theirs[i].wateredAt = now;
       (x.wf ??= []).push(ownerActor);
       bump(life, uid, 'waterFriend', 1);
+      gainXp(life, uid, 'farm', XP.water * targets.length, now);
       if (bondGate(life, `w:${actor}>${ownerActor}`, now)) addBond(life, actor, ownerActor, BOND_POINTS.water, now);
       addNews(
         life,
@@ -1371,21 +1391,31 @@ export function plusAction(
         weather = weatherOf(kstDay(now)),
         rod = x.rod ?? 1,
         luck = buffOf(life, uid, now)?.kind === 'luck',
-        bait = invCount(life, uid, 'bait') > 0;
-      if (bait) addInv(life, uid, 'bait', -1);
+        bait = invCount(life, uid, 'bait') > 0,
+        mods = growthMods(life, uid);
+      // 성장: 미끼꾼 / 미끼 연구가 sometimes keep the bait.
+      if (bait && !growthChance(life, uid, 'bait', mods.baitKeep, now)) addInv(life, uid, 'bait', -1);
       const seq = ++life.seq,
         token = hash32(`cast:${uid}:${seq}:${now}`).toString(36) + seq.toString(36);
       const found = fishCandidates(a.spot, season, weather, now),
         list = found.length ? found : FISH.filter((f) => f.spots.includes(a.spot) && f.weight >= 10);
       const lights = a.spot === 'sea' && isNighttime(now) && hasFlag(life, 'lights');
-      const rareBoost = (luck ? 2 : 1) * (bait ? 2 : 1) * (rod === 3 ? 1.5 : 1) * (lights ? LIGHTS_RARE_BOOST : 1);
+      const rareBoost =
+        (luck ? 2 : 1) *
+        (bait ? 2 : 1) *
+        (rod === 3 ? 1.5 : 1) *
+        (lights ? LIGHTS_RARE_BOOST : 1) *
+        (a.spot === 'sea' || a.spot === 'harbor' || a.spot === 'rocks' ? 1 + mods.seaRare : 1);
       const fish =
-        pickWeighted(list, (f) => (f.weight < 10 ? f.weight * rareBoost : f.weight), `fish:${token}`) ??
-        FISH_BY_ID.crucian;
+        pickWeighted(
+          list,
+          (f) => (f.weight < 10 ? f.weight * rareBoost * (f.weight <= 1 ? 1 + mods.legend : 1) : f.weight),
+          `fish:${token}`,
+        ) ?? FISH_BY_ID.crucian;
       const [lo, hi] = fish.cm,
         cm = lo + (hash32(`cm:${token}`) % (hi - lo + 1)),
         biteAt = now + BITE_MIN_MS + (hash32(`bite:${token}`) % BITE_SPREAD_MS),
-        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * (luck ? 1.2 : 1));
+        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * (luck ? 1.2 : 1) * (1 + mods.biteWindow));
       x.pending = {
         token: token.slice(0, 24),
         spot: a.spot,
@@ -1406,19 +1436,23 @@ export function plusAction(
       const timing = a.timingMs;
       if (now < p!.biteAt - REEL_EARLY_MS) {
         x.last = { ok: false, at: now, reason: 'early' };
+        gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
       if (now > p!.expiresAt) {
         x.last = { ok: false, at: now, reason: 'late' };
+        gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
       if (!safe(timing) || timing < 0 || timing > p!.windowMs) {
         x.last = { ok: false, at: now, reason: 'timing' };
+        gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
       const fish = FISH_BY_ID[p!.fish];
       addInv(life, uid, fish.id, 1);
       bump(life, uid, 'fish', 1);
+      gainXp(life, uid, 'fish', fishXp(fish.weight), now);
       discover(life, uid, fish.id);
       const records = (life.records ??= {}),
         record = !records[fish.id] || p!.cm > records[fish.id].cm;
@@ -1453,10 +1487,17 @@ export function plusAction(
       if (x.taken?.includes(key)) fail(PLUS_REJECT.foraged);
       const item = forageAt(spot!.id, kstDay(now));
       if (!item) fail(PLUS_REJECT.nothingHere);
-      const n = 1 + (buffOf(life, uid, now)?.kind === 'forage' ? 1 : 0);
+      // 성장: 약초꾼 / 채집 Lv6 may give one more; 꽃집 always doubles flowers.
+      const mods = growthMods(life, uid),
+        flower = ITEM_BY_ID[item!]?.kind === 'flower',
+        n =
+          (1 + (buffOf(life, uid, now)?.kind === 'forage' ? 1 : 0)) *
+            (flower && mods.flowerDouble ? 2 : 1) +
+          (growthChance(life, uid, 'forage', mods.forageDouble, now) ? 1 : 0);
       (x.taken ??= []).push(key);
       addInv(life, uid, item!, n);
       bump(life, uid, 'forage', 1);
+      gainXp(life, uid, 'forage', XP.forage, now);
       discover(life, uid, item!);
       if (item === 'ginseng') {
         const text = `${josaGa(nameOf(actor))} 산삼을 찾았어요. 심봤다!`;
@@ -1477,6 +1518,7 @@ export function plusAction(
       (x.taken ??= []).push(key);
       addInv(life, uid, bug!, 1 + (buffOf(life, uid, now)?.kind === 'bug' ? 1 : 0));
       bump(life, uid, 'bug', 1);
+      gainXp(life, uid, 'forage', XP.bug, now);
       discover(life, uid, bug!);
       break;
     }
@@ -1485,13 +1527,16 @@ export function plusAction(
       if (!def || def.sell <= 0) fail(PLUS_REJECT.noSell);
       if (!safe(a.n) || a.n < 1 || a.n > 999) fail(LIFE_REJECT.invalid);
       if (invCount(life, uid, def!.id) < a.n) fail(LIFE_REJECT.notEnough);
-      // Demand curve per item (fish per species): see demandMult.
-      const amount = sellTotal(
-          def!.id,
-          sellUnit(def!.id, 0, now, life.flags ?? []),
-          demandSold(life, uid, now, def!.id),
-          a.n,
-          soldBeomToday(life, uid, now),
+      // Demand curve per item (fish per species): see demandMult. 성장 bonus on top.
+      const amount = Math.round(
+          sellTotal(
+            def!.id,
+            sellUnit(def!.id, 0, now, life.flags ?? []),
+            demandSold(life, uid, now, def!.id),
+            a.n,
+            soldBeomToday(life, uid, now),
+          ) *
+            (1 + sellBonus(growthMods(life, uid), def!.id)),
         ),
         left = sellCapLeft(life, uid, now);
       if (amount > left)
@@ -1545,8 +1590,20 @@ export function plusAction(
       if (!recipe) fail(PLUS_REJECT.recipe);
       if (recipe!.flag && !hasFlag(life, recipe!.flag)) fail(PLUS_REJECT.recipeLocked);
       const n = nInRange(a.n, 10);
-      for (let i = 0; i < n; i++) for (const need of recipe!.needs) takeNeed(life, uid, need, need.n);
-      const made = recipe!.count * n;
+      // 성장: 솜씨 perks / 공예가 / 목수 save craft inputs; recipe-specific perks add output.
+      const mods = growthMods(life, uid);
+      const needOf = (need: Need & { n: number }) => {
+        if (a.kind !== 'craft' || 'beom' in need) return need.n;
+        let k = need.n;
+        if (recipe!.id === 'fertilizer-deluxe' && 'item' in need && need.item === 'fertilizer' && mods.deluxeCheap) k -= 1;
+        if (mods.craftDiscount > 0 && k >= 2) k -= Math.floor(k * mods.craftDiscount);
+        return Math.max(1, k);
+      };
+      for (let i = 0; i < n; i++) for (const need of recipe!.needs) takeNeed(life, uid, need, needOf(need));
+      let made = recipe!.count * n;
+      if (a.kind === 'craft' && recipe!.makes === 'bait') made += mods.baitExtra * n;
+      if (a.kind === 'craft' && recipe!.makes === 'fertilizer') made += mods.fertExtra * n;
+      if (a.kind === 'cook') for (let i = 0; i < n; i++) if (growthChance(life, uid, 'cook' + i, mods.cookExtra, now)) made += 1;
       if (recipe!.makes.startsWith('furn-')) {
         const furn = (x.furn ??= {});
         furn[recipe!.makes] = Math.min(COUNT_MAX, (furn[recipe!.makes] ?? 0) + made);
@@ -1555,7 +1612,11 @@ export function plusAction(
       if (a.kind === 'cook') {
         bump(life, uid, 'cook', n);
         discover(life, uid, recipe!.makes);
-      } else bump(life, uid, 'craft', n);
+        gainXp(life, uid, 'craft', XP.cook * n, now);
+      } else {
+        bump(life, uid, 'craft', n);
+        gainXp(life, uid, 'craft', XP.craft * n, now);
+      }
       break;
     }
     case 'eat': {
@@ -1566,7 +1627,8 @@ export function plusAction(
       if (invCount(life, uid, dish!.id) < 1) fail(LIFE_REJECT.notEnough);
       addInv(life, uid, dish!.id, -1);
       x.ate = dish!.id;
-      x.buff = { kind: dish!.buff!, dish: dish!.id, until: nextKstMidnight(now) };
+      // 성장: 미식가 keeps the buff until 06:00 KST the next day.
+      x.buff = { kind: dish!.buff!, dish: dish!.id, until: nextKstMidnight(now) + (growthMods(life, uid).longBuff ? 6 * 3_600_000 : 0) };
       break;
     }
     case 'contribute': {

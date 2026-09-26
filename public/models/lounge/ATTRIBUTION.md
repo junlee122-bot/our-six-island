@@ -141,3 +141,16 @@ Files under `public/models/lounge/friends/`:
 - pencil.glb: https://karchive.vibeline.co.kr/models/exam-06
 
 Modifications: web-optimized copies as described at the top of this file. At runtime the game sets position, orientation and (partly non-uniform) scale; the holiday-set calendar and pencil (normalized to a 2 m longest side) are scaled down to desk size. The 야추 table reuses `club/cardTable.glb` and the 라이어 table reuses `club/banquetChair.glb` (no new bytes). Dice and the dice cup are drawn in code (three.js RoundedBoxGeometry / LatheGeometry).
+
+## kArchive blacksmith (성장 · 대장간) · 2026-09-26
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Two original, self-contained GLB files were downloaded from the official model URLs on 2026-09-26 (`https://karchive-assets.vibeline.co.kr/models/v1/rounded/<id>.glb`); the displayed terms were unchanged from 2026-09-25 (personal and commercial use and modification allowed; AI training allowed; resale of the original assets prohibited; the credit "자료: kArchive / 출처: 쓰레드 dogfooter" is required) and are recorded verbatim in `public/models/village/forge/assets.json` with each file's source page, URL, SHA-256, byte size, triangle count and bounds. Originals (1,817,216 bytes) are kept under `public/models/_originals/village/forge/`; web copies total 1,219,536 bytes (1024² WebP textures).
+
+Files under `public/models/village/forge/`:
+
+- workshop.glb: https://karchive.vibeline.co.kr/models/common-buildings-community-workshop-compact-normal
+- workshopRuin.glb: https://karchive.vibeline.co.kr/models/common-buildings-community-workshop-compact-destroyed
+
+Modifications: web-optimized copies as described at the top of this file. At runtime the game sets position and scale; the ruined workshop stands in the village until the shared project “대장간 재건” is finished, then the rebuilt one. The village's material nodes (잡목·통나무 더미·바위) reuse the valley set's shrub, firewood and granite boulder.

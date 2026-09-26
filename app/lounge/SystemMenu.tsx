@@ -11,6 +11,7 @@ import {
   Settings,
   House,
   LayoutGrid,
+  Sparkles,
   TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
@@ -195,6 +196,7 @@ export function SystemMenu({
   onHelp,
   onFullscreen,
   onVillageMenu,
+  onGrowth,
   onLeaveRoom,
   leaveLabel = '마을로 나가기',
   onLogout,
@@ -207,6 +209,8 @@ export function SystemMenu({
   onFullscreen: () => void;
   /** 마을 메뉴 (the hub with bag, shop, mail…). */
   onVillageMenu: () => void;
+  /** 성장 수첩 (skills, tools, 마을 개척). */
+  onGrowth?: () => void;
   /** In my room: walk out to the village. */
   onLeaveRoom?: () => void;
   /** The leave item's words ('내 방으로 나가기' from the wardrobe). */
@@ -251,6 +255,13 @@ export function SystemMenu({
           <LayoutGrid size={18} aria-hidden="true" />
           <span>마을 메뉴</span>
         </button>
+        {onGrowth && (
+          <button type="button" onClick={onGrowth} data-testid="system-growth">
+            <Sparkles size={18} aria-hidden="true" />
+            <span>성장 수첩</span>
+            <kbd>{keyLabel(settings.keys.growth) || 'T'}</kbd>
+          </button>
+        )}
         {onLeaveRoom && (
           <button type="button" onClick={onLeaveRoom}>
             <House size={18} aria-hidden="true" />
