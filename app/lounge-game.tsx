@@ -741,8 +741,22 @@ function AccountLounge({
   // A game screen covers the shell (the village stays mounted and paused), and
   // closing it restores the shell's scroll position (e.g. in the hall).
   const inGame = !!gameScreen && view.status === 'connected';
-  // The village music box fades out at game tables and returns afterwards.
-  useEffect(() => loungeAudio.setScene({ game: inGame }), [inGame]);
+  // Music: the casino / hall location track (lounge-music-tracks.ts) inside and
+  // at their tables, quieter at a table; the village music box elsewhere.
+  const musicPlace =
+    inGame && gameScreen
+      ? TABLE_AREA[gameScreen] === 'casino'
+        ? 'casino'
+        : 'hall'
+      : visiting === null && tab === 'casino'
+        ? 'casino'
+        : visiting === null && tab === 'lounge'
+          ? 'hall'
+          : null;
+  useEffect(
+    () => loungeAudio.setScene({ game: inGame, place: musicPlace }),
+    [inGame, musicPlace],
+  );
   const appRef = useRef<HTMLElement>(null),
     shellScroll = useRef(0),
     wasInGame = useRef(inGame);

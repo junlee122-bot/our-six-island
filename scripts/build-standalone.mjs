@@ -139,6 +139,30 @@ for (const name of models) {
   replacements.set('/models/' + name, writeOnce(hashed(bytes, name, 'model-'), bytes));
 }
 
+// Optional location music (app/lounge-music-tracks.ts, ASSETS.md → 장소 배경음):
+// files that exist are content-hashed; absent ones become '' so the game keeps
+// the music box there instead of fetching a missing file.
+const MUSIC_FAIL_BYTES = 12 * KB * KB;
+const musicSource = fs.readFileSync(path.join(root, 'app/lounge-music-tracks.ts'), 'utf8');
+const musicFiles = [...musicSource.matchAll(/["']\/assets\/(lounge\/music\/[^'" ]+)["']/g)].map(
+  (match) => match[1],
+);
+let musicBytes = 0,
+  musicCount = 0;
+for (const name of musicFiles) {
+  const file = path.join(root, 'public/assets', name);
+  if (!fs.existsSync(file)) {
+    replacements.set('/assets/' + name, '');
+    continue;
+  }
+  const bytes = fs.readFileSync(file);
+  if (bytes.length > MUSIC_FAIL_BYTES)
+    throw new Error(`Music over budget (${Math.round(bytes.length / KB)}KB): ${name}`);
+  musicBytes += bytes.length;
+  musicCount++;
+  replacements.set('/assets/' + name, writeOnce(hashed(bytes, name), bytes));
+}
+
 // Site furniture (favicon, install icons, Open Graph card) — stable names.
 const siteFiles = {
   'favicon.svg': 'public/favicon.svg',
@@ -169,7 +193,11 @@ const built = await build({
       name: 'versioned-game-art',
       enforce: 'pre',
       transform(code, id) {
-        if (!id.endsWith('/lounge-assets.ts') && !id.endsWith('/lounge-model-assets.ts'))
+        if (
+          !id.endsWith('/lounge-assets.ts') &&
+          !id.endsWith('/lounge-model-assets.ts') &&
+          !id.endsWith('/lounge-music-tracks.ts')
+        )
           return;
         for (const [from, to] of replacements) {
           if (code.includes(from)) {
@@ -310,6 +338,6 @@ console.log(
   [
     `Pages build: ${path.relative(root, outDirectory) || '.'}/index.html (${kb(Buffer.byteLength(html))})`,
     `  entry ${entry.fileName} ${kb(Buffer.byteLength(entry.code))}, ${lazyChunks.length} other chunk(s), JS total ${kb(jsBytes)}, CSS ${[...initialCss].join(', ')}`,
-    `  ${images.length} images (${kb(imageBytes)}) + ${models.length} models (${kb(modelBytes)}) as content-hashed files`,
+    `  ${images.length} images (${kb(imageBytes)}) + ${models.length} models (${kb(modelBytes)}) + ${musicCount} music (${kb(musicBytes)}) as content-hashed files`,
   ].join('\n'),
 );

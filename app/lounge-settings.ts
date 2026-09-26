@@ -21,6 +21,8 @@ export type LoungeSettings = {
   music: boolean;
   /** 0..1 music and ambience level under the master volume. */
   musicVolume: number;
+  /** 게임 중 배경음: casino / hall music keeps playing quietly at game tables. */
+  gameMusic: boolean;
   /** 0..1 world sounds: footsteps, cards, fishing, cooking. */
   effectsVolume: number;
   /** 0..1 UI cues: invites, my turn, game start and results. */
@@ -58,6 +60,7 @@ export const DEFAULT_SETTINGS: LoungeSettings = Object.freeze({
   volume: 0.35,
   music: true,
   musicVolume: 1,
+  gameMusic: true,
   effectsVolume: 1,
   uiVolume: 1,
   reactionsHidden: false,
@@ -115,6 +118,7 @@ export function readSettings(raw: string | null | undefined): LoungeSettings {
     volume: level('volume'),
     music: bool('music'),
     musicVolume: level('musicVolume'),
+    gameMusic: bool('gameMusic'),
     effectsVolume: level('effectsVolume'),
     uiVolume: level('uiVolume'),
     reactionsHidden: bool('reactionsHidden'),

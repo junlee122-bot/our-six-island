@@ -8,13 +8,25 @@
 // The Esc menu (scene.paused) ducks music and ambience while it is open.
 // This is the app's single AudioContext. Channels under the master volume:
 // music (music box + ambience), sfx (footsteps, tables, life cues) and ui
-// (feedback.ts playCue, button clicks), each with its own settings level. The music box fades out at
-// game tables (scene.game) and comes back in the village.
+// (feedback.ts playCue, button clicks), each with its own settings level.
+// In 별빛 카지노 / 범마을 회관 (scene.place) a looping location track takes over
+// from the music box when its file exists (lounge-music-tracks.ts), with a
+// crossfade; at game tables the music continues quietly when 게임 중 배경음 is
+// on (settings.gameMusic) and steps aside otherwise.
 import {
   getSettings,
   onSettingsChange,
   updateSettings,
 } from './lounge-settings';
+import {
+  MUSIC_TRACKS,
+  TRACK_LEVEL,
+  TRACK_RELEASE_MS,
+  loopPoints,
+  musicMix,
+  trackCandidates,
+  type MusicPlace,
+} from './lounge-music-tracks';
 
 type Scene = {
   /** Village screen is showing (ambience and footsteps). */
@@ -22,8 +34,10 @@ type Scene = {
   night: boolean;
   /** 0..1 closeness to the river. */
   water: number;
-  /** A game table is showing: the music box steps aside for game sounds. */
+  /** A game table is showing: the music quiets down (or steps aside). */
   game: boolean;
+  /** 별빛 카지노 / 범마을 회관 (inside, or at one of its tables): its location track. */
+  place: MusicPlace | null;
   /** The Esc menu is open: ambience and music step back (the world goes on). */
   paused: boolean;
 };
@@ -32,10 +46,34 @@ const DAY_SCALE = [0, 2, 4, 7, 9]; // major pentatonic
 const NIGHT_SCALE = [0, 3, 5, 7, 10]; // minor pentatonic
 const midi = (n: number) => 440 * 2 ** ((n - 69) / 12);
 
+/** One location track: fetched and decoded on first entry, looped seamlessly. */
+type TrackSlot = {
+  status: 'idle' | 'loading' | 'ready' | 'missing';
+  buffer: AudioBuffer | null;
+  gain: GainNode | null;
+  source: AudioBufferSourceNode | null;
+  /** Context time to stop a faded-out source (0 = playing or none). */
+  stopAt: number;
+  /** Date.now() when last heard (idle buffers are released). */
+  heard: number;
+};
+const emptySlot = (): TrackSlot => ({
+  status: 'idle',
+  buffer: null,
+  gain: null,
+  source: null,
+  stopAt: 0,
+  heard: 0,
+});
+
 class LoungeAudio {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private music: GainNode | null = null;
+  /** The music box under the music channel (crossfades with location tracks). */
+  private box: GainNode | null = null;
+  private boxOn = false;
+  private tracks: Record<MusicPlace, TrackSlot> = { casino: emptySlot(), hall: emptySlot() };
   private ambient: GainNode | null = null;
   private waterGain: GainNode | null = null;
   private sfx: GainNode | null = null;
@@ -50,7 +88,14 @@ class LoungeAudio {
   private lastStep = 0;
   private attached = 0;
   private gestured = false;
-  private scene: Scene = { village: false, night: false, water: 0, game: false, paused: false };
+  private scene: Scene = {
+    village: false,
+    night: false,
+    water: 0,
+    game: false,
+    place: null,
+    paused: false,
+  };
   private cleanup: (() => void) | null = null;
   /** Running water loop (only while the village is showing). */
   private waterNodes: { source: AudioBufferSourceNode; lfo: OscillatorNode } | null =
@@ -98,7 +143,9 @@ class LoungeAudio {
     this.timer = null;
     void this.ctx?.close().catch(() => {});
     this.ctx = null;
-    this.master = this.music = this.ambient = this.sfx = this.ui = this.waterGain = null;
+    this.master = this.music = this.box = this.ambient = this.sfx = this.ui = this.waterGain = null;
+    this.tracks = { casino: emptySlot(), hall: emptySlot() };
+    this.boxOn = false;
     this.waterNodes = null;
     this.applied = '';
   }
@@ -112,6 +159,7 @@ class LoungeAudio {
       before.village === this.scene.village &&
       before.night === this.scene.night &&
       before.game === this.scene.game &&
+      before.place === this.scene.place &&
       before.paused === this.scene.paused &&
       Math.abs(before.water - this.scene.water) < 0.02
     )
@@ -145,6 +193,9 @@ class LoungeAudio {
         this.master.connect(ctx.destination);
         this.music = ctx.createGain();
         this.music.connect(this.master);
+        this.box = ctx.createGain();
+        this.box.gain.value = 0;
+        this.box.connect(this.music);
         this.ambient = ctx.createGain();
         this.ambient.connect(this.master);
         this.sfx = ctx.createGain();
@@ -177,15 +228,22 @@ class LoungeAudio {
     const ambientOn = musicOn && this.scene.village && !this.scene.game;
     // The Esc menu ducks music and ambience; the shared world keeps going.
     const duck = this.scene.paused ? 0.35 : 1;
+    // Fetch the place's track on first entry (the box plays meanwhile).
+    if (musicOn && this.scene.place) this.loadTrack(this.scene.place);
+    const mix = musicMix(
+      this.scene,
+      settings.gameMusic,
+      (place) => this.tracks[place].status === 'ready',
+    );
+    this.boxOn = musicOn && mix.box > 0;
     const targets = [
       audible ? settings.volume : 0,
-      musicOn && !this.scene.game
-        ? (this.scene.night ? 0.16 : 0.2) * settings.musicVolume * duck
-        : 0,
+      musicOn ? mix.channel * settings.musicVolume * duck : 0,
       ambientOn ? settings.musicVolume * duck : 0,
       Math.round(Math.max(0, Math.min(1, this.scene.water)) * 50) / 50,
       audible ? settings.effectsVolume : 0,
       audible ? settings.uiVolume : 0,
+      this.boxOn ? mix.box : 0,
     ];
     const key = targets.join(',');
     if (key !== this.applied) {
@@ -196,7 +254,10 @@ class LoungeAudio {
       this.waterGain?.gain.setTargetAtTime(0.05 + 0.3 * targets[3], t, 0.5);
       this.sfx!.gain.setTargetAtTime(targets[4], t, 0.02);
       this.ui!.gain.setTargetAtTime(targets[5], t, 0.02);
+      this.box!.gain.setTargetAtTime(targets[6], t, 0.5);
     }
+    for (const place of ['casino', 'hall'] as const)
+      this.fadeTrack(place, musicOn && mix.track === place, t);
     // The water loop (noise + filter + LFO) only runs in the village.
     if (ambientOn && !this.waterNodes) this.startWater();
     else if (!ambientOn && this.waterNodes) this.stopWater();
@@ -255,13 +316,96 @@ class LoungeAudio {
     } catch {}
   }
 
+  /** Fetches and decodes a place's track once (a missing file stays missing). */
+  private loadTrack(place: MusicPlace) {
+    const ctx = this.ctx,
+      slot = this.tracks[place];
+    if (!ctx || slot.status !== 'idle') return;
+    const probe = typeof Audio === 'function' ? new Audio() : null;
+    const urls = trackCandidates(MUSIC_TRACKS[place], (mime) =>
+      probe ? probe.canPlayType(mime) : 'maybe',
+    );
+    if (!urls.length) {
+      slot.status = 'missing';
+      return;
+    }
+    slot.status = 'loading';
+    void (async () => {
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) continue;
+          const buffer = await ctx.decodeAudioData(await response.arrayBuffer());
+          if (this.ctx !== ctx || slot !== this.tracks[place]) return;
+          slot.buffer = buffer;
+          slot.status = 'ready';
+          slot.heard = Date.now();
+          this.applyState();
+          return;
+        } catch {}
+      }
+      if (slot === this.tracks[place]) slot.status = 'missing';
+    })();
+  }
+  /** Fades a location track in (starting its loop) or out (stopping it later). */
+  private fadeTrack(place: MusicPlace, on: boolean, t: number) {
+    const ctx = this.ctx,
+      slot = this.tracks[place];
+    if (!ctx || !this.music) return;
+    if (on && slot.buffer) {
+      slot.heard = Date.now();
+      if (!slot.source) {
+        slot.gain ??= ctx.createGain();
+        slot.gain.connect(this.music);
+        slot.gain.gain.cancelScheduledValues(t);
+        slot.gain.gain.setValueAtTime(0, t);
+        const source = ctx.createBufferSource();
+        source.buffer = slot.buffer;
+        source.loop = true;
+        const loop = loopPoints(MUSIC_TRACKS[place], slot.buffer.duration);
+        source.loopStart = loop.start;
+        source.loopEnd = loop.end;
+        source.connect(slot.gain);
+        source.start(t + 0.02);
+        slot.source = source;
+      } else if (!slot.stopAt) return;
+      slot.stopAt = 0;
+      slot.gain!.gain.setTargetAtTime(TRACK_LEVEL, t, 0.6);
+    } else if (!on && slot.source && !slot.stopAt) {
+      slot.gain!.gain.setTargetAtTime(0, t, 0.4);
+      slot.stopAt = t + 2.5;
+    }
+  }
+  /** Stops faded tracks and releases decoded buffers not heard for a while. */
+  private tickTracks(now: number) {
+    for (const place of ['casino', 'hall'] as const) {
+      const slot = this.tracks[place];
+      if (slot.source && slot.stopAt && now >= slot.stopAt) {
+        try {
+          slot.source.stop();
+        } catch {}
+        slot.source.disconnect();
+        slot.gain?.disconnect();
+        slot.source = null;
+        slot.stopAt = 0;
+      }
+      if (
+        !slot.source &&
+        slot.status === 'ready' &&
+        Date.now() - slot.heard > TRACK_RELEASE_MS
+      )
+        this.tracks[place] = emptySlot();
+    }
+  }
+
   /** Lookahead scheduler for the music box and ambient chirps. */
   private schedule() {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
-    const settings = getSettings();
-    // No notes (and no oscillators) while the music is off or a game is on.
-    if (!settings.music || this.scene.game) {
+    this.tickTracks(ctx.currentTime);
+    // No notes (and no oscillators) while the box is not heard: music off,
+    // a location track playing, or a game table without 게임 중 배경음.
+    if (!this.boxOn) {
       this.nextNote = ctx.currentTime + 0.2;
       return;
     }
@@ -312,7 +456,7 @@ class LoungeAudio {
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(peak, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0005, t + decay);
-    g.connect(this.music!);
+    g.connect(this.box!);
     for (const [ratio, level, type] of [
       [1, 1, 'sine'],
       [2, 0.28, 'sine'],
@@ -337,7 +481,7 @@ class LoungeAudio {
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(peak, t + 0.3);
     g.gain.exponentialRampToValueAtTime(0.0005, t + length);
-    o.connect(g).connect(this.music!);
+    o.connect(g).connect(this.box!);
     o.start(t);
     o.stop(t + length + 0.05);
   }

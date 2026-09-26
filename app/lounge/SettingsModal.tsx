@@ -420,6 +420,13 @@ export function SettingsModal({
                 disabled={!settings.sound || !settings.music}
                 onChange={(musicVolume) => update({ musicVolume })}
               />
+              <Toggle
+                label="게임 중 배경음"
+                hint="카지노·회관 테이블에서도 음악을 작게 계속 틀어요."
+                checked={settings.gameMusic}
+                disabled={!settings.sound || !settings.music}
+                onChange={(gameMusic) => update({ gameMusic })}
+              />
               <Volume
                 label="효과음"
                 value={settings.effectsVolume}
