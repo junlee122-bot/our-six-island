@@ -33,8 +33,10 @@ import {
   AUTH_LOCKOUT,
   authFailureKey,
   clientIp,
+  activationCodeExpired,
   looksLikeIssuedCode,
   newPasswordProblem,
+  unactivatedLoginProblem,
   validPassword,
 } from '../../../app/lounge-accounts.ts';
 
@@ -162,8 +164,7 @@ serve('hohyeon-auth', async (b, req, ctx) => {
     let recoveryCode: string | undefined;
     let mode = 'session';
     const codeExpired = () =>
-      !!m.activation_expires_at &&
-      Date.parse(m.activation_expires_at) <= Date.now();
+      activationCodeExpired(m.activation_expires_at, Date.now());
     const signIn = async (password: unknown, reason: string) => {
       if (typeof password !== 'string' || password.length > 100)
         throw new AuthFailure(reason);
@@ -183,6 +184,16 @@ serve('hohyeon-auth', async (b, req, ctx) => {
         (await digest(b.password)) === m.activation_hash
       )
         throw new AuthFailure('activation_code_on_login');
+      // D-1: the repair below must never run on an old/leaked code that a
+      // half-finished rotation left as the Auth password, nor after expiry.
+      if (!m.activated) {
+        const problem = unactivatedLoginProblem(
+          b.password,
+          m.activation_expires_at,
+          Date.now(),
+        );
+        if (problem) throw new AuthFailure(problem);
+      }
       data = await signIn(b.password, 'bad_password');
       // Repair a password update whose final database write was interrupted.
       if (!m.activated) {

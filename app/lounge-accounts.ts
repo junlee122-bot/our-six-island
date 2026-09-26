@@ -194,6 +194,29 @@ export const PASSWORD_IS_CODE =
 export const ISSUED_CODE = /^H[HR]-[0-9a-f]{48}$/i;
 export const looksLikeIssuedCode = (value: unknown) =>
   typeof value === 'string' && ISSUED_CODE.test(value.trim());
+/** True when an activation code with this expiry (ISO string or null) has expired at `now`. */
+export const activationCodeExpired = (
+  expiresAt: string | null | undefined,
+  now: number,
+) => !!expiresAt && !(Date.parse(expiresAt) > now);
+/**
+ * D-1: `login` on a NOT yet activated account is only legitimate as the
+ * "repair" of an activation whose final DB write was interrupted: GoTrue then
+ * already holds the friend's NEW password. That password can never be
+ * code-shaped (newPasswordProblem) and the activation it repairs happened
+ * before the code expired. Anything else — in particular an old (leaked) HH-
+ * code left as the Auth password by a half-finished rotation — is refused
+ * before GoTrue is asked. Returns an audit reason, or null when allowed.
+ */
+export function unactivatedLoginProblem(
+  password: unknown,
+  expiresAt: string | null | undefined,
+  now: number,
+): 'repair_code_shaped' | 'repair_code_expired' | null {
+  if (looksLikeIssuedCode(password)) return 'repair_code_shaped';
+  if (activationCodeExpired(expiresAt, now)) return 'repair_code_expired';
+  return null;
+}
 /**
  * Extra rule on top of validPassword for activate/recover/password: the new
  * password may not equal the code just used, nor look like any HH-/HR- code.
