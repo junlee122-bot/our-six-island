@@ -55,7 +55,7 @@ export function MoodHud({ life, clockOffset, onOpen }: { life: LifeView | null |
         <span className="l-mood-moodles" aria-hidden="true">
           {list.map((x) => (
             <span key={x.key} className="l-mood-moodle" data-sign={x.value < 0 ? 'neg' : 'pos'} data-level={x.level}>
-              <MoodGlyph name={x.icon} size={14} />
+              <MoodGlyph name={x.icon} size={16} />
             </span>
           ))}
         </span>
@@ -176,7 +176,8 @@ export function MoodNotices({
       s.cup = m.cup;
       changed = true;
     }
-    if (m.tier === 'great' && !s.great) {
+    // The first 신나요 tip waits when an inspiration ribbon is showing right now.
+    if (m.tier === 'great' && !s.great && !changed) {
       notify('신나요! 기분이 좋으면 기술 XP가 더 붙고, 영감 게이지가 빨리 차요.', 'info');
       s.great = true;
       changed = true;

@@ -69,8 +69,8 @@
 .l-mood-moodle {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 5px;
   background: #fff;
   box-shadow: inset 0 0 0 calc(var(--w, 1) * 1px) var(--mood-pos);
@@ -205,7 +205,8 @@
 .l-mood-insp {
   position: fixed;
   z-index: 61;
-  top: 76px;
+  /* Below the toast line (which also drops in at the top). */
+  top: 146px;
   left: 50%;
   display: flex;
   align-items: center;
