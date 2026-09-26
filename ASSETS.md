@@ -5,7 +5,7 @@
 ## 현재 요약 (2026-09-24)
 
 - 배포 대상은 매니페스트에 적힌 파일뿐입니다: 이미지 `app/lounge-assets.ts` **127개**(래스터 67 + 체스·화투 SVG 60), 3D 모델 `app/lounge-model-assets.ts` **39개**. 개수는 빌드 스크립트가 매니페스트에서 직접 읽어 검사하므로 문서와 코드를 따로 고칠 필요가 없습니다.
-- 캐릭터 아틀라스(`friends-motion`, `accessories`, `jaemin-cap`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
+- 캐릭터 아틀라스(`friends-motion`, `accessories`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
 - 범티콘 8장은 1254² PNG(장당 약 1MB)에서 **256px WebP(장당 약 20KB)** 로 줄였습니다.
 - GLB 39개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 15.8MB → 9.7MB(2026-09-25 kArchive 공공시설 15종 포함). 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
 - 섬·극장 전용 원화(`legacy/assets/`)는 2026-09 두 페이지와 함께 삭제했습니다(git 기록에 남아 있음). 아래 표의 `legacy/assets/` 경로는 출처 기록으로만 남깁니다. 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
@@ -16,7 +16,7 @@
 
 | # | 출처 / 도구 | 만든 것 | 현재 파일 | 라이선스·조건 | 사용 |
 |---|---|---|---|---|---|
-| A | OpenAI 내장 이미지 생성(Codex imagegen) | 6인 캐릭터 모션·액세서리·재민 모자, 호현, 라운지 1기 시트, 도원 추가 코디·만두머리·하치마키, 범티콘 8종, 섬·극장 원화 | `public/assets/*.webp`, `lounge/daowon-*`, `lounge/hachimaki.*`, `lounge/reactions/*`, `legacy/assets/*` | 생성물. 원본 사진은 비배포 | 캐릭터·스티커 사용 중, 섬·극장 원화는 미사용 |
+| A | OpenAI 내장 이미지 생성(Codex imagegen) | 6인 캐릭터 모션·액세서리(안경·머리핀), 호현, 라운지 1기 시트, 도원 추가 코디·만두머리·하치마키, 범티콘 8종, 섬·극장 원화 | `public/assets/*.webp`, `lounge/daowon-*`, `lounge/hachimaki.*`, `lounge/reactions/*`, `legacy/assets/*` | 생성물. 원본 사진은 비배포 | 캐릭터·스티커 사용 중, 섬·극장 원화는 미사용 |
 | A+ | OpenAI 생성 + [Spritegen](https://github.com/aldegad/sprite-gen) v2.7.0 | 7인 걷기·달리기 84프레임 | `lounge/motion/*.webp` | 도구 라이선스 파일 보관 | 사용 중 |
 | B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
 | C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
@@ -61,7 +61,7 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 각 캐릭터 시트는 4열 × 2행으로 도원·강재·민서·승준 / 민재·재민·호현·빈칸 순서입니다. 세 컬렉션의 **일곱 친구 × 세 의상 = 21개 전신 모습**이며, 21명의 다른 인물이 아닙니다. 기존 얼굴 특징과 의상 디자인을 기준으로 선화와 명암을 정리했습니다. 시트의 파란 머리는 런타임 염색용이고, 마젠타 배경은 렌더러에서 제거합니다. 실제 화면의 머리색은 저장된 코디를 따릅니다.
 
-새 WebP 7개는 생성 아트를 게임용 이미지로 변환한 파일입니다. 도원의 와이드 팬츠·데님·미쿠 복장, 만두머리, 응원 머리띠와 기존 모자·안경·꽃 머리핀은 원래 자산을 유지합니다. 따라서 도원의 모든 추가 코디를 새 그림으로 다시 만든 것은 아닙니다. 기존 의상의 걷기·인사 프레임과 호랑이 임티, 화투·체스 SVG도 재사용합니다.
+새 WebP 7개는 생성 아트를 게임용 이미지로 변환한 파일입니다. 도원의 와이드 팬츠·데님·미쿠 복장, 만두머리, 응원 머리띠와 기존 안경·꽃 머리핀은 원래 자산을 유지합니다(모자는 게임에서 제거). 따라서 도원의 모든 추가 코디를 새 그림으로 다시 만든 것은 아닙니다. 기존 의상의 걷기·인사 프레임과 호랑이 임티, 화투·체스 SVG도 재사용합니다.
 
 회관·카지노는 **2D 배경·테이블 이미지와 Canvas 캐릭터**를 합성합니다. 내 방의 ‘방 산책’은 Three.js로 렌더링하는 실시간 3D 방이며, 기존 Canvas 캐릭터를 빌보드로 표시합니다. 3D 캐릭터 모델·리깅은 만들지 않았습니다. 분장실과 산책방은 같은 코디·염색 렌더러를 사용합니다. 분장실의 옷 중심 썸네일은 기존 전신 그림을 화면에서 잘라 보여주며 원본 인물 그림을 별도 도형으로 대체하지 않습니다.
 
@@ -97,7 +97,7 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 | 파일                                                                    | 출처 / 실제 크기                      | 용도                                       |
 | ----------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------ |
-| friends-motion.png, accessories.png, jaemin-cap.png, hohyeon-friend.png | 기존 생성 에셋 재사용                 | 원래 전신·걷기·인사, 안경, 작은 모자, 호현 |
+| friends-motion.png, accessories.png, hohyeon-friend.png | 기존 생성 에셋 재사용                 | 원래 전신·걷기·인사, 안경·머리핀, 호현 |
 | lounge-friends-classic.png                                              | 내장 imagegen, 1774×887               | 4×2 배치의 일곱 친구 기본복                |
 | lounge-friends-street.png                                               | classic을 참조한 imagegen, 1774×887   | 얼굴과 포즈를 유지한 스트리트룩            |
 | lounge-friends-smart.png                                                | classic을 참조한 imagegen, 1774×887   | 얼굴과 포즈를 유지한 외출복                |
@@ -206,10 +206,10 @@ No large surrounding terrain or scenery, no landscape background, no opaque rect
 | 게임 파일                          | 실제 해상도   | 용도                                       |
 | ---------------------------------- | ------------- | ------------------------------------------ |
 | `public/assets/friends-motion.png` | 1024×1536 RGB | 여섯 캐릭터 × 서기·왼발·오른발·인사 24자세 |
-| `public/assets/accessories.png`    | 1774×887 RGBA | 모자 4종·안경 3종·꽃 머리핀                |
+| `public/assets/accessories.png`    | 1774×887 RGBA | 안경 3종·꽃 머리핀 (셀 0–3의 모자 4종은 게임에서 쓰지 않음) |
 | `legacy/assets/nature-detail.png`  | 1774×887 RGBA | 나무·풀·꽃·돌·나비·갈매기 8종              |
 
-캐릭터 생성 결과의 체크무늬는 실제 투명도가 아니어서 게임에서 가장자리에 연결된 중립색 배경만 제거합니다. 자세별 머리·눈·발 좌표를 측정해 정렬하고, 파란 머리와 청록색 옷의 색상 채널만 염색합니다. 자연물은 셀 경계의 희미한 선을 피하도록 안쪽을 사용합니다. 안경과 모자는 측정한 눈과 머리 위치에 맞추며, 기본 모습에는 도원의 붉은 머리, 강재의 긴 머리·둥근 안경, 재민의 갈색 모자를 적용합니다.
+캐릭터 생성 결과의 체크무늬는 실제 투명도가 아니어서 게임에서 가장자리에 연결된 중립색 배경만 제거합니다. 자세별 머리·눈·발 좌표를 측정해 정렬하고, 파란 머리와 청록색 옷의 색상 채널만 염색합니다. 자연물은 셀 경계의 희미한 선을 피하도록 안쪽을 사용합니다. 안경은 측정한 눈 위치에 맞추며, 기본 모습에는 도원의 붉은 머리, 강재의 긴 머리·둥근 안경을 적용합니다. 모자(탐험 모자·밀짚모자·버킷햇·비니·재민 모자)는 캐릭터에 어울리지 않아 게임에서 제거했고, 예전 저장·다른 기기에서 온 모자 값은 '없음'으로 읽습니다. 도원의 응원 머리띠만 남습니다.
 
 친구 아틀라스는 투명도 실패로 교정 시도가 있었으며, 바지가 일관된 첫 교정본을 최종 선택했습니다. 마지막 재생성본은 사용하지 않습니다. 걷기 자세는 서로 다르지만 손과 발의 교차가 모든 프레임에서 완전히 대칭은 아닙니다.
 
@@ -303,7 +303,7 @@ Within each row, hold the exact same head size, hair, identity, body scale and c
 
 ## Jaemin original cap restoration (2026-09-14)
 
-- public/assets/jaemin-cap.png: 1683 × 935, AI-redrawn chestnut cap with cream/orange floral embroidery, referenced from Jaemin at bottom right of friends-v2.png.
+- ~~public/assets/jaemin-cap.png~~: removed with the hats (재민's chestnut cap is no longer worn).
 - Generated using built-in imagegen, followed by one focused crown/transparency correction. The delivered PNG is RGB with a painted neutral checkerboard, despite the transparency request. The character renderer removes its edge-connected neutral backdrop at native resolution before scaling, using the existing motion-sheet cleanup.
 - Only Jaemin wearing the cap uses this dedicated asset. It is fitted to each pose at 1.03 times the hair width and near the crown, replacing the generic 1.18-width raised cap. The brim stays above the eyes. Other hats, colors and all other characters are preserved. Saved cap appearances automatically use the updated art.
 
@@ -343,7 +343,7 @@ OpenAI 내장 imagegen으로 새 에셋 세 장을 생성했습니다. 원본 �
 | legacy/assets/theater-wardrobe.png  | 1254 × 1254 | 실제 RGBA. 4×4로 먼저 나누고 각 셀의 의상 영역을 분리. 상의 8종, 하의 4종, 신발 4종.                       |
 | legacy/assets/theater-backstage.png | 1536 × 1024 | 극장 배경. 무대 및 단체 기념사진에 사용.                                                                   |
 
-기존 friends-motion.png, accessories.png, jaemin-cap.png를 재사용합니다. 신체와 의상은 Canvas에서 층별로 합성하며, 분리된 의상과 신발 사이의 발목은 연속된 도형으로 연결합니다. 얼굴, 머리, 의상과 배경 일러스트는 생성 에셋입니다. 분장 미리보기의 흔들기·인사·기쁨 모션은 합성 캐릭터의 이동/회전/배율 애니메이션입니다. 새로운 보행 스프라이트를 생성했다고 표기하지 않습니다.
+기존 friends-motion.png, accessories.png를 재사용합니다. 신체와 의상은 Canvas에서 층별로 합성하며, 분리된 의상과 신발 사이의 발목은 연속된 도형으로 연결합니다. 얼굴, 머리, 의상과 배경 일러스트는 생성 에셋입니다. 분장 미리보기의 흔들기·인사·기쁨 모션은 합성 캐릭터의 이동/회전/배율 애니메이션입니다. 새로운 보행 스프라이트를 생성했다고 표기하지 않습니다.
 
 ### hohyeon-friend 생성 프롬프트
 
@@ -451,7 +451,7 @@ Higgsfield의 `gpt_image_2_5`, high, 4K 설정, 3:2로 빈 방 1장과 소품 �
 
 사용자가 요청한 나루토 아카츠키의 검은 망토·붉은 구름 디자인을 참고해, 기존 `club-friends-classic.webp`의 일곱 친구 그림체와 얼굴을 유지하는 새 의상을 Higgsfield GPT Image 2.5로 생성했습니다. 원화나 게임 스크린샷을 다운로드해 복사하지 않았습니다. 작업 ID는 `ecaf0007-edca-4304-821e-8505800f91dd`이며 생성 1회, high/4K/3:2 설정입니다. 생성 전 표시된 예상 비용은 4.25크레딧입니다.
 
-원본 `akatsuki-atlas.png`는 3504×2336, 4×2 셀입니다. 첫 일곱 셀은 도원·강재·민서·승준·민재·재민·호현, 마지막 셀은 도원 만두머리입니다. 런타임 `akatsuki-atlas.webp`는 같은 해상도의 quality 95/effort 6 WebP이며 951,564바이트입니다. 원본 PNG를 보관하고 피부·머리 염색 및 마젠타 배경 제거 후 외곽을 확인했습니다. 안경·모자·머리띠는 기존 액세서리를 조합합니다.
+원본 `akatsuki-atlas.png`는 3504×2336, 4×2 셀입니다. 첫 일곱 셀은 도원·강재·민서·승준·민재·재민·호현, 마지막 셀은 도원 만두머리입니다. 런타임 `akatsuki-atlas.webp`는 같은 해상도의 quality 95/effort 6 WebP이며 951,564바이트입니다. 원본 PNG를 보관하고 피부·머리 염색 및 마젠타 배경 제거 후 외곽을 확인했습니다. 안경·머리핀·도원의 머리띠는 기존 액세서리를 조합합니다.
 
 정확한 생성 프롬프트, 작업·원본 주소, 셀 순서와 런타임 해시는 [akatsuki-generation.json](public/assets/lounge/akatsuki-generation.json)에 기록합니다. 새 의상에만 목과 샌들의 노출 피부 마스크를 적용해 붉은 구름·크림 테두리·검은 망토색을 유지합니다.
 

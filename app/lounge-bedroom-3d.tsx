@@ -881,14 +881,14 @@ export function Bedroom3D({
     const projectLabels = () => {
       const w = host.clientWidth,
         h = host.clientHeight;
-      const place = (id: string, p: WalkPoint, f: Figure) => {
+      const place = (id: string, p: WalkPoint) => {
         const el = labelsRef.current.get(id);
         if (!el) return;
         label.set(p.x, 1.98, p.z).project(camera);
         el.style.transform = `translate(${((label.x + 1) / 2) * w}px, ${((1 - label.y) / 2) * h}px) translate(-50%, -100%)`;
       };
-      place('self', me.pos, me);
-      for (const [id, f] of others) place(id, f.pos, f);
+      place('self', me.pos);
+      for (const [id, f] of others) place(id, f.pos);
     };
     let lastTick = 0;
     const animate = (t: number) => {

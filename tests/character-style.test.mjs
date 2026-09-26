@@ -5,6 +5,9 @@ import {defaultAppearance,readAppearance,readWardrobe,dyePixel,removeConnectedBa
 test('untrusted customization and motion are bounded and never copy arbitrary payloads',()=>{
  const bad={hair:'url(https://example.com)',top:'<script>',hat:{},glasses:17,clip:'yes',extra:'private'};
  assert.deepEqual(readAppearance(bad,1),defaultAppearance(1));
+ // Hats were removed: old values and 재민's old default read as bare-headed.
+ for(const hat of ['cap','straw','bucket','beanie'])assert.equal(readAppearance({hat},5).hat,'none');
+ assert.equal(defaultAppearance(5).hat,'none');
  const defaults=readWardrobe(null);defaults[1].hair='rose';assert.equal(readWardrobe(null)[1].hair===defaults[1].hair,false);
 });
 test('animation alternates real step frames and reduced motion suppresses movement',()=>{

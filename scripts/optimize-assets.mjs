@@ -6,6 +6,7 @@
 //   node scripts/optimize-assets.mjs            # images + models
 //   node scripts/optimize-assets.mjs images     # images only
 //   node scripts/optimize-assets.mjs models     # models only
+//   node scripts/optimize-assets.mjs models village/valley   # one folder
 //
 // Character atlases are LOSSLESS WebP (`exact`): lounge-sprites.ts/lounge-color.ts
 // key the magenta background and dye the blue hair by exact RGB, so every pixel
@@ -55,6 +56,21 @@ const MODEL_TEXTURE_SIZE = {
   'lounge/club/banquetChair.glb': 512,
   'lounge/club/barStool.glb': 512,
   'lounge/club/queueRope.glb': 512,
+  // VILL-2 valley props (village/valley): props up to about 1 m across.
+  'village/valley/waterPump.glb': 512,
+  'village/valley/picketGate.glb': 512,
+  'village/valley/onggi.glb': 512,
+  'village/valley/produceCrate.glb': 512,
+  'village/valley/firewood.glb': 512,
+  'village/valley/campChair.glb': 512,
+  'village/valley/cattail.glb': 512,
+  'village/valley/hanjiLantern.glb': 512,
+  'village/valley/ropeFence.glb': 512,
+  'village/valley/treeStump.glb': 512,
+  'village/valley/meadowGrass.glb': 512,
+  'village/valley/stonePaver.glb': 512,
+  'village/valley/shrub.glb': 512,
+  'village/valley/cobbleWall.glb': 512,
 };
 
 async function sameRgba(a, b) {
@@ -174,8 +190,11 @@ async function models() {
       if (entry.isDirectory()) return full === originals ? [] : walk(full);
       return entry.name.endsWith('.glb') ? [full] : [];
     });
+  // Optional third argument: only models under that folder (e.g. village/valley).
+  const only = process.argv[3]?.replace(/\/$/, '');
   for (const file of walk(modelRoot)) {
     const relative = path.relative(modelRoot, file);
+    if (only && !relative.split(path.sep).join('/').startsWith(only + '/')) continue;
     const original = path.join(originals, relative);
     if (!fs.existsSync(original)) {
       fs.mkdirSync(path.dirname(original), { recursive: true });

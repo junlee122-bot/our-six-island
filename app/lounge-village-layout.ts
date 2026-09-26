@@ -363,8 +363,8 @@ export const VILLAGE_TERRACE = {
 } as const;
 export const VILLAGE_ORCHARD: readonly VillagePoint[] = [
   { x: -31, z: -6 },
-  { x: -10, z: -29.6 },
-  { x: 10, z: -29.6 },
+  { x: -10, z: -27.1 },
+  { x: 10, z: -27.1 },
   { x: 30.6, z: -13 },
   { x: 8, z: 12 },
   { x: -36, z: -5 },
@@ -954,6 +954,240 @@ const slotFillers: SolidCollider[] = (() => {
   return out;
 })();
 
+/* ------------------------------------------------------------ valley props (VILL-2 kArchive set) */
+
+/** Measured GLB bounds (model units): w, h, d and the lowest y (0 = origin at the base). */
+export const VALLEY_MODEL_SIZE = {
+  waterPump: { w: 0.441, h: 0.552, d: 0.85, y0: 0 },
+  picketGate: { w: 1.054, h: 0.601, d: 0.12, y0: 0 },
+  toolShed: { w: 3.2, h: 2.927, d: 2.461, y0: 0 },
+  onggi: { w: 1.805, h: 2, d: 1.826, y0: 0 },
+  produceCrate: { w: 0.563, h: 0.317, d: 0.4, y0: 0 },
+  firewood: { w: 2, h: 1.56, d: 1.308, y0: 0 },
+  scarecrow: { w: 1.512, h: 1.901, d: 1.238, y0: -0.951 },
+  campChair: { w: 0.722, h: 0.742, d: 0.8, y0: 0 },
+  volcanicRock: { w: 1.2, h: 0.481, d: 1.034, y0: 0 },
+  graniteBoulder: { w: 1.2, h: 0.542, d: 1.078, y0: 0 },
+  cattail: { w: 1.2, h: 1.068, d: 0.84, y0: 0 },
+  hanjiLantern: { w: 1.001, h: 2, d: 0.99, y0: 0 },
+  valleyRocks: { w: 1.675, h: 0.571, d: 1.902, y0: -0.286 },
+  ropeFence: { w: 1.011, h: 1.2, d: 0.18, y0: 0 },
+  broadleafTree: { w: 1.8, h: 1.906, d: 1.079, y0: 0 },
+  smallPine: { w: 1.2, h: 1.612, d: 1.124, y0: 0 },
+  meadowGrass: { w: 1.2, h: 0.409, d: 0.967, y0: 0 },
+  shrub: { w: 1.018, h: 0.495, d: 0.65, y0: 0 },
+  treeStump: { w: 1.2, h: 0.377, d: 1.171, y0: 0 },
+  cobbleWall: { w: 1, h: 1.2, d: 0.24, y0: 0 },
+  pavilion: { w: 1.758, h: 1.9, d: 1.773, y0: -0.951 },
+  stonePaver: { w: 1, h: 0.08, d: 1, y0: 0 },
+} as const;
+export type ValleyModelKey = keyof typeof VALLEY_MODEL_SIZE;
+/**
+ * Where a valley prop shows: always, only for a friend's farm size, or in a
+ * fishing zone (those load when the player comes near).
+ */
+export type ValleyZone = 'village' | 'falls' | 'lake' | 'rapids' | 'rocks' | 'harbor' | 'bridge' | 'sea';
+export type ValleyProp = {
+  model: ValleyModelKey;
+  x: number;
+  z: number;
+  /** Uniform scale, or [x, y, z]. */
+  s: number | readonly [number, number, number];
+  rot?: number;
+  /** Extra height (e.g. on a deck). */
+  y?: number;
+  zone: ValleyZone;
+  /** Shown only when this friend's farm has at least `plots` plots. */
+  yard?: { actor: number; plots: 9 | 12 };
+  collider?: VillageCollider;
+};
+/** 팔각정 by the lake: a landmark you walk around (solid octagon). */
+export const VILLAGE_PAVILION = { x: 34.2, z: -19.8, scale: 1.9, radius: 1.5 } as const;
+/** Dry-stone wall behind the homes, open at three alley gaps. */
+export const VILLAGE_STONE_WALL = { z: -29.5, x0: -26, x1: 26, gaps: [-13.5, 0, 13.5], gapHalf: 1.1, scale: 0.6 } as const;
+
+const valleyProps: ValleyProp[] = [];
+// Friends' yards: pump by the well, an open gate leaf, a jar terrace (장독대),
+// firewood, and — for bigger farms — a produce crate (9+), a tool shed and a
+// scarecrow (12). Knee-high props and the size-gated ones are walkable
+// decoration (no collider), like the flowers.
+for (const yard of VILLAGE_YARDS) {
+  const west = yard.pathX - yard.x0;
+  valleyProps.push(
+    { model: 'waterPump', x: yard.well.x, z: yard.well.z, s: 1.1, rot: Math.PI / 2, zone: 'village' },
+    { model: 'picketGate', x: round(yard.pathX - YARD_GATE_HALF - 0.04), z: round(YARD_FENCE_Z - 0.45), s: 0.78, rot: Math.PI / 2, zone: 'village' },
+    { model: 'stonePaver', x: yard.pathX, z: YARD_FENCE_Z, s: [1.2, 1, 1.2], y: 0.09, zone: 'village' },
+  );
+  const jx = round(yard.pathX - Math.min(1.5, west - 0.7));
+  for (const [dx, dz, sc] of [[0, 0, 0.3], [0.45, 0.25, 0.23], [-0.2, 0.5, 0.2]] as const)
+    valleyProps.push({ model: 'onggi', x: round(jx + dx), z: round(-15.6 + dz), s: sc, rot: dx * 3, zone: 'village' });
+  valleyProps.push({ model: 'firewood', x: round(yard.x1 - 0.75), z: round(yard.z0 + 0.7), s: 0.35, zone: 'village' });
+  const bed = yard.beds[0];
+  valleyProps.push(
+    { model: 'produceCrate', x: round(bed.x + bed.w / 2 + 0.4), z: -13.4, s: 1.2, rot: 0.2, zone: 'village', yard: { actor: yard.actor, plots: 9 } },
+    { model: 'toolShed', x: round(yard.pathX - Math.min(1.55, west / 2 + 0.3)), z: -13.3, s: 0.45, rot: Math.PI / 2, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
+    { model: 'scarecrow', x: yard.scarecrow.x, z: yard.scarecrow.z, s: 0.7, rot: -0.3, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
+  );
+}
+// Main green: stone pavers down the plaza walk to the middle bridge.
+for (let z = 3.6; z <= 12.4; z += 1.25) valleyProps.push({ model: 'stonePaver', x: 0, z: round(z), s: [1.2, 1, 1.2], y: 0.09, zone: 'village' });
+// Stone-wall alley behind the homes (solid runs, open gaps).
+{
+  const w = VILLAGE_STONE_WALL,
+    seg = VALLEY_MODEL_SIZE.cobbleWall.w * w.scale;
+  const cuts = [w.x0, ...w.gaps.flatMap((g) => [g - w.gapHalf, g + w.gapHalf]), w.x1];
+  for (let i = 0; i < cuts.length; i += 2) {
+    const a = cuts[i],
+      b = cuts[i + 1],
+      n = Math.max(1, Math.round((b - a) / seg)),
+      step = (b - a) / n;
+    for (let k = 0; k < n; k++)
+      valleyProps.push({ model: 'cobbleWall', x: round(a + step * (k + 0.5)), z: w.z, s: [step, w.scale, w.scale], zone: 'village' });
+    valleyProps.push({
+      model: 'cobbleWall',
+      x: round((a + b) / 2),
+      z: w.z,
+      s: 0,
+      zone: 'village',
+      collider: boxCollider(round(b - a), 0.2),
+    });
+  }
+}
+valleyProps.push({ model: 'pavilion', x: VILLAGE_PAVILION.x, z: VILLAGE_PAVILION.z, s: VILLAGE_PAVILION.scale, rot: Math.PI / 8, zone: 'village', collider: circle(VILLAGE_PAVILION.radius) });
+// Fishing spots (zone props load when the player comes near).
+{
+  const mid = (VILLAGE_RIVER.minZ + VILLAGE_RIVER.maxZ) / 2;
+  for (let i = 0; i < 8; i++)
+    valleyProps.push({ model: 'graniteBoulder', x: round(VILLAGE_RAPIDS.x0 + 1.6 + i * 1.5), z: round(mid + (i % 2 ? 0.45 : -0.4)), s: 0.55 + (i % 3) * 0.12, rot: i * 1.3, y: -0.05, zone: 'rapids' });
+  const f = VILLAGE_FALLS;
+  valleyProps.push({ model: 'valleyRocks', x: f.x, z: round(-VILLAGE_BOUNDS.depth / 2 + 0.2), s: 2.4, zone: 'falls' });
+  for (const a of [0.35, 1.2, 2.75])
+    valleyProps.push({ model: 'graniteBoulder', x: round(f.x + Math.cos(a) * 3.5), z: round(f.z + Math.sin(a) * 3.5), s: 0.8, rot: a * 2, y: -0.08, zone: 'falls' });
+  const lake = VILLAGE_LAKE;
+  for (let x = lake.x - lake.radius + 0.5; x <= lake.x - lake.radius + 2.5; x += 0.8)
+    for (const side of [-1, 1])
+      valleyProps.push({ model: 'ropeFence', x: round(x), z: round(lake.dockZ + side * 0.68), s: 0.8, y: 0.3, zone: 'lake' });
+  for (const a of [0.5, 1.1, 1.9, 4.3, 5.0, 5.7])
+    valleyProps.push({ model: 'cattail', x: round(lake.x + Math.cos(a) * (lake.radius - 0.45)), z: round(lake.z + Math.sin(a) * (lake.radius - 0.45)), s: 0.75, rot: a, zone: 'lake' });
+  const r = VILLAGE_ROCKS;
+  for (const [dx, dz, sc] of [[0.2, 0.3, 2.2], [-1.6, 1.4, 1.6], [1.8, 1.6, 1.4]] as const)
+    valleyProps.push({ model: 'volcanicRock', x: round(r.x + dx), z: round(r.z + dz), s: sc, rot: dx, zone: 'rocks' });
+  const h = VILLAGE_HARBOR;
+  for (const dz of [0.6, 2.4, 4.2, 5.8])
+    for (const side of [-1, 1])
+      valleyProps.push({ model: 'hanjiLantern', x: round(h.x + side * (h.width / 2 + 0.12)), z: round(h.z + dz), s: 0.34, y: 0.34, zone: 'harbor' });
+  for (const [x, z] of [[-3.8, VILLAGE_RIVER.minZ + 0.25], [3.9, VILLAGE_RIVER.maxZ - 0.25], [-4.6, VILLAGE_RIVER.maxZ - 0.3], [4.4, VILLAGE_RIVER.minZ + 0.3]] as const)
+    valleyProps.push({ model: 'cattail', x, z: round(z), s: 0.6, rot: x, zone: 'bridge' });
+}
+/** A folding camp chair beside each fishing stand (added by the spots module's stands). */
+export const VALLEY_CHAIR_OFFSET = { x: 0.95, z: -0.35 } as const;
+// Nature filler for the enlarged valley (picked by scratch gen-nature.mjs from
+// this layout: off routes, a walker-wide ring clear around each solid one).
+const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number])[] = [
+  ['broadleafTree', -41.4, 24.9, 2.09, 2.14],
+  ['broadleafTree', -4.1, 18.8, 1.97, 0.67],
+  ['broadleafTree', -45.1, -28.9, 1.63, 2.75],
+  ['broadleafTree', 19.1, 23, 1.84, 6.02],
+  ['broadleafTree', -25.5, 24.6, 1.83, 3.57],
+  ['broadleafTree', -41.3, -19.9, 1.74, 4.14],
+  ['broadleafTree', 45.3, 2.5, 1.94, 3.84],
+  ['broadleafTree', -45.3, -14.4, 1.83, 0.08],
+  ['broadleafTree', 36.1, 6.7, 1.95, 4.37],
+  ['broadleafTree', 35.4, 20.6, 1.89, 1.86],
+  ['broadleafTree', 21, 27.4, 2.03, 2.12],
+  ['broadleafTree', 40.8, 1.2, 1.63, 3.88],
+  ['broadleafTree', 15.7, 26.4, 1.95, 2.77],
+  ['broadleafTree', 29.2, 27.1, 1.99, 2.28],
+  ['broadleafTree', -41.2, -1.8, 1.99, 3.98],
+  ['broadleafTree', 23.3, -0.4, 1.8, 3.66],
+  ['broadleafTree', -14.2, 23.4, 1.83, 1.24],
+  ['broadleafTree', -40.8, -9.6, 1.69, 5.46],
+  ['broadleafTree', 24.8, 19, 2.07, 3.16],
+  ['broadleafTree', -31, -20.2, 2.03, 3.22],
+  ['broadleafTree', -35.6, 21.2, 1.68, 1.72],
+  ['broadleafTree', 42.2, -12.4, 2, 1.82],
+  ['smallPine', 42.9, 19.8, 1.83, 4.78],
+  ['smallPine', 39, 11.1, 1.68, 2.02],
+  ['smallPine', -35.3, 25, 1.92, 6.15],
+  ['smallPine', -42.3, 7.3, 1.92, 1.9],
+  ['smallPine', 35.1, -35.6, 1.85, 3.75],
+  ['smallPine', 39.2, -9.3, 1.91, 2.46],
+  ['smallPine', 27.3, 23, 1.94, 0.71],
+  ['smallPine', 42.7, -2.5, 1.53, 3.4],
+  ['smallPine', -17.5, 27.3, 1.89, 5.2],
+  ['smallPine', -34, 18.3, 1.58, 4.82],
+  ['smallPine', 39.6, 27.8, 1.97, 5.28],
+  ['smallPine', -14.7, 18.2, 1.83, 0.34],
+  ['smallPine', 45.4, 11.1, 1.87, 4.77],
+  ['smallPine', -21.4, 21.5, 1.68, 2.32],
+  ['smallPine', -5.7, 29.9, 1.72, 5.91],
+  ['smallPine', -38, -11.8, 1.85, 0.95],
+  ['smallPine', -36.9, -0.3, 1.67, 3.33],
+  ['smallPine', -24.7, 28.4, 1.82, 3.63],
+  ['treeStump', 22.4, 30.1, 0.55, 2.66],
+  ['treeStump', 45.2, 29.2, 0.52, 3.86],
+  ['treeStump', -32.9, -21.9, 0.5, 0.75],
+  ['treeStump', -36.8, -26.2, 0.51, 1.02],
+  ['treeStump', 22.4, -6.2, 0.59, 0.43],
+  ['treeStump', -44.8, -4.7, 0.54, 1.32],
+  ['treeStump', 44, -5.7, 0.53, 2.84],
+  ['treeStump', 42.9, 26.2, 0.55, 3.18],
+  ['graniteBoulder', 45.7, -33.1, 1.19, 4.35],
+  ['graniteBoulder', -23.9, 0.4, 1.04, 5.76],
+  ['graniteBoulder', -40.5, -26.1, 0.99, 1.19],
+  ['graniteBoulder', 35.2, 29.1, 1.17, 4.56],
+  ['graniteBoulder', -40.3, -5.6, 0.92, 3.6],
+  ['graniteBoulder', 29.4, 0, 1.03, 1.91],
+  ['shrub', -3.2, 24, 1.12, 5.31],
+  ['shrub', 38.2, 26.1, 1.06, 5.03],
+  ['shrub', -40.2, -22.6, 1.13, 5.13],
+  ['shrub', -42.3, -0.2, 1.05, 5.01],
+  ['shrub', -4.5, 20.7, 1, 6.18],
+  ['shrub', -28.4, 24.3, 1.26, 2.7],
+  ['shrub', -32.5, -2.8, 1.09, 2.85],
+  ['shrub', 8.6, 29.3, 1.04, 5.29],
+  ['shrub', 45.6, -16, 1.25, 5.76],
+  ['shrub', 0.9, 25.6, 1.13, 3.25],
+  ['shrub', 16.2, 24, 1.02, 4.29],
+  ['shrub', -35.5, 26.9, 1.21, 2.27],
+  ['shrub', -43.4, -5.8, 1.28, 0.95],
+  ['shrub', -42.2, -17.3, 1.21, 6.22],
+  ['shrub', -23.6, -5.7, 1.27, 3.17],
+  ['shrub', -43.9, -8.5, 1.11, 2.01],
+  ['meadowGrass', 16.2, 22.1, 0.71, 1.01],
+  ['meadowGrass', -39.7, 18.3, 0.81, 0.15],
+  ['meadowGrass', 45.8, 4.8, 0.81, 3.11],
+  ['meadowGrass', 32.4, -15.8, 0.68, 2.79],
+  ['meadowGrass', -13.7, -34.6, 0.72, 0.23],
+  ['meadowGrass', -32.6, 22, 0.8, 4.88],
+  ['meadowGrass', 33, 26.5, 0.63, 3.95],
+  ['meadowGrass', 28.8, 29.7, 0.78, 0.75],
+  ['meadowGrass', -45.8, 6.4, 0.78, 3.52],
+  ['meadowGrass', -6.2, 27.8, 0.84, 0.9],
+  ['meadowGrass', 27.5, 27.2, 0.62, 1.4],
+  ['meadowGrass', -43.4, -2.9, 0.7, 5.65],
+  ['meadowGrass', -13.8, -26.8, 0.88, 3.81],
+  ['meadowGrass', 31, 7.9, 0.71, 2.43],
+  ['meadowGrass', 20.7, -31.6, 0.64, 1.25],
+  ['meadowGrass', -1.5, 30.2, 0.74, 2.81],
+  ['meadowGrass', -29.9, 18.9, 0.64, 3.32],
+  ['meadowGrass', -7.8, 21.8, 0.85, 6.24],
+  ['meadowGrass', 20, 21.6, 0.69, 5.8],
+  ['meadowGrass', -43.3, -26.1, 0.7, 4.95],
+  ['meadowGrass', 35.4, 26.4, 0.71, 6.03],
+  ['meadowGrass', 25, -6.6, 0.63, 6.03],
+  ['meadowGrass', 32.1, -32.9, 0.61, 1.01],
+  ['meadowGrass', -24.6, -35.5, 0.76, 2.59],
+];
+for (const [model, x, z, sc, rot] of NATURE) {
+  const size = VALLEY_MODEL_SIZE[model];
+  const solid = model === 'broadleafTree' || model === 'smallPine' || model === 'treeStump' || model === 'graniteBoulder';
+  const r = model === 'broadleafTree' ? 0.2 * sc : model === 'smallPine' ? 0.22 * sc : model === 'treeStump' ? 0.25 * sc * size.w : 0.36 * sc * size.w;
+  valleyProps.push({ model, x, z, s: sc, rot, zone: 'village', ...(solid ? { collider: circle(round(r)) } : {}) });
+}
+/** Single source for the valley kArchive props: the layer draws them, collision uses their colliders. */
+export const VILLAGE_VALLEY_PROPS: readonly ValleyProp[] = valleyProps;
+
 /** Every solid thing a walker can bump into, besides places, water and bounds. */
 export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
   ...VILLAGE_DECOR.flatMap((item) =>
@@ -1031,6 +1265,10 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
   })),
   // kArchive civic set: the festival stage and the pergola's four posts.
   ...KARCHIVE_COLLIDERS,
+  // VILL-2 valley props with a footprint (trees, stumps, boulders, wall runs, 팔각정).
+  ...VILLAGE_VALLEY_PROPS.flatMap((p, i) =>
+    p.collider ? [{ id: `valley-${p.model}-${i}`, x: p.x, z: p.z, collider: p.collider, rotation: 0 }] : [],
+  ),
   ...slotFillers,
 ];
 

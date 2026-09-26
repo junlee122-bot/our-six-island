@@ -1,0 +1,758 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-26",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-26 재확인: 변경 없음): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs(models village/valley)가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소; 2048² 원본 3종 lp-au-04·lp-su-10·kc-23은 1024²로)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/village/valley/에 보관. 런타임에는 크기·위치·방향만 바꾸고, 한지 등은 밤에 발광색을 더함.",
+  "assets": [
+    {
+      "key": "waterPump",
+      "id": "apocalypse-manual-water-pump-station-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/apocalypse-manual-water-pump-station-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/apocalypse-manual-water-pump-station-cottage-normal.glb",
+      "file": "waterPump.glb",
+      "bytes": 480640,
+      "sha256": "8b3ebd06e2e317a195d74b72029611b9a28d60f69c04a349366bc80136d08e98",
+      "webBytes": 236448,
+      "meshes": 1,
+      "triangles": 6037,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.221,
+          0,
+          -0.425
+        ],
+        "max": [
+          0.221,
+          0.552,
+          0.425
+        ],
+        "size": [
+          0.441,
+          0.552,
+          0.85
+        ]
+      },
+      "use": "친구 마당 물 주는 곳(수동 펌프, 우물 자리). 7개 인스턴스"
+    },
+    {
+      "key": "picketGate",
+      "id": "angular-common-fences-picket-gate-closed",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-fences-picket-gate-closed",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-fences-picket-gate-closed.glb",
+      "file": "picketGate.glb",
+      "bytes": 482792,
+      "sha256": "b0676be0bbdfcb4e2d3c3465c45e0c09dc404a68651ced3c4afbb44d685b5e91",
+      "webBytes": 222852,
+      "meshes": 1,
+      "triangles": 4449,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.527,
+          0,
+          -0.06
+        ],
+        "max": [
+          0.527,
+          0.601,
+          0.06
+        ],
+        "size": [
+          1.054,
+          0.601,
+          0.12
+        ]
+      },
+      "use": "마당 입구 문(열린 문짝처럼 옆으로 세움). 7개"
+    },
+    {
+      "key": "toolShed",
+      "id": "common-buildings-garden-tool-shed-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-garden-tool-shed-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-garden-tool-shed-compact-normal.glb",
+      "file": "toolShed.glb",
+      "bytes": 690028,
+      "sha256": "01862984a071d1b0897ce789003d740d4bb4cb871e91cdb8169fa03cdeefc3ca",
+      "webBytes": 448572,
+      "meshes": 1,
+      "triangles": 8103,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.6,
+          0,
+          -1.231
+        ],
+        "max": [
+          1.6,
+          2.927,
+          1.231
+        ],
+        "size": [
+          3.2,
+          2.927,
+          2.461
+        ]
+      },
+      "use": "12칸 마당 농기구 창고. 7개(12칸일 때만 보임)"
+    },
+    {
+      "key": "onggi",
+      "id": "dongji-06",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-06",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-06.glb",
+      "file": "onggi.glb",
+      "bytes": 247880,
+      "sha256": "b861d88e906d4af7bbd6c2f8a27a7e947ad911fa16f5f3d4147cc47a26f66cda",
+      "webBytes": 118112,
+      "meshes": 1,
+      "triangles": 3875,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.902,
+          0,
+          -0.913
+        ],
+        "max": [
+          0.902,
+          2,
+          0.913
+        ],
+        "size": [
+          1.805,
+          2,
+          1.826
+        ]
+      },
+      "use": "마당 장독대(옹기 3개씩). 21개"
+    },
+    {
+      "key": "produceCrate",
+      "id": "angular-restaurant-produce-crate-vegetables",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-produce-crate-vegetables",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-produce-crate-vegetables.glb",
+      "file": "produceCrate.glb",
+      "bytes": 495916,
+      "sha256": "ab774e873490aa30bf92f95a7b5f551476f8c94cbe33cbc511d9bbf709d208b6",
+      "webBytes": 230288,
+      "meshes": 1,
+      "triangles": 3891,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.281,
+          0,
+          -0.2
+        ],
+        "max": [
+          0.281,
+          0.317,
+          0.2
+        ],
+        "size": [
+          0.563,
+          0.317,
+          0.4
+        ]
+      },
+      "use": "9칸 이상 마당 출하 상자. 7개(9칸 이상)"
+    },
+    {
+      "key": "firewood",
+      "id": "dongji-09",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-09",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-09.glb",
+      "file": "firewood.glb",
+      "bytes": 343392,
+      "sha256": "6f78cc222f4d539c577ceb8e26702e82c6d1e2bb1a30b84baed7ac9bfe7f99e8",
+      "webBytes": 151896,
+      "meshes": 1,
+      "triangles": 3643,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.654
+        ],
+        "max": [
+          1,
+          1.56,
+          0.654
+        ],
+        "size": [
+          2,
+          1.56,
+          1.308
+        ]
+      },
+      "use": "마당 장작 더미. 7개"
+    },
+    {
+      "key": "scarecrow",
+      "id": "lp-au-04",
+      "source": "https://karchive.vibeline.co.kr/models/lp-au-04",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/seasons/lp-au-04.glb",
+      "file": "scarecrow.glb",
+      "bytes": 3298644,
+      "sha256": "c3a06e16e5ecb1206b705bd226fea51fe518f1df45c1b0c19c5259aa07865534",
+      "webBytes": 390672,
+      "meshes": 1,
+      "triangles": 4044,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.758,
+          -0.951,
+          -0.619
+        ],
+        "max": [
+          0.753,
+          0.951,
+          0.619
+        ],
+        "size": [
+          1.512,
+          1.901,
+          1.238
+        ]
+      },
+      "use": "12칸 마당 허수아비. 7개(12칸일 때만)"
+    },
+    {
+      "key": "campChair",
+      "id": "common-furniture-folding-camp-chair-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-folding-camp-chair-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-folding-camp-chair-cottage-normal.glb",
+      "file": "campChair.glb",
+      "bytes": 458984,
+      "sha256": "21a61da7cecbc7ccb418fa2583472c63b6d7f36817fb6a03cb8ce586846539bb",
+      "webBytes": 219340,
+      "meshes": 1,
+      "triangles": 6168,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.361,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.361,
+          0.742,
+          0.4
+        ],
+        "size": [
+          0.722,
+          0.742,
+          0.8
+        ]
+      },
+      "use": "낚시터 앉는 자리(가까이 가면 로드)"
+    },
+    {
+      "key": "volcanicRock",
+      "id": "common-nature-volcanic-rock-cluster-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-volcanic-rock-cluster-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-volcanic-rock-cluster-cottage-normal.glb",
+      "file": "volcanicRock.glb",
+      "bytes": 512404,
+      "sha256": "7068b1e3739f477ef92c655868474957deca30f19cdb3ce5fe395135d3c49f68",
+      "webBytes": 323540,
+      "meshes": 1,
+      "triangles": 6265,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.517
+        ],
+        "max": [
+          0.6,
+          0.481,
+          0.517
+        ],
+        "size": [
+          1.2,
+          0.481,
+          1.034
+        ]
+      },
+      "use": "갯바위 낚시터(가까이 가면 로드)"
+    },
+    {
+      "key": "graniteBoulder",
+      "id": "common-nature-rounded-granite-boulder-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-rounded-granite-boulder-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-rounded-granite-boulder-cottage-normal.glb",
+      "file": "graniteBoulder.glb",
+      "bytes": 523220,
+      "sha256": "2c9c9b62af41dbf2843c7bcf462bcc9356f523f00779d364a4c7a9d897ef3d80",
+      "webBytes": 338340,
+      "meshes": 1,
+      "triangles": 6249,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.539
+        ],
+        "max": [
+          0.6,
+          0.542,
+          0.539
+        ],
+        "size": [
+          1.2,
+          0.542,
+          1.078
+        ]
+      },
+      "use": "윗물 여울 물속 바위, 숲길 바위"
+    },
+    {
+      "key": "cattail",
+      "id": "common-nature-cattail-reed-clump-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-cattail-reed-clump-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-cattail-reed-clump-cottage-normal.glb",
+      "file": "cattail.glb",
+      "bytes": 492140,
+      "sha256": "3904d9394c96cd061597b12bba0d21fbd5e11d0a819b9d5f98e5b3cee5dc8ad6",
+      "webBytes": 252076,
+      "meshes": 1,
+      "triangles": 6238,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.42
+        ],
+        "max": [
+          0.6,
+          1.068,
+          0.42
+        ],
+        "size": [
+          1.2,
+          1.068,
+          0.84
+        ]
+      },
+      "use": "호수·강·다리 물가 부들"
+    },
+    {
+      "key": "hanjiLantern",
+      "id": "dongji-11",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-11",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-11.glb",
+      "file": "hanjiLantern.glb",
+      "bytes": 353004,
+      "sha256": "4479edb9d076b850df1e4906dcc344cb98438d9c9ab00920475ac2f32ac52419",
+      "webBytes": 153436,
+      "meshes": 1,
+      "triangles": 3174,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.501,
+          0,
+          -0.495
+        ],
+        "max": [
+          0.501,
+          2,
+          0.495
+        ],
+        "size": [
+          1.001,
+          2,
+          0.99
+        ]
+      },
+      "use": "밤 항구 한지 등(밤에 발광)"
+    },
+    {
+      "key": "valleyRocks",
+      "id": "lp-su-10",
+      "source": "https://karchive.vibeline.co.kr/models/lp-su-10",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/seasons/lp-su-10.glb",
+      "file": "valleyRocks.glb",
+      "bytes": 2932612,
+      "sha256": "5539b2d9520a14c7d7f9b052942355ba0949f91cff522329002c15bbcd2887d8",
+      "webBytes": 399752,
+      "meshes": 1,
+      "triangles": 6189,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.836,
+          -0.286,
+          -0.952
+        ],
+        "max": [
+          0.839,
+          0.285,
+          0.951
+        ],
+        "size": [
+          1.675,
+          0.571,
+          1.902
+        ]
+      },
+      "use": "폭포 소 계곡 바위(가까이 가면 로드)"
+    },
+    {
+      "key": "ropeFence",
+      "id": "common-fences-rope-and-timber-post-fence-straight-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-fences-rope-and-timber-post-fence-straight-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-fences-rope-and-timber-post-fence-straight-normal.glb",
+      "file": "ropeFence.glb",
+      "bytes": 275624,
+      "sha256": "264b80a1c8f8277bd18dd95cea4f9e2fea13b30b0ac69732c34616865a943500",
+      "webBytes": 114160,
+      "meshes": 1,
+      "triangles": 2430,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.505,
+          0,
+          -0.09
+        ],
+        "max": [
+          0.505,
+          1.2,
+          0.09
+        ],
+        "size": [
+          1.011,
+          1.2,
+          0.18
+        ]
+      },
+      "use": "호숫가 선착장 밧줄 난간"
+    },
+    {
+      "key": "broadleafTree",
+      "id": "angular-common-nature-broadleaf-tree-mature",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-nature-broadleaf-tree-mature",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-nature-broadleaf-tree-mature.glb",
+      "file": "broadleafTree.glb",
+      "bytes": 611372,
+      "sha256": "891b0c2d165c2510ca47992e62e1f7e939f49f5ae550c53d8aebf9c2a7c33b45",
+      "webBytes": 376436,
+      "meshes": 1,
+      "triangles": 6253,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.9,
+          0,
+          -0.539
+        ],
+        "max": [
+          0.9,
+          1.906,
+          0.539
+        ],
+        "size": [
+          1.8,
+          1.906,
+          1.079
+        ]
+      },
+      "use": "넓어진 맵 활엽수"
+    },
+    {
+      "key": "smallPine",
+      "id": "common-nature-small-pine-tree-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-small-pine-tree-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-small-pine-tree-cottage-normal.glb",
+      "file": "smallPine.glb",
+      "bytes": 413796,
+      "sha256": "d000a77e84eaa011b352adb283d285d4e5a3c6cebb6f6e4b2805b3674de9ad6e",
+      "webBytes": 257644,
+      "meshes": 1,
+      "triangles": 6292,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.562
+        ],
+        "max": [
+          0.6,
+          1.612,
+          0.562
+        ],
+        "size": [
+          1.2,
+          1.612,
+          1.124
+        ]
+      },
+      "use": "넓어진 맵 작은 소나무 무리"
+    },
+    {
+      "key": "meadowGrass",
+      "id": "common-nature-tufted-meadow-grass-patch-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-tufted-meadow-grass-patch-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-tufted-meadow-grass-patch-cottage-normal.glb",
+      "file": "meadowGrass.glb",
+      "bytes": 593132,
+      "sha256": "488664629f74478eb82d8351617685a9078542fb57b6c35b89bacae9acc1e542",
+      "webBytes": 303648,
+      "meshes": 1,
+      "triangles": 6252,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.484
+        ],
+        "max": [
+          0.6,
+          0.409,
+          0.484
+        ],
+        "size": [
+          1.2,
+          0.409,
+          0.967
+        ]
+      },
+      "use": "길가 강조용 풀(수 제한)"
+    },
+    {
+      "key": "shrub",
+      "id": "common-nature-broadleaf-shrub-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-broadleaf-shrub-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-broadleaf-shrub-cottage-normal.glb",
+      "file": "shrub.glb",
+      "bytes": 522708,
+      "sha256": "a10575ba5e4c84703e9b0418c10e791d498461ad3e7e95f0c5254e477706ba35",
+      "webBytes": 274980,
+      "meshes": 1,
+      "triangles": 6270,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.509,
+          0,
+          -0.325
+        ],
+        "max": [
+          0.509,
+          0.495,
+          0.325
+        ],
+        "size": [
+          1.018,
+          0.495,
+          0.65
+        ]
+      },
+      "use": "길가·경계 덤불"
+    },
+    {
+      "key": "treeStump",
+      "id": "common-nature-short-cut-tree-stump-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-nature-short-cut-tree-stump-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-nature-short-cut-tree-stump-cottage-normal.glb",
+      "file": "treeStump.glb",
+      "bytes": 500556,
+      "sha256": "93df79a4eba2fc11263838449ceec1bc06c749c21b463efd6c1243b39ffcf79b",
+      "webBytes": 248420,
+      "meshes": 1,
+      "triangles": 6207,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.585
+        ],
+        "max": [
+          0.6,
+          0.377,
+          0.585
+        ],
+        "size": [
+          1.2,
+          0.377,
+          1.171
+        ]
+      },
+      "use": "숲길 그루터기"
+    },
+    {
+      "key": "cobbleWall",
+      "id": "common-fences-dry-stacked-cobble-fence-straight-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-fences-dry-stacked-cobble-fence-straight-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-fences-dry-stacked-cobble-fence-straight-normal.glb",
+      "file": "cobbleWall.glb",
+      "bytes": 263972,
+      "sha256": "ac439abcd16fa61bdbc13dd70636976fb5989d5be3b1658f2bb4408eb5a4c274",
+      "webBytes": 107040,
+      "meshes": 1,
+      "triangles": 2605,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.12
+        ],
+        "max": [
+          0.5,
+          1.2,
+          0.12
+        ],
+        "size": [
+          1,
+          1.2,
+          0.24
+        ]
+      },
+      "use": "집 뒤 돌담 골목"
+    },
+    {
+      "key": "pavilion",
+      "id": "kc-23",
+      "source": "https://karchive.vibeline.co.kr/models/kc-23",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/korea-city/kc-23.glb",
+      "file": "pavilion.glb",
+      "bytes": 2571116,
+      "sha256": "386aac3174572aa839ae9b5b6777685b3cfa92b7857f79e14e410718769d936f",
+      "webBytes": 291920,
+      "meshes": 1,
+      "triangles": 4060,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.879,
+          -0.951,
+          -0.888
+        ],
+        "max": [
+          0.88,
+          0.949,
+          0.884
+        ],
+        "size": [
+          1.758,
+          1.9,
+          1.773
+        ]
+      },
+      "use": "호숫가 팔각정 랜드마크"
+    },
+    {
+      "key": "stonePaver",
+      "id": "angular-common-infrastructure-stone-paver-flat",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-infrastructure-stone-paver-flat",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-infrastructure-stone-paver-flat.glb",
+      "file": "stonePaver.glb",
+      "bytes": 303080,
+      "sha256": "c81e304228cb362052b5c97b9d963199a123dde0fa8a7d74cca9aa7f04af91bc",
+      "webBytes": 147020,
+      "meshes": 1,
+      "triangles": 3253,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.5
+        ],
+        "max": [
+          0.5,
+          0.08,
+          0.5
+        ],
+        "size": [
+          1,
+          0.08,
+          1
+        ]
+      },
+      "use": "광장 본선·마당 대문 앞 판석"
+    }
+  ]
+}

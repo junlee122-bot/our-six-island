@@ -46,3 +46,35 @@ export const LOUNGE_MODELS = {
   barStool: '/models/lounge/club/barStool.glb',
   queueRope: '/models/lounge/club/queueRope.glb',
 } as const;
+
+/**
+ * VILL-2 valley set (kArchive, 2026-09-26): friends' yard props, fishing-spot
+ * props, nature filler, stone walls, pavers and the 팔각정. Placed by
+ * lounge-village-valley.ts from VILLAGE_VALLEY_PROPS (lounge-village-layout.ts);
+ * sources in public/models/village/valley/assets.json.
+ */
+export const VALLEY_MODELS = {
+  waterPump: '/models/village/valley/waterPump.glb',
+  picketGate: '/models/village/valley/picketGate.glb',
+  toolShed: '/models/village/valley/toolShed.glb',
+  onggi: '/models/village/valley/onggi.glb',
+  produceCrate: '/models/village/valley/produceCrate.glb',
+  firewood: '/models/village/valley/firewood.glb',
+  scarecrow: '/models/village/valley/scarecrow.glb',
+  campChair: '/models/village/valley/campChair.glb',
+  volcanicRock: '/models/village/valley/volcanicRock.glb',
+  graniteBoulder: '/models/village/valley/graniteBoulder.glb',
+  cattail: '/models/village/valley/cattail.glb',
+  hanjiLantern: '/models/village/valley/hanjiLantern.glb',
+  valleyRocks: '/models/village/valley/valleyRocks.glb',
+  ropeFence: '/models/village/valley/ropeFence.glb',
+  broadleafTree: '/models/village/valley/broadleafTree.glb',
+  smallPine: '/models/village/valley/smallPine.glb',
+  meadowGrass: '/models/village/valley/meadowGrass.glb',
+  shrub: '/models/village/valley/shrub.glb',
+  treeStump: '/models/village/valley/treeStump.glb',
+  cobbleWall: '/models/village/valley/cobbleWall.glb',
+  pavilion: '/models/village/valley/pavilion.glb',
+  stonePaver: '/models/village/valley/stonePaver.glb',
+} as const;
+export type ValleyModel = keyof typeof VALLEY_MODELS;
