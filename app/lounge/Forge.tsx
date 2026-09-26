@@ -175,7 +175,7 @@ export function ForgePanel({
             </p>
           ) : null}
         </div>
-        <ul className="l-forge-rack" role="listbox" aria-label="도구 (↑↓로 고르기, Enter로 맡기기)">
+        <ul className="l-forge-rack" aria-label="도구 (↑↓로 고르기, Enter로 맡기기)">
           {tools.map((t, i) => {
             const next = t.next;
             const away = job?.tool === t.id;
@@ -196,8 +196,7 @@ export function ForgePanel({
               <li key={t.id}>
                 <button
                   type="button"
-                  role="option"
-                  aria-selected={i === at}
+                  aria-current={i === at || undefined}
                   className="l-forge-tool"
                   data-state={away ? 'away' : next && !next.why && !job ? 'ok' : 'no'}
                   onClick={() => setAt(i)}

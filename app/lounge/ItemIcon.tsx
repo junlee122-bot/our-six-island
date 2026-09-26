@@ -428,6 +428,35 @@ const nut = (body: string, cap: string, round = false) => (
   </>
 );
 const FORAGE_ART: Record<string, ReactNode> = {
+  // 성장 P1 ores (lounge-growth-data ORE_ITEMS).
+  copper: (
+    <>
+      <path d="M7 36 C5 26 13 15 24 14 C35 13 43 22 41 32 C39 41 10 43 7 36Z" fill="#8f8a83" stroke="#5f5a52" strokeWidth="1.5" />
+      <path d="M15 27 l5 -6 5 6 -5 6z M26 31 l4 -5 4 5 -4 5z M22 20 l3 -4 3 4 -3 4z" fill="#d9844a" stroke="#8a4a22" strokeWidth="1.2" />
+      <path d="M17 26 l3 -3" stroke="#fff" strokeWidth="1.2" opacity=".6" />
+    </>
+  ),
+  iron: (
+    <>
+      <path d="M7 36 C5 26 13 15 24 14 C35 13 43 22 41 32 C39 41 10 43 7 36Z" fill="#8f8a83" stroke="#5f5a52" strokeWidth="1.5" />
+      <path d="M15 27 l5 -6 5 6 -5 6z M26 31 l4 -5 4 5 -4 5z M22 20 l3 -4 3 4 -3 4z" fill="#b8c2cc" stroke="#5d6873" strokeWidth="1.2" />
+      <path d="M17 26 l3 -3" stroke="#fff" strokeWidth="1.2" opacity=".6" />
+    </>
+  ),
+  gold: (
+    <>
+      <path d="M7 36 C5 26 13 15 24 14 C35 13 43 22 41 32 C39 41 10 43 7 36Z" fill="#8f8a83" stroke="#5f5a52" strokeWidth="1.5" />
+      <path d="M15 27 l5 -6 5 6 -5 6z M26 31 l4 -5 4 5 -4 5z M22 20 l3 -4 3 4 -3 4z" fill="#f3c332" stroke="#a87a12" strokeWidth="1.2" />
+      <path d="M17 26 l3 -3" stroke="#fff" strokeWidth="1.2" opacity=".6" />
+    </>
+  ),
+  gem: (
+    <>
+      <path d="M7 36 C5 26 13 15 24 14 C35 13 43 22 41 32 C39 41 10 43 7 36Z" fill="#8f8a83" stroke="#5f5a52" strokeWidth="1.5" />
+      <path d="M15 27 l5 -6 5 6 -5 6z M26 31 l4 -5 4 5 -4 5z M22 20 l3 -4 3 4 -3 4z" fill="#b07be0" stroke="#6a3d99" strokeWidth="1.2" />
+      <path d="M17 26 l3 -3" stroke="#fff" strokeWidth="1.2" opacity=".6" />
+    </>
+  ),
   wood: (
     <>
       <path d="M6 38 L40 12" stroke="#8a5a34" strokeWidth="6" strokeLinecap="round" />

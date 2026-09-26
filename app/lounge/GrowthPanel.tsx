@@ -182,13 +182,13 @@ export function GrowthPanel({
           <>
             <section className="l-growth-page l-growth-left" aria-label={tab === 'skills' ? '기술 목록' : '도구 목록'}>
               {tab === 'skills' ? (
-                <ul className="l-skill-list" role="listbox" aria-label="기술 (↑↓로 고르기)">
+                <ul className="l-skill-list" aria-label="기술 (↑↓로 고르기)">
                   {g.skills.map((s, i) => (
                     <SkillRow key={s.id} s={s} selected={i === skillAt} onPick={() => setSkillAt(i)} onChoose={() => setChoose(s.id)} />
                   ))}
                 </ul>
               ) : (
-                <ul className="l-tool-rack" role="listbox" aria-label="도구 (↑↓로 고르기)">
+                <ul className="l-tool-rack" aria-label="도구 (↑↓로 고르기)">
                   {g.tools.map((t, i) => (
                     <ToolRow key={t.id} t={t} selected={i === toolAt} forging={g.forge?.tool === t.id ? g.forge : null} onPick={() => setToolAt(i)} />
                   ))}
@@ -305,8 +305,7 @@ function SkillRow({ s, selected, onPick, onChoose }: { s: SkillView; selected: b
     <li>
       <button
         type="button"
-        role="option"
-        aria-selected={selected}
+        aria-current={selected || undefined}
         className="l-skill-row"
         style={{ ['--c' as string]: info.color }}
         onClick={onPick}
@@ -456,7 +455,7 @@ function ToolRow({ t, selected, forging, onPick }: { t: ToolView; selected: bool
   const info = TOOL_INFO[t.id];
   return (
     <li>
-      <button type="button" role="option" aria-selected={selected} className="l-tool-row" data-tier={t.tier} onClick={onPick} data-testid={`tool-${t.id}`}>
+      <button type="button" aria-current={selected || undefined} className="l-tool-row" data-tier={t.tier} onClick={onPick} data-testid={`tool-${t.id}`}>
         <span className="l-tool-peg" aria-hidden="true">
           <Glyph name={TOOL_GLYPH[t.id]} size={30} />
         </span>
