@@ -176,6 +176,10 @@ export function TableSheet({
   const busyRef = useRef(false);
   const sheetRef = useRef<HTMLElement>(null);
   const invite = state.invite;
+  // Nobody else in the village: 친구 부르기 is a dead end, 혼자 하기 is not.
+  const othersHere = view.players.some(
+    (p) => p.id !== view.self && !state.occupants.includes(p.id),
+  );
   const tableStake = mode === 'setup' ? stake : (state.stake ?? stake);
   const reservation = gameReservation(game, tableStake);
   // High-roller tiers (50,000 / VIP 100,000) open with the wallet and 마을 공사.
@@ -399,8 +403,6 @@ export function TableSheet({
   const selectable = friends.filter(
     (p) => !playerIsBusy(view, p.id) && p.balance >= reservation,
   );
-  // Nobody else in the village: 친구 부르기 is a dead end, 혼자 하기 is not.
-  const othersHere = friends.length > 0;
   const soloBlock = solo &&
     (mode === 'setup' || (mode === 'seated' && !calling && !othersHere)) && (
       <div

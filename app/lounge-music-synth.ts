@@ -91,7 +91,7 @@ export class NoirEngine {
     this.limiter.release.value = 0.2;
     this.limiter.connect(this.output);
     const mix = (this.mix = ctx.createGain());
-    mix.gain.value = 0.9;
+    mix.gain.value = 0.45;
     mix.connect(this.limiter);
     // A small dark room.
     const room = ctx.createConvolver();
@@ -267,7 +267,7 @@ export class NoirEngine {
     tone.type = 'lowpass';
     tone.frequency.value = 3200;
     const g = ctx.createGain();
-    g.gain.value = 0.9;
+    g.gain.value = 0.13; // peaks near a card flip on the sfx bus
     tone.connect(g).connect(out);
     let end = t;
     for (const n of stingNotes(kind)) {
@@ -340,7 +340,7 @@ export class NoirEngine {
       bus = this.bus;
     switch (e.inst as Inst) {
       case 'bass': {
-        const { g, end } = this.decay(out ?? bus.bass, t, 0.34 * v, 0.006, Math.min(1.1, dur + 0.35));
+        const { g, end } = this.decay(out ?? bus.bass, t, 0.13 * v, 0.006, Math.min(1.1, dur + 0.35));
         this.osc('triangle', f, g, t, end);
         const body = this.osc('sine', f, g, t, end);
         body.frequency.setValueAtTime(f * 1.012, t);
@@ -350,7 +350,7 @@ export class NoirEngine {
       case 'reed':
       case 'lead': {
         const lead = e.inst === 'lead';
-        const { g, end } = this.env(out ?? bus.reed, t, (lead ? 0.1 : 0.055) * v, lead ? 0.03 : 0.07, dur, 0.14);
+        const { g, end } = this.env(out ?? bus.reed, t, (lead ? 0.11 : 0.13) * v, lead ? 0.03 : 0.07, dur, 0.14);
         const a = this.osc('sawtooth', f, g, t, end, -7);
         const b = this.osc(lead ? 'square' : 'sawtooth', f, g, t, end, 6);
         if (lead)
@@ -361,18 +361,18 @@ export class NoirEngine {
         return;
       }
       case 'piano': {
-        const { g, end } = this.decay(out ?? bus.piano, t, 0.16 * v, 0.004, Math.max(0.6, Math.min(2.2, dur + 0.8)));
+        const { g, end } = this.decay(out ?? bus.piano, t, 0.3 * v, 0.004, Math.max(0.6, Math.min(2.2, dur + 0.8)));
         this.osc('triangle', f, g, t, end);
         this.osc('sine', f * 2, g, t, end);
         return;
       }
       case 'strings': {
-        const { g, end } = this.decay(out ?? bus.strings, t, 0.07 * v, 0.008, 0.16);
+        const { g, end } = this.decay(out ?? bus.strings, t, 0.12 * v, 0.008, 0.16);
         this.osc('sawtooth', f, g, t, end);
         return;
       }
       case 'violin': {
-        const { g, end } = this.env(out ?? bus.violin, t, 0.05 * v, 0.4, dur, 0.5);
+        const { g, end } = this.env(out ?? bus.violin, t, 0.09 * v, 0.4, dur, 0.5);
         for (const d of [-6, 6]) this.vibrato(this.violinVibrato, this.osc('sawtooth', f, g, t, end, d));
         return;
       }
@@ -390,7 +390,7 @@ export class NoirEngine {
             ? [110, 48, 0.22, 0.5]
             : e.inst === 'heart'
               ? [72, 42, 0.2, 0.55]
-              : [150, 82, 0.34, 0.42];
+              : [150, 82, 0.34, 0.32];
         const { g, end } = this.decay(out ?? bus.drums, t, peak * v, 0.003, len);
         const o = this.osc('sine', start, g, t, end);
         o.frequency.exponentialRampToValueAtTime(stop, t + len * 0.6);
@@ -453,7 +453,7 @@ export class NoirEngine {
         return;
       }
       case 'daegeum': {
-        const { g, end } = this.env(out ?? bus.daegeum, t, 0.07 * v, 0.14, dur, 0.35);
+        const { g, end } = this.env(out ?? bus.daegeum, t, 0.13 * v, 0.14, dur, 0.35);
         const a = this.osc('sine', f, g, t, end);
         const b = this.osc('triangle', f, g, t, end);
         for (const o of [a, b]) {

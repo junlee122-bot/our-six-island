@@ -271,6 +271,83 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
   }),
 ];
 
+/* ------------------------------------------------------------ farm yards */
+
+/** One raised plot is PLOT_SIZE square; a bed frame holds 3 × 2 plots. */
+export const PLOT_SIZE = 0.72;
+export const PLOT_GAP = 0.1;
+/** Frame rim around the plots (each side). */
+export const BED_RIM = 0.12;
+export const BED_COLS = 3;
+export const BED_ROWS = 2;
+const BED_W = BED_COLS * PLOT_SIZE + (BED_COLS - 1) * PLOT_GAP + 2 * BED_RIM;
+const BED_D = BED_ROWS * PLOT_SIZE + (BED_ROWS - 1) * PLOT_GAP + 2 * BED_RIM;
+/** The lane in front of the yards and the picket fence that closes them (gates at each path). */
+export const VILLAGE_LANE_Z = -9;
+export const YARD_FENCE_Z = -10.35;
+export const YARD_GATE_HALF = 0.85;
+export type YardRect = { x: number; z: number; w: number; d: number };
+/**
+ * A friend's front-yard farm: two 3 × 2 bed frames beside the path from the
+ * door to the gate (plots 0–5 in the front bed, 6–11 in the back bed, which
+ * stays fallow until the farm is expanded), a well and a name sign at the
+ * gate. Yards are bounded by the house front, the lane fence and the midpoints
+ * to the neighbours.
+ */
+export type FarmYard = {
+  actor: number;
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  /** Door → gate path (x) through the yard. */
+  pathX: number;
+  /** [front bed (plots 0–5), back bed (plots 6–11)]. */
+  beds: readonly [YardRect, YardRect];
+  well: VillagePoint;
+  sign: VillagePoint;
+};
+export const VILLAGE_YARDS: readonly FarmYard[] = (() => {
+  const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home').sort((a, b) => a.x - b.x);
+  return homes.map((home, i): FarmYard => {
+    const prev = homes[i - 1],
+      next = homes[i + 1];
+    const x0 = round(prev ? (prev.x + home.x) / 2 : home.x - home.width / 2),
+      x1 = round(next ? (next.x + home.x) / 2 : home.x + home.width / 2);
+    const pathX = home.entry.x,
+      bedX = round(pathX + 0.75 + BED_W / 2),
+      front = home.z + home.depth / 2;
+    const bed = (z: number): YardRect => ({ x: bedX, z, w: round(BED_W), d: round(BED_D) });
+    return {
+      actor: home.actor!,
+      x0,
+      x1,
+      z0: round(front),
+      z1: YARD_FENCE_Z,
+      pathX,
+      beds: [bed(-13.9), bed(-17)],
+      well: { x: round(pathX - 1.5), z: -11.9 },
+      sign: { x: round(pathX + YARD_GATE_HALF + 0.12), z: YARD_FENCE_Z },
+    };
+  });
+})();
+export const villageYard = (actor: number) => VILLAGE_YARDS.find((y) => y.actor === actor) ?? null;
+/**
+ * Centre of plot `index` (0–11) in a yard: row-major from the back-left of
+ * the front bed (0–5), then the back bed (6–11).
+ */
+export function yardPlotCenter(yard: FarmYard, index: number): VillagePoint {
+  const bed = yard.beds[index < 6 ? 0 : 1],
+    i = index % 6,
+    col = i % BED_COLS,
+    row = Math.floor(i / BED_COLS),
+    step = PLOT_SIZE + PLOT_GAP;
+  return {
+    x: round(bed.x + (col - (BED_COLS - 1) / 2) * step),
+    z: round(bed.z + (row - (BED_ROWS - 1) / 2) * step),
+  };
+}
+
 export const VILLAGE_TERRACE = {
   id: 'terrace',
   x: -8,
@@ -279,10 +356,10 @@ export const VILLAGE_TERRACE = {
   depth: 3,
 } as const;
 export const VILLAGE_ORCHARD: readonly VillagePoint[] = [
-  { x: -22, z: -13 },
-  { x: -10, z: -18.3 },
-  { x: 10, z: -18.3 },
-  { x: 22, z: -13 },
+  { x: -31, z: -6 },
+  { x: -10, z: -29.6 },
+  { x: 10, z: -29.6 },
+  { x: 30.6, z: -13 },
   { x: 8, z: 12 },
   { x: -36, z: -5 },
   { x: -36, z: 5 },
@@ -314,9 +391,24 @@ export const VILLAGE_MARKET = {
  * frame on the river's north bank gets its glass once the 'greenhouse' bundle is
  * done. All are built from primitives in lounge-village-season-3d.ts.
  */
-export const VILLAGE_POND = { id: 'pond', name: '연못', x: -29, z: -17, radius: 2.6 } as const;
-/** Sea pier off the south-east edge; fishing stands at its root (x ≤ 39.6). */
-export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 39, z: 24, width: 1.5 } as const;
+export const VILLAGE_POND = { id: 'pond', name: '연못', x: -33, z: -15, radius: 2.6 } as const;
+/** Sea pier off the east edge; fishing stands at its root (x ≤ 47.6). */
+export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 47, z: 24, width: 1.5 } as const;
+
+/*
+ * VILL-2 fishing spots. Each water body is one convex solid (or a disc
+ * bitten into the island edge) so walking around it never wedges.
+ */
+/** 폭포 소: a pool bitten into the north-west edge under a rock cliff (the cliff stands beyond the edge). */
+export const VILLAGE_FALLS = { id: 'falls', name: '폭포 소', x: -40, z: -36.4, radius: 4 } as const;
+/** 호숫가 선착장: a round lake in the north-east; the dock reaches in from its west shore. */
+export const VILLAGE_LAKE = { id: 'lake', name: '호수', x: 39.5, z: -26, radius: 4, dockZ: -26 } as const;
+/** 윗물 여울: the river's upstream (west) stretch, past the last bridge, runs over rocks. */
+export const VILLAGE_RAPIDS = { id: 'rapids', name: '윗물 여울', x0: -48, x1: -35 } as const;
+/** South coast: a sand beach band, 갯바위 (a rock heap on the shore) and the night harbor dock. */
+export const VILLAGE_BEACH = { z0: 31.2 } as const;
+export const VILLAGE_ROCKS = { id: 'rocks', name: '갯바위', x: -19, z: 37.6, radius: 1.5 } as const;
+export const VILLAGE_HARBOR = { id: 'harbor', name: '밤 항구', x: 36, z: 38, width: 1.6, length: 6 } as const;
 // Museum and greenhouse footprints follow their kArchive models
 // (lounge-village-karchive-layout.ts: KARCHIVE_MUSEUM, KARCHIVE_GREENHOUSE).
 export const VILLAGE_MUSEUM = {
@@ -377,7 +469,7 @@ export const VILLAGE_FURNISHINGS = [
     id: 'forestBench',
     model: 'parkBench',
     x: 5,
-    z: -27.2,
+    z: -35.2,
     width: 3,
     depth: 2.5,
     height: 1.4,
@@ -414,13 +506,10 @@ export const VILLAGE_FURNISHINGS = [
 
 /** Walking routes drawn by the world builder and the minimap: [x1, z1, x2, z2, width]. */
 export type VillagePathSegment = readonly [number, number, number, number, number];
+// Each door path runs through the friend's yard and out of its gate to the lane.
 const homeSpurs: VillagePathSegment[] = VILLAGE_PLACES.filter(
   (place) => place.kind === 'home',
-).map((place) =>
-  place.z < -10
-    ? ([place.entry.x, place.entry.z - 0.4, place.entry.x, -9, 1.3] as const)
-    : ([place.entry.x, place.entry.z - 0.4, place.entry.x, -1.1, 1.45] as const),
-);
+).map((place) => [place.entry.x, place.entry.z - 0.4, place.entry.x, VILLAGE_LANE_Z, 1.3] as const);
 export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   // Three crossings fan the expanded valley out from the civic green.
   [-16, 10, -27, 10, 1.7],
@@ -435,12 +524,28 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [0, 20, -8, 24, 1.3],
   [5, 24, 14, 24, 1.3],
   // The eastern perimeter loops north to the forest walk and boardwalk.
-  [27, -1, 27, -25, 1.4],
-  [27, -25, 0, -25, 1.4],
+  [27, -1, 27, -33, 1.4],
+  [27, -33, 0, -33, 1.4],
   [27, -5, 29, -5, 1.45],
-  // Existing homes remain connected to the long forest trail at the north edge.
-  [14, -9, 24, -9, 1.3],
-  [24, -9, 27, -12, 1.3],
+  // The west perimeter mirrors it past the pond (VILL-2).
+  [0, -33, -27.5, -33, 1.4],
+  [-27.5, -33, -27.5, -9, 1.4],
+  [-27, -9, -27, 10, 1.4],
+  // The yard lane runs the whole row and meets both perimeters.
+  [14, -9, 27, -9, 1.3],
+  [-27.5, -9, -15.2, -9, 1.5],
+  // New fishing spots: waterfall pool, lake dock, upstream rapids, sea pier,
+  // and the south beach promenade to the rocks and the night harbor.
+  [-27.5, -33, -35.4, -31.6, 1.3],
+  [27, -26, 34.6, -26, 1.3],
+  [-27, 12.6, -40.6, 12.6, 1.2],
+  [27, 17.5, 31, 24, 1.3],
+  [31, 24, 46.6, 24, 1.3],
+  [5, 24, 5, 33.4, 1.3],
+  [-8, 24, -18, 33.4, 1.2],
+  [-19, 33.4, 30, 33.4, 1.3],
+  [-19, 33.4, -19, 35.2, 1.2],
+  [30, 33.4, 35.9, 36.9, 1.3],
   // West orchard picnic loop from its dedicated bridge.
   [-27, 5, -32, 5, 1.35],
   [-32, 5, -32, 3.2, 1.25],
@@ -470,9 +575,9 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [5, -3.3, 3, -3.3, 1.45],
   [-3, -3.3, 0, -2.7, 1.45],
   [3, -3.3, 0, -2.7, 1.45],
-  // The two side cottages join the plaza from the south side of the fountain.
-  [-20, -1.1, -7, -1.1, 1.5],
-  [20, -1.1, 7, -1.1, 1.5],
+  // The market walk and its east twin join the plaza south of the fountain.
+  [-13.5, -1.1, -7, -1.1, 1.5],
+  [13.5, -1.1, 7, -1.1, 1.5],
   [-7, -1.1, -5, -2.2, 1.4],
   [7, -1.1, 5, -2.2, 1.4],
   [-5, -2.2, -3, -3.3, 1.4],
@@ -516,7 +621,9 @@ export type VillageDecorKind =
   | 'fence'
   | 'mailbox'
   | 'hydrangea'
-  | 'rail';
+  | 'rail'
+  /** VILL-2 yard well (pump and trough); drawn by the life layer. */
+  | 'well';
 export type VillageCollider =
   | { shape: 'circle'; r: number }
   | { shape: 'box'; w: number; d: number };
@@ -556,23 +663,34 @@ const addTree = (x: number, z: number, scale: number, variant: number) =>
 // Edge woodland planted in irregular clusters, leaving routes and fronts open.
 (
   [
-    [-23, -16, 1.2],
-    [-22, -10.6, 0.9],
+    [-24.5, -28, 1.2],
+    [-31.5, -9.8, 0.9],
     [-25.3, -1.8, 1.2],
     [-22, 3, 0.95],
     [-23.5, 6.8, 1.1],
     [-22, 18, 0.95],
-    [23, -16, 1.1],
-    [22, -10.6, 0.92],
+    [31, -17.5, 1.1],
+    [31.6, -21.4, 0.92],
     [25.3, -1.8, 1.16],
     [22, 3, 0.95],
     [23.5, 6.8, 1.1],
     [22, 18, 0.92],
-    [-18, -18.3, 0.82],
-    [-3.5, -18.3, 0.72],
-    [4.5, -18.3, 0.78],
-    [13, -18.6, 0.75],
-    [18, -18.3, 0.8],
+    [-18, -27.6, 0.82],
+    [-3.5, -27.6, 0.72],
+    [4.5, -27.6, 0.78],
+    [13, -27.8, 0.75],
+    [18, -27.6, 0.8],
+    // VILL-2: the lots the side cottages left, and the new margins.
+    [-21, -4.2, 1.0],
+    [21, -4.2, 0.96],
+    [-37, -21, 1.05],
+    [-43, -24, 0.9],
+    [37, -16, 1.0],
+    [44, -18, 0.92],
+    [42, -34, 0.9],
+    [-42.5, 30, 0.95],
+    [-33, 28.5, 0.85],
+    [42.5, 30.5, 0.9],
     [-18, 12.3, 0.76],
     [-14, 12.3, 0.72],
     [14, 12.3, 0.74],
@@ -624,9 +742,6 @@ decor.push(
 // Hedges: a shrub is ~1.4 wide but only its dense core blocks walking.
 (
   [
-    [-19, -11],
-    [-19.2, -10.75],
-    [19, -11],
     [-21.5, 8.4],
     [-19.6, 11.4],
     [21.5, 8.4],
@@ -657,7 +772,11 @@ decor.push(
     [-32, 9, 12, 3],
     [5, 28, 10, 4],
     [33, -10.9, 12, 2],
-    [0, -28, 14, 5],
+    [0, -36, 14, 5],
+    [-36.5, -27.5, 10, 2],
+    [34, -21.5, 10, 4],
+    [-4, 30, 9, 1],
+    [22, 29.6, 9, 3],
     [-4, 12, 8, 2],
     [4, 12, 8, 5],
     [-20, 12.6, 8, 4],
@@ -721,6 +840,37 @@ for (const place of VILLAGE_PLACES) {
       z: front - 1.2,
       home,
       collider: boxCollider(0.14, 2.3),
+    });
+}
+
+// Yard fronts: one picket run along the lane, open at every yard's gate, and
+// a well beside each gate. (The fence is a straight wall with free ends and
+// the well stands clear of everything, so neither leaves a pocket.)
+{
+  const gates = VILLAGE_YARDS.map((y) => y.pathX).sort((a, b) => a - b);
+  const start = VILLAGE_YARDS[0].x0,
+    end = VILLAGE_YARDS[VILLAGE_YARDS.length - 1].x1;
+  const cuts = [start, ...gates.flatMap((g) => [g - YARD_GATE_HALF, g + YARD_GATE_HALF]), end];
+  for (let i = 0; i < cuts.length; i += 2) {
+    const a = cuts[i],
+      b = cuts[i + 1];
+    if (b - a < 0.3) continue;
+    decor.push({
+      id: `yard-fence-${i / 2}`,
+      kind: 'fence',
+      x: round((a + b) / 2),
+      z: YARD_FENCE_Z,
+      collider: boxCollider(round(b - a), 0.14),
+    });
+  }
+  for (const yard of VILLAGE_YARDS)
+    decor.push({
+      id: `well-${yard.actor}`,
+      kind: 'well',
+      x: yard.well.x,
+      z: yard.well.z,
+      home: yard.actor,
+      collider: circle(0.32),
     });
 }
 
@@ -846,13 +996,23 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
     collider: boxCollider(VILLAGE_FARMLAND.width, VILLAGE_FARMLAND.depth),
     rotation: 0,
   },
-  {
-    id: VILLAGE_POND.id,
-    x: VILLAGE_POND.x,
-    z: VILLAGE_POND.z,
-    collider: circle(VILLAGE_POND.radius),
+  ...[VILLAGE_POND, VILLAGE_FALLS, VILLAGE_LAKE, VILLAGE_ROCKS].map((w) => ({
+    id: w.id,
+    x: w.x,
+    z: w.z,
+    collider: circle(w.radius),
     rotation: 0,
-  },
+  })),
+  // Raised bed frames in every yard (two per friend).
+  ...VILLAGE_YARDS.flatMap((yard) =>
+    yard.beds.map((bed, i) => ({
+      id: `bed-${yard.actor}-${i}`,
+      x: bed.x,
+      z: bed.z,
+      collider: boxCollider(bed.w, bed.d),
+      rotation: 0,
+    })),
+  ),
   ...[VILLAGE_MUSEUM, VILLAGE_BOARD, VILLAGE_GREENHOUSE].map((b) => ({
     id: b.id,
     x: b.x,

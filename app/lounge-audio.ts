@@ -9,17 +9,22 @@
 // This is the app's single AudioContext. Channels under the master volume:
 // music (music box + ambience), sfx (footsteps, tables, life cues) and ui
 // (feedback.ts playCue, button clicks), each with its own settings level.
-// In 별빛 카지노 / 범마을 회관 (scene.place) a looping location track takes over
-// from the music box when its file exists (lounge-music-tracks.ts), with a
-// crossfade; at game tables the music continues quietly when 게임 중 배경음 is
-// on (settings.gameMusic) and steps aside otherwise.
+// In 별빛 카지노 / 범마을 회관 (scene.place) the room has its own music: a looping
+// file when one exists (lounge-music-tracks.ts), otherwise the room's generative
+// noir piece (lounge-music-synth.ts), crossfaded with the music box; at game
+// tables it continues quietly when 게임 중 배경음 is on (settings.gameMusic) and
+// steps aside otherwise. Table hooks add a tension layer during a hand and
+// short stings for big moments (tableTension / sting).
 import {
   getSettings,
   onSettingsChange,
   updateSettings,
 } from './lounge-settings';
+import { NoirEngine } from './lounge-music-synth';
+import type { StingKind } from './lounge-music-score';
 import {
   MUSIC_TRACKS,
+  PIECE_LEVEL,
   TRACK_LEVEL,
   TRACK_RELEASE_MS,
   loopPoints,
@@ -74,6 +79,9 @@ class LoungeAudio {
   private box: GainNode | null = null;
   private boxOn = false;
   private tracks: Record<MusicPlace, TrackSlot> = { casino: emptySlot(), hall: emptySlot() };
+  /** The generative room pieces (made on first need, then reused). */
+  private noir: NoirEngine | null = null;
+  private tension = false;
   private ambient: GainNode | null = null;
   private waterGain: GainNode | null = null;
   private sfx: GainNode | null = null;
@@ -145,6 +153,8 @@ class LoungeAudio {
     this.ctx = null;
     this.master = this.music = this.box = this.ambient = this.sfx = this.ui = this.waterGain = null;
     this.tracks = { casino: emptySlot(), hall: emptySlot() };
+    this.noir?.dispose();
+    this.noir = null;
     this.boxOn = false;
     this.waterNodes = null;
     this.applied = '';
@@ -258,6 +268,8 @@ class LoungeAudio {
     }
     for (const place of ['casino', 'hall'] as const)
       this.fadeTrack(place, musicOn && mix.track === place, t);
+    const synth = musicOn ? mix.synth : null;
+    if (synth || this.noir) this.noirEngine()?.setPiece(synth, t);
     // The water loop (noise + filter + LFO) only runs in the village.
     if (ambientOn && !this.waterNodes) this.startWater();
     else if (!ambientOn && this.waterNodes) this.stopWater();
@@ -314,6 +326,28 @@ class LoungeAudio {
       nodes.source.stop(at);
       nodes.lfo.stop(at);
     } catch {}
+  }
+
+  private noirEngine() {
+    if (!this.noir && this.ctx && this.noise && this.music) {
+      this.noir = new NoirEngine(this.ctx, this.noise, PIECE_LEVEL);
+      this.noir.output.connect(this.music);
+      this.noir.setTension(this.tension);
+    }
+    return this.noir;
+  }
+  /** A hand is being played at a casino / hall table: the piece's tension layer. */
+  tableTension(on: boolean) {
+    this.tension = on;
+    this.noir?.setTension(on);
+  }
+  /** A short sting for a big table moment (all-in, blackjack, a big win). */
+  sting(kind: StingKind) {
+    if (!getSettings().sound) return;
+    this.ensure();
+    const ctx = this.ctx;
+    if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    this.noirEngine()?.sting(kind, this.sfx, ctx.currentTime + 0.03);
   }
 
   /** Fetches and decodes a place's track once (a missing file stays missing). */
@@ -403,6 +437,7 @@ class LoungeAudio {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     this.tickTracks(ctx.currentTime);
+    if (this.noir?.busy) this.noir.schedule(ctx.currentTime, ctx.currentTime + 0.6);
     // No notes (and no oscillators) while the box is not heard: music off,
     // a location track playing, or a game table without 게임 중 배경음.
     if (!this.boxOn) {

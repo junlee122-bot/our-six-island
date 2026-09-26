@@ -11,7 +11,10 @@ import { friendlyError } from './lounge/feedback';
 import { lastRoomKey, recall, remember } from './lounge-settings';
 import { setServerClockOffset } from './lounge-turn-timer';
 import {
+  ACTION_TIMEOUT_MS,
   LINK_OK,
+  PROBE_GAP_MS,
+  READ_TIMEOUT_MS,
   isNetworkFailure,
   nextLink,
   retryDelay,
@@ -192,6 +195,9 @@ export class CloudRoom {
     this.timer = setTimeout(() => void this.refresh(), Math.max(250, delay));
   }
   private lastHint = 0;
+  /** Local time of the last server answer / Realtime-triggered probe. */
+  private lastOk = 0;
+  private lastProbe = 0;
   private hintTimer: ReturnType<typeof setTimeout> | null = null;
   /** Throttled refresh for Realtime hints: leading + trailing, ≤1 per 500ms. */
   private hint() {
@@ -216,6 +222,21 @@ export class CloudRoom {
       ? cloud.channel(name, { config: { private: true } })
       : cloud.channel(name);
     this.channel = channel;
+    // The Realtime socket notices a dropped network before the next poll:
+    // an error probes the server now (so the header turns to 연결 끊김 within
+    // a second or two), and a re-subscribe while offline reconnects at once.
+    const status = (s: string) => {
+      if (this.stopped || this.channel !== channel) return;
+      if (s === 'SUBSCRIBED') {
+        if (this.view.link.state !== 'ok') void this.refresh();
+      } else if (
+        (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT' || s === 'CLOSED') &&
+        Date.now() - Math.max(this.lastOk, this.lastProbe) > PROBE_GAP_MS
+      ) {
+        this.lastProbe = Date.now();
+        void this.refresh();
+      }
+    };
     channel.on('broadcast', { event: 'revision' }, (message) => {
       const revision = Number(
         (message as { payload?: { revision?: unknown } }).payload?.revision,
@@ -225,7 +246,7 @@ export class CloudRoom {
       this.hint();
     });
     const subscribe = () => {
-      if (this.channel === channel) channel.subscribe();
+      if (this.channel === channel) channel.subscribe(status);
     };
     if (PRIVATE_REALTIME)
       void cloud.realtime
@@ -247,6 +268,7 @@ export class CloudRoom {
       return;
     this.revision = r.revision;
     this.epoch = r.epoch;
+    this.lastOk = Date.now();
     if (this.view.link !== LINK_OK) this.view = { ...this.view, link: LINK_OK };
     this.activeRoom = r.activeRoom;
     const clockOffset = Number.isFinite(r.serverNow)
@@ -315,19 +337,31 @@ export class CloudRoom {
         : VISIBLE_POLL_MS,
     );
   }
-  private async send(command: CloudCommand, generation: number) {
+  /**
+   * `background` polls try once with a short timeout: a failure is reported
+   * to the link right away (retried on the fast backoff) instead of three
+   * silent 25s attempts that kept the header on "접속 3명" after a drop.
+   */
+  private async send(command: CloudCommand, generation: number, background = false) {
     let result: Response | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const attempts = background ? 1 : 2;
+    for (let attempt = 0; attempt < attempts; attempt++) {
       try {
         result = await cloudCall<Response>(
           'hohyeon-api',
           { op: 'world', command },
           true,
           this.account.id,
+          background ? READ_TIMEOUT_MS : ACTION_TIMEOUT_MS,
         );
         break;
       } catch (e) {
-        if (!(e instanceof AccountError) || e.status < 500 || attempt === 2)
+        if (
+          !(e instanceof AccountError) ||
+          e.status < 500 ||
+          attempt === attempts - 1 ||
+          (typeof navigator !== 'undefined' && navigator.onLine === false)
+        )
           throw e;
       }
     }
@@ -354,6 +388,7 @@ export class CloudRoom {
           connection: this.connection,
         },
         g,
+        true,
       );
     } catch (e) {
       if (this.stopped || g !== this.generation) return;

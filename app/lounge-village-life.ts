@@ -4,79 +4,80 @@
 // Pure (no three.js / DOM) so the schedule and lighting are testable and every
 // client computes the same thing from the same clock.
 import {
+  PLOT_GAP,
+  PLOT_SIZE,
   VILLAGE_DECOR,
   VILLAGE_FARMLAND,
   VILLAGE_MARKET,
   VILLAGE_ORCHARD,
   VILLAGE_PLACES,
+  VILLAGE_YARDS,
   villageCanWalk,
   villagePath,
+  villageYard,
+  yardPlotCenter,
   type VillagePoint,
 } from './lounge-village-layout.ts';
 import type { Crop, LifeView } from './lounge-life.ts';
 
 /* ------------------------------------------------------------ farm beds */
 
-/** One raised plot is PLOT_SIZE square; a bed holds 6 plots in cols × rows. */
-export const PLOT_SIZE = 0.62;
-export const PLOT_GAP = 0.1;
-export type FarmBed = { actor: number; x: number; z: number; cols: 2 | 3 };
+export { PLOT_SIZE, PLOT_GAP } from './lounge-village-layout.ts';
 /**
- * Each friend's six plots sit in open ground in front of (or right beside)
- * their home. The row homes are packed wall to wall, so the beds use the
- * green strips south of the lane; the narrow strip beside 분장실 holds a
- * 2 × 3 bed. tests/lounge-village-life.test.mjs keeps them off routes,
- * colliders and buildings.
+ * One bed frame of a friend's front-yard farm (VILL-2). Every friend has two:
+ * `part` 0 is the front bed (plots 0–5), 1 the back bed (plots 6–11, fallow
+ * until the farm is expanded to 9 / 12). Geometry: VILLAGE_YARDS.
  */
-export const FARM_BEDS: readonly FarmBed[] = [
-  { actor: 0, x: -13.6, z: -6.9, cols: 3 },
-  { actor: 1, x: -10.2, z: -6.9, cols: 3 },
-  { actor: 2, x: -5.2, z: -6.1, cols: 2 },
-  { actor: 3, x: 10.2, z: -6.9, cols: 3 },
-  { actor: 4, x: 13.9, z: -6.9, cols: 3 },
-  { actor: 5, x: -22.4, z: 0.85, cols: 3 },
-  { actor: 6, x: 22.4, z: 0.85, cols: 3 },
-];
+export type FarmBed = {
+  actor: number;
+  part: 0 | 1;
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  cols: 3;
+};
+export const FARM_BEDS: readonly FarmBed[] = VILLAGE_YARDS.flatMap((yard) =>
+  yard.beds.map(
+    (bed, part): FarmBed => ({ actor: yard.actor, part: part as 0 | 1, x: bed.x, z: bed.z, w: bed.w, d: bed.d, cols: 3 }),
+  ),
+);
+/** A friend's front bed (plots 0–5): where "go to my farm" leads. */
 export const farmBed = (actor: number) =>
-  FARM_BEDS.find((bed) => bed.actor === actor) ?? null;
+  FARM_BEDS.find((bed) => bed.actor === actor && bed.part === 0) ?? null;
+export const farmBeds = (actor: number) => FARM_BEDS.filter((bed) => bed.actor === actor);
 
 export function farmBedRect(bed: FarmBed) {
-  const rows = 6 / bed.cols;
-  return {
-    x: bed.x,
-    z: bed.z,
-    w: bed.cols * PLOT_SIZE + (bed.cols - 1) * PLOT_GAP + 0.2,
-    d: rows * PLOT_SIZE + (rows - 1) * PLOT_GAP + 0.2,
-  };
+  return { x: bed.x, z: bed.z, w: bed.w, d: bed.d };
 }
 /**
- * Expanded farms (9 / 12 plots) keep the bed's footprint: the rows get
- * shallower instead of the bed growing into the lane. Returns the centre of
- * plot `index` and the plot depth scale (1 for a 6-plot farm).
+ * Centre of plot `index` (0–11) of `bed.actor`'s farm. Plots 0–5 fill the
+ * front bed, 6–11 the back bed; every plot keeps its full size, so 9 and 12
+ * plots never overlap. `scale` is kept for callers (always 1).
  */
-export function plotCenterIn(bed: FarmBed, index: number, total: number) {
-  const base = 6 / bed.cols,
-    rows = Math.max(base, Math.ceil(total / bed.cols)),
-    scale = base / rows,
-    col = index % bed.cols,
-    row = Math.floor(index / bed.cols),
-    step = PLOT_SIZE + PLOT_GAP;
-  return {
-    x: bed.x + (col - (bed.cols - 1) / 2) * step,
-    z: bed.z + (row - (rows - 1) / 2) * step * scale,
-    scale,
-  };
+export function plotCenterIn(bed: FarmBed, index: number, _total = 6) {
+  const yard = villageYard(bed.actor);
+  const at = yard ? yardPlotCenter(yard, index) : { x: bed.x, z: bed.z };
+  return { ...at, scale: 1 };
 }
-/** Centre of plot `index` (0..5), row-major from the back-left. */
+/** Centre of plot `index` (0–11), row-major from the back-left of each bed. */
 export function plotCenter(bed: FarmBed, index: number): VillagePoint {
-  const rows = 6 / bed.cols,
-    col = index % bed.cols,
-    row = Math.floor(index / bed.cols),
-    step = PLOT_SIZE + PLOT_GAP;
-  return {
-    x: bed.x + (col - (bed.cols - 1) / 2) * step,
-    z: bed.z + (row - (rows - 1) / 2) * step,
-  };
+  const { x, z } = plotCenterIn(bed, index);
+  return { x, z };
+}
+/** Which friend's plot (if any) lies under a ground point (hover / click). */
+export function plotAt(point: VillagePoint): { actor: number; index: number } | null {
+  const half = PLOT_SIZE / 2 + PLOT_GAP / 2;
+  for (const yard of VILLAGE_YARDS)
+    for (const [part, bed] of yard.beds.entries()) {
+      if (Math.abs(point.x - bed.x) > bed.w / 2 || Math.abs(point.z - bed.z) > bed.d / 2) continue;
+      for (let i = part * 6; i < part * 6 + 6; i++) {
+        const c = yardPlotCenter(yard, i);
+        if (Math.abs(point.x - c.x) <= half && Math.abs(point.z - c.z) <= half)
+          return { actor: yard.actor, index: i };
+      }
+    }
+  return null;
 }
 
 /** Distance from a point to an axis-aligned rectangle (0 inside). */
@@ -107,17 +108,24 @@ export function walkableNear(target: VillagePoint): VillagePoint {
 /** The walkable spot just in front (+z) of a bed where you tend it. */
 export function farmFront(bed: FarmBed): VillagePoint {
   const r = farmBedRect(bed);
-  return walkableNear({ x: bed.x, z: bed.z + r.d / 2 + 0.45 });
+  return walkableNear({ x: bed.x, z: bed.z + r.d / 2 + 0.55 });
 }
 
 export const FARM_REACH = 1.3;
-/** Distance from `point` to the edge of `actor`'s farm bed (Infinity if none). */
+/** Distance from `point` to the nearer of `actor`'s two bed frames (Infinity if none). */
 export function farmDistance(point: VillagePoint, actor: number) {
-  const bed = farmBed(actor);
-  return bed ? rectDistance(point, farmBedRect(bed)) : Infinity;
+  const yard = villageYard(actor);
+  if (!yard) return Infinity;
+  return Math.min(...yard.beds.map((bed) => rectDistance(point, bed)));
 }
 export function nearFarm(point: VillagePoint, actor: number, reach = FARM_REACH) {
   return farmDistance(point, actor) <= reach;
+}
+/** The friend whose yard `point` stands in (null outside every yard). */
+export function yardOwnerAt(point: VillagePoint): number | null {
+  for (const yard of VILLAGE_YARDS)
+    if (point.x >= yard.x0 && point.x <= yard.x1 && point.z >= yard.z0 && point.z <= yard.z1 + 0.2) return yard.actor;
+  return null;
 }
 
 /**

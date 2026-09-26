@@ -15,7 +15,7 @@ import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, NAMES, josa } from '../lounge-text';
 import { DailyButton } from './WalletModal';
-import { linkLabel, offlineReason } from '../lounge-connection';
+import { linkLabel, offlineReason, retryDelay } from '../lounge-connection';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
 
@@ -45,7 +45,12 @@ export function PresenceRow({
   onRetry?: () => void;
 }) {
   const offline = view.link.state === 'offline';
-  const now = useNow(offline);
+  // The clock only ticks while offline: never count down from a stale time
+  // (the latest failure is at retryAt − its delay).
+  const now = Math.max(
+    useNow(offline),
+    view.link.retryAt !== null ? view.link.retryAt - retryDelay(view.link.failures) : 0,
+  );
   const connected = view.status === 'connected' && !offline;
   const others = connected
     ? view.players.filter((p) => p.id !== view.self)

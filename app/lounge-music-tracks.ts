@@ -1,6 +1,8 @@
 // Location music slots for 별빛 카지노 and 범마을 회관 (ASSETS.md → 장소 배경음).
 // A slot plays a looping audio file when one is dropped into
-// public/assets/lounge/music/; with no file the village music box keeps playing.
+// public/assets/lounge/music/; with no file (or while it loads) the room's
+// generative piece plays instead (lounge-music-score.ts / lounge-music-synth.ts).
+// The village and rooms keep the music box.
 // scripts/build-standalone.mjs content-hashes the files that exist and blanks the
 // paths that do not, so the standalone build never references a missing file.
 // Pure helpers only (no AudioContext here): lounge-audio.ts does the playback.
@@ -30,6 +32,11 @@ export const MUSIC_TRACKS: Record<MusicPlace, MusicTrack> = {
  * measures about -39 LUFS at its 0.2 channel level; see ASSETS.md).
  */
 export const TRACK_LEVEL = 0.08;
+/**
+ * Level of the generative room pieces (they render at about -23 LUFS, so this
+ * puts them near -37 LUFS, a touch above the music box).
+ */
+export const PIECE_LEVEL = 0.2;
 /** Music level at a casino / hall game table with 게임 중 배경음 on. */
 export const GAME_MUSIC_LEVEL = 0.4;
 /** Decoded tracks not heard for this long are released (memory). */
@@ -69,16 +76,19 @@ export function loopPoints(track: MusicTrack, duration: number) {
 export type MusicMix = {
   /** Music channel level before the music volume (and Esc duck). */
   channel: number;
-  /** The village music box (fallback when a place has no track). */
+  /** The village music box (outside the casino and the hall). */
   box: number;
-  /** The location track that should be heard, or null. */
+  /** The location file that should be heard, or null. */
   track: MusicPlace | null;
+  /** The generative piece that should be heard (no file, or still loading). */
+  synth: MusicPlace | null;
 };
 
 /**
- * What the music channel plays. In the casino / hall the place's track wins
- * once it is loaded (otherwise the music box stands in); at a game table the
- * music continues at GAME_MUSIC_LEVEL when 게임 중 배경음 is on, else it steps aside.
+ * What the music channel plays. In the casino / hall the place's file wins
+ * once it is loaded, otherwise its generative piece plays; elsewhere the music
+ * box. At a game table the music continues at GAME_MUSIC_LEVEL when
+ * 게임 중 배경음 is on, else it steps aside.
  */
 export function musicMix(
   scene: { place: MusicPlace | null; game: boolean; night: boolean },
@@ -87,7 +97,9 @@ export function musicMix(
 ): MusicMix {
   const place = scene.place;
   const channel = scene.game ? (place && gameMusic ? GAME_MUSIC_LEVEL : 0) : 1;
-  const track = channel > 0 && place && ready(place) ? place : null;
-  const box = channel > 0 && !track ? (scene.night ? 0.16 : 0.2) : 0;
-  return { channel, box, track };
+  const on = channel > 0 ? place : null;
+  const track = on && ready(on) ? on : null;
+  const synth = on && !track ? on : null;
+  const box = channel > 0 && !place ? (scene.night ? 0.16 : 0.2) : 0;
+  return { channel, box, track, synth };
 }
