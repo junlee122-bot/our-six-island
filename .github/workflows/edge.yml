@@ -1,0 +1,65 @@
+# Deploys the Supabase Edge functions when server code changes on main.
+# Needs the repository secret SUPABASE_ACCESS_TOKEN (Settings → Secrets and
+# variables → Actions) and runs in the protected "supabase" environment.
+name: Deploy Edge functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'app/*.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: ogfpeqeoaznwjbrbedbx
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm test
+      - name: Bundle functions
+        run: |
+          mkdir -p out/hohyeon-api out/hohyeon-auth
+          common="--bundle --format=esm --platform=neutral --target=es2022 --minify --legal-comments=none --external:@supabase/supabase-js --external:@supabase/realtime-js --external:chess.js"
+          npx esbuild supabase/functions/hohyeon-api/index.ts $common --charset=utf8 --outfile=out/hohyeon-api/index.js
+          npx esbuild supabase/functions/hohyeon-auth/index.ts $common --outfile=out/hohyeon-auth/index.js
+          cp supabase/functions/deno.json out/hohyeon-api/deno.json
+          cp supabase/functions/deno.json out/hohyeon-auth/deno.json
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "SUPABASE_ACCESS_TOKEN secret is missing"; exit 1; }
+          deploy() {
+            name=$1 jwt=$2
+            cd "out/$name"
+            status=$(curl -sS -o resp.json -w '%{http_code}' -X POST \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/functions/deploy?slug=$name" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -F "metadata={\"entrypoint_path\":\"index.js\",\"import_map_path\":\"deno.json\",\"name\":\"$name\",\"verify_jwt\":$jwt};type=application/json" \
+              -F "file=@index.js;type=application/javascript" \
+              -F "file=@deno.json;type=application/json")
+            node -e "const r=require('./resp.json');console.log('$name', '$status', r.version ?? '', r.status ?? r.message ?? '')"
+            cd - >/dev/null
+            [ "$status" -lt 300 ]
+          }
+          deploy hohyeon-auth false
+          deploy hohyeon-api true
