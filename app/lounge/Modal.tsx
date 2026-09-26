@@ -10,12 +10,18 @@ const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d]';
  * visible scene. Never steals focus from another dialog that is now open.
  */
 function restoreFocus(opener: HTMLElement | null) {
-  if (document.querySelector('dialog[open]')) return;
   const active = document.activeElement;
   // Something else already took focus (e.g. the next screen's own field).
   if (active instanceof HTMLElement && active !== document.body) return;
   const visible = (e: Element | null): e is HTMLElement =>
     e instanceof HTMLElement && e.isConnected && e.getClientRects().length > 0;
+  const open = [...document.querySelectorAll<HTMLDialogElement>('dialog[open]')].at(-1);
+  if (open) {
+    // A confirm closed over another dialog: back to what opened it there, so
+    // its keys (and Escape) keep working without a click.
+    (visible(opener) && open.contains(opener) ? opener : open).focus({ preventScroll: true });
+    return;
+  }
   const target = visible(opener)
     ? opener
     : [...document.querySelectorAll(SCENES)].find(visible);

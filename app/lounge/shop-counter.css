@@ -101,7 +101,11 @@ dialog.sc-counter {
 }
 .sc-upgrades:focus,
 .sc-shelf:focus,
-.sc-realty-body:focus {
+.sc-realty-body:focus,
+.l-app .sc-upgrades:focus-visible,
+.l-app .sc-shelf:focus-visible,
+.l-app .sc-realty-body:focus-visible {
+  /* The picked row is the focus mark inside these keyboard boards. */
   outline: none;
 }
 .sc-tiers,

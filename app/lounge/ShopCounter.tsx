@@ -128,7 +128,7 @@ export function UpgradeBoard({ venue, room, view, notify, host }: Omit<Base, 'on
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- ←→ category, ↑↓ tier, Enter chips in.
     <div className="sc-upgrades" ref={boardRef} tabIndex={-1} role="application" aria-roledescription={`${VENUE_NAME[venue]} 업그레이드`} onKeyDown={onKey} data-testid={`upgrades-${venue}`}>
       <p className="sc-help">
-        친구들이 범을 조금씩 보태 함께 짓는 가게 업그레이드예요. 다 모이면 {VENUE_NAME[venue]}이(가) 모두에게 바뀌어요. 지금 {done}/{total}개 완성.
+        친구들이 범을 조금씩 보태 함께 짓는 가게 업그레이드예요. 다 모이면 {josa(VENUE_NAME[venue], '이/가')} 모두에게 바뀌어요. 지금 {done}/{total}개 완성.
         <kbd>←→</kbd> 분류 <kbd>↑↓</kbd> 단계 <kbd>Enter</kbd> 보태기
       </p>
       <div className="sc-cats" role="tablist">
