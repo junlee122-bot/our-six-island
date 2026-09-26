@@ -561,3 +561,16 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 프롬프트:
 
 > Full-bleed portrait concert poster, polished official anime key-visual style, crisp clean line art and cel shading with glowing highlights. Subject: Hatsune Miku, the virtual singer — very long teal twin-tails tied with black-and-pink hair ties, teal eyes, grey sleeveless collared top with a teal necktie, black detached sleeves with teal trim, black skirt, singing joyfully into a handheld microphone, one arm raised, hair flowing dynamically. She stands center-stage on a glossy stage with teal and pink spotlight beams, lens flares, floating sparkles, stars and music notes; in the lower foreground a dark silhouette crowd waving teal and pink glow sticks. Deep navy night background with teal/pink gradient light. Typographic layout like a real event poster: at the top a large bold stylized title "MIKU LIVE" in white with teal glow, directly beneath it in clean Korean sans-serif "범타듀 밸리 콘서트"; at the bottom a thin clean info band with the line "2026.10.31 SAT · 범타듀 밸리 라운지 스테이지" and a small line "OPEN 18:00 / START 19:00". All lettering sharp, correctly spelled, legible. No other text, no logos, no sponsor marks, no watermark, no border or frame — art fills the whole canvas.
+
+## 금빛 브레이드 · 케이프 코트 · 메이드 (2026-09-26)
+
+소유자가 올린 세 장의 옷 사진(금빛 프로그 브레이드 검정 폴로, 케이프 달린 더블 피코트와 티어드 미니스커트, 빅토리안 롱 메이드 드레스)을 **생성 참고로만** Higgsfield에 올려 GPT Image 2.5(high, 4K, 3:2, opaque)로 두 장을 생성했습니다. 사진 원본은 저장소에 넣지 않았습니다. 얼굴·비율·그림체 참고는 기존 `akatsuki-atlas.png`입니다(메이드는 시트 전체, 두 여성 의상은 셀 0·2·7을 3×2로 배치한 합성본). 생성 2회, 장당 4.25크레딧, 합계 **8.5크레딧**(생성 전 잔액 38.25). 모자는 그리지 않았습니다.
+
+| 파일 | 크기 · 칸 | 내용 | 작업 ID |
+| --- | --- | --- | --- |
+| `lounge/ladies-outfits-atlas.png` / `.webp` | 2100×1400, 3×2 | 윗줄 금빛 브레이드(검정 폴로·금빛 장식 끈·검정 플리츠 스커트), 아랫줄 케이프 코트(더블 피코트·케이프·회색 티어드 스커트·무늬 타이츠·회색 술 목도리). 칸 순서 도원 · 민서 · 도원 만두머리 | `34917de1-3d3a-4042-8845-18722e6fd06c` |
+| `lounge/maid-atlas.png` / `.webp` | 2100×1400, 4×2 | 메이드: 여자는 발목 길이 검정 드레스, 남자는 무릎 길이 검정 튜닉 코트와 바지, 모두 흰 러플 앞치마·둥근 흰 칼라·갈색 가죽 장갑·레이스업 부츠. 칸 순서 도원·강재·민서·승준·민재·재민·호현·도원 만두머리 | `218b93a0-cab0-4c6b-b621-b3a846bfc38b` |
+
+생성본(3504×2336)은 오프라인에서 배경을 뺐습니다. 가장자리 픽셀은 마젠타 비율만큼 색을 역산(스필 제거)하고 알파를 이진화했으며, 400px 미만의 떨어진 조각은 지웠습니다. 2100×1400으로 lanczos3 축소 후 배경은 투명(RGB는 #ff00ff 유지)으로 저장하고, 런타임은 **무손실 WebP**(`scripts/optimize-assets.mjs`의 목록에 추가, 각 약 1.0 MB·1.3 MB)입니다. 정확한 프롬프트·원본 주소·해시는 [outfits3-generation.json](public/assets/lounge/outfits3-generation.json)에 기록했습니다.
+
+걷기·달리기는 컷아웃 리그입니다(`node --experimental-strip-types scripts/build-lounge-rig.mjs`; 기존 칸의 리그 값은 그대로). 세 의상 모두 치마·코트·앞치마가 몸통에 붙어 있는 hem 모드이고, 메이드와 케이프 코트는 팔을 흔들지 않습니다(앞치마 옆 검정 코트 자락이 팔로 잘못 잘리던 문제). 금빛 브레이드는 양팔이 모두 잡힐 때만 팔을 흔듭니다. 머리 염색은 파란 머리 규약을 따르며, 팔에 가려 끊긴 민서의 긴 머리도 염색되도록 이 아틀라스들만 `looseBlueHair`를 씁니다(옷에 파란색이 없음). 피부 염색은 얼굴·목·맨팔·맨다리만 칠하고 장갑·타이츠·금빛 장식·앞치마는 칠하지 않습니다. 이 얼굴들은 눈가에 옅은 크림색 하이라이트가 있어 `paleFaceHighlights`로 눈 제외 조건을 좁혔습니다. 눈높이(안경 위치)는 `LADIES_EYES`/`MAID_EYES`에 쟀습니다.

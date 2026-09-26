@@ -1,0 +1,66 @@
+{
+  "model": "gpt_image_2_5",
+  "createdAt": "2026-09-26",
+  "params": {
+    "quality": "high",
+    "resolution": "4k",
+    "aspect_ratio": "3:2",
+    "background": "opaque",
+    "count": 1
+  },
+  "estimatedCreditsEach": 4.25,
+  "note": "References: the owner's three outfit photos (uploaded to Higgsfield only as generation references, not stored in this repository) plus layout/identity references composed from akatsuki-atlas.png. Keyed offline: magenta spill unmixed on edge pixels, binary alpha, specks under 400 px dropped, downscaled 3504x2336 -> 2100x1400 (lanczos3), transparent background (RGB kept #ff00ff).",
+  "atlases": [
+    {
+      "file": "ladies-outfits-atlas.png",
+      "runtime": "ladies-outfits-atlas.webp",
+      "jobId": "34917de1-3d3a-4042-8845-18722e6fd06c",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GvlNWM4g0WFFzr7aU4tTQPXdqm/hf_20260926_082553_34917de1-3d3a-4042-8845-18722e6fd06c.png",
+      "layoutReference": "akatsuki-atlas.png cells 0, 2, 7 placed in a 3x2 grid (both rows)",
+      "cells": {
+        "columns": 3,
+        "rows": 2,
+        "order": [
+          "gold-braid 도원",
+          "gold-braid 민서",
+          "gold-braid 도원 buns",
+          "cape-coat 도원",
+          "cape-coat 민서",
+          "cape-coat 도원 buns"
+        ]
+      },
+      "prompt": "Create a production-ready 2D game character sprite atlas by editing the FIRST attached image, which is an existing 3-column by 2-row layout of our game characters. Preserve EXACTLY its soft hand-drawn anime/chibi art style, line weight, soft shading, faces, large brown eyes, friendly smile, head-to-body proportions, front-facing neutral standing pose and hairstyles. All hair stays the same saturated BLUE marker color as the reference so the game can recolor it. Flat solid chroma-magenta #FF00FF background everywhere, no gradient, no floor, no shadows on the background. Exactly 3 columns by 2 rows, six evenly spaced equal square cells, no grid lines, no labels, no text, no logos, no props. Each full-body figure is complete inside its own cell with ample empty padding; all feet aligned to the same baseline in each row; all six figures the same size and consistently positioned. COLUMN 1 in both rows is the girl with the chin-length blue bob and bangs. COLUMN 2 in both rows is the girl with very long straight blue hair to the waist. COLUMN 3 in both rows is the SAME bob-haired girl as column 1 but with two high round Chun-Li-style hair buns with small cream ribbons (all bun hair BLUE). Keep each girl's facial character. NO hats, NO beanie, NO glasses, NO headbands, NO hair accessories besides the column-3 ribbons; the game draws accessories separately. Replace the black cloaks entirely with two new outfits. TOP ROW (all three girls), from the SECOND attached image: a fitted BLACK short-sleeve polo shirt with a pointed shirt collar, three small black buttons at the placket, and GOLD looped hussar frog-braid cord embroidery running vertically down both sides of the front, clearly visible; tucked into a short black pleated skirt; bare knees, white crew socks, black mary-jane shoes. Short sleeves show the bare forearms and small bare hands. TOP ROW keeps arms relaxed slightly away from the body. BOTTOM ROW (all three girls), from the THIRD attached image (right-hand model): a BLACK wool double-breasted short peacoat with a high stand-up collar, a short black capelet layer over the shoulders, two columns of black buttons, long sleeves to the wrists with small bare hands visible; below the coat hem a layered charcoal-grey pinstripe tiered ruffled mini skirt; opaque dark charcoal-grey tights with a subtle grey diamond pattern (never skin-colored, never blue); black ankle boots; a small soft light-grey fringed wool scarf loosely around the neck with short fringed ends hanging on the chest. No hat on anyone. Garments must be black, grey, gold, white or charcoal only: never navy or blue (blue is reserved for hair). Keep the original face skin shade and skin shading. Both small hands clearly separated from the body with a little magenta gap between arm and torso. Crisp clean outlines. The output is a single high-quality flat 2D game asset sheet, NOT a poster, NOT a scene, NOT 3D.",
+      "width": 2100,
+      "height": 1400,
+      "runtimeBytes": 1025152,
+      "runtimeSha256": "cf05fbc8f5d826428ffc8e8ad9c3e69483687e889f6f3e47173a8a9a9432d50a"
+    },
+    {
+      "file": "maid-atlas.png",
+      "runtime": "maid-atlas.webp",
+      "jobId": "218b93a0-cab0-4c6b-b621-b3a846bfc38b",
+      "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GvlNWM4g0WFFzr7aU4tTQPXdqm/hf_20260926_082553_218b93a0-cab0-4c6b-b621-b3a846bfc38b.png",
+      "layoutReference": "akatsuki-atlas.png (whole sheet)",
+      "cells": {
+        "columns": 4,
+        "rows": 2,
+        "actors": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          0
+        ],
+        "lastCellHairstyle": "buns"
+      },
+      "prompt": "Create a production-ready 2D game character sprite atlas by editing the FIRST attached image, an existing 4-column by 2-row atlas of our eight game characters. Preserve EXACTLY its soft hand-drawn anime/chibi art style, line weight, soft shading, faces, large brown eyes, friendly smile, head-to-body proportions, front-facing neutral standing pose, cell positions and the eight distinct hairstyles. All hair stays the same saturated BLUE marker color as the reference so the game can recolor it. Flat solid chroma-magenta #FF00FF background everywhere, no gradient, no floor, no shadows on the background. Exactly 4 columns by 2 rows, 8 evenly spaced equal rectangular cells, no grid lines, no labels, no text, no logos, no props. Each full-body figure is complete inside its own cell with ample empty padding, feet aligned to the same baseline in each row, all eight equally sized and positioned exactly like the reference. Same people in the same cells as the reference: cell 1 girl with blue bob, cell 2 MAN with shoulder-length hair, cell 3 girl with very long hair, cell 4 man, cell 5 MAN with medium-length bob hair, cell 6 man, cell 7 man, cell 8 the same girl as cell 1 with two high round hair buns and small cream ribbons. Keep each person's facial character. NO hats, NO maid headdress, NO glasses, NO headbands; the game draws accessories separately. Replace ALL the black Akatsuki cloaks entirely with a classic Victorian MAID outfit based on the SECOND attached image. GIRLS (cells 1, 3, 8): long black long-sleeve maid dress reaching the ankles, white rounded Peter Pan collar with a tiny brooch, a long WHITE pinafore apron with ruffled frilled shoulder straps, a gathered waistband and a wide ruffled hem reaching near the dress hem, dark brown leather gloves, black lace-up ankle boots. MEN (cells 2, 4, 5, 6, 7): the matching men's maid outfit, clearly the same maid set adapted to a boy's figure: a black long-sleeve high-buttoned long tunic coat reaching the knees, the same white rounded collar, the SAME long white pinafore apron with ruffled frilled shoulder straps, gathered waist and ruffled hem reaching mid-shin, black straight trousers, dark brown leather gloves, black lace-up ankle boots. Tasteful and neat, consistent across all eight. Arms hang relaxed slightly away from the body with a little magenta gap between sleeve and torso; gloved hands visible. The dress, coat and trousers must be black, never navy or blue (blue is reserved for hair); the apron and collar pure white; gloves dark brown. Keep the original face skin shade and skin shading. Crisp clean outlines. The output is a single high-quality flat 2D game asset sheet, NOT a poster, NOT a scene, NOT 3D.",
+      "width": 2100,
+      "height": 1400,
+      "runtimeBytes": 1273994,
+      "runtimeSha256": "f9f73ff4fb9b70a12bf8ed9d7bcdde3238f5c2d8a68a0978af76d3f033cf96bb"
+    }
+  ]
+}
