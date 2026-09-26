@@ -1059,7 +1059,7 @@ export function Village3D(props: Props) {
       const sizes: Record<number, number> = {};
       for (const [a, list] of Object.entries(plots)) sizes[Number(a)] = list.length;
       if (life?.me.plots) sizes[me] = life.me.plots;
-      if (world.valley.update({ plots: sizes })) {
+      if (world.valley.update({ plots: sizes, season: life?.calendar?.season ?? null })) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
       }

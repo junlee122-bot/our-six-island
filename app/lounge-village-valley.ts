@@ -29,6 +29,7 @@ import {
 } from './lounge-village-layout';
 import { FISH_STAND, bobberPoint } from './lounge-village-spots';
 import type { Spot } from './lounge-items';
+import type { Season } from './lounge-calendar';
 
 type Loader = (url: string) => Promise<THREE.Group>;
 const GROUND_Y = 0.03;
@@ -110,6 +111,20 @@ const NO_SHADOW = new Set<ValleyModelKey>(['stonePaver', 'meadowGrass', 'onggi',
 export type ValleyUpdate = {
   /** Plots per friend (6 / 9 / 12). */
   plots: Record<number, number>;
+  season?: Season | null;
+};
+/**
+ * Seasonal tint multiplied over the baked foliage texture, so the kArchive
+ * trees follow the procedural ones (gold in autumn, frosted in winter).
+ */
+type Tint = { color: string; glow: string; glowIntensity: number };
+const AUTUMN: Tint = { color: '#ffcf6a', glow: '#7a4410', glowIntensity: 0.28 };
+const FROST: Tint = { color: '#b9c2c4', glow: '#e4ecf0', glowIntensity: 0.42 };
+const FOLIAGE_TINT: Partial<Record<ValleyModelKey, Partial<Record<Season, Tint>>>> = {
+  broadleafTree: { autumn: AUTUMN, winter: FROST },
+  shrub: { autumn: AUTUMN, winter: FROST },
+  meadowGrass: { autumn: AUTUMN, winter: FROST },
+  smallPine: { winter: { ...FROST, glowIntensity: 0.3 } },
 };
 
 export class VillageValleyLayer {
@@ -124,6 +139,8 @@ export class VillageValleyLayer {
   private lanterns: THREE.MeshStandardMaterial[] = [];
   private night = 0;
   private textures = new Map<string, number>();
+  private foliage = new Map<ValleyModelKey, THREE.MeshStandardMaterial[]>();
+  private season: Season | null = null;
   constructor(scene: THREE.Object3D) {
     this.scene = scene;
     this.root.name = 'village-valley';
@@ -157,6 +174,15 @@ export class VillageValleyLayer {
           this.root.add(object);
         }
         if (model === 'hanjiLantern') this.litLanterns();
+        if (FOLIAGE_TINT[model]) {
+          const mats: THREE.MeshStandardMaterial[] = [];
+          source.traverse((child) => {
+            const m = (child as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+            if ((child as THREE.Mesh).isMesh && m && !mats.includes(m)) mats.push(m);
+          });
+          this.foliage.set(model, mats);
+          this.tint(model);
+        }
         if (model === 'waterPump') {
           // The pump stands where the primitive well was; the well's collider stays.
           const wells = this.scene.getObjectByName('village-yard-wells');
@@ -210,10 +236,24 @@ export class VillageValleyLayer {
     return jobs;
   }
 
+  private tint(model: ValleyModelKey) {
+    const t = this.season ? FOLIAGE_TINT[model]?.[this.season] : undefined;
+    for (const m of this.foliage.get(model) ?? []) {
+      m.color.set(t?.color ?? '#ffffff');
+      m.emissive.set(t?.glow ?? '#000000');
+      m.emissiveIntensity = t?.glowIntensity ?? 0;
+    }
+  }
+
   /** Farm sizes decide which yard props show; true when something changed. */
   update(u: ValleyUpdate) {
     this.plots = u.plots;
     let changed = false;
+    if (u.season !== undefined && u.season !== this.season) {
+      this.season = u.season;
+      for (const model of this.foliage.keys()) this.tint(model);
+      changed = true;
+    }
     for (const [object, actor, need] of this.gated) {
       const show = (u.plots[actor] ?? 6) >= need;
       if (object.visible !== show) {
