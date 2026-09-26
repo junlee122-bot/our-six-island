@@ -224,7 +224,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = area === 'mine' ? 1.25 : 1.05;
+    renderer.toneMappingExposure = area === 'mine' ? 1.45 : 1.05;
     renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     const canvas = renderer.domElement;
@@ -237,7 +237,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     scene.background = new THREE.Color(region.look.sky);
     // Only a far haze: the camera sits ~50 units away.
     if (area !== 'mine') scene.fog = new THREE.Fog(region.look.fog, 90, 170);
-    const hemi = new THREE.HemisphereLight(area === 'mine' ? '#8a7560' : '#fff6e2', area === 'mine' ? '#1d1510' : '#5d7446', area === 'mine' ? 0.7 : 1.5);
+    const hemi = new THREE.HemisphereLight(area === 'mine' ? '#8a7560' : '#fff6e2', area === 'mine' ? '#1d1510' : '#5d7446', area === 'mine' ? 1.35 : 1.5);
     const sun = new THREE.DirectionalLight(area === 'mine' ? '#ffd9a8' : '#fff1d6', area === 'mine' ? 0.35 : 2.1);
     sun.position.set(-12, 22, 10);
     sun.castShadow = quality.shadows;
@@ -250,7 +250,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     sc.far = 80;
     scene.add(hemi, sun, sun.target);
     // My lantern (the mine is dark).
-    const lantern = new THREE.PointLight('#ffc27a', area === 'mine' ? 2.4 : 0, 8, 1.5);
+    const lantern = new THREE.PointLight('#ffc27a', area === 'mine' ? 3.2 : 0, 10, 1.3);
     scene.add(lantern);
 
     const set = new RegionSet(area);

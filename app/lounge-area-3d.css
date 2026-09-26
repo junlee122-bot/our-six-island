@@ -45,8 +45,11 @@
 .ar-plate {
   position: absolute;
   z-index: 3;
-  left: 20px;
+  left: 50%;
   top: 92px;
+  transform: translateX(-50%);
+  text-align: center;
+  justify-items: center;
   display: grid;
   gap: 3px;
   max-width: min(360px, calc(100% - 40px));
@@ -148,6 +151,5 @@
   }
   .ar-plate {
     top: 76px;
-    left: 12px;
   }
 }

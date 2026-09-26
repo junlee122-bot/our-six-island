@@ -232,16 +232,16 @@ export class RegionSet {
     // The mouth: a dark arch facing the camera, framed with mine timbers.
     const mouth = new THREE.Mesh(new THREE.CircleGeometry(1.25, 24, 0, Math.PI), dark);
     mouth.scale.set(1, 1.35, 1);
-    mouth.position.set(0, 0.02, -0.55);
+    mouth.position.set(0, 0.02, 0.42);
     g.add(mouth);
     for (const x of [-1.25, 1.25]) {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.8, 0.2), timber);
-      post.position.set(x, 0.9, -0.45);
+      post.position.set(x, 0.9, 0.5);
       g.add(post);
       this.disposables.push(post.geometry);
     }
     const beam = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.24, 0.24), timber);
-    beam.position.set(0, 1.84, -0.45);
+    beam.position.set(0, 1.84, 0.5);
     g.add(beam);
     // A little mine cart rail stub.
     for (const x of [-0.35, 0.35]) {
