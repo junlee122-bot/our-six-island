@@ -44,3 +44,4 @@ next-env.d.ts
 
 # admin economy reports (friends' balances; never commit)
 /supabase/admin/reports/
+/docs/
