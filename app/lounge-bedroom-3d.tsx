@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import * as THREE from 'three';
 import { loungeSprites } from './lounge-sprites';
+import { HAT_HEADROOM, withHatHeadroom } from './lounge-figure-frame';
 import {
   BEDROOM_LIMITS,
   ROOM,
@@ -476,9 +477,13 @@ export function Bedroom3D({
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
     const avatarHeight = 1.82;
     const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-    const avatarGeometry = new THREE.PlaneGeometry(avatarHeight * cameraUp.y * (440 / 540), avatarHeight);
+    // The figure canvas adds a hat band (HAT_HEADROOM) above the 440×540 body
+    // canvas that avatarHeight spans, so a hat never shrinks the figure.
+    const avatarCanvasHeight = withHatHeadroom(540),
+      avatarPlaneHeight = (avatarHeight * avatarCanvasHeight) / 540;
+    const avatarGeometry = new THREE.PlaneGeometry(avatarHeight * cameraUp.y * (440 / 540), avatarPlaneHeight);
     // loungeSprites.draw places the soles at 97% of the texture's height.
-    avatarGeometry.translate(0, avatarHeight * 0.47, 0);
+    avatarGeometry.translate(0, avatarPlaneHeight * 0.47, 0);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = shadowCanvas.height = 64;
     {
@@ -510,7 +515,7 @@ export function Bedroom3D({
     const figure = (actor: number, look: Look, at: WalkPoint): Figure => {
       const c = document.createElement('canvas');
       c.width = 440;
-      c.height = 540;
+      c.height = avatarCanvasHeight;
       const texture = new THREE.CanvasTexture(c);
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.minFilter = THREE.LinearFilter;
@@ -547,7 +552,7 @@ export function Bedroom3D({
     });
     const drawFigure = (f: Figure, t: number, force = false) => {
       if (!sprites || (!force && t - f.drawnAt < (f.motion === 'idle' ? 90 : 40))) return;
-      if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing })) {
+      if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing, headroom: HAT_HEADROOM })) {
         f.texture.needsUpdate = true;
         dirty = true;
       }

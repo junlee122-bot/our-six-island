@@ -8,6 +8,7 @@ import { Footprints, LoaderCircle, RotateCcw } from 'lucide-react';
 import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
 import { loungeSprites } from './lounge-sprites';
+import { HAT_HEADROOM, withHatHeadroom } from './lounge-figure-frame';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import type { ChatLine, LoungePlayer, LoungeView } from './lounge-room';
 import type { Look } from './lounge-look';
@@ -53,11 +54,13 @@ import './lounge-interior-3d.css';
 /** Server units per second (the floor is 70 × 46 units), as on the flat floor. */
 const WALK_SPEED = 16;
 const FIGURE_HEIGHT = 1.72;
+/** Body canvas (px) that FIGURE_HEIGHT spans; a hat band of HAT_HEADROOM sits above it. */
+const FIGURE_BODY_H = 540;
 /** Figure canvas size (px); loungeSprites.draw puts the soles at 97% of its height. */
 const FIGURE_W = 440,
-  FIGURE_H = 540;
+  FIGURE_H = withHatHeadroom(FIGURE_BODY_H);
 /** World height of a figure-canvas row (y px from the top). */
-const rowHeight = (y: number) => ((FIGURE_H * 0.97 - y) / FIGURE_H) * FIGURE_HEIGHT;
+const rowHeight = (y: number) => ((FIGURE_H * 0.97 - y) / FIGURE_BODY_H) * FIGURE_HEIGHT;
 /**
  * Seated figures: below this share of the figure's height are the legs; they
  * are drawn shorter (the thighs point at the table, so only the shins show)
@@ -397,9 +400,10 @@ export function Interior3D({
 
     // ---------------------------------------------------------- figures
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const figureGeometry = new THREE.PlaneGeometry(FIGURE_HEIGHT * cameraUp.y * (FIGURE_W / FIGURE_H), FIGURE_HEIGHT);
+    const planeHeight = (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H;
+    const figureGeometry = new THREE.PlaneGeometry(FIGURE_HEIGHT * cameraUp.y * (FIGURE_W / FIGURE_BODY_H), planeHeight);
     // loungeSprites.draw places the soles at 97% of the texture's height.
-    figureGeometry.translate(0, FIGURE_HEIGHT * 0.47, 0);
+    figureGeometry.translate(0, planeHeight * 0.47, 0);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = shadowCanvas.height = 64;
     {
@@ -482,7 +486,7 @@ export function Interior3D({
       if (!sprites || (!force && t - f.drawnAt < (f.motion === 'idle' ? 90 : 40))) return;
       f.drawnAt = t;
       if (!f.chair) {
-        if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing })) {
+        if (sprites.draw(f.canvas, f.actor, f.look, f.motion, f.locomotion.phase, false, reduced.matches, { facing: f.locomotion.facing, headroom: HAT_HEADROOM })) {
           f.texture.needsUpdate = true;
           dirty = true;
         }
@@ -495,8 +499,13 @@ export function Interior3D({
         f.standing.height = FIGURE_H;
       }
       const facing = f.locomotion.facing;
-      if (!sprites.draw(f.standing, f.actor, f.look, 'idle', 0, false, reduced.matches, { facing }) && !force) return;
-      if (!f.rows) f.rows = opaqueRows(f.standing);
+      if (!sprites.draw(f.standing, f.actor, f.look, 'idle', 0, false, reduced.matches, { facing, headroom: HAT_HEADROOM }) && !force) return;
+      if (!f.rows) {
+        // The leg line is measured on the body alone: a hat must not lift it.
+        const drawn = opaqueRows(f.standing),
+          body = sprites.bodyRows(f.standing);
+        f.rows = drawn && body ? { top: Math.max(drawn.top, Math.round(body.top)), bottom: drawn.bottom } : drawn;
+      }
       if (!f.rows) return;
       const { top, bottom } = f.rows;
       const cut = Math.round(top + (bottom - top) * LEG_LINE);
