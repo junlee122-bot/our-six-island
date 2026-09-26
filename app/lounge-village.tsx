@@ -27,7 +27,6 @@ import {
   Store,
   Mail,
   MessageCircle,
-  FishingRod,
   Leaf,
   Bug,
   ClipboardList,
@@ -63,15 +62,13 @@ import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import {
   BOARD_FRONT,
+  FISH_STAND,
   MUSEUM_FRONT,
-  PIER_POINT,
-  POND_EDGE,
-  RIVER_BANK,
   SPAWN_POINTS,
   bobberPoint,
 } from './lounge-village-spots';
-import type { Spot } from './lounge-items';
-import { itemName } from './lounge-life-plus';
+import { FISH_SPOTS, SPOT_INFO, type Spot } from './lounge-items';
+import { fishCandidates, itemName, spotBlock } from './lounge-life-plus';
 import {
   DAY_PHASE_LABEL,
   FRUIT_TREE_POINTS,
@@ -105,6 +102,7 @@ import {
 } from './lounge-village-actions';
 import { ActionButton } from './lounge/ActionButton';
 import { CropStageArt, ItemIcon, QualityStar } from './lounge/ItemIcon';
+import { Glyph } from './lounge/field-glyphs';
 import './lounge/farm-fish.css';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
@@ -2890,15 +2888,22 @@ export function Village3D(props: Props) {
             </button>
             {(
               [
-                ['river', '강가 낚시터', '강을 따라 어디서나 낚시해요', '#5aa0b8', RIVER_BANK],
-                ['pond', '연못 낚시터', '서쪽 들판의 조용한 연못', '#79c3c8', POND_EDGE],
-                [
-                  'sea',
-                  '동쪽 바다 데크',
-                  props.life?.flags?.includes('bridge') ? '바다 물고기를 낚아요' : '데크 수리가 필요해요',
-                  '#3f7fa0',
-                  { x: PIER_POINT.x - 0.8, z: PIER_POINT.z },
-                ],
+                ...FISH_SPOTS.map((spot) => {
+                  const block = spotBlock(spot, props.life?.flags ?? [], props.life?.me.fishing?.rod ?? 1, lifeClock);
+                  return [
+                    'fish-' + spot,
+                    `${SPOT_INFO[spot].name} 낚시`,
+                    block === 'flag'
+                      ? '데크 수리가 필요해요'
+                      : block === 'rod'
+                        ? '낚싯대 2단계부터'
+                        : block === 'night'
+                          ? '저녁 7시~새벽 5시'
+                          : SPOT_INFO[spot].note,
+                    block ? '#9aa8ad' : '#4f8aa6',
+                    FISH_STAND[spot],
+                  ] as const;
+                }),
                 ['museum', '마을 박물관', '기증하고 이름을 남겨요', '#6f8fa3', MUSEUM_FRONT],
                 ['board', '마을 게시판', '함께 채우는 꾸러미', '#c9a06a', BOARD_FRONT],
               ] as const
@@ -3314,17 +3319,38 @@ function SpotPrompt({
     );
   }
   if (spot.kind === 'fish') {
-    const locked = spot.spot === 'sea' && !life?.flags?.includes('bridge');
+    const info = SPOT_INFO[spot.spot];
+    const block = spotBlock(spot.spot, life?.flags ?? [], life?.me.fishing?.rod ?? 1, clock);
+    const biting = life?.calendar
+      ? fishCandidates(spot.spot, life.calendar.season, life.weather?.today ?? 'sunny', clock)
+          .slice()
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 6)
+      : [];
+    const dex = life?.me.dex ?? [];
     return (
-      <div>
+      <div className="hv-fish-prompt" data-spot={spot.spot}>
         <strong>
-          <FishingRod size={14} /> {spot.spot === 'river' ? '강가 낚시터' : spot.spot === 'pond' ? '연못 낚시터' : '동쪽 바다 데크'}
+          <Glyph name="hook" size={15} /> {info.name}
         </strong>
         <small>
-          {locked
+          {block === 'flag'
             ? '데크가 부서져 있어요 · 마을 게시판의 봄나물 꾸러미로 고칠 수 있어요'
-            : `찌가 쏙 들어가면 당겨요 · 미끼 ${life?.me.fishing?.bait ?? 0}개${key}`}
+            : block === 'rod'
+              ? '물살이 세요 · 상점에서 낚싯대를 2단계로 바꿔 주세요'
+              : block === 'night'
+                ? '항구는 저녁 7시부터 새벽 5시까지 열려요'
+                : `${info.note}${key}`}
         </small>
+        {!block && biting.length > 0 && (
+          <span className="hv-fish-now" aria-label="지금 무는 물고기">
+            {biting.map((f) => (
+              <span key={f.id} data-known={dex.includes(f.id) || undefined} data-rare={f.weight < 10 || undefined} title={dex.includes(f.id) ? f.name : '아직 못 만난 물고기'}>
+                <ItemIcon id={f.id} size={24} />
+              </span>
+            ))}
+          </span>
+        )}
       </div>
     );
   }
