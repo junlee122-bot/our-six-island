@@ -55,22 +55,22 @@ function faceSvgInner(tier: MoodTier, ring: string) {
     .join('');
   return `<circle cx="12" cy="12.4" r="9.6" fill="${SKIN}" stroke="${ring}" stroke-width="2.4"/>${parts}`;
 }
-/** A face as a data URI (village name tags). */
-export function moodFaceUri(tier: MoodTier) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${faceSvgInner(tier, MOOD_TIER_BY_ID[tier].color)}</svg>`;
+const SPARK = '<path d="M20.2 0.6 l1.1 2.6 2.6 1.1 -2.6 1.1 -1.1 2.6 -1.1 -2.6 -2.6 -1.1 2.6 -1.1z" fill="#f3c332" stroke="#a87a12" stroke-width="0.8" stroke-linejoin="round"/>';
+/** A face as a data URI (village name tags); a sparkle while holding an inspiration. */
+export function moodFaceUri(tier: MoodTier, insp = false) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">${faceSvgInner(tier, MOOD_TIER_BY_ID[tier].color)}${insp ? SPARK : ''}</svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 /**
  * CSS custom properties for the village name tags: `--mood-a3` is actor 3's
- * face (mood.css draws it on `.hv-tag[data-actor="3"]`), `--mood-s3` a sparkle
- * while they hold an inspiration.
+ * face (mood.css draws it on `.hv-tag[data-actor="3"]`), with a sparkle while
+ * they hold an inspiration.
  */
 export function moodTagStyle(faces: Record<number, MoodFace> | undefined): CSSProperties | undefined {
   if (!faces) return undefined;
   const out: Record<string, string> = {};
   for (const [actor, face] of Object.entries(faces)) {
-    out[`--mood-a${actor}`] = moodFaceUri(face.tier);
-    if (face.insp) out[`--mood-s${actor}`] = '1';
+    out[`--mood-a${actor}`] = moodFaceUri(face.tier, !!face.insp);
   }
   return out as CSSProperties;
 }
