@@ -555,7 +555,7 @@ export function LiarsBarTable({
               </li>
             ))}
           </ol>
-          <p>{v.stake > 0 ? `참가비 ${formatBeom(v.stake)} × ${v.n}명 · 마지막까지 버틴 사람이 모두 가져가요.` : '파티 판 · 범은 오가지 않았어요.'}</p>
+          <p>{v.stake > 0 ? `참가비 ${formatBeom(v.stake)} × ${v.n}명 · 마지막까지 버틴 사람이 모두 가져가요.` : '범 없이 즐긴 판이라 범은 오가지 않았어요.'}</p>
           <button type="button" className="l-secondary" onClick={() => setVerify((x) => !x)} aria-expanded={verify} data-testid="liarsbar-verify">
             <ShieldCheck size={16} aria-hidden="true" /> 탄창 확인
           </button>

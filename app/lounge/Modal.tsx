@@ -79,6 +79,8 @@ export function Modal({
       onKeyDown={(e) => {
         if (e.key === 'Escape') {
           e.preventDefault();
+          // A confirm nested in another dialog closes alone, not its parent too.
+          e.stopPropagation();
           close();
         }
       }}

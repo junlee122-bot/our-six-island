@@ -250,6 +250,9 @@
   height: auto;
 }
 .lb-card.is-face small {
+  grid-row: 1;
+  justify-self: end;
+  padding-left: calc(var(--lb-card-w) * 0.2);
   font-size: 13px;
   font-weight: 700;
   color: #5b4330;
