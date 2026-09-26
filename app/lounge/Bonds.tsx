@@ -107,7 +107,7 @@ export function FriendsLife({
         <ul className="l-bond-list" aria-label="친구">
           <li>
             <button type="button" aria-pressed={writing} onClick={() => setWriting(true)} data-testid="bond-my-lines">
-              <span className="l-bond-face" aria-hidden="true">
+              <span className="l-bond-face is-icon" aria-hidden="true">
                 <PenLine size={18} />
               </span>
               <span>
@@ -300,7 +300,7 @@ function MyLinesEditor({ initial, busy, onSave }: { initial: readonly string[]; 
   return (
     <section className="l-bond-profile l-my-lines" data-testid="my-lines">
       <header>
-        <span className="l-bond-face big" aria-hidden="true">
+        <span className="l-bond-face big is-icon" aria-hidden="true">
           <Feather size={28} />
         </span>
         <div>

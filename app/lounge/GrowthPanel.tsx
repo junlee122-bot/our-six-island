@@ -20,7 +20,6 @@ import {
   profChoices,
   type NodeKind,
   type SkillId,
-  type ToolId,
   type ToolTier,
 } from '../lounge-growth-data';
 import type { GrowthView, SkillView, ToolView } from '../lounge-growth';
@@ -158,7 +157,7 @@ export function GrowthPanel({
     <Modal title="성장 수첩" onClose={onClose} className="l-growth" wide>
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 1–3, Tab, arrows and Enter move and act inside the journal. */}
       <div ref={bookRef} className="l-growth-book" tabIndex={-1} role="application" aria-roledescription="성장 수첩" onKeyDown={onKey} data-testid="growth-panel">
-        <nav className="l-growth-ribbons" role="tablist" aria-label="성장 수첩 쪽">
+        <div className="l-growth-ribbons" role="tablist" aria-label="성장 수첩 쪽">
           {TABS.map((t, i) => (
             <button
               key={t.id}
@@ -173,7 +172,7 @@ export function GrowthPanel({
               <Glyph name={t.glyph} size={18} /> {t.label} <kbd>{i + 1}</kbd>
             </button>
           ))}
-        </nav>
+        </div>
         {tab === 'research' ? (
           <section className="l-growth-page l-growth-wide" aria-label="마을 개척">
             <ResearchBoard room={room} view={view} notify={notify} compact />

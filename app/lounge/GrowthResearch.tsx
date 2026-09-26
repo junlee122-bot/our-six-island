@@ -81,8 +81,8 @@ export function ResearchBoard({
 }) {
   const life = view.life;
   const growth = life?.growth;
-  const list = growth?.research ?? [];
-  const byId = useMemo(() => Object.fromEntries(list.map((r) => [r.id, r])), [list]);
+  const list = growth?.research;
+  const byId = useMemo(() => Object.fromEntries((list ?? []).map((r) => [r.id, r])), [list]);
   const firstOpen = RESEARCH.find((d) => byId[d.id] && !byId[d.id].done && d.live)?.id ?? 'forge';
   const [picked, setPicked] = useState<string>(firstOpen);
   const [step, setStep] = useState(10_000);

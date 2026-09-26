@@ -393,7 +393,7 @@ export const RESEARCH_FLAGS: Record<string, string> = Object.fromEntries(RESEARC
 export type NodeKind = 'bush' | 'log' | 'rock';
 export const NODE_INFO: Record<NodeKind, { name: string; verb: string; tool: ToolId; skill: SkillId }> = {
   bush: { name: '잡목', verb: '베기', tool: 'axe', skill: 'forage' },
-  log: { name: '쓰러진 통나무', verb: '쪼개기', tool: 'axe', skill: 'forage' },
+  log: { name: '통나무 더미', verb: '쪼개기', tool: 'axe', skill: 'forage' },
   rock: { name: '바위', verb: '깨기', tool: 'pickaxe', skill: 'mine' },
 };
 /**

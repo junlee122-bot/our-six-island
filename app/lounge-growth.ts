@@ -434,7 +434,6 @@ export const researchDone = (life: LifeState, id: string, now: number) => {
   const s = life.growth?.r?.[id];
   return !!s?.doneAt && s.doneAt <= now;
 };
-const helpersOf = (s: ResearchState | undefined) => Object.keys(s?.by ?? {}).length;
 const researchFull = (def: (typeof RESEARCH)[number], s: ResearchState) =>
   s.got >= def.beom && Object.entries(def.mats).every(([id, n]) => (s.mat[id] ?? 0) >= n);
 export const researchOpen = (life: LifeState, def: (typeof RESEARCH)[number], now: number) =>
