@@ -15,9 +15,15 @@ type Loader = (url: string) => Promise<THREE.Group>;
 const GROUND_Y = 0.03;
 /** Node look per kind: which valley model, its scale and a per-spot turn. */
 const NODE_LOOK: Record<NodeKind, { model: 'shrub' | 'firewood' | 'graniteBoulder'; s: number }> = {
-  bush: { model: 'shrub', s: 1.45 },
-  log: { model: 'firewood', s: 0.55 },
-  rock: { model: 'graniteBoulder', s: 1.05 },
+  bush: { model: 'shrub', s: 1.6 },
+  log: { model: 'firewood', s: 0.6 },
+  rock: { model: 'graniteBoulder', s: 1.35 },
+};
+/** A small hovering diamond over each node that is still up today (wood: leaf green, rock: copper). */
+const MARK_GEO = new THREE.OctahedronGeometry(0.16, 0);
+const MARK_MAT: Record<'wood' | 'rock', THREE.MeshBasicMaterial> = {
+  wood: new THREE.MeshBasicMaterial({ color: '#9fd46b' }),
+  rock: new THREE.MeshBasicMaterial({ color: '#f0a25a' }),
 };
 const hashTurn = (id: string) => {
   let h = 7;
@@ -45,6 +51,7 @@ export class VillageGrowthLayer {
   private site: THREE.Group;
   private glow: THREE.Mesh;
   private nodes = new Map<string, THREE.Object3D>();
+  private marks = new Map<string, THREE.Mesh>();
   private sources: Partial<Record<NodeKind, THREE.Group>> = {};
   private state: GrowthUpdate = { forgeOpen: false, forgeReady: false, nodes: [] };
   private lastKey = '';
@@ -130,6 +137,12 @@ export class VillageGrowthLayer {
     shadowed(object);
     this.root.add(object);
     this.nodes.set(id, object);
+    const mark = new THREE.Mesh(MARK_GEO, MARK_MAT[kind === 'rock' ? 'rock' : 'wood']);
+    mark.name = 'growth-mark-' + id;
+    mark.position.set(spot.x, GROUND_Y + size.h * look.s + 0.55, spot.z);
+    mark.scale.set(1, 1.5, 1);
+    this.root.add(mark);
+    this.marks.set(id, mark);
     return object;
   }
 
@@ -153,6 +166,7 @@ export class VillageGrowthLayer {
     const up = new Set(u.nodes.filter((n) => !n.taken).map((n) => n.id));
     for (const n of u.nodes) this.nodeObject(n.id, n.kind);
     for (const [id, object] of this.nodes) object.visible = up.has(id);
+    for (const [id, mark] of this.marks) mark.visible = up.has(id);
     return true;
   }
 }

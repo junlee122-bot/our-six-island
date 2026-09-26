@@ -31,6 +31,7 @@ export const ECONOMY_GAMES: readonly EconomyGame[] = [
   'blackjack',
   'seotda',
   'yacht',
+  'liarsbar',
 ];
 export const GAME_LABEL: Record<EconomyGame, string> = {
   chess: '체스',
@@ -39,6 +40,7 @@ export const GAME_LABEL: Record<EconomyGame, string> = {
   blackjack: '블랙잭',
   seotda: '섯다',
   yacht: '야추',
+  liarsbar: '허풍 카드',
 };
 export type ReportMember = { uid: string; username?: string; actor?: number };
 export type EconomyReportInput = {
@@ -230,6 +232,7 @@ export const BUCKET_LABEL: Record<string, string> = {
   tool: '대장간 도구',
   research: '마을 개척',
   respec: '전문가 다시 고르기',
+  'venue-up': '가게 업그레이드',
   'spend-other': '기타 지출',
 };
 const bucketLabel = (key: string) =>
@@ -296,6 +299,7 @@ const LIFE_REASONS: Record<string, string> = {
   'house-4': '집 확장 4단계',
   research: '마을 개척',
   respec: '전문가 다시 고르기',
+  'venue-up': '가게 업그레이드(주점·부동산·가구점)',
 };
 const TOOL_LABEL: Record<string, string> = { can: '물뿌리개', hoe: '괭이', rod: '낚싯대', axe: '도끼', pickaxe: '곡괭이' };
 /** Korean label of a ledger entry reason ('sell-tomato' → '토마토 판매'). */

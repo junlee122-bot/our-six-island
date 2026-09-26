@@ -28,7 +28,7 @@ export const PARTY_ITEMS: Record<
   watermelon: {
     name: '수박',
     effect: '지금 흐르는 시간을 30초 늘려요.',
-    games: ['yacht', 'gostop', 'liar', 'chess'],
+    games: ['yacht', 'gostop', 'liar', 'chess', 'liarsbar'],
   },
 };
 

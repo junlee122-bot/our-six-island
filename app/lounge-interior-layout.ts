@@ -17,6 +17,7 @@ import {
 } from './lounge-scene-layout.ts';
 import type { GameKind } from './lounge-games.ts';
 import { slideSubstep } from './lounge-walk-slide.ts';
+import type { HostId } from './lounge-host-sprites.ts';
 
 export type InteriorWorld = { x: number; z: number };
 
@@ -56,7 +57,7 @@ export const INTERIOR_DOOR_Z = { z0: 2.55, z1: 4.25 } as const;
 export const INTERIOR_DOOR_REACH = 5.5;
 
 /** The table hosts: 루미 deals in the casino, 매화 runs the hwatu tables. */
-export const TABLE_HOST: Record<GameKind, 'lumi' | 'maehwa' | null> = {
+export const TABLE_HOST: Record<GameKind, HostId | null> = {
   blackjack: 'lumi',
   poker: 'lumi',
   seotda: 'maehwa',
@@ -65,7 +66,15 @@ export const TABLE_HOST: Record<GameKind, 'lumi' | 'maehwa' | null> = {
   // Friends' tables: no host (the game shows a 진행 strip instead).
   yacht: null,
   liar: null,
+  // 허풍 주점: 허 선장 stands behind the bar (TAVERN_HOST_AT), not at the table.
+  liarsbar: 'captain',
 };
+
+/**
+ * 허 선장 stands behind the tavern's bar counter (world units), off the
+ * walkable floor: he blocks nothing and never moves with the seats.
+ */
+export const TAVERN_HOST_AT: InteriorWorld = { x: -3.6, z: -5.68 };
 
 /** Radius (network units) a standing host blocks. */
 export const HOST_RADIUS = 1.6;
@@ -81,7 +90,8 @@ const inFloor = (p: ScenePoint) =>
  * player walks up to the table and of the other tables.
  */
 export function hostSpot(area: SceneArea, game: GameKind): ScenePoint | null {
-  if (!TABLE_HOST[game]) return null;
+  // The tavern's host is behind the bar (TAVERN_HOST_AT), not at a table end.
+  if (!TABLE_HOST[game] || area === 'tavern') return null;
   const c = sceneColliders(area).find((t) => t.game === game);
   if (!c) return null;
   const toward = c.x < 50 ? 1 : -1;
@@ -157,11 +167,21 @@ export function interiorStep(
 export const nearDoor = (p: ScenePoint) =>
   Math.hypot(p.x - INTERIOR_DOOR.x, p.y - INTERIOR_DOOR.y) <= INTERIOR_DOOR_REACH;
 
-/** What the one action button offers here: a table within reach, else the door. */
-export type InteriorAction = { kind: 'table'; game: GameKind } | { kind: 'door' };
+/**
+ * 허풍 주점: where you stand to talk to 허 선장 across the bar (network units;
+ * world (−3.6, −4.2), just in front of the counter).
+ */
+export const TAVERN_BAR_FRONT: ScenePoint = { x: 32, y: 44 };
+export const TAVERN_BAR_REACH = 6;
+export const nearBar = (p: ScenePoint, area: SceneArea) =>
+  area === 'tavern' && Math.hypot(p.x - TAVERN_BAR_FRONT.x, p.y - TAVERN_BAR_FRONT.y) <= TAVERN_BAR_REACH;
+
+/** What the one action button offers here: a table within reach, the tavern's host, else the door. */
+export type InteriorAction = { kind: 'table'; game: GameKind } | { kind: 'door' } | { kind: 'host' };
 export function interiorAction(p: ScenePoint, area: SceneArea): InteriorAction | null {
   const table = sceneNearestTable(p, area);
   if (table) return { kind: 'table', game: table.game };
+  if (nearBar(p, area)) return { kind: 'host' };
   return nearDoor(p) ? { kind: 'door' } : null;
 }
 
@@ -171,6 +191,8 @@ export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | 
     if (((p.x - c.x) / (c.rx + 1)) ** 2 + ((p.y - c.y) / (c.ry + 1)) ** 2 <= 1)
       return { kind: 'table', game: c.game };
   if (p.x < 15.5 && Math.abs(p.y - INTERIOR_DOOR.y) < 5) return { kind: 'door' };
+  // The tavern's bar (허 선장 behind it).
+  if (area === 'tavern' && p.y < 44.5 && p.x > 20 && p.x < 44) return { kind: 'host' };
   return null;
 }
 
@@ -200,14 +222,28 @@ export type InteriorTable = {
   /** Half extents of the table top. */
   rx: number;
   rz: number;
-  host: 'lumi' | 'maehwa' | null;
+  host: HostId | null;
   hostAt: InteriorWorld | null;
   collider: SceneCollider;
   /** Which way the room's middle is (the sign stands at the other end). */
   toward: 1 | -1;
+  /** The host stands at a fixed spot (behind the tavern's bar). */
+  fixedHost?: boolean;
 };
 export function interiorTables(area: SceneArea): InteriorTable[] {
   return sceneColliders(area).map((c) => {
+    if (area === 'tavern' && TABLE_HOST[c.game])
+      return {
+        game: c.game,
+        center: interiorToWorld(c),
+        rx: c.rx * INTERIOR_SCALE * 0.82,
+        rz: c.ry * INTERIOR_SCALE * 0.8,
+        host: TABLE_HOST[c.game],
+        hostAt: { ...TAVERN_HOST_AT },
+        collider: c,
+        toward: c.x < 50 ? 1 : -1,
+        fixedHost: true,
+      };
     const host = hostSpot(area, c.game);
     return {
       game: c.game,
@@ -232,6 +268,7 @@ export function overTable(t: Pick<InteriorTable, 'game' | 'rx' | 'rz'>, x: numbe
   switch (t.game) {
     case 'poker':
     case 'liar':
+    case 'liarsbar':
       return (x / (rx + 0.07)) ** 2 + (z / (rz + 0.07)) ** 2 <= 1;
     case 'blackjack':
       // A half oval: the curve toward the back wall, the flat side forward.
@@ -281,11 +318,11 @@ export function seatChair(
  * are in use (five seats or more reach round to the ends).
  */
 export function hostStand(
-  t: Pick<InteriorTable, 'game' | 'rx' | 'rz' | 'center' | 'hostAt'>,
+  t: Pick<InteriorTable, 'game' | 'rx' | 'rz' | 'center' | 'hostAt' | 'fixedHost'>,
   seats: number,
 ): InteriorWorld | null {
   if (!t.hostAt) return null;
-  if (seats >= 5) return t.hostAt;
+  if (seats >= 5 || t.fixedHost) return t.hostAt;
   const dir = Math.sign(t.hostAt.x - t.center.x) || 1;
   let lo = 0,
     hi = 6;

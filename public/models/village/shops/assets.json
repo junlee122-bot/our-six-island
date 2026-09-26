@@ -1,0 +1,146 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-26",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-26 다시 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/ 같은 경로에 보관. 런타임에는 크기·위치·방향만 바꾸고(명절 계열은 가장 긴 변 2 단위라 목표 크기로 줄임), 일부 소품은 마을 업그레이드(허풍 주점·부동산·가구점) 단계에 따라 보이거나 바뀜.",
+  "assets": [
+    {
+      "key": "realtyOffice",
+      "id": "common-buildings-office-reception-building-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-office-reception-building-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-office-reception-building-compact-normal.glb",
+      "file": "realtyOffice.glb",
+      "bytes": 695512,
+      "sha256": "df74c43f8c592cc3ad52144437e3b459866be54a44eefe372e8d229f49028d05",
+      "webBytes": 454980,
+      "meshes": 1,
+      "triangles": 9156,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.6,
+          0,
+          -1.299
+        ],
+        "max": [
+          1.6,
+          2.077,
+          1.299
+        ],
+        "size": [
+          3.2,
+          2.077,
+          2.598
+        ]
+      },
+      "use": "범마을 부동산 외관 · 기본"
+    },
+    {
+      "key": "realtyDuplex",
+      "id": "common-buildings-office-reception-building-duplex-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-office-reception-building-duplex-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-office-reception-building-duplex-normal.glb",
+      "file": "realtyDuplex.glb",
+      "bytes": 650120,
+      "sha256": "245dc50d10c403a307cd6b21cd936bee425e67efca4ca7b9ffcfd16760aac191",
+      "webBytes": 427716,
+      "meshes": 1,
+      "triangles": 8519,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.6,
+          0,
+          -1.206
+        ],
+        "max": [
+          1.6,
+          2.542,
+          1.206
+        ],
+        "size": [
+          3.2,
+          2.542,
+          2.412
+        ]
+      },
+      "use": "부동산 외관 2단계 ‘2층 사무소’"
+    },
+    {
+      "key": "furnitureShop",
+      "id": "convenience-corner-convenience-store-building-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/convenience-corner-convenience-store-building-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/convenience-corner-convenience-store-building-cottage-normal.glb",
+      "file": "furnitureShop.glb",
+      "bytes": 794872,
+      "sha256": "3e46574918bc8a65cc16ae6ba8ef13efb06d4b46302e7cb2547587fc69bc7024",
+      "webBytes": 527364,
+      "meshes": 1,
+      "triangles": 9817,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.1,
+          0,
+          -1.4
+        ],
+        "max": [
+          1.1,
+          1.983,
+          1.4
+        ],
+        "size": [
+          2.2,
+          1.983,
+          2.8
+        ]
+      },
+      "use": "나무결 가구점 외관 · 기본"
+    },
+    {
+      "key": "furnitureShowroom",
+      "id": "convenience-corner-convenience-store-building-heritage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/convenience-corner-convenience-store-building-heritage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/convenience-corner-convenience-store-building-heritage-normal.glb",
+      "file": "furnitureShowroom.glb",
+      "bytes": 809248,
+      "sha256": "5845671fb09cb0125647e0fb51c4570c521fdd5ee814991aa22f58e0dba812b6",
+      "webBytes": 539520,
+      "meshes": 1,
+      "triangles": 9309,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.437,
+          0,
+          -1.4
+        ],
+        "max": [
+          1.437,
+          2.257,
+          1.4
+        ],
+        "size": [
+          2.874,
+          2.257,
+          2.8
+        ]
+      },
+      "use": "가구점 외관 2단계 ‘쇼윈도 증축’"
+    }
+  ]
+}

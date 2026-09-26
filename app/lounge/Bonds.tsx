@@ -278,7 +278,7 @@ function HeartRewards({
           <li key={l} data-got={granted >= l || undefined} data-next={(granted < l && level < l && l === HEART_REWARD_LEVELS.find((x) => x > level)) || undefined}>
             <b>♥{l}</b>
             <span>{what(l)}</span>
-            <small>{granted >= l ? '받았어요' : level >= l ? '곧 도착해요' : ''}</small>
+            <small>{granted >= l ? '받았어요' : level >= l ? '다음 활동 때 도착해요' : ''}</small>
           </li>
         ))}
       </ol>

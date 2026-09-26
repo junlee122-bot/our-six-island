@@ -14,7 +14,8 @@ import {
   PRACTICE_GAMES,
   SEAT_RANGE,
   PRACTICE_NAMES,
-  TABLE_STAKES,
+  BOT_FILL_GAMES,
+  stakesOf,
   gameReservation,
   stakeLock,
   tableIdOf,
@@ -172,9 +173,14 @@ export function TableSheet({
   // 라이어 게임 is never staked; 야추 / 고스톱 may be a 파티 판 (no 범).
   const noStake = NO_STAKE_GAMES.includes(game);
   const partyOption = PARTY_GAMES.includes(game) && !noStake;
-  const [partyOn, setParty] = useState(false);
+  // A game whose usual table has no 범 (허풍 카드) opens as a 파티 판.
+  const [partyOn, setParty] = useState(GAME_INFO[game].stake === 0);
+  const stakes = stakesOf(game);
+  // 대타 봇 (파티 판 of BOT_FILL_GAMES): seats the practice AI plays.
+  const botOption = BOT_FILL_GAMES.includes(game);
+  const [botsWanted, setBots] = useState(0);
   const party = noStake || (partyOption && partyOn);
-  const [stake, setStake] = useState<number>(GAME_INFO[game].stake || 1000),
+  const [stake, setStake] = useState<number>(GAME_INFO[game].stake || stakes[0] || 1000),
     [count, setCount] = useState<number>(
       flex
         ? Math.max(lo, Math.min(Math.max(lo, 3), hi, view.players.length || lo))
@@ -183,6 +189,8 @@ export function TableSheet({
     [calling, setCalling] = useState(false),
     [chosen, setChosen] = useState<string[]>([]),
     [pending, setPending] = useState(false);
+  // Bots only at a 파티 판, and never every seat.
+  const bots = botOption && party ? Math.min(botsWanted, count - 1) : 0;
   const busyRef = useRef(false);
   const sheetRef = useRef<HTMLElement>(null);
   const invite = state.invite;
@@ -217,7 +225,8 @@ export function TableSheet({
             game,
             players: preselect ?? [],
             ...(party ? { party: true } : { stake }),
-            required: flex ? count : GAME_INFO[game].players,
+            required: (flex ? count : GAME_INFO[game].players) - bots,
+            ...(bots ? { bots } : {}),
             table: tableIdOf(game),
           })
         : invite
@@ -332,12 +341,16 @@ export function TableSheet({
         } else if (!short) void sit();
         return true;
       }
+      if (mode === 'setup' && botOption && party && e.code === 'KeyB') {
+        setBots((b) => (b + 1) % count);
+        return true;
+      }
       if (mode === 'setup' && partyOption && e.code === 'KeyP') {
         setParty((v) => !v);
         return true;
       }
       if (mode === 'setup' && digit && !e.shiftKey && !party) {
-        const n = TABLE_STAKES[Number(digit) - 1];
+        const n = stakes[Number(digit) - 1];
         if (!n || lockOf(n)) return false;
         setStake(n);
         return true;
@@ -534,7 +547,7 @@ export function TableSheet({
               role="radiogroup"
               aria-label={GAME_COPY[game].amountLabel}
             >
-              {TABLE_STAKES.map((n, i) => (
+              {stakes.map((n, i) => (
                 <button
                   type="button"
                   key={n}
@@ -579,7 +592,29 @@ export function TableSheet({
               </div>
             </fieldset>
           )}
+          {botOption && party && (
+            <fieldset>
+              <legend>
+                대타 봇 <small>빈자리를 연습 봇이 채워요 (B)</small>
+              </legend>
+              <div className="l-sheet-chips is-count" role="radiogroup" aria-label="대타 봇 수">
+                {Array.from({ length: count }, (_, n) => n).map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    role="radio"
+                    aria-checked={bots === n}
+                    onClick={() => setBots(n)}
+                    data-testid={`table-bots-${n}`}
+                  >
+                    {n === 0 ? '없이' : `${n}명`}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
           <p className="l-sheet-note">
+            {bots > 0 ? `친구 ${count - bots}명 + 대타 봇 ${bots}명. ` : ''}
             {party
               ? noStake
                 ? GAME_COPY[game].moneyRule

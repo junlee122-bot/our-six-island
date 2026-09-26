@@ -35,6 +35,9 @@ import {
   Anvil,
   Axe,
   Pickaxe,
+  Wine,
+  KeyRound,
+  Armchair,
 } from 'lucide-react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -64,6 +67,8 @@ import { VillageValleyLayer } from './lounge-village-valley';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import { VillageGrowthLayer } from './lounge-village-growth-3d';
+import { VillageShopsLayer } from './lounge-village-shops';
+import { venuesFromView } from './lounge-venue-data';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data';
 import {
   BOARD_FRONT,
@@ -172,6 +177,9 @@ const PLACE_SHORT: Record<VillagePlace['kind'], string> = {
   hall: '회관',
   casino: '카지노',
   wardrobe: '분장실',
+  tavern: '주점',
+  realty: '부동산',
+  furniture: '가구점',
 };
 function placeShortName(place: VillagePlace) {
   return place.kind === 'home' ? ACTORS[place.actor ?? 0] : PLACE_SHORT[place.kind];
@@ -184,7 +192,13 @@ function PlaceIcon({ place, size = 12 }: { place: VillagePlace; size?: number })
         ? Landmark
         : place.kind === 'casino'
           ? Dices
-          : Shirt;
+          : place.kind === 'tavern'
+            ? Wine
+            : place.kind === 'realty'
+              ? KeyRound
+              : place.kind === 'furniture'
+                ? Armchair
+                : Shirt;
   return (
     <Icon
       className="hv-place-icon"
@@ -304,6 +318,8 @@ type WorldState = {
   valley: VillageValleyLayer;
   /** 성장 P1: the blacksmith and today's material nodes. */
   growth: VillageGrowthLayer;
+  /** 허풍 주점 · 범마을 부동산 · 나무결 가구점 buildings. */
+  shops: VillageShopsLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -387,6 +403,7 @@ function getVillageWorld(): WorldState {
   const waters = new VillageWatersLayer(root);
   const valley = new VillageValleyLayer(root);
   const growth = new VillageGrowthLayer(root);
+  const shops = new VillageShopsLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -462,6 +479,7 @@ function getVillageWorld(): WorldState {
       ...karchive.load(loadModel, changed),
       ...valley.loadAll(loadModel, changed),
       ...growth.load(loadModel, changed),
+      ...shops.loadAll(loadModel, changed),
     ]),
   );
   const props = propJobs.then((results) =>
@@ -482,6 +500,7 @@ function getVillageWorld(): WorldState {
     waters,
     valley,
     growth,
+    shops,
   };
   return villageWorld;
 }
@@ -1044,7 +1063,8 @@ export function Village3D(props: Props) {
         nodes: life?.growth?.nodes ?? [],
       });
       if (growthChanged) host.dataset.nodes = String((life?.growth?.nodes ?? []).filter((n) => !n.taken).length);
-      if ((civicChanged || growthChanged) && !seasonChanged) {
+      const shopsChanged = world.shops.update({ venues: venuesFromView(life?.venues) ?? {}, night });
+      if ((civicChanged || growthChanged || shopsChanged) && !seasonChanged) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
       }

@@ -1,6 +1,7 @@
 import { cleanText } from "./text-clean.ts";
 import { IslandRoom } from "./multiplayer-transport.ts";
 import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
+import { isInteriorArea } from "./lounge-venues.ts";
 import { readLook, type Look } from "./lounge-look.ts";
 import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
 import { ACTORS } from "./lounge-roster.ts";
@@ -110,6 +111,19 @@ import {
   type LiarView,
 } from "./lounge-liar.ts";
 import {
+  newLiarsBar,
+  liarsBarAction,
+  liarsBarActor,
+  liarsBarAuto,
+  liarsBarBot,
+  liarsBarKey,
+  liarsBarLimit,
+  liarsBarView,
+  type LiarsBarAction,
+  type LiarsBarMatch,
+  type LiarsBarView,
+} from "./lounge-liarsbar.ts";
+import {
   PARTY_EXTEND_MS,
   PARTY_ITEMS,
   PARTY_PEEK_MS,
@@ -136,7 +150,6 @@ import {
   FLEX_GAMES,
   TABLE_AREA,
   TABLE_FORM_MS,
-  TABLE_STAKES,
   stakeLock,
   tableIdOf,
   minPlayers,
@@ -145,6 +158,8 @@ import {
   PARTY_GAMES,
   PRACTICE_GAMES,
   PRACTICE_NAMES,
+  BOT_FILL_GAMES,
+  stakesOf,
   isPracticeAi,
   emptyLoungeView as empty,
   type GameKind,
@@ -207,6 +222,11 @@ export type GameInvite = {
    * table stays open while anyone is seated, and the host seat passes on.
    */
   table?: string;
+  /**
+   * 대타 봇 (파티 판 of BOT_FILL_GAMES): this many seats after the friends
+   * are played by the practice AI, so fewer friends still fill the table.
+   */
+  bots?: number;
 };
 export type LoungeTable = {
   matchId: string;
@@ -221,6 +241,8 @@ export type LoungeTable = {
   practice?: boolean;
   /** 파티 판: friends only, nothing staked (see GameInvite.party). */
   party?: boolean;
+  /** 대타 봇: seats played by the practice AI at this 파티 판 (허풍 카드). */
+  bots?: number;
 };
 export type LoungeTables = Partial<Record<GameKind, LoungeTable>>;
 export type LoungePlayer = {
@@ -247,6 +269,7 @@ export type LoungeWorld = {
     seotda: (string | null)[];
     yacht: (string | null)[];
     liar: (string | null)[];
+    liarsbar: (string | null)[];
   };
   chess: (ChessMatch & TurnTiming) | null;
   gostop: (GoView & TurnTiming) | null;
@@ -255,6 +278,7 @@ export type LoungeWorld = {
   seotda: (SeotdaView & TurnTiming) | null;
   yacht: (YachtView & TurnTiming) | null;
   liar: (LiarView & TurnTiming) | null;
+  liarsbar: (LiarsBarView & TurnTiming) | null;
   /** 파티 판 state per table (who ate what; a peek only for the peeker). */
   party?: Partial<Record<GameKind, PartyView>>;
   names: Record<GameKind, string[]>;
@@ -335,6 +359,8 @@ export type LoungeAction =
       practice?: boolean;
       /** With `table`: a 파티 판 among friends (no 범; crop effects allowed). */
       party?: boolean;
+      /** With `party`: seats the practice AI plays (대타 봇, BOT_FILL_GAMES). */
+      bots?: number;
     }
   | { kind: "area"; area: Area; x?: number; y?: number; home?: number }
   | { kind: "draw"; id: string; op: "offer" | "accept" | "decline" }
@@ -344,6 +370,7 @@ export type LoungeAction =
   | { kind: "seotda"; id: string; revision: number; action: SeotdaAction }
   | { kind: "yacht"; id: string; revision: number; action: YachtAction }
   | { kind: "liar"; id: string; revision: number; action: LiarAction }
+  | { kind: "liarsbar"; id: string; revision: number; action: LiarsBarAction }
   | PartyAction
   | { kind: "reply"; id: string; accept: boolean }
   | { kind: "cancel"; id: string }
@@ -387,8 +414,10 @@ export type HostedRoomSnapshot = {
   seotda: SeotdaMatch | null;
   yacht?: YachtMatch | null;
   liar?: LiarMatch | null;
+  liarsbar?: LiarsBarMatch | null;
   yachtAway?: number[];
   liarAway?: number[];
+  liarsbarAway?: number[];
   party?: Partial<Record<GameKind, PartyState>>;
   pokerAway: number[];
   blackjackAway: number[];
@@ -400,7 +429,14 @@ export type HostedRoomSnapshot = {
   lastChat: [string, number][];
   due: Partial<
     Record<
-      "poker" | "blackjack" | "seotda" | "gostop" | "chess" | "yacht" | "liar",
+      | "poker"
+      | "blackjack"
+      | "seotda"
+      | "gostop"
+      | "chess"
+      | "yacht"
+      | "liar"
+      | "liarsbar",
       { id: string; revision: number; at: number }
     >
   >;
@@ -485,6 +521,8 @@ export class LoungeRoom {
   private liar: LiarMatch | null = null;
   private yachtAway = new Set<number>();
   private liarAway = new Set<number>();
+  private liarsbar: LiarsBarMatch | null = null;
+  private liarsbarAway = new Set<number>();
   private partyState: Partial<Record<GameKind, PartyState>> = {};
   private blackjackAway = new Set<number>();
   private blackjackTimer: ReturnType<typeof setTimeout> | null = null;
@@ -561,17 +599,21 @@ export class LoungeRoom {
       r.liar = structuredClone(snapshot.liar ?? null);
       r.yachtAway = new Set(snapshot.yachtAway ?? []);
       r.liarAway = new Set(snapshot.liarAway ?? []);
+      r.liarsbar = structuredClone(snapshot.liarsbar ?? null);
+      r.liarsbarAway = new Set(snapshot.liarsbarAway ?? []);
       r.partyState = structuredClone(snapshot.party ?? {});
       // Seat lists of the newer tables are missing from older snapshots.
       r.view.seats = {
         ...r.view.seats,
         yacht: r.view.seats.yacht ?? [null, null],
         liar: r.view.seats.liar ?? [null, null, null, null],
+        liarsbar: r.view.seats.liarsbar ?? [null, null, null, null],
       };
       r.view.names = {
         ...r.view.names,
         yacht: r.view.names.yacht ?? [],
         liar: r.view.names.liar ?? [],
+        liarsbar: r.view.names.liarsbar ?? [],
       };
       r.pokerAway = new Set(snapshot.pokerAway);
       r.blackjackAway = new Set(snapshot.blackjackAway);
@@ -608,6 +650,8 @@ export class LoungeRoom {
       liar: this.liar,
       yachtAway: [...this.yachtAway],
       liarAway: [...this.liarAway],
+      liarsbar: this.liarsbar,
+      liarsbarAway: [...this.liarsbarAway],
       party: this.partyState,
       pokerAway: [...this.pokerAway],
       blackjackAway: [...this.blackjackAway],
@@ -714,7 +758,8 @@ export class LoungeRoom {
           }
         } else
           for (let step = 0; step < 2000 && this.gameActive(kind); step++)
-            if (!this.autoStep(kind, false)) break;
+            // 허풍 카드's reveal / result beats run on their own clock.
+            if (!this.autoStep(kind, kind === "liarsbar")) break;
       } catch (error) {
         console.error("lounge: auto-complete failed", kind, error);
       }
@@ -732,6 +777,7 @@ export class LoungeRoom {
       this.seotda,
       this.yacht,
       this.liar,
+      this.liarsbar,
     ]
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => m.id);
@@ -879,6 +925,34 @@ export class LoungeRoom {
           };
       }
     }
+    // 허풍 카드: bots (연습 판, 대타 봇) and away seats move after a beat.
+    {
+      const g = this.liarsbar,
+        seat = g && g.phase !== "over" ? liarsBarActor(g) : -1;
+      const ai = seat >= 0 && this.aiSeat("liarsbar", seat),
+        away = seat >= 0 && this.liarsbarAway.has(seat);
+      if (!g || seat < 0 || (!ai && !away)) delete this.serverDue.liarsbar;
+      else {
+        const due = this.serverDue.liarsbar;
+        const wait = ai
+          ? g.phase === "trigger"
+            ? 1800
+            : 1400
+          : g.phase === "trigger"
+            ? 2000
+            : 3000;
+        if (!due || due.id !== g.id || due.revision !== g.revision)
+          this.serverDue.liarsbar = {
+            id: g.id,
+            revision: g.revision,
+            at: now + wait,
+          };
+        else if (due.at <= now) {
+          this.autoStep("liarsbar", false);
+          delete this.serverDue.liarsbar;
+        }
+      }
+    }
     // 연습 체스: the practice AI answers after a short think.
     const chess = this.chess,
       aiPly = chess && !chess.winner ? chess.moves.length : -1;
@@ -922,6 +996,7 @@ export class LoungeRoom {
   private awaySet(kind: GameKind) {
     if (kind === "yacht") return this.yachtAway;
     if (kind === "liar") return this.liarAway;
+    if (kind === "liarsbar") return this.liarsbarAway;
     return kind === "poker"
       ? this.pokerAway
       : kind === "blackjack"
@@ -947,6 +1022,8 @@ export class LoungeRoom {
         ? `${this.yacht.id}:${this.yacht.revision}`
         : null;
     if (kind === "liar") return this.liar ? liarKey(this.liar) : null;
+    if (kind === "liarsbar")
+      return this.liarsbar ? liarsBarKey(this.liarsbar) : null;
     const g = this[kind];
     if (!g || g.turn < 0) return null;
     const deciding =
@@ -969,7 +1046,9 @@ export class LoungeRoom {
             now +
             (kind === "liar" && this.liar
               ? liarLimit(this.liar)
-              : TURN_LIMIT_MS[kind]),
+              : kind === "liarsbar" && this.liarsbar
+                ? liarsBarLimit(this.liarsbar)
+                : TURN_LIMIT_MS[kind]),
         };
     }
     let tables = this.view.tables,
@@ -1040,6 +1119,27 @@ export class LoungeRoom {
       const next = liarAuto(g, this.liarAway, timeout);
       if (!next) return false;
       this.liar = next;
+      return true;
+    }
+    if (kind === "liarsbar") {
+      const g = this.liarsbar;
+      if (!g || g.phase === "over") return false;
+      const party = !!this.view.tables.liarsbar?.party;
+      const bot = (seat: number) =>
+        this.aiSeat("liarsbar", seat) ||
+        // 파티 판: a friend who is away is played by 대타 봇 (never forfeits).
+        (party && this.liarsbarAway.has(seat))
+          ? liarsBarBot(liarsBarView(g, seat))
+          : null;
+      const next = liarsBarAuto(g, {
+        timeout,
+        away: this.liarsbarAway,
+        bot,
+        staked: this.bank.ledger.games[g.id]?.state === "reserved",
+      });
+      if (!next) return false;
+      this.settle(kind, next);
+      this.liarsbar = next;
       return true;
     }
     if (kind === "poker") {
@@ -1173,6 +1273,19 @@ export class LoungeRoom {
                 : seat("liar"),
             ),
             ...this.timing("liar"),
+          }
+        : null,
+      // Only my own cards: watchers and those who are out see the table.
+      liarsbar: this.liarsbar
+        ? {
+            ...liarsBarView(
+              this.liarsbar,
+              this.view.tables.liarsbar &&
+                !this.view.tables.liarsbar.members.includes(id)
+                ? -1
+                : seat("liarsbar"),
+            ),
+            ...this.timing("liarsbar"),
           }
         : null,
       party: Object.fromEntries(
@@ -1362,7 +1475,8 @@ export class LoungeRoom {
       | PokerMatch
       | BlackjackMatch
       | SeotdaMatch
-      | YachtMatch,
+      | YachtMatch
+      | LiarsBarMatch,
   ) {
     const escrow = this.bank.ledger.games[game.id];
     if (!escrow || escrow.state !== "reserved") return;
@@ -1381,7 +1495,12 @@ export class LoungeRoom {
       if (g.phase === "over")
         this.bank.commit(goSettle(this.bank.ledger, g, escrow.deposits));
     } else {
-      const g = game as PokerMatch | BlackjackMatch | SeotdaMatch | YachtMatch;
+      const g = game as
+        | PokerMatch
+        | BlackjackMatch
+        | SeotdaMatch
+        | YachtMatch
+        | LiarsBarMatch;
       if (g.phase === "over")
         this.bank.commit(settleGame(this.bank.ledger, g.id, g.result));
     }
@@ -1420,6 +1539,8 @@ export class LoungeRoom {
     this.liar = null;
     this.yachtAway.clear();
     this.liarAway.clear();
+    this.liarsbar = null;
+    this.liarsbarAway.clear();
     this.partyState = {};
     this.poker = null;
     this.pokerAway.clear();
@@ -1626,7 +1747,9 @@ export class LoungeRoom {
               ? !!this.yacht && this.yacht.phase !== "over"
               : game === "liar"
                 ? !!this.liar && this.liar.phase !== "over"
-                : !!this.blackjack && this.blackjack.phase !== "over";
+                : game === "liarsbar"
+                  ? !!this.liarsbar && this.liarsbar.phase !== "over"
+                  : !!this.blackjack && this.blackjack.phase !== "over";
   }
   private busy(id: string, except = "") {
     return (
@@ -1651,12 +1774,18 @@ export class LoungeRoom {
     const practice = !!request.practice,
       // 파티 판 (and every 라이어 게임): nothing is reserved or settled.
       party = !!request.party || NO_STAKE_GAMES.includes(request.game),
-      // 연습 판: the practice AI takes the seats after mine.
+      // 연습 판: the practice AI takes the seats after mine; a 파티 판 of
+      // 허풍 카드 may fill its empty seats with 대타 봇 the same way.
       ai = practice
         ? (PRACTICE_NAMES[request.game] ?? []).map(
             (_, i) => `ai:${request.game}:${i + 1}`,
           )
-        : [],
+        : (request.bots ?? 0) > 0
+          ? Array.from(
+              { length: request.bots! },
+              (_, i) => `ai:${request.game}:${i + 1}`,
+            )
+          : [],
       seated = [...request.accepted, ...ai];
     const id = crypto.randomUUID(),
       n = seated.length,
@@ -1704,6 +1833,19 @@ export class LoungeRoom {
                         ? this.liar.totals
                         : undefined,
                     )
+                  : request.game === "liarsbar"
+                    ? newLiarsBar(
+                        id,
+                        n,
+                        party ? 0 : request.stake,
+                        (round - 1) % n,
+                        // Wins / catches carry over the same friends' rounds.
+                        this.liarsbar &&
+                          round > 1 &&
+                          this.view.seats.liarsbar.join() === order.join()
+                          ? this.liarsbar.totals
+                          : undefined,
+                      )
                   : newBlackjack(id, n, request.stake, undefined, (round - 1) % n);
     // 연습 판 / 파티 판 hold no escrow: settle() finds nothing to pay out.
     if (!practice && !party) {
@@ -1735,6 +1877,7 @@ export class LoungeRoom {
           ready: [],
           ...(practice ? { practice: true } : {}),
           ...(party && !practice ? { party: true } : {}),
+          ...(request.bots ? { bots: request.bots } : {}),
         },
       },
       names: {
@@ -1765,6 +1908,9 @@ export class LoungeRoom {
     } else if (request.game === "liar") {
       this.liar = game as LiarMatch;
       this.liarAway.clear();
+    } else if (request.game === "liarsbar") {
+      this.liarsbar = game as LiarsBarMatch;
+      this.liarsbarAway.clear();
     } else {
       this.blackjack = game as BlackjackMatch;
       this.blackjackAway.clear();
@@ -1778,6 +1924,16 @@ export class LoungeRoom {
     for (let i = 0; i < order.length; i++) {
       const p = this.members.get(order[i]);
       if (!p) continue;
+      if (request.game === "liarsbar") {
+        // Round the back of the tavern's table (the client seats me exactly).
+        this.members.set(p.id, {
+          ...p,
+          area: "tavern",
+          x: 50 + (i - (order.length - 1) / 2) * 6,
+          y: 56,
+        });
+        continue;
+      }
       if (request.game === "yacht" || request.game === "liar") {
         // Around the hall's two friend tables (the client seats me exactly).
         this.members.set(p.id, {
@@ -1901,6 +2057,19 @@ export class LoungeRoom {
       if (typeof next === "string") return this.reject(next);
       if (!next) return this.reject(REJECT.illegal);
       this.liar = next;
+    } else if (a.kind === "liarsbar") {
+      const g = this.liarsbar,
+        seat = this.view.seats.liarsbar.indexOf(id);
+      if (!g || seat < 0 || !this.view.tables.liarsbar?.members.includes(id))
+        return this.reject(REJECT.notSeated);
+      if (g.id !== a.id || g.revision !== a.revision)
+        return this.reject(REJECT.stale);
+      // Pressing anything brings an away seat back.
+      this.liarsbarAway.delete(seat);
+      const next = liarsBarAction(g, seat, a.action);
+      if (!next) return this.reject(REJECT.illegal);
+      this.settle("liarsbar", next);
+      this.liarsbar = next;
     } else if (a.kind === "party") {
       if (!this.party(id, member, a, now)) return false;
     } else if (a.kind === "move") {
@@ -1911,7 +2080,7 @@ export class LoungeRoom {
       if (
         this.busy(id) &&
         !this.view.invites.some((r) => this.seatedForming(r, id)) &&
-        (member.area === "lounge" || member.area === "casino")
+        isInteriorArea(member.area)
       )
         return true;
       this.members.set(
@@ -1947,6 +2116,7 @@ export class LoungeRoom {
         a.scope === "village" ||
         a.scope === "lounge" ||
         a.scope === "casino" ||
+        a.scope === "tavern" ||
         a.scope === "home"
       ) {
         if (member.area !== a.scope || a.matchId !== undefined)
@@ -2037,7 +2207,7 @@ export class LoungeRoom {
       if (
         (noStake
           ? a.stake !== undefined && a.stake !== 0
-          : !(TABLE_STAKES as readonly number[]).includes(stake)) ||
+          : !stakesOf(a.game).includes(stake)) ||
         !Number.isInteger(required) ||
         required < Math.max(2, minPlayers(a.game)) ||
         required > maxPlayers(a.game)
@@ -2465,18 +2635,28 @@ export class LoungeRoom {
     if (a.party && !PARTY_GAMES.includes(game))
       return this.reject(REJECT.party);
     const stake = noStake ? 0 : (a.stake ?? GAME_INFO[game].stake);
+    // 대타 봇: only at a 파티 판 of the games that allow it.
+    const bots = a.bots ?? 0;
+    if (
+      !Number.isInteger(bots) ||
+      bots < 0 ||
+      (bots > 0 && (!noStake || !BOT_FILL_GAMES.includes(game)))
+    )
+      return this.reject(REJECT.invalid);
     const required = FLEX_GAMES.includes(game)
-      ? (a.required ?? GAME_INFO[game].players)
+      ? (a.required ?? GAME_INFO[game].players - bots)
       : GAME_INFO[game].players;
     if (
       (noStake
         ? a.stake !== undefined && a.stake !== 0
-        : !(TABLE_STAKES as readonly number[]).includes(stake)) ||
+        : !stakesOf(a.game).includes(stake)) ||
       !Number.isInteger(required) ||
-      required < minPlayers(game) ||
-      required > maxPlayers(game) ||
-      // A 파티 판 is for friends: never one seat.
-      (noStake && required < 2)
+      required < 1 ||
+      required + bots < minPlayers(game) ||
+      required + bots > maxPlayers(game) ||
+      (!bots && required < minPlayers(game)) ||
+      // A 파티 판 is for friends: never one seat (대타 봇 count as seats).
+      (noStake && required + bots < 2)
     )
       return this.reject(REJECT.stake);
     const balance = this.bank.view(this.wallets.get(id), now).balance;
@@ -2499,6 +2679,7 @@ export class LoungeRoom {
       stake,
       table: a.table,
       ...(noStake ? { party: true } : {}),
+      ...(bots ? { bots } : {}),
     };
     // A one-seat table is full as I sit: the round starts (and reserves) now.
     if (required === 1) this.launch(request);
@@ -2650,6 +2831,7 @@ export class LoungeRoom {
       stake: table.stake,
       ...(table.practice ? { practice: true } : {}),
       ...(table.party ? { party: true } : {}),
+      ...(table.bots ? { bots: table.bots } : {}),
     };
     // launch commits escrow before changing table or match state. Failed
     // storage writes leave the previous ended round and readiness intact.
@@ -2705,6 +2887,22 @@ export class LoungeRoom {
     const l = this.view.seats.liar.indexOf(id);
     if (l >= 0 && this.liar && this.liar.phase !== "over")
       this.liarAway.add(l);
+    const lb = this.view.seats.liarsbar.indexOf(id);
+    if (lb >= 0 && this.liarsbar && this.liarsbar.phase !== "over") {
+      // 허풍 카드: standing up from a staked match forfeits at once (the stake
+      // stays in the pot); a lost connection is played as away (two automatic
+      // moves in a row forfeit). At a 파티 판 대타 봇 plays the seat.
+      const staked =
+        this.bank.ledger.games[this.liarsbar.id]?.state === "reserved";
+      const next =
+        staked && !keepChess && this.liarsbar.alive[lb]
+          ? liarsBarAction(this.liarsbar, lb, { kind: "forfeit" })
+          : null;
+      if (next) {
+        this.settle("liarsbar", next);
+        this.liarsbar = next;
+      } else this.liarsbarAway.add(lb);
+    }
     const tables = { ...this.view.tables };
     for (const game of GAME_KINDS) {
       const table = tables[game];
@@ -2733,6 +2931,10 @@ export class LoungeRoom {
         ),
         yacht: keep("yacht", !!this.yacht && this.yacht.phase !== "over"),
         liar: keep("liar", !!this.liar && this.liar.phase !== "over"),
+        liarsbar: keep(
+          "liarsbar",
+          !!this.liarsbar && this.liarsbar.phase !== "over",
+        ),
       },
     });
   }
@@ -3001,6 +3203,7 @@ export class LoungeRoom {
           seotda: p.seotda,
           yacht: p.yacht ?? null,
           liar: p.liar ?? null,
+          liarsbar: p.liarsbar ?? null,
           names: p.names,
           wallet: p.wallet,
         });

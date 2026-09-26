@@ -130,6 +130,9 @@ import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 // 성장 P1: XP and skill/tool effects (functions only; see the cycle note above).
 import { XP, fishXp } from './lounge-growth-data.ts';
 import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
+import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
+/** 오늘의 가구 rerolls a day (+2 with 나무결 가구점's 단골 손님 대접). */
+const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
 // ---------------------------------------------------------------- constants
 /** 6 → 9 and 9 → 12 plots. */
@@ -992,7 +995,7 @@ export function luxuryStock(life: LifeState, now: number) {
   const week = weekOfDay(kstDay(now));
   return FURNITURE.filter((f) => f.luxury)
     .sort((a, b) => hash32(`lux:${week}:${a.ref}`) - hash32(`lux:${week}:${b.ref}`))
-    .slice(0, LUXURY_PER_WEEK + (hasFlag(life, 'festival') ? 1 : 0));
+    .slice(0, LUXURY_PER_WEEK + (hasFlag(life, 'festival') ? 1 : 0) + furnitureBonus(life).luxury);
 }
 /**
  * Today's furniture stock: limited pieces always, then a daily rotation. With
@@ -1004,7 +1007,7 @@ export function shopStock(life: LifeState, now: number, uid?: string): ShopView 
     season = seasonOfDay(day),
     sunday = weekdayOf(day) === 0,
     discount = sunday ? MARKET_DISCOUNT : 0,
-    size = SHOP_DAILY_ITEMS + (sunday ? MARKET_EXTRA : 0) + (hasFlag(life, 'market') ? 2 : 0);
+    size = SHOP_DAILY_ITEMS + (sunday ? MARKET_EXTRA : 0) + (hasFlag(life, 'market') ? 2 : 0) + furnitureBonus(life).stock;
   const x = uid ? life.ext?.[uid] : undefined,
     rerolls = x?.day === day ? (x.reroll ?? 0) : 0,
     seed = rerolls ? `shop:${day}:r${rerolls}:${uid}` : `shop:${day}`;
@@ -1029,7 +1032,7 @@ export function shopStock(life: LifeState, now: number, uid?: string): ShopView 
     view.luxuryResetAt = weekResetAt(week);
     view.luxuryBought = x?.lux?.w === week ? [...x.lux.refs] : [];
     view.rerolls = rerolls;
-    view.rerollPrice = rerolls < SHOP_REROLL_MAX ? shopRerollPrice(rerolls) : null;
+    view.rerollPrice = rerolls < rerollMax(life) ? shopRerollPrice(rerolls) : null;
   }
   return view;
 }
@@ -1291,7 +1294,7 @@ export function plusAction(
     }
     case 'rerollShop': {
       const used = x.reroll ?? 0;
-      if (used >= SHOP_REROLL_MAX) fail(PLUS_REJECT.rerollMax);
+      if (used >= rerollMax(life)) fail(PLUS_REJECT.rerollMax);
       next = spend(next, life, uid, shopRerollPrice(used), 'shop-reroll', now);
       x.reroll = used + 1;
       break;
@@ -1299,7 +1302,8 @@ export function plusAction(
     case 'upgradeHouse': {
       const tier = HOUSE_TIERS.find((t) => t.tier === (x.house ?? 0) + 1);
       if (!tier) fail(PLUS_REJECT.houseMax);
-      next = spend(next, life, uid, tier!.price, 'house-' + tier!.tier, now);
+      // 범마을 부동산's plan rooms take 10% off tiers 3 and 4.
+      next = spend(next, life, uid, housePrice(life, tier!.tier, tier!.price), 'house-' + tier!.tier, now);
       x.house = tier!.tier;
       const text = `${josaGa(nameOf(actor))} 집을 넓혔어요 · ${tier!.name}`;
       addNews(life, now, `house:${actor}:${tier!.tier}`, 'house', text, [actor]);

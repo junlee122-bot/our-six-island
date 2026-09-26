@@ -67,9 +67,15 @@ export function FestivalPanel({ room, view, notify, onClose, selfActor }: Base) 
   const night = ['evening', 'night'].includes(timeOfDay(now));
   const board = fete.board;
   const start = async () => {
-    const ok = await run({ kind: 'fete', op: 'start' }, '');
-    const token = room.snapshot().life?.social?.fete?.play?.token;
-    if (ok && token) setPlaying({ token });
+    const before = room.snapshot().life?.social?.fete?.play?.token;
+    if (!(await run({ kind: 'fete', op: 'start' }, ''))) return;
+    // The accepted response carries the new token; wait for it to land in the view.
+    for (let i = 0; i < 20; i++) {
+      const token = room.snapshot().life?.social?.fete?.play?.token;
+      if (token && token !== before) return setPlaying({ token });
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    notify('송편 빚기를 준비하지 못했어요. 다시 눌러 주세요.', 'error');
   };
   return (
     <Modal title={def.name} onClose={onClose} className="l-life-modal l-fete" wide>

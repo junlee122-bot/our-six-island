@@ -24,6 +24,7 @@ import { NoirEngine } from './lounge-music-synth';
 import { SFX_FILES, type SfxId } from './lounge-sfx-files';
 import type { StingKind } from './lounge-music-score';
 import {
+  MUSIC_PLACES,
   MUSIC_TRACKS,
   PIECE_LEVEL,
   TRACK_LEVEL,
@@ -79,7 +80,7 @@ class LoungeAudio {
   /** The music box under the music channel (crossfades with location tracks). */
   private box: GainNode | null = null;
   private boxOn = false;
-  private tracks: Record<MusicPlace, TrackSlot> = { casino: emptySlot(), hall: emptySlot() };
+  private tracks: Record<MusicPlace, TrackSlot> = { casino: emptySlot(), hall: emptySlot(), tavern: emptySlot() };
   /** The generative room pieces (made on first need, then reused). */
   private noir: NoirEngine | null = null;
   private tension = false;
@@ -153,7 +154,7 @@ class LoungeAudio {
     void this.ctx?.close().catch(() => {});
     this.ctx = null;
     this.master = this.music = this.box = this.ambient = this.sfx = this.ui = this.waterGain = null;
-    this.tracks = { casino: emptySlot(), hall: emptySlot() };
+    this.tracks = { casino: emptySlot(), hall: emptySlot(), tavern: emptySlot() };
     this.noir?.dispose();
     this.noir = null;
     this.boxOn = false;
@@ -267,7 +268,7 @@ class LoungeAudio {
       this.ui!.gain.setTargetAtTime(targets[5], t, 0.02);
       this.box!.gain.setTargetAtTime(targets[6], t, 0.5);
     }
-    for (const place of ['casino', 'hall'] as const)
+    for (const place of MUSIC_PLACES)
       this.fadeTrack(place, musicOn && mix.track === place, t);
     const synth = musicOn ? mix.synth : null;
     if (synth || this.noir) this.noirEngine()?.setPiece(synth, t);
@@ -413,7 +414,7 @@ class LoungeAudio {
   }
   /** Stops faded tracks and releases decoded buffers not heard for a while. */
   private tickTracks(now: number) {
-    for (const place of ['casino', 'hall'] as const) {
+    for (const place of MUSIC_PLACES) {
       const slot = this.tracks[place];
       if (slot.source && slot.stopAt && now >= slot.stopAt) {
         try {
@@ -680,6 +681,64 @@ class LoungeAudio {
       source.connect(filter).connect(g).connect(this.sfx);
       source.start(t, (i * 0.137) % 1.5, length + 0.02);
     }
+  }
+  /**
+   * 허풍 카드 sounds (all synthesized, no files): `bell` the "거짓말!" bell
+   * (two sines, 1,320 / 1,980 Hz), `pop` the toy cork gun (a 20 ms noise burst
+   * and a 420 → 90 Hz sweep, then paper), `click` a dry trigger click,
+   * `heart` one heartbeat (two low thumps), `ratchet` the cylinder turning.
+   */
+  tavern(kind: 'bell' | 'pop' | 'click' | 'heart' | 'ratchet') {
+    if (!getSettings().sound) return;
+    this.ensure();
+    const ctx = this.ctx,
+      out = this.sfx;
+    if (!ctx || !out || ctx.state !== 'running') return;
+    const t0 = ctx.currentTime;
+    const tone = (f: number, at: number, peak: number, decay: number, type: OscillatorType = 'sine', to?: number) => {
+      const o = ctx.createOscillator(),
+        g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f, at);
+      if (to) o.frequency.exponentialRampToValueAtTime(to, at + decay * 0.8);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(peak, at + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0005, at + decay);
+      o.connect(g).connect(out);
+      o.start(at);
+      o.stop(at + decay + 0.05);
+    };
+    const noise = (at: number, length: number, peak: number, type: BiquadFilterType, f: number) => {
+      if (!this.noise) return;
+      const source = ctx.createBufferSource(),
+        filter = ctx.createBiquadFilter(),
+        g = ctx.createGain();
+      source.buffer = this.noise;
+      filter.type = type;
+      filter.frequency.value = f;
+      g.gain.setValueAtTime(peak, at);
+      g.gain.exponentialRampToValueAtTime(0.0005, at + length);
+      source.connect(filter).connect(g).connect(out);
+      source.start(at, 0.3, length + 0.02);
+    };
+    if (kind === 'bell') {
+      tone(1320, t0, 0.07, 0.6);
+      tone(1980, t0, 0.035, 0.45);
+    } else if (kind === 'pop') {
+      noise(t0, 0.02, 0.25, 'highpass', 900);
+      tone(420, t0, 0.2, 0.14, 'triangle', 90);
+      noise(t0 + 0.08, 0.35, 0.05, 'bandpass', 3200);
+    } else if (kind === 'click') {
+      noise(t0, 0.03, 0.14, 'highpass', 2400);
+      tone(1800, t0, 0.03, 0.04, 'square');
+    } else if (kind === 'heart') {
+      tone(60, t0, 0.22, 0.16);
+      tone(55, t0 + 0.2, 0.15, 0.14);
+    } else
+      for (let i = 0; i < 6; i++) {
+        noise(t0 + i * 0.05, 0.025, 0.08, 'highpass', 3000);
+        tone(900 - i * 40, t0 + i * 0.05, 0.02, 0.03, 'square');
+      }
   }
   /** Recorded effects (lounge-sfx-files.ts): decoded buffers, or 'missing'. */
   private samples = new Map<SfxId, AudioBuffer | 'loading' | 'missing'>();

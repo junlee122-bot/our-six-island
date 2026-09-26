@@ -288,3 +288,102 @@
   background: #f1e6d2;
   color: #5e4630;
 }
+/* ------------------------------------------------------------ tavern
+   허풍 주점 (허풍 카드): dark walnut, amber lamps, oxblood cloth and brass —
+   "a little shady but warm", between the casino's green and the hall's cream. */
+.l-app .l-game-screen[data-venue='tavern'] {
+  --venue-page: #1d1512;
+  --venue-head: #2a1d17;
+  --venue-line: #4a3426;
+  --venue-panel: #2c201a;
+  --venue-deep: #20170f;
+  --venue-ink: #f1e4cc;
+  --venue-muted: #bfa88a;
+  --venue-gold: #d19a4a;
+  --venue-oxblood: #9e3b2e;
+  background: var(--venue-page);
+  color: var(--venue-ink);
+}
+.l-app .l-game-screen[data-venue='tavern'] > header {
+  background: var(--venue-head);
+  border-bottom-color: var(--venue-line);
+  color: #f3e6cd;
+}
+.l-app .l-game-screen[data-venue='tavern'] > header small,
+.l-app .l-game-screen[data-venue='tavern'] .l-game-live {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='tavern'] > header button {
+  color: #efdfc2;
+}
+.l-app .l-game-screen[data-venue='tavern'] > header .l-game-back {
+  background: #3a281d;
+  border: 1px solid #6b4a34;
+  color: #f1e0bd;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-primary {
+  border-color: var(--venue-gold);
+  background: var(--venue-gold);
+  color: #2a1a0e;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-primary:hover {
+  background: #deaa5e;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-secondary {
+  border-color: #6b4a34;
+  background: #3a281d;
+  color: #f1e0bd;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-text {
+  color: #e2b774;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-game-money {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-game-money b {
+  color: var(--venue-gold);
+}
+.l-game-screen[data-venue='tavern'] .dh-host {
+  --dh-bg: #2c201a;
+  --dh-border: #4a3426;
+  --dh-name: #e2b774;
+  --dh-muted: #bfa88a;
+  --dh-text: #f6ead3;
+  --dh-ring: #d19a4a;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-modal {
+  color: #3e3228;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-modal .l-primary {
+  border-color: var(--l-primary, #3f6a4a);
+  background: var(--l-primary, #3f6a4a);
+  color: #fffdf1;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-modal .l-secondary {
+  border-color: #d8cdb8;
+  background: #f7f2e8;
+  color: #5b4330;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-round-ready {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+  color: var(--venue-ink);
+  box-shadow: 0 12px 32px #0007;
+}
+.l-app .l-game-screen[data-venue='tavern'] :is(.l-round-kicker, .l-round-heading p, .l-round-feedback) {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-round-count {
+  background: #3a281d;
+  color: #f1e0bd;
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-round-friends li {
+  border-color: var(--venue-line);
+  background: var(--venue-deep);
+}
+.l-app .l-game-screen[data-venue='tavern'] .l-round-friends li.is-ready {
+  border-color: #8a9a5a;
+  background: #2e3320;
+}

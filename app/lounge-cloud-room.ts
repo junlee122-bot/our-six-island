@@ -51,7 +51,7 @@ type Response = {
   life?: LifeView;
 };
 
-export type Area = 'village' | 'lounge' | 'casino' | 'wardrobe' | 'home';
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'wardrobe' | 'home';
 
 /** Client-only extras layered on the server view. */
 export type CloudRoomView = LoungeView & {

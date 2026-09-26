@@ -121,6 +121,9 @@ const Dm = ch(2, [0, 3, 7]),
   GmD = ch(7, [0, 3, 7], 2),
   FA = ch(5, [0, 4, 7], 9),
   E7Gs = ch(4, [0, 4, 7, 10], 8),
+  G7 = ch(7, [0, 4, 7, 10]),
+  G9 = ch(7, [0, 4, 7, 10, 14]),
+  Em7 = ch(4, [0, 3, 7, 10]),
   C = ch(0, [0, 4, 7]),
   CD = ch(0, [0, 4, 7], 2);
 
@@ -164,7 +167,31 @@ export const HALL: PieceSpec = {
   ],
 };
 
-export const PIECES: Record<MusicPlace, PieceSpec> = { casino: CASINO, hall: HALL };
+/**
+ * 허풍 주점: a slow swing shuffle in D dorian (88 bpm, triplet eighths): a
+ * walking pizzicato bass, a slightly detuned honky-tonk piano, an accordion
+ * drone (the reeds) and 가야금 plucks as accents. Dm7 – G7 – Dm7 – A7.
+ */
+export const TAVERN: PieceSpec = {
+  id: 'tavern',
+  bpm: 88,
+  stepsPerBeat: 3,
+  stepsPerBar: 12,
+  sections: {
+    A: [Dm7, G7, Dm7, A7, Dm7, G9, Em7, A7],
+    B: [G7, G7, Dm7, Dm7, G9, C, Em7, A7],
+    A2: [Dm7, G7, Dm7, A7, Dm7, G9, A7, Dm7],
+    C: [Dm7, Dm7, G7, G7, BbMaj7, C, A7sus, A7],
+    T: [Dm7, G7, A7, A7],
+  },
+  forms: [
+    ['A', 'B', 'A2', 'C', 'T'],
+    ['A', 'A2', 'B', 'C', 'T'],
+    ['A', 'C', 'A2', 'B', 'T'],
+  ],
+};
+
+export const PIECES: Record<MusicPlace, PieceSpec> = { casino: CASINO, hall: HALL, tavern: TAVERN };
 /** Seconds per step. */
 export const stepSeconds = (spec: PieceSpec) => 60 / spec.bpm / spec.stepsPerBeat;
 
@@ -594,8 +621,68 @@ export function hallBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[]
   return ev;
 }
 
+/** D dorian (B natural), C♯ over the dominant. */
+export function tavernScale(c: Chord): number[] {
+  return pcsOf(c).includes(1) ? [2, 4, 5, 7, 9, 11, 1] : [2, 4, 5, 7, 9, 11, 0];
+}
+
+/** One bar of the tavern shuffle (4 beats of triplet eighths: long-short). */
+export function tavernBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[] {
+  const { section: s, bar, chord, next } = plan;
+  const ev: NoteEvent[] = [];
+  const scale = tavernScale(chord),
+    tones = pcsOf(chord),
+    b = bassOf(chord);
+  // Walking bass: root, chord tone, scale step, chromatic approach.
+  const walk = [b, nearest(b + 4, tones, 33, 52), stepScale(nearest(b + 7, tones, 33, 52), -1, scale, 33, 52), approach(next, rng)];
+  walk.forEach((midi, beat) => ev.push({ step: beat * 3, inst: 'bass', midi, vel: beat ? 0.62 : 0.82, dur: 2.6 }));
+  // Brushes on the shuffle (long-short), a rim on 2 and 4.
+  for (let beat = 0; beat < 4; beat++) {
+    ev.push(hit(beat * 3, 'brush', 0.12, 2), hit(beat * 3 + 2, 'brush', 0.08, 1));
+    if (beat % 2) ev.push(hit(beat * 3, 'rim', s === 'C' ? 0.1 : 0.16));
+  }
+  // Honky-tonk piano comping: off-beat stabs, doubled a hair apart (detune feel).
+  const comp = voicing(chord, 62, 55, 70);
+  for (const step of [2, 8]) {
+    ev.push(...chordAt(step, 'piano', comp, 0.28, 1));
+    ev.push(...chordAt(step + 0.06, 'piano', comp.map((m) => m + 12), 0.1, 0.8));
+  }
+  // Accordion drone (the reeds) in A / A2 / T, held under the bar.
+  if (s !== 'B' && s !== 'C') ev.push(...chordAt(0, 'reed', voicing(chord, 60, 55, 67), 0.18, 11.5));
+  // Melody: piano right hand in A / A2, 가야금 answers in B, sparse in C.
+  const cells: readonly Rhythm[] = [
+    [[0, 2], [2, 1], [3, 2], [5, 1], [6, 6]],
+    [[0, 3], [3, 2], [5, 1], [6, 2], [8, 1], [9, 3]],
+    [[2, 1], [3, 3], [6, 2], [8, 4]],
+  ];
+  if (s === 'A' || s === 'A2') {
+    const key = 'T' + bar;
+    let line = state.motifs.get(key);
+    if (!line || s === 'A2') {
+      line = melody('piano', chord, cells[bar % cells.length], scale, state.lead, 64, 81, rng, {
+        cadence: s === 'A2' && bar === plan.of - 1,
+        strong: 6,
+      });
+      if (s === 'A') state.motifs.set(key, line);
+    }
+    state.lead = last(line).midi;
+    ev.push(...line.map((e) => ({ ...e, vel: e.vel * 0.7 })));
+  } else if (s === 'B') {
+    const line = melody('gayageum', chord, cells[(bar + 1) % cells.length], scale, state.high, 67, 84, rng, { strong: 6 });
+    state.high = last(line).midi;
+    ev.push(...line.map((e, i) => ({ ...e, vel: e.vel * 0.65, bend: e.dur >= 4 ? ('vib' as const) : i === 0 ? ('up' as const) : undefined })));
+  } else if (s === 'C') {
+    if (bar % 2 === 0) ev.push({ step: 0, inst: 'gayageum', midi: nearest(state.lead, tones, 64, 79), vel: 0.45, dur: 6, bend: 'down' });
+  } else if (bar === plan.of - 1) ev.push(...chordAt(0, 'piano', [62, 65, 69, 72], 0.3, 10));
+  return ev;
+}
+
 export function barEvents(spec: PieceSpec, plan: BarPlan, state: ScoreState, rng: Rng) {
-  return spec.id === 'casino' ? casinoBar(plan, state, rng) : hallBar(plan, state, rng);
+  return spec.id === 'casino'
+    ? casinoBar(plan, state, rng)
+    : spec.id === 'tavern'
+      ? tavernBar(plan, state, rng)
+      : hallBar(plan, state, rng);
 }
 
 /** Tension level after `bars` bars of a hand (rises, then holds). */

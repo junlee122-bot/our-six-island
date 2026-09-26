@@ -18,8 +18,11 @@ import { FRIEND_MODELS, FRIEND_PROP_SIZE, type FriendModel } from './lounge-frie
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { BAR_STOOL_Z, CLUB_MODELS, VIP_CORNER, type ClubModel } from './lounge-karchive-club';
 import { GAME_INFO, type GameKind } from './lounge-games';
-import { NAMES } from './lounge-text';
 import type { SceneArea } from './lounge-scene-layout';
+import { VENUES } from './lounge-venues';
+import { VENUE_BASE } from './lounge-venue-data';
+import type { TavernModel } from './lounge-model-assets';
+import { buildCorkGun, buildTavern, type TavernRoom } from './lounge-tavern-interior';
 import {
   INTERIOR_DOOR_Z,
   INTERIOR_ROOM,
@@ -52,6 +55,18 @@ type Palette = {
   sun: [string, number];
   lamp: string;
   background: string;
+  /** Fill light, the daylight seen through the door, the door mat. */
+  fill: string;
+  outside: string;
+  mat: string;
+  /** Dark signage (gold on dark) instead of dark on cream. */
+  dark: boolean;
+  /** Table wood. */
+  wood: string;
+  /** Point lamps (x, y, z), their power and reach. */
+  lamps: readonly (readonly [number, number, number])[];
+  lampPower: number;
+  lampReach: number;
 };
 const PALETTE: Record<SceneArea, Palette> = {
   lounge: {
@@ -66,6 +81,17 @@ const PALETTE: Record<SceneArea, Palette> = {
     sun: ['#ffe9c8', 2.1],
     lamp: '#ffd79a',
     background: '#e9dcc4',
+    fill: '#e6efe6',
+    outside: '#dcecc4',
+    mat: '#9c7a52',
+    dark: false,
+    wood: '#8e6540',
+    lamps: [
+      [-4, 3.1, -0.6],
+      [4, 3.1, -0.6],
+    ],
+    lampPower: 6,
+    lampReach: 11,
   },
   casino: {
     wall: '#6b3443',
@@ -79,6 +105,43 @@ const PALETTE: Record<SceneArea, Palette> = {
     sun: ['#ffdcb0', 1.7],
     lamp: '#ffc978',
     background: '#3c2129',
+    fill: '#f2c9a0',
+    outside: '#f3d9a4',
+    mat: '#c9a24a',
+    dark: true,
+    wood: '#4a2a1e',
+    lamps: [
+      [-4, 3.1, -0.6],
+      [4, 3.1, -0.6],
+    ],
+    lampPower: 9,
+    lampReach: 11,
+  },
+  // 허풍 주점: dark walnut planks, amber lamps over the table, a fireplace glow.
+  tavern: {
+    wall: '#5a3b2a',
+    wainscot: '#3a2418',
+    rail: '#8a6038',
+    floor: ['#6b4a34', '#634430', '#72503a', '#5d3f2c'],
+    trim: '#3a2418',
+    chair: '#6b4226',
+    cushion: '#9e3b2e',
+    hemi: ['#f1c58f', '#2a1d17', 1.35],
+    sun: ['#ffd6a0', 1.25],
+    lamp: '#ffcf8a',
+    background: '#1d1512',
+    fill: '#ffb87a',
+    outside: '#3b4a6a',
+    mat: '#7a3a2c',
+    dark: true,
+    wood: '#5a3a24',
+    lamps: [
+      [-1.2, 2.2, -0.3],
+      [0, 2.2, -0.3],
+      [1.2, 2.2, -0.3],
+    ],
+    lampPower: 5,
+    lampReach: 7,
   },
 };
 
@@ -90,6 +153,7 @@ const FELT: Record<GameKind, string> = {
   chess: '#d8c39a',
   yacht: '#3f6fa3',
   liar: '#c98a3b',
+  liarsbar: '#2f5a4e',
 };
 
 export type SeatShow = { world: InteriorWorld; state: 'empty' | 'taken' | 'me' | 'away' };
@@ -135,13 +199,15 @@ function clubCopy(source: THREE.Group, scale: number | [number, number, number],
 export function createInteriorScene(
   scene: THREE.Scene,
   area: SceneArea,
-  options: { lights: boolean; vip?: boolean },
+  options: { lights: boolean; vip?: boolean; props?: readonly TavernModel[] },
 ) {
   const pal = PALETTE[area];
   const root = new THREE.Group();
   root.name = 'interior-' + area;
   scene.add(root);
   let disposed = false;
+  /** 허풍 주점's own furnishings (set once its kArchive loader exists). */
+  let tavern: TavernRoom | null = null;
   /** Loaded kArchive models (shared by their clones in this scene). */
   const models: Partial<Record<ClubModel, THREE.Group>> = {};
   /** Set when a model arrived; refresh() reports it so the view re-renders. */
@@ -213,25 +279,31 @@ export function createInteriorScene(
   sun.shadow.normalBias = 0.03;
   sun.shadow.bias = -0.0002;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(area === 'casino' ? '#f2c9a0' : '#e6efe6', 0.7);
+  const fill = new THREE.DirectionalLight(pal.fill, area === 'tavern' ? 0.45 : 0.7);
   fill.position.set(8, 6, 4);
   scene.add(fill);
   const lamps: THREE.PointLight[] = [];
   if (options.lights)
-    for (const x of [-4, 4]) {
-      const lamp = new THREE.PointLight(pal.lamp, area === 'casino' ? 9 : 6, 11, 1.6);
-      lamp.position.set(x, 3.1, -0.6);
+    for (const [x, y, z] of pal.lamps) {
+      const lamp = new THREE.PointLight(pal.lamp, pal.lampPower, pal.lampReach, 1.6);
+      lamp.position.set(x, y, z);
       scene.add(lamp);
       lamps.push(lamp);
     }
+  // 허풍 주점: the fireplace's flickering glow (still on low quality).
+  const hearth = area === 'tavern' ? new THREE.PointLight('#ff9a4a', 3.2, 6, 1.8) : null;
+  if (hearth) {
+    hearth.position.set(INTERIOR_ROOM.maxX - 1.1, 0.8, -2.2);
+    scene.add(hearth);
+  }
 
   // ---------------------------------------------------------- shell
   const { minX, maxX, minZ, maxZ, wallHeight } = INTERIOR_ROOM;
   const width = maxX - minX,
     depth = maxZ - minZ;
   box(width + 0.4, 0.3, depth + 0.4, 0, -0.16, (minZ + maxZ) / 2, pal.trim, root, false);
-  if (area === 'lounge') {
-    // Warm oak planks (instanced, four tones).
+  if (area !== 'casino') {
+    // Warm oak planks (walnut in the tavern; instanced, four tones).
     const plank = new THREE.BoxGeometry(1, 0.05, 1);
     const rows = Math.ceil(depth / 0.36);
     pal.floor.forEach((color, tone) => {
@@ -258,7 +330,8 @@ export function createInteriorScene(
       mesh.receiveShadow = true;
       root.add(mesh);
     });
-    // A woven rug under the middle of the hall.
+    // A woven rug under the middle of the hall (the tavern has its own oval rug).
+    if (area === 'lounge') {
     const rug = canvasTexture(256, 160, (c) => {
       c.fillStyle = '#d9b77d';
       c.fillRect(0, 0, 256, 160);
@@ -280,6 +353,7 @@ export function createInteriorScene(
     rugMesh.position.set(0, 0.025, 3.2);
     rugMesh.receiveShadow = true;
     root.add(rugMesh);
+    }
   } else {
     // Patterned carpet.
     const carpet = canvasTexture(128, 128, (c) => {
@@ -338,12 +412,12 @@ export function createInteriorScene(
   for (const z of [INTERIOR_DOOR_Z.z0 - 0.08, INTERIOR_DOOR_Z.z1 + 0.08]) box(0.24, 2.46, 0.14, minX - 0.02, 1.23, z, pal.trim);
   const outside = new THREE.Mesh(
     new THREE.PlaneGeometry(doorW, 2.36),
-    new THREE.MeshBasicMaterial({ color: area === 'casino' ? '#f3d9a4' : '#dcecc4', toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: pal.outside, toneMapped: false }),
   );
   outside.rotation.y = Math.PI / 2;
   outside.position.set(minX - 0.17, 1.18, doorZ);
   root.add(outside);
-  const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.1, doorW - 0.1), surface(area === 'casino' ? '#c9a24a' : '#9c7a52'));
+  const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.1, doorW - 0.1), surface(pal.mat));
   mat.rotation.x = -Math.PI / 2;
   mat.position.set(minX + 0.6, 0.02, doorZ);
   mat.receiveShadow = true;
@@ -352,16 +426,16 @@ export function createInteriorScene(
   // Back wall: windows (hall) or the lit sign (casino), plus a name banner.
   const banner = canvasTexture(640, 150, (c) => {
     roundRect(c, 6, 6, 628, 138, 26);
-    c.fillStyle = area === 'casino' ? '#2a1720' : '#fff6e2';
+    c.fillStyle = area === 'tavern' ? '#2a1d17' : pal.dark ? '#2a1720' : '#fff6e2';
     c.fill();
     c.lineWidth = 8;
-    c.strokeStyle = area === 'casino' ? '#e0b85a' : '#9c6b44';
+    c.strokeStyle = pal.dark ? '#e0b85a' : '#9c6b44';
     c.stroke();
-    c.fillStyle = area === 'casino' ? '#ffd98a' : '#6b4526';
+    c.fillStyle = pal.dark ? '#ffd98a' : '#6b4526';
     c.font = `800 72px ${FONT}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
-    c.fillText(area === 'casino' ? NAMES.casino : NAMES.hall, 320, 80);
+    c.fillText(VENUES[area].name, 320, 80);
   });
   textures.push(banner);
   const bannerMesh = new THREE.Mesh(
@@ -369,9 +443,9 @@ export function createInteriorScene(
     new THREE.MeshStandardMaterial({
       map: banner,
       roughness: 0.9,
-      emissive: area === 'casino' ? '#ffffff' : '#000000',
-      emissiveMap: area === 'casino' ? banner : null,
-      emissiveIntensity: area === 'casino' ? 0.55 : 0,
+      emissive: pal.dark ? '#ffffff' : '#000000',
+      emissiveMap: pal.dark ? banner : null,
+      emissiveIntensity: pal.dark ? 0.55 : 0,
     }),
   );
   bannerMesh.position.set(0, 2.72, minZ + 0.06);
@@ -405,6 +479,8 @@ export function createInteriorScene(
     cylinder(0.14, 0.12, 0.2, -2.6, 0.9, minZ + 0.3, '#e8e0cf');
     cylinder(0.1, 0.1, 0.14, -2.0, 0.87, minZ + 0.3, '#6f8f73');
     cylinder(0.1, 0.1, 0.14, -1.7, 0.87, minZ + 0.3, '#6f8f73');
+  } else if (area === 'tavern') {
+    // Built with its kArchive props below (buildTavern), after the tables.
   } else {
     // Gold wall sconces and a bar counter along the back wall.
     const glow = surface('#fff4d6', { emissive: '#ffd27a', emissiveIntensity: 1.2 });
@@ -430,7 +506,8 @@ export function createInteriorScene(
       doorPosts.push(cylinder(0.12, 0.12, 0.04, minX + 1.3, 0.02, z, pal.trim));
     }
   }
-  // Potted plants in the corners.
+  // Potted plants in the corners (the tavern has its own corners).
+  if (area !== 'tavern')
   for (const [x, z] of [[minX + 0.6, minZ + 0.6], [maxX - 0.6, minZ + 0.6], [maxX - 0.6, maxZ - 0.6]] as const) {
     if (area === 'casino' && x > 0 && z < 0) continue;
     cylinder(0.3, 0.24, 0.5, x, 0.25, z, area === 'casino' ? '#c9a24a' : '#b5673f');
@@ -479,12 +556,16 @@ export function createInteriorScene(
     const chair = new THREE.Group();
     chair.position.set(at.x, 0, at.z);
     chair.rotation.y = face;
+    const stool = tavern?.stool();
     const model = models.banquetChair;
-    if (model) {
+    if (stool) {
+      // 허풍 주점: the saddle stool, its seat at SEAT_HEIGHT.
+      chair.add(clubCopy(stool, SEAT_HEIGHT / tavern!.stoolSeat, Math.PI / 2));
+    } else if (model) {
       // The kArchive banquet chair: its back on the far side from the table,
       // its cushion at SEAT_HEIGHT where a seated figure's hips rest.
       chair.add(clubCopy(model, CLUB_CHAIR_SCALE));
-    } else if (area === 'lounge') {
+    } else if (area !== 'casino') {
       const top = new THREE.Mesh(seatGeometry.stool, cushion);
       top.position.y = SEAT_HEIGHT - 0.05;
       top.castShadow = true;
@@ -516,17 +597,17 @@ export function createInteriorScene(
     const info = GAME_INFO[table.game];
     const texture = canvasTexture(256, 176, (c) => {
       roundRect(c, 6, 6, 244, 164, 20);
-      c.fillStyle = area === 'casino' ? '#2d1a22' : '#fff4dd';
+      c.fillStyle = area === 'tavern' ? '#2a1d17' : pal.dark ? '#2d1a22' : '#fff4dd';
       c.fill();
       c.lineWidth = 7;
-      c.strokeStyle = area === 'casino' ? '#d9b25a' : '#8d6a45';
+      c.strokeStyle = pal.dark ? '#d9b25a' : '#8d6a45';
       c.stroke();
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillStyle = area === 'casino' ? '#ffd98a' : '#9c3b30';
+      c.fillStyle = pal.dark ? '#ffd98a' : '#9c3b30';
       c.font = `800 58px ${FONT}`;
       c.fillText(info.symbol, 128, 64);
-      c.fillStyle = area === 'casino' ? '#fff1d0' : '#5a3b22';
+      c.fillStyle = pal.dark ? '#fff1d0' : '#5a3b22';
       c.font = `800 38px ${FONT}`;
       c.fillText(info.name, 128, 130);
     });
@@ -592,7 +673,7 @@ export function createInteriorScene(
     group.name = 'table-' + table.game;
     group.position.set(table.center.x, 0, table.center.z);
     const felt = surface(FELT[table.game], { roughness: 1 });
-    const wood = surface(area === 'casino' ? '#4a2a1e' : '#8e6540');
+    const wood = surface(pal.wood);
     const { rx, rz } = table;
     const body: THREE.Mesh[] = [];
     if (table.game === 'poker' || table.game === 'blackjack') {
@@ -673,6 +754,26 @@ export function createInteriorScene(
       mark.rotation.y = 0.25;
       const bell = cylinder(0.02, 0.07, 0.07, 0.12, TABLE_HEIGHT + 0.035, -0.02, '#e9dcc0', group, 16);
       friendBodies.push(bell);
+    } else if (table.game === 'liarsbar') {
+      // 허풍 카드: a big round walnut table (the kArchive café table replaces
+      // it), a teal felt disc, the toy cork gun, the 거짓말! bell and a card pile.
+      const top = cylinder(1, 1, 0.08, 0, TABLE_HEIGHT - 0.04, 0, wood, group, 40);
+      top.scale.set(rx, 1, rz);
+      body.push(top);
+      body.push(cylinder(0.22, 0.4, TABLE_HEIGHT - 0.08, 0, (TABLE_HEIGHT - 0.08) / 2, 0, wood, group, 14));
+      const cloth = cylinder(1, 1, 0.012, 0, TABLE_HEIGHT + 0.012, 0, felt, group, 40);
+      cloth.scale.set(rx * 0.78, 1, rz * 0.78);
+      cloth.castShadow = false;
+      const gun = buildCorkGun({ surface, geometries });
+      gun.position.set(0.18, TABLE_HEIGHT + 0.03, 0.05);
+      gun.rotation.y = 0.4;
+      gun.scale.setScalar(1.6);
+      gun.name = 'cork-gun';
+      group.add(gun);
+      for (let i = 0; i < 5; i++) {
+        const card = box(0.12, 0.012, 0.17, -0.3 + (i % 2) * 0.03, TABLE_HEIGHT + 0.03 + i * 0.012, -0.05, i % 2 ? '#7d2a22' : '#8d342a', group, false);
+        card.rotation.y = (i - 2) * 0.2;
+      }
     } else if (table.game === 'chess') {
       box(rx * 1.7, 0.1, rz * 1.9, 0, TABLE_HEIGHT, 0, wood, group);
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
@@ -914,7 +1015,11 @@ export function createInteriorScene(
     },
   };
   const wanted: ClubModel[] =
-    area === 'lounge' ? ['banquetChair', 'cardTable'] : ['banquetChair', 'barStool', 'queueRope'];
+    area === 'lounge'
+      ? ['banquetChair', 'cardTable']
+      : area === 'casino'
+        ? ['banquetChair', 'barStool', 'queueRope']
+        : [];
   const loaded: THREE.Group[] = [];
   const disposeModel = (model: THREE.Group) =>
     model.traverse((child) => {
@@ -927,6 +1032,59 @@ export function createInteriorScene(
       }
     });
   const loader = new GLTFLoader();
+  /** 허풍 주점: the café table model under the 허풍 카드 felt (stretched to the table). */
+  function placeTavernTable() {
+    const node = nodes.get('liarsbar'),
+      model = tavern?.table();
+    if (!node || !model) return;
+    for (const mesh of node.body) mesh.visible = false;
+    const { rx, rz } = node.table;
+    const size = { w: 0.8, h: 0.565, d: 0.8 };
+    node.group.add(clubCopy(model, [(rx * 2) / size.w, TABLE_HEIGHT / size.h, (rz * 2) / size.d]));
+  }
+  // 허풍 주점: its own furnishings and upgrade props (lounge-tavern-interior.ts).
+  if (area === 'tavern') {
+  tavern = buildTavern(
+    {
+      root,
+      loader,
+      surface,
+      box,
+      cylinder,
+      canvasTexture,
+      textures,
+      geometries,
+      own: (model) => loaded.push(model),
+      isDisposed: () => disposed,
+      changed: () => {
+        modelsChanged = true;
+      },
+      arrived: (key) => {
+        if (key === 'saddleStool')
+          for (const node of nodes.values()) {
+            node.key = '';
+            setSeats(node.table.game, node.last);
+          }
+        if (key === 'cafeTable') placeTavernTable();
+      },
+      font: FONT,
+    },
+    { props: options.props ?? VENUE_BASE.tavern.props },
+  );
+  }
+  if (area === 'tavern' && tavern)
+    loader
+      .loadAsync(tavern.bellUrl)
+      .then((gltf) => {
+        loaded.push(gltf.scene);
+        const node = nodes.get('liarsbar');
+        if (disposed || !node || !tavern) return;
+        const bell = clubCopy(gltf.scene, tavern.bellScale);
+        bell.position.set(-0.05, TABLE_HEIGHT + 0.012, 0.28);
+        node.group.add(bell);
+        modelsChanged = true;
+      })
+      .catch(() => {});
   for (const key of wanted)
     loader
       .loadAsync(LOUNGE_MODELS[key])
@@ -1036,8 +1194,9 @@ export function createInteriorScene(
      * Applies the VIP project state; true when the view should re-render
      * (that changed, or a kArchive model has just been placed).
      */
-    refresh(vipOn: boolean) {
-      const changed = setVip(vipOn) || modelsChanged;
+    refresh(vipOn: boolean, props?: readonly TavernModel[]) {
+      const shown = !!props && !!tavern?.setProps(props);
+      const changed = setVip(vipOn) || modelsChanged || shown;
       modelsChanged = false;
       return changed;
     },
@@ -1047,9 +1206,19 @@ export function createInteriorScene(
     setLights(on: boolean) {
       for (const lamp of lamps) lamp.visible = on;
     },
+    /** Per-frame life (the tavern's fireplace flicker); true when it changed. */
+    tick(t: number) {
+      if (!hearth) return false;
+      hearth.intensity = 3.2 * (1 + 0.12 * Math.sin(t * 7.3) + 0.06 * Math.sin(t * 17.1 + 1.3));
+      return true;
+    },
     dispose() {
       disposed = true;
       scene.remove(root, hemi, sun, fill, ...lamps);
+      if (hearth) {
+        scene.remove(hearth);
+        hearth.dispose();
+      }
       for (const model of loaded) disposeModel(model);
       root.traverse((child) => {
         const mesh = child as THREE.Mesh;

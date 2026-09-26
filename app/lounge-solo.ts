@@ -3,7 +3,7 @@
 // against the dealer and chess / go-stop have a 연습 판 against the AI.
 // Pure: the invite window renders the list and lounge-game.tsx runs the chosen one.
 
-export type SoloTableKind = 'blackjack' | 'practice-gostop' | 'practice-chess';
+export type SoloTableKind = 'blackjack' | 'practice-gostop' | 'practice-chess' | 'practice-liarsbar';
 export type SoloKind =
   | 'farm'
   | 'fish'
@@ -13,10 +13,11 @@ export type SoloKind =
   | SoloTableKind;
 
 /** The table each 혼자 하기 entry walks to. */
-export const SOLO_TABLE_GAME: Record<SoloTableKind, 'blackjack' | 'gostop' | 'chess'> = {
+export const SOLO_TABLE_GAME: Record<SoloTableKind, 'blackjack' | 'gostop' | 'chess' | 'liarsbar'> = {
   blackjack: 'blackjack',
   'practice-gostop': 'gostop',
   'practice-chess': 'chess',
+  'practice-liarsbar': 'liarsbar',
 };
 
 /** Table games playable alone (shown with the solo activities when nobody is on). */
@@ -37,6 +38,12 @@ export const SOLO_TABLES: readonly SoloActivity[] = [
     kind: 'practice-chess',
     title: '체스 연습 판',
     detail: '카지노 · 루미(AI)와 · 범 없이',
+    hot: false,
+  },
+  {
+    kind: 'practice-liarsbar',
+    title: '허 선장네 연습 판',
+    detail: '허풍 주점 · 봇 셋과 · 범 없이',
     hot: false,
   },
 ];

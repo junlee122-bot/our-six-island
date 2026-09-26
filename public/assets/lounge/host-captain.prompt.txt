@@ -1,0 +1,18 @@
+허 선장 (허풍 주점 host) pose sheet — generated 2026-09-26 with Higgsfield gpt_image_2_5 (1:1, 1 generation, 0.25 credits),
+reference image: host-maehwa.png on flat magenta (style and proportion only).
+Post-processing: magenta keyed to alpha with edge despill, six cells cropped by their opaque bounds and
+repacked into 3×2 cells of 440×660 px (soles on the 648 px line, calm figure 600 px tall), like host-lumi / host-maehwa.
+
+Prompt:
+Use case: production 2D game sprite sheet for a cozy browser game. Original character "Captain Heo", the jolly owner and host of a small harbor tavern.
+Reference image role: ILLUSTRATION STYLE, LAYOUT AND PROPORTION reference only. Match exactly its crisp clean 2D illustrated chibi game-sprite style: big head (about one third of body height), soft round face, large warm eyes, tidy dark outlines, opaque smooth colors with restrained soft painted shading, front-facing, same body scale, same 3 columns x 2 rows layout of tall cells. Do NOT copy the reference girl's hair, hanbok or colors.
+Character design (original; no logos, no text, no weapons): a cheerful round-bellied middle-aged man, short and stout, with a big bushy reddish-brown beard and mustache, rosy cheeks, twinkling brown eyes with small laugh lines. White sailor captain's cap with a small navy anchor embroidery and a black visor. Blue-and-white horizontal striped sailor shirt with sleeves rolled to the elbows, a dark brown leather vest with brass buttons, a long cream canvas apron tied at the waist, dark navy trousers, sturdy brown boots. A small brass kettle (makgeolli jug) is his signature prop.
+Output: ONE square image with exactly SIX equal tall cells in a 3 columns x 2 rows grid, no visible grid lines. One full-body Captain Heo in each cell, all the same size, identical design and colors, feet (boot soles) at 98 percent of cell height, head top (cap) near 7 percent, everything fully inside its cell with clear gutters, nothing clipped, nothing overlapping neighbouring cells.
+Cell 1 (top-left) CALM: gentle content smile, standing relaxed, both hands resting on his apron at the belly, the brass kettle hanging from one hand.
+Cell 2 (top-middle) SMILE: big hearty closed-eye laugh, one hand raised to shoulder height in a welcoming open-palm wave, the other holding the brass kettle.
+Cell 3 (top-right) DEALING: pleasant grin, leaning slightly, right arm extended forward and down sliding one plain dark-red-backed playing card (no marks) as if across a table; left hand holds a small stack of the same cards at the waist.
+Cell 4 (bottom-left) FOCUS: serious squint, eyebrows lowered, lips pressed under the beard, arms folded across his chest, watching intently.
+Cell 5 (bottom-middle) WOW: astonished, eyes wide, mouth open in a round "oh" inside the beard, both hands raised near his cheeks, cap slightly lifted.
+Cell 6 (bottom-right) SORRY: sympathetic sad-sweet look, eyebrows tilted up in the middle, cap held against his chest with both hands.
+Well-drawn small natural hands with clearly defined fingers. Crisp sharp outlines on every edge, no soft glow or halo, no magenta tint on skin, beard or edges.
+Background: opaque FLAT SOLID MAGENTA #ff00ff across all empty space, completely uniform. No floor, no table, no ground or contact shadows, no gradient, no text, no labels, no watermark, no grid lines. Exactly six figures, nothing else.

@@ -89,3 +89,65 @@ export const VALLEY_MODELS = {
   stonePaver: '/models/village/valley/stonePaver.glb',
 } as const;
 export type ValleyModel = keyof typeof VALLEY_MODELS;
+
+/**
+ * 허풍 주점 (kArchive, 2026-09-26; lounge/tavern/assets.json): the interior's
+ * base set and every upgrade tier's props (lounge-venue-upgrades.ts). Loaded
+ * only inside the tavern (lounge-tavern-interior.ts).
+ */
+export const TAVERN_MODELS = {
+  barCounter: '/models/lounge/tavern/barCounter.glb',
+  wallShelf: '/models/lounge/tavern/wallShelf.glb',
+  bottle: '/models/lounge/tavern/bottle.glb',
+  keg: '/models/lounge/tavern/keg.glb',
+  cafeTable: '/models/lounge/tavern/cafeTable.glb',
+  saddleStool: '/models/lounge/tavern/saddleStool.glb',
+  fireplace: '/models/lounge/tavern/fireplace.glb',
+  glass: '/models/lounge/tavern/glass.glb',
+  cupTree: '/models/lounge/tavern/cupTree.glb',
+  bottleCrate: '/models/lounge/tavern/bottleCrate.glb',
+  cornerCabinet: '/models/lounge/tavern/cornerCabinet.glb',
+  teaSideboard: '/models/lounge/tavern/teaSideboard.glb',
+  glassRack: '/models/lounge/tavern/glassRack.glb',
+  sodaTap: '/models/lounge/tavern/sodaTap.glb',
+  beverageBar: '/models/lounge/tavern/beverageBar.glb',
+  boothBench: '/models/lounge/tavern/boothBench.glb',
+  shelterBench: '/models/lounge/tavern/shelterBench.glb',
+  soban: '/models/lounge/tavern/soban.glb',
+  stringLights: '/models/lounge/tavern/stringLights.glb',
+  starLamp: '/models/lounge/tavern/starLamp.glb',
+  floorLamp: '/models/lounge/tavern/floorLamp.glb',
+  coatStand: '/models/lounge/tavern/coatStand.glb',
+  bambooPlanter: '/models/lounge/tavern/bambooPlanter.glb',
+  doorway: '/models/lounge/tavern/doorway.glb',
+  windowFrame: '/models/lounge/tavern/windowFrame.glb',
+  audioConsole: '/models/lounge/tavern/audioConsole.glb',
+  bookcase: '/models/lounge/tavern/bookcase.glb',
+  ticketRail: '/models/lounge/tavern/ticketRail.glb',
+  cauldron: '/models/lounge/tavern/cauldron.glb',
+  stove: '/models/lounge/tavern/stove.glb',
+  teaUrn: '/models/lounge/tavern/teaUrn.glb',
+  register: '/models/lounge/tavern/register.glb',
+  storageShelf: '/models/lounge/tavern/storageShelf.glb',
+  barrelRack: '/models/lounge/tavern/barrelRack.glb',
+  chestnutRoaster: '/models/lounge/tavern/chestnutRoaster.glb',
+} as const;
+export type TavernModel = keyof typeof TAVERN_MODELS;
+
+/**
+ * Village buildings of the tavern, 범마을 부동산 and 나무결 가구점 with their
+ * exterior upgrade variants (village/tavern and village/shops assets.json).
+ * Placed by lounge-village-shops.ts.
+ */
+export const SHOP_MODELS = {
+  tavernStall: '/models/village/tavern/tavernStall.glb',
+  menuBoard: '/models/village/tavern/menuBoard.glb',
+  dumplingShop: '/models/village/tavern/dumplingShop.glb',
+  stallHeritage: '/models/village/tavern/stallHeritage.glb',
+  grillHut: '/models/village/tavern/grillHut.glb',
+  realtyOffice: '/models/village/shops/realtyOffice.glb',
+  realtyDuplex: '/models/village/shops/realtyDuplex.glb',
+  furnitureShop: '/models/village/shops/furnitureShop.glb',
+  furnitureShowroom: '/models/village/shops/furnitureShowroom.glb',
+} as const;
+export type ShopModel = keyof typeof SHOP_MODELS;

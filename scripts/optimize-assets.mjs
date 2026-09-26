@@ -37,7 +37,13 @@ const LOSSLESS_ATLASES = [
 // the framed PNG composites; skipped (keeping the committed WebP) when missing.
 const WALL_PRINTS = ['lounge/bedroom/miku-poster.png'];
 // Table host sheets (루미 / 매화): already keyed RGBA, never dyed, so lossy is fine.
-const HOST_SHEETS = ['lounge/host-lumi.png', 'lounge/host-maehwa.png'];
+const HOST_SHEETS = [
+  'lounge/host-lumi.png',
+  'lounge/host-maehwa.png',
+  'lounge/host-captain.png',
+  'lounge/host-realtor.png',
+  'lounge/host-carpenter.png',
+];
 // Legacy pack (PNG sources in the repo) + current pack. The current pack's
 // 1024px PNG sources are kept out of the repository (not used at runtime), so
 // ids without a PNG next to the WebP are skipped and keep their committed WebP.
@@ -83,6 +89,42 @@ const MODEL_TEXTURE_SIZE = {
   'village/valley/stonePaver.glb': 512,
   'village/valley/shrub.glb': 512,
   'village/valley/cobbleWall.glb': 512,
+  // 허풍 주점 · 부동산 · 가구점 (2026-09-26): small interior props and signs.
+  'lounge/tavern/barCounter.glb': 512,
+  'lounge/tavern/wallShelf.glb': 512,
+  'lounge/tavern/bottle.glb': 512,
+  'lounge/tavern/keg.glb': 512,
+  'lounge/tavern/saddleStool.glb': 512,
+  'lounge/tavern/fireplace.glb': 512,
+  'lounge/tavern/glass.glb': 512,
+  'lounge/tavern/cupTree.glb': 512,
+  'lounge/tavern/bottleCrate.glb': 512,
+  'lounge/tavern/cornerCabinet.glb': 512,
+  'lounge/tavern/teaSideboard.glb': 512,
+  'lounge/tavern/glassRack.glb': 512,
+  'lounge/tavern/sodaTap.glb': 512,
+  'lounge/tavern/beverageBar.glb': 512,
+  'lounge/tavern/boothBench.glb': 512,
+  'lounge/tavern/shelterBench.glb': 512,
+  'lounge/tavern/soban.glb': 512,
+  'lounge/tavern/stringLights.glb': 512,
+  'lounge/tavern/starLamp.glb': 512,
+  'lounge/tavern/floorLamp.glb': 512,
+  'lounge/tavern/coatStand.glb': 512,
+  'lounge/tavern/bambooPlanter.glb': 512,
+  'lounge/tavern/doorway.glb': 512,
+  'lounge/tavern/windowFrame.glb': 512,
+  'lounge/tavern/audioConsole.glb': 512,
+  'lounge/tavern/bookcase.glb': 512,
+  'lounge/tavern/ticketRail.glb': 512,
+  'lounge/tavern/cauldron.glb': 512,
+  'lounge/tavern/stove.glb': 512,
+  'lounge/tavern/teaUrn.glb': 512,
+  'lounge/tavern/register.glb': 512,
+  'lounge/tavern/storageShelf.glb': 512,
+  'lounge/tavern/barrelRack.glb': 512,
+  'lounge/tavern/chestnutRoaster.glb': 512,
+  'village/tavern/menuBoard.glb': 512,
 };
 
 async function sameRgba(a, b) {

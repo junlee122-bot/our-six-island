@@ -9,7 +9,8 @@ export type EconomyGame =
   | 'poker'
   | 'blackjack'
   | 'seotda'
-  | 'yacht';
+  | 'yacht'
+  | 'liarsbar';
 export type GameEscrow = {
   game: EconomyGame;
   wallets: string[];
@@ -144,7 +145,7 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('tool-')) return 'tool';
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival', 'venue-up'].includes(reason)
   )
     return reason;
   return 'spend-other';
@@ -231,7 +232,7 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
     if (
       !matchKey(id) ||
       !g ||
-      !['chess', 'gostop', 'poker', 'blackjack', 'seotda', 'yacht'].includes(g.game) ||
+      !['chess', 'gostop', 'poker', 'blackjack', 'seotda', 'yacht', 'liarsbar'].includes(g.game) ||
       !['reserved', 'settled', 'void'].includes(g.state) ||
       !Array.isArray(g.wallets) ||
       !Array.isArray(g.deposits) ||
@@ -254,7 +255,7 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
         ? n !== 2
         : g.game === 'gostop'
           ? n !== 3
-          : g.game === 'yacht'
+          : g.game === 'yacht' || g.game === 'liarsbar'
             ? n < 2 || n > 4
           : // Blackjack may be played alone against the dealer (혼자 하기).
             n < (g.game === 'blackjack' ? 1 : 2) || n > 7

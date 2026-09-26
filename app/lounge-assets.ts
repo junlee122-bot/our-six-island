@@ -93,6 +93,11 @@ export const LOUNGE_ASSETS = {
   // Table hosts (루미 / 매화): keyed 3×2 pose sheets, see lounge-host-sprites.ts.
   hostLumi: '/assets/lounge/host-lumi.webp',
   hostMaehwa: '/assets/lounge/host-maehwa.webp',
+  // 허 선장 (허풍 주점): same 3×2 layout, generated 2026-09-26 (host-captain.prompt.txt).
+  hostCaptain: '/assets/lounge/host-captain.webp',
+  // 부동산 문 사장 · 가구점 결 목수: one shared generation (host-shopkeepers.prompt.txt).
+  hostRealtor: '/assets/lounge/host-realtor.webp',
+  hostCarpenter: '/assets/lounge/host-carpenter.webp',
   room: '/assets/lounge/club-room.webp',
   casino: '/assets/lounge/club-casino.webp',
   wardrobe: '/assets/lounge/club-wardrobe.webp',

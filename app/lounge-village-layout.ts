@@ -1,13 +1,22 @@
 import { KARCHIVE_COLLIDERS } from './lounge-village-karchive-layout.ts';
+import { SHOP_COLLIDERS } from './lounge-village-shops-layout.ts';
 import { slideSubstep } from './lounge-walk-slide.ts';
 
-export type VillageDestination = 'lounge' | 'casino' | 'wardrobe' | 'bedroom';
+export type VillageDestination =
+  | 'lounge'
+  | 'casino'
+  | 'tavern'
+  | 'wardrobe'
+  | 'bedroom'
+  /** Counter shops: the door opens the shop's counter scene (no interior area). */
+  | 'realty'
+  | 'furniture';
 export type VillagePoint = { x: number; z: number };
 export type VillagePlace = {
   id: string;
   name: string;
   subtitle: string;
-  kind: 'home' | 'hall' | 'casino' | 'wardrobe';
+  kind: 'home' | 'hall' | 'casino' | 'wardrobe' | 'tavern' | 'realty' | 'furniture';
   actor?: number;
   x: number;
   z: number;
@@ -125,6 +134,13 @@ export const VILLAGE_DISTRICTS = [
     description: '모래사장과 갯바위, 밤에 불 켜지는 항구',
     point: { x: 8, z: 33.2 },
     color: '#c9a86a',
+  },
+  {
+    id: 'shop-street',
+    name: '강 건너 상점가',
+    description: '서쪽 다리 건너 부동산과 가구점',
+    point: { x: -27, z: 25.4 },
+    color: '#8a7a5a',
   },
 ] as const;
 
@@ -268,6 +284,49 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
     color: '#ead1dd',
     roofColor: '#86647d',
     destination: 'wardrobe',
+  }),
+  // 허풍 주점 (2026-09-26): the beach hill by the night harbor, door (+z)
+  // toward the beach; a short spur joins the harbor walk (VILLAGE_PATHS).
+  makePlace({
+    id: 'tavern',
+    name: '허풍 주점',
+    subtitle: '허풍 카드 · 뻥총 룰렛',
+    kind: 'tavern',
+    x: 35.8,
+    z: 27.6,
+    width: 6.4,
+    depth: 5,
+    color: '#6b4a34',
+    roofColor: '#b3452f',
+    destination: 'tavern',
+  }),
+  // 강 건너 상점가 (2026-09-26): the south-west meadow past the west bridge,
+  // both doors (+z) on the new shop lane.
+  makePlace({
+    id: 'realty',
+    name: '범마을 부동산',
+    subtitle: '집 확장 상담 · 도면',
+    kind: 'realty',
+    x: -32.3,
+    z: 21.7,
+    width: 5.5,
+    depth: 4.5,
+    color: '#e9e2d0',
+    roofColor: '#4d6f9c',
+    destination: 'realty',
+  }),
+  makePlace({
+    id: 'furniture',
+    name: '나무결 가구점',
+    subtitle: '오늘의 가구 · 이번 주 명품',
+    kind: 'furniture',
+    x: -21.8,
+    z: 21.7,
+    width: 5.3,
+    depth: 5.1,
+    color: '#f1e6d6',
+    roofColor: '#2f4a6b',
+    destination: 'furniture',
   }),
 ];
 
@@ -554,6 +613,11 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [-19, 33.4, 30, 33.4, 1.3],
   [-19, 33.4, -19, 35.2, 1.2],
   [30, 33.4, 35.9, 36.9, 1.3],
+  // 허풍 주점's door down to the harbor walk.
+  [35.8, 30.9, 34.4, 35.9, 1.2],
+  // 강 건너 상점가: from the west bridge south to the shop lane.
+  [-27, 17.5, -27, 25.4, 1.4],
+  [-34, 25.4, -18, 25.4, 1.4],
   // West orchard picnic loop from its dedicated bridge.
   [-27, 5, -32, 5, 1.35],
   [-32, 5, -32, 3.2, 1.25],
@@ -676,7 +740,7 @@ const addTree = (x: number, z: number, scale: number, variant: number) =>
     [-25.3, -1.8, 1.2],
     [-22, 3, 0.95],
     [-23.5, 6.8, 1.1],
-    [-22, 18, 0.95],
+    [-22.6, 17.2, 0.95], // moved for 나무결 가구점
     [31, -17.5, 1.1],
     [31.6, -21.4, 0.92],
     [25.3, -1.8, 1.16],
@@ -1088,7 +1152,7 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['broadleafTree', -4.1, 18.8, 1.97, 0.67],
   ['broadleafTree', -45.1, -28.9, 1.63, 2.75],
   ['broadleafTree', 19.1, 23, 1.84, 6.02],
-  ['broadleafTree', -25.5, 24.6, 1.83, 3.57],
+  ['broadleafTree', -29.5, 28.6, 1.83, 3.57], // moved off the shop lane
   ['broadleafTree', -41.3, -19.9, 1.74, 4.14],
   ['broadleafTree', 45.3, 2.5, 1.94, 3.84],
   ['broadleafTree', -45.3, -14.4, 1.83, 0.08],
@@ -1104,22 +1168,22 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['broadleafTree', -40.8, -9.6, 1.69, 5.46],
   ['broadleafTree', 24.8, 19, 2.07, 3.16],
   ['broadleafTree', -31, -20.2, 2.03, 3.22],
-  ['broadleafTree', -35.6, 21.2, 1.68, 1.72],
+  ['broadleafTree', -37.9, 22.2, 1.68, 1.72], // moved beside 범마을 부동산
   ['broadleafTree', 42.2, -12.4, 2, 1.82],
   ['smallPine', 42.9, 19.8, 1.83, 4.78],
   ['smallPine', 39, 11.1, 1.68, 2.02],
-  ['smallPine', -35.3, 25, 1.92, 6.15],
+  ['smallPine', -37.2, 26.2, 1.92, 6.15], // moved off the shop lane corner
   ['smallPine', -42.3, 7.3, 1.92, 1.9],
   ['smallPine', 35.1, -35.6, 1.85, 3.75],
   ['smallPine', 39.2, -9.3, 1.91, 2.46],
   ['smallPine', 27.3, 23, 1.94, 0.71],
   ['smallPine', 42.7, -2.5, 1.53, 3.4],
   ['smallPine', -17.5, 27.3, 1.89, 5.2],
-  ['smallPine', -34, 18.3, 1.58, 4.82],
-  ['smallPine', 39.6, 27.8, 1.97, 5.28],
+  ['smallPine', -37.6, 18.4, 1.58, 4.82], // moved behind 범마을 부동산
+  ['smallPine', 42.2, 28.6, 1.97, 5.28], // moved for 허풍 주점
   ['smallPine', -14.7, 18.2, 1.83, 0.34],
   ['smallPine', 45.4, 11.1, 1.87, 4.77],
-  ['smallPine', -21.4, 21.5, 1.68, 2.32],
+  ['smallPine', -17.2, 21.2, 1.68, 2.32], // moved for 나무결 가구점
   ['smallPine', -5.7, 29.9, 1.72, 5.91],
   ['smallPine', -38, -11.8, 1.85, 0.95],
   ['smallPine', -36.9, -0.3, 1.67, 3.33],
@@ -1135,15 +1199,15 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['graniteBoulder', 45.7, -33.1, 1.19, 4.35],
   ['graniteBoulder', -23.9, 0.4, 1.04, 5.76],
   ['graniteBoulder', -40.5, -26.1, 0.99, 1.19],
-  ['graniteBoulder', 35.2, 29.1, 1.17, 4.56],
+  ['graniteBoulder', 30.6, 29.6, 1.17, 4.56], // moved for 허풍 주점
   ['graniteBoulder', -40.3, -5.6, 0.92, 3.6],
   ['graniteBoulder', 29.4, 0, 1.03, 1.91],
   ['shrub', -3.2, 24, 1.12, 5.31],
-  ['shrub', 38.2, 26.1, 1.06, 5.03],
+  ['shrub', 43.4, 22.6, 1.06, 5.03], // moved for 허풍 주점
   ['shrub', -40.2, -22.6, 1.13, 5.13],
   ['shrub', -42.3, -0.2, 1.05, 5.01],
   ['shrub', -4.5, 20.7, 1, 6.18],
-  ['shrub', -28.4, 24.3, 1.26, 2.7],
+  ['shrub', -28.9, 27.6, 1.26, 2.7], // moved off the shop lane
   ['shrub', -32.5, -2.8, 1.09, 2.85],
   ['shrub', 8.6, 29.3, 1.04, 5.29],
   ['shrub', 45.6, -16, 1.25, 5.76],
@@ -1159,8 +1223,8 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['meadowGrass', 45.8, 4.8, 0.81, 3.11],
   ['meadowGrass', 32.4, -15.8, 0.68, 2.79],
   ['meadowGrass', -13.7, -34.6, 0.72, 0.23],
-  ['meadowGrass', -32.6, 22, 0.8, 4.88],
-  ['meadowGrass', 33, 26.5, 0.63, 3.95],
+  ['meadowGrass', -33, 27.9, 0.8, 4.88], // moved for 범마을 부동산
+  ['meadowGrass', 31.6, 25.6, 0.63, 3.95], // moved for 허풍 주점
   ['meadowGrass', 28.8, 29.7, 0.78, 0.75],
   ['meadowGrass', -45.8, 6.4, 0.78, 3.52],
   ['meadowGrass', -6.2, 27.8, 0.84, 0.9],
@@ -1174,7 +1238,7 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['meadowGrass', -7.8, 21.8, 0.85, 6.24],
   ['meadowGrass', 20, 21.6, 0.69, 5.8],
   ['meadowGrass', -43.3, -26.1, 0.7, 4.95],
-  ['meadowGrass', 35.4, 26.4, 0.71, 6.03],
+  ['meadowGrass', 32.4, 32.2, 0.71, 6.03], // moved for 허풍 주점
   ['meadowGrass', 25, -6.6, 0.63, 6.03],
   ['meadowGrass', 32.1, -32.9, 0.61, 1.01],
   ['meadowGrass', -24.6, -35.5, 0.76, 2.59],
@@ -1265,6 +1329,8 @@ export const VILLAGE_COLLIDERS: readonly SolidCollider[] = [
   })),
   // kArchive civic set: the festival stage and the pergola's four posts.
   ...KARCHIVE_COLLIDERS,
+  // 허풍 주점's harbor grill stall lot (lounge-village-shops-layout.ts).
+  ...SHOP_COLLIDERS,
   // VILL-2 valley props with a footprint (trees, stumps, boulders, wall runs, 팔각정).
   ...VILLAGE_VALLEY_PROPS.flatMap((p, i) =>
     p.collider ? [{ id: `valley-${p.model}-${i}`, x: p.x, z: p.z, collider: p.collider, rotation: 0 }] : [],

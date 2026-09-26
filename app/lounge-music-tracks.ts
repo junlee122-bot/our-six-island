@@ -7,7 +7,8 @@
 // paths that do not, so the standalone build never references a missing file.
 // Pure helpers only (no AudioContext here): lounge-audio.ts does the playback.
 
-export type MusicPlace = 'casino' | 'hall';
+export type MusicPlace = 'casino' | 'hall' | 'tavern';
+export const MUSIC_PLACES: readonly MusicPlace[] = ['casino', 'hall', 'tavern'];
 
 export type MusicTrack = {
   /** Candidate files, best first; the first one the browser can play is fetched. */
@@ -23,6 +24,10 @@ export const MUSIC_TRACKS: Record<MusicPlace, MusicTrack> = {
   },
   hall: {
     files: ['/assets/lounge/music/hall.ogg', '/assets/lounge/music/hall.mp3'],
+  },
+  // 허풍 주점 (no file yet: the swing shuffle in lounge-music-score.ts plays).
+  tavern: {
+    files: ['/assets/lounge/music/tavern.ogg', '/assets/lounge/music/tavern.mp3'],
   },
 };
 

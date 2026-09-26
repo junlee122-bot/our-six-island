@@ -9,7 +9,6 @@ import {
   FlaskConical,
   Gift,
   House,
-  RefreshCw,
   Sofa,
   Mail,
   MailOpen,
@@ -42,11 +41,10 @@ import {
   type ShopItem,
 } from '../lounge-life';
 import { ROD_PRICE, itemName, sellQuote } from '../lounge-life-plus';
-import { ITEM_BY_ID, ITEM_PRICES, FURNITURE_BY_REF, HOUSE_TIERS } from '../lounge-items';
+import { ITEM_BY_ID, ITEM_PRICES } from '../lounge-items';
 import { SEASON_INFO } from '../lounge-calendar';
 import { giftTaste, tastesKnown } from '../lounge-life-ui';
 import { ItemIcon } from './ItemIcon';
-import { FURNITURE_ART } from '../lounge-furniture-art';
 import { REACTIONS, reactionInfo } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
 import { TROPHY_ART, isTrophy } from '../lounge-trophy-art';
@@ -391,7 +389,8 @@ export function ShopModal({
   notify,
   onClose,
   initialTab = 'seeds',
-}: Base & { initialTab?: ShopTab }) {
+  onGoShop,
+}: Base & { initialTab?: ShopTab; onGoShop?: (where: 'furniture' | 'realty') => void }) {
   const life = view.life;
   const [run] = useLifeAction(room, notify);
   const [tab, setTab] = useState<ShopTab>(initialTab);
@@ -428,9 +427,9 @@ export function ShopModal({
         </button>
       </div>
       {!life && <NoLife />}
-      {tab === 'house' && life && <HouseShop room={room} view={view} notify={notify} />}
+      {tab === 'house' && life && <MovedShop where="realty" onGo={onGoShop} />}
       {tab === 'tools' && life && <ToolShop room={room} view={view} notify={notify} />}
-      {tab === 'furniture' && life && <FurnitureShop room={room} view={view} notify={notify} />}
+      {tab === 'furniture' && life && <MovedShop where="furniture" onGo={onGoShop} />}
       {tab === 'seeds' && groups.map(([kind, title, hint]) => (
         <section key={kind} className="l-shop-group" aria-label={title}>
           <h3>
@@ -644,214 +643,26 @@ function ToolShop({ room, view, notify }: Omit<Base, 'onClose'>) {
   );
 }
 
-/** 오늘의 가구: today's rotating furniture stock (resets at KST midnight). */
-function FurnitureShop({ room, view, notify }: Omit<Base, 'onClose'>) {
-  const life = view.life!;
-  const [run, busy] = useLifeAction(room, notify);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [confirm, setConfirm] = useState<{ ref: string; name: string; price: number; n: number } | null>(null);
-  const balance = view.wallet.balance;
-  const shop = life.shop;
-  const owned = life.me.furniture ?? {};
-  const now = useNow(true, 60_000) + view.clockOffset;
-  const hours = shop ? Math.max(0, Math.ceil((shop.resetAt - now) / 3_600_000)) : 0;
+/**
+ * 오늘의 가구 and 집 확장 moved to their own buildings (2026-09-26): 나무결
+ * 가구점 and 범마을 부동산 in 강 건너 상점가 (lounge/ShopCounter.tsx). The
+ * store's tabs point there.
+ */
+function MovedShop({ where, onGo }: { where: 'furniture' | 'realty'; onGo?: (where: 'furniture' | 'realty') => void }) {
+  const furniture = where === 'furniture';
   return (
-    <section className="l-shop-group" aria-label="오늘의 가구" data-testid="furniture-shop">
+    <section className="l-shop-group l-shop-moved" aria-label={furniture ? '오늘의 가구' : '집 확장'} data-testid={furniture ? 'moved-furniture' : 'moved-house'}>
       <h3>
-        오늘의 가구{' '}
+        {furniture ? '오늘의 가구는 나무결 가구점으로 옮겼어요' : '집 확장은 범마을 부동산에서 상담해요'}
         <small>
-          매일 자정에 바뀌어요 (약 {hours}시간 뒤){shop?.discount ? ` · 일요 장터 ${shop.discount}% 할인` : ''}. 산 가구는 내 방 꾸미기의 “내 가구”에
-          생겨요.
+          서쪽 다리 건너 강 건너 상점가에 있어요.{' '}
+          {furniture ? '결 목수가 진열대를 보여 줘요 (오늘의 가구 · 이번 주 명품 · 새로 고치기).' : '문 사장이 단계별 도면과 미리보기를 보여 줘요.'}
         </small>
       </h3>
-      {shop?.rerolls !== undefined && (
-        <p className="l-help-text" data-testid="furn-reroll-row">
-          오늘 {shop.rerolls}번 새로 고쳤어요.{' '}
-          {shop.rerollPrice ? (
-            <button
-              type="button"
-              className="l-secondary"
-              disabled={busy || balance < shop.rerollPrice}
-              onClick={() => void run({ kind: 'rerollShop' }, `오늘의 가구를 ${formatBeom(shop.rerollPrice!)}에 새로 고쳤어요.`, 'coin')}
-              data-testid="furn-reroll"
-            >
-              <RefreshCw size={14} /> {formatBeom(shop.rerollPrice)}에 새로 고치기
-            </button>
-          ) : (
-            '오늘은 더 새로 고칠 수 없어요.'
-          )}
-        </p>
-      )}
-      <ul className="l-shop-list l-furn-list">
-        {(shop?.items ?? []).map((item) => {
-          const n = counts[item.ref] ?? 1;
-          const total = item.price * n;
-          return (
-            <li key={item.ref} data-testid={`furn-${item.ref}`}>
-              <span className="l-shop-art l-furn-art">
-                {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
-                <img src={FURNITURE_ART[item.ref]} alt="" />
-              </span>
-              <span className="l-shop-text">
-                <strong>
-                  {item.name}
-                  {item.limited && <em className="l-limited">{item.limited === 'holiday' ? '명절 한정' : '계절 한정'}</em>}
-                </strong>
-                <small>
-                  {FURNITURE_BY_REF[item.ref]?.craft ? '공방에서 만들 수도 있어요 · ' : ''}가진 개수 {owned[item.ref] ?? 0}
-                </small>
-                <b>{formatBeom(item.price)}</b>
-              </span>
-              <Stepper label={`${item.name} 개수`} value={n} max={5} onChange={(v) => setCounts((p) => ({ ...p, [item.ref]: v }))} />
-              <span className="l-buy">
-                <button className="l-primary" disabled={total > balance} onClick={() => setConfirm({ ...item, n })} data-testid={`buy-${item.ref}`}>
-                  {n}개 사기
-                </button>
-                {total > balance && <small className="l-why">범이 모자라요</small>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      {!!shop?.luxury?.length && (
-        <>
-          <h3>
-            이번 주 명품 가구{' '}
-            <small>
-              매주 월요일에 바뀌어요 (약 {Math.max(1, Math.ceil(((shop.luxuryResetAt ?? now) - now) / 86_400_000))}일 뒤). 한 주에 한 사람당 하나씩만 살 수 있는
-              귀한 가구예요.
-            </small>
-          </h3>
-          <ul className="l-shop-list l-furn-list" data-testid="luxury-shop">
-            {shop.luxury.map((item) => {
-              const bought = !!shop.luxuryBought?.includes(item.ref);
-              return (
-                <li key={item.ref} data-owned={bought || undefined} data-testid={`lux-${item.ref}`}>
-                  <span className="l-shop-art l-furn-art">
-                    {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
-                    <img src={FURNITURE_ART[item.ref]} alt="" />
-                  </span>
-                  <span className="l-shop-text">
-                    <strong>
-                      {item.name}
-                      <em className="l-limited">이번 주 한정</em>
-                    </strong>
-                    <small>가진 개수 {owned[item.ref] ?? 0}</small>
-                    <b>{formatBeom(item.price)}</b>
-                  </span>
-                  {bought ? (
-                    <span className="l-owned">
-                      <Check size={15} /> 이번 주에 샀어요
-                    </span>
-                  ) : (
-                    <span className="l-buy">
-                      <button
-                        className="l-primary"
-                        disabled={item.price > balance}
-                        onClick={() => setConfirm({ ...item, n: 1 })}
-                        data-testid={`buy-${item.ref}`}
-                      >
-                        사기
-                      </button>
-                      {item.price > balance && <small className="l-why">범이 모자라요</small>}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
-      {confirm && (
-        <ConfirmModal
-          title="가구를 살까요?"
-          body={
-            <>
-              <b>{confirm.name}</b> {confirm.n}개를 <b>{formatBeom(confirm.price * confirm.n)}</b>에 사요. 지갑에{' '}
-              {formatBeom(balance - confirm.price * confirm.n)}이 남아요.
-            </>
-          }
-          confirmLabel="사기"
-          busyLabel="사는 중…"
-          cancelLabel="다음에"
-          onClose={() => setConfirm(null)}
-          onConfirm={async () => {
-            const ok = await run(
-              { kind: 'buyFurniture', ref: confirm.ref, n: confirm.n },
-              `${josa(confirm.name, '을/를')} 샀어요! 내 방 꾸미기의 “내 가구”에서 놓아 보세요.`,
-              'coin',
-            );
-            if (ok) setConfirm(null);
-            return ok;
-          }}
-        />
-      )}
-    </section>
-  );
-}
-
-/** 집 확장: house tiers bought in order (room styles, the house outside). */
-function HouseShop({ room, view, notify }: Omit<Base, 'onClose'>) {
-  const life = view.life!;
-  const [run, busy] = useLifeAction(room, notify);
-  const [confirm, setConfirm] = useState(false);
-  const balance = view.wallet.balance;
-  const tier = life.me.house ?? 0;
-  const next = HOUSE_TIERS.find((t) => t.tier === tier + 1);
-  return (
-    <section className="l-shop-group" aria-label="집 확장" data-testid="house-shop">
-      <h3>
-        집 확장 <small>한 단계씩 넓혀요. 새 벽지·바닥은 내 방 꾸미기의 “벽·바닥”에서 골라요. 지금 {tier}단계예요.</small>
-      </h3>
-      <ul className="l-shop-list l-house-tiers">
-        {HOUSE_TIERS.map((t) => {
-          const have = t.tier <= tier,
-            isNext = t.tier === tier + 1;
-          return (
-            <li key={t.tier} data-owned={have || undefined} data-locked={!have && !isNext ? true : undefined} data-testid={`house-${t.tier}`}>
-              <span className="l-shop-art">
-                <House size={28} aria-hidden="true" />
-                <small>{t.tier}단계</small>
-              </span>
-              <span className="l-shop-text">
-                <strong>{t.name}</strong>
-                <small>{t.note}</small>
-                <b>{formatBeom(t.price)}</b>
-              </span>
-              {have ? (
-                <span className="l-owned">
-                  <Check size={15} /> 완료
-                </span>
-              ) : isNext ? (
-                <span className="l-buy">
-                  <button className="l-primary" disabled={busy || t.price > balance} onClick={() => setConfirm(true)} data-testid="buy-house">
-                    공사하기
-                  </button>
-                  {t.price > balance && <small className="l-why">범이 모자라요</small>}
-                </span>
-              ) : (
-                <span className="l-buy">
-                  <small className="l-why">{t.tier - 1}단계 다음에 열려요</small>
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {confirm && next && (
-        <ConfirmModal
-          title="집을 넓힐까요?"
-          body={
-            <>
-              <b>{next.name}</b>에 <b>{formatBeom(next.price)}</b>이 들어요. 지갑에 {formatBeom(balance - next.price)}이 남아요.
-            </>
-          }
-          confirmLabel="공사하기"
-          busyLabel="공사 중…"
-          cancelLabel="다음에"
-          onClose={() => setConfirm(false)}
-          onConfirm={() => run({ kind: 'upgradeHouse' }, `집 확장 ${next.tier}단계 “${next.name}”을 마쳤어요!`, 'coin')}
-        />
+      {onGo && (
+        <button type="button" className="l-primary" onClick={() => onGo(where)} data-testid={furniture ? 'go-furniture' : 'go-realty'}>
+          {furniture ? '가구점으로 가기' : '부동산으로 가기'}
+        </button>
       )}
     </section>
   );

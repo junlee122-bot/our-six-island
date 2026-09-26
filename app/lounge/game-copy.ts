@@ -72,6 +72,14 @@ export const GAME_COPY: Record<GameKind, Copy> = {
     leaveActive:
       '라이어 게임은 내 차례를 서버가 넘기고(힌트 패스·기권표) 끝까지 진행돼요.',
   },
+  liarsbar: {
+    players: '2–4명',
+    tagline: '허풍 카드 · 뻥총 룰렛',
+    amountLabel: '참가비',
+    moneyRule: '기본은 범 없는 파티 판이에요. 참가비를 걸면 마지막까지 버틴 한 사람이 모두 가져가요.',
+    leaveActive:
+      '허풍 카드는 중간에 떠나면 기권이에요. 걸어 둔 참가비는 판돈에 남고, 파티 판이면 대타 봇이 이어서 해요.',
+  },
 };
 
 /** Text for the "leave this game" confirmation. */

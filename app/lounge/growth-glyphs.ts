@@ -16,3 +16,17 @@ export const TOOL_GLYPH: Record<ToolId, GlyphName> = {
   axe: 'axe',
   pickaxe: 'pickaxe',
 };
+/** Crest of each Lv5 profession (Lv10 picks show their branch's crest). */
+export const PROF_GLYPH: Record<string, GlyphName> = {
+  'farm-a': 'leaf',
+  'farm-b': 'sack',
+  'fish-a': 'hook',
+  'fish-b': 'wave',
+  'forage-a': 'basket',
+  'forage-b': 'axe',
+  'mine-a': 'pickaxe',
+  'mine-b': 'ore',
+  'craft-a': 'bell',
+  'craft-b': 'anvil',
+};
+export const profGlyph = (id: string): GlyphName | undefined => PROF_GLYPH[id] ?? PROF_GLYPH[id.replace(/[12]$/, '')];

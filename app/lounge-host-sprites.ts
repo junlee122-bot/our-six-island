@@ -14,6 +14,9 @@ export type HostPose = DealerMood | 'deal';
 export const HOST_SHEET: Record<HostId, string> = {
   lumi: LOUNGE_ASSETS.hostLumi,
   maehwa: LOUNGE_ASSETS.hostMaehwa,
+  captain: LOUNGE_ASSETS.hostCaptain,
+  realtor: LOUNGE_ASSETS.hostRealtor,
+  carpenter: LOUNGE_ASSETS.hostCarpenter,
 };
 
 /**

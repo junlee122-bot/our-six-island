@@ -1,0 +1,1200 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-26",
+  "terms": "다운로드 전 동의 창·모델 상세 페이지 표시 문구(2026-09-26 다시 확인): \"개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter\". 별도 약관 페이지(/terms, /license)는 없음. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본: scripts/optimize-assets.mjs가 dedup·weld·prune, KHR_mesh_quantization, 내장 텍스처 WebP(q88) 재인코딩(표의 textureMax 이하로 축소)을 적용. 형상·UV·머티리얼 변경 없음. 원본 바이트는 public/models/_originals/ 같은 경로에 보관. 런타임에는 크기·위치·방향만 바꾸고(명절 계열은 가장 긴 변 2 단위라 목표 크기로 줄임), 일부 소품은 마을 업그레이드(허풍 주점·부동산·가구점) 단계에 따라 보이거나 바뀜.",
+  "assets": [
+    {
+      "key": "barCounter",
+      "id": "angular-onsen-reception-desk",
+      "source": "https://karchive.vibeline.co.kr/models/angular-onsen-reception-desk",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-onsen-reception-desk.glb",
+      "file": "barCounter.glb",
+      "bytes": 485648,
+      "sha256": "05f0913f073110ee33f7bb59057b6d1dd3db47e473b4b395755bef1816eccb9d",
+      "webBytes": 220116,
+      "meshes": 1,
+      "triangles": 5336,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.914,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.914,
+          0.91,
+          0.4
+        ],
+        "size": [
+          1.828,
+          0.91,
+          0.8
+        ]
+      },
+      "use": "바 카운터(2개 이어 붙임) · 기본"
+    },
+    {
+      "key": "wallShelf",
+      "id": "common-furniture-wall-shelf-unit-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-wall-shelf-unit-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-wall-shelf-unit-cottage-normal.glb",
+      "file": "wallShelf.glb",
+      "bytes": 558812,
+      "sha256": "6cd10211f8a10e8175aea7f70df36653d6c318ec2d941508f28eb1b95317a936",
+      "webBytes": 269640,
+      "meshes": 1,
+      "triangles": 5673,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.467,
+          0,
+          -0.295
+        ],
+        "max": [
+          0.467,
+          1,
+          0.295
+        ],
+        "size": [
+          0.934,
+          1,
+          0.59
+        ]
+      },
+      "use": "바 뒤 선반 · 기본"
+    },
+    {
+      "key": "bottle",
+      "id": "newyear-06",
+      "source": "https://karchive.vibeline.co.kr/models/newyear-06",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/newyear-06.glb",
+      "file": "bottle.glb",
+      "bytes": 373588,
+      "sha256": "9df0881d7d179cc9ea940eb7084cd30c6d043aa94e419e94e9137ec001c8742d",
+      "webBytes": 163592,
+      "meshes": 1,
+      "triangles": 3519,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.357,
+          0,
+          -0.347
+        ],
+        "max": [
+          0.357,
+          2,
+          0.347
+        ],
+        "size": [
+          0.714,
+          2,
+          0.694
+        ]
+      },
+      "use": "선반 위 술병(반복) · 기본"
+    },
+    {
+      "key": "keg",
+      "id": "onsen-mineral-dosing-barrel-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/onsen-mineral-dosing-barrel-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/onsen-mineral-dosing-barrel-cottage-normal.glb",
+      "file": "keg.glb",
+      "bytes": 510800,
+      "sha256": "a09c35187d0516910230ce4986c1e7710315ced7fba22d00476d215c3ed25928",
+      "webBytes": 251532,
+      "meshes": 1,
+      "triangles": 6065,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.331,
+          0,
+          -0.35
+        ],
+        "max": [
+          0.331,
+          0.793,
+          0.35
+        ],
+        "size": [
+          0.662,
+          0.793,
+          0.7
+        ]
+      },
+      "use": "막걸리 통(케그) · 기본"
+    },
+    {
+      "key": "cafeTable",
+      "id": "common-furniture-round-cafe-table-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-round-cafe-table-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-round-cafe-table-cottage-normal.glb",
+      "file": "cafeTable.glb",
+      "bytes": 421628,
+      "sha256": "143fbb28f15003456293079f4dbc0e755ea392e42676b40cda45f443381a6bc8",
+      "webBytes": 264136,
+      "meshes": 1,
+      "triangles": 5803,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤1024²)",
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.4,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.4,
+          0.565,
+          0.4
+        ],
+        "size": [
+          0.8,
+          0.565,
+          0.8
+        ]
+      },
+      "use": "허풍 카드 메인 테이블(확대) · 기본"
+    },
+    {
+      "key": "saddleStool",
+      "id": "common-furniture-saddle-workshop-stool-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-saddle-workshop-stool-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-saddle-workshop-stool-cottage-normal.glb",
+      "file": "saddleStool.glb",
+      "bytes": 353436,
+      "sha256": "7b39787c2d2ead9a9b950066a786bd0a5aab32e186eaf42c108c295b5f9be7c9",
+      "webBytes": 179324,
+      "meshes": 1,
+      "triangles": 6021,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.586,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.586,
+          0.832,
+          0.4
+        ],
+        "size": [
+          1.172,
+          0.832,
+          0.8
+        ]
+      },
+      "use": "테이블 안장 의자 · 기본"
+    },
+    {
+      "key": "fireplace",
+      "id": "christmas-23",
+      "source": "https://karchive.vibeline.co.kr/models/christmas-23",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/christmas-23.glb",
+      "file": "fireplace.glb",
+      "bytes": 546644,
+      "sha256": "0ad615065cc1a3ee59c25537d91bc1c04382276df8d3e1a634723568f0af850a",
+      "webBytes": 257312,
+      "meshes": 1,
+      "triangles": 5524,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.859,
+          0,
+          -0.52
+        ],
+        "max": [
+          0.859,
+          2,
+          0.52
+        ],
+        "size": [
+          1.718,
+          2,
+          1.04
+        ]
+      },
+      "use": "벽난로 · 기본"
+    },
+    {
+      "key": "glass",
+      "id": "newyear-07",
+      "source": "https://karchive.vibeline.co.kr/models/newyear-07",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/newyear-07.glb",
+      "file": "glass.glb",
+      "bytes": 285656,
+      "sha256": "4dd08afb00b8771ea4dce8866cd74f5548725eddf593690b5f4892d33b96d296",
+      "webBytes": 128788,
+      "meshes": 1,
+      "triangles": 3235,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.404,
+          0,
+          -0.405
+        ],
+        "max": [
+          0.404,
+          2.0,
+          0.405
+        ],
+        "size": [
+          0.808,
+          2.0,
+          0.81
+        ]
+      },
+      "use": "잔 · 업그레이드 바 1단계"
+    },
+    {
+      "key": "cupTree",
+      "id": "angular-restaurant-cup-tree-four-mugs",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-cup-tree-four-mugs",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-cup-tree-four-mugs.glb",
+      "file": "cupTree.glb",
+      "bytes": 415732,
+      "sha256": "3057e54734705f90133f7ea6b23075a9908a1ee86c41ef064854366a56e233ac",
+      "webBytes": 180748,
+      "meshes": 1,
+      "triangles": 3791,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.076,
+          0,
+          -0.15
+        ],
+        "max": [
+          0.076,
+          0.5,
+          0.15
+        ],
+        "size": [
+          0.152,
+          0.5,
+          0.3
+        ]
+      },
+      "use": "머그 걸이 · 업그레이드 바 1단계"
+    },
+    {
+      "key": "bottleCrate",
+      "id": "angular-restaurant-bottle-crate-full-bottles",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-bottle-crate-full-bottles",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-bottle-crate-full-bottles.glb",
+      "file": "bottleCrate.glb",
+      "bytes": 398416,
+      "sha256": "f232391fe5461e15093182302af3744f4997ed6095ca65be1a6d648b3c6667c5",
+      "webBytes": 181488,
+      "meshes": 1,
+      "triangles": 3510,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.25,
+          0,
+          -0.143
+        ],
+        "max": [
+          0.25,
+          0.25,
+          0.143
+        ],
+        "size": [
+          0.5,
+          0.25,
+          0.286
+        ]
+      },
+      "use": "병 상자 · 업그레이드 바 1단계"
+    },
+    {
+      "key": "cornerCabinet",
+      "id": "common-furniture-corner-display-cabinet-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-corner-display-cabinet-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-corner-display-cabinet-cottage-normal.glb",
+      "file": "cornerCabinet.glb",
+      "bytes": 539212,
+      "sha256": "44f6dd8e80069e6c44a90eaa2e97fca598837f6f068267647f5f85631b295caa",
+      "webBytes": 258688,
+      "meshes": 1,
+      "triangles": 5787,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.455,
+          0,
+          -0.283
+        ],
+        "max": [
+          0.455,
+          1,
+          0.283
+        ],
+        "size": [
+          0.91,
+          1,
+          0.566
+        ]
+      },
+      "use": "코너 장식장 · 업그레이드 바 2단계"
+    },
+    {
+      "key": "teaSideboard",
+      "id": "angular-onsen-tea-sideboard-open-stocked",
+      "source": "https://karchive.vibeline.co.kr/models/angular-onsen-tea-sideboard-open-stocked",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-onsen-tea-sideboard-open-stocked.glb",
+      "file": "teaSideboard.glb",
+      "bytes": 498816,
+      "sha256": "4726d8db0b442d965a33408035850b3a1f9cb724112e0d4a6028211e5c82ce53",
+      "webBytes": 227768,
+      "meshes": 1,
+      "triangles": 4384,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.386,
+          0,
+          -0.25
+        ],
+        "max": [
+          0.386,
+          0.502,
+          0.25
+        ],
+        "size": [
+          0.772,
+          0.502,
+          0.5
+        ]
+      },
+      "use": "찻장 · 업그레이드 바 2단계"
+    },
+    {
+      "key": "glassRack",
+      "id": "angular-restaurant-glassware-rack-full-glasses",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-glassware-rack-full-glasses",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-glassware-rack-full-glasses.glb",
+      "file": "glassRack.glb",
+      "bytes": 479572,
+      "sha256": "581d70edddcec739a79d6eeb0fa0bd163b2deff7ab8aad3043af454db0f731c3",
+      "webBytes": 216336,
+      "meshes": 1,
+      "triangles": 3641,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.182,
+          0,
+          -0.182
+        ],
+        "max": [
+          0.182,
+          0.2,
+          0.182
+        ],
+        "size": [
+          0.364,
+          0.2,
+          0.364
+        ]
+      },
+      "use": "잔 상자 · 업그레이드 바 2단계"
+    },
+    {
+      "key": "sodaTap",
+      "id": "angular-restaurant-soda-fountain-ready",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-soda-fountain-ready",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-soda-fountain-ready.glb",
+      "file": "sodaTap.glb",
+      "bytes": 550096,
+      "sha256": "38e29e8dab089d34742f376e64945aca6088afa0549f3b49d4ffe350c02c3d83",
+      "webBytes": 265668,
+      "meshes": 1,
+      "triangles": 5217,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.264,
+          0,
+          -0.273
+        ],
+        "max": [
+          0.264,
+          0.7,
+          0.273
+        ],
+        "size": [
+          0.528,
+          0.7,
+          0.546
+        ]
+      },
+      "use": "맥주 탭 · 업그레이드 바 3단계"
+    },
+    {
+      "key": "beverageBar",
+      "id": "restaurant-beverage-bar",
+      "source": "https://karchive.vibeline.co.kr/models/restaurant-beverage-bar",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/restaurant-beverage-bar.glb",
+      "file": "beverageBar.glb",
+      "bytes": 2408392,
+      "sha256": "d4e04c938bd86c9c8a430f06a10b802a1d8096fce818bd7857980212d6e535a3",
+      "webBytes": 229348,
+      "meshes": 1,
+      "triangles": 6021,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.899,
+          0,
+          -0.35
+        ],
+        "max": [
+          0.899,
+          1.607,
+          0.35
+        ],
+        "size": [
+          1.798,
+          1.607,
+          0.7
+        ]
+      },
+      "use": "음료 바 · 업그레이드 바 3단계"
+    },
+    {
+      "key": "boothBench",
+      "id": "angular-restaurant-booth-bench-seat-cushions",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-booth-bench-seat-cushions",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-booth-bench-seat-cushions.glb",
+      "file": "boothBench.glb",
+      "bytes": 353988,
+      "sha256": "d79146b6ead08e83c09397d3973121f110aedc5cea03dd50a2167691b663c93f",
+      "webBytes": 163284,
+      "meshes": 1,
+      "triangles": 3738,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.65,
+          0,
+          -0.236
+        ],
+        "max": [
+          0.65,
+          0.817,
+          0.236
+        ],
+        "size": [
+          1.3,
+          0.817,
+          0.472
+        ]
+      },
+      "use": "관전석 부스 · 업그레이드 좌석 1단계"
+    },
+    {
+      "key": "shelterBench",
+      "id": "common-furniture-backless-shelter-bench-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-backless-shelter-bench-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-backless-shelter-bench-cottage-normal.glb",
+      "file": "shelterBench.glb",
+      "bytes": 468244,
+      "sha256": "0f54d851acf53dfc6e51b0feec444c9298175de424eea087246f6b235c31be75",
+      "webBytes": 221332,
+      "meshes": 1,
+      "triangles": 6100,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.568,
+          0,
+          -0.4
+        ],
+        "max": [
+          0.568,
+          0.823,
+          0.4
+        ],
+        "size": [
+          1.136,
+          0.823,
+          0.8
+        ]
+      },
+      "use": "지붕 벤치 · 업그레이드 좌석 2단계"
+    },
+    {
+      "key": "soban",
+      "id": "dongji-05",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-05",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-05.glb",
+      "file": "soban.glb",
+      "bytes": 287648,
+      "sha256": "d8d1a55cb8a892527001d848a2b0590ac2b79e455f34ed530acaef4cffc7661b",
+      "webBytes": 131168,
+      "meshes": 1,
+      "triangles": 3300,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.0,
+          0,
+          -1
+        ],
+        "max": [
+          1.0,
+          0.959,
+          1
+        ],
+        "size": [
+          2.0,
+          0.959,
+          2
+        ]
+      },
+      "use": "소반 · 업그레이드 좌석 3단계"
+    },
+    {
+      "key": "stringLights",
+      "id": "christmas-17",
+      "source": "https://karchive.vibeline.co.kr/models/christmas-17",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/christmas-17.glb",
+      "file": "stringLights.glb",
+      "bytes": 413116,
+      "sha256": "5348912be7544a8c0c7f118372c5ad0e873977cd725c07d995379e2815dacc53",
+      "webBytes": 177252,
+      "meshes": 1,
+      "triangles": 4156,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.144
+        ],
+        "max": [
+          1,
+          1.191,
+          0.144
+        ],
+        "size": [
+          2,
+          1.191,
+          0.288
+        ]
+      },
+      "use": "전구 줄 · 업그레이드 조명 1단계"
+    },
+    {
+      "key": "starLamp",
+      "id": "christmas-18",
+      "source": "https://karchive.vibeline.co.kr/models/christmas-18",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/christmas-18.glb",
+      "file": "starLamp.glb",
+      "bytes": 316164,
+      "sha256": "5b843233637d741c2140cd6414f7e6b8ec690ebfdc7cf763f743e079e35673ed",
+      "webBytes": 137020,
+      "meshes": 1,
+      "triangles": 3311,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.812,
+          0,
+          -0.512
+        ],
+        "max": [
+          0.812,
+          2,
+          0.512
+        ],
+        "size": [
+          1.624,
+          2,
+          1.024
+        ]
+      },
+      "use": "별 등 · 업그레이드 조명 2단계"
+    },
+    {
+      "key": "floorLamp",
+      "id": "restaurant-floor-lamp",
+      "source": "https://karchive.vibeline.co.kr/models/restaurant-floor-lamp",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/restaurant-floor-lamp.glb",
+      "file": "floorLamp.glb",
+      "bytes": 2005168,
+      "sha256": "aa1c681c1beb86114636ca7439fb0896202c5b0a88f58a2e407cce6856929e54",
+      "webBytes": 172724,
+      "meshes": 1,
+      "triangles": 6276,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.325,
+          0,
+          -0.325
+        ],
+        "max": [
+          0.325,
+          1.474,
+          0.325
+        ],
+        "size": [
+          0.65,
+          1.474,
+          0.65
+        ]
+      },
+      "use": "스탠드 등 · 업그레이드 조명 3단계"
+    },
+    {
+      "key": "coatStand",
+      "id": "angular-restaurant-coat-stand-coats-and-bags",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-coat-stand-coats-and-bags",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-coat-stand-coats-and-bags.glb",
+      "file": "coatStand.glb",
+      "bytes": 573472,
+      "sha256": "4d99829595cad6eaf0406cdfc5dc2ac3c34917694b2f875712ec0327a195d1fd",
+      "webBytes": 279792,
+      "meshes": 1,
+      "triangles": 6044,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.275,
+          0,
+          -0.183
+        ],
+        "max": [
+          0.275,
+          1.26,
+          0.183
+        ],
+        "size": [
+          0.55,
+          1.26,
+          0.366
+        ]
+      },
+      "use": "옷걸이 · 업그레이드 벽·장식 1단계"
+    },
+    {
+      "key": "bambooPlanter",
+      "id": "angular-onsen-garden-planter-bamboo-planting",
+      "source": "https://karchive.vibeline.co.kr/models/angular-onsen-garden-planter-bamboo-planting",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-onsen-garden-planter-bamboo-planting.glb",
+      "file": "bambooPlanter.glb",
+      "bytes": 671516,
+      "sha256": "0094fafc9ec48e3ab840f9f921df7235312a6ca8096c1de8d6c3a68a11f8a9f4",
+      "webBytes": 301980,
+      "meshes": 1,
+      "triangles": 5726,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.278,
+          0,
+          -0.141
+        ],
+        "max": [
+          0.278,
+          0.5,
+          0.141
+        ],
+        "size": [
+          0.556,
+          0.5,
+          0.282
+        ]
+      },
+      "use": "대나무 화분 · 업그레이드 벽·장식 1단계"
+    },
+    {
+      "key": "doorway",
+      "id": "angular-common-buildings-board-batten-doorway-2m",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-buildings-board-batten-doorway-2m",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-buildings-board-batten-doorway-2m.glb",
+      "file": "doorway.glb",
+      "bytes": 381572,
+      "sha256": "d669421c20e4d90955e0ec60ee1e6e19745ac136faa5e07d643238478df74eaa",
+      "webBytes": 184312,
+      "meshes": 1,
+      "triangles": 3970,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.08
+        ],
+        "max": [
+          1,
+          2.4,
+          0.08
+        ],
+        "size": [
+          2,
+          2.4,
+          0.16
+        ]
+      },
+      "use": "판자 문틀 · 업그레이드 벽·장식 2단계"
+    },
+    {
+      "key": "windowFrame",
+      "id": "angular-common-buildings-board-batten-window-2m",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-buildings-board-batten-window-2m",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-buildings-board-batten-window-2m.glb",
+      "file": "windowFrame.glb",
+      "bytes": 280460,
+      "sha256": "dac056cabe9f2667e7782c5767e885aad567885519a7179cccbaf673f42856cf",
+      "webBytes": 141152,
+      "meshes": 1,
+      "triangles": 3197,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1,
+          0,
+          -0.08
+        ],
+        "max": [
+          1,
+          2.4,
+          0.08
+        ],
+        "size": [
+          2,
+          2.4,
+          0.16
+        ]
+      },
+      "use": "판자 창틀 · 업그레이드 벽·장식 2단계"
+    },
+    {
+      "key": "audioConsole",
+      "id": "common-furniture-audio-equipment-console-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-audio-equipment-console-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-audio-equipment-console-cottage-normal.glb",
+      "file": "audioConsole.glb",
+      "bytes": 559748,
+      "sha256": "2ab910060ce49984cdba57c362ea1c6630c41452d8223f61cbfa9bca67db635b",
+      "webBytes": 261092,
+      "meshes": 1,
+      "triangles": 6051,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6,
+          0,
+          -0.306
+        ],
+        "max": [
+          0.6,
+          0.771,
+          0.306
+        ],
+        "size": [
+          1.2,
+          0.771,
+          0.612
+        ]
+      },
+      "use": "음향 콘솔 · 업그레이드 벽·장식 3단계"
+    },
+    {
+      "key": "bookcase",
+      "id": "common-furniture-open-bookcase-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-furniture-open-bookcase-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-furniture-open-bookcase-cottage-normal.glb",
+      "file": "bookcase.glb",
+      "bytes": 527108,
+      "sha256": "9e4cc58d47b28976c33ded90bb79f641ebf3300e3fd280de58ae484c4f7337ae",
+      "webBytes": 247128,
+      "meshes": 1,
+      "triangles": 5634,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.46,
+          0,
+          -0.202
+        ],
+        "max": [
+          0.46,
+          1,
+          0.202
+        ],
+        "size": [
+          0.92,
+          1,
+          0.404
+        ]
+      },
+      "use": "책장 · 업그레이드 벽·장식 3단계"
+    },
+    {
+      "key": "ticketRail",
+      "id": "angular-restaurant-order-ticket-rail-five-blank-tickets",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-order-ticket-rail-five-blank-tickets",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-order-ticket-rail-five-blank-tickets.glb",
+      "file": "ticketRail.glb",
+      "bytes": 471820,
+      "sha256": "a4d615d264a3096128364d710f95e4f655419fc23c826396d592032cab8ecfb1",
+      "webBytes": 214684,
+      "meshes": 1,
+      "triangles": 4155,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.259,
+          0,
+          -0.036
+        ],
+        "max": [
+          0.259,
+          0.15,
+          0.036
+        ],
+        "size": [
+          0.518,
+          0.15,
+          0.072
+        ]
+      },
+      "use": "주문표 걸이 · 업그레이드 벽·장식 3단계"
+    },
+    {
+      "key": "cauldron",
+      "id": "dongji-03",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-03",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-03.glb",
+      "file": "cauldron.glb",
+      "bytes": 322588,
+      "sha256": "e176bf9d1a3f24bfe6391d84649d29f4d2802faf548b118b695478632277f498",
+      "webBytes": 154296,
+      "meshes": 1,
+      "triangles": 3807,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.0,
+          0,
+          -0.83
+        ],
+        "max": [
+          1.0,
+          1.285,
+          0.83
+        ],
+        "size": [
+          2.0,
+          1.285,
+          1.66
+        ]
+      },
+      "use": "국밥 가마솥 · 업그레이드 주방 1단계"
+    },
+    {
+      "key": "stove",
+      "id": "dongji-10",
+      "source": "https://karchive.vibeline.co.kr/models/dongji-10",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/holiday/dongji-10.glb",
+      "file": "stove.glb",
+      "bytes": 415984,
+      "sha256": "b371c1bf1c84c08292899ce02848ae94c03e4f3091e8254559fd6252c925192d",
+      "webBytes": 197456,
+      "meshes": 1,
+      "triangles": 4787,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.0,
+          0,
+          -0.788
+        ],
+        "max": [
+          1.0,
+          1.427,
+          0.788
+        ],
+        "size": [
+          2.0,
+          1.427,
+          1.576
+        ]
+      },
+      "use": "아궁이 · 업그레이드 주방 1단계"
+    },
+    {
+      "key": "teaUrn",
+      "id": "angular-restaurant-tea-urn-open-filled",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-tea-urn-open-filled",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-tea-urn-open-filled.glb",
+      "file": "teaUrn.glb",
+      "bytes": 377688,
+      "sha256": "8d1050b13d10a12e34be3da431f4b314899f73fc5c9c2267f5cdc08a6fd88ddc",
+      "webBytes": 163020,
+      "meshes": 1,
+      "triangles": 3518,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.129,
+          0,
+          -0.13
+        ],
+        "max": [
+          0.129,
+          0.55,
+          0.13
+        ],
+        "size": [
+          0.258,
+          0.55,
+          0.26
+        ]
+      },
+      "use": "보리차 통 · 업그레이드 주방 2단계"
+    },
+    {
+      "key": "register",
+      "id": "angular-restaurant-cash-register-closed",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-cash-register-closed",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-cash-register-closed.glb",
+      "file": "register.glb",
+      "bytes": 327428,
+      "sha256": "4e20986e2952b64b3c4ec41b453bd731c5cf6301f6a9f9075cafb743d1b43384",
+      "webBytes": 138212,
+      "meshes": 1,
+      "triangles": 2680,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.225,
+          0,
+          -0.182
+        ],
+        "max": [
+          0.225,
+          0.39,
+          0.182
+        ],
+        "size": [
+          0.45,
+          0.39,
+          0.364
+        ]
+      },
+      "use": "계산대 · 업그레이드 주방 2단계"
+    },
+    {
+      "key": "storageShelf",
+      "id": "rounded-restaurant-storage-shelf-fully-stocked",
+      "source": "https://karchive.vibeline.co.kr/models/rounded-restaurant-storage-shelf-fully-stocked",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/rounded-restaurant-storage-shelf-fully-stocked.glb",
+      "file": "storageShelf.glb",
+      "bytes": 710688,
+      "sha256": "b22d79e2d0d660036337f0c6568ac0d8c9e4db9cddec54db09d54de6ca39d543",
+      "webBytes": 332972,
+      "meshes": 1,
+      "triangles": 5567,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.418,
+          0,
+          -0.225
+        ],
+        "max": [
+          0.418,
+          1.371,
+          0.225
+        ],
+        "size": [
+          0.836,
+          1.371,
+          0.45
+        ]
+      },
+      "use": "식료품 선반 · 업그레이드 주방 3단계"
+    },
+    {
+      "key": "barrelRack",
+      "id": "apocalypse-sand-filter-barrel-rack-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/apocalypse-sand-filter-barrel-rack-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/apocalypse-sand-filter-barrel-rack-cottage-normal.glb",
+      "file": "barrelRack.glb",
+      "bytes": 504420,
+      "sha256": "3dd1972146ff9644c0928df24f4d0100e21efe5cc83c428bdf673a1a89af19cc",
+      "webBytes": 245964,
+      "meshes": 1,
+      "triangles": 6013,
+      "textures": 1,
+      "texture": "JPEG 1024x1024 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.75,
+          0,
+          -0.401
+        ],
+        "max": [
+          0.75,
+          1.428,
+          0.401
+        ],
+        "size": [
+          1.5,
+          1.428,
+          0.802
+        ]
+      },
+      "use": "술통 받침 · 업그레이드 주방 3단계"
+    },
+    {
+      "key": "chestnutRoaster",
+      "id": "lp-wi-06",
+      "source": "https://karchive.vibeline.co.kr/models/lp-wi-06",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/seasons/lp-wi-06.glb",
+      "file": "chestnutRoaster.glb",
+      "bytes": 2531520,
+      "sha256": "f29dd8d87254958dd02d29eb0e503b9446be7641a0cbbf77b24c9e3789be9747",
+      "webBytes": 235972,
+      "meshes": 1,
+      "triangles": 4114,
+      "textures": 1,
+      "texture": "JPEG 2048x2048 (web: WebP ≤512²)",
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.897,
+          -0.622,
+          -0.944
+        ],
+        "max": [
+          0.904,
+          0.618,
+          0.951
+        ],
+        "size": [
+          1.801,
+          1.24,
+          1.895
+        ]
+      },
+      "use": "군밤 화로 · 업그레이드 주방 3단계"
+    }
+  ]
+}

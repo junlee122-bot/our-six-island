@@ -108,6 +108,8 @@ import {
   type ReactionId,
 } from './lounge-reactions';
 import { formatBeom, josa, NAMES } from './lounge-text';
+import { VENUES, isInteriorArea, type InteriorArea } from './lounge-venues';
+import { venueLook, venuesFromView } from './lounge-venue-data';
 import {
   getSettings,
   PASSWORD_WARNING_KEY,
@@ -204,6 +206,11 @@ const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({
 // 성장 P1: the growth journal (T), the blacksmith and the level-up banner.
 const GrowthPanel = lazyRetry(() => import('./lounge/GrowthPanel').then((m) => ({ default: m.GrowthPanel })));
 const ForgePanel = lazyRetry(() => import('./lounge/Forge').then((m) => ({ default: m.ForgePanel })));
+// 부동산 · 가구점 counters and the shop upgrade board (lounge/ShopCounter.tsx).
+const loadCounter = () => import('./lounge/ShopCounter');
+const RealtyCounter = lazyRetry(() => loadCounter().then((m) => ({ default: m.RealtyCounter })));
+const FurnitureCounter = lazyRetry(() => loadCounter().then((m) => ({ default: m.FurnitureCounter })));
+const TavernUpgrades = lazyRetry(() => loadCounter().then((m) => ({ default: m.TavernUpgrades })));
 const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) => ({ default: m.GrowthNotices })));
 
 /**
@@ -374,6 +381,10 @@ type ModalName =
   // 성장 P1 (T): the growth journal and the blacksmith.
   | 'growth'
   | 'forge'
+  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 결 목수).
+  | 'realty'
+  | 'furniture'
+  | 'tavernUp'
   // PC: the Esc menu and 조작 안내.
   | 'system'
   | 'help';
@@ -383,6 +394,7 @@ const TAB_AREA: Record<Tab, Area> = {
   village: 'village',
   lounge: 'lounge',
   casino: 'casino',
+  tavern: 'tavern',
   wardrobe: 'wardrobe',
   bedroom: 'home',
 };
@@ -500,10 +512,11 @@ function AccountLounge({
     }),
     // Offline mode keeps one position per area so the village's coordinates
     // never leak into the hall (where they could start inside a table).
-    [localPos, setLocalPos] = useState<Record<'village' | 'lounge' | 'casino', { x: number; y: number }>>({
+    [localPos, setLocalPos] = useState<Record<'village' | InteriorArea, { x: number; y: number }>>({
       village: AREA_DEFAULTS.village,
       lounge: AREA_DEFAULTS.lounge,
       casino: AREA_DEFAULTS.casino,
+      tavern: AREA_DEFAULTS.tavern,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -766,14 +779,10 @@ function AccountLounge({
   // at their tables, quieter at a table; the village music box elsewhere.
   const musicPlace =
     inGame && gameScreen
-      ? TABLE_AREA[gameScreen] === 'casino'
-        ? 'casino'
-        : 'hall'
-      : visiting === null && tab === 'casino'
-        ? 'casino'
-        : visiting === null && tab === 'lounge'
-          ? 'hall'
-          : null;
+      ? VENUES[TABLE_AREA[gameScreen]].music
+      : visiting === null && isInteriorArea(tab)
+        ? VENUES[tab].music
+        : null;
   useEffect(
     () => loungeAudio.setScene({ game: inGame, place: musicPlace }),
     [inGame, musicPlace],
@@ -847,12 +856,8 @@ function AccountLounge({
       if (room.snapshot().status === 'connected')
         void room.action({ kind: 'move', x, y });
       else {
-        const key =
-          tabRef.current === 'casino'
-            ? 'casino'
-            : tabRef.current === 'lounge'
-              ? 'lounge'
-              : 'village';
+        const current = tabRef.current,
+          key = isInteriorArea(current) ? current : 'village';
         setLocalPos((all) => ({
           ...all,
           [key]: {
@@ -873,15 +878,21 @@ function AccountLounge({
     [move],
   );
   const enter = (
-    destination: VillageDestination | 'village' = 'village',
+    target: VillageDestination | 'village' = 'village',
     place?: VillagePlace,
     /** Where to stand inside a hall / casino (e.g. beside a table). */
     at?: { x: number; y: number },
     then?: () => void,
   ) => {
+    // 부동산 / 가구점: the door opens the shop's counter (no interior area).
+    if (target === 'realty' || target === 'furniture') {
+      setModal(target);
+      return;
+    }
+    const destination: Tab | 'village' = target;
     const from = visiting !== null ? 'village' : tab;
     // Walking in from the village: just inside the hall's / casino's door.
-    if (!at && from === 'village' && (destination === 'lounge' || destination === 'casino'))
+    if (!at && from === 'village' && isInteriorArea(destination))
       at = { ...INTERIOR_DOOR };
     const go = () => {
       setVisiting(null);
@@ -931,8 +942,8 @@ function AccountLounge({
     const scope =
       visiting !== null || tab === 'bedroom'
         ? 'home'
-        : tab === 'casino'
-          ? 'casino'
+        : isInteriorArea(tab)
+          ? tab
           : tab === 'village'
             ? 'village'
             : 'lounge';
@@ -1185,19 +1196,16 @@ function AccountLounge({
         void prefetchVisit(place.actor).catch(() => {});
       return;
     }
-    preloadTab(place.destination, save);
+    if (place.destination !== 'realty' && place.destination !== 'furniture') preloadTab(place.destination, save);
   };
   // Who is inside each building, for the door prompt ("회관 · 안에 2명").
   const areaCounts: Record<string, number> = {};
   if (connected)
     for (const p of view.players) {
       if (p.id === view.self) continue;
-      const id =
-        p.area === 'lounge'
-          ? 'hall'
-          : p.area === 'casino'
-            ? 'casino'
-            : p.area === 'wardrobe'
+      const id = isInteriorArea(p.area)
+        ? VENUES[p.area].place
+        : p.area === 'wardrobe'
               ? 'wardrobe'
               : p.area === 'home'
                 ? `home-${p.home ?? p.actor}`
@@ -1257,7 +1265,7 @@ function AccountLounge({
   const closeGame = () => {
     const kind = gameScreen;
     setGameScreen(null);
-    const area = tab === 'lounge' ? 'lounge' : tab === 'casino' ? 'casino' : null;
+    const area = isInteriorArea(tab) ? tab : null;
     if (kind && area && TABLE_AREA[kind] === area) {
       const side = sceneTableSide(area, kind);
       placeIn(side);
@@ -1291,7 +1299,7 @@ function AccountLounge({
     }
     enter(
       area,
-      VILLAGE_PLACES.find((p) => p.id === (area === 'lounge' ? 'hall' : 'casino')),
+      VILLAGE_PLACES.find((p) => p.id === VENUES[area].place),
       side,
       open,
     );
@@ -1771,14 +1779,12 @@ function AccountLounge({
           id: 'local',
           actor: save.actor,
           look: save.looks[save.actor],
-          ...localPos[
-            tab === 'casino' ? 'casino' : tab === 'lounge' ? 'lounge' : 'village'
-          ],
+          ...localPos[isInteriorArea(tab) ? tab : 'village'],
           emote: '',
           emoteAt: 0,
           balance: 0,
-          area: (tab === 'casino'
-            ? 'casino'
+          area: (isInteriorArea(tab)
+            ? tab
             : tab === 'village'
               ? 'village'
               : 'lounge') as LoungePlayer['area'],
@@ -1793,12 +1799,12 @@ function AccountLounge({
       ? '이 방 수다'
       : myArea === 'village'
       ? NAMES.chatVillage
-      : myArea === 'casino'
-        ? NAMES.chatCasino
+      : isInteriorArea(myArea)
+        ? VENUES[myArea].chat
         : NAMES.chatHall;
   // The table sheet over the hall / casino: my seat (seated) wins; otherwise
   // the table I walked up to (setup at an empty one, join at a forming one).
-  const interior = tab === 'lounge' || tab === 'casino' ? tab : null;
+  const interior = isInteriorArea(tab) ? tab : null;
   let tableSheet: {
     game: GameKind;
     mode: SheetMode;
@@ -1849,6 +1855,11 @@ function AccountLounge({
   // The hall and the casino are walkable 3D rooms like the village (the flat
   // floor stays for 간단 그래픽 and when WebGL is not available).
   const interior3d = !!interior && visiting === null && !settings.simpleGraphics && !interiorFlat;
+  // 허풍 주점's props follow its finished upgrades (venueLook).
+  const tavernProps = useMemo(() => venueLook(venuesFromView(view.life?.venues), 'tavern').props, [view.life?.venues]);
+  // 간단 그래픽: the flat floor of the interior I am in (hall when elsewhere).
+  const flatArea: InteriorArea = interior ?? 'lounge';
+  const flatGames = GAME_KINDS.filter((k) => TABLE_AREA[k] === flatArea);
   return (
     <main
       ref={appRef}
@@ -1885,7 +1896,7 @@ function AccountLounge({
           room={room}
           view={view}
           onBack={closeGame}
-          place={TABLE_AREA[gameScreen] === 'casino' ? NAMES.casino : NAMES.hall}
+          place={VENUES[TABLE_AREA[gameScreen]].name}
           onRequest={requestGame}
           reactionsHidden={reactionsHidden}
           onReactionsHidden={setReactionsHidden}
@@ -1988,7 +1999,7 @@ function AccountLounge({
             </button>
           </aside>
         )}
-        {tab !== 'lounge' && tab !== 'casino' && pendingInvites > 0 && (
+        {!isInteriorArea(tab) && pendingInvites > 0 && (
           // Arrivals come as a banner; this line only keeps the status in view.
           <aside className="l-retained-table l-invite-pill" aria-label="진행 중인 초대">
             <span>
@@ -2265,7 +2276,7 @@ function AccountLounge({
             name="interior-3d"
             fallback={(retry, chunk) => (
               <ScreenError
-                what={interior === 'casino' ? NAMES.casino : NAMES.hall}
+                what={VENUES[interior].name}
                 retry={retry}
                 chunk={chunk}
                 onBack={leaveInterior}
@@ -2284,10 +2295,12 @@ function AccountLounge({
                 onMove={move}
                 onTable={tableAct}
                 onExit={leaveInterior}
+                onHost={interior === 'tavern' ? () => setModal('tavernUp') : undefined}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
                 sheetOpen={!!tableSheet}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
+                props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
                   setInteriorFlat(true);
                   notify('이 기기에서는 입체 화면을 열 수 없어 간단한 화면으로 보여 드려요.', 'info');
@@ -2327,14 +2340,14 @@ function AccountLounge({
           </div>
         </section>
       ) : (
-        <section className={'l-lounge' + (tab === 'casino' ? ' l-casino' : '')}>
+        <section className={'l-lounge' + (flatArea !== 'lounge' ? ` l-${flatArea}` : '')}>
           <div className="l-section-title">
             <div>
-              <h1>{tab === 'casino' ? NAMES.casino : NAMES.hall}</h1>
+              <h1>{VENUES[flatArea].name}</h1>
               <p>
-                {tab === 'casino'
-                  ? '체스 · 텍사스 홀덤 · 블랙잭'
-                  : '고스톱 · 섯다 · 친구들과 수다'}
+                {flatArea === 'lounge'
+                  ? '고스톱 · 섯다 · 친구들과 수다'
+                  : flatGames.map((k) => GAME_INFO[k].name).join(' · ')}
               </p>
             </div>
             <button
@@ -2350,7 +2363,7 @@ function AccountLounge({
                 name="room-floor"
                 fallback={(retry, chunk) => (
                   <ScreenError
-                    what={tab === 'casino' ? NAMES.casino : NAMES.hall}
+                    what={VENUES[flatArea].name}
                     retry={retry}
                     chunk={chunk}
                   />
@@ -2363,7 +2376,7 @@ function AccountLounge({
                     onMove={move}
                     onTable={tableAct}
                     view={view}
-                    area={tab === 'casino' ? 'casino' : 'lounge'}
+                    area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
                     sheetOpen={!!tableSheet}
                   />
@@ -2373,7 +2386,7 @@ function AccountLounge({
               <ReactionDock
                 players={players}
                 self={self}
-                scope={tab === 'casino' ? 'casino' : 'lounge'}
+                scope={flatArea}
                 connected={connected}
                 hidden={reactionsHidden}
                 onHidden={setReactionsHidden}
@@ -2383,14 +2396,11 @@ function AccountLounge({
             <aside className="l-lounge-sidebar">
               <div className="l-play-list">
                 <h2>오늘의 한 판</h2>
-                {(tab === 'casino'
-                  ? (['poker', 'blackjack', 'chess'] as const)
-                  : (['seotda', 'gostop', 'yacht', 'liar'] as const)
-                ).map((kind) => (
+                {flatGames.map((kind) => (
                   <button key={kind} onClick={() => openTable(kind)}>
                     <span
                       className={
-                        'l-game-symbol' + (tab === 'casino' ? ' chess' : '')
+                        'l-game-symbol' + (flatArea === 'casino' ? ' chess' : '')
                       }
                     >
                       {kind === 'gostop' || kind === 'seotda' ? (
@@ -2403,7 +2413,7 @@ function AccountLounge({
                           }
                           alt=""
                         />
-                      ) : kind === 'yacht' || kind === 'liar' ? (
+                      ) : kind === 'yacht' || kind === 'liar' || kind === 'liarsbar' ? (
                         GAME_INFO[kind].symbol
                       ) : kind === 'chess' ? (
                         '♞'
@@ -2664,7 +2674,7 @@ function AccountLounge({
           table={
             inGame && gameScreen
               ? {
-                  place: TABLE_AREA[gameScreen] === 'casino' ? NAMES.casino : NAMES.hall,
+                  place: VENUES[TABLE_AREA[gameScreen]].name,
                   onBack: () => {
                     setModal(null);
                     closeGame();
@@ -2689,7 +2699,7 @@ function AccountLounge({
                     setModal(null);
                     leaveVisit();
                   }
-                : tab === 'bedroom' || tab === 'lounge' || tab === 'casino'
+                : tab === 'bedroom' || isInteriorArea(tab)
                   ? () => {
                       setModal(null);
                       enter('village');
@@ -2762,6 +2772,11 @@ function AccountLounge({
           view={view}
           notify={notify}
           initialTab={shopTab}
+          onGoShop={(where) => {
+            setModal(null);
+            const place = VILLAGE_PLACES.find((p) => p.id === where);
+            if (place) walkTo(place.entry);
+          }}
           onClose={() => setModal(null)}
         />
       )}
@@ -2839,6 +2854,11 @@ function AccountLounge({
           onClose={() => setTalk(null)}
         />
       )}
+      </Suspense>
+      <Suspense fallback={null}>
+        {modal === 'realty' && <RealtyCounter room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+        {modal === 'furniture' && <FurnitureCounter room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+        {modal === 'tavernUp' && <TavernUpgrades room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       </Suspense>
       {modal === 'mail' && (
         <MailModal

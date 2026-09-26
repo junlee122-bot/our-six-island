@@ -24,6 +24,7 @@ import { sceneTableSide, type SceneArea, type ScenePoint } from './lounge-scene-
 import {
   INTERIOR_DOOR,
   INTERIOR_PLACE_EVENT,
+  TAVERN_BAR_FRONT,
   INTERIOR_ROOM,
   interiorAction,
   interiorHover,
@@ -48,6 +49,8 @@ import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys
 import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lounge-settings';
 import { keyLabel } from './lounge-keybinds';
 import { josa, NAMES } from './lounge-text';
+import { VENUES } from './lounge-venues';
+import type { TavernModel } from './lounge-model-assets';
 import './lounge-interior-3d.css';
 
 /** Server units per second (the floor is 70 × 46 units), as on the flat floor. */
@@ -119,6 +122,8 @@ type Props = {
   onTable: (game: GameKind) => void;
   /** 나가기 at the door. */
   onExit: () => void;
+  /** 허풍 주점: talk to 허 선장 at the bar (the upgrade board). */
+  onHost?: () => void;
   /** I am near the door: preload the village. */
   onNearDoor?: () => void;
   /** I sit at this forming table: walking pauses until I stand up. */
@@ -127,6 +132,8 @@ type Props = {
   sheetOpen?: boolean;
   /** The village's '카지노 VIP룸' project is done (the casino shows its VIP corner). */
   vip?: boolean;
+  /** 허풍 주점: the kArchive props of its finished upgrades (venueLook). */
+  props?: readonly TavernModel[];
   /** WebGL is not available (or the player chose the simple screen). */
   onUnavailable: () => void;
 };
@@ -162,10 +169,12 @@ export function Interior3D({
   onMove,
   onTable,
   onExit,
+  onHost,
   onNearDoor,
   seatedAt = null,
   sheetOpen = false,
   vip = false,
+  props,
   onUnavailable,
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -229,9 +238,9 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
@@ -253,6 +262,10 @@ export function Interior3D({
   useLayoutEffect(() => {
     vipRef.current = vip;
   }, [vip]);
+  const propsRef = useRef(props);
+  useLayoutEffect(() => {
+    propsRef.current = props;
+  }, [props]);
   const actionRef = useRef<InteriorAction | null>(null);
   const exited = useRef(false);
   const runAction = (next: InteriorAction | null) => {
@@ -261,7 +274,8 @@ export function Interior3D({
       if (exited.current) return;
       exited.current = true;
       latest.current.onExit();
-    } else latest.current.onTable(next.game);
+    } else if (next.kind === 'host') latest.current.onHost?.();
+    else latest.current.onTable(next.game);
   };
   const runRef = useRef(runAction);
   useLayoutEffect(() => {
@@ -336,7 +350,7 @@ export function Interior3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = area === 'casino' ? 1.12 : 1.05;
+    renderer.toneMappingExposure = VENUES[area].exposure;
     renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     // Only the room and its furniture cast shadows; figures have contact shadows.
@@ -358,7 +372,11 @@ export function Interior3D({
       .add(new THREE.Vector3(Math.sin(YAW) * Math.cos(pitch), Math.sin(pitch), Math.cos(YAW) * Math.cos(pitch)).multiplyScalar(40));
     camera.lookAt(target);
     camera.updateMatrixWorld();
-    const studio = createInteriorScene(scene, area, { lights: quality.effects, vip: vipRef.current });
+    const studio = createInteriorScene(scene, area, {
+      lights: quality.effects,
+      vip: vipRef.current,
+      props: propsRef.current,
+    });
 
     // Frame the floor and the back wall (with its name banner) as large as the
     // window allows, leaving room at the top for the HUD.
@@ -602,7 +620,9 @@ export function Interior3D({
       walkToRef.current(
         hover?.kind === 'door'
           ? { ...INTERIOR_DOOR }
-          : { x: Math.max(15, Math.min(85, at.floor.x)), y: Math.max(42, Math.min(88, at.floor.y)) },
+          : hover?.kind === 'host'
+            ? { ...TAVERN_BAR_FRONT }
+            : { x: Math.max(15, Math.min(85, at.floor.x)), y: Math.max(42, Math.min(88, at.floor.y)) },
       );
       showMarker(l.goal);
     };
@@ -922,7 +942,7 @@ export function Interior3D({
             dirty = true;
           }
         }
-        host.dataset.action = next ? (next.kind === 'door' ? 'door' : 'table:' + next.game) : '';
+        host.dataset.action = next ? (next.kind === 'table' ? 'table:' + next.game : next.kind) : '';
         host.dataset.avatarX = l.point.x.toFixed(2);
         host.dataset.avatarY = l.point.y.toFixed(2);
         host.dataset.walking = String(l.moving);
@@ -930,7 +950,8 @@ export function Interior3D({
         lastData = t;
       }
       // kArchive furniture arriving, or the VIP project finishing.
-      if (studio.refresh(vipRef.current)) {
+      studio.tick(t / 1000);
+      if (studio.refresh(vipRef.current, propsRef.current)) {
         renderer.shadowMap.needsUpdate = true;
         dirty = true;
       }
@@ -977,7 +998,7 @@ export function Interior3D({
     // The scene is rebuilt only for another place or a retry.
   }, [area, attempt]);
 
-  const placeName = area === 'casino' ? NAMES.casino : NAMES.hall;
+  const placeName = VENUES[area].name;
   const others = here.filter((p) => p.id !== self);
   const myPlayer = meHere;
   const actionState = action?.kind === 'table' ? tableState(view, action.game) : null;
@@ -1039,7 +1060,7 @@ export function Interior3D({
               <span className="ih-name ih-host-name">
                 <DealerAvatar host={t.host} mood={t.state.phase === 'playing' ? 'focus' : 'smile'} />
                 {HOSTS[t.host].name}
-                <em>{t.host === 'lumi' ? '딜러' : '진행자'}</em>
+                <em>{t.host === 'lumi' ? '딜러' : t.host === 'captain' ? '주인' : '진행자'}</em>
               </span>
             </div>
           ) : null,
@@ -1106,11 +1127,13 @@ export function Interior3D({
       {!seatedAt && !sheetOpen && state !== 'unavailable' && action && (
         <ActionButton
           className="ih-action"
-          kind={action.kind === 'door' ? 'exit' : actionKind}
+          kind={action.kind === 'door' ? 'exit' : action.kind === 'host' ? 'talk' : actionKind}
           label={
             action.kind === 'door'
               ? `${NAMES.village}로 나가기`
-              : `${GAME_INFO[action.game].name} ${TABLE_ACTION_LABEL[actionKind!]}`
+              : action.kind === 'host'
+                ? '허 선장과 이야기 · 주점 꾸미기'
+                : `${GAME_INFO[action.game].name} ${TABLE_ACTION_LABEL[actionKind!]}`
           }
           detail={actionState ? tableLabel(actionState).text : undefined}
           shortcut={keyLabel(keys.action)}

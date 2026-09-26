@@ -319,6 +319,12 @@
   list-style: none;
   color: #8a8474;
 }
+.l-museum-milestones li {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
 .l-museum-milestones li[data-reached] {
   color: #2f6d3a;
   font-weight: 700;

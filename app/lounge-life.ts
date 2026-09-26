@@ -45,6 +45,15 @@ import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
 // 성장 P1 (skills, blacksmith, 마을 개척): same cycle rule as lounge-life-plus.
 import { GROWTH_ACTION_KINDS, XP } from './lounge-growth-data.ts';
 import {
+  VENUE_ACTION_KINDS,
+  readVenues,
+  venueAction,
+  venuesView,
+  type VenueAction,
+  type VenueExt,
+  type VenueUpgradeView,
+} from './lounge-venue-upgrades.ts';
+import {
   gainXp,
   growthAction,
   growthMods,
@@ -445,7 +454,8 @@ export type LifeState = {
   /** Lifetime harvest/pick counts per user (trophy milestones). Optional. */
   harvested?: Record<string, Partial<Record<HarvestKind, number>>>;
 } & LifeExt &
-  GrowthExt;
+  GrowthExt &
+  VenueExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -474,7 +484,9 @@ export type LifeAction =
   /** Friend NPC talk, my NPC lines, festivals, 마을 적응하기 (lounge-life-social.ts). */
   | SocialAction
   /** Skills, blacksmith, 마을 개척, material nodes (lounge-growth.ts). */
-  | GrowthAction;
+  | GrowthAction
+  /** 가게 업그레이드 (lounge-venue-upgrades.ts). */
+  | VenueAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -491,6 +503,7 @@ export const LIFE_ACTION_KINDS = [
   ...PLUS_ACTION_KINDS,
   ...SOCIAL_ACTION_KINDS,
   ...GROWTH_ACTION_KINDS,
+  ...VENUE_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -827,6 +840,7 @@ export function readLife(value: unknown): LifeState {
     ...harvestedOf(v.harvested),
     ...readLifeExt(v),
     ...readGrowth(v.growth),
+    ...readVenues(v.venues),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -933,6 +947,10 @@ export function lifeAction(
   touchGrowth(life, uid, now);
   if ((GROWTH_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = growthAction(life, ledger, member, a as GrowthAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((VENUE_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = venueAction(life, ledger, member, a as VenueAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((PLUS_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1294,6 +1312,8 @@ export type LifeView = {
   social?: SocialView;
   /** 성장: skills, tools, 마을 개척, material nodes (absent from older servers). */
   growth?: GrowthView;
+  /** 가게 업그레이드 progress (static defs: VENUE_UPGRADES, same order; absent from older servers). */
+  venues?: VenueUpgradeView[];
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1382,6 +1402,7 @@ export function lifeView(
     me: { ...base.me, ...me },
     ...(UUID.test(uid) && actorValid(actor) ? { social: socialView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
+    venues: venuesView(life),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

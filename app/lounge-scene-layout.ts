@@ -1,6 +1,8 @@
 import type { GameKind } from './lounge-room';
+import type { InteriorArea } from './lounge-venues';
 
-export type SceneArea = 'lounge' | 'casino';
+/** Every interior with tables (lounge-venues.ts). */
+export type SceneArea = InteriorArea;
 export type ScenePoint = { x: number; y: number };
 export type SceneTable = {
   game: GameKind;
@@ -70,6 +72,19 @@ export const SCENE_LAYOUT: Record<
         game: 'blackjack',
         foot: { x: 78, y: 68 },
         width: 25,
+        imageAnchor: { x: 50, y: 91 },
+      },
+    ],
+  },
+  // 허풍 주점: one big round table in the middle (the bar and the host are
+  // behind the walkable floor, along the back wall).
+  tavern: {
+    floor: { left: 12, right: 88, back: 58, front: 90 },
+    tables: [
+      {
+        game: 'liarsbar',
+        foot: { x: 50, y: 76 },
+        width: 26,
         imageAnchor: { x: 50, y: 91 },
       },
     ],

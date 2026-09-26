@@ -19,6 +19,7 @@ export const AREA_NAMES: Record<string, string> = {
   village: NAMES.village,
   lounge: '회관',
   casino: '카지노',
+  tavern: '허풍 주점',
   wardrobe: NAMES.wardrobe,
   home: NAMES.home,
 };

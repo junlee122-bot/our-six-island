@@ -6,6 +6,7 @@ import {
   PRACTICE_NAMES,
   isPracticeAi,
   tableIdOf,
+  TABLE_AREA,
   type GameKind,
 } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
@@ -27,7 +28,9 @@ import {
   SeotdaTable,
   YachtTable,
   LiarTable,
+  LiarsBarTable,
 } from './table-chunks';
+import { VENUES } from '../lounge-venues';
 import { PartyBar } from '../lounge-party-bar';
 import type { Notify } from './Toast';
 import '../lounge-game-fit.css';
@@ -247,7 +250,7 @@ export function GameScreen({
   return (
     <section
       className={'l-game-screen ' + kind + (dark ? ' is-dark' : '')}
-      data-venue={dark ? 'casino' : 'hall'}
+      data-venue={VENUES[TABLE_AREA[kind]].venue}
       data-my-turn={turn || undefined}
     >
       <header>
@@ -420,6 +423,19 @@ export function GameScreen({
                       kind: 'yacht',
                       id: view.yacht!.id,
                       revision: view.yacht!.revision,
+                      action,
+                    }))}
+                  />
+                ) : kind === 'liarsbar' ? (
+                  <LiarsBarTable
+                    figures={figures}
+                    match={view.liarsbar!}
+                    seat={seat}
+                    names={names}
+                    onAction={act((action) => ({
+                      kind: 'liarsbar',
+                      id: view.liarsbar!.id,
+                      revision: view.liarsbar!.revision,
                       action,
                     }))}
                   />

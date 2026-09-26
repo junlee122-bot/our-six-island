@@ -190,6 +190,7 @@ export function tableLabel(state: TableState): {
 export const TABLE_PLACE: Record<TableArea, string> = {
   lounge: '회관',
   casino: '카지노',
+  tavern: '주점',
 };
 
 /** The forming table I sit at (at most one: seats make me busy). */

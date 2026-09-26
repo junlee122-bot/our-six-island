@@ -26,6 +26,9 @@ export const YachtTable = lazyRetry(() =>
 export const LiarTable = lazyRetry(() =>
   import('../lounge-liar-table').then((m) => ({ default: m.LiarTable })),
 );
+export const LiarsBarTable = lazyRetry(() =>
+  import('../lounge-liarsbar-table').then((m) => ({ default: m.LiarsBarTable })),
+);
 
 const TABLES = {
   chess: ChessBoard,
@@ -35,6 +38,7 @@ const TABLES = {
   seotda: SeotdaTable,
   yacht: YachtTable,
   liar: LiarTable,
+  liarsbar: LiarsBarTable,
 } satisfies Record<GameKind, { preload: () => void }>;
 
 /**
