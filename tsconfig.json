@@ -29,7 +29,6 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase/functions",
-    "app/island-game.tsx"
+    "supabase/functions"
   ]
 }

@@ -82,7 +82,7 @@ npm run optimize:assets  # 원본 PNG/GLB에서 WebP·압축 GLB를 다시 만�
 
 서버 쪽 변경이 없으면 3번만 합니다. 현재 GitHub Pages는 main 브랜치의 `docs/` 폴더를 게시합니다.
 
-`build:pages`는 `docs/assets/`를 비우지 않습니다. 빌드 후 새 `index.html`(과 그 청크)이 더 이상 참조하지 않는 해시 파일은 지워도 됩니다. `docs/island.html`·`docs/theater.html`은 이미지가 내장된 단일 HTML이라 `docs/assets/`를 쓰지 않습니다. 예전 HTML을 캐시한 브라우저가 없어진 청크를 요청하면 앱이 한 번 새로 고쳐 새 HTML을 받습니다.
+`build:pages`는 `docs/assets/`를 비우지 않습니다. 빌드 후 새 `index.html`(과 그 청크)이 더 이상 참조하지 않는 해시 파일은 지워도 됩니다. `docs/theater.html`은 이미지가 내장된 단일 HTML이라 `docs/assets/`를 쓰지 않습니다. 예전 HTML을 캐시한 브라우저가 없어진 청크를 요청하면 앱이 한 번 새로 고쳐 새 HTML을 받습니다.
 
 ### 나중에 Actions 배포로 바꾸기
 
@@ -108,9 +108,8 @@ npm run optimize:assets  # 원본 PNG/GLB에서 WebP·압축 GLB를 다시 만�
 ## 예전 게임
 
 - [우당탕 극장](https://junlee122-bot.github.io/our-six-island/theater.html) · [극장 설명](THEATER.md) (약 16MB)
-- [지난 섬](https://junlee122-bot.github.io/our-six-island/island.html) · [섬 설명](ISLAND.md) (약 28MB)
 
-두 페이지는 이미지가 내장된 단일 HTML로 보존되어 있고 다시 빌드하는 스크립트는 없습니다. `app/island-*`, `app/theater-*` 등의 소스는 참고용으로 남아 있으며 현재 게임 빌드에는 포함되지 않습니다(`theater-data.ts`의 이름 목록만 아직 쓰임). 원본 사진은 어떤 배포물에도 포함하지 않습니다.
+극장 페이지는 이미지가 내장된 단일 HTML로 보존되어 있고 다시 빌드하는 스크립트는 없습니다. `app/theater-*` 소스는 참고용으로 남아 있으며 현재 게임 빌드에는 포함되지 않습니다(`theater-data.ts`의 이름 목록만 아직 쓰임). 예전 섬 페이지(`island.html`)와 그 전용 코드·원화는 2026-09 삭제했습니다(git 기록에 남아 있음). 원본 사진은 어떤 배포물에도 포함하지 않습니다.
 
 ## 라이선스와 크레딧
 

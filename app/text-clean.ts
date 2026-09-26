@@ -14,12 +14,14 @@ export const TEXT_CONTROL_SOURCE =
 const CONTROL = new RegExp(TEXT_CONTROL_SOURCE);
 // oxlint-disable-next-line no-control-regex -- stripping control characters is the point.
 const CONTROL_ALL = new RegExp(TEXT_CONTROL_SOURCE, 'g');
-const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
-const LONE_SURROGATE_ALL = new RegExp(LONE_SURROGATE.source, 'g');
+// A pair, or a lone half. No lookbehind: older WebKit (Tauri on macOS) lacks it.
+const SURROGATES = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\uD800-\uDFFF]/g;
+const dropLoneSurrogates = (text: string) =>
+  text.replace(SURROGATES, (m) => (m.length === 2 ? m : ''));
 
 /** True when the text holds a control/bidi character or half of a surrogate pair. */
 export const hasUnsafeText = (text: string) =>
-  CONTROL.test(text) || LONE_SURROGATE.test(text);
+  CONTROL.test(text) || dropLoneSurrogates(text) !== text;
 
 /** Length in code points (what every *_TEXT_MAX limit counts). */
 export const textLength = (text: string) => Array.from(text).length;
@@ -62,10 +64,9 @@ export function clipText(text: string, max: number): string {
  */
 export function cleanText(value: unknown, max: number): string {
   if (typeof value !== 'string') return '';
-  const text = value
+  const text = dropLoneSurrogates(value)
     .replace(/\s+/g, ' ')
     .replace(CONTROL_ALL, '')
-    .replace(LONE_SURROGATE_ALL, '')
     .trim();
   return clipText(text, max).trim();
 }

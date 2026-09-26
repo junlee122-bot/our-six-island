@@ -41,11 +41,9 @@ jobs:
       - run: npm test
       - name: Build site
         run: node scripts/build-standalone.mjs --out _site
-      - name: Keep the legacy island/theater pages
+      - name: Keep the legacy theater page
         run: |
-          for page in island.html theater.html; do
-            if [ -f "docs/$page" ]; then cp "docs/$page" "_site/$page"; fi
-          done
+          if [ -f docs/theater.html ]; then cp docs/theater.html _site/theater.html; fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

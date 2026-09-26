@@ -97,7 +97,7 @@
    - `hohyeon-auth`: **verify_jwt=false** (자체 자격증명 검증), `hohyeon-api`: **verify_jwt=true**. import map은 둘 다 `supabase/functions/deno.json`(고정 npm 버전)입니다.
    - 번들에는 `supabase/functions/_shared/server.ts`와 루트 `app/*.ts` 공유 엔진 파일(`lounge-accounts.ts`, `lounge-look.ts`, `lounge-bedroom-*.ts`, `lounge-life.ts`, `lounge-room.ts`, `lounge-cloud-engine.ts`, `lounge-games.ts`, `lounge-reactions.ts` 등)이 상대 경로 import로 함께 들어갑니다. 이 파일들을 바꿨다면 두 함수를 다시 배포해야 서버에 반영됩니다.
    - 배포 전 확인: `npm run check`(tsc·테스트·lint), `deno check supabase/functions/*/index.ts`. 선택: Edge 비밀값 `HH_IP_SALT`를 설정합니다.
-3. **Pages** — `npm run build:pages`(기본 출력 `docs/`)로 만든 `docs/index.html`, `docs/assets/`, `manifest.webmanifest`, `icons/`, `favicon.svg`를 커밋해 **main에 머지**하면 GitHub Pages가 `/docs`를 게시합니다. HTML만 올리면 이미지·코드 청크가 빠지므로 `docs/` 전체를 함께 올립니다. 예전 `docs/island.html`·`docs/theater.html`은 그대로 둡니다. 게시 후 배포 HTML의 SHA-256을 로컬 파일과 비교하고, 로그인 → 마을 → 방 → 게임 한 판을 확인합니다.
+3. **Pages** — `npm run build:pages`(기본 출력 `docs/`)로 만든 `docs/index.html`, `docs/assets/`, `manifest.webmanifest`, `icons/`, `favicon.svg`를 커밋해 **main에 머지**하면 GitHub Pages가 `/docs`를 게시합니다. HTML만 올리면 이미지·코드 청크가 빠지므로 `docs/` 전체를 함께 올립니다. 예전 `docs/theater.html`은 그대로 둡니다. 게시 후 배포 HTML의 SHA-256을 로컬 파일과 비교하고, 로그인 → 마을 → 방 → 게임 한 판을 확인합니다.
 4. **활성화 코드 재발급** — 아직 쓰지 않은 활성화 코드는 모두 새로 만듭니다(위 ‘활성화 코드 재발급’): `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node supabase/admin/rotate-activation-code.mjs <아이디>`. 새 코드는 친구에게 1:1로만 전달합니다.
 
 서버 쪽 변경이 없는 릴리스는 3번(Pages)만 하면 됩니다. 반대로 서버만 바뀐 경우에도 클라이언트가 새 서버 응답을 기대하는지 먼저 확인합니다.
