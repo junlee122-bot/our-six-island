@@ -49,7 +49,7 @@ const DAY = 86_400_000;
 const kstDayOf = (now: number) => Math.floor((now + 9 * 3_600_000) / DAY);
 
 export type AreaAction =
-  | { kind: 'node'; id: string; node: NodeKind; label: string }
+  | { kind: 'node'; id: string; node: NodeKind; label: string; disabled?: boolean }
   | { kind: 'rock'; rock: number; label: string }
   | { kind: 'ladder'; label: string }
   | { kind: 'lift'; label: string }
@@ -154,7 +154,14 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const d = Math.hypot(p.x - n.x, p.z - n.z);
       if (d <= NODE_REACH) {
         const info = NODE_INFO[n.kind];
-        found.push({ d, a: { kind: 'node', id: n.id, node: n.kind, label: `${info.name} ${info.verb}` } });
+        const need = info.tool === 'axe' ? (info.tier ?? 1) : 1;
+        found.push({
+          d,
+          a:
+            s.axeTier < need
+              ? { kind: 'node', id: n.id, node: n.kind, label: `${info.name} · 도끼 ${need}단계 필요`, disabled: true }
+              : { kind: 'node', id: n.id, node: n.kind, label: `${info.name} ${info.verb}` },
+        });
       }
     }
     if (s.area === 'mine' && s.floor) {
