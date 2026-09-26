@@ -45,7 +45,8 @@ function launch(room, game) {
       game,
       players: people.slice(1),
       required,
-      stake: 1000,
+      // 라이어 게임 is never staked.
+      ...(game === 'liar' ? {} : { stake: 1000 }),
     }),
     true,
   );
@@ -66,6 +67,10 @@ function finish(room, game) {
     room.poker = { ...room.poker, phase: 'over', result: [0, 0, 0] };
   else if (game === 'blackjack')
     room.blackjack = { ...room.blackjack, phase: 'over', result: [0, 0, 0] };
+  else if (game === 'yacht')
+    room.yacht = { ...room.yacht, phase: 'over', turn: -1, result: [0, 0, 0] };
+  else if (game === 'liar')
+    room.liar = { ...room.liar, phase: 'over', turn: -1, winner: 'citizens' };
   else room.seotda = { ...room.seotda, phase: 'over', result: [0, 0, 0] };
 }
 

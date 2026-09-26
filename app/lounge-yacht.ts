@@ -150,7 +150,7 @@ export function yachtScore(dice: readonly number[], category: YachtCategory): nu
     case 'fourKind':
       return c.some((n) => n >= 4) ? sum(dice) : 0;
     case 'fullHouse': {
-      const sorted = c.filter((n) => n > 0).sort();
+      const sorted = c.filter((n) => n > 0).sort((a, b) => a - b);
       return sorted.length === 2 && sorted[0] === 2 && sorted[1] === 3 ? sum(dice) : 0;
     }
     case 'smallStraight':

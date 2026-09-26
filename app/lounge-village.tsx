@@ -66,6 +66,7 @@ import {
   MUSEUM_FRONT,
   SPAWN_POINTS,
   bobberPoint,
+  feteSpot,
 } from './lounge-village-spots';
 import { FISH_SPOTS, SPOT_INFO, type Spot } from './lounge-items';
 import { fishCandidates, itemName, spotBlock } from './lounge-life-plus';
@@ -237,6 +238,8 @@ type Props = {
   /** VILL-2: a click on one of my plots within reach tends that plot. */
   onPlot?: (index: number) => void;
   onWish?: () => void;
+  /** The festival booth (C-6). */
+  onFete?: () => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
   onTalk?: (actor: number) => void;
   /** The selected hotbar item (the farm action follows it). */
@@ -958,6 +961,7 @@ export function Village3D(props: Props) {
       else if (target.kind === 'board') current.onBoard?.();
       else if (target.kind === 'friendFarm') current.onWaterFriend?.(target.actor);
       else if (target.kind === 'fountain') current.onWish?.();
+      else if (target.kind === 'fete') current.onFete?.();
       else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
@@ -1009,6 +1013,9 @@ export function Village3D(props: Props) {
             effects: current.seasonFx !== false,
             bundlesDone: (life.bundles ?? []).map((b) => b.done),
             houses: life.houses,
+            fete: life.social?.fete?.active
+              ? { kind: life.social.fete.kind, lanterns: life.social.fete.lanterns.length, at: feteSpot(life.flags ?? []) }
+              : null,
           })
         : false;
       const civicChanged = world.karchive.update({
@@ -3421,13 +3428,27 @@ function SpotPrompt({
         <small>하루 한 번 소원을 빌 수 있어요{key}</small>
       </div>
     );
+  if (spot.kind === 'fete') {
+    const fete = life?.social?.fete;
+    return (
+      <div>
+        <strong>
+          <Sparkles size={14} /> {fete?.name ?? '마을 축제'}
+        </strong>
+        <small>
+          {fete ? `${fete.game} · ${fete.extra}` : '오늘의 축제'}
+          {key}
+        </small>
+      </div>
+    );
+  }
   return (
     <div>
       <strong>
         <MessageCircle size={14} /> {ACTORS[spot.actor]}
       </strong>
       <small>
-        {life?.me.requests?.some((r) => r.from === spot.actor && !r.done) ? '부탁이 있는 것 같아요' : '산책 중이에요'}
+        {life?.me.requests?.some((r) => r.from === spot.actor && !r.done) ? '부탁이 있는 것 같아요' : life?.social?.talked?.includes(spot.actor) ? '오늘 이야기 나눴어요' : '쉬는 중 · 말을 걸어 봐요'}
         {key}
       </small>
     </div>

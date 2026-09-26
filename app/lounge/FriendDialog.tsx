@@ -13,7 +13,7 @@ import { getSettings } from '../lounge-settings';
 import type { DialogChoice, DialogScript } from '../lounge-friend-dialog';
 import { lookFor } from './friend-looks';
 import { Hearts } from './Bonds';
-import './social.css';
+import './friend-life.css';
 
 const TYPE_MS = 28;
 const reducedMotion = () => {

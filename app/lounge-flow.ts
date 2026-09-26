@@ -32,7 +32,9 @@ export type ActionKind =
   | 'board'
   | 'waterFriend'
   | 'cook'
-  | 'wish';
+  | 'wish'
+  // Participatory festivals (C-6).
+  | 'fete';
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   enter: '들어가기',
@@ -61,6 +63,7 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   waterFriend: '물 주기',
   cook: '요리·만들기',
   wish: '소원 빌기',
+  fete: '축제 참여하기',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

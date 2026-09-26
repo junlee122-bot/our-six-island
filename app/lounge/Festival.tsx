@@ -31,7 +31,7 @@ import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { lookFor } from './friend-looks';
 import { useLifeAction } from './LifePanels';
-import './social.css';
+import './friend-life.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void; selfActor: number };
 const dayText = (day: number) => {

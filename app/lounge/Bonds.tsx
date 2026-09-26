@@ -47,7 +47,7 @@ import {
 import { FRIEND_LINES } from '../lounge-friend-lines';
 import { DISH_BY_ID, FURNITURE_BY_REF } from '../lounge-items';
 import './life-plus.css';
-import './social.css';
+import './friend-life.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const dateText = (at: number) => {

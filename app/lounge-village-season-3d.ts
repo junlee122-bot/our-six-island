@@ -201,6 +201,8 @@ export type SeasonUpdate = {
   bundlesDone: readonly boolean[];
   /** 집 확장 tier per actor (3: front garden, 4: second floor + nameplate). */
   houses?: Readonly<Record<number, number>>;
+  /** Today's participatory festival (C-6): booth, lights and its decorations. */
+  fete?: { kind: 'chuseok' | 'blossom'; lanterns: number; at: VillagePoint } | null;
 };
 export type FishingState = {
   phase: 'none' | 'wait' | 'bite' | 'caught';
@@ -571,6 +573,131 @@ export class VillageSeasonLayer {
     this.addFlagged('festival', fest);
   }
 
+  /**
+   * Festival decorations (C-6), rebuilt when the festival or its lantern
+   * count changes: a booth with string lights where the festival happens,
+   * then 추석's moon and the wish lanterns over the plaza, or 꽃놀이's
+   * blossom trees and the photo arch. Static (fine under reduced motion).
+   */
+  private feteGroup: THREE.Group | null = null;
+  private feteKey = '';
+  private updateFete(fete: SeasonUpdate['fete']) {
+    const key = JSON.stringify(fete ?? null);
+    if (key === this.feteKey) return;
+    this.feteKey = key;
+    if (this.feteGroup) {
+      this.root.remove(this.feteGroup);
+      const shared = new Set<unknown>([...Object.values(GEO), ...Object.values(MAT)]);
+      this.feteGroup.traverse((o) => {
+        if (o instanceof THREE.Sprite) {
+          o.material.map?.dispose();
+          o.material.dispose();
+        } else if (o instanceof THREE.Mesh) {
+          if (!shared.has(o.geometry)) o.geometry.dispose();
+          for (const m of [o.material].flat()) if (!shared.has(m)) m.dispose();
+        }
+      });
+      this.feteGroup = null;
+    }
+    if (!fete) return;
+    const g = new THREE.Group();
+    g.name = 'village-fete-' + fete.kind;
+    const { x, z } = fete.at;
+    const glow = new THREE.MeshBasicMaterial({ color: '#ffe7a0' });
+    const pink = new THREE.MeshBasicMaterial({ color: fete.kind === 'chuseok' ? '#ff9a5a' : '#f7a8c9' });
+    const blue = new THREE.MeshBasicMaterial({ color: '#9fd8f0' });
+    // Booth: two posts, a striped roof and a sign.
+    const booth = new THREE.Group();
+    cyl(booth, MAT.woodDark, x - 0.9, 0.9, z - 0.5, 0.05, 1.8);
+    cyl(booth, MAT.woodDark, x + 0.9, 0.9, z - 0.5, 0.05, 1.8);
+    box(booth, MAT.woodLight, x, 0.45, z - 0.6, 1.6, 0.5, 0.45);
+    box(booth, fete.kind === 'chuseok' ? MAT.flag1 : MAT.flag2, x - 0.45, 1.85, z - 0.5, 0.9, 0.08, 0.9);
+    box(booth, MAT.cream, x + 0.45, 1.85, z - 0.5, 0.9, 0.08, 0.9);
+    batchDirectMeshes(booth);
+    g.add(booth);
+    const sign = signSprite(fete.kind === 'chuseok' ? '한가위 잔치' : '봄 꽃놀이', 0.5);
+    sign.position.set(x, 2.45, z - 0.5);
+    g.add(sign);
+    // String lights over the booth (the 마을 축제 ring's palette).
+    const colors = [glow, pink, blue];
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      const b = new THREE.Mesh(GEO.sphere, colors[i % 3]);
+      b.position.set(x + Math.sin(a) * 1.7, 2.15 + Math.sin(i * 0.9) * 0.06, z - 0.5 + Math.cos(a) * 1.2);
+      b.scale.setScalar(0.07);
+      g.add(b);
+    }
+    if (fete.kind === 'chuseok') {
+      // Full moon in the sky and one glowing lantern per wish (max 7).
+      const moon = canvasSprite(
+        (c) => {
+          const grad = c.createRadialGradient(64, 64, 20, 64, 64, 64);
+          grad.addColorStop(0, '#fff8d8');
+          grad.addColorStop(0.7, '#ffe9a0');
+          grad.addColorStop(1, 'rgba(255, 233, 160, 0)');
+          c.fillStyle = grad;
+          c.beginPath();
+          c.arc(64, 64, 62, 0, Math.PI * 2);
+          c.fill();
+        },
+        128,
+        128,
+        5,
+      );
+      moon.position.set(-6, 15, -20);
+      g.add(moon);
+      const lantern = new THREE.MeshBasicMaterial({ color: '#ffb561' });
+      for (let i = 0; i < Math.min(7, fete.lanterns); i++) {
+        const l = new THREE.Mesh(GEO.cyl, lantern);
+        l.position.set(Math.sin(i * 2.4) * (2.5 + i * 0.4), 4.2 + i * 0.55, Math.cos(i * 2.4) * (2.5 + i * 0.4) - 1);
+        l.scale.set(0.2, 0.32, 0.2);
+        g.add(l);
+      }
+      // 청사초롱 on the booth posts.
+      for (const dx of [-0.9, 0.9]) {
+        const c = new THREE.Mesh(GEO.cyl, dx < 0 ? MAT.flag1 : MAT.flag3);
+        c.position.set(x + dx, 1.55, z - 0.35);
+        c.scale.set(0.12, 0.22, 0.12);
+        g.add(c);
+      }
+    } else {
+      // Blossom trees around the booth and a flower arch (the photo spot).
+      const petal = mat('#f6b8cf');
+      const trees = new THREE.Group();
+      for (const [dx, dz] of [
+        [-2.6, -1.4],
+        [2.6, -1.6],
+        [-2.2, 1.6],
+      ] as const) {
+        cyl(trees, MAT.woodDark, x + dx, 0.7, z + dz, 0.09, 1.4);
+        for (let k = 0; k < 4; k++) {
+          const c = new THREE.Mesh(GEO.sphere, petal);
+          c.position.set(x + dx + Math.sin(k * 1.7) * 0.35, 1.65 + (k % 2) * 0.25, z + dz + Math.cos(k * 1.7) * 0.35);
+          c.scale.setScalar(0.5);
+          trees.add(c);
+        }
+      }
+      const ax = x + 2.1,
+        az = z + 0.6;
+      cyl(trees, MAT.woodLight, ax - 0.55, 0.8, az, 0.05, 1.6);
+      cyl(trees, MAT.woodLight, ax + 0.55, 0.8, az, 0.05, 1.6);
+      box(trees, MAT.woodLight, ax, 1.62, az, 1.3, 0.08, 0.1);
+      for (let k = 0; k < 9; k++) {
+        const f = new THREE.Mesh(GEO.sphere, k % 2 ? petal : MAT.cream);
+        f.position.set(ax - 0.6 + k * 0.15, 1.7 + Math.sin(k) * 0.05, az);
+        f.scale.setScalar(0.1);
+        trees.add(f);
+      }
+      batchDirectMeshes(trees);
+      g.add(trees);
+      const photo = signSprite('꽃길 포토존', 0.36);
+      photo.position.set(ax, 2.05, az);
+      g.add(photo);
+    }
+    this.feteGroup = g;
+    this.root.add(g);
+  }
+
   /** 집 확장 tiers 3–4 outside each friend's house (rebuilt when tiers change). */
   private houseGroup: THREE.Group | null = null;
   private houseKey = '';
@@ -705,10 +832,11 @@ export class VillageSeasonLayer {
 
   /** Season, weather, flags and today's spawns (returns true when something changed). */
   update(u: SeasonUpdate): boolean {
-    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone, u.houses ?? {}]);
+    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone, u.houses ?? {}, u.fete ?? null]);
     if (key === this.lastKey) return false;
     this.lastKey = key;
     this.updateHouses(u.houses);
+    this.updateFete(u.fete ?? null);
     this.effects = u.effects && !this.reduced;
     // Season tint (winter frost, autumn gold…): a blend over the original colours.
     const tint = SEASON_TINT[u.season];

@@ -15,7 +15,7 @@ import { formatBeom } from '../lounge-text';
 import { recall, remember } from '../lounge-settings';
 import type { Notify } from './Toast';
 import { useLifeAction } from './LifePanels';
-import './social.css';
+import './friend-life.css';
 
 const LOCAL_KEY = 'bumtadew-adapt-local-v1';
 const HIDE_KEY = 'bumtadew-adapt-hidden-v1';

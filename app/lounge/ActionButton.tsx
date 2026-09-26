@@ -21,6 +21,7 @@ import {
   Mail,
   MessageCircle,
   Palette,
+  PartyPopper,
   Shirt,
   Sprout,
   Wheat,
@@ -65,6 +66,7 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   waterFriend: Droplets,
   cook: CookingPot,
   wish: Sparkles,
+  fete: PartyPopper,
 };
 
 export function ActionButton({

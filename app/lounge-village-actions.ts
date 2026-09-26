@@ -27,7 +27,9 @@ import type { VillagePoint } from './lounge-village-layout.ts';
 import type { LifeView } from './lounge-life.ts';
 import {
   BOARD_REACH,
+  FETE_REACH,
   FISH_REACH,
+  feteDistance,
   FOUNTAIN_REACH,
   MUSEUM_REACH,
   SPAWN_REACH,
@@ -56,7 +58,9 @@ export type VillageSpot =
   | { kind: 'museum' }
   | { kind: 'board' }
   | { kind: 'friendFarm'; actor: number }
-  | { kind: 'fountain' };
+  | { kind: 'fountain' }
+  /** Today's festival booth (C-6). */
+  | { kind: 'fete' };
 
 export type VillageTarget =
   | { type: 'door'; entrance: NearbyVillageEntrance }
@@ -185,6 +189,13 @@ export function villageAction(
       distance: fountainDistance(point),
       reach: FOUNTAIN_REACH,
       target: { type: 'spot', spot: { kind: 'fountain' } },
+    });
+  if (life?.social?.fete?.active)
+    candidates.push({
+      kind: 'fete',
+      distance: feteDistance(point, life.flags ?? []),
+      reach: FETE_REACH,
+      target: { type: 'spot', spot: { kind: 'fete' } },
     });
   candidates.push({
     kind: 'mail',

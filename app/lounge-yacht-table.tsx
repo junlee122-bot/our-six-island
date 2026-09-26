@@ -256,7 +256,7 @@ export function YachtTable({
           <div className={'y-tray' + (mine ? ' is-mine' : '')}>
             <div className="y-dice" role="group" aria-label="주사위 다섯 개">
               {g.dice.map((d, i) => {
-                const keep = mine ? held[i] : g.rolls > 0 && g.held[i] && g.rolls > 1;
+                const keep = mine ? held[i] : g.held[i] && g.rolls > 1;
                 return (
                   <button
                     key={i}

@@ -9,6 +9,7 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, type Crop } from '../lounge-life';
 import { FISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
 import { FIRST_DONATION_GRANT } from '../lounge-life-plus';
+import { CO_DONATION_GRANT, MUSEUM_MILESTONES } from '../lounge-social-defs';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { DEX_TABS, MUSEUM_IDS, achievementRows, needHave, whereFrom, type DexTab } from '../lounge-life-ui';
@@ -34,6 +35,7 @@ export function CollectionBook({
   initialTab = 'fish',
   atMuseum = false,
   onGo,
+  selfActor = -1,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -44,6 +46,8 @@ export function CollectionBook({
   atMuseum?: boolean;
   /** "박물관으로 가기": walk to the pavilion. */
   onGo?: () => void;
+  /** My actor (my stamps and stats). */
+  selfActor?: number;
 }) {
   const life = view.life;
   const [tab, setTab] = useState<BookTab>(initialTab);
@@ -60,10 +64,17 @@ export function CollectionBook({
   const total = DEX_TABS.reduce((s, [, , ids]) => s + ids.length, 0);
   const found = DEX_TABS.reduce((s, [, , ids]) => s + ids.filter((id) => dex.has(id)).length, 0);
   const donatedCount = MUSEUM_IDS.filter((id) => museum[id]).length;
+  const mult = life.flags?.includes('museum') ? 2 : 1;
+  // C-5 co-donation: everyone may stamp each item once; the first donor keeps the honor.
+  const donors = life.social?.museum.donors ?? {};
+  const mine = new Set(life.social?.museum.mine ?? Object.keys(museum).filter((id) => museum[id].actor === selfActor));
   const donate = async (id: string) => {
+    const first = !museum[id];
     const ok = await run(
       { kind: 'donate', item: id },
-      `${josa(nameOf(id), '을/를')} 박물관에 처음으로 기증했어요! +${formatBeom(FIRST_DONATION_GRANT * (life.flags?.includes('museum') ? 2 : 1))}`,
+      first
+        ? `${josa(nameOf(id), '을/를')} 박물관에 처음으로 기증했어요! 첫 기증자로 이름이 남아요. +${formatBeom(FIRST_DONATION_GRANT * mult)}`
+        : `${nameOf(id)} 칸에 내 기증 도장을 찍었어요. +${formatBeom(CO_DONATION_GRANT * mult)}`,
     );
     if (ok) lifeSfx('donate');
   };
@@ -84,9 +95,16 @@ export function CollectionBook({
         </p>
       )}
       {museum[picked] ? (
-        <p className="l-dex-museum">
-          <Landmark size={13} aria-hidden="true" /> {ACTORS[museum[picked].actor] ?? '친구'}의 첫 기증 · {dateText(museum[picked].at)}
-        </p>
+        <>
+          <p className="l-dex-museum">
+            <Landmark size={13} aria-hidden="true" /> 첫 기증자 {ACTORS[museum[picked].actor] ?? '친구'} · {dateText(museum[picked].at)}
+          </p>
+          {(donors[picked]?.length ?? 0) > 1 && (
+            <p className="l-help-text" data-testid="dex-donors">
+              함께 기증한 친구 · {donors[picked].slice(1).map((a) => ACTORS[a] ?? '친구').join(', ')}
+            </p>
+          )}
+        </>
       ) : (
         <p className="l-help-text">아직 박물관에 없어요.</p>
       )}
@@ -151,9 +169,10 @@ export function CollectionBook({
         <div className="l-museum">
           <p className="l-help-text">
             {atMuseum
-              ? `가진 물건을 처음 기증하면 기증자로 이름이 남고 ${formatBeom(FIRST_DONATION_GRANT * (life.flags?.includes('museum') ? 2 : 1))}을 받아요. 한 종류에 한 번만 받을 수 있어요.`
+              ? `누구나 종류마다 한 번씩 기증 도장을 찍을 수 있어요. 처음 기증하면 첫 기증자로 이름이 남고 ${formatBeom(FIRST_DONATION_GRANT * mult)}, 이미 있는 물건은 ${formatBeom(CO_DONATION_GRANT * mult)}을 받아요.`
               : '기증은 광장 동쪽의 마을 박물관에서 할 수 있어요. 여기서는 전시를 둘러볼 수 있어요.'}
           </p>
+          <MuseumStats view={view} selfActor={selfActor} />
           {DEX_TABS.map(([id, label, ids]) => (
             <section key={id} className="l-museum-shelf" aria-label={label}>
               <h3>
@@ -163,20 +182,26 @@ export function CollectionBook({
                 {ids.map((item) => {
                   const shown = museum[item];
                   const have = needHave(life.me, { item });
+                  const others = Math.max(0, (donors[item]?.length ?? (shown ? 1 : 0)) - 1);
                   return (
                     <li key={item}>
                       <button
                         type="button"
                         className="l-dex-cell"
                         data-shown={shown ? true : undefined}
+                        data-mine={mine.has(item) || undefined}
                         aria-pressed={picked === item}
                         onClick={() => setPicked(item)}
-                        aria-label={`${dex.has(item) ? nameOf(item) : '아직 모르는 것'}${shown ? ` · ${ACTORS[shown.actor]} 기증` : ''}`}
+                        aria-label={`${dex.has(item) ? nameOf(item) : '아직 모르는 것'}${shown ? ` · 첫 기증 ${ACTORS[shown.actor]}${others ? ` 외 ${others}명` : ''}` : ''}${mine.has(item) ? ' · 내 도장 있음' : ''}`}
                       >
                         <ItemIcon id={item} size={34} className={shown || dex.has(item) ? '' : 'is-unknown'} />
-                        <small>{shown ? ACTORS[shown.actor] : dex.has(item) ? nameOf(item) : '???'}</small>
+                        <small>
+                          {shown ? ACTORS[shown.actor] : dex.has(item) ? nameOf(item) : '???'}
+                          {others > 0 && <em className="l-museum-plus">+{others}</em>}
+                        </small>
+                        {mine.has(item) && <Check size={11} className="l-museum-stamp" aria-hidden="true" />}
                       </button>
-                      {atMuseum && !shown && have > 0 && (
+                      {atMuseum && !mine.has(item) && have > 0 && (
                         <button
                           type="button"
                           className="l-primary l-donate"
@@ -184,7 +209,7 @@ export function CollectionBook({
                           onClick={() => void donate(item)}
                           data-testid={`donate-${item}`}
                         >
-                          기증
+                          {shown ? '도장' : '기증'}
                         </button>
                       )}
                     </li>
@@ -219,5 +244,35 @@ export function CollectionBook({
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Village museum progress (shared milestones) and every friend's donations. */
+function MuseumStats({ view, selfActor }: { view: CloudRoomView; selfActor: number }) {
+  const m = view.life?.social?.museum;
+  if (!m) return null;
+  const next = MUSEUM_MILESTONES.find((x) => m.count < x.n);
+  const rows = [...m.stats].filter((r) => r.total > 0 || r.actor === selfActor).sort((a, b) => b.total - a.total || a.actor - b.actor);
+  return (
+    <div className="l-museum-stats" data-testid="museum-stats">
+      <div className="l-museum-milestones">
+        <strong>마을 전시 {m.count}종</strong>
+        <ol>
+          {m.milestones.map((x) => (
+            <li key={x.n} data-reached={x.reached || undefined}>
+              {x.reached ? <Check size={12} aria-hidden="true" /> : null} {x.n}종 · {x.name}
+            </li>
+          ))}
+        </ol>
+        <small>{next ? `${next.n - m.count}종 더 모이면 기증한 모두가 “${next.name}” 보상을 받아요.` : '모든 전시 목표를 이뤘어요!'}</small>
+      </div>
+      <ul className="l-museum-people" aria-label="친구별 기증">
+        {rows.map((r) => (
+          <li key={r.actor} data-me={r.actor === selfActor || undefined}>
+            <b>{ACTORS[r.actor]}</b> 기증 {r.total} · 첫 기증 {r.first}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
