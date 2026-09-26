@@ -1,0 +1,21 @@
+Sound effects in this folder (public/assets/lounge/sfx/)
+
+Kenney "Casino Audio" (1.1) and "Interface Sounds" (1.0) by Kenney Vleugels (www.kenney.nl)
+License: Creative Commons Zero, CC0 — http://creativecommons.org/publicdomain/zero/1.0/
+"You may use these assets in personal and commercial projects. Credit (Kenney or
+www.kenney.nl) would be nice but is not mandatory."
+
+Retrieved 2026-09-26 from pack mirrors that ship the original license files:
+- Casino Audio: github.com/coderKillo/do-you-wanna-jam-2026 assets/sfx/kenney_casino-audio/ (License.txt)
+- Interface Sounds: github.com/lwjglgamedev/vulkanbook (License-Interface Sounds.txt:
+  "License: (Creative Commons Zero, CC0)")
+
+Files (original name -> file here; .ogg is the original Ogg Vorbis byte-for-byte,
+.m4a is an AAC 64 kbit/s copy made with ffmpeg 7.0.2 for browsers without Vorbis):
+  dice-shake-1.ogg   -> dice-shake      dice-throw-1.ogg -> dice-throw
+  dice-grab-1.ogg    -> dice-grab       die-throw-1.ogg  -> die-throw
+  card-slide-1.ogg   -> card-slide      card-place-1.ogg -> card-place
+  tick_001.ogg       -> tick            bong_001.ogg     -> bong
+  question_001.ogg   -> question        drop_001.ogg     -> drop
+  confirmation_001.ogg -> confirm       error_004.ogg    -> error
+  select_001.ogg     -> select

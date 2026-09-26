@@ -14,7 +14,8 @@ import {
   type LiarView,
 } from './lounge-liar';
 import type { TurnTiming } from './lounge-room';
-import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import { AWAY_LABEL, TurnTimer, awaitAnswer, useSecondsLeft } from './lounge-turn-timer';
+import { loungeAudio } from './lounge-audio';
 import { FriendHost } from './lounge-friend-host';
 import { SeatPortrait, type SeatFigure } from './lounge-dealer-host';
 import { ChatPanel } from './lounge/ChatPanel';
@@ -58,6 +59,7 @@ export function LiarTable({
   const hintRef = useRef<HTMLInputElement>(null);
   const act = (a: LiarAction) => {
     if (locked || inFlight.current === version) return;
+    if (a.kind === 'vote') loungeAudio.sample('drop');
     inFlight.current = version;
     setSent(version);
     awaitAnswer(onAction(a), () => {
@@ -65,6 +67,26 @@ export function LiarTable({
       setSent(null);
     });
   };
+  // Table sounds: the cards go out, a turn passes, the vote opens / closes,
+  // my ballot drops, the reveal; the last seconds of my own clock tick.
+  const cue = useRef({ id: '', turn: g.turn, phase: g.phase, ballots: g.ballots.length });
+  useEffect(() => {
+    const was = cue.current;
+    cue.current = { id: g.id, turn: g.turn, phase: g.phase, ballots: g.ballots.length };
+    if (was.id !== g.id) {
+      loungeAudio.sample('card-slide', () => loungeAudio.table('deal', 2));
+      return;
+    }
+    if (g.phase === 'over' && was.phase !== 'over')
+      loungeAudio.sample('card-place', () => loungeAudio.table('flip', 2));
+    else if (g.ballots.length > was.ballots) loungeAudio.sample('confirm');
+    else if (g.phase === 'vote' && was.phase !== 'vote') loungeAudio.sample('question');
+    else if (g.phase === 'hint' && g.turn !== was.turn) loungeAudio.sample('bong');
+  }, [g.id, g.turn, g.phase, g.ballots.length]);
+  const left = useSecondsLeft(g.legal.enabled && !over ? g.turnDeadline : undefined);
+  useEffect(() => {
+    if (left !== null && left > 0 && left <= 5) loungeAudio.sample('tick');
+  }, [left]);
   // My hint turn: focus the line.
   useEffect(() => {
     if (g.legal.hint) hintRef.current?.focus({ preventScroll: true });

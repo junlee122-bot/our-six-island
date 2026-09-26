@@ -21,6 +21,7 @@ import {
   updateSettings,
 } from './lounge-settings';
 import { NoirEngine } from './lounge-music-synth';
+import { SFX_FILES, type SfxId } from './lounge-sfx-files';
 import type { StingKind } from './lounge-music-score';
 import {
   MUSIC_TRACKS,
@@ -679,6 +680,48 @@ class LoungeAudio {
       source.connect(filter).connect(g).connect(this.sfx);
       source.start(t, (i * 0.137) % 1.5, length + 0.02);
     }
+  }
+  /** Recorded effects (lounge-sfx-files.ts): decoded buffers, or 'missing'. */
+  private samples = new Map<SfxId, AudioBuffer | 'loading' | 'missing'>();
+  /**
+   * Plays a recorded effect on the sfx channel. Until it has loaded (the first
+   * call starts the download), or when no file decodes (e.g. no Vorbis and no
+   * AAC), `fallback` plays the synthesized cue instead.
+   */
+  sample(id: SfxId, fallback?: () => void, level = 1) {
+    if (!getSettings().sound) return;
+    this.ensure();
+    const ctx = this.ctx;
+    if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    const state = this.samples.get(id);
+    if (state instanceof AudioBuffer) {
+      const source = ctx.createBufferSource(),
+        g = ctx.createGain();
+      source.buffer = state;
+      g.gain.value = SFX_FILES[id].gain * level;
+      source.connect(g).connect(this.sfx);
+      source.start();
+      return;
+    }
+    fallback?.();
+    if (state) return;
+    this.samples.set(id, 'loading');
+    const probe = typeof Audio === 'function' ? new Audio() : null;
+    const urls = trackCandidates({ files: SFX_FILES[id].files }, (mime) =>
+      probe ? probe.canPlayType(mime) : 'maybe',
+    );
+    void (async () => {
+      for (const url of urls) {
+        try {
+          const response = await fetch(url);
+          if (!response.ok) continue;
+          const buffer = await ctx.decodeAudioData(await response.arrayBuffer());
+          this.samples.set(id, buffer);
+          return;
+        } catch {}
+      }
+      this.samples.set(id, 'missing');
+    })();
   }
   /** Little rewards: plant, water, harvest, coin. */
   chime(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail') {

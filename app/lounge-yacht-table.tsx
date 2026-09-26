@@ -122,8 +122,9 @@ export function YachtTable({
     });
   };
   const roll = () => {
-    if (!g.legal.canRoll) return;
+    if (!g.legal.canRoll || locked) return;
     if (g.rolls > 0 && held.every(Boolean)) return;
+    loungeAudio.sample('dice-shake', undefined, 0.7);
     act({ kind: 'roll', held });
   };
   const write = (c: YachtCategory | null) => {
@@ -132,14 +133,22 @@ export function YachtTable({
   };
   const toggle = (i: number) => {
     if (!mine || g.rolls === 0 || g.rolls >= YACHT_ROLLS) return;
+    loungeAudio.sample('dice-grab', () => loungeAudio.table('flip', 1), 0.8);
     setHeld(held.map((h, j) => (j === i ? !h : h)));
   };
-  // Dice sounds: each throw rattles.
+  // Dice sounds: each throw rattles (one die for 당근), a written score clicks.
   const lastRoll = useRef(g.rollCount);
+  const one = g.held.filter((h) => !h).length === 1 && g.rolls > 0;
   useEffect(() => {
-    if (g.rollCount > lastRoll.current) loungeAudio.table('flip', 3, 0.05);
+    if (g.rollCount > lastRoll.current)
+      loungeAudio.sample(one ? 'die-throw' : 'dice-throw', () => loungeAudio.table('flip', 3, 0.05));
     lastRoll.current = g.rollCount;
-  }, [g.rollCount]);
+  }, [g.rollCount, one]);
+  const lastWrite = useRef(g.log.length);
+  useEffect(() => {
+    if (g.log.length > lastWrite.current && g.last) loungeAudio.sample('confirm');
+    lastWrite.current = g.log.length;
+  }, [g.log.length, g.last]);
   // Keys (not while typing or in a dialog).
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
   useEffect(() => {
@@ -158,6 +167,7 @@ export function YachtTable({
         const i = cat ? open.indexOf(cat) : -1;
         const next = open[(i + (e.key === 'ArrowDown' ? 1 : -1) + open.length) % open.length];
         setCursor({ key: holdKey, cat: next });
+        loungeAudio.sample('select');
         return true;
       }
       if (e.key === 'Enter' && g.rolls > 0) {

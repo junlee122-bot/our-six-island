@@ -146,6 +146,10 @@ const musicSource = fs.readFileSync(path.join(root, 'app/lounge-music-tracks.ts'
 const musicFiles = [...musicSource.matchAll(/["']\/assets\/(lounge\/music\/[^'" ]+)["']/g)].map(
   (match) => match[1],
 );
+// Recorded sound effects (app/lounge-sfx-files.ts), handled like the music files.
+const sfxSource = fs.readFileSync(path.join(root, 'app/lounge-sfx-files.ts'), 'utf8');
+for (const [, name] of sfxSource.matchAll(/["']\/assets\/(lounge\/sfx\/[^'" ]+)["']/g))
+  musicFiles.push(name);
 let musicBytes = 0,
   musicCount = 0;
 for (const name of musicFiles) {
@@ -195,7 +199,8 @@ const built = await build({
         if (
           !id.endsWith('/lounge-assets.ts') &&
           !id.endsWith('/lounge-model-assets.ts') &&
-          !id.endsWith('/lounge-music-tracks.ts')
+          !id.endsWith('/lounge-music-tracks.ts') &&
+          !id.endsWith('/lounge-sfx-files.ts')
         )
           return;
         for (const [from, to] of replacements) {

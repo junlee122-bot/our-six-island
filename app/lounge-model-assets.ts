@@ -45,6 +45,14 @@ export const LOUNGE_MODELS = {
   banquetChair: '/models/lounge/club/banquetChair.glb',
   barStool: '/models/lounge/club/barStool.glb',
   queueRope: '/models/lounge/club/queueRope.glb',
+  // 야추 · 라이어 게임 tables in the hall (kArchive, 2026-09-26; lounge/friends/assets.json).
+  ovalTable: '/models/lounge/friends/ovalTable.glb',
+  serviceBell: '/models/lounge/friends/serviceBell.glb',
+  serviceBellPressed: '/models/lounge/friends/serviceBellPressed.glb',
+  lectern: '/models/lounge/friends/lectern.glb',
+  ballotBox: '/models/lounge/friends/ballotBox.glb',
+  deskCalendar: '/models/lounge/friends/deskCalendar.glb',
+  pencil: '/models/lounge/friends/pencil.glb',
 } as const;
 
 /**
