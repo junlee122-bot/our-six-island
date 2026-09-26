@@ -207,8 +207,8 @@ export const cozyOf = (score: number) => COZY_TIERS.find((t) => score >= t.min)!
 export const COZY_SCORE_MAX = 999;
 
 // ---------------------------------------------------------------- inspirations
-/** Gauge fills by (mood − 65) per active minute; full at 600 → one inspiration. */
-export const INSPIRATION_GAUGE = 720;
+/** Gauge fills by (mood − 65) per active minute; full at 1,200 → one inspiration (engine sim: regular ≈1.7 a week). */
+export const INSPIRATION_GAUGE = 1200;
 export const INSPIRATION_FROM = 65;
 export const INSPIRATIONS_PER_DAY = 1;
 export const INSPIRATIONS_PER_WEEK = 3;

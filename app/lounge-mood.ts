@@ -103,7 +103,7 @@ export type MoodUser = {
   v: number;
   /** Moodlets: [id, expires at]. One entry per stack. */
   l?: [MoodletId, number][];
-  /** Inspiration gauge 0–600. */
+  /** Inspiration gauge 0–INSPIRATION_GAUGE. */
   g?: number;
   /** The inspiration being held. */
   i?: MoodInspiration;

@@ -309,7 +309,7 @@ test('inspiration: gauge fills above 65, one a day, three a KST week, held one s
     u.n = [100, 100, 100, 100];
     u.l = [['festival', at + 12 * HOUR], ['birthdayCheer', at + 12 * HOUR]];
     u.at = at;
-    for (let k = 1; k <= 4; k++) s.touch(m, at + k * 10 * MIN);
+    for (let k = 1; k <= 8; k++) s.touch(m, at + k * 10 * MIN);
   };
   // Monday of the test week (KST).
   const day0 = kstDay(T0),
