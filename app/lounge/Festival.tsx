@@ -321,8 +321,11 @@ function SongpyeonGame({ token, onDone, onCancel }: { token: string; onDone: (to
   const [stepped] = useState(reducedMotion);
   const target = 0.3 + (hash32(`${token}:${round}`) % 400) / 1000;
   const done = marks.length >= SONGPYEON_ROUNDS;
+  // One mark per round even if a key and the timeout land in the same frame.
+  const lock = useRef(-1);
   const press = (forced?: number) => {
-    if (done || flash) return;
+    if (done || flash || lock.current === round) return;
+    lock.current = round;
     const miss = forced ?? Math.min(SONGPYEON_MISS_MS, Math.round(Math.abs(pos - target) * SONGPYEON_ROUND_MS));
     const s = songpyeonRound(miss);
     setMarks((m) => [...m, miss]);
@@ -376,7 +379,7 @@ function SongpyeonGame({ token, onDone, onCancel }: { token: string; onDone: (to
     if (!done || sent.current) return;
     sent.current = true;
     const wait = Math.max(0, SONGPYEON_ROUNDS * SONGPYEON_ROUND_MS - (performance.now() - started.current)) + 200;
-    const all = marks;
+    const all = marks.slice(0, SONGPYEON_ROUNDS);
     const t = setTimeout(() => doneRef.current(token, all), wait);
     return () => clearTimeout(t);
   }, [done, marks, token]);

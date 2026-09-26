@@ -715,6 +715,8 @@ export function tomorrowLines(life: LifeState, uid: string, actor: number, now: 
     out: string[] = [];
   const fete = feteOn(tomorrow);
   if (fete && fete.start === tomorrow) out.push(`내일은 ${FETES[fete.kind].name}! 광장에서 ${FETES[fete.kind].game}를 해요.`);
+  const today = feteOn(day);
+  if (today && today.end === day) out.push(`오늘이 ${FETES[today.kind].name} 마지막 날이에요. 내일 순위가 추억 앨범에 남아요.`);
   for (const h of holidaysOn(tomorrow)) if (!holidaysOn(day).some((x) => x.key === h.key)) out.push(`내일은 ${h.name}이에요. ${h.text}.`);
   for (const b of birthdayActors(tomorrow, FRIEND_PROFILES)) out.push(`내일은 ${nameOf(b)}의 생일이에요. 선물을 준비해 볼까요?`);
   if (seasonOfDay(tomorrow) !== seasonOfDay(day)) out.push(`내일부터 ${SEASON_INFO[seasonOfDay(tomorrow)].name}이에요. 제철 씨앗을 확인해요.`);

@@ -145,7 +145,8 @@ export const AREAS: Area[] = ['village', 'lounge', 'casino', 'wardrobe', 'home']
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
-  lounge: { x: 50, y: 79 },
+  // Front left, clear of the hall's 라이어 게임 table (front middle).
+  lounge: { x: 28, y: 84 },
   casino: { x: 50, y: 79 },
   wardrobe: { x: 50, y: 79 },
   // Just inside the room's door (see ROOM_DOOR_POINT / roomToNetwork).
