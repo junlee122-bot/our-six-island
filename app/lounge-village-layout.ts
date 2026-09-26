@@ -1024,7 +1024,7 @@ for (const yard of VILLAGE_YARDS) {
   valleyProps.push({ model: 'firewood', x: round(yard.x1 - 0.75), z: round(yard.z0 + 0.7), s: 0.35, zone: 'village' });
   const bed = yard.beds[0];
   valleyProps.push(
-    { model: 'produceCrate', x: round(bed.x + bed.w / 2 + 0.4), z: -13.4, s: 1.2, rot: 0.2, zone: 'village', yard: { actor: yard.actor, plots: 9 } },
+    { model: 'produceCrate', x: round(bed.x - bed.w / 2 + 0.3), z: -12.6, s: 1.2, rot: 0.2, zone: 'village', yard: { actor: yard.actor, plots: 9 } },
     { model: 'toolShed', x: round(yard.pathX - Math.min(1.55, west / 2 + 0.3)), z: -13.3, s: 0.45, rot: Math.PI / 2, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
     { model: 'scarecrow', x: yard.scarecrow.x, z: yard.scarecrow.z, s: 0.7, rot: -0.3, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
   );

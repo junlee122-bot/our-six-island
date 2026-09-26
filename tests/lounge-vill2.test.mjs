@@ -77,3 +77,29 @@ test('yards and saved positions fit the 96 × 76 valley', () => {
   const plaza = villageFromNetwork(villageToNetwork(VILLAGE_START));
   assert.ok(Math.hypot(plaza.x - VILLAGE_START.x, plaza.z - VILLAGE_START.z) < 1e-9);
 });
+
+test('valley kArchive set: sizes match assets.json, files exist, yard props sit in their yards', async () => {
+  const { VALLEY_MODEL_SIZE, VILLAGE_VALLEY_PROPS, VILLAGE_YARDS: yards } = await import('../app/lounge-village-layout.ts');
+  const { VALLEY_MODELS } = await import('../app/lounge-model-assets.ts');
+  const manifest = JSON.parse(fs.readFileSync(new URL('../public/models/village/valley/assets.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.assets.length, 22);
+  assert.match(manifest.terms, /출처 표기 필수/);
+  for (const a of manifest.assets) {
+    const size = VALLEY_MODEL_SIZE[a.key];
+    assert.ok(size, a.key);
+    assert.ok(Math.abs(size.w - a.bounds.size[0]) < 0.002 && Math.abs(size.h - a.bounds.size[1]) < 0.002 && Math.abs(size.d - a.bounds.size[2]) < 0.002, a.key);
+    assert.ok(Math.abs(size.y0 - a.bounds.min[1]) < 0.002, a.key);
+    assert.equal(VALLEY_MODELS[a.key], `/models/village/valley/${a.file}`);
+    assert.ok(fs.existsSync(new URL(`../public/models/village/valley/${a.file}`, import.meta.url)));
+    assert.equal(fs.statSync(new URL(`../public/models/_originals/village/valley/${a.file}`, import.meta.url)).size, a.bytes);
+    assert.ok(a.textureMax <= 1024);
+  }
+  for (const p of VILLAGE_VALLEY_PROPS.filter((q) => q.yard)) {
+    const y = yards.find((v) => v.actor === p.yard.actor);
+    assert.ok(p.x > y.x0 && p.x < y.x1 && p.z > y.z0 && p.z < y.z1, `${p.model} in yard ${y.actor}`);
+  }
+  // Every friend gets the same set: pump, gate, three jars, firewood, crate, shed, scarecrow.
+  for (const y of yards)
+    for (const model of ['waterPump', 'picketGate', 'onggi', 'firewood', 'produceCrate', 'toolShed', 'scarecrow'])
+      assert.ok(VILLAGE_VALLEY_PROPS.some((p) => p.model === model && p.x > y.x0 && p.x < y.x1 && p.z > y.z0 - 0.1 && p.z < y.z1 + 0.1), `${model} at ${y.actor}`);
+});

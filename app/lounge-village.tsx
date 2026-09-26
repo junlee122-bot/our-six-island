@@ -57,6 +57,7 @@ import {
 } from './lounge-village-world';
 import { VillageLifeLayer } from './lounge-village-life-3d';
 import { VillageWatersLayer } from './lounge-village-waters';
+import { VillageValleyLayer } from './lounge-village-valley';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import {
@@ -287,6 +288,8 @@ type WorldState = {
   karchive: VillageKarchiveLayer;
   /** VILL-2 fishing waters (falls, lake, rapids, beach, rocks, harbor). */
   waters: VillageWatersLayer;
+  /** VILL-2 kArchive valley set (yard props, spot props, nature, 팔각정). */
+  valley: VillageValleyLayer;
 };
 let villageWorld: WorldState | null = null;
 
@@ -368,6 +371,7 @@ function getVillageWorld(): WorldState {
   const season = new VillageSeasonLayer(root);
   const karchive = new VillageKarchiveLayer(root);
   const waters = new VillageWatersLayer(root);
+  const valley = new VillageValleyLayer(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -441,6 +445,7 @@ function getVillageWorld(): WorldState {
         );
       }),
       ...karchive.load(loadModel, changed),
+      ...valley.loadAll(loadModel, changed),
     ]),
   );
   const props = propJobs.then((results) =>
@@ -459,6 +464,7 @@ function getVillageWorld(): WorldState {
     season,
     karchive,
     waters,
+    valley,
   };
   return villageWorld;
 }
@@ -1050,6 +1056,13 @@ export function Village3D(props: Props) {
           setTimeout(() => uiFns.current.setPops((list) => list.filter((b) => !ids.has(b.id))), 1500 + born.length * 70);
         }
       }
+      const sizes: Record<number, number> = {};
+      for (const [a, list] of Object.entries(plots)) sizes[Number(a)] = list.length;
+      if (life?.me.plots) sizes[me] = life.me.plots;
+      if (world.valley.update({ plots: sizes })) {
+        renderer.shadowMap.needsUpdate = true;
+        needsRender = true;
+      }
       const changed = world.life.update({
         plots,
         watered: life?.me.farm?.map((plot) => plot.wateredAt !== null) ?? [],
@@ -1095,6 +1108,7 @@ export function Village3D(props: Props) {
       renderer.toneMappingExposure = light.exposure;
       world.life.setNight(light.lamps);
       world.waters.setNight(light.lamps);
+      world.valley.setNight(light.lamps);
       if (light.sky !== lastSky) {
         lastSky = light.sky;
         host.style.background = `linear-gradient(180deg, ${light.sky}, ${light.sky}ee)`;
@@ -2171,6 +2185,10 @@ export function Village3D(props: Props) {
         for (const texture of world.world.water)
           texture.offset.x = (now / 1000) * -0.05;
         world.waters.tick(now);
+        // Fishing-spot props stream in when I first come near a spot.
+        for (const job of world.valley.near(position)) job.catch(() => {});
+        host.dataset.valleyTextures = String(Math.round(world.valley.textureBytes() / 1048576));
+        host.dataset.valleyKinds = String(world.valley.loadedKinds());
         renderer.render(scene, camera);
         lastRender = now;
         needsRender = false;

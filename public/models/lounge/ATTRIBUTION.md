@@ -90,3 +90,36 @@ Room file under `public/models/lounge/redesign/` (entry added to that `assets.js
 - rockingChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-rocking-chair-cottage-normal (sold in the furniture shop as 흔들의자)
 
 Modifications: the served copies are the web-optimized versions described at the top of this file (the fences, deck tile, bed frame, notice board, banquet chair, bar stool and rope post textures are reduced to 512²). At runtime the game sets position, orientation and (partly non-uniform) scale, draws the card-table blanket, bundle papers and crops with its own geometry, and, outside winter, recolors the snow texels of the hanok's roof and stone base with a shader. The room catalog thumbnail `public/assets/lounge/bedroom/thumbs/rocking-chair.webp` is a render of the rocking chair made for this project. Files are served from the game's own content-hashed URLs; the provider is not contacted during gameplay.
+
+## kArchive valley set: farm yards, fishing spots, nature, 팔각정 · 2026-09-26
+
+자료: kArchive · 출처: 쓰레드 dogfooter
+
+Twenty-two original, self-contained GLB files were downloaded from the official model detail pages on 2026-09-26 (`https://karchive-assets.vibeline.co.kr/models/v1/<collection>/<id>.glb`). The terms shown on the detail pages that day were unchanged from 2026-09-25 (personal and commercial use and modification allowed; AI training allowed; resale of the original assets prohibited; the credit "자료: kArchive / 출처: 쓰레드 dogfooter" is required); they are recorded verbatim in `public/models/village/valley/assets.json` with each file's URL, SHA-256 and byte size. Each model has one mesh and one embedded JPEG texture (1024², or 2048² for lp-au-04, lp-su-10 and kc-23). Originals total 17,367,012 bytes; web copies 5,606,592 bytes.
+
+Files under `public/models/village/valley/`:
+
+- waterPump.glb: https://karchive.vibeline.co.kr/models/apocalypse-manual-water-pump-station-cottage-normal
+- picketGate.glb: https://karchive.vibeline.co.kr/models/angular-common-fences-picket-gate-closed
+- toolShed.glb: https://karchive.vibeline.co.kr/models/common-buildings-garden-tool-shed-compact-normal
+- onggi.glb: https://karchive.vibeline.co.kr/models/dongji-06
+- produceCrate.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-produce-crate-vegetables
+- firewood.glb: https://karchive.vibeline.co.kr/models/dongji-09
+- scarecrow.glb: https://karchive.vibeline.co.kr/models/lp-au-04
+- campChair.glb: https://karchive.vibeline.co.kr/models/common-furniture-folding-camp-chair-cottage-normal
+- volcanicRock.glb: https://karchive.vibeline.co.kr/models/common-nature-volcanic-rock-cluster-cottage-normal
+- graniteBoulder.glb: https://karchive.vibeline.co.kr/models/common-nature-rounded-granite-boulder-cottage-normal
+- cattail.glb: https://karchive.vibeline.co.kr/models/common-nature-cattail-reed-clump-cottage-normal
+- hanjiLantern.glb: https://karchive.vibeline.co.kr/models/dongji-11
+- valleyRocks.glb: https://karchive.vibeline.co.kr/models/lp-su-10
+- ropeFence.glb: https://karchive.vibeline.co.kr/models/common-fences-rope-and-timber-post-fence-straight-normal
+- broadleafTree.glb: https://karchive.vibeline.co.kr/models/angular-common-nature-broadleaf-tree-mature
+- smallPine.glb: https://karchive.vibeline.co.kr/models/common-nature-small-pine-tree-cottage-normal
+- meadowGrass.glb: https://karchive.vibeline.co.kr/models/common-nature-tufted-meadow-grass-patch-cottage-normal
+- shrub.glb: https://karchive.vibeline.co.kr/models/common-nature-broadleaf-shrub-cottage-normal
+- treeStump.glb: https://karchive.vibeline.co.kr/models/common-nature-short-cut-tree-stump-cottage-normal
+- cobbleWall.glb: https://karchive.vibeline.co.kr/models/common-fences-dry-stacked-cobble-fence-straight-normal
+- pavilion.glb: https://karchive.vibeline.co.kr/models/kc-23
+- stonePaver.glb: https://karchive.vibeline.co.kr/models/angular-common-infrastructure-stone-paver-flat
+
+Modifications: web-optimized copies as described at the top of this file; textures are reduced to 512² for the props up to about 1 m across (pump, gate, jar, crate, firewood, camp chair, cattail, paper lantern, rope fence, stump, grass, shrub, stone wall, paver) and to 1024² for the rest (including the three 2048² originals). At runtime the game sets position, orientation and (partly non-uniform) scale, and adds a warm emissive glow to the paper lanterns at night.
