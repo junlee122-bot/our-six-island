@@ -1,4 +1,5 @@
 import { KARCHIVE_COLLIDERS } from './lounge-village-karchive-layout.ts';
+import { slideSubstep } from './lounge-walk-slide.ts';
 
 export type VillageDestination = 'lounge' | 'casino' | 'wardrobe' | 'bedroom';
 export type VillagePoint = { x: number; z: number };
@@ -866,14 +867,7 @@ const SOLIDS: Solid[] = [
 // Spatial buckets: each cell lists the solids within REACH of it, so every
 // distance below REACH (all that walking and contact need) is exact.
 const CELL = 2,
-  REACH = 1.1;
-/**
- * Smooth union width: two surfaces closer than about the walker's diameter
- * plus this leave a narrow niche (a wall and a shrub, a door and a
- * hydrangea). Blending their distances fills that niche with a rounded
- * fillet, so pressing into it slides out along the fillet instead of wedging.
- */
-const FILLET = 0.6;
+  REACH = 0.6;
 const CELL_COLS = Math.ceil(VILLAGE_BOUNDS.width / CELL) + 1,
   CELL_ROWS = Math.ceil(VILLAGE_BOUNDS.depth / CELL) + 1;
 const cellOf = (x: number, z: number) =>
@@ -897,8 +891,7 @@ for (const solid of SOLIDS) {
 
 function solidDistance(x: number, z: number): { d: number; small: boolean } {
   const { width, depth } = VILLAGE_BOUNDS;
-  let d = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z)),
-    nearest = d,
+  let d = Math.min(width / 2 - Math.abs(x), depth / 2 - Math.abs(z), REACH),
     small = false;
   for (const solid of BUCKETS[cellOf(x, z)]) {
     let value: number;
@@ -914,14 +907,12 @@ function solidDistance(x: number, z: number): { d: number; small: boolean } {
         solid.hd,
       );
     }
-    if (value < nearest) {
-      nearest = value;
+    if (value < d) {
+      d = value;
       small = solid.small;
     }
-    const h = Math.max(FILLET - Math.abs(d - value), 0) / FILLET;
-    d = Math.min(d, value) - (h * h * FILLET) / 4;
   }
-  return { d: Math.min(d, REACH), small };
+  return { d, small };
 }
 
 function contactAt(point: VillagePoint): Contact {
@@ -1041,10 +1032,13 @@ export function villageStep(
         progress = (around.x - point.x) * sx + (around.z - point.z) * sz;
       }
     }
-    if (!best) {
-      // Legacy axis slides (e.g. squeezed between two props).
-      consider(villageCanWalk({ x: next.x, z: point.z }) ? { x: next.x, z: point.z } : null);
-      consider(villageCanWalk({ x: point.x, z: next.z }) ? { x: point.x, z: next.z } : null);
+    if (progress < stepLength * stepLength * 0.3) {
+      // Wedged between a wall and a prop (or two props): steer out along the
+      // least-turned free direction, like a player easing off the key.
+      const out = slideSubstep(point.x, point.z, sx, sz, (x, z) =>
+        villageCanWalk({ x, z }),
+      );
+      if (out) consider({ x: out[0], z: out[1] });
     }
     if (!best || progress < -1e-9) break;
     point = best;
