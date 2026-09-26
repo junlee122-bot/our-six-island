@@ -1,0 +1,810 @@
+/*
+ * 무드(기분): the HUD chip (face + three moodles + tooltip), the inspiration
+ * ribbon, friends' face badges and name-tag faces, and the mood panel.
+ * Palette from the farm ledger (farm-fish.css): cream paper, brown ink, leaf
+ * green for good thoughts, a warm orange for bad ones.
+ */
+:root {
+  --mood-pos: #5f8a55;
+  --mood-neg: #d0772f;
+  --mood-ink: #3d2b1d;
+  --mood-ink-soft: #6e5843;
+  --mood-paper: #f8efd9;
+  --mood-paper-2: #efe1c0;
+  --mood-rule: rgb(122 83 52 / 0.14);
+}
+
+/* ------------------------------------------------------------ HUD chip */
+.l-mood-hud {
+  position: relative;
+  display: inline-flex;
+}
+.l-app .l-mood-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 10px 0 6px;
+  border: 1px solid color-mix(in srgb, var(--mood-c, #7f9bb0) 45%, #d8cdb2);
+  border-radius: 22px;
+  background: #fffaf0;
+  color: var(--mood-ink);
+  cursor: pointer;
+}
+.l-app .l-mood-chip:hover {
+  background: #fff4dc;
+}
+.l-app .l-mood-chip:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--mood-c, #7f9bb0) 70%, #fff);
+  outline-offset: 2px;
+}
+.l-mood-chip-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+}
+.l-mood-chip-spark {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  display: grid;
+  animation: l-mood-twinkle 1.6s ease-in-out infinite;
+}
+.l-mood-chip-dot {
+  position: absolute;
+  bottom: -1px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #c2413a;
+  box-shadow: 0 0 0 2px #fffaf0;
+}
+.l-mood-moodles {
+  display: inline-flex;
+  gap: 4px;
+}
+.l-mood-moodle {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: inset 0 0 0 calc(var(--w, 1) * 1px) var(--mood-pos);
+}
+.l-mood-moodle[data-sign='neg'] {
+  background: #fff4ea;
+  box-shadow: inset 0 0 0 calc(var(--w, 1) * 1px) var(--mood-neg);
+}
+.l-mood-moodle[data-level='1'] {
+  --w: 1;
+}
+.l-mood-moodle[data-level='2'] {
+  --w: 1.6;
+}
+.l-mood-moodle[data-level='3'] {
+  --w: 2.2;
+}
+.l-mood-moodle[data-level='4'] {
+  --w: 2.8;
+}
+.l-mood-tip {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 50%;
+  display: grid;
+  gap: 4px;
+  width: max-content;
+  max-width: 300px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--mood-ink);
+  background: var(--mood-paper);
+  box-shadow:
+    inset 0 0 0 1.5px #c9ab7c,
+    0 10px 28px rgb(40 30 20 / 0.22);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  transform: translate(-50%, -4px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.15s,
+    transform 0.15s,
+    visibility 0.15s;
+}
+.l-mood-hud:hover .l-mood-tip,
+.l-mood-hud:focus-within .l-mood-tip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+.l-mood-tip strong {
+  font-size: 14px;
+}
+.l-mood-tip strong small {
+  font-weight: 700;
+  color: var(--mood-pos);
+}
+.l-mood-tip span b {
+  color: var(--mood-pos);
+}
+.l-mood-tip span[data-sign='neg'] b {
+  color: var(--mood-neg);
+}
+.l-mood-tip small {
+  color: var(--mood-ink-soft);
+}
+.l-mood-tip em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--mood-ink-soft);
+  border-top: 1px dashed #d6c3a0;
+  padding-top: 4px;
+}
+
+/* ------------------------------------------------------------ friend badges */
+.l-mood-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fffaf0;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  pointer-events: auto;
+}
+.l-mood-badge i {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+}
+/* Village name tags: the face is a CSS custom property set on .hv-labels. */
+.hv-labels .hv-tag[data-actor]::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: 5px;
+  vertical-align: -3px;
+  background: no-repeat center / contain;
+}
+.hv-labels .hv-tag[data-actor='0']::after {
+  background-image: var(--mood-a0, none);
+}
+.hv-labels .hv-tag[data-actor='1']::after {
+  background-image: var(--mood-a1, none);
+}
+.hv-labels .hv-tag[data-actor='2']::after {
+  background-image: var(--mood-a2, none);
+}
+.hv-labels .hv-tag[data-actor='3']::after {
+  background-image: var(--mood-a3, none);
+}
+.hv-labels .hv-tag[data-actor='4']::after {
+  background-image: var(--mood-a4, none);
+}
+.hv-labels .hv-tag[data-actor='5']::after {
+  background-image: var(--mood-a5, none);
+}
+.hv-labels .hv-tag[data-actor='6']::after {
+  background-image: var(--mood-a6, none);
+}
+
+/* ------------------------------------------------------------ inspiration ribbon */
+.l-mood-insp {
+  position: fixed;
+  z-index: 61;
+  top: 76px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px 12px 14px;
+  border-radius: 14px;
+  color: var(--mood-ink);
+  background:
+    radial-gradient(circle at 12% 50%, rgb(243 195 50 / 0.28), transparent 45%),
+    var(--mood-paper);
+  box-shadow:
+    inset 0 0 0 3px #e3ab3b,
+    0 6px 0 rgb(61 43 29 / 0.25),
+    0 18px 50px rgb(20 30 20 / 0.35);
+  transform: translateX(-50%);
+  animation: l-mood-drop 6s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.l-mood-insp-medal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffbe8, #f6dc8a);
+  box-shadow: inset 0 0 0 3px #e3ab3b;
+  animation: l-mood-spin 1s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.l-mood-insp-spark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  animation: l-mood-twinkle 1.2s ease-in-out infinite;
+}
+.l-mood-insp-text {
+  display: grid;
+  gap: 1px;
+  max-width: 420px;
+}
+.l-mood-insp-text small {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #b07d12;
+}
+.l-mood-insp-text strong {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.l-mood-insp-text em {
+  font-style: normal;
+  font-size: 13px;
+  color: var(--mood-ink-soft);
+}
+.l-app .l-mood-insp-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  margin-left: 8px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fffbee;
+  background: #c48a1c;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
+}
+.l-mood-insp kbd {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgb(255 255 255 / 0.25);
+}
+.l-mood-insp-burst {
+  position: absolute;
+  left: 43px;
+  top: 50%;
+  pointer-events: none;
+}
+.l-mood-insp-burst i {
+  position: absolute;
+  width: 6px;
+  height: 14px;
+  border-radius: 3px;
+  background: #f3c332;
+  transform: rotate(calc(var(--i) * 45deg)) translateY(-10px);
+  opacity: 0;
+  animation: l-mood-burst 0.9s ease-out 0.15s both;
+}
+@keyframes l-mood-drop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30px) scale(0.9);
+  }
+  8%,
+  90% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -12px) scale(0.97);
+  }
+}
+@keyframes l-mood-spin {
+  from {
+    transform: rotate(-120deg) scale(0.4);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes l-mood-burst {
+  0% {
+    opacity: 1;
+    transform: rotate(calc(var(--i) * 45deg)) translateY(-10px);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(calc(var(--i) * 45deg)) translateY(-44px);
+  }
+}
+@keyframes l-mood-twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.75) rotate(20deg);
+    opacity: 0.7;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-mood-insp,
+  .l-mood-insp-medal,
+  .l-mood-insp-burst i,
+  .l-mood-chip-spark,
+  .l-mood-insp-spark {
+    animation: none;
+  }
+  .l-mood-insp {
+    transform: translateX(-50%);
+  }
+}
+
+/* ------------------------------------------------------------ panel */
+.l-mood-modal {
+  --modal-width: 1080px;
+}
+.l-mood-panel {
+  display: grid;
+  gap: 14px;
+  color: var(--mood-ink);
+}
+.l-mood-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 8% 50%, color-mix(in srgb, var(--mood-c) 30%, transparent), transparent 40%),
+    var(--mood-paper);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mood-c) 60%, #d8c49e);
+}
+.l-mood-bigface {
+  display: grid;
+  place-items: center;
+}
+.l-mood-headtext {
+  display: grid;
+  gap: 2px;
+}
+.l-mood-headtext small {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mood-ink-soft);
+}
+.l-mood-headtext strong {
+  font-size: 26px;
+  letter-spacing: -0.03em;
+}
+.l-mood-headtext strong b {
+  margin-left: 4px;
+  color: color-mix(in srgb, var(--mood-c) 75%, #000);
+}
+.l-mood-headtext em {
+  font-style: normal;
+  font-size: 14px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-xp {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mood-ink-soft);
+}
+.l-mood-xp b {
+  font-size: 20px;
+  color: var(--mood-ink);
+}
+.l-mood-xp[data-up] b {
+  color: var(--mood-pos);
+}
+.l-mood-xp[data-down] b {
+  color: var(--mood-neg);
+}
+.l-mood-xp small {
+  font-weight: 600;
+}
+.l-mood-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (min-width: 1360px) {
+  .l-mood-grid {
+    grid-template-columns: 1.1fr 1.2fr 0.9fr;
+  }
+  .l-mood-grid .l-mood-tips {
+    grid-column: 1 / -1;
+  }
+}
+.l-mood-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 27px, var(--mood-rule) 27px 28px),
+    #fffaf0;
+  box-shadow: inset 0 0 0 1.5px #e3d3b1;
+}
+.l-mood-card h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+.l-mood-card h3 small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mood-ink-soft);
+}
+.l-mood-needs,
+.l-mood-extra,
+.l-mood-lets,
+.l-mood-tips ul,
+.l-mood-friends ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-mood-needs li {
+  display: grid;
+  grid-template-columns: 22px 52px 1fr 76px 30px;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+.l-mood-need-name {
+  font-weight: 800;
+}
+.l-mood-need-word {
+  font-size: 13px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-needs b,
+.l-mood-extra b {
+  text-align: right;
+  font-size: 13px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-needs b[data-sign='pos'],
+.l-mood-extra b[data-sign='pos'] {
+  color: var(--mood-pos);
+}
+.l-mood-needs b[data-sign='neg'],
+.l-mood-extra b[data-sign='neg'] {
+  color: var(--mood-neg);
+}
+.l-mood-bar,
+.l-mood-timer {
+  position: relative;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--mood-paper-2);
+  box-shadow: inset 0 0 0 1px #d6c3a0;
+  overflow: hidden;
+}
+.l-mood-bar i,
+.l-mood-timer i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 6px;
+  background: var(--mood-pos);
+}
+.l-mood-needs li[data-low] .l-mood-bar i {
+  background: var(--mood-neg);
+}
+.l-mood-extra {
+  padding-top: 8px;
+  border-top: 1px dashed #d6c3a0;
+}
+.l-mood-extra li {
+  display: grid;
+  grid-template-columns: 22px 64px 1fr 30px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.l-mood-extra li span:nth-of-type(2) {
+  color: var(--mood-ink-soft);
+}
+.l-mood-extra li span:first-of-type {
+  font-weight: 800;
+}
+.l-mood-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--mood-ink-soft);
+}
+.l-mood-lets {
+  max-height: 290px;
+  overflow: auto;
+  padding-right: 4px;
+}
+.l-mood-lets li {
+  display: grid;
+  grid-template-columns: 22px 1fr 70px;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 3px;
+  align-items: center;
+  font-size: 14px;
+}
+.l-mood-lets li .l-glyph {
+  grid-row: span 2;
+}
+.l-mood-let-name small {
+  color: var(--mood-ink-soft);
+}
+.l-mood-lets li b {
+  text-align: right;
+  color: var(--mood-pos);
+}
+.l-mood-lets li[data-sign='neg'] b {
+  color: var(--mood-neg);
+}
+.l-mood-lets li .l-mood-timer {
+  height: 6px;
+}
+.l-mood-lets li[data-sign='neg'] .l-mood-timer i {
+  background: var(--mood-neg);
+}
+.l-mood-left {
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-gauge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.l-mood-ring {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background:
+    radial-gradient(closest-side, #fffaf0 76%, transparent 78% 100%),
+    conic-gradient(#e3ab3b calc(var(--p) * 1%), var(--mood-paper-2) 0);
+  box-shadow: inset 0 0 0 1px #d6c3a0;
+}
+.l-mood-gauge-text {
+  display: grid;
+  gap: 2px;
+}
+.l-mood-gauge-text strong {
+  font-size: 16px;
+}
+.l-mood-gauge-text small {
+  font-size: 12.5px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-held {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff4cf;
+  box-shadow: inset 0 0 0 1.5px #e3ab3b;
+}
+.l-mood-held span {
+  display: grid;
+  gap: 2px;
+}
+.l-mood-held small {
+  font-size: 12.5px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-held em {
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9a6a0e;
+}
+.l-mood-tips li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #eadbb9;
+}
+.l-mood-tips li span {
+  display: grid;
+  gap: 2px;
+}
+.l-mood-tips li strong {
+  font-size: 14px;
+}
+.l-mood-tips li small {
+  font-size: 12px;
+  color: var(--mood-ink-soft);
+}
+.l-app .l-mood-go,
+.l-app .l-mood-cheer,
+.l-app .l-mood-cheer-menu button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fffbee;
+  background: var(--mood-pos);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.18);
+}
+.l-app .l-mood-go:disabled,
+.l-app .l-mood-cheer:disabled,
+.l-app .l-mood-cheer-menu button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.l-mood-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+.l-mood-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #eadbb9;
+}
+.l-mood-action.is-cup {
+  background: #fff4e0;
+  box-shadow: inset 0 0 0 1.5px #d9a35b;
+}
+.l-mood-action > span {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 150px;
+  min-width: 0;
+}
+.l-mood-action small {
+  font-size: 12px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-action select {
+  max-width: 130px;
+  min-height: 36px;
+  padding: 0 6px;
+  border: 1px solid #d6c3a0;
+  border-radius: 8px;
+  background: #fffaf0;
+  font: inherit;
+  font-size: 13px;
+}
+.l-mood-action .l-leaf {
+  min-height: 36px;
+}
+.l-mood-action .l-leaf:disabled {
+  opacity: 0.5;
+}
+.l-mood-friends ul {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.l-mood-friends li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #eadbb9;
+}
+.l-mood-friends li[data-away] .l-mood-friend-face {
+  opacity: 0.7;
+}
+.l-mood-friend-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.l-mood-friend-face .is-unknown {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.l-mood-friend-spark {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+}
+.l-mood-friend-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.l-mood-friend-text small {
+  font-size: 12px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-friend-top {
+  font-size: 11.5px;
+}
+.l-mood-cheer-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-end;
+}
+.l-app .l-mood-cheer-menu button {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+.l-app .l-mood-cheer-menu button:last-child {
+  color: var(--mood-ink);
+  background: var(--mood-paper-2);
+}
+.l-mood-friends .l-setting {
+  margin-top: 4px;
+}
+.l-mood-foot {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--mood-ink-soft);
+}
+.l-mood-foot kbd {
+  margin: 0 3px 0 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  background: var(--mood-paper-2);
+  box-shadow: inset 0 -1px 0 #cdb58a;
+}
+
+/* Friends list portraits: the face badge sits on the portrait's corner. */
+.l-mood-portrait {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+}
+.l-app .l-mood-portrait .l-mood-badge {
+  display: grid;
+  font-size: 0;
+}
+.l-mood-panel .sr-only,
+.l-mood-chip .sr-only,
+.l-mood-tip .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

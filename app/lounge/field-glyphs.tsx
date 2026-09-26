@@ -31,7 +31,13 @@ export type GlyphName =
   | 'ore'
   | 'bush'
   | 'sign'
-  | 'spark';
+  | 'spark'
+  // 성장 P2: regions.
+  | 'tree'
+  | 'mushroom'
+  | 'fossil'
+  | 'ladder'
+  | 'mountain';
 
 const PATHS = {
   can: (
@@ -173,6 +179,38 @@ Object.assign(PATHS, {
   ),
   spark: (
     <path d="M12 2 l2 7 7 2 -7 2 -2 7 -2 -7 -7 -2 7 -2z" fill="#f3c332" stroke="#a87a12" strokeWidth="1.3" strokeLinejoin="round" />
+  ),
+  tree: (
+    <>
+      <path d="M12 2 L20 13 H15 L19 18 H5 L9 13 H4z" fill="#6f9a52" stroke={INK} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 18 v4" stroke="#7a5334" strokeWidth="2.4" strokeLinecap="round" />
+    </>
+  ),
+  mushroom: (
+    <>
+      <path d="M3 12 C3 5 21 5 21 12 z" fill="#c2413a" stroke={INK} strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx="8.5" cy="9" r="1.2" fill="#fff4e0" />
+      <circle cx="14.5" cy="8" r="1.4" fill="#fff4e0" />
+      <path d="M9 12 h6 v6 a3 3 0 0 1 -6 0z" fill="#f2e3c2" stroke={INK} strokeWidth="1.5" strokeLinejoin="round" />
+    </>
+  ),
+  fossil: (
+    <>
+      <circle cx="12" cy="12" r="9" fill="#d8c7a4" stroke={INK} strokeWidth="1.5" />
+      <path d="M12 12 m0 -1 a1 1 0 1 1 -1 1 a2.4 2.4 0 1 1 3 -2.2 a4 4 0 1 1 -5.4 4.4 a5.6 5.6 0 1 1 8.6 -4" fill="none" stroke="#8a6a3e" strokeWidth="1.3" strokeLinecap="round" />
+    </>
+  ),
+  ladder: (
+    <>
+      <path d="M7 3 v18 M17 3 v18" stroke="#8a6242" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M7 7 h10 M7 12 h10 M7 17 h10" stroke="#b98553" strokeWidth="2" strokeLinecap="round" />
+    </>
+  ),
+  mountain: (
+    <>
+      <path d="M2 20 L9 8 L13 14 L16 10 L22 20z" fill="#8fa77a" stroke={INK} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M9 8 l-2 3.4 h4z" fill="#f4f1e8" />
+    </>
   ),
 } satisfies Partial<Record<GlyphName, ReactNode>>);
 

@@ -49,6 +49,8 @@ export type LoungeSettings = {
   uiScale: (typeof UI_SCALES)[number];
   /** Extra size for reading text (dialogs, chat, panels), percent. */
   textScale: (typeof TEXT_SCALES)[number];
+  /** 무드: the mood face and moodles beside the wallet. */
+  moodHud: boolean;
   /** Rebindable keys for the village and my room. */
   keys: Keybinds;
 };
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: LoungeSettings = Object.freeze({
   fullscreen: false,
   uiScale: 100,
   textScale: 100,
+  moodHud: true,
   keys: DEFAULT_KEYBINDS,
 }) as LoungeSettings;
 
@@ -132,6 +135,7 @@ export function readSettings(raw: string | null | undefined): LoungeSettings {
     fullscreen: bool('fullscreen'),
     uiScale: oneOf('uiScale', UI_SCALES),
     textScale: oneOf('textScale', TEXT_SCALES),
+    moodHud: bool('moodHud'),
     keys: readKeybinds(value.keys),
   };
 }

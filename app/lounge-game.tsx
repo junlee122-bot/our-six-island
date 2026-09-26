@@ -34,6 +34,7 @@ import {
   Users,
   GraduationCap,
   Keyboard,
+  Smile,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import {
@@ -84,6 +85,8 @@ import { lifeSfx } from './lounge-audio-life';
 import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
+import { useOutdoor } from './lounge/Outdoor';
+import { VILLAGE_GATE } from './lounge-areas';
 import { DISH_BY_ID, BUFF_INFO, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
@@ -212,6 +215,9 @@ const RealtyCounter = lazyRetry(() => loadCounter().then((m) => ({ default: m.Re
 const FurnitureCounter = lazyRetry(() => loadCounter().then((m) => ({ default: m.FurnitureCounter })));
 const TavernUpgrades = lazyRetry(() => loadCounter().then((m) => ({ default: m.TavernUpgrades })));
 const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) => ({ default: m.GrowthNotices })));
+// 무드 (U): the HUD chip rides in the header; the panel loads when opened.
+import { MoodHud, MoodNotices, MoodShareToggle } from './lounge/MoodHud';
+const MoodPanel = lazyRetry(() => import('./lounge/MoodPanel').then((m) => ({ default: m.MoodPanel })));
 
 /**
  * Walking up to a door starts loading what is behind it (the lazy chunk and
@@ -381,6 +387,8 @@ type ModalName =
   // 성장 P1 (T): the growth journal and the blacksmith.
   | 'growth'
   | 'forge'
+  // 무드 (U): needs, thoughts, inspiration, 응원하기.
+  | 'mood'
   // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 결 목수).
   | 'realty'
   | 'furniture'
@@ -547,6 +555,19 @@ function AccountLounge({
     lookRef.current = myLook;
     tabRef.current = tab;
   }, [myLook, tab]);
+  // 성장 P2: 뒷산 / 숲 깊은 곳 / 광산 replace the village scene while I am out.
+  const outdoorApi = useOutdoor({
+    room,
+    notify,
+    fade: playFade,
+    onVillage: (at) => {
+      setVillageSpawn(at);
+      villagePosition.current = at;
+      const p = villageToNetwork(at);
+      if (room.snapshot().status === 'connected') void room.area('village', p.x, p.y);
+    },
+  });
+  const { outdoorRef, tell: tellOutdoor } = outdoorApi;
   const reactionsHidden = settings.reactionsHidden;
   const setReactionsHidden = useCallback(
     (reactionsHidden: boolean) => updateSettings({ reactionsHidden }),
@@ -833,13 +854,14 @@ function AccountLounge({
   const sendArea = useCallback(
     (next: Tab, at?: { x: number; y: number }) => {
       if (room.snapshot().status !== 'connected') return;
-      if (next === 'village') {
+      if (next === 'village' && outdoorRef.current) tellOutdoor(outdoorRef.current);
+      else if (next === 'village') {
         const p = villageToNetwork(villagePosition.current ?? VILLAGE_START);
         void room.area('village', p.x, p.y);
       } else if (at) void room.area(TAB_AREA[next], at.x, at.y);
       else void room.area(TAB_AREA[next]);
     },
-    [room],
+    [room, outdoorRef, tellOutdoor],
   );
   // Also (re)send after (re)connecting, so presence matches the current screen.
   useEffect(() => {
@@ -897,6 +919,12 @@ function AccountLounge({
     const go = () => {
       setVisiting(null);
       setGameScreen(null);
+      // Out on 뒷산 / in the mine: any door or menu brings me back first.
+      if (outdoorApi.reset() && destination === 'village' && from === 'village') {
+        setVillageSpawn({ ...VILLAGE_GATE.stand });
+        villagePosition.current = { ...VILLAGE_GATE.stand };
+        sendArea('village');
+      }
       if (place) enteredPlace.current = place;
       if (destination === 'village' && from !== 'village') {
         const position = enteredPlace.current
@@ -1495,6 +1523,9 @@ function AccountLounge({
             setGrowthSkill(undefined);
             setModal((m) => (m === 'growth' ? null : 'growth'));
             return true;
+          case 'mood':
+            setModal((m) => (m === 'mood' ? null : 'mood'));
+            return true;
           default:
             return false;
         }
@@ -1921,6 +1952,11 @@ function AccountLounge({
         onMenu={() => setModal('menu')}
         onMail={() => openMail()}
         onBag={() => setModal('bag')}
+        mood={
+          connected && !inGame ? (
+            <MoodHud life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('mood')} />
+          ) : undefined
+        }
       />
       <SaveStatus
         status={cloudSave.status}
@@ -2037,6 +2073,9 @@ function AccountLounge({
       {lifeEvents.celebration && (
         <Celebration name={lifeEvents.celebration.name} text={lifeEvents.celebration.text} />
       )}
+      {view.life?.mood && (
+        <MoodNotices life={view.life} uid={view.self} notify={notify} paused={inGame || !!fishing} onOpen={() => setModal('mood')} />
+      )}
       {view.life?.growth && (
         <Suspense fallback={null}>
           <GrowthNotices
@@ -2076,7 +2115,18 @@ function AccountLounge({
       ) : tab === 'village' ? (
         <section className="l-village">
           <div className="l-village-content">
-            {settings.simpleGraphics ? (
+            {outdoorApi.outdoor ? (
+              outdoorApi.render({
+                view,
+                players,
+                self,
+                me: { actor: save.actor, look: myLook },
+                paused: !!modal || !!coach || !!talk,
+                onChat: () => setModal('chat'),
+                onBag: () => setModal('bag'),
+                axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
+              })
+            ) : settings.simpleGraphics ? (
               <VillageSimple
                 actor={save.actor}
                 players={players}
@@ -2135,6 +2185,7 @@ function AccountLounge({
                       onFete={() => setModal('fete')}
                       onForge={() => setModal('forge')}
                       onNode={(id, kind) => void gatherNode(id, kind)}
+                      onGate={outdoorApi.toHill}
                       onTalk={talkTo}
                       tool={hotbar.tool}
                       fishing={fishing}
@@ -2507,6 +2558,7 @@ function AccountLounge({
                 { id: 'book', label: '도감 · 박물관', icon: <BookOpen size={18} />, kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
                 { id: 'board', label: '마을 게시판', icon: <ClipboardList size={18} />, kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
                 { id: 'growth', label: '성장 수첩', icon: <Sparkles size={18} />, kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
+                { id: 'mood', label: '기분', icon: <Smile size={18} />, kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
                 { id: 'digest', label: '어제 마을 소식', icon: <Newspaper size={18} />, onClick: () => setModal('digest') },
                 { id: 'memories', label: '추억 앨범', icon: <Sparkles size={18} />, onClick: () => setModal('memories') },
               ],
@@ -2652,6 +2704,7 @@ function AccountLounge({
         <SettingsModal
           key={settingsTab}
           initialTab={settingsTab}
+          moodShare={<MoodShareToggle room={room} life={view.life} />}
           onClose={() => {
             // Back to the Esc menu it was opened from (one Esc = one layer).
             setModal(fromMenu ? 'system' : null);
@@ -2690,6 +2743,7 @@ function AccountLounge({
           onFullscreen={() => void toggleFullscreen()}
           onVillageMenu={() => setModal('menu')}
           onGrowth={inGame ? undefined : () => setModal('growth')}
+          onMood={inGame ? undefined : () => setModal('mood')}
           onLeaveRoom={
             inGame
               ? undefined
@@ -2829,6 +2883,24 @@ function AccountLounge({
           initialSkill={growthSkill}
           onWalk={settings.simpleGraphics ? undefined : walkTo}
           onClose={() => setModal(null)}
+        />
+      )}
+      {modal === 'mood' && (
+        <MoodPanel
+          room={room}
+          view={view}
+          notify={notify}
+          onClose={() => setModal(null)}
+          onSticker={() => void greet('cheer')}
+          onTip={(tip) => {
+            if (tip.action === 'invite') requestGame(null);
+            else if (tip.action === 'visit') setModal('friends');
+            else {
+              setModal(null);
+              if (tip.action === 'talk') notify('마을에서 친구에게 다가가 말을 걸어 봐요.', 'info');
+              if (tip.action === 'fish') notify('물가에서 낚시하거나 숲에서 채집해 봐요.', 'info');
+            }
+          }}
         />
       )}
       {modal === 'forge' && (

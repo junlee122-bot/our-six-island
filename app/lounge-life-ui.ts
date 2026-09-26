@@ -35,6 +35,7 @@ import {
   type Weather,
 } from './lounge-calendar.ts';
 import { itemName } from './lounge-life-plus.ts';
+import { REGION_ITEMS } from './lounge-growth-data.ts';
 
 export type LifeMe = LifeView['me'];
 
@@ -373,13 +374,16 @@ export function giftTaste(actor: number, id: string): 'like' | 'dislike' | null 
 
 /* ------------------------------------------------------------ collection */
 
-export type DexTab = 'fish' | 'bug' | 'forage' | 'crop' | 'dish';
+export type DexTab = 'fish' | 'bug' | 'forage' | 'crop' | 'dish' | 'fossil';
 export const DEX_TABS: readonly (readonly [DexTab, string, readonly string[]])[] = [
   ['fish', '물고기', FISH.map((f) => f.id)],
   ['bug', '곤충', BUGS.map((b) => b.id)],
-  ['forage', '채집물', FORAGE.filter((f) => f.kind !== 'material').map((f) => f.id)],
+  // 성장 P2: 송이·영지 from 숲 깊은 곳 join the forage shelf.
+  ['forage', '채집물', [...FORAGE.filter((f) => f.kind !== 'material').map((f) => f.id), ...REGION_ITEMS.filter((o) => o.kind === 'forage' && o.museum).map((o) => o.id)]],
   ['crop', '작물', [...CROPS]],
   ['dish', '요리', DISHES.map((d) => d.id)],
+  // 성장 P2: fossils from the 광산 (museum only).
+  ['fossil', '화석', REGION_ITEMS.filter((o) => o.id.startsWith('fossil-')).map((o) => o.id)],
 ];
 /** Every museum-donatable id (the museum's shelves). */
 export const MUSEUM_IDS: readonly string[] = DEX_TABS.flatMap(([, , ids]) => ids);

@@ -9,6 +9,7 @@ import {
   Trees,
   RotateCcw,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { AvatarView } from '../avatar-view';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungeSave } from '../lounge-look';
@@ -123,6 +124,7 @@ export function WorldHeader({
   onBag,
   backTo = NAMES.village,
   visiting,
+  mood,
 }: {
   tab: Tab;
   save: LoungeSave;
@@ -141,6 +143,8 @@ export function WorldHeader({
   backTo?: string;
   /** In a friend's room: whose (the brand becomes 나가기 · 마을로). */
   visiting?: string;
+  /** 무드: the mood face chip beside the wallet (lounge/MoodHud.tsx). */
+  mood?: ReactNode;
 }) {
   const village = tab === 'village' && !visiting;
   const unread = view.life?.me.mailUnread ?? 0;
@@ -201,6 +205,7 @@ export function WorldHeader({
           </button>
           <DailyButton room={room} view={view} notify={notify} compact />
         </span>
+        {mood}
         {onBag && (
           <button
             className="l-header-icon l-bag-button"

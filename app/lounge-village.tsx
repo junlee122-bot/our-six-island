@@ -114,6 +114,7 @@ import {
 import { ActionButton } from './lounge/ActionButton';
 import { CropStageArt, ItemIcon, QualityStar } from './lounge/ItemIcon';
 import { Glyph } from './lounge/field-glyphs';
+import { moodTagStyle } from './lounge/mood-glyphs';
 import './lounge/farm-fish.css';
 import { lookFor, rememberLook } from './lounge/friend-looks';
 import { useServerClock } from './lounge/use-server-clock';
@@ -263,6 +264,8 @@ type Props = {
   onForge?: () => void;
   /** 성장 P1: chop / smash one of today's material nodes. */
   onNode?: (id: string, kind: NodeKind) => void;
+  /** 성장 P2: the north gate up to 뒷산. */
+  onGate?: () => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
   onTalk?: (actor: number) => void;
   /** The selected hotbar item (the farm action follows it). */
@@ -997,6 +1000,7 @@ export function Village3D(props: Props) {
       else if (target.kind === 'fete') current.onFete?.();
       else if (target.kind === 'forge') current.onForge?.();
       else if (target.kind === 'node') current.onNode?.(target.id, target.node);
+      else if (target.kind === 'gate') current.onGate?.();
       else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
@@ -1271,6 +1275,8 @@ export function Village3D(props: Props) {
         }
         el.dataset.player = p.id;
         el.dataset.presence = npc ? 'away' : 'online';
+        // 무드: the tier face (mood.css reads --mood-a{actor} from .hv-labels).
+        el.dataset.actor = String(p.actor);
         labels.appendChild(el);
         tag = el;
       }
@@ -2583,7 +2589,7 @@ export function Village3D(props: Props) {
               </span>
             ))}
           </div>
-          <div ref={labelsRef} className="hv-labels">
+          <div ref={labelsRef} className="hv-labels" style={moodTagStyle(props.life?.mood?.faces)}>
             {VILLAGE_PLACES.map((place) => (
               <button
                 key={place.id}
@@ -3503,6 +3509,20 @@ function SpotPrompt({
         </strong>
         <small>
           {spot.node === 'rock' ? '돌 · 가끔 구리 광석' : '나무'} · 오늘 한 번{key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'gate') {
+    const open = !!life?.growth?.regions?.hill.open;
+    return (
+      <div>
+        <strong>
+          <Axe size={14} /> 뒷산 가는 길
+        </strong>
+        <small>
+          {open ? '나무꾼의 능선 · 곰바위 동굴 광산' : '마을 개척 “산길 정비”로 길을 닦아요'}
+          {key}
         </small>
       </div>
     );

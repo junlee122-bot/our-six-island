@@ -10,11 +10,12 @@ import { LOUNGE_MODELS, VALLEY_MODELS } from './lounge-model-assets';
 import { KARCHIVE_FORGE } from './lounge-village-karchive-layout';
 import { VALLEY_MODEL_SIZE } from './lounge-village-layout';
 import { NODE_SPOTS, type NodeKind } from './lounge-growth-data';
+import { VILLAGE_GATE } from './lounge-areas';
 
 type Loader = (url: string) => Promise<THREE.Group>;
 const GROUND_Y = 0.03;
 /** Node look per kind: which valley model, its scale and a per-spot turn. */
-const NODE_LOOK: Record<NodeKind, { model: 'shrub' | 'firewood' | 'graniteBoulder'; s: number }> = {
+const NODE_LOOK: Partial<Record<NodeKind, { model: 'shrub' | 'firewood' | 'graniteBoulder'; s: number }>> = {
   bush: { model: 'shrub', s: 1.6 },
   log: { model: 'firewood', s: 0.6 },
   rock: { model: 'graniteBoulder', s: 1.35 },
@@ -42,6 +43,31 @@ function shadowed(object: THREE.Object3D) {
     if ((child as THREE.Mesh).isMesh) child.castShadow = child.receiveShadow = true;
   });
   return object;
+}
+
+/** 성장 P2: the timber gate at the north edge, the trail up to 뒷산 (no collider). */
+function hillGate() {
+  const g = new THREE.Group();
+  g.name = 'hill-gate';
+  const timber = new THREE.MeshStandardMaterial({ color: '#7a5433', roughness: 0.9 }),
+    board = new THREE.MeshStandardMaterial({ color: '#c9a26a', roughness: 0.85 }),
+    dirt = new THREE.MeshStandardMaterial({ color: '#b39266', roughness: 1 });
+  for (const x of [-1.25, 1.25]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.3, 0.22), timber);
+    post.position.set(x, 1.15, 0);
+    g.add(post);
+  }
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.22, 0.26), timber);
+  beam.position.set(0, 2.25, 0);
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.42, 0.08), board);
+  sign.position.set(0, 1.9, 0.14);
+  const path = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 3.2), dirt);
+  path.rotation.x = -Math.PI / 2;
+  path.position.set(0, GROUND_Y - 0.005, 1.3);
+  path.receiveShadow = true;
+  g.add(beam, sign, path);
+  g.position.set(VILLAGE_GATE.x, GROUND_Y, VILLAGE_GATE.z);
+  return shadowed(g);
 }
 
 export class VillageGrowthLayer {
@@ -76,7 +102,7 @@ export class VillageGrowthLayer {
     );
     this.glow.position.set(f.x + 0.55, 0.45, f.z + f.d / 2 - 0.2);
     this.glow.visible = false;
-    this.root.add(this.site, this.glow);
+    this.root.add(this.site, this.glow, hillGate());
   }
 
   /** Starts the downloads; each promise settles once its model is placed. */
@@ -104,7 +130,7 @@ export class VillageGrowthLayer {
         placedOne('growthForgeRuin');
       }),
       ...(Object.keys(NODE_LOOK) as NodeKind[]).map((kind) =>
-        load(VALLEY_MODELS[NODE_LOOK[kind].model]).then((s) => {
+        load(VALLEY_MODELS[NODE_LOOK[kind]!.model]).then((s) => {
           this.sources[kind] = s;
           this.apply(true);
           placedOne('growthNode' + kind[0].toUpperCase() + kind.slice(1));
@@ -126,8 +152,9 @@ export class VillageGrowthLayer {
     if (object || !source) return object ?? null;
     const spot = NODE_SPOTS.find((n) => n.id === id);
     if (!spot) return null;
-    const look = NODE_LOOK[kind],
-      size = VALLEY_MODEL_SIZE[look.model];
+    const look = NODE_LOOK[kind];
+    if (!look) return null;
+    const size = VALLEY_MODEL_SIZE[look.model];
     object = new THREE.Group();
     object.name = 'growth-node-' + id;
     object.add(source.clone(true));

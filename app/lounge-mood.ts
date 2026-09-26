@@ -23,6 +23,7 @@ import { DISH_BY_ID, FISH_BY_ID, ITEM_BY_ID } from './lounge-items.ts';
 import { LIFE_REJECT, LifeError, CROPS, uidOf, type Crop, type LifeAction, type LifeState, type Quality } from './lounge-life.ts';
 import { addBond, addCropQ, addInv, addNews, bondGate, bondLevel, bondPoints, cropQCount, invCount } from './lounge-life-plus.ts';
 import { TALK_POINTS } from './lounge-social-defs.ts';
+import { cozyScore } from './lounge-mood-room.ts';
 import {
   ACTIVE_GAP_MS,
   BACK_MS,
@@ -474,7 +475,7 @@ function other(life: LifeState, uid: string | null | undefined, now: number) {
  */
 export function moodBeforeLifeAction(life: LifeState, member: { id: string; actor: number }, now: number): LifeState {
   if (!UUID.test(member.id) || !(member.id in life.actors) || life.actors[member.id] !== member.actor) return life;
-  const mood = { ...(life.mood ?? {}) };
+  const mood = { ...life.mood };
   if (mood[member.id]) mood[member.id] = structuredClone(mood[member.id]);
   const next = { ...life, mood };
   moodTouch(next, member.id, now);
@@ -508,7 +509,8 @@ export function moodAfterLifeAction(
   const xb = before.ext?.[uid],
     xa = life.ext?.[uid];
   // 먹기
-  if (xa?.ate && xa.ate !== xb?.ate) {
+  // (ext.ate resets at KST midnight inside the action, so compare the kind.)
+  if (kind === 'eat' && xa?.ate) {
     u.n[0] = FILL.eatFood;
     addLet(u, 'meal', now);
   }
@@ -584,12 +586,12 @@ export function moodAfterLifeAction(
       addLet(u, 'sunny', now);
     } else if (w === 'rain' || w === 'storm') addLet(u, w === 'storm' ? 'storm' : 'rain', now);
   }
-  // 요리 영감: the dish comes out twice.
+  // 요리 영감: one more plate of the next dish (a batch still gets only one).
   if (kind === 'cook' && u.i?.k === 'cook' && u.i.left > 0) {
     const recipe = String((action as { recipe?: unknown }).recipe);
     const made = invCount(life, uid, recipe) - invCount(before, uid, recipe);
     if (made > 0 && DISH_BY_ID[recipe]) {
-      addInv(life, uid, recipe, made);
+      addInv(life, uid, recipe, 1);
       u.i.left -= 1;
     }
   }
@@ -639,7 +641,8 @@ export function moodAfterCloud(opts: {
       if (id !== member.id && id in life.actors && lease.seen >= now - opts.leaseMs) online.add(id);
   const u = moodTouch(life, member.id, now, online.size);
   if (!u) return life;
-  if (opts.room !== undefined && Number.isSafeInteger(opts.room)) u.room = Math.max(0, Math.min(COZY_SCORE_MAX, opts.room));
+  // 아늑함: the room part from the profile save plus the house tier × 8.
+  if (opts.room !== undefined && Number.isSafeInteger(opts.room)) u.room = cozyScore(opts.room, life.ext?.[member.id]?.house ?? 0);
   // 방문 (the friendship stat counts the first visit per friend per day).
   if (opts.visited !== undefined && opts.visited !== null && opts.visited !== member.actor) {
     addLet(u, 'visit', now);

@@ -5,6 +5,7 @@ import {
   FIRST_TOOL_ROCKS,
   LEVEL_XP,
   NODE_SPOTS,
+  OVER_CAP_RATE,
   PROFESSIONS,
   RESEARCH,
   RESEARCH_MIN_BEOM,
@@ -148,17 +149,18 @@ test('fishing XP by rarity, 1 XP for a miss; forage 5, bugs 4; cooking 6 and cra
   assert.equal(s.xp(m, 'craft'), 2 * XP.craft);
 });
 
-test('daily soft cap: SOFT_CAP in full, then 20%; resets at KST midnight', () => {
+test('daily soft cap: SOFT_CAP in full, then 10%; resets at KST midnight', () => {
   const s = world(1);
   const [m] = s.members;
   setXp(s, m, 'fish', 0);
-  assert.equal(SOFT_CAP, 150);
-  gainXp(s.life, m.id, 'fish', 100, T0);
+  assert.equal(SOFT_CAP, 100);
+  assert.equal(OVER_CAP_RATE, 0.1);
+  gainXp(s.life, m.id, 'fish', 60, T0);
   gainXp(s.life, m.id, 'fish', 100, T0 + 1000);
-  // 150 in full + 50 × 0.2
-  assert.equal(s.xp(m, 'fish'), 150 + 10);
+  // 100 in full + 60 × 0.1
+  assert.equal(s.xp(m, 'fish'), 100 + 6);
   gainXp(s.life, m.id, 'fish', 100, T0 + DAY);
-  assert.equal(s.xp(m, 'fish'), 260);
+  assert.equal(s.xp(m, 'fish'), 206);
 });
 
 test('rested XP: 100 per skill per day away (max 300) doubles XP until spent', () => {
@@ -298,7 +300,9 @@ test('research: 범 and materials, three helpers (reserved share), finishes at t
     s.give(m, 'wood', 60);
     s.give(m, 'stone', 60);
   }
-  s.fails(a, { kind: 'research', project: 'trail', beom: 10_000 }, T0, GROWTH_REJECT.projectSoon);
+  s.fails(a, { kind: 'research', project: 'ranch', beom: 10_000 }, T0, GROWTH_REJECT.projectSoon);
+  // 산길 정비 (P2) is live but waits for 대장간 재건.
+  s.fails(a, { kind: 'research', project: 'trail', beom: 10_000 }, T0, GROWTH_REJECT.projectLocked);
   s.fails(a, { kind: 'research', project: 'forge', item: 'shell', n: 1 }, T0, GROWTH_REJECT.giveItem);
   s.fails(a, { kind: 'research', project: 'forge', beom: 500 }, T0, GROWTH_REJECT.give);
   s.act(a, { kind: 'research', project: 'forge', beom: 200_000 }, T0);
@@ -337,9 +341,10 @@ test('research: 범 and materials, three helpers (reserved share), finishes at t
   for (const m of s.members) assert.equal(s.life.ext[m.id].furn['furn-project-plaque'], 1);
   assert.equal(s.life.memories.filter((mm) => mm.kind === 'area').length, 1);
   assert.equal(s.ledger.entries.filter((e) => e.reason === 'research').reduce((x, e) => x + e.amount, 0), 150_000);
-  // V2 opens its prerequisite but stays 준비 중 in P1.
-  const v2 = lifeView(s.life, a.id, a.actor, kst(2026, 9, 25, 9)).growth.research.find((r) => r.id === 'trail');
-  assert.equal(v2.open, false);
+  // V2 산길 정비 (live since P2) opens once 대장간 재건 is done; V3 waits for V2.
+  const board = lifeView(s.life, a.id, a.actor, kst(2026, 9, 25, 9)).growth.research;
+  assert.equal(board.find((r) => r.id === 'trail').open, true);
+  assert.equal(board.find((r) => r.id === 'lift').open, false);
 });
 
 test('research: the three-helper rule relaxes after seven days', () => {
@@ -411,7 +416,8 @@ test('blacksmith: hoe tier adds gold chance to new plantings; senior discount ha
 
 // ------------------------------------------------------------ material nodes
 test('material nodes: a daily set on walkable ground off the paths; chop/smash once per day each', () => {
-  for (const n of NODE_SPOTS) {
+  // Village-edge nodes (the regions' own spots are checked in lounge-regions.test.mjs).
+  for (const n of NODE_SPOTS.filter((x) => (x.area ?? 'village') === 'village')) {
     assert.ok(villageCanWalk({ x: n.x, z: n.z }), n.id);
     for (const [x0, z0, x1, z1, w] of VILLAGE_PATHS) {
       const dx = x1 - x0,
@@ -558,5 +564,5 @@ test('catalog: ore items, research flags, professions and every research materia
     assert.equal(five.length, 2);
     for (const p of five) assert.equal(PROFESSIONS.filter((q) => q.parent === p.id).length, 2);
   }
-  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge');
+  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge,trail,lift');
 });

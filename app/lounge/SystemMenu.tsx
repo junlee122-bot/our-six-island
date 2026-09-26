@@ -12,6 +12,7 @@ import {
   House,
   LayoutGrid,
   Sparkles,
+  Smile,
   TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
@@ -197,6 +198,7 @@ export function SystemMenu({
   onFullscreen,
   onVillageMenu,
   onGrowth,
+  onMood,
   onLeaveRoom,
   leaveLabel = '마을로 나가기',
   onLogout,
@@ -211,6 +213,8 @@ export function SystemMenu({
   onVillageMenu: () => void;
   /** 성장 수첩 (skills, tools, 마을 개척). */
   onGrowth?: () => void;
+  /** 기분 창 (needs, thoughts, inspiration). */
+  onMood?: () => void;
   /** In my room: walk out to the village. */
   onLeaveRoom?: () => void;
   /** The leave item's words ('내 방으로 나가기' from the wardrobe). */
@@ -260,6 +264,13 @@ export function SystemMenu({
             <Sparkles size={18} aria-hidden="true" />
             <span>성장 수첩</span>
             <kbd>{keyLabel(settings.keys.growth) || 'T'}</kbd>
+          </button>
+        )}
+        {onMood && (
+          <button type="button" onClick={onMood} data-testid="system-mood">
+            <Smile size={18} aria-hidden="true" />
+            <span>기분</span>
+            <kbd>{keyLabel(settings.keys.mood) || 'U'}</kbd>
           </button>
         )}
         {onLeaveRoom && (

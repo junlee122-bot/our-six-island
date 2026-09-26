@@ -457,6 +457,72 @@ const FORAGE_ART: Record<string, ReactNode> = {
       <path d="M17 26 l3 -3" stroke="#fff" strokeWidth="1.2" opacity=".6" />
     </>
   ),
+  // 성장 P2 region items (lounge-growth-data REGION_ITEMS).
+  hardwood: (
+    <>
+      <rect x="8" y="16" width="32" height="18" rx="9" fill="#7a4a2a" stroke="#4f2e18" strokeWidth="1.5" />
+      <ellipse cx="36" cy="25" rx="6" ry="9" fill="#c79a66" stroke="#4f2e18" strokeWidth="1.5" />
+      <ellipse cx="36" cy="25" rx="3" ry="4.5" fill="none" stroke="#8a5a34" strokeWidth="1.2" />
+      <path d="M12 21 H28 M14 29 H30" stroke="#5d3820" strokeWidth="1.2" />
+    </>
+  ),
+  songi: (
+    <>
+      <path d="M20 22 h8 l2 22 h-12z" fill="#efe2c8" stroke="#b9a37a" />
+      <path d="M11 24 C11 12 37 12 37 24 C32 22 16 22 11 24Z" fill="#8a5a34" stroke="#5d3820" strokeWidth="1.5" />
+      <path d="M22 30 v10 M26 30 v10" stroke="#d2c29f" strokeWidth="1" />
+    </>
+  ),
+  yeongji: (
+    <>
+      <path d="M22 30 C22 36 20 42 18 44 h8 C26 40 26 34 26 30Z" fill="#6b3a24" />
+      <path d="M6 28 C6 14 42 12 42 26 C36 32 12 34 6 28Z" fill="#9c3b22" stroke="#5c1f10" strokeWidth="1.5" />
+      <path d="M10 26 C18 22 32 20 38 23" stroke="#e0a25a" strokeWidth="2" fill="none" />
+    </>
+  ),
+  'fossil-shell': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M24 36 L12 20 C16 12 32 12 36 20 Z" fill="none" stroke="#7a6848" strokeWidth="1.6" />
+      <path d="M24 36 L18 16 M24 36 L24 14 M24 36 L30 16" stroke="#7a6848" strokeWidth="1.2" />
+    </>
+  ),
+  'fossil-leaf': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M12 34 C14 22 24 14 36 14 C34 26 26 34 12 34Z" fill="none" stroke="#6f7d4a" strokeWidth="1.6" />
+      <path d="M12 34 L32 18 M20 28 l-2 -6 M26 24 l-1 -6 M20 28 l6 1" stroke="#6f7d4a" strokeWidth="1.1" />
+    </>
+  ),
+  'fossil-fish': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M12 26 C18 18 28 18 32 26 C28 34 18 34 12 26Z M32 26 l6 -5 v10z" fill="none" stroke="#7a6848" strokeWidth="1.6" />
+      <path d="M18 22 v8 M22 21 v10 M26 22 v8" stroke="#7a6848" strokeWidth="1.1" />
+      <circle cx="15.5" cy="25" r="1.2" fill="#7a6848" />
+    </>
+  ),
+  'fossil-fern': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M14 36 C18 28 24 20 34 14" stroke="#5f7442" strokeWidth="1.6" fill="none" />
+      <path d="M18 31 l-4 -3 M18 31 l3 3 M22 26 l-4 -4 M22 26 l4 3 M26 21 l-3 -4 M26 21 l4 2 M30 17 l-2 -3 M30 17 l3 1" stroke="#5f7442" strokeWidth="1.2" />
+    </>
+  ),
+  'fossil-trilobite': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M16 18 C16 12 32 12 32 18 L30 36 C28 40 20 40 18 36Z" fill="none" stroke="#6a5a44" strokeWidth="1.6" />
+      <path d="M20 16 V38 M28 16 V38 M17 22 H31 M18 27 H30 M18 32 H30" stroke="#6a5a44" strokeWidth="1.1" />
+    </>
+  ),
+  'fossil-tooth': (
+    <>
+      <path d="M6 30 C6 16 18 8 28 10 C40 12 44 24 40 34 C36 42 10 42 6 30Z" fill="#d8c9a8" stroke="#9c8a66" strokeWidth="1.5" />
+      <path d="M16 14 C22 12 30 14 32 18 C34 26 30 34 26 38 C24 32 22 24 16 14Z" fill="#f1ead8" stroke="#7a6848" strokeWidth="1.6" />
+      <path d="M22 20 l3 2 M24 25 l3 2" stroke="#b5a47f" strokeWidth="1" />
+    </>
+  ),
   wood: (
     <>
       <path d="M6 38 L40 12" stroke="#8a5a34" strokeWidth="6" strokeLinecap="round" />

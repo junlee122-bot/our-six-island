@@ -36,7 +36,7 @@ export function sceneKeyTarget(
 export function visibleSceneHost(): HTMLElement | null {
   if (typeof document === 'undefined') return null;
   for (const el of document.querySelectorAll<HTMLElement>(
-    '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=village-simple], [data-testid=interior-3d], [data-testid=interior-simple]',
+    '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=village-simple], [data-testid=interior-3d], [data-testid=interior-simple], [data-testid=area-3d]',
   ))
     if (el.isConnected && el.getClientRects().length) return el;
   return null;

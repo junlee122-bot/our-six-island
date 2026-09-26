@@ -250,9 +250,12 @@ function Section({ children }: { children: ReactNode }) {
 export function SettingsModal({
   onClose,
   initialTab = 'graphics',
+  moodShare,
 }: {
   onClose: () => void;
   initialTab?: Tab;
+  /** 무드: the server-side 내 기분 자세히 보여 주기 switch (needs the room). */
+  moodShare?: ReactNode;
 }) {
   const [settings, update] = useSettings();
   const [tab, setTab] = useState<Tab>(initialTab);
@@ -388,6 +391,13 @@ export function SettingsModal({
                 checked={settings.reactionsHidden}
                 onChange={(reactionsHidden) => update({ reactionsHidden })}
               />
+              <Toggle
+                label="기분 표시"
+                hint="지갑 옆에 내 기분 얼굴과 작은 생각 아이콘 세 개를 보여줘요. 꺼도 기분 창(U)은 열 수 있어요."
+                checked={settings.moodHud}
+                onChange={(moodHud) => update({ moodHud })}
+              />
+              {moodShare}
             </Section>
           )}
           {tab === 'sound' && (

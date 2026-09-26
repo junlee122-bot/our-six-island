@@ -44,6 +44,7 @@ import { itemName, spotBlock } from './lounge-life-plus.ts';
 import { farmToolAction } from './lounge-life-ui.ts';
 import { FORGE_REACH, NODE_REACH, forgeDistance, nearestNode } from './lounge-village-growth.ts';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data.ts';
+import { VILLAGE_GATE, villageGateDistance } from './lounge-areas.ts';
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
 export type VillageSpot =
@@ -66,7 +67,9 @@ export type VillageSpot =
   /** 성장 P1: the blacksmith (ruined until 마을 개척 “대장간 재건”). */
   | { kind: 'forge' }
   /** 성장 P1: today's bush / log / rock at the village edge. */
-  | { kind: 'node'; id: string; node: NodeKind };
+  | { kind: 'node'; id: string; node: NodeKind }
+  /** 성장 P2: the north gate up to 뒷산 (open after 마을 개척 “산길 정비”). */
+  | { kind: 'gate' };
 
 export type VillageTarget =
   | { type: 'door'; entrance: NearbyVillageEntrance }
@@ -214,6 +217,13 @@ export function villageAction(
       distance: forgeDistance(point),
       reach: FORGE_REACH,
       target: { type: 'spot', spot: { kind: 'forge' } },
+    });
+    labels.set('gate', { label: life.growth.regions?.hill.open ? '뒷산 오르기' : '뒷산 가는 길 · 산길 정비 필요' });
+    candidates.push({
+      kind: 'enter',
+      distance: villageGateDistance(point),
+      reach: VILLAGE_GATE.reach,
+      target: { type: 'spot', spot: { kind: 'gate' } },
     });
     const node = nearestNode(point, life.growth.nodes, NODE_REACH);
     if (node) {

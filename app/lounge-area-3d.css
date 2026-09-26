@@ -1,0 +1,153 @@
+/* 성장 P2: the walkable regions (뒷산, 숲 깊은 곳, 광산 floors). */
+.ar-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #bcd9e8;
+  touch-action: none;
+  outline: none;
+}
+.ar-scene.ar-woods {
+  background: #8fb2a4;
+}
+.ar-scene.ar-mine {
+  background: #140f0b;
+}
+.ar-scene:focus-visible {
+  box-shadow: inset 0 0 0 3px #f2c14e;
+}
+.ar-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+.ar-labels {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.ar-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #fffaeee6;
+  color: #4d3e2c;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px #2d241814;
+}
+.ar-plate {
+  position: absolute;
+  z-index: 3;
+  left: 20px;
+  top: 92px;
+  display: grid;
+  gap: 3px;
+  max-width: min(360px, calc(100% - 40px));
+  padding: 10px 15px;
+  border-radius: 14px;
+  background: #fffaeef0;
+  color: #5d4d38;
+  box-shadow: 0 5px 16px #2d241822;
+  font-size: 13px;
+  pointer-events: none;
+}
+.ar-plate strong {
+  color: #3f3121;
+  font-size: 16px;
+}
+.ar-mine .ar-plate {
+  background: #2a211aeb;
+  color: #e9d8bd;
+}
+.ar-mine .ar-plate strong {
+  color: #ffe2a6;
+}
+.ar-plate-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+.ar-action {
+  right: 20px;
+  bottom: 38px;
+}
+.ar-hint {
+  position: absolute;
+  z-index: 3;
+  right: 20px;
+  top: 92px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: #fffaeee0;
+  color: #6c5b44;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.ar-loading {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 12px 17px;
+  border-radius: 50px;
+  color: #7e6c52;
+  background: #fffaf1ed;
+  font-size: 12px;
+}
+/* The lift panel (광산 승강기): lift floors I have reached. */
+.ar-lift {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.ar-lift button {
+  display: grid;
+  gap: 2px;
+  padding: 10px 8px;
+  border: 1.5px solid #d9c7a6;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #4d3e2c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ar-lift button small {
+  font-weight: 500;
+  color: #8a7658;
+}
+.ar-lift button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ar-lift button:focus-visible {
+  outline: 3px solid #f2c14e;
+  outline-offset: 2px;
+}
+@media (max-width: 720px) {
+  .ar-hint {
+    display: none;
+  }
+  .ar-plate {
+    top: 76px;
+    left: 12px;
+  }
+}

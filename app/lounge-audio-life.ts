@@ -9,7 +9,9 @@ type LifeSfx =
   // VILL-2: harvest pop, gold-star sparkle, reel clicks, a big-catch splash.
   | 'pop' | 'sparkle' | 'tick' | 'splash'
   // 성장 P1: a level-up flourish, chopping, breaking rock, the blacksmith's anvil.
-  | 'levelup' | 'chop' | 'smash' | 'anvil';
+  | 'levelup' | 'chop' | 'smash' | 'anvil'
+  // 무드: an inspiration (a rising music-box run), a cheer, a sip or a bite of a snack.
+  | 'inspire' | 'cheer' | 'sip';
 
 const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorType; peak?: number }> = {
   // A soft whoosh-plop: falling triangle notes.
@@ -32,6 +34,9 @@ const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorTy
   chop: { notes: [233.08, 196], step: 0.05, type: 'triangle', peak: 0.07 },
   smash: { notes: [174.61, 138.59, 110], step: 0.04, type: 'square', peak: 0.04 },
   anvil: { notes: [1760, 2349.32, 1760, 2349.32], step: 0.11, type: 'square', peak: 0.03 },
+  inspire: { notes: [783.99, 987.77, 1174.66, 1567.98, 1975.53, 2349.32, 3135.96], step: 0.085, type: 'sine', peak: 0.07 },
+  cheer: { notes: [659.25, 880, 1108.73], step: 0.07, type: 'triangle', peak: 0.06 },
+  sip: { notes: [523.25, 440, 587.33], step: 0.08, type: 'sine', peak: 0.05 },
 };
 
 /** Plays one life cue (quietly does nothing when sound is off). */

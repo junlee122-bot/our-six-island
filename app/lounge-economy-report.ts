@@ -277,6 +277,7 @@ const LIFE_REASONS: Record<string, string> = {
   'buy-fertilizer-deluxe': '상점: 고급 비료',
   'buy-bait': '상점: 미끼',
   furn: '가구 상점',
+  'bar-drink': '카지노 바 음료',
   'farm-9': '밭 넓히기 (9칸)',
   'farm-12': '밭 넓히기 (12칸)',
   'rod-2': '낚싯대 강화 (2단계)',

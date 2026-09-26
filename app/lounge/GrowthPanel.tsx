@@ -53,11 +53,7 @@ const TABS: { id: GrowthTab; label: string; glyph: GlyphName }[] = [
   { id: 'tools', label: '도구', glyph: 'anvil' },
   { id: 'research', label: '마을 개척', glyph: 'sign' },
 ];
-const NODE_GLYPH: Record<NodeKind, GlyphName> = {
-  bush: 'bush',
-  log: 'log',
-  rock: 'rock',
-};
+const NODE_GLYPH: Record<NodeKind, GlyphName> = { bush: 'bush', log: 'log', rock: 'rock', tree: 'tree', stump: 'log', shroom: 'mushroom' };
 
 function untilText(ms: number) {
   const m = Math.max(1, Math.ceil(ms / 60_000));
@@ -570,6 +566,18 @@ function SkillDetail({
             {info.name} <span className="l-skill-lv">Lv{s.level}</span>
           </h3>
           <p>{info.note}</p>
+          {s.id === 'mine' && g.regions?.mine.open && (
+            <p className="l-skill-region" data-testid="mine-depth">
+              광산 가장 깊이 {g.regions.mine.deep}층 · 곡괭이 {g.regions.mine.pickaxe}단계
+              {g.regions.mine.lift ? ' · 승강기 운행 중' : ''}
+            </p>
+          )}
+          {s.id === 'forage' && g.regions?.hill.open && (
+            <p className="l-skill-region">
+              뒷산 {g.regions.hill.nodes.filter((n) => !n.taken).length}곳
+              {g.regions.woods.open ? ` · 숲 깊은 곳 ${g.regions.woods.nodes.filter((n) => !n.taken).length}곳` : ' · 숲 깊은 곳은 쓰러진 통나무에 막혀 있어요'}
+            </p>
+          )}
         </div>
       </header>
       <ol className="l-perk-ladder" aria-label="레벨 보상">

@@ -3,7 +3,7 @@
 // forage/bug spots and the rotating furniture shop pool. Pure data + tiny
 // helpers; shared by the client and the hohyeon-api Edge function.
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
-import { ORE_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
+import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 export type Spot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
@@ -304,6 +304,19 @@ export const ITEMS: readonly ItemDef[] = [
   ...tools,
   // 성장 P1: ores for the blacksmith (lounge-growth-data.ts); copper drops from village rocks.
   ...ORE_ITEMS.map((o): ItemDef => ({ id: o.id, name: o.name, emoji: '', cat: 'material', kind: 'material', sell: o.sell, note: o.note })),
+  // 성장 P2: 단단한 나무, 송이·영지 (museum), mine fossils (museum only, not sold).
+  ...REGION_ITEMS.map(
+    (o): ItemDef => ({
+      id: o.id,
+      name: o.name,
+      emoji: '',
+      cat: o.kind === 'forage' ? 'forage' : 'material',
+      kind: o.kind === 'forage' ? 'forage' : 'material',
+      sell: o.sell,
+      note: o.note,
+      ...(o.museum ? { museum: true } : {}),
+    }),
+  ),
 ];
 export const ITEM_BY_ID: Readonly<Record<string, ItemDef>> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 export const isItemId = (id: unknown): id is string =>

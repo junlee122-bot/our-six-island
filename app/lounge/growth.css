@@ -387,6 +387,11 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   font-size: 12.5px;
   color: var(--ff-ink-soft);
 }
+.l-skill-card header p.l-skill-region {
+  margin-top: 5px;
+  color: var(--c, #6a5a44);
+  font-weight: 700;
+}
 .l-perk-ladder {
   display: grid;
   grid-template-columns: 1fr 1fr;

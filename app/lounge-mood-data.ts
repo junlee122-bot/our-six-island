@@ -237,7 +237,7 @@ export const INSPIRATIONS: Readonly<
   },
   cook: {
     name: '요리 영감',
-    text: '다음 요리 한 번은 대성공! 같은 요리가 두 배로 나와요',
+    text: '다음 요리 한 번은 대성공! 한 접시가 더 나와요',
     uses: 1,
     ms: INSPIRATION_MS,
     icon: 'bowl',

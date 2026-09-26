@@ -145,7 +145,7 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('tool-')) return 'tool';
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival', 'venue-up'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink'].includes(reason)
   )
     return reason;
   return 'spend-other';

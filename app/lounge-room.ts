@@ -2085,7 +2085,11 @@ export class LoungeRoom {
         return true;
       this.members.set(
         id,
-        member.area === "village" || member.area === "home"
+        member.area === "village" ||
+          member.area === "home" ||
+          member.area === "hill" ||
+          member.area === "woods" ||
+          member.area === "mine"
           ? {
               ...member,
               x: Math.max(0, Math.min(100, a.x)),

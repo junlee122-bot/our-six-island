@@ -57,16 +57,22 @@ import {
   TOOL_INFO,
   WATER_TIER_PTS,
   XP,
+  GATES,
+  MINE_XP,
+  NODE_XP,
+  REGION_ITEMS,
   addMods,
   isProfId,
   levelOf,
   profChoices,
   type GrowthMods,
+  type NodeArea,
   type NodeKind,
   type SkillId,
   type ToolId,
 } from './lounge-growth-data.ts';
 import { LIFE_REJECT, LifeError, uidOf, type LifeState } from './lounge-life.ts';
+import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorPick, mineDrop, mineFloor } from './lounge-mine.ts';
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
 import { moodXpMult } from './lounge-mood.ts';
@@ -106,6 +112,10 @@ export type GrowthUser = {
   gift?: boolean;
   /** Recent level-ups (banner + notifications), newest last. */
   ups?: { s: SkillId; lv: number; at: number }[];
+  /** 광산: the floor I am on (0 = outside) and the deepest floor reached. */
+  mine?: { at: number; deep: number };
+  /** 광산 rocks broken today ('floor:rock'), daily. */
+  mrock?: string[];
 };
 export type ResearchState = {
   got: number;
@@ -116,7 +126,12 @@ export type ResearchState = {
   fullAt?: number;
   doneAt?: number;
 };
-export type GrowthState = { u?: Record<string, GrowthUser>; r?: Record<string, ResearchState> };
+export type GrowthState = {
+  u?: Record<string, GrowthUser>;
+  r?: Record<string, ResearchState>;
+  /** Shared gates cleared once for everyone (GATES): who and when. */
+  c?: Record<string, { actor: number; at: number }>;
+};
 export type GrowthExt = { growth?: GrowthState };
 export type GrowthAction =
   | { kind: 'chooseProf'; skill: SkillId; prof: string }
@@ -126,7 +141,10 @@ export type GrowthAction =
   | { kind: 'forgeGift' }
   | { kind: 'research'; project: string; beom?: number; item?: string; n?: number }
   | { kind: 'chop'; node: string }
-  | { kind: 'smash'; node: string };
+  | { kind: 'smash'; node: string }
+  | { kind: 'mineGo'; floor: number }
+  | { kind: 'mineRock'; floor: number; rock: number }
+  | { kind: 'clearGate'; gate: string };
 
 export const GROWTH_REJECT = {
   skill: '기술을 확인해 주세요.',
@@ -157,6 +175,18 @@ export const GROWTH_REJECT = {
   reserved: '남은 범은 아직 보태지 않은 친구 몫이에요. 재료를 보태거나 친구를 기다려 주세요.',
   node: '여기에는 오늘 벨 것이 없어요.',
   nodeTaken: '오늘은 이미 여기서 거뒀어요. 내일 다시 자라요.',
+  nodeTool: '도끼가 더 튼튼해야 해요. 대장간에서 도끼를 3단계로 두드려 주세요.',
+  area: '아직 갈 수 없는 곳이에요.',
+  mineClosed: '광산은 마을 개척 “산길 정비”가 끝나면 열려요.',
+  mineFloor: '그 층으로는 갈 수 없어요.',
+  mineLadder: '아직 사다리를 찾지 못했어요. 바위를 더 깨 보세요.',
+  mineLift: '승강기는 마을 개척 “광산 승강기”가 끝나면 움직여요.',
+  minePick: '곡괭이가 더 튼튼해야 이 층의 바위를 깰 수 있어요.',
+  mineHere: '지금 있는 층의 바위만 깰 수 있어요.',
+  mineRock: '그 바위는 여기에 없어요.',
+  gate: '치울 수 있는 곳이 아니에요.',
+  gateDone: '이미 누군가 치웠어요.',
+  gateTool: '도끼 2단계부터 이 통나무를 쪼갤 수 있어요.',
 } as const;
 function fail(message: string): never {
   throw new LifeError(message);
@@ -218,6 +248,13 @@ function readUser(v: unknown): GrowthUser | undefined {
     out.forge = { tool: f.tool, to: f.to, at: f.at, readyAt: f.readyAt };
   if (safe(x.rocks) && x.rocks > 0) out.rocks = Math.min(1_000_000, x.rocks);
   if (x.gift === true) out.gift = true;
+  const m = obj(x.mine);
+  if (safe(m.at) && safe(m.deep) && m.at >= 0 && m.deep >= 0)
+    out.mine = { at: Math.min(MINE_FLOORS_P2, m.at), deep: Math.min(MINE_FLOORS_P2, m.deep) };
+  if (safe(x.day) && x.day > 0 && Array.isArray(x.mrock)) {
+    const mrock = [...new Set(x.mrock.filter((k): k is string => typeof k === 'string' && /^\d{1,2}:\d{1,2}$/.test(k)))];
+    if (mrock.length) out.mrock = mrock.slice(0, MINE_FLOORS_P2 * 20);
+  }
   if (Array.isArray(x.ups)) {
     const ups = x.ups
       .slice(-UPS_MAX)
@@ -257,9 +294,15 @@ export function readGrowth(value: unknown): GrowthExt {
     const s = readResearch(def, obj(v.r)[def.id]);
     if (s) r[def.id] = s;
   }
+  const c: NonNullable<GrowthState['c']> = {};
+  for (const id of Object.keys(GATES)) {
+    const g = obj(obj(v.c)[id]);
+    if (safe(g.actor) && g.actor >= 0 && g.actor < 7 && safe(g.at) && g.at > 0) c[id] = { actor: g.actor, at: g.at };
+  }
   const out: GrowthState = {};
   if (Object.keys(u).length) out.u = u;
   if (Object.keys(r).length) out.r = r;
+  if (Object.keys(c).length) out.c = c;
   return Object.keys(out).length ? { growth: out } : {};
 }
 
@@ -315,6 +358,7 @@ function userToday(life: LifeState, uid: string, now: number): GrowthUser {
     u.day = day;
     delete u.dxp;
     delete u.nodes;
+    delete u.mrock;
   }
   if (u.seen !== undefined && day > u.seen + 1) {
     const away = Math.min(REST_MAX / REST_PER_DAY, day - u.seen - 1);
@@ -491,20 +535,53 @@ export const growthNeedsSettle = (life: LifeState, now: number) =>
 
 // ---------------------------------------------------------------- nodes
 /** Today's material nodes for a friend: the shared daily set plus perk/profession extras. */
-export function nodesFor(life: LifeState, uid: string, day: number) {
+export function nodesFor(life: LifeState, uid: string, day: number, area: NodeArea = 'village') {
   const mods = uid ? growthMods(life, uid) : NO_MODS;
   const out: { id: string; kind: NodeKind; x: number; z: number }[] = [];
-  for (const kind of ['bush', 'log', 'rock'] as const) {
-    const pool = NODE_SPOTS.filter((n) => n.kind === kind).sort(
+  const perDay = NODES_PER_DAY[area];
+  for (const kind of Object.keys(perDay) as NodeKind[]) {
+    const pool = NODE_SPOTS.filter((n) => n.kind === kind && (n.area ?? 'village') === area).sort(
       (a, b) => hash32(`node:${day}:${a.id}`) - hash32(`node:${day}:${b.id}`),
     );
-    const base = NODES_PER_DAY[kind];
-    const extra = kind === 'bush' ? mods.extraBush : kind === 'rock' ? mods.extraRock : 0;
+    const base = perDay[kind] ?? 0;
+    // Profession / perk extras apply at the village edge only.
+    const extra = area !== 'village' ? 0 : kind === 'bush' ? mods.extraBush : kind === 'rock' ? mods.extraRock : 0;
     const shared = pool.slice(0, base);
     const rest = pool.slice(base).sort((a, b) => hash32(`node:${day}:${uid}:${a.id}`) - hash32(`node:${day}:${uid}:${b.id}`));
     out.push(...shared, ...rest.slice(0, Math.max(0, extra)));
   }
-  return out;
+  return out.map(({ id, kind, x, z }) => ({ id, kind, x, z }));
+}
+/** Whether a region is open for everyone now. */
+export function areaOpen(life: LifeState, area: NodeArea | 'mine', now: number) {
+  if (area === 'village') return true;
+  if (!researchDone(life, 'trail', now)) return false;
+  return area === 'woods' ? !!life.growth?.c?.woods : true;
+}
+/** Floors a friend may go to now (1, the next one after a found ladder, lift floors). */
+export function mineCanGo(life: LifeState, uid: string, floor: number, now: number): string | null {
+  if (floor === 0) return null;
+  if (!researchDone(life, 'trail', now)) return GROWTH_REJECT.mineClosed;
+  if (!safe(floor) || floor < 1 || floor > MINE_FLOORS_P2) return GROWTH_REJECT.mineFloor;
+  const lift = researchDone(life, 'lift', now);
+  if (floor >= LIFT_FROM_FLOOR && !lift) return GROWTH_REJECT.mineLift;
+  if (floorPick(floor) > toolTier(life, uid, 'pickaxe')) return GROWTH_REJECT.minePick;
+  if (floor === 1) return null;
+  const u = life.growth?.u?.[uid],
+    at = u?.mine?.at ?? 0,
+    deep = u?.mine?.deep ?? 0;
+  if (lift && floor % LIFT_EVERY === 0 && floor <= deep) return null;
+  if (floor === at + 1 && ladderFound(life, uid, at, now)) return null;
+  if (floor <= at && floor >= 1 && at > 0 && floor === at) return null;
+  return floor === at + 1 ? GROWTH_REJECT.mineLadder : GROWTH_REJECT.mineFloor;
+}
+/** Rocks broken on a floor today by this friend. */
+const brokenOn = (u: GrowthUser | undefined, floor: number) => (u?.mrock ?? []).filter((k) => k.startsWith(floor + ':')).length;
+export function ladderFound(life: LifeState, uid: string, floor: number, now: number) {
+  if (floor < 1) return false;
+  const u = life.growth?.u?.[uid];
+  if (u?.day !== kstDay(now)) return false;
+  return brokenOn(u, floor) >= mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed;
 }
 
 // ---------------------------------------------------------------- actions
@@ -635,8 +712,12 @@ export function growthAction(
       const node = typeof a.node === 'string' && own(NODE_BY_ID, a.node) ? NODE_BY_ID[a.node] : undefined;
       if (!node) fail(GROWTH_REJECT.node);
       if ((a.kind === 'smash') !== (node!.kind === 'rock')) fail(GROWTH_REJECT.node);
-      if (!nodesFor(life, uid, kstDay(now)).some((n) => n.id === node!.id)) fail(GROWTH_REJECT.node);
+      const nodeArea = node!.area ?? 'village';
+      if (!areaOpen(life, nodeArea, now)) fail(GROWTH_REJECT.area);
+      if (!nodesFor(life, uid, kstDay(now), nodeArea).some((n) => n.id === node!.id)) fail(GROWTH_REJECT.node);
       if (u.nodes?.includes(node!.id)) fail(GROWTH_REJECT.nodeTaken);
+      const needTier = NODE_INFO[node!.kind].tier ?? 1;
+      if (toolTier(life, uid, NODE_INFO[node!.kind].tool) < needTier) fail(GROWTH_REJECT.nodeTool);
       (u.nodes ??= []).push(node!.id);
       const mods = growthMods(life, uid),
         seq = ++life.seq;
@@ -650,11 +731,78 @@ export function growthAction(
         if (copper) addInv(life, uid, 'copper', copper);
         u.rocks = Math.min(1_000_000, (u.rocks ?? 0) + 1);
         gainXp(life, uid, 'mine', XP.rock + (copper ? XP.ore : 0), now);
+      } else if (node!.kind === 'shroom') {
+        // 송이 or 영지 (영지 1 in 3); 약초꾼's double chance applies.
+        const item = roll(`shroom:${uid}:${node!.id}:${seq}`) < 34 ? 'yeongji' : 'songi';
+        addInv(life, uid, item, NODE_YIELD.shroom + (growthChance(life, uid, 'shroom', mods.forageDouble, now) ? 1 : 0));
+        gainXp(life, uid, 'forage', NODE_XP.shroom, now);
+      } else if (node!.kind === 'stump') {
+        addInv(life, uid, 'hardwood', Math.round(NODE_YIELD.stump * mods.woodMult));
+        gainXp(life, uid, 'forage', NODE_XP.stump, now);
       } else {
         const wood = Math.round((NODE_YIELD[node!.kind] + mods.woodBonus) * mods.woodMult);
         addInv(life, uid, 'wood', wood);
-        gainXp(life, uid, NODE_INFO[node!.kind].skill, node!.kind === 'log' ? XP.log : XP.bush, now);
+        gainXp(life, uid, NODE_INFO[node!.kind].skill, NODE_XP[node!.kind], now);
       }
+      break;
+    }
+    case 'mineGo': {
+      const why = mineCanGo(life, uid, a.floor, now);
+      if (why) fail(why);
+      const m = (u.mine ??= { at: 0, deep: 0 });
+      m.at = a.floor;
+      if (a.floor > 0 && a.floor > m.deep) {
+        m.deep = a.floor;
+        gainXp(life, uid, 'mine', MINE_XP.newFloor, now);
+        if (a.floor % LIFT_EVERY === 0 || a.floor === MINE_FLOORS_P2)
+          addNews(life, now, `deep:${actor}:${a.floor}`, 'growth', `${josaGa(nameOf(actor))} 광산 ${a.floor}층에 도착했어요`, [actor]);
+      }
+      break;
+    }
+    case 'mineRock': {
+      const m = u.mine;
+      if (!m || !safe(a.floor) || m.at !== a.floor || a.floor < 1) fail(GROWTH_REJECT.mineHere);
+      if (floorPick(a.floor) > toolTier(life, uid, 'pickaxe')) fail(GROWTH_REJECT.minePick);
+      const day = kstDay(now),
+        floor = mineFloor(day, a.floor, researchDone(life, 'lift', now));
+      const rock = floor.rocks.find((r) => r.i === a.rock);
+      if (!rock) fail(GROWTH_REJECT.mineRock);
+      const key = `${a.floor}:${a.rock}`;
+      if (u.mrock?.includes(key)) fail(GROWTH_REJECT.nodeTaken);
+      (u.mrock ??= []).push(key);
+      const mods = growthMods(life, uid),
+        seq = ++life.seq;
+      const drop = mineDrop(`${uid}:${day}:${key}:${seq}`, a.floor, rock!.vein, mods.copperPts);
+      const ore = drop.item !== 'stone' && drop.item !== 'gem';
+      const n = ore ? Math.round((drop.n + mods.oreBonus) * mods.oreMult) : drop.item === 'stone' ? Math.round(drop.n * mods.stoneMult) : drop.n;
+      addInv(life, uid, drop.item, n);
+      if (drop.fossil) {
+        addInv(life, uid, drop.fossil, 1);
+        const name = REGION_ITEMS.find((i) => i.id === drop.fossil)?.name ?? '화석';
+        addNews(life, now, `fossil:${actor}:${drop.fossil}`, 'growth', `${josaGa(nameOf(actor))} 광산 ${a.floor}층에서 ${josaUl(name)} 찾았어요`, [actor]);
+      }
+      u.rocks = Math.min(1_000_000, (u.rocks ?? 0) + 1);
+      gainXp(
+        life,
+        uid,
+        'mine',
+        XP.rock + (ore ? XP.ore : 0) + (drop.item === 'gem' ? MINE_XP.gem : 0) + (drop.fossil ? MINE_XP.fossil : 0),
+        now,
+      );
+      break;
+    }
+    case 'clearGate': {
+      const def = typeof a.gate === 'string' && own(GATES, a.gate) ? GATES[a.gate] : undefined;
+      if (!def) fail(GROWTH_REJECT.gate);
+      if (!researchDone(life, def!.flag, now)) fail(GROWTH_REJECT.area);
+      const cleared = (growthOf(life).c ??= {});
+      if (cleared[a.gate]) fail(GROWTH_REJECT.gateDone);
+      if (toolTier(life, uid, def!.tool) < def!.tier) fail(GROWTH_REJECT.gateTool);
+      cleared[a.gate] = { actor, at: now };
+      const text = `${josaGa(nameOf(actor))} ${def!.name}를 쪼개 길을 열었어요`;
+      addMemory(life, now, 'area', [actor], text);
+      addNews(life, now, `gate:${a.gate}`, 'growth', text, [actor]);
+      gainXp(life, uid, 'forage', NODE_XP.stump, now);
       break;
     }
     default:
@@ -726,6 +874,29 @@ export type GrowthView = {
   retroAt: number | null;
   respecPrice: number;
   softCap: number;
+  /** 성장 P2 regions (absent from older servers). */
+  regions?: RegionsView;
+};
+export type RegionsView = {
+  hill: { open: boolean; nodes: { id: string; kind: NodeKind; x: number; z: number; taken: boolean }[] };
+  woods: {
+    open: boolean;
+    cleared: { actor: number; at: number } | null;
+    nodes: { id: string; kind: NodeKind; x: number; z: number; taken: boolean }[];
+  };
+  mine: {
+    open: boolean;
+    lift: boolean;
+    at: number;
+    deep: number;
+    /** Rocks I broke today per floor. */
+    broken: Record<number, number[]>;
+    /** The ladder down on my current floor has shown today. */
+    ladder: boolean;
+    /** Friends in the mine today: actor → floor. */
+    friends: Record<number, number>;
+    pickaxe: number;
+  };
 };
 export function growthView(state: LifeState, uid: string, now: number): GrowthView {
   // Views never mutate: settle a throwaway copy of this friend's record.
@@ -806,6 +977,36 @@ export function growthView(state: LifeState, uid: string, now: number): GrowthVi
     retroAt: u.retro ?? null,
     respecPrice: RESPEC_PRICE,
     softCap: SOFT_CAP,
+    regions: regionsView(life, uid, u, taken, now),
+  };
+}
+function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<string>, now: number): RegionsView {
+  const day = kstDay(now),
+    ok = UUID.test(uid) && uid in life.actors;
+  const nodes = (area: NodeArea) =>
+    ok && areaOpen(life, area, now) ? nodesFor(life, uid, day, area).map((n) => ({ ...n, taken: taken.has(n.id) })) : [];
+  const broken: Record<number, number[]> = {};
+  for (const k of u.mrock ?? []) {
+    const [f, r] = k.split(':').map(Number);
+    (broken[f] ??= []).push(r);
+  }
+  const friends: Record<number, number> = {};
+  for (const [id, x] of Object.entries(life.growth?.u ?? {}))
+    if (id !== uid && id in life.actors && x.day === day && (x.mine?.at ?? 0) > 0) friends[life.actors[id]] = x.mine!.at;
+  const at = u.mine?.at ?? 0;
+  return {
+    hill: { open: areaOpen(life, 'hill', now), nodes: nodes('hill') },
+    woods: { open: areaOpen(life, 'woods', now), cleared: life.growth?.c?.woods ?? null, nodes: nodes('woods') },
+    mine: {
+      open: researchDone(life, 'trail', now),
+      lift: researchDone(life, 'lift', now),
+      at,
+      deep: u.mine?.deep ?? 0,
+      broken,
+      ladder: ok && at > 0 && ladderFound(life, uid, at, now),
+      friends,
+      pickaxe: ok ? toolTier(life, uid, 'pickaxe') : 1,
+    },
   };
 }
 /** Item ids the growth screens name (materials must exist in the item catalog). */

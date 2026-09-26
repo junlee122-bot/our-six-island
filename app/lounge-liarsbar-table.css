@@ -756,3 +756,26 @@
   margin-left: 6px;
   color: var(--lb-muted);
 }
+
+/* Laptop heights (1440×900 and below): the whole table, hand included, fits
+   without scrolling — smaller cards, a shorter log and a flatter felt. */
+@media (max-height: 960px) {
+  .lb-club {
+    --lb-card-w: 92px;
+    --lb-card-h: 128px;
+    gap: 8px;
+  }
+  .lb-felt {
+    min-height: 320px;
+    padding: 12px 24px;
+  }
+  .lb-log {
+    max-height: 170px;
+  }
+  .lb-hand {
+    padding-top: 10px;
+  }
+  .lb-hand-wrap {
+    padding: 8px 14px;
+  }
+}

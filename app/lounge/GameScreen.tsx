@@ -601,7 +601,7 @@ export function GameScreen({
           title={`${GAME_INFO[kind].name} 테이블에서 일어날까요?`}
           body={
             practice
-              ? `연습 판이라 범은 오가지 않아요. ${kind === 'chess' ? '일어나면 기권으로 끝나요.' : '일어나면 남은 판은 AI가 마무리해요.'}`
+              ? `연습 판이라 범은 오가지 않아요. ${ended ? '판이 끝나서 바로 일어날 수 있어요.' : kind === 'chess' ? '일어나면 기권으로 끝나요.' : '일어나면 남은 판은 AI가 마무리해요.'}`
               : party && !ended
                 ? `범은 오가지 않는 판이에요. ${GAME_COPY[kind].leaveActive}`
                 : leaveConsequence(kind, ended)

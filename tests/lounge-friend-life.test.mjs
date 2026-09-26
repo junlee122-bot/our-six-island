@@ -280,6 +280,9 @@ test('hearts: slower late curve, rewards at 2/4/6/8/10 by mail and furniture, id
   delete again.lastText;
   const before = JSON.parse(snapshot);
   delete before.lastText;
+  // The mood clock moves with every action by design (lounge-mood.ts).
+  delete again.mood;
+  delete before.mood;
   assert.deepEqual(again, before);
   // Title from ♥10.
   const v = s.view(a, T0 + 2 * DAY);

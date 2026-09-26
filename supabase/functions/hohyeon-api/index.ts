@@ -16,6 +16,7 @@ import {
   commandHash,
   CloudError,
 } from '../../../app/lounge-cloud-engine.ts';
+import { roomScore } from '../../../app/lounge-mood-room.ts';
 import {
   HttpError,
   key,
@@ -102,6 +103,8 @@ serve('hohyeon-api', async (b, req, ctx) => {
   )
     throw new HttpError('방 코드를 확인해 주세요.');
   const hash = await commandHash(b.command);
+  // 무드 아늑함: the room score of this member's saved room (the engine adds the house tier).
+  const room = roomScore(m.save, m.actor);
   for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
     if (attempt) await sleep(casBackoffMs(attempt - 1));
     const row = await rpc('hh_world_read');
@@ -109,7 +112,7 @@ serve('hohyeon-api', async (b, req, ctx) => {
     try {
       transition = cloudTransition(
         row.state,
-        { id: m.user_id, actor: m.actor, username: m.username },
+        { id: m.user_id, actor: m.actor, username: m.username, room },
         b.command,
         hash,
         row.now,

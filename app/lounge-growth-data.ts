@@ -13,7 +13,7 @@ export const SKILL_INFO: Record<SkillId, { name: string; verb: string; note: str
   farm: { name: '농사', verb: '심고 가꾸고 거두기', note: '물 주기와 수확에서 자라요. 오래 자라는 작물, 은별·금별일수록 더 많이.', color: '#5f8a55' },
   fish: { name: '낚시', verb: '물고기 낚기', note: '낚을 때마다 자라요. 드문 물고기일수록 훨씬 많이, 놓쳐도 조금.', color: '#4f8aa6' },
   forage: { name: '채집', verb: '줍고 잡고 베기', note: '채집·곤충 잡기와 마을 가장자리 잡목·통나무 베기에서 자라요.', color: '#a07a3c' },
-  mine: { name: '광업', verb: '바위 깨기', note: '마을 가장자리 바위를 깨면 자라요. 구리가 나오면 더. 광산은 다음 개척에서 열려요.', color: '#7a7f8c' },
+  mine: { name: '광업', verb: '바위 깨기', note: '바위를 깨면 자라요. 광석·보석·화석이 나오면 더, 광산의 새 층에 처음 내려가면 또.', color: '#7a7f8c' },
   craft: { name: '솜씨', verb: '요리하고 만들기', note: '요리와 제작 한 번마다 자라요.', color: '#c2703a' },
 };
 export const MAX_LEVEL = 10;
@@ -24,9 +24,13 @@ export const levelOf = (xp: number) => {
   while (lv < MAX_LEVEL && xp >= LEVEL_XP[lv]) lv++;
   return lv;
 };
-/** XP a day counts in full per skill; past it each point counts OVER_CAP_RATE. */
-export const SOFT_CAP = 150;
-export const OVER_CAP_RATE = 0.2;
+/**
+ * XP a day counts in full per skill; past it each point counts OVER_CAP_RATE.
+ * Tuned on the 120-day sim (p1/sim-p1.mjs): 100 / 10% keeps hard-core ≈ 2.3×
+ * a regular player's XP while regular pacing (Lv10 farm ~day 77) is unchanged.
+ */
+export const SOFT_CAP = 100;
+export const OVER_CAP_RATE = 0.1;
 /** Rested XP: per skill per day away, at most REST_MAX; while it lasts XP is doubled. */
 export const REST_PER_DAY = 100;
 export const REST_MAX = 300;
@@ -196,12 +200,12 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   ],
   mine: [
     { level: 2, text: '돌 계단 장식', soon: '산길 정비' },
-    { level: 3, text: '구리 확률 +3%p', mods: { copperPts: 3 } },
+    { level: 3, text: '광석 확률 +3%p', mods: { copperPts: 3 } },
     { level: 4, text: '바위 1곳 더 (매일)', mods: { extraRock: 1 } },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '보석 판독', soon: '광산 승강기' },
     { level: 7, text: '큰 망치 (바위 3×3)', soon: '산길 정비' },
-    { level: 8, text: '구리 확률 +3%p 더', mods: { copperPts: 3 } },
+    { level: 8, text: '광석 확률 +3%p 더', mods: { copperPts: 3 } },
     { level: 9, text: '승강기로 가장 깊은 층', soon: '광산 승강기' },
     { level: 10, text: '전문가 선택 ②' },
   ],
@@ -257,11 +261,11 @@ export const PROFESSIONS: readonly ProfDef[] = [
   prof('forage-a2', 'forage', 10, '꽃집', '꽃은 늘 두 송이', { flowerDouble: true }, 'forage-a'),
   prof('forage-b1', 'forage', 10, '벌목왕', '나무 두 배', { woodMult: 2 }, 'forage-b'),
   prof('forage-b2', 'forage', 10, '숲지기', '매일 잡목 2곳 더', { extraBush: 2 }, 'forage-b'),
-  prof('mine-a', 'mine', 5, '광부', '구리가 나오면 +1', { oreBonus: 1 }),
-  prof('mine-b', 'mine', 5, '탐광꾼', '구리 확률 +10%p', { copperPts: 10 }),
+  prof('mine-a', 'mine', 5, '광부', '광석이 나오면 +1', { oreBonus: 1 }),
+  prof('mine-b', 'mine', 5, '탐광꾼', '광석 확률 +10%p', { copperPts: 10 }),
   prof('mine-a1', 'mine', 10, '대장장이', '도구 광석 비용 −25%', { toolOre: 0.25 }, 'mine-a'),
   prof('mine-a2', 'mine', 10, '돌깨기 명수', '돌 두 배', { stoneMult: 2 }, 'mine-a'),
-  prof('mine-b1', 'mine', 10, '구리맥', '구리가 나오면 두 배', { oreMult: 2 }, 'mine-b'),
+  prof('mine-b1', 'mine', 10, '광맥꾼', '광석이 나오면 두 배', { oreMult: 2 }, 'mine-b'),
   prof('mine-b2', 'mine', 10, '부지런한 광부', '매일 바위 2곳 더', { extraRock: 2 }, 'mine-b'),
   prof('craft-a', 'craft', 5, '요리사', '요리할 때 20% 확률로 하나 더', { cookExtra: 0.2 }),
   prof('craft-b', 'craft', 5, '공예가', '제작 재료 −25%', { craftDiscount: 0.25 }),
@@ -296,6 +300,20 @@ export const ORE_ITEMS = [
   { id: 'gem', name: '보석 원석', sell: 300, note: '광산 깊은 곳에서 드물게 나와요. (다음 개척)' },
 ] as const;
 export type OreId = (typeof ORE_ITEMS)[number]['id'];
+/** 성장 P2 items: 뒷산/광산 finds (fossils go to the museum), 숲 깊은 곳's wood and mushrooms. */
+export const REGION_ITEMS = [
+  { id: 'hardwood', name: '단단한 나무', kind: 'material', sell: 80, museum: false, note: '숲 깊은 곳의 큰 그루터기에서 나와요. 도끼 3단계가 필요해요.' },
+  { id: 'songi', name: '송이', kind: 'forage', sell: 600, museum: true, note: '숲 깊은 곳 버섯 통나무에서 드물게. 향이 진해요.' },
+  { id: 'yeongji', name: '영지', kind: 'forage', sell: 900, museum: true, note: '숲 깊은 곳 버섯 통나무의 붉은 보물.' },
+  { id: 'fossil-shell', name: '암모나이트 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 1~5층. 소용돌이 껍데기가 그대로예요.' },
+  { id: 'fossil-leaf', name: '잎 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 1~5층. 옛 숲의 잎맥.' },
+  { id: 'fossil-fish', name: '물고기 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 6~10층. 뼈 하나하나가 보여요.' },
+  { id: 'fossil-fern', name: '고사리 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 6~10층.' },
+  { id: 'fossil-trilobite', name: '삼엽충 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 11~15층. 아주 오래된 바다의 흔적.' },
+  { id: 'fossil-tooth', name: '공룡 이빨 화석', kind: 'fossil', sell: 0, museum: true, note: '광산 16~20층. 마을 박물관의 자랑거리.' },
+] as const;
+/** XP for mine finds (on top of XP.rock / XP.ore). */
+export const MINE_XP = { gem: 10, fossil: 20, newFloor: 15 } as const;
 
 // ---------------------------------------------------------------- tools
 export type ToolId = 'can' | 'hoe' | 'rod' | 'axe' | 'pickaxe';
@@ -326,7 +344,7 @@ export const TOOL_INFO: Record<ToolId, { name: string; skill: SkillId; tiers: Re
   pickaxe: {
     name: '곡괭이',
     skill: 'mine',
-    tiers: { 1: '바위 깨기 · 광산 1~5층', 2: '구리 확률 +5%p · 6~10층', 3: '구리 +10%p · 11~15층', 4: '16~20층', 5: '21~30층 · 광석 +10%' },
+    tiers: { 1: '바위 깨기 · 광산 1~5층', 2: '광석 확률 +5%p · 광산 6~10층', 3: '광석 +10%p · 광산 11~15층', 4: '광석 +10%p · 광산 16~20층', 5: '광산 21~30층 · 광석 +10%' },
   },
 };
 /** Upgrade to a tier: 범 + ore (tier 2 needs only copper, which the village rocks give). */
@@ -372,8 +390,8 @@ export type ResearchDef = {
 };
 export const RESEARCH: readonly ResearchDef[] = [
   { id: 'forge', code: 'V1', name: '대장간 재건', flag: 'forge', requires: [], beom: 150_000, mats: { wood: 120, stone: 100 }, opens: '대장간과 무쇠 아저씨 · 도구 2단계', preview: '북서쪽 폭포 아래 무너진 공방을 다시 세워요. 맡긴 도구는 다음 날 아침 6시에 찾아요.', live: true },
-  { id: 'trail', code: 'V2', name: '산길 정비', flag: 'trail', requires: ['forge'], beom: 250_000, mats: { wood: 150, stone: 200 }, opens: '뒷산 · 광산 1~10층 · 광업 확장', preview: '북쪽 돌담 틈으로 이어지는 산길 계단. 소나무 능선과 곰 동굴 광산 입구, 약수터.', live: false },
-  { id: 'lift', code: 'V3', name: '광산 승강기', flag: 'lift', requires: ['trail'], beom: 350_000, mats: { copper: 60, stone: 150, wood: 100 }, opens: '광산 11~20층 · 5층마다 승강기 · 화석', preview: '광차 레일과 등불이 이어진 깊은 굴. 수정 동굴이 15층부터 반짝여요.', live: false },
+  { id: 'trail', code: 'V2', name: '산길 정비', flag: 'trail', requires: ['forge'], beom: 250_000, mats: { wood: 150, stone: 200 }, opens: '뒷산 · 광산 1~10층 · 숲 깊은 곳 입구', preview: '북쪽 돌담 틈 너머 산길 계단. 소나무 능선과 곰 동굴 광산 입구, 서쪽엔 쓰러진 통나무가 막은 숲 깊은 곳.', live: true },
+  { id: 'lift', code: 'V3', name: '광산 승강기', flag: 'lift', requires: ['trail'], beom: 350_000, mats: { copper: 60, stone: 150, wood: 100 }, opens: '광산 11~20층 · 5층마다 승강기', preview: '광차 레일과 등불이 이어진 깊은 굴. 5층마다 승강기로 곧장 내려가요.', live: true },
   { id: 'orchardHill', code: 'V4', name: '과수원 언덕 개간', flag: 'orchardHill', requires: ['trail'], beom: 400_000, mats: { wood: 200, fertilizer: 30 }, opens: '과수원 언덕 · 친구마다 과일나무 3그루 · 벌통 명당', preview: '서쪽 과수원 너머 계단식 언덕과 원두막. 사과·배·감·복숭아.', live: false },
   { id: 'ranch', code: 'V5', name: '목장 울타리', flag: 'ranch', requires: ['orchardHill'], beom: 600_000, mats: { wood: 300, stone: 150, iron: 30 }, opens: '목장 초원 · 닭장·외양간 · 공동 외양간', preview: '윗물 여울 징검다리 건너 풍차와 곡물 창고가 있는 초원.', live: false },
   { id: 'weather', code: 'V8', name: '기상 관측소', flag: 'weather', requires: ['lift'], beom: 500_000, mats: { copper: 40, iron: 40 }, opens: '내일 날씨 예보 · 스프링클러 레시피', preview: '뒷산 능선의 작은 풍향계 관측소.', live: false },
@@ -391,17 +409,22 @@ export const RESEARCH_MIN_BEOM = 1_000;
 export const RESEARCH_FLAGS: Record<string, string> = Object.fromEntries(RESEARCH.map((r) => [r.flag, `${r.name} · ${r.opens}`]));
 
 // ---------------------------------------------------------------- material nodes
-export type NodeKind = 'bush' | 'log' | 'rock';
-export const NODE_INFO: Record<NodeKind, { name: string; verb: string; tool: ToolId; skill: SkillId }> = {
+export type NodeKind = 'bush' | 'log' | 'rock' | 'tree' | 'stump' | 'shroom';
+/** Where a node grows: the village edge (P1) or a region (P2). */
+export type NodeArea = 'village' | 'hill' | 'woods';
+export const NODE_INFO: Record<NodeKind, { name: string; verb: string; tool: ToolId; skill: SkillId; tier?: number }> = {
   bush: { name: '잡목', verb: '베기', tool: 'axe', skill: 'forage' },
   log: { name: '통나무 더미', verb: '쪼개기', tool: 'axe', skill: 'forage' },
   rock: { name: '바위', verb: '깨기', tool: 'pickaxe', skill: 'mine' },
+  tree: { name: '큰 나무', verb: '베기', tool: 'axe', skill: 'forage' },
+  stump: { name: '큰 그루터기', verb: '쪼개기', tool: 'axe', skill: 'forage', tier: 3 },
+  shroom: { name: '버섯 통나무', verb: '따기', tool: 'axe', skill: 'forage' },
 };
 /**
  * Candidate spots near the village edge (x/z on walkable ground, off every
  * path, no collider: they never block a route). Each day a hashed few are up.
  */
-export const NODE_SPOTS: readonly { id: string; kind: NodeKind; x: number; z: number }[] = [
+export const NODE_SPOTS: readonly { id: string; kind: NodeKind; x: number; z: number; area?: NodeArea }[] = [
   { id: 'r1', kind: 'rock', x: -43.6, z: -13.9 },
   { id: 'r2', kind: 'rock', x: -45, z: 10 },
   { id: 'r3', kind: 'rock', x: -19.2, z: -31.2 },
@@ -417,22 +440,57 @@ export const NODE_SPOTS: readonly { id: string; kind: NodeKind; x: number; z: nu
   { id: 'b4', kind: 'bush', x: 16.8, z: -31.2 },
   { id: 'b5', kind: 'bush', x: 42, z: -15 },
   { id: 'b6', kind: 'bush', x: -12, z: 31 },
-  { id: 'b7', kind: 'bush', x: 40, z: 30 },
+  { id: 'b7', kind: 'bush', x: 44, z: 18 },
   { id: 'b8', kind: 'bush', x: 30.5, z: -32 },
   { id: 'l1', kind: 'log', x: -46, z: 18 },
   { id: 'l2', kind: 'log', x: -28, z: -35 },
   { id: 'l4', kind: 'log', x: 19.6, z: 26.1 },
   { id: 'l5', kind: 'log', x: -2.2, z: -31.2 },
+  // 뒷산 (P2): a logging ridge (area coordinates, lounge-areas.ts HILL).
+  ...([
+    ['ht1', 'tree', -18, -9], ['ht2', 'tree', -12, -15], ['ht3', 'tree', -4, -16], ['ht4', 'tree', 4, -15.5], ['ht5', 'tree', -21, 3], ['ht6', 'tree', 21, 6],
+    ['hb1', 'bush', -15, 5], ['hb2', 'bush', -8, 9], ['hb3', 'bush', 9, 10], ['hb4', 'bush', 18, -2], ['hb5', 'bush', -20, 11], ['hb6', 'bush', 6, -8],
+    ['hr1', 'rock', 10, -5], ['hr2', 'rock', 22, -9], ['hr3', 'rock', -6, -6], ['hr4', 'rock', 13, 4], ['hr5', 'rock', -14, -3], ['hr6', 'rock', 23, 13], ['hr7', 'rock', 1, 2], ['hr8', 'rock', -23, -13],
+  ] as const).map(([id, kind, x, z]) => ({ id, kind, x, z, area: 'hill' as const })),
+  // 숲 깊은 곳 (P2): old stumps (axe 3), trees and mushroom logs.
+  ...([
+    ['ws1', 'stump', -12, -8], ['ws2', 'stump', 8, -10], ['ws3', 'stump', -4, 9], ['ws4', 'stump', 12, 7],
+    ['wt1', 'tree', -16, 2], ['wt2', 'tree', 2, -13], ['wt3', 'tree', 16, -3], ['wt4', 'tree', -9, 13], ['wt5', 'tree', 5, 3],
+    ['wm1', 'shroom', -17, -12], ['wm2', 'shroom', -2, -3], ['wm3', 'shroom', 14, 13], ['wm4', 'shroom', -14, 9],
+  ] as const).map(([id, kind, x, z]) => ({ id, kind, x, z, area: 'woods' as const })),
 ];
 export const NODE_BY_ID: Readonly<Record<string, (typeof NODE_SPOTS)[number]>> = Object.fromEntries(NODE_SPOTS.map((n) => [n.id, n]));
 /** Nodes up each day (shared positions; each friend breaks their own copy). */
-export const NODES_PER_DAY: Record<NodeKind, number> = { bush: 2, log: 1, rock: 3 };
-/** Base yields. */
-export const NODE_YIELD = { bush: 2, log: 3, rock: 2 } as const;
+export const NODES_PER_DAY: Record<NodeArea, Partial<Record<NodeKind, number>>> = {
+  village: { bush: 2, log: 1, rock: 3 },
+  hill: { tree: 3, bush: 4, rock: 5 },
+  woods: { stump: 2, tree: 3, shroom: 2 },
+};
+/** Base yields (wood; stone for rocks; 단단한 나무 for stumps; one mushroom per log). */
+export const NODE_YIELD = { bush: 2, log: 3, rock: 2, tree: 5, stump: 2, shroom: 1 } as const;
+/** Skill XP per node (rocks: see XP.rock / XP.ore). */
+export const NODE_XP: Record<NodeKind, number> = { bush: 3, log: 5, rock: 3, tree: 8, stump: 10, shroom: 5 };
 /** Copper from a village rock: chance and amount (1–2, mean 1.3). */
 export const COPPER_CHANCE = 20;
 
 // ---------------------------------------------------------------- actions
 /** Life actions of the growth engine (names must not collide with other life/room actions). */
-export const GROWTH_ACTION_KINDS = ['chooseProf', 'respec', 'forge', 'forgePickup', 'forgeGift', 'research', 'chop', 'smash'] as const;
+export const GROWTH_ACTION_KINDS = [
+  'chooseProf',
+  'respec',
+  'forge',
+  'forgePickup',
+  'forgeGift',
+  'research',
+  'chop',
+  'smash',
+  // 성장 P2: 광산 floors and the 숲 깊은 곳 log.
+  'mineGo',
+  'mineRock',
+  'clearGate',
+] as const;
+/** Shared gates cleared once for everyone (숲 깊은 곳's fallen log: axe tier 2). */
+export const GATES: Record<string, { name: string; tool: ToolId; tier: number; flag: string }> = {
+  woods: { name: '숲 깊은 곳의 쓰러진 통나무', tool: 'axe', tier: 2, flag: 'trail' },
+};
 export type GrowthActionKind = (typeof GROWTH_ACTION_KINDS)[number];

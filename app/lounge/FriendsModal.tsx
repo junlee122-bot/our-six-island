@@ -14,6 +14,7 @@ import { NAMES } from '../lounge-text';
 import { Modal } from './Modal';
 import { lookFor } from './friend-looks';
 import type { Notify } from './Toast';
+import { FriendMoodBadge } from './MoodHud';
 
 export const AREA_NAMES: Record<string, string> = {
   village: NAMES.village,
@@ -22,6 +23,10 @@ export const AREA_NAMES: Record<string, string> = {
   tavern: '허풍 주점',
   wardrobe: NAMES.wardrobe,
   home: NAMES.home,
+  // 성장 P2 regions (lounge-areas.ts).
+  hill: '뒷산',
+  woods: '숲 깊은 곳',
+  mine: '광산',
 };
 
 export function FriendsModal({
@@ -90,8 +95,11 @@ export function FriendsModal({
       <ul className="l-online-list is-resting" aria-label="쉬는 중인 친구">
         {resting.map((actor) => (
           <li key={actor} data-testid={`resting-${actor}`}>
-            <span className="l-resting-face" aria-hidden="true">
-              <AvatarView actor={actor} look={lookFor(actor)} portrait />
+            <span className="l-mood-portrait">
+              <span className="l-resting-face" aria-hidden="true">
+                <AvatarView actor={actor} look={lookFor(actor)} portrait />
+              </span>
+              <FriendMoodBadge face={view.life?.mood?.faces[actor]} />
             </span>
             <strong>{ACTORS[actor]}</strong>
             <span>쉬는 중 · 마을을 산책해요</span>
@@ -143,7 +151,10 @@ export function FriendsModal({
           <ul className="l-online-list" aria-label="접속 중인 친구">
             {view.players.map((p) => (
               <li key={p.id}>
-                <AvatarView actor={p.actor} look={p.look} portrait />
+                <span className="l-mood-portrait">
+                  <AvatarView actor={p.actor} look={p.look} portrait />
+                  {p.id !== view.self && <FriendMoodBadge face={view.life?.mood?.faces[p.actor]} />}
+                </span>
                 <strong>{ACTORS[p.actor]}</strong>
                 <span>
                   {p.id === view.self
