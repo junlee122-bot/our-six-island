@@ -18,7 +18,7 @@ export const GAME_INFO = {
   poker: { name: '텍사스 홀덤', symbol: '♠', players: 3, stake: 10000 },
   blackjack: { name: '블랙잭', symbol: '21', players: 3, stake: 1000 },
   seotda: { name: '섯다', symbol: '섯', players: 3, stake: 10000 },
-  yacht: { name: '야추', symbol: '⚄', players: 2, stake: 1000 },
+  yacht: { name: '야추', symbol: '야', players: 2, stake: 1000 },
   liar: { name: '라이어 게임', symbol: '?', players: 4, stake: 0 },
 } as const;
 export const GAME_KINDS: GameKind[] = [

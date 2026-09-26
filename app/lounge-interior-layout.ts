@@ -231,7 +231,6 @@ export function overTable(t: Pick<InteriorTable, 'game' | 'rx' | 'rz'>, x: numbe
   const { rx, rz } = t;
   switch (t.game) {
     case 'poker':
-    case 'yacht':
     case 'liar':
       return (x / (rx + 0.07)) ** 2 + (z / (rz + 0.07)) ** 2 <= 1;
     case 'blackjack':

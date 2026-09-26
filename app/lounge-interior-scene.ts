@@ -13,6 +13,8 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { FRIEND_MODELS, FRIEND_PROP_SIZE, type FriendModel } from './lounge-friend-props';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { BAR_STOOL_Z, CLUB_MODELS, VIP_CORNER, type ClubModel } from './lounge-karchive-club';
 import { GAME_INFO, type GameKind } from './lounge-games';
@@ -552,6 +554,39 @@ export function createInteriorScene(
     );
     return group;
   };
+  /** Primitive stand-ins that the 라이어 table's kArchive models replace. */
+  const friendBodies: THREE.Mesh[] = [];
+  /** Geometries made here (disposed with the scene). */
+  const geometries: THREE.BufferGeometry[] = [];
+  /** Six pip faces for the rounded dice (red 1 and 4, as on Korean dice). */
+  let diceMats: THREE.MeshStandardMaterial[] | null = null;
+  const diceMaterials = () => {
+    if (diceMats) return diceMats;
+    const pips: Record<number, [number, number][]> = {
+      1: [[0.5, 0.5]],
+      2: [[0.27, 0.27], [0.73, 0.73]],
+      3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
+      4: [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]],
+      5: [[0.26, 0.26], [0.74, 0.26], [0.5, 0.5], [0.26, 0.74], [0.74, 0.74]],
+      6: [[0.28, 0.22], [0.72, 0.22], [0.28, 0.5], [0.72, 0.5], [0.28, 0.78], [0.72, 0.78]],
+    };
+    // BoxGeometry material order: +x, -x, +y, -y, +z, -z.
+    diceMats = [2, 5, 3, 4, 1, 6].map((n) => {
+      const texture = canvasTexture(64, 64, (c) => {
+        c.fillStyle = '#f7f0e0';
+        c.fillRect(0, 0, 64, 64);
+        c.fillStyle = n === 1 || n === 4 ? '#b3261e' : '#3d2f25';
+        for (const [x, y] of pips[n]) {
+          c.beginPath();
+          c.arc(x * 64, y * 64, n === 1 ? 10 : 6.5, 0, Math.PI * 2);
+          c.fill();
+        }
+      });
+      textures.push(texture);
+      return new THREE.MeshStandardMaterial({ map: texture, roughness: 0.45 });
+    });
+    return diceMats;
+  };
   const buildTable = (table: InteriorTable) => {
     const group = new THREE.Group();
     group.name = 'table-' + table.game;
@@ -587,37 +622,57 @@ export function createInteriorScene(
       for (let i = 0; i < 4; i++)
         cylinder(0.07, 0.07, 0.05 + i * 0.03, -0.45 + i * 0.3, TABLE_HEIGHT + 0.06 + i * 0.015, half ? -rz * 0.05 : 0.05, chipColors[i], group, 12);
       for (let i = 0; i < 3; i++) box(0.16, 0.012, 0.23, -0.3 + i * 0.3, TABLE_HEIGHT + 0.05, half ? -rz * 0.35 : -rz * 0.35, '#fbf7ec', group, false);
-    } else if (table.game === 'yacht' || table.game === 'liar') {
-      // Friends' tables: a round wooden table; 야추 has a felt dice tray
-      // with five dice, 라이어 게임 a cloth with a question card and cups.
-      const top = cylinder(1, 1, 0.08, 0, TABLE_HEIGHT, 0, wood, group, 36);
-      top.scale.set(rx, 1, rz);
-      const cloth = cylinder(1, 1, 0.02, 0, TABLE_HEIGHT + 0.05, 0, felt, group, 36);
-      cloth.scale.set(rx * 0.86, 1, rz * 0.86);
-      cloth.castShadow = false;
-      cylinder(0.12, 0.2, TABLE_HEIGHT - 0.04, 0, (TABLE_HEIGHT - 0.04) / 2, 0, wood, group, 12);
-      cylinder(0.34, 0.4, 0.04, 0, 0.02, 0, wood, group, 16);
-      if (table.game === 'yacht') {
-        const tray = box(0.62, 0.05, 0.42, 0, TABLE_HEIGHT + 0.08, 0, '#6b4a2e', group);
-        tray.receiveShadow = true;
-        const pips = ['#fbf7ec', '#f7e7c8', '#fbf7ec', '#f2d9d0', '#fbf7ec'];
-        for (let i = 0; i < 5; i++) {
-          const d = box(0.1, 0.1, 0.1, -0.22 + i * 0.11, TABLE_HEIGHT + 0.16, (i % 2 ? 0.06 : -0.06), pips[i], group);
-          d.rotation.y = i * 0.5;
-        }
-        // A dice cup lying by the tray.
-        const cup = cylinder(0.09, 0.07, 0.2, rx * 0.5, TABLE_HEIGHT + 0.16, rz * 0.2, '#8e2f36', group, 14);
-        cup.rotation.z = Math.PI / 2.4;
-      } else {
-        const card = box(0.26, 0.012, 0.36, 0, TABLE_HEIGHT + 0.07, 0, '#fff4dd', group, false);
-        card.rotation.y = 0.2;
-        const mark = box(0.08, 0.014, 0.16, 0, TABLE_HEIGHT + 0.08, -0.02, '#c0392b', group, false);
-        mark.rotation.y = 0.2;
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2;
-          cylinder(0.045, 0.04, 0.1, Math.cos(a) * rx * 0.62, TABLE_HEIGHT + 0.11, Math.sin(a) * rz * 0.62, '#f2efe6', group, 10);
-        }
+    } else if (table.game === 'yacht') {
+      // 야추: a card table (the kArchive one replaces this stand-in, like the
+      // hwatu tables) with a wooden dice tray, five rounded dice and a cup.
+      body.push(box(rx * 1.75, 0.1, rz * 1.8, 0, TABLE_HEIGHT - 0.04, 0, wood, group));
+      body.push(box(rx * 1.6, 0.03, rz * 1.62, 0, TABLE_HEIGHT + 0.02, 0, felt, group));
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
+        body.push(box(0.1, TABLE_HEIGHT - 0.08, 0.1, x * rx * 0.76, (TABLE_HEIGHT - 0.08) / 2, z * rz * 0.78, wood, group));
+      const trayWood = surface('#7a5230');
+      box(0.5, 0.03, 0.34, 0.02, TABLE_HEIGHT + 0.03, -0.02, trayWood, group);
+      for (const [w, d, x, z] of [[0.5, 0.03, 0.02, -0.175], [0.5, 0.03, 0.02, 0.135], [0.03, 0.34, -0.215, -0.02], [0.03, 0.34, 0.255, -0.02]] as const)
+        box(w, 0.06, d, x, TABLE_HEIGHT + 0.06, z, trayWood, group);
+      box(0.44, 0.012, 0.28, 0.02, TABLE_HEIGHT + 0.05, -0.02, surface('#2f5f8f', { roughness: 1 }), group, false);
+      const dice = diceMaterials();
+      const cube = new RoundedBoxGeometry(0.075, 0.075, 0.075, 3, 0.014);
+      geometries.push(cube);
+      const faces: number[] = [5, 3, 6, 2, 4];
+      for (let i = 0; i < 5; i++) {
+        const d = new THREE.Mesh(cube, dice);
+        // Turn the rolled face up (materials: +x 2, -x 5, +y 3, -y 4, +z 1, -z 6).
+        const up = faces[i];
+        d.rotation.order = 'YXZ';
+        d.rotation.set(up === 1 ? -Math.PI / 2 : up === 6 ? Math.PI / 2 : up === 4 ? Math.PI : 0, i * 0.45, up === 2 ? Math.PI / 2 : up === 5 ? -Math.PI / 2 : 0);
+        d.position.set(-0.13 + i * 0.075, TABLE_HEIGHT + 0.095, i % 2 ? 0.03 : -0.06);
+        d.castShadow = true;
+        group.add(d);
       }
+      // The dice cup: a turned leather cup lying on its side by the tray.
+      const profile = [
+        [0, 0], [0.055, 0], [0.06, 0.008], [0.062, 0.1], [0.07, 0.112], [0.066, 0.118], [0.056, 0.112], [0.054, 0.01],
+      ].map(([x, y]) => new THREE.Vector2(x, y));
+      const cupGeometry = new THREE.LatheGeometry(profile, 18);
+      geometries.push(cupGeometry);
+      const cup = new THREE.Mesh(cupGeometry, surface('#8e2f36', { roughness: 0.7, side: THREE.DoubleSide }));
+      cup.rotation.set(0, -0.6, Math.PI / 2);
+      cup.position.set(rx * 0.62, TABLE_HEIGHT + 0.07, rz * 0.35);
+      cup.castShadow = true;
+      group.add(cup);
+    } else if (table.game === 'liar') {
+      // 라이어 게임: an oval meeting table (the kArchive one replaces this),
+      // a question card and a service bell in the middle.
+      const top = cylinder(1, 1, 0.07, 0, TABLE_HEIGHT - 0.03, 0, surface('#2f5d62'), group, 40);
+      top.scale.set(rx * 0.95, 1, rz * 0.95);
+      friendBodies.push(top);
+      friendBodies.push(cylinder(0.1, 0.16, TABLE_HEIGHT - 0.06, -rx * 0.45, (TABLE_HEIGHT - 0.06) / 2, 0, wood, group, 12));
+      friendBodies.push(cylinder(0.1, 0.16, TABLE_HEIGHT - 0.06, rx * 0.45, (TABLE_HEIGHT - 0.06) / 2, 0, wood, group, 12));
+      const card = box(0.2, 0.01, 0.28, -0.18, TABLE_HEIGHT + 0.012, 0.02, '#fff4dd', group, false);
+      card.rotation.y = 0.25;
+      const mark = box(0.06, 0.012, 0.12, -0.18, TABLE_HEIGHT + 0.018, 0.0, '#c0392b', group, false);
+      mark.rotation.y = 0.25;
+      const bell = cylinder(0.02, 0.07, 0.07, 0.12, TABLE_HEIGHT + 0.035, -0.02, '#e9dcc0', group, 16);
+      friendBodies.push(bell);
     } else if (table.game === 'chess') {
       box(rx * 1.7, 0.1, rz * 1.9, 0, TABLE_HEIGHT, 0, wood, group);
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const)
@@ -670,6 +725,11 @@ export function createInteriorScene(
   const setSeats = (game: GameKind, seats: SeatShow[]) => {
     const node = nodes.get(game);
     if (!node) return false;
+    // The 라이어 table's bell is pressed once friends sit down.
+    if (game === 'liar') {
+      bells.live = seats.some((s) => s.state !== 'empty');
+      showBell();
+    }
     const key = seats.map((s) => `${s.world.x.toFixed(2)},${s.world.z.toFixed(2)},${s.state}`).join('|');
     if (key === node.key) return false;
     node.key = key;
@@ -880,6 +940,94 @@ export function createInteriorScene(
       // The primitive stand-ins stay when a model cannot be loaded.
       .catch(() => {});
 
+  // ------------------------------------------- friends' tables (hall only)
+  // 라이어: the oval meeting table (chairs are the banquet chairs above), a
+  // service bell in the middle (pressed once friends sit down), a lectern
+  // and a ballot box at the front. 야추: a desk-calendar score pad and a pencil.
+  let bells: { ready: THREE.Object3D | null; pressed: THREE.Object3D | null; live: boolean } = {
+    ready: null,
+    pressed: null,
+    live: false,
+  };
+  const showBell = () => {
+    if (bells.ready) bells.ready.visible = !bells.live || !bells.pressed;
+    if (bells.pressed) bells.pressed.visible = bells.live;
+  };
+  const liarNode = nodes.get('liar'),
+    yachtNode = nodes.get('yacht');
+  /** A copy scaled so its longest side (or height) is `size`. */
+  const propCopy = (model: THREE.Group, key: FriendModel, size: number, by: 'w' | 'h' = 'w') =>
+    clubCopy(model, size / (by === 'h' ? FRIEND_MODELS[key].h : Math.max(FRIEND_MODELS[key].w, FRIEND_MODELS[key].h)));
+  const placeFriend: Partial<Record<FriendModel, (model: THREE.Group) => void>> = {
+    ovalTable: (model) => {
+      if (!liarNode) return;
+      for (const mesh of friendBodies) mesh.visible = false;
+      const size = FRIEND_MODELS.ovalTable,
+        { rx, rz } = liarNode.table;
+      // Just inside the walk ellipse the chairs are pulled up to.
+      liarNode.group.add(clubCopy(model, [(rx * 1.9) / size.w, TABLE_HEIGHT / size.top, (rz * 1.9) / size.d]));
+    },
+    serviceBell: (model) => {
+      if (!liarNode) return;
+      const bell = propCopy(model, 'serviceBell', FRIEND_PROP_SIZE.bell);
+      bell.position.set(0.12, TABLE_HEIGHT, -0.02);
+      liarNode.group.add(bell);
+      bells = { ...bells, ready: bell };
+      showBell();
+    },
+    serviceBellPressed: (model) => {
+      if (!liarNode) return;
+      const bell = propCopy(model, 'serviceBellPressed', FRIEND_PROP_SIZE.bell);
+      bell.position.set(0.12, TABLE_HEIGHT, -0.02);
+      liarNode.group.add(bell);
+      bells = { ...bells, pressed: bell };
+      showBell();
+    },
+    lectern: (model) => {
+      if (!liarNode) return;
+      const { rx, rz } = liarNode.table;
+      const lectern = propCopy(model, 'lectern', FRIEND_PROP_SIZE.lectern, 'h');
+      lectern.position.set(rx * 0.72, 0, rz + 0.42);
+      lectern.rotation.y = Math.PI - 0.35;
+      liarNode.group.add(lectern);
+    },
+    ballotBox: (model) => {
+      if (!liarNode) return;
+      const { rx, rz } = liarNode.table;
+      const box = propCopy(model, 'ballotBox', FRIEND_PROP_SIZE.ballotBox, 'h');
+      box.position.set(-rx * 0.3, 0, rz + 0.46);
+      box.rotation.y = 0.25;
+      liarNode.group.add(box);
+    },
+    deskCalendar: (model) => {
+      if (!yachtNode) return;
+      const { rx, rz } = yachtNode.table;
+      const pad = propCopy(model, 'deskCalendar', FRIEND_PROP_SIZE.calendar);
+      pad.position.set(-rx * 0.6, TABLE_HEIGHT + 0.01, rz * 0.45);
+      pad.rotation.y = 0.5;
+      yachtNode.group.add(pad);
+    },
+    pencil: (model) => {
+      if (!yachtNode) return;
+      const { rx, rz } = yachtNode.table;
+      const pencil = propCopy(model, 'pencil', FRIEND_PROP_SIZE.pencil);
+      pencil.position.set(-rx * 0.28, TABLE_HEIGHT + 0.012, rz * 0.62);
+      pencil.rotation.y = -0.4;
+      yachtNode.group.add(pencil);
+    },
+  };
+  if (area === 'lounge')
+    for (const key of Object.keys(placeFriend) as FriendModel[])
+      loader
+        .loadAsync(LOUNGE_MODELS[key])
+        .then((gltf) => {
+          if (disposed) return disposeModel(gltf.scene);
+          loaded.push(gltf.scene);
+          placeFriend[key]!(gltf.scene);
+          modelsChanged = true;
+        })
+        .catch(() => {});
+
   return {
     sun,
     tables,
@@ -913,6 +1061,7 @@ export function createInteriorScene(
       for (const m of Object.values(ringMaterials)) m.dispose();
       for (const g of Object.values(seatGeometry)) g.dispose();
       ringGeometry.dispose();
+      for (const g of geometries) g.dispose();
       hitMaterial.dispose();
       for (const t of textures) t.dispose();
       sun.shadow.dispose();

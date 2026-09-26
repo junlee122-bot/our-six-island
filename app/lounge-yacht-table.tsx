@@ -200,7 +200,7 @@ export function YachtTable({
   const line = over
     ? g.winners.length > 1
       ? `${g.winners.map((w) => names[w]).join('·')} 님이 ${totals[g.winners[0]].total}점으로 함께 1등이에요!`
-      : `${josa(names[g.winners[0]] ?? '', '이/가')} ${totals[g.winners[0]]?.total ?? 0}점으로 이겼어요! 🎉`
+      : `${josa(names[g.winners[0]] ?? '', '이/가')} ${totals[g.winners[0]]?.total ?? 0}점으로 이겼어요!`
     : mine
       ? g.rolls === 0
         ? '내 차례예요! Space(또는 굴리기)로 주사위 다섯 개를 굴려요.'
@@ -219,7 +219,7 @@ export function YachtTable({
   return (
     <div className="y-club" data-testid="yacht-table" data-phase={g.phase} data-my-turn={mine || undefined}>
       <FriendHost
-        symbol="⚄"
+        symbol={<Dices size={28} strokeWidth={2.2} />}
         game="야추"
         line={line}
         aside={aside}

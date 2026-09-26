@@ -13,23 +13,20 @@ export const PARTY_EXTEND_MS = 30_000;
 
 export const PARTY_ITEMS: Record<
   PartyItem,
-  { name: string; emoji: string; effect: string; games: readonly GameKind[] }
+  { name: string; effect: string; games: readonly GameKind[] }
 > = {
   strawberry: {
     name: '딸기',
-    emoji: '🍓',
     effect: '상대 패 한 장을 5초 동안 훔쳐봐요. 훔쳐본 건 모두에게 알려져요.',
     games: ['gostop'],
   },
   carrot: {
     name: '당근',
-    emoji: '🥕',
     effect: '굴린 주사위 하나를 한 번 더 굴려요 (굴리기 횟수는 그대로).',
     games: ['yacht'],
   },
   watermelon: {
     name: '수박',
-    emoji: '🍉',
     effect: '지금 흐르는 시간을 30초 늘려요.',
     games: ['yacht', 'gostop', 'liar', 'chess'],
   },
@@ -88,7 +85,7 @@ export const PARTY_REJECT = {
 
 /** What the table log says (without the peeked card). */
 export function partyLine(item: PartyItem, who: string, target?: string, extra = ''): string {
-  if (item === 'strawberry') return `${who}님이 딸기를 먹고 ${target ?? '상대'}님의 패 한 장을 훔쳐봤어요 👀`;
+  if (item === 'strawberry') return `${who}님이 딸기를 먹고 ${target ?? '상대'}님의 패 한 장을 훔쳐봤어요`;
   if (item === 'carrot') return `${who}님이 당근을 먹고 주사위 하나를 다시 굴렸어요${extra ? ` (${extra})` : ''}`;
   return `${who}님이 수박을 먹고 시간을 30초 늘렸어요`;
 }

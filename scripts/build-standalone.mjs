@@ -281,6 +281,7 @@ const licenses = {
     'utf8',
   ),
   hwatu: fs.readFileSync(path.join(root, 'public/assets/lounge/HWATU-ATTRIBUTION.txt'), 'utf8'),
+  kenneySfx: fs.readFileSync(path.join(root, 'public/assets/lounge/sfx/LICENSE-KENNEY.txt'), 'utf8'),
 };
 const escapeAttribute = (value) =>
   value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;');

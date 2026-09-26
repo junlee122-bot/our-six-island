@@ -20,14 +20,15 @@
 | A+ | OpenAI 생성 + [Spritegen](https://github.com/aldegad/sprite-gen) v2.7.0 | 7인 걷기·달리기 84프레임 | `lounge/motion/*.webp` | 도구 라이선스 파일 보관 | 사용 중 |
 | B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
 | C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
-| D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) — GLB 28개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `village/`, `village/expansion/`, `village/civic/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
+| D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) — GLB 35개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
 | H | chess.js 1.4.0 | 체스 규칙 | npm | BSD-2 | 사용 중 |
 | I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부 | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`) | 자체 제작 | 사용 중 |
 | J | Canvas 런타임 가공 | 머리·피부 RGB 염색, 마젠타 배경 제거, 의상 보행 변형 | 코드(`lounge-color.ts`, `lounge-gait.ts`, `lounge-sprites.ts`) | 자체 제작 | 사용 중 |
-| — | 사운드 | 효과음 합성 코드만 있음 | — | — | 오디오 파일 0개 |
+| K | Kenney Casino Audio 1.1 · Interface Sounds 1.0 | 야추 주사위(흔들기·던지기·잡기·한 개 던지기)·라이어 카드·타이머 틱·투표·확인 효과음 13종 | `public/assets/lounge/sfx/*.ogg`(원본) + `*.m4a`(AAC 사본) | **CC0**, `LICENSE-KENNEY.txt` 보관 | 사용 중(없거나 디코딩 실패 시 합성음) |
+| — | 그 밖의 사운드 | 음악·발걸음·카드·칩·UI는 합성 코드 | — | — | — |
 
 배포 HTML에는 three.js, chess.js, Chessnut, hwatu, kArchive/3DAssets 고지를 JSON으로 함께 넣습니다(`#third-party-licenses`).
 
@@ -574,3 +575,12 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 생성본(3504×2336)은 오프라인에서 배경을 뺐습니다. 가장자리 픽셀은 마젠타 비율만큼 색을 역산(스필 제거)하고 알파를 이진화했으며, 400px 미만의 떨어진 조각은 지웠습니다. 2100×1400으로 lanczos3 축소 후 배경은 투명(RGB는 #ff00ff 유지)으로 저장하고, 런타임은 **무손실 WebP**(`scripts/optimize-assets.mjs`의 목록에 추가, 각 약 1.0 MB·1.3 MB)입니다. 정확한 프롬프트·원본 주소·해시는 [outfits3-generation.json](public/assets/lounge/outfits3-generation.json)에 기록했습니다.
 
 걷기·달리기는 컷아웃 리그입니다(`node --experimental-strip-types scripts/build-lounge-rig.mjs`; 기존 칸의 리그 값은 그대로). 세 의상 모두 치마·코트·앞치마가 몸통에 붙어 있는 hem 모드이고, 메이드와 케이프 코트는 팔을 흔들지 않습니다(앞치마 옆 검정 코트 자락이 팔로 잘못 잘리던 문제). 금빛 브레이드는 양팔이 모두 잡힐 때만 팔을 흔듭니다. 머리 염색은 파란 머리 규약을 따르며, 팔에 가려 끊긴 민서의 긴 머리도 염색되도록 이 아틀라스들만 `looseBlueHair`를 씁니다(옷에 파란색이 없음). 피부 염색은 얼굴·목·맨팔·맨다리만 칠하고 장갑·타이츠·금빛 장식·앞치마는 칠하지 않습니다. 이 얼굴들은 눈가에 옅은 크림색 하이라이트가 있어 `paleFaceHighlights`로 눈 제외 조건을 좁혔습니다. 눈높이(안경 위치)는 `LADIES_EYES`/`MAID_EYES`에 쟀습니다.
+
+## 야추·라이어 게임 에셋 · 2026-09-26
+
+`scratchpad/yacht-liar-assets.md` 조사의 1–2순위를 적용했습니다.
+
+- **3D 회관**: 야추 테이블은 이미 배포 중인 kArchive 카드 테이블(`club/cardTable.glb`)을 다시 쓰고, 그 위의 나무 트레이·주사위 5개(three.js `RoundedBoxGeometry`, 눈은 캔버스 텍스처, 1·4는 빨강)·가죽 컵(`LatheGeometry`)은 코드로 그립니다(추가 0 KB). 라이어 테이블은 kArchive 각진 타원 회의 테이블 + 기존 연회 의자, 가운데 알림종(앉으면 눌린 모양), 앞쪽 발언대와 투표함(표 넣는 받침대), 야추 테이블 위 탁상 달력 점수표와 연필입니다. 자료: kArchive · 출처: 쓰레드 dogfooter. 7종 원본 2,756,920바이트 → 웹 사본 1,337,824바이트(`node scripts/optimize-assets.mjs models lounge/friends`, 타원 테이블 1024², 나머지 512²). 원본 주소·SHA-256·바운딩 박스·약관 문구는 `public/models/lounge/friends/assets.json`, 영문 출처는 `public/models/lounge/ATTRIBUTION.md`. 기념일 세트(달력 `newyear-09`, 연필 `exam-06`)는 가장 긴 변이 2 m로 정규화되어 있어 런타임에 0.2 m로 줄입니다(`app/lounge-friend-props.ts`). 회관에 들어갈 때만 받습니다.
+- **효과음**: Kenney Casino Audio 1.1과 Interface Sounds 1.0(둘 다 CC0) 13종을 원본 OGG 그대로 두고, Safari용 AAC(m4a, 64 kbit/s, ffmpeg 7.0.2) 사본을 만들었습니다(합계 약 230 KB). 목록과 음량은 `app/lounge-sfx-files.ts`, 재생은 `loungeAudio.sample()`(효과음 채널, 소리 설정을 그대로 따름)입니다. 파일을 아직 받는 중이거나 두 형식 모두 디코딩하지 못하면 기존 합성음으로 대신합니다. `scripts/build-standalone.mjs`가 음악 파일처럼 내용 해시 이름으로 복사하고, 없는 파일은 빈 경로로 바꿉니다. 받은 곳(원본 라이선스 파일이 든 미러)은 `public/assets/lounge/sfx/LICENSE-KENNEY.txt`에 적었습니다.
+- **UI 아이콘**: 두 게임 화면은 이모지 없이 lucide-react(ISC, 이미 의존성) 아이콘(`Dices`, `VenetianMask`, `Vote`, `Crown`, `Lock`, `Eye`)과 기존 작물 그림(`ItemIcon`)을 씁니다. 게임 화면의 주사위는 CSS 3D 정육면체(둥근 면·눈은 코드)로 그려 3D 회관과 따로 WebGL 컨텍스트를 만들지 않습니다.
+

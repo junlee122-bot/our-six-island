@@ -6,7 +6,7 @@
 // scaled down to desk size. Pure data shared by lounge-interior-scene.ts and
 // the tests.
 export const FRIEND_MODELS = {
-  ovalTable: { w: 1.2, d: 0.754, top: 0.511 },
+  ovalTable: { w: 1.2, d: 0.754, top: 0.511, h: 0.511 },
   serviceBell: { h: 0.08, w: 0.1 },
   serviceBellPressed: { h: 0.067, w: 0.1 },
   lectern: { h: 0.997, w: 0.55 },

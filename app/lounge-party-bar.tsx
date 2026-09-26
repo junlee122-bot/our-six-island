@@ -3,7 +3,8 @@
 // something at this table, one per round, and the table's party log. A peek
 // (딸기) shows the card only to me; everyone reads that I peeked.
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Eye, Sparkles } from 'lucide-react';
+import { ItemIcon } from './lounge/ItemIcon';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import {
   PARTY_ITEMS,
@@ -84,9 +85,7 @@ export function PartyBar({
                 aria-pressed={choose?.item === item && choose.key === key}
                 data-testid={`party-${item}`}
               >
-                <span className="l-party-emoji" aria-hidden="true">
-                  {info.emoji}
-                </span>
+                <ItemIcon id={item} size={30} />
                 <span>
                   <strong>
                     {info.name} <em>×{n}</em>
@@ -130,7 +129,7 @@ export function PartyBar({
             </>
           ) : (
             <span>
-              👀 {names[peek.seat]}의 패를 누가 훔쳐보는 중… {peekLeft}초
+              <Eye size={15} aria-hidden="true" /> {names[peek.seat]}의 패를 누가 훔쳐보는 중… {peekLeft}초
             </span>
           )}
         </div>

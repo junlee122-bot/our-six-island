@@ -15,8 +15,8 @@ export function FriendHost({
   className = '',
   children,
 }: {
-  /** The game's badge (⚄, ?). */
-  symbol: string;
+  /** The game's badge (a lucide icon). */
+  symbol: ReactNode;
   /** '야추' → '야추 테이블' on the right. */
   game: string;
   line: string;

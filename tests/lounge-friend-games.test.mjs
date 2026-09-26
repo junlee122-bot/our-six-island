@@ -38,6 +38,11 @@ import { TURN_LIMIT_MS, READY_LIMIT_MS, tableIdOf, TABLE_AREA } from '../app/lou
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger, validateLedger, INITIAL_BEOM } from '../app/lounge-economy.ts';
 import { defaultLook } from '../app/lounge-look.ts';
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { FRIEND_MODELS } from '../app/lounge-friend-props.ts';
+import { LOUNGE_MODELS } from '../app/lounge-model-assets.ts';
+import { SFX_FILES } from '../app/lounge-sfx-files.ts';
 
 const seq = (...values) => {
   let i = 0;
@@ -556,7 +561,7 @@ test('the cloud engine takes the crop from the bag, and only on success', async 
   await run(me, 'action', { action: { kind: 'invite', game: 'yacht', players: [], required: 2, table: YACHT, party: true } });
   const inv = (await run(me, 'read')).packet.invites.find((i) => i.status === 'waiting');
   await run(you, 'action', { action: { kind: 'reply', id: inv.id, accept: true } });
-  let y = (await run(me, 'read')).packet.yacht;
+  const y = (await run(me, 'read')).packet.yacht;
   await run(me, 'action', { action: { kind: 'yacht', id: y.id, revision: y.revision, action: { kind: 'roll' } } });
   world.life.bag[uid].produce.carrot = 0;
   let r = await run(me, 'action', { action: { kind: 'party', game: 'yacht', id: y.id, item: 'carrot', die: 0 } });
@@ -571,4 +576,38 @@ test('the cloud engine takes the crop from the bag, and only on success', async 
   assert.equal(world.life.bag[uid].produce.carrot, 1, 'a refused use keeps the crop');
   assert.throws(() => eatPartyItem({ produce: { carrot: 0 } }, 'carrot'));
   validateLedger(world.ledger);
+});
+
+// ------------------------------------------------ assets of the two tables
+
+
+test('kArchive props of the friends’ tables: originals match assets.json, sizes match the code', () => {
+  const root = new URL('../public/models/', import.meta.url);
+  const manifest = JSON.parse(fs.readFileSync(new URL('lounge/friends/assets.json', root), 'utf8'));
+  assert.match(manifest.terms, /출처 표기 필수/);
+  assert.equal(manifest.assets.length, Object.keys(FRIEND_MODELS).length);
+  for (const a of manifest.assets) {
+    const original = fs.readFileSync(new URL(`_originals/lounge/friends/${a.file}`, root));
+    assert.equal(original.length, a.bytes, a.key);
+    assert.equal(createHash('sha256').update(original).digest('hex'), a.sha256, a.key);
+    const web = fs.readFileSync(new URL(`lounge/friends/${a.file}`, root));
+    assert.equal(web.toString('ascii', 0, 4), 'glTF');
+    assert.ok(web.length < original.length, `${a.key} web copy is smaller`);
+    assert.equal(LOUNGE_MODELS[a.key], `/models/lounge/friends/${a.file}`);
+    const m = FRIEND_MODELS[a.key];
+    assert.ok(Math.abs(a.bounds.size[1] - m.h) < 0.005, `${a.key} height`);
+    assert.ok(Math.abs(Math.max(a.bounds.size[0], a.bounds.size[2]) - (m.w ?? 0)) < 0.005 || a.key === 'deskCalendar' || a.key === 'lectern' || a.key === 'ballotBox' || a.key === 'ovalTable', `${a.key} width`);
+  }
+  const attribution = fs.readFileSync(new URL('lounge/ATTRIBUTION.md', root), 'utf8');
+  for (const a of manifest.assets) assert.ok(attribution.includes(a.source), a.source);
+});
+
+test('every recorded sound has an Ogg original and an AAC copy, and a license', () => {
+  const pub = new URL('../public', import.meta.url);
+  for (const [id, s] of Object.entries(SFX_FILES)) {
+    assert.deepEqual(s.files.map((f) => f.split('.').pop()), ['ogg', 'm4a'], id);
+    for (const f of s.files) assert.ok(fs.statSync(new URL('.' + f, pub + '/')).size > 500, f);
+    assert.ok(s.gain > 0 && s.gain <= 0.5, id);
+  }
+  assert.match(fs.readFileSync(new URL('./assets/lounge/sfx/LICENSE-KENNEY.txt', pub + '/'), 'utf8'), /CC0/);
 });

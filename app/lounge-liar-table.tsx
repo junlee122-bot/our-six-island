@@ -5,7 +5,7 @@
 // The server's view never holds the word for the liar or watchers, nor the
 // liar's seat before it is public (lounge-liar.ts liarView).
 import { useEffect, useRef, useState } from 'react';
-import { Check, Crown, Eye, MessageCircle, Send, Vote } from 'lucide-react';
+import { Check, Crown, Eye, MessageCircle, Send, VenetianMask, Vote } from 'lucide-react';
 import {
   LIAR_HINT_MAX,
   LIAR_LIMIT_MS,
@@ -127,7 +127,7 @@ export function LiarTable({
   return (
     <div className="lg-club" data-testid="liar-table" data-phase={g.phase} data-role={g.role}>
       <FriendHost
-        symbol="?"
+        symbol={<VenetianMask size={28} strokeWidth={2.2} />}
         game="라이어 게임"
         line={line}
         aside={g.log.length ? g.log[g.log.length - 1].text : undefined}
