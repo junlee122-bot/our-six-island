@@ -70,6 +70,7 @@ import {
   chessOfferDraw,
   chessAnswerDraw,
   chessTimeout,
+  chessPracticeMove,
   type ChessMatch,
 } from "./lounge-chess.ts";
 import {
@@ -102,6 +103,10 @@ import {
   TABLE_STAKES,
   stakeLock,
   tableIdOf,
+  minPlayers,
+  PRACTICE_GAMES,
+  PRACTICE_NAMES,
+  isPracticeAi,
   emptyLoungeView as empty,
   type GameKind,
   type Area,
@@ -146,6 +151,11 @@ export type GameInvite = {
    */
   fill?: string;
   /**
+   * 연습 판 (chess / go-stop vs the practice AI): no 범 is reserved or
+   * settled, the other seats are AI seats (`PRACTICE_AI` ids).
+   */
+  practice?: boolean;
+  /**
    * Set on a table-forming invite: the interior table id (`tableIdOf(game)`,
    * e.g. 'lounge-seotda') the host sits at. `invited` are the friends called
    * over; anyone standing in that interior may also sit (reply accept) without
@@ -163,6 +173,8 @@ export type LoungeTable = {
   ready: string[];
   /** Server-clock end of the ready check after a round (absent while playing). */
   readyDeadline?: number;
+  /** 연습 판: the rest of the seats are the practice AI; nothing is staked. */
+  practice?: boolean;
 };
 export type LoungeTables = Partial<Record<GameKind, LoungeTable>>;
 export type LoungePlayer = {
@@ -267,6 +279,8 @@ export type LoungeAction =
       required?: number;
       /** Interior table id: sit down at that table (host) or call friends to it. */
       table?: string;
+      /** With `table`: a 연습 판 against the practice AI (chess, go-stop; no 범). */
+      practice?: boolean;
     }
   | { kind: "area"; area: Area; x?: number; y?: number; home?: number }
   | { kind: "draw"; id: string; op: "offer" | "accept" | "decline" }
@@ -324,7 +338,7 @@ export type HostedRoomSnapshot = {
   lastChat: [string, number][];
   due: Partial<
     Record<
-      "poker" | "blackjack" | "seotda" | "gostop",
+      "poker" | "blackjack" | "seotda" | "gostop" | "chess",
       { id: string; revision: number; at: number }
     >
   >;
@@ -693,7 +707,9 @@ export class LoungeRoom {
               : kind === "seotda"
                 ? g.phase !== "betting"
                 : false;
-        return automatic || this.awaySet(kind).has(g.turn)
+        return automatic ||
+          this.awaySet(kind).has(g.turn) ||
+          this.aiSeat(kind, g.turn)
           ? {
               id: g.id,
               revision: g.revision,
@@ -738,6 +754,19 @@ export class LoungeRoom {
         };
       else delete this.serverDue[kind];
     }
+    // 연습 체스: the practice AI answers after a short think.
+    const chess = this.chess,
+      aiPly = chess && !chess.winner ? chess.moves.length : -1;
+    if (aiPly < 0 || !this.aiSeat("chess", aiPly % 2)) delete this.serverDue.chess;
+    else {
+      const due = this.serverDue.chess;
+      if (!due || due.id !== chess!.id || due.revision !== aiPly)
+        this.serverDue.chess = { id: chess!.id, revision: aiPly, at: now + 900 };
+      else if (due.at <= now) {
+        this.autoStep("chess", false);
+        delete this.serverDue.chess;
+      }
+    }
     // Turn deadlines: the server acts for a seat that let its clock run out.
     for (const kind of GAME_KINDS) {
       const d = this.deadlines[kind],
@@ -760,6 +789,10 @@ export class LoungeRoom {
     if (changed) this.view = { ...this.view, tables };
     this.cancelStaleFills();
     this.sync();
+  }
+  /** Whether this seat of the current match is the practice AI (연습 판). */
+  private aiSeat(kind: GameKind, seat: number) {
+    return isPracticeAi(this.view.seats[kind][seat]);
   }
   private awaySet(kind: GameKind) {
     return kind === "poker"
@@ -887,8 +920,15 @@ export class LoungeRoom {
       this.go = next;
     } else {
       const g = this.chess;
-      if (!g || g.winner || !timeout) return false;
-      const next = chessTimeout(g);
+      if (!g || g.winner) return false;
+      const seat = g.moves.length % 2;
+      let next: ChessMatch | null = null;
+      if (this.aiSeat("chess", seat)) {
+        const m = chessPracticeMove(g);
+        next = m
+          ? chessMove(g, seat, m.slice(0, 2), m.slice(2, 4), m[4] || undefined)
+          : null;
+      } else if (timeout) next = chessTimeout(g);
       if (!next) return false;
       this.settle(kind, next);
       this.chess = next;

@@ -21,6 +21,22 @@ export const GAME_KINDS: GameKind[] = [
 ];
 export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
+/**
+ * 혼자 하기: blackjack can be played alone against the dealer (루미) with the
+ * usual stake; chess and go-stop have a 연습 판 against the practice AI with
+ * no 범 at stake. Everything else needs friends.
+ */
+export const minPlayers = (game: GameKind) => (game === 'blackjack' ? 1 : 2);
+export const PRACTICE_GAMES: readonly GameKind[] = ['chess', 'gostop'];
+/** Seat ids of the practice AI (never a member id: those are UUIDs). */
+export const PRACTICE_AI_PREFIX = 'ai:';
+export const isPracticeAi = (id: unknown): id is string =>
+  typeof id === 'string' && id.startsWith(PRACTICE_AI_PREFIX);
+/** The practice AI's names, seat by seat after mine. */
+export const PRACTICE_NAMES: Partial<Record<GameKind, readonly string[]>> = {
+  chess: ['루미'],
+  gostop: ['매화', '루미'],
+};
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
 export const FLEX_GAMES: readonly GameKind[] = ['poker', 'blackjack', 'seotda'];
 export const TABLE_STAKES = [1000, 5000, 10000, 20000, 50000, 100000] as const;

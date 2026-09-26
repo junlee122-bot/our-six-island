@@ -39,6 +39,8 @@ type Receipt = {
   code: string;
   ok: boolean;
   error: string;
+  /** Server time it was written; receipts expire after RECEIPT_TTL_MS (D-4). */
+  at?: number;
 };
 export type CloudWorld = {
   schema: 1;
@@ -46,6 +48,12 @@ export type CloudWorld = {
   rooms: Record<string, Room>;
   receipts: Record<string, Receipt[]>;
   epochs?: Record<string, number>;
+  /**
+   * Highest (connection, sequence) each member had processed. Replay guard for
+   * requests whose receipt was already trimmed (D-4); clients send one request
+   * at a time per connection with increasing sequences.
+   */
+  sequences?: Record<string, { connection: string; sequence: number }>;
   /** Phase 2 life state (farms, bags, mail…). Absent in older worlds. */
   life?: LifeState;
 };
@@ -68,6 +76,50 @@ export class CloudError extends Error {
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const CLOUD_LEASE_MS = 180000;
+/**
+ * D-3: a plain `read` only rewrites the world row to refresh `lease.seen` when
+ * the lease is older than this (well under CLOUD_LEASE_MS even with the 45 s
+ * hidden-tab poll and one missed poll). Fresher leases are refreshed only when
+ * the transition commits anyway (SEEN_PIGGYBACK_MS granularity).
+ */
+export const SEEN_REFRESH_MS = 60000;
+const SEEN_PIGGYBACK_MS = 15000;
+/**
+ * D-4: receipts made up ~98% of the world row at 512 per member. A client
+ * retries one request at a time within seconds, so a short window is plenty;
+ * older replays are refused by `sequences` / lease sequence / epoch checks.
+ */
+export const RECEIPT_CAP = 64;
+export const RECEIPT_TTL_MS = 10 * 60000;
+/** Keeps each member's receipts that are younger than the TTL, newest RECEIPT_CAP. */
+export function trimReceipts(
+  receipts: Record<string, Receipt[]>,
+  now: number,
+): Record<string, Receipt[]> {
+  const next: Record<string, Receipt[]> = {};
+  for (const [id, list] of Object.entries(receipts)) {
+    // Legacy receipts have no `at`: they predate this rule and are dropped.
+    const kept = list
+      .filter((r) => typeof r.at === 'number' && r.at > now - RECEIPT_TTL_MS)
+      .slice(-RECEIPT_CAP);
+    if (kept.length) next[id] = kept;
+  }
+  return next;
+}
+/**
+ * D-8: a deliberate rejection (stored as a 409 receipt) vs an engine bug.
+ * Rejections are CloudError/LifeError, or a plain Error with a Korean
+ * user-facing message (economy/room rules). TypeError, RangeError and other
+ * runtime errors are bugs: they must not be committed as receipts.
+ */
+export function isRejection(e: unknown): e is Error {
+  if (e instanceof CloudError || e instanceof LifeError) return true;
+  return (
+    e instanceof Error &&
+    Object.getPrototypeOf(e) === Error.prototype &&
+    /[\uAC00-\uD7A3]/.test(e.message)
+  );
+}
 function code() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789',
     data = crypto.getRandomValues(new Uint8Array(10));
@@ -188,6 +240,8 @@ export function cloudTransition(
   let ok = true,
     error = '',
     status = 200;
+  /** A read's lease whose `seen` is refreshed only if we commit anyway (D-3). */
+  let piggyback: Lease | null = null;
   const mutating = !['read', 'wallet'].includes(command.op);
   if (
     mutating &&
@@ -200,6 +254,15 @@ export function cloudTransition(
     : null;
   if (old && old.hash !== hash)
     throw new CloudError('이미 사용한 요청 번호입니다.', 409);
+  const mark = g.sequences?.[member.id];
+  if (
+    mutating &&
+    !old &&
+    mark?.connection === command.connection &&
+    Number.isSafeInteger(command.sequence) &&
+    command.sequence! <= mark.sequence
+  )
+    throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
   const receipt = old ?? null;
   if (!receipt) {
     try {
@@ -331,7 +394,8 @@ export function cloudTransition(
         )
           throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
         if (mutating) lease.sequence = command.sequence!;
-        if (now - lease.seen > 15000 || mutating) lease.seen = now;
+        if (mutating || now - lease.seen > SEEN_REFRESH_MS) lease.seen = now;
+        else if (now - lease.seen > SEEN_PIGGYBACK_MS) piggyback = lease;
         const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life));
         if (command.op === 'leave') {
           r.hostedDrop(member.id);
@@ -372,7 +436,8 @@ export function cloudTransition(
       } else if (command.op !== 'wallet')
         throw new CloudError('지원하지 않는 요청입니다.');
     } catch (e) {
-      if (!(e instanceof Error)) throw e;
+      // Bugs propagate (500, logged by the caller, nothing committed).
+      if (!isRejection(e)) throw e;
       ok = false;
       error = e.message;
       status = e instanceof CloudError ? e.status : 409;
@@ -381,8 +446,19 @@ export function cloudTransition(
       const list = g.receipts[member.id] ?? [];
       g.receipts[member.id] = [
         ...list,
-        { id: command.requestId!, hash, code: target ?? '', ok, error },
-      ].slice(-512);
+        { id: command.requestId!, hash, code: target ?? '', ok, error, at: now },
+      ];
+      if (Number.isSafeInteger(command.sequence)) {
+        g.sequences ??= {};
+        const prev = g.sequences[member.id];
+        g.sequences[member.id] = {
+          connection: command.connection!,
+          sequence:
+            prev?.connection === command.connection
+              ? Math.max(prev.sequence, command.sequence!)
+              : command.sequence!,
+        };
+      }
     }
   } else {
     ok = receipt.ok;
@@ -431,10 +507,16 @@ export function cloudTransition(
     serverNow: now,
   };
   validateLedger(g.ledger);
+  const changed = JSON.stringify(g) !== JSON.stringify(original);
+  // The row is rewritten anyway (a timer fired, someone else's lease expired…):
+  // refresh this reader's presence for free. `seen` is not in the response.
+  if (changed && piggyback) piggyback.seen = now;
+  // Trim (and migrate legacy) receipts only when the row is written anyway.
+  if (changed) g.receipts = trimReceipts(g.receipts, now);
   return {
     state: g,
     response,
     notifications: [...notifications],
-    changed: JSON.stringify(g) !== JSON.stringify(original),
+    changed,
   };
 }
