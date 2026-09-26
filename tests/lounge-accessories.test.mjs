@@ -94,7 +94,7 @@ function allLooks(actor) {
 
 test('every current headband, glasses, clip, collection and colour is on the allowlist', () => {
   assert.deepEqual(HATS.map((h) => h.id), ['none', 'hachimaki']);
-  assert.equal(COLLECTIONS.length, 9);
+  assert.equal(COLLECTIONS.length, 12);
   for (let actor = 0; actor < 7; actor++)
     for (const look of allLooks(actor)) assert.deepEqual(readLook(look, actor), look, JSON.stringify([actor, look]));
   // The headband belongs to 도원's wardrobe only; others read it as bare-headed.

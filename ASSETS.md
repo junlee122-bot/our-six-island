@@ -549,3 +549,15 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 
 `scratchpad/karchive-village-expansion.md` 추천 22종을 상세 페이지 주소 그대로 받았습니다. 자료: kArchive · 출처: 쓰레드 dogfooter. 받은 날 상세 페이지 문구가 09-25와 같음을 확인해 `public/models/village/valley/assets.json`의 `terms`에 적었고, 항목마다 원본 주소·SHA-256·바이트·삼각형 수·바운딩 박스·웹 사본 크기가 있습니다. 원본 17,367,012바이트 → 웹 사본 5,606,592바이트(`node scripts/optimize-assets.mjs models village/valley`). 한 변 1 m 이하 소품 14종은 512², 나머지 8종은 1024²(2048² 원본 허수아비 lp-au-04·계곡 바위 lp-su-10·팔각정 kc-23 포함)입니다. GPU 텍스처(RGBA+밉맵)는 22종 모두 로드 시 약 61 MB이고, 낚시터 소품(폭포 계곡 바위·갯바위 현무암·캠핑 의자·한지 등·밧줄 난간·부들)은 그 낚시터 근처에 처음 갔을 때만 로드합니다. 반복 소품은 종류마다 InstancedMesh 하나(드로콜 1개)로 그립니다. 배치는 `app/lounge-village-layout.ts`의 `VILLAGE_VALLEY_PROPS`, 그리기는 `app/lounge-village-valley.ts`입니다. 잎 없는 활엽수(`-leafless`)는 두께 0.2의 판 모양이라 넣지 않았습니다. 새 유료 생성은 없습니다(Higgsfield 미사용).
 
+
+## 미쿠 테마 콘서트 포스터 · 2026-09-26
+
+방 벽 장식 `miku-poster`('미쿠 테마 콘서트 포스터', 1.14×1.52 m)의 그림을 절차 SVG에서 Higgsfield 생성 그림으로 바꿨습니다. Higgsfield `gpt_image_2_5`, high, 2K, 3:4(출력 1744×2336), 생성 1회, 2.75크레딧(유료 크레딧, 29.75 → 27.00). 작업 ID: `43517d92-1d98-4082-ad12-9f79d203c749`. 제목·날짜 글자가 한 번에 바르게 나와 재생성·글자 덧씌우기는 하지 않았습니다.
+
+생성 그림의 좌우를 조금 잘라 크림색 종이 여백과 원목 액자(`music-poster`와 같은 색·베벨), 옅은 유리 반사, 그림자를 붙여 768×1024(벽 판 1.14:1.52와 같은 비율)로 합성했습니다. 원본 합성 PNG는 `public/assets/lounge/bedroom/miku-poster.png`, 웹 사본은 `miku-poster.webp`(약 161KB)이고 `node scripts/optimize-assets.mjs images`의 `WALL_PRINTS`로 다시 만들 수 있습니다. 앱에서는 `LOUNGE_ASSETS.bedroom_miku_poster` → `MIKU_ROOM_ART['miku-poster']`로 방 벽과 꾸미기 카탈로그 썸네일에 함께 쓰입니다.
+
+하츠네 미쿠 팬 아트입니다. 일곱 친구의 비공개·비상업 게임에서만 쓰며, 피아프로 캐릭터 라이선스(PCL)식 가이드라인의 비상업 팬 창작 범위를 따릅니다. 공식 일러스트를 복사하지 않았고, 크립톤·"MIKU EXPO"·매지컬 미라이 로고나 실제 후원사 표시는 넣지 않도록 지시했습니다. 행사명 "MIKU LIVE · 범타듀 밸리 콘서트"와 날짜는 게임 속 가상의 공연입니다.
+
+프롬프트:
+
+> Full-bleed portrait concert poster, polished official anime key-visual style, crisp clean line art and cel shading with glowing highlights. Subject: Hatsune Miku, the virtual singer — very long teal twin-tails tied with black-and-pink hair ties, teal eyes, grey sleeveless collared top with a teal necktie, black detached sleeves with teal trim, black skirt, singing joyfully into a handheld microphone, one arm raised, hair flowing dynamically. She stands center-stage on a glossy stage with teal and pink spotlight beams, lens flares, floating sparkles, stars and music notes; in the lower foreground a dark silhouette crowd waving teal and pink glow sticks. Deep navy night background with teal/pink gradient light. Typographic layout like a real event poster: at the top a large bold stylized title "MIKU LIVE" in white with teal glow, directly beneath it in clean Korean sans-serif "범타듀 밸리 콘서트"; at the bottom a thin clean info band with the line "2026.10.31 SAT · 범타듀 밸리 라운지 스테이지" and a small line "OPEN 18:00 / START 19:00". All lettering sharp, correctly spelled, legible. No other text, no logos, no sponsor marks, no watermark, no border or frame — art fills the whole canvas.

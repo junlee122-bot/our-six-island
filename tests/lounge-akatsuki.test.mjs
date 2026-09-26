@@ -24,7 +24,7 @@ test('Akatsuki is a shared costume and survives account, bookmark, local, and mu
     if (actor !== 0)
       assert.deepEqual(
         costumes.map((c) => c.id),
-        ['akatsuki'],
+        ['akatsuki', 'maid'],
       );
     const look = readLook(
       {

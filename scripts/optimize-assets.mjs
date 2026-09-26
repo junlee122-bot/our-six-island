@@ -33,6 +33,9 @@ const LOSSLESS_ATLASES = [
   'lounge/maid-atlas.png',
   'lounge/hachimaki.png',
 ];
+// Framed wall prints (768x1024, matches the 1.14x1.52 wall plane). Sources are
+// the framed PNG composites; skipped (keeping the committed WebP) when missing.
+const WALL_PRINTS = ['lounge/bedroom/miku-poster.png'];
 // Table host sheets (루미 / 매화): already keyed RGBA, never dyed, so lossy is fine.
 const HOST_SHEETS = ['lounge/host-lumi.png', 'lounge/host-maehwa.png'];
 // Legacy pack (PNG sources in the repo) + current pack. The current pack's
@@ -130,6 +133,19 @@ async function images() {
     const target = source.replace(/\.png$/, '.webp');
     await sharp(source).webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
     console.log(`${name} -> .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`);
+  }
+  for (const name of WALL_PRINTS) {
+    const source = path.join(assets, name);
+    const target = source.replace(/\.png$/, '.webp');
+    if (!fs.existsSync(source)) {
+      console.log(`${name} missing, keeping committed .webp`);
+      continue;
+    }
+    await sharp(source)
+      .resize(768, 1024, { kernel: 'lanczos3', fit: 'fill' })
+      .webp({ quality: 86, alphaQuality: 100, effort: 6 })
+      .toFile(target);
+    console.log(`${name} -> 768x1024 .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`);
   }
   await socialImages();
 }

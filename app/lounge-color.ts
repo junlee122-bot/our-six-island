@@ -43,6 +43,12 @@ type SkinAnchors = {
   bareToes?: boolean;
   darkHighCollar?: boolean;
   sleevelessTop?: boolean;
+  /**
+   * 금빛 브레이드 · 케이프 코트 · 메이드: the faces carry pale cream highlights
+   * right around the eyes. Only near-white cream counts as the eye there, so
+   * those highlights follow the chosen skin colour.
+   */
+  paleFaceHighlights?: boolean;
 };
 const luminance = (r: number, g: number, b: number) =>
   r * 0.21 + g * 0.72 + b * 0.07;
@@ -180,7 +186,13 @@ export function createSkinMask(
       (eyeDistance / (head * 0.115)) ** 2 +
         ((y - eyes - head * 0.015) / (head * 0.08)) ** 2 <
       1;
-    if (inEye && r - g < 28 && g - b < 35) continue;
+    if (
+      inEye &&
+      (anchors.paleFaceHighlights
+        ? r - g < 20 && g - b < 24
+        : r - g < 28 && g - b < 35)
+    )
+      continue;
     warm[i] = 1;
     if (
       r - g < 10 ||

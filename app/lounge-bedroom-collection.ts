@@ -5,7 +5,11 @@
  * gradients, a thin warm-brown outline, a slightly elevated front view and a
  * soft contact shadow. Also provides the flat print textures used by the 3D
  * versions (record sleeves, acrylic print, cushion face, rug top).
+ * Exception: the concert poster is a framed Higgsfield fan-art print
+ * (public/assets/lounge/bedroom/miku-poster.webp; see ASSETS.md).
  */
+import { LOUNGE_ASSETS } from './lounge-assets';
+
 const OUT = '#4a3c35';
 const svg = (body: string, width: number, height: number, defs = '') =>
   `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
@@ -89,31 +93,6 @@ const star = (x: number, y: number, r: number, fill: string) =>
   `<path d="M${x} ${y - r}L${x + r * 0.28} ${y - r * 0.28}L${x + r} ${y}L${x + r * 0.28} ${y + r * 0.28}L${x} ${y + r}L${x - r * 0.28} ${y + r * 0.28}L${x - r} ${y}L${x - r * 0.28} ${y - r * 0.28}Z" fill="${fill}"/>`;
 
 // ---------------------------------------------------------------- flat art
-const poster = svg(
-  `<g filter="url(#paper)">
-  <rect x="10" y="8" width="280" height="386" rx="6" fill="url(#frame)" ${line}/>
-  <rect x="24" y="22" width="252" height="358" rx="2" fill="#f6efe1" ${lw(1.2)}/>
-  <clipPath id="inner"><rect x="34" y="32" width="232" height="338"/></clipPath>
-  <g clip-path="url(#inner)">
-  <rect x="34" y="32" width="232" height="338" fill="url(#sky)"/>
-  <circle cx="150" cy="176" r="104" fill="#e9fbf5" opacity=".8"/>
-  <g stroke="#bfeee3" stroke-width="10" opacity=".55">${Array.from({ length: 12 }, (_, i) => `<path d="M150 176L${150 + Math.cos((i / 12) * Math.PI * 2) * 170} ${176 + Math.sin((i / 12) * Math.PI * 2) * 170}"/>`).join('')}</g>
-  <path d="M34 296Q150 262 266 296V370H34Z" fill="url(#stage)"/>
-  <path d="M34 296Q150 262 266 296" stroke="#fff" stroke-width="3" fill="none" opacity=".7"/>
-  <g fill="#fff" opacity=".85">${Array.from({ length: 7 }, (_, i) => `<circle cx="${58 + i * 31}" cy="${318 + (i % 2) * 14}" r="2.4"/>`).join('')}</g>
-  ${note(60, 96, 1.1, '#e27fa0')}${note(236, 132, 0.9, MINT.hairDeep)}${star(232, 72, 11, '#f7d77c')}${star(68, 250, 8, '#f7d77c')}${star(246, 250, 6, '#fff')}
-  <g transform="translate(52 64) scale(.98)">${singer(4)}</g>
-  </g>
-  <rect x="34" y="352" width="232" height="18" fill="${MINT.navy}"/>
-  <g fill="#f4ecdc">${Array.from({ length: 9 }, (_, i) => `<circle cx="${62 + i * 22}" cy="361" r="3"/>`).join('')}</g>
-  <path d="M34 32H266V370H34Z" fill="none" stroke="#fff" stroke-width="3" opacity=".35"/>
-  <path d="M280 14L286 20V388L280 394Z" fill="#8a643e" opacity=".5"/>
-</g>`,
-  300,
-  400,
-  `<linearGradient id="frame" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2c296"/><stop offset="1" stop-color="${MINT.oakDeep}"/></linearGradient><linearGradient id="stage" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fd8ca"/><stop offset="1" stop-color="#3e8f8a"/></linearGradient><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bfeee3"/><stop offset=".6" stop-color="#e3f6ee"/><stop offset="1" stop-color="#f8f1e2"/></linearGradient>${SINGER_DEFS}`,
-);
-
 const banner = svg(
   `<g filter="url(#paper)">
   <path d="M40 30Q62 28 70 20M240 30Q218 28 210 20" stroke="#8a6a4a" stroke-width="2.4" fill="none"/>
@@ -335,7 +314,8 @@ const figureShelf = svg(
 
 /** Catalog art (thumbnails, and the flat wall items in the room). */
 export const MIKU_ROOM_ART = {
-  'miku-poster': poster,
+  // Higgsfield fan-art concert poster in a painted oak frame (ASSETS.md).
+  'miku-poster': LOUNGE_ASSETS.bedroom_miku_poster,
   'miku-banner': banner,
   'miku-records': records,
   'miku-acrylic': acrylic,

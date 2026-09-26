@@ -71,6 +71,7 @@ type Figure = {
     bareToes?: boolean;
     darkHighCollar?: boolean;
     sleevelessTop?: boolean;
+    paleFaceHighlights?: boolean;
   };
 };
 const canvas = (w: number, h: number) => {
@@ -721,6 +722,7 @@ async function prepare() {
         const f = sheetFigure(sheet, 3, 2, i, LADIES_EYES[i], i < 3, false, true);
         f.rig = `ladies:${i}`;
         f.looseBlueHair = true;
+        f.skinRegions.paleFaceHighlights = true;
         return f;
       });
     },
@@ -731,6 +733,7 @@ async function prepare() {
         const f = sheetFigure(sheet, 4, 2, i, MAID_EYES[i], false, false, true);
         f.rig = `maid:${i}`;
         f.looseBlueHair = true;
+        f.skinRegions.paleFaceHighlights = true;
         return f;
       });
     },

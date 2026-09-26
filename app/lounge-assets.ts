@@ -42,6 +42,8 @@ export const LOUNGE_ASSETS = {
   bedroom_photo_string: '/assets/lounge/bedroom/photo-string.webp',
   bedroom_wall_clock: '/assets/lounge/bedroom/wall-clock.webp',
   bedroom_star_lights: '/assets/lounge/bedroom/star-lights.webp',
+  // Higgsfield fan-art concert poster (framed), the 'miku-poster' wall item.
+  bedroom_miku_poster: '/assets/lounge/bedroom/miku-poster.webp',
   // Rendered previews of the placeable 3D furniture (catalog thumbnails).
   bedroom_thumb_bed: '/assets/lounge/bedroom/thumbs/bed.webp',
   bedroom_thumb_desk: '/assets/lounge/bedroom/thumbs/desk.webp',

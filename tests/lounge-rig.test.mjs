@@ -15,6 +15,8 @@ const expected = [
   'shampoo:0',
   'shampoo:1',
   ...Array.from({ length: 8 }, (_, i) => `akatsuki:${i}`),
+  ...Array.from({ length: 6 }, (_, i) => `ladies:${i}`),
+  ...Array.from({ length: 8 }, (_, i) => `maid:${i}`),
 ];
 const inBox = ([x, y]) => x >= 0 && x <= 1000 && y >= 0 && y <= 1000;
 const bands = (span) =>
@@ -32,6 +34,8 @@ test('every atlas cell has a rig with two legs or a hem-only split', () => {
     // Skirts, coats and tunics stay with the torso; only lower legs move.
     const costume =
       key.startsWith('akatsuki') ||
+      key.startsWith('ladies') ||
+      key.startsWith('maid') ||
       key.startsWith('shampoo') ||
       key === 'outfits:2' ||
       key === 'outfits:5';
