@@ -124,10 +124,13 @@ export function FriendVisitScreen({
     notify(`${josa(name, '이/가')} 방문을 닫았어요. 마을로 돌아갈게요.`, 'info');
     backRef.current();
   }, [closed, name, notify]);
-  // Esc goes back to the village (unless a dialog is open or I am typing).
+  // Esc opens the menu (its 마을로 나가기 leaves); this is only the fallback
+  // when nothing else took the key: a dialog closing, the menu opening
+  // (both preventDefault) or typing never leave the room.
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || document.querySelector('dialog[open]')) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]'))
+        return;
       const t = e.target as HTMLElement | null;
       if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
       backRef.current();

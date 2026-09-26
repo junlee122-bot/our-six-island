@@ -8,7 +8,7 @@
 - 캐릭터 아틀라스(`friends-motion`, `accessories`, `jaemin-cap`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
 - 범티콘 8장은 1254² PNG(장당 약 1MB)에서 **256px WebP(장당 약 20KB)** 로 줄였습니다.
 - GLB 39개는 `KHR_mesh_quantization` + `EXT_texture_webp`(three.js GLTFLoader가 별도 디코더 없이 읽음)로 15.8MB → 9.7MB(2026-09-25 kArchive 공공시설 15종 포함). 원본은 `public/models/_originals/`에 같은 경로로 보관합니다. Draco·Meshopt는 디코더가 필요해 쓰지 않았습니다.
-- 극장 전용 원화(`theater-*`)는 `legacy/assets/`에 있습니다. `docs/theater.html`은 이미지를 내장한 단일 HTML이라 영향이 없습니다. 예전 섬 전용 원화 10개는 섬 페이지와 함께 삭제했습니다(git 기록에 남아 있음). 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
+- 섬·극장 전용 원화(`legacy/assets/`)는 2026-09 두 페이지와 함께 삭제했습니다(git 기록에 남아 있음). 아래 표의 `legacy/assets/` 경로는 출처 기록으로만 남깁니다. 라운지 1기 원화(`public/assets/lounge/lounge-friends-*.png`, `lounge-room.png`, `casino-room.png`)도 현재 매니페스트에는 없습니다(기록용 보관).
 - 공유 미리보기 `public/og-image.webp`(1200×630)는 로그인 전신 7장을 합성한 파생 이미지이고, `public/favicon.svg`와 `public/icons/*.png`는 직접 그린 잎 아이콘입니다. 새 AI 생성은 없습니다.
 - 재생성: `npm run optimize:assets` (원본에서 WebP·GLB·아이콘을 다시 만듦).
 
@@ -67,7 +67,7 @@ Higgsfield의 GPT Image 2.5로 회관 배경·카지노 배경·독립 테이블
 
 ## Pages 이미지 패키징
 
-`scripts/build-standalone.mjs`는 두 매니페스트의 모든 경로를 읽어 파일이 있는지 확인하고, 각 파일의 SHA-256 앞 12자리를 넣은 이름으로 `<out>/assets/`에 저장한 뒤 게임 코드의 경로를 `./assets/...` 상대 URL로 바꿉니다. 앱 JS·CSS도 해시 파일로 분리되어 `index.html`은 작고, 에셋만 바뀐 배포에서는 코드 캐시를 재사용합니다. 이미지는 600KB 초과 시 경고, 3MB 초과 시 실패(예외 목록의 아틀라스 제외)이며, 모델은 1MB 경고·4MB 실패입니다. 이전 버전의 해시 파일과 보존된 `theater.html` 내부 이미지는 매니페스트 수에 포함하지 않습니다.
+`scripts/build-standalone.mjs`는 두 매니페스트의 모든 경로를 읽어 파일이 있는지 확인하고, 각 파일의 SHA-256 앞 12자리를 넣은 이름으로 `<out>/assets/`에 저장한 뒤 게임 코드의 경로를 `./assets/...` 상대 URL로 바꿉니다. 앱 JS·CSS도 해시 파일로 분리되어 `index.html`은 작고, 에셋만 바뀐 배포에서는 코드 캐시를 재사용합니다. 이미지는 600KB 초과 시 경고, 3MB 초과 시 실패(예외 목록의 아틀라스 제외)이며, 모델은 1MB 경고·4MB 실패입니다. 이전 버전의 해시 파일은 매니페스트 수에 포함하지 않습니다.
 
 ## 섯다 테이블
 
@@ -113,7 +113,7 @@ Chessnut 원본: https://github.com/LexLuengas/chessnut-pieces . LICENSE와 COPY
 
 기본 규칙 참고: chess.js 공식 저장소, 한게임 3인 고스톱 가이드, 피망 고스톱 가이드(개인 마지막 패의 특수 피 보너스 제외, 1~5피 피박). 지역별 차이가 있는 규칙은 README 및 게임 안 규칙 설명으로 명시합니다.
 
-아래는 보존된 섬·극장 에셋의 이전 기록입니다.
+아래는 섬·극장 에셋의 이전 기록입니다(두 페이지와 `legacy/assets/`는 2026-09 삭제, 출처·라이선스 기록으로 보존).
 
 ---
 

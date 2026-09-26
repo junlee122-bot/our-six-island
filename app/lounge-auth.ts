@@ -23,6 +23,8 @@ export async function cloudCall<T = unknown>(
   body: unknown,
   authenticated = true,
   expectedUid?: string,
+  /** Give up after this long (a hung connection counts as a failure). */
+  timeoutMs = 25000,
 ): Promise<T> {
   let token: string | undefined;
   if (authenticated) {
@@ -46,7 +48,7 @@ export async function cloudCall<T = unknown>(
         ...(token ? { Authorization: 'Bearer ' + token } : {}),
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(25000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     throw new AccountError(

@@ -136,14 +136,24 @@ export function RoundReady({
           <span className="l-round-kicker">
             {table.round}번째 판을 마쳤어요
           </span>
-          <h2>다음 판도 함께할까요?</h2>
-          <p>
-            모두 체크하면 같은 조건({GAME_COPY[kind].amountLabel}{' '}
-            {formatBeom(table.stake)}
-            {reservation !== table.stake &&
-              ` · 최대 ${formatBeom(reservation)} 예약`}
-            )으로 이어서 시작해요.
-          </p>
+          <h2>
+            {table.practice
+              ? '한 판 더 연습할까요?'
+              : table.required === 1
+                ? '한 판 더 할까요?'
+                : '다음 판도 함께할까요?'}
+          </h2>
+          {table.practice ? (
+            <p>연습 판이라 범은 오가지 않아요. 누르면 바로 다음 판을 시작해요.</p>
+          ) : (
+            <p>
+              {table.required === 1 ? '누르면' : '모두 체크하면'} 같은 조건(
+              {GAME_COPY[kind].amountLabel} {formatBeom(table.stake)}
+              {reservation !== table.stake &&
+                ` · 최대 ${formatBeom(reservation)} 예약`}
+              )으로 이어서 시작해요.
+            </p>
+          )}
         </div>
         <div className="l-round-side">
           <TurnTimer

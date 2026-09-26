@@ -1,21 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {freshSave,hydrate,SPAWN} from '../app/game-data.ts';
 import {defaultAppearance,readAppearance,readWardrobe,dyePixel,removeConnectedBackdrop,motionFrame,motionTransform} from '../app/character-style.ts';
-import {readPlayer,readIsland} from '../app/multiplayer-protocol.ts';
 
-test('old saves get six independent defaults and edited appearances survive export/import',()=>{
- const old=freshSave(1);delete old.wardrobe;old.coins=314;old.bag.wood=29;
- const s=hydrate(JSON.stringify(old));assert.equal(s.wardrobe.length,6);assert.equal(s.wardrobe[0].hair,'wine');assert.equal(s.wardrobe[1].glasses,'round');assert.equal(s.wardrobe[5].hat,'cap');
- s.wardrobe[1]={hair:'honey',top:'ocean',hat:'straw',glasses:'sun',clip:true};
- const restored=hydrate(JSON.stringify(s));assert.deepEqual(restored,s);assert.equal(restored.coins,314);assert.equal(restored.bag.wood,29);assert.notEqual(restored.wardrobe[2].hair,'honey');
- const defaults=readWardrobe(null);defaults[1].hair='rose';assert.equal(defaults[2].hair,'ink');
-});
 test('untrusted customization and motion are bounded and never copy arbitrary payloads',()=>{
  const bad={hair:'url(https://example.com)',top:'<script>',hat:{},glasses:17,clip:'yes',extra:'private'};
  assert.deepEqual(readAppearance(bad,1),defaultAppearance(1));
- const p=readPlayer({id:'friend',character:1,name:'강재',...SPAWN,facing:1,appearance:bad,motion:'invalid'});assert.equal(p.motion,'idle');assert.deepEqual(p.appearance,defaultAppearance(1));
- const wardrobe=readWardrobe(null),shared=readIsland({placed:[],night:false,wardrobe});shared.wardrobe[0].hair='rose';assert.equal(wardrobe[0].hair,'wine');
+ const defaults=readWardrobe(null);defaults[1].hair='rose';assert.equal(readWardrobe(null)[1].hair===defaults[1].hair,false);
 });
 test('animation alternates real step frames and reduced motion suppresses movement',()=>{
  assert.deepEqual(new Set(Array.from({length:40},(_,i)=>motionFrame('walk',i/20))),new Set([0,1,2]));

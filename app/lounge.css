@@ -306,6 +306,12 @@
 .l-password-settings form {
   margin-top: 20px;
 }
+/* Korean wraps between words (어절), never mid-word ("아 / 래"); a token
+   too long for its line (codes, links) may still break anywhere (A-8). */
+:where(html) {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
 .l-app {
   position: fixed;
   inset: 0;

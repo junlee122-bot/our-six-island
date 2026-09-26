@@ -19,7 +19,6 @@
     "check": "tsc --noEmit && npm test && npm run lint",
     "format": "oxfmt",
     "start": "wrangler dev --config dist/server/wrangler.json",
-    "test:theater-multiplayer": "node --experimental-strip-types scripts/verify-theater-multiplayer.mjs",
     "test:lounge-multiplayer": "node --experimental-strip-types scripts/verify-lounge-multiplayer.mjs",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",

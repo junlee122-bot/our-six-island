@@ -1,1 +1,0 @@
-export const THEATER_ASSETS={friends:'/assets/friends-motion.png',accessories:'/assets/accessories.png',jaeminCap:'/assets/jaemin-cap.png',hohyeon:'/assets/hohyeon-friend.png',wardrobe:'/assets/theater-wardrobe.png',backstage:'/assets/theater-backstage.png'};

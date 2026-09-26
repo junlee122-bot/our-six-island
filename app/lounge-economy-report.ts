@@ -21,7 +21,7 @@ import {
 } from './lounge-economy.ts';
 import { CROP_INFO, SHOP_BY_ID, type Crop } from './lounge-life.ts';
 import { ACCOUNT_IDS } from './lounge-accounts.ts';
-import { ACTORS } from './theater-data.ts';
+import { ACTORS } from './lounge-roster.ts';
 
 const DAY_MS = 86_400_000;
 export const ECONOMY_GAMES: readonly EconomyGame[] = [

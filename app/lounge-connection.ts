@@ -28,11 +28,22 @@ export const LINK_OK: Link = Object.freeze({
 /** Failures in a row before the village shows as offline. */
 export const OFFLINE_AFTER = 2;
 
-/** Retry delay after `failures` failures in a row: 2s, 4s, 8s, then 15s. */
+/**
+ * Retry delay after `failures` failures in a row: 1s, 2s, 4s, then every 8s.
+ * Short at first so a blip is confirmed (or cleared) within a second, and
+ * capped low so the village is back within ~8s of the network returning.
+ */
 export function retryDelay(failures: number): number {
   if (failures <= 0) return 0;
-  return Math.min(15_000, 2_000 * 2 ** (failures - 1));
+  return Math.min(8_000, 1_000 * 2 ** (failures - 1));
 }
+
+/** Background polls give up after this long (a hung request is a failure). */
+export const READ_TIMEOUT_MS = 6_000;
+/** Actions wait longer: they may carry a whole game step. */
+export const ACTION_TIMEOUT_MS = 12_000;
+/** Realtime drop → probe the server at most this often. */
+export const PROBE_GAP_MS = 3_000;
 
 export type LinkEvent =
   | { kind: 'ok' }

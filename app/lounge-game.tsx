@@ -464,6 +464,8 @@ function AccountLounge({
     [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom'>('village'),
     [modal, setModal] = useState<ModalName | null>(null),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
+    // 설정 / 조작 안내 opened from the Esc menu go back to it on close (Esc stack).
+    [fromMenu, setFromMenu] = useState(false),
     [bondsInitial, setBondsInitial] = useState<number | undefined>(undefined),
     [confirm, setConfirm] = useState<Confirm | null>(null),
     [gameScreen, setGameScreen] = useState<GameKind | null>(null),
@@ -1324,7 +1326,8 @@ function AccountLounge({
   // The day starts in my room: one line about today's grant / new mail.
   const greeted = useRef(false);
   useEffect(() => {
-    if (greeted.current || !connected) return;
+    // Queued behind the first-day tutorial: its card sits where banners go.
+    if (greeted.current || !connected || coach || shouldOnboard()) return;
     const timer = setTimeout(() => {
       if (greeted.current) return;
       greeted.current = true;
@@ -1353,7 +1356,7 @@ function AccountLounge({
         });
     }, 900);
     return () => clearTimeout(timer);
-  }, [connected, room, pushBanner, notify]);
+  }, [connected, room, pushBanner, notify, coach]);
   // Warm the life panels' chunks shortly after connecting, so I / K / L and
   // the first cast open without a wait.
   useEffect(() => {
@@ -1389,6 +1392,7 @@ function AccountLounge({
             return true;
           }
           case 'help':
+            setFromMenu(false);
             setModal('help');
             return true;
           case 'inventory':
@@ -1431,8 +1435,21 @@ function AccountLounge({
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
-      // Coach marks, game tables and the fishing overlay keep their own keys (Esc included).
-      if (document.querySelector('.l-coach, .l-in-game, [data-testid=fishing]')) return;
+      // At a game table only Esc (menu) and F1 (help) apply: the menu has
+      // 일어나기, and no other key reaches the table (nothing acts by accident).
+      // An open dialog closes itself first (Modal handles its own Esc).
+      if (document.querySelector('.l-in-game')) {
+        if (document.querySelector('dialog[open], .l-coach')) return;
+        const t = e.target instanceof HTMLElement ? e.target : null;
+        if (t?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])'))
+          return;
+        const action = boundAction(e);
+        if ((action === 'menu' || action === 'help') && pcKeys.current.run(action))
+          e.preventDefault();
+        return;
+      }
+      // Coach marks and the fishing overlay keep their own keys (Esc included).
+      if (document.querySelector('.l-coach, [data-testid=fishing]')) return;
       if (document.querySelector('.b3-room[data-editing]')) return;
       if (!globalKeyTarget(e)) return;
       const action = boundAction(e);
@@ -1443,7 +1460,8 @@ function AccountLounge({
     return () => window.removeEventListener('keydown', key);
   }, []);
   // The Esc menu: my walk stops and the music steps back (the world goes on).
-  const paused = modal === 'system';
+  const paused =
+    modal === 'system' || (fromMenu && (modal === 'settings' || modal === 'help'));
   useEffect(() => {
     loungeAudio.setScene({ paused });
     window.dispatchEvent(new CustomEvent('bumtadew:pause', { detail: paused }));
@@ -2308,6 +2326,7 @@ function AccountLounge({
           <button
             onClick={() => {
               setSettingsTab('graphics');
+              setFromMenu(false);
               setModal('settings');
             }}
           >
@@ -2416,6 +2435,7 @@ function AccountLounge({
             <button
             onClick={() => {
               setSettingsTab('graphics');
+              setFromMenu(false);
               setModal('settings');
             }}
           >
@@ -2436,10 +2456,6 @@ function AccountLounge({
             >
               처음 안내 다시 보기
             </button>
-            {/* oxlint-disable-next-line nextjs/no-html-link-for-pages -- Static legacy game pages. */}
-            <a href="./theater.html">
-              우당탕 극장 <small>약 16MB</small> <ArrowUpRight size={12} />
-            </a>
             <button className="danger" onClick={() => guarded('reset', reset)}>
               코디 초기화
             </button>
@@ -2522,25 +2538,61 @@ function AccountLounge({
         />
       )}
       {modal === 'settings' && (
-        <SettingsModal key={settingsTab} initialTab={settingsTab} onClose={() => setModal(null)} />
+        <SettingsModal
+          key={settingsTab}
+          initialTab={settingsTab}
+          onClose={() => {
+            // Back to the Esc menu it was opened from (one Esc = one layer).
+            setModal(fromMenu ? 'system' : null);
+            setFromMenu(false);
+          }}
+        />
       )}
       {modal === 'system' && (
         <SystemMenu
           onClose={() => setModal(null)}
           onSettings={() => {
             setSettingsTab('graphics');
+            setFromMenu(true);
             setModal('settings');
           }}
-          onHelp={() => setModal('help')}
+          onHelp={() => {
+            setFromMenu(true);
+            setModal('help');
+          }}
+          table={
+            inGame && gameScreen
+              ? {
+                  place: TABLE_AREA[gameScreen] === 'casino' ? NAMES.casino : NAMES.hall,
+                  onBack: () => {
+                    setModal(null);
+                    closeGame();
+                  },
+                  onStand: () => {
+                    setModal(null);
+                    // GameScreen asks first (or just stops watching).
+                    window.dispatchEvent(new Event('bumtadew:game-stand'));
+                  },
+                }
+              : undefined
+          }
           onFullscreen={() => void toggleFullscreen()}
           onVillageMenu={() => setModal('menu')}
           onLeaveRoom={
-            (tab === 'bedroom' || tab === 'lounge' || tab === 'casino') && visiting === null
-              ? () => {
-                  setModal(null);
-                  enter('village');
-                }
-              : undefined
+            inGame
+              ? undefined
+              : visiting !== null
+                ? () => {
+                    // A friend's room: 나가기 back to the village.
+                    setModal(null);
+                    leaveVisit();
+                  }
+                : tab === 'bedroom' || tab === 'lounge' || tab === 'casino'
+                  ? () => {
+                      setModal(null);
+                      enter('village');
+                    }
+                  : undefined
           }
           onLogout={() => {
             setModal(null);
@@ -2558,7 +2610,10 @@ function AccountLounge({
       )}
       {modal === 'help' && (
         <ControlsHelp
-          onClose={() => setModal(null)}
+          onClose={() => {
+            setModal(fromMenu ? 'system' : null);
+            setFromMenu(false);
+          }}
           onEdit={() => {
             setSettingsTab('controls');
             setModal('settings');

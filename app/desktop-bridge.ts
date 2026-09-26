@@ -227,7 +227,7 @@ export async function focusDesktopWindow(): Promise<void> {
  * web build, which also works for friends who have not installed the app.
  */
 export function shareableInviteUrl(
-  key: 'lounge' | 'theater' | 'room',
+  key: 'lounge' | 'room',
   code: string,
 ): string {
   const hash = key + '=' + encodeURIComponent(code);

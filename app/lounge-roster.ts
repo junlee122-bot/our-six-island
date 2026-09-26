@@ -1,5 +1,5 @@
-// The seven friends of 범타듀 밸리. Copied from the legacy theater module so the
-// lounge no longer depends on theater-data.ts (keep the two in sync if names change).
+// The seven friends of 범타듀 밸리 (names and name-tag colors). Server engines
+// (lounge-room, lounge-accounts, economy report) and the UI all import it.
 export const ACTORS = [
   '도원',
   '강재',

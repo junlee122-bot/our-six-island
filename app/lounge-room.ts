@@ -3,7 +3,7 @@ import { IslandRoom } from "./multiplayer-transport.ts";
 import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
 import { readLook, type Look } from "./lounge-look.ts";
 import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
-import { ACTORS } from "./theater-data.ts";
+import { ACTORS } from "./lounge-roster.ts";
 import {
   reactionId,
   readReaction,

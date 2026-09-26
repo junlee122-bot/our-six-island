@@ -1,5 +1,7 @@
 'use client';
 import {
+  ArrowLeft,
+  ArrowUpFromLine,
   Keyboard,
   LogOut,
   Maximize,
@@ -13,12 +15,14 @@ import {
 import { useSettings } from '../lounge-settings';
 import { BIND_GROUPS, bindingLabel, keyLabel, type Keybinds } from '../lounge-keybinds';
 import { isDesktopApp } from '../desktop-bridge';
+import { josa } from '../lounge-text';
 import { Modal } from './Modal';
 import './pc.css';
 
 /**
- * The Esc menu (village and room). Opening it stops my own walk and ducks
- * the music; the village is shared online, so the world itself goes on.
+ * The Esc menu (village, room, hall, casino and game tables). Opening it
+ * stops my own walk and ducks the music; the village is shared online, so
+ * the world itself goes on (a table's turn clock too).
  */
 export function SystemMenu({
   onClose,
@@ -29,6 +33,7 @@ export function SystemMenu({
   onLeaveRoom,
   onLogout,
   onQuit,
+  table,
 }: {
   onClose: () => void;
   onSettings: () => void;
@@ -41,13 +46,17 @@ export function SystemMenu({
   onLogout: () => void;
   /** Desktop app only: close the game window (saves first). */
   onQuit?: () => void;
+  /** At a game table: step back to the hall/casino (seat kept) or stand up. */
+  table?: { place: string; onBack: () => void; onStand: () => void };
 }) {
   const [settings] = useSettings();
   const desktop = isDesktopApp();
   return (
     <Modal title="메뉴" onClose={onClose} className="l-system-menu">
       <p className="l-modal-intro l-system-note">
-        마을은 친구들과 함께 쓰는 곳이라 메뉴를 열어 둬도 시간은 흘러가요. 내 캐릭터만 잠시 멈춰요.
+        {table
+          ? '메뉴를 열어 둬도 게임은 이어져요. 내 차례 시간도 흘러가니 금방 돌아와 주세요.'
+          : '마을은 친구들과 함께 쓰는 곳이라 메뉴를 열어 둬도 시간은 흘러가요. 내 캐릭터만 잠시 멈춰요.'}
       </p>
       <div className="l-system-list" data-testid="system-menu">
         <button type="button" className="l-system-primary" onClick={onClose} data-testid="system-resume">
@@ -55,6 +64,18 @@ export function SystemMenu({
           <span>계속하기</span>
           <kbd>Esc</kbd>
         </button>
+        {table && (
+          <>
+            <button type="button" onClick={table.onBack} data-testid="system-table-back">
+              <ArrowLeft size={18} aria-hidden="true" />
+              <span>{josa(table.place, '으로/로')} 돌아가기 · 자리 유지</span>
+            </button>
+            <button type="button" onClick={table.onStand} data-testid="system-table-stand">
+              <ArrowUpFromLine size={18} aria-hidden="true" />
+              <span>테이블에서 일어나기</span>
+            </button>
+          </>
+        )}
         <button type="button" onClick={onVillageMenu}>
           <LayoutGrid size={18} aria-hidden="true" />
           <span>마을 메뉴</span>

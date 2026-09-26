@@ -81,7 +81,7 @@ export function AccountModal({
             </button>
           </div>
           <Details summary="현재 코디가 이 기기에 남은 이전 코디로 바뀌어요.">
-            범 잔액과 극장 기록은 옮기지 않아요.
+            범 잔액은 옮기지 않아요.
           </Details>
           <details className="l-password-settings">
             <summary>비밀번호 변경</summary>

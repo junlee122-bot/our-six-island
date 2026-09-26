@@ -717,3 +717,23 @@
   outline: 3px solid #f2c14e;
   outline-offset: 2px;
 }
+/* 연습 판 / 혼자 하기 tag next to the game's name (playtest A-3). */
+.l-game-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #f2c14e;
+  color: #3a2c05;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  vertical-align: middle;
+}
+/* While the first-day tutorial card is up (top centre), other banners
+   (invites, turns) drop below it instead of covering its head (A-7). */
+.l-app:has(.l-tutorial) .l-banner,
+.l-app:has(.l-tutorial) .l-banner[popover],
+.l-app.l-immersive:has(.l-tutorial) .l-banner[popover] {
+  top: calc(96px + var(--tutorial-h, 220px) + 12px);
+}

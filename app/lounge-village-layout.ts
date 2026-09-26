@@ -21,7 +21,13 @@ export type VillagePlace = {
   model?: VillageHouseModel;
 };
 
-export const VILLAGE_BOUNDS = { width: 80, depth: 60, radius: 0.35 } as const;
+/**
+ * VILL-2 (2026-09-26): the valley grew from 80 × 60 to 96 × 76. The resident
+ * row moved 8 north so every friend has a front-yard farm between the door
+ * and the lane, and the new margins hold the fishing spots (waterfall pool,
+ * lake dock, upstream rapids, beach rocks, night harbor).
+ */
+export const VILLAGE_BOUNDS = { width: 96, depth: 76, radius: 0.35 } as const;
 export const VILLAGE_START: VillagePoint = { x: 0, z: 10 };
 
 /**
@@ -96,16 +102,42 @@ export const VILLAGE_DISTRICTS = [
     id: 'north-forest',
     name: '북쪽 숲길',
     description: '마을 뒤편 숲속 산책로',
-    point: { x: 0, z: -26 },
+    point: { x: 0, z: -34 },
     color: '#547552',
+  },
+  {
+    id: 'north-falls',
+    name: '폭포 소',
+    description: '북서쪽 바위 절벽 아래 물보라 이는 소',
+    point: { x: -36.2, z: -31.2 },
+    color: '#5f8f9c',
+  },
+  {
+    id: 'east-lake',
+    name: '호숫가 선착장',
+    description: '북동쪽 조용한 호수와 나무 선착장',
+    point: { x: 31, z: -26 },
+    color: '#4f8aa6',
+  },
+  {
+    id: 'south-beach',
+    name: '남쪽 해변',
+    description: '모래사장과 갯바위, 밤에 불 켜지는 항구',
+    point: { x: 8, z: 33.2 },
+    color: '#c9a86a',
   },
 ] as const;
 
 export const VILLAGE_SCENIC_TREES = [
-  { x: -30, z: -27, radius: 0.9, scale: 0.92 },
-  { x: -20, z: -28, radius: 0.85, scale: 0.86 },
-  { x: 20, z: -28, radius: 0.85, scale: 0.86 },
-  { x: 30, z: -27, radius: 0.9, scale: 0.92 },
+  { x: -30, z: -35.4, radius: 0.9, scale: 0.92 },
+  { x: -20, z: -36, radius: 0.85, scale: 0.86 },
+  { x: 20, z: -36, radius: 0.85, scale: 0.86 },
+  { x: 30, z: -35.4, radius: 0.9, scale: 0.92 },
+  { x: -44, z: -12, radius: 1, scale: 1.1 },
+  { x: -45, z: 2, radius: 0.9, scale: 1 },
+  { x: 44.5, z: -8, radius: 1, scale: 1.1 },
+  { x: 44, z: 6, radius: 0.9, scale: 0.98 },
+  { x: -44, z: 24, radius: 0.9, scale: 1 },
   { x: -38, z: -23, radius: 1.05, scale: 1.15 },
   { x: -38, z: -16, radius: 0.85, scale: 0.95 },
   { x: -38, z: 22, radius: 1, scale: 1.1 },
@@ -119,17 +151,19 @@ export const VILLAGE_SCENIC_TREES = [
 ] as const;
 
 const homeNames = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'];
+/** Every home stands in one row; its front yard (farm) fills the strip down to the lane. */
+export const VILLAGE_HOME_ROW_Z = -22;
 const homePositions: readonly VillagePoint[] = [
-  { x: -14, z: -14 },
-  { x: -7, z: -14 },
-  { x: 0, z: -14 },
-  { x: 7, z: -14 },
-  { x: 14, z: -14 },
-  { x: -20, z: -6 },
-  { x: 20, z: -6 },
+  { x: -14, z: VILLAGE_HOME_ROW_Z },
+  { x: -7, z: VILLAGE_HOME_ROW_Z },
+  { x: 0, z: VILLAGE_HOME_ROW_Z },
+  { x: 7, z: VILLAGE_HOME_ROW_Z },
+  { x: 14, z: VILLAGE_HOME_ROW_Z },
+  { x: -22.2, z: VILLAGE_HOME_ROW_Z },
+  { x: 22.2, z: VILLAGE_HOME_ROW_Z },
 ];
-// The five-house row alternates the two narrower models; the wide courtyard
-// house sits on the roomier side lots.
+// The five middle houses alternate the two narrower models; the wide
+// courtyard houses close the row at both ends.
 const homeModels: readonly VillageHouseModel[] = [
   'cornerHouse',
   'cottage',

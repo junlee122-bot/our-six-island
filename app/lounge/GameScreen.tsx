@@ -1,7 +1,7 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from 'lucide-react';
-import { GAME_INFO, type GameKind } from '../lounge-games';
+import { GAME_INFO, PRACTICE_NAMES, isPracticeAi, type GameKind } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { ReactionId } from '../lounge-reactions';
 import { ReactionDock } from '../lounge-reaction-ui';
@@ -162,23 +162,23 @@ export function GameScreen({
   // Watching a table I do not sit at (구경하기).
   const watching = !belongs && seat < 0 && !dissolved;
   if (leave && !canLeave && !leaving) setLeave(false);
-  // Esc while watching = 일어나기 (the global Esc skips the game screen).
-  const backRef = useRef(onBack);
+  // Esc opens the menu (lounge-game.tsx); its 테이블에서 일어나기 lands here:
+  // watching just stops, a seat asks first (never an accidental stand-up).
+  const standRef = useRef(() => {});
   useEffect(() => {
-    backRef.current = onBack;
+    standRef.current = () => {
+      if (watching || (!canLeave && !leaving)) onBack();
+      else if (canLeave) setLeave(true);
+    };
   });
   useEffect(() => {
-    if (!watching) return;
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
-      const t = e.target as HTMLElement | null;
-      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      e.preventDefault();
-      backRef.current();
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, [watching]);
+    const stand = () => standRef.current();
+    window.addEventListener('bumtadew:game-stand', stand);
+    return () => window.removeEventListener('bumtadew:game-stand', stand);
+  }, []);
+  // 연습 판 (AI seats, no 범) and 혼자 하기 (blackjack alone vs the dealer).
+  const practice = !!table?.practice || seats.some(isPracticeAi);
+  const alone = !practice && seats.length === 1 && seat === 0;
   // Say it once as a toast too (the note stays under the result).
   useEffect(() => {
     if (dissolved) notify?.(dissolved.text, 'info');
@@ -245,6 +245,13 @@ export function GameScreen({
           </small>
           <strong>
             {GAME_INFO[kind].name}
+            {practice ? (
+              <em className="l-game-tag" data-testid="game-practice">
+                연습
+              </em>
+            ) : alone ? (
+              <em className="l-game-tag">혼자</em>
+            ) : null}
             {table && table.round > 1 ? ` · ${table.round}번째 판` : ''}
           </strong>
         </span>
@@ -257,8 +264,7 @@ export function GameScreen({
               <button
                 onClick={onBack}
                 data-testid="game-watch-stand"
-                aria-keyshortcuts="Escape"
-                title="구경 그만하기 (Esc)"
+                title="구경 그만하기"
                 aria-label={`구경 그만하고 일어나기 · ${josa(place, '으로/로')} 돌아가기`}
               >
                 <ArrowUpFromLine size={15} aria-hidden="true" />
@@ -305,7 +311,13 @@ export function GameScreen({
           />
         </div>
         <div className="l-game-money">
-          <span>{GAME_COPY[kind].moneyRule}</span>
+          <span>
+            {practice
+              ? `연습 판 · ${(PRACTICE_NAMES[kind] ?? []).join('·')}(AI)와 쳐요. 범은 오가지 않아요.`
+              : alone
+                ? `딜러와 혼자 치는 판이에요. ${GAME_COPY[kind].moneyRule}`
+                : GAME_COPY[kind].moneyRule}
+          </span>
           <b>
             <Coins size={14} /> {formatBeom(view.wallet.balance)}
             {view.wallet.held > 0
@@ -487,12 +499,16 @@ export function GameScreen({
       {leave && (
         <ConfirmModal
           title={`${GAME_INFO[kind].name} 테이블에서 일어날까요?`}
-          body={leaveConsequence(kind, ended)}
-          consequences={ended ? [] : ['일어나면 되돌릴 수 없어요.']}
+          body={
+            practice
+              ? '연습 판이라 범은 오가지 않아요. 일어나면 남은 판은 AI가 마무리해요.'
+              : leaveConsequence(kind, ended)
+          }
+          consequences={ended || practice ? [] : ['일어나면 되돌릴 수 없어요.']}
           confirmLabel="일어나기"
           busyLabel="일어나는 중…"
           cancelLabel="테이블에 남기"
-          danger={!ended}
+          danger={!ended && !practice}
           onClose={() => {
             setLeave(false);
             setLeaveError('');

@@ -1,4 +1,4 @@
-import { ACTORS } from './theater-data.ts';
+import { ACTORS } from './lounge-roster.ts';
 import {
   LoungeSaveError,
   readLounge,

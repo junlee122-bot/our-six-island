@@ -31,8 +31,8 @@ test('connection: one failure retries quietly, two in a row is offline, success 
   assert.equal(nextLink(LINK_OK, { kind: 'browser-offline', now: 5 }).state, 'offline');
 });
 
-test('connection: retry backoff 2s, 4s, 8s, then 15s', () => {
-  assert.deepEqual([0, 1, 2, 3, 4, 9].map(retryDelay), [0, 2000, 4000, 8000, 15000, 15000]);
+test('connection: retry backoff 1s, 2s, 4s, then every 8s', () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 9].map(retryDelay), [0, 1000, 2000, 4000, 8000, 8000]);
 });
 
 test('connection: network failures vs refusals', () => {
