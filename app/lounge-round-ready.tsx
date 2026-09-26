@@ -13,11 +13,6 @@ import type { LoungeView } from './lounge-room';
 import { formatBeom, josa } from './lounge-text';
 import { GAME_COPY } from './lounge/game-copy';
 import { TurnTimer } from './lounge-turn-timer';
-import {
-  blackjackVerdict,
-  pokerResultLines,
-  seotdaLine,
-} from './lounge-dealer-lines';
 import './lounge-round-ready.css';
 
 /** READY_LIMIT_MS as words, e.g. '1분' or '90초'. */
@@ -34,32 +29,6 @@ function readyDeadlineOf(view: LoungeView, kind: GameKind): number | undefined {
   return Number.isFinite(value) ? value : undefined;
 }
 
-/**
- * One line that says how the round ended (the host's verdict), repeated
- * above the ready check so the reason is on screen with the buttons.
- */
-export function roundSummary(kind: GameKind, view: LoungeView): string {
-  const names = (view.seats[kind] ?? []).map((id, i) => {
-    const p = view.players.find((p) => p.id === id);
-    return p ? ACTORS[p.actor] : (view.names[kind]?.[i] ?? `참가자 ${i + 1}`);
-  });
-  const seat = (view.seats[kind] ?? []).indexOf(view.self);
-  if (kind === 'blackjack' && view.blackjack?.phase === 'over') {
-    const mine = seat >= 0 ? view.blackjack.result[seat] : undefined;
-    return (
-      '루미: ' +
-      blackjackVerdict(view.blackjack.dealer, view.blackjack.hands) +
-      (mine === undefined
-        ? ''
-        : ` 내 손익 ${mine > 0 ? '+' : ''}${formatBeom(mine)}.`)
-    );
-  }
-  if (kind === 'poker' && view.poker?.phase === 'over')
-    return '루미: ' + pokerResultLines(view.poker, names).join(' ');
-  if (kind === 'seotda' && view.seotda?.phase === 'over')
-    return '매화: ' + seotdaLine(view.seotda, seat, names).text;
-  return '';
-}
 /** How long the result stays on the table before the ready check scrolls in. */
 export const RESULT_HOLD_MS = 2400;
 
@@ -107,7 +76,6 @@ export function RoundReady({
     table.ready.includes(id),
   ).length;
   const game = GAME_INFO[kind].name;
-  const summary = roundSummary(kind, view);
   const confirm = async () => {
     if (pending) return;
     setPending(true);
@@ -126,11 +94,6 @@ export function RoundReady({
       data-testid="round-ready"
       data-ready-count={readyCount}
     >
-      {summary && (
-        <p className="l-round-summary" data-testid="round-summary">
-          {summary}
-        </p>
-      )}
       <div className="l-round-heading">
         <div>
           <span className="l-round-kicker">
@@ -180,7 +143,7 @@ export function RoundReady({
               data-member={id}
               data-ready={checked}
             >
-              {member && <AvatarView actor={member.actor} look={member.look} />}
+              {member && <AvatarView actor={member.actor} look={member.look} portrait />}
               <span>
                 <strong>
                   {member ? ACTORS[member.actor] : '친구'}

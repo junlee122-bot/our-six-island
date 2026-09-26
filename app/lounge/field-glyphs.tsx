@@ -52,7 +52,12 @@ const PATHS: Record<GlyphName, ReactNode> = {
       <path d="M9 9 h6" stroke={INK} strokeWidth="1.6" />
     </>
   ),
-  hook: <path d="M14 3 v10 a4 4 0 0 1 -8 0 v-1 l2 2" fill="none" stroke={INK} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />,
+  hook: (
+    <>
+      <path d="M14 3 v10 a4 4 0 0 1 -8 0 v-1 l2 2" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="14" cy="3" r="1.6" fill="#d9573f" />
+    </>
+  ),
   star: <path d="M12 3 l2.6 5.4 5.9 .8 -4.3 4.1 1 5.8 -5.2 -2.8 -5.2 2.8 1 -5.8 -4.3 -4.1 5.9 -.8z" fill="#f3c332" stroke="#a87a12" strokeWidth="1.4" strokeLinejoin="round" />,
   moon: <path d="M15 3 a8.5 8.5 0 1 0 6 13 a7 7 0 0 1 -6 -13z" fill="#f3d98a" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />,
   lock: (
@@ -63,8 +68,8 @@ const PATHS: Record<GlyphName, ReactNode> = {
   ),
   walk: (
     <>
-      <circle cx="13" cy="4.5" r="2" fill={INK} />
-      <path d="M12 8 l-2 6 l3 2 l-1 5 M10 14 l-3 5 M12 8 l4 3 l3 -1" fill="none" stroke={INK} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="13" cy="4.5" r="2" fill="currentColor" />
+      <path d="M12 8 l-2 6 l3 2 l-1 5 M10 14 l-3 5 M12 8 l4 3 l3 -1" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
   wave: <path d="M2 14 c3 -3 5 -3 8 0 s5 3 8 0 s3 -2 4 -1 M2 19 c3 -3 5 -3 8 0 s5 3 8 0" fill="none" stroke="#4f8aa6" strokeWidth="1.8" strokeLinecap="round" />,

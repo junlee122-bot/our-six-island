@@ -28,13 +28,17 @@ import {
 } from './table-chunks';
 import type { Notify } from './Toast';
 import '../lounge-game-fit.css';
+import '../lounge-table-venue.css';
 
 /** Each table's action area (the part that must be on screen on my turn). */
 const TABLE_CONTROLS =
   '.p-controls, .s-controls, .bj-controls, .l-action-bar, .l-go-decision, .l-go-hand';
 
-/** Dark casino screens get a dark sticker bar (chess is a light screen). */
-const DARK: GameKind[] = ['poker', 'blackjack'];
+/**
+ * One table look per venue: the casino's games (holdem, blackjack, chess) are
+ * dark felt, the hall's (섯다, 고스톱) warm wood on cream.
+ */
+const DARK: GameKind[] = ['poker', 'blackjack', 'chess'];
 
 type TableSnapshot = { members: string[]; ready: string[]; required: number };
 
@@ -120,6 +124,12 @@ export function GameScreen({
     names = seats.map((id, i) => {
       const p = view.players.find((p) => p.id === id);
       return p ? ACTORS[p.actor] : (view.names[kind]?.[i] ?? `참가자 ${i + 1}`);
+    }),
+    // Each seat's current portrait (the same chibi face as the header and
+    // the ready check); AI seats and friends who left have none.
+    figures = seats.map((id) => {
+      const p = view.players.find((p) => p.id === id);
+      return p ? { actor: p.actor, look: p.look } : null;
     }),
     match =
       kind === 'chess'
@@ -232,6 +242,7 @@ export function GameScreen({
   return (
     <section
       className={'l-game-screen ' + kind + (dark ? ' is-dark' : '')}
+      data-venue={dark ? 'casino' : 'hall'}
       data-my-turn={turn || undefined}
     >
       <header>
@@ -367,6 +378,8 @@ export function GameScreen({
                     seat={seat}
                     names={names}
                     settlement={settlement}
+                    round={host.round}
+                    reaction={host.reaction}
                     onMove={(from, to, promotion) =>
                       room.action({
                         kind: 'chess',
@@ -400,6 +413,7 @@ export function GameScreen({
                 ) : kind === 'blackjack' ? (
                   <BlackjackTable
                     {...host}
+                    figures={figures}
                     match={view.blackjack!}
                     seat={seat}
                     names={names}
@@ -413,6 +427,7 @@ export function GameScreen({
                 ) : kind === 'poker' ? (
                   <PokerTable
                     {...host}
+                    figures={figures}
                     match={view.poker!}
                     seat={seat}
                     names={names}

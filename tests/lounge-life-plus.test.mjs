@@ -420,7 +420,7 @@ test('fishing: cast → server bite window → reel; early/late misses; records;
   const s = world(2),
     [m, n] = s.members;
   s.fails(m, { kind: 'cast', spot: 'sea' }, T0, PLUS_REJECT.spotLocked);
-  s.fails(m, { kind: 'cast', spot: 'lake' }, T0, PLUS_REJECT.spot);
+  s.fails(m, { kind: 'cast', spot: 'ocean' }, T0, PLUS_REJECT.spot);
   s.act(m, { kind: 'cast', spot: 'river' }, T0);
   let p = s.view(m, T0).me.fishing.pending;
   assert.ok(p.token && p.biteAt >= T0 + 1_500 && p.biteAt <= T0 + 6_000);
@@ -977,4 +977,48 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
   const back = readLife(JSON.parse(JSON.stringify(s.life)));
   for (const key of Object.keys(s.life)) assert.deepEqual(back[key], s.life[key], key);
   assert.deepEqual(back, s.life);
+});
+
+// ------------------------------------------------------------ VILL-2 fishing spots
+test('VILL-2 spots: falls need rod 2, the harbor opens at night, personal bests are kept', () => {
+  const s = world(1),
+    [m] = s.members;
+  // 폭포 소: strong water.
+  s.fails(m, { kind: 'cast', spot: 'falls' }, T0, PLUS_REJECT.spotRod);
+  s.act(m, { kind: 'upgradeRod' }, T0);
+  s.act(m, { kind: 'cast', spot: 'falls' }, T0 + MIN);
+  let p = s.view(m, T0 + MIN).me.fishing.pending;
+  s.act(m, { kind: 'reel', token: p.token, timingMs: 100 }, p.biteAt + 100);
+  let last = s.view(m, p.biteAt + 100).me.fishing.last;
+  assert.equal(last.ok, true);
+  assert.ok(FISH_BY_ID[last.fish].spots.includes('falls'));
+  assert.equal(last.best, true);
+  assert.equal(s.view(m, p.biteAt + 100).me.fishing.best[last.fish], last.cm);
+  // 밤 항구: closed at noon, open at 21:00 KST with night fish.
+  s.fails(m, { kind: 'cast', spot: 'harbor' }, T0 + 2 * MIN, PLUS_REJECT.spotNight);
+  const night = kst(2026, 9, 24, 21);
+  s.act(m, { kind: 'cast', spot: 'harbor' }, night);
+  p = s.view(m, night).me.fishing.pending;
+  s.act(m, { kind: 'reel', token: p.token, timingMs: 100 }, p.biteAt + 100);
+  last = s.view(m, p.biteAt + 100).me.fishing.last;
+  assert.ok(FISH_BY_ID[last.fish].spots.includes('harbor'));
+  // The other new waters are open to everyone.
+  for (const spot of ['rapids', 'lake', 'rocks', 'bridge']) {
+    const t = night + HOUR * (1 + ['rapids', 'lake', 'rocks', 'bridge'].indexOf(spot));
+    s.act(m, { kind: 'cast', spot }, t);
+    p = s.view(m, t).me.fishing.pending;
+    s.act(m, { kind: 'reel', token: p.token, timingMs: 50 }, p.biteAt + 50);
+    last = s.view(m, p.biteAt + 50).me.fishing.last;
+    assert.ok(FISH_BY_ID[last.fish].spots.includes(spot), `${spot} → ${last.fish}`);
+  }
+  // A smaller catch of the same fish keeps the old best (no 'best' flag).
+  s.act(m, { kind: 'cast', spot: 'bridge' }, night + 9 * HOUR);
+  p = s.view(m, night + 9 * HOUR).me.fishing.pending;
+  const fishId = s.life.ext[m.id].pending.fish;
+  (s.life.ext[m.id].best ??= {})[fishId] = 999;
+  s.act(m, { kind: 'reel', token: p.token, timingMs: 50 }, p.biteAt + 50);
+  assert.equal(s.view(m, p.biteAt + 50).me.fishing.last.best, undefined);
+  assert.equal(s.view(m, p.biteAt + 50).me.fishing.best[fishId], 999);
+  // Bests survive the strict reader.
+  assert.equal(readLife(JSON.parse(JSON.stringify(s.life))).ext[m.id].best[fishId], 999);
 });

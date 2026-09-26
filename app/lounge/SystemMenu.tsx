@@ -11,13 +11,178 @@ import {
   Settings,
   House,
   LayoutGrid,
+  TriangleAlert,
 } from 'lucide-react';
+import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { useSettings } from '../lounge-settings';
 import { BIND_GROUPS, bindingLabel, keyLabel, type Keybinds } from '../lounge-keybinds';
 import { isDesktopApp } from '../desktop-bridge';
 import { josa } from '../lounge-text';
 import { Modal } from './Modal';
 import './pc.css';
+
+/**
+ * Arrow keys move focus between a menu's buttons by where they sit on
+ * screen (down/up to the nearest button in the next row, left/right within
+ * a row); Home / End jump to the first / last. Tab still works as usual.
+ */
+export function menuArrows(e: ReactKeyboardEvent<HTMLElement>) {
+  const keys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+  if (!keys.includes(e.key)) return;
+  const items = [
+    ...e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), summary'),
+  ].filter((b) => b.getClientRects().length > 0);
+  if (!items.length) return;
+  const current = document.activeElement as HTMLElement | null;
+  const at = current ? items.indexOf(current) : -1;
+  let next: HTMLElement | undefined;
+  if (e.key === 'Home') next = items[0];
+  else if (e.key === 'End') next = items.at(-1);
+  else if (at < 0) next = items[0];
+  else {
+    const r = items[at].getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    let best = Infinity;
+    for (const item of items) {
+      if (item === items[at]) continue;
+      const q = item.getBoundingClientRect();
+      const x = q.left + q.width / 2;
+      const y = q.top + q.height / 2;
+      const dx = x - cx;
+      const dy = y - cy;
+      const along =
+        e.key === 'ArrowDown' ? dy : e.key === 'ArrowUp' ? -dy : e.key === 'ArrowRight' ? dx : -dx;
+      const across = e.key === 'ArrowDown' || e.key === 'ArrowUp' ? Math.abs(dx) : Math.abs(dy);
+      if (along < 4) continue;
+      // Same row / column first, then the closest.
+      const score = along + across * 3;
+      if (score < best) {
+        best = score;
+        next = item;
+      }
+    }
+    // Left/right at a row's end wrap to the next / previous button.
+    next ??= e.key === 'ArrowRight' ? items[at + 1] : e.key === 'ArrowLeft' ? items[at - 1] : undefined;
+  }
+  if (!next) return;
+  e.preventDefault();
+  next.focus();
+  next.scrollIntoView({ block: 'nearest' });
+}
+
+/**
+ * The dialog opens with focus on itself: the first arrow key press steps
+ * into the menu's list (then menuArrows moves along it).
+ */
+function useArrowEntry(list: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+      const el = list.current;
+      const active = document.activeElement;
+      if (!el || e.defaultPrevented || (active && el.contains(active))) return;
+      const dialog = el.closest('dialog');
+      if (!dialog || !active || !dialog.contains(active)) return;
+      if (active.closest('input, textarea, select')) return;
+      e.preventDefault();
+      el.querySelector<HTMLElement>('button:not(:disabled)')?.focus();
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [list]);
+}
+
+export type MenuEntry = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+  /** Shortcut shown on the right (from 설정 → 조작). */
+  kbd?: string;
+  /** Unread count and the like. */
+  badge?: number;
+};
+
+/**
+ * The ☰ menu (마을 메뉴): the same list style as the Esc menu, grouped
+ * (내 마을 / 친구 / 설정·도움말 / 계정). Actions that cannot be undone sit in
+ * a closed '되돌릴 수 없는 일' area at the end and still ask before acting.
+ */
+export function VillageMenu({
+  title,
+  summary,
+  intro,
+  groups,
+  danger,
+  onClose,
+}: {
+  title: string;
+  summary: ReactNode;
+  intro?: string;
+  groups: { title: string; items: MenuEntry[] }[];
+  danger: { id: string; label: string; note: string; onClick: () => void }[];
+  onClose: () => void;
+}) {
+  const list = useRef<HTMLDivElement>(null);
+  useArrowEntry(list);
+  return (
+    <Modal title={title} onClose={onClose} className="l-village-menu" wide>
+      {summary}
+      {intro && <p className="l-modal-intro l-system-note">{intro}</p>}
+      {/* Arrow-key focus moves are the menu's own keyboard help (see menuArrows). */}
+      {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div ref={list} className="l-village-menu-groups" onKeyDown={menuArrows} data-testid="village-menu">
+        {groups.map((group) => (
+          <section key={group.title} className="l-village-menu-group" aria-label={group.title}>
+            <h3>{group.title}</h3>
+            <div className="l-system-list">
+              {group.items.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  onClick={item.onClick}
+                  data-testid={'menu-' + item.id}
+                >
+                  {item.icon}
+                  <span>
+                    {item.label}
+                    {item.badge ? <b className="l-menu-badge">{item.badge}</b> : null}
+                  </span>
+                  {item.kbd && <kbd>{item.kbd}</kbd>}
+                </button>
+              ))}
+            </div>
+          </section>
+        ))}
+        {danger.length > 0 && (
+          <details className="l-menu-danger" data-testid="menu-danger">
+            <summary>
+              <TriangleAlert size={16} aria-hidden="true" />
+              되돌릴 수 없는 일
+            </summary>
+            <div className="l-system-list">
+              {danger.map((d) => (
+                <button
+                  type="button"
+                  key={d.id}
+                  className="l-system-danger"
+                  onClick={d.onClick}
+                  data-testid={'menu-' + d.id}
+                >
+                  <span>
+                    {d.label}
+                    <small>{d.note}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
+      </div>
+    </Modal>
+  );
+}
 
 /**
  * The Esc menu (village, room, hall, casino and game tables). Opening it
@@ -31,6 +196,7 @@ export function SystemMenu({
   onFullscreen,
   onVillageMenu,
   onLeaveRoom,
+  leaveLabel = '마을로 나가기',
   onLogout,
   onQuit,
   table,
@@ -43,6 +209,8 @@ export function SystemMenu({
   onVillageMenu: () => void;
   /** In my room: walk out to the village. */
   onLeaveRoom?: () => void;
+  /** The leave item's words ('내 방으로 나가기' from the wardrobe). */
+  leaveLabel?: string;
   onLogout: () => void;
   /** Desktop app only: close the game window (saves first). */
   onQuit?: () => void;
@@ -51,6 +219,8 @@ export function SystemMenu({
 }) {
   const [settings] = useSettings();
   const desktop = isDesktopApp();
+  const list = useRef<HTMLDivElement>(null);
+  useArrowEntry(list);
   return (
     <Modal title="메뉴" onClose={onClose} className="l-system-menu">
       <p className="l-modal-intro l-system-note">
@@ -58,7 +228,8 @@ export function SystemMenu({
           ? '메뉴를 열어 둬도 게임은 이어져요. 내 차례 시간도 흘러가니 금방 돌아와 주세요.'
           : '마을은 친구들과 함께 쓰는 곳이라 메뉴를 열어 둬도 시간은 흘러가요. 내 캐릭터만 잠시 멈춰요.'}
       </p>
-      <div className="l-system-list" data-testid="system-menu">
+      {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div ref={list} className="l-system-list" data-testid="system-menu" onKeyDown={menuArrows}>
         <button type="button" className="l-system-primary" onClick={onClose} data-testid="system-resume">
           <Play size={18} aria-hidden="true" />
           <span>계속하기</span>
@@ -83,7 +254,7 @@ export function SystemMenu({
         {onLeaveRoom && (
           <button type="button" onClick={onLeaveRoom}>
             <House size={18} aria-hidden="true" />
-            <span>마을로 나가기</span>
+            <span>{leaveLabel}</span>
           </button>
         )}
         <button type="button" onClick={onSettings} data-testid="system-settings">

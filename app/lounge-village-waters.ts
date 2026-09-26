@@ -27,8 +27,9 @@ const MAT = {
   rockLight: std('#aaa497', { flatShading: true }),
   rockDark: std('#6f6a62', { flatShading: true }),
   moss: std('#6f8f55', { flatShading: true }),
-  sand: std('#e6d3a4'),
-  sandWet: std('#cdb785'),
+  sand: std('#f4e7c6'),
+  sandWet: std('#cfb27d'),
+  dune: std('#8fa35e'),
   plank: std('#a77a4e'),
   plankDark: std('#79563c'),
   rope: std('#d8c39a'),
@@ -189,6 +190,11 @@ export class VillageWatersLayer {
     // Dry sand band, a wet strip at the waterline and scattered shells/driftwood.
     add(g, GEO.box, MAT.sand, 0, 0.035, (z0 + z1) / 2 + 0.2, width - 0.9, 0.05, z1 - z0 - 0.4).castShadow = false;
     add(g, GEO.box, MAT.sandWet, 0, 0.04, z1 - 0.55, width - 0.9, 0.05, 0.7).castShadow = false;
+    // Dune grass along the top of the beach.
+    for (let i = 0; i < 46; i++) {
+      const x = -width / 2 + 1.5 + i * ((width - 3) / 45) + (jitter(i, 11) - 0.5) * 0.8;
+      add(g, GEO.rock, MAT.dune, x, 0.1, z0 + 0.1 + jitter(i, 12) * 0.5, 0.28, 0.16, 0.2, jitter(i, 13) * 3).castShadow = false;
+    }
     for (let i = 0; i < 18; i++) {
       const x = -width / 2 + 3 + jitter(i, 7) * (width - 6),
         z = z0 + 1 + jitter(i, 8) * (z1 - z0 - 2);
@@ -241,8 +247,8 @@ export class VillageWatersLayer {
     for (let i = 0; i < 6; i++)
       add(g, GEO.sphere, this.foam, x - 1 + i * 0.4, 0.28, edge + 0.5 + jitter(i, 6) * 0.6, 0.38, 0.14, 0.32).castShadow = false;
     const sign = spotSign('폭포 소', '낚싯대 2단계부터');
-    const stand = FISH_STAND.falls;
-    sign.position.set(stand.x + 1.2, 1.6, stand.z + 0.6);
+    // West of the pool, clear of where you stand to cast.
+    sign.position.set(x - radius + 0.2, 1.7, z + radius * 0.75);
     g.add(sign);
   }
 

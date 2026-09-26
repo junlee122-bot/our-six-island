@@ -126,7 +126,7 @@
   }
   /* Chess: the board is as large as the stage height allows. */
   .l-app .l-game-screen .l-chess-layout {
-    grid-template-columns: min(720px, calc(100cqh - 96px)) minmax(220px, 1fr);
+    grid-template-columns: min(720px, calc(100cqh - 124px)) minmax(220px, 1fr);
     gap: 24px;
   }
   .l-app .l-game-screen .l-game-status {

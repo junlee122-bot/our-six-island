@@ -760,6 +760,9 @@ export function Interior3D({
         project('table-' + t.game, t.center.x, TABLE_HEIGHT * 0.55, t.center.z + t.rz + 0.05, w, h, true);
         const stand = hosts.standAt(t.game);
         if (stand) project('host-' + t.game, stand.x, 1.9, stand.z, w, h);
+        // The host's tag goes with her (one figure per host, see hosts.update).
+        const tagEl = labelsRef.current.get('host-' + t.game);
+        if (tagEl) tagEl.style.visibility = stand ? '' : 'hidden';
       }
     };
     let previous = performance.now(),

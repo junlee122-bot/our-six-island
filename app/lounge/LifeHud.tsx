@@ -225,11 +225,29 @@ export function Hotbar({
   };
   const me = life?.me;
   const [{ keys }] = useSettings();
+  // The selected item's name shows for a moment after picking a slot, then
+  // steps aside (it sat over the place card and door prompts).
+  const [nameShown, setNameShown] = useState(false);
+  const firstSelect = useRef(true);
+  useEffect(() => {
+    if (firstSelect.current) {
+      firstSelect.current = false;
+      return;
+    }
+    setNameShown(true);
+    const t = setTimeout(() => setNameShown(false), 1600);
+    return () => clearTimeout(t);
+  }, [hotbar.selected, hotbar.tool]);
+  const toolCount = hotbarCount(me, hotbar.tool);
   return (
     <div className={`l-hotbar ${className}`} role="toolbar" aria-label="핫바" data-testid="hotbar">
       {Array.from({ length: HOTBAR_SIZE }, (_, i) => {
-        const ref = hotbar.slots[i] ?? '';
-        const count = hotbarCount(me, ref);
+        const stored = hotbar.slots[i] ?? '';
+        const storedCount = hotbarCount(me, stored);
+        // Used up (0 left): the slot shows as empty; the item comes back to
+        // the same slot when I have it again.
+        const ref = me && storedCount === 0 ? '' : stored;
+        const count = ref ? storedCount : null;
         const name = hotbarName(ref);
         const active = hotbar.selected === i;
         return (
@@ -244,7 +262,7 @@ export function Hotbar({
             data-slot={i}
             data-ref={ref}
             data-over={over === i || undefined}
-            data-empty={(count === 0) || undefined}
+            data-empty={!ref || undefined}
             onClick={() => {
               if (active && ref) onUse?.(ref);
               hotbar.setSelected(i);
@@ -263,13 +281,13 @@ export function Hotbar({
             onDrop={drop(i)}
           >
             <kbd aria-hidden="true">{keyLabel(keys[`hotbar${i + 1}` as BindAction])}</kbd>
-            {ref ? <ItemIcon id={ref} size={30} /> : null}
-            {count !== null && ref ? <b className="l-hotbar-count">{count}</b> : null}
+            {ref ? <ItemIcon id={ref} size={28} /> : null}
+            {count !== null ? <b className="l-hotbar-count">{count}</b> : null}
           </button>
         );
       })}
-      <output className="l-hotbar-name" aria-live="polite">
-        {hotbarName(hotbar.tool) || '빈 칸'}
+      <output className="l-hotbar-name" aria-live="polite" data-show={nameShown || undefined}>
+        {(me && toolCount === 0 ? '' : hotbarName(hotbar.tool)) || '빈 칸'}
       </output>
     </div>
   );

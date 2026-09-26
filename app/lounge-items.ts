@@ -74,7 +74,7 @@ export const FISH: readonly FishDef[] = [
   { id: 'sweetfish', name: '은어', emoji: '🐟', spots: ['river', 'rapids'], seasons: ['summer'], time: 'day', sky: 'dry', weight: 18, sell: 500, cm: [15, 30], windowMs: 800, note: '맑은 여름 강에서만 보여요. 수박 향이 난대요.' },
   { id: 'mandarin', name: '쏘가리', emoji: '🐟', spots: ['river', 'bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 10, sell: 900, cm: [20, 50], windowMs: 700, note: '바위틈의 강의 왕.' },
   { id: 'catfish', name: '메기', emoji: '🐟', spots: ['river', 'pond', 'lake'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 22, sell: 800, cm: [30, 90], windowMs: 900, note: '비 오는 밤에 수염을 흔들며 나와요.' },
-  { id: 'eel', name: '뱀장어', emoji: '🐍', spots: ['river'], seasons: ['spring', 'summer'], time: 'night', sky: 'rain', weight: 9, sell: 1_200, cm: [40, 100], windowMs: 600, note: '미끌미끌, 놓치기 쉬워요.' },
+  { id: 'eel', name: '뱀장어', emoji: '🐍', spots: ['river', 'bridge'], seasons: ['spring', 'summer'], time: 'night', sky: 'rain', weight: 9, sell: 1_200, cm: [40, 100], windowMs: 600, note: '미끌미끌, 놓치기 쉬워요.' },
   { id: 'trout', name: '산천어', emoji: '🐟', spots: ['river', 'rapids', 'falls'], seasons: ['winter'], time: 'day', sky: 'any', weight: 20, sell: 700, cm: [20, 45], windowMs: 850, note: '차가운 겨울 강의 보석.' },
   { id: 'medaka', name: '송사리', emoji: '🐟', spots: ['pond'], seasons: ['spring', 'summer'], time: 'day', sky: 'any', weight: 60, sell: 40, cm: [2, 5], windowMs: 1_200, note: '작디작은 연못 친구.' },
   { id: 'goldfish', name: '금붕어', emoji: '🐡', spots: ['pond'], seasons: ALL, time: 'any', sky: 'any', weight: 25, sell: 150, cm: [5, 20], windowMs: 1_000, note: '누군가 풀어 준 걸까요?' },

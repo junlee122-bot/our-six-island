@@ -1,0 +1,290 @@
+/* One table look per venue (GameScreen sets data-venue):
+   - casino (별빛 카지노: 홀덤, 블랙잭, 체스) = dark room, dark green felt,
+     dark wood rim, gold accents;
+   - hall (범마을 회관: 섯다, 고스톱) = cream room, warm wood table.
+   Every game of a venue shares the page, header, side column, host strip
+   and the next-round card, so moving between tables feels like one place. */
+
+/* ------------------------------------------------------------ casino */
+.l-app .l-game-screen[data-venue='casino'] {
+  --venue-page: #111c1b;
+  --venue-head: #162320;
+  --venue-line: #34413a;
+  --venue-panel: #1b2925;
+  --venue-deep: #13201b;
+  --venue-ink: #ece7d7;
+  --venue-muted: #b9b39f;
+  --venue-gold: #c7af72;
+  background: var(--venue-page);
+  color: var(--venue-ink);
+}
+.l-app .l-game-screen[data-venue='casino'] > header {
+  background: var(--venue-head);
+  border-bottom-color: var(--venue-line);
+  color: #efe7d3;
+}
+.l-app .l-game-screen[data-venue='casino'] > header small {
+  color: #a6b5a6;
+}
+.l-app .l-game-screen[data-venue='casino'] > header button {
+  color: #dfd7c2;
+}
+.l-app .l-game-screen[data-venue='casino'] > header .l-game-back {
+  background: #293c30;
+  border: 1px solid #536449;
+  color: #eadfbd;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-live {
+  color: #a6b5a6;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-primary {
+  border-color: var(--venue-gold);
+  background: var(--venue-gold);
+  color: #273522;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-primary:hover {
+  background: #d6bf84;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-secondary {
+  border-color: #5a6c4e;
+  background: #24392c;
+  color: #eee4c7;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-text {
+  color: #d7c48e;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-money {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-money b {
+  color: var(--venue-gold);
+}
+/* The casino host strip (루미) is the same at every table. */
+.l-game-screen[data-venue='casino'] :is(.p-host, .bj-announcement, .c-host) {
+  --dh-bg: #1d2e28;
+  --dh-border: #3c493b;
+  --dh-name: #d7c48e;
+  --dh-muted: #a6b5a6;
+  --dh-ring: #bfa265;
+}
+/* The dialogs keep their own light look. */
+.l-app .l-game-screen[data-venue='casino'] .l-modal {
+  color: #3e4234;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-modal .l-primary {
+  border-color: var(--l-primary, #3f6a4a);
+  background: var(--l-primary, #3f6a4a);
+  color: #fffdf1;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-modal .l-secondary {
+  border-color: #cdd5c0;
+  background: #f5f6ef;
+  color: #3f5638;
+}
+
+/* 체스 in the casino: a felt-green board in a dark wood frame, the host strip
+   above it and a dark side panel (it used to be a light web page). */
+.l-chess-club .c-host {
+  margin-bottom: 12px;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard {
+  border: 12px solid #3a2a1c;
+  border-radius: 10px;
+  outline: 1px solid #977652;
+  box-shadow:
+    inset 0 0 0 2px #b294663f,
+    0 14px 30px #0007;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard .light {
+  background: #e6dcc0;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard .dark {
+  background: #3f6b52;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard .light small {
+  color: #3f6b52;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard .dark small {
+  color: #e6dcc0;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chessboard button.selected {
+  background: #c9a34f;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-aside {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+  color: var(--venue-ink);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-aside .l-kicker {
+  color: var(--venue-gold);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-game-aside > p {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-move-log {
+  background: var(--venue-deep);
+  color: var(--venue-ink);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-move-log > div {
+  border-bottom-color: #2a3a31;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-move-log :is(small, p) {
+  color: #8f9c86;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chess-settlement {
+  border-color: var(--venue-line);
+  background: var(--venue-deep);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chess-settlement small {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chess-settlement b {
+  color: var(--venue-ink);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chess-settlement b.is-win {
+  color: #8fd19e;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-chess-settlement b.is-lose {
+  color: #f0a39a;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-inline-confirm button {
+  background: #293c30;
+  color: #eadfbd;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-promotion {
+  background: var(--venue-panel);
+}
+
+/* ------------------------------------------------------------ hall */
+.l-app .l-game-screen[data-venue='hall'] {
+  --venue-line: #e2d6bf;
+  --venue-panel: #fffaf0;
+  background: #f4eee2;
+  color: #3b2f28;
+}
+.l-app .l-game-screen[data-venue='hall'] > header {
+  background: #fffaf0;
+  border-bottom-color: var(--venue-line);
+}
+.l-app .l-game-screen[data-venue='hall'] > header small {
+  color: #93836c;
+}
+.l-app .l-game-screen[data-venue='hall'] > header .l-game-back {
+  background: #f1e6d2;
+  color: #6b4f33;
+}
+.l-app .l-game-screen[data-venue='hall'] .l-game-money {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+}
+.l-app .l-game-screen[data-venue='hall'] .l-game-money b {
+  color: #8a5a2b;
+}
+/* The hall's tables are warm wood (섯다 and 고스톱 alike). */
+.l-app .l-game-screen[data-venue='hall'] :is(.s-table, .g-table-shell) {
+  border-color: #5a3d26;
+  background: radial-gradient(ellipse at 50% 42%, #8a6642 0%, #6d4d31 58%, #573b24 100%);
+  box-shadow:
+    inset 0 0 0 2px #e2c28a55,
+    inset 0 0 60px #2a180a55,
+    0 14px 35px #3a2a1a26;
+}
+.l-app .l-game-screen[data-venue='hall'] :is(.s-seat, .g-player-area) {
+  border-color: #f0dcb440;
+  background: #2e1c0e4d;
+}
+.l-app .l-game-screen[data-venue='hall'] :is(.s-seat.current, .g-player-area.active) {
+  border-color: #eac27c;
+  background: #7a55309e;
+}
+.l-app .l-game-screen[data-venue='hall'] .s-seat.winner {
+  border-color: #ffcc76;
+  background: #b08e3650;
+}
+
+/* ------------------------------------------------------------ next round
+   The ready card takes its venue's look (it was a light card on the dark
+   casino screens). */
+.l-app .l-game-screen[data-venue='casino'] .l-round-ready {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+  color: var(--venue-ink);
+  box-shadow: 0 12px 32px #0006;
+}
+.l-app .l-game-screen[data-venue='casino'] :is(.l-round-kicker, .l-round-heading p, .l-round-feedback) {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-count {
+  background: #24392c;
+  color: #cfe0c0;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends li {
+  border-color: var(--venue-line);
+  background: var(--venue-deep);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends li.is-ready {
+  border-color: #6f9a62;
+  background: #1f3a2a;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends li > span > span,
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends strong small {
+  color: var(--venue-muted);
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends li.is-ready > svg {
+  color: #8fd19e;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-friends li > .avatar-view {
+  background: #2a3a31;
+  box-shadow: 0 0 0 2px #c6a46199;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-message {
+  background: #2d2a1c;
+  color: #e7cf95;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-round-confirm.is-ready {
+  background: #2f4a33;
+  color: #cfe8c0;
+}
+.l-app .l-game-screen[data-venue='hall'] .l-round-ready {
+  border-color: var(--venue-line);
+  background: var(--venue-panel);
+}
+/* In the side column the portraits are round faces. */
+@media (min-width: 1024px) {
+  .l-app .l-game-screen .l-round-friends li > .avatar-view {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* The sticker bar in the side column takes its venue's panel too (it was a
+   navy bar on the green casino and a white web strip in the hall). */
+.l-app .l-game-screen[data-venue='casino'] .l-sticker-float .l-reactions {
+  border: 1px solid var(--venue-line);
+  border-radius: 12px;
+  background: var(--venue-panel);
+  box-shadow: none;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-sticker-float :is(.l-reaction-open, .l-reaction-toggle) {
+  border-color: #536449;
+  background: #293c30;
+  color: #eadfbd;
+}
+.l-app .l-game-screen[data-venue='casino'] .l-sticker-float .l-reaction-card {
+  border-color: var(--venue-line);
+  background: var(--venue-deep);
+}
+.l-app .l-game-screen[data-venue='hall'] .l-sticker-inline .l-reactions {
+  border: 1px solid var(--venue-line);
+  border-radius: 12px;
+  background: var(--venue-panel);
+}
+
+/* 고스톱's status line in the hall's cream (it was a green web bar). */
+.l-app .l-game-screen[data-venue='hall'] .g-game-top .l-game-status {
+  border-color: var(--venue-line);
+  background: #f1e6d2;
+  color: #5e4630;
+}

@@ -6,6 +6,8 @@ import { chessBoard, CHESS_MOVE_MS, type ChessMatch } from './lounge-chess';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer } from './lounge-turn-timer';
 import { formatBeom } from './lounge-text';
+import { DealerHost, useReactionReply } from './lounge-dealer-host';
+import { chessHostLine, type TableReaction } from './lounge-dealer-lines';
 const art = LOUNGE_ASSETS as Record<string, string>;
 export function ChessBoard({
   match,
@@ -15,6 +17,8 @@ export function ChessBoard({
   onDraw,
   names,
   settlement,
+  round,
+  reaction,
 }: {
   match: ChessMatch & TurnTiming;
   seat: number;
@@ -30,6 +34,10 @@ export function ChessBoard({
   names: string[];
   /** My 범 result for this match once it is settled. */
   settlement?: number;
+  /** Table round (1 = first 판), for the host's greeting. */
+  round?: number;
+  /** Newest sticker at this table, for the host's reply. */
+  reaction?: TableReaction | null;
 }) {
   const board = useMemo(() => chessBoard(match), [match]),
     [selected, setSelected] = useState<string | null>(null),
@@ -81,35 +89,41 @@ export function ChessBoard({
     } else
       setSelected(board.get(sq as Square)?.color === board.turn() ? sq : null);
   };
+  // 루미 hosts the casino's chess table too: the same strip as the card tables.
+  const history = board.history();
+  const line = chessHostLine(match, seat, names, history.at(-1), round);
+  const aside = useReactionReply(match.id, reaction, names);
   const squares = Array.from(
     { length: 64 },
     (_, i) =>
       `${'abcdefgh'[flipped ? 7 - (i % 8) : i % 8]}${flipped ? 1 + Math.floor(i / 8) : 8 - Math.floor(i / 8)}`,
   );
   return (
+    <div className="l-chess-club">
+      <DealerHost
+        host="lumi"
+        line={line}
+        aside={aside}
+        className="c-host"
+        table={{ game: '체스' }}
+      >
+        {!match.winner && (
+          <TurnTimer
+            deadline={match.turnDeadline}
+            total={CHESS_MOVE_MS}
+            label={
+              match.away?.includes(turn)
+                ? `${names[turn]} 연결 끊김`
+                : seat === turn
+                  ? '내 수'
+                  : `${names[turn]}의 수`
+            }
+            mine={seat === turn}
+          />
+        )}
+      </DealerHost>
     <div className="l-chess-layout">
       <div>
-        <div className="l-turn-row">
-          <div className="l-game-status" aria-live="polite">
-            {match.winner
-              ? `${match.winner === 'draw' ? '무승부' : names[match.winner === 'w' ? 0 : 1] + ' 승리'} · ${match.reason}`
-              : `${names[turn]}의 차례${board.isCheck() ? ' · 체크!' : ''}`}
-          </div>
-          {!match.winner && (
-            <TurnTimer
-              deadline={match.turnDeadline}
-              total={CHESS_MOVE_MS}
-              label={
-                match.away?.includes(turn)
-                  ? `${names[turn]} 연결 끊김`
-                  : seat === turn
-                    ? '내 수'
-                    : `${names[turn]}의 수`
-              }
-              mine={seat === turn}
-            />
-          )}
-        </div>
         <div className="l-chessboard" role="group" aria-label="체스판">
           {squares.map((sq, i) => {
             const piece = board.get(sq as Square),
@@ -175,14 +189,14 @@ export function ChessBoard({
         </p>
         <div className="l-move-log">
           <strong>기보</strong>
-          {board.history().length ? (
+          {history.length ? (
             Array.from(
-              { length: Math.ceil(board.history().length / 2) },
+              { length: Math.ceil(history.length / 2) },
               (_, i) => (
                 <div key={i}>
                   <small>{i + 1}.</small>
-                  <span>{board.history()[i * 2]}</span>
-                  <span>{board.history()[i * 2 + 1] ?? '—'}</span>
+                  <span>{history[i * 2]}</span>
+                  <span>{history[i * 2 + 1] ?? '—'}</span>
                 </div>
               ),
             )
@@ -245,6 +259,7 @@ export function ChessBoard({
             </button>
           ))}
       </aside>
+    </div>
     </div>
   );
 }

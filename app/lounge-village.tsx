@@ -3442,7 +3442,7 @@ function PlotTag({
 }) {
   const mine = actor === me;
   const owner = ACTORS[actor] ?? '친구';
-  const where = `${owner === ACTORS[me] ? '내' : owner + '네'} ${index < 6 ? '앞' : '뒤'} 두둑 ${(index % 6) + 1}`;
+  const where = `${mine ? '내 밭' : owner + '네 밭'} · ${index < 6 ? '앞' : '뒤'} 두둑 ${(index % 6) + 1}`;
   const plots = mine
     ? life?.me.farm
     : (() => {

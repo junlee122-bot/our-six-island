@@ -737,3 +737,20 @@
 .l-app.l-immersive:has(.l-tutorial) .l-banner[popover] {
   top: calc(96px + var(--tutorial-h, 220px) + 12px);
 }
+
+/* Banners never cover an open sheet or window's head: while a table sheet
+   or a dialog (the invite window, a panel) is open the banner stacks at the
+   bottom centre instead; at a game table it sits in the side column's top
+   so the host strip and my cards stay clear. */
+.l-app:has(dialog[open], [data-testid='table-sheet']) .l-banner,
+.l-app:has(dialog[open], [data-testid='table-sheet']) .l-banner[popover],
+.l-app.l-immersive:has(dialog[open], [data-testid='table-sheet']) .l-banner[popover] {
+  top: auto;
+  bottom: 28px;
+}
+.l-app.l-in-game .l-banner,
+.l-app.l-in-game .l-banner[popover] {
+  inset: 64px 20px auto auto;
+  transform: none;
+  max-width: min(420px, calc(100vw - 40px));
+}

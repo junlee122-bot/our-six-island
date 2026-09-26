@@ -1128,7 +1128,9 @@ export function Bedroom3D({
           </p>
         </div>
         <div className="b3-heading-side">
-          <span className="b3-mode-label">{visit ? '놀러 온 방' : theme.tag}</span>
+          <span className="b3-mode-label">
+            {visit ? `${ownerName}의 ${theme.title} · 놀러 왔어요` : theme.tag}
+          </span>
           {!visit && (
             <span className="b3-visitors" data-testid="room-visitors">
               {closed ? (

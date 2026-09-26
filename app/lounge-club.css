@@ -1,6 +1,11 @@
 /* The clubhouse shell. Game tables keep their dedicated, readable play surfaces. */
 .l-app {
-  --accent: #345bce;
+  /* Theme colour tokens (green village theme): primary buttons, links, focus. */
+  --l-primary: #3f6a4a;
+  --l-primary-hover: #355c3f;
+  --l-primary-ink: #fffdf1;
+  --l-primary-soft: #e3ecd9;
+  --accent: var(--l-primary);
   --line: #d5d9df;
   --muted: #65717f;
   --paper: #fafaf7;
@@ -33,8 +38,8 @@
   color: #626e7e;
 }
 .l-app .l-header nav button[aria-pressed='true'] {
-  color: #345bce;
-  border-color: #345bce;
+  color: var(--l-primary);
+  border-color: var(--l-primary);
 }
 .l-app .l-header-right {
   gap: 14px;
@@ -57,7 +62,7 @@
   font-size: 11px;
 }
 .l-app .l-save-bar button {
-  color: #345bce;
+  color: var(--l-primary);
 }
 .l-app .l-lounge {
   max-width: 1588px;
@@ -81,14 +86,14 @@
   font-size: 12px;
 }
 .l-app .l-primary {
-  background: #345bce;
-  border-color: #345bce;
+  background: var(--l-primary);
+  border-color: var(--l-primary);
   border-radius: 7px;
   box-shadow: none;
-  color: white;
+  color: var(--l-primary-ink);
 }
 .l-app .l-primary:hover {
-  background: #274caf;
+  background: var(--l-primary-hover);
 }
 .l-app .l-secondary {
   background: #f5f6f8;
@@ -150,7 +155,7 @@
   background: #f5f7fa;
 }
 .l-app .l-chat form button {
-  color: #345bce;
+  color: var(--l-primary);
 }
 .l-app .l-chat-messages {
   height: 148px;
@@ -246,8 +251,8 @@
   font-size: clamp(30px, 3.3vw, 50px);
 }
 .l-app .l-auth-tabs button[aria-selected='true'] {
-  color: #345bce;
-  border-color: #345bce;
+  color: var(--l-primary);
+  border-color: var(--l-primary);
 }
 .l-app .l-account-form input {
   background: #fff;
@@ -260,7 +265,7 @@
 .l-app .l-account-ids button[aria-checked='true'] {
   background: #dbe5fb;
   border-color: #6b89cf;
-  color: #234caa;
+  color: var(--l-primary-hover);
 }
 @media (max-width: 1100px) {
   .l-app .l-header {

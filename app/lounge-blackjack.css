@@ -11,7 +11,7 @@
   top: 53%;
 }
 .l-world-table.blackjack .l-table-top {
-  background: #692d39;
+  background: #1f5a45;
   border-color: #b9945c;
 }
 .l-mini-blackjack {
@@ -21,26 +21,26 @@
     serif;
 }
 .l-game-symbol.blackjack {
-  background: #6c2d3b;
+  background: #1f5a45;
   color: #f3d6a0;
   font-family: Georgia, serif;
 }
 .l-game-screen.blackjack {
-  background: #20191d;
+  background: #111c1b;
   color: #f3e8d5;
   min-height: 100dvh;
 }
 .l-game-screen.blackjack > header {
-  background: #2d2026;
+  background: #162320;
   color: #f4e8d3;
-  border-color: #66434a;
+  border-color: #34413a;
 }
 .l-game-screen.blackjack > header button {
   color: #f4e8d3;
 }
 .l-game-screen.blackjack > header .l-game-back {
-  background: #51323d;
-  border: 1px solid #85604c;
+  background: #293c30;
+  border: 1px solid #536449;
 }
 .l-game-screen.blackjack .l-game-content {
   max-width: 1320px;
@@ -51,16 +51,16 @@
 }
 .l-game-screen.blackjack .l-game-ending {
   background: transparent;
-  border-color: #68494d;
+  border-color: #455b43;
 }
 .l-game-screen.blackjack .l-primary {
-  background: #e4bc78;
-  color: #402a25;
+  background: #c7af72;
+  color: #273522;
 }
 .l-game-screen.blackjack .l-secondary {
-  background: #49313c;
+  background: #24392c;
   color: #fae9d1;
-  border-color: #866055;
+  border-color: #5a6c4e;
 }
 .l-game-screen.blackjack .l-modal {
   color: #3e4234;

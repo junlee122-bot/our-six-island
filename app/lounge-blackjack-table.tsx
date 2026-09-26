@@ -14,12 +14,13 @@ import {
   blackjackHandReports,
   blackjackLine,
   blackjackTotalLabel,
-  blackjackVerdict,
   sir,
   type TableReaction,
 } from './lounge-dealer-lines';
 import {
   DealerHost,
+  SeatPortrait,
+  type SeatFigure,
   useDealerTips,
   useReactionReply,
   useTableMemory,
@@ -50,6 +51,7 @@ export function BlackjackTable({
   onAction,
   round,
   reaction,
+  figures = [],
 }: {
   match: BlackjackView & TurnTiming;
   seat: number;
@@ -59,6 +61,8 @@ export function BlackjackTable({
   round?: number;
   /** Newest sticker at this table, for the host's reply. */
   reaction?: TableReaction | null;
+  /** Seat portraits (GameScreen). */
+  figures?: SeatFigure[];
 }) {
   const [rules, setRules] = useState(false),
     [sent, setSent] = useState<number | null>(null),
@@ -131,7 +135,7 @@ export function BlackjackTable({
         line={line}
         aside={aside}
         className="bj-announcement"
-        table={{ number: 3, game: '블랙잭' }}
+        table={{ game: '블랙잭' }}
         tips={tips}
       />
       <div className="bj-felt">
@@ -194,7 +198,7 @@ export function BlackjackTable({
             >
               <div className="bj-seat-title">
                 <strong>
-                  <small>{String(i + 1).padStart(2, '0')}</small>
+                  <SeatPortrait figure={figures[i]} name={names[i] ?? ''} className="bj-seat-face" />
                   {names[i]}
                   {seat === i && <em>나</em>}
                 </strong>
@@ -354,7 +358,7 @@ export function BlackjackTable({
           <strong>
             {seat >= 0 ? signed(g.result[seat]) : `${names.length}명 정산 완료`}
           </strong>
-          <p className="bj-verdict">{blackjackVerdict(g.dealer)}</p>
+          {/* The verdict is said once, in 루미's line above the table. */}
           <ul className="bj-report" aria-label="손별 결과">
             {reports.map((r) => (
               <li key={r.seat + ':' + r.hand} className={r.outcome}>

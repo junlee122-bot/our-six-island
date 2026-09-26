@@ -30,6 +30,9 @@ import { Glyph } from './field-glyphs';
 import { ConfirmModal, Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useServerClock } from './use-server-clock';
+import { boundAction } from '../lounge-scene-keys';
+import { keyLabel } from '../lounge-keybinds';
+import { getSettings } from '../lounge-settings';
 import './farm-fish.css';
 
 type Plot = LifeView['me']['farm'][number];
@@ -112,7 +115,9 @@ export function FarmLedger({
   const [packet, setPacket] = useState<Crop | null>(lastSeed);
   const bookRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    bookRef.current?.focus({ preventScroll: true });
+    // After the dialog focuses itself (its effect runs after this one).
+    const id = requestAnimationFrame(() => bookRef.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(id);
   }, []);
   const run = async (action: LifeAction, done: string, chime?: 'plant' | 'water' | 'harvest') => {
     if (busy) return false;
@@ -244,7 +249,7 @@ export function FarmLedger({
     else if (e.key === 'ArrowRight') move(1, 0);
     else if (e.key === 'ArrowUp') move(0, -1);
     else if (e.key === 'ArrowDown') move(0, 1);
-    else if (k === 'e' || e.key === 'Enter' || e.key === ' ') primary(current);
+    else if (boundAction(e.nativeEvent) === 'action' || e.key === 'Enter' || e.key === ' ') primary(current);
     else if (k === 'h' && ready) void harvestAll();
     else if (k === 'w' && thirsty) waterAll();
     else if (/^[1-9]$/.test(e.key) && pouch[Number(e.key) - 1]) {
@@ -258,6 +263,7 @@ export function FarmLedger({
     }
   };
 
+  const actKey = keyLabel(getSettings().keys.action);
   const weather = life.weather?.today;
   const name = ACTORS[actor] ?? '';
   const st = plot ? stageOf(plot) : 0;
@@ -325,7 +331,7 @@ export function FarmLedger({
                             onDoubleClick={() => primary(i)}
                           >
                             <span className="l-ledger-soil" />
-                            {p.crop ? <CropStageArt crop={p.crop} stage={s} size={46} /> : null}
+                            {p.crop ? <CropStageArt crop={p.crop} stage={s} size={60} /> : null}
                             {state === 'thirsty' && (
                               <span className="l-ledger-mark l-ledger-thirst">
                                 <Glyph name="drop" size={14} />
@@ -472,7 +478,7 @@ export function FarmLedger({
                   <div className="l-ledger-row-actions">
                     {st === 3 ? (
                       <button type="button" className="l-leaf" disabled={busy} onClick={() => void harvestOne(current)} data-testid={`plot-${current}-harvest`}>
-                        <Glyph name="basket" /> 거두기 <kbd>E</kbd>
+                        <Glyph name="basket" /> 거두기 <kbd>{actKey}</kbd>
                       </button>
                     ) : (
                       <button
@@ -482,7 +488,7 @@ export function FarmLedger({
                         onClick={() => void run({ kind: 'water', plot: current }, `${bedName(current)}에 물을 줬어요.`, 'water')}
                         data-testid={`plot-${current}-water`}
                       >
-                        <Glyph name="can" /> {plot.rained ? '비가 줬어요' : plot.wateredAt !== null ? '물 줬어요' : '물 주기'} {thirstyOf(plot) ? <kbd>E</kbd> : null}
+                        <Glyph name="can" /> {plot.rained ? '비가 줬어요' : plot.wateredAt !== null ? '물 줬어요' : '물 주기'} {thirstyOf(plot) ? <kbd>{actKey}</kbd> : null}
                       </button>
                     )}
                     {st < 3 &&
@@ -592,7 +598,7 @@ export function FarmLedger({
             )}
           </section>
           <p className="l-ledger-keys" aria-hidden="true">
-            <kbd>←↑↓→</kbd> 칸 고르기 <kbd>E</kbd> 가꾸기 <kbd>1–9</kbd> 씨앗 <kbd>Esc</kbd> 덮기
+            <kbd>←↑↓→</kbd> 칸 고르기 <kbd>{actKey}</kbd> 가꾸기 <kbd>1–9</kbd> 씨앗 <kbd>Esc</kbd> 덮기
           </p>
         </section>
       </div>

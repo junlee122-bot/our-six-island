@@ -5,6 +5,8 @@
 // settings store (lounge-settings.ts) persists the table, the scenes and
 // lounge-game.tsx read it through `bindingFor` / `actionForCode`.
 
+import { particle, type JosaPair } from './lounge-text.ts';
+
 export type BindAction =
   | 'up'
   | 'down'
@@ -186,6 +188,30 @@ export function keyLabel(code: string | null | undefined): string {
     ArrowRight: '→',
   };
   return named[code] ?? code;
+}
+
+// How a key's label is read aloud in Korean, for picking 은/는, 을/를, (으)로.
+const LETTER_READING = '에이 비 씨 디 이 에프 지 에이치 아이 제이 케이 엘 엠 엔 오 피 큐 알 에스 티 유 브이 더블유 엑스 와이 제트'.split(' ');
+const KEY_READING: Record<string, string> = {
+  Esc: '이스케이프', Space: '스페이스', Enter: '엔터', Tab: '탭', Shift: '시프트',
+  Backspace: '백스페이스', Delete: '딜리트', Insert: '인서트', Home: '홈', End: '엔드',
+  PageUp: '페이지업', PageDown: '페이지다운', CapsLock: '캡스 락', Control: '컨트롤',
+  ControlLeft: '컨트롤', ControlRight: '컨트롤', AltLeft: '알트', AltRight: '알트',
+  ShiftLeft: '시프트', ShiftRight: '시프트', MetaLeft: '윈도', MetaRight: '윈도',
+  ContextMenu: '메뉴', '↑': '위', '↓': '아래', '←': '왼쪽', '→': '오른쪽',
+};
+/**
+ * A key name with the right particle: keyJosa('KeyL', '은/는') → 'L은',
+ * keyJosa('Space', '은/는') → 'Space는', keyJosa('Tab', '으로/로') → 'Tab으로'.
+ * Symbols with no clear reading become '` 키는' (always correct).
+ */
+export function keyJosa(code: string, pair: JosaPair): string {
+  const label = keyLabel(code);
+  let reading = KEY_READING[label] ?? KEY_READING[code];
+  if (!reading && /^[A-Z]$/.test(label)) reading = LETTER_READING[label.charCodeAt(0) - 65];
+  if (!reading && /^(F\d{1,2}|숫자판 \d|\d)$/.test(label)) reading = label.replace(/^숫자판 /, '');
+  if (!reading) return `${label} 키${particle('키', pair)}`;
+  return label + particle(reading, pair);
 }
 
 /**

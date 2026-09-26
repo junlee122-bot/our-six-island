@@ -26,6 +26,17 @@ import {
   Wheat,
 } from 'lucide-react';
 import { ACTION_LABEL, type ActionKind } from '../lounge-flow';
+import { Glyph, type GlyphName } from './field-glyphs';
+
+/** Farm and fishing actions use the painted field glyphs (VILL-2). */
+const GLYPH: Partial<Record<ActionKind, GlyphName>> = {
+  plant: 'seed',
+  water: 'can',
+  waterFriend: 'can',
+  harvest: 'basket',
+  tend: 'leaf',
+  fish: 'hook',
+};
 
 const ICON: Record<ActionKind, typeof DoorOpen> = {
   enter: DoorOpen,
@@ -91,7 +102,7 @@ export function ActionButton({
       aria-keyshortcuts={key}
       onClick={onPress}
     >
-      <Icon size={22} aria-hidden="true" />
+      {GLYPH[kind] ? <Glyph name={GLYPH[kind]} size={24} /> : <Icon size={22} aria-hidden="true" />}
       <span>{text}</span>
       <kbd aria-hidden="true" className="l-action-key">
         {key}

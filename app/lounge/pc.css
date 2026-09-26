@@ -329,6 +329,106 @@ dialog.l-system-menu.l-modal {
   color: #9b3b2f;
 }
 
+/* ---------------------------------------------------------- ☰ 마을 메뉴
+   The Esc menu's list style, in groups; arrow keys move between items. */
+dialog.l-village-menu.l-modal {
+  width: min(860px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+}
+.l-village-menu-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 22px;
+  margin-top: 14px;
+}
+.l-village-menu-group h3,
+.l-menu-danger summary {
+  margin: 0 0 8px;
+  color: #5d7052;
+  font-size: calc(13px * var(--text-scale, 1));
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.l-village-menu-group:first-child {
+  grid-row: span 2;
+}
+.l-village-menu-group .l-system-list {
+  gap: 6px;
+}
+.l-village-menu-group .l-system-list button {
+  min-height: 44px;
+  padding: 9px 14px;
+  font-size: calc(14px * var(--text-scale, 1));
+}
+.l-village-menu kbd {
+  min-width: 26px;
+  padding: 2px 6px;
+  border: 1px solid #cfd6c0;
+  border-radius: 6px;
+  background: #fff;
+  color: #5b6b50;
+  font-size: calc(12px * var(--text-scale, 1));
+  text-align: center;
+}
+.l-menu-badge {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #c8503f;
+  color: #fff;
+  font-size: calc(12px * var(--text-scale, 1));
+  line-height: 1.5;
+  text-align: center;
+}
+/* Actions that cannot be undone: closed until opened, and they still ask. */
+.l-menu-danger {
+  grid-column: 1 / -1;
+  padding: 10px 14px;
+  border: 1px dashed #e0c4b6;
+  border-radius: 12px;
+  background: #fbf4ee;
+}
+.l-menu-danger summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  min-height: 32px;
+  color: #8a4a36;
+  cursor: pointer;
+}
+.l-menu-danger summary:focus-visible {
+  outline: 3px solid #d99556;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.l-menu-danger .l-system-list {
+  margin-top: 8px;
+}
+.l-menu-danger .l-system-list button {
+  border-color: #e7cbbd;
+  background: #fff;
+}
+.l-menu-danger .l-system-list button:hover {
+  background: #fbeae2;
+}
+.l-menu-danger button small {
+  display: block;
+  margin-top: 2px;
+  color: #7d5a4d;
+  font-size: calc(12px * var(--text-scale, 1));
+  font-weight: 400;
+}
+@media (max-width: 720px) {
+  .l-village-menu-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .l-village-menu-group:first-child {
+    grid-row: auto;
+  }
+}
+
 /* ---------------------------------------------------------- controls help */
 .l-controls-grid {
   display: grid;

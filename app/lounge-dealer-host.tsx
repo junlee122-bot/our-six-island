@@ -5,6 +5,8 @@
 // streak lines, sticker replies, card sounds, the beginner-tip toggle).
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Lightbulb } from 'lucide-react';
+import { AvatarView } from './avatar-view';
+import type { Look } from './lounge-look';
 import {
   HOSTS,
   reactionLine,
@@ -63,6 +65,34 @@ export function DealerAvatar({
   );
 }
 
+/** A seated friend's figure for the table's portraits (null: AI or gone). */
+export type SeatFigure = { actor: number; look: Look } | null;
+
+/**
+ * A seat's round portrait: the friend's current chibi face (as in the
+ * header, the menus and the ready check); a letter only when there is no
+ * figure (an AI seat, a friend who left).
+ */
+export function SeatPortrait({
+  figure,
+  name,
+  className = '',
+}: {
+  figure?: SeatFigure;
+  name: string;
+  className?: string;
+}) {
+  return (
+    <span className={'dh-seat-face ' + className} aria-hidden="true">
+      {figure ? (
+        <AvatarView actor={figure.actor} look={figure.look} portrait />
+      ) : (
+        <b>{name.slice(0, 1)}</b>
+      )}
+    </span>
+  );
+}
+
 /** The host strip above a table: portrait, name, title and the line. */
 export function DealerHost({
   host,
@@ -77,8 +107,11 @@ export function DealerHost({
 }: {
   host: HostId;
   line: DealerLine;
-  /** Right-hand label, e.g. { number: 3, game: '블랙잭' } → '3번 테이블'. */
-  table?: { number: number; game: string };
+  /**
+   * Right-hand label: { game: '블랙잭' } → '블랙잭 테이블'. A number is shown
+   * only when a venue has several tables of the same game ('2번 테이블').
+   */
+  table?: { number?: number; game: string };
   /** Beginner-tip toggle (off by default, remembered per device). */
   tips?: { on: boolean; toggle: () => void };
   /** A short extra line (sticker reply) shown under the main line. */
@@ -120,8 +153,8 @@ export function DealerHost({
         <div className="dh-side">
           {table && (
             <span className="dh-table-number">
-              {table.game}
-              <b>{table.number}번 테이블</b>
+              {table.number ? table.game : null}
+              <b>{table.number ? `${table.number}번 테이블` : `${table.game} 테이블`}</b>
             </span>
           )}
           {tips && (

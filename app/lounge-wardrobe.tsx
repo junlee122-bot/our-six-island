@@ -1,7 +1,7 @@
 'use client';
 /* Static GitHub Pages serves these versioned game assets without a Next image service. */
 /* oxlint-disable next/no-img-element */
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Check, Bookmark, Download, RotateCcw, ArrowRight } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import { ACTORS, ACTOR_COLORS } from './lounge-roster';
@@ -165,6 +165,24 @@ function ColorEditor({
   );
 }
 
+/**
+ * Arrow keys move focus through a grid of buttons (outfits, saved looks):
+ * left/right by one, up/down by a row. Rows are read from the layout.
+ */
+function gridArrows(e: ReactKeyboardEvent<HTMLElement>) {
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(':scope > button, :scope > div > button:first-child')];
+  const at = items.indexOf(document.activeElement as HTMLButtonElement);
+  if (at < 0) return;
+  const top = items[0].offsetTop;
+  const cols = Math.max(1, items.filter((b) => b.offsetTop === top).length);
+  const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[e.key]!;
+  const next = items[Math.min(items.length - 1, Math.max(0, at + step))];
+  e.preventDefault();
+  next.focus();
+  next.scrollIntoView({ block: 'nearest' });
+}
+
 export function Wardrobe({
   save,
   onChange,
@@ -207,6 +225,39 @@ export function Wardrobe({
       hairColor: next.hairColor,
       skinColor: next.skinColor,
     });
+  // Keyboard first: Q / E switch the closet tabs (Esc opens the menu, see
+  // lounge-game.tsx). Typing in a colour field never switches.
+  const categoryRef = useRef(category);
+  useEffect(() => {
+    categoryRef.current = category;
+  });
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.code !== 'KeyQ' && e.code !== 'KeyE') return;
+      if (document.querySelector('dialog[open], .l-coach')) return;
+      const t = e.target instanceof HTMLElement ? e.target : null;
+      if (t?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+      const ids = WARDROBE_CATEGORIES.map(([id]) => id);
+      const at = ids.indexOf(categoryRef.current);
+      const next = ids[(at + (e.code === 'KeyE' ? 1 : ids.length - 1)) % ids.length];
+      e.preventDefault();
+      setCategory(next);
+      document.getElementById(`${tabsId}-${next}`)?.focus({ preventScroll: true });
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, [tabsId]);
+  // Coming in, focus lands on the closet tabs so the keys work at once.
+  useEffect(() => {
+    if (entry) return;
+    const t = setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active === document.body)
+        document.getElementById(`${tabsId}-${categoryRef.current}`)?.focus({ preventScroll: true });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [entry, tabsId]);
   const bookmark = () => {
     if (
       save.saved.some(
@@ -274,7 +325,24 @@ export function Wardrobe({
     }
   };
   return (
-    <section className="l-wardrobe">
+    <section
+      className="l-wardrobe"
+      data-testid="wardrobe-scene"
+      style={{ '--wardrobe-bg': `url("${LOUNGE_ASSETS.wardrobe}")` } as CSSProperties}
+    >
+      {/* Full-window (in the game): a small chip under the header instead of
+          the page title, like my room's and the village's chips. */}
+      <p className="l-wardrobe-chip" aria-hidden={entry || undefined}>
+        <b>분장실</b>
+        <span>
+          착용 중 · {currentCollection.name}
+        </span>
+        <span className="l-wardrobe-keys">
+          <kbd>Q</kbd>
+          <kbd>E</kbd> 분류 · <kbd>←</kbd>
+          <kbd>→</kbd> 고르기 · <kbd>Esc</kbd> 메뉴
+        </span>
+      </p>
       <div className="l-section-title">
         <div>
           <h1>분장실</h1>
@@ -437,7 +505,9 @@ export function Wardrobe({
                       </button>
                     ))}
                 </div>
-                <div className="l-outfits">
+                {/* Arrow keys move between the buttons in this grid (gridArrows). */}
+                {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+                <div className="l-outfits" role="group" aria-label="의상 목록 · 방향키로 고르기" onKeyDown={gridArrows}>
                   {collectionsFor(actor)
                     .filter(
                       (c) =>
@@ -650,7 +720,9 @@ export function Wardrobe({
               </div>
             )}
             {category === 'saved' && (
-              <div className="l-saved-looks">
+              // Arrow keys move between the buttons in this grid (gridArrows).
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+              <div className="l-saved-looks" role="group" aria-label="보관한 코디" onKeyDown={gridArrows}>
                 {!save.saved.some((s) => s.actor === actor) && (
                   <p>
                     마음에 드는 모습을 찾으면

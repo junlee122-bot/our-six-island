@@ -135,7 +135,26 @@ export function createInteriorHosts(
       reduced: boolean,
     ) {
       let changed = false;
+      // One figure per host: 루미 (or 매화) stands at the busiest of her
+      // tables — a game in play first, then the most seats taken, else her
+      // first table — and the other stays without a second copy of her.
+      const busiest = new Map<HostId, Host>();
+      const score = (h: Host) => {
+        const s = tables.get(h.game);
+        return (s?.phase === 'playing' ? 1000 : s?.phase === 'retained' || s?.phase === 'forming' ? 500 : 0) + (s?.seats ?? 0);
+      };
       for (const host of hosts) {
+        const best = busiest.get(host.id);
+        if (!best || score(host) > score(best)) busiest.set(host.id, host);
+      }
+      for (const host of hosts) {
+        const shown = busiest.get(host.id) === host;
+        if (host.mesh.visible !== shown) {
+          host.mesh.visible = shown;
+          host.shadow.visible = shown;
+          changed = true;
+        }
+        if (!shown) continue;
         const table = tables.get(host.game);
         const phase = table?.phase ?? 'empty';
         const seats = table?.seats ?? 0;
@@ -170,7 +189,7 @@ export function createInteriorHosts(
     /** Where the host at a table stands now (for her name tag). */
     standAt(game: GameKind) {
       const host = hosts.find((h) => h.game === game);
-      return host ? { x: host.mesh.position.x, z: host.mesh.position.z } : null;
+      return host?.mesh.visible ? { x: host.mesh.position.x, z: host.mesh.position.z } : null;
     },
     dispose() {
       disposed = true;

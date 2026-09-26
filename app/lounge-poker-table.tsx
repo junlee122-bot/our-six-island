@@ -16,12 +16,13 @@ import { formatBeom } from './lounge-text';
 import {
   POKER_RANK_TIPS,
   pokerLine,
-  pokerResultLines,
   sir,
   type TableReaction,
 } from './lounge-dealer-lines';
 import {
   DealerHost,
+  SeatPortrait,
+  type SeatFigure,
   useDealerTips,
   useReactionReply,
   useTableMemory,
@@ -78,7 +79,9 @@ export function PokerCard({
         <Spade size={17} />
       </span>
     );
-  const rank = POKER_RANKS[card % 13],
+  const code = POKER_RANKS[card % 13],
+    // The engine's 'T' is shown as the 10 printed on real cards.
+    rank = code === 'T' ? '10' : code,
     suit = POKER_SUITS[Math.floor(card / 13)],
     red = [1, 2].includes(Math.floor(card / 13));
   return (
@@ -108,6 +111,7 @@ export function PokerTable({
   onAction,
   round,
   reaction,
+  figures = [],
 }: {
   match: PokerView & TurnTiming;
   seat: number;
@@ -117,6 +121,8 @@ export function PokerTable({
   round?: number;
   /** Newest sticker at this table, for the host's reply. */
   reaction?: TableReaction | null;
+  /** Seat portraits (GameScreen). */
+  figures?: SeatFigure[];
 }) {
   const away = (i: number) => !!g.away?.includes(i),
     tips = useDealerTips(),
@@ -211,7 +217,7 @@ export function PokerTable({
         line={line}
         aside={aside}
         className="p-host"
-        table={{ number: 1, game: '홀덤' }}
+        table={{ game: '홀덤' }}
         tips={tips}
       />
       <div className="p-table-wrap">
@@ -290,7 +296,8 @@ export function PokerTable({
               </div>
               <div className="p-seat-label">
                 <span className="p-seat-initial">
-                  {winner ? <Crown size={15} /> : names[i]?.slice(0, 1)}
+                  <SeatPortrait figure={figures[i]} name={names[i] ?? ''} />
+                  {winner && <Crown size={14} className="p-seat-crown" aria-label="승리" />}
                   {i === g.dealer && <i className="p-button-chip">D</i>}
                 </span>
                 <span>
@@ -370,11 +377,7 @@ export function PokerTable({
               </span>
             ))}
           </div>
-          <ul className="p-result-lines">
-            {pokerResultLines(g, names).map((text) => (
-              <li key={text}>{text}</li>
-            ))}
-          </ul>
+          {/* Who won what and why is said once, in 루미's line above the table. */}
           {sidePots && (
             <small>
               메인 팟과 사이드 팟은 각 팟에 참가한 친구들끼리 따로 정산했어요.

@@ -7,6 +7,7 @@ import type { Crop } from './lounge-life';
 import {
   FARM_BEDS,
   FRUIT_TREE_POINTS,
+  PLOT_GAP,
   PLOT_SIZE,
   farmBedRect,
   mailboxPoint,
@@ -35,7 +36,6 @@ const MAT = {
   soilWet: std('#4f3421'),
   /** Fallow ground in a bed that is not tilled yet (farm expansion). */
   fallow: std('#8fa968'),
-  fallowStake: std('#c9a36a'),
   stone: std('#b9b2a2'),
   stoneDark: std('#8d877a'),
   water: std('#6fb2c4', { roughness: 0.25, metalness: 0.05 }),
@@ -445,15 +445,15 @@ function buildYards(root: THREE.Object3D) {
       }
     }
     // Name board on two stakes, just inside the gate, facing the lane.
-    const sx = yard.sign.x + 0.55,
-      sz = YARD_FENCE_Z - 0.28;
-    for (const dx of [-0.42, 0.42]) box(signs, MAT.woodDark, sx + dx, 0.42, sz, 0.07, 0.84, 0.07);
+    const sx = yard.sign.x + 0.8,
+      sz = YARD_FENCE_Z - 0.3;
+    for (const dx of [-0.62, 0.62]) box(signs, MAT.woodDark, sx + dx, 0.55, sz, 0.08, 1.1, 0.08);
     const board = new THREE.Mesh(
       plane,
       new THREE.MeshStandardMaterial({ map: yardSignTexture(ACTORS[yard.actor] ?? '', home?.roofColor ?? '#8a6242'), roughness: 0.9 }),
     );
-    board.position.set(sx, 0.78, sz + 0.05);
-    board.scale.set(1.1, 0.48, 1);
+    board.position.set(sx, 1.02, sz + 0.05);
+    board.scale.set(1.55, 0.68, 1);
     board.castShadow = true;
     board.name = `yard-sign-${yard.actor}`;
     signs.add(board);
@@ -697,9 +697,12 @@ export class VillageLifeLayer {
         for (let i = 0; i < 12; i++) {
           const at = yardPlotCenter(yard, i);
           if (i >= total) {
-            // Untilled: a grass tile with a small stake in its corner.
-            soil.push({ geo: GEO.box, mat: MAT.fallow, m: matrix(at.x, 0.13, at.z, PLOT_SIZE, 0.1, PLOT_SIZE) });
-            if (i % 3 === 1) soil.push({ geo: GEO.box, mat: MAT.fallowStake, m: matrix(at.x, 0.3, at.z, 0.05, 0.34, 0.05) });
+            // Untilled: grass over the whole cell (no furrows) with a few tufts.
+            soil.push({ geo: GEO.box, mat: MAT.fallow, m: matrix(at.x, 0.14, at.z, PLOT_SIZE + PLOT_GAP + 0.01, 0.12, PLOT_SIZE + PLOT_GAP + 0.01) });
+            for (let k = 0; k < 3; k++) {
+              const a = (yard.actor * 3 + i * 5 + k * 2.1) % 6.28;
+              soil.push({ geo: GEO.cone, mat: MAT.leafLight, m: matrix(at.x + Math.cos(a) * 0.2, 0.26, at.z + Math.sin(a) * 0.2, 0.05, 0.12, 0.05) });
+            }
             continue;
           }
           const plot = plots[i];

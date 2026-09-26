@@ -102,9 +102,9 @@ export const DEALER_LINES = {
     '{total|이/가} 됐어요. 딜러는 여기서 멈춰요.',
   ],
   dealerBust: [
-    '{card}! 앗, {total|으로/로} 버스트예요.',
-    '앗, {card}… {total|으로/로} 버스트예요.',
-    '{card}{extra}… 딜러 {total}, 버스트예요.',
+    '딜러가 받은 카드는 {card}. 앗, 합계 {total|으로/로} 버스트예요.',
+    '한 장 더 받았더니 {card}… 합계 {total|으로/로} 버스트예요.',
+    '이번 카드는 {card}{extra}. 딜러 {total}, 버스트예요.',
   ],
   win: [
     '축하해요!',
@@ -713,6 +713,48 @@ export function seotdaLine(
         ? '내 차례예요.'
         : `이제 ${sir(names[g.turn])} 차례예요.`;
   return { text: `${action} ${turn}`.trim(), mood: 'calm' };
+}
+
+// ---------------------------------------------------------------------------
+// 체스 · 루미 (the casino's host watches the board; she does not play)
+export function chessHostLine(
+  g: {
+    id: string;
+    moves: readonly string[];
+    winner: 'w' | 'b' | 'draw' | null | '';
+    reason: string;
+  },
+  seat: number,
+  names: string[],
+  /** Standard notation of the last move ('Nf3', 'exd5+'), when known. */
+  lastSan?: string,
+  round?: number,
+): DealerLine {
+  const white = names[0] ?? '백',
+    black = names[1] ?? '흑';
+  if (g.winner) {
+    if (g.winner === 'draw')
+      return { text: `무승부예요 · ${g.reason}. 끝까지 좋은 승부였어요.`, mood: 'calm' };
+    const won = g.winner === 'w' ? 0 : 1;
+    const who = won === seat ? '내가' : josa(sir(names[won]), '이/가');
+    return {
+      text: `${who} 이겼어요 · ${g.reason}. 멋진 승부였어요.`,
+      mood: seat >= 0 ? (won === seat ? 'smile' : 'sorry') : 'smile',
+    };
+  }
+  const turn = g.moves.length % 2;
+  const next = turn === seat ? '내 차례예요.' : `이제 ${sir(names[turn])} 차례예요.`;
+  if (!g.moves.length)
+    return {
+      text: `${round && round > 1 ? `${round}번째 판이에요. ` : ''}백은 ${sir(white)}, 흑은 ${sir(black)}. 백부터 둬요. ${next}`,
+      mood: 'smile',
+    };
+  const mover = 1 - turn;
+  const check = lastSan?.endsWith('+') ? ' 체크!' : '';
+  const moved = lastSan
+    ? `${subject(mover, seat, names)} ${lastSan}${particle(lastSan.replace(/[+#]+$/, ''), '을/를')} 뒀어요.${check}`
+    : `${subject(mover, seat, names)} 한 수 뒀어요.`;
+  return { text: `${moved} ${next}`, mood: check ? 'wow' : 'focus' };
 }
 
 // ---------------------------------------------------------------------------

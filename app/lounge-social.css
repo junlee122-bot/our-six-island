@@ -431,6 +431,101 @@
   transform: translateX(-50%);
 }
 
+/* A friend's room (놀러 가기) is the same full-window room: the room's name
+   chip and who is here under the header, the dock bottom-left and the
+   guestbook as an in-scene panel on the right (G / Esc). */
+.l-visit-full .l-visit {
+  display: block;
+  padding: 0;
+}
+.l-visit-full .b3-visit-wait {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  justify-items: center;
+}
+.b3-visit-chips {
+  position: fixed;
+  z-index: 7;
+  top: 134px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: min(520px, 42vw);
+  pointer-events: none;
+}
+.b3-visit-chip {
+  padding: 6px 10px;
+  border: 1px solid #f8f9e5e0;
+  border-radius: 10px;
+  background: #fffdeeeb;
+  color: #4a4234;
+  font-size: calc(12px * var(--text-scale, 1));
+  line-height: 1.5;
+  word-break: keep-all;
+  box-shadow: 0 3px 12px #43523310;
+}
+.b3-visit-chip.is-status b {
+  margin-right: 6px;
+  color: #6b5a40;
+}
+.b3-visit-dock kbd {
+  min-width: 20px;
+  padding: 1px 5px;
+  border: 1px solid #d7ccb6;
+  border-radius: 5px;
+  background: #fff;
+  color: #6b5a40;
+  font-size: calc(11px * var(--text-scale, 1));
+  line-height: 1.4;
+}
+.b3-visit-dock .b3-chat-button[aria-expanded='true'] {
+  border-color: #6b8a58;
+  background: #eef3e3;
+  color: #3f5a34;
+}
+.b3-visit-guestbook {
+  position: fixed;
+  z-index: 9;
+  top: 96px;
+  right: 20px;
+  width: min(380px, calc(100vw - 40px));
+  max-height: calc(100dvh - 190px);
+  overflow-y: auto;
+  padding: 6px 4px 4px;
+  border: 1px solid #f8f9e5e0;
+  border-radius: 16px;
+  background: #fffdf2f7;
+  box-shadow: 0 14px 34px #2c2a1a2e;
+  animation: b3-panel-in 160ms ease-out;
+}
+.b3-visit-guestbook .l-guestbook {
+  padding: 12px 14px;
+}
+.b3-visit-guestbook .l-guestbook h2 {
+  padding-right: 36px;
+}
+.b3-visit-guestbook-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+@keyframes b3-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .b3-visit-guestbook {
+    animation: none;
+  }
+}
+
 /* The room's status bar: key help on the left, model credits on the right.
    Both pass 4.5:1 on the bar colour and follow 글자 크기. */
 .l-app .b3-scene-footer {

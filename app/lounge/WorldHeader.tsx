@@ -121,6 +121,7 @@ export function WorldHeader({
   onMail,
   onBag,
   backTo = NAMES.village,
+  visiting,
 }: {
   tab: Tab;
   save: LoungeSave;
@@ -137,8 +138,10 @@ export function WorldHeader({
   onBag?: () => void;
   /** Where the interior's 나가기 leads (마을, or 내 방 from the wardrobe). */
   backTo?: string;
+  /** In a friend's room: whose (the brand becomes 나가기 · 마을로). */
+  visiting?: string;
 }) {
-  const village = tab === 'village';
+  const village = tab === 'village' && !visiting;
   const unread = view.life?.me.mailUnread ?? 0;
   // Tables need the server; the picker still opens (solo things to do).
   const inviteOff = offlineReason(view.link.state, view.status);
@@ -151,7 +154,7 @@ export function WorldHeader({
         aria-label={
           village
             ? `${NAMES.app} 메뉴`
-            : `나가기 · ${josa(backTo, '으로/로')}${tab === 'wardrobe' ? ' (Esc)' : ''}`
+            : `나가기 · ${josa(visiting ? NAMES.village : backTo, '으로/로')}`
         }
       >
         <span className="l-brand-icon">
@@ -164,7 +167,9 @@ export function WorldHeader({
           <small>
             {village
               ? '일곱 친구가 사는 마을'
-              : `${tab === 'bedroom' ? `${ACTORS[save.actor]}의 집` : TAB_TITLES[tab]} → ${backTo}`}
+              : visiting
+                ? `${visiting}의 집 → ${NAMES.village}`
+                : `${tab === 'bedroom' ? `${ACTORS[save.actor]}의 집` : TAB_TITLES[tab]} → ${backTo}`}
           </small>
         </span>
       </button>

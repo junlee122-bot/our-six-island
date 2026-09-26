@@ -32,6 +32,8 @@ import {
   Sprout,
   Store,
   Users,
+  GraduationCap,
+  Keyboard,
 } from 'lucide-react';
 import { AvatarView } from './avatar-view';
 import {
@@ -121,11 +123,11 @@ import { RequestGameModal } from './lounge/RequestGameModal';
 import { WalletModal } from './lounge/WalletModal';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal, type SettingsTab } from './lounge/SettingsModal';
-import { ControlsHelp, SystemMenu } from './lounge/SystemMenu';
+import { ControlsHelp, SystemMenu, VillageMenu } from './lounge/SystemMenu';
 import { useTooltips } from './lounge/tooltips';
 import { toggleFullscreen, useDisplaySettings } from './lounge-display';
 import { boundAction, globalKeyTarget } from './lounge-scene-keys';
-import type { BindAction } from './lounge-keybinds';
+import { keyLabel, type BindAction } from './lounge-keybinds';
 import {
   closeDesktopWindow,
   isDesktopApp,
@@ -901,31 +903,6 @@ function AccountLounge({
     enter(tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? 'bedroom' : 'village');
   const backTo =
     tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : NAMES.village;
-  // Esc in the wardrobe = 나가기 (elsewhere it opens the Esc menu).
-  const leaveRef = useRef(leaveInterior);
-  useLayoutEffect(() => {
-    leaveRef.current = leaveInterior;
-  });
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
-      // The village, my room, the hall and the casino open the Esc menu
-      // instead (see the PC keys below); only the wardrobe leaves on Esc.
-      if (
-        tabRef.current !== 'wardrobe' ||
-        document.querySelector('dialog[open], .l-coach')
-      )
-        return;
-      const t = e.target as HTMLElement | null;
-      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      // My room handles its own keys (꾸미기 uses Esc to deselect).
-      if (t?.closest('.b3-scene') || document.querySelector('.b3-room[data-editing]')) return;
-      if (document.querySelector('.l-in-game, [data-testid=friend-visit]')) return;
-      leaveRef.current();
-    };
-    window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
-  }, []);
   const moveInVillage = useCallback(
     (x: number, y: number) => {
       villagePosition.current = villageFromNetwork({ x, y });
@@ -1404,7 +1381,9 @@ function AccountLounge({
     pcKeys.current = {
       run: (a) => {
         const place = tabRef.current;
-        if (visiting === null && place === 'wardrobe') return false;
+        // The wardrobe takes only the menu and the help (see below).
+        if (visiting === null && place === 'wardrobe' && a !== 'menu' && a !== 'help')
+          return false;
         switch (a) {
           case 'menu': {
             // Open panels on the scene (마을 안내, a place card) close first.
@@ -1477,6 +1456,27 @@ function AccountLounge({
       const action = boundAction(e);
       if (!action || /^(up|down|left|right|action|hotbar\d)$/.test(action)) return;
       if (pcKeys.current.run(action)) e.preventDefault();
+    };
+    window.addEventListener('keydown', key);
+    return () => window.removeEventListener('keydown', key);
+  }, []);
+  // The wardrobe has no walkable scene, so the PC keys above never reach it:
+  // here Esc opens the same Esc menu as everywhere else (its 나가기 leaves)
+  // and F1 the controls help. Typing in a colour field keeps its keys.
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (
+        tabRef.current !== 'wardrobe' ||
+        document.querySelector('dialog[open], .l-coach')
+      )
+        return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+      if (document.querySelector('.l-in-game, [data-testid=friend-visit]')) return;
+      const action = boundAction(e);
+      if ((action === 'menu' || action === 'help') && pcKeys.current.run(action))
+        e.preventDefault();
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
@@ -1790,8 +1790,11 @@ function AccountLounge({
           ? 'l-app l-in-game'
           : `l-app ${
               visiting !== null
-                ? 'l-interior'
-                : tab === 'village' || interior3d
+                ? // A friend's room fills the window like mine.
+                  'l-immersive l-room-full l-visit-full'
+                : tab === 'wardrobe'
+                  ? 'l-immersive l-wardrobe-full'
+                  : tab === 'village' || interior3d
                   ? 'l-immersive'
                   : // My room fills the window like the village (꾸미기 already did).
                     tab === 'bedroom'
@@ -1828,8 +1831,11 @@ function AccountLounge({
         room={room}
         view={view}
         notify={notify}
-        onBrand={() => (tab === 'village' ? setModal('menu') : leaveInterior())}
+        onBrand={() =>
+          visiting !== null ? leaveVisit() : tab === 'village' ? setModal('menu') : leaveInterior()
+        }
         backTo={backTo}
+        visiting={visiting !== null ? (ACTORS[visiting] ?? '친구') : undefined}
         onPresence={() => setModal('friends')}
         onInvite={() => requestGame(null)}
         onWallet={() => setModal('wallet')}
@@ -2358,7 +2364,6 @@ function AccountLounge({
           <button onClick={() => setModal('credits')}>
             <Info size={12} /> 만든 이야기
           </button>
-          <button onClick={() => guarded('reset', reset)}>코디 초기화</button>
         </div>
       </footer>
       {modal === 'chat' && (
@@ -2372,118 +2377,97 @@ function AccountLounge({
         </Modal>
       )}
       {modal === 'menu' && (
-        <Modal title={NAMES.app} onClose={() => setModal(null)}>
-          <div className="l-world-menu-summary">
-            <AvatarView
-              actor={save.actor}
-              look={save.looks[save.actor]}
-              portrait
-            />
-            <div>
-              <strong>{ACTORS[save.actor]}</strong>
-              <small>
-                {account.username} · {cloudSave.status}
-              </small>
+        <VillageMenu
+          title={NAMES.app}
+          onClose={() => setModal(null)}
+          summary={
+            <div className="l-world-menu-summary">
+              <AvatarView actor={save.actor} look={save.looks[save.actor]} portrait />
+              <div>
+                <strong>{ACTORS[save.actor]}</strong>
+                <small>
+                  {account.username} · {cloudSave.status}
+                </small>
+              </div>
             </div>
-          </div>
-          {!settings.simpleGraphics && (
-            <p className="l-modal-intro">
-              건물이나 이름을 클릭하면 문 앞까지 걸어가요.
-            </p>
-          )}
-          <div className="l-world-menu-grid">
-            <button onClick={() => setModal('friends')}>
-              <Users size={20} />
-              <span>마을 친구들</span>
-            </button>
-            <button onClick={() => setModal('bag')} data-testid="menu-bag">
-              <Backpack size={20} />
-              <span>가방 (I)</span>
-            </button>
-            <button onClick={() => openMail()}>
-              <Mail size={20} />
-              <span>
-                우편함
-                {unread > 0 ? ` (${unread})` : ''}
-              </span>
-            </button>
-            <button onClick={() => setModal('shop')}>
-              <Store size={20} />
-              <span>범타듀 상점</span>
-            </button>
-            <button onClick={() => setModal('farm')} data-testid="menu-farm">
-              <Sprout size={20} />
-              <span>내 텃밭</span>
-            </button>
-            <button onClick={() => openBook('fish')} data-testid="menu-book">
-              <BookOpen size={20} />
-              <span>도감 · 박물관 (K)</span>
-            </button>
-            <button onClick={() => setModal('bonds')} data-testid="menu-bonds">
-              <Heart size={20} />
-              <span>친구 사이 (L)</span>
-            </button>
-            <button onClick={() => setModal('memories')} data-testid="menu-memories">
-              <Sparkles size={20} />
-              <span>추억 앨범</span>
-            </button>
-            <button onClick={() => walkTo(BOARD_FRONT)} data-testid="menu-board">
-              <ClipboardList size={20} />
-              <span>마을 게시판 (B)</span>
-            </button>
-            <button onClick={openKitchen} data-testid="menu-kitchen">
-              <CookingPot size={20} />
-              <span>요리·만들기</span>
-            </button>
-            <button onClick={() => setModal('digest')} data-testid="menu-digest">
-              <Newspaper size={20} />
-              <span>어제 마을 소식</span>
-            </button>
-            <button onClick={() => setModal('status')} data-testid="menu-status">
-              <MessageSquareQuote size={20} />
-              <span>오늘의 한마디</span>
-            </button>
-            <button onClick={() => requestGame(null)}>
-              <Spade size={20} />
-              <span>게임 초대</span>
-            </button>
-            <button onClick={() => void cloudSave.flush()}>
-              <Check size={20} />
-              <span>지금 저장</span>
-            </button>
-            <button onClick={() => setModal('account')}>
-              <House size={20} />
-              <span>내 계정</span>
-            </button>
-            <button
-            onClick={() => {
-              setSettingsTab('graphics');
-              setFromMenu(false);
-              setModal('settings');
-            }}
-          >
-              <Settings size={20} />
-              <span>설정</span>
-            </button>
-            <button onClick={() => setModal('credits')}>
-              <Info size={20} />
-              <span>만든 이야기</span>
-            </button>
-          </div>
-          <div className="l-world-menu-links">
-            <button
-              onClick={() => {
-                setModal(null);
-                setCoach(tab === 'bedroom' ? 'room' : 'village');
-              }}
-            >
-              처음 안내 다시 보기
-            </button>
-            <button className="danger" onClick={() => guarded('reset', reset)}>
-              코디 초기화
-            </button>
-          </div>
-        </Modal>
+          }
+          intro={settings.simpleGraphics ? undefined : '건물이나 이름을 클릭하면 문 앞까지 걸어가요. 방향키로도 고를 수 있어요.'}
+          groups={[
+            {
+              title: '내 마을',
+              items: [
+                { id: 'bag', label: '가방', icon: <Backpack size={18} />, kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
+                { id: 'mail', label: '우편함', icon: <Mail size={18} />, badge: unread, onClick: () => openMail() },
+                { id: 'shop', label: '범타듀 상점', icon: <Store size={18} />, onClick: () => setModal('shop') },
+                { id: 'farm', label: '내 텃밭', icon: <Sprout size={18} />, onClick: () => setModal('farm') },
+                { id: 'kitchen', label: '요리·만들기', icon: <CookingPot size={18} />, onClick: openKitchen },
+                { id: 'book', label: '도감 · 박물관', icon: <BookOpen size={18} />, kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
+                { id: 'board', label: '마을 게시판', icon: <ClipboardList size={18} />, kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
+                { id: 'digest', label: '어제 마을 소식', icon: <Newspaper size={18} />, onClick: () => setModal('digest') },
+                { id: 'memories', label: '추억 앨범', icon: <Sparkles size={18} />, onClick: () => setModal('memories') },
+              ],
+            },
+            {
+              title: '친구',
+              items: [
+                { id: 'friends', label: '마을 친구들', icon: <Users size={18} />, onClick: () => setModal('friends') },
+                { id: 'bonds', label: '친구 사이', icon: <Heart size={18} />, kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
+                { id: 'invite', label: '게임 초대', icon: <Spade size={18} />, onClick: () => requestGame(null) },
+                { id: 'status', label: '오늘의 한마디', icon: <MessageSquareQuote size={18} />, onClick: () => setModal('status') },
+              ],
+            },
+            {
+              title: '설정 · 도움말',
+              items: [
+                {
+                  id: 'settings',
+                  label: '설정',
+                  icon: <Settings size={18} />,
+                  onClick: () => {
+                    setSettingsTab('graphics');
+                    setFromMenu(false);
+                    setModal('settings');
+                  },
+                },
+                {
+                  id: 'help',
+                  label: '조작 안내',
+                  icon: <Keyboard size={18} />,
+                  kbd: keyLabel(settings.keys.help),
+                  onClick: () => {
+                    setFromMenu(false);
+                    setModal('help');
+                  },
+                },
+                {
+                  id: 'tutorial',
+                  label: '처음 안내 다시 보기',
+                  icon: <GraduationCap size={18} />,
+                  onClick: () => {
+                    setModal(null);
+                    setCoach(tab === 'bedroom' ? 'room' : 'village');
+                  },
+                },
+                { id: 'credits', label: '만든 이야기', icon: <Info size={18} />, onClick: () => setModal('credits') },
+              ],
+            },
+            {
+              title: '계정',
+              items: [
+                { id: 'account', label: '내 계정', icon: <House size={18} />, onClick: () => setModal('account') },
+                { id: 'save', label: '지금 저장', icon: <Check size={18} />, onClick: () => void cloudSave.flush() },
+              ],
+            },
+          ]}
+          danger={[
+            {
+              id: 'reset',
+              label: '코디 초기화',
+              note: '모든 친구의 옷과 보관한 코디를 처음 모습으로 되돌려요. 누르면 한 번 더 확인해요.',
+              onClick: () => guarded('reset', reset),
+            },
+          ]}
+        />
       )}
       {modal === 'account' && (
         <AccountModal
@@ -2615,7 +2599,17 @@ function AccountLounge({
                       setModal(null);
                       enter('village');
                     }
-                  : undefined
+                  : tab === 'wardrobe'
+                    ? () => {
+                        setModal(null);
+                        leaveInterior();
+                      }
+                    : undefined
+          }
+          leaveLabel={
+            tab === 'wardrobe' && visiting === null && !inGame
+              ? `${josa(backTo, '으로/로')} 나가기`
+              : undefined
           }
           onLogout={() => {
             setModal(null);

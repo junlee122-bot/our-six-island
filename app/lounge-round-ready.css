@@ -74,9 +74,13 @@
   background: #edf3e4;
 }
 .l-round-friends li > .avatar-view {
-  width: 45px;
-  height: 55px;
-  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  /* The name column is the li's other span (flex: 1); the face keeps its size. */
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #efe6cf;
+  box-shadow: 0 0 0 2px #fffaf0;
 }
 .l-round-friends li > span {
   flex: 1;

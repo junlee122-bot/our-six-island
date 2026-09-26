@@ -266,19 +266,34 @@ body:has(.b3-room[data-editing]) .l-life-hud {
 .l-hotbar-slot[data-empty] .l-item-icon {
   opacity: 0.4;
 }
+/* The slot key sits on the frame's corner, clear of the item icon. */
 .l-hotbar-slot kbd {
   position: absolute;
-  left: 3px;
-  top: 1px;
-  font: 800 11px/1.2 inherit;
-  color: #6c6451;
+  left: -5px;
+  top: -6px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #3a4a37;
+  color: #fffdf0;
+  box-shadow: 0 0 0 1.5px rgb(255 250 235 / 0.9);
+  font: 800 11px/17px inherit;
+  text-align: center;
+}
+.l-hotbar-slot[aria-pressed='true'] kbd {
+  background: #b5860f;
 }
 .l-hotbar-count {
   position: absolute;
-  right: 3px;
-  bottom: 1px;
-  font-size: 11px;
+  right: 2px;
+  bottom: 0;
+  padding: 0 3px;
+  border-radius: 5px;
+  background: rgb(255 250 235 / 0.92);
+  font-size: 12px;
   font-weight: 800;
+  line-height: 1.25;
   color: #3e4a3c;
 }
 .l-hotbar-name {
@@ -296,6 +311,19 @@ body:has(.b3-room[data-editing]) .l-life-hud {
 }
 .l-inv-hotbar .l-hotbar-name {
   display: none;
+}
+/* The name shows briefly after picking a slot (Hotbar sets data-show) and
+   never over a place card or door prompt. */
+.l-hotbar-name {
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.l-hotbar-name[data-show] {
+  opacity: 1;
+}
+.l-app:has(.hv-place-card, .hv-entry-prompt) .l-hotbar-name {
+  opacity: 0;
 }
 
 /* ------------------------------------------------------------ inventory */

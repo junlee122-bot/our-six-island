@@ -4,11 +4,12 @@
 // the guestbook; only the owner decorates (their edits reach us through the
 // room revision in world.life). If the owner is away they stand in as an NPC.
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { ArrowLeft, BookOpen, MessageCircle, RotateCcw } from 'lucide-react';
+import { BookOpen, Mail, MessageCircle, RotateCcw, X } from 'lucide-react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { josa } from '../lounge-text';
+import { boundAction, globalKeyTarget } from '../lounge-scene-keys';
 import { visitFriend, type FriendVisit } from '../lounge-visit';
 import { friendlyError } from './feedback';
 import { rememberLook } from './friend-looks';
@@ -44,6 +45,13 @@ function takeVisit(owner: number, fresh: boolean) {
   if (!fresh && hit && Date.now() - hit.at < PREFETCH_MS) return hit.job;
   return visitFriend(owner);
 }
+
+const AREA_NAMES: Record<string, string> = {
+  village: '마을',
+  lounge: '회관',
+  casino: '카지노',
+  home: '다른 친구 집',
+};
 
 /** Live presence for a room from the cloud view (players, room chat, my moves). */
 export function roomPresence(room: CloudRoom, view: CloudRoomView) {
@@ -83,7 +91,7 @@ export function FriendVisitScreen({
   const [error, setError] = useState('');
   const now = useNow(true, 30_000) + view.clockOffset;
   const [reload, setReload] = useState(0);
-  const guestbookRef = useRef<HTMLDivElement>(null);
+  const guestbookRef = useRef<HTMLElement>(null);
   useEffect(() => {
     let live = true;
     takeVisit(owner, reload > 0).then(
@@ -124,104 +132,164 @@ export function FriendVisitScreen({
     notify(`${josa(name, '이/가')} 방문을 닫았어요. 마을로 돌아갈게요.`, 'info');
     backRef.current();
   }, [closed, name, notify]);
-  // Esc opens the menu (its 마을로 나가기 leaves); this is only the fallback
-  // when nothing else took the key: a dialog closing, the menu opening
-  // (both preventDefault) or typing never leave the room.
+  // The guestbook is an in-scene panel (G or the dock button). Esc closes it
+  // first; otherwise Esc opens the Esc menu like everywhere else (its
+  // 마을로 나가기 leaves), so one Esc never walks me out of the room.
+  const [bookOpen, setBookOpen] = useState(false);
+  const bookRef = useRef(bookOpen);
+  useLayoutEffect(() => {
+    bookRef.current = bookOpen;
+  });
+  const closeBook = () => {
+    setBookOpen(false);
+    document.querySelector<HTMLElement>('[data-testid=bedroom-3d]')?.focus({ preventScroll: true });
+  };
   useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]'))
-        return;
-      const t = e.target as HTMLElement | null;
-      if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
-      backRef.current();
+    const escape = (e: Event) => {
+      if (!bookRef.current) return;
+      e.preventDefault();
+      setBookOpen(false);
     };
+    const key = (e: KeyboardEvent) => {
+      // Esc while typing in the guestbook closes the panel (the menu stays shut).
+      if (
+        e.key === 'Escape' &&
+        bookRef.current &&
+        !e.defaultPrevented &&
+        e.target instanceof Element &&
+        e.target.closest('#visit-guestbook')
+      ) {
+        e.preventDefault();
+        setBookOpen(false);
+        document.querySelector<HTMLElement>('[data-testid=bedroom-3d]')?.focus({ preventScroll: true });
+        return;
+      }
+      if (e.code !== 'KeyG' || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat)
+        return;
+      if (boundAction(e) || !globalKeyTarget(e)) return;
+      e.preventDefault();
+      setBookOpen((open) => !open);
+    };
+    window.addEventListener('bumtadew:escape', escape);
     window.addEventListener('keydown', key);
-    return () => window.removeEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('bumtadew:escape', escape);
+      window.removeEventListener('keydown', key);
+    };
   }, []);
+  // Opening the panel puts the cursor in the guestbook line.
+  useEffect(() => {
+    if (bookOpen)
+      guestbookRef.current?.querySelector<HTMLElement>('input')?.focus({ preventScroll: true });
+  }, [bookOpen]);
   const here = view.players.filter(
     (p) => p.id !== view.self && p.area === 'home' && p.home === owner,
   );
+  const ownerHere = here.some((p) => p.actor === owner);
+  const guests = here.filter((p) => p.actor !== owner);
+  // Where the owner is when not home (online players only).
+  const ownerAt = view.players.find((p) => p.actor === owner)?.area;
+  const ownerLine = ownerHere
+    ? `${name}도 방에 있어요`
+    : ownerAt
+      ? `${josa(name, '은/는')} 지금 ${AREA_NAMES[ownerAt] ?? '마을'}에 있어요`
+      : `${josa(name, '은/는')} 지금 쉬는 중이에요`;
   return (
     <section className="l-visit b3-visit" aria-label={`${name}의 방`} data-testid="friend-visit">
-      <div className="l-visit-bar b3-visit-bar">
-        <button className="l-secondary b3-visit-back" onClick={onBack} data-testid="visit-back" aria-label="나가기 · 마을로 (Esc)">
-          <ArrowLeft size={18} /> 나가기
-        </button>
-        <p>
-          {here.length
-            ? `지금 함께 있는 친구 · ${here.map((p) => ACTORS[p.actor]).join(', ')}`
-            : `${name}의 방에 놀러 왔어요.`}
-        </p>
-        {onChat && (
-          <button className="l-secondary" onClick={onChat} data-testid="visit-chat">
-            <MessageCircle size={16} /> 수다
-          </button>
-        )}
-        {owner !== save.actor && (
-          <button className="l-secondary" onClick={() => onMail(owner)}>
-            편지 보내기
-          </button>
-        )}
-      </div>
       {error ? (
-        <div className="l-empty">
+        <div className="l-empty b3-visit-wait">
           <p>{error}</p>
           <button className="l-primary" onClick={load}>
             <RotateCcw size={15} /> 다시 시도
           </button>
+          <button className="l-secondary" onClick={onBack} data-testid="visit-back">
+            마을로 나가기
+          </button>
         </div>
       ) : !data ? (
-        <div className="l-scene-wait">
+        <div className="l-scene-wait b3-visit-wait">
           <p>
             <span className="l-spinner" /> {josa(name, '을/를')} 만나러 가는 중…
           </p>
         </div>
       ) : (
-        <>
-          <div className="b3-visit-room">
-            {data.status && (
-              <p className="l-visit-status">
-                <b>{name}의 오늘의 한마디</b> · {data.status.text}
-              </p>
-            )}
-            <Suspense
-              fallback={
-                <div className="l-scene-wait">
-                  <p>
-                    <span className="l-spinner" /> 방을 여는 중…
-                  </p>
-                </div>
-              }
-            >
-              <Bedroom3D
-                key={owner}
-                save={save}
-                onExit={onBack}
-                visit={{ owner, ownerLook: data.look, bedroom: data.bedroom }}
-                presence={roomPresence(room, view)}
-              />
-            </Suspense>
-            {stickers && <div className="b3-visit-stickers">{stickers}</div>}
-          </div>
-          <div ref={guestbookRef} className="b3-visit-guestbook" id="visit-guestbook">
-            <Guestbook
-              room={room}
-              owner={owner}
-              entries={data.guestbook}
-              notify={notify}
-              now={now}
-              onWritten={load}
-            />
-          </div>
-          <button
-            type="button"
-            className="b3-guestbook-fab"
-            onClick={() => guestbookRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            data-testid="visit-guestbook-jump"
+        <div className="b3-bedroom-experience">
+          <Suspense
+            fallback={
+              <div className="l-scene-wait b3-visit-wait">
+                <p>
+                  <span className="l-spinner" /> 방을 여는 중…
+                </p>
+              </div>
+            }
           >
-            <BookOpen size={17} /> 방명록 {data.guestbook.length ? data.guestbook.length : ''}
-          </button>
-        </>
+            <Bedroom3D
+              key={owner}
+              save={save}
+              onExit={onBack}
+              visit={{ owner, ownerLook: data.look, bedroom: data.bedroom }}
+              presence={roomPresence(room, view)}
+            />
+          </Suspense>
+          {/* Who is here and the owner's line: small chips under the room's
+              name chip, like my room's visitors chip. */}
+          <div className="b3-visit-chips">
+            <span className="b3-visit-chip" data-testid="visit-here">
+              {ownerLine}
+              {guests.length > 0 && ` · 함께 온 친구 ${guests.map((p) => ACTORS[p.actor]).join(', ')}`}
+            </span>
+            {data.status && (
+              <span className="b3-visit-chip is-status">
+                <b>오늘의 한마디</b> {data.status.text}
+              </span>
+            )}
+          </div>
+          <div className="b3-owner-bar b3-visit-dock">
+            {onChat && (
+              <button type="button" className="b3-chat-button" onClick={onChat} data-testid="visit-chat">
+                <MessageCircle size={17} /> 이 방 수다
+              </button>
+            )}
+            {stickers}
+            {owner !== save.actor && (
+              <button type="button" className="b3-chat-button" onClick={() => onMail(owner)}>
+                <Mail size={17} /> 편지 보내기
+              </button>
+            )}
+            <button
+              type="button"
+              className="b3-chat-button"
+              aria-expanded={bookOpen}
+              aria-controls="visit-guestbook"
+              onClick={() => (bookOpen ? closeBook() : setBookOpen(true))}
+              data-testid="visit-guestbook-jump"
+            >
+              <BookOpen size={17} /> 방명록{data.guestbook.length ? ` ${data.guestbook.length}` : ''}
+              <kbd aria-hidden="true">G</kbd>
+            </button>
+          </div>
+          {bookOpen && (
+            // An in-scene panel, not a page section: Esc (or ✕) closes it.
+            <aside
+              ref={guestbookRef}
+              className="b3-visit-guestbook"
+              id="visit-guestbook"
+              aria-label={`${name}의 방명록`}
+            >
+              <button type="button" className="l-icon b3-visit-guestbook-close" onClick={closeBook} aria-label="방명록 닫기 (Esc)">
+                <X size={18} />
+              </button>
+              <Guestbook
+                room={room}
+                owner={owner}
+                entries={data.guestbook}
+                notify={notify}
+                now={now}
+                onWritten={load}
+              />
+            </aside>
+          )}
+        </div>
       )}
     </section>
   );

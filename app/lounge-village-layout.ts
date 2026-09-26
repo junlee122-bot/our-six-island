@@ -306,6 +306,11 @@ export type FarmYard = {
   beds: readonly [YardRect, YardRect];
   well: VillagePoint;
   sign: VillagePoint;
+  /**
+   * Open ground east of the front bed, kept free for a scarecrow or another
+   * yard prop (kArchive slot; nothing stands there yet, so no collider).
+   */
+  scarecrow: VillagePoint;
 };
 export const VILLAGE_YARDS: readonly FarmYard[] = (() => {
   const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home').sort((a, b) => a.x - b.x);
@@ -328,6 +333,7 @@ export const VILLAGE_YARDS: readonly FarmYard[] = (() => {
       beds: [bed(-13.9), bed(-17)],
       well: { x: round(pathX - 1.5), z: -11.9 },
       sign: { x: round(pathX + YARD_GATE_HALF + 0.12), z: YARD_FENCE_Z },
+      scarecrow: { x: round(Math.min(x1 - 0.5, bedX + BED_W / 2 + 0.45)), z: -12.2 },
     };
   });
 })();

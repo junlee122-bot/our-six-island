@@ -339,9 +339,9 @@
 .p-seat-initial {
   display: grid;
   place-items: center;
-  border: 1px solid #647155;
-  width: 28px;
-  height: 28px;
+  border: 2px solid #c6a461;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: 50%;
   font-size: 13px;
@@ -619,4 +619,16 @@
   .p-chip-win {
     display: none;
   }
+}
+
+/* The winner's crown sits on the portrait's shoulder. */
+.p-seat-crown {
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  z-index: 2;
+  padding: 2px;
+  border-radius: 50%;
+  background: #e4c67d;
+  color: #3a2a10;
 }

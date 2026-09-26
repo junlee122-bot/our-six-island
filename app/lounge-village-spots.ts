@@ -95,8 +95,12 @@ export function bobberPoint(spot: Spot, p: VillagePoint): VillagePoint {
       return { x: HARBOR_POINT.x + 0.9, z: HARBOR_POINT.z + 3.6 };
     case 'sea':
       return { x: PIER_POINT.x + 3.2, z: PIER_POINT.z + 0.2 };
-    case 'bridge':
-      return { x: p.x + 0.9, z: RIVER_MID + (p.z < RIVER_MID ? 0.55 : -0.55) };
+    case 'bridge': {
+      // Over the rail, into the water beside the deck.
+      const bridge = bridgeAt(p) ?? VILLAGE_RIVER.bridges[1];
+      const side = p.x >= bridge.x ? 1 : -1;
+      return { x: bridge.x + side * (bridge.halfWidth + 1.1), z: RIVER_MID + (p.z < RIVER_MID ? -0.2 : 0.2) };
+    }
     default:
       return { x: p.x + 0.4, z: p.z < RIVER_MID ? RIVER_MID - 0.35 : RIVER_MID + 0.35 };
   }

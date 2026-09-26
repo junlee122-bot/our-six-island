@@ -7,6 +7,7 @@ import {
   BIND_LABEL,
   bindingLabel,
   keyLabel,
+  keyJosa,
   rebind,
   type BindAction,
 } from '../lounge-keybinds';
@@ -176,14 +177,14 @@ function KeyTable({
       }
       const result = rebind(latest.current.keys, listening, e.code);
       if (!result.ok) {
-        setNote(`${keyLabel(e.code) || e.key}은(는) 쓸 수 없는 키예요. 다른 키를 눌러 주세요.`);
+        setNote(`${e.code ? keyJosa(e.code, '은/는') : e.key + ' 키는'} 쓸 수 없는 키예요. 다른 키를 눌러 주세요.`);
         return;
       }
       latest.current.update({ keys: result.binds });
       setNote(
         result.swapped
           ? `${keyLabel(e.code)} 키는 ‘${BIND_LABEL[result.swapped]}’에 쓰이고 있었어요. 두 키를 서로 바꿨어요.`
-          : `‘${BIND_LABEL[listening]}’ 키를 ${keyLabel(e.code)}(으)로 바꿨어요.`,
+          : `‘${BIND_LABEL[listening]}’ 키를 ${keyJosa(e.code, '으로/로')} 바꿨어요.`,
       );
       setListening(null);
     };
