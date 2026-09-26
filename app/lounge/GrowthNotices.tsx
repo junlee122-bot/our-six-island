@@ -36,6 +36,20 @@ function writeSeen(uid: string, seen: Seen) {
 }
 
 type Banner = { id: string; skill: SkillId; level: number };
+const shared: { queue: Banner[]; seen: Record<string, Seen>; shown: Record<string, number> } = { queue: [], seen: {}, shown: {} };
+function updateQueue(f: (q: Banner[]) => Banner[]) {
+  shared.queue = f(shared.queue);
+  return shared.queue;
+}
+/** When a banner first showed (and whether this is that first time). */
+function shownAt(id: string) {
+  const first = !(id in shared.shown);
+  if (first) shared.shown[id] = Date.now();
+  return { at: shared.shown[id], first };
+}
+function rememberSeen(uid: string, s: Seen) {
+  shared.seen[uid] = s;
+}
 
 export function GrowthNotices({
   life,
@@ -53,8 +67,11 @@ export function GrowthNotices({
   paused?: boolean;
 }) {
   const g = life?.growth;
-  const [queue, setQueue] = useState<Banner[]>([]);
-  const seen = useRef<Seen | null>(null);
+  // Kept outside the component too: the notices may remount (reconnects,
+  // screen changes) and a banner must not vanish half-way.
+  const [queue, setQueueState] = useState<Banner[]>(() => shared.queue);
+  const setQueue = (f: (q: Banner[]) => Banner[]) => setQueueState(updateQueue(f));
+  const seen = useRef<Seen | null>(shared.seen[uid] ?? null);
   useEffect(() => {
     if (!g || !uid) return;
     const now = life!.serverNow;
@@ -67,6 +84,7 @@ export function GrowthNotices({
       };
     }
     const s = seen.current;
+    rememberSeen(uid, s);
     let changed = false;
     const fresh = g.ups.filter((u) => u.at > s.ups);
     if (fresh.length) {
@@ -94,8 +112,11 @@ export function GrowthNotices({
   const current = paused ? undefined : queue[0];
   useEffect(() => {
     if (!current) return;
-    lifeSfx('levelup');
-    const timer = setTimeout(() => setQueue((q) => q.slice(1)), 4200);
+    // A remount mid-banner keeps its clock and does not chime twice.
+    const id = current.id,
+      shown = shownAt(id);
+    if (shown.first) lifeSfx('levelup');
+    const timer = setTimeout(() => setQueueState(updateQueue((q) => q.filter((b) => b.id !== id))), Math.max(0, 4200 - (Date.now() - shown.at)));
     return () => clearTimeout(timer);
   }, [current]);
   if (!current) return null;
@@ -130,7 +151,7 @@ export function GrowthNotices({
         type="button"
         className="l-levelup-open"
         onClick={() => {
-          setQueue((q) => q.slice(1));
+          setQueue((q) => q.filter((b) => b.id !== current.id));
           onOpen(current.skill);
         }}
       >

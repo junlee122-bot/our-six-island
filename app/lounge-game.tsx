@@ -2037,7 +2037,7 @@ function AccountLounge({
       {lifeEvents.celebration && (
         <Celebration name={lifeEvents.celebration.name} text={lifeEvents.celebration.text} />
       )}
-      {connected && view.life?.growth && (
+      {view.life?.growth && (
         <Suspense fallback={null}>
           <GrowthNotices
             life={view.life}
