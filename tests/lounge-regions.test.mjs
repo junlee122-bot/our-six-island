@@ -29,8 +29,8 @@ const kst = (y, m, d, h = 12) => Date.UTC(y, m - 1, d, h - 9);
 const T0 = kst(2026, 9, 24);
 const uuid = () => crypto.randomUUID();
 
-function world(n = 2) {
-  const members = Array.from({ length: n }, (_, actor) => ({ id: uuid(), actor }));
+function world(n = 2, ids = []) {
+  const members = Array.from({ length: n }, (_, actor) => ({ id: ids[actor] ?? uuid(), actor }));
   let ledger = newLoungeLedger(),
     life = emptyLife();
   for (const m of members) {
@@ -252,7 +252,9 @@ test('mine: closed until 산길 정비, floor 1, ladders, pickaxe and lift gates
 });
 
 test('mine rocks: ore amounts follow the band, fossils go to the bag with news', () => {
-  const s = world(1);
+  // This seed finds fossils before the final news window, so the test also
+  // exercises their news ageing out while the inventory remains intact.
+  const s = world(1, ['00000000-0000-4000-8000-000000000018']);
   const [a] = s.members;
   s.done('forge', 'trail', 'lift');
   s.tool(a, 'pickaxe', 4);
@@ -263,7 +265,17 @@ test('mine rocks: ore amounts follow the band, fossils go to the bag with news',
     for (const floor of [16, 17]) {
       s.u(a).mine = { at: floor, deep: 20 };
       const before = { ...(s.life.ext?.[a.id]?.inv ?? {}) };
-      for (const r of mineFloor(kstDay(now), floor, true).rocks) s.act(a, { kind: 'mineRock', floor, rock: r.i }, now);
+      for (const r of mineFloor(kstDay(now), floor, true).rocks) {
+        const beforeFossils = s.inv(a, 'fossil-tooth');
+        s.act(a, { kind: 'mineRock', floor, rock: r.i }, now);
+        // News intentionally keeps only the recent days. Check the event at
+        // discovery, not after the entire 30-day simulation has aged it out.
+        if (s.inv(a, 'fossil-tooth') > beforeFossils)
+          assert.ok(
+            s.life.news?.find((entry) => entry.day === kstDay(now))?.lines.some((n) => n.text.includes('공룡 이빨 화석')),
+            `fossil news missing on day ${d}, floor ${floor}, rock ${r.i}`,
+          );
+      }
       for (const k of Object.keys(gained)) gained[k] += s.inv(a, k) - (before[k] ?? 0);
       fossils += s.inv(a, 'fossil-tooth') - (before['fossil-tooth'] ?? 0);
     }
@@ -272,7 +284,6 @@ test('mine rocks: ore amounts follow the band, fossils go to the bag with news',
   assert.ok(gained.gold > gained.iron, JSON.stringify(gained));
   assert.ok(gained.gold > 0 && gained.gem > 0);
   assert.ok(fossils >= 1, 'a dinosaur tooth in ~700 rocks');
-  assert.ok(s.life.news.flatMap((d) => d.lines).some((n) => n.text.includes('공룡 이빨 화석')));
 });
 
 test('숲 깊은 곳: the fallen log needs axe 2 once for everyone; stumps need axe 3', () => {
