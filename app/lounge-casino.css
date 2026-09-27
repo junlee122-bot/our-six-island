@@ -1,30 +1,29 @@
 .l-casino .l-kicker {
-  color: #978253;
+  color: var(--pal-amber-55);
 }
 .l-casino .l-room-scene {
-  background: #28251f;
+  background: var(--pal-grey-15);
 }
 .l-casino .l-room-plaque {
-  background: #192e29e8;
-  color: #ebd4a1;
-  border: 1px solid #a89154;
+  background: color-mix(in srgb, var(--pal-grey-17) 91%, transparent);
+  color: var(--paper-300);
+  border: 1px solid var(--pal-amber-58);
 }
 .l-casino .l-room-plaque span {
-  color: #cab880;
+  color: var(--pal-orange-75);
 }
 .l-casino .l-world-table.poker {
   left: 67%;
   top: 62%;
 }
 .l-casino .l-world-table.poker .l-table-top {
-  background: #1d5947;
-  border-color: #735039;
+  background: var(--pal-teal-33);
+  border-color: var(--wood-500);
   box-shadow:
-    0 5px 0 #483423,
-    0 12px 14px #0005;
+    var(--lift-1), var(--lift-2);
 }
 .l-casino .l-world-table.poker .l-mini-poker {
-  color: #e5cd88;
+  color: var(--pal-amber-82);
 }
 .l-mini-poker {
   display: flex;
@@ -40,19 +39,18 @@
   place-items: center;
   width: 36px;
   height: 53px;
-  background: #fffae9;
-  color: #28483c;
+  background: var(--paper-50);
+  color: var(--pal-teal-23);
   font:
-    bold 21px Georgia,
-    serif;
-  border: 1px solid #dbc79f;
-  border-radius: 4px;
-  box-shadow: 1px 3px 3px #0004;
+    bold 21px var(--font-display);
+  border: 1px solid var(--paper-300);
+  border-radius: var(--r-s);
+  box-shadow: var(--lift-1);
   font-style: normal;
   transform: rotate(-7deg);
 }
 .l-mini-poker i + i {
-  color: #a63f45;
+  color: var(--pal-red-41);
   transform: rotate(13deg) translateY(2px);
 }
 .l-wallet-button {
@@ -60,18 +58,18 @@
   flex-shrink: 0;
   align-items: center;
   gap: 7px;
-  border: 1px solid #d9c998;
-  background: #fcf4d9;
-  border-radius: 99px;
+  border: 1px solid var(--paper-300);
+  background: var(--paper-100);
+  border-radius: var(--r-round);
   padding: 9px 13px;
-  color: #6b582a;
+  color: var(--pal-amber-38);
   font-weight: 750;
   font-size: 13px;
   white-space: nowrap;
 }
 .l-wallet-info {
-  background: #f4f0e3;
-  border-radius: 16px;
+  background: var(--paper-50);
+  border-radius: var(--r-l);
   padding: 22px;
 }
 .l-wallet-info > strong {
@@ -87,7 +85,7 @@
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid #e8e4db;
+  border-bottom: 1px solid var(--stamp-100);
 }
 .l-money-settings {
   display: flex;
@@ -95,9 +93,9 @@
   flex-wrap: wrap;
   margin: 16px 0;
   padding: 16px;
-  border: 1px solid #e1d8bb;
-  border-radius: 14px;
-  background: #fbf7eb;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-l);
+  background: var(--paper-50);
 }
 .l-money-settings label {
   display: flex;
@@ -108,17 +106,17 @@
 }
 .l-money-settings select {
   background: white;
-  border: 1px solid #d9cead;
-  border-radius: 8px;
+  border: 1px solid var(--paper-300);
+  border-radius: var(--r-m);
   padding: 8px;
-  color: #554831;
-  font: inherit;
+  color: var(--ink-700);
+  font: var(--font-body);
 }
 .l-money-settings p {
   flex-basis: 100%;
   margin: 0;
   font-size: 12px;
-  color: #777065;
+  color: var(--pal-grey-54);
 }
 .l-game-money {
   display: flex;
@@ -127,30 +125,30 @@
   gap: 12px;
   margin: 0 auto 16px;
   font-size: 12px;
-  color: #8e8269;
+  color: var(--pal-orange-51);
   max-width: 1250px;
 }
 .l-game-money b {
   font-size: 15px;
-  color: #a9904c;
+  color: var(--pal-amber-58);
 }
 .l-game-screen.poker {
-  background: #111c1b;
-  color: #ece7d7;
+  background: var(--pal-grey-7);
+  color: var(--paper-100);
   min-height: 100dvh;
 }
 .l-game-screen.poker > header {
-  background: #162320;
-  border-bottom-color: #34413a;
-  color: #efe7d3;
+  background: var(--pal-grey-17);
+  border-bottom-color: var(--pal-grey-30);
+  color: var(--paper-100);
 }
 .l-game-screen.poker > header button {
-  color: #dfd7c2;
+  color: var(--paper-200);
 }
 .l-game-screen.poker > header .l-game-back {
-  background: #293c30;
-  color: #eadfbd;
-  border: 1px solid #536449;
+  background: var(--pal-grey-30);
+  color: var(--paper-200);
+  border: 1px solid var(--pal-grey-41);
 }
 .l-game-money b {
   display: flex;
@@ -165,19 +163,19 @@
 }
 .l-game-screen.poker .l-game-ending {
   background: transparent;
-  border-color: #455b43;
+  border-color: var(--pal-grey-41);
 }
 .l-game-screen.poker .l-secondary {
-  background: #24392c;
-  color: #eee4c7;
-  border-color: #5a6c4e;
+  background: var(--pal-teal-23);
+  color: var(--paper-200);
+  border-color: var(--pal-grey-41);
 }
 .l-game-screen.poker .l-primary {
-  background: #c7af72;
-  color: #273522;
+  background: var(--pal-orange-75);
+  color: var(--pal-green-16);
 }
 .l-game-screen.poker .l-modal {
-  color: #3e4234;
+  color: var(--pal-grey-30);
 }
 @keyframes p-card-arrive {
   from {
@@ -258,7 +256,7 @@
   align-items: center;
   column-gap: 6px;
   min-height: 30px;
-  color: #d9b36a;
+  color: var(--pal-orange-69);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
@@ -278,7 +276,7 @@
 .turn-timer-fill {
   stroke: currentColor;
   stroke-linecap: round;
-  transition: stroke-dasharray 0.25s linear;
+  transition: stroke-dasharray var(--dur-ui) linear;
 }
 .turn-timer b {
   position: absolute;
@@ -287,7 +285,7 @@
   width: 30px;
   transform: translateY(-50%);
   text-align: center;
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 .turn-timer small {
   grid-column: 2;
@@ -296,19 +294,19 @@
   white-space: nowrap;
 }
 .turn-timer.mine {
-  color: #7fd6a4;
+  color: var(--pal-green-79);
 }
 .turn-timer.urgent {
-  color: #ff8a7a;
+  color: var(--pal-red-70);
 }
 .seat-away {
   display: inline-block;
   margin-top: 2px;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--r-round);
   background: rgba(20, 20, 24, 0.72);
-  color: #f5d9a6;
-  font-size: 11px;
+  color: var(--paper-300);
+  font-size: var(--fs-cap);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -333,7 +331,7 @@
 .l-go-decision button small {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 500;
   opacity: 0.85;
 }

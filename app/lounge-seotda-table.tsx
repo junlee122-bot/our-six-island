@@ -1,7 +1,7 @@
 'use client';
 /* oxlint-disable next/no-img-element -- GitHub Pages embeds the existing SVG cards without an image server. */
 import { useId, useRef, useState } from 'react';
-import { BookOpen, Coins, Crown, Flower2, X } from 'lucide-react';
+import { BookOpen, Coins, Crown, Flower2, X } from './ui/icons';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { beom } from './lounge-poker-table';
 import type { SeotdaAction, SeotdaView } from './lounge-seotda';

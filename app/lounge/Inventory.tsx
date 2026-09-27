@@ -4,7 +4,7 @@
 // quality, sell price and where it comes from; drag a seed, tool or dish onto
 // the hotbar; sell (with a quality choice for crops), eat or gift from here.
 import { useMemo, useState } from 'react';
-import { Coins, Gift, Landmark, Soup, Store } from 'lucide-react';
+import { Coins, Gift, Landmark, Soup, Store } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, SELL_MAX_N, type Crop, type Quality } from '../lounge-life';
 import { ITEM_BY_ID, FURNITURE_BY_REF, DISH_BY_ID, BUFF_INFO } from '../lounge-items';

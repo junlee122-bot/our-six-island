@@ -5,13 +5,12 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
-  Footprints,
   LoaderCircle,
   Lock,
   Palette,
   RotateCcw,
   Sun,
-} from 'lucide-react';
+} from './ui/icons';
 import * as THREE from 'three';
 import { loungeSprites } from './lounge-sprites';
 import {
@@ -76,7 +75,9 @@ import {
 } from './lounge-bedroom-navigation';
 import { ActionButton } from './lounge/ActionButton';
 import { EmptyState } from './ui/EmptyState';
-import { GameButton } from './ui/GameButton';
+import {
+  GameButton,
+} from './ui/GameButton';
 import { KeyHintBar } from './ui/KeyHint';
 import type { ActionKind } from './lounge-flow';
 import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
@@ -84,6 +85,7 @@ import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lo
 import { keyLabel } from './lounge-keybinds';
 import './lounge-bedroom-3d.css';
 import './lounge-bedroom-edit-dock.css';
+import { WalkHints } from './ui/WalkHints';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -1334,27 +1336,12 @@ export function Bedroom3D({
             {editing ? (
               <>
                 <Palette size={15} /> 소품을 클릭해 고르고 끌어서 옮겨요
-                <span className="b3-key-help"> · R 회전 · Delete 치우기 · Ctrl+Z 되돌리기</span>
               </>
             ) : (
-              <>
-                <Footprints size={15} /> 클릭해서 이동
-                <span className="b3-key-help"> · 방향키 / {[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')} · Shift 달리기 · Esc 메뉴</span>
-              </>
+              <WalkHints className="b3-walkhints" />
             )}
           </span>
-          {/* Model credits live in the room's status bar (full-window room). */}
-          <small className="b3-credit">
-            가구 모델{' '}
-            <a href="https://karchive.vibeline.co.kr/models" target="_blank" rel="noreferrer">
-              kArchive
-            </a>
-            (출처: 쓰레드 dogfooter)·
-            <a href="https://3dassets.dev/packs/bedroom-and-living-room-furniture" target="_blank" rel="noreferrer">
-              3DAssets.dev
-            </a>{' '}
-            CC0 · 미쿠 테마 소품은 새로 그린 팬 아트예요
-          </small>
+          {/* Model credits: 설정 → 만든 이야기 (and the page's license notice). */}
         </div>
       </div>
       {state === 'partial' && <output className="b3-status">{message}</output>}

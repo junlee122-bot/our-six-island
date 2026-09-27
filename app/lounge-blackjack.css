@@ -11,67 +11,65 @@
   top: 53%;
 }
 .l-world-table.blackjack .l-table-top {
-  background: #1f5a45;
-  border-color: #b9945c;
+  background: var(--pal-teal-33);
+  border-color: var(--pal-orange-65);
 }
 .l-mini-blackjack {
-  color: #fce3a5;
+  color: var(--pal-amber-91);
   font:
-    italic bold clamp(24px, 4vw, 52px) Georgia,
-    serif;
+    clamp(24px, 4vw, 52px) var(--font-display);
 }
 .l-game-symbol.blackjack {
-  background: #1f5a45;
-  color: #f3d6a0;
-  font-family: Georgia, serif;
+  background: var(--pal-teal-33);
+  color: var(--paper-300);
+  font-family: var(--font-display);
 }
 .l-game-screen.blackjack {
-  background: #111c1b;
-  color: #f3e8d5;
+  background: var(--pal-grey-7);
+  color: var(--paper-100);
   min-height: 100dvh;
 }
 .l-game-screen.blackjack > header {
-  background: #162320;
-  color: #f4e8d3;
-  border-color: #34413a;
+  background: var(--pal-grey-17);
+  color: var(--paper-100);
+  border-color: var(--pal-grey-30);
 }
 .l-game-screen.blackjack > header button {
-  color: #f4e8d3;
+  color: var(--paper-100);
 }
 .l-game-screen.blackjack > header .l-game-back {
-  background: #293c30;
-  border: 1px solid #536449;
+  background: var(--pal-grey-30);
+  border: 1px solid var(--pal-grey-41);
 }
 .l-game-screen.blackjack .l-game-content {
   max-width: 1320px;
   padding: 20px 32px 40px;
 }
 .l-game-screen.blackjack .l-game-money {
-  color: #d1bdaa;
+  color: var(--pal-orange-82);
 }
 .l-game-screen.blackjack .l-game-ending {
   background: transparent;
-  border-color: #455b43;
+  border-color: var(--pal-grey-41);
 }
 .l-game-screen.blackjack .l-primary {
-  background: #c7af72;
-  color: #273522;
+  background: var(--pal-orange-75);
+  color: var(--pal-green-16);
 }
 .l-game-screen.blackjack .l-secondary {
-  background: #24392c;
-  color: #fae9d1;
-  border-color: #5a6c4e;
+  background: var(--pal-teal-23);
+  color: var(--paper-100);
+  border-color: var(--pal-grey-41);
 }
 .l-game-screen.blackjack .l-modal {
-  color: #3e4234;
+  color: var(--pal-grey-30);
 }
 .l-app .bj-table-heading h2 {
   font:
-    30px Georgia,
-    serif;
-  letter-spacing: 5px;
+    30px var(--font-display);
+  letter-spacing: 0;
   margin: 7px 0;
-  color: #f8e3b5;
+  color: var(--paper-200);
 }
 @keyframes bj-deal {
   from {

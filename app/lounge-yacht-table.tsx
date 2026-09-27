@@ -3,7 +3,7 @@
 // dice, the shared score sheet with what my dice would score, and the result.
 // Keys: Space 굴리기 · 1–5 주사위 킵 · ↑↓ 칸 고르기 · Enter 적기.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { Crown, Dices, Lock } from 'lucide-react';
+import { Crown, Dices, Lock } from './ui/icons';
 import {
   YACHT_BONUS,
   YACHT_BONUS_AT,

@@ -1,10 +1,10 @@
 /* The wardrobe keeps its controls separate from the illustrated room. */
 .l-wardrobe {
-  --wc-ink: #202c3d;
-  --wc-muted: #657080;
-  --wc-line: #cbd0d5;
-  --wc-paper: #f5f5f1;
-  --wc-blue: var(--l-primary, #3f6a4a);
+  --wc-ink: var(--pal-blue-16);
+  --wc-muted: var(--pal-grey-47b);
+  --wc-line: var(--pal-grey-83);
+  --wc-paper: var(--paper-50);
+  --wc-blue: var(--l-primary, var(--leaf-800));
   color: var(--wc-ink);
 }
 
@@ -46,13 +46,13 @@
   gap: 8px;
   padding: 5px 10px 5px 5px;
   min-height: 44px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   color: var(--wc-ink);
 }
 
 .l-wardrobe .l-friend-picker > button.selected {
-  border-color: #b5c8a4;
-  background: #edf3e4;
+  border-color: var(--pal-lime-78);
+  background: var(--note-50);
 }
 
 .l-wardrobe .l-friend-picker > button > svg {
@@ -74,7 +74,7 @@
 }
 
 .l-wardrobe .l-friend-picker > small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--wc-muted);
   text-align: left;
   padding: 0 4px;
@@ -86,8 +86,8 @@
   top: 100px;
   margin: 0;
   padding: 0;
-  border: 1px solid #adb7c2;
-  border-radius: 8px;
+  border: 1px solid var(--pal-blue-74);
+  border-radius: var(--r-m);
   background: var(--wc-paper);
   overflow: hidden;
 }
@@ -97,7 +97,7 @@
   padding: 13px 17px;
   justify-content: space-between;
   gap: 10px;
-  color: #f8f9fc;
+  color: var(--note-50);
   background: var(--wc-ink);
 }
 
@@ -108,8 +108,8 @@
 .l-wardrobe .l-mirror-top > span:last-child {
   border: 0;
   padding: 0;
-  font-size: 11px;
-  color: #c6d0df;
+  font-size: var(--fs-cap);
+  color: var(--pal-blue-82);
 }
 
 .l-wardrobe .l-avatar-stage {
@@ -120,7 +120,7 @@
   margin: 0;
   overflow: hidden;
   isolation: isolate;
-  background: #c8c8c1;
+  background: var(--pal-orange-82);
 }
 
 .l-wardrobe .l-wardrobe-backdrop {
@@ -143,7 +143,7 @@
   width: 52%;
   height: 64%;
   transform: translateX(-50%);
-  z-index: 2;
+  z-index: var(--z-raised);
 }
 
 .l-wardrobe .l-stage-oval {
@@ -152,9 +152,9 @@
   width: 20%;
   height: 2.8%;
   transform: translateX(-50%);
-  background: #25303c38;
+  background: color-mix(in srgb, var(--pal-blue-16) 22%, transparent);
   filter: blur(3px);
-  z-index: 1;
+  z-index: var(--z-base);
 }
 
 .l-wardrobe .l-pose-bar {
@@ -164,21 +164,21 @@
   margin: 0;
   padding: 10px 14px;
   border-top: 1px solid var(--wc-line);
-  background: #e7e9ea;
+  background: var(--paper-50);
 }
 
 .l-wardrobe .l-pose-bar button {
   min-height: 40px;
   padding: 8px 5px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
   color: var(--wc-muted);
   font-size: 12px;
 }
 
 .l-wardrobe .l-pose-bar button.selected {
-  background: #fff;
+  background: var(--note-50);
   color: var(--wc-ink);
-  box-shadow: 0 1px 3px #202c3d12;
+  box-shadow: var(--lift-1);
 }
 
 .l-wardrobe .l-look-tools {
@@ -194,7 +194,7 @@
   padding: 6px 8px;
   color: var(--wc-ink);
   font-size: 12px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
 }
 
 .l-wardrobe .l-look-tools button:last-child {
@@ -206,7 +206,7 @@
   min-height: 570px;
   padding: 22px;
   border: 1px solid var(--wc-line);
-  border-radius: 8px;
+  border-radius: var(--r-m);
   background: var(--wc-paper);
 }
 
@@ -235,7 +235,7 @@
 
 .l-wardrobe .l-current-look small {
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-current-look strong {
@@ -266,9 +266,9 @@
 
 .l-wardrobe .l-tabs small {
   color: var(--wc-blue);
-  background: #e3ecd9;
-  border-radius: 4px;
-  font-size: 11px;
+  background: var(--leaf-100);
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-closet-panel {
@@ -284,14 +284,14 @@
 .l-wardrobe .l-outfit-filters button {
   min-height: 36px;
   padding: 6px 14px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
   border-color: var(--wc-line);
   color: var(--wc-muted);
   font-size: 12px;
 }
 
 .l-wardrobe .l-outfit-filters button[aria-pressed='true'] {
-  color: #fff;
+  color: var(--note-50);
   background: var(--wc-ink);
   border-color: var(--wc-ink);
 }
@@ -305,16 +305,16 @@
   min-width: 0;
   padding: 0;
   gap: 0;
-  border: 1px solid #d3d7da;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--pal-grey-83);
+  border-radius: var(--r-s);
+  background: var(--note-50);
   overflow: hidden;
 }
 
 .l-wardrobe .l-outfits > button.selected {
   border-color: var(--wc-blue);
-  background: #f1f4ff;
-  box-shadow: 0 0 0 1px var(--wc-blue);
+  background: var(--pal-grey-96);
+  box-shadow: var(--ring-line);
 }
 
 .l-wardrobe .l-outfit-art {
@@ -323,7 +323,7 @@
   width: 100%;
   overflow: hidden;
   border-radius: 0;
-  background: #e8e7e2;
+  background: var(--paper-50);
 }
 
 /* Show the original illustrated garment, from shoulders to shoes, rather
@@ -352,7 +352,7 @@
 }
 
 .l-wardrobe .l-outfits small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1.5;
   color: var(--wc-muted);
   margin-top: 5px;
@@ -366,10 +366,10 @@
   right: 5px;
   top: 5px;
   padding: 4px 6px;
-  border-radius: 4px;
+  border-radius: var(--r-s);
   background: var(--wc-blue);
-  color: #fff;
-  font-size: 11px;
+  color: var(--note-50);
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-colors {
@@ -386,16 +386,16 @@
 .l-wardrobe .l-colors button {
   width: 34px;
   height: 34px;
-  box-shadow: 0 0 0 1px var(--wc-line);
+  box-shadow: var(--ring-line);
 }
 
 .l-wardrobe .l-colors button[aria-pressed='true'] {
-  box-shadow: 0 0 0 2px var(--wc-blue);
+  box-shadow: var(--ring-line);
 }
 
 .l-wardrobe .l-help-text {
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1.7;
   margin-top: 17px;
 }
@@ -407,16 +407,16 @@
 
 .l-wardrobe .l-hairstyles > button {
   border-color: var(--wc-line);
-  background: #eeefed;
+  background: var(--paper-50);
   color: var(--wc-ink);
-  border-radius: 6px;
+  border-radius: var(--r-s);
   font-size: 13px;
 }
 
 .l-wardrobe .l-hairstyles > button[aria-pressed='true'] {
   border-color: var(--wc-blue);
-  box-shadow: inset 0 0 0 1px var(--wc-blue);
-  background: #edf1ff;
+  box-shadow: var(--edge-line);
+  background: var(--pal-grey-96);
 }
 
 .l-wardrobe .l-hairstyles > button > svg {
@@ -424,7 +424,7 @@
 }
 
 .l-wardrobe .l-hairstyles .avatar-view {
-  background: #e1e4e7;
+  background: var(--pal-grey-96);
 }
 
 .l-wardrobe .l-hair-options > h3,
@@ -442,16 +442,16 @@
 .l-wardrobe .l-hair-options button {
   min-height: 66px;
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-hair-options button > span {
   border-color: var(--wc-paper);
-  box-shadow: 0 0 0 1px var(--wc-line);
+  box-shadow: var(--ring-line);
 }
 
 .l-wardrobe .l-hair-options button[aria-pressed='true'] > span {
-  box-shadow: 0 0 0 2px var(--wc-blue);
+  box-shadow: var(--ring-line);
 }
 
 .l-wardrobe .l-hair-options button[aria-pressed='true'] {
@@ -464,8 +464,8 @@
   margin: 22px 0 0;
   padding: 16px;
   border: 1px solid var(--wc-line);
-  border-radius: 6px;
-  background: #f8f9f7;
+  border-radius: var(--r-s);
+  background: var(--note-50);
 }
 
 .l-wardrobe .l-color-editor legend {
@@ -477,7 +477,7 @@
 
 .l-wardrobe .l-color-editor p {
   margin: 0 0 14px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1.6;
   color: var(--wc-muted);
 }
@@ -494,7 +494,7 @@
   min-width: 0;
   gap: 6px;
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 600;
 }
 
@@ -504,8 +504,8 @@
   min-height: 42px;
   padding: 8px 6px;
   border: 1px solid var(--wc-line);
-  border-radius: 4px;
-  background: #fff;
+  border-radius: var(--r-s);
+  background: var(--note-50);
   color: var(--wc-ink);
   font:
     12px ui-monospace,
@@ -518,7 +518,7 @@
 }
 
 .l-wardrobe .l-color-inputs input[aria-invalid='true'] {
-  border-color: #b5413c;
+  border-color: var(--stamp-600);
 }
 
 .l-wardrobe .l-color-inputs input:focus-visible {
@@ -534,7 +534,7 @@
   gap: 10px;
   margin-top: 13px;
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1.6;
 }
 
@@ -545,10 +545,10 @@
   min-height: 36px;
   padding: 6px 9px;
   border: 1px solid var(--wc-line);
-  border-radius: 4px;
-  background: #fff;
+  border-radius: var(--r-s);
+  background: var(--note-50);
   color: var(--wc-ink);
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-color-editor-footer button:disabled {
@@ -564,18 +564,18 @@
 .l-wardrobe .l-extra-options button {
   min-height: 44px;
   padding: 10px 13px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
   border-color: var(--wc-line);
-  background: #fff;
+  background: var(--note-50);
   color: var(--wc-ink);
   font-size: 12px;
 }
 
 .l-wardrobe .l-extra-options button[aria-pressed='true'] {
-  background: #edf3e4;
-  color: #244499;
+  background: var(--note-50);
+  color: var(--pal-blue-31);
   border-color: var(--wc-blue);
-  box-shadow: inset 0 0 0 1px var(--wc-blue);
+  box-shadow: var(--edge-line);
 }
 
 .l-wardrobe .l-saved-looks {
@@ -586,9 +586,9 @@
 .l-wardrobe .l-saved-looks > div {
   min-width: 0;
   padding: 5px;
-  background: #fff;
+  background: var(--note-50);
   border-color: var(--wc-line);
-  border-radius: 5px;
+  border-radius: var(--r-s);
 }
 
 .l-wardrobe .l-saved-looks > p {
@@ -597,14 +597,14 @@
 
 .l-wardrobe .l-saved-looks > div > button:first-child {
   border: 1px solid transparent;
-  border-radius: 3px;
-  background: #e8e9e6;
+  border-radius: var(--r-s);
+  background: var(--paper-50);
   color: var(--wc-ink);
 }
 
 .l-wardrobe .l-saved-looks > div > button[aria-pressed='true'] {
   border-color: var(--wc-blue);
-  background: #edf3e4;
+  background: var(--note-50);
 }
 
 .l-wardrobe .l-saved-looks .avatar-view {
@@ -613,14 +613,14 @@
 
 .l-wardrobe .l-saved-looks strong {
   padding: 7px 4px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1.5;
 }
 
 .l-wardrobe .l-saved-looks .l-text {
   min-height: 36px;
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-closet-bottom {
@@ -633,16 +633,16 @@
 
 .l-wardrobe .l-closet-bottom > span {
   color: var(--wc-muted);
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-wardrobe .l-closet-bottom > .l-primary {
   min-height: 44px;
   margin-left: auto;
   padding: 11px 16px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
   background: var(--wc-ink);
-  color: #fff;
+  color: var(--note-50);
   box-shadow: none;
   font-size: 12px !important;
 }
@@ -656,12 +656,12 @@
 @media (hover: hover) {
   .l-wardrobe .l-look-tools button:hover,
   .l-wardrobe .l-pose-bar button:hover {
-    background: #e6edda;
+    background: var(--leaf-100);
     color: var(--wc-ink);
   }
 
   .l-wardrobe .l-outfits > button:hover {
-    border-color: #86a578;
+    border-color: var(--pal-green-58);
   }
 }
 
@@ -680,8 +680,6 @@
   }
 }
 
-
-
 /* ------------------------------------------------------------------------
    분장실 in the game: a full-window scene like my room and the village.
    The dressing room fills the window (a soft copy of the backdrop behind
@@ -699,7 +697,7 @@
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #cfc9bc;
+  background: var(--pal-orange-82);
 }
 .l-wardrobe-full .l-wardrobe::before {
   content: '';
@@ -713,7 +711,7 @@
 }
 .l-wardrobe-full .l-wardrobe-chip {
   position: absolute;
-  z-index: 6;
+  z-index: var(--z-world-pop);
   top: 90px;
   left: 20px;
   display: flex;
@@ -723,29 +721,22 @@
   max-width: calc(100vw - var(--closet-w) - 60px);
   margin: 0;
   padding: 7px 12px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 12px;
-  background: #fffdeeeb;
-  color: #4a4234;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--note-50) 92%, transparent);
+  color: var(--ink-700);
   font-size: calc(12px * var(--text-scale, 1));
-  box-shadow: 0 3px 12px #43523310;
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .l-wardrobe-full .l-wardrobe-chip b {
   font-size: calc(13px * var(--text-scale, 1));
 }
 .l-wardrobe-full .l-wardrobe-keys {
-  color: #6b604c;
+  color: var(--ink-600);
 }
 .l-wardrobe-full .l-wardrobe-chip kbd {
   display: inline-block;
-  min-width: 18px;
   margin-right: 2px;
-  padding: 0 4px;
-  border: 1px solid #d7ccb6;
-  border-radius: 5px;
-  background: #fff;
-  font: inherit;
-  font-size: calc(11px * var(--text-scale, 1));
   text-align: center;
 }
 .l-wardrobe-full .l-wardrobe .l-wardrobe-grid {
@@ -777,20 +768,20 @@
 .l-wardrobe-full .l-wardrobe .l-avatar-stage {
   width: min(100%, calc(100dvh * 4 / 3));
   aspect-ratio: 4 / 3;
-  box-shadow: 0 20px 60px #2a221633;
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-wardrobe-full .l-wardrobe .l-pose-bar,
 .l-wardrobe-full .l-wardrobe .l-look-tools {
   position: absolute;
-  z-index: 4;
+  z-index: var(--z-lift-2);
   left: 50%;
   display: flex;
   gap: 4px;
   padding: 5px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 14px;
-  background: #fffdeeeb;
-  box-shadow: 0 6px 18px #2a221626;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--note-50) 92%, transparent);
+  box-shadow: var(--lift-2), var(--lift-1);
   transform: translateX(-50%);
 }
 .l-wardrobe-full .l-wardrobe .l-pose-bar {
@@ -803,17 +794,17 @@
 .l-wardrobe-full .l-wardrobe .l-look-tools button {
   min-height: 42px;
   padding: 6px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   font-size: calc(13px * var(--text-scale, 1));
   white-space: nowrap;
 }
 .l-wardrobe-full .l-wardrobe .l-pose-bar button.selected {
   background: var(--wc-blue);
-  color: #fffdf1;
+  color: var(--note-50);
 }
 .l-wardrobe-full .l-wardrobe .l-closet {
   position: absolute;
-  z-index: 5;
+  z-index: var(--z-world-label);
   top: 88px;
   right: 20px;
   bottom: 20px;
@@ -822,10 +813,10 @@
   display: flex;
   flex-direction: column;
   padding: 16px 16px 12px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 18px;
-  background: #fffdf2f5;
-  box-shadow: 0 14px 36px #2a22162e;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--note-50) 96%, transparent);
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-wardrobe-full .l-wardrobe .l-closet-panel {
   flex: 1 1 auto;
@@ -839,7 +830,7 @@
   padding-top: 10px;
 }
 .l-wardrobe-full .l-wardrobe .l-closet-bottom > .l-primary {
-  border-radius: 10px;
+  border-radius: var(--r-m);
   background: var(--wc-blue);
 }
 .l-wardrobe-full .l-wardrobe .l-tabs > button[aria-selected='true'] {

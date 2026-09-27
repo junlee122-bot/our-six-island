@@ -5,7 +5,7 @@
 /* ---------------------------------------------------------- header presence */
 .l-app .l-world-header .l-presence-label small {
   font-size: calc(12px * var(--text-scale, 1));
-  color: #4d5a44;
+  color: var(--pal-grey-41);
 }
 .l-app .l-world-header .l-presence-label b {
   font-size: calc(14px * var(--text-scale, 1));
@@ -26,18 +26,18 @@
   bottom: -1px;
   width: 9px;
   height: 9px;
-  border: 2px solid #fffdf2;
+  border: 2px solid var(--note-50);
   border-radius: 50%;
-  background: #2f9e55;
+  background: var(--pal-green-64);
 }
 .l-app .l-world-header .l-presence.is-retrying {
-  border-color: #e3b3a6;
-  background: #fff3ee;
-  color: #8a2f20;
+  border-color: var(--pal-red-78);
+  background: var(--paper-50);
+  color: var(--stamp-800);
   cursor: pointer;
 }
 .l-app .l-world-header .l-presence.is-retrying .l-presence-label small {
-  color: #8a2f20;
+  color: var(--stamp-800);
   font-weight: 800;
 }
 .l-app .l-world-header .l-presence.is-retrying .l-presence-label b {
@@ -56,11 +56,16 @@
 }
 /* The header invite while tables are off: still opens (solo list inside). */
 .l-app .l-world-header .l-invite-button.is-off {
-  background: #e4e2d8;
-  color: #3f3d35;
+  /* offline: the disabled look, still readable (was 1.75:1 in the audit) */
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  box-shadow: var(--edge-disabled);
+}
+.l-app .l-world-header .l-invite-button.is-off * {
+  color: inherit;
 }
 .l-app .l-world-header .l-header-badge {
-  background: #b93a2e;
+  background: var(--stamp-600);
   font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 800;
 }
@@ -69,10 +74,10 @@
 .l-offline-note {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border: 1px solid #e8c2b6;
-  border-radius: 10px;
-  background: #fff4ef;
-  color: #7c2d1f;
+  border: 1px solid var(--pal-red-78);
+  border-radius: var(--r-m);
+  background: var(--paper-50);
+  color: var(--stamp-800);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -91,26 +96,26 @@
   width: 100%;
   min-height: 62px;
   padding: 10px 34px 10px 12px;
-  border: 1px solid #dfe5d1;
-  border-radius: 12px;
-  background: #fbfcf6;
-  color: #2f3a2a;
-  font: inherit;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  color: var(--pal-grey-30);
+  font: var(--font-body);
   text-align: left;
   cursor: pointer;
 }
 .l-solo-list button:hover {
-  background: #eef3e4;
+  background: var(--note-50);
 }
 .l-solo-list button[data-hot] {
-  border-color: #d8b24b;
-  background: #fff8df;
+  border-color: var(--gold-400);
+  background: var(--paper-100);
 }
 .l-solo-list strong {
   font-size: 14px;
 }
 .l-solo-list small {
-  color: #56624b;
+  color: var(--pal-grey-41);
   font-size: 12px;
 }
 .l-solo-list svg {
@@ -118,16 +123,16 @@
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #55704a;
+  color: var(--leaf-800);
 }
 .l-watch-friends {
   display: grid;
   gap: 2px;
   margin: 0 0 14px;
   padding: 10px 12px;
-  border: 1px dashed #b9c6a4;
-  border-radius: 12px;
-  background: #f6f9ee;
+  border: 1px dashed var(--pal-lime-78);
+  border-radius: var(--r-m);
+  background: var(--note-50);
 }
 .l-watch-friends label {
   display: flex;
@@ -140,30 +145,30 @@
 .l-watch-friends input {
   width: 18px;
   height: 18px;
-  accent-color: #3f6a4a;
+  accent-color: var(--leaf-800);
 }
 .l-watch-friends small {
   padding-left: 26px;
-  color: #56624b;
+  color: var(--pal-grey-41);
   font-size: 12px;
 }
 .l-picker-subtitle {
   margin: 4px 0 8px;
-  color: #3e4638;
+  color: var(--pal-grey-30);
   font-size: 14px;
 }
 .l-table-picker[data-muted] button {
-  background: #f4f4ee;
+  background: var(--paper-50);
 }
 .l-table-picker button:disabled {
   cursor: not-allowed;
-  color: #55594d;
+  color: var(--pal-grey-37);
 }
 .l-table-picker button:disabled > span:first-child {
-  background: #8a8f80;
+  background: var(--pal-grey-62);
 }
 .l-table-picker small {
-  color: #56624b;
+  color: var(--pal-grey-41);
 }
 
 /* ---------------------------------------------------------- table calls */
@@ -172,11 +177,11 @@
 }
 .l-sheet-seats li.is-called .avatar-view {
   opacity: 0.6;
-  box-shadow: 0 0 0 2px #fffdf4, 0 0 0 4px #d8b24b;
+  box-shadow: var(--ring-line), var(--ring-highlight);
 }
 .l-sheet-seats li.is-called[data-call='coming'] .avatar-view {
   opacity: 0.85;
-  box-shadow: 0 0 0 2px #fffdf4, 0 0 0 4px #2f9e55;
+  box-shadow: var(--ring-line);
 }
 .l-sheet-seats li.is-called span {
   display: grid;
@@ -185,13 +190,13 @@
 }
 .l-sheet-seats li.is-called small {
   white-space: nowrap;
-  color: #6a4a12;
+  color: var(--text-soft);
   font-size: var(--fs-cap);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .l-sheet-seats li.is-called[data-call='coming'] small {
-  color: #1f6b39;
+  color: var(--accent);
 }
 @media (prefers-reduced-motion: no-preference) {
   .l-sheet-seats li.is-called .avatar-view {
@@ -205,11 +210,11 @@
 }
 .l-sheet-declined {
   margin: 6px 0 0;
-  color: #7c2d1f;
+  color: var(--danger);
   font-size: 12px;
 }
 .l-sheet-seats li {
-  color: #4d4132;
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------- tutorial */
@@ -221,16 +226,16 @@
   transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));
   padding: 14px 16px 12px;
-  border: 1px solid #efe3b8;
-  border-radius: 16px;
-  background: #fffdf5f7;
-  color: #2d3e33;
-  box-shadow: 0 12px 36px #1b2a2133;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--note-50) 97%, transparent);
+  color: var(--pal-grey-30);
+  box-shadow: var(--lift-3), var(--lift-1);
   zoom: var(--dialog-zoom, 1);
 }
 .l-tutorial[data-cheer] {
-  border-color: #9bd1a8;
-  background: #f1fbf1f7;
+  border-color: var(--pal-green-77);
+  background: color-mix(in srgb, var(--note-50) 97%, transparent);
 }
 .l-tutorial-head {
   display: flex;
@@ -238,7 +243,7 @@
   align-items: center;
 }
 .l-tutorial-head small {
-  color: #4f5c46;
+  color: var(--pal-grey-41);
   font-size: 12px;
   font-weight: 700;
 }
@@ -252,14 +257,14 @@
 .l-tutorial-dots li {
   width: 18px;
   height: 5px;
-  border-radius: 3px;
-  background: #dcdcc9;
+  border-radius: var(--r-s);
+  background: var(--leaf-100);
 }
 .l-tutorial-dots li[data-state='done'] {
-  background: #4b8a57;
+  background: var(--leaf-600);
 }
 .l-tutorial-dots li[data-state='now'] {
-  background: #d8a22b;
+  background: var(--gold-400);
 }
 .l-tutorial h2 {
   display: flex;
@@ -269,7 +274,7 @@
   font-size: 18px;
 }
 .l-tutorial h2 svg {
-  color: #2f8a4a;
+  color: var(--pal-green-51);
 }
 .l-tutorial p {
   margin: 0;
@@ -280,11 +285,11 @@
   display: inline-block;
   min-width: 1.6em;
   padding: 0 6px;
-  border: 1px solid #c9bf9f;
+  border: 1px solid var(--paper-300);
   border-bottom-width: 2px;
-  border-radius: 6px;
-  background: #fff;
-  color: #2d3e33;
+  border-radius: var(--r-s);
+  background: var(--note-50);
+  color: var(--pal-grey-30);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -299,7 +304,7 @@
   margin-top: 10px;
 }
 .l-tutorial-actions .l-text {
-  color: #4b5842;
+  color: var(--pal-grey-41);
 }
 
 /* ---------------------------------------------------------- full-window room */
@@ -326,7 +331,7 @@
    small chip under the header, like the village's top tools. */
 .l-room-full .b3-heading {
   position: fixed;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   top: 90px;
   left: 20px;
   margin: 0;
@@ -343,19 +348,19 @@
 .l-room-full .b3-mode-label,
 .l-room-full .b3-visitors {
   padding: 6px 10px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 10px;
-  background: #fffdeeeb;
-  color: #4a4234;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--note-50) 92%, transparent);
+  color: var(--ink-700);
   font-size: calc(12px * var(--text-scale, 1));
-  box-shadow: 0 3px 12px #43523310;
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .l-room-full .b3-room[data-editing] .b3-heading {
   display: none;
 }
 .l-room-full .b3-owner-bar {
   position: fixed;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   left: 20px;
   bottom: 56px;
   flex-wrap: nowrap;
@@ -368,7 +373,7 @@
 }
 .l-room-full .b3-status {
   position: fixed;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   left: 50%;
   bottom: 56px;
   transform: translateX(-50%);
@@ -391,7 +396,7 @@
 }
 .b3-visit-chips {
   position: fixed;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   top: 134px;
   left: 20px;
   display: flex;
@@ -403,47 +408,37 @@
 }
 .b3-visit-chip {
   padding: 6px 10px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 10px;
-  background: #fffdeeeb;
-  color: #4a4234;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--note-50) 92%, transparent);
+  color: var(--ink-700);
   font-size: calc(12px * var(--text-scale, 1));
   line-height: 1.5;
   word-break: keep-all;
-  box-shadow: 0 3px 12px #43523310;
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .b3-visit-chip.is-status b {
   margin-right: 6px;
-  color: #6b5a40;
-}
-.b3-visit-dock kbd {
-  min-width: 20px;
-  padding: 1px 5px;
-  border: 1px solid #d7ccb6;
-  border-radius: 5px;
-  background: #fff;
-  color: #6b5a40;
-  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
-  line-height: 1.4;
+  color: var(--ink-600);
 }
 .b3-visit-dock .b3-chat-button[aria-expanded='true'] {
-  border-color: #6b8a58;
-  background: #eef3e3;
-  color: #3f5a34;
+  border-color: var(--leaf-600);
+  background: var(--leaf-100);
+  color: var(--leaf-800);
 }
 .b3-visit-guestbook {
   position: fixed;
-  z-index: 9;
+  z-index: var(--z-hud-float);
   top: 96px;
   right: 20px;
   width: min(380px, calc(100vw - 40px));
   max-height: calc(100dvh - 190px);
   overflow-y: auto;
   padding: 6px 4px 4px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 16px;
-  background: #fffdf2f7;
-  box-shadow: 0 14px 34px #2c2a1a2e;
+  border: 1px solid color-mix(in srgb, var(--paper-100) 88%, transparent);
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--note-50) 97%, transparent);
+  box-shadow: var(--lift-3), var(--lift-1);
   animation: b3-panel-in 160ms ease-out;
 }
 .b3-visit-guestbook .l-guestbook {
@@ -472,30 +467,30 @@
 /* The room's status bar: key help on the left, model credits on the right.
    Both pass 4.5:1 on the bar colour and follow 글자 크기. */
 .l-app .b3-scene-footer {
-  color: #5a4e3c;
+  color: var(--ink-700);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .b3-key-help {
-  color: #5a4e3c;
+  color: var(--ink-700);
 }
 .l-app .b3-scene-footer .b3-credit {
   padding: 0;
   margin: 0 0 0 auto;
-  color: #5a4e3c;
+  color: var(--ink-700);
   font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   text-align: right;
 }
 .l-app .b3-scene-footer .b3-credit a {
-  color: #4a3f2d;
+  color: var(--ink-700);
 }
 .l-app .b3-eyebrow {
-  color: #6b5a40;
+  color: var(--ink-600);
 }
 .l-app .b3-heading p {
-  color: #625849;
+  color: var(--ink-600);
 }
 .l-app .b3-mode-label {
-  color: #5f5645;
+  color: var(--ink-600);
 }
 
 /* ---------------------------------------------------------- village tags */
@@ -503,29 +498,29 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #34402c;
+  color: var(--pal-grey-30);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .hv-tag > i {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2f9e55;
-  box-shadow: 0 0 0 1.5px var(--text-on-accent);
+  background: var(--pal-green-64);
+  box-shadow: var(--ring-line);
 }
 .l-app .hv-tag.is-away {
-  background: #f1efe6d9;
-  color: #4a4d44;
+  background: color-mix(in srgb, var(--paper-50) 85%, transparent);
+  color: var(--pal-grey-37);
   font-weight: 600;
 }
 .l-app .hv-tag.is-away > i {
-  background: #9a9d92;
+  background: var(--pal-grey-62);
 }
 .l-app .hv-tag.is-away small {
   padding: 1px 5px;
-  border-radius: 6px;
-  background: #e2e0d5;
-  color: #4a4d44;
+  border-radius: var(--r-s);
+  background: var(--stamp-100);
+  color: var(--pal-grey-37);
   font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 700;
 }
@@ -534,8 +529,8 @@
 }
 /* The farm chip's ripe count (was 3.4:1). */
 .l-app .hv-place small {
-  background: #3f6a34;
-  color: #fff;
+  background: var(--leaf-600);
+  color: var(--note-50);
 }
 .hv-labels .hv-place {
   font-size: calc(12px * var(--text-scale, 1));
@@ -547,11 +542,11 @@
   top: 0;
   left: 0;
   padding: 2px 8px;
-  border: 1px solid #6e4f33;
-  border-radius: 4px;
-  background: #fbf1dc;
-  color: #3d2c1b;
-  box-shadow: 0 1px 0 #6e4f33, 0 2px 5px #2a1d1033;
+  border: 1px solid var(--wood-500);
+  border-radius: var(--r-s);
+  background: var(--paper-100);
+  color: var(--ink-900);
+  box-shadow: var(--lift-1), var(--lift-2);
   font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 750;
   letter-spacing: -0.01em;
@@ -568,14 +563,14 @@
 .l-app .hv-sign-casino,
 .l-app .hv-sign-wardrobe {
   padding: 3px 10px;
-  background: #5b3e27;
-  border-color: #3f2a18;
-  color: #fff6e3;
+  background: var(--wood-700);
+  border-color: var(--wood-900);
+  color: var(--paper-100);
   font-size: calc(12px * var(--text-scale, 1));
-  box-shadow: 0 1px 0 #3f2a18, 0 3px 8px #2a1d1044;
+  box-shadow: var(--lift-1), var(--lift-2);
 }
 .hv-scene[data-phase='night'] .hv-sign {
-  box-shadow: 0 0 0 1px #ffe7a055, 0 3px 10px #0008;
+  box-shadow: var(--ring-line), var(--lift-1), var(--lift-2);
 }
 /* A hovered building gets the hand cursor (canvas) and its name chip. */
 .hv-scene[data-hover-place]:not([data-hover-place='']) .hv-canvas {
@@ -590,36 +585,36 @@
    Small HUD text raised to at least 4.5:1 on its own background and sized
    with 글자 크기. */
 .l-app .hv-place.hv-farm-label small {
-  background: #3f6a34;
-  color: #fff;
+  background: var(--leaf-600);
+  color: var(--note-50);
 }
 .l-app .l-world-header .l-brand small {
-  color: #4f5c46;
+  color: var(--text-on-frame);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .l-hud-date small {
-  color: #525c4b;
+  color: var(--text-on-frame);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .l-banner-more {
-  background: #00000033;
+  background: color-mix(in srgb, var(--pal-grey-0) 20%, transparent);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .hv-minimap-note {
-  color: #4f5c46;
+  color: var(--pal-grey-41);
   font-size: calc(12px * var(--text-scale, 1));
 }
 .l-app .l-sheet-keys {
-  color: #5f5240;
-  font-size: calc(12px * var(--text-scale, 1));
+  justify-content: flex-start;
+  color: var(--text-soft);
 }
 .l-app .l-sheet-key {
   opacity: 1;
 }
 .l-app .l-sheet-chips > button[aria-checked='true'] .l-sheet-key {
   background: transparent;
-  box-shadow: inset 0 0 0 1px #fffdf180;
-  color: #fffdf1;
+  box-shadow: var(--edge-line), var(--lift-1);
+  color: var(--note-50);
 }
 /* Disabled buttons: grey with dark grey text instead of a faded colour
    (the faded blue-green read as white on pale blue). */

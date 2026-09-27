@@ -5,7 +5,7 @@
 // with a friend each day adds a little friendship). Lines come from
 // lounge-friend-dialog.ts (lounge-friend-lines.ts + the friend's own lines).
 import { useEffect, useRef, useState } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle } from '../ui/icons';
 import { ACTORS } from '../lounge-roster';
 import { AvatarView } from '../avatar-view';
 import { actionForCode } from '../lounge-keybinds';

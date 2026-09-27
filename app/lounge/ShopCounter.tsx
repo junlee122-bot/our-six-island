@@ -4,7 +4,7 @@
 // the counter's pages, ↑↓ (or ←→↑↓ in the showroom) move the selection,
 // Enter buys or chips in, +/− change the count, R rerolls today's stock.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Check, Coins, Crown, Hammer, House, Lock, RefreshCw, Sparkles } from 'lucide-react';
+import { Check, Coins, Crown, Hammer, House, Lock, RefreshCw, Sparkles } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FURNITURE_BY_REF, HOUSE_TIERS, type HouseTier } from '../lounge-items';
 import { FURNITURE_ART } from '../lounge-furniture-art';
@@ -594,7 +594,7 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
 export function TavernUpgrades({ room, view, notify, onClose }: Base) {
   const done = (view.life?.venues ?? []).filter((v) => v.done && v.id.startsWith('tavern-')).length;
   return (
-    <Modal title={`${VENUE_NAME.tavern} · 허 선장`} onClose={onClose} className="sc-counter sc-tavern" wide>
+    <Modal title={`${VENUE_NAME.tavern} · 허 선장`} onClose={onClose} className="sc-counter sc-tavern" venue="tavern" wide>
       <Keeper
         host="captain"
         mood={done ? 'smile' : 'calm'}

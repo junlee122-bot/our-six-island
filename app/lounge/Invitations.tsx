@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Check, X, MoreHorizontal } from 'lucide-react';
+import { Check, X, MoreHorizontal } from '../ui/icons';
 import { GAME_INFO, gameReservation, type GameKind } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { formatBeom, josa } from '../lounge-text';

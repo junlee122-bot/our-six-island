@@ -8,7 +8,7 @@ import {
   Send,
   Trees,
   RotateCcw,
-} from 'lucide-react';
+} from '../ui/icons';
 import type { ReactNode } from 'react';
 import { AvatarView } from '../avatar-view';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';

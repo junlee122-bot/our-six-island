@@ -183,19 +183,6 @@
   color: var(--text-soft);
   padding: 20px 24px 26px;
 }
-/* Windows and toasts: warm paper, not the old blue-grey card / navy toast. */
-.l-app .l-modal {
-  background: var(--surface-raised);
-  border-color: var(--line);
-  border-radius: var(--r-l);
-  color: var(--text);
-}
-.l-app .l-toast {
-  background: var(--toast-bg);
-  color: var(--toast-text);
-  box-shadow: var(--lift-2);
-  border-radius: var(--r-m);
-}
 /* Reactions remain available without reserving a large empty panel every turn. */
 .l-app .l-reactions {
   margin: 0;
@@ -244,15 +231,16 @@
 .l-app .l-reaction-status:not(:empty) {
   margin-top: 5px;
 }
-/* The entry screen belongs to the same village: walnut story panel. */
+/* The entry screen belongs to the same village: a cream page for the story
+   and the room preview. */
 .l-app .l-auth-story {
-  background: var(--frame-edge);
-  color: var(--text-on-frame);
+  background: var(--surface-app);
+  color: var(--text);
 }
 .l-app .l-auth-story .l-kicker,
 .l-app .l-auth-story > p,
 .l-app .l-auth-promise {
-  color: var(--text-on-frame);
+  color: var(--text-soft);
 }
 .l-app .l-auth-story h1 {
   font-family: var(--font-display);
@@ -291,4 +279,40 @@
     grid-template-columns: minmax(0, 1fr) 230px;
     gap: 12px;
   }
+}
+
+/* Login: the room preview on the left, and on the right a wooden board with
+   the sign-in form pinned to it as a paper note (the mailbox slip), instead of
+   a landing page's form column. */
+.l-app.l-auth-page {
+  background:
+    linear-gradient(90deg, transparent 55%, var(--frame-edge) 55%, var(--frame-edge) calc(55% + 4px), transparent calc(55% + 4px)),
+    linear-gradient(90deg, var(--surface-app) 55%, var(--frame) 55%);
+}
+.l-app.l-auth-page > .l-auth-card {
+  position: relative;
+  align-self: center;
+  max-height: calc(100dvh - 48px);
+  margin: var(--sp-5) var(--sp-4);
+  padding: 44px 40px 32px;
+  border-radius: var(--r-s);
+  background: var(--note);
+  color: var(--text);
+  box-shadow: var(--lift-3);
+}
+.l-app.l-auth-page > .l-auth-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 96px;
+  height: 16px;
+  margin-left: -48px;
+  background: var(--tape);
+}
+.l-app .l-auth-card h2 {
+  font-family: var(--font-hand);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-display);
+  letter-spacing: 0;
 }

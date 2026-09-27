@@ -6,11 +6,11 @@
   width: 100%;
   min-height: 48px;
   padding: 8px 10px;
-  border: 1px dashed #d9a55b;
-  border-radius: 12px;
-  background: #fffaf0;
-  color: #5f4630;
-  font: inherit;
+  border: 1px dashed var(--pal-orange-71);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--font-body);
   text-align: left;
   cursor: pointer;
 }
@@ -25,15 +25,15 @@
 .l-sheet-party small {
   font-size: 12px;
   line-height: 1.4;
-  color: #8a7658;
+  color: var(--text-soft);
 }
 .l-sheet-party.is-on {
   border-style: solid;
-  border-color: #e0a64f;
-  background: linear-gradient(160deg, #fff6df, #ffe9b8);
-  color: #7a4a14;
+  border-color: var(--pal-orange-71);
+  background: linear-gradient(160deg, var(--surface-raised), var(--ink-on-wood));
+  color: var(--pal-orange-36);
 }
 .l-sheet-party:focus-visible {
-  outline: 3px solid #e0a64f;
+  outline: 3px solid var(--pal-orange-71);
   outline-offset: 2px;
 }

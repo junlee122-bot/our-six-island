@@ -2,18 +2,18 @@
   max-width: 920px;
   margin: 26px auto 12px;
   padding: 25px;
-  border: 1px solid #d7decc;
-  border-radius: 20px;
-  background: #fffdf5;
-  color: #354c3d;
-  box-shadow: 0 12px 32px #172d1710;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-round-summary {
   margin: -6px 0 16px;
   padding: 9px 13px;
-  border-radius: 11px;
-  background: #f3efdf;
-  color: #4b4430;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
   font-size: 13.5px;
   line-height: 1.55;
   word-break: keep-all;
@@ -26,8 +26,8 @@
   gap: 16px;
 }
 .l-round-kicker {
-  font-size: 11px;
-  color: #7a826c;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
   letter-spacing: 0.5px;
 }
 .l-round-heading h2 {
@@ -37,7 +37,7 @@
 }
 .l-round-heading p {
   margin: 0;
-  color: #778170;
+  color: var(--text-soft);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -46,9 +46,9 @@
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  border-radius: 20px;
-  background: #eaf0df;
-  color: #527148;
+  border-radius: var(--r-l);
+  background: var(--surface-raised);
+  color: var(--leaf-600);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -65,13 +65,13 @@
   align-items: center;
   gap: 9px;
   padding: 10px 12px;
-  border: 1px solid #e1e4d9;
-  border-radius: 13px;
-  background: #f7f7ef;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--surface-raised);
 }
 .l-round-friends li.is-ready {
-  border-color: #9eb888;
-  background: #edf3e4;
+  border-color: var(--pal-lime-72);
+  background: var(--surface-raised);
 }
 .l-round-friends li > .avatar-view {
   width: 46px;
@@ -79,8 +79,8 @@
   /* The name column is the li's other span (flex: 1); the face keeps its size. */
   flex: 0 0 auto;
   border-radius: 50%;
-  background: #efe6cf;
-  box-shadow: 0 0 0 2px #fffaf0;
+  background: var(--surface-raised);
+  box-shadow: var(--ring-line);
 }
 .l-round-friends li > span {
   flex: 1;
@@ -92,31 +92,31 @@
 }
 .l-round-friends strong small {
   margin-left: 6px;
-  color: #859475;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
 }
 .l-round-friends li > span > span {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   margin-top: 4px;
-  color: #8d9584;
+  color: var(--text-soft);
 }
 .l-round-friends li > svg {
-  color: #a7b09d;
+  color: var(--pal-grey-71);
   flex-shrink: 0;
 }
 .l-round-friends li.is-ready > svg {
-  color: #537749;
+  color: var(--leaf-600);
 }
 .l-round-stake {
   font-size: 12px;
-  color: #5f7057;
+  color: var(--text-soft);
   line-height: 1.6;
 }
 .l-round-stake > span {
   display: block;
-  color: #89907f;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
   margin-top: 3px;
 }
 .l-round-actions {
@@ -136,22 +136,22 @@
   min-width: 220px;
 }
 .l-app .l-round-confirm.is-ready {
-  background: #dae8ca;
-  color: #3f6133;
+  background: var(--surface-raised);
+  color: var(--leaf-800);
 }
 .l-round-feedback {
   display: block;
   min-height: 18px;
-  font-size: 11px;
-  color: #77856c;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
   margin-top: 12px;
   line-height: 1.7;
 }
 .l-round-message {
   padding: 11px 13px;
-  border-radius: 10px;
-  background: #f4ead7;
-  color: #8c6b3a;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--wood-300);
   font-size: 12px;
   line-height: 1.7;
 }
@@ -163,10 +163,10 @@
   max-width: 1360px;
   margin: 14px auto;
   padding: 13px 20px;
-  background: #eaf0df;
-  border: 1px solid #cedabc;
-  border-radius: 13px;
-  color: #45653d;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  color: var(--leaf-800);
   font-size: 13px;
 }
 .l-retained-table > span {
@@ -174,15 +174,15 @@
   gap: 4px;
 }
 .l-retained-table small {
-  font-size: 11px;
-  color: #7d8d6d;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 .l-retained-table button {
   white-space: nowrap;
   min-height: 42px;
 }
 .l-round-ready button:focus-visible {
-  outline: 3px solid #abbb72;
+  outline: 3px solid var(--pal-lime-73);
   outline-offset: 3px;
 }
 

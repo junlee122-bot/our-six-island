@@ -3,7 +3,7 @@
 // something at this table, one per round, and the table's party log. A peek
 // (딸기) shows the card only to me; everyone reads that I peeked.
 import { useState } from 'react';
-import { Eye, Sparkles } from 'lucide-react';
+import { Eye, Sparkles } from './ui/icons';
 import { ItemIcon } from './lounge/ItemIcon';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import {

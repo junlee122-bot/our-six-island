@@ -5,7 +5,7 @@
 // push-in overlay. Only the public view is ever shown (lounge-liarsbar.ts).
 // Keys: 1–5 카드 고르기 · Enter 내기 · L 거짓말! · Space/Enter 방아쇠 · Esc 선택 풀기.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { BellRing, Check, Crown, Ghost, ShieldCheck, Skull } from 'lucide-react';
+import { BellRing, Check, Crown, Ghost, ShieldCheck, Skull } from './ui/icons';
 import {
   LB_CHAMBERS,
   LB_FACE_NAME,

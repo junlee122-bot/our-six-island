@@ -5,7 +5,7 @@
 // and runs the region's actions (nodes, mine rocks, ladder, lift, the log
 // gate, exits). lounge-game.tsx only mounts it; the scene is lounge-area-3d.
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Backpack, MessageCircle } from 'lucide-react';
+import { Backpack, MessageCircle } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import type { Look } from '../lounge-look';

@@ -4,7 +4,7 @@
 // as they complete, village restorations (a small celebration), and the
 // "어제 마을 소식" digest on the first login of the day.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { PartyPopper } from 'lucide-react';
+import { PartyPopper } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { ACHIEVEMENT_BY_ID, BUNDLES, VILLAGE_FLAGS } from '../lounge-items';
 import { ACTORS } from '../lounge-roster';

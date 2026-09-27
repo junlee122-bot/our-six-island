@@ -4,7 +4,7 @@
 // host's line in a speech bubble, and a few table hooks (per-table memory for
 // streak lines, sticker replies, card sounds, the beginner-tip toggle).
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb } from './ui/icons';
 import { AvatarView } from './avatar-view';
 import type { Look } from './lounge-look';
 import {

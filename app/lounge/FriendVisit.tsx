@@ -4,7 +4,7 @@
 // the guestbook; only the owner decorates (their edits reach us through the
 // room revision in world.life). If the owner is away they stand in as an NPC.
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { BookOpen, Mail, MessageCircle, RotateCcw, X } from 'lucide-react';
+import { BookOpen, Mail, MessageCircle, RotateCcw, X } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';

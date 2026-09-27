@@ -1,4 +1,6 @@
-/* One table look per venue (GameScreen sets data-venue):
+/* One table look per venue (GameScreen sets data-venue, so app/ui/tokens.css
+   refills --surface/--text/--accent… for the venue). The --venue-* names below
+   only map those tokens for the table sheets that read them:
    - casino (별빛 카지노: 홀덤, 블랙잭, 체스) = dark room, dark green felt,
      dark wood rim, gold accents;
    - hall (범마을 회관: 섯다, 고스톱) = cream room, warm wood table.
@@ -7,51 +9,52 @@
 
 /* ------------------------------------------------------------ casino */
 .l-app .l-game-screen[data-venue='casino'] {
-  --venue-page: #111c1b;
-  --venue-head: #162320;
-  --venue-line: #34413a;
-  --venue-panel: #1b2925;
-  --venue-deep: #13201b;
-  --venue-ink: #ece7d7;
-  --venue-muted: #b9b39f;
-  --venue-gold: #c7af72;
+  /* felt room, oxblood rail, brass */
+  --venue-page: var(--surface-sunken);
+  --venue-head: var(--frame-edge);
+  --venue-line: var(--line);
+  --venue-panel: var(--surface);
+  --venue-deep: var(--surface-sunken);
+  --venue-ink: var(--text);
+  --venue-muted: var(--text-soft);
+  --venue-gold: var(--accent);
   background: var(--venue-page);
   color: var(--venue-ink);
 }
 .l-app .l-game-screen[data-venue='casino'] > header {
   background: var(--venue-head);
   border-bottom-color: var(--venue-line);
-  color: #efe7d3;
+  color: var(--paper-100);
 }
 .l-app .l-game-screen[data-venue='casino'] > header small {
-  color: #a6b5a6;
+  color: var(--pal-grey-71);
 }
 .l-app .l-game-screen[data-venue='casino'] > header button {
-  color: #dfd7c2;
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] > header .l-game-back {
-  background: #293c30;
-  border: 1px solid #536449;
-  color: #eadfbd;
+  background: var(--pal-grey-30);
+  border: 1px solid var(--pal-grey-41);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-game-live {
-  color: #a6b5a6;
+  color: var(--pal-grey-71);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-primary {
   border-color: var(--venue-gold);
   background: var(--venue-gold);
-  color: #273522;
+  color: var(--pal-green-16);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-primary:hover {
-  background: #d6bf84;
+  background: var(--pal-orange-75);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-secondary {
-  border-color: #5a6c4e;
-  background: #24392c;
-  color: #eee4c7;
+  border-color: var(--pal-grey-41);
+  background: var(--pal-teal-23);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-text {
-  color: #d7c48e;
+  color: var(--paper-300);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-game-money {
   border-color: var(--venue-line);
@@ -63,25 +66,25 @@
 }
 /* The casino host strip (루미) is the same at every table. */
 .l-game-screen[data-venue='casino'] :is(.p-host, .bj-announcement, .c-host) {
-  --dh-bg: #1d2e28;
-  --dh-border: #3c493b;
-  --dh-name: #d7c48e;
-  --dh-muted: #a6b5a6;
-  --dh-ring: #bfa265;
+  --dh-bg: var(--pal-grey-17);
+  --dh-border: var(--pal-grey-30);
+  --dh-name: var(--paper-300);
+  --dh-muted: var(--pal-grey-71);
+  --dh-ring: var(--pal-orange-69);
 }
 /* The dialogs keep their own light look. */
 .l-app .l-game-screen[data-venue='casino'] .l-modal {
-  color: #3e4234;
+  color: var(--pal-grey-30);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-modal .l-primary {
-  border-color: var(--l-primary, #3f6a4a);
-  background: var(--l-primary, #3f6a4a);
-  color: #fffdf1;
+  border-color: var(--l-primary, var(--leaf-800));
+  background: var(--l-primary, var(--leaf-800));
+  color: var(--note-50);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-modal .l-secondary {
-  border-color: #cdd5c0;
-  background: #f5f6ef;
-  color: #3f5638;
+  border-color: var(--leaf-100);
+  background: var(--paper-50);
+  color: var(--leaf-800);
 }
 
 /* 체스 in the casino: a felt-green board in a dark wood frame, the host strip
@@ -90,27 +93,26 @@
   margin-bottom: 12px;
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard {
-  border: 12px solid #3a2a1c;
-  border-radius: 10px;
-  outline: 1px solid #977652;
+  border: 12px solid var(--ink-900);
+  border-radius: var(--r-m);
+  outline: 1px solid var(--wood-300);
   box-shadow:
-    inset 0 0 0 2px #b294663f,
-    0 14px 30px #0007;
+    var(--edge-line), var(--lift-1), var(--lift-3);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard .light {
-  background: #e6dcc0;
+  background: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard .dark {
-  background: #3f6b52;
+  background: var(--pal-green-42);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard .light small {
-  color: #3f6b52;
+  color: var(--pal-green-42);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard .dark small {
-  color: #e6dcc0;
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chessboard button.selected {
-  background: #c9a34f;
+  background: var(--pal-amber-69);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-game-aside {
   border-color: var(--venue-line);
@@ -128,10 +130,10 @@
   color: var(--venue-ink);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-move-log > div {
-  border-bottom-color: #2a3a31;
+  border-bottom-color: var(--pal-grey-17);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-move-log :is(small, p) {
-  color: #8f9c86;
+  color: var(--pal-grey-62);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chess-settlement {
   border-color: var(--venue-line);
@@ -144,14 +146,14 @@
   color: var(--venue-ink);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chess-settlement b.is-win {
-  color: #8fd19e;
+  color: var(--pal-green-77);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-chess-settlement b.is-lose {
-  color: #f0a39a;
+  color: var(--pal-red-71);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-inline-confirm button {
-  background: #293c30;
-  color: #eadfbd;
+  background: var(--pal-grey-30);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-promotion {
   background: var(--venue-panel);
@@ -159,49 +161,54 @@
 
 /* ------------------------------------------------------------ hall */
 .l-app .l-game-screen[data-venue='hall'] {
-  --venue-line: #e2d6bf;
-  --venue-panel: #fffaf0;
-  background: #f4eee2;
-  color: #3b2f28;
+  /* hanji room, lacquer frame, jade accent */
+  --venue-page: var(--surface);
+  --venue-head: var(--surface-raised);
+  --venue-line: var(--line);
+  --venue-panel: var(--surface-raised);
+  --venue-deep: var(--surface-sunken);
+  --venue-ink: var(--text);
+  --venue-muted: var(--text-soft);
+  --venue-gold: var(--accent);
+  background: var(--venue-page);
+  color: var(--venue-ink);
 }
 .l-app .l-game-screen[data-venue='hall'] > header {
-  background: #fffaf0;
+  background: var(--paper-50);
   border-bottom-color: var(--venue-line);
 }
 .l-app .l-game-screen[data-venue='hall'] > header small {
-  color: #93836c;
+  color: var(--pal-grey-54);
 }
 .l-app .l-game-screen[data-venue='hall'] > header .l-game-back {
-  background: #f1e6d2;
-  color: #6b4f33;
+  background: var(--paper-100);
+  color: var(--wood-500);
 }
 .l-app .l-game-screen[data-venue='hall'] .l-game-money {
   border-color: var(--venue-line);
   background: var(--venue-panel);
 }
 .l-app .l-game-screen[data-venue='hall'] .l-game-money b {
-  color: #8a5a2b;
+  color: var(--pal-orange-36);
 }
 /* The hall's tables are warm wood (섯다 and 고스톱 alike). */
 .l-app .l-game-screen[data-venue='hall'] :is(.s-table, .g-table-shell) {
-  border-color: #5a3d26;
-  background: radial-gradient(ellipse at 50% 42%, #8a6642 0%, #6d4d31 58%, #573b24 100%);
+  border-color: var(--wood-700);
+  background: radial-gradient(ellipse at 50% 42%, var(--wood-500) 0%, var(--wood-500) 58%, var(--wood-700) 100%);
   box-shadow:
-    inset 0 0 0 2px #e2c28a55,
-    inset 0 0 60px #2a180a55,
-    0 14px 35px #3a2a1a26;
+    var(--edge-line), var(--lift-1), var(--edge-soft), var(--lift-3);
 }
 .l-app .l-game-screen[data-venue='hall'] :is(.s-seat, .g-player-area) {
-  border-color: #f0dcb440;
-  background: #2e1c0e4d;
+  border-color: color-mix(in srgb, var(--paper-300) 25%, transparent);
+  background: color-mix(in srgb, var(--wood-900) 30%, transparent);
 }
 .l-app .l-game-screen[data-venue='hall'] :is(.s-seat.current, .g-player-area.active) {
-  border-color: #eac27c;
-  background: #7a55309e;
+  border-color: var(--pal-orange-77);
+  background: color-mix(in srgb, var(--wood-500) 62%, transparent);
 }
 .l-app .l-game-screen[data-venue='hall'] .s-seat.winner {
-  border-color: #ffcc76;
-  background: #b08e3650;
+  border-color: var(--pal-orange-85);
+  background: color-mix(in srgb, var(--pal-amber-61) 31%, transparent);
 }
 
 /* ------------------------------------------------------------ next round
@@ -211,41 +218,41 @@
   border-color: var(--venue-line);
   background: var(--venue-panel);
   color: var(--venue-ink);
-  box-shadow: 0 12px 32px #0006;
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-app .l-game-screen[data-venue='casino'] :is(.l-round-kicker, .l-round-heading p, .l-round-feedback) {
   color: var(--venue-muted);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-count {
-  background: #24392c;
-  color: #cfe0c0;
+  background: var(--pal-teal-23);
+  color: var(--leaf-100);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends li {
   border-color: var(--venue-line);
   background: var(--venue-deep);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends li.is-ready {
-  border-color: #6f9a62;
-  background: #1f3a2a;
+  border-color: var(--pal-green-58);
+  background: var(--pal-teal-23);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends li > span > span,
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends strong small {
   color: var(--venue-muted);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends li.is-ready > svg {
-  color: #8fd19e;
+  color: var(--pal-green-77);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-friends li > .avatar-view {
-  background: #2a3a31;
-  box-shadow: 0 0 0 2px #c6a46199;
+  background: var(--pal-grey-17);
+  box-shadow: var(--ring-line), var(--lift-1);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-message {
-  background: #2d2a1c;
-  color: #e7cf95;
+  background: var(--ink-900);
+  color: var(--paper-300);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-round-confirm.is-ready {
-  background: #2f4a33;
-  color: #cfe8c0;
+  background: var(--pal-green-28);
+  color: var(--pal-green-89);
 }
 .l-app .l-game-screen[data-venue='hall'] .l-round-ready {
   border-color: var(--venue-line);
@@ -263,14 +270,14 @@
    navy bar on the green casino and a white web strip in the hall). */
 .l-app .l-game-screen[data-venue='casino'] .l-sticker-float .l-reactions {
   border: 1px solid var(--venue-line);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background: var(--venue-panel);
   box-shadow: none;
 }
 .l-app .l-game-screen[data-venue='casino'] .l-sticker-float :is(.l-reaction-open, .l-reaction-toggle) {
-  border-color: #536449;
-  background: #293c30;
-  color: #eadfbd;
+  border-color: var(--pal-grey-41);
+  background: var(--pal-grey-30);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='casino'] .l-sticker-float .l-reaction-card {
   border-color: var(--venue-line);
@@ -278,64 +285,65 @@
 }
 .l-app .l-game-screen[data-venue='hall'] .l-sticker-inline .l-reactions {
   border: 1px solid var(--venue-line);
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background: var(--venue-panel);
 }
 
 /* 고스톱's status line in the hall's cream (it was a green web bar). */
 .l-app .l-game-screen[data-venue='hall'] .g-game-top .l-game-status {
   border-color: var(--venue-line);
-  background: #f1e6d2;
-  color: #5e4630;
+  background: var(--paper-100);
+  color: var(--ink-700);
 }
 /* ------------------------------------------------------------ tavern
    허풍 주점 (허풍 카드): dark walnut, amber lamps, oxblood cloth and brass —
    "a little shady but warm", between the casino's green and the hall's cream. */
 .l-app .l-game-screen[data-venue='tavern'] {
-  --venue-page: #1d1512;
-  --venue-head: #2a1d17;
-  --venue-line: #4a3426;
-  --venue-panel: #2c201a;
-  --venue-deep: #20170f;
-  --venue-ink: #f1e4cc;
-  --venue-muted: #bfa88a;
-  --venue-gold: #d19a4a;
-  --venue-oxblood: #9e3b2e;
+  /* the tavern's dark oak room around parchment sheets; amber lamps */
+  --venue-page: var(--frame-edge);
+  --venue-head: var(--frame);
+  --venue-line: color-mix(in srgb, var(--text-on-frame) 20%, transparent);
+  --venue-panel: var(--frame);
+  --venue-deep: var(--frame-edge);
+  --venue-ink: var(--text-on-frame);
+  --venue-muted: color-mix(in srgb, var(--text-on-frame) 78%, var(--frame));
+  --venue-gold: var(--highlight);
+  --venue-oxblood: var(--danger);
   background: var(--venue-page);
   color: var(--venue-ink);
 }
 .l-app .l-game-screen[data-venue='tavern'] > header {
   background: var(--venue-head);
   border-bottom-color: var(--venue-line);
-  color: #f3e6cd;
+  color: var(--paper-100);
 }
 .l-app .l-game-screen[data-venue='tavern'] > header small,
 .l-app .l-game-screen[data-venue='tavern'] .l-game-live {
   color: var(--venue-muted);
 }
 .l-app .l-game-screen[data-venue='tavern'] > header button {
-  color: #efdfc2;
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='tavern'] > header .l-game-back {
-  background: #3a281d;
-  border: 1px solid #6b4a34;
-  color: #f1e0bd;
+  background: var(--ink-900);
+  border: 1px solid var(--ink-700);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-primary {
   border-color: var(--venue-gold);
   background: var(--venue-gold);
-  color: #2a1a0e;
+  color: var(--wood-900);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-primary:hover {
-  background: #deaa5e;
+  background: var(--pal-orange-71);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-secondary {
-  border-color: #6b4a34;
-  background: #3a281d;
-  color: #f1e0bd;
+  border-color: var(--ink-700);
+  background: var(--ink-900);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-text {
-  color: #e2b774;
+  color: var(--pal-orange-77);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-game-money {
   border-color: var(--venue-line);
@@ -346,44 +354,44 @@
   color: var(--venue-gold);
 }
 .l-game-screen[data-venue='tavern'] .dh-host {
-  --dh-bg: #2c201a;
-  --dh-border: #4a3426;
-  --dh-name: #e2b774;
-  --dh-muted: #bfa88a;
-  --dh-text: #f6ead3;
-  --dh-ring: #d19a4a;
+  --dh-bg: var(--ink-900);
+  --dh-border: var(--wood-700);
+  --dh-name: var(--pal-orange-77);
+  --dh-muted: var(--pal-orange-66);
+  --dh-text: var(--paper-100);
+  --dh-ring: var(--pal-orange-71);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-modal {
-  color: #3e3228;
+  color: var(--ink-900);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-modal .l-primary {
-  border-color: var(--l-primary, #3f6a4a);
-  background: var(--l-primary, #3f6a4a);
-  color: #fffdf1;
+  border-color: var(--l-primary, var(--leaf-800));
+  background: var(--l-primary, var(--leaf-800));
+  color: var(--note-50);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-modal .l-secondary {
-  border-color: #d8cdb8;
-  background: #f7f2e8;
-  color: #5b4330;
+  border-color: var(--paper-200);
+  background: var(--paper-50);
+  color: var(--ink-700);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-round-ready {
   border-color: var(--venue-line);
   background: var(--venue-panel);
   color: var(--venue-ink);
-  box-shadow: 0 12px 32px #0007;
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-app .l-game-screen[data-venue='tavern'] :is(.l-round-kicker, .l-round-heading p, .l-round-feedback) {
   color: var(--venue-muted);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-round-count {
-  background: #3a281d;
-  color: #f1e0bd;
+  background: var(--ink-900);
+  color: var(--paper-200);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-round-friends li {
   border-color: var(--venue-line);
   background: var(--venue-deep);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-round-friends li.is-ready {
-  border-color: #8a9a5a;
-  background: #2e3320;
+  border-color: var(--pal-yellow-59);
+  background: var(--pal-lime-20);
 }

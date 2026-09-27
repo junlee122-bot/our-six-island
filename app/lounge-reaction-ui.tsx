@@ -1,7 +1,7 @@
 'use client';
 /* oxlint-disable next/no-img-element -- GitHub Pages embeds these transparent assets; no image optimization server is available. */
 import { useEffect, useRef, useState } from 'react';
-import { Smile, Eye, EyeOff, X } from 'lucide-react';
+import { Smile, Eye, EyeOff, X } from './ui/icons';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { ACTORS } from './lounge-roster';
 import type { LoungePlayer } from './lounge-room';

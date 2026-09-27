@@ -28,7 +28,7 @@ import {
   Shirt,
   Sprout,
   Wheat,
-} from 'lucide-react';
+} from '../ui/icons';
 import { ACTION_LABEL, type ActionKind } from '../lounge-flow';
 import { Glyph, type GlyphName } from './field-glyphs';
 

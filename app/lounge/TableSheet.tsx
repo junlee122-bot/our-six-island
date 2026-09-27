@@ -3,7 +3,7 @@
 // setup (empty table: stake + seats → 앉기), join (a forming table → 앉기),
 // seated (N/M명 · 친구 부르기 · 일어나기). No separate page, no invitation card.
 import { useEffect, useId, useRef, useState } from 'react';
-import { Armchair, ArrowUpFromLine, BellRing, Bot, Check, PartyPopper, X } from 'lucide-react';
+import { Armchair, ArrowUpFromLine, BellRing, Bot, Check, PartyPopper, X } from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import {
   FLEX_GAMES,
@@ -30,6 +30,8 @@ import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY } from './game-copy';
 import { AREA_NAMES } from './FriendsModal';
 import { SCENE_LAYOUT } from '../lounge-scene-layout';
+import { VENUES } from '../lounge-venues';
+import { TABLE_AREA } from '../lounge-games';
 import { boundAction } from '../lounge-scene-keys';
 import {
   CALL_LABEL,
@@ -42,6 +44,7 @@ import {
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './table-party.css';
+import { KeyHintBar } from '../ui/KeyHint';
 
 export type SheetMode = 'setup' | 'join' | 'seated';
 
@@ -470,6 +473,8 @@ export function TableSheet({
       data-testid="table-sheet"
       data-mode={mode}
       data-game={game}
+      // Venue tokens: felt in the casino, hanji in the hall, oak in the tavern.
+      data-venue={VENUES[TABLE_AREA[game]].venue}
       // Opposite the table, so the table and the seated figures stay in view.
       data-side={
         (SCENE_LAYOUT[state.area].tables.find((t) => t.game === game)?.foot.x ??
@@ -715,15 +720,30 @@ export function TableSheet({
         </div>
       )}
       {soloBlock}
-      <p className="l-sheet-keys" aria-hidden="true">
-        {mode === 'seated'
-          ? calling
-            ? '1–7 친구 고르기 · Enter 부르기 · Esc 닫기'
-            : 'C 친구 부르기 · Esc 일어나기'
-          : mode === 'setup'
-            ? `E 앉기${party ? '' : ' · 1–4 판돈'}${partyOption ? ' · P 파티 판' : ''}${flex ? ` · Shift+${lo}–${hi} 인원` : ''} · Esc 닫기`
-            : 'E 앉기 · Esc 닫기'}
-      </p>
+      <KeyHintBar
+        className="l-sheet-keys"
+        label="테이블 키 안내"
+        items={
+          mode === 'seated'
+            ? calling
+              ? [
+                  { keys: [{ label: '1–7' }], does: '친구 고르기' },
+                  { keys: [{ code: 'Enter' }], does: '부르기' },
+                  { keys: [{ code: 'Escape' }], does: '닫기' },
+                ]
+              : [
+                  { keys: [{ label: 'C' }], does: '친구 부르기' },
+                  { keys: [{ code: 'Escape' }], does: '일어나기' },
+                ]
+            : [
+                { keys: ['action'], does: '앉기' },
+                ...(mode === 'setup' && !party ? [{ keys: [{ label: '1–4' }], does: '판돈' }] : []),
+                ...(mode === 'setup' && partyOption ? [{ keys: [{ label: 'P' }], does: '파티 판' }] : []),
+                ...(mode === 'setup' && flex ? [{ keys: [{ label: `Shift+${lo}–${hi}` }], does: '인원' }] : []),
+                { keys: [{ code: 'Escape' }], does: '닫기' },
+              ]
+        }
+      />
       <div className="l-sheet-actions">
         {mode === 'seated' ? (
           <>

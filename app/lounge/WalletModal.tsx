@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Gift } from 'lucide-react';
+import { Gift } from '../ui/icons';
 import { GAME_INFO, type GameKind } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { formatBeom, josa } from '../lounge-text';

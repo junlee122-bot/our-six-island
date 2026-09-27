@@ -7,7 +7,10 @@
 // follows me from above like the village's. E (the action key) uses what is
 // in reach: a node, a mine rock, the ladder, the lift, a gate or an exit.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Footprints, LoaderCircle, Pickaxe } from 'lucide-react';
+import {
+  LoaderCircle,
+  Pickaxe,
+} from './ui/icons';
 import * as THREE from 'three';
 import { loungeSprites } from './lounge-sprites';
 import type { LoungePlayer } from './lounge-room';
@@ -36,6 +39,7 @@ import type { ActionKind } from './lounge-flow';
 import { RegionSet, type RegionNode } from './lounge-area-scene';
 import type { WalkPoint } from './lounge-walk-world';
 import './lounge-area-3d.css';
+import { WalkHints } from './ui/WalkHints';
 
 const WALK_SPEED = 5.2;
 const FIGURE_HEIGHT = 1.72;
@@ -685,10 +689,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           onPress={() => onAction(action)}
         />
       )}
-      <span className="ar-hint">
-        <Footprints size={13} aria-hidden="true" />
-        클릭해서 이동 · 방향키 / {[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')} · Shift 달리기 · {keyLabel(keys.action)} 행동
-      </span>
+      <WalkHints className="ar-hint" />
     </div>
   );
 }

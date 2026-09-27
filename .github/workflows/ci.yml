@@ -29,7 +29,7 @@ jobs:
         run: npm test
       - name: Lint
         run: npm run lint
-      - name: CSS token lint (report + ratchet; enforced for app/ui and new sheets)
+      - name: CSS token lint (zero tolerance; tokens in app/ui/tokens.css)
         run: npm run lint:css -- --ci --quiet
       - name: Pages build (scratch output, docs/ untouched)
         run: node scripts/build-standalone.mjs --out /tmp/pages
@@ -37,3 +37,29 @@ jobs:
         run: |
           du -sh /tmp/pages /tmp/pages/assets
           ls -S -l /tmp/pages/assets/*.js /tmp/pages/assets/*.css | head -20
+
+  ui-regression:
+    # Screens at 1920×1080 and 1280×720 against a mocked cloud (never the real
+    # Supabase): fails when contrast, small text, wrapping, clipping, HUD
+    # overlap or covered controls get worse than scripts/ui-baseline.json.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Chromium for playwright-core
+        run: npx playwright-core install --with-deps chromium
+      - name: Pages build with the UI kit page
+        run: UI_KIT=1 node scripts/build-standalone.mjs --out /tmp/pages --site-url /
+      - name: UI regression (strict)
+        run: npm run ui:shots -- --pages /tmp/pages --views fhd,s --out /tmp/ui-shots --baseline scripts/ui-baseline.json --strict
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-shots
+          path: /tmp/ui-shots

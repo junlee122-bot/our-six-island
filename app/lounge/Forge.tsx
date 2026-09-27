@@ -71,7 +71,7 @@ export function ForgePanel({
   }, []);
   if (!life || !g)
     return (
-      <Modal title="대장간" onClose={onClose} className="l-forge">
+      <Modal title="대장간" onClose={onClose} className="l-forge" panel="plain">
         <p className="l-ledger-empty">
           마을에 연결되면 대장간에 들어갈 수 있어요.
         </p>
@@ -83,6 +83,7 @@ export function ForgePanel({
         title="무너진 공방"
         onClose={onClose}
         className="l-forge l-growth"
+        panel="plain"
         wide
       >
         <div className="l-forge-ruin">
@@ -146,6 +147,7 @@ export function ForgePanel({
         title="대장간 · 무쇠 아저씨"
         onClose={onClose}
         className="l-forge l-growth"
+        panel="plain"
         wide
       >
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- ↑↓ pick a tool, Enter drops it off or picks it up. */}

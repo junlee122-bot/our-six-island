@@ -8,7 +8,7 @@
 // Rules (the token layer lives in app/ui/tokens.css):
 //   hex       raw #hex colours outside the token file (use var(--…) tokens)
 //   font      font-size below 12px (px/rem literals, also in the `font:` shorthand)
-//   radius    border-radius other than 0, 50%, inherit or var(--r-*)
+//   radius    border-radius other than 0, a percentage (shapes), inherit or var(--r-*)
 //   shadow    box-shadow other than none or var(--lift-*/--edge-*/--ring-*) tokens
 //   z         z-index other than auto, 0, -1 or var(--z-*)
 // A line ending in `/* lint-allow: <reason> */` is skipped.
@@ -36,7 +36,7 @@ function cssFiles(dir) {
   return out.sort((a, b) => a.localeCompare(b));
 }
 
-const okRadius = (part) => /^(0|0px|50%|inherit|initial|var\(--r-[a-z0-9-]+\))$/.test(part);
+const okRadius = (part) => /^(0|0px|\d+(\.\d+)?%|inherit|initial|var\(--r-[a-z0-9-]+\))$/.test(part);
 const okShadow = (value) =>
   value === 'none' ||
   value === 'inherit' ||

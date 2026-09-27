@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState } from 'react';
-import { ArrowRight, Check, Send } from 'lucide-react';
+import { ArrowRight, Check, Send } from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import {
   GAME_INFO,

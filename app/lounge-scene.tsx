@@ -11,7 +11,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { Footprints } from 'lucide-react';
+import { Footprints } from './ui/icons';
 import { AvatarView } from './avatar-view';
 import { VENUES } from './lounge-venues';
 import { LOUNGE_ASSETS } from './lounge-assets';

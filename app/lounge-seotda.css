@@ -6,7 +6,7 @@
   left: 68%;
 }
 .l-game-screen.seotda {
-  background: #f4efe7;
+  background: var(--paper-50);
 }
 @keyframes s-deal {
   from {

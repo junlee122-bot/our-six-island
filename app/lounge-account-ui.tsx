@@ -6,7 +6,7 @@ import {
   KeyRound,
   ShieldCheck,
   CloudCheck,
-} from 'lucide-react';
+} from './ui/icons';
 import {
   ACCOUNTS,
   validPassword,

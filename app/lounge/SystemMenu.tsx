@@ -1,20 +1,6 @@
 'use client';
-import {
-  ArrowLeft,
-  ArrowUpFromLine,
-  Keyboard,
-  LogOut,
-  Maximize,
-  Minimize,
-  Play,
-  Power,
-  Settings,
-  House,
-  LayoutGrid,
-  Sparkles,
-  Smile,
-  TriangleAlert,
-} from 'lucide-react';
+import { Glyph, type GlyphName } from '../ui/Glyph';
+import { GameButton } from '../ui/GameButton';
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { useSettings } from '../lounge-settings';
 import { BIND_GROUPS, bindingLabel, keyLabel, type Keybinds } from '../lounge-keybinds';
@@ -98,7 +84,7 @@ function useArrowEntry(list: RefObject<HTMLElement | null>) {
 export type MenuEntry = {
   id: string;
   label: string;
-  icon: ReactNode;
+  glyph: GlyphName;
   onClick: () => void;
   /** Shortcut shown on the right (from 설정 → 조작). */
   kbd?: string;
@@ -128,61 +114,111 @@ export function VillageMenu({
 }) {
   const list = useRef<HTMLDivElement>(null);
   useArrowEntry(list);
+  const [mine, ...rest] = groups;
+  const group = (g: { title: string; items: MenuEntry[] }) => (
+    <section key={g.title} className="l-village-menu-group" aria-label={g.title}>
+      <h3>{g.title}</h3>
+      <div className="l-system-list">
+        {g.items.map((item) => (
+          <MenuRow
+            key={item.id}
+            glyph={item.glyph}
+            label={item.label}
+            badge={item.badge}
+            kbd={item.kbd}
+            onClick={item.onClick}
+            testId={'menu-' + item.id}
+          />
+        ))}
+      </div>
+    </section>
+  );
   return (
-    <Modal title={title} onClose={onClose} className="l-village-menu" wide>
-      {summary}
-      {intro && <p className="l-modal-intro l-system-note">{intro}</p>}
+    <Modal
+      title={title}
+      onClose={onClose}
+      className="l-village-menu"
+      wide
+      keyHints={[
+        { keys: [{ label: '↑↓←→' }], does: '고르기' },
+        { keys: [{ code: 'Enter' }], does: '열기' },
+      ]}
+    >
       {/* Arrow-key focus moves are the menu's own keyboard help (see menuArrows). */}
       {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div ref={list} className="l-village-menu-groups" onKeyDown={menuArrows} data-testid="village-menu">
-        {groups.map((group) => (
-          <section key={group.title} className="l-village-menu-group" aria-label={group.title}>
-            <h3>{group.title}</h3>
-            <div className="l-system-list">
-              {group.items.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  onClick={item.onClick}
-                  data-testid={'menu-' + item.id}
-                >
-                  {item.icon}
-                  <span>
-                    {item.label}
-                    {item.badge ? <b className="l-menu-badge">{item.badge}</b> : null}
-                  </span>
-                  {item.kbd && <kbd>{item.kbd}</kbd>}
-                </button>
-              ))}
-            </div>
-          </section>
-        ))}
-        {danger.length > 0 && (
-          <details className="l-menu-danger" data-testid="menu-danger">
-            <summary>
-              <TriangleAlert size={16} aria-hidden="true" />
-              되돌릴 수 없는 일
-            </summary>
-            <div className="l-system-list">
-              {danger.map((d) => (
-                <button
-                  type="button"
-                  key={d.id}
-                  className="l-system-danger"
-                  onClick={d.onClick}
-                  data-testid={'menu-' + d.id}
-                >
-                  <span>
-                    {d.label}
-                    <small>{d.note}</small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </details>
-        )}
+        <div className="l-menu-page">
+          {summary}
+          {intro && <p className="l-system-note">{intro}</p>}
+          {mine && group(mine)}
+        </div>
+        <div className="l-menu-page">
+          {rest.map(group)}
+          {danger.length > 0 && (
+            <details className="l-menu-danger" data-testid="menu-danger">
+              <summary>
+                <Glyph name="warn" size={18} />
+                되돌릴 수 없는 일
+              </summary>
+              <div className="l-system-list">
+                {danger.map((d) => (
+                  <button
+                    type="button"
+                    key={d.id}
+                    className="l-system-danger"
+                    onClick={d.onClick}
+                    data-testid={'menu-' + d.id}
+                  >
+                    <span>
+                      {d.label}
+                      <small>{d.note}</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
       </div>
     </Modal>
+  );
+}
+
+/** One line of a menu: glyph · name · dotted leader · keycap. */
+function MenuRow({
+  glyph,
+  label,
+  badge,
+  kbd,
+  onClick,
+  testId,
+  primary = false,
+  danger = false,
+}: {
+  glyph: GlyphName;
+  label: ReactNode;
+  badge?: number;
+  kbd?: string;
+  onClick: () => void;
+  testId?: string;
+  primary?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className={primary ? 'l-system-primary' : danger ? 'l-system-danger' : undefined}
+      onClick={onClick}
+      data-testid={testId}
+    >
+      <Glyph name={glyph} size={20} />
+      <span className="l-menu-label">
+        {label}
+        {badge ? <b className="l-menu-badge">{badge}</b> : null}
+      </span>
+      <i className="l-menu-leader" aria-hidden="true" />
+      {kbd && <kbd>{kbd}</kbd>}
+    </button>
   );
 }
 
@@ -230,83 +266,44 @@ export function SystemMenu({
   const list = useRef<HTMLDivElement>(null);
   useArrowEntry(list);
   return (
-    <Modal title="메뉴" onClose={onClose} className="l-system-menu">
-      <p className="l-modal-intro l-system-note">
+    <Modal
+      title="메뉴"
+      onClose={onClose}
+      className="l-system-menu"
+      keyHints={[
+        { keys: [{ label: '↑↓' }], does: '고르기' },
+        { keys: [{ code: 'Enter' }], does: '누르기' },
+      ]}
+    >
+      <p className="l-system-note">
         {table
           ? '메뉴를 열어 둬도 게임은 이어져요. 내 차례 시간도 흘러가니 금방 돌아와 주세요.'
           : '마을은 친구들과 함께 쓰는 곳이라 메뉴를 열어 둬도 시간은 흘러가요. 내 캐릭터만 잠시 멈춰요.'}
       </p>
       {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div ref={list} className="l-system-list" data-testid="system-menu" onKeyDown={menuArrows}>
-        <button type="button" className="l-system-primary" onClick={onClose} data-testid="system-resume">
-          <Play size={18} aria-hidden="true" />
-          <span>계속하기</span>
-          <kbd>Esc</kbd>
-        </button>
+        <MenuRow primary glyph="play" label="계속하기" kbd="Esc" onClick={onClose} testId="system-resume" />
         {table && (
           <>
-            <button type="button" onClick={table.onBack} data-testid="system-table-back">
-              <ArrowLeft size={18} aria-hidden="true" />
-              <span>{josa(table.place, '으로/로')} 돌아가기 · 자리 유지</span>
-            </button>
-            <button type="button" onClick={table.onStand} data-testid="system-table-stand">
-              <ArrowUpFromLine size={18} aria-hidden="true" />
-              <span>테이블에서 일어나기</span>
-            </button>
+            <MenuRow glyph="arrow-left" label={`${josa(table.place, '으로/로')} 돌아가기 · 자리 유지`} onClick={table.onBack} testId="system-table-back" />
+            <MenuRow glyph="stand" label="테이블에서 일어나기" onClick={table.onStand} testId="system-table-stand" />
           </>
         )}
-        <button type="button" onClick={onVillageMenu}>
-          <LayoutGrid size={18} aria-hidden="true" />
-          <span>마을 메뉴</span>
-        </button>
-        {onGrowth && (
-          <button type="button" onClick={onGrowth} data-testid="system-growth">
-            <Sparkles size={18} aria-hidden="true" />
-            <span>성장 수첩</span>
-            <kbd>{keyLabel(settings.keys.growth) || 'T'}</kbd>
-          </button>
-        )}
-        {onMood && (
-          <button type="button" onClick={onMood} data-testid="system-mood">
-            <Smile size={18} aria-hidden="true" />
-            <span>기분</span>
-            <kbd>{keyLabel(settings.keys.mood) || 'U'}</kbd>
-          </button>
-        )}
-        {onLeaveRoom && (
-          <button type="button" onClick={onLeaveRoom}>
-            <House size={18} aria-hidden="true" />
-            <span>{leaveLabel}</span>
-          </button>
-        )}
-        <button type="button" onClick={onSettings} data-testid="system-settings">
-          <Settings size={18} aria-hidden="true" />
-          <span>설정</span>
-        </button>
-        <button type="button" onClick={onHelp} data-testid="system-help">
-          <Keyboard size={18} aria-hidden="true" />
-          <span>조작 안내</span>
-          <kbd>{keyLabel(settings.keys.help) || 'F1'}</kbd>
-        </button>
-        <button type="button" onClick={onFullscreen} data-testid="system-fullscreen">
-          {settings.fullscreen ? (
-            <Minimize size={18} aria-hidden="true" />
-          ) : (
-            <Maximize size={18} aria-hidden="true" />
-          )}
-          <span>{settings.fullscreen ? '창 모드로 전환' : '전체 화면으로 전환'}</span>
-          <kbd>F11</kbd>
-        </button>
-        <button type="button" onClick={onLogout} data-testid="system-logout">
-          <LogOut size={18} aria-hidden="true" />
-          <span>로그아웃</span>
-        </button>
-        {desktop && onQuit && (
-          <button type="button" className="l-system-danger" onClick={onQuit} data-testid="system-quit">
-            <Power size={18} aria-hidden="true" />
-            <span>게임 끝내기</span>
-          </button>
-        )}
+        <MenuRow glyph="grid" label="마을 메뉴" onClick={onVillageMenu} />
+        {onGrowth && <MenuRow glyph="spark" label="성장 수첩" kbd={keyLabel(settings.keys.growth) || 'T'} onClick={onGrowth} testId="system-growth" />}
+        {onMood && <MenuRow glyph="sticker" label="기분" kbd={keyLabel(settings.keys.mood) || 'U'} onClick={onMood} testId="system-mood" />}
+        {onLeaveRoom && <MenuRow glyph="house" label={leaveLabel} onClick={onLeaveRoom} />}
+        <MenuRow glyph="gear" label="설정" onClick={onSettings} testId="system-settings" />
+        <MenuRow glyph="keyboard" label="조작 안내" kbd={keyLabel(settings.keys.help) || 'F1'} onClick={onHelp} testId="system-help" />
+        <MenuRow
+          glyph={settings.fullscreen ? 'minimize' : 'maximize'}
+          label={settings.fullscreen ? '창 모드로 전환' : '전체 화면으로 전환'}
+          kbd="F11"
+          onClick={onFullscreen}
+          testId="system-fullscreen"
+        />
+        <MenuRow glyph="door" label="로그아웃" onClick={onLogout} testId="system-logout" />
+        {desktop && onQuit && <MenuRow danger glyph="power" label="게임 끝내기" onClick={onQuit} testId="system-quit" />}
       </div>
     </Modal>
   );
@@ -418,12 +415,12 @@ export function ControlsHelp({
         </section>
       </div>
       <div className="l-modal-actions">
-        <button type="button" className="l-secondary" onClick={onEdit} data-testid="help-edit-keys">
+        <GameButton glyph="keyboard" onClick={onEdit} data-testid="help-edit-keys">
           키 바꾸기
-        </button>
-        <button type="button" className="l-primary" onClick={onClose}>
+        </GameButton>
+        <GameButton variant="primary" onClick={onClose}>
           알겠어요
-        </button>
+        </GameButton>
       </div>
     </Modal>
   );

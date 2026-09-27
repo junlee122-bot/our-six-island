@@ -18,7 +18,7 @@ import {
   Send,
   Sprout,
   Store,
-} from 'lucide-react';
+} from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
@@ -58,6 +58,7 @@ import { lookFor } from './friend-looks';
 import { FarmLedger } from './FarmLedger';
 import type { VillagePoint } from '../lounge-village-layout';
 import './life.css';
+import { Glyph, type GlyphName } from '../ui/Glyph';
 
 type Base = {
   room: CloudRoom;
@@ -94,22 +95,23 @@ function when(at: number, now: number) {
   if (ago < 86_400_000) return `${Math.floor(ago / 3_600_000)}시간 전`;
   return `${Math.floor(ago / 86_400_000)}일 전`;
 }
-/** A little picture next to each sticker word in mail. */
-const STICKER_EMOJI: Record<string, string> = {
-  laugh: '😆',
-  wow: '😲',
-  cry: '😭',
-  love: '💖',
-  cheer: '👍',
-  think: '🤔',
-  sorry: '🙏',
-  hello: '👋',
-  jeje: '😎',
-  yoi: '🏁',
-  eum: '😑',
-  aye: '🤨',
-  nonono: '🙅',
+/** A little hand-drawn face next to each sticker word in mail (no emoji). */
+const STICKER_GLYPH: Record<string, GlyphName> = {
+  laugh: 'sticker-laugh',
+  wow: 'sticker-wow',
+  cry: 'sticker-cry',
+  love: 'sticker-love',
+  cheer: 'sticker-cheer',
+  think: 'sticker-think',
+  sorry: 'sticker-sorry',
+  hello: 'sticker-hello',
+  jeje: 'sticker-jeje',
+  yoi: 'sticker-yoi',
+  eum: 'sticker-eum',
+  aye: 'sticker-aye',
+  nonono: 'sticker-nonono',
 };
+const stickerGlyph = (id: string) => <Glyph name={STICKER_GLYPH[id] ?? 'letter'} size={20} />;
 const cropLabel = (crop: Crop) => CROP_INFO[crop].name;
 export function giftText(gift: LifeGift | undefined) {
   if (!gift) return '';
@@ -825,7 +827,7 @@ export function MailModal({
                       <p className="l-mail-extra">
                         {reaction && (
                           <span className="l-sticker-chip" title={reaction.description}>
-                            <span aria-hidden="true">{STICKER_EMOJI[reaction.id] ?? '💌'}</span>{' '}
+                            {stickerGlyph(reaction.id)}{' '}
                             {reaction.label}
                           </span>
                         )}
@@ -915,7 +917,7 @@ export function MailModal({
                 aria-pressed={sticker === r.id}
                 onClick={() => setSticker(r.id)}
               >
-                <span aria-hidden="true">{STICKER_EMOJI[r.id] ?? '💌'}</span> {r.label}
+                {stickerGlyph(r.id)} {r.label}
               </button>
             ))}
           </fieldset>

@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Download, Link, Monitor } from 'lucide-react';
+import { Download, Link, Monitor } from '../ui/icons';
 import { NAMES } from '../lounge-text';
 import { WEB_URL } from '../desktop-bridge';
 import './pc.css';

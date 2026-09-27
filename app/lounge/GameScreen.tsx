@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from 'lucide-react';
+import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from '../ui/icons';
 import {
   GAME_INFO,
   PRACTICE_NAMES,

@@ -5,7 +5,7 @@
 // The server's view never holds the word for the liar or watchers, nor the
 // liar's seat before it is public (lounge-liar.ts liarView).
 import { useEffect, useRef, useState } from 'react';
-import { Check, Crown, Eye, MessageCircle, Send, VenetianMask, Vote } from 'lucide-react';
+import { Check, Crown, Eye, MessageCircle, Send, VenetianMask, Vote } from './ui/icons';
 import {
   LIAR_HINT_MAX,
   LIAR_LIMIT_MS,

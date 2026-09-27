@@ -7,7 +7,7 @@
 // best score when the festival ends wins the trophy. All judged on the server
 // (lounge-life-social.ts feteAction).
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Crown, Flame, Moon, PartyPopper, Trophy } from 'lucide-react';
+import { Camera, Crown, Flame, Moon, PartyPopper, Trophy } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { ACTORS } from '../lounge-roster';
 import { AvatarView } from '../avatar-view';

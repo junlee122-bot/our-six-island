@@ -38,7 +38,7 @@ import {
   Wine,
   KeyRound,
   Armchair,
-} from 'lucide-react';
+} from './ui/icons';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { LoungeSave } from './lounge-look';
@@ -114,6 +114,7 @@ import {
 import { ActionButton } from './lounge/ActionButton';
 import { CropStageArt, ItemIcon, QualityStar } from './lounge/ItemIcon';
 import { Glyph } from './lounge/field-glyphs';
+import { KeyHint } from './ui/KeyHint';
 import { moodTagStyle } from './lounge/mood-glyphs';
 import './lounge/farm-fish.css';
 import { lookFor, rememberLook } from './lounge/friend-looks';
@@ -2699,8 +2700,9 @@ export function Village3D(props: Props) {
             onClick={() => setDirectory(!directory)}
             aria-expanded={directory}
           >
-            <MapIcon size={17} />
+            <MapIcon size={18} />
             마을 안내
+            <KeyHint action="map" />
           </button>
         </div>
         <div
@@ -3126,66 +3128,67 @@ export function Village3D(props: Props) {
           </section>
         )}
         {(action || nearby) && state !== 'unavailable' && state !== 'lost' && (
-          <section
-            className={
-              'hv-entry-prompt' +
-              (action?.target.type === 'spot' ? ' hv-spot-prompt' : '')
-            }
-            aria-live="polite"
-            data-testid={
-              action?.target.type === 'spot'
-                ? 'village-spot-prompt'
-                : 'village-entry-prompt'
-            }
-            data-place={doorPlace?.id}
-            data-spot={
-              action?.target.type === 'spot' ? action.target.spot.kind : undefined
-            }
-            data-entry-ready={doorPlace ? String(!!nearby?.canEnter) : undefined}
-          >
-            {action?.target.type === 'spot' ? (
-              <SpotPrompt
-                spot={action.target.spot}
-                life={props.life ?? null}
-                clockOffset={props.clockOffset ?? 0}
-                actionKey={actionKey}
-                actor={props.save.actor}
-              />
-            ) : doorPlace ? (
-              <div>
-                <strong>
-                  {doorPlace.name}
-                  {doorCount !== undefined && (
-                    <span className="hv-inside" data-testid="door-count">
-                      {' · '}
-                      {doorCount > 0 ? `안에 ${doorCount}명` : '안에 아무도 없어요'}
-                    </span>
-                  )}
-                </strong>
-                <small>
-                  {action
-                    ? doorPlace.kind === 'home' &&
-                      doorPlace.actor !== props.save.actor
-                      ? `놀러 가서 방명록을 남겨요 · ${actionKey}`
-                      : `${actionKey} 또는 오른쪽 아래 버튼으로 들어가요`
-                    : '주민의 집이에요. 집 앞에서 인사해요.'}
-                </small>
-              </div>
-            ) : null}
-          </section>
-        )}
-        {state !== 'unavailable' && state !== 'lost' && (
-          <ActionButton
-            className="hv-action"
-            kind={action?.kind ?? null}
-            label={action?.label}
-            detail={actionDetail}
-            shortcut={actionKey}
-            disabled={actionDisabled || !!action?.disabled}
-            onPress={() => {
-              if (action) controls.current?.act(action);
-            }}
-          />
+          // The place and what E does there hang together as one sign (UI audit P1-6).
+          <div className="hv-action-sign">
+            <section
+              className={
+                'hv-entry-prompt' +
+                (action?.target.type === 'spot' ? ' hv-spot-prompt' : '')
+              }
+              aria-live="polite"
+              data-testid={
+                action?.target.type === 'spot'
+                  ? 'village-spot-prompt'
+                  : 'village-entry-prompt'
+              }
+              data-place={doorPlace?.id}
+              data-spot={
+                action?.target.type === 'spot' ? action.target.spot.kind : undefined
+              }
+              data-entry-ready={doorPlace ? String(!!nearby?.canEnter) : undefined}
+            >
+              {action?.target.type === 'spot' ? (
+                <SpotPrompt
+                  spot={action.target.spot}
+                  life={props.life ?? null}
+                  clockOffset={props.clockOffset ?? 0}
+                  actionKey={actionKey}
+                  actor={props.save.actor}
+                />
+              ) : doorPlace ? (
+                <div>
+                  <strong>
+                    {doorPlace.name}
+                    {doorCount !== undefined && (
+                      <span className="hv-inside" data-testid="door-count">
+                        {' · '}
+                        {doorCount > 0 ? `안에 ${doorCount}명` : '안에 아무도 없어요'}
+                      </span>
+                    )}
+                  </strong>
+                  <small>
+                    {action
+                      ? doorPlace.kind === 'home' &&
+                        doorPlace.actor !== props.save.actor
+                        ? `놀러 가서 방명록을 남겨요 · ${actionKey}`
+                        : `${actionKey} 또는 옆 버튼으로 들어가요`
+                      : '주민의 집이에요. 집 앞에서 인사해요.'}
+                  </small>
+                </div>
+              ) : null}
+            </section>
+            <ActionButton
+              className="hv-action"
+              kind={action?.kind ?? null}
+              label={action?.label}
+              detail={actionDetail}
+              shortcut={actionKey}
+              disabled={actionDisabled || !!action?.disabled}
+              onPress={() => {
+                if (action) controls.current?.act(action);
+              }}
+            />
+          </div>
         )}
         {selected && !nearby && !action && (
           <section className="hv-place-card" aria-label="선택한 장소">

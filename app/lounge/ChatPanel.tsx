@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Send, Users } from 'lucide-react';
+import { Send, Users } from '../ui/icons';
 import { ACTORS, ACTOR_COLORS } from '../lounge-roster';
 import type { CloudRoomView, CloudRoom } from '../lounge-cloud-room';
 

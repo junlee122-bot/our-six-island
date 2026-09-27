@@ -12,30 +12,12 @@ import {
 import {
   ArrowRight,
   ArrowUpRight,
-  Backpack,
-  BookOpen,
-  Check,
-  ClipboardList,
-  CookingPot,
-  Heart,
-  House,
-  Newspaper,
-  Sparkles,
   Info,
-  Mail,
   MessageCircle,
-  MessageSquareQuote,
   RotateCcw,
   Settings,
   Shirt,
-  Spade,
-  Sprout,
-  Store,
-  Users,
-  GraduationCap,
-  Keyboard,
-  Smile,
-} from 'lucide-react';
+} from './ui/icons';
 import { AvatarView } from './avatar-view';
 import {
   villageFromNetwork,
@@ -217,6 +199,7 @@ const TavernUpgrades = lazyRetry(() => loadCounter().then((m) => ({ default: m.T
 const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) => ({ default: m.GrowthNotices })));
 // 무드 (U): the HUD chip rides in the header; the panel loads when opened.
 import { MoodHud, MoodNotices, MoodShareToggle } from './lounge/MoodHud';
+import { WalkHints } from './ui/WalkHints';
 const MoodPanel = lazyRetry(() => import('./lounge/MoodPanel').then((m) => ({ default: m.MoodPanel })));
 
 /**
@@ -433,8 +416,7 @@ function VillageHint({ paused }: { paused: boolean }) {
   if (!show || paused) return null;
   return (
     <output className="l-world-hint">
-      클릭해서 걷고, 마을 안내(M)에서 장소를 찾아요
-      <span> · 방향키 / WASD · Shift 달리기 · E 행동 · Esc 메뉴 · F1 조작 안내</span>
+      <WalkHints extra={[{ keys: ['map'], does: '마을 안내' }, { keys: ['help'], does: '조작 안내' }]} />
     </output>
   );
 }
@@ -2202,16 +2184,6 @@ function AccountLounge({
                     <MessageCircle size={19} />
                     <span>수다</span>
                   </button>
-                  <button
-                    className="l-world-chat-button"
-                    aria-label="가방 열기"
-                    onClick={() => setModal('bag')}
-                    data-testid="dock-bag"
-                    data-bind="inventory"
-                  >
-                    <Backpack size={19} />
-                    <span>가방</span>
-                  </button>
                   <ReactionDock
                     players={players}
                     self={self}
@@ -2369,15 +2341,6 @@ function AccountLounge({
             >
               <MessageCircle size={19} />
               <span>수다</span>
-            </button>
-            <button
-              className="l-world-chat-button"
-              aria-label="가방 열기"
-              onClick={() => setModal('bag')}
-              data-bind="inventory"
-            >
-              <Backpack size={19} />
-              <span>가방</span>
             </button>
             <ReactionDock
               players={players}
@@ -2550,26 +2513,26 @@ function AccountLounge({
             {
               title: '내 마을',
               items: [
-                { id: 'bag', label: '가방', icon: <Backpack size={18} />, kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
-                { id: 'mail', label: '우편함', icon: <Mail size={18} />, badge: unread, onClick: () => openMail() },
-                { id: 'shop', label: '범타듀 상점', icon: <Store size={18} />, onClick: () => setModal('shop') },
-                { id: 'farm', label: '내 텃밭', icon: <Sprout size={18} />, onClick: () => setModal('farm') },
-                { id: 'kitchen', label: '요리·만들기', icon: <CookingPot size={18} />, onClick: openKitchen },
-                { id: 'book', label: '도감 · 박물관', icon: <BookOpen size={18} />, kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
-                { id: 'board', label: '마을 게시판', icon: <ClipboardList size={18} />, kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
-                { id: 'growth', label: '성장 수첩', icon: <Sparkles size={18} />, kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
-                { id: 'mood', label: '기분', icon: <Smile size={18} />, kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
-                { id: 'digest', label: '어제 마을 소식', icon: <Newspaper size={18} />, onClick: () => setModal('digest') },
-                { id: 'memories', label: '추억 앨범', icon: <Sparkles size={18} />, onClick: () => setModal('memories') },
+                { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
+                { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
+                { id: 'shop', label: '범타듀 상점', glyph: 'store', onClick: () => setModal('shop') },
+                { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
+                { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
+                { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
+                { id: 'board', label: '마을 게시판', glyph: 'board', kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
+                { id: 'growth', label: '성장 수첩', glyph: 'spark', kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
+                { id: 'mood', label: '기분', glyph: 'sticker', kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
+                { id: 'digest', label: '어제 마을 소식', glyph: 'news', onClick: () => setModal('digest') },
+                { id: 'memories', label: '추억 앨범', glyph: 'camera', onClick: () => setModal('memories') },
               ],
             },
             {
               title: '친구',
               items: [
-                { id: 'friends', label: '마을 친구들', icon: <Users size={18} />, onClick: () => setModal('friends') },
-                { id: 'bonds', label: '친구 사이', icon: <Heart size={18} />, kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
-                { id: 'invite', label: '게임 초대', icon: <Spade size={18} />, onClick: () => requestGame(null) },
-                { id: 'status', label: '오늘의 한마디', icon: <MessageSquareQuote size={18} />, onClick: () => setModal('status') },
+                { id: 'friends', label: '마을 친구들', glyph: 'people', onClick: () => setModal('friends') },
+                { id: 'bonds', label: '친구 사이', glyph: 'heart', kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
+                { id: 'invite', label: '게임 초대', glyph: 'dice', onClick: () => requestGame(null) },
+                { id: 'status', label: '오늘의 한마디', glyph: 'quote', onClick: () => setModal('status') },
               ],
             },
             {
@@ -2578,7 +2541,7 @@ function AccountLounge({
                 {
                   id: 'settings',
                   label: '설정',
-                  icon: <Settings size={18} />,
+                  glyph: 'gear',
                   onClick: () => {
                     setSettingsTab('graphics');
                     setFromMenu(false);
@@ -2588,7 +2551,7 @@ function AccountLounge({
                 {
                   id: 'help',
                   label: '조작 안내',
-                  icon: <Keyboard size={18} />,
+                  glyph: 'keyboard',
                   kbd: keyLabel(settings.keys.help),
                   onClick: () => {
                     setFromMenu(false);
@@ -2598,20 +2561,20 @@ function AccountLounge({
                 {
                   id: 'tutorial',
                   label: '처음 안내 다시 보기',
-                  icon: <GraduationCap size={18} />,
+                  glyph: 'cap',
                   onClick: () => {
                     setModal(null);
                     setCoach(tab === 'bedroom' ? 'room' : 'village');
                   },
                 },
-                { id: 'credits', label: '만든 이야기', icon: <Info size={18} />, onClick: () => setModal('credits') },
+                { id: 'credits', label: '만든 이야기', glyph: 'info', onClick: () => setModal('credits') },
               ],
             },
             {
               title: '계정',
               items: [
-                { id: 'account', label: '내 계정', icon: <House size={18} />, onClick: () => setModal('account') },
-                { id: 'save', label: '지금 저장', icon: <Check size={18} />, onClick: () => void cloudSave.flush() },
+                { id: 'account', label: '내 계정', glyph: 'house', onClick: () => setModal('account') },
+                { id: 'save', label: '지금 저장', glyph: 'check', onClick: () => void cloudSave.flush() },
               ],
             },
           ]}

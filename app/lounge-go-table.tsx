@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { Expand, Layers, X, ArrowRight, Volume2, VolumeX } from 'lucide-react';
+import { Expand, Layers, X, ArrowRight, Volume2, VolumeX } from './ui/icons';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import {
   cardInfo,

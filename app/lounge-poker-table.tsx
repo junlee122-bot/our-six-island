@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState, type CSSProperties } from 'react';
-import { ChevronDown, Coins, Crown, Spade } from 'lucide-react';
+import { ChevronDown, Coins, Crown, Spade } from './ui/icons';
 import {
   POKER_RANKS,
   POKER_SUITS,

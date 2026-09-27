@@ -25,10 +25,10 @@
   }
   .l-app .l-game-screen > header strong {
     font-size: 19px;
-    letter-spacing: 1px;
+    letter-spacing: 0;
   }
   .l-app .l-game-screen > header small {
-    letter-spacing: 1px;
+    letter-spacing: 0;
   }
   .l-app .l-game-screen .l-game-back {
     padding-block: 6px;
@@ -64,18 +64,18 @@
     gap: 4px;
     margin: 0;
     padding: 10px 12px;
-    border: 1px solid #e3dfcf;
-    border-radius: 12px;
-    background: #fffdf5;
+    border: 1px solid var(--paper-100);
+    border-radius: var(--r-m);
+    background: var(--note-50);
     line-height: 1.5;
   }
   .l-app .l-game-screen .l-game-money b {
     justify-content: flex-start;
   }
   .l-app .l-game-screen.is-dark .l-game-money {
-    background: #162320;
-    border-color: #34413a;
-    color: #b9b39f;
+    background: var(--pal-grey-17);
+    border-color: var(--pal-grey-30);
+    color: var(--pal-grey-71);
   }
   .l-app .l-game-screen :is(.l-sticker-inline, .l-sticker-float) {
     grid-column: 2;
@@ -147,7 +147,7 @@
   .l-app .l-table-stage .dh-host {
     position: sticky;
     top: 0;
-    z-index: 8;
+    z-index: var(--z-hud-bar);
   }
 }
 

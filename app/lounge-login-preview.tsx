@@ -2,7 +2,7 @@
 /* These small, pre-rendered sprites also run on static GitHub Pages. */
 /* oxlint-disable next/no-img-element */
 import { lazy, Suspense, useState, useSyncExternalStore } from 'react';
-import { Hand, RotateCcw } from 'lucide-react';
+import { Hand, RotateCcw } from './ui/icons';
 import { ACCOUNTS } from './lounge-accounts';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { ScreenBoundary } from './lounge/ErrorBoundary';

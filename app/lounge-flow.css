@@ -4,57 +4,49 @@
 /* ------------------------------------------------------------ action button */
 .l-action-button {
   position: absolute;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-width: 140px;
   min-height: 56px;
-  padding: 8px 16px;
-  border: 2px solid #fffdf1;
-  border-radius: 18px;
-  background: #3f6a4a;
-  color: #fffdf1;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.2px;
-  box-shadow: 0 8px 22px #1f35244d;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+  font-weight: var(--fw-regular);
+  box-shadow: var(--edge-press), var(--lift-2);
   cursor: pointer;
   touch-action: manipulation;
   white-space: nowrap;
 }
 .l-action-button:hover {
-  background: #355c3f;
+  background: var(--accent-edge);
 }
 .l-action-button:focus-visible {
-  outline: 3px solid #f2c14e;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .l-action-button:disabled {
-  background: #8f9a86;
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  box-shadow: var(--edge-disabled);
   cursor: default;
 }
 .l-action-button[data-action='enter'],
 .l-action-button[data-action='exit'] {
-  background: #7a4f2a;
+  background: var(--wood-500);
 }
 .l-action-button[data-action='enter']:hover,
 .l-action-button[data-action='exit']:hover {
-  background: #683f1f;
+  background: var(--wood-700);
 }
 .l-action-key {
-  display: inline-grid;
-  place-items: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
-  border-radius: 6px;
-  background: #ffffff2e;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
+  margin-right: -4px;
 }
 @media (prefers-reduced-motion: no-preference) {
   .l-action-button {
@@ -68,23 +60,56 @@
   }
 }
 
-/* Village: right above the D-pad (bottom-right). */
+/* Village: the place and its action hang together as one sign, bottom
+   centre above the hotbar. Without a place prompt the button stands alone. */
+.hv-action-sign {
+  position: absolute;
+  z-index: var(--z-hud-map);
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: stretch;
+  border-radius: var(--r-m);
+  box-shadow: var(--lift-2);
+  pointer-events: none;
+}
+.hv-action-sign > * {
+  pointer-events: auto;
+}
+.hv-action-sign > .hv-entry-prompt {
+  pointer-events: none;
+}
+.hv-action-sign > .l-action-button {
+  min-height: 0;
+  border-radius: 0 var(--r-m) var(--r-m) 0;
+  box-shadow: var(--edge-press);
+}
+.hv-action-sign > .l-action-button:only-child {
+  min-height: 56px;
+  border-radius: var(--r-m);
+}
+.hv-action-sign > .hv-entry-prompt:only-child {
+  border-radius: var(--r-m);
+}
 .hv-action {
-  right: 20px;
-  bottom: calc(38px + 150px);
+  position: static;
+  animation: none;
 }
 .hv-inside {
-  font-weight: 700;
-  color: #7a4f2a;
+  font-weight: var(--fw-bold);
+  color: var(--text-soft);
 }
 /* The prompt is information only now (the action is on the button). */
 .hv-entry-prompt {
+  position: static;
+  transform: none;
   pointer-events: none;
 }
 
 /* Room / friend's room: bottom-right of the scene, left of the D-pad. */
 .b3-action {
-  z-index: 3;
+  z-index: var(--z-lift);
   right: 18px;
   bottom: 64px;
 }
@@ -123,11 +148,11 @@
   min-height: 48px;
   padding: 4px 4px 4px 16px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   font-size: 13px;
   line-height: 1.45;
   overflow: visible;
-  box-shadow: 0 10px 30px #1b2a3a40;
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .l-app .l-banner > span {
   flex: 1;
@@ -135,21 +160,21 @@
 }
 .l-app .l-banner.is-invite,
 .l-app .l-banner.is-turn {
-  background: #7a4f2a;
-  color: #fff;
+  background: var(--wood-500);
+  color: var(--note-50);
 }
 .l-app .l-banner.is-mail,
 .l-app .l-banner.is-guest,
 .l-app .l-banner.is-daily {
-  background: #3f6a4a;
-  color: #fff;
+  background: var(--leaf-800);
+  color: var(--note-50);
 }
 .l-banner-more {
   flex: none;
   padding: 2px 7px;
-  border-radius: 10px;
-  background: #ffffff2e;
-  font-size: 11px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--surface-raised) 18%, transparent);
+  font-size: var(--fs-cap);
   font-weight: 700;
 }
 .l-banner-action {
@@ -158,10 +183,10 @@
   min-height: 44px;
   padding: 0 14px;
   border: 0;
-  border-radius: 11px;
-  background: #fffdf1;
-  color: #2c3b2c;
-  font: inherit;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--font-body);
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
@@ -173,7 +198,7 @@
   width: 44px;
   height: 44px;
   border: 0;
-  border-radius: 11px;
+  border-radius: var(--r-m);
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -198,7 +223,7 @@
 .l-scene-fade {
   position: fixed;
   inset: 0;
-  z-index: 950;
+  z-index: var(--z-coach-top);
   pointer-events: none;
   overflow: hidden;
   opacity: 0;
@@ -217,7 +242,7 @@
   height: 0;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 150vmax #12161b;
+  box-shadow: var(--ring-line);
 }
 .l-scene-fade.is-plain > i {
   width: 0;
@@ -225,7 +250,7 @@
   box-shadow: none;
 }
 .l-scene-fade.is-plain {
-  background: #12161b;
+  background: var(--pal-grey-7);
 }
 /* A place that is still loading after the transition: calm dark backdrop,
    the spinner only appears if loading takes long. */
@@ -233,7 +258,7 @@
   display: grid;
   place-items: center;
   min-height: 60vh;
-  color: #6b7a66;
+  color: var(--text-soft);
   font-size: 13px;
 }
 .l-scene-wait > * {
@@ -272,19 +297,20 @@
   position: absolute;
   top: 14px;
   left: 14px;
-  z-index: 30;
+  z-index: var(--z-hud);
   display: grid;
   gap: 12px;
   width: min(400px, calc(100% - 28px));
   max-height: calc(100% - 28px);
   overflow: auto;
   padding: 14px 16px 16px;
-  border: 1px solid #d9ccb0;
-  border-radius: 16px;
-  background: #fffdf5;
-  color: #3a3226;
-  box-shadow: 0 14px 36px #2a1f1240;
-  font-size: 13px;
+  border: 0;
+  border-radius: var(--r-l);
+  /* the venue's own board: felt / hanji / oak parchment, framed */
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--edge-frame), var(--lift-3);
+  font-size: var(--fs-body-s);
 }
 @media (prefers-reduced-motion: no-preference) {
   .l-table-sheet {
@@ -316,8 +342,8 @@
   line-height: 1.3;
 }
 .l-table-sheet small {
-  font-size: 11px;
-  color: #7a6a4f;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 .l-sheet-symbol {
   display: grid;
@@ -325,9 +351,9 @@
   flex: none;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
-  background: #3f6a4a;
-  color: #fffdf1;
+  border-radius: var(--r-m);
+  background: var(--leaf-800);
+  color: var(--note-50);
   font-size: 16px;
   font-weight: 800;
 }
@@ -338,17 +364,17 @@
   height: 44px;
   flex: none;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background: transparent;
   color: inherit;
   cursor: pointer;
 }
 .l-sheet-close:hover {
-  background: #f1eadb;
+  background: var(--surface-raised);
 }
 .l-sheet-close:focus-visible,
 .l-table-sheet button:focus-visible {
-  outline: 3px solid #f2c14e;
+  outline: 3px solid var(--gold-400);
   outline-offset: 2px;
 }
 .l-sheet-setup {
@@ -365,7 +391,7 @@
   margin-bottom: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #5b4b33;
+  color: var(--text);
 }
 .l-sheet-chips {
   display: grid;
@@ -382,15 +408,15 @@
 .l-sheet-chips > button {
   min-height: 44px;
   padding: 0 4px;
-  border: 1px solid #d9ccb0;
-  border-radius: 10px;
-  background: #fff;
-  color: #3a3226;
-  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--font-body);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease;
+  transition: background var(--dur-quick) ease, border-color var(--dur-quick) ease;
 }
 .l-sheet-chips > button {
   position: relative;
@@ -405,15 +431,15 @@
   background: transparent;
 }
 .l-sheet-chips > button[aria-checked='true'] {
-  border-color: #3f6a4a;
-  background: #3f6a4a;
-  color: #fffdf1;
+  border-color: var(--leaf-800);
+  background: var(--leaf-800);
+  color: var(--note-50);
 }
 .l-sheet-note {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #5f5240;
+  color: var(--text);
 }
 .l-sheet-status {
   display: grid;
@@ -425,7 +451,7 @@
 }
 .l-sheet-status span {
   font-size: 12px;
-  color: #5f5240;
+  color: var(--text);
 }
 .l-sheet-seats {
   display: flex;
@@ -440,8 +466,8 @@
   justify-items: center;
   gap: 3px;
   width: 44px;
-  font-size: 11px;
-  color: #5f5240;
+  font-size: var(--fs-cap);
+  color: var(--text);
 }
 .l-sheet-seats .avatar-view,
 .l-sheet-seats li > i {
@@ -449,12 +475,12 @@
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
-  background: #efe5cf;
+  background: var(--surface-raised);
 }
 .l-sheet-seats li > i {
   display: block;
   box-sizing: border-box;
-  border: 1.5px dashed #b39d74;
+  border: 1.5px dashed var(--pal-orange-66);
   background: transparent;
 }
 .l-sheet-seats li span {
@@ -481,17 +507,17 @@
   width: 100%;
   min-height: 52px;
   padding: 6px 10px;
-  border: 1px solid #e3d8c0;
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
   color: inherit;
-  font: inherit;
+  font: var(--font-body);
   text-align: left;
   cursor: pointer;
 }
 .l-sheet-friends button[aria-pressed='true'] {
-  border-color: #3f6a4a;
-  background: #eef4e8;
+  border-color: var(--leaf-800);
+  background: var(--surface-raised);
 }
 .l-sheet-friends button:disabled {
   opacity: 0.55;
@@ -503,7 +529,7 @@
   flex: none;
   border-radius: 50%;
   overflow: hidden;
-  background: #efe5cf;
+  background: var(--surface-raised);
 }
 .l-sheet-friends button > span {
   display: grid;
@@ -516,8 +542,8 @@
 .l-sheet-friends em {
   flex: none;
   font-style: normal;
-  font-size: 11px;
-  color: #6e7f5a;
+  font-size: var(--fs-cap);
+  color: var(--pal-lime-51);
 }
 .l-sheet-actions {
   display: flex;
@@ -530,8 +556,8 @@
   gap: 6px;
   min-height: 48px;
   padding: 0 14px;
-  border-radius: 12px;
-  font: inherit;
+  border-radius: var(--r-m);
+  font: var(--font-body);
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
@@ -539,34 +565,34 @@
 .l-sheet-actions > .l-primary {
   flex: 1;
   border: 0;
-  background: #3f6a4a;
-  color: #fffdf1;
+  background: var(--leaf-800);
+  color: var(--note-50);
 }
 .l-sheet-actions > .l-primary:hover {
-  background: #355c3f;
+  background: var(--leaf-800);
 }
 .l-sheet-actions > .l-primary:disabled {
-  background: #8f9a86;
+  background: var(--pal-grey-62);
   cursor: default;
 }
 .l-sheet-actions > .l-secondary {
-  border: 1px solid #d9ccb0;
-  background: #fff;
-  color: #3a3226;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  color: var(--text);
 }
 .l-sheet-solo {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px dashed #c9b88f;
-  border-radius: 12px;
-  background: #fbf6e9;
+  border: 1px dashed var(--paper-300);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
 }
 .l-sheet-solo.is-lead {
   border-style: solid;
-  border-color: #3f6a4a;
-  background: #eef4e8;
+  border-color: var(--leaf-800);
+  background: var(--surface-raised);
 }
 .l-sheet-solo p {
   flex: 1;
@@ -574,10 +600,10 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.45;
-  color: #5f5240;
+  color: var(--text);
 }
 .l-sheet-solo p strong {
-  color: #2f4a35;
+  color: var(--text);
 }
 .l-sheet-solo button {
   display: inline-flex;
@@ -586,17 +612,17 @@
   gap: 6px;
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid #3f6a4a;
-  border-radius: 12px;
-  background: #fff;
-  color: #2f4a35;
-  font: inherit;
+  border: 1px solid var(--leaf-800);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: var(--font-body);
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
 }
 .l-sheet-solo button:hover {
-  background: #f3f8ee;
+  background: var(--surface-raised);
 }
 .l-sheet-solo button:disabled {
   opacity: 0.5;
@@ -620,16 +646,16 @@
   width: 100%;
   min-height: 56px;
   padding: 8px 12px;
-  border: 1px solid #dfe5d1;
-  border-radius: 12px;
-  background: #f8f9f2;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
   color: inherit;
-  font: inherit;
+  font: var(--font-body);
   text-align: left;
   cursor: pointer;
 }
 .l-table-picker button:hover {
-  background: #eef3e4;
+  background: var(--surface-raised);
 }
 .l-table-picker button > span:first-child {
   display: grid;
@@ -637,9 +663,9 @@
   width: 36px;
   height: 36px;
   flex: none;
-  border-radius: 10px;
-  background: #3f6a4a;
-  color: #fffdf1;
+  border-radius: var(--r-m);
+  background: var(--leaf-800);
+  color: var(--note-50);
   font-weight: 800;
 }
 .l-table-picker button > span:nth-child(2) {
@@ -649,12 +675,12 @@
 }
 .l-table-picker small {
   font-size: 12px;
-  color: #66745a;
+  color: var(--text-soft);
 }
 /* 구경 중: the header's live chip in the spectator view. */
 .l-game-live.is-watching {
-  background: #fff1cf;
-  color: #7a4f2a;
+  background: var(--surface-raised);
+  color: var(--wood-500);
 }
 .l-sheet-key {
   display: inline-grid;
@@ -663,11 +689,11 @@
   height: 16px;
   margin-left: 4px;
   padding: 0 3px;
-  border-radius: 4px;
-  background: #0000000f;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--pal-grey-0) 6%, transparent);
   color: inherit;
-  font: inherit;
-  font-size: 11px;
+  font: var(--font-body);
+  font-size: var(--fs-cap);
   font-weight: 700;
   opacity: 0.75;
 }
@@ -677,8 +703,8 @@
 }
 .l-sheet-keys {
   margin: -4px 0 0;
-  font-size: 11px;
-  color: #8a7a5d;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 /* Game header buttons (일어나기, 구경 중 · 일어나기) keep a full 44px target. */
 .l-game-screen > header button {
@@ -689,10 +715,10 @@
   align-items: center;
   gap: 8px;
   padding: 0 0 0 14px;
-  border: 1px solid #e6c98a;
-  border-radius: 999px;
-  background: #fff1cf;
-  color: #7a4f2a;
+  border: 1px solid var(--pal-amber-82);
+  border-radius: var(--r-round);
+  background: var(--surface-raised);
+  color: var(--wood-500);
   font-size: 14px;
   font-weight: 800;
 }
@@ -703,18 +729,18 @@
   min-height: 44px;
   padding: 0 16px;
   border: 0;
-  border-radius: 999px;
-  background: #7a4f2a;
-  color: #fffdf1;
-  font: inherit;
+  border-radius: var(--r-round);
+  background: var(--wood-500);
+  color: var(--note-50);
+  font: var(--font-body);
   font-size: 13px;
   cursor: pointer;
 }
 .l-game-watch > button:hover {
-  background: #683f1f;
+  background: var(--wood-500);
 }
 .l-game-watch > button:focus-visible {
-  outline: 3px solid #f2c14e;
+  outline: 3px solid var(--gold-400);
   outline-offset: 2px;
 }
 /* 연습 판 / 혼자 하기 tag next to the game's name (playtest A-3). */
@@ -722,9 +748,9 @@
   display: inline-block;
   margin-left: 6px;
   padding: 1px 8px;
-  border-radius: 999px;
-  background: #f2c14e;
-  color: #3a2c05;
+  border-radius: var(--r-round);
+  background: var(--gold-400);
+  color: var(--pal-amber-19);
   font-size: 12px;
   font-style: normal;
   font-weight: 800;

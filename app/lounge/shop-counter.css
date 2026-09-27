@@ -1,17 +1,15 @@
 /* 범마을 부동산 · 나무결 가구점 · 허풍 주점 upgrade counters. */
 .sc-counter .l-modal-body,
 .sc-counter {
-  --sc-ink: #3b2f28;
-  --sc-muted: #7a6a58;
-  --sc-line: #e2d6bf;
-  --sc-panel: #fffaf0;
-  --sc-accent: #8a5a2b;
+  /* Counters are journals; the tavern's is oak ([data-venue='tavern']). */
+  --sc-ink: var(--text);
+  --sc-muted: var(--text-soft);
+  --sc-line: var(--line);
+  --sc-panel: var(--surface-raised);
+  --sc-accent: var(--accent);
 }
 .sc-counter.sc-realty {
-  --sc-accent: #2f4a6b;
-}
-.sc-counter.sc-tavern {
-  --sc-accent: #9e3b2e;
+  --sc-accent: var(--water-600);
 }
 dialog.sc-counter {
   width: min(1180px, 94vw);
@@ -24,8 +22,8 @@ dialog.sc-counter {
   align-items: center;
   padding: 10px 14px;
   margin-bottom: 10px;
-  border-radius: 16px;
-  background: linear-gradient(90deg, #f7ecd8, #fffaf0);
+  border-radius: var(--r-l);
+  background: linear-gradient(90deg, var(--paper-100), var(--paper-50));
   border: 1px solid var(--sc-line);
 }
 .sc-keeper-face .dh-face {
@@ -58,8 +56,8 @@ dialog.sc-counter {
 .sc-pages button,
 .sc-cats button {
   border: 1px solid var(--sc-line);
-  background: #fff;
-  border-radius: 999px;
+  background: var(--note-50);
+  border-radius: var(--r-round);
   padding: 7px 14px;
   font-weight: 700;
   color: var(--sc-muted);
@@ -72,7 +70,7 @@ dialog.sc-counter {
 .sc-cats button.is-on {
   background: var(--sc-accent);
   border-color: var(--sc-accent);
-  color: #fffdf6;
+  color: var(--note-50);
 }
 .sc-cats small {
   font-weight: 500;
@@ -87,17 +85,6 @@ dialog.sc-counter {
 .sc-counter kbd {
   display: inline-block;
   margin: 0 2px;
-  padding: 0 6px;
-  border-radius: 5px;
-  border: 1px solid var(--sc-line);
-  background: #fff;
-  font-size: 12px;
-  color: var(--sc-ink);
-}
-.l-primary kbd {
-  background: #0002;
-  border-color: #0003;
-  color: inherit;
 }
 .sc-upgrades:focus,
 .sc-shelf:focus,
@@ -123,14 +110,14 @@ dialog.sc-counter {
   align-items: center;
   gap: 10px;
   border: 1px solid var(--sc-line);
-  border-radius: 14px;
+  border-radius: var(--r-l);
   background: var(--sc-panel);
   padding: 8px 12px;
 }
 .sc-tiers li.is-cursor,
 .sc-plans li.is-cursor {
   border-color: var(--sc-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sc-accent) 25%, transparent);
+  box-shadow: var(--ring-line), var(--lift-1);
 }
 .sc-tiers li.is-locked,
 .sc-plans li.is-locked {
@@ -138,7 +125,7 @@ dialog.sc-counter {
 }
 .sc-tiers li.is-done,
 .sc-plans li.is-done {
-  background: #eef5e6;
+  background: var(--note-50);
 }
 .sc-tier-pick,
 .sc-plans li > button {
@@ -159,7 +146,7 @@ dialog.sc-counter {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #f1e6d2;
+  background: var(--paper-100);
   color: var(--sc-accent);
 }
 .sc-tier-text {
@@ -176,8 +163,8 @@ dialog.sc-counter {
 .sc-meter {
   display: block;
   height: 8px;
-  border-radius: 999px;
-  background: #eadfcb;
+  border-radius: var(--r-round);
+  background: var(--paper-100);
   overflow: hidden;
 }
 .sc-meter i {
@@ -193,14 +180,14 @@ dialog.sc-counter {
 }
 .sc-chips button {
   border: 1px solid var(--sc-line);
-  border-radius: 999px;
+  border-radius: var(--r-round);
   padding: 5px 12px;
-  background: #fff;
+  background: var(--note-50);
   cursor: pointer;
 }
 .sc-chips button.is-on {
-  background: var(--sc-accent, #8a5a2b);
-  color: #fff;
+  background: var(--sc-accent, var(--pal-orange-36));
+  color: var(--note-50);
 }
 .sc-left {
   display: flex;
@@ -224,9 +211,9 @@ dialog.sc-counter {
 }
 .sc-plan-detail {
   border: 1px solid var(--sc-line);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   padding: 14px 16px;
-  background: #fbf7ee;
+  background: var(--paper-50);
   display: grid;
   gap: 10px;
   align-content: start;
@@ -247,10 +234,10 @@ dialog.sc-counter {
   position: relative;
   width: 150px;
   height: 118px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   overflow: hidden;
   background: linear-gradient(var(--wall) 0 64%, var(--floor) 64% 100%);
-  box-shadow: inset 0 0 0 2px #0001;
+  box-shadow: var(--edge-line), var(--lift-1);
 }
 .sc-room-window {
   position: absolute;
@@ -258,9 +245,9 @@ dialog.sc-counter {
   top: 16px;
   width: 38px;
   height: 30px;
-  border: 3px solid #fff8;
-  background: #cfe6f5aa;
-  border-radius: 4px;
+  border: 3px solid color-mix(in srgb, var(--note-50) 53%, transparent);
+  background: color-mix(in srgb, var(--pal-cyan-85) 67%, transparent);
+  border-radius: var(--r-s);
 }
 .sc-room-bed {
   position: absolute;
@@ -268,9 +255,9 @@ dialog.sc-counter {
   bottom: 30px;
   width: 58px;
   height: 22px;
-  border-radius: 6px;
-  background: #f4efe4;
-  box-shadow: 0 -8px 0 0 #d9826a inset;
+  border-radius: var(--r-s);
+  background: var(--paper-50);
+  box-shadow: var(--edge-press);
 }
 .sc-room small {
   position: absolute;
@@ -278,23 +265,23 @@ dialog.sc-counter {
   bottom: 4px;
   font-size: 12px;
   padding: 1px 6px;
-  border-radius: 6px;
-  background: #fffc;
-  color: #3b2f28;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--note-50) 80%, transparent);
+  color: var(--ink-900);
 }
 .sc-house {
   width: 150px;
   height: 118px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   display: grid;
   place-items: center;
-  background: #e5efdc;
-  color: #4d6f9c;
+  background: var(--leaf-100);
+  color: var(--pal-blue-42);
   text-align: center;
   padding: 6px;
 }
 .sc-house small {
-  color: #3b2f28;
+  color: var(--ink-900);
   font-size: 12px;
 }
 .sc-buy {
@@ -332,14 +319,14 @@ dialog.sc-counter {
   gap: 4px;
   padding: 10px 8px;
   border: 1px solid var(--sc-line);
-  border-radius: 14px;
-  background: linear-gradient(#fbf6ec, #f1e6d2);
+  border-radius: var(--r-l);
+  background: linear-gradient(var(--paper-50), var(--paper-100));
   cursor: pointer;
   color: var(--sc-ink);
 }
 .sc-grid li.is-cursor button {
   border-color: var(--sc-accent);
-  box-shadow: 0 0 0 3px #8a5a2b33;
+  box-shadow: var(--ring-line), var(--lift-1);
   transform: translateY(-2px);
 }
 .sc-grid li.is-bought button {
@@ -361,23 +348,23 @@ dialog.sc-counter {
 }
 .sc-grid em {
   font-style: normal;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   padding: 0 5px;
-  border-radius: 6px;
-  background: #d19a4a33;
-  color: #7a4e2c;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--pal-orange-71) 20%, transparent);
+  color: var(--wood-500);
 }
 .sc-bought {
   position: absolute;
   top: 6px;
   right: 6px;
-  color: #3f7a4a;
+  color: var(--leaf-600);
 }
 .sc-detail {
   border: 1px solid var(--sc-line);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   padding: 14px;
-  background: #fbf7ee;
+  background: var(--paper-50);
   display: grid;
   gap: 8px;
   align-content: start;
@@ -388,8 +375,8 @@ dialog.sc-counter {
   display: grid;
   place-items: center;
   height: 200px;
-  border-radius: 12px;
-  background: radial-gradient(circle at 50% 70%, #fff 0%, #efe3c8 70%);
+  border-radius: var(--r-m);
+  background: radial-gradient(circle at 50% 70%, var(--note-50) 0%, var(--paper-200) 70%);
 }
 .sc-detail-art img {
   width: 170px;
@@ -400,7 +387,7 @@ dialog.sc-counter {
   position: absolute;
   top: 8px;
   right: 10px;
-  color: #d19a4a;
+  color: var(--pal-orange-71);
 }
 .sc-detail h3 {
   margin: 0;
@@ -419,7 +406,7 @@ dialog.sc-counter {
   height: 34px;
   border-radius: 50%;
   border: 1px solid var(--sc-line);
-  background: #fff;
+  background: var(--note-50);
   font-size: 18px;
   cursor: pointer;
 }

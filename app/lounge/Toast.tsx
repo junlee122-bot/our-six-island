@@ -19,7 +19,7 @@ import {
   Timer,
   UserRound,
   X,
-} from 'lucide-react';
+} from '../ui/icons';
 import { playCue } from './feedback';
 import {
   bannerDuration,

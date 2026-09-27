@@ -2,7 +2,7 @@
   max-width: 1600px;
   margin: auto;
   padding: 24px 34px 12px;
-  color: #374638;
+  color: var(--pal-grey-30);
 }
 .hv-heading {
   display: flex;
@@ -14,10 +14,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
-  letter-spacing: 2.1px;
+  font-size: var(--fs-cap);
+  letter-spacing: 0;
   font-weight: 700;
-  color: #7c8c68;
+  color: var(--pal-lime-51);
 }
 .hv-heading h1 {
   font-size: 31px;
@@ -27,37 +27,37 @@
 }
 .hv-heading p {
   font-size: 13px;
-  color: #88917d;
+  color: var(--text-soft);
   margin: 0;
 }
 .hv-weather {
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #8a7858;
+  color: var(--pal-orange-51);
   font-size: 12px;
 }
 .hv-weather svg {
-  color: #c9a15a;
+  color: var(--pal-orange-69);
 }
 .hv-weather small {
   display: block;
-  color: #9aa08f;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
   margin-top: 4px;
 }
 .hv-frame {
   position: relative;
-  border: 1px solid #d5ddbf;
-  border-radius: 24px;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-l);
   overflow: hidden;
   background: radial-gradient(
     ellipse at 55% 35%,
-    #f2f2dc 0%,
-    #e4ebd1 65%,
-    #d2dec2 100%
+    var(--paper-100) 0%,
+    var(--leaf-100) 65%,
+    var(--leaf-100) 100%
   );
-  box-shadow: 0 16px 48px #4a674b0b;
+  box-shadow: var(--lift-3), var(--lift-1);
 }
 .hv-scene {
   position: relative;
@@ -67,7 +67,7 @@
   touch-action: none;
 }
 .hv-scene:focus-visible {
-  box-shadow: inset 0 0 0 3px #8d9d6f;
+  box-shadow: var(--edge-highlight);
 }
 .hv-canvas {
   display: block;
@@ -91,12 +91,12 @@
   align-items: center;
   gap: 5px;
   min-height: 26px;
-  border: 1px solid #fffdf4;
-  border-radius: 999px;
+  border: 1px solid var(--note-50);
+  border-radius: var(--r-round);
   padding: 3px 10px 3px 8px;
-  background: #fffcf1e6;
-  color: #4a5842;
-  box-shadow: 0 2px 6px #34542f1f;
+  background: color-mix(in srgb, var(--note-50) 90%, transparent);
+  color: var(--pal-grey-41);
+  box-shadow: var(--lift-2), var(--lift-1);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.2;
@@ -107,29 +107,29 @@
   visibility: hidden;
   will-change: transform, opacity;
   transition:
-    opacity 0.28s ease,
-    visibility 0s linear 0.28s,
-    background 0.15s;
+    opacity var(--dur-ui) ease,
+    visibility var(--dur-quick) linear 0.28s,
+    background var(--dur-quick);
 }
 .hv-place[data-show='true'] {
   opacity: 1;
   visibility: visible;
   transition:
-    opacity 0.28s ease,
-    visibility 0s,
-    background 0.15s;
+    opacity var(--dur-ui) ease,
+    visibility var(--dur-quick),
+    background var(--dur-quick);
 }
 .hv-place:hover,
 .hv-place.is-selected {
-  background: #fff;
-  box-shadow: 0 3px 10px #34542f33;
+  background: var(--note-50);
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .hv-place small {
-  font-size: 11px;
-  background: #e4edd8;
-  color: #526742;
+  font-size: var(--fs-cap);
+  background: var(--leaf-100);
+  color: var(--leaf-800);
   padding: 1px 4px;
-  border-radius: 5px;
+  border-radius: var(--r-s);
 }
 .hv-place-icon {
   flex-shrink: 0;
@@ -142,8 +142,8 @@
   gap: 3px;
   min-height: 22px;
   padding: 2px 7px 2px 5px;
-  font-size: 11px;
-  background: #fffcf1d9;
+  font-size: var(--fs-cap);
+  background: color-mix(in srgb, var(--note-50) 85%, transparent);
 }
 .hv-labels[data-mode='overview'] .hv-place-full,
 .hv-labels[data-mode='overview'] .hv-place small {
@@ -158,7 +158,7 @@
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
-  border: 1px solid #00000010;
+  border: 1px solid color-mix(in srgb, var(--pal-grey-0) 6%, transparent);
 }
 .hv-self {
   position: absolute;
@@ -168,16 +168,16 @@
   gap: 5px;
   align-items: center;
   padding: 4px 8px;
-  border-radius: 10px;
-  background: #fff9e4;
-  font-size: 11px;
-  color: #4b593d;
+  border-radius: var(--r-m);
+  background: var(--paper-100);
+  font-size: var(--fs-cap);
+  color: var(--pal-grey-41);
   white-space: nowrap;
-  box-shadow: 0 2px 6px #253b2828;
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .hv-self small {
-  font-size: 11px;
-  color: #8b9e69;
+  font-size: var(--fs-cap);
+  color: var(--pal-yellow-59);
 }
 .hv-top-tools {
   position: absolute;
@@ -192,17 +192,26 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #fffcf1f0;
-  border: 1px solid #dbe0c6;
-  color: #536648;
-  box-shadow: 0 3px 10px #3b582410;
+  background: color-mix(in srgb, var(--note-50) 94%, transparent);
+  border: 1px solid var(--leaf-100);
+  color: var(--pal-grey-41);
+  box-shadow: var(--lift-2), var(--lift-1);
   cursor: pointer;
 }
 .hv-top-tools button {
-  border-radius: 12px;
-  padding: 11px 15px;
-  font-size: 12px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: var(--hit);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  cursor: pointer;
 }
 .hv-top-tools button:hover,
 .hv-camera button:hover {
@@ -217,7 +226,7 @@
   gap: 5px;
 }
 .hv-camera button {
-  border-radius: 10px;
+  border-radius: var(--r-m);
   width: 38px;
   height: 38px;
 }
@@ -231,34 +240,29 @@
   pointer-events: none;
   display: flex;
   flex-direction: column;
-  color: #839472;
+  color: var(--text-soft);
 }
 .hv-map-caption > span {
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 4px;
+  letter-spacing: 0;
 }
 .hv-map-caption small {
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: var(--fs-cap);
+  letter-spacing: 0;
   margin-top: 7px;
 }
 .hv-entry-prompt {
-  position: absolute;
-  z-index: 6;
-  left: 50%;
-  bottom: 22px;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 14px;
   min-height: 56px;
-  padding: 9px 12px 9px 17px;
-  border: 1px solid #fff;
-  border-radius: 15px;
-  background: #fffdf4f5;
-  box-shadow: 0 8px 28px #314b3430;
-  color: #465b42;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: var(--r-m) 0 0 var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+  color: var(--text);
   white-space: nowrap;
 }
 .hv-entry-prompt > div {
@@ -266,12 +270,14 @@
   gap: 4px;
 }
 .hv-entry-prompt strong {
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
 }
 .hv-entry-prompt small,
 .hv-entry-prompt > span {
-  color: #8a927d;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
 }
 .hv-entry-prompt button {
   display: inline-flex;
@@ -280,16 +286,16 @@
   min-height: 36px;
   padding: 8px 12px;
   border: 0;
-  border-radius: 10px;
-  background: #4f6e50;
-  color: #fffbe8;
-  font: inherit;
-  font-size: 11px;
+  border-radius: var(--r-m);
+  background: var(--pal-green-42);
+  color: var(--paper-50);
+  font: var(--font-body);
+  font-size: var(--fs-cap);
   font-weight: 650;
   cursor: pointer;
 }
 .hv-entry-prompt button:focus-visible {
-  outline: 3px solid #b5bd69;
+  outline: 3px solid var(--pal-lime-73);
   outline-offset: 2px;
 }
 .hv-place-card {
@@ -297,10 +303,10 @@
   left: 50%;
   bottom: 22px;
   transform: translateX(-50%);
-  background: #fffdf4f5;
-  border: 1px solid #fff;
-  box-shadow: 0 8px 40px #314b342b;
-  border-radius: 18px;
+  background: color-mix(in srgb, var(--note-50) 96%, transparent);
+  border: 1px solid var(--note-50);
+  box-shadow: var(--lift-3), var(--lift-1);
+  border-radius: var(--r-l);
   padding: 18px 32px 18px 18px;
   display: flex;
   align-items: center;
@@ -313,13 +319,13 @@
   height: 56px;
   display: grid;
   place-items: center;
-  border-radius: 13px;
-  color: #637359;
+  border-radius: var(--r-l);
+  color: var(--text-soft);
   flex-shrink: 0;
 }
 .hv-place-card small {
-  font-size: 11px;
-  color: #9a9f8b;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
   letter-spacing: 0.8px;
 }
 .hv-place-card h2 {
@@ -328,9 +334,9 @@
   letter-spacing: -0.7px;
 }
 .hv-place-card p {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   margin: 0;
-  color: #8b917e;
+  color: var(--text-soft);
   white-space: nowrap;
 }
 .hv-enter {
@@ -339,12 +345,12 @@
   gap: 9px;
   align-items: center;
   border: 0;
-  background: #4f6e50;
-  color: #fffbe8;
+  background: var(--pal-green-42);
+  color: var(--paper-50);
   white-space: nowrap;
-  border-radius: 11px;
+  border-radius: var(--r-m);
   padding: 12px 15px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   cursor: pointer;
 }
 .hv-card-close {
@@ -355,7 +361,7 @@
   place-items: center;
   background: none;
   border: 0;
-  color: #9a9f8b;
+  color: var(--text-soft);
   padding: 3px;
   cursor: pointer;
 }
@@ -366,13 +372,13 @@
   width: 275px;
   max-height: calc(100% - 95px);
   overflow: auto;
-  background: #fffdf5f7;
+  background: color-mix(in srgb, var(--note-50) 97%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid #fff;
-  border-radius: 16px;
+  border: 1px solid var(--note-50);
+  border-radius: var(--r-l);
   padding: 15px;
-  box-shadow: 0 12px 40px #34532c25;
-  z-index: 4;
+  box-shadow: var(--lift-3), var(--lift-1);
+  z-index: var(--z-lift-2);
 }
 .hv-directory header {
   display: flex;
@@ -385,15 +391,15 @@
   place-items: center;
   background: none;
   border: 0;
-  color: #87947b;
+  color: var(--text-soft);
   padding: 3px;
   cursor: pointer;
 }
 .hv-directory-sub {
   display: block;
-  font-size: 11px;
-  color: #99a085;
-  letter-spacing: 1px;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+  letter-spacing: 0;
   margin: 18px 0 8px;
 }
 .hv-directory > button {
@@ -404,9 +410,9 @@
   padding: 10px 4px;
   gap: 10px;
   border: 0;
-  border-bottom: 1px solid #eceddd;
+  border-bottom: 1px solid var(--paper-100);
   background: none;
-  color: #536348;
+  color: var(--pal-grey-41);
   cursor: pointer;
 }
 .hv-directory > button > span:nth-child(2) {
@@ -419,8 +425,8 @@
 .hv-directory small {
   display: block;
   margin-top: 4px;
-  font-size: 11px;
-  color: #939b83;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 .hv-home-list {
   display: grid;
@@ -431,27 +437,27 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  background: #f0f2e6;
+  background: var(--paper-50);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-m);
   padding: 10px;
-  font-size: 11px;
-  color: #687c58;
+  font-size: var(--fs-cap);
+  color: var(--pal-lime-51);
   cursor: pointer;
 }
 .hv-home-list small {
   display: inline;
   margin: 0;
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 .hv-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 15px 6px;
-  font-size: 11px;
-  color: #909a83;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 .hv-bottom > span {
   display: flex;
@@ -460,17 +466,17 @@
 }
 .hv-bottom i {
   font-style: normal;
-  color: #b4bd9f;
+  color: var(--pal-lime-78);
   margin: 0 2px;
 }
 .hv-bottom button {
   display: flex;
   gap: 7px;
   align-items: center;
-  color: #58734c;
+  color: var(--pal-lime-51);
   background: none;
   border: 0;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   cursor: pointer;
 }
 .hv-loading {
@@ -482,11 +488,11 @@
   align-items: center;
   gap: 12px;
   padding: 16px 24px;
-  background: #fffdf1f5;
-  border-radius: 16px;
-  color: #7b8c67;
+  background: color-mix(in srgb, var(--note-50) 96%, transparent);
+  border-radius: var(--r-l);
+  color: var(--text-soft);
   font-size: 13px;
-  box-shadow: 0 10px 30px #4b633d20;
+  box-shadow: var(--lift-3), var(--lift-1);
   white-space: nowrap;
 }
 .hv-fallback {
@@ -496,11 +502,11 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: #eaf0dc;
+  background: var(--leaf-100);
   padding: 80px 20px;
   text-align: center;
-  color: #647956;
-  z-index: 2;
+  color: var(--pal-lime-51);
+  z-index: var(--z-raised);
 }
 .hv-fallback h2 {
   margin-bottom: 0;
@@ -508,7 +514,7 @@
 .hv-fallback p {
   font-size: 13px;
   line-height: 1.8;
-  color: #8a987d;
+  color: var(--text-soft);
 }
 .hv-fallback > div {
   display: grid;
@@ -519,20 +525,20 @@
   display: flex;
   gap: 18px;
   justify-content: space-between;
-  background: #fffced;
-  border: 1px solid #cfdbbc;
+  background: var(--note-50);
+  border: 1px solid var(--leaf-100);
   padding: 13px 20px;
-  border-radius: 10px;
-  color: #526a42;
+  border-radius: var(--r-m);
+  color: var(--leaf-800);
   cursor: pointer;
 }
 .hv-partial {
   font-size: 12px;
-  color: #867a51;
+  color: var(--pal-amber-55);
   margin: 0 6px;
 }
 .hv-village button:focus-visible {
-  outline: 3px solid #b5bd69;
+  outline: 3px solid var(--pal-lime-73);
   outline-offset: 3px;
 }
 @media (min-width: 1600px) {
@@ -548,12 +554,12 @@
 }
 .hv-credit {
   margin: 2px 6px 8px;
-  font-size: 11px;
-  color: #a0a78f;
+  font-size: var(--fs-cap);
+  color: var(--pal-grey-71);
   line-height: 1.6;
 }
 .hv-credit a {
-  color: #7c906a;
+  color: var(--text-soft);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -567,36 +573,35 @@
   flex-direction: column-reverse;
   align-items: flex-start;
   gap: 6px;
-  color: #58664b;
+  color: var(--pal-grey-41);
 }
 .hv-minimap-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
-  padding: 0 13px;
-  border: 1px solid #dbe0c6;
-  border-radius: 12px;
-  background: #fffcf1f0;
-  color: #536648;
-  box-shadow: 0 3px 10px #3b582410;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
+  min-height: var(--hit);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-bold);
 }
 .hv-minimap-toggle:hover {
-  background: #fff;
+  background: var(--surface-sunken);
 }
 .hv-minimap.is-open {
-  z-index: 7;
+  z-index: var(--z-hud-map);
 }
 .hv-minimap-body {
   width: 280px;
-  padding: 8px;
-  border: 1px solid #fff9e7;
-  border-radius: 15px;
-  background: #fffdf0ee;
-  box-shadow: 0 5px 22px #344a3020;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface);
+  box-shadow: var(--edge-frame), var(--lift-2);
 }
 .hv-minimap-map {
   position: relative;
@@ -615,17 +620,18 @@
   height: auto;
 }
 .hv-minimap-place {
+  /* pins sit ~20px apart in the row of houses: hit areas must not overlap */
   position: absolute;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  margin: -13px 0 0 -13px;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #3f4f37;
+  color: var(--pal-green-28);
   cursor: pointer;
 }
 .hv-minimap-place > span {
@@ -634,9 +640,9 @@
   left: 50%;
   transform: translate(-50%, -50%);
   padding: 0 4px;
-  border-radius: 6px;
-  background: #fffdf3e6;
-  font-size: 11px;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--note-50) 90%, transparent);
+  font-size: var(--fs-cap);
   font-weight: 700;
   line-height: 15px;
   white-space: nowrap;
@@ -648,22 +654,27 @@
 .hv-minimap-place:hover > span,
 .hv-minimap-place:focus-visible > span {
   display: block;
-  z-index: 1;
+  z-index: var(--z-base);
 }
 .hv-minimap-place[data-nearest='true'] > span {
-  background: #4f6b45;
-  color: #fff8e4;
-  z-index: 1;
+  background: var(--leaf-800);
+  color: var(--paper-100);
+  z-index: var(--z-base);
 }
 .hv-minimap-place:focus-visible {
-  outline: 2px solid #b5bd69;
+  outline: 2px solid var(--pal-lime-73);
   outline-offset: 0;
 }
 .hv-minimap-note {
   display: block;
-  margin-top: 5px;
-  font-size: 11px;
-  color: #6f7d60;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-body-s);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -676,20 +687,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #fffdf2f2;
+  background: color-mix(in srgb, var(--note-50) 95%, transparent);
   border: 1px solid white;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   padding: 13px 15px;
-  box-shadow: 0 6px 22px #344a3020;
-  color: #596b48;
+  box-shadow: var(--lift-2), var(--lift-1);
+  color: var(--pal-grey-41);
 }
 .hv-route strong {
   font-size: 12px;
 }
 .hv-route output {
   display: block;
-  font-size: 11px;
-  color: #8a927c;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
   margin-top: 4px;
 }
 .hv-route button {
@@ -700,15 +711,15 @@
   padding: 6px;
 }
 .hv-self {
-  border: 1px solid #fff0ad;
+  border: 1px solid var(--pal-amber-91);
   font-weight: 750;
   font-size: 12px;
 }
 .hv-self small {
-  background: #556e48;
+  background: var(--leaf-800);
   color: white;
   padding: 2px 4px;
-  border-radius: 4px;
+  border-radius: var(--r-s);
 }
 
 /* Remote friends' name tags and speech bubbles (projected every frame). */
@@ -717,13 +728,13 @@
   left: 0;
   top: 0;
   padding: 3px 8px;
-  border-radius: 10px;
-  background: #fffbeede;
-  color: #4b593d;
-  font-size: 11px;
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--paper-50) 87%, transparent);
+  color: var(--pal-grey-41);
+  font-size: var(--fs-cap);
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 2px 6px #253b2820;
+  box-shadow: var(--lift-2), var(--lift-1);
   pointer-events: none;
   visibility: hidden;
 }
@@ -733,16 +744,16 @@
   top: 0;
   max-width: 180px;
   padding: 6px 10px;
-  border: 1px solid #e5e1c9;
-  border-radius: 12px;
-  background: #fffef8;
-  color: #3f4c37;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  color: var(--pal-grey-30);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
-  box-shadow: 0 4px 12px #253b2826;
+  box-shadow: var(--lift-2), var(--lift-1);
   pointer-events: none;
 }
 .hv-bubble::after {
@@ -753,8 +764,8 @@
   width: 10px;
   height: 10px;
   background: inherit;
-  border-right: 1px solid #e5e1c9;
-  border-bottom: 1px solid #e5e1c9;
+  border-right: 1px solid var(--leaf-100);
+  border-bottom: 1px solid var(--leaf-100);
   transform: translateX(-50%) rotate(45deg);
 }
 .hv-bubble[hidden] {
@@ -804,12 +815,12 @@
   min-height: 44px;
 }
 .hv-entry-prompt button:disabled {
-  background: #a9b39c;
+  background: var(--pal-grey-71);
   cursor: default;
 }
 .hv-entry-prompt .hv-prompt-secondary {
-  background: #f1ead2;
-  color: #4f5f3c;
+  background: var(--paper-100);
+  color: var(--leaf-800);
 }
 .hv-count {
   display: inline-grid;
@@ -817,10 +828,10 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border-radius: 9px;
-  background: #d4574a;
-  color: #fff;
-  font-size: 11px;
+  border-radius: var(--r-m);
+  background: var(--stamp-600);
+  color: var(--note-50);
+  font-size: var(--fs-cap);
 }
 .hv-spot-prompt strong {
   display: inline-flex;
@@ -828,18 +839,18 @@
   gap: 5px;
 }
 .hv-scene {
-  transition: background 1.2s ease;
+  transition: background var(--dur-scene) ease;
 }
 .hv-scene[data-phase='night'] .hv-place,
 .hv-scene[data-phase='night'] .hv-tag {
-  box-shadow: 0 0 0 1px #ffffff55, 0 4px 14px #0006;
+  box-shadow: var(--ring-line), var(--lift-1), var(--lift-2);
 }
 .hv-weather[data-phase='night'] {
-  background: #2f3854;
-  color: #f3eed8;
+  background: var(--pal-blue-24);
+  color: var(--paper-100);
 }
 .hv-weather[data-phase='night'] small {
-  color: #c9cbe0;
+  color: var(--pal-blue-82);
 }
 @media (prefers-reduced-motion: reduce) {
   .hv-scene {
@@ -850,18 +861,18 @@
 /* "승준의 텃밭": my own plots are always labelled (gold) so they are not
    mistaken for paving or the decorative shared field by the plaza. */
 .hv-place.hv-farm-label {
-  background: #fff3c9;
-  color: #6b4b1f;
-  border: 1px solid #e0b64c;
-  box-shadow: 0 3px 10px #8a6a2030;
+  background: var(--ink-on-wood);
+  color: var(--wood-500);
+  border: 1px solid var(--gold-400);
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .hv-place.hv-farm-label:hover {
-  background: #ffe9a6;
+  background: var(--pal-amber-91);
 }
 .hv-place.hv-farm-label small {
   display: inline;
-  background: #5f9a3f;
-  color: #fff;
+  background: var(--pal-green-58b);
+  color: var(--note-50);
 }
 /* The WebGL fallback can hold the whole life list; let it scroll. */
 .hv-fallback {

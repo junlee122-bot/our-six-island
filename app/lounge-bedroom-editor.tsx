@@ -13,7 +13,7 @@ import {
   Trash2,
   Users,
   X,
-} from 'lucide-react';
+} from './ui/icons';
 import { GameButton } from './ui/GameButton';
 import {
   BEDROOM_LIMITS,

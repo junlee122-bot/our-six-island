@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from '../ui/icons';
 import { CloseButton } from '../ui/Panel';
 import { KeyHintBar, type KeyHintItem } from '../ui/KeyHint';
 
@@ -37,8 +37,9 @@ export function Modal({
   wide = false,
   closable = true,
   className = '',
-  panel = 'plain',
+  panel = 'journal',
   keyHints,
+  venue,
 }: {
   title: string;
   onClose: () => void;
@@ -54,6 +55,8 @@ export function Modal({
   panel?: 'plain' | 'journal' | 'note';
   /** Key hints pinned under the page ("[Esc] 닫기" is added when closable). */
   keyHints?: KeyHintItem[];
+  /** Venue tokens for the window (tokens.css [data-venue]): oak in the tavern… */
+  venue?: 'hall' | 'casino' | 'tavern';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -84,6 +87,7 @@ export function Modal({
       tabIndex={-1}
       className={'l-modal ui-dialog ' + (wide ? 'wide ' : '') + className}
       data-panel={panel}
+      data-venue={venue}
       onCancel={(e) => {
         e.preventDefault();
         close();

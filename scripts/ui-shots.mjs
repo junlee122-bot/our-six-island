@@ -4,6 +4,7 @@
 //   npm run ui:shots -- --pages /tmp/pages         # reuse an existing Pages build
 //   npm run ui:shots -- --views s --only friends,map
 //   npm run ui:shots -- --baseline .ui-shots/before/report.json [--strict]
+//   npm run ui:shots -- --games                    # also casino/hall table screens
 //
 // For each key screen at 1920×1080 (fhd), 1440×900 (d) and 1280×720 (s) it saves
 // a PNG and measures, inside the top dialog (or the whole HUD when none is open):
@@ -39,6 +40,11 @@ const only = opt('only', '')
   .split(',')
   .filter(Boolean);
 const baselineFile = opt('baseline', '');
+// --games adds the table screens (casino blackjack, hall seotda): slower, the
+// avatar walks to each venue.
+const withGames = flag('games');
+// --write-baseline <file>: keep only the per-screen counts (the CI baseline).
+const writeBaseline = opt('write-baseline', '');
 fs.mkdirSync(out, { recursive: true });
 
 let pages = opt('pages', '');
@@ -179,6 +185,28 @@ function measureInPage() {
         overlaps.push({ a: cls(tops[i]), b: cls(tops[j]), px: Math.round(w * h), onTop: hit && tops[i].contains(hit) ? cls(tops[i]) : hit && tops[j].contains(hit) ? cls(tops[j]) : '?' });
       }
   }
+  // Controls hidden under another HUD piece: sample each control's centre
+  // (and its left/right thirds) and see what is really on top there. This
+  // also catches siblings inside one bar (a header row running into the date
+  // sign), which the box check above cannot see.
+  const covered = [];
+  if (top.tagName !== 'DIALOG') {
+    for (const b of top.querySelectorAll('button, a[href], [role=button]')) {
+      if (!visible(b) || b.closest('canvas')) continue;
+      const cs = getComputedStyle(b);
+      if (cs.pointerEvents === 'none' || +cs.opacity < 0.1) continue;
+      const r = b.getBoundingClientRect();
+      if (r.width < 8 || r.height < 8 || r.top < 0 || r.left < 0 || r.bottom > innerHeight || r.right > innerWidth) continue;
+      for (const fx of [0.06, 0.25, 0.5, 0.75, 0.94]) {
+        const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height / 2);
+        if (!hit || b.contains(hit) || hit.contains(b) || hit.tagName === 'CANVAS') continue;
+        const hs = getComputedStyle(hit);
+        if (hs.pointerEvents === 'none') continue;
+        covered.push({ control: (b.getAttribute('aria-label') || b.innerText || '').trim().slice(0, 20), cls: cls(b), by: cls(hit) });
+        break;
+      }
+    }
+  }
   let dialog = null;
   if (top.tagName === 'DIALOG') {
     const r = top.getBoundingClientRect();
@@ -209,6 +237,8 @@ function measureInPage() {
     cut: cut.slice(0, 8),
     overlapCount: overlaps.length,
     overlaps: overlaps.slice(0, 8),
+    coveredCount: covered.length,
+    covered: covered.slice(0, 8),
     dialog,
     overflowX: document.documentElement.scrollWidth > innerWidth,
     fontsLoaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '') + ' ' + f.weight).filter((v, i, a) => a.indexOf(v) === i),
@@ -255,7 +285,7 @@ async function runView(browser, base, view, report) {
     const m = await js(measureInPage).catch((e) => ({ err: e.message }));
     res.screens[name] = { file, ...m, ...extra };
     const d = m.dialog;
-    console.log(`  ${view} ${name.padEnd(16)} low ${m.lowCount} small ${m.smallCount} narrow ${m.narrowCount} cut ${m.cutCount} overlap ${m.overlapCount}${d?.close ? ` close ${d.close.w}x${d.close.h}` : ''}`);
+    console.log(`  ${view} ${name.padEnd(16)} low ${m.lowCount} small ${m.smallCount} narrow ${m.narrowCount} cut ${m.cutCount} overlap ${m.overlapCount} covered ${m.coveredCount}${d?.close ? ` close ${d.close.w}x${d.close.h}` : ''}`);
   };
   const step = async (name, fn) => {
     if (!want(name)) return;
@@ -337,6 +367,52 @@ async function runView(browser, base, view, report) {
   await step('bonds', async () => { await focusScene(); await page.keyboard.press('KeyL'); await sleep(1000); await snap('bonds'); });
   await step('collection', async () => { await focusScene(); await page.keyboard.press('KeyK'); await sleep(1000); await snap('collection'); });
 
+  // Game tables: walk in, a bot opens the table, sit, capture the game screen.
+  if (withGames) {
+    const STAKE = { blackjack: 1000, seotda: 10000 };
+    const PLACE = { casino: '별빛 카지노', lounge: '범마을 회관' };
+    for (const [game, area] of [['blackjack', 'casino'], ['seotda', 'lounge']]) {
+      await step('game-' + game, async () => {
+        for (const b of H.bots) await H.run(b, 'action', { action: { kind: 'area', area } }).catch(() => {});
+        await focusScene();
+        await page.keyboard.press('KeyM');
+        await sleep(700);
+        await H.clickText(new RegExp(PLACE[area]), '.hv-directory button');
+        await until((a) => { const d = document.querySelector('[data-testid=village-3d]')?.dataset; return d?.nearbyPlace === a && d?.walking === 'false'; }, 180000, area === 'casino' ? 'casino' : 'hall');
+        await page.keyboard.press('KeyE');
+        await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.loadState === 'ready', 60000);
+        await sleep(2500);
+        const host = H.bots[0];
+        await H.run(host, 'action', { action: { kind: 'invite', game, players: [], stake: STAKE[game], required: 2, table: `${area}-${game}` } });
+        await sleep(1200);
+        await H.clickSel(`[data-testid=interior-table-${game}]`);
+        await until((g) => { const d = document.querySelector('[data-testid=interior-3d]')?.dataset; return (d?.action === 'table:' + g && d?.walking === 'false') || !!document.querySelector('[data-testid=table-sheet]'); }, 60000, game);
+        if (!(await js(() => !!document.querySelector('[data-testid=table-sheet]')))) {
+          await page.keyboard.press('KeyE');
+          await until(() => !!document.querySelector('[data-testid=table-sheet]'), 8000);
+        }
+        await sleep(600);
+        await snap('sheet-' + game);
+        await H.clickSel('[data-testid=table-sit]');
+        await until(() => !!document.querySelector('.l-game-screen'), 30000);
+        await sleep(2500);
+        await snap('game-' + game);
+        // back to the village for the next venue
+        await page.keyboard.press('Escape');
+        await sleep(700);
+        await H.clickText(/일어나기/, 'dialog[open] button');
+        await sleep(1500);
+        await closeAll();
+        await focusScene();
+        await page.keyboard.press('Escape');
+        await sleep(700);
+        await H.clickText(/마을로|나가기/, 'dialog[open] button');
+        await until(() => document.querySelector('main.l-app')?.dataset.space === 'village', 30000);
+        await sleep(2500);
+      });
+    }
+  }
+
   // Primitives page (only in builds made with VITE_UI_KIT=1).
   await step('ui-kit', async () => {
     await page.goto(base + '?ui-kit');
@@ -376,7 +452,7 @@ console.log('report:', path.join(out, 'report.json'));
 console.log(JSON.stringify(report.summary));
 
 function summarize(r) {
-  const s = { screens: 0, low: 0, small: 0, narrow: 0, cut: 0, overlap: 0, closeUnder44: 0, editorEscFails: 0 };
+  const s = { screens: 0, low: 0, small: 0, narrow: 0, cut: 0, overlap: 0, covered: 0, closeUnder44: 0, editorEscFails: 0 };
   for (const v of Object.values(r.views))
     for (const m of Object.values(v.screens)) {
       s.screens++;
@@ -385,10 +461,23 @@ function summarize(r) {
       s.narrow += m.narrowCount ?? 0;
       s.cut += m.cutCount ?? 0;
       s.overlap += m.overlapCount ?? 0;
+      s.covered += m.coveredCount ?? 0;
       if (m.dialog?.close && (m.dialog.close.w < 44 || m.dialog.close.h < 44)) s.closeUnder44++;
       if (m.escExits === false) s.editorEscFails++;
     }
   return s;
+}
+
+if (writeBaseline) {
+  const keep = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'];
+  const trimmed = { label, commit: report.commit, summary: report.summary, views: {} };
+  for (const [view, v] of Object.entries(report.views)) {
+    trimmed.views[view] = { screens: {} };
+    for (const [name, m] of Object.entries(v.screens))
+      trimmed.views[view].screens[name] = Object.fromEntries(keep.map((k) => [k, m[k] ?? 0]).concat([['dialog', m.dialog?.close ? { close: m.dialog.close } : null]]));
+  }
+  fs.writeFileSync(writeBaseline, JSON.stringify(trimmed, null, 1) + '\n');
+  console.log('baseline written:', writeBaseline);
 }
 
 if (baselineFile) {
@@ -399,12 +488,12 @@ if (baselineFile) {
     for (const [name, m] of Object.entries(v.screens)) {
       const b = before.views?.[view]?.screens?.[name];
       if (!b) continue;
-      const cols = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount'].map((k) => {
+      const cols = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'].map((k) => {
         if ((m[k] ?? 0) > (b[k] ?? 0)) worse++;
         return `${b[k] ?? '-'}→${m[k] ?? '-'}`;
       });
       const c = (d) => (d?.close ? `${d.close.w}x${d.close.h}` : '-');
-      rows.push(`${view.padEnd(3)} ${name.padEnd(16)} low ${cols[0].padEnd(7)} small ${cols[1].padEnd(7)} narrow ${cols[2].padEnd(6)} cut ${cols[3].padEnd(6)} overlap ${cols[4].padEnd(6)} close ${c(b.dialog)}→${c(m.dialog)}`);
+      rows.push(`${view.padEnd(3)} ${name.padEnd(16)} low ${cols[0].padEnd(7)} small ${cols[1].padEnd(7)} narrow ${cols[2].padEnd(6)} cut ${cols[3].padEnd(6)} overlap ${cols[4].padEnd(6)} covered ${cols[5].padEnd(6)} close ${c(b.dialog)}→${c(m.dialog)}`);
     }
   const comparison = { before: before.summary, after: report.summary, worse, rows };
   fs.writeFileSync(path.join(out, 'compare.json'), JSON.stringify(comparison, null, 1));

@@ -10,7 +10,7 @@ import {
   Sprout,
   Store,
   Trees,
-} from 'lucide-react';
+} from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import type { LoungePlayer } from '../lounge-room';
 import {

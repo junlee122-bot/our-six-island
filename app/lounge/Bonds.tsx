@@ -19,8 +19,8 @@ import {
   Sparkles,
   Trophy,
   Users,
-  type LucideIcon,
-} from 'lucide-react';
+  type IconComponent,
+} from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FRIEND_PROFILES, WEATHER_INFO } from '../lounge-calendar';
 import { ACTORS } from '../lounge-roster';
@@ -48,6 +48,7 @@ import { FRIEND_LINES } from '../lounge-friend-lines';
 import { DISH_BY_ID, FURNITURE_BY_REF } from '../lounge-items';
 import './life-plus.css';
 import './friend-life.css';
+import { EmptyState } from '../ui/EmptyState';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const dateText = (at: number) => {
@@ -409,7 +410,7 @@ export function RequestCard({ room, view, notify, onClose, from }: Base & { from
   );
 }
 
-const MEMORY_ICON: Record<string, LucideIcon> = {
+const MEMORY_ICON: Record<string, IconComponent> = {
   bond: Heart,
   bundle: Landmark,
   legend: Trophy,
@@ -434,7 +435,11 @@ export function MemoriesAlbum({ view, onClose, selfActor }: { view: CloudRoomVie
         </button>
       </div>
       {!list.length ? (
-        <p className="l-help-text">아직 추억이 없어요. 친구와 하트를 쌓거나 꾸러미를 완성하면 여기에 남아요.</p>
+        <EmptyState
+          glyph="camera"
+          title={mine ? '나의 첫 장이 아직 비어 있어요' : '앨범의 첫 장이 아직 비어 있어요'}
+          hint="친구와 하트가 2개가 되면 첫 장이 생겨요. 선물, 방 방문, 친구 밭에 물 주기, 테이블 한 판으로 추억이 쌓여요. 꾸러미를 완성해도 한 장이 남아요."
+        />
       ) : (
         <ol className="l-memories" data-testid="memories">
           {list.map((m) => {
@@ -466,7 +471,7 @@ export function MemoriesAlbum({ view, onClose, selfActor }: { view: CloudRoomVie
   );
 }
 
-const DIGEST_ICON: Record<string, LucideIcon> = {
+const DIGEST_ICON: Record<string, IconComponent> = {
   water: Droplets,
   gift: Gift,
   visit: Users,

@@ -4,18 +4,18 @@
   inset: 0;
   overflow: hidden;
   isolation: isolate;
-  background: #bcd9e8;
+  background: var(--pal-cyan-85);
   touch-action: none;
   outline: none;
 }
 .ar-scene.ar-woods {
-  background: #8fb2a4;
+  background: var(--pal-teal-70);
 }
 .ar-scene.ar-mine {
-  background: #140f0b;
+  background: var(--pal-grey-0);
 }
 .ar-scene:focus-visible {
-  box-shadow: inset 0 0 0 3px #f2c14e;
+  box-shadow: var(--edge-highlight);
 }
 .ar-canvas {
   display: block;
@@ -26,7 +26,7 @@
 .ar-labels {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: var(--z-raised);
   pointer-events: none;
 }
 .ar-tag {
@@ -34,17 +34,17 @@
   left: 0;
   top: 0;
   padding: 3px 9px;
-  border-radius: 999px;
-  background: #fffaeee6;
-  color: #4d3e2c;
+  border-radius: var(--r-round);
+  background: color-mix(in srgb, var(--paper-50) 90%, transparent);
+  color: var(--ink-700);
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: 0 2px 6px #2d241814;
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .ar-plate {
   position: absolute;
-  z-index: 3;
+  z-index: var(--z-lift);
   left: 50%;
   top: 92px;
   transform: translateX(-50%);
@@ -54,23 +54,23 @@
   gap: 3px;
   max-width: min(360px, calc(100% - 40px));
   padding: 10px 15px;
-  border-radius: 14px;
-  background: #fffaeef0;
-  color: #5d4d38;
-  box-shadow: 0 5px 16px #2d241822;
+  border-radius: var(--r-l);
+  background: color-mix(in srgb, var(--paper-50) 94%, transparent);
+  color: var(--ink-700);
+  box-shadow: var(--lift-2), var(--lift-1);
   font-size: 13px;
   pointer-events: none;
 }
 .ar-plate strong {
-  color: #3f3121;
+  color: var(--ink-900);
   font-size: 16px;
 }
 .ar-mine .ar-plate {
-  background: #2a211aeb;
-  color: #e9d8bd;
+  background: color-mix(in srgb, var(--ink-900) 92%, transparent);
+  color: var(--paper-200);
 }
 .ar-mine .ar-plate strong {
-  color: #ffe2a6;
+  color: var(--pal-amber-91);
 }
 .ar-plate-sub {
   display: inline-flex;
@@ -85,23 +85,23 @@
 }
 .ar-hint {
   position: absolute;
-  z-index: 3;
+  z-index: var(--z-lift);
   right: 20px;
   top: 92px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 7px 12px;
-  border-radius: 999px;
-  background: #fffaeee0;
-  color: #6c5b44;
+  border-radius: var(--r-round);
+  background: color-mix(in srgb, var(--paper-50) 88%, transparent);
+  color: var(--ink-600);
   font-size: 12px;
   font-weight: 600;
   pointer-events: none;
 }
 .ar-loading {
   position: absolute;
-  z-index: 4;
+  z-index: var(--z-lift-2);
   left: 50%;
   bottom: 40px;
   transform: translateX(-50%);
@@ -109,9 +109,9 @@
   gap: 9px;
   align-items: center;
   padding: 12px 17px;
-  border-radius: 50px;
-  color: #7e6c52;
-  background: #fffaf1ed;
+  border-radius: var(--r-round);
+  color: var(--ink-600);
+  background: color-mix(in srgb, var(--paper-50) 93%, transparent);
   font-size: 12px;
 }
 /* The lift panel (광산 승강기): lift floors I have reached. */
@@ -125,24 +125,24 @@
   display: grid;
   gap: 2px;
   padding: 10px 8px;
-  border: 1.5px solid #d9c7a6;
-  border-radius: 12px;
-  background: #fffaf0;
-  color: #4d3e2c;
-  font: inherit;
+  border: 1.5px solid var(--paper-300);
+  border-radius: var(--r-m);
+  background: var(--paper-50);
+  color: var(--ink-700);
+  font: var(--font-body);
   font-weight: 700;
   cursor: pointer;
 }
 .ar-lift button small {
   font-weight: 500;
-  color: #8a7658;
+  color: var(--pal-orange-51);
 }
 .ar-lift button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 .ar-lift button:focus-visible {
-  outline: 3px solid #f2c14e;
+  outline: 3px solid var(--gold-400);
   outline-offset: 2px;
 }
 @media (max-width: 720px) {

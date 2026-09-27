@@ -3,7 +3,7 @@
 // (꾸미기 모드); there is no separate 2D decorating canvas any more. Friends
 // who walk in appear live, and the room has its own chat and stickers.
 import type { ReactNode } from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle } from './ui/icons';
 import type { LoungeSave } from './lounge-look';
 import type { RoomAccess } from './lounge-bedroom-data';
 import type { CloudRoom, CloudRoomView } from './lounge-cloud-room';

@@ -3,7 +3,7 @@
 // who helped, and what each one restores in the village; 마을 공사 2차 (big
 // shared 범 projects) and this week's 마을 축제 기금 (ECON-2).
 import { useState } from 'react';
-import { Check, ClipboardList, Coins, Compass, Construction, Hammer, Lock, PartyPopper, Users } from 'lucide-react';
+import { Check, ClipboardList, Coins, Compass, Construction, Hammer, Lock, PartyPopper, Users } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
   BUNDLES,

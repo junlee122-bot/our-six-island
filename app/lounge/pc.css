@@ -26,8 +26,8 @@
 .l-app .hv-top-tools,
 .l-app .hv-route,
 .l-app .hv-place-card,
-.l-app .hv-entry-prompt,
-.l-app .l-action-button,
+.l-app .hv-action-sign,
+.l-app .l-action-button:not(.hv-action),
 .l-app .b3-scene-footer {
   zoom: var(--hud-zoom, 1);
 }
@@ -65,33 +65,25 @@ dialog.l-modal.wide {
   position: fixed;
   inset: 0 auto auto 0;
   margin: 0;
-  z-index: var(--z-toast, 1000);
+  z-index: var(--z-toast);
   display: none;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   max-width: 280px;
   padding: 7px 10px;
   border: 0;
-  border-radius: 8px;
-  background: #24372c;
-  color: #fffdf0;
-  font-size: 13px;
+  border-radius: var(--r-s);
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  font-size: var(--fs-body-s);
   line-height: 1.4;
-  box-shadow: 0 6px 20px #1a2a2033;
+  box-shadow: var(--lift-2);
   pointer-events: none;
   overflow: visible;
 }
 .l-tooltip[data-open='true'] {
   display: inline-flex;
-  animation: l-tooltip-in 120ms ease-out;
-}
-.l-tooltip kbd {
-  padding: 1px 6px;
-  border: 1px solid #ffffff40;
-  border-bottom-width: 2px;
-  border-radius: 5px;
-  background: #ffffff14;
-  font: 700 12px/1.4 inherit;
+  animation: l-tooltip-in var(--dur-quick) ease-out;
 }
 @keyframes l-tooltip-in {
   from {
@@ -104,57 +96,45 @@ dialog.l-modal.wide {
   }
 }
 
-/* ---------------------------------------------------------- key caps */
-.l-app kbd,
-.l-modal kbd {
-  /* The one keycap (same as <KeyHint>, app/ui/ui.css). */
-  display: inline-block;
-  min-width: 22px;
-  padding: 2px 7px;
-  border: 0;
-  border-radius: var(--r-s);
-  background: var(--keycap-bg);
-  color: var(--keycap-text);
-  box-shadow: var(--edge-ink);
-  font: var(--fw-bold) var(--fs-cap) / 1.4 var(--font-body);
-  text-align: center;
-  white-space: nowrap;
-}
-
-/* ---------------------------------------------------------- settings */
+/* ---------------------------------------------------------- settings
+   A journal with bookmark tabs on the left page; choices are paper chips and
+   stamp boxes instead of phone toggles and segmented controls. */
 .l-settings-layout {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: var(--sp-5);
   min-height: 430px;
 }
 .l-settings-tabs {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding-right: 16px;
-  border-right: 1px solid #eceee4;
+  gap: var(--sp-1);
+  padding-right: var(--sp-4);
+  border-right: 2px dotted var(--line);
 }
 .l-settings-tabs > button {
-  min-height: 44px;
+  min-height: var(--hit);
   padding: 10px 14px;
-  border-radius: 10px;
+  border: 0;
+  border-radius: var(--r-m);
   background: none;
-  color: #5c6c55;
-  font-size: 14px;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semi);
   text-align: left;
   cursor: pointer;
 }
 .l-settings-tabs > button:hover {
-  background: #f1f4e8;
+  background: var(--surface-sunken);
+  color: var(--text);
 }
 .l-settings-tabs > button[aria-selected='true'] {
-  background: #e4ecd6;
-  color: #2f4a37;
-  font-weight: 700;
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
 }
 .l-settings-tabs > button:focus-visible {
-  outline: 3px solid #d99556;
+  outline: 3px solid var(--focus);
   outline-offset: 1px;
 }
 .l-settings-panel {
@@ -163,36 +143,40 @@ dialog.l-modal.wide {
 .l-setting-choice {
   margin: 0;
   border: 0;
-  border-bottom: 1px solid #eceee4;
+  border-bottom: 2px dotted var(--line);
   padding: 10px 0;
   flex-wrap: wrap;
 }
 .l-segment {
   display: inline-flex;
+  flex-wrap: wrap;
   flex-shrink: 0;
-  padding: 3px;
-  border-radius: 10px;
-  background: #edf0e5;
+  gap: var(--sp-1);
 }
 .l-segment label {
   position: relative;
+  display: inline-grid;
+  place-items: center;
   min-width: 58px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: #5e765b;
-  font-size: 13px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+  color: var(--text);
+  font-size: var(--fs-body-s);
   text-align: center;
   cursor: pointer;
   white-space: nowrap;
 }
 .l-segment label:hover {
-  color: #2f4a37;
+  background: var(--surface-sunken);
 }
 .l-segment label[data-checked='true'] {
-  background: #fffef8;
-  color: #2f4a37;
-  font-weight: 700;
-  box-shadow: 0 1px 4px #3a4b3222;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: var(--fw-bold);
+  box-shadow: var(--edge-press);
 }
 .l-segment input {
   position: absolute;
@@ -200,35 +184,40 @@ dialog.l-modal.wide {
   pointer-events: none;
 }
 .l-segment label:has(input:focus-visible) {
-  outline: 3px solid #d99556;
-  outline-offset: 1px;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 .l-range-row {
   display: inline-flex !important;
   align-items: center;
   gap: 10px;
 }
+.l-range-row input[type='range'] {
+  accent-color: var(--accent);
+}
 .l-range-row output {
   min-width: 42px;
-  color: #5f6d55;
-  font-size: 13px;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 /* Key bindings */
 .l-keys-intro {
-  margin: 0 0 8px;
+  margin: 0 0 var(--sp-2);
 }
 .l-keys-group h3 {
   margin: 14px 0 6px;
-  color: #4b6044;
-  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-body);
 }
 .l-keys-group ul {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px 20px;
+  gap: var(--sp-1) 20px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -238,195 +227,221 @@ dialog.l-modal.wide {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 40px;
-  font-size: 13px;
-  color: #304438;
+  min-height: var(--hit);
+  font-size: var(--fs-body-s);
+  color: var(--text);
 }
 .l-keycap-button {
   min-width: 96px;
-  min-height: 34px;
-  padding: 4px 10px;
-  border: 1px solid #dbe0cf;
-  border-radius: 8px;
-  background: #f5f6ed;
-  color: #4b6044;
-  font-size: 12px;
+  min-height: 40px;
+  padding: var(--sp-1) 10px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--keycap-bg);
+  box-shadow: var(--edge-ink);
+  color: var(--keycap-text);
+  font: var(--fw-bold) var(--fs-body-s) / 1.2 var(--font-body);
   cursor: pointer;
 }
 .l-keycap-button:hover {
-  background: #e9efd9;
+  background: var(--surface-sunken);
 }
 .l-keycap-button[aria-pressed='true'] {
-  border-color: #d99556;
-  background: #fff4e3;
-  color: #7a4f2a;
-  font-weight: 700;
+  background: var(--accent-soft);
+  box-shadow: var(--ring-focus);
+  color: var(--text);
 }
 .l-keys-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: var(--sp-4);
 }
 .l-keys-note {
   min-height: 20px;
   margin: 0;
-  color: #5f6d55;
-  font-size: 13px;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
 }
 
-/* ---------------------------------------------------------- Esc menu */
+/* ---------------------------------------------------------- menus
+   The Esc menu and the ☰ 마을 메뉴 are table-of-contents pages of the
+   journal: glyph · name · dotted leader · keycap. */
 dialog.l-system-menu.l-modal {
-  width: min(420px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+  width: min(460px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
 }
 .l-system-note {
-  font-size: 13px;
+  margin: 0 0 var(--sp-3);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
 }
 .l-system-list {
   display: grid;
-  gap: 8px;
+  gap: 2px;
 }
 .l-system-list button {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 50px;
-  padding: 12px 16px;
-  border: 1px solid #dbe0cf;
-  border-radius: 12px;
-  background: #f5f6ed;
-  color: #3f5638;
-  font-size: 15px;
+  gap: var(--sp-3);
+  min-height: var(--hit);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-m);
+  background: transparent;
+  color: var(--text);
+  font-size: calc(var(--fs-body) * var(--text-scale, 1));
+  font-weight: var(--fw-semi);
   text-align: left;
   cursor: pointer;
-  transition: background 150ms;
+  transition: background-color var(--dur-quick);
 }
-.l-system-list button > span {
+.l-menu-label {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+.l-menu-leader {
+  flex: 1;
+  min-width: var(--sp-4);
+  align-self: center;
+  margin-top: 6px;
+  border-bottom: 2px dotted var(--line);
+}
+.l-system-list button > span:not(.l-menu-label) {
   flex: 1;
 }
 .l-system-list button:hover {
-  background: #e9efd9;
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
 }
 .l-system-list button:focus-visible {
-  outline: 3px solid #d99556;
-  outline-offset: 2px;
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  background: var(--surface-raised);
 }
 .l-system-list .l-system-primary {
-  background: #42694f;
-  border-color: #42694f;
-  color: #fffdef;
-  font-weight: 700;
+  margin-bottom: var(--sp-2);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: var(--edge-press), var(--lift-1);
+}
+.l-system-list .l-system-primary .l-menu-leader {
+  border-color: transparent;
 }
 .l-system-list .l-system-primary:hover {
-  background: #315b42;
-}
-.l-system-list .l-system-primary kbd {
-  background: #ffffff1c;
-  border-color: #ffffff55;
-  color: #fffdef;
+  background: var(--accent-edge);
 }
 .l-system-list .l-system-danger {
-  color: #9b3b2f;
+  color: var(--danger);
 }
 
-/* ---------------------------------------------------------- ☰ 마을 메뉴
-   The Esc menu's list style, in groups; arrow keys move between items. */
 dialog.l-village-menu.l-modal {
-  width: min(860px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+  width: min(900px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
+}
+.l-village-menu .ui-dialog-page {
+  padding: 0;
 }
 .l-village-menu-groups {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px 22px;
-  margin-top: 14px;
+}
+.l-menu-page {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-4);
+  min-width: 0;
+  padding: var(--sp-5);
+}
+.l-menu-page + .l-menu-page {
+  border-left: 2px dashed var(--line-strong);
+  background: var(--surface-raised);
+  border-radius: 0 var(--r-m) var(--r-m) 0;
 }
 .l-village-menu-group h3,
 .l-menu-danger summary {
-  margin: 0 0 8px;
-  color: #5d7052;
-  font-size: calc(13px * var(--text-scale, 1));
-  font-weight: 800;
-  letter-spacing: 0.02em;
-}
-.l-village-menu-group:first-child {
-  grid-row: span 2;
-}
-.l-village-menu-group .l-system-list {
-  gap: 6px;
-}
-.l-village-menu-group .l-system-list button {
-  min-height: 44px;
-  padding: 9px 14px;
-  font-size: calc(14px * var(--text-scale, 1));
-}
-.l-village-menu kbd {
-  min-width: 26px;
-  padding: 2px 6px;
-  border: 1px solid #cfd6c0;
-  border-radius: 6px;
-  background: #fff;
-  color: #5b6b50;
-  font-size: calc(12px * var(--text-scale, 1));
-  text-align: center;
+  margin: 0 0 var(--sp-1);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+  letter-spacing: 0;
 }
 .l-menu-badge {
   display: inline-block;
   min-width: 20px;
-  margin-left: 8px;
+  margin-left: var(--sp-2);
   padding: 0 6px;
-  border-radius: 999px;
-  background: #c8503f;
-  color: #fff;
-  font-size: calc(12px * var(--text-scale, 1));
+  border-radius: var(--r-round);
+  background: var(--danger);
+  color: var(--text-on-accent);
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   line-height: 1.5;
   text-align: center;
 }
 /* Actions that cannot be undone: closed until opened, and they still ask. */
 .l-menu-danger {
-  grid-column: 1 / -1;
-  padding: 10px 14px;
-  border: 1px dashed #e0c4b6;
-  border-radius: 12px;
-  background: #fbf4ee;
+  padding: var(--sp-2) var(--sp-3);
+  border: 2px dashed var(--danger);
+  border-radius: var(--r-m);
+  background: var(--danger-soft);
 }
 .l-menu-danger summary {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   margin: 0;
-  min-height: 32px;
-  color: #8a4a36;
+  min-height: var(--hit);
+  color: var(--danger-edge);
+  font-size: var(--fs-body);
   cursor: pointer;
 }
 .l-menu-danger summary:focus-visible {
-  outline: 3px solid #d99556;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
 }
 .l-menu-danger .l-system-list {
-  margin-top: 8px;
+  margin-top: var(--sp-2);
 }
 .l-menu-danger .l-system-list button {
-  border-color: #e7cbbd;
-  background: #fff;
-}
-.l-menu-danger .l-system-list button:hover {
-  background: #fbeae2;
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
 }
 .l-menu-danger button small {
   display: block;
   margin-top: 2px;
-  color: #7d5a4d;
-  font-size: calc(12px * var(--text-scale, 1));
-  font-weight: 400;
+  color: var(--text-soft);
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
+  font-weight: var(--fw-regular);
+}
+.l-world-menu-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+.l-world-menu-summary .avatar-view {
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--r-round);
+  background: var(--surface-sunken);
+  box-shadow: var(--edge-line);
+}
+.l-world-menu-summary strong {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+}
+.l-world-menu-summary small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
 }
 @media (max-width: 720px) {
   .l-village-menu-groups {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .l-village-menu-group:first-child {
-    grid-row: auto;
   }
 }
 
@@ -434,12 +449,14 @@ dialog.l-village-menu.l-modal {
 .l-controls-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 32px;
+  gap: var(--sp-2) var(--sp-6);
 }
 .l-controls-grid h3 {
-  margin: 8px 0 6px;
-  color: #4b6044;
-  font-size: 13px;
+  margin: var(--sp-2) 0 6px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
 }
 .l-controls-grid dl {
   margin: 0;
@@ -449,12 +466,13 @@ dialog.l-village-menu.l-modal {
   grid-template-columns: 110px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  min-height: 32px;
-  font-size: 13px;
+  min-height: 36px;
+  border-bottom: 1px dotted var(--line);
+  font-size: var(--fs-body-s);
 }
 .l-controls-grid dd {
   margin: 0;
-  color: #304438;
+  color: var(--text);
 }
 
 /* ---------------------------------------------------------- PC-only screen */
@@ -462,34 +480,34 @@ dialog.l-village-menu.l-modal {
   display: grid;
   place-items: center;
   min-height: 100dvh;
-  padding: 32px 20px;
-  background: linear-gradient(#f5f1dc, #e4ecd3);
-  color: #304438;
-  font-family: inherit;
+  padding: var(--sp-6) 20px;
+  background: var(--surface-app);
+  color: var(--text);
+  font-family: var(--font-body);
 }
 .l-pc-only-card {
   width: min(440px, 100%);
-  padding: 28px 24px;
-  border: 1px solid #dadfcd;
-  border-radius: 18px;
-  background: #fffdf5;
-  box-shadow: 0 18px 60px #20312622;
+  padding: 28px var(--sp-5);
+  border-radius: var(--r-s);
+  background: var(--note);
+  box-shadow: var(--lift-2);
   text-align: center;
 }
 .l-pc-only-card > svg {
   display: block;
   margin: 0 auto;
-  color: #42694f;
+  color: var(--accent);
 }
 .l-pc-only-card h1 {
-  margin: 12px 0 8px;
-  font-size: 22px;
-  letter-spacing: -0.4px;
+  margin: 12px 0 var(--sp-2);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title);
 }
 .l-pc-only-card p {
   margin: 0 0 18px;
-  color: #56654f;
-  font-size: 15px;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
   line-height: 1.6;
 }
 .l-pc-only-links {
@@ -501,26 +519,28 @@ dialog.l-village-menu.l-modal {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--sp-2);
   min-height: 48px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 15px;
+  padding: 12px var(--sp-4);
+  border: 0;
+  border-radius: var(--r-m);
+  font-size: var(--fs-body);
   text-decoration: none;
   cursor: pointer;
 }
 .l-pc-only-links a {
-  background: #42694f;
-  color: #fffdef;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: var(--edge-press);
 }
 .l-pc-only-links button {
-  border: 1px solid #d8e0cd;
-  background: #edf0e5;
-  color: #3f5638;
+  background: var(--surface-raised);
+  box-shadow: var(--edge-ink);
+  color: var(--text);
 }
 .l-pc-only small {
   display: block;
-  margin-top: 16px;
-  color: #6b7563;
-  font-size: 13px;
+  margin-top: var(--sp-4);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
 }

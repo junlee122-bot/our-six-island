@@ -5,7 +5,7 @@
 // key bindings (lounge-keybinds.ts); the scene keeps every key, so nothing
 // blocks the step it asks for. Skippable at any time.
 import { useEffect, useRef, useState } from 'react';
-import { Check } from 'lucide-react';
+import { Check } from '../ui/icons';
 import { ONBOARDING_KEY, getSettings, recall, remember } from '../lounge-settings';
 import { actionForCode, keyLabel } from '../lounge-keybinds';
 import {

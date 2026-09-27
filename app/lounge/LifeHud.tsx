@@ -16,8 +16,8 @@ import {
   Snowflake,
   Sparkles,
   Sun,
-  type LucideIcon,
-} from 'lucide-react';
+  type IconComponent,
+} from '../ui/icons';
 import type { LifeView } from '../lounge-life';
 import type { Season, Weather } from '../lounge-calendar';
 import { SEASON_INFO, WEATHER_INFO } from '../lounge-calendar';
@@ -34,13 +34,13 @@ import { ItemIcon } from './ItemIcon';
 import { useNow } from './use-now';
 import './life-plus.css';
 
-export const SEASON_ICON: Record<Season, LucideIcon> = {
+export const SEASON_ICON: Record<Season, IconComponent> = {
   spring: Flower2,
   summer: Sun,
   autumn: Leaf,
   winter: Snowflake,
 };
-export const WEATHER_ICON: Record<Weather, LucideIcon> = {
+export const WEATHER_ICON: Record<Weather, IconComponent> = {
   sunny: Sun,
   cloudy: Cloud,
   rain: CloudRain,

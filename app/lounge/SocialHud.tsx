@@ -7,7 +7,7 @@
 // - The festival banner (C-6): on festival days, where to go and a button
 //   that opens the festival panel.
 import { useEffect, useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Gift, ListChecks, MapPin, PartyPopper, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Gift, ListChecks, MapPin, PartyPopper, X } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { ADAPT_STEPS, FETES, type AdaptStepId } from '../lounge-social-defs';
 import { FURNITURE_BY_REF } from '../lounge-items';

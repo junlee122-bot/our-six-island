@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState, type CSSProperties } from 'react';
-import { ChevronDown, Layers, Plus, Hand, ChevronsUp } from 'lucide-react';
+import { ChevronDown, Layers, Plus, Hand, ChevronsUp } from './ui/icons';
 import { PokerCard, beom } from './lounge-poker-table';
 import {
   blackjackValue,

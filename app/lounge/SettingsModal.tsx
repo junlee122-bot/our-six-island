@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw } from '../ui/icons';
 import {
   DEFAULT_KEYBINDS,
   BIND_GROUPS,

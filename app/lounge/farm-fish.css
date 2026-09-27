@@ -18,7 +18,7 @@
   --ff-leaf: var(--leaf-600); /* white text 4.8:1 (was #5f8a55, 3.9:1) */
   --ff-leaf-dark: var(--leaf-800);
   --ff-water: var(--water-600);
-  --ff-water-light: #bfe0e6;
+  --ff-water-light: var(--pal-cyan-85);
   --ff-gold: var(--gold-400);
   --ff-stamp: var(--stamp-600);
 }
@@ -31,7 +31,7 @@
   gap: 7px;
   min-height: 42px;
   padding: 0 14px;
-  border-radius: 9px;
+  border-radius: var(--r-m);
   font-weight: 700;
   font-size: 14px;
   letter-spacing: -0.01em;
@@ -39,7 +39,7 @@
 .l-leaf {
   background: var(--ff-leaf);
   color: var(--text-on-accent);
-  box-shadow: inset 0 -3px 0 var(--ff-leaf-dark);
+  box-shadow: var(--edge-press);
 }
 .l-leaf:hover:not(:disabled) {
   background: var(--leaf-800);
@@ -48,11 +48,10 @@
   background: var(--paper-50);
   color: var(--ff-ink);
   box-shadow:
-    inset 0 0 0 1.5px var(--ff-ink-soft),
-    inset 0 -3px 0 rgb(61 43 29 / 0.25);
+    var(--edge-line), var(--edge-press);
 }
 .l-ink:hover:not(:disabled) {
-  background: #fff3da;
+  background: var(--paper-100);
 }
 /* Disabled: token colours instead of the global opacity (was 2.6:1). */
 .l-leaf:disabled,
@@ -69,16 +68,6 @@
 .l-angler kbd {
   display: inline-grid;
   place-items: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 5px;
-  font-size: var(--fs-cap);
-  font-weight: 700;
-  line-height: 1;
-  background: rgb(255 250 235 / 0.9);
-  color: var(--ff-ink);
-  box-shadow: inset 0 -2px 0 rgb(61 43 29 / 0.28);
 }
 .l-ink small {
   font-weight: 400;
@@ -99,16 +88,14 @@ dialog.l-modal.l-ledger {
   width: min(1180px, calc((100vw - 32px) / var(--dialog-zoom, 1)));
   padding: 16px 18px 18px;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   color: var(--ff-ink);
   background:
     repeating-linear-gradient(94deg, rgb(255 255 255 / 0.035) 0 3px, transparent 3px 11px),
     repeating-linear-gradient(88deg, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 23px),
     var(--ff-wood);
   box-shadow:
-    inset 0 0 0 3px var(--ff-wood-dark),
-    inset 0 0 0 6px rgb(255 230 190 / 0.12),
-    0 28px 80px rgb(20 30 20 / 0.45);
+    var(--edge-frame), var(--lift-3);
 }
 dialog.l-modal.l-ledger > header {
   margin: 0 0 12px;
@@ -117,9 +104,9 @@ dialog.l-modal.l-ledger > header {
 dialog.l-modal.l-ledger > header h2 {
   font-size: 19px;
   padding: 6px 16px 7px;
-  border-radius: 4px 4px 4px 12px;
+  border-radius: var(--r-s) var(--r-s) var(--r-s) var(--r-m);
   background: var(--ff-paper);
-  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+  box-shadow: var(--lift-1);
   transform: rotate(-1deg);
 }
 dialog.l-modal.l-ledger > header .l-icon {
@@ -131,14 +118,13 @@ dialog.l-modal.l-ledger > header .l-icon {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
   gap: 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   outline: none;
-  box-shadow: 0 6px 0 rgb(0 0 0 / 0.22);
+  box-shadow: var(--lift-1);
 }
 .l-ledger-book:focus-visible {
   box-shadow:
-    0 0 0 3px var(--focus),
-    0 6px 0 rgb(0 0 0 / 0.22);
+    var(--ring-focus), var(--lift-1);
 }
 .l-ledger-page {
   position: relative;
@@ -149,18 +135,18 @@ dialog.l-modal.l-ledger > header .l-icon {
     var(--ff-paper);
 }
 .l-ledger-left {
-  border-radius: 6px 0 0 6px;
-  box-shadow: inset -18px 0 22px -18px rgb(61 43 29 / 0.35);
+  border-radius: var(--r-s) 0 0 var(--r-s);
+  box-shadow: var(--edge-soft);
 }
 .l-ledger-right {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--r-s) var(--r-s) 0;
   background:
     repeating-linear-gradient(180deg, transparent 0 27px, var(--ff-rule) 27px 28px),
-    #faf3e1;
-  box-shadow: inset 18px 0 22px -18px rgb(61 43 29 / 0.3);
+    var(--paper-100);
+  box-shadow: var(--edge-soft);
 }
 /* Stitched spine. */
 .l-ledger-book::after {
@@ -184,7 +170,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-ledger-stamp {
   padding: 2px 9px;
   border: 1.5px solid var(--ff-stamp);
-  border-radius: 4px;
+  border-radius: var(--r-s);
   color: var(--ff-stamp);
   font-weight: 800;
   transform: rotate(-2deg);
@@ -203,29 +189,28 @@ dialog.l-modal.l-ledger > header .l-icon {
   align-items: center;
   gap: 12px;
   padding: 14px 10px 8px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   background:
     radial-gradient(circle at 12% 18%, rgb(143 169 104 / 0.35) 0 2px, transparent 3px) 0 0 / 23px 19px,
-    #b9c98f;
-  box-shadow: inset 0 0 0 2px rgb(79 52 33 / 0.18);
+    var(--pal-lime-79);
+  box-shadow: var(--edge-line);
 }
 .l-ledger-bed {
   position: relative;
   display: grid;
   gap: 6px;
   padding: 16px 12px 10px;
-  border-radius: 8px;
-  background: #8a6242;
+  border-radius: var(--r-m);
+  background: var(--wood-500);
   box-shadow:
-    inset 0 0 0 3px #6e4a30,
-    0 3px 0 #5b3d25;
+    var(--edge-frame), var(--lift-1);
 }
 .l-ledger-bedname {
   position: absolute;
   top: -9px;
   left: 10px;
   padding: 1px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-s);
   font-size: var(--fs-cap);
   font-weight: 800;
   color: var(--ff-paper);
@@ -243,37 +228,36 @@ dialog.l-modal.l-ledger > header .l-icon {
   width: 78px;
   height: 70px;
   padding: 0 0 4px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: transparent;
   overflow: visible;
 }
 .l-ledger-soil {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background:
     radial-gradient(circle at 30% 35%, rgb(255 230 190 / 0.18) 0 1.5px, transparent 2px) 0 0 / 11px 9px,
     radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.14) 0 1.5px, transparent 2px) 0 0 / 13px 11px,
-    #9c6c44;
-  box-shadow: inset 0 2px 4px rgb(0 0 0 / 0.25);
-  transition: background-color 0.3s;
+    var(--wood-300);
+  box-shadow: var(--edge-soft);
+  transition: background-color var(--dur-ui);
 }
 .l-ledger-plot[data-wet] .l-ledger-soil {
   background:
     radial-gradient(circle at 70% 70%, rgb(0 0 0 / 0.18) 0 1.5px, transparent 2px) 0 0 / 13px 11px,
-    #5e3f27;
+    var(--wood-700);
   box-shadow:
-    inset 0 2px 4px rgb(0 0 0 / 0.3),
-    inset 0 -6px 10px -6px rgb(160 210 230 / 0.35);
+    var(--edge-soft), var(--edge-press);
 }
 .l-ledger-plot[data-state='empty'] .l-ledger-soil {
   background:
     radial-gradient(circle at 30% 35%, rgb(255 230 190 / 0.2) 0 1.5px, transparent 2px) 0 0 / 11px 9px,
-    #a87850;
+    var(--wood-300);
 }
 .l-ledger-plot .l-stage-art {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-base);
   filter: drop-shadow(0 2px 0 rgb(0 0 0 / 0.18));
 }
 .l-ledger-plot[data-state='ready'] .l-stage-art {
@@ -283,12 +267,12 @@ dialog.l-modal.l-ledger > header .l-icon {
   content: '';
   position: absolute;
   inset: -3px;
-  border-radius: 8px;
-  box-shadow: 0 0 0 2px #f3cf6a, 0 0 14px #f3cf6a;
+  border-radius: var(--r-m);
+  box-shadow: var(--ring-highlight), var(--ring-glow);
   pointer-events: none;
 }
 .l-ledger-plot[aria-selected='true'] {
-  outline: 3px dashed #fff4d4;
+  outline: 3px dashed var(--ink-on-wood);
   outline-offset: 3px;
 }
 .l-ledger-plot:focus-visible {
@@ -297,7 +281,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-num {
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-raised);
   left: 4px;
   top: 3px;
   font-style: normal;
@@ -307,7 +291,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-mark {
   position: absolute;
-  z-index: 2;
+  z-index: var(--z-raised);
   display: grid;
   place-items: center;
 }
@@ -330,11 +314,11 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-ledger-fallow {
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background:
-    radial-gradient(circle at 30% 40%, #7d9a55 0 3px, transparent 4px) 0 0 / 14px 12px,
-    #93ad6a;
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+    radial-gradient(circle at 30% 40%, var(--pal-lime-60) 0 3px, transparent 4px) 0 0 / 14px 12px,
+    var(--pal-lime-73);
+  box-shadow: var(--edge-line);
 }
 .l-ledger-bed[data-locked] .l-ledger-row {
   opacity: 0.7;
@@ -346,9 +330,9 @@ dialog.l-modal.l-ledger > header .l-icon {
   align-items: center;
   gap: 9px;
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-m);
   background: rgb(248 239 217 / 0.94);
-  box-shadow: 0 2px 0 rgb(0 0 0 / 0.2);
+  box-shadow: var(--lift-1);
   font-size: 13px;
   font-weight: 700;
 }
@@ -366,12 +350,12 @@ dialog.l-modal.l-ledger > header .l-icon {
   order: 3;
   width: 64px;
   padding: 4px 0 2px;
-  border-radius: 4px 4px 0 0;
+  border-radius: var(--r-s) var(--r-s) 0 0;
   text-align: center;
   font-size: var(--fs-cap);
   font-weight: 700;
-  color: var(--ff-ink-soft);
-  background: #e6d3a4;
+  color: var(--ink-700);
+  background: var(--paper-300);
 }
 .l-ledger-actions {
   display: flex;
@@ -413,7 +397,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   gap: 1px;
   width: 64px;
   padding: 3px 0 2px;
-  border-radius: 7px;
+  border-radius: var(--r-s);
   opacity: 0.38;
   filter: grayscale(0.7);
 }
@@ -422,8 +406,8 @@ dialog.l-modal.l-ledger > header .l-icon {
   filter: none;
 }
 .l-ledger-stages li[data-now] {
-  background: #fff6dc;
-  box-shadow: inset 0 0 0 1.5px #d9b779;
+  background: var(--paper-100);
+  box-shadow: var(--edge-line);
 }
 .l-ledger-stages small {
   font-size: var(--fs-cap);
@@ -482,12 +466,11 @@ dialog.l-modal.l-ledger > header .l-icon {
   gap: 2px;
   width: 100%;
   padding: 10px 6px 8px;
-  border-radius: 6px 6px 10px 10px;
-  background: #f2e3c2;
+  border-radius: var(--r-s) var(--r-s) var(--r-m) var(--r-m);
+  background: var(--paper-200);
   color: var(--ff-ink);
   box-shadow:
-    inset 0 0 0 1.5px #b9956a,
-    inset 0 -3px 0 rgb(122 83 52 / 0.25);
+    var(--edge-line), var(--edge-press);
   font-weight: 800;
   font-size: 13px;
 }
@@ -502,10 +485,9 @@ dialog.l-modal.l-ledger > header .l-icon {
   top: 5px;
 }
 .l-ledger-packet[aria-pressed='true'] {
-  background: #fff6dc;
+  background: var(--paper-100);
   box-shadow:
-    inset 0 0 0 2px var(--ff-leaf),
-    inset 0 -3px 0 var(--ff-leaf-dark);
+    var(--edge-line), var(--edge-press);
 }
 .l-ledger-packet:hover:not(:disabled) {
   transform: translateY(-2px) rotate(-1deg);
@@ -529,9 +511,9 @@ dialog.l-modal.l-ledger > header .l-icon {
   display: grid;
   gap: 8px;
   padding: 12px 14px;
-  border-radius: 10px;
-  background: #fff6dc;
-  box-shadow: inset 0 0 0 1.5px #d9b779;
+  border-radius: var(--r-m);
+  background: var(--paper-100);
+  box-shadow: var(--edge-line);
 }
 .l-ledger-basket strong {
   display: flex;
@@ -550,7 +532,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   animation: l-pop-in 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
 .l-ledger-pop[data-q='2'] .l-item-icon {
-  filter: drop-shadow(0 0 6px #f3cf6a);
+  filter: drop-shadow(0 0 6px var(--pal-amber-84));
 }
 .l-ledger-friends h4 {
   display: flex;
@@ -638,12 +620,11 @@ dialog.l-modal.l-ledger > header .l-icon {
   width: min(600px, 94vw);
   transform: translateX(-50%);
   padding: 0 0 12px;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   color: var(--ff-ink);
   background: var(--ff-paper);
   box-shadow:
-    inset 0 0 0 3px var(--ff-wood),
-    0 16px 40px rgb(20 30 20 / 0.35);
+    var(--edge-frame), var(--lift-3);
   outline: none;
   animation: l-rise 240ms ease-out;
 }
@@ -652,11 +633,11 @@ dialog.l-modal.l-ledger > header .l-icon {
   align-items: stretch;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--r-m) var(--r-m) 0 0;
   background:
     repeating-linear-gradient(94deg, rgb(255 255 255 / 0.04) 0 3px, transparent 3px 11px),
     var(--ff-wood);
-  color: #fdf1d8;
+  color: var(--paper-100);
 }
 .l-angler-board {
   display: grid;
@@ -670,7 +651,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-angler-board small {
   font-size: 12px;
-  color: #f0dcb6;
+  color: var(--paper-200);
 }
 .l-angler-tags {
   display: flex;
@@ -679,11 +660,11 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-tag {
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-s);
   font-size: 12px;
   font-weight: 700;
   color: var(--ff-ink);
-  background: #f3dfb6;
+  background: var(--paper-200);
   transform: rotate(-2deg);
 }
 .l-tag[data-empty] {
@@ -739,10 +720,10 @@ dialog.l-modal.l-ledger > header .l-icon {
   height: 7px;
   border-radius: 50%;
   background: var(--ff-gold);
-  box-shadow: 0 0 0 1.5px var(--ff-paper);
+  box-shadow: var(--ring-line);
 }
 .l-angler-now li[data-rarity='legend']::after {
-  background: #9b6fc4;
+  background: var(--pal-violet-54);
 }
 .l-angler-quiet {
   width: auto !important;
@@ -758,13 +739,13 @@ dialog.l-modal.l-ledger > header .l-icon {
   min-height: 116px;
   margin: 12px 12px 0;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   text-align: left;
-  color: #fdf8ea;
+  color: var(--paper-50);
   background:
     repeating-linear-gradient(170deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 13px),
-    linear-gradient(180deg, #5b9bb3, #3f7890);
-  box-shadow: inset 0 0 0 2px rgb(30 60 70 / 0.35);
+    linear-gradient(180deg, var(--pal-cyan-61), var(--water-600));
+  box-shadow: var(--edge-line);
 }
 .l-angler-water:disabled {
   opacity: 1;
@@ -810,9 +791,9 @@ dialog.l-modal.l-ledger > header .l-icon {
   border-radius: 50%;
   font-size: 26px;
   font-weight: 900;
-  color: #fff;
+  color: var(--note-50);
   background: var(--ff-stamp);
-  box-shadow: 0 0 0 3px #fff6dc;
+  box-shadow: var(--ring-line);
   animation: l-pop-in 180ms cubic-bezier(0.2, 1.8, 0.4, 1) both;
 }
 .l-angler-say {
@@ -829,8 +810,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-angler[data-phase='bite'] .l-angler-water {
   box-shadow:
-    inset 0 0 0 3px #fff2c4,
-    0 0 0 3px var(--ff-stamp);
+    var(--edge-frame), var(--ring-line);
 }
 /* Reel bar: the bite window runs out from left to right. */
 .l-reelbar {
@@ -839,15 +819,15 @@ dialog.l-modal.l-ledger > header .l-icon {
   right: 14px;
   bottom: 9px;
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: rgb(20 40 50 / 0.45);
-  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.5);
+  box-shadow: var(--edge-light);
   overflow: hidden;
 }
 .l-reelbar-sweet {
   position: absolute;
   inset: 0 60% 0 0;
-  background: repeating-linear-gradient(135deg, #f3cf6a 0 6px, #e8bb4a 6px 12px);
+  background: repeating-linear-gradient(135deg, var(--pal-amber-84) 0 6px, var(--gold-400) 6px 12px);
 }
 .l-reelbar-mark {
   position: absolute;
@@ -855,9 +835,9 @@ dialog.l-modal.l-ledger > header .l-icon {
   bottom: -2px;
   left: 0;
   width: 6px;
-  border-radius: 3px;
+  border-radius: var(--r-s);
   background: var(--paper-50);
-  box-shadow: 0 0 0 1.5px var(--ff-ink);
+  box-shadow: var(--ring-line);
   animation: l-reel-run var(--window, 1000ms) linear forwards;
 }
 .l-reel-spin {
@@ -867,7 +847,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 3px solid #fff6dc;
+  border: 3px solid var(--paper-100);
   border-right-color: transparent;
   animation: l-reel-spin 0.5s linear infinite;
 }
@@ -879,13 +859,12 @@ dialog.l-modal.l-ledger > header .l-icon {
   gap: 16px;
   margin: 12px 12px 0;
   padding: 14px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   background:
     radial-gradient(circle at 20% 30%, rgb(191 224 230 / 0.7) 0 70px, transparent 120px),
     var(--paper-50);
   box-shadow:
-    inset 0 0 0 1.5px #d9c29a,
-    0 2px 0 rgb(0 0 0 / 0.08);
+    var(--edge-light), var(--lift-1);
 }
 .l-catch:not(.is-ok) {
   grid-template-columns: 1fr;
@@ -901,7 +880,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   animation: l-catch-flop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 .l-catch-art[data-rarity='legend'] .l-item-icon {
-  filter: drop-shadow(0 0 10px #f3cf6a);
+  filter: drop-shadow(0 0 10px var(--pal-amber-84));
 }
 .l-catch-ruler {
   width: 180px;
@@ -939,18 +918,18 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-catch-rarity {
   justify-self: start;
   padding: 1px 8px;
-  border-radius: 4px;
+  border-radius: var(--r-s);
   font-size: var(--fs-cap);
   font-weight: 800;
-  color: #fff;
-  background: #8aa07a;
+  color: var(--note-50);
+  background: var(--pal-grey-59);
 }
 .l-catch-rarity[data-rarity='rare'] {
   background: var(--ff-gold);
   color: var(--ff-ink);
 }
 .l-catch-rarity[data-rarity='legend'] {
-  background: #8a5fb4;
+  background: var(--pal-violet-54);
 }
 .l-catch-text strong {
   font-size: 26px;
@@ -993,13 +972,13 @@ dialog.l-modal.l-ledger > header .l-icon {
   gap: 4px;
   padding: 0 8px;
   font-weight: 800;
-  color: #fff;
+  color: var(--note-50);
   background: var(--ff-leaf);
   clip-path: polygon(0 0, 100% 0, 94% 50%, 100% 100%, 0 100%);
 }
 .l-ribbon.is-gold {
   color: var(--ff-ink);
-  background: #f3cf6a;
+  background: var(--pal-amber-84);
 }
 .l-catch-miss {
   display: grid;
@@ -1104,7 +1083,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 /* ------------------------------------------------------------ plot tag + pops (village) */
 .hv-plot-anchor {
   position: absolute;
-  z-index: 6;
+  z-index: var(--z-world-pop);
   left: 0;
   top: 0;
   width: 0;
@@ -1113,19 +1092,18 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .hv-plot-tag {
   position: absolute;
-  z-index: 6;
+  z-index: var(--z-world-pop);
   left: 0;
   top: 0;
   display: grid;
   gap: 2px;
   min-width: 132px;
   padding: 8px 12px 8px 14px;
-  border-radius: 4px 10px 10px 4px;
+  border-radius: var(--r-s) var(--r-m) var(--r-m) var(--r-s);
   color: var(--ff-ink);
   background: var(--ff-paper);
   box-shadow:
-    inset 3px 0 0 var(--ff-wood-light),
-    0 6px 16px rgb(20 30 20 / 0.28);
+    var(--edge-soft), var(--lift-2);
   font-size: 12px;
   pointer-events: none;
   transform: translate(18px, -50%);
@@ -1139,7 +1117,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   height: 9px;
   border-radius: 50%;
   background: var(--ff-paper);
-  box-shadow: inset 0 0 0 2px var(--ff-wood-light);
+  box-shadow: var(--edge-line);
   transform: translateY(-50%);
 }
 .hv-plot-tag strong {
@@ -1165,7 +1143,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 .hv-pops {
   position: absolute;
   inset: 0;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   pointer-events: none;
   overflow: hidden;
 }
@@ -1189,12 +1167,12 @@ dialog.l-modal.l-ledger > header .l-icon {
   inset: -14px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, #fff6c8 0 2px, transparent 3px) 8px 10px / 22px 22px,
-    radial-gradient(circle, #f3cf6a 0 2px, transparent 3px) 0 0 / 18px 18px;
+    radial-gradient(circle, var(--ink-on-wood) 0 2px, transparent 3px) 8px 10px / 22px 22px,
+    radial-gradient(circle, var(--pal-amber-84) 0 2px, transparent 3px) 0 0 / 18px 18px;
   animation: hv-sparkle 1.1s ease-out forwards;
 }
 .hv-pop[data-q='1']::after {
-  background: radial-gradient(circle, #e8eef4 0 2px, transparent 3px) 0 0 / 18px 18px;
+  background: radial-gradient(circle, var(--pal-grey-96) 0 2px, transparent 3px) 0 0 / 18px 18px;
 }
 @keyframes hv-pop-rise {
   0% {
@@ -1260,7 +1238,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   place-items: center;
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: rgb(191 224 230 / 0.55);
 }
 .hv-fish-now > span:not([data-known]) .l-item-icon {

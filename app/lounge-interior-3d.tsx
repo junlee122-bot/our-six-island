@@ -4,7 +4,10 @@
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex */
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Footprints, LoaderCircle, RotateCcw } from 'lucide-react';
+import {
+  LoaderCircle,
+  RotateCcw,
+} from './ui/icons';
 import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
 import { loungeSprites } from './lounge-sprites';
@@ -52,6 +55,7 @@ import { josa, NAMES } from './lounge-text';
 import { VENUES } from './lounge-venues';
 import type { TavernModel } from './lounge-model-assets';
 import './lounge-interior-3d.css';
+import { WalkHints } from './ui/WalkHints';
 
 /** Server units per second (the floor is 70 × 46 units), as on the flat floor. */
 const WALK_SPEED = 16;
@@ -1140,11 +1144,7 @@ export function Interior3D({
           onPress={() => runAction(action)}
         />
       )}
-      <span className="ih-hint">
-        <Footprints size={13} aria-hidden="true" />
-        클릭해서 이동 · 방향키 / {[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')} · Shift 달리기 ·{' '}
-        {keyLabel(keys.action)} 앉기 · Esc 메뉴
-      </span>
+      <WalkHints act="앉기" className="ih-hint" />
     </div>
   );
 }

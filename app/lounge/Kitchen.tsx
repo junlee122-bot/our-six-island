@@ -2,7 +2,7 @@
 // 요리·만들기 (at a table or the hearth in my room): recipes with what I have
 // of each ingredient, how many I can make, and today's dish buff.
 import { useState } from 'react';
-import { ChefHat, Hammer, Lock, Soup, Sparkles } from 'lucide-react';
+import { ChefHat, Hammer, Lock, Soup, Sparkles } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { BUFF_INFO, CRAFTS, DISHES, VILLAGE_FLAGS, type RecipeDef } from '../lounge-items';
 import { FURNITURE_BY_REF } from '../lounge-items';

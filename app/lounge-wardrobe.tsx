@@ -2,7 +2,7 @@
 /* Static GitHub Pages serves these versioned game assets without a Next image service. */
 /* oxlint-disable next/no-img-element */
 import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { Check, Bookmark, Download, RotateCcw, ArrowRight } from 'lucide-react';
+import { Check, Bookmark, Download, RotateCcw, ArrowRight } from './ui/icons';
 import { AvatarView } from './avatar-view';
 import { ACTORS, ACTOR_COLORS } from './lounge-roster';
 import { PALETTES, SHOP_BY_ID } from './lounge-life';

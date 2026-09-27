@@ -181,7 +181,7 @@ export function FarmLedger({
 
   if (!life)
     return (
-      <Modal title="텃밭 장부" onClose={onClose} className="l-ledger">
+      <Modal title="텃밭 장부" onClose={onClose} className="l-ledger" panel="plain">
         <p className="l-ledger-empty">마을에 연결되면 장부를 펼칠 수 있어요.</p>
       </Modal>
     );
@@ -270,7 +270,7 @@ export function FarmLedger({
   const readyAt = plot?.readyAt ?? 0;
   const regrow = plot?.crop ? CROP_INFO[plot.crop].regrow : undefined;
   return (
-    <Modal title={`${name}네 텃밭 장부`} onClose={onClose} className="l-ledger" wide>
+    <Modal title={`${name}네 텃밭 장부`} onClose={onClose} className="l-ledger" panel="plain" wide>
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Arrow keys / 1–9 / H / W move and act inside the ledger. */}
       <div
         ref={bookRef}

@@ -1,26 +1,26 @@
 /* Table host strip (루미 / 매화). Colours come from the table via variables. */
 .dh-host {
-  --dh-bg: #1d2e28;
-  --dh-border: #3c493b;
-  --dh-name: #c4b485;
-  --dh-muted: #a6b5a6;
-  --dh-text: #f3ecd9;
-  --dh-ring: #bfa265;
+  --dh-bg: var(--pal-grey-17);
+  --dh-border: var(--pal-grey-30);
+  --dh-name: var(--pal-amber-74);
+  --dh-muted: var(--pal-grey-71);
+  --dh-text: var(--paper-100);
+  --dh-ring: var(--pal-orange-69);
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 10px 18px 10px 12px;
   background: var(--dh-bg);
   border: 1px solid var(--dh-border);
-  border-radius: 16px;
+  border-radius: var(--r-l);
   margin-bottom: 12px;
   color: var(--dh-text);
   /* Stays in view while the table scrolls, so the host's line (and the
      result summary) is never pushed off screen at 1440×900. */
   position: sticky;
   top: 6px;
-  z-index: 8;
-  box-shadow: 0 8px 18px #0003;
+  z-index: var(--z-hud-bar);
+  box-shadow: var(--lift-2), var(--lift-1);
 }
 .dh-portrait {
   width: 56px;
@@ -28,10 +28,9 @@
   flex-shrink: 0;
   border-radius: 50%;
   box-shadow:
-    0 0 0 2px var(--dh-ring),
-    0 3px 8px #0005;
+    var(--ring-line), var(--lift-2), var(--lift-1);
   overflow: hidden;
-  background: #2a3b34;
+  background: var(--pal-grey-17);
 }
 .dh-face {
   display: block;
@@ -39,10 +38,10 @@
   height: 100%;
 }
 .dh-face .dh-backdrop {
-  fill: #33495a;
+  fill: var(--pal-cyan-30);
 }
 .dh-maehwa .dh-face .dh-backdrop {
-  fill: #f6e3d5;
+  fill: var(--stamp-100);
 }
 .dh-host[data-mood="wow"] .dh-portrait {
   animation: dh-hop 0.45s ease-out;
@@ -58,7 +57,7 @@
   display: block;
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   color: var(--dh-name);
 }
 .dh-name span {
@@ -94,8 +93,8 @@
   flex-shrink: 0;
 }
 .dh-table-number {
-  font-size: 11px;
-  letter-spacing: 1px;
+  font-size: var(--fs-cap);
+  letter-spacing: 0;
   color: var(--dh-muted);
   text-align: right;
   line-height: 1.4;
@@ -103,25 +102,24 @@
 .dh-table-number b {
   display: block;
   font:
-    15px Georgia,
-    serif;
-  letter-spacing: 1px;
+    15px var(--font-display);
+  letter-spacing: 0;
   color: var(--dh-name);
 }
 .dh-tips {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-round);
   border: 1px solid var(--dh-border);
   background: transparent;
   color: var(--dh-muted);
   cursor: pointer;
 }
 .dh-tips.on {
-  color: #2a2418;
+  color: var(--ink-900);
   background: var(--dh-ring);
   border-color: var(--dh-ring);
 }
@@ -173,12 +171,12 @@
 }
 /* 고스톱: a light, compact strip above the status line. */
 .dh-host.g-host {
-  --dh-bg: #fffaf2;
-  --dh-border: #e4dac9;
-  --dh-name: #a44437;
-  --dh-muted: #93836c;
-  --dh-text: #3b2f28;
-  --dh-ring: #d98a9d;
+  --dh-bg: var(--paper-50);
+  --dh-border: var(--paper-100);
+  --dh-name: var(--stamp-800);
+  --dh-muted: var(--pal-grey-54);
+  --dh-text: var(--ink-900);
+  --dh-ring: var(--pal-red-66);
 }
 
 /* A seat's round portrait (SeatPortrait): the friend's current chibi face. */
@@ -189,13 +187,13 @@
   height: 100%;
   overflow: hidden;
   border-radius: 50%;
-  background: #efe6cf;
+  background: var(--paper-100);
 }
 .dh-seat-face > .avatar-view {
   width: 100%;
   height: 100%;
 }
 .dh-seat-face > b {
-  color: #4a4234;
+  color: var(--ink-700);
   font-size: 13px;
 }

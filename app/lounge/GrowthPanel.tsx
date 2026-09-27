@@ -173,7 +173,7 @@ export function GrowthPanel({
   const todos = useMemo(() => (g ? growthTodos(g, now) : []), [g, now]);
   if (!life || !g)
     return (
-      <Modal title="성장 수첩" onClose={onClose} className="l-growth">
+      <Modal title="성장 수첩" onClose={onClose} className="l-growth" panel="plain">
         <p className="l-ledger-empty">
           마을에 연결되면 성장 수첩을 펼칠 수 있어요. 서버가 업데이트되는 중일
           수도 있어요.
@@ -234,6 +234,7 @@ export function GrowthPanel({
         title="성장 수첩"
         onClose={onClose}
         className="l-growth"
+        panel="plain"
         wide
         keyHints={[
           { keys: [{ label: '1–3' }], does: '쪽 넘기기' },
@@ -979,6 +980,7 @@ export function ProfessionChooser({
       title={`${info.name} Lv${level} · 전문가 고르기`}
       onClose={onClose}
       className="l-prof-modal"
+      panel="plain"
       wide
     >
       {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- ←/→ pick a card, Enter twice confirms. */}

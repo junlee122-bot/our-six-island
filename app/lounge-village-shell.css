@@ -1,31 +1,31 @@
 .l-app {
-  background: #f6f3e9;
-  color: #46533a;
+  background: var(--paper-50);
+  color: var(--pal-green-28);
 }
 
 .l-app .l-header {
-  background: #fffdf5;
-  border-bottom: 1px solid #e4dec9;
+  background: var(--note-50);
+  border-bottom: 1px solid var(--paper-100);
 }
 
 .l-app .l-brand-icon {
-  background: #456a49;
-  color: #fffdf5;
+  background: var(--leaf-800);
+  color: var(--note-50);
 }
 
 .l-app .l-brand small {
-  color: #758269;
+  color: var(--text-soft);
 }
 
 .l-app .l-header nav button[aria-pressed='true'] {
-  color: #416c49;
-  border-color: #66845d;
+  color: var(--leaf-800);
+  border-color: var(--pal-lime-51);
 }
 
 .l-app .l-wallet-button {
-  background: #eaf0dd;
-  border-color: #cfdbb9;
-  color: #46613f;
+  background: var(--leaf-100);
+  border-color: var(--leaf-100);
+  color: var(--leaf-800);
 }
 
 .l-village {
@@ -65,9 +65,9 @@
 .l-village-chat {
   overflow: hidden;
   border: 1px solid rgba(89, 73, 49, 0.12);
-  border-radius: 18px;
+  border-radius: var(--r-l);
   background: rgba(255, 252, 245, 0.88);
-  box-shadow: 0 12px 32px rgba(69, 58, 41, 0.07);
+  box-shadow: var(--lift-3);
 }
 
 .l-village-shortcuts {
@@ -95,7 +95,7 @@
 
 .l-village-shortcuts > button > svg:first-child {
   flex: 0 0 auto;
-  color: #8a704b;
+  color: var(--pal-orange-51);
 }
 
 .l-village-shortcuts > button > svg:last-child {
@@ -114,12 +114,12 @@
 }
 
 .l-village-shortcuts > button small {
-  color: #807769;
+  color: var(--text-soft);
   font-size: var(--fs-cap);
 }
 
 .l-village-shortcuts > button:hover {
-  color: #725638;
+  color: var(--wood-500);
 }
 
 .l-village-chat {
@@ -131,14 +131,12 @@
   max-height: 205px;
 }
 
-
-
 /* The village is the game surface; utilities float above it like a small HUD. */
 .l-app.l-immersive {
   overflow: hidden;
   height: 100dvh;
   isolation: isolate;
-  background: #e6edcf;
+  background: var(--leaf-100);
 }
 .l-immersive .l-village,
 .l-immersive .l-village-content,
@@ -186,7 +184,7 @@
 }
 .l-immersive .l-world-header {
   position: absolute;
-  z-index: 8;
+  z-index: var(--z-hud-bar);
   top: 16px;
   left: 20px;
   right: 20px;
@@ -201,33 +199,40 @@
 }
 .l-immersive .l-brand {
   gap: 9px;
-  padding: 8px 13px 8px 9px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 16px;
-  background: #fffdeeeb;
-  box-shadow: 0 3px 12px #43523310;
+  min-height: var(--hit);
+  padding: 4px 14px 4px 5px;
+  border: 0;
+  border-radius: var(--r-m);
+  background-color: var(--frame);
+  color: var(--text-on-frame);
+  box-shadow: var(--edge-frame), var(--lift-1);
 }
 .l-immersive .l-brand strong {
-  font-size: 17px;
-  letter-spacing: -0.6px;
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+  letter-spacing: 0;
 }
 .l-immersive .l-brand small {
   font-size: var(--fs-cap);
+  color: var(--text-on-frame);
 }
 .l-immersive .l-brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  color: var(--text);
 }
 .l-app .l-world-header .l-header-right {
   gap: 8px;
 }
 .l-immersive .l-header-right {
-  padding: 5px;
-  border: 1px solid #f8f9e5e0;
-  border-radius: 15px;
-  background: #fffdeeeb;
-  box-shadow: 0 3px 12px #43523310;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .l-immersive .l-friends-button {
   display: none;
@@ -243,16 +248,17 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 40px;
-  height: 40px;
+  width: var(--hit);
+  height: var(--hit);
   border: 0;
-  border-radius: 10px;
-  color: #516342;
-  background: transparent;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
   cursor: pointer;
 }
 .l-world-menu-button:hover {
-  background: #e8eed7;
+  background: var(--surface-sunken);
 }
 .l-immersive .hv-top-tools {
   top: 90px;
@@ -272,7 +278,8 @@
 }
 .l-immersive .hv-directory {
   top: 140px;
-  max-height: calc(100dvh - 230px);
+  /* ends above the bottom-left 수다 / 스티커 signs */
+  max-height: calc(100dvh - 140px - 100px);
   overflow-y: auto;
   z-index: var(--z-hud-pop);
 }
@@ -284,13 +291,10 @@
 }
 .l-immersive .hv-place-card {
   bottom: 80px;
-  z-index: 6;
-}
-.l-immersive .hv-entry-prompt {
-  bottom: 90px;
+  z-index: var(--z-world-pop);
 }
 .l-immersive .hv-loading {
-  z-index: 4;
+  z-index: var(--z-lift-2);
 }
 .l-immersive .hv-partial {
   position: absolute;
@@ -303,7 +307,7 @@
 }
 .l-world-social {
   position: absolute;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   bottom: 38px;
   left: 20px;
   display: flex;
@@ -317,11 +321,11 @@
   gap: 7px;
   height: 44px;
   padding: 0 14px;
-  border: 1px solid #d5ddbf;
-  border-radius: 12px;
-  background: #fffcf1f0;
-  color: #536648;
-  box-shadow: 0 3px 10px #3b582410;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--note-50) 94%, transparent);
+  color: var(--pal-grey-41);
+  box-shadow: var(--lift-2), var(--lift-1);
   cursor: pointer;
 }
 .l-app .l-world-social .l-reactions {
@@ -342,10 +346,10 @@
 }
 .l-app .l-world-social .l-reaction-open {
   height: 44px;
-  border-color: #d5ddbf;
-  border-radius: 12px;
-  background: #fffcf1f0;
-  color: #536648;
+  border-color: var(--leaf-100);
+  border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--note-50) 94%, transparent);
+  color: var(--pal-grey-41);
 }
 .l-app .l-world-social .l-reaction-feed {
   position: absolute;
@@ -366,26 +370,26 @@
 /* First-visit hint: a small pill under the header, never over the controls. */
 .l-world-hint {
   position: absolute;
-  z-index: 7;
+  z-index: var(--z-hud-map);
   top: 96px;
   left: 50%;
   transform: translateX(-50%);
   max-width: calc(100% - 360px);
   margin: 0;
   padding: 8px 14px;
-  border: 1px solid #fffdf2;
-  border-radius: 999px;
-  background: #fffcf1f2;
-  box-shadow: 0 4px 14px #3b58241a;
+  border: 1px solid var(--note-50);
+  border-radius: var(--r-round);
+  background: color-mix(in srgb, var(--note-50) 95%, transparent);
+  box-shadow: var(--lift-2), var(--lift-1);
   text-align: center;
-  color: #4f5f45;
+  color: var(--pal-grey-41);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
   pointer-events: none;
 }
 .l-world-hint span {
-  color: #7d8a6d;
+  color: var(--text-soft);
   font-weight: 500;
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -410,7 +414,7 @@
 }
 .l-immersive .l-world-alerts {
   position: absolute;
-  z-index: 9;
+  z-index: var(--z-hud-float);
   top: 142px;
   left: 20px;
   width: min(330px, calc(100vw - 95px));
@@ -429,7 +433,7 @@
   padding: 12px;
   gap: 8px;
   flex-wrap: wrap;
-  border-radius: 14px;
+  border-radius: var(--r-l);
 }
 .l-immersive .l-retained-table small {
   display: none;
@@ -437,7 +441,7 @@
 .l-immersive .l-save-alert {
   margin: 0 0 10px;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: var(--r-l);
 }
 .l-immersive .l-invitations {
   margin: 0;
@@ -450,26 +454,6 @@
 .l-immersive .l-invitation-card > div:last-child {
   grid-column: 1/-1;
 }
-.l-world-menu-summary {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-top: 18px;
-}
-.l-world-menu-summary .avatar-view {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: #e5ecd6;
-}
-.l-world-menu-summary strong {
-  display: block;
-  margin-bottom: 5px;
-}
-.l-world-menu-summary small {
-  display: block;
-  color: #78836d;
-}
 .l-world-menu-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -481,22 +465,22 @@
   gap: 10px;
   min-height: 64px;
   padding: 14px;
-  border: 1px solid #dbe0cf;
-  border-radius: 12px;
-  background: #f5f6ed;
-  color: #4b6044;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-m);
+  background: var(--paper-50);
+  color: var(--pal-grey-41);
   cursor: pointer;
   text-align: left;
 }
 .l-world-menu-grid button:hover {
-  background: #e9efd9;
+  background: var(--leaf-100);
 }
 .l-world-menu-links {
   display: flex;
   flex-wrap: wrap;
   gap: 18px;
   margin: 22px 0 8px;
-  color: #79826c;
+  color: var(--text-soft);
   font-size: 12px;
 }
 .l-world-menu-links a {
@@ -549,16 +533,17 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 44px;
-  height: 44px;
+  width: var(--hit);
+  height: var(--hit);
   border: 0;
-  border-radius: 10px;
-  color: #516342;
-  background: transparent;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
   cursor: pointer;
 }
 .l-header-icon:hover {
-  background: #e8eed7;
+  background: var(--surface-sunken);
 }
 .l-header-badge {
   position: absolute;
@@ -569,9 +554,9 @@
   padding: 0 4px;
   display: grid;
   place-items: center;
-  border-radius: 9px;
-  background: #d4574a;
-  color: #fff;
+  border-radius: var(--r-m);
+  background: var(--stamp-600);
+  color: var(--note-50);
   font-size: var(--fs-cap);
   line-height: 1;
 }
@@ -592,11 +577,11 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
 }
 .l-simple-life h2 {
   font-size: 16px;
-  color: #3f5a3e;
+  color: var(--leaf-800);
 }
 .l-simple-life h3 {
   font-size: 14px;
-  color: #4b5f45;
+  color: var(--pal-grey-41);
   margin-top: 6px;
 }
 .l-simple-trees,
@@ -615,31 +600,31 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
   gap: 6px;
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid #dde3cf;
-  border-radius: 10px;
-  background: #fffdf5;
-  color: #3f5a3e;
+  border: 1px solid var(--leaf-100);
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  color: var(--leaf-800);
   font-size: 13px;
 }
 .l-simple-trees button small {
   font-size: var(--fs-cap);
-  color: #6b7a5f;
+  color: var(--text-soft);
 }
 .l-simple-trees button:disabled {
   opacity: 0.6;
 }
 .l-simple-homes button[aria-pressed='true'] {
-  border-color: #8aa874;
-  background: #eef4e2;
+  border-color: var(--pal-lime-72);
+  background: var(--leaf-100);
 }
 .l-simple-talk {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background: var(--paper-50);
-  border: 1px solid #ecdfbf;
+  border: 1px solid var(--paper-200);
   font-size: 13px;
 }
 .l-simple-talk .avatar-view {
@@ -649,4 +634,21 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
   border-radius: 50%;
 }
 
-
+/* HUD slots at 1440 and below: the brand shrinks to its icon so the date sign
+   and the top-right sign row never meet (UI audit §6, 1280×720). */
+@media (max-width: 1440px) {
+  .l-immersive .l-brand {
+    padding: 4px;
+  }
+  .l-immersive .l-brand > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .l-immersive .l-life-hud {
+    left: 78px;
+  }
+}

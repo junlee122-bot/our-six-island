@@ -5,11 +5,11 @@
  * green for good thoughts, a warm orange for bad ones.
  */
 :root {
-  --mood-pos: #5f8a55;
-  --mood-neg: #d0772f;
-  --mood-ink: #3d2b1d;
-  --mood-ink-soft: #6e5843;
-  --mood-paper: #f8efd9;
+  --mood-pos: var(--leaf-600);
+  --mood-neg: var(--pal-orange-52);
+  --mood-ink: var(--ink-900);
+  --mood-ink-soft: var(--ink-600);
+  --mood-paper: var(--paper-100);
   --mood-paper-2: #efe1c0;
   --mood-rule: rgb(122 83 52 / 0.14);
 }
@@ -25,17 +25,17 @@
   gap: 6px;
   min-height: 44px;
   padding: 0 10px 0 6px;
-  border: 1px solid color-mix(in srgb, var(--mood-c, #7f9bb0) 45%, #d8cdb2);
-  border-radius: 22px;
-  background: #fffaf0;
+  border: 1px solid color-mix(in srgb, var(--mood-c, var(--pal-grey-63b)) 45%, var(--paper-300));
+  border-radius: var(--r-l);
+  background: var(--paper-50);
   color: var(--mood-ink);
   cursor: pointer;
 }
 .l-app .l-mood-chip:hover {
-  background: #fff4dc;
+  background: var(--paper-100);
 }
 .l-app .l-mood-chip:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--mood-c, #7f9bb0) 70%, #fff);
+  outline: 3px solid color-mix(in srgb, var(--mood-c, var(--pal-grey-63b)) 70%, var(--note-50));
   outline-offset: 2px;
 }
 .l-mood-chip-face {
@@ -59,8 +59,8 @@
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #c2413a;
-  box-shadow: 0 0 0 2px #fffaf0;
+  background: var(--stamp-600);
+  box-shadow: var(--ring-line);
 }
 .l-mood-moodles {
   display: inline-flex;
@@ -71,13 +71,13 @@
   place-items: center;
   width: 22px;
   height: 22px;
-  border-radius: 5px;
-  background: #fff;
-  box-shadow: inset 0 0 0 calc(var(--w, 1) * 1px) var(--mood-pos);
+  border-radius: var(--r-s);
+  background: var(--note-50);
+  box-shadow: var(--edge-line);
 }
 .l-mood-moodle[data-sign='neg'] {
-  background: #fff4ea;
-  box-shadow: inset 0 0 0 calc(var(--w, 1) * 1px) var(--mood-neg);
+  background: var(--paper-50);
+  box-shadow: var(--edge-line);
 }
 .l-mood-moodle[data-level='1'] {
   --w: 1;
@@ -93,7 +93,7 @@
 }
 .l-mood-tip {
   position: absolute;
-  z-index: 40;
+  z-index: var(--z-overlay);
   top: calc(100% + 8px);
   left: 50%;
   display: grid;
@@ -101,12 +101,11 @@
   width: max-content;
   max-width: 300px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-m);
   color: var(--mood-ink);
   background: var(--mood-paper);
   box-shadow:
-    inset 0 0 0 1.5px #c9ab7c,
-    0 10px 28px rgb(40 30 20 / 0.22);
+    var(--edge-line), var(--lift-3);
   font-size: 13px;
   line-height: 1.35;
   text-align: left;
@@ -115,9 +114,9 @@
   visibility: hidden;
   pointer-events: none;
   transition:
-    opacity 0.15s,
-    transform 0.15s,
-    visibility 0.15s;
+    opacity var(--dur-quick),
+    transform var(--dur-quick),
+    visibility var(--dur-quick);
 }
 .l-mood-hud:hover .l-mood-tip,
 .l-mood-hud:focus-within .l-mood-tip {
@@ -145,7 +144,7 @@
   font-style: normal;
   font-size: 12px;
   color: var(--mood-ink-soft);
-  border-top: 1px dashed #d6c3a0;
+  border-top: 1px dashed var(--paper-300);
   padding-top: 4px;
 }
 
@@ -159,8 +158,8 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #fffaf0;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  background: var(--paper-50);
+  box-shadow: var(--lift-1);
   pointer-events: auto;
 }
 .l-mood-badge i {
@@ -204,7 +203,7 @@
 /* ------------------------------------------------------------ inspiration ribbon */
 .l-mood-insp {
   position: fixed;
-  z-index: 61;
+  z-index: var(--z-banner-top);
   /* Below the toast line (which also drops in at the top). */
   top: 146px;
   left: 50%;
@@ -212,15 +211,13 @@
   align-items: center;
   gap: 14px;
   padding: 12px 18px 12px 14px;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   color: var(--mood-ink);
   background:
     radial-gradient(circle at 12% 50%, rgb(243 195 50 / 0.28), transparent 45%),
     var(--mood-paper);
   box-shadow:
-    inset 0 0 0 3px #e3ab3b,
-    0 6px 0 rgb(61 43 29 / 0.25),
-    0 18px 50px rgb(20 30 20 / 0.35);
+    var(--edge-highlight), var(--lift-1), var(--lift-3);
   transform: translateX(-50%);
   animation: l-mood-drop 6s cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
@@ -231,8 +228,8 @@
   width: 58px;
   height: 58px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fffbe8, #f6dc8a);
-  box-shadow: inset 0 0 0 3px #e3ab3b;
+  background: radial-gradient(circle at 35% 30%, var(--paper-50), var(--pal-amber-89));
+  box-shadow: var(--edge-highlight);
   animation: l-mood-spin 1s cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 .l-mood-insp-spark {
@@ -247,10 +244,10 @@
   max-width: 420px;
 }
 .l-mood-insp-text small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 900;
-  letter-spacing: 0.08em;
-  color: #b07d12;
+  letter-spacing: 0;
+  color: var(--pal-amber-56);
 }
 .l-mood-insp-text strong {
   font-size: 22px;
@@ -268,18 +265,12 @@
   min-height: 36px;
   margin-left: 8px;
   padding: 0 12px;
-  border-radius: 9px;
+  border-radius: var(--r-m);
   font-weight: 800;
   font-size: 13px;
-  color: #fffbee;
-  background: #c48a1c;
-  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
-}
-.l-mood-insp kbd {
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-size: 11px;
-  background: rgb(255 255 255 / 0.25);
+  color: var(--paper-50);
+  background: var(--pal-amber-56);
+  box-shadow: var(--edge-press);
 }
 .l-mood-insp-burst {
   position: absolute;
@@ -291,8 +282,8 @@
   position: absolute;
   width: 6px;
   height: 14px;
-  border-radius: 3px;
-  background: #f3c332;
+  border-radius: var(--r-s);
+  background: var(--pal-amber-81);
   transform: rotate(calc(var(--i) * 45deg)) translateY(-10px);
   opacity: 0;
   animation: l-mood-burst 0.9s ease-out 0.15s both;
@@ -369,11 +360,11 @@
   align-items: center;
   gap: 16px;
   padding: 14px 18px;
-  border-radius: 14px;
+  border-radius: var(--r-l);
   background:
     radial-gradient(circle at 8% 50%, color-mix(in srgb, var(--mood-c) 30%, transparent), transparent 40%),
     var(--mood-paper);
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mood-c) 60%, #d8c49e);
+  box-shadow: var(--edge-line), var(--lift-1);
 }
 .l-mood-bigface {
   display: grid;
@@ -394,7 +385,7 @@
 }
 .l-mood-headtext strong b {
   margin-left: 4px;
-  color: color-mix(in srgb, var(--mood-c) 75%, #000);
+  color: color-mix(in srgb, var(--mood-c) 75%, var(--pal-grey-0));
 }
 .l-mood-headtext em {
   font-style: normal;
@@ -440,11 +431,11 @@
   align-content: start;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--r-m);
   background:
     repeating-linear-gradient(180deg, transparent 0 27px, var(--mood-rule) 27px 28px),
-    #fffaf0;
-  box-shadow: inset 0 0 0 1.5px #e3d3b1;
+    var(--paper-50);
+  box-shadow: var(--edge-light);
 }
 .l-mood-card h3 {
   display: flex;
@@ -501,16 +492,16 @@
 .l-mood-timer {
   position: relative;
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: var(--mood-paper-2);
-  box-shadow: inset 0 0 0 1px #d6c3a0;
+  box-shadow: var(--edge-light);
   overflow: hidden;
 }
 .l-mood-bar i,
 .l-mood-timer i {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 6px;
+  border-radius: var(--r-s);
   background: var(--mood-pos);
 }
 .l-mood-needs li[data-low] .l-mood-bar i {
@@ -518,7 +509,7 @@
 }
 .l-mood-extra {
   padding-top: 8px;
-  border-top: 1px dashed #d6c3a0;
+  border-top: 1px dashed var(--paper-300);
 }
 .l-mood-extra li {
   display: grid;
@@ -574,7 +565,7 @@
 }
 .l-mood-left {
   text-align: right;
-  font-size: 11.5px;
+  font-size: var(--fs-cap);
   color: var(--mood-ink-soft);
 }
 .l-mood-gauge-row {
@@ -590,9 +581,9 @@
   height: 64px;
   border-radius: 50%;
   background:
-    radial-gradient(closest-side, #fffaf0 76%, transparent 78% 100%),
-    conic-gradient(#e3ab3b calc(var(--p) * 1%), var(--mood-paper-2) 0);
-  box-shadow: inset 0 0 0 1px #d6c3a0;
+    radial-gradient(closest-side, var(--paper-50) 76%, transparent 78% 100%),
+    conic-gradient(var(--gold-400) calc(var(--p) * 1%), var(--mood-paper-2) 0);
+  box-shadow: var(--edge-light);
 }
 .l-mood-gauge-text {
   display: grid;
@@ -610,9 +601,9 @@
   gap: 10px;
   align-items: flex-start;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff4cf;
-  box-shadow: inset 0 0 0 1.5px #e3ab3b;
+  border-radius: var(--r-m);
+  background: var(--ink-on-wood);
+  box-shadow: var(--edge-highlight);
 }
 .l-mood-held span {
   display: grid;
@@ -626,7 +617,7 @@
   font-style: normal;
   font-size: 12px;
   font-weight: 700;
-  color: #9a6a0e;
+  color: var(--gold-700);
 }
 .l-mood-tips li {
   display: flex;
@@ -634,9 +625,9 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #eadbb9;
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  box-shadow: var(--edge-light);
 }
 .l-mood-tips li span {
   display: grid;
@@ -658,12 +649,12 @@
   flex: none;
   min-height: 36px;
   padding: 0 12px;
-  border-radius: 9px;
+  border-radius: var(--r-m);
   font-weight: 800;
   font-size: 13px;
-  color: #fffbee;
+  color: var(--paper-50);
   background: var(--mood-pos);
-  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.18);
+  box-shadow: var(--edge-press);
 }
 .l-app .l-mood-go:disabled,
 .l-app .l-mood-cheer:disabled,
@@ -682,13 +673,13 @@
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #eadbb9;
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  box-shadow: var(--edge-light);
 }
 .l-mood-action.is-cup {
-  background: #fff4e0;
-  box-shadow: inset 0 0 0 1.5px #d9a35b;
+  background: var(--paper-100);
+  box-shadow: var(--edge-line);
 }
 .l-mood-action > span {
   display: grid;
@@ -704,10 +695,10 @@
   max-width: 130px;
   min-height: 36px;
   padding: 0 6px;
-  border: 1px solid #d6c3a0;
-  border-radius: 8px;
-  background: #fffaf0;
-  font: inherit;
+  border: 1px solid var(--paper-300);
+  border-radius: var(--r-m);
+  background: var(--paper-50);
+  font: var(--font-body);
   font-size: 13px;
 }
 .l-mood-action .l-leaf {
@@ -724,9 +715,9 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 10px;
-  background: #fff;
-  box-shadow: inset 0 0 0 1px #eadbb9;
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  box-shadow: var(--edge-light);
 }
 .l-mood-friends li[data-away] .l-mood-friend-face {
   opacity: 0.7;
@@ -755,7 +746,7 @@
   color: var(--mood-ink-soft);
 }
 .l-mood-friend-top {
-  font-size: 11.5px;
+  font-size: var(--fs-cap);
 }
 .l-mood-cheer-menu {
   display: flex;
@@ -782,11 +773,6 @@
 }
 .l-mood-foot kbd {
   margin: 0 3px 0 6px;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  background: var(--mood-paper-2);
-  box-shadow: inset 0 -1px 0 #cdb58a;
 }
 
 /* Friends list portraits: the face badge sits on the portrait's corner. */

@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { CloudCheck, CloudOff, CloudUpload } from 'lucide-react';
+import { CloudCheck, CloudOff, CloudUpload } from '../ui/icons';
 
 const SAVED = '서버에 저장됨';
 

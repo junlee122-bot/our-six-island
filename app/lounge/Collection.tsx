@@ -4,7 +4,7 @@
 // achievements with progress bars. The museum pavilion in the village opens
 // this book on its 박물관 tab.
 import { useState } from 'react';
-import { Award, BookOpen, Check, Landmark, Lock, MapPin, Trophy } from 'lucide-react';
+import { Award, BookOpen, Check, Landmark, Lock, MapPin, Trophy } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, type Crop } from '../lounge-life';
 import { FISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
@@ -83,6 +83,15 @@ export function CollectionBook({
     ['museum', '박물관'],
     ['achievements', '업적'],
   ];
+  // Empty page hint: the three commonest things on this page not found yet.
+  const weightOf = (id: string) => {
+    const it = ITEM_BY_ID[id] as { weight?: number } | undefined;
+    return it?.weight ?? 0;
+  };
+  const nextUp = (DEX_TABS.find(([id]) => id === tab)?.[2] ?? [])
+    .filter((id) => !dex.has(id))
+    .sort((a, b) => weightOf(b) - weightOf(a))
+    .slice(0, 3);
   const detail = picked ? (
     <aside className="l-dex-detail" data-testid="dex-detail">
       <ItemIcon id={picked} size={72} className={dex.has(picked) ? '' : 'is-unknown'} />
@@ -110,7 +119,20 @@ export function CollectionBook({
       )}
     </aside>
   ) : (
-    <aside className="l-dex-detail">
+    <aside className="l-dex-detail l-dex-next" data-testid="dex-next">
+      <h4>다음으로 찾아볼 것</h4>
+      {nextUp.length ? (
+        <ul>
+          {nextUp.map((id) => (
+            <li key={id}>
+              <ItemIcon id={id} size={36} className="is-unknown" />
+              <small>{whereFrom(id)}</small>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="l-help-text">이 쪽은 모두 찾았어요. 다른 쪽을 펼쳐 봐요.</p>
+      )}
       <p className="l-help-text">칸을 클릭하면 어디서 만나는지, 누가 처음 기증했는지 볼 수 있어요.</p>
     </aside>
   );

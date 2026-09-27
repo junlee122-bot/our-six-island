@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut } from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import { PasswordForm, RecoveryCard } from '../lounge-account-ui';
 import type { AccountProfile } from '../lounge-accounts';

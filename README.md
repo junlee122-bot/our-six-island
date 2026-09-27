@@ -77,19 +77,25 @@ npm run optimize:assets  # 원본 PNG/GLB에서 WebP·압축 GLB를 다시 만�
 - `<Panel variant="journal|sign|note|felt|hanji">`: 창 껍데기. 대화상자는 `lounge/Modal.tsx`의 `panel="journal"`과 `keyHints`(아래 키 안내 줄, Esc 닫기 자동)를 씁니다. 닫기 버튼은 `<CloseButton>`(44×44).
 - `<GameButton variant="primary|secondary|danger|ghost" size="s|m|l" glyph keyAction disabledReason>`: 모든 크기에서 44px 누름 영역, 초점 링, 비활성은 투명도 대신 전용 색.
 - `<KeyHint action="inventory">`(현재 키 설정을 읽음) · `<KeyHintBar items>`: 키캡 한 모양. 버튼 안은 "라벨 [키]", 설명 줄은 "[키] 동사".
-- `<Glyph name>`: 손그림 아이콘 한 가족(lucide·이모지 대신). `<Tabs numberKeys>`: 종이 탭, ←/→와 1–9. `<EmptyState glyph title hint action>`.
+- `<Glyph name>`: 손그림 아이콘 한 가족(채색 글리프 + currentColor 선 글리프, 편지 스티커 13종 포함). 예전 lucide 이름이 필요하면 `app/ui/icons`에서 가져와요. `lucide-react`는 설치돼 있지 않고 import하면 oxlint 에러예요. 화면에 이모지를 아이콘으로 쓰지 않아요.
+- `<Tabs numberKeys>`: 종이 탭, ←/→와 1–9. `<EmptyState glyph title hint action>`.
+- `<kbd>`는 한 규칙(`app/ui/ui.css`)으로만 그려요. 다른 곳에서는 위치만 정하거나 `--keycap-bg`/`--keycap-text`로 색만 바꿔요.
+- 창은 기본이 `panel="journal"`이에요(`lounge/Modal.tsx`). 텃밭 장부·성장 수첩처럼 자체 나무 테두리가 있는 창만 `panel="plain"`. 장소 창은 `venue="tavern"`처럼 장소 토큰을 받아요. 게임 화면과 테이블 시트는 `data-venue`로 펠트(카지노)·한지(회관)·참나무(주점) 토큰을 써요.
 - 개발용 카탈로그: `npm run dev` 후 `/?ui-kit`, 또는 `UI_KIT=1 npm run build:pages -- --out /tmp/pages` 후 `?ui-kit`. 일반 빌드에는 들어가지 않아요.
 
 검사 도구:
 
 ```bash
 npm run lint:css                 # 토큰 밖의 hex, 12px 미만, 낯선 반경·그림자, 단계 밖 z-index 보고
-npm run lint:css -- --ci         # CI: 새 파일·app/ui는 0건, 기존 파일은 기준치(scripts/css-lint-baseline.json)보다 늘면 실패
-npm run lint:css -- --update-baseline   # 파일을 토큰으로 옮긴 뒤 기준치 낮추기
+npm run lint:css -- --ci         # CI: 모든 CSS가 0건이어야 해요(색은 tokens.css의 이름으로만, 삽화 색은 --pal-*)
 npm run ui:shots -- --views fhd,d,s --baseline .ui-shots/before/report.json
                                  # 목(mock) 클라우드로 주요 화면을 1920/1440/1280에서 캡처하고
-                                 # 대비·작은 글씨·세로 한 글자 줄바꿈·잘림·HUD 겹침·닫기 버튼 크기를 report.json에 기록
+                                 # 대비·작은 글씨·세로 한 글자 줄바꿈·잘림·HUD 겹침·가려진 버튼·닫기 버튼 크기를 report.json에 기록
+npm run ui:shots -- --games      # 카지노 블랙잭·회관 섯다 테이블 화면까지 (느려요)
+npm run ui:shots -- --write-baseline scripts/ui-baseline.json   # CI 기준치 갱신 (나빠지지 않았을 때만)
 ```
+
+CI(`.github/workflows/ci.yml`)의 `ui-regression` 잡이 1920·1280에서 `--strict`로 돌려서, `scripts/ui-baseline.json`보다 하나라도 나빠지면 실패해요.
 
 `ui:shots`는 실제 Supabase에 연결하지 않아요(모든 외부 요청을 가로채 로컬 엔진으로 답함). `playwright-core`와 Chromium(`CHROMIUM_PATH` 또는 playwright 기본 설치)이 필요해요.
 

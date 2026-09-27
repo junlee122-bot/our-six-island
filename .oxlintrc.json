@@ -60,7 +60,18 @@
     "jsx-a11y/prefer-tag-over-role": "warn",
     "jsx-a11y/no-autofocus": "warn",
     "unicorn/no-useless-fallback-in-spread": "warn",
-    "no-control-regex": "warn"
+    "no-control-regex": "warn",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "lucide-react",
+            "message": "Use <Glyph name> (app/ui/Glyph.tsx) or app/ui/icons: one hand-drawn icon family (UI audit §3.6)."
+          }
+        ]
+      }
+    ]
   },
   "overrides": [
     {

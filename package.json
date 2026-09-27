@@ -31,7 +31,6 @@
     "@supabase/realtime-js": "2.116.0",
     "@supabase/supabase-js": "2.116.0",
     "chess.js": "1.4.0",
-    "lucide-react": "1.31.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-server-dom-webpack": "19.2.6",

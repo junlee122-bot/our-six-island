@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Check, Circle, LogOut, RotateCcw, UserPlus } from 'lucide-react';
+import { Check, Circle, LogOut, RotateCcw, UserPlus } from './ui/icons';
 import { AvatarView } from './avatar-view';
 import { ACTORS } from './lounge-roster';
 import {

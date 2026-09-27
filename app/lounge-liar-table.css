@@ -2,7 +2,7 @@
 .lg-club {
   max-width: 1240px;
   margin: 0 auto;
-  color: #3b2f28;
+  color: var(--ink-900);
 }
 .lg-host-side {
   display: flex;
@@ -18,15 +18,15 @@
 }
 .lg-phases li {
   padding: 3px 8px;
-  border-radius: 999px;
-  background: #f4e6cf;
-  font-size: 11.5px;
-  color: #93836c;
+  border-radius: var(--r-round);
+  background: var(--paper-100);
+  font-size: var(--fs-cap);
+  color: var(--pal-grey-54);
   white-space: nowrap;
 }
 .lg-phases li.is-now {
-  background: #c98a3b;
-  color: #fff;
+  background: var(--pal-orange-62);
+  color: var(--note-50);
   font-weight: 700;
 }
 .lg-layout {
@@ -46,13 +46,12 @@
   justify-items: center;
   gap: 2px;
   padding: 16px 20px 14px;
-  border: 8px solid #6b4a2e;
-  border-radius: 24px;
+  border: 8px solid var(--wood-500);
+  border-radius: var(--r-l);
   background:
-    radial-gradient(ellipse at 50% 30%, #fff8ea, #f6e3c1 80%);
+    radial-gradient(ellipse at 50% 30%, var(--paper-50), var(--paper-200) 80%);
   box-shadow:
-    inset 0 0 0 2px #e2c28a,
-    0 10px 26px #3a2a1a22;
+    var(--edge-highlight), var(--lift-2), var(--lift-1);
   text-align: center;
   animation: lg-flip 0.5s ease-out;
 }
@@ -61,31 +60,30 @@
   align-items: center;
   gap: 4px;
   font-size: 13px;
-  letter-spacing: 1px;
-  color: #93836c;
+  letter-spacing: 0;
+  color: var(--pal-grey-54);
 }
 .lg-role strong {
   font-size: clamp(30px, 3.2vw, 44px);
   line-height: 1.15;
-  color: #8a4b2a;
-  letter-spacing: 1px;
+  color: var(--pal-orange-39);
+  letter-spacing: 0;
 }
 .lg-role span {
   font-size: 13.5px;
-  color: #7a6a55;
+  color: var(--ink-600);
 }
 .lg-role.is-liar {
-  border-color: #7d2230;
-  background: radial-gradient(ellipse at 50% 30%, #fff0ee, #f3cbc4 80%);
+  border-color: var(--pal-red-29);
+  background: radial-gradient(ellipse at 50% 30%, var(--stamp-100), var(--pal-red-78) 80%);
   box-shadow:
-    inset 0 0 0 2px #e79a8f,
-    0 10px 26px #7d223033;
+    var(--edge-line), var(--lift-2), var(--lift-1);
 }
 .lg-role .lg-role-liar {
-  color: #b0322a;
+  color: var(--stamp-600);
 }
 .lg-role.is-watcher {
-  border-color: #8f7d65;
+  border-color: var(--pal-orange-51);
 }
 @keyframes lg-flip {
   from {
@@ -113,25 +111,25 @@
   width: 100%;
   min-height: 62px;
   padding: 8px 10px;
-  border: 1px solid #e4dac9;
-  border-radius: 14px;
-  background: #fffaf2;
+  border: 1px solid var(--paper-100);
+  border-radius: var(--r-l);
+  background: var(--paper-50);
   color: inherit;
   text-align: left;
-  font: inherit;
+  font: var(--font-body);
 }
 .lg-vote-target {
   position: relative;
   cursor: pointer;
-  border: 2px dashed #c98a3b;
+  border: 2px dashed var(--pal-orange-62);
   padding: 7px 9px;
   transition:
-    transform 0.15s,
-    background 0.15s;
+    transform var(--dur-quick),
+    background var(--dur-quick);
 }
 .lg-vote-target:hover:not(:disabled),
 .lg-vote-target:focus-visible {
-  background: #fff0d6;
+  background: var(--paper-100);
   transform: translateY(-2px);
   outline: none;
 }
@@ -143,25 +141,25 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border-radius: 8px;
-  background: #c98a3b;
-  color: #fff;
+  border-radius: var(--r-m);
+  background: var(--pal-orange-62);
+  color: var(--note-50);
   font-size: 12.5px;
   font-weight: 700;
   white-space: nowrap;
 }
 .lg-seats li.is-turn .lg-seat {
-  border: 2px solid #e0a64f;
+  border: 2px solid var(--pal-orange-71);
   padding: 7px 9px;
-  background: #fff3da;
+  background: var(--paper-100);
 }
 .lg-seats li.is-liar .lg-seat,
 .lg-seats li.is-liar .lg-vote-target {
-  border: 2px solid #c0392b;
-  background: #fdebe8;
+  border: 2px solid var(--stamp-600);
+  background: var(--stamp-100);
 }
 .lg-seats li.is-my-vote .lg-seat {
-  box-shadow: 0 0 0 3px #c98a3b55;
+  box-shadow: var(--ring-line), var(--lift-1);
 }
 .lg-seats li.is-away {
   opacity: 0.7;
@@ -174,8 +172,8 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: #f4e6cf;
-  box-shadow: 0 0 0 2px #d9b98a;
+  background: var(--paper-100);
+  box-shadow: var(--ring-line);
 }
 .lg-seats .dh-seat-face .avatar-view {
   width: 100%;
@@ -195,48 +193,48 @@
 }
 .lg-seat-body em {
   padding: 0 5px;
-  border-radius: 6px;
-  background: #f0d9ae;
-  font-size: 11px;
+  border-radius: var(--r-s);
+  background: var(--paper-300);
+  font-size: var(--fs-cap);
   font-style: normal;
-  color: #7a4a22;
+  color: var(--wood-500);
 }
 .lg-seat-body em.lg-tag-liar {
-  background: #c0392b;
-  color: #fff;
+  background: var(--stamp-600);
+  color: var(--note-50);
 }
 .lg-seat-body em.lg-tag-wrong {
-  background: #8f7d65;
-  color: #fff;
+  background: var(--pal-orange-51);
+  color: var(--note-50);
 }
 .lg-hint {
   position: relative;
   padding: 4px 9px;
-  border-radius: 10px;
-  background: #f6ecdb;
+  border-radius: var(--r-m);
+  background: var(--paper-100);
   font-size: 14px;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 .lg-hint.is-pass {
-  color: #a2927a;
+  color: var(--pal-grey-63);
   font-style: italic;
 }
 .lg-seat-side {
   display: grid;
   justify-items: end;
   gap: 2px;
-  color: #2f7a4a;
+  color: var(--pal-green-46);
 }
 .lg-tally {
   padding: 1px 7px;
-  border-radius: 8px;
-  background: #3b2f28;
-  color: #fff;
+  border-radius: var(--r-m);
+  background: var(--ink-900);
+  color: var(--note-50);
   font-size: 12px;
 }
 .lg-points {
-  color: #2f7a4a;
+  color: var(--pal-green-46);
   font-size: 15px;
 }
 /* ---------------------------------------------------------- actions */
@@ -244,19 +242,19 @@
   display: flex;
   gap: 8px;
   padding: 10px;
-  border: 2px solid #e0a64f;
-  border-radius: 16px;
-  background: #fff3da;
+  border: 2px solid var(--pal-orange-71);
+  border-radius: var(--r-l);
+  background: var(--paper-100);
 }
 .lg-hint-form input {
   flex: 1;
   min-width: 0;
   min-height: 44px;
   padding: 0 14px;
-  border: 1px solid #e4dac9;
-  border-radius: 12px;
-  background: #fff;
-  font: inherit;
+  border: 1px solid var(--paper-100);
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  font: var(--font-body);
   font-size: 15px;
 }
 .lg-hint-form button,
@@ -272,9 +270,9 @@
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid #e4dac9;
-  border-radius: 14px;
-  background: #fffaf2;
+  border: 1px solid var(--paper-100);
+  border-radius: var(--r-l);
+  background: var(--paper-50);
 }
 .lg-bar p,
 .lg-bar-note {
@@ -283,23 +281,23 @@
   gap: 6px;
   margin: 0;
   font-size: 13.5px;
-  color: #6b5a45;
+  color: var(--ink-600);
 }
 .lg-bar-note {
   padding: 10px 12px;
-  border-radius: 14px;
-  background: #fff3da;
+  border-radius: var(--r-l);
+  background: var(--paper-100);
 }
 .lg-guess {
   padding: 12px;
-  border: 2px solid #c0392b;
-  border-radius: 16px;
-  background: #fdf1ee;
+  border: 2px solid var(--stamp-600);
+  border-radius: var(--r-l);
+  background: var(--paper-50);
 }
 .lg-guess h3 {
   margin: 0 0 8px;
   font-size: 15px;
-  color: #8a2a22;
+  color: var(--stamp-800);
 }
 .lg-choices {
   display: grid;
@@ -308,15 +306,15 @@
 }
 .lg-choices button {
   min-height: 38px;
-  border: 1px solid #e3b6ad;
-  border-radius: 10px;
-  background: #fff;
-  font: inherit;
+  border: 1px solid var(--pal-red-78);
+  border-radius: var(--r-m);
+  background: var(--note-50);
+  font: var(--font-body);
   font-size: 14px;
   cursor: pointer;
 }
 .lg-choices button:hover:not(:disabled) {
-  background: #ffe1da;
+  background: var(--stamp-100);
 }
 /* ---------------------------------------------------------- reveal */
 .lg-reveal {
@@ -330,29 +328,29 @@
   align-content: start;
   gap: 2px;
   padding: 12px 14px;
-  border-radius: 16px;
-  background: #fffaf2;
-  border: 1px solid #e4dac9;
+  border-radius: var(--r-l);
+  background: var(--paper-50);
+  border: 1px solid var(--paper-100);
 }
 .lg-reveal small {
   font-size: 12px;
-  letter-spacing: 1px;
-  color: #93836c;
+  letter-spacing: 0;
+  color: var(--pal-grey-54);
 }
 .lg-reveal strong {
   font-size: 24px;
-  color: #8a4b2a;
+  color: var(--pal-orange-39);
 }
 .lg-reveal span {
   font-size: 13px;
-  color: #7a6a55;
+  color: var(--ink-600);
 }
 .lg-reveal .lg-reveal-liar {
-  border-color: #e79a8f;
-  background: #fdebe8;
+  border-color: var(--pal-red-71);
+  background: var(--stamp-100);
 }
 .lg-reveal .lg-reveal-liar strong {
-  color: #b0322a;
+  color: var(--stamp-600);
 }
 .lg-reveal ol {
   display: grid;
@@ -369,14 +367,14 @@
 }
 .lg-reveal li span {
   flex: 1;
-  color: #3b2f28;
+  color: var(--ink-900);
 }
 .lg-ballots {
   padding: 8px 12px;
-  border-radius: 12px;
-  background: #fffaf2;
+  border-radius: var(--r-m);
+  background: var(--paper-50);
   font-size: 13px;
-  color: #6b5a45;
+  color: var(--ink-600);
 }
 .lg-ballots summary {
   cursor: pointer;
@@ -396,9 +394,9 @@
   max-height: min(460px, calc(100cqh - 180px));
   display: flex;
   flex-direction: column;
-  border: 1px solid #e4dac9;
-  border-radius: 16px;
-  background: #fffaf2;
+  border: 1px solid var(--paper-100);
+  border-radius: var(--r-l);
+  background: var(--paper-50);
 }
 .lg-chat .lg-chat-panel .l-chat-messages {
   min-height: 160px;
@@ -408,7 +406,7 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #93836c;
+  color: var(--pal-grey-54);
 }
 @media (max-width: 1100px) {
   .lg-layout {
