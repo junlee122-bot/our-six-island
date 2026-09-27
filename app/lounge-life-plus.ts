@@ -7,6 +7,7 @@
 // Cycle-safe: lounge-life.ts imports this module and this module imports it
 // back, so neither may use the other's bindings at the top level.
 import { cleanText, clipText } from './text-clean.ts';
+import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import {
   grantBeom,
   spendBeom,
@@ -86,6 +87,7 @@ import {
   isFurnitureRef,
   isItemId,
   type DishBuff,
+  type FishDef,
   type Need,
   type Spot,
   type StatKey,
@@ -150,6 +152,29 @@ export const BITE_SPREAD_MS = 4_500;
 /** Network allowance after the window closes, and before the bite (clock skew). */
 export const REEL_SLACK_MS = 1_500;
 export const REEL_EARLY_MS = 300;
+/** Extra sealed parcels, awarded only after a successful reel (mutually exclusive). */
+export const FISHING_PARCEL_CHANCE = { seed: 12, food: 4 } as const;
+export const FISHING_FOODS = ['salad', 'ssukddeok', 'roastchestnut'] as const;
+export type ReactionGrade = 'S' | 'A' | 'B' | 'C' | 'D' | 'E';
+export const REACTION_BANDS: readonly { grade: ReactionGrade; maxMs: number }[] = [
+  { grade: 'S', maxMs: 200 }, { grade: 'A', maxMs: 350 }, { grade: 'B', maxMs: 500 },
+  { grade: 'C', maxMs: 750 }, { grade: 'D', maxMs: 1_100 }, { grade: 'E', maxMs: Infinity },
+];
+/** Server arrival delay, including network time. Never use client timing for a rank. */
+export function reactionGrade(ms: number): ReactionGrade {
+  return REACTION_BANDS.find((band) => ms <= band.maxMs)?.grade ?? 'E';
+}
+export type FishingParcel = { kind: 'seed'; item: Crop; n: 1 } | { kind: 'food'; item: string; n: 1 };
+export function fishingParcel(token: string, season: Season): FishingParcel | null {
+  const roll = hash32(`parcel:${token}`) % 100;
+  if (roll < FISHING_PARCEL_CHANCE.seed) {
+    const seeds = CROPS.filter((crop) => cropInSeason(crop, season) && CROP_INFO[crop].seed <= 800);
+    return { kind: 'seed', item: seeds[hash32(`parcel-item:${token}`) % seeds.length] ?? 'carrot', n: 1 };
+  }
+  if (roll < FISHING_PARCEL_CHANCE.seed + FISHING_PARCEL_CHANCE.food)
+    return { kind: 'food', item: FISHING_FOODS[hash32(`parcel-item:${token}`) % FISHING_FOODS.length], n: 1 };
+  return null;
+}
 export const FIRST_DONATION_GRANT = 300;
 export const REQUESTS_PER_DAY = 3;
 export const REQUEST_BASE_REWARD = 300;
@@ -194,10 +219,17 @@ export type FishLast = {
   record?: boolean;
   /** A new personal best for this fish. */
   best?: boolean;
+  /** Server bite → receipt of the reel command, not device-only reaction time. */
+  reactionMs?: number;
+  grade?: ReactionGrade;
+  parcel?: FishingParcel;
   at: number;
   reason?: 'early' | 'late' | 'timing';
 };
 export type UserExt = {
+  /** Refs whose room placements must obey current ownership after a theft. */
+  furnStrict?: Record<string, true>;
+  npcRelations?: NpcRelations;
   plots?: 9 | 12;
   inv?: Record<string, number>;
   q1?: Partial<Record<Crop, number>>;
@@ -257,6 +289,7 @@ export type LifeExt = {
   social?: SocialState;
 };
 export type PlusAction =
+  | NpcSocialAction
   | { kind: 'fertilize'; plot: number; item: string }
   | { kind: 'expandFarm' }
   | { kind: 'waterFriend'; owner: number | string; plot: number }
@@ -265,6 +298,7 @@ export type PlusAction =
   | { kind: 'upgradeRod' }
   | { kind: 'cast'; spot: Spot }
   | { kind: 'reel'; token: string; timingMs: number }
+  | { kind: 'cancelCast'; token: string }
   | { kind: 'forage'; spot: string }
   | { kind: 'catch'; spot: string }
   | { kind: 'sellItem'; item: string; n: number }
@@ -394,6 +428,15 @@ function readLast(v: unknown): FishLast | undefined {
   if (safe(l.cm) && l.cm > 0) out.cm = l.cm;
   if (l.record === true) out.record = true;
   if (l.best === true) out.best = true;
+  if (safe(l.reactionMs) && l.reactionMs >= 0 && l.reactionMs <= 120_000) {
+    out.reactionMs = l.reactionMs;
+    out.grade = reactionGrade(l.reactionMs);
+  }
+  const parcel = obj(l.parcel);
+  if (l.ok && parcel.n === 1 && typeof parcel.item === 'string') {
+    if (parcel.kind === 'seed' && isCropId(parcel.item)) out.parcel = { kind: 'seed', item: parcel.item, n: 1 };
+    else if (parcel.kind === 'food' && (FISHING_FOODS as readonly string[]).includes(parcel.item)) out.parcel = { kind: 'food', item: parcel.item, n: 1 };
+  }
   if (l.reason === 'early' || l.reason === 'late' || l.reason === 'timing') out.reason = l.reason;
   return out;
 }
@@ -409,6 +452,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (nonEmpty(q2)) out.q2 = q2;
   const furn = counts(x.furn, isFurnitureRef);
   if (nonEmpty(furn)) out.furn = furn as Record<string, number>;
+  const furnStrict = Object.fromEntries(Object.entries(obj(x.furnStrict)).filter(([ref, yes]) => isFurnitureRef(ref) && yes === true)) as Record<string, true>;
+  if (nonEmpty(furnStrict)) out.furnStrict = furnStrict;
   const dex = idList(x.dex, DEX_MAX, isDexId);
   if (dex.length) out.dex = dex;
   const stats: Partial<Record<StatKey, number>> = {};
@@ -429,6 +474,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (pending) out.pending = pending;
   const last = readLast(x.last);
   if (last) out.last = last;
+  const npcRelations = readNpcRelations(x.npcRelations);
+  if (npcRelations) out.npcRelations = npcRelations;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {
@@ -1080,15 +1127,22 @@ const slotOf = (now: number) => BUG_SLOTS.indexOf(timeOfDay(now));
 
 // ---------------------------------------------------------------- fishing
 export function fishCandidates(spot: Spot, season: Season, weather: Weather, now: number) {
-  const day = isDaytime(now),
-    night = isNighttime(now);
-  return FISH.filter(
-    (f) =>
-      f.spots.includes(spot) &&
-      f.seasons.includes(season) &&
-      eligibleSky(f.sky, weather) &&
-      eligibleTime(f.time, day, night),
-  );
+  const local = FISH.filter((f) => f.spots.includes(spot));
+  const current = local.filter((f) => fishInSeason(f, season, weather, now));
+  // Quiet water should still offer variety. Only common native species can
+  // wander outside their favourite conditions, and then at a reduced weight.
+  // Rare/legendary seasonal and weather requirements are never bypassed.
+  if (current.length >= 3) return current;
+  const visitors = local.filter((f) => f.weight >= 10 && !current.includes(f))
+    .sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
+  return [...current, ...visitors.slice(0, 3 - current.length)];
+}
+const fishInSeason = (f: FishDef, season: Season, weather: Weather, now: number) =>
+  f.seasons.includes(season) && eligibleSky(f.sky, weather) && eligibleTime(f.time, isDaytime(now), isNighttime(now));
+export function fishEncounterWeight(f: FishDef, season: Season, weather: Weather, now: number, previous?: string, rareBoost = 1) {
+  const native = fishInSeason(f, season, weather, now) ? 1 : 0.25;
+  const repeat = previous === f.id ? 0.4 : 1;
+  return (f.weight < 10 ? f.weight * rareBoost : Math.min(32, f.weight)) * native * repeat;
 }
 
 // ---------------------------------------------------------------- requests
@@ -1201,6 +1255,10 @@ export function plusAction(
     farm = life.farms[uid];
   let next = ledger;
   switch (a.kind) {
+    case 'npcSocial': {
+      npcSocialAction(life, uid, a, now);
+      break;
+    }
     case 'fertilize': {
       const level = a.item === 'fertilizer' ? 1 : a.item === 'fertilizer-deluxe' ? 2 : 0;
       if (!level || !(FERTILIZERS as readonly string[]).includes(a.item)) fail(PLUS_REJECT.fert);
@@ -1420,7 +1478,7 @@ export function plusAction(
       const fish =
         pickWeighted(
           list,
-          (f) => (f.weight < 10 ? f.weight * rareBoost * (f.weight <= 1 ? 1 + mods.legend : 1) : f.weight),
+          (f) => fishEncounterWeight(f, season, weather, now, x.last?.ok ? x.last.fish : undefined, rareBoost * (f.weight <= 1 ? 1 + mods.legend : 1)),
           `fish:${token}`,
         ) ?? FISH_BY_ID.crucian;
       const [lo, hi] = fish.cm,
@@ -1439,24 +1497,32 @@ export function plusAction(
       };
       break;
     }
+    case 'cancelCast': {
+      if (typeof a.token !== 'string' || !/^[a-z0-9]{1,24}$/.test(a.token)) fail(PLUS_REJECT.token);
+      if (x.pending && x.pending.token !== a.token) fail(PLUS_REJECT.token);
+      delete x.pending;
+      break;
+    }
     case 'reel': {
       const p = x.pending;
       if (!p || typeof a.token !== 'string' || a.token !== p.token || now > p.expiresAt + 60_000)
         fail(PLUS_REJECT.token);
       delete x.pending;
       const timing = a.timingMs;
+      const reactionMs = Math.max(0, Math.round(now - p!.biteAt));
+      const reaction = now >= p!.biteAt ? { reactionMs, grade: reactionGrade(reactionMs) } : {};
       if (now < p!.biteAt - REEL_EARLY_MS) {
         x.last = { ok: false, at: now, reason: 'early' };
         gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
       if (now > p!.expiresAt) {
-        x.last = { ok: false, at: now, reason: 'late' };
+        x.last = { ok: false, at: now, reason: 'late', ...reaction };
         gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
       if (!safe(timing) || timing < 0 || timing > p!.windowMs) {
-        x.last = { ok: false, at: now, reason: 'timing' };
+        x.last = { ok: false, at: now, reason: 'timing', ...reaction };
         gainXp(life, uid, 'fish', XP.fishMiss, now);
         break;
       }
@@ -1487,7 +1553,13 @@ export function plusAction(
         addMemory(life, now, 'legend', [actor], text);
         addNews(life, now, `legend:${fish.id}:${actor}`, 'legend', text, [actor]);
       }
-      x.last = { ok: true, fish: fish.id, cm: p!.cm, ...(record ? { record: true } : {}), ...(personal ? { best: true } : {}), at: now };
+      const parcel = fishingParcel(p!.token, seasonOf(p!.castAt));
+      if (parcel?.kind === 'seed') life.bag[uid].seeds[parcel.item] = addCount(life.bag[uid].seeds[parcel.item], 1);
+      else if (parcel?.kind === 'food') {
+        addInv(life, uid, parcel.item, 1);
+        discover(life, uid, parcel.item);
+      }
+      x.last = { ok: true, fish: fish.id, cm: p!.cm, ...(record ? { record: true } : {}), ...(personal ? { best: true } : {}), ...reaction, ...(parcel ? { parcel } : {}), at: now };
       break;
     }
     case 'forage': {
@@ -1835,10 +1907,12 @@ export function recordTables(
 
 // ---------------------------------------------------------------- views
 export type PlusMe = {
+  npcRelations: NpcRelationView[];
   plots: FarmSize;
   inv: Record<string, number>;
   quality: { silver: Partial<Record<Crop, number>>; gold: Partial<Record<Crop, number>> };
   furniture: Record<string, number>;
+  furnitureStrict: Record<string, true>;
   dex: string[];
   stats: Partial<Record<StatKey, number>>;
   /** Static names/texts/goals/rewards: lounge-items ACHIEVEMENTS (same order). */
@@ -1865,6 +1939,7 @@ export type PlusMe = {
   house: number;
 };
 export type PlusView = {
+  npcGuests: Record<string, NpcGuest>;
   calendar: CalendarView;
   weather: { today: Weather; tomorrow: Weather };
   shop: ShopView;
@@ -1915,10 +1990,12 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const pending = raw.pending && now <= raw.pending.expiresAt ? raw.pending : null;
   const yesterday = life.news?.find((d) => d.day === day - 1);
   const me: PlusMe = {
+    npcRelations: npcRelationsView(raw.npcRelations, now),
     plots: raw.plots ?? 6,
     inv: { ...raw.inv },
     quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 } },
     furniture: { ...raw.furn },
+    furnitureStrict: { ...raw.furnStrict },
     dex: [...(raw.dex ?? [])],
     stats: { ...raw.stats, ...(raw.dex?.length ? { dex: raw.dex.length } : {}) },
     achievements: ACHIEVEMENTS.map((a) => ({
@@ -1966,6 +2043,10 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const calendar = calendarOf(now);
   return {
     me,
+    npcGuests: Object.fromEntries(Object.entries(life.actors).flatMap(([id, actor]) => {
+      const guest = npcGuestOf(life.ext?.[id]?.npcRelations, now);
+      return guest ? [[String(actor), guest]] : [];
+    })),
     calendar,
     weather: { today: weatherOf(day), tomorrow: weatherOf(day + 1) },
     shop: shopStock(life, now, uid),

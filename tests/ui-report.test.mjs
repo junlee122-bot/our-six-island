@@ -52,3 +52,20 @@ test('game groups require valid join sheets in targeted runs and the first full 
     assert.deepEqual(reportFailures(r, options), []);
   }
 });
+
+test('new finance and NPC screens are required before baseline enrollment and work independently with --only', () => {
+  const names = ['bank', 'bank-notes', 'bank-casino', 'bank-rob', 'npc'];
+  const r = { views: { fhd: { screens: {}, notes: [], errors: [] } } };
+  const oldBaseline = { views: { fhd: { screens: { room: screen() } } } };
+  const full = reportFailures(r, { views: ['fhd'], baseline: oldBaseline });
+  for (const name of names) {
+    assert.ok(full.includes(`fhd/${name}: missing screen`), name);
+    const options = { views: ['fhd'], only: [name], baseline: oldBaseline };
+    assert.deepEqual(reportFailures(r, options), [`fhd/${name}: missing screen`]);
+    r.views.fhd.screens[name] = { ...screen(), coveredCount: undefined };
+    assert.deepEqual(reportFailures(r, options), [`fhd/${name}: invalid coveredCount`]);
+    r.views.fhd.screens[name] = screen();
+    assert.deepEqual(reportFailures(r, options), []);
+    delete r.views.fhd.screens[name];
+  }
+});

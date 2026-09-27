@@ -1,8 +1,12 @@
 'use client';
+/* oxlint-disable next/no-img-element -- Static sticker assets are served directly by GitHub Pages. */
 import { useEffect, useRef, useState } from 'react';
 import { Send, Users } from '../ui/icons';
 import { ACTORS, ACTOR_COLORS } from '../lounge-roster';
 import type { CloudRoomView, CloudRoom } from '../lounge-cloud-room';
+import { LOUNGE_ASSETS } from '../lounge-assets';
+import { reactionInfo } from '../lounge-reactions';
+import './chat.css';
 
 /** The single chat UI used in the hall sidebar and the village chat modal. */
 export function ChatPanel({
@@ -22,9 +26,10 @@ export function ChatPanel({
   const [sending, setSending] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const connected = view.status === 'connected';
+  const lastMessageId = view.chat.at(-1)?.id;
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'nearest' });
-  }, [view.chat.length]);
+  }, [lastMessageId]);
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   return (
     <div className={'l-chat ' + className}>
@@ -34,12 +39,26 @@ export function ChatPanel({
       </div>
       <div className="l-chat-messages" aria-live="polite">
         {view.chat.length ? (
-          view.chat.map((m) => (
-            <p key={m.id}>
-              <b style={{ color: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b>
-              <span>{m.text}</span>
-            </p>
-          ))
+          view.chat.map((m) => {
+            const sticker = reactionInfo(m.reaction);
+            return (
+              <p key={m.id}>
+                <b style={{ color: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b>
+                {sticker ? (
+                  <span className="l-chat-sticker" data-reaction={sticker.id}>
+                    <img
+                      src={LOUNGE_ASSETS[`reaction_${sticker.id}`]}
+                      alt={`${sticker.label} 스티커`}
+                      width={104}
+                      height={104}
+                      loading="lazy"
+                    />
+                    <span aria-hidden="true">{sticker.label}</span>
+                  </span>
+                ) : <span>{m.text}</span>}
+              </p>
+            );
+          })
         ) : (
           <div className="l-chat-welcome">
             <Users size={25} />

@@ -32,6 +32,8 @@ import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
 import { lifeWealth, recordTables, recordVisit } from './lounge-life-plus.ts';
 import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } from './lounge-party.ts';
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
+import { financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
+import { assertNpcSocialContext } from './lounge-romance.ts';
 export type CloudMember = {
   id: string;
   actor: number;
@@ -64,6 +66,7 @@ export type CloudWorld = {
   sequences?: Record<string, { connection: string; sequence: number }>;
   /** Phase 2 life state (farms, bags, mail…). Absent in older worlds. */
   life?: LifeState;
+  finance?: FinanceState;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -325,6 +328,22 @@ export function cloudTransition(
         current = target;
         notifications.add(target);
         g.life = ensureLifeMember(readLife(g.life), member.id, member.actor);
+      } else if (command.op === 'action' && command.action?.kind === 'finance') {
+        const entry = target ? g.rooms[target] : undefined, lease = entry?.leases[member.id];
+        if (!entry || !lease || lease.connection !== command.connection)
+          throw new CloudError('마을에 다시 접속한 뒤 거래해 주세요.', 409);
+        if (!Number.isSafeInteger(command.sequence) || command.sequence! <= lease.sequence)
+          throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
+        lease.sequence = command.sequence!;
+        lease.seen = now;
+        const life = readLife(g.life);
+        const presence: FinancePresence[] = entry.snapshot.players.filter((p) => entry.leases[p.id]?.seen >= now - CLOUD_LEASE_MS).map((p) => ({
+          ...p, busy: Object.values(entry.snapshot.tables ?? {}).some((t) => t?.members.includes(p.id)) ||
+            (life.ext?.[p.id]?.pending?.expiresAt ?? 0) > now,
+        }));
+        const next = financeAction(g.finance, g.ledger, life, member.id, command.action, now, presence);
+        g.finance = next.state; g.ledger = next.ledger; g.life = next.life;
+        for (const c of Object.keys(g.rooms)) notifications.add(c);
       } else if (command.op === 'action' && isLifeAction(command.action)) {
         // Life actions work inside the village room and outside any room.
         const entry = target ? g.rooms[target] : undefined,
@@ -344,6 +363,15 @@ export function cloudTransition(
           lease.seen = now;
         }
         try {
+          if (command.action.kind === 'npcSocial') {
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player) throw new CloudError('마을에 먼저 접속한 뒤 주민을 만나 주세요.', 409);
+            const life = readLife(g.life);
+            assertNpcSocialContext(command.action, life.ext?.[member.id]?.npcRelations, {
+              area: player.area ?? 'village', home: player.home, actor: member.actor,
+              fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
+            }, now);
+          }
           const next = lifeAction(
             readLife(g.life),
             g.ledger,
@@ -417,6 +445,8 @@ export function cloudTransition(
           if (!command.action || typeof command.action !== 'object')
             throw new CloudError('요청 정보를 확인해 주세요.');
           const action = command.action as { kind?: unknown; area?: unknown; home?: unknown };
+          if ((action.kind === 'move' || action.kind === 'area') && (g.life?.ext?.[member.id]?.pending?.expiresAt ?? 0) > now)
+            throw new CloudError('낚시를 마치거나 취소한 뒤 움직일 수 있어요.', 409);
           // Walking into a friend's room ('home' + owner) honours their access setting.
           if (action.kind === 'area' && action.area === 'home') {
             const owner = action.home ?? member.actor;
@@ -500,6 +530,7 @@ export function cloudTransition(
   }
   // Table games that settled in this transition: friendship, stats, the
   // Friday casino-night bonus and a digest line (life expansion).
+  g.finance = recordCasino(g.finance, original.ledger, g.ledger, now);
   const settled = Object.entries(g.ledger.games)
     .filter(
       ([id, game]) =>
@@ -551,6 +582,7 @@ export function cloudTransition(
     packet,
     wallet: wallet(g.ledger, member.id, now, lifeState),
     life,
+    finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
     activeRoom: current ?? null,
     epoch: g.epochs[member.id] ?? 0,
     nextDue: Number.isFinite(nextDue) ? nextDue : null,

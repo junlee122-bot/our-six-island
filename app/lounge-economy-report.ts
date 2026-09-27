@@ -4,8 +4,8 @@
 // this to the browser bundle — it reads every friend's balance.
 //
 // Data limits (see ACCOUNTS.md "경제 대시보드"):
-// - ledger.granted / ledger.spent / houseBalance / balances are exact lifetime
-//   totals.
+// - ledger.granted / ledger.spent / houseBalance / financeHouseNet are exact
+//   lifetime totals; accounts and vault are current holdings.
 // - Breakdowns by source (daily grant, farm sales, shop items) come from
 //   ledger.entries, which keeps only the most recent 200 grant/spend entries.
 //   `entries.complete` says whether they still cover every grant/spend ever.
@@ -83,7 +83,9 @@ export type AccountRow = {
   name: string;
   balance: number;
   reserved: number;
-  /** balance + reserved. */
+  /** Bank deposits (ledger.vault), separate from game reservations. */
+  stored: number;
+  /** balance + reserved + stored. */
   total: number;
   /** Finished games (hot + archived). */
   games: number;
@@ -148,9 +150,12 @@ export type EconomyReport = {
     accounts: number;
     balances: number;
     reserved: number;
-    /** Money supply held by players: balances + reserved. */
+    stored: number;
+    /** Money supply held by players: balances + reserved + stored. */
     playerMoney: number;
     houseBalance: number;
+    /** Loan payouts/repayments already included in houseBalance, not new supply. */
+    financeHouseNet: number;
     /** Lifetime minted by grants (daily, relief, farm sales). */
     granted: number;
     /** Lifetime moved to the house by spends (shop). */
@@ -385,6 +390,7 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
   if (!ledger) warnings.push('world.state.ledger가 없습니다.');
   const L = ledger ?? {};
   const accountsRaw = isObj(L.accounts) ? L.accounts : {},
+    vaultRaw = isObj(L.vault) ? L.vault : {},
     gamesRaw = isObj(L.games) ? L.games : {},
     archiveRaw = isObj(L.archive) ? L.archive : {},
     archiveAccounts = isObj(archiveRaw.accounts) ? archiveRaw.accounts : {},
@@ -427,6 +433,7 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
         : (username ?? `알 수 없음 ${uid.slice(0, 8)}`),
       balance: 0,
       reserved: 0,
+      stored: 0,
       total: 0,
       games: 0,
       gamblingNet: 0,
@@ -449,6 +456,13 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
     row(wallet).balance = int(amount);
     if (!Number.isSafeInteger(amount) || (amount as number) < 0)
       warnings.push(`${wallet.slice(0, 16)}… 잔액이 올바르지 않습니다.`);
+  }
+  if (L.vault !== undefined && !isObj(L.vault))
+    warnings.push('은행 보관금 기록이 올바르지 않습니다.');
+  for (const [wallet, amount] of Object.entries(vaultRaw)) {
+    row(wallet).stored = int(amount);
+    if (!Number.isSafeInteger(amount) || (amount as number) < 0)
+      warnings.push(`${wallet.slice(0, 16)}… 은행 보관금이 올바르지 않습니다.`);
   }
 
   const games = new Map<EconomyGame, GameRow>(
@@ -540,24 +554,26 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
 
   const accounts = [...rows.values()];
   for (const r of accounts) {
-    r.total = r.balance + r.reserved;
+    r.total = r.balance + r.reserved + r.stored;
     if (!Object.hasOwn(accountsRaw, r.wallet))
       warnings.push(`${r.name}: 원장에 없는 지갑이 기록에 나옵니다.`);
   }
   accounts.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
   const balances = accounts.reduce((a, r) => a + r.balance, 0),
+    stored = accounts.reduce((a, r) => a + r.stored, 0),
     registered = Object.keys(accountsRaw).length,
     houseBalance = int(L.houseBalance),
+    financeHouseNet = int(L.financeHouseNet),
     granted = int(L.granted),
     spent = int(L.spent),
     initial = registered * INITIAL_BEOM,
-    playerMoney = balances + held,
+    playerMoney = balances + held + stored,
     supply = playerMoney + houseBalance,
     invariantDiff = supply - (initial + granted);
   if (ledger && invariantDiff !== 0)
     warnings.push(
-      `총액 불일치: 잔액+예약+하우스(${supply})가 초기 지급+발행(${initial + granted})과 ${invariantDiff}만큼 다릅니다.`,
+      `총액 불일치: 잔액+예약+보관금+하우스(${supply})가 초기 지급+발행(${initial + granted})과 ${invariantDiff}만큼 다릅니다.`,
     );
 
   const sumOf = (type: LedgerEntry['type']) =>
@@ -607,8 +623,10 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
       accounts: registered,
       balances,
       reserved: held,
+      stored,
       playerMoney,
       houseBalance,
+      financeHouseNet,
       granted,
       spent,
       initial,
@@ -642,6 +660,29 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
     daily: [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date)),
     flows,
     warnings,
+  };
+}
+/** Admin cross-check: old SQL functions lack bank fields and need an update. */
+export function compareEconomySqlTotals(report: EconomyReport, sqlReport: unknown) {
+  const sql = isObj(sqlReport) ? sqlReport : {},
+    totals = isObj(sql.totals) ? sql.totals : {},
+    fields: [string, string, number][] = [
+      ['balances', '잔액 합계', report.totals.balances],
+      ['reserved', '게임 예약금', report.totals.reserved],
+      ['stored', '은행 보관금', report.totals.stored],
+      ['player_money', '플레이어 보유액', report.totals.playerMoney],
+      ['house_balance', '하우스', report.totals.houseBalance],
+      ['finance_house_net', '금융 순액', report.totals.financeHouseNet],
+      ['granted', '누적 발행', report.totals.granted],
+      ['spent', '누적 지출', report.totals.spent],
+      ['supply', '총액', report.totals.supply],
+    ];
+  return {
+    sameRevision: report.revision !== null && sql.revision === report.revision,
+    missing: fields.filter(([key]) => totals[key] == null).map(([key]) => key),
+    differences: fields
+      .filter(([key, , value]) => totals[key] != null && Number(totals[key]) !== value)
+      .map(([key, label, reportValue]) => ({ label, sqlValue: Number(totals[key]), reportValue })),
   };
 }
 function bucketRows(o: unknown, type: LedgerEntry['type']): FlowRow[] {
@@ -772,8 +813,10 @@ function tables(r: EconomyReport): Table[] {
         ['지갑 수', `${t.accounts}개`],
         ['잔액 합계', beomText(t.balances)],
         ['게임 예약금', beomText(t.reserved)],
-        ['통화량(플레이어 보유 = 잔액+예약)', beomText(t.playerMoney)],
-        ['하우스(카지노+상점 수입)', beomText(t.houseBalance)],
+        ['은행 보관금', beomText(t.stored)],
+        ['통화량(플레이어 보유 = 잔액+예약+보관금)', beomText(t.playerMoney)],
+        ['하우스(카지노+상점+금융)', beomText(t.houseBalance)],
+        ['하우스 중 금융 순액(상환−대출)', signed(t.financeHouseNet)],
         ['초기 지급(지갑×100,000)', beomText(t.initial)],
         ['누적 발행(오늘의 범·판매)', beomText(t.granted)],
         ['누적 상점 지출', beomText(t.spent)],
@@ -786,6 +829,7 @@ function tables(r: EconomyReport): Table[] {
         '친구',
         '잔액',
         '예약',
+        '보관금',
         '합계',
         '게임 수',
         '게임 손익',
@@ -794,11 +838,12 @@ function tables(r: EconomyReport): Table[] {
         '상점 지출*',
         '오늘 판매',
       ],
-      right: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+      right: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       rows: r.accounts.map((a) => [
         a.name,
         beomText(a.balance),
         beomText(a.reserved),
+        beomText(a.stored),
         beomText(a.total),
         String(a.games),
         signed(a.gamblingNet),

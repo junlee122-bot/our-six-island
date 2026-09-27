@@ -10,13 +10,14 @@ export type VillageDestination =
   | 'bedroom'
   /** Counter shops: the door opens the shop's counter scene (no interior area). */
   | 'realty'
-  | 'furniture';
+  | 'furniture'
+  | 'bank';
 export type VillagePoint = { x: number; z: number };
 export type VillagePlace = {
   id: string;
   name: string;
   subtitle: string;
-  kind: 'home' | 'hall' | 'casino' | 'wardrobe' | 'tavern' | 'realty' | 'furniture';
+  kind: 'home' | 'hall' | 'casino' | 'wardrobe' | 'tavern' | 'realty' | 'furniture' | 'bank';
   actor?: number;
   x: number;
   z: number;
@@ -274,13 +275,13 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
   }),
   makePlace({
     id: 'wardrobe',
-    name: '분장실',
-    subtitle: '옷 컬렉션 · 나만의 코디',
+    name: '보송 미용실',
+    subtitle: '머리·피부색 · 나만의 코디',
     kind: 'wardrobe',
     x: 0,
     z: -6,
-    width: 8,
-    depth: 5,
+    width: 5,
+    depth: 5.2,
     color: '#ead1dd',
     roofColor: '#86647d',
     destination: 'wardrobe',
@@ -327,6 +328,11 @@ export const VILLAGE_PLACES: readonly VillagePlace[] = [
     color: '#f1e6d6',
     roofColor: '#2f4a6b',
     destination: 'furniture',
+  }),
+  makePlace({
+    id: 'bank', name: '범마을 은행', subtitle: '예금·인출 · 친구와 범 약속',
+    kind: 'bank', x: -11, z: 21.7, width: 5.5, depth: 4.9,
+    color: '#dfdbc8', roofColor: '#6d8178', destination: 'bank',
   }),
 ];
 
@@ -674,6 +680,8 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [-11.3, 8, -10.7, 8, 0.7],
   [-11.3, 8, -11.3, 4.1, 0.8],
   [-11.3, 4.1, -3.1, 4.1, 1.45],
+  [-21.8, 25.4, -11, 25.4, 1.5],
+  [-11, 25.4, -11, 24.7, 1.5],
 ];
 
 /** Boardwalk deck and its two rails at the eastern garden edge. */

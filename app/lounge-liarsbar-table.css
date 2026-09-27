@@ -581,6 +581,44 @@
 }
 
 /* ---------------------------------------------------------- hand */
+.lb-round-guide {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+}
+.lb-round-guide > p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0;
+}
+.lb-round-guide strong {
+  font-size: var(--fs-body);
+}
+.lb-round-guide summary {
+  cursor: pointer;
+  color: var(--text-soft);
+}
+.lb-round-guide ol {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-5);
+}
+.lb-record {
+  min-height: 0;
+  overflow: auto;
+}
+.lb-turn-note {
+  margin: 0;
+  color: var(--lb-ink);
+  font-size: var(--fs-cap);
+  line-height: 1.6;
+}
 .lb-hand-wrap {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

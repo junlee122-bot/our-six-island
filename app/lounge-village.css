@@ -596,12 +596,146 @@
   z-index: var(--z-hud-map);
 }
 .hv-minimap-body {
+  position: relative;
   width: 280px;
   padding: 10px;
   border: 0;
   border-radius: var(--r-m);
   background: var(--surface);
   box-shadow: var(--edge-frame), var(--lift-2);
+}
+.hv-minimap.is-expanded .hv-minimap-body {
+  width: min(480px, calc(100vw - 44px));
+}
+.hv-minimap-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+  font-size: var(--fs-body-s);
+  color: var(--text);
+}
+.hv-minimap-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--hit);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-legend {
+  display: block;
+  margin: 6px 3px 0;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-friend {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  color: var(--surface);
+  background: var(--accent-edge);
+  box-shadow: var(--edge-line);
+  font-size: var(--fs-cap);
+  z-index: var(--z-base);
+}
+.hv-minimap-friend[data-indoor='true'] {
+  border-radius: var(--r-s);
+  background: var(--text-soft);
+  margin-top: 0;
+}
+.hv-minimap-peers {
+  position: absolute;
+  left: calc(100% + 12px);
+  bottom: 0;
+  width: 220px;
+  max-height: calc(100dvh - 230px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--r-m);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--edge-frame), var(--lift-2);
+  z-index: var(--z-hud-map);
+}
+.hv-minimap-peers header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 8px;
+  font-size: var(--fs-body-s);
+}
+.hv-minimap-peers header button {
+  display: grid;
+  place-items: center;
+  min-width: var(--hit);
+  min-height: var(--hit);
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--text-soft);
+}
+.hv-minimap-peers > button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--hit);
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  text-align: left;
+}
+.hv-minimap-peers > button:hover,
+.hv-minimap-peers header button:hover {
+  background: var(--surface-sunken);
+}
+.hv-minimap-peers small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-friend > span {
+  display: none;
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: var(--r-s);
+  box-shadow: var(--edge-line);
+  font-weight: var(--fw-bold);
+}
+.hv-minimap-friend:hover > span,
+.hv-minimap-friend:focus-visible > span,
+.hv-minimap.is-expanded .hv-minimap-friend > span {
+  display: block;
+}
+.hv-minimap-friend:hover,
+.hv-minimap-friend:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: var(--z-hud-map);
 }
 .hv-minimap-map {
   position: relative;

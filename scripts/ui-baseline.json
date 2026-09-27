@@ -2,7 +2,7 @@
  "label": "current",
  "commit": "ccec5a7",
  "summary": {
-  "screens": 69,
+  "screens": 84,
   "low": 0,
   "small": 0,
   "narrow": 0,
@@ -296,6 +296,76 @@
      "overlapCount": 0,
      "coveredCount": 0,
      "dialog": null
+    },
+    "bank": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-notes": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-casino": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-rob": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "npc": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
     }
    }
   },
@@ -582,6 +652,76 @@
      "overlapCount": 0,
      "coveredCount": 0,
      "dialog": null
+    },
+    "bank": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-notes": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-casino": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-rob": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "npc": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
     }
    }
   },
@@ -868,6 +1008,76 @@
      "overlapCount": 0,
      "coveredCount": 0,
      "dialog": null
+    },
+    "bank": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-notes": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-casino": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bank-rob": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "npc": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
     }
    }
   }

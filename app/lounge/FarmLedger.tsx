@@ -4,8 +4,8 @@
 // bed below, fallow rows until the farm is expanded); the right page is the
 // selected plot with the seed pouch (only seeds I own that grow now) and the
 // friends whose plots need water. Keyboard: arrows pick a plot, E / Enter /
-// Space tends it, 1–9 plant from the pouch, H harvests all, W waters all.
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+// Space tends it, 1–9 select a seed packet, H harvests all, W waters all.
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
   CROPS,
@@ -17,6 +17,7 @@ import {
   type LifeView,
 } from '../lounge-life';
 import { FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
+import { harvestOf, harvestText, type Harvest } from '../lounge-life-ui';
 import { ITEM_BY_ID } from '../lounge-items';
 import { SEASON_INFO, WEATHER_INFO } from '../lounge-calendar';
 import { ACTORS } from '../lounge-roster';
@@ -68,23 +69,6 @@ function lastSeed(): Crop | null {
   }
 }
 
-type Harvest = { crop: Crop; n: number; quality: 0 | 1 | 2 }[];
-/** What the last harvest put in the bag, by crop and star (for the basket strip). */
-function harvestOf(before: LifeView | null | undefined, after: LifeView | null | undefined): Harvest {
-  if (!before || !after) return [];
-  const out: Harvest = [];
-  for (const c of CROPS) {
-    const n = after.me.bag.produce[c] - before.me.bag.produce[c];
-    if (n <= 0) continue;
-    const gold = (after.me.quality?.gold?.[c] ?? 0) - (before.me.quality?.gold?.[c] ?? 0),
-      silver = (after.me.quality?.silver?.[c] ?? 0) - (before.me.quality?.silver?.[c] ?? 0);
-    if (gold > 0) out.push({ crop: c, n: gold, quality: 2 });
-    if (silver > 0) out.push({ crop: c, n: silver, quality: 1 });
-    if (n - gold - silver > 0) out.push({ crop: c, n: n - gold - silver, quality: 0 });
-  }
-  return out;
-}
-
 export function FarmLedger({
   room,
   view,
@@ -109,6 +93,7 @@ export function FarmLedger({
   const life = view.life;
   const now = useServerClock(view.clockOffset, life?.me.farm.map((p) => p.readyAt) ?? [], 5000);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
   const [sel, setSel] = useState<number | null>(null);
   const [basket, setBasket] = useState<Harvest>([]);
   const [expand, setExpand] = useState(false);
@@ -120,7 +105,8 @@ export function FarmLedger({
     return () => cancelAnimationFrame(id);
   }, []);
   const run = async (action: LifeAction, done: string, chime?: 'plant' | 'water' | 'harvest') => {
-    if (busy) return false;
+    if (busyRef.current) return false;
+    busyRef.current = true;
     setBusy(true);
     try {
       const ok = await room.life(action);
@@ -130,6 +116,7 @@ export function FarmLedger({
       }
       return ok;
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   };
@@ -186,22 +173,22 @@ export function FarmLedger({
       </Modal>
     );
 
-  const harvestAll = async () => {
-    const before = room.snapshot().life;
-    if (await run({ kind: 'harvest', plot: -1 }, '', 'harvest')) {
-      const got = harvestOf(before, room.snapshot().life);
-      setBasket(got);
-      lifeSfx(got.some((g) => g.quality === 2) ? 'sparkle' : 'pop');
-    }
-  };
-  const harvestOne = async (i: number) => {
+  const harvest = async (i: number) => {
     const before = room.snapshot().life;
     if (await run({ kind: 'harvest', plot: i }, '', 'harvest')) {
-      const got = harvestOf(before, room.snapshot().life);
+      const after = room.snapshot().life;
+      const got = harvestOf(before, after);
       setBasket(got);
+      if (got.length) notify(`${harvestText(got)}을 바구니에 담았어요.`);
       lifeSfx(got.some((g) => g.quality === 2) ? 'sparkle' : 'pop');
+      // Keep the next ripe plot selected; holding a key must not accidentally
+      // plant a new seed into the freshly emptied plot.
+      const next = after?.me.farm.findIndex((p) => p.crop && (p.readyAt ?? Infinity) <= Date.now() + room.snapshot().clockOffset) ?? -1;
+      if (next >= 0) setSel(next);
     }
   };
+  const harvestAll = () => harvest(-1);
+  const harvestOne = (i: number) => harvest(i);
   const plantOne = (i: number, crop: Crop) => {
     setPacket(crop);
     rememberSeed(crop);
@@ -213,6 +200,11 @@ export function FarmLedger({
     void run({ kind: 'plant', plot: -1, crop }, `${CROP_INFO[crop].name} ${n}칸을 심었어요.`, 'plant');
   };
   const waterAll = () => void run({ kind: 'water', plot: -1 }, `목마른 ${thirsty}칸에 물을 줬어요.`, 'water');
+  const onFertilize = (event: MouseEvent<HTMLButtonElement>) => {
+    const item = event.currentTarget.dataset.item;
+    if (item !== 'fertilizer' && item !== 'fertilizer-deluxe') return;
+    void run({ kind: 'fertilize', plot: current, item }, `${bedName(current)}에 ${ITEM_BY_ID[item].name}를 뿌렸어요.`, 'plant');
+  };
   /** The one thing E does for the selected plot. */
   const primary = (i: number) => {
     const p = farm[i];
@@ -242,6 +234,7 @@ export function FarmLedger({
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const target = e.target as HTMLElement;
+    if (e.repeat && !e.key.startsWith('Arrow')) { e.preventDefault(); return; }
     if (target !== e.currentTarget && target.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return;
     const k = e.key.toLowerCase();
     let handled = true;
@@ -254,8 +247,8 @@ export function FarmLedger({
     else if (k === 'w' && thirsty) waterAll();
     else if (/^[1-9]$/.test(e.key) && pouch[Number(e.key) - 1]) {
       const crop = pouch[Number(e.key) - 1];
-      if (plot && !plot.crop) plantOne(current, crop);
-      else setPacket(crop);
+      setPacket(crop);
+      rememberSeed(crop);
     } else handled = false;
     if (handled) {
       e.preventDefault();
@@ -280,6 +273,7 @@ export function FarmLedger({
         aria-roledescription="텃밭 장부"
         onKeyDown={onKey}
         data-testid="farm-ledger"
+        aria-busy={busy}
       >
         <section className="l-ledger-page l-ledger-left" aria-label="내 밭 그림">
           <header className="l-ledger-date">
@@ -374,6 +368,7 @@ export function FarmLedger({
               대문 쪽
             </span>
           </div>
+          <p className="l-ledger-aside">칸을 눌러 고르고 {actKey}로 가꿔요 · 두 번 누르면 바로 실행해요.</p>
           <footer className="l-ledger-actions">
             <button type="button" className="l-leaf" disabled={!ready || busy} onClick={() => void harvestAll()} data-testid="farm-harvest-all">
               <Glyph name="basket" /> 모두 거두기{ready ? ` ${ready}` : ''} <kbd>H</kbd>
@@ -411,15 +406,16 @@ export function FarmLedger({
 
         <section className="l-ledger-page l-ledger-right" aria-label="고른 칸">
           {basket.length > 0 && (
-            <output className="l-ledger-basket" data-testid="farm-next-step">
+            <output className="l-ledger-basket" data-testid="farm-next-step" aria-live="polite">
               <strong>
-                <Glyph name="basket" /> 바구니에 담았어요
+                <Glyph name="basket" /> {basket.reduce((n, b) => n + b.n, 0)}개를 바구니에 담았어요
               </strong>
               <span className="l-ledger-haul">
                 {basket.map((b, k) => (
                   <span key={`${b.crop}${b.quality}`} className="l-ledger-pop" style={{ animationDelay: `${k * 90}ms` }} data-q={b.quality}>
                     <ItemIcon id={b.crop} size={38} quality={b.quality || undefined} />
                     <b>×{b.n}</b>
+                    <small>{itemName(b.crop)}{b.quality ? ` · ${b.quality === 2 ? '금별' : '은별'}` : ''}</small>
                   </span>
                 ))}
               </span>
@@ -499,7 +495,8 @@ export function FarmLedger({
                             type="button"
                             className="l-ink"
                             disabled={busy}
-                            onClick={() => void run({ kind: 'fertilize', plot: current, item }, `${bedName(current)}에 ${ITEM_BY_ID[item].name}를 뿌렸어요.`, 'plant')}
+                            data-item={item}
+                            onClick={onFertilize}
                           >
                             <Glyph name="leaf" /> {ITEM_BY_ID[item].name}
                           </button>
@@ -510,7 +507,7 @@ export function FarmLedger({
               ) : (
                 <div className="l-ledger-pouch" data-testid="farm-plant-all-row">
                   <p className="l-ledger-note">
-                    <Glyph name="sack" /> 씨앗 주머니 <small>숫자키로 바로 심어요</small>
+                    <Glyph name="sack" /> 씨앗 주머니 <small>숫자키로 고른 뒤 {actKey}로 심어요</small>
                   </p>
                   {pouch.length ? (
                     <>
@@ -522,7 +519,7 @@ export function FarmLedger({
                               className="l-ledger-packet"
                               aria-pressed={chosen === crop}
                               disabled={busy}
-                              onClick={() => plantOne(current, crop)}
+                              onClick={() => { setPacket(crop); rememberSeed(crop); }}
                               data-testid={`farm-seed-${crop}`}
                             >
                               <kbd>{k + 1}</kbd>
@@ -535,6 +532,11 @@ export function FarmLedger({
                           </li>
                         ))}
                       </ul>
+                      {chosen && (
+                        <button type="button" className="l-leaf" disabled={busy} onClick={() => plantOne(current, chosen)} data-testid="farm-plant-selected">
+                          <Glyph name="seed" /> 이 칸에 {itemName(chosen)} 심기 <kbd>{actKey}</kbd>
+                        </button>
+                      )}
                       {empty > 1 && chosen && (
                         <button
                           type="button"

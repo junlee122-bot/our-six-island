@@ -38,6 +38,7 @@ import {
   newPasswordProblem,
   unactivatedLoginProblem,
   validPassword,
+  protectProfileFurniture,
 } from '../../../app/lounge-accounts.ts';
 
 const OPS = ['login', 'activate', 'recover', 'password', 'logout', 'logoutAll'];
@@ -300,12 +301,13 @@ serve('hohyeon-auth', async (b, req, ctx) => {
           ? mode + ',code_like_password'
           : mode,
     });
+    const world = await rpc('hh_world_read');
     return {
       session: {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       },
-      profile: profile(m),
+      profile: profile({ ...m, save: protectProfileFurniture(m.save, world?.state?.life, m.user_id) }),
       recoveryCode,
       // Client may prompt "비밀번호를 바꿔 주세요" when true.
       ...(op === 'login' && looksLikeIssuedCode(b.password)

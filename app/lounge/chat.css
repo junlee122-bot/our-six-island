@@ -1,0 +1,19 @@
+.l-chat-messages .l-chat-sticker {
+  display: grid;
+  justify-items: start;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-chat-sticker img {
+  display: block;
+  width: 104px;
+  height: 104px;
+  max-width: 100%;
+  object-fit: contain;
+}

@@ -52,6 +52,9 @@ type Scene = {
 const DAY_SCALE = [0, 2, 4, 7, 9]; // major pentatonic
 const NIGHT_SCALE = [0, 3, 5, 7, 10]; // minor pentatonic
 const midi = (n: number) => 440 * 2 ** ((n - 69) / 12);
+// Water is a quiet bed under the music and conversation, even at the bank.
+const WATER_BASE_GAIN = 0.003;
+const WATER_PROXIMITY_GAIN = 0.052;
 
 /** One location track: fetched and decoded on first entry, looped seamlessly. */
 type TrackSlot = {
@@ -263,7 +266,7 @@ class LoungeAudio {
       this.master.gain.setTargetAtTime(targets[0], t, 0.08);
       this.music!.gain.setTargetAtTime(targets[1], t, this.scene.game ? 0.25 : 0.8);
       this.ambient!.gain.setTargetAtTime(targets[2], t, 0.4);
-      this.waterGain?.gain.setTargetAtTime(0.05 + 0.3 * targets[3], t, 0.5);
+      this.waterGain?.gain.setTargetAtTime(WATER_BASE_GAIN + WATER_PROXIMITY_GAIN * targets[3], t, 0.5);
       this.sfx!.gain.setTargetAtTime(targets[4], t, 0.02);
       this.ui!.gain.setTargetAtTime(targets[5], t, 0.02);
       this.box!.gain.setTargetAtTime(targets[6], t, 0.5);
@@ -312,7 +315,7 @@ class LoungeAudio {
     depth.gain.value = 260;
     lfo.connect(depth).connect(band.frequency);
     this.waterGain = ctx.createGain();
-    this.waterGain.gain.value = 0.05;
+    this.waterGain.gain.value = WATER_BASE_GAIN + WATER_PROXIMITY_GAIN * Math.max(0, Math.min(1, this.scene.water));
     source.connect(band).connect(this.waterGain).connect(this.ambient!);
     source.start();
     lfo.start();

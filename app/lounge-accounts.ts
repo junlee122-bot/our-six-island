@@ -18,10 +18,12 @@ import type { Bedroom } from './lounge-bedroom-data.ts';
 import {
   friendLife,
   readLife,
+  uidOf,
   type GuestEntry,
   type RoomAccess,
 } from './lounge-life.ts';
 import { furnitureOf, houseUnlocksOf } from './lounge-life-plus.ts';
+import { maskBedroomFurniture, maskFurnitureSave, type FurniturePolicy } from './lounge-furniture-protection.ts';
 export const ACCOUNT_IDS = [
   'dowon',
   'gangjae',
@@ -78,7 +80,15 @@ export const serverAccountSave = (
   actor: number,
   previousSave?: unknown,
   unlocks: readonly string[] = [],
-) => accountSave(value, actor, previousSave, { strict: true, unlocks });
+  furniture?: FurniturePolicy,
+) => accountSave(value, actor, previousSave, { strict: true, unlocks, furniture });
+
+export function furniturePolicyOf(life: unknown, uid: string): FurniturePolicy {
+  const x = readLife(life).ext?.[uid];
+  return { owned: x?.furn, strict: x?.furnStrict };
+}
+export const protectProfileFurniture = <T>(save: T, life: unknown, uid: string): T =>
+  maskFurnitureSave(save, furniturePolicyOf(life, uid));
 /** A member's shop unlocks from the world's life state (server save path). */
 /**
  * What the room-save validator may place: shop unlocks, plus one entry per
@@ -101,7 +111,7 @@ export function accountSave(
   value: unknown,
   actor: number,
   previousSave?: unknown,
-  options: { strict?: boolean; unlocks?: readonly string[] } = {},
+  options: { strict?: boolean; unlocks?: readonly string[]; furniture?: FurniturePolicy } = {},
 ): LoungeSave {
   if (!Number.isInteger(actor) || actor < 0 || actor >= ACCOUNT_IDS.length)
     throw new RangeError('Unknown account actor');
@@ -145,17 +155,20 @@ export function accountSave(
     priorRoom?.version === BEDROOM_VERSION &&
     Array.isArray(incomingRoom?.items) &&
     incomingRoom?.version !== BEDROOM_VERSION;
-  const bedroom =
+  const parsedBedroom =
     previous &&
     (legacyRoomWrite ||
       (!Object.prototype.hasOwnProperty.call(source, 'bedroom') &&
         Object.prototype.hasOwnProperty.call(previous, 'bedroom')))
       ? readBedroom(previous.bedroom, actor)
       : s.bedroom;
+  const bedroom = maskBedroomFurniture(parsedBedroom, options.furniture?.owned, options.furniture?.strict);
   // Shop rarities need ownership. Only checked when the caller knows the
   // saver's unlocks (the server); what the stored room already had is kept.
   const priorBedroom =
-    options.unlocks && previous?.bedroom ? readBedroom(previous.bedroom, actor) : null;
+    options.unlocks && previous?.bedroom
+      ? maskBedroomFurniture(readBedroom(previous.bedroom, actor), options.furniture?.owned, options.furniture?.strict)
+      : null;
   if (
     options.unlocks &&
     bedroom !== null &&
@@ -339,11 +352,12 @@ export function friendVisitView(
   life: unknown,
 ): FriendVisit {
   if (!visitOwnerValid(owner)) throw new RangeError(VISIT_BAD_OWNER);
+  const state = readLife(life), uid = uidOf(state, owner), owned = uid ? state.ext?.[uid] : undefined;
   let bedroom: Bedroom | null = null,
     look = defaultLook(owner);
   if (save && typeof save === 'object') {
     const s = readLounge(JSON.stringify(save), owner);
-    bedroom = s.bedroom;
+    bedroom = maskBedroomFurniture(s.bedroom, owned?.furn, owned?.furnStrict);
     look = readLook(s.looks[owner], owner);
   }
   return {
@@ -351,6 +365,6 @@ export function friendVisitView(
     name: ACTORS[owner],
     bedroom,
     look,
-    ...friendLife(readLife(life), owner),
+    ...friendLife(state, owner),
   };
 }

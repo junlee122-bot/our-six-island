@@ -1,0 +1,200 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-28",
+  "terms": "모델 상세 페이지 약관 2026-09-28 확인: 개인·상업 프로젝트 사용 및 수정 가능. 원본 자료 재판매 금지. 프로젝트 라이선스 화면·크레딧·설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본은 기존 optimize-assets 파이프라인의 dedup/weld/prune 및 위치·법선·UV 양자화, 내장 텍스처 WebP(q88, 최대1024px) 변환. 원본은 public/models/_originals/village/life-services에 보관. 건물은 미용실·은행 간판을 추가하여 배치.",
+  "assets": [
+    {
+      "key": "salonBuilding",
+      "id": "common-buildings-campground-reception-compact-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-campground-reception-compact-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-campground-reception-compact-normal.glb",
+      "file": "salonBuilding.glb",
+      "bytes": 704468,
+      "sha256": "57e3d02696b688bd4742e84624b4811a31f21f847b96c2afe190c6fb97028868",
+      "meshes": 1,
+      "triangles": 8998,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.4263217449188232,
+          0,
+          -1.5
+        ],
+        "max": [
+          1.4263217449188232,
+          2.0666306018829346,
+          1.5
+        ],
+        "size": [
+          2.8526434898376465,
+          2.0666306018829346,
+          3
+        ]
+      },
+      "use": "보송 미용실 외관",
+      "webBytes": 462428,
+      "webSha256": "46ee8c0473cc86c79075a451174a86cb7be62b90bb13e0fcbe30b0b5183a42dd",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "bankBuilding",
+      "id": "common-buildings-office-reception-building-corner-normal",
+      "source": "https://karchive.vibeline.co.kr/models/common-buildings-office-reception-building-corner-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/common-buildings-office-reception-building-corner-normal.glb",
+      "file": "bankBuilding.glb",
+      "bytes": 680616,
+      "sha256": "d0aa32a596a40fa81d6e63bd0f3166b74457d768022cb95e86269d5f27382da4",
+      "meshes": 1,
+      "triangles": 9513,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -1.600000023841858,
+          0,
+          -1.3968660831451416
+        ],
+        "max": [
+          1.600000023841858,
+          1.3525949716567993,
+          1.3968660831451416
+        ],
+        "size": [
+          3.200000047683716,
+          1.3525949716567993,
+          2.793732166290283
+        ]
+      },
+      "use": "범마을 은행 외관",
+      "webBytes": 451252,
+      "webSha256": "238a8a3efd316c6f7366e615c89d325fa09246c84256b738cef39bc147367bd9",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishCatfish",
+      "id": "fish-catfish",
+      "source": "https://karchive.vibeline.co.kr/models/fish-catfish",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-catfish.glb",
+      "file": "fishCatfish.glb",
+      "bytes": 3474244,
+      "sha256": "4115dd673f1345e30b186319899e39cff155dd282c359eb28df40752a6a7bfef",
+      "meshes": 1,
+      "triangles": 6206,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.22499999403953552,
+          0,
+          -0.058616865426301956
+        ],
+        "max": [
+          0.22499999403953552,
+          0.10419834405183792,
+          0.058616865426301956
+        ],
+        "size": [
+          0.44999998807907104,
+          0.10419834405183792,
+          0.11723373085260391
+        ]
+      },
+      "use": "메기 낚시 결과",
+      "webBytes": 379180,
+      "webSha256": "e8de272b9162067b25dd5e7f3e8b377c51cf043e8d45e619d239a94bca168c68",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishCarp",
+      "id": "fish-f226",
+      "source": "https://karchive.vibeline.co.kr/models/fish-f226",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-f226.glb",
+      "file": "fishCarp.glb",
+      "bytes": 4290152,
+      "sha256": "6634d18e1017c9d38b16bf3fa04d77fa6b672e9ba476b3315a189676f927bbd4",
+      "meshes": 1,
+      "triangles": 6234,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.20000000298023224,
+          0,
+          -0.034041520208120346
+        ],
+        "max": [
+          0.20000000298023224,
+          0.17048950493335724,
+          0.034041520208120346
+        ],
+        "size": [
+          0.4000000059604645,
+          0.17048950493335724,
+          0.06808304041624069
+        ]
+      },
+      "use": "잉어 낚시 결과",
+      "webBytes": 508936,
+      "webSha256": "2a15dd4d885a5fdcdf6452df6bd27e5a6ccfccd45c433b9da5120e2df5cda274",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishMackerel",
+      "id": "fish-mackerel",
+      "source": "https://karchive.vibeline.co.kr/models/fish-mackerel",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-mackerel.glb",
+      "file": "fishMackerel.glb",
+      "bytes": 3925688,
+      "sha256": "f5e5506f351afca9f9dfdbd0b5f69a4d92486792747d4e087a69c09fe256969c",
+      "meshes": 1,
+      "triangles": 6123,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.15043550729751587,
+          0,
+          -0.02974860556423664
+        ],
+        "max": [
+          0.15043550729751587,
+          0.11000000685453415,
+          0.02974860556423664
+        ],
+        "size": [
+          0.30087101459503174,
+          0.11000000685453415,
+          0.05949721112847328
+        ]
+      },
+      "use": "고등어 낚시 결과",
+      "webBytes": 440432,
+      "webSha256": "679705806ca7270bebec4b8735720bb9c9181a52f4489a74280fe3efcb527e33",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    }
+  ]
+}

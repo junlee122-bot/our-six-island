@@ -19,6 +19,7 @@ import {
   Shirt,
 } from './ui/icons';
 import { AvatarView } from './avatar-view';
+import { Glyph } from './ui/Glyph';
 import {
   villageFromNetwork,
   villageToNetwork,
@@ -111,6 +112,8 @@ import { FriendsModal } from './lounge/FriendsModal';
 import { Invitations } from './lounge/Invitations';
 import { RequestGameModal } from './lounge/RequestGameModal';
 import { WalletModal } from './lounge/WalletModal';
+import { FinancePanel } from './lounge/FinancePanel';
+import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal, type SettingsTab } from './lounge/SettingsModal';
 import { ControlsHelp, SystemMenu, VillageMenu } from './lounge/SystemMenu';
@@ -349,6 +352,8 @@ type ModalName =
   | 'games'
   | 'invitations'
   | 'wallet'
+  | 'bank'
+  | 'npc'
   | 'account'
   | 'menu'
   | 'chat'
@@ -483,6 +488,7 @@ function AccountLounge({
     // 성장 수첩: the skill a level-up banner opens it on.
     [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
     [modal, setModal] = useState<ModalName | null>(null),
+    [financePage, setFinancePage] = useState<'bank' | 'notes' | 'casino' | 'rob' | undefined>(undefined),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
     // 설정 / 조작 안내 opened from the Esc menu go back to it on close (Esc stack).
     [fromMenu, setFromMenu] = useState(false),
@@ -614,6 +620,21 @@ function AccountLounge({
   // but the same text is shown once per 20 s so a lost connection does not
   // flash the same red toast over and over; the header shows 연결 끊김).
   const lastErrorToast = useRef<{ text: string; at: number } | null>(null);
+  const financeNotice = useRef<{ last: number | null; due: Set<string> }>({ last: null, due: new Set() });
+  useEffect(() => {
+    if (view.status !== 'connected' || !view.finance) return;
+    const memory = financeNotice.current, latest = view.finance.logs[0];
+    if (latest && memory.last !== null && latest.id > memory.last) notify(latest.text, 'info');
+    if (latest) memory.last = latest.id;
+    else memory.last ??= 0;
+    const due = view.finance.loans.filter((l) => l.state === 'active' && l.borrower === view.self && l.dueAt <= Date.now() + view.clockOffset && !memory.due.has(l.id));
+    if (due.length) {
+      due.forEach((l) => memory.due.add(l.id));
+      pushBanner('mail', `상환 기한이 지난 차용증이 ${due.length}개 있어요. 은행에서 남은 금액을 확인해 주세요.`, {
+        key: 'finance-due', action: { label: '차용증 보기', run: () => { setFinancePage('notes'); setModal('bank'); } },
+      });
+    }
+  }, [view.status, view.finance, view.self, view.clockOffset, notify, pushBanner]);
   useEffect(() => {
     if (!view.errorSeq || !view.error) return;
     const now = Date.now();
@@ -889,7 +910,8 @@ function AccountLounge({
     then?: () => void,
   ) => {
     // 부동산 / 가구점: the door opens the shop's counter (no interior area).
-    if (target === 'realty' || target === 'furniture') {
+    if (fishing) { notify('낚시를 마치거나 취소한 뒤 이동해 주세요.'); return; }
+    if (target === 'realty' || target === 'furniture' || target === 'bank') {
       setModal(target);
       return;
     }
@@ -943,10 +965,11 @@ function AccountLounge({
     tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : NAMES.village;
   const moveInVillage = useCallback(
     (x: number, y: number) => {
+      if (fishing) return;
       villagePosition.current = villageFromNetwork({ x, y });
       move(x, y);
     },
-    [move],
+    [move, fishing],
   );
   const greet = async (value: ReactionId) => {
     const scope =
@@ -969,12 +992,18 @@ function AccountLounge({
   };
   // "범타듀의 하루": fruit, friend visits and the mailbox.
   const pickFruit = async (tree: string) => {
+    if (gathering.current || fishing) return;
+    gathering.current = true;
+    try {
     const before = room.snapshot().life?.me.bag.fruit ?? 0;
     if (await room.life({ kind: 'pick', tree })) {
       const after = room.snapshot().life?.me.bag.fruit ?? before;
-      notify(`과일을 ${Math.max(1, after - before)}개 땄어요! 가방에 담았어요.`);
+      const got = Math.max(0, after - before);
+      if (!got) { notify('가방에 더 담을 공간이 없어요.'); return; }
+      notify(`과일을 ${got}개 땄어요! 가방에 담았어요.`);
       loungeAudio.chime('harvest');
     }
+    } finally { gathering.current = false; }
   };
   /* ---------------------------------------------------------- life expansion */
   const lifeRun = async (
@@ -1056,22 +1085,32 @@ function AccountLounge({
     else setModal('farm');
   };
   const startFishing = (spot: Spot) => {
+    if (fishing) return;
     setModal(null);
     setFishing({ spot, phase: 'casting' });
   };
   const fishPhase = useCallback((phase: FishingPhase | null) => {
     setFishing((f) => (f && phase ? (f.phase === phase ? f : { ...f, phase }) : f));
   }, []);
+  const gathering = useRef(false);
   const gather = async (spot: string, mode: 'forage' | 'bug', item: string) => {
+    if (gathering.current || fishing) return;
+    gathering.current = true;
+    try {
     const before = room.snapshot().life?.me.inv?.[item] ?? 0;
     const ok = await room.life({ kind: mode === 'bug' ? 'catch' : 'forage', spot });
     if (!ok) return;
-    const got = Math.max(1, (room.snapshot().life?.me.inv?.[item] ?? before + 1) - before);
+    const got = Math.max(0, (room.snapshot().life?.me.inv?.[item] ?? before) - before);
+    if (!got) { notify('가방에 더 담을 공간이 없어요.'); return; }
     notify(`${josa(itemName(item), '을/를')} ${got > 1 ? `${got}개 ` : ''}${mode === 'bug' ? '잡았어요' : '주웠어요'}! 가방에 담았어요.`);
     lifeSfx(mode === 'bug' ? 'catch' : 'pickup');
+    } finally { gathering.current = false; }
   };
   /** 성장 P1: chop a bush/log or break a rock at the village edge. */
   const gatherNode = async (id: string, kind: NodeKind) => {
+    if (gathering.current || fishing) return;
+    gathering.current = true;
+    try {
     const inv = () => room.snapshot().life?.me.inv ?? {};
     const before = { ...inv() };
     const ok = await room.life({ kind: kind === 'rock' ? 'smash' : 'chop', node: id });
@@ -1081,8 +1120,10 @@ function AccountLounge({
       .map((item) => [item, (after[item] ?? 0) - (before[item] ?? 0)] as const)
       .filter(([, n]) => n > 0)
       .map(([item, n]) => `${itemName(item)} ${n}`);
+    if (!got.length) { notify('가방에 더 담을 공간이 없어요.'); return; }
     notify(`${NODE_INFO[kind].name}${kind === 'rock' ? '를 깼어요' : '를 베었어요'}! ${got.join(' · ')}${got.some((g) => g.startsWith('구리')) ? ' · 반짝!' : ''}`);
     lifeSfx(kind === 'rock' ? 'smash' : 'chop');
+    } finally { gathering.current = false; }
   };
   const waterFriend = (actor: number) =>
     void lifeRun(
@@ -1206,7 +1247,7 @@ function AccountLounge({
         void prefetchVisit(place.actor).catch(() => {});
       return;
     }
-    if (place.destination !== 'realty' && place.destination !== 'furniture') preloadTab(place.destination, save);
+    if (place.destination !== 'realty' && place.destination !== 'furniture' && place.destination !== 'bank') preloadTab(place.destination, save);
   };
   // Who is inside each building, for the door prompt ("회관 · 안에 2명").
   const areaCounts: Record<string, number> = {};
@@ -2248,6 +2289,7 @@ function AccountLounge({
               }}
               onDecorated={roomDecorated}
               onAccess={(access) => void room.life({ kind: 'room', access })}
+              onNpcTalk={() => setModal('npc')}
               room={room}
               view={view}
               onChat={() => setModal('chat')}
@@ -2318,7 +2360,7 @@ function AccountLounge({
                 onMove={move}
                 onTable={tableAct}
                 onExit={leaveInterior}
-                onHost={interior === 'tavern' ? () => setModal('tavernUp') : undefined}
+                onHost={interior === 'tavern' ? () => setModal('tavernUp') : interior === 'casino' ? () => setModal('bank') : undefined}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
                 sheetOpen={!!tableSheet}
@@ -2333,6 +2375,7 @@ function AccountLounge({
           </ScreenBoundary>
           {sheetNode}
           <div className="l-world-social">
+            {interior === 'casino' && <button className="l-world-chat-button" onClick={() => setModal('bank')} aria-label="루미 장부와 카지노 대부 창구 열기"><Glyph name="coin" size={19} /><span>카지노 창구</span></button>}
             <button
               className="l-world-chat-button"
               aria-label={`${chatTitle} 열기`}
@@ -2516,6 +2559,7 @@ function AccountLounge({
                 { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
                 { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
                 { id: 'shop', label: '범타듀 상점', glyph: 'store', onClick: () => setModal('shop') },
+                { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => setModal('bank') },
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
                 { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
@@ -2531,6 +2575,7 @@ function AccountLounge({
               items: [
                 { id: 'friends', label: '마을 친구들', glyph: 'people', onClick: () => setModal('friends') },
                 { id: 'bonds', label: '친구 사이', glyph: 'heart', kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
+                { id: 'npc', label: '루미와 매화', glyph: 'heart', onClick: () => setModal('npc') },
                 { id: 'invite', label: '게임 초대', glyph: 'dice', onClick: () => requestGame(null) },
                 { id: 'status', label: '오늘의 한마디', glyph: 'quote', onClick: () => setModal('status') },
               ],
@@ -2616,6 +2661,8 @@ function AccountLounge({
           selfActor={save.actor}
         />
       )}
+      {modal === 'bank' && <FinancePanel room={room} view={view} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? (tab === 'casino' ? 'casino' : 'bank')} />}
+      {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'wallet' && (
         <WalletModal
           room={room}

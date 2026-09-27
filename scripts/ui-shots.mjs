@@ -153,6 +153,27 @@ async function runView(browser, base, view, report) {
   await step('friends', async () => { await menu(/마을 친구들/); await snap('friends'); });
   await step('invite', async () => { await menu(/게임 초대/); await snap('invite'); });
 
+  // New resident services use the same visible menu and tabs as a player.
+  // Each step reopens independently so --only bank-notes (etc.) also works.
+  // Viewing these pages does not deposit, borrow, rob, gift or invite anyone.
+  for (const [name, title] of [
+    ['bank', '보관함'], ['bank-notes', '차용증'],
+    ['bank-casino', '카지노 창구'], ['bank-rob', '강도 놀이'],
+  ]) {
+    await step(name, async () => {
+      if (!(await menu(/^은행 · 차용증$/))) throw new Error('은행 메뉴를 찾지 못했습니다.');
+      await until(() => !!document.querySelector('dialog[open] .l-finance-balances'), 15000);
+      if (!(await H.clickText(new RegExp(`^${title}$`), 'dialog[open] [role="tab"]'))) throw new Error(`${title} 탭을 찾지 못했습니다.`);
+      await until((text) => document.querySelector('dialog[open] [role="tab"][aria-selected="true"]')?.textContent.trim() === text, 10000, title);
+      await snap(name);
+    });
+  }
+  await step('npc', async () => {
+    if (!(await menu(/^루미와 매화$/))) throw new Error('주민 인연 메뉴를 찾지 못했습니다.');
+    await until(() => !!document.querySelector('dialog[open] [data-testid="npc-lumi"]') && !!document.querySelector('dialog[open] [data-testid="npc-maehwa"]'), 15000);
+    await snap('npc');
+  });
+
   // village
   for (let i = 0; i < 4 && (await js(() => document.querySelector('main.l-app')?.dataset.space)) !== 'village'; i++) {
     await closeAll();

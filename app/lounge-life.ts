@@ -946,6 +946,12 @@ export function lifeAction(
   action: LifeAction,
   now: number,
 ): { life: LifeState; ledger: LoungeLedger } {
+  // Closing a finished/already-cancelled cast is an idempotent acknowledgement,
+  // not a new activity that changes mood, growth or daily state.
+  if (isLifeAction(action) && action.kind === 'cancelCast' && original.actors[member.id] === member.actor && !original.ext?.[member.id]?.pending) {
+    if (typeof action.token !== 'string' || !/^[a-z0-9]{1,24}$/.test(action.token)) fail('낚싯대를 다시 던져 주세요.');
+    return { life: original, ledger };
+  }
   // 무드: brought up to now first (XP multiplier, inspirations), then the
   // events of what the action changed (lounge-mood.ts).
   const before = moodBeforeLifeAction(original, member, now);

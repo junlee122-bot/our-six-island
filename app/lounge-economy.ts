@@ -58,6 +58,10 @@ export type LoungeLedger = {
    * records the lifetime totals at that moment).
    */
   flows?: LedgerFlows;
+  /** Bank deposits are reserved for their owner, never available to a table. */
+  vault?: Record<string, number>;
+  /** Net account → house transfers from loans and dealer refunds (no minting). */
+  financeHouseNet?: number;
 };
 /** One KST day of grant (`g`) and spend (`s`) totals per bucket. */
 export type FlowDay = { d: number; g: Record<string, number>; s: Record<string, number> };
@@ -228,6 +232,12 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
       fail('유효하지 않은 지갑 잔액입니다.');
   let held = 0,
     casinoNet = 0;
+  if (v.vault !== undefined) {
+    if (!v.vault || typeof v.vault !== 'object' || Array.isArray(v.vault) ||
+      Object.entries(v.vault).some(([w, n]) => !walletKey(w) || !own(v.accounts, w) || !safe(n) || n < 0))
+      fail('은행 보관 기록을 읽을 수 없습니다.');
+    held += sum(Object.values(v.vault));
+  }
   for (const [id, g] of games) {
     if (
       !matchKey(id) ||
@@ -301,7 +311,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
   // Invariant: balances + reservations + house − minted grants = initial total.
   if (
     !safe(houseBalance) ||
-    houseBalance !== casinoNet + archive.houseNet + spent ||
+    !safe(v.financeHouseNet ?? 0) ||
+    houseBalance !== casinoNet + archive.houseNet + spent + (v.financeHouseNet ?? 0) ||
     !safe(held) ||
     sum(accounts.map(([, amount]) => amount)) + held + houseBalance - granted !==
       accounts.length * INITIAL_BEOM
@@ -332,6 +343,44 @@ export function registerWallet(
     fail('공통 지갑의 저장 한도에 도달했습니다.');
   const next = changed(ledger);
   next.accounts[wallet] = INITIAL_BEOM;
+  validateLedger(next);
+  return next;
+}
+/** Transfers preserve existing currency; only authenticated engine actions call this. */
+export function transferBeom(ledger: LoungeLedger, from: string, to: string, amount: number) {
+  validateLedger(ledger);
+  if (!walletKey(from) || !walletKey(to) || from === to ||
+    !own(ledger.accounts, from) || !own(ledger.accounts, to) || !safe(amount) || amount <= 0)
+    fail('송금 정보가 올바르지 않습니다.');
+  if (ledger.accounts[from] < amount) fail('사용할 수 있는 범이 부족해요.');
+  const next = changed(ledger);
+  next.accounts[from] -= amount;
+  next.accounts[to] += amount;
+  validateLedger(next);
+  return next;
+}
+export function storeBeom(ledger: LoungeLedger, wallet: string, amount: number, withdraw = false) {
+  validateLedger(ledger);
+  if (!walletKey(wallet) || !own(ledger.accounts, wallet) || !safe(amount) || amount <= 0)
+    fail('보관 금액을 확인해 주세요.');
+  const stored = ledger.vault?.[wallet] ?? 0;
+  if ((withdraw ? stored : ledger.accounts[wallet]) < amount) fail('꺼내거나 맡길 범이 부족해요.');
+  const next = changed(ledger);
+  (next.vault ??= {})[wallet] = stored + (withdraw ? -amount : amount);
+  next.accounts[wallet] += withdraw ? amount : -amount;
+  validateLedger(next);
+  return next;
+}
+/** Positive amount pays a wallet from the house; negative amount repays the house. */
+export function houseTransfer(ledger: LoungeLedger, wallet: string, amount: number) {
+  validateLedger(ledger);
+  if (!walletKey(wallet) || !own(ledger.accounts, wallet) || !safe(amount) || !amount)
+    fail('거래 금액을 확인해 주세요.');
+  if (ledger.accounts[wallet] + amount < 0) fail('사용할 수 있는 범이 부족해요.');
+  const next = changed(ledger);
+  next.accounts[wallet] += amount;
+  next.houseBalance = (next.houseBalance ?? 0) - amount;
+  next.financeHouseNet = (next.financeHouseNet ?? 0) - amount;
   validateLedger(next);
   return next;
 }
@@ -401,7 +450,11 @@ export function settleGame(
   // Canonical zeros: a -0 (e.g. from `-stake * 0`) must not leak into the ledger.
   if (escrow.game === 'blackjack')
     next.houseBalance = (next.houseBalance ?? 0) - sum(result) || 0;
-  next.games[id] = { ...next.games[id], state, result: result.map((n) => n || 0) };
+  const finished = { ...next.games[id], state, result: result.map((n) => n || 0) } as GameEscrow;
+  // Archive by completion order: an old, long-running reservation that just
+  // settled must survive for the daily casino/stat observers of this transition.
+  delete next.games[id];
+  next.games[id] = finished;
   escrow.wallets.forEach((wallet, i) => {
     next.accounts[wallet] += escrow.deposits[i] + result[i];
   });
@@ -526,6 +579,7 @@ export function dailyGrantInfo(
     claimed = !!wallet && ledger.daily?.[wallet] === kstDay(now),
     wealth =
       balance +
+      (wallet ? ledger.vault?.[wallet] ?? 0 : 0) +
       (wallet ? reservedOf(ledger, wallet) : 0) +
       (safe(extraWealth) && extraWealth > 0 ? extraWealth : 0),
     amount = wealth < DAILY_RELIEF_BELOW ? DAILY_RELIEF : DAILY_GRANT;
