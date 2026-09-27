@@ -605,7 +605,18 @@
   box-shadow: var(--edge-frame), var(--lift-2);
 }
 .hv-minimap.is-expanded .hv-minimap-body {
-  width: min(480px, calc(100vw - 44px));
+  width: min(420px, calc(100vw - 44px));
+}
+.hv-minimap.is-expanded {
+  top: 80px;
+  right: 80px;
+  bottom: auto;
+  left: auto;
+  align-items: flex-end;
+}
+.hv-minimap.is-expanded .hv-minimap-peers {
+  right: calc(100% + 12px);
+  left: auto;
 }
 .hv-minimap-tools {
   display: flex;
@@ -831,7 +842,7 @@
 .hv-route {
   position: absolute;
   left: 50%;
-  bottom: 30px;
+  bottom: 110px;
   transform: translateX(-50%);
   display: flex;
   align-items: center;

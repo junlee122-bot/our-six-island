@@ -1,7 +1,7 @@
 'use client';
 /* Static GitHub Pages serves these versioned game assets without a Next image service. */
 /* oxlint-disable next/no-img-element */
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Check, Bookmark, Download, RotateCcw, ArrowRight } from './ui/icons';
 import { AvatarView } from './avatar-view';
 import { ACTORS, ACTOR_COLORS } from './lounge-roster';
@@ -328,8 +328,10 @@ export function Wardrobe({
     <section
       className="l-wardrobe"
       data-testid="wardrobe-scene"
-      style={{ '--wardrobe-bg': `url("${LOUNGE_ASSETS.wardrobe}")` } as CSSProperties}
     >
+      {/* An image resolves versioned relative URLs against the page; a CSS
+          custom property would resolve them against the nested stylesheet. */}
+      <img className="l-wardrobe-full-backdrop" src={LOUNGE_ASSETS.wardrobe} alt="" draggable={false} />
       {/* Full-window (in the game): a small chip under the header instead of
           the page title, like my room's and the village's chips. */}
       <p className="l-wardrobe-chip" aria-hidden={entry || undefined}>

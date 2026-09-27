@@ -59,9 +59,11 @@ async function runView(mobile = false) {
   try {
     H = await setup({ browser: host, base: server.url, view: 's' });
     const { page, ctx, js, sleep } = H;
-    await ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, fpsCap: 30, quality: 'mid' })));
+    // Supported low graphics preset keeps every building and interaction while
+    // avoiding costly shadows on CI's software GPU. It is not simpleGraphics.
+    await ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, fpsCap: 30, quality: 'low' })));
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    res.renderSettings = { fpsCap: 30, quality: 'mid', reducedMotion: true };
+    res.renderSettings = { fpsCap: 30, quality: 'low', reducedMotion: true };
     // Change only wall time. Playwright's clock also wraps animation callbacks,
     // which can stall the capped WebGL loop; native rAF and timers stay intact.
     await ctx.addInitScript((start) => {
@@ -98,7 +100,10 @@ async function runView(mobile = false) {
       await js(() => document.fonts.ready);
       const file = `${name}-${label}.png`;
       await page.screenshot({ path: path.join(out, file), timeout: 90_000 });
-      res.screenshots.push({ label, file, measurements: await js(measureInPage) });
+      const measurements = await js(measureInPage);
+      res.screenshots.push({ label, file, measurements });
+      assert.equal(measurements.coveredCount, 0,
+        'visible controls remain reachable: ' + JSON.stringify(measurements.covered));
     };
     const step = async (label, work) => {
       const at = performance.now();
@@ -126,6 +131,11 @@ async function runView(mobile = false) {
       await page.mouse.click(hit.x, hit.y);
     };
     const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d]').first().focus();
+    const runTo = async (arrive) => {
+      await focus();
+      await page.keyboard.down('Shift');
+      try { await arrive(); } finally { await page.keyboard.up('Shift'); }
+    };
     const closeDialogs = async () => {
       for (let i = 0; i < 5 && await page.locator('dialog[open]').count(); i++) { await page.keyboard.press('Escape'); await sleep(250); }
     };
@@ -151,8 +161,7 @@ async function runView(mobile = false) {
       await closeDialogs();
       if (!(await page.locator('.hv-directory').count())) await click('.hv-top-tools button');
       await click(`.hv-directory [data-district="${district}"]`);
-      await sleep(400);
-      await stationary();
+      await runTo(async () => { await sleep(400); await stationary(); });
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
     const guardedAction = async (kind, changed, label) => {
@@ -167,8 +176,7 @@ async function runView(mobile = false) {
     const walkBuilding = async (id) => {
       if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
       await click(`[data-minimap-place="${id}"]`);
-      await sleep(400);
-      await stationary(id);
+      await runTo(async () => { await sleep(400); await stationary(id); });
     };
     // The overview makes the real ground clickable. Projection uses the public
     // camera contract + its observable data attributes; it never teleports.
@@ -192,10 +200,10 @@ async function runView(mobile = false) {
       assert.ok(sx > 0 && sy > 0 && sx < 1280 && sy < 720, 'world target projects inside the viewport');
       assert.equal(await js(([x, y]) => document.elementFromPoint(x, y)?.tagName, [sx, sy]), 'CANVAS', 'ground click must not be hidden under a HUD');
       await page.mouse.click(sx, sy);
-      await wait((point) => {
+      await runTo(() => wait((point) => {
         const d = document.querySelector('[data-testid=village-3d]')?.dataset;
         return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - point.x, Number(d.avatarZ) - point.z) < 1.2;
-      }, point, 120_000);
+      }, point, 120_000));
       const arrived = await position();
       assert.ok(Math.hypot(arrived.x - point.x, arrived.z - point.z) < 1.2, 'walk reaches resource through collision-safe path');
     };
@@ -273,7 +281,8 @@ async function runView(mobile = false) {
       await click('[data-testid=minimap-toggle]'); await click('[data-testid=minimap-resize]');
     });
     await step('museum-walk-and-open', async () => {
-      await click('[data-minimap-place=museum]'); await sleep(400); await stationary();
+      await click('[data-minimap-place=museum]');
+      await runTo(async () => { await sleep(400); await stationary(); });
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.spot === 'museum');
       await shot('museum-door'); await pressAction();
       await page.getByRole('dialog').filter({ hasText: '박물관' }).waitFor();
@@ -282,6 +291,10 @@ async function runView(mobile = false) {
     await step('salon-walk-and-customization', async () => {
       await walkBuilding('wardrobe'); await shot('salon-door'); await pressAction();
       await wait(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'wardrobe', null, 60_000);
+      await wait(() => {
+        const backdrop = document.querySelector('.l-wardrobe-full-backdrop');
+        return backdrop instanceof HTMLImageElement && backdrop.complete && backdrop.naturalWidth > 0 && getComputedStyle(backdrop).display !== 'none';
+      });
       await shot('salon-customization');
       await village();
     });
