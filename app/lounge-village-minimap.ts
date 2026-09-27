@@ -42,8 +42,8 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
     if (p.area === 'village')
       return [{ id: p.id, actor: p.actor, point: villageFromNetwork(p), indoor: false, location: '마을' }];
     const placeId = p.area === 'home' ? `home-${p.home ?? p.actor}`
-      : p.area === 'lounge' ? 'hall'
-      : ['casino', 'wardrobe', 'tavern'].includes(p.area) ? p.area : undefined;
+      : p.area === 'lounge' ? 'hall' : p.area === 'salon' ? 'wardrobe'
+      : ['casino', 'wardrobe', 'tavern', 'bank'].includes(p.area) ? p.area : undefined;
     const place = VILLAGE_PLACES.find((v) => v.id === placeId);
     if (place) return [{ id: p.id, actor: p.actor, point: place.entry, indoor: true, placeId, location: place.name }];
     if (['hill', 'woods', 'mine'].includes(p.area))

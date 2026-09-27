@@ -7,6 +7,7 @@ export type VillageDestination =
   | 'casino'
   | 'tavern'
   | 'wardrobe'
+  | 'salon'
   | 'bedroom'
   /** Counter shops: the door opens the shop's counter scene (no interior area). */
   | 'realty'

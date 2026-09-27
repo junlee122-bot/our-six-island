@@ -1,0 +1,42 @@
+{
+  "createdAt": "2026-09-28",
+  "provider": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "quality": "high",
+  "resolution": "2k",
+  "referenceStyle": "Existing host-lumi art; user attachments used as visual references, not redistributed.",
+  "assets": [
+    {
+      "file": "casino-lender-rose",
+      "job": "771f8846-15a1-4b0b-a100-5fb9691226a0",
+      "sha256": "3D9F8CD1C28AE830760D21B0749118BF087188BBC2C8498DEBC6106EF2FAA3FA",
+      "reference": "User-provided Miss Fortune illustration (Riot Games character); adapted lender fan art.",
+      "original": "_originals/casino-lender-rose.png",
+      "prompt": "_originals/casino-lender-rose.prompt.txt"
+    },
+    {
+      "file": "bank-clerk-nyamo",
+      "job": "042263d4-e773-4b60-a345-2d373dce1785",
+      "sha256": "A1426A220F1BFC8DF97F486D2B993859BB301B1C21C644207FCB2A68092E0CAE",
+      "reference": "User-provided cat-person character references; adapted bank teller fan art.",
+      "original": "_originals/bank-clerk-nyamo.png",
+      "prompt": "_originals/bank-clerk-nyamo.prompt.txt"
+    },
+    {
+      "file": "salon-stylist-gwen",
+      "job": "982a0baf-75c1-4ed5-9b70-ca578eb277bf",
+      "sha256": "CA52D7EB012166BF69CB6BA3ABEC9BC3EC99EE99CA9431F53F2851855AEA40F4",
+      "reference": "User-provided Gwen illustration (Riot Games character); adapted salon owner fan art.",
+      "original": "_originals/salon-stylist-gwen.png",
+      "prompt": "_originals/salon-stylist-gwen.prompt.txt"
+    },
+    {
+      "file": "tavern-cards",
+      "job": "60431e1f-2bf1-440e-9755-9e6737448671",
+      "sha256": "A47FBEA54C95B38F870699DA079AF1BD79BE820C67CCF8B5E0619569C2DBB375",
+      "reference": "Original tiger, crane, moon, dokkaebi, ornamental back designs; no external game art.",
+      "original": "_originals/tavern-cards.png",
+      "prompt": "_originals/tavern-cards.prompt.txt"
+    }
+  ]
+}

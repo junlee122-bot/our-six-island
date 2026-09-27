@@ -35,6 +35,7 @@ import './lounge-village-shell.css';
 import './lounge-flow.css';
 import './lounge-social.css';
 import { sceneSeatPoint, sceneTableSide } from './lounge-scene-layout';
+import { SALON_FRONT } from './lounge-salon-layout';
 import { LoungePlayHub } from './lounge-play-hub';
 import { gameFlow } from './lounge-game-flow';
 import {
@@ -113,6 +114,7 @@ import { Invitations } from './lounge/Invitations';
 import { RequestGameModal } from './lounge/RequestGameModal';
 import { WalletModal } from './lounge/WalletModal';
 import { FinancePanel } from './lounge/FinancePanel';
+import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal, type SettingsTab } from './lounge/SettingsModal';
@@ -353,6 +355,7 @@ type ModalName =
   | 'invitations'
   | 'wallet'
   | 'bank'
+  | 'lender'
   | 'npc'
   | 'account'
   | 'menu'
@@ -391,6 +394,8 @@ const TAB_AREA: Record<Tab, Area> = {
   lounge: 'lounge',
   casino: 'casino',
   tavern: 'tavern',
+  bank: 'bank',
+  salon: 'salon',
   wardrobe: 'wardrobe',
   bedroom: 'home',
 };
@@ -484,7 +489,7 @@ function AccountLounge({
     [tab, setTab] = useState<Tab>('bedroom'),
     [roomSpawn, setRoomSpawn] = useState<'bed' | 'door'>('bed'),
     // The wardrobe opened from my room ("옷 갈아입기") returns there.
-    [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom'>('village'),
+    [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom' | 'salon'>('village'),
     // 성장 수첩: the skill a level-up banner opens it on.
     [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
     [modal, setModal] = useState<ModalName | null>(null),
@@ -513,6 +518,8 @@ function AccountLounge({
       lounge: AREA_DEFAULTS.lounge,
       casino: AREA_DEFAULTS.casino,
       tavern: AREA_DEFAULTS.tavern,
+      bank: AREA_DEFAULTS.bank,
+      salon: AREA_DEFAULTS.salon,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -911,15 +918,18 @@ function AccountLounge({
   ) => {
     // 부동산 / 가구점: the door opens the shop's counter (no interior area).
     if (fishing) { notify('낚시를 마치거나 취소한 뒤 이동해 주세요.'); return; }
-    if (target === 'realty' || target === 'furniture' || target === 'bank') {
+    if (target === 'realty' || target === 'furniture') {
       setModal(target);
       return;
     }
-    const destination: Tab | 'village' = target;
+    const destination: Tab | 'village' = target === 'wardrobe' && place?.id === 'wardrobe' ? 'salon' : target;
     const from = visiting !== null ? 'village' : tab;
     // Walking in from the village: just inside the hall's / casino's door.
     if (!at && from === 'village' && isInteriorArea(destination))
       at = { ...INTERIOR_DOOR };
+    // Finishing a style change returns to the stylist, not the entrance.
+    if (!at && from === 'wardrobe' && destination === 'salon')
+      at = { ...SALON_FRONT };
     const go = () => {
       setVisiting(null);
       setGameScreen(null);
@@ -944,7 +954,7 @@ function AccountLounge({
       if (destination === 'bedroom')
         setRoomSpawn(from === 'wardrobe' ? 'bed' : 'door');
       if (destination === 'wardrobe')
-        setWardrobeFrom(from === 'bedroom' ? 'bedroom' : 'village');
+        setWardrobeFrom(from === 'bedroom' ? 'bedroom' : from === 'salon' ? 'salon' : 'village');
       setModal(null);
       setSheet(null);
       setTab(destination);
@@ -960,9 +970,9 @@ function AccountLounge({
   };
   /** 나가기 from an interior: the wardrobe opened from my room goes back there. */
   const leaveInterior = () =>
-    enter(tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? 'bedroom' : 'village');
+    enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
   const backTo =
-    tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : NAMES.village;
+    tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : tab === 'wardrobe' && wardrobeFrom === 'salon' ? '미용실' : NAMES.village;
   const moveInVillage = useCallback(
     (x: number, y: number) => {
       if (fishing) return;
@@ -1247,7 +1257,7 @@ function AccountLounge({
         void prefetchVisit(place.actor).catch(() => {});
       return;
     }
-    if (place.destination !== 'realty' && place.destination !== 'furniture' && place.destination !== 'bank') preloadTab(place.destination, save);
+    if (place.destination !== 'realty' && place.destination !== 'furniture') preloadTab(place.id === 'wardrobe' ? 'salon' : place.destination, save);
   };
   // Who is inside each building, for the door prompt ("회관 · 안에 2명").
   const areaCounts: Record<string, number> = {};
@@ -2361,9 +2371,12 @@ function AccountLounge({
                 onTable={tableAct}
                 onExit={leaveInterior}
                 onHost={interior === 'tavern' ? () => setModal('tavernUp') : interior === 'casino' ? () => setModal('bank') : undefined}
+                onLender={() => setModal('lender')}
+                onBanker={() => { setFinancePage('bank'); setModal('bank'); }}
+                onSalon={() => enter('wardrobe')}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                sheetOpen={!!tableSheet}
+                sheetOpen={!!tableSheet || !!modal}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
@@ -2375,7 +2388,7 @@ function AccountLounge({
           </ScreenBoundary>
           {sheetNode}
           <div className="l-world-social">
-            {interior === 'casino' && <button className="l-world-chat-button" onClick={() => setModal('bank')} aria-label="루미 장부와 카지노 대부 창구 열기"><Glyph name="coin" size={19} /><span>카지노 창구</span></button>}
+            {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => setModal('bank')} aria-label="루미 장부 열기"><Glyph name="coin" size={19} /><span>루미 장부</span></button>}
             <button
               className="l-world-chat-button"
               aria-label={`${chatTitle} 열기`}
@@ -2404,15 +2417,15 @@ function AccountLounge({
               <p>
                 {flatArea === 'lounge'
                   ? '고스톱 · 섯다 · 친구들과 수다'
-                  : flatGames.map((k) => GAME_INFO[k].name).join(' · ')}
+                  : flatGames.length ? flatGames.map((k) => GAME_INFO[k].name).join(' · ') : VENUES[flatArea].tagline}
               </p>
             </div>
-            <button
+            {flatGames.length > 0 && <button
               className="l-primary l-new-game"
               onClick={() => requestGame(null)}
             >
               <span aria-hidden="true">＋</span>게임 초대
-            </button>
+            </button>}
           </div>
           <div className="l-lounge-grid">
             <div className="l-room-wrap">
@@ -2432,10 +2445,13 @@ function AccountLounge({
                     self={self}
                     onMove={move}
                     onTable={tableAct}
+                    onLender={() => setModal('lender')}
+                    onBanker={() => { setFinancePage('bank'); setModal('bank'); }}
+                    onSalon={() => enter('wardrobe')}
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                    sheetOpen={!!tableSheet}
+                    sheetOpen={!!tableSheet || !!modal}
                   />
                 </Suspense>
               </ScreenBoundary>
@@ -2451,7 +2467,7 @@ function AccountLounge({
               />
             </div>
             <aside className="l-lounge-sidebar">
-              <div className="l-play-list">
+              {flatGames.length > 0 && <div className="l-play-list">
                 <h2>오늘의 한 판</h2>
                 {flatGames.map((kind) => (
                   <button key={kind} onClick={() => openTable(kind)}>
@@ -2489,7 +2505,7 @@ function AccountLounge({
                     <ArrowUpRight size={19} />
                   </button>
                 ))}
-              </div>
+              </div>}
               <ChatPanel room={room} view={view} title={chatTitle} />
             </aside>
           </div>
@@ -2662,6 +2678,7 @@ function AccountLounge({
         />
       )}
       {modal === 'bank' && <FinancePanel room={room} view={view} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? (tab === 'casino' ? 'casino' : 'bank')} />}
+      {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'wallet' && (
         <WalletModal

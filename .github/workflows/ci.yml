@@ -13,6 +13,33 @@ permissions:
   contents: read
 
 jobs:
+  casino-lender:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Chromium for playwright-core
+        run: npx playwright-core install --with-deps chromium
+      - name: Pages build (scratch output)
+        run: node scripts/build-standalone.mjs --out /tmp/lender-pages --site-url /
+      - name: Casino lender interactions
+        run: node --experimental-strip-types scripts/verify-casino-lender-ui.mjs --pages /tmp/lender-pages --out /tmp/casino-lender --max-ms 1200000
+      - name: Illustrated tavern cards
+        run: node --experimental-strip-types scripts/verify-tavern-cards-ui.mjs --pages /tmp/lender-pages --out /tmp/tavern-cards
+      - name: Keep casino lender evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: casino-lender
+          path: |
+            /tmp/casino-lender
+            /tmp/tavern-cards
+
   village-life:
     # Real UI input against the isolated mock world: no production accounts,
     # network writes or saved data. Linux avoids local SwiftShader contention.

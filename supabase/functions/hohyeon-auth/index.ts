@@ -40,6 +40,7 @@ import {
   validPassword,
   protectProfileFurniture,
 } from '../../../app/lounge-accounts.ts';
+import { completeLoginGifts, LoginGiftError } from '../../../app/lounge-login-gifts.ts';
 
 const OPS = ['login', 'activate', 'recover', 'password', 'logout', 'logoutAll'];
 /** Marks a credential failure: counted by the lockout and logged as ok=false. */
@@ -287,6 +288,22 @@ serve('hohyeon-auth', async (b, req, ctx) => {
         ...(recoveryCode ? { recovery_hash: await digest(recoveryCode) } : {}),
       },
     });
+    // Only a verified password login claims administrator-armed gifts. The
+    // balance, permanent delivery marker and notice commit before success is
+    // returned; retries recompute against the latest world revision.
+    let world;
+    try {
+      world = await completeLoginGifts(op, { id: m.user_id, actor: m.actor }, {
+        read: () => rpc('hh_world_read'),
+        commit: (revision, state) => rpc('hh_world_commit', {
+          p_expected: revision,
+          p_state: state,
+        }),
+      });
+    } catch (e) {
+      if (e instanceof LoginGiftError) throw new HttpError(e.message, 503, e.reason);
+      throw e;
+    }
     await rpc('hh_auth_reset', { p_key: failKey });
     await audit(ctx, {
       username,
@@ -301,7 +318,6 @@ serve('hohyeon-auth', async (b, req, ctx) => {
           ? mode + ',code_like_password'
           : mode,
     });
-    const world = await rpc('hh_world_read');
     return {
       session: {
         access_token: data.session.access_token,

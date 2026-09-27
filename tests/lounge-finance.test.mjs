@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newLoungeLedger, registerWallet, validateLedger, reserveGame, settleGame, storeBeom, dailyGrantInfo, transferBeom, houseTransfer } from '../app/lounge-economy.ts';
 import { ensureLifeMember, readLife } from '../app/lounge-life.ts';
-import { financeAction, financeView, recordCasino } from '../app/lounge-finance.ts';
+import { financeAction, financeView, readFinance, recordCasino } from '../app/lounge-finance.ts';
+import { CASINO_LENDER_FRONT, CASINO_LENDER_SPOT, CASINO_LENDER_REACH } from '../app/lounge-casino-lender.ts';
+import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
+import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 const ids = [0, 1, 2].map((i) => `00000000-0000-4000-8000-00000000000${i}`);
 const wallets = ids.map((id) => 'wallet-' + id), now = Date.UTC(2026, 8, 28, 2), day = 86_400_000;
 function world() {
@@ -60,7 +63,7 @@ test('loan reminders are due-only, lender-only and once per KST day', () => {
   assert.throws(() => act(w, 0, { op: 'remind', id }, now + day + 1));
 });
 test('casino loan is one outstanding fixed-interest contract and preserves the house invariant', () => {
-  const casino = presence.map((p) => ({ ...p, area: 'casino' }));
+  const casino = presence.map((p) => ({ ...p, ...CASINO_LENDER_FRONT, area: 'casino' }));
   assert.throws(() => act(world(), 0, { op: 'borrow', amount: 10_000 }));
   let w = act(world(), 0, { op: 'borrow', amount: 10_000 }, now, casino);
   assert.equal(w.ledger.houseBalance, -10_000);
@@ -70,6 +73,29 @@ test('casino loan is one outstanding fixed-interest contract and preserves the h
   w = act(w, 0, { op: 'repay', id: w.state.loans[0].id, amount: 13_000 }, now + 20 * day, casino);
   assert.equal(w.ledger.houseBalance, 3000);
   assert.equal(w.ledger.accounts[wallets[0]], 97_000);
+});
+
+test('casino contracts require an idle player at Rosé, while friend repayments remain remote', () => {
+  const casino = presence.map((p) => ({ ...p, ...CASINO_LENDER_FRONT, area: 'casino' }));
+  const original = world();
+  const loan = act(original, 0, { op: 'borrow', amount: 10_000 }, now, casino);
+  const id = loan.state.loans[0].id;
+  for (const override of [{ area: 'home' }, { x: 15, y: 82 }, { x: NaN }, { y: Infinity }, { busy: true }, { x: CASINO_LENDER_SPOT.x + CASINO_LENDER_REACH + .01, y: CASINO_LENDER_SPOT.y }]) {
+    const unavailable = casino.map((p) => p.actor === 0 ? { ...p, ...override } : p);
+    const before = structuredClone(loan);
+    assert.throws(() => act(original, 0, { op: 'borrow', amount: 1000 }, now, unavailable));
+    assert.throws(() => act(loan, 0, { op: 'repay', id, amount: 1000 }, now, unavailable));
+    assert.deepEqual(loan, before, 'rejected repayment cannot change a saved debt or ledger');
+  }
+  const restored = { ...loan, state: readFinance(JSON.parse(JSON.stringify(loan.state))) };
+  assert.deepEqual(restored.state.loans[0], loan.state.loans[0]);
+  const partlyPaid = act(restored, 0, { op: 'repay', id, amount: 300 }, now + 20 * day, casino);
+  assert.deepEqual(partlyPaid.state.loans[0], { ...loan.state.loans[0], paid: 300 });
+  const paid = act(partlyPaid, 0, { op: 'repay', id, amount: 12700 }, now + 20 * day, casino);
+  assert.equal(paid.state.loans[0].state, 'paid');
+  const friend = act(world(), 0, { op: 'offer', to: 1, amount: 1000, interest: 0, days: 1 });
+  const signed = act(friend, 1, { op: 'accept', id: friend.state.loans[0].id });
+  assert.equal(act(signed, 1, { op: 'repay', id: friend.state.loans[0].id, amount: 1000 }).state.loans[0].state, 'paid');
 });
 test('robbery targets online nearby friends only, with daily limits and protected deposits', () => {
   let w = world();
@@ -135,14 +161,86 @@ test('Lumi stats count paid settlements once and mercy refunds a bounded loss wi
   assert.equal(recordCasino(w.state, w.ledger, w.ledger, now), w.state);
   const casino = presence.map((p) => ({ ...p, area: 'casino' }));
   const refunded = act(w, 0, { op: 'mercy' }, now, casino);
-  assert.equal(refunded.ledger.accounts[wallets[0]], 92_000);
-  assert.equal(refunded.ledger.houseBalance, 8000);
+  assert.equal(refunded.ledger.accounts[wallets[0]], 95_000);
+  assert.equal(refunded.ledger.houseBalance, 5000);
   assert.equal(refunded.ledger.granted ?? 0, 0);
-  assert.equal(financeView(refunded.state, refunded.ledger, refunded.life, ids[0], now).casino.profit, 8000);
+  assert.equal(financeView(refunded.state, refunded.ledger, refunded.life, ids[0], now).casino.profit, 5000);
   assert.throws(() => act(refunded, 0, { op: 'mercy' }, now, casino));
   const refused = act(w, 0, { op: 'mercy' }, now, casino, () => .99);
   assert.equal(refused.ledger.accounts[wallets[0]], 90_000);
   assert.throws(() => act(refused, 0, { op: 'mercy' }, now, casino));
+});
+
+test('Lumi returns half the net loss without a 10,000 cap and large refunds survive saved-state parsing', () => {
+  let w = world();
+  for (const [id, stake, result] of [['loss', 60000, -60000], ['win', 10000, 9999]]) {
+    const before = reserveGame(w.ledger, id, 'blackjack', [wallets[0]], [stake]);
+    w.ledger = settleGame(before, id, [result]);
+    w.state = recordCasino(w.state, before, w.ledger, now);
+  }
+  const casino = presence.map((p) => ({ ...p, area: 'casino' }));
+  const refunded = act(w, 0, { op: 'mercy' }, now, casino);
+  assert.equal(refunded.state.casino[0].net[wallets[0]], -50001);
+  assert.equal(refunded.state.casino[0].mercy[ids[0]], 25000);
+  assert.equal(refunded.ledger.accounts[wallets[0]], 74999);
+  assert.equal(refunded.ledger.houseBalance, 25001);
+  assert.equal(financeView(refunded.state, refunded.ledger, refunded.life, ids[0], now).casino.profit, 25001);
+  const restored = { ...refunded, state: readFinance(JSON.parse(JSON.stringify(refunded.state))) };
+  assert.equal(restored.state.casino[0].mercy[ids[0]], 25000);
+  assert.throws(() => act(restored, 0, { op: 'mercy' }, now, casino));
+  assert.throws(() => act(restored, 0, { op: 'mercy' }, now + day, casino), /순손실/);
+});
+
+test('cloud lender transactions use server location, preserve legacy debt and replay receipts only once', async () => {
+  let state = { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} };
+  const people = [0, 1].map(actor => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), code: '', epoch: 0, sequence: 0 }));
+  const [borrower, friend] = people;
+  const apply = async (person, command, at = now) => {
+    const result = cloudTransition(state, person, command, await commandHash(command), at);
+    state = result.state;
+    person.epoch = result.response.epoch;
+    if (result.response.code) person.code = result.response.code;
+    validateLedger(state.ledger);
+    assert.equal(Object.values(state.ledger.accounts).reduce((a, b) => a + b, 0) + (state.ledger.houseBalance ?? 0) - (state.ledger.granted ?? 0), Object.keys(state.ledger.accounts).length * 100000);
+    return result.response;
+  };
+  const command = (person, op, extra = {}) => ({ op, connection: person.connection, ...(person.code ? { code: person.code } : {}), ...(!['read', 'wallet'].includes(op) ? { requestId: crypto.randomUUID(), sequence: ++person.sequence } : {}), ...(['open', 'join'].includes(op) ? { epoch: person.epoch } : {}), ...extra });
+  const run = (person, op, extra = {}) => apply(person, command(person, op, extra));
+  const action = (person, a) => run(person, 'action', { action: a });
+  assert.equal((await run(borrower, 'open')).ok, true);
+  friend.code = borrower.code;
+  assert.equal((await run(friend, 'join')).ok, true);
+  const borrow = { kind: 'finance', op: 'borrow', amount: 10000 };
+  assert.equal((await action(borrower, { ...borrow, area: 'casino', ...CASINO_LENDER_FRONT })).ok, false);
+  assert.equal((await action(borrower, { kind: 'area', area: 'casino' })).ok, true);
+  assert.equal((await action(borrower, { kind: 'move', x: 15, y: 82 })).ok, true);
+  assert.equal((await action(borrower, { ...borrow, ...CASINO_LENDER_FRONT })).ok, false, 'coordinates inside finance payload are not authoritative');
+  assert.equal((await action(borrower, { kind: 'move', ...CASINO_LENDER_FRONT })).ok, true);
+  const borrowCommand = command(borrower, 'action', { action: borrow });
+  const accepted = await apply(borrower, borrowCommand);
+  assert.equal(accepted.ok, true, accepted.error);
+  const note = structuredClone(accepted.finance.loans[0]);
+  assert.equal((await apply(borrower, borrowCommand)).ok, true);
+  assert.equal(state.ledger.accounts['wallet-' + borrower.id], 110000);
+  assert.equal(state.finance.loans.length, 1);
+  assert.deepEqual((await run(friend, 'read')).finance.loans, [], 'another resident cannot see my debt');
+  assert.equal((await action(friend, { kind: 'finance', op: 'repay', id: note.id, amount: 1000 })).ok, false);
+  assert.equal((await action(borrower, { kind: 'area', area: 'home' })).ok, true);
+  assert.equal((await action(borrower, { kind: 'finance', op: 'repay', id: note.id, amount: 1000, area: 'casino', ...CASINO_LENDER_FRONT })).ok, false);
+  state = JSON.parse(JSON.stringify(state));
+  assert.equal((await action(borrower, { kind: 'area', area: 'casino' })).ok, true);
+  assert.equal((await action(borrower, { kind: 'move', ...CASINO_LENDER_FRONT })).ok, true);
+  const repayCommand = command(borrower, 'action', { action: { kind: 'finance', op: 'repay', id: note.id, amount: 300 } });
+  assert.equal((await apply(borrower, repayCommand)).ok, true);
+  assert.equal((await apply(borrower, repayCommand)).ok, true);
+  assert.equal(state.finance.loans[0].paid, 300);
+  assert.equal(state.finance.loans[0].id, note.id);
+  assert.equal(state.finance.loans[0].dueAt, note.dueAt);
+  const repaid = await action(borrower, { kind: 'finance', op: 'repay', id: note.id, amount: 12700 });
+  assert.equal(repaid.ok, true, repaid.error);
+  assert.equal(repaid.finance.loans[0].state, 'paid');
+  assert.equal(state.ledger.accounts['wallet-' + borrower.id], 97000);
+  assert.equal(state.ledger.houseBalance, 3000);
 });
 test('newly completed long-running game survives hot-game compaction for daily observers', () => {
   let w = world().ledger;

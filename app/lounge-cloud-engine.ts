@@ -34,6 +34,7 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
+import type { LoginGift } from './lounge-login-gifts.ts';
 export type CloudMember = {
   id: string;
   actor: number;
@@ -67,6 +68,8 @@ export type CloudWorld = {
   /** Phase 2 life state (farms, bags, mail…). Absent in older worlds. */
   life?: LifeState;
   finance?: FinanceState;
+  /** Private administrator-armed login gifts; delivered records never expire. */
+  loginGifts?: Record<string, LoginGift>;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';

@@ -27,6 +27,8 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
           사용했습니다. 테라스와 방의 가구는 3DAssets.dev (CC0)입니다. 주사위·카드·
           타이머 효과음은 Kenney의 Casino Audio·Interface Sounds (CC0)입니다. 허 선장·문 사장·결 목수
           그림은 Higgsfield(gpt_image_2_5)로 만들었고, 뻥총·다트판·축음기와 주점 음악은 코드로 그렸어요.
+          로제·냐모·그웬과 허풍 카드 그림도 Higgsfield로 제작했습니다. 로제와 그웬은
+          Riot Games의 미스 포츈·그웬, 냐모는 사용자가 제공한 캐릭터 그림을 참고한 팬 창작입니다.
         </p>
         <p>
           공간을 걸으며 기능을 만나는 구성은{' '}

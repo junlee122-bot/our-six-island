@@ -3,6 +3,8 @@ import { useRef, useState } from 'react';
 import { ACTORS } from '../lounge-roster';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { FinanceAction } from '../lounge-finance';
+import { LENDER_NAME } from '../lounge-casino-lender';
+import { LOUNGE_ASSETS } from '../lounge-assets';
 import { formatBeom } from '../lounge-text';
 import { GameButton } from '../ui/GameButton';
 import { Tabs, tabPanelProps } from '../ui/Tabs';
@@ -34,6 +36,10 @@ export function FinancePanel({ room, view, onClose, initial = 'bank' }: {
   const button = (label: string, action: FinanceAction, off = false) => <GameButton disabled={busy || off} onClick={() => void run(action)}>{label}</GameButton>;
   return <Modal title="범마을 은행" wide className="l-finance" venue={page === 'casino' ? 'casino' : undefined} onClose={onClose}>
     {!data ? <p role="status">은행 장부를 불러오는 중이에요. 잠시 뒤 다시 열어 주세요.</p> : <>
+      {(page === 'bank' || page === 'notes') && <div className="l-finance-clerk" data-testid="bank-clerk">
+        <img src={LOUNGE_ASSETS.bankClerkSprite} alt="고양이 귀와 꼬리가 있는 은행원 냐모" />
+        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p></div>
+      </div>}
       <div className="l-finance-balances"><span>소지금 <strong>{formatBeom(view.wallet.balance)}</strong></span><span>보관금 <strong>{formatBeom(data.stored)}</strong></span></div>
       {data.loans.some((l) => l.borrower === uid && l.state === 'active' && l.dueAt <= now) && <p className="l-finance-due" role="status">상환 기한이 지난 차용증이 있어요. 차용증 탭에서 남은 금액을 확인하고 직접 갚아 주세요.</p>}
       <Tabs items={pages.map((p) => ({ ...p }))} value={page} onChange={setPage} label="은행 업무" idBase="finance" />
@@ -57,13 +63,13 @@ export function FinancePanel({ room, view, onClose, initial = 'bank' }: {
           {!data.loans.length && <p>아직 주고받은 차용증이 없어요.</p>}
           {data.loans.slice().reverse().map((l) => {
             const remaining = l.principal + l.interest - l.paid, borrowing = l.borrower === uid,
-              lender = l.lenderActor === null ? '카지노 대부업자' : ACTORS[l.lenderActor] ?? '친구', borrower = ACTORS[l.borrowerActor] ?? '친구';
+              lender = l.lender === 'house' ? LENDER_NAME : ACTORS[l.lenderActor ?? -1] ?? '친구', borrower = ACTORS[l.borrowerActor] ?? '친구';
             return <article className="l-finance-note" key={l.id}>
               <h4>{lender} → {borrower}</h4><p>원금 {formatBeom(l.principal)} + 이자 {formatBeom(l.interest)} · 남은 {formatBeom(remaining)}</p>
               <p>{l.state === 'offered' ? l.expired ? '수락 기한이 지났어요.' : `${l.days}일 약정 · 상대 수락 대기` : l.state === 'active' ? `만기 ${date(l.dueAt)}${now >= l.dueAt ? ' · 연체 중' : ''}` : l.state === 'paid' ? '모두 갚았어요.' : '거절한 차용증'}</p>
               <div className="l-finance-actions">
                 {l.state === 'offered' && borrowing && !l.expired && <>{button('조건 확인 · 수락', { kind: 'finance', op: 'accept', id: l.id })}{button('거절', { kind: 'finance', op: 'decline', id: l.id })}</>}
-                {l.state === 'active' && borrowing && <>{button(`${formatBeom(Math.min(1000, remaining))} 갚기`, { kind: 'finance', op: 'repay', id: l.id, amount: Math.min(1000, remaining) }, view.wallet.balance < Math.min(1000, remaining))}{button('전액 갚기', { kind: 'finance', op: 'repay', id: l.id, amount: remaining }, view.wallet.balance < remaining)}</>}
+                {l.state === 'active' && borrowing && (l.lender === 'house' ? <p>상환하려면 카지노의 {LENDER_NAME}를 찾아가세요.</p> : <>{button(`${formatBeom(Math.min(1000, remaining))} 갚기`, { kind: 'finance', op: 'repay', id: l.id, amount: Math.min(1000, remaining) }, view.wallet.balance < Math.min(1000, remaining))}{button('전액 갚기', { kind: 'finance', op: 'repay', id: l.id, amount: remaining }, view.wallet.balance < remaining)}</>)}
                 {l.state === 'active' && !borrowing && button('독촉 쪽지 보내기', { kind: 'finance', op: 'remind', id: l.id }, now < l.dueAt)}
               </div>
             </article>;
@@ -74,12 +80,9 @@ export function FinancePanel({ room, view, onClose, initial = 'bank' }: {
           <p>한국 시간 오늘의 블랙잭 정산이에요. 포커 판돈은 친구끼리 나누므로 루미 수익에 포함하지 않아요. 기록은 이번 업데이트부터 쌓여요.</p>
           <p>내 블랙잭 순손익 <strong>{formatBeom(data.casino.myNet)}</strong></p>
           {button(data.casino.mercyUsed ? `오늘 부탁 완료 · ${formatBeom(data.casino.refund)} 환급` : '루미에게 싹싹 빌기', { kind: 'finance', op: 'mercy' }, !casino || data.casino.mercyUsed || data.casino.myNet >= 0)}
-          <p>하루 한 번 · 성공 30% · 오늘 순손실의 20%, 최대 10,000범을 돌려줘요.</p>
-          <h3>카지노 대부 창구</h3><p>3일 약정 · 한 번 붙는 이자 30% · 추가 연체이자 없음 · 기존 빚을 갚아야 다시 빌릴 수 있어요.</p>
-          <label>빌릴 금액<input type="number" min="1000" max="30000" step="1000" value={amount} onChange={(e) => setAmount(Number(e.target.value))} /></label>
-          <p>받을 돈 {formatBeom(amount)} / 갚을 돈 <strong>{formatBeom(amount + Math.floor(amount * .3))}</strong></p>
-          {button('이 조건에 동의하고 빌리기', { kind: 'finance', op: 'borrow', amount }, !casino || amount < 1000 || amount > 30000)}
-          {!casino && <p>대출과 루미에게 부탁하기는 카지노에 들어가서 이용해 주세요.</p>}
+          <p>하루 한 번 · 성공 30% · 오늘 블랙잭 순손실의 50%를 돌려줘요. 금액 상한은 없어요.</p>
+          {!casino && <p>루미에게 부탁하기는 카지노에 들어가서 이용해 주세요.</p>}
+          <p>카지노 대출과 상환은 카지노 안의 {LENDER_NAME}에게 직접 찾아가세요.</p>
         </>}
         {page === 'rob' && <>
           <h3>방범 물품</h3><p>접속 중인 모든 친구가 강도 대상이에요. 자물쇠와 호루라기는 자동으로 지켜줘요.</p>

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
+import { UI_METRICS } from './ui-report.mjs';
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
 import { villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
@@ -52,10 +53,11 @@ process.once('SIGTERM', stop);
 
 async function runView(mobile = false) {
   const name = mobile ? 'mobile' : 'desktop';
-  const res = report.views[name] = { viewport: mobile ? [390, 844] : [1280, 720], steps: [], screenshots: [], console: [], errors: [], requests: [] };
+  const res = report.views[name] = { viewport: mobile ? [390, 844] : [1280, 720], steps: [], screenshots: [], console: [], errors: [], requests: [], apiFailures: [], actionGuards: [] };
   // setup retains its normal mock logic; only the isolated context's device varies.
   const host = mobile ? { newContext: (options) => browser.newContext({ ...options, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }) } : browser;
   let H;
+  const responseReads = [];
   try {
     H = await setup({ browser: host, base: server.url, view: 's' });
     const { page, ctx, js, sleep } = H;
@@ -72,15 +74,30 @@ async function runView(mobile = false) {
     }, Date.now());
     page.on('console', (msg) => { if (msg.type() === 'error') res.console.push(msg.text().slice(0, 500)); });
     page.on('response', (r) => { if (r.status() >= 400 && r.url().startsWith(server.url)) res.requests.push({ status: r.status(), url: r.url().replace(server.url, '/') }); });
+    page.on('response', (r) => {
+      if (r.status() < 400 || !r.url().includes('/functions/v1/hohyeon-api')) return;
+      let command;
+      try { command = JSON.parse(r.request().postData() || '{}').command; } catch {}
+      const failure = { status: r.status(), op: command?.op, kind: command?.action?.kind, requestId: command?.requestId };
+      res.apiFailures.push(failure);
+      responseReads.push(r.json().then((body) => { failure.error = body.error; }).catch(() => {}));
+    });
     // Record actual requests made by the tested page, rather than fabricating
     // action counts from render state. Payloads contain synthetic test data only.
     const commands = [];
-    // Delay only these synthetic requests to make duplicate-input races visible.
-    // fallback always lands in ui-harness's mocked context route (never fetch).
+    // Hold the tested request until every repeated key has actually been sent.
+    // A fixed 700ms delay can expire while SwiftShader processes pointer/focus
+    // input, accidentally testing a second action after the first has finished.
+    // fallback still lands in ui-harness's mocked context route (never fetch).
+    let heldAction = null;
     await page.route('**/functions/v1/hohyeon-api', async (route) => {
       let kind;
       try { kind = JSON.parse(route.request().postData() || '{}').command?.action?.kind; } catch {}
-      if (['pick', 'forage', 'chop'].includes(kind)) await new Promise((done) => setTimeout(done, 700));
+      const gate = heldAction;
+      if (gate && kind === gate.kind) {
+        gate.requests.push(route.request());
+        await gate.open;
+      }
       await route.fallback();
     });
     page.on('request', (r) => {
@@ -96,14 +113,15 @@ async function runView(mobile = false) {
       assert.ok(check(), label);
     };
     const model = () => lifeView(H.world().life, H.uid, 3, Date.now());
-    const shot = async (label) => {
+    const shot = async (label, allMetrics = false) => {
       await js(() => document.fonts.ready);
       const file = `${name}-${label}.png`;
       await page.screenshot({ path: path.join(out, file), timeout: 90_000 });
       const measurements = await js(measureInPage);
-      res.screenshots.push({ label, file, measurements });
+      res.screenshots.push({ label, file, viewport: page.viewportSize(), measurements });
       assert.equal(measurements.coveredCount, 0,
         'visible controls remain reachable: ' + JSON.stringify(measurements.covered));
+      if (allMetrics) for (const metric of UI_METRICS) assert.equal(measurements[metric], 0, label + ': ' + metric);
     };
     const step = async (label, work) => {
       const at = performance.now();
@@ -119,18 +137,12 @@ async function runView(mobile = false) {
       } finally { persistReport(); }
     };
     const click = async (selector) => {
-      await page.locator(selector).first().waitFor({ state: 'visible', timeout: 30_000 });
-      // Use a real pointer at the visible centre. Avoid Playwright's scroll
-      // phase stalling behind SwiftShader while the full 3D village animates.
-      const hit = await js((s) => {
-        const e = document.querySelector(s), r = e.getBoundingClientRect();
-        const x = r.x + r.width / 2, y = r.y + r.height / 2;
-        return { x, y, clear: e.contains(document.elementFromPoint(x, y)), disabled: e.matches(':disabled') };
-      }, selector);
-      assert.ok(hit.clear && !hit.disabled, 'click target is visible, enabled and unobstructed: ' + selector);
-      await page.mouse.click(hit.x, hit.y);
+      // Model readiness can precede the input-blocking entrance fade. Use real
+      // actionability checks after it clears; a persistent obstruction still fails.
+      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+      await page.locator(selector).first().click({ timeout: 30_000 });
     };
-    const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d]').first().focus();
+    const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=interior-3d]').first().focus();
     const runTo = async (arrive) => {
       await focus();
       await page.keyboard.down('Shift');
@@ -147,7 +159,7 @@ async function runView(mobile = false) {
       if (!(await js(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'village')))
         await page.getByRole('button', { name: /마을로 나가기/ }).click();
       await wait(() => document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state') === 'ready', null, 180_000);
-      await sleep(500);
+      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
     };
     const stationary = async (near) => wait((id) => {
       const d = document.querySelector('[data-testid=village-3d]')?.dataset;
@@ -166,12 +178,42 @@ async function runView(mobile = false) {
     const pressAction = () => click('[data-testid=action-button].hv-action');
     const guardedAction = async (kind, changed, label) => {
       const before = commands.filter((c) => c.action?.kind === kind).length;
-      await pressAction();
-      await focus();
-      for (let i = 0; i < 3; i++) { await page.keyboard.press('KeyE'); await sleep(60); }
+      let release;
+      const gate = { kind, requests: [], open: new Promise((done) => { release = done; }) };
+      const evidence = { kind, heldMs: 0, requestsWhileHeld: 0, requestsAfterReply: 0 };
+      res.actionGuards.push(evidence);
+      assert.equal(heldAction, null, 'only one resource action gate is active');
+      assert.ok(!changed(), label + ': resource starts uncollected');
+      heldAction = gate;
+      const startedAt = performance.now();
+      let reply;
+      try {
+        await pressAction();
+        await waitMock(() => gate.requests.length > 0, label + ': first request reaches the gate');
+        // Handle rejection even if an assertion fails before the gate is released.
+        reply = page.waitForResponse((r) => r.request() === gate.requests[0], { timeout: 30_000 })
+          .then((response) => ({ response }), (error) => ({ error }));
+        await focus();
+        for (let i = 0; i < 3; i++) await page.keyboard.press('KeyE');
+        assert.ok(!changed(), label + ': canonical state stays unchanged while the response is held');
+        evidence.requestsWhileHeld = commands.filter((c) => c.action?.kind === kind).length - before;
+        assert.equal(evidence.requestsWhileHeld, 1, label + ': repeated keys send only one in-flight action');
+      } finally {
+        evidence.heldMs = Math.round(performance.now() - startedAt);
+        heldAction = null;
+        release();
+      }
+      const received = await reply;
+      if (received.error) throw received.error;
+      assert.equal(received.response.status(), 200, label + ': resource action succeeds');
+      await received.response.finished();
       await waitMock(changed, label);
-      await sleep(150);
-      assert.equal(commands.filter((c) => c.action?.kind === kind).length, before + 1, label + ': repeated E during 700ms reply sends one action');
+      // Let the client consume the reply and render its resulting state. Any
+      // incorrectly queued duplicate is sent after the first reply, so check
+      // the total again after these actual browser frames, not a wall-time nap.
+      await js(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+      evidence.requestsAfterReply = commands.filter((c) => c.action?.kind === kind).length - before;
+      assert.equal(evidence.requestsAfterReply, 1, label + ': no duplicate action is queued after the reply');
     };
     const walkBuilding = async (id) => {
       if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
@@ -290,17 +332,92 @@ async function runView(mobile = false) {
     });
     await step('salon-walk-and-customization', async () => {
       await walkBuilding('wardrobe'); await shot('salon-door'); await pressAction();
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 8 && d.salonState === 'loaded';
+      }, null, 180_000);
+      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+      assert.equal(await page.getByTestId('wardrobe-preview').count(), 0, 'the salon opens on a walkable floor');
+      await shot('salon-interior');
+      await click('[data-testid=interior-salon-route]');
+      await runTo(() => wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.action === 'salon' && d.walking === 'false' && d.nearSalon === 'true';
+      }, null, 120_000));
+      await page.keyboard.press('KeyE');
       await wait(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'wardrobe', null, 60_000);
       await wait(() => {
-        const backdrop = document.querySelector('.l-wardrobe-full-backdrop');
-        return backdrop instanceof HTMLImageElement && backdrop.complete && backdrop.naturalWidth > 0 && getComputedStyle(backdrop).display !== 'none';
+        const canvas = document.querySelector('[data-testid=wardrobe-preview] canvas');
+        if (!(canvas instanceof HTMLCanvasElement) || !canvas.width || !canvas.height) return false;
+        const context = canvas.getContext('2d');
+        if (!context) return false;
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let visible = 0;
+        for (let p = 3; p < pixels.length; p += 4) if (pixels[p] > 80) visible++;
+        return visible > canvas.width * canvas.height * .02;
       });
-      await shot('salon-customization');
+      await shot('salon-customization', true);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('salon-customization-fhd', true);
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
+      const savedColors = page.waitForResponse((response) => {
+        if (!response.url().includes('/functions/v1/hohyeon-api')) return false;
+        try {
+          const body = JSON.parse(response.request().postData() || '{}');
+          const look = body.save?.looks?.[3];
+          return body.op === 'save' && look?.skinColor === '#b47a58' && look.hairColor?.slice(1, 3) === '25';
+        } catch { return false; }
+      }, { timeout: 30_000 }).then((response) => ({ response }), (error) => ({ error }));
+      await page.getByRole('tab', { name: '머리', exact: true }).click();
+      await page.getByRole('group', { name: '나만의 머리 색', exact: true }).getByLabel('R', { exact: true }).fill('37');
+      await page.getByRole('tab', { name: '피부', exact: true }).click();
+      await page.getByRole('group', { name: '피부 색', exact: true }).getByLabel('HEX', { exact: true }).fill('#b47a58');
+      await page.keyboard.press('Tab');
+      const colorResult = await savedColors;
+      if (colorResult.error) throw colorResult.error;
+      const colorResponse = colorResult.response;
+      assert.ok(colorResponse.ok(), 'synthetic custom colors are accepted by the profile save API');
+      const accepted = await colorResponse.json();
+      assert.equal(accepted.save.looks[3].skinColor, '#b47a58');
+      assert.equal(parseInt(accepted.save.looks[3].hairColor.slice(1, 3), 16), 37);
+      await shot('salon-custom-colors', true);
+      await click('[data-testid=wardrobe-exit]');
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'salon' && d.loadState === 'ready' && d.action === 'salon';
+      }, null, 60_000);
+      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+      await focus(); await page.keyboard.press('KeyE');
+      await page.getByTestId('wardrobe-preview').waitFor();
+      await page.getByRole('tab', { name: '머리', exact: true }).click();
+      assert.equal(await page.getByRole('group', { name: '나만의 머리 색', exact: true }).getByLabel('R', { exact: true }).inputValue(), '37');
+      await page.getByRole('tab', { name: '피부', exact: true }).click();
+      assert.equal((await page.getByRole('group', { name: '피부 색', exact: true }).getByLabel('HEX', { exact: true }).inputValue()).toLowerCase(), '#b47a58');
+      await click('[data-testid=wardrobe-exit]');
+      await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.area === 'salon', null, 60_000);
       await village();
     });
     await step('bank-deposit-withdraw-consent', async () => {
       await walkBuilding('bank'); await shot('bank-door'); await pressAction();
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 7;
+      }, null, 180_000);
+      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+      assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'entering the bank leaves the player on its walkable floor');
+      await shot('bank-interior');
+      await click('[data-testid=interior-banker-route]');
+      await runTo(() => wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.action === 'banker' && d.walking === 'false' && d.nearBanker === 'true';
+      }, null, 120_000));
+      assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'approaching Nyamo does not transfer money or open a form');
+      await page.keyboard.press('KeyE');
       await page.locator('dialog[open].l-finance').waitFor();
+      await wait(() => {
+        const img = document.querySelector('[data-testid=bank-clerk] img');
+        return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
       const key = 'wallet-' + H.uid, before = H.world().ledger.accounts[key];
       await page.getByLabel('맡기거나 찾을 금액').fill('1000');
       await page.getByRole('button', { name: '맡기기', exact: true }).click();
@@ -322,6 +439,13 @@ async function runView(mobile = false) {
       await wait(() => document.querySelector('.l-finance-note')?.textContent.includes('모두 갚았어요'));
       assert.equal(H.world().ledger.accounts[key], before);
       await shot('bank'); await closeDialogs();
+      await village();
+      const inside = await H.run(H.bots[1], 'action', { action: { kind: 'area', area: 'bank' } });
+      assert.ok(!inside.error, 'another synthetic friend can enter the bank');
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
+      await wait(() => document.querySelector('[data-minimap-friend="6"]')?.getAttribute('data-indoor') === 'true');
+      assert.match(await page.locator('[data-minimap-friend="6"]').getAttribute('aria-label'), /은행 안/);
+      await shot('bank-friend-minimap');
     });
     await step('fruit-forage-chop', async () => {
       await directory('orchard');
@@ -380,6 +504,7 @@ async function runView(mobile = false) {
       if (res.errors.length || res.console.length || res.requests.length)
         report.failures.push(`${name}: browser errors=${res.errors.length}, console=${res.console.length}, HTTP=${res.requests.length}`);
       await H.close();
+      await Promise.allSettled(responseReads);
     }
   }
 }

@@ -283,5 +283,32 @@ async function models() {
   }
 }
 
+async function serviceSprites() {
+  for (const name of ['casino-lender-rose', 'bank-clerk-nyamo', 'salon-stylist-gwen']) {
+    const source = path.join(assets, `lounge/_originals/${name}.png`);
+    if (!fs.existsSync(source)) continue;
+    const target = path.join(assets, `lounge/${name}.webp`);
+    await sharp(source).resize(660, 990, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
+    console.log(`${name}.png -> 660x990 .webp ${kb(fs.statSync(target).size)}`);
+  }
+}
+async function tavernCards() {
+  const source = path.join(assets, 'lounge/_originals/tavern-cards.png');
+  if (!fs.existsSync(source)) return;
+  const { width, height } = await sharp(source).metadata();
+  const out = path.join(assets, 'lounge/cards');
+  fs.mkdirSync(out, { recursive: true });
+  for (const [i, name] of ['king', 'queen', 'ace', 'joker', 'back'].entries()) {
+    const col = i % 3, row = Math.floor(i / 3);
+    const left = Math.round(width * col / 3), top = Math.round(height * row / 2);
+    const target = path.join(out, `tavern-${name}.webp`);
+    await sharp(source).extract({ left, top, width: Math.round(width * (col + 1) / 3) - left, height: Math.round(height * (row + 1) / 2) - top })
+      .resize(512, 768).webp({ quality: 90, effort: 6 }).toFile(target);
+    console.log(`tavern-${name}.webp ${kb(fs.statSync(target).size)}`);
+  }
+}
+if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
+if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();

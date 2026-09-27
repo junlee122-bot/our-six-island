@@ -32,6 +32,7 @@
   outline-offset: 3px;
 }
 .l-action-button:disabled {
+  opacity: 1;
   background: var(--disabled-bg);
   color: var(--disabled-text);
   box-shadow: var(--edge-disabled);

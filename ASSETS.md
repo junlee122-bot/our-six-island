@@ -605,3 +605,13 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 - 상세 페이지 약관(2026-09-28 확인): 개인·상업 프로젝트 사용 및 수정 가능, 출처 표기 필수, 원본 자료 재판매 금지. Creative Commons 자료로 표기하지 않습니다.
 - 웹용 5개 합계 2,242,228바이트. dedup/weld/prune, 양자화, 텍스처 최대 1024px WebP(q88) 최적화. 공개 배포에서는 원본 폴더를 제외하고 웹용 사본만 사용합니다.
 - 원본 보관: `public/models/_originals/village/life-services/`.
+
+## 로제·냐모·그웬과 허풍 카드 · 2026-09-28
+
+Higgsfield GPT Image 2.5(high, 2K)로 NPC 3장과 카드 아틀라스 1장을 생성했습니다. 사용자가 제공한 미스 포츈·냐모·그웬 이미지는 외형 참고로만 사용하고, 기존 루미 그림을 그림체 참고로 넣었습니다. 사용자 참고 원본은 공개 저장소에 넣지 않습니다. NPC는 2:3 투명 전신으로 생성하고 660×990 WebP로, 카드 시트는 3열×2행 중 왕·여왕·에이스·조커·뒷면 5칸을 512×768 WebP로 만들었습니다. 카드 등급·이름은 실제 텍스트로 표시합니다.
+
+- 원본·정확한 프롬프트: `public/assets/lounge/_originals/`의 같은 이름 PNG 및 `.prompt.txt`.
+- 생성 작업 ID·SHA-256·참고 범위: [services-generation.json](public/assets/lounge/services-generation.json).
+- 재현: `node scripts/optimize-assets.mjs services`, `node scripts/optimize-assets.mjs cards`. 원본은 배포 매니페스트에 넣지 않습니다.
+- 런타임: `casino-lender-rose.webp`, `bank-clerk-nyamo.webp`, `salon-stylist-gwen.webp`, `cards/tavern-*.webp`. 미스 포츈·그웬은 Riot Games 캐릭터를 참고한 팬 창작이며 별도 권리 허락을 받은 에셋으로 표기하지 않습니다. 냐모 역시 사용자 참고 캐릭터 기반 팬 창작입니다. 카드 동물·민화 문양은 새로 생성한 그림입니다.
+- 은행·미용실 실내는 이미 약관·해시가 기록된 kArchive 접수대·연회 의자·서가·소파·화분대·찻상·종·달력·찬장·모서리 수납장을 재배치합니다. 은행 7종, 미용실 8종을 사용하며 자료: kArchive / 출처: 쓰레드 dogfooter 표기를 유지합니다. 거울·벽·바닥·간판은 같은 톤의 자체 3D 도형입니다. 새 kArchive 원본을 추가로 내려받지 않았습니다.

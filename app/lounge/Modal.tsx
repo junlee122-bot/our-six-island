@@ -5,7 +5,7 @@ import { CloseButton } from '../ui/Panel';
 import { KeyHintBar, type KeyHintItem } from '../ui/KeyHint';
 
 /** The walkable scene on screen (village or room), if any. */
-const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d]';
+const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=interior-3d], .cf-scene';
 
 /**
  * After a dialog closes: focus its opener if it is still on screen, else the

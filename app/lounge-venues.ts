@@ -6,8 +6,8 @@
 import { NAMES } from './lounge-text.ts';
 
 /** Server areas that are table interiors ('lounge' is the hall). */
-export type InteriorArea = 'lounge' | 'casino' | 'tavern';
-export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern'];
+export type InteriorArea = 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon';
+export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern', 'bank', 'salon'];
 export const isInteriorArea = (a: unknown): a is InteriorArea =>
   typeof a === 'string' && (INTERIOR_AREAS as readonly string[]).includes(a);
 
@@ -23,7 +23,7 @@ export type Venue = {
   /** Short name for banners ("회관"). */
   short: string;
   /** Its VILLAGE_PLACES id (the door you walk through). */
-  place: 'hall' | 'casino' | 'tavern';
+  place: 'hall' | 'casino' | 'tavern' | 'bank' | 'wardrobe';
   music: VenueMusic;
   venue: TableVenue;
   /** Its own chat ("회관 수다"). */
@@ -35,6 +35,16 @@ export type Venue = {
 };
 
 export const VENUES: Record<InteriorArea, Venue> = {
+  salon: {
+    area: 'salon', name: '보송 미용실', short: '미용실', place: 'wardrobe',
+    music: 'hall', venue: 'hall', chat: '미용실 수다', exposure: 1.08,
+    tagline: '오늘의 나를 만나는 곳',
+  },
+  bank: {
+    area: 'bank', name: '범마을 은행', short: '은행', place: 'bank',
+    music: 'hall', venue: 'hall', chat: '은행 수다', exposure: 1.08,
+    tagline: '차곡차곡 모으는 하루',
+  },
   lounge: {
     area: 'lounge',
     name: NAMES.hall,

@@ -2125,6 +2125,8 @@ export class LoungeRoom {
         a.scope === "lounge" ||
         a.scope === "casino" ||
         a.scope === "tavern" ||
+        a.scope === "bank" ||
+        a.scope === "salon" ||
         a.scope === "home"
       ) {
         if (member.area !== a.scope || a.matchId !== undefined)

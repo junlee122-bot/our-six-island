@@ -49,11 +49,11 @@ import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 // ---------------------------------------------------------------- registry
 
 test('every table interior is in the registry; the hall and casino keep their looks', () => {
-  assert.deepEqual([...INTERIOR_AREAS], ['lounge', 'casino', 'tavern']);
+  assert.deepEqual([...INTERIOR_AREAS], ['lounge', 'casino', 'tavern', 'bank', 'salon']);
   for (const a of INTERIOR_AREAS) {
     assert.ok(AREAS.includes(a));
     assert.ok(isInteriorArea(a));
-    assert.ok(VILLAGE_PLACES.some((p) => p.id === VENUES[a].place && p.destination === a));
+    assert.ok(VILLAGE_PLACES.some((p) => p.id === VENUES[a].place && p.destination === (a === 'salon' ? 'wardrobe' : a)));
   }
   assert.equal(isInteriorArea('village'), false);
   assert.equal(VENUES.lounge.venue, 'hall');
