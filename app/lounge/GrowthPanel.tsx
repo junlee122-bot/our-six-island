@@ -230,7 +230,17 @@ export function GrowthPanel({
   // dialog), so their Esc closes only themselves.
   return (
     <>
-      <Modal title="성장 수첩" onClose={onClose} className="l-growth" wide>
+      <Modal
+        title="성장 수첩"
+        onClose={onClose}
+        className="l-growth"
+        wide
+        keyHints={[
+          { keys: [{ label: '1–3' }], does: '쪽 넘기기' },
+          { keys: [{ label: '↑↓' }], does: '고르기' },
+          ...(tab === 'research' ? [] : [{ keys: [{ code: 'Enter' }], does: tab === 'skills' ? '전문가 고르기' : '대장간 가기' }]),
+        ]}
+      >
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 1–3, Tab, arrows and Enter move and act inside the journal. */}
         <div
           ref={bookRef}
@@ -382,11 +392,6 @@ export function GrowthPanel({
                     })
                   }
                 />
-                <p className="l-ledger-keys" aria-hidden="true">
-                  <kbd>1–3</kbd> 쪽 넘기기 <kbd>↑↓</kbd> 고르기 <kbd>Enter</kbd>{' '}
-                  {tab === 'skills' ? '전문가 고르기' : '대장간 가기'}{' '}
-                  <kbd>Esc</kbd> 덮기
-                </p>
               </section>
             </>
           )}

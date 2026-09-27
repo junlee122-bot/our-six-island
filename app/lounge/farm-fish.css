@@ -303,7 +303,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   font-style: normal;
   font-size: var(--fs-cap);
   font-weight: 800;
-  color: rgb(255 244 212 / 0.85);
+  color: var(--ink-on-wood);
 }
 .l-ledger-mark {
   position: absolute;

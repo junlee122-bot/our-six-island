@@ -274,7 +274,13 @@
   top: 140px;
   max-height: calc(100dvh - 230px);
   overflow-y: auto;
-  z-index: 12;
+  z-index: var(--z-hud-pop);
+}
+/* The guide list (M) owns the left column while it is open: the 마을 적응하기
+   checklist and the minimap step aside instead of covering it (UI audit P0-2). */
+.l-app:has(.hv-directory) .l-adapt,
+.l-app:has(.hv-directory) .hv-minimap {
+  display: none;
 }
 .l-immersive .hv-place-card {
   bottom: 80px;

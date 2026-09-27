@@ -33,7 +33,7 @@ function cssFiles(dir) {
     if (entry.isDirectory()) out.push(...cssFiles(rel));
     else if (entry.name.endsWith('.css')) out.push(rel);
   }
-  return out.sort();
+  return out.sort((a, b) => a.localeCompare(b));
 }
 
 const okRadius = (part) => /^(0|0px|50%|inherit|initial|var\(--r-[a-z0-9-]+\))$/.test(part);

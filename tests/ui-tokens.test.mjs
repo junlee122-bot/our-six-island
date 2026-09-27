@@ -101,7 +101,7 @@ test('css lint: rules catch raw values and accept tokens', () => {
       '.c { font: 700 12px/10px x; color: #000; /* lint-allow: test */ }',
     'app/x.css',
   );
-  assert.deepEqual(found.map((f) => f.rule).sort(), ['font', 'hex', 'radius', 'shadow', 'z']);
+  assert.deepEqual(found.map((f) => f.rule).sort((a, b) => a.localeCompare(b)), ['font', 'hex', 'radius', 'shadow', 'z']);
   assert.equal(lintCss(':root { --a: #fff; }', 'app/ui/tokens.css').length, 0);
 });
 

@@ -2,7 +2,7 @@
  "enforce": [],
  "files": {
   "app/globals.css": {
-   "hex": 288,
+   "hex": 287,
    "font": 48,
    "radius": 77,
    "shadow": 23,
@@ -16,21 +16,14 @@
    "z": 4
   },
   "app/lounge-bedroom-3d.css": {
-   "hex": 123,
+   "hex": 120,
    "font": 9,
    "radius": 28,
    "shadow": 8,
    "z": 6
   },
-  "app/lounge-bedroom-edit-dock.css": {
-   "hex": 3,
-   "font": 0,
-   "radius": 0,
-   "shadow": 0,
-   "z": 1
-  },
   "app/lounge-blackjack-table.css": {
-   "hex": 68,
+   "hex": 65,
    "font": 9,
    "radius": 8,
    "shadow": 3,
@@ -48,13 +41,6 @@
    "font": 3,
    "radius": 6,
    "shadow": 2,
-   "z": 0
-  },
-  "app/lounge-club.css": {
-   "hex": 62,
-   "font": 4,
-   "radius": 10,
-   "shadow": 0,
    "z": 0
   },
   "app/lounge-dealer-host.css": {
@@ -163,8 +149,8 @@
    "z": 0
   },
   "app/lounge-social.css": {
-   "hex": 120,
-   "font": 6,
+   "hex": 108,
+   "font": 0,
    "radius": 12,
    "shadow": 11,
    "z": 5
@@ -177,11 +163,11 @@
    "z": 0
   },
   "app/lounge-village-shell.css": {
-   "hex": 57,
-   "font": 5,
+   "hex": 56,
+   "font": 0,
    "radius": 15,
    "shadow": 5,
-   "z": 7
+   "z": 6
   },
   "app/lounge-village.css": {
    "hex": 121,
@@ -205,43 +191,43 @@
    "z": 0
   },
   "app/lounge.css": {
-   "hex": 403,
-   "font": 70,
-   "radius": 86,
-   "shadow": 29,
+   "hex": 376,
+   "font": 63,
+   "radius": 85,
+   "shadow": 28,
    "z": 5
   },
   "app/lounge/farm-fish.css": {
-   "hex": 69,
-   "font": 13,
+   "hex": 47,
+   "font": 0,
    "radius": 30,
    "shadow": 30,
    "z": 6
   },
   "app/lounge/friend-life.css": {
-   "hex": 109,
-   "font": 7,
+   "hex": 106,
+   "font": 0,
    "radius": 23,
    "shadow": 6,
    "z": 0
   },
   "app/lounge/growth.css": {
-   "hex": 102,
-   "font": 14,
+   "hex": 65,
+   "font": 0,
    "radius": 48,
-   "shadow": 58,
+   "shadow": 57,
    "z": 3
   },
   "app/lounge/life-plus.css": {
-   "hex": 168,
-   "font": 16,
+   "hex": 165,
+   "font": 15,
    "radius": 41,
    "shadow": 15,
    "z": 1
   },
   "app/lounge/life.css": {
-   "hex": 73,
-   "font": 15,
+   "hex": 72,
+   "font": 0,
    "radius": 21,
    "shadow": 1,
    "z": 0

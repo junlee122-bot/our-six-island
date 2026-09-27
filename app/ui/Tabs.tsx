@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Glyph, type GlyphName } from './Glyph';
 
 export type TabItem<T extends string> = { id: T; label: ReactNode; glyph?: GlyphName; badge?: ReactNode };
@@ -32,7 +32,9 @@ export function Tabs<T extends string>({
   const base = idBase ?? auto;
   const ref = useRef<HTMLDivElement>(null);
   const latest = useRef({ items, onChange });
-  latest.current = { items, onChange };
+  useLayoutEffect(() => {
+    latest.current = { items, onChange };
+  });
   useEffect(() => {
     if (!numberKeys) return;
     const scope: HTMLElement | Document = ref.current?.closest('dialog') ?? document;
@@ -57,19 +59,7 @@ export function Tabs<T extends string>({
     ref.current?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next]?.focus();
   };
   return (
-    <div
-      ref={ref}
-      className={`ui-tabs ${className}`.trim()}
-      role="tablist"
-      aria-label={label}
-      onKeyDown={(e) => {
-        const dir = { ArrowRight: 1, ArrowLeft: -1, Home: 'home', End: 'end' }[e.key] as number | 'home' | 'end' | undefined;
-        if (dir === undefined) return;
-        e.preventDefault();
-        e.stopPropagation();
-        move(dir);
-      }}
-    >
+    <div ref={ref} className={`ui-tabs ${className}`.trim()} role="tablist" aria-label={label}>
       {items.map((t, i) => (
         <button
           key={t.id}
@@ -81,6 +71,13 @@ export function Tabs<T extends string>({
           tabIndex={t.id === value ? 0 : -1}
           className="ui-tab"
           onClick={() => onChange(t.id)}
+          onKeyDown={(e) => {
+            const dir = ({ ArrowRight: 1, ArrowLeft: -1, Home: 'home', End: 'end' } as const)[e.key as 'Home'];
+            if (dir === undefined) return;
+            e.preventDefault();
+            e.stopPropagation();
+            move(dir);
+          }}
         >
           {t.glyph && <Glyph name={t.glyph} size={18} />}
           <span>{t.label}</span>

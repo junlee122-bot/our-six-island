@@ -550,7 +550,11 @@
 }
 .p-controls button:disabled,
 .p-controls input:disabled {
-  opacity: 0.3;
+  /* Venue disabled tokens: still readable on the dark bar (was opacity .3). */
+  opacity: 1;
+  background: var(--disabled-bg);
+  border-color: var(--disabled-edge);
+  color: var(--disabled-text);
   cursor: not-allowed;
 }
 .p-settlement {

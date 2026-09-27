@@ -267,22 +267,24 @@ body:has(.b3-room[data-editing]) .l-life-hud {
   opacity: 0.4;
 }
 /* The slot key sits on the frame's corner, clear of the item icon. */
+.l-app .l-hotbar-slot kbd,
 .l-hotbar-slot kbd {
   position: absolute;
   left: -5px;
   top: -6px;
-  min-width: 17px;
-  height: 17px;
+  min-width: 18px;
+  height: 18px;
   padding: 0 4px;
   border-radius: 6px;
-  background: #3a4a37;
-  color: #fffdf0;
+  background: var(--wood-700);
+  color: var(--ink-on-wood);
   box-shadow: 0 0 0 1.5px rgb(255 250 235 / 0.9);
-  font: 800 11px/17px inherit;
+  /* (was `font: 800 11px/17px inherit`, an invalid shorthand the browser dropped) */
+  font: var(--fw-bold) var(--fs-cap) / 18px var(--font-body);
   text-align: center;
 }
-.l-hotbar-slot[aria-pressed='true'] kbd {
-  background: #b5860f;
+.l-app .l-hotbar-slot[aria-pressed='true'] kbd {
+  background: var(--gold-700); /* white 5.6:1 (was 2.6:1 on #b5860f) */
 }
 .l-hotbar-count {
   position: absolute;

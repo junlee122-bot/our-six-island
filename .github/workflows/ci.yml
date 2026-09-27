@@ -29,6 +29,8 @@ jobs:
         run: npm test
       - name: Lint
         run: npm run lint
+      - name: CSS token lint (report + ratchet; enforced for app/ui and new sheets)
+        run: npm run lint:css -- --ci --quiet
       - name: Pages build (scratch output, docs/ untouched)
         run: node scripts/build-standalone.mjs --out /tmp/pages
       - name: Build size summary

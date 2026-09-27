@@ -68,6 +68,31 @@ npm run optimize:assets  # 원본 PNG/GLB에서 WebP·압축 GLB를 다시 만�
 - 이미지 예산: 새로 참조한 이미지가 600KB를 넘으면 경고, 3MB를 넘으면 빌드 실패입니다. 캐릭터 아틀라스처럼 예외가 필요한 파일은 `scripts/build-standalone.mjs`의 `ATLAS_EXCEPTIONS`에 이유와 함께 추가합니다. 모델은 1MB 경고, 4MB 실패입니다.
 - 새 에셋을 추가할 때: 원본을 `public/`에 두고 → 필요하면 `optimize-assets.mjs`에 추가해 WebP/압축본을 만들고 → 매니페스트에 경로를 적고 → `ASSETS.md`에 출처·라이선스를 기록합니다. 염색·마젠타 배경 제거에 쓰는 캐릭터 아틀라스는 반드시 **무손실 WebP**여야 합니다.
 
+### UI 토큰과 프리미티브 (`app/ui/`)
+
+창·버튼·키 안내는 한 벌의 토큰과 프리미티브로 그립니다. 새 화면은 여기서 시작해요.
+
+- `tokens.css`: 색(마을 기본 + `[data-venue=hall|casino|tavern]` 덮어쓰기), 글자 6단계(12px 미만 없음), 간격 ×4, 반경 3개, 그림자 3개(+ 테두리 `--edge-*`), z-index 단계(`--z-scene … --z-toast`). 대비 짝은 `tests/ui-tokens.test.mjs`가 확인합니다.
+- 글꼴: Jua(제목·간판) · Pretendard(본문) · Gaegu(쪽지·편지), 모두 OFL. `npm run fonts`가 `app/ui/fonts/`와 `fonts.css`를 다시 만듭니다(Jua·Gaegu는 앱 문구 core + KS X 1001 ext로 나눠 필요할 때만 받음).
+- `<Panel variant="journal|sign|note|felt|hanji">`: 창 껍데기. 대화상자는 `lounge/Modal.tsx`의 `panel="journal"`과 `keyHints`(아래 키 안내 줄, Esc 닫기 자동)를 씁니다. 닫기 버튼은 `<CloseButton>`(44×44).
+- `<GameButton variant="primary|secondary|danger|ghost" size="s|m|l" glyph keyAction disabledReason>`: 모든 크기에서 44px 누름 영역, 초점 링, 비활성은 투명도 대신 전용 색.
+- `<KeyHint action="inventory">`(현재 키 설정을 읽음) · `<KeyHintBar items>`: 키캡 한 모양. 버튼 안은 "라벨 [키]", 설명 줄은 "[키] 동사".
+- `<Glyph name>`: 손그림 아이콘 한 가족(lucide·이모지 대신). `<Tabs numberKeys>`: 종이 탭, ←/→와 1–9. `<EmptyState glyph title hint action>`.
+- 개발용 카탈로그: `npm run dev` 후 `/?ui-kit`, 또는 `UI_KIT=1 npm run build:pages -- --out /tmp/pages` 후 `?ui-kit`. 일반 빌드에는 들어가지 않아요.
+
+검사 도구:
+
+```bash
+npm run lint:css                 # 토큰 밖의 hex, 12px 미만, 낯선 반경·그림자, 단계 밖 z-index 보고
+npm run lint:css -- --ci         # CI: 새 파일·app/ui는 0건, 기존 파일은 기준치(scripts/css-lint-baseline.json)보다 늘면 실패
+npm run lint:css -- --update-baseline   # 파일을 토큰으로 옮긴 뒤 기준치 낮추기
+npm run ui:shots -- --views fhd,d,s --baseline .ui-shots/before/report.json
+                                 # 목(mock) 클라우드로 주요 화면을 1920/1440/1280에서 캡처하고
+                                 # 대비·작은 글씨·세로 한 글자 줄바꿈·잘림·HUD 겹침·닫기 버튼 크기를 report.json에 기록
+```
+
+`ui:shots`는 실제 Supabase에 연결하지 않아요(모든 외부 요청을 가로채 로컬 엔진으로 답함). `playwright-core`와 Chromium(`CHROMIUM_PATH` 또는 playwright 기본 설치)이 필요해요.
+
 ## 배포
 
 ### 배포 순서

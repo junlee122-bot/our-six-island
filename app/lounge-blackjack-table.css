@@ -318,19 +318,16 @@
   background: #e2bd7b;
   color: #22322a;
 }
-.bj-action-buttons button:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
+.bj-action-buttons button:disabled,
 /* While the dealer plays, nothing is pressable: no gold "히트" either. */
 .bj-controls.is-dealer .bj-action-buttons button,
 .bj-action-buttons[aria-disabled="true"] button:first-child:disabled {
-  background: #28352d;
-  color: #bca99d;
-  border-color: #4a5a4a;
-}
-.bj-controls.is-dealer .bj-action-buttons {
-  opacity: 0.6;
+  /* Venue disabled tokens: still readable on the dark bar (was opacity .35). */
+  opacity: 1;
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  border-color: var(--disabled-edge);
+  cursor: not-allowed;
 }
 .bj-action-buttons strong {
   font-size: 14px;

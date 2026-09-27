@@ -10,7 +10,7 @@
 .l-life-modal h3 small {
   font-weight: 400;
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 .l-life-modal button,
 .l-guestbook button,
@@ -40,7 +40,7 @@
   display: block;
   text-align: right;
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 
 /* Stepper */
@@ -144,7 +144,7 @@
   cursor: pointer;
 }
 .l-seed-choices small {
-  color: #8a9480;
+  color: var(--text-soft);
   font-size: var(--fs-cap);
 }
 
@@ -168,7 +168,7 @@
   margin-bottom: 8px;
 }
 .l-sell-cap small {
-  color: #8a9480;
+  color: var(--text-soft);
   font-size: var(--fs-cap);
 }
 .l-sell-list,
@@ -317,7 +317,7 @@
 }
 .l-sell-list small {
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 
 /* Shop */
@@ -373,7 +373,7 @@
 }
 .l-shop-text small {
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 .l-shop-text b {
   font-size: 12px;
@@ -449,7 +449,7 @@
 .l-mail-list strong small {
   font-weight: 400;
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 .l-new {
   margin-left: 6px;
@@ -493,7 +493,7 @@
   font-size: 12px;
 }
 .l-mail-form label small {
-  color: #8a9480;
+  color: var(--text-soft);
   font-size: var(--fs-cap);
 }
 .l-mail-form select,
@@ -604,7 +604,7 @@
 .l-guestbook li small {
   grid-column: 2;
   font-size: var(--fs-cap);
-  color: #8a9480;
+  color: var(--text-soft);
 }
 .l-guestbook li span {
   overflow-wrap: anywhere;

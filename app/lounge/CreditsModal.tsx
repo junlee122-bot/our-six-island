@@ -53,6 +53,22 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
           생성으로 제작했습니다. 새 의상은 전신 그림으로 전환하며, 기존 의상의
           걷기·인사는 원래 프레임을 사용합니다.
         </p>
+        <h3>글꼴</h3>
+        <p>
+          제목과 간판은{' '}
+          <a href="https://fonts.google.com/specimen/Jua" target="_blank" rel="noreferrer">
+            Jua
+          </a>
+          , 본문은{' '}
+          <a href="https://github.com/orioncactus/pretendard" target="_blank" rel="noreferrer">
+            Pretendard
+          </a>{' '}
+          (길형진), 쪽지와 편지는{' '}
+          <a href="https://fonts.google.com/specimen/Gaegu" target="_blank" rel="noreferrer">
+            Gaegu
+          </a>
+          를 써요. 모두 SIL Open Font License 1.1이에요.
+        </p>
         <h3>체스</h3>
         <p>
           규칙:{' '}

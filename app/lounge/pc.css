@@ -107,15 +107,16 @@ dialog.l-modal.wide {
 /* ---------------------------------------------------------- key caps */
 .l-app kbd,
 .l-modal kbd {
+  /* The one keycap (same as <KeyHint>, app/ui/ui.css). */
   display: inline-block;
   min-width: 22px;
   padding: 2px 7px;
-  border: 1px solid #cfd6c2;
-  border-bottom-width: 2px;
-  border-radius: 6px;
-  background: #fbfcf6;
-  color: #3c5040;
-  font: 700 12px/1.4 inherit;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--keycap-bg);
+  color: var(--keycap-text);
+  box-shadow: var(--edge-ink);
+  font: var(--fw-bold) var(--fs-cap) / 1.4 var(--font-body);
   text-align: center;
   white-space: nowrap;
 }

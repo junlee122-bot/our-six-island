@@ -106,6 +106,7 @@
   --edge-press: inset 0 -3px 0 rgb(0 0 0 / 0.22);
   --edge-ink: inset 0 0 0 1.5px var(--line-strong), inset 0 -3px 0 rgb(61 43 29 / 0.18);
   --edge-frame: inset 0 0 0 3px var(--frame-edge), inset 0 0 0 6px rgb(255 230 190 / 0.1);
+  --edge-line: inset 0 0 0 1.5px var(--line-strong);
   --edge-disabled: inset 0 0 0 1.5px var(--disabled-edge);
   --ring-focus: 0 0 0 3px var(--focus);
 
@@ -162,8 +163,8 @@
   --accent: #c9a24a; /* brass */
   --accent-edge: #8a6a22;
   --accent-soft: rgb(201 162 74 / 0.18);
-  --danger: #c4473d;
-  --danger-edge: #7e241d;
+  --danger: #a8352d;
+  --danger-edge: #6e1e18;
   --focus: #f3d98a;
   --disabled-bg: #2b4c42;
   --disabled-text: #cdbf9e;

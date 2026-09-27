@@ -55,11 +55,11 @@ export const GameButton = forwardRef<HTMLButtonElement, Props>(function GameButt
       data-icon-only={iconOnly || undefined}
       title={reason ?? title}
       aria-label={iconOnly && typeof children === 'string' ? children : rest['aria-label']}
-      aria-description={reason}
       {...rest}
     >
       {glyph && <Glyph name={glyph} size={size === 's' ? 16 : 20} />}
       {iconOnly ? null : <span className="ui-btn-label">{children}</span>}
+      {reason && <span className="sr-only"> · {reason}</span>}
       {(keyAction || keyLabel) && <KeyHint action={keyAction} label={keyLabel} />}
     </button>
   );

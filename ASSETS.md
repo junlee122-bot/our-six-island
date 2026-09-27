@@ -28,9 +28,10 @@
 | I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부 | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`) | 자체 제작 | 사용 중 |
 | J | Canvas 런타임 가공 | 머리·피부 RGB 염색, 마젠타 배경 제거, 의상 보행 변형 | 코드(`lounge-color.ts`, `lounge-gait.ts`, `lounge-sprites.ts`) | 자체 제작 | 사용 중 |
 | K | Kenney Casino Audio 1.1 · Interface Sounds 1.0 | 야추 주사위(흔들기·던지기·잡기·한 개 던지기)·라이어 카드·타이머 틱·투표·확인 효과음 13종 | `public/assets/lounge/sfx/*.ogg`(원본) + `*.m4a`(AAC 사본) | **CC0**, `LICENSE-KENNEY.txt` 보관 | 사용 중(없거나 디코딩 실패 시 합성음) |
+| L | 글꼴 Jua · Pretendard 1.3.9 · Gaegu | 창 제목·간판(Jua), 본문(Pretendard 400/600/700), 쪽지·편지(Gaegu 400/700) | `app/ui/fonts/*.woff2` (`npm run fonts` → `scripts/build-fonts.mjs`) | **SIL OFL 1.1**, `licenses/OFL-Jua.txt`·`OFL-Pretendard.txt`·`OFL-Gaegu.txt`. Jua·Gaegu는 앱 문구+KS X 1001 서브셋(core/ext), Pretendard는 예약 글꼴명이 있어 제작자 배포 서브셋을 그대로 씀 | 사용 중 |
 | — | 그 밖의 사운드 | 음악·발걸음·카드·칩·UI는 합성 코드 | — | — | — |
 
-배포 HTML에는 three.js, chess.js, Chessnut, hwatu, kArchive/3DAssets 고지를 JSON으로 함께 넣습니다(`#third-party-licenses`).
+배포 HTML에는 three.js, chess.js, Chessnut, hwatu, kArchive/3DAssets, 글꼴(OFL) 고지를 JSON으로 함께 넣습니다(`#third-party-licenses`).
 
 ### IP·라이선스 주의
 

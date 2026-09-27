@@ -90,6 +90,9 @@ function measureInPage() {
   const cls = (e) => (e.className?.baseVal ?? e.className ?? '').toString().trim().split(/\s+/).slice(0, 2).join('.') || e.tagName.toLowerCase();
   const top = [...document.querySelectorAll('dialog[open]')].pop() ?? document.querySelector('main') ?? document.body;
   const visible = (e) => {
+    // Content of a closed <details> still reports boxes in Chrome.
+    const closed = e.closest('details:not([open])');
+    if (closed && !e.closest('summary')) return false;
     const r = e.getBoundingClientRect();
     if (!r.width || !r.height || r.bottom < 0 || r.right < 0 || r.left > innerWidth || r.top > innerHeight) return false;
     const cs = getComputedStyle(e);
@@ -123,7 +126,7 @@ function measureInPage() {
     // one or two characters per line
     for (const node of e.childNodes) {
       if (node.nodeType !== 3) continue;
-      const chars = [...node.textContent.replace(/\s+/g, '')].length;
+      const chars = Array.from(node.textContent.replace(/\s+/g, '')).length;
       if (chars < 3) continue;
       const range = document.createRange();
       range.selectNodeContents(node);
