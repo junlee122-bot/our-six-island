@@ -11,11 +11,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH, FISH_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
 import { REEL_REASON, reelTiming } from '../lounge-life-ui';
-import { fishCandidates, sellQuote } from '../lounge-life-plus';
+import { fishCandidates, sellQuote, itemName, type FishLast } from '../lounge-life-plus';
 import { lifeSfx } from '../lounge-audio-life';
 import { formatBeom, josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
 import { ItemIcon } from './ItemIcon';
+import { FishCatchModel } from './FishCatchModel';
 import { Glyph } from './field-glyphs';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
@@ -26,7 +27,7 @@ import './life-plus.css';
 import './farm-fish.css';
 
 export type FishingPhase = 'casting' | 'wait' | 'bite' | 'reeling' | 'result';
-type Result = { ok: boolean; fish?: string; cm?: number; record?: boolean; best?: boolean; reason?: string; isNew?: boolean; quick?: boolean };
+type Result = Omit<FishLast, 'at'> & { isNew?: boolean };
 
 /** Rough body build per fish look (g per cm³ ×1e-3): long fish are light for their length. */
 const BUILD: Record<string, number> = {
@@ -62,6 +63,11 @@ export function FishingOverlay({
   const [result, setResult] = useState<Result | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [nibble, setNibble] = useState(0);
+  const [closing, setClosing] = useState(false);
+  const [closeFailed, setCloseFailed] = useState(false);
+  const closingRef = useRef(false);
+  const castingRef = useRef(true);
+  const cancelBusy = useRef(false);
   const token = useRef<{ token: string; biteAt: number; windowMs: number } | null>(null);
   const [windowMs, setWindowMs] = useState(1000);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -89,10 +95,39 @@ export function FishingOverlay({
     }
   }, []);
 
+  // Do not leave a live server cast behind when the sheet closes. A close
+  // during cast/reel waits for its reply before cancelling/finishing it.
+  const finishClose = useCallback(async () => {
+    if (cancelBusy.current) return;
+    cancelBusy.current = true;
+    for (const t of timers.current) clearTimeout(t);
+    timers.current = [];
+    const p = token.current;
+    const ok = !p || await room.life({ kind: 'cancelCast', token: p.token });
+    cancelBusy.current = false;
+    if (!ok) {
+      closingRef.current = false;
+      setClosing(false);
+      setCloseFailed(true);
+      return;
+    }
+    token.current = null;
+    cb.current.onClose();
+  }, [room]);
+  const requestClose = useCallback(() => {
+    if (closingRef.current) return;
+    closingRef.current = true;
+    setClosing(true);
+    setCloseFailed(false);
+    for (const t of timers.current) clearTimeout(t);
+    timers.current = [];
+    if (!castingRef.current && !reelingRef.current) void finishClose();
+  }, [finishClose]);
+
   /** `pressedAt`: the input event's timeStamp (performance clock), when known. */
   const reel = useCallback(async (pressedAt?: number) => {
     const p = token.current;
-    if (!p || reelingRef.current) return;
+    if (!p || reelingRef.current || closingRef.current) return;
     reelingRef.current = true;
     for (const t of timers.current) clearTimeout(t);
     timers.current = [];
@@ -108,8 +143,12 @@ export function FishingOverlay({
     setPhase('reeling');
     lifeSfx('tick');
     const ok = await room.life({ kind: 'reel', token: p.token, timingMs });
-    token.current = null;
+    if (ok) token.current = null;
     reelingRef.current = false;
+    if (closingRef.current) {
+      await finishClose();
+      return;
+    }
     const last = room.snapshot().life?.me.fishing?.last;
     if (!ok || !last) {
       setResult({ ok: false, reason: 'timing' });
@@ -126,17 +165,22 @@ export function FishingOverlay({
       best: last.best,
       reason: last.reason,
       isNew,
-      quick: last.ok && timingMs <= p.windowMs * 0.4,
+      // A timeout reels automatically only to clear server state; it is not
+      // the player's input and must not be presented as their reaction score.
+      reactionMs: pressedAt !== undefined ? last.reactionMs : undefined,
+      grade: pressedAt !== undefined ? last.grade : undefined,
+      parcel: last.parcel,
     });
     setPhase('result');
     const f = last.fish ? FISH_BY_ID[last.fish] : undefined;
     lifeSfx(!last.ok ? 'miss' : f && f.weight < 10 ? 'fanfare' : 'reel');
-    if (last.ok && (isNew || last.record)) setTimeout(() => lifeSfx('sparkle'), 380);
-  }, [room, serverNow]);
+    if (last.ok && (isNew || last.record)) timers.current.push(setTimeout(() => lifeSfx('sparkle'), 380));
+  }, [room, serverNow, finishClose]);
 
   // Cast (again on each attempt): the server answers with the pending bite.
   useEffect(() => {
     let cancelled = false;
+    castingRef.current = true;
     lifeSfx('cast');
     void (async () => {
       const sent = performance.now();
@@ -144,13 +188,21 @@ export function FishingOverlay({
       // The server clock offset is measured when the answer arrives (one trip
       // late); half the round trip (capped) brings the bite back on time.
       lead.current = Math.min(600, Math.max(0, (performance.now() - sent) / 2));
-      if (cancelled) return;
       const pending = room.snapshot().life?.me.fishing?.pending;
+      castingRef.current = false;
+      if (cancelled) {
+        if (ok && pending) void room.life({ kind: 'cancelCast', token: pending.token });
+        return;
+      }
       if (!ok || !pending) {
         cb.current.onClose();
         return;
       }
       token.current = { token: pending.token, biteAt: pending.biteAt, windowMs: pending.windowMs };
+      if (closingRef.current) {
+        await finishClose();
+        return;
+      }
       setWindowMs(pending.windowMs);
       setPhase('wait');
       const toBite = Math.max(0, pending.biteAt - serverNow());
@@ -183,12 +235,13 @@ export function FishingOverlay({
       for (const t of timers.current) clearTimeout(t);
       timers.current = [];
     };
-  }, [attempt, room, spot, serverNow, reel, reduced]);
+  }, [attempt, room, spot, serverNow, reel, reduced, finishClose]);
 
   useEffect(() => {
     rootRef.current?.focus({ preventScroll: true });
   }, []);
   const act = useCallback((pressedAt?: number) => {
+    if (closingRef.current) return;
     const p = phaseRef.current;
     if (p === 'bite' || p === 'wait') void reel(pressedAt);
     else if (p === 'result') {
@@ -209,12 +262,12 @@ export function FishingOverlay({
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
-        cb.current.onClose();
+        requestClose();
       }
     };
     window.addEventListener('keydown', key, true);
     return () => window.removeEventListener('keydown', key, true);
-  }, [act]);
+  }, [act, requestClose]);
 
   const life = view.life;
   const fish = result?.fish ? FISH_BY_ID[result.fish] : undefined;
@@ -258,7 +311,7 @@ export function FishingOverlay({
             미끼 {bait}
           </span>
         </span>
-        <button type="button" className="l-angler-close" aria-label="그만하기 (Esc)" onClick={onClose}>
+        <button type="button" className="l-angler-close" aria-label="그만하기 (Esc)" onClick={requestClose} disabled={closing}>
           <kbd>Esc</kbd>
         </button>
       </header>
@@ -284,7 +337,7 @@ export function FishingOverlay({
           {result.ok && fish ? (
             <>
               <figure className="l-catch-art" data-rarity={fishRarity(fish)}>
-                <ItemIcon id={fish.id} size={132} />
+                <FishCatchModel key={fish.id} fish={fish.id} />
                 <svg className="l-catch-ruler" viewBox="0 0 200 18" aria-hidden="true">
                   <rect x="1" y="3" width="198" height="12" rx="2" fill="#f3dc9a" stroke="#a8743a" />
                   {Array.from({ length: 21 }, (_, i) => (
@@ -306,7 +359,7 @@ export function FishingOverlay({
                 <b>
                   {result.cm}cm · 약 {fishWeight(fish.id, result.cm ?? 0)}
                 </b>
-                {result.quick && <em className="l-catch-quick">한 번에 챘어요!</em>}
+                {(result.grade === 'S' || result.grade === 'A') && <em className="l-catch-quick">재빠르게 챘어요!</em>}
                 <p>{fish.note}</p>
                 <dl>
                   <dt>내 기록</dt>
@@ -347,11 +400,24 @@ export function FishingOverlay({
               </small>
             </p>
           )}
+          {result.reactionMs !== undefined && result.grade && (
+            <div className="l-catch-reaction" data-testid="fish-reaction" aria-label={`입질 반응 ${result.reactionMs}밀리초, ${result.grade}등급`}>
+              <b>{result.grade}급</b>
+              <span>입질 반응 <strong>{result.reactionMs.toLocaleString()} ms</strong><small>서버 입질 → 당기기 도착 · 통신 시간 포함</small></span>
+              <small>S ≤200 · A ≤350 · B ≤500 · C ≤750 · D ≤1,100 · E &gt;1,100 ms</small>
+            </div>
+          )}
+          {result.ok && result.parcel && (
+            <div className="l-catch-parcel" data-testid="fish-parcel">
+              <ItemIcon id={result.parcel.kind === 'seed' ? `seed-${result.parcel.item}` : result.parcel.item} size={34} />
+              <span><strong>물 위에서 꾸러미도 건졌어요!</strong><small>{itemName(result.parcel.item)}{result.parcel.kind === 'seed' ? ' 씨앗' : ''} 1개 · 주머니에 담았어요</small></span>
+            </div>
+          )}
           <div className="l-catch-actions">
-            <button ref={actRef} type="button" className="l-leaf" onClick={(e) => act(e.timeStamp)} data-testid="fish-again" autoFocus>
+            <button ref={actRef} type="button" className="l-leaf" onClick={(e) => act(e.timeStamp)} data-testid="fish-again" disabled={closing} autoFocus>
               <Glyph name="hook" /> 다시 던지기 <kbd>{actKey}</kbd>
             </button>
-            <button type="button" className="l-ink" onClick={onClose}>
+            <button type="button" className="l-ink" onClick={requestClose} disabled={closing}>
               그만하기 <kbd>Esc</kbd>
             </button>
           </div>
@@ -362,7 +428,7 @@ export function FishingOverlay({
           type="button"
           className="l-angler-water"
           onClick={(e) => act(e.timeStamp)}
-          disabled={phase === 'casting' || phase === 'reeling'}
+          disabled={closing || phase === 'casting' || phase === 'reeling'}
           data-testid="fish-act"
           aria-live="assertive"
         >
@@ -379,7 +445,7 @@ export function FishingOverlay({
             {phase === 'bite' && <b className="l-angler-bang">!</b>}
           </span>
           <span className="l-angler-say">
-            {phase === 'casting'
+            {closing ? '낚싯대를 거두는 중…' : phase === 'casting'
               ? '휘익, 찌를 던지는 중…'
               : phase === 'wait'
                 ? nibble > 0
@@ -405,6 +471,7 @@ export function FishingOverlay({
           {phase === 'reeling' && <span className="l-reel-spin" aria-hidden="true" />}
         </button>
       )}
+      <p className="l-angler-tip" role="status">{closing ? '정리가 끝나면 다시 걸을 수 있어요.' : closeFailed ? '낚싯대를 거두지 못했어요. 연결을 확인한 뒤 Esc로 다시 시도해 주세요.' : '낚시하는 동안은 제자리에 서 있어요 · 성공 시 씨앗 12% / 먹거리 4% 추가 발견'}</p>
     </div>
   );
 }

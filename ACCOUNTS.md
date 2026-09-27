@@ -82,11 +82,12 @@
 
 - CLI(권장): `SUPABASE_ACCESS_TOKEN=… node --experimental-strip-types supabase/admin/economy-report.mjs [--out=supabase/admin/reports/2026-09-25.html|.md] [--days=7] [--snapshot=<id>] [--check-sql] [--json]`
   - Supabase 개인 액세스 토큰(대시보드 → Account → Access Tokens)으로 Management API SQL 엔드포인트에서 world의 원장·생활 카운터와 계정 roster만 읽습니다(방의 비공개 카드, 우편, 방명록은 읽지 않음). 토큰은 환경 변수로만 전달하고 출력하지 않습니다. 프로젝트는 기본 `ogfpeqeoaznwjbrbedbx`(`SUPABASE_PROJECT_REF`/`--project`로 변경).
-  - 계산은 `app/lounge-economy-report.ts`(테스트: `tests/lounge-economy-report.test.mjs`)가 합니다: 계정별 잔액·예약금·합계·게임 손익(게임 종류별)·농사 수입·오늘의 범·상점 지출·오늘 판매액, 게임 종류별 진행/정산/무효 수·판돈·오간 금액·하우스 손익, 하우스 잔액, 통화량(잔액+예약), 초기 지급·누적 발행·누적 지출, 총액 검증(잔액+예약+하우스 = 지갑×100,000 + 발행), 최근 N일 주요 공급원/소비처, KST 일별 지급·지출.
+  - 계산은 `app/lounge-economy-report.ts`(테스트: `tests/lounge-economy-report.test.mjs`)가 합니다: 계정별 잔액·게임 예약금·은행 보관금·합계·게임 손익(게임 종류별)·농사 수입·오늘의 범·상점 지출·오늘 판매액, 게임 종류별 진행/정산/무효 수·판돈·오간 금액·하우스 손익, 하우스 잔액과 그중 금융 순액, 통화량(잔액+예약+보관금), 초기 지급·누적 발행·누적 지출, 총액 검증(잔액+예약+보관금+하우스 = 지갑×100,000 + 발행), 최근 N일 주요 공급원/소비처, KST 일별 지급·지출. 은행 입출금은 발행·지출이 아니며, 대출·상환의 금융 순액(`financeHouseNet`)은 이미 `houseBalance`에 포함되므로 총액에 다시 더하지 않습니다.
   - 한계: 사유별·일별 수치는 원장에 남는 최근 지갑 기록 200건 기준입니다(리포트에 기록 범위와 ‘전체와 일치’ 여부를 표시). 게임 정산에는 시각이 없고 오래된 게임(최근 500건 밖)은 계정별 합계로 접히므로 게임 손익은 전체 기간 누적이며, 접힌 부분은 ‘보관(종류 미상)’으로 나옵니다.
   - `--out`의 파일에는 친구들의 잔액이 들어 있습니다. `supabase/admin/reports/`(git 무시)에 두고 저장소·대화방에 올리지 않습니다. `--input=<world.json>`으로 저장해 둔 world JSON을 오프라인으로 볼 수도 있습니다.
   - 총액 검증이 불일치면 종료 코드 1입니다. `--check-sql`은 SQL 함수 결과와 JS 계산의 총계를 비교합니다.
 - SQL 편집기: `select jsonb_pretty(public.hh_economy_report(7));` — 같은 항목의 간단한 요약(service_role/postgres 전용).
+- 은행·금융 보고서에는 `20260927201400_hohyeon_economy_vault_report.sql` 적용이 필요합니다. 기존 보고서 함수의 집계만 교체하며 원장·잔액·스냅샷은 변경하지 않습니다. 이전 월드의 보관금·금융 순액 누락 필드는 0으로 취급합니다. `--check-sql`은 구 SQL 함수의 필드 누락을 금액 불일치와 구분해 마이그레이션 필요를 알립니다.
 
 ## 배포 순서
 

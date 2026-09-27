@@ -1,0 +1,17 @@
+.l-npc-relations p { color: var(--text-soft); }
+.l-npc-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+.l-npc-card { display: grid; align-content: start; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-npc-card header { display: flex; align-items: center; gap: var(--sp-3); }
+.l-npc-card header > svg { width: var(--sp-7); height: var(--sp-7); flex-shrink: 0; }
+.l-npc-card h3 { margin: 0; font-size: var(--fs-title-s); }
+.l-npc-card p { margin: 0; font-size: var(--fs-body); }
+.l-npc-card small { font-size: var(--fs-cap); color: var(--text-soft); }
+.l-npc-card blockquote { margin: 0; padding: var(--sp-3); background: var(--surface-sunken); border-radius: var(--r-s); color: var(--text); font-size: var(--fs-body); }
+.l-npc-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-1); font-size: var(--fs-body-s); }
+.l-npc-progress progress { width: 100%; accent-color: var(--accent); }
+.l-npc-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.l-npc-gift { display: flex; align-items: end; flex-wrap: wrap; gap: var(--sp-2); }
+.l-npc-gift label { flex: 1; display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
+.l-npc-gift select { width: 100%; min-width: 0; padding: var(--sp-2); border-radius: var(--r-s); background: var(--surface); color: var(--text); box-shadow: var(--edge-line); }
+.l-npc-location { padding: var(--sp-2); background: var(--surface-sunken); border-radius: var(--r-s); }
+@media (max-width: 720px) { .l-npc-cards { grid-template-columns: 1fr; } }

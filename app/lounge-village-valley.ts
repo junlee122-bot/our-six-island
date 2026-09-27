@@ -30,6 +30,7 @@ import {
 import { FISH_STAND, bobberPoint } from './lounge-village-spots';
 import type { Spot } from './lounge-items';
 import type { Season } from './lounge-calendar';
+import { villageFoliageTint } from './lounge-village-foliage';
 
 type Loader = (url: string) => Promise<THREE.Group>;
 const GROUND_Y = 0.03;
@@ -113,20 +114,6 @@ export type ValleyUpdate = {
   plots: Record<number, number>;
   season?: Season | null;
 };
-/**
- * Seasonal tint multiplied over the baked foliage texture, so the kArchive
- * trees follow the procedural ones (gold in autumn, frosted in winter).
- */
-type Tint = { color: string; glow: string; glowIntensity: number };
-const AUTUMN: Tint = { color: '#ffcf6a', glow: '#7a4410', glowIntensity: 0.28 };
-const FROST: Tint = { color: '#b9c2c4', glow: '#e4ecf0', glowIntensity: 0.42 };
-const FOLIAGE_TINT: Partial<Record<ValleyModelKey, Partial<Record<Season, Tint>>>> = {
-  broadleafTree: { autumn: AUTUMN, winter: FROST },
-  shrub: { autumn: AUTUMN, winter: FROST },
-  meadowGrass: { autumn: AUTUMN, winter: FROST },
-  smallPine: { winter: { ...FROST, glowIntensity: 0.3 } },
-};
-
 export class VillageValleyLayer {
   readonly root = new THREE.Group();
   private scene: THREE.Object3D;
@@ -174,7 +161,7 @@ export class VillageValleyLayer {
           this.root.add(object);
         }
         if (model === 'hanjiLantern') this.litLanterns();
-        if (FOLIAGE_TINT[model]) {
+        if (villageFoliageTint(model, 'winter')) {
           const mats: THREE.MeshStandardMaterial[] = [];
           source.traverse((child) => {
             const m = (child as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
@@ -237,7 +224,7 @@ export class VillageValleyLayer {
   }
 
   private tint(model: ValleyModelKey) {
-    const t = this.season ? FOLIAGE_TINT[model]?.[this.season] : undefined;
+    const t = villageFoliageTint(model, this.season);
     for (const m of this.foliage.get(model) ?? []) {
       m.color.set(t?.color ?? '#ffffff');
       m.emissive.set(t?.glow ?? '#000000');

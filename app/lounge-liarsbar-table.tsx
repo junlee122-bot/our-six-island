@@ -298,6 +298,21 @@ export function LiarsBarTable({
   const mine = v.legal.enabled;
   const [verify, setVerify] = useState(false);
   const moment = v.phase === 'reveal' || v.phase === 'trigger' || v.phase === 'shot';
+  const turnHint = v.legal.forced
+    ? '앞사람의 마지막 패를 확인할 차례예요. “거짓말!”을 눌러요.'
+    : v.legal.play
+      ? picked.length
+        ? `${picked.length}장 선택했어요. Enter를 누르면 “${LB_FACE_NAME[v.table]} ${picked.length}장”이라고 내요.`
+        : `내 차례예요. 1~${v.legal.max}장을 골라요.${v.legal.call ? ' 앞사람의 패가 의심되면 “거짓말!”을 눌러도 돼요.' : ''}`
+      : v.legal.trigger
+        ? '내가 방아쇠를 당길 차례예요. Space를 눌러요.'
+        : v.phase === 'play'
+          ? `${actorName}의 차례예요. 내 손패와 오늘의 카드를 확인해 두세요.`
+          : v.phase === 'reveal'
+            ? '지목한 패를 확인하고 있어요. 가짜가 섞였으면 낸 사람, 전부 진짜면 지목한 사람이 당겨요.'
+            : v.phase === 'trigger'
+              ? `${actorName}의 방아쇠를 기다려요.`
+              : '방아쇠 결과를 확인하고 다음 패를 나눠요.';
   return (
     <div
       className={'lb-club' + (reduced() ? ' is-reduced' : '')}
@@ -452,14 +467,33 @@ export function LiarsBarTable({
           )}
         </section>
         <aside className="lb-side">
-          <h3>기록</h3>
-          <ol className="lb-log" aria-live="polite">
-            {v.log.slice(-10).map((l, i) => (
-              <li key={`${v.revision}-${i}`} className={l.seat < 0 ? 'is-host' : ''}>
-                {l.seat >= 0 ? <b>{names[l.seat]}</b> : null} {l.text}
-              </li>
-            ))}
-          </ol>
+          <div className="lb-round-guide">
+            <p data-testid="liarsbar-pot">
+              <strong>{v.stake > 0 ? `총 판돈 ${formatBeom(v.stake * v.n)}` : '범 없이 즐기는 판'}</strong>
+              <span>{v.stake > 0
+                ? `1인 ${formatBeom(v.stake)} × ${v.n}명 · 마지막까지 남은 사람이 모두 받아요.`
+                : '연습 판과 파티 판에서는 범을 잃거나 얻지 않아요.'}</span>
+            </p>
+            <details>
+              <summary>허풍 카드 하는 법</summary>
+              <ol>
+                <li>오늘의 카드라고 주장하며 1~3장을 뒷면으로 내요. 다른 카드로 허풍을 쳐도 돼요. 조커는 항상 진짜예요.</li>
+                <li>내 차례에는 패를 내거나 앞사람에게 “거짓말!”을 외쳐요. 가짜가 있으면 낸 사람, 모두 진짜면 지목한 사람이 방아쇠를 당겨요.</li>
+                <li>뻥총이 터지면 탈락해요. 약실은 다시 돌리지 않아 당길수록 위험이 커져요. 마지막 한 사람이 우승해요.</li>
+              </ol>
+              {v.stake > 0 && <p>중간에 나가거나 두 차례 연속 시간을 넘기면 기권해요. 예약한 참가비는 돌려받지 못해요.</p>}
+            </details>
+          </div>
+          <div className="lb-record">
+            <h3>기록</h3>
+            <ol className="lb-log" aria-live="polite">
+              {v.log.slice(-10).map((l, i) => (
+                <li key={`${v.revision}-${i}`} className={l.seat < 0 ? 'is-host' : ''}>
+                  {l.seat >= 0 ? <b>{names[l.seat]}</b> : null} {l.text}
+                </li>
+              ))}
+            </ol>
+          </div>
           <div className="lb-totals">
             <h3>이 자리 기록</h3>
             <table>
@@ -529,9 +563,7 @@ export function LiarsBarTable({
             >
               거짓말! <kbd>L</kbd>
             </button>
-            <p className="lb-keys" aria-hidden="true">
-              1–5 고르기 · Enter 내기 · L 거짓말 · Space 방아쇠 · Esc 선택 풀기
-            </p>
+            <output className="lb-turn-note" data-testid="liarsbar-turn-help">{turnHint}</output>
           </div>
         </section>
       )}

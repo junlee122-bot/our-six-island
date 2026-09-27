@@ -10,6 +10,8 @@ import {
   claimDailyGrant,
   spendBeom,
   grantBeom,
+  storeBeom,
+  houseTransfer,
   compactLedger,
   kstDay,
 } from '../app/lounge-economy.ts';
@@ -17,6 +19,7 @@ import { emptyLife, lifeAction } from '../app/lounge-life.ts';
 import { sellTotal } from '../app/lounge-life-plus.ts';
 import {
   economyReport,
+  compareEconomySqlTotals,
   formatEconomyReport,
   economyReportMarkdown,
   economyReportHtml,
@@ -66,6 +69,8 @@ test('report totals match the ledger invariant and per-account rows', () => {
   assert.equal(r.totals.accounts, 3);
   assert.equal(r.totals.initial, 3 * INITIAL_BEOM);
   assert.equal(r.totals.reserved, 5000);
+  assert.equal(r.totals.stored, 0); // legacy ledgers do not have a vault
+  assert.equal(r.totals.financeHouseNet, 0);
   assert.equal(r.totals.houseBalance, -200 + 1200); // blackjack house lost 200, shop +1200
   assert.equal(r.totals.granted, 3000 + 3000 + FRUIT10);
   assert.equal(r.totals.spent, 1200);
@@ -94,6 +99,90 @@ test('report totals match the ledger invariant and per-account rows', () => {
     r.accounts.map((x) => x.total),
     r.accounts.map((x) => x.total).sort((x, y) => y - x),
   );
+});
+
+test('bank deposits and finance transfers preserve report supply without double-counting', () => {
+  const state = world();
+  const before = economyReport({ state, now: NOW, members });
+  state.ledger = storeBeom(state.ledger, w(0), 10000);
+  state.ledger = storeBeom(state.ledger, w(1), 7000);
+  state.ledger = storeBeom(state.ledger, w(0), 2500, true);
+  const bank = economyReport({ state, now: NOW, members });
+  assert.equal(bank.totals.stored, 14500);
+  assert.equal(bank.totals.balances, before.totals.balances - 14500);
+  assert.equal(bank.totals.reserved, 5000); // existing poker deposits stay separate
+  assert.equal(bank.totals.playerMoney, before.totals.playerMoney);
+  assert.equal(bank.totals.supply, before.totals.supply);
+  assert.deepEqual(bank.accounts.map((a) => [a.wallet, a.total]), before.accounts.map((a) => [a.wallet, a.total]));
+  assert.equal(bank.accounts.find((a) => a.wallet === w(1)).stored, 7000);
+  assert.equal(bank.accounts.find((a) => a.wallet === w(1)).reserved, 2000);
+  assert.deepEqual(bank.warnings, []);
+
+  // Loans move existing house money; neither disbursement nor repayment mints it.
+  state.ledger = houseTransfer(state.ledger, w(0), 20000);
+  const borrowed = economyReport({ state, now: NOW, members });
+  assert.equal(borrowed.totals.financeHouseNet, -20000);
+  assert.equal(borrowed.totals.houseBalance, before.totals.houseBalance - 20000);
+  assert.equal(borrowed.totals.playerMoney, before.totals.playerMoney + 20000);
+  assert.equal(borrowed.totals.supply, before.totals.supply);
+  assert.ok(borrowed.totals.invariantOk);
+  assert.deepEqual(borrowed.warnings, []);
+
+  state.ledger = houseTransfer(state.ledger, w(0), -21000);
+  const repaid = economyReport({ state, now: NOW, members });
+  assert.equal(repaid.totals.financeHouseNet, 1000);
+  assert.equal(repaid.totals.houseBalance, before.totals.houseBalance + 1000);
+  assert.equal(repaid.totals.playerMoney, before.totals.playerMoney - 1000);
+  assert.equal(repaid.totals.supply, before.totals.supply);
+  assert.equal(repaid.totals.granted, before.totals.granted);
+  assert.equal(repaid.totals.spent, before.totals.spent);
+  assert.deepEqual(repaid.entries, before.entries);
+  assert.deepEqual(repaid.sources, before.sources);
+  assert.deepEqual(repaid.sinks, before.sinks);
+  assert.ok(repaid.totals.invariantOk);
+  assert.deepEqual(repaid.warnings, []);
+  for (const rendered of [formatEconomyReport(repaid), economyReportMarkdown(repaid), economyReportHtml(repaid)]) {
+    assert.match(rendered, /은행 보관금/);
+    assert.match(rendered, /금융 순액/);
+    assert.match(rendered, /14,500범/);
+  }
+
+  state.ledger.vault[w(0)] += 5; // a real bank discrepancy must still be reported
+  const broken = economyReport({ state, now: NOW, members });
+  assert.equal(broken.totals.invariantDiff, 5);
+  assert.equal(broken.totals.invariantOk, false);
+  assert.ok(broken.warnings.some((warning) => warning.includes('총액 불일치')));
+});
+
+test('SQL cross-check distinguishes old report functions from real finance discrepancies', () => {
+  const state = world();
+  state.ledger = storeBeom(state.ledger, w(0), 9000);
+  state.ledger = houseTransfer(state.ledger, w(1), 3000);
+  const r = economyReport({ state, now: NOW, revision: 42 });
+  const sql = {
+    revision: 42,
+    totals: {
+      balances: r.totals.balances, reserved: r.totals.reserved, stored: r.totals.stored,
+      player_money: r.totals.playerMoney, house_balance: r.totals.houseBalance,
+      finance_house_net: r.totals.financeHouseNet, granted: r.totals.granted,
+      spent: r.totals.spent, supply: r.totals.supply,
+    },
+  };
+  assert.deepEqual(compareEconomySqlTotals(r, sql), { sameRevision: true, missing: [], differences: [] });
+  const old = structuredClone(sql);
+  delete old.totals.stored;
+  delete old.totals.finance_house_net;
+  old.totals.player_money -= 9000;
+  old.totals.supply -= 9000;
+  assert.deepEqual(compareEconomySqlTotals(r, old).missing, ['stored', 'finance_house_net']);
+
+  sql.totals.finance_house_net += 1;
+  assert.deepEqual(compareEconomySqlTotals(r, sql).differences, [
+    { label: '금융 순액', sqlValue: -2999, reportValue: -3000 },
+  ]);
+  sql.revision++;
+  assert.equal(compareEconomySqlTotals(r, sql).sameRevision, false);
+  assert.ok(compareEconomySqlTotals(r, null).missing.length > 0);
 });
 
 test('game summary, sources/sinks, recent window and daily totals', () => {

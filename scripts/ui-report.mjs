@@ -4,6 +4,8 @@ const GROUPS = {
   login: ['login'], room: ['room'], menu: ['menu'], 'esc-menu': ['esc-menu'],
   'room-editor': ['room-editor'], wallet: ['wallet'], settings: ['settings'],
   controls: ['controls'], credits: ['credits'], friends: ['friends'], invite: ['invite'],
+  bank: ['bank'], 'bank-notes': ['bank-notes'], 'bank-casino': ['bank-casino'],
+  'bank-rob': ['bank-rob'], npc: ['npc'],
   village: ['village'], map: ['map'], bag: ['bag'], shop: ['shop'], ledger: ['ledger'],
   growth: ['growth', 'growth-research'], bonds: ['bonds'], collection: ['collection'],
   'ui-kit': ['ui-kit', 'ui-kit-panels', 'ui-kit-glyphs'],

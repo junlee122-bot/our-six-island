@@ -86,6 +86,8 @@ import { keyLabel } from './lounge-keybinds';
 import './lounge-bedroom-3d.css';
 import './lounge-bedroom-edit-dock.css';
 import { WalkHints } from './ui/WalkHints';
+import { createBedroomNpc } from './lounge-bedroom-npc';
+import { NPCS, type NpcGuest } from './lounge-romance';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 
@@ -139,6 +141,9 @@ export function Bedroom3D({
   onAccess,
   visit,
   presence,
+  guest,
+  clockOffset = 0,
+  onNpcTalk,
   unlocks = [],
   notice,
   onExit,
@@ -157,6 +162,10 @@ export function Bedroom3D({
   /** Read-only visit: their room and their figure; I walk as myself. */
   visit?: BedroomVisit;
   presence?: RoomPresence;
+  /** Server-projected guest, separate from the seven player avatars. */
+  guest?: NpcGuest;
+  clockOffset?: number;
+  onNpcTalk?: () => void;
   unlocks?: readonly string[];
   notice?: (message: string) => void;
   /** Walking out of the door / 나가기 / Esc (my room): back to the village. */
@@ -204,9 +213,9 @@ export function Bedroom3D({
   const [ownKey, setOwnKey] = useState('');
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ save, room, visit, presence, editing, selectedId, draft });
+  const latest = useRef({ save, room, visit, presence, editing, selectedId, draft, guest, clockOffset });
   useLayoutEffect(() => {
-    latest.current = { save, room, visit, presence, editing, selectedId, draft };
+    latest.current = { save, room, visit, presence, editing, selectedId, draft, guest, clockOffset };
   });
   const studioRef = useRef<RoomScene | null>(null);
   const positionRef = useRef<WalkPoint>(
@@ -266,6 +275,10 @@ export function Bedroom3D({
     [room],
   );
   const hostSpotRef = useRef(hostSpot);
+  const guestSpot = useMemo(() => nearestWalkable({ x: -0.7, z: 1.8 }, roomObstacles(room), 0.45) ?? hostSpot, [room, hostSpot]);
+  const guestSpotRef = useRef(guestSpot);
+  useLayoutEffect(() => { guestSpotRef.current = guestSpot; }, [guestSpot]);
+  const activeGuest = guest && guest.until > now + clockOffset ? guest : null;
   useLayoutEffect(() => {
     hostSpotRef.current = hostSpot;
   }, [hostSpot]);
@@ -512,6 +525,7 @@ export function Bedroom3D({
     shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false, toneMapped: false });
     const shadowGeometry = new THREE.PlaneGeometry(0.72, 0.52);
+    const npcGuest = createBedroomNpc(scene, camera, shadowGeometry, shadowMaterial, () => { dirty = true; });
     type Figure = {
       canvas: HTMLCanvasElement;
       texture: THREE.CanvasTexture;
@@ -907,6 +921,7 @@ export function Bedroom3D({
         el.style.transform = `translate(${((label.x + 1) / 2) * w}px, ${((1 - label.y) / 2) * h}px) translate(-50%, -100%)`;
       };
       place('self', me.pos);
+      place('invited-npc', guestSpotRef.current);
       for (const [id, f] of others) place(id, f.pos);
     };
     let lastTick = 0;
@@ -920,6 +935,8 @@ export function Bedroom3D({
       const dt = Math.min((t - previous) / 1000, 0.25);
       previous = t;
       if (!visible || document.hidden) return;
+      const guest = latest.current.guest;
+      if (npcGuest.update(guest && guest.until > Date.now() + latest.current.clockOffset ? guest.npc : undefined, guestSpotRef.current)) dirty = true;
       // Me.
       const before = positionRef.current;
       let position = before;
@@ -1081,6 +1098,7 @@ export function Bedroom3D({
       document.removeEventListener('visibilitychange', visibilityChanged);
       dropFigure(me);
       for (const f of others.values()) dropFigure(f);
+      npcGuest.dispose();
       avatarGeometry.dispose();
       shadowGeometry.dispose();
       shadowMaterial.dispose();
@@ -1211,6 +1229,13 @@ export function Bedroom3D({
               );
             })}
           </div>
+          {activeGuest && (
+            <div className="b3-labels">
+              <div className="b3-label" ref={(el) => { if (el) labelsRef.current.set('invited-npc', el); else labelsRef.current.delete('invited-npc'); }}>
+                {!visit && onNpcTalk ? <button type="button" className="b3-name b3-npc-talk" onClick={onNpcTalk} data-testid="bedroom-npc-talk">{NPCS[activeGuest.npc].name} <em>손님 · 이야기하기</em></button> : <span className="b3-name">{NPCS[activeGuest.npc].name} <em>초대된 주민</em></span>}
+              </div>
+            </div>
+          )}
           {state === 'loading' && (
             <output className="b3-loading">
               <LoaderCircle size={19} />

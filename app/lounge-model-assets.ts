@@ -4,6 +4,10 @@
 // three's GLTFLoader); byte-exact originals live in public/models/_originals/.
 // Standalone builds rewrite these to content-hashed relative URLs for Pages.
 export const LOUNGE_MODELS = {
+  // kArchive catch display set (2026-09-28); loaded only after a matching catch.
+  fishCatfish: '/models/village/life-services/fishCatfish.glb',
+  fishCarp: '/models/village/life-services/fishCarp.glb',
+  fishMackerel: '/models/village/life-services/fishMackerel.glb',
   sofa: '/models/lounge/sofa.glb',
   tulips: '/models/lounge/tulips.glb',
   bed: '/models/lounge/furniture/bed.glb',
@@ -142,6 +146,8 @@ export const tavernModelUrl = (key: TavernModel): string =>
  * Placed by lounge-village-shops.ts.
  */
 export const SHOP_MODELS = {
+  salonBuilding: '/models/village/life-services/salonBuilding.glb',
+  bankBuilding: '/models/village/life-services/bankBuilding.glb',
   tavernStall: '/models/village/tavern/tavernStall.glb',
   menuBoard: '/models/village/tavern/menuBoard.glb',
   dumplingShop: '/models/village/tavern/dumplingShop.glb',

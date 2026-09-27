@@ -358,67 +358,6 @@ function buildCivicHall(scene: THREE.Object3D, p: Place, casino = false) {
   return g;
 }
 
-function buildWardrobeShop(scene: THREE.Object3D, p: Place) {
-  const g = new THREE.Group();
-  g.name = 'village-building-wardrobe';
-  g.position.set(p.x, 0, p.z);
-  scene.add(g);
-  const wall = mat('#e4d4b6');
-  box(g, M.stoneDark, 0, 0.23, 0, 8.4, 0.42, 5.5);
-  box(g, M.stone, 0, 0.43, 0, 8.2, 0.16, 5.32);
-  box(g, wall, 0, 1.9, 0, 7.9, 2.85, 5.15);
-  roofPanel(g, M.roofD, [
-    [-4.35, 3.2, -2.95],
-    [0, 4.48, -2.95],
-    [0, 4.48, 2.95],
-    [-4.35, 3.2, 2.95],
-  ]);
-  roofPanel(g, M.roofE, [
-    [0, 4.48, -2.95],
-    [4.35, 3.2, -2.95],
-    [4.35, 3.2, 2.95],
-    [0, 4.48, 2.95],
-  ]);
-  box(g, M.gold, 0, 4.48, 0, 0.13, 0.14, 6.15);
-  box(g, mat('#a5c3c4'), 0, 2.15, 2.68, 4.8, 1.52, 0.13);
-  box(g, M.white, 0, 2.15, 2.78, 4.45, 1.24, 0.07);
-  // Tailor's striped canopy and scalloped valance.
-  box(g, M.wood, 0, 2.92, 3.06, 5.8, 0.16, 1.12, 0.18);
-  for (let i = 0; i < 8; i++)
-    box(
-      g,
-      i % 2 ? M.cream : mat('#c96d69'),
-      -2.48 + i * 0.71,
-      3.0,
-      3.42,
-      0.36,
-      0.14,
-      0.46,
-      0.18,
-    );
-  box(g, M.wood, 0, 3.52, 3.0, 5.3, 0.48, 0.18);
-  for (let x = -2.3; x <= 2.31; x += 0.77)
-    box(g, M.white, x, 3.52, 3.12, 0.34, 0.47, 0.035);
-  box(g, M.wood, 0, 1.35, 2.72, 1.1, 1.95, 0.16);
-  box(g, M.woodLight, 0, 1.43, 2.83, 0.82, 1.62, 0.07);
-  for (const x of [-3.1, 3.1]) {
-    box(g, M.wood, x, 2.1, 2.7, 0.88, 1.45, 0.14);
-    box(g, M.glass, x, 2.1, 2.8, 0.65, 1.17, 0.055);
-    box(g, M.gold, x, 1.28, 2.94, 1.0, 0.18, 0.32);
-  }
-  for (let i = 0; i < 6; i++)
-    sphere(
-      g,
-      [M.flowerPink, M.flowerBlue, M.flowerYellow][i % 3],
-      -2.1 + i * 0.84,
-      1.4,
-      3.02,
-      0.13,
-      0.8,
-    );
-  return g;
-}
-
 /**
  * Collects repeated decor parts and emits one InstancedMesh per
  * geometry/material pair, so 30+ trees, lamps, hedges, fences and flower
@@ -1021,8 +960,7 @@ export function buildVillageWorld(scene: THREE.Object3D): VillageWorld {
   if (hall) decorations.push(buildCivicHall(scene, hall, false));
   const casino = VILLAGE_PLACES.find((p) => p.kind === 'casino');
   if (casino) decorations.push(buildCivicHall(scene, casino, true));
-  const tailor = VILLAGE_PLACES.find((p) => p.kind === 'wardrobe');
-  if (tailor) decorations.push(buildWardrobeShop(scene, tailor));
+  // The salon exterior is an actual kArchive reception building in the shops layer.
   decorations.push(kitchenGarden(scene));
 
   // Fountain plaza with alternating paving arcs.

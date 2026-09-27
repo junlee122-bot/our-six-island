@@ -93,7 +93,18 @@ export function useCloudSave(account: AccountProfile) {
             return false;
           }
           s.revision = r.revision;
-          s.committed = raw;
+          // The server may remove copies lost to a robbery while this save was
+          // in flight. Acknowledge that effective save, without losing newer edits.
+          const acknowledged = accountSave(r.save, account.actor);
+          s.committed = JSON.stringify(acknowledged);
+          if (JSON.stringify(s.current) === raw) {
+            s.current = acknowledged;
+            setSave(acknowledged);
+            try {
+              if (localStorage.getItem(draftKey) === raw)
+                localStorage.setItem(draftKey, s.committed);
+            } catch {}
+          }
         }
         setStatus('서버에 저장됨');
         try {
@@ -123,7 +134,7 @@ export function useCloudSave(account: AccountProfile) {
     const result = await s.pending;
     s.pending = null;
     return result;
-  }, [draftKey, account.id]);
+  }, [draftKey, account.id, account.actor]);
   useEffect(() => {
     const timer = setTimeout(() => void flush(), 900);
     return () => clearTimeout(timer);

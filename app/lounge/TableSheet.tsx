@@ -524,7 +524,20 @@ export function TableSheet({
       )}
       {mode === 'setup' && (
         <div className="l-sheet-setup">
-          {partyOption && (
+          {game === 'liarsbar' && (
+            <fieldset>
+              <legend>어떻게 할까요? (P)</legend>
+              <div className="l-sheet-chips l-sheet-mode">
+                <button type="button" aria-pressed={party} onClick={() => setParty(true)} data-testid="table-party">
+                  범 없이
+                </button>
+                <button type="button" aria-pressed={!party} onClick={() => setParty(false)} data-testid="table-wager">
+                  범 걸고 하기
+                </button>
+              </div>
+            </fieldset>
+          )}
+          {partyOption && game !== 'liarsbar' && (
             <button
               type="button"
               className={'l-sheet-party' + (party ? ' is-on' : '')}
@@ -627,6 +640,15 @@ export function TableSheet({
               : `${GAME_COPY[game].moneyRule} 내 잔액 ${formatBeom(view.wallet.balance)}`}
             {callNames ? ` 앉으면 ${josa(callNames, '을/를')} 불러요.` : ''}
           </p>
+        </div>
+      )}
+      {game === 'liarsbar' && (
+        <div className="l-sheet-pot" data-testid="table-pot" aria-live="polite">
+          <strong>{tableStake > 0 ? `총 판돈 ${formatBeom(tableStake * (mode === 'setup' ? count : state.required))}` : '범 없이 즐기는 허풍 카드'}</strong>
+          <span>{tableStake > 0
+            ? `1인 ${formatBeom(tableStake)} · 우승자가 총 판돈을 받아요. 내 잔액 ${formatBeom(view.wallet.balance)}`
+            : '친구와 함께하거나 대타 봇을 넣을 수 있어요. 혼자라면 아래 연습 판을 골라요.'}</span>
+          {tableStake > 0 && <small>시작할 때 참가비를 예약해요. 중간에 나가면 기권하며 참가비를 돌려받지 못해요. 범을 거는 판에는 봇이 없어요.</small>}
         </div>
       )}
       {mode === 'join' && (
@@ -737,7 +759,7 @@ export function TableSheet({
                 ]
             : [
                 { keys: ['action'], does: '앉기' },
-                ...(mode === 'setup' && !party ? [{ keys: [{ label: '1–4' }], does: '판돈' }] : []),
+                ...(mode === 'setup' && !party ? [{ keys: [{ label: `1–${stakes.length}` }], does: '판돈' }] : []),
                 ...(mode === 'setup' && partyOption ? [{ keys: [{ label: 'P' }], does: '파티 판' }] : []),
                 ...(mode === 'setup' && flex ? [{ keys: [{ label: `Shift+${lo}–${hi}` }], does: '인원' }] : []),
                 { keys: [{ code: 'Escape' }], does: '닫기' },

@@ -37,3 +37,33 @@
   outline: 3px solid var(--pal-orange-71);
   outline-offset: 2px;
 }
+
+.l-sheet-pot {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+}
+.l-sheet-pot strong {
+  font-size: var(--fs-body);
+}
+.l-sheet-pot small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-sheet-chips.l-sheet-mode {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.l-sheet-chips.l-sheet-mode > button {
+  transition: transform var(--dur-quick), box-shadow var(--dur-quick);
+}
+.l-sheet-mode > button[aria-pressed='true'] {
+  border-color: var(--accent-edge);
+  background: var(--accent);
+  color: var(--text-on-accent);
+}

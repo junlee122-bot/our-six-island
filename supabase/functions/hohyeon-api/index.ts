@@ -6,6 +6,8 @@ import {
   AccountSaveError,
   casBackoffMs,
   lifeUnlocksOf,
+  furniturePolicyOf,
+  protectProfileFurniture,
   jsonbTextBytes,
   PROFILE_SAVE_MAX_BYTES,
   SAVE_TOO_LARGE,
@@ -34,7 +36,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 serve('hohyeon-api', async (b, req, ctx) => {
   const { m } = await member(req);
   await rate('api:' + m.user_id, 300);
-  if (b.op === 'profile') return { profile: profile(m) };
+  if (b.op === 'profile') {
+    const world = await rpc('hh_world_read');
+    return { profile: profile({ ...m, save: protectProfileFurniture(m.save, world?.state?.life, m.user_id) }) };
+  }
   if (b.op === 'visit') {
     // Read-only friend room visit: bedroom + look from the friend's profile
     // save, guestbook/status from the world. Only the 7 roster members exist.
@@ -67,7 +72,7 @@ serve('hohyeon-api', async (b, req, ctx) => {
     try {
       // Fail closed: an unreadable or unknown-version save is rejected (409),
       // never normalized into a blank save that would overwrite the account.
-      save = serverAccountSave(b.save, m.actor, m.save, unlocks);
+      save = serverAccountSave(b.save, m.actor, m.save, unlocks, furniturePolicyOf(world?.state?.life, m.user_id));
     } catch (e) {
       if (e instanceof AccountSaveError) {
         log('warn', 'save_rejected', {
@@ -82,11 +87,15 @@ serve('hohyeon-api', async (b, req, ctx) => {
     if (jsonbTextBytes(save) > PROFILE_SAVE_MAX_BYTES)
       throw new HttpError(SAVE_TOO_LARGE, 413);
     // hh_profile_save also appends to hohyeon.profile_history (last 20).
-    return await rpc('hh_profile_save', {
+    const result = await rpc('hh_profile_save', {
       p_uid: m.user_id,
       p_expected: b.revision,
       p_save: save,
     });
+    // A robbery can commit while this separate profile CAS is in flight.
+    // Mask both successful and conflict replies against the latest world.
+    const latest = await rpc('hh_world_read');
+    return { ...result, save: protectProfileFurniture(result.save, latest?.state?.life, m.user_id) };
   }
   if (
     b.op !== 'world' ||
@@ -103,11 +112,12 @@ serve('hohyeon-api', async (b, req, ctx) => {
   )
     throw new HttpError('방 코드를 확인해 주세요.');
   const hash = await commandHash(b.command);
-  // 무드 아늑함: the room score of this member's saved room (the engine adds the house tier).
-  const room = roomScore(m.save, m.actor);
   for (let attempt = 0; attempt < CAS_ATTEMPTS; attempt++) {
     if (attempt) await sleep(casBackoffMs(attempt - 1));
     const row = await rpc('hh_world_read');
+    // Evaluate the effective room inside each CAS attempt: stolen copies must
+    // not keep contributing to mood through an older profile layout.
+    const room = roomScore(protectProfileFurniture(m.save, row.state.life, m.user_id), m.actor);
     let transition;
     try {
       transition = cloudTransition(

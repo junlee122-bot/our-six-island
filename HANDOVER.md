@@ -13,6 +13,7 @@
 - **스택**: React 19 + Vite(vinext) + three.js, TypeScript. 서버는 Supabase(Edge Functions `hohyeon-auth`, `hohyeon-api` + Postgres `hohyeon` 스키마, 비공개 Realtime). 데스크톱 앱은 Tauri 2(`desktop/`).
 - **서버 권위(authoritative) 구조**: 게임 규칙은 `app/*.ts`의 순수 엔진에 있고, 같은 코드가 Edge Function에 번들되어 서버에서 판정합니다. 클라이언트는 결과만 그립니다.
 - **월드 저장**: DB 한 행(JSON) + revision CAS. 범(화폐) 원장 불변식 `잔액 + 예약 + 하우스 − 지급 = 계정수 × 100,000`을 테스트가 항상 검사합니다.
+- **2026-09-28 생활 업데이트**: 미용실·은행, 지도 친구 위치, 낚시 반응 등급·보너스, 차용증·방어 물품·강도, 루미 장부·대부 창구, NPC 친밀도/방 초대. 구현 범위·수치·검증은 [생활 업데이트](handover/design/life-services-2026-09-28.md)를 보세요. 은행 보관금도 위 원장의 예약 합계에 포함합니다.
 
 ## 2. 처음 ChatGPT 코드와 얼마나 달라졌나
 
@@ -122,6 +123,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 서버 진입 | `supabase/functions/hohyeon-api/index.ts`, `hohyeon-auth/index.ts` |
 | 월드 엔진 | `app/lounge-cloud-engine.ts`, `app/lounge-room.ts`, `app/lounge-economy.ts` |
 | 생활 | `app/lounge-life.ts`, `lounge-life-plus.ts`, `lounge-life-social.ts`, `lounge-calendar.ts`, `lounge-items.ts` |
+| 은행·강도·주민 관계 | `app/lounge-finance.ts`, `lounge-furniture-protection.ts`, `lounge-romance.ts`, `lounge/FinancePanel.tsx`, `lounge/NpcRelationsPanel.tsx` |
 | 성장·지역 | `app/lounge-growth*.ts`, `lounge-areas.ts`, `lounge-mine.ts`, `lounge-walk-world.ts` |
 | 무드 | `app/lounge-mood*.ts` |
 | 게임 | `app/lounge-blackjack.ts`, `lounge-poker.ts`, `lounge-seotda*`, `lounge-gostop*`, `lounge-chess*`, `lounge-yacht.ts`, `lounge-liar.ts`, `lounge-liarsbar.ts` |

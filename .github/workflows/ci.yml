@@ -13,6 +13,31 @@ permissions:
   contents: read
 
 jobs:
+  village-life:
+    # Real UI input against the isolated mock world: no production accounts,
+    # network writes or saved data. Linux avoids local SwiftShader contention.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Chromium for playwright-core
+        run: npx playwright-core install --with-deps chromium
+      - name: Pages build (scratch output)
+        run: node scripts/build-standalone.mjs --out /tmp/village-pages --site-url /
+      - name: Village life interactions
+        run: node --experimental-strip-types scripts/verify-village-life-ui.mjs --pages /tmp/village-pages --out /tmp/village-life --max-ms 1200000
+      - name: Keep village life evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: village-life
+          path: /tmp/village-life
+
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20

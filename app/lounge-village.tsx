@@ -167,6 +167,7 @@ import {
   type VillagePlace,
   type VillagePoint,
 } from './lounge-village-layout';
+import { villageFriendPins, villageFriendGroups, type VillageFriendPin } from './lounge-village-minimap';
 import './lounge-village.css';
 
 type ChatLine = { id: string; actor: number; text: string };
@@ -178,7 +179,8 @@ const PLACE_SHORT: Record<VillagePlace['kind'], string> = {
   home: '',
   hall: '회관',
   casino: '카지노',
-  wardrobe: '분장실',
+  wardrobe: '미용실',
+  bank: '은행',
   tavern: '주점',
   realty: '부동산',
   furniture: '가구점',
@@ -190,7 +192,7 @@ function PlaceIcon({ place, size = 12 }: { place: VillagePlace; size?: number })
   const Icon =
     place.kind === 'home'
       ? House
-      : place.kind === 'hall'
+      : (place.kind === 'hall' || place.kind === 'bank')
         ? Landmark
         : place.kind === 'casino'
           ? Dices
@@ -670,6 +672,14 @@ export function Village3D(props: Props) {
   const [action, setAction] = useState<VillageAction | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
   const [miniOpen, setMiniOpen] = useState(true);
+  const [miniExpanded, setMiniExpanded] = useState(false);
+  const friendPins = villageFriendPins(props.players, props.self);
+  const friendGroups = villageFriendGroups(friendPins, (miniExpanded ? 400 : 260) / MINI_BOX.w);
+  const [friendGroup, setFriendGroup] = useState<string | null>(null);
+  const shownFriends = friendGroups.find((group) => group.key === friendGroup);
+  const onFriendKey = (e: { key: string; preventDefault: () => void; stopPropagation: () => void }) => {
+    if (e.key === 'Escape' && shownFriends) { e.preventDefault(); e.stopPropagation(); setFriendGroup(null); }
+  };
   /** The plot under the mouse (wooden tag) and the harvest pops (VILL-2). */
   const [plotTag, setPlotTag] = useState<{ actor: number; index: number } | null>(null);
   const plotTagRef = useRef<HTMLDivElement>(null);
@@ -760,11 +770,17 @@ export function Village3D(props: Props) {
     );
   }, [nearPlaceId]);
   const select = (place: VillagePlace) => {
+    if (latest.current.fishing) return;
     requestedPlace.current = place;
     setDistrict(null);
     setSelected(place);
     setDirectory(false);
     controls.current?.go(place);
+  };
+  const followFriend = (friend: VillageFriendPin) => {
+    const place = VILLAGE_PLACES.find((p) => p.id === friend.placeId);
+    if (place) select(place); else controls.current?.visit(friend.point);
+    setFriendGroup(null);
   };
 
   useEffect(() => {
@@ -862,6 +878,7 @@ export function Village3D(props: Props) {
       point: VillagePoint,
       enterWhenNear: VillagePlace | null = null,
     ) => {
+      if (latest.current.fishing) return;
       entryIntent = enterWhenNear;
       path = villagePath(position, point);
       const end = path.at(-1);
@@ -877,6 +894,7 @@ export function Village3D(props: Props) {
     };
     controls.current = {
       visit: (point) => {
+        if (latest.current.fishing) return;
         requestedPlace.current = null;
         goTo(point);
       },
@@ -887,10 +905,12 @@ export function Village3D(props: Props) {
         marker.visible = false;
       },
       go: (place) => {
+        if (latest.current.fishing) return;
         requestedPlace.current = place;
         goTo(place.entry);
       },
       enter: (place) => {
+        if (latest.current.fishing) return;
         requestedPlace.current = place;
         if (villageCanEnterPlace(place, latest.current.save.actor))
           goTo(place.entry, place);
@@ -980,6 +1000,7 @@ export function Village3D(props: Props) {
       actionKey = '';
     const act = (action: VillageAction) => {
       const current = latest.current;
+      if (current.fishing) return;
       const t = action.target;
       if (t.type === 'door') {
         const { place, canEnter } = t.entrance;
@@ -1452,7 +1473,7 @@ export function Village3D(props: Props) {
     };
     const up = (e: PointerEvent) => {
       if (!press || e.pointerId !== press.id) return;
-      if (!press.dragged) {
+      if (!press.dragged && !latest.current.fishing) {
         entryIntent = null;
         requestedPlace.current = null;
         const target = hoverAt(e.clientX, e.clientY);
@@ -1503,7 +1524,7 @@ export function Village3D(props: Props) {
     const keydown = (e: KeyboardEvent) => {
       // Heard on window (focus may be on body or a dock button after a dialog).
       const at = sceneKeyTarget(e, host);
-      if (!at || e.altKey || e.ctrlKey || e.metaKey) return;
+      if (!at || e.altKey || e.ctrlKey || e.metaKey || latest.current.fishing) return;
       const bound = boundAction(e);
       if (e.code === 'Enter' || e.code === 'NumpadEnter' || bound === 'action') {
         // The one action button: its key (E) always presses it (Enter on a
@@ -1548,7 +1569,7 @@ export function Village3D(props: Props) {
       press = null;
     };
     const keyrun = (e: KeyboardEvent) => {
-      if (e.key !== 'Shift' || e.repeat || !sceneKeyTarget(e, host)) return;
+      if (e.key !== 'Shift' || e.repeat || latest.current.fishing || !sceneKeyTarget(e, host)) return;
       shiftHeld.current = true;
     };
     const visibilityChanged = () => {
@@ -1696,6 +1717,13 @@ export function Village3D(props: Props) {
       w: 0,
       h: 0,
     }));
+    placeLabels.push({
+      id: 'museum', element: labels.querySelector<HTMLElement>('[data-place="museum"]'),
+      x: VILLAGE_MUSEUM.x, z: VILLAGE_MUSEUM.z,
+      hw: VILLAGE_MUSEUM.width / 2, hd: VILLAGE_MUSEUM.depth / 2,
+      ax: VILLAGE_MUSEUM.x, ay: 3.6, az: VILLAGE_MUSEUM.z,
+      shown: false, w: 0, h: 0,
+    });
     if (myBed) {
       const r = farmBedRect(myBed);
       placeLabels.push({
@@ -1740,6 +1768,9 @@ export function Village3D(props: Props) {
       w: 0,
       h: 0,
     }));
+    signs.push({ id: 'museum', element: labels.querySelector<HTMLElement>('[data-sign="museum"]'),
+      ax: VILLAGE_MUSEUM.x, ay: 2.2, az: VILLAGE_MUSEUM.z + VILLAGE_MUSEUM.depth / 2,
+      shown: false, w: 0, h: 0 });
     const signPointer = new THREE.Vector2();
     let labelMode: 'walk' | 'overview' | '' = '',
       labelNearest: string | null = null,
@@ -1812,6 +1843,16 @@ export function Village3D(props: Props) {
       const dt = previous ? Math.min((now - previous) / 1000, 0.25) : 0;
       previous = now;
       if (!assetsReady || !visible || document.hidden) return;
+      // Clear both manual and queued walking throughout the cast, including its result.
+      // keyup stays active; closing fishing cannot resume a stale held direction.
+      if (latest.current.fishing) {
+        activeDirections.clear();
+        shiftHeld.current = false;
+        path = [];
+        entryIntent = null;
+        requestedPlace.current = null;
+        marker.visible = false;
+      }
       const before = position;
       const h =
         Number(directions.current.has('right')) -
@@ -2608,6 +2649,14 @@ export function Village3D(props: Props) {
                 {place.actor === props.save.actor && <small>내 집</small>}
               </button>
             ))}
+            <button type="button" data-place="museum" className="hv-place hv-place-museum"
+              onClick={() => controls.current?.visit(MUSEUM_FRONT)}
+              aria-label="마을 박물관으로 걸어가기" data-show="false">
+              <Landmark size={12} aria-hidden="true" />
+              <span className="hv-place-full">마을 박물관</span>
+              <span className="hv-place-short">박물관</span>
+            </button>
+            <span className="hv-sign" data-sign="museum" data-show="false" aria-hidden="true">마을 박물관</span>
             {farmBed(props.save.actor) && (
               <button
                 type="button"
@@ -2705,8 +2754,9 @@ export function Village3D(props: Props) {
             <KeyHint action="map" />
           </button>
         </div>
-        <div
-          className={`hv-minimap${miniOpen ? ' is-open' : ''}`}
+        <nav
+          aria-label="친구와 마을 지도"
+          className={`hv-minimap${miniOpen ? ' is-open' : ''}${miniExpanded ? ' is-expanded' : ''}`}
           data-testid="minimap"
         >
           <button
@@ -2715,15 +2765,24 @@ export function Village3D(props: Props) {
             data-testid="minimap-toggle"
             aria-expanded={miniOpen}
             aria-controls="hv-minimap-body"
-            onClick={() => setMiniOpen(!miniOpen)}
+            onClick={() => { setMiniOpen(!miniOpen); setFriendGroup(null); }}
             aria-label={miniOpen ? '미니맵 접기' : '미니맵 펼치기'}
           >
             <Compass size={17} aria-hidden="true" />
-            <span>지도</span>
+            <span>{miniOpen ? '지도 접기' : '지도 펼치기'}</span>
             {miniOpen && <X size={14} aria-hidden="true" />}
           </button>
           {miniOpen && (
             <div id="hv-minimap-body" className="hv-minimap-body">
+              <div className="hv-minimap-tools">
+                <strong>범타듀 밸리</strong>
+                <button type="button" onClick={() => { setMiniExpanded(!miniExpanded); setFriendGroup(null); }}
+                  aria-expanded={miniExpanded} aria-label={miniExpanded ? '미니맵 축소' : '미니맵 확대'}
+                  data-testid="minimap-resize">
+                  {miniExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                  {miniExpanded ? '축소' : '확대'}
+                </button>
+              </div>
               <div className="hv-minimap-map">
                 <button
                   type="button"
@@ -2856,7 +2915,7 @@ export function Village3D(props: Props) {
                 </button>
                 {VILLAGE_PLACES.map((p) => {
                   const named =
-                    p.kind !== 'home' ||
+                    miniExpanded || p.kind !== 'home' ||
                     p.actor === props.save.actor ||
                     p.id === nearestPlace ||
                     p.id === selected?.id;
@@ -2874,9 +2933,7 @@ export function Village3D(props: Props) {
                       }}
                       onClick={() => {
                         select(p);
-                        // On a phone the open map would hide the walk; fold it.
-                        if (window.matchMedia?.('(max-width: 600px)').matches)
-                          setMiniOpen(false);
+                        if (miniExpanded) setMiniExpanded(false);
                       }}
                       aria-label={`${p.name}${p.id === nearestPlace ? ' (가장 가까운 곳)' : ''} 걸어가기`}
                     >
@@ -2886,15 +2943,53 @@ export function Village3D(props: Props) {
                     </button>
                   );
                 })}
+                <button type="button" className="hv-minimap-place" data-minimap-place="museum"
+                  data-named="true" data-nearest={String(nearestPlace === 'museum')}
+                  style={{ left: `${((VILLAGE_MUSEUM.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((VILLAGE_MUSEUM.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                  onClick={() => controls.current?.visit(MUSEUM_FRONT)} aria-label="마을 박물관으로 걸어가기">
+                  <span aria-hidden="true">박물관</span>
+                </button>
+                {friendGroups.map((group) => {
+                  const friend = group.friends[0], clustered = group.friends.length > 1;
+                  const label = clustered
+                    ? group.friends.map((p) => ACTORS[p.actor]).join(' · ') + ' 위치 목록'
+                    : `${ACTORS[friend.actor]} · ${friend.location}${friend.indoor ? ' 안' : ''}`;
+                  return <button type="button" key={group.key} className="hv-minimap-friend"
+                    data-minimap-friend={clustered ? undefined : friend.actor}
+                    data-minimap-cluster={clustered ? group.friends.length : undefined}
+                    data-indoor={String(group.friends.every((p) => p.indoor))}
+                    aria-label={clustered ? label : label + ' 위치로 걸어가기'} title={label}
+                    aria-expanded={clustered ? friendGroup === group.key : undefined}
+                    aria-controls={clustered ? 'hv-minimap-peers' : undefined}
+                    onKeyDown={onFriendKey}
+                    style={{ left: `${((group.point.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((group.point.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                    onClick={() => clustered ? setFriendGroup(friendGroup === group.key ? null : group.key) : followFriend(friend)}>
+                    <b aria-hidden="true">{clustered ? group.friends.length : ACTORS[friend.actor].slice(0, 1)}</b>
+                    <span>{clustered ? `친구 ${group.friends.length}명` : ACTORS[friend.actor] + (friend.indoor ? ' · 실내' : '')}</span>
+                  </button>;
+                })}
               </div>
               <small className="hv-minimap-note">
                 {nearestPlace
-                  ? `가까운 곳 · ${VILLAGE_PLACES.find((p) => p.id === nearestPlace)?.name ?? ''}`
+                  ? `가까운 곳 · ${nearestPlace === 'museum' ? '마을 박물관' : (VILLAGE_PLACES.find((p) => p.id === nearestPlace)?.name ?? '내 텃밭')}`
                   : '건물을 클릭하면 걸어가요'}
               </small>
+              <small className="hv-minimap-legend">나: 빈 원 · 친구 {friendPins.length}명 · 숫자: 모여 있는 친구</small>
+              {shownFriends && shownFriends.friends.length > 1 && (
+                <section id="hv-minimap-peers" className="hv-minimap-peers" aria-label="모여 있는 친구들">
+                  <header><strong>여기 있는 친구들</strong><button type="button" aria-label="친구 위치 목록 닫기" onKeyDown={onFriendKey} onClick={() => setFriendGroup(null)}><X size={16} /></button></header>
+                  {shownFriends.friends.map((friend) => <button type="button" key={friend.id}
+                    data-minimap-friend={friend.actor} data-indoor={String(friend.indoor)}
+                    onKeyDown={onFriendKey} onClick={() => followFriend(friend)}>
+                    <strong>{ACTORS[friend.actor]}</strong>
+                    <small>{friend.location}{friend.indoor ? ' 안' : ''}</small>
+                    <Footprints size={15} aria-hidden="true" />
+                  </button>)}
+                </section>
+              )}
             </div>
           )}
-        </div>
+        </nav>
         {directory && (
           <aside className="hv-directory" aria-label="마을 장소">
             <header>

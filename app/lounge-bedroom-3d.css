@@ -238,6 +238,14 @@
   font-weight: 600;
   color: var(--text-soft);
 }
+.b3-npc-talk {
+  pointer-events: auto;
+  cursor: pointer;
+  min-height: var(--sp-6);
+}
+.b3-npc-talk:focus-visible {
+  outline: var(--sp-1) solid var(--focus);
+}
 .b3-bubble {
   max-width: 190px;
   padding: 7px 11px;

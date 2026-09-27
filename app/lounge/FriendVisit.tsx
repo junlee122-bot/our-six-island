@@ -229,6 +229,8 @@ export function FriendVisitScreen({
               onExit={onBack}
               visit={{ owner, ownerLook: data.look, bedroom: data.bedroom }}
               presence={roomPresence(room, view)}
+              guest={view.life?.npcGuests?.[String(owner)]}
+              clockOffset={view.clockOffset}
             />
           </Suspense>
           {/* Who is here and the owner's line: small chips under the room's

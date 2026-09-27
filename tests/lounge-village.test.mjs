@@ -38,9 +38,9 @@ test('village places retain all resident homes and public destinations', () => {
   );
   assert.deepEqual(
     VILLAGE_PLACES.filter((place) => place.kind !== 'home').map((place) => place.destination),
-    ['lounge', 'casino', 'wardrobe', 'tavern', 'realty', 'furniture'],
+    ['lounge', 'casino', 'wardrobe', 'tavern', 'realty', 'furniture', 'bank'],
   );
-  assert.equal(VILLAGE_PLACES.length, 13);
+  assert.equal(VILLAGE_PLACES.length, 14);
   assert.deepEqual(VILLAGE_TERRACE, {
     id: 'terrace',
     x: -8,

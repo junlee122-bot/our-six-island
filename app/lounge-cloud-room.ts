@@ -1,6 +1,7 @@
 import { emptyLoungeView } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
+import type { FinanceView } from './lounge-finance';
 import { cloud, cloudCall, AccountError } from './lounge-auth';
 import type { AccountProfile } from './lounge-accounts';
 import type { CloudCommand } from './lounge-cloud-engine';
@@ -49,6 +50,7 @@ type Response = {
   serverNow: number;
   /** Phase 2 life block (farm, bag, mail…) on every world response. */
   life?: LifeView;
+  finance?: FinanceView;
 };
 
 export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine';
@@ -69,6 +71,7 @@ export type CloudRoomView = LoungeView & {
   host?: string;
   /** Latest "범타듀의 하루" state from any response (null until the first one). */
   life: LifeView | null;
+  finance?: FinanceView;
   /** Connection health (lounge-connection.ts): 'offline' after two failed calls in a row. */
   link: Link;
 };
@@ -277,6 +280,7 @@ export class CloudRoom {
     setServerClockOffset(clockOffset);
     const life = r.life ?? (r.packet as { life?: LifeView } | null)?.life;
     if (life) this.view = { ...this.view, life };
+    if (r.finance) this.view = { ...this.view, finance: r.finance };
     if (r.packet && r.code) {
       const localNow = Date.now();
       const players = r.packet.players.map((p) => ({

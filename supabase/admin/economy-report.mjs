@@ -34,7 +34,7 @@ try {
   console.error('Node 22에서는 `node --experimental-strip-types supabase/admin/economy-report.mjs`로 실행하세요.');
   process.exit(2);
 }
-const { economyReport, formatEconomyReport, economyReportMarkdown, economyReportHtml, beomText } = lib;
+const { economyReport, compareEconomySqlTotals, formatEconomyReport, economyReportMarkdown, economyReportHtml, beomText } = lib;
 
 const args = process.argv.slice(2);
 const opt = (name) => {
@@ -152,21 +152,19 @@ if (opt('check-sql')) {
   } else {
     let sqlReport = (await sql(`select public.hh_economy_report(${days}) as r`))?.[0]?.r;
     if (typeof sqlReport === 'string') sqlReport = JSON.parse(sqlReport);
-    const t = sqlReport?.totals ?? {};
-    const pairs = [
-      ['잔액 합계', t.balances, report.totals.balances],
-      ['게임 예약금', t.reserved, report.totals.reserved],
-      ['하우스', t.house_balance, report.totals.houseBalance],
-      ['누적 발행', t.granted, report.totals.granted],
-      ['누적 지출', t.spent, report.totals.spent],
-    ];
-    const bad = pairs.filter(([, a, b]) => Number(a) !== b);
+    const check = compareEconomySqlTotals(report, sqlReport);
     console.log('\n■ SQL 교차 검증 (hh_economy_report)');
-    if (sqlReport?.revision !== report.revision)
+    if (!check.sameRevision)
       console.log(`- world revision이 달라졌습니다(${report.revision} → ${sqlReport?.revision}); 그 사이 게임이 진행됐을 수 있습니다.`);
-    if (!bad.length) console.log('- 총계가 JS 계산과 일치합니다.');
-    for (const [label, a, b] of bad) console.log(`- ${label}: SQL ${beomText(Number(a))} ≠ JS ${beomText(b)}`);
-    if (bad.length && sqlReport?.revision === report.revision) process.exitCode = 1;
+    if (check.missing.length) {
+      console.log(`- SQL 보고서에 ${check.missing.join(', ')} 항목이 없습니다. 은행·금융 보고서 마이그레이션을 적용한 뒤 다시 검증하세요.`);
+      process.exitCode = 1;
+    } else {
+      if (!check.differences.length) console.log('- 총계가 JS 계산과 일치합니다.');
+      for (const { label, sqlValue, reportValue } of check.differences)
+        console.log(`- ${label}: SQL ${beomText(sqlValue)} ≠ JS ${beomText(reportValue)}`);
+      if (check.differences.length && check.sameRevision) process.exitCode = 1;
+    }
   }
 }
 

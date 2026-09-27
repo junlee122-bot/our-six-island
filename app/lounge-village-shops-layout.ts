@@ -8,6 +8,8 @@
 // Model sizes: public/models/village/{tavern,shops}/assets.json (model units,
 // +z is the front / door side).
 export const SHOP_MODEL_SIZE = {
+  salonBuilding: { w: 2.8526435, h: 2.0666306, d: 3 },
+  bankBuilding: { w: 3.2, h: 1.352595, d: 2.7937322 },
   tavernStall: { w: 3.0, h: 2.689, d: 2.222 },
   dumplingShop: { w: 1.962, h: 1.98, d: 2.6 },
   stallHeritage: { w: 2.728, h: 2.8, d: 2.178 },
@@ -24,6 +26,8 @@ export type ShopBuildingModel = keyof typeof SHOP_MODEL_SIZE;
 export type ShopFit = { x: number; z: number; scale: number; rot: number };
 /** Lots (match VILLAGE_PLACES): centre, width, depth. */
 export const SHOP_LOTS = {
+  salon: { x: 0, z: -6, w: 5, d: 5.2 },
+  bank: { x: -11, z: 21.7, w: 5.5, d: 4.9 },
   tavern: { x: 35.8, z: 27.6, w: 6.4, d: 5 },
   realty: { x: -32.3, z: 21.7, w: 5.5, d: 4.5 },
   furniture: { x: -21.8, z: 21.7, w: 5.3, d: 5.1 },

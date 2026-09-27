@@ -594,3 +594,14 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 - **kArchive GLB 42개**(자료: kArchive · 출처: 쓰레드 dogfooter): 주점 실내 34개(`public/models/lounge/tavern/`, 기본 7 + 업그레이드 6분류 18단계), 주점 외관 5개(`village/tavern/`: 라멘 포장마차 기본, 칠판, 만두 가게·홍등 포장마차·생선구이 오두막 업그레이드), 가게 건물 4개(`village/shops/`: 부동산 사무소·2층 사무소, 가구점·쇼윈도 가구점). 약관 원문·URL·SHA-256·바이트·삼각형·바운드는 각 폴더 `assets.json`, 원본은 `_originals/`. 작은 소품은 512² WebP, 건물과 메인 테이블은 1024². 책장·옹기·한지 등·장작·알림종은 이미 받은 모델을 다시 씀(추가 0 KB). 주점 실내는 들어갈 때만 불러옵니다.
 - **Higgsfield GPT Image 2.5 2회(각 0.25 크레딧)**: 허 선장 6포즈 시트(`lounge/host-captain.*`, 프롬프트 `host-captain.prompt.txt`), 문 사장·결 목수 3포즈씩 한 장(`lounge/host-realtor.*`, `host-carpenter.*`, 프롬프트 `host-shopkeepers.prompt.txt`). 참조는 `host-maehwa.png`(스타일만). 마젠타 키잉 뒤 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 배치.
 - **코드로 그린 것**: 뻥총(장난감 코르크 리볼버, 약 400삼각형 + 인라인 SVG), 다트판, 축음기, 현상수배 포스터, 타원 러그, 주기(酒) 깃발, 간판, 카드 문양(범 왕관·학·보름달·도깨비 방망이), 주점 배경음(`lounge-music-score.ts` TAVERN: D 도리안 셔플 88 bpm)과 뻥총·벨·심장 박동 합성음. `tavern` 음악 슬롯에 파일을 넣으면 그 파일이 우선합니다(`/assets/lounge/music/tavern.ogg|mp3`).
+
+## kArchive 미용실·은행·낚시 모델 — 2026-09-28
+
+자료: **kArchive** · 출처: **쓰레드 dogfooter**. [공식 모델 카탈로그](https://karchive.vibeline.co.kr/models)의 공개 GLB 5개를 사용했습니다. 원본과 웹용 사본의 URL·SHA-256·바운드·용도는 [모델 기록](public/models/village/life-services/assets.json)에 있습니다.
+
+- 보송 미용실: 캠핑장 접수동에 미용실 간판을 부착했습니다. 기존 코디·머리·피부색 편집 화면으로 연결됩니다.
+- 범마을 은행: 코너형 오피스 접수동을 금융 창구 건물로 사용했습니다.
+- 낚시 결과: 메기(fish-catfish), 잉어(fish-f226), 고등어(fish-mackerel) 3종을 사용했습니다.
+- 상세 페이지 약관(2026-09-28 확인): 개인·상업 프로젝트 사용 및 수정 가능, 출처 표기 필수, 원본 자료 재판매 금지. Creative Commons 자료로 표기하지 않습니다.
+- 웹용 5개 합계 2,242,228바이트. dedup/weld/prune, 양자화, 텍스처 최대 1024px WebP(q88) 최적화. 공개 배포에서는 원본 폴더를 제외하고 웹용 사본만 사용합니다.
+- 원본 보관: `public/models/_originals/village/life-services/`.

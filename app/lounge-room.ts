@@ -7,6 +7,7 @@ import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
 import { ACTORS } from "./lounge-roster.ts";
 import {
   reactionId,
+  reactionInfo,
   readReaction,
   REACTION_COOLDOWN,
   type Reaction,
@@ -178,11 +179,13 @@ export {
   chatScope,
 };
 export type { GameKind, Area, ChatScope };
+import type { FinanceAction } from './lounge-finance.ts';
 export type ChatLine = {
   id: string;
   actor: number;
   text: string;
   scope?: ChatScope;
+  reaction?: ReactionId;
 };
 /** Server-clock deadline for the seat to act, and seats played automatically. */
 export type TurnTiming = { turnDeadline?: number; away?: number[] };
@@ -347,6 +350,7 @@ function playersRead(value: unknown): LoungePlayer[] | null {
 }
 export type LoungeAction =
   | LifeAction
+  | FinanceAction
   | {
       kind: "invite";
       game: GameKind;
@@ -2139,6 +2143,11 @@ export class LoungeRoom {
           ...(a.matchId ? { matchId: a.matchId } : {}),
         },
       });
+      const scope = chatScope(member.area, member.home);
+      const line: ChatLine = { id: crypto.randomUUID(), actor: member.actor, text: reactionInfo(a.id)?.label ?? '스티커', reaction: a.id, scope };
+      const chat = [...this.view.chat, line];
+      const recent = chat.filter((c) => (c.scope ?? 'lounge') === scope).slice(-12);
+      this.view.chat = [...chat.filter((c) => (c.scope ?? 'lounge') !== scope), ...recent];
     } else if (a.kind === "emote") {
       if (!["👋", "♥", "✨", "ㅋㅋ"].includes(a.emote))
         return this.reject(REJECT.invalid);

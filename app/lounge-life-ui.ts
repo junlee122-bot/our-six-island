@@ -38,6 +38,19 @@ import { itemName } from './lounge-life-plus.ts';
 import { REGION_ITEMS } from './lounge-growth-data.ts';
 
 export type LifeMe = LifeView['me'];
+export type Harvest = { crop: Crop; n: number; quality: Quality }[];
+/** Describe only items the server actually added; never announce a guessed yield. */
+export function harvestOf(before: LifeView | null | undefined, after: LifeView | null | undefined): Harvest {
+  if (!before || !after) return [];
+  return CROPS.flatMap((crop) => {
+    const old = cropSplit(before.me, crop), next = cropSplit(after.me, crop);
+    return ([2, 1, 0] as const).flatMap((quality) => next[quality] > old[quality]
+      ? [{ crop, quality, n: next[quality] - old[quality] }] : []);
+  });
+}
+export function harvestText(harvest: Harvest) {
+  return harvest.map(({ crop, quality, n }) => `${CROP_INFO[crop].name}${quality ? ` ${QUALITY_LABEL[quality]}` : ''} ${n}개`).join(' · ');
+}
 
 /* ------------------------------------------------------------ inventory */
 

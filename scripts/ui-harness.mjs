@@ -84,7 +84,10 @@ export async function setup({ browser, base, view = 'fhd', seedLife, onboard = f
       ...(['open', 'join'].includes(op) ? { epoch: p.epoch } : {}),
       ...extra,
     };
-    const r = cloudTransition(world, p, command, await commandHash(command), Date.now());
+    // Hash before reading world: concurrent heartbeats must transition the latest
+    // state, not an object captured before the asynchronous digest completed.
+    const hash = await commandHash(command);
+    const r = cloudTransition(world, p, command, hash, Date.now());
     world = r.state;
     revision++;
     p.epoch = r.response.epoch;
@@ -162,7 +165,8 @@ export async function setup({ browser, base, view = 'fhd', seedLife, onboard = f
       try {
         const c = body.command;
         if (c.connection) lastMe = { connection: c.connection, code: c.code };
-        const t = cloudTransition(world, me, c, await commandHash(c), Date.now());
+        const hash = await commandHash(c);
+        const t = cloudTransition(world, me, c, hash, Date.now());
         if (t.response.code && lastMe) lastMe.code = t.response.code;
         world = t.state;
         if (t.changed) revision++;

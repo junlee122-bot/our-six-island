@@ -60,11 +60,15 @@ function signTexture(text: string, sub: string, colors: { bg: string; ink: strin
 }
 
 const LOT_BASE: Record<ShopLot, ShopBuildingModel> = {
+  salon: 'salonBuilding',
+  bank: 'bankBuilding',
   tavern: 'tavernStall',
   realty: 'realtyOffice',
   furniture: 'furnitureShop',
 };
 const SIGNS: Record<ShopLot, { text: string; sub: string; bg: string; ink: string; line: string }> = {
+  salon: { text: '보송 미용실', sub: '머리 · 피부 · 코디', bg: '#f4e6d7', ink: '#654b49', line: '#b18478' },
+  bank: { text: '범마을 은행', sub: '예금 · 인출 · 범 약속', bg: '#ede9d7', ink: '#425d50', line: '#7b967d' },
   tavern: { text: '허풍 주점', sub: '허풍 카드 · 뻥총 룰렛', bg: '#3a2418', ink: '#f6e3bf', line: '#d19a4a' },
   realty: { text: '범마을 부동산', sub: '집 확장 상담', bg: '#f6efe0', ink: '#2f4a6b', line: '#4d6f9c' },
   furniture: { text: '나무결 가구점', sub: '오늘의 가구 · 명품관', bg: '#f1e6d6', ink: '#5a3b22', line: '#8e6540' },
@@ -274,6 +278,8 @@ export class VillageShopsLayer {
   private apply(force: boolean) {
     const u = this.state;
     const looks = {
+      salon: { building: 'salonBuilding' },
+      bank: { building: 'bankBuilding' },
       tavern: venueLook(u.venues, 'tavern'),
       realty: venueLook(u.venues, 'realty'),
       furniture: venueLook(u.venues, 'furniture'),
