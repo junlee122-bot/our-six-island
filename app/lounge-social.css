@@ -55,6 +55,13 @@
   }
 }
 /* The header invite while tables are off: still opens (solo list inside). */
+.l-app .l-world-header .l-invite-button {
+  /* Swap ink and paper together: fading only the background briefly leaves
+     the offline brown ink on online green (1.5:1 contrast). */
+  transition:
+    transform var(--dur-quick),
+    box-shadow var(--dur-quick);
+}
 .l-app .l-world-header .l-invite-button.is-off {
   /* offline: the disabled look, still readable (was 1.75:1 in the audit) */
   background: var(--disabled-bg);
