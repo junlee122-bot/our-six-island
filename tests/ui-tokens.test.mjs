@@ -45,6 +45,7 @@ const PAIRS = [
   ['--text-soft', '--surface-raised', 4.5],
   ['--text-soft', '--surface-sunken', 4.5],
   ['--text-on-accent', '--accent', 4.5],
+  ['--text-on-highlight', '--highlight-soft', 4.5],
   ['--text-on-frame', '--frame', 4.5],
   ['--disabled-text', '--disabled-bg', 4.5],
   ['--keycap-text', '--keycap-bg', 4.5],

@@ -15,7 +15,7 @@
 //   overlaps  floating HUD boxes that cover each other
 //   close     size of the dialog's close (×) button (target: 44×44)
 // and writes <out>/report.json. With --baseline it prints before/after numbers
-// and (with --strict) exits 1 when any count got worse.
+// and (with --strict) exits 1 when any count got worse or a capture is missing.
 // Needs playwright-core (devDependency) and a Chromium (CHROMIUM_PATH or
 // playwright's default install).
 import fs from 'node:fs';
@@ -24,6 +24,9 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
+import { measureInPage } from './ui-measure.mjs';
+import { verifyMeasurements } from './ui-measure-fixtures.mjs';
+import { reportFailures } from './ui-report.mjs';
 import { kstDay } from '../app/lounge-economy.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -56,193 +59,6 @@ if (!pages) {
     stdio: 'inherit',
     env: { ...process.env, VITE_UI_KIT: '1' },
   });
-}
-
-// ---- in-page measurement ----------------------------------------------------
-function measureInPage() {
-  const parse = (c) => {
-    const m = c.match(/rgba?\(([^)]+)\)/);
-    if (!m) return null;
-    const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number);
-    return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 };
-  };
-  const lum = ({ r, g, b }) => {
-    const f = (v) => {
-      v /= 255;
-      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-    };
-    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-  };
-  const blend = (top, bot) => ({ r: top.r * top.a + bot.r * (1 - top.a), g: top.g * top.a + bot.g * (1 - top.a), b: top.b * top.a + bot.b * (1 - top.a), a: 1 });
-  function bgOf(el) {
-    const stack = [];
-    let opacity = 1;
-    for (let e = el; e; e = e.parentElement) {
-      const cs = getComputedStyle(e);
-      opacity *= +cs.opacity;
-      if (cs.backgroundImage && cs.backgroundImage !== 'none' && !cs.backgroundImage.startsWith('repeating-linear-gradient')) return { img: true };
-      const c = parse(cs.backgroundColor);
-      if (c && c.a > 0) {
-        stack.push(c);
-        if (c.a >= 0.99) break;
-      }
-      if (cs.backdropFilter && cs.backdropFilter !== 'none' && stack.length === 0) return { img: true };
-    }
-    if (!stack.length || stack[stack.length - 1].a < 0.99) return { img: true };
-    let out = stack.pop();
-    while (stack.length) out = blend(stack.pop(), out);
-    return out;
-  }
-  const cls = (e) => (e.className?.baseVal ?? e.className ?? '').toString().trim().split(/\s+/).slice(0, 2).join('.') || e.tagName.toLowerCase();
-  const top = [...document.querySelectorAll('dialog[open]')].pop() ?? document.querySelector('main') ?? document.body;
-  const visible = (e) => {
-    // Content of a closed <details> still reports boxes in Chrome.
-    const closed = e.closest('details:not([open])');
-    if (closed && !e.closest('summary')) return false;
-    const r = e.getBoundingClientRect();
-    if (!r.width || !r.height || r.bottom < 0 || r.right < 0 || r.left > innerWidth || r.top > innerHeight) return false;
-    const cs = getComputedStyle(e);
-    return cs.visibility !== 'hidden' && cs.display !== 'none';
-  };
-  const ownText = (e) => [...e.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent).join('').trim();
-  const low = [], small = [], narrow = [], cut = [];
-  let texts = 0, minFont = 99;
-  for (const e of top.querySelectorAll('*')) {
-    const t = ownText(e);
-    if (!t || !visible(e)) continue;
-    const cs = getComputedStyle(e);
-    let op = 1;
-    for (let p = e; p; p = p.parentElement) op *= +getComputedStyle(p).opacity;
-    if (op < 0.1) continue;
-    texts++;
-    const size = parseFloat(cs.fontSize);
-    minFont = Math.min(minFont, size);
-    if (size < 12) small.push({ t: t.slice(0, 18), size, cls: cls(e) });
-    // contrast (the element's own opacity chain multiplies the text alpha)
-    const fg0 = parse(cs.color);
-    const bg = bgOf(e);
-    if (fg0 && !bg.img) {
-      const fg = blend({ ...fg0, a: fg0.a * op }, bg);
-      const L1 = lum(fg), L2 = lum(bg);
-      const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
-      const bold = +cs.fontWeight >= 700;
-      const need = size >= 24 || (size >= 18.66 && bold) ? 3 : 4.5;
-      if (ratio < need) low.push({ t: t.slice(0, 18), ratio: +ratio.toFixed(2), size, cls: cls(e) });
-    }
-    // one or two characters per line
-    for (const node of e.childNodes) {
-      if (node.nodeType !== 3) continue;
-      const chars = Array.from(node.textContent.replace(/\s+/g, '')).length;
-      if (chars < 3) continue;
-      const range = document.createRange();
-      range.selectNodeContents(node);
-      const lines = new Set([...range.getClientRects()].filter((q) => q.width > 0).map((q) => Math.round(q.top / (size * 0.6))));
-      if (lines.size >= 3 && chars / lines.size <= 2.2) {
-        narrow.push({ t: t.slice(0, 18), lines: lines.size, cls: cls(e) });
-        break;
-      }
-    }
-    // cut off: outside the viewport, or outside a clipping ancestor that cannot scroll
-    // (Text below the fold of a scrolling box is reachable, so it does not count.)
-    const r = e.getBoundingClientRect();
-    let isCut = false, scrolls = false;
-    for (let p = e.parentElement; p && !isCut && p !== document.body; p = p.parentElement) {
-      const pc = getComputedStyle(p);
-      if ((pc.overflowY === 'auto' || pc.overflowY === 'scroll') && p.scrollHeight > p.clientHeight + 1) {
-        scrolls = true;
-        break;
-      }
-      if (pc.overflowY === 'hidden' || pc.overflowY === 'clip') {
-        const pr = p.getBoundingClientRect();
-        if (r.top >= pr.bottom - 1 || r.bottom > pr.bottom + 2) isCut = true;
-      }
-    }
-    if (!scrolls && (r.bottom > innerHeight + 1 || r.right > innerWidth + 1)) isCut = true;
-    if (isCut && top.tagName === 'DIALOG') cut.push({ t: t.slice(0, 18), cls: cls(e) });
-  }
-  // Floating HUD boxes that cover each other (only without a dialog on top).
-  const overlaps = [];
-  if (top.tagName !== 'DIALOG') {
-    const boxes = [...top.querySelectorAll('*')].filter((e) => {
-      const cs = getComputedStyle(e);
-      if (cs.position !== 'fixed' && cs.position !== 'absolute') return false;
-      if (e.closest('canvas') || e.tagName === 'CANVAS' || !visible(e) || cs.pointerEvents === 'none') return false;
-      const r = e.getBoundingClientRect();
-      if (r.width * r.height < 3000 || (r.width > innerWidth * 0.6 && r.height > innerHeight * 0.6)) return false;
-      return !!e.innerText?.trim();
-    });
-    const tops = boxes.filter((e) => !boxes.some((o) => o !== e && o.contains(e)));
-    for (let i = 0; i < tops.length; i++)
-      for (let j = i + 1; j < tops.length; j++) {
-        const a = tops[i].getBoundingClientRect(), b = tops[j].getBoundingClientRect();
-        const w = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-        const h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
-        if (w <= 4 || h <= 4) continue;
-        const frac = (w * h) / Math.min(a.width * a.height, b.width * b.height);
-        if (frac < 0.05) continue;
-        const cx = Math.max(a.left, b.left) + w / 2, cy = Math.max(a.top, b.top) + h / 2;
-        const hit = document.elementFromPoint(cx, cy);
-        overlaps.push({ a: cls(tops[i]), b: cls(tops[j]), px: Math.round(w * h), onTop: hit && tops[i].contains(hit) ? cls(tops[i]) : hit && tops[j].contains(hit) ? cls(tops[j]) : '?' });
-      }
-  }
-  // Controls hidden under another HUD piece: sample each control's centre
-  // (and its left/right thirds) and see what is really on top there. This
-  // also catches siblings inside one bar (a header row running into the date
-  // sign), which the box check above cannot see.
-  const covered = [];
-  if (top.tagName !== 'DIALOG') {
-    for (const b of top.querySelectorAll('button, a[href], [role=button]')) {
-      if (!visible(b) || b.closest('canvas')) continue;
-      const cs = getComputedStyle(b);
-      if (cs.pointerEvents === 'none' || +cs.opacity < 0.1) continue;
-      const r = b.getBoundingClientRect();
-      if (r.width < 8 || r.height < 8 || r.top < 0 || r.left < 0 || r.bottom > innerHeight || r.right > innerWidth) continue;
-      for (const fx of [0.06, 0.25, 0.5, 0.75, 0.94]) {
-        const hit = document.elementFromPoint(r.left + r.width * fx, r.top + r.height / 2);
-        if (!hit || b.contains(hit) || hit.contains(b) || hit.tagName === 'CANVAS') continue;
-        const hs = getComputedStyle(hit);
-        if (hs.pointerEvents === 'none') continue;
-        covered.push({ control: (b.getAttribute('aria-label') || b.innerText || '').trim().slice(0, 20), cls: cls(b), by: cls(hit) });
-        break;
-      }
-    }
-  }
-  let dialog = null;
-  if (top.tagName === 'DIALOG') {
-    const r = top.getBoundingClientRect();
-    const x = top.querySelector('button[aria-label="닫기"], button[aria-label$="닫기"], [data-close]');
-    const xr = x?.getBoundingClientRect();
-    const targets = [...top.querySelectorAll('button, [role=tab], a[href]')].filter(visible);
-    dialog = {
-      label: top.getAttribute('aria-label') || cls(top),
-      w: Math.round(r.width),
-      h: Math.round(r.height),
-      offscreen: r.top < -1 || r.bottom > innerHeight + 1,
-      close: xr ? { w: Math.round(xr.width), h: Math.round(xr.height) } : null,
-      smallTargets: targets.filter((b) => { const q = b.getBoundingClientRect(); return q.height < 32 || q.width < 32; }).length,
-      fonts: [...new Set([...top.querySelectorAll('h1,h2,h3,p,button')].map((e) => getComputedStyle(e).fontFamily.split(',')[0].replace(/"/g, '')))],
-    };
-  }
-  low.sort((a, b) => a.ratio - b.ratio);
-  return {
-    texts,
-    minFont: minFont === 99 ? null : minFont,
-    lowCount: low.length,
-    low: low.slice(0, 12),
-    smallCount: small.length,
-    small: small.slice(0, 8),
-    narrowCount: narrow.length,
-    narrow: narrow.slice(0, 8),
-    cutCount: cut.length,
-    cut: cut.slice(0, 8),
-    overlapCount: overlaps.length,
-    overlaps: overlaps.slice(0, 8),
-    coveredCount: covered.length,
-    covered: covered.slice(0, 8),
-    dialog,
-    overflowX: document.documentElement.scrollWidth > innerWidth,
-    fontsLoaded: [...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/"/g, '') + ' ' + f.weight).filter((v, i, a) => a.indexOf(v) === i),
-  };
 }
 
 // ---- screens ------------------------------------------------------------------
@@ -438,6 +254,7 @@ try {
   report.commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root }).toString().trim();
 } catch {}
 try {
+  await verifyMeasurements(browser);
   for (const view of views) {
     console.log(`view ${view} (${VIEWS[view].width}x${VIEWS[view].height})`);
     await runView(browser, server.url, view, report);
@@ -468,20 +285,14 @@ function summarize(r) {
   return s;
 }
 
-if (writeBaseline) {
-  const keep = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'];
-  const trimmed = { label, commit: report.commit, summary: report.summary, views: {} };
-  for (const [view, v] of Object.entries(report.views)) {
-    trimmed.views[view] = { screens: {} };
-    for (const [name, m] of Object.entries(v.screens))
-      trimmed.views[view].screens[name] = Object.fromEntries(keep.map((k) => [k, m[k] ?? 0]).concat([['dialog', m.dialog?.close ? { close: m.dialog.close } : null]]));
-  }
-  fs.writeFileSync(writeBaseline, JSON.stringify(trimmed, null, 1) + '\n');
-  console.log('baseline written:', writeBaseline);
+const before = baselineFile ? JSON.parse(fs.readFileSync(baselineFile, 'utf8')) : undefined;
+const coverageFailures = reportFailures(report, { views, only, withGames, baseline: before });
+if (coverageFailures.length) {
+  fs.writeFileSync(path.join(out, 'coverage-errors.json'), JSON.stringify(coverageFailures, null, 1));
+  console.error(coverageFailures.join('\n'));
+  if (flag('strict') || writeBaseline) process.exit(1);
 }
-
 if (baselineFile) {
-  const before = JSON.parse(fs.readFileSync(baselineFile, 'utf8'));
   const rows = [];
   let worse = 0;
   for (const [view, v] of Object.entries(report.views))
@@ -504,4 +315,18 @@ if (baselineFile) {
     console.error(`${worse} measurement(s) got worse than the baseline.`);
     process.exit(1);
   }
+}
+
+// Never save missing/erroring screens as zero-issue baseline entries. When
+// --strict and --baseline are also set, the comparison must pass first.
+if (writeBaseline) {
+  const keep = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'];
+  const trimmed = { label, commit: report.commit, summary: report.summary, views: {} };
+  for (const [view, v] of Object.entries(report.views)) {
+    trimmed.views[view] = { screens: {} };
+    for (const [name, m] of Object.entries(v.screens))
+      trimmed.views[view].screens[name] = Object.fromEntries(keep.map((k) => [k, m[k]]).concat([['dialog', m.dialog?.close ? { close: m.dialog.close } : null]]));
+  }
+  fs.writeFileSync(writeBaseline, JSON.stringify(trimmed, null, 1) + '\n');
+  console.log('baseline written:', writeBaseline);
 }

@@ -90,7 +90,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 
 ## 5. 남은 작업 (우선순위 순)
 
-1. **UI 마무리 점검**: A·B단계 모두 배포됨. CI의 `ui-regression` 잡은 `scripts/ui-baseline.json`보다 나빠지면 실패합니다. 남은 측정치(1920·1280 기준): 대비 부족 10건(성장 수첩 등), 가려진 조작 1건. 줄이면 `--write-baseline`으로 기준을 갱신하세요. 기성 아이콘(lucide)은 1개 파일에만 남음.
+1. **UI 마무리 점검**: A·B단계 이후 성장 수첩의 ‘고르기’ 대비를 높이고, 혼합 색상·스크롤 밖 조작의 오탐을 수정했습니다. 최신 검증과 수치는 [2026-09-28 점검 기록](handover/design/ui-finish-2026-09-28.md)과 `scripts/ui-baseline.json`을 보세요. CI의 `ui-regression` 잡은 기준보다 나빠지거나 화면·측정이 누락되면 실패합니다. 개선한 수치는 `--strict --baseline scripts/ui-baseline.json --write-baseline <새 파일>`로 검증한 뒤 갱신하세요. lucide 의존성·사용은 없으며 `app/ui/icons.tsx`도 자체 Glyph를 사용합니다.
 2. **맵 확장 3단계**: 과수원 언덕(V4), 목장(V5: 닭장·외양간·동물 5종), 가공 기계(옹기·숙성통·베틀), 스프링클러·기상대(V8), 도구 5단계 — 설계: `handover/design/design-expansion-techtree.md`
 3. **맵 확장 4단계**: 온천(V6), 여섯섬 배편(V7, `dock` 보상 채우기), 깊은 굴(V9, 금 요구량 낮출 것)
 4. **2단계 보완**: 광산 동굴·레일을 kArchive 모델로 교체, 뒷산/광산의 "간단 그래픽" 대체 화면

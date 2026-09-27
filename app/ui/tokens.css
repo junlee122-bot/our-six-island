@@ -203,6 +203,8 @@
   --danger-soft: var(--stamp-100);
   --info: var(--water-600);
   --highlight: var(--gold-400);
+  --highlight-soft: var(--pal-amber-91);
+  --text-on-highlight: var(--ink-900);
   --focus: #b8661a; /* 3px ring, ≥ 3:1 on paper and on wood-300 */
   --disabled-bg: #e5d9c0;
   --disabled-text: #66513d;
