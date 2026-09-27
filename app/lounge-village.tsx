@@ -674,7 +674,7 @@ export function Village3D(props: Props) {
   const [miniOpen, setMiniOpen] = useState(true);
   const [miniExpanded, setMiniExpanded] = useState(false);
   const friendPins = villageFriendPins(props.players, props.self);
-  const friendGroups = villageFriendGroups(friendPins, (miniExpanded ? 460 : 260) / MINI_BOX.w);
+  const friendGroups = villageFriendGroups(friendPins, (miniExpanded ? 400 : 260) / MINI_BOX.w);
   const [friendGroup, setFriendGroup] = useState<string | null>(null);
   const shownFriends = friendGroups.find((group) => group.key === friendGroup);
   const onFriendKey = (e: { key: string; preventDefault: () => void; stopPropagation: () => void }) => {
