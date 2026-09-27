@@ -50,7 +50,14 @@ export async function verifyMeasurements(browser) {
       <button style="position:absolute;left:80px;top:5px;width:100px;height:40px">horizontal</button></div>
       <div style="position:absolute;left:150px;top:25px;width:100px;height:40px;background:white"></div>`);
     assert.equal(m.coveredCount, 0, 'horizontal overflow clipping also limits hit-test samples');
-    console.log('UI measurement fixtures: 10 passed');
+    m = await measure('<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);color:white"><span>saved announcement</span></span><p>visible text</p>');
+    assert.equal(m.texts, 1, 'fully clipped announcements and descendants are not painted text');
+    assert.equal(m.lowCount, 0, 'screen-reader-only ink has no visual contrast');
+    m = await measure('<span style="position:absolute;width:1px;height:1px;overflow:hidden;color:white">visible faint ink</span>');
+    assert.equal(m.lowCount, 1, 'a tiny layout box alone must not hide a contrast failure');
+    m = await measure('<p style="clip-path:inset(10%);color:white">partially clipped faint ink</p>');
+    assert.equal(m.lowCount, 1, 'partially clipped text is still painted and must be checked');
+    console.log('UI measurement fixtures: 13 passed');
 
     // Exercise the production state styles, including the global button
     // transitions. Both settled colours can pass while a state change fails.

@@ -56,6 +56,12 @@ export function measureInPage() {
     const r = e.getBoundingClientRect();
     if (!r.width || !r.height || r.bottom < 0 || r.right < 0 || r.left > innerWidth || r.top > innerHeight) return false;
     const cs = getComputedStyle(e);
+    // Screen-reader announcements keep a layout box, but inset(50%) removes
+    // all painted pixels. Do not measure their invisible ink as visual text.
+    // Check ancestors too, because an announcement may wrap its text in a span.
+    for (let p = e; p; p = p.parentElement) {
+      if (getComputedStyle(p).clipPath === 'inset(50%)') return false;
+    }
     return cs.visibility !== 'hidden' && cs.display !== 'none';
   };
   const ownText = (e) => [...e.childNodes].filter((x) => x.nodeType === 3).map((x) => x.textContent).join('').trim();

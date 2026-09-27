@@ -697,6 +697,8 @@
 }
 .lb-hand-card:disabled {
   cursor: default;
+  /* The remaining hand is still useful information outside my turn. */
+  opacity: 1;
 }
 .lb-hand-card.is-picked {
   transform: translateY(-18px);
