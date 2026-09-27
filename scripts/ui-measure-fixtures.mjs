@@ -61,7 +61,7 @@ export async function verifyMeasurements(browser) {
 
     // Exercise the production state styles, including the global button
     // transitions. Both settled colours can pass while a state change fails.
-    const styles = ['../app/globals.css', '../app/ui/tokens.css', '../app/lounge.css', '../app/lounge-social.css']
+    const styles = ['../app/globals.css', '../app/ui/tokens.css', '../app/lounge.css', '../app/lounge-social.css', '../app/lounge-flow.css']
       .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8').replace(/@import[^;]+;/g, ''))
       .join('\n');
     for (const [fromOff, toOff] of [[false, true], [true, false]]) {
@@ -85,7 +85,16 @@ export async function verifyMeasurements(browser) {
       assert.equal(m.texts, 1, `invite ${direction}: the fixture label must be measured`);
       assert.equal(m.lowCount, 0, `invite ${direction} must stay readable: ${JSON.stringify(m.low)}`);
     }
-    console.log('UI style state fixtures: 2 passed');
+    await page.setContent(`<style>${styles}</style><main class="l-app">
+      <button class="l-action-button" data-action="pick" disabled><span>따기</span><kbd class="l-action-key">E</kbd></button>
+    </main>`);
+    await page.evaluate(() => {
+      for (const animation of document.getAnimations()) animation.finish();
+    });
+    m = await page.evaluate(measureInPage);
+    assert.equal(m.texts, 2, 'the locked harvest label and shortcut remain visible');
+    assert.equal(m.lowCount, 0, `a pending harvest action stays readable: ${JSON.stringify(m.low)}`);
+    console.log('UI style state fixtures: 3 passed');
   } finally {
     await page.close();
   }

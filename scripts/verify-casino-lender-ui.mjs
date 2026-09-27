@@ -52,14 +52,12 @@ try {
     assert.ok(fn(), label); validateLedger(H.world().ledger);
   };
   const click = async (selector) => {
-    await page.locator(selector).first().waitFor({ state: 'visible', timeout: 30_000 });
-    const at = await js((s) => {
-      const el = document.querySelector(s), r = el.getBoundingClientRect();
-      const x = r.x + r.width / 2, y = r.y + r.height / 2;
-      return { x, y, clear: el.contains(document.elementFromPoint(x, y)), disabled: el.matches(':disabled') };
-    }, selector);
-    assert.ok(at.clear && !at.disabled, 'real pointer target is visible, enabled and unobstructed: ' + selector);
-    await page.mouse.click(at.x, at.y);
+    // Visibility alone does not mean the scene accepts input: the entrance
+    // fade can still intercept the pointer after its models are ready. Keep
+    // real pointer input, waiting for enabled/stable/unobstructed actionability
+    // rather than failing on one animation frame (or forcing the click).
+    await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+    await page.locator(selector).first().click({ timeout: 30_000 });
   };
   const sceneFocus = () => page.locator('[data-testid=interior-3d], [data-testid=village-3d], [data-testid=bedroom-3d]').first().focus();
   const closeDialogs = async () => {
@@ -124,6 +122,7 @@ try {
     await page.keyboard.press('KeyE');
     await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.loadState === 'ready', null, 180_000);
     await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.lenderState === 'loaded', null, 90_000);
+    await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
   };
   const approachLender = async (selector = '[data-testid=interior-lender-route]') => {
     await click(selector); await sceneFocus(); await page.keyboard.down('Shift');

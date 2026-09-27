@@ -48,9 +48,9 @@ try {
     for (let i = 0; i < 5 && await page.locator('dialog[open]').count(); i++) { await page.keyboard.press('Escape'); await sleep(250); }
   };
   const click = async (selector) => {
-    const target = page.locator(selector).first();
-    await target.waitFor({ state: 'visible', timeout: 30_000 });
-    await target.click();
+    // Ready models may still sit behind the input-blocking scene transition.
+    await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+    await page.locator(selector).first().click({ timeout: 30_000 });
   };
   const holdClock = () => {
     const snapshot = state(), game = snapshot?.liarsbar;
@@ -107,6 +107,7 @@ try {
     } finally { await page.keyboard.up('Shift'); }
     await page.keyboard.press('KeyE');
     await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.loadState === 'ready', null, 180_000);
+    await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
     const host = H.bots[0];
     await action(host, { kind: 'area', area: 'tavern' });
     await action(host, { kind: 'invite', game: 'liarsbar', players: [], required: 2, party: true, table: 'tavern-liarsbar' });
