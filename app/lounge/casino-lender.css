@@ -1,0 +1,26 @@
+.l-modal.l-casino-lender { width: min(980px, 94vw); }
+.l-lender-layout { display: grid; grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr); gap: var(--sp-5); }
+.l-lender-host { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.l-lender-portrait { display: block; width: 100%; height: 300px; object-fit: contain; }
+.l-lender-host h3 { margin: var(--sp-2) 0 0; font: var(--fs-title)/1.2 var(--font-display); }
+.l-lender-host > p { margin: var(--sp-2) 0; font-size: var(--fs-body-s); color: var(--text-soft); }
+.l-lender-speech { display: block; width: 100%; margin-top: var(--sp-2); padding: var(--sp-4); border-radius: var(--r-m); background: var(--surface-sunken); color: var(--text); font-size: var(--fs-body); line-height: 1.6; }
+.l-lender-book, .l-lender-contract { display: grid; align-content: start; gap: var(--sp-3); min-width: 0; }
+.l-lender-book h3, .l-lender-book h4, .l-lender-book p { margin: 0; }
+.l-lender-book h3 { font: var(--fs-title-s)/1.4 var(--font-display); }
+.l-lender-book h4 { font-size: var(--fs-body); }
+.l-lender-book p { font-size: var(--fs-body-s); color: var(--text-soft); line-height: 1.6; }
+.l-lender-balance { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3); background: var(--surface-sunken); font-size: var(--fs-body); }
+.l-lender-balance strong { font-variant-numeric: tabular-nums; }
+.l-lender-location { display: block; padding: var(--sp-3); background: var(--surface-sunken); color: var(--text); font-size: var(--fs-body); line-height: 1.5; }
+.l-lender-contract header { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.l-lender-contract label { display: grid; gap: var(--sp-2); font-size: var(--fs-body-s); }
+.l-lender-contract input { width: 100%; min-height: var(--hit); padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-s); box-shadow: var(--ring-line); background: var(--surface-raised); color: var(--text); font-size: var(--fs-body); }
+.l-lender-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); margin: 0; padding: var(--sp-3); background: var(--surface-sunken); }
+.l-lender-totals dt { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-lender-totals dd { margin: var(--sp-1) 0 0; font-size: var(--fs-title-s); font-variant-numeric: tabular-nums; }
+.l-lender-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.l-lender-history { border-top: 1px solid var(--line); font-size: var(--fs-body-s); }
+.l-lender-history summary { display: list-item; padding: var(--sp-3) 0; cursor: pointer; min-height: var(--hit); }
+.l-lender-history article { display: grid; gap: var(--sp-2); padding: var(--sp-3); margin-bottom: var(--sp-2); border-radius: var(--r-s); background: var(--surface-sunken); }
+@media (max-height: 780px) { .l-lender-portrait { height: 230px; } .l-lender-layout { gap: var(--sp-4); } }

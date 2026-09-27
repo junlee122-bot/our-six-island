@@ -4,6 +4,7 @@ import { CROPS, CROP_INFO, cloneLife, uidOf, type LifeState } from './lounge-lif
 import { addCropQ, cropQCount } from './lounge-life-plus.ts';
 import { FURNITURE_BY_REF } from './lounge-items.ts';
 import { ACTORS } from './lounge-roster.ts';
+import { LENDER_NAME, nearCasinoLender } from './lounge-casino-lender.ts';
 
 const DAY = 86_400_000;
 const wallet = (uid: string) => 'wallet-' + uid;
@@ -32,6 +33,10 @@ export type FinanceAction = { kind: 'finance' } & (
   | { op: 'mercy' }
 );
 export type FinancePresence = { id: string; actor: number; area: string; x: number; y: number; busy?: boolean };
+function requireCasinoLender(player: FinancePresence) {
+  if (!nearCasinoLender(player, player.area)) fail(`카지노의 ${LENDER_NAME} 앞으로 직접 와 주세요.`);
+  if (player.busy) fail('게임이나 낚시를 마친 뒤 거래해 주세요.');
+}
 export const newFinance = (): FinanceState => ({ version: 1, seq: 0, loans: [], logs: [], protection: {}, attempts: {}, targeted: {}, casino: [] });
 const dictionary = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const validUser = (v: unknown): v is string => typeof v === 'string' && /^[a-zA-Z0-9-]{1,80}$/.test(v) && !['constructor', 'prototype', '__proto__'].includes(v);
@@ -53,7 +58,7 @@ export function readFinance(raw?: FinanceState): FinanceState {
     new Set(raw.casino.map((d) => d.day)).size !== raw.casino.length ||
     raw.casino.some((d) => !d || !timeValue(d.day) || !timeValue(d.earned) || !timeValue(d.paid) || !dictionary(d.net) || !dictionary(d.mercy) ||
       Object.entries(d.net).some(([w, n]) => !w.startsWith('wallet-') || !validUser(w.slice(7)) || !Number.isSafeInteger(n)) ||
-      Object.entries(d.mercy).some(([id, n]) => !validUser(id) || !integer(n, 0, 10000))))
+      Object.entries(d.mercy).some(([id, n]) => !validUser(id) || !integer(n, 0, Number.MAX_SAFE_INTEGER))))
     fail('은행 장부를 읽을 수 없습니다.');
   return structuredClone(raw);
 }
@@ -135,6 +140,7 @@ export function financeAction(
       } else { loan.state = 'declined'; log(state, [uid, loan.lender], now, '차용증을 거절했어요. 송금된 범은 없어요.'); }
     } else if (a.op === 'repay') {
       if (loan.borrower !== uid || loan.state !== 'active' || !integer(a.amount, 1, loan.principal + loan.interest - loan.paid)) fail('남은 빚 안에서 상환 금액을 정해 주세요.');
+      if (loan.lender === 'house') requireCasinoLender(me);
       next = loan.lender === 'house' ? houseTransfer(next, w, -a.amount) : transferBeom(next, w, wallet(loan.lender), a.amount);
       loan.paid += a.amount;
       if (loan.paid === loan.principal + loan.interest) loan.state = 'paid';
@@ -146,7 +152,7 @@ export function financeAction(
       log(state, [uid, loan.borrower], now, `빚 독촉 쪽지 · 남은 ${(loan.principal + loan.interest - loan.paid).toLocaleString('ko-KR')}범을 상환해 주세요.`);
     }
   } else if (a.op === 'borrow') {
-    if (me.area !== 'casino') fail('카지노의 대부 창구에서 계약해 주세요.');
+    requireCasinoLender(me);
     if (!integer(a.amount, 1000, 30_000)) fail('1,000~30,000범 안에서 빌릴 수 있어요.');
     if (state.loans.some((l) => l.borrower === uid && l.lender === 'house' && l.state === 'active')) fail('기존 카지노 빚을 먼저 갚아 주세요.');
     next = houseTransfer(next, w, a.amount);
@@ -208,7 +214,7 @@ export function financeAction(
     const today = state.casino.find((d) => d.day === day), loss = -(today?.net[w] ?? 0);
     if (!today || loss <= 0) fail('오늘 루미와 한 블랙잭에서 순손실이 있을 때 부탁할 수 있어요.');
     if (Object.hasOwn(today.mercy, uid)) fail('오늘은 이미 부탁했어요.');
-    const amount = roll() < .3 ? Math.min(10_000, Math.floor(loss * .2)) : 0;
+    const amount = roll() < .3 ? Math.floor(loss * .5) : 0;
     today.mercy[uid] = amount;
     if (amount) next = houseTransfer(next, w, amount);
     log(state, [uid], now, amount ? `루미가 ${amount.toLocaleString('ko-KR')}범을 돌려줬어요. 오늘 순손실의 일부예요.` : '루미: 오늘은 어렵겠어요. 다음에는 좋은 패가 오길 바랄게요.');

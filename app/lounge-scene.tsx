@@ -30,7 +30,6 @@ import {
   projectPlayer,
   unprojectFloor,
   sceneDepth,
-  sceneStep,
   sceneNearestTable,
   sceneTableSide,
   type SceneArea,
@@ -40,6 +39,10 @@ import {
 import { ActionButton } from './lounge/ActionButton';
 import './lounge-scene.css';
 import { boundAction } from './lounge-scene-keys';
+import { interiorPath, interiorStep } from './lounge-interior-layout';
+import { CASINO_LENDER_SPOT, CASINO_LENDER_FRONT, LENDER_NAME, nearCasinoLender } from './lounge-casino-lender';
+import { BANKER_SPOT, BANKER_FRONT, BANKER_NAME, BANK_OBSTACLES, nearBanker } from './lounge-bank-layout';
+import { SALON_STYLIST_SPOT, SALON_FRONT, SALON_STYLIST_NAME, SALON_OBSTACLES, nearSalon } from './lounge-salon-layout';
 
 type RoomFloorProps = {
   players: LoungePlayer[];
@@ -47,6 +50,9 @@ type RoomFloorProps = {
   onMove: (x: number, y: number) => void;
   /** The table's action (앉기 / 자리 잡기 / 구경하기 / 이어하기), after walking up to it. */
   onTable: (kind: GameKind) => void;
+  onLender?: () => void;
+  onBanker?: () => void;
+  onSalon?: () => void;
   view: LoungeView;
   area?: SceneArea;
   /** I sit at this forming table: walking is paused until I stand up. */
@@ -246,6 +252,11 @@ const SCENE_WALK_SPEED = 16;
 
 /** The flat (간단 그래픽) look of each interior; the tavern borrows the hall's art, tinted. */
 const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tagline: string; title: string }> = {
+  salon: { src: LOUNGE_ASSETS.wardrobe, alt: '그웬의 미용실', short: '미용실', tagline: '그웬과 오늘의 모습을 골라요', title: '미용실' },
+  bank: {
+    src: LOUNGE_ASSETS.room, alt: '범마을 은행', short: '은행',
+    tagline: '통장과 약속을 맡기는 곳', title: '범마을 은행',
+  },
   lounge: {
     src: LOUNGE_ASSETS.room,
     alt: '햇살과 생활감이 가득한 범타듀 밸리의 마을 회관',
@@ -274,6 +285,9 @@ export function RoomFloor({
   self,
   onMove,
   onTable,
+  onLender,
+  onBanker,
+  onSalon,
   view,
   area = 'lounge',
   seatedAt = null,
@@ -295,6 +309,7 @@ export function RoomFloor({
     held: new Set<string>(),
     shift: false,
     target: null as ScenePoint | null,
+    route: [] as ScenePoint[],
     lastSent: null as ScenePoint | null,
     moving: false,
     /** Walking up to this table; its action runs on arrival. */
@@ -302,20 +317,24 @@ export function RoomFloor({
     locked: false,
   });
   useEffect(() => {
-    live.current.locked = !!seatedAt;
-    if (seatedAt) {
+    live.current.locked = !!seatedAt || sheetOpen;
+    if (live.current.locked) {
       live.current.held.clear();
+      live.current.shift = false;
       live.current.target = null;
+      live.current.route = [];
       live.current.approach = null;
     }
-  }, [seatedAt]);
-  const latest = useRef({ onMove, runMode, area, onTable });
+  }, [seatedAt, sheetOpen]);
+  const latest = useRef({ onMove, runMode, area, onTable, onLender, onBanker, onSalon });
   useEffect(() => {
-    latest.current = { onMove, runMode, area, onTable };
-  }, [onMove, runMode, area, onTable]);
+    latest.current = { onMove, runMode, area, onTable, onLender, onBanker, onSalon };
+  }, [onMove, runMode, area, onTable, onLender, onBanker, onSalon]);
   // The one action button: the nearest table within reach ("둘러보기", E).
   const [near, setNear] = useState<GameKind | null>(null);
   const nearRef = useRef<GameKind | null>(null);
+  const [nearService, setNearService] = useState<'lender' | 'banker' | 'salon' | null>(null);
+  const serviceRef = useRef<'lender' | 'banker' | 'salon' | null>(null);
 
   // Adopt server positions (entering, seats after a game) while standing still.
   useEffect(() => {
@@ -343,6 +362,9 @@ export function RoomFloor({
       previous = now;
       const state = live.current;
       if (!state.point || !dt) return;
+      if (document.querySelector('dialog[open]')) {
+        state.held.clear(); state.shift = false; state.target = null; state.route = []; state.approach = null;
+      }
       let dx = 0,
         dy = 0;
       for (const code of state.held) {
@@ -357,12 +379,13 @@ export function RoomFloor({
       const speed = SCENE_WALK_SPEED * (running ? 1.65 : 1) * dt;
       if (dx || dy) {
         state.target = null;
+        state.route = [];
         state.approach = null;
       } else if (state.target && !state.locked) {
         dx = state.target.x - state.point.x;
         dy = state.target.y - state.point.y;
         if (Math.hypot(dx, dy) < 0.3) {
-          state.target = null;
+          state.target = state.route.shift() ?? null;
           dx = dy = 0;
         }
       }
@@ -370,14 +393,14 @@ export function RoomFloor({
       let moved = false;
       if (length > 0) {
         const step = state.target ? Math.min(speed, length) : speed;
-        const next = sceneStep(
+        const next = interiorStep(
           state.point,
           (dx / length) * step,
           (dy / length) * step,
           latest.current.area,
         );
         moved = Math.hypot(next.x - state.point.x, next.y - state.point.y) > 0.01;
-        if (!moved) state.target = null;
+        if (!moved) { state.target = null; state.route = []; }
         if (Math.abs(next.x - state.point.x) > 0.01)
           facing = next.x < state.point.x ? -1 : 1;
         state.point = next;
@@ -409,6 +432,9 @@ export function RoomFloor({
         nearRef.current = table;
         setNear(table);
       }
+      const service = nearCasinoLender(state.point, latest.current.area) ? 'lender'
+        : nearBanker(state.point, latest.current.area) ? 'banker' : nearSalon(state.point, latest.current.area) ? 'salon' : null;
+      if (service !== serviceRef.current) { serviceRef.current = service; setNearService(service); }
     };
     frame = requestAnimationFrame(tick);
     const release = () => {
@@ -427,9 +453,27 @@ export function RoomFloor({
     if (state.locked || !state.point) return;
     state.held.clear();
     state.target = sceneTableSide(area, game);
+    state.route = [];
     state.approach = game;
     ref.current?.focus({ preventScroll: true });
   };
+  const approachService = () => {
+    const state = live.current;
+    if (state.locked || !state.point || (area !== 'casino' && area !== 'bank' && area !== 'salon')) return;
+    state.held.clear(); state.approach = null;
+    state.route = interiorPath(state.point, area === 'casino' ? CASINO_LENDER_FRONT : area === 'salon' ? SALON_FRONT : BANKER_FRONT, area);
+    state.target = state.route.shift() ?? null;
+    ref.current?.focus({ preventScroll: true });
+  };
+  const openService = () => {
+    const state = live.current;
+    if (state.locked || !state.point) return;
+    if (nearCasinoLender(state.point, area)) onLender?.();
+    else if (nearBanker(state.point, area)) onBanker?.();
+    else if (nearSalon(state.point, area)) onSalon?.();
+  };
+  const serviceSpot = area === 'casino' ? CASINO_LENDER_SPOT : area === 'salon' ? SALON_STYLIST_SPOT : BANKER_SPOT;
+  const serviceFoot = projectPlayer(serviceSpot, area);
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
       <div
@@ -450,6 +494,9 @@ export function RoomFloor({
           live.current.shift = e.shiftKey;
           if (boundAction(e.nativeEvent) === 'action' || e.code === 'Enter') {
             if (e.target !== e.currentTarget) return;
+            if (serviceRef.current && !live.current.locked) {
+              e.preventDefault(); openService(); return;
+            }
             if (nearRef.current && !live.current.locked) {
               e.preventDefault();
               latest.current.onTable(nearRef.current);
@@ -459,6 +506,7 @@ export function RoomFloor({
           // Physical key codes: WASD also works with a Korean IME active.
           if (!SCENE_KEYS[e.code]) return;
           e.preventDefault();
+          if (live.current.locked) return;
           live.current.held.add(e.code);
         }}
         onKeyUp={(e) => {
@@ -481,6 +529,7 @@ export function RoomFloor({
           if (point.y < layout.floor.back - 5) return;
           const destination = unprojectFloor(point, area);
           live.current.target = destination;
+          live.current.route = [];
           live.current.approach = null;
         }}
       >
@@ -496,6 +545,16 @@ export function RoomFloor({
           </span>
           <strong>{FLAT_ART[area].title}</strong>
         </div>
+        {(area === 'bank' || area === 'salon') && (area === 'bank' ? BANK_OBSTACLES : SALON_OBSTACLES).filter(o => o.id !== 'banker' && o.id !== 'stylist').map(o => {
+          const at = projectPlayer(o, area);
+          return <span key={o.id} className={'cf-bank-fixture cf-bank-' + o.id} style={{ left: `${at.x}%`, top: `${at.y}%`, width: `${o.rx * 2}%`, height: `${o.ry * 1.3}%` }} aria-hidden="true" />;
+        })}
+        {(area === 'casino' || area === 'bank' || area === 'salon') && <button type="button" className="cf-service" data-testid={area === 'casino' ? 'simple-lender' : area === 'salon' ? 'simple-stylist' : 'simple-banker'}
+          style={{ left: `${serviceFoot.x}%`, top: `${serviceFoot.y}%` }} onClick={approachService}
+          aria-label={`${area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME}에게 걸어가기`}>
+          <img src={area === 'casino' ? LOUNGE_ASSETS.casinoLenderSprite : area === 'salon' ? LOUNGE_ASSETS.salonStylistSprite : LOUNGE_ASSETS.bankClerkSprite} alt="" draggable={false} />
+          <span className="cf-service-name">{area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구'}</span>
+        </button>}
         <button
           type="button"
           className="cf-run-toggle"
@@ -536,7 +595,8 @@ export function RoomFloor({
           클릭해서 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
-      {near && !seatedAt && !sheetOpen && (() => {
+      {nearService && !seatedAt && !sheetOpen && <ActionButton className="cf-action" kind="talk" detail={nearService === 'lender' ? '로제 · 카지노 대부' : nearService === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행원'} label="이야기하기" onPress={openService} />}
+      {!nearService && near && !seatedAt && !sheetOpen && (() => {
         const state = tableState(view, near);
         const kind = tableAction(state);
         return (

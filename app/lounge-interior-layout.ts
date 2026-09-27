@@ -18,6 +18,9 @@ import {
 import type { GameKind } from './lounge-games.ts';
 import { slideSubstep } from './lounge-walk-slide.ts';
 import type { HostId } from './lounge-host-sprites.ts';
+import { CASINO_LENDER_SPOT, CASINO_LENDER_RADIUS, nearCasinoLender } from './lounge-casino-lender.ts';
+import { BANK_OBSTACLES, BANKER_SPOT, nearBanker } from './lounge-bank-layout.ts';
+import { SALON_OBSTACLES, nearSalon } from './lounge-salon-layout.ts';
 
 export type InteriorWorld = { x: number; z: number };
 
@@ -177,8 +180,11 @@ export const nearBar = (p: ScenePoint, area: SceneArea) =>
   area === 'tavern' && Math.hypot(p.x - TAVERN_BAR_FRONT.x, p.y - TAVERN_BAR_FRONT.y) <= TAVERN_BAR_REACH;
 
 /** What the one action button offers here: a table within reach, the tavern's host, else the door. */
-export type InteriorAction = { kind: 'table'; game: GameKind } | { kind: 'door' } | { kind: 'host' };
+export type InteriorAction = { kind: 'table'; game: GameKind } | { kind: 'door' } | { kind: 'host' } | { kind: 'lender' } | { kind: 'banker' } | { kind: 'salon' };
 export function interiorAction(p: ScenePoint, area: SceneArea): InteriorAction | null {
+  if (nearSalon(p, area)) return { kind: 'salon' };
+  if (nearBanker(p, area)) return { kind: 'banker' };
+  if (nearCasinoLender(p, area)) return { kind: 'lender' };
   const table = sceneNearestTable(p, area);
   if (table) return { kind: 'table', game: table.game };
   if (nearBar(p, area)) return { kind: 'host' };
@@ -187,6 +193,10 @@ export function interiorAction(p: ScenePoint, area: SceneArea): InteriorAction |
 
 /** What the mouse points at on the floor (for the cursor and for clicks). */
 export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | null {
+  if (area === 'salon' && p.x >= 37 && p.x <= 67 && p.y >= 42 && p.y <= 58) return { kind: 'salon' };
+  if (area === 'bank' && Math.abs(p.x - BANKER_SPOT.x) < 11 && p.y >= 43 && p.y <= 57) return { kind: 'banker' };
+  if (area === 'casino' && Math.hypot(p.x - CASINO_LENDER_SPOT.x, p.y - CASINO_LENDER_SPOT.y) <= CASINO_LENDER_RADIUS + 1)
+    return { kind: 'lender' };
   for (const c of sceneColliders(area))
     if (((p.x - c.x) / (c.rx + 1)) ** 2 + ((p.y - c.y) / (c.ry + 1)) ** 2 <= 1)
       return { kind: 'table', game: c.game };
@@ -369,6 +379,15 @@ export function interiorWaypoints(area: SceneArea): ScenePoint[] {
       const r = o.r + SCENE_PLAYER_RADIUS + 1.2;
       push({ x: o.x + r * Math.cos(a), y: o.y + r * Math.sin(a) });
     }
+  if (area === 'casino')
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2, r = CASINO_LENDER_RADIUS + SCENE_PLAYER_RADIUS + 1.2;
+      push({ x: CASINO_LENDER_SPOT.x + r * Math.cos(a), y: CASINO_LENDER_SPOT.y + r * Math.sin(a) });
+    }
+  if (area === 'bank' || area === 'salon')
+    for (const o of area === 'bank' ? BANK_OBSTACLES : SALON_OBSTACLES)
+      for (const x of [-1, 1]) for (const y of [-1, 1])
+        push({ x: o.x + x * (o.rx + SCENE_PLAYER_RADIUS + 1), y: o.y + y * (o.ry + SCENE_PLAYER_RADIUS + 1) });
   waypointCache.set(area, list);
   return list;
 }

@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
+import { UI_METRICS } from './ui-report.mjs';
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
 import { villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
@@ -96,14 +97,15 @@ async function runView(mobile = false) {
       assert.ok(check(), label);
     };
     const model = () => lifeView(H.world().life, H.uid, 3, Date.now());
-    const shot = async (label) => {
+    const shot = async (label, allMetrics = false) => {
       await js(() => document.fonts.ready);
       const file = `${name}-${label}.png`;
       await page.screenshot({ path: path.join(out, file), timeout: 90_000 });
       const measurements = await js(measureInPage);
-      res.screenshots.push({ label, file, measurements });
+      res.screenshots.push({ label, file, viewport: page.viewportSize(), measurements });
       assert.equal(measurements.coveredCount, 0,
         'visible controls remain reachable: ' + JSON.stringify(measurements.covered));
+      if (allMetrics) for (const metric of UI_METRICS) assert.equal(measurements[metric], 0, label + ': ' + metric);
     };
     const step = async (label, work) => {
       const at = performance.now();
@@ -130,7 +132,7 @@ async function runView(mobile = false) {
       assert.ok(hit.clear && !hit.disabled, 'click target is visible, enabled and unobstructed: ' + selector);
       await page.mouse.click(hit.x, hit.y);
     };
-    const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d]').first().focus();
+    const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=interior-3d]').first().focus();
     const runTo = async (arrive) => {
       await focus();
       await page.keyboard.down('Shift');
@@ -290,17 +292,89 @@ async function runView(mobile = false) {
     });
     await step('salon-walk-and-customization', async () => {
       await walkBuilding('wardrobe'); await shot('salon-door'); await pressAction();
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 8 && d.salonState === 'loaded';
+      }, null, 180_000);
+      assert.equal(await page.getByTestId('wardrobe-preview').count(), 0, 'the salon opens on a walkable floor');
+      await shot('salon-interior');
+      await click('[data-testid=interior-salon-route]');
+      await runTo(() => wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.action === 'salon' && d.walking === 'false' && d.nearSalon === 'true';
+      }, null, 120_000));
+      await page.keyboard.press('KeyE');
       await wait(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'wardrobe', null, 60_000);
       await wait(() => {
-        const backdrop = document.querySelector('.l-wardrobe-full-backdrop');
-        return backdrop instanceof HTMLImageElement && backdrop.complete && backdrop.naturalWidth > 0 && getComputedStyle(backdrop).display !== 'none';
+        const canvas = document.querySelector('[data-testid=wardrobe-preview] canvas');
+        if (!(canvas instanceof HTMLCanvasElement) || !canvas.width || !canvas.height) return false;
+        const context = canvas.getContext('2d');
+        if (!context) return false;
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let visible = 0;
+        for (let p = 3; p < pixels.length; p += 4) if (pixels[p] > 80) visible++;
+        return visible > canvas.width * canvas.height * .02;
       });
-      await shot('salon-customization');
+      await shot('salon-customization', true);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('salon-customization-fhd', true);
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
+      const savedColors = page.waitForResponse((response) => {
+        if (!response.url().includes('/functions/v1/hohyeon-api')) return false;
+        try {
+          const body = JSON.parse(response.request().postData() || '{}');
+          const look = body.save?.looks?.[3];
+          return body.op === 'save' && look?.skinColor === '#b47a58' && look.hairColor?.slice(1, 3) === '25';
+        } catch { return false; }
+      }, { timeout: 30_000 }).then((response) => ({ response }), (error) => ({ error }));
+      await page.getByRole('tab', { name: '머리', exact: true }).click();
+      await page.getByRole('group', { name: '나만의 머리 색', exact: true }).getByLabel('R', { exact: true }).fill('37');
+      await page.getByRole('tab', { name: '피부', exact: true }).click();
+      await page.getByRole('group', { name: '피부 색', exact: true }).getByLabel('HEX', { exact: true }).fill('#b47a58');
+      await page.keyboard.press('Tab');
+      const colorResult = await savedColors;
+      if (colorResult.error) throw colorResult.error;
+      const colorResponse = colorResult.response;
+      assert.ok(colorResponse.ok(), 'synthetic custom colors are accepted by the profile save API');
+      const accepted = await colorResponse.json();
+      assert.equal(accepted.save.looks[3].skinColor, '#b47a58');
+      assert.equal(parseInt(accepted.save.looks[3].hairColor.slice(1, 3), 16), 37);
+      await shot('salon-custom-colors', true);
+      await click('[data-testid=wardrobe-exit]');
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'salon' && d.loadState === 'ready' && d.action === 'salon';
+      }, null, 60_000);
+      await focus(); await page.keyboard.press('KeyE');
+      await page.getByTestId('wardrobe-preview').waitFor();
+      await page.getByRole('tab', { name: '머리', exact: true }).click();
+      assert.equal(await page.getByRole('group', { name: '나만의 머리 색', exact: true }).getByLabel('R', { exact: true }).inputValue(), '37');
+      await page.getByRole('tab', { name: '피부', exact: true }).click();
+      assert.equal((await page.getByRole('group', { name: '피부 색', exact: true }).getByLabel('HEX', { exact: true }).inputValue()).toLowerCase(), '#b47a58');
+      await click('[data-testid=wardrobe-exit]');
+      await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.area === 'salon', null, 60_000);
       await village();
     });
     await step('bank-deposit-withdraw-consent', async () => {
       await walkBuilding('bank'); await shot('bank-door'); await pressAction();
+      await wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 7;
+      }, null, 180_000);
+      assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'entering the bank leaves the player on its walkable floor');
+      await shot('bank-interior');
+      await click('[data-testid=interior-banker-route]');
+      await runTo(() => wait(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.action === 'banker' && d.walking === 'false' && d.nearBanker === 'true';
+      }, null, 120_000));
+      assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'approaching Nyamo does not transfer money or open a form');
+      await page.keyboard.press('KeyE');
       await page.locator('dialog[open].l-finance').waitFor();
+      await wait(() => {
+        const img = document.querySelector('[data-testid=bank-clerk] img');
+        return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
       const key = 'wallet-' + H.uid, before = H.world().ledger.accounts[key];
       await page.getByLabel('맡기거나 찾을 금액').fill('1000');
       await page.getByRole('button', { name: '맡기기', exact: true }).click();
@@ -322,6 +396,13 @@ async function runView(mobile = false) {
       await wait(() => document.querySelector('.l-finance-note')?.textContent.includes('모두 갚았어요'));
       assert.equal(H.world().ledger.accounts[key], before);
       await shot('bank'); await closeDialogs();
+      await village();
+      const inside = await H.run(H.bots[1], 'action', { action: { kind: 'area', area: 'bank' } });
+      assert.ok(!inside.error, 'another synthetic friend can enter the bank');
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
+      await wait(() => document.querySelector('[data-minimap-friend="6"]')?.getAttribute('data-indoor') === 'true');
+      assert.match(await page.locator('[data-minimap-friend="6"]').getAttribute('aria-label'), /은행 안/);
+      await shot('bank-friend-minimap');
     });
     await step('fruit-forage-chop', async () => {
       await directory('orchard');

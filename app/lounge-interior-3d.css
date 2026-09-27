@@ -26,6 +26,9 @@
   touch-action: none;
 }
 .ih-scene[data-hover='table'] .ih-canvas,
+.ih-scene[data-hover='lender'] .ih-canvas,
+.ih-scene[data-hover='banker'] .ih-canvas,
+.ih-scene[data-hover='salon'] .ih-canvas,
 .ih-scene[data-hover='door'] .ih-canvas {
   cursor: pointer;
 }
@@ -107,6 +110,24 @@
 .ih-casino .ih-host-name em {
   color: var(--pal-amber-77);
 }
+.ih-lender-name {
+  min-height: 44px;
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-round);
+  background: var(--surface);
+  color: var(--text);
+  font: var(--fw-semi) var(--fs-body-s) / 1.3 var(--font-body);
+  box-shadow: var(--lift-2);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.ih-lender-name strong { font-size: var(--fs-body-s); }
+.ih-lender-name span { font-size: var(--fs-cap); color: var(--text-soft); }
+.ih-lender-name:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 
 /* Table signs: name, status, seat portraits (click = walk up to the table). */
 .ih-sign {

@@ -20,14 +20,16 @@ import { linkLabel, offlineReason, retryDelay } from '../lounge-connection';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
 
-export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bedroom';
+export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom';
 
 export const TAB_TITLES: Record<Tab, string> = {
   village: NAMES.village,
   lounge: NAMES.hall,
   casino: NAMES.casino,
   tavern: NAMES.tavern,
+  bank: '범마을 은행',
   wardrobe: NAMES.wardrobe,
+  salon: '미용실',
   bedroom: NAMES.home,
 };
 

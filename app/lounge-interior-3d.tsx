@@ -43,6 +43,10 @@ import {
 } from './lounge-interior-layout';
 import { createInteriorScene, SEAT_HEIGHT, TABLE_HEIGHT, type SeatShow } from './lounge-interior-scene';
 import { createInteriorHosts } from './lounge-interior-hosts';
+import { createInteriorLender, createInteriorBanker, createInteriorStylist } from './lounge-interior-lender';
+import { CASINO_LENDER_FRONT, LENDER_NAME, nearCasinoLender } from './lounge-casino-lender';
+import { BANKER_FRONT, BANKER_NAME, nearBanker } from './lounge-bank-layout';
+import { SALON_FRONT, SALON_STYLIST_NAME, nearSalon } from './lounge-salon-layout';
 import type { TablePhase } from './lounge-table-state';
 import { advanceLocomotion, RUN_SPEED_MULTIPLIER, type LocomotionState } from './lounge-locomotion';
 import { ActionButton } from './lounge/ActionButton';
@@ -128,11 +132,17 @@ type Props = {
   onExit: () => void;
   /** 허풍 주점: talk to 허 선장 at the bar (the upgrade board). */
   onHost?: () => void;
+  /** Talk to the casino lender only after walking within her shared reach. */
+  onLender?: () => void;
+  /** Talk to 냐모 from the public side of the bank's counter. */
+  onBanker?: () => void;
+  /** Open customization after meeting the stylist in the salon. */
+  onSalon?: () => void;
   /** I am near the door: preload the village. */
   onNearDoor?: () => void;
   /** I sit at this forming table: walking pauses until I stand up. */
   seatedAt?: GameKind | null;
-  /** A table sheet is open: its own buttons (and E) replace the action button. */
+  /** A sheet or modal is open: its controls replace walking and the action button. */
   sheetOpen?: boolean;
   /** The village's '카지노 VIP룸' project is done (the casino shows its VIP corner). */
   vip?: boolean;
@@ -174,6 +184,9 @@ export function Interior3D({
   onTable,
   onExit,
   onHost,
+  onLender,
+  onBanker,
+  onSalon,
   onNearDoor,
   seatedAt = null,
   sheetOpen = false,
@@ -242,9 +255,9 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
@@ -260,6 +273,7 @@ export function Interior3D({
     moving: false,
     approach: null as GameKind | null,
     locked: false,
+    paused: false,
   });
   // The casino's VIP corner follows the village project ('vip' flag).
   const vipRef = useRef(vip);
@@ -273,11 +287,22 @@ export function Interior3D({
   const actionRef = useRef<InteriorAction | null>(null);
   const exited = useRef(false);
   const runAction = (next: InteriorAction | null) => {
-    if (!next || live.current.locked) return;
+    if (!next || live.current.locked || live.current.paused) return;
     if (next.kind === 'door') {
       if (exited.current) return;
       exited.current = true;
       latest.current.onExit();
+    } else if (next.kind === 'lender' || next.kind === 'banker' || next.kind === 'salon') {
+      const l = live.current;
+      if (!(next.kind === 'salon' ? nearSalon(l.point, area) : next.kind === 'banker' ? nearBanker(l.point, area) : nearCasinoLender(l.point, area))) return;
+      l.held.clear();
+      l.target = l.goal = null;
+      l.route = [];
+      l.approach = null;
+      latest.current.onMove(l.point.x, l.point.y);
+      if (next.kind === 'salon') latest.current.onSalon?.();
+      else if (next.kind === 'banker') latest.current.onBanker?.();
+      else latest.current.onLender?.();
     } else if (next.kind === 'host') latest.current.onHost?.();
     else latest.current.onTable(next.game);
   };
@@ -285,15 +310,18 @@ export function Interior3D({
   useLayoutEffect(() => {
     runRef.current = runAction;
   });
-  useEffect(() => {
+  useLayoutEffect(() => {
     const l = live.current;
-    l.locked = !!seatedAt;
-    if (seatedAt) {
+    l.locked = !!seatedAt || sheetOpen;
+    if (l.locked) {
       l.held.clear();
+      l.shift = false;
       l.target = null;
+      l.goal = null;
+      l.route = [];
       l.approach = null;
     }
-  }, [seatedAt]);
+  }, [seatedAt, sheetOpen]);
   // The first server position here (walking in at the door or beside a
   // table) is where I stand; later moves arrive as INTERIOR_PLACE_EVENT.
   useEffect(() => {
@@ -319,7 +347,7 @@ export function Interior3D({
   /** Walk up to a table; its action runs on arrival (as on the flat floor). */
   const approach = (game: GameKind) => {
     const l = live.current;
-    if (l.locked) return;
+    if (l.locked || l.paused) return;
     l.held.clear();
     walkTo(sceneTableSide(area, game));
     l.approach = game;
@@ -329,6 +357,36 @@ export function Interior3D({
   useLayoutEffect(() => {
     approachRef.current = approach;
   });
+  /** Clicking her sign only walks; E or the nearby action opens the dialogue. */
+  const approachLender = () => {
+    const l = live.current;
+    if (area !== 'casino' || l.locked || l.paused || latest.current.sheetOpen) return;
+    l.held.clear();
+    l.approach = null;
+    walkToRef.current({ ...CASINO_LENDER_FRONT });
+    hostRef.current?.focus({ preventScroll: true });
+  };
+  const lenderApproachRef = useRef(approachLender);
+  useLayoutEffect(() => { lenderApproachRef.current = approachLender; });
+  const approachBanker = () => {
+    const l = live.current;
+    if (area !== 'bank' || l.locked || l.paused || latest.current.sheetOpen) return;
+    l.held.clear();
+    l.approach = null;
+    walkToRef.current({ ...BANKER_FRONT });
+    hostRef.current?.focus({ preventScroll: true });
+  };
+  const bankerApproachRef = useRef(approachBanker);
+  useLayoutEffect(() => { bankerApproachRef.current = approachBanker; });
+  const approachSalon = () => {
+    const l = live.current;
+    if (area !== 'salon' || l.locked || l.paused || latest.current.sheetOpen) return;
+    l.held.clear(); l.approach = null;
+    walkToRef.current({ ...SALON_FRONT });
+    hostRef.current?.focus({ preventScroll: true });
+  };
+  const salonApproachRef = useRef(approachSalon);
+  useLayoutEffect(() => { salonApproachRef.current = approachSalon; });
 
   // ------------------------------------------------------------ three.js
   useEffect(() => {
@@ -451,6 +509,36 @@ export function Interior3D({
         dirty = true;
       },
     });
+    host.dataset.lenderState = area === 'casino' ? 'loading' : '';
+    const lender = area === 'casino' ? createInteriorLender(scene, {
+      yaw: YAW,
+      squash: cameraUp.y,
+      shadow: { geometry: shadowGeometry, material: shadowMaterial },
+      onLoad: (status) => {
+        if (disposed) return;
+        host.dataset.lenderState = status;
+        dirty = true;
+      },
+    }) : null;
+    host.dataset.bankerState = area === 'bank' ? 'loading' : '';
+    const banker = area === 'bank' ? createInteriorBanker(scene, {
+      yaw: YAW, squash: cameraUp.y,
+      shadow: { geometry: shadowGeometry, material: shadowMaterial },
+      onLoad: (status) => {
+        if (disposed) return;
+        host.dataset.bankerState = status;
+        dirty = true;
+      },
+    }) : null;
+    host.dataset.salonState = area === 'salon' ? 'loading' : '';
+    const stylist = area === 'salon' ? createInteriorStylist(scene, {
+      yaw: YAW, squash: cameraUp.y,
+      shadow: { geometry: shadowGeometry, material: shadowMaterial },
+      onLoad: (status) => {
+        if (disposed) return;
+        host.dataset.salonState = status; dirty = true;
+      },
+    }) : null;
     const hostTables = new Map<GameKind, { phase: TablePhase; seats: number }>();
     const makeFigure = (actor: number, look: Look, at: ScenePoint): Figure => {
       const c = document.createElement('canvas');
@@ -589,14 +677,14 @@ export function Interior3D({
     marker.rotation.x = -Math.PI / 2;
     marker.visible = false;
     scene.add(marker);
-    const pointAt = (event: PointerEvent): { table: GameKind | null; floor: ScenePoint | null } => {
+    const pointAt = (event: PointerEvent): { table: GameKind | null; lender: boolean; banker: boolean; stylist: boolean; floor: ScenePoint | null } => {
       const rect = canvas.getBoundingClientRect();
       pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(studio.hits(), false)[0];
+      const hit = raycaster.intersectObjects([...studio.hits(), ...(lender?.hits() ?? []), ...(banker?.hits() ?? []), ...(stylist?.hits() ?? [])], false)[0];
       const table = (hit?.object.userData.game as GameKind | undefined) ?? null;
       const onFloor = raycaster.ray.intersectPlane(floor, hitPoint);
-      return { table, floor: onFloor ? worldToInterior({ x: onFloor.x, z: onFloor.z }) : null };
+      return { table, lender: hit?.object.userData.npc === 'casino-lender', banker: hit?.object.userData.npc === 'bank-clerk', stylist: hit?.object.userData.npc === 'salon-stylist', floor: onFloor ? worldToInterior({ x: onFloor.x, z: onFloor.z }) : null };
     };
     const showMarker = (p: ScenePoint | null) => {
       marker.visible = !!p;
@@ -609,9 +697,22 @@ export function Interior3D({
     const onPointerDown = (event: PointerEvent) => {
       if (event.button !== 0 || !event.isPrimary || contextFailed) return;
       host.focus({ preventScroll: true });
-      if (l.locked) return;
+      if (l.locked || l.paused) return;
       const at = pointAt(event);
-      const hover = at.table ? ({ kind: 'table', game: at.table } as const) : at.floor ? interiorHover(at.floor, area) : null;
+      const hover = at.stylist ? ({ kind: 'salon' } as const) : at.banker ? ({ kind: 'banker' } as const) : at.lender ? ({ kind: 'lender' } as const) : at.table ? ({ kind: 'table', game: at.table } as const) : at.floor ? interiorHover(at.floor, area) : null;
+      if (hover?.kind === 'salon') {
+        salonApproachRef.current(); showMarker(l.goal); return;
+      }
+      if (hover?.kind === 'banker') {
+        bankerApproachRef.current();
+        showMarker(l.goal);
+        return;
+      }
+      if (hover?.kind === 'lender') {
+        lenderApproachRef.current();
+        showMarker(l.goal);
+        return;
+      }
       if (hover?.kind === 'table') {
         approachRef.current(hover.game);
         showMarker(l.goal);
@@ -634,7 +735,7 @@ export function Interior3D({
     const onPointerMove = (event: PointerEvent) => {
       if (contextFailed) return;
       const at = pointAt(event);
-      const kind = at.table ? 'table' : at.floor ? (interiorHover(at.floor, area)?.kind ?? '') : '';
+      const kind = at.stylist ? 'salon' : at.banker ? 'banker' : at.lender ? 'lender' : at.table ? 'table' : at.floor ? (interiorHover(at.floor, area)?.kind ?? '') : '';
       if (kind !== hoverKind) host.dataset.hover = hoverKind = kind;
     };
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -645,6 +746,7 @@ export function Interior3D({
       // Heard on window, so WASD keeps working after a dialog closes.
       const at = sceneKeyTarget(event, host);
       if (!at || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (l.paused) return;
       if (event.key === 'Shift') l.shift = true;
       const bound = boundAction(event);
       if (bound === 'action' || (event.key === 'Enter' && at === 'scene')) {
@@ -678,9 +780,12 @@ export function Interior3D({
       if (document.hidden) release();
     };
     const pause = (e: Event) => {
-      if ((e as CustomEvent<boolean>).detail) {
+      l.paused = !!(e as CustomEvent<boolean>).detail;
+      if (l.paused) {
         release();
         l.target = null;
+        l.goal = null;
+        l.route = [];
         l.approach = null;
         showMarker(null);
       }
@@ -777,6 +882,9 @@ export function Interior3D({
       };
       tag('self', mine);
       for (const [id, f] of others) tag(id, f);
+      if (lender) project('casino-lender', lender.at.x, 1.92, lender.at.z, w, h);
+      if (banker) project('bank-clerk', banker.at.x, 1.92, banker.at.z, w, h);
+      if (stylist) project('salon-stylist', stylist.at.x, 1.92, stylist.at.z, w, h);
       for (const t of latest.current.tables) {
         // The table's sign hangs from its front edge; the host tag is over the host.
         project('table-' + t.game, t.center.x, TABLE_HEIGHT * 0.55, t.center.z + t.rz + 0.05, w, h, true);
@@ -804,6 +912,7 @@ export function Interior3D({
       previous = t;
       if (!visible || document.hidden || !host.clientWidth) return;
       const current = latest.current;
+      if ((l.locked || l.paused) && marker.visible) showMarker(null);
       // Me: keys first, then a clicked destination.
       const keyed = screenToFloor(
         Number(l.held.has('right')) - Number(l.held.has('left')),
@@ -811,13 +920,13 @@ export function Interior3D({
       );
       let dx = keyed.x,
         dy = keyed.y;
-      if (l.locked) dx = dy = 0;
+      if (l.locked || l.paused) dx = dy = 0;
       const running = l.shift;
       const speed = WALK_SPEED * (running ? RUN_SPEED_MULTIPLIER : 1) * dt;
       if (Math.abs(dx) > 1e-6 || Math.abs(dy) > 1e-6) {
         l.target = null;
         l.approach = null;
-      } else if (l.target && !l.locked) {
+      } else if (l.target && !l.locked && !l.paused) {
         dx = l.target.x - l.point.x;
         dy = l.target.y - l.point.y;
         if (Math.hypot(dx, dy) < 0.3) {
@@ -950,7 +1059,13 @@ export function Interior3D({
         host.dataset.avatarX = l.point.x.toFixed(2);
         host.dataset.avatarY = l.point.y.toFixed(2);
         host.dataset.walking = String(l.moving);
+        host.dataset.paused = String(l.paused || current.sheetOpen);
         host.dataset.others = String(others.size);
+        host.dataset.nearLender = String(nearCasinoLender(l.point, area));
+        host.dataset.nearBanker = String(nearBanker(l.point, area));
+        if (area === 'bank') host.dataset.bankModels = String(studio.bankModels());
+        host.dataset.nearSalon = String(nearSalon(l.point, area));
+        if (area === 'salon') host.dataset.salonModels = String(studio.salonModels());
         lastData = t;
       }
       // kArchive furniture arriving, or the VIP project finishing.
@@ -988,6 +1103,9 @@ export function Interior3D({
       for (const f of others.values()) dropFigure(f);
       others.clear();
       hosts.dispose();
+      lender?.dispose();
+      banker?.dispose();
+      stylist?.dispose();
       figureGeometry.dispose();
       shadowGeometry.dispose();
       shadowMaterial.dispose();
@@ -1013,7 +1131,7 @@ export function Interior3D({
       className={`ih-scene ih-${area}`}
       tabIndex={0}
       role="application"
-      aria-label={`${placeName} 안. 바닥을 클릭하거나 방향키와 ${[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')}로 걸어요. 테이블을 클릭하면 그 앞까지 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 앉거나 구경해요. Esc로 메뉴를 열어요.`}
+      aria-label={`${placeName} 안. 바닥을 클릭하거나 방향키와 ${[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')}로 걸어요. ${area === 'bank' || area === 'salon' ? `${area === 'bank' ? BANKER_NAME : SALON_STYLIST_NAME}의 이름을 클릭하면 앞으로 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 이야기해요.` : `테이블을 클릭하면 그 앞까지 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 앉거나 구경해요.`} Esc로 메뉴를 열어요.`}
       data-testid="interior-3d"
       data-area={area}
       data-load-state={state}
@@ -1071,6 +1189,41 @@ export function Interior3D({
         )}
       </div>
       <div className="ih-signs">
+        {area === 'salon' && (
+          <button type="button" className="ih-label ih-lender-name" data-testid="interior-salon-service"
+            onClick={approachSalon} aria-label={`${SALON_STYLIST_NAME} · 미용실 원장에게 걸어가기`}
+            ref={(el) => {
+              if (el) labelsRef.current.set('salon-stylist', el);
+              else labelsRef.current.delete('salon-stylist');
+            }}>
+            <strong>{SALON_STYLIST_NAME}</strong><span>미용실 원장</span>
+          </button>
+        )}
+        {area === 'bank' && (
+          <button type="button" className="ih-label ih-lender-name" data-testid="interior-banker-name"
+            onClick={approachBanker} aria-label={`${BANKER_NAME} · 은행 창구로 걸어가기`}
+            ref={(el) => {
+              if (el) labelsRef.current.set('bank-clerk', el);
+              else labelsRef.current.delete('bank-clerk');
+            }}>
+            <strong>{BANKER_NAME}</strong><span>은행원</span>
+          </button>
+        )}
+        {area === 'casino' && (
+          <button
+            type="button"
+            className="ih-label ih-lender-name"
+            data-testid="interior-lender-name"
+            onClick={approachLender}
+            aria-label={`${LENDER_NAME} · 대출 상담 구역으로 걸어가기`}
+            ref={(el) => {
+              if (el) labelsRef.current.set('casino-lender', el);
+              else labelsRef.current.delete('casino-lender');
+            }}
+          >
+            <strong>{LENDER_NAME}</strong><span>대출 상담</span>
+          </button>
+        )}
         {tables.map((t) => (
           <TableSign
             key={t.game}
@@ -1086,7 +1239,7 @@ export function Interior3D({
           />
         ))}
       </div>
-      <nav className="ih-tables" aria-label={`${placeName} 테이블`}>
+      <nav className="ih-tables" aria-label={`${placeName} ${area === 'bank' || area === 'salon' ? '이동 안내' : '테이블'}`}>
         <strong>{placeName}</strong>
         {tables.map((t) => (
           <button
@@ -1101,6 +1254,21 @@ export function Interior3D({
             <small>{tableLabel(t.state).status}</small>
           </button>
         ))}
+        {area === 'casino' && (
+          <button type="button" data-testid="interior-lender-route" onClick={approachLender}>
+            <span>{LENDER_NAME}</span><small>대출 상담 · 걸어가기</small>
+          </button>
+        )}
+        {area === 'bank' && (
+          <button type="button" data-testid="interior-banker-route" onClick={approachBanker}>
+            <span>{BANKER_NAME}</span><small>은행 창구 · 걸어가기</small>
+          </button>
+        )}
+        {area === 'salon' && (
+          <button type="button" data-testid="interior-salon-route" onClick={approachSalon}>
+            <span>{SALON_STYLIST_NAME}</span><small>미용실 원장 · 걸어가기</small>
+          </button>
+        )}
       </nav>
       {state === 'loading' && (
         <output className="ih-loading">
@@ -1131,12 +1299,18 @@ export function Interior3D({
       {!seatedAt && !sheetOpen && state !== 'unavailable' && action && (
         <ActionButton
           className="ih-action"
-          kind={action.kind === 'door' ? 'exit' : action.kind === 'host' ? 'talk' : actionKind}
+          kind={action.kind === 'door' ? 'exit' : action.kind === 'host' || action.kind === 'lender' || action.kind === 'banker' || action.kind === 'salon' ? 'talk' : actionKind}
           label={
             action.kind === 'door'
               ? `${NAMES.village}로 나가기`
               : action.kind === 'host'
                 ? '허 선장과 이야기 · 주점 꾸미기'
+                : action.kind === 'lender'
+                  ? `${LENDER_NAME}와 대출 상담`
+                  : action.kind === 'banker'
+                    ? `${BANKER_NAME}와 은행 업무`
+                    : action.kind === 'salon'
+                      ? `${SALON_STYLIST_NAME}과 이야기 · 스타일 바꾸기`
                 : `${GAME_INFO[action.game].name} ${TABLE_ACTION_LABEL[actionKind!]}`
           }
           detail={actionState ? tableLabel(actionState).text : undefined}
@@ -1144,7 +1318,7 @@ export function Interior3D({
           onPress={() => runAction(action)}
         />
       )}
-      <WalkHints act="앉기" className="ih-hint" />
+      <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : '앉기'} className="ih-hint" />
     </div>
   );
 }

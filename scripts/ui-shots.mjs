@@ -165,6 +165,13 @@ async function runView(browser, base, view, report) {
       await until(() => !!document.querySelector('dialog[open] .l-finance-balances'), 15000);
       if (!(await H.clickText(new RegExp(`^${title}$`), 'dialog[open] [role="tab"]'))) throw new Error(`${title} 탭을 찾지 못했습니다.`);
       await until((text) => document.querySelector('dialog[open] [role="tab"][aria-selected="true"]')?.textContent.trim() === text, 10000, title);
+      if (name === 'bank' || name === 'bank-notes') {
+        const loaded = await until(() => {
+          const img = document.querySelector('[data-testid=bank-clerk] img');
+          return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+        }, 15000);
+        if (loaded < 0) throw new Error('은행원 냐모의 그림을 불러오지 못했습니다.');
+      }
       await snap(name);
     });
   }

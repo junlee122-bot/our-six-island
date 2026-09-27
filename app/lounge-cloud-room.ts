@@ -53,7 +53,8 @@ type Response = {
   finance?: FinanceView;
 };
 
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine';
+type Area = import('./lounge-games').Area;
+export type { Area };
 
 /** Client-only extras layered on the server view. */
 export type CloudRoomView = LoungeView & {

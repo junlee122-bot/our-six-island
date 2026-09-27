@@ -23,6 +23,8 @@ import { VENUES } from './lounge-venues';
 import { VENUE_BASE } from './lounge-venue-data';
 import type { TavernModel } from './lounge-model-assets';
 import { buildCorkGun, buildTavern, type TavernRoom } from './lounge-tavern-interior';
+import { buildBank } from './lounge-bank-interior';
+import { buildSalon } from './lounge-salon-interior';
 import {
   INTERIOR_DOOR_Z,
   INTERIOR_ROOM,
@@ -69,6 +71,24 @@ type Palette = {
   lampReach: number;
 };
 const PALETTE: Record<SceneArea, Palette> = {
+  salon: {
+    wall: '#f3e5df', wainscot: '#9eb6aa', rail: '#f8ead8',
+    floor: ['#d8bd99', '#d0b28e', '#dfc6a6', '#cbaa85'],
+    trim: '#ad8f65', chair: '#a68462', cushion: '#b47b87',
+    hemi: ['#fff7e9', '#9c9d87', 1.9], sun: ['#fff0d7', 2.1],
+    lamp: '#fff0d1', background: '#eddfd3', fill: '#e4f0ed',
+    outside: '#e3efcc', mat: '#a87977', dark: false, wood: '#a38665',
+    lamps: [[-4, 3.1, -.6], [4, 3.1, -.6]], lampPower: 6, lampReach: 11,
+  },
+  bank: {
+    wall: '#e9eee4', wainscot: '#99b4a4', rail: '#f1e7d3',
+    floor: ['#d5c8ae', '#cfc2a8', '#dcd0b9', '#cbbb9f'],
+    trim: '#8d7958', chair: '#866b4d', cushion: '#567d6b',
+    hemi: ['#fff8e8', '#8e9f8b', 1.9], sun: ['#fff0d5', 2.1],
+    lamp: '#fff0c5', background: '#dce5d6', fill: '#e8f3ea',
+    outside: '#dcecc4', mat: '#507b67', dark: false, wood: '#8e6745',
+    lamps: [[-4, 3.1, -.6], [4, 3.1, -.6]], lampPower: 6, lampReach: 11,
+  },
   lounge: {
     wall: '#efe2cc',
     wainscot: '#b98d5f',
@@ -208,6 +228,8 @@ export function createInteriorScene(
   let disposed = false;
   /** 허풍 주점's own furnishings (set once its kArchive loader exists). */
   let tavern: TavernRoom | null = null;
+  let bank: ReturnType<typeof buildBank> | null = null;
+  let salon: ReturnType<typeof buildSalon> | null = null;
   /** Loaded kArchive models (shared by their clones in this scene). */
   const models: Partial<Record<ClubModel, THREE.Group>> = {};
   /** Set when a model arrived; refresh() reports it so the view re-renders. */
@@ -450,7 +472,7 @@ export function createInteriorScene(
   );
   bannerMesh.position.set(0, 2.72, minZ + 0.06);
   root.add(bannerMesh);
-  if (area === 'lounge') {
+  if (area === 'lounge' || area === 'bank' || area === 'salon') {
     const glass = new THREE.MeshBasicMaterial({ color: '#f6e7b8', toneMapped: false });
     for (const x of [-5.2, 5.2]) {
       box(2.1, 1.7, 0.1, x, 2.05, minZ + 0.05, pal.trim);
@@ -470,6 +492,7 @@ export function createInteriorScene(
       cylinder(0.12, 0.12, 0.04, x, 2.84, minZ + 0.3, '#9c3b30');
       cylinder(0.12, 0.12, 0.04, x, 2.27, minZ + 0.3, '#9c3b30');
     }
+    if (area === 'lounge') {
     // A notice board and a low shelf with tea things.
     box(1.5, 1.0, 0.06, 7.2 - 5.1, 1.95, minZ + 0.05, '#a47b50');
     box(1.34, 0.84, 0.04, 7.2 - 5.1, 1.95, minZ + 0.09, '#e8d9b6');
@@ -479,6 +502,7 @@ export function createInteriorScene(
     cylinder(0.14, 0.12, 0.2, -2.6, 0.9, minZ + 0.3, '#e8e0cf');
     cylinder(0.1, 0.1, 0.14, -2.0, 0.87, minZ + 0.3, '#6f8f73');
     cylinder(0.1, 0.1, 0.14, -1.7, 0.87, minZ + 0.3, '#6f8f73');
+    }
   } else if (area === 'tavern') {
     // Built with its kArchive props below (buildTavern), after the tables.
   } else {
@@ -507,7 +531,7 @@ export function createInteriorScene(
     }
   }
   // Potted plants in the corners (the tavern has its own corners).
-  if (area !== 'tavern')
+  if (area !== 'tavern' && area !== 'bank' && area !== 'salon')
   for (const [x, z] of [[minX + 0.6, minZ + 0.6], [maxX - 0.6, minZ + 0.6], [maxX - 0.6, maxZ - 0.6]] as const) {
     if (area === 'casino' && x > 0 && z < 0) continue;
     cylinder(0.3, 0.24, 0.5, x, 0.25, z, area === 'casino' ? '#c9a24a' : '#b5673f');
@@ -1032,6 +1056,8 @@ export function createInteriorScene(
       }
     });
   const loader = new GLTFLoader();
+  if (area === 'bank') bank = buildBank(root, () => { modelsChanged = true; });
+  if (area === 'salon') salon = buildSalon(root, () => { modelsChanged = true; });
   /** 허풍 주점: the café table model under the 허풍 카드 felt (stretched to the table). */
   function placeTavernTable() {
     const node = nodes.get('liarsbar'),
@@ -1189,6 +1215,8 @@ export function createInteriorScene(
   return {
     sun,
     tables,
+    bankModels: () => bank?.loaded() ?? 0,
+    salonModels: () => salon?.loaded() ?? 0,
     setSeats,
     /**
      * Applies the VIP project state; true when the view should re-render
@@ -1214,6 +1242,8 @@ export function createInteriorScene(
     },
     dispose() {
       disposed = true;
+      bank?.dispose();
+      salon?.dispose();
       scene.remove(root, hemi, sun, fill, ...lamps);
       if (hearth) {
         scene.remove(hearth);

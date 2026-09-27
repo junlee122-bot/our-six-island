@@ -1,4 +1,9 @@
 .l-finance { width: min(850px, 92vw); }
+.l-finance-clerk { display: grid; grid-template-columns: 70px minmax(0, 1fr); align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4) var(--sp-3); }
+.l-finance-clerk img { display: block; width: 70px; height: 100px; object-fit: contain; }
+.l-finance-clerk h3 { margin: 0 0 var(--sp-2); font: var(--fs-title-s)/1.4 var(--font-display); }
+.l-finance-clerk h3 span { margin-left: var(--sp-2); font: var(--fs-body-s)/1.4 var(--font-body); color: var(--text-soft); }
+.l-finance-clerk p { margin: 0; font-size: var(--fs-body); color: var(--text); line-height: 1.6; }
 .l-finance-page { padding: var(--sp-4); display: grid; gap: var(--sp-3); }
 .l-finance-page h3, .l-finance-page h4, .l-finance-page p { margin: 0; }
 .l-finance-page p { color: var(--text-soft); font-size: var(--fs-body); line-height: 1.6; }

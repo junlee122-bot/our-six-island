@@ -1,10 +1,21 @@
 'use client';
 /* Static GitHub Pages serves these versioned game assets without a Next image service. */
 /* oxlint-disable next/no-img-element */
-import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import { Check, Bookmark, Download, RotateCcw, ArrowRight } from './ui/icons';
 import { AvatarView } from './avatar-view';
-import { ACTORS, ACTOR_COLORS } from './lounge-roster';
+import { ACTORS } from './lounge-roster';
+import { GameButton } from './ui/GameButton';
+import { Panel } from './ui/Panel';
+import { KeyHintBar } from './ui/KeyHint';
+import { Tabs, tabPanelProps } from './ui/Tabs';
+import { EmptyState } from './ui/EmptyState';
 import { PALETTES, SHOP_BY_ID } from './lounge-life';
 import {
   COLLECTIONS,
@@ -28,7 +39,6 @@ import {
   DEFAULT_SKIN_COLOR,
 } from './lounge-color';
 import { loungeSprites } from './lounge-sprites';
-import { LOUNGE_ASSETS } from './lounge-assets';
 import type { Motion } from './character-style';
 import './lounge-wardrobe-club.css';
 
@@ -170,13 +180,23 @@ function ColorEditor({
  * left/right by one, up/down by a row. Rows are read from the layout.
  */
 function gridArrows(e: ReactKeyboardEvent<HTMLElement>) {
-  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-  const items = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(':scope > button, :scope > div > button:first-child')];
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key))
+    return;
+  const items = [
+    ...e.currentTarget.querySelectorAll<HTMLButtonElement>(
+      ':scope > button, :scope > div > button:first-child',
+    ),
+  ];
   const at = items.indexOf(document.activeElement as HTMLButtonElement);
   if (at < 0) return;
   const top = items[0].offsetTop;
   const cols = Math.max(1, items.filter((b) => b.offsetTop === top).length);
-  const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -cols, ArrowDown: cols }[e.key]!;
+  const step = {
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    ArrowUp: -cols,
+    ArrowDown: cols,
+  }[e.key]!;
   const next = items[Math.min(items.length - 1, Math.max(0, at + step))];
   e.preventDefault();
   next.focus();
@@ -233,17 +253,26 @@ export function Wardrobe({
   });
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.repeat)
+        return;
       if (e.code !== 'KeyQ' && e.code !== 'KeyE') return;
       if (document.querySelector('dialog[open], .l-coach')) return;
       const t = e.target instanceof HTMLElement ? e.target : null;
-      if (t?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+      if (
+        t?.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+        )
+      )
+        return;
       const ids = WARDROBE_CATEGORIES.map(([id]) => id);
       const at = ids.indexOf(categoryRef.current);
-      const next = ids[(at + (e.code === 'KeyE' ? 1 : ids.length - 1)) % ids.length];
+      const next =
+        ids[(at + (e.code === 'KeyE' ? 1 : ids.length - 1)) % ids.length];
       e.preventDefault();
       setCategory(next);
-      document.getElementById(`${tabsId}-${next}`)?.focus({ preventScroll: true });
+      document
+        .getElementById(`${tabsId}-tab-${next}`)
+        ?.focus({ preventScroll: true });
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
@@ -254,7 +283,9 @@ export function Wardrobe({
     const t = setTimeout(() => {
       const active = document.activeElement;
       if (!active || active === document.body)
-        document.getElementById(`${tabsId}-${categoryRef.current}`)?.focus({ preventScroll: true });
+        document
+          .getElementById(`${tabsId}-tab-${categoryRef.current}`)
+          ?.focus({ preventScroll: true });
     }, 60);
     return () => clearTimeout(t);
   }, [entry, tabsId]);
@@ -325,36 +356,25 @@ export function Wardrobe({
     }
   };
   return (
-    <section
-      className="l-wardrobe"
-      data-testid="wardrobe-scene"
-    >
-      {/* An image resolves versioned relative URLs against the page; a CSS
-          custom property would resolve them against the nested stylesheet. */}
-      <img className="l-wardrobe-full-backdrop" src={LOUNGE_ASSETS.wardrobe} alt="" draggable={false} />
-      {/* Full-window (in the game): a small chip under the header instead of
-          the page title, like my room's and the village's chips. */}
-      <p className="l-wardrobe-chip" aria-hidden={entry || undefined}>
-        <b>분장실</b>
-        <span>
-          착용 중 · {currentCollection.name}
-        </span>
-        <span className="l-wardrobe-keys">
-          <kbd>Q</kbd>
-          <kbd>E</kbd> 분류 · <kbd>←</kbd>
-          <kbd>→</kbd> 고르기 · <kbd>Esc</kbd> 메뉴
-        </span>
-      </p>
-      <div className="l-section-title">
+    <section className="l-wardrobe" data-testid="wardrobe-scene">
+      <header className="l-wardrobe-heading" data-testid="wardrobe-panel">
         <div>
-          <h1>분장실</h1>
-          <p>
-            {entry
-              ? '오늘 입을 옷을 고르면, 친구들을 만나러 가요.'
-              : '입어 보고, 마음에 드는 코디를 보관하세요.'}
-          </p>
+          <span className="l-wardrobe-eyebrow">그웬의 피팅룸</span>
+          <h1>{ACTORS[actor]}의 분장실</h1>
         </div>
-      </div>
+        <p>
+          {entry
+            ? '오늘 입을 옷을 고르면 친구들을 만나러 가요.'
+            : '입어 보고, 마음에 드는 코디를 보관하세요.'}
+        </p>
+        <GameButton
+          variant="primary"
+          data-testid="wardrobe-exit"
+          onClick={onEnter}
+        >
+          {entry ? '이 모습으로 입장' : '나가기'} <ArrowRight size={18} />
+        </GameButton>
+      </header>
       <div
         className={
           'l-wardrobe-grid' + (actor === 0 ? ' l-daowon-wardrobe' : '')
@@ -372,10 +392,7 @@ export function Wardrobe({
               disabled={locked && actor !== i}
               onClick={() => onChange({ ...save, actor: i })}
             >
-              <span
-                className="l-face"
-                style={{ background: ACTOR_COLORS[i] + '33' }}
-              >
+              <span className="l-face">
                 <AvatarView actor={i} look={save.looks[i]} portrait />
               </span>
               <strong>{name}</strong>
@@ -386,19 +403,13 @@ export function Wardrobe({
             <small>이 계정은 {ACTORS[actor]}의 옷장을 사용해요.</small>
           )}
         </aside>
-        <div className="l-mirror">
+        <Panel as="div" className="l-mirror" variant="journal">
           <div className="l-mirror-top">
-            <strong>{ACTORS[actor]}의 착용 미리보기</strong>
-            <span>{currentCollection.name}</span>
+            <span>지금 입은 코디</span>
+            <strong>{currentCollection.name}</strong>
           </div>
-          <div className="l-avatar-stage">
-            <img
-              className="l-wardrobe-backdrop"
-              src={LOUNGE_ASSETS.wardrobe}
-              alt=""
-              draggable={false}
-            />
-            <div className="l-stage-oval" />
+          <div className="l-avatar-stage" data-testid="wardrobe-preview">
+            <div className="l-stage-oval" aria-hidden="true" />
             <AvatarView actor={actor} look={look} motion={motion} animated />
           </div>
           <div className="l-pose-bar">
@@ -420,24 +431,25 @@ export function Wardrobe({
             ))}
           </div>
           <div className="l-look-tools">
-            <button onClick={bookmark}>
+            <GameButton onClick={bookmark}>
               <Bookmark size={16} />
               코디 보관
-            </button>
-            <button onClick={download}>
+            </GameButton>
+            <GameButton onClick={download}>
               <Download size={16} />
               사진 저장
-            </button>
-            <button
+            </GameButton>
+            <GameButton
               title="이 친구의 기본 모습"
               aria-label="이 친구의 기본 모습"
               onClick={() => replaceLook(defaultLook(actor))}
             >
               <RotateCcw size={16} />
-            </button>
+              기본 모습
+            </GameButton>
           </div>
-        </div>
-        <div className="l-closet">
+        </Panel>
+        <Panel as="div" className="l-closet" variant="journal">
           <div className="l-closet-header">
             <h2>내 옷장</h2>
             <span className="l-current-look">
@@ -445,47 +457,27 @@ export function Wardrobe({
               <strong>{currentCollection.name}</strong>
             </span>
           </div>
-          <div className="l-tabs" role="tablist" aria-label="옷장 분류">
-            {WARDROBE_CATEGORIES.map(([id, name], index) => (
-              <button
-                id={`${tabsId}-${id}`}
-                role="tab"
-                aria-selected={category === id}
-                aria-controls={`${tabsId}-panel`}
-                tabIndex={category === id ? 0 : -1}
-                key={id}
-                onClick={() => setCategory(id)}
-                onKeyDown={(event) => {
-                  const nextIndex =
-                    event.key === 'ArrowRight'
-                      ? (index + 1) % WARDROBE_CATEGORIES.length
-                      : event.key === 'ArrowLeft'
-                        ? (index + WARDROBE_CATEGORIES.length - 1) %
-                          WARDROBE_CATEGORIES.length
-                        : event.key === 'Home'
-                          ? 0
-                          : event.key === 'End'
-                            ? WARDROBE_CATEGORIES.length - 1
-                            : null;
-                  if (nextIndex === null) return;
-                  event.preventDefault();
-                  const next = WARDROBE_CATEGORIES[nextIndex][0];
-                  setCategory(next);
-                  document.getElementById(`${tabsId}-${next}`)?.focus();
-                }}
-              >
-                {name}
-                {id === 'saved' && savedCount > 0 && (
-                  <small>{savedCount}</small>
-                )}
-              </button>
-            ))}
+          <div data-testid="wardrobe-tabs">
+            <Tabs
+              idBase={tabsId}
+              className="l-wardrobe-tabs"
+              label="옷장 분류"
+              value={category}
+              onChange={setCategory}
+              items={WARDROBE_CATEGORIES.map(([id, label]) => ({
+                id,
+                label,
+                badge:
+                  id === 'saved' && savedCount > 0 ? (
+                    <small>{savedCount}</small>
+                  ) : undefined,
+              }))}
+            />
           </div>
           <div
             className="l-closet-panel"
+            {...tabPanelProps(tabsId, category)}
             role="tabpanel"
-            id={`${tabsId}-panel`}
-            aria-labelledby={`${tabsId}-${category}`}
             tabIndex={0}
           >
             {category === 'outfit' && (
@@ -509,7 +501,12 @@ export function Wardrobe({
                 </div>
                 {/* Arrow keys move between the buttons in this grid (gridArrows). */}
                 {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-                <div className="l-outfits" role="group" aria-label="의상 목록 · 방향키로 고르기" onKeyDown={gridArrows}>
+                <div
+                  className="l-outfits"
+                  role="group"
+                  aria-label="의상 목록 · 방향키로 고르기"
+                  onKeyDown={gridArrows}
+                >
                   {collectionsFor(actor)
                     .filter(
                       (c) =>
@@ -729,13 +726,22 @@ export function Wardrobe({
             {category === 'saved' && (
               // Arrow keys move between the buttons in this grid (gridArrows).
               // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-              <div className="l-saved-looks" role="group" aria-label="보관한 코디" onKeyDown={gridArrows}>
+              <div
+                className="l-saved-looks"
+                role="group"
+                aria-label="보관한 코디"
+                onKeyDown={gridArrows}
+              >
                 {!save.saved.some((s) => s.actor === actor) && (
-                  <p>
-                    마음에 드는 모습을 찾으면
-                    <br />
-                    ‘코디 보관’을 눌러 주세요.
-                  </p>
+                  <EmptyState
+                    glyph="bookmark"
+                    className="l-wardrobe-empty"
+                    title="아직 보관한 코디가 없어요"
+                    hint="지금 모습이 마음에 들면 ‘코디 보관’을 눌러 주세요."
+                    action={
+                      <GameButton onClick={bookmark}>지금 코디 보관</GameButton>
+                    }
+                  />
                 )}
                 {save.saved
                   .filter((s) => s.actor === actor)
@@ -768,16 +774,20 @@ export function Wardrobe({
           </div>
           <div className="l-closet-bottom">
             <span>
-              <Check size={14} />
-              자동으로 저장돼요
+              <Check size={14} /> 바꾼 모습은 자동으로 저장돼요
             </span>
-            <button className="l-primary" onClick={onEnter}>
-              {entry ? '이 모습으로 입장' : '나가기'}
-              <ArrowRight size={18} />
-            </button>
+            <span>보관한 코디 {savedCount}벌</span>
           </div>
-        </div>
+        </Panel>
       </div>
+      <KeyHintBar
+        className="l-wardrobe-keys"
+        items={[
+          { keys: [{ label: 'Q' }, { label: 'E' }], does: '분류' },
+          { keys: [{ label: '←' }, { label: '→' }], does: '고르기' },
+          { keys: [{ label: 'Esc' }], does: '메뉴' },
+        ]}
+      />
     </section>
   );
 }
