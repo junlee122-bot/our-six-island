@@ -1,68 +1,71 @@
-/* The clubhouse shell. Game tables keep their dedicated, readable play surfaces. */
+/* The clubhouse shell, on the warm ledger palette (app/ui/tokens.css).
+   This layer used to repaint windows, toasts and the header in a cold
+   blue-grey/navy; it now only maps the legacy names onto the tokens.
+   Game tables keep their dedicated play surfaces (venue tokens). */
 .l-app {
-  /* Theme colour tokens (green village theme): primary buttons, links, focus. */
-  --l-primary: #3f6a4a;
-  --l-primary-hover: #355c3f;
-  --l-primary-ink: #fffdf1;
-  --l-primary-soft: #e3ecd9;
-  --accent: var(--l-primary);
-  --line: #d5d9df;
-  --muted: #65717f;
-  --paper: #fafaf7;
-  background: #e9ebeb;
-  color: #202c3d;
+  /* Legacy names still read by older sheets → semantic tokens. */
+  --l-primary: var(--accent);
+  --l-primary-hover: var(--accent-edge);
+  --l-primary-ink: var(--text-on-accent);
+  --l-primary-soft: var(--accent-soft);
+  --muted: var(--text-soft);
+  --paper: var(--surface-raised);
+  background: var(--surface-app);
+  color: var(--text);
 }
 .l-app .l-header {
   height: 76px;
   padding: 0 max(24px, calc((100vw - 1540px) / 2));
   gap: 26px;
-  background: #fafaf7;
-  border-bottom: 1px solid #cbd1da;
+  background: var(--surface-raised);
+  border-bottom: 1px solid var(--line);
 }
 .l-app .l-brand-icon {
-  background: #24354e;
-  color: #faf8ef;
-  border-radius: 7px;
+  background: var(--frame);
+  color: var(--text-on-frame);
+  border-radius: var(--r-s);
 }
 .l-app .l-brand strong {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
   font-size: 20px;
-  letter-spacing: -0.7px;
+  letter-spacing: 0;
 }
 .l-app .l-brand small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   letter-spacing: 0;
-  color: #6d7888;
+  color: var(--text-soft);
 }
 .l-app .l-header nav button {
   padding: 0 20px;
-  color: #626e7e;
+  color: var(--text-soft);
 }
 .l-app .l-header nav button[aria-pressed='true'] {
-  color: var(--l-primary);
-  border-color: var(--l-primary);
+  color: var(--accent-edge);
+  border-color: var(--accent);
 }
 .l-app .l-header-right {
   gap: 14px;
 }
 .l-app .l-wallet-button {
-  background: #edf0f7;
-  border-color: #d2d9e7;
-  color: #253953;
-  border-radius: 7px;
+  background: var(--surface-raised);
+  border-color: var(--line);
+  color: var(--text);
+  border-radius: var(--r-s);
 }
 .l-app .l-profile .avatar-view {
-  background: #d8deea;
+  background: var(--surface-sunken);
 }
 .l-app .l-save-bar {
-  background: #e0e4e9;
-  border-bottom: 1px solid #d1d6df;
-  color: #586577;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--line);
+  color: var(--text-soft);
   min-height: 30px;
   padding: 5px max(24px, calc((100vw - 1540px) / 2));
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 .l-app .l-save-bar button {
-  color: var(--l-primary);
+  color: var(--accent-edge);
 }
 .l-app .l-lounge {
   max-width: 1588px;
@@ -76,30 +79,30 @@
   letter-spacing: -1.2px;
 }
 .l-app .l-kicker {
-  color: #697b95;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
   letter-spacing: 0.3px;
   margin-bottom: 5px;
 }
 .l-app .l-section-title p {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--fs-cap);
 }
 .l-app .l-primary {
-  background: var(--l-primary);
-  border-color: var(--l-primary);
-  border-radius: 7px;
-  box-shadow: none;
-  color: var(--l-primary-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+  border-radius: var(--r-s);
+  box-shadow: var(--edge-press);
+  color: var(--text-on-accent);
 }
 .l-app .l-primary:hover {
-  background: var(--l-primary-hover);
+  background: var(--accent-edge);
 }
 .l-app .l-secondary {
-  background: #f5f6f8;
-  border-color: #cdd5e0;
-  color: #304564;
-  border-radius: 7px;
+  background: var(--surface-raised);
+  border-color: var(--line-strong);
+  color: var(--text);
+  border-radius: var(--r-s);
 }
 .l-app .l-lounge-grid {
   grid-template-columns: minmax(0, 1fr) 268px;
@@ -107,16 +110,16 @@
   align-items: start;
 }
 .l-app .l-room-wrap {
-  border-radius: 9px;
-  background: #f7f8f9;
-  border: 1px solid #c8cfda;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
   overflow: hidden;
 }
 .l-app .l-play-list,
 .l-app .l-chat {
-  border-radius: 8px;
-  border: 1px solid #cfd6df;
-  background: #f8f9f8;
+  border-radius: var(--r-m);
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
   box-shadow: none;
 }
 .l-app .l-play-list {
@@ -129,86 +132,90 @@
 .l-app .l-play-list > button {
   padding: 13px 0;
   border-radius: 0;
-  border-top: 1px solid #e0e4ea;
+  border-top: 1px solid var(--line);
   gap: 10px;
 }
 .l-app .l-play-list strong {
-  font-size: 12px;
+  font-size: var(--fs-cap);
 }
 .l-app .l-play-list small {
   display: none;
 }
 .l-app .l-play-list em {
-  color: #788394;
-  font-size: 11px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
 }
 .l-app .l-game-symbol {
-  background: #e7ebf3;
-  color: #39537d;
-  border-radius: 5px;
+  background: var(--surface-sunken);
+  color: var(--text);
+  border-radius: var(--r-s);
   width: 35px;
   height: 39px;
   font-size: 23px;
 }
 .l-app .l-chat form {
-  border-color: #d3dae5;
-  background: #f5f7fa;
+  border-color: var(--line);
+  background: var(--surface-raised);
 }
 .l-app .l-chat form button {
-  color: var(--l-primary);
+  color: var(--accent-edge);
 }
 .l-app .l-chat-messages {
   height: 148px;
 }
 .l-app .l-closet-invitation {
   margin-top: 18px;
-  border: 1px solid #ccd4df;
-  border-radius: 8px;
-  background: #e0e6ef;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
   padding: 17px 21px;
-  color: #344761;
+  color: var(--text);
 }
 .l-app .l-closet-invitation small {
   letter-spacing: 0.2px;
-  color: #73819a;
+  color: var(--text-soft);
 }
 .l-app .l-closet-invitation strong {
   font-size: 17px;
 }
 .l-app .l-footer {
   max-width: 1588px;
-  color: #6a7587;
+  color: var(--text-soft);
   padding: 20px 24px 26px;
 }
+/* Windows and toasts: warm paper, not the old blue-grey card / navy toast. */
 .l-app .l-modal {
-  background: #fafaf7;
-  border-color: #d0d6df;
-  border-radius: 12px;
+  background: var(--surface-raised);
+  border-color: var(--line);
+  border-radius: var(--r-l);
+  color: var(--text);
 }
 .l-app .l-toast {
-  background: #263954;
-  color: #fff;
+  background: var(--toast-bg);
+  color: var(--toast-text);
+  box-shadow: var(--lift-2);
+  border-radius: var(--r-m);
 }
 /* Reactions remain available without reserving a large empty panel every turn. */
 .l-app .l-reactions {
   margin: 0;
   border: 0;
-  border-top: 1px solid #d4dbe5;
+  border-top: 1px solid var(--line);
   border-radius: 0;
-  background: #f8f9fa;
+  background: var(--surface-raised);
   padding: 9px 14px;
 }
 .l-app .l-reaction-bar small {
   display: none;
 }
 .l-app .l-reaction-bar b {
-  font-size: 12px;
-  color: #4b5b72;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
 }
 .l-app .l-reaction-open {
-  background: #e7edf8;
-  color: #3154a8;
-  border-color: #cdd7eb;
+  background: var(--surface-sunken);
+  color: var(--text);
+  border-color: var(--line);
 }
 .l-app .l-reaction-feed {
   min-height: 0;
@@ -223,9 +230,9 @@
 }
 .l-app .l-reaction-card {
   min-width: 0;
-  background: #fff;
-  border-color: #d7dfea;
-  border-radius: 8px;
+  background: var(--surface-raised);
+  border-color: var(--line);
+  border-radius: var(--r-m);
 }
 .l-app .l-reaction-card img {
   width: 56px;
@@ -237,35 +244,37 @@
 .l-app .l-reaction-status:not(:empty) {
   margin-top: 5px;
 }
-/* The entry screen belongs to the same club; authentication behaviour is unchanged. */
+/* The entry screen belongs to the same village: walnut story panel. */
 .l-app .l-auth-story {
-  background: #24354e;
-  color: #f5f5f0;
+  background: var(--frame-edge);
+  color: var(--text-on-frame);
 }
 .l-app .l-auth-story .l-kicker,
 .l-app .l-auth-story > p,
 .l-app .l-auth-promise {
-  color: #c3cedf;
+  color: var(--text-on-frame);
 }
 .l-app .l-auth-story h1 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
   font-size: clamp(30px, 3.3vw, 50px);
 }
 .l-app .l-auth-tabs button[aria-selected='true'] {
-  color: var(--l-primary);
-  border-color: var(--l-primary);
+  color: var(--accent-edge);
+  border-color: var(--accent);
 }
 .l-app .l-account-form input {
-  background: #fff;
-  border-color: #cbd3df;
-  color: #253954;
+  background: var(--surface-raised);
+  border-color: var(--line-strong);
+  color: var(--text);
 }
 .l-app .l-account-ids button {
-  background: #e5eaf1;
+  background: var(--surface-sunken);
 }
 .l-app .l-account-ids button[aria-checked='true'] {
-  background: #dbe5fb;
-  border-color: #6b89cf;
-  color: var(--l-primary-hover);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-edge);
 }
 @media (max-width: 1100px) {
   .l-app .l-header {

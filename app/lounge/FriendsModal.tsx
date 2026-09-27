@@ -1,7 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { shareableInviteUrl } from '../desktop-bridge';
-import { ArrowRight, Copy, LogOut, RotateCcw } from 'lucide-react';
 import { AvatarView } from '../avatar-view';
 import {
   VILLAGE_CODE,
@@ -15,6 +14,9 @@ import { Modal } from './Modal';
 import { lookFor } from './friend-looks';
 import type { Notify } from './Toast';
 import { FriendMoodBadge } from './MoodHud';
+import { GameButton } from '../ui/GameButton';
+import { Glyph } from '../ui/Glyph';
+import './friends.css';
 
 export const AREA_NAMES: Record<string, string> = {
   village: NAMES.village,
@@ -88,31 +90,33 @@ export function FriendsModal({
     }
   };
   const restingList = (connected || offline) && resting.length > 0 && (
-    <section className="l-resting" aria-labelledby="l-resting-title">
-      <h3 id="l-resting-title">
+    <section className="fr-section" aria-labelledby="l-resting-title">
+      <h3 id="l-resting-title" className="fr-heading">
         쉬는 중인 친구 <small>{resting.length}명 · 지금은 접속하지 않았어요</small>
       </h3>
-      <ul className="l-online-list is-resting" aria-label="쉬는 중인 친구">
+      <ul className="fr-list" aria-label="쉬는 중인 친구">
         {resting.map((actor) => (
-          <li key={actor} data-testid={`resting-${actor}`}>
-            <span className="l-mood-portrait">
+          <li key={actor} className="fr-row is-resting" data-testid={`resting-${actor}`}>
+            <span className="l-mood-portrait fr-face">
               <span className="l-resting-face" aria-hidden="true">
                 <AvatarView actor={actor} look={lookFor(actor)} portrait />
               </span>
               <FriendMoodBadge face={view.life?.mood?.faces[actor]} />
             </span>
-            <strong>{ACTORS[actor]}</strong>
-            <span>쉬는 중 · 마을을 산책해요</span>
-            <span className="l-resting-actions">
+            <span className="fr-who">
+              <strong>{ACTORS[actor]}</strong>
+              <span>쉬는 중 · 마을을 산책해요</span>
+            </span>
+            <span className="fr-actions">
               {onMail && (
-                <button className="l-secondary" onClick={() => onMail(actor)}>
+                <GameButton size="s" glyph="letter" onClick={() => onMail(actor)}>
                   편지 쓰기
-                </button>
+                </GameButton>
               )}
               {onVisit && (
-                <button className="l-text" onClick={() => onVisit(actor)}>
+                <GameButton size="s" variant="ghost" glyph="house" onClick={() => onVisit(actor)}>
                   방에 놀러 가기
-                </button>
+                </GameButton>
               )}
             </span>
           </li>
@@ -121,7 +125,13 @@ export function FriendsModal({
     </section>
   );
   return (
-    <Modal title="친구들" onClose={onClose}>
+    <Modal
+      title="친구들"
+      onClose={onClose}
+      panel="journal"
+      className="fr-modal"
+      keyHints={[{ keys: [{ label: 'Tab' }], does: '버튼 옮기기' }, { keys: [{ code: 'Enter' }], does: '누르기' }]}
+    >
       {offline ? (
         <div className="l-empty">
           <h3>연결이 끊겼어요.</h3>
@@ -129,9 +139,9 @@ export function FriendsModal({
             다시 연결되면 누가 접속했는지 보여요. 지금 보이는 친구들은 마지막
             모습이에요.
           </p>
-          <button className="l-primary" onClick={() => room.reconnect()}>
-            <RotateCcw size={16} /> 지금 다시 연결
-          </button>
+          <GameButton variant="primary" glyph="refresh" onClick={() => room.reconnect()}>
+            지금 다시 연결
+          </GameButton>
         </div>
       ) : view.status === 'connecting' ? (
         <div className="l-empty">
@@ -140,62 +150,71 @@ export function FriendsModal({
         </div>
       ) : connected ? (
         <>
-          <p className="l-modal-intro">
+          <p className="fr-intro">
             로그인한 친구는 모두 같은 마을에서 만나요. 게임은 회관과 카지노의
             테이블에 앉아서 시작해요.
           </p>
-          <h3 className="l-online-title">
-            <i className="l-online-dot" aria-hidden="true" /> 지금 접속{' '}
-            <small>{Math.max(0, view.players.length - 1)}명</small>
-          </h3>
-          <ul className="l-online-list" aria-label="접속 중인 친구">
-            {view.players.map((p) => (
-              <li key={p.id}>
-                <span className="l-mood-portrait">
-                  <AvatarView actor={p.actor} look={p.look} portrait />
-                  {p.id !== view.self && <FriendMoodBadge face={view.life?.mood?.faces[p.actor]} />}
-                </span>
-                <strong>{ACTORS[p.actor]}</strong>
-                <span>
-                  {p.id === view.self
-                    ? '나'
-                    : p.area === 'home'
-                      ? `${ACTORS[p.home ?? p.actor]}의 방`
-                      : (AREA_NAMES[p.area] ?? NAMES.village)}
-                  {view.host === p.id && <em className="l-host-badge">방장</em>}
-                </span>
-                {onVisit &&
-                  p.id !== view.self &&
-                  p.area === 'home' &&
-                  view.life?.rooms?.[p.home ?? p.actor]?.access !== 'closed' && (
-                    <button
-                      className="l-secondary"
-                      onClick={() => onVisit(p.home ?? p.actor)}
-                      data-testid={`visit-room-${p.home ?? p.actor}`}
-                    >
-                      {ACTORS[p.home ?? p.actor]} 방으로 가기
-                    </button>
-                  )}
-              </li>
-            ))}
-          </ul>
-          {view.players.length < 2 && (
-            <p className="l-help-text">
-              아직 혼자예요. 친구가 로그인하면 바로 여기에 나타나요.
-            </p>
-          )}
+          <section className="fr-section" aria-labelledby="l-online-title">
+            <h3 id="l-online-title" className="fr-heading">
+              <i className="fr-dot" aria-hidden="true" /> 지금 접속{' '}
+              <small>{Math.max(0, view.players.length - 1)}명</small>
+            </h3>
+            <ul className="fr-list" aria-label="접속 중인 친구">
+              {view.players.map((p) => (
+                <li key={p.id} className="fr-row">
+                  <span className="l-mood-portrait fr-face">
+                    <AvatarView actor={p.actor} look={p.look} portrait />
+                    {p.id !== view.self && <FriendMoodBadge face={view.life?.mood?.faces[p.actor]} />}
+                  </span>
+                  <span className="fr-who">
+                    <strong>
+                      {ACTORS[p.actor]}
+                      {view.host === p.id && <em className="fr-host">방장</em>}
+                    </strong>
+                    <span>
+                      {p.id === view.self
+                        ? '나'
+                        : p.area === 'home'
+                          ? `${ACTORS[p.home ?? p.actor]}의 방`
+                          : (AREA_NAMES[p.area] ?? NAMES.village)}
+                    </span>
+                  </span>
+                  {onVisit &&
+                    p.id !== view.self &&
+                    p.area === 'home' &&
+                    view.life?.rooms?.[p.home ?? p.actor]?.access !== 'closed' && (
+                      <span className="fr-actions">
+                        <GameButton
+                          size="s"
+                          glyph="house"
+                          onClick={() => onVisit(p.home ?? p.actor)}
+                          data-testid={`visit-room-${p.home ?? p.actor}`}
+                        >
+                          {ACTORS[p.home ?? p.actor]} 방으로 가기
+                        </GameButton>
+                      </span>
+                    )}
+                </li>
+              ))}
+            </ul>
+            {view.players.length < 2 && (
+              <p className="fr-note">
+                아직 혼자예요. 친구가 로그인하면 바로 여기에 나타나요.
+              </p>
+            )}
+          </section>
           {restingList}
-          <div className="l-modal-actions">
-            <button className="l-secondary" onClick={onClose}>
-              닫기
-            </button>
-            <button
-              className="l-primary"
+          <div className="l-modal-actions fr-footer">
+            <GameButton onClick={onClose}>닫기</GameButton>
+            <GameButton
+              variant="primary"
+              glyph="arrow"
               disabled={view.players.length < 2}
+              disabledReason="친구가 접속하면 초대할 수 있어요"
               onClick={onInvite}
             >
-              게임 초대하기 <ArrowRight size={16} />
-            </button>
+              게임 초대하기
+            </GameButton>
           </div>
         </>
       ) : (
@@ -205,13 +224,14 @@ export function FriendsModal({
               ? '마을과 연결이 끊겼어요.'
               : '마을에 연결되어 있지 않아요.'}
           </h3>
-          <button
-            className="l-primary"
+          <GameButton
+            variant="primary"
+            glyph="refresh"
             disabled={busy}
             onClick={() => void run(() => room.rejoin(look))}
           >
-            <RotateCcw size={16} /> 다시 들어가기
-          </button>
+            다시 들어가기
+          </GameButton>
         </div>
       )}
       <details className="l-advanced">
@@ -225,10 +245,10 @@ export function FriendsModal({
             <strong>{view.code}</strong>
             <div>
               <button onClick={() => void copy(view.code)}>
-                <Copy size={15} /> 코드 복사
+                <Glyph name="copy" size={16} /> 코드 복사
               </button>
               <button onClick={() => void copy(link())}>
-                <Copy size={15} /> 링크 복사
+                <Glyph name="copy" size={16} /> 링크 복사
               </button>
             </div>
           </div>
@@ -273,7 +293,7 @@ export function FriendsModal({
               disabled={busy}
               onClick={onLeaveRoom}
             >
-              <LogOut size={15} /> 방 나가기
+              <Glyph name="door" size={16} /> 방 나가기
             </button>
           )}
         </div>

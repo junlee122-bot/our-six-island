@@ -8,14 +8,13 @@ import {
   FlipHorizontal2,
   Lock,
   Plus,
-  Redo2,
   RotateCcw,
   RotateCw,
   Trash2,
-  Undo2,
   Users,
   X,
 } from 'lucide-react';
+import { GameButton } from './ui/GameButton';
 import {
   BEDROOM_LIMITS,
   FLOOR_KINDS,
@@ -294,24 +293,32 @@ export function EditBar({
 }) {
   return (
     <div className="b3-editbar" role="toolbar" aria-label="꾸미기 도구">
-      <button type="button" className="b3-primary" onClick={onCatalog} data-testid="room-add">
-        <Plus size={18} /> 놓기
-      </button>
-      <button type="button" aria-label="실행 취소" title="실행 취소 (Ctrl+Z)" disabled={!canUndo} onClick={onUndo} data-testid="room-undo">
-        <Undo2 size={18} />
-      </button>
-      <button type="button" aria-label="다시 실행" title="다시 실행 (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo} data-testid="room-redo">
-        <Redo2 size={18} />
-      </button>
-      <button type="button" onClick={onSettings} data-testid="room-settings">
+      <GameButton variant="primary" glyph="plus" onClick={onCatalog} data-testid="room-add">
+        놓기
+      </GameButton>
+      <GameButton glyph="undo" iconOnly title="실행 취소 (Ctrl+Z)" disabled={!canUndo} onClick={onUndo} data-testid="room-undo">
+        실행 취소
+      </GameButton>
+      <GameButton glyph="redo" iconOnly title="다시 실행 (Ctrl+Shift+Z)" disabled={!canRedo} onClick={onRedo} data-testid="room-redo">
+        다시 실행
+      </GameButton>
+      <GameButton onClick={onSettings} data-testid="room-settings">
         벽·바닥
-      </button>
+      </GameButton>
       {conflicts > 0 && (
         <output className="b3-conflict-count">겹친 곳 {conflicts}</output>
       )}
-      <button type="button" className="b3-done" onClick={onDone} data-testid="room-done">
-        <Check size={18} /> 다 됐어요
-      </button>
+      <GameButton
+        variant="primary"
+        className="b3-done"
+        glyph="check"
+        keyLabel="Esc"
+        aria-keyshortcuts="Escape"
+        onClick={onDone}
+        data-testid="room-done"
+      >
+        다 됐어요
+      </GameButton>
     </div>
   );
 }

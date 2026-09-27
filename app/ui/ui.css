@@ -1,0 +1,423 @@
+/* UI primitives (app/ui/*.tsx). Tokens only (app/ui/tokens.css) — this file is
+   in css-lint "enforce" mode: no raw colours, sizes < 12px, loose radii,
+   shadows or z-index values. */
+
+/* ---------------------------------------------------------------- base type */
+.l-app,
+.ui-kit {
+  font-family: var(--font-body);
+}
+.ui-glyph {
+  flex: none;
+  vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------- <KeyHint> */
+kbd.ui-key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--sp-1);
+  margin: 0 2px;
+  border-radius: var(--r-s);
+  background: var(--keycap-bg);
+  color: var(--keycap-text);
+  box-shadow: var(--edge-ink);
+  font: var(--fw-bold) var(--fs-cap) / 1 var(--font-body);
+  letter-spacing: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.ui-keybar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-1) var(--sp-2);
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-tight);
+}
+.ui-keybar-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  white-space: nowrap;
+}
+.ui-keybar-sep {
+  color: var(--text-soft);
+}
+
+/* ---------------------------------------------------------------- <GameButton> */
+.ui-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--hit);
+  min-width: var(--hit);
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-radius: var(--r-m);
+  font: var(--fw-semi) var(--fs-body) / 1.2 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform var(--dur-quick) var(--ease-out),
+    background-color var(--dur-quick) var(--ease-out);
+}
+/* Small plates keep a 44px hit area around them. */
+.ui-btn[data-size='s'] {
+  min-height: 36px;
+  min-width: 36px;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-body-s);
+}
+.ui-btn[data-size='s']::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+.ui-btn[data-size='l'] {
+  min-height: 52px;
+  padding: 0 var(--sp-5);
+  font-size: var(--fs-title-s);
+}
+.ui-btn[data-icon-only] {
+  padding: 0;
+}
+.ui-btn-label {
+  min-width: 0;
+}
+.ui-btn[data-variant='primary'] {
+  background: var(--accent);
+  color: var(--text-on-accent);
+  box-shadow: var(--edge-press), var(--lift-1);
+}
+.ui-btn[data-variant='secondary'] {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-ink);
+}
+.ui-btn[data-variant='danger'] {
+  background: var(--danger);
+  color: var(--text-on-accent);
+  box-shadow: var(--edge-press), var(--lift-1);
+}
+[data-venue='casino'] .ui-btn[data-variant='danger'] {
+  color: var(--text);
+}
+.ui-btn[data-variant='ghost'] {
+  background: transparent;
+  color: var(--text);
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+}
+.ui-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.ui-btn[data-variant='secondary']:not(:disabled):hover,
+.ui-btn[data-variant='ghost']:not(:disabled):hover {
+  background: var(--surface-sunken);
+}
+.ui-btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+.ui-btn:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+/* Disabled: own colours, no opacity — the text stays ≥ 4.5:1 on every venue. */
+.ui-btn:disabled {
+  opacity: 1;
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  box-shadow: var(--edge-disabled);
+  text-decoration: none;
+  cursor: not-allowed;
+}
+.ui-btn .ui-key {
+  margin-right: calc(var(--sp-1) * -1);
+}
+
+/* ---------------------------------------------------------------- close button */
+button.ui-close {
+  display: inline-grid;
+  place-items: center;
+  width: var(--hit);
+  height: var(--hit);
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-m);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+button.ui-close:hover {
+  background: var(--surface-sunken);
+}
+button.ui-close:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+}
+
+/* ---------------------------------------------------------------- dialog shell
+   <Modal panel="plain|journal|note"> (app/lounge/Modal.tsx). */
+dialog.ui-dialog > header {
+  min-height: var(--hit);
+}
+dialog.ui-dialog > header h2 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title);
+  letter-spacing: 0;
+}
+dialog.ui-dialog[data-panel='journal'] {
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  border: 0;
+  border-radius: var(--r-l);
+  background-color: var(--frame);
+  background-image:
+    repeating-linear-gradient(94deg, rgb(255 255 255 / 0.035) 0 3px, transparent 3px 11px),
+    repeating-linear-gradient(88deg, rgb(0 0 0 / 0.05) 0 1px, transparent 1px 23px);
+  box-shadow: var(--edge-frame), var(--lift-3);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+dialog.ui-dialog[data-panel='journal'] > header {
+  margin: 0 0 var(--sp-3);
+  justify-content: flex-start;
+  flex: none;
+}
+dialog.ui-dialog[data-panel='journal'] > header h2 {
+  padding: 6px var(--sp-4) 5px;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--lift-1);
+  transform: rotate(-1deg);
+}
+dialog.ui-dialog[data-panel='journal'] > header .ui-close {
+  margin-left: auto;
+  color: var(--text-on-frame);
+}
+dialog.ui-dialog[data-panel='journal'] > header .ui-close:hover {
+  background: var(--frame-edge);
+}
+.ui-dialog-page {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--sp-5);
+  border-radius: var(--r-m);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--lift-1);
+}
+dialog.ui-dialog[data-panel='journal'] > .ui-dialog-keys {
+  flex: none;
+  margin-top: var(--sp-3);
+  color: var(--text-on-frame);
+}
+dialog.ui-dialog[data-panel='plain'] > .ui-dialog-keys {
+  margin-top: var(--sp-4);
+}
+dialog.ui-dialog[data-panel='note'] {
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--note);
+  color: var(--text);
+  box-shadow: var(--lift-2);
+}
+dialog.ui-dialog[data-panel='note'] > header h2 {
+  font-family: var(--font-hand);
+  font-weight: var(--fw-bold);
+}
+
+/* ---------------------------------------------------------------- <Panel> */
+.ui-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  color: var(--text);
+}
+.ui-panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+.ui-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+  line-height: var(--lh-tight);
+  letter-spacing: 0;
+}
+.ui-panel-page {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.ui-panel-foot {
+  flex: none;
+}
+.ui-panel[data-panel='journal'] {
+  padding: var(--sp-3);
+  border-radius: var(--r-l);
+  background-color: var(--frame);
+  background-image: repeating-linear-gradient(94deg, rgb(255 255 255 / 0.035) 0 3px, transparent 3px 11px);
+  box-shadow: var(--edge-frame), var(--lift-2);
+}
+.ui-panel[data-panel='journal'] > .ui-panel-head {
+  margin: 0 0 var(--sp-2);
+  min-height: var(--hit);
+}
+.ui-panel[data-panel='journal'] .ui-panel-title {
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+  transform: rotate(-1deg);
+}
+.ui-panel[data-panel='journal'] > .ui-panel-head .ui-close {
+  margin-left: auto;
+  color: var(--text-on-frame);
+}
+.ui-panel[data-panel='journal'] > .ui-panel-page {
+  overflow: auto;
+  padding: var(--sp-4);
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+.ui-panel[data-panel='journal'] > .ui-panel-foot {
+  margin-top: var(--sp-2);
+}
+.ui-panel[data-panel='journal'] > .ui-panel-foot .ui-keybar {
+  color: var(--text-on-frame);
+}
+.ui-panel[data-panel='sign'] {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--hit);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-m);
+  background-color: var(--frame);
+  color: var(--text-on-frame);
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+  box-shadow: var(--edge-frame), var(--lift-1);
+}
+.ui-panel[data-panel='sign'] .ui-panel-title {
+  color: inherit;
+}
+.ui-panel[data-panel='note'] {
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  border-radius: var(--r-s);
+  background: var(--note);
+  color: var(--ink-900);
+  box-shadow: var(--lift-2);
+}
+.ui-panel[data-panel='note']::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  width: 72px;
+  height: 18px;
+  margin-left: -36px;
+  background: var(--tape);
+  transform: rotate(2deg);
+}
+.ui-panel[data-panel='note'] .ui-panel-title {
+  font-family: var(--font-hand);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-title);
+}
+/* felt / hanji carry data-venue (casino / hall), so --surface is cloth or hanji. */
+.ui-panel[data-panel='felt'],
+.ui-panel[data-panel='hanji'] {
+  padding: var(--sp-4);
+  border-radius: var(--r-l);
+  background: var(--surface);
+  box-shadow: var(--edge-frame), var(--lift-2);
+}
+
+/* ---------------------------------------------------------------- <Tabs> */
+.ui-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  border-bottom: 2px solid var(--line-strong);
+}
+.ui-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--hit);
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-radius: var(--r-m) var(--r-m) 0 0;
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+  font: var(--fw-semi) var(--fs-body-s) / 1.2 var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ui-tab[aria-selected='true'] {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--lift-1);
+}
+.ui-tab:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+/* ---------------------------------------------------------------- <EmptyState> */
+.ui-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-4);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-ink);
+  color: var(--text);
+  text-align: center;
+}
+.ui-empty-glyph {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-round);
+  background: var(--surface-sunken);
+}
+.ui-empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+.ui-empty-hint {
+  margin: 0;
+  max-width: 36em;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+}
+.ui-empty-action {
+  margin-top: var(--sp-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-btn {
+    transition: none;
+  }
+}

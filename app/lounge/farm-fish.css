@@ -4,21 +4,23 @@
  * gold stars and a red ink stamp. No gradients-as-decoration on buttons: they
  * are flat ink or leaf blocks with a pressed bottom edge.
  */
+/* The ledger palette is the token palette (app/ui/tokens.css); these names stay
+   for the ledger / fishing / growth sheets that read them. */
 :root {
-  --ff-wood-dark: #4f3421;
-  --ff-wood: #7a5334;
-  --ff-wood-light: #a8784a;
-  --ff-paper: #f8efd9;
-  --ff-paper-2: #efe1c0;
+  --ff-wood-dark: var(--wood-700);
+  --ff-wood: var(--wood-500);
+  --ff-wood-light: var(--wood-300);
+  --ff-paper: var(--paper-100);
+  --ff-paper-2: var(--paper-200);
   --ff-rule: rgb(122 83 52 / 0.12);
-  --ff-ink: #3d2b1d;
-  --ff-ink-soft: #6e5843;
-  --ff-leaf: #5f8a55;
-  --ff-leaf-dark: #41633a;
-  --ff-water: #4f8aa6;
+  --ff-ink: var(--ink-900);
+  --ff-ink-soft: var(--ink-600);
+  --ff-leaf: var(--leaf-600); /* white text 4.8:1 (was #5f8a55, 3.9:1) */
+  --ff-leaf-dark: var(--leaf-800);
+  --ff-water: var(--water-600);
   --ff-water-light: #bfe0e6;
-  --ff-gold: #e3ab3b;
-  --ff-stamp: #c2413a;
+  --ff-gold: var(--gold-400);
+  --ff-stamp: var(--stamp-600);
 }
 
 /* ------------------------------------------------------------ shared buttons */
@@ -36,14 +38,14 @@
 }
 .l-leaf {
   background: var(--ff-leaf);
-  color: #fffbee;
+  color: var(--text-on-accent);
   box-shadow: inset 0 -3px 0 var(--ff-leaf-dark);
 }
 .l-leaf:hover:not(:disabled) {
-  background: #6a9860;
+  background: var(--leaf-800);
 }
 .l-ink {
-  background: #fffaf0;
+  background: var(--paper-50);
   color: var(--ff-ink);
   box-shadow:
     inset 0 0 0 1.5px var(--ff-ink-soft),
@@ -51,6 +53,15 @@
 }
 .l-ink:hover:not(:disabled) {
   background: #fff3da;
+}
+/* Disabled: token colours instead of the global opacity (was 2.6:1). */
+.l-leaf:disabled,
+.l-ink:disabled {
+  opacity: 1;
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+  box-shadow: var(--edge-disabled);
+  cursor: not-allowed;
 }
 .l-leaf kbd,
 .l-ink kbd,
@@ -62,7 +73,7 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 700;
   line-height: 1;
   background: rgb(255 250 235 / 0.9);
@@ -71,7 +82,7 @@
 }
 .l-ink small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-small {
@@ -113,7 +124,7 @@ dialog.l-modal.l-ledger > header h2 {
 }
 dialog.l-modal.l-ledger > header .l-icon {
   margin-left: auto;
-  color: #fbe9c9;
+  color: var(--ink-on-wood);
 }
 .l-ledger-book {
   position: relative;
@@ -126,7 +137,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-book:focus-visible {
   box-shadow:
-    0 0 0 3px #d5943e,
+    0 0 0 3px var(--focus),
     0 6px 0 rgb(0 0 0 / 0.22);
 }
 .l-ledger-page {
@@ -159,7 +170,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   bottom: 14px;
   left: calc(51.9% - 1px);
   width: 2px;
-  background: repeating-linear-gradient(180deg, #a8784a 0 7px, transparent 7px 16px);
+  background: repeating-linear-gradient(180deg, var(--wood-300) 0 7px, transparent 7px 16px);
   pointer-events: none;
 }
 .l-ledger-date {
@@ -215,7 +226,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   left: 10px;
   padding: 1px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: var(--ff-paper);
   background: var(--ff-wood-dark);
@@ -281,7 +292,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   outline-offset: 3px;
 }
 .l-ledger-plot:focus-visible {
-  outline: 3px solid #d5943e;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .l-ledger-num {
@@ -290,7 +301,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   left: 4px;
   top: 3px;
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: rgb(255 244 212 / 0.85);
 }
@@ -348,7 +359,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-lock small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-path {
@@ -357,7 +368,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   padding: 4px 0 2px;
   border-radius: 4px 4px 0 0;
   text-align: center;
-  font-size: 10px;
+  font-size: var(--fs-cap);
   font-weight: 700;
   color: var(--ff-ink-soft);
   background: #e6d3a4;
@@ -415,7 +426,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   box-shadow: inset 0 0 0 1.5px #d9b779;
 }
 .l-ledger-stages small {
-  font-size: 10px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-facts {
@@ -449,7 +460,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-note small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-pouch {
@@ -482,7 +493,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-packet small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-packet kbd {
@@ -550,7 +561,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-friends h4 small {
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-friends ul {
@@ -580,7 +591,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 }
 .l-ledger-keys {
   margin: auto 0 0;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-ledger-keys kbd {
@@ -712,7 +723,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   display: grid;
   justify-items: center;
   width: 54px;
-  font-size: 10px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-angler-now li:not([data-known]) .l-item-icon {
@@ -845,7 +856,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   left: 0;
   width: 6px;
   border-radius: 3px;
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow: 0 0 0 1.5px var(--ff-ink);
   animation: l-reel-run var(--window, 1000ms) linear forwards;
 }
@@ -871,14 +882,14 @@ dialog.l-modal.l-ledger > header .l-icon {
   border-radius: 10px;
   background:
     radial-gradient(circle at 20% 30%, rgb(191 224 230 / 0.7) 0 70px, transparent 120px),
-    #fffaf0;
+    var(--paper-50);
   box-shadow:
     inset 0 0 0 1.5px #d9c29a,
     0 2px 0 rgb(0 0 0 / 0.08);
 }
 .l-catch:not(.is-ok) {
   grid-template-columns: 1fr;
-  background: #fffaf0;
+  background: var(--paper-50);
 }
 .l-catch-art {
   position: relative;
@@ -929,7 +940,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   justify-self: start;
   padding: 1px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: #fff;
   background: #8aa07a;
@@ -1168,7 +1179,7 @@ dialog.l-modal.l-ledger > header .l-icon {
 .hv-pop b {
   font-size: 12px;
   font-weight: 900;
-  color: #fffaf0;
+  color: var(--paper-50);
   text-shadow: 0 1px 0 rgb(0 0 0 / 0.5);
 }
 .hv-pop[data-q='2']::after,

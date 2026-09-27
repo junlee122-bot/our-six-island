@@ -43,7 +43,13 @@ export function AdaptChecklist({ room, view, notify, hidden }: { room: CloudRoom
   const life = view.life;
   const [run, busy] = useLifeAction(room, notify);
   const [dismissed, setDismissed] = useState(() => recall(HIDE_KEY) === '1');
-  const [folded, setFolded] = useState(() => recall(FOLD_KEY) === '1');
+  // Folded by the player ('1'), opened by the player ('0'), or unset: then it
+  // starts folded on short screens, where the open list would reach the
+  // minimap in the left column (UI audit P0-2 at 1280×720).
+  const [folded, setFolded] = useState(() => {
+    const saved = recall(FOLD_KEY);
+    return saved === '1' || (saved === null && typeof window !== 'undefined' && window.innerHeight < 820);
+  });
   const [, setTick] = useState(0);
   useEffect(() => {
     const again = () => setTick((t) => t + 1);
@@ -74,7 +80,7 @@ export function AdaptChecklist({ room, view, notify, hidden }: { room: CloudRoom
           aria-label={folded ? '펼치기' : '접기'}
           onClick={() => {
             setFolded(!folded);
-            remember(FOLD_KEY, folded ? null : '1');
+            remember(FOLD_KEY, folded ? '0' : '1');
           }}
         >
           {folded ? <ChevronDown size={15} /> : <ChevronUp size={15} />}

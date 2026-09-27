@@ -7,7 +7,7 @@
 :root {
   --gr-copper: #c77b43;
   --gr-iron: #8e99a4;
-  --gr-gold: #e3ab3b;
+  --gr-gold: var(--gold-400);
   --gr-star: #8fb8e8;
   --gr-ribbon: #b8503f;
 }
@@ -53,7 +53,7 @@ dialog.l-modal.l-growth > header .l-icon,
 dialog.l-modal.l-forge > header .l-icon,
 dialog.l-modal.l-prof-modal > header .l-icon {
   margin-left: auto;
-  color: #fbe9c9;
+  color: var(--ink-on-wood);
 }
 .l-growth kbd,
 .l-forge kbd,
@@ -65,7 +65,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   height: 20px;
   padding: 0 5px;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 700;
   line-height: 1;
   background: rgb(255 250 235 / 0.9);
@@ -85,7 +85,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-growth-book:focus-visible {
   box-shadow:
-    0 0 0 3px #d5943e,
+    0 0 0 3px var(--focus),
     0 6px 0 rgb(0 0 0 / 0.22);
 }
 .l-growth-ribbons {
@@ -106,13 +106,13 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 8px 8px 0 0;
   font-weight: 800;
   font-size: 14px;
-  color: #fbe9c9;
+  color: var(--ink-on-wood);
   background: #6b4a30;
   box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.18);
   transition: transform 0.15s, background-color 0.15s;
 }
 .l-growth-ribbon kbd {
-  opacity: 0.8;
+  opacity: 1;
 }
 .l-growth-ribbon:hover {
   background: #7d5739;
@@ -162,7 +162,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   bottom: 14px;
   left: calc(49.5% - 1px);
   width: 2px;
-  background: repeating-linear-gradient(180deg, #a8784a 0 7px, transparent 7px 16px);
+  background: repeating-linear-gradient(180deg, var(--wood-300) 0 7px, transparent 7px 16px);
   pointer-events: none;
 }
 .l-growth-today {
@@ -223,7 +223,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-skill-row:hover,
 .l-tool-row:hover {
-  background: #fffaf0;
+  background: var(--paper-50);
 }
 .l-skill-row[aria-current='true'],
 .l-tool-row[aria-current='true'] {
@@ -235,7 +235,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-skill-row:focus-visible,
 .l-tool-row:focus-visible {
-  outline: 3px solid #d5943e;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 .l-skill-medal {
@@ -247,9 +247,9 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.55), transparent 55%),
-    color-mix(in srgb, var(--c, #a8784a) 38%, #fff6e0);
+    color-mix(in srgb, var(--c, var(--wood-300)) 38%, #fff6e0);
   box-shadow:
-    inset 0 0 0 2.5px var(--c, #a8784a),
+    inset 0 0 0 2.5px var(--c, var(--wood-300)),
     0 2px 0 rgb(61 43 29 / 0.25);
 }
 .l-skill-medal.big {
@@ -282,15 +282,15 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   transform: rotate(-2deg);
 }
 .l-skill-lv[data-max] {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--c, var(--ff-stamp));
 }
 .l-skill-prof {
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 700;
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--c, var(--ff-leaf));
 }
 .l-skill-pick {
@@ -299,7 +299,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 3px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: #7a4d0e;
   background: #ffe7a6;
@@ -338,7 +338,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   flex-wrap: wrap;
   align-items: center;
   gap: 4px 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-skill-cap,
@@ -384,7 +384,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 .l-skill-card header p,
 .l-tool-card header p {
   margin: 2px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   color: var(--ff-ink-soft);
 }
 .l-skill-card header p.l-skill-region {
@@ -399,7 +399,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
 }
 .l-perk-ladder li {
   display: flex;
@@ -408,14 +408,16 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   min-height: 26px;
   padding: 2px 6px;
   border-radius: 6px;
-  opacity: 0.55;
+  /* Locked perks read as "not yet" by the hollow level badge, not by fading
+     the text (was opacity .55 → 1.7–2.5:1). */
+  color: var(--text-soft);
 }
 .l-perk-ladder li[data-got] {
-  opacity: 1;
+  color: var(--text);
   background: rgb(255 255 255 / 0.55);
 }
 .l-perk-ladder li[data-soon] small {
-  color: #9a7d5b;
+  color: var(--text-soft);
 }
 .l-perk-ladder li[data-prof] {
   font-weight: 800;
@@ -424,16 +426,19 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--ff-paper);
-  background: #b09576;
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
 }
 .l-perk-ladder li[data-got] .l-perk-lv {
+  color: var(--text-on-accent);
   background: var(--c, var(--ff-leaf));
+  box-shadow: none;
 }
 .l-perk-ladder li[data-prof] .l-perk-lv {
   border-radius: 5px;
@@ -457,7 +462,8 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   background: #fffdf4;
 }
 .l-prof-branch[data-dim] {
-  opacity: 0.5;
+  color: var(--text-soft);
+  background: transparent;
 }
 .l-prof-node {
   display: grid;
@@ -471,11 +477,11 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   font-size: 13px;
 }
 .l-prof-node small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-prof-node[data-chosen] {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--c, var(--ff-leaf));
 }
 .l-prof-node[data-chosen] small {
@@ -554,9 +560,9 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   top: -8px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--ff-stamp);
   transform: rotate(3deg);
 }
@@ -589,7 +595,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-tool-next p {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
 }
 .l-tool-cost {
   display: flex;
@@ -605,9 +611,9 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 5px;
   padding: 3px 9px 3px 5px;
   border-radius: 999px;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   font-weight: 700;
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow: inset 0 0 0 1.5px #dcc59b;
 }
 .l-tool-cost li[data-short] {
@@ -620,8 +626,8 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   padding: 0 5px;
   border-radius: 4px;
   font-style: normal;
-  font-size: 11px;
-  color: #fffbee;
+  font-size: var(--fs-cap);
+  color: var(--text-on-accent);
   background: var(--ff-leaf);
 }
 
@@ -635,7 +641,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-growth-nodes h4 small {
   font-weight: 400;
-  font-size: 11.5px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-growth-nodes ul {
@@ -652,21 +658,23 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 6px;
   padding: 5px 6px 5px 8px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   font-weight: 700;
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow: inset 0 0 0 1.5px #e3cf9e;
 }
 .l-growth-nodes li > span {
   flex: 1;
 }
 .l-growth-nodes li[data-taken] {
-  opacity: 0.55;
+  color: var(--text-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--line-strong);
   background: transparent;
   box-shadow: inset 0 0 0 1.5px rgb(122 83 52 / 0.15);
 }
 .l-growth-nodes li small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 400;
   color: var(--ff-ink-soft);
 }
@@ -694,7 +702,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 14px;
   text-align: center;
   color: var(--ff-ink);
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow:
     inset 0 0 0 2px rgb(122 83 52 / 0.2),
     0 4px 0 rgb(61 43 29 / 0.15);
@@ -718,8 +726,8 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.6), transparent 55%),
-    color-mix(in srgb, var(--c, #a8784a) 35%, #fff6e0);
-  box-shadow: inset 0 0 0 3px var(--c, #a8784a);
+    color-mix(in srgb, var(--c, var(--wood-300)) 35%, #fff6e0);
+  box-shadow: inset 0 0 0 3px var(--c, var(--wood-300));
 }
 .l-prof-card strong {
   font-size: 22px;
@@ -785,7 +793,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 10px;
   text-align: center;
   color: var(--ff-ink);
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow:
     inset 0 0 0 1.5px rgb(122 83 52 / 0.3),
     0 2px 0 rgb(61 43 29 / 0.2);
@@ -793,11 +801,11 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   transition: transform 0.15s, box-shadow 0.15s;
 }
 .l-research-site b {
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   line-height: 1.2;
 }
 .l-research-site small {
-  font-size: 10.5px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-research-pin {
@@ -842,7 +850,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   z-index: 1;
 }
 .l-research-site:focus-visible {
-  outline: 3px solid #d5943e;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 .l-research-card {
@@ -850,7 +858,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 8px;
   padding: 14px 16px;
   border-radius: 10px;
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow:
     inset 0 0 0 1.5px rgb(122 83 52 / 0.18),
     3px 4px 0 rgb(122 83 52 / 0.12);
@@ -903,7 +911,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 .l-research-req,
 .l-research-soon {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   color: var(--ff-ink-soft);
 }
 .l-research-soon {
@@ -948,7 +956,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   font-size: 13px;
 }
 .l-research-slot-text small {
-  font-size: 11.5px;
+  font-size: var(--fs-cap);
   color: var(--ff-ink-soft);
 }
 .l-research-bar {
@@ -989,11 +997,11 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   font-size: 12px;
   font-weight: 700;
   color: var(--ff-ink);
-  background: #fffaf0;
+  background: var(--paper-50);
   box-shadow: inset 0 0 0 1.5px #dcc59b;
 }
 .l-research .l-beom-steps button[aria-pressed='true'] {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--ff-wood);
   box-shadow: inset 0 -2px 0 var(--ff-wood-dark);
 }
@@ -1004,7 +1012,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 10px;
 }
 .l-research-helpers small {
-  font-size: 12.5px;
+  font-size: var(--fs-body-s);
   color: var(--ff-ink-soft);
 }
 .l-research-seals {
@@ -1017,14 +1025,15 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgb(61 43 29 / 0.4);
-  background: rgb(122 83 52 / 0.08);
-  box-shadow: inset 0 0 0 1.5px rgb(122 83 52 / 0.2);
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  /* Not yet stamped: hollow ring, but the initial stays readable (was 2.2:1). */
+  color: var(--text-soft);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1.5px var(--line-strong);
 }
 .l-research-seal[data-on] {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--c);
   box-shadow:
     inset 0 0 0 2px rgb(255 255 255 / 0.5),
@@ -1051,7 +1060,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
 }
 .l-forge-body:focus-visible {
   box-shadow:
-    0 0 0 3px #d5943e,
+    0 0 0 3px var(--focus),
     0 6px 0 rgb(0 0 0 / 0.22);
 }
 .l-forge-counter {
@@ -1086,7 +1095,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   background:
     radial-gradient(circle at 50% 70%, #ffb45e 0 30%, transparent 60%),
     #5b3d25;
-  box-shadow: inset 0 0 0 3px #3d2b1d;
+  box-shadow: inset 0 0 0 3px var(--ink-900);
 }
 .l-forge-job,
 .l-forge-letter,
@@ -1119,13 +1128,13 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   height: 60px;
   border-radius: 10px;
   background: #5b3d25;
-  box-shadow: inset 0 -4px 0 #3d2b1d;
+  box-shadow: inset 0 -4px 0 var(--ink-900);
   animation: l-gr-hammer 1.1s ease-in-out infinite;
 }
 .l-forge-job[data-ready] .l-forge-anvil {
   animation: none;
   box-shadow:
-    inset 0 -4px 0 #3d2b1d,
+    inset 0 -4px 0 var(--ink-900),
     0 0 16px #ffb45e;
 }
 .l-forge-lift {
@@ -1172,24 +1181,24 @@ dialog.l-modal.l-prof-modal > header .l-icon {
     3px 4px 0 rgb(122 83 52 / 0.16);
 }
 .l-forge-tool:focus-visible {
-  outline: 3px solid #d5943e;
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 .l-forge-status {
   flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
   color: var(--ff-ink-soft);
   background: rgb(122 83 52 / 0.1);
 }
 .l-forge-tool[data-state='ok'] .l-forge-status {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--ff-leaf);
 }
 .l-forge-tool[data-state='away'] .l-forge-status {
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--ff-stamp);
 }
 .l-forge-detail {
@@ -1270,8 +1279,8 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 50%;
   background:
     radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.6), transparent 55%),
-    color-mix(in srgb, var(--c, #a8784a) 35%, #fff6e0);
-  box-shadow: inset 0 0 0 3px var(--c, #a8784a);
+    color-mix(in srgb, var(--c, var(--wood-300)) 35%, #fff6e0);
+  box-shadow: inset 0 0 0 3px var(--c, var(--wood-300));
   animation: l-gr-spin 0.9s cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 .l-levelup-text {
@@ -1279,7 +1288,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   gap: 1px;
 }
 .l-levelup-text small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 900;
   letter-spacing: 0.08em;
   color: var(--ff-stamp);
@@ -1303,7 +1312,7 @@ dialog.l-modal.l-prof-modal > header .l-icon {
   border-radius: 9px;
   font-weight: 800;
   font-size: 13px;
-  color: #fffbee;
+  color: var(--text-on-accent);
   background: var(--c, var(--ff-leaf));
   box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
 }

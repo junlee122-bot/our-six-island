@@ -214,7 +214,11 @@ const built = await build({
     },
   ],
   resolve: { alias: { '@': root } },
-  define: { 'process.env.NODE_ENV': '"production"' },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    // Dev-only primitives page (app/ui/kit-gate.ts): only with UI_KIT=1.
+    __UI_KIT__: JSON.stringify(!!(process.env.UI_KIT || process.env.VITE_UI_KIT)),
+  },
   build: {
     write: false,
     target: 'es2020',
@@ -269,6 +273,14 @@ const byName = new Map(output.map((item) => [item.fileName, item]));
 })(entry);
 if (!initialCss.size) throw new Error('The build must include the game styles.');
 const lazyChunks = output.filter((item) => item.type === 'chunk' && !item.isEntry);
+// Bundled fonts (app/ui/fonts.css): preload the body face's core subset so the
+// first screen does not flash the fallback; report the payload.
+const fontAssets = output.filter((item) => item.type === 'asset' && item.fileName.endsWith('.woff2'));
+const bodyFont = fontAssets.find((item) => /pretendard-400-core/.test(item.fileName));
+if (!bodyFont) throw new Error('The body font (pretendard-400-core) is missing from the build.');
+const FONT_FAIL_BYTES = 2.5 * KB * KB;
+const fontBytes = fontAssets.reduce((sum, item) => sum + item.source.length, 0);
+if (fontBytes > FONT_FAIL_BYTES) throw new Error(`Fonts over budget (${Math.round(fontBytes / KB)}KB)`);
 
 // ---- licenses and page ---------------------------------------------------
 const licenses = {
@@ -304,6 +316,7 @@ ${siteUrl !== '/' ? `<meta property="og:url" content="${escapeAttribute(siteUrl)
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="범타듀 밸리의 일곱 친구">
 <meta name="twitter:card" content="summary_large_image">
+<link rel="preload" href="./${bodyFont.fileName}" as="font" type="font/woff2" crossorigin>
 ${[...initialCss].map((css) => `<link rel="stylesheet" href="./${css}">`).join('\n')}
 ${[...initialJs].map((js) => `<link rel="modulepreload" href="./${js}">`).join('\n')}
 <script type="module" src="./${entry.fileName}"></script>
@@ -343,6 +356,7 @@ console.log(
   [
     `Pages build: ${path.relative(root, outDirectory) || '.'}/index.html (${kb(Buffer.byteLength(html))})`,
     `  entry ${entry.fileName} ${kb(Buffer.byteLength(entry.code))}, ${lazyChunks.length} other chunk(s), JS total ${kb(jsBytes)}, CSS ${[...initialCss].join(', ')}`,
+    `  ${fontAssets.length} font files (${kb(fontBytes)}; first screen preloads ${bodyFont.fileName} ${kb(bodyFont.source.length)})`,
     `  ${images.length} images (${kb(imageBytes)}) + ${models.length} models (${kb(modelBytes)}) + ${musicCount} music (${kb(musicBytes)}) as content-hashed files`,
   ].join('\n'),
 );

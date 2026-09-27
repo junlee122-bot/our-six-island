@@ -1,0 +1,191 @@
+/* 범타듀 밸리 design tokens — the only stylesheet allowed to hold raw colours
+   (scripts/css-lint.mjs). Two layers:
+     :root              the village (default venue): walnut frame, cream paper, brown ink
+     [data-venue=…]     hall / casino / tavern re-fill the SAME semantic names
+   Components use the semantic names (--surface, --text, --accent …), never the
+   palette steps, so a venue only swaps values. Contrast pairs are checked in
+   tests/ui-tokens.test.mjs (text ≥ 4.5:1 on every surface it is used on). */
+:root {
+  /* ---- palette ---------------------------------------------------------- */
+  --wood-900: #3b2616;
+  --wood-700: #4f3421;
+  --wood-500: #7a5334;
+  --wood-300: #a8784a;
+  --paper-50: #fffaf0;
+  --paper-100: #f8efd9;
+  --paper-200: #efe1c0;
+  --paper-300: #e2d0a8;
+  --ink-900: #3d2b1d;
+  --ink-700: #5a4331;
+  --ink-600: #6e5843;
+  --ink-on-wood: #fbe9c9;
+  --leaf-100: #e4ecd3;
+  --leaf-600: #4f7a45;
+  --leaf-800: #3a5c33;
+  --water-600: #3f7d99;
+  --gold-400: #e3ab3b;
+  --gold-700: #8a5f12;
+  --stamp-100: #f8e3dc;
+  --stamp-600: #b93a33;
+  --stamp-800: #8e2a20;
+  --note-50: #fffdf3;
+
+  /* ---- semantic colour (village) ---------------------------------------- */
+  --surface-app: #efe6d0; /* behind windows (menus, login) */
+  --surface: var(--paper-100); /* page / board */
+  --surface-raised: var(--paper-50); /* cards, inputs, secondary buttons */
+  --surface-sunken: var(--paper-200); /* wells, tracks, empty slots */
+  --frame: var(--wood-500); /* wooden binding around a panel */
+  --frame-edge: var(--wood-700);
+  --text: var(--ink-900); /* 11.8:1 on paper */
+  --text-soft: var(--ink-600); /* 5.9:1 on paper — secondary copy, never lighter */
+  --text-on-frame: var(--ink-on-wood);
+  --text-on-accent: #fffbee;
+  --line: #d8c6a2; /* hairlines, dividers (decorative) */
+  --line-strong: var(--wood-300); /* control outlines */
+  --accent: var(--leaf-600);
+  --accent-edge: var(--leaf-800);
+  --accent-soft: var(--leaf-100);
+  --danger: var(--stamp-600);
+  --danger-edge: var(--stamp-800);
+  --danger-soft: var(--stamp-100);
+  --info: var(--water-600);
+  --highlight: var(--gold-400);
+  --focus: #b8661a; /* 3px ring, ≥ 3:1 on paper and on wood-300 */
+  --disabled-bg: #e5d9c0;
+  --disabled-text: #66513d;
+  --disabled-edge: #c9b48e;
+  --note: var(--note-50);
+  --tape: rgb(227 171 59 / 0.55);
+  --toast-bg: var(--wood-700);
+  --toast-text: var(--ink-on-wood);
+  --scrim: rgb(40 28 16 / 0.45);
+  --keycap-bg: var(--paper-50);
+  --keycap-text: var(--ink-900);
+  --keycap-edge: rgb(61 43 29 / 0.35);
+  --glyph-ink: #4a3423;
+
+  /* ---- type ----------------------------------------------------------------
+     display = Jua (signs, titles, big numbers) · body = Pretendard · hand = Gaegu.
+     Six steps, nothing below 12px. Weights: 400 / 600 / 700 only. */
+  --font-display: 'Jua', 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  --font-body: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  --font-hand: 'Gaegu', 'Pretendard', 'Malgun Gothic', sans-serif;
+  --fs-cap: 12px;
+  --fs-body-s: 13px;
+  --fs-body: 15px;
+  --fs-title-s: 18px;
+  --fs-title: 22px;
+  --fs-display: 30px;
+  --lh-tight: 1.2;
+  --lh-body: 1.55;
+  --fw-regular: 400;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  /* ---- space (×4) --------------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --hit: 44px; /* minimum hit target */
+
+  /* ---- shape: three radii (+ round for pills and portraits) ---------------- */
+  --r-s: 6px; /* keycaps, chips */
+  --r-m: 10px; /* buttons, cells, cards */
+  --r-l: 14px; /* windows */
+  --r-round: 999px;
+
+  /* ---- depth: three lifts, plus edges that draw pressed wood / ink outlines */
+  --lift-1: 0 2px 0 rgb(59 38 22 / 0.35);
+  --lift-2: 0 4px 0 rgb(59 38 22 / 0.3), 0 14px 30px rgb(30 20 10 / 0.24);
+  --lift-3: 0 28px 80px rgb(20 14 8 / 0.45);
+  --edge-press: inset 0 -3px 0 rgb(0 0 0 / 0.22);
+  --edge-ink: inset 0 0 0 1.5px var(--line-strong), inset 0 -3px 0 rgb(61 43 29 / 0.18);
+  --edge-frame: inset 0 0 0 3px var(--frame-edge), inset 0 0 0 6px rgb(255 230 190 / 0.1);
+  --edge-disabled: inset 0 0 0 1.5px var(--disabled-edge);
+  --ring-focus: 0 0 0 3px var(--focus);
+
+  /* ---- layers: the only z-index values components may use ------------------- */
+  --z-scene: 0;
+  --z-base: 1;
+  --z-raised: 2;
+  --z-world-label: 5;
+  --z-sticky: 20;
+  --z-hud: 30;
+  --z-hud-pop: 35;
+  --z-overlay: 40;
+  --z-coach: 900;
+  --z-toast: 1000;
+
+  /* ---- motion ---------------------------------------------------------------- */
+  --dur-quick: 120ms; /* presses */
+  --dur-ui: 200ms; /* windows, tabs */
+  --dur-scene: 450ms; /* scene changes, banners */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---- venues: same names, different wood / cloth ------------------------------ */
+[data-venue='hall'] {
+  --surface: #f6ecd8; /* hanji */
+  --surface-raised: #fffaf0;
+  --surface-sunken: #eadbbd;
+  --frame: #5a3322; /* lacquer */
+  --frame-edge: #3a1f14;
+  --text: #3a2618;
+  --text-soft: #6b4a36;
+  --line: #d9c2a0;
+  --line-strong: #9a6a48;
+  --accent: #2f6b5a; /* jade */
+  --accent-edge: #1f4a3e;
+  --accent-soft: #dcebe4;
+  --danger: #b8432f; /* dancheong red */
+  --focus: #b8661a;
+  --disabled-bg: #e6d6b8;
+  --disabled-text: #654835;
+}
+[data-venue='casino'] {
+  --surface: #16443a; /* felt */
+  --surface-raised: #1f5a45;
+  --surface-sunken: #0f3329;
+  --frame: #6b1f24; /* oxblood rail */
+  --frame-edge: #3d0f13;
+  --text: #f4ecd6;
+  --text-soft: #d2c5a5;
+  --text-on-frame: #f4ecd6;
+  --text-on-accent: #1b140a;
+  --line: rgb(244 236 214 / 0.22);
+  --line-strong: #b89a5a;
+  --accent: #c9a24a; /* brass */
+  --accent-edge: #8a6a22;
+  --accent-soft: rgb(201 162 74 / 0.18);
+  --danger: #c4473d;
+  --danger-edge: #7e241d;
+  --focus: #f3d98a;
+  --disabled-bg: #2b4c42;
+  --disabled-text: #cdbf9e;
+  --disabled-edge: #54715f;
+  --keycap-bg: #f4ecd6;
+  --keycap-text: #1b140a;
+  --glyph-ink: #f4ecd6;
+}
+[data-venue='tavern'] {
+  --surface: #efdcb6; /* parchment */
+  --surface-raised: #f7ead0;
+  --surface-sunken: #e3cc9f;
+  --frame: #2e1f16; /* oak */
+  --frame-edge: #1a110b;
+  --text: #2e1f16;
+  --text-soft: #5d4632;
+  --line: #cdb286;
+  --line-strong: #8a6a45;
+  --accent: #a8612a; /* amber */
+  --accent-edge: #6f3c16;
+  --accent-soft: #f1d9b8;
+  --focus: #8a4a12;
+  --disabled-bg: #dfc89c;
+  --disabled-text: #574230;
+}

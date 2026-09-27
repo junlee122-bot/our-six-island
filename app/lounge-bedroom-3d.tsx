@@ -75,6 +75,9 @@ import {
   type WalkPoint,
 } from './lounge-bedroom-navigation';
 import { ActionButton } from './lounge/ActionButton';
+import { EmptyState } from './ui/EmptyState';
+import { GameButton } from './ui/GameButton';
+import { KeyHintBar } from './ui/KeyHint';
 import type { ActionKind } from './lounge-flow';
 import { boundAction, boundDirection, sceneKeyTarget } from './lounge-scene-keys';
 import { getSettings, onSettingsChange, qualityProfile, useSettings } from './lounge-settings';
@@ -365,16 +368,26 @@ export function Bedroom3D({
   };
   // Stable entry points for the three.js handlers (setters never change).
   const setters = useRef({ setSelectedId, setDraft, setDragging });
-  const editOps = useRef({ commitItem, remove, undo, redo });
-  useLayoutEffect(() => {
-    editOps.current = { commitItem, remove, undo, redo };
-  });
   const stopEditing = () => {
     setEditing(false);
     setSelectedId(null);
     setDraft(null);
     setPanel(null);
   };
+  // Esc while decorating steps back one layer: close the open drawer, then
+  // let go of the chosen item, then leave decorate mode (= 다 됐어요).
+  const escapeEdit = () => {
+    if (panel) setPanel(null);
+    else if (selectedId) setSelectedId(null);
+    else {
+      stopEditing();
+      hostRef.current?.focus({ preventScroll: true });
+    }
+  };
+  const editOps = useRef({ commitItem, remove, undo, redo, escapeEdit });
+  useLayoutEffect(() => {
+    editOps.current = { commitItem, remove, undo, redo, escapeEdit };
+  });
   // A room replaced from elsewhere (other device, account switch) starts a new history.
   const key = roomKey(room);
   const [trackedKey, setTrackedKey] = useState(key);
@@ -717,6 +730,11 @@ export function Bedroom3D({
           editOps.current.redo();
           return;
         }
+        if (event.key === 'Escape' && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+          event.preventDefault();
+          editOps.current.escapeEdit();
+          return;
+        }
         // Delete / R / arrows on a focused toolbar button stay that button's.
         if (at !== 'scene') return;
         const id = latest.current.selectedId,
@@ -725,8 +743,7 @@ export function Bedroom3D({
         if (event.key === 'Delete' || event.key === 'Backspace') {
           event.preventDefault();
           editOps.current.remove(item.id);
-        } else if (event.key === 'Escape') setters.current.setSelectedId(null);
-        else if (event.code === 'KeyR') {
+        } else if (event.code === 'KeyR') {
           event.preventDefault();
           editOps.current.commitItem(rotateItem(latest.current.room, item, event.shiftKey ? -90 : 90), '방향을 바꿨어요.');
         } else {
@@ -1262,6 +1279,31 @@ export function Bedroom3D({
                 }}
                 onDelete={() => remove(selected.id)}
                 onDeselect={() => setSelectedId(null)}
+              />
+            )}
+            {wideEdit && !panel && !selected && (
+              <EmptyState
+                className="b3-edit-empty"
+                glyph="armchair"
+                title="무엇을 꾸밀까요?"
+                hint="방 안의 소품을 클릭하면 여기에서 돌리고, 크기를 바꾸고, 치울 수 있어요. 새 소품은 서랍에서 골라요."
+                action={
+                  <GameButton variant="primary" glyph="plus" onClick={() => setPanel('catalog')}>
+                    놓을 것 고르기
+                  </GameButton>
+                }
+              />
+            )}
+            {wideEdit && (
+              <KeyHintBar
+                className="b3-edit-keys"
+                label="꾸미기 키 안내"
+                items={[
+                  { keys: [{ label: 'R' }], does: '돌리기' },
+                  { keys: [{ label: 'Delete' }], does: '치우기' },
+                  { keys: [{ label: 'Ctrl+Z' }], does: '되돌리기' },
+                  { keys: [{ code: 'Escape' }], does: panel ? '서랍 닫기' : selected ? '고르기 풀기' : '다 됐어요' },
+                ]}
               />
             )}
             <EditBar

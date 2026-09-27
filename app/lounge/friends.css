@@ -1,0 +1,111 @@
+/* 친구들 window (FriendsModal.tsx) on the journal skin. Tokens only.
+   One friend per row — avatar · name over status · actions — so names and
+   buttons never wrap one character per line (UI audit P0-1). */
+.fr-intro {
+  margin: 0 0 var(--sp-3);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+}
+.fr-section + .fr-section {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 2px dotted var(--line);
+}
+.fr-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-2);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+  letter-spacing: 0;
+}
+.fr-heading small {
+  font-family: var(--font-body);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-semi);
+}
+.fr-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-round);
+  background: var(--accent);
+}
+.fr-list {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fr-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 56px;
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-1);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+}
+.fr-face .avatar-view,
+.fr-face .l-resting-face {
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: var(--r-round);
+  background: var(--surface-sunken);
+}
+.fr-row.is-resting .l-resting-face {
+  filter: grayscale(0.35);
+}
+.fr-who {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.fr-who strong {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title-s);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+}
+.fr-who > span {
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fr-host {
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-round);
+  background: var(--highlight);
+  color: var(--text);
+  font: var(--fw-bold) var(--fs-cap) / 1.2 var(--font-body);
+  font-style: normal;
+}
+.fr-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--sp-2);
+}
+.fr-note {
+  margin: var(--sp-2) 0 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.fr-footer {
+  margin-top: var(--sp-5);
+}
+.fr-modal .l-advanced {
+  border-top-color: var(--line);
+}

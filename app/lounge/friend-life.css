@@ -145,7 +145,7 @@
   border-radius: 5px;
   background: #3e5a44;
   color: #fff;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 800;
 }
 
@@ -211,7 +211,7 @@
   color: #c43d33;
 }
 .l-heart-rewards small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: #b3453b;
 }
 .l-heart-fade {
@@ -282,7 +282,7 @@
 .l-museum-plus {
   margin-left: 2px;
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-cap);
   color: #5b8f5e;
   font-weight: 800;
 }
@@ -361,7 +361,7 @@
   padding: 14px;
   border: 1px solid #eadfbf;
   border-radius: 14px;
-  background: #fffaf0;
+  background: var(--paper-50);
 }
 .l-fete-card h3 {
   display: flex;
@@ -541,7 +541,7 @@
   cursor: default;
 }
 .l-fete-flowers small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 /* 송편 빚기 */
@@ -552,7 +552,7 @@
   padding: 20px 16px;
   border: 1px solid #eadfbf;
   border-radius: 14px;
-  background: radial-gradient(circle at 50% 0%, #fff6d8, #fffaf0 70%);
+  background: radial-gradient(circle at 50% 0%, #fff6d8, var(--paper-50) 70%);
 }
 .l-songpyeon-row {
   display: flex;
@@ -694,7 +694,7 @@
   min-width: 0;
 }
 .l-adapt-text small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: #7a7466;
   word-break: keep-all;
 }
@@ -708,7 +708,7 @@
 }
 .l-adapt-foot {
   margin: 8px 0 0;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: #7a7466;
 }
 .l-fete-banner {
@@ -737,7 +737,7 @@
   display: grid;
 }
 .l-fete-banner small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   opacity: 0.85;
 }
 .l-fete-banner .l-primary,

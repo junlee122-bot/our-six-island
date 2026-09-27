@@ -61,65 +61,8 @@
 }
 .l-app .l-world-header .l-header-badge {
   background: #b93a2e;
-  font-size: calc(11px * var(--text-scale, 1));
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 800;
-}
-
-/* ---------------------------------------------------------- friends window */
-.l-online-title,
-.l-resting h3 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 14px 0 8px;
-  font-size: 14px;
-}
-.l-online-title small,
-.l-resting h3 small {
-  color: #56624b;
-  font-size: 12px;
-  font-weight: 600;
-}
-.l-online-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #2f9e55;
-}
-.l-resting {
-  margin-top: 6px;
-  padding-top: 4px;
-  border-top: 1px solid #e4e7d8;
-}
-.l-online-list.is-resting li > strong {
-  color: #3e4638;
-}
-.l-online-list.is-resting li > span:not(.l-resting-actions) {
-  color: #5c6454;
-}
-.l-resting-face {
-  display: block;
-  width: 36px;
-  height: 36px;
-  flex: none;
-  overflow: hidden;
-  border-radius: 50%;
-  opacity: 0.72;
-  filter: grayscale(0.35);
-}
-.l-resting-face .avatar-view {
-  width: 100%;
-  height: 100%;
-}
-.l-resting-actions {
-  display: inline-flex;
-  gap: 6px;
-  margin-left: auto;
-}
-.l-resting-actions button {
-  min-height: 36px;
-  padding: 0 10px;
-  font-size: 13px;
 }
 
 /* ---------------------------------------------------------- invite window */
@@ -243,7 +186,7 @@
 .l-sheet-seats li.is-called small {
   white-space: nowrap;
   color: #6a4a12;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -480,7 +423,7 @@
   border-radius: 5px;
   background: #fff;
   color: #6b5a40;
-  font-size: calc(11px * var(--text-scale, 1));
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   line-height: 1.4;
 }
 .b3-visit-dock .b3-chat-button[aria-expanded='true'] {
@@ -539,7 +482,7 @@
   padding: 0;
   margin: 0 0 0 auto;
   color: #5a4e3c;
-  font-size: calc(11px * var(--text-scale, 1));
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   text-align: right;
 }
 .l-app .b3-scene-footer .b3-credit a {
@@ -568,7 +511,7 @@
   height: 7px;
   border-radius: 50%;
   background: #2f9e55;
-  box-shadow: 0 0 0 1.5px #fffbee;
+  box-shadow: 0 0 0 1.5px var(--text-on-accent);
 }
 .l-app .hv-tag.is-away {
   background: #f1efe6d9;
@@ -583,7 +526,7 @@
   border-radius: 6px;
   background: #e2e0d5;
   color: #4a4d44;
-  font-size: calc(10.5px * var(--text-scale, 1));
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 700;
 }
 .l-app .hv-self {
@@ -609,7 +552,7 @@
   background: #fbf1dc;
   color: #3d2c1b;
   box-shadow: 0 1px 0 #6e4f33, 0 2px 5px #2a1d1033;
-  font-size: calc(11px * var(--text-scale, 1));
+  font-size: calc(var(--fs-cap) * var(--text-scale, 1));
   font-weight: 750;
   letter-spacing: -0.01em;
   line-height: 1.35;
@@ -681,15 +624,21 @@
 /* Disabled buttons: grey with dark grey text instead of a faded colour
    (the faded blue-green read as white on pale blue). */
 .l-app .l-primary:disabled,
-dialog.l-modal .l-primary:disabled {
+dialog.l-modal .l-primary:disabled,
+.l-app .l-danger:disabled,
+dialog.l-modal .l-danger:disabled {
   opacity: 1;
-  background: #dcdfd3;
-  color: #474c42;
+  background: var(--disabled-bg);
+  border-color: var(--disabled-edge);
+  color: var(--disabled-text);
+  box-shadow: none;
 }
 .l-app .l-secondary:disabled,
 dialog.l-modal .l-secondary:disabled {
   opacity: 1;
-  color: #5a6053;
+  background: var(--disabled-bg);
+  border-color: var(--disabled-edge);
+  color: var(--disabled-text);
 }
 .l-app .l-table-picker button:disabled {
   opacity: 1;
@@ -697,15 +646,15 @@ dialog.l-modal .l-secondary:disabled {
 /* Quiet helper text and text buttons in windows (were 2.6–3.6:1). */
 dialog.l-modal .l-help-text,
 .l-app .l-help-text {
-  color: #5c6553;
-  font-size: calc(12px * var(--text-scale, 1));
+  color: var(--text-soft);
+  font-size: calc(var(--fs-body-s) * var(--text-scale, 1));
 }
 dialog.l-modal .l-text,
 .l-app .l-text {
-  color: #4f5e46;
-  font-size: calc(12px * var(--text-scale, 1));
+  color: var(--text-soft);
+  font-size: calc(var(--fs-body-s) * var(--text-scale, 1));
 }
 dialog.l-modal .l-text.danger,
 .l-app .l-text.danger {
-  color: #8e4a39;
+  color: var(--danger);
 }

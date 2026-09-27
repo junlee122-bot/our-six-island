@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import './ui/fonts.css';
+import './ui/tokens.css';
 import './lounge.css';
 import './lounge-casino.css';
 import './lounge-blackjack.css';
 import './lounge-seotda.css';
 import './lounge-club.css';
+import './ui/ui.css';
 // Keep in sync with the Pages <head> in scripts/build-standalone.mjs.
 export const metadata: Metadata = {
   title: '범타듀 밸리 · 일곱 친구의 마을',

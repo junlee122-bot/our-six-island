@@ -115,7 +115,7 @@
 
 .l-village-shortcuts > button small {
   color: #807769;
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 
 .l-village-shortcuts > button:hover {
@@ -212,7 +212,7 @@
   letter-spacing: -0.6px;
 }
 .l-immersive .l-brand small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 .l-immersive .l-brand-icon {
   width: 34px;
@@ -355,7 +355,7 @@
   bottom: 50px;
   left: 0;
   width: 220px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
 }
 /* First-visit hint: a small pill under the header, never over the controls. */
 .l-world-hint {
@@ -566,7 +566,7 @@
   border-radius: 9px;
   background: #d4574a;
   color: #fff;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   line-height: 1;
 }
 
@@ -616,7 +616,7 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
   font-size: 13px;
 }
 .l-simple-trees button small {
-  font-size: 11px;
+  font-size: var(--fs-cap);
   color: #6b7a5f;
 }
 .l-simple-trees button:disabled {
@@ -632,7 +632,7 @@ body:has(dialog[open]) .l-app .l-toast[popover] {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #fffaf0;
+  background: var(--paper-50);
   border: 1px solid #ecdfbf;
   font-size: 13px;
 }

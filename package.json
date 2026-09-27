@@ -22,7 +22,10 @@
     "test:lounge-multiplayer": "node --experimental-strip-types scripts/verify-lounge-multiplayer.mjs",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "ui:shots": "node --experimental-strip-types --no-warnings scripts/ui-shots.mjs",
+    "lint:css": "node scripts/css-lint.mjs",
+    "fonts": "node scripts/build-fonts.mjs"
   },
   "dependencies": {
     "@supabase/realtime-js": "2.116.0",
@@ -53,7 +56,9 @@
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0",
     "oxlint-tsgolint": "7.0.2001",
+    "playwright-core": "^1.56.1",
     "sharp": "0.34.5",
+    "subset-font": "^2.9.0",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vite": "8.0.13",

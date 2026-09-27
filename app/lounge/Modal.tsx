@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { X, TriangleAlert } from 'lucide-react';
+import { TriangleAlert } from 'lucide-react';
+import { CloseButton } from '../ui/Panel';
+import { KeyHintBar, type KeyHintItem } from '../ui/KeyHint';
 
 /** The walkable scene on screen (village or room), if any. */
 const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d]';
@@ -35,6 +37,8 @@ export function Modal({
   wide = false,
   closable = true,
   className = '',
+  panel = 'plain',
+  keyHints,
 }: {
   title: string;
   onClose: () => void;
@@ -43,6 +47,13 @@ export function Modal({
   /** When false the close button is hidden (e.g. while a recovery code must be saved). */
   closable?: boolean;
   className?: string;
+  /**
+   * Window skin (app/ui/ui.css): 'journal' = walnut binding + cream page (the
+   * farm ledger look), 'note' = taped paper slip, 'plain' = the older card.
+   */
+  panel?: 'plain' | 'journal' | 'note';
+  /** Key hints pinned under the page ("[Esc] 닫기" is added when closable). */
+  keyHints?: KeyHintItem[];
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -71,7 +82,8 @@ export function Modal({
     <dialog
       ref={ref}
       tabIndex={-1}
-      className={'l-modal ' + (wide ? 'wide ' : '') + className}
+      className={'l-modal ui-dialog ' + (wide ? 'wide ' : '') + className}
+      data-panel={panel}
       onCancel={(e) => {
         e.preventDefault();
         close();
@@ -99,13 +111,15 @@ export function Modal({
     >
       <header>
         <h2>{title}</h2>
-        {closable && (
-          <button className="l-icon" onClick={onClose} aria-label="닫기">
-            <X size={20} />
-          </button>
-        )}
+        {closable && <CloseButton onClick={onClose} />}
       </header>
-      {children}
+      {panel === 'plain' ? children : <div className="ui-dialog-page">{children}</div>}
+      {keyHints && (
+        <KeyHintBar
+          className="ui-dialog-keys"
+          items={closable ? [...keyHints, { keys: [{ code: 'Escape' }], does: '닫기' }] : keyHints}
+        />
+      )}
     </dialog>
   );
 }

@@ -259,7 +259,7 @@
   box-shadow: 0 0 0 3px #bfe8df, 0 13px 35px #71583612;
 }
 .b3-decorate,
-.b3-editbar button,
+.b3-editbar button:not(.ui-btn),
 .b3-toolbar button,
 .b3-catalog-grid button,
 .b3-categories button,
@@ -324,7 +324,7 @@
   align-items: center;
   gap: 8px;
 }
-.b3-editbar button,
+.b3-editbar button:not(.ui-btn),
 .b3-toolbar-row button {
   display: inline-flex;
   align-items: center;
@@ -339,13 +339,12 @@
   font-size: 13px;
   font-weight: 700;
 }
-.b3-editbar button:disabled,
+.b3-editbar button:not(.ui-btn):disabled,
 .b3-toolbar button:disabled,
 .b3-catalog-grid button:disabled {
   opacity: 0.45;
   cursor: default;
 }
-.b3-editbar .b3-primary,
 .b3-dialog .b3-primary {
   background: #3e9f90;
   border-color: #33877a;
@@ -353,9 +352,6 @@
 }
 .b3-editbar .b3-done {
   margin-left: auto;
-  background: #5e6b48;
-  border-color: #4f5a3b;
-  color: #fffaf0;
 }
 .b3-conflict-count,
 .b3-conflict {
