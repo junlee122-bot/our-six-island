@@ -301,8 +301,8 @@ dialog.l-modal.l-growth > .ui-dialog-keys {
   border-radius: var(--r-round);
   font-size: var(--fs-cap);
   font-weight: 800;
-  color: var(--gold-700);
-  background: var(--pal-amber-91);
+  color: var(--text-on-highlight);
+  background: var(--highlight-soft);
   box-shadow: var(--ring-line);
   animation: l-gr-pulse 1.8s ease-out infinite;
 }

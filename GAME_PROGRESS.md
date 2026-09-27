@@ -1,6 +1,6 @@
 # 범타듀 밸리 · 현재 상태와 다음 할 일
 
-> 한 페이지 요약입니다. 2026-09-24까지의 상세 작업·배포 검증 일지는 [GAME_PROGRESS-archive.md](GAME_PROGRESS-archive.md)에 보관했습니다. 배포 기록은 이 파일에 쌓지 말고 GitHub Actions 실행 기록이나 Releases에 남깁니다.
+> 아래는 2026-09-24 당시 요약입니다. **최신 상태·작업 순서·배포 방법은 [HANDOVER.md](HANDOVER.md)를 우선합니다.** 이미 완료한 기능을 아래 목록만 보고 다시 구현하지 마세요. 2026-09-24까지의 상세 작업·배포 검증 일지는 [GAME_PROGRESS-archive.md](GAME_PROGRESS-archive.md)에 보관했습니다. 배포 기록은 이 파일에 쌓지 말고 GitHub Actions 실행 기록이나 Releases에 남깁니다.
 
 ## 현재 상태 (2026-09-24)
 
