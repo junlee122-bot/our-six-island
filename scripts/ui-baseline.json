@@ -1,0 +1,589 @@
+{
+ "label": "current",
+ "commit": "294c833",
+ "summary": {
+  "screens": 46,
+  "low": 10,
+  "small": 0,
+  "narrow": 0,
+  "cut": 0,
+  "overlap": 0,
+  "covered": 1,
+  "closeUnder44": 0,
+  "editorEscFails": 0
+ },
+ "views": {
+  "fhd": {
+   "screens": {
+    "login": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "room": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "menu": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "esc-menu": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "room-editor": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "wallet": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "settings": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "controls": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "credits": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "friends": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "invite": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "village": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "map": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 1,
+     "dialog": null
+    },
+    "bag": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "shop": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "ledger": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "growth": {
+     "lowCount": 5,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "growth-research": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bonds": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "collection": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "ui-kit": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "ui-kit-panels": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "ui-kit-glyphs": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    }
+   }
+  },
+  "s": {
+   "screens": {
+    "login": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "room": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "menu": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "esc-menu": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "room-editor": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "wallet": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "settings": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "controls": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "credits": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "friends": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "invite": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "village": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "map": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "bag": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "shop": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "ledger": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "growth": {
+     "lowCount": 5,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "growth-research": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "bonds": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "collection": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "ui-kit": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "ui-kit-panels": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "ui-kit-glyphs": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    }
+   }
+  }
+ }
+}
