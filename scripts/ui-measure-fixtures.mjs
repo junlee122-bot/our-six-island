@@ -1,6 +1,7 @@
 // Tiny real-browser cases for the audit itself; ui:shots runs these before
 // checking game screens so CI cannot silently accept a broken measurement.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { measureInPage } from './ui-measure.mjs';
 
@@ -50,6 +51,34 @@ export async function verifyMeasurements(browser) {
       <div style="position:absolute;left:150px;top:25px;width:100px;height:40px;background:white"></div>`);
     assert.equal(m.coveredCount, 0, 'horizontal overflow clipping also limits hit-test samples');
     console.log('UI measurement fixtures: 10 passed');
+
+    // Exercise the production state styles, including the global button
+    // transitions. Both settled colours can pass while a state change fails.
+    const styles = ['../app/globals.css', '../app/ui/tokens.css', '../app/lounge.css', '../app/lounge-social.css']
+      .map((file) => readFileSync(new URL(file, import.meta.url), 'utf8').replace(/@import[^;]+;/g, ''))
+      .join('\n');
+    for (const [fromOff, toOff] of [[false, true], [true, false]]) {
+      await page.setContent(`<style>${styles}</style><main class="l-app"><header class="l-world-header">
+        <button class="l-invite-button${fromOff ? ' is-off' : ''}"><span>게임 초대</span></button>
+      </header></main>`);
+      await page.evaluate((off) => {
+        const button = document.querySelector('.l-invite-button');
+        // Flush both style states, then hold transitions at their first frame
+        // so CPU speed cannot decide whether the contrast regression is seen.
+        void getComputedStyle(button).backgroundColor;
+        button.classList.toggle('is-off', off);
+        void getComputedStyle(button).backgroundColor;
+        for (const animation of button.getAnimations()) {
+          animation.pause();
+          animation.currentTime = 0;
+        }
+      }, toOff);
+      m = await page.evaluate(measureInPage);
+      const direction = fromOff ? 'offline → online' : 'online → offline';
+      assert.equal(m.texts, 1, `invite ${direction}: the fixture label must be measured`);
+      assert.equal(m.lowCount, 0, `invite ${direction} must stay readable: ${JSON.stringify(m.low)}`);
+    }
+    console.log('UI style state fixtures: 2 passed');
   } finally {
     await page.close();
   }
