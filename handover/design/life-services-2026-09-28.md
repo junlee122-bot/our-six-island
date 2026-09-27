@@ -44,6 +44,6 @@
 
 새 금융 상태는 world.finance, 관계·도난 가구 정책은 life.ext에 저장한다. 기존 데이터가 없으면 빈 상태로 시작하며 기존 계정·범·방·가방을 초기화하지 않는다. 프로필/방문/저장 충돌 응답에도 서버 소유량을 적용한다. 게임 저장 테이블은 변경하지 않으며, `hohyeon_economy_vault_report` 마이그레이션으로 관리자 보고서에 보관금을 포함한다. 보고서 함수는 관리자 전용 권한을 유지한다. Edge와 Pages 모두 배포 대상이다.
 
-새 검증 파일: `tests/lounge-finance.test.mjs`, `lounge-life-cloud-integration.test.mjs`, `lounge-furniture-protection.test.mjs`, `lounge-romance.test.mjs`, `lounge-fishing-feedback.test.mjs`, `lounge-village-services.test.mjs`. 실제 계정·비밀번호·서버 저장을 쓰지 않는다. 화면 검증은 `scripts/verify-village-life-ui.mjs`와 `npm run ui:shots`의 로컬 모의 클라우드를 사용한다.
+새 검증 파일: `tests/lounge-finance.test.mjs`, `lounge-life-cloud-integration.test.mjs`, `lounge-furniture-protection.test.mjs`, `lounge-romance.test.mjs`, `lounge-fishing-feedback.test.mjs`, `lounge-village-services.test.mjs`. 실제 계정·비밀번호·서버 저장을 쓰지 않는다. 화면 검증은 `scripts/verify-village-life-ui.mjs`와 `npm run ui:shots`의 로컬 모의 클라우드를 사용한다. CI의 `village-life` 잡은 별도 Linux 환경에서 마을·은행·채집·낚시 조작을 검사하고 보고서와 스크린샷을 보관한다. 이 검사는 네이티브 RAF를 유지하고 날짜만 겨울로 설정한다.
 
 전체 검사와 배포 결과는 해당 PR의 CI/Pages/Edge Actions 실행 기록으로 확인한다. 새 모델 출처·이용 조건·해시는 `ASSETS.md`와 `public/models/village/life-services/`에 있다. 새 이미지가 필요하면 사용자가 허용한 힉스필드를 사용할 수 있다.

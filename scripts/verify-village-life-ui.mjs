@@ -35,12 +35,16 @@ for (let n = 0; n < 40 && seasonOfDay(winterDay) !== 'winter'; n++) winterDay++;
 assert.equal(seasonOfDay(winterDay), 'winter');
 const fixtureStart = dayStart(winterDay) + 12 * 3_600_000, started = performance.now();
 Date.now = () => Math.floor(fixtureStart + performance.now() - started);
-const report = { createdAt: new Date(realNow()).toISOString(), fixtureAt: new Date(fixtureStart).toISOString(), build: path.resolve(pages), views: {}, failures: [] };
+const report = { createdAt: new Date(realNow()).toISOString(), fixtureAt: new Date(fixtureStart).toISOString(), build: path.resolve(pages), status: 'running', views: {}, failures: [] };
+const persistReport = () => fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
+persistReport();
 let browser, server, interrupted = false, watchdog;
 const stop = () => {
   if (interrupted) return;
   interrupted = true;
   report.failures.push('Browser verification interrupted; incomplete steps are not passes.');
+  report.status = 'interrupted';
+  persistReport();
   void browser?.close().catch(() => {});
 };
 process.once('SIGINT', stop);
@@ -58,7 +62,12 @@ async function runView(mobile = false) {
     await ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, fpsCap: 30, quality: 'mid' })));
     await page.emulateMedia({ reducedMotion: 'reduce' });
     res.renderSettings = { fpsCap: 30, quality: 'mid', reducedMotion: true };
-    await page.clock.setSystemTime(new Date(Date.now()));
+    // Change only wall time. Playwright's clock also wraps animation callbacks,
+    // which can stall the capped WebGL loop; native rAF and timers stay intact.
+    await ctx.addInitScript((start) => {
+      const at = performance.now();
+      Date.now = () => Math.floor(start + performance.now() - at);
+    }, Date.now());
     page.on('console', (msg) => { if (msg.type() === 'error') res.console.push(msg.text().slice(0, 500)); });
     page.on('response', (r) => { if (r.status() >= 400 && r.url().startsWith(server.url)) res.requests.push({ status: r.status(), url: r.url().replace(server.url, '/') }); });
     // Record actual requests made by the tested page, rather than fabricating
@@ -102,12 +111,19 @@ async function runView(mobile = false) {
         await shot(label + '-failed').catch(() => {});
         console.error(`${name} FAIL ${label}: ${error.message}`);
         throw error;
-      }
+      } finally { persistReport(); }
     };
     const click = async (selector) => {
-      const el = page.locator(selector).first();
-      await el.waitFor({ state: 'visible', timeout: 15_000 });
-      await el.click({ timeout: 15_000 });
+      await page.locator(selector).first().waitFor({ state: 'visible', timeout: 30_000 });
+      // Use a real pointer at the visible centre. Avoid Playwright's scroll
+      // phase stalling behind SwiftShader while the full 3D village animates.
+      const hit = await js((s) => {
+        const e = document.querySelector(s), r = e.getBoundingClientRect();
+        const x = r.x + r.width / 2, y = r.y + r.height / 2;
+        return { x, y, clear: e.contains(document.elementFromPoint(x, y)), disabled: e.matches(':disabled') };
+      }, selector);
+      assert.ok(hit.clear && !hit.disabled, 'click target is visible, enabled and unobstructed: ' + selector);
+      await page.mouse.click(hit.x, hit.y);
     };
     const focus = () => page.locator('[data-testid=village-3d], [data-testid=bedroom-3d]').first().focus();
     const closeDialogs = async () => {
@@ -176,7 +192,10 @@ async function runView(mobile = false) {
       assert.ok(sx > 0 && sy > 0 && sx < 1280 && sy < 720, 'world target projects inside the viewport');
       assert.equal(await js(([x, y]) => document.elementFromPoint(x, y)?.tagName, [sx, sy]), 'CANVAS', 'ground click must not be hidden under a HUD');
       await page.mouse.click(sx, sy);
-      await sleep(400); await stationary();
+      await wait((point) => {
+        const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+        return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - point.x, Number(d.avatarZ) - point.z) < 1.2;
+      }, point, 120_000);
       const arrived = await position();
       assert.ok(Math.hypot(arrived.x - point.x, arrived.z - point.z) < 1.2, 'walk reaches resource through collision-safe path');
     };
@@ -211,6 +230,12 @@ async function runView(mobile = false) {
         return d?.shopSalonBuilding === 'loaded' && d.shopBankBuilding === 'loaded' && d.karchiveMuseum === 'loaded';
       }, null, 180_000);
       assert.equal(seasonOf(Date.now()), 'winter');
+      // Asset promises resolve before the animation loop paints the first
+      // frame. Wait for its observable world data, especially under a FPS cap.
+      await wait(() => {
+        const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+        return d?.season === 'winter' && Number.isFinite(Number(d.avatarX));
+      }, null, 60_000);
       assert.equal(await page.getByTestId('village-3d').getAttribute('data-season'), 'winter');
       await shot('winter-world');
       res.winterVisualReview = 'Screenshot requires visual review of leaf/bark texture; this test asserts season and loaded model state only.';
@@ -360,7 +385,8 @@ try {
   await browser?.close().catch(() => {});
   server?.close();
   Date.now = realNow;
-  fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
+  report.status = interrupted ? 'interrupted' : report.failures.length ? 'failed' : 'passed';
+  persistReport();
 }
 console.log('Report:', path.join(out, 'report.json'));
 if (report.failures.length) { console.error(report.failures.join('\n')); process.exitCode = 1; }

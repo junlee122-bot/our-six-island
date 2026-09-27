@@ -782,6 +782,21 @@
   white-space: nowrap;
   pointer-events: none;
 }
+/* The three shop lots share one street; stagger the middle label on the
+   compact map, while the expanded map keeps every name at its building. */
+.hv-minimap:not(.is-expanded) .hv-minimap-place[data-minimap-place='furniture'] > span {
+  top: calc(50% + 16px);
+}
+.hv-minimap:not(.is-expanded) .hv-minimap-place[data-minimap-place='furniture']::before {
+  content: '';
+  position: absolute;
+  top: calc(50% + 4px);
+  left: 50%;
+  width: 1px;
+  height: 7px;
+  background: var(--text-soft);
+  pointer-events: none;
+}
 .hv-minimap-place[data-named='false'] > span {
   display: none;
 }
