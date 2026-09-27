@@ -2,7 +2,7 @@
 
 작성일: 2026-09-27 · 저장소: `junlee122-bot/our-six-island` · 작업 브랜치: `claude/dreamy-einstein-x142a5` (= `main`과 동일 시점까지 반영)
 
-이 문서 하나로 지금 상태, 처음 ChatGPT/Codex 코드와의 차이, 남은 작업, 운영 방법을 파악할 수 있게 정리했습니다. 세부 설계·점검 문서는 `handover/design/`에 있습니다.
+이 문서 하나로 지금 상태, 처음 ChatGPT/Codex 코드와의 차이, 남은 작업, 운영 방법을 파악할 수 있게 정리했습니다. 세부 설계·점검 문서는 `handover/design/`에 있습니다. 화면·에셋을 건드리기 전에는 **`handover/STYLE-AND-SOURCES.md`**(미감 규칙과 자료 출처)를 먼저 읽으세요.
 
 ---
 
@@ -128,8 +128,8 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 마을 3D | `app/lounge-village*.ts(x)` |
 | 실내 3D | `app/lounge-venues.ts`, `lounge-interior-*.ts(x)`, `lounge-tavern-*.ts` |
 | 화면 | `app/lounge-game.tsx`(최상위), `app/lounge/*.tsx`, `app/ui/*` |
-| 문서 | `README.md`, `ACCOUNTS.md`(계정·배포), `ASSETS.md`(에셋), `GAME_PROGRESS.md`, `handover/design/*` |
+| 문서 | `handover/STYLE-AND-SOURCES.md`(미감 규칙·자료 출처), `README.md`, `ACCOUNTS.md`(계정·배포), `ASSETS.md`(에셋 제작 기록), `GAME_PROGRESS.md`, `handover/design/*` |
 
 ## 9. ChatGPT에 처음 보낼 메시지 (예시)
 
-> 이 저장소는 친구 7명이 함께 하는 3D 마을 생활 게임 "범타듀 밸리"야. 루트의 `HANDOVER.md`를 먼저 읽고, 세부 설계는 `handover/design/`을 참고해. 규칙은 서버 권위 구조라 `app/*.ts` 엔진을 바꾸면 테스트(`npm run check`)와 원장 불변식이 통과해야 하고, 스타일은 `app/ui/tokens.css` 토큰만 써야 해(`npm run lint:css`). 비밀 값(활성화 코드, Supabase 토큰)은 절대 코드나 대화에 넣지 마. `main`에 올리면 자동 배포돼. 다음 작업은 5장의 순서대로 진행해 줘.
+> 이 저장소는 친구 7명이 함께 하는 3D 마을 생활 게임 "범타듀 밸리"야. 루트의 `HANDOVER.md`를 먼저 읽고, 화면·에셋을 건드릴 때는 `handover/STYLE-AND-SOURCES.md`의 미감 규칙과 에셋 추가 순서를 따라. 세부 설계는 `handover/design/`을 참고해. 규칙은 서버 권위 구조라 `app/*.ts` 엔진을 바꾸면 테스트(`npm run check`)와 원장 불변식이 통과해야 하고, 스타일은 `app/ui/tokens.css` 토큰만 써야 해(`npm run lint:css`). 비밀 값(활성화 코드, Supabase 토큰)은 절대 코드나 대화에 넣지 마. `main`에 올리면 자동 배포돼. 다음 작업은 5장의 순서대로 진행해 줘.
