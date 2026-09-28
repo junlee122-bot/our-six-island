@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
+import { actionAttemptEvidence, assertSingleLogicalAction, assertSingleResourceChange, resourceActionState } from './ui-action-guard.mjs';
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
 import { villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
@@ -107,8 +108,8 @@ async function runView(mobile = false) {
     const wait = async (fn, arg, timeout = 30_000) => {
       assert.notEqual(await H.until(fn, timeout, arg), -1, `UI wait timed out: ${fn.toString().slice(0, 150)}`);
     };
-    const waitMock = async (check, label) => {
-      const end = performance.now() + 15_000;
+    const waitMock = async (check, label, timeout = 15_000) => {
+      const end = performance.now() + timeout;
       while (!check() && performance.now() < end) await sleep(100);
       assert.ok(check(), label);
     };
@@ -177,43 +178,83 @@ async function runView(mobile = false) {
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
     const guardedAction = async (kind, changed, label) => {
-      const before = commands.filter((c) => c.action?.kind === kind).length;
+      const before = commands.length;
+      const sent = () => commands.slice(before).filter((c) => c.action?.kind === kind);
       let release;
       const gate = { kind, requests: [], open: new Promise((done) => { release = done; }) };
-      const evidence = { kind, heldMs: 0, requestsWhileHeld: 0, requestsAfterReply: 0 };
+      const evidence = { kind, heldMs: 0, requestsWhileHeld: 0, requestsAfterReply: 0, responses: [], failedAttempts: [] };
       res.actionGuards.push(evidence);
       assert.equal(heldAction, null, 'only one resource action gate is active');
       assert.ok(!changed(), label + ': resource starts uncollected');
-      heldAction = gate;
-      const startedAt = performance.now();
-      let reply;
+      const replies = [], reads = [];
+      const readCommand = (request) => {
+        try { return JSON.parse(request.postData() || '{}').command; } catch { return null; }
+      };
+      const observeResponse = (response) => {
+        const command = readCommand(response.request());
+        if (command?.action?.kind !== kind) return;
+        const entry = { requestId: command.requestId, status: response.status() };
+        evidence.responses.push(entry);
+        reads.push(response.json().then((body) => {
+          entry.ok = body.ok;
+          if (body.error) entry.error = body.error;
+          if (response.status() === 200 && body.ok === true)
+            replies.push({ requestId: command.requestId, state: resourceActionState(body.life ?? body.packet?.life, command.action) });
+        }).catch((error) => { entry.readError = error.message.slice(0, 200); }));
+      };
+      const observeFailure = (request) => {
+        const command = readCommand(request);
+        if (command?.action?.kind === kind)
+          evidence.failedAttempts.push({ requestId: command.requestId, error: request.failure()?.errorText });
+      };
+      page.on('response', observeResponse);
+      page.on('requestfailed', observeFailure);
       try {
-        await pressAction();
-        await waitMock(() => gate.requests.length > 0, label + ': first request reaches the gate');
-        // Handle rejection even if an assertion fails before the gate is released.
-        reply = page.waitForResponse((r) => r.request() === gate.requests[0], { timeout: 30_000 })
-          .then((response) => ({ response }), (error) => ({ error }));
-        await focus();
-        for (let i = 0; i < 3; i++) await page.keyboard.press('KeyE');
-        assert.ok(!changed(), label + ': canonical state stays unchanged while the response is held');
-        evidence.requestsWhileHeld = commands.filter((c) => c.action?.kind === kind).length - before;
-        assert.equal(evidence.requestsWhileHeld, 1, label + ': repeated keys send only one in-flight action');
+        heldAction = gate;
+        const startedAt = performance.now();
+        let first, canonicalBefore;
+        try {
+          await pressAction();
+          await waitMock(() => gate.requests.length > 0, label + ': first request reaches the gate');
+          first = readCommand(gate.requests[0]);
+          canonicalBefore = resourceActionState(model(), first.action);
+          evidence.canonicalBefore = canonicalBefore;
+          await focus();
+          for (let i = 0; i < 3; i++) await page.keyboard.press('KeyE');
+          assert.ok(!changed(), label + ': canonical state stays unchanged while the response is held');
+          assert.deepEqual(resourceActionState(model(), first.action), canonicalBefore,
+            label + ': neither the resource nor bag changes before the reply');
+          evidence.requestsWhileHeld = sent().length;
+          evidence.whileHeld = actionAttemptEvidence(sent());
+          assertSingleLogicalAction(sent(), kind, label + ': repeated keys while pending');
+        } finally {
+          evidence.heldMs = Math.round(performance.now() - startedAt);
+          heldAction = null;
+          release();
+        }
+        // A slow software-rendered input step may outlast the real 12s network
+        // timeout. Accept only a successful reply for the SAME logical request,
+        // whether it belongs to the original HTTP attempt or its normal retry.
+        await waitMock(() => replies.some((r) => r.requestId === first.requestId),
+          label + ': resource action receives a successful canonical reply', 30_000);
+        await waitMock(changed, label);
+        // Preserve the post-reply check: a broken input guard queues a new ID,
+        // whereas CloudLoungeRoom's transport retry reuses the entire command.
+        await js(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+        await Promise.all(reads);
+        evidence.requestsAfterReply = sent().length;
+        evidence.afterReply = actionAttemptEvidence(sent());
+        assertSingleLogicalAction(sent(), kind, label + ': no duplicate action is queued after the reply');
+        const canonicalAfter = resourceActionState(model(), first.action);
+        evidence.canonicalAfter = canonicalAfter;
+        const canonicalReplies = replies.filter((r) => r.requestId === first.requestId).map((r) => r.state);
+        assertSingleResourceChange(canonicalBefore, canonicalReplies, canonicalAfter, label);
+        evidence.canonicalReplyCount = canonicalReplies.length;
+        evidence.canonicalChangedOnce = true;
       } finally {
-        evidence.heldMs = Math.round(performance.now() - startedAt);
-        heldAction = null;
-        release();
+        page.off('response', observeResponse);
+        page.off('requestfailed', observeFailure);
       }
-      const received = await reply;
-      if (received.error) throw received.error;
-      assert.equal(received.response.status(), 200, label + ': resource action succeeds');
-      await received.response.finished();
-      await waitMock(changed, label);
-      // Let the client consume the reply and render its resulting state. Any
-      // incorrectly queued duplicate is sent after the first reply, so check
-      // the total again after these actual browser frames, not a wall-time nap.
-      await js(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
-      evidence.requestsAfterReply = commands.filter((c) => c.action?.kind === kind).length - before;
-      assert.equal(evidence.requestsAfterReply, 1, label + ': no duplicate action is queued after the reply');
     };
     const walkBuilding = async (id) => {
       if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
@@ -334,11 +375,14 @@ async function runView(mobile = false) {
       await walkBuilding('wardrobe'); await shot('salon-door'); await pressAction();
       await wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
-        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 8 && d.salonState === 'loaded';
+        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 14 && d.salonState === 'loaded';
       }, null, 180_000);
       await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
       assert.equal(await page.getByTestId('wardrobe-preview').count(), 0, 'the salon opens on a walkable floor');
       await shot('salon-interior');
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('salon-interior-fhd');
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
       await click('[data-testid=interior-salon-route]');
       await runTo(() => wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
@@ -401,11 +445,14 @@ async function runView(mobile = false) {
       await walkBuilding('bank'); await shot('bank-door'); await pressAction();
       await wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
-        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 7;
+        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 13;
       }, null, 180_000);
       await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
       assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'entering the bank leaves the player on its walkable floor');
       await shot('bank-interior');
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('bank-interior-fhd');
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
       await click('[data-testid=interior-banker-route]');
       await runTo(() => wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
@@ -414,11 +461,35 @@ async function runView(mobile = false) {
       assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'approaching Nyamo does not transfer money or open a form');
       await page.keyboard.press('KeyE');
       await page.locator('dialog[open].l-finance').waitFor();
+      assert.deepEqual(await page.locator('dialog[open].l-finance [role="tab"]').allTextContents(), ['보관함', '차용증'], 'the bank only exposes storage and friend notes');
       await wait(() => {
         const img = document.querySelector('[data-testid=bank-clerk] img');
         return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
       });
       const key = 'wallet-' + H.uid, before = H.world().ledger.accounts[key];
+      const ledgerBeforePortrait = structuredClone(H.world().ledger);
+      const portraitToggle = page.getByTestId('bank-clerk-portrait-toggle');
+      assert.equal(await page.getByTestId('bank-clerk').getAttribute('data-portrait'), 'sprite');
+      assert.equal((await portraitToggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+      await portraitToggle.click();
+      await wait(() => {
+        const clerk = document.querySelector('[data-testid=bank-clerk]');
+        const img = clerk?.querySelector('img');
+        return clerk?.getAttribute('data-portrait') === 'photo' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
+      assert.equal((await portraitToggle.textContent()).trim(), '창구로 돌아가기');
+      await shot('bank-portrait', true);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('bank-portrait-fhd', true);
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
+      await portraitToggle.click();
+      await wait(() => {
+        const clerk = document.querySelector('[data-testid=bank-clerk]');
+        const img = clerk?.querySelector('img');
+        return clerk?.getAttribute('data-portrait') === 'sprite' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
+      assert.equal((await portraitToggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+      assert.deepEqual(H.world().ledger, ledgerBeforePortrait, 'portrait viewing and return must not change balances or ledger entries');
       await page.getByLabel('맡기거나 찾을 금액').fill('1000');
       await page.getByRole('button', { name: '맡기기', exact: true }).click();
       await waitMock(() => H.world().ledger.vault?.[key] === 1000, 'deposit appears in canonical mock ledger');

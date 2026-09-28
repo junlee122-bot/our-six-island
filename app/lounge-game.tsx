@@ -493,7 +493,8 @@ function AccountLounge({
     // 성장 수첩: the skill a level-up banner opens it on.
     [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
     [modal, setModal] = useState<ModalName | null>(null),
-    [financePage, setFinancePage] = useState<'bank' | 'notes' | 'casino' | 'rob' | undefined>(undefined),
+    [financeMode, setFinanceMode] = useState<'bank' | 'casino' | 'rob'>('bank'),
+    [financePage, setFinancePage] = useState<'bank' | 'notes' | undefined>(undefined),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
     // 설정 / 조작 안내 opened from the Esc menu go back to it on close (Esc stack).
     [fromMenu, setFromMenu] = useState(false),
@@ -638,7 +639,7 @@ function AccountLounge({
     if (due.length) {
       due.forEach((l) => memory.due.add(l.id));
       pushBanner('mail', `상환 기한이 지난 차용증이 ${due.length}개 있어요. 은행에서 남은 금액을 확인해 주세요.`, {
-        key: 'finance-due', action: { label: '차용증 보기', run: () => { setFinancePage('notes'); setModal('bank'); } },
+        key: 'finance-due', action: { label: '차용증 보기', run: () => { setFinanceMode('bank'); setFinancePage('notes'); setModal('bank'); } },
       });
     }
   }, [view.status, view.finance, view.self, view.clockOffset, notify, pushBanner]);
@@ -2370,9 +2371,9 @@ function AccountLounge({
                 onMove={move}
                 onTable={tableAct}
                 onExit={leaveInterior}
-                onHost={interior === 'tavern' ? () => setModal('tavernUp') : interior === 'casino' ? () => setModal('bank') : undefined}
+                onHost={interior === 'tavern' ? () => setModal('tavernUp') : interior === 'casino' ? () => { setFinanceMode('casino'); setModal('bank'); } : undefined}
                 onLender={() => setModal('lender')}
-                onBanker={() => { setFinancePage('bank'); setModal('bank'); }}
+                onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
@@ -2388,7 +2389,7 @@ function AccountLounge({
           </ScreenBoundary>
           {sheetNode}
           <div className="l-world-social">
-            {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => setModal('bank')} aria-label="루미 장부 열기"><Glyph name="coin" size={19} /><span>루미 장부</span></button>}
+            {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => { setFinanceMode('casino'); setModal('bank'); }} aria-label="루미 장부 열기"><Glyph name="coin" size={19} /><span>루미 장부</span></button>}
             <button
               className="l-world-chat-button"
               aria-label={`${chatTitle} 열기`}
@@ -2446,7 +2447,7 @@ function AccountLounge({
                     onMove={move}
                     onTable={tableAct}
                     onLender={() => setModal('lender')}
-                    onBanker={() => { setFinancePage('bank'); setModal('bank'); }}
+                    onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                     onSalon={() => enter('wardrobe')}
                     view={view}
                     area={flatArea}
@@ -2575,7 +2576,7 @@ function AccountLounge({
                 { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
                 { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
                 { id: 'shop', label: '범타듀 상점', glyph: 'store', onClick: () => setModal('shop') },
-                { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => setModal('bank') },
+                { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); } },
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
                 { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
@@ -2672,12 +2673,13 @@ function AccountLounge({
           notify={notify}
           onLeaveRoom={() => guarded('leaveRoom', () => void leaveRoom())}
           onInvite={() => requestGame(null)}
+          onRobbery={() => { setFinanceMode('rob'); setModal('bank'); }}
           onVisit={visitHouse}
           onMail={(actor) => openMail(actor)}
           selfActor={save.actor}
         />
       )}
-      {modal === 'bank' && <FinancePanel room={room} view={view} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? (tab === 'casino' ? 'casino' : 'bank')} />}
+      {modal === 'bank' && <FinancePanel key={`${financeMode}:${financePage ?? 'bank'}`} room={room} view={view} mode={financeMode} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? 'bank'} />}
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'wallet' && (

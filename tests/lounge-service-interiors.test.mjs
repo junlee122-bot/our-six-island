@@ -52,6 +52,28 @@ for (const { area, front, npc, furniture, near, action } of [
       }
     }
   });
+  test(`${area} furnished floor has no stranded walking pockets on a dense grid`, () => {
+    // Sample every 40cm, including the narrow right/front strip behind seating.
+    // The former bank sofa placement stranded legal starts (84,84..88), which
+    // the sparse public-path checks above did not visit.
+    let starts = 0;
+    for (let x = 16; x <= 84; x += 2) for (let y = 42; y <= 88; y += 2) {
+      const start = { x, y };
+      if (!interiorCanWalk(start, area)) continue;
+      starts++;
+      for (const destination of [front, INTERIOR_DOOR]) {
+        let current = start;
+        for (const next of interiorPath(start, destination, area)) {
+          assert.ok(segmentWalkable(current, next, area),
+            `${area} from ${JSON.stringify(start)}: blocked segment ${JSON.stringify(current)} → ${JSON.stringify(next)}`);
+          current = next;
+        }
+        assert.deepEqual(current, destination,
+          `${area} from ${JSON.stringify(start)} reaches ${JSON.stringify(destination)}`);
+      }
+    }
+    assert.ok(starts >= 200, `${area} retains a useful public walking floor`);
+  });
   test(`${area} visitors appear at the real building and reactions stay in their venue`, () => {
     const [pin] = villageFriendPins([{ id: `${area}-visitor`, actor: 1, area, x: front.x, y: front.y }], 'other');
     const place = VILLAGE_PLACES.find(p => p.id === VENUES[area].place);

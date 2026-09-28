@@ -292,6 +292,12 @@ async function serviceSprites() {
       .webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
     console.log(`${name}.png -> 660x990 .webp ${kb(fs.statSync(target).size)}`);
   }
+  const portrait = path.join(assets, 'lounge/_originals/bank-clerk-nyamo-portrait.png');
+  if (fs.existsSync(portrait)) {
+    const target = path.join(assets, 'lounge/bank-clerk-nyamo-portrait.webp');
+    await sharp(portrait).resize({ width: 768 }).webp({ quality: 88, effort: 6 }).toFile(target);
+    console.log(`bank-clerk-nyamo-portrait.png -> 768px .webp ${kb(fs.statSync(target).size)}`);
+  }
 }
 async function tavernCards() {
   const source = path.join(assets, 'lounge/_originals/tavern-cards.png');

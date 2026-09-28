@@ -95,6 +95,7 @@ export const LOUNGE_ASSETS = {
   hostMaehwa: '/assets/lounge/host-maehwa.webp',
   casinoLenderSprite: '/assets/lounge/casino-lender-rose.webp',
   bankClerkSprite: '/assets/lounge/bank-clerk-nyamo.webp',
+  bankClerkPortrait: '/assets/lounge/bank-clerk-nyamo-portrait.webp',
   salonStylistSprite: '/assets/lounge/salon-stylist-gwen.webp',
   tavernCardKing: '/assets/lounge/cards/tavern-king.webp',
   tavernCardQueen: '/assets/lounge/cards/tavern-queen.webp',
