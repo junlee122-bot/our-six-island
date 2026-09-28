@@ -42,7 +42,7 @@ export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
     {!data ? <p role="status">은행 장부를 불러오는 중이에요. 잠시 뒤 다시 열어 주세요.</p> : <>
       {mode === 'bank' && <div className="l-finance-clerk" data-testid="bank-clerk" data-portrait={showClerkPortrait ? 'photo' : 'sprite'}>
         <img className={showClerkPortrait ? 'is-photo' : undefined} src={showClerkPortrait ? LOUNGE_ASSETS.bankClerkPortrait : LOUNGE_ASSETS.bankClerkSprite} alt={showClerkPortrait ? '짙은 남청색 머리와 고양이 귀, 금빛 눈의 은행원 냐모' : '고양이 귀와 꼬리가 있는 은행원 냐모'} />
-        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
+        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{showClerkPortrait ? '오랜만에 왔네, 자기? …조금만 더 가까이 와. 오늘은 네 얘기부터 듣고 싶은데.' : page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
           <GameButton size="s" variant="ghost" data-testid="bank-clerk-portrait-toggle" onClick={() => setShowClerkPortrait((visible) => !visible)}>{showClerkPortrait ? '창구로 돌아가기' : '잠깐 창구 아래로 와보세요'}</GameButton>
         </div>
       </div>}

@@ -221,6 +221,7 @@ async function runView(browser, base, view, report) {
           return clerk?.getAttribute('data-portrait') === 'photo' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
         }, 15000), -1, '은행원 냐모의 사진을 불러오지 못했습니다.');
         assert.equal((await toggle.textContent()).trim(), '창구로 돌아가기');
+        assert.match(await page.getByTestId('bank-clerk').locator('p').innerText(), /오랜만에 왔네, 자기/);
         await snap('bank-portrait');
         for (const metric of UI_METRICS) assert.equal(res.screens['bank-portrait'][metric], 0, `bank-portrait: ${metric}`);
         await toggle.click();
@@ -230,6 +231,7 @@ async function runView(browser, base, view, report) {
           return clerk?.getAttribute('data-portrait') === 'sprite' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
         }, 15000), -1, '은행원 냐모의 창구 모습으로 돌아오지 못했습니다.');
         assert.equal((await toggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+        assert.doesNotMatch(await page.getByTestId('bank-clerk').locator('p').innerText(), /자기/);
       }
     });
   }
