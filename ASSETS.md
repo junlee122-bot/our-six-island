@@ -614,4 +614,12 @@ Higgsfield GPT Image 2.5(high, 2K)로 NPC 3장과 카드 아틀라스 1장을 �
 - 생성 작업 ID·SHA-256·참고 범위: [services-generation.json](public/assets/lounge/services-generation.json).
 - 재현: `node scripts/optimize-assets.mjs services`, `node scripts/optimize-assets.mjs cards`. 원본은 배포 매니페스트에 넣지 않습니다.
 - 런타임: `casino-lender-rose.webp`, `bank-clerk-nyamo.webp`, `salon-stylist-gwen.webp`, `cards/tavern-*.webp`. 미스 포츈·그웬은 Riot Games 캐릭터를 참고한 팬 창작이며 별도 권리 허락을 받은 에셋으로 표기하지 않습니다. 냐모 역시 사용자 참고 캐릭터 기반 팬 창작입니다. 카드 동물·민화 문양은 새로 생성한 그림입니다.
-- 은행·미용실 실내는 이미 약관·해시가 기록된 kArchive 접수대·연회 의자·서가·소파·화분대·찻상·종·달력·찬장·모서리 수납장을 재배치합니다. 은행 7종, 미용실 8종을 사용하며 자료: kArchive / 출처: 쓰레드 dogfooter 표기를 유지합니다. 거울·벽·바닥·간판은 같은 톤의 자체 3D 도형입니다. 새 kArchive 원본을 추가로 내려받지 않았습니다.
+- 은행·미용실 실내는 이미 약관·해시가 기록된 kArchive 접수대·연회 의자·서가·소파·화분대·찻상·종·달력·찬장·모서리 수납장을 재배치합니다. 후속 실내 보강으로 은행 13종, 미용실 14종을 사용합니다. 상담 책상·의자·조명·옷걸이·튤립·선반·연필·차례표 걸이를 기존 `lounge/friends`, `lounge/redesign`, `lounge/tavern`에서 재사용하며 자료: kArchive / 출처: 쓰레드 dogfooter 표기를 유지합니다. 금고·번호표 받침·서류·샴푸 세면볼·수전·제품병·수건·러그·벽그림은 자체 Three.js 도형과 캔버스입니다. 반복 모델은 종류별 한 번만 받고, 작은 반복 소품은 인스턴싱/공유 재질을 사용합니다. 새 kArchive 원본 다운로드는 없습니다.
+
+## 냐모 은행 대화 초상 · 2026-09-28
+
+사용자의 새 참고 그림을 바탕으로 성인 냐모의 실사풍 초상을 OpenAI 내장 `image_gen`으로 생성했습니다. 남청색 머리·고양이 귀·금빛 눈·흰 셔츠와 은행 책상 배경을 사용하며 은행 대화창의 전환 버튼으로만 표시합니다. 대화 기본 그림과 실내 2D 전신 스프라이트는 유지합니다. 사용자 참고 원본은 저장소에 포함하지 않았습니다. 참고 캐릭터 기반 팬 창작이며 원저작물의 권리 허락을 별도로 받은 것으로 표기하지 않습니다.
+
+- 최적화 사본: `public/assets/lounge/bank-clerk-nyamo-portrait.webp`(768px, 89,842바이트).
+- 생성 원본·정확한 프롬프트·SHA-256: [nyamo-portrait-generation.json](public/assets/lounge/nyamo-portrait-generation.json).
+- 재현: `node scripts/optimize-assets.mjs services`. 생성 원본은 공개 빌드에서 제외됩니다.

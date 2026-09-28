@@ -5,6 +5,7 @@
 //   npm run ui:shots -- --views s --only friends,map
 //   npm run ui:shots -- --baseline .ui-shots/before/report.json [--strict]
 //   npm run ui:shots -- --games                    # also casino/hall table screens
+//   npm run ui:shots -- --low-graphics             # software GPU: low quality, 30 FPS
 //
 // For each key screen at 1920×1080 (fhd), 1440×900 (d) and 1280×720 (s) it saves
 // a PNG and measures, inside the top dialog (or the whole HUD when none is open):
@@ -21,12 +22,13 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { verifyMeasurements } from './ui-measure-fixtures.mjs';
-import { reportFailures } from './ui-report.mjs';
+import { reportFailures, UI_METRICS } from './ui-report.mjs';
 import { kstDay } from '../app/lounge-economy.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -46,6 +48,7 @@ const baselineFile = opt('baseline', '');
 // --games adds the table screens (casino blackjack, hall seotda): slower, the
 // avatar walks to each venue.
 const withGames = flag('games');
+const lowGraphics = flag('low-graphics');
 // --write-baseline <file>: keep only the per-screen counts (the CI baseline).
 const writeBaseline = opt('write-baseline', '');
 fs.mkdirSync(out, { recursive: true });
@@ -81,6 +84,13 @@ async function runView(browser, base, view, report) {
   const H = await setup({ browser, base, view, seedLife });
   const { page, js, sleep, until } = H;
   const res = (report.views[view] = { screens: {}, notes: [] });
+  if (lowGraphics) {
+    // Use the game's supported settings, preserving its real buildings and UI.
+    // Opt-in only: standard baseline runs keep their existing graphics preset.
+    await H.ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, fpsCap: 30, quality: 'low' })));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    res.renderSettings = { fpsCap: 30, quality: 'low', reducedMotion: true };
+  }
   const want = (n) => !only.length || only.includes(n);
   const dlg = () => js(() => [...document.querySelectorAll('dialog[open]')].length);
   const closeAll = async () => {
@@ -90,7 +100,7 @@ async function runView(browser, base, view, report) {
     }
   };
   const focusScene = async () => {
-    await js(() => document.querySelector('[data-testid=village-3d], [data-testid=bedroom-3d]')?.focus({ preventScroll: true }));
+    await js(() => document.querySelector('[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid=interior-3d]')?.focus({ preventScroll: true }));
     await sleep(200);
   };
   const snap = async (name, extra = {}) => {
@@ -108,7 +118,17 @@ async function runView(browser, base, view, report) {
     try {
       await fn();
     } catch (e) {
-      res.notes.push(`${name}: ${e.message.slice(0, 140)}`);
+      const message = `${name}: ${e.stack || e.message || String(e)}`;
+      res.notes.push(message);
+      console.error(`  ${view} ${message}`);
+      const failureFile = `${view}-${name}-failed.png`;
+      try {
+        await page.screenshot({ path: path.join(out, failureFile), timeout: 90000 });
+        (res.failedScreens ??= {})[name] = failureFile;
+      } catch (shotError) {
+        res.notes.push(`${name}: failure screenshot: ${shotError.message}`);
+        console.error(`  ${view} ${name}: failure screenshot: ${shotError.message}`);
+      }
     }
     await closeAll();
   };
@@ -119,6 +139,23 @@ async function runView(browser, base, view, report) {
     const ok = await H.clickText(re, 'dialog[open] button');
     await sleep(900);
     return ok;
+  };
+  const returnToVillage = async () => {
+    for (let i = 0; i < 4 && (await js(() => document.querySelector('main.l-app')?.dataset.space)) !== 'village'; i++) {
+      await closeAll();
+      await focusScene();
+      await page.keyboard.press('Escape');
+      await sleep(700);
+      if (!(await H.clickText(/마을로 나가기/, 'dialog[open] button'))) { await closeAll(); await H.clickText(/^나가기/); }
+      await until(() => document.querySelector('main.l-app')?.dataset.space === 'village', 20000);
+    }
+    assert.notEqual(await until(() => {
+      const s = document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state');
+      return !!s && s !== 'loading';
+    }, 180000), -1, '마을로 돌아오지 못했습니다.');
+    await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+    await sleep(1500);
+    await closeAll();
   };
 
   await page.goto(base);
@@ -158,11 +195,11 @@ async function runView(browser, base, view, report) {
   // Viewing these pages does not deposit, borrow, rob, gift or invite anyone.
   for (const [name, title] of [
     ['bank', '보관함'], ['bank-notes', '차용증'],
-    ['bank-casino', '카지노 창구'], ['bank-rob', '강도 놀이'],
   ]) {
     await step(name, async () => {
       if (!(await menu(/^은행 · 차용증$/))) throw new Error('은행 메뉴를 찾지 못했습니다.');
       await until(() => !!document.querySelector('dialog[open] .l-finance-balances'), 15000);
+      assert.deepEqual(await page.locator('dialog[open] [role="tab"]').allTextContents(), ['보관함', '차용증'], '은행에는 보관함과 차용증만 표시합니다.');
       if (!(await H.clickText(new RegExp(`^${title}$`), 'dialog[open] [role="tab"]'))) throw new Error(`${title} 탭을 찾지 못했습니다.`);
       await until((text) => document.querySelector('dialog[open] [role="tab"][aria-selected="true"]')?.textContent.trim() === text, 10000, title);
       if (name === 'bank' || name === 'bank-notes') {
@@ -171,8 +208,29 @@ async function runView(browser, base, view, report) {
           return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
         }, 15000);
         if (loaded < 0) throw new Error('은행원 냐모의 그림을 불러오지 못했습니다.');
+        assert.equal(await page.getByTestId('bank-clerk').getAttribute('data-portrait'), 'sprite');
       }
       await snap(name);
+      if (name === 'bank') {
+        const toggle = page.getByTestId('bank-clerk-portrait-toggle');
+        assert.equal((await toggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+        await toggle.click();
+        assert.notEqual(await until(() => {
+          const clerk = document.querySelector('[data-testid=bank-clerk]');
+          const img = clerk?.querySelector('img');
+          return clerk?.getAttribute('data-portrait') === 'photo' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+        }, 15000), -1, '은행원 냐모의 사진을 불러오지 못했습니다.');
+        assert.equal((await toggle.textContent()).trim(), '창구로 돌아가기');
+        await snap('bank-portrait');
+        for (const metric of UI_METRICS) assert.equal(res.screens['bank-portrait'][metric], 0, `bank-portrait: ${metric}`);
+        await toggle.click();
+        assert.notEqual(await until(() => {
+          const clerk = document.querySelector('[data-testid=bank-clerk]');
+          const img = clerk?.querySelector('img');
+          return clerk?.getAttribute('data-portrait') === 'sprite' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+        }, 15000), -1, '은행원 냐모의 창구 모습으로 돌아오지 못했습니다.');
+        assert.equal((await toggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+      }
     });
   }
   await step('npc', async () => {
@@ -182,17 +240,7 @@ async function runView(browser, base, view, report) {
   });
 
   // village
-  for (let i = 0; i < 4 && (await js(() => document.querySelector('main.l-app')?.dataset.space)) !== 'village'; i++) {
-    await closeAll();
-    await focusScene();
-    await page.keyboard.press('Escape');
-    await sleep(700);
-    if (!(await H.clickText(/마을로 나가기/, 'dialog[open] button'))) { await closeAll(); await H.clickText(/^나가기/); }
-    await until(() => document.querySelector('main.l-app')?.dataset.space === 'village', 20000);
-  }
-  await until(() => { const s = document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state'); return !!s && s !== 'loading'; }, 180000);
-  await sleep(3000);
-  await closeAll();
+  await returnToVillage();
   await step('village', () => snap('village'));
   await step('map', async () => { await focusScene(); await page.keyboard.press('KeyM'); await sleep(1000); await snap('map'); await focusScene(); await page.keyboard.press('KeyM'); await sleep(400); });
   await step('bag', async () => { await focusScene(); await page.keyboard.press('KeyI'); await sleep(1000); await snap('bag'); });
@@ -210,6 +258,46 @@ async function runView(browser, base, view, report) {
   });
   await step('bonds', async () => { await focusScene(); await page.keyboard.press('KeyL'); await sleep(1000); await snap('bonds'); });
   await step('collection', async () => { await focusScene(); await page.keyboard.press('KeyK'); await sleep(1000); await snap('collection'); });
+
+  // Historical baseline names are retained, but each service now has its own
+  // visible entry point. These are read-only captures, never robbery/loan actions.
+  await step('bank-rob', async () => {
+    if (!(await menu(/마을 친구들/))) throw new Error('마을 친구들 메뉴를 찾지 못했습니다.');
+    // Software WebGL can delay actionability; retain the normal hit-target and
+    // visibility checks instead of force-clicking a potentially covered button.
+    await page.getByTestId('friends-robbery-button').click({ timeout: 60000 });
+    const dialog = page.getByRole('dialog', { name: '강도·방범', exact: true });
+    await dialog.waitFor({ state: 'visible' });
+    assert.equal(await dialog.getByRole('tab').count(), 0, '강도·방범은 은행 탭과 분리됩니다.');
+    assert.equal(await dialog.getByTestId('bank-clerk').count(), 0);
+    await snap('bank-rob');
+  });
+  await step('bank-casino', async () => {
+    try {
+      await closeAll();
+      if (!(await page.locator('#hv-minimap-body').count())) await page.getByTestId('minimap-toggle').click();
+      await page.locator('[data-minimap-place="casino"]').click({ timeout: 60000 });
+      await focusScene(); await page.keyboard.down('Shift');
+      try {
+        assert.notEqual(await until(() => {
+          const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+          return d?.nearbyPlace === 'casino' && d.walking === 'false';
+        }, 180000), -1, '카지노 입구까지 걷지 못했습니다.');
+      } finally { await page.keyboard.up('Shift'); }
+      await page.keyboard.press('KeyE');
+      assert.notEqual(await until(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === 'casino' && d.loadState === 'ready';
+      }, 180000), -1, '카지노 실내를 불러오지 못했습니다.');
+      assert.notEqual(await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000), -1, '카지노 입장 효과가 끝나지 않았습니다.');
+      await page.getByTestId('casino-lumi-ledger').click();
+      const dialog = page.getByRole('dialog', { name: '루미의 카지노 장부', exact: true });
+      await dialog.waitFor({ state: 'visible' });
+      assert.equal(await dialog.getByRole('tab').count(), 0, '루미 장부는 은행 탭과 분리됩니다.');
+      assert.equal(await dialog.getByTestId('bank-clerk').count(), 0);
+      await snap('bank-casino');
+    } finally { await returnToVillage(); }
+  });
 
   // Game tables: walk in, a bot opens the table, sit, capture the game screen.
   if (withGames) {

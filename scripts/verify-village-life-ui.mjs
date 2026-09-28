@@ -334,11 +334,14 @@ async function runView(mobile = false) {
       await walkBuilding('wardrobe'); await shot('salon-door'); await pressAction();
       await wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
-        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 8 && d.salonState === 'loaded';
+        return d?.area === 'salon' && d.loadState === 'ready' && Number(d.salonModels) === 14 && d.salonState === 'loaded';
       }, null, 180_000);
       await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
       assert.equal(await page.getByTestId('wardrobe-preview').count(), 0, 'the salon opens on a walkable floor');
       await shot('salon-interior');
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('salon-interior-fhd');
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
       await click('[data-testid=interior-salon-route]');
       await runTo(() => wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
@@ -401,11 +404,14 @@ async function runView(mobile = false) {
       await walkBuilding('bank'); await shot('bank-door'); await pressAction();
       await wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
-        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 7;
+        return d?.area === 'bank' && d.loadState === 'ready' && d.bankerState === 'loaded' && Number(d.bankModels) === 13;
       }, null, 180_000);
       await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
       assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'entering the bank leaves the player on its walkable floor');
       await shot('bank-interior');
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('bank-interior-fhd');
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
       await click('[data-testid=interior-banker-route]');
       await runTo(() => wait(() => {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
@@ -414,11 +420,35 @@ async function runView(mobile = false) {
       assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'approaching Nyamo does not transfer money or open a form');
       await page.keyboard.press('KeyE');
       await page.locator('dialog[open].l-finance').waitFor();
+      assert.deepEqual(await page.locator('dialog[open].l-finance [role="tab"]').allTextContents(), ['보관함', '차용증'], 'the bank only exposes storage and friend notes');
       await wait(() => {
         const img = document.querySelector('[data-testid=bank-clerk] img');
         return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
       });
       const key = 'wallet-' + H.uid, before = H.world().ledger.accounts[key];
+      const ledgerBeforePortrait = structuredClone(H.world().ledger);
+      const portraitToggle = page.getByTestId('bank-clerk-portrait-toggle');
+      assert.equal(await page.getByTestId('bank-clerk').getAttribute('data-portrait'), 'sprite');
+      assert.equal((await portraitToggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+      await portraitToggle.click();
+      await wait(() => {
+        const clerk = document.querySelector('[data-testid=bank-clerk]');
+        const img = clerk?.querySelector('img');
+        return clerk?.getAttribute('data-portrait') === 'photo' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
+      assert.equal((await portraitToggle.textContent()).trim(), '창구로 돌아가기');
+      await shot('bank-portrait', true);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('bank-portrait-fhd', true);
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
+      await portraitToggle.click();
+      await wait(() => {
+        const clerk = document.querySelector('[data-testid=bank-clerk]');
+        const img = clerk?.querySelector('img');
+        return clerk?.getAttribute('data-portrait') === 'sprite' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
+      });
+      assert.equal((await portraitToggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
+      assert.deepEqual(H.world().ledger, ledgerBeforePortrait, 'portrait viewing and return must not change balances or ledger entries');
       await page.getByLabel('맡기거나 찾을 금액').fill('1000');
       await page.getByRole('button', { name: '맡기기', exact: true }).click();
       await waitMock(() => H.world().ledger.vault?.[key] === 1000, 'deposit appears in canonical mock ledger');

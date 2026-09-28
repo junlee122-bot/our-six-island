@@ -39,6 +39,7 @@ export function FriendsModal({
   notify,
   onLeaveRoom,
   onInvite,
+  onRobbery,
   onVisit,
   onMail,
   selfActor,
@@ -51,6 +52,8 @@ export function FriendsModal({
   /** Asks for confirmation (if a seat is active) and leaves the room. */
   onLeaveRoom: () => void;
   onInvite: () => void;
+  /** Open the village-only protection and robbery screen. */
+  onRobbery?: () => void;
   /** Walk into that friend's room (shared live with whoever is there). */
   onVisit?: (actor: number) => void;
   /** Write a letter (friends who are resting get one instead of an invite). */
@@ -64,6 +67,7 @@ export function FriendsModal({
   const connected = view.status === 'connected' && !offline;
   const online = new Set(view.players.map((p) => p.actor));
   const me = selfActor ?? view.players.find((p) => p.id === view.self)?.actor;
+  const canOpenRobbery = connected && view.players.some((p) => p.id === view.self && p.area === 'village');
   // Friends who are not logged in: they walk their daily round in the village
   // as "쉬는 중" figures. Letters and room visits work; games do not.
   const resting = ACTORS.map((_, actor) => actor).filter(
@@ -204,6 +208,11 @@ export function FriendsModal({
             )}
           </section>
           {restingList}
+          {canOpenRobbery && onRobbery && (
+            <section className="fr-section" aria-label="마을 방범">
+              <GameButton glyph="shield" onClick={onRobbery} data-testid="friends-robbery-button">강도·방범</GameButton>
+            </section>
+          )}
           <div className="l-modal-actions fr-footer">
             <GameButton onClick={onClose}>닫기</GameButton>
             <GameButton

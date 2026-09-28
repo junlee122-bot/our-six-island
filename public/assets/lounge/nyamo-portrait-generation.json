@@ -1,0 +1,13 @@
+{
+  "createdAt": "2026-09-28",
+  "provider": "OpenAI built-in image_gen",
+  "asset": "bank-clerk-nyamo-portrait.webp",
+  "original": "_originals/bank-clerk-nyamo-portrait.png",
+  "prompt": "_originals/bank-clerk-nyamo-portrait.prompt.txt",
+  "reference": "User-provided fictional cat-person illustration, appearance and expression reference only; reference original is not redistributed.",
+  "use": "Adult photoreal portrait in Nyamo bank dialog only; existing 2D world sprite retained.",
+  "originalSha256": "59680A48CB8EB6C98D75DB257DB4A61EB025BECD07A76911B82228D386F9AFCF",
+  "webSha256": "4C59F11C3B7D8C58EA92A1008562CB28BF08F950F92868C32DCD93D89BB3943F",
+  "webBytes": 89842,
+  "optimization": "sharp resize width 768, WebP quality 88 effort 6; npm run optimize:assets -- services"
+}

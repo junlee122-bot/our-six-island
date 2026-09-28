@@ -54,7 +54,7 @@ test('game groups require valid join sheets in targeted runs and the first full 
 });
 
 test('new finance and NPC screens are required before baseline enrollment and work independently with --only', () => {
-  const names = ['bank', 'bank-notes', 'bank-casino', 'bank-rob', 'npc'];
+  const names = ['bank-notes', 'bank-casino', 'bank-rob', 'npc'];
   const r = { views: { fhd: { screens: {}, notes: [], errors: [] } } };
   const oldBaseline = { views: { fhd: { screens: { room: screen() } } } };
   const full = reportFailures(r, { views: ['fhd'], baseline: oldBaseline });
@@ -68,4 +68,20 @@ test('new finance and NPC screens are required before baseline enrollment and wo
     assert.deepEqual(reportFailures(r, options), []);
     delete r.views.fhd.screens[name];
   }
+});
+
+test('bank captures require the portrait screen before baseline enrollment and in targeted runs', () => {
+  const r = { views: { fhd: { screens: { bank: screen() }, notes: [], errors: [] } } };
+  const oldBaseline = { views: { fhd: { screens: { bank: screen() } } } };
+  const selectedBank = { views: ['fhd'], only: ['bank'], baseline: oldBaseline };
+  const fullBank = { views: ['fhd'], baseline: oldBaseline };
+  assert.deepEqual(reportFailures(r, selectedBank), ['fhd/bank-portrait: missing screen']);
+  assert.ok(reportFailures(r, fullBank).includes('fhd/bank-portrait: missing screen'));
+  r.views.fhd.screens['bank-portrait'] = { ...screen(), coveredCount: undefined };
+  assert.deepEqual(reportFailures(r, selectedBank), ['fhd/bank-portrait: invalid coveredCount']);
+  assert.ok(reportFailures(r, fullBank).includes('fhd/bank-portrait: invalid coveredCount'));
+  r.views.fhd.screens['bank-portrait'] = screen();
+  assert.deepEqual(reportFailures(r, selectedBank), []);
+  delete r.views.fhd.screens.bank;
+  assert.deepEqual(reportFailures(r, selectedBank), ['fhd/bank: missing screen']);
 });
