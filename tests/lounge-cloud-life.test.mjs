@@ -144,6 +144,25 @@ test('buy is idempotent: replaying the same request never charges twice', async 
   assert.deepEqual(again.response.life.me.unlocks, ['palette-pastel']);
 });
 
+test('a lost fruit-pick response replays once without adding fruit or moving the harvest time again', async () => {
+  const h = harness(), a = member(0);
+  await h.run(a, 'open');
+  const before = h.world.life.bag[a.id].fruit;
+  const picked = await h.run(a, 'action', { action: { kind: 'pick', tree: 'tree-1' } });
+  assert.equal(picked.response.ok, true, picked.response.error);
+  const bag = structuredClone(h.world.life.bag[a.id]);
+  const pickedAt = structuredClone(h.world.life.fruitPickedAt[a.id]);
+  assert.ok(bag.fruit > before);
+  // The client lost that reply, then retried after its 12s action timeout.
+  h.advance(21_000);
+  const retry = h.replay(a, picked.command, picked.hash);
+  assert.equal(retry.response.ok, true, retry.response.error);
+  assert.deepEqual(h.world.life.bag[a.id], bag);
+  assert.deepEqual(h.world.life.fruitPickedAt[a.id], pickedAt);
+  assert.equal(h.world.receipts[a.id].filter((r) => r.id === picked.command.requestId).length, 1);
+  validateLedger(h.world.ledger);
+});
+
 test('sell and mail gifts through the cloud keep the ledger valid', async () => {
   const h = harness(),
     a = member(0),

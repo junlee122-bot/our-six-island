@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
+import { actionAttemptEvidence, assertSingleLogicalAction, assertSingleResourceChange, resourceActionState } from './ui-action-guard.mjs';
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
 import { villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
@@ -107,8 +108,8 @@ async function runView(mobile = false) {
     const wait = async (fn, arg, timeout = 30_000) => {
       assert.notEqual(await H.until(fn, timeout, arg), -1, `UI wait timed out: ${fn.toString().slice(0, 150)}`);
     };
-    const waitMock = async (check, label) => {
-      const end = performance.now() + 15_000;
+    const waitMock = async (check, label, timeout = 15_000) => {
+      const end = performance.now() + timeout;
       while (!check() && performance.now() < end) await sleep(100);
       assert.ok(check(), label);
     };
@@ -177,43 +178,83 @@ async function runView(mobile = false) {
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
     const guardedAction = async (kind, changed, label) => {
-      const before = commands.filter((c) => c.action?.kind === kind).length;
+      const before = commands.length;
+      const sent = () => commands.slice(before).filter((c) => c.action?.kind === kind);
       let release;
       const gate = { kind, requests: [], open: new Promise((done) => { release = done; }) };
-      const evidence = { kind, heldMs: 0, requestsWhileHeld: 0, requestsAfterReply: 0 };
+      const evidence = { kind, heldMs: 0, requestsWhileHeld: 0, requestsAfterReply: 0, responses: [], failedAttempts: [] };
       res.actionGuards.push(evidence);
       assert.equal(heldAction, null, 'only one resource action gate is active');
       assert.ok(!changed(), label + ': resource starts uncollected');
-      heldAction = gate;
-      const startedAt = performance.now();
-      let reply;
+      const replies = [], reads = [];
+      const readCommand = (request) => {
+        try { return JSON.parse(request.postData() || '{}').command; } catch { return null; }
+      };
+      const observeResponse = (response) => {
+        const command = readCommand(response.request());
+        if (command?.action?.kind !== kind) return;
+        const entry = { requestId: command.requestId, status: response.status() };
+        evidence.responses.push(entry);
+        reads.push(response.json().then((body) => {
+          entry.ok = body.ok;
+          if (body.error) entry.error = body.error;
+          if (response.status() === 200 && body.ok === true)
+            replies.push({ requestId: command.requestId, state: resourceActionState(body.life ?? body.packet?.life, command.action) });
+        }).catch((error) => { entry.readError = error.message.slice(0, 200); }));
+      };
+      const observeFailure = (request) => {
+        const command = readCommand(request);
+        if (command?.action?.kind === kind)
+          evidence.failedAttempts.push({ requestId: command.requestId, error: request.failure()?.errorText });
+      };
+      page.on('response', observeResponse);
+      page.on('requestfailed', observeFailure);
       try {
-        await pressAction();
-        await waitMock(() => gate.requests.length > 0, label + ': first request reaches the gate');
-        // Handle rejection even if an assertion fails before the gate is released.
-        reply = page.waitForResponse((r) => r.request() === gate.requests[0], { timeout: 30_000 })
-          .then((response) => ({ response }), (error) => ({ error }));
-        await focus();
-        for (let i = 0; i < 3; i++) await page.keyboard.press('KeyE');
-        assert.ok(!changed(), label + ': canonical state stays unchanged while the response is held');
-        evidence.requestsWhileHeld = commands.filter((c) => c.action?.kind === kind).length - before;
-        assert.equal(evidence.requestsWhileHeld, 1, label + ': repeated keys send only one in-flight action');
+        heldAction = gate;
+        const startedAt = performance.now();
+        let first, canonicalBefore;
+        try {
+          await pressAction();
+          await waitMock(() => gate.requests.length > 0, label + ': first request reaches the gate');
+          first = readCommand(gate.requests[0]);
+          canonicalBefore = resourceActionState(model(), first.action);
+          evidence.canonicalBefore = canonicalBefore;
+          await focus();
+          for (let i = 0; i < 3; i++) await page.keyboard.press('KeyE');
+          assert.ok(!changed(), label + ': canonical state stays unchanged while the response is held');
+          assert.deepEqual(resourceActionState(model(), first.action), canonicalBefore,
+            label + ': neither the resource nor bag changes before the reply');
+          evidence.requestsWhileHeld = sent().length;
+          evidence.whileHeld = actionAttemptEvidence(sent());
+          assertSingleLogicalAction(sent(), kind, label + ': repeated keys while pending');
+        } finally {
+          evidence.heldMs = Math.round(performance.now() - startedAt);
+          heldAction = null;
+          release();
+        }
+        // A slow software-rendered input step may outlast the real 12s network
+        // timeout. Accept only a successful reply for the SAME logical request,
+        // whether it belongs to the original HTTP attempt or its normal retry.
+        await waitMock(() => replies.some((r) => r.requestId === first.requestId),
+          label + ': resource action receives a successful canonical reply', 30_000);
+        await waitMock(changed, label);
+        // Preserve the post-reply check: a broken input guard queues a new ID,
+        // whereas CloudLoungeRoom's transport retry reuses the entire command.
+        await js(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
+        await Promise.all(reads);
+        evidence.requestsAfterReply = sent().length;
+        evidence.afterReply = actionAttemptEvidence(sent());
+        assertSingleLogicalAction(sent(), kind, label + ': no duplicate action is queued after the reply');
+        const canonicalAfter = resourceActionState(model(), first.action);
+        evidence.canonicalAfter = canonicalAfter;
+        const canonicalReplies = replies.filter((r) => r.requestId === first.requestId).map((r) => r.state);
+        assertSingleResourceChange(canonicalBefore, canonicalReplies, canonicalAfter, label);
+        evidence.canonicalReplyCount = canonicalReplies.length;
+        evidence.canonicalChangedOnce = true;
       } finally {
-        evidence.heldMs = Math.round(performance.now() - startedAt);
-        heldAction = null;
-        release();
+        page.off('response', observeResponse);
+        page.off('requestfailed', observeFailure);
       }
-      const received = await reply;
-      if (received.error) throw received.error;
-      assert.equal(received.response.status(), 200, label + ': resource action succeeds');
-      await received.response.finished();
-      await waitMock(changed, label);
-      // Let the client consume the reply and render its resulting state. Any
-      // incorrectly queued duplicate is sent after the first reply, so check
-      // the total again after these actual browser frames, not a wall-time nap.
-      await js(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
-      evidence.requestsAfterReply = commands.filter((c) => c.action?.kind === kind).length - before;
-      assert.equal(evidence.requestsAfterReply, 1, label + ': no duplicate action is queued after the reply');
     };
     const walkBuilding = async (id) => {
       if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
