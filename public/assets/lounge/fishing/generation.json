@@ -1,0 +1,20 @@
+{
+  "tool": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "jobId": "3a70b9ba-d4d2-46e3-aa5c-acb3f6983bae",
+  "createdAt": "2026-09-30",
+  "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GvlNWM4g0WFFzr7aU4tTQPXdqm/hf_20260930_090715_3a70b9ba-d4d2-46e3-aa5c-acb3f6983bae.png",
+  "params": { "quality": "high", "resolution": "2k", "aspect_ratio": "1:1", "use_unlim": false, "count": 1 },
+  "credits": { "before": 73.5, "after": 70.75, "spent": 2.75 },
+  "original": { "file": "_originals/fish-icons-atlas.png", "width": 2048, "height": 2048, "sha256": "2e25c705a913c02124c1d3c73c62283a5fd4303e8de4cd71167fc0a154c71157" },
+  "slicing": "node scripts/slice-fish-atlas.mjs: 6×6 equal cells, magenta keyed to alpha with a soft rim, trimmed, 128px WebP per id",
+  "cells": [
+    ["crucian", "carp", "koi", "catfish", "mandarin", "eel"],
+    ["trout", "sweetfish", "lenok", "rainbow", "snakehead", "skygazer"],
+    ["mackerel", "seabream", "flounder", "yellowtail", "hairtail", "squid"],
+    ["mullet", "sandfish", "filefish", "octopus", "blackbream", "rockfish"],
+    ["goldcarp", "moonhairtail", "blossomtrout", "lakelord", "icecod", "crab"],
+    ["snail", "shrimp", "clam", "oyster", "conch", "chest"]
+  ],
+  "prompt": "A sprite sheet of 36 game item icons arranged in a strict 6 by 6 grid on a flat solid pure magenta background (#FF00FF). Every icon is centered in its own equal square cell, fully inside the cell with generous margin, no icon touches another, no text, no labels, no grid lines, no borders, no shadows on the background. Style: warm cozy hand-painted farming-life game item art, soft gouache texture, gentle dark brown ink outline, muted natural colors, slight top-left light, each fish shown in side view facing left, cute but anatomically recognizable Korean freshwater and sea species. Row 1 left to right: crucian carp, common carp (bronze), koi (white with orange patches), catfish with whiskers, Korean mandarin fish (siniperca, mottled yellow-brown), freshwater eel. Row 2: cherry trout (masu salmon, parr marks), sweetfish ayu (olive, yellow spot), lenok trout (red eye, dark spots), rainbow trout (pink stripe), northern snakehead (long, dark blotches), skygazer culter (silver, upturned mouth). Row 3: chub mackerel (blue wavy stripes), red sea bream (pink-red), olive flounder (flat, spotted), Japanese amberjack yellowtail (blue back, yellow stripe), largehead hairtail (long silver ribbon), squid (reddish, tentacles). Row 4: grey mullet, sailfin sandfish (small, beige with brown mottling), threadsail filefish (flat diamond shape, beige), octopus (red-brown), black sea bream (dark silver), dark-banded rockfish (reddish brown, big eyes). Row 5 (legendary, subtle golden glow outline): golden carp (shiny gold scales), moonlight hairtail (pale gold-silver ribbon with glowing tip), cherry blossom trout (pink with small blossom petals on its side), lake lord giant dark green-black catfish-like fish (huge, mossy), king ice cod (pale blue-white with frost), blue crab (orange-red, claws raised). Row 6: freshwater marsh snail (dark olive conical shell), small freshwater shrimp (translucent tan), manila clam (patterned beige shell), oyster (rough grey shell, slightly open showing pearl-white), turban shell conch (spiky orange-brown), small wooden treasure chest with brass fittings."
+}

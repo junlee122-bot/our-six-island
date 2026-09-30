@@ -1,0 +1,407 @@
+/*
+ * 손맛 겨루기 (FishingReel.tsx) and the 낚시 수첩 (FishingJournal.tsx).
+ * Tokens only (app/ui/tokens.css): water blue track, leaf-green catch zone,
+ * gold gauge and chest, paper side panel. Readable at 1280×720.
+ */
+.l-reel-hold {
+  display: grid;
+  grid-template-columns: 76px 22px;
+  gap: var(--sp-3);
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+}
+.l-reel-hold:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-focus);
+  border-radius: var(--r-s);
+}
+.l-reel {
+  --zone-y: 0%;
+  --zone-h: 25%;
+  --fish-y: 30%;
+  --progress: 30%;
+  --chest-y: 50%;
+  --chest-p: 0%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  margin: var(--sp-3) var(--sp-3) 0;
+  padding: var(--sp-3);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+  box-shadow: var(--edge-line);
+  outline: none;
+  user-select: none;
+  touch-action: none;
+  cursor: pointer;
+}
+.l-reel:focus-visible {
+  box-shadow: var(--ring-focus);
+}
+.l-reel-track {
+  position: relative;
+  display: block;
+  height: clamp(220px, 38vh, 340px);
+  border-radius: var(--r-s);
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--pal-cyan-61), var(--water-600));
+  box-shadow: var(--edge-frame);
+}
+.l-reel-water {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--paper-50) 10%, transparent) 0 2px, transparent 2px 18px);
+}
+.l-reel-zone {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: var(--zone-y);
+  height: var(--zone-h);
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--leaf-100) 55%, transparent);
+  box-shadow: var(--ring-line);
+}
+.l-reel-track[data-inside='true'] .l-reel-zone {
+  background: color-mix(in srgb, var(--leaf-100) 85%, transparent);
+}
+.l-reel-fish {
+  position: absolute;
+  left: 50%;
+  bottom: var(--fish-y);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  margin: 0 0 -17px -17px;
+  border-radius: 50%;
+  color: var(--ink-900);
+  background: var(--paper-50);
+  box-shadow: var(--ring-line);
+}
+.l-reel-track[data-inside='false'] .l-reel-fish {
+  color: var(--danger);
+}
+.l-reel-chest {
+  position: absolute;
+  left: 50%;
+  bottom: var(--chest-y);
+  display: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0 0 -15px -15px;
+}
+.l-reel-track[data-chest='active'] .l-reel-chest {
+  display: grid;
+}
+.l-reel-chest svg {
+  position: relative;
+  z-index: var(--z-raised);
+}
+.l-reel-chest-box {
+  fill: var(--wood-500);
+  stroke: var(--wood-900);
+  stroke-width: 1.4;
+}
+.l-reel-chest-lid {
+  fill: var(--wood-300);
+  stroke: var(--wood-900);
+  stroke-width: 1.4;
+}
+.l-reel-chest-lock {
+  fill: var(--highlight);
+}
+.l-reel-chest-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: conic-gradient(var(--highlight) var(--chest-p), color-mix(in srgb, var(--paper-50) 30%, transparent) 0);
+}
+.l-reel-gauge {
+  position: relative;
+  display: block;
+  height: clamp(220px, 38vh, 340px);
+  border-radius: var(--r-s);
+  background: var(--surface);
+  box-shadow: var(--edge-line);
+  overflow: hidden;
+}
+.l-reel-gauge span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--progress);
+  background: var(--highlight);
+}
+.l-reel-side {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-2);
+  min-width: 0;
+  color: var(--text);
+}
+.l-reel-kind {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  margin: 0;
+}
+.l-reel-kind strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+.l-reel-kind small {
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+.l-reel-help {
+  margin: 0;
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+  color: var(--text-soft);
+}
+.l-reel-status {
+  margin: 0;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-bold);
+}
+.l-reel[data-pressed] .l-reel-track {
+  box-shadow: var(--edge-press);
+}
+
+/* ------------------------------------------------------------ catch extras */
+.l-catch-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+}
+.l-catch-tag {
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+  background: var(--surface-sunken);
+}
+.l-catch-tag[data-kind='perfect'],
+.l-catch-tag[data-kind='gold'] {
+  color: var(--text-on-highlight);
+  background: var(--highlight);
+}
+.l-catch-tag[data-kind='coop'] {
+  color: var(--text-on-accent);
+  background: var(--accent);
+}
+
+/* ------------------------------------------------------------ tackle row, crab pot row */
+.l-angler-gear {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-body-s);
+  color: var(--text);
+  border-bottom: 1px dashed var(--line);
+}
+.l-angler-gear label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-weight: var(--fw-bold);
+}
+.l-angler-gear select {
+  min-height: 36px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-s);
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+}
+.l-angler-gear .l-gear-note {
+  color: var(--text-soft);
+}
+.l-angler-gear .l-gear-spacer {
+  flex: 1;
+}
+
+/* ------------------------------------------------------------ journal */
+.l-fj {
+  display: grid;
+  gap: var(--sp-3);
+}
+.l-fj-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-fj-cell button {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 96px;
+  padding: var(--sp-2) var(--sp-1);
+  border-radius: var(--r-s);
+  font: inherit;
+  font-size: var(--fs-cap);
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+  cursor: pointer;
+}
+.l-fj-cell button[aria-pressed='true'] {
+  box-shadow: var(--ring-focus);
+}
+.l-fj-cell[data-unknown] .l-item-icon {
+  filter: brightness(0) opacity(0.35);
+}
+.l-fj-cell[data-rarity='legend'] button {
+  background: color-mix(in srgb, var(--highlight) 22%, var(--surface-raised));
+}
+.l-fj-detail {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+}
+.l-fj-detail[data-unknown] .l-item-icon {
+  filter: brightness(0) opacity(0.35);
+}
+.l-fj-detail h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+.l-fj-detail p {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+}
+.l-fj-detail dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--sp-3);
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-body-s);
+}
+.l-fj-detail dt {
+  color: var(--text-soft);
+}
+.l-fj-detail dd {
+  margin: 0;
+  font-weight: var(--fw-semi);
+}
+.l-fj-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body-s);
+}
+.l-fj-table th,
+.l-fj-table td {
+  padding: var(--sp-1) var(--sp-2);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.l-fj-table th {
+  color: var(--text-soft);
+  font-weight: var(--fw-semi);
+}
+.l-fj-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.l-fj-section {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-fj-section h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+.l-fj-section > p {
+  margin: 0;
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+.l-fj-rows {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-fj-rows li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+}
+.l-fj-rows li > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.l-fj-rows small {
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+}
+.l-fj-podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sp-2);
+}
+.l-fj-podium div {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line);
+}
+.l-fj-podium b {
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+
+@media (max-height: 760px) {
+  .l-reel-track,
+  .l-reel-gauge {
+    height: 210px;
+  }
+}
+
+.l-fish-art {
+  display: inline-grid;
+  place-items: center;
+}
+.l-fish-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.l-fish-shadow {
+  display: inline-block;
+  flex: none;
+  background: color-mix(in srgb, var(--text) 35%, transparent);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}

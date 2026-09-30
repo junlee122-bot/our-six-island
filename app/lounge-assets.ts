@@ -172,3 +172,48 @@ export const LOUNGE_ASSETS = {
   'm11-01': '/assets/lounge/m11-01.svg',
   'm12-01': '/assets/lounge/m12-01.svg',
 } as const;
+
+/**
+ * 낚시 업그레이드: painted fish / shellfish icons and the treasure chest
+ * (Higgsfield atlas, sliced by scripts/slice-fish-atlas.mjs; record in
+ * public/assets/lounge/fishing/generation.json). Species without one keep
+ * their vector icon (ItemIcon).
+ */
+export const FISH_PAINTED: Readonly<Record<string, string>> = {
+  crucian: '/assets/lounge/fishing/crucian.webp',
+  carp: '/assets/lounge/fishing/carp.webp',
+  koi: '/assets/lounge/fishing/koi.webp',
+  catfish: '/assets/lounge/fishing/catfish.webp',
+  mandarin: '/assets/lounge/fishing/mandarin.webp',
+  eel: '/assets/lounge/fishing/eel.webp',
+  trout: '/assets/lounge/fishing/trout.webp',
+  sweetfish: '/assets/lounge/fishing/sweetfish.webp',
+  lenok: '/assets/lounge/fishing/lenok.webp',
+  rainbow: '/assets/lounge/fishing/rainbow.webp',
+  snakehead: '/assets/lounge/fishing/snakehead.webp',
+  skygazer: '/assets/lounge/fishing/skygazer.webp',
+  mackerel: '/assets/lounge/fishing/mackerel.webp',
+  seabream: '/assets/lounge/fishing/seabream.webp',
+  flounder: '/assets/lounge/fishing/flounder.webp',
+  yellowtail: '/assets/lounge/fishing/yellowtail.webp',
+  hairtail: '/assets/lounge/fishing/hairtail.webp',
+  squid: '/assets/lounge/fishing/squid.webp',
+  mullet: '/assets/lounge/fishing/mullet.webp',
+  sandfish: '/assets/lounge/fishing/sandfish.webp',
+  filefish: '/assets/lounge/fishing/filefish.webp',
+  octopus: '/assets/lounge/fishing/octopus.webp',
+  blackbream: '/assets/lounge/fishing/blackbream.webp',
+  rockfish: '/assets/lounge/fishing/rockfish.webp',
+  goldcarp: '/assets/lounge/fishing/goldcarp.webp',
+  moonhairtail: '/assets/lounge/fishing/moonhairtail.webp',
+  blossomtrout: '/assets/lounge/fishing/blossomtrout.webp',
+  lakelord: '/assets/lounge/fishing/lakelord.webp',
+  icecod: '/assets/lounge/fishing/icecod.webp',
+  crab: '/assets/lounge/fishing/crab.webp',
+  snail: '/assets/lounge/fishing/snail.webp',
+  shrimp: '/assets/lounge/fishing/shrimp.webp',
+  clam: '/assets/lounge/fishing/clam.webp',
+  oyster: '/assets/lounge/fishing/oyster.webp',
+  conch: '/assets/lounge/fishing/conch.webp',
+  chest: '/assets/lounge/fishing/chest.webp',
+};
