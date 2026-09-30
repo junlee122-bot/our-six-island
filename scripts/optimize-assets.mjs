@@ -59,6 +59,11 @@ const kb = (n) => `${Math.round(n / 1024)}KB`;
 // samples at their on-screen size anyway (mip level 1), at a quarter of the
 // memory. Everything else keeps the 1024² cap. Paths are relative to public/models.
 const MODEL_TEXTURE_SIZE = {
+  // 낚시 업그레이드: catch-card trophies are 132 px on screen.
+  'village/life-services/fishCrucian.glb': 512,
+  'village/life-services/fishMandarin.glb': 512,
+  'village/life-services/fishHairtail.glb': 512,
+  'village/life-services/fishCod.glb': 512,
   'village/civic/picketFence.glb': 512,
   'village/civic/harborFence.glb': 512,
   'village/civic/timberDeck.glb': 512,
