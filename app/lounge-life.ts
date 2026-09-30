@@ -1361,6 +1361,8 @@ export type PlotView = Plot & {
   witherAt?: number | null;
   giant?: boolean;
   sprinkled?: boolean;
+  /** 텃밭 확장: the fixture standing on this tile (the plot is then empty). */
+  fixture?: string;
 };
 /** A friend's plot as the village draws it (optional fields: 텃밭 확장). */
 export type PublicPlotView = {
@@ -1469,6 +1471,7 @@ export function lifeView(
           witherAt: witherAt(p, sheltered),
           giant: giants.includes(i < 6 ? 0 : 1),
           sprinkled: sprinklerBonus(life, uid, i) !== null,
+          ...(fixtureAt(life, uid, i) ? { fixture: fixtureAt(life, uid, i)!.k } : {}),
         };
       }),
       bag: structuredClone(life.bag[uid] ?? emptyBag()),

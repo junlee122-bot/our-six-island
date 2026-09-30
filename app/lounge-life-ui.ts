@@ -299,7 +299,7 @@ export function farmToolAction(
   if (tool.startsWith('seed-')) {
     const crop = tool.slice(5) as Crop;
     if (!CROP_INFO[crop] || !(greenhouse || cropInSeason(crop, season))) return null;
-    const n = Math.min(farm.filter((p) => !p.crop).length, me.bag.seeds[crop] ?? 0);
+    const n = Math.min(farm.filter((p) => !p.crop && !(p as { fixture?: string }).fixture).length, me.bag.seeds[crop] ?? 0);
     return n ? { kind: 'plant', label: `${CROP_INFO[crop].name} 심기 (${n})`, n } : null;
   }
   if (tool === 'fertilizer' || tool === 'fertilizer-deluxe') {
