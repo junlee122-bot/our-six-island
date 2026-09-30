@@ -1,0 +1,99 @@
+{
+ "createdAt": "2026-09-30",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "quality": "high",
+ "resolution": "2k",
+ "purpose": "In-world chibi sprites (about 2.5-3 heads, matching the friends and 루미/허 선장). The tall art (npc-stage1/2-generation.json, casino-lender-rose, salon-stylist-gwen, bank-clerk-nyamo) stays as the dialogue illustration/portrait.",
+ "layout": "Two figures per 3:2 image (left, right) unless a single name; split at the horizontal midpoint.",
+ "background": "solid magenta #FF00FF, except beatrice-bocchi on solid green #00FF00 (both wear pink)",
+ "styleReferences": [
+  "host-lumi (cell 1)",
+  "login/dowon",
+  "host-captain (cell 1)",
+  "the first test pair frieren-nasera"
+ ],
+ "note": "Two first attempts (rose-gwen b3b787b0-349c-4424-a3fb-ce85fefd3658, janna-gabung ffd57913-fd20-49e3-82f8-7c2b17f043db) were blocked by the provider's content filter and re-requested with plainer wording.",
+ "assets": [
+  {
+   "file": "_originals/chibi/npc-chibi-frieren-nasera.png",
+   "npcs": [
+    "frieren",
+    "nasera"
+   ],
+   "job": "84c6c165-bc86-42e1-b184-5eb8bab584e7",
+   "sha256": "94E67DE5BF3377C838EFF72514BC17BE722C140E92BAC692008D83FDC7C84ACD"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-rose-gwen.png",
+   "npcs": [
+    "rose",
+    "gwen"
+   ],
+   "job": "2e225968-4bd8-4ae5-9f74-5fca8755d5fd",
+   "sha256": "10B82D0B45FF6403C540BBE301FD2271DF7827A0BB2D75493786608FBFEB03FA"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-nyamo-thresh.png",
+   "npcs": [
+    "nyamo",
+    "thresh"
+   ],
+   "job": "8941a5e9-7342-476c-a538-f6120432b999",
+   "sha256": "99C83069F38E59F0E75BFD8D8398E68B21D78807E8A3EDA4873D9AA3BF9DD1D4"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-sinjjajang-volibas.png",
+   "npcs": [
+    "sinjjajang",
+    "volibas"
+   ],
+   "job": "e3524073-93bc-458c-a819-9dbd96a88aab",
+   "sha256": "4ED73D4151778EE13DF9775439852D212CDC02DD2B3BC245E4646E43DC48EFF5"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-janna-gabung.png",
+   "npcs": [
+    "janna",
+    "gabung"
+   ],
+   "job": "8ed63e38-5766-48b6-ad7e-4a0fc4ec5048",
+   "sha256": "21C20EB483F59FE68C93360EC1D956701A78067A97DA8686A025C870049467BE"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "npcs": [
+    "lux",
+    "himmel"
+   ],
+   "job": "f32bc00e-8dbd-4b08-a707-c2cb6c1bb9a6",
+   "sha256": "6F45C166AB0253135AC3A075C11F53100BFAED2DD900652A6D894F217DFAE431"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-beatrice-bocchi.png",
+   "npcs": [
+    "beatrice",
+    "bocchi"
+   ],
+   "job": "8d74cf90-8939-4973-a3fc-5c6a2463aec0",
+   "sha256": "767101C0B509E5DB8575A8C595F029AFC53C4966161199F4C058558733438BB0"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-tsunade-makima.png",
+   "npcs": [
+    "tsunade",
+    "makima"
+   ],
+   "job": "29ca1329-3a03-4bb4-9fce-b76d19dc690d",
+   "sha256": "1AA2F40BEEBBBAFAC720474507BCFF125385F1B613493F9121929430BD1D4D33"
+  },
+  {
+   "file": "_originals/chibi/npc-chibi-yaninekko.png",
+   "npcs": [
+    "yaninekko"
+   ],
+   "job": "6fcc8c44-8524-4fd9-8f8e-5acf6ff20037",
+   "sha256": "E6B92D62FF795B8AC87EC12A67ECAD1C9604757CCB31C4AC306175C0591B5A86"
+  }
+ ]
+}
