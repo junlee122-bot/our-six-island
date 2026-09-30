@@ -344,7 +344,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     intro: '수백 년 동안 도서관을 지켜 온 대정령. 연체에는 가장 엄격한 거야.',
     likesText: '옛 화석, 꽃차, 달콤한 과자',
     dislikesText: '시끄러운 벌레, 달팽이',
-    gifts: { loved: ['fossil', 'flowertea', 'jam'], liked: ['mattang', 'hwachae', 'kind:flower', 'pumpkinpie'], disliked: ['cicada', 'cricket', 'snail'] },
+    gifts: { loved: ['kind:fossil', 'flowertea', 'jam'], liked: ['mattang', 'hwachae', 'kind:flower', 'pumpkinpie'], disliked: ['cicada', 'cricket', 'snail'] },
     rewards: { 40: ['flowertea', 3], 100: ['fossil-fern', 1] },
     art: img(A.npc_beatrice, A.npc_beatrice_portrait),
     speech: 'casual',
