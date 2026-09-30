@@ -11,6 +11,8 @@ import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { recall, remember } from '../lounge-settings';
 import { lifeSfx } from '../lounge-audio-life';
+import { DISTRICT_OPEN_LINES } from '../lounge-district-unlocks';
+import { DISTRICTS, DISTRICT_FLAG } from '../lounge-districts';
 import type { Notify, PushBanner } from './Toast';
 
 const EVENTS_KEY = 'bumtadew-life-events-v1';
@@ -111,9 +113,21 @@ export function useLifeEvents({
   const [celebration, setCelebration] = useState<{ flag: string; name: string; text: string } | null>(null);
   useEffect(() => {
     if (!flags) return;
+    // 마을 확장 2단계: a district that opened (항구) or the move-in day (언덕 이사)
+    // shows its banner once per device, even if it opened while I was away.
+    for (const id of ['harbor', 'hillside'] as const) {
+      const flag = DISTRICT_FLAG[id]!;
+      const key = `bumtadew-district-banner-${id}`;
+      if (!flags.includes(flag) || recall(key)) continue;
+      remember(key, '1');
+      const shown = { flag, name: id === 'hillside' ? '이사 날' : `${DISTRICTS[id].name} 열림`, text: DISTRICT_OPEN_LINES[id].banner };
+      queueMicrotask(() => setCelebration(shown));
+      cb.current.push('success', DISTRICT_OPEN_LINES[id].banner, { key: 'flag-' + flag });
+      lifeSfx('fanfare');
+    }
     if (flagsRef.current)
       for (const flag of flags)
-        if (!flagsRef.current.includes(flag)) {
+        if (!flagsRef.current.includes(flag) && !flag.startsWith('district-')) {
           const bundle = BUNDLES.find((b) => b.flag === flag);
           const text = VILLAGE_FLAGS[flag] ?? '';
           setCelebration({ flag, name: bundle?.reward ?? flag, text });

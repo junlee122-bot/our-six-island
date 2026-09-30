@@ -230,6 +230,8 @@ function RecordsPage({ view, a }: { view: CloudRoomView; a: AnglingView }) {
 function CupPage({ room, view, a, notify }: { room: CloudRoom; view: CloudRoomView; a: AnglingView; notify: Notify }) {
   const [run, busy] = useLifeAction(room, notify);
   const me = view.life?.actors?.[view.self];
+  // Once 항구 구역 is open the cup is held there: prizes are handed out at 낚시조합.
+  const awayFromHarbor = !!view.life?.flags?.includes('district-harbor') && view.players.find((p) => p.id === view.self)?.area !== 'harbor';
   const ends = new Date(a.cup.resetAt + 9 * 3_600_000);
   return (
     <section className="l-fj-section" aria-label="주간 낚시 대회">
@@ -274,7 +276,8 @@ function CupPage({ room, view, a, notify }: { room: CloudRoom; view: CloudRoomVi
                   <GameButton
                     variant="primary"
                     size="s"
-                    disabled={busy}
+                    disabled={busy || awayFromHarbor}
+                    title={awayFromHarbor ? '항구 낚시조합에서 받아요' : undefined}
                     onClick={() => void run({ kind: 'cupClaim', week: h.week }, `대회 ${rank + 1}위 상품 ${formatBeom(a.cup.prizes[rank])}을 받았어요.`, 'coin')}
                   >
                     상품 받기 {formatBeom(a.cup.prizes[rank])}

@@ -37,7 +37,7 @@ import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToI
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender.ts';
 import { BANKER_SPOT } from './lounge-bank-layout.ts';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout.ts';
-import { NPC_IDS, NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
+import { NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
 

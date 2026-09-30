@@ -1906,6 +1906,16 @@ function AccountLounge({
   // The table sheet over the hall / casino: my seat (seated) wins; otherwise
   // the table I walked up to (setup at an empty one, join at a forming one).
   const interior = isInteriorArea(tab) ? tab : null;
+  // 공연 밤 (Tue/Fri 20–22 KST): 봇치 is on the tavern stage (lounge-town.ts SHOW_*); say so once per night.
+  const showOn = interior === 'tavern' && !!view.life?.town?.show.on;
+  const showNotified = useRef('');
+  useEffect(() => {
+    if (!showOn) return;
+    const night = String(Math.floor(((view.life?.serverNow ?? 0) + 9 * 3_600_000) / 86_400_000));
+    if (showNotified.current === night) return;
+    showNotified.current = night;
+    notify('공연 밤이에요. 봇치가 무대에서 기타를 쳐요.');
+  }, [showOn, view.life?.serverNow, notify]);
   let tableSheet: {
     game: GameKind;
     mode: SheetMode;
