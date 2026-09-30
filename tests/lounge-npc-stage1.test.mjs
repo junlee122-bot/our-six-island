@@ -334,3 +334,20 @@ test('dialogue selection is deterministic and fills every placeholder', () => {
   assert.ok(misses > 3 && misses < 30);
   assert.deepEqual(jannaForecast(DAY0), jannaForecast(DAY0));
 });
+
+test('late evening: every walking resident is out somewhere visible until 01:00 KST', async () => {
+  const { npcSpot } = await import('../app/lounge-npc-schedule.ts');
+  const visible = new Set(['village', 'market', 'tavern', 'casino', 'lounge', 'bank', 'salon', 'realty', 'furniture']);
+  const ids = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'];
+  const KST = 9 * 3_600_000, DAY = 86_400_000;
+  for (let d = 0; d < 14; d++) {
+    const day = Math.floor(Date.UTC(2026, 9, 1) / DAY) + d;
+    for (const [h, m] of [[21, 0], [22, 0], [23, 30], [0, 30]]) {
+      const t = (day + (h < 12 ? 1 : 0)) * DAY - KST + (h * 60 + m) * 60_000;
+      for (const id of ids) {
+        const s = npcSpot(id, t);
+        assert.ok(visible.has(s.area) || s.walking, `${id} hidden at ${h}:${m} (day ${d}): ${s.area} ${s.label}`);
+      }
+    }
+  }
+});
