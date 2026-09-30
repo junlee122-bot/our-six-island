@@ -908,7 +908,11 @@ export function Bedroom3D({
       // The room's scale on screen (ROOM_VIEW_HALF over the whole window), also
       // when the room sits in a smaller frame (모델하우스 관람).
       const windowH = Math.max(height, window.innerHeight || height);
-      const half = viewHalf((window.innerWidth || width) / windowH, ROOM_VIEW_HALF) * (height / windowH);
+      const scaled = viewHalf((window.innerWidth || width) / windowH, ROOM_VIEW_HALF) * (height / windowH);
+      // …but never crop the room in a small frame: zoom out until it all fits.
+      const fitH = ((shape.maxZ - shape.minZ + 0.7) * Math.sin(VIEW_PITCH) + shape.wallHeight * Math.cos(VIEW_PITCH) + 0.6) / 2,
+        fitW = (shape.maxX - shape.minX + 1.2) / 2 / aspect;
+      const half = Math.max(scaled, Math.min(ROOM_VIEW_HALF * 1.25, Math.max(fitH, fitW)));
       camera.left = -half * aspect;
       camera.right = half * aspect;
       camera.top = half;
