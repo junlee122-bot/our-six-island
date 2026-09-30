@@ -1,0 +1,58 @@
+{
+ "createdAt": "2026-09-30",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "quality": "high",
+ "resolution": "2k",
+ "aspect": "2:3",
+ "background": "solid magenta #FF00FF (removed at build/runtime)",
+ "styleReferences": [
+  "_originals/casino-lender-rose.png",
+  "_originals/salon-stylist-gwen.png"
+ ],
+ "note": "User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "assets": [
+  {
+   "npc": "nasera",
+   "job": "7a8e5bc5-57ec-43ad-90e5-8eeb46dc33cf",
+   "original": "_originals/npc-nasera.png",
+   "sha256": "B773532E17DFCE35E71F774B71D8F9BFDA728DBDB8A862774D9B6FBF8658356C",
+   "reference": "User-provided female Nasus fan art (Riot Games character)."
+  },
+  {
+   "npc": "frieren",
+   "job": "5759f938-367c-48b1-879a-e81ec62fd436",
+   "original": "_originals/npc-frieren.png",
+   "sha256": "8CFA994098A5AEF9AAAA7EE41DD2465D01E6DED40C86A08C8C262875285160D8",
+   "reference": "User-provided Frieren official model sheet (Frieren: Beyond Journey's End, Yamada/Abe/Shogakukan)."
+  },
+  {
+   "npc": "thresh",
+   "job": "08107dc4-477b-4305-83c8-7c5103b14265",
+   "original": "_originals/npc-thresh.png",
+   "sha256": "D35C5BC18BCD6E5E623AAA7EF4428B5B0D3280BAC1C566E053EB1E10541A654A",
+   "reference": "User-provided female Thresh fan art (Riot Games character)."
+  },
+  {
+   "npc": "sinjjajang",
+   "job": "92895842-40c7-4f6a-8aff-f1c622985ef9",
+   "original": "_originals/npc-sinjjajang.png",
+   "sha256": "95A87B98C18B5F9350C79BE2B1666FC5043BC9A1855242E2B608E958E0B641DB",
+   "reference": "User-provided Xin Zhao splash art (Riot Games character)."
+  },
+  {
+   "npc": "volibas",
+   "job": "f6c76093-35d9-4ad5-80e5-3c5d999dbc68",
+   "original": "_originals/npc-volibas.png",
+   "sha256": "B7D93DBE7D183BF6BA52A56462A9D77EC87310DCEF458EDBD4B37AF154349AA3",
+   "reference": "User-provided Volibear 'Captain' skin splash (Riot Games); drawn as a human."
+  },
+  {
+   "npc": "janna",
+   "job": "891a749b-8229-4473-a5b8-30e4fcb7aae2",
+   "original": "_originals/npc-janna.png",
+   "sha256": "E87D94B021C6CA7D942BF4C265E7FD499011F5AA0DCD5250EBB361FF5EF35E82",
+   "reference": "User-provided Janna 'Forecast' skin splash (Riot Games character)."
+  }
+ ]
+}
