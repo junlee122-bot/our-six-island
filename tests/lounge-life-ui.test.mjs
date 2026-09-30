@@ -71,7 +71,7 @@ test('inventory rows: crops split by quality stars, groups in order, tools hotba
     inv: { crucian: 1, fertilizer: 2, salad: 1, wood: 4, butterfly: 1 },
     furniture: { 'furn-plant': 1 },
   });
-  assert.deepEqual(cropSplit(m, 'tomato'), { 0: 2, 1: 2, 2: 1 });
+  assert.deepEqual(cropSplit(m, 'tomato'), { 0: 2, 1: 2, 2: 1, 3: 0 }); // 3 = 별빛 (텃밭 확장)
   const rows = inventoryEntries(m);
   const keys = rows.map((r) => r.key);
   assert.deepEqual(keys.slice(0, 5), ['seed-carrot', 'tomato@2', 'tomato@1', 'tomato@0', 'fruit']);

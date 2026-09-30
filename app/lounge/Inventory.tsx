@@ -194,7 +194,7 @@ export function InventoryPanel({
               {ITEM_BY_ID[entry.id]?.note && <p className="l-help-text">{ITEM_BY_ID[entry.id].note}</p>}
               {crop && split && (
                 <fieldset className="l-quality-pick" aria-label="팔 품질">
-                  {([0, 1, 2] as Quality[]).map((t) => (
+                  {([0, 1, 2, 3] as Quality[]).filter((t) => t < 3 || split[3] > 0).map((t) => (
                     <button
                       key={t}
                       type="button"

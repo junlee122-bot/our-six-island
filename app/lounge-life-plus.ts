@@ -133,6 +133,9 @@ import {
 import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 // 성장 P1: XP and skill/tool effects (functions only; see the cycle note above).
 import { XP, fishXp } from './lounge-growth-data.ts';
+// 텃밭 확장: leaf data, and the farm engine (functions only; see the cycle note above).
+import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId } from './lounge-farm-data.ts';
+import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
 import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
@@ -234,6 +237,8 @@ export type UserExt = {
   inv?: Record<string, number>;
   q1?: Partial<Record<Crop, number>>;
   q2?: Partial<Record<Crop, number>>;
+  /** 별빛 crops (텃밭 확장), counted like q1/q2. */
+  q3?: Partial<Record<Crop, number>>;
   furn?: Record<string, number>;
   dex?: string[];
   stats?: Partial<Record<StatKey, number>>;
@@ -318,6 +323,7 @@ export type PlusAction =
 export const PLUS_REJECT = {
   fert: '비료를 확인해 주세요.',
   fertDone: '이미 그 비료를 준 칸이에요.',
+  fixture: '설비가 놓인 칸이에요.',
   nothingToFert: '비료를 줄 작물이 없어요.',
   farmMax: '밭은 12칸까지 넓힐 수 있어요.',
   friendFarm: '친구의 밭을 찾을 수 없어요.',
@@ -390,7 +396,7 @@ const idList = (v: unknown, max: number, ok: (s: string) => boolean = () => true
     : [];
 const isDexId = (id: string) => isCropId(id) || (isItemId(id) && ITEM_BY_ID[id].kind !== 'tool');
 const isMuseumId = (id: string) => isCropId(id) || (isItemId(id) && !!ITEM_BY_ID[id].museum);
-const isDemandId = (id: string) => isCropId(id) || id === 'fruit' || (isItemId(id) && ITEM_BY_ID[id].sell > 0);
+const isDemandId = (id: string) => isCropId(id) || id === 'fruit' || isGoodId(id) || (isItemId(id) && ITEM_BY_ID[id].sell > 0);
 const readActorAmounts = (v: unknown) => {
   const by: Record<string, number> = {};
   for (const [a, n] of Object.entries(obj(v)))
@@ -447,9 +453,11 @@ function readUserExt(v: unknown): UserExt | undefined {
   const inv = counts(x.inv, isItemId);
   if (nonEmpty(inv)) out.inv = inv as Record<string, number>;
   const q1 = counts<Crop>(x.q1, isCropId),
-    q2 = counts<Crop>(x.q2, isCropId);
+    q2 = counts<Crop>(x.q2, isCropId),
+    q3 = counts<Crop>(x.q3, isCropId);
   if (nonEmpty(q1)) out.q1 = q1;
   if (nonEmpty(q2)) out.q2 = q2;
+  if (nonEmpty(q3)) out.q3 = q3;
   const furn = counts(x.furn, isFurnitureRef);
   if (nonEmpty(furn)) out.furn = furn as Record<string, number>;
   const furnStrict = Object.fromEntries(Object.entries(obj(x.furnStrict)).filter(([ref, yes]) => isFurnitureRef(ref) && yes === true)) as Record<string, true>;
@@ -677,10 +685,12 @@ export const DEMAND_HALF_LIFE: Readonly<Record<string, number>> = {
   sweetpotato: 5,
   cabbage: 5,
   fruit: 20,
+  ...NEW_CROP_HALF_LIFE,
 };
 export function demandHalfLife(id: string): number {
   if (Object.hasOwn(DEMAND_HALF_LIFE, id)) return DEMAND_HALF_LIFE[id];
   if (isCropId(id)) return 5;
+  if (isGoodId(id)) return GOOD_HALF_LIFE_BY_ID[id] ?? GOOD_HALF_LIFE;
   const def = ITEM_BY_ID[id];
   if (!def) return 6;
   if (def.kind === 'fish') {
@@ -798,6 +808,7 @@ export function lifeWealth(life: LifeState, uid: string) {
     total += (bag.fruit ?? 0) * FRUIT_SELL;
   }
   for (const [id, n] of Object.entries(life.ext?.[uid]?.inv ?? {})) total += n * (ITEM_BY_ID[id]?.sell ?? 0);
+  total += farmGoodsWealth(life, uid);
   return Math.min(Number.MAX_SAFE_INTEGER, total);
 }
 /** KST week (Monday start) of a KST day number. */
@@ -827,8 +838,9 @@ export function cropQCount(life: LifeState, uid: string, crop: Crop, q: Quality)
   const total = life.bag[uid]?.produce[crop] ?? 0,
     x = life.ext?.[uid],
     q1 = Math.min(total, x?.q1?.[crop] ?? 0),
-    q2 = Math.min(total - q1, x?.q2?.[crop] ?? 0);
-  return q === 0 ? total - q1 - q2 : q === 1 ? q1 : q2;
+    q2 = Math.min(total - q1, x?.q2?.[crop] ?? 0),
+    q3 = Math.min(total - q1 - q2, x?.q3?.[crop] ?? 0);
+  return q === 0 ? total - q1 - q2 - q3 : q === 1 ? q1 : q === 2 ? q2 : q3;
 }
 /** Adds (or with negative n removes) crops of exactly one quality. */
 export function addCropQ(life: LifeState, uid: string, crop: Crop, q: Quality, n: number) {
@@ -839,16 +851,16 @@ export function addCropQ(life: LifeState, uid: string, crop: Crop, q: Quality, n
   const added = bag.produce[crop] - before;
   if (q === 0 || added === 0) return;
   const x = extOf(life, uid),
-    key = q === 1 ? 'q1' : 'q2',
+    key = q === 1 ? 'q1' : q === 2 ? 'q2' : 'q3',
     map = (x[key] ??= {});
   setCount(map, crop, (map[crop] ?? 0) + added);
   if (!nonEmpty(map)) delete x[key];
 }
-/** Removes n crops, lowest eligible quality first; returns [normal, silver, gold] taken. */
+/** Removes n crops, lowest eligible quality first; returns [normal, silver, gold, 별빛] taken. */
 export function takeCrop(life: LifeState, uid: string, crop: Crop, n: number, minQ: Quality = 0) {
-  const taken: [number, number, number] = [0, 0, 0];
+  const taken: [number, number, number, number] = [0, 0, 0, 0];
   let left = n;
-  for (const t of [0, 1, 2] as Quality[]) {
+  for (const t of [0, 1, 2, 3] as Quality[]) {
     if (t < minQ || !left) continue;
     const take = Math.min(left, cropQCount(life, uid, crop, t));
     if (take) addCropQ(life, uid, crop, t, -take);
@@ -869,7 +881,7 @@ export function addInv(life: LifeState, uid: string, item: string, n: number) {
 /** How many of an item (crops: at least quality q, any tier) the user has. */
 function itemCount(life: LifeState, uid: string, id: string, q: Quality = 0) {
   if (isCropId(id))
-    return ([0, 1, 2] as Quality[])
+    return ([0, 1, 2, 3] as Quality[])
       .filter((t) => t >= q)
       .reduce((s: number, t) => s + cropQCount(life, uid, id, t), 0);
   if (id === 'fruit') return life.bag[uid]?.fruit ?? 0;
@@ -1260,31 +1272,38 @@ export function plusAction(
       break;
     }
     case 'fertilize': {
-      const level = a.item === 'fertilizer' ? 1 : a.item === 'fertilizer-deluxe' ? 2 : 0;
-      if (!level || !(FERTILIZERS as readonly string[]).includes(a.item)) fail(PLUS_REJECT.fert);
+      // Quality fertilizers (level 1–3) replace a lower level; 성장 촉진제 and
+      // 보습 흙 are separate soil treatments (one each per planting).
+      const level = a.item === 'fertilizer' ? 1 : a.item === 'fertilizer-deluxe' ? 2 : a.item === 'fertilizer-star' ? 3 : 0;
+      const soil = a.item === 'speed-gro' ? 'sg' : a.item === 'retaining' ? 'rs' : null;
+      if ((!level && !soil) || !(FERTILIZERS as readonly string[]).includes(a.item)) fail(PLUS_REJECT.fert);
+      const done = (p: (typeof farm)[number]) => (soil ? !!p[soil] : (p.fert ?? 0) >= level);
       const open = (i: number) => {
         const p = farm[i];
-        return !!p.crop && (p.fert ?? 0) < level && now < plotReadyAt(p, now)!;
+        return !!p.crop && !done(p) && now < plotReadyAt(p, now)!;
       };
       let targets: number[];
       if (a.plot === -1) targets = farm.flatMap((_, i) => (open(i) ? [i] : []));
       else {
         if (!safe(a.plot) || a.plot < 0 || a.plot >= farm.length) fail(LIFE_REJECT.plot);
         const p = farm[a.plot];
-        if (!p.crop) fail(LIFE_REJECT.empty);
-        if ((p.fert ?? 0) >= level) fail(PLUS_REJECT.fertDone);
+        if (!p.crop) fail(fixtureAt(life, uid, a.plot) ? PLUS_REJECT.fixture : LIFE_REJECT.empty);
+        if (done(p)) fail(PLUS_REJECT.fertDone);
         if (now >= plotReadyAt(p, now)!) fail(LIFE_REJECT.grown);
         targets = [a.plot];
       }
       if (!targets.length) fail(PLUS_REJECT.nothingToFert);
       if (invCount(life, uid, a.item) < 1) fail(LIFE_REJECT.notEnough);
       targets = targets.slice(0, invCount(life, uid, a.item));
-      const speedUp = (level === 2 ? DELUXE_SPEED : 0) + plantSpeed(life, uid, now);
+      const speedUp = (level === 2 ? DELUXE_SPEED : soil === 'sg' ? SPEED_GRO : 0) + (level ? plantSpeed(life, uid, now) : 0);
       for (const i of targets) {
         const p = farm[i];
         addInv(life, uid, a.item, -1);
-        p.fert = level as 1 | 2;
+        if (level) p.fert = level as 1 | 2 | 3;
+        else if (soil) p[soil] = 1;
         if (speedUp) p.speed = Math.min(MAX_SPEED, (p.speed ?? 0) + speedUp);
+        // 보습 흙: the soil is wet right now (if it still needed water).
+        if (soil === 'rs' && p.wateredAt === null && plotRainAt(p, now) === null) p.wateredAt = now;
       }
       break;
     }
@@ -1303,6 +1322,8 @@ export function plusAction(
       const ownerActor = life.actors[owner!],
         theirs = life.farms[owner!];
       if (x.wf?.includes(ownerActor)) fail(PLUS_REJECT.friendWatered);
+      // 텃밭 확장: crows and withering on the friend's farm settle first.
+      settleFarmPlots(life, owner!, now);
       const needs = (i: number) => {
         const p = theirs[i];
         return !!p.crop && p.wateredAt === null && plotRainAt(p, now) === null && now < plotReadyAt(p, now)!;
@@ -1910,7 +1931,7 @@ export type PlusMe = {
   npcRelations: NpcRelationView[];
   plots: FarmSize;
   inv: Record<string, number>;
-  quality: { silver: Partial<Record<Crop, number>>; gold: Partial<Record<Crop, number>> };
+  quality: { silver: Partial<Record<Crop, number>>; gold: Partial<Record<Crop, number>>; star?: Partial<Record<Crop, number>> };
   furniture: Record<string, number>;
   furnitureStrict: Record<string, true>;
   dex: string[];
@@ -1993,7 +2014,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     npcRelations: npcRelationsView(raw.npcRelations, now),
     plots: raw.plots ?? 6,
     inv: { ...raw.inv },
-    quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 } },
+    quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 }, ...(raw.q3 ? { star: { ...raw.q3 } } : {}) },
     furniture: { ...raw.furn },
     furnitureStrict: { ...raw.furnStrict },
     dex: [...(raw.dex ?? [])],

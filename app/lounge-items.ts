@@ -4,6 +4,7 @@
 // helpers; shared by the client and the hohyeon-api Edge function.
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
+import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 export type Spot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
@@ -227,6 +228,7 @@ export const CROP_SELL_REF: Record<string, number> = {
   sweetpotato: 3_000,
   cabbage: 3_600,
   spinach: 2_200,
+  ...Object.fromEntries(Object.entries(NEW_CROP_INFO).map(([id, c]) => [id, c.sell])),
 };
 const RAW_DISHES = [
   // Legacy island meals (life-data.ts MEALS).
@@ -274,18 +276,22 @@ export const DISHES: readonly DishDef[] = RAW_DISHES.map((d) => ({
   sell: Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
 }));
 
-export const FERTILIZERS = ['fertilizer', 'fertilizer-deluxe'] as const;
+/** Soil items the `fertilize` action takes (텃밭 확장 added the last three). */
+export const FERTILIZERS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
 export type FertilizerId = (typeof FERTILIZERS)[number];
 /** Buyable consumables (a sink). */
 export const ITEM_PRICES: Record<string, number> = {
   fertilizer: 400,
   'fertilizer-deluxe': 2_000,
   bait: 150,
+  ...FARM_ITEM_PRICES,
 };
 const tools: ItemDef[] = [
   { id: 'fertilizer', name: '비료', emoji: '🧪', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +1 (은별·금별 확률이 올라요)' },
   { id: 'fertilizer-deluxe', name: '고급 비료', emoji: '⚗️', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +2, 성장 10% 빠르게' },
   { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },
+  // 텃밭 확장: fixtures, machines and the new soil items (lounge-farm-data.ts).
+  ...FARM_TOOL_ITEMS.map((t): ItemDef => ({ id: t.id, name: t.name, emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: t.note })),
 ];
 export const ITEMS: readonly ItemDef[] = [
   ...FISH.map((f): ItemDef => ({ id: f.id, name: f.name, emoji: f.emoji, cat: 'fish', kind: 'fish', sell: f.sell, note: f.note, museum: true })),

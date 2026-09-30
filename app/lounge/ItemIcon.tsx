@@ -914,13 +914,15 @@ export function ItemIcon({
   );
 }
 
-/** Silver / gold quality star (vector). */
+const QUALITY_WORD: Record<Quality, string> = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' };
+/** Silver / gold / 별빛 quality star (vector). */
 export function QualityStar({ quality, size = 13 }: { quality: Quality; size?: number }) {
   if (!quality) return null;
-  const fill = quality === 2 ? '#f3c332' : '#c9d2dc';
-  const stroke = quality === 2 ? '#a87a12' : '#7f8a96';
+  // 별빛 (3): a lilac star with a small inner glint (Stardew's iridium tier).
+  const fill = quality === 3 ? '#b99cf0' : quality === 2 ? '#f3c332' : '#c9d2dc';
+  const stroke = quality === 3 ? '#6a4bb0' : quality === 2 ? '#a87a12' : '#7f8a96';
   return (
-    <svg className="l-q-star" data-quality={quality} viewBox="0 0 20 20" width={size} height={size} aria-label={quality === 2 ? '금별' : '은별'} role="img">
+    <svg className="l-q-star" data-quality={quality} viewBox="0 0 20 20" width={size} height={size} aria-label={QUALITY_WORD[quality]} role="img">
       <path d="M10 1.5 l2.6 5.4 5.9 .8 -4.3 4.1 1 5.8 -5.2 -2.8 -5.2 2.8 1 -5.8 -4.3 -4.1 5.9 -.8z" fill={fill} stroke={stroke} strokeWidth="1.2" strokeLinejoin="round" />
     </svg>
   );

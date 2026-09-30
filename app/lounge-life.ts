@@ -29,7 +29,6 @@ import {
   soldBeomToday,
   hasFlag,
   bump,
-  discover,
   addCropQ,
   cropQCount,
   takeCrop,
@@ -42,6 +41,30 @@ import {
   type PlusMe,
 } from './lounge-life-plus.ts';
 import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
+// 텃밭 확장: static data (leaf) and the farm engine (same cycle rule: functions only).
+import { FARM_ACTION_KINDS, NEW_CROP_IDS, NEW_CROP_INFO, STAR_CHANCE, STAR_MULT, type NewCrop } from './lounge-farm-data.ts';
+import {
+  applySprinklers,
+  farmAction,
+  farmsPublic,
+  farmXView,
+  fairView,
+  fixtureAt,
+  giantBed,
+  growthStage,
+  harvestFarm,
+  projectFarms,
+  readFarmExt,
+  settleFarm,
+  shadeFor,
+  sprinklerBonus,
+  witherAt,
+  farmSheltered,
+  type FairView,
+  type FarmAction,
+  type FarmExt,
+  type FarmXView,
+} from './lounge-farm.ts';
 // 성장 P1 (skills, blacksmith, 마을 개척): same cycle rule as lounge-life-plus.
 import { GROWTH_ACTION_KINDS, XP } from './lounge-growth-data.ts';
 import {
@@ -92,7 +115,9 @@ export type Crop =
   | 'corn'
   | 'watermelon'
   | 'sweetpotato'
-  | 'cabbage';
+  | 'cabbage'
+  /** 텃밭 확장: 16 seasonal crops (lounge-farm-data.ts). */
+  | NewCrop;
 export const BASE_CROPS: Crop[] = ['carrot', 'tomato', 'pumpkin', 'strawberry'];
 export const CROPS: Crop[] = [
   ...BASE_CROPS,
@@ -102,6 +127,7 @@ export const CROPS: Crop[] = [
   'watermelon',
   'sweetpotato',
   'cabbage',
+  ...NEW_CROP_IDS,
 ];
 const MIN = 60_000,
   HOUR = 3_600_000;
@@ -139,6 +165,8 @@ export type CropInfo = {
   seasons?: readonly Season[];
   /** Regrows after harvest: time to the next harvest and total harvests. */
   regrow?: { ms: number; harvests: number };
+  /** Grows up a stake and shades the tile behind it (텃밭 확장). */
+  trellis?: true;
 };
 export const CROP_INFO: Record<Crop, CropInfo> = {
   carrot: { name: '당근', growMs: 30 * MIN, seed: 100, sell: 200, emoji: '🥕' },
@@ -193,19 +221,25 @@ export const CROP_INFO: Record<Crop, CropInfo> = {
     emoji: '🥬',
     seasons: ['autumn', 'winter'],
   },
+  ...NEW_CROP_INFO,
 };
 /** Whether a crop can be planted in a season (base crops: always). */
 export const cropInSeason = (crop: Crop, season: Season) =>
   !CROP_INFO[crop].seasons || CROP_INFO[crop].seasons!.includes(season);
-/** Quality stars: 0 normal, 1 silver, 2 gold. */
-export type Quality = 0 | 1 | 2;
-export const QUALITY_MULT: Record<Quality, number> = { 0: 1, 1: 1.25, 2: 1.5 };
-export const QUALITY_NAME: Record<Quality, string> = { 0: '', 1: '은별', 2: '금별' };
-/** [gold below, silver below] out of 100 per fertilizer level. */
-export const QUALITY_ODDS: Record<0 | 1 | 2, [number, number]> = {
+/** Quality stars: 0 normal, 1 silver, 2 gold, 3 별빛 (텃밭 확장; only with 별빛 비료). */
+export type Quality = 0 | 1 | 2 | 3;
+export const QUALITIES: readonly Quality[] = [0, 1, 2, 3];
+export const isQuality = (q: unknown): q is Quality => q === 0 || q === 1 || q === 2 || q === 3;
+export const QUALITY_MULT: Record<Quality, number> = { 0: 1, 1: 1.25, 2: 1.5, 3: STAR_MULT };
+export const QUALITY_NAME: Record<Quality, string> = { 0: '', 1: '은별', 2: '금별', 3: '별빛' };
+/** Fertilizer level on a plot: 1 비료, 2 고급 비료, 3 별빛 비료. */
+export type FertLevel = 1 | 2 | 3;
+/** [gold below, silver below] out of 100 per fertilizer level (level 3: 별빛 first, see plotQuality). */
+export const QUALITY_ODDS: Record<0 | FertLevel, [number, number]> = {
   0: [5, 25],
   1: [15, 50],
   2: [35, 80],
+  3: [55, 90],
 };
 /** Deluxe fertilizer growth bonus (percent faster). */
 export const DELUXE_SPEED = 10;
@@ -409,8 +443,16 @@ export type Plot = {
   crop: Crop | null;
   plantedAt: number;
   wateredAt: number | null;
-  /** Fertilizer level (quality odds; deluxe also grows faster). */
-  fert?: 1 | 2;
+  /** Fertilizer level (quality odds; deluxe also grows faster; 3 = 별빛 비료). */
+  fert?: FertLevel;
+  /** 텃밭 확장: 성장 촉진제 given (its speed is already in `speed`). */
+  sg?: 1;
+  /** 텃밭 확장: 보습 흙 (wet at once and on every regrow). */
+  rs?: 1;
+  /** 텃밭 확장: % slower (shade of a trellis crop in front, set at planting). */
+  sl?: number;
+  /** 텃밭 확장: an empty tile still showing the crop that withered there. */
+  dead?: Crop;
   /** Percent faster growth (deluxe fertilizer, 초록 손 buff), ≤ MAX_SPEED. */
   speed?: number;
   /** Harvests already taken from a regrowing crop. */
@@ -469,7 +511,8 @@ export type LifeState = {
 } & LifeExt &
   GrowthExt &
   VenueExt &
-  MoodExt;
+  MoodExt &
+  FarmExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -502,7 +545,9 @@ export type LifeAction =
   /** 가게 업그레이드 (lounge-venue-upgrades.ts). */
   | VenueAction
   /** 무드: snack, bed rest, bar drink, 촌장님 찻잔, sharing, 응원하기 (lounge-mood.ts). */
-  | MoodAction;
+  | MoodAction
+  /** 텃밭 확장: fixtures, machines, shipping bin, helping, 품평회 (lounge-farm.ts). */
+  | FarmAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -521,6 +566,7 @@ export const LIFE_ACTION_KINDS = [
   ...GROWTH_ACTION_KINDS,
   ...VENUE_ACTION_KINDS,
   ...MOOD_ACTION_KINDS,
+  ...FARM_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -560,6 +606,7 @@ export const LIFE_REJECT = {
   season: '지금은 심을 수 없는 계절이에요.',
   rained: '비가 와서 이미 촉촉해요.',
   quality: '품질을 확인해 주세요.',
+  fixture: '설비가 놓인 칸이에요.',
 } as const;
 export class LifeError extends Error {
   status = 409;
@@ -624,7 +671,7 @@ export function plotGrowMs(plot: Plot) {
   if (!plot.crop) return 0;
   const info = CROP_INFO[plot.crop],
     base = (plot.n ?? 0) > 0 && info.regrow ? info.regrow.ms : info.growMs;
-  return Math.ceil((base * (100 - Math.min(MAX_SPEED, plot.speed ?? 0))) / 100);
+  return Math.ceil((base * (100 - Math.min(MAX_SPEED, plot.speed ?? 0) + (plot.sl ?? 0))) / 100);
 }
 /**
  * When rain watered this plot (the start of the first rainy KST day on or
@@ -667,6 +714,8 @@ export function plotQuality(uid: string, index: number, plot: Plot): Quality {
   const roll = hash32(`q:${uid}:${index}:${plot.plantedAt}:${plot.crop}`) % 100,
     [gold, silver] = QUALITY_ODDS[plot.fert ?? 0],
     bonus = plot.g ?? 0;
+  // 별빛 비료: the lowest rolls become 별빛 (farming/hoe bonus adds half).
+  if (plot.fert === 3 && roll < STAR_CHANCE + Math.floor(bonus / 2)) return 3;
   return roll < gold + bonus ? 2 : roll < silver + bonus ? 1 : 0;
 }
 export function plotProgress(plot: Plot, now: number) {
@@ -695,13 +744,16 @@ function fruitYield(uid: string, tree: string, now: number, seq: number) {
 // ---------------------------------------------------------------- loading
 function readPlot(value: unknown): Plot {
   const p = (value ?? {}) as Partial<Plot>;
-  if (!isCrop(p.crop)) return emptyPlot();
+  if (!isCrop(p.crop)) return isCrop(p.dead) ? { ...emptyPlot(), dead: p.dead } : emptyPlot();
   const out: Plot = {
     crop: p.crop,
     plantedAt: time(p.plantedAt),
     wateredAt: p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt),
   };
-  if (p.fert === 1 || p.fert === 2) out.fert = p.fert;
+  if (p.fert === 1 || p.fert === 2 || p.fert === 3) out.fert = p.fert;
+  if (p.sg === 1) out.sg = 1;
+  if (p.rs === 1) out.rs = 1;
+  if (safe(p.sl) && p.sl > 0) out.sl = Math.min(30, p.sl);
   if (safe(p.speed) && p.speed > 0) out.speed = Math.min(MAX_SPEED, p.speed);
   const regrow = CROP_INFO[p.crop].regrow;
   if (regrow && safe(p.n) && p.n > 0) out.n = Math.min(regrow.harvests - 1, p.n);
@@ -859,6 +911,7 @@ export function readLife(value: unknown): LifeState {
     ...readGrowth(v.growth),
     ...readVenues(v.venues),
     ...readMood(v.mood),
+    ...readFarmExt(v),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -873,7 +926,7 @@ function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
   });
   return Object.keys(harvested).length ? { harvested } : {};
 }
-const countHarvest = (life: LifeState, uid: string, kind: HarvestKind, n: number) => {
+export const countHarvest = (life: LifeState, uid: string, kind: HarvestKind, n: number) => {
   const mine = ((life.harvested ??= {})[uid] ??= {});
   mine[kind] = addCount(mine[kind] ?? 0, n);
 };
@@ -983,6 +1036,13 @@ function lifeActionCore(
   const kind = a.kind as string;
   // 성장: today's fields, rested/retro XP and finished 마을 개척 settle first.
   touchGrowth(life, uid, now);
+  // 텃밭 확장: crows, withering, my shipping bin and last week's 품평회.
+  ledger = settleFarm(life, ledger, member, now);
+  nextLedger = ledger;
+  if ((FARM_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = farmAction(life, ledger, member, a as FarmAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
   if ((GROWTH_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = growthAction(life, ledger, member, a as GrowthAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
@@ -1013,6 +1073,14 @@ function lifeActionCore(
     const speed = Math.min(MAX_SPEED, plantSpeed(life, uid, now) + villageGrowSpeed(life) + mods.growSpeed);
     return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
   };
+  /** 텃밭 확장: shade from a trellis in front, then sprinklers, for tiles just planted. */
+  const afterPlant = (tiles: number[]) => {
+    for (const i of tiles) {
+      const sl = shadeFor(life, uid, i);
+      if (sl) farm[i].sl = sl;
+    }
+    for (const i of tiles) applySprinklers(life, uid, i, farm[i], now);
+  };
   switch (a.kind) {
     case 'plant': {
       // plot -1 plants every empty plot (as many as there are seeds): one
@@ -1020,20 +1088,24 @@ function lifeActionCore(
       if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
       plantOk(a.crop);
       if (a.plot === -1) {
-        const empty = farm.flatMap((p, i) => (p.crop ? [] : [i]));
+        const empty = farm.flatMap((p, i) => (p.crop || fixtureAt(life, uid, i) ? [] : [i]));
         if (!empty.length) fail(LIFE_REJECT.noEmpty);
         if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
-        for (const i of empty.slice(0, bag.seeds[a.crop])) {
+        const planted = empty.slice(0, bag.seeds[a.crop]);
+        for (const i of planted) {
           bag.seeds[a.crop] -= 1;
           farm[i] = newPlot(a.crop);
         }
+        afterPlant(planted);
         break;
       }
       const i = plotIndex(a.plot, size);
       if (farm[i].crop) fail(LIFE_REJECT.occupied);
+      if (fixtureAt(life, uid, i)) fail(LIFE_REJECT.fixture);
       if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
       bag.seeds[a.crop] -= 1;
       farm[i] = newPlot(a.crop);
+      afterPlant([i]);
       break;
     }
     case 'water': {
@@ -1069,50 +1141,12 @@ function lifeActionCore(
     }
     case 'harvest': {
       if (a.plot !== -1) plotIndex(a.plot, size);
-      const targets =
-        a.plot === -1 ? farm.map((_, i) => i) : [a.plot as number];
-      let harvested = 0;
-      for (const i of targets) {
-        const plot = farm[i];
-        if (!plot.crop) {
-          if (a.plot !== -1) fail(LIFE_REJECT.empty);
-          continue;
-        }
-        if (now < plotReadyAt(plot, now)!) {
-          if (a.plot !== -1) fail(LIFE_REJECT.notReady);
-          continue;
-        }
-        const crop = plot.crop,
-          // 무드: 풍작 영감 lifts the plot one quality step.
-          quality = moodHarvestQuality(life, uid, plotQuality(uid, i, plot), now);
-        addCropQ(life, uid, crop, quality, 1);
-        countHarvest(life, uid, crop, 1);
-        bump(life, uid, 'harvest', 1);
-        if (quality === 2) bump(life, uid, 'gold', 1);
-        discover(life, uid, crop);
-        gainXp(
-          life,
-          uid,
-          'farm',
-          (XP.harvestBase + Math.min(XP.harvestHourMax, plotGrowMs(plot) / HOUR)) * QUALITY_MULT[quality],
-          now,
-        );
-        const regrow = CROP_INFO[crop].regrow,
-          n = (plot.n ?? 0) + 1;
-        farm[i] =
-          regrow && n < regrow.harvests
-            ? {
-                crop,
-                plantedAt: now,
-                wateredAt: null,
-                ...(plot.fert ? { fert: plot.fert } : {}),
-                ...(plot.speed ? { speed: plot.speed } : {}),
-                n,
-              }
-            : emptyPlot();
-        harvested++;
-      }
-      if (!harvested) fail(LIFE_REJECT.nothingReady);
+      // 텃밭 확장: giant beds, regrow + sprinklers (lounge-farm.ts harvestFarm).
+      harvestFarm(life, uid, a.plot as number, now, {
+        xpTo: uid,
+        // 무드: 풍작 영감 lifts the plot one quality step.
+        lift: (q) => moodHarvestQuality(life, uid, q, now),
+      });
       break;
     }
     case 'pick': {
@@ -1133,7 +1167,7 @@ function lifeActionCore(
       if (!fruit && !isCrop(a.crop)) fail(LIFE_REJECT.invalid);
       if (!safe(a.n) || a.n < 1 || a.n > SELL_MAX_N) fail(LIFE_REJECT.invalid);
       const q = a.quality;
-      if (q !== undefined && q !== 0 && q !== 1 && q !== 2) fail(LIFE_REJECT.quality);
+      if (q !== undefined && !isQuality(q)) fail(LIFE_REJECT.quality);
       if (fruit && q) fail(LIFE_REJECT.quality);
       const have = fruit
         ? bag.fruit
@@ -1151,7 +1185,7 @@ function lifeActionCore(
         ? [a.n, 0, 0]
         : q === undefined
           ? takeCrop(life, uid, a.crop as Crop, a.n)
-          : [0, 1, 2].map((t) => (t === q ? a.n : 0));
+          : [0, 1, 2, 3].map((t) => (t === q ? a.n : 0));
       if (fruit) bag.fruit -= a.n;
       else if (q !== undefined) addCropQ(life, uid, a.crop as Crop, q, -a.n);
       tiers.forEach((n, t) => {
@@ -1322,6 +1356,21 @@ export type PlotView = Plot & {
   quality: Quality;
   /** Harvests left including the next one (regrowing crops), else 1. */
   harvestsLeft: number;
+  /** 텃밭 확장: visual stage 0–4, when the crop withers (seasonal), on a giant bed, under a sprinkler. */
+  growth?: 0 | 1 | 2 | 3 | 4;
+  witherAt?: number | null;
+  giant?: boolean;
+  sprinkled?: boolean;
+};
+/** A friend's plot as the village draws it (optional fields: 텃밭 확장). */
+export type PublicPlotView = {
+  crop: Crop | null;
+  stage: 0 | 1 | 2 | 3;
+  needsWater: boolean;
+  growth?: 0 | 1 | 2 | 3 | 4;
+  fert?: FertLevel;
+  wet?: boolean;
+  dead?: Crop;
 };
 export type LifeView = {
   me: {
@@ -1339,10 +1388,13 @@ export type LifeView = {
     harvested: Partial<Record<HarvestKind, number>>;
   } & PlusMe;
   statuses: Record<string, { actor: number; text: string; at: number }>;
-  housesPlotsPublic: Record<
-    string,
-    { crop: Crop | null; stage: 0 | 1 | 2 | 3; needsWater: boolean }[]
-  >;
+  housesPlotsPublic: Record<string, PublicPlotView[]>;
+  /** 텃밭 확장: my yard's fixtures, machines, goods, shipping bin and farm news. */
+  farmx?: FarmXView;
+  /** 텃밭 확장: this week's 품평회 and past results (judge: 나세라). */
+  fair?: FairView;
+  /** 텃밭 확장: friends' fixtures / machines / giant beds for the 3D village. */
+  farmsPublic?: ReturnType<typeof farmsPublic>;
   actors: Record<string, number>;
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
@@ -1375,6 +1427,8 @@ export function lifeView(
     life = cloneLife(life);
     settleResearch(life, now);
   }
+  // 텃밭 확장: crows and withering as they will be settled (a view never writes).
+  life = projectFarms(life, now);
   const farm = life.farms[uid] ?? [];
   const mail = life.mail[uid] ?? [];
   const picked = life.fruitPickedAt[uid] ?? {};
@@ -1384,15 +1438,20 @@ export function lifeView(
       statuses[id] = { actor: life.actors[id], text: s.text, at: s.at };
   const housesPlotsPublic: LifeView['housesPlotsPublic'] = {};
   for (const [id, plots] of Object.entries(life.farms))
-    housesPlotsPublic[id] = plots.map((p) => ({
-      crop: p.crop,
-      stage: plotStage(p, now),
-      needsWater:
-        !!p.crop &&
-        p.wateredAt === null &&
-        plotRainAt(p, now) === null &&
-        now < plotReadyAt(p, now)!,
-    }));
+    housesPlotsPublic[id] = plots.map((p) => {
+      const wet = !!p.crop && plotWateredAt(p, now) !== null;
+      return {
+        crop: p.crop,
+        stage: plotStage(p, now),
+        needsWater: !!p.crop && !wet && now < plotReadyAt(p, now)!,
+        ...(p.crop ? { growth: growthStage(p, now) } : {}),
+        ...(p.fert ? { fert: p.fert } : {}),
+        ...(wet ? { wet } : {}),
+        ...(p.dead ? { dead: p.dead } : {}),
+      };
+    });
+  const sheltered = farmSheltered(life, uid),
+    giants = [0, 1].filter((b) => giantBed(farm, uid, b, now));
   const base = {
     me: {
       farm: farm.map((p, i) => {
@@ -1406,6 +1465,10 @@ export function lifeView(
           rained: plotRainAt(p, now) !== null,
           quality: plotQuality(uid, i, p),
           harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
+          growth: growthStage(p, now),
+          witherAt: witherAt(p, sheltered),
+          giant: giants.includes(i < 6 ? 0 : 1),
+          sprinkled: sprinklerBonus(life, uid, i) !== null,
         };
       }),
       bag: structuredClone(life.bag[uid] ?? emptyBag()),
@@ -1439,6 +1502,8 @@ export function lifeView(
     soldToday: soldBeomToday(life, uid, now),
     sellCapResetAt: nextKstMidnight(now),
     serverNow: now,
+    ...(UUID.test(uid) && actorValid(actor) ? { farmx: farmXView(life, uid, now), fair: fairView(life, uid, now) } : {}),
+    farmsPublic: farmsPublic(life, now),
   };
   const { me, ...plus } = plusView(life, uid, actor, now);
   return {

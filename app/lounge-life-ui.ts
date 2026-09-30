@@ -44,7 +44,7 @@ export function harvestOf(before: LifeView | null | undefined, after: LifeView |
   if (!before || !after) return [];
   return CROPS.flatMap((crop) => {
     const old = cropSplit(before.me, crop), next = cropSplit(after.me, crop);
-    return ([2, 1, 0] as const).flatMap((quality) => next[quality] > old[quality]
+    return ([3, 2, 1, 0] as const).flatMap((quality) => next[quality] > old[quality]
       ? [{ crop, quality, n: next[quality] - old[quality] }] : []);
   });
 }
@@ -98,11 +98,12 @@ export function groupOfItem(id: string): InvGroup {
 export function cropSplit(me: Pick<LifeMe, 'bag' | 'quality'>, crop: Crop): Record<Quality, number> {
   const total = me.bag.produce[crop] ?? 0,
     silver = me.quality?.silver?.[crop] ?? 0,
-    gold = me.quality?.gold?.[crop] ?? 0;
-  return { 0: Math.max(0, total - silver - gold), 1: silver, 2: gold };
+    gold = me.quality?.gold?.[crop] ?? 0,
+    star = me.quality?.star?.[crop] ?? 0;
+  return { 0: Math.max(0, total - silver - gold - star), 1: silver, 2: gold, 3: star };
 }
 export const cropPrice = (crop: Crop, q: Quality) => Math.round(CROP_INFO[crop].sell * QUALITY_MULT[q]);
-export const QUALITY_LABEL: Record<Quality, string> = { 0: '보통', 1: '은별', 2: '금별' };
+export const QUALITY_LABEL: Record<Quality, string> = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' };
 
 /** Every non-empty inventory row, grouped in INV_GROUPS order. */
 export function inventoryEntries(me: LifeMe): InvEntry[] {
@@ -122,7 +123,7 @@ export function inventoryEntries(me: LifeMe): InvEntry[] {
       });
   for (const crop of CROPS) {
     const split = cropSplit(me, crop);
-    for (const q of [2, 1, 0] as Quality[])
+    for (const q of [3, 2, 1, 0] as Quality[])
       if (split[q] > 0)
         rows.push({
           key: `${crop}@${q}`,
@@ -222,7 +223,7 @@ export function needHave(me: LifeMe, need: Need, balance = 0): number {
   if ((CROPS as string[]).includes(id)) {
     const split = cropSplit(me, id as Crop),
       q = need.q ?? 0;
-    return ([0, 1, 2] as Quality[]).filter((t) => t >= q).reduce((s: number, t) => s + split[t], 0);
+    return ([0, 1, 2, 3] as Quality[]).filter((t) => t >= q).reduce((s: number, t) => s + split[t], 0);
   }
   if (id === 'fruit') return me.bag.fruit;
   return me.inv?.[id] ?? 0;
