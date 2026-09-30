@@ -3,7 +3,7 @@
 // the choices, the gift picker and their reaction), measured like ui:shots
 // (contrast, small / narrow / cut text) and checked for Esc + focus return.
 //
-//   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s]
+//   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s,phone] [--skip-friend]
 //
 // The mock server's clock is moved to 22:05 KST today, when 프리렌 sits on the
 // plaza bench looking at the stars ("빵집 카페 사장 · 광장 벤치에서 별 보는
@@ -33,6 +33,8 @@ if (!pages) throw new Error('--pages <dir> (a build from scripts/build-standalon
 const out = path.resolve(opt('out', path.join(root, '.ui-shots', 'talk')));
 const views = opt('views', 'fhd,s').split(',');
 const fullGraphics = args.includes('--full-graphics');
+// --skip-friend: only the resident (a friend resting on a bench can take minutes to find).
+const skipFriend = args.includes('--skip-friend');
 fs.mkdirSync(out, { recursive: true });
 
 // Move this process's clock (the mock server's) before the harness starts.
@@ -45,6 +47,8 @@ console.log(`server clock ${new Date(at).toISOString()} (shift ${(shift / 3_600_
 assert.equal(bench.area, 'village', '프리렌이 그 시각 마을에 있어야 합니다.');
 
 const { launchBrowser, login, serve, setup, VIEWS } = await import('./ui-harness.mjs');
+// A phone-width view for the box only (ui:shots keeps its own three).
+VIEWS.phone ??= { width: 390, height: 844 };
 const { measureInPage } = await import('./ui-measure.mjs');
 
 const OFFLINE = [1, 4, 5];
@@ -80,6 +84,9 @@ async function runView(view) {
   const H = await setup({ browser, base: server.url, view, seedLife });
   const { page, js, sleep, until } = H;
   const res = { screens: {}, notes: [], lowGraphics: !fullGraphics };
+  // The phone view is a narrow window on a desktop screen: a real phone gets
+  // the "PC 게임이에요" screen (PcOnly.tsx decides by the screen's width).
+  if (view === 'phone') await H.ctx.addInitScript(() => Object.defineProperty(screen, 'width', { get: () => 1280 }));
   if (!fullGraphics) {
     await H.ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, fpsCap: 30, quality: 'low' })));
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -121,16 +128,35 @@ async function runView(view) {
       await page.keyboard.up('Shift');
     }
   };
-  const linkOk = () => until(() => !document.querySelector('.l-presence.is-retrying'), 60000);
-  /** Presses `key` until `done(arg)` holds (up to 3 tries, each after the link is back); the try that worked, or 0. */
+  const linkOk = () => until(() => !document.querySelector('.l-presence.is-retrying'), 180000);
+  /**
+   * Presses `key` until `done(arg)` holds (up to 4 tries, each after the link
+   * is back); the try that worked, or 0. A software GPU drawing the full
+   * viewport can starve the page so its polls time out and the header stays
+   * on 연결 끊김 (the game then refuses online actions, as it should): the
+   * viewport shrinks while waiting for the server and is restored before the
+   * next capture.
+   */
   const tryKey = async (key, done, arg) => {
-    for (let n = 1; n <= 3; n++) {
-      await linkOk();
-      await page.keyboard.press(key);
-      if ((await until(done, 25000, arg)) >= 0) return n;
-      console.log(`  ${view} ${key}: no answer yet (try ${n})`);
+    await page.setViewportSize({ width: 800, height: 450 });
+    try {
+      for (let n = 1; n <= 4; n++) {
+        await linkOk();
+        await page.keyboard.press(key);
+        if ((await until(done, 30000, arg)) >= 0) return n;
+        const why = await js(() => ({
+          banner: document.querySelector('[data-testid=banner] span')?.textContent ?? '',
+          retrying: !!document.querySelector('.l-presence.is-retrying'),
+          focus: document.activeElement?.getAttribute('data-testid') ?? document.activeElement?.tagName,
+        }));
+        res.notes.push(`${key} try ${n}: ${JSON.stringify(why)}`);
+        console.log(`  ${view} ${key}: no answer yet (try ${n}) ${JSON.stringify(why)}`);
+      }
+      return 0;
+    } finally {
+      await page.setViewportSize(VIEWS[view]);
+      await sleep(1500);
     }
-    return 0;
   };
   /** Esc closes the box and the scene has focus again (keys walk at once). */
   const escBack = async (name) => {
@@ -180,36 +206,38 @@ async function runView(view) {
     // plaza (lounge-village-life.ts npcPose, a new spot every 80 s). Doors and
     // farms have their own actions, so wait for one resting on a bench or the
     // plaza and walk up to them.
-    let friend = -1;
-    const deadline = Date.now() + 8 * 60_000;
-    while (friend < 0 && Date.now() < deadline) {
-      const now = Date.now();
-      const resting = OFFLINE.map((actor) => ({ actor, pose: npcPose(actor, now) })).filter(({ pose }) => !pose.walking && (pose.target === 1 || pose.target === 3) && Math.hypot(pose.point.x - bench.x, pose.point.z - bench.z) > 2);
-      if (!resting.length) {
-        await sleep(3000);
-        continue;
+    if (!skipFriend) {
+      let friend = -1;
+      const deadline = Date.now() + 8 * 60_000;
+      while (friend < 0 && Date.now() < deadline) {
+        const now = Date.now();
+        const resting = OFFLINE.map((actor) => ({ actor, pose: npcPose(actor, now) })).filter(({ pose }) => !pose.walking && (pose.target === 1 || pose.target === 3) && Math.hypot(pose.point.x - bench.x, pose.point.z - bench.z) > 2);
+        if (!resting.length) {
+          await sleep(3000);
+          continue;
+        }
+        const { actor, pose } = resting[0];
+        await focusScene();
+        const arrived = await walkTo(pose.point, 1.3, 45000);
+        const d = await js(() => ({ ...document.querySelector('[data-testid=village-3d]')?.dataset }));
+        console.log(`  ${view} friend ${actor} at ${pose.point.x.toFixed(1)},${pose.point.z.toFixed(1)}: arrived ${arrived}, me ${d.avatarX},${d.avatarZ}, spot ${d.spot || '-'}`);
+        if (d.spot !== 'npc') continue;
+        await focusScene();
+        await page.keyboard.press('KeyE');
+        if ((await until(() => !!document.querySelector('[data-testid=friend-dialog]'), 60000)) >= 0) friend = actor;
       }
-      const { actor, pose } = resting[0];
-      await focusScene();
-      const arrived = await walkTo(pose.point, 1.3, 45000);
-      const d = await js(() => ({ ...document.querySelector('[data-testid=village-3d]')?.dataset }));
-      console.log(`  ${view} friend ${actor} at ${pose.point.x.toFixed(1)},${pose.point.z.toFixed(1)}: arrived ${arrived}, me ${d.avatarX},${d.avatarZ}, spot ${d.spot || '-'}`);
-      if (d.spot !== 'npc') continue;
-      await focusScene();
-      await page.keyboard.press('KeyE');
-      if ((await until(() => !!document.querySelector('[data-testid=friend-dialog]'), 60000)) >= 0) friend = actor;
-    }
-    assert.ok(friend >= 0, '쉬는 친구에게 말을 걸지 못했습니다.');
-    await typed();
-    await snap('friend');
-    for (let i = 0; i < 6 && !(await js(() => !!document.querySelector('dialog[open] .l-talk-choices'))); i++) {
-      await page.keyboard.press('KeyE');
-      await sleep(250);
+      assert.ok(friend >= 0, '쉬는 친구에게 말을 걸지 못했습니다.');
       await typed();
+      await snap('friend');
+      for (let i = 0; i < 6 && !(await js(() => !!document.querySelector('dialog[open] .l-talk-choices'))); i++) {
+        await page.keyboard.press('KeyE');
+        await sleep(250);
+        await typed();
+      }
+      await snap('friend-choices');
+      await escBack('friend-choices');
+      await closeAll();
     }
-    await snap('friend-choices');
-    await escBack('friend-choices');
-    await closeAll();
 
     // ---- a resident (NpcTalkDialog) ------------------------------------------
     await focusScene();

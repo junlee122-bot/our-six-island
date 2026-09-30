@@ -38,6 +38,7 @@ export function SpeechBox({
   testId,
   textTestId,
   portrait,
+  tall = false,
   name,
   hearts,
   level,
@@ -59,6 +60,8 @@ export function SpeechBox({
   testId?: string;
   textTestId?: string;
   portrait: ReactNode;
+  /** A standing figure (a resident's full-body art) in a 2:3 frame that rises above the box. */
+  tall?: boolean;
   name: string;
   /** Hearts shown, 0–10. */
   hearts: number;
@@ -212,7 +215,7 @@ export function SpeechBox({
       data-testid={testId}
     >
       <div className="l-talk-box">
-        <div className="l-talk-portrait" aria-hidden="true">
+        <div className={tall ? 'l-talk-portrait is-tall' : 'l-talk-portrait'} aria-hidden="true">
           {portrait}
         </div>
         <div className="l-talk-main">

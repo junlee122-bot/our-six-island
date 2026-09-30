@@ -23,18 +23,16 @@ import { getSettings } from '../lounge-settings';
 import { josa } from '../lounge-text';
 import { MessageCircle } from '../ui/icons';
 import { ItemIcon } from './ItemIcon';
-import { NpcPortrait } from './NpcPortrait';
+import { NpcFigure } from './NpcPortrait';
 import { SpeechBox } from './SpeechBox';
 import { giftOptions, type GiftOption } from './npc-gifts';
-import type { Notify } from './Toast';
 import { useNow } from './use-now';
 import './npc-relations.css';
 
-export function NpcTalkDialog({ npc, room, view, notify, onClose, onBook, onBoard }: {
+export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
   npc: NpcId;
   room: CloudRoom;
   view: CloudRoomView;
-  notify: Notify;
   onClose: () => void;
   /** Opens the residents' notebook on this resident. */
   onBook: () => void;
@@ -110,9 +108,7 @@ export function NpcTalkDialog({ npc, room, view, notify, onClose, onBook, onBoar
     if (busy || row.gifted || talkBlock) return;
     const reaction = npcGiftReaction(npc, gift.item, gift.q);
     const line = npcGiftLine(npc, reaction, { me: myName, item: itemName(gift.item), who, now });
-    void run({ kind: 'npcSocial', npc, op: 'gift', item: gift.item, ...(gift.q ? { q: gift.q } : {}) }, [line]).then((ok) => {
-      if (ok) notify(`${info.name}: ${line}`);
-    });
+    void run({ kind: 'npcSocial', npc, op: 'gift', item: gift.item, ...(gift.q ? { q: gift.q } : {}) }, [line]);
   };
   const choose = (index: number) => {
     const choice = choices[index];
@@ -128,7 +124,8 @@ export function NpcTalkDialog({ npc, room, view, notify, onClose, onBook, onBoar
       label={`${josa(info.name, '과/와')} 이야기`}
       testId="npc-dialog"
       textTestId="npc-dialog-text"
-      portrait={<NpcPortrait npc={npc} mood="smile" />}
+      portrait={<NpcFigure npc={npc} mood="smile" />}
+      tall
       name={info.name}
       hearts={npcHearts(row.points)}
       level={row.level}
@@ -187,7 +184,7 @@ function GiftPicker({ gifts, off, onGive, onBack }: { gifts: GiftOption[]; off: 
                 data-testid={`npc-gift-${gift.key}`}
               >
                 <ItemIcon id={gift.item} size={28} quality={gift.q || undefined} />
-                <span>{gift.name}</span>
+                <span className="l-talk-item-name">{gift.name}</span>
                 <em>{gift.n}개</em>
               </button>
             </li>
@@ -211,7 +208,9 @@ function GiftPicker({ gifts, off, onGive, onBack }: { gifts: GiftOption[]; off: 
 /**
  * Keys in the gift picker: arrows move over the grid (down from the last row
  * reaches "돌아가기"), E gives the focused item. Space / Enter press the
- * focused button themselves; Esc closes the box like everywhere else.
+ * focused button themselves; with nothing in the picker focused (after a
+ * click on the text), E / Space / Enter only move to the first item, never
+ * give. Esc closes the box like everywhere else.
  */
 function pickerKeys(e: KeyboardEvent<HTMLDialogElement>) {
   const box = e.currentTarget;
@@ -220,7 +219,8 @@ function pickerKeys(e: KeyboardEvent<HTMLDialogElement>) {
   const all = back ? [...items, back] : items;
   if (!all.length) return false;
   const at = all.findIndex((b) => b === document.activeElement);
-  if (actionForCode(getSettings().keys, e.code) === 'action') {
+  const press = e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter';
+  if (actionForCode(getSettings().keys, e.code) === 'action' || (press && at < 0)) {
     e.preventDefault();
     if (at >= 0) all[at].click();
     else all[0].focus();
