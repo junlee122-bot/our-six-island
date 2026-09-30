@@ -1,6 +1,6 @@
 'use client';
 import { useRef, useState, type CSSProperties } from 'react';
-import { ChevronDown, Layers, Plus, Hand, ChevronsUp } from './ui/icons';
+import { ChevronDown, Layers, Plus, Hand, ChevronsUp, RotateCcw } from './ui/icons';
 import { PokerCard, beom } from './lounge-poker-table';
 import {
   blackjackValue,
@@ -40,7 +40,10 @@ const status = {
   stood: '스탠드',
   bust: '버스트',
   blackjack: '블랙잭',
+  surrender: '서렌더',
 };
+/** Why a surrendered hand lost only half (the dealer's report compares totals). */
+const SURRENDER_REASON = '서렌더 · 베팅의 절반을 돌려받았어요';
 const signed = (n: number) => (n > 0 ? '+' : '') + beom(n);
 /** Deal stagger: the order a card left the shoe in the opening deal. */
 const STAGGER_MS = 110;
@@ -256,10 +259,18 @@ export function BlackjackTable({
                           'bj-outcome ' + (ended ? h.outcome : h.status)
                         }
                       >
-                        {ended ? outcomes[h.outcome] : status[h.status]}
+                        {ended
+                          ? h.status === 'surrender'
+                            ? status.surrender
+                            : outcomes[h.outcome]
+                          : status[h.status]}
                         {ended && <b>{signed(h.result)}</b>}
                       </span>
-                      {report && <small className="bj-reason">{report.reason}</small>}
+                      {report && (
+                        <small className="bj-reason">
+                          {h.status === 'surrender' ? SURRENDER_REASON : report.reason}
+                        </small>
+                      )}
                       {ended && h.result > 0 && (
                         <span className="bj-payout-chip" aria-hidden="true">
                           B
@@ -340,6 +351,15 @@ export function BlackjackTable({
               <strong>스플릿</strong>
               <small>+{beom(g.stake)} · 두 손</small>
             </button>
+            <button
+              disabled={!g.legal.surrender || sent === g.revision}
+              onClick={() => act('surrender')}
+              data-testid="blackjack-surrender"
+            >
+              <RotateCcw size={19} />
+              <strong>서렌더</strong>
+              <small>−{beom(Math.floor((hand?.bet ?? g.stake) / 2))} · 포기</small>
+            </button>
           </div>
         </div>
       )}
@@ -369,9 +389,15 @@ export function BlackjackTable({
                 <span>
                   {r.outcome === 'blackjack'
                     ? '블랙잭 · 3:2 승리'
-                    : `${r.label} · ${outcomes[r.outcome]}`}
+                    : g.hands[r.seat]?.[r.hand]?.status === 'surrender'
+                      ? `${r.label} · ${status.surrender}`
+                      : `${r.label} · ${outcomes[r.outcome]}`}
                 </span>
-                <small>{r.reason}</small>
+                <small>
+                  {g.hands[r.seat]?.[r.hand]?.status === 'surrender'
+                    ? SURRENDER_REASON
+                    : r.reason}
+                </small>
                 <em>{signed(r.amount)}</em>
               </li>
             ))}
@@ -400,7 +426,9 @@ export function BlackjackTable({
           <p>
             처음 두 장에서는 더블다운할 수 있어요. 같은 값 두 장은 한 번만
             스플릿하고, 나눈 손도 더블다운할 수 있어요. 나눈 A는 한 장씩 받고
-            종료하며, 스플릿 후 21은 일반 21이에요. 보험·서렌더는 없어요.
+            종료하며, 스플릿 후 21은 일반 21이에요. 처음 두 장에서는 서렌더로
+            포기하고 베팅의 절반을 돌려받을 수 있어요(나누기 전, 딜러
+            블랙잭 확인 뒤). 보험은 없어요.
           </p>
           <p>
             6덱(312장)을 매 판 새로 섞어서 나눠요. 그래서 지난 판의 카드가

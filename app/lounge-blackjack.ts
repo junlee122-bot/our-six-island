@@ -1,12 +1,18 @@
-// Six-deck blackjack: S17, natural 3:2, one split, double after split.
+// Six-deck blackjack: S17, natural 3:2, one split, double after split, late
+// surrender (only on the first two cards, before a split, and only after the
+// dealer's peek found no blackjack; it returns half the bet).
 // Rules reference: https://bicyclecards.com/how-to-play/blackjack
-export type BlackjackAction = { kind: 'hit' | 'stand' | 'double' | 'split' };
+// House edge (basic strategy, 6 decks, S17, DAS, no resplit): about 0.4%;
+// late surrender takes about 0.08 points off it (2026-09-30, the house still
+// keeps half of every surrendered bet, nothing is minted).
+export type BlackjackAction = { kind: 'hit' | 'stand' | 'double' | 'split' | 'surrender' };
 export type BlackjackHand = {
   cards: number[];
   bet: number;
   split: boolean;
-  status: 'playing' | 'stood' | 'bust' | 'blackjack';
+  status: 'playing' | 'stood' | 'bust' | 'blackjack' | 'surrender';
   result: number;
+  /** A surrendered hand is 'lose' (status 'surrender', half the bet). */
   outcome: '' | 'win' | 'lose' | 'push' | 'blackjack';
 };
 export type BlackjackMatch = {
@@ -37,6 +43,7 @@ export type BlackjackEventKind =
   | 'stand'
   | 'double'
   | 'split'
+  | 'surrender'
   | 'reveal'
   | 'dealer-hit'
   | 'dealer-stand'
@@ -199,6 +206,14 @@ export function blackjackLegal(g: BlackjackMatch, seat: number) {
       hands.length === 1 &&
       h.cards.length === 2 &&
       cardValue(h.cards[0]) === cardValue(h.cards[1]),
+    // Late surrender: the untouched first two cards of an unsplit hand.
+    surrender:
+      !!h &&
+      h.status === 'playing' &&
+      hands.length === 1 &&
+      !h.split &&
+      h.cards.length === 2 &&
+      h.bet === g.stake,
   };
 }
 export function blackjackAction(
@@ -209,7 +224,7 @@ export function blackjackAction(
   if (
     !action ||
     typeof action !== 'object' ||
-    !['hit', 'stand', 'double', 'split'].includes(action.kind)
+    !['hit', 'stand', 'double', 'split', 'surrender'].includes(action.kind)
   )
     return null;
   const legal = blackjackLegal(g, seat);
@@ -219,6 +234,7 @@ export function blackjackAction(
   next.revision++;
   next.event = { kind: action.kind, seat, hand: g.hand };
   if (action.kind === 'stand') h.status = 'stood';
+  else if (action.kind === 'surrender') h.status = 'surrender';
   else if (action.kind === 'split') {
     const pair = h.cards;
     next.hands[seat] = pair.map((card) => {
@@ -247,7 +263,9 @@ export function blackjackAction(
 /** True while every hand still in play needs the dealer to finish drawing. */
 function dealerNeeded(g: BlackjackMatch) {
   return g.hands.some((hands) =>
-    hands.some((h) => h.status !== 'bust' && h.status !== 'blackjack'),
+    hands.some(
+      (h) => h.status !== 'bust' && h.status !== 'blackjack' && h.status !== 'surrender',
+    ),
   );
 }
 /** The dealer draws below 17 (S17) unless nothing is left to beat. */
@@ -264,7 +282,11 @@ function settle(next: BlackjackMatch) {
   next.result = next.hands.map((hands) =>
     hands.reduce((total, h) => {
       const v = blackjackValue(h.cards);
-      if (v.bust) {
+      if (h.status === 'surrender') {
+        // Half the bet comes back (stakes are even, so this is whole 범).
+        h.result = -Math.floor(h.bet / 2);
+        h.outcome = 'lose';
+      } else if (v.bust) {
         h.result = -h.bet;
         h.outcome = 'lose';
       } else if (dealerNatural) {
