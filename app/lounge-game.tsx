@@ -139,8 +139,6 @@ import { WorldHeader, type Tab } from './lounge/WorldHeader';
 import { GameScreen, myTurn } from './lounge/GameScreen';
 import {
   Onboarding,
-  shouldOnboard,
-  shouldOnboardRoom,
 } from './lounge/Onboarding';
 import { VillageSimple } from './lounge/VillageSimple';
 import {
@@ -635,9 +633,9 @@ function AccountLounge({
           '비밀번호가 받은 코드와 비슷해요. 내 계정에서 비밀번호를 바꿔 주세요.',
           'error',
         );
-      } else if (shouldOnboard())
-        setCoach(shouldOnboardRoom() && tabRef.current === 'bedroom' ? 'room' : 'village');
-      // (Both start the same hands-on tutorial; the first step works anywhere.)
+      }
+      // The first-day tutorial no longer opens by itself on every wake-up in
+      // the room (friends' feedback); it stays in the menu (처음 안내 다시 보기).
     }, 1200);
     return () => {
       clearTimeout(first);
@@ -1485,7 +1483,7 @@ function AccountLounge({
   const greeted = useRef(false);
   useEffect(() => {
     // Queued behind the first-day tutorial: its card sits where banners go.
-    if (greeted.current || !connected || coach || shouldOnboard()) return;
+    if (greeted.current || !connected || coach) return;
     const timer = setTimeout(() => {
       if (greeted.current) return;
       greeted.current = true;
@@ -3115,7 +3113,7 @@ function AccountLounge({
           onConfirm={reset}
         />
       )}
-      {!coach && !shouldOnboard() && visiting === null && !inGame && (tab === 'village' || tab === 'bedroom') && (
+      {!coach && visiting === null && !inGame && tab === 'village' && (
         // 마을 적응하기 (C-10): optional follow-up steps after the first-day tutorial.
         <AdaptChecklist room={room} view={view} notify={notify} hidden={!!modal || !!talk} />
       )}
