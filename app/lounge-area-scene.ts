@@ -12,6 +12,9 @@ import { HILL_CAVE, HILL_LOG, MINE_LIFT, REGIONS, type OutdoorArea } from './lou
 import { MINE_ARRIVE, MINE_ROOM, bandOf, type MineFloor } from './lounge-mine';
 import type { NodeKind } from './lounge-growth-data';
 import { MarketSet } from './lounge-market-scene';
+import { HarborSet } from './lounge-harbor-scene';
+import { HillsideSet } from './lounge-hillside-scene';
+import type { DistrictSet } from './lounge-district-kit';
 
 let loader: GLTFLoader | null = null;
 const cache = new Map<string, Promise<THREE.Group>>();
@@ -93,7 +96,7 @@ export class RegionSet {
   private state: RegionUpdate = { nodes: [], logCleared: false };
   private disposables: { dispose: () => void }[] = [];
   /** A district's own set (시장 거리); the generic outdoor set otherwise. */
-  private district: MarketSet | null = null;
+  private district: DistrictSet | null = null;
   /** Called when a model arrives (the scene redraws). */
   onChange: () => void = () => {};
 
@@ -101,8 +104,9 @@ export class RegionSet {
     this.area = area;
     this.root.name = 'region-' + area;
     if (area === 'mine') this.buildMineShell();
-    else if (area === 'market') {
-      this.district = new MarketSet(REGIONS.market.look);
+    else if (area === 'market' || area === 'harbor' || area === 'hillside') {
+      const look = REGIONS[area].look;
+      this.district = area === 'market' ? new MarketSet(look) : area === 'harbor' ? new HarborSet(look) : new HillsideSet(look);
       this.district.onChange = () => this.onChange();
       this.root.add(this.district.root);
     } else this.buildOutdoor();
@@ -500,6 +504,7 @@ export class RegionSet {
   }
   /** Marks bob a little. */
   tick(t: number) {
+    this.district?.tick(t);
     const y = Math.sin(t / 420) * 0.08;
     for (const e of this.nodes.values()) if (e.mark.visible) e.mark.position.y = (e.mark.userData.y0 ??= e.mark.position.y) + y;
   }

@@ -9,6 +9,7 @@
 // Doors face the camera (+z); each row has its lane just south of it. The
 // stairs down to the hub come in on the east edge.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
+import { VILLAGE_HOUSE_MODELS, villageHouseScale, type VillageHouseModel } from './lounge-village-layout.ts';
 
 export const HILLSIDE_W = 50,
   HILLSIDE_D = 50;
@@ -50,7 +51,16 @@ export type HillHouse = {
   sign: { bg: string; ink: string; line: string };
   door: WalkPoint;
 };
-const house = (id: string, npc: string, model: HillsideModel, x: number, z: number, sign: HillHouse['sign'], w = 6.2, d = 5): HillHouse => ({
+/**
+ * Houses are the hub's own house models at the hub's scale (door 1.45, 구역
+ * 공통 규격), so a lot is the model's footprint at that scale.
+ */
+const footprint = (model: VillageHouseModel) => {
+  const m = VILLAGE_HOUSE_MODELS[model],
+    k = villageHouseScale(model);
+  return { w: Math.round(m.width * k * 100) / 100 + 0.3, d: Math.round(m.depth * k * 100) / 100 + 0.3, h: Math.round(m.height * k * 100) / 100 };
+};
+const house = (id: string, npc: string, model: VillageHouseModel, x: number, z: number, sign: HillHouse['sign'], w = footprint(model).w, d = footprint(model).d): HillHouse => ({
   id,
   npc,
   model,
@@ -58,7 +68,7 @@ const house = (id: string, npc: string, model: HillsideModel, x: number, z: numb
   z,
   w,
   d,
-  h: 4.2,
+  h: footprint(model).h,
   sign,
   door: { x, z: z + d / 2 + 1.1 },
 });
@@ -86,12 +96,12 @@ export const HILL_LIBRARY = { id: 'library', x: -17, z: -16, w: 10, d: 7, h: 5.4
 /** 츠나데's 텃밭: six decorative beds (farm 3D crop stages), fenced. */
 export const HILL_GARDEN = { x: -8.5, z: 14.2, w: 8, d: 5.2 } as const;
 export const HILL_GARDEN_BEDS: readonly { x: number; z: number; crop: string; stage: number }[] = [
-  { x: -11, z: 12.8, crop: 'cabbage', stage: 3 },
-  { x: -8.5, z: 12.8, crop: 'radish', stage: 2 },
-  { x: -6, z: 12.8, crop: 'spinach', stage: 3 },
-  { x: -11, z: 15.6, crop: 'pepper', stage: 2 },
-  { x: -8.5, z: 15.6, crop: 'garlic', stage: 1 },
-  { x: -6, z: 15.6, crop: 'potato', stage: 3 },
+  { x: -11, z: 12.8, crop: 'garlic', stage: 3 },
+  { x: -8.5, z: 12.8, crop: 'radish', stage: 4 },
+  { x: -6, z: 12.8, crop: 'pepper', stage: 3 },
+  { x: -11, z: 15.6, crop: 'greenonion', stage: 2 },
+  { x: -8.5, z: 15.6, crop: 'eggplant', stage: 4 },
+  { x: -6, z: 15.6, crop: 'insam', stage: 1 },
 ];
 /** The small park: a pavilion-free lawn with a plaza, benches and a pergola. */
 export const HILL_PARK = { x: 4, z: 15, w: 10, d: 7 } as const;
