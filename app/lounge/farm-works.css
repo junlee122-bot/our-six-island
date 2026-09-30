@@ -394,3 +394,12 @@
 .l-farm .l-ledger-book {
   margin-top: 0;
 }
+.l-fw-tile[data-state='fixture'] .l-fw-num {
+  color: var(--text-soft);
+}
+.l-fw-hint:has(> svg:first-child),
+.l-fw-hint:has(> .ui-glyph:first-child) {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+}
