@@ -111,6 +111,8 @@ export type ResidentLayerOptions = {
    * friend planes use for their width (lounge-npc-chibi.ts).
    */
   chibi?: { plane: number; upY: number };
+  /** Colour multiplied into every sprite (a dark room's warm dimness). */
+  tint?: string;
 };
 
 export class ResidentLayer {
@@ -121,7 +123,7 @@ export class ResidentLayer {
   private shadowGeo = new THREE.CircleGeometry(0.34, 20);
   private shadowMat = new THREE.MeshBasicMaterial({ color: '#2d2418', transparent: true, opacity: 0.26, depthWrite: false });
   private labels: HTMLElement;
-  private opts: Required<Omit<ResidentLayerOptions, 'chibi'>> & Pick<ResidentLayerOptions, 'chibi'>;
+  private opts: Required<Omit<ResidentLayerOptions, 'chibi' | 'tint'>> & Pick<ResidentLayerOptions, 'chibi' | 'tint'>;
   private disposed = false;
   /** Called when a texture arrives (the scene redraws). */
   onChange: () => void = () => {};
@@ -180,6 +182,7 @@ export class ResidentLayer {
     let m = this.mats.get(id);
     if (m) return m;
     m = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false, visible: false, side: THREE.DoubleSide });
+    if (this.opts.tint) m.color.set(this.opts.tint);
     this.mats.set(id, m);
     const art = NPCS[id].art;
     const chibi = this.opts.chibi && npcChibi(id);

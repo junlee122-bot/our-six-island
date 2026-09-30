@@ -25,6 +25,7 @@ import type { TavernModel } from './lounge-model-assets';
 import { buildCorkGun, buildTavern, type TavernRoom } from './lounge-tavern-interior';
 import { buildBank } from './lounge-bank-interior';
 import { buildSalon } from './lounge-salon-interior';
+import { VIEW_LIGHT } from './lounge-village-camera';
 import {
   INTERIOR_DOOR_Z,
   INTERIOR_ROOM,
@@ -165,6 +166,24 @@ const PALETTE: Record<SceneArea, Palette> = {
   },
 };
 
+/**
+ * Indoors the key light is a ceiling lamp, not the noon sun the outdoor scale
+ * is tuned against: lifted a little so a room keeps its brightness while the
+ * key-to-sky balance matches the outdoor look (VIEW_LIGHT).
+ */
+const INTERIOR_KEY_LIFT = 1.2;
+/**
+ * Figures are unlit sprites: in the dark rooms (casino, tavern) they take the
+ * lamps' warm dimness so they do not glow (as the night tint does outdoors).
+ */
+export const INTERIOR_FIGURE_TINT: Record<SceneArea, string> = {
+  lounge: '#ffffff',
+  bank: '#ffffff',
+  salon: '#ffffff',
+  casino: '#f6e8dc',
+  tavern: '#f0dcc6',
+};
+
 const FELT: Record<GameKind, string> = {
   seotda: '#8e2f36',
   gostop: '#2f6b47',
@@ -291,9 +310,11 @@ export function createInteriorScene(
   const doorPosts: THREE.Mesh[] = [];
 
   // ---------------------------------------------------------- lights
-  const hemi = new THREE.HemisphereLight(pal.hemi[0], pal.hemi[1], pal.hemi[2]);
+  // 구역 공통 규격: the venue's own colours under the outdoor light scale
+  // (VIEW_LIGHT: a softer key light, a slightly fuller sky light).
+  const hemi = new THREE.HemisphereLight(pal.hemi[0], pal.hemi[1], pal.hemi[2] * (VIEW_LIGHT.hemi / 1.5));
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight(pal.sun[0], pal.sun[1]);
+  const sun = new THREE.DirectionalLight(pal.sun[0], pal.sun[1] * (VIEW_LIGHT.sun / 3) * INTERIOR_KEY_LIFT);
   sun.position.set(-5, 11, 7);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -416,7 +437,8 @@ export function createInteriorScene(
   // Side walls, with the door opening on the left.
   box(0.18, wallHeight, INTERIOR_DOOR_Z.z0 - minZ, minX - 0.09, wallHeight / 2, (minZ + INTERIOR_DOOR_Z.z0) / 2, wall);
   box(0.18, wallHeight, maxZ - INTERIOR_DOOR_Z.z1, minX - 0.09, wallHeight / 2, (INTERIOR_DOOR_Z.z1 + maxZ) / 2, wall);
-  box(0.18, wallHeight - 2.4, INTERIOR_DOOR_Z.z1 - INTERIOR_DOOR_Z.z0, minX - 0.09, 2.4 + (wallHeight - 2.4) / 2, (INTERIOR_DOOR_Z.z0 + INTERIOR_DOOR_Z.z1) / 2, wall);
+  // (No wall piece over the opening: from the straight-on camera the left
+  // wall is an edge-on strip and the doorway stands outside it, below.)
   // Only a low half wall on the right: the camera looks in from the front-right.
   box(0.18, 0.95, depth, maxX + 0.09, 0.475, (minZ + maxZ) / 2, pal.wainscot);
   box(0.26, 0.07, depth + 0.1, maxX + 0.09, 0.98, (minZ + maxZ) / 2, pal.rail);
@@ -427,17 +449,21 @@ export function createInteriorScene(
   for (const y of [0.92, wallHeight - 0.25]) {
     box(width, 0.07, 0.07, 0, y, minZ + 0.04, pal.rail);
   }
-  // Door frame (the way back out to the village).
+  // The door (the way back out to the village). The camera looks straight
+  // in (구역 공통 규격), so the opening in the left wall is seen edge-on: a
+  // lit doorway stands just outside it facing the camera, on a threshold.
   const doorZ = (INTERIOR_DOOR_Z.z0 + INTERIOR_DOOR_Z.z1) / 2,
     doorW = INTERIOR_DOOR_Z.z1 - INTERIOR_DOOR_Z.z0;
-  box(0.24, 0.16, doorW + 0.3, minX - 0.02, 2.42, doorZ, pal.trim);
-  for (const z of [INTERIOR_DOOR_Z.z0 - 0.08, INTERIOR_DOOR_Z.z1 + 0.08]) box(0.24, 2.46, 0.14, minX - 0.02, 1.23, z, pal.trim);
+  const doorX = minX - 0.86;
+  box(1.5, 0.05, doorW, minX - 0.75, -0.005, doorZ, pal.mat, root, false);
+  box(1.5, 0.16, 0.16, doorX, 2.2, doorZ, pal.trim);
+  for (const x of [doorX - 0.67, doorX + 0.67]) box(0.16, 2.2, 0.16, x, 1.1, doorZ, pal.trim);
   const outside = new THREE.Mesh(
-    new THREE.PlaneGeometry(doorW, 2.36),
+    new THREE.PlaneGeometry(1.18, 2.12),
     new THREE.MeshBasicMaterial({ color: pal.outside, toneMapped: false }),
   );
-  outside.rotation.y = Math.PI / 2;
-  outside.position.set(minX - 0.17, 1.18, doorZ);
+  outside.position.set(doorX, 1.06, doorZ - 0.02);
+  outside.userData.door = true;
   root.add(outside);
   const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.1, doorW - 0.1), surface(pal.mat));
   mat.rotation.x = -Math.PI / 2;
@@ -518,11 +544,11 @@ export function createInteriorScene(
     for (let i = 0; i < 5; i++)
       cylinder(0.06, 0.06, 0.32, -5.4 + i * 0.5, 1.6, minZ + 0.18, ['#3f6b52', '#8e2f36', '#c9a24a', '#6b4a8e', '#3f6b52'][i]);
     box(3.3, 0.06, 0.26, -4.2, 1.42, minZ + 0.15, pal.trim);
-    // Two slot machines by the right wall.
+    // Two slot machines by the right wall, their screens toward the camera.
     for (const z of [-3.4, -1.9]) {
       box(0.7, 1.5, 0.8, maxX - 0.5, 0.75, z, '#5a2d3a');
-      box(0.04, 0.5, 0.56, maxX - 0.87, 1.1, z, surface('#fff0c4', { emissive: '#ffcf6b', emissiveIntensity: 0.9 }), root, false);
-      cylinder(0.03, 0.03, 0.4, maxX - 0.45, 1.7, z + 0.28, pal.trim);
+      box(0.5, 0.5, 0.04, maxX - 0.5, 1.1, z + 0.41, surface('#fff0c4', { emissive: '#ffcf6b', emissiveIntensity: 0.9 }), root, false);
+      cylinder(0.03, 0.03, 0.4, maxX - 0.11, 1.25, z + 0.1, pal.trim);
     }
     // Velvet rope posts by the door (kArchive queue posts replace them).
     for (const z of [1.6, 5.0]) {
@@ -1230,7 +1256,7 @@ export function createInteriorScene(
     },
 
     /** Invisible table boxes (pointer hits carry `userData.game`). */
-    hits: () => [...nodes.values()].map((n) => n.hit),
+    hits: () => [...nodes.values()].map((n) => n.hit as THREE.Object3D).concat(outside),
     setLights(on: boolean) {
       for (const lamp of lamps) lamp.visible = on;
     },

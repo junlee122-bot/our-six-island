@@ -148,8 +148,8 @@ export function buildTavern(kit: Kit, options: { props: readonly TavernModel[] }
     });
     textures.push(tex);
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.91), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
-    mesh.position.set(INTERIOR_ROOM.minX + 0.05, p.y, p.z);
-    mesh.rotation.set(0, Math.PI / 2, p.z < -2 ? -0.03 : 0.04);
+    mesh.position.set(p.x, p.y, INTERIOR_ROOM.minZ + 0.05);
+    mesh.rotation.set(0, 0, p.x < 5 ? 0.03 : -0.04);
     root.add(mesh);
   }
   // Dartboard with three darts.
@@ -239,8 +239,8 @@ export function buildTavern(kit: Kit, options: { props: readonly TavernModel[] }
     });
     textures.push(tex);
     const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.42), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
-    plate.position.set(INTERIOR_ROOM.minX + 0.05, 2.75, 3.4);
-    plate.rotation.y = Math.PI / 2;
+    // Over the doorway, facing the camera (lounge-interior-scene.ts).
+    plate.position.set(INTERIOR_ROOM.minX - 0.86, 2.58, 3.4);
     root.add(plate);
   }
 

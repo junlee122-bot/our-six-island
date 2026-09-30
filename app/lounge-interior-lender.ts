@@ -6,15 +6,17 @@ import { BANKER_SPOT } from './lounge-bank-layout';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout';
 import { npcChibi } from './lounge-npc-chibi';
 
-/** A friend's sprite plane height in the interiors (their canvas spans it). */
-export const LENDER_FIGURE_HEIGHT = 1.72;
 /** Bottom alpha row of each optimized full-body image, measured after matting. */
 const FOOT_LINE = { lender: .9808, banker: .9859, stylist: .9859 } as const;
 
 /** An independent illustrated resident, not another instance of the dealer. */
 type ResidentView = {
-  yaw: number;
-  squash: number;
+  /** A friend's sprite card (canvas height as the camera sees it, room units). */
+  card: number;
+  /** Screen-up per unit of height on an upright plane (cos of the camera pitch). */
+  upY: number;
+  /** Colour multiplied into the sprite (a dark room's warm dimness). */
+  tint?: string;
   shadow: { geometry: THREE.BufferGeometry; material: THREE.Material };
   onLoad: (state: 'loaded' | 'unavailable') => void;
 };
@@ -32,16 +34,18 @@ function createResident(scene: THREE.Scene, view: ResidentView, kind: 'lender' |
   let disposed = false, loaded = false;
   // In the world they are chibi at a friend's size (lounge-npc-chibi.ts); the tall art stays for dialogue.
   const chibi = npcChibi(kind === 'banker' ? 'nyamo' : kind === 'stylist' ? 'gwen' : 'rose');
+  // Upright, stretched by 1 / cos(pitch): on screen exactly a friend's card (구역 공통 규격).
+  const upright = view.card / view.upY;
   const geometry = chibi
-    ? new THREE.PlaneGeometry(LENDER_FIGURE_HEIGHT * view.squash * (chibi.w / chibi.h), LENDER_FIGURE_HEIGHT)
-    : new THREE.PlaneGeometry(LENDER_FIGURE_HEIGHT * view.squash * 2 / 3, LENDER_FIGURE_HEIGHT);
-  geometry.translate(0, chibi ? LENDER_FIGURE_HEIGHT * 0.47 : LENDER_FIGURE_HEIGHT * (FOOT_LINE[kind] - 0.5), 0);
+    ? new THREE.PlaneGeometry(view.card * (chibi.w / chibi.h), upright)
+    : new THREE.PlaneGeometry(view.card * 2 / 3, upright);
+  geometry.translate(0, chibi ? upright * 0.47 : upright * (FOOT_LINE[kind] - 0.5), 0);
   ownedGeometry.push(geometry);
   const material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false });
+  if (view.tint) material.color.set(view.tint);
   material.visible = false;
   ownedMaterial.push(material);
   const figure = new THREE.Mesh(geometry, material);
-  figure.rotation.y = view.yaw;
   figure.position.set(at.x, 0.025, at.z);
   figure.userData.npc = kind === 'banker' ? 'bank-clerk' : kind === 'stylist' ? 'salon-stylist' : 'casino-lender';
   root.add(figure);
