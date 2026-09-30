@@ -186,6 +186,29 @@ async function runView(mobile = false) {
       await runTo(async () => { await sleep(400); await stationary(); });
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
+    // Frame time and long tasks on the page (evidence only, never a pass/fail):
+    // start() samples animation-frame gaps and long tasks until stop() returns them.
+    const perf = {
+      start: () => js(() => {
+        const p = (window.__perfProbe = { gaps: [], long: [], t0: performance.now(), on: true });
+        let last = performance.now();
+        const tick = (t) => { if (!p.on) return; p.gaps.push(t - last); last = t; requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+        try {
+          p.observer = new PerformanceObserver((list) => { for (const e of list.getEntries()) p.long.push(e.duration); });
+          p.observer.observe({ type: 'longtask', buffered: false });
+        } catch {}
+      }),
+      stop: () => js(() => {
+        const p = window.__perfProbe;
+        if (!p) return null;
+        p.on = false; p.observer?.disconnect();
+        const sorted = [...p.gaps].sort((a, b) => a - b), at = (q) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0);
+        const ms = performance.now() - p.t0;
+        return { ms: Math.round(ms), frames: p.gaps.length, fps: +(p.gaps.length / (ms / 1000)).toFixed(2), frameP50: at(0.5), frameP90: at(0.9), frameMax: Math.round(sorted.at(-1) ?? 0),
+          longTasks: p.long.length, longTaskMs: Math.round(p.long.reduce((a, b) => a + b, 0)), longTaskMax: Math.round(Math.max(0, ...p.long)), busyPct: Math.round((p.long.reduce((a, b) => a + b, 0) / ms) * 100) };
+      }),
+    };
     const fishing = (phases, timeout) => wait((list) => list.includes(document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase')), phases, timeout);
     const guardedAction = async (kind, changed, label) => {
       const before = commands.length;
@@ -585,7 +608,10 @@ async function runView(mobile = false) {
       // 낚시 업그레이드: bite → hook → the reel fight shows, holding lifts the zone, Esc lets the fish go.
       await directory('fish-river');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.fishSpot === 'river');
+      res.fishingPerf = {};
+      await perf.start(); await sleep(4_000); res.fishingPerf.village = await perf.stop();
       await pressAction(); await page.getByTestId('fishing').waitFor();
+      await perf.start();
       // React the moment the float dips, like a player: a MutationObserver answers
       // right after the page draws it, where polling (one page task per poll, which
       // a software-GPU page can hold for seconds) can miss the bite window by itself.
@@ -622,12 +648,16 @@ async function runView(mobile = false) {
         assert.ok(res.fishingMisses.length <= LATE_MISSES[grade], `late misses within a ${grade} fish's allowance: ` + JSON.stringify(res.fishingMisses));
         await click('[data-testid=fish-again]');
       }
+      res.fishingPerf.castToHook = await perf.stop();
       assert.ok(commands.some((c) => c.action?.kind === 'anglerHook'), 'hook came from browser UI');
       assert.ok(model().angling.me.fight?.setup, 'the server stored the fight seed');
       const zone = () => js(() => getComputedStyle(document.querySelector('[data-testid=fish-reel]')).getPropertyValue('--zone-y'));
+      await perf.start();
       await page.keyboard.down('Space'); await sleep(700);
       const lifted = parseFloat(await zone());
       await page.keyboard.up('Space');
+      res.fishingPerf.fight = await perf.stop();
+      console.log(`${name} fishing perf ` + JSON.stringify({ ...res.fishingPerf, hooks: res.fishingHooks, misses: res.fishingMisses }));
       assert.ok(lifted > 0, 'holding lifts the catch zone');
       await shot('fishing-fight');
       await page.keyboard.press('Escape');

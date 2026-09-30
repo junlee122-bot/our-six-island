@@ -182,6 +182,7 @@ import {
   type VillagePoint,
 } from './lounge-village-layout';
 import { villageFriendPins, villageFriendGroups, type VillageFriendPin } from './lounge-village-minimap';
+import { FrameCost, fishingFrameDue } from './lounge-fishing-frames';
 import './lounge-village.css';
 
 type ChatLine = { id: string; actor: number; text: string };
@@ -1827,9 +1828,11 @@ export function Village3D(props: Props) {
     let lastSent = { ...position },
       wasWalking = false;
     let lastTick = 0;
+    const drawCost = new FrameCost();
     const animate = (now: number) => {
       if (disposed || contextLost) return;
       frame = requestAnimationFrame(animate);
+      drawCost.frame(now);
       // 프레임 제한: skip display frames; dt below still covers the whole gap.
       const cap = getSettings().fpsCap;
       if (cap && now - lastTick < 1000 / cap - 2) return;
@@ -1848,6 +1851,11 @@ export function Village3D(props: Props) {
         entryIntent = null;
         requestedPlace.current = null;
         marker.visible = false;
+        // Behind the overlay the village draws (and updates) only now and then.
+        const phase = latest.current.fishing.phase;
+        const changed = latest.current.fishing.spot + ':' + phase !== lastFishKey;
+        if (!fishingFrameDue(phase, now, lastRender, drawCost.ms, changed)) return;
+        needsRender = true;
       }
       const before = position;
       const h =
@@ -2309,6 +2317,7 @@ export function Village3D(props: Props) {
         host.dataset.valleyTextures = String(Math.round(world.valley.textureBytes() / 1048576));
         host.dataset.valleyKinds = String(world.valley.loadedKinds());
         renderer.render(scene, camera);
+        drawCost.drew(now);
         residentLayer.project(camera, width, height);
         lastRender = now;
         needsRender = false;

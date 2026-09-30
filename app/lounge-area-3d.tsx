@@ -52,6 +52,7 @@ import { districtCounters, type DistrictCounter } from './lounge-district-counte
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
+import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -114,13 +115,15 @@ export type AreaSceneProps = {
   axeTier: number;
   /** Paused while a dialog is open. */
   paused?: boolean;
+  /** The fishing overlay's phase while it is open (the scene behind it draws only now and then). */
+  fishing?: FishingFramePhase | null;
   /** 설정 → 낮밤 변화 (false: always lit like noon). */
   dayNight?: boolean;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
 
-export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, dayNight = true, onMove, onAction }: AreaSceneProps) {
+export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, fishing = null, dayNight = true, onMove, onAction }: AreaSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLElement>());
   const labelLayerRef = useRef<HTMLDivElement>(null);
@@ -171,9 +174,9 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     target: null as WalkPoint | null,
     lastSent: { x: NaN, z: NaN },
   });
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight });
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -559,13 +562,22 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       lastRender = -1000,
       lastAction = '',
       stateKey = '';
+    const drawCost = new FrameCost();
+    let fishKey: FishingFramePhase | null = null;
     const animate = (t: number) => {
       if (disposed) return;
       frame = requestAnimationFrame(animate);
+      drawCost.frame(t);
+      const s = latest.current;
+      // Behind the fishing overlay this scene draws (and updates) only now and then.
+      if (s.fishing) {
+        if (!fishingFrameDue(s.fishing, t, lastRender, drawCost.ms, s.fishing !== fishKey)) return;
+        dirty = true;
+      }
+      fishKey = s.fishing;
       const dt = Math.min((t - previous) / 1000, 0.25);
       previous = t;
       if (document.hidden || !host.clientWidth) return;
-      const s = latest.current;
       // State from the server (nodes taken, rocks broken, ladder…).
       if (applyDay(t)) {
         dirty = true;
@@ -702,6 +714,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       for (const [id, f] of others) project(id, f.pos);
       project('self', l.point);
       renderer.render(scene, camera);
+      drawCost.drew(t);
       residents?.project(camera, host.clientWidth, host.clientHeight);
       dirty = false;
     };

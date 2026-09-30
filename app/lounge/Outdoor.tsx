@@ -22,6 +22,7 @@ import { josa } from '../lounge-text';
 import { useSettings } from '../lounge-settings';
 import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
+import type { FishingFramePhase } from '../lounge-fishing-frames';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -265,6 +266,7 @@ export function useOutdoor({
     self,
     me,
     paused,
+    fishing,
     onChat,
     onBag,
     axeTier,
@@ -274,6 +276,7 @@ export function useOutdoor({
     self: string | null;
     me: { actor: number; look: Look };
     paused: boolean;
+    fishing?: FishingFramePhase | null;
     onChat: () => void;
     onBag: () => void;
     axeTier: number;
@@ -297,6 +300,7 @@ export function useOutdoor({
             clockOffset={view.clockOffset}
             axeTier={axeTier}
             paused={paused || liftOpen}
+            fishing={fishing}
             dayNight={dayNight}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
