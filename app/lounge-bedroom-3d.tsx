@@ -15,10 +15,13 @@ import * as THREE from 'three';
 import { loungeSprites } from './lounge-sprites';
 import {
   BEDROOM_LIMITS,
-  ROOM,
-  ROOM_DOOR_POINT,
+  DEFAULT_BED,
   catalogEntry,
   defaultBedroom,
+  roomDoorPoint,
+  roomOfHouse,
+  setActiveRoomShape,
+  type RoomShape,
   readBedroom,
   roomConflicts,
   roomFromNetwork,
@@ -28,7 +31,8 @@ import {
   type RoomItem,
 } from './lounge-bedroom-data';
 import { bedroomTheme, BEDROOM_THEMES } from './lounge-bedroom-themes';
-import { createBedroomScene, ROOM_CAMERA, type RoomScene } from './lounge-bedroom-scene';
+import { createBedroomScene, ROOM_LIGHT, type RoomScene } from './lounge-bedroom-scene';
+import { FIGURE_CANVAS_RATIO, VIEW_DIR, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import {
   CONFLICT_TEXT,
   duplicateItem,
@@ -59,8 +63,8 @@ import { ACTORS } from './lounge-roster';
 import { josa } from './lounge-text';
 import {
   ROOM_DOOR_REACH,
-  WALK_START,
   besideBed,
+  walkStart,
   roomItemUsable,
   leavingThroughDoor,
   roomAction,
@@ -107,7 +111,19 @@ export type RoomPresence = {
   onMove: (x: number, y: number) => void;
 };
 /** Where the owner likes to stand when a friend visits while they are away (as an NPC). */
-const HOST_SPOT = { x: 1.5, z: 2.5 } as const;
+const HOST_SPOT = { x: 1.5, z: 1.5 } as const;
+/**
+ * The ground point the camera looks at so the whole room (front floor edge to
+ * the top of the back wall) sits in the middle of the screen. Screen-up of a
+ * point is y·cos(pitch) − z·sin(pitch) for the straight-on camera.
+ */
+function roomLook(shape: RoomShape) {
+  const c = Math.cos(VIEW_PITCH),
+    s = Math.sin(VIEW_PITCH);
+  const lo = -(shape.maxZ + 0.35) * s,
+    hi = shape.wallHeight * c - (shape.minZ - 0.35) * s;
+  return new THREE.Vector3((shape.minX + shape.maxX) / 2, 0, -(lo + hi) / 2 / s);
+}
 const HOST_ID = 'host-npc';
 const BUBBLE_MS = 6500;
 /** Desktop 꾸미기: the room fills the window and the tools sit in a side dock. */
@@ -151,6 +167,9 @@ export function Bedroom3D({
   onCook,
   spawn = 'door',
   onNearDoor,
+  house = 0,
+  shape: fixedShape,
+  title,
 }: {
   save: LoungeSave;
   /** Owner only: saves room edits (꾸미기 모드 is unavailable without it). */
@@ -178,7 +197,19 @@ export function Bedroom3D({
   spawn?: 'door' | 'bed';
   /** I am near the door: preload the village. */
   onNearDoor?: () => void;
+  /** 집 확장 tier of the room's owner (the room grows with it). */
+  house?: number;
+  /** A fixed room shape instead (모델하우스 관람: the old themed rooms). */
+  shape?: RoomShape;
+  /** Heading shown instead of the room's theme name (모델하우스 관람). */
+  title?: string;
 }) {
+  const shape = useMemo(() => fixedShape ?? roomOfHouse(house), [fixedShape, house]);
+  // The pure editing and walking helpers read the active room shape.
+  setActiveRoomShape(shape);
+  useLayoutEffect(() => {
+    setActiveRoomShape(shape);
+  });
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLDivElement>());
   const directions = useRef(new Set<Direction>());
@@ -221,7 +252,7 @@ export function Bedroom3D({
   const positionRef = useRef<WalkPoint>(
     spawn === 'bed' && !visit
       ? besideBed(save.bedroom ?? defaultBedroom(save.actor))
-      : { ...WALK_START },
+      : walkStart(shape),
   );
   const [action, setAction] = useState<{ kind: ActionKind; item?: string } | null>(null);
   const [{ keys }] = useSettings();
@@ -456,35 +487,38 @@ export function Bedroom3D({
       };
     }
     const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-6, 6, 4.8, -4.8, 0.1, 60);
-    camera.position.set(ROOM_CAMERA.x, ROOM_CAMERA.y, ROOM_CAMERA.z);
-    camera.lookAt(0, 1.08, 0);
-    camera.updateMatrixWorld();
-    const cameraRight = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
-    // The room box in camera space (screen right / up), for framing.
-    const roomFrame = (() => {
-      const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1),
-        target = new THREE.Vector3(0, 1.08, 0);
-      const r: number[] = [],
-        u: number[] = [];
-      for (const x of [ROOM.minX - 0.2, ROOM.maxX + 0.1])
-        for (const y of [-0.35, ROOM.wallHeight])
-          for (const z of [ROOM.minZ - 0.2, ROOM.maxZ + 0.1]) {
-            const p = new THREE.Vector3(x, y, z).sub(target);
-            r.push(p.dot(cameraRight));
-            u.push(p.dot(up));
-          }
-      const span = (v: number[]) => ({
-        center: (Math.max(...v) + Math.min(...v)) / 2,
-        half: (Math.max(...v) - Math.min(...v)) / 2,
-      });
-      return { right: span(r), up: span(u) };
-    })();
+    // 구역 공통 규격: straight on, pitched VIEW_PITCH down, VIEW_HALF above the
+    // centre; the room sits in the middle, and a room wider than the view
+    // eases after me like every district.
+    const camera = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 200);
+    const cameraOffset = new THREE.Vector3(VIEW_DIR.x, VIEW_DIR.y, VIEW_DIR.z).multiplyScalar(VIEW_DISTANCE);
+    const centre = roomLook(shape),
+      look = centre.clone(),
+      aim = new THREE.Vector3();
+    const aimAt = (p: WalkPoint) => {
+      const halfW = camera.right,
+        halfZ = camera.top / Math.sin(VIEW_PITCH);
+      const spanX = Math.max(0, (shape.maxX - shape.minX) / 2 + 0.8 - halfW),
+        spanZ = Math.max(0, (shape.maxZ - shape.minZ) / 2 + 1.5 - halfZ);
+      aim.set(
+        centre.x + Math.max(-spanX, Math.min(spanX, p.x - centre.x)),
+        0,
+        centre.z + Math.max(-spanZ, Math.min(spanZ, p.z - centre.z)),
+      );
+      return aim;
+    };
+    const frameCamera = () => {
+      camera.position.copy(look).add(cameraOffset);
+      camera.lookAt(look);
+      camera.updateMatrixWorld();
+    };
+    frameCamera();
+    const cameraRight = new THREE.Vector3(1, 0, 0);
     const quality = qualityProfile(getSettings().quality);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.08 * ROOM_LIGHT.exposure;
     renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     // Only static geometry casts shadows; a contact shadow follows the sprite.
@@ -495,19 +529,27 @@ export function Bedroom3D({
     canvas.setAttribute('aria-hidden', 'true');
     host.insertBefore(canvas, host.firstChild);
 
-    const studio = createBedroomScene(scene, renderer, latest.current.room, host, () => {
-      dirty = true;
-    });
+    const studio = createBedroomScene(
+      scene,
+      renderer,
+      latest.current.room,
+      host,
+      () => {
+        dirty = true;
+      },
+      shape,
+    );
     studioRef.current = studio;
 
     // ---------------------------------------------------------- figures
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const avatarHeight = 1.82;
-    const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-    // The 440×540 figure canvas spans avatarHeight (no hat band above it).
-    const avatarCanvasHeight = 540,
-      avatarPlaneHeight = (avatarHeight * avatarCanvasHeight) / 540;
-    const avatarGeometry = new THREE.PlaneGeometry(avatarHeight * cameraUp.y * (440 / 540), avatarPlaneHeight);
+    // Friends as in every district: the market's 440×640 canvas for a body
+    // VILLAGE_FIGURE_HEIGHT tall, on an upright plane stretched by
+    // 1 / cos(pitch) so it looks camera-facing without leaning into a wall.
+    const avatarCanvasHeight = 640,
+      avatarBase = VILLAGE_FIGURE_HEIGHT * FIGURE_CANVAS_RATIO,
+      avatarPlaneHeight = avatarBase / Math.cos(VIEW_PITCH);
+    const avatarGeometry = new THREE.PlaneGeometry(avatarBase * (440 / avatarCanvasHeight), avatarPlaneHeight);
     // loungeSprites.draw places the soles at 97% of the texture's height.
     avatarGeometry.translate(0, avatarPlaneHeight * 0.47, 0);
     const shadowCanvas = document.createElement('canvas');
@@ -552,7 +594,7 @@ export function Bedroom3D({
         avatarGeometry,
         new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.12, toneMapped: false }),
       );
-      mesh.rotation.y = Math.atan2(camera.position.x, camera.position.z);
+      mesh.rotation.y = 0;
       const shadow = new THREE.Mesh(shadowGeometry, shadowMaterial);
       shadow.rotation.x = -Math.PI / 2;
       scene.add(mesh, shadow);
@@ -621,17 +663,14 @@ export function Bedroom3D({
     };
     type Drag = { pointer: number; id: string; start: RoomItem; offset: { x: number; z: number }; moved: boolean; sx: number; sy: number };
     let drag: Drag | null = null;
-    /** Where a wall item under the pointer would hang (the nearer wall wins). */
+    /** Where a wall item under the pointer would hang (the back wall). */
     const wallHit = (ray: THREE.Ray) => {
-      const options: { wall: 'back' | 'left'; along: number; y: number; d: number }[] = [];
-      const back = ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -ROOM.minZ), new THREE.Vector3());
-      if (back && back.x >= ROOM.minX - 0.3 && back.x <= ROOM.maxX && back.y > 0 && back.y < ROOM.wallHeight + 0.4)
-        options.push({ wall: 'back', along: back.x, y: back.y, d: back.distanceTo(ray.origin) });
-      const left = ray.intersectPlane(new THREE.Plane(new THREE.Vector3(1, 0, 0), -ROOM.minX), new THREE.Vector3());
-      if (left && left.z >= ROOM.minZ - 0.3 && left.z <= ROOM.maxZ && left.y > 0 && left.y < ROOM.wallHeight + 0.4)
-        options.push({ wall: 'left', along: left.z, y: left.y, d: left.distanceTo(ray.origin) });
-      options.sort((a, b) => a.d - b.d);
-      return options[0] ?? null;
+      const back = ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), -shape.minZ), new THREE.Vector3());
+      if (back && back.x >= shape.minX - 0.3 && back.x <= shape.maxX + 0.3 && back.y > -0.5 && back.y < shape.wallHeight + 0.6)
+        return { wall: 'back' as const, along: back.x, y: back.y };
+      // Below the wall (on the floor near it): keep the height, follow x.
+      const floor = ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), new THREE.Vector3());
+      return floor ? { wall: 'back' as const, along: floor.x, y: 1.2 } : null;
     };
     const dragTo = (event: PointerEvent) => {
       if (!drag) return;
@@ -679,7 +718,7 @@ export function Bedroom3D({
       }
       floorPlane.constant = 0;
       const hit = ray.intersectPlane(floorPlane, hitPoint);
-      if (!hit || hit.x < ROOM.minX - 0.2 || hit.x > ROOM.maxX + 0.2 || hit.z < ROOM.minZ - 0.2 || hit.z > ROOM.maxZ + 0.2) return;
+      if (!hit || hit.x < shape.minX - 0.2 || hit.x > shape.maxX + 0.2 || hit.z < shape.minZ - 0.2 || hit.z > shape.maxZ + 0.4) return;
       path = findWalkPath(positionRef.current, { x: hit.x, z: hit.z });
       const last = path.at(-1);
       destination.visible = Boolean(last);
@@ -695,10 +734,12 @@ export function Bedroom3D({
       if (current.editing) return studio.pick(ray, current.selectedId) ? 'grab' : '';
       floorPlane.constant = 0;
       const hit = ray.intersectPlane(floorPlane, hitPoint);
-      if (hit && Math.hypot(hit.x - ROOM_DOOR_POINT.x, hit.z - ROOM_DOOR_POINT.z) < ROOM_DOOR_REACH && !current.visit)
+      const door = roomDoorPoint(shape);
+      if (hit && Math.hypot(hit.x - door.x, hit.z - door.z) < ROOM_DOOR_REACH && !current.visit)
         return 'place';
       const id = studio.pick(ray, null);
       const ref = id ? current.room.items.find((i) => i.id === id)?.ref : undefined;
+      if (!current.visit && hit && shape.fixtures.some((f) => hit.x > f.x0 - 0.3 && hit.x < f.x1 + 0.3 && hit.z > f.z0 - 0.3 && hit.z < f.z1 + 0.5)) return 'spot';
       return ref && !current.visit && roomItemUsable(ref) ? 'spot' : '';
     };
     const onPointerMove = (event: PointerEvent) => {
@@ -771,7 +812,7 @@ export function Bedroom3D({
           const entry = catalogEntry(item.ref)!;
           const next =
             entry.mount === 'wall'
-              ? moveWallItem(item, item.wall ?? 'back', (item.wall === 'left' ? item.z : item.x) + (item.wall === 'left' ? -o[0] : o[0]), (item.y ?? 2) - o[1])
+              ? moveWallItem(item, 'back', item.x + o[0], (item.y ?? 2) - o[1])
               : moveFloorItem(latest.current.room, item, item.x + o[0], item.z + o[1]);
           editOps.current.commitItem(next, '조금 옮겼어요.');
         }
@@ -862,14 +903,14 @@ export function Bedroom3D({
         height = host.clientHeight;
       if (!width || !height) return;
       const aspect = width / height;
-      // Frame the whole room box (floor slab to the top of the walls) tightly.
-      const { right: r, up: u } = roomFrame;
-      const halfHeight = Math.max(u.half, r.half / aspect) * 1.05;
-      camera.left = r.center - halfHeight * aspect;
-      camera.right = r.center + halfHeight * aspect;
-      camera.top = u.center + halfHeight;
-      camera.bottom = u.center - halfHeight;
+      const half = viewHalf(aspect);
+      camera.left = -half * aspect;
+      camera.right = half * aspect;
+      camera.top = half;
+      camera.bottom = -half;
       camera.updateProjectionMatrix();
+      look.copy(aimAt(positionRef.current));
+      frameCamera();
       renderer.setSize(width, height, false);
       dirty = true;
     };
@@ -917,7 +958,7 @@ export function Bedroom3D({
       const place = (id: string, p: WalkPoint) => {
         const el = labelsRef.current.get(id);
         if (!el) return;
-        label.set(p.x, 1.98, p.z).project(camera);
+        label.set(p.x, avatarPlaneHeight * 0.86, p.z).project(camera);
         el.style.transform = `translate(${((label.x + 1) / 2) * w}px, ${((1 - label.y) / 2) * h}px) translate(-50%, -100%)`;
       };
       place('self', me.pos);
@@ -941,7 +982,7 @@ export function Bedroom3D({
       const before = positionRef.current;
       let position = before;
       const running = shiftHeld.current,
-        speed = 2.25 * (running ? RUN_SPEED_MULTIPLIER : 1);
+        speed = VIEW_WALK_SPEED * (running ? RUN_SPEED_MULTIPLIER : 1);
       if (!latest.current.editing) {
         let horizontal = Number(pressed.has('right')) - Number(pressed.has('left'));
         let vertical = Number(pressed.has('down')) - Number(pressed.has('up'));
@@ -951,9 +992,10 @@ export function Bedroom3D({
           const length = Math.hypot(horizontal, vertical);
           horizontal /= length;
           vertical /= length;
-          const stepX = (horizontal + vertical) * Math.SQRT1_2 * speed * dt;
-          position = walkStep(position, stepX, (vertical - horizontal) * Math.SQRT1_2 * speed * dt);
-          if (leavingThroughDoor(position, stepX) && flow.current.onExit)
+          // Straight-on camera: the arrow keys move along the screen's axes.
+          const stepZ = vertical * speed * dt;
+          position = walkStep(position, horizontal * speed * dt, stepZ);
+          if (leavingThroughDoor(position, stepZ) && flow.current.onExit)
             queueMicrotask(() => runActionRef.current('exit'));
         } else if (path.length) {
           const next = path[0],
@@ -974,7 +1016,7 @@ export function Bedroom3D({
         movedZ = position.z - before.z,
         moved = Math.hypot(movedX, movedZ);
       const walking = moved > 0.0001;
-      const motion = advanceLocomotion(me.locomotion, { distance: moved, horizontal: movedX * cameraRight.x + movedZ * cameraRight.z }, running ? 'run' : 'walk', 2.25);
+      const motion = advanceLocomotion(me.locomotion, { distance: moved, horizontal: movedX * cameraRight.x + movedZ * cameraRight.z }, running ? 'run' : 'walk', VIEW_WALK_SPEED);
       const changed = motion.motion !== me.motion || motion.state.facing !== me.locomotion.facing;
       me.locomotion = motion.state;
       me.motion = motion.motion;
@@ -1004,7 +1046,7 @@ export function Bedroom3D({
       const players = latest.current.presence?.players ?? [];
       for (const o of wanted) {
         const live = players.find((p) => p.id === o.id);
-        const target = o.npc ? { ...hostSpotRef.current } : live ? roomFromNetwork(live) : { ...WALK_START };
+        const target = o.npc ? { ...hostSpotRef.current } : live ? roomFromNetwork(live) : walkStart(shape);
         let f = others.get(o.id);
         if (!f) {
           f = figure(o.actor, o.look, target);
@@ -1020,11 +1062,11 @@ export function Bedroom3D({
         let fm = 0;
         if (d > 3.5) f.pos = { ...f.target };
         else if (d > 0.02) {
-          const step = Math.min(d, (d > 1.2 ? 4 : 2.3) * dt);
+          const step = Math.min(d, (d > 1.2 ? VIEW_WALK_SPEED * 1.4 : VIEW_WALK_SPEED) * dt);
           f.pos = { x: f.pos.x + (dx / d) * step, z: f.pos.z + (dz / d) * step };
           fm = step;
         }
-        const m = advanceLocomotion(f.locomotion, { distance: fm, horizontal: (dx / (d || 1)) * fm * cameraRight.x + (dz / (d || 1)) * fm * cameraRight.z }, d > 1.2 ? 'run' : 'walk', 2.25);
+        const m = advanceLocomotion(f.locomotion, { distance: fm, horizontal: (dx / (d || 1)) * fm * cameraRight.x + (dz / (d || 1)) * fm * cameraRight.z }, d > 1.2 ? 'run' : 'walk', VIEW_WALK_SPEED);
         const fc = m.motion !== f.motion || m.state.facing !== f.locomotion.facing;
         f.locomotion = m.state;
         f.motion = m.motion;
@@ -1065,6 +1107,14 @@ export function Bedroom3D({
         host.dataset.motion = me.motion;
         host.dataset.others = String(others.size);
         lastData = t;
+      }
+      // A room wider than the view eases after me (followEase, like the districts).
+      aimAt(position);
+      const far = look.distanceTo(aim);
+      if (far > 0.005) {
+        look.lerp(aim, followEase(dt));
+        frameCamera();
+        dirty = true;
       }
       if (walking || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);
@@ -1110,7 +1160,7 @@ export function Bedroom3D({
       renderer.forceContextLoss();
       canvas.remove();
     };
-  }, [attempt]);
+  }, [attempt, shape]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -1152,18 +1202,18 @@ export function Bedroom3D({
           <span className="b3-eyebrow">
             <Sun size={14} /> 좋아하는 것들로 채운 하루
           </span>
-          <h1>
-            {ownerName}의 {theme.title}
-          </h1>
+          <h1>{title ?? `${ownerName}의 ${theme.title}`}</h1>
           <p>
-            {visit
-              ? `${ownerName}의 방에 놀러 왔어요. 함께 있는 친구와 이야기해 보세요.`
-              : theme.description}
+            {title
+              ? `${theme.title} · ${theme.description}`
+              : visit
+                ? `${ownerName}의 방에 놀러 왔어요. 함께 있는 친구와 이야기해 보세요.`
+                : theme.description}
           </p>
         </div>
         <div className="b3-heading-side">
           <span className="b3-mode-label">
-            {visit ? `${ownerName}의 ${theme.title} · 놀러 왔어요` : theme.tag}
+            {title ? '모델하우스 관람 · 구경만 할 수 있어요' : visit ? `${ownerName}의 ${theme.title} · 놀러 왔어요` : theme.tag}
           </span>
           {!visit && (
             <span className="b3-visitors" data-testid="room-visitors">
@@ -1377,7 +1427,7 @@ export function Bedroom3D({
         <ResetRoomDialog
           onClose={() => setResetOpen(false)}
           onReset={() => {
-            commit(defaultBedroom(save.actor), '처음 배치로 되돌렸어요. 실행 취소로 돌아갈 수 있어요.');
+            commit({ ...latest.current.room, items: [{ ...DEFAULT_BED }] }, '침대만 남기고 가구를 치웠어요. 실행 취소로 돌아갈 수 있어요.');
             setSelectedId(null);
             setResetOpen(false);
             setPanel(null);

@@ -4,7 +4,7 @@
 // command (CloudMember.room), and the engine adds the house tier (×8).
 //
 //   score = Σ item value + categories × 3 + premium wall/floor 4 + a theme set 6
-//   item value: plain 1 · shop furniture price / 5,000 (1–8) · rare 5;
+//   item value: plain (기본 가구) 1 · shop furniture price / 5,000 (1–8) · rare 5;
 //   copies past the fifth of the same thing count 0 (no carpeting the floor).
 import { catalogEntry, readBedroom, STYLE_UNLOCK } from './lounge-bedroom-data.ts';
 import { FURNITURE_BY_REF } from './lounge-items.ts';
@@ -16,7 +16,8 @@ export function roomItemValue(ref: string) {
   if (!entry) return 0;
   if (entry.category === 'rare') return 5;
   const furn = FURNITURE_BY_REF[entry.unlock ?? ref];
-  if (entry.premium && furn) return Math.max(1, Math.min(8, Math.floor(furn.price / 5_000)));
+  // 기본 가구 (bought since the 새 방 reset) still counts as a plain piece.
+  if (entry.premium && furn && !furn.basic) return Math.max(1, Math.min(8, Math.floor(furn.price / 5_000)));
   return 1;
 }
 export const ROOM_COPIES_MAX = 5;

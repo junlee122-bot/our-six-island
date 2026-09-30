@@ -10,12 +10,14 @@ import { financeAction } from '../app/lounge-finance.ts';
 import { roomScore } from '../app/lounge-mood-room.ts';
 import { readFile } from 'node:fs/promises';
 import ts from 'typescript';
+import { ROOMS_RESET_ID } from '../app/lounge-rooms-reset.ts';
 
 const ids = [0, 1].map((i) => `00000000-0000-4000-8000-00000000000${i}`);
 const ref = 'furn-armchair-navy', now = Date.UTC(2026, 8, 28, 3);
 const piece = (id, itemRef, x) => ({ id, ref: itemRef, kind: catalogEntry(itemRef).kind, x, z: 1, rotY: 0, scale: 1 });
 function fixture() {
-  let life = readLife(undefined), ledger = newLoungeLedger();
+  // A world after the 새 방 furniture reset (its done-mark is stored).
+  let life = { ...readLife(undefined), roomsReset: { id: ROOMS_RESET_ID, at: 0, backup: {} } }, ledger = newLoungeLedger();
   ids.forEach((id, actor) => { life = ensureLifeMember(life, id, actor); ledger = registerWallet(ledger, 'wallet-' + id); });
   life.ext ??= {};
   life.ext[ids[1]] = { furn: { [ref]: 2 } };

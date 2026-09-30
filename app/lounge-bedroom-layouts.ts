@@ -1,8 +1,9 @@
-// The seven friends' starting rooms (pure; shared with the Edge function).
-// Tall furniture stands against the back and left walls (the camera looks in
-// from the open front-right corner), beds sit headboard-to-wall, desks sit
-// under the window, rugs are centred and the door strip stays clear.
-import { ROOM, catalogEntry } from './lounge-bedroom-catalog.ts';
+// The seven friends' old themed rooms (room format v3, 2026-09 → 2026-10-02),
+// kept as 범마을 부동산's 모델하우스 관람 (legacyThemeRoom in
+// lounge-bedroom-data.ts). Pure; the coordinates are the old 10 × 8.2 room
+// (LEGACY_ROOM). Tall furniture stands against the back and left walls, beds
+// sit headboard-to-wall, desks sit under the window, rugs are centred.
+import { LEGACY_ROOM as ROOM, catalogEntry } from './lounge-bedroom-catalog.ts';
 import type { RoomItem, RoomWall } from './lounge-bedroom-data.ts';
 
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -288,6 +289,6 @@ function hohyeon(): RoomItem[] {
 }
 
 const LAYOUTS = [dowon, gangjae, minseo, seungjun, minjae, jaemin, hohyeon];
-export function defaultRoomItems(actor: number): RoomItem[] {
+export function legacyRoomItems(actor: number): RoomItem[] {
   return (LAYOUTS[actor] ?? LAYOUTS[0])();
 }

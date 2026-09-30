@@ -203,7 +203,8 @@ test('이번 주 명품 가구: weekly rotation, one copy per friend per week; �
   assert.ok(luxury.length >= 8);
   for (const f of FURNITURE) {
     assert.ok(catalogEntry(f.ref), f.ref);
-    assert.match(FURNITURE_ART[f.ref] ?? '', /^data:image\/svg\+xml/, f.ref);
+    // 기본 가구 (새 방) show their room thumbnails instead of drawn SVG art.
+    if (!f.basic) assert.match(FURNITURE_ART[f.ref] ?? '', /^data:image\/svg\+xml/, f.ref);
   }
   const stock = shopStock(s.life, T0, m.id);
   assert.equal(stock.luxury.length, LUXURY_PER_WEEK);

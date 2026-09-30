@@ -40,6 +40,12 @@ import { isTownAction, townActionArea } from './lounge-town-data.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
+import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
+/** The life state without the reset's done-mark (for the "did anything change" check). */
+const withoutResetMark = (life: LifeState) => {
+  const { roomsReset: _mark, ...rest } = life;
+  return rest;
+};
 export type CloudMember = {
   id: string;
   actor: number;
@@ -233,6 +239,20 @@ export function cloudTransition(
     throw new CloudError('초대 코드를 확인해 주세요.', 400);
   const g = structuredClone(original),
     notifications = new Set<string>();
+  // 새 방 가구 초기화 (lounge-rooms-reset.ts): once per world, before anything
+  // else reads the furniture. A world with no furniture only gets the done-mark,
+  // which is stored with the next write (a plain read still writes nothing).
+  let resetMarkOnly = false;
+  if (g.life) {
+    const current = readLife(g.life);
+    if (!current.roomsReset) {
+      const reset = applyRoomsReset(current, now);
+      if (reset.empty) {
+        (g.life as LifeState).roomsReset = reset.life.roomsReset;
+        resetMarkOnly = true;
+      } else g.life = reset.life;
+    }
+  }
   g.epochs ??= {};
   g.ledger = compactLedger(g.ledger);
   const saveRoom = (
@@ -677,7 +697,15 @@ export function cloudTransition(
     serverNow: now,
   };
   validateLedger(g.ledger);
-  const changed = JSON.stringify(g) !== JSON.stringify(original);
+  // A life started in this very command is born after the reset.
+  if (g.life && !(g.life as LifeState).roomsReset) {
+    (g.life as LifeState).roomsReset = { id: ROOMS_RESET_ID, at: now, backup: {} };
+    resetMarkOnly = true;
+  }
+  const changed =
+    resetMarkOnly && !original.life?.roomsReset
+      ? JSON.stringify({ ...g, life: withoutResetMark(g.life!) }) !== JSON.stringify(original)
+      : JSON.stringify(g) !== JSON.stringify(original);
   // The row is rewritten anyway (a timer fired, someone else's lease expired…):
   // refresh this reader's presence for free. `seen` is not in the response.
   if (changed && piggyback) piggyback.seen = now;

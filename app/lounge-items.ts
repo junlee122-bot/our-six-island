@@ -7,6 +7,7 @@ import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
 import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
+import { catalogEntry } from './lounge-bedroom-catalog.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 /** Fishing spots in the hub (each has a stand in lounge-village-spots.ts). */
@@ -377,7 +378,74 @@ export type FurnitureDef = {
   luxury?: boolean;
   /** Craft recipe (legacy island RECIPES: wood / flower / shell). */
   craft?: { wood: number; flower: number; shell: number };
+  /**
+   * 기본 가구 (새 방, 2026-10-02): the plain pieces the old rooms came with.
+   * Always on 나무결 가구점's “기본 가구” shelf, never in the daily rotation.
+   */
+  basic?: boolean;
 };
+/**
+ * 기본 가구 prices (범). Before 2026-10-02 these came free with each friend's
+ * themed room; with the new rooms every piece but one bed is bought.
+ * Small props 1,500–5,000, furniture 4,000–18,000 (the daily 'furn-*' pieces
+ * are 5,000–40,000).
+ */
+export const BASIC_FURNITURE_PRICES: Readonly<Record<string, number>> = {
+  bed: 18_000,
+  desk: 9_000,
+  chair: 4_000,
+  bookcase: 10_000,
+  'low-bookcase': 8_000,
+  wardrobe: 12_000,
+  nightstand: 4_000,
+  'coffee-table': 7_000,
+  'tea-table': 6_000,
+  sofa: 14_000,
+  'wool-rug': 6_000,
+  'table-lamp': 3_000,
+  cushions: 3_000,
+  'plant-stand': 6_000,
+  tulips: 3_000,
+  vanity: 9_000,
+  'clothes-rack': 7_000,
+  armchair: 8_000,
+  'floor-lamp': 5_000,
+  mirror: 6_000,
+  'round-rug': 5_000,
+  'cat-plush': 2_500,
+  'bunny-plush': 2_500,
+  'heart-cushion': 2_000,
+  'record-player': 8_000,
+  speaker: 4_000,
+  plant: 3_500,
+  flowers: 2_000,
+  books: 1_500,
+  'tea-set': 3_000,
+  'twin-tail-figure': 4_000,
+  'headband-display': 3_000,
+  'instant-camera': 3_500,
+  'music-poster': 2_500,
+  'photo-string': 3_000,
+  'wall-clock': 3_000,
+  'star-lights': 3_500,
+  'miku-poster': 5_000,
+  'miku-banner': 4_000,
+  'miku-records': 9_000,
+  'miku-acrylic': 3_000,
+  'miku-light-sticks': 2_500,
+  'miku-headphones': 4_000,
+  'miku-cushion': 3_500,
+  'miku-rug': 6_000,
+  'miku-leek': 2_000,
+  'miku-figure-shelf': 12_000,
+};
+/**
+ * 모델하우스 관람 (범마을 부동산): the old themed rooms' walls and floors,
+ * bought one at a time for the new room (cream walls and oak floors are free).
+ */
+export const THEME_STYLES = ['sage', 'blush', 'blue', 'mint', 'dusk', 'walnut', 'pale', 'ash'] as const;
+export type ThemeStyle = (typeof THEME_STYLES)[number];
+export const THEME_STYLE_PRICE = 10_000;
 const legacy = (ref: string, name: string, acorns: number, wood: number, flower: number, shell: number): FurnitureDef => ({
   ref: 'furn-' + ref,
   name,
@@ -439,6 +507,13 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-festival-drum', name: '축제 북', price: 0, unsold: true },
   { ref: 'furn-festival-kite', name: '축제 방패연', price: 0, unsold: true },
   { ref: 'furn-festival-fan', name: '축제 부채', price: 0, unsold: true },
+  // 기본 가구 (always on the shelf; names from the room catalog).
+  ...Object.entries(BASIC_FURNITURE_PRICES).map(([ref, price]): FurnitureDef => ({
+    ref,
+    name: catalogEntry(ref)?.name ?? ref,
+    price,
+    basic: true,
+  })),
 ];
 export const LUXURY_PER_WEEK = 2;
 export const FURNITURE_BY_REF: Readonly<Record<string, FurnitureDef>> = Object.fromEntries(FURNITURE.map((f) => [f.ref, f]));
@@ -698,6 +773,7 @@ export const PLUS_ACTION_KINDS = [
   'festival',
   'upgradeHouse',
   'rerollShop',
+  'buyRoomStyle',
 ] as const;
 export type PlusActionKind = (typeof PLUS_ACTION_KINDS)[number];
 

@@ -1,10 +1,16 @@
-/** Walking in the room: obstacles come from the saved v3 room itself. */
+/**
+ * Walking in the room: obstacles come from the saved room itself plus the
+ * built-in kitchen counter and closet. The room's shape (its 집 확장 tier, or
+ * a model house) is the active one (setActiveRoomShape in lounge-bedroom-data).
+ */
 import {
-  ROOM,
   ROOM_DOOR_POINT,
+  activeRoomShape,
   blocksFloor,
   itemFootprint,
+  roomDoorPoint,
   type Bedroom,
+  type RoomShape,
 } from './lounge-bedroom-data.ts';
 import { pickAction, type ActionCandidate, type ActionKind } from './lounge-flow.ts';
 import { slideSubstep } from './lounge-walk-slide.ts';
@@ -17,17 +23,24 @@ export type WalkObstacle = {
   width: number;
   depth: number;
 };
-export const WALK_ROOM = {
-  width: ROOM.maxX - ROOM.minX,
-  depth: ROOM.maxZ - ROOM.minZ,
-  radius: 0.22,
-} as const;
-/** Everyone walks in through the door. */
+export const WALK_ROOM = { radius: 0.22 } as const;
+/** Everyone walks in through the door (the smallest room's; see walkStart). */
 export const WALK_START: WalkPoint = { ...ROOM_DOOR_POINT };
+/** Just inside the door of a room. */
+export const walkStart = (shape: RoomShape = activeRoomShape()): WalkPoint => roomDoorPoint(shape);
 
-/** Floor footprints that block walking (rugs, wall art and items on surfaces do not). */
-export function roomObstacles(room: Pick<Bedroom, 'items'>): WalkObstacle[] {
-  const out: WalkObstacle[] = [];
+/**
+ * Floor footprints that block walking (rugs, wall art and items on surfaces
+ * do not), and the room's built-in kitchen counter and closet.
+ */
+export function roomObstacles(room: Pick<Bedroom, 'items'>, shape: RoomShape = activeRoomShape()): WalkObstacle[] {
+  const out: WalkObstacle[] = shape.fixtures.map((f) => ({
+    id: 'fixture-' + f.id,
+    x: (f.x0 + f.x1) / 2,
+    z: (f.z0 + f.z1) / 2,
+    width: f.x1 - f.x0,
+    depth: f.z1 - f.z0,
+  }));
   for (const item of room.items) {
     if (!blocksFloor(item)) continue;
     const box = itemFootprint(item);
@@ -40,7 +53,7 @@ export function roomObstacles(room: Pick<Bedroom, 'items'>): WalkObstacle[] {
       depth: box.z1 - box.z0,
     });
   }
-  return [...out, ...slotFillers(out)];
+  return [...out, ...slotFillers(out, shape)];
 }
 
 /**
@@ -48,7 +61,7 @@ export function roomObstacles(room: Pick<Bedroom, 'items'>): WalkObstacle[] {
  * and a wall) are closed, so walking along furniture never wedges into one.
  */
 const SLOT = WALK_ROOM.radius * 2 + 0.1;
-function slotFillers(items: readonly WalkObstacle[]): WalkObstacle[] {
+function slotFillers(items: readonly WalkObstacle[], ROOM: RoomShape): WalkObstacle[] {
   const fills: WalkObstacle[] = [];
   const box = (o: WalkObstacle) => ({
     x0: o.x - o.width / 2,
@@ -64,11 +77,11 @@ function slotFillers(items: readonly WalkObstacle[]): WalkObstacle[] {
   items.forEach((item, i) => {
     const a = box(item);
     // Against the walls (the door stays open: nothing stands in its span).
-    if (a.x0 - walls.x0 > 0 && a.x0 - walls.x0 < SLOT && (a.z1 < ROOM.door.z0 || a.z0 > ROOM.door.z1))
-      add(`slot-${item.id}-w`, walls.x0, a.x0, a.z0, a.z1);
+    if (a.x0 - walls.x0 > 0 && a.x0 - walls.x0 < SLOT) add(`slot-${item.id}-w`, walls.x0, a.x0, a.z0, a.z1);
     if (walls.x1 - a.x1 > 0 && walls.x1 - a.x1 < SLOT) add(`slot-${item.id}-e`, a.x1, walls.x1, a.z0, a.z1);
     if (a.z0 - walls.z0 > 0 && a.z0 - walls.z0 < SLOT) add(`slot-${item.id}-n`, a.x0, a.x1, walls.z0, a.z0);
-    if (walls.z1 - a.z1 > 0 && walls.z1 - a.z1 < SLOT) add(`slot-${item.id}-s`, a.x0, a.x1, a.z1, walls.z1);
+    if (walls.z1 - a.z1 > 0 && walls.z1 - a.z1 < SLOT && (a.x1 < ROOM.door.x0 || a.x0 > ROOM.door.x1))
+      add(`slot-${item.id}-s`, a.x0, a.x1, a.z1, walls.z1);
     for (const other of items.slice(i + 1)) {
       const b = box(other);
       const zOverlap = Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0),
@@ -99,6 +112,7 @@ export function canWalk(
   radius: number = WALK_ROOM.radius,
 ): boolean {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.z)) return false;
+  const ROOM = activeRoomShape();
   if (
     point.x < ROOM.minX + radius ||
     point.x > ROOM.maxX - radius ||
@@ -163,12 +177,17 @@ export function walkStep(
 }
 
 const GRID = 0.2;
-const COLS = Math.round((ROOM.maxX - ROOM.minX) / GRID) - 1;
-const ROWS = Math.round((ROOM.maxZ - ROOM.minZ) / GRID) - 1;
-const gridPoint = (id: number): WalkPoint => ({
-  x: ROOM.minX + GRID + (id % COLS) * GRID,
-  z: ROOM.minZ + GRID + Math.floor(id / COLS) * GRID,
-});
+/** The walk grid of the active room. */
+function grid() {
+  const ROOM = activeRoomShape();
+  const COLS = Math.round((ROOM.maxX - ROOM.minX) / GRID) - 1,
+    ROWS = Math.round((ROOM.maxZ - ROOM.minZ) / GRID) - 1;
+  const point = (id: number): WalkPoint => ({
+    x: ROOM.minX + GRID + (id % COLS) * GRID,
+    z: ROOM.minZ + GRID + Math.floor(id / COLS) * GRID,
+  });
+  return { ROOM, COLS, ROWS, point };
+}
 const distanceSquared = (a: WalkPoint, b: WalkPoint) =>
   (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 
@@ -179,6 +198,7 @@ export function nearestWalkable(
   radius: number = WALK_ROOM.radius,
 ): WalkPoint | null {
   if (canWalk(point, obstacles, radius)) return point;
+  const { COLS, ROWS, point: gridPoint } = grid();
   let best: WalkPoint | null = null,
     bestD = Infinity;
   for (let id = 0; id < COLS * ROWS; id++) {
@@ -210,6 +230,7 @@ export function findWalkPath(
     !Number.isFinite(requested.z)
   )
     return [];
+  const { ROOM, COLS, ROWS, point: gridPoint } = grid();
   const target = {
     x: Math.max(ROOM.minX + radius, Math.min(ROOM.maxX - radius, requested.x)),
     z: Math.max(ROOM.minZ + radius, Math.min(ROOM.maxZ - radius, requested.z)),
@@ -293,13 +314,15 @@ export function findWalkPath(
 
 /** The action button offers "나가기" this close to the door. */
 export const ROOM_DOOR_REACH = 1.1;
+/** A built-in fixture's box (walk-distance checks). */
+const fixtureRect = (f: { x0: number; x1: number; z0: number; z1: number }) => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1 });
 /** "옷 갈아입기" this close to the wardrobe or the mirror. */
 export const ROOM_DRESS_REACH = 0.9;
 const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white']);
 /** Tables and the hearth double as the kitchen counter / workbench (요리·만들기). */
 export const ROOM_COOK_REACH = 0.9;
 export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace']);
-/** Furniture with its own action in my room (the pointer cursor shows over it). */
+/** Furniture with its own action in my room (the pointer cursor shows over it; the built-ins always count). */
 export const roomItemUsable = (ref: string) => DRESS_REFS.has(ref) || COOK_REFS.has(ref);
 
 /**
@@ -326,14 +349,20 @@ export function besideBed(
     const near = nearestWalkable({ x: cx, z: box.z1 + gap }, obstacles);
     if (near) return near;
   }
-  return nearestWalkable(WALK_START, obstacles) ?? { ...WALK_START };
+  const start = walkStart();
+  return nearestWalkable(start, obstacles) ?? start;
 }
 
-/** Walkable floor beside the first kitchen table / hearth (요리·만들기), or null. */
+/** Walkable floor in front of the kitchen counter (or a table / hearth) for 요리·만들기, or null. */
 export function besideCookTable(
   room: Pick<Bedroom, 'items'>,
   obstacles: readonly WalkObstacle[] = roomObstacles(room),
 ): WalkPoint | null {
+  for (const f of activeRoomShape().fixtures) {
+    if (f.action !== 'cook') continue;
+    const front = { x: (f.x0 + f.x1) / 2, z: f.z1 + WALK_ROOM.radius + 0.15 };
+    if (canWalk(front, obstacles)) return front;
+  }
   for (const item of room.items) {
     if (!COOK_REFS.has(item.ref)) continue;
     const box = itemFootprint(item);
@@ -352,15 +381,14 @@ export function besideCookTable(
   return null;
 }
 
-/** Pressing out through the door (walking into the left wall at the doorway). */
-export function leavingThroughDoor(point: WalkPoint, dx: number) {
+/** Pressing out through the door (walking down into the front wall at the doorway). */
+export function leavingThroughDoor(point: WalkPoint, dz: number) {
+  const ROOM = activeRoomShape();
   return (
-    dx < 0 &&
-    point.x <= ROOM.minX + WALK_ROOM.radius + 0.08 &&
-    point.z > ROOM.door.z0 + 0.12 &&
-    // The door sits by the front corner: holding "left" (down-left on the
-    // floor) slides along the front wall into that corner, which counts too.
-    point.z < Math.max(ROOM.door.z1 - 0.12, ROOM.door.z1 + 0.8 >= ROOM.maxZ ? ROOM.maxZ : -Infinity)
+    dz > 0 &&
+    point.z >= ROOM.maxZ - WALK_ROOM.radius - 0.08 &&
+    point.x > ROOM.door.x0 + 0.05 &&
+    point.x < ROOM.door.x1 - 0.05
   );
 }
 
@@ -385,13 +413,24 @@ export function roomAction(
   }: { own: boolean; canExit?: boolean; canDress?: boolean; canCook?: boolean },
 ): { kind: ActionKind; item?: string } | null {
   const candidates: ActionCandidate<string>[] = [];
+  const shape = activeRoomShape(),
+    door = roomDoorPoint(shape);
   if (canExit)
     candidates.push({
       kind: 'exit' as const,
-      distance: Math.hypot(point.x - ROOM_DOOR_POINT.x, point.z - ROOM_DOOR_POINT.z),
+      distance: Math.hypot(point.x - door.x, point.z - door.z),
       reach: ROOM_DOOR_REACH,
       door: true,
     });
+  for (const f of shape.fixtures) {
+    if (!own || (f.action === 'dress' ? !canDress : !canCook)) continue;
+    candidates.push({
+      kind: f.action,
+      distance: rectDistance(point, fixtureRect(f)),
+      reach: f.action === 'dress' ? ROOM_DRESS_REACH : ROOM_COOK_REACH,
+      target: 'fixture-' + f.id,
+    });
+  }
   if (own && canDress)
     for (const item of room.items) {
       if (!DRESS_REFS.has(item.ref)) continue;
