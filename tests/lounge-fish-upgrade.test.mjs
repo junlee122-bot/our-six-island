@@ -20,11 +20,14 @@ import {
   ANGLING_REJECT,
   CRAB_READY_MS,
   CUP_PRIZES,
+  HOOK_SLACK_MS,
   anglerCandidates,
   anglingHooks,
   biteDelayMs,
   catchQuality,
   fishAvailable,
+  hookSlackMs,
+  rarityOf,
   readAngling,
   treasureChance,
   treasureLoot,
@@ -208,6 +211,44 @@ test('the server re-simulates: claimed timing faster than real time or a forged 
   const c3 = s.view(m, T0 + 120_000).angling.me.cast;
   s.act(m, { kind: 'anglerHook', token: c3.token }, c3.expiresAt + 1);
   assert.equal(s.view(m, c3.expiresAt + 1).angling.me.last.reason, 'late');
+});
+
+test('the hook grace follows the fish grade: common forgives the most, legend the least', () => {
+  const order = ['common', 'uncommon', 'rare', 'legend'];
+  for (let i = 1; i < order.length; i++) assert.ok(HOOK_SLACK_MS[order[i - 1]] > HOOK_SLACK_MS[order[i]], order[i]);
+  assert.ok(HOOK_SLACK_MS.legend >= 800, 'a legend still covers a normal network round trip');
+  for (const f of FISH) assert.equal(hookSlackMs(f), HOOK_SLACK_MS[rarityOf(f)], f.id);
+  // In the engine: expiresAt = biteAt + windowMs + the grade's grace, and the
+  // server hooks up to that moment and calls it late one millisecond after.
+  const s = world(1), m = s.members[0];
+  const seen = new Set();
+  let at = T0;
+  for (let n = 0; n < 400 && seen.size < 3; n++) {
+    const spot = ['pond', 'river'][n % 2];
+    at += 60_000;
+    s.act(m, { kind: 'anglerCast', spot }, at);
+    const cast = s.view(m, at).angling.me.cast;
+    const grade = rarityOf(FISH_BY_ID[s.life.angling.u[m.id].cast.fish]);
+    assert.equal(cast.expiresAt - cast.biteAt - cast.windowMs, HOOK_SLACK_MS[grade], grade);
+    if (seen.has(grade)) {
+      s.act(m, { kind: 'anglerCancel', token: cast.token }, at + 1);
+      continue;
+    }
+    seen.add(grade);
+    s.act(m, { kind: 'anglerHook', token: cast.token }, cast.expiresAt);
+    const fight = s.view(m, cast.expiresAt).angling.me.fight;
+    assert.ok(fight, `${grade}: hooked at the last moment of its grace`);
+    assert.equal(fight.reactionMs, cast.windowMs + HOOK_SLACK_MS[grade]);
+    s.act(m, { kind: 'anglerCancel', token: fight.token }, cast.expiresAt + 1);
+    at += 60_000;
+    s.act(m, { kind: 'anglerCast', spot }, at);
+    const again = s.view(m, at).angling.me.cast;
+    s.act(m, { kind: 'anglerHook', token: again.token }, again.expiresAt + 1);
+    const last = s.view(m, again.expiresAt + 1).angling.me.last;
+    assert.equal(last.reason, 'late');
+    assert.equal(last.grade, 'E', 'a hook past the window keeps the slowest reaction grade');
+  }
+  assert.ok(seen.has('common') && seen.size >= 2, [...seen].join());
 });
 
 test('the bite is timed from when the cast left, so a reply that runs late still hooks in time', () => {

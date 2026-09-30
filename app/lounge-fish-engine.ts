@@ -36,7 +36,6 @@ import {
   BITE_MIN_MS,
   BITE_SPREAD_MS,
   REEL_EARLY_MS,
-  REEL_SLACK_MS,
   ROD_WINDOW,
   addInv,
   addMemory,
@@ -58,6 +57,15 @@ import { gainXp, growthChance, growthMods, skillLevel, toolTier } from './lounge
 import { moodBiteBoost } from './lounge-mood.ts';
 
 // ---------------------------------------------------------------- constants
+/**
+ * Hook grace after the bite window closes, by fish grade: the server still
+ * hooks until `biteAt + windowMs + HOOK_SLACK_MS[grade]` (the cast's
+ * `expiresAt`). Common fish forgive a slow page or network the most, legends
+ * the least; the legacy cast/reel keeps its single REEL_SLACK_MS.
+ */
+export const HOOK_SLACK_MS = { common: 3_000, uncommon: 2_200, rare: 1_500, legend: 1_000 } as const;
+export type FishRarity = keyof typeof HOOK_SLACK_MS;
+export const hookSlackMs = (f: FishDef) => HOOK_SLACK_MS[rarityOf(f)];
 /** Network allowance: a trace may run this much longer than the server saw. */
 export const FIGHT_SLACK_MS = 2_000;
 /** A fight left open longer than this is gone (the fish swam off). */
@@ -431,8 +439,8 @@ export function anglerCandidates(spot: Spot, ctx: AnglerContext): FishDef[] {
     .sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
   return [...current, ...visitors.slice(0, 3 - current.length)];
 }
-/** Rarity bucket (cup points, UI). */
-export const rarityOf = (f: FishDef) => (f.weight <= 1 ? 'legend' : f.weight < 10 ? 'rare' : f.weight < 20 ? 'uncommon' : 'common');
+/** Rarity bucket (cup points, hook grace, UI). */
+export const rarityOf = (f: FishDef): FishRarity => (f.weight <= 1 ? 'legend' : f.weight < 10 ? 'rare' : f.weight < 20 ? 'uncommon' : 'common');
 /** Rough body build per fish look (g per cm³ ×1e-3): long fish are light for their length. */
 const BUILD: Readonly<Record<string, number>> = {
   eel: 0.35, snakehead: 0.7, loach: 0.45, hairtail: 0.28, conger: 0.35, moonhairtail: 0.28,
@@ -659,7 +667,7 @@ export function anglingAction(
         rodWindow = rod >= 4 ? 1.75 : ROD_WINDOW[Math.max(1, Math.min(3, rod)) as 1 | 2 | 3],
         windowMs = Math.round(fish.windowMs * rodWindow * (luck ? 1.2 : 1) * (1 + mods.biteWindow) * insp.window);
       delete u.fight;
-      u.cast = { token, spot, castAt: now, biteAt, windowMs, expiresAt: biteAt + windowMs + REEL_SLACK_MS, fish: fish.id, cm, ...(bait ? { bait } : {}), coop };
+      u.cast = { token, spot, castAt: now, biteAt, windowMs, expiresAt: biteAt + windowMs + hookSlackMs(fish), fish: fish.id, cm, ...(bait ? { bait } : {}), coop };
       break;
     }
     case 'anglerHook': {

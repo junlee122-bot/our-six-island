@@ -16,8 +16,14 @@ import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.t
 import { VIEW_DIR, VIEW_DISTANCE, villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
 import { lifeView } from '../app/lounge-life.ts';
+import { rarityOf } from '../app/lounge-fish-engine.ts';
+import { FISH_BY_ID } from '../app/lounge-items.ts';
 import { dayStart, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
 import { kstDay } from '../app/lounge-economy.ts';
+
+// fishing-reel-fight: late hooks tolerated before the next miss fails, by the grade
+// of the fish that got away (its HOOK_SLACK_MS grace follows the same order).
+const LATE_MISSES = { common: 3, uncommon: 2, rare: 1, legend: 0 };
 
 const args = process.argv.slice(2);
 const opt = (key, fallback) => { const i = args.indexOf('--' + key); return i < 0 ? fallback : args[i + 1]; };
@@ -594,18 +600,26 @@ async function runView(mobile = false) {
         done();
       }));
       res.fishingMisses = [];
+      res.fishingHooks = [];
       for (;;) {
         await dip();
+        // The hidden fish (server state, never sent to the page) sets its grade's grace.
+        const cast = H.world().life.angling?.u?.[H.uid]?.cast;
+        const grade = cast ? rarityOf(FISH_BY_ID[cast.fish]) : 'common';
         await page.keyboard.press('Space');
         await fishing(['fight', 'result'], 15_000);
-        if ((await page.getByTestId('fishing').getAttribute('data-phase')) === 'fight') break;
+        if ((await page.getByTestId('fishing').getAttribute('data-phase')) === 'fight') {
+          res.fishingHooks.push({ grade, reactionMs: model().angling.me.fight?.reactionMs });
+          break;
+        }
         // The server times the hook from its own bite, page delays included, and a
         // software GPU can hold even this key press for a frame of seconds: a late
-        // hook casts again (recorded). An early one would mean a wrong bite clock.
+        // hook casts again (recorded), as often as the fish's grade forgives
+        // (LATE_MISSES; a legend none). An early one would mean a wrong bite clock.
         const last = model().angling.me.last;
-        res.fishingMisses.push({ reason: last?.reason, reactionMs: last?.reactionMs });
+        res.fishingMisses.push({ grade, reason: last?.reason, reactionMs: last?.reactionMs });
         assert.equal(last?.reason, 'late', 'a missed hook is only late: ' + JSON.stringify(last));
-        assert.ok(res.fishingMisses.length < 3, 'hooked within three casts: ' + JSON.stringify(res.fishingMisses));
+        assert.ok(res.fishingMisses.length <= LATE_MISSES[grade], `late misses within a ${grade} fish's allowance: ` + JSON.stringify(res.fishingMisses));
         await click('[data-testid=fish-again]');
       }
       assert.ok(commands.some((c) => c.action?.kind === 'anglerHook'), 'hook came from browser UI');
