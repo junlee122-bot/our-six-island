@@ -21,14 +21,19 @@ import { dayLighting } from './lounge-village-life';
 export const VILLAGE_CAMERA_OFFSET = new THREE.Vector3(VIEW_DIR.x, VIEW_DIR.y, VIEW_DIR.z).multiplyScalar(VIEW_DISTANCE);
 /** Screen-up direction in the world (labels above heads go this way). */
 export const VILLAGE_CAMERA_UP = new THREE.Vector3(0, Math.cos(VIEW_PITCH), -Math.sin(VIEW_PITCH));
-/** A figure plane faces the camera: tipped back by the pitch, never turned. */
-export const VILLAGE_FIGURE_TILT = -VIEW_PITCH;
 /** Sprite canvas (px); the body fills it (figures wear no hats, so no band above). */
 export const VILLAGE_FIGURE_BODY = { width: 256, height: 320 } as const;
-/** Plane height: the drawn character is ~95% of its canvas. */
+/**
+ * Figure planes stand upright facing the camera (it never turns sideways),
+ * stretched by 1 / cos(pitch) so they look exactly like camera-facing cards
+ * of VILLAGE_FIGURE_HEIGHT without leaning back into a wall behind them.
+ * The drawn character is ~95% of its canvas.
+ */
 export const VILLAGE_FIGURE_PLANE = VILLAGE_FIGURE_HEIGHT / 0.95;
-/** Residents' drawn height (ResidentLayer, billboard 'screen'). */
-export const VILLAGE_RESIDENT_HEIGHT = VILLAGE_FIGURE_HEIGHT * RESIDENT_SCALE;
+/** Vertical world height of a figure's plane (and of a head, for labels). */
+export const VILLAGE_FIGURE_UPRIGHT = VILLAGE_FIGURE_PLANE / Math.cos(VIEW_PITCH);
+/** Residents' plane height (ResidentLayer, billboard 'upright'). */
+export const VILLAGE_RESIDENT_HEIGHT = (VILLAGE_FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(VIEW_PITCH);
 /** Grass top is ~0.026; props and figures rest on it. */
 export const VILLAGE_GROUND_Y = 0.03;
 
@@ -36,9 +41,9 @@ let figureGeometry: THREE.PlaneGeometry | null = null;
 /** The shared plane of a walking figure (soles at its origin). */
 export function villageFigureGeometry() {
   if (!figureGeometry) {
-    figureGeometry = new THREE.PlaneGeometry(VILLAGE_FIGURE_PLANE * (VILLAGE_FIGURE_BODY.width / VILLAGE_FIGURE_BODY.height), VILLAGE_FIGURE_PLANE);
+    figureGeometry = new THREE.PlaneGeometry(VILLAGE_FIGURE_PLANE * (VILLAGE_FIGURE_BODY.width / VILLAGE_FIGURE_BODY.height), VILLAGE_FIGURE_UPRIGHT);
     // loungeSprites.draw places the soles at 97% of the canvas height.
-    figureGeometry.translate(0, VILLAGE_FIGURE_PLANE * 0.47, 0);
+    figureGeometry.translate(0, VILLAGE_FIGURE_UPRIGHT * 0.47, 0);
   }
   return figureGeometry;
 }

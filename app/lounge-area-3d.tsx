@@ -349,7 +349,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     applyState();
     // Residents walking about here (the district's shops, their errands).
     const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
-      ? new ResidentLayer(scene, labelLayerRef.current, { height: FIGURE_HEIGHT * RESIDENT_SCALE, billboard: 'screen' })
+      ? new ResidentLayer(scene, labelLayerRef.current, { height: (FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(PITCH), billboard: 'upright' })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;
@@ -395,9 +395,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     const cameraUp = new THREE.Vector3(0, Math.cos(PITCH), -Math.sin(PITCH));
 
     // Figures: sprite canvases on camera-facing planes (the village's look).
+    // An upright plane stretched by 1 / cos(pitch) projects exactly like a
+    // camera-facing one but never leans back into a wall behind it (구역 공통 규격).
     const planeH = (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H;
-    const figureGeo = new THREE.PlaneGeometry(planeH * (FIGURE_W / FIGURE_H), planeH);
-    figureGeo.translate(0, planeH * 0.47, 0);
+    const figureGeo = new THREE.PlaneGeometry(planeH * (FIGURE_W / FIGURE_H), planeH / Math.cos(PITCH));
+    figureGeo.translate(0, (planeH / Math.cos(PITCH)) * 0.47, 0);
     const shadowGeo = new THREE.CircleGeometry(0.34, 20);
     const shadowMat = new THREE.MeshBasicMaterial({ color: '#2d2418', transparent: true, opacity: 0.28, depthWrite: false });
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -410,8 +412,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       texture.minFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
       const mesh = new THREE.Mesh(figureGeo, new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.12, toneMapped: false }));
-      // Faces the camera (tilted back by the pitch): upright on screen.
-      mesh.rotation.set(-PITCH, 0, 0);
+      // Upright, facing the camera (which never turns sideways).
+      mesh.rotation.set(0, 0, 0);
       const shadow = new THREE.Mesh(shadowGeo, shadowMat);
       shadow.rotation.x = -Math.PI / 2;
       scene.add(mesh, shadow);

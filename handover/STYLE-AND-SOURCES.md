@@ -81,7 +81,7 @@
 플레이어들이 예전 마을 중심의 비스듬한 3/4 시점이 걷기에 피곤하다고 해서, ① 시장 거리의 보기·움직임을 마을 전체의 기준으로 삼았습니다. 새 구역(④ 목장·과수원, ⑤ 산기슭 등)도 이 규격을 그대로 씁니다. 검토 기록: `handover/design/art-direction-options.md` "카메라 각도 검토".
 
 - **카메라·걷기**: `app/lounge-village-camera.ts`(숫자)와 `app/lounge-village-view.ts`(three.js)만 씁니다. 정면에서 52° 내려다보는 직교 카메라, 옆으로 돌리지 않음(방향키 = 화면 위아래좌우), 화면 중심에서 위쪽 끝까지 11 유닛(세로가 긴 창은 1.25배), 따라오기는 지수 감쇠(초당 7), 걷기 5.2 유닛/초·Shift 달리기. 구역별 값을 새로 만들지 말고 필요하면 `REGIONS[area].view`만 조금 조정합니다.
-- **캐릭터**: 친구 몸 높이 1.72 유닛, 카메라를 향한 판(뒤로 52° 기울임), 주민은 1.12배(`RESIDENT_SCALE`). 밤에는 푸른 틴트(`villageFigureTint`).
+- **캐릭터**: 친구 몸 높이 1.72 유닛(화면에서 보이는 높이), 주민은 1.12배(`RESIDENT_SCALE`). 판은 똑바로 세우고 1/cos(52°)만큼 늘려서 카메라를 향한 판과 똑같이 보이게 합니다(뒤로 눕히면 뒤쪽 벽에 머리가 파묻힘). 밤에는 푸른 틴트(`villageFigureTint`).
 - **빛**: 시각 팔레트 `dayLighting`에 공통 배율 `VIEW_LIGHT`(반구광 ×1.6/1.5, 해 ×2.2/3, 노출 ×1.05)와 날씨 어둡게(`weatherDim`)를 곱합니다. 설정의 낮밤 변화를 끄면 모든 곳이 한낮입니다.
 - **구역 3D**: `app/lounge-district-kit.ts`의 `DistrictSet`을 상속합니다. 평평한 잔디 바닥과 길·광장 판(`PAVING`), kArchive 모델을 부지 상자에 맞춰 넣기(`place`), 캔버스 간판(`signpost`), 가장자리 나무 띠(`ring`), 밤 등불(`lantern`·`gardenLamp`, 점광원 7개 이하). 집은 마을 중심과 같은 크기(문 높이 1.45, `villageHouseScale`)입니다.
 - **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다.

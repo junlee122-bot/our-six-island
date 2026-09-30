@@ -8,7 +8,8 @@
  *     sideways, so the arrow keys move along the screen's own axes;
  *   - VIEW_HALF world units from the screen centre to its top edge;
  *   - the camera eases after the walker (VIEW_FOLLOW_RATE, exponential);
- *   - figures are VILLAGE_FIGURE_HEIGHT tall on planes that face the camera.
+ *   - figures look VILLAGE_FIGURE_HEIGHT tall on screen (upright planes
+ *     stretched by 1 / cos(pitch), so they never lean into a wall).
  *
  * Pure numbers (no three.js): the server, tests and every renderer share them.
  */
