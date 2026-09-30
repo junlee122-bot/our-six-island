@@ -35,7 +35,7 @@ import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
 import { DISTRICTS, districtOpen } from './lounge-districts.ts';
-import { TOWN_ACTION_AREA, isTownAction } from './lounge-town-data.ts';
+import { isTownAction, townActionArea } from './lounge-town-data.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
@@ -406,10 +406,15 @@ export function cloudTransition(
               hill: (life.flags ?? []).includes('district-hillside'),
             }, now);
           }
+          if ((command.action as { kind?: string }).kind === 'cupClaim' && (readLife(g.life).flags ?? []).includes('district-harbor')) {
+            // 주간 낚시 대회 is held at the harbor once it is open: prizes are handed out at 낚시조합.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'harbor') throw new CloudError('주간 낚시 대회 상품은 항구 낚시조합에서 받아요.', 409);
+          }
           if (isTownAction(command.action)) {
             // 새벽 경매 at the harbor, 시장 거리 shops and stalls, the library's reading club.
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
-            const where = TOWN_ACTION_AREA[command.action.kind];
+            const where = townActionArea(command.action);
             if (!lease || !player || player.area !== where)
               throw new CloudError(`${DISTRICTS[where].name}에 가서 해 주세요.`, 409);
           }

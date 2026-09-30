@@ -29,7 +29,7 @@ import { ITEM_BY_ID, ITEM_PRICES, isItemId } from './lounge-items.ts';
 import { CROPS, CROP_INFO, LifeError, cropInSeason, type Crop, type LifeState } from './lounge-life.ts';
 import { addInv, hasFlag, soldBeomToday, weekOfDay } from './lounge-life-plus.ts';
 import { gainXp } from './lounge-growth.ts';
-import { SKILLS, type SkillId } from './lounge-growth-data.ts';
+import { SKILLS } from './lounge-growth-data.ts';
 import { moodTreat } from './lounge-mood.ts';
 import { STALL_IDS, TOWN_ACTION_AREA, TOWN_ACTION_KINDS, isTownAction, type StallId, type TownAction, type TownActionKind } from './lounge-town-data.ts';
 import { DISTRICT_FLAG, DISTRICT_IDS, type DistrictId } from './lounge-districts.ts';
@@ -84,6 +84,7 @@ export const TOWN_REJECT = {
   bakeryItem: '메뉴를 다시 골라 주세요.',
   bakeryMax: `빵집 카페는 하루 ${BAKERY_PER_DAY}번까지 들를 수 있어요. 내일 또 와요.`,
   stallClosed: '장날(일요일)에만 좌판이 열려요.',
+  harborStallClosed: '마키마의 항구 좌판은 수요일과 토요일에만 열려요.',
   stallMax: `장날 좌판은 하루 ${STALL_PER_DAY}번까지 살 수 있어요.`,
   stallBought: '이 좌판 물건은 오늘 이미 샀어요.',
   clubClosed: '독서 모임은 수요일 저녁 7시부터 9시까지 도서관에서 열려요.',
@@ -168,6 +169,11 @@ export const auctionOpen = (now: number) => {
   return h >= AUCTION_HOURS[0] && h < AUCTION_HOURS[1];
 };
 export const marketDayOn = (day: number) => weekdayOf(day) === 0;
+/** 마키마 sets up at the harbor on Wednesdays and Saturdays. */
+export const HARBOR_STALL_DAYS = [3, 6] as const;
+export const harborStallOn = (day: number) => (HARBOR_STALL_DAYS as readonly number[]).includes(weekdayOf(day));
+/** Whether a stall is open on `day`. */
+export const stallOpenOn = (stall: StallId, day: number) => (stall === 'stall-harbor' ? harborStallOn(day) : marketDayOn(day));
 export const readingOpen = (now: number) => {
   const h = kstHour(now);
   return weekdayOf(kstDay(now)) === READING_WEEKDAY && h >= READING_HOURS[0] && h < READING_HOURS[1];
@@ -281,8 +287,9 @@ export function townAction(
     }
     case 'stallBuy': {
       const day = kstDay(now);
-      if (!marketDayOn(day)) fail(TOWN_REJECT.stallClosed);
       if (!(STALL_IDS as readonly unknown[]).includes(a.stall)) fail(TOWN_REJECT.stallClosed);
+      if (!stallOpenOn(a.stall, day)) fail(a.stall === 'stall-harbor' ? TOWN_REJECT.harborStallClosed : TOWN_REJECT.stallClosed);
+      if (a.stall === 'stall-harbor' && !hasFlag(life, DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
       const t = townOf(life, uid, now);
       if ((t.stall ?? []).includes(a.stall)) fail(TOWN_REJECT.stallBought);
       if ((t.stall ?? []).length >= STALL_PER_DAY) fail(TOWN_REJECT.stallMax);
@@ -314,7 +321,7 @@ export type TownView = {
   auction: { open: boolean; premiumLeft: number; unitsLeft: number; next: number };
   coop: { week: number; crops: Crop[]; bonusLeft: number };
   bakery: { left: number };
-  stalls: { open: boolean; goods: Record<StallId, { item: string; price: number }>; bought: StallId[]; left: number };
+  stalls: { open: boolean; harbor: boolean; goods: Record<StallId, { item: string; price: number }>; bought: StallId[]; left: number };
   club: { open: boolean; done: boolean; next: number };
   show: { on: boolean; next: number };
   seen: DistrictId[];
@@ -332,7 +339,7 @@ export function townView(life: LifeState, uid: string, now: number): TownView {
     },
     coop: { week, crops: coopWeekCrops(week), bonusLeft: Math.max(0, COOP_BONUS_CAP - (t.coop ?? 0)) },
     bakery: { left: Math.max(0, BAKERY_PER_DAY - (t.bake ?? 0)) },
-    stalls: { open: marketDayOn(day), goods: stallGoods(day), bought: [...(t.stall ?? [])], left: Math.max(0, STALL_PER_DAY - (t.stall?.length ?? 0)) },
+    stalls: { open: marketDayOn(day), harbor: harborStallOn(day), goods: stallGoods(day), bought: [...(t.stall ?? [])], left: Math.max(0, STALL_PER_DAY - (t.stall?.length ?? 0)) },
     club: { open: readingOpen(now), done: t.club === week, next: nextSlot(now, [READING_WEEKDAY], READING_HOURS[0]) },
     show: { on: showNight(now), next: nextSlot(now, SHOW_WEEKDAYS, SHOW_HOURS[0]) },
     seen: [...(t.seen ?? [])],

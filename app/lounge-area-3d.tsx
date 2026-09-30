@@ -48,9 +48,7 @@ import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { districtProgress } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
-import { MARKET_BOARD, MARKET_EXIT, MARKET_SHOPS, MARKET_SPOTS } from './lounge-market-layout';
-import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPOTS } from './lounge-harbor-layout';
-import { HILL_LIBRARY, HILLSIDE_EXIT } from './lounge-hillside-layout';
+import { districtCounters, type DistrictCounter } from './lounge-district-counters';
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
@@ -87,18 +85,7 @@ export type AreaAction =
   | { kind: 'fish'; spot: 'breakwater' | 'pier'; label: string }
   /** 친구에게 가기 signpost by each district's road out. */
   | { kind: 'signpost'; label: string };
-export type DistrictCounter =
-  | 'coop'
-  | 'general'
-  | 'bakery'
-  | 'newspaper'
-  | 'post'
-  | 'police'
-  | 'fishmarket'
-  | 'guild'
-  | 'library'
-  | 'stalls'
-  | 'harborStall';
+export type { DistrictCounter } from './lounge-district-counters';
 
 type Figure = {
   canvas: HTMLCanvasElement;
@@ -827,46 +814,5 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     </div>
   );
 }
-const COUNTER_NAME: Record<DistrictCounter, string> = {
-  coop: '농협 창구',
-  general: '잡화점',
-  bakery: '빵집 카페',
-  newspaper: '신문사',
-  post: '우체국',
-  police: '파출소',
-  fishmarket: '어시장',
-  guild: '낚시조합',
-  library: '도서관',
-  stalls: '장날 좌판',
-  harborStall: '마키마의 항구 좌판',
-};
-/**
- * What E reaches in a district besides residents and exits: shop doors (just
- * right of where the owner stands), the boards, the fishing and crab-pot
- * spots, the stalls on their days and the 친구에게 가기 signpost.
- */
-export function districtCounters(area: 'market' | 'harbor' | 'hillside', weekday: number): { x: number; z: number; reach: number; a: AreaAction }[] {
-  const counter = (place: DistrictCounter, x: number, z: number, reach = 1.4, label = `${COUNTER_NAME[place]} 들르기`) => ({ x, z, reach, a: { kind: 'counter' as const, place, label } });
-  const out: { x: number; z: number; reach: number; a: AreaAction }[] = [];
-  if (area === 'market') {
-    for (const shop of MARKET_SHOPS) out.push(counter(shop.id, shop.counter.x + 1.5, shop.counter.z + 0.2));
-    out.push({ x: MARKET_BOARD.front.x, z: MARKET_BOARD.front.z, reach: MARKET_BOARD.reach, a: { kind: 'board', label: '의뢰 게시판 보기' } });
-    if (weekday === 0)
-      for (const k of ['stall-w', 'stall-e', 'stall-sw', 'stall-se']) out.push(counter('stalls', MARKET_SPOTS[k].x + 1.1, MARKET_SPOTS[k].z, 1.3, '장날 좌판 보기'));
-    out.push({ x: MARKET_EXIT.x + 1.6, z: MARKET_EXIT.z - 0.8, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
-  } else if (area === 'harbor') {
-    for (const b of HARBOR_BUILDINGS) out.push(counter(b.id, b.door.x + 1.4, b.door.z));
-    out.push(counter('fishmarket', HARBOR_AUCTION.front.x, HARBOR_AUCTION.front.z, HARBOR_AUCTION.reach, '새벽 경매장'));
-    out.push(counter('guild', HARBOR_BOARD.front.x, HARBOR_BOARD.front.z, HARBOR_BOARD.reach, '주간 낚시 대회 게시판'));
-    for (const sp of HARBOR_SPOTS) out.push({ x: sp.stand.x, z: sp.stand.z, reach: sp.reach, a: { kind: 'fish', spot: sp.spot, label: sp.label } });
-    if (weekday === 3 || weekday === 6) out.push(counter('harborStall', 15.4, 0.8, 1.4, '마키마의 좌판 보기'));
-    out.push({ x: HARBOR_EXIT.stand.x + 1.6, z: HARBOR_EXIT.stand.z + 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
-  } else {
-    out.push(counter('library', HILL_LIBRARY.door.x, HILL_LIBRARY.door.z, HILL_LIBRARY.reach, '도서관 들어가기'));
-    out.push({ x: HILLSIDE_EXIT.stand.x - 1.6, z: HILLSIDE_EXIT.stand.z + 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
-  }
-  return out;
-}
-
 /** Where the log gate sits (for the village's "가 보기"). */
 export const AREA_LOG = HILL_LOG;

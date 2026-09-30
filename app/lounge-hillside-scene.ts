@@ -131,6 +131,6 @@ export class HillsideSet extends DistrictSet {
       step.position.set(HILLSIDE_W / 2 - 0.3 - i * 0.6, 0.06 + (3 - i) * 0.04, HILLSIDE_EXIT.z);
       this.root.add(shadowed(step, false));
     }
-    this.signpost('마을 중심', '계단 내려가 동쪽', { bg: '#c49a62', ink: '#3c2716', line: '#7d5a36' }, HILLSIDE_EXIT.x - 1.6, HILLSIDE_EXIT.z - 1.8, { w: 1.4, h: 1.4, name: 'hill-road-sign' });
+    this.signpost('친구에게 가기', '마을 중심은 동쪽 계단', { bg: '#c49a62', ink: '#3c2716', line: '#7d5a36' }, HILLSIDE_EXIT.x - 1.2, HILLSIDE_EXIT.z - 2.3, { w: 1.6, h: 1.4, name: 'hill-road-sign' });
   }
 }

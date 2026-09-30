@@ -4,7 +4,8 @@
 import type { Crop } from './lounge-life.ts';
 import type { SkillId } from './lounge-growth-data.ts';
 
-export const STALL_IDS = ['stall-w', 'stall-e', 'stall-sw', 'stall-se'] as const;
+/** 장날 좌판: four in 시장 거리 (Sundays; stall-sw is 마키마's) and 마키마's harbor stall (Wednesdays and Saturdays). */
+export const STALL_IDS = ['stall-w', 'stall-e', 'stall-sw', 'stall-se', 'stall-harbor'] as const;
 export type StallId = (typeof STALL_IDS)[number];
 export const TOWN_ACTION_KINDS = ['auctionSell', 'coopSell', 'bakeryBuy', 'stallBuy', 'readingClub'] as const;
 export type TownActionKind = (typeof TOWN_ACTION_KINDS)[number];
@@ -22,6 +23,9 @@ export const TOWN_ACTION_AREA: Record<TownActionKind, 'harbor' | 'market' | 'hil
   stallBuy: 'market',
   readingClub: 'hillside',
 };
+/** Where one action must be done (마키마's harbor stall is at the harbor). */
+export const townActionArea = (a: TownAction): 'harbor' | 'market' | 'hillside' =>
+  a.kind === 'stallBuy' && a.stall === 'stall-harbor' ? 'harbor' : TOWN_ACTION_AREA[a.kind];
 export const isTownAction = (a: unknown): a is TownAction =>
   !!a && typeof a === 'object' && (TOWN_ACTION_KINDS as readonly string[]).includes((a as { kind?: unknown }).kind as string);
 

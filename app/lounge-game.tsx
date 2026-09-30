@@ -117,6 +117,8 @@ import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { NpcTalkDialog } from './lounge/NpcTalkDialog';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
+import type { TownPlace, TravelArea } from './lounge/TownPanel';
+const TownPanel = lazyRetry(() => import('./lounge/TownPanel').then((m) => ({ default: m.TownPanel })));
 import { outdoorReturnPoint } from './lounge-areas';
 import type { NpcId } from './lounge-npc-data';
 import { AccountModal } from './lounge/AccountModal';
@@ -560,12 +562,25 @@ function AccountLounge({
     tabRef.current = tab;
   }, [myLook, tab]);
   // 성장 P2: 뒷산 / 숲 깊은 곳 / 광산 replace the village scene while I am out.
+  const [townPlace, setTownPlace] = useState<TownPlace | null>(null);
   const outdoorApi = useOutdoor({
     room,
     notify,
     fade: playFade,
     onResident: (npc) => setResidentTalk(npc),
     onRequests: () => setModal('npcRequests'),
+    onCounter: (place) => {
+      // 잡화점 and 우체국 open the shop and the mail window; the rest are counters.
+      if (place === 'general') {
+        setShopTab('seeds');
+        setModal('shop');
+      } else if (place === 'post') {
+        setMailGift('none');
+        setModal('mail');
+      } else setTownPlace(place);
+    },
+    onFish: (spot) => startFishing(spot),
+    onSignpost: () => setTownPlace('signpost'),
     onVillage: (at) => {
       setVillageSpawn(at);
       villagePosition.current = at;
@@ -1106,6 +1121,15 @@ function AccountLounge({
     else if (plot.crop && plot.wateredAt === null && !plot.rained)
       void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));
     else setModal('farm');
+  };
+  /** 친구에게 가기: from the hub a district is a gate away; outdoors the area hook fades straight there. */
+  const travelTo = (area: TravelArea) => {
+    if (area === 'village') {
+      if (outdoorApi.outdoor) outdoorApi.travel('village');
+      return;
+    }
+    if (outdoorApi.outdoor) outdoorApi.travel(area);
+    else outdoorApi.toDistrict(area);
   };
   const startFishing = (spot: Spot) => {
     if (fishing) return;
@@ -2167,7 +2191,7 @@ function AccountLounge({
                 players,
                 self,
                 me: { actor: save.actor, look: myLook },
-                paused: !!modal || !!coach || !!talk || !!residentTalk,
+                paused: !!modal || !!coach || !!talk || !!residentTalk || !!townPlace || !!fishing,
                 onChat: () => setModal('chat'),
                 onBag: () => setModal('bag'),
                 axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
@@ -2233,6 +2257,7 @@ function AccountLounge({
                       onNode={(id, kind) => void gatherNode(id, kind)}
                       onGate={outdoorApi.toHill}
                       onDistrict={outdoorApi.toDistrict}
+                      onSignpost={() => setTownPlace('signpost')}
                       onResident={setResidentTalk}
                       onTalk={talkTo}
                       tool={hotbar.tool}
@@ -2698,6 +2723,11 @@ function AccountLounge({
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} initial={npcBookAt} onClose={() => setModal(null)} />}
       {modal === 'npcRequests' && <NpcRequestBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+      {townPlace && !modal && (
+        <Suspense fallback={null}>
+          <TownPanel room={room} view={view} notify={notify} place={townPlace} onClose={() => setTownPlace(null)} onTravel={(area) => travelTo(area)} />
+        </Suspense>
+      )}
       {residentTalk && !modal && (
         <NpcTalkDialog
           key={residentTalk}
