@@ -137,6 +137,7 @@ import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
 import { moodBiteBoost } from './lounge-mood.ts';
+import { fishSaleMult, takeSoldFishQuality } from './lounge-fish-quality.ts';
 /** 오늘의 가구 rerolls a day (+2 with 나무결 가구점's 단골 손님 대접). */
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
@@ -1619,11 +1620,14 @@ export function plusAction(
             a.n,
             soldBeomToday(life, uid, now),
           ) *
-            (1 + sellBonus(growthMods(life, uid), def!.id)),
+            (1 + sellBonus(growthMods(life, uid), def!.id)) *
+            // 낚시 업그레이드: silver/gold fish sell best first (lounge-fish-quality).
+            (def!.kind === 'fish' ? fishSaleMult(life, uid, def!.id, a.n) : 1),
         ),
         left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
+      if (def!.kind === 'fish') takeSoldFishQuality(life, uid, def!.id, a.n);
       addInv(life, uid, def!.id, -a.n);
       noteDemand(life, uid, now, def!.id, a.n);
       const day = kstDay(now),
