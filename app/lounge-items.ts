@@ -4,6 +4,8 @@
 // helpers; shared by the client and the hohyeon-api Edge function.
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
+// 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
+import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 export type Spot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
@@ -113,7 +115,9 @@ export const FISH: readonly FishDef[] = [
   { id: 'moonhairtail', name: '달빛 갈치', emoji: '✨', spots: ['harbor'], seasons: ['autumn'], time: 'night', sky: 'dry', weight: 1, sell: 7_000, cm: [120, 180], windowMs: 450, note: '보름달 뜬 가을밤 항구에 나타난다는 전설.' },
   { id: 'kkeuri', name: '끄리', emoji: '🐟', spots: ['bridge'], seasons: WARM, time: 'any', sky: 'any', weight: 30, sell: 260, cm: [20, 40], windowMs: 900, note: '다리 아래 물살을 거슬러 사냥해요.' },
   { id: 'nuchi', name: '누치', emoji: '🐟', spots: ['bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 30, sell: 220, cm: [25, 50], windowMs: 950, note: '모래 바닥을 입으로 뒤지는 강의 청소부.' },
-  { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 500, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },
+  { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 500, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },  // 낚시 업그레이드 (lounge-fish-data.ts).
+  ...EXTRA_FISH,
+  ...POT_FISH,
 ];
 export type BugDef = {
   id: string;
@@ -269,10 +273,10 @@ function ITEM_BY_ID_RAW() {
   return rawItems;
 }
 /** Dishes sell for 25% over their ingredients (+100범), rounded to 10. */
-export const DISHES: readonly DishDef[] = RAW_DISHES.map((d) => ({
+export const DISHES: readonly DishDef[] = [...RAW_DISHES.map((d): DishDef => ({
   ...d,
   sell: Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
-}));
+})), ...FISH_DISHES];
 
 export const FERTILIZERS = ['fertilizer', 'fertilizer-deluxe'] as const;
 export type FertilizerId = (typeof FERTILIZERS)[number];
@@ -281,11 +285,12 @@ export const ITEM_PRICES: Record<string, number> = {
   fertilizer: 400,
   'fertilizer-deluxe': 2_000,
   bait: 150,
+  ...FISHING_ITEM_PRICES,
 };
 const tools: ItemDef[] = [
   { id: 'fertilizer', name: '비료', emoji: '🧪', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +1 (은별·금별 확률이 올라요)' },
   { id: 'fertilizer-deluxe', name: '고급 비료', emoji: '⚗️', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +2, 성장 10% 빠르게' },
-  { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },
+  { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },  ...FISHING_TOOL_ITEMS,
 ];
 export const ITEMS: readonly ItemDef[] = [
   ...FISH.map((f): ItemDef => ({ id: f.id, name: f.name, emoji: f.emoji, cat: 'fish', kind: 'fish', sell: f.sell, note: f.note, museum: true })),
@@ -434,7 +439,7 @@ export const CRAFTS: readonly RecipeDef[] = [
   ),
   { id: 'fertilizer', name: '비료', emoji: '🧪', needs: [it('wood', 1), it('pinecone', 1)], makes: 'fertilizer', count: 2 },
   { id: 'fertilizer-deluxe', name: '고급 비료', emoji: '⚗️', needs: [it('fertilizer', 2), it('stone', 2)], makes: 'fertilizer-deluxe', count: 1 },
-  { id: 'bait', name: '미끼', emoji: '🪱', needs: [anyOf('bug', 1)], makes: 'bait', count: 3 },
+  { id: 'bait', name: '미끼', emoji: '🪱', needs: [anyOf('bug', 1)], makes: 'bait', count: 3 },  ...FISHING_CRAFTS,
 ];
 export const CRAFT_BY_ID: Readonly<Record<string, RecipeDef>> = Object.fromEntries(CRAFTS.map((r) => [r.id, r]));
 
