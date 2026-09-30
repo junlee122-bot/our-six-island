@@ -23,6 +23,7 @@
 | C2 | Higgsfield (GPT Image 2.5, 2026-09-28) | 카지노 대부 로제, 은행 직원 냐모, 미용실 그웬 전신 스프라이트, 허풍 주점 카드 5장(에이스·킹·퀸·조커·뒷면: 호랑이·학·달·도깨비 자체 도안) | `lounge/casino-lender-rose.webp`, `bank-clerk-nyamo.webp`, `salon-stylist-gwen.webp`, `lounge/cards/tavern-*.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/services-generation.json`, 원본·프롬프트 `_originals/`. **로제·그웬은 Riot Games 캐릭터 팬아트**(아래 IP 표) | 사용 중 |
 | C3 | Higgsfield (GPT Image 2.5, 2026-09-30) | 낚시 업그레이드: 손그림 물고기·조개 아이콘 35종과 보물 상자(6×6 아틀라스 1장) | `lounge/fishing/*.webp`, 원본 `lounge/fishing/_originals/fish-icons-atlas.png` | 유료 2.75 크레딧(73.5 → 70.75). 작업 ID·프롬프트·SHA-256: `public/assets/lounge/fishing/generation.json`. 자르기: `scripts/slice-fish-atlas.mjs` | 낚시 창·낚시 수첩·결과 카드 |
 | C4 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 1단계 6명 전신 스프라이트와 대화창 초상: 나세라(농협)·프리렌(빵집 카페)·쓰레쉬(잡화점)·신짜장(우체국)·볼리바스(파출소)·잔나(신문사) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/npc-stage1-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경). **Riot Games 캐릭터 팬아트 5명 + 『장송의 프리렌』 캐릭터 1명**(아래 IP 표) | 마을·시장 거리 NPC |
+| C5 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 2단계 8명 전신 스프라이트와 대화창 초상: 가붕(등대지기)·럭스(어시장)·힘멜(빵집 알바생)·베아트리스(사서)·봇치(악사)·츠나데(텃밭 할머니)·마키마(행상인)·야니네코(대학생) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·키잉 결과 해시: `public/assets/lounge/npc-stage2-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경, 야니네코 원본 파일명은 `npc-yaninekko.png`). **Riot Games 팬아트 2명 + 쇼가쿠칸·KADOKAWA·호분샤·슈에이샤(2)·코단샤 캐릭터 6명**(아래 IP 표) | 항구·언덕·시장 거리 NPC |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
@@ -55,6 +56,14 @@
 | 순경 볼리바스 | 『리그 오브 레전드』 볼리베어 "경위" 스킨을 사람으로 바꾼 팬아트 | 비상업 유지. 공개 전 외형 교체 |
 | 기자 잔나 | 『리그 오브 레전드』 잔나 "기상캐스터" 스킨 팬아트. 이름·외형이 원작과 같음 | 비상업 유지. 공개 전 이름·외형 교체 우선 |
 | 빵집 카페 프리렌 | 『장송의 프리렌』(야마다 카네히토·아베 츠카사 / 쇼가쿠칸) 캐릭터 그대로. 이름·외형이 원작과 같음 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
+| 등대지기 가붕 | 『리그 오브 레전드』 가렌 초상 기반(Riot Games). 이름만 바꾸고 갑옷·망토는 원작 디자인, 대검 대신 등불 | 비상업 유지. 공개 전 외형 교체 |
+| 어시장 럭스 | 『리그 오브 레전드』 럭스(Riot Games). 이름·외형이 원작과 같음, 가붕의 동생 설정도 원작 남매 | 비상업 유지. 공개 전 이름·외형 교체 우선 |
+| 빵집 알바생 힘멜 | 『장송의 프리렌』 힘멜(야마다 카네히토·아베 츠카사 / 쇼가쿠칸) 그대로 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
+| 도서관 사서 베아트리스 | 『Re:제로부터 시작하는 이세계 생활』 베아트리스(나가츠키 탓페이 / KADOKAWA). 원작의 어린 외형을 성인 체형으로 바꿔 그림 | 비상업 유지. 공개 전 반드시 교체 |
+| 악사 봇치 | 『봇치 더 록!』 고토 히토리(하마지 아키 / 호분샤) 그대로 | 비상업 유지. 공개 전 반드시 교체 |
+| 텃밭 할머니 츠나데 | 『나루토』 츠나데(키시모토 마사시 / 슈에이샤) 그대로 | 비상업 유지. 공개 전 반드시 교체 |
+| 행상인 마키마 | 『체인소 맨』 마키마(후지모토 타츠키 / 슈에이샤, 애니메이션 MAPPA). 외형·말투를 원작대로 고증 | 비상업 유지. 공개 전 반드시 교체 |
+| 대학생 야니네코 | 『야니네코』(냥냥팩토리 / 코단샤) 그대로. 원작처럼 담배를 문 모습 | 비상업 유지. 공개 전 반드시 교체, 담배 묘사는 공개 등급 확인 |
 | 은행 직원 냐모 | 사용자 제공 고양이 수인 캐릭터 레퍼런스 기반. 원작 출처 미기록 | 레퍼런스 원작 확인 후 기록 |
 | 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
 | kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
@@ -651,3 +660,12 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 시장 거리 NPC 6명(나세라·프
 - 웹 사본: `node scripts/optimize-assets.mjs npcs`가 마젠타를 한 번에 빼고(테두리와 닫힌 틈에서 시작하는 채우기, 가장자리 색 분리·번짐 제거) 660×990 전신 WebP와 384px 머리·어깨 초상 WebP를 만듭니다. 쓰레쉬의 초록 도깨비불은 반투명 그대로 남깁니다. 결과 확인용 대조표: `node scripts/npc-contact-sheet.mjs <폴더>`.
 - 런타임: `lounge/npc-<id>.webp`(마을·시장 거리 빌보드), `lounge/npc-<id>-portrait.webp`(대화창·주민 수첩). 원본은 배포 매니페스트에 넣지 않습니다.
 - 나세라·쓰레쉬·신짜장·볼리바스·잔나는 Riot Games 캐릭터 팬아트, 프리렌은 쇼가쿠칸 『장송의 프리렌』 캐릭터입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(IP 표 참고).
+
+## 마을 NPC 2단계 8명 · 2026-09-30
+
+Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·럭스·힘멜·베아트리스·봇치·츠나데·마키마·야니네코)의 전신을 생성했습니다. 사용자 레퍼런스는 생성 입력으로만 쓰고 저장소에 넣지 않았으며, 로제·그웬 그림을 그림체 참조로 넣었습니다. 배경은 단색 마젠타(#FF00FF)입니다.
+
+- 원본(1360×2048)과 작업 ID·SHA-256: `public/assets/lounge/_originals/npc-*.png`, [npc-stage2-generation.json](public/assets/lounge/npc-stage2-generation.json) (웹 사본·초상의 SHA-256도 같은 파일에 기록).
+- 웹 사본: `node scripts/optimize-assets.mjs npcs`가 1단계와 같은 방식으로 마젠타를 뺍니다. 베아트리스의 진홍 드레스와 봇치의 분홍 재킷·머리는 마젠타에 가까워서 바탕 채우기 기준을 높였고(seed 150), 가장자리만 색 분리합니다. 야니네코의 담배는 그대로 남깁니다.
+- 런타임: `lounge/npc-<id>.webp`, `lounge/npc-<id>-portrait.webp`(`app/lounge-assets.ts`).
+- 가붕·럭스는 Riot Games, 힘멜은 쇼가쿠칸, 베아트리스는 KADOKAWA, 봇치는 호분샤, 츠나데·마키마는 슈에이샤(마키마 애니메이션 MAPPA), 야니네코는 코단샤 캐릭터입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(IP 표 참고).
