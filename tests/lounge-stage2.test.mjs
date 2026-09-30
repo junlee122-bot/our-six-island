@@ -527,3 +527,10 @@ test('승준 explorer pass: the server lets him into the districts, not the othe
   }
   assert.ok(!(w.life.flags ?? []).includes('district-harbor'), 'no village flag was written');
 });
+
+test('the hub signpost (친구에게 가기) is within reach of the plaza paths', async () => {
+  const { HUB_SIGNPOST } = await import('../app/lounge-districts.ts');
+  const { villagePath } = await import('../app/lounge-village-layout.ts');
+  const end = villagePath({ x: 0, z: 3 }, HUB_SIGNPOST).at(-1);
+  assert.ok(Math.hypot(end.x - HUB_SIGNPOST.x, end.z - HUB_SIGNPOST.z) < HUB_SIGNPOST.reach);
+});
