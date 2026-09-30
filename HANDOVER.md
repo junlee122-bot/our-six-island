@@ -130,7 +130,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 생활 | `app/lounge-life.ts`, `lounge-life-plus.ts`, `lounge-life-social.ts`, `lounge-calendar.ts`, `lounge-items.ts` |
 | 텃밭 확장 | `app/lounge-farm-data.ts`(숫자), `lounge-farm.ts`(엔진), `lounge-farm-3d.ts`(3D), `lounge/FarmWorks.tsx`(밭 배치·가공·출하·품평회 탭) |
 | 은행·강도·주민 관계 | `app/lounge-finance.ts`, `lounge-furniture-protection.ts`, `lounge-romance.ts`, `lounge/FinancePanel.tsx`, `lounge/NpcRelationsPanel.tsx` |
-| 마을 주민(NPC)·구역 | `app/lounge-npc-data.ts`(명부·선물 취향), `lounge-npc-schedule.ts`(`npcSpot` 일과), `lounge-npc-behavior.ts`·`lounge-npc-figures.ts`(화면 행동·스프라이트), `lounge-npc-dialog.ts`·`lounge-npc-lines-*.ts`(대사), `lounge-npc-requests.ts`(의뢰 게시판), `lounge-districts.ts`·`lounge-market-*.ts`·`lounge-district-models.ts`(구역) |
+| 마을 주민(NPC)·구역 | `app/lounge-npc-data.ts`(명부·선물 취향), `lounge-npc-schedule.ts`(`npcSpot` 일과), `lounge-npc-behavior.ts`·`lounge-npc-figures.ts`(화면 행동·스프라이트), `lounge-npc-dialog.ts`·`lounge-npc-lines-*.ts`(대사), `lounge/NpcTalkDialog.tsx`·`lounge-npc-speech.ts`(말 걸기: 쉬는 친구와 같은 대화 상자 `lounge/SpeechBox.tsx`), `lounge-npc-requests.ts`(의뢰 게시판), `lounge-districts.ts`·`lounge-market-*.ts`·`lounge-district-models.ts`(구역) |
 | 카지노 대부 로제 | `app/lounge-casino-lender.ts`(서버·화면 공용 위치/거리), `lounge/CasinoLenderPanel.tsx`, `lounge-interior-lender.ts` |
 | 냐모 은행·그웬 미용실 | `app/lounge-bank-layout.ts`, `lounge-bank-interior.ts`, `lounge-salon-layout.ts`, `lounge-salon-interior.ts` |
 | 분장실·허풍 카드 그림 | `app/lounge-wardrobe.tsx`, `lounge-wardrobe-club.css`, `lounge-liarsbar-table.tsx`, `lounge-liarsbar-table.css` |

@@ -1,0 +1,376 @@
+/* The speech box (SpeechBox.tsx): talking to a resting friend's NPC
+   (FriendDialog) and to the village residents (NpcTalkDialog) look the same.
+   Docked at the bottom centre so the world stays visible behind it: portrait,
+   name and hearts, typewriter text, numbered choices, and for residents an
+   item picker for gifts. Palette steps are the note-paper card the friends'
+   box has always used; the resident parts reuse the choices' look. */
+
+/* ------------------------------------------------------------ box */
+.l-talk {
+  position: fixed;
+  inset: auto 0 var(--sp-5);
+  margin: 0 auto;
+  width: min(760px, calc(100vw - 2 * var(--sp-4)));
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+.l-talk::backdrop {
+  background: linear-gradient(to top, color-mix(in srgb, var(--pal-teal-23) 25%, transparent), transparent 45%);
+}
+/* The box itself takes focus while its pages are read: no ring around the
+   whole box (like the other windows, lounge.css .l-modal); the text and the
+   choices show their own. */
+.l-talk:focus,
+.l-app dialog.l-talk:focus-visible {
+  outline: none;
+}
+/* A banner while talking (reconnected, an error) keeps its place under the
+   header: lounge-flow.css moves banners to the bottom centre while a window
+   is open, which is where this box's choices are. */
+.l-app:has(dialog.l-talk[open]) .l-banner.l-toast[popover],
+.l-app.l-immersive:has(dialog.l-talk[open]) .l-banner.l-toast[popover] {
+  top: calc(var(--sp-4) + 64px);
+  bottom: auto;
+}
+.l-talk-box {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: stretch;
+  padding: var(--sp-4);
+  border: 2px solid var(--paper-300);
+  border-radius: var(--r-l);
+  background: var(--note-50);
+  color: var(--pal-grey-30);
+  box-shadow: var(--lift-3), var(--lift-1);
+  animation: l-talk-in 0.2s ease-out;
+}
+@keyframes l-talk-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.l-talk-portrait {
+  flex: none;
+  width: 108px;
+  height: 108px;
+  border-radius: var(--r-l);
+  background: var(--paper-100);
+  overflow: hidden;
+  border: 2px solid var(--paper-200);
+}
+.l-talk-portrait > * {
+  width: 100%;
+  height: 100%;
+}
+/* A resident stands in a 2:3 frame, head to waist, rising above the box's
+   top edge like a figure stepping up to talk (the box's first lines stay
+   clear of it: the frame only grows upwards). */
+.l-talk-portrait.is-tall {
+  align-self: flex-end;
+  width: 120px;
+  height: 180px;
+  margin-top: calc(-1 * var(--sp-7) - var(--sp-4));
+  background: linear-gradient(to bottom, var(--note-50), var(--paper-100));
+}
+.l-npc-figure {
+  display: block;
+  overflow: hidden;
+}
+.l-npc-figure > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The keyed 660 × 990 image: its middle 440 px, from just above the head. */
+.l-npc-figure.is-image > img {
+  display: block;
+  width: 150%;
+  max-width: none;
+  height: auto;
+  margin: -4.5% 0 0 -25%;
+}
+.l-talk-main {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+}
+.l-talk-main header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+.l-talk-main header strong {
+  font-size: var(--fs-title-s);
+}
+.l-talk-away {
+  margin-left: auto;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+  text-align: right;
+}
+.l-talk-text {
+  display: block;
+  min-height: 3.2em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.l-talk-text:focus-visible {
+  outline: 2px solid var(--leaf-600);
+  outline-offset: var(--sp-1);
+  border-radius: var(--r-s);
+}
+.l-talk-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  justify-content: flex-end;
+  margin: 0;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+}
+.l-talk-choices {
+  display: grid;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-talk-choices button {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-m);
+  background: var(--paper-100);
+  color: inherit;
+  font: var(--font-body);
+  font-size: var(--fs-body-s);
+  text-align: left;
+  cursor: pointer;
+}
+.l-talk-choices button:hover,
+.l-talk-choices button:focus-visible {
+  border-color: var(--pal-green-58);
+  background: var(--note-50);
+  outline: none;
+}
+.l-talk-choices button[data-kind='bye'] {
+  background: transparent;
+  color: var(--text-soft);
+}
+.l-talk-choices button[data-kind='request'] {
+  border-color: var(--pal-orange-77);
+}
+.l-talk-choices kbd {
+  display: inline-grid;
+  place-items: center;
+}
+
+/* ------------------------------------------------------------ residents */
+/* The relation word after the hearts ("인사하는 사이"). */
+.l-talk-level {
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+/* A resident's portrait fills the same frame as a friend's. */
+.l-talk-portrait .l-npc-face {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+/* Listed but not pickable today (the talk or gift is done, or out of reach). */
+.l-talk-choices button[aria-disabled='true'] {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-soft);
+  cursor: default;
+}
+.l-talk-choices button[aria-disabled='true']:hover {
+  border-color: var(--paper-200);
+  background: transparent;
+}
+.l-talk-choices button[aria-disabled='true']:focus-visible {
+  border-color: var(--pal-green-58);
+}
+/* Why talking or giving is not possible right now. */
+.l-talk-note {
+  display: block;
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--paper-100);
+  font-size: var(--fs-body-s);
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------ gift picker */
+.l-talk-pick {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-talk-pick-title {
+  margin: 0;
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+.l-talk-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-1);
+  max-height: 170px;
+  margin: 0;
+  padding: var(--sp-1);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.l-talk-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-m);
+  background: var(--paper-100);
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  text-align: left;
+  cursor: pointer;
+}
+.l-talk-item:hover,
+.l-talk-item:focus-visible {
+  border-color: var(--pal-green-58);
+  background: var(--note-50);
+}
+/* E hands over the focused item, so it gets the app's focus ring, drawn
+   inside the button: the scrolling list would clip one outside it. */
+.l-app .l-talk-item:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+.l-talk-item[aria-disabled='true'] {
+  color: var(--text-soft);
+  cursor: progress;
+}
+/* (The icon is a span too: only the name takes the free width.) */
+.l-talk-item-name {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.l-talk-item > em {
+  font-size: var(--fs-cap);
+  font-style: normal;
+  color: var(--text-soft);
+  white-space: nowrap;
+}
+.l-talk-empty {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px dashed var(--paper-300);
+  border-radius: var(--r-m);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.l-talk-pick-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.l-talk-back {
+  min-height: var(--sp-6);
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-m);
+  background: transparent;
+  color: var(--text-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.l-talk-back:hover,
+.l-talk-back:focus-visible {
+  border-color: var(--pal-green-58);
+  background: var(--note-50);
+  color: inherit;
+}
+
+@media (max-width: 900px) {
+  .l-talk-portrait {
+    width: 72px;
+    height: 72px;
+  }
+  .l-talk-portrait.is-tall {
+    width: 80px;
+    height: 120px;
+    margin-top: calc(-1 * var(--sp-6));
+  }
+}
+/* Phones: less padding so the text keeps its width, the item picker in one
+   column, and the choices in two. */
+@media (max-width: 520px) {
+  .l-talk {
+    inset: auto 0 var(--sp-3);
+    width: calc(100vw - 2 * var(--sp-3));
+  }
+  .l-talk-box {
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+  }
+  .l-talk-portrait {
+    width: 56px;
+    height: 56px;
+  }
+  /* The figure stands on the box's top edge instead of taking a column, so
+     the text and the item picker keep the full width. */
+  .l-talk-box:has(.l-talk-portrait.is-tall) {
+    position: relative;
+  }
+  .l-talk-portrait.is-tall {
+    position: absolute;
+    left: var(--sp-3);
+    bottom: calc(100% - var(--sp-2));
+    width: 64px;
+    height: 96px;
+    margin: 0;
+  }
+  .l-talk-items {
+    grid-template-columns: 1fr;
+    max-height: 132px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-talk-box {
+    animation: none;
+  }
+}

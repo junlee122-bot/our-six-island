@@ -93,8 +93,8 @@ export type NpcTalkContext = {
 };
 export type NpcTalk = { lines: string[]; tier: 0 | 1 | 2 | 3 | 4 };
 
-/** Two lines: an opener (time/weather/festival) and something about them, you, the season or a joke. */
-export function npcTalk(ctx: NpcTalkContext): NpcTalk {
+/** The fill-ins and the body pools of a talk (npcTalk, npcTalkReply). */
+function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
   const L = NPC_LINES[ctx.npc];
   const day = kstDay(ctx.now);
   const tier = npcTier(ctx.points);
@@ -110,6 +110,23 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
     forecast: jannaForecast(day).text,
   };
   const f = (s: string | undefined) => (s ? fillNpcLine(s, vars) : '');
+  // Body: what they are doing, you two, the season, a joke or a memory.
+  const pools = () =>
+    [
+      ctx.spot?.activity ? L.activity[ctx.spot.activity] : undefined,
+      L.tier[tier],
+      L.tier[tier],
+      L.season[seasonOf(ctx.now)],
+      L.jokes,
+      ctx.lastGiftName ? L.gift.remember : undefined,
+      ctx.npc === 'janna' && jannaMissedToday(day) ? JANNA_MISS : undefined,
+    ].filter((p): p is string[] => !!p && p.length > 0);
+  return { L, day, tier, key, weather, f, pools };
+}
+
+/** Two lines: an opener (time/weather/festival) and something about them, you, the season or a joke. */
+export function npcTalk(ctx: NpcTalkContext): NpcTalk {
+  const { L, day, tier, key, weather, f, pools } = talkParts(ctx);
   if (ctx.talkedToday) return { lines: [f(pick(L.talked, key('talked')))], tier };
   const festival = holidaysOn(day).some((h) => !!h.claim);
   const marketDay = new Date(ctx.now + 9 * 3_600_000).getUTCDay() === 0;
@@ -120,19 +137,21 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
   else if (weather !== 'sunny' && weather !== 'cloudy' && slot < 5) opener = pick(L.weather[weather as keyof NpcLineSet['weather']], key('weather'));
   else if (marketDay && ctx.spot?.area === 'market' && slot < 5) opener = pick(L.marketDay, key('market'));
   opener ??= pick(L.greet[timeOfDay(ctx.now)], key('greet'));
-  // Body: what they are doing, you two, the season, a joke or a memory.
-  const pools: (string[] | undefined)[] = [
-    ctx.spot?.activity ? L.activity[ctx.spot.activity] : undefined,
-    L.tier[tier],
-    L.tier[tier],
-    L.season[seasonOf(ctx.now)],
-    L.jokes,
-    ctx.lastGiftName ? L.gift.remember : undefined,
-    ctx.npc === 'janna' && jannaMissedToday(day) ? JANNA_MISS : undefined,
-  ].filter((p): p is string[] => !!p && p.length > 0);
-  const body = pick(pick(pools, key('pool')), key('body'));
+  const body = pick(pick(pools(), key('pool')), key('body'));
   const lines = [f(opener), f(body)].filter((s, i, a) => s && a.indexOf(s) === i);
   return { lines, tier };
+}
+
+/**
+ * What they answer after "이야기 나누기" in the speech box: a line from the
+ * same pools as the talk's second line, but never one already said in this
+ * conversation (`said`), so the talk does not repeat the page just read.
+ * Same person, day and lines give the same answer on every screen.
+ */
+export function npcTalkReply(ctx: Omit<NpcTalkContext, 'talkedToday'>, said: readonly string[]): string {
+  const { L, key, f, pools } = talkParts(ctx);
+  const fresh = [...new Set(pools().flat().map(f))].filter((s) => s && !said.includes(s));
+  return pick(fresh, key('reply')) ?? f(pick(L.talked, key('talked')));
 }
 const JANNA_MISS = ['어제 예보가 빗나갔어요. 정정 보도 나갑니다. 죄송해요!', '어제 제가 뭐라고 했죠? …못 들은 걸로 해 주세요.'];
 

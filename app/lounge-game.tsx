@@ -2310,7 +2310,7 @@ function AccountLounge({
                   />
                 </div>
                 <VillageHint paused={!!coach || !!modal} />
-                {!modal && !coach && !talk && (
+                {!modal && !coach && !talk && !residentTalk && (
                   <FeteBanner
                     view={view}
                     onOpen={() => setModal('fete')}
@@ -2770,7 +2770,6 @@ function AccountLounge({
           npc={residentTalk}
           room={room}
           view={view}
-          notify={notify}
           onClose={() => setResidentTalk(null)}
           onBook={() => {
             setNpcBookAt(residentTalk);
@@ -3134,7 +3133,7 @@ function AccountLounge({
       )}
       {!coach && visiting === null && !inGame && tab === 'village' && (
         // 마을 적응하기 (C-10): optional follow-up steps after the first-day tutorial.
-        <AdaptChecklist room={room} view={view} notify={notify} hidden={!!modal || !!talk} />
+        <AdaptChecklist room={room} view={view} notify={notify} hidden={!!modal || !!talk || !!residentTalk} />
       )}
       {coach && visiting === null && !inGame && (
         // Hands-on first day: walk → door → bag → one seed (Onboarding.tsx).
