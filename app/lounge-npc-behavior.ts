@@ -126,7 +126,8 @@ export function residentFrames(
       if (was !== best.id && now - last > GREET_AGAIN_MS) ctx.memory.greeted.set(greetKey, now);
       ctx.memory.near.set(key, best.id);
       const since = now - (ctx.memory.greeted.get(greetKey) ?? -Infinity);
-      if (since >= 0 && since < GREET_MS && !chatting.has(r.id)) {
+      // Only people with a name on this screen get a spoken greeting (me); others just get a look.
+      if (since >= 0 && since < GREET_MS && !chatting.has(r.id) && best.name) {
         r.bubble = npcBubble(r.id, 'near', `${best.id}:${Math.floor((ctx.memory.greeted.get(greetKey) ?? 0) / 1000)}`, { me: best.name, now });
         r.gesture = r.walking ? 'nod' : 'wave';
       }

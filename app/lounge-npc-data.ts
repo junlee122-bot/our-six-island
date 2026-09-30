@@ -150,7 +150,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '쑥, 채소 요리',
     gifts: { loved: ['seabream', 'yellowtail', 'gem'], liked: ['kind:fish', 'gold', 'fishstew'], disliked: ['mugwort', 'spinachnamul', 'kimchi'] },
     rewards: { 40: ['bait', 5], 100: ['gem', 2] },
-    art: img(A.casinoLenderSprite, undefined, 0.9808),
+    art: img(A.casinoLenderSprite, A.casinoLenderFace, 0.9808),
     speech: 'casual',
   },
   nyamo: {
@@ -164,7 +164,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '김치, 매운 요리',
     gifts: { loved: ['mackerel', 'grilledfish', 'crucian', 'sweetfish'], liked: ['kind:fish', 'jam'], disliked: ['kimchi', 'maeuntang', 'wildgarlic'] },
     rewards: { 40: ['grilledfish', 2], 100: ['goldcarp', 1] },
-    art: img(A.bankClerkSprite, undefined, 0.9859),
+    art: img(A.bankClerkSprite, A.bankClerkFace, 0.9859),
     speech: 'polite',
   },
   gwen: {
@@ -178,7 +178,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '벌레, 돌',
     gifts: { loved: ['camellia', 'cosmos', 'azalea'], liked: ['kind:flower', 'strawberry', 'jam', 'flowertea'], disliked: ['kind:bug', 'stone'] },
     rewards: { 40: ['flowertea', 2], 100: ['camellia', 5] },
-    art: img(A.salonStylistSprite, undefined, 0.9859),
+    art: img(A.salonStylistSprite, A.salonStylistFace, 0.9859),
     speech: 'polite',
   },
   nasera: {

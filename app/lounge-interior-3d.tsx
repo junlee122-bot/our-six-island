@@ -1149,7 +1149,7 @@ export function Interior3D({
       if (residents) {
         const at = Date.now() + clockRef.current;
         const people = [
-          { id: 'self', name: '', ...interiorToWorld(l.point) },
+          { id: 'self', name: ACTORS[latest.current.me.actor] ?? '', ...interiorToWorld(l.point) },
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
         const frames = residentFrames(npcsIn('tavern', at), people, at, {
@@ -1163,7 +1163,7 @@ export function Interior3D({
       if (postBubbles) {
         const at = Date.now() + clockRef.current;
         const people = [
-          { id: 'self', name: '', ...interiorToWorld(l.point) },
+          { id: 'self', name: ACTORS[latest.current.me.actor] ?? '', ...interiorToWorld(l.point) },
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
         postBubbles.update(residentFrames(posts, people, at, { rain: false, night: false, memory: postMemory }));

@@ -422,6 +422,42 @@ async function npcSprites() {
     console.log(`npc-${id}.png -> 660x990 .webp ${kb(fs.statSync(target).size)} · portrait ${kb(fs.statSync(portrait).size)}`);
   }
 }
+// Round dialogue portraits for 로제 / 냐모 / 그웬 (주민 수첩): a head-and-shoulders
+// square cut from their keyed full-body web copies, centred on the head
+// (the opaque pixels of the top of the figure).
+async function servicePortraits() {
+  for (const name of ['casino-lender-rose', 'bank-clerk-nyamo', 'salon-stylist-gwen']) {
+    const source = path.join(assets, `lounge/${name}.webp`);
+    if (!fs.existsSync(source)) continue;
+    const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    let top = height;
+    for (let y = 0; y < height && top === height; y++)
+      for (let x = 0; x < width; x++)
+        if (data[(y * width + x) * 4 + 3] > 64) {
+          top = y;
+          break;
+        }
+    const size = Math.round(height * 0.36);
+    let sum = 0,
+      n = 0;
+    for (let y = top; y < Math.min(height, top + Math.round(size * 0.6)); y++)
+      for (let x = 0; x < width; x++)
+        if (data[(y * width + x) * 4 + 3] > 64) {
+          sum += x;
+          n++;
+        }
+    const cx = n ? sum / n : width / 2;
+    const left = Math.max(0, Math.min(width - size, Math.round(cx - size / 2)));
+    const target = path.join(assets, `lounge/${name}-face.webp`);
+    await sharp(source)
+      .extract({ left, top: Math.max(0, top - Math.round(size * 0.04)), width: size, height: Math.min(size, height - top) })
+      .resize(384, 384, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 88, alphaQuality: 100, effort: 6 })
+      .toFile(target);
+    console.log(`${name}-face.webp ${kb(fs.statSync(target).size)}`);
+  }
+}
 async function tavernCards() {
   const source = path.join(assets, 'lounge/_originals/tavern-cards.png');
   if (!fs.existsSync(source)) return;
@@ -440,5 +476,6 @@ async function tavernCards() {
 if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
 if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
+if (['all', 'images', 'services', 'npcs'].includes(mode)) await servicePortraits();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();

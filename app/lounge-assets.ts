@@ -97,6 +97,10 @@ export const LOUNGE_ASSETS = {
   bankClerkSprite: '/assets/lounge/bank-clerk-nyamo.webp',
   bankClerkPortrait: '/assets/lounge/bank-clerk-nyamo-portrait.webp',
   salonStylistSprite: '/assets/lounge/salon-stylist-gwen.webp',
+  // Round notebook portraits of 로제 / 냐모 / 그웬, cut from their sprites (optimize-assets.mjs npcs).
+  casinoLenderFace: '/assets/lounge/casino-lender-rose-face.webp',
+  bankClerkFace: '/assets/lounge/bank-clerk-nyamo-face.webp',
+  salonStylistFace: '/assets/lounge/salon-stylist-gwen-face.webp',
   // Village NPCs, stage 1 (npc-stage1-generation.json; keyed by optimize-assets.mjs npcs).
   npc_nasera: '/assets/lounge/npc-nasera.webp',
   npc_frieren: '/assets/lounge/npc-frieren.webp',
