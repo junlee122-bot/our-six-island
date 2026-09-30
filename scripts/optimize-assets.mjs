@@ -14,6 +14,7 @@
 // GLBs use only extensions three's GLTFLoader decodes natively
 // (KHR_mesh_quantization, EXT_texture_webp) — no Draco/Meshopt decoder needed.
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -443,6 +444,189 @@ async function npcSprites() {
     console.log(`npc-${id}.png -> 660x990 .webp ${kb(fs.statSync(target).size)} · portrait ${kb(fs.statSync(portrait).size)}`);
   }
 }
+// In-world chibi residents (npc-chibi-generation.json): two figures per 3:2
+// original (left name first) on a solid key colour — magenta, or green for
+// 베아트리스·봇치 who wear pink. Each is keyed like the tall sprites (flood from
+// the border, unmix, despill), split at the emptiest column near the middle,
+// trimmed to its opaque box and placed on a 640px-tall canvas the way
+// lounge-figure-frame.ts places a friend: the figure fills 94% of the height,
+// feet on the 97% line, centred. So a chibi drawn at a friend's plane height
+// stands exactly as tall as the friend. 쓰레쉬's green wisps stay (they are
+// kept like the tall sprite's), 야니네코's cigarette is part of the figure.
+const CHIBI_FILES = [
+  ['frieren', 'nasera'],
+  ['rose', 'gwen'],
+  ['nyamo', 'thresh'],
+  ['sinjjajang', 'volibas'],
+  ['janna', 'gabung'],
+  ['lux', 'himmel'],
+  ['beatrice', 'bocchi'],
+  ['tsunade', 'makima'],
+  ['yaninekko'],
+];
+const CHIBI_GREEN = new Set(['beatrice-bocchi']);
+const CHIBI_H = 640;
+/** Magenta-ness (or green-ness) of a pixel: 255 on the key, ≤ 0 on the figure. */
+function keyness(data, n, green) {
+  const m = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const r = data[i * 4],
+      g = data[i * 4 + 1],
+      b = data[i * 4 + 2];
+    m[i] = green ? g - Math.max(r, b) : Math.min(r, b) - g;
+  }
+  return m;
+}
+function keyChibi(data, width, height, { green = false, fgM = 0, seed = 40 } = {}) {
+  const n = width * height;
+  const m = keyness(data, n, green);
+  const ground = new Uint8Array(n);
+  const stack = [];
+  const push = (i) => {
+    if (!ground[i] && m[i] > seed) {
+      ground[i] = 1;
+      stack.push(i);
+    }
+  };
+  for (let x = 0; x < width; x++) {
+    push(x);
+    push((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y++) {
+    push(y * width);
+    push(y * width + width - 1);
+  }
+  for (let i = 0; i < n; i++) if (m[i] > 200) push(i);
+  while (stack.length) {
+    const i = stack.pop();
+    const x = i % width,
+      y = (i - x) / width;
+    if (x > 0) push(i - 1);
+    if (x < width - 1) push(i + 1);
+    if (y > 0) push(i - width);
+    if (y < height - 1) push(i + width);
+  }
+  const rim = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (ground[i]) continue;
+    const x = i % width;
+    if ((x > 0 && ground[i - 1]) || (x < width - 1 && ground[i + 1]) || ground[i - width] || ground[i + width]) rim[i] = 1;
+  }
+  // The generated ground is never quite pure (magenta ≈ 246,8,249): measure its
+  // keyness on the border so the ground itself keys to alpha 0, not a faint veil.
+  const border = [];
+  for (let x = 0; x < width; x += 4) border.push(m[x], m[(height - 1) * width + x]);
+  for (let y = 0; y < height; y += 4) border.push(m[y * width], m[y * width + width - 1]);
+  border.sort((p, q) => p - q);
+  const ref = Math.max(seed + 40, border[Math.floor(border.length / 2)] - 6);
+  const out = Buffer.from(data);
+  for (let i = 0; i < n; i++) {
+    if (!ground[i] && !rim[i]) continue;
+    const k = Math.max(fgM, Math.min(ref, m[i]));
+    let a = (ref - k) / (ref - fgM);
+    a = a < 0.06 ? 0 : Math.min(1, (a - 0.06) / 0.94);
+    if (a <= 0) {
+      out[i * 4 + 3] = 0;
+      continue;
+    }
+    let r = data[i * 4],
+      g = data[i * 4 + 1],
+      b = data[i * 4 + 2];
+    if (green) {
+      g = (g - (1 - a) * 255) / a;
+      r = r / a;
+      b = b / a;
+      if (g - Math.max(r, b) > 12) g = Math.max(r, b) + 12;
+    } else {
+      r = (r - (1 - a) * 255) / a;
+      g = g / a;
+      b = (b - (1 - a) * 255) / a;
+      if (Math.min(r, b) - g > 12) {
+        r = Math.min(r, g + 12);
+        b = Math.min(b, g + 12);
+      }
+    }
+    out[i * 4] = Math.max(0, Math.min(255, Math.round(r)));
+    out[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(g)));
+    out[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(b)));
+    out[i * 4 + 3] = Math.round(Math.min(data[i * 4 + 3], a * 255));
+  }
+  return out;
+}
+/** Opaque box of columns [x0, x1) of a keyed RGBA buffer (alpha > 24). */
+function opaqueBox(data, width, height, x0, x1) {
+  let l = x1,
+    r = x0 - 1,
+    t = height,
+    b = -1;
+  for (let y = 0; y < height; y++)
+    for (let x = x0; x < x1; x++)
+      if (data[(y * width + x) * 4 + 3] > 24) {
+        if (x < l) l = x;
+        if (x > r) r = x;
+        if (y < t) t = y;
+        if (y > b) b = y;
+      }
+  return r < l ? null : { left: l, top: t, width: r - l + 1, height: b - t + 1 };
+}
+async function chibiSprites() {
+  const outDir = path.join(assets, 'lounge/chibi');
+  fs.mkdirSync(outDir, { recursive: true });
+  const sizes = {};
+  for (const names of CHIBI_FILES) {
+    const base = names.join('-');
+    const source = path.join(assets, `lounge/_originals/chibi/npc-chibi-${base}.png`);
+    if (!fs.existsSync(source)) continue;
+    const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    const keyed = keyChibi(data, width, height, { green: CHIBI_GREEN.has(base), fgM: names.includes('thresh') ? -120 : 0, seed: CHIBI_GREEN.has(base) ? 60 : 40 });
+    // Split two figures at the emptiest column between 40% and 60% of the width.
+    let cut = width;
+    if (names.length === 2) {
+      let best = Infinity;
+      for (let x = Math.floor(width * 0.4); x < Math.ceil(width * 0.6); x++) {
+        let filled = 0;
+        for (let y = 0; y < height; y++) if (keyed[(y * width + x) * 4 + 3] > 24) filled++;
+        if (filled < best || (filled === best && Math.abs(x - width / 2) < Math.abs(cut - width / 2))) {
+          best = filled;
+          cut = x;
+        }
+      }
+    }
+    const spans = names.length === 2 ? [[0, cut], [cut, width]] : [[0, width]];
+    for (const [i, name] of names.entries()) {
+      const id = name === 'yaninekko' ? 'yanineko' : name;
+      const box = opaqueBox(keyed, width, height, spans[i][0], spans[i][1]);
+      if (!box) continue;
+      const scale = (CHIBI_H * 0.94) / box.height;
+      const fw = Math.round(box.width * scale),
+        fh = Math.round(box.height * scale);
+      const W = Math.max(512, Math.ceil(fw / 0.92 / 2) * 2);
+      const figure = await sharp(keyed, { raw: { width, height, channels: 4 } })
+        .extract(box)
+        .resize(fw, fh, { kernel: 'lanczos3' })
+        .png()
+        .toBuffer();
+      const top = Math.round(CHIBI_H * 0.97) - fh;
+      const target = path.join(outDir, `npc-${id}.webp`);
+      await sharp({ create: { width: W, height: CHIBI_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+        .composite([{ input: figure, left: Math.round((W - fw) / 2), top }])
+        .webp({ quality: 90, alphaQuality: 100, effort: 6 })
+        .toFile(target);
+      const sha256 = crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex').toUpperCase();
+      sizes[id] = { file: `chibi/npc-${id}.webp`, w: W, h: CHIBI_H, sha256 };
+      console.log(`chibi ${base} -> ${id} ${W}x${CHIBI_H} ${kb(fs.statSync(target).size)}`);
+    }
+  }
+  // Record the web copies (size for lounge-npc-chibi.ts, hash) beside the originals' record.
+  const record = path.join(assets, 'lounge/npc-chibi-generation.json');
+  if (fs.existsSync(record)) {
+    const json = JSON.parse(fs.readFileSync(record, 'utf8'));
+    json.web = sizes;
+    json.keying = 'scripts/optimize-assets.mjs chibi: flood key from the border against the measured ground colour, unmix + despill on the rim, split at the emptiest column near the middle, figure at 94% of a 640px canvas with the feet on the 97% line.';
+    fs.writeFileSync(record, JSON.stringify(json, null, 1) + '\n');
+  }
+}
 // Round dialogue portraits for 로제 / 냐모 / 그웬 (주민 수첩): a head-and-shoulders
 // square cut from their keyed full-body web copies, centred on the head
 // (the opaque pixels of the top of the figure).
@@ -497,6 +681,7 @@ async function tavernCards() {
 if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
 if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
+if (['all', 'images', 'npcs', 'chibi'].includes(mode)) await chibiSprites();
 if (['all', 'images', 'services', 'npcs'].includes(mode)) await servicePortraits();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();

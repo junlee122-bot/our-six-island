@@ -4,6 +4,7 @@
 // from ① 시장 거리 — the look players found easiest to move in (2026-09-30).
 import * as THREE from 'three';
 import {
+  FIGURE_CANVAS_RATIO,
   VIEW_DIR,
   VIEW_DISTANCE,
   VIEW_LIGHT,
@@ -27,13 +28,16 @@ export const VILLAGE_FIGURE_BODY = { width: 256, height: 320 } as const;
  * Figure planes stand upright facing the camera (it never turns sideways),
  * stretched by 1 / cos(pitch) so they look exactly like camera-facing cards
  * of VILLAGE_FIGURE_HEIGHT without leaning back into a wall behind them.
- * The drawn character is ~95% of its canvas.
+ * The canvas is the market's (FIGURE_CANVAS_RATIO), so friends are the same
+ * size on screen in the hub and in every district.
  */
-export const VILLAGE_FIGURE_PLANE = VILLAGE_FIGURE_HEIGHT / 0.95;
+export const VILLAGE_FIGURE_PLANE = VILLAGE_FIGURE_HEIGHT * FIGURE_CANVAS_RATIO;
 /** Vertical world height of a figure's plane (and of a head, for labels). */
 export const VILLAGE_FIGURE_UPRIGHT = VILLAGE_FIGURE_PLANE / Math.cos(VIEW_PITCH);
-/** Residents' plane height (ResidentLayer, billboard 'upright'). */
+/** Pose-sheet residents' plane height (ResidentLayer, billboard 'upright'). */
 export const VILLAGE_RESIDENT_HEIGHT = (VILLAGE_FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(VIEW_PITCH);
+/** Chibi residents stand exactly as tall as friends (ResidentLayer `chibi`). */
+export const VILLAGE_CHIBI = { plane: VILLAGE_FIGURE_UPRIGHT, upY: Math.cos(VIEW_PITCH) } as const;
 /** Grass top is ~0.026; props and figures rest on it. */
 export const VILLAGE_GROUND_Y = 0.03;
 

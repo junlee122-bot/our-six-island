@@ -72,7 +72,7 @@ import { VillageDistrictGates } from './lounge-village-districts-3d';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
 import { npcsIn, npcSpot } from './lounge-npc-schedule';
-import { VILLAGE_CAMERA_OFFSET, VILLAGE_FIGURE_BODY, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
+import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
@@ -931,7 +931,7 @@ export function Village3D(props: Props) {
     };
     const figures = new Map<string, Figure>();
     // Residents walking about the hub (lounge-npc-schedule.ts) with this screen's idle behaviour.
-    const residentLayer = new ResidentLayer(scene, labels, { height: VILLAGE_RESIDENT_HEIGHT, billboard: 'upright', y: GROUND_Y });
+    const residentLayer = new ResidentLayer(scene, labels, { height: VILLAGE_RESIDENT_HEIGHT, billboard: 'upright', y: GROUND_Y, chibi: VILLAGE_CHIBI });
     residentLayer.onChange = () => {
       needsRender = true;
     };

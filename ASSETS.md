@@ -24,6 +24,7 @@
 | C3 | Higgsfield (GPT Image 2.5, 2026-09-30) | 낚시 업그레이드: 손그림 물고기·조개 아이콘 35종과 보물 상자(6×6 아틀라스 1장) | `lounge/fishing/*.webp`, 원본 `lounge/fishing/_originals/fish-icons-atlas.png` | 유료 2.75 크레딧(73.5 → 70.75). 작업 ID·프롬프트·SHA-256: `public/assets/lounge/fishing/generation.json`. 자르기: `scripts/slice-fish-atlas.mjs` | 낚시 창·낚시 수첩·결과 카드 |
 | C4 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 1단계 6명 전신 스프라이트와 대화창 초상: 나세라(농협)·프리렌(빵집 카페)·쓰레쉬(잡화점)·신짜장(우체국)·볼리바스(파출소)·잔나(신문사) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/npc-stage1-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경). **Riot Games 캐릭터 팬아트 5명 + 『장송의 프리렌』 캐릭터 1명**(아래 IP 표) | 마을·시장 거리 NPC |
 | C5 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 2단계 8명 전신 스프라이트와 대화창 초상: 가붕(등대지기)·럭스(어시장)·힘멜(빵집 알바생)·베아트리스(사서)·봇치(악사)·츠나데(텃밭 할머니)·마키마(행상인)·야니네코(대학생) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·키잉 결과 해시: `public/assets/lounge/npc-stage2-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경, 야니네코 원본 파일명은 `npc-yaninekko.png`). **Riot Games 팬아트 2명 + 쇼가쿠칸·KADOKAWA·호분샤·슈에이샤(2)·코단샤 캐릭터 6명**(아래 IP 표) | 항구·언덕·시장 거리 NPC |
+| C6 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 주민 17명 게임 속 치비 스프라이트(친구들과 같은 2.5~3등신): 프리렌·나세라·로제·그웬·냐모·쓰레쉬·신짜장·볼리바스·잔나·가붕·럭스·힘멜·베아트리스·봇치·츠나데·마키마·야니네코 | `lounge/chibi/npc-*.webp` (512~514×640) | 유료 크레딧 생성. 원본 `_originals/chibi/npc-chibi-*.png`(한 장에 두 명, 왼쪽 이름이 먼저; 마젠타 배경, 베아트리스·봇치는 초록 배경), 작업 ID·SHA-256과 웹 사본 크기·해시: `public/assets/lounge/npc-chibi-generation.json`. 키 빼기·자르기: `node scripts/optimize-assets.mjs chibi` | 마을·구역·주점·카지노·은행·미용실·내 방에 서 있는 주민(대화창 초상은 C2·C4·C5의 큰 그림 그대로) |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
@@ -669,3 +670,13 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - 웹 사본: `node scripts/optimize-assets.mjs npcs`가 1단계와 같은 방식으로 마젠타를 뺍니다. 베아트리스의 진홍 드레스와 봇치의 분홍 재킷·머리는 마젠타에 가까워서 바탕 채우기 기준을 높였고(seed 150), 가장자리만 색 분리합니다. 야니네코의 담배는 그대로 남깁니다.
 - 런타임: `lounge/npc-<id>.webp`, `lounge/npc-<id>-portrait.webp`(`app/lounge-assets.ts`).
 - 가붕·럭스는 Riot Games, 힘멜은 쇼가쿠칸, 베아트리스는 KADOKAWA, 봇치는 호분샤, 츠나데·마키마는 슈에이샤(마키마 애니메이션 MAPPA), 야니네코는 코단샤 캐릭터입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(IP 표 참고).
+
+## 마을 주민 치비 17명 · 2026-09-30
+
+큰 그림(C2·C4·C5)이 친구들 사이에서 너무 길어 보인다는 사용자 결정으로, 게임 속에 서 있거나 걷는 주민은 친구들과 같은 비율의 치비 그림을 씁니다. 큰 그림은 대화창 초상과 삽화로만 남깁니다. 루미·매화·허 선장·문 사장·결 목수는 원래 치비(포즈 시트)라 그대로입니다.
+
+- 원본: `public/assets/lounge/_originals/chibi/npc-chibi-*.png`(3:2 한 장에 두 명, 왼쪽 이름이 먼저. 야니네코만 한 명 세로 그림). 배경은 마젠타, 분홍 옷을 입은 베아트리스·봇치는 초록.
+- 웹 사본: `node scripts/optimize-assets.mjs chibi`가 테두리의 실제 배경색을 재서 키를 빼고(배경이 완전한 원색이 아니어서 옅은 막이 남지 않게), 가운데 근처의 가장 빈 세로줄에서 두 명을 나누고, 친구 그림과 같은 규칙(몸이 캔버스 높이의 94%, 발이 97% 선)으로 640px 높이 캔버스에 놓습니다. 쓰레쉬의 초록 도깨비불과 야니네코의 담배는 그대로입니다.
+- 런타임: `app/lounge-npc-chibi.ts`(크기), `ResidentLayer`의 `chibi` 옵션이 친구 그림 판과 같은 높이·발 선으로 세웁니다. 카지노 로제·은행 냐모·미용실 그웬(`lounge-interior-lender.ts`), 내 방 손님(`lounge-bedroom-npc.ts`), 간단 그래픽 화면도 치비를 씁니다.
+- IP는 큰 그림과 같습니다(위 IP 표).
+

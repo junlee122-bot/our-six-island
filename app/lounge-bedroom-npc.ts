@@ -1,14 +1,27 @@
 import * as THREE from 'three';
 import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
 import { NPCS, type NpcId } from './lounge-npc-data';
+import { npcChibi } from './lounge-npc-chibi';
 import type { WalkPoint } from './lounge-bedroom-navigation';
 
 /**
  * The invited resident in my room: a pose-sheet host (smile cell) or a single
  * keyed full-body image, at the same floor/scale as friends.
  */
-export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shadowGeometry: THREE.BufferGeometry, shadowMaterial: THREE.Material, onLoad: () => void) {
+export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shadowGeometry: THREE.BufferGeometry, shadowMaterial: THREE.Material, onLoad: () => void, friendPlane = 1.82) {
   const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+  // Chibi residents on a friend's plane: same height and feet line (lounge-npc-chibi.ts).
+  const chibiGeometries = new Map<string, THREE.PlaneGeometry>();
+  const chibiGeometry = (w: number, h: number) => {
+    const key = `${w}x${h}`;
+    let g = chibiGeometries.get(key);
+    if (!g) {
+      g = new THREE.PlaneGeometry(friendPlane * up.y * (w / h), friendPlane);
+      g.translate(0, friendPlane * 0.47, 0);
+      chibiGeometries.set(key, g);
+    }
+    return g;
+  };
   const height = 1.7 * HOST_CELL.h / HOST_CELL.figure;
   const sheetGeometry = new THREE.PlaneGeometry(height * up.y * HOST_CELL.w / HOST_CELL.h, height);
   sheetGeometry.translate(0, height / 2 - height * (HOST_CELL.h - HOST_CELL.foot) / HOST_CELL.h, 0);
@@ -45,9 +58,10 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
     const material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false, visible: false });
     materials.set(npc, material);
     const art = NPCS[npc].art;
-    // Residents without a picture yet (stage 2) are never drawn.
-    if (art.kind === 'pending') return material;
-    new THREE.TextureLoader().load(art.kind === 'sheet' ? HOST_SHEET[art.host] : art.asset, (texture) => {
+    const chibi = npcChibi(npc);
+    // Residents without a picture yet are never drawn.
+    if (art.kind === 'pending' && !chibi) return material;
+    new THREE.TextureLoader().load(chibi ? chibi.asset : art.kind === 'sheet' ? HOST_SHEET[art.host] : art.kind === 'image' ? art.asset : '', (texture) => {
       if (disposed) { texture.dispose(); return; }
       textures.push(texture);
       texture.colorSpace = THREE.SRGBColorSpace;
@@ -65,7 +79,8 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
       mesh.visible = shadow.visible = !!npc;
       if (npc) {
         const art = NPCS[npc].art;
-        mesh.geometry = art.kind === 'sheet' ? sheetGeometry : imageGeometry(art.kind === 'image' ? art.foot : 0.985);
+        const chibi = npcChibi(npc);
+        mesh.geometry = chibi ? chibiGeometry(chibi.w, chibi.h) : art.kind === 'sheet' ? sheetGeometry : imageGeometry(art.kind === 'image' ? art.foot : 0.985);
         mesh.material = materialFor(npc);
       }
       mesh.position.set(point.x, 0.065, point.z);
@@ -77,6 +92,7 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
       scene.remove(mesh, shadow);
       sheetGeometry.dispose();
       imageGeometries.forEach((g) => g.dispose());
+      chibiGeometries.forEach((g) => g.dispose());
       placeholder.dispose();
       materials.forEach((material) => material.dispose());
       textures.forEach((texture) => texture.dispose());

@@ -27,7 +27,13 @@ export const VIEW_FOLLOW_RATE = 7;
 export const followEase = (dt: number) => 1 - Math.exp(-dt * VIEW_FOLLOW_RATE);
 /** A walking friend's body height (world units), on a camera-facing plane. */
 export const VILLAGE_FIGURE_HEIGHT = 1.72;
-/** Residents are drawn a little taller than friends. */
+/**
+ * A friend's sprite canvas is this many times VILLAGE_FIGURE_HEIGHT tall (the
+ * market's 640 px canvas for a 540 px figure line); the body is drawn at 94%
+ * of the canvas with the feet on the 97% line (lounge-figure-frame.ts).
+ */
+export const FIGURE_CANVAS_RATIO = 640 / 540;
+/** 루미·매화·허 선장·문 사장·결 목수 (pose sheets) are drawn a little taller than friends. */
 export const RESIDENT_SCALE = 1.12;
 /** Walking speed (world units per second); Shift runs. */
 export const VIEW_WALK_SPEED = 5.2;

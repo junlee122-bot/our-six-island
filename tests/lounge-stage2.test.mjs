@@ -444,3 +444,28 @@ test('town state round-trips through a save and ignores junk', () => {
   assert.equal(loaded.ext[a.id].town.junk, undefined);
   assert.equal(loaded.ext[a.id].town.bake, 1);
 });
+
+test('in the world every resident but the pose-sheet five is a chibi at a friend size; dialogue keeps the tall art', async () => {
+  const fs = await import('node:fs');
+  const { NPC_CHIBI } = await import('../app/lounge-npc-chibi.ts');
+  const record = JSON.parse(fs.readFileSync(new URL('../public/assets/lounge/npc-chibi-generation.json', import.meta.url), 'utf8'));
+  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'];
+  assert.deepEqual(Object.keys(NPC_CHIBI).sort(), [...chibi].sort());
+  for (const id of NPC_IDS) {
+    const c = NPC_CHIBI[id];
+    if (NPCS[id].art.kind === 'sheet') {
+      assert.equal(c, undefined, `${id} keeps its chibi pose sheet`);
+      continue;
+    }
+    assert.ok(c, `${id} has a chibi`);
+    const file = new URL(`../public${c.asset}`, import.meta.url);
+    assert.ok(fs.existsSync(file), `${id} chibi file`);
+    // Sizes match what the keying script wrote (the plane's aspect comes from them).
+    assert.deepEqual([record.web[id].w, record.web[id].h], [c.w, c.h], `${id} size`);
+    assert.equal(c.h, 640);
+    assert.ok(c.w >= 512 && c.w <= 640);
+    // The tall art still serves the dialogue portrait.
+    assert.equal(NPCS[id].art.kind, 'image');
+    assert.ok(NPCS[id].art.portrait);
+  }
+});

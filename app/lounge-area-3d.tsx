@@ -349,7 +349,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     applyState();
     // Residents walking about here (the district's shops, their errands).
     const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
-      ? new ResidentLayer(scene, labelLayerRef.current, { height: (FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(PITCH), billboard: 'upright' })
+      ? new ResidentLayer(scene, labelLayerRef.current, {
+          height: (FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(PITCH),
+          billboard: 'upright',
+          // Chibi residents on a friend's plane (same height and feet line).
+          chibi: { plane: ((FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H) / Math.cos(PITCH), upY: Math.cos(PITCH) },
+        })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;
