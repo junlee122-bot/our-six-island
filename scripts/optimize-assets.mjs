@@ -316,6 +316,11 @@ async function serviceSprites() {
 //    their partial cover) and the magenta is unmixed and despilled out of
 //    their colour, so 쓰레쉬's green wisps stay green, not pink.
 const NPC_SPRITES = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'];
+// Stage-2 residents (npc-stage2-generation.json). The web file name is the
+// resident id; 야니네코's original is spelled "yaninekko".
+const NPC_SPRITES_2 = ['gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'];
+const NPC_ORIGINAL = { yanineko: 'yaninekko' };
+const NPC_SEED = { beatrice: 150, bocchi: 150 };
 /** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
 const NPC_PORTRAITS = {
   nasera: { cx: 0.5, top: 0.02, size: 0.36 },
@@ -324,10 +329,21 @@ const NPC_PORTRAITS = {
   sinjjajang: { cx: 0.5, top: 0.02, size: 0.34 },
   volibas: { cx: 0.5, top: 0.02, size: 0.34 },
   janna: { cx: 0.5, top: 0.02, size: 0.34 },
+  gabung: { cx: 0.5, top: 0.02, size: 0.34 },
+  lux: { cx: 0.5, top: 0.02, size: 0.34 },
+  himmel: { cx: 0.5, top: 0.02, size: 0.34 },
+  beatrice: { cx: 0.5, top: 0.03, size: 0.34 },
+  bocchi: { cx: 0.5, top: 0.03, size: 0.34 },
+  tsunade: { cx: 0.5, top: 0.03, size: 0.34 },
+  makima: { cx: 0.5, top: 0.03, size: 0.32 },
+  yanineko: { cx: 0.5, top: 0.02, size: 0.32 },
 };
 // `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
 // skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
-function keyMagenta(data, width, height, fgM = 0) {
+// `seed`: how magenta a pixel must be to count as ground. 베아트리스's crimson
+// dress and 봇치's pink jacket sit near 60–110, so they use a higher seed and
+// only the near-pure ground floods (their edges are unmixed as the rim).
+function keyMagenta(data, width, height, fgM = 0, seed = 40) {
   const n = width * height;
   const m = new Int16Array(n);
   for (let i = 0; i < n; i++) {
@@ -336,7 +352,7 @@ function keyMagenta(data, width, height, fgM = 0) {
       b = data[i * 4 + 2];
     m[i] = Math.min(r, b) - g;
   }
-  const SEED = 40,
+  const SEED = seed,
     POCKET = 200;
   const ground = new Uint8Array(n);
   const stack = [];
@@ -403,11 +419,11 @@ function keyMagenta(data, width, height, fgM = 0) {
   return out;
 }
 async function npcSprites() {
-  for (const id of NPC_SPRITES) {
-    const source = path.join(assets, `lounge/_originals/npc-${id}.png`);
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2]) {
+    const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-    const keyed = keyMagenta(data, info.width, info.height, id === 'thresh' ? -120 : 0);
+    const keyed = keyMagenta(data, info.width, info.height, id === 'thresh' ? -120 : 0, NPC_SEED[id] ?? 40);
     const raw = { raw: { width: info.width, height: info.height, channels: 4 } };
     const target = path.join(assets, `lounge/npc-${id}.webp`);
     await sharp(keyed, raw)

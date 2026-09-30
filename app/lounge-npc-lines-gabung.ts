@@ -1,7 +1,7 @@
 // 가붕 — 등대지기 (항구 등대, 2단계). 목소리 크고 정의감 넘치는 기사형 반말.
 // "이 불빛이 꺼지는 날은 없다!" 폭풍이 오면 신나서 등대 꼭대기에서 빙글빙글
 // 돈다(반복 농담). 잔나 예보보다 자기 감이 맞는다고 우기고, 여동생 럭스를
-// 과보호한다. 그림이 생길 때까지 게임에 나오지 않는다(hasSprite: false).
+// 과보호한다.  
 import type { NpcLineSet } from './lounge-npc-line-types.ts';
 
 export const GABUNG_LINES: NpcLineSet = {

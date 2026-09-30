@@ -17,56 +17,97 @@
    "job": "e93471d4-30f8-4d83-8da0-e8b15bd6b704",
    "original": "_originals/npc-gabung.png",
    "sha256": "30BB9CF6242BE4A9F22F787B077C8E48CE962DED4AEB47138A006E2D098DAAE1",
-   "reference": "User-provided Garen portrait (Riot Games)."
+   "reference": "User-provided Garen portrait (Riot Games).",
+   "residentId": "gabung",
+   "web": "npc-gabung.webp",
+   "webSha256": "A7473E0C27881631387AFEC0F550DF664B910DC667431554B9B38D2BA15BC83B",
+   "portrait": "npc-gabung-portrait.webp",
+   "portraitSha256": "F617E239B48C9CCB4B8987C43B0B2E295EF16178AAA36B55DFA9C89647CEF07C"
   },
   {
    "npc": "lux",
    "job": "0a28a398-2538-4e9e-9902-6da2ebbe7abb",
    "original": "_originals/npc-lux.png",
    "sha256": "655018449E15496487475B6556B21C6BCB42D73249DECA53D42747B11A6391FD",
-   "reference": "User-provided Lux illustration (Riot Games)."
+   "reference": "User-provided Lux illustration (Riot Games).",
+   "residentId": "lux",
+   "web": "npc-lux.webp",
+   "webSha256": "0A58794043B8544D201B2955DC04FCB53518D241D22AB1D3BC7002554286E020",
+   "portrait": "npc-lux-portrait.webp",
+   "portraitSha256": "065CACA467F5F3B7466BDBA769B46B20DBEC108CCFFD9411D8BC7176CDD38435"
   },
   {
    "npc": "himmel",
    "job": "e4c43530-9e7a-4868-a570-1aa4a94e0148",
    "original": "_originals/npc-himmel.png",
    "sha256": "B7E981EAA1723E6F4D38FDC31179F6C8D0BFECEECE304FD3D285CAA9C89D049F",
-   "reference": "User-provided Himmel model sheet (Frieren, Shogakukan)."
+   "reference": "User-provided Himmel model sheet (Frieren, Shogakukan).",
+   "residentId": "himmel",
+   "web": "npc-himmel.webp",
+   "webSha256": "5DD12F99503241E727A7359A1541EE7B132B7DBF960F714A5AD0E501F9AE14E4",
+   "portrait": "npc-himmel-portrait.webp",
+   "portraitSha256": "57574FF106444152A8D70E7DAF1C854EE5AFACCF2D5C6C1987192E27257F9D2B"
   },
   {
    "npc": "beatrice",
    "job": "9297ad78-0829-4817-a3bc-90114eeb2787",
    "original": "_originals/npc-beatrice.png",
    "sha256": "054C50B21E29CFCE764F624A5EAAFB902B5F6AEF9E0C040977460E3EB7E9A513",
-   "reference": "User-provided Beatrice model sheet (Re:Zero, KADOKAWA); drawn as an adult."
+   "reference": "User-provided Beatrice model sheet (Re:Zero, KADOKAWA); drawn as an adult.",
+   "residentId": "beatrice",
+   "web": "npc-beatrice.webp",
+   "webSha256": "24D55D2CD9199172B6A56A87DE20C9960FE65DF47F1DBBC8192260956960999E",
+   "portrait": "npc-beatrice-portrait.webp",
+   "portraitSha256": "7883CEDC9B957C1006FAD51BF2A30DEB55B12BA817924CD194F9876F069CB516"
   },
   {
    "npc": "bocchi",
    "job": "467ab5c1-72ca-43fd-a7bc-5a5c6d59f4a9",
    "original": "_originals/npc-bocchi.png",
    "sha256": "6E9F246D0DFD9298375CCA1BA0B35CC767AEAC6C95AA24F4F6861B532084F824",
-   "reference": "User-provided Bocchi the Rock! Hitori Gotoh model sheet and key visual (Houbunsha)."
+   "reference": "User-provided Bocchi the Rock! Hitori Gotoh model sheet and key visual (Houbunsha).",
+   "residentId": "bocchi",
+   "web": "npc-bocchi.webp",
+   "webSha256": "423B1EE217F66EA3DBD63D82EC8BE6514130D6934B1D4C481A11C21D350D1807",
+   "portrait": "npc-bocchi-portrait.webp",
+   "portraitSha256": "7A1907104331F33A567B32B3049AACC12BFB3CBFA22295681DF81EAAE546A94D"
   },
   {
    "npc": "tsunade",
    "job": "3a91776a-184f-400b-947f-4b202f4426a1",
    "original": "_originals/npc-tsunade.png",
    "sha256": "628FAF1F6C72CDBA7DE093B7B02651E05F750DFDD823332A8CD351B729603E0C",
-   "reference": "User-provided Tsunade art (Naruto, Shueisha)."
+   "reference": "User-provided Tsunade art (Naruto, Shueisha).",
+   "residentId": "tsunade",
+   "web": "npc-tsunade.webp",
+   "webSha256": "1E392E8FFD693DA5697F825DAC4BA4CE7C1FDFE31A362EF1AF2A9C8B605941FF",
+   "portrait": "npc-tsunade-portrait.webp",
+   "portraitSha256": "92372457409D2043C766D5545E51C8F0D4E4D3018F69279C8D89E26683AC2D11"
   },
   {
    "npc": "makima",
    "job": "086dfeb5-7f1d-44d5-9b3c-16d04e0fdb77",
    "original": "_originals/npc-makima.png",
    "sha256": "D5B533F7D63AC532D5F26F2252A7619E4480919600A6D722DBDD38C3942678BB",
-   "reference": "User-provided Makima model sheet (Chainsaw Man, Shueisha/MAPPA); kept faithful to the anime."
+   "reference": "User-provided Makima model sheet (Chainsaw Man, Shueisha/MAPPA); kept faithful to the anime.",
+   "residentId": "makima",
+   "web": "npc-makima.webp",
+   "webSha256": "318EAF3C99DA519C9F1C32AEC776FFF0FF448E9DBC8FBA9A1701C1C6BD7728FE",
+   "portrait": "npc-makima-portrait.webp",
+   "portraitSha256": "E9797E45569D65322DD8002B675E1FD4CAA894D95D02A619CF8B37074E3C0566"
   },
   {
    "npc": "yaninekko",
    "job": "2b8a42c0-7ef2-4bb7-8c1f-1d99362bc363",
    "original": "_originals/npc-yaninekko.png",
    "sha256": "457535762934F25AFA7102296F73A72051635DA4A5CD34459CE901A47C3943F6",
-   "reference": "User-provided Yaninekko model sheet and expressions (Kodansha)."
+   "reference": "User-provided Yaninekko model sheet and expressions (Kodansha).",
+   "residentId": "yanineko",
+   "web": "npc-yanineko.webp",
+   "webSha256": "2386FDB2A20B0F7722A6882D967A4CDE3BEE57D07C2C44E28D102CC6381C2695",
+   "portrait": "npc-yanineko-portrait.webp",
+   "portraitSha256": "7E75DC34675223DA5C57D064D8309DCCC3DE3B88B6876A2D4EB9819738B9A983"
   }
- ]
+ ],
+ "keying": "scripts/optimize-assets.mjs npcs: magenta flood key (seed 150 for beatrice and bocchi so the crimson dress and pink jacket stay opaque), unmix + despill on the rim, 660x990 web sprite and a 384px head-and-shoulders portrait."
 }

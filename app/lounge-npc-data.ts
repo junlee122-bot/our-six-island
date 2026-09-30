@@ -2,10 +2,9 @@
 // eight who already work in the village (dealers, shopkeepers, service desks),
 // the six stage-1 residents of 시장 거리 (handover/design/
 // design-village-2x-npcs.md §8) and the eight stage-2 residents of the harbor
-// and the hillside (design-npcs-stage2.md §7). Stage-2 residents carry
-// `hasSprite: false` until their pictures exist: they have schedules, lines
-// and gift tastes, but nothing draws or lists them (VISIBLE_NPC_IDS) and the
-// server refuses to meet them. Pure data shared by the server (relations,
+// and the hillside (design-npcs-stage2.md §7). A resident may carry
+// `hasSprite: false` while their picture is missing: nothing draws or lists
+// them then (VISIBLE_NPC_IDS). Pure data shared by the server (relations,
 // gifts, requests) and the client (dialogue, sprites, schedules). All
 // residents are adults and all can be dated (user decision 2026-09-30).
 //
@@ -32,7 +31,7 @@ export const NPC_IDS = [
   'sinjjajang',
   'volibas',
   'janna',
-  // Stage 2 (hasSprite: false until their sprites are collected).
+  // Stage 2 (harbor, hillside, travelling).
   'gabung',
   'lux',
   'himmel',
@@ -289,7 +288,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     art: img(A.npc_janna, A.npc_janna_portrait),
     speech: 'polite',
   },
-  // ------------------------------------------------------------ stage 2 (hasSprite: false)
+  // ------------------------------------------------------------ stage 2
   gabung: {
     id: 'gabung',
     name: '가붕',
@@ -301,9 +300,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '달팽이, 쑥',
     gifts: { loved: ['lunchbox', 'grilledfish', 'hairtail', 'conger'], liked: ['kind:dish', 'iron', 'gold', 'rockfish', 'kind:fish'], disliked: ['snail', 'mugwort'] },
     rewards: { 40: ['grilledfish', 2], 100: ['gold', 2] },
-    art: { kind: 'pending' },
+    art: img(A.npc_gabung, A.npc_gabung_portrait),
     speech: 'casual',
-    hasSprite: false,
     stage: 2,
   },
   lux: {
@@ -317,9 +315,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '흔한 돌, 달팽이',
     gifts: { loved: ['gem', 'pumpkinpie', 'jam', 'seabream'], liked: ['kind:fish', 'hwachae', 'mattang', 'gold'], disliked: ['stone', 'snail'] },
     rewards: { 40: ['bait-shrimp', 6], 100: ['gem', 1] },
-    art: { kind: 'pending' },
+    art: img(A.npc_lux, A.npc_lux_portrait),
     speech: 'polite',
-    hasSprite: false,
     stage: 2,
   },
   himmel: {
@@ -333,9 +330,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '돌멩이, 달팽이',
     gifts: { loved: ['camellia', 'cosmos', 'gem', 'pumpkinpie'], liked: ['kind:flower', 'jam', 'kind:dish'], disliked: ['stone', 'snail'] },
     rewards: { 40: ['camellia', 2], 100: ['gem', 1] },
-    art: { kind: 'pending' },
+    art: img(A.npc_himmel, A.npc_himmel_portrait),
     speech: 'casual',
-    hasSprite: false,
     stage: 2,
   },
   beatrice: {
@@ -350,9 +346,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '시끄러운 벌레, 달팽이',
     gifts: { loved: ['fossil', 'flowertea', 'jam'], liked: ['mattang', 'hwachae', 'kind:flower', 'pumpkinpie'], disliked: ['cicada', 'cricket', 'snail'] },
     rewards: { 40: ['flowertea', 3], 100: ['fossil-fern', 1] },
-    art: { kind: 'pending' },
+    art: img(A.npc_beatrice, A.npc_beatrice_portrait),
     speech: 'casual',
-    hasSprite: false,
     stage: 2,
   },
   bocchi: {
@@ -366,9 +361,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '매미, 메뚜기처럼 시끄러운 것',
     gifts: { loved: ['mattang', 'roastchestnut', 'dotorimuk'], liked: ['kind:dish', 'hardwood', 'shell'], disliked: ['cicada', 'grasshopper'] },
     rewards: { 40: ['roastchestnut', 2], 100: ['hardwood', 3] },
-    art: { kind: 'pending' },
+    art: img(A.npc_bocchi, A.npc_bocchi_portrait),
     speech: 'polite',
-    hasSprite: false,
     stage: 2,
   },
   tsunade: {
@@ -383,9 +377,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '달팽이, 흔한 돌',
     gifts: { loved: ['ginseng', 'kimchi', 'spinachnamul', 'haemuljeon'], liked: ['kind:forage', 'crop', 'kind:dish'], disliked: ['snail', 'stone'] },
     rewards: { 40: ['fertilizer-deluxe', 2], 100: ['ginseng', 1] },
-    art: { kind: 'pending' },
+    art: img(A.npc_tsunade, A.npc_tsunade_portrait),
     speech: 'casual',
-    hasSprite: false,
     stage: 2,
   },
   makima: {
@@ -400,9 +393,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '계약을 어기는 손님',
     gifts: { loved: ['kind:dish'], liked: ['kind:fish', 'fruit', 'crop'], disliked: ['snail', 'stone'] },
     rewards: { 40: ['sashimi', 1], 100: ['gem', 2] },
-    art: { kind: 'pending' },
+    art: img(A.npc_makima, A.npc_makima_portrait),
     speech: 'polite',
-    hasSprite: false,
     stage: 2,
   },
   yanineko: {
@@ -416,9 +408,8 @@ export const NPCS: Record<NpcId, NpcDef> = {
     dislikesText: '아침 수업, 비 오는 날의 달팽이',
     gifts: { loved: ['grilledfish', 'sashimi', 'fishstew', 'flowertea'], liked: ['kind:fish', 'kind:dish', 'jam'], disliked: ['snail', 'mugwort'] },
     rewards: { 40: ['grilledfish', 2], 100: ['sashimi', 2] },
-    art: { kind: 'pending' },
+    art: img(A.npc_yanineko, A.npc_yanineko_portrait),
     speech: 'casual',
-    hasSprite: false,
     stage: 2,
   },
 };
