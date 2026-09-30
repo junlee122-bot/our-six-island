@@ -205,7 +205,7 @@ export type SeasonUpdate = {
   fete?: { kind: 'chuseok' | 'blossom'; lanterns: number; at: VillagePoint } | null;
 };
 export type FishingState = {
-  phase: 'none' | 'wait' | 'bite' | 'caught';
+  phase: 'none' | 'wait' | 'bite' | 'fight' | 'caught';
   from: VillagePoint;
   to: VillagePoint;
 };
@@ -996,10 +996,22 @@ export class VillageSeasonLayer {
       }
     if (this.fishing.phase !== 'none') {
       const since = (now - this.fishingSince) / 1000;
-      const bite = this.fishing.phase === 'bite';
-      const dip = bite ? -0.1 + Math.sin(t * 22) * 0.06 : this.reduced ? 0 : Math.sin(t * 2.2) * 0.03;
+      const bite = this.fishing.phase === 'bite',
+        fight = this.fishing.phase === 'fight';
+      const dip = bite ? -0.1 + Math.sin(t * 22) * 0.06 : fight ? -0.16 + Math.sin(t * 9) * 0.05 : this.reduced ? 0 : Math.sin(t * 2.2) * 0.03;
       this.bobber.position.y = 0.2 + dip;
-      const r = this.reduced ? 1 : 1 + ((since * (bite ? 1.6 : 0.6)) % 1) * (bite ? 2.2 : 1.2);
+      // 손맛 겨루기: the float is dragged under and pulled side to side.
+      const to = this.fishing.to;
+      this.bobber.position.x = to.x + (fight ? Math.sin(t * 3.1) * 0.35 + Math.sin(t * 7.3) * 0.08 : 0);
+      this.bobber.position.z = to.z + (fight ? Math.cos(t * 2.3) * 0.25 : 0);
+      if (fight) {
+        this.ripple.position.set(this.bobber.position.x, 0.21, this.bobber.position.z);
+        const pos = this.line.geometry.getAttribute('position') as THREE.BufferAttribute;
+        pos.setXYZ(1, this.bobber.position.x, 0.28, this.bobber.position.z);
+        pos.needsUpdate = true;
+      }
+      const splashy = bite || fight;
+      const r = this.reduced ? 1 : 1 + ((since * (splashy ? 1.6 : 0.6)) % 1) * (fight ? 2.8 : bite ? 2.2 : 1.2);
       this.ripple.scale.setScalar(r);
       (this.ripple.material as THREE.MeshBasicMaterial).opacity = this.reduced ? 0.5 : Math.max(0, 0.8 - (r - 1) * 0.35);
       if (bite && !this.reduced) this.bite.scale.setScalar(0.8 + Math.sin(t * 14) * 0.06);

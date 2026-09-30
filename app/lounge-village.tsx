@@ -274,7 +274,7 @@ type Props = {
   /** The selected hotbar item (the farm action follows it). */
   tool?: string;
   /** The fishing bobber: where and in which phase. */
-  fishing?: { spot: Spot; phase: 'casting' | 'wait' | 'bite' | 'reeling' | 'result' } | null;
+  fishing?: { spot: Spot; phase: 'casting' | 'wait' | 'bite' | 'reeling' | 'fight' | 'result' } | null;
   /** Weather particles and falling leaves (settings + reduced motion). */
   seasonFx?: boolean;
 };
@@ -2258,7 +2258,9 @@ export function Village3D(props: Props) {
             phase:
               fishing.phase === 'bite'
                 ? 'bite'
-                : fishing.phase === 'result'
+                : fishing.phase === 'fight'
+                  ? 'fight'
+                  : fishing.phase === 'result'
                   ? 'caught'
                   : 'wait',
             from: fishFrom,
