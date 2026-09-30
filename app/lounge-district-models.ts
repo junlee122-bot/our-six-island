@@ -49,6 +49,7 @@ export const HARBOR_MODEL_URLS: Record<HarborModel, string> = {
   harborFence: LOUNGE_MODELS.harborFence,
   timberDeck: LOUNGE_MODELS.timberDeck,
   smallPine: VALLEY_MODELS.smallPine,
+  broadleafTree: VALLEY_MODELS.broadleafTree,
   shrub: VALLEY_MODELS.shrub,
   graniteBoulder: VALLEY_MODELS.graniteBoulder,
   valleyRocks: VALLEY_MODELS.valleyRocks,

@@ -32,6 +32,7 @@ export type HarborModel =
   | 'harborFence'
   | 'timberDeck'
   | 'smallPine'
+  | 'broadleafTree'
   | 'shrub'
   | 'graniteBoulder'
   | 'valleyRocks'
