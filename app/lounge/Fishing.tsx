@@ -7,11 +7,12 @@
 // server picks the fish at the cast, times the bite, stores the fight seed at
 // the hook and replays the recorded input when the fish is landed.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
 import { REEL_REASON } from '../lounge-life-ui';
 import { sellQuote, itemName } from '../lounge-life-plus';
-import { anglerCandidates, fishGrams, gramsText, rarityOf, type AnglerLast, type AnglingView } from '../lounge-fish-engine';
+import { anglerCandidates, biteDelayMs, fishGrams, gramsText, rarityOf, type AnglerLast, type AnglingView } from '../lounge-fish-engine';
 import { BAITS, BEHAVIOUR_NAME, CRAB_POT, FISH_PROFILE, type BaitId } from '../lounge-fish-data';
 import { FISH_QUALITY_MULT } from '../lounge-fish-quality';
 import type { FightResult } from '../lounge-fish-minigame';
@@ -105,8 +106,6 @@ export function FishingOverlay({
     cb.current.onPhase(phase);
   }, [phase]);
   useEffect(() => () => cb.current.onPhase(null), []);
-  const lead = useRef(0);
-  const serverNow = useCallback(() => Date.now() + room.snapshot().clockOffset + lead.current, [room]);
   const reduced = useMemo(() => {
     try {
       return matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -173,15 +172,17 @@ export function FishingOverlay({
       const ok = await room.life({ kind: 'anglerHook', token: p.token });
       token.current = null;
       busyRef.current = false;
+      const a = room.snapshot().life?.angling;
+      const f = ok ? a?.me.fight : null;
+      const hooked = f && f.token === p.token ? f : null;
+      // Closed while the hook was on its way: let a fish it hooked go on the server too.
+      fightRef.current = hooked;
       if (closingRef.current) {
         await finishClose();
         return;
       }
-      const a = room.snapshot().life?.angling;
-      const f = ok ? a?.me.fight : null;
-      if (f && f.token === p.token) {
-        fightRef.current = f;
-        setFight(f);
+      if (hooked) {
+        setFight(hooked);
         setPhase('fight');
         lifeSfx('splash');
         return;
@@ -218,11 +219,12 @@ export function FishingOverlay({
     castingRef.current = true;
     lifeSfx('cast');
     void (async () => {
-      const sent = performance.now();
+      let sent = performance.now();
       const chosen = baitRef.current,
         have = chosen ? (room.snapshot().life?.me.inv?.[chosen] ?? 0) : 0;
-      const ok = await room.life({ kind: 'anglerCast', spot, ...(chosen && have > 0 ? { bait: chosen } : {}) });
-      lead.current = Math.min(600, Math.max(0, (performance.now() - sent) / 2));
+      const ok = await room.life({ kind: 'anglerCast', spot, ...(chosen && have > 0 ? { bait: chosen } : {}) }, (at) => {
+        sent = at;
+      });
       const pending = room.snapshot().life?.angling?.me.cast;
       castingRef.current = false;
       if (cancelled) {
@@ -238,9 +240,14 @@ export function FishingOverlay({
         await finishClose();
         return;
       }
-      setWindowMs(pending.windowMs);
-      setPhase('wait');
-      const toBite = Math.max(0, pending.biteAt - serverNow());
+      // Commit the wait now: the bite timer below checks for it, and when the
+      // reply ran late that timer is due at once, ahead of a queued render.
+      flushSync(() => {
+        setWindowMs(pending.windowMs);
+        setPhase('wait');
+      });
+      // Counted from when the cast left, not from when its reply ran (see biteDelayMs).
+      const toBite = biteDelayMs(pending, performance.now() - sent);
       if (!reduced)
         for (const at of [0.35, 0.7]) {
           const t = toBite * at;
@@ -249,7 +256,9 @@ export function FishingOverlay({
       timers.current.push(
         setTimeout(() => {
           if (cancelled || phaseRef.current !== 'wait') return;
-          setPhase('bite');
+          // The dip is a reaction cue: draw it in this task, not in a render
+          // queued behind the 3D scene's next frame (long on a slow GPU).
+          flushSync(() => setPhase('bite'));
           lifeSfx('bite');
           requestAnimationFrame(() => actRef.current?.focus({ preventScroll: true }));
         }, toBite),
@@ -264,7 +273,7 @@ export function FishingOverlay({
       for (const t of timers.current) clearTimeout(t);
       timers.current = [];
     };
-  }, [attempt, room, spot, serverNow, hook, reduced, finishClose]);
+  }, [attempt, room, spot, hook, reduced, finishClose]);
 
   useEffect(() => {
     rootRef.current?.focus({ preventScroll: true });

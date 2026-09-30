@@ -22,6 +22,7 @@ import {
   CUP_PRIZES,
   anglerCandidates,
   anglingHooks,
+  biteDelayMs,
   catchQuality,
   fishAvailable,
   readAngling,
@@ -207,6 +208,34 @@ test('the server re-simulates: claimed timing faster than real time or a forged 
   const c3 = s.view(m, T0 + 120_000).angling.me.cast;
   s.act(m, { kind: 'anglerHook', token: c3.token }, c3.expiresAt + 1);
   assert.equal(s.view(m, c3.expiresAt + 1).angling.me.last.reason, 'late');
+});
+
+test('the bite is timed from when the cast left, so a reply that runs late still hooks in time', () => {
+  // What is left to wait: biteAt − castAt, less the time since the cast left.
+  assert.equal(biteDelayMs({ castAt: 100, biteAt: 3_100 }, 500), 2_500);
+  assert.equal(biteDelayMs({ castAt: 100, biteAt: 3_100 }, 9_000), 0);
+  assert.equal(biteDelayMs({ castAt: 100, biteAt: 3_100 }, -5), 3_000);
+  // Against the server's window, on one clock: the cast reaches the server `up`
+  // after it left at T0, its reply runs `late` after the server answered (seconds
+  // on a page busy with software WebGL), and the hook also takes `up`.
+  const react = 300;
+  for (const up of [30, 250])
+    for (const share of [0, 0.5, 0.95, 1.1]) {
+      const s = world(1), m = s.members[0];
+      const castAt = T0 + up;
+      s.act(m, { kind: 'anglerCast', spot: 'pond' }, castAt);
+      const cast = s.view(m, castAt).angling.me.cast;
+      const late = Math.round((cast.biteAt - castAt) * share), ranAt = castAt + late;
+      const shownAt = ranAt + biteDelayMs(cast, ranAt - T0);
+      // One uplink before the server's bite however late the reply ran, or at
+      // once when it only ran after the fish bit.
+      assert.equal(shownAt, Math.max(cast.biteAt - up, ranAt), `up=${up} late=${late}`);
+      const hookAt = shownAt + react + up;
+      s.act(m, { kind: 'anglerHook', token: cast.token }, hookAt);
+      const me = s.view(m, hookAt).angling.me;
+      assert.ok(me.fight, `up=${up} late=${late}: hooked, not ${me.last?.reason}`);
+      if (ranAt <= cast.biteAt - up) assert.equal(me.fight.reactionMs, react, 'the server times the player, not the page');
+    }
 });
 
 // ------------------------------------------------------------ catch, records, quality
