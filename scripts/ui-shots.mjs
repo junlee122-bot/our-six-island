@@ -6,6 +6,7 @@
 //   npm run ui:shots -- --baseline .ui-shots/before/report.json [--strict]
 //   npm run ui:shots -- --games                    # also casino/hall table screens
 //   npm run ui:shots -- --low-graphics             # software GPU: low quality, 30 FPS
+//   npm run ui:shots -- --fishing-fight            # also the reel fight (needs a fast mock round trip)
 //
 // For each key screen at 1920×1080 (fhd), 1440×900 (d) and 1280×720 (s) it saves
 // a PNG and measures, inside the top dialog (or the whole HUD when none is open):
@@ -75,7 +76,7 @@ function seedLife(life, uid) {
   for (const [id, actor] of Object.entries(life.actors ?? {}))
     if (id !== uid) u[id] = { xp: { farm: 1500 + actor * 120, fish: 700, forage: 400, mine: 100, craft: 300 }, retro: now - 4 * DAY, prof: ['farm-a'] };
   const x = ((life.ext ??= {})[uid] ??= {});
-  x.inv = { ...(x.inv ?? {}), wood: 48, stone: 30, copper: 6, pinecone: 4, crucian: 1, azalea: 2, wildflower: 2 };
+  x.inv = { ...(x.inv ?? {}), wood: 48, stone: 30, copper: 6, pinecone: 4, crucian: 1, azalea: 2, wildflower: 2, bait: 4, 'bait-dough': 6, crabpot: 1 };
   g.r = { forge: { got: 92_000, mat: { wood: 70, stone: 45 }, by: { 0: 2, 6: 1 }, start: now - 2 * DAY } };
   life.bonds = { ...(life.bonds ?? {}), '2-3': 1_180, '1-3': 700, '0-3': 260, '3-6': 90 };
 }
@@ -260,6 +261,60 @@ async function runView(browser, base, view, report) {
   });
   await step('bonds', async () => { await focusScene(); await page.keyboard.press('KeyL'); await sleep(1000); await snap('bonds'); });
   await step('collection', async () => { await focusScene(); await page.keyboard.press('KeyK'); await sleep(1000); await snap('collection'); });
+  // 낚시 업그레이드: the tackle board, the 낚시 수첩 and the reel fight at the river.
+  const phase = () => js(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') ?? '');
+  const openFishing = async () => {
+    await closeAll();
+    if (await js(() => !!document.querySelector('[data-testid=fishing]'))) return;
+    if (!(await page.locator('.hv-directory').count())) await H.clickSel('.hv-top-tools button');
+    await sleep(500);
+    await H.clickSel('.hv-directory [data-district="fish-river"]');
+    await focusScene();
+    await page.keyboard.down('Shift');
+    try {
+      assert.notEqual(await until(() => {
+        const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+        return d?.fishSpot === 'river' && d.walking === 'false';
+      }, 180000), -1, '강 낚시터까지 걷지 못했습니다.');
+    } finally { await page.keyboard.up('Shift'); }
+    await H.clickSel('[data-testid=action-button].hv-action');
+    assert.notEqual(await until(() => !!document.querySelector('[data-testid=fishing]'), 20000), -1, '낚시 창이 열리지 않았습니다.');
+  };
+  await step('fishing', async () => {
+    await openFishing();
+    await until(() => ['wait', 'bite'].includes(document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase')), 20000);
+    await snap('fishing');
+  });
+  await step('fishing-journal', async () => {
+    await openFishing();
+    await H.clickSel('[data-testid=fish-journal-open]');
+    assert.notEqual(await until(() => !!document.querySelector('dialog[open] [data-testid=fj-detail]'), 15000), -1, '낚시 수첩이 열리지 않았습니다.');
+    await snap('fishing-journal');
+    await page.keyboard.press('Digit3');
+    await sleep(600);
+    await snap('fishing-cup');
+    await page.keyboard.press('Escape');
+    await sleep(500);
+  });
+  // The fight needs a quick hook reply; under a software GPU the mock round
+  // trip can outlast the bite window, so this capture is opt-in (--fishing-fight).
+  if (flag('fishing-fight')) await step('fishing-fight', async () => {
+    await openFishing();
+    let fighting = false;
+    for (let i = 0; i < 4 && !fighting; i++) {
+      if ((await phase()) === 'result') { await H.clickSel('[data-testid=fish-again]'); await sleep(500); }
+      if (await until(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'bite', 30000) < 0) continue;
+      await page.keyboard.press('Space');
+      fighting = (await until(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'fight', 15000)) >= 0;
+    }
+    assert.ok(fighting, '손맛 겨루기가 시작되지 않았습니다.');
+    await page.keyboard.down('Space');
+    await sleep(500);
+    await page.keyboard.up('Space');
+    await snap('fishing-fight');
+    await page.keyboard.press('Escape');
+    await until(() => !document.querySelector('[data-testid=fishing]'), 20000);
+  });
 
   // Historical baseline names are retained, but each service now has its own
   // visible entry point. These are read-only captures, never robbery/loan actions.
