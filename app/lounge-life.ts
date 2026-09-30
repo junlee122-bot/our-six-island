@@ -67,6 +67,9 @@ import {
   type GrowthView,
 } from './lounge-growth.ts';
 import { socialAction, socialView, type SocialAction, type SocialView } from './lounge-life-social.ts';
+// 낚시 업그레이드: same cycle rule; the action kinds come from the leaf data module.
+import { ANGLING_ACTION_KINDS } from './lounge-fish-data.ts';
+import { anglingAction, anglingView, readAngling, type AnglingAction, type AnglingExt, type AnglingView } from './lounge-fish-engine.ts';
 // 무드(기분): same cycle rule (functions only); the action kinds come from the leaf data module.
 import { MOOD_ACTION_KINDS } from './lounge-mood-data.ts';
 import {
@@ -469,7 +472,8 @@ export type LifeState = {
 } & LifeExt &
   GrowthExt &
   VenueExt &
-  MoodExt;
+  MoodExt &
+  AnglingExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -502,7 +506,9 @@ export type LifeAction =
   /** 가게 업그레이드 (lounge-venue-upgrades.ts). */
   | VenueAction
   /** 무드: snack, bed rest, bar drink, 촌장님 찻잔, sharing, 응원하기 (lounge-mood.ts). */
-  | MoodAction;
+  | MoodAction
+  /** 낚시 업그레이드: cast/hook/fight, tackle, crab pots, weekly cup (lounge-fish-engine.ts). */
+  | AnglingAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -521,6 +527,7 @@ export const LIFE_ACTION_KINDS = [
   ...GROWTH_ACTION_KINDS,
   ...VENUE_ACTION_KINDS,
   ...MOOD_ACTION_KINDS,
+  ...ANGLING_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -859,6 +866,7 @@ export function readLife(value: unknown): LifeState {
     ...readGrowth(v.growth),
     ...readVenues(v.venues),
     ...readMood(v.mood),
+    ...readAngling(v.angling),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -993,6 +1001,10 @@ function lifeActionCore(
   }
   if ((PLUS_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = plusAction(life, ledger, member, a as PlusAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((ANGLING_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = anglingAction(life, ledger, member, a as AnglingAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((MOOD_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1359,6 +1371,8 @@ export type LifeView = {
   venues?: VenueUpgradeView[];
   /** 무드: my mood (projected to serverNow, never written by a read) and friends' faces. */
   mood?: MoodView;
+  /** 낚시 업그레이드: my cast/fight, tackle, pots, log; the weekly cup (lounge-fish-engine.ts). */
+  angling?: AnglingView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1448,6 +1462,7 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { social: socialView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
     venues: venuesView(life),
+    ...(UUID.test(uid) && actorValid(actor) ? { angling: anglingView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
   };
 }

@@ -71,7 +71,7 @@ test('new kArchive models retain source originals, credits and valid self-contai
   const dir = 'public/models/village/life-services/';
   const rec = JSON.parse(fs.readFileSync(dir + 'assets.json', 'utf8'));
   assert.equal(rec.provider, 'kArchive');
-  assert.equal(rec.assets.length, 5);
+  assert.equal(rec.assets.length, 9); // + 붕어·쏘가리·갈치·대구 (낚시 업그레이드)
   for (const asset of rec.assets) {
     assert.match(asset.source, /^https:\/\/karchive\.vibeline\.co\.kr\/models\//);
     for (const [path, hash] of [[dir + asset.file, asset.webSha256], ['public/models/_originals/village/life-services/' + asset.file, asset.sha256]]) {

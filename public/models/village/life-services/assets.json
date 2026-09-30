@@ -195,6 +195,162 @@
         "EXT_texture_webp",
         "KHR_mesh_quantization"
       ]
+    },
+    {
+      "key": "fishCrucian",
+      "id": "fish-f227",
+      "source": "https://karchive.vibeline.co.kr/models/fish-f227",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-f227.glb",
+      "file": "fishCrucian.glb",
+      "bytes": 4069984,
+      "sha256": "6b2e53e3221ccfbcf29ff70ea7276433475e23f027e21789e25cb3deda16f6cf",
+      "meshes": 1,
+      "triangles": 6216,
+      "textures": 1,
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.1637648344039917,
+          0,
+          -0.04062628373503685
+        ],
+        "max": [
+          0.1637648344039917,
+          0.18000000715255737,
+          0.04062628373503685
+        ],
+        "size": [
+          0.3275296688079834,
+          0.18000000715255737,
+          0.0812525674700737
+        ]
+      },
+      "use": "붕어 낚시 결과",
+      "downloaded": "2026-09-30",
+      "webBytes": 287100,
+      "webSha256": "7734d5ca89271bb0ecb103b75beda019704f86dd52215dd43458e60507266959",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishMandarin",
+      "id": "fish-f233",
+      "source": "https://karchive.vibeline.co.kr/models/fish-f233",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-f233.glb",
+      "file": "fishMandarin.glb",
+      "bytes": 4146492,
+      "sha256": "ff3a4b133ae3d82221b3f5a5a8f680ad3a9b769dd676899afdbc7ddb31ee814b",
+      "meshes": 1,
+      "triangles": 6174,
+      "textures": 1,
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.20000000298023224,
+          0,
+          -0.054130587726831436
+        ],
+        "max": [
+          0.20000000298023224,
+          0.1687111258506775,
+          0.054130587726831436
+        ],
+        "size": [
+          0.4000000059604645,
+          0.1687111258506775,
+          0.10826117545366287
+        ]
+      },
+      "use": "쏘가리 낚시 결과",
+      "downloaded": "2026-09-30",
+      "webBytes": 287448,
+      "webSha256": "7674ef0b543dc62031e0fe340b7d38c2050b58cf52dfc3ad3c1a9b5dd2d80436",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishHairtail",
+      "id": "fish-f126",
+      "source": "https://karchive.vibeline.co.kr/models/fish-f126",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-f126.glb",
+      "file": "fishHairtail.glb",
+      "bytes": 3916492,
+      "sha256": "e34da8237bd089e4edfd6232ea400a89edcaa2fb922585a8f1f14219fbabb4b3",
+      "meshes": 1,
+      "triangles": 6002,
+      "textures": 1,
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.20000000298023224,
+          0,
+          -0.034420453011989594
+        ],
+        "max": [
+          0.20000000298023224,
+          0.0973350927233696,
+          0.034420453011989594
+        ],
+        "size": [
+          0.4000000059604645,
+          0.0973350927233696,
+          0.06884090602397919
+        ]
+      },
+      "use": "갈치·달빛 갈치 낚시 결과",
+      "downloaded": "2026-09-30",
+      "webBytes": 295292,
+      "webSha256": "65913822ed785deeee43359f26f5b67373c32124b3e997d7a865640b3b4d7a14",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishCod",
+      "id": "fish-f090",
+      "source": "https://karchive.vibeline.co.kr/models/fish-f090",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/crops-fish/fish-f090.glb",
+      "file": "fishCod.glb",
+      "bytes": 3907504,
+      "sha256": "55ba3b5e87601e3097f82d5576e7906a42123a2bb4265a6c660309dcb8539473",
+      "meshes": 1,
+      "triangles": 6142,
+      "textures": 1,
+      "textureMax": 512,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.20000001788139343,
+          0,
+          -0.04731205105781555
+        ],
+        "max": [
+          0.20000001788139343,
+          0.15336859226226807,
+          0.04731205105781555
+        ],
+        "size": [
+          0.40000003576278687,
+          0.15336859226226807,
+          0.0946241021156311
+        ]
+      },
+      "use": "겨울 왕대구(전설) 낚시 결과",
+      "downloaded": "2026-09-30",
+      "webBytes": 288388,
+      "webSha256": "6510773850d106a238ce35d1a9d9ae8d254403809ccde3ea446568d2659caaef",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
     }
   ]
 }

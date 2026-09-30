@@ -2,12 +2,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Material, Object3D, Texture } from 'three';
 import { LOUNGE_MODELS } from '../lounge-model-assets';
-import { ItemIcon } from './ItemIcon';
+import { FishArt } from './FishArt';
 
 const FISH_MODELS: Record<string, string> = {
   catfish: LOUNGE_MODELS.fishCatfish,
   carp: LOUNGE_MODELS.fishCarp,
   mackerel: LOUNGE_MODELS.fishMackerel,
+  crucian: LOUNGE_MODELS.fishCrucian,
+  mandarin: LOUNGE_MODELS.fishMandarin,
+  hairtail: LOUNGE_MODELS.fishHairtail,
+  moonhairtail: LOUNGE_MODELS.fishHairtail,
+  icecod: LOUNGE_MODELS.fishCod,
 };
 
 /** A still trophy, loaded only for a matching catch. No animation loop; the
@@ -98,6 +103,6 @@ export function FishCatchModel({ fish }: { fish: string }) {
     return () => { stopped = true; cleanup(); };
   }, [url]);
   return <span className="l-catch-model" ref={host} data-ready={ready || undefined}>
-    <ItemIcon id={fish} size={132} />
+    <FishArt id={fish} size={132} />
   </span>;
 }

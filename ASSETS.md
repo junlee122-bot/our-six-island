@@ -21,9 +21,10 @@
 | B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
 | C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
 | C2 | Higgsfield (GPT Image 2.5, 2026-09-28) | 카지노 대부 로제, 은행 직원 냐모, 미용실 그웬 전신 스프라이트, 허풍 주점 카드 5장(에이스·킹·퀸·조커·뒷면: 호랑이·학·달·도깨비 자체 도안) | `lounge/casino-lender-rose.webp`, `bank-clerk-nyamo.webp`, `salon-stylist-gwen.webp`, `lounge/cards/tavern-*.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/services-generation.json`, 원본·프롬프트 `_originals/`. **로제·그웬은 Riot Games 캐릭터 팬아트**(아래 IP 표) | 사용 중 |
+| C3 | Higgsfield (GPT Image 2.5, 2026-09-30) | 낚시 업그레이드: 손그림 물고기·조개 아이콘 35종과 보물 상자(6×6 아틀라스 1장) | `lounge/fishing/*.webp`, 원본 `lounge/fishing/_originals/fish-icons-atlas.png` | 유료 2.75 크레딧(73.5 → 70.75). 작업 ID·프롬프트·SHA-256: `public/assets/lounge/fishing/generation.json`. 자르기: `scripts/slice-fish-atlas.mjs` | 낚시 창·낚시 수첩·결과 카드 |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
-| D2 | kArchive (쓰레드 dogfooter, 2026-09-28) | 은행·미용실 외관, 낚시 결과 물고기 3종(메기·잉어·고등어) | `public/models/village/life-services/` (5개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
+| D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
 | E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
@@ -611,6 +612,11 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 - 상세 페이지 약관(2026-09-28 확인): 개인·상업 프로젝트 사용 및 수정 가능, 출처 표기 필수, 원본 자료 재판매 금지. Creative Commons 자료로 표기하지 않습니다.
 - 웹용 5개 합계 2,242,228바이트. dedup/weld/prune, 양자화, 텍스처 최대 1024px WebP(q88) 최적화. 공개 배포에서는 원본 폴더를 제외하고 웹용 사본만 사용합니다.
 - 원본 보관: `public/models/_originals/village/life-services/`.
+- 2026-09-30 낚시 업그레이드: 붕어(fish-f227)·쏘가리(fish-f233)·갈치(fish-f126, 달빛 갈치에도 사용)·대구(fish-f090, 전설 "겨울 왕대구")를 같은 약관으로 추가했습니다. 결과 카드에서 132px로만 보여 텍스처를 512px로 줄였습니다(`scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`). 웹 사본 약 1.1MB, 원본 약 16MB. 기록은 같은 `assets.json`.
+
+## 낚시 아이콘 아틀라스 — 2026-09-30
+
+Higgsfield GPT Image 2.5(high, 2K, 1:1, `use_unlim: false`)로 6×6 아틀라스 1장을 생성했습니다(2.75 크레딧, 73.5 → 70.75). 작업 ID `3a70b9ba-d4d2-46e3-aa5c-acb3f6983bae`, 원본 SHA-256 `2e25c705a913c02124c1d3c73c62283a5fd4303e8de4cd71167fc0a154c71157`. 참고 이미지는 넣지 않았고, 기존 아이템 그림처럼 갈색 잉크 외곽선·흙빛 색을 프롬프트로 지정했습니다. 마젠타 배경을 알파로 바꾸고 칸마다 잘라 128px WebP 36장을 만듭니다(`node scripts/slice-fish-atlas.mjs`). 등록은 `app/lounge-assets.ts`의 `FISH_PAINTED`, 그리는 곳은 `app/lounge/FishArt.tsx`(없는 어종은 기존 벡터 아이콘). 못 본 물고기의 그림자는 필터가 아니라 마스크로 그립니다. 프롬프트 전문은 `public/assets/lounge/fishing/generation.json`.
 
 ## 로제·냐모·그웬과 허풍 카드 · 2026-09-28
 

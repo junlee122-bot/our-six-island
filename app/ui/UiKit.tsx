@@ -10,6 +10,7 @@ import { Glyph, GLYPH_NAMES } from './Glyph';
 import { KeyHint, KeyHintBar } from './KeyHint';
 import { CloseButton, Panel } from './Panel';
 import { Tabs } from './Tabs';
+import { FishingReel } from '../lounge/FishingReel';
 import './ui-kit.css';
 
 const VENUES = [
@@ -20,7 +21,8 @@ const VENUES = [
 ] as const;
 
 export default function UiKit() {
-  const [tab, setTab] = useState<'buttons' | 'panels' | 'glyphs'>('buttons');
+  const [tab, setTab] = useState<'buttons' | 'panels' | 'glyphs' | 'reel'>('buttons');
+  const [reel, setReel] = useState(0);
   const [open, setOpen] = useState(false);
   return (
     <main className="ui-kit l-app" data-testid="ui-kit">
@@ -37,6 +39,7 @@ export default function UiKit() {
           { id: 'buttons', label: '버튼과 키', glyph: 'hand' },
           { id: 'panels', label: '창 껍데기', glyph: 'book' },
           { id: 'glyphs', label: '글리프', glyph: 'star' },
+          { id: 'reel', label: '손맛 겨루기', glyph: 'fish' },
         ]}
       />
       {tab === 'buttons' && (
@@ -129,6 +132,18 @@ export default function UiKit() {
             </li>
           ))}
         </ul>
+      )}
+      {tab === 'reel' && (
+        <div className="ui-kit-reel" data-testid="ui-kit-reel">
+          {/* The fishing reel fight on a fixed seed (no server): it restarts when it ends. */}
+          <FishingReel
+            key={reel}
+            setup={{ seed: 1234 + reel, behaviour: 'mixed', difficulty: 45, bar: 2_800, gain: 42, loss: 45, treasure: { at: 20, pos: 6_000 } }}
+            behaviourName="제멋대로"
+            difficulty={45}
+            onDone={() => setTimeout(() => setReel((n) => n + 1), 1_200)}
+          />
+        </div>
       )}
       {open && (
         <Modal title="수첩 창" panel="journal" onClose={() => setOpen(false)} keyHints={[{ keys: ['action'], does: '고르기' }]}>

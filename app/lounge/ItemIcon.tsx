@@ -108,7 +108,7 @@ const CROP_ART: Record<string, ReactNode> = {
 };
 
 /* ------------------------------------------------------------ fish */
-type FishLook = { shape: 'fish' | 'long' | 'flat' | 'round' | 'squid' | 'claw' | 'tiny' | 'octo'; body: string; belly?: string; mark?: string };
+type FishLook = { shape: 'fish' | 'long' | 'flat' | 'round' | 'squid' | 'claw' | 'tiny' | 'octo' | 'shell'; body: string; belly?: string; mark?: string };
 const FISH_LOOK: Record<string, FishLook> = {
   crucian: { shape: 'fish', body: '#8a8f5a', belly: '#c9c99a' },
   carp: { shape: 'fish', body: '#b9854a', belly: '#e3c08a' },
@@ -157,6 +157,19 @@ const FISH_LOOK: Record<string, FishLook> = {
   kkeuri: { shape: 'fish', body: '#8fa0a8', belly: '#eef0ea', mark: '#e08a4a' },
   nuchi: { shape: 'fish', body: '#b3a37f', belly: '#efe6cf', mark: '#7d6e4f' },
   bagrid: { shape: 'fish', body: '#b58a3f', belly: '#f0dca0', mark: '#4a3a1f' },
+  // 낚시 업그레이드 (lounge-fish-data.ts).
+  mullet: { shape: 'fish', body: '#8f9aa3', belly: '#eef1f2', mark: '#5f6a73' },
+  sandfish: { shape: 'fish', body: '#a39a7c', belly: '#f1ebd8', mark: '#7a6e50' },
+  filefish: { shape: 'flat', body: '#b8a07a', mark: '#6f5a3a' },
+  blossomtrout: { shape: 'fish', body: '#e9a7b4', belly: '#fff0f3', mark: '#c95a78' },
+  lakelord: { shape: 'fish', body: '#4a5a4f', belly: '#9fae98', mark: '#2d3a31' },
+  icecod: { shape: 'fish', body: '#9fb3c4', belly: '#f2f6f9', mark: '#6a8196' },
+  snail: { shape: 'shell', body: '#6e6a4a', mark: '#2f2d20' },
+  shrimp: { shape: 'claw', body: '#c9a88a' },
+  crab: { shape: 'claw', body: '#d0602f' },
+  clam: { shape: 'shell', body: '#c9b48f', mark: '#7a6546' },
+  oyster: { shape: 'shell', body: '#a9a49a', mark: '#6d685e' },
+  conch: { shape: 'shell', body: '#e0b890', mark: '#a8704a' },
 };
 function fishArt(id: string): ReactNode {
   const f = FISH_LOOK[id];
@@ -222,6 +235,14 @@ function fishArt(id: string): ReactNode {
           ))}
           {eye(20, 20)}
           {eye(28, 20)}
+        </>
+      );
+    case 'shell':
+      return (
+        <>
+          <path d="M7 35 C7 19 19 10 31 12 C42 14 45 27 39 35 Z" fill={f.body} {...stroke} />
+          <path d="M13 34 C15 25 19 18 25 15 M20 35 C22 27 26 20 32 17 M28 35 C30 29 33 25 38 23" stroke={f.mark} strokeWidth="1.5" fill="none" opacity=".75" />
+          <path d="M7 35 h32" stroke={INK} strokeOpacity=".35" strokeWidth="1.2" />
         </>
       );
     case 'claw':
@@ -626,6 +647,11 @@ const DISH_LOOK: Record<string, DishLook> = {
   tteokguk: { shape: 'bowl', food: '#f4f1e6', bits: '#f3cc3c' },
   fishstew: { shape: 'pot', food: '#e0562f', bits: '#e8b6a8' },
   flowertea: { shape: 'cup', food: '#f3c677', bits: '#f28bb5' },
+  sashimi: { shape: 'plate', food: '#f2a08a', bits: '#f7efe4' },
+  haemuljeon: { shape: 'plate', food: '#e3b85a', bits: '#6fa04a' },
+  guljeon: { shape: 'plate', food: '#efd07a', bits: '#b9b4a8' },
+  kkotgetang: { shape: 'pot', food: '#d9542f', bits: '#e8a07a' },
+  daseulgiguk: { shape: 'bowl', food: '#7fb0a0', bits: '#4f6a4a' },
 };
 function dishArt(id: string): ReactNode {
   const d = DISH_LOOK[id];
@@ -750,6 +776,57 @@ const TOOL_ART: Record<string, ReactNode> = {
       <path d="M8 32 C12 22 18 38 24 28 S34 20 40 26" stroke="#e58ba0" strokeWidth="6" fill="none" strokeLinecap="round" />
       <path d="M14 30 v4 M20 30 v4 M26 25 v4 M32 24 v4" stroke="#c9667e" strokeWidth="1.2" />
       <circle cx="40" cy="25" r="1.3" fill={INK} />
+    </>
+  ),  'bait-dough': (
+    <>
+      <ellipse cx="24" cy="30" rx="15" ry="10" fill="#d9b77a" stroke="#a8844a" strokeWidth="1.5" />
+      <circle cx="18" cy="28" r="2" fill="#f1dcaa" />
+      <circle cx="28" cy="32" r="2.4" fill="#f1dcaa" />
+      <circle cx="25" cy="25" r="1.6" fill="#b89458" />
+    </>
+  ),
+  'bait-shrimp': (
+    <>
+      <path d="M10 30 C10 18 24 12 34 18 C40 22 38 32 30 34" stroke="#e8866a" strokeWidth="7" fill="none" strokeLinecap="round" />
+      <path d="M16 22 v6 M22 18 v6 M28 17 v6" stroke="#c9604a" strokeWidth="1.3" />
+      <path d="M34 18 L42 10 M36 20 L45 16" stroke="#c9604a" strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  ),
+  'bait-glow': (
+    <>
+      <circle cx="24" cy="26" r="15" fill="#fff3b0" opacity=".55" />
+      <ellipse cx="24" cy="26" rx="7" ry="10" fill="#e8d23a" stroke="#a8941a" strokeWidth="1.4" />
+      <path d="M17 22 C10 16 10 12 14 11 M31 22 C38 16 38 12 34 11" stroke="#a8941a" strokeWidth="1.4" fill="none" />
+    </>
+  ),
+  'tackle-float': (
+    <>
+      <path d="M24 4 v8 M24 38 v6" stroke="#4a3423" strokeWidth="1.6" />
+      <ellipse cx="24" cy="25" rx="10" ry="13" fill="#fffaf0" stroke="#4a3423" strokeWidth="1.5" />
+      <path d="M14 25 a10 13 0 0 0 20 0z" fill="#d9573f" />
+    </>
+  ),
+  'tackle-trap': (
+    <>
+      <path d="M24 4 v10" stroke="#4a3423" strokeWidth="1.6" />
+      <ellipse cx="24" cy="24" rx="8" ry="10" fill="#6f8fa3" stroke="#3d5566" strokeWidth="1.5" />
+      <path d="M24 34 v4 C24 44 16 44 16 38" stroke="#5a5a52" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M18 20 l12 8 M30 20 l-12 8" stroke="#dfe8ee" strokeWidth="1.4" />
+    </>
+  ),
+  'tackle-treasure': (
+    <>
+      <path d="M24 4 v8" stroke="#4a3423" strokeWidth="1.6" />
+      <ellipse cx="24" cy="24" rx="9" ry="12" fill="#f3c332" stroke="#a87a12" strokeWidth="1.5" />
+      <path d="M24 17 l2 4 4.5 .6 -3.3 3 .8 4.4 -4 -2.2 -4 2.2 .8 -4.4 -3.3 -3 4.5 -.6z" fill="#fff6c8" />
+      <path d="M24 36 v6" stroke="#4a3423" strokeWidth="1.6" />
+    </>
+  ),
+  crabpot: (
+    <>
+      <path d="M8 18 h32 l-3 22 h-26z" fill="#b58a52" stroke="#7a5530" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M13 18 l2 22 M19 18 l1 22 M25 18 v22 M31 18 l-1 22 M37 18 l-2 22 M9 26 h30 M10 33 h28" stroke="#7a5530" strokeWidth="1.1" />
+      <path d="M16 18 C16 10 32 10 32 18" stroke="#6f726b" strokeWidth="2" fill="none" />
     </>
   ),
 };

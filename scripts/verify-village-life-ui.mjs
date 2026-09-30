@@ -26,6 +26,8 @@ if (!pages || !fs.existsSync(path.join(pages, 'index.html')))
   throw new Error('Pass --pages with an existing Pages build; this script never builds or deploys.');
 const out = path.resolve(opt('out', '.ui-shots/village-life'));
 const only = new Set(opt('only', 'desktop,mobile').split(','));
+// --steps a,b: run only these steps (plus login) while iterating locally.
+const onlySteps = opt('steps', '') ? new Set(['login-and-winter-world', ...opt('steps', '').split(',')]) : null;
 assert.ok(only.size && [...only].every((v) => v === 'desktop' || v === 'mobile'), '--only accepts desktop,mobile');
 fs.mkdirSync(out, { recursive: true });
 
@@ -125,6 +127,7 @@ async function runView(mobile = false) {
       if (allMetrics) for (const metric of UI_METRICS) assert.equal(measurements[metric], 0, label + ': ' + metric);
     };
     const step = async (label, work) => {
+      if (onlySteps && !onlySteps.has(label)) return;
       const at = performance.now();
       console.log(`${name} START ${label}`);
       try { await work(); res.steps.push({ label, pass: true, ms: Math.round(performance.now() - at) }); console.log(`${name} PASS ${label}`); }
@@ -558,14 +561,34 @@ async function runView(mobile = false) {
       }
       await page.keyboard.press('Escape');
       await wait(() => !document.querySelector('[data-testid=fishing]'));
-      assert.equal(model().me.fishing.pending, null, 'cancel clears the mock server cast');
-      assert.ok(commands.some((c) => c.action?.kind === 'cancelCast'), 'cancel came from browser UI');
+      assert.equal(model().angling.me.cast, null, 'cancel clears the mock server cast');
+      assert.ok(commands.some((c) => c.action?.kind === 'anglerCancel'), 'cancel came from browser UI');
       await sleep(450);
       assert.ok(Math.hypot((await position()).x - before.x, (await position()).z - before.z) < .02, 'no queued/held movement survives cancel');
       await focus(); await page.keyboard.down('ArrowUp'); await sleep(600); await page.keyboard.up('ArrowUp'); await sleep(350);
       const after = await position();
       assert.ok(Math.hypot(after.x - before.x, after.z - before.z) > .15, 'walking resumes after cancel');
       await shot('fishing-resumed');
+    });
+    await step('fishing-reel-fight', async () => {
+      // 낚시 업그레이드: bite → hook → the reel fight shows, holding lifts the zone, Esc lets the fish go.
+      await directory('fish-river');
+      await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.fishSpot === 'river');
+      await pressAction(); await page.getByTestId('fishing').waitFor();
+      await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'bite', null, 20_000);
+      await page.keyboard.press('Space');
+      await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'fight', null, 15_000);
+      assert.ok(commands.some((c) => c.action?.kind === 'anglerHook'), 'hook came from browser UI');
+      assert.ok(model().angling.me.fight?.setup, 'the server stored the fight seed');
+      const zone = () => js(() => getComputedStyle(document.querySelector('[data-testid=fish-reel]')).getPropertyValue('--zone-y'));
+      await page.keyboard.down('Space'); await sleep(700);
+      const lifted = parseFloat(await zone());
+      await page.keyboard.up('Space');
+      assert.ok(lifted > 0, 'holding lifts the catch zone');
+      await shot('fishing-fight');
+      await page.keyboard.press('Escape');
+      await wait(() => !document.querySelector('[data-testid=fishing]'));
+      assert.equal(model().angling.me.fight, null, 'Esc lets the fish go on the server too');
     });
   } catch (error) {
     if (!res.steps.some((s) => !s.pass)) report.failures.push(`${name}: setup/cleanup: ${error.message}`);
