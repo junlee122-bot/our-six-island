@@ -76,6 +76,7 @@ import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorPick, mineDrop, mineF
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
 import { moodXpMult } from './lounge-mood.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
 
 const DAY = 86_400_000,
   HOUR = 3_600_000;
@@ -557,16 +558,18 @@ export function nodesFor(life: LifeState, uid: string, day: number, area: NodeAr
   return out.map(({ id, kind, x, z }) => ({ id, kind, x, z }));
 }
 /** Whether a region is open for everyone now. */
-export function areaOpen(life: LifeState, area: NodeArea | 'mine', now: number) {
+export function areaOpen(life: LifeState, area: NodeArea | 'mine', now: number, uid?: string) {
   if (area === 'village') return true;
+  if (uid !== undefined && hasExplorerPass(life.actors[uid], now)) return true;
   if (!researchDone(life, 'trail', now)) return false;
   return area === 'woods' ? !!life.growth?.c?.woods : true;
 }
 /** Floors a friend may go to now (1, the next one after a found ladder, lift floors). */
 export function mineCanGo(life: LifeState, uid: string, floor: number, now: number): string | null {
   if (floor === 0) return null;
-  if (!researchDone(life, 'trail', now)) return GROWTH_REJECT.mineClosed;
+  if (!researchDone(life, 'trail', now) && !hasExplorerPass(life.actors[uid], now)) return GROWTH_REJECT.mineClosed;
   if (!safe(floor) || floor < 1 || floor > MINE_FLOORS_P2) return GROWTH_REJECT.mineFloor;
+  if (hasExplorerPass(life.actors[uid], now)) return null;
   const lift = researchDone(life, 'lift', now);
   if (floor >= LIFT_FROM_FLOOR && !lift) return GROWTH_REJECT.mineLift;
   if (floorPick(floor) > toolTier(life, uid, 'pickaxe')) return GROWTH_REJECT.minePick;
@@ -717,7 +720,7 @@ export function growthAction(
       if (!node) fail(GROWTH_REJECT.node);
       if ((a.kind === 'smash') !== (node!.kind === 'rock')) fail(GROWTH_REJECT.node);
       const nodeArea = node!.area ?? 'village';
-      if (!areaOpen(life, nodeArea, now)) fail(GROWTH_REJECT.area);
+      if (!areaOpen(life, nodeArea, now, uid)) fail(GROWTH_REJECT.area);
       if (!nodesFor(life, uid, kstDay(now), nodeArea).some((n) => n.id === node!.id)) fail(GROWTH_REJECT.node);
       if (u.nodes?.includes(node!.id)) fail(GROWTH_REJECT.nodeTaken);
       const needTier = NODE_INFO[node!.kind].tier ?? 1;
@@ -988,7 +991,7 @@ function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<str
   const day = kstDay(now),
     ok = UUID.test(uid) && uid in life.actors;
   const nodes = (area: NodeArea) =>
-    ok && areaOpen(life, area, now) ? nodesFor(life, uid, day, area).map((n) => ({ ...n, taken: taken.has(n.id) })) : [];
+    ok && areaOpen(life, area, now, uid) ? nodesFor(life, uid, day, area).map((n) => ({ ...n, taken: taken.has(n.id) })) : [];
   const broken: Record<number, number[]> = {};
   for (const k of u.mrock ?? []) {
     const [f, r] = k.split(':').map(Number);
@@ -999,8 +1002,8 @@ function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<str
     if (id !== uid && id in life.actors && x.day === day && (x.mine?.at ?? 0) > 0) friends[life.actors[id]] = x.mine!.at;
   const at = u.mine?.at ?? 0;
   return {
-    hill: { open: areaOpen(life, 'hill', now), nodes: nodes('hill') },
-    woods: { open: areaOpen(life, 'woods', now), cleared: life.growth?.c?.woods ?? null, nodes: nodes('woods') },
+    hill: { open: areaOpen(life, 'hill', now, uid), nodes: nodes('hill') },
+    woods: { open: areaOpen(life, 'woods', now, uid), cleared: life.growth?.c?.woods ?? null, nodes: nodes('woods') },
     mine: {
       open: researchDone(life, 'trail', now),
       lift: researchDone(life, 'lift', now),
