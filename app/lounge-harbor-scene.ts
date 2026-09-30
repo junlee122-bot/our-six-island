@@ -81,16 +81,32 @@ export class HarborSet extends DistrictSet {
       block.rotation.y = rnd('bw' + z) * 1.2;
       this.root.add(shadowed(block));
     }
-    // Moored boats.
+    // Moored boats: an open hull (painted sides, a cream gunwale, a plank floor
+    // and two thwarts), since from the camera's height a lidded box reads as a slab.
     for (const [i, b] of HARBOR_BOATS.entries()) {
       const g = new THREE.Group();
-      const hull = this.box(b.len * 0.36, 0.42, b.len, b.color);
-      hull.position.y = 0.05;
-      const rim = this.box(b.len * 0.36 + 0.08, 0.08, b.len + 0.08, '#f2e6cf');
-      rim.position.y = 0.3;
-      const seat = this.box(b.len * 0.3, 0.06, 0.3, '#8a6a48');
-      seat.position.set(0, 0.28, 0);
-      g.add(hull, rim, seat);
+      const w = b.len * 0.36;
+      const floor = this.box(w - 0.2, 0.06, b.len - 0.2, '#6b4e36');
+      floor.position.y = 0.06;
+      g.add(floor);
+      const sides: [x: number, z: number, sw: number, sd: number][] = [
+        [-(w / 2 - 0.06), 0, 0.12, b.len],
+        [w / 2 - 0.06, 0, 0.12, b.len],
+        [0, -(b.len / 2 - 0.06), w, 0.12],
+        [0, b.len / 2 - 0.06, w, 0.12],
+      ];
+      for (const [x, z, sw, sd] of sides) {
+        const side = this.box(sw, 0.42, sd, b.color);
+        side.position.set(x, 0.05, z);
+        const rail = this.box(sw + 0.05, 0.06, sd + 0.05, '#f2e6cf');
+        rail.position.set(x, 0.29, z);
+        g.add(side, rail);
+      }
+      for (const z of [-b.len * 0.2, b.len * 0.22]) {
+        const seat = this.box(w - 0.2, 0.06, 0.3, '#a07c55');
+        seat.position.set(0, 0.2, z);
+        g.add(seat);
+      }
       g.position.set(b.x, 0, b.z);
       g.rotation.y = b.rot;
       g.name = 'harbor-boat-' + i;
