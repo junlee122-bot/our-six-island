@@ -13,6 +13,7 @@
 - **스택**: React 19 + Vite(vinext) + three.js, TypeScript. 서버는 Supabase(Edge Functions `hohyeon-auth`, `hohyeon-api` + Postgres `hohyeon` 스키마, 비공개 Realtime). 데스크톱 앱은 Tauri 2(`desktop/`).
 - **서버 권위(authoritative) 구조**: 게임 규칙은 `app/*.ts`의 순수 엔진에 있고, 같은 코드가 Edge Function에 번들되어 서버에서 판정합니다. 클라이언트는 결과만 그립니다.
 - **월드 저장**: DB 한 행(JSON) + revision CAS. 범(화폐) 원장 불변식 `잔액 + 예약 + 하우스 − 지급 = 계정수 × 100,000`을 테스트가 항상 검사합니다.
+- **2026-09-30 게임 점검**: 응답 크기 41KB → 폴링 5KB(life 한 번만, 바뀔 때만), 테이블은 내 판이 바뀔 때만 다시 그림, 3분 넘게 끊겼다 돌아와도 자리 되찾기, 고장 난 방의 허풍 카드 참가비 환불, 블랙잭 서렌더, 게임마다 **규칙·기록** 창(규칙 카드·내 기록·주간 순위, `world.tableStats`). 수치·미룬 일: [게임 점검](handover/design/audit-games-2026-09-30.md).
 - **2026-09-28 생활 업데이트**: 미용실·은행, 지도 친구 위치, 낚시 반응 등급·보너스, 차용증·방어 물품·강도, 루미 장부·대부 창구, NPC 친밀도/방 초대. 구현 범위·수치·검증은 [생활 업데이트](handover/design/life-services-2026-09-28.md)를 보세요. 은행 보관금도 위 원장의 예약 합계에 포함합니다.
 
 ## 2. 처음 ChatGPT 코드와 얼마나 달라졌나
@@ -129,7 +130,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 분장실·허풍 카드 그림 | `app/lounge-wardrobe.tsx`, `lounge-wardrobe-club.css`, `lounge-liarsbar-table.tsx`, `lounge-liarsbar-table.css` |
 | 성장·지역 | `app/lounge-growth*.ts`, `lounge-areas.ts`, `lounge-mine.ts`, `lounge-walk-world.ts` |
 | 무드 | `app/lounge-mood*.ts` |
-| 게임 | `app/lounge-blackjack.ts`, `lounge-poker.ts`, `lounge-seotda*`, `lounge-gostop*`, `lounge-chess*`, `lounge-yacht.ts`, `lounge-liar.ts`, `lounge-liarsbar.ts` |
+| 게임 | `app/lounge-blackjack.ts`, `lounge-poker.ts`, `lounge-seotda*`, `lounge-gostop*`, `lounge-chess*`, `lounge-yacht.ts`, `lounge-liar.ts`, `lounge-liarsbar.ts`, 기록 `lounge-table-stats.ts`, 규칙 카드 `lounge/game-rules.ts`·`lounge/TableGuide.tsx` |
 | 마을 3D | `app/lounge-village*.ts(x)` |
 | 실내 3D | `app/lounge-venues.ts`, `lounge-interior-*.ts(x)`, `lounge-tavern-*.ts` |
 | 화면 | `app/lounge-game.tsx`(최상위), `app/lounge/*.tsx`, `app/ui/*` |
