@@ -17,6 +17,8 @@ import {
   type LifeView,
 } from '../lounge-life';
 import { FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
+import { FIXTURE_BY_ID } from '../lounge-farm-data';
+import { witherAt } from '../lounge-farm';
 import { harvestOf, harvestText, type Harvest } from '../lounge-life-ui';
 import { ITEM_BY_ID } from '../lounge-items';
 import { SEASON_INFO, WEATHER_INFO } from '../lounge-calendar';
@@ -46,6 +48,17 @@ const PAGE_ROWS = [
   [3, 4, 5],
 ] as const;
 const SEED_KEY = 'bumtadew-last-seed';
+/** Soil items the ledger offers (quality 1–3, then the two treatments). */
+const SOIL_ITEMS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
+type SoilItem = (typeof SOIL_ITEMS)[number];
+const SOIL_LEVEL: Record<SoilItem, number> = { fertilizer: 1, 'fertilizer-deluxe': 2, 'fertilizer-star': 3, 'speed-gro': 0, retaining: 0 };
+const FERT_NAME: Record<1 | 2 | 3, string> = { 1: '비료', 2: '고급 비료', 3: '별빛 비료' };
+const QUALITY_WORD = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' } as const;
+/** "3시간 뒤" / "내일 0시" style time for a future moment. */
+function whenAt(at: number, now: number) {
+  if (at <= now) return '곧';
+  return `${duration(at - now)} 뒤`;
+}
 
 function duration(ms: number) {
   const minutes = Math.max(1, Math.ceil(ms / 60_000));
@@ -69,16 +82,7 @@ function lastSeed(): Crop | null {
   }
 }
 
-export function FarmLedger({
-  room,
-  view,
-  notify,
-  onClose,
-  onShop,
-  onBag,
-  onWalk,
-  actor,
-}: {
+type LedgerProps = {
   /** My actor (resident index). */
   actor: number;
   room: CloudRoom;
@@ -89,7 +93,20 @@ export function FarmLedger({
   onBag?: () => void;
   /** Walks there in the village (switching to the village first). */
   onWalk?: (point: VillagePoint) => void;
-}) {
+  /** 텃밭 확장: opens another page of the farm window (a fixture tile → 밭 배치). */
+  onPage?: (page: 'layout' | 'works' | 'market') => void;
+};
+/** The ledger as its own window (older callers). */
+export function FarmLedger(props: LedgerProps) {
+  const name = ACTORS[props.actor] ?? '';
+  return (
+    <Modal title={`${name}네 텃밭 장부`} onClose={props.onClose} className="l-ledger" panel="plain" wide>
+      <FarmLedgerBody {...props} />
+    </Modal>
+  );
+}
+/** The ledger pages (my yard + the selected plot); FarmModal puts it under its tabs. */
+export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onWalk, actor, onPage }: LedgerProps) {
   const life = view.life;
   const now = useServerClock(view.clockOffset, life?.me.farm.map((p) => p.readyAt) ?? [], 5000);
   const [busy, setBusy] = useState(false);
@@ -130,13 +147,22 @@ export function FarmLedger({
   const pouch = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && plantable(c));
   const offSeason = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && !plantable(c));
   const chosen = packet && pouch.includes(packet) ? packet : (pouch[0] ?? null);
+  /** The season ends before this crop could ripen even when watered (it would wither). */
+  const sheltered = greenhouse || !!life?.growth?.mods.offSeason;
+  const withersSoon = (crop: Crop) => {
+    const w = witherAt({ crop, plantedAt: now, wateredAt: null }, sheltered);
+    return w !== null && w < now + CROP_INFO[crop].growMs * 0.6;
+  };
   const stageOf = (p: Plot) => (p.crop ? plotStage(p, now) : 0);
   const ready = farm.filter((p) => p.crop && stageOf(p) === 3).length;
   const empty = farm.filter((p) => !p.crop).length;
   const thirstyOf = (p: Plot) => !!p.crop && stageOf(p) < 3 && p.wateredAt === null && !p.rained;
   const thirsty = farm.filter(thirstyOf).length;
   const inv = life?.me.inv ?? {};
-  const fertOf = (level: 1 | 2) => farm.filter((p) => p.crop && (p.fert ?? 0) < level && stageOf(p) < 3).length;
+  /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙). */
+  const soilOpen = (p: Plot, item: SoilItem) =>
+    !!p.crop && stageOf(p) < 3 && (item === 'speed-gro' ? !p.sg : item === 'retaining' ? !p.rs : (p.fert ?? 0) < SOIL_LEVEL[item]);
+  const fertOf = (item: SoilItem) => farm.filter((p) => soilOpen(p, item)).length;
   const nextSize = size === 6 ? 9 : size === 9 ? 12 : 0;
   // Default selection: something to do first (ripe, then empty, then thirsty).
   const current =
@@ -148,6 +174,8 @@ export function FarmLedger({
         );
   const plot = farm[current];
 
+  const fixtures = life?.farmx?.fixtures ?? [];
+  const fixtureAt = (i: number) => fixtures.find((f) => f.tile === i) ?? null;
   const friends = useMemo(() => {
     if (!life) return [];
     const me = life.actors ? Object.entries(life.actors) : [];
@@ -160,18 +188,15 @@ export function FarmLedger({
           need: plots.filter((p) => p.needsWater).length,
           growing: plots.filter((p) => p.crop).length,
           done: !!life.me.waterFriend?.includes(actor),
+          ripe: plots.filter((p) => p.crop && p.stage === 3).length,
+          helped: !!life.farmx?.helped.includes(actor),
         };
       })
-      .filter((f) => f.need > 0 || f.done)
+      .filter((f) => f.need > 0 || f.done || (f.ripe > 0 && !f.helped))
       .sort((a, b) => Number(a.done) - Number(b.done) || b.need - a.need);
   }, [life, actor]);
 
-  if (!life)
-    return (
-      <Modal title="텃밭 장부" onClose={onClose} className="l-ledger" panel="plain">
-        <p className="l-ledger-empty">마을에 연결되면 장부를 펼칠 수 있어요.</p>
-      </Modal>
-    );
+  if (!life) return <p className="l-ledger-empty">마을에 연결되면 장부를 펼칠 수 있어요.</p>;
 
   const harvest = async (i: number) => {
     const before = room.snapshot().life;
@@ -180,7 +205,7 @@ export function FarmLedger({
       const got = harvestOf(before, after);
       setBasket(got);
       if (got.length) notify(`${harvestText(got)}을 바구니에 담았어요.`);
-      lifeSfx(got.some((g) => g.quality === 2) ? 'sparkle' : 'pop');
+      lifeSfx(got.some((g) => g.quality >= 2) ? 'sparkle' : 'pop');
       // Keep the next ripe plot selected; holding a key must not accidentally
       // plant a new seed into the freshly emptied plot.
       const next = after?.me.farm.findIndex((p) => p.crop && (p.readyAt ?? Infinity) <= Date.now() + room.snapshot().clockOffset) ?? -1;
@@ -202,13 +227,17 @@ export function FarmLedger({
   const waterAll = () => void run({ kind: 'water', plot: -1 }, `목마른 ${thirsty}칸에 물을 줬어요.`, 'water');
   const onFertilize = (event: MouseEvent<HTMLButtonElement>) => {
     const item = event.currentTarget.dataset.item;
-    if (item !== 'fertilizer' && item !== 'fertilizer-deluxe') return;
+    if (!item || !(SOIL_ITEMS as readonly string[]).includes(item)) return;
     void run({ kind: 'fertilize', plot: current, item }, `${bedName(current)}에 ${ITEM_BY_ID[item].name}를 뿌렸어요.`, 'plant');
   };
   /** The one thing E does for the selected plot. */
   const primary = (i: number) => {
     const p = farm[i];
     if (!p) return;
+    if (fixtureAt(i)) {
+      onPage?.('layout');
+      return;
+    }
     if (!p.crop) {
       if (chosen) plantOne(i, chosen);
       return;
@@ -258,12 +287,11 @@ export function FarmLedger({
 
   const actKey = keyLabel(getSettings().keys.action);
   const weather = life.weather?.today;
-  const name = ACTORS[actor] ?? '';
   const st = plot ? stageOf(plot) : 0;
   const readyAt = plot?.readyAt ?? 0;
   const regrow = plot?.crop ? CROP_INFO[plot.crop].regrow : undefined;
   return (
-    <Modal title={`${name}네 텃밭 장부`} onClose={onClose} className="l-ledger" panel="plain" wide>
+    <>
       {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Arrow keys / 1–9 / H / W move and act inside the ledger. */}
       <div
         ref={bookRef}
@@ -309,7 +337,8 @@ export function FarmLedger({
                             </span>
                           );
                         const s = stageOf(p);
-                        const state = !p.crop ? 'empty' : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
+                        const fixture = fixtureAt(i);
+                        const state = fixture ? 'fixture' : !p.crop ? (p.dead ? 'dead' : 'empty') : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
                         return (
                           <button
                             key={i}
@@ -319,13 +348,23 @@ export function FarmLedger({
                             data-state={state}
                             data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
                             aria-selected={current === i}
-                            aria-label={`${bedName(i)} · ${p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : '빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}`}
+                            aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : '빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}`}
                             data-testid={`plot-${i}`}
                             onClick={() => setSel(i)}
                             onDoubleClick={() => primary(i)}
                           >
                             <span className="l-ledger-soil" />
-                            {p.crop ? <CropStageArt crop={p.crop} stage={s} size={60} /> : null}
+                            {fixture ? <ItemIcon id={fixture.kind} size={46} /> : p.crop ? <CropStageArt crop={p.crop} stage={s} size={60} /> : null}
+                            {!fixture && !p.crop && p.dead ? (
+                              <span className="l-ledger-dead" aria-hidden="true">
+                                <CropStageArt crop={p.dead} stage={1} size={40} />
+                              </span>
+                            ) : null}
+                            {p.crop && p.sprinkled && state !== 'ready' ? (
+                              <span className="l-ledger-mark l-ledger-spr" title="스프링클러가 물을 줘요">
+                                <Glyph name="drop" size={12} />
+                              </span>
+                            ) : null}
                             {state === 'thirsty' && (
                               <span className="l-ledger-mark l-ledger-thirst">
                                 <Glyph name="drop" size={14} />
@@ -337,7 +376,7 @@ export function FarmLedger({
                               </span>
                             ) : null}
                             {p.crop && p.fert ? (
-                              <span className="l-ledger-mark l-ledger-fert" title={p.fert === 2 ? '고급 비료' : '비료'}>
+                              <span className="l-ledger-mark l-ledger-fert" title={FERT_NAME[p.fert]}>
                                 <Glyph name="leaf" size={12} />
                               </span>
                             ) : null}
@@ -376,10 +415,10 @@ export function FarmLedger({
             <button type="button" className="l-ink" disabled={!thirsty || busy} onClick={waterAll} data-testid="farm-water-all">
               <Glyph name="can" /> 모두 물 주기{thirsty ? ` ${thirsty}` : ''} <kbd>W</kbd>
             </button>
-            {(['fertilizer', 'fertilizer-deluxe'] as const).map((item, k) => {
+            {SOIL_ITEMS.map((item) => {
               const have = inv[item] ?? 0;
               if (!have) return null;
-              const n = Math.min(have, fertOf((k + 1) as 1 | 2));
+              const n = Math.min(have, fertOf(item));
               return (
                 <button
                   key={item}
@@ -389,7 +428,7 @@ export function FarmLedger({
                   onClick={() =>
                     void run({ kind: 'fertilize', plot: -1, item }, `${n}칸에 ${ITEM_BY_ID[item].name}를 뿌렸어요.`, 'plant')
                   }
-                  data-testid={`farm-fert-${k + 1}`}
+                  data-testid={`farm-fert-${item === 'fertilizer' ? 1 : item === 'fertilizer-deluxe' ? 2 : item}`}
                 >
                   <Glyph name="leaf" /> {ITEM_BY_ID[item].name} {n ? n : ''}
                   <small>남은 {have}</small>
@@ -415,7 +454,7 @@ export function FarmLedger({
                   <span key={`${b.crop}${b.quality}`} className="l-ledger-pop" style={{ animationDelay: `${k * 90}ms` }} data-q={b.quality}>
                     <ItemIcon id={b.crop} size={38} quality={b.quality || undefined} />
                     <b>×{b.n}</b>
-                    <small>{itemName(b.crop)}{b.quality ? ` · ${b.quality === 2 ? '금별' : '은별'}` : ''}</small>
+                    <small>{itemName(b.crop)}{b.quality ? ` · ${QUALITY_WORD[b.quality]}` : ''}</small>
                   </span>
                 ))}
               </span>
@@ -431,7 +470,23 @@ export function FarmLedger({
               </span>
             </output>
           )}
-          {plot && (
+          {plot && fixtureAt(current) ? (
+            <article className="l-ledger-card" data-state="fixture">
+              <header>
+                <span className="l-ledger-where">{bedName(current)}</span>
+                <h3>{FIXTURE_BY_ID[fixtureAt(current)!.kind].name}</h3>
+              </header>
+              <p className="l-ledger-note">{FIXTURE_BY_ID[fixtureAt(current)!.kind].note}</p>
+              {onPage && (
+                <div className="l-ledger-row-actions">
+                  <button type="button" className="l-ink" onClick={() => onPage('layout')}>
+                    <Glyph name="grid" /> 밭 배치에서 옮기기
+                  </button>
+                </div>
+              )}
+            </article>
+          ) : null}
+          {plot && !fixtureAt(current) && (
             <article className="l-ledger-card" data-state={!plot.crop ? 'empty' : st === 3 ? 'ready' : 'growing'}>
               <header>
                 <span className="l-ledger-where">{bedName(current)}</span>
@@ -453,14 +508,36 @@ export function FarmLedger({
                     <dt>수확</dt>
                     <dd>{st === 3 ? '지금 거둘 수 있어요' : `${duration(readyAt - now)} 뒤`}</dd>
                     <dt>물</dt>
-                    <dd>{plot.rained ? '오늘 비가 적셔 줬어요' : plot.wateredAt !== null ? '오늘 줬어요' : st === 3 ? '다 자랐어요' : '목말라요 · 주면 40% 빨리 자라요'}</dd>
+                    <dd>{plot.rained ? '오늘 비가 적셔 줬어요' : plot.sprinkled && plot.wateredAt !== null ? '스프링클러가 줬어요' : plot.wateredAt !== null ? '오늘 줬어요' : st === 3 ? '다 자랐어요' : '목말라요 · 주면 40% 빨리 자라요'}</dd>
                     <dt>거름</dt>
-                    <dd>{plot.fert === 2 ? '고급 비료' : plot.fert === 1 ? '비료' : '아직 안 줬어요'}</dd>
+                    <dd>
+                      {plot.fert ? FERT_NAME[plot.fert] : '아직 안 줬어요'}
+                      {plot.sg ? ' · 성장 촉진제' : ''}
+                      {plot.rs ? ' · 보습 흙' : ''}
+                    </dd>
+                    {plot.giant ? (
+                      <>
+                        <dt>거대</dt>
+                        <dd>두둑 여섯 칸이 하나로 합쳐졌어요 · 한 번에 칸마다 2개</dd>
+                      </>
+                    ) : null}
+                    {plot.witherAt ? (
+                      <>
+                        <dt>철</dt>
+                        <dd>{whenAt(plot.witherAt, now)} 계절이 바뀌면 시들어요</dd>
+                      </>
+                    ) : null}
+                    {plot.sl ? (
+                      <>
+                        <dt>그늘</dt>
+                        <dd>앞 칸 지지대 작물 때문에 {plot.sl}% 늦게 자라요</dd>
+                      </>
+                    ) : null}
                     {plot.quality ? (
                       <>
                         <dt>예감</dt>
                         <dd>
-                          <QualityStar quality={plot.quality} size={13} /> {plot.quality === 2 ? '금별이 나올 것 같아요' : '은별이 나올 것 같아요'}
+                          <QualityStar quality={plot.quality} size={13} /> {QUALITY_WORD[plot.quality]}이 나올 것 같아요
                         </dd>
                       </>
                     ) : null}
@@ -488,8 +565,8 @@ export function FarmLedger({
                       </button>
                     )}
                     {st < 3 &&
-                      (['fertilizer', 'fertilizer-deluxe'] as const).map((item, k) =>
-                        (inv[item] ?? 0) > 0 && (plot.fert ?? 0) < k + 1 ? (
+                      SOIL_ITEMS.map((item) =>
+                        (inv[item] ?? 0) > 0 && soilOpen(plot, item) ? (
                           <button
                             key={item}
                             type="button"
@@ -527,6 +604,7 @@ export function FarmLedger({
                               <span>{CROP_INFO[crop].name}</span>
                               <small>
                                 {seeds?.[crop]}봉 · {duration(CROP_INFO[crop].growMs)}
+                                {withersSoon(crop) ? ' · 곧 시듦' : ''}
                               </small>
                             </button>
                           </li>
@@ -569,7 +647,7 @@ export function FarmLedger({
           )}
           <section className="l-ledger-friends" aria-label="물이 필요한 친구 밭">
             <h4>
-              <Glyph name="can" size={16} /> 친구 밭 물 주기 <small>하루 한 번씩 · 우정이 쌓여요</small>
+              <Glyph name="can" size={16} /> 친구 밭 돕기 <small>물 주기·거들기 하루 한 번씩 · 우정이 쌓여요</small>
             </h4>
             {friends.length ? (
               <ul>
@@ -578,7 +656,21 @@ export function FarmLedger({
                   return (
                     <li key={f.actor} data-done={f.done || undefined}>
                       <span className="l-ledger-friend">{ACTORS[f.actor]}네</span>
-                      <span>{f.done ? '오늘 물 줬어요' : `목마른 칸 ${f.need}`}</span>
+                      <span>
+                        {f.done ? '오늘 물 줬어요' : f.need ? `목마른 칸 ${f.need}` : ''}
+                        {f.ripe > 0 && !f.helped ? `${f.done || f.need ? ' · ' : ''}익은 칸 ${f.ripe}` : ''}
+                      </span>
+                      {f.ripe > 0 && !f.helped && (
+                        <button
+                          type="button"
+                          className="l-leaf l-small"
+                          disabled={busy}
+                          onClick={() => void run({ kind: 'harvestFriend', owner: f.actor }, `${ACTORS[f.actor]}네 밭을 거들었어요. 작물은 ${josa(ACTORS[f.actor], '이/가')} 가방에 넣어 둬요.`, 'harvest')}
+                          data-testid={`farm-help-${f.actor}`}
+                        >
+                          <Glyph name="basket" size={14} /> 거들기
+                        </button>
+                      )}
                       {!f.done && bed && onWalk && (
                         <button
                           type="button"
@@ -596,7 +688,7 @@ export function FarmLedger({
                 })}
               </ul>
             ) : (
-              <p className="l-ledger-aside">지금은 목마른 친구 밭이 없어요.</p>
+              <p className="l-ledger-aside">지금은 도울 친구 밭이 없어요.</p>
             )}
           </section>
           <p className="l-ledger-keys" aria-hidden="true">
@@ -620,6 +712,6 @@ export function FarmLedger({
           onConfirm={() => run({ kind: 'expandFarm' }, `텃밭이 ${nextSize}칸으로 넓어졌어요!`, 'harvest')}
         />
       ) : null}
-    </Modal>
+    </>
   );
 }

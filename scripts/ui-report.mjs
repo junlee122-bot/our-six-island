@@ -7,6 +7,7 @@ const GROUPS = {
   bank: ['bank', 'bank-portrait'], 'bank-notes': ['bank-notes'], 'bank-casino': ['bank-casino'],
   'bank-rob': ['bank-rob'], npc: ['npc'],
   village: ['village'], map: ['map'], bag: ['bag'], shop: ['shop'], ledger: ['ledger'],
+  'farm-layout': ['farm-layout'], 'farm-works': ['farm-works'], 'farm-market': ['farm-market'],
   growth: ['growth', 'growth-research'], bonds: ['bonds'], collection: ['collection'],
   'ui-kit': ['ui-kit', 'ui-kit-panels', 'ui-kit-glyphs'],
 };

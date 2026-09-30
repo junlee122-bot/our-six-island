@@ -323,7 +323,7 @@ export function FishingOverlay({
   const biting = ctx ? [...anglerCandidates(spot, ctx)].sort((a, b) => b.weight - a.weight) : [];
   const living = FISH.filter((f) => f.spots.includes(spot));
   const found = living.filter((f) => dex.includes(f.id)).length;
-  const q = result?.quality ?? 0;
+  const q = Math.min(2, result?.quality ?? 0) as 0 | 1 | 2; // fish top out at 금별 (별빛 is a farm grade)
   const price = fish && life ? Math.round(sellQuote(life, fish.id, 0, 1, now).next * FISH_QUALITY_MULT[q]) : undefined;
   const myActor = life?.actors?.[view.self];
   const friends = (life?.angling?.anglers?.[spot] ?? []).filter((a) => a !== myActor);

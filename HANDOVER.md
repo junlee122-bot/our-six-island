@@ -15,6 +15,7 @@
 - **월드 저장**: DB 한 행(JSON) + revision CAS. 범(화폐) 원장 불변식 `잔액 + 예약 + 하우스 − 지급 = 계정수 × 100,000`을 테스트가 항상 검사합니다.
 - **2026-09-30 게임 점검**: 응답 크기 41KB → 폴링 5KB(life 한 번만, 바뀔 때만), 테이블은 내 판이 바뀔 때만 다시 그림, 3분 넘게 끊겼다 돌아와도 자리 되찾기, 고장 난 방의 허풍 카드 참가비 환불, 블랙잭 서렌더, 게임마다 **규칙·기록** 창(규칙 카드·내 기록·주간 순위, `world.tableStats`). 수치·미룬 일: [게임 점검](handover/design/audit-games-2026-09-30.md).
 - **2026-09-30 낚시 업그레이드**(브랜치 `fishing-upgrade`): 챔질 뒤 손맛 겨루기(서버가 씨앗을 저장하고 입력 기록을 다시 돌려 판정), 58종(전설 5), 미끼 4·찌 3·통발, 보물 상자, 품질·무게 기록, 낚시 수첩(J), 함께 낚시, 주간 낚시 대회. 설계·수치·경제 비교는 [낚시 업그레이드](handover/design/design-fishing-upgrade.md). 엔진은 `app/lounge-fish-*.ts`, 상태는 `world.life.angling`.
+- **텃밭 확장(브랜치 `farming-upgrade`)**: 작물 26종(다시 열림·지지대·거대 작물·계절 끝 시듦), 밭 3×4 타일 격자에 스프링클러·허수아비·벌통 배치, 작업 마당의 옹기·숙성통·건조기·씨앗 제조기(품질 이어짐), 별빛 품질·새 비료 3종, 까마귀, 출하 상자(KST 자정 정산), 친구 밭 거들기, 주간 품평회(나세라 조합장 심사 데이터만). 설계·수치·이전 방식: [텃밭 확장 설계](handover/design/design-farming-upgrade.md). 엔진 `app/lounge-farm.ts`, 데이터 `app/lounge-farm-data.ts`, 화면 `app/lounge/FarmWorks.tsx`, 3D `app/lounge-farm-3d.ts`, 테스트 `tests/lounge-farm.test.mjs`.
 - **2026-09-28 생활 업데이트**: 미용실·은행, 지도 친구 위치, 낚시 반응 등급·보너스, 차용증·방어 물품·강도, 루미 장부·대부 창구, NPC 친밀도/방 초대. 구현 범위·수치·검증은 [생활 업데이트](handover/design/life-services-2026-09-28.md)를 보세요. 은행 보관금도 위 원장의 예약 합계에 포함합니다.
 
 ## 2. 처음 ChatGPT 코드와 얼마나 달라졌나
@@ -94,7 +95,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 ## 5. 남은 작업 (우선순위 순)
 
 1. **UI 마무리 점검**: A·B단계 이후 성장 수첩의 ‘고르기’ 대비를 높이고, 혼합 색상·스크롤 밖 조작의 오탐을 수정했습니다. 최신 검증과 수치는 [2026-09-28 점검 기록](handover/design/ui-finish-2026-09-28.md)과 `scripts/ui-baseline.json`을 보세요. CI의 `ui-regression` 잡은 기준보다 나빠지거나 화면·측정이 누락되면 실패합니다. 개선한 수치는 `--strict --baseline scripts/ui-baseline.json --write-baseline <새 파일>`로 검증한 뒤 갱신하세요. lucide 의존성·사용은 없으며 `app/ui/icons.tsx`도 자체 Glyph를 사용합니다.
-2. **맵 확장 3단계**: 과수원 언덕(V4), 목장(V5: 닭장·외양간·동물 5종), 가공 기계(옹기·숙성통·베틀), 스프링클러·기상대(V8), 도구 5단계 — 설계: `handover/design/design-expansion-techtree.md`
+2. **맵 확장 3단계**: 과수원 언덕(V4), 목장(V5: 닭장·외양간·동물 5종), 베틀, 기상대(V8), 도구 5단계 (옹기·숙성통·스프링클러는 텃밭 확장에서 농사/솜씨 레벨로 먼저 열었음. V8이 열리면 스프링클러 할인을 붙일 것) — 설계: `handover/design/design-expansion-techtree.md`
 3. **맵 확장 4단계**: 온천(V6), 여섯섬 배편(V7, `dock` 보상 채우기), 깊은 굴(V9, 금 요구량 낮출 것)
 4. **2단계 보완**: 광산 동굴·레일을 kArchive 모델로 교체, 뒷산/광산의 "간단 그래픽" 대체 화면
 5. **보드게임 추가**: 오목·뒤집기 → 윷놀이 → 원카드 → 허풍 주사위 → 장기(MIT 엔진) → 마피아 — `handover/design/boardgames-open-assets.md`
@@ -125,6 +126,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 서버 진입 | `supabase/functions/hohyeon-api/index.ts`, `hohyeon-auth/index.ts` |
 | 월드 엔진 | `app/lounge-cloud-engine.ts`, `app/lounge-room.ts`, `app/lounge-economy.ts` |
 | 생활 | `app/lounge-life.ts`, `lounge-life-plus.ts`, `lounge-life-social.ts`, `lounge-calendar.ts`, `lounge-items.ts` |
+| 텃밭 확장 | `app/lounge-farm-data.ts`(숫자), `lounge-farm.ts`(엔진), `lounge-farm-3d.ts`(3D), `lounge/FarmWorks.tsx`(밭 배치·가공·출하·품평회 탭) |
 | 은행·강도·주민 관계 | `app/lounge-finance.ts`, `lounge-furniture-protection.ts`, `lounge-romance.ts`, `lounge/FinancePanel.tsx`, `lounge/NpcRelationsPanel.tsx` |
 | 카지노 대부 로제 | `app/lounge-casino-lender.ts`(서버·화면 공용 위치/거리), `lounge/CasinoLenderPanel.tsx`, `lounge-interior-lender.ts` |
 | 냐모 은행·그웬 미용실 | `app/lounge-bank-layout.ts`, `lounge-bank-interior.ts`, `lounge-salon-layout.ts`, `lounge-salon-interior.ts` |

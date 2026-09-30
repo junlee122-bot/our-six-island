@@ -1,0 +1,405 @@
+/*
+ * 텃밭 확장 pages of the farm window (FarmWorks.tsx): the yard's tile grid,
+ * the work yard and the market. Tokens only (app/ui/tokens.css); the grid
+ * reuses the ledger's soil and bed-frame colours (--ff-* in farm-fish.css).
+ */
+.l-farm-tabs {
+  padding: var(--sp-2) var(--sp-4) 0;
+}
+.l-fw {
+  display: grid;
+  gap: var(--sp-3);
+  padding: 18px 22px 16px;
+  border-radius: var(--r-s);
+  color: var(--ff-ink);
+  font-size: var(--fs-body);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 27px, var(--ff-rule) 27px 28px),
+    var(--ff-paper);
+  box-shadow: var(--lift-1);
+}
+.l-fw-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+.l-fw-yard,
+.l-fw-side {
+  display: grid;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+.l-fw-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  align-items: center;
+  justify-content: space-between;
+}
+.l-fw-hint {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+}
+.l-fw-hint .ui-glyph,
+.l-fw-hint svg {
+  vertical-align: -3px;
+}
+.l-fw-card {
+  min-width: 0;
+}
+.l-fw-card .ui-panel-page {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-fw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* ------------------------------------------------------------ tile grid */
+.l-fw-grid {
+  display: grid;
+  gap: var(--sp-4);
+  justify-items: center;
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--pal-lime-79);
+  border-radius: var(--r-m);
+  box-shadow: var(--ring-line);
+}
+.l-fw-bed {
+  position: relative;
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--ff-wood);
+  box-shadow: var(--lift-1);
+}
+.l-fw-bedname {
+  position: absolute;
+  top: calc(-1 * var(--sp-2));
+  left: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--ff-wood-dark);
+  color: var(--text-on-frame);
+  font-size: var(--fs-cap);
+}
+.l-fw-row {
+  display: grid;
+  grid-template-columns: repeat(3, 76px);
+  gap: var(--sp-1);
+}
+.l-fw-tile {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--pal-orange-44);
+  color: var(--text-on-frame);
+  cursor: pointer;
+  box-shadow: var(--ring-line);
+  transition: transform var(--dur-quick) var(--ease-out);
+}
+.l-fw-tile[data-wet] {
+  background: var(--pal-orange-28);
+}
+.l-fw-tile[data-state='fixture'] {
+  background: var(--paper-200);
+}
+.l-fw-tile[data-state='dead'] {
+  background: var(--pal-amber-38);
+}
+.l-fw-tile[data-state='fallow'] {
+  background: var(--pal-lime-51);
+  color: var(--ink-on-wood);
+  cursor: default;
+}
+.l-fw-tile[data-reach] {
+  box-shadow: var(--ring-highlight);
+}
+.l-fw-tile[data-target] {
+  box-shadow: var(--ring-glow);
+}
+.l-fw-tile[aria-selected='true'] {
+  box-shadow: var(--ring-focus);
+  transform: translateY(-2px);
+}
+.l-fw-tile:hover:not([data-state='fallow']) {
+  transform: translateY(-1px);
+}
+.l-fw-num {
+  position: absolute;
+  left: var(--sp-1);
+  bottom: 2px;
+  font-style: normal;
+  font-size: var(--fs-cap);
+  color: var(--text-on-frame);
+}
+.l-fw-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-round);
+  background: var(--surface-raised);
+  color: var(--water-600);
+}
+.l-fw-moving {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-s);
+  background: var(--highlight-soft);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+}
+.l-fw-detail {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-fw-detail p {
+  margin: 0;
+  line-height: var(--lh-body);
+}
+.l-fw-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.l-fw-title b {
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+  font-weight: var(--fw-regular);
+}
+.l-fw-title small {
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.l-fw-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ------------------------------------------------------------ build lists, goods, log */
+.l-fw-build,
+.l-fw-goods,
+.l-fw-log,
+.l-fw-entries {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-fw-build li,
+.l-fw-goods li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--sp-2);
+  align-items: center;
+  padding: var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--ring-line);
+}
+.l-fw-build-text,
+.l-fw-goods li > span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.l-fw-build-text em {
+  font-style: normal;
+  color: var(--accent);
+  font-size: var(--fs-body-s);
+}
+.l-fw-build small,
+.l-fw-goods small,
+.l-fw-recipe {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+  line-height: var(--lh-body);
+}
+.l-fw-log li {
+  font-size: var(--fs-body-s);
+  line-height: var(--lh-body);
+}
+.l-fw-log time {
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+  margin-right: var(--sp-1);
+}
+.l-fw-sum {
+  margin: 0;
+  font-size: var(--fs-body-s);
+  color: var(--text);
+}
+.l-fw-sum small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+
+/* ------------------------------------------------------------ work yard */
+.l-fw-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-fw-slot {
+  display: grid;
+  gap: var(--sp-2);
+  align-content: start;
+  min-height: 132px;
+  padding: var(--sp-3);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--ring-line);
+}
+.l-fw-slot[data-state='empty'] {
+  background: var(--surface-sunken);
+}
+.l-fw-slot[data-state='done'] {
+  box-shadow: var(--ring-highlight);
+}
+.l-fw-slot-name {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-display);
+  font-size: var(--fs-title-s);
+}
+.l-fw-slot[data-state='empty'] .l-fw-slot-name {
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+.l-fw-slot-out,
+.l-fw-slot-in {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-fw-slot-out > span {
+  display: grid;
+  gap: 2px;
+}
+.l-fw-slot-out small,
+.l-fw-slot-in > small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+  line-height: var(--lh-body);
+}
+.l-fw-slot progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent);
+}
+
+/* ------------------------------------------------------------ fair */
+.l-fw-entries li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body-s);
+}
+.l-fw-entries small {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+.l-fw-enter {
+  display: grid;
+  gap: var(--sp-2);
+}
+.l-fw-enter label {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--fs-body-s);
+}
+.l-fw-enter select {
+  min-height: var(--hit);
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--ring-line);
+  color: var(--text);
+  font-size: var(--fs-body);
+}
+.l-fw-results summary {
+  min-height: var(--hit);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text);
+}
+.l-fw-results ul {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-body-s);
+}
+.l-fw-results li {
+  display: grid;
+  gap: 2px;
+}
+.l-fw-keys {
+  margin-top: var(--sp-1);
+}
+@media (max-width: 1100px) {
+  .l-fw-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ------------------------------------------------------------ ledger additions (텃밭 확장) */
+.l-ledger-plot[data-state='fixture'] .l-ledger-soil {
+  background: var(--paper-200);
+}
+.l-ledger-plot[data-state='dead'] .l-ledger-dead {
+  filter: grayscale(0.85) sepia(0.6);
+  opacity: 0.75;
+  transform: rotate(-12deg);
+}
+.l-ledger-dead {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+.l-ledger-spr {
+  left: 4px;
+  right: auto;
+  color: var(--water-600);
+}
+.l-farm .l-ledger-book {
+  margin-top: 0;
+}
+.l-fw-tile[data-state='fixture'] .l-fw-num {
+  color: var(--text-soft);
+}
+.l-fw-hint:has(> svg:first-child),
+.l-fw-hint:has(> .ui-glyph:first-child) {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: flex-start;
+}

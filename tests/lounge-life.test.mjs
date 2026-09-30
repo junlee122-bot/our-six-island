@@ -92,6 +92,8 @@ test('new members start with 3 carrot + 2 tomato seeds and six empty plots', () 
     watermelon: 0,
     sweetpotato: 0,
     cabbage: 0,
+    // 텃밭 확장: the 16 new crops start at 0 too.
+    ...Object.fromEntries(CROPS.slice(10).map((c) => [c, 0])),
   });
   assert.equal(v.sellCapLeft, SELL_CAP_PER_DAY);
   assert.equal(v.actors[members[0].id], 0);
@@ -432,6 +434,23 @@ test('crop and shop catalog match the contract', () => {
       ['watermelon', 720, 2000, 8000],
       ['sweetpotato', 360, 700, 3000],
       ['cabbage', 480, 1000, 3600],
+      // 텃밭 확장 (design-farming-upgrade.md §4-1): 16 seasonal crops appended.
+      ['garlic', 240, 500, 1900],
+      ['pea', 300, 900, 1300],
+      ['lettuce', 90, 400, 380],
+      ['tulip', 180, 300, 900],
+      ['onion', 360, 700, 2800],
+      ['pepper', 360, 1000, 1100],
+      ['cucumber', 240, 800, 900],
+      ['blueberry', 480, 1500, 1800],
+      ['chamoe', 420, 1200, 4400],
+      ['zinnia', 300, 500, 1500],
+      ['grape', 480, 1500, 1900],
+      ['radish', 240, 400, 1500],
+      ['eggplant', 300, 800, 1000],
+      ['chrysanthemum', 360, 600, 1700],
+      ['greenonion', 180, 600, 900],
+      ['insam', 1440, 5000, 18000],
     ],
   );
   // Longer base crops earn more per hour (watered, all six plots), so the
