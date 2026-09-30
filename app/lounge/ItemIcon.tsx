@@ -299,7 +299,7 @@ const FISH_LOOK: Record<string, FishLook> = {
   blossomtrout: { shape: 'fish', body: '#e9a7b4', belly: '#fff0f3', mark: '#c95a78' },
   lakelord: { shape: 'fish', body: '#4a5a4f', belly: '#9fae98', mark: '#2d3a31' },
   icecod: { shape: 'fish', body: '#9fb3c4', belly: '#f2f6f9', mark: '#6a8196' },
-  snail: { shape: 'shell', body: '#6e6a4a', mark: '#2f2d20' },
+  daseulgi: { shape: 'shell', body: '#6e6a4a', mark: '#2f2d20' },
   shrimp: { shape: 'claw', body: '#c9a88a' },
   crab: { shape: 'claw', body: '#d0602f' },
   clam: { shape: 'shell', body: '#c9b48f', mark: '#7a6546' },

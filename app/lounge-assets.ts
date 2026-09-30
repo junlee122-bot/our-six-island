@@ -262,7 +262,8 @@ export const FISH_PAINTED: Readonly<Record<string, string>> = {
   lakelord: '/assets/lounge/fishing/lakelord.webp',
   icecod: '/assets/lounge/fishing/icecod.webp',
   crab: '/assets/lounge/fishing/crab.webp',
-  snail: '/assets/lounge/fishing/snail.webp',
+  // 다슬기 (pot catch; its id was 'snail', which 달팽이 the bug also used).
+  daseulgi: '/assets/lounge/fishing/snail.webp',
   shrimp: '/assets/lounge/fishing/shrimp.webp',
   clam: '/assets/lounge/fishing/clam.webp',
   oyster: '/assets/lounge/fishing/oyster.webp',

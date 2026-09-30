@@ -13,8 +13,12 @@
 //   농협 주간 시세 (시장): three crops a week (나세라's notice) sell through the
 //     normal crop sale plus 15%, at most COOP_BONUS_CAP 범 a day, reason
 //     'coop-week'.
-//   빵집 카페 (시장): drinks and breads bought and eaten on the spot; a spend
-//     (sink) that fills mood needs through lounge-mood.ts moodTreat.
+//   빵집 카페 (시장) and 허풍 주점 (음식 시스템, 2026-10): food bought and eaten
+//     on the spot ('shopFood'; 'bakeryBuy' is the older name); a spend (sink)
+//     that fills mood needs through lounge-mood.ts moodTreat and the 간식 칸
+//     buff (lounge-food-data.ts), SHOP_FOOD_PER_DAY a day at each shop.
+//   행상인 계약 (시장 on Sundays, 항구 on Wednesdays and Saturdays): once a
+//     week, the week's goods for the week's spice. No 범.
 //   장날 좌판 (시장, Sundays): one item of the day per stall at 80% of the
 //     general-store price, three purchases a day; a spend.
 //   독서 모임 (언덕 도서관, Wednesdays 19:00–21:00 KST): once a week, skill XP
@@ -26,8 +30,11 @@
 import { grantBeom, kstDay, spendBeom, type LoungeLedger } from './lounge-economy.ts';
 import { hash32, kstHour, seasonOf, seasonOfDay, weekdayOf } from './lounge-calendar.ts';
 import { ITEM_BY_ID, ITEM_PRICES, isItemId } from './lounge-items.ts';
+import { SHOP_FOODS, SHOP_FOOD_BY_ID, SHOP_FOOD_PER_DAY, type ShopFoodDef } from './lounge-food-data.ts';
+import { tasteNote } from './lounge-food.ts';
+import { peddlerDeal, peddlerOpenOn, peddlerStock, weekOf } from './lounge-shops.ts';
 import { CROPS, CROP_INFO, LifeError, cropInSeason, type Crop, type LifeState } from './lounge-life.ts';
-import { addInv, hasFlag, soldBeomToday, weekOfDay } from './lounge-life-plus.ts';
+import { addInv, hasFlag, invCount, soldBeomToday, weekOfDay } from './lounge-life-plus.ts';
 import { gainXp } from './lounge-growth.ts';
 import { SKILLS } from './lounge-growth-data.ts';
 import { moodTreat } from './lounge-mood.ts';
@@ -47,8 +54,8 @@ export const AUCTION_UNITS_MAX = 10;
 export const COOP_WEEK_BONUS = 0.15;
 export const COOP_BONUS_CAP = 3_000;
 export const COOP_WEEK_CROPS = 3;
-/** 빵집 카페: treats a friend can have a day. */
-export const BAKERY_PER_DAY = 2;
+/** 빵집 카페 / 허풍 주점: treats a friend can have a day at each. */
+export const BAKERY_PER_DAY = SHOP_FOOD_PER_DAY;
 /** 장날 좌판: price share of the general-store price and purchases a day. */
 export const STALL_DISCOUNT = 0.8;
 export const STALL_PER_DAY = 3;
@@ -60,14 +67,10 @@ export const READING_XP = 30;
 export const SHOW_WEEKDAYS = [2, 5] as const;
 export const SHOW_HOURS = [20, 22] as const;
 
-export type BakeryItem = { id: string; name: string; price: number; note: string; food?: number; rest?: number; fun?: number; let: 'snack' | 'drink' };
-/** Prices are sinks; fills are need points (0–100 scale). */
-export const BAKERY_MENU: readonly BakeryItem[] = [
-  { id: 'milkbread', name: '느긋한 우유 식빵', price: 400, note: '배부름 +30', food: 30, let: 'snack' },
-  { id: 'recipepie', name: '천 년 레시피 파이', price: 900, note: '배부름 +25 · 재미 +10', food: 25, fun: 10, let: 'snack' },
-  { id: 'coffee', name: '늦잠 깨는 커피', price: 500, note: '휴식 +30', rest: 30, let: 'drink' },
-  { id: 'flowertea-cup', name: '꽃차 한 잔', price: 600, note: '휴식 +20 · 재미 +8', rest: 20, fun: 8, let: 'drink' },
-];
+export type BakeryItem = ShopFoodDef;
+/** Prices are sinks; fills are need points (0–100 scale). The menus live in lounge-food-data.ts. */
+export const BAKERY_MENU: readonly BakeryItem[] = SHOP_FOODS.filter((f) => f.shop === 'bakery');
+export const TAVERN_MENU: readonly BakeryItem[] = SHOP_FOODS.filter((f) => f.shop === 'tavern');
 export const BAKERY_BY_ID: Readonly<Record<string, BakeryItem>> = Object.fromEntries(BAKERY_MENU.map((b) => [b.id, b]));
 /** What the market-day stalls can carry (general-store consumables). */
 const STALL_POOL = ['fertilizer', 'fertilizer-deluxe', 'bait', 'bait-dough', 'bait-shrimp', 'speed-gro', 'retaining'] as const;
@@ -84,6 +87,10 @@ export const TOWN_REJECT = {
   coopCrop: '이번 주 시세표에 있는 작물만 웃돈을 받아요. 다른 작물은 텃밭 장부에서 팔아 주세요.',
   bakeryItem: '메뉴를 다시 골라 주세요.',
   bakeryMax: `빵집 카페는 하루 ${BAKERY_PER_DAY}번까지 들를 수 있어요. 내일 또 와요.`,
+  tavernMax: `주점 음식은 하루 ${SHOP_FOOD_PER_DAY}번까지예요. 내일 또 와요.`,
+  peddlerAway: '행상인 마키마는 수요일·토요일(항구)과 일요일(시장 거리)에만 와요.',
+  peddlerDone: '이번 주 계약은 이미 맺었어요. 다음 주에 새 계약을 가져와요.',
+  peddlerGoods: '계약에 필요한 물건이 모자라요.',
   stallClosed: '장날(일요일)에만 좌판이 열려요.',
   harborStallClosed: '마키마의 항구 좌판은 수요일과 토요일에만 열려요.',
   stallMax: `장날 좌판은 하루 ${STALL_PER_DAY}번까지 살 수 있어요.`,
@@ -108,6 +115,8 @@ export type TownUser = {
   coop?: number;
   /** Bakery treats today. */
   bake?: number;
+  /** 허풍 주점 food today. */
+  tav?: number;
   /** Market-day stalls bought from today. */
   stall?: StallId[];
   /** Week of the last reading club. */
@@ -127,6 +136,7 @@ export function readTownUser(v: unknown): TownUser | undefined {
     if (safe(x.aucN) && x.aucN > 0) out.aucN = Math.min(AUCTION_UNITS_MAX, x.aucN);
     if (safe(x.coop) && x.coop > 0) out.coop = Math.min(COOP_BONUS_CAP, x.coop);
     if (safe(x.bake) && x.bake > 0) out.bake = Math.min(BAKERY_PER_DAY, x.bake);
+    if (safe(x.tav) && x.tav > 0) out.tav = Math.min(SHOP_FOOD_PER_DAY, x.tav);
     const stall = Array.isArray(x.stall) ? [...new Set(x.stall.filter((s): s is StallId => (STALL_IDS as readonly unknown[]).includes(s)))] : [];
     if (stall.length) out.stall = stall;
   }
@@ -146,6 +156,7 @@ function townOf(life: LifeState, uid: string, now: number): TownUser {
     delete t.aucN;
     delete t.coop;
     delete t.bake;
+    delete t.tav;
     delete t.stall;
   }
   return t;
@@ -221,7 +232,7 @@ const walletOf = (uid: string) => 'wallet-' + uid;
 export type SellRunner = (
   life: LifeState,
   ledger: LoungeLedger,
-  action: { kind: 'sellItem'; item: string; n: number } | { kind: 'sell'; crop: Crop; n: number; quality?: 0 | 1 | 2 | 3 },
+  action: { kind: 'sellItem'; item: string; n: number; at?: 'fishmarket' } | { kind: 'sell'; crop: Crop; n: number; quality?: 0 | 1 | 2 | 3; at?: 'coop' },
 ) => { life: LifeState; ledger: LoungeLedger };
 
 /**
@@ -250,7 +261,8 @@ export function townAction(
       if (!safe(n) || n < 1) fail(TOWN_REJECT.auctionUnits);
       if ((townRead(life, uid, now).aucN ?? 0) + n > AUCTION_UNITS_MAX) fail(TOWN_REJECT.auctionUnits);
       const before = soldBeomToday(life, uid, now);
-      const base = sell(life, ledger, { kind: 'sellItem', item: a.item, n });
+      // The auction is at the 어시장, so the fish fetch their full price before the premium.
+      const base = sell(life, ledger, { kind: 'sellItem', item: a.item, n, at: 'fishmarket' });
       const amount = soldBeomToday(base.life, uid, now) - before;
       const t = townOf(base.life, uid, now);
       t.aucN = (t.aucN ?? 0) + n;
@@ -266,7 +278,7 @@ export function townAction(
       const week = weekOfDay(kstDay(now));
       if (!(CROPS as readonly unknown[]).includes(a.crop) || !coopWeekCrops(week).includes(a.crop)) fail(TOWN_REJECT.coopCrop);
       const before = soldBeomToday(life, uid, now);
-      const base = sell(life, ledger, { kind: 'sell', crop: a.crop, n: a.n, ...(a.quality !== undefined ? { quality: a.quality } : {}) });
+      const base = sell(life, ledger, { kind: 'sell', crop: a.crop, n: a.n, at: 'coop', ...(a.quality !== undefined ? { quality: a.quality } : {}) });
       const amount = soldBeomToday(base.life, uid, now) - before;
       const t = townOf(base.life, uid, now);
       const bonus = Math.min(Math.round(amount * COOP_WEEK_BONUS), COOP_BONUS_CAP - (t.coop ?? 0));
@@ -277,16 +289,40 @@ export function townAction(
       }
       return { life: base.life, ledger: next };
     }
-    case 'bakeryBuy': {
-      const item = typeof a.item === 'string' && Object.prototype.hasOwnProperty.call(BAKERY_BY_ID, a.item) ? BAKERY_BY_ID[a.item] : undefined;
-      if (!item) fail(TOWN_REJECT.bakeryItem);
-      const t = townOf(life, uid, now);
-      if ((t.bake ?? 0) >= BAKERY_PER_DAY) fail(TOWN_REJECT.bakeryMax);
+    case 'bakeryBuy':
+    case 'shopFood': {
+      const shop = a.kind === 'bakeryBuy' ? 'bakery' : a.shop;
+      const item = typeof a.item === 'string' && Object.prototype.hasOwnProperty.call(SHOP_FOOD_BY_ID, a.item) ? SHOP_FOOD_BY_ID[a.item] : undefined;
+      if (!item || item.shop !== shop) fail(TOWN_REJECT.bakeryItem);
+      const t = townOf(life, uid, now),
+        key = shop === 'tavern' ? 'tav' : 'bake';
+      if ((t[key] ?? 0) >= SHOP_FOOD_PER_DAY) fail(shop === 'tavern' ? TOWN_REJECT.tavernMax : TOWN_REJECT.bakeryMax);
       if ((ledger.accounts[wallet] ?? 0) < item!.price) fail(TOWN_REJECT.balance);
-      const next = spendBeom(ledger, wallet, item!.price, `life-bakery-${uid}-${++life.seq}`, now, 'bakery');
-      t.bake = (t.bake ?? 0) + 1;
+      let next = spendBeom(ledger, wallet, item!.price, `life-${shop}-${uid}-${++life.seq}`, now, shop === 'tavern' ? 'tavern-food' : 'bakery');
+      t[key] = (t[key] ?? 0) + 1;
       moodTreat(life, uid, now, { food: item!.food, rest: item!.rest, fun: item!.fun, let: item!.let });
+      // 간식 칸: the menu's buff for an hour or two (replaces what was there).
+      if (item!.buff && item!.hours) {
+        const x = (life.ext ??= {})[uid] ?? {};
+        (life.ext[uid] = x).snack = { kind: item!.buff, food: item!.id, until: now + item!.hours * 3_600_000, ...(item!.weak ? { weak: true as const } : {}) };
+      }
+      next = tasteNote(life, next, uid, item!.id, now);
       return { life, ledger: next };
+    }
+    case 'peddlerDeal': {
+      const day = kstDay(now),
+        week = weekOf(day);
+      if (!peddlerOpenOn(day)) fail(TOWN_REJECT.peddlerAway);
+      if (weekdayOf(day) !== 0 && !opened(DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
+      const x = ((life.ext ??= {})[uid] ??= {});
+      const ped = x.ped?.w === week ? x.ped : { w: week, got: [] as string[] };
+      if (ped.deal) fail(TOWN_REJECT.peddlerDone);
+      const deal = peddlerDeal(week);
+      if (invCount(life, uid, deal.item) < deal.n) fail(TOWN_REJECT.peddlerGoods);
+      addInv(life, uid, deal.item, -deal.n);
+      addInv(life, uid, peddlerStock(week)[0].item, 1);
+      x.ped = { ...ped, deal: true };
+      return { life, ledger };
     }
     case 'stallBuy': {
       const day = kstDay(now);
@@ -324,6 +360,7 @@ export type TownView = {
   auction: { open: boolean; premiumLeft: number; unitsLeft: number; next: number };
   coop: { week: number; crops: Crop[]; bonusLeft: number };
   bakery: { left: number };
+  tavern: { left: number };
   stalls: { open: boolean; harbor: boolean; goods: Record<StallId, { item: string; price: number }>; bought: StallId[]; left: number };
   club: { open: boolean; done: boolean; next: number };
   show: { on: boolean; next: number };
@@ -342,6 +379,7 @@ export function townView(life: LifeState, uid: string, now: number): TownView {
     },
     coop: { week, crops: coopWeekCrops(week), bonusLeft: Math.max(0, COOP_BONUS_CAP - (t.coop ?? 0)) },
     bakery: { left: Math.max(0, BAKERY_PER_DAY - (t.bake ?? 0)) },
+    tavern: { left: Math.max(0, SHOP_FOOD_PER_DAY - (t.tav ?? 0)) },
     stalls: { open: marketDayOn(day), harbor: harborStallOn(day), goods: stallGoods(day), bought: [...(t.stall ?? [])], left: Math.max(0, STALL_PER_DAY - (t.stall?.length ?? 0)) },
     club: { open: readingOpen(now), done: t.club === week, next: nextSlot(now, [READING_WEEKDAY], READING_HOURS[0]) },
     show: { on: showNight(now), next: nextSlot(now, SHOW_WEEKDAYS, SHOW_HOURS[0]) },

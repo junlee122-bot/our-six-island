@@ -58,7 +58,7 @@ function world() {
   const bagged = lifeAction(life, l, member, { kind: 'pick', tree: 'tree-1' }, NOW - 2 * DAY);
   life = bagged.life;
   life.bag[uids[1]].fruit = 10;
-  const sold = lifeAction(life, bagged.ledger, member, { kind: 'sell', crop: 'fruit', n: 10 }, NOW - 2 * 3_600_000);
+  const sold = lifeAction(life, bagged.ledger, member, { kind: 'sell', crop: 'fruit', n: 10, at: 'coop' }, NOW - 2 * 3_600_000);
   return { schema: 1, ledger: sold.ledger, life: sold.life, rooms: {}, receipts: {} };
 }
 

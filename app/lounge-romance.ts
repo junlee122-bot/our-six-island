@@ -10,6 +10,7 @@ import { kstDay } from './lounge-economy.ts';
 import { ITEM_BY_ID } from './lounge-items.ts';
 import { CROPS, LifeError, type LifeState } from './lounge-life.ts';
 import { addInv, itemCount, takeItem } from './lounge-life-plus.ts';
+import { charmPoints } from './lounge-food-data.ts';
 import {
   NPCS,
   NPC_DATE_POINTS,
@@ -175,8 +176,9 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
   const relations = (user.npcRelations ??= {});
   const relation = (relations[action.npc] ??= { points: 0 });
   const day = kstDay(now);
+  // 친화력 (food buff): talks and gifts count half again.
   const add = (n: number) => {
-    relation.points = Math.max(0, Math.min(NPC_POINTS_MAX, relation.points + n));
+    relation.points = Math.max(0, Math.min(NPC_POINTS_MAX, relation.points + charmPoints(life, uid, now, n)));
   };
   let reaction: GiftReaction | undefined;
   switch (action.op) {

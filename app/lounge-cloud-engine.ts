@@ -37,6 +37,11 @@ import { assertNpcSocialContext } from './lounge-romance.ts';
 import { DISTRICTS, districtOpen } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
+// 가게 나누기 · 음식 시스템: shops' districts and where meals are eaten.
+import { SHOP_INFO, isShopId, shopArea } from './lounge-shops.ts';
+import { DISH_BY_ID } from './lounge-items.ts';
+import { weekdayOf } from './lounge-calendar.ts';
+import { kstDay } from './lounge-economy.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
@@ -413,11 +418,36 @@ export function cloudTransition(
             if (!lease || !player || player.area !== 'harbor') throw new CloudError('주간 낚시 대회 상품은 항구 낚시조합에서 받아요.', 409);
           }
           if (isTownAction(command.action)) {
-            // 새벽 경매 at the harbor, 시장 거리 shops and stalls, the library's reading club.
+            // 새벽 경매 at the harbor, 시장 거리 shops and stalls, the library's reading club,
+            // 허풍 주점's food, 행상인 마키마 (시장 on Sundays, 항구 on Wednesdays and Saturdays).
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
-            const where = townActionArea(command.action);
+            const where = townActionArea(command.action, weekdayOf(kstDay(now)) !== 0);
             if (!lease || !player || player.area !== where)
-              throw new CloudError(`${DISTRICTS[where].name}에 가서 해 주세요.`, 409);
+              throw new CloudError(`${where === 'tavern' ? '허풍 주점' : DISTRICTS[where].name}에 가서 해 주세요.`, 409);
+          }
+          {
+            // 가게 나누기: buying or selling "at" a shop needs me at its counter's district.
+            const at = (command.action as { at?: unknown }).at;
+            if (at !== undefined) {
+              if (!isShopId(at)) throw new CloudError('가게를 확인해 주세요.', 400);
+              const player = entry?.snapshot.players.find((p) => p.id === member.id);
+              const where = shopArea(at, now);
+              if (!where) throw new CloudError('행상인 마키마는 수요일·토요일(항구)과 일요일(시장 거리)에만 와요.', 409);
+              if (!lease || !player || (player.area ?? 'village') !== where)
+                throw new CloudError(`${SHOP_INFO[at].name}에 가서 해 주세요.`, 409);
+            }
+          }
+          if (['eat', 'snack'].includes(command.action.kind)) {
+            // 음식 시스템: the server says where I ate (함께 먹기); home cooking is eaten at home,
+            // a lunchbox anywhere.
+            const player = lease ? entry?.snapshot.players.find((p) => p.id === member.id) : undefined;
+            const act = command.action as { kind: string; item?: unknown; where?: unknown };
+            const area = player ? (player.area ?? 'village') : undefined;
+            if (area === undefined) delete act.where;
+            else act.where = area;
+            const dish = act.kind === 'eat' && typeof act.item === 'string' && Object.hasOwn(DISH_BY_ID, act.item) ? DISH_BY_ID[act.item] : undefined;
+            if (dish && !dish.lunch && area !== 'home')
+              throw new CloudError('집밥은 방에서 먹어요. 밖에서는 도시락을 먹을 수 있어요.', 409);
           }
           if (command.action.kind === 'npcRequest') {
             // 의뢰 게시판 stands in 시장 거리 (lounge-market-layout.ts MARKET_BOARD).

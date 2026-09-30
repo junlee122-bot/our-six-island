@@ -1,3 +1,4 @@
+import { buyerOf } from '../app/lounge-shops.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -274,10 +275,10 @@ test('farming: regrowing corn, quality stars from fertilizer, quality sell price
   s.life.ext[m.id].q1 = { pumpkin: 1 };
   s.life.ext[m.id].q2 = { pumpkin: 1 };
   let before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 1, quality: 2 }, t);
+  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 1, quality: 2, at: 'coop' }, t);
   assert.equal(s.balance(m) - before, 1_800 * QUALITY_MULT[2]);
   before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 2 }, t);
+  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 2, at: 'coop' }, t);
   // Units 2 and 3 of pumpkin today: the demand curve (half-life 6) applies.
   assert.equal(
     s.balance(m) - before,
@@ -294,8 +295,8 @@ test('farming: fertilizer purchase and use, farm expansion 6→9→12', () => {
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0);
   s.fails(m, { kind: 'fertilize', plot: 0, item: 'fertilizer' }, T0, LIFE_REJECT.notEnough);
   const before = s.balance(m);
-  s.act(m, { kind: 'buyItem', item: 'fertilizer', n: 2 }, T0);
-  s.act(m, { kind: 'buyItem', item: 'fertilizer-deluxe', n: 1 }, T0);
+  s.act(m, { kind: 'buyItem', item: 'fertilizer', n: 2, at: 'general' }, T0);
+  s.act(m, { kind: 'buyItem', item: 'fertilizer-deluxe', n: 1, at: 'general' }, T0);
   assert.equal(before - s.balance(m), 2 * 400 + 2_000);
   s.act(m, { kind: 'fertilize', plot: 0, item: 'fertilizer-deluxe' }, T0);
   assert.equal(s.life.farms[m.id][0].fert, 2);
@@ -450,7 +451,7 @@ test('fishing: cast → server bite window → reel; early/late misses; records;
   assert.equal(s.view(m, p.expiresAt + 1).me.fishing.last.reason, 'late');
   // Rod upgrades are a sink; the window grows.
   const before = s.balance(m);
-  s.act(m, { kind: 'upgradeRod' }, T0);
+  s.act(m, { kind: 'upgradeRod', at: 'general' }, T0);
   assert.equal(before - s.balance(m), ROD_PRICE[2]);
   assert.equal(s.view(m, T0).me.fishing.rod, 2);
   // The sea opens with the bridge flag.
@@ -464,10 +465,10 @@ test('fishing: deterministic fish table by season/weather/time; Wednesday sells 
     wed = kst(2026, 9, 23, 12);
   s.give(m, 'carp', 2);
   let before = s.balance(m);
-  s.act(m, { kind: 'sellItem', item: 'carp', n: 1 }, T0);
+  s.act(m, { kind: 'sellItem', item: 'carp', n: 1, at: 'general' }, T0);
   assert.equal(s.balance(m) - before, ITEM_BY_ID.carp.sell);
   before = s.balance(m);
-  s.act(m, { kind: 'sellItem', item: 'carp', n: 1 }, wed);
+  s.act(m, { kind: 'sellItem', item: 'carp', n: 1, at: 'general' }, wed);
   assert.equal(s.balance(m) - before, Math.round(ITEM_BY_ID.carp.sell * 1.2));
   s.fails(m, { kind: 'sellItem', item: 'fertilizer', n: 1 }, wed, PLUS_REJECT.noSell);
   // Night river casts can give night fish; winter pond gives smelt-type fish.
@@ -800,7 +801,11 @@ test('cloud: new actions and room visits flow through cloudTransition with the l
   await run(a, 'open');
   b.code = a.code;
   await run(b, 'join');
-  const bought = await run(a, 'action', { action: { kind: 'buyItem', item: 'bait', n: 2 } });
+  // 가게 나누기: bait is bought at a shop counter (the 잡화점 until the harbor opens).
+  const away = await run(a, 'action', { action: { kind: 'buyItem', item: 'bait', n: 2, at: 'general' } });
+  assert.match(away.error ?? '', /등불 잡화점에 가서/);
+  assert.equal((await run(a, 'action', { action: { kind: 'area', area: 'market', x: 0, y: 0 } })).ok, true);
+  const bought = await run(a, 'action', { action: { kind: 'buyItem', item: 'bait', n: 2, at: 'general' } });
   assert.equal(bought.ok, true, bought.error);
   assert.equal(bought.life.me.inv.bait, 2);
   assert.equal(bought.life.me.fishing.bait, 2);
@@ -850,7 +855,7 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
       const crop = order.find((c) => !CROP_INFO[c].seasons || CROP_INFO[c].seasons.includes(v.calendar.season)),
         empty = v.me.farm.filter((p) => !p.crop || p.ready).length;
       if (empty) {
-        act(m, { kind: 'buy', item: 'seed-' + crop, n: Math.min(20, empty) }, morning);
+        act(m, { kind: 'buy', item: 'seed-' + crop, n: Math.min(20, empty), at: 'general' }, morning);
         act(m, { kind: 'plant', plot: -1, crop }, morning);
       }
       v = lifeView(s.life, m.id, m.actor, morning);
@@ -913,11 +918,11 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
       ev = lifeView(s.life, m.id, m.actor, evening);
       const keep = new Set(['wood', 'pinecone', 'stone', 'shell']);
       for (const [id, n] of Object.entries(ev.me.inv))
-        if (ITEM_BY_ID[id].sell > 0 && !keep.has(id) && n > 3) act(m, { kind: 'sellItem', item: id, n: n - 3 }, evening);
+        if (ITEM_BY_ID[id].sell > 0 && !keep.has(id) && n > 3) act(m, { kind: 'sellItem', item: id, n: n - 3, at: buyerOf(id, 'general') }, evening);
       for (const c of CROPS) {
         const left = sellCapLeft(s.life, m.id, evening),
           n = Math.min(ev.me.bag.produce[c] - 6, Math.floor(left / (CROP_INFO[c].sell * 1.5)));
-        if (n > 0) act(m, { kind: 'sell', crop: c, n }, evening);
+        if (n > 0) act(m, { kind: 'sell', crop: c, n, at: 'coop' }, evening);
       }
       if (d % 5 === m.actor % 5) {
         const gift = Object.keys(ev.me.inv).find((id) => ITEM_BY_ID[id].kind !== 'tool');
@@ -927,7 +932,7 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
       if ((ev.me.inv.wood ?? 0) > 1 && (ev.me.inv.pinecone ?? 0) > 0) act(m, { kind: 'craft', recipe: 'fertilizer' }, evening);
       if (d % 30 === 10) {
         if (s.balance(m) > FARM_EXPAND_PRICE[9] + 50_000) act(m, { kind: 'expandFarm' }, evening);
-        if (s.balance(m) > ROD_PRICE[2] + 50_000) act(m, { kind: 'upgradeRod' }, evening);
+        if (s.balance(m) > ROD_PRICE[2] + 50_000) act(m, { kind: 'upgradeRod', at: 'general' }, evening);
         const stock = ev.shop.items[m.actor % ev.shop.items.length];
         if (s.balance(m) > stock.price + 50_000) act(m, { kind: 'buyFurniture', ref: stock.ref }, evening);
       }
@@ -993,7 +998,7 @@ test('VILL-2 spots: falls need rod 2, the harbor opens at night, personal bests 
     [m] = s.members;
   // 폭포 소: strong water.
   s.fails(m, { kind: 'cast', spot: 'falls' }, T0, PLUS_REJECT.spotRod);
-  s.act(m, { kind: 'upgradeRod' }, T0);
+  s.act(m, { kind: 'upgradeRod', at: 'general' }, T0);
   s.act(m, { kind: 'cast', spot: 'falls' }, T0 + MIN);
   let p = s.view(m, T0 + MIN).me.fishing.pending;
   s.act(m, { kind: 'reel', token: p.token, timingMs: 100 }, p.biteAt + 100);

@@ -139,6 +139,11 @@ export type MineDrop = { item: 'stone' | 'copper' | 'iron' | 'gold' | 'gem'; n: 
  * by the band table (copper/iron/gold/gem +`orePts`%p taken from stone), 1–2
  * of it (ore +`oreBonus`, ×VEIN_MULT on a vein rock), sometimes a fossil too.
  */
+/** The best ore a floor's band gives (광부의 힘's extra ore). */
+export function floorOre(floor: number): 'copper' | 'iron' | 'gold' {
+  const b = bandOf(floor);
+  return b.gold ? 'gold' : b.iron ? 'iron' : 'copper';
+}
 export function mineDrop(key: string, floor: number, vein: boolean, orePts = 0): MineDrop {
   const b = bandOf(floor);
   const r = (mh(`drop:${key}`) % 10_000) / 100;

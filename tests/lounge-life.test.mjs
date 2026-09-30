@@ -197,29 +197,29 @@ test('selling grants 범 through the ledger; demand curves per crop recover at K
   s.life.bag[m.id].produce.strawberry = 30;
   s.life.bag[m.id].produce.carrot = 10;
   s.life.bag[m.id].fruit = 5;
-  s.act(m, { kind: 'sell', crop: 'fruit', n: 2 }, T0);
+  s.act(m, { kind: 'sell', crop: 'fruit', n: 2, at: 'coop' }, T0);
   // Fruit sags slowly (half-life 20): 150 + round(150 × 0.5^(1/20)).
   assert.equal(s.balance(m), INITIAL_BEOM + 150 + Math.round(150 * 0.5 ** (1 / 20)));
   assert.equal(s.ledger.entries.at(-1).type, 'grant');
-  s.fails(m, { kind: 'sell', crop: 'fruit', n: 4 }, T0, LIFE_REJECT.notEnough);
-  s.fails(m, { kind: 'sell', crop: 'fruit', n: 0 }, T0);
-  s.fails(m, { kind: 'sell', crop: 'fruit', n: 1.5 }, T0);
+  s.fails(m, { kind: 'sell', crop: 'fruit', n: 4, at: 'coop' }, T0, LIFE_REJECT.notEnough);
+  s.fails(m, { kind: 'sell', crop: 'fruit', n: 0, at: 'coop' }, T0);
+  s.fails(m, { kind: 'sell', crop: 'fruit', n: 1.5, at: 'coop' }, T0);
   // Strawberries: each one sold today pays less (half-life 4).
   const one = (k) => Math.round(4_500 * demandMult('strawberry', k));
   let before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'strawberry', n: 4 }, T0);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 4, at: 'coop' }, T0);
   assert.equal(s.balance(m) - before, one(0) + one(1) + one(2) + one(3));
   assert.equal(one(4), 2_250);
   before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'strawberry', n: 1 }, T0 + 1);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 1, at: 'coop' }, T0 + 1);
   assert.equal(s.balance(m) - before, 2_250);
   // Another crop has its own demand: the first carrot is full price.
   before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'carrot', n: 1 }, T0 + 2);
+  s.act(m, { kind: 'sell', crop: 'carrot', n: 1, at: 'coop' }, T0 + 2);
   assert.equal(s.balance(m) - before, CROP_INFO.carrot.sell);
   // Flooding one crop bottoms out at DEMAND_FLOOR (below the seed price).
   before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'strawberry', n: 20 }, T0 + 3);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 20, at: 'coop' }, T0 + 3);
   const tail = s.balance(m) - before;
   assert.ok(tail < 20 * 4_500 * 0.4, String(tail));
   assert.equal(Math.round(4_500 * demandMult('strawberry', 40)), Math.round(4_500 * DEMAND_FLOOR));
@@ -232,7 +232,7 @@ test('selling grants 범 through the ledger; demand curves per crop recover at K
   assert.equal(lifeView(s.life, m.id, 0, tomorrow).sellCapLeft, SELL_CAP_PER_DAY);
   assert.deepEqual(lifeView(s.life, m.id, 0, tomorrow).me.demand, {});
   before = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'strawberry', n: 1 }, tomorrow);
+  s.act(m, { kind: 'sell', crop: 'strawberry', n: 1, at: 'coop' }, tomorrow);
   assert.equal(s.balance(m) - before, 4_500);
   invariant(s.ledger);
 });
@@ -247,7 +247,7 @@ test('market saturation tapers very long selling days; the safety ceiling still 
   const view = () => lifeView(s.life, m.id, 0, T0);
   const q = sellQuote(view(), 'koi', 0, 20, T0);
   const before = s.balance(m);
-  s.act(m, { kind: 'sellItem', item: 'koi', n: 20 }, T0);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 20, at: 'general' }, T0);
   assert.equal(s.balance(m) - before, q.total);
   // Rare fish sag fast (half-life 2): the 3rd koi pays half.
   assert.equal(view().me.demand.koi, 20);
@@ -260,42 +260,42 @@ test('market saturation tapers very long selling days; the safety ceiling still 
   const carp = sellQuote(view(), 'carp', 0, 1, T0);
   assert.equal(carp.next, Math.round(sellUnit('carp', 0, T0) * 0.5));
   s.life.sold[m.id] = { day: kstDay(T0), amount: SELL_CAP_PER_DAY - 100 };
-  s.fails(m, { kind: 'sellItem', item: 'carp', n: 50 }, T0);
+  s.fails(m, { kind: 'sellItem', item: 'carp', n: 50, at: 'general' }, T0);
   invariant(s.ledger);
 });
 
 test('buying spends through the ledger; unlocks are idempotent, seeds stack', () => {
   const s = world(1),
     [m] = s.members;
-  s.act(m, { kind: 'buy', item: 'seed-pumpkin', n: 3 }, T0);
+  s.act(m, { kind: 'buy', item: 'seed-pumpkin', n: 3, at: 'general' }, T0);
   assert.equal(s.life.bag[m.id].seeds.pumpkin, 3);
   assert.equal(s.balance(m), INITIAL_BEOM - 1_500);
   // Bundles: six seeds at 10% off, stackable.
-  s.act(m, { kind: 'buy', item: 'bundle-pumpkin', n: 2 }, T0);
+  s.act(m, { kind: 'buy', item: 'bundle-pumpkin', n: 2, at: 'general' }, T0);
   assert.equal(s.life.bag[m.id].seeds.pumpkin, 15);
   assert.equal(s.balance(m), INITIAL_BEOM - 1_500 - 2 * 2_700);
   // Palette tiers: neon needs pastel first.
-  s.fails(m, { kind: 'buy', item: 'palette-neon' }, T0 + 1, LIFE_REJECT.locked);
-  s.act(m, { kind: 'buy', item: 'palette-pastel' }, T0 + 1);
+  s.fails(m, { kind: 'buy', item: 'palette-neon', at: 'general' }, T0 + 1, LIFE_REJECT.locked);
+  s.act(m, { kind: 'buy', item: 'palette-pastel', at: 'general' }, T0 + 1);
   assert.deepEqual(s.life.unlocks[m.id], ['palette-pastel']);
   const before = s.balance(m);
-  s.fails(m, { kind: 'buy', item: 'palette-pastel' }, T0 + 2, LIFE_REJECT.owned);
+  s.fails(m, { kind: 'buy', item: 'palette-pastel', at: 'general' }, T0 + 2, LIFE_REJECT.owned);
   assert.equal(s.balance(m), before);
-  s.fails(m, { kind: 'buy', item: 'palette-neon', n: 2 }, T0 + 2);
-  s.fails(m, { kind: 'buy', item: 'rocket' }, T0 + 2, LIFE_REJECT.item);
-  s.fails(m, { kind: 'buy', item: 'seed-carrot', n: 21 }, T0 + 2);
+  s.fails(m, { kind: 'buy', item: 'palette-neon', n: 2, at: 'general' }, T0 + 2);
+  s.fails(m, { kind: 'buy', item: 'rocket', at: 'general' }, T0 + 2, LIFE_REJECT.item);
+  s.fails(m, { kind: 'buy', item: 'seed-carrot', n: 21, at: 'general' }, T0 + 2);
   // Trophies need a harvest milestone as well as 범.
-  s.fails(m, { kind: 'buy', item: 'trophy-carrot' }, T0 + 3, LIFE_REJECT.locked);
+  s.fails(m, { kind: 'buy', item: 'trophy-carrot', at: 'general' }, T0 + 3, LIFE_REJECT.locked);
   s.life.harvested = { [m.id]: { carrot: 29 } };
-  s.fails(m, { kind: 'buy', item: 'trophy-carrot' }, T0 + 3, LIFE_REJECT.locked);
+  s.fails(m, { kind: 'buy', item: 'trophy-carrot', at: 'general' }, T0 + 3, LIFE_REJECT.locked);
   s.life.harvested[m.id].carrot = 30;
-  s.act(m, { kind: 'buy', item: 'trophy-carrot' }, T0 + 3);
+  s.act(m, { kind: 'buy', item: 'trophy-carrot', at: 'general' }, T0 + 3);
   assert.equal(s.balance(m), before - 20_000);
-  s.act(m, { kind: 'buy', item: 'seed-strawberry', n: 20 }, T0 + 11);
+  s.act(m, { kind: 'buy', item: 'seed-strawberry', n: 20, at: 'general' }, T0 + 11);
   assert.equal(s.balance(m), before - 40_000);
   // Not enough money: rejected without any change.
   const snapshot = JSON.stringify(s.life);
-  s.fails(m, { kind: 'buy', item: 'palette-neon' }, T0 + 12, LIFE_REJECT.balance);
+  s.fails(m, { kind: 'buy', item: 'palette-neon', at: 'general' }, T0 + 12, LIFE_REJECT.balance);
   assert.equal(JSON.stringify(s.life), snapshot);
   assert.equal(s.balance(m), before - 40_000);
   invariant(s.ledger);
@@ -308,13 +308,13 @@ test('ledger invariant holds after many mixed life operations', () => {
     for (const m of s.members) {
       now += 7 * MIN;
       const tries = [
-        { kind: 'buy', item: 'seed-carrot', n: 2 },
+        { kind: 'buy', item: 'seed-carrot', n: 2, at: 'general' },
         { kind: 'plant', plot: round % PLOTS_PER_USER, crop: 'carrot' },
         { kind: 'water', plot: round % PLOTS_PER_USER },
         { kind: 'harvest', plot: -1 },
         { kind: 'pick', tree: FRUIT_TREES[round % FRUIT_TREES.length] },
-        { kind: 'sell', crop: 'carrot', n: 1 },
-        { kind: 'sell', crop: 'fruit', n: 1 },
+        { kind: 'sell', crop: 'carrot', n: 1, at: 'coop' },
+        { kind: 'sell', crop: 'fruit', n: 1, at: 'coop' },
       ];
       for (const a of tries) {
         try {

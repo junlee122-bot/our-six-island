@@ -280,7 +280,7 @@ test('profession effects: crop sell bonus, bite window, forage double, craft dis
   s.act(m, { kind: 'chooseProf', skill: 'craft', prof: 'craft-b' }, T0);
   s.life.bag[m.id].produce.pumpkin = 1;
   const b0 = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 1 }, T0 + 1000);
+  s.act(m, { kind: 'sell', crop: 'pumpkin', n: 1, at: 'coop' }, T0 + 1000);
   assert.equal(s.balance(m) - b0, Math.round(CROP_INFO.pumpkin.sell * 1.1));
   s.act(m, { kind: 'cast', spot: 'river' }, T0 + 2000);
   const p = s.life.ext[m.id].pending;
