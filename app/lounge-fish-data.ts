@@ -153,8 +153,8 @@ export const FISHING_TOOL_ITEMS: readonly ItemDef[] = [
   tool(CRAB_POT, '통발', '낚시터에 놓아 두면 4시간 뒤 해산물이 들어 있어요'),
 ];
 export const FISHING_ITEM_PRICES: Readonly<Record<string, number>> = {
-  'bait-dough': 120,
-  'bait-shrimp': 300,
+  'bait-dough': 40,
+  'bait-shrimp': 80,
   'tackle-float': 4_000,
   'tackle-trap': 5_000,
   'tackle-treasure': 6_000,
