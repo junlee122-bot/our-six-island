@@ -55,7 +55,9 @@ import { ConfirmModal, Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useNow } from './use-now';
 import { lookFor } from './friend-looks';
-import { FarmLedger } from './FarmLedger';
+import { FarmLedgerBody } from './FarmLedger';
+import { FarmWorks, type FarmPage } from './FarmWorks';
+import { Tabs, tabPanelProps } from '../ui/Tabs';
 import type { VillagePoint } from '../lounge-village-layout';
 import './life.css';
 import { Glyph, type GlyphName } from '../ui/Glyph';
@@ -169,9 +171,12 @@ function Stepper({
 /* ------------------------------------------------------------------ farm */
 
 /**
- * 내 텃밭 → 텃밭 장부 (VILL-2): the wooden notebook in FarmLedger.tsx. My
- * actor comes from the life view when the caller does not pass it.
+ * 내 텃밭 (VILL-2 + 텃밭 확장): one window with four tabs — 텃밭 장부 (the
+ * wooden notebook in FarmLedger.tsx), 밭 배치, 가공, 출하·품평회
+ * (FarmWorks.tsx). My actor comes from the life view when the caller does
+ * not pass it. The last tab stays for the session.
  */
+let lastFarmPage: FarmPage = 'ledger';
 export function FarmModal({
   room,
   view,
@@ -187,17 +192,40 @@ export function FarmModal({
   onWalk?: (point: VillagePoint) => void;
   actor?: number;
 }) {
+  const [page, setPageState] = useState<FarmPage>(lastFarmPage);
+  const setPage = (next: FarmPage) => {
+    lastFarmPage = next;
+    setPageState(next);
+  };
+  const me = actor ?? view.life?.actors?.[view.self] ?? 0;
+  const farmx = view.life?.farmx;
+  const now = useNow(true, 15_000) + view.clockOffset;
+  const ready =
+    (farmx?.machines.filter((m) => m.out && (m.doneAt ?? Infinity) <= now).length ?? 0) +
+    (farmx?.fixtures.filter((f) => f.kind === 'beehouse' && (f.readyAt ?? Infinity) <= now).length ?? 0);
   return (
-    <FarmLedger
-      room={room}
-      view={view}
-      notify={notify}
-      onClose={onClose}
-      onShop={onShop}
-      onBag={onBag}
-      onWalk={onWalk}
-      actor={actor ?? view.life?.actors?.[view.self] ?? 0}
-    />
+    <Modal title={`${ACTORS[me] ?? ''}네 텃밭`} onClose={onClose} className="l-ledger l-farm" panel="plain" wide>
+      <Tabs<FarmPage>
+        className="l-farm-tabs"
+        label="텃밭"
+        idBase="farm"
+        value={page}
+        onChange={setPage}
+        items={[
+          { id: 'ledger', label: '텃밭 장부', glyph: 'sprout' },
+          { id: 'layout', label: '밭 배치', glyph: 'grid' },
+          { id: 'works', label: '가공', glyph: 'pot', badge: ready || undefined },
+          { id: 'market', label: '출하·품평회', glyph: 'award', badge: farmx?.bin ? farmx.bin.items.length : undefined },
+        ]}
+      />
+      <div {...tabPanelProps('farm', page)}>
+        {page === 'ledger' ? (
+          <FarmLedgerBody room={room} view={view} notify={notify} onClose={onClose} onShop={onShop} onBag={onBag} onWalk={onWalk} actor={me} onPage={setPage} />
+        ) : (
+          <FarmWorks page={page} room={room} view={view} notify={notify} />
+        )}
+      </div>
+    </Modal>
   );
 }
 

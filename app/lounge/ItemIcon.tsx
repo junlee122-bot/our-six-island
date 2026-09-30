@@ -97,6 +97,141 @@ const CROP_ART: Record<string, ReactNode> = {
       <circle cx="24" cy="26" r="6" fill="#e3f2c8" />
     </>
   ),
+  garlic: (
+    <>
+      <path d="M24 12 C14 18 10 28 14 36 C18 44 30 44 34 36 C38 28 34 18 24 12Z" fill="#f4eee0" stroke="#b9ab8a" strokeWidth="1.5" />
+      <path d="M24 14 C20 24 20 34 24 42 M24 14 C28 24 28 34 24 42" stroke="#d6c9a8" strokeWidth="1.3" fill="none" />
+      <path d="M24 12 C24 8 23 5 21 3" stroke="#8aa35a" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M18 42 l-2 3 M24 43 v3 M30 42 l2 3" stroke="#b9ab8a" strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  ),
+  pea: (
+    <>
+      <path d="M8 30 C12 18 30 12 42 16 C40 28 24 36 8 30Z" fill="#7cc05a" stroke="#4f8a3a" strokeWidth="1.5" />
+      <circle cx="17" cy="26" r="3.6" fill="#a6dc7a" />
+      <circle cx="25" cy="23" r="3.6" fill="#a6dc7a" />
+      <circle cx="33" cy="20" r="3.4" fill="#a6dc7a" />
+      <path d="M42 16 C44 12 42 8 38 8" stroke="#4f8a3a" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  lettuce: (
+    <>
+      <path d="M24 42 C10 42 6 30 10 22 C14 14 20 18 24 12 C28 18 34 14 38 22 C42 30 38 42 24 42Z" fill="#9fd36e" stroke="#5f9a48" strokeWidth="1.5" />
+      <path d="M24 42 C18 34 18 26 24 18 C30 26 30 34 24 42Z" fill="#c8ec9c" />
+      <path d="M24 40 V22" stroke="#e8f6d4" strokeWidth="1.4" />
+    </>
+  ),
+  tulip: (
+    <>
+      <path d="M24 44 V24" stroke="#4f8a3a" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M24 38 C16 36 12 30 12 24 C18 26 22 30 24 36Z" fill="#5f9e48" />
+      <path d="M14 10 L18 16 L24 8 L30 16 L34 10 C36 22 32 28 24 28 C16 28 12 22 14 10Z" fill="#e8546e" stroke="#a82a44" strokeWidth="1.5" strokeLinejoin="round" />
+    </>
+  ),
+  onion: (
+    <>
+      <path d="M24 12 C12 18 8 30 14 38 C18 43 30 43 34 38 C40 30 36 18 24 12Z" fill="#d9a060" stroke="#9a6a34" strokeWidth="1.5" />
+      <path d="M24 14 C18 22 18 34 22 42 M24 14 C30 22 30 34 26 42" stroke="#b9834a" strokeWidth="1.2" fill="none" />
+      <path d="M24 12 V4" stroke="#8aa35a" strokeWidth="2.5" strokeLinecap="round" />
+    </>
+  ),
+  pepper: (
+    <>
+      <path d="M20 12 C28 12 34 18 32 28 C30 36 22 42 12 44 C18 36 18 24 20 12Z" fill="#d8352a" stroke="#9a2018" strokeWidth="1.5" />
+      <path d="M22 18 C24 22 24 28 22 34" stroke="#f08a80" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <path d="M20 12 C20 8 23 5 27 5 M18 12 h8" stroke="#3f8a34" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  cucumber: (
+    <>
+      <path d="M10 36 C8 30 14 20 26 14 C34 10 40 12 40 16 C40 22 32 32 22 38 C16 41 11 40 10 36Z" fill="#4f9a3c" stroke="#2f6a2a" strokeWidth="1.5" />
+      <circle cx="20" cy="30" r="1" fill="#c8ec9c" />
+      <circle cx="27" cy="24" r="1" fill="#c8ec9c" />
+      <circle cx="33" cy="19" r="1" fill="#c8ec9c" />
+      <path d="M40 15 l4 -3" stroke="#6a8a3a" strokeWidth="2" strokeLinecap="round" />
+    </>
+  ),
+  blueberry: (
+    <>
+      <circle cx="17" cy="28" r="9" fill="#4a5fa8" stroke="#2f3f7a" strokeWidth="1.5" />
+      <circle cx="31" cy="30" r="9" fill="#5a6fba" stroke="#2f3f7a" strokeWidth="1.5" />
+      <circle cx="24" cy="18" r="8" fill="#51669f" stroke="#2f3f7a" strokeWidth="1.5" />
+      <path d="M22 15 l2 2 2 -2 M15 25 l2 2 2 -2 M29 27 l2 2 2 -2" stroke="#1f2a55" strokeWidth="1.2" fill="none" />
+    </>
+  ),
+  chamoe: (
+    <>
+      <ellipse cx="24" cy="27" rx="18" ry="13" fill="#f2c230" stroke="#b88a10" strokeWidth="1.5" />
+      <path d="M8 27 h32 M10 21 C18 23 30 23 38 21 M10 33 C18 31 30 31 38 33" stroke="#fff3c0" strokeWidth="1.8" fill="none" />
+      <path d="M24 14 C24 10 26 8 29 7" stroke="#6a8a3a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  zinnia: (
+    <>
+      <path d="M24 44 V30" stroke="#4f8a3a" strokeWidth="2.6" />
+      {[0, 40, 80, 120, 160, 200, 240, 280, 320].map((a) => (
+        <ellipse key={a} cx="24" cy="10" rx="4.2" ry="6.5" fill="#e0506a" stroke="#a82a44" strokeWidth="1" transform={`rotate(${a} 24 19)`} />
+      ))}
+      {[20, 100, 180, 260, 340].map((a) => (
+        <ellipse key={a} cx="24" cy="13" rx="3" ry="4.5" fill="#f07888" transform={`rotate(${a} 24 19)`} />
+      ))}
+      <circle cx="24" cy="19" r="4" fill="#f5c52a" stroke="#b8861a" strokeWidth="1" />
+    </>
+  ),
+  grape: (
+    <>
+      {[
+        [18, 18],
+        [26, 18],
+        [34, 18],
+        [22, 25],
+        [30, 25],
+        [18, 32],
+        [26, 32],
+        [22, 39],
+      ].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="4.6" fill="#7a3f96" stroke="#4f2266" strokeWidth="1.2" />
+      ))}
+      <path d="M26 13 C26 9 28 6 32 5" stroke="#6b4a2b" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <path d="M28 9 C34 4 40 8 40 11 C34 12 30 12 28 9Z" fill="#5f9e48" />
+    </>
+  ),
+  radish: (
+    <>
+      <path d="M14 16 C14 30 18 40 24 44 C30 40 34 30 34 16Z" fill="#f6f2e8" stroke="#b8b09a" strokeWidth="1.5" />
+      <path d="M14 16 C14 22 34 22 34 16 C34 12 14 12 14 16Z" fill="#b8d88a" />
+      <path d="M24 14 C18 6 14 6 12 8 M24 14 C24 4 27 2 30 4 M24 14 C30 7 34 7 36 10" stroke="#4f9a3c" strokeWidth="3" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  eggplant: (
+    <>
+      <path d="M22 14 C32 14 38 22 36 32 C34 40 26 44 18 42 C10 40 8 32 12 26 C16 20 16 14 22 14Z" fill="#6a3a84" stroke="#43205a" strokeWidth="1.5" />
+      <path d="M18 24 C16 28 16 34 18 37" stroke="#9a6ab4" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+      <path d="M22 14 l-5 -2 4 5 M22 14 l6 -3 -3 5 M22 14 C22 10 24 6 27 5" stroke="#3f8a34" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  chrysanthemum: (
+    <>
+      <path d="M24 44 V30" stroke="#4f8a3a" strokeWidth="2.6" />
+      {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((a) => (
+        <ellipse key={a} cx="24" cy="9" rx="2.6" ry="8" fill="#f0c83c" stroke="#c8961a" strokeWidth=".8" transform={`rotate(${a} 24 19)`} />
+      ))}
+      <circle cx="24" cy="19" r="4" fill="#e0a020" />
+    </>
+  ),
+  greenonion: (
+    <>
+      <path d="M18 44 C18 34 20 20 16 6 M24 44 C24 30 24 18 24 4 M30 44 C30 34 28 20 32 6" stroke="#4f9a3c" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <path d="M16 30 h16 v12 C32 45 16 45 16 42Z" fill="#f4f1e6" stroke="#bdb49a" strokeWidth="1.3" />
+    </>
+  ),
+  insam: (
+    <>
+      <path d="M24 10 C30 14 30 22 26 28 C30 32 34 38 36 44 M26 28 C22 34 18 38 12 42 M24 10 C20 16 20 22 24 28" stroke="#d9b27a" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <path d="M24 10 C22 6 20 4 16 4 M24 10 C26 5 29 3 33 4" stroke="#4f8a3a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <circle cx="30" cy="5" r="2.2" fill="#d8352a" />
+    </>
+  ),
   fruit: (
     <>
       <path d="M24 16 C14 8 6 18 8 28 C10 38 18 44 24 40 C30 44 38 38 40 28 C42 18 34 8 24 16Z" fill="#d9412e" stroke="#9e2a1c" strokeWidth="1.5" />
@@ -714,6 +849,16 @@ function dishArt(id: string): ReactNode {
 }
 
 /* ------------------------------------------------------------ tools */
+function sprinklerArt(head: string, dark: string): ReactNode {
+  return (
+    <>
+      <path d="M24 44 V22" stroke="#6f726b" strokeWidth="3" strokeLinecap="round" />
+      <ellipse cx="24" cy="44" rx="8" ry="2.5" fill="#8a6a44" />
+      <path d="M14 22 h20 l-3 -7 h-14z" fill={head} stroke={dark} strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M10 12 q-3 -4 -1 -8 M38 12 q3 -4 1 -8 M24 10 v-6 M16 10 l-3 -5 M32 10 l3 -5" stroke="#8fd0f0" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+    </>
+  );
+}
 const TOOL_ART: Record<string, ReactNode> = {
   can: (
     <>
@@ -752,6 +897,79 @@ const TOOL_ART: Record<string, ReactNode> = {
       <circle cx="40" cy="25" r="1.3" fill={INK} />
     </>
   ),
+  sprinkler: sprinklerArt('#c77a3f', '#8a4a20'),
+  'sprinkler-q': sprinklerArt('#a9b4be', '#5f6a74'),
+  'sprinkler-s': sprinklerArt('#b99cf0', '#6a4bb0'),
+  scarecrow: (
+    <>
+      <path d="M24 16 V46 M10 24 H38" stroke="#8a5a34" strokeWidth="3" strokeLinecap="round" />
+      <path d="M16 22 h16 l-2 14 h-12z" fill="#c95f3f" stroke="#8a3a24" strokeWidth="1.3" />
+      <circle cx="24" cy="12" r="7" fill="#f2d88a" stroke="#b9956a" strokeWidth="1.3" />
+      <path d="M14 8 C18 2 30 2 34 8Z" fill="#c9a36a" stroke="#8a6a3a" strokeWidth="1.2" />
+      <path d="M21 12 h1 M26 12 h1 M21 15 q3 2 6 0" stroke={INK} strokeWidth="1.3" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  beehouse: (
+    <>
+      <path d="M10 18 L24 8 L38 18Z" fill="#9a6a3a" stroke="#6a4424" strokeWidth="1.3" strokeLinejoin="round" />
+      <rect x="12" y="18" width="24" height="24" rx="2" fill="#e8c27a" stroke="#9a7a44" strokeWidth="1.3" />
+      <path d="M12 26 h24 M12 34 h24" stroke="#c9a05a" strokeWidth="1.2" />
+      <rect x="21" y="36" width="6" height="4" rx="1" fill="#6a4424" />
+      <circle cx="38" cy="12" r="2.6" fill="#f5c52a" stroke={INK} strokeWidth=".8" />
+    </>
+  ),
+  jar: (
+    <>
+      <path d="M14 14 h20 C40 20 42 30 38 38 C36 43 12 43 10 38 C6 30 8 20 14 14Z" fill="#7a4a2a" stroke="#4a2a14" strokeWidth="1.5" />
+      <path d="M12 12 h24 v4 h-24z" fill="#5a3418" />
+      <path d="M13 24 C20 26 28 26 35 24" stroke="#a8764a" strokeWidth="1.5" fill="none" />
+    </>
+  ),
+  keg: (
+    <>
+      <path d="M12 8 h24 C40 18 40 30 36 42 h-24 C8 30 8 18 12 8Z" fill="#b9854a" stroke="#6a4424" strokeWidth="1.5" />
+      <path d="M11 16 h26 M10 34 h28" stroke="#5f6a74" strokeWidth="2.5" />
+      <path d="M24 8 v34" stroke="#8a5a34" strokeWidth="1" />
+      <rect x="21" y="23" width="6" height="4" rx="1" fill="#5a3418" />
+    </>
+  ),
+  dehydrator: (
+    <>
+      <rect x="8" y="10" width="32" height="30" rx="3" fill="#c9a36a" stroke="#6a4424" strokeWidth="1.5" />
+      <path d="M12 18 h24 M12 25 h24 M12 32 h24" stroke="#8a5a34" strokeWidth="1.5" strokeDasharray="3 2" />
+      <path d="M16 6 q2 -3 4 0 q2 3 4 0 M26 6 q2 -3 4 0" stroke="#e8a060" strokeWidth="1.4" fill="none" />
+    </>
+  ),
+  seedmaker: (
+    <>
+      <path d="M12 12 h24 l-4 14 h-16z" fill="#a9b4be" stroke="#5f6a74" strokeWidth="1.5" strokeLinejoin="round" />
+      <rect x="14" y="26" width="20" height="14" rx="2" fill="#8a5a34" stroke="#4a2a14" strokeWidth="1.3" />
+      <ellipse cx="20" cy="44" rx="2" ry="1.4" fill="#e7cf97" />
+      <ellipse cx="26" cy="45" rx="2" ry="1.4" fill="#e7cf97" />
+      <circle cx="24" cy="33" r="3" fill="#e7cf97" stroke="#b9956a" />
+    </>
+  ),
+  'fertilizer-star': (
+    <>
+      <path d="M12 12 h24 l4 30 h-32z" fill="#6a4bb0" stroke="#43307a" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 12 l4 -5 h16 l4 5" fill="#8a6ad0" stroke="#43307a" strokeWidth="1.5" />
+      <path d="M24 20 l3 6 7 1 -5 4 1 7 -6 -3 -6 3 1 -7 -5 -4 7 -1z" fill="#d8c8ff" />
+    </>
+  ),
+  'speed-gro': (
+    <>
+      <path d="M12 12 h24 l4 30 h-32z" fill="#d88a3a" stroke="#9a5a1a" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 12 l4 -5 h16 l4 5" fill="#e8a860" stroke="#9a5a1a" strokeWidth="1.5" />
+      <path d="M26 18 l-8 12 h6 l-2 10 8 -13 h-6z" fill="#fff1a8" />
+    </>
+  ),
+  retaining: (
+    <>
+      <path d="M12 12 h24 l4 30 h-32z" fill="#5f7a8a" stroke="#3a4f5a" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M12 12 l4 -5 h16 l4 5" fill="#7a98a8" stroke="#3a4f5a" strokeWidth="1.5" />
+      <path d="M24 20 C20 26 18 30 18 33 C18 37 30 37 30 33 C30 30 28 26 24 20Z" fill="#bfe8f2" />
+    </>
+  ),
 };
 
 /** The painted icon for any life item id (crops, 'seed-*', fish, bugs, forage, dishes, tools). */
@@ -767,7 +985,54 @@ export function itemArt(id: string): ReactNode {
       </>
     );
   }
-  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? null;
+  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? goodArt(id) ?? null;
+}
+
+/* ------------------------------------------------------------ artisan goods (텃밭 확장) */
+/** Jar / bottle / tray / honey pot with the source crop drawn small on its label. */
+function goodArt(id: string): ReactNode {
+  const m = /^(jar|keg|dry|honey)(?:-([a-z]+))?$/.exec(id);
+  if (!m || (m[1] !== 'honey' && !m[2])) return null;
+  const crop = m[2] ? CROP_ART[m[2]] : null;
+  const label = crop ? <g transform="translate(16 22) scale(.34)">{crop}</g> : null;
+  switch (m[1]) {
+    case 'jar':
+      return (
+        <>
+          <path d="M14 14 h20 C40 20 42 30 38 38 C36 43 12 43 10 38 C6 30 8 20 14 14Z" fill="#7a4a2a" stroke="#4a2a14" strokeWidth="1.5" />
+          <path d="M12 11 h24 v4 h-24z" fill="#5a3418" />
+          <rect x="14" y="20" width="20" height="16" rx="3" fill="#f2e3c2" />
+          {label}
+        </>
+      );
+    case 'keg':
+      return (
+        <>
+          <path d="M20 4 h8 v8 C34 16 36 22 36 28 V42 C36 44 12 44 12 42 V28 C12 22 14 16 20 12Z" fill="#6a8a5a" stroke="#3a5a34" strokeWidth="1.5" />
+          <rect x="19" y="2" width="10" height="4" rx="1" fill="#8a5a34" />
+          <rect x="14" y="20" width="20" height="16" rx="2" fill="#f2e3c2" />
+          {label}
+        </>
+      );
+    case 'dry':
+      return (
+        <>
+          <ellipse cx="24" cy="36" rx="19" ry="7" fill="#c9a36a" stroke="#8a6a3a" strokeWidth="1.5" />
+          <path d="M8 34 C14 38 34 38 40 34" stroke="#a8804a" strokeWidth="1.2" fill="none" />
+          <g transform="translate(10 12) scale(.42)" opacity=".85">{crop}</g>
+          <g transform="translate(20 16) scale(.42)" opacity=".85">{crop}</g>
+        </>
+      );
+    default:
+      return (
+        <>
+          <path d="M12 16 h24 v22 C36 43 12 43 12 38Z" fill="#f0a830" stroke="#b8741a" strokeWidth="1.5" />
+          <path d="M10 12 h28 v5 h-28z" fill="#c9a36a" stroke="#8a6a3a" strokeWidth="1.2" />
+          <path d="M16 22 C18 30 18 34 16 38" stroke="#ffd98a" strokeWidth="2" fill="none" strokeLinecap="round" />
+          {crop ? <g transform="translate(22 22) scale(.3)">{crop}</g> : null}
+        </>
+      );
+  }
 }
 
 /* ------------------------------------------------------------ growth stages */
@@ -783,6 +1048,22 @@ const CROP_LEAF: Record<string, { leaf: Leaf; tone: string; dark: string; hint: 
   watermelon: { leaf: 'vine', tone: '#5a9a45', dark: '#3f7a34', hint: '#4f8f3c' },
   sweetpotato: { leaf: 'vine', tone: '#6a9e4a', dark: '#6b4a7a', hint: '#b0587a' },
   cabbage: { leaf: 'rosette', tone: '#8cc063', dark: '#5f9a48', hint: '#cfe7a8' },
+  garlic: { leaf: 'stalk', tone: '#8aa35a', dark: '#6a8a3a', hint: '#f4eee0' },
+  pea: { leaf: 'vine', tone: '#7cc05a', dark: '#4f8a3a', hint: '#f6f2e8' },
+  lettuce: { leaf: 'rosette', tone: '#9fd36e', dark: '#6aa54c', hint: '#c8ec9c' },
+  tulip: { leaf: 'stalk', tone: '#5f9e48', dark: '#3f7a34', hint: '#e8546e' },
+  onion: { leaf: 'stalk', tone: '#8aa35a', dark: '#5f8a3a', hint: '#d9a060' },
+  pepper: { leaf: 'bush', tone: '#5f9e48', dark: '#3f7a34', hint: '#f6f2e8' },
+  cucumber: { leaf: 'vine', tone: '#5f9e48', dark: '#3f7a34', hint: '#f5d04a' },
+  blueberry: { leaf: 'bush', tone: '#5a9a55', dark: '#3a6a3f', hint: '#f6f2e8' },
+  chamoe: { leaf: 'vine', tone: '#6aa54c', dark: '#4a8238', hint: '#f5d04a' },
+  zinnia: { leaf: 'bush', tone: '#6aa54c', dark: '#4a8238', hint: '#e0506a' },
+  grape: { leaf: 'vine', tone: '#6a9e4a', dark: '#4a7a34', hint: '#9a6ab4' },
+  radish: { leaf: 'feather', tone: '#6fae4f', dark: '#4f8a3a', hint: '#f6f2e8' },
+  eggplant: { leaf: 'bush', tone: '#5f9e48', dark: '#3f7a34', hint: '#b48ad0' },
+  chrysanthemum: { leaf: 'bush', tone: '#5f8e48', dark: '#3f6a34', hint: '#f0c83c' },
+  greenonion: { leaf: 'stalk', tone: '#4f9a3c', dark: '#3a7a2e', hint: '#f4f1e6' },
+  insam: { leaf: 'feather', tone: '#5f9e48', dark: '#3f7a34', hint: '#d8352a' },
 };
 function leaves(kind: Leaf, tone: string, dark: string, grow: number) {
   const s = 0.55 + grow * 0.45;
