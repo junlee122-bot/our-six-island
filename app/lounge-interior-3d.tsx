@@ -1061,6 +1061,9 @@ export function Interior3D({
         host.dataset.walking = String(l.moving);
         host.dataset.paused = String(l.paused || current.sheetOpen);
         host.dataset.others = String(others.size);
+        // Cost of the last frame, for the UI harness (games audit).
+        host.dataset.drawCalls = String(renderer.info.render.calls);
+        host.dataset.triangles = String(renderer.info.render.triangles);
         host.dataset.nearLender = String(nearCasinoLender(l.point, area));
         host.dataset.nearBanker = String(nearBanker(l.point, area));
         if (area === 'bank') host.dataset.bankModels = String(studio.bankModels());

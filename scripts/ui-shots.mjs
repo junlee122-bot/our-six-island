@@ -326,11 +326,25 @@ async function runView(browser, base, view, report) {
           await until(() => !!document.querySelector('[data-testid=table-sheet]'), 8000);
         }
         await sleep(600);
-        await snap('sheet-' + game);
+        // Interior frame cost (lounge-interior-3d.tsx dataset) next to the sheet.
+        const cost = await js(() => {
+          const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+          return { drawCalls: Number(d?.drawCalls ?? NaN), triangles: Number(d?.triangles ?? NaN) };
+        });
+        await snap('sheet-' + game, cost);
         await H.clickSel('[data-testid=table-sit]');
         await until(() => !!document.querySelector('.l-game-screen'), 30000);
         await sleep(2500);
         await snap('game-' + game);
+        // 규칙·기록 window (TableGuide.tsx), then back to the table.
+        if (await js(() => !!document.querySelector('[data-testid=game-guide]'))) {
+          await H.clickSel('[data-testid=game-guide]');
+          await until(() => !!document.querySelector('dialog[open].l-table-guide'), 15000);
+          await sleep(500);
+          await snap('guide-' + game);
+          await page.keyboard.press('Escape');
+          await sleep(500);
+        }
         // back to the village for the next venue
         await page.keyboard.press('Escape');
         await sleep(700);
