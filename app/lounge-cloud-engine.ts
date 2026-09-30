@@ -34,6 +34,10 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
+import { DISTRICTS, districtOpen } from './lounge-districts.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
+import { isTownAction, townActionArea } from './lounge-town-data.ts';
+import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 export type CloudMember = {
@@ -400,7 +404,20 @@ export function cloudTransition(
               area: player.area ?? 'village', home: player.home, actor: member.actor,
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
               x: player.x, y: player.y,
+              hill: (life.flags ?? []).includes('district-hillside'),
             }, now);
+          }
+          if ((command.action as { kind?: string }).kind === 'cupClaim' && (readLife(g.life).flags ?? []).includes('district-harbor')) {
+            // 주간 낚시 대회 is held at the harbor once it is open: prizes are handed out at 낚시조합.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'harbor') throw new CloudError('주간 낚시 대회 상품은 항구 낚시조합에서 받아요.', 409);
+          }
+          if (isTownAction(command.action)) {
+            // 새벽 경매 at the harbor, 시장 거리 shops and stalls, the library's reading club.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            const where = townActionArea(command.action);
+            if (!lease || !player || player.area !== where)
+              throw new CloudError(`${DISTRICTS[where].name}에 가서 해 주세요.`, 409);
           }
           if (command.action.kind === 'npcRequest') {
             // 의뢰 게시판 stands in 시장 거리 (lounge-market-layout.ts MARKET_BOARD).
@@ -489,6 +506,11 @@ export function cloudTransition(
             if (!mayEnterRoom(readLife(g.life), owner, member.actor))
               throw new CloudError(HOME_CLOSED, 403);
           }
+          // 항구 구역 / 언덕 주택가 open only once their village goal is recorded.
+          if (action.kind === 'area' && (action.area === 'harbor' || action.area === 'hillside')) {
+            const flags = readLife(g.life).flags ?? [];
+            if (!districtOpen(action.area, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[action.area].hint, 403);
+          }
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;
           if (action.kind === 'party') {
@@ -515,6 +537,14 @@ export function cloudTransition(
             const before = readLife(g.life),
               after = recordVisit(before, member, action.home as number, now);
             if (after !== before) g.life = after;
+          }
+          // The first walk into a district (for the 친구에게 가기 signpost).
+          if (action.kind === 'area' && (action.area === 'market' || action.area === 'harbor' || action.area === 'hillside')) {
+            const life = readLife(g.life);
+            if (!life.ext?.[member.id]?.town?.seen?.includes(action.area)) {
+              const next = ensureLifeMember(life, member.id, member.actor);
+              if (recordDistrictVisit(next, member.id, action.area)) g.life = next;
+            }
           }
           // A coalesced look is applied by a later tick; no broadcast now.
           quiet = r.hostedCoalesced;

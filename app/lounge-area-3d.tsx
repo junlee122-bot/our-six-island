@@ -48,20 +48,23 @@ import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { districtProgress } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
-import { MARKET_BOARD } from './lounge-market-layout';
+import { districtCounters, type DistrictCounter } from './lounge-district-counters';
 import { josa } from './lounge-text';
+import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
+import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
 
-const WALK_SPEED = 5.2;
-const FIGURE_HEIGHT = 1.72;
+// 구역 공통 규격 (lounge-village-camera.ts): the hub walks and looks the same.
+const WALK_SPEED = VIEW_WALK_SPEED;
+const FIGURE_HEIGHT = VILLAGE_FIGURE_HEIGHT;
 const FIGURE_W = 440,
   FIGURE_H = 640,
   FIGURE_BODY_H = 540;
 const NODE_REACH = 1.35;
 const ROCK_REACH = 1.3;
-const PITCH = (52 * Math.PI) / 180;
+const PITCH = VIEW_PITCH;
 const DAY = 86_400_000;
 const kstDayOf = (now: number) => Math.floor((now + 9 * 3_600_000) / DAY);
 
@@ -75,7 +78,14 @@ export type AreaAction =
   /** A resident walking about here (lounge-npc-schedule.ts). */
   | { kind: 'npc'; npc: NpcId; label: string }
   /** 시장 거리's request board. */
-  | { kind: 'board'; label: string };
+  | { kind: 'board'; label: string }
+  /** A district counter (E at the door): 농협, 잡화점, 빵집, 신문사, 우체국, 파출소, 어시장, 낚시조합, 도서관, 좌판. */
+  | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean }
+  /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot). */
+  | { kind: 'fish'; spot: 'breakwater' | 'pier'; label: string }
+  /** 친구에게 가기 signpost by each district's road out. */
+  | { kind: 'signpost'; label: string };
+export type { DistrictCounter } from './lounge-district-counters';
 
 type Figure = {
   canvas: HTMLCanvasElement;
@@ -104,22 +114,25 @@ export type AreaSceneProps = {
   axeTier: number;
   /** Paused while a dialog is open. */
   paused?: boolean;
+  /** 설정 → 낮밤 변화 (false: always lit like noon). */
+  dayNight?: boolean;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
 
-export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, onMove, onAction }: AreaSceneProps) {
+export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, dayNight = true, onMove, onAction }: AreaSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLElement>());
   const labelLayerRef = useRef<HTMLDivElement>(null);
   /** Where residents are drawn right now (talk reach). */
   const residentsRef = useRef<{ id: NpcId; x: number; z: number }[]>([]);
-  const [loadPct, setLoadPct] = useState(() => (area === 'market' ? districtProgress('market') : 1));
+  const districtId = area === 'market' || area === 'harbor' || area === 'hillside' ? area : null;
+  const [loadPct, setLoadPct] = useState(() => (districtId ? districtProgress(districtId) : 1));
   useEffect(() => {
-    if (area !== 'market' || loadPct >= 1) return;
-    const id = setInterval(() => setLoadPct(districtProgress('market')), 150);
+    if (!districtId || loadPct >= 1) return;
+    const id = setInterval(() => setLoadPct(districtProgress(districtId)), 150);
     return () => clearInterval(id);
-  }, [area, loadPct]);
+  }, [districtId, loadPct]);
   const [{ keys }] = useSettings();
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -158,9 +171,9 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     target: null as WalkPoint | null,
     lastSent: { x: NaN, z: NaN },
   });
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset });
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -214,13 +227,18 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const d = Math.hypot(p.x - r.x, p.z - r.z);
       if (d <= RESIDENT_REACH) found.push({ d: d - 0.3, a: { kind: 'npc', npc: r.id, label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` } });
     }
-    if (s.area === 'market') {
-      const d = Math.hypot(p.x - MARKET_BOARD.front.x, p.z - MARKET_BOARD.front.z);
-      if (d <= MARKET_BOARD.reach) found.push({ d, a: { kind: 'board', label: '의뢰 게시판 보기' } });
+    if (s.area === 'market' || s.area === 'harbor' || s.area === 'hillside') {
+      const now = Date.now() + s.clockOffset;
+      const weekday = new Date(now + 9 * 3_600_000).getUTCDay();
+      for (const c of districtCounters(s.area, weekday)) {
+        const d = Math.hypot(p.x - c.x, p.z - c.z);
+        if (d <= c.reach) found.push({ d: d + (c.a.kind === 'counter' ? 0.15 : 0), a: c.a });
+      }
     }
     const exit = nearestExit(s.area, p);
     if (exit) {
-      if (exit.to === 'woods' && !s.logCleared) {
+      // The fallen log stays for everyone until someone splits it; 승준's explorer pass walks him past it.
+      if (exit.to === 'woods' && !s.logCleared && !s.regions?.pass) {
         const gate = GATES.woods;
         found.push({
           d: exit.distance,
@@ -289,19 +307,17 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     sc.bottom = -shadowHalf;
     // A district's own day and night (the hub's palettes, lounge-village-life.ts).
     let lastDay = -1e9,
-      night = false;
+      night = false,
+      tint = new THREE.Color('#ffffff');
     const applyDay = (t: number) => {
       if (!light?.dayCycle || t - lastDay < 2000) return false;
       lastDay = t;
-      const pal = dayLighting(Date.now() + latest.current.clockOffset);
+      const now = Date.now() + latest.current.clockOffset;
+      const pal = latest.current.dayNight === false ? dayLighting(Date.UTC(2026, 0, 1, 3)) : dayLighting(now);
       scene.background = new THREE.Color(pal.sky);
-      hemi.color.set(pal.hemiSky);
-      hemi.groundColor.set(pal.hemiGround);
-      hemi.intensity = pal.hemiIntensity * (light.hemi / 1.5);
-      sun.color.set(pal.sun);
-      sun.intensity = pal.sunIntensity * (light.sun / 3);
-      renderer.toneMappingExposure = pal.exposure * light.exposure;
+      applyVillageLight({ hemi, sun }, renderer, pal, weatherOf(kstDayOf(now)), light);
       night = pal.lamps > 0.5;
+      tint = villageFigureTint(pal.lamps);
       return true;
     };
     sc.far = 80;
@@ -334,7 +350,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     applyState();
     // Residents walking about here (the district's shops, their errands).
     const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
-      ? new ResidentLayer(scene, labelLayerRef.current, { height: FIGURE_HEIGHT * 1.12, billboard: 'screen' })
+      ? new ResidentLayer(scene, labelLayerRef.current, {
+          height: (FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(PITCH),
+          billboard: 'upright',
+          // Chibi residents on a friend's plane (same height and feet line).
+          chibi: { plane: ((FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H) / Math.cos(PITCH), upY: Math.cos(PITCH) },
+        })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;
@@ -343,11 +364,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
 
     // Camera: orthographic, pitched, following me (clamped to the region).
     const camera = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 120);
-    const offset = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH)).multiplyScalar(50);
+    const offset = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH)).multiplyScalar(VIEW_DISTANCE);
     const look = new THREE.Vector3();
     const halfView = REGIONS[area].view ?? (area === 'mine' ? 8.4 : 11);
     const frameCamera = (aspect: number) => {
-      const half = aspect < 1.2 ? halfView * 1.25 : halfView;
+      const half = viewHalf(aspect, halfView);
       camera.left = -half * aspect;
       camera.right = half * aspect;
       camera.top = half;
@@ -368,7 +389,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       aim.set(tx, 0, tz);
       const far = look.distanceTo(aim);
       if (snap || far < 0.005) look.copy(aim);
-      else look.lerp(aim, 1 - Math.exp(-dt * 7));
+      else look.lerp(aim, followEase(dt));
       const moving = !snap && far >= 0.005;
       camera.position.copy(look).add(offset);
       camera.lookAt(look);
@@ -380,9 +401,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     const cameraUp = new THREE.Vector3(0, Math.cos(PITCH), -Math.sin(PITCH));
 
     // Figures: sprite canvases on camera-facing planes (the village's look).
+    // An upright plane stretched by 1 / cos(pitch) projects exactly like a
+    // camera-facing one but never leans back into a wall behind it (구역 공통 규격).
     const planeH = (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H;
-    const figureGeo = new THREE.PlaneGeometry(planeH * (FIGURE_W / FIGURE_H), planeH);
-    figureGeo.translate(0, planeH * 0.47, 0);
+    const figureGeo = new THREE.PlaneGeometry(planeH * (FIGURE_W / FIGURE_H), planeH / Math.cos(PITCH));
+    figureGeo.translate(0, (planeH / Math.cos(PITCH)) * 0.47, 0);
     const shadowGeo = new THREE.CircleGeometry(0.34, 20);
     const shadowMat = new THREE.MeshBasicMaterial({ color: '#2d2418', transparent: true, opacity: 0.28, depthWrite: false });
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -395,8 +418,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       texture.minFilter = THREE.LinearFilter;
       texture.generateMipmaps = false;
       const mesh = new THREE.Mesh(figureGeo, new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.12, toneMapped: false }));
-      // Faces the camera (tilted back by the pitch): upright on screen.
-      mesh.rotation.set(-PITCH, 0, 0);
+      // Upright, facing the camera (which never turns sideways).
+      mesh.rotation.set(0, 0, 0);
       const shadow = new THREE.Mesh(shadowGeo, shadowMat);
       shadow.rotation.x = -Math.PI / 2;
       scene.add(mesh, shadow);
@@ -544,7 +567,10 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (document.hidden || !host.clientWidth) return;
       const s = latest.current;
       // State from the server (nodes taken, rocks broken, ladder…).
-      if (applyDay(t)) dirty = true;
+      if (applyDay(t)) {
+        dirty = true;
+        for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
+      }
       const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow()]);
       if (key !== stateKey) {
         stateKey = key;
@@ -709,8 +735,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     ? null
     : action.kind === 'npc'
       ? 'talk'
-      : action.kind === 'board'
+      : action.kind === 'board' || action.kind === 'signpost'
         ? 'board'
+        : action.kind === 'fish'
+          ? 'fish'
+          : action.kind === 'counter'
+            ? 'enter'
         : action.kind === 'node'
       ? action.node === 'rock'
         ? 'smash'

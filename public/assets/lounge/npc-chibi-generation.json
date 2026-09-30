@@ -95,5 +95,110 @@
    "job": "6fcc8c44-8524-4fd9-8f8e-5acf6ff20037",
    "sha256": "E6B92D62FF795B8AC87EC12A67ECAD1C9604757CCB31C4AC306175C0591B5A86"
   }
- ]
+ ],
+ "web": {
+  "frieren": {
+   "file": "chibi/npc-frieren.webp",
+   "w": 514,
+   "h": 640,
+   "sha256": "D5E3AE5531B9BF7929F083260FEF837473ADA12DE2A5687423BDF941B818E3AB"
+  },
+  "nasera": {
+   "file": "chibi/npc-nasera.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "463F592DFF98ECF7FED304BE1F4FF553570F8DA762A581A3A7C9A438C6396D7C"
+  },
+  "rose": {
+   "file": "chibi/npc-rose.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "BBA8A2808D93E4B07FBADBEF9EB7D80FCE3BE8EF2D86040D36AB7D07555641BA"
+  },
+  "gwen": {
+   "file": "chibi/npc-gwen.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "0184821165C346F61E2BBD880AF4C5DE1ADCF82A8AA721B6C496F29127B5721C"
+  },
+  "nyamo": {
+   "file": "chibi/npc-nyamo.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "B14C654000FEE428E611EFA2EB73D472483654A4A6251FE6352EF01D35330017"
+  },
+  "thresh": {
+   "file": "chibi/npc-thresh.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "C94D70CAD264FCBE7FEA130BB1D1C2694C5F9F73B323378D4DCBE44EFB1DF7D3"
+  },
+  "sinjjajang": {
+   "file": "chibi/npc-sinjjajang.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "3908F07E4F77BB13F0D1729FB14ED574E6250B77BBAC98940A81C879189A8DDC"
+  },
+  "volibas": {
+   "file": "chibi/npc-volibas.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "C465E4ED2B6FC4B2BFF97814F369B4D65F531C834D1BC581330E7230D3635F48"
+  },
+  "janna": {
+   "file": "chibi/npc-janna.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "7A37095175D52E621236F1174226A0B8996DA3584D3ABE05C2FDD4967F66AF15"
+  },
+  "gabung": {
+   "file": "chibi/npc-gabung.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "FAD582A37B503169C52129DC1C1DCE305EC53E75AA13610D342F09DCBEC83A73"
+  },
+  "lux": {
+   "file": "chibi/npc-lux.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "E14CC962AE062C26F5F237DF6FA43C9D0D8B3DC060892AB8177230B0F91599BC"
+  },
+  "himmel": {
+   "file": "chibi/npc-himmel.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "8AC6A6219028A453C2CA92A6C83691EFDFB63C80ADAAAF0858C2DC1679B28565"
+  },
+  "beatrice": {
+   "file": "chibi/npc-beatrice.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "995C027EB68D8EAF9BA4E09BE96F202BE41DFD8498A1E217E09CBFEBFF993EBF"
+  },
+  "bocchi": {
+   "file": "chibi/npc-bocchi.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "9A077EB7CA783D64DB4274C5EC957B44842D8055936010A06176849A3419EF8E"
+  },
+  "tsunade": {
+   "file": "chibi/npc-tsunade.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "39A9C8894381B0FDBFB703D71BFDF6AED96950F41FD42E9CD8C80E6206589140"
+  },
+  "makima": {
+   "file": "chibi/npc-makima.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "60AAB2D691BEE5039F0B698B3BB75474AF30ACF3548C5FECC8F726957F73F6C1"
+  },
+  "yanineko": {
+   "file": "chibi/npc-yanineko.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "B2F191160E1321C95CD2310AFE70E0DCBABA061CEAB27A445D62849C5C17C0DB"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs chibi: flood key from the border against the measured ground colour, unmix + despill on the rim, split at the emptiest column near the middle, figure at 94% of a 640px canvas with the feet on the 97% line."
 }

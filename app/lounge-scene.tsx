@@ -559,7 +559,7 @@ export function RoomFloor({
         {(area === 'casino' || area === 'bank' || area === 'salon') && <button type="button" className="cf-service" data-testid={area === 'casino' ? 'simple-lender' : area === 'salon' ? 'simple-stylist' : 'simple-banker'}
           style={{ left: `${serviceFoot.x}%`, top: `${serviceFoot.y}%` }} onClick={approachService}
           aria-label={`${area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME}에게 걸어가기`}>
-          <img src={area === 'casino' ? LOUNGE_ASSETS.casinoLenderSprite : area === 'salon' ? LOUNGE_ASSETS.salonStylistSprite : LOUNGE_ASSETS.bankClerkSprite} alt="" draggable={false} />
+          <img src={area === 'casino' ? LOUNGE_ASSETS.chibi_rose : area === 'salon' ? LOUNGE_ASSETS.chibi_gwen : LOUNGE_ASSETS.chibi_nyamo} alt="" draggable={false} />
           <span className="cf-service-name">{area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구'}</span>
         </button>}
         <button

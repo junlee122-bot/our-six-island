@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
 import { NPCS, type NpcId } from './lounge-npc-data';
+import { npcChibi } from './lounge-npc-chibi';
 import type { ResidentFrame } from './lounge-npc-behavior';
 import { GAIT_CYCLES_PER_PHASE } from './lounge-gait';
 import { setNpcViewShift } from './lounge-npc-schedule';
@@ -44,6 +45,8 @@ type Figure = {
   phase: number;
   flip: number;
   last: { x: number; z: number };
+  /** Height of the head top above the feet (tags and bubbles sit above it). */
+  top: number;
 };
 
 /**
@@ -102,6 +105,12 @@ export type ResidentLayerOptions = {
   y?: number;
   /** Walking speed used for the stride (world units / s). */
   speed?: number;
+  /**
+   * Chibi residents stand exactly as tall as a walking friend: the vertical
+   * height of a friend's sprite plane in this scene and the camera-up y that
+   * friend planes use for their width (lounge-npc-chibi.ts).
+   */
+  chibi?: { plane: number; upY: number };
 };
 
 export class ResidentLayer {
@@ -112,7 +121,7 @@ export class ResidentLayer {
   private shadowGeo = new THREE.CircleGeometry(0.34, 20);
   private shadowMat = new THREE.MeshBasicMaterial({ color: '#2d2418', transparent: true, opacity: 0.26, depthWrite: false });
   private labels: HTMLElement;
-  private opts: Required<ResidentLayerOptions>;
+  private opts: Required<Omit<ResidentLayerOptions, 'chibi'>> & Pick<ResidentLayerOptions, 'chibi'>;
   private disposed = false;
   /** Called when a texture arrives (the scene redraws). */
   onChange: () => void = () => {};
@@ -125,8 +134,22 @@ export class ResidentLayer {
   }
 
   private geometry(id: NpcId) {
+    const chibi = this.opts.chibi && npcChibi(id);
+    if (chibi && this.opts.chibi) {
+      const { plane, upY } = this.opts.chibi;
+      const key = `chibi:${chibi.w}x${chibi.h}`;
+      let g = this.geos.get(key);
+      if (!g) {
+        g = new THREE.PlaneGeometry(plane * upY * (chibi.w / chibi.h), plane);
+        // Feet on the 97% line, like a friend's canvas.
+        g.translate(0, plane * 0.47, 0);
+        this.geos.set(key, g);
+      }
+      return g;
+    }
     const art = NPCS[id].art;
-    const key = art.kind === 'sheet' ? 'sheet' : `img:${art.foot}`;
+    const foot = art.kind === 'image' ? art.foot : 0.985;
+    const key = art.kind === 'sheet' ? 'sheet' : `img:${foot}`;
     let g = this.geos.get(key);
     if (g) return g;
     const H = this.opts.height;
@@ -148,7 +171,7 @@ export class ResidentLayer {
       // 660 × 990 images: the figure fills about 95% of the height.
       const h = H / 0.95;
       g = new THREE.PlaneGeometry((h * 2) / 3, h);
-      g.translate(0, h * (art.foot - 0.5), 0);
+      g.translate(0, h * (foot - 0.5), 0);
     }
     this.geos.set(key, g);
     return g;
@@ -159,7 +182,10 @@ export class ResidentLayer {
     m = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false, visible: false, side: THREE.DoubleSide });
     this.mats.set(id, m);
     const art = NPCS[id].art;
-    void texture(art.kind === 'sheet' ? HOST_SHEET[art.host] : art.asset).then(
+    const chibi = this.opts.chibi && npcChibi(id);
+    // Residents without a picture yet are never drawn.
+    if (art.kind === 'pending' && !chibi) return m;
+    void texture(chibi ? chibi.asset : art.kind === 'sheet' ? HOST_SHEET[art.host] : art.kind === 'image' ? art.asset : '').then(
       (t) => {
         if (this.disposed) return;
         m!.map = t;
@@ -190,7 +216,8 @@ export class ResidentLayer {
     bubble.hidden = true;
     this.labels.appendChild(tag);
     this.labels.appendChild(bubble);
-    return { id, root, sprite, shadow, tag, bubble, bubbleText: '', pos: new THREE.Vector3(f.x, this.opts.y, f.z), phase: 0, flip: 1, last: { x: f.x, z: f.z } };
+    const top = this.opts.chibi && npcChibi(id) ? this.opts.chibi.plane * 0.94 : this.opts.height;
+    return { id, root, sprite, shadow, tag, bubble, bubbleText: '', pos: new THREE.Vector3(f.x, this.opts.y, f.z), phase: 0, flip: 1, last: { x: f.x, z: f.z }, top };
   }
 
   /**
@@ -284,9 +311,8 @@ export class ResidentLayer {
   /** Moves the DOM tags over the heads (call after the camera moved). */
   project(camera: THREE.Camera, width: number, height: number) {
     const v = new THREE.Vector3();
-    const up = this.opts.height + 0.35;
     for (const fig of this.figures.values()) {
-      v.set(fig.pos.x, fig.pos.y + up, fig.pos.z).project(camera);
+      v.set(fig.pos.x, fig.pos.y + fig.top + 0.35, fig.pos.z).project(camera);
       const x = ((v.x + 1) / 2) * width,
         y = ((1 - v.y) / 2) * height;
       const off = v.z > 1 || v.z < -1;

@@ -4,7 +4,9 @@ import { CASINO_LENDER_SPOT, LENDER_NAME } from './lounge-casino-lender';
 import { interiorToWorld } from './lounge-interior-layout';
 import { BANKER_SPOT } from './lounge-bank-layout';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout';
+import { npcChibi } from './lounge-npc-chibi';
 
+/** A friend's sprite plane height in the interiors (their canvas spans it). */
 export const LENDER_FIGURE_HEIGHT = 1.72;
 /** Bottom alpha row of each optimized full-body image, measured after matting. */
 const FOOT_LINE = { lender: .9808, banker: .9859, stylist: .9859 } as const;
@@ -28,8 +30,12 @@ function createResident(scene: THREE.Scene, view: ResidentView, kind: 'lender' |
   const ownedGeometry: THREE.BufferGeometry[] = [], ownedMaterial: THREE.Material[] = [];
   const textures: THREE.Texture[] = [];
   let disposed = false, loaded = false;
-  const geometry = new THREE.PlaneGeometry(LENDER_FIGURE_HEIGHT * view.squash * 2 / 3, LENDER_FIGURE_HEIGHT);
-  geometry.translate(0, LENDER_FIGURE_HEIGHT * (FOOT_LINE[kind] - 0.5), 0);
+  // In the world they are chibi at a friend's size (lounge-npc-chibi.ts); the tall art stays for dialogue.
+  const chibi = npcChibi(kind === 'banker' ? 'nyamo' : kind === 'stylist' ? 'gwen' : 'rose');
+  const geometry = chibi
+    ? new THREE.PlaneGeometry(LENDER_FIGURE_HEIGHT * view.squash * (chibi.w / chibi.h), LENDER_FIGURE_HEIGHT)
+    : new THREE.PlaneGeometry(LENDER_FIGURE_HEIGHT * view.squash * 2 / 3, LENDER_FIGURE_HEIGHT);
+  geometry.translate(0, chibi ? LENDER_FIGURE_HEIGHT * 0.47 : LENDER_FIGURE_HEIGHT * (FOOT_LINE[kind] - 0.5), 0);
   ownedGeometry.push(geometry);
   const material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false });
   material.visible = false;
@@ -78,7 +84,7 @@ function createResident(scene: THREE.Scene, view: ResidentView, kind: 'lender' |
   root.add(sign);
   }
 
-  const image = kind === 'banker' ? LOUNGE_ASSETS.bankClerkSprite : kind === 'stylist' ? LOUNGE_ASSETS.salonStylistSprite : LOUNGE_ASSETS.casinoLenderSprite;
+  const image = chibi?.asset ?? (kind === 'banker' ? LOUNGE_ASSETS.bankClerkSprite : kind === 'stylist' ? LOUNGE_ASSETS.salonStylistSprite : LOUNGE_ASSETS.casinoLenderSprite);
   new THREE.TextureLoader().load(image, (texture) => {
     if (disposed) { texture.dispose(); return; }
     texture.colorSpace = THREE.SRGBColorSpace;

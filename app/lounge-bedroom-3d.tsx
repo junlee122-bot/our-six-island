@@ -525,7 +525,7 @@ export function Bedroom3D({
     shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false, toneMapped: false });
     const shadowGeometry = new THREE.PlaneGeometry(0.72, 0.52);
-    const npcGuest = createBedroomNpc(scene, camera, shadowGeometry, shadowMaterial, () => { dirty = true; });
+    const npcGuest = createBedroomNpc(scene, camera, shadowGeometry, shadowMaterial, () => { dirty = true; }, avatarPlaneHeight);
     type Figure = {
       canvas: HTMLCanvasElement;
       texture: THREE.CanvasTexture;

@@ -13,14 +13,15 @@ import { REGIONS, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '
 import { DISTRICTS, districtOpen, type DistrictId } from '../lounge-districts';
 import { prefetchDistrict } from '../lounge-district-models';
 import type { NpcId } from '../lounge-npc-data';
-import { MINE_ARRIVE, LIFT_EVERY, floorPick } from '../lounge-mine';
+import { MINE_ARRIVE, LIFT_EVERY, floorPick, mineStops } from '../lounge-mine';
 import { GROWTH_REJECT } from '../lounge-growth';
 import { NODE_INFO, type NodeKind } from '../lounge-growth-data';
 import { itemName } from '../lounge-life-plus';
 import { lifeSfx } from '../lounge-audio-life';
 import { josa } from '../lounge-text';
+import { useSettings } from '../lounge-settings';
 import type { WalkPoint } from '../lounge-walk-world';
-import type { AreaAction } from '../lounge-area-3d';
+import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -53,6 +54,9 @@ export function useOutdoor({
   onVillage,
   onResident,
   onRequests,
+  onCounter,
+  onFish,
+  onSignpost,
 }: {
   room: CloudRoom;
   notify: Notify;
@@ -64,9 +68,16 @@ export function useOutdoor({
   onResident?: (npc: NpcId) => void;
   /** 시장 거리's request board. */
   onRequests?: () => void;
+  /** A district counter (E at a shop door, a board or a stall). */
+  onCounter?: (place: DistrictCounter) => void;
+  /** The harbor's fishing and crab-pot spots. */
+  onFish?: (spot: 'breakwater' | 'pier') => void;
+  /** 친구에게 가기. */
+  onSignpost?: () => void;
 }) {
   const [outdoor, setOutdoor] = useState<Outdoor | null>(null);
   const [liftOpen, setLiftOpen] = useState(false);
+  const [{ dayNight }] = useSettings();
   const ref = useRef(outdoor);
   useEffect(() => {
     ref.current = outdoor;
@@ -107,15 +118,40 @@ export function useOutdoor({
   /** A district gate on the hub's rim: 시장 거리 is open in stage 1; the rest say what opens them. */
   const toDistrict = useCallback(
     (id: DistrictId) => {
-      if (!districtOpen(id)) {
+      const life = room.snapshot().life;
+      if (!districtOpen(id, { flags: life?.flags, pass: life?.districts?.pass })) {
         notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
         return;
       }
-      if (id !== 'market') return;
-      void prefetchDistrict('market');
-      go({ area: 'market', spawn: { ...REGIONS.market.arrive.village! } });
+      if (id !== 'market' && id !== 'harbor' && id !== 'hillside') return;
+      void prefetchDistrict(id);
+      go({ area: id, spawn: { ...REGIONS[id].arrive.village! } });
     },
-    [notify, go],
+    [notify, go, room],
+  );
+
+  /**
+   * 친구에게 가기: straight to a district's arrival point (from anywhere
+   * outdoors or the hub); 'village' walks back out through the current gate.
+   */
+  const travel = useCallback(
+    (area: 'village' | DistrictId) => {
+      if (area === 'village') {
+        const from = ref.current?.area;
+        if (!from) return;
+        fade(() => {
+          setOutdoor(null);
+          ref.current = null;
+          onVillage(outdoorReturnPoint(from));
+        });
+        return;
+      }
+      if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
+      if (!districtOpen(area, { flags: room.snapshot().life?.flags, pass: room.snapshot().life?.districts?.pass })) return;
+      void prefetchDistrict(area);
+      go({ area, spawn: { ...REGIONS[area].arrive.village! } });
+    },
+    [fade, go, onVillage, room],
   );
 
   const leaveToVillage = () => {
@@ -134,11 +170,12 @@ export function useOutdoor({
     return true;
   };
   const enterMine = () => {
-    const m = regions()?.mine;
-    if (!m) return;
-    if (m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
-    // With the lift: pick a lift floor (or 1층).
-    if (m.lift && m.deep >= LIFT_EVERY) setLiftOpen(true);
+    const r = regions(),
+      m = r?.mine;
+    if (!r || !m) return;
+    if (!r.pass && m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
+    // With the lift (or 승준's explorer pass, every floor): pick a floor.
+    if (r.pass || (m.lift && m.deep >= LIFT_EVERY)) setLiftOpen(true);
     else void goFloor(1);
   };
   const gain = async (run: () => Promise<boolean>) => {
@@ -200,6 +237,15 @@ export function useOutdoor({
       case 'board':
         onRequests?.();
         return;
+      case 'counter':
+        onCounter?.(a.place);
+        return;
+      case 'fish':
+        onFish?.(a.spot);
+        return;
+      case 'signpost':
+        onSignpost?.();
+        return;
       case 'exit':
         if (a.to === 'village') return leaveToVillage();
         if (a.to === 'mine') return enterMine();
@@ -235,7 +281,9 @@ export function useOutdoor({
     if (!outdoor) return null;
     const r = view.life?.growth?.regions ?? null;
     const m = r?.mine;
-    const liftFloors = m ? [1, ...Array.from({ length: Math.floor(m.deep / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY)] : [1];
+    // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
+    const pass = !!r?.pass;
+    const stops = m ? mineStops(m, pass) : [];
     return (
       <div className="l-village-world">
         <Suspense fallback={null}>
@@ -249,6 +297,7 @@ export function useOutdoor({
             clockOffset={view.clockOffset}
             axeTier={axeTier}
             paused={paused || liftOpen}
+            dayNight={dayNight}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}
@@ -266,13 +315,17 @@ export function useOutdoor({
           </button>
         </div>
         {liftOpen && m && (
-          <Modal title="광산 승강기" onClose={() => setLiftOpen(false)}>
-            <p className="l-muted">가 본 층까지 {LIFT_EVERY}층마다 내려갈 수 있어요. 곡괭이 단계가 모자라면 그 층에는 못 가요.</p>
+          <Modal title={pass ? '광산 층 고르기' : '광산 승강기'} onClose={() => setLiftOpen(false)}>
+            <p className="l-muted">
+              {pass
+                ? '탐험 패스로 어느 층이든 갈 수 있어요. 바위는 곡괭이 단계가 맞아야 깨져요.'
+                : `가 본 층까지 ${LIFT_EVERY}층마다 내려갈 수 있어요. 곡괭이 단계가 모자라면 그 층에는 못 가요.`}
+            </p>
             <div className="ar-lift" data-testid="mine-lift">
-              {liftFloors.map((f) => (
-                <button key={f} type="button" disabled={f === m.at || floorPick(f) > m.pickaxe} onClick={() => void goFloor(f)}>
+              {stops.map(({ floor: f, pick }) => (
+                <button key={f} type="button" disabled={f === m.at || (!pass && pick !== null)} onClick={() => void goFloor(f)}>
                   {f}층
-                  <small>{f === m.at ? '지금 여기' : floorPick(f) > m.pickaxe ? `곡괭이 ${floorPick(f)}단계` : f === 1 ? '입구' : '승강장'}</small>
+                  <small>{f === m.at ? '지금 여기' : pick !== null ? `곡괭이 ${pick}단계` : f === 1 ? '입구' : pass ? '탐험 패스' : '승강장'}</small>
                 </button>
               ))}
             </div>
@@ -289,5 +342,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, toDistrict, render, tell, reset };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset };
 }

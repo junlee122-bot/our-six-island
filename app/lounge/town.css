@@ -1,0 +1,24 @@
+/* 마을 확장 2단계 counters (TownPanel.tsx): tokens only. */
+.l-town-keeper { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-sunken); }
+.l-town-keeper p { display: grid; gap: var(--sp-1); margin: 0; color: var(--text); font-size: var(--fs-body); }
+.l-town-keeper b { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; }
+.l-town-keeper small { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-town-notice { display: grid; gap: var(--sp-1); margin-bottom: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--accent-soft); box-shadow: var(--edge-line); }
+.l-town-notice strong { font-family: var(--font-display); font-size: var(--fs-body); font-weight: 400; color: var(--text); }
+.l-town-notice p { margin: 0; color: var(--text); font-size: var(--fs-body-s); }
+.l-town-sub { margin: 0 0 var(--sp-3); color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-town-buttons { display: inline-flex; gap: var(--sp-2); }
+.l-town-art { display: inline-grid; place-items: center; min-width: 36px; }
+.l-town-news { display: grid; gap: var(--sp-2); margin: 0 0 var(--sp-3); padding: 0; list-style: none; }
+.l-town-news h3 { margin: 0 0 var(--sp-1); font-family: var(--font-display); font-size: var(--fs-body); font-weight: 400; color: var(--text); }
+.l-town-news ul { display: grid; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }
+.l-town-news li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); color: var(--text); font-size: var(--fs-body-s); }
+.l-town-news small { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-town-wanted strong { color: var(--text); }
+.l-town-skills { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.l-town-list { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.l-town-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-town-row div { display: grid; gap: var(--sp-1); min-width: 0; }
+.l-town-row strong { color: var(--text); font-size: var(--fs-body); }
+.l-town-row small { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); color: var(--text-soft); font-size: var(--fs-cap); }
+.l-town-head { margin: var(--sp-4) 0 var(--sp-2); font-family: var(--font-display); font-size: var(--fs-body); font-weight: 400; color: var(--text); }

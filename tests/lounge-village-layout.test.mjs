@@ -197,8 +197,7 @@ test('home colliders come from the real model bounds at door scale', () => {
             Math.abs(a.z - b.z) >= (a.depth + b.depth) / 2,
           `${a.id} and ${b.id} overlap`,
         );
-  // The character stands a little shorter than a door (drawn figure ≈ 94% of its canvas).
-  const up = Math.cos(Math.atan2(43, Math.hypot(34, 52)));
-  const figure = (VILLAGE_ACTOR_HEIGHT / up) * 0.94;
-  assert.ok(figure / VILLAGE_DOOR_HEIGHT > 0.8 && figure / VILLAGE_DOOR_HEIGHT < 1.1);
+  // 구역 공통 규격: figures are the market's size, a little taller than a door.
+  const figure = VILLAGE_ACTOR_HEIGHT;
+  assert.ok(figure / VILLAGE_DOOR_HEIGHT > 0.9 && figure / VILLAGE_DOOR_HEIGHT < 1.3);
 });

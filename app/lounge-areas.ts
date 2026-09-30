@@ -11,16 +11,19 @@
 import { makeWalkWorld, type WalkCollider, type WalkPoint, type WalkWorld } from './lounge-walk-world.ts';
 import { MINE_ARRIVE, MINE_LIFT_AT, MINE_ROOM, mineFloor } from './lounge-mine.ts';
 import { MARKET_ARRIVE, MARKET_COLLIDERS, MARKET_D, MARKET_EXIT, MARKET_W } from './lounge-market-layout.ts';
-import { DISTRICTS } from './lounge-districts.ts';
+import { HARBOR_ARRIVE, HARBOR_COLLIDERS, HARBOR_D, HARBOR_EXIT, HARBOR_W } from './lounge-harbor-layout.ts';
+import { HILLSIDE_ARRIVE, HILLSIDE_COLLIDERS, HILLSIDE_D, HILLSIDE_EXIT, HILLSIDE_W } from './lounge-hillside-layout.ts';
+import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
 
 /**
- * 'market' is ① 시장 거리, the first of the five districts around the hub
- * (lounge-districts.ts): a separate map behind the hub's east gate.
+ * 'market' is ① 시장 거리, 'harbor' ② 항구 구역 and 'hillside' ③ 언덕 주택가 —
+ * districts around the hub (lounge-districts.ts): separate maps behind gates
+ * on the hub's rim.
  */
-export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market';
-export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market'];
+export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside';
+export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside'];
 /** Districts (separate maps around the hub) among the outdoor areas. */
-export const DISTRICT_AREAS: readonly OutdoorArea[] = ['market'];
+export const DISTRICT_AREAS: readonly (OutdoorArea & DistrictId)[] = ['market', 'harbor', 'hillside'];
 export const isDistrictArea = (a: unknown): a is OutdoorArea => typeof a === 'string' && (DISTRICT_AREAS as readonly string[]).includes(a);
 export const isOutdoorArea = (a: unknown): a is OutdoorArea =>
   typeof a === 'string' && (OUTDOOR_AREAS as readonly string[]).includes(a);
@@ -158,6 +161,36 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
     view: 11,
   },
+  harbor: {
+    area: 'harbor',
+    name: DISTRICTS.harbor.name,
+    short: '항구',
+    tagline: DISTRICTS.harbor.tagline,
+    bounds: { w: HARBOR_W, d: HARBOR_D },
+    colliders: HARBOR_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: HARBOR_EXIT.x, z: HARBOR_EXIT.z, stand: { ...HARBOR_EXIT.stand }, label: '둑길 따라 마을로', reach: HARBOR_EXIT.reach },
+    ],
+    arrive: { village: { ...HARBOR_ARRIVE } },
+    look: { ground: '#a9a37c', groundFar: '#7f8b66', fog: '#dde7e6', sky: '#bcd8e6' },
+    light: { hemi: 1.6, sun: 2.3, exposure: 1.05, shadow: 32, dayCycle: true },
+    view: 11.5,
+  },
+  hillside: {
+    area: 'hillside',
+    name: DISTRICTS.hillside.name,
+    short: '언덕',
+    tagline: DISTRICTS.hillside.tagline,
+    bounds: { w: HILLSIDE_W, d: HILLSIDE_D },
+    colliders: HILLSIDE_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: HILLSIDE_EXIT.x, z: HILLSIDE_EXIT.z, stand: { ...HILLSIDE_EXIT.stand }, label: '계단 내려가 마을로', reach: HILLSIDE_EXIT.reach },
+    ],
+    arrive: { village: { ...HILLSIDE_ARRIVE } },
+    look: { ground: '#8fae6a', groundFar: '#6b8c50', fog: '#e1e8d2', sky: '#c9e0ea' },
+    light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
+    view: 11,
+  },
 };
 
 /** The village's north gate to 뒷산 (village coordinates, off every path). */
@@ -165,7 +198,7 @@ export const VILLAGE_GATE = { x: 12, z: -43.4, stand: { x: 12, z: -41.8 }, reach
 export const villageGateDistance = (p: WalkPoint) => Math.hypot(p.x - VILLAGE_GATE.stand.x, p.z - VILLAGE_GATE.stand.z);
 /** Where I stand in the hub after leaving an outdoor area (its gate on the rim). */
 export const outdoorReturnPoint = (area: OutdoorArea): WalkPoint =>
-  area === 'market' ? { ...DISTRICTS.market.gate.stand } : { ...VILLAGE_GATE.stand };
+  area === 'market' || area === 'harbor' || area === 'hillside' ? { ...DISTRICTS[area].gate.stand } : { ...VILLAGE_GATE.stand };
 
 /** Walls of a region; the hill's log counts until 숲 깊은 곳 is opened. */
 export function regionColliders(area: OutdoorArea, opts: { logCleared?: boolean; day?: number; floor?: number; lift?: boolean } = {}): WalkCollider[] {

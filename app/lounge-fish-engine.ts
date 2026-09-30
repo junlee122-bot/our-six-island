@@ -8,6 +8,8 @@
 // Cycle-safe like lounge-life-plus: lounge-life.ts imports this module and it
 // imports the life modules back, so their bindings are only used inside
 // functions, never at the top level.
+import { districtFlagsFor } from './lounge-districts.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { grantBeom, kstDay, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, hash32, kstHour, isDaytime, isNighttime, seasonOf, weatherOf, type Season, type Weather } from './lounge-calendar.ts';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, LIGHTS_RARE_BOOST, SPOT_INFO, eligibleSky, eligibleTime, isItemId, type FishDef, type Spot } from './lounge-items.ts';
@@ -556,7 +558,8 @@ export function coopCount(life: LifeState, uid: string, spot: Spot, now: number)
 }
 function spotCheck(life: LifeState, uid: string, spot: unknown, now: number, clock = true): Spot {
   if (!isSpot(spot)) fail(ANGLING_REJECT.spot);
-  const block = spotBlock(spot as Spot, life.flags ?? [], toolTier(life, uid, 'rod'), now);
+  // 승준's explorer pass opens the districts' spots (lounge-districts.ts districtFlagsFor).
+  const block = spotBlock(spot as Spot, districtFlagsFor(life.flags, hasExplorerPass(life.actors[uid], now)), toolTier(life, uid, 'rod'), now);
   if (block === 'flag') fail(ANGLING_REJECT.spotLocked);
   if (block === 'rod') fail(ANGLING_REJECT.spotRod);
   if (block === 'night' && clock) fail(ANGLING_REJECT.spotNight);

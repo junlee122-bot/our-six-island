@@ -626,7 +626,7 @@ export function Interior3D({
     mine.mesh.name = 'me';
     const others = new Map<string, Figure>();
     const residents = area === 'tavern' && residentLabelsRef.current
-      ? new ResidentLayer(scene, residentLabelsRef.current, { height: FIGURE_HEIGHT * 1.02, billboard: 'upright' })
+      ? new ResidentLayer(scene, residentLabelsRef.current, { height: FIGURE_HEIGHT * 1.02, billboard: 'upright', chibi: { plane: planeHeight, upY: cameraUp.y } })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;

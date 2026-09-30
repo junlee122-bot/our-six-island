@@ -3,6 +3,7 @@
 // schedule of offline friends' NPCs, and the KST day/night palette.
 // Pure (no three.js / DOM) so the schedule and lighting are testable and every
 // client computes the same thing from the same clock.
+import { VIEW_DIR } from './lounge-village-camera.ts';
 import {
   PLOT_GAP,
   PLOT_SIZE,
@@ -283,14 +284,8 @@ export const NPC_SPEED = 1.7;
 const pathCache = new Map<string, VillagePoint[]>();
 const waypointCache = new Map<number, VillagePoint[]>();
 
-/** Village camera direction (ground → camera), matches CAMERA_OFFSET in lounge-village.tsx. */
-const VIEW = (() => {
-  const x = 34,
-    y = 43,
-    z = 52,
-    l = Math.hypot(x, y, z);
-  return { x: x / l, y: y / l, z: z / l };
-})();
+/** Camera direction (ground → camera), 구역 공통 규격 (lounge-village-camera.ts). */
+const VIEW = VIEW_DIR;
 /** Roof height used for the occlusion check (houses and the plaza buildings). */
 const ROOF_HEIGHT = 4.6;
 /**
@@ -311,6 +306,11 @@ export function villageOccluded(point: VillagePoint, head = 1.5) {
       [point.x, VIEW.x, place.x - hw, place.x + hw],
       [point.z, VIEW.z, place.z - hd, place.z + hd],
     ] as const) {
+      // A ray parallel to this slab: inside it for the whole segment, or never.
+      if (Math.abs(d) < 1e-9) {
+        if (p < lo || p > hi) t1 = -1;
+        continue;
+      }
       const a = (lo - p) / d,
         b = (hi - p) / d;
       t0 = Math.max(t0, Math.min(a, b));
@@ -419,7 +419,7 @@ export function npcPose(actor: number, t: number): NpcPose {
       return {
         point: { x: a.x + dx * k, z: a.z + dz * k },
         walking: true,
-        heading: Math.sign(dx * 0.837 - dz * 0.547),
+        heading: Math.sign(dx),
         target: to,
       };
     }

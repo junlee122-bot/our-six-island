@@ -117,6 +117,8 @@ export function financeView(state: FinanceState | undefined, ledger: LoungeLedge
     logs: s.logs.filter((l) => l.users.includes(uid)).slice(-30).reverse(),
     protection: s.protection[uid] ?? { until: 0, whistles: 0 },
     robbedToday: s.attempts[uid] === day,
+    // 파출소 게시판 (볼리바스): the village's last robbery reports, everyone's.
+    police: s.logs.filter((l) => /강도/.test(l.text) && !/구매/.test(l.text)).slice(-8).reverse().map((l) => ({ id: l.id, at: l.at, text: l.text, by: ACTORS[life.actors[l.users[0]]] ?? '누군가' })),
     casino: { earned: today?.earned ?? 0, paid: today?.paid ?? 0,
       profit: (today?.earned ?? 0) - (today?.paid ?? 0) - Object.values(today?.mercy ?? {}).reduce((a, b) => a + b, 0),
       myNet: today?.net[wallet(uid)] ?? 0, mercyUsed: Object.hasOwn(today?.mercy ?? {}, uid),
