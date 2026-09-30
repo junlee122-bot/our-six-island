@@ -70,7 +70,7 @@ import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
 import { useOutdoor } from './lounge/Outdoor';
-import { DISH_BY_ID, BUFF_INFO, ITEM_BY_ID, type Spot } from './lounge-items';
+import { DISH_BY_ID, BUFF_INFO, FISH_SPOTS, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
 import { friendDialog, type DialogScript } from './lounge-friend-dialog';
@@ -1126,6 +1126,8 @@ function AccountLounge({
     if (outdoorApi.outdoor) outdoorApi.travel(area);
     else outdoorApi.toDistrict(area);
   };
+  // The hub draws only its own spots' bobber (the harbor's belong to 항구 구역).
+  const hubFishing = useMemo(() => (fishing && (FISH_SPOTS as readonly string[]).includes(fishing.spot) ? fishing : null), [fishing]);
   const startFishing = (spot: Spot) => {
     if (fishing) return;
     setModal(null);
@@ -2266,7 +2268,7 @@ function AccountLounge({
                       onResident={setResidentTalk}
                       onTalk={talkTo}
                       tool={hotbar.tool}
-                      fishing={fishing}
+                      fishing={hubFishing}
                       seasonFx={settings.seasonFx && settings.quality !== 'low'}
                     />
                   </Suspense>
