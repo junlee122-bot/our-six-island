@@ -1239,12 +1239,12 @@ function AccountLounge({
     if (!dish?.buff) return;
     void lifeRun({ kind: 'eat', item: ref }, `${josa(dish.name, '을/를')} 먹었어요. 오늘은 ${BUFF_INFO[dish.buff].name}!`, 'eat');
   };
-  /** 요리·만들기 happens at a table in my room: walk there (going home first). */
+  /** 요리·만들기 happens at the kitchen counter in my room: walk there (going home first). */
   const openKitchen = () => {
     setModal(null);
     const go = () => {
       window.dispatchEvent(new CustomEvent('bumtadew:room-go', { detail: 'cook' }));
-      notify('책상으로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
+      notify('부엌 조리대로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
     };
     if (tabRef.current === 'bedroom' && visiting === null) go();
     else enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`), undefined, () => setTimeout(go, 900));

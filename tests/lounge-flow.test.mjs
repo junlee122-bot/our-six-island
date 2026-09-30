@@ -23,7 +23,7 @@ import {
   roomAction,
   roomObstacles,
 } from '../app/lounge-bedroom-navigation.ts';
-import { ROOM, ROOM_DOOR_POINT, defaultBedroom, roomShape } from '../app/lounge-bedroom-data.ts';
+import { ROOM_DOOR_POINT, defaultBedroom, roomShape } from '../app/lounge-bedroom-data.ts';
 import {
   SCENE_LAYOUT,
   sceneCanWalk,

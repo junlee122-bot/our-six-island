@@ -569,7 +569,9 @@ function PlacementPreview({ refId }: { refId: string }) {
   const entry = catalogEntry(refId);
   if (!entry) return null;
   const total = PREVIEW.floor + PREVIEW.wall;
-  const width = `${Math.min(100, (entry.w / PREVIEW.w) * 100)}%`;
+  // Rendered 3D thumbnails leave a margin round the model (about 60% of the picture is the piece).
+  const fill = entry.kind === 'model' && !FURNITURE_ART[refId] ? 0.6 : 1;
+  const width = `${Math.min(100, (entry.w / PREVIEW.w / fill) * 100)}%`;
   const style: Record<string, string> =
     entry.mount === 'wall'
       ? { ['--w']: width, ['--bottom']: `${((PREVIEW.floor + PREVIEW.wall * 0.35) / total) * 100}%` }
