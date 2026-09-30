@@ -2389,9 +2389,10 @@ function AccountLounge({
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
+                onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                sheetOpen={!!tableSheet || !!modal}
+                sheetOpen={!!tableSheet || !!modal || !!residentTalk}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
@@ -2466,7 +2467,7 @@ function AccountLounge({
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                    sheetOpen={!!tableSheet || !!modal}
+                    sheetOpen={!!tableSheet || !!modal || !!residentTalk}
                   />
                 </Suspense>
               </ScreenBoundary>

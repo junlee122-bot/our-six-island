@@ -42,6 +42,53 @@ type Figure = {
   last: { x: number; z: number };
 };
 
+/**
+ * Speech bubbles only, for residents another scene already draws (the
+ * dealers, 허 선장, 로제, 냐모, 그웬 at their posts): greetings, idle lines and
+ * chats from lounge-npc-behavior.ts over their heads.
+ */
+export class PostBubbles {
+  private bubbles = new Map<NpcId, { el: HTMLElement; text: string; x: number; z: number }>();
+  constructor(
+    private labels: HTMLElement,
+    private height: number,
+  ) {}
+  update(frames: readonly ResidentFrame[]) {
+    for (const f of frames) {
+      let b = this.bubbles.get(f.id);
+      if (!b) {
+        const el = document.createElement('span');
+        el.className = 'rn-bubble';
+        el.hidden = true;
+        el.dataset.npc = f.id;
+        this.labels.appendChild(el);
+        b = { el, text: '', x: f.x, z: f.z };
+        this.bubbles.set(f.id, b);
+      }
+      b.x = f.x;
+      b.z = f.z;
+      const text = f.bubble ?? '';
+      if (text !== b.text) {
+        b.text = text;
+        b.el.textContent = text;
+        b.el.hidden = !text;
+      }
+    }
+  }
+  project(camera: THREE.Camera, width: number, height: number) {
+    const v = new THREE.Vector3();
+    for (const b of this.bubbles.values()) {
+      if (!b.text) continue;
+      v.set(b.x, this.height + 0.45, b.z).project(camera);
+      b.el.style.transform = `translate(${((v.x + 1) / 2) * width}px, ${((1 - v.y) / 2) * height}px) translate(-50%, -100%)`;
+    }
+  }
+  dispose() {
+    for (const b of this.bubbles.values()) b.el.remove();
+    this.bubbles.clear();
+  }
+}
+
 export type ResidentLayerOptions = {
   /** Standing height of the figure (world units). */
   height: number;

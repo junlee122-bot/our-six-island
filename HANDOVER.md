@@ -13,6 +13,7 @@
 - **스택**: React 19 + Vite(vinext) + three.js, TypeScript. 서버는 Supabase(Edge Functions `hohyeon-auth`, `hohyeon-api` + Postgres `hohyeon` 스키마, 비공개 Realtime). 데스크톱 앱은 Tauri 2(`desktop/`).
 - **서버 권위(authoritative) 구조**: 게임 규칙은 `app/*.ts`의 순수 엔진에 있고, 같은 코드가 Edge Function에 번들되어 서버에서 판정합니다. 클라이언트는 결과만 그립니다.
 - **월드 저장**: DB 한 행(JSON) + revision CAS. 범(화폐) 원장 불변식 `잔액 + 예약 + 하우스 − 지급 = 계정수 × 100,000`을 테스트가 항상 검사합니다.
+- **2026-09-30 마을 확장 1단계**: 마을 중심 112×88과 테두리의 구역 입구 5곳(시장 거리만 열림), 별도 맵 ① 시장 거리(농협·잡화점·빵집 카페·신문사·우체국·파출소·의뢰 게시판·장날 좌판), 새 주민 6명(나세라·프리렌·쓰레쉬·신짜장·볼리바스·잔나)의 일과 엔진(`npcSpot`), 주민 14명 모두와의 관계·선물 취향·단계 선물·초대/데이트, 의뢰 게시판, 주민별 대사 파일. 자세한 범위와 남은 일: [마을 확장 설계 9장](handover/design/design-village-2x-npcs.md).
 - **2026-09-28 생활 업데이트**: 미용실·은행, 지도 친구 위치, 낚시 반응 등급·보너스, 차용증·방어 물품·강도, 루미 장부·대부 창구, NPC 친밀도/방 초대. 구현 범위·수치·검증은 [생활 업데이트](handover/design/life-services-2026-09-28.md)를 보세요. 은행 보관금도 위 원장의 예약 합계에 포함합니다.
 
 ## 2. 처음 ChatGPT 코드와 얼마나 달라졌나
@@ -124,6 +125,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 월드 엔진 | `app/lounge-cloud-engine.ts`, `app/lounge-room.ts`, `app/lounge-economy.ts` |
 | 생활 | `app/lounge-life.ts`, `lounge-life-plus.ts`, `lounge-life-social.ts`, `lounge-calendar.ts`, `lounge-items.ts` |
 | 은행·강도·주민 관계 | `app/lounge-finance.ts`, `lounge-furniture-protection.ts`, `lounge-romance.ts`, `lounge/FinancePanel.tsx`, `lounge/NpcRelationsPanel.tsx` |
+| 마을 주민(NPC)·구역 | `app/lounge-npc-data.ts`(명부·선물 취향), `lounge-npc-schedule.ts`(`npcSpot` 일과), `lounge-npc-behavior.ts`·`lounge-npc-figures.ts`(화면 행동·스프라이트), `lounge-npc-dialog.ts`·`lounge-npc-lines-*.ts`(대사), `lounge-npc-requests.ts`(의뢰 게시판), `lounge-districts.ts`·`lounge-market-*.ts`·`lounge-district-models.ts`(구역) |
 | 카지노 대부 로제 | `app/lounge-casino-lender.ts`(서버·화면 공용 위치/거리), `lounge/CasinoLenderPanel.tsx`, `lounge-interior-lender.ts` |
 | 냐모 은행·그웬 미용실 | `app/lounge-bank-layout.ts`, `lounge-bank-interior.ts`, `lounge-salon-layout.ts`, `lounge-salon-interior.ts` |
 | 분장실·허풍 카드 그림 | `app/lounge-wardrobe.tsx`, `lounge-wardrobe-club.css`, `lounge-liarsbar-table.tsx`, `lounge-liarsbar-table.css` |

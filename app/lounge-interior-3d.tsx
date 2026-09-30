@@ -10,10 +10,33 @@ import {
 } from './ui/icons';
 import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
-import { ResidentLayer } from './lounge-npc-figures';
+import { PostBubbles, ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
-import { npcsIn } from './lounge-npc-schedule';
-import { interiorCanWalk } from './lounge-interior-layout';
+import { npcsIn, type NpcSpot } from './lounge-npc-schedule';
+import { interiorCanWalk, hostSpot, TABLE_HOST, TAVERN_HOST_AT } from './lounge-interior-layout';
+import { CASINO_LENDER_SPOT } from './lounge-casino-lender';
+import { BANKER_SPOT } from './lounge-bank-layout';
+import { SALON_STYLIST_SPOT } from './lounge-salon-layout';
+import { NPCS, type NpcId } from './lounge-npc-data';
+import { GAME_KINDS } from './lounge-games';
+
+/** The residents who work here (their scene draws them), as spots for their bubbles. */
+function postSpots(area: SceneArea): NpcSpot[] {
+  const out: NpcSpot[] = [];
+  const add = (id: NpcId, p: { x: number; z: number }) =>
+    out.push({ id, area: 'tavern', x: p.x, z: p.z, facing: 0, walking: false, visible: true, activity: 'work', label: NPCS[id].place, place: '' });
+  for (const host of ['lumi', 'maehwa'] as const) {
+    const game = GAME_KINDS.find((g) => TABLE_HOST[g] === host && hostSpot(area, g));
+    const at = game ? hostSpot(area, game) : null;
+    if (at) add(host, interiorToWorld(at));
+  }
+  if (area === 'tavern') add('captain', TAVERN_HOST_AT);
+  if (area === 'casino') add('rose', interiorToWorld(CASINO_LENDER_SPOT));
+  if (area === 'bank') add('nyamo', interiorToWorld(BANKER_SPOT));
+  if (area === 'salon') add('gwen', interiorToWorld(SALON_STYLIST_SPOT));
+  return out;
+}
+const RESIDENT_TALK_REACH = 1.9;
 import './lounge-npc-figures.css';
 import { loungeSprites } from './lounge-sprites';
 import { GAME_INFO, type GameKind } from './lounge-games';
@@ -143,6 +166,8 @@ type Props = {
   onBanker?: () => void;
   /** Open customization after meeting the stylist in the salon. */
   onSalon?: () => void;
+  /** 허풍 주점 evenings: talk to a visiting resident (프리렌, 쓰레쉬, 볼리바스). */
+  onResident?: (npc: NpcId) => void;
   /** I am near the door: preload the village. */
   onNearDoor?: () => void;
   /** I sit at this forming table: walking pauses until I stand up. */
@@ -192,6 +217,7 @@ export function Interior3D({
   onLender,
   onBanker,
   onSalon,
+  onResident,
   onNearDoor,
   seatedAt = null,
   sheetOpen = false,
@@ -268,9 +294,9 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onResident, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onResident, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
@@ -298,6 +324,8 @@ export function Interior3D({
     propsRef.current = props;
   }, [props]);
   const actionRef = useRef<InteriorAction | null>(null);
+  const [residentNear, setResidentNear] = useState<NpcId | null>(null);
+  const residentNearRef = useRef<NpcId | null>(null);
   const exited = useRef(false);
   const runAction = (next: InteriorAction | null) => {
     if (!next || live.current.locked || live.current.paused) return;
@@ -604,6 +632,9 @@ export function Interior3D({
       dirty = true;
     };
     const residentMemory = newBehaviorMemory();
+    const posts = postSpots(area);
+    const postBubbles = posts.length && residentLabelsRef.current ? new PostBubbles(residentLabelsRef.current, FIGURE_HEIGHT) : null;
+    const postMemory = newBehaviorMemory();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
     const spritesJob = loungeSprites().then(async (value) => {
       const m = latest.current.me;
@@ -774,6 +805,9 @@ export function Interior3D({
         if (actionRef.current && !l.locked) {
           event.preventDefault();
           runRef.current(actionRef.current);
+        } else if (residentNearRef.current && !l.locked) {
+          event.preventDefault();
+          latest.current.onResident?.(residentNearRef.current);
         }
         return;
       }
@@ -1053,6 +1087,24 @@ export function Interior3D({
       if (t - lastData > 150) {
         const next = interiorAction(l.point, area);
         const prev = actionRef.current;
+        // A visiting resident within reach (only when nothing else is here to do).
+        if (residents) {
+          const me = interiorToWorld(l.point);
+          let near: NpcId | null = null,
+            best = RESIDENT_TALK_REACH;
+          if (!next)
+            for (const r of residents.positions()) {
+              const d = Math.hypot(r.x - me.x, r.z - me.z);
+              if (d < best) {
+                best = d;
+                near = r.id;
+              }
+            }
+          if (near !== residentNearRef.current) {
+            residentNearRef.current = near;
+            setResidentNear(near);
+          }
+        }
         if (next?.kind !== prev?.kind || (next?.kind === 'table' && prev?.kind === 'table' && next.game !== prev.game)) {
           actionRef.current = next;
           setAction(next);
@@ -1108,10 +1160,19 @@ export function Interior3D({
         });
         if (residents.update(frames, t, dt, camera)) dirty = true;
       }
+      if (postBubbles) {
+        const at = Date.now() + clockRef.current;
+        const people = [
+          { id: 'self', name: '', ...interiorToWorld(l.point) },
+          ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
+        ];
+        postBubbles.update(residentFrames(posts, people, at, { rain: false, night: false, memory: postMemory }));
+      }
       if (l.moving || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);
         projectLabels();
         residents?.project(camera, host.clientWidth, host.clientHeight);
+        postBubbles?.project(camera, host.clientWidth, host.clientHeight);
         lastRender = t;
         dirty = false;
       }
@@ -1138,6 +1199,7 @@ export function Interior3D({
       for (const f of others.values()) dropFigure(f);
       others.clear();
       residents?.dispose();
+      postBubbles?.dispose();
       hosts.dispose();
       lender?.dispose();
       banker?.dispose();
@@ -1353,6 +1415,15 @@ export function Interior3D({
           detail={actionState ? tableLabel(actionState).text : undefined}
           shortcut={keyLabel(keys.action)}
           onPress={() => runAction(action)}
+        />
+      )}
+      {!seatedAt && !sheetOpen && state !== 'unavailable' && !action && residentNear && (
+        <ActionButton
+          className="ih-action"
+          kind="talk"
+          label={`${NPCS[residentNear].name}에게 말 걸기`}
+          shortcut={keyLabel(keys.action)}
+          onPress={() => onResident?.(residentNear)}
         />
       )}
       <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : '앉기'} className="ih-hint" />
