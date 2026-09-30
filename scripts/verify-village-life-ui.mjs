@@ -13,7 +13,7 @@ import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
 import { actionAttemptEvidence, assertSingleLogicalAction, assertSingleResourceChange, resourceActionState } from './ui-action-guard.mjs';
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
-import { villageCameraFrame } from '../app/lounge-village-camera.ts';
+import { VIEW_DIR, VIEW_DISTANCE, villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
 import { lifeView } from '../app/lounge-life.ts';
 import { dayStart, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
@@ -279,7 +279,7 @@ async function runView(mobile = false) {
       const { half } = villageCameraFrame(view.cw, view.ch, VILLAGE_BOUNDS.width, VILLAGE_BOUNDS.depth), aspect = view.cw / view.ch;
       const camera = new THREE.OrthographicCamera(-half * aspect, half * aspect, half, -half, .1, 180);
       const target = new THREE.Vector3(view.tx, 0, view.tz);
-      camera.position.copy(target).add(new THREE.Vector3(34, 43, 52));
+      camera.position.copy(target).add(new THREE.Vector3(VIEW_DIR.x, VIEW_DIR.y, VIEW_DIR.z).multiplyScalar(VIEW_DISTANCE));
       camera.lookAt(target); camera.zoom = view.zoom; camera.updateProjectionMatrix(); camera.updateMatrixWorld();
       const p = new THREE.Vector3(point.x, 0, point.z).project(camera);
       const sx = view.x + (p.x + 1) * view.w / 2, sy = view.y + (1 - p.y) * view.h / 2;

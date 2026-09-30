@@ -19,8 +19,9 @@ import { NODE_INFO, type NodeKind } from '../lounge-growth-data';
 import { itemName } from '../lounge-life-plus';
 import { lifeSfx } from '../lounge-audio-life';
 import { josa } from '../lounge-text';
+import { useSettings } from '../lounge-settings';
 import type { WalkPoint } from '../lounge-walk-world';
-import type { AreaAction } from '../lounge-area-3d';
+import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -53,6 +54,9 @@ export function useOutdoor({
   onVillage,
   onResident,
   onRequests,
+  onCounter,
+  onFish,
+  onSignpost,
 }: {
   room: CloudRoom;
   notify: Notify;
@@ -64,9 +68,16 @@ export function useOutdoor({
   onResident?: (npc: NpcId) => void;
   /** 시장 거리's request board. */
   onRequests?: () => void;
+  /** A district counter (E at a shop door, a board or a stall). */
+  onCounter?: (place: DistrictCounter) => void;
+  /** The harbor's fishing and crab-pot spots. */
+  onFish?: (spot: 'breakwater' | 'pier') => void;
+  /** 친구에게 가기. */
+  onSignpost?: () => void;
 }) {
   const [outdoor, setOutdoor] = useState<Outdoor | null>(null);
   const [liftOpen, setLiftOpen] = useState(false);
+  const [{ dayNight }] = useSettings();
   const ref = useRef(outdoor);
   useEffect(() => {
     ref.current = outdoor;
@@ -107,15 +118,40 @@ export function useOutdoor({
   /** A district gate on the hub's rim: 시장 거리 is open in stage 1; the rest say what opens them. */
   const toDistrict = useCallback(
     (id: DistrictId) => {
-      if (!districtOpen(id)) {
+      const life = room.snapshot().life;
+      if (!districtOpen(id, { flags: life?.flags })) {
         notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
         return;
       }
-      if (id !== 'market') return;
-      void prefetchDistrict('market');
-      go({ area: 'market', spawn: { ...REGIONS.market.arrive.village! } });
+      if (id !== 'market' && id !== 'harbor' && id !== 'hillside') return;
+      void prefetchDistrict(id);
+      go({ area: id, spawn: { ...REGIONS[id].arrive.village! } });
     },
-    [notify, go],
+    [notify, go, room],
+  );
+
+  /**
+   * 친구에게 가기: straight to a district's arrival point (from anywhere
+   * outdoors or the hub); 'village' walks back out through the current gate.
+   */
+  const travel = useCallback(
+    (area: 'village' | DistrictId) => {
+      if (area === 'village') {
+        const from = ref.current?.area;
+        if (!from) return;
+        fade(() => {
+          setOutdoor(null);
+          ref.current = null;
+          onVillage(outdoorReturnPoint(from));
+        });
+        return;
+      }
+      if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
+      if (!districtOpen(area, { flags: room.snapshot().life?.flags })) return;
+      void prefetchDistrict(area);
+      go({ area, spawn: { ...REGIONS[area].arrive.village! } });
+    },
+    [fade, go, onVillage, room],
   );
 
   const leaveToVillage = () => {
@@ -200,6 +236,15 @@ export function useOutdoor({
       case 'board':
         onRequests?.();
         return;
+      case 'counter':
+        onCounter?.(a.place);
+        return;
+      case 'fish':
+        onFish?.(a.spot);
+        return;
+      case 'signpost':
+        onSignpost?.();
+        return;
       case 'exit':
         if (a.to === 'village') return leaveToVillage();
         if (a.to === 'mine') return enterMine();
@@ -249,6 +294,7 @@ export function useOutdoor({
             clockOffset={view.clockOffset}
             axeTier={axeTier}
             paused={paused || liftOpen}
+            dayNight={dayNight}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}
@@ -289,5 +335,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, toDistrict, render, tell, reset };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset };
 }

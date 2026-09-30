@@ -72,6 +72,8 @@ import { VillageDistrictGates } from './lounge-village-districts-3d';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
 import { npcsIn, npcSpot } from './lounge-npc-schedule';
+import { VILLAGE_CAMERA_OFFSET, VILLAGE_FIGURE_BODY, VILLAGE_FIGURE_TILT, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
+import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
 import { prefetchDistrict } from './lounge-district-models';
@@ -92,7 +94,6 @@ import { fishCandidates, itemName, spotBlock } from './lounge-life-plus';
 import {
   DAY_PHASE_LABEL,
   FRUIT_TREE_POINTS,
-  dayLighting,
   FARM_REACH,
   farmBed,
   farmBedRect,
@@ -288,6 +289,8 @@ type Props = {
   onGate?: () => void;
   /** A district gate on the rim (시장 거리 open; the rest say what opens them). */
   onDistrict?: (id: DistrictId) => void;
+  /** 친구에게 가기 signpost by the plaza board. */
+  onSignpost?: () => void;
   /** Talking to a resident walking about the hub. */
   onResident?: (npc: NpcId) => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
@@ -299,9 +302,17 @@ type Props = {
   /** Weather particles and falling leaves (settings + reduced motion). */
   seasonFx?: boolean;
 };
+/** " · 박물관 물고기 7/12종" for a locked gate's hint (lounge-district-unlocks.ts). */
+function goalText(id: DistrictId, life: LifeView | null | undefined) {
+  const g = life?.districts?.goals;
+  if (!g) return '';
+  if (id === 'harbor') return ` · 박물관 물고기 ${Math.min(g.harbor.have, g.harbor.need)}/${g.harbor.need}종`;
+  if (id === 'hillside') return ` · 친한 주민 ${Math.min(g.hillside.have, g.hillside.need)}/${g.hillside.need}명`;
+  return '';
+}
 type Direction = 'up' | 'down' | 'left' | 'right';
 const WALK_SPEED = 5.2;
-const CAMERA_OFFSET = new THREE.Vector3(34, 43, 52);
+const CAMERA_OFFSET = VILLAGE_CAMERA_OFFSET;
 /** Remote samples are replayed this far behind real time (cloud writes land ~every 500 ms). */
 const REMOTE_DELAY = 550;
 const BUBBLE_MS = 5000;
@@ -567,29 +578,12 @@ function acquireRenderer() {
 }
 
 /* Upright character plane (yaw only), like the bedroom walk room: a
-   screen-facing Sprite leans back ~0.9 units and sinks into walls. */
-const CAMERA_UP_Y = Math.cos(
-  Math.atan2(CAMERA_OFFSET.y, Math.hypot(CAMERA_OFFSET.x, CAMERA_OFFSET.z)),
-);
-/** Sprite canvas (px); the body fills it (figures wear no hats, so no band above). */
-const FIGURE_BODY = { width: 256, height: 320 } as const;
-const FIGURE_CANVAS = FIGURE_BODY;
-/** Vertical world height of the canvas; projects to VILLAGE_ACTOR_HEIGHT on screen. */
-const FIGURE_HEIGHT = VILLAGE_ACTOR_HEIGHT / CAMERA_UP_Y;
-const FIGURE_PLANE_HEIGHT = FIGURE_HEIGHT;
-let figureGeometry: THREE.PlaneGeometry | null = null;
-function getFigureGeometry() {
-  if (!figureGeometry) {
-    figureGeometry = new THREE.PlaneGeometry(
-      VILLAGE_ACTOR_HEIGHT * (FIGURE_BODY.width / FIGURE_BODY.height),
-      FIGURE_PLANE_HEIGHT,
-    );
-    // loungeSprites.draw places the soles at 97% of the canvas height.
-    figureGeometry.translate(0, FIGURE_PLANE_HEIGHT * 0.47, 0);
-  }
-  return figureGeometry;
-}
-const FIGURE_YAW = Math.atan2(CAMERA_OFFSET.x, CAMERA_OFFSET.z);
+   screen-facing Sprite leans back ~0.9 units and sinks into walls. Shared
+   with the districts (lounge-village-view.ts). */
+const FIGURE_CANVAS = VILLAGE_FIGURE_BODY;
+/** How high above the soles a head is, as a vertical offset the camera sees (labels, bubbles). */
+const FIGURE_HEIGHT = VILLAGE_FIGURE_HEIGHT / Math.cos(VIEW_PITCH);
+const getFigureGeometry = villageFigureGeometry;
 
 function disposeObject(root: THREE.Object3D) {
   const shared = getFigureGeometry();
@@ -605,44 +599,6 @@ function disposeObject(root: THREE.Object3D) {
         material.dispose();
       }
   });
-}
-
-/**
- * Keeps the follow camera's ground footprint on the island (plus a small
- * skirt) along the screen's own axes, while never letting the player leave
- * the central 75% of the view.
- */
-function clampFollowTarget(
-  target: THREE.Vector3,
-  player: VillagePoint,
-  halfWidth: number,
-  halfHeight: number,
-) {
-  const ground = Math.hypot(CAMERA_OFFSET.x, CAMERA_OFFSET.z);
-  const sinElevation = Math.sin(Math.acos(CAMERA_UP_Y));
-  // Screen-right and screen-up directions projected onto the ground (orthonormal).
-  const rx = CAMERA_OFFSET.z / ground,
-    rz = -CAMERA_OFFSET.x / ground,
-    fx = -CAMERA_OFFSET.x / ground,
-    fz = -CAMERA_OFFSET.z / ground;
-  const depth = halfHeight / sinElevation;
-  const margin = 3;
-  const w = VILLAGE_BOUNDS.width / 2,
-    d = VILLAGE_BOUNDS.depth / 2;
-  const extentA = w * Math.abs(rx) + d * Math.abs(rz) + margin,
-    extentB = w * Math.abs(fx) + d * Math.abs(fz) + margin;
-  let a = target.x * rx + target.z * rz,
-    b = target.x * fx + target.z * fz;
-  const limitA = Math.max(0, extentA - halfWidth),
-    limitB = Math.max(0, extentB - depth);
-  a = THREE.MathUtils.clamp(a, -limitA, limitA);
-  b = THREE.MathUtils.clamp(b, -limitB, limitB);
-  const pa = player.x * rx + player.z * rz,
-    pb = player.x * fx + player.z * fz;
-  a = THREE.MathUtils.clamp(a, pa - halfWidth * 0.75, pa + halfWidth * 0.75);
-  b = THREE.MathUtils.clamp(b, pb - depth * 0.75, pb + depth * 0.75);
-  target.x = a * rx + b * fx;
-  target.z = a * rz + b * fz;
 }
 
 /** NPC friends wait beside (not on) their own front step. */
@@ -975,13 +931,13 @@ export function Village3D(props: Props) {
     };
     const figures = new Map<string, Figure>();
     // Residents walking about the hub (lounge-npc-schedule.ts) with this screen's idle behaviour.
-    const residentLayer = new ResidentLayer(scene, labels, { height: FIGURE_HEIGHT * 1.12, billboard: 'upright', y: GROUND_Y });
+    const residentLayer = new ResidentLayer(scene, labels, { height: VILLAGE_RESIDENT_HEIGHT, billboard: 'screen', y: GROUND_Y });
     residentLayer.onChange = () => {
       needsRender = true;
     };
     const residentMemory = newBehaviorMemory();
     let residentPositions: { id: NpcId; x: number; z: number }[] = [];
-    let prefetched = false;
+    const prefetched = new Set<string>();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
     const spritesJob = loungeSprites().then(async (value) => {
       if (disposed) return;
@@ -1047,6 +1003,7 @@ export function Village3D(props: Props) {
       }
       const target = t.spot;
       if (target.kind === 'district') return current.onDistrict?.(target.id);
+      if (target.kind === 'signpost') return current.onSignpost?.();
       if (target.kind === 'resident') return current.onResident?.(target.npc);
       if (action.disabled) return;
       if (target.kind === 'fish') current.onFish?.(target.spot);
@@ -1127,7 +1084,19 @@ export function Village3D(props: Props) {
       });
       if (growthChanged) host.dataset.nodes = String((life?.growth?.nodes ?? []).filter((n) => !n.taken).length);
       const shopsChanged = world.shops.update({ venues: venuesFromView(life?.venues) ?? {}, night });
+      // Opened districts and the locked gates' live progress (lounge-district-unlocks.ts).
+      const dv = life?.districts;
+      const gatesChanged = world.gates.setState(
+        dv
+          ? {
+              market: { open: true, progress: '' },
+              harbor: { open: dv.goals.harbor.open, progress: `박물관 물고기 ${Math.min(dv.goals.harbor.have, dv.goals.harbor.need)}/${dv.goals.harbor.need}종` },
+              hillside: { open: dv.goals.hillside.open, progress: `친한 주민 ${Math.min(dv.goals.hillside.have, dv.goals.hillside.need)}/${dv.goals.hillside.need}명` },
+            }
+          : {},
+      );
       world.gates.setNight(night);
+      if (gatesChanged) needsRender = true;
       if ((civicChanged || growthChanged || shopsChanged) && !seasonChanged) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
@@ -1195,43 +1164,33 @@ export function Village3D(props: Props) {
       );
       needsRender = true;
     };
-    const noon = dayLighting(Date.UTC(2026, 0, 1, 3));
-    // Sprites are unlit (toneMapped: false); at night they take a cool tint
-    // so the characters do not glow against the dark village.
-    const figureTint = new THREE.Color('#ffffff'),
-      nightTint = new THREE.Color('#c9d0ff');
+    const figureTint = new THREE.Color('#ffffff');
     let lastSky = '';
     const applyLight = () => {
-      const light =
-        latest.current.dayNight === false ? noon : dayLighting(serverNow());
-      world.hemi.color.set(light.hemiSky);
-      world.hemi.groundColor.set(light.hemiGround);
-      world.hemi.intensity = light.hemiIntensity;
-      world.sun.color.set(light.sun);
-      world.sun.intensity = light.sunIntensity;
-      // Grey days are a little dimmer (rain, storms, clouds, snow).
-      const sky = latest.current.life?.weather?.today;
-      const dim = sky === 'storm' ? 0.72 : sky === 'rain' ? 0.82 : sky === 'cloudy' ? 0.9 : sky === 'snow' ? 0.94 : 1;
-      world.hemi.intensity *= dim;
-      world.sun.intensity *= dim * dim;
+      const light = applyVillageLight(
+        { hemi: world.hemi, sun: world.sun },
+        renderer,
+        villageLightAt(serverNow(), latest.current.dayNight),
+        latest.current.life?.weather?.today,
+      );
+      // One island-wide shadow (static, redrawn only when the sun moves).
       world.sun.position.set(-20, 12 + 22 * light.elevation, 25);
       if (Math.abs(light.elevation - lastElevation) > 0.01) {
         lastElevation = light.elevation;
         renderer.shadowMap.needsUpdate = true;
       }
-      renderer.toneMappingExposure = light.exposure;
       world.life.setNight(light.lamps);
       world.waters.setNight(light.lamps);
       world.valley.setNight(light.lamps);
       if (light.sky !== lastSky) {
         lastSky = light.sky;
-        host.style.background = `linear-gradient(180deg, ${light.sky}, ${light.sky}ee)`;
+        host.style.background = villageSkyBackground(light.sky);
         needsRender = true;
       }
       host.dataset.phase = light.phase;
       host.dataset.lamps = light.lamps.toFixed(2);
       setPhase(light.phase);
-      const tint = new THREE.Color('#ffffff').lerp(nightTint, Math.min(1, light.lamps) * 0.85);
+      const tint = villageFigureTint(light.lamps);
       if (!tint.equals(figureTint)) {
         figureTint.copy(tint);
         for (const figure of figures.values()) figure.body.color.copy(figureTint);
@@ -1259,7 +1218,7 @@ export function Village3D(props: Props) {
         toneMapped: false,
       });
       const body = new THREE.Mesh(getFigureGeometry(), bodyMaterial);
-      body.rotation.y = FIGURE_YAW;
+      body.rotation.x = VILLAGE_FIGURE_TILT;
       const group = new THREE.Group();
       group.add(body);
       if (own) {
@@ -1278,7 +1237,7 @@ export function Village3D(props: Props) {
             toneMapped: false,
           }),
         );
-        ghost.rotation.y = FIGURE_YAW;
+        ghost.rotation.x = VILLAGE_FIGURE_TILT;
         ghost.renderOrder = 10;
         group.add(ghost);
       }
@@ -1910,12 +1869,8 @@ export function Village3D(props: Props) {
         const len = Math.hypot(h, v),
           speed =
             ((run ? WALK_SPEED * RUN_SPEED_MULTIPLIER : WALK_SPEED) * dt) / len;
-        // Camera-right and ground-forward vectors keep arrow keys aligned with the screen.
-        position = villageStep(
-          position,
-          (h * 0.837 + v * 0.547) * speed,
-          (v * 0.837 - h * 0.547) * speed,
-        );
+        // The camera never turns sideways: arrow keys move along the screen's axes.
+        position = villageStep(position, h * speed, v * speed);
       } else if (path.length) {
         let budget = WALK_SPEED * (run ? RUN_SPEED_MULTIPLIER : 1) * dt;
         while (path.length && budget > 0) {
@@ -1951,7 +1906,7 @@ export function Village3D(props: Props) {
         movedZ = position.z - before.z,
         moved = Math.hypot(movedX, movedZ),
         walking = moved > 0.0001,
-        horizontal = movedX * 0.837 - movedZ * 0.547,
+        horizontal = movedX,
         playerMotion = advanceLocomotion(
           locomotion,
           { distance: moved, horizontal },
@@ -1984,11 +1939,12 @@ export function Village3D(props: Props) {
         for (const [id, figure] of figures)
           if (id.startsWith('friend-'))
             npcs.push({ actor: Number(id.slice(7)), point: figure.point });
-        // Walking up to 시장 거리's gate starts fetching its models (before the fade).
-        if (!prefetched && districtOpen('market') && gateDistance('market', position) < DISTRICT_PREFETCH_RADIUS) {
-          prefetched = true;
-          void prefetchDistrict('market');
-        }
+        // Walking up to an open district's gate starts fetching its models (before the fade).
+        for (const id of ['market', 'harbor', 'hillside'] as const)
+          if (!prefetched.has(id) && districtOpen(id, { flags: latest.current.life?.flags }) && gateDistance(id, position) < DISTRICT_PREFETCH_RADIUS) {
+            prefetched.add(id);
+            void prefetchDistrict(id);
+          }
         const nextAction = villageAction(position, latest.current.save.actor, {
           life: latest.current.life,
           now: serverNow(),
@@ -2058,7 +2014,7 @@ export function Village3D(props: Props) {
       const beforeX = target.x,
         beforeZ = target.z,
         beforeZoom = zoom;
-      target.lerp(desiredTarget, reduced.matches ? 1 : Math.min(1, dt * 5));
+      target.lerp(desiredTarget, reduced.matches ? 1 : followEase(dt));
       zoom +=
         (desiredZoom - zoom) * (reduced.matches ? 1 : Math.min(1, dt * 6));
       if (dt > 0) {
@@ -2159,7 +2115,7 @@ export function Village3D(props: Props) {
             {
               // A teleport (first frame, clock jump) is not a stride.
               distance: npcDistance < 2 ? npcDistance : 0,
-              horizontal: npcX * 0.837 - npcZ * 0.547,
+              horizontal: npcX,
             },
             'walk',
             WALK_SPEED,
@@ -2224,7 +2180,7 @@ export function Village3D(props: Props) {
             { phase: figure.phase, facing: figure.facing },
             {
               distance: remoteDistance,
-              horizontal: remoteX * 0.837 - remoteZ * 0.547,
+              horizontal: remoteX,
             },
             figure.motion === 'run' ? 'run' : 'walk',
             WALK_SPEED,
@@ -3628,6 +3584,18 @@ function SpotPrompt({
         </small>
       </div>
     );
+  if (spot.kind === 'signpost') {
+    return (
+      <div>
+        <strong>
+          <Store size={14} /> 친구에게 가기
+        </strong>
+        <small>
+          친구가 있는 구역 입구로 바로 가요 · 가 본 곳만{key}
+        </small>
+      </div>
+    );
+  }
   if (spot.kind === 'board') {
     const done = (life?.bundles ?? []).filter((b) => b.done).length;
     return (
@@ -3716,7 +3684,7 @@ function SpotPrompt({
           <Store size={14} /> {d.no}. {d.name}
         </strong>
         <small>
-          {districtOpen(spot.id) ? `${d.gate.road} · ${d.tagline}` : d.hint}
+          {districtOpen(spot.id, { flags: life?.flags }) ? `${d.gate.road} · ${d.tagline}` : `${d.hint}${goalText(spot.id, life)}`}
           {key}
         </small>
       </div>

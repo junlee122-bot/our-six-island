@@ -45,7 +45,7 @@ import { farmToolAction } from './lounge-life-ui.ts';
 import { FORGE_REACH, NODE_REACH, forgeDistance, nearestNode } from './lounge-village-growth.ts';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data.ts';
 import { VILLAGE_GATE, villageGateDistance } from './lounge-areas.ts';
-import { DISTRICTS, DISTRICT_IDS, districtOpen, gateDistance, type DistrictId } from './lounge-districts.ts';
+import { DISTRICTS, DISTRICT_IDS, HUB_SIGNPOST, districtOpen, gateDistance, type DistrictId } from './lounge-districts.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import { josa } from './lounge-text.ts';
 
@@ -75,6 +75,8 @@ export type VillageSpot =
   | { kind: 'gate' }
   /** A district gate on the rim (lounge-districts.ts); a closed one says what opens it. */
   | { kind: 'district'; id: DistrictId }
+  /** 친구에게 가기: fast travel to a friend's district gate (visited districts only). */
+  | { kind: 'signpost' }
   /** A resident walking about the hub (lounge-npc-schedule.ts). */
   | { kind: 'resident'; npc: NpcId };
 
@@ -295,9 +297,16 @@ export function villageAction(
       target: { type: 'spot', spot: { kind: 'resident', npc: r.id } },
     });
   }
+  labels.set('signpost', { label: '친구에게 가기' });
+  candidates.push({
+    kind: 'board',
+    distance: Math.hypot(point.x - HUB_SIGNPOST.x, point.z - HUB_SIGNPOST.z),
+    reach: HUB_SIGNPOST.reach,
+    target: { type: 'spot', spot: { kind: 'signpost' } },
+  });
   for (const id of DISTRICT_IDS) {
     const d = DISTRICTS[id];
-    labels.set('district:' + id, { label: districtOpen(id) ? `${josa(d.name, '으로/로')} 가기` : `${d.name} · 아직 닫혀 있어요` });
+    labels.set('district:' + id, { label: districtOpen(id, { flags: life?.flags }) ? `${josa(d.name, '으로/로')} 가기` : `${d.name} · 아직 닫혀 있어요` });
     candidates.push({
       kind: 'enter',
       distance: gateDistance(id, point),

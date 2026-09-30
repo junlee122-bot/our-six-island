@@ -177,6 +177,9 @@ export function districtGoalText(id: DistrictId, ctx: DistrictCtx): string {
   }
 }
 
+/** 친구에게 가기 signpost in the hub, beside the plaza board (hub coordinates). */
+export const HUB_SIGNPOST = { x: 6.5, z: 5.6, reach: 1.3 } as const;
+
 /** Start fetching a district's models when the player comes this close to its gate. */
 export const DISTRICT_PREFETCH_RADIUS = 10;
 export const gateDistance = (id: DistrictId, p: { x: number; z: number }) =>
