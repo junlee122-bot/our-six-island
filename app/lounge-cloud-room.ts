@@ -445,6 +445,7 @@ export class CloudRoom {
   }
   private enqueue(
     command: Omit<CloudCommand, 'requestId' | 'sequence' | 'connection'>,
+    onSend?: (at: number) => void,
   ) {
     const g = this.generation,
       body: CloudCommand = {
@@ -457,6 +458,7 @@ export class CloudRoom {
     this.update({ pending: this.view.pending + 1 });
     const task = this.queue.then(async () => {
       if (this.stopped || g !== this.generation) return false;
+      onSend?.(performance.now());
       try {
         return (await this.send(body, g)).ok;
       } catch (e) {
@@ -586,14 +588,16 @@ export class CloudRoom {
   /**
    * "범타듀의 하루" actions (plant, water, harvest, pick, sell, buy, guestbook,
    * mail, readMail, status). Work inside or outside a room, like daily().
+   * `onSend` gets the performance.now() at which the request actually leaves,
+   * after any earlier queued action has been answered.
    */
-  life(action: LifeAction) {
+  life(action: LifeAction, onSend?: (at: number) => void) {
     const a = action as unknown as LoungeAction;
-    if (this.view.status === 'connected') return this.action(a);
-    return this.enqueue({ op: 'action', action: a });
+    if (this.view.status === 'connected') return this.action(a, onSend);
+    return this.enqueue({ op: 'action', action: a }, onSend);
   }
   /** Sends an action; resolves when the server answered (true = accepted). */
-  action(action: LoungeAction): Promise<boolean> {
+  action(action: LoungeAction, onSend?: (at: number) => void): Promise<boolean> {
     if (this.view.status !== 'connected') return Promise.resolve(false);
     if (action.kind === 'move') {
       this.movement = action;
@@ -626,7 +630,7 @@ export class CloudRoom {
         }, 500);
       return Promise.resolve(true);
     }
-    return this.enqueue({ op: 'action', code: this.view.code, action });
+    return this.enqueue({ op: 'action', code: this.view.code, action }, onSend);
   }
   async leave() {
     // Keep a pending join in the same queue, then leave its acknowledged room.
