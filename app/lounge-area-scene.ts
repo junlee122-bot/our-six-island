@@ -11,6 +11,7 @@ import { VALLEY_MODEL_SIZE, type ValleyModelKey } from './lounge-village-layout'
 import { HILL_CAVE, HILL_LOG, MINE_LIFT, REGIONS, type OutdoorArea } from './lounge-areas';
 import { MINE_ARRIVE, MINE_ROOM, bandOf, type MineFloor } from './lounge-mine';
 import type { NodeKind } from './lounge-growth-data';
+import { MarketSet } from './lounge-market-scene';
 
 let loader: GLTFLoader | null = null;
 const cache = new Map<string, Promise<THREE.Group>>();
@@ -73,6 +74,9 @@ export type RegionUpdate = {
   broken?: readonly number[];
   ladder?: boolean;
   lift?: boolean;
+  /** Districts: Sunday market goods, lamps at night. */
+  marketDay?: boolean;
+  night?: boolean;
 };
 
 export class RegionSet {
@@ -88,6 +92,8 @@ export class RegionSet {
   private liftGroup: THREE.Group | null = null;
   private state: RegionUpdate = { nodes: [], logCleared: false };
   private disposables: { dispose: () => void }[] = [];
+  /** A district's own set (시장 거리); the generic outdoor set otherwise. */
+  private district: MarketSet | null = null;
   /** Called when a model arrives (the scene redraws). */
   onChange: () => void = () => {};
 
@@ -95,7 +101,11 @@ export class RegionSet {
     this.area = area;
     this.root.name = 'region-' + area;
     if (area === 'mine') this.buildMineShell();
-    else this.buildOutdoor();
+    else if (area === 'market') {
+      this.district = new MarketSet(REGIONS.market.look);
+      this.district.onChange = () => this.onChange();
+      this.root.add(this.district.root);
+    } else this.buildOutdoor();
   }
 
   // ---------------------------------------------------------- outdoors
@@ -466,6 +476,7 @@ export class RegionSet {
 
   update(u: RegionUpdate) {
     this.state = u;
+    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night });
     const up = new Set(u.nodes.filter((n) => !n.taken).map((n) => n.id));
     for (const n of u.nodes) this.nodeObject(n);
     for (const [id, e] of this.nodes) {
@@ -493,6 +504,7 @@ export class RegionSet {
     for (const e of this.nodes.values()) if (e.mark.visible) e.mark.position.y = (e.mark.userData.y0 ??= e.mark.position.y) + y;
   }
   dispose() {
+    this.district?.dispose();
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
     if (this.floorGroup)

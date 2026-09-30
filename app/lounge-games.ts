@@ -166,8 +166,9 @@ export const READY_LIMIT_MS = 60_000;
 /** Minimum spacing of committed `look` changes per member. */
 export const LOOK_THROTTLE_MS = 300;
 // 'hill' | 'woods' | 'mine': 성장 P2 outdoor regions (lounge-areas.ts REGIONS).
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine';
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine'];
+// 'market': ① 시장 거리, the first district around the hub (lounge-districts.ts).
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market';
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market'];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -185,6 +186,8 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   hill: { x: 50, y: 94.5 },
   woods: { x: 94.55, y: 50 },
   mine: { x: 50, y: 92.14 },
+  // 시장 거리: arriving from the hub's east gate (MARKET_ARRIVE).
+  market: { x: 4.29, y: 43.18 },
 };
 /**
  * Chat follows the area: village and casino chat are separate from the hall,
@@ -197,7 +200,7 @@ export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
 export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
-  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine'
+  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market'
     ? 'village'
     : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon'
       ? area

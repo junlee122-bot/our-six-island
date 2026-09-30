@@ -9,7 +9,10 @@ import { Backpack, MessageCircle } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import type { Look } from '../lounge-look';
-import { REGIONS, VILLAGE_GATE, regionToNetwork, type OutdoorArea } from '../lounge-areas';
+import { REGIONS, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '../lounge-areas';
+import { DISTRICTS, districtOpen, type DistrictId } from '../lounge-districts';
+import { prefetchDistrict } from '../lounge-district-models';
+import type { NpcId } from '../lounge-npc-data';
 import { MINE_ARRIVE, LIFT_EVERY, floorPick } from '../lounge-mine';
 import { GROWTH_REJECT } from '../lounge-growth';
 import { NODE_INFO, type NodeKind } from '../lounge-growth-data';
@@ -48,13 +51,19 @@ export function useOutdoor({
   notify,
   fade,
   onVillage,
+  onResident,
+  onRequests,
 }: {
   room: CloudRoom;
   notify: Notify;
   /** The scene fade (plays `then` at the dark moment). */
   fade: (then: () => void) => void;
-  /** Back in the village at this point (by the north gate). */
+  /** Back in the village at this point (by the gate I left through). */
   onVillage: (at: { x: number; z: number }) => void;
+  /** Talking to a resident out here (시장 거리). */
+  onResident?: (npc: NpcId) => void;
+  /** 시장 거리's request board. */
+  onRequests?: () => void;
 }) {
   const [outdoor, setOutdoor] = useState<Outdoor | null>(null);
   const [liftOpen, setLiftOpen] = useState(false);
@@ -95,11 +104,26 @@ export function useOutdoor({
     go({ area: 'hill', spawn: { ...REGIONS.hill.arrive.village! } });
   }, [room, notify, go]);
 
+  /** A district gate on the hub's rim: 시장 거리 is open in stage 1; the rest say what opens them. */
+  const toDistrict = useCallback(
+    (id: DistrictId) => {
+      if (!districtOpen(id)) {
+        notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
+        return;
+      }
+      if (id !== 'market') return;
+      void prefetchDistrict('market');
+      go({ area: 'market', spawn: { ...REGIONS.market.arrive.village! } });
+    },
+    [notify, go],
+  );
+
   const leaveToVillage = () => {
+    const from = ref.current?.area ?? 'hill';
     fade(() => {
       setOutdoor(null);
       ref.current = null;
-      onVillage({ ...VILLAGE_GATE.stand });
+      onVillage(outdoorReturnPoint(from));
     });
   };
   const goFloor = async (floor: number) => {
@@ -169,6 +193,12 @@ export function useOutdoor({
           notify('쓰러진 통나무를 쪼갰어요! 숲 깊은 곳으로 가는 길이 열렸어요.');
           lifeSfx('chop');
         });
+        return;
+      case 'npc':
+        onResident?.(a.npc);
+        return;
+      case 'board':
+        onRequests?.();
         return;
       case 'exit':
         if (a.to === 'village') return leaveToVillage();
@@ -259,5 +289,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, render, tell, reset };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, render, tell, reset };
 }
