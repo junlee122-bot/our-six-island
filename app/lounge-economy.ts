@@ -133,7 +133,8 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
     if (reason === 'daily' || reason === 'daily-relief') return reason;
     if (reason.startsWith('sell-')) return reason.slice(0, 24);
     if (
-      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night'].includes(reason)
+      // 마을 확장 2단계: the dawn auction and 농협 weekly premiums (lounge-town.ts, each capped per friend per day).
+      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night', 'auction', 'coop-week'].includes(reason)
     )
       return reason;
     return 'grant-other';
@@ -149,7 +150,7 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('tool-')) return 'tool';
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall'].includes(reason)
   )
     return reason;
   return 'spend-other';
