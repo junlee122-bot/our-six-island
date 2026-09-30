@@ -221,12 +221,16 @@ function PlaceIcon({ place, size = 12 }: { place: VillagePlace; size?: number })
     />
   );
 }
-const MINI_BOX = {
-  x: -VILLAGE_BOUNDS.width / 2 - 2,
-  y: -VILLAGE_BOUNDS.depth / 2 - 2,
-  w: VILLAGE_BOUNDS.width + 4,
-  h: VILLAGE_BOUNDS.depth + 4,
-};
+/**
+ * The minimap keeps framing the lived-in hub (100 × 80, as before the hub
+ * grew to 112 × 88) so the homes' pins do not crowd each other; the district
+ * gates on the rim are pinned at the map's edge (miniEdge).
+ */
+const MINI_BOX = { x: -50, y: -40, w: 100, h: 80 };
+const miniEdge = (p: { x: number; z: number }) => ({
+  x: Math.max(MINI_BOX.x + 1.5, Math.min(MINI_BOX.x + MINI_BOX.w - 1.5, p.x)),
+  z: Math.max(MINI_BOX.y + 1.5, Math.min(MINI_BOX.y + MINI_BOX.h - 1.5, p.z)),
+});
 /** Building labels (walking): only the nearest place within this many world
  *  units of its footprint is named; the next one takes over past HANDOFF. */
 const LABEL_NEAR = 4.2,
@@ -3009,10 +3013,11 @@ export function Village3D(props: Props) {
                 {DISTRICT_IDS.map((id) => {
                   const d = DISTRICTS[id];
                   const open = districtOpen(id);
+                  const pin = miniEdge(d.gate.stand);
                   return (
                     <button type="button" key={id} className="hv-minimap-place" data-minimap-place={'district-' + id}
                       data-named={String(open || miniExpanded)} data-nearest="false"
-                      style={{ left: `${((d.gate.stand.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((d.gate.stand.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                      style={{ left: `${((pin.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((pin.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                       onClick={() => controls.current?.visit(d.gate.stand)} aria-label={`${d.name}${open ? '' : ' (아직 닫힘)'} 입구로 걸어가기`}>
                       <span aria-hidden="true">{open ? d.name : `${d.name} · 닫힘`}</span>
                     </button>
@@ -3031,7 +3036,7 @@ export function Village3D(props: Props) {
                     aria-expanded={clustered ? friendGroup === group.key : undefined}
                     aria-controls={clustered ? 'hv-minimap-peers' : undefined}
                     onKeyDown={onFriendKey}
-                    style={{ left: `${((group.point.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((group.point.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                    style={{ left: `${((miniEdge(group.point).x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((miniEdge(group.point).z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                     onClick={() => clustered ? setFriendGroup(friendGroup === group.key ? null : group.key) : followFriend(friend)}>
                     <b aria-hidden="true">{clustered ? group.friends.length : ACTORS[friend.actor].slice(0, 1)}</b>
                     <span>{clustered ? `친구 ${group.friends.length}명` : ACTORS[friend.actor] + (friend.indoor ? ' · 실내' : '')}</span>
