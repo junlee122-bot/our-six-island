@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { DISTRICTS } from '../app/lounge-districts.ts';
 import { REGIONS } from '../app/lounge-areas.ts';
+import { districtCounters } from '../app/lounge-district-counters.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -24,6 +25,8 @@ const out = path.resolve(opt('out', path.join(root, '.ui-shots', 'districts')));
 const only = opt('only', 'market,harbor,hillside').split(',').filter(Boolean);
 const noon = args.includes('--noon');
 const view = opt('view', 'fhd');
+// --panels: also open each counter window (E at the door) and capture it.
+const panels = args.includes('--panels');
 fs.mkdirSync(out, { recursive: true });
 
 const server = await serve(pages);
@@ -33,8 +36,14 @@ const H = await setup({
   browser,
   base,
   view,
-  seedLife: (life) => {
+  seedLife: (life, uid) => {
     life.flags = [...new Set([...(life.flags ?? []), 'district-harbor', 'district-hillside'])];
+    // Something to sell at 농협 and 어시장, and a visited harbor for the signpost.
+    const bag = life.bag?.[uid];
+    if (bag) Object.assign(bag.produce, { carrot: 6, tomato: 3, potato: 4 });
+    const x = ((life.ext ??= {})[uid] ??= {});
+    x.inv = { ...(x.inv ?? {}), mackerel: 3, crucian: 2, hairtail: 1 };
+    x.town = { seen: ['market', 'harbor', 'hillside'] };
   },
 });
 const { page, js, sleep, until } = H;
@@ -99,6 +108,29 @@ try {
     await until(() => document.querySelector('[data-testid=area-3d]')?.dataset.walking === 'false', 120000);
     await sleep(2500);
     await shot(`${id}-centre`);
+    if (panels) {
+      const weekday = new Date(Date.now() + 9 * 3_600_000).getUTCDay();
+      const seen = new Set();
+      for (const c of districtCounters(id, weekday)) {
+        const key = c.a.kind === 'counter' ? c.a.place : c.a.kind;
+        if (seen.has(key) || c.a.kind === 'fish' || c.a.kind === 'board') continue;
+        seen.add(key);
+        await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), { x: c.x, z: c.z });
+        await until((q) => {
+          const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+          return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < 0.6;
+        }, 120000, { x: c.x, z: c.z });
+        await scene('[data-testid=area-3d]');
+        await page.keyboard.press('KeyE');
+        await until(() => !!document.querySelector('dialog[open]'), 15000);
+        await sleep(900);
+        await shot(`${id}-panel-${key}`);
+        for (let i = 0; i < 3 && (await js(() => !!document.querySelector('dialog[open]'))); i++) {
+          await page.keyboard.press('Escape');
+          await sleep(400);
+        }
+      }
+    }
     // Back to the hub through the exit.
     const back = REGIONS[id].exits[0]?.stand;
     if (back) {
