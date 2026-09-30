@@ -172,6 +172,9 @@ function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
     snapshot.blackjack,
     snapshot.seotda,
     snapshot.yacht,
+    // 허풍 카드 can hold 참가비 (라이어 게임 never does; listed for safety).
+    snapshot.liar,
+    snapshot.liarsbar,
   ])
     if (match && next.games[match.id]?.state === 'reserved')
       next = voidGame(next, match.id);
