@@ -8,6 +8,7 @@ import type { CloudCommand } from './lounge-cloud-engine';
 import type { Look } from './lounge-look';
 import { roomCode } from './multiplayer-protocol';
 import { receiveReaction } from './lounge-reactions';
+import { keepUnchanged } from './lounge-view-share';
 import { friendlyError } from './lounge/feedback';
 import { lastRoomKey, recall, remember } from './lounge-settings';
 import { setServerClockOffset } from './lounge-turn-timer';
@@ -34,6 +35,15 @@ export const VILLAGE_CODE = 'BEMTADUVLY';
 export const PRIVATE_REALTIME = true;
 const VISIBLE_POLL_MS = 8000;
 const HIDDEN_POLL_MS = 45000;
+
+/**
+ * Every client at a table polls when the dealer's next step is due. Spread
+ * those reads a little so one of them commits the step and the rest see it
+ * (and its Realtime hint) instead of all racing the same world CAS.
+ */
+export const DUE_POLL_MIN_MS = 150;
+export const DUE_POLL_SPREAD_MS = 250;
+const dueJitter = () => DUE_POLL_MIN_MS + Math.floor(Math.random() * DUE_POLL_SPREAD_MS);
 
 type Response = {
   ok: boolean;
@@ -291,8 +301,10 @@ export class CloudRoom {
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };
     if (r.finance) this.view = { ...this.view, finance: r.finance };
     if (r.packet && r.code) {
+      const packet =
+        this.view.code === r.code ? keepUnchanged(this.view, r.packet) : r.packet;
       const localNow = Date.now();
-      const players = r.packet.players.map((p) => ({
+      const players = packet.players.map((p) => ({
         ...p,
         reaction: receiveReaction(
           p.reaction,
@@ -306,12 +318,12 @@ export class CloudRoom {
       if (this.view.lastRoom !== r.code)
         remember(lastRoomKey(this.account.id), r.code);
       this.update({
-        ...r.packet,
+        ...packet,
         players,
         self: this.account.id,
         code: r.code,
         role: r.host === this.account.id ? 'host' : 'guest',
-        host: (r.packet as { host?: string }).host ?? r.host ?? undefined,
+        host: (packet as { host?: string }).host ?? r.host ?? undefined,
         status: 'connected',
         claiming: null,
         lastRoom: r.code,
@@ -346,7 +358,7 @@ export class CloudRoom {
     }
     this.schedule(
       r.nextDue
-        ? Math.min(VISIBLE_POLL_MS, r.nextDue - r.serverNow + 150)
+        ? Math.min(VISIBLE_POLL_MS, r.nextDue - r.serverNow + dueJitter())
         : VISIBLE_POLL_MS,
     );
   }

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger, validateLedger } from '../app/lounge-economy.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
+import { keepUnchanged, sameTableProps } from '../app/lounge-view-share.ts';
 
 const T0 = Date.UTC(2026, 8, 30, 3, 0, 0); // Wednesday 12:00 KST
 const member = (actor) => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
@@ -97,4 +98,95 @@ test('an unchanged life view is not resent; the packet no longer repeats it', as
   assert.deepEqual({ ...stale.response.life, serverNow: 0 }, { ...first.response.life, serverNow: 0 });
   const bytes = (o) => JSON.stringify(o).length;
   assert.ok(bytes(again.response) * 3 < bytes(first.response), `${bytes(again.response)} vs ${bytes(first.response)}`);
+});
+
+test('keepUnchanged keeps equal matches as the same object and replaces changed ones', () => {
+  const poker = { id: 'p', revision: 3, hand: [1, 2] },
+    tables = { poker: { members: ['a'] } };
+  const before = { poker, tables, chess: null };
+  const same = keepUnchanged(before, { poker: structuredClone(poker), tables: structuredClone(tables), chess: null, players: [] });
+  assert.equal(same.poker, poker);
+  assert.equal(same.tables, tables);
+  const moved = { ...poker, revision: 4 };
+  const next = keepUnchanged(before, { poker: moved, tables: structuredClone(tables), chess: null });
+  assert.equal(next.poker, moved);
+  assert.equal(next.tables, tables);
+  const untouched = { poker: moved };
+  assert.equal(keepUnchanged({}, untouched), untouched, 'nothing to share: the same packet');
+});
+
+test('sameTableProps ignores callbacks and compares the match by identity', () => {
+  const match = { id: 'm', revision: 1 };
+  const base = { match, seat: 0, names: ['도원', '강재'], onAction: () => {} };
+  assert.equal(sameTableProps(base, { ...base, names: ['도원', '강재'], onAction: () => {} }), true);
+  assert.equal(sameTableProps(base, { ...base, match: { ...match } }), false);
+  assert.equal(sameTableProps(base, { ...base, seat: 1 }), false);
+  assert.equal(sameTableProps(base, { ...base, names: ['도원', '민서'] }), false);
+  assert.equal(sameTableProps(base, { ...base, reaction: { id: 'x' } }), false);
+});
+
+/** Every member's packet of the running match, from a fresh read. */
+async function packets(h, ps, kind) {
+  const out = [];
+  for (const p of ps) out.push((await h.run(p, 'read')).response.packet[kind]);
+  return out;
+}
+
+test('card games never send another seat\'s hand, the deck or the hole card', async () => {
+  for (const [kind, n, stake] of [
+    ['poker', 5, 10000],
+    ['seotda', 5, 10000],
+    ['blackjack', 5, 1000],
+    ['gostop', 3, 10000],
+  ]) {
+    const { h, ps } = await startTable(kind, n, stake);
+    const snap = h.world.rooms[ps[0].code].snapshot,
+      match = kind === 'gostop' ? snap.go : snap[kind];
+    const views = await packets(h, ps, kind);
+    views.forEach((v, i) => {
+      const seated = i < n,
+        text = JSON.stringify(v);
+      assert.equal(v.deck, undefined, `${kind}: no deck`);
+      if (kind === 'blackjack') {
+        // Hands are public at the blackjack table; the dealer's second card is not.
+        if (match.phase === 'players') assert.equal(v.dealer[1], null, 'hole card hidden');
+        return;
+      }
+      assert.equal(v.hands, undefined, `${kind}: no hands array`);
+      assert.deepEqual(v.hand, seated ? match.hands[i] : [], `${kind}: seat ${i} sees only its own hand`);
+      if (kind === 'gostop')
+        match.hands.forEach((hand, j) => {
+          if (j !== i) for (const card of hand) assert.ok(!text.includes(card), `gostop: seat ${i} must not see ${card}`);
+        });
+      else if (!match.reveal) assert.deepEqual(v.revealed, [], `${kind}: nothing revealed before the showdown`);
+    });
+  }
+});
+
+test('허풍 카드 and 라이어 게임 keep secrets per seat and from watchers', async () => {
+  {
+    const { h, ps } = await startTable('liarsbar', 4, 1000);
+    const g = h.world.rooms[ps[0].code].snapshot.liarsbar;
+    const views = await packets(h, ps, 'liarsbar');
+    views.forEach((v, i) => {
+      assert.equal(v.cards, undefined);
+      assert.equal(v.hands, undefined);
+      assert.equal(v.chamber, null, 'chambers stay secret until the end');
+      assert.equal(v.salt, null);
+      if (i < 4) assert.deepEqual(v.hand.map((c) => c.id), g.hands[i]);
+      else assert.equal(v.hand, null, 'watchers see no cards');
+    });
+  }
+  {
+    const { h, ps } = await startTable('liar', 5, 0, { party: true });
+    const g = h.world.rooms[ps[0].code].snapshot.liar;
+    const views = await packets(h, ps, 'liar');
+    views.forEach((v, i) => {
+      assert.equal(v.votes, undefined);
+      assert.equal(v.liar, null, 'the liar seat is secret');
+      const citizen = i < 5 && i !== g.liar;
+      assert.equal(v.word, citizen ? g.word : null, `seat ${i}`);
+      if (!citizen) assert.ok(!JSON.stringify(v).includes(g.word), 'the word never leaks to the liar or watchers');
+    });
+  }
 });

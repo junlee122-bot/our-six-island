@@ -1,44 +1,57 @@
+import { memo, type ComponentType } from 'react';
 import type { GameKind } from '../lounge-games';
 import { lazyRetry } from './ErrorBoundary';
+import { sameTableProps } from '../lounge-view-share';
 
 // Each game table is its own chunk (with its own CSS).
-export const ChessBoard = lazyRetry(() =>
+const chess = lazyRetry(() =>
   import('../lounge-boards').then((m) => ({ default: m.ChessBoard })),
 );
-export const GoBoard = lazyRetry(() =>
+const gostop = lazyRetry(() =>
   import('../lounge-go-table').then((m) => ({ default: m.GoBoard })),
 );
-export const PokerTable = lazyRetry(() =>
+const poker = lazyRetry(() =>
   import('../lounge-poker-table').then((m) => ({ default: m.PokerTable })),
 );
-export const BlackjackTable = lazyRetry(() =>
+const blackjack = lazyRetry(() =>
   import('../lounge-blackjack-table').then((m) => ({
     default: m.BlackjackTable,
   })),
 );
-export const SeotdaTable = lazyRetry(() =>
+const seotda = lazyRetry(() =>
   import('../lounge-seotda-table').then((m) => ({ default: m.SeotdaTable })),
 );
-
-export const YachtTable = lazyRetry(() =>
+const yacht = lazyRetry(() =>
   import('../lounge-yacht-table').then((m) => ({ default: m.YachtTable })),
 );
-export const LiarTable = lazyRetry(() =>
+const liar = lazyRetry(() =>
   import('../lounge-liar-table').then((m) => ({ default: m.LiarTable })),
 );
-export const LiarsBarTable = lazyRetry(() =>
+const liarsbar = lazyRetry(() =>
   import('../lounge-liarsbar-table').then((m) => ({ default: m.LiarsBarTable })),
 );
 
+const table = <T extends ComponentType<never>>(c: T) =>
+  memo(c as unknown as ComponentType<Record<string, unknown>>, sameTableProps) as unknown as T;
+
+export const ChessBoard = table(chess);
+export const GoBoard = table(gostop);
+export const PokerTable = table(poker);
+export const BlackjackTable = table(blackjack);
+export const SeotdaTable = table(seotda);
+export const YachtTable = table(yacht);
+export const LiarTable = table(liar);
+export const LiarsBarTable = table(liarsbar);
+
 const TABLES = {
-  chess: ChessBoard,
-  gostop: GoBoard,
-  poker: PokerTable,
-  blackjack: BlackjackTable,
-  seotda: SeotdaTable,
-  yacht: YachtTable,
-  liar: LiarTable,
-  liarsbar: LiarsBarTable,
+  chess,
+  gostop,
+  poker,
+  blackjack,
+  seotda,
+  yacht,
+  liar,
+  liarsbar,
 } satisfies Record<GameKind, { preload: () => void }>;
 
 /**
