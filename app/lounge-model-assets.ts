@@ -163,3 +163,25 @@ export const SHOP_MODELS = {
   furnitureShowroom: '/models/village/shops/furnitureShowroom.glb',
 } as const;
 export type ShopModel = keyof typeof SHOP_MODELS;
+
+/**
+ * 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장, 2026-10-02): kArchive furniture
+ * (village/shop-interiors/assets.json). The rooms also reuse the tavern's café
+ * table, cash register and storage shelf and the valley's produce crate.
+ * Placed by lounge-shop-interior.ts; each room loads only its own models.
+ */
+export const SHOP_INTERIOR_MODELS = {
+  breadStand: '/models/village/shop-interiors/breadStand.glb',
+  espresso: '/models/village/shop-interiors/espresso.glb',
+  cakeCase: '/models/village/shop-interiors/cakeCase.glb',
+  pastryCase: '/models/village/shop-interiors/pastryCase.glb',
+  flourCart: '/models/village/shop-interiors/flourCart.glb',
+  scale: '/models/village/shop-interiors/scale.glb',
+  fruitCrate: '/models/village/shop-interiors/fruitCrate.glb',
+  seedCabinet: '/models/village/shop-interiors/seedCabinet.glb',
+  goodsGondola: '/models/village/shop-interiors/goodsGondola.glb',
+  basketStand: '/models/village/shop-interiors/basketStand.glb',
+  toolTrunk: '/models/village/shop-interiors/toolTrunk.glb',
+  iceBin: '/models/village/shop-interiors/iceBin.glb',
+  fishFreezer: '/models/village/shop-interiors/fishFreezer.glb',
+} as const;

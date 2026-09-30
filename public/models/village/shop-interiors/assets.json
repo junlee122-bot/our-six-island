@@ -1,0 +1,504 @@
+{
+  "provider": "kArchive",
+  "creator": "쓰레드 dogfooter",
+  "catalog": "https://karchive.vibeline.co.kr/models",
+  "downloaded": "2026-09-30",
+  "terms": "모델 상세 페이지 약관 2026-09-30 확인: 개인·상업 프로젝트 사용 및 수정 가능. AI 학습 사용 가능. 원본 자료 재판매 금지. 프로젝트의 라이선스 화면, 크레딧 또는 설명란 등에 출처 표기 필수. 자료: kArchive · 출처: 쓰레드 dogfooter. Creative Commons 라이선스 아님.",
+  "modifications": "웹용 사본은 optimize-assets 파이프라인의 dedup/weld/resample/prune, 위치·법선·UV 양자화, 내장 텍스처 WebP(q88, 최대 512px) 변환. 원본은 public/models/_originals/village/shop-interiors에 보관. 게임 장면에서는 위치·크기·방향만 적용.",
+  "assets": [
+    {
+      "key": "breadStand",
+      "id": "restaurant-bread-basket-display-stand-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/restaurant-bread-basket-display-stand-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/restaurant-bread-basket-display-stand-cottage-normal.glb",
+      "file": "breadStand.glb",
+      "bytes": 663892,
+      "sha256": "a2bc0277ec14b45c8a0ace36f4395582c6ae314794856f6af95b65e6a57ac181",
+      "meshes": 1,
+      "triangles": 6102,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.3886,
+          0,
+          -0.325
+        ],
+        "max": [
+          0.3886,
+          1.0882,
+          0.325
+        ],
+        "size": [
+          0.7771,
+          1.0882,
+          0.65
+        ]
+      },
+      "use": "빵집 빵 바구니 진열대",
+      "webBytes": 317776,
+      "webSha256": "87c0a745dea8fd832f3f9c127c0935eca9cc15faf59dd211548821a5e576df47",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "espresso",
+      "id": "rounded-restaurant-coffee-machine-cups-loaded",
+      "source": "https://karchive.vibeline.co.kr/models/rounded-restaurant-coffee-machine-cups-loaded",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/rounded-restaurant-coffee-machine-cups-loaded.glb",
+      "file": "espresso.glb",
+      "bytes": 579824,
+      "sha256": "663bece650a93a9b9b71e14e7130f1c7b018826f5bea633f7c26ba4cfe865c8b",
+      "meshes": 1,
+      "triangles": 5572,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.3414,
+          0,
+          -0.275
+        ],
+        "max": [
+          0.3414,
+          0.4907,
+          0.275
+        ],
+        "size": [
+          0.6828,
+          0.4907,
+          0.55
+        ]
+      },
+      "use": "빵집 커피 머신",
+      "webBytes": 282264,
+      "webSha256": "d6e821b91060346465dfa9532b92eb95da2f682637e8177f9d3d2fd2917bb8ae",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "cakeCase",
+      "id": "icecream-frosted-cake-display-freezer-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/icecream-frosted-cake-display-freezer-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/icecream-frosted-cake-display-freezer-cottage-normal.glb",
+      "file": "cakeCase.glb",
+      "bytes": 601372,
+      "sha256": "75f4f25b93f10b2e404995b4b1b19e0af21ece4864e9fd4fae51e6bacd00ef8d",
+      "meshes": 1,
+      "triangles": 5844,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.69,
+          0,
+          -0.425
+        ],
+        "max": [
+          0.69,
+          1.0105,
+          0.425
+        ],
+        "size": [
+          1.38,
+          1.0105,
+          0.85
+        ]
+      },
+      "use": "빵집 케이크 진열장(계산대)",
+      "webBytes": 287532,
+      "webSha256": "803e4d3bce725c343a606350bfc1a0db95aa4961e8bbe2ceb996b891f5c3fcd7",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "pastryCase",
+      "id": "convenience-fried-snack-warming-case-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/convenience-fried-snack-warming-case-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/convenience-fried-snack-warming-case-cottage-normal.glb",
+      "file": "pastryCase.glb",
+      "bytes": 681424,
+      "sha256": "27d3e125865b1d7a0e1e47b2aa5013498db63823264afa492fa050e01c535e09",
+      "meshes": 1,
+      "triangles": 5745,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.653,
+          0,
+          -0.375
+        ],
+        "max": [
+          0.653,
+          1.193,
+          0.375
+        ],
+        "size": [
+          1.306,
+          1.193,
+          0.75
+        ]
+      },
+      "use": "빵집 구움과자 진열장",
+      "webBytes": 326328,
+      "webSha256": "e2f730e289b795f41aa1e6813cdb967eb9985cc3edbde42d189fd858912b49e7",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "flourCart",
+      "id": "angular-restaurant-flour-sack-cart-two-sacks",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-flour-sack-cart-two-sacks",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-flour-sack-cart-two-sacks.glb",
+      "file": "flourCart.glb",
+      "bytes": 537948,
+      "sha256": "d002567a7161fc7c708c1f2a23b30ae7b34c52afcf6aec9f45113ef02ba5ab27",
+      "meshes": 1,
+      "triangles": 5421,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.25,
+          0,
+          -0.2462
+        ],
+        "max": [
+          0.25,
+          0.7703,
+          0.2462
+        ],
+        "size": [
+          0.5,
+          0.7703,
+          0.4925
+        ]
+      },
+      "use": "농협 곡물 자루 수레",
+      "webBytes": 259116,
+      "webSha256": "b51f52492dd656a2e84ec3f61120d23b72514f331f3b643db13b7d316668ee6f",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "scale",
+      "id": "rounded-restaurant-kitchen-scale-flour-bag",
+      "source": "https://karchive.vibeline.co.kr/models/rounded-restaurant-kitchen-scale-flour-bag",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/rounded-restaurant-kitchen-scale-flour-bag.glb",
+      "file": "scale.glb",
+      "bytes": 411288,
+      "sha256": "222581a5631472e383686499a807a6cb6950feac68afbbd1207ed0e6ca618bb9",
+      "meshes": 1,
+      "triangles": 3921,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.0586,
+          0,
+          -0.0573
+        ],
+        "max": [
+          0.0586,
+          0.12,
+          0.0573
+        ],
+        "size": [
+          0.1172,
+          0.12,
+          0.1146
+        ]
+      },
+      "use": "농협·어시장 계량 저울",
+      "webBytes": 175584,
+      "webSha256": "0a463f4a621938ebed8a8fc6b16498b67354d8a73f78b4e5cb8c7b1ad9a827d5",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fruitCrate",
+      "id": "angular-restaurant-produce-crate-fruit",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-produce-crate-fruit",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-produce-crate-fruit.glb",
+      "file": "fruitCrate.glb",
+      "bytes": 401164,
+      "sha256": "756734191899fb6c9c6d2c09874e278f61c6fc985720882bff73f9d9b9f334ff",
+      "meshes": 1,
+      "triangles": 3681,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.2761,
+          0,
+          -0.2
+        ],
+        "max": [
+          0.2761,
+          0.2721,
+          0.2
+        ],
+        "size": [
+          0.5522,
+          0.2721,
+          0.4
+        ]
+      },
+      "use": "농협 과일 상자",
+      "webBytes": 175392,
+      "webSha256": "29a61323dca336f0ca0d569fe32644aabaed7b948d4e490894790f33e180fbd8",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "seedCabinet",
+      "id": "apocalypse-seed-storage-cabinet-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/apocalypse-seed-storage-cabinet-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/apocalypse-seed-storage-cabinet-cottage-normal.glb",
+      "file": "seedCabinet.glb",
+      "bytes": 707296,
+      "sha256": "94dbfe89aa50f6450a42f6c223a7894e29093c1ec97b56bfbf9f8ac9e4e4ba51",
+      "meshes": 1,
+      "triangles": 5808,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.6743,
+          0,
+          -0.425
+        ],
+        "max": [
+          0.6743,
+          1.0128,
+          0.425
+        ],
+        "size": [
+          1.3486,
+          1.0128,
+          0.85
+        ]
+      },
+      "use": "농협·잡화점 씨앗 보관장",
+      "webBytes": 339228,
+      "webSha256": "60ae6e97dfb1475bece51b88c549b7c8a3150940c22e3321d612a92bba987914",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "goodsGondola",
+      "id": "convenience-household-supplies-gondola-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/convenience-household-supplies-gondola-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/convenience-household-supplies-gondola-cottage-normal.glb",
+      "file": "goodsGondola.glb",
+      "bytes": 600768,
+      "sha256": "5665908d180718e66cb243f435e7f60c192f0af3ea8a66cfb281bcc7a7224641",
+      "meshes": 1,
+      "triangles": 5660,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.5707,
+          0,
+          -0.375
+        ],
+        "max": [
+          0.5707,
+          1.3644,
+          0.375
+        ],
+        "size": [
+          1.1413,
+          1.3644,
+          0.75
+        ]
+      },
+      "use": "잡화점 생활용품 진열대",
+      "webBytes": 286196,
+      "webSha256": "9a47120b897f27874e790efa92428f435e66f503a331789e2c23b687f18715b8",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "basketStand",
+      "id": "convenience-shopping-basket-stack-stand-cottage-normal",
+      "source": "https://karchive.vibeline.co.kr/models/convenience-shopping-basket-stack-stand-cottage-normal",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/rounded/convenience-shopping-basket-stack-stand-cottage-normal.glb",
+      "file": "basketStand.glb",
+      "bytes": 659656,
+      "sha256": "4acaa5ea99c3491476e84f12cb8811a4db79a91a71dddcc738d0f00e34823141",
+      "meshes": 1,
+      "triangles": 5860,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.4138,
+          0,
+          -0.325
+        ],
+        "max": [
+          0.4138,
+          1.096,
+          0.325
+        ],
+        "size": [
+          0.8277,
+          1.096,
+          0.65
+        ]
+      },
+      "use": "잡화점 장바구니 거치대",
+      "webBytes": 319168,
+      "webSha256": "bf72d39832369bac9a2988a919ee2aabb57cb15738058582156ec8aa19351f08",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "toolTrunk",
+      "id": "angular-common-furniture-storage-trunk-open-tools",
+      "source": "https://karchive.vibeline.co.kr/models/angular-common-furniture-storage-trunk-open-tools",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-common-furniture-storage-trunk-open-tools.glb",
+      "file": "toolTrunk.glb",
+      "bytes": 565388,
+      "sha256": "ce727477e199213b48ceb7bab67c08b6c0c5fa7a4a3b3bee9981ccc656512dcd",
+      "meshes": 1,
+      "triangles": 5483,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.2951,
+          0,
+          -0.1876
+        ],
+        "max": [
+          0.2951,
+          0.55,
+          0.1876
+        ],
+        "size": [
+          0.5902,
+          0.55,
+          0.3752
+        ]
+      },
+      "use": "잡화점 도구 상자",
+      "webBytes": 277252,
+      "webSha256": "e213227cb8ef8cc7fdc0a9f12f5413433e1be7e3cd97bd9fe1ab07fe3aa8bb2c",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "iceBin",
+      "id": "angular-restaurant-ice-bin-open-ice",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-ice-bin-open-ice",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-ice-bin-open-ice.glb",
+      "file": "iceBin.glb",
+      "bytes": 614632,
+      "sha256": "b7f24cf4120f2f4669304dd08875eb63006722d7e6c81bec37d7c1142e1c0e07",
+      "meshes": 1,
+      "triangles": 5905,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.297,
+          0,
+          -0.221
+        ],
+        "max": [
+          0.297,
+          0.85,
+          0.221
+        ],
+        "size": [
+          0.594,
+          0.85,
+          0.442
+        ]
+      },
+      "use": "어시장 얼음 통",
+      "webBytes": 312788,
+      "webSha256": "7723ce07fffc840459ea458c33f6bad46d15fee2d04cf18ca8c2a97333081809",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    },
+    {
+      "key": "fishFreezer",
+      "id": "angular-restaurant-chest-freezer-open-stocked",
+      "source": "https://karchive.vibeline.co.kr/models/angular-restaurant-chest-freezer-open-stocked",
+      "url": "https://karchive-assets.vibeline.co.kr/models/v1/angular/angular-restaurant-chest-freezer-open-stocked.glb",
+      "file": "fishFreezer.glb",
+      "bytes": 597340,
+      "sha256": "3113404a0535e43730ca2ade850aa8d52937a87bfa48296660ac114b53a7cf77",
+      "meshes": 1,
+      "triangles": 4765,
+      "textures": 1,
+      "textureMax": 1024,
+      "extensions": [],
+      "bounds": {
+        "min": [
+          -0.41,
+          0,
+          -0.2432
+        ],
+        "max": [
+          0.41,
+          0.85,
+          0.2432
+        ],
+        "size": [
+          0.82,
+          0.85,
+          0.4863
+        ]
+      },
+      "use": "어시장 냉동 진열고",
+      "webBytes": 288676,
+      "webSha256": "64ac304590cede91e9ba434820217984fbc22e79958b68f84d9b6bccadd0dbbb",
+      "webExtensions": [
+        "EXT_texture_webp",
+        "KHR_mesh_quantization"
+      ]
+    }
+  ]
+}
