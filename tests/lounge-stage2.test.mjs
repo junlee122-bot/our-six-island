@@ -97,6 +97,14 @@ test('harbor and hillside are separate areas with walkable spots, counters and e
         assert.ok(end && Math.hypot(end.x - c.x, end.z - c.z) < 0.8, `${area} ${c.a.label} reachable`);
       }
   }
+  // 시장 거리's shop doors, board, Sunday stalls and signpost are walkable and reachable too.
+  const mw = regionWalk('market');
+  for (const weekday of [0, 1])
+    for (const c of districtCounters('market', weekday)) {
+      assert.ok(mw.canWalk(c), `market ${c.a.label} walkable`);
+      const end = mw.path(REGIONS.market.arrive.village, c).at(-1);
+      assert.ok(end && Math.hypot(end.x - c.x, end.z - c.z) < 0.8, `market ${c.a.label} reachable`);
+    }
   // Fishing and crab-pot spots are the fishing engine's own, behind the harbor flag.
   for (const s of HARBOR_SPOTS) {
     assert.ok(SPOT_INFO[s.spot], s.spot);
