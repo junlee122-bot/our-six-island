@@ -355,14 +355,21 @@ export function RoomFloor({
       previous = 0,
       lastSend = 0,
       facing: 1 | -1 = 1,
-      wasMoving = false;
+      wasMoving = false,
+      dialogAt = -1000,
+      dialogOpen = false;
     const tick = (now: number) => {
       frame = requestAnimationFrame(tick);
       const dt = previous ? Math.min((now - previous) / 1000, 0.25) : 0;
       previous = now;
       const state = live.current;
       if (!state.point || !dt) return;
-      if (document.querySelector('dialog[open]')) {
+      // A DOM query per frame adds up; an open dialog is checked 5× a second.
+      if (now - dialogAt > 200) {
+        dialogAt = now;
+        dialogOpen = !!document.querySelector('dialog[open]');
+      }
+      if (dialogOpen) {
         state.held.clear(); state.shift = false; state.target = null; state.route = []; state.approach = null;
       }
       let dx = 0,
