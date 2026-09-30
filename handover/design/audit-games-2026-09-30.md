@@ -47,7 +47,7 @@ three.js 784KB는 공유 vendor 청크로 그대로다.
 
 - 그림자 1024² 한 장, `shadowMap.autoUpdate = false`로 좌석·가구가 바뀔 때만 갱신. 렌더는 움직임·변화가 있을 때, 없으면 120ms마다(딜러 대기 동작 때문). 화면 밖·숨은 탭이면 멈춤. 떠날 때 지오메트리·재질·텍스처·렌더러를 모두 dispose하고 `forceContextLoss`까지 한다.
 - 프레임마다 작은 배열·객체를 만든다(`here.filter`, 목표 좌표 복사, 150ms마다 좌석 배열). 7명 규모에서는 무시할 수준이라 두었다.
-- 측정용으로 `data-draw-calls`/`data-triangles`를 실내 3D 요소에 붙였고 `ui:shots --games`가 테이블 시트 캡처에 기록한다. 부하 때문에 이번에는 값을 얻지 못했다(다음 점검 때 확인).
+- 측정용으로 `data-draw-calls`/`data-triangles`를 실내 3D 요소에 붙였고 `ui:shots --games`가 테이블 시트 캡처에 기록한다. 카지노(블랙잭 시트 앞, 1920×1080): **draw call 137, 삼각형 약 7.8만**. 7명 규모에서 여유가 있다.
 - 대기 중 8fps 렌더를 더 낮추려면 딜러 대기 동작(`lounge-interior-hosts.ts`, 다른 작업 범위)과 같이 봐야 한다.
 
 ### 네트워크와 서버 엔진 (7명 방, `scripts/measure-games.mjs`)
@@ -122,4 +122,4 @@ three.js 784KB는 공유 vendor 청크로 그대로다.
 - `npm test`: 전 718개 → 후 730개(새 `tests/lounge-games-review.test.mjs` 12개), 모두 통과.
 - 새 테스트: 격리 환불, life 생략·크기, 공유 도우미, 카드 게임·라이어·허풍 카드의 좌석별 숨은 정보, 3분 뒤 재접속, 기록 집계·주 넘김·잘못된 데이터, 체스 정산 → 기록(원장 불변), 서렌더 정산과 원장, 서렌더 거절 조건, 규칙 카드 문구(이모지·영어 단어 없음).
 - `node scripts/build-standalone.mjs --out /tmp/pages` 성공(위 표).
-- `npm run ui:shots`: 컨테이너 부하로 마을 화면 단계에서 시간 초과가 이어져 기준 비교를 끝내지 못했다. `scripts/ui-baseline.json`은 바꾸지 않았다. 다음 점검 때 `npm run ui:shots -- --games`로 블랙잭·섯다 화면, 새 규칙·기록 창(`guide-*`), 실내 draw call을 확인한다.
+- `npm run ui:shots`: 전체 캡처는 컨테이너 부하로 마을 화면 단계에서 시간 초과가 이어져 기준 비교를 끝내지 못했다. 대신 `npm run ui:shots -- --games --views fhd --only game-blackjack`을 돌려 블랙잭 시트·게임 화면·새 규칙·기록 창 3개 화면 모두 대비·작은 글자·잘림·겹침·가림 0건, 닫기 44×44를 확인하고 눈으로도 봤다. `scripts/ui-baseline.json`은 바꾸지 않았다. 1280×720과 섯다 화면은 다음 전체 캡처 때 확인한다.
