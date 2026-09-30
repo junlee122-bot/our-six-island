@@ -140,6 +140,8 @@ import { GameScreen, myTurn } from './lounge/GameScreen';
 import {
   Onboarding,
 } from './lounge/Onboarding';
+import { WHATS_NEW_KEY } from './lounge/WhatsNew';
+import { unseenChanges } from './lounge-changelog';
 import { VillageSimple } from './lounge/VillageSimple';
 import {
   ErrorState,
@@ -601,6 +603,21 @@ function AccountLounge({
   });
   // Village music, ambience and UI clicks (start after the first gesture).
   useEffect(() => loungeAudio.attach(), []);
+
+  // 새 소식 on the 마을 게시판 (lounge-changelog.ts): a menu badge until read,
+  // and one toast after connecting.
+  const [newsUnseen, setNewsUnseen] = useState(() => unseenChanges(recall(WHATS_NEW_KEY)));
+  useEffect(() => {
+    const seen = () => setNewsUnseen(unseenChanges(recall(WHATS_NEW_KEY)));
+    window.addEventListener('bumtadew:whatsnew', seen);
+    return () => window.removeEventListener('bumtadew:whatsnew', seen);
+  }, []);
+  const newsToasted = useRef(false);
+  useEffect(() => {
+    if (newsToasted.current || view.status !== 'connected' || newsUnseen === 0) return;
+    newsToasted.current = true;
+    notify('마을 게시판에 새 소식이 있어요.', 'info');
+  }, [view.status, newsUnseen, notify]);
 
   // New letters: a toast and a small chime (count only rises on arrival).
   const unread = view.life?.me.mailUnread ?? 0;
@@ -2627,7 +2644,7 @@ function AccountLounge({
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
                 { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
-                { id: 'board', label: '마을 게시판', glyph: 'board', kbd: keyLabel(settings.keys.board), onClick: () => walkTo(BOARD_FRONT) },
+                { id: 'board', label: '마을 게시판', glyph: 'board', kbd: keyLabel(settings.keys.board), badge: newsUnseen, onClick: () => walkTo(BOARD_FRONT) },
                 { id: 'growth', label: '성장 수첩', glyph: 'spark', kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
                 { id: 'mood', label: '기분', glyph: 'sticker', kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
                 { id: 'digest', label: '어제 마을 소식', glyph: 'news', onClick: () => setModal('digest') },

@@ -3,7 +3,7 @@
 // who helped, and what each one restores in the village; 마을 공사 2차 (big
 // shared 범 projects) and this week's 마을 축제 기금 (ECON-2).
 import { useState } from 'react';
-import { Check, ClipboardList, Coins, Compass, Construction, Hammer, Lock, PartyPopper, Users } from '../ui/icons';
+import { Check, ClipboardList, Coins, Compass, Construction, Hammer, Lock, Newspaper, PartyPopper, Users } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
   BUNDLES,
@@ -24,12 +24,15 @@ import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { useLifeAction } from './LifePanels';
 import { ResearchBoard } from './GrowthResearch';
+import { WhatsNew, WHATS_NEW_KEY } from './WhatsNew';
+import { unseenChanges } from '../lounge-changelog';
+import { recall } from '../lounge-settings';
 import './life-plus.css';
 
 const BEOM_STEPS = [1_000, 10_000, 50_000];
 /** 마을 공사 / 축제 기금 give steps. */
 const GIVE_STEPS = [10_000, 50_000, 100_000];
-type BoardTab = 'bundles' | 'projects' | 'festival' | 'research';
+type BoardTab = 'news' | 'bundles' | 'projects' | 'festival' | 'research';
 const stepLabel = (v: number) => (v >= 10_000 ? `${v / 10_000}만` : `${v / 1_000}천`);
 const flagName = (flag: string) => VILLAGE_FLAGS[flag]?.split(' · ')[0] ?? flag;
 const byAmount = (by: Record<string, number>) =>
@@ -45,8 +48,10 @@ export function BundleBoard(props: {
   onClose: () => void;
 }) {
   const life = props.view.life;
+  // Unseen 새 소식 open first; otherwise the first unfinished board.
+  const [unseen] = useState(() => unseenChanges(recall(WHATS_NEW_KEY)));
   const [tab, setTab] = useState<BoardTab>(() =>
-    life && (life.bundles ?? []).every((b) => b.done) && life.projects ? 'projects' : 'bundles',
+    unseen > 0 ? 'news' : life && (life.bundles ?? []).every((b) => b.done) && life.projects ? 'projects' : 'bundles',
   );
   if (!life)
     return (
@@ -57,6 +62,10 @@ export function BundleBoard(props: {
   return (
     <Modal title="마을 게시판" onClose={props.onClose} className="l-life-modal l-board" wide>
       <div className="l-mail-tabs" role="tablist" aria-label="게시판">
+        <button role="tab" aria-selected={tab === 'news'} onClick={() => setTab('news')} data-testid="board-tab-news">
+          <Newspaper size={15} /> 새 소식
+          {unseen > 0 && tab !== 'news' && <span className="l-news-dot" aria-label="읽지 않은 소식" />}
+        </button>
         <button role="tab" aria-selected={tab === 'bundles'} onClick={() => setTab('bundles')} data-testid="board-tab-bundles">
           <ClipboardList size={15} /> 꾸러미
         </button>
@@ -70,7 +79,9 @@ export function BundleBoard(props: {
           <Compass size={15} /> 마을 개척
         </button>
       </div>
-      {tab === 'bundles' ? (
+      {tab === 'news' ? (
+        <WhatsNew />
+      ) : tab === 'bundles' ? (
         <BundlePanel {...props} />
       ) : tab === 'projects' ? (
         <ProjectPanel {...props} />
