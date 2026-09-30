@@ -5,6 +5,8 @@
 // room art (lounge-furniture-art.ts).
 import type { ReactNode } from 'react';
 import { FURNITURE_ART } from '../lounge-furniture-art';
+import { THUMBNAILS } from '../lounge-bedroom-art';
+import { FURNITURE_BY_REF } from '../lounge-items';
 import type { Quality } from '../lounge-life';
 
 const INK = '#3d2f25';
@@ -1255,7 +1257,8 @@ export function ItemIcon({
   title?: string;
   className?: string;
 }) {
-  const furn = id.startsWith('furn-') ? FURNITURE_ART[id] : undefined;
+  // 'furn-*': drawn art; 기본 가구 (새 방): the room catalog thumbnail.
+  const furn = id.startsWith('furn-') ? FURNITURE_ART[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
   return (
     <span className={`l-item-icon ${className}`} style={{ width: size, height: size }} title={title} aria-hidden={title ? undefined : true}>
       {furn ? (

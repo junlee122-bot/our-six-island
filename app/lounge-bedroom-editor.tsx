@@ -29,7 +29,7 @@ import {
 } from './lounge-bedroom-data';
 import { BEDROOM_THEMES } from './lounge-bedroom-themes';
 import { THUMBNAILS } from './lounge-bedroom-art';
-import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR } from './lounge-bedroom-scene';
+import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR } from './lounge-bedroom-styles';
 import { scaleRange } from './lounge-bedroom-edit';
 import { josa, particle } from './lounge-text';
 
@@ -44,31 +44,8 @@ export const CATEGORY_NAMES: readonly [RoomCategory | 'all', string][] = [
   ['wall', '벽 장식'],
   ['rare', '희귀 소품'],
 ];
-export const WALL_NAMES: Record<Bedroom['wall'], string> = {
-  cream: '크림',
-  sage: '세이지',
-  blush: '연분홍',
-  blue: '하늘색',
-  mint: '민트',
-  dusk: '밤보라',
-  gold: '샴페인 골드',
-  navy: '밤바다 남색',
-  rose: '로즈 스모크',
-  forest: '깊은 숲',
-  silver: '달빛 은색',
-  terracotta: '노을 테라코타',
-  velvet: '별밤 벨벳',
-};
-export const FLOOR_NAMES: Record<Bedroom['floor'], string> = {
-  oak: '내추럴 오크',
-  walnut: '짙은 월넛',
-  pale: '밝은 나무',
-  ash: '회색 애쉬',
-  marble: '대리석',
-  herringbone: '헤링본',
-  cherry: '체리목',
-  ebony: '흑단',
-};
+export { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
+import { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
 export const ACCESS_NAMES: Record<RoomAccess, [string, string]> = {
   public: ['활짝 열기', '누구나 편하게 놀러 와요. 친구 목록에 “놀러 오세요”가 떠요.'],
   friends: ['친구만', '일곱 친구 모두 놀러 올 수 있어요.'],

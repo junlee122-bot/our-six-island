@@ -22,31 +22,8 @@ import { VIEW_LIGHT, VIEW_PITCH } from './lounge-village-camera';
 import { MODEL_FILES, PROP_ART } from './lounge-bedroom-art';
 import { buildMiku } from './lounge-bedroom-miku3d';
 
-export const BEDROOM_WALL_COLOR: Record<Bedroom['wall'], string> = {
-  cream: '#eee6d7',
-  sage: '#cbd1bd',
-  blush: '#e8d3cb',
-  blue: '#c9d8d6',
-  mint: '#d3e8df',
-  dusk: '#a9a2b8',
-  gold: '#e9d8b0',
-  navy: '#5d6b86',
-  rose: '#d7b3b5',
-  forest: '#8fa58c',
-  silver: '#d4d8de',
-  terracotta: '#d39a7c',
-  velvet: '#4a3d63',
-};
-export const BEDROOM_FLOOR_COLOR: Record<Bedroom['floor'], string> = {
-  oak: '#c3a579',
-  walnut: '#8d7057',
-  pale: '#e0d1b7',
-  ash: '#cfc7bb',
-  marble: '#e8e4dd',
-  herringbone: '#a8825a',
-  cherry: '#9b5a45',
-  ebony: '#4a3a32',
-};
+export { BEDROOM_WALL_COLOR, BEDROOM_FLOOR_COLOR } from './lounge-bedroom-styles';
+import { BEDROOM_WALL_COLOR, BEDROOM_FLOOR_COLOR } from './lounge-bedroom-styles';
 /**
  * The room is seen like every district (구역 공통 규격): straight on, pitched
  * VIEW_PITCH down, never turned sideways. Painted cards face it and are
@@ -244,6 +221,8 @@ export function createBedroomScene(
   const shell = new THREE.Group();
   shell.name = 'shell';
   scene.add(shell);
+  // Outside the room is dark, like a drawn interior.
+  scene.background = new THREE.Color('#3b3029');
   const box = (
     w: number,
     h: number,
@@ -323,17 +302,26 @@ export function createBedroomScene(
     T = 0.32,
     trim = '#5b4636';
   box(width + 2 * T, 0.3, depth + 2 * T, cx, -0.2, cz, '#937a5a');
-  const plankGeometry = new THREE.BoxGeometry(1.99, 0.065, 0.29);
-  const cols = Math.ceil(width / 2) + 1,
+  // Planks run 2 long in staggered rows; the ones at either end are cut to the room.
+  const plankGeometry = new THREE.BoxGeometry(1, 0.065, 0.29);
+  const cols = Math.ceil(width / 2) + 2,
     rows = Math.ceil(depth / 0.3);
   floors.forEach((material, color) => {
     const matrices: THREE.Matrix4[] = [];
     for (let row = 0; row < rows; row++)
       for (let col = 0; col < cols; col++)
         if ((row + col * 2) % floors.length === color) {
-          const x = minX + 1 + col * 2 + ((row % 2) - 0.5) * 0.5;
-          if (x - 1 > maxX) continue;
-          matrices.push(new THREE.Matrix4().makeTranslation(x, -0.016, minZ + row * 0.3 + 0.15));
+          const x = minX + col * 2 + ((row % 2) - 0.5) * 0.5,
+            x0 = Math.max(minX, x - 0.995),
+            x1 = Math.min(maxX, x + 0.995);
+          if (x1 - x0 < 0.05) continue;
+          matrices.push(
+            new THREE.Matrix4().compose(
+              new THREE.Vector3((x0 + x1) / 2, -0.016, minZ + row * 0.3 + 0.15),
+              new THREE.Quaternion(),
+              new THREE.Vector3(x1 - x0, 1, 1),
+            ),
+          );
         }
     const planks = new THREE.InstancedMesh(plankGeometry, material, matrices.length);
     matrices.forEach((matrix, index) => planks.setMatrixAt(index, matrix));
@@ -343,10 +331,14 @@ export function createBedroomScene(
   // Planks that run past the side walls are hidden under them; a skirting
   // board in the trim colour closes the floor edge.
   box(width + 2 * T, H, T, cx, H / 2 - 0.05, minZ - T / 2, wall);
-  for (const side of [minX - T / 2, maxX + T / 2]) {
-    box(T, H, depth + T, side, H / 2 - 0.05, cz + T / 2, wall);
-    box(T + 0.02, 0.08, depth + T + 0.02, side, H - 0.02, cz + T / 2, trim);
-  }
+  // Side and front walls are seen end-on: dark frame pieces that cast no
+  // shadow into the room (like the drawn edge of a Stardew room).
+  const frame = (w: number, h: number, d: number, x: number, y: number, z: number) => {
+    const mesh = box(w, h, d, x, y, z, trim);
+    mesh.castShadow = false;
+    return mesh;
+  };
+  for (const side of [minX - T / 2, maxX + T / 2]) frame(T, H, depth + T, side, H / 2 - 0.05, cz + T / 2);
   box(width + 2 * T + 0.02, 0.08, T + 0.02, cx, H - 0.02, minZ - T / 2, trim);
   const wainscot = '#d8d9c8';
   box(width, 0.77, 0.03, cx, 0.47, minZ + 0.015, wainscot);
@@ -359,15 +351,11 @@ export function createBedroomScene(
     [minX - T, door.x0],
     [door.x1, maxX + T],
   ];
-  for (const [a, b] of segments)
-    if (b - a > 0.01) {
-      box(b - a, frontH, T, (a + b) / 2, frontH / 2 - 0.05, fz, wall);
-      box(b - a + 0.02, 0.08, T + 0.02, (a + b) / 2, frontH - 0.02, fz, trim);
-    }
+  for (const [a, b] of segments) if (b - a > 0.01) frame(b - a, frontH, T, (a + b) / 2, frontH / 2 - 0.05, fz);
   // Doorway: a threshold, two short posts and a doormat inside.
   const dx = (door.x0 + door.x1) / 2;
   box(door.x1 - door.x0, 0.05, T, dx, 0.0, fz, '#a98e6a');
-  for (const x of [door.x0 - 0.05, door.x1 + 0.05]) box(0.1, frontH + 0.12, T + 0.04, x, (frontH + 0.12) / 2 - 0.05, fz, '#a98e6a');
+  for (const x of [door.x0 - 0.05, door.x1 + 0.05]) frame(0.1, frontH + 0.12, T + 0.04, x, (frontH + 0.12) / 2 - 0.05, fz).material = surface('#a98e6a');
   const doormat = new THREE.Mesh(new THREE.PlaneGeometry(door.x1 - door.x0 - 0.1, 0.62), surface('#b8a58a'));
   doormat.rotation.x = -Math.PI / 2;
   doormat.position.set(dx, 0.035, maxZ - 0.4);

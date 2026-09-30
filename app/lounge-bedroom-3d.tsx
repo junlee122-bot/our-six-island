@@ -100,6 +100,8 @@ export type BedroomVisit = {
   owner: number;
   ownerLook: Look;
   bedroom: Bedroom | null;
+  /** false: the owner does not stand in the room (모델하우스 관람). */
+  host?: false;
 };
 /** Everyone in the same room ('home' + owner) as seen from the server. */
 export type RoomPresence = {
@@ -296,7 +298,7 @@ export function Bedroom3D({
       (p) => p.id !== presence?.self && p.area === 'home' && (p.home ?? p.actor) === roomActor,
     );
     for (const p of inRoom) list.push({ id: p.id, actor: p.actor, look: p.look });
-    if (visit && !inRoom.some((p) => p.actor === visit.owner))
+    if (visit && visit.host !== false && !inRoom.some((p) => p.actor === visit.owner))
       list.push({ id: HOST_ID, actor: visit.owner, look: visit.ownerLook, npc: true });
     return list;
   }, [presence?.players, presence?.self, roomActor, visit]);
@@ -903,7 +905,10 @@ export function Bedroom3D({
         height = host.clientHeight;
       if (!width || !height) return;
       const aspect = width / height;
-      const half = viewHalf(aspect);
+      // The village's scale on screen (VIEW_HALF over the whole window), also
+      // when the room sits in a smaller frame (모델하우스 관람).
+      const windowH = Math.max(height, window.innerHeight || height);
+      const half = viewHalf((window.innerWidth || width) / windowH) * (height / windowH);
       camera.left = -half * aspect;
       camera.right = half * aspect;
       camera.top = half;

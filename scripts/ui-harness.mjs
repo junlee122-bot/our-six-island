@@ -65,13 +65,15 @@ export async function launchBrowser() {
  * A logged-in-able mock world: three friends online, a ripe farm, a letter.
  * Returns helpers bound to one page at the given viewport.
  */
-export async function setup({ browser, base, view = 'fhd', seedLife, onboard = false }) {
+export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, onboard = false }) {
   const VW = VIEWS[view];
   const uid = '11111111-2222-4333-8444-555555555553';
   const me = { id: uid, actor: 3, username: 'seungjun' };
   let world = { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} };
   let revision = 1;
   const saves = {};
+  // A stored profile save for me (e.g. a furnished room), as the server would hold it.
+  if (seedSave) saves[3] = JSON.parse(JSON.stringify(seedSave));
   const errors = [];
   const mk = (actor, username) => ({ id: crypto.randomUUID(), actor, username, connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
   const bots = [mk(0, 'dowon'), mk(6, 'hohyeon'), mk(2, 'minseo')];

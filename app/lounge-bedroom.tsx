@@ -41,10 +41,13 @@ export function BedroomEditor(props: {
   const owned = props.view?.life?.me.furniture, strict = props.view?.life?.me.furnitureStrict;
   const policy = useMemo(() => ({ owned, strict }), [owned, strict]);
   const save = useMemo(() => maskFurnitureSave(props.save, policy), [props.save, policy]);
+  // The room grows with 집 확장 (범마을 부동산).
+  const house = props.view?.life?.me.house ?? 0;
   return (
     <div className="b3-bedroom-experience">
       <Bedroom3D
-        key={props.save.actor}
+        key={`${props.save.actor}-${house}`}
+        house={house}
         save={save}
         onChange={(next) => props.onChange(maskFurnitureSave(next, policy))}
         notice={props.notice}

@@ -3,10 +3,15 @@
 // upgrade board (also 허 선장's in 허풍 주점). Keyboard first: Tab / ←→ switch
 // the counter's pages, ↑↓ (or ←→↑↓ in the showroom) move the selection,
 // Enter buys or chips in, +/− change the count, R rerolls today's stock.
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Check, Coins, Crown, Hammer, House, Lock, RefreshCw, Sparkles } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
-import { FURNITURE_BY_REF, HOUSE_TIERS, type HouseTier } from '../lounge-items';
+import { FURNITURE_BY_REF, HOUSE_TIERS, THEME_STYLE_PRICE, type HouseTier, type ThemeStyle } from '../lounge-items';
+import { FREE_FLOOR, FREE_WALL, LEGACY_ROOM, MOUNT_NAME, ROOM_TIERS, catalogEntry, legacyThemeRoom, type Bedroom } from '../lounge-bedroom-data';
+import { BEDROOM_THEMES } from '../lounge-bedroom-themes';
+import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR, FLOOR_NAMES, WALL_NAMES } from '../lounge-bedroom-styles';
+import { THUMBNAILS } from '../lounge-bedroom-art';
+import { defaultLook, type LoungeSave } from '../lounge-look';
 import { FURNITURE_ART } from '../lounge-furniture-art';
 import {
   UPGRADE_CATEGORY_NAME,
@@ -33,6 +38,7 @@ import { useNow } from './use-now';
 import './shop-counter.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
+const Bedroom3D = lazy(() => import('../lounge-bedroom-3d').then((m) => ({ default: m.Bedroom3D })));
 
 /** The shopkeeper at the counter: portrait (mood follows the moment) and a line. */
 function Keeper({ host, mood, line }: { host: HostId; mood: DealerMood; line: string }) {
@@ -288,9 +294,143 @@ function RoomPreview({ tier }: { tier: HouseTier }) {
   );
 }
 
-export function RealtyCounter({ room, view, notify, onClose }: Base) {
+/* ------------------------------------------------------------ 모델하우스 관람 */
+
+const styleOwned = (style: string, styles: readonly string[]) =>
+  style === FREE_WALL || style === FREE_FLOOR || styles.includes(style);
+
+/**
+ * One friend's old themed room, walked through as a model house (the new
+ * rooms' camera and figures; look only, nothing can be taken home).
+ */
+function ModelHouse({ actor, save, onClose }: { actor: number; save: LoungeSave; onClose: () => void }) {
+  const bedroom = useMemo(() => legacyThemeRoom(actor), [actor]);
+  const name = `${ACTORS[actor]}의 방`;
+  return (
+    <Modal title={`모델하우스 · ${name}`} onClose={onClose} className="sc-counter sc-modelhouse" wide>
+      <div className="sc-modelhouse-stage" data-testid="model-house" data-actor={actor}>
+        <Suspense fallback={<p className="l-ledger-empty">모델하우스 문을 여는 중…</p>}>
+          <Bedroom3D
+            save={save}
+            visit={{ owner: actor, ownerLook: save.looks[actor] ?? defaultLook(actor), bedroom, host: false }}
+            shape={LEGACY_ROOM}
+            title={name}
+            onExit={onClose}
+          />
+        </Suspense>
+      </div>
+    </Modal>
+  );
+}
+
+/** A tiny room (wall above, floor below) in a theme's colours. */
+function Swatch({ wall, floor }: { wall: Bedroom['wall']; floor: Bedroom['floor'] }) {
+  return (
+    <span className="sc-room sc-room-mini" style={{ ['--wall' as string]: BEDROOM_WALL_COLOR[wall], ['--floor' as string]: BEDROOM_FLOOR_COLOR[floor] }}>
+      <i className="sc-room-window" />
+      <i className="sc-room-bed" />
+    </span>
+  );
+}
+
+function ModelHouses({ room, view, notify, save, onVisit }: Omit<Base, 'onClose'> & { save?: LoungeSave; onVisit: (actor: number) => void }) {
+  const [run, busy] = useLifeAction(room, notify);
+  const styles = view.life?.me.styles ?? [];
+  const balance = view.wallet.balance;
+  const [at, setAt] = useState(0);
+  const [confirm, setConfirm] = useState<ThemeStyle | null>(null);
+  const theme = BEDROOM_THEMES[at];
+  const body = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => body.current?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const onKey = listKeys(BEDROOM_THEMES.length, at, setAt, () => save && onVisit(at), 4);
+  const part = (kind: 'wall' | 'floor') => {
+    const style = kind === 'wall' ? theme.wall : theme.floor,
+      name = kind === 'wall' ? WALL_NAMES[theme.wall] : FLOOR_NAMES[theme.floor],
+      owned = styleOwned(style, styles),
+      free = style === FREE_WALL || style === FREE_FLOOR;
+    return (
+      <li key={kind} className={owned ? 'is-done' : ''} data-testid={`model-${kind}`}>
+        <span className="sc-style-chip" style={{ ['--chip' as string]: kind === 'wall' ? BEDROOM_WALL_COLOR[theme.wall] : BEDROOM_FLOOR_COLOR[theme.floor] }} aria-hidden="true" />
+        <span className="sc-tier-text">
+          <strong>
+            {kind === 'wall' ? '벽지' : '바닥'} · {name}
+          </strong>
+          <small>{free ? '처음부터 가지고 있어요' : owned ? '샀어요 · 내 방 꾸미기의 “벽·바닥”에서 골라요' : formatBeom(THEME_STYLE_PRICE)}</small>
+        </span>
+        {!owned && (
+          <button
+            type="button"
+            className="l-secondary"
+            disabled={busy || balance < THEME_STYLE_PRICE}
+            onClick={() => setConfirm(style as ThemeStyle)}
+            data-testid={`buy-style-${style}`}
+          >
+            사기
+          </button>
+        )}
+      </li>
+    );
+  };
+  return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrows pick a model house, Enter walks in.
+    <div className="sc-models" ref={body} tabIndex={-1} role="application" aria-roledescription="모델하우스 관람" onKeyDown={onKey} data-testid="model-houses">
+      <p className="sc-help">
+        예전 방 일곱 개를 모델하우스로 옮겨 두었어요. 구경만 할 수 있고, 마음에 드는 벽지·바닥은 한 장씩 사서 내 방에 쓸 수 있어요.{' '}
+        <kbd>←→↑↓</kbd> 고르기 <kbd>Enter</kbd> 들어가 보기
+      </p>
+      <ul className="sc-model-grid">
+        {BEDROOM_THEMES.map((t, i) => (
+          <li key={t.id} className={i === at ? 'is-cursor' : ''} data-testid={`model-${i}`}>
+            <button type="button" onClick={() => setAt(i)} onDoubleClick={() => save && onVisit(i)} aria-current={i === at}>
+              <Swatch wall={t.wall} floor={t.floor} />
+              <strong>{ACTORS[i]}의 방</strong>
+              <small>{t.title}</small>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <section className="sc-plan-detail" aria-live="polite">
+        <h3>
+          {ACTORS[at]}의 방 · {theme.title}
+        </h3>
+        <p>{theme.description}</p>
+        <ul className="sc-styles">{[part('wall'), part('floor')]}</ul>
+        <button type="button" className="l-primary" disabled={!save} onClick={() => save && onVisit(at)} data-testid="visit-model">
+          <House size={16} /> 들어가 보기 <kbd>Enter</kbd>
+        </button>
+        <p className="sc-locked">예전 방에 있던 가구는 여기서만 볼 수 있어요. 가구는 나무결 가구점에서 새로 사요.</p>
+      </section>
+      {confirm && (
+        <ConfirmModal
+          title="이 벽지·바닥을 살까요?"
+          body={
+            <>
+              <b>{(WALL_NAMES as Record<string, string>)[confirm] ?? (FLOOR_NAMES as Record<string, string>)[confirm]}</b>에{' '}
+              <b>{formatBeom(THEME_STYLE_PRICE)}</b>이 들어요. 지갑에 {formatBeom(balance - THEME_STYLE_PRICE)}이 남아요.
+            </>
+          }
+          confirmLabel="사기"
+          busyLabel="사는 중…"
+          cancelLabel="다음에"
+          onClose={() => setConfirm(null)}
+          onConfirm={async () => {
+            const ok = await run({ kind: 'buyRoomStyle', style: confirm }, '샀어요! 내 방 꾸미기의 “벽·바닥”에서 골라 보세요.', 'coin');
+            if (ok) setConfirm(null);
+            return ok;
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+export function RealtyCounter({ room, view, notify, onClose, save }: Base & { save?: LoungeSave }) {
   const life = view.life;
-  const [page, setPage] = useState<'house' | 'upgrade'>('house');
+  const [page, setPage] = useState<'house' | 'models' | 'upgrade'>('house');
+  const [touring, setTouring] = useState<number | null>(null);
   const [run, busy] = useLifeAction(room, notify);
   const tier = life?.me.house ?? 0;
   const venues = venuesFromView(life?.venues);
@@ -309,7 +449,9 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
     ? '마을에 연결되면 상담해 드릴게요.'
     : page === 'upgrade'
       ? '사무소를 넓히면 도면실이 생겨서 공사비를 깎아 드릴 수 있어요.'
-      : next
+      : page === 'models'
+        ? '예전 방들은 모델하우스로 잘 모셔 뒀어요. 벽지랑 바닥은 한 장씩 팔아요.'
+        : next
         ? `다음은 ${next.tier}단계 “${next.name}”이에요. 도면 보여 드릴까요?`
         : '집 확장은 다 끝났어요! 정말 멋진 집이에요.';
   const onKey = listKeys(HOUSE_TIERS.length, at, setAt, () => {
@@ -321,6 +463,7 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
       <Pages
         pages={[
           { id: 'house', label: '집 확장' },
+          { id: 'models', label: '모델하우스 관람' },
           { id: 'upgrade', label: '부동산 가꾸기' },
         ]}
         page={page}
@@ -330,6 +473,8 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
         <p className="l-ledger-empty">마을에 연결되면 부동산에 들어갈 수 있어요.</p>
       ) : page === 'upgrade' ? (
         <UpgradeBoard venue="realty" host="realtor" room={room} view={view} notify={notify} />
+      ) : page === 'models' ? (
+        <ModelHouses room={room} view={view} notify={notify} save={save} onVisit={setTouring} />
       ) : (
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- ↑↓ pick a tier, Enter builds the next one.
         <div className="sc-realty-body" ref={body} tabIndex={-1} role="application" aria-roledescription="집 확장 상담" onKeyDown={onKey} data-testid="realty-counter">
@@ -361,10 +506,13 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
               {t.tier}단계 · {t.name}
             </h3>
             <p>{t.note}</p>
+            <p className="sc-room-size" data-testid="house-room-size">
+              방 크기 {ROOM_TIERS[t.tier].w} × {ROOM_TIERS[t.tier].d}칸 (지금 {ROOM_TIERS[tier].w} × {ROOM_TIERS[tier].d}칸)
+            </p>
             <RoomPreview tier={t} />
             {t.tier <= tier ? (
               <p className="sc-owned">
-                <Check size={16} /> 이미 공사를 마쳤어요. 새 벽지·바닥은 내 방 꾸미기의 “벽·바닥”에서 골라요.
+                <Check size={16} /> 이미 공사를 마쳤어요. 방이 넓어졌고, 새 벽지·바닥은 내 방 꾸미기의 “벽·바닥”에서 골라요.
               </p>
             ) : next && t.tier === next.tier ? (
               <div className="sc-buy">
@@ -381,6 +529,7 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
           </section>
         </div>
       )}
+      {touring !== null && save && <ModelHouse actor={touring} save={save} onClose={() => setTouring(null)} />}
       {confirm && next && (
         <ConfirmModal
           title="집을 넓힐까요?"
@@ -403,11 +552,58 @@ export function RealtyCounter({ room, view, notify, onClose }: Base) {
 /* ------------------------------------------------------------ 나무결 가구점 */
 
 type Stock = { ref: string; name: string; price: number; limited?: 'season' | 'holiday' | 'luxury' };
+/** Shop picture: the drawn art of 'furn-*' pieces, the room thumbnail of 기본 가구. */
+const furnitureArt = (ref: string) => FURNITURE_ART[ref] ?? THUMBNAILS[ref];
+/**
+ * A corner of the new room seen by the room camera: 6 wide, the floor 4 deep
+ * (× sin 52°) under the back wall 3.8 high (× cos 52°).
+ */
+const PREVIEW = { w: 6, floor: 4 * Math.sin((52 * Math.PI) / 180), wall: 3.8 * Math.cos((52 * Math.PI) / 180) };
+
+/**
+ * Where a piece goes in the new room and how big it is there: the room seen
+ * like the room camera (back wall on top, floor below) with the piece drawn
+ * to scale — on the floor, on a table top or on the back wall.
+ */
+function PlacementPreview({ refId }: { refId: string }) {
+  const entry = catalogEntry(refId);
+  if (!entry) return null;
+  const total = PREVIEW.floor + PREVIEW.wall;
+  const width = `${Math.min(100, (entry.w / PREVIEW.w) * 100)}%`;
+  const style: Record<string, string> =
+    entry.mount === 'wall'
+      ? { ['--w']: width, ['--bottom']: `${((PREVIEW.floor + PREVIEW.wall * 0.35) / total) * 100}%` }
+      : entry.mount === 'rug'
+        ? { ['--w']: width, ['--bottom']: `${(PREVIEW.floor * 0.3 / total) * 100}%` }
+        : { ['--w']: width, ['--bottom']: `${(PREVIEW.floor * 0.45 / total) * 100}%` };
+  const size =
+    entry.mount === 'wall'
+      ? `가로 ${entry.w.toFixed(1)} × 높이 ${entry.h.toFixed(1)}칸`
+      : `가로 ${entry.w.toFixed(1)} × 깊이 ${entry.d.toFixed(1)}칸`;
+  return (
+    <figure className="sc-placement" data-testid="furniture-placement" data-mount={entry.mount}>
+      <span className="sc-placement-room" style={{ ['--wall-h' as string]: `${(PREVIEW.wall / total) * 100}%` }}>
+        {/* oxlint-disable-next-line nextjs/no-img-element -- Room art (inline SVG or a small webp thumbnail). */}
+        <img src={furnitureArt(refId)} alt="" style={style} data-mount={entry.mount} />
+      </span>
+      <figcaption>
+        <strong>{MOUNT_NAME[entry.mount]}</strong>
+        <span>
+          {size}
+          {entry.top ? ' · 위에 작은 소품을 올릴 수 있어요' : ''}
+        </span>
+        <small>
+          새 방 한쪽(가로 {PREVIEW.w}칸)에 놓았을 때의 크기예요. 처음 방은 가로 {ROOM_TIERS[0].w}칸이에요.
+        </small>
+      </figcaption>
+    </figure>
+  );
+}
 
 export function FurnitureCounter({ room, view, notify, onClose }: Base) {
   const life = view.life;
   const shop = life?.shop;
-  const [page, setPage] = useState<'today' | 'luxury' | 'upgrade'>('today');
+  const [page, setPage] = useState<'today' | 'basic' | 'luxury' | 'upgrade'>('today');
   const [run, busy] = useLifeAction(room, notify);
   const [at, setAt] = useState(0);
   const [count, setCount] = useState(1);
@@ -416,7 +612,10 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
   const owned = life?.me.furniture ?? {};
   const balance = view.wallet.balance;
   const now = useNow(true, 60_000) + view.clockOffset;
-  const items: Stock[] = useMemo(() => (page === 'luxury' ? (shop?.luxury ?? []) : (shop?.items ?? [])), [page, shop]);
+  const items: Stock[] = useMemo(
+    () => (page === 'luxury' ? (shop?.luxury ?? []) : page === 'basic' ? (shop?.basic ?? []) : (shop?.items ?? [])),
+    [page, shop],
+  );
   const item = items[Math.min(at, items.length - 1)];
   const bought = page === 'luxury' && !!item && !!shop?.luxuryBought?.includes(item.ref);
   const n = page === 'luxury' ? 1 : count;
@@ -432,12 +631,14 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
       ? '진열대를 늘리면 매일 더 많은 가구를 들여올 수 있어요!'
       : page === 'luxury'
         ? '이번 주에만 들어온 귀한 가구예요. 한 사람당 하나씩만 팔아요.'
-        : item
+        : page === 'basic'
+          ? '새 방에 맞춰 기본 가구를 늘 갖춰 뒀어요. 벽지랑 바닥은 부동산 문 사장님한테 가 보세요!'
+          : item
           ? `${josa(item.name, '은/는')} ${formatBeom(item.price)}이에요. 직접 다듬었어요!`
           : '오늘은 물건이 다 나갔어요.';
   const cols = 4;
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (page !== 'luxury' && (e.key === '+' || e.key === '=' || e.key === '-')) {
+    if (page !== 'luxury' && page !== 'upgrade' && (e.key === '+' || e.key === '=' || e.key === '-')) {
       setCount((c) => Math.max(1, Math.min(5, c + (e.key === '-' ? -1 : 1))));
       e.preventDefault();
       return;
@@ -457,6 +658,7 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
       <Pages
         pages={[
           { id: 'today', label: `오늘의 가구 ${shop?.items.length ?? 0}` },
+          { id: 'basic', label: `기본 가구 ${shop?.basic?.length ?? 0}` },
           { id: 'luxury', label: `이번 주 명품 ${shop?.luxury?.length ?? 0}` },
           { id: 'upgrade', label: '가게 가꾸기' },
         ]}
@@ -473,9 +675,11 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
       ) : (
         <div className="sc-showroom">
           {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrows browse, Enter buys, +/− count, R rerolls. */}
-          <div className="sc-shelf" ref={grid} tabIndex={-1} role="application" aria-roledescription="가구 진열대" onKeyDown={onKey} data-testid={page === 'luxury' ? 'luxury-shop' : 'furniture-shop'}>
+          <div className="sc-shelf" ref={grid} tabIndex={-1} role="application" aria-roledescription="가구 진열대" onKeyDown={onKey} data-testid={page === 'luxury' ? 'luxury-shop' : page === 'basic' ? 'basic-shop' : 'furniture-shop'}>
             <p className="sc-help">
-              {page === 'luxury'
+              {page === 'basic'
+                ? `늘 파는 가구예요${shop?.discount ? ` · 일요 장터 ${shop.discount}% 할인` : ''}.`
+                : page === 'luxury'
                 ? `매주 월요일에 바뀌어요 (약 ${Math.max(1, Math.ceil(((shop?.luxuryResetAt ?? now) - now) / 86_400_000))}일 뒤).`
                 : `매일 자정에 바뀌어요 (약 ${hours}시간 뒤)${shop?.discount ? ` · 일요 장터 ${shop.discount}% 할인` : ''}.`}{' '}
               <kbd>←→↑↓</kbd> 둘러보기 <kbd>Enter</kbd> 사기 {page === 'today' && (<><kbd>+/−</kbd> 개수 <kbd>R</kbd> 새로 고치기</>)}
@@ -486,8 +690,8 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
                 return (
                   <li key={x.ref} className={(i === at ? 'is-cursor ' : '') + (mine ? 'is-bought' : '')} data-testid={`furn-${x.ref}`}>
                     <button type="button" onClick={() => setAt(i)} aria-current={i === at} aria-label={`${x.name} ${formatBeom(x.price)}`}>
-                      {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
-                      <img src={FURNITURE_ART[x.ref]} alt="" />
+                      {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art or a room thumbnail. */}
+                      <img src={furnitureArt(x.ref)} alt="" loading="lazy" />
                       <strong>{x.name}</strong>
                       <small>
                         {formatBeom(x.price)}
@@ -503,16 +707,17 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
           {item && (
             <aside className="sc-detail" aria-live="polite">
               <span className="sc-detail-art">
-                {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
-                <img src={FURNITURE_ART[item.ref]} alt="" />
+                {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art or a room thumbnail. */}
+                <img src={furnitureArt(item.ref)} alt="" />
                 {page === 'luxury' && <Crown className="sc-crown" size={22} aria-hidden="true" />}
               </span>
               <h3>{item.name}</h3>
+              <PlacementPreview refId={item.ref} />
               <p>
                 {formatBeom(item.price)} · 가진 개수 {owned[item.ref] ?? 0}
                 {FURNITURE_BY_REF[item.ref]?.craft ? ' · 공방에서 만들 수도 있어요' : ''}
               </p>
-              {page === 'today' && (
+              {page !== 'luxury' && (
                 <div className="sc-count" aria-label="개수">
                   <button type="button" onClick={() => setCount((c) => Math.max(1, c - 1))} aria-label="하나 빼기">
                     −

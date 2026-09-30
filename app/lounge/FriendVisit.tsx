@@ -224,7 +224,8 @@ export function FriendVisitScreen({
             }
           >
             <Bedroom3D
-              key={owner}
+              key={`${owner}-${data.house ?? 0}`}
+              house={data.house ?? 0}
               save={save}
               onExit={onBack}
               visit={{ owner, ownerLook: data.look, bedroom: data.bedroom }}
