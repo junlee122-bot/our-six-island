@@ -1,9 +1,11 @@
 // The five new districts around the hub (handover/design/design-village-2x-npcs.md
 // §2): each one is a separate map behind a gate on the hub's rim, like 뒷산
-// behind the north gate. Stage 1 opens only ① 시장 거리; the other four gates
-// stand locked with a sign that says what opens them (the unlock rules are
-// kept here as data for the later stages). Pure data; the gates are in hub
-// (village) coordinates, the maps themselves are regions in lounge-areas.ts.
+// behind the north gate. ① 시장 거리 is open from the start; stage 2 builds
+// ② 항구 구역 and ③ 언덕 주택가, which open by a village goal (the server keeps
+// the result as a village flag, lounge-district-unlocks.ts); ④ and ⑤ stand
+// locked with a sign that says what will open them. Pure data; the gates are
+// in hub (village) coordinates, the maps themselves are regions in
+// lounge-areas.ts.
 
 export type DistrictId = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
 export const DISTRICT_IDS: readonly DistrictId[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
@@ -11,10 +13,17 @@ export const DISTRICT_IDS: readonly DistrictId[] = ['market', 'harbor', 'hillsid
 /** How a district opens (design doc §2 "구역 해금"). */
 export type DistrictUnlock =
   | { kind: 'open' }
-  /** A village-wide donation goal (the fishing total for the harbor). */
-  | { kind: 'bundle'; goal: string }
-  /** Friends with this many residents (points ≥ 친구). */
-  | { kind: 'residents'; count: number }
+  /**
+   * A village-wide donation goal: this many different fish species donated
+   * to the museum (first donations, any friend).
+   */
+  | { kind: 'fish'; species: number }
+  /**
+   * "친한 사이" with this many of the stage-1 residents: some friend (any
+   * friend) has at least `points` with each of them (lounge-npc-data.ts
+   * NPC_INVITE_POINTS, the 친구 level).
+   */
+  | { kind: 'residents'; count: number; points: number }
   /** A research project (P3 orchard/ranch). */
   | { kind: 'research'; project: string }
   /** Reaching a mine floor. */
@@ -66,8 +75,8 @@ export const DISTRICTS: Record<DistrictId, District> = {
     size: { w: 60, d: 40 },
     stage: 2,
     gate: { x: 46, z: 43.4, stand: { x: 46, z: 42.2 }, reach: 1.9, road: '둑길', rot: Math.PI },
-    unlock: { kind: 'bundle', goal: 'fishing-total' },
-    hint: '마을 공동 낚시 기부를 채우면 둑길이 열려요.',
+    unlock: { kind: 'fish', species: 12 },
+    hint: '박물관에 물고기 12종을 기증하면 둑길이 열려요.',
   },
   hillside: {
     id: 'hillside',
@@ -77,8 +86,9 @@ export const DISTRICTS: Record<DistrictId, District> = {
     size: { w: 50, d: 50 },
     stage: 2,
     gate: { x: -55.3, z: -3, stand: { x: -53.6, z: -3 }, reach: 1.9, road: '계단', rot: Math.PI / 2 },
-    unlock: { kind: 'residents', count: 6 },
-    hint: '마을 주민 여섯 명과 친구가 되면 언덕 계단이 열려요.',
+    // 친한 사이 = 친밀도 20 (the 친구 level, NPC_INVITE_POINTS).
+    unlock: { kind: 'residents', count: 3, points: 20 },
+    hint: '시장 거리 주민 세 명과 친한 사이가 되면 언덕 계단이 열려요.',
   },
   ranch: {
     id: 'ranch',
@@ -104,21 +114,33 @@ export const DISTRICTS: Record<DistrictId, District> = {
   },
 };
 
-/** Stage 1 builds only 시장 거리; the other gates stay shut whatever their rule says. */
-export const BUILT_DISTRICTS: readonly DistrictId[] = ['market'];
+/** Districts with a map (stage 2 adds the harbor and the hillside); the rest stay shut. */
+export const BUILT_DISTRICTS: readonly DistrictId[] = ['market', 'harbor', 'hillside'];
 export const districtBuilt = (id: DistrictId) => BUILT_DISTRICTS.includes(id);
+/**
+ * The village flag (world.life.flags) the server sets the moment a
+ * district's goal is reached; once set it never closes again.
+ */
+export const DISTRICT_FLAG: Partial<Record<DistrictId, string>> = { harbor: 'district-harbor', hillside: 'district-hillside' };
 
-/** Whether a district's rule is met (for the later stages; stage 1 only builds the market). */
-export function districtRuleMet(
-  id: DistrictId,
-  ctx: { residentFriends?: number; mineDeep?: number; research?: readonly string[]; bundles?: readonly string[] },
-): boolean {
+export type DistrictCtx = {
+  /** Village flags (the server's record of opened districts). */
+  flags?: readonly string[];
+  /** Different fish species in the museum. */
+  fishSpecies?: number;
+  /** Stage-1 residents some friend is 친한 사이 with. */
+  residentFriends?: number;
+  mineDeep?: number;
+  research?: readonly string[];
+};
+/** Whether a district's rule is met right now (the goal itself, not the flag). */
+export function districtRuleMet(id: DistrictId, ctx: DistrictCtx): boolean {
   const u = DISTRICTS[id].unlock;
   switch (u.kind) {
     case 'open':
       return true;
-    case 'bundle':
-      return !!ctx.bundles?.includes(u.goal);
+    case 'fish':
+      return (ctx.fishSpecies ?? 0) >= u.species;
     case 'residents':
       return (ctx.residentFriends ?? 0) >= u.count;
     case 'research':
@@ -127,8 +149,33 @@ export function districtRuleMet(
       return (ctx.mineDeep ?? 0) >= u.floor;
   }
 }
-export const districtOpen = (id: DistrictId, ctx: Parameters<typeof districtRuleMet>[1] = {}) =>
-  districtBuilt(id) && districtRuleMet(id, ctx);
+/**
+ * Whether I can walk in: built, and open from the start or opened (the
+ * village flag). A rule met but not yet recorded counts only on the server,
+ * which records it on the next action (lounge-district-unlocks.ts).
+ */
+export function districtOpen(id: DistrictId, ctx: DistrictCtx = {}): boolean {
+  if (!districtBuilt(id)) return false;
+  if (DISTRICTS[id].unlock.kind === 'open') return true;
+  const flag = DISTRICT_FLAG[id];
+  return !!flag && !!ctx.flags?.includes(flag);
+}
+/** Progress toward a district's goal for the gate sign ("물고기 7/12종"). */
+export function districtGoalText(id: DistrictId, ctx: DistrictCtx): string {
+  const u = DISTRICTS[id].unlock;
+  switch (u.kind) {
+    case 'fish':
+      return `박물관 물고기 ${Math.min(u.species, ctx.fishSpecies ?? 0)}/${u.species}종`;
+    case 'residents':
+      return `친한 주민 ${Math.min(u.count, ctx.residentFriends ?? 0)}/${u.count}명`;
+    case 'mine':
+      return `광산 ${Math.min(u.floor, ctx.mineDeep ?? 0)}/${u.floor}층`;
+    case 'research':
+      return ctx.research?.includes(u.project) ? '연구 완료' : '연구 전';
+    case 'open':
+      return '';
+  }
+}
 
 /** Start fetching a district's models when the player comes this close to its gate. */
 export const DISTRICT_PREFETCH_RADIUS = 10;

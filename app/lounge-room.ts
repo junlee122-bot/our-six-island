@@ -2111,7 +2111,10 @@ export class LoungeRoom {
           member.area === "home" ||
           member.area === "hill" ||
           member.area === "woods" ||
-          member.area === "mine"
+          member.area === "mine" ||
+          member.area === "market" ||
+          member.area === "harbor" ||
+          member.area === "hillside"
           ? {
               ...member,
               x: Math.max(0, Math.min(100, a.x)),

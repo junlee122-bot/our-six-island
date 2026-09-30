@@ -17,7 +17,7 @@ import {
 } from './lounge-village-layout.ts';
 import { walkableNear } from './lounge-village-life.ts';
 import { KARCHIVE_STAGE } from './lounge-village-karchive-layout.ts';
-import { SPAWN_SPOTS, type Spot } from './lounge-items.ts';
+import { SPAWN_SPOTS, type Spot, type VillageSpot } from './lounge-items.ts';
 
 const rectDistance = (p: VillagePoint, r: { x: number; z: number; width: number; depth: number }) =>
   Math.hypot(
@@ -141,7 +141,7 @@ export const RIVER_BANK: VillagePoint = walkableNear({ x: -12, z: VILLAGE_RIVER.
  * Where to stand to fish each spot (directory "가 보기", NPC-free walkable
  * ground within FISH_REACH of the water).
  */
-export const FISH_STAND: Readonly<Record<Spot, VillagePoint>> = {
+export const FISH_STAND: Readonly<Record<VillageSpot, VillagePoint>> = {
   river: RIVER_BANK,
   pond: POND_EDGE,
   sea: walkableNear({ x: PIER_POINT.x + 0.2, z: PIER_POINT.z }),

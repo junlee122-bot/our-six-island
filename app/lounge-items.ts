@@ -9,8 +9,14 @@ import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FI
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
-export type Spot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
-export const FISH_SPOTS: readonly Spot[] = ['river', 'pond', 'sea', 'rapids', 'falls', 'lake', 'rocks', 'harbor', 'bridge'];
+/** Fishing spots in the hub (each has a stand in lounge-village-spots.ts). */
+export type VillageSpot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
+/** Every spot the fishing engine knows: the hub's and ② 항구 구역's 방파제 and 큰 선착장. */
+export type Spot = VillageSpot | 'breakwater' | 'pier';
+export const FISH_SPOTS: readonly VillageSpot[] = ['river', 'pond', 'sea', 'rapids', 'falls', 'lake', 'rocks', 'harbor', 'bridge'];
+/** Spots in the harbor district (lounge-harbor-layout.ts HARBOR_SPOTS); open with its village flag. */
+export const HARBOR_FISH_SPOTS: readonly Spot[] = ['breakwater', 'pier'];
+export const ALL_FISH_SPOTS: readonly Spot[] = [...FISH_SPOTS, ...HARBOR_FISH_SPOTS];
 export type SpotInfo = {
   name: string;
   /** Village flag (bundle / project) that opens the spot. */
@@ -32,6 +38,8 @@ export const SPOT_INFO: Record<Spot, SpotInfo> = {
   rocks: { name: '갯바위', note: '파도가 부서지는 바닷가 바위. 바위틈 물고기가 숨어 있어요.' },
   harbor: { name: '밤 항구', night: true, note: '해가 지면 등불이 켜지는 작은 항구. 밤바다 물고기가 몰려와요.' },
   bridge: { name: '다리 위', note: '다리 난간에서 내려 던지는 낚시. 강 한가운데 물고기가 와요.' },
+  breakwater: { name: '방파제', flag: 'district-harbor', note: '등대 아래 돌 방파제. 바다와 갯바위 물고기가 낮밤 없이 와요.' },
+  pier: { name: '큰 선착장', flag: 'district-harbor', note: '항구의 긴 나무 선착장. 바다 물고기와 밤 항구 물고기가 모여요.' },
 };
 type When = 'day' | 'night' | 'any';
 type Sky = 'rain' | 'dry' | 'any';
@@ -68,7 +76,7 @@ export type FishDef = {
   windowMs: number;
   note: string;
 };
-export const FISH: readonly FishDef[] = [
+const BASE_FISH: readonly FishDef[] = [
   // Legacy island fish (life-data.ts COLLECTION) first.
   { id: 'crucian', name: '붕어', emoji: '🐟', spots: ['river', 'pond', 'lake', 'bridge'], seasons: ALL, time: 'any', sky: 'any', weight: 60, sell: 120, cm: [10, 30], windowMs: 1_100, note: '호수에서 자주 만날 수 있는 느긋한 물고기.' },
   { id: 'carp', name: '잉어', emoji: '🐠', spots: ['river', 'pond', 'lake'], seasons: WARM, time: 'any', sky: 'any', weight: 35, sell: 250, cm: [30, 70], windowMs: 950, note: '부두 그늘 아래 숨어 있어요.' },
@@ -120,6 +128,17 @@ export const FISH: readonly FishDef[] = [
   ...EXTRA_FISH,
   ...POT_FISH,
 ];
+/**
+ * ② 항구 구역: the breakwater gets the sea and rock fish, the big pier the sea
+ * and night-harbor fish (legends keep their own waters).
+ */
+export const FISH: readonly FishDef[] = BASE_FISH.map((f) => {
+  if (f.weight <= 1 || !f.spots.length) return f;
+  const add: Spot[] = [];
+  if (f.spots.some((s) => s === 'sea' || s === 'rocks')) add.push('breakwater');
+  if (f.spots.some((s) => s === 'sea' || s === 'harbor')) add.push('pier');
+  return add.length ? { ...f, spots: [...f.spots, ...add] } : f;
+});
 export type BugDef = {
   id: string;
   name: string;
@@ -501,6 +520,9 @@ export const VILLAGE_FLAGS: Record<string, string> = {
   festival: '축제 무대 조명 · 이번 주 명품 가구가 1종 더',
   // 마을 개척 연구 (lounge-growth-data.ts RESEARCH).
   ...RESEARCH_FLAGS,
+  // 마을 확장 2단계: districts opened by a village goal (lounge-district-unlocks.ts).
+  'district-harbor': '항구 구역 · 어시장 · 낚시조합 · 등대 · 방파제 낚시터',
+  'district-hillside': '언덕 주택가 · 주민 집 · 도서관 · 작은 공원',
 };
 /**
  * 마을 공사 2차: shared 범-only public projects. Friends contribute any

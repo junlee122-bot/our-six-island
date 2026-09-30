@@ -166,9 +166,11 @@ export const READY_LIMIT_MS = 60_000;
 /** Minimum spacing of committed `look` changes per member. */
 export const LOOK_THROTTLE_MS = 300;
 // 'hill' | 'woods' | 'mine': 성장 P2 outdoor regions (lounge-areas.ts REGIONS).
-// 'market': ① 시장 거리, the first district around the hub (lounge-districts.ts).
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market';
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market'];
+// 'market' | 'harbor' | 'hillside': ① 시장 거리, ② 항구 구역, ③ 언덕 주택가 — the
+// districts around the hub (lounge-districts.ts). The cloud engine lets you
+// into the harbor and the hillside only once their village flag is set.
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside';
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside'];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -188,6 +190,9 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   mine: { x: 50, y: 92.14 },
   // 시장 거리: arriving from the hub's east gate (MARKET_ARRIVE).
   market: { x: 4.29, y: 43.18 },
+  // 항구 구역 / 언덕 주택가: arriving from the hub's south / west gates (HARBOR_ARRIVE, HILLSIDE_ARRIVE).
+  harbor: { x: 4, y: 25 },
+  hillside: { x: 95.2, y: 43 },
 };
 /**
  * Chat follows the area: village and casino chat are separate from the hall,
@@ -200,7 +205,7 @@ export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
 export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
-  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market'
+  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside'
     ? 'village'
     : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon'
       ? area
