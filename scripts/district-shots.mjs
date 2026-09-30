@@ -78,17 +78,44 @@ const shot = async (name) => {
     }
 };
 const scene = (sel) => js((s) => document.querySelector(s)?.focus({ preventScroll: true }), sel);
-const walkVillage = async (p) => {
+const walkVillage = async (p, near = 0) => {
   await scene('[data-testid=village-3d]');
   await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), p);
   await page.keyboard.down('Shift');
   try {
-    // Arrived, or stopped as close as the paths allow (a point inside a wall).
-    await until(() => document.querySelector('[data-testid=village-3d]')?.dataset.walking === 'true', 15000);
+    // The walk has started (slow frames can hold it back a while) or I am there already…
     await until((q) => {
       const d = document.querySelector('[data-testid=village-3d]')?.dataset;
-      return d?.walking === 'false' && (Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < 1.2 || !!q);
-    }, 900000, p);
+      return d?.walking === 'true' || Math.hypot(Number(d?.avatarX) - q.x, Number(d?.avatarZ) - q.z) < 0.6;
+    }, 30000, p);
+    // …then arrived (within `near` when given: a gate must be in reach before E), or
+    // stopped as close as the paths allow (a point inside a wall).
+    await until((q) => {
+      const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+      return d?.walking === 'false' && (!q.near || Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < q.near);
+    }, 900000, { ...p, near });
+  } finally {
+    await page.keyboard.up('Shift');
+  }
+};
+/**
+ * Walks to `p` on the current outdoor map: waits for the walk to start (the
+ * software renderer can take a while to draw the next frame), then to end,
+ * within `near` of `p` when given (an exit must be in reach before E).
+ */
+const walkArea = async (p, near = 0) => {
+  await scene('[data-testid=area-3d]');
+  await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), p);
+  await page.keyboard.down('Shift');
+  try {
+    await until((q) => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.walking === 'true' || Math.hypot(Number(d?.avatarX) - q.x, Number(d?.avatarZ) - q.z) < 0.6;
+    }, 30000, p);
+    await until((q) => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.walking === 'false' && (!q.near || Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < q.near);
+    }, 600000, { ...p, near });
   } finally {
     await page.keyboard.up('Shift');
   }
@@ -132,7 +159,7 @@ try {
   }
   for (const id of only) {
     const g = DISTRICTS[id].gate;
-    await walkVillage(g.stand);
+    await walkVillage(g.stand, g.reach);
     await sleep(2500);
     await shot(`hub-${id}-gate`);
     await scene('[data-testid=village-3d]');
@@ -145,8 +172,7 @@ try {
     await sleep(6000);
     await shot(`${id}-arrive`);
     // A second look further in (the district's centre).
-    await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: 0, z: 0 } })));
-    await until(() => document.querySelector('[data-testid=area-3d]')?.dataset.walking === 'false', 120000);
+    await walkArea({ x: 0, z: 0 });
     await sleep(2500);
     await shot(`${id}-centre`);
     if (panels) {
@@ -172,14 +198,15 @@ try {
         }
       }
     }
-    // Back to the hub through the exit.
-    const back = REGIONS[id].exits[0]?.stand;
+    // Back to the hub through the exit (in reach first, or E does nothing and the next gate is walked to in here).
+    const back = REGIONS[id].exits[0];
     if (back) {
-      await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), back);
-      await until(() => document.querySelector('[data-testid=area-3d]')?.dataset.walking === 'false', 120000);
+      await walkArea(back.stand, back.reach);
       await scene('[data-testid=area-3d]');
       await page.keyboard.press('KeyE');
+      await until(() => !document.querySelector('[data-testid=area-3d]'), 60000);
       await villageReady();
+      await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
       await sleep(2500);
     }
   }
