@@ -126,7 +126,8 @@ export class ResidentLayer {
 
   private geometry(id: NpcId) {
     const art = NPCS[id].art;
-    const key = art.kind === 'sheet' ? 'sheet' : `img:${art.foot}`;
+    const foot = art.kind === 'image' ? art.foot : 0.985;
+    const key = art.kind === 'sheet' ? 'sheet' : `img:${foot}`;
     let g = this.geos.get(key);
     if (g) return g;
     const H = this.opts.height;
@@ -148,7 +149,7 @@ export class ResidentLayer {
       // 660 × 990 images: the figure fills about 95% of the height.
       const h = H / 0.95;
       g = new THREE.PlaneGeometry((h * 2) / 3, h);
-      g.translate(0, h * (art.foot - 0.5), 0);
+      g.translate(0, h * (foot - 0.5), 0);
     }
     this.geos.set(key, g);
     return g;
@@ -159,6 +160,8 @@ export class ResidentLayer {
     m = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false, visible: false, side: THREE.DoubleSide });
     this.mats.set(id, m);
     const art = NPCS[id].art;
+    // Residents without a picture yet (stage 2) are never drawn.
+    if (art.kind === 'pending') return m;
     void texture(art.kind === 'sheet' ? HOST_SHEET[art.host] : art.asset).then(
       (t) => {
         if (this.disposed) return;

@@ -40,7 +40,8 @@ test('hub grew to 112 × 88 and every district gate stands on the rim, walkable 
   }
   assert.equal(districtOpen('market'), true);
   for (const id of ['harbor', 'hillside', 'ranch', 'foothill']) {
-    assert.equal(districtOpen(id, { residentFriends: 99, mineDeep: 99, research: ['P3'], bundles: ['fishing-total'] }), false, `${id} not built in stage 1`);
+    // A goal met is not enough: the server records the district as a village flag (stage 2).
+    assert.equal(districtOpen(id, { residentFriends: 99, mineDeep: 99, research: ['P3'], fishSpecies: 99 }), false, `${id} not open without its flag`);
     assert.ok(DISTRICTS[id].hint.length > 5);
   }
 });
@@ -74,7 +75,7 @@ test('시장 거리 is a separate area the server accepts, with an exit back to 
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 test('every resident place is walkable in its area (posts are drawn by their own scenes)', () => {
   for (const [id, p] of Object.entries(NPC_PLACES)) {
-    if (POSTS.test(id) || !['village', 'market', 'tavern'].includes(p.area)) continue;
+    if (POSTS.test(id) || !['village', 'market', 'tavern', 'harbor', 'hillside'].includes(p.area)) continue;
     assert.ok(npcCanStand(p.area, p), `${id} (${p.area} ${p.x}, ${p.z}) walkable`);
   }
 });
@@ -85,13 +86,13 @@ test('npcSpot is never off walkable ground over two weeks (every 2 minutes)', ()
       for (let m = 0; m < 1440; m += 2) {
         const s = npcSpot(id, kstDayStart(DAY0 + d) + m * 60_000 + 17_000);
         if (!s.visible) continue;
-        assert.ok(['village', 'market', 'tavern'].includes(s.area), `${id} visible only in walk areas`);
+        assert.ok(['village', 'market', 'tavern', 'harbor', 'hillside'].includes(s.area), `${id} visible only in walk areas`);
         assert.ok(npcCanStand(s.area, s), `${id} day ${d} ${Math.floor(m / 60)}:${m % 60} ${s.area} (${s.x.toFixed(2)}, ${s.z.toFixed(2)})`);
       }
 });
 
 test('no teleports: timelines are continuous and areas change only through an exit', () => {
-  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'harbor', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in']);
+  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, DAY0 + d);

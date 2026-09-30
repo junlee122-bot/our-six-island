@@ -45,6 +45,8 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
     const material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.12, toneMapped: false, visible: false });
     materials.set(npc, material);
     const art = NPCS[npc].art;
+    // Residents without a picture yet (stage 2) are never drawn.
+    if (art.kind === 'pending') return material;
     new THREE.TextureLoader().load(art.kind === 'sheet' ? HOST_SHEET[art.host] : art.asset, (texture) => {
       if (disposed) { texture.dispose(); return; }
       textures.push(texture);
@@ -63,7 +65,7 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
       mesh.visible = shadow.visible = !!npc;
       if (npc) {
         const art = NPCS[npc].art;
-        mesh.geometry = art.kind === 'sheet' ? sheetGeometry : imageGeometry(art.foot);
+        mesh.geometry = art.kind === 'sheet' ? sheetGeometry : imageGeometry(art.kind === 'image' ? art.foot : 0.985);
         mesh.material = materialFor(npc);
       }
       mesh.position.set(point.x, 0.065, point.z);

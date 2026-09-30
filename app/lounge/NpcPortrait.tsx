@@ -14,6 +14,9 @@ export function NpcPortrait({ npc, mood = 'calm', className = '' }: { npc: NpcId
         <DealerAvatar host={art.host} mood={mood} />
       </span>
     );
+  // Stage-2 residents wait for their pictures: a plain round face card.
+  if (art.kind === 'pending')
+    return <span className={`l-npc-face is-pending ${className}`} aria-hidden="true" />;
   return (
     <span className={`l-npc-face ${art.portrait ? '' : 'is-crop'} ${className}`} aria-hidden="true">
       <img src={art.portrait ?? art.asset} alt="" loading="lazy" decoding="async" />

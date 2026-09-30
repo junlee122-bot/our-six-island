@@ -13,23 +13,31 @@
 // walkable; paths come from the areas' own walkers (villagePath for the hub,
 // regionWalk for 시장 거리, interiorPath for the tavern).
 //
-// Hidden areas are places a resident can be but nobody can see yet: their
-// homes and the library up the hillside, the harbor district, the counter
-// rooms of 부동산·가구점. The eight residents who already work indoors stay at
-// their posts (their scenes draw them); 문 사장 and 결 목수 take an evening
-// walk through the hub.
+// Hidden areas are places a resident can be but nobody can see: the counter
+// rooms of 부동산·가구점, and — until ③ 언덕 주택가 opens — their homes and the
+// library up the hillside (the 'home' / 'library' stand-ins at the hub's west
+// gate). Once the hillside is open (village flag 'district-hillside') every
+// resident commutes to their own house there instead (`hill` option; the
+// client sets it from the world with setNpcWorld, the server passes it).
+// Inside a house, the library or the lighthouse a resident is not drawn
+// (`hidden` places in a visible area). The eight residents who already work
+// indoors stay at their posts (their scenes draw them); 문 사장 and 결 목수 take
+// an evening walk through the hub. Stage-2 residents (hasSprite: false) have
+// schedules too, but npcsIn leaves them out until they can be drawn.
 import { kstDay } from './lounge-economy.ts';
 import { holidaysOn, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
 import { VILLAGE_PLACES, villagePath, villageCanWalk, VILLAGE_BOARD, VILLAGE_MUSEUM, VILLAGE_PAVILION, VILLAGE_HARBOR, type VillagePoint } from './lounge-village-layout.ts';
 import { walkableNear } from './lounge-village-life.ts';
 import { DISTRICTS } from './lounge-districts.ts';
 import { MARKET_SPOTS } from './lounge-market-layout.ts';
+import { HARBOR_SPOTS_NPC } from './lounge-harbor-layout.ts';
+import { HILLSIDE_SPOTS } from './lounge-hillside-layout.ts';
 import { regionWalk } from './lounge-areas.ts';
 import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToInterior, TAVERN_HOST_AT } from './lounge-interior-layout.ts';
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender.ts';
 import { BANKER_SPOT } from './lounge-bank-layout.ts';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout.ts';
-import { NPC_IDS, NPCS, type NpcId } from './lounge-npc-data.ts';
+import { NPC_IDS, NPCS, VISIBLE_NPC_IDS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
 
@@ -56,9 +64,12 @@ export type NpcArea =
   | 'furniture'
   | 'home'
   | 'library'
-  | 'harbor';
+  | 'harbor'
+  | 'hillside'
+  /** Out of the village (마키마 on the days she does not visit). */
+  | 'away';
 /** Where residents are drawn walking about (the rest is drawn by its own scene or not at all). */
-export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern'];
+export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside'];
 export type NpcActivity =
   | 'work'
   | 'stall'
@@ -96,9 +107,11 @@ export type NpcSpot = {
 };
 
 // ---------------------------------------------------------------- places
-type Place = { area: NpcArea; x: number; z: number; face: number; name: string };
+type Place = { area: NpcArea; x: number; z: number; face: number; name: string; hidden?: boolean };
 const vSnap = (p: VillagePoint) => walkableNear(p);
 const place = (area: NpcArea, p: WalkPoint, face: number, name: string): Place => ({ area, x: p.x, z: p.z, face, name });
+/** Inside a building of a visible area: there, but not drawn. */
+const inside = (area: NpcArea, p: WalkPoint, name: string): Place => ({ area, x: p.x, z: p.z, face: 0, name, hidden: true });
 const entryOf = (id: string) => VILLAGE_PLACES.find((p) => p.id === id)!.entry;
 
 /** Tavern spots in interior scene units (0–100), converted to world units below. */
@@ -109,16 +122,76 @@ const TAVERN_SCENE = {
   fire: { x: 79, y: 56 },
   booth: { x: 80, y: 71 },
   judge: { x: 60, y: 76 },
+  'bar-3': { x: 33, y: 45.5 },
+  stage: { x: 68, y: 62 },
 } as const;
 const tw = (k: keyof typeof TAVERN_SCENE) => interiorToWorld(TAVERN_SCENE[k]);
 
 const market = MARKET_SPOTS;
+const hb = HARBOR_SPOTS_NPC,
+  hl = HILLSIDE_SPOTS;
+/** Who lives where once the hillside is open ('hl.in-*' are inside their houses). */
+const HILL_HOMES: Partial<Record<NpcId, string>> = {
+  nasera: 'hl.in-nasera',
+  frieren: 'hl.in-frieren',
+  thresh: 'hl.in-thresh',
+  janna: 'hl.in-janna',
+  sinjjajang: 'hl.in-sinjjajang',
+  volibas: 'hl.in-volibas',
+  lux: 'hl.in-lux',
+  bocchi: 'hl.in-bocchi',
+  tsunade: 'hl.in-tsunade',
+  himmel: 'hl.in-youth',
+  yanineko: 'hl.in-youth-2',
+};
+const HOUSE_NAMES: Record<string, string> = { youth: '청년 자취방', 'youth-2': '청년 자취방' };
+const HARBOR_NAMES: Record<string, string> = {
+  gate: '둑길 어귀',
+  fishmarket: '어시장',
+  'fishmarket-2': '어시장',
+  auction: '새벽 경매장',
+  'auction-crowd': '새벽 경매장',
+  board: '항구 게시판',
+  guild: '낚시조합',
+  'pier-root': '큰 선착장',
+  'pier-mid': '큰 선착장',
+  'pier-end': '선착장 끝',
+  'lighthouse-door': '등대 앞',
+  'lighthouse-yard': '등대 마당',
+  'breakwater-mid': '방파제',
+  'breakwater-end': '방파제 끝',
+  'bench-w': '항구 벤치',
+  'bench-e': '항구 벤치',
+  shed: '항구 창고',
+  quay: '항구 부두',
+};
+const hillName = (k: string) => {
+  if (HILL_NAMES[k]) return HILL_NAMES[k];
+  const who = k.startsWith('door-') ? k.slice(5) : '';
+  if (who === 'youth' || who === 'youth-2') return '청년 자취방 앞';
+  return who && who in NPCS ? `${NPCS[who as NpcId].name} 집 앞` : '언덕 주택가';
+};
+const HILL_NAMES: Record<string, string> = {
+  gate: '언덕 계단',
+  'library-door': '도서관 앞',
+  'library-steps': '도서관 계단',
+  'garden-gate': '텃밭 입구',
+  'garden-w': '텃밭',
+  'garden-e': '텃밭',
+  'park-bench-w': '공원 벤치',
+  'park-bench-e': '공원 벤치',
+  'park-corner': '공원 구석',
+  plaza: '작은 광장',
+  'lane-n': '윗골목',
+  'lane-s': '아랫골목',
+  board: '언덕 게시판',
+};
 const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home' && p.actor !== undefined).sort((a, b) => a.actor! - b.actor!);
 export const NPC_PLACES: Record<string, Place> = {
   // Hidden areas (their "position" is the gate they left by).
   home: place('home', DISTRICTS.hillside.gate.stand, 0, '언덕 집'),
   library: place('library', DISTRICTS.hillside.gate.stand, 0, '언덕 도서관'),
-  harbor: place('harbor', DISTRICTS.harbor.gate.stand, 0, '항구'),
+  away: place('away', DISTRICTS.market.gate.stand, 0, '마을 밖'),
   'realty-in': place('realty', entryOf('realty'), 0, '범마을 부동산'),
   'furniture-in': place('furniture', entryOf('furniture'), 0, '나무결 가구점'),
   // The hub.
@@ -178,6 +251,24 @@ export const NPC_PLACES: Record<string, Place> = {
   'm.plaza-s': place('market', market['plaza-s'], Math.PI, '시장 광장'),
   'm.street-e': place('market', market['street-e'], -Math.PI / 2, '시장 거리 끝'),
   'm.gate': place('market', market.gate, Math.PI / 2, '큰길 어귀'),
+  // Stage-2 residents' seats in the market (beside the stage-1 ones).
+  'm.bakery-2': place('market', { x: 6.4, z: -8.2 }, -0.3, '빵집 카페 계산대'),
+  'm.cafe-5': place('market', { x: 8, z: -10.2 }, 0.9, '빵집 카페 테라스'),
+  'm.cafe-6': place('market', { x: 11, z: -6.1 }, -0.9, '빵집 카페 테라스'),
+  'm.cafe-7': place('market', { x: 14.2, z: -7.4 }, -1.6, '빵집 카페 테라스'),
+  // ② 항구 구역.
+  ...Object.fromEntries(Object.entries(hb).map(([k, p]) => [`hb.${k}`, place('harbor', p, p.face, HARBOR_NAMES[k] ?? '항구')])),
+  'hb.quay-2': place('harbor', { x: 15.4, z: -0.6 }, 0, '항구 좌판'),
+  'hb.lighthouse-in': inside('harbor', hb['lighthouse-door'], '등대 안'),
+  // ③ 언덕 주택가 (visible once it is open; the plans map these to 'home' / 'library' before).
+  ...Object.fromEntries(Object.entries(hl).map(([k, p]) => [`hl.${k}`, place('hillside', p, p.face, hillName(k))])),
+  'hl.library-club': place('hillside', { x: hl['library-steps'].x - 1.6, z: hl['library-steps'].z + 0.2 }, -0.3, '도서관 독서 모임'),
+  'hl.library-in': inside('hillside', hl['library-door'], '언덕 도서관'),
+  ...Object.fromEntries(
+    Object.entries(hl)
+      .filter(([k]) => k.startsWith('door-'))
+      .map(([k, p]) => [`hl.in-${k.slice(5)}`, inside('hillside', p, HOUSE_NAMES[k.slice(5)] ?? '언덕 집')]),
+  ),
   // 허풍 주점 (interior world units).
   't.door': place('tavern', tw('door'), Math.PI / 2, '주점 문 앞'),
   't.bar-1': place('tavern', tw('bar-1'), Math.PI, '주점 바'),
@@ -185,6 +276,9 @@ export const NPC_PLACES: Record<string, Place> = {
   't.fire': place('tavern', tw('fire'), -Math.PI / 2, '주점 벽난로 옆'),
   't.booth': place('tavern', tw('booth'), -Math.PI / 2, '주점 구석 자리'),
   't.judge': place('tavern', tw('judge'), Math.PI, '허풍 탁자 옆'),
+  't.bar-3': place('tavern', tw('bar-3'), Math.PI, '주점 바'),
+  // 공연 밤: the placeholder stage by the fireplace (lounge-town.ts SHOW_*).
+  't.stage': place('tavern', tw('stage'), 0, '주점 무대'),
   // Posts of the residents who work indoors (drawn by their own scenes).
   'casino.lumi': place('casino', { x: 0, z: 0 }, 0, '블랙잭 테이블'),
   'casino.rose': place('casino', interiorToWorld(CASINO_LENDER_SPOT), 0, '대부 창구'),
@@ -192,6 +286,7 @@ export const NPC_PLACES: Record<string, Place> = {
   'tavern.captain': place('tavern', TAVERN_HOST_AT, 0, '주점 바 안쪽'),
   'bank.nyamo': place('bank', interiorToWorld(BANKER_SPOT), 0, '은행 창구'),
   'salon.gwen': place('salon', interiorToWorld(SALON_STYLIST_SPOT), 0, '미용실'),
+  'casino.tsunade': place('casino', { x: 1.2, z: 0.6 }, 0, '카지노 테이블'),
 };
 export const npcPlace = (id: string) => NPC_PLACES[id];
 
@@ -210,8 +305,12 @@ const PORTALS: readonly Portal[] = [
   { a: 'home', b: 'village', from: 'home', to: 'v.home-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'library', from: 'v.home-gate', to: 'library', ms: GATE_TRANSIT_MS },
   { a: 'library', b: 'village', from: 'library', to: 'v.home-gate', ms: GATE_TRANSIT_MS },
-  { a: 'village', b: 'harbor', from: 'v.harbor-gate', to: 'harbor', ms: GATE_TRANSIT_MS },
-  { a: 'harbor', b: 'village', from: 'harbor', to: 'v.harbor-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'harbor', from: 'v.harbor-gate', to: 'hb.gate', ms: GATE_TRANSIT_MS },
+  { a: 'harbor', b: 'village', from: 'hb.gate', to: 'v.harbor-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'hillside', from: 'v.home-gate', to: 'hl.gate', ms: GATE_TRANSIT_MS },
+  { a: 'hillside', b: 'village', from: 'hl.gate', to: 'v.home-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'away', from: 'v.market-gate', to: 'away', ms: GATE_TRANSIT_MS },
+  { a: 'away', b: 'village', from: 'away', to: 'v.market-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'realty', from: 'v.realty-door', to: 'realty-in', ms: DOOR_TRANSIT_MS },
   { a: 'realty', b: 'village', from: 'realty-in', to: 'v.realty-door', ms: DOOR_TRANSIT_MS },
   { a: 'village', b: 'furniture', from: 'v.furniture-door', to: 'furniture-in', ms: DOOR_TRANSIT_MS },
@@ -242,7 +341,12 @@ function areaRoute(a: NpcArea, b: NpcArea): Portal[] {
 
 // ---------------------------------------------------------------- walking paths
 const pathCache = new Map<string, WalkPoint[]>();
-let marketWalk: ReturnType<typeof regionWalk> | null = null;
+const walkers = new Map<string, ReturnType<typeof regionWalk>>();
+const walkerOf = (area: 'market' | 'harbor' | 'hillside') => {
+  let w = walkers.get(area);
+  if (!w) walkers.set(area, (w = regionWalk(area)));
+  return w;
+};
 /** Waypoints (area coordinates) from one place to another inside a visible area; first = start. */
 export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoint[] {
   const key = `${area}:${from.x},${from.z}>${to.x},${to.z}`;
@@ -250,10 +354,8 @@ export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoi
   if (hit) return hit;
   let pts: WalkPoint[];
   if (area === 'village') pts = villagePath(from, to);
-  else if (area === 'market') {
-    marketWalk ??= regionWalk('market');
-    pts = marketWalk.path(from, to);
-  } else if (area === 'tavern') {
+  else if (area === 'market' || area === 'harbor' || area === 'hillside') pts = walkerOf(area).path(from, to);
+  else if (area === 'tavern') {
     const s = worldToInterior(from),
       e = worldToInterior(to);
     pts = interiorPath(s, e, 'tavern').map((p) => interiorToWorld(p));
@@ -269,10 +371,7 @@ export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoi
 /** Whether a point is walkable in its area (tests). */
 export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
   if (area === 'village') return villageCanWalk(p);
-  if (area === 'market') {
-    marketWalk ??= regionWalk('market');
-    return marketWalk.canWalk(p);
-  }
+  if (area === 'market' || area === 'harbor' || area === 'hillside') return walkerOf(area).canWalk(p);
   if (area === 'tavern') return interiorCanWalk(worldToInterior(p), 'tavern');
   return true;
 }
@@ -329,8 +428,15 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
             [hm(13), 'm.coop', 'work', '농협 매입 창구'],
             [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
             [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
-            [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
-            [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            ...(k.weekday === 3
+              ? ([
+                  [hm(19), 'hl.library-club', 'read', '도서관 독서 모임'],
+                  [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+                ] as Seg[])
+              : ([
+                  [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
+                  [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+                ] as Seg[])),
           ];
       return festival(plan, k, 0);
     }
@@ -381,7 +487,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [0, 'home', 'sleep'],
         [hm(7), 'm.post', 'work', '우체국에서 우편 분류'],
         ...round,
-        [hm(10, 40), 'harbor', 'deliver', '항구로 배달 중'],
+        [hm(10, 40), 'hb.lighthouse-yard', 'deliver', '항구 등대까지 배달 중'],
         [hm(12), 'm.cafe-1', 'eat', '빵집 카페에서 점심'],
         [hm(13), 'm.coop-drop', 'deliver', '농협에 소포 전하는 중'],
         [hm(13, 30), 'v.museum', 'deliver', '박물관에 소포 배달 중'],
@@ -401,7 +507,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(14, 20), 'v.pond', 'patrol', '연못가 순찰 중'],
         [hm(15), 'v.forest', 'patrol', '북쪽 숲길 순찰 중'],
         [hm(15, 40), k.rain ? 'v.bridge' : 'v.beach', 'patrol', k.rain ? '다리 위에서 물길 살피는 중' : '해변 순찰 중'],
-        [hm(16, 20), 'harbor', 'patrol', '항구 순찰 중'],
+        [hm(16, 20), 'hb.quay', 'patrol', '항구 순찰 중'],
         [hm(17, 10), 'm.board', 'patrol', '수배 전단 붙이는 중'],
       ];
       const plan: Seg[] = [
@@ -457,7 +563,131 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return [[0, 'bank.nyamo', 'work', '은행 창구']];
     case 'gwen':
       return [[0, 'salon.gwen', 'work', '보송 미용실']];
+    // ---------------------------------------------------------- stage 2 (not drawn until they have sprites)
+    case 'gabung': {
+      const plan: Seg[] = [
+        [0, 'hb.lighthouse-in', 'sleep', '등대에서 불 지키는 중'],
+        [hm(5), 'hb.lighthouse-door', 'work', '등대 점검 중'],
+        [hm(7), 'hb.breakwater-mid', 'patrol', '방파제 순찰 중'],
+        [hm(9), k.rain ? 'hb.lighthouse-door' : 'hb.breakwater-end', 'forecast', k.rain ? '등대 앞에서 폭풍 경보' : '방파제 끝에서 날씨 발표'],
+        [hm(10, 30), 'hb.pier-end', 'patrol', '선착장 순찰 중'],
+        [hm(12), 'm.cafe-5', 'eat', '빵집 카페에서 점심'],
+        [hm(13), 'hb.quay', 'work', '항구 부두 정비'],
+        [hm(15, 30), 'hb.lighthouse-yard', 'work', '등대 마당 정비'],
+        [hm(18), 'hb.lighthouse-in', 'work', '등대 불 켜는 중'],
+      ];
+      return plan;
+    }
+    case 'lux':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(5), 'hb.auction', 'stall', '새벽 경매 여는 중'],
+        [hm(7), 'hb.fishmarket', 'work', '어시장'],
+        [hm(12), 'hb.lighthouse-door', 'deliver', '등대에 도시락 배달 중'],
+        [hm(13), 'hb.fishmarket', 'work', '어시장'],
+        [hm(15), 'hb.guild', 'work', '낚시조합'],
+        [hm(18), 't.bar-1', 'drink', '주점에서 하루 마무리'],
+        [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+      ];
+    case 'himmel':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(8), 'm.bakery-2', 'work', '사장 대신 빵집 문 여는 중'],
+        [hm(9), 'm.bakery-2', 'work', '빵집 알바'],
+        [hm(15), 'v.plaza', 'work', '광장에서 동상 청원 서명 받는 중'],
+        [hm(17), 'hb.pier-root', 'deliver', '항구 심부름 중'],
+        [hm(19), 'home', 'sleep', '청년 자취방에서 쉬는 중'],
+      ];
+    case 'beatrice':
+      return [
+        [0, 'hl.library-in', 'sleep', '도서관 안'],
+        [hm(9), 'hl.library-in', 'work', '도서관 사서'],
+        ...(k.rain
+          ? ([
+              [hm(13), 'm.cafe-6', 'eat', '빵집 카페에서 홍차 마시는 중'],
+              [hm(14), 'hl.library-in', 'work', '도서관 사서'],
+            ] as Seg[])
+          : []),
+        ...(k.weekday === 3
+          ? ([
+              [hm(19), 'hl.library-steps', 'read', '도서관 독서 모임'],
+              [hm(21), 'hl.library-in', 'sleep', '도서관 안'],
+            ] as Seg[])
+          : []),
+      ];
+    case 'bocchi': {
+      const show = k.weekday === 2 || k.weekday === 5;
+      const practice = seed('practice', 2) ? 'hb.shed' : 'hl.park-corner';
+      return [
+        [0, 'home', 'sleep'],
+        [hm(10), practice, 'work', '구석에서 혼자 기타 연습'],
+        ...(show
+          ? ([
+              [hm(19, 30), 't.stage', 'work', '주점 무대에서 공연 준비'],
+              [hm(22), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            ] as Seg[])
+          : ([
+              [hm(17), 'hl.park-bench-e', 'rest', '공원 벤치에서 가사 쓰는 중'],
+              [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            ] as Seg[])),
+      ];
+    }
+    case 'tsunade':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(6), 'hl.garden-w', 'work', '텃밭 가꾸는 중'],
+        [hm(10), 'hl.garden-e', 'work', '약초 손질 중'],
+        [hm(12), 'm.cafe-7', 'eat', '빵집 카페에서 점심'],
+        [hm(14), 'hl.garden-gate', 'work', '텃밭 앞에서 조언하는 중'],
+        [hm(17), 'home', 'rest', '언덕 집에서 쉬는 중'],
+        k.day % 2 ? [hm(19), 'casino.tsunade', 'drink', '카지노에서 한 판 중'] : [hm(19), 't.bar-2', 'drink', '주점에서 딱 한 잔 중'],
+        [hm(22), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+      ];
+    case 'makima': {
+      if (k.marketDay)
+        return [
+          [0, 'away', 'sleep', '마을 밖'],
+          [hm(9), 'm.stall-sw', 'stall', '장날 노점'],
+          [hm(17), 't.bar-3', 'eat', '주점에서 저녁 식사'],
+          [hm(20), 'away', 'sleep', '마을 밖'],
+        ];
+      if (k.weekday === 3 || k.weekday === 6)
+        return [
+          [0, 'away', 'sleep', '마을 밖'],
+          [hm(10), 'hb.quay-2', 'stall', '항구 좌판'],
+          [hm(17), 't.bar-3', 'eat', '주점에서 저녁 식사'],
+          [hm(20), 'away', 'sleep', '마을 밖'],
+        ];
+      return [[0, 'away', 'sleep', '마을 밖']];
+    }
+    case 'yanineko':
+      // Wakes at 11; naps in the library until 베아트리스 chases her out; sunbathes at the harbor.
+      return [
+        [0, 'home', 'sleep'],
+        [hm(11, 30), 'hl.library-steps', 'nap', '도서관에서 조는 중'],
+        [hm(15), k.rain ? 'hb.shed' : 'hb.pier-mid', 'rest', k.rain ? '항구 창고 처마 밑에서 비 피하는 중' : '선착장에서 해바라기 중'],
+        [hm(18), 'v.plaza', 'rest', '광장에서 어슬렁거리는 중'],
+        [hm(20), 'home', 'sleep', '청년 자취방에서 뒹구는 중'],
+      ];
   }
+}
+
+/**
+ * Homes: before ③ 언덕 주택가 opens, 'home' / 'library' are the hidden stand-ins
+ * at the hub's west gate and every hillside place falls back to them; once it
+ * is open, 'home' is the resident's own house up there.
+ */
+function homesOf(id: NpcId, plan: Seg[], hill: boolean): Seg[] {
+  const map = (p: string) => {
+    if (hill) {
+      if (p === 'home') return HILL_HOMES[id] ?? 'home';
+      if (p === 'library') return 'hl.library-in';
+      return p;
+    }
+    if (!p.startsWith('hl.')) return p;
+    return p.startsWith('hl.library') ? 'library' : 'home';
+  };
+  return plan.map(([t, p, act, label]) => [t, map(p), act, label] as Seg);
 }
 
 // ---------------------------------------------------------------- timeline
@@ -510,13 +740,21 @@ function route(from: string, to: string, t: number, label: string): Ev[] {
   return out;
 }
 const timelines = new Map<string, Ev[]>();
+/** World facts a schedule depends on: whether ③ 언덕 주택가 is open. */
+export type NpcWorld = { hill?: boolean };
+let worldDefault: NpcWorld = {};
+/** The client's current world (the server always passes its own). */
+export const setNpcWorld = (w: NpcWorld) => {
+  worldDefault = { hill: !!w.hill };
+};
 /** Every event of a resident's KST day (cached). */
-export function npcTimeline(id: NpcId, day: number): Ev[] {
-  const key = `${id}:${day}`;
+export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefault): Ev[] {
+  const hill = !!world.hill;
+  const key = `${id}:${day}:${hill ? 1 : 0}`;
   const hit = timelines.get(key);
   if (hit) return hit;
   const k = dayKind(day);
-  const plan = planOf(id, k);
+  const plan = homesOf(id, planOf(id, k), hill);
   const start = day * DAY - KST;
   const end = start + DAY;
   const ev: Ev[] = [];
@@ -564,9 +802,9 @@ function interp(e: Ev & { k: 'walk' }, now: number) {
 }
 
 /** Where resident `id` is at `now` (ms, server clock). */
-export function npcSpot(id: NpcId, now: number): NpcSpot {
+export function npcSpot(id: NpcId, now: number, world: NpcWorld = worldDefault): NpcSpot {
   const day = kstDay(now);
-  const ev = npcTimeline(id, day);
+  const ev = npcTimeline(id, day, world);
   let e = ev[ev.length - 1];
   for (const x of ev)
     if (now >= x.t0 && now < x.t1) {
@@ -575,7 +813,7 @@ export function npcSpot(id: NpcId, now: number): NpcSpot {
     }
   if (e.k === 'stay') {
     const p = NPC_PLACES[e.place];
-    const visible = NPC_WALK_AREAS.includes(p.area) && !isPostPlace(e.place);
+    const visible = NPC_WALK_AREAS.includes(p.area) && !isPostPlace(e.place) && !p.hidden;
     return { id, area: p.area, x: p.x, z: p.z, facing: p.face, walking: false, visible, activity: e.act, label: e.label, place: e.place };
   }
   if (e.k === 'walk') {
@@ -598,7 +836,7 @@ export const setNpcViewShift = (ms: number) => {
   viewShift = Number.isFinite(ms) ? ms : 0;
 };
 /** Every resident in `area` who is drawn walking about there right now. */
-export function npcsIn(area: NpcArea, now: number, ids: readonly NpcId[] = NPC_IDS): NpcSpot[] {
+export function npcsIn(area: NpcArea, now: number, ids: readonly NpcId[] = VISIBLE_NPC_IDS): NpcSpot[] {
   return ids.map((id) => npcSpot(id, now + viewShift)).filter((s) => s.visible && s.area === area);
 }
 /** "신짜장 · 항구로 배달 중" for the notebook and the map. */
@@ -616,8 +854,11 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   furniture: '나무결 가구점',
   home: '언덕 집',
   library: '언덕 도서관',
-  harbor: '항구',
+  harbor: '항구 구역',
+  hillside: '언덕 주택가',
+  away: '마을 밖',
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
-export const npcPlan = (id: NpcId, day: number) => planOf(id, dayKind(day)).map(([t, p]) => [t, p] as const);
+export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>
+  homesOf(id, planOf(id, dayKind(day)), !!world.hill).map(([t, p]) => [t, p] as const);
 export const kstDayStart = (day: number) => day * DAY - KST;

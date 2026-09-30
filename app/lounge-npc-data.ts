@@ -1,7 +1,11 @@
 // The village's adult residents (NPCs), one registry for all of them: the
-// eight who already work in the village (dealers, shopkeepers, service desks)
-// and the six stage-1 residents of 시장 거리 (handover/design/
-// design-village-2x-npcs.md §8). Pure data shared by the server (relations,
+// eight who already work in the village (dealers, shopkeepers, service desks),
+// the six stage-1 residents of 시장 거리 (handover/design/
+// design-village-2x-npcs.md §8) and the eight stage-2 residents of the harbor
+// and the hillside (design-npcs-stage2.md §7). Stage-2 residents carry
+// `hasSprite: false` until their pictures exist: they have schedules, lines
+// and gift tastes, but nothing draws or lists them (VISIBLE_NPC_IDS) and the
+// server refuses to meet them. Pure data shared by the server (relations,
 // gifts, requests) and the client (dialogue, sprites, schedules). All
 // residents are adults and all can be dated (user decision 2026-09-30).
 //
@@ -28,6 +32,15 @@ export const NPC_IDS = [
   'sinjjajang',
   'volibas',
   'janna',
+  // Stage 2 (hasSprite: false until their sprites are collected).
+  'gabung',
+  'lux',
+  'himmel',
+  'beatrice',
+  'bocchi',
+  'tsunade',
+  'makima',
+  'yanineko',
 ] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 export const isNpcId = (id: unknown): id is NpcId => typeof id === 'string' && (NPC_IDS as readonly string[]).includes(id);
@@ -36,12 +49,17 @@ export const WALKING_NPCS = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volib
 export type WalkingNpcId = (typeof WALKING_NPCS)[number];
 export const isWalkingNpc = (id: unknown): id is WalkingNpcId =>
   typeof id === 'string' && (WALKING_NPCS as readonly string[]).includes(id);
+/** The stage-2 residents of the harbor and the hillside (they walk like the six above). */
+export const STAGE2_NPCS = ['gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'] as const;
+export type Stage2NpcId = (typeof STAGE2_NPCS)[number];
 
 export type NpcArt =
   /** A 3×2 pose sheet (lounge-host-sprites.ts). */
   | { kind: 'sheet'; host: 'lumi' | 'maehwa' | 'captain' | 'realtor' | 'carpenter' }
   /** One keyed full-body image (660×990) and, for dialogue, a head-and-shoulders crop. */
-  | { kind: 'image'; asset: string; portrait?: string; foot: number };
+  | { kind: 'image'; asset: string; portrait?: string; foot: number }
+  /** No picture yet (stage 2): never drawn; `hasSprite` is false. */
+  | { kind: 'pending' };
 
 export type GiftTaste = { loved: readonly string[]; liked: readonly string[]; disliked: readonly string[] };
 export type NpcDef = {
@@ -63,6 +81,12 @@ export type NpcDef = {
   art: NpcArt;
   /** Voice for dialogue: 'polite' 해요체, 'casual' 반말, 'formal' 하십시오체. */
   speech: 'polite' | 'casual' | 'formal';
+  /** Shown instead of the age ("나이는 비밀"). */
+  ageText?: string;
+  /** False until the resident has a sprite: not drawn, not listed, cannot be met. */
+  hasSprite?: boolean;
+  /** Expansion stage the resident arrived with. */
+  stage?: 2;
 };
 
 const img = (asset: string, portrait?: string, foot = 0.985): NpcArt => ({ kind: 'image', asset, ...(portrait ? { portrait } : {}), foot });
@@ -265,6 +289,138 @@ export const NPCS: Record<NpcId, NpcDef> = {
     art: img(A.npc_janna, A.npc_janna_portrait),
     speech: 'polite',
   },
+  // ------------------------------------------------------------ stage 2 (hasSprite: false)
+  gabung: {
+    id: 'gabung',
+    name: '가붕',
+    age: 34,
+    role: '등대지기',
+    place: '항구 등대',
+    intro: '목소리 크고 정의감 넘치는 등대지기. 폭풍이 오면 등대 꼭대기에서 신이 나요.',
+    likesText: '든든한 요리, 밤에 잡은 물고기, 광산 금속',
+    dislikesText: '달팽이, 쑥',
+    gifts: { loved: ['lunchbox', 'grilledfish', 'hairtail', 'conger'], liked: ['kind:dish', 'iron', 'gold', 'rockfish', 'kind:fish'], disliked: ['snail', 'mugwort'] },
+    rewards: { 40: ['grilledfish', 2], 100: ['gold', 2] },
+    art: { kind: 'pending' },
+    speech: 'casual',
+    hasSprite: false,
+    stage: 2,
+  },
+  lux: {
+    id: 'lux',
+    name: '럭스',
+    age: 26,
+    role: '어시장 상인 · 낚시조합장',
+    place: '항구 어시장',
+    intro: '가붕의 여동생. 새벽 경매 때 목청이 제일 큰 밝은 흥정꾼이에요.',
+    likesText: '반짝이는 보석, 달콤한 디저트, 귀한 물고기',
+    dislikesText: '흔한 돌, 달팽이',
+    gifts: { loved: ['gem', 'pumpkinpie', 'jam', 'seabream'], liked: ['kind:fish', 'hwachae', 'mattang', 'gold'], disliked: ['stone', 'snail'] },
+    rewards: { 40: ['bait-shrimp', 6], 100: ['gem', 1] },
+    art: { kind: 'pending' },
+    speech: 'polite',
+    hasSprite: false,
+    stage: 2,
+  },
+  himmel: {
+    id: 'himmel',
+    name: '힘멜',
+    age: 24,
+    role: '빵집 알바생',
+    place: '시장 거리 빵집 카페',
+    intro: '자칭 마을의 용사. 늦잠 자는 사장 대신 빵집 문을 열고, 광장 동상 청원을 받으러 다녀요.',
+    likesText: '꽃, 보석, 빵집 신메뉴',
+    dislikesText: '돌멩이, 달팽이',
+    gifts: { loved: ['camellia', 'cosmos', 'gem', 'pumpkinpie'], liked: ['kind:flower', 'jam', 'kind:dish'], disliked: ['stone', 'snail'] },
+    rewards: { 40: ['camellia', 2], 100: ['gem', 1] },
+    art: { kind: 'pending' },
+    speech: 'casual',
+    hasSprite: false,
+    stage: 2,
+  },
+  beatrice: {
+    id: 'beatrice',
+    name: '베아트리스',
+    age: 400,
+    ageText: '수백 년',
+    role: '도서관 사서',
+    place: '언덕 도서관',
+    intro: '수백 년 동안 도서관을 지켜 온 대정령. 연체에는 가장 엄격한 거야.',
+    likesText: '옛 화석, 꽃차, 달콤한 과자',
+    dislikesText: '시끄러운 벌레, 달팽이',
+    gifts: { loved: ['fossil', 'flowertea', 'jam'], liked: ['mattang', 'hwachae', 'kind:flower', 'pumpkinpie'], disliked: ['cicada', 'cricket', 'snail'] },
+    rewards: { 40: ['flowertea', 3], 100: ['fossil-fern', 1] },
+    art: { kind: 'pending' },
+    speech: 'casual',
+    hasSprite: false,
+    stage: 2,
+  },
+  bocchi: {
+    id: 'bocchi',
+    name: '봇치',
+    age: 22,
+    role: '떠돌이 악사',
+    place: '허풍 주점 무대',
+    intro: '낯을 몹시 가려 말을 더듬지만, 기타를 잡으면 사람이 바뀌는 악사예요.',
+    likesText: '조용히 먹는 간식, 단단한 나무, 조개',
+    dislikesText: '매미, 메뚜기처럼 시끄러운 것',
+    gifts: { loved: ['mattang', 'roastchestnut', 'dotorimuk'], liked: ['kind:dish', 'hardwood', 'shell'], disliked: ['cicada', 'grasshopper'] },
+    rewards: { 40: ['roastchestnut', 2], 100: ['hardwood', 3] },
+    art: { kind: 'pending' },
+    speech: 'polite',
+    hasSprite: false,
+    stage: 2,
+  },
+  tsunade: {
+    id: 'tsunade',
+    name: '츠나데',
+    age: 50,
+    ageText: '나이는 비밀',
+    role: '텃밭 할머니',
+    place: '언덕 텃밭',
+    intro: '겉모습은 젊은데 나이 얘기만 나오면 화내는 텃밭 할머니. 약초에 밝고 도박은 늘 져요.',
+    likesText: '약초, 제철 채소 요리, 주점 안주',
+    dislikesText: '달팽이, 흔한 돌',
+    gifts: { loved: ['ginseng', 'kimchi', 'spinachnamul', 'haemuljeon'], liked: ['kind:forage', 'crop', 'kind:dish'], disliked: ['snail', 'stone'] },
+    rewards: { 40: ['fertilizer-deluxe', 2], 100: ['ginseng', 1] },
+    art: { kind: 'pending' },
+    speech: 'casual',
+    hasSprite: false,
+    stage: 2,
+  },
+  makima: {
+    id: 'makima',
+    name: '마키마',
+    age: 30,
+    ageText: '성인',
+    role: '떠돌이 행상인',
+    place: '장날 좌판 · 항구',
+    intro: '늘 차분하게 웃는 행상인. 거래를 계약이라고 부르고, 냄새로 사람을 알아봐요.',
+    likesText: '맛있는 요리라면 무엇이든, 개, 영화',
+    dislikesText: '계약을 어기는 손님',
+    gifts: { loved: ['kind:dish'], liked: ['kind:fish', 'fruit', 'crop'], disliked: ['snail', 'stone'] },
+    rewards: { 40: ['sashimi', 1], 100: ['gem', 2] },
+    art: { kind: 'pending' },
+    speech: 'polite',
+    hasSprite: false,
+    stage: 2,
+  },
+  yanineko: {
+    id: 'yanineko',
+    name: '야니네코',
+    age: 22,
+    role: '동네 대학생',
+    place: '청년 자취방',
+    intro: '늘 나른한 고양이 귀 대학생. 게으른 척하지만 머리가 좋고, 잔나에게 동네 소문을 흘려줘요.',
+    likesText: '생선 요리, 따뜻한 음료, 햇볕 좋은 자리',
+    dislikesText: '아침 수업, 비 오는 날의 달팽이',
+    gifts: { loved: ['grilledfish', 'sashimi', 'fishstew', 'flowertea'], liked: ['kind:fish', 'kind:dish', 'jam'], disliked: ['snail', 'mugwort'] },
+    rewards: { 40: ['grilledfish', 2], 100: ['sashimi', 2] },
+    art: { kind: 'pending' },
+    speech: 'casual',
+    hasSprite: false,
+    stage: 2,
+  },
 };
 
 /** How residents relate to each other (their chats and a few events come from here). */
@@ -291,7 +447,31 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'sinjjajang', b: 'nyamo', kind: 'regular', note: '은행 서류 배달' },
   { a: 'gwen', b: 'janna', kind: 'friend', note: '방송 전 머리 손질' },
   { a: 'realtor', b: 'carpenter', kind: 'partner', note: '집 확장 공사를 같이 하는 동업자' },
+  // Stage 2 (design-npcs-stage2.md §3 and the cards).
+  { a: 'lux', b: 'janna', kind: 'rival', note: '예보가 틀리면 조업을 망쳐서 늘 투덕거림' },
+  { a: 'gabung', b: 'janna', kind: 'rival', note: '날씨 예보 대결, 누가 맞혔는지 신문에 실림' },
+  { a: 'gabung', b: 'lux', kind: 'friend', note: '오빠와 여동생. 과보호와 도시락' },
+  { a: 'beatrice', b: 'nasera', kind: 'friend', note: '책 친구, 주 1회 독서 모임' },
+  { a: 'beatrice', b: 'himmel', kind: 'rival', note: '도서관에서 떠든다고 출입 경고' },
+  { a: 'makima', b: 'thresh', kind: 'rival', note: '희귀품 경매 라이벌' },
+  { a: 'makima', b: 'volibas', kind: 'rival', note: '수상한 행상인을 늘 뒤에서 캠' },
+  { a: 'bocchi', b: 'himmel', kind: 'friend', note: '힘멜의 연애 상담역. 상담하다 본인이 더 긴장함' },
+  { a: 'bocchi', b: 'frieren', kind: 'regular', note: '공연 중에 늘 조는 손님' },
+  { a: 'himmel', b: 'frieren', kind: 'crush', note: '알바생과 사장. 힘멜의 짝사랑, 프리렌은 모름' },
+  { a: 'yanineko', b: 'janna', kind: 'friend', note: '동네 소문 제보자와 기자' },
+  { a: 'yanineko', b: 'himmel', kind: 'rival', note: '청년 둘의 숨바꼭질 내기 상대' },
+  { a: 'yanineko', b: 'beatrice', kind: 'rival', note: '도서관에서 잔다고 쫓겨남' },
+  { a: 'yanineko', b: 'lux', kind: 'regular', note: '어시장에서 생선을 얻어먹는 단골' },
+  { a: 'tsunade', b: 'nasera', kind: 'mentor', note: '옛 스승과 제자' },
+  { a: 'tsunade', b: 'rose', kind: 'rival', note: '카지노 빚 문제로 티격태격' },
+  { a: 'tsunade', b: 'gabung', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
+  { a: 'tsunade', b: 'lux', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
+  { a: 'sinjjajang', b: 'gabung', kind: 'regular', note: '항구 끝 등대까지 배달이 제일 먼 코스' },
 ];
+/** Whether a resident has a picture (drawn, listed and met). */
+export const npcVisible = (id: NpcId) => NPCS[id].hasSprite !== false;
+/** Residents shown anywhere in the game (the rest wait for their sprites). */
+export const VISIBLE_NPC_IDS: readonly NpcId[] = NPC_IDS.filter(npcVisible);
 export function npcBond(a: NpcId, b: NpcId): NpcBond | null {
   return NPC_BONDS.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a)) ?? null;
 }

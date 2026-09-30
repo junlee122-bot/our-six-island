@@ -21,6 +21,14 @@ import { THRESH_LINES } from './lounge-npc-lines-thresh.ts';
 import { SINJJAJANG_LINES } from './lounge-npc-lines-sinjjajang.ts';
 import { VOLIBAS_LINES } from './lounge-npc-lines-volibas.ts';
 import { JANNA_LINES } from './lounge-npc-lines-janna.ts';
+import { GABUNG_LINES } from './lounge-npc-lines-gabung.ts';
+import { LUX_LINES } from './lounge-npc-lines-lux.ts';
+import { HIMMEL_LINES } from './lounge-npc-lines-himmel.ts';
+import { BEATRICE_LINES } from './lounge-npc-lines-beatrice.ts';
+import { BOCCHI_LINES } from './lounge-npc-lines-bocchi.ts';
+import { TSUNADE_LINES } from './lounge-npc-lines-tsunade.ts';
+import { MAKIMA_LINES } from './lounge-npc-lines-makima.ts';
+import { YANINEKO_LINES } from './lounge-npc-lines-yanineko.ts';
 
 export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   lumi: LUMI_LINES,
@@ -37,6 +45,14 @@ export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   sinjjajang: SINJJAJANG_LINES,
   volibas: VOLIBAS_LINES,
   janna: JANNA_LINES,
+  gabung: GABUNG_LINES,
+  lux: LUX_LINES,
+  himmel: HIMMEL_LINES,
+  beatrice: BEATRICE_LINES,
+  bocchi: BOCCHI_LINES,
+  tsunade: TSUNADE_LINES,
+  makima: MAKIMA_LINES,
+  yanineko: YANINEKO_LINES,
 };
 
 const pick = <T>(pool: readonly T[] | undefined, key: string): T | undefined => (pool && pool.length ? pool[hash32(key) % pool.length] : undefined);
