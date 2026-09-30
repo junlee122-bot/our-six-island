@@ -52,8 +52,15 @@ const shot = async (name) => {
   await js(() => document.fonts.ready);
   await sleep(1500);
   const file = path.join(out, `${view}-${name}.png`);
-  await page.screenshot({ path: file, timeout: 90000 });
-  console.log('  ', file);
+  // The software renderer can be slow under load: retry once, never abort the run.
+  for (let i = 0; i < 2; i++)
+    try {
+      await page.screenshot({ path: file, timeout: 180000 });
+      console.log('  ', file);
+      return;
+    } catch (e) {
+      console.log(`   shot ${name} failed (${i + 1}/2): ${e.message.split('\n')[0]}`);
+    }
 };
 const scene = (sel) => js((s) => document.querySelector(s)?.focus({ preventScroll: true }), sel);
 const walkVillage = async (p) => {
