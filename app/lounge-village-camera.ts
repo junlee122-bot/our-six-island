@@ -20,6 +20,13 @@ export const VIEW_DISTANCE = 50;
 export const VIEW_DIR = { x: 0, y: Math.sin(VIEW_PITCH), z: Math.cos(VIEW_PITCH) } as const;
 /** World units from the screen's centre to its top edge (wide screens). */
 export const VIEW_HALF = 11;
+/**
+ * Rooms (내 방, 모델하우스) are seen closer than the districts: same angle,
+ * follow and light, but 7 units above the centre so a 12-wide room fills
+ * about half the screen (friends look ~1.6× their village size there).
+ * Chosen by the user on 2026-10-02 after seeing the room at VIEW_HALF.
+ */
+export const ROOM_VIEW_HALF = 7;
 /** Tall or square windows see a little more. */
 export const viewHalf = (aspect: number, base = VIEW_HALF) => (aspect < 1.2 ? base * 1.25 : base);
 /** Camera follow: the gap closes by 1 − e^(−rate·dt) each frame. */

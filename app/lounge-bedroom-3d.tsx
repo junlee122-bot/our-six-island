@@ -32,7 +32,7 @@ import {
 } from './lounge-bedroom-data';
 import { bedroomTheme, BEDROOM_THEMES } from './lounge-bedroom-themes';
 import { createBedroomScene, ROOM_LIGHT, type RoomScene } from './lounge-bedroom-scene';
-import { FIGURE_CANVAS_RATIO, VIEW_DIR, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
+import { FIGURE_CANVAS_RATIO, ROOM_VIEW_HALF, VIEW_DIR, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import {
   CONFLICT_TEXT,
   duplicateItem,
@@ -905,10 +905,10 @@ export function Bedroom3D({
         height = host.clientHeight;
       if (!width || !height) return;
       const aspect = width / height;
-      // The village's scale on screen (VIEW_HALF over the whole window), also
+      // The room's scale on screen (ROOM_VIEW_HALF over the whole window), also
       // when the room sits in a smaller frame (모델하우스 관람).
       const windowH = Math.max(height, window.innerHeight || height);
-      const half = viewHalf((window.innerWidth || width) / windowH) * (height / windowH);
+      const half = viewHalf((window.innerWidth || width) / windowH, ROOM_VIEW_HALF) * (height / windowH);
       camera.left = -half * aspect;
       camera.right = half * aspect;
       camera.top = half;
