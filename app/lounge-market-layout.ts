@@ -181,6 +181,14 @@ export const MARKET_CAFE_TABLES: readonly WalkPoint[] = [
   { x: 11.8, z: -9.2 },
 ];
 
+/** A picnic table in the plaza's south half and flower planters at its corners. */
+export const MARKET_PICNIC: readonly { x: number; z: number; w: number; d: number }[] = [{ x: -0.6, z: 9.8, w: 2.4, d: 2.2 }];
+export const MARKET_PLANTERS: readonly { x: number; z: number; w: number; d: number }[] = [
+  { x: -9.6, z: -1.6, w: 2, d: 0.8 },
+  { x: 9.6, z: -1.6, w: 2, d: 0.8 },
+  { x: -4.6, z: 12.4, w: 1.6, d: 0.8 },
+  { x: 3.6, z: 12.4, w: 1.6, d: 0.8 },
+];
 /** Trees: a tree line behind the north row and loose clusters on the sides. */
 export const MARKET_TREES: readonly { x: number; z: number; s: number; pine?: boolean }[] = [
   { x: -25.6, z: -18.6, s: 1.9 },
@@ -209,6 +217,8 @@ export const MARKET_COLLIDERS: readonly WalkCollider[] = [
   ...MARKET_CAFE_TABLES.map((t) => ({ shape: 'circle' as const, x: t.x, z: t.z, r: 0.55 })),
   ...MARKET_LAMPS.map((l) => ({ shape: 'circle' as const, x: l.x, z: l.z, r: 0.14 })),
   box(MARKET_BOARD.x, MARKET_BOARD.z, MARKET_BOARD.w, MARKET_BOARD.d),
+  ...MARKET_PICNIC.map((t) => box(t.x, t.z, t.w, t.d)),
+  ...MARKET_PLANTERS.map((p) => box(p.x, p.z, p.w, p.d)),
   ...MARKET_TREES.map((t) => ({ shape: 'circle' as const, x: t.x, z: t.z, r: round((t.pine ? 0.22 : 0.2) * t.s) })),
 ];
 

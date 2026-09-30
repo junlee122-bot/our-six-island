@@ -16,6 +16,8 @@ import {
   MARKET_EXIT,
   MARKET_LAMPS,
   MARKET_PAVING,
+  MARKET_PICNIC,
+  MARKET_PLANTERS,
   MARKET_SHOPS,
   MARKET_STALLS,
   MARKET_TREES,
@@ -163,14 +165,16 @@ export class MarketSet {
     this.root.add(shadowed(base, false));
     // Standing sign right of the door.
     const front = s.z + s.d / 2;
-    const sx = s.x + s.w / 2 - 0.7;
-    const post = this.box(0.1, 2.3, 0.1, '#6d4f33');
-    post.position.set(sx, 1.15, front + 0.55);
+    // Big enough to read from the district's high camera, tipped back toward it.
+    const sx = s.x + s.w / 2 - 1.2;
+    const post = this.box(0.12, 2.7, 0.12, '#6d4f33');
+    post.position.set(sx, 1.35, front + 0.55);
     const board = new THREE.Mesh(
-      this.own(new THREE.PlaneGeometry(1.7, 0.53)),
+      this.own(new THREE.PlaneGeometry(2.8, 0.87)),
       this.own(new THREE.MeshBasicMaterial({ map: this.own(signTexture(s.name, s.sub, s.sign)), toneMapped: false })),
     );
-    board.position.set(sx, 2.05, front + 0.62);
+    board.position.set(sx, 2.75, front + 0.7);
+    board.rotation.x = -0.55;
     board.name = 'market-sign-' + s.id;
     this.root.add(shadowed(post), board);
     // Trade props.
@@ -240,10 +244,26 @@ export class MarketSet {
     // 의뢰 게시판.
     this.place('noticeBoard', MARKET_BOARD.x, MARKET_BOARD.z, { w: MARKET_BOARD.w, h: 1.5, d: MARKET_BOARD.d }, 0, 'market-board');
     const plate = new THREE.Mesh(
-      this.own(new THREE.PlaneGeometry(1.5, 0.47)),
+      this.own(new THREE.PlaneGeometry(2.4, 0.75)),
       this.own(new THREE.MeshBasicMaterial({ map: this.own(signTexture('의뢰 게시판', '주민들의 오늘 부탁', { bg: '#f3e6c8', ink: '#5a3b22', line: '#a77b4c' })), toneMapped: false })),
     );
-    plate.position.set(MARKET_BOARD.x, 1.95, MARKET_BOARD.z + 0.3);
+    plate.position.set(MARKET_BOARD.x, 2.2, MARKET_BOARD.z + 0.35);
+    plate.rotation.x = -0.55;
+    // Picnic table and planters so the plaza is not a bare square.
+    for (const t of MARKET_PICNIC) this.place('picnicTable', t.x, t.z, { w: t.w, h: 1.2, d: t.d }, 0, 'market-picnic');
+    for (const [i, p] of MARKET_PLANTERS.entries()) {
+      const box = this.box(p.w, 0.42, p.d, '#8a6440');
+      box.position.set(p.x, 0.21, p.z);
+      const soil = this.box(p.w - 0.16, 0.06, p.d - 0.16, '#5b4330');
+      soil.position.set(p.x, 0.43, p.z);
+      this.root.add(shadowed(box), soil);
+      const colors = ['#e8a0b4', '#f2d06b', '#b9d98a', '#f0b27a'];
+      for (let k = 0; k < 6; k++) {
+        const f = new THREE.Mesh(this.own(new THREE.SphereGeometry(0.13, 8, 6)), this.own(mat(colors[(i + k) % colors.length])));
+        f.position.set(p.x - p.w / 2 + 0.3 + (k % 3) * ((p.w - 0.6) / 2), 0.55, p.z + (k < 3 ? -0.18 : 0.18));
+        this.root.add(f);
+      }
+    }
     this.root.add(plate);
     for (const st of MARKET_STALLS) {
       this.place(st.model, st.x, st.z, { w: st.w, h: st.h, d: st.d }, 0, 'market-' + st.id);

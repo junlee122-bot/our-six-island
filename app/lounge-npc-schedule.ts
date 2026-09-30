@@ -588,9 +588,18 @@ export function npcSpot(id: NpcId, now: number): NpcSpot {
 /** Posts drawn by their own scenes (dealers, the captain, service desks). */
 const isPostPlace = (p: string) => /^(casino|lounge|bank|salon|tavern)\./.test(p);
 
+/**
+ * Screenshot harness only (scripts/market-check.mjs): shifts the clock the
+ * scenes draw residents at, so a check can see them at work any time of day.
+ * The server and dialogue never use it. Set by the 'bumtadew:npc-clock' event.
+ */
+let viewShift = 0;
+export const setNpcViewShift = (ms: number) => {
+  viewShift = Number.isFinite(ms) ? ms : 0;
+};
 /** Every resident in `area` who is drawn walking about there right now. */
 export function npcsIn(area: NpcArea, now: number, ids: readonly NpcId[] = NPC_IDS): NpcSpot[] {
-  return ids.map((id) => npcSpot(id, now)).filter((s) => s.visible && s.area === area);
+  return ids.map((id) => npcSpot(id, now + viewShift)).filter((s) => s.visible && s.area === area);
 }
 /** "신짜장 · 항구로 배달 중" for the notebook and the map. */
 export const npcWhere = (s: NpcSpot) => `${NPCS[s.id].name} · ${s.label}`;

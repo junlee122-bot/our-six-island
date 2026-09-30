@@ -966,7 +966,7 @@ export function Village3D(props: Props) {
     };
     const figures = new Map<string, Figure>();
     // Residents walking about the hub (lounge-npc-schedule.ts) with this screen's idle behaviour.
-    const residentLayer = new ResidentLayer(scene, labels, { height: FIGURE_HEIGHT * 1.04, billboard: 'upright', y: GROUND_Y });
+    const residentLayer = new ResidentLayer(scene, labels, { height: FIGURE_HEIGHT * 1.12, billboard: 'upright', y: GROUND_Y });
     residentLayer.onChange = () => {
       needsRender = true;
     };

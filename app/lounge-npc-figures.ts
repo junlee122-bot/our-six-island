@@ -10,6 +10,10 @@ import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import type { ResidentFrame } from './lounge-npc-behavior';
 import { GAIT_CYCLES_PER_PHASE } from './lounge-gait';
+import { setNpcViewShift } from './lounge-npc-schedule';
+
+if (typeof window !== 'undefined')
+  window.addEventListener('bumtadew:npc-clock', (e) => setNpcViewShift(Number((e as CustomEvent<number>).detail) || 0));
 
 const loader = new THREE.TextureLoader();
 const textureCache = new Map<string, Promise<THREE.Texture>>();

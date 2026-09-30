@@ -334,7 +334,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     applyState();
     // Residents walking about here (the district's shops, their errands).
     const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
-      ? new ResidentLayer(scene, labelLayerRef.current, { height: FIGURE_HEIGHT, billboard: 'screen' })
+      ? new ResidentLayer(scene, labelLayerRef.current, { height: FIGURE_HEIGHT * 1.12, billboard: 'screen' })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;

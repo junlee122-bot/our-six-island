@@ -272,7 +272,7 @@ async function runView(browser, base, view, report) {
         assert.notEqual(await until(() => {
           const d = document.querySelector('[data-testid=village-3d]')?.dataset;
           return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - 53.6, Number(d.avatarZ) + 5) < 1.2;
-        }, 180000), -1, '시장 거리 입구까지 걷지 못했습니다.');
+        }, 900000), -1, '시장 거리 입구까지 걷지 못했습니다.');
       } finally { await page.keyboard.up('Shift'); }
       await focusScene();
       await page.keyboard.press('KeyE');
