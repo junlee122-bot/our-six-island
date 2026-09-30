@@ -2,7 +2,7 @@
 
 이 문서는 게임에 쓰는 이미지·3D 모델의 출처, 라이선스, 제작 기록입니다. 맨 위 요약이 현재 기준이고, 그 아래 절은 제작 당시의 기록(프롬프트·해상도·해시)을 날짜순으로 보관한 것입니다.
 
-## 현재 요약 (2026-09-24)
+## 현재 요약 (2026-09-24, 이후 추가분은 출처 표의 C2·A2·D2 행)
 
 - 배포 대상은 매니페스트에 적힌 파일뿐입니다: 이미지 `app/lounge-assets.ts` **127개**(래스터 67 + 체스·화투 SVG 60), 3D 모델 `app/lounge-model-assets.ts` **39개**. 개수는 빌드 스크립트가 매니페스트에서 직접 읽어 검사하므로 문서와 코드를 따로 고칠 필요가 없습니다.
 - 캐릭터 아틀라스(`friends-motion`, `accessories`, `hohyeon-friend`, `dowon-shampoo-atlas`, `daowon-buns`, `daowon-outfits`, `hachimaki`)는 **무손실 WebP** 사본을 사용합니다. 파란 머리 염색과 마젠타 배경 제거가 정확한 RGB에 의존하므로, 보이는 모든 픽셀이 원본 PNG와 같은지 변환 스크립트가 확인합니다. 원본 PNG는 같은 폴더에 남겨 두며(회귀 테스트도 원본을 읽음) 게임은 참조하지 않습니다.
@@ -20,7 +20,10 @@
 | A+ | OpenAI 생성 + [Spritegen](https://github.com/aldegad/sprite-gen) v2.7.0 | 7인 걷기·달리기 84프레임 | `lounge/motion/*.webp` | 도구 라이선스 파일 보관 | 사용 중 |
 | B | Real-ESRGAN (ncnn-vulkan) | 섬 지도·실내 4배 업스케일 | `legacy/assets/island-hd.webp`, `interiors-hd.webp` | BSD-3 / MIT, `licenses/` | 섬 전용(미사용) |
 | C | Higgsfield (GPT Image 2.5) | 회관·카지노·분장실 배경, 테이블, 7인×3 컬렉션, 방 배경·소품 28+9종, 도원 샴푸 의상, 아카츠키 코스튬 | `lounge/club-*.webp`, `lounge/bedroom/*.webp`, `lounge/dowon-shampoo-atlas.*`, `lounge/akatsuki-atlas.*` | 유료 크레딧 약 50. 프롬프트·작업 ID는 아래 기록과 `*.json` | 사용 중 |
+| C2 | Higgsfield (GPT Image 2.5, 2026-09-28) | 카지노 대부 로제, 은행 직원 냐모, 미용실 그웬 전신 스프라이트, 허풍 주점 카드 5장(에이스·킹·퀸·조커·뒷면: 호랑이·학·달·도깨비 자체 도안) | `lounge/casino-lender-rose.webp`, `bank-clerk-nyamo.webp`, `salon-stylist-gwen.webp`, `lounge/cards/tavern-*.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/services-generation.json`, 원본·프롬프트 `_originals/`. **로제·그웬은 Riot Games 캐릭터 팬아트**(아래 IP 표) | 사용 중 |
+| A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
+| D2 | kArchive (쓰레드 dogfooter, 2026-09-28) | 은행·미용실 외관, 낚시 결과 물고기 3종(메기·잉어·고등어) | `public/models/village/life-services/` (5개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
 | E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
@@ -42,6 +45,9 @@
 | 하츠네 미쿠 코디·미쿠 테마 소품 | 크립톤 퓨처 미디어 캐릭터. 비상업 2차 창작 가이드라인 범위 확인 필요 | 비상업 유지, 공식 로고·이름 노출 최소화, 필요하면 오마주 디자인으로 교체 |
 | 아카츠키 망토 | 『나루토』 의상 디자인 | 비상업 유지, 공개 홍보·출품 시 교체 검토 |
 | 샴푸 중국풍·만두머리 | 『란마½』·『스트리트 파이터』 참조 | 일반적 의상 요소. 화면 이름에서 원작명 빼기 권장 |
+| 카지노 대부 로제 | 사용자 제공 『리그 오브 레전드』 미스 포츈 그림을 참조한 팬아트(해적 모자·붉은 머리) | 비상업 유지. 공개 홍보·출품·수익화 전 디자인 교체 |
+| 미용실 그웬 | 『리그 오브 레전드』 그웬 팬아트. 이름과 외형(파란 드릴 트윈테일·가위)이 원작과 거의 같음 | 비상업 유지. 공개 전에 이름·외형 교체가 가장 우선 |
+| 은행 직원 냐모 | 사용자 제공 고양이 수인 캐릭터 레퍼런스 기반. 원작 출처 미기록 | 레퍼런스 원작 확인 후 기록 |
 | 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
 | kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
 | 3DAssets CC0 | 제약 없음 | — |

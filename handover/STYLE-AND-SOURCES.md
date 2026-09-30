@@ -95,9 +95,9 @@
 
 | 출처 / 도구 | 만든 것 | 위치 | 조건 |
 |---|---|---|---|
-| OpenAI 이미지 생성 (처음 ChatGPT/Codex 작업) | 친구 7명 기본 전신·모션, 액세서리(안경·머리핀), 호현, 초기 라운지 시트, 도원 코디·만두머리·하치마키(응원 머리띠), 초기 범티콘 8종 | `public/assets/`, `public/assets/lounge/` | 자체 생성 |
+| OpenAI 이미지 생성 (처음 ChatGPT/Codex 작업) | 친구 7명 기본 전신·모션, 액세서리(안경·머리핀), 호현, 초기 라운지 시트, 도원 코디·만두머리·하치마키(응원 머리띠), 초기 범티콘 8종, 냐모 은행 대화창 초상(2026-09-28) | `public/assets/`, `public/assets/lounge/` | 자체 생성 |
 | Spritegen v2.7.0 (github.com/aldegad/sprite-gen) | 7명 걷기·달리기 84프레임 | `public/assets/lounge/motion/` | 도구 라이선스 보관 |
-| **Higgsfield (GPT Image 2.5)** | 회관·카지노 배경, 테이블, 7명×3벌 컬렉션, 방 배경·소품, 도원 샴푸 의상, 아카츠키 코스튬, 딜러 루미·매화, NPC 선장·목수·부동산, 여성 의상 3종(금빛 브레이드·케이프 코트 등), 메이드복(7명 전원), 미쿠 콘서트 포스터, 새 범티콘(제제이야·요이·엄·아 예?·아뇨아뇨아뇨) | `public/assets/lounge/club-*`, `host-*`, `*-atlas`, `bedroom/`, `reactions/` | 유료 크레딧 생성. 프롬프트는 같은 폴더의 `*.prompt.txt`, `generation.json`, `prompts.json` |
+| **Higgsfield (GPT Image 2.5)** | 회관·카지노 배경, 테이블, 7명×3벌 컬렉션, 방 배경·소품, 도원 샴푸 의상, 아카츠키 코스튬, 딜러 루미·매화, NPC 선장·목수·부동산, 카지노 대부 로제·은행 냐모·미용실 그웬, 허풍 주점 카드 5장, 여성 의상 3종(금빛 브레이드·케이프 코트 등), 메이드복(7명 전원), 미쿠 콘서트 포스터, 새 범티콘(제제이야·요이·엄·아 예?·아뇨아뇨아뇨) | `public/assets/lounge/club-*`, `host-*`, `*-atlas`, `bedroom/`, `reactions/` | 유료 크레딧 생성. 프롬프트는 같은 폴더의 `*.prompt.txt`, `generation.json`, `prompts.json` |
 | 코드로 그린 것 | 파비콘·앱 아이콘(잎), 공유 미리보기(`og-image.webp`, 전신 합성), 고스톱 테이블·패 뒷면(CSS) | `public/icons/`, 코드 | 자체 제작 |
 | Real-ESRGAN | 옛 섬 지도 업스케일 | 삭제됨(git 기록에만 있음) | BSD-3 / MIT |
 
@@ -105,7 +105,7 @@
 
 | 출처 | 폴더 (개수) | 조건 |
 |---|---|---|
-| **kArchive** (karchive.vibeline.co.kr, 제작 공유: 쓰레드 dogfooter) | `public/models/lounge/` 소파·튤립, `lounge/club` (4), `lounge/friends` (7), `lounge/redesign` (4), `lounge/tavern` (34), `village/` 주택·나무·꽃·정원 소품, `village/civic` (10), `village/valley` (22), `village/shops` (4), `village/tavern` (5), `village/forge` (2) | **출처 표기 필수**("자료: kArchive / 출처: 쓰레드 dogfooter"), 원본 재판매 금지, CC 라이선스가 아니며 약관이 바뀔 수 있음. 각 폴더 `assets.json`에 모델 주소·약관 원문·SHA-256 기록. 웹 최적화 사본은 약관의 수정 허용 범위 |
+| **kArchive** (karchive.vibeline.co.kr, 제작 공유: 쓰레드 dogfooter) | `public/models/lounge/` 소파·튤립, `lounge/club` (4), `lounge/friends` (7), `lounge/redesign` (4), `lounge/tavern` (34), `village/` 주택·나무·꽃·정원 소품, `village/civic` (10), `village/valley` (22), `village/shops` (4), `village/tavern` (5), `village/forge` (2), `village/life-services` (5: 은행·미용실 외관, 물고기 3종) | **출처 표기 필수**("자료: kArchive / 출처: 쓰레드 dogfooter"), 원본 재판매 금지, CC 라이선스가 아니며 약관이 바뀔 수 있음. 각 폴더 `assets.json`에 모델 주소·약관 원문·SHA-256 기록. 웹 최적화 사본은 약관의 수정 허용 범위 |
 | 3DAssets.dev Bedroom & Living Room | 방 가구 11개 `public/models/lounge/furniture/` | CC0 |
 | Three.js 절차 생성 | 회관·카지노 외형 일부, 나무, 가로등·울타리·강·다리·분수, 뒷산·숲·광산 지형 | 자체 제작 |
 
@@ -141,7 +141,7 @@ Jua · Pretendard 1.3.9 · Gaegu — 모두 **SIL OFL 1.1**. 서브셋 파일은
 
 ### IP 주의
 
-하츠네 미쿠(크립톤), 아카츠키 망토(『나루토』), 샴푸 의상(『란마½』) 같은 패러디 요소가 있습니다. 실존 친구 7명의 이름과 얼굴을 바탕으로 한 캐릭터도 있습니다. 친구끼리 비상업으로 쓰는 한 괜찮지만, 공개 홍보·출품·수익화 전에는 `ASSETS.md`의 "IP·라이선스 주의" 표를 먼저 정리하세요.
+하츠네 미쿠(크립톤), 로제·그웬(『리그 오브 레전드』 미스 포츈·그웬 팬아트), 아카츠키 망토(『나루토』), 샴푸 의상(『란마½』) 같은 패러디 요소가 있습니다. 실존 친구 7명의 이름과 얼굴을 바탕으로 한 캐릭터도 있습니다. 친구끼리 비상업으로 쓰는 한 괜찮지만, 공개 홍보·출품·수익화 전에는 `ASSETS.md`의 "IP·라이선스 주의" 표를 먼저 정리하세요.
 
 ---
 

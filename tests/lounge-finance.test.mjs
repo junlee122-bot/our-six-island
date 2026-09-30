@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newLoungeLedger, registerWallet, validateLedger, reserveGame, settleGame, storeBeom, dailyGrantInfo, transferBeom, houseTransfer } from '../app/lounge-economy.ts';
 import { ensureLifeMember, readLife } from '../app/lounge-life.ts';
-import { financeAction, financeView, readFinance, recordCasino } from '../app/lounge-finance.ts';
+import { collectOverdue, financeAction, financeView, readFinance, recordCasino } from '../app/lounge-finance.ts';
 import { CASINO_LENDER_FRONT, CASINO_LENDER_SPOT, CASINO_LENDER_REACH } from '../app/lounge-casino-lender.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
@@ -255,4 +255,26 @@ test('transfers reject prototype keys and unsafe sums', () => {
   assert.throws(() => transferBeom(w, wallets[0], '__proto__', 100));
   assert.throws(() => houseTransfer(w, wallets[0], Number.MAX_SAFE_INTEGER));
   assert.throws(() => houseTransfer(w, wallets[0], -100_001));
+});
+
+test('overdue casino loans collect from the wallet, then bank deposits, without minting', () => {
+  const casino = presence.map((p, i) => i === 0 ? { ...p, area: 'casino', ...CASINO_LENDER_FRONT } : p);
+  let w = act(world(), 0, { op: 'borrow', amount: 10_000 }, now, casino);
+  const supply = (l) => Object.values(l.accounts).reduce((a, b) => a + b, 0) + Object.values(l.vault ?? {}).reduce((a, b) => a + b, 0) + (l.houseBalance ?? 0);
+  assert.deepEqual(collectOverdue(w.state, w.ledger, ids[0], now + 3 * day - 1), { state: w.state, ledger: w.ledger });
+  assert.deepEqual(collectOverdue(w.state, w.ledger, ids[1], now + 4 * day).ledger, w.ledger);
+  w = act(w, 0, { op: 'deposit', amount: 110_000 });
+  const before = supply(w.ledger), c = collectOverdue(w.state, w.ledger, ids[0], now + 3 * day);
+  validateLedger(c.ledger);
+  assert.equal(supply(c.ledger), before);
+  assert.equal(c.ledger.accounts[wallets[0]], 0);
+  assert.equal(c.ledger.vault[wallets[0]], 110_000 - 13_000);
+  assert.equal(c.state.loans[0].state, 'paid');
+  assert.match(c.state.logs.at(-1).text, /연체 회수 · 13,000범 \(은행 예금 13,000범 포함\) · 완납/);
+  assert.deepEqual(collectOverdue(c.state, c.ledger, ids[0], now + 5 * day), { state: c.state, ledger: c.ledger });
+  const poor = act(world(), 0, { op: 'borrow', amount: 10_000 }, now, casino);
+  const part = collectOverdue(poor.state, transferBeom(poor.ledger, wallets[0], wallets[1], 106_000), ids[0], now + 3 * day);
+  assert.equal(part.ledger.accounts[wallets[0]], 0);
+  assert.equal(part.state.loans[0].paid, 4_000);
+  assert.equal(part.state.loans[0].state, 'active');
 });

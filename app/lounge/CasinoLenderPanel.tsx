@@ -31,7 +31,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
     : !nearCasinoLender(me, me.area) ? `카지노 안에서 ${LENDER_NAME} 앞으로 와 주세요.`
       : playing || fishing ? '게임이나 낚시를 마친 뒤 이야기해요.' : '';
   const greeting = active ? now >= active.dueAt
-    ? '약속한 날이 지났네. 장부는 그대로야. 갚을 수 있는 만큼부터 정리하자.'
+    ? '약속한 날이 지났네. 이제부턴 네가 가진 범에서 알아서 걷어 갈게.'
     : '네 이름은 장부에 있어. 약속한 날까지 정리해 줘. 나도 약속은 지키거든.'
     : loans.some((l) => l.state === 'paid') ? '깔끔하게 갚았네. 그런 손님은 기억해 두지. 다음 거래도 조건부터 읽어.'
       : '난 로제. 급한 범이 필요해? 조건은 간단해. 잘 읽고 네가 결정해.';
@@ -69,7 +69,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
             <div><dt>갚은 돈</dt><dd>{formatBeom(active.paid)}</dd></div>
             <div><dt>남은 돈</dt><dd><strong>{formatBeom(remaining)}</strong></dd></div>
           </dl>
-          <p>상환 기한 <strong>{date(active.dueAt)}</strong> · 추가 연체이자 없음</p>
+          <p>상환 기한 <strong>{date(active.dueAt)}</strong> · 추가 연체이자 없음 · 기한이 지나면 소지금과 은행 예금에서 자동으로 회수돼요</p>
           <label>이번에 갚을 금액<input data-testid="lender-repay-amount" type="number" min="1" max={remaining} step="1" value={paying} disabled={busy} onChange={(e) => setRepay(Number(e.target.value))} /></label>
           <div className="l-lender-actions">
             <GameButton data-testid="lender-repay" disabled={disabled || !validAmount(paying, 1, remaining) || paying > view.wallet.balance} onClick={() => void run({ kind: 'finance', op: 'repay', id: active.id, amount: paying })}>입력한 금액 갚기</GameButton>
@@ -79,7 +79,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
           <p>지금 대출을 모두 갚으면 새로 빌릴 수 있어요.</p>
         </section> : <section className="l-lender-contract">
           <h3>새 대출 조건</h3>
-          <p>1,000~30,000범 · 3일 약정<br />이자는 한 번만 30% · 추가 연체이자 없음</p>
+          <p>1,000~30,000범 · 3일 약정<br />이자는 한 번만 30% · 추가 연체이자 없음<br />기한이 지나면 소지금과 은행 예금에서 자동 회수</p>
           <label>빌릴 금액<input data-testid="lender-borrow-amount" type="number" min="1000" max="30000" step="1000" value={amount} disabled={busy} onChange={(e) => setAmount(Number(e.target.value))} /></label>
           <dl className="l-lender-totals">
             <div><dt>받는 돈</dt><dd>{formatBeom(validAmount(amount, 1000, 30000) ? amount : 0)}</dd></div>

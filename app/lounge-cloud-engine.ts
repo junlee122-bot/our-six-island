@@ -32,7 +32,7 @@ import { HOME_CLOSED, validHomeOwner } from './lounge-games.ts';
 import { lifeWealth, recordTables, recordVisit } from './lounge-life-plus.ts';
 import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } from './lounge-party.ts';
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
-import { financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
+import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 export type CloudMember = {
@@ -534,6 +534,8 @@ export function cloudTransition(
   // Table games that settled in this transition: friendship, stats, the
   // Friday casino-night bonus and a digest line (life expansion).
   g.finance = recordCasino(g.finance, original.ledger, g.ledger, now);
+  // An overdue casino loan takes whatever the borrower holds on their next request.
+  if (mutating) ({ state: g.finance, ledger: g.ledger } = collectOverdue(g.finance, g.ledger, member.id, now));
   const settled = Object.entries(g.ledger.games)
     .filter(
       ([id, game]) =>

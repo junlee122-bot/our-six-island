@@ -89,6 +89,23 @@ export function recordCasino(state: FinanceState | undefined, before: LoungeLedg
   next.casino = next.casino.filter((d) => d.day >= day - 30);
   return next;
 }
+/** Overdue casino loans collect themselves: wallet first, then bank deposits. */
+export function collectOverdue(state: FinanceState | undefined, ledger: LoungeLedger, uid: string, now: number) {
+  const loan = state?.loans.find((l) => l.lender === 'house' && l.borrower === uid && l.state === 'active' && now >= l.dueAt);
+  if (!state || !loan) return { state, ledger };
+  const w = wallet(uid), owed = loan.principal + loan.interest - loan.paid;
+  const fromWallet = Math.min(owed, ledger.accounts[w] ?? 0);
+  const fromVault = Math.min(owed - fromWallet, ledger.vault?.[w] ?? 0);
+  if (fromWallet + fromVault <= 0) return { state, ledger };
+  let next = ledger;
+  if (fromVault > 0) next = storeBeom(next, w, fromVault, true);
+  next = houseTransfer(next, w, -(fromWallet + fromVault));
+  const s = readFinance(state), l = s.loans.find((x) => x.id === loan.id)!;
+  l.paid += fromWallet + fromVault;
+  if (l.paid === l.principal + l.interest) l.state = 'paid';
+  log(s, [uid], now, `카지노 대부 연체 회수 · ${(fromWallet + fromVault).toLocaleString('ko-KR')}범${fromVault ? ` (은행 예금 ${fromVault.toLocaleString('ko-KR')}범 포함)` : ''}${l.state === 'paid' ? ' · 완납했어요' : ''}`);
+  return { state: s, ledger: next };
+}
 export function financeView(state: FinanceState | undefined, ledger: LoungeLedger, life: LifeState, uid: string, now: number) {
   const s = state ?? newFinance(), day = kstDay(now), today = s.casino.find((d) => d.day === day);
   return {
@@ -158,7 +175,7 @@ export function financeAction(
     next = houseTransfer(next, w, a.amount);
     const interest = Math.floor(a.amount * .3);
     addLoan(state, { lender: 'house', borrower: uid, principal: a.amount, interest, days: 3, offeredAt: now, dueAt: now + 3 * DAY, paid: 0, state: 'active' });
-    log(state, [uid], now, `카지노 대부 · ${a.amount.toLocaleString('ko-KR')}범 받음 / 3일 뒤 ${(a.amount + interest).toLocaleString('ko-KR')}범 상환 (단리 30%, 추가 연체이자 없음)`);
+    log(state, [uid], now, `카지노 대부 · ${a.amount.toLocaleString('ko-KR')}범 받음 / 3일 뒤 ${(a.amount + interest).toLocaleString('ko-KR')}범 상환 (단리 30%, 추가 연체이자 없음, 기한이 지나면 소지금·예금에서 자동 회수)`);
   } else if (a.op === 'protect') {
     if (a.item !== 'lock' && a.item !== 'whistle') fail('방범 물품을 선택해 주세요.');
     const guard = (state.protection[uid] ??= { until: 0, whistles: 0 });
