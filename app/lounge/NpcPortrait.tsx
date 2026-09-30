@@ -43,6 +43,7 @@ export function NpcFigure({ npc, mood = 'calm' }: { npc: NpcId; mood?: DealerMoo
       </span>
     );
   }
+  if (art.kind === 'pending') return <span className="l-npc-figure is-pending" aria-hidden="true" />;
   return (
     <span className="l-npc-figure is-image" aria-hidden="true">
       <img src={art.asset} alt="" decoding="async" />
