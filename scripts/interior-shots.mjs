@@ -117,9 +117,15 @@ try {
         await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.walking === 'false', 60000);
         await sleep(2500);
         // An auto-opened sheet (table) covers the room: close it for the capture.
-        await page.keyboard.press('Escape').catch(() => {});
-        await sleep(800);
-        results[place].inside = { ...(await cost()), route };
+        if (await dialogOpen()) {
+          await page.keyboard.press('Escape').catch(() => {});
+          await sleep(800);
+        }
+        const at = await js(() => {
+          const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+          return { x: Number(d?.avatarX), y: Number(d?.avatarY), action: d?.action ?? '' };
+        });
+        results[place].inside = { ...(await cost()), route, at };
         await shot(`${place}-inside`);
       }
     } catch (e) {

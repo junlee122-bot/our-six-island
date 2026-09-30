@@ -437,7 +437,8 @@ export function createInteriorScene(
   // Side walls, with the door opening on the left.
   box(0.18, wallHeight, INTERIOR_DOOR_Z.z0 - minZ, minX - 0.09, wallHeight / 2, (minZ + INTERIOR_DOOR_Z.z0) / 2, wall);
   box(0.18, wallHeight, maxZ - INTERIOR_DOOR_Z.z1, minX - 0.09, wallHeight / 2, (INTERIOR_DOOR_Z.z1 + maxZ) / 2, wall);
-  box(0.18, wallHeight - 2.4, INTERIOR_DOOR_Z.z1 - INTERIOR_DOOR_Z.z0, minX - 0.09, 2.4 + (wallHeight - 2.4) / 2, (INTERIOR_DOOR_Z.z0 + INTERIOR_DOOR_Z.z1) / 2, wall);
+  // (No wall piece over the opening: from the straight-on camera the left
+  // wall is an edge-on strip and the doorway stands outside it, below.)
   // Only a low half wall on the right: the camera looks in from the front-right.
   box(0.18, 0.95, depth, maxX + 0.09, 0.475, (minZ + maxZ) / 2, pal.wainscot);
   box(0.26, 0.07, depth + 0.1, maxX + 0.09, 0.98, (minZ + maxZ) / 2, pal.rail);
