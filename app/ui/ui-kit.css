@@ -78,3 +78,6 @@
   font-size: var(--fs-cap);
   color: var(--text-soft);
 }
+.ui-kit-reel {
+  max-width: 600px;
+}
