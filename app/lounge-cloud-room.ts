@@ -2,6 +2,7 @@ import { emptyLoungeView } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
 import type { FinanceView } from './lounge-finance';
+import type { TableStatsView } from './lounge-table-stats';
 import { cloud, cloudCall, AccountError } from './lounge-auth';
 import type { AccountProfile } from './lounge-accounts';
 import type { CloudCommand } from './lounge-cloud-engine';
@@ -65,6 +66,8 @@ type Response = {
   life?: LifeView;
   lifeHash?: string;
   finance?: FinanceView;
+  /** 테이블 기록 (lounge-table-stats.ts): my totals and the weekly table. */
+  tableStats?: TableStatsView;
 };
 
 type Area = import('./lounge-games').Area;
@@ -87,6 +90,7 @@ export type CloudRoomView = LoungeView & {
   /** Latest "범타듀의 하루" state from any response (null until the first one). */
   life: LifeView | null;
   finance?: FinanceView;
+  tableStats?: TableStatsView;
   /** Connection health (lounge-connection.ts): 'offline' after two failed calls in a row. */
   link: Link;
 };
@@ -300,6 +304,8 @@ export class CloudRoom {
     } else if (this.view.life && Number.isFinite(r.serverNow))
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };
     if (r.finance) this.view = { ...this.view, finance: r.finance };
+    if (r.tableStats && JSON.stringify(r.tableStats) !== JSON.stringify(this.view.tableStats))
+      this.view = { ...this.view, tableStats: r.tableStats };
     if (r.packet && r.code) {
       const packet =
         this.view.code === r.code ? keepUnchanged(this.view, r.packet) : r.packet;

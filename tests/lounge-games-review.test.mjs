@@ -322,3 +322,17 @@ test('surrender is refused after a hit, after a split and when every hand gave u
   assert.equal(peek.phase, 'reveal');
   assert.equal(blackjackLegal(peek, 0).surrender, false);
 });
+
+test('every game has a rules card in plain Korean (no emoji, no English words)', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../app/lounge/game-rules.ts', import.meta.url), 'utf8');
+  const cards = src.slice(src.indexOf('export const GAME_RULES'));
+  for (const kind of ['blackjack', 'poker', 'seotda', 'gostop', 'chess', 'yacht', 'liar', 'liarsbar'])
+    assert.match(cards, new RegExp(`\\n  ${kind}: \\{\\n    goal: '`), kind);
+  const strings = [...cards.matchAll(/'([^'\n]*)'|`([^`\n]*)`/g)].map((m) => m[1] ?? m[2]);
+  for (const text of strings) {
+    assert.doesNotMatch(text, /\p{Extended_Pictographic}/u, text);
+    // Card names (K, Q, A, S./L.) are fine; whole English words are not.
+    assert.doesNotMatch(text.replace(/\$\{[^}]*\}/g, ''), /[A-Za-z]{3,}/, text);
+  }
+});

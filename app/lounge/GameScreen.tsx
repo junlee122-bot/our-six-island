@@ -1,6 +1,6 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUpFromLine, Coins, Eye, Send } from '../ui/icons';
+import { ArrowLeft, ArrowUpFromLine, BookOpen, Coins, Eye, Send } from '../ui/icons';
 import {
   GAME_INFO,
   PRACTICE_NAMES,
@@ -19,7 +19,7 @@ import { formatBeom, josa, NAMES } from '../lounge-text';
 import { GAME_COPY, leaveConsequence } from './game-copy';
 import { ConfirmModal } from './Modal';
 import { attention, playCue } from './feedback';
-import { ErrorState, ScreenBoundary, chunkRecovery } from './ErrorBoundary';
+import { ErrorState, ScreenBoundary, chunkRecovery, lazyRetry } from './ErrorBoundary';
 import {
   BlackjackTable,
   ChessBoard,
@@ -35,6 +35,11 @@ import { PartyBar } from '../lounge-party-bar';
 import type { Notify } from './Toast';
 import '../lounge-game-fit.css';
 import '../lounge-table-venue.css';
+
+/** 규칙과 기록 (its own small chunk: rules text and the weekly table). */
+const TableGuide = lazyRetry(() =>
+  import('./TableGuide').then((m) => ({ default: m.TableGuide })),
+);
 
 /** Each table's action area (the part that must be on screen on my turn). */
 const TABLE_CONTROLS =
@@ -118,6 +123,7 @@ export function GameScreen({
   place?: string;
 }) {
   const backLabel = `${josa(place, '으로/로')} 돌아가기`;
+  const [guide, setGuide] = useState(false);
   const [leave, setLeave] = useState(false),
     [leaveError, setLeaveError] = useState(''),
     [displayedGoRevision, setDisplayedGoRevision] = useState(
@@ -315,6 +321,15 @@ export function GameScreen({
                   : '대전 중'}
             </span>
           )}
+          <button
+            className="l-text l-game-guide"
+            onClick={() => setGuide(true)}
+            data-testid="game-guide"
+            title="규칙 카드, 내 기록, 이번 주 순위"
+          >
+            <BookOpen size={16} aria-hidden="true" />
+            규칙·기록
+          </button>
           {canLeave && (
             <button
               className="l-text"
@@ -629,6 +644,11 @@ export function GameScreen({
             return false;
           }}
         />
+      )}
+      {guide && (
+        <Suspense fallback={null}>
+          <TableGuide kind={kind} view={view} onClose={() => setGuide(false)} />
+        </Suspense>
       )}
       {leaveError && (
         <p className="l-sr" role="alert">

@@ -294,3 +294,6 @@
     padding-block: 4px;
   }
 }
+
+/* 규칙·기록 (GameScreen header): icon + label, a full-size target. */
+.l-game-screen .l-game-guide { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: 44px; }

@@ -1,0 +1,22 @@
+/* 규칙과 기록 (TableGuide.tsx): tokens only, the venue sets the colours. */
+.l-table-guide .ui-dialog-page { display: grid; gap: var(--sp-4); max-width: 640px; }
+.l-guide-page { display: grid; gap: var(--sp-3); color: var(--text); font-size: var(--fs-body); }
+.l-guide-page h3 { margin: var(--sp-2) 0 0; font-family: var(--font-display); font-size: var(--fs-title-s); }
+.l-guide-page p { margin: 0; }
+.l-guide-goal { padding: var(--sp-3) var(--sp-4); border-radius: var(--r-m); background: var(--accent-soft); box-shadow: var(--edge-line); font-size: var(--fs-title-s); }
+.l-guide-turn { display: grid; gap: var(--sp-2); margin: 0; padding-left: var(--sp-5); }
+.l-guide-examples { display: grid; gap: var(--sp-2); margin: 0; }
+.l-guide-examples > div { display: grid; gap: var(--sp-1); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-sunken); }
+.l-guide-examples dt { font-weight: 700; }
+.l-guide-examples dd { margin: 0; color: var(--text-soft); }
+.l-guide-clock { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-guide-record { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); margin: 0; }
+.l-guide-record > div { display: grid; gap: var(--sp-1); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-guide-record dt { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-guide-record dd { margin: 0; font-family: var(--font-display); font-size: var(--fs-title); }
+.l-guide-week { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.l-guide-week li { display: grid; grid-template-columns: var(--sp-6) 1fr auto auto; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-guide-week li[data-me] { box-shadow: var(--edge-highlight); }
+.l-guide-week b { font-family: var(--font-display); font-size: var(--fs-title-s); text-align: center; }
+.l-guide-week small { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-guide-week em { font-style: normal; font-weight: 700; }
