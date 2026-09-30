@@ -21,3 +21,4 @@
 .l-town-row div { display: grid; gap: var(--sp-1); min-width: 0; }
 .l-town-row strong { color: var(--text); font-size: var(--fs-body); }
 .l-town-row small { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); color: var(--text-soft); font-size: var(--fs-cap); }
+.l-town-head { margin: var(--sp-4) 0 var(--sp-2); font-family: var(--font-display); font-size: var(--fs-body); font-weight: 400; color: var(--text); }

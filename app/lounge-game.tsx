@@ -571,10 +571,7 @@ function AccountLounge({
     onRequests: () => setModal('npcRequests'),
     onCounter: (place) => {
       // 잡화점 and 우체국 open the shop and the mail window; the rest are counters.
-      if (place === 'general') {
-        setShopTab('seeds');
-        setModal('shop');
-      } else if (place === 'post') {
+      if (place === 'post') {
         setMailGift('none');
         setModal('mail');
       } else setTownPlace(place);
@@ -2735,7 +2732,19 @@ function AccountLounge({
       {modal === 'npcRequests' && <NpcRequestBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {townPlace && !modal && (
         <Suspense fallback={null}>
-          <TownPanel room={room} view={view} notify={notify} place={townPlace} onClose={() => setTownPlace(null)} onTravel={(area) => travelTo(area)} />
+          <TownPanel
+            room={room}
+            view={view}
+            notify={notify}
+            place={townPlace}
+            onClose={() => setTownPlace(null)}
+            onTravel={(area) => travelTo(area)}
+            onOpen={(what) => {
+              setTownPlace(null);
+              if (what === 'shop') setShopTab('seeds');
+              setModal(what);
+            }}
+          />
         </Suspense>
       )}
       {residentTalk && !modal && (

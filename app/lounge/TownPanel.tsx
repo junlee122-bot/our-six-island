@@ -15,6 +15,7 @@ import { NPCS, type NpcId } from '../lounge-npc-data';
 import { jannaForecast, jannaMissedToday } from '../lounge-npc-dialog';
 import { BAKERY_MENU, AUCTION_PREMIUM, COOP_WEEK_BONUS, READING_XP, STALL_PER_DAY, type StallId } from '../lounge-town';
 import { SKILLS, SKILL_INFO } from '../lounge-growth-data';
+import { FIXTURES } from '../lounge-farm-data';
 import { ACTORS } from '../lounge-roster';
 import { kstDay } from '../lounge-economy';
 import { formatBeom, josa } from '../lounge-text';
@@ -29,12 +30,13 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './town.css';
 
-export type TownPlace = 'coop' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'signpost';
+export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'signpost';
 /** Where a friend can be found by the signpost (areas with a gate to walk to). */
 export type TravelArea = 'village' | DistrictId;
 
 const KEEPER: Record<Exclude<TownPlace, 'signpost'>, { npc: NpcId; title: string; line: string }> = {
   coop: { npc: 'nasera', title: '범마을 농협', line: '이번 주 시세표에 오른 작물은 웃돈을 드립니다. 규칙대로요.' },
+  general: { npc: 'thresh', title: '등불 잡화점', line: '후후, 씨앗도 도구도 다 있어요. 밭 설비 도면도요.' },
   bakery: { npc: 'frieren', title: '느긋한 빵집 카페', line: '오늘 빵은 다 구웠어. 아마. 하나 골라.' },
   newspaper: { npc: 'janna', title: '범마을 신문사', line: '속보입니다! 어제 마을 소식, 여기 다 모았어요.' },
   police: { npc: 'volibas', title: '범마을 파출소', line: '이 마을의 평화는 이 볼리바스가 지킨다! 신고는 여기다.' },
@@ -81,9 +83,11 @@ type Props = {
   onClose: () => void;
   /** 친구에게 가기: walk in at this area's gate. */
   onTravel?: (area: TravelArea) => void;
+  /** 잡화점: the shop window (seeds, tools) or the farm window (building fixtures). */
+  onOpen?: (what: 'shop' | 'farm') => void;
 };
 
-export function TownPanel({ room, view, notify, place, onClose, onTravel }: Props) {
+export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen }: Props) {
   const life = view.life;
   const town = life?.town;
   const [run, busy] = useLifeAction(room, notify);
@@ -138,6 +142,36 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel }: Prop
           </>
         );
       }
+      case 'general':
+        return (
+          <>
+            <section className="l-town-notice" aria-label="씨앗과 도구">
+              <strong>씨앗 · 도구 · 비료 · 미끼</strong>
+              <p>계절 씨앗과 꾸러미, 비료·미끼·통발 같은 소모품은 상점 창에서 골라요.</p>
+            </section>
+            <GameButton variant="primary" onClick={() => onOpen?.('shop')}>
+              씨앗과 도구 보기
+            </GameButton>
+            <h3 className="l-town-head">밭 설비 도면</h3>
+            <ul className="l-town-list">
+              {FIXTURES.map((f) => (
+                <li key={f.id} className="l-town-row" data-testid={`fixture-${f.id}`}>
+                  <ItemIcon id={f.id} size={36} />
+                  <div>
+                    <strong>{f.name}</strong>
+                    <small>
+                      {f.note} · {formatBeom(f.recipe.beom)}
+                      {Object.entries(f.recipe.mats ?? {}).map(([m, n]) => ` · ${itemName(m)} ${n}`).join('')} · {SKILL_INFO[f.recipe.skill].name} {f.recipe.level}레벨
+                    </small>
+                  </div>
+                  <GameButton size="s" onClick={() => onOpen?.('farm')}>
+                    밭에서 만들기
+                  </GameButton>
+                </li>
+              ))}
+            </ul>
+          </>
+        );
       case 'bakery':
         return (
           <>
