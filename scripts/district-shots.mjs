@@ -12,6 +12,8 @@ import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { DISTRICTS } from '../app/lounge-districts.ts';
 import { REGIONS } from '../app/lounge-areas.ts';
 import { districtCounters } from '../app/lounge-district-counters.ts';
+import { npcSpot } from '../app/lounge-npc-schedule.ts';
+import { NPC_IDS } from '../app/lounge-npc-data.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -27,6 +29,19 @@ const noon = args.includes('--noon');
 const view = opt('view', 'fhd');
 // --panels: also open each counter window (E at the door) and capture it.
 const panels = args.includes('--panels');
+// --residents: also walk to the biggest group of residents in the hub and capture it.
+const residents = args.includes('--residents');
+// --at HH:MM: run the mock world (and so the page's clock) at this KST time today.
+const atOpt = opt('at', '');
+if (atOpt) {
+  const [hh, mm] = atOpt.split(':').map(Number);
+  const DAY = 86_400_000,
+    KST = 9 * 3_600_000;
+  const real = Date.now();
+  const shift = Math.floor((real + KST) / DAY) * DAY - KST + (hh * 60 + (mm || 0)) * 60_000 - real;
+  const original = Date.now;
+  Date.now = () => original() + shift;
+}
 fs.mkdirSync(out, { recursive: true });
 
 const server = await serve(pages);
@@ -68,9 +83,11 @@ const walkVillage = async (p) => {
   await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), p);
   await page.keyboard.down('Shift');
   try {
+    // Arrived, or stopped as close as the paths allow (a point inside a wall).
+    await until(() => document.querySelector('[data-testid=village-3d]')?.dataset.walking === 'true', 15000);
     await until((q) => {
       const d = document.querySelector('[data-testid=village-3d]')?.dataset;
-      return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < 1.2;
+      return d?.walking === 'false' && (Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < 1.2 || !!q);
     }, 900000, p);
   } finally {
     await page.keyboard.up('Shift');
@@ -96,6 +113,23 @@ try {
   await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
   await sleep(4000);
   await shot('hub-plaza');
+  if (residents) {
+    // The residents drawn in the hub right now (the mock world has 언덕 open).
+    const here = NPC_IDS.map((id) => npcSpot(id, Date.now(), { hill: true })).filter((s) => s.visible && s.area === 'village' && !s.walking);
+    let best = null;
+    for (const a of here) {
+      const n = here.filter((b) => Math.hypot(a.x - b.x, a.z - b.z) < 10);
+      if (!best || n.length > best.length) best = n;
+    }
+    if (best?.length) {
+      const cx = best.reduce((t, s) => t + s.x, 0) / best.length,
+        cz = best.reduce((t, s) => t + s.z, 0) / best.length;
+      console.log('   residents near', best.map((s) => s.id).join(', '));
+      await walkVillage({ x: cx, z: cz + 1.6 });
+      await sleep(3000);
+      await shot('hub-residents');
+    }
+  }
   for (const id of only) {
     const g = DISTRICTS[id].gate;
     await walkVillage(g.stand);
