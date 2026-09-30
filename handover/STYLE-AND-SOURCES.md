@@ -85,7 +85,8 @@
 - **캐릭터**: 친구 몸 높이 기준 1.72 유닛(캔버스는 그 640/540배, `FIGURE_CANVAS_RATIO`). 주민은 게임 속에서 **치비 그림**(`app/lounge-npc-chibi.ts`)을 친구와 같은 판 높이·발 선으로 세우고, 큰 그림은 대화창 초상에만 씁니다. 포즈 시트 주민 5명(루미·매화·허 선장·문 사장·결 목수)만 1.12배(`RESIDENT_SCALE`). 판은 똑바로 세우고 1/cos(52°)만큼 늘려서 카메라를 향한 판과 똑같이 보이게 합니다(뒤로 눕히면 뒤쪽 벽에 머리가 파묻힘). 밤에는 푸른 틴트(`villageFigureTint`).
 - **빛**: 시각 팔레트 `dayLighting`에 공통 배율 `VIEW_LIGHT`(반구광 ×1.6/1.5, 해 ×2.2/3, 노출 ×1.05)와 날씨 어둡게(`weatherDim`)를 곱합니다. 설정의 낮밤 변화를 끄면 모든 곳이 한낮입니다.
 - **구역 3D**: `app/lounge-district-kit.ts`의 `DistrictSet`을 상속합니다. 평평한 잔디 바닥과 길·광장 판(`PAVING`), kArchive 모델을 부지 상자에 맞춰 넣기(`place`), 캔버스 간판(`signpost`), 가장자리 나무 띠(`ring`), 밤 등불(`lantern`·`gardenLamp`, 점광원 7개 이하). 집은 마을 중심과 같은 크기(문 높이 1.45, `villageHouseScale`)입니다.
-- **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다.
+- **실내**(회관·카지노·허풍 주점·은행·미용실, 2026-10-02): 같은 카메라·걷기·캐릭터·빛을 `app/lounge-interior-view.ts`로 씁니다. 방은 자기 단위(네트워크 좌표 × 0.2)로 만들어져 있어서, 방 한 단위를 바깥 1.5 단위로 봅니다(`INTERIOR_VIEW_SCALE`). 그래서 화면에서 친구 키·걷는 빠르기·카메라 따라오기가 시장 거리와 똑같고, 방은 화면의 약 3/4을 채웁니다. 카메라가 옆으로 돌지 않아 양옆 벽은 얇은 띠로 보이므로, 벽에 거는 것은 뒷벽에 걸고 문은 왼쪽 벽 밖에 카메라를 보는 밝은 문으로 세웁니다. 어두운 방(카지노·주점)의 캐릭터는 등불 색으로 살짝 어둡게(`INTERIOR_FIGURE_TINT`) 합니다.
+- **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다. 실내는 `scripts/interior-shots.mjs --pages <빌드>`(방마다 문 앞·테이블 앞 화면과 그리기 호출 수).
 
 ### 소리
 
