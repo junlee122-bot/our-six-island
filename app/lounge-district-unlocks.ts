@@ -18,6 +18,7 @@ import { WALKING_NPCS, type WalkingNpcId } from './lounge-npc-data.ts';
 import { DISTRICTS, DISTRICT_FLAG, districtRuleMet, type DistrictCtx, type DistrictId } from './lounge-districts.ts';
 import { addMemory, addNews, hasFlag } from './lounge-life-plus.ts';
 import type { LifeState } from './lounge-life.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
 
 /** Districts stage 2 opens by a goal (the others are open from the start or not built). */
 export const GOAL_DISTRICTS = ['harbor', 'hillside'] as const satisfies readonly DistrictId[];
@@ -81,20 +82,24 @@ export function settleDistrictUnlocks(life: LifeState, now: number): GoalDistric
 }
 
 export type DistrictsView = {
-  /** Districts I can walk into now. */
+  /** Districts I can walk into now (the village's, or all built ones with the explorer pass). */
   open: DistrictId[];
+  /** 승준's temporary explorer pass (lounge-explorer-pass.ts). */
+  pass: boolean;
   /** Goal progress for the gate signs. */
   goals: Record<GoalDistrict, { have: number; need: number; open: boolean }>;
   /** Which stage-1 residents count toward 언덕 (names shown on the sign). */
   close: WalkingNpcId[];
 };
-export function districtsView(life: LifeState): DistrictsView {
+export function districtsView(life: LifeState, actor?: number, now = 0): DistrictsView {
   const ctx = districtCtx(life);
+  const pass = hasExplorerPass(actor, now);
   const hill = DISTRICTS.hillside.unlock,
     harbor = DISTRICTS.harbor.unlock;
   const flagged = (id: GoalDistrict) => hasFlag(life, DISTRICT_FLAG[id]!);
   return {
-    open: (['market', ...GOAL_DISTRICTS.filter(flagged)] as DistrictId[]),
+    open: ['market', ...GOAL_DISTRICTS.filter((id) => pass || flagged(id))] as DistrictId[],
+    pass,
     goals: {
       harbor: { have: ctx.fishSpecies ?? 0, need: harbor.kind === 'fish' ? harbor.species : 0, open: flagged('harbor') },
       hillside: { have: ctx.residentFriends ?? 0, need: hill.kind === 'residents' ? hill.count : 0, open: flagged('hillside') },

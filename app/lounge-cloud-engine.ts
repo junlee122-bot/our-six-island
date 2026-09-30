@@ -35,6 +35,7 @@ import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
 import { DISTRICTS, districtOpen } from './lounge-districts.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
@@ -508,7 +509,7 @@ export function cloudTransition(
           // 항구 구역 / 언덕 주택가 open only once their village goal is recorded.
           if (action.kind === 'area' && (action.area === 'harbor' || action.area === 'hillside')) {
             const flags = readLife(g.life).flags ?? [];
-            if (!districtOpen(action.area, { flags })) throw new CloudError(DISTRICTS[action.area].hint, 403);
+            if (!districtOpen(action.area, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[action.area].hint, 403);
           }
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;

@@ -33,6 +33,7 @@ import { SKILLS } from './lounge-growth-data.ts';
 import { moodTreat } from './lounge-mood.ts';
 import { STALL_IDS, TOWN_ACTION_AREA, TOWN_ACTION_KINDS, isTownAction, type StallId, type TownAction, type TownActionKind } from './lounge-town-data.ts';
 import { DISTRICT_FLAG, DISTRICT_IDS, type DistrictId } from './lounge-districts.ts';
+import { hasExplorerPass } from './lounge-explorer-pass.ts';
 
 // ---------------------------------------------------------------- numbers
 /** 새벽 경매: KST hours [from, to). */
@@ -238,9 +239,11 @@ export function townAction(
 ): { life: LifeState; ledger: LoungeLedger } {
   const uid = member.id,
     wallet = walletOf(uid);
+  // A district counts as open for this friend once the village opened it, or with 승준's explorer pass.
+  const opened = (flag: string) => hasFlag(life, flag) || hasExplorerPass(member.actor, now);
   switch (a.kind) {
     case 'auctionSell': {
-      if (!hasFlag(life, DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
+      if (!opened(DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
       if (!auctionOpen(now)) fail(TOWN_REJECT.auctionClosed);
       if (!isItemId(a.item) || ITEM_BY_ID[a.item].kind !== 'fish') fail(TOWN_REJECT.auctionFish);
       const n = a.n;
@@ -289,7 +292,7 @@ export function townAction(
       const day = kstDay(now);
       if (!(STALL_IDS as readonly unknown[]).includes(a.stall)) fail(TOWN_REJECT.stallClosed);
       if (!stallOpenOn(a.stall, day)) fail(a.stall === 'stall-harbor' ? TOWN_REJECT.harborStallClosed : TOWN_REJECT.stallClosed);
-      if (a.stall === 'stall-harbor' && !hasFlag(life, DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
+      if (a.stall === 'stall-harbor' && !opened(DISTRICT_FLAG.harbor!)) fail(TOWN_REJECT.harborShut);
       const t = townOf(life, uid, now);
       if ((t.stall ?? []).includes(a.stall)) fail(TOWN_REJECT.stallBought);
       if ((t.stall ?? []).length >= STALL_PER_DAY) fail(TOWN_REJECT.stallMax);
@@ -302,7 +305,7 @@ export function townAction(
     }
     case 'readingClub': {
       if (!(SKILLS as readonly unknown[]).includes(a.skill)) fail(TOWN_REJECT.clubSkill);
-      if (!hasFlag(life, DISTRICT_FLAG.hillside!)) fail(TOWN_REJECT.hillShut);
+      if (!opened(DISTRICT_FLAG.hillside!)) fail(TOWN_REJECT.hillShut);
       if (!readingOpen(now)) fail(TOWN_REJECT.clubClosed);
       const week = weekOfDay(kstDay(now));
       const t = townOf(life, uid, now);

@@ -1550,7 +1550,7 @@ export function lifeView(
     venues: venuesView(life),
     ...(UUID.test(uid) && actorValid(actor) ? { angling: anglingView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
-    districts: districtsView(life),
+    districts: districtsView(life, actorValid(actor) ? actor : undefined, now),
     ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now) } : {}),
   };
 }

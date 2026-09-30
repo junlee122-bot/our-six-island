@@ -469,3 +469,61 @@ test('in the world every resident but the pose-sheet five is a chibi at a friend
     assert.ok(NPCS[id].art.portrait);
   }
 });
+
+test('승준 explorer pass: the harbor and the hillside and their counters are open for him only', async () => {
+  const { EXPLORER_PASS } = await import('../app/lounge-explorer-pass.ts');
+  const seungjun = EXPLORER_PASS.actor;
+  // The view: open for him, still closed for the others (the village record is untouched).
+  const s = world(4);
+  const me = s.members[seungjun],
+    other = s.members[0];
+  const mine = lifeView(s.life, me.id, me.actor, T0).districts;
+  assert.equal(mine.pass, true);
+  assert.deepEqual([...mine.open].sort(), ['harbor', 'hillside', 'market']);
+  assert.equal(mine.goals.harbor.open, false, 'the village has not opened it');
+  const theirs = lifeView(s.life, other.id, other.actor, T0).districts;
+  assert.equal(theirs.pass, false);
+  assert.deepEqual(theirs.open, ['market']);
+  assert.equal(districtOpen('harbor', { flags: [], pass: true }), true);
+  // Server rules honour it: dawn auction, reading club and the harbor rod spots.
+  const fish = FISH.find((f) => f.sell >= 500 && f.weight > 1);
+  s.life.ext[me.id].inv[fish.id] = 2;
+  s.life.ext[other.id].inv[fish.id] = 2;
+  s.act(me, { kind: 'auctionSell', item: fish.id, n: 1 }, at(1, 6, 20));
+  assert.throws(() => s.act(other, { kind: 'auctionSell', item: fish.id, n: 1 }, at(1, 6, 20)), /항구 구역/);
+  const wed = dayWith(3);
+  s.act(me, { kind: 'readingClub', skill: 'fish' }, at(wed, 19, 30));
+  assert.throws(() => s.act(other, { kind: 'readingClub', skill: 'fish' }, at(wed, 19, 30)), /언덕 주택가/);
+  assert.throws(() => s.act(other, { kind: 'anglerCast', spot: 'breakwater' }, at(1, 12)), /열리지|아직|갈 수 없/);
+  s.act(me, { kind: 'anglerCast', spot: 'breakwater' }, at(1, 12));
+  // After it ends he follows the village's record like everyone else.
+  const late = world(4);
+  assert.deepEqual(lifeView(late.life, late.members[seungjun].id, seungjun, EXPLORER_PASS.until).districts.open, ['market']);
+});
+
+test('승준 explorer pass: the server lets him into the districts, not the others', async () => {
+  const { EXPLORER_PASS } = await import('../app/lounge-explorer-pass.ts');
+  let w = { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} };
+  const mk = (actor) => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
+  const run = async (p, op, extra = {}) => {
+    const command = { op, connection: p.connection, ...(p.code ? { code: p.code } : {}), ...(!['read', 'wallet'].includes(op) ? { requestId: crypto.randomUUID(), sequence: ++p.sequence } : {}), ...(['open', 'join'].includes(op) ? { epoch: p.epoch } : {}), ...extra };
+    const r = cloudTransition(w, p, command, await commandHash(command), T0);
+    w = r.state;
+    p.epoch = r.response.epoch;
+    if (r.response.code) p.code = r.response.code;
+    return r.response;
+  };
+  const him = mk(EXPLORER_PASS.actor),
+    friend = mk(0);
+  for (const p of [him, friend]) {
+    await run(p, 'wallet');
+    await run(p, 'open', { code: 'BEMTADUVLY' });
+  }
+  for (const area of ['harbor', 'hillside']) {
+    const ok = await run(him, 'action', { action: { kind: 'area', area } });
+    assert.ok(!ok.error, `${area}: ${ok.error}`);
+    const no = await run(friend, 'action', { action: { kind: 'area', area } });
+    assert.ok(no.error, `${area} still closed for the others`);
+  }
+  assert.ok(!(w.life.flags ?? []).includes('district-harbor'), 'no village flag was written');
+});

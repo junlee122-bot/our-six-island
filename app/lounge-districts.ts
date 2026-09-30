@@ -126,6 +126,8 @@ export const DISTRICT_FLAG: Partial<Record<DistrictId, string>> = { harbor: 'dis
 export type DistrictCtx = {
   /** Village flags (the server's record of opened districts). */
   flags?: readonly string[];
+  /** 승준's temporary explorer pass (lounge-explorer-pass.ts): every district is open for him. */
+  pass?: boolean;
   /** Different fish species in the museum. */
   fishSpecies?: number;
   /** Stage-1 residents some friend is 친한 사이 with. */
@@ -156,7 +158,7 @@ export function districtRuleMet(id: DistrictId, ctx: DistrictCtx): boolean {
  */
 export function districtOpen(id: DistrictId, ctx: DistrictCtx = {}): boolean {
   if (!districtBuilt(id)) return false;
-  if (DISTRICTS[id].unlock.kind === 'open') return true;
+  if (DISTRICTS[id].unlock.kind === 'open' || ctx.pass) return true;
   const flag = DISTRICT_FLAG[id];
   return !!flag && !!ctx.flags?.includes(flag);
 }
@@ -175,6 +177,20 @@ export function districtGoalText(id: DistrictId, ctx: DistrictCtx): string {
     case 'open':
       return '';
   }
+}
+
+/**
+ * Village flags as one friend's rules see them: with the explorer pass the
+ * built districts count as opened (their fishing spots, auction, stalls,
+ * reading club), without changing the village's own record.
+ */
+export function districtFlagsFor(flags: readonly string[] | undefined, pass: boolean): string[] {
+  const out = [...(flags ?? [])];
+  if (pass) for (const id of BUILT_DISTRICTS) {
+    const f = DISTRICT_FLAG[id];
+    if (f && !out.includes(f)) out.push(f);
+  }
+  return out;
 }
 
 /** 친구에게 가기 signpost in the hub, beside the plaza board (hub coordinates). */

@@ -306,7 +306,7 @@ export function villageAction(
   });
   for (const id of DISTRICT_IDS) {
     const d = DISTRICTS[id];
-    labels.set('district:' + id, { label: districtOpen(id, { flags: life?.flags }) ? `${josa(d.name, '으로/로')} 가기` : `${d.name} · 아직 닫혀 있어요` });
+    labels.set('district:' + id, { label: districtOpen(id, { flags: life?.flags, pass: life?.districts?.pass }) ? `${josa(d.name, '으로/로')} 가기` : `${d.name} · 아직 닫혀 있어요` });
     candidates.push({
       kind: 'enter',
       distance: gateDistance(id, point),

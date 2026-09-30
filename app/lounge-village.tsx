@@ -1090,8 +1090,8 @@ export function Village3D(props: Props) {
         dv
           ? {
               market: { open: true, progress: '' },
-              harbor: { open: dv.goals.harbor.open, progress: `박물관 물고기 ${Math.min(dv.goals.harbor.have, dv.goals.harbor.need)}/${dv.goals.harbor.need}종` },
-              hillside: { open: dv.goals.hillside.open, progress: `친한 주민 ${Math.min(dv.goals.hillside.have, dv.goals.hillside.need)}/${dv.goals.hillside.need}명` },
+              harbor: { open: dv.open.includes('harbor'), progress: `박물관 물고기 ${Math.min(dv.goals.harbor.have, dv.goals.harbor.need)}/${dv.goals.harbor.need}종` },
+              hillside: { open: dv.open.includes('hillside'), progress: `친한 주민 ${Math.min(dv.goals.hillside.have, dv.goals.hillside.need)}/${dv.goals.hillside.need}명` },
             }
           : {},
       );
@@ -1939,7 +1939,7 @@ export function Village3D(props: Props) {
             npcs.push({ actor: Number(id.slice(7)), point: figure.point });
         // Walking up to an open district's gate starts fetching its models (before the fade).
         for (const id of ['market', 'harbor', 'hillside'] as const)
-          if (!prefetched.has(id) && districtOpen(id, { flags: latest.current.life?.flags }) && gateDistance(id, position) < DISTRICT_PREFETCH_RADIUS) {
+          if (!prefetched.has(id) && districtOpen(id, { flags: latest.current.life?.flags, pass: latest.current.life?.districts?.pass }) && gateDistance(id, position) < DISTRICT_PREFETCH_RADIUS) {
             prefetched.add(id);
             void prefetchDistrict(id);
           }
@@ -2975,7 +2975,7 @@ export function Village3D(props: Props) {
                 </button>
                 {DISTRICT_IDS.map((id) => {
                   const d = DISTRICTS[id];
-                  const open = districtOpen(id);
+                  const open = districtOpen(id, { flags: props.life?.flags, pass: props.life?.districts?.pass });
                   const pin = miniEdge(d.gate.stand);
                   return (
                     <button type="button" key={id} className="hv-minimap-place" data-minimap-place={'district-' + id}
@@ -3682,7 +3682,7 @@ function SpotPrompt({
           <Store size={14} /> {d.no}. {d.name}
         </strong>
         <small>
-          {districtOpen(spot.id, { flags: life?.flags }) ? `${d.gate.road} · ${d.tagline}` : `${d.hint}${goalText(spot.id, life)}`}
+          {districtOpen(spot.id, { flags: life?.flags, pass: life?.districts?.pass }) ? `${d.gate.road} · ${d.tagline}` : `${d.hint}${goalText(spot.id, life)}`}
           {key}
         </small>
       </div>

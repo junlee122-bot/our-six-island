@@ -119,7 +119,7 @@ export function useOutdoor({
   const toDistrict = useCallback(
     (id: DistrictId) => {
       const life = room.snapshot().life;
-      if (!districtOpen(id, { flags: life?.flags })) {
+      if (!districtOpen(id, { flags: life?.flags, pass: life?.districts?.pass })) {
         notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
         return;
       }
@@ -147,7 +147,7 @@ export function useOutdoor({
         return;
       }
       if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
-      if (!districtOpen(area, { flags: room.snapshot().life?.flags })) return;
+      if (!districtOpen(area, { flags: room.snapshot().life?.flags, pass: room.snapshot().life?.districts?.pass })) return;
       void prefetchDistrict(area);
       go({ area, spawn: { ...REGIONS[area].arrive.village! } });
     },
