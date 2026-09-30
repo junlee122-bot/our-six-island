@@ -9,9 +9,14 @@
 .l-fw {
   display: grid;
   gap: var(--sp-3);
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  color: var(--text);
+  padding: 18px 22px 16px;
+  border-radius: var(--r-s);
+  color: var(--ff-ink);
   font-size: var(--fs-body);
+  background:
+    repeating-linear-gradient(180deg, transparent 0 27px, var(--ff-rule) 27px 28px),
+    var(--ff-paper);
+  box-shadow: var(--lift-1);
 }
 .l-fw-cols {
   display: grid;
@@ -59,39 +64,43 @@
 /* ------------------------------------------------------------ tile grid */
 .l-fw-grid {
   display: grid;
-  gap: var(--sp-1);
-  justify-content: start;
-  padding: var(--sp-3);
-  background: var(--surface-sunken);
+  gap: var(--sp-4);
+  justify-items: center;
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--pal-lime-79);
   border-radius: var(--r-m);
   box-shadow: var(--ring-line);
 }
+.l-fw-bed {
+  position: relative;
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--ff-wood);
+  box-shadow: var(--lift-1);
+}
+.l-fw-bedname {
+  position: absolute;
+  top: calc(-1 * var(--sp-2));
+  left: var(--sp-2);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--ff-wood-dark);
+  color: var(--text-on-frame);
+  font-size: var(--fs-cap);
+}
 .l-fw-row {
   display: grid;
-  grid-template-columns: repeat(3, 72px);
+  grid-template-columns: repeat(3, 76px);
   gap: var(--sp-1);
-  padding: 0 var(--sp-2);
-  background: var(--ff-wood);
-}
-.l-fw-row[data-bed='back']:first-child,
-.l-fw-row[data-gap] {
-  padding-top: var(--sp-2);
-  border-radius: var(--r-s) var(--r-s) 0 0;
-}
-.l-fw-row:nth-child(2),
-.l-fw-row:last-child {
-  padding-bottom: var(--sp-2);
-  border-radius: 0 0 var(--r-s) var(--r-s);
-}
-.l-fw-row[data-gap] {
-  margin-top: var(--sp-4);
 }
 .l-fw-tile {
   position: relative;
   display: grid;
   place-items: center;
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   padding: 0;
   border: 0;
   border-radius: var(--r-s);

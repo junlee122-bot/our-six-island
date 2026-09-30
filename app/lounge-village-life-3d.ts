@@ -26,6 +26,15 @@ import {
   type FarmYard,
 } from './lounge-village-layout';
 import { ACTORS } from './lounge-roster';
+import {
+  FarmExtrasLayer,
+  deadShapes,
+  fertShapes,
+  giantShapes,
+  isNewCrop,
+  newCropShapes,
+  type YardFarm,
+} from './lounge-farm-3d';
 import { batchDirectMeshes } from './lounge-village-world';
 
 const std = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) =>
@@ -144,9 +153,23 @@ function cropInstances(
   crop: Crop,
   stage: number,
   seed: number,
+  /** 텃밭 확장: visual stage 0–4 (seed, sprout, leaves, flower, ripe). */
+  growth?: number,
 ) {
   const local: Instance[] = [];
-  cropShapes(local, crop, stage, seed);
+  const g = growth ?? [0, 1, 2, 4][stage] ?? 0;
+  if (isNewCrop(crop)) newCropShapes(local, crop, g, seed);
+  else {
+    // The original crops keep their shapes: leaves (2) are drawn smaller, and
+    // the flowering stage (3) adds buds before the produce shows (4).
+    cropShapes(local, crop, g <= 1 ? g : g === 4 ? 3 : 2, seed);
+    if (g === 2) for (const i of local) i.m.premultiply(new THREE.Matrix4().makeScale(0.8, 0.8, 0.8));
+    if (g === 3)
+      for (let k = 0; k < 3; k++) {
+        const a = seed + k * 2.1;
+        local.push({ geo: GEO.sphere, mat: MAT.flower, m: matrix(Math.cos(a) * 0.09, 0.26, Math.sin(a) * 0.09, 0.022, 0.018, 0.022) });
+      }
+  }
   const place = new THREE.Matrix4()
     .makeTranslation(at.x, SOIL_TOP, at.z)
     .multiply(new THREE.Matrix4().makeScale(CROP_SCALE, CROP_SCALE, CROP_SCALE));
@@ -464,6 +487,8 @@ function buildYards(root: THREE.Object3D) {
 
 export type LifeLayerUpdate = {
   plots: Record<number, PublicPlot[]>;
+  /** 텃밭 확장: fixtures, machines and giant beds per actor (lounge-farm-3d yardFarms). */
+  farms?: Record<number, YardFarm>;
   /** Plots of mine that were watered (darker soil). */
   watered: boolean[];
   selfActor: number;
@@ -476,6 +501,8 @@ export class VillageLifeLayer {
   readonly root = new THREE.Group();
   private crops: Batches;
   private soil: Batches;
+  /** 텃밭 확장: fixtures on the tiles and machines in the work yards. */
+  private extras: FarmExtrasLayer;
   private fruit: Batches;
   private lastKey = '';
   private lastFruit = '';
@@ -525,6 +552,10 @@ export class VillageLifeLayer {
     this.root.add(soilGroup, cropGroup, fruitGroup);
     this.soil = new Batches(soilGroup);
     this.crops = new Batches(cropGroup);
+    this.extras = new FarmExtrasLayer(this.root, (group) => {
+      const batches = new Batches(group);
+      return (instances) => batches.set(instances);
+    });
     this.fruit = new Batches(fruitGroup);
     buildMarket(this.root);
     this.readyBadge = badge('#5f9a3f', '!');
@@ -534,6 +565,10 @@ export class VillageLifeLayer {
     this.root.add(this.readyBadge, this.mailBadge);
     this.night = this.buildNight();
     this.update({ plots: {}, watered: [], selfActor: -1, ripeTrees: [], unreadMail: false });
+  }
+  /** 텃밭 확장: the reused kArchive onggi / scarecrow models (village model cache). */
+  loadFarm(load: (url: string) => Promise<THREE.Group>, changed: (id: string) => void) {
+    return this.extras.load(load, changed);
   }
   /** Lets the layer brighten the shared lamp glow material at night. */
   setLampGlowMaterial(material: THREE.MeshBasicMaterial) {
@@ -682,7 +717,8 @@ export class VillageLifeLayer {
       }
       changed = true;
     }
-    const key = JSON.stringify([u.plots, u.watered, u.selfActor]);
+    if (this.extras.update(u.farms ?? {})) changed = true;
+    const key = JSON.stringify([u.plots, u.watered, u.selfActor, u.farms ?? null]);
     if (key !== this.lastKey) {
       this.lastKey = key;
       changed = true;
@@ -694,6 +730,18 @@ export class VillageLifeLayer {
         // 6 / 9 / 12 plots: the back bed stays fallow until the farm grows.
         const total = Math.max(6, Math.min(12, plots.length));
         const mine = yard.actor === u.selfActor;
+        // 텃밭 확장: a giant bed is one big crop over its six tiles.
+        const giants = u.farms?.[yard.actor]?.giants ?? [];
+        for (const bed of giants) {
+          const plot = plots[bed * 6];
+          if (!plot?.crop) continue;
+          const r = yard.beds[bed],
+            local: Instance[] = [];
+          giantShapes(local, plot.crop);
+          const place = new THREE.Matrix4().makeTranslation(r.x, SOIL_TOP, r.z);
+          for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
+          if (mine) readyYard = yard;
+        }
         for (let i = 0; i < 12; i++) {
           const at = yardPlotCenter(yard, i);
           if (i >= total) {
@@ -712,8 +760,21 @@ export class VillageLifeLayer {
             mat: wet ? MAT.soilWet : MAT.soil,
             m: matrix(at.x, 0.14, at.z, PLOT_SIZE, 0.12, PLOT_SIZE),
           });
-          if (plot?.crop) {
-            cropInstances(crops, at, plot.crop, plot.stage, yard.actor * 1.7 + i);
+          const seed = yard.actor * 1.7 + i;
+          if (plot?.fert) {
+            const local: Instance[] = [];
+            fertShapes(local, plot.fert, seed);
+            const place = new THREE.Matrix4().makeTranslation(at.x, SOIL_TOP, at.z);
+            for (const k of local) soil.push({ ...k, m: place.clone().multiply(k.m) });
+          }
+          if (!plot?.crop && plot?.dead) {
+            const local: Instance[] = [];
+            deadShapes(local, seed);
+            const place = new THREE.Matrix4().makeTranslation(at.x, SOIL_TOP, at.z);
+            for (const k of local) crops.push({ ...k, m: place.clone().multiply(k.m) });
+          }
+          if (plot?.crop && !giants.includes(i < 6 ? 0 : 1)) {
+            cropInstances(crops, at, plot.crop, plot.stage, seed, plot.growth);
             if (mine && plot.stage === 3) readyYard = yard;
           }
         }

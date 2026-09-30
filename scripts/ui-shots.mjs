@@ -78,6 +78,20 @@ function seedLife(life, uid) {
   x.inv = { ...(x.inv ?? {}), wood: 48, stone: 30, copper: 6, pinecone: 4, crucian: 1, azalea: 2, wildflower: 2 };
   g.r = { forge: { got: 92_000, mat: { wood: 70, stone: 45 }, by: { 0: 2, 6: 1 }, start: now - 2 * DAY } };
   life.bonds = { ...(life.bonds ?? {}), '2-3': 1_180, '1-3': 700, '0-3': 260, '3-6': 90 };
+  // 텃밭 확장: a sprinkler and a scarecrow on the grid, two machines at work,
+  // a few artisan goods and a filled shipping bin (farm window tabs).
+  (life.farmx ??= {})[uid] = {
+    fx: { 1: { k: 'sprinkler', at: now - DAY }, 4: { k: 'scarecrow', at: now - DAY } },
+    mach: {
+      0: { k: 'jar', out: 'jar-cabbage', q: 2, n: 1, at: now - 3_600_000, done: now + 5 * 3_600_000 },
+      1: { k: 'keg', out: 'keg-grape', n: 1, at: now - DAY, done: now - 60_000 },
+      2: { k: 'dehydrator' },
+    },
+    goods: { 'jar-strawberry': 2, 'keg-grape@1': 1, 'honey-zinnia': 3 },
+    bin: { day, items: { carrot: 6, 'tomato@2': 2 } },
+    st: day,
+    log: [{ kind: 'guard', at: now - 7 * 3_600_000 }, { kind: 'ship', at: now - 8 * 3_600_000, n: 9, beom: 4_320 }],
+  };
 }
 
 async function runView(browser, base, view, report) {
@@ -248,6 +262,14 @@ async function runView(browser, base, view, report) {
   await step('bag', async () => { await focusScene(); await page.keyboard.press('KeyI'); await sleep(1000); await snap('bag'); });
   await step('shop', async () => { await menu(/범타듀 상점/); await snap('shop'); });
   await step('ledger', async () => { await menu(/내 텃밭/); await snap('ledger'); });
+  // 텃밭 확장 tabs of the same window.
+  for (const [name, tab] of [['farm-layout', /밭 배치/], ['farm-works', /^가공/], ['farm-market', /출하·품평회/]])
+    await step(name, async () => {
+      await menu(/내 텃밭/);
+      if (!(await H.clickText(tab, 'dialog[open] [role=tab]'))) throw new Error(`텃밭 탭을 찾지 못했습니다: ${tab}`);
+      await sleep(700);
+      await snap(name);
+    });
   await step('growth', async () => {
     await focusScene();
     await page.keyboard.press('KeyT');

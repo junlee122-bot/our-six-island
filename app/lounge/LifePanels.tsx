@@ -174,9 +174,8 @@ function Stepper({
  * 내 텃밭 (VILL-2 + 텃밭 확장): one window with four tabs — 텃밭 장부 (the
  * wooden notebook in FarmLedger.tsx), 밭 배치, 가공, 출하·품평회
  * (FarmWorks.tsx). My actor comes from the life view when the caller does
- * not pass it. The last tab stays for the session.
+ * not pass it. It always opens on the ledger (E at the farm expects it).
  */
-let lastFarmPage: FarmPage = 'ledger';
 export function FarmModal({
   room,
   view,
@@ -192,11 +191,7 @@ export function FarmModal({
   onWalk?: (point: VillagePoint) => void;
   actor?: number;
 }) {
-  const [page, setPageState] = useState<FarmPage>(lastFarmPage);
-  const setPage = (next: FarmPage) => {
-    lastFarmPage = next;
-    setPageState(next);
-  };
+  const [page, setPage] = useState<FarmPage>('ledger');
   const me = actor ?? view.life?.actors?.[view.self] ?? 0;
   const farmx = view.life?.farmx;
   const now = useNow(true, 15_000) + view.clockOffset;

@@ -94,6 +94,7 @@ import {
   npcLine,
   npcPose,
   plotsForActor,
+  plotExtras,
   type DayPhase,
 } from './lounge-village-life';
 import {
@@ -104,6 +105,9 @@ import {
   type LifeView,
   type Quality,
 } from './lounge-life';
+// 텃밭 확장: growth stages and yard fixtures / machines for the 3D farm.
+import { growthStage } from './lounge-farm';
+import { yardFarms } from './lounge-farm-3d';
 import { loungeAudio } from './lounge-audio';
 import {
   villageAction,
@@ -484,6 +488,7 @@ function getVillageWorld(): WorldState {
       }),
       ...karchive.load(loadModel, changed),
       ...valley.loadAll(loadModel, changed),
+      ...life.loadFarm(loadModel, changed),
       ...growth.load(loadModel, changed),
       ...shops.loadAll(loadModel, changed),
     ]),
@@ -1064,6 +1069,7 @@ export function Village3D(props: Props) {
         plots[me] = life.me.farm.map((plot) => ({
           crop: plot.crop,
           stage: plot.crop ? plotStage(plot, at) : 0,
+          ...plotExtras({ ...plot, growth: plot.crop ? growthStage(plot, at) : undefined }),
         }));
       const seasonChanged = life?.calendar
         ? world.season.update({
@@ -1140,6 +1146,7 @@ export function Village3D(props: Props) {
       }
       const changed = world.life.update({
         plots,
+        farms: yardFarms(life),
         watered: life?.me.farm?.map((plot) => plot.wateredAt !== null) ?? [],
         selfActor: me,
         ripeTrees: life

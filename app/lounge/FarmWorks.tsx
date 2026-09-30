@@ -186,8 +186,11 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
           <Glyph name="grid" size={16} /> 칸을 골라 설비를 놓거나 옮겨요. 설비가 있는 칸에는 심을 수 없어요.
         </p>
         <div className="l-fw-grid" role="grid" aria-label={`밭 ${size}칸`}>
-          {GRID_ROWS_VIEW.map((row, r) => (
-            <div key={r} className="l-fw-row" role="row" data-bed={r < 2 ? 'back' : 'front'} data-gap={r === 2 || undefined}>
+          {[GRID_ROWS_VIEW.slice(0, 2), GRID_ROWS_VIEW.slice(2)].map((bedRows, b) => (
+            <div key={b} className="l-fw-bed" data-bed={b === 0 ? 'back' : 'front'}>
+              <span className="l-fw-bedname">{b === 0 ? '뒤 두둑 (집 쪽)' : '앞 두둑 (대문 쪽)'}</span>
+              {bedRows.map((row, r) => (
+            <div key={r} className="l-fw-row" role="row">
               {row.map((tile) => {
                 const p = farm[tile],
                   f = fixtureOf(tile);
@@ -223,6 +226,8 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
                   </button>
                 );
               })}
+            </div>
+              ))}
             </div>
           ))}
         </div>

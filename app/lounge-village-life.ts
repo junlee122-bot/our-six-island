@@ -205,7 +205,19 @@ export type PublicPlot = {
   stage: 0 | 1 | 2 | 3;
   /** Growing and not watered today (friends can water it); unknown = undefined. */
   thirsty?: boolean;
+  /** 텃밭 확장: visual stage 0–4, fertilizer level, the crop that withered here. */
+  growth?: number;
+  fert?: number;
+  dead?: Crop;
 };
+/** 텃밭 확장 extras of a plot for the 3D layer (absent fields stay absent). */
+export function plotExtras(p: { crop: Crop | null; growth?: number; fert?: number; dead?: Crop }) {
+  return {
+    ...(p.crop && p.growth !== undefined ? { growth: p.growth } : {}),
+    ...(p.crop && p.fert ? { fert: p.fert } : {}),
+    ...(!p.crop && p.dead ? { dead: p.dead } : {}),
+  };
+}
 /**
  * Plots to draw in front of `actor`'s home. My own farm comes from `me.farm`
  * (fresher, includes timers); friends' from `housesPlotsPublic` via the
@@ -225,6 +237,7 @@ export function plotsForActor(
       crop: p.crop,
       stage: p.stage,
       thirsty: !!p.crop && p.stage < 3 && p.wateredAt === null && !p.rained,
+      ...plotExtras(p),
     }));
   else {
     const uid = Object.entries(life.actors ?? {}).find(
@@ -242,6 +255,7 @@ export function plotsForActor(
       crop: p.crop ?? null,
       stage: (p.crop ? stage : 0) as 0 | 1 | 2 | 3,
       ...(p.crop && thirsty !== undefined ? { thirsty } : {}),
+      ...plotExtras(p),
     };
   });
   return out;
