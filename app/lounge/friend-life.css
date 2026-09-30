@@ -1,146 +1,8 @@
-/* Friend-life UI (C-3..C-7, C-10): the friend NPC speech box, heart rewards
-   and "내 대사 쓰기" in 친구 사이, the festival panel and its mini-games, the
-   "마을 적응하기" checklist, the festival banner, museum stats and the digest's
-   "내일 예고". Warm cream cards like the rest of the life UI; motion stays
-   short and turns off under reduced motion. */
-
-/* ------------------------------------------------------------ talk box */
-.l-talk {
-  position: fixed;
-  inset: auto 0 28px;
-  margin: 0 auto;
-  width: min(760px, calc(100vw - 32px));
-  max-width: none;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  overflow: visible;
-}
-.l-talk::backdrop {
-  background: linear-gradient(to top, color-mix(in srgb, var(--pal-teal-23) 25%, transparent), transparent 45%);
-}
-.l-talk:focus {
-  outline: none;
-}
-.l-talk-box {
-  display: flex;
-  gap: 16px;
-  align-items: stretch;
-  padding: 16px 18px;
-  border: 2px solid var(--paper-300);
-  border-radius: var(--r-l);
-  background: var(--note-50);
-  color: var(--pal-grey-30);
-  box-shadow: var(--lift-3), var(--lift-1);
-  animation: l-talk-in 0.2s ease-out;
-}
-@keyframes l-talk-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-.l-talk-portrait {
-  flex: none;
-  width: 108px;
-  height: 108px;
-  border-radius: var(--r-l);
-  background: var(--paper-100);
-  overflow: hidden;
-  border: 2px solid var(--paper-200);
-}
-.l-talk-portrait > * {
-  width: 100%;
-  height: 100%;
-}
-.l-talk-main {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-.l-talk-main header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.l-talk-main header strong {
-  font-size: 17px;
-}
-.l-talk-away {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--text-soft);
-}
-.l-talk-text {
-  display: block;
-  min-height: 3.2em;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: var(--font-body);
-  font-size: 16px;
-  line-height: 1.6;
-  text-align: left;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-}
-.l-talk-text:focus-visible {
-  outline: 2px solid var(--leaf-600);
-  outline-offset: 4px;
-  border-radius: var(--r-s);
-}
-.l-talk-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: flex-end;
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-soft);
-}
-.l-talk-choices {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.l-talk-choices button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--paper-200);
-  border-radius: var(--r-m);
-  background: var(--paper-100);
-  color: inherit;
-  font: var(--font-body);
-  font-size: 14px;
-  text-align: left;
-  cursor: pointer;
-}
-.l-talk-choices button:hover,
-.l-talk-choices button:focus-visible {
-  border-color: var(--pal-green-58);
-  background: var(--note-50);
-  outline: none;
-}
-.l-talk-choices button[data-kind='bye'] {
-  background: transparent;
-  color: var(--text-soft);
-}
-.l-talk-choices button[data-kind='request'] {
-  border-color: var(--pal-orange-77);
-}
-.l-talk-choices kbd {
-  display: inline-grid;
-  place-items: center;
-}
+/* Friend-life UI (C-4..C-7, C-10): heart rewards and "내 대사 쓰기" in 친구
+   사이, the festival panel and its mini-games, the "마을 적응하기" checklist,
+   the festival banner, museum stats and the digest's "내일 예고". Warm cream
+   cards like the rest of the life UI; motion stays short and turns off under
+   reduced motion. The speech box (friends and residents) is speech-box.css. */
 
 /* ------------------------------------------------------------ hearts / my lines */
 .l-bond-face.is-icon {
@@ -776,16 +638,7 @@
   .l-museum-stats {
     grid-template-columns: 1fr;
   }
-  .l-talk-portrait {
-    width: 72px;
-    height: 72px;
-  }
   .l-adapt {
     display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .l-talk-box {
-    animation: none;
   }
 }

@@ -317,6 +317,13 @@ async function runView(browser, base, view, report) {
     await snap('fishing-cup');
     await page.keyboard.press('Escape');
     await sleep(500);
+    // The fishing panel is not a <dialog>, so closeAll leaves it open and the
+    // next walk (시장 거리) would never start: Esc again closes it.
+    await closeAll();
+    for (let i = 0; i < 3 && (await js(() => !!document.querySelector('[data-testid=fishing]'))); i++) {
+      await page.keyboard.press('Escape');
+      await until(() => !document.querySelector('[data-testid=fishing]'), 10000);
+    }
   });
   // The fight needs a quick hook reply; under a software GPU the mock round
   // trip can outlast the bite window, so this capture is opt-in (--fishing-fight).

@@ -27,7 +27,7 @@ import { ACTORS } from '../lounge-roster';
 import { AvatarView } from '../avatar-view';
 import { formatBeom, josa } from '../lounge-text';
 import { itemName } from '../lounge-life-plus';
-import { bondHearts, categoryName, needHave, tastesKnown } from '../lounge-life-ui';
+import { categoryName, needHave, tastesKnown } from '../lounge-life-ui';
 import { lifeSfx } from '../lounge-audio-life';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
@@ -49,23 +49,13 @@ import { DISH_BY_ID, FURNITURE_BY_REF } from '../lounge-items';
 import './life-plus.css';
 import './friend-life.css';
 import { EmptyState } from '../ui/EmptyState';
+import { Hearts } from './Hearts';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const dateText = (at: number) => {
   const d = new Date(at + 9 * 3_600_000);
   return `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}`;
 };
-
-export function Hearts({ level, size = 14 }: { level: number; size?: number }) {
-  const n = bondHearts(level);
-  return (
-    <span className="l-hearts" role="img" aria-label={`하트 ${n}개`}>
-      {Array.from({ length: 10 }, (_, i) => (
-        <Heart key={i} size={size} aria-hidden="true" fill={i < n ? '#e2574c' : 'none'} color={i < n ? '#c43d33' : '#c9bfb2'} />
-      ))}
-    </span>
-  );
-}
 
 /** 친구 사이: every friend's hearts, tastes, status and today's request. */
 export function FriendsLife({

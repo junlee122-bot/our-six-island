@@ -11,7 +11,7 @@ const SCENES = '[data-testid=village-3d], [data-testid=bedroom-3d], [data-testid
  * After a dialog closes: focus its opener if it is still on screen, else the
  * visible scene. Never steals focus from another dialog that is now open.
  */
-function restoreFocus(opener: HTMLElement | null) {
+export function restoreFocus(opener: HTMLElement | null) {
   const active = document.activeElement;
   // Something else already took focus (e.g. the next screen's own field).
   if (active instanceof HTMLElement && active !== document.body) return;
