@@ -180,6 +180,7 @@ async function runView(mobile = false) {
       await runTo(async () => { await sleep(400); await stationary(); });
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
+    const fishing = (phases, timeout) => wait((list) => list.includes(document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase')), phases, timeout);
     const guardedAction = async (kind, changed, label) => {
       const before = commands.length;
       const sent = () => commands.slice(before).filter((c) => c.action?.kind === kind);
@@ -545,7 +546,9 @@ async function runView(mobile = false) {
       await directory('fish-river');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.fishSpot === 'river');
       await pressAction(); await page.getByTestId('fishing').waitFor();
-      await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'wait');
+      // The cast is answered. The float can dip soon after, and a slow page can
+      // even hook (or miss) on its own before a poll looks, so any settled phase counts.
+      await fishing(['wait', 'bite', 'fight', 'result']);
       const before = await position();
       await focus(); await page.keyboard.down('ArrowRight'); await sleep(450);
       await page.keyboard.up('ArrowRight');
@@ -554,10 +557,12 @@ async function runView(mobile = false) {
       if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
       await click('[data-minimap-place=bank]'); await sleep(350);
       assert.ok(Math.hypot((await position()).x - before.x, (await position()).z - before.z) < .02);
-      // A slow screenshot can outlast the bite; recast before the cancellation check.
-      if (await page.getByTestId('fish-again').count()) {
+      // A slow screenshot can outlast the bite; recast so Esc meets a live cast
+      // (a fish hooked meanwhile is let go the same way).
+      await fishing(['wait', 'bite', 'fight', 'result']);
+      for (let i = 0; i < 3 && (await page.getByTestId('fish-again').count()); i++) {
         await click('[data-testid=fish-again]');
-        await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'wait');
+        await fishing(['wait', 'bite', 'fight', 'result']);
       }
       await page.keyboard.press('Escape');
       await wait(() => !document.querySelector('[data-testid=fishing]'));
@@ -575,9 +580,34 @@ async function runView(mobile = false) {
       await directory('fish-river');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.fishSpot === 'river');
       await pressAction(); await page.getByTestId('fishing').waitFor();
-      await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'bite', null, 20_000);
-      await page.keyboard.press('Space');
-      await wait(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') === 'fight', null, 15_000);
+      // React the moment the float dips, like a player: a MutationObserver answers
+      // right after the page draws it, where polling (one page task per poll, which
+      // a software-GPU page can hold for seconds) can miss the bite window by itself.
+      const dip = () => js(() => new Promise((resolve, reject) => {
+        const done = () => {
+          if (document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') !== 'bite') return;
+          observer.disconnect(); clearTimeout(timer); resolve();
+        };
+        const observer = new MutationObserver(done);
+        const timer = setTimeout(() => { observer.disconnect(); reject(new Error('the float never dipped')); }, 20_000);
+        observer.observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-phase'] });
+        done();
+      }));
+      res.fishingMisses = [];
+      for (;;) {
+        await dip();
+        await page.keyboard.press('Space');
+        await fishing(['fight', 'result'], 15_000);
+        if ((await page.getByTestId('fishing').getAttribute('data-phase')) === 'fight') break;
+        // The server times the hook from its own bite, page delays included, and a
+        // software GPU can hold even this key press for a frame of seconds: a late
+        // hook casts again (recorded). An early one would mean a wrong bite clock.
+        const last = model().angling.me.last;
+        res.fishingMisses.push({ reason: last?.reason, reactionMs: last?.reactionMs });
+        assert.equal(last?.reason, 'late', 'a missed hook is only late: ' + JSON.stringify(last));
+        assert.ok(res.fishingMisses.length < 3, 'hooked within three casts: ' + JSON.stringify(res.fishingMisses));
+        await click('[data-testid=fish-again]');
+      }
       assert.ok(commands.some((c) => c.action?.kind === 'anglerHook'), 'hook came from browser UI');
       assert.ok(model().angling.me.fight?.setup, 'the server stored the fight seed');
       const zone = () => js(() => getComputedStyle(document.querySelector('[data-testid=fish-reel]')).getPropertyValue('--zone-y'));

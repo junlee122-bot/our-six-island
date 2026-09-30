@@ -925,6 +925,19 @@ const crabSize = (uid: string, pot: CrabPot, item: string) => {
 };
 
 // ---------------------------------------------------------------- views
+/**
+ * How much longer the client waits before showing the bite, when the cast
+ * request left `sinceSendMs` ago. The server stamped `castAt` after that send,
+ * so counting `biteAt − castAt` from the send shows the bite at most one
+ * uplink early, which the hook's own uplink (and REEL_EARLY_MS) makes up for.
+ * Never count from when the reply ran, or from a clock offset stamped then: on
+ * a page busy with software WebGL a reply can wait seconds for the main
+ * thread, and that wait pushed the bite on screen so late that the hook
+ * reached the server after `expiresAt`.
+ */
+export function biteDelayMs(cast: Pick<AnglerCastView, 'castAt' | 'biteAt'>, sinceSendMs: number): number {
+  return Math.max(0, cast.biteAt - cast.castAt - Math.max(0, sinceSendMs));
+}
 export type AnglerCastView = Omit<AnglerCast, 'fish' | 'cm'>;
 export type AnglerFightView = Omit<AnglerFight, 'fish' | 'cm'> & { behaviourName: string };
 export type AnglingView = {
