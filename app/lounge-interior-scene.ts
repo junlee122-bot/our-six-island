@@ -543,11 +543,11 @@ export function createInteriorScene(
     for (let i = 0; i < 5; i++)
       cylinder(0.06, 0.06, 0.32, -5.4 + i * 0.5, 1.6, minZ + 0.18, ['#3f6b52', '#8e2f36', '#c9a24a', '#6b4a8e', '#3f6b52'][i]);
     box(3.3, 0.06, 0.26, -4.2, 1.42, minZ + 0.15, pal.trim);
-    // Two slot machines by the right wall.
+    // Two slot machines by the right wall, their screens toward the camera.
     for (const z of [-3.4, -1.9]) {
       box(0.7, 1.5, 0.8, maxX - 0.5, 0.75, z, '#5a2d3a');
-      box(0.04, 0.5, 0.56, maxX - 0.87, 1.1, z, surface('#fff0c4', { emissive: '#ffcf6b', emissiveIntensity: 0.9 }), root, false);
-      cylinder(0.03, 0.03, 0.4, maxX - 0.45, 1.7, z + 0.28, pal.trim);
+      box(0.5, 0.5, 0.04, maxX - 0.5, 1.1, z + 0.41, surface('#fff0c4', { emissive: '#ffcf6b', emissiveIntensity: 0.9 }), root, false);
+      cylinder(0.03, 0.03, 0.4, maxX - 0.11, 1.25, z + 0.1, pal.trim);
     }
     // Velvet rope posts by the door (kArchive queue posts replace them).
     for (const z of [1.6, 5.0]) {

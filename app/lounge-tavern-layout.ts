@@ -116,10 +116,13 @@ export function tavernFootprint(model: TavernModel, spot: TavernSpot) {
 export const TAVERN_DECOR = {
   gramophone: { x: 7.45, z: -5.45 },
   dartboard: { x: 2.85, y: 2.05 },
-  /** On the left wall (z), above the jars and the bookcase. */
+  /**
+   * On the back wall (x), right of the dartboard: the camera looks straight
+   * in (구역 공통 규격), so the side walls are seen edge-on.
+   */
   posters: [
-    { z: -3.0, y: 2.05, title: '이달의 허풍왕' },
-    { z: -0.9, y: 2.05, title: '뻥총 조심' },
+    { x: 4.35, y: 2.05, title: '이달의 허풍왕' },
+    { x: 5.45, y: 2.05, title: '뻥총 조심' },
   ],
   /** Hanji lanterns hung over the 허풍 카드 table. */
   lanterns: [-1.2, 0, 1.2],
