@@ -56,7 +56,6 @@ import {
   INTERIOR_DOOR,
   INTERIOR_PLACE_EVENT,
   TAVERN_BAR_FRONT,
-  INTERIOR_ROOM,
   interiorAction,
   interiorHover,
   interiorPath,
@@ -69,7 +68,7 @@ import {
   worldToInterior,
   type InteriorAction,
 } from './lounge-interior-layout';
-import { createInteriorScene, SEAT_HEIGHT, TABLE_HEIGHT, type SeatShow } from './lounge-interior-scene';
+import { createInteriorScene, INTERIOR_FIGURE_TINT, SEAT_HEIGHT, TABLE_HEIGHT, type SeatShow } from './lounge-interior-scene';
 import { createInteriorHosts } from './lounge-interior-hosts';
 import { createInteriorLender, createInteriorBanker, createInteriorStylist } from './lounge-interior-lender';
 import { CASINO_LENDER_FRONT, LENDER_NAME, nearCasinoLender } from './lounge-casino-lender';
@@ -88,17 +87,28 @@ import { VENUES } from './lounge-venues';
 import type { TavernModel } from './lounge-model-assets';
 import './lounge-interior-3d.css';
 import { WalkHints } from './ui/WalkHints';
+import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_LIGHT, VIEW_PITCH, followEase } from './lounge-village-camera';
+import {
+  INTERIOR_FIGURE_CARD,
+  INTERIOR_FIGURE_UPRIGHT,
+  INTERIOR_HOST_HEIGHT,
+  INTERIOR_UP_Y,
+  INTERIOR_VIEW_SCALE,
+  INTERIOR_WALK_SPEED,
+  interiorCameraAim,
+  interiorViewHalf,
+} from './lounge-interior-view';
 
-/** Server units per second (the floor is 70 × 46 units), as on the flat floor. */
-const WALK_SPEED = 16;
-const FIGURE_HEIGHT = 1.72;
-/** Body canvas (px) that FIGURE_HEIGHT spans (no hat band: figures wear no hats). */
-const FIGURE_BODY_H = 540;
-/** Figure canvas size (px); loungeSprites.draw puts the soles at 97% of its height. */
+// 구역 공통 규격 (lounge-interior-view.ts): walking, camera and figures as outdoors.
+/** Server units per second (the floor is 70 × 46 units). */
+const WALK_SPEED = INTERIOR_WALK_SPEED;
+/** Figure canvas size (px), the market's; loungeSprites.draw puts the soles at 97% of its height. */
 const FIGURE_W = 440,
-  FIGURE_H = FIGURE_BODY_H;
-/** World height of a figure-canvas row (y px from the top). */
-const rowHeight = (y: number) => ((FIGURE_H * 0.97 - y) / FIGURE_BODY_H) * FIGURE_HEIGHT;
+  FIGURE_H = 640;
+/** World height (on the upright plane) of a figure-canvas row (y px from the top). */
+const rowHeight = (y: number) => ((FIGURE_H * 0.97 - y) / FIGURE_H) * INTERIOR_FIGURE_UPRIGHT;
+/** World height of a standing figure's head top (the upright plane's; tags go above it). */
+const HEAD_Y = INTERIOR_FIGURE_UPRIGHT * 0.95;
 /**
  * Seated figures: below this share of the figure's height are the legs; they
  * are drawn shorter (the thighs point at the table, so only the shins show)
@@ -123,14 +133,13 @@ function opaqueRows(canvas: HTMLCanvasElement) {
   return top < bottom ? { top, bottom } : null;
 }
 const BUBBLE_MS = 6500;
-/** The camera looks in from the front-right (like my room, a little flatter). */
-const YAW = (20 * Math.PI) / 180;
-const COS = Math.cos(YAW),
-  SIN = Math.sin(YAW);
-/** Screen-relative keys → floor direction (network units, same scale on x/y). */
-const screenToFloor = (h: number, v: number) => ({ x: h * COS + v * SIN, y: -h * SIN + v * COS });
+/**
+ * The camera looks straight in (it never turns sideways), so the keys walk
+ * along the screen's own axes: right is +x, up is −y on the floor.
+ */
+const screenToFloor = (h: number, v: number) => ({ x: h, y: v });
 /** Horizontal screen movement of a floor step (for which way a figure faces). */
-const floorToScreenX = (dx: number, dy: number) => dx * COS - dy * SIN;
+const floorToScreenX = (dx: number, _dy: number) => dx;
 
 /** When each chat line first reached this browser (for speech bubbles). */
 const arrivals = new Map<string, number>();
@@ -453,7 +462,7 @@ export function Interior3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = VENUES[area].exposure;
+    renderer.toneMappingExposure = VENUES[area].exposure * VIEW_LIGHT.exposure;
     renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     // Only the room and its furniture cast shadows; figures have contact shadows.
@@ -465,65 +474,53 @@ export function Interior3D({
     host.insertBefore(canvas, host.firstChild);
 
     const scene = new THREE.Scene();
-    // A fixed orthographic camera like my room's: figures and table legs stay
-    // upright anywhere on screen (no perspective lean at the edges).
-    const camera = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 90);
-    const pitch = (46 * Math.PI) / 180;
-    const target = new THREE.Vector3(0, 0.6, -0.3);
-    camera.position
-      .copy(target)
-      .add(new THREE.Vector3(Math.sin(YAW) * Math.cos(pitch), Math.sin(pitch), Math.cos(YAW) * Math.cos(pitch)).multiplyScalar(40));
-    camera.lookAt(target);
-    camera.updateMatrixWorld();
+    // 구역 공통 규격: an orthographic camera pitched VIEW_PITCH straight in
+    // (never turned sideways) that eases after me, clamped to the room.
+    const camera = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 120);
+    const cameraOffset = new THREE.Vector3(0, Math.sin(VIEW_PITCH), Math.cos(VIEW_PITCH)).multiplyScalar(VIEW_DISTANCE);
+    const look = new THREE.Vector3();
+    const aim = new THREE.Vector3();
+    let viewAspect = 16 / 9,
+      topShare = 0.08;
     const studio = createInteriorScene(scene, area, {
       lights: quality.effects,
       vip: vipRef.current,
       props: propsRef.current,
     });
-
-    // Frame the floor and the back wall (with its name banner) as large as the
-    // window allows, leaving room at the top for the HUD.
-    const framing = (() => {
-      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0),
-        up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-      const r: number[] = [],
-        u: number[] = [];
-      const add = (x: number, y: number, z: number) => {
-        const p = new THREE.Vector3(x, y, z).sub(target);
-        r.push(p.dot(right));
-        u.push(p.dot(up));
-      };
-      for (const x of [INTERIOR_ROOM.minX - 0.1, INTERIOR_ROOM.maxX + 0.1]) {
-        for (const z of [INTERIOR_ROOM.minZ, INTERIOR_ROOM.maxZ + 0.2]) add(x, 0, z);
-        add(x, 3.3, INTERIOR_ROOM.minZ);
-      }
-      const span = (v: number[]) => ({ lo: Math.min(...v), hi: Math.max(...v) });
-      return { right: span(r), up: span(u) };
-    })();
     const frameCamera = (aspect: number, height: number) => {
-      const { right: r, up: u } = framing;
+      viewAspect = aspect;
       // Keep ~88 px of the top for the header over the back wall.
-      const top = Math.min(0.14, 88 / Math.max(1, height));
-      const halfW = (r.hi - r.lo) / 2,
-        halfH = (u.hi - u.lo) / 2 / (1 - top / 2);
-      const half = Math.max(halfH, halfW / aspect) * 1.02;
-      const cx = (r.hi + r.lo) / 2,
-        cy = (u.hi + u.lo) / 2 + half * top * 0.5;
-      camera.left = cx - half * aspect;
-      camera.right = cx + half * aspect;
-      camera.top = cy + half;
-      camera.bottom = cy - half;
+      topShare = Math.min(0.14, 88 / Math.max(1, height));
+      const half = interiorViewHalf(aspect);
+      camera.left = -half * aspect;
+      camera.right = half * aspect;
+      camera.top = half;
+      camera.bottom = -half;
       camera.updateProjectionMatrix();
     };
+    /** Eases the camera after me (time-based); true while it still moves. */
+    const follow = (p: ScenePoint, snap: boolean, dt = 0) => {
+      const w = interiorToWorld(p);
+      const a = interiorCameraAim(w, camera.top, viewAspect, topShare);
+      aim.set(a.x, 0, -a.u / Math.sin(VIEW_PITCH));
+      const far = look.distanceTo(aim);
+      if (snap || far < 0.003) look.copy(aim);
+      else look.lerp(aim, followEase(dt));
+      camera.position.copy(look).add(cameraOffset);
+      camera.lookAt(look);
+      camera.updateMatrixWorld();
+      return !snap && far >= 0.003;
+    };
     frameCamera(16 / 9, 900);
-    const cameraUp = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    follow(l.point, true);
 
     // ---------------------------------------------------------- figures
     const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const planeHeight = (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H;
-    const figureGeometry = new THREE.PlaneGeometry(FIGURE_HEIGHT * cameraUp.y * (FIGURE_W / FIGURE_BODY_H), planeHeight);
+    // Upright planes facing the camera, stretched by 1 / cos(pitch) so they
+    // look like camera-facing cards of the outdoor size (구역 공통 규격).
+    const figureGeometry = new THREE.PlaneGeometry(INTERIOR_FIGURE_CARD * (FIGURE_W / FIGURE_H), INTERIOR_FIGURE_UPRIGHT);
     // loungeSprites.draw places the soles at 97% of the texture's height.
-    figureGeometry.translate(0, planeHeight * 0.47, 0);
+    figureGeometry.translate(0, INTERIOR_FIGURE_UPRIGHT * 0.47, 0);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = shadowCanvas.height = 64;
     {
@@ -540,11 +537,14 @@ export function Interior3D({
     const shadowTexture = new THREE.CanvasTexture(shadowCanvas);
     shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false, toneMapped: false });
-    const shadowGeometry = new THREE.PlaneGeometry(0.7, 0.5);
+    const shadowGeometry = new THREE.PlaneGeometry(0.66, 0.5);
     // The table hosts (루미 / 매화) stand at their tables' ends.
+    const tint = INTERIOR_FIGURE_TINT[area];
+    const figureView = { card: INTERIOR_FIGURE_CARD, upY: INTERIOR_UP_Y, tint };
     const hosts = createInteriorHosts(scene, studio.tables, {
-      yaw: YAW,
-      squash: cameraUp.y,
+      height: INTERIOR_HOST_HEIGHT,
+      upY: INTERIOR_UP_Y,
+      tint,
       shadow: { geometry: shadowGeometry, material: shadowMaterial },
       onLoad: () => {
         dirty = true;
@@ -552,8 +552,7 @@ export function Interior3D({
     });
     host.dataset.lenderState = area === 'casino' ? 'loading' : '';
     const lender = area === 'casino' ? createInteriorLender(scene, {
-      yaw: YAW,
-      squash: cameraUp.y,
+      ...figureView,
       shadow: { geometry: shadowGeometry, material: shadowMaterial },
       onLoad: (status) => {
         if (disposed) return;
@@ -563,7 +562,7 @@ export function Interior3D({
     }) : null;
     host.dataset.bankerState = area === 'bank' ? 'loading' : '';
     const banker = area === 'bank' ? createInteriorBanker(scene, {
-      yaw: YAW, squash: cameraUp.y,
+      ...figureView,
       shadow: { geometry: shadowGeometry, material: shadowMaterial },
       onLoad: (status) => {
         if (disposed) return;
@@ -573,7 +572,7 @@ export function Interior3D({
     }) : null;
     host.dataset.salonState = area === 'salon' ? 'loading' : '';
     const stylist = area === 'salon' ? createInteriorStylist(scene, {
-      yaw: YAW, squash: cameraUp.y,
+      ...figureView,
       shadow: { geometry: shadowGeometry, material: shadowMaterial },
       onLoad: (status) => {
         if (disposed) return;
@@ -591,9 +590,9 @@ export function Interior3D({
       texture.generateMipmaps = false;
       const mesh = new THREE.Mesh(
         figureGeometry,
-        new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.12, toneMapped: false }),
+        new THREE.MeshBasicMaterial({ map: texture, transparent: true, alphaTest: 0.12, toneMapped: false, color: tint }),
       );
-      mesh.rotation.y = YAW;
+      // Upright, facing the camera (which never turns sideways).
       const shadow = new THREE.Mesh(shadowGeometry, shadowMaterial);
       shadow.rotation.x = -Math.PI / 2;
       shadow.renderOrder = 1;
@@ -626,14 +625,20 @@ export function Interior3D({
     mine.mesh.name = 'me';
     const others = new Map<string, Figure>();
     const residents = area === 'tavern' && residentLabelsRef.current
-      ? new ResidentLayer(scene, residentLabelsRef.current, { height: FIGURE_HEIGHT * 1.02, billboard: 'upright', chibi: { plane: planeHeight, upY: cameraUp.y } })
+      ? new ResidentLayer(scene, residentLabelsRef.current, {
+          height: INTERIOR_HOST_HEIGHT / INTERIOR_UP_Y,
+          billboard: 'upright',
+          speed: 2.1 / INTERIOR_VIEW_SCALE,
+          chibi: { plane: INTERIOR_FIGURE_UPRIGHT, upY: INTERIOR_UP_Y },
+          tint,
+        })
       : null;
     if (residents) residents.onChange = () => {
       dirty = true;
     };
     const residentMemory = newBehaviorMemory();
     const posts = postSpots(area);
-    const postBubbles = posts.length && residentLabelsRef.current ? new PostBubbles(residentLabelsRef.current, FIGURE_HEIGHT) : null;
+    const postBubbles = posts.length && residentLabelsRef.current ? new PostBubbles(residentLabelsRef.current, HEAD_Y) : null;
     const postMemory = newBehaviorMemory();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
     const spritesJob = loungeSprites().then(async (value) => {
@@ -681,7 +686,7 @@ export function Interior3D({
     };
     // The seated figure stands a little in front of its chair's middle (toward
     // the camera), so the backrest stays behind and the table in front.
-    const toCamera = { x: Math.sin(YAW) * 0.1, z: Math.cos(YAW) * 0.1 };
+    const toCamera = { x: 0, z: 0.1 };
     const placeFigure = (f: Figure) => {
       if (f.chair) {
         f.mesh.position.set(f.chair.x + toCamera.x, f.lift, f.chair.z + toCamera.z);
@@ -728,14 +733,14 @@ export function Interior3D({
     marker.rotation.x = -Math.PI / 2;
     marker.visible = false;
     scene.add(marker);
-    const pointAt = (event: PointerEvent): { table: GameKind | null; lender: boolean; banker: boolean; stylist: boolean; floor: ScenePoint | null } => {
+    const pointAt = (event: PointerEvent): { table: GameKind | null; door: boolean; lender: boolean; banker: boolean; stylist: boolean; floor: ScenePoint | null } => {
       const rect = canvas.getBoundingClientRect();
       pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
       const hit = raycaster.intersectObjects([...studio.hits(), ...(lender?.hits() ?? []), ...(banker?.hits() ?? []), ...(stylist?.hits() ?? [])], false)[0];
       const table = (hit?.object.userData.game as GameKind | undefined) ?? null;
       const onFloor = raycaster.ray.intersectPlane(floor, hitPoint);
-      return { table, lender: hit?.object.userData.npc === 'casino-lender', banker: hit?.object.userData.npc === 'bank-clerk', stylist: hit?.object.userData.npc === 'salon-stylist', floor: onFloor ? worldToInterior({ x: onFloor.x, z: onFloor.z }) : null };
+      return { table, door: !!hit?.object.userData.door, lender: hit?.object.userData.npc === 'casino-lender', banker: hit?.object.userData.npc === 'bank-clerk', stylist: hit?.object.userData.npc === 'salon-stylist', floor: onFloor ? worldToInterior({ x: onFloor.x, z: onFloor.z }) : null };
     };
     const showMarker = (p: ScenePoint | null) => {
       marker.visible = !!p;
@@ -750,7 +755,7 @@ export function Interior3D({
       host.focus({ preventScroll: true });
       if (l.locked || l.paused) return;
       const at = pointAt(event);
-      const hover = at.stylist ? ({ kind: 'salon' } as const) : at.banker ? ({ kind: 'banker' } as const) : at.lender ? ({ kind: 'lender' } as const) : at.table ? ({ kind: 'table', game: at.table } as const) : at.floor ? interiorHover(at.floor, area) : null;
+      const hover = at.door ? ({ kind: 'door' } as const) : at.stylist ? ({ kind: 'salon' } as const) : at.banker ? ({ kind: 'banker' } as const) : at.lender ? ({ kind: 'lender' } as const) : at.table ? ({ kind: 'table', game: at.table } as const) : at.floor ? interiorHover(at.floor, area) : null;
       if (hover?.kind === 'salon') {
         salonApproachRef.current(); showMarker(l.goal); return;
       }
@@ -769,8 +774,8 @@ export function Interior3D({
         showMarker(l.goal);
         return;
       }
-      if (!at.floor) return;
-      if (at.floor.y < 36 || at.floor.x < 8 || at.floor.x > 92 || at.floor.y > 96) return;
+      if (!at.floor && hover?.kind !== 'door') return;
+      if (at.floor && hover?.kind !== 'door' && (at.floor.y < 36 || at.floor.x < 8 || at.floor.x > 92 || at.floor.y > 96)) return;
       l.held.clear();
       l.approach = null;
       walkToRef.current(
@@ -778,7 +783,7 @@ export function Interior3D({
           ? { ...INTERIOR_DOOR }
           : hover?.kind === 'host'
             ? { ...TAVERN_BAR_FRONT }
-            : { x: Math.max(15, Math.min(85, at.floor.x)), y: Math.max(42, Math.min(88, at.floor.y)) },
+            : { x: Math.max(15, Math.min(85, at.floor!.x)), y: Math.max(42, Math.min(88, at.floor!.y)) },
       );
       showMarker(l.goal);
     };
@@ -786,7 +791,7 @@ export function Interior3D({
     const onPointerMove = (event: PointerEvent) => {
       if (contextFailed) return;
       const at = pointAt(event);
-      const kind = at.stylist ? 'salon' : at.banker ? 'banker' : at.lender ? 'lender' : at.table ? 'table' : at.floor ? (interiorHover(at.floor, area)?.kind ?? '') : '';
+      const kind = at.door ? 'door' : at.stylist ? 'salon' : at.banker ? 'banker' : at.lender ? 'lender' : at.table ? 'table' : at.floor ? (interiorHover(at.floor, area)?.kind ?? '') : '';
       if (kind !== hoverKind) host.dataset.hover = hoverKind = kind;
     };
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -887,6 +892,7 @@ export function Interior3D({
         height = host.clientHeight;
       if (!width || !height) return;
       frameCamera(width / height, height);
+      follow(l.point, true);
       renderer.setSize(width, height, false);
       dirty = true;
     };
@@ -931,19 +937,19 @@ export function Interior3D({
       // Over the head: a seated figure's tag drops with it.
       const tag = (id: string, f: Figure) => {
         const p = f.chair ? { x: f.mesh.position.x, z: f.mesh.position.z } : interiorToWorld(f.pos);
-        const over = FIGURE_HEIGHT + 0.22;
+        const over = HEAD_Y + 0.12;
         project(id, p.x, over + (f.chair ? f.lift - 0.03 : 0), p.z, w, h);
       };
       tag('self', mine);
       for (const [id, f] of others) tag(id, f);
-      if (lender) project('casino-lender', lender.at.x, 1.92, lender.at.z, w, h);
-      if (banker) project('bank-clerk', banker.at.x, 1.92, banker.at.z, w, h);
-      if (stylist) project('salon-stylist', stylist.at.x, 1.92, stylist.at.z, w, h);
+      if (lender) project('casino-lender', lender.at.x, HEAD_Y + 0.12, lender.at.z, w, h);
+      if (banker) project('bank-clerk', banker.at.x, HEAD_Y + 0.12, banker.at.z, w, h);
+      if (stylist) project('salon-stylist', stylist.at.x, HEAD_Y + 0.12, stylist.at.z, w, h);
       for (const t of latest.current.tables) {
         // The table's sign hangs from its front edge; the host tag is over the host.
         project('table-' + t.game, t.center.x, TABLE_HEIGHT * 0.55, t.center.z + t.rz + 0.05, w, h, true);
         const stand = hosts.standAt(t.game);
-        if (stand) project('host-' + t.game, stand.x, 1.9, stand.z, w, h);
+        if (stand) project('host-' + t.game, stand.x, HEAD_Y * RESIDENT_SCALE + 0.12, stand.z, w, h);
         // The host's tag goes with her (one figure per host, see hosts.update).
         const tagEl = labelsRef.current.get('host-' + t.game);
         if (tagEl) tagEl.style.visibility = stand ? '' : 'hidden';
@@ -1004,7 +1010,7 @@ export function Interior3D({
       }
       const moved = Math.hypot(l.point.x - before.x, l.point.y - before.y);
       l.moving = moved > 0.005;
-      const loco = advanceLocomotion(mine.locomotion, { distance: moved * 0.2, horizontal: floorToScreenX(l.point.x - before.x, l.point.y - before.y) }, running ? 'run' : 'walk', 2.25);
+      const loco = advanceLocomotion(mine.locomotion, { distance: moved, horizontal: floorToScreenX(l.point.x - before.x, l.point.y - before.y) }, running ? 'run' : 'walk', WALK_SPEED);
       const changed = loco.motion !== mine.motion || loco.state.facing !== mine.locomotion.facing;
       mine.locomotion = loco.state;
       mine.motion = loco.motion;
@@ -1022,6 +1028,7 @@ export function Interior3D({
         dirty = true;
       placeFigure(mine);
       drawFigure(mine, t, changed);
+      if (follow(l.point, false, dt)) dirty = true;
       // Tell the server where I am (throttled, and once more when I stop) —
       // only once it has me in this place, so a move never lands in the village.
       if (current.meHere && ((l.moving && t - lastSend > 150) || (!l.moving && wasMoving))) {
@@ -1071,7 +1078,7 @@ export function Interior3D({
           step = Math.min(d, (d > 8 ? WALK_SPEED * RUN_SPEED_MULTIPLIER : WALK_SPEED) * dt);
           f.pos = { x: f.pos.x + (gx / d) * step, y: f.pos.y + (gy / d) * step };
         }
-        const fl = advanceLocomotion(f.locomotion, { distance: step * 0.2, horizontal: floorToScreenX(gx, gy) }, d > 8 ? 'run' : 'walk', 2.25);
+        const fl = advanceLocomotion(f.locomotion, { distance: step, horizontal: floorToScreenX(gx, gy) }, d > 8 ? 'run' : 'walk', WALK_SPEED);
         const fc = fl.motion !== f.motion || fl.state.facing !== f.locomotion.facing;
         f.locomotion = fl.state;
         f.motion = fl.motion;

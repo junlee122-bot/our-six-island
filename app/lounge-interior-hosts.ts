@@ -1,7 +1,8 @@
 /**
  * The table hosts in the 3D hall and casino: 루미 deals hold'em and blackjack,
  * 매화 runs 섯다 and 고스톱. Each stands at her table's end as an illustrated
- * billboard facing the camera (like the friends' figures), cut from the host's
+ * upright plane facing the camera (like the friends' figures, 구역 공통 규격:
+ * stretched by 1 / cos(pitch), RESIDENT_SCALE × a friend's height), cut from the host's
  * pose sheet by UV (one texture per host, shared by her tables), breathes a
  * little, and changes pose with her table (lounge-host-sprites.ts hostPose).
  */
@@ -17,9 +18,6 @@ import {
 } from './lounge-host-sprites';
 import { hostStand, type InteriorTable } from './lounge-interior-layout';
 import type { TablePhase } from './lounge-table-state';
-
-/** Height of the calm figure (world units): a friend's figure is about as tall. */
-export const HOST_FIGURE_HEIGHT = 1.64;
 
 type Host = {
   game: GameKind;
@@ -39,17 +37,20 @@ export function createInteriorHosts(
   scene: THREE.Scene,
   tables: readonly InteriorTable[],
   view: {
-    /** The billboards turn with the camera's yaw. */
-    yaw: number;
-    /** Vertical foreshortening of an upright plane on screen (camera up · y). */
-    squash: number;
+    /** Height of the calm figure as the camera sees it (room units). */
+    height: number;
+    /** Screen-up per unit of height on an upright plane (cos of the camera pitch). */
+    upY: number;
+    /** Colour multiplied into the sprite (a dark room's warm dimness). */
+    tint?: string;
     shadow: { geometry: THREE.BufferGeometry; material: THREE.Material };
     /** A sheet arrived: render again. */
     onLoad: () => void;
   },
 ) {
-  const cellH = (HOST_FIGURE_HEIGHT * HOST_CELL.h) / HOST_CELL.figure;
-  const cellW = cellH * view.squash * (HOST_CELL.w / HOST_CELL.h);
+  const card = (view.height * HOST_CELL.h) / HOST_CELL.figure;
+  const cellW = card * (HOST_CELL.w / HOST_CELL.h),
+    cellH = card / view.upY;
   const sheetW = HOST_CELL.w * HOST_CELL.cols,
     sheetH = HOST_CELL.h * HOST_CELL.rows;
   const materials = new Map<HostId, THREE.MeshBasicMaterial>();
@@ -60,6 +61,7 @@ export function createInteriorHosts(
     let material = materials.get(id);
     if (material) return material;
     material = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.1, toneMapped: false });
+    if (view.tint) material.color.set(view.tint);
     material.visible = false;
     materials.set(id, material);
     const m = material;
@@ -94,7 +96,6 @@ export function createInteriorHosts(
     geometry.translate(0, cellH / 2 - (cellH * (HOST_CELL.h - HOST_CELL.foot)) / HOST_CELL.h, 0);
     const mesh = new THREE.Mesh(geometry, materialFor(table.host));
     mesh.name = 'host-' + table.host;
-    mesh.rotation.y = view.yaw;
     mesh.position.set(table.hostAt.x, 0.02, table.hostAt.z);
     const shadow = new THREE.Mesh(view.shadow.geometry, view.shadow.material);
     shadow.rotation.x = -Math.PI / 2;
