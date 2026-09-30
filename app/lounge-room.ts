@@ -693,7 +693,25 @@ export class LoungeRoom {
     // A chess player whose connection expired returns to their running game.
     const chessSeat = this.view.seats.chess.indexOf(id);
     if (chessSeat >= 0) this.chessAway.delete(chessSeat);
+    this.reseat(id);
     this.sync();
+  }
+  /**
+   * Someone whose connection expired (or who logged out) mid-round comes back:
+   * every running match that still has their seat stops playing it for them,
+   * and they sit at that table again (their own cards and role come back).
+   */
+  private reseat(id: string) {
+    let tables = this.view.tables;
+    for (const kind of GAME_KINDS) {
+      const seat = this.view.seats[kind].indexOf(id);
+      if (kind === "chess" || seat < 0 || !this.gameActive(kind)) continue;
+      this.awaySet(kind).delete(seat);
+      const table = tables[kind];
+      if (table && !table.members.includes(id))
+        tables = { ...tables, [kind]: { ...table, members: [...table.members, id] } };
+    }
+    if (tables !== this.view.tables) this.view = { ...this.view, tables };
   }
   /** Boolean wrapper kept for callers that only need success. */
   hostedAction(id: string, a: LoungeAction, now = Date.now()) {

@@ -2,7 +2,7 @@
 // invariant around table games in the cloud engine.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
+import { cloudTransition, commandHash, CLOUD_LEASE_MS } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger, validateLedger } from '../app/lounge-economy.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { keepUnchanged, sameTableProps } from '../app/lounge-view-share.ts';
@@ -189,4 +189,26 @@ test('허풍 카드 and 라이어 게임 keep secrets per seat and from watchers
       if (!citizen) assert.ok(!JSON.stringify(v).includes(g.word), 'the word never leaks to the liar or watchers');
     });
   }
+});
+
+test('coming back after the connection expired takes the seat back from the server', async () => {
+  const { h, ps } = await startTable('yacht', 4, 1000);
+  const code = ps[0].code,
+    gone = ps[3];
+  // Everyone else keeps polling for longer than the lease; seat 3 is silent.
+  for (let t = 0; t * 70_000 <= CLOUD_LEASE_MS; t++) {
+    h.advance(70_000);
+    for (const p of ps) if (p !== gone) await h.run(p, 'read');
+  }
+  let snap = h.world.rooms[code].snapshot;
+  assert.equal(snap.players.some((p) => p.id === gone.id), false, 'dropped after the lease');
+  assert.ok(snap.yachtAway.includes(3), 'the server plays seat 3 meanwhile');
+  assert.equal(snap.yacht.phase, 'playing');
+  const back = await h.run(gone, 'open');
+  assert.equal(back.response.ok, true, back.response.error);
+  snap = h.world.rooms[code].snapshot;
+  assert.equal(snap.yachtAway.includes(3), false, 'seat 3 is mine again');
+  assert.ok(snap.tables.yacht.members.includes(gone.id), 'back at the table');
+  assert.deepEqual(back.response.packet.yacht.away, []);
+  assert.equal(back.response.packet.yacht.legal.enabled, back.response.packet.yacht.turn === 3);
 });
