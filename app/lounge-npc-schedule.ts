@@ -311,7 +311,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const lunch: Seg = k.rain ? [hm(12), 'm.cafe-4', 'eat', '빵집 카페에서 비 피하며 점심'] : [hm(12), 'library', 'read', '도서관에서 책 읽는 중'];
       const plan: Seg[] = k.marketDay
         ? [
-            [0, 'home', 'sleep'],
+            [0, 't.bar-1', 'drink', '주점 바에서 작물 이야기 중'],
+            [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
             [hm(6), 'm.coop', 'work', '농협 매입 창구'],
             [hm(9), 'm.stall-e', 'stall', '장날 작물 좌판'],
             lunch,
@@ -320,56 +321,60 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
             [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
             [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
             [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
-            [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            [hm(20), 't.bar-1', 'drink', '주점 바에서 작물 이야기 중'],
           ]
         : [
-            [0, 'home', 'sleep'],
+            [0, 't.bar-1', 'drink', '주점 바에서 작물 이야기 중'],
+            [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
             [hm(6), 'm.coop', 'work', '농협 매입 창구'],
             lunch,
             [hm(13), 'm.coop', 'work', '농협 매입 창구'],
             [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
             [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
             [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
-            [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            [hm(20), 't.bar-1', 'drink', '주점 바에서 작물 이야기 중'],
           ];
       return festival(plan, k, 0);
     }
     case 'frieren': {
       // Running joke: she oversleeps. Opening time slips by 0–40 minutes.
       const open = hm(10) + seed('oversleep', 3) * 20;
-      const night: Seg = [1, 3, 5].includes(k.weekday) ? [hm(19), 't.booth', 'drink', '주점 구석에서 우유 마시는 중'] : [hm(19), 'library', 'read', '도서관에서 옛 레시피 찾는 중'];
+      const night: Seg = [1, 3, 5].includes(k.weekday) ? [hm(19), 't.booth', 'drink', '주점 구석에서 우유 마시는 중'] : [hm(19), 'm.cafe-3', 'read', '빵집 테라스에서 옛 레시피 읽는 중'];
       const nap: Seg = k.rain ? [hm(15), 'm.cafe-3', 'nap', '테라스 차양 아래서 꾸벅꾸벅'] : [hm(15), 'v.plaza-bench', 'nap', '광장 벤치에서 낮잠'];
       const plan: Seg[] = k.marketDay
         ? [
-            [0, 'home', 'sleep'],
+            [0, 'v.plaza-bench', 'stroll', '광장 벤치에서 별 보는 중'],
+            [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
             [open, 'm.bakery', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
             [hm(11, 30), 'm.stall-se', 'stall', '장날 빵 좌판'],
             [hm(14), 'm.bakery', 'work', '빵집 카페'],
             nap,
             [hm(16), 'm.bakery', 'work', '빵집 카페'],
             night,
-            [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            [hm(22), 'v.plaza-bench', 'stroll', '광장 벤치에서 별 보는 중'],
           ]
         : [
-            [0, 'home', 'sleep'],
+            [0, 'v.plaza-bench', 'stroll', '광장 벤치에서 별 보는 중'],
+            [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
             [open, 'm.bakery', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
             nap,
             [hm(16), 'm.bakery', 'work', '빵집 카페'],
             night,
-            [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+            [hm(22), 'v.plaza-bench', 'stroll', '광장 벤치에서 별 보는 중'],
           ];
       return festival(plan, k, 1);
     }
     case 'thresh': {
       const lantern = k.weekday === 6;
       const plan: Seg[] = [
-        [0, 'home', 'sleep'],
+        [0, 't.fire', 'drink', '주점 벽난로 옆에서 수집품 자랑'],
+        [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
         [hm(8), 'm.general', 'work', '잡화점'],
         ...(k.marketDay ? ([[hm(14), 'm.stall-w', 'stall', '장날 경매 여는 중'], [hm(17), 'm.general', 'work', '잡화점']] as Seg[]) : []),
         [hm(19), 'v.harbor', 'stroll', '밤바다 산책 중'],
         [hm(20), 'v.beach', 'stroll', '해변에서 등불 켜는 중'],
         lantern ? [hm(21), 'm.general', 'work', '밤에만 여는 등불 상점'] : [hm(21), 't.fire', 'drink', '주점 벽난로 옆에서 수집품 자랑'],
-        [hm(23), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+        [hm(23), 't.fire', 'drink', '주점 벽난로 옆에서 수집품 자랑'],
       ];
       return festival(plan, k, 2);
     }
@@ -378,7 +383,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const order = [0, 1, 2, 3, 4, 5, 6].sort((a, b) => hash32(`mail:${k.day}:${a}`) - hash32(`mail:${k.day}:${b}`)).slice(0, 4);
       const round: Seg[] = order.map((a, i) => [hm(9) + i * 22, `v.home-${a}`, 'deliver', `${homes[a]?.name ?? '친구'} 집에 편지 배달 중`] as Seg);
       const plan: Seg[] = [
-        [0, 'home', 'sleep'],
+        [0, 'v.camp', 'eat', '강변 캠프에서 짜장면 끓이는 중'],
+        [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
         [hm(7), 'm.post', 'work', '우체국에서 우편 분류'],
         ...round,
         [hm(10, 40), 'harbor', 'deliver', '항구로 배달 중'],
@@ -390,7 +396,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(15, 30), 'm.newspaper-drop', 'deliver', '신문사에 원고 받으러 가는 중'],
         [hm(16), 'm.street-e', 'deliver', '시장 거리 배달 중'],
         [hm(17), 'm.post', 'work', '우체국 마감 정리'],
-        [hm(18), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+        [hm(18), 'm.cafe-1', 'eat', '빵집 카페에서 저녁'],
+        [hm(19, 30), 'v.camp', 'eat', '강변 캠프에서 짜장면 끓이는 중'],
       ];
       return festival(plan, k, 3);
     }
@@ -405,13 +412,14 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(17, 10), 'm.board', 'patrol', '수배 전단 붙이는 중'],
       ];
       const plan: Seg[] = [
-        [0, 'home', 'sleep'],
+        [0, 'v.plaza-e', 'patrol', '광장 야간 순찰 중'],
+        [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
         [hm(8), 'm.police', 'work', '파출소 근무'],
         [hm(12), 'm.cafe-2', 'eat', '빵집 카페에서 빵 먹는 중'],
         ...hub,
         [hm(18), 'm.police', 'work', '파출소 근무'],
         ...(k.weekday === 5 ? ([[hm(20), 't.judge', 'drink', '허풍 경연 심판 보는 중']] as Seg[]) : []),
-        [k.weekday === 5 ? hm(22) : hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+        [k.weekday === 5 ? hm(22) : hm(20), 'v.plaza-e', 'patrol', '광장 야간 순찰 중'],
       ];
       return festival(plan, k, 4);
     }
@@ -420,7 +428,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const a = beat[seed('beat-a', beat.length)],
         b = beat[(seed('beat-a', beat.length) + 1 + seed('beat-b', beat.length - 1)) % beat.length];
       const plan: Seg[] = [
-        [0, 'home', 'sleep'],
+        [0, 'v.lake', 'forecast', '호숫가에서 내일 날씨 관측 중'],
+        [hm(1), 'home', 'sleep', '언덕 집에서 자는 중'],
         [hm(6), 'm.newspaper', 'work', '아침 소식 쓰는 중'],
         [hm(8), 'v.plaza', 'forecast', k.rain ? '광장에서 우산 들고 날씨 예보' : '광장에서 날씨 예보'],
         [hm(9), a, 'report', '취재 중'],
@@ -429,7 +438,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(13), 'm.newspaper', 'work', '기사 쓰는 중'],
         [hm(15), k.marketDay ? 'm.stall-w-crowd' : 'm.board', 'report', k.marketDay ? '장날 경매 취재 중' : '의뢰 게시판 취재 중'],
         [hm(16, 30), 'm.newspaper', 'work', '마감 중'],
-        [hm(18), 'home', 'sleep', '언덕 집에서 쉬는 중'],
+        [hm(18), 'm.plaza-s', 'report', '밤 시장 취재 중'],
+        [hm(20), 'v.lake', 'forecast', '호숫가에서 내일 날씨 관측 중'],
       ];
       return festival(plan, k, 5);
     }
