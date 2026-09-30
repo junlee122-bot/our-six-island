@@ -9,6 +9,7 @@
 import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
+import { readTownUser, type TownUser } from './lounge-town.ts';
 import {
   grantBeom,
   spendBeom,
@@ -269,6 +270,8 @@ export type UserExt = {
   house?: 1 | 2 | 3 | 4;
   /** Weekly luxury furniture bought this KST week. */
   lux?: { w: number; refs: string[] };
+  /** 마을 확장 2단계: auction, shops, reading club, visited districts (lounge-town.ts). */
+  town?: TownUser;
 };
 export type Memory = { id: string; kind: string; actors: number[]; text: string; at: number };
 export type NewsLine = { key: string; kind: string; text: string; actors: number[] };
@@ -491,6 +494,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (npcRelations) out.npcRelations = npcRelations;
   const npcBoard = readNpcBoard(x.npcBoard);
   if (npcBoard) out.npcBoard = npcBoard;
+  const town = readTownUser(x.town);
+  if (town) out.town = town;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {

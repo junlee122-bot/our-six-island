@@ -847,6 +847,27 @@ export function moodAction(
   prune(me, now);
   return { life, ledger: next };
 }
+/**
+ * A bought treat (빵집 카페 menu, lounge-town.ts): fills needs and adds one
+ * existing moodlet through the same helpers as a snack or a bar drink. No
+ * ledger here; the caller spends the price. Returns false when this friend
+ * has no mood record (the purchase still stands).
+ */
+export function moodTreat(
+  life: LifeState,
+  uid: string,
+  now: number,
+  t: { food?: number; rest?: number; fun?: number; let: 'snack' | 'drink' },
+): boolean {
+  const u = moodTouch(life, uid, now);
+  if (!u) return false;
+  if (t.food) fill(u, 'food', t.food);
+  if (t.rest) fill(u, 'rest', t.rest);
+  if (t.fun) fill(u, 'fun', t.fun, 'bakery');
+  addLet(u, t.let, now);
+  prune(u, now);
+  return true;
+}
 export const isMoodAction = (kind: string) => (MOOD_ACTION_KINDS as readonly string[]).includes(kind);
 
 // ---------------------------------------------------------------- views

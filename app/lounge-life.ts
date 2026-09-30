@@ -106,6 +106,10 @@ import {
   type MoodExt,
   type MoodView,
 } from './lounge-mood.ts';
+// 마을 확장 2단계: same cycle rule; the action kinds come from the leaf data module.
+import { TOWN_ACTION_KINDS, type TownAction } from './lounge-town-data.ts';
+import { townAction, townView, type TownView } from './lounge-town.ts';
+import { districtsView, settleDistrictUnlocks, type DistrictsView } from './lounge-district-unlocks.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
 export type Crop =
@@ -553,7 +557,9 @@ export type LifeAction =
   /** 낚시 업그레이드: cast/hook/fight, tackle, crab pots, weekly cup (lounge-fish-engine.ts). */
   | AnglingAction
   /** 텃밭 확장: fixtures, machines, shipping bin, helping, 품평회 (lounge-farm.ts). */
-  | FarmAction;
+  | FarmAction
+  /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
+  | TownAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -574,6 +580,7 @@ export const LIFE_ACTION_KINDS = [
   ...MOOD_ACTION_KINDS,
   ...ANGLING_ACTION_KINDS,
   ...FARM_ACTION_KINDS,
+  ...TOWN_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -1018,6 +1025,8 @@ export function lifeAction(
   const before = moodBeforeLifeAction(original, member, now);
   const next = lifeActionCore(before, ledger, member, action, now);
   moodAfterLifeAction(before, next.life, member, action, now);
+  // 마을 확장 2단계: record a district whose village goal was just reached.
+  settleDistrictUnlocks(next.life, now);
   return next;
 }
 function lifeActionCore(
@@ -1073,6 +1082,11 @@ function lifeActionCore(
   }
   if ((SOCIAL_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = socialAction(life, ledger, member, a as SocialAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((TOWN_ACTION_KINDS as readonly string[]).includes(kind)) {
+    // The auction and the 농협 notice run the ordinary sale first (same rules, same caps).
+    const next = townAction(life, ledger, member, a as TownAction, now, (l, lg, sale) => lifeActionCore(l, lg, member, sale, now));
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   const size = farm.length;
@@ -1427,6 +1441,10 @@ export type LifeView = {
   mood?: MoodView;
   /** 낚시 업그레이드: my cast/fight, tackle, pots, log; the weekly cup (lounge-fish-engine.ts). */
   angling?: AnglingView;
+  /** 마을 확장 2단계: which districts are open and the goals behind the locked ones. */
+  districts?: DistrictsView;
+  /** 마을 확장 2단계: auction, shops, stalls, reading club, visited districts (lounge-town.ts). */
+  town?: TownView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1532,6 +1550,8 @@ export function lifeView(
     venues: venuesView(life),
     ...(UUID.test(uid) && actorValid(actor) ? { angling: anglingView(life, uid, actor, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
+    districts: districtsView(life),
+    ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */
