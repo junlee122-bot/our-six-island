@@ -79,14 +79,14 @@ export const KARCHIVE_PERGOLA = {
 } as const;
 /** Sea pier deck (마을 공사 'bridge'): four 1.5 m tiles from the island edge. */
 export const KARCHIVE_PIER = {
-  // VILL-2: the island edge moved from x 40 to 48 (VILLAGE_PIER.x − 1.45).
-  x0: 45.55,
+  // VILL-2: the island edge moved from x 40 to 48, the hub growth to 56 (VILLAGE_PIER.x − 1.45).
+  x0: 53.55,
   z: 24,
   tile: 1.5,
   tiles: 4,
   top: 0.35,
   /** Railings stand only over the sea (past the walkable island edge). */
-  railFrom: 48.3,
+  railFrom: 56.3,
 } as const;
 
 /**

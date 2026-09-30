@@ -64,8 +64,8 @@ test('every fish has painted art (no emoji fallback)', () => {
   for (const f of FISH) assert.match(looks, new RegExp(`\\b${f.id}: \\{ shape:`), `${f.id} has a FISH_LOOK`);
 });
 
-test('yards and saved positions fit the 96 × 76 valley', () => {
-  assert.deepEqual([VILLAGE_BOUNDS.width, VILLAGE_BOUNDS.depth], [96, 76]);
+test('yards and saved positions fit the 112 × 88 hub', () => {
+  assert.deepEqual([VILLAGE_BOUNDS.width, VILLAGE_BOUNDS.depth], [112, 88]);
   for (const y of VILLAGE_YARDS) assert.ok(y.x0 > -VILLAGE_BOUNDS.width / 2 && y.x1 < VILLAGE_BOUNDS.width / 2);
   // Old network positions (the server keeps x 15..85, y 42..88) decode to
   // points in the new valley; the plaza default still lands on the plaza.

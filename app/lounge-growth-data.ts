@@ -435,7 +435,7 @@ export const NODE_SPOTS: readonly { id: string; kind: NodeKind; x: number; z: nu
   { id: 'r8', kind: 'rock', x: 44.8, z: 25.8 },
   { id: 'r9', kind: 'rock', x: -8, z: -36 },
   { id: 'b1', kind: 'bush', x: -40.5, z: -24.2 },
-  { id: 'b2', kind: 'bush', x: -45, z: -2 },
+  { id: 'b2', kind: 'bush', x: -45, z: -0.4 }, // moved off the 계단 road to 언덕 주택가 (2026-09-30)
   { id: 'b3', kind: 'bush', x: -42, z: 28 },
   { id: 'b4', kind: 'bush', x: 16.8, z: -31.2 },
   { id: 'b5', kind: 'bush', x: 42, z: -15 },

@@ -146,7 +146,7 @@ export const FISH_STAND: Readonly<Record<Spot, VillagePoint>> = {
   pond: POND_EDGE,
   sea: walkableNear({ x: PIER_POINT.x + 0.2, z: PIER_POINT.z }),
   rapids: walkableNear({ x: -41, z: VILLAGE_RIVER.minZ - 0.62 }),
-  falls: walkableNear({ x: -37, z: -32.9 }),
+  falls: walkableNear({ x: -37, z: -38.9 }),
   lake: walkableNear({ x: VILLAGE_LAKE.x - VILLAGE_LAKE.radius - 0.7, z: VILLAGE_LAKE.dockZ }),
   rocks: walkableNear({ x: VILLAGE_ROCKS.x, z: VILLAGE_ROCKS.z - VILLAGE_ROCKS.radius - 0.55 }),
   harbor: walkableNear({ x: HARBOR_POINT.x, z: HARBOR_POINT.z - 0.1 }),
