@@ -54,7 +54,7 @@ export type NpcRelation = {
 export type NpcRelations = Partial<Record<NpcId, NpcRelation>>;
 export type NpcGuest = { npc: NpcId; until: number };
 export type NpcRelationView = NpcRelation & { npc: NpcId; level: string; talked: boolean; gifted: boolean; dated: boolean; visiting: boolean };
-export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number };
+export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number; /** ③ 언덕 주택가 is open (residents sleep up there). */ hill?: boolean };
 const fail = (text: string): never => {
   throw new LifeError(text);
 };
@@ -105,14 +105,14 @@ function validAction(action: NpcSocialAction) {
 }
 
 /** Where a resident can be met right now: area (and, when they walk about, a point). */
-export function npcMeetAt(npc: NpcId, now: number): { area: string; point?: { x: number; z: number }; label: string; away: boolean } {
-  const s = npcSpot(npc, now);
+export function npcMeetAt(npc: NpcId, now: number, world: { hill?: boolean } = {}): { area: string; point?: { x: number; z: number }; label: string; away: boolean } {
+  const s = npcSpot(npc, now, world);
   // Counter shops (부동산·가구점) open from the village; you meet them at the door.
   if (s.area === 'realty' || s.area === 'furniture') {
     const door = VILLAGE_PLACES.find((p) => p.id === s.area)!.entry;
     return { area: 'village', point: door, label: NPCS[npc].place, away: false };
   }
-  const walking = s.area === 'village' || s.area === 'market' || (s.area === 'tavern' && s.visible);
+  const walking = s.area === 'village' || s.area === 'market' || s.area === 'harbor' || s.area === 'hillside' || (s.area === 'tavern' && s.visible);
   if (!s.visible && !['casino', 'lounge', 'bank', 'salon', 'tavern'].includes(s.area)) return { area: s.area, label: s.label, away: true };
   return { area: s.area, point: walking ? { x: s.x, z: s.z } : undefined, label: s.label, away: false };
 }
@@ -120,7 +120,7 @@ export function npcMeetAt(npc: NpcId, now: number): { area: string; point?: { x:
 function areaPoint(area: string, x?: number, y?: number) {
   if (typeof x !== 'number' || typeof y !== 'number') return null;
   if (area === 'village') return villageFromNetwork({ x, y });
-  if (area === 'market') return regionFromNetwork('market', { x, y });
+  if (area === 'market' || area === 'harbor' || area === 'hillside') return regionFromNetwork(area, { x, y });
   return null;
 }
 
@@ -140,7 +140,7 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
     return;
   }
   if (ownHome && invited) return;
-  const meet = npcMeetAt(action.npc, now);
+  const meet = npcMeetAt(action.npc, now, { hill: !!ctx.hill });
   const def = NPCS[action.npc];
   if (meet.away) fail(`${josa(def.name, '은/는')} 지금 ${meet.label}이라 만날 수 없어요. 조금 뒤에 찾아와 주세요.`);
   if (ctx.area !== meet.area) fail(`${placeOf(action.npc, meet.area)}에서 만나거나 내 방에 초대해 주세요.`);
@@ -148,7 +148,7 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
   if (meet.point && me && Math.hypot(me.x - meet.point.x, me.z - meet.point.z) > NPC_SOCIAL_REACH)
     fail(`${def.name}에게 조금 더 가까이 가서 말을 걸어 주세요.`);
 }
-const AREA_WORD: Record<string, string> = { village: '마을 중심', market: '시장 거리', tavern: '허풍 주점' };
+const AREA_WORD: Record<string, string> = { village: '마을 중심', market: '시장 거리', harbor: '항구 구역', hillside: '언덕 주택가', tavern: '허풍 주점' };
 const placeOf = (npc: NpcId, area: string) => (area in AREA_WORD && !['captain'].includes(npc) ? AREA_WORD[area] : NPCS[npc].place);
 
 /** Anything but tools can be a present: crops, fruit, fish, bugs, flowers, dishes, ores, fossils. */

@@ -37,7 +37,7 @@ import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToI
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender.ts';
 import { BANKER_SPOT } from './lounge-bank-layout.ts';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout.ts';
-import { NPC_IDS, NPCS, VISIBLE_NPC_IDS, type NpcId } from './lounge-npc-data.ts';
+import { NPC_IDS, NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
 
@@ -124,6 +124,14 @@ const TAVERN_SCENE = {
   judge: { x: 60, y: 76 },
   'bar-3': { x: 33, y: 45.5 },
   stage: { x: 68, y: 62 },
+  // Evening seats (every one on the walkable floor, apart from each other).
+  'table-1': { x: 20, y: 60 },
+  'table-2': { x: 20, y: 76 },
+  'table-3': { x: 35, y: 83 },
+  'table-4': { x: 50, y: 83 },
+  window: { x: 84, y: 48 },
+  corner: { x: 72, y: 83 },
+  'bar-4': { x: 50, y: 46 },
 } as const;
 const tw = (k: keyof typeof TAVERN_SCENE) => interiorToWorld(TAVERN_SCENE[k]);
 
@@ -277,6 +285,13 @@ export const NPC_PLACES: Record<string, Place> = {
   't.booth': place('tavern', tw('booth'), -Math.PI / 2, '주점 구석 자리'),
   't.judge': place('tavern', tw('judge'), Math.PI, '허풍 탁자 옆'),
   't.bar-3': place('tavern', tw('bar-3'), Math.PI, '주점 바'),
+  't.bar-4': place('tavern', tw('bar-4'), Math.PI, '주점 바'),
+  't.table-1': place('tavern', tw('table-1'), -Math.PI / 2, '주점 창가 탁자'),
+  't.table-2': place('tavern', tw('table-2'), -Math.PI / 2, '주점 탁자'),
+  't.table-3': place('tavern', tw('table-3'), Math.PI, '주점 탁자'),
+  't.table-4': place('tavern', tw('table-4'), Math.PI, '주점 탁자'),
+  't.window': place('tavern', tw('window'), -Math.PI / 2, '주점 창가'),
+  't.corner': place('tavern', tw('corner'), Math.PI, '주점 구석'),
   // 공연 밤: the placeholder stage by the fireplace (lounge-town.ts SHOW_*).
   't.stage': place('tavern', tw('stage'), 0, '주점 무대'),
   // Posts of the residents who work indoors (drawn by their own scenes).
@@ -286,7 +301,6 @@ export const NPC_PLACES: Record<string, Place> = {
   'tavern.captain': place('tavern', TAVERN_HOST_AT, 0, '주점 바 안쪽'),
   'bank.nyamo': place('bank', interiorToWorld(BANKER_SPOT), 0, '은행 창구'),
   'salon.gwen': place('salon', interiorToWorld(SALON_STYLIST_SPOT), 0, '미용실'),
-  'casino.tsunade': place('casino', { x: 1.2, z: 0.6 }, 0, '카지노 테이블'),
 };
 export const npcPlace = (id: string) => NPC_PLACES[id];
 
@@ -378,12 +392,13 @@ export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
 
 // ---------------------------------------------------------------- day plans
 type Seg = readonly [hhmm: number, place: string, act: NpcActivity, label?: string];
-export type DayKind = { weekday: number; rain: boolean; marketDay: boolean; festival: boolean; day: number };
-export function dayKind(day: number): DayKind {
+export type DayKind = { weekday: number; rain: boolean; marketDay: boolean; festival: boolean; day: number; hill: boolean };
+export function dayKind(day: number, hill = false): DayKind {
   const weekday = weekdayOf(day);
   const w = weatherOf(day);
   return {
     day,
+    hill,
     weekday,
     rain: w === 'rain' || w === 'storm',
     marketDay: weekday === 0,
@@ -574,7 +589,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(12), 'm.cafe-5', 'eat', '빵집 카페에서 점심'],
         [hm(13), 'hb.quay', 'work', '항구 부두 정비'],
         [hm(15, 30), 'hb.lighthouse-yard', 'work', '등대 마당 정비'],
-        [hm(18), 'hb.lighthouse-in', 'work', '등대 불 켜는 중'],
+        [hm(18), 'hb.lighthouse-door', 'work', '등대 불 켜는 중'],
       ];
       return plan;
     }
@@ -640,8 +655,6 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(12), 'm.cafe-7', 'eat', '빵집 카페에서 점심'],
         [hm(14), 'hl.garden-gate', 'work', '텃밭 앞에서 조언하는 중'],
         [hm(17), 'home', 'rest', '언덕 집에서 쉬는 중'],
-        k.day % 2 ? [hm(19), 'casino.tsunade', 'drink', '카지노에서 한 판 중'] : [hm(19), 't.bar-2', 'drink', '주점에서 딱 한 잔 중'],
-        [hm(22), 'home', 'sleep', '언덕 집에서 쉬는 중'],
       ];
     case 'makima': {
       if (k.marketDay)
@@ -688,6 +701,140 @@ function homesOf(id: NpcId, plan: Seg[], hill: boolean): Seg[] {
     return p.startsWith('hl.library') ? 'library' : 'home';
   };
   return plan.map(([t, p, act, label]) => [t, map(p), act, label] as Seg);
+}
+
+
+// ---------------------------------------------------------------- evenings
+// The friends play mostly 20:00–01:00 KST, so every resident who walks about
+// stays out until 01:00 and sleeps only 01:00–(morning). The day plans above
+// cover the day until about 19:00; the evening comes from here: an evening
+// spot from 19:30 and a late spot from 22:30, which they keep past midnight —
+// the next day's timeline starts where the last one ended and sends them home
+// at 01:00. Venues vary by weekday; seats in a venue are handed out in the
+// residents' order, so two residents never stand on the same spot.
+const NIGHT_START = hm(19, 30),
+  LATE_START = hm(22, 30),
+  BED_TIME = hm(1);
+type Venue = 'T' | 'P' | 'M' | 'H' | 'B' | 'L';
+/** Seats per venue (the fixed spots below are never in a pool). */
+const VENUE_SEATS: Record<Venue, readonly string[]> = {
+  T: ['t.bar-1', 't.bar-2', 't.bar-3', 't.bar-4', 't.fire', 't.booth', 't.table-1', 't.table-2', 't.table-3', 't.table-4', 't.window', 't.corner'],
+  P: ['v.plaza', 'v.plaza-bench', 'v.plaza-e', 'v.pavilion', 'v.board', 'v.museum', 'v.bridge'],
+  M: ['m.bench-w', 'm.bench-e', 'm.plaza-n', 'm.plaza-s', 'm.cafe-1', 'm.cafe-2', 'm.cafe-3', 'm.cafe-4', 'm.board'],
+  H: ['v.harbor', 'v.beach', 'v.camp', 'v.lake'],
+  B: ['hb.bench-w', 'hb.bench-e', 'hb.quay', 'hb.pier-mid', 'hb.pier-end', 'hb.auction-crowd', 'hb.board'],
+  L: ['hl.park-bench-w', 'hl.park-bench-e', 'hl.plaza', 'hl.park-corner', 'hl.lane-n', 'hl.lane-s', 'hl.garden-gate'],
+};
+const VENUE_LABEL: Record<Venue, [eve: string, late: string]> = {
+  T: ['주점에서 한잔하는 중', '주점에서 늦게까지 수다 중'],
+  P: ['광장에서 저녁 바람 쐬는 중', '광장 가로등 아래서 쉬는 중'],
+  M: ['시장 거리 밤 등불 구경 중', '시장 벤치에서 밤 산책 중'],
+  H: ['밤바다 보러 나온 중', '해변에서 별 보는 중'],
+  B: ['항구에서 밤바다 구경 중', '항구 벤치에서 쉬는 중'],
+  L: ['언덕 공원에서 쉬는 중', '언덕 골목에서 산책 중'],
+};
+/**
+ * Evening and late codes for Sunday…Saturday. A venue letter, or a fixed
+ * spot: S 주점 무대 (공연 밤), J 허풍 심판석, G 밤의 등불 상점, D 등대 앞,
+ * K 독서 모임 자리, Y 도서관 계단 (the hillside ones fall back to a venue until
+ * ③ 언덕 주택가 opens).
+ */
+const NIGHTS: Record<string, { eve: string; late: string }> = {
+  nasera: { eve: 'MPTKTPM', late: 'TTPPHTP' },
+  frieren: { eve: 'TMTLMTM', late: 'PTTPTTP' },
+  thresh: { eve: 'HHTHHTH', late: 'TMTTTTG' },
+  sinjjajang: { eve: 'PMPTPMT', late: 'TPTPTTP' },
+  volibas: { eve: 'MPMPMJP', late: 'PTPTPTT' },
+  janna: { eve: 'TPMTPMT', late: 'PTTMTPT' },
+  gabung: { eve: 'BBBBBBB', late: 'DDDDDDD' },
+  lux: { eve: 'TBTBTBT', late: 'LBLTLBT' },
+  himmel: { eve: 'PTTPTTM', late: 'LPTLPTL' },
+  beatrice: { eve: 'YYYYYYY', late: 'YTYYTYY' },
+  bocchi: { eve: 'LBSLBSL', late: 'TTTLTTB' },
+  tsunade: { eve: 'TLTTLTT', late: 'TTLTTTT' },
+  makima: { eve: 'TTTTTTT', late: 'TTTTTTT' },
+  yanineko: { eve: 'BPHBPBH', late: 'PTLPMTL' },
+};
+const FIXED: Record<string, { place: string; hill?: boolean; label: string; act: NpcActivity; fallback: Venue }> = {
+  S: { place: 't.stage', label: '주점 무대에서 공연 중', act: 'work', fallback: 'T' },
+  J: { place: 't.judge', label: '허풍 경연 심판 보는 중', act: 'drink', fallback: 'T' },
+  G: { place: 'm.general', label: '밤에만 여는 등불 상점', act: 'work', fallback: 'M' },
+  D: { place: 'hb.lighthouse-door', label: '등대 앞에서 밤새 불 지키는 중', act: 'work', fallback: 'B' },
+  K: { place: 'hl.library-club', hill: true, label: '도서관 독서 모임', act: 'read', fallback: 'T' },
+  Y: { place: 'hl.library-steps', hill: true, label: '도서관 늦은 열람 시간', act: 'work', fallback: 'M' },
+};
+/** Residents with an evening (the rest keep their posts). */
+export const NIGHT_NPCS: readonly NpcId[] = [...WALKING_NPCS, ...STAGE2_NPCS];
+/** Where each resident sleeps (01:00 until their day starts). */
+const BED: Partial<Record<NpcId, string>> = { gabung: 'hb.lighthouse-in', beatrice: 'hl.library-in', makima: 'away' };
+type NightSpot = { place: string; act: NpcActivity; label: string };
+const nightCache = new Map<string, Record<string, { eve: NightSpot; late: NightSpot }>>();
+/** Every resident's evening and late spot on `day` (seats handed out without clashes). */
+function nightsOn(day: number, hill: boolean) {
+  const key = `${day}:${hill ? 1 : 0}`;
+  const hit = nightCache.get(key);
+  if (hit) return hit;
+  const k = dayKind(day, hill);
+  const taken = { eve: new Set<string>(), late: new Set<string>() };
+  const out: Record<string, { eve: NightSpot; late: NightSpot }> = {};
+  const resolve = (code: string, when: 'eve' | 'late'): NightSpot => {
+    const fixed = FIXED[code];
+    let v = (fixed ? fixed.fallback : code) as Venue;
+    if (v === 'L' && !hill) v = 'P';
+    // Rainy nights move the seaside and hillside evenings indoors.
+    if (k.rain && (v === 'H' || v === 'B' || v === 'L')) v = 'T';
+    const seats = VENUE_SEATS[v];
+    const start = hash32(`night:${day}:${v}:${when}`) % seats.length;
+    for (const venue of [v, 'T', 'P', 'M'] as Venue[]) {
+      const list = VENUE_SEATS[venue];
+      const base = venue === v ? start : 0;
+      for (let i = 0; i < list.length; i++) {
+        const seat = list[(base + i) % list.length];
+        if (taken[when].has(seat)) continue;
+        taken[when].add(seat);
+        return { place: seat, act: venue === 'T' ? 'drink' : 'stroll', label: VENUE_LABEL[venue][when === 'eve' ? 0 : 1] };
+      }
+    }
+    return { place: 'v.plaza', act: 'stroll', label: VENUE_LABEL.P[0] };
+  };
+  // Fixed spots first so a venue seat never lands on them.
+  for (const when of ['eve', 'late'] as const)
+    for (const id of NIGHT_NPCS) {
+      const f = FIXED[NIGHTS[id][when][k.weekday]];
+      if (f && (!f.hill || hill)) taken[when].add(f.place);
+    }
+  for (const id of NIGHT_NPCS) {
+    const n = NIGHTS[id];
+    const eveCode = n.eve[k.weekday],
+      lateCode = n.late[k.weekday];
+    const pick = (code: string, when: 'eve' | 'late') => {
+      const f = FIXED[code];
+      if (f && (!f.hill || hill)) return { place: f.place, act: f.act, label: f.label };
+      return resolve(code, when);
+    };
+    out[id] = { eve: pick(eveCode, 'eve'), late: pick(lateCode, 'late') };
+  }
+  if (nightCache.size > 64) nightCache.clear();
+  nightCache.set(key, out);
+  return out;
+}
+/**
+ * A resident's full day: yesterday's late spot until 01:00, bed, the day
+ * plan until 19:30, the evening spot, then the late spot past midnight.
+ */
+function withNight(id: NpcId, plan: Seg[], day: number, hill: boolean): Seg[] {
+  if (!NIGHT_NPCS.includes(id)) return plan;
+  const prev = nightsOn(day - 1, hill)[id].late,
+    today = nightsOn(day, hill)[id];
+  const bed = BED[id] ?? 'home';
+  const body = plan.filter(([t]) => t > 0 && t < NIGHT_START);
+  return [
+    [0, prev.place, prev.act, prev.label],
+    [BED_TIME, bed, 'sleep', bed === 'away' ? '마을 밖' : undefined],
+    ...body.filter(([t]) => t > BED_TIME),
+    [NIGHT_START, today.eve.place, today.eve.act, today.eve.label],
+    [LATE_START, today.late.place, today.late.act, today.late.label],
+  ];
 }
 
 // ---------------------------------------------------------------- timeline
@@ -753,8 +900,8 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
   const key = `${id}:${day}:${hill ? 1 : 0}`;
   const hit = timelines.get(key);
   if (hit) return hit;
-  const k = dayKind(day);
-  const plan = homesOf(id, planOf(id, k), hill);
+  const k = dayKind(day, hill);
+  const plan = homesOf(id, withNight(id, planOf(id, k), day, hill), hill);
   const start = day * DAY - KST;
   const end = start + DAY;
   const ev: Ev[] = [];
@@ -860,5 +1007,5 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>
-  homesOf(id, planOf(id, dayKind(day)), !!world.hill).map(([t, p]) => [t, p] as const);
+  homesOf(id, withNight(id, planOf(id, dayKind(day, !!world.hill)), day, !!world.hill), !!world.hill).map(([t, p]) => [t, p] as const);
 export const kstDayStart = (day: number) => day * DAY - KST;

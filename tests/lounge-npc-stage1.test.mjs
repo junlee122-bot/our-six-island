@@ -98,11 +98,11 @@ test('no teleports: timelines are continuous and areas change only through an ex
       const ev = npcTimeline(id, DAY0 + d);
       assert.equal(ev[0].t0, kstDayStart(DAY0 + d), `${id} starts at midnight`);
       assert.ok(ev.at(-1).t1 >= kstDayStart(DAY0 + d + 1), `${id} lasts the day`);
-      // Every day starts and ends at the same place (no jump at midnight).
-      const first = ev[0], last = ev.at(-1);
+      // Each day starts where the day before ended (no jump at midnight).
+      const first = ev[0], last = npcTimeline(id, DAY0 + d - 1).at(-1);
       assert.equal(first.k, 'stay');
       assert.equal(last.k, 'stay');
-      assert.equal(first.place, last.place, `${id} same place at midnight`);
+      assert.equal(first.place, last.place, `${id} same place across midnight`);
       for (let i = 1; i < ev.length; i++) {
         const a = ev[i - 1], b = ev[i];
         assert.equal(a.t1, b.t0, `${id} day ${d} event ${i} contiguous`);

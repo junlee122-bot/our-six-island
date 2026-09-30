@@ -1,3 +1,4 @@
+import { setNpcWorld } from './lounge-npc-schedule';
 import { emptyLoungeView } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
@@ -300,6 +301,8 @@ export class CloudRoom {
     const life = r.life ?? (r.packet as { life?: LifeView } | null)?.life;
     if (life) {
       this.view = { ...this.view, life };
+      // Residents sleep in their hillside houses once 언덕 주택가 is open.
+      setNpcWorld({ hill: !!life.districts?.goals.hillside.open });
       this.lifeHash = r.lifeHash ?? '';
     } else if (this.view.life && Number.isFinite(r.serverNow))
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };

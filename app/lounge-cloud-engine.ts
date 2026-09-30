@@ -403,6 +403,7 @@ export function cloudTransition(
               area: player.area ?? 'village', home: player.home, actor: member.actor,
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
               x: player.x, y: player.y,
+              hill: (life.flags ?? []).includes('district-hillside'),
             }, now);
           }
           if (isTownAction(command.action)) {
