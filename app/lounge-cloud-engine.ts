@@ -399,7 +399,13 @@ export function cloudTransition(
             assertNpcSocialContext(command.action, life.ext?.[member.id]?.npcRelations, {
               area: player.area ?? 'village', home: player.home, actor: member.actor,
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
+              x: player.x, y: player.y,
             }, now);
+          }
+          if (command.action.kind === 'npcRequest') {
+            // 의뢰 게시판 stands in 시장 거리 (lounge-market-layout.ts MARKET_BOARD).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'market') throw new CloudError('시장 거리 의뢰 게시판 앞에서 전해 주세요.', 409);
           }
           const next = lifeAction(
             readLife(g.life),

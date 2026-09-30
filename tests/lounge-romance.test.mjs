@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NPCS, NPC_INVITE_MS, assertNpcSocialContext, npcGuestOf, readNpcRelations } from '../app/lounge-romance.ts';
+import { NPCS, NPC_IDS, NPC_INVITE_MS, assertNpcSocialContext, npcGuestOf, readNpcRelations } from '../app/lounge-romance.ts';
 import { emptyLife, ensureLifeMember, lifeAction, lifeView, readLife } from '../app/lounge-life.ts';
 import { newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
 import { FORAGE } from '../app/lounge-items.ts';
@@ -105,7 +105,7 @@ test('save parser bounds NPC keys/counters and round-trips old and new worlds', 
   const old = ensureLifeMember(emptyLife(), s.member.id, 0);
   const before = JSON.stringify(old);
   const view = lifeView(old, s.member.id, 0, T0);
-  assert.equal(view.me.npcRelations.length, 2);
+  assert.equal(view.me.npcRelations.length, NPC_IDS.length);
   assert.deepEqual(view.npcGuests, {});
   assert.equal(JSON.stringify(old), before);
 });

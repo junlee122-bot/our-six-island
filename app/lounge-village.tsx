@@ -68,6 +68,15 @@ import { VillageSeasonLayer } from './lounge-village-season-3d';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import { VillageGrowthLayer } from './lounge-village-growth-3d';
 import { VillageShopsLayer } from './lounge-village-shops';
+import { VillageDistrictGates } from './lounge-village-districts-3d';
+import { ResidentLayer } from './lounge-npc-figures';
+import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { npcsIn, npcSpot } from './lounge-npc-schedule';
+import { NPCS, type NpcId } from './lounge-npc-data';
+import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
+import { prefetchDistrict } from './lounge-district-models';
+import { weatherOf } from './lounge-calendar';
+import './lounge-npc-figures.css';
 import { venuesFromView } from './lounge-venue-data';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data';
 import {
@@ -216,12 +225,16 @@ function PlaceIcon({ place, size = 12 }: { place: VillagePlace; size?: number })
     />
   );
 }
-const MINI_BOX = {
-  x: -VILLAGE_BOUNDS.width / 2 - 2,
-  y: -VILLAGE_BOUNDS.depth / 2 - 2,
-  w: VILLAGE_BOUNDS.width + 4,
-  h: VILLAGE_BOUNDS.depth + 4,
-};
+/**
+ * The minimap keeps framing the lived-in hub (100 × 80, as before the hub
+ * grew to 112 × 88) so the homes' pins do not crowd each other; the district
+ * gates on the rim are pinned at the map's edge (miniEdge).
+ */
+const MINI_BOX = { x: -50, y: -40, w: 100, h: 80 };
+const miniEdge = (p: { x: number; z: number }) => ({
+  x: Math.max(MINI_BOX.x + 1.5, Math.min(MINI_BOX.x + MINI_BOX.w - 1.5, p.x)),
+  z: Math.max(MINI_BOX.y + 1.5, Math.min(MINI_BOX.y + MINI_BOX.h - 1.5, p.z)),
+});
 /** Building labels (walking): only the nearest place within this many world
  *  units of its footprint is named; the next one takes over past HANDOFF. */
 const LABEL_NEAR = 4.2,
@@ -273,6 +286,10 @@ type Props = {
   onNode?: (id: string, kind: NodeKind) => void;
   /** 성장 P2: the north gate up to 뒷산. */
   onGate?: () => void;
+  /** A district gate on the rim (시장 거리 open; the rest say what opens them). */
+  onDistrict?: (id: DistrictId) => void;
+  /** Talking to a resident walking about the hub. */
+  onResident?: (npc: NpcId) => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
   onTalk?: (actor: number) => void;
   /** The selected hotbar item (the farm action follows it). */
@@ -330,6 +347,8 @@ type WorldState = {
   growth: VillageGrowthLayer;
   /** 허풍 주점 · 범마을 부동산 · 나무결 가구점 buildings. */
   shops: VillageShopsLayer;
+  /** The five district gates on the rim (2026-09-30). */
+  gates: VillageDistrictGates;
 };
 let villageWorld: WorldState | null = null;
 
@@ -392,13 +411,13 @@ function getVillageWorld(): WorldState {
   const sun = new THREE.DirectionalLight('#fff3d3', 3.0);
   sun.position.set(-20, 34, 25);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
-  // Covers the 96 × 76 valley (VILL-2) from the sun's slant.
+  sun.shadow.mapSize.set(2048, 2048);
+  // Covers the 112 × 88 hub (2026-09-30) from the sun's slant.
   Object.assign(sun.shadow.camera, {
-    left: -64,
-    right: 64,
-    top: 56,
-    bottom: -56,
+    left: -74,
+    right: 74,
+    top: 64,
+    bottom: -64,
     near: 1,
     far: 130,
   });
@@ -414,6 +433,7 @@ function getVillageWorld(): WorldState {
   const valley = new VillageValleyLayer(root);
   const growth = new VillageGrowthLayer(root);
   const shops = new VillageShopsLayer(root);
+  const gates = new VillageDistrictGates(root);
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -512,6 +532,7 @@ function getVillageWorld(): WorldState {
     valley,
     growth,
     shops,
+    gates,
   };
   return villageWorld;
 }
@@ -953,6 +974,14 @@ export function Village3D(props: Props) {
       bubbleText: string;
     };
     const figures = new Map<string, Figure>();
+    // Residents walking about the hub (lounge-npc-schedule.ts) with this screen's idle behaviour.
+    const residentLayer = new ResidentLayer(scene, labels, { height: FIGURE_HEIGHT * 1.12, billboard: 'upright', y: GROUND_Y });
+    residentLayer.onChange = () => {
+      needsRender = true;
+    };
+    const residentMemory = newBehaviorMemory();
+    let residentPositions: { id: NpcId; x: number; z: number }[] = [];
+    let prefetched = false;
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
     const spritesJob = loungeSprites().then(async (value) => {
       if (disposed) return;
@@ -1017,6 +1046,8 @@ export function Village3D(props: Props) {
         return;
       }
       const target = t.spot;
+      if (target.kind === 'district') return current.onDistrict?.(target.id);
+      if (target.kind === 'resident') return current.onResident?.(target.npc);
       if (action.disabled) return;
       if (target.kind === 'fish') current.onFish?.(target.spot);
       else if (target.kind === 'spawn') current.onSpawn?.(target.spot, target.mode, target.item);
@@ -1096,6 +1127,7 @@ export function Village3D(props: Props) {
       });
       if (growthChanged) host.dataset.nodes = String((life?.growth?.nodes ?? []).filter((n) => !n.taken).length);
       const shopsChanged = world.shops.update({ venues: venuesFromView(life?.venues) ?? {}, night });
+      world.gates.setNight(night);
       if ((civicChanged || growthChanged || shopsChanged) && !seasonChanged) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
@@ -1952,10 +1984,16 @@ export function Village3D(props: Props) {
         for (const [id, figure] of figures)
           if (id.startsWith('friend-'))
             npcs.push({ actor: Number(id.slice(7)), point: figure.point });
+        // Walking up to 시장 거리's gate starts fetching its models (before the fade).
+        if (!prefetched && districtOpen('market') && gateDistance('market', position) < DISTRICT_PREFETCH_RADIUS) {
+          prefetched = true;
+          void prefetchDistrict('market');
+        }
         const nextAction = villageAction(position, latest.current.save.actor, {
           life: latest.current.life,
           now: serverNow(),
           npcs,
+          residents: residentPositions,
           canVisit: !!latest.current.onVisit,
           tool: latest.current.tool,
         });
@@ -2278,6 +2316,27 @@ export function Village3D(props: Props) {
         host.dataset.fishing = fishing?.phase ?? '';
         needsRender = true;
       }
+      {
+        const at = serverNow();
+        const people = [...figures.entries()].map(([id, f]) => ({
+          id,
+          name: id === current.self ? ACTORS[current.save.actor] ?? '' : '',
+          x: f.point.x,
+          z: f.point.z,
+        }));
+        const w = weatherOf(Math.floor((at + 9 * 3_600_000) / 86_400_000));
+        const frames = residentFrames(npcsIn('village', at), people, at, {
+          rain: w === 'rain' || w === 'storm',
+          night,
+          memory: residentMemory,
+          canStand: villageCanWalk,
+        });
+        if (residentLayer.update(frames, now, dt, camera)) {
+          needsRender = true;
+          anyWalking = true;
+        }
+        residentPositions = residentLayer.positions();
+      }
       if (world.season.tick(now, dt, target)) needsRender = true;
       const shouldRender =
         needsRender ||
@@ -2296,6 +2355,7 @@ export function Village3D(props: Props) {
         host.dataset.valleyTextures = String(Math.round(world.valley.textureBytes() / 1048576));
         host.dataset.valleyKinds = String(world.valley.loadedKinds());
         renderer.render(scene, camera);
+        residentLayer.project(camera, width, height);
         lastRender = now;
         needsRender = false;
         // Labels are projected on every rendered frame so they never lag.
@@ -2543,6 +2603,7 @@ export function Village3D(props: Props) {
       window.removeEventListener('blur', blur);
       document.removeEventListener('visibilitychange', visibilityChanged);
       for (const [id, figure] of figures) removeFigure(id, figure);
+      residentLayer.dispose();
       scene.remove(world.root);
       disposeObject(marker);
       canvas.remove();
@@ -2958,6 +3019,19 @@ export function Village3D(props: Props) {
                   onClick={() => controls.current?.visit(MUSEUM_FRONT)} aria-label="마을 박물관으로 걸어가기">
                   <span aria-hidden="true">박물관</span>
                 </button>
+                {DISTRICT_IDS.map((id) => {
+                  const d = DISTRICTS[id];
+                  const open = districtOpen(id);
+                  const pin = miniEdge(d.gate.stand);
+                  return (
+                    <button type="button" key={id} className="hv-minimap-place" data-minimap-place={'district-' + id}
+                      data-named={String(open || miniExpanded)} data-nearest="false"
+                      style={{ left: `${((pin.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((pin.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                      onClick={() => controls.current?.visit(d.gate.stand)} aria-label={`${d.name}${open ? '' : ' (아직 닫힘)'} 입구로 걸어가기`}>
+                      <span aria-hidden="true">{open ? d.name : `${d.name} · 닫힘`}</span>
+                    </button>
+                  );
+                })}
                 {friendGroups.map((group) => {
                   const friend = group.friends[0], clustered = group.friends.length > 1;
                   const label = clustered
@@ -2971,7 +3045,7 @@ export function Village3D(props: Props) {
                     aria-expanded={clustered ? friendGroup === group.key : undefined}
                     aria-controls={clustered ? 'hv-minimap-peers' : undefined}
                     onKeyDown={onFriendKey}
-                    style={{ left: `${((group.point.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((group.point.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
+                    style={{ left: `${((miniEdge(group.point).x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((miniEdge(group.point).z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                     onClick={() => clustered ? setFriendGroup(friendGroup === group.key ? null : group.key) : followFriend(friend)}>
                     <b aria-hidden="true">{clustered ? group.friends.length : ACTORS[friend.actor].slice(0, 1)}</b>
                     <span>{clustered ? `친구 ${group.friends.length}명` : ACTORS[friend.actor] + (friend.indoor ? ' · 실내' : '')}</span>
@@ -3629,6 +3703,35 @@ function SpotPrompt({
         </strong>
         <small>
           {open ? '나무꾼의 능선 · 곰바위 동굴 광산' : '마을 개척 “산길 정비”로 길을 닦아요'}
+          {key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'district') {
+    const d = DISTRICTS[spot.id];
+    return (
+      <div>
+        <strong>
+          <Store size={14} /> {d.no}. {d.name}
+        </strong>
+        <small>
+          {districtOpen(spot.id) ? `${d.gate.road} · ${d.tagline}` : d.hint}
+          {key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'resident') {
+    const s = life ? npcSpot(spot.npc, life.serverNow) : null;
+    return (
+      <div>
+        <strong>
+          <MessageCircle size={14} /> {NPCS[spot.npc].name}
+        </strong>
+        <small>
+          {NPCS[spot.npc].role}
+          {s ? ` · ${s.label}` : ''}
           {key}
         </small>
       </div>

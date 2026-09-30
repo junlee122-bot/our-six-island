@@ -1,5 +1,6 @@
 import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-village-layout.ts';
 import { VILLAGE_GATE } from './lounge-areas.ts';
+import { DISTRICTS } from './lounge-districts.ts';
 
 type Presence = { id: string; actor: number; area: string; x: number; y: number; home?: number };
 export type VillageFriendPin = {
@@ -46,6 +47,9 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
       : ['casino', 'wardrobe', 'tavern', 'bank'].includes(p.area) ? p.area : undefined;
     const place = VILLAGE_PLACES.find((v) => v.id === placeId);
     if (place) return [{ id: p.id, actor: p.actor, point: place.entry, indoor: true, placeId, location: place.name }];
+    // Out in a district: pinned at its gate on the rim.
+    if (p.area === 'market')
+      return [{ id: p.id, actor: p.actor, point: DISTRICTS.market.gate.stand, indoor: false, location: DISTRICTS.market.name }];
     if (['hill', 'woods', 'mine'].includes(p.area))
       return [{ id: p.id, actor: p.actor, point: VILLAGE_GATE.stand, indoor: false,
         location: p.area === 'hill' ? '북쪽 언덕' : p.area === 'woods' ? '숲' : '광산' }];

@@ -1,6 +1,7 @@
 import { KARCHIVE_COLLIDERS } from './lounge-village-karchive-layout.ts';
 import { SHOP_COLLIDERS } from './lounge-village-shops-layout.ts';
 import { slideSubstep } from './lounge-walk-slide.ts';
+import { DISTRICTS, DISTRICT_IDS } from './lounge-districts.ts';
 
 export type VillageDestination =
   | 'lounge'
@@ -37,8 +38,14 @@ export type VillagePlace = {
  * row moved 8 north so every friend has a front-yard farm between the door
  * and the lane, and the new margins hold the fishing spots (waterfall pool,
  * lake dock, upstream rapids, beach rocks, night harbor).
+ *
+ * Hub growth (2026-09-30, design-village-2x-npcs.md §2): 96 × 76 → 112 × 88.
+ * Every inland coordinate stays; the coast moved out with the edge (the
+ * falls pool, the sea pier, the rapids' west end, 갯바위 and the night harbor
+ * keep their place on the shore) and the new rim holds the five district
+ * gates (lounge-districts.ts).
  */
-export const VILLAGE_BOUNDS = { width: 96, depth: 76, radius: 0.35 } as const;
+export const VILLAGE_BOUNDS = { width: 112, depth: 88, radius: 0.35 } as const;
 export const VILLAGE_START: VillagePoint = { x: 0, z: 10 };
 
 /**
@@ -465,23 +472,23 @@ export const VILLAGE_MARKET = {
  * done. All are built from primitives in lounge-village-season-3d.ts.
  */
 export const VILLAGE_POND = { id: 'pond', name: '연못', x: -34, z: -15, radius: 2.6 } as const;
-/** Sea pier off the east edge; fishing stands at its root (x ≤ 47.6). */
-export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 47, z: 24, width: 1.5 } as const;
+/** Sea pier off the east edge; fishing stands at its root (x ≤ 55.6). */
+export const VILLAGE_PIER = { id: 'pier', name: '동쪽 바다 데크', x: 55, z: 24, width: 1.5 } as const;
 
 /*
  * VILL-2 fishing spots. Each water body is one convex solid (or a disc
  * bitten into the island edge) so walking around it never wedges.
  */
 /** 폭포 소: a pool bitten into the north-west edge under a rock cliff (the cliff stands beyond the edge). */
-export const VILLAGE_FALLS = { id: 'falls', name: '폭포 소', x: -40, z: -36.4, radius: 4 } as const;
+export const VILLAGE_FALLS = { id: 'falls', name: '폭포 소', x: -40, z: -42.4, radius: 4 } as const;
 /** 호숫가 선착장: a round lake in the north-east; the dock reaches in from its west shore. */
 export const VILLAGE_LAKE = { id: 'lake', name: '호수', x: 39.5, z: -26, radius: 4, dockZ: -26 } as const;
 /** 윗물 여울: the river's upstream (west) stretch, past the last bridge, runs over rocks. */
-export const VILLAGE_RAPIDS = { id: 'rapids', name: '윗물 여울', x0: -48, x1: -35 } as const;
+export const VILLAGE_RAPIDS = { id: 'rapids', name: '윗물 여울', x0: -56, x1: -35 } as const;
 /** South coast: a sand beach band, 갯바위 (a rock heap on the shore) and the night harbor dock. */
 export const VILLAGE_BEACH = { z0: 31.2 } as const;
-export const VILLAGE_ROCKS = { id: 'rocks', name: '갯바위', x: -19, z: 37.6, radius: 1.5 } as const;
-export const VILLAGE_HARBOR = { id: 'harbor', name: '밤 항구', x: 36, z: 38, width: 1.6, length: 6 } as const;
+export const VILLAGE_ROCKS = { id: 'rocks', name: '갯바위', x: -19, z: 43.6, radius: 1.5 } as const;
+export const VILLAGE_HARBOR = { id: 'harbor', name: '밤 항구', x: 36, z: 44, width: 1.6, length: 6 } as const;
 // Museum and greenhouse footprints follow their kArchive models
 // (lounge-village-karchive-layout.ts: KARCHIVE_MUSEUM, KARCHIVE_GREENHOUSE).
 export const VILLAGE_MUSEUM = {
@@ -610,16 +617,16 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [-28.5, -9, -15.2, -9, 1.5],
   // New fishing spots: waterfall pool, lake dock, upstream rapids, sea pier,
   // and the south beach promenade to the rocks and the night harbor.
-  [-28.5, -33, -36.6, -32.6, 1.3],
+  [-28.5, -33, -36.6, -38.6, 1.3],
   [28.5, -26, 34.6, -26, 1.3],
   [-27, 12.6, -40.6, 12.6, 1.2],
   [27, 17.5, 31, 24, 1.3],
-  [31, 24, 46.6, 24, 1.3],
+  [31, 24, 54.6, 24, 1.3],
   [5, 24, 5, 33.4, 1.3],
   [-8, 24, -18, 33.4, 1.2],
   [-19, 33.4, 30, 33.4, 1.3],
-  [-19, 33.4, -19, 35.2, 1.2],
-  [30, 33.4, 35.9, 36.9, 1.3],
+  [-19, 33.4, -19, 41.2, 1.2],
+  [30, 33.4, 35.9, 42.9, 1.3],
   // 허풍 주점's door down to the harbor walk.
   [35.8, 30.9, 34.4, 35.9, 1.2],
   // 강 건너 상점가: from the west bridge south to the shop lane.
@@ -683,6 +690,15 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [-11.3, 4.1, -3.1, 4.1, 1.45],
   [-21.8, 25.4, -11, 25.4, 1.5],
   [-11, 25.4, -11, 24.7, 1.5],
+  // Hub growth (2026-09-30): roads out to the district gates on the rim
+  // (lounge-districts.ts) and the moved north gate to 뒷산.
+  [38, -4.8, 54.4, -4.8, 1.5],
+  [-27, -3, -54.4, -3, 1.3],
+  [35.9, 42.9, 46, 42.4, 1.2],
+  [28.5, -29.6, 34, -29.6, 1.2],
+  [34, -29.6, 40, -42, 1.2],
+  [-24, -33, -20, -42, 1.2],
+  [12, -33, 12, -42, 1.3],
 ];
 
 /** Boardwalk deck and its two rails at the eastern garden edge. */
@@ -1203,7 +1219,7 @@ const NATURE: readonly (readonly [ValleyModelKey, number, number, number, number
   ['treeStump', -36.8, -26.2, 0.51, 1.02],
   ['treeStump', 22.4, -6.2, 0.59, 0.43],
   ['treeStump', -44.8, -4.7, 0.54, 1.32],
-  ['treeStump', 44, -5.7, 0.53, 2.84],
+  ['treeStump', 44, -7.6, 0.53, 2.84], // moved off the 큰길 to 시장 거리
   ['treeStump', 42.9, 26.2, 0.55, 3.18],
   ['graniteBoulder', 45.7, -33.1, 1.19, 4.35],
   ['graniteBoulder', -23.9, 0.4, 1.04, 5.76],
@@ -1257,6 +1273,42 @@ for (const [model, x, z, sc, rot] of NATURE) {
   const solid = model === 'broadleafTree' || model === 'smallPine' || model === 'treeStump' || model === 'graniteBoulder';
   const r = model === 'broadleafTree' ? 0.2 * sc : model === 'smallPine' ? 0.22 * sc : model === 'treeStump' ? 0.25 * sc * size.w : 0.36 * sc * size.w;
   valleyProps.push({ model, x, z, s: sc, rot, zone: 'village', ...(solid ? { collider: circle(round(r)) } : {}) });
+}
+// Hub growth (2026-09-30): a loose tree line along the new rim, 0.8 in from
+// the edge (too tight to walk behind), open at the district gates
+// (lounge-districts.ts), the 뒷산 gate (x 12), the falls, where the river runs
+// out and along the south coast. Deterministic jitter, no randomness.
+{
+  const jit = (k: number) => {
+    const v = Math.sin(k * 12.9898 + 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  const hw = VILLAGE_BOUNDS.width / 2,
+    hd = VILLAGE_BOUNDS.depth / 2;
+  const open = (x: number, z: number) =>
+    DISTRICT_IDS.some((id) => Math.hypot(x - DISTRICTS[id].gate.x, z - DISTRICTS[id].gate.z) < 4.2) ||
+    Math.hypot(x - 12, z + hd) < 4.2 ||
+    (z < -hd + 2 && x > VILLAGE_FALLS.x - VILLAGE_FALLS.radius - 1.5 && x < VILLAGE_FALLS.x + VILLAGE_FALLS.radius + 1.5) ||
+    (z > VILLAGE_RIVER.minZ - 3 && z < VILLAGE_RIVER.maxZ + 3) ||
+    Math.abs(z - VILLAGE_PIER.z) < 3.5 ||
+    z > VILLAGE_BEACH.z0 - 1.5;
+  const rim: [number, number][] = [];
+  for (let x = -hw + 2.2; x <= hw - 2.2; x += 3.1) rim.push([x, -hd + 0.8]);
+  for (let z = -hd + 3.4; z <= hd - 2; z += 3.3) rim.push([-hw + 0.8, z], [hw - 0.8, z]);
+  rim.forEach(([x, z], i) => {
+    if (open(x, z) || jit(i) < 0.18) return;
+    const pine = jit(i + 91) < 0.45,
+      sc = round(1.6 + jit(i + 7) * 0.45);
+    valleyProps.push({
+      model: pine ? 'smallPine' : 'broadleafTree',
+      x: round(x + (jit(i + 3) - 0.5) * 0.3),
+      z: round(z + (jit(i + 5) - 0.5) * 0.3),
+      s: sc,
+      rot: round(jit(i + 11) * 6.28),
+      zone: 'village',
+      collider: circle(round((pine ? 0.22 : 0.2) * sc)),
+    });
+  });
 }
 /** Single source for the valley kArchive props: the layer draws them, collision uses their colliders. */
 export const VILLAGE_VALLEY_PROPS: readonly ValleyProp[] = valleyProps;

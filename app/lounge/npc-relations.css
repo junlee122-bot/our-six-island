@@ -1,12 +1,25 @@
 .l-npc-relations p { color: var(--text-soft); }
-.l-npc-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
+.l-npc-book { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+.l-npc-list { display: grid; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; max-height: 62vh; overflow: auto; }
+.l-npc-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2); width: 100%; min-height: 48px; padding: var(--sp-2); border: 0; border-radius: var(--r-s); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.l-npc-row:hover { background: var(--surface-sunken); }
+.l-npc-row[aria-pressed='true'] { background: var(--accent-soft); box-shadow: var(--edge-line); }
+.l-npc-row:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.l-npc-row span { display: grid; min-width: 0; }
+.l-npc-row strong { font-size: var(--fs-body); }
+.l-npc-row small { overflow: hidden; color: var(--text-soft); font-size: var(--fs-cap); text-overflow: ellipsis; white-space: nowrap; }
+.l-npc-row em { color: var(--text-soft); font-size: var(--fs-body-s); font-style: normal; }
+.l-npc-face { display: inline-block; flex-shrink: 0; width: var(--sp-7); height: var(--sp-7); overflow: hidden; border-radius: 50%; background: var(--surface-sunken); box-shadow: var(--edge-line); }
+.l-npc-face > svg, .l-npc-face > img { display: block; width: 100%; height: 100%; }
+.l-npc-face > img { object-fit: cover; object-position: 50% 0; }
+.l-npc-face.is-crop > img { width: 250%; height: auto; margin-left: -75%; margin-top: -4%; }
+.l-npc-face.is-large { width: calc(var(--sp-7) * 1.6); height: calc(var(--sp-7) * 1.6); }
 .l-npc-card { display: grid; align-content: start; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
 .l-npc-card header { display: flex; align-items: center; gap: var(--sp-3); }
-.l-npc-card header > svg { width: var(--sp-7); height: var(--sp-7); flex-shrink: 0; }
 .l-npc-card h3 { margin: 0; font-size: var(--fs-title-s); }
 .l-npc-card p { margin: 0; font-size: var(--fs-body); }
 .l-npc-card small { font-size: var(--fs-cap); color: var(--text-soft); }
-.l-npc-card blockquote { margin: 0; padding: var(--sp-3); background: var(--surface-sunken); border-radius: var(--r-s); color: var(--text); font-size: var(--fs-body); }
+.l-npc-card blockquote { display: grid; gap: var(--sp-1); margin: 0; padding: var(--sp-3); background: var(--surface-sunken); border-radius: var(--r-s); color: var(--text); font-size: var(--fs-body); }
 .l-npc-progress { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-1); font-size: var(--fs-body-s); }
 .l-npc-progress progress { width: 100%; accent-color: var(--accent); }
 .l-npc-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
@@ -14,4 +27,15 @@
 .l-npc-gift label { flex: 1; display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
 .l-npc-gift select { width: 100%; min-width: 0; padding: var(--sp-2); border-radius: var(--r-s); background: var(--surface); color: var(--text); box-shadow: var(--edge-line); }
 .l-npc-location { padding: var(--sp-2); background: var(--surface-sunken); border-radius: var(--r-s); }
-@media (max-width: 720px) { .l-npc-cards { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .l-npc-book { grid-template-columns: 1fr; } .l-npc-list { max-height: 30vh; } }
+.l-npc-talk-head { display: flex; align-items: center; gap: var(--sp-3); }
+.l-npc-talk-head div { display: grid; gap: var(--sp-1); }
+.l-npc-talk-head small { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-npc-talk-lines { display: grid; gap: var(--sp-2); margin: var(--sp-3) 0; padding: var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); color: var(--text); font-family: var(--font-hand); font-size: var(--fs-title-s); line-height: var(--lh-body); }
+.l-npc-talk .l-npc-actions, .l-npc-talk .l-npc-gift { margin-top: var(--sp-3); }
+.l-npc-requests { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
+.l-npc-request { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-npc-request[data-done] { opacity: 0.72; }
+.l-npc-request div { display: grid; gap: var(--sp-1); min-width: 0; }
+.l-npc-request p { margin: 0; color: var(--text); font-size: var(--fs-body); }
+.l-npc-request small { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); color: var(--text-soft); font-size: var(--fs-cap); }

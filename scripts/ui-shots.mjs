@@ -251,7 +251,7 @@ async function runView(browser, base, view, report) {
     });
   }
   await step('npc', async () => {
-    if (!(await menu(/^루미와 매화$/))) throw new Error('주민 인연 메뉴를 찾지 못했습니다.');
+    if (!(await menu(/^주민 수첩$/))) throw new Error('주민 수첩 메뉴를 찾지 못했습니다.');
     await until(() => !!document.querySelector('dialog[open] [data-testid="npc-lumi"]') && !!document.querySelector('dialog[open] [data-testid="npc-maehwa"]'), 15000);
     await snap('npc');
   });
@@ -336,6 +336,59 @@ async function runView(browser, base, view, report) {
     await snap('fishing-fight');
     await page.keyboard.press('Escape');
     await until(() => !document.querySelector('[data-testid=fishing]'), 20000);
+  });
+
+  // 시장 거리 (stage 1 district): walk to the east gate, go through, open the request board.
+  await step('market', async () => {
+    try {
+      await closeAll();
+      await focusScene();
+      await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: 53.6, z: -5 } })));
+      await page.keyboard.down('Shift');
+      try {
+        assert.notEqual(await until(() => {
+          const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+          return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - 53.6, Number(d.avatarZ) + 5) < 1.2;
+        }, 900000), -1, '시장 거리 입구까지 걷지 못했습니다.');
+      } finally { await page.keyboard.up('Shift'); }
+      await focusScene();
+      await page.keyboard.press('KeyE');
+      assert.notEqual(await until(() => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.area === 'market' && d.loadState === 'ready';
+      }, 180000), -1, '시장 거리를 불러오지 못했습니다.');
+      await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+      await sleep(6000);
+      await snap('market');
+      await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: 0, z: 1.6 } })));
+      assert.notEqual(await until(() => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.walking === 'false' && Math.hypot(Number(d.avatarX), Number(d.avatarZ) - 1.6) < 1;
+      }, 120000), -1, '의뢰 게시판까지 걷지 못했습니다.');
+      await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+      await page.keyboard.press('KeyE');
+      await until(() => !!document.querySelector('dialog[open] .l-npc-requests, dialog[open] .ui-empty'), 15000);
+      await sleep(800);
+      await snap('npc-requests');
+    } finally {
+      // Back along the 큰길 (the market is outside the village tab's own Esc flow).
+      await closeAll();
+      if (await js(() => !!document.querySelector('[data-testid=area-3d]'))) {
+        await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: -26, z: -3 } })));
+        await until(() => {
+          const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+          return d?.walking === 'false' && Math.hypot(Number(d.avatarX) + 26, Number(d.avatarZ) + 3) < 1;
+        }, 120000);
+        await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+        await page.keyboard.press('KeyE');
+        await until(() => {
+          const s = document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state');
+          return !!s && s !== 'loading';
+        }, 180000);
+        await sleep(1500);
+      }
+      await returnToVillage();
+    }
   });
 
   // Historical baseline names are retained, but each service now has its own

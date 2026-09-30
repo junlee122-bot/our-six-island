@@ -70,7 +70,6 @@ import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
 import { useOutdoor } from './lounge/Outdoor';
-import { VILLAGE_GATE } from './lounge-areas';
 import { DISH_BY_ID, BUFF_INFO, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
@@ -116,6 +115,10 @@ import { WalletModal } from './lounge/WalletModal';
 import { FinancePanel } from './lounge/FinancePanel';
 import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
+import { NpcTalkDialog } from './lounge/NpcTalkDialog';
+import { NpcRequestBoard } from './lounge/NpcRequestBoard';
+import { outdoorReturnPoint } from './lounge-areas';
+import type { NpcId } from './lounge-npc-data';
 import { AccountModal } from './lounge/AccountModal';
 import { SettingsModal, type SettingsTab } from './lounge/SettingsModal';
 import { ControlsHelp, SystemMenu, VillageMenu } from './lounge/SystemMenu';
@@ -378,6 +381,8 @@ type ModalName =
   // 성장 P1 (T): the growth journal and the blacksmith.
   | 'growth'
   | 'forge'
+  // 시장 거리: residents' request board (lounge-npc-requests.ts).
+  | 'npcRequests'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
   // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 결 목수).
@@ -493,6 +498,9 @@ function AccountLounge({
     // 성장 수첩: the skill a level-up banner opens it on.
     [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
     [modal, setModal] = useState<ModalName | null>(null),
+    // Talking to a resident where they stand (hub / 시장 거리), and the notebook's first page.
+    [residentTalk, setResidentTalk] = useState<NpcId | null>(null),
+    [npcBookAt, setNpcBookAt] = useState<NpcId | undefined>(undefined),
     [financeMode, setFinanceMode] = useState<'bank' | 'casino' | 'rob'>('bank'),
     [financePage, setFinancePage] = useState<'bank' | 'notes' | undefined>(undefined),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
@@ -556,6 +564,8 @@ function AccountLounge({
     room,
     notify,
     fade: playFade,
+    onResident: (npc) => setResidentTalk(npc),
+    onRequests: () => setModal('npcRequests'),
     onVillage: (at) => {
       setVillageSpawn(at);
       villagePosition.current = at;
@@ -935,9 +945,11 @@ function AccountLounge({
       setVisiting(null);
       setGameScreen(null);
       // Out on 뒷산 / in the mine: any door or menu brings me back first.
-      if (outdoorApi.reset() && destination === 'village' && from === 'village') {
-        setVillageSpawn({ ...VILLAGE_GATE.stand });
-        villagePosition.current = { ...VILLAGE_GATE.stand };
+      const wasOut = outdoorApi.reset();
+      if (wasOut && destination === 'village' && from === 'village') {
+        const back = outdoorReturnPoint(wasOut.area);
+        setVillageSpawn(back);
+        villagePosition.current = back;
         sendArea('village');
       }
       if (place) enteredPlace.current = place;
@@ -2155,7 +2167,7 @@ function AccountLounge({
                 players,
                 self,
                 me: { actor: save.actor, look: myLook },
-                paused: !!modal || !!coach || !!talk,
+                paused: !!modal || !!coach || !!talk || !!residentTalk,
                 onChat: () => setModal('chat'),
                 onBag: () => setModal('bag'),
                 axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
@@ -2220,6 +2232,8 @@ function AccountLounge({
                       onForge={() => setModal('forge')}
                       onNode={(id, kind) => void gatherNode(id, kind)}
                       onGate={outdoorApi.toHill}
+                      onDistrict={outdoorApi.toDistrict}
+                      onResident={setResidentTalk}
                       onTalk={talkTo}
                       tool={hotbar.tool}
                       fishing={fishing}
@@ -2375,9 +2389,10 @@ function AccountLounge({
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
+                onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                sheetOpen={!!tableSheet || !!modal}
+                sheetOpen={!!tableSheet || !!modal || !!residentTalk}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
@@ -2452,7 +2467,7 @@ function AccountLounge({
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                    sheetOpen={!!tableSheet || !!modal}
+                    sheetOpen={!!tableSheet || !!modal || !!residentTalk}
                   />
                 </Suspense>
               </ScreenBoundary>
@@ -2592,7 +2607,7 @@ function AccountLounge({
               items: [
                 { id: 'friends', label: '마을 친구들', glyph: 'people', onClick: () => setModal('friends') },
                 { id: 'bonds', label: '친구 사이', glyph: 'heart', kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
-                { id: 'npc', label: '루미와 매화', glyph: 'heart', onClick: () => setModal('npc') },
+                { id: 'npc', label: '주민 수첩', glyph: 'heart', onClick: () => { setNpcBookAt(undefined); setModal('npc'); } },
                 { id: 'invite', label: '게임 초대', glyph: 'dice', onClick: () => requestGame(null) },
                 { id: 'status', label: '오늘의 한마디', glyph: 'quote', onClick: () => setModal('status') },
               ],
@@ -2681,7 +2696,24 @@ function AccountLounge({
       )}
       {modal === 'bank' && <FinancePanel key={`${financeMode}:${financePage ?? 'bank'}`} room={room} view={view} mode={financeMode} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? 'bank'} />}
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
-      {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+      {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} initial={npcBookAt} onClose={() => setModal(null)} />}
+      {modal === 'npcRequests' && <NpcRequestBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+      {residentTalk && !modal && (
+        <NpcTalkDialog
+          key={residentTalk}
+          npc={residentTalk}
+          room={room}
+          view={view}
+          notify={notify}
+          onClose={() => setResidentTalk(null)}
+          onBook={() => {
+            setNpcBookAt(residentTalk);
+            setResidentTalk(null);
+            setModal('npc');
+          }}
+          onBoard={view.players.find((p) => p.id === view.self)?.area === 'market' ? () => { setResidentTalk(null); setModal('npcRequests'); } : undefined}
+        />
+      )}
       {modal === 'wallet' && (
         <WalletModal
           room={room}

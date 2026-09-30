@@ -10,9 +10,18 @@
 // other area (regionToNetwork / regionFromNetwork).
 import { makeWalkWorld, type WalkCollider, type WalkPoint, type WalkWorld } from './lounge-walk-world.ts';
 import { MINE_ARRIVE, MINE_LIFT_AT, MINE_ROOM, mineFloor } from './lounge-mine.ts';
+import { MARKET_ARRIVE, MARKET_COLLIDERS, MARKET_D, MARKET_EXIT, MARKET_W } from './lounge-market-layout.ts';
+import { DISTRICTS } from './lounge-districts.ts';
 
-export type OutdoorArea = 'hill' | 'woods' | 'mine';
-export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine'];
+/**
+ * 'market' is ① 시장 거리, the first of the five districts around the hub
+ * (lounge-districts.ts): a separate map behind the hub's east gate.
+ */
+export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market';
+export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market'];
+/** Districts (separate maps around the hub) among the outdoor areas. */
+export const DISTRICT_AREAS: readonly OutdoorArea[] = ['market'];
+export const isDistrictArea = (a: unknown): a is OutdoorArea => typeof a === 'string' && (DISTRICT_AREAS as readonly string[]).includes(a);
 export const isOutdoorArea = (a: unknown): a is OutdoorArea =>
   typeof a === 'string' && (OUTDOOR_AREAS as readonly string[]).includes(a);
 
@@ -30,6 +39,12 @@ export type RegionExit = {
   reach: number;
 };
 export type RegionLook = { ground: string; groundFar: string; fog: string; sky: string };
+/**
+ * A district's own light: hemisphere and sun strength, exposure and the sun
+ * shadow's half-extent (world units). `dayCycle` follows the KST clock like the
+ * hub (dawn / day / evening / night palettes).
+ */
+export type RegionLight = { hemi: number; sun: number; exposure: number; shadow: number; dayCycle?: boolean };
 export type Region = {
   area: OutdoorArea;
   name: string;
@@ -41,6 +56,9 @@ export type Region = {
   /** Where you arrive, by where you came from. */
   arrive: Partial<Record<ExitTo, WalkPoint>>;
   look: RegionLook;
+  light?: RegionLight;
+  /** Camera half-height (world units) for this map. */
+  view?: number;
 };
 
 // ------------------------------------------------------------------ 뒷산
@@ -125,11 +143,29 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     arrive: { hill: { ...MINE_ARRIVE }, mine: { ...MINE_ARRIVE } },
     look: { ground: '#5a4a3c', groundFar: '#3a2f27', fog: '#1d1712', sky: '#140f0b' },
   },
+  market: {
+    area: 'market',
+    name: DISTRICTS.market.name,
+    short: '시장',
+    tagline: DISTRICTS.market.tagline,
+    bounds: { w: MARKET_W, d: MARKET_D },
+    colliders: MARKET_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: MARKET_EXIT.x, z: MARKET_EXIT.z, stand: { ...MARKET_EXIT.stand }, label: '큰길 따라 마을로', reach: MARKET_EXIT.reach },
+    ],
+    arrive: { village: { ...MARKET_ARRIVE } },
+    look: { ground: '#93ad6a', groundFar: '#6f8d52', fog: '#dfe5cf', sky: '#c7dfe9' },
+    light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
+    view: 11,
+  },
 };
 
 /** The village's north gate to 뒷산 (village coordinates, off every path). */
-export const VILLAGE_GATE = { x: 12, z: -37.4, stand: { x: 12, z: -35.8 }, reach: 1.9 } as const;
+export const VILLAGE_GATE = { x: 12, z: -43.4, stand: { x: 12, z: -41.8 }, reach: 1.9 } as const;
 export const villageGateDistance = (p: WalkPoint) => Math.hypot(p.x - VILLAGE_GATE.stand.x, p.z - VILLAGE_GATE.stand.z);
+/** Where I stand in the hub after leaving an outdoor area (its gate on the rim). */
+export const outdoorReturnPoint = (area: OutdoorArea): WalkPoint =>
+  area === 'market' ? { ...DISTRICTS.market.gate.stand } : { ...VILLAGE_GATE.stand };
 
 /** Walls of a region; the hill's log counts until 숲 깊은 곳 is opened. */
 export function regionColliders(area: OutdoorArea, opts: { logCleared?: boolean; day?: number; floor?: number; lift?: boolean } = {}): WalkCollider[] {

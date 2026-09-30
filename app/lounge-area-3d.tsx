@@ -39,7 +39,20 @@ import type { ActionKind } from './lounge-flow';
 import { RegionSet, type RegionNode } from './lounge-area-scene';
 import type { WalkPoint } from './lounge-walk-world';
 import './lounge-area-3d.css';
+import './lounge-npc-figures.css';
 import { WalkHints } from './ui/WalkHints';
+import { dayLighting } from './lounge-village-life';
+import { NPC_WALK_AREAS, npcsIn, type NpcArea } from './lounge-npc-schedule';
+import { ResidentLayer } from './lounge-npc-figures';
+import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { NPCS, type NpcId } from './lounge-npc-data';
+import { districtProgress } from './lounge-district-models';
+import { weatherOf } from './lounge-calendar';
+import { MARKET_BOARD } from './lounge-market-layout';
+import { josa } from './lounge-text';
+
+/** How close you stand to a resident to talk (E). */
+const RESIDENT_REACH = 1.9;
 
 const WALK_SPEED = 5.2;
 const FIGURE_HEIGHT = 1.72;
@@ -58,7 +71,11 @@ export type AreaAction =
   | { kind: 'ladder'; label: string }
   | { kind: 'lift'; label: string }
   | { kind: 'gate'; gate: string; label: string; disabled?: boolean }
-  | { kind: 'exit'; to: ExitTo; label: string; disabled?: boolean };
+  | { kind: 'exit'; to: ExitTo; label: string; disabled?: boolean }
+  /** A resident walking about here (lounge-npc-schedule.ts). */
+  | { kind: 'npc'; npc: NpcId; label: string }
+  /** 시장 거리's request board. */
+  | { kind: 'board'; label: string };
 
 type Figure = {
   canvas: HTMLCanvasElement;
@@ -94,6 +111,15 @@ export type AreaSceneProps = {
 export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, onMove, onAction }: AreaSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLElement>());
+  const labelLayerRef = useRef<HTMLDivElement>(null);
+  /** Where residents are drawn right now (talk reach). */
+  const residentsRef = useRef<{ id: NpcId; x: number; z: number }[]>([]);
+  const [loadPct, setLoadPct] = useState(() => (area === 'market' ? districtProgress('market') : 1));
+  useEffect(() => {
+    if (area !== 'market' || loadPct >= 1) return;
+    const id = setInterval(() => setLoadPct(districtProgress('market')), 150);
+    return () => clearInterval(id);
+  }, [area, loadPct]);
   const [{ keys }] = useSettings();
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -132,9 +158,9 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     target: null as WalkPoint | null,
     lastSent: { x: NaN, z: NaN },
   });
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area });
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, onMove, onAction, regions, axeTier, logCleared, area, clockOffset };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -184,6 +210,14 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         if (d <= MINE_LIFT.reach) found.push({ d, a: { kind: 'lift', label: '승강기 타기' } });
       }
     }
+    for (const r of residentsRef.current) {
+      const d = Math.hypot(p.x - r.x, p.z - r.z);
+      if (d <= RESIDENT_REACH) found.push({ d: d - 0.3, a: { kind: 'npc', npc: r.id, label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` } });
+    }
+    if (s.area === 'market') {
+      const d = Math.hypot(p.x - MARKET_BOARD.front.x, p.z - MARKET_BOARD.front.z);
+      if (d <= MARKET_BOARD.reach) found.push({ d, a: { kind: 'board', label: '의뢰 게시판 보기' } });
+    }
     const exit = nearestExit(s.area, p);
     if (exit) {
       if (exit.to === 'woods' && !s.logCleared) {
@@ -228,7 +262,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.pixelRatio));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = area === 'mine' ? 1.45 : 1.05;
+    const light = REGIONS[area].light;
+    renderer.toneMappingExposure = light?.exposure ?? (area === 'mine' ? 1.45 : 1.05);
     renderer.shadowMap.enabled = quality.shadows;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     const canvas = renderer.domElement;
@@ -241,16 +276,34 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     scene.background = new THREE.Color(region.look.sky);
     // Only a far haze: the camera sits ~50 units away.
     if (area !== 'mine') scene.fog = new THREE.Fog(region.look.fog, 90, 170);
-    const hemi = new THREE.HemisphereLight(area === 'mine' ? '#8a7560' : '#fff6e2', area === 'mine' ? '#1d1510' : '#5d7446', area === 'mine' ? 1.35 : 1.5);
-    const sun = new THREE.DirectionalLight(area === 'mine' ? '#ffd9a8' : '#fff1d6', area === 'mine' ? 0.35 : 2.1);
+    const hemi = new THREE.HemisphereLight(area === 'mine' ? '#8a7560' : '#fff6e2', area === 'mine' ? '#1d1510' : '#5d7446', light?.hemi ?? (area === 'mine' ? 1.35 : 1.5));
+    const sun = new THREE.DirectionalLight(area === 'mine' ? '#ffd9a8' : '#fff1d6', light?.sun ?? (area === 'mine' ? 0.35 : 2.1));
     sun.position.set(-12, 22, 10);
     sun.castShadow = quality.shadows;
     sun.shadow.mapSize.set(2048, 2048);
     const sc = sun.shadow.camera as THREE.OrthographicCamera;
-    sc.left = -24;
-    sc.right = 24;
-    sc.top = 24;
-    sc.bottom = -24;
+    const shadowHalf = light?.shadow ?? 24;
+    sc.left = -shadowHalf;
+    sc.right = shadowHalf;
+    sc.top = shadowHalf;
+    sc.bottom = -shadowHalf;
+    // A district's own day and night (the hub's palettes, lounge-village-life.ts).
+    let lastDay = -1e9,
+      night = false;
+    const applyDay = (t: number) => {
+      if (!light?.dayCycle || t - lastDay < 2000) return false;
+      lastDay = t;
+      const pal = dayLighting(Date.now() + latest.current.clockOffset);
+      scene.background = new THREE.Color(pal.sky);
+      hemi.color.set(pal.hemiSky);
+      hemi.groundColor.set(pal.hemiGround);
+      hemi.intensity = pal.hemiIntensity * (light.hemi / 1.5);
+      sun.color.set(pal.sun);
+      sun.intensity = pal.sunIntensity * (light.sun / 3);
+      renderer.toneMappingExposure = pal.exposure * light.exposure;
+      night = pal.lamps > 0.5;
+      return true;
+    };
     sc.far = 80;
     scene.add(hemi, sun, sun.target);
     // My lantern (the mine is dark).
@@ -262,6 +315,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       dirty = true;
     };
     scene.add(set.root);
+    const marketDayNow = () => new Date(Date.now() + latest.current.clockOffset + 9 * 3_600_000).getUTCDay() === 0;
     const applyState = () => {
       const s = latest.current;
       set.update({
@@ -271,16 +325,27 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         broken: s.broken,
         ladder: !!s.regions?.mine.ladder,
         lift: !!s.regions?.mine.lift,
+        marketDay: marketDayNow(),
+        night,
       });
       dirty = true;
     };
+    applyDay(performance.now());
     applyState();
+    // Residents walking about here (the district's shops, their errands).
+    const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
+      ? new ResidentLayer(scene, labelLayerRef.current, { height: FIGURE_HEIGHT * 1.12, billboard: 'screen' })
+      : null;
+    if (residents) residents.onChange = () => {
+      dirty = true;
+    };
+    const memory = newBehaviorMemory();
 
     // Camera: orthographic, pitched, following me (clamped to the region).
     const camera = new THREE.OrthographicCamera(-10, 10, 6, -6, 0.1, 120);
     const offset = new THREE.Vector3(0, Math.sin(PITCH), Math.cos(PITCH)).multiplyScalar(50);
     const look = new THREE.Vector3();
-    const halfView = area === 'mine' ? 8.4 : 11;
+    const halfView = REGIONS[area].view ?? (area === 'mine' ? 8.4 : 11);
     const frameCamera = (aspect: number) => {
       const half = aspect < 1.2 ? halfView * 1.25 : halfView;
       camera.left = -half * aspect;
@@ -381,6 +446,15 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const rect = canvas.getBoundingClientRect();
       pointer.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
+      // A click on a resident walks up to them (E talks once in reach).
+      const who = residents?.hit(raycaster);
+      const at = who ? residentsRef.current.find((r) => r.id === who) : null;
+      if (at) {
+        l.held.clear();
+        l.route = latest.current.walk.path(l.point, { x: at.x, z: at.z + 1.1 });
+        l.target = l.route.shift() ?? null;
+        return;
+      }
       if (!raycaster.ray.intersectPlane(ground, hit)) return;
       l.held.clear();
       l.route = latest.current.walk.path(l.point, { x: hit.x, z: hit.z });
@@ -470,7 +544,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (document.hidden || !host.clientWidth) return;
       const s = latest.current;
       // State from the server (nodes taken, rocks broken, ladder…).
-      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared]);
+      if (applyDay(t)) dirty = true;
+      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow()]);
       if (key !== stateKey) {
         stateKey = key;
         applyState();
@@ -570,6 +645,23 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           others.delete(id);
           dirty = true;
         }
+      // Residents: their schedule spot, then this screen's idle / greet / chat / step-aside.
+      if (residents) {
+        const now = Date.now() + s.clockOffset;
+        const people = [
+          { id: 'self', name: ACTORS[s.me.actor] ?? '', x: l.point.x, z: l.point.z },
+          ...[...others.entries()].map(([id, f]) => ({ id, name: ACTORS[f.actor] ?? '', x: f.pos.x, z: f.pos.z })),
+        ];
+        const w = weatherOf(Math.floor((now + 9 * 3_600_000) / DAY));
+        const frames = residentFrames(npcsIn(s.area as NpcArea, now), people, now, {
+          rain: w === 'rain' || w === 'storm',
+          night,
+          memory,
+          canStand: s.walk.canWalk,
+        });
+        if (residents.update(frames, t, dt, camera)) dirty = true;
+        residentsRef.current = residents.positions();
+      }
       // What E does here.
       const a = findActionRef.current(l.point);
       const ak = a ? JSON.stringify(a) : '';
@@ -584,6 +676,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       for (const [id, f] of others) project(id, f.pos);
       project('self', l.point);
       renderer.render(scene, camera);
+      residents?.project(camera, host.clientWidth, host.clientHeight);
       dirty = false;
     };
     frame = requestAnimationFrame(animate);
@@ -600,6 +693,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       offSettings();
       for (const f of others.values()) dropFigure(f);
       dropFigure(mineFig);
+      residents?.dispose();
+      residentsRef.current = [];
       set.dispose();
       figureGeo.dispose();
       shadowGeo.dispose();
@@ -612,7 +707,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
 
   const kind: ActionKind | null = !action
     ? null
-    : action.kind === 'node'
+    : action.kind === 'npc'
+      ? 'talk'
+      : action.kind === 'board'
+        ? 'board'
+        : action.kind === 'node'
       ? action.node === 'rock'
         ? 'smash'
         : 'chop'
@@ -638,7 +737,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       data-floor={area === 'mine' ? floorNo : undefined}
       aria-label={`${region.name}${area === 'mine' ? ` ${floorNo}층` : ''} · 방향키로 걷고 ${keyLabel(keys.action)}로 행동해요`}
     >
-      <div className="ar-labels" aria-hidden="true">
+      <div className="ar-labels" aria-hidden="true" ref={labelLayerRef}>
         {tags.map((t) => (
           <span
             key={t.id}
@@ -671,7 +770,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       </div>
       {!ready && !failed && (
         <output className="ar-loading">
-          <LoaderCircle size={17} className="l-spin" aria-hidden="true" /> {region.name}로 가는 중…
+          <LoaderCircle size={17} className="l-spin" aria-hidden="true" /> {josa(region.name, '으로/로')} 가는 중…{loadPct < 1 ? ` ${Math.round(loadPct * 100)}%` : ''}
         </output>
       )}
       {failed && (

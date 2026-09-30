@@ -1,0 +1,339 @@
+// The village's adult residents (NPCs), one registry for all of them: the
+// eight who already work in the village (dealers, shopkeepers, service desks)
+// and the six stage-1 residents of 시장 거리 (handover/design/
+// design-village-2x-npcs.md §8). Pure data shared by the server (relations,
+// gifts, requests) and the client (dialogue, sprites, schedules). All
+// residents are adults and all can be dated (user decision 2026-09-30).
+//
+// Gift tastes are selectors over item ids:
+//   'carrot'        one item id
+//   'kind:flower'   every item of that kind (fish, bug, flower, forage, dish, material, fossil)
+//   'crop'          any crop (and 'crop:gold' = a 금별 crop, 'fruit' = orchard fruit)
+//   'gem', 'fossil' shorthands for the mine finds
+// A gift is checked loved → disliked → liked; anything else is "neutral".
+import { LOUNGE_ASSETS } from './lounge-assets.ts';
+
+export const NPC_IDS = [
+  'lumi',
+  'maehwa',
+  'captain',
+  'realtor',
+  'carpenter',
+  'rose',
+  'nyamo',
+  'gwen',
+  'nasera',
+  'frieren',
+  'thresh',
+  'sinjjajang',
+  'volibas',
+  'janna',
+] as const;
+export type NpcId = (typeof NPC_IDS)[number];
+export const isNpcId = (id: unknown): id is NpcId => typeof id === 'string' && (NPC_IDS as readonly string[]).includes(id);
+/** The six residents who walk between the hub, 시장 거리 and the tavern (stage 1). */
+export const WALKING_NPCS = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'] as const;
+export type WalkingNpcId = (typeof WALKING_NPCS)[number];
+export const isWalkingNpc = (id: unknown): id is WalkingNpcId =>
+  typeof id === 'string' && (WALKING_NPCS as readonly string[]).includes(id);
+
+export type NpcArt =
+  /** A 3×2 pose sheet (lounge-host-sprites.ts). */
+  | { kind: 'sheet'; host: 'lumi' | 'maehwa' | 'captain' | 'realtor' | 'carpenter' }
+  /** One keyed full-body image (660×990) and, for dialogue, a head-and-shoulders crop. */
+  | { kind: 'image'; asset: string; portrait?: string; foot: number };
+
+export type GiftTaste = { loved: readonly string[]; liked: readonly string[]; disliked: readonly string[] };
+export type NpcDef = {
+  id: NpcId;
+  name: string;
+  age: number;
+  /** Job title ("농협 조합장"). */
+  role: string;
+  /** Where they work (shown in the notebook). */
+  place: string;
+  /** One line about them (the notebook card). */
+  intro: string;
+  /** Loved / disliked, said in words (the notebook card). */
+  likesText: string;
+  dislikesText: string;
+  gifts: GiftTaste;
+  /** One-time presents at 40 and 100 points (item id, count). */
+  rewards: { 40: readonly [string, number]; 100: readonly [string, number] };
+  art: NpcArt;
+  /** Voice for dialogue: 'polite' 해요체, 'casual' 반말, 'formal' 하십시오체. */
+  speech: 'polite' | 'casual' | 'formal';
+};
+
+const img = (asset: string, portrait?: string, foot = 0.985): NpcArt => ({ kind: 'image', asset, ...(portrait ? { portrait } : {}), foot });
+const A = LOUNGE_ASSETS;
+
+export const NPCS: Record<NpcId, NpcDef> = {
+  lumi: {
+    id: 'lumi',
+    name: '루미',
+    age: 25,
+    role: '별빛 카지노 딜러',
+    place: '별빛 카지노',
+    intro: '쉬는 날에는 꽃을 구경하고 작은 카페를 찾아다녀요.',
+    likesText: '꽃, 달콤한 음료',
+    dislikesText: '벌레, 쓴 나물',
+    gifts: { loved: ['kind:flower'], liked: ['flowertea', 'jam', 'hwachae', 'strawberry'], disliked: ['kind:bug', 'mugwort'] },
+    rewards: { 40: ['flowertea', 2], 100: ['camellia', 3] },
+    art: { kind: 'sheet', host: 'lumi' },
+    speech: 'casual',
+  },
+  maehwa: {
+    id: 'maehwa',
+    name: '매화',
+    age: 27,
+    role: '화투방 진행자',
+    place: '범마을 회관',
+    intro: '따뜻한 차와 정성껏 차린 한 끼를 좋아해요.',
+    likesText: '직접 만든 요리, 차',
+    dislikesText: '날생선, 벌레',
+    gifts: { loved: ['kind:dish'], liked: ['kind:flower', 'chestnut', 'ginseng'], disliked: ['kind:bug', 'kind:fish'] },
+    rewards: { 40: ['songpyeon', 2], 100: ['ginseng', 2] },
+    art: { kind: 'sheet', host: 'maehwa' },
+    speech: 'casual',
+  },
+  captain: {
+    id: 'captain',
+    name: '허 선장',
+    age: 46,
+    role: '허풍 주점 주인',
+    place: '허풍 주점',
+    intro: '바다에서 본 것보다 본 척한 게 더 많다는 소문이 있어요.',
+    likesText: '큰 바닷고기, 군밤',
+    dislikesText: '시금치, 꽃다발',
+    gifts: { loved: ['yellowtail', 'hairtail', 'moonhairtail', 'octopus', 'squid'], liked: ['kind:fish', 'roastchestnut', 'grilledfish', 'fishstew'], disliked: ['spinach', 'spinachnamul', 'kind:flower'] },
+    rewards: { 40: ['bait', 5], 100: ['gem', 1] },
+    art: { kind: 'sheet', host: 'captain' },
+    speech: 'casual',
+  },
+  realtor: {
+    id: 'realtor',
+    name: '문 사장',
+    age: 41,
+    role: '범마을 부동산 사장',
+    place: '범마을 부동산',
+    intro: '마을 땅값을 다 외우고 다니지만 정작 자기 집은 좁아요.',
+    likesText: '보석, 금, 좋은 목재',
+    dislikesText: '벌레, 달팽이',
+    gifts: { loved: ['gem', 'gold'], liked: ['hardwood', 'iron', 'kind:dish'], disliked: ['kind:bug'] },
+    rewards: { 40: ['fertilizer-deluxe', 2], 100: ['gold', 3] },
+    art: { kind: 'sheet', host: 'realtor' },
+    speech: 'polite',
+  },
+  carpenter: {
+    id: 'carpenter',
+    name: '결 목수',
+    age: 34,
+    role: '나무결 가구점 주인',
+    place: '나무결 가구점',
+    intro: '말수는 적지만 나뭇결 얘기가 나오면 눈이 반짝여요.',
+    likesText: '단단한 나무, 솔방울, 도토리',
+    dislikesText: '돌덩이, 광석',
+    gifts: { loved: ['hardwood'], liked: ['wood', 'pinecone', 'acorn', 'chestnut', 'dotorimuk'], disliked: ['stone', 'copper', 'iron'] },
+    rewards: { 40: ['hardwood', 3], 100: ['hardwood', 10] },
+    art: { kind: 'sheet', host: 'carpenter' },
+    speech: 'casual',
+  },
+  rose: {
+    id: 'rose',
+    name: '로제',
+    age: 31,
+    role: '카지노 대부',
+    place: '별빛 카지노',
+    intro: '조건은 짧게, 이자는 정확하게. 바다 이야기엔 말이 길어져요.',
+    likesText: '귀한 바닷고기, 보석',
+    dislikesText: '쑥, 채소 요리',
+    gifts: { loved: ['seabream', 'yellowtail', 'gem'], liked: ['kind:fish', 'gold', 'fishstew'], disliked: ['mugwort', 'spinachnamul', 'kimchi'] },
+    rewards: { 40: ['bait', 5], 100: ['gem', 2] },
+    art: img(A.casinoLenderSprite, A.casinoLenderFace, 0.9808),
+    speech: 'casual',
+  },
+  nyamo: {
+    id: 'nyamo',
+    name: '냐모',
+    age: 26,
+    role: '범마을 은행원',
+    place: '범마을 은행',
+    intro: '장부는 한 번에 맞추고, 점심은 생선이면 다 좋대요.',
+    likesText: '생선, 생선구이',
+    dislikesText: '김치, 매운 요리',
+    gifts: { loved: ['mackerel', 'grilledfish', 'crucian', 'sweetfish'], liked: ['kind:fish', 'jam'], disliked: ['kimchi', 'maeuntang', 'wildgarlic'] },
+    rewards: { 40: ['grilledfish', 2], 100: ['goldcarp', 1] },
+    art: img(A.bankClerkSprite, A.bankClerkFace, 0.9859),
+    speech: 'polite',
+  },
+  gwen: {
+    id: 'gwen',
+    name: '그웬',
+    age: 24,
+    role: '미용실 원장',
+    place: '보송 미용실',
+    intro: '가위 소리가 음악 같다는 원장님. 예쁜 것엔 칭찬이 끝이 없어요.',
+    likesText: '동백·코스모스 같은 꽃, 딸기',
+    dislikesText: '벌레, 돌',
+    gifts: { loved: ['camellia', 'cosmos', 'azalea'], liked: ['kind:flower', 'strawberry', 'jam', 'flowertea'], disliked: ['kind:bug', 'stone'] },
+    rewards: { 40: ['flowertea', 2], 100: ['camellia', 5] },
+    art: img(A.salonStylistSprite, A.salonStylistFace, 0.9859),
+    speech: 'polite',
+  },
+  nasera: {
+    id: 'nasera',
+    name: '나세라',
+    age: 34,
+    role: '농협 조합장',
+    place: '시장 거리 농협',
+    intro: '무뚝뚝하고 규칙에 엄격해요. 작물과 책 얘기가 나오면 말이 길어져요.',
+    likesText: '금별 작물, 오래된 화석, 보석',
+    dislikesText: '돌·나무 같은 잡동사니, 벌레',
+    gifts: { loved: ['crop:gold', 'fossil', 'gem'], liked: ['crop', 'fruit', 'kimchi', 'bibimbap'], disliked: ['stone', 'wood', 'kind:bug'] },
+    rewards: { 40: ['fertilizer-deluxe', 3], 100: ['fertilizer-deluxe', 8] },
+    art: img(A.npc_nasera, A.npc_nasera_portrait),
+    speech: 'formal',
+  },
+  frieren: {
+    id: 'frieren',
+    name: '프리렌',
+    age: 1000,
+    role: '빵집 카페 사장',
+    place: '시장 거리 빵집 카페',
+    intro: '천 살 된 엘프예요. 이상한 빵 레시피를 모으고, 아침잠이 많아 가게를 늦게 열어요.',
+    likesText: '달콤한 과일·디저트, 처음 보는 꽃, 옛 화석',
+    dislikesText: '쓴 나물, 이른 아침',
+    gifts: { loved: ['jam', 'hwachae', 'mattang', 'strawberry', 'fossil-leaf', 'fossil-fern'], liked: ['kind:flower', 'raspberry', 'watermelon', 'fruit', 'pumpkinpie', 'fossil'], disliked: ['mugwort', 'ginseng', 'spinachnamul'] },
+    rewards: { 40: ['jam', 3], 100: ['pumpkinpie', 3] },
+    art: img(A.npc_frieren, A.npc_frieren_portrait),
+    speech: 'casual',
+  },
+  thresh: {
+    id: 'thresh',
+    name: '쓰레쉬',
+    age: 29,
+    role: '잡화점 주인',
+    place: '시장 거리 잡화점',
+    intro: '능글맞게 웃는 수집광 사장님. 손님이 판 물건은 절대 버리지 않아요.',
+    likesText: '보석·화석 같은 수집품, 밤에 잡은 물고기',
+    dislikesText: '해바라기처럼 밝은 것, 흔한 돌',
+    gifts: { loved: ['gem', 'fossil', 'moonhairtail', 'eel'], liked: ['kind:fish', 'gold', 'iron', 'firefly', 'shell'], disliked: ['sunflower', 'stone', 'jam'] },
+    rewards: { 40: ['bait', 6], 100: ['gem', 3] },
+    art: img(A.npc_thresh, A.npc_thresh_portrait),
+    speech: 'polite',
+  },
+  sinjjajang: {
+    id: 'sinjjajang',
+    name: '신짜장',
+    age: 36,
+    role: '우체부',
+    place: '시장 거리 우체국',
+    intro: '배달을 "임무"라고 부르는 우직한 우체부. 이름 때문에 짜장면 얘기에 약해요.',
+    likesText: '든든한 요리, 감자·양배추, 편지',
+    dislikesText: '달팽이, 늦잠',
+    gifts: { loved: ['gamjajeon', 'lunchbox', 'tteokguk', 'potato', 'cabbage'], liked: ['kind:dish', 'corn', 'sweetpotato'], disliked: ['snail', 'kind:flower'] },
+    rewards: { 40: ['lunchbox', 2], 100: ['tteokguk', 3] },
+    art: img(A.npc_sinjjajang, A.npc_sinjjajang_portrait),
+    speech: 'formal',
+  },
+  volibas: {
+    id: 'volibas',
+    name: '볼리바스',
+    age: 42,
+    role: '순경',
+    place: '시장 거리 파출소',
+    intro: '콧수염을 쓸며 수사 드라마처럼 말하는 호탕한 순경. 동네 사람에게는 다정해요.',
+    likesText: '연어 같은 민물고기, 달콤한 잼, 프리렌네 빵',
+    dislikesText: '벌레 장난, 새치기',
+    gifts: { loved: ['trout', 'sweetfish', 'lenok', 'jam'], liked: ['kind:fish', 'kind:dish', 'honeybee'], disliked: ['snail', 'cicada', 'mugwort'] },
+    rewards: { 40: ['grilledfish', 2], 100: ['goldcarp', 1] },
+    art: img(A.npc_volibas, A.npc_volibas_portrait),
+    speech: 'casual',
+  },
+  janna: {
+    id: 'janna',
+    name: '잔나',
+    age: 28,
+    role: '신문 기자',
+    place: '시장 거리 신문사',
+    intro: '밝고 수다스러운 기자. 날씨 예보가 특기인데 가끔 틀려요.',
+    likesText: '꽃차 같은 음료, 꽃, 특종이 될 발견물',
+    dislikesText: '달팽이, 마감 직전의 방해',
+    gifts: { loved: ['flowertea', 'fossil', 'goldcarp', 'skygazer'], liked: ['kind:flower', 'kind:dish', 'gem'], disliked: ['snail', 'stone', 'mugwort'] },
+    rewards: { 40: ['flowertea', 3], 100: ['gem', 1] },
+    art: img(A.npc_janna, A.npc_janna_portrait),
+    speech: 'polite',
+  },
+};
+
+/** How residents relate to each other (their chats and a few events come from here). */
+export type NpcBond = { a: NpcId; b: NpcId; kind: 'rival' | 'friend' | 'regular' | 'mentor' | 'crush' | 'partner'; note: string };
+export const NPC_BONDS: readonly NpcBond[] = [
+  { a: 'frieren', b: 'volibas', kind: 'regular', note: '볼리바스는 빵집 카페의 아침 단골' },
+  { a: 'frieren', b: 'nasera', kind: 'friend', note: '도서관에서 자주 마주치는 책 친구' },
+  { a: 'frieren', b: 'thresh', kind: 'rival', note: '옛 물건을 두고 경쟁하는 수집 라이벌' },
+  { a: 'frieren', b: 'janna', kind: 'friend', note: '잔나는 신메뉴 시식회 취재 담당' },
+  { a: 'frieren', b: 'sinjjajang', kind: 'regular', note: '점심 배달 가방에 빵을 챙겨 가는 사이' },
+  { a: 'nasera', b: 'thresh', kind: 'rival', note: '씨앗 값과 재고를 두고 늘 티격태격' },
+  { a: 'nasera', b: 'janna', kind: 'friend', note: '주간 시세 공지를 신문에 싣는 사이' },
+  { a: 'volibas', b: 'thresh', kind: 'rival', note: '밤마다 등불 상점을 수상하게 보는 순경' },
+  { a: 'volibas', b: 'janna', kind: 'friend', note: '사건 제보와 특종 사이' },
+  { a: 'volibas', b: 'sinjjajang', kind: 'friend', note: '순찰과 배달 경로가 겹치는 동료' },
+  { a: 'janna', b: 'sinjjajang', kind: 'crush', note: '잔나는 매일 신문을 받으러 우체국 앞에 서 있어요' },
+  { a: 'sinjjajang', b: 'nasera', kind: 'regular', note: '농협 소포 담당' },
+  { a: 'thresh', b: 'captain', kind: 'regular', note: '밤마다 주점에서 수집품 자랑' },
+  { a: 'frieren', b: 'captain', kind: 'regular', note: '주점에서 조용히 우유를 시키는 손님' },
+  { a: 'volibas', b: 'captain', kind: 'friend', note: '허풍 경연의 영원한 심판' },
+  { a: 'nasera', b: 'maehwa', kind: 'friend', note: '회관 차 모임 친구' },
+  { a: 'janna', b: 'lumi', kind: 'friend', note: '카지노의 밤 취재 파트너' },
+  { a: 'thresh', b: 'rose', kind: 'rival', note: '보석 값 흥정 맞수' },
+  { a: 'sinjjajang', b: 'nyamo', kind: 'regular', note: '은행 서류 배달' },
+  { a: 'gwen', b: 'janna', kind: 'friend', note: '방송 전 머리 손질' },
+  { a: 'realtor', b: 'carpenter', kind: 'partner', note: '집 확장 공사를 같이 하는 동업자' },
+];
+export function npcBond(a: NpcId, b: NpcId): NpcBond | null {
+  return NPC_BONDS.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a)) ?? null;
+}
+
+// ---------------------------------------------------------------- relations
+export const NPC_TALK_POINTS = 6;
+export const NPC_INVITE_POINTS = 20;
+export const NPC_REGULAR_POINTS = 40;
+export const NPC_DATE_POINTS = 60;
+export const NPC_SPECIAL_POINTS = 100;
+export const NPC_POINTS_MAX = 120;
+/** Points for a gift by how the resident likes it. */
+export const NPC_GIFT_POINTS = { loved: 12, liked: 8, neutral: 5, disliked: -3 } as const;
+export type GiftReaction = keyof typeof NPC_GIFT_POINTS;
+export const npcLevel = (points: number) =>
+  points >= NPC_SPECIAL_POINTS
+    ? '특별한 사이'
+    : points >= NPC_DATE_POINTS
+      ? '설레는 사이'
+      : points >= NPC_REGULAR_POINTS
+        ? '단골'
+        : points >= NPC_INVITE_POINTS
+          ? '친구'
+          : '인사하는 사이';
+/** 0 인사 · 1 친구 · 2 단골 · 3 설렘 · 4 특별 (dialogue tiers). */
+export const npcTier = (points: number): 0 | 1 | 2 | 3 | 4 =>
+  points >= NPC_SPECIAL_POINTS ? 4 : points >= NPC_DATE_POINTS ? 3 : points >= NPC_REGULAR_POINTS ? 2 : points >= NPC_INVITE_POINTS ? 1 : 0;
+
+/** What a selector matches; `kindOf` / `isCrop` come from the item tables (kept out of this file). */
+export type GiftFacts = { id: string; kind?: string; crop: boolean; gold?: boolean };
+function matches(sel: string, f: GiftFacts) {
+  if (sel === f.id) return true;
+  if (sel.startsWith('kind:')) return f.kind === sel.slice(5);
+  if (sel === 'crop') return f.crop;
+  if (sel === 'crop:gold') return f.crop && !!f.gold;
+  if (sel === 'fossil') return f.id.startsWith('fossil-');
+  return false;
+}
+export function giftReaction(npc: NpcId, f: GiftFacts): GiftReaction {
+  const t = NPCS[npc].gifts;
+  if (t.loved.some((s) => matches(s, f))) return 'loved';
+  if (t.disliked.some((s) => matches(s, f))) return 'disliked';
+  if (t.liked.some((s) => matches(s, f))) return 'liked';
+  return 'neutral';
+}

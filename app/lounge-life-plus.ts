@@ -8,6 +8,7 @@
 // back, so neither may use the other's bindings at the top level.
 import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
+import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
 import {
   grantBeom,
   spendBeom,
@@ -234,6 +235,8 @@ export type UserExt = {
   /** Refs whose room placements must obey current ownership after a theft. */
   furnStrict?: Record<string, true>;
   npcRelations?: NpcRelations;
+  /** 의뢰 게시판 progress today (lounge-npc-requests.ts). */
+  npcBoard?: NpcBoardState;
   plots?: 9 | 12;
   inv?: Record<string, number>;
   q1?: Partial<Record<Crop, number>>;
@@ -319,7 +322,8 @@ export type PlusAction =
   | { kind: 'project'; project: string; n: number }
   | { kind: 'festival'; n: number }
   | { kind: 'upgradeHouse' }
-  | { kind: 'rerollShop' };
+  | { kind: 'rerollShop' }
+  | NpcRequestAction;
 
 export const PLUS_REJECT = {
   fert: '비료를 확인해 주세요.',
@@ -485,6 +489,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (last) out.last = last;
   const npcRelations = readNpcRelations(x.npcRelations);
   if (npcRelations) out.npcRelations = npcRelations;
+  const npcBoard = readNpcBoard(x.npcBoard);
+  if (npcBoard) out.npcBoard = npcBoard;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {
@@ -880,7 +886,7 @@ export function addInv(life: LifeState, uid: string, item: string, n: number) {
   if (!nonEmpty(inv)) delete x.inv;
 }
 /** How many of an item (crops: at least quality q, any tier) the user has. */
-function itemCount(life: LifeState, uid: string, id: string, q: Quality = 0) {
+export function itemCount(life: LifeState, uid: string, id: string, q: Quality = 0) {
   if (isCropId(id))
     return ([0, 1, 2, 3] as Quality[])
       .filter((t) => t >= q)
@@ -889,7 +895,7 @@ function itemCount(life: LifeState, uid: string, id: string, q: Quality = 0) {
   return invCount(life, uid, id);
 }
 /** Removes n of an item; crops go lowest eligible quality first. */
-function takeItem(life: LifeState, uid: string, id: string, n: number, q: Quality = 0) {
+export function takeItem(life: LifeState, uid: string, id: string, n: number, q: Quality = 0) {
   if (itemCount(life, uid, id, q) < n) fail(PLUS_REJECT.ingredients);
   if (isCropId(id)) takeCrop(life, uid, id, n, q);
   else if (id === 'fruit') life.bag[uid].fruit -= n;
@@ -1270,6 +1276,10 @@ export function plusAction(
   switch (a.kind) {
     case 'npcSocial': {
       npcSocialAction(life, uid, a, now);
+      break;
+    }
+    case 'npcRequest': {
+      next = npcRequestAction(life, next, uid, a, now).ledger;
       break;
     }
     case 'fertilize': {
@@ -1933,6 +1943,8 @@ export function recordTables(
 // ---------------------------------------------------------------- views
 export type PlusMe = {
   npcRelations: NpcRelationView[];
+  /** Residents' requests on today's board (시장 거리). */
+  npcBoard: NpcBoardView;
   plots: FarmSize;
   inv: Record<string, number>;
   quality: { silver: Partial<Record<Crop, number>>; gold: Partial<Record<Crop, number>>; star?: Partial<Record<Crop, number>> };
@@ -2016,6 +2028,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const yesterday = life.news?.find((d) => d.day === day - 1);
   const me: PlusMe = {
     npcRelations: npcRelationsView(raw.npcRelations, now),
+    npcBoard: npcBoardView(life, uid, now),
     plots: raw.plots ?? 6,
     inv: { ...raw.inv },
     quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 }, ...(raw.q3 ? { star: { ...raw.q3 } } : {}) },

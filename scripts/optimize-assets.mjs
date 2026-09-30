@@ -304,6 +304,165 @@ async function serviceSprites() {
     console.log(`bank-clerk-nyamo-portrait.png -> 768px .webp ${kb(fs.statSync(target).size)}`);
   }
 }
+// Stage-1 village NPCs (npc-stage1-generation.json): 1360×2048 originals on a
+// solid magenta ground. The key is done here once (not at runtime) so the web
+// copy is a plain RGBA sprite like 로제 / 냐모 / 그웬:
+// 1. "magenta-ness" m = min(R, B) − G (255 on the ground, ≤ 0 on skin, navy,
+//    green flames, black outlines).
+// 2. The ground is every pixel with m > SEED reachable from the border, plus
+//    enclosed pockets (between an arm and the body) of near-pure magenta.
+//    Purple cloth inside the outline is never reached, so it stays opaque.
+// 3. Ground pixels get alpha from m (soft glow and antialiased edges keep
+//    their partial cover) and the magenta is unmixed and despilled out of
+//    their colour, so 쓰레쉬's green wisps stay green, not pink.
+const NPC_SPRITES = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'];
+/** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
+const NPC_PORTRAITS = {
+  nasera: { cx: 0.5, top: 0.02, size: 0.36 },
+  frieren: { cx: 0.5, top: 0.05, size: 0.34 },
+  thresh: { cx: 0.5, top: 0.01, size: 0.34 },
+  sinjjajang: { cx: 0.5, top: 0.02, size: 0.34 },
+  volibas: { cx: 0.5, top: 0.02, size: 0.34 },
+  janna: { cx: 0.5, top: 0.02, size: 0.34 },
+};
+// `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
+// skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
+function keyMagenta(data, width, height, fgM = 0) {
+  const n = width * height;
+  const m = new Int16Array(n);
+  for (let i = 0; i < n; i++) {
+    const r = data[i * 4],
+      g = data[i * 4 + 1],
+      b = data[i * 4 + 2];
+    m[i] = Math.min(r, b) - g;
+  }
+  const SEED = 40,
+    POCKET = 200;
+  const ground = new Uint8Array(n);
+  const stack = [];
+  const push = (i) => {
+    if (!ground[i] && m[i] > SEED) {
+      ground[i] = 1;
+      stack.push(i);
+    }
+  };
+  for (let x = 0; x < width; x++) {
+    push(x);
+    push((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y++) {
+    push(y * width);
+    push(y * width + width - 1);
+  }
+  // Enclosed pockets: seeds of near-pure magenta anywhere.
+  for (let i = 0; i < n; i++) if (m[i] > POCKET) push(i);
+  while (stack.length) {
+    const i = stack.pop();
+    const x = i % width,
+      y = (i - x) / width;
+    if (x > 0) push(i - 1);
+    if (x < width - 1) push(i + 1);
+    if (y > 0) push(i - width);
+    if (y < height - 1) push(i + width);
+  }
+  // One-pixel rim around the ground: antialiased outline pixels.
+  const rim = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (ground[i]) continue;
+    const x = i % width;
+    if ((x > 0 && ground[i - 1]) || (x < width - 1 && ground[i + 1]) || ground[i - width] || ground[i + width]) rim[i] = 1;
+  }
+  const out = Buffer.from(data);
+  for (let i = 0; i < n; i++) {
+    if (!ground[i] && !rim[i]) continue;
+    const k = Math.max(fgM, Math.min(255, m[i]));
+    let a = (255 - k) / (255 - fgM);
+    // Ease the curve so faint haze fades out instead of leaving a veil.
+    a = a < 0.06 ? 0 : Math.min(1, (a - 0.06) / 0.94);
+    if (a <= 0) {
+      out[i * 4 + 3] = 0;
+      continue;
+    }
+    let r = data[i * 4],
+      g = data[i * 4 + 1],
+      b = data[i * 4 + 2];
+    // Unmix the magenta ground (255, 0, 255).
+    r = (r - (1 - a) * 255) / a;
+    g = g / a;
+    b = (b - (1 - a) * 255) / a;
+    // Despill: no leftover magenta cast (R and B never exceed G by much at once).
+    if (Math.min(r, b) - g > 12) {
+      r = Math.min(r, g + 12);
+      b = Math.min(b, g + 12);
+    }
+    out[i * 4] = Math.max(0, Math.min(255, Math.round(r)));
+    out[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(g)));
+    out[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(b)));
+    out[i * 4 + 3] = Math.round(Math.min(data[i * 4 + 3], a * 255));
+  }
+  return out;
+}
+async function npcSprites() {
+  for (const id of NPC_SPRITES) {
+    const source = path.join(assets, `lounge/_originals/npc-${id}.png`);
+    if (!fs.existsSync(source)) continue;
+    const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const keyed = keyMagenta(data, info.width, info.height, id === 'thresh' ? -120 : 0);
+    const raw = { raw: { width: info.width, height: info.height, channels: 4 } };
+    const target = path.join(assets, `lounge/npc-${id}.webp`);
+    await sharp(keyed, raw)
+      .resize(660, 990, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 90, alphaQuality: 100, effort: 6 })
+      .toFile(target);
+    const p = NPC_PORTRAITS[id];
+    const size = Math.round(info.height * p.size);
+    const left = Math.max(0, Math.min(info.width - size, Math.round(info.width * p.cx - size / 2)));
+    const top = Math.round(info.height * p.top);
+    const portrait = path.join(assets, `lounge/npc-${id}-portrait.webp`);
+    await sharp(keyed, raw)
+      .extract({ left, top, width: size, height: size })
+      .resize(384, 384, { kernel: 'lanczos3' })
+      .webp({ quality: 88, alphaQuality: 100, effort: 6 })
+      .toFile(portrait);
+    console.log(`npc-${id}.png -> 660x990 .webp ${kb(fs.statSync(target).size)} · portrait ${kb(fs.statSync(portrait).size)}`);
+  }
+}
+// Round dialogue portraits for 로제 / 냐모 / 그웬 (주민 수첩): a head-and-shoulders
+// square cut from their keyed full-body web copies, centred on the head
+// (the opaque pixels of the top of the figure).
+async function servicePortraits() {
+  for (const name of ['casino-lender-rose', 'bank-clerk-nyamo', 'salon-stylist-gwen']) {
+    const source = path.join(assets, `lounge/${name}.webp`);
+    if (!fs.existsSync(source)) continue;
+    const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    let top = height;
+    for (let y = 0; y < height && top === height; y++)
+      for (let x = 0; x < width; x++)
+        if (data[(y * width + x) * 4 + 3] > 64) {
+          top = y;
+          break;
+        }
+    const size = Math.round(height * 0.36);
+    let sum = 0,
+      n = 0;
+    for (let y = top; y < Math.min(height, top + Math.round(size * 0.6)); y++)
+      for (let x = 0; x < width; x++)
+        if (data[(y * width + x) * 4 + 3] > 64) {
+          sum += x;
+          n++;
+        }
+    const cx = n ? sum / n : width / 2;
+    const left = Math.max(0, Math.min(width - size, Math.round(cx - size / 2)));
+    const target = path.join(assets, `lounge/${name}-face.webp`);
+    await sharp(source)
+      .extract({ left, top: Math.max(0, top - Math.round(size * 0.04)), width: size, height: Math.min(size, height - top) })
+      .resize(384, 384, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .webp({ quality: 88, alphaQuality: 100, effort: 6 })
+      .toFile(target);
+    console.log(`${name}-face.webp ${kb(fs.statSync(target).size)}`);
+  }
+}
 async function tavernCards() {
   const source = path.join(assets, 'lounge/_originals/tavern-cards.png');
   if (!fs.existsSync(source)) return;
@@ -321,5 +480,7 @@ async function tavernCards() {
 }
 if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
 if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
+if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
+if (['all', 'images', 'services', 'npcs'].includes(mode)) await servicePortraits();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();
