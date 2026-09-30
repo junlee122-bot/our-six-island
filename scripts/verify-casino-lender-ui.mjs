@@ -222,10 +222,17 @@ try {
     // balance, principal, interest, paid amount and player position stay intact.
     const note = myLoan(); note.offeredAt = Date.now() - 4 * 86_400_000; note.dueAt = note.offeredAt + 3 * 86_400_000;
     report.fixtures.push('Existing synthetic note dates aged four days to exercise overdue UI.');
-    await wait(() => document.querySelector('[data-testid=lender-active-note]')?.textContent.includes('기한이 지난'), null, 30_000);
-    await bothScreens('overdue');
-    await click('[data-testid=lender-repay-all]');
-    await canonical(() => !myLoan(), 'full repayment closes the existing contract');
+    // An overdue casino note collects itself on the borrower's next request
+    // (wallet first, then bank deposits). Depending on timing the panel either
+    // shows the overdue note first (then the borrower pays it in full) or the
+    // next request has already collected it; both end fully paid.
+    await wait(() => document.querySelector('[data-testid=lender-active-note]')?.textContent.includes('기한이 지난') ||
+      !!document.querySelector('[data-testid=lender-borrow]'), null, 30_000);
+    if (myLoan()) {
+      await bothScreens('overdue');
+      await click('[data-testid=lender-repay-all]');
+    }
+    await canonical(() => !myLoan(), 'overdue note ends fully paid');
     const paid = H.world().finance.loans.find((l) => l.id === noteId);
     assert.equal(paid.state, 'paid'); assert.equal(paid.paid, 13000);
     assert.equal(H.world().ledger.accounts[wallet], before - 3000);
