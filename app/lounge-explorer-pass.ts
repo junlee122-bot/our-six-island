@@ -6,8 +6,8 @@ import { ACTORS } from './lounge-roster.ts';
 
 export const EXPLORER_PASS = {
   actor: ACTORS.indexOf('승준'),
-  /** Until 2026-10-15 00:00 KST. */
-  until: Date.UTC(2026, 9, 14, 15),
+  /** Until 2027-01-01 00:00 KST (extended by the user on 2026-10-01). */
+  until: Date.UTC(2026, 11, 31, 15),
 } as const;
 
 export const hasExplorerPass = (actor: number | undefined, now: number) =>
