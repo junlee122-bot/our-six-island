@@ -35,6 +35,7 @@ import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
+import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 export type CloudMember = {
   id: string;
   actor: number;
@@ -70,6 +71,8 @@ export type CloudWorld = {
   finance?: FinanceState;
   /** Private administrator-armed login gifts; delivered records never expire. */
   loginGifts?: Record<string, LoginGift>;
+  /** 테이블 기록: per-game results and the weekly table (lounge-table-stats.ts). */
+  tableStats?: TableStats;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -567,6 +570,17 @@ export function cloudTransition(
         game.wallets.length > 1,
     )
     .map(([id, game]) => ({ id, wallets: game.wallets }));
+  // 테이블 기록 (also 혼자 블랙잭): results only, never money.
+  const newlySettled = Object.entries(g.ledger.games)
+    .filter(([id, game]) => game.state === 'settled' && original.ledger.games[id]?.state !== 'settled')
+    .map(([, game]) => game);
+  if (newlySettled.length)
+    g.tableStats = recordTableStats(
+      readTableStats(g.tableStats, now),
+      newlySettled,
+      (w) => (w.startsWith('wallet-') ? w.slice(7) : null),
+      now,
+    );
   if (settled.length) {
     const next = recordTables(readLife(g.life), g.ledger, settled, now);
     g.life = next.life;
@@ -615,6 +629,12 @@ export function cloudTransition(
     ...(command.lifeHash === lifeHash ? {} : { life }),
     lifeHash,
     finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
+    tableStats: tableStatsView(
+      readTableStats(g.tableStats, now),
+      member.id,
+      (uid) => (Object.hasOwn(lifeState.actors, uid) ? lifeState.actors[uid] : null),
+      now,
+    ),
     activeRoom: current ?? null,
     epoch: g.epochs[member.id] ?? 0,
     nextDue: Number.isFinite(nextDue) ? nextDue : null,

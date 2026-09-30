@@ -6,6 +6,24 @@ import { cloudTransition, commandHash, CLOUD_LEASE_MS } from '../app/lounge-clou
 import { newLoungeLedger, validateLedger } from '../app/lounge-economy.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { keepUnchanged, sameTableProps } from '../app/lounge-view-share.ts';
+import { emptyTableStats, kstWeek, readTableStats, recordTableStats, tableStatsView } from '../app/lounge-table-stats.ts';
+import { newBlackjack, blackjackAction, blackjackDeal, blackjackLegal } from '../app/lounge-blackjack.ts';
+import { registerWallet, reserveGame, settleGame } from '../app/lounge-economy.ts';
+
+/** A 6-deck shoe whose top cards have these ranks (then the rest in order). */
+function shoe(ranks) {
+  const deck = Array.from({ length: 312 }, (_, i) => i),
+    top = [];
+  for (const rank of ranks.split(' ')) {
+    const at = deck.findIndex((c) => c % 13 === '23456789TJQKA'.indexOf(rank));
+    top.push(...deck.splice(at, 1));
+  }
+  return [...top, ...deck];
+}
+const dealOut = (g) => {
+  for (let i = 0; g.phase !== 'over' && i < 50; i++) g = blackjackDeal(g);
+  return g;
+};
 
 const T0 = Date.UTC(2026, 8, 30, 3, 0, 0); // Wednesday 12:00 KST
 const member = (actor) => ({ id: crypto.randomUUID(), actor, username: ACCOUNT_IDS[actor], connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
@@ -211,4 +229,96 @@ test('coming back after the connection expired takes the seat back from the serv
   assert.ok(snap.tables.yacht.members.includes(gone.id), 'back at the table');
   assert.deepEqual(back.response.packet.yacht.away, []);
   assert.equal(back.response.packet.yacht.legal.enabled, back.response.packet.yacht.turn === 3);
+});
+
+test('table stats count settled rounds per game and roll the week over', () => {
+  const MON = Date.UTC(2026, 8, 27, 15, 0, 0); // Monday 00:00 KST
+  assert.equal(kstWeek(MON), kstWeek(MON + 6 * 86_400_000 + 3_600_000 * 23));
+  assert.equal(kstWeek(MON) - 1, kstWeek(MON - 1));
+  const uid = (w) => w.slice(7);
+  let s = emptyTableStats(MON);
+  s = recordTableStats(s, [{ game: 'poker', wallets: ['wallet-a', 'wallet-b', 'wallet-c'], result: [3000, -1000, -2000], state: 'settled' }], uid, MON);
+  s = recordTableStats(s, [{ game: 'poker', wallets: ['wallet-a', 'wallet-b'], result: [-500, 500], state: 'settled' }], uid, MON + 1000);
+  s = recordTableStats(s, [{ game: 'poker', wallets: ['wallet-a', 'wallet-b'], result: [9, 9], state: 'void' }], uid, MON + 2000);
+  assert.deepEqual(s.u.a.poker, { n: 2, w: 1, l: 1, net: 2500, best: 3000, pot: 3000 });
+  assert.deepEqual(s.u.b.poker, { n: 2, w: 1, l: 1, net: -500, best: 500, pot: 3000 });
+  const actors = { a: 0, b: 1, c: 2 };
+  const view = tableStatsView(s, 'b', (u) => actors[u] ?? null, MON + 5000);
+  assert.deepEqual(view.week.poker.map((r) => r.actor), [0, 1, 2]);
+  assert.equal(view.mine.poker.net, -500);
+  // Next week: this week becomes last week's table; totals stay.
+  const later = readTableStats(JSON.parse(JSON.stringify(s)), MON + 7 * 86_400_000);
+  assert.equal(later.week.k, kstWeek(MON) + 1);
+  assert.deepEqual(later.week.g, {});
+  assert.equal(later.last.k, kstWeek(MON));
+  assert.equal(tableStatsView(later, 'a', (u) => actors[u] ?? null, MON + 7 * 86_400_000).last.poker.actor, 0);
+  // Two weeks later there is no "last week" any more.
+  assert.equal(readTableStats(s, MON + 14 * 86_400_000).last, undefined);
+  // Malformed rows are dropped, never thrown.
+  const bad = readTableStats({ v: 1, u: { a: { poker: { n: -1 } }, b: 'x' }, week: { k: 'x' } }, MON);
+  assert.deepEqual(bad.u.a, {});
+});
+
+test('a settled chess round shows up in both players\' table stats; the ledger is untouched', async () => {
+  const { h, ps } = await startTable('chess', 2, 1000);
+  const code = ps[0].code,
+    id = h.world.rooms[code].snapshot.chess.id;
+  const before = structuredClone(h.world.ledger.accounts);
+  const r = await h.run(ps[1], 'action', { action: { kind: 'resign', id } });
+  assert.equal(r.response.ok, true, r.response.error);
+  assert.equal(h.world.ledger.games[id].state, 'settled');
+  assert.deepEqual(r.response.tableStats.mine.chess, { n: 1, w: 0, l: 1, net: -1000, best: 0, pot: 1000 });
+  const winner = await h.run(ps[0], 'read');
+  assert.deepEqual(winner.response.tableStats.mine.chess, { n: 1, w: 1, l: 0, net: 1000, best: 1000, pot: 1000 });
+  assert.deepEqual(winner.response.tableStats.week.chess.map((row) => [row.actor, row.net]), [[0, 1000], [1, -1000]]);
+  // Stats never move 범: balances changed only by the settled stake.
+  assert.equal(h.world.ledger.accounts['wallet-' + ps[0].id], before['wallet-' + ps[0].id] + 2000);
+  assert.equal(h.world.ledger.accounts['wallet-' + ps[1].id], before['wallet-' + ps[1].id]);
+  validateLedger(h.world.ledger);
+  // A later read does not rewrite the stats.
+  const again = await h.run(ps[2], 'read');
+  assert.equal(again.changed, false);
+});
+
+test('blackjack late surrender returns half the bet and settles through the ledger', () => {
+  // Seat 0: T 9 (19), seat 1: 6 7 (13), dealer T 8 (18).
+  let g = newBlackjack('bj-surrender', 2, 1000, shoe('T 6 T 9 7 8'));
+  assert.equal(blackjackLegal(g, 0).surrender, true);
+  assert.equal(blackjackLegal(g, 1).surrender, false, 'not my turn');
+  g = blackjackAction(g, 0, { kind: 'stand' });
+  g = blackjackAction(g, 1, { kind: 'surrender' });
+  assert.equal(g.hands[1][0].status, 'surrender');
+  assert.equal(g.phase, 'reveal');
+  g = dealOut(g);
+  assert.deepEqual(g.result, [1000, -500]);
+  assert.equal(g.hands[1][0].outcome, 'lose');
+  // The ledger accepts it and the house keeps the other half.
+  let ledger = newLoungeLedger();
+  const A = 'wallet-' + 'a'.repeat(24), B = 'wallet-' + 'b'.repeat(24);
+  for (const w of [A, B]) ledger = registerWallet(ledger, w);
+  ledger = reserveGame(ledger, g.id, 'blackjack', [A, B], [4000, 4000]);
+  ledger = settleGame(ledger, g.id, g.result);
+  validateLedger(ledger);
+  assert.equal(ledger.accounts[B], 99_500);
+  assert.equal(ledger.houseBalance, -500);
+});
+
+test('surrender is refused after a hit, after a split and when every hand gave up the dealer skips', () => {
+  let g = newBlackjack('bj-s2', 1, 1000, shoe('5 T 5 8 2'));
+  g = blackjackAction(g, 0, { kind: 'hit' });
+  assert.equal(blackjackLegal(g, 0).surrender, false);
+  assert.equal(blackjackAction(g, 0, { kind: 'surrender' }), null);
+  let s = newBlackjack('bj-s3', 1, 1000, shoe('8 T 8 7 3 4'));
+  s = blackjackAction(s, 0, { kind: 'split' });
+  assert.equal(blackjackLegal(s, 0).surrender, false, 'no surrender on a split hand');
+  let alone = newBlackjack('bj-s4', 1, 1000, shoe('T T 6 7'));
+  alone = blackjackAction(alone, 0, { kind: 'surrender' });
+  alone = blackjackDeal(alone);
+  alone = blackjackDeal(alone);
+  assert.equal(alone.event.kind, 'dealer-skip', 'nothing left for the dealer to beat');
+  assert.deepEqual(alone.result, [-500]);
+  // Dealer blackjack is checked first: the round ends before anyone may surrender.
+  const peek = newBlackjack('bj-s5', 1, 1000, shoe('T A 6 K'));
+  assert.equal(peek.phase, 'reveal');
+  assert.equal(blackjackLegal(peek, 0).surrender, false);
 });
