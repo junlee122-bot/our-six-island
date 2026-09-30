@@ -1,0 +1,72 @@
+{
+ "createdAt": "2026-09-30",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "quality": "high",
+ "resolution": "2k",
+ "aspect": "2:3",
+ "background": "solid magenta #FF00FF (removed at build/runtime)",
+ "styleReferences": [
+  "_originals/casino-lender-rose.png",
+  "_originals/salon-stylist-gwen.png"
+ ],
+ "note": "User reference images were uploaded only as generation inputs and are not stored in this repository. An extra text-only Bocchi render (job a069594c-0d92-4680-acf9-c09cd2b47537) was not used.",
+ "assets": [
+  {
+   "npc": "gabung",
+   "job": "e93471d4-30f8-4d83-8da0-e8b15bd6b704",
+   "original": "_originals/npc-gabung.png",
+   "sha256": "30BB9CF6242BE4A9F22F787B077C8E48CE962DED4AEB47138A006E2D098DAAE1",
+   "reference": "User-provided Garen portrait (Riot Games)."
+  },
+  {
+   "npc": "lux",
+   "job": "0a28a398-2538-4e9e-9902-6da2ebbe7abb",
+   "original": "_originals/npc-lux.png",
+   "sha256": "655018449E15496487475B6556B21C6BCB42D73249DECA53D42747B11A6391FD",
+   "reference": "User-provided Lux illustration (Riot Games)."
+  },
+  {
+   "npc": "himmel",
+   "job": "e4c43530-9e7a-4868-a570-1aa4a94e0148",
+   "original": "_originals/npc-himmel.png",
+   "sha256": "B7E981EAA1723E6F4D38FDC31179F6C8D0BFECEECE304FD3D285CAA9C89D049F",
+   "reference": "User-provided Himmel model sheet (Frieren, Shogakukan)."
+  },
+  {
+   "npc": "beatrice",
+   "job": "9297ad78-0829-4817-a3bc-90114eeb2787",
+   "original": "_originals/npc-beatrice.png",
+   "sha256": "054C50B21E29CFCE764F624A5EAAFB902B5F6AEF9E0C040977460E3EB7E9A513",
+   "reference": "User-provided Beatrice model sheet (Re:Zero, KADOKAWA); drawn as an adult."
+  },
+  {
+   "npc": "bocchi",
+   "job": "467ab5c1-72ca-43fd-a7bc-5a5c6d59f4a9",
+   "original": "_originals/npc-bocchi.png",
+   "sha256": "6E9F246D0DFD9298375CCA1BA0B35CC767AEAC6C95AA24F4F6861B532084F824",
+   "reference": "User-provided Bocchi the Rock! Hitori Gotoh model sheet and key visual (Houbunsha)."
+  },
+  {
+   "npc": "tsunade",
+   "job": "3a91776a-184f-400b-947f-4b202f4426a1",
+   "original": "_originals/npc-tsunade.png",
+   "sha256": "628FAF1F6C72CDBA7DE093B7B02651E05F750DFDD823332A8CD351B729603E0C",
+   "reference": "User-provided Tsunade art (Naruto, Shueisha)."
+  },
+  {
+   "npc": "makima",
+   "job": "086dfeb5-7f1d-44d5-9b3c-16d04e0fdb77",
+   "original": "_originals/npc-makima.png",
+   "sha256": "D5B533F7D63AC532D5F26F2252A7619E4480919600A6D722DBDD38C3942678BB",
+   "reference": "User-provided Makima model sheet (Chainsaw Man, Shueisha/MAPPA); kept faithful to the anime."
+  },
+  {
+   "npc": "yaninekko",
+   "job": "2b8a42c0-7ef2-4bb7-8c1f-1d99362bc363",
+   "original": "_originals/npc-yaninekko.png",
+   "sha256": "457535762934F25AFA7102296F73A72051635DA4A5CD34459CE901A47C3943F6",
+   "reference": "User-provided Yaninekko model sheet and expressions (Kodansha)."
+  }
+ ]
+}
