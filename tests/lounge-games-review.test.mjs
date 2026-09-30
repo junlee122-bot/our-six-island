@@ -79,3 +79,22 @@ test('a broken room refunds a staked 허풍 카드 match instead of leaving it r
   assert.equal(h.world.ledger.games[id].state, 'void');
   for (const p of ps) assert.equal(h.world.ledger.accounts['wallet-' + p.id], 100000);
 });
+
+test('an unchanged life view is not resent; the packet no longer repeats it', async () => {
+  const { h, ps } = await startTable('poker', 3, 10000);
+  // A life action stores growth's one-time fields (a never-written member's
+  // view is stamped with the current time until then).
+  await h.run(ps[4], 'action', { action: { kind: 'status', text: '구경 중' } });
+  const first = await h.run(ps[4], 'read');
+  assert.ok(first.response.life, 'first read carries the life view');
+  assert.equal(first.response.packet.life, undefined);
+  assert.equal(typeof first.response.lifeHash, 'string');
+  h.advance(8000);
+  const again = await h.run(ps[4], 'read', { lifeHash: first.response.lifeHash });
+  assert.equal(again.response.lifeHash, first.response.lifeHash, 'a poll 8 s later sees the same life view');
+  assert.equal(again.response.life, undefined);
+  const stale = await h.run(ps[4], 'read', { lifeHash: 'old' });
+  assert.deepEqual({ ...stale.response.life, serverNow: 0 }, { ...first.response.life, serverNow: 0 });
+  const bytes = (o) => JSON.stringify(o).length;
+  assert.ok(bytes(again.response) * 3 < bytes(first.response), `${bytes(again.response)} vs ${bytes(first.response)}`);
+});

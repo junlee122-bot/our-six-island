@@ -48,8 +48,12 @@ type Response = {
   activeRoom: string | null;
   nextDue: number | null;
   serverNow: number;
-  /** Phase 2 life block (farm, bag, mail…) on every world response. */
+  /**
+   * Phase 2 life block (farm, bag, mail…). Left out when it equals the view
+   * whose `lifeHash` the command carried (then only serverNow moves on).
+   */
   life?: LifeView;
+  lifeHash?: string;
   finance?: FinanceView;
 };
 
@@ -280,7 +284,11 @@ export class CloudRoom {
       : this.view.clockOffset;
     setServerClockOffset(clockOffset);
     const life = r.life ?? (r.packet as { life?: LifeView } | null)?.life;
-    if (life) this.view = { ...this.view, life };
+    if (life) {
+      this.view = { ...this.view, life };
+      this.lifeHash = r.lifeHash ?? '';
+    } else if (this.view.life && Number.isFinite(r.serverNow))
+      this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };
     if (r.finance) this.view = { ...this.view, finance: r.finance };
     if (r.packet && r.code) {
       const localNow = Date.now();
@@ -347,8 +355,14 @@ export class CloudRoom {
    * to the link right away (retried on the fast backoff) instead of three
    * silent 25s attempts that kept the header on "접속 3명" after a drop.
    */
+  /** Hash of the life view in `view.life` (sent so an unchanged one is skipped). */
+  private lifeHash = '';
   private async send(command: CloudCommand, generation: number, background = false) {
     let result: Response | undefined;
+    // Reads carry it; queued actions carry it from when they were queued (the
+    // retry below reuses the same body, so its request hash stays the same).
+    if (command.op === 'read' || command.op === 'wallet')
+      command = { ...command, ...(this.view.life && this.lifeHash ? { lifeHash: this.lifeHash } : {}) };
     const attempts = background ? 1 : 2;
     for (let attempt = 0; attempt < attempts; attempt++) {
       try {
@@ -417,6 +431,7 @@ export class CloudRoom {
     const g = this.generation,
       body: CloudCommand = {
         ...command,
+        ...(this.view.life && this.lifeHash ? { lifeHash: this.lifeHash } : {}),
         requestId: crypto.randomUUID(),
         sequence: ++this.sequence,
         connection: this.connection,

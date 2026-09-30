@@ -82,7 +82,8 @@ test('old worlds without life load; every response carries a life view', async (
   const opened = await h.run(a, 'open');
   assert.equal(opened.response.ok, true);
   assert.equal(h.world.life.actors[a.id], 0);
-  assert.ok(opened.response.packet.life);
+  assert.ok(opened.response.packet);
+  assert.equal(opened.response.packet.life, undefined, "life travels once, at the top level");
   assert.equal(opened.response.life.me.farm.length, 6);
 });
 
@@ -105,7 +106,7 @@ test('life actions work outside rooms and inside the village room', async () => 
   });
   assert.equal(status.response.ok, true, status.response.error);
   assert.deepEqual(status.notifications, [a.code]);
-  assert.equal(status.response.packet.life.statuses[b.id].text, '밭 가꾸는 중');
+  assert.equal(status.response.life.statuses[b.id].text, '밭 가꾸는 중');
   const readA = await h.run(a, 'read');
   assert.equal(readA.response.life.statuses[b.id].actor, 1);
   assert.equal(readA.response.life.housesPlotsPublic[a.id][0].crop, 'carrot');

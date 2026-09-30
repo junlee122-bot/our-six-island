@@ -80,6 +80,11 @@ export type CloudCommand = {
   epoch?: number;
   action?: LoungeAction;
   look?: Look;
+  /**
+   * `lifeHash` of the life view the client already holds: the response then
+   * leaves `life` out when it has not changed (most polls during a game).
+   */
+  lifeHash?: string;
 };
 export class CloudError extends Error {
   status: number;
@@ -87,6 +92,21 @@ export class CloudError extends Error {
     super(message);
     this.status = status;
   }
+}
+/**
+ * Short content hash of a view (two 32-bit FNV-1a / djb2 lanes). Only used to
+ * skip resending an unchanged life view, never for security.
+ */
+export function viewHash(value: unknown): string {
+  const text = JSON.stringify(value) ?? '';
+  let a = 0x811c9dc5,
+    b = 5381;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    a = Math.imul(a ^ c, 0x01000193);
+    b = (Math.imul(b, 33) + c) | 0;
+  }
+  return (a >>> 0).toString(36) + (b >>> 0).toString(36) + text.length.toString(36);
 }
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const CLOUD_LEASE_MS = 180000;
@@ -578,7 +598,10 @@ export function cloudTransition(
   const runtime = allowed ? LoungeRoom.hosted(entry.snapshot, g.ledger) : null;
   const lifeState = readLife(g.life),
     life = lifeView(lifeState, member.id, member.actor, now);
-  const packet = runtime ? { ...runtime.hostedPacket(member.id), life } : null;
+  // `life` travels once, at the top level (it used to be in the packet too).
+  const packet = runtime ? runtime.hostedPacket(member.id) : null;
+  // serverNow ticks on every call; the client stamps it from the response.
+  const lifeHash = viewHash({ ...life, serverNow: 0 });
   const nextDue =
     entry && allowed ? snapshotNextDue(entry.snapshot) : Infinity;
   const response = {
@@ -589,7 +612,8 @@ export function cloudTransition(
     host: allowed ? entry.snapshot.host : null,
     packet,
     wallet: wallet(g.ledger, member.id, now, lifeState),
-    life,
+    ...(command.lifeHash === lifeHash ? {} : { life }),
+    lifeHash,
     finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
     activeRoom: current ?? null,
     epoch: g.epochs[member.id] ?? 0,
