@@ -1,7 +1,7 @@
 // Captures every public interior (mock cloud, never real Supabase) and its
 // frame cost, for before/after comparisons of the 3D rooms:
 //
-//   node --experimental-strip-types --no-warnings scripts/interior-shots.mjs --pages /tmp/pages --out .ui-shots/interiors [--view fhd|s] [--only casino,hall]
+//   node --experimental-strip-types --no-warnings scripts/interior-shots.mjs --pages /tmp/pages --out .ui-shots/interiors [--view fhd|s] [--only casino,hall] [--seated]
 //
 // For each place it walks to the door on the village map, presses E, waits
 // for the room, captures it at the door, then walks to the first table (or
@@ -25,6 +25,7 @@ const view = opt('view', 'fhd');
 // place id on the village map → server area of the room
 const PLACES = { casino: 'casino', hall: 'lounge', tavern: 'tavern', bank: 'bank', wardrobe: 'salon' };
 const only = opt('only', Object.keys(PLACES).join(',')).split(',').filter(Boolean);
+const seated = args.includes('--seated');
 fs.mkdirSync(out, { recursive: true });
 
 const server = await serve(pages);
@@ -106,6 +107,14 @@ try {
       await sleep(4000);
       results[place] = { door: await cost() };
       await shot(`${place}-door`);
+      // --seated: a friend opens a table and sits (casino blackjack, hall 섯다).
+      const SEAT = { casino: ['blackjack', 1000], lounge: ['seotda', 10000] }[area];
+      if (seated && SEAT) {
+        const [game, stake] = SEAT;
+        await H.run(H.bots[0], 'action', { action: { kind: 'invite', game, players: [], stake, required: 2, table: `${area}-${game}` } }).catch((e) => console.log('   invite failed:', e.message));
+        await sleep(4000);
+        await shot(`${place}-seated`);
+      }
       // Walk to the first table (or the counter) and capture again.
       const route = await js(() => {
         const b = document.querySelector('.ih-tables button');
