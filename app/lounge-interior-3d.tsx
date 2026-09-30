@@ -10,6 +10,11 @@ import {
 } from './ui/icons';
 import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
+import { ResidentLayer } from './lounge-npc-figures';
+import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { npcsIn } from './lounge-npc-schedule';
+import { interiorCanWalk } from './lounge-interior-layout';
+import './lounge-npc-figures.css';
 import { loungeSprites } from './lounge-sprites';
 import { GAME_INFO, type GameKind } from './lounge-games';
 import type { ChatLine, LoungePlayer, LoungeView } from './lounge-room';
@@ -196,6 +201,14 @@ export function Interior3D({
 }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLElement>());
+  /** Residents' name tags and bubbles (허풍 주점 evenings: 프리렌, 쓰레쉬, 볼리바스). */
+  const residentLabelsRef = useRef<HTMLDivElement>(null);
+  // The cloud view carries the server clock offset (a plain LoungeView does not).
+  const offsetOf = (v: unknown) => (v as { clockOffset?: number }).clockOffset ?? 0;
+  const clockRef = useRef(offsetOf(view));
+  useLayoutEffect(() => {
+    clockRef.current = offsetOf(view);
+  });
   const [{ keys }] = useSettings();
   const [state, setState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [attempt, setAttempt] = useState(0);
@@ -584,6 +597,13 @@ export function Interior3D({
     const mine = makeFigure(latest.current.me.actor, latest.current.me.look, l.point);
     mine.mesh.name = 'me';
     const others = new Map<string, Figure>();
+    const residents = area === 'tavern' && residentLabelsRef.current
+      ? new ResidentLayer(scene, residentLabelsRef.current, { height: FIGURE_HEIGHT * 1.02, billboard: 'upright' })
+      : null;
+    if (residents) residents.onChange = () => {
+      dirty = true;
+    };
+    const residentMemory = newBehaviorMemory();
     let sprites: Awaited<ReturnType<typeof loungeSprites>> | null = null;
     const spritesJob = loungeSprites().then(async (value) => {
       const m = latest.current.me;
@@ -1074,9 +1094,24 @@ export function Interior3D({
         renderer.shadowMap.needsUpdate = true;
         dirty = true;
       }
+      if (residents) {
+        const at = Date.now() + clockRef.current;
+        const people = [
+          { id: 'self', name: '', ...interiorToWorld(l.point) },
+          ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
+        ];
+        const frames = residentFrames(npcsIn('tavern', at), people, at, {
+          rain: false,
+          night: true,
+          memory: residentMemory,
+          canStand: (p) => interiorCanWalk(worldToInterior(p), 'tavern'),
+        });
+        if (residents.update(frames, t, dt, camera)) dirty = true;
+      }
       if (l.moving || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);
         projectLabels();
+        residents?.project(camera, host.clientWidth, host.clientHeight);
         lastRender = t;
         dirty = false;
       }
@@ -1102,6 +1137,7 @@ export function Interior3D({
       dropFigure(mine);
       for (const f of others.values()) dropFigure(f);
       others.clear();
+      residents?.dispose();
       hosts.dispose();
       lender?.dispose();
       banker?.dispose();
@@ -1138,6 +1174,7 @@ export function Interior3D({
       data-seated={seatedAt ?? ''}
     >
       <div className="ih-labels" aria-hidden="true">
+        <div className="ih-residents" ref={residentLabelsRef} />
         <div
           className="ih-label ih-label-self"
           ref={(el) => {

@@ -45,6 +45,9 @@ import { farmToolAction } from './lounge-life-ui.ts';
 import { FORGE_REACH, NODE_REACH, forgeDistance, nearestNode } from './lounge-village-growth.ts';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data.ts';
 import { VILLAGE_GATE, villageGateDistance } from './lounge-areas.ts';
+import { DISTRICTS, DISTRICT_IDS, districtOpen, gateDistance, type DistrictId } from './lounge-districts.ts';
+import { NPCS, type NpcId } from './lounge-npc-data.ts';
+import { josa } from './lounge-text.ts';
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
 export type VillageSpot =
@@ -69,7 +72,11 @@ export type VillageSpot =
   /** 성장 P1: today's bush / log / rock at the village edge. */
   | { kind: 'node'; id: string; node: NodeKind }
   /** 성장 P2: the north gate up to 뒷산 (open after 마을 개척 “산길 정비”). */
-  | { kind: 'gate' };
+  | { kind: 'gate' }
+  /** A district gate on the rim (lounge-districts.ts); a closed one says what opens it. */
+  | { kind: 'district'; id: DistrictId }
+  /** A resident walking about the hub (lounge-npc-schedule.ts). */
+  | { kind: 'resident'; npc: NpcId };
 
 export type VillageTarget =
   | { type: 'door'; entrance: NearbyVillageEntrance }
@@ -91,12 +98,15 @@ export function villageAction(
     life,
     now,
     npcs = [],
+    residents = [],
     canVisit = true,
     tool = '',
   }: {
     life?: LifeView | null;
     now: number;
     npcs?: readonly { actor: number; point: VillagePoint }[];
+    /** Residents drawn in the hub right now (id and where). */
+    residents?: readonly { id: NpcId; x: number; z: number }[];
     /** Friends' doors lead to their rooms ('놀러 가기'). */
     canVisit?: boolean;
     /** The selected hotbar item (seed / fertilizer / watering can). */
@@ -276,6 +286,25 @@ export function villageAction(
       reach: NPC_TALK_REACH,
       target: { type: 'spot', spot: { kind: 'npc', actor: npc.actor } },
     });
+  for (const r of residents) {
+    labels.set('resident:' + r.id, { label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` });
+    candidates.push({
+      kind: 'talk',
+      distance: Math.hypot(r.x - point.x, r.z - point.z) - 0.2,
+      reach: NPC_TALK_REACH + 0.3,
+      target: { type: 'spot', spot: { kind: 'resident', npc: r.id } },
+    });
+  }
+  for (const id of DISTRICT_IDS) {
+    const d = DISTRICTS[id];
+    labels.set('district:' + id, { label: districtOpen(id) ? `${josa(d.name, '으로/로')} 가기` : `${d.name} · 아직 닫혀 있어요` });
+    candidates.push({
+      kind: 'enter',
+      distance: gateDistance(id, point),
+      reach: d.gate.reach,
+      target: { type: 'spot', spot: { kind: 'district', id } },
+    });
+  }
   const best = pickAction(candidates);
   if (!best?.target) return null;
   const t = best.target;
@@ -290,7 +319,11 @@ export function villageAction(
             ? 'spawn:' + t.spot.spot
             : t.spot.kind === 'node'
               ? 'node:' + t.spot.id
-              : t.spot.kind;
+              : t.spot.kind === 'district'
+                ? 'district:' + t.spot.id
+                : t.spot.kind === 'resident'
+                  ? 'resident:' + t.spot.npc
+                  : t.spot.kind;
   return { kind: best.kind, target: t, ...labels.get(key) };
 }
 
