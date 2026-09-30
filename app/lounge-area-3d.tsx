@@ -237,7 +237,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     }
     const exit = nearestExit(s.area, p);
     if (exit) {
-      if (exit.to === 'woods' && !s.logCleared) {
+      // The fallen log stays for everyone until someone splits it; 승준's explorer pass walks him past it.
+      if (exit.to === 'woods' && !s.logCleared && !s.regions?.pass) {
         const gate = GATES.woods;
         found.push({
           d: exit.distance,

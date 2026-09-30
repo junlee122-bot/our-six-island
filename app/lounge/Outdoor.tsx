@@ -13,7 +13,7 @@ import { REGIONS, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '
 import { DISTRICTS, districtOpen, type DistrictId } from '../lounge-districts';
 import { prefetchDistrict } from '../lounge-district-models';
 import type { NpcId } from '../lounge-npc-data';
-import { MINE_ARRIVE, LIFT_EVERY, floorPick } from '../lounge-mine';
+import { MINE_ARRIVE, LIFT_EVERY, floorPick, mineStops } from '../lounge-mine';
 import { GROWTH_REJECT } from '../lounge-growth';
 import { NODE_INFO, type NodeKind } from '../lounge-growth-data';
 import { itemName } from '../lounge-life-plus';
@@ -170,11 +170,12 @@ export function useOutdoor({
     return true;
   };
   const enterMine = () => {
-    const m = regions()?.mine;
-    if (!m) return;
-    if (m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
-    // With the lift: pick a lift floor (or 1층).
-    if (m.lift && m.deep >= LIFT_EVERY) setLiftOpen(true);
+    const r = regions(),
+      m = r?.mine;
+    if (!r || !m) return;
+    if (!r.pass && m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
+    // With the lift (or 승준's explorer pass, every floor): pick a floor.
+    if (r.pass || (m.lift && m.deep >= LIFT_EVERY)) setLiftOpen(true);
     else void goFloor(1);
   };
   const gain = async (run: () => Promise<boolean>) => {
@@ -280,7 +281,9 @@ export function useOutdoor({
     if (!outdoor) return null;
     const r = view.life?.growth?.regions ?? null;
     const m = r?.mine;
-    const liftFloors = m ? [1, ...Array.from({ length: Math.floor(m.deep / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY)] : [1];
+    // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
+    const pass = !!r?.pass;
+    const stops = m ? mineStops(m, pass) : [];
     return (
       <div className="l-village-world">
         <Suspense fallback={null}>
@@ -312,13 +315,17 @@ export function useOutdoor({
           </button>
         </div>
         {liftOpen && m && (
-          <Modal title="광산 승강기" onClose={() => setLiftOpen(false)}>
-            <p className="l-muted">가 본 층까지 {LIFT_EVERY}층마다 내려갈 수 있어요. 곡괭이 단계가 모자라면 그 층에는 못 가요.</p>
+          <Modal title={pass ? '광산 층 고르기' : '광산 승강기'} onClose={() => setLiftOpen(false)}>
+            <p className="l-muted">
+              {pass
+                ? '탐험 패스로 어느 층이든 갈 수 있어요. 바위는 곡괭이 단계가 맞아야 깨져요.'
+                : `가 본 층까지 ${LIFT_EVERY}층마다 내려갈 수 있어요. 곡괭이 단계가 모자라면 그 층에는 못 가요.`}
+            </p>
             <div className="ar-lift" data-testid="mine-lift">
-              {liftFloors.map((f) => (
-                <button key={f} type="button" disabled={f === m.at || floorPick(f) > m.pickaxe} onClick={() => void goFloor(f)}>
+              {stops.map(({ floor: f, pick }) => (
+                <button key={f} type="button" disabled={f === m.at || (!pass && pick !== null)} onClick={() => void goFloor(f)}>
                   {f}층
-                  <small>{f === m.at ? '지금 여기' : floorPick(f) > m.pickaxe ? `곡괭이 ${floorPick(f)}단계` : f === 1 ? '입구' : '승강장'}</small>
+                  <small>{f === m.at ? '지금 여기' : pick !== null ? `곡괭이 ${pick}단계` : f === 1 ? '입구' : pass ? '탐험 패스' : '승강장'}</small>
                 </button>
               ))}
             </div>

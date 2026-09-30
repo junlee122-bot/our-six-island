@@ -25,6 +25,18 @@ export const LIFT_FROM_FLOOR = 11;
 export const FOSSIL_CHANCE = 2;
 export const VEIN_ROCKS = 3;
 export const VEIN_MULT = 3;
+/**
+ * Floors the lift cage offers: 1층 and a stop every LIFT_EVERY floors down to
+ * the deepest one reached. With 승준's explorer pass (lounge-explorer-pass.ts)
+ * it is every floor. `pick` is the pickaxe tier a floor needs when mine is
+ * lower: the lift will not stop there; the pass goes anyway (the rocks stay hard).
+ */
+export function mineStops(m: { deep: number; pickaxe: number }, pass = false): { floor: number; pick: number | null }[] {
+  const floors = pass
+    ? Array.from({ length: MINE_FLOORS_P2 }, (_, i) => i + 1)
+    : [1, ...Array.from({ length: Math.floor(Math.min(m.deep, MINE_FLOORS_P2) / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY)];
+  return floors.map((floor) => ({ floor, pick: floorPick(floor) > m.pickaxe ? floorPick(floor) : null }));
+}
 /** Rocks broken on a floor today before its ladder down shows (4–6). */
 export const ladderNeed = (day: number, floor: number) => 4 + (mh(`ladder-n:${day}:${floor}`) % 3);
 

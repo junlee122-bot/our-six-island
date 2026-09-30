@@ -33,3 +33,46 @@ test('승준 enters locked areas and any mine floor; others still need the unloc
   assert.notEqual(mineCanGo(l, seungjun, 999, now), null, 'floors outside the mine stay invalid');
   assert.equal(areaOpen(l, 'hill', EXPLORER_PASS.until, seungjun), false);
 });
+
+// The client's locked gates read the region view: the fallen log to 숲 깊은 곳
+// and the mine's floor picker / ladder (lounge-area-3d.tsx, lounge/Outdoor.tsx).
+test('the region view carries the pass: 승준 walks past the log and picks any mine floor', async () => {
+  const { growthView } = await import('../app/lounge-growth.ts');
+  const { lifeAction } = await import('../app/lounge-life.ts');
+  const { newLoungeLedger, registerWallet } = await import('../app/lounge-economy.ts');
+  const { MINE_FLOORS_P2, mineStops } = await import('../app/lounge-mine.ts');
+  let l = life(),
+    ledger = newLoungeLedger();
+  for (const id of ids) ledger = registerWallet(ledger, 'wallet-' + id);
+  const seungjun = { id: ids[EXPLORER_PASS.actor], actor: EXPLORER_PASS.actor },
+    other = { id: ids[0], actor: 0 };
+  const act = (m, a) => {
+    const r = lifeAction(l, ledger, m, a, now);
+    l = r.life;
+    ledger = r.ledger;
+  };
+  const his = growthView(l, seungjun.id, now).regions;
+  assert.equal(his.pass, true);
+  assert.equal(his.hill.open && his.woods.open && his.mine.open, true);
+  assert.equal(his.woods.cleared, null, 'the log is still there for everyone');
+  const theirs = growthView(l, other.id, now).regions;
+  assert.equal(theirs.pass, undefined);
+  assert.equal(theirs.mine.open, false);
+  // Straight to floor 7 from the entrance picker; the ladder down is there at once.
+  act(seungjun, { kind: 'mineGo', floor: 7 });
+  const at7 = growthView(l, seungjun.id, now).regions.mine;
+  assert.equal(at7.at, 7);
+  assert.equal(at7.ladder, true);
+  act(seungjun, { kind: 'mineGo', floor: 8 });
+  act(seungjun, { kind: 'mineGo', floor: MINE_FLOORS_P2 });
+  assert.equal(growthView(l, seungjun.id, now).regions.mine.ladder, false, 'no ladder below the bottom floor');
+  assert.throws(() => act(other, { kind: 'mineGo', floor: 1 }));
+  // The picker: every floor with the pass (deep rocks still name their pickaxe); the lift's stops without it.
+  const stops = mineStops({ deep: 0, pickaxe: 1 }, true);
+  assert.deepEqual(stops.map((s) => s.floor), Array.from({ length: MINE_FLOORS_P2 }, (_, i) => i + 1));
+  assert.equal(stops[0].pick, null);
+  assert.equal(stops.at(-1).pick, 4);
+  assert.deepEqual(mineStops({ deep: 12, pickaxe: 1 }).map((s) => [s.floor, s.pick]), [[1, null], [5, null], [10, 2]]);
+  // After the pass ends the view goes back to the village's rules.
+  assert.equal(growthView(l, seungjun.id, EXPLORER_PASS.until).regions.pass, undefined);
+});

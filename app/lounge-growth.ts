@@ -885,6 +885,12 @@ export type GrowthView = {
   regions?: RegionsView;
 };
 export type RegionsView = {
+  /**
+   * 승준's temporary explorer pass (lounge-explorer-pass.ts): the fallen log
+   * lets him through and every mine floor is his to pick (the rocks still
+   * need the pickaxe). Only present while it is his and valid.
+   */
+  pass?: true;
   hill: { open: boolean; nodes: { id: string; kind: NodeKind; x: number; z: number; taken: boolean }[] };
   woods: {
     open: boolean;
@@ -898,7 +904,7 @@ export type RegionsView = {
     deep: number;
     /** Rocks I broke today per floor. */
     broken: Record<number, number[]>;
-    /** The ladder down on my current floor has shown today. */
+    /** The ladder down on my current floor has shown today (always, above the bottom, with the explorer pass). */
     ladder: boolean;
     /** Friends in the mine today: actor → floor. */
     friends: Record<number, number>;
@@ -1001,16 +1007,18 @@ function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<str
   for (const [id, x] of Object.entries(life.growth?.u ?? {}))
     if (id !== uid && id in life.actors && x.day === day && (x.mine?.at ?? 0) > 0) friends[life.actors[id]] = x.mine!.at;
   const at = u.mine?.at ?? 0;
+  const pass = ok && hasExplorerPass(life.actors[uid], now);
   return {
+    ...(pass ? { pass: true as const } : {}),
     hill: { open: areaOpen(life, 'hill', now, uid), nodes: nodes('hill') },
     woods: { open: areaOpen(life, 'woods', now, uid), cleared: life.growth?.c?.woods ?? null, nodes: nodes('woods') },
     mine: {
-      open: researchDone(life, 'trail', now),
+      open: areaOpen(life, 'mine', now, uid),
       lift: researchDone(life, 'lift', now),
       at,
       deep: u.mine?.deep ?? 0,
       broken,
-      ladder: ok && at > 0 && ladderFound(life, uid, at, now),
+      ladder: ok && at > 0 && (ladderFound(life, uid, at, now) || (pass && at < MINE_FLOORS_P2)),
       friends,
       pickaxe: ok ? toolTier(life, uid, 'pickaxe') : 1,
     },
