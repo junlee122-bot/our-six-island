@@ -53,8 +53,8 @@ const KEY = { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'Arro
 const keysFor = (x, z) => [x < -0.3 ? KEY.left : x > 0.3 ? KEY.right : null, z < -0.3 ? KEY.up : z > 0.3 ? KEY.down : null].filter(Boolean);
 const fadeClear = () => until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
 const focus = (sel) => js((s) => document.querySelector(s)?.focus({ preventScroll: true }), sel);
-const data = (sel) => js((s) => ({ ...(document.querySelector(s)?.dataset ?? {}) }), sel);
-const music = () => js(() => ({ ...document.documentElement.dataset }));
+const data = (sel) => js((s) => Object.fromEntries(Object.entries(document.querySelector(s)?.dataset ?? {})), sel);
+const music = () => js(() => Object.fromEntries(Object.entries(document.documentElement.dataset)));
 const near = (d, p, r) => Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < r;
 const villageReady = () => until(() => {
   const s = document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state');
@@ -168,7 +168,7 @@ try {
         await fadeClear();
         await sleep(1200);
         if (shotDir) await page.screenshot({ path: `${shotDir}/${shop}-out.png` });
-        console.log('  info scenes:', await js(() => [...document.querySelectorAll('[data-testid$=\"-3d\"]')].map((e) => `${e.dataset.testid}:${e.dataset.area ?? ''}`).join(' ')));
+        console.log('  info scenes:', await js(() => [...document.querySelectorAll(`[data-testid$="-3d"]`)].map((e) => `${e.dataset.testid}:${e.dataset.area ?? ''}`).join(' ')));
         const o = await data('[data-testid=area-3d]');
         check(near(o, shopDoorOutside(shop).at, 0.7), `${shop}: back in front of the shop (${o.avatarX}, ${o.avatarZ})`);
         check(o.action !== 'counter', `${shop}: its door is not in my face (${o.action || 'nothing'})`);
