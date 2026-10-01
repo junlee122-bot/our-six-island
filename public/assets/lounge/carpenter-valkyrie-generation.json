@@ -43,5 +43,33 @@
       "original": "_originals/host-valkyrie.png",
       "sha256": "DAA8DB706AE8188CE6B378D1BF2447A9CD2944857EB16DCA7A13390DD7FAB767"
     }
-  ]
+  ],
+  "web": {
+    "npc-valkyrie.webp": {
+      "w": 660,
+      "h": 990,
+      "sha256": "0A0451DC6E3AE307EF28B18F17B30C5C45801DB95C8CE086AA0EA506D3F16B2B"
+    },
+    "npc-valkyrie-portrait.webp": {
+      "w": 384,
+      "h": 384,
+      "sha256": "7A46B07D4A16287CCE849FAC8304B5C2FD76BB92C5275B1B66A001C4DACBFD73"
+    },
+    "chibi/npc-valkyrie.webp": {
+      "w": 512,
+      "h": 640,
+      "sha256": "E8B567B1DBCEB02EA36AA21FE33AAFB6ABFF448AA83238011D8ECADE10A7DB31"
+    },
+    "host-carpenter.png": {
+      "w": 1320,
+      "h": 1320,
+      "sha256": "AC06CDD4178C4E0CE77B94E6F5CDC2A2E579C5181F19923F19B260C6E03CE155"
+    },
+    "host-carpenter.webp": {
+      "w": 1320,
+      "h": 1320,
+      "sha256": "39384F0CA632C58A2D4BDA3146E020695C8A0CE38C84415A5FF46A7B1DBC8B2A"
+    }
+  },
+  "keying": "scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-carpenter.png, then encodes host-carpenter.webp."
 }

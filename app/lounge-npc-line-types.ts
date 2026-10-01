@@ -43,6 +43,11 @@ export type NpcLineSet = {
   marketDay: string[];
   /** 이 주민만의 반복 농담. */
   jokes: string[];
+  /**
+   * 말 건 친구에 따라 달라지는 말(발키리): 'sister'는 NPC_SISTER_FRIENDS에
+   * 적힌 친구에게 하는 언니·동생 말투, 'hannam'은 나머지 모두에게 하는 시비.
+   */
+  tone?: { hannam: string[]; sister: string[] };
   /** 머리 위 말풍선(짧게): 혼자 있을 때 · 누가 다가올 때 · 비 올 때 · 밤. */
   bubble: { idle: string[]; near: string[]; rain: string[]; night: string[] };
   /** 오늘 이미 이야기했을 때. */

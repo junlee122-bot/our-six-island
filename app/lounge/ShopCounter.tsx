@@ -627,17 +627,18 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
     return () => cancelAnimationFrame(id);
   }, [page]);
   const hours = shop ? Math.max(0, Math.ceil((shop.resetAt - now) / 3_600_000)) : 0;
+  // 발키리's voice (lounge-npc-lines-carpenter.ts); the prices and rules stay in the panels.
   const line = !life
-    ? '마을에 연결되면 가게 문을 열게요.'
+    ? '마을에 연결되믄 문 연다. 누나야 바빠요.'
     : page === 'upgrade'
-      ? '진열대를 늘리면 매일 더 많은 가구를 들여올 수 있어요!'
+      ? '진열대 늘리믄 매일 가구 더 들여온다. 범 보태라, 한남들아.'
       : page === 'luxury'
-        ? '이번 주에만 들어온 귀한 가구예요. 한 사람당 하나씩만 팔아요.'
+        ? '이번 주에만 들어온 귀한 거다. 한 사람당 하나. 독점ㄴㄴ 나빠요.'
         : page === 'basic'
-          ? '새 방에 맞춰 기본 가구를 늘 갖춰 뒀어요. 벽지랑 바닥은 부동산 문 사장님한테 가 보세요!'
+          ? '새 방 기본 가구는 늘 있다. 벽지랑 바닥은 옆 부동산 가 보이소.'
           : item
-          ? `${josa(item.name, '은/는')} ${formatBeom(item.price)}이에요. 직접 다듬었어요!`
-          : '오늘은 물건이 다 나갔어요.';
+          ? `${josa(item.name, '은/는')} ${formatBeom(item.price)}. 내가 직접 깎았다. 흥정ㄴㄴ.`
+          : '오늘 물건 다 나갔다. 내일 온나.';
   const cols = 4;
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (page !== 'luxury' && page !== 'upgrade' && (e.key === '+' || e.key === '=' || e.key === '-')) {

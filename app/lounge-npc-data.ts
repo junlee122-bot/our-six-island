@@ -423,6 +423,13 @@ export const NPCS: Record<NpcId, NpcDef> = {
   },
 };
 
+/**
+ * Friends (lounge-roster ACTORS names) 발키리 talks to as 언니·동생; everyone
+ * else gets her default 한남 ribbing (NpcLineSet.tone). The roster carries no
+ * gender, so this stays for the friends to fill in (one name per entry).
+ */
+export const NPC_SISTER_FRIENDS: readonly string[] = [];
+
 /** How residents relate to each other (their chats and a few events come from here). */
 export type NpcBond = { a: NpcId; b: NpcId; kind: 'rival' | 'friend' | 'regular' | 'mentor' | 'crush' | 'partner'; note: string };
 export const NPC_BONDS: readonly NpcBond[] = [
@@ -447,6 +454,11 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'sinjjajang', b: 'nyamo', kind: 'regular', note: '은행 서류 배달' },
   { a: 'gwen', b: 'janna', kind: 'friend', note: '방송 전 머리 손질' },
   { a: 'realtor', b: 'carpenter', kind: 'partner', note: '집 확장 공사를 같이 하는 동업자' },
+  // 발키리 (2026-10-01): 한남 둘과는 말싸움, 언니 하나와 기자 하나와는 친구.
+  { a: 'carpenter', b: 'captain', kind: 'rival', note: '주점 의자를 고쳐 주면서 허풍마다 시비' },
+  { a: 'carpenter', b: 'volibas', kind: 'rival', note: '도끼 들고 다닌다고 검문, 검문한다고 시비' },
+  { a: 'carpenter', b: 'janna', kind: 'friend', note: '가구점 바이럴을 태워 주는 기자' },
+  { a: 'carpenter', b: 'tsunade', kind: 'friend', note: '텃밭 울타리를 고쳐 주는 동생과 언니' },
   // Stage 2 (design-npcs-stage2.md §3 and the cards).
   { a: 'lux', b: 'janna', kind: 'rival', note: '예보가 틀리면 조업을 망쳐서 늘 투덕거림' },
   { a: 'gabung', b: 'janna', kind: 'rival', note: '날씨 예보 대결, 누가 맞혔는지 신문에 실림' },

@@ -754,7 +754,9 @@ async function chibiSprites() {
     }
     const spans = names.length === 2 ? [[0, cut], [cut, width]] : [[0, width]];
     for (const [i, name] of names.entries()) {
-      const id = name === 'yaninekko' ? 'yanineko' : name;
+      const file = name === 'yaninekko' ? 'yanineko' : name;
+      // The record is keyed by resident id (발키리 is the 'carpenter').
+      const id = file === 'valkyrie' ? 'carpenter' : file;
       const box = opaqueBox(keyed, width, height, spans[i][0], spans[i][1]);
       if (!box) continue;
       const scale = (CHIBI_H * 0.94) / box.height;
@@ -767,14 +769,14 @@ async function chibiSprites() {
         .png()
         .toBuffer();
       const top = Math.round(CHIBI_H * 0.97) - fh;
-      const target = path.join(outDir, `npc-${id}.webp`);
+      const target = path.join(outDir, `npc-${file}.webp`);
       await sharp({ create: { width: W, height: CHIBI_H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
         .composite([{ input: figure, left: Math.round((W - fw) / 2), top }])
         .webp({ quality: 90, alphaQuality: 100, effort: 6 })
         .toFile(target);
       const sha256 = crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex').toUpperCase();
-      sizes[id] = { file: `chibi/npc-${id}.webp`, w: W, h: CHIBI_H, sha256 };
-      console.log(`chibi ${base} -> ${id} ${W}x${CHIBI_H} ${kb(fs.statSync(target).size)}`);
+      sizes[id] = { file: `chibi/npc-${file}.webp`, w: W, h: CHIBI_H, sha256 };
+      console.log(`chibi ${base} -> ${file} ${W}x${CHIBI_H} ${kb(fs.statSync(target).size)}`);
     }
   }
   // Record the web copies (size for lounge-npc-chibi.ts, hash) beside the originals' record.

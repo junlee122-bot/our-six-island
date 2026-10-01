@@ -3,7 +3,7 @@
 // line files, like the dealers' voices). Pure; no randomness, no server.
 import { SEASON_INFO, WEATHER_INFO, seasonOf, timeOfDay, weatherOf, holidaysOn, hash32, type Weather } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
-import { NPCS, npcTier, type GiftReaction, type NpcId } from './lounge-npc-data.ts';
+import { NPCS, NPC_SISTER_FRIENDS, npcTier, type GiftReaction, type NpcId } from './lounge-npc-data.ts';
 import type { NpcLineSet } from './lounge-npc-line-types.ts';
 import { NPC_BANTER } from './lounge-npc-banter.ts';
 import type { NpcSpot } from './lounge-npc-schedule.ts';
@@ -118,6 +118,7 @@ function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
       L.tier[tier],
       L.season[seasonOf(ctx.now)],
       L.jokes,
+      L.tone?.[NPC_SISTER_FRIENDS.includes(ctx.me) ? 'sister' : 'hannam'],
       ctx.lastGiftName ? L.gift.remember : undefined,
       ctx.npc === 'janna' && jannaMissedToday(day) ? JANNA_MISS : undefined,
     ].filter((p): p is string[] => !!p && p.length > 0);

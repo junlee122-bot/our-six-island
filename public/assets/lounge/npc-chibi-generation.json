@@ -199,7 +199,7 @@
    "h": 640,
    "sha256": "C131F45EFFE5BA43BACFA7169C686F7CF6BAA16C218B706EEB0922A5E38C585B"
   },
-  "valkyrie": {
+  "carpenter": {
    "file": "chibi/npc-valkyrie.webp",
    "w": 512,
    "h": 640,
