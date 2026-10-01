@@ -67,12 +67,22 @@ const CLASSIC: MotionSheet[] = ACTOR_FILES.map((name, actor) => ({
  */
 export const EXTRA_MOTION_SHEETS: MotionSheet[] = [];
 
+/**
+ * The built-in hand-drawn classic sheets stay off: their poses switch between
+ * front and three-quarter views, the run row crouches every third frame (the
+ * head drops by up to 18% of the figure) and each frame sits a little
+ * sideways, so the head pumped and jittered. Every look now walks with the
+ * cut-out rig — a steady body with alternating steps, like a farm-sim sprite
+ * (character QA 2026-10-01). Drop-in sheets still win when added.
+ */
+export const HAND_DRAWN_CLASSIC = false;
+
 export function motionSheetFor(
   actor: number,
   look: { collection: string; hairstyle: string },
 ) {
   // Drop-in sheets win over the built-in ones for the same look.
-  return [...EXTRA_MOTION_SHEETS, ...CLASSIC].find(
+  return [...EXTRA_MOTION_SHEETS, ...(HAND_DRAWN_CLASSIC ? CLASSIC : [])].find(
     (sheet) =>
       sheet.actor === actor &&
       sheet.collection === look.collection &&

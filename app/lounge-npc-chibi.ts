@@ -10,7 +10,7 @@ import type { NpcId } from './lounge-npc-data.ts';
 
 export type NpcChibi = { asset: string; w: number; h: number };
 export const NPC_CHIBI: Partial<Record<NpcId, NpcChibi>> = {
-  frieren: { asset: A.chibi_frieren, w: 514, h: 640 },
+  frieren: { asset: A.chibi_frieren, w: 512, h: 640 },
   nasera: { asset: A.chibi_nasera, w: 512, h: 640 },
   rose: { asset: A.chibi_rose, w: 512, h: 640 },
   gwen: { asset: A.chibi_gwen, w: 512, h: 640 },

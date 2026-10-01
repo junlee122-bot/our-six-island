@@ -102,7 +102,7 @@ test('rest pose is the untouched idle art', () => {
     }
 });
 
-test('soles stay grounded: no sinking, a planted foot while walking, flight while running', () => {
+test('soles stay grounded: no sinking and no airborne hop, walking or running (farm-sim steps)', () => {
   for (const hem of [false, true]) {
     const g = geometry(hem);
     for (const motion of ['walk', 'run']) {
@@ -118,13 +118,15 @@ test('soles stay grounded: no sinking, a planted foot while walking, flight whil
         if (Math.max(...soles) < 450 - 1) airborne++;
         drops.push(s.drop);
       }
-      if (motion === 'walk') assert.equal(airborne, 0);
-      else assert.ok(airborne > 0 && airborne < 56, `run airborne ${airborne}/96`);
+      // Running is the same step, faster: a one-frame hop read as a pop.
+      assert.equal(airborne, 0, `${motion} airborne ${airborne}/96`);
       if (motion === 'walk' && !hem) {
         // Two pelvis bobs per cycle: lowest at each double support (legs
         // spread, u = 0 and 0.5), highest while passing (u ≈ 0.25, 0.75).
         const at = (u) => drops[Math.round(u * 96) % 96];
-        assert.ok(at(0) > at(0.25) + 2 && at(0.5) > at(0.75) + 2);
+        assert.ok(at(0) > at(0.25) + 1 && at(0.5) > at(0.75) + 1);
+        // …but only a small bob (the head stays put, like a farm-sim sprite).
+        assert.ok(at(0) - at(0.25) < 0.04 * g.height, 'bob under 4% of the height');
         assert.ok(Math.abs(at(0) - at(0.5)) < 0.5, 'both steps bob alike');
       }
     }

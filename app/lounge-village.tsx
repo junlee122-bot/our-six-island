@@ -1196,6 +1196,7 @@ export function Village3D(props: Props) {
       if (!tint.equals(figureTint)) {
         figureTint.copy(tint);
         for (const figure of figures.values()) figure.body.color.copy(figureTint);
+        residentLayer.setTint(figureTint);
         needsRender = true;
       }
       return light;

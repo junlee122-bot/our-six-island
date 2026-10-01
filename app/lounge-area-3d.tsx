@@ -373,6 +373,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     if (residents) residents.onChange = () => {
       dirty = true;
     };
+    // Dusk and night darken them like the friends (the tint below).
+    residents?.setTint(tint);
     const memory = newBehaviorMemory();
 
     // Camera: orthographic, pitched, following me (clamped to the region).
@@ -592,6 +594,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (applyDay(t)) {
         dirty = true;
         for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
+        residents?.setTint(tint);
       }
       const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow()]);
       if (key !== stateKey) {

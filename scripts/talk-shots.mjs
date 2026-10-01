@@ -5,7 +5,8 @@
 //
 //   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s,phone] [--skip-friend]
 //
-// The mock server's clock is moved to 22:05 KST today, when 프리렌 sits on the
+// The mock server's clock is moved to 22:05 KST today (or the first half hour
+// 프리렌 rests in the village, see below), when 프리렌 sits on the
 // plaza bench looking at the stars ("빵집 카페 사장 · 광장 벤치에서 별 보는
 // 중"). The page reads that clock from the server like the real game, so the
 // talk and the gift really go through (only on this mock world). --at <ms>
@@ -39,7 +40,15 @@ fs.mkdirSync(out, { recursive: true });
 
 // Move this process's clock (the mock server's) before the harness starts.
 const realNow = Date.now.bind(Date);
-const at = Number(opt('at', String(kstDayStart(kstDay(realNow())) + (22 * 60 + 5) * 60_000)));
+// 22:05 when 프리렌 is on the plaza then; else the first half hour of today she
+// rests in the village (her evenings moved to 시장 거리, character QA 2026-10-01).
+const inVillage = (t) => {
+  const s = npcSpot('frieren', t);
+  return s.area === 'village' && s.visible && !s.walking;
+};
+const dayStart = kstDayStart(kstDay(realNow()));
+const defaultAt = [22 * 60 + 5, ...Array.from({ length: 36 }, (_, i) => 6 * 60 + i * 30)].map((m) => dayStart + m * 60_000).find(inVillage) ?? dayStart + (22 * 60 + 5) * 60_000;
+const at = Number(opt('at', String(defaultAt)));
 const shift = at - realNow();
 Date.now = () => realNow() + shift;
 const bench = npcSpot('frieren', at);

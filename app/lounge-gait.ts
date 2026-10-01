@@ -53,26 +53,32 @@ type GaitStyle = {
   /** Lower-garment lag (horizontal shear below the waist). */
   hem: number;
 };
+/**
+ * Farm-sim steps (character QA 2026-10-01): the chibi figures are drawn
+ * front-on, so a long stride splayed the legs into an A and a forward lean
+ * read as a sideways tilt. Short steps, an upright body, a 1–2 px bob at
+ * each step and no airborne hop: running is the same walk, faster.
+ */
 export const GAIT_STYLES: Record<'walk' | 'run', GaitStyle> = {
   walk: {
-    thigh: 18,
-    knee: 44,
-    stanceKnee: 6,
+    thigh: 12,
+    knee: 30,
+    stanceKnee: 4,
     stance: 0.5,
-    arm: 8,
-    lean: 1.5,
+    arm: 6,
+    lean: 0,
     flight: 0,
-    hem: 0.05,
+    hem: 0.04,
   },
   run: {
-    thigh: 23,
-    knee: 55,
-    stanceKnee: 16,
-    stance: 0.4,
-    arm: 16,
-    lean: 6,
-    flight: 0.03,
-    hem: 0.09,
+    thigh: 15,
+    knee: 38,
+    stanceKnee: 6,
+    stance: 0.5,
+    arm: 10,
+    lean: 1,
+    flight: 0,
+    hem: 0.06,
   },
 };
 
