@@ -5,7 +5,7 @@
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
-import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
+import { EXTRA_FISH, MORE_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
 
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
@@ -126,6 +126,7 @@ const BASE_FISH: readonly FishDef[] = [
   { id: 'nuchi', name: '누치', emoji: '🐟', spots: ['bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 30, sell: 220, cm: [25, 50], windowMs: 950, note: '모래 바닥을 입으로 뒤지는 강의 청소부.' },
   { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 500, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },  // 낚시 업그레이드 (lounge-fish-data.ts).
   ...EXTRA_FISH,
+  ...MORE_FISH,
   ...POT_FISH,
 ];
 /**

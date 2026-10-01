@@ -447,6 +447,8 @@ const BUILD: Readonly<Record<string, number>> = {
   flounder: 1.25, puffer: 1.3, goldfish: 1.3, bluegill: 1.35, filefish: 1.2,
   squid: 0.75, mitre: 0.75, octopus: 0.9, crayfish: 1.6, lakelord: 0.8, icecod: 0.9,
   snail: 2.2, shrimp: 1.1, crab: 2.2, clam: 2.4, oyster: 2.2, conch: 2.4,
+  halfbeak: 0.35, saury: 0.4, swampeel: 0.35, anchovy: 0.8, sturgeon: 0.7, jjukkumi: 0.9, cuttlefish: 0.9,
+  monkfish: 1.2, skate: 0.9, flatfish: 1.25, sunfish: 1.6, bitterling: 1.3, beakperch: 1.3,
 };
 /** Weight in grams of a fish of `cm` (records, cards). */
 export const fishGrams = (id: string, cm: number) => Math.max(1, Math.round(15.5 * (BUILD[id] ?? 1) * (cm / 10) ** 3));

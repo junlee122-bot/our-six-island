@@ -1,0 +1,77 @@
+{
+  "tool": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "jobId": "ea01a4e4-030a-4ebb-9c3d-c5bf789cf2a6",
+  "createdAt": "2026-10-01",
+  "sourceUrl": "https://d8j0ntlcm91z4.cloudfront.net/user_3GvlNWM4g0WFFzr7aU4tTQPXdqm/hf_20261001_115430_ea01a4e4-030a-4ebb-9c3d-c5bf789cf2a6.png",
+  "params": {
+    "quality": "high",
+    "resolution": "2k",
+    "aspect_ratio": "1:1",
+    "use_unlim": false,
+    "count": 1
+  },
+  "credits": {
+    "before": 21.25,
+    "spent": 2.75,
+    "note": "GPT Image 2.5 high 2k list price; the balance is shared with other sessions running at the same time"
+  },
+  "original": {
+    "file": "_originals/fish-icons-atlas-2.png",
+    "width": 2048,
+    "height": 2048,
+    "sha256": "b3802b4c8e1280396946c933b265ff22c038f1d4f05ffa5414d12782c7808f8e"
+  },
+  "slicing": "node scripts/slice-fish-atlas.mjs --atlas 2: magenta keyed to alpha, each icon cut by its solid body (big fins may cross their cell), the painted legend glow trimmed to a 2 px rim, 128px WebP per id",
+  "cells": [
+    [
+      "hwangeo",
+      "galgyeoni",
+      "chambungeo",
+      "moraemuji",
+      "dongsari",
+      "hyangeo"
+    ],
+    [
+      "halfbeak",
+      "sardine",
+      "anchovy",
+      "scorpionfish",
+      "jjukkumi",
+      "cod"
+    ],
+    [
+      "atka",
+      "flatfish",
+      "sillago",
+      "saury",
+      "bitterling",
+      "tunggari"
+    ],
+    [
+      "sculpin",
+      "paradise",
+      "swampeel",
+      "salmon",
+      "spanish",
+      "opaleye"
+    ],
+    [
+      "cuttlefish",
+      "monkfish",
+      "skate",
+      "stickleback",
+      "sturgeon",
+      "goldmandarin"
+    ],
+    [
+      "beakperch",
+      "tuna",
+      "sunfish",
+      "eldercat",
+      "prismayu",
+      "startuna"
+    ]
+  ],
+  "prompt": "A sprite sheet of 36 game item icons arranged in a strict 6 by 6 grid on a flat solid pure magenta background (#FF00FF). Every icon is centered in its own equal square cell, fully inside the cell with generous margin, no icon touches another, no text, no labels, no grid lines, no borders, no shadows on the background. Style: warm cozy hand-painted farming-life game item art, soft gouache texture, gentle dark brown ink outline, muted natural colors, slight top-left light, each fish shown in side view facing left, cute but anatomically recognizable Korean freshwater and sea species. Row 1 left to right: Pacific redfin dace (silver with orange-red breeding stripes), dark chub (olive, small, red mark above eye), stone moroko (small grey-gold minnow), sand gudgeon (pale sandy body with dark spots), Korean dark sleeper (mottled brown, big head), Israeli mirror carp (olive with a few large scattered scales). Row 2: halfbeak (slender silver, long needle lower jaw), Japanese sardine (blue-green back, row of black dots), anchovy (tiny slender silver), scorpionfish (red-brown mottled, spiny fins), webfoot octopus (small brown-pink octopus), Pacific cod (grey-brown spotted, big mouth, chin barbel). Row 3: Atka mackerel (yellow-grey with dark vertical bands), righteye flounder (flat oval, brown with spots), Japanese sillago whiting (slim pale beige), Pacific saury (long slim, dark blue back, silver belly, pointed jaw), rose bitterling (small, iridescent pink-purple and orange), torrent catfish (small brown with whiskers). Row 4: Korean sculpin (mottled brown-green, wide head), paradise fish (blue and red stripes, long flowing fins), Asian swamp eel (long yellow-brown, no fins), chum salmon (silver with purple-green breeding bars, hooked jaw), Japanese Spanish mackerel (long, blue-grey with dots), opaleye (dark olive-blue, rounded). Row 5: golden cuttlefish (brown with zebra pattern, short arms), monkfish anglerfish (wide flat mouth, lure on head), skate ray (diamond flat body, long tail, seen slightly from above), three-spined stickleback (small green-silver, sharp spines), sturgeon (grey with bony plates along the side, pointed snout), golden mandarin fish (siniperca, bright golden yellow all over). Row 6: striped beakperch (white with bold black vertical stripes), Pacific bluefin tuna (deep blue back, silver belly, yellow finlets), ocean sunfish mola (tall round grey body, tall fins, no tail). Then the last three are legendary with a subtle golden glow outline: thousand-year giant catfish (huge, dark mossy green with long white whiskers and a few lotus leaves on its back), rainbow sweetfish (slim ayu with prismatic rainbow sheen), starry-sea bluefin tuna (deep navy body speckled with tiny glowing star dots)."
+}

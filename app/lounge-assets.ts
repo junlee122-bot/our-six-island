@@ -228,7 +228,7 @@ export const LOUNGE_ASSETS = {
 /**
  * 낚시 업그레이드: painted fish / shellfish icons and the treasure chest
  * (Higgsfield atlas, sliced by scripts/slice-fish-atlas.mjs; record in
- * public/assets/lounge/fishing/generation.json). Species without one keep
+ * public/assets/lounge/fishing/generation*.json). Species without one keep
  * their vector icon (ItemIcon).
  */
 export const FISH_PAINTED: Readonly<Record<string, string>> = {
@@ -268,4 +268,41 @@ export const FISH_PAINTED: Readonly<Record<string, string>> = {
   oyster: '/assets/lounge/fishing/oyster.webp',
   conch: '/assets/lounge/fishing/conch.webp',
   chest: '/assets/lounge/fishing/chest.webp',
+  // 2026-10-02 어종 확장 (generation-2.json, slice-fish-atlas.mjs --atlas 2).
+  hwangeo: '/assets/lounge/fishing/hwangeo.webp',
+  galgyeoni: '/assets/lounge/fishing/galgyeoni.webp',
+  chambungeo: '/assets/lounge/fishing/chambungeo.webp',
+  moraemuji: '/assets/lounge/fishing/moraemuji.webp',
+  dongsari: '/assets/lounge/fishing/dongsari.webp',
+  hyangeo: '/assets/lounge/fishing/hyangeo.webp',
+  halfbeak: '/assets/lounge/fishing/halfbeak.webp',
+  sardine: '/assets/lounge/fishing/sardine.webp',
+  anchovy: '/assets/lounge/fishing/anchovy.webp',
+  scorpionfish: '/assets/lounge/fishing/scorpionfish.webp',
+  jjukkumi: '/assets/lounge/fishing/jjukkumi.webp',
+  cod: '/assets/lounge/fishing/cod.webp',
+  atka: '/assets/lounge/fishing/atka.webp',
+  flatfish: '/assets/lounge/fishing/flatfish.webp',
+  sillago: '/assets/lounge/fishing/sillago.webp',
+  saury: '/assets/lounge/fishing/saury.webp',
+  bitterling: '/assets/lounge/fishing/bitterling.webp',
+  tunggari: '/assets/lounge/fishing/tunggari.webp',
+  sculpin: '/assets/lounge/fishing/sculpin.webp',
+  paradise: '/assets/lounge/fishing/paradise.webp',
+  swampeel: '/assets/lounge/fishing/swampeel.webp',
+  salmon: '/assets/lounge/fishing/salmon.webp',
+  spanish: '/assets/lounge/fishing/spanish.webp',
+  opaleye: '/assets/lounge/fishing/opaleye.webp',
+  cuttlefish: '/assets/lounge/fishing/cuttlefish.webp',
+  monkfish: '/assets/lounge/fishing/monkfish.webp',
+  skate: '/assets/lounge/fishing/skate.webp',
+  stickleback: '/assets/lounge/fishing/stickleback.webp',
+  sturgeon: '/assets/lounge/fishing/sturgeon.webp',
+  goldmandarin: '/assets/lounge/fishing/goldmandarin.webp',
+  beakperch: '/assets/lounge/fishing/beakperch.webp',
+  tuna: '/assets/lounge/fishing/tuna.webp',
+  sunfish: '/assets/lounge/fishing/sunfish.webp',
+  eldercat: '/assets/lounge/fishing/eldercat.webp',
+  prismayu: '/assets/lounge/fishing/prismayu.webp',
+  startuna: '/assets/lounge/fishing/startuna.webp',
 };
