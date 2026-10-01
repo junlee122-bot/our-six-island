@@ -1,0 +1,278 @@
+/* Minimap (hub and districts): the same panel in the bottom-left corner.
+   Shared by lounge-village.tsx and lounge/DistrictMinimap.tsx. */
+/* Minimap: a panel in the corner. Click a
+   building to walk there; the nearest one is highlighted and named. */
+.hv-minimap {
+  position: absolute;
+  left: 22px;
+  bottom: 92px;
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--pal-grey-41);
+}
+.hv-minimap-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--hit);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--edge-line), var(--lift-1);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-bold);
+}
+.hv-minimap-toggle:hover {
+  background: var(--surface-sunken);
+}
+.hv-minimap.is-open {
+  z-index: var(--z-hud-map);
+}
+.hv-minimap-body {
+  position: relative;
+  width: 280px;
+  padding: 10px;
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface);
+  box-shadow: var(--edge-frame), var(--lift-2);
+}
+.hv-minimap.is-expanded .hv-minimap-body {
+  width: min(420px, calc(100vw - 44px));
+}
+.hv-minimap.is-expanded {
+  top: 80px;
+  right: 80px;
+  bottom: auto;
+  left: auto;
+  align-items: flex-end;
+}
+.hv-minimap.is-expanded .hv-minimap-peers {
+  right: calc(100% + 12px);
+  left: auto;
+}
+.hv-minimap-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 8px;
+  font-size: var(--fs-body-s);
+  color: var(--text);
+}
+.hv-minimap-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--hit);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface-sunken);
+  color: var(--text);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-legend {
+  display: block;
+  margin: 6px 3px 0;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-friend {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  color: var(--surface);
+  background: var(--accent-edge);
+  box-shadow: var(--edge-line);
+  font-size: var(--fs-cap);
+  z-index: var(--z-base);
+}
+.hv-minimap-friend[data-indoor='true'] {
+  border-radius: var(--r-s);
+  background: var(--text-soft);
+  margin-top: 0;
+}
+.hv-minimap-peers {
+  position: absolute;
+  left: calc(100% + 12px);
+  bottom: 0;
+  width: 220px;
+  max-height: calc(100dvh - 230px);
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--r-m);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--edge-frame), var(--lift-2);
+  z-index: var(--z-hud-map);
+}
+.hv-minimap-peers header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-left: 8px;
+  font-size: var(--fs-body-s);
+}
+.hv-minimap-peers header button {
+  display: grid;
+  place-items: center;
+  min-width: var(--hit);
+  min-height: var(--hit);
+  border: 0;
+  border-radius: var(--r-s);
+  background: transparent;
+  color: var(--text-soft);
+}
+.hv-minimap-peers > button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: var(--hit);
+  padding: 8px;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  text-align: left;
+}
+.hv-minimap-peers > button:hover,
+.hv-minimap-peers header button:hover {
+  background: var(--surface-sunken);
+}
+.hv-minimap-peers small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.hv-minimap-friend > span {
+  display: none;
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 5px;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: var(--r-s);
+  box-shadow: var(--edge-line);
+  font-weight: var(--fw-bold);
+}
+.hv-minimap-friend:hover > span,
+.hv-minimap-friend:focus-visible > span,
+.hv-minimap.is-expanded .hv-minimap-friend > span {
+  display: block;
+}
+.hv-minimap-friend:hover,
+.hv-minimap-friend:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: var(--z-hud-map);
+}
+.hv-minimap-map {
+  position: relative;
+}
+.hv-minimap-overview {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: zoom-out;
+}
+.hv-minimap-overview svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hv-minimap-place {
+  /* pins sit ~20px apart in the row of houses: hit areas must not overlap */
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--pal-green-28);
+  cursor: pointer;
+}
+.hv-minimap-place > span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 4px;
+  border-radius: var(--r-s);
+  background: color-mix(in srgb, var(--note-50) 90%, transparent);
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  line-height: 15px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* The three shop lots share one street; stagger the middle label on the
+   compact map, while the expanded map keeps every name at its building. */
+.hv-minimap:not(.is-expanded) .hv-minimap-place[data-minimap-place='furniture'] > span {
+  top: calc(50% + 16px);
+}
+.hv-minimap:not(.is-expanded) .hv-minimap-place[data-minimap-place='furniture']::before {
+  content: '';
+  position: absolute;
+  top: calc(50% + 4px);
+  left: 50%;
+  width: 1px;
+  height: 7px;
+  background: var(--text-soft);
+  pointer-events: none;
+}
+.hv-minimap-place[data-named='false'] > span {
+  display: none;
+}
+.hv-minimap-place:hover > span,
+.hv-minimap-place:focus-visible > span {
+  display: block;
+  z-index: var(--z-base);
+}
+.hv-minimap-place[data-nearest='true'] > span {
+  background: var(--leaf-800);
+  color: var(--paper-100);
+  z-index: var(--z-base);
+}
+.hv-minimap-place:focus-visible {
+  outline: 2px solid var(--pal-lime-73);
+  outline-offset: 0;
+}
+.hv-minimap-note {
+  display: block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--lift-1);
+  font-family: var(--font-display);
+  font-size: var(--fs-body-s);
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

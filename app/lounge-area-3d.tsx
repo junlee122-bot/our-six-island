@@ -54,6 +54,7 @@ import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIG
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
 import type { ShopArea } from './lounge-shop-interiors';
+import { DistrictMinimap } from './lounge/DistrictMinimap';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -257,6 +258,14 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     }
     found.sort((a, b) => a.d - b.d);
     return found[0]?.a ?? null;
+  };
+
+  /** Walk to a district point along the paths (the minimap's places and friends). */
+  const walkTo = (p: WalkPoint) => {
+    const l = live.current;
+    l.held.clear();
+    l.route = latest.current.walk.path(l.point, p);
+    l.target = l.route.shift() ?? null;
   };
 
   const findActionRef = useRef(findAction);
@@ -833,6 +842,17 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         />
       )}
       <WalkHints className="ar-hint" />
+      {districtId && (
+        <DistrictMinimap
+          area={area}
+          weekday={(day + 4) % 7}
+          players={players}
+          self={self}
+          where={() => live.current.point}
+          residents={() => residentsRef.current}
+          onGo={walkTo}
+        />
+      )}
     </div>
   );
 }
