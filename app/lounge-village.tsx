@@ -183,6 +183,7 @@ import {
 } from './lounge-village-layout';
 import { villageFriendPins, villageFriendGroups, type VillageFriendPin } from './lounge-village-minimap';
 import { FrameCost, fishingFrameDue } from './lounge-fishing-frames';
+import { useMinimapOpen } from './lounge-minimap-state';
 import './lounge-minimap.css';
 import './lounge-village.css';
 
@@ -655,7 +656,7 @@ export function Village3D(props: Props) {
   const nearbyId = useRef<string | null>(null);
   const [action, setAction] = useState<VillageAction | null>(null);
   const [phase, setPhase] = useState<DayPhase>('day');
-  const [miniOpen, setMiniOpen] = useState(true);
+  const [miniOpen, setMiniOpen] = useMinimapOpen();
   const [miniExpanded, setMiniExpanded] = useState(false);
   const friendPins = villageFriendPins(props.players, props.self);
   const friendGroups = villageFriendGroups(friendPins, (miniExpanded ? 400 : 260) / MINI_BOX.w);

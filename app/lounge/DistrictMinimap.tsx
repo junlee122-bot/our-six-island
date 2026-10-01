@@ -10,6 +10,7 @@ import type { OutdoorArea } from '../lounge-areas';
 import type { WalkPoint } from '../lounge-walk-world';
 import { ACTORS } from '../lounge-roster';
 import { NPCS, type NpcId } from '../lounge-npc-data';
+import { useMinimapOpen } from '../lounge-minimap-state';
 import '../lounge-minimap.css';
 
 /** The hub minimap's colours (lounge-village.tsx), by what a shape is. */
@@ -55,7 +56,7 @@ function Shape({ s }: { s: MiniShape }) {
 
 export function DistrictMinimap({ area, weekday, players, self, where, residents, onGo }: DistrictMinimapProps) {
   const map = useMemo(() => districtMinimap(area, weekday), [area, weekday]);
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useMinimapOpen();
   const [expanded, setExpanded] = useState(false);
   const [friendGroup, setFriendGroup] = useState<string | null>(null);
   const [nearest, setNearest] = useState<string | null>(null);

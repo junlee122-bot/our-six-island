@@ -551,6 +551,25 @@ async function runView(mobile = false) {
       assert.match(await page.locator('[data-minimap-friend="6"]').getAttribute('aria-label'), /은행 안/);
       await shot('bank-friend-minimap');
     });
+    await step('minimap-stays-folded', async () => {
+      // Folding the map is the player's choice: leaving the house and a page
+      // reload must not open it again (lounge-minimap-state.ts).
+      await village();
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
+      await click('[data-testid=minimap-toggle]');
+      assert.equal(await page.locator('#hv-minimap-body').count(), 0);
+      assert.equal(await js(() => localStorage.getItem('beomdew:minimap-open')), '0');
+      await page.reload();
+      if (await page.locator('.l-auth-card').first().waitFor({ timeout: 20_000 }).then(() => true, () => false)) await login(H, server.url);
+      await wait(() => document.querySelector('[data-testid=bedroom-3d]')?.getAttribute('data-load-state') === 'ready', null, 180_000);
+      await village();
+      await page.getByTestId('minimap-toggle').waitFor();
+      assert.equal(await page.getByTestId('minimap-toggle').getAttribute('aria-expanded'), 'false', 'leaving the house keeps the folded map folded');
+      assert.equal(await page.locator('#hv-minimap-body').count(), 0);
+      await shot('minimap-stays-folded');
+      await click('[data-testid=minimap-toggle]');
+      assert.equal(await js(() => localStorage.getItem('beomdew:minimap-open')), '1');
+    });
     await step('fruit-forage-chop', async () => {
       await directory('orchard');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.spot === 'tree');
