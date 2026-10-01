@@ -23,7 +23,8 @@ export const HOSTS = {
   lumi: { name: '루미', title: '별빛 카지노 딜러' },
   maehwa: { name: '매화', title: '화투방 진행자' },
   captain: { name: '허 선장', title: '허풍 주점 주인' },
-  realtor: { name: '문 사장', title: '범마을 부동산' },
+  realtor: { name: '신형만', title: '범마을 부동산 중개인' },
+  misun: { name: '봉미선', title: '범마을 부동산 실장' },
   carpenter: { name: '결 목수', title: '나무결 가구점 주인' },
 } as const;
 

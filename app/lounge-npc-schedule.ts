@@ -21,8 +21,12 @@
 // client sets it from the world with setNpcWorld, the server passes it).
 // Inside a house, the library or the lighthouse a resident is not drawn
 // (`hidden` places in a visible area). The eight residents who already work
-// indoors stay at their posts (their scenes draw them); 문 사장 and 결 목수 take
-// an evening walk through the hub. Stage-2 residents (hasSprite: false) have
+// indoors stay at their posts (their scenes draw them); 결 목수 takes an
+// evening walk through the hub. 범마을 부동산 is kept in turns by a married
+// couple (realtyDuty): 신형만 on Mon/Wed/Fri, 봉미선 on Tue/Thu, both at the
+// weekend (one at the counter, the other showing the model house). Off duty
+// 형만 works out of the village and ends the day at the tavern; 미선 shops in
+// 시장 거리 and the bakery, then fetches him from the tavern. Stage-2 residents (hasSprite: false) have
 // schedules too, but npcsIn leaves them out until they can be drawn.
 import { kstDay } from './lounge-economy.ts';
 import { holidaysOn, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
@@ -135,6 +139,8 @@ const TAVERN_SCENE = {
   window: { x: 84, y: 48 },
   corner: { x: 72, y: 83 },
   'bar-4': { x: 50, y: 46 },
+  'bar-5': { x: 57, y: 47 },
+  misun: { x: 61, y: 51 },
 } as const;
 const tw = (k: keyof typeof TAVERN_SCENE) => interiorToWorld(TAVERN_SCENE[k]);
 
@@ -221,6 +227,7 @@ export const NPC_PLACES: Record<string, Place> = {
   library: place('library', DISTRICTS.hillside.gate.stand, 0, '언덕 도서관'),
   away: place('away', DISTRICTS.market.gate.stand, 0, '마을 밖'),
   'realty-in': place('realty', entryOf('realty'), 0, '범마을 부동산'),
+  'realty-model': place('realty', entryOf('realty'), 0, '범마을 부동산 모델하우스'),
   'furniture-in': place('furniture', entryOf('furniture'), 0, '나무결 가구점'),
   // The hub.
   'v.plaza-bench': place('village', vSnap({ x: -3.0, z: -0.8 }), Math.PI / 2, '광장 벤치'),
@@ -245,6 +252,9 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.tavern-door': place('village', entryOf('tavern'), Math.PI, '허풍 주점 앞'),
   'v.realty-door': place('village', entryOf('realty'), Math.PI, '부동산 앞'),
   'v.furniture-door': place('village', entryOf('furniture'), Math.PI, '가구점 앞'),
+  // 신형만 · 봉미선's Sunday evening walk (side by side, off the evening seats).
+  'v.couple-a': place('village', vSnap({ x: VILLAGE_PAVILION.x - 1.2, z: VILLAGE_PAVILION.z + 3.4 }), Math.PI / 2, '팔각정 산책길'),
+  'v.couple-b': place('village', vSnap({ x: VILLAGE_PAVILION.x + 0.4, z: VILLAGE_PAVILION.z + 3.4 }), -Math.PI / 2, '팔각정 산책길'),
   ...Object.fromEntries(homes.map((h) => [`v.home-${h.actor}`, place('village', vSnap({ x: h.entry.x - 1.2, z: h.entry.z + 1.9 }), Math.PI, `${h.name} 집 앞`)])),
   // Festival ring on the plaza.
   ...Object.fromEntries(
@@ -284,6 +294,8 @@ export const NPC_PLACES: Record<string, Place> = {
   'm.cafe-5': place('market', { x: 8, z: -10.2 }, 0.9, '빵집 카페 테라스'),
   'm.cafe-6': place('market', { x: 11, z: -6.1 }, -0.9, '빵집 카페 테라스'),
   'm.cafe-7': place('market', { x: 14.2, z: -7.4 }, -1.6, '빵집 카페 테라스'),
+  // 봉미선's shopping round.
+  'm.misun': place('market', { x: market['plaza-n'].x + 2.2, z: market['plaza-n'].z + 0.6 }, Math.PI, '시장 광장'),
   // ② 항구 구역.
   ...Object.fromEntries(Object.entries(hb).map(([k, p]) => [`hb.${k}`, place('harbor', p, p.face, HARBOR_NAMES[k] ?? '항구')])),
   'hb.quay-2': place('harbor', { x: 15.4, z: -0.6 }, 0, '항구 좌판'),
@@ -306,6 +318,9 @@ export const NPC_PLACES: Record<string, Place> = {
   't.judge': place('tavern', tw('judge'), Math.PI, '허풍 탁자 옆'),
   't.bar-3': place('tavern', tw('bar-3'), Math.PI, '주점 바'),
   't.bar-4': place('tavern', tw('bar-4'), Math.PI, '주점 바'),
+  // 신형만's after-work stool (kept off the evening seat pool).
+  't.bar-5': place('tavern', tw('bar-5'), Math.PI, '주점 바 끝자리'),
+  't.misun': place('tavern', tw('misun'), -Math.PI / 2, '주점 바 끝자리 옆'),
   't.table-1': place('tavern', tw('table-1'), -Math.PI / 2, '주점 창가 탁자'),
   't.table-2': place('tavern', tw('table-2'), -Math.PI / 2, '주점 탁자'),
   't.table-3': place('tavern', tw('table-3'), Math.PI, '주점 탁자'),
@@ -455,6 +470,66 @@ function festival(plan: Seg[], k: DayKind, slot: number): Seg[] {
   return out.sort((a, b) => a[0] - b[0]);
 }
 
+// ---------------------------------------------------------------- 범마을 부동산
+export type RealtyKeeper = 'realtor' | 'misun';
+/**
+ * Who keeps 범마을 부동산 on a KST weekday (0 = Sunday): 신형만 ('realtor') on
+ * Mon/Wed/Fri, 봉미선 ('misun') on Tue/Thu; at the weekend both are in, one at
+ * the counter and the other showing the model house (Sat 형만 at the counter,
+ * Sun 미선).
+ */
+export function realtyDuty(weekday: number): { counter: RealtyKeeper; model: RealtyKeeper | null } {
+  switch (weekday) {
+    case 1:
+    case 3:
+    case 5:
+      return { counter: 'realtor', model: null };
+    case 2:
+    case 4:
+      return { counter: 'misun', model: null };
+    case 6:
+      return { counter: 'realtor', model: 'misun' };
+    default:
+      return { counter: 'misun', model: 'realtor' };
+  }
+}
+/** The realty keeper at the counter at `now` (the counter shows their face and name). */
+export const realtyKeeper = (now: number): RealtyKeeper => realtyDuty(weekdayOf(kstDay(now))).counter;
+
+function realtyPlan(id: RealtyKeeper, k: DayKind): Seg[] {
+  const duty = realtyDuty(k.weekday);
+  // The friends play until 01:00 KST, so both stay out until then: 형만 on his
+  // stool at the tavern, 미선 coming to fetch him (and staying for a glass).
+  const night: Seg = id === 'realtor' ? [0, 't.bar-5', 'drink', '주점에서 늦게까지 한잔'] : [0, 't.misun', 'drink', '주점에서 형만 씨랑 한잔하는 중'];
+  const morning: Seg[] = [night, [hm(1), 'home', 'sleep', '집에서 자는 중']];
+  const evening: Seg[] =
+    k.weekday === 0
+      ? [
+          [hm(18, 30), id === 'realtor' ? 'v.couple-a' : 'v.couple-b', 'stroll', '부부 저녁 산책 중'],
+          [hm(21, 30), night[1], 'drink', id === 'realtor' ? '산책 끝에 주점에서 맥주 한잔' : '주점에서 형만 씨랑 한잔하는 중'],
+        ]
+      : id === 'realtor'
+        ? [[hm(19), 't.bar-5', 'drink', '퇴근하고 주점에서 맥주 한잔']]
+        : [
+            [hm(18), 'm.misun', 'stroll', '저녁 장 보는 중'],
+            [hm(19, 30), 'm.misun', 'stroll', '시장 거리 마감 세일 구경 중'],
+            [hm(21, 30), 't.misun', 'drink', '형만 씨 데리러 주점에 온 중'],
+            [hm(22, 30), 't.misun', 'drink', '결국 주점에서 같이 한잔하는 중'],
+          ];
+  if (duty.counter === id) return [...morning, [hm(9), 'realty-in', 'work', '범마을 부동산 상담 중'], ...evening];
+  if (duty.model === id) return [...morning, [hm(9, 30), 'realty-model', 'stroll', '모델하우스 안내 중'], ...evening];
+  // Off duty: 형만 helps his old company out of the village, 미선 does the shopping.
+  if (id === 'realtor') return [...morning, [hm(8), 'away', 'work', '옛 회사 일 도우러 출근 중'], ...evening];
+  return [
+    ...morning,
+    [hm(10), 'coop.browse-2', 'stroll', '농협에서 세일 품목 고르는 중'],
+    [hm(11, 40), 'bakery.queue', 'eat', '빵집 카페에서 점심 빵 고르는 중'],
+    [hm(13), 'm.misun', 'stroll', '장바구니 들고 시장 구경 중'],
+    [hm(16, 30), 'bakery.browse', 'eat', '빵집 마감 할인 기다리는 중'],
+    ...evening,
+  ];
+}
+
 function planOf(id: NpcId, k: DayKind): Seg[] {
   const seed = (salt: string, n: number) => hash32(`${id}:${k.day}:${salt}`) % n;
   switch (id) {
@@ -592,11 +667,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return festival(plan, k, 5);
     }
     case 'realtor':
-      return [
-        [0, 'realty-in', 'work', '범마을 부동산'],
-        [hm(19), 'v.pavilion', 'stroll', '팔각정에서 땅값 계산하는 중'],
-        [hm(20, 30), 'realty-in', 'work', '범마을 부동산'],
-      ];
+    case 'misun':
+      return realtyPlan(id, k);
     case 'carpenter':
       return [
         [0, 'furniture-in', 'work', '나무결 가구점'],

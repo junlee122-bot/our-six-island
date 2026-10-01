@@ -11,6 +11,7 @@ import { LUMI_LINES } from './lounge-npc-lines-lumi.ts';
 import { MAEHWA_LINES } from './lounge-npc-lines-maehwa.ts';
 import { CAPTAIN_LINES } from './lounge-npc-lines-captain.ts';
 import { REALTOR_LINES } from './lounge-npc-lines-realtor.ts';
+import { MISUN_LINES } from './lounge-npc-lines-misun.ts';
 import { CARPENTER_LINES } from './lounge-npc-lines-carpenter.ts';
 import { ROSE_LINES } from './lounge-npc-lines-rose.ts';
 import { NYAMO_LINES } from './lounge-npc-lines-nyamo.ts';
@@ -35,6 +36,7 @@ export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   maehwa: MAEHWA_LINES,
   captain: CAPTAIN_LINES,
   realtor: REALTOR_LINES,
+  misun: MISUN_LINES,
   carpenter: CARPENTER_LINES,
   rose: ROSE_LINES,
   nyamo: NYAMO_LINES,

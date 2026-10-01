@@ -9,6 +9,7 @@
 //   node scripts/optimize-assets.mjs models village/valley   # one folder
 //   node scripts/optimize-assets.mjs hosts      # table host sheets only
 //   node scripts/optimize-assets.mjs chibi      # in-world resident chibis only
+//   node scripts/optimize-assets.mjs npcs shinhyungman bongmison   # only these residents' files
 //
 // Character atlases are LOSSLESS WebP (`exact`): lounge-sprites.ts/lounge-color.ts
 // key the magenta background and dye the blue hair by exact RGB, so every pixel
@@ -24,6 +25,9 @@ import sharp from 'sharp';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const assets = path.join(root, 'public/assets');
 const mode = process.argv[2] ?? 'all';
+/** Optional names after `npcs` / `chibi`: only those residents' files are rebuilt. */
+const onlyNames = ['npcs', 'chibi'].includes(mode) ? process.argv.slice(3) : [];
+const wanted = (...names) => !onlyNames.length || names.some((n) => onlyNames.includes(n));
 
 const LOSSLESS_ATLASES = [
   'friends-motion.png',
@@ -46,6 +50,7 @@ const HOST_SHEETS = [
   'lounge/host-captain.png',
   'lounge/host-realtor.png',
   'lounge/host-carpenter.png',
+  'lounge/host-misun.png',
 ];
 // 허 선장 · 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
 // pink line still rings their hair, hands and props on any ground. Pixels
@@ -94,8 +99,66 @@ function defringeMagenta(data, width, height, reach = 6) {
   }
   return out;
 }
-const DEFRINGE_HOSTS = new Set(['lounge/host-captain.png', 'lounge/host-realtor.png', 'lounge/host-carpenter.png']);
+const DEFRINGE_HOSTS = new Set(['lounge/host-captain.png', 'lounge/host-realtor.png', 'lounge/host-carpenter.png', 'lounge/host-misun.png']);
+// 범마을 부동산 신형만 · 봉미선 (shopkeepers-generation.json): one 3×2 magenta
+// original, 신형만 on the top row and 봉미선 on the bottom (calm, smile, focus).
+// Each row becomes its own keyed host sheet in the usual 3×2 layout (calm,
+// smile, deal, focus, wow, sorry): deal and wow reuse the smile, sorry the
+// calm. One scale per row (the tallest figure 600 px), soles on the 648 px
+// line, centred in the 440 × 660 cell.
+const NOHARA_SHEET = { source: 'lounge/_originals/host-realtor-nohara.png', rows: ['lounge/host-realtor.png', 'lounge/host-misun.png'] };
+async function noharaHostSheets() {
+  const source = path.join(assets, NOHARA_SHEET.source);
+  if (!fs.existsSync(source)) return;
+  const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const keyed = keyChibi(data, width, height);
+  const CELL_W = 440,
+    CELL_H = 660,
+    FOOT = 648,
+    FIGURE = 600;
+  for (const [row, target] of NOHARA_SHEET.rows.entries()) {
+    const y0 = Math.round((height * row) / 2),
+      y1 = Math.round((height * (row + 1)) / 2);
+    const figures = [];
+    for (let col = 0; col < 3; col++) {
+      const x0 = Math.round((width * col) / 3),
+        x1 = Math.round((width * (col + 1)) / 3);
+      const cell = Buffer.alloc((x1 - x0) * (y1 - y0) * 4);
+      for (let y = y0; y < y1; y++) keyed.copy(cell, (y - y0) * (x1 - x0) * 4, (y * width + x0) * 4, (y * width + x1) * 4);
+      const box = opaqueBox(cell, x1 - x0, y1 - y0, 0, x1 - x0);
+      if (!box) throw new Error(`${NOHARA_SHEET.source}: empty cell ${row}/${col}`);
+      figures.push({ cell, w: x1 - x0, h: y1 - y0, box });
+    }
+    const scale = FIGURE / Math.max(...figures.map((f) => f.box.height));
+    const parts = [];
+    for (const f of figures) {
+      const fw = Math.round(f.box.width * scale),
+        fh = Math.round(f.box.height * scale);
+      if (fw > CELL_W - 8) throw new Error(`${target}: a figure is ${fw} px wide, wider than its cell`);
+      parts.push({
+        fw,
+        fh,
+        png: await sharp(f.cell, { raw: { width: f.w, height: f.h, channels: 4 } }).extract(f.box).resize(fw, fh, { kernel: 'lanczos3' }).png().toBuffer(),
+      });
+    }
+    // Sheet order: calm, smile, deal (smile), focus, wow (smile), sorry (calm).
+    const order = [0, 1, 1, 2, 1, 0];
+    await sharp({ create: { width: CELL_W * 3, height: CELL_H * 2, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite(
+        order.map((k, i) => ({
+          input: parts[k].png,
+          left: (i % 3) * CELL_W + Math.round((CELL_W - parts[k].fw) / 2),
+          top: Math.floor(i / 3) * CELL_H + FOOT - parts[k].fh,
+        })),
+      )
+      .png()
+      .toFile(path.join(assets, target));
+    console.log(`${NOHARA_SHEET.source} row ${row} -> ${target}`);
+  }
+}
 async function hostSheets() {
+  await noharaHostSheets();
   for (const name of HOST_SHEETS) {
     const source = path.join(assets, name);
     const target = source.replace(/\.png$/, '.webp');
@@ -393,6 +456,8 @@ const NPC_SPRITES = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'ja
 // Stage-2 residents (npc-stage2-generation.json). The web file name is the
 // resident id; 야니네코's original is spelled "yaninekko".
 const NPC_SPRITES_2 = ['gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'];
+// 범마을 부동산 신형만 · 봉미선 (shopkeepers-generation.json); files are named after the person.
+const NPC_SPRITES_REALTY = ['shinhyungman', 'bongmison'];
 const NPC_ORIGINAL = { yanineko: 'yaninekko' };
 const NPC_SEED = { beatrice: 150, bocchi: 150 };
 /** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
@@ -411,6 +476,8 @@ const NPC_PORTRAITS = {
   tsunade: { cx: 0.5, top: 0.03, size: 0.34 },
   makima: { cx: 0.5, top: 0.03, size: 0.32 },
   yanineko: { cx: 0.5, top: 0.02, size: 0.32 },
+  shinhyungman: { cx: 0.5, top: 0.005, size: 0.32 },
+  bongmison: { cx: 0.48, top: 0.01, size: 0.32 },
 };
 // `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
 // skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
@@ -493,7 +560,8 @@ function keyMagenta(data, width, height, fgM = 0, seed = 40) {
   return out;
 }
 async function npcSprites() {
-  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2]) {
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY]) {
+    if (!wanted(id)) continue;
     const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -536,7 +604,10 @@ const CHIBI_FILES = [
   ['beatrice', 'bocchi'],
   ['tsunade', 'makima'],
   ['yaninekko'],
+  ['shinhyungman', 'bongmison'],
 ];
+/** Chibi files named after the person; the record keys them by resident id. */
+const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun' };
 const CHIBI_GREEN = new Set(['beatrice-bocchi']);
 const CHIBI_H = 640;
 /** Magenta-ness (or green-ness) of a pixel: 255 on the key, ≤ 0 on the figure. */
@@ -679,6 +750,7 @@ async function chibiSprites() {
   fs.mkdirSync(outDir, { recursive: true });
   const sizes = {};
   for (const names of CHIBI_FILES) {
+    if (!wanted(...names)) continue;
     const base = names.join('-');
     const source = path.join(assets, `lounge/_originals/chibi/npc-chibi-${base}.png`);
     if (!fs.existsSync(source)) continue;
@@ -701,6 +773,7 @@ async function chibiSprites() {
     const spans = names.length === 2 ? [[0, cut], [cut, width]] : [[0, width]];
     for (const [i, name] of names.entries()) {
       const id = name === 'yaninekko' ? 'yanineko' : name;
+      const npcId = CHIBI_NPC_ID[name] ?? name;
       const box = opaqueBox(keyed, width, height, spans[i][0], spans[i][1]);
       if (!box) continue;
       const scale = (CHIBI_H * 0.94) / box.height;
@@ -719,7 +792,7 @@ async function chibiSprites() {
         .webp({ quality: 90, alphaQuality: 100, effort: 6 })
         .toFile(target);
       const sha256 = crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex').toUpperCase();
-      sizes[id] = { file: `chibi/npc-${id}.webp`, w: W, h: CHIBI_H, sha256 };
+      sizes[npcId] = { file: `chibi/npc-${id}.webp`, w: W, h: CHIBI_H, sha256 };
       console.log(`chibi ${base} -> ${id} ${W}x${CHIBI_H} ${kb(fs.statSync(target).size)}`);
     }
   }
@@ -727,7 +800,7 @@ async function chibiSprites() {
   const record = path.join(assets, 'lounge/npc-chibi-generation.json');
   if (fs.existsSync(record)) {
     const json = JSON.parse(fs.readFileSync(record, 'utf8'));
-    json.web = sizes;
+    json.web = { ...json.web, ...sizes };
     json.keying = 'scripts/optimize-assets.mjs chibi: flood key from the border against the measured ground colour, unmix + despill on the rim, split at the emptiest column near the middle, figure at 94% of a 640px canvas with the feet on the 97% line.';
     fs.writeFileSync(record, JSON.stringify(json, null, 1) + '\n');
   }

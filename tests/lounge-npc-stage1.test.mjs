@@ -161,10 +161,11 @@ test('schedules follow the cards: 프리렌 opens late, 신짜장 delivers, ever
   assert.equal(at('thresh', 9).place, 'general.owner');
   assert.ok(/배달|우체국|카페|점심/.test(at('sinjjajang', 11).label + at('sinjjajang', 12, 20).label));
   for (const id of WALKING_NPCS) assert.equal(at(id, 3).area, 'home', `${id} at home at 3am`);
-  // The eight who work indoors stay at their posts (문 사장·결 목수 take an evening walk).
+  // The ones who work indoors stay at their posts (결 목수 takes an evening walk;
+  // 신형만, off duty on Thursdays, ends the day at the tavern).
   assert.equal(at('lumi', 14).area, 'casino');
   assert.equal(at('captain', 22).area, 'tavern');
-  assert.equal(at('realtor', 19, 40).area, 'village');
+  assert.equal(at('realtor', 19, 40).area, 'tavern');
 });
 
 // ---------------------------------------------------------------- relations

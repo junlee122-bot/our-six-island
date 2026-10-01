@@ -449,11 +449,11 @@ test('town state round-trips through a save and ignores junk', () => {
   assert.equal(loaded.ext[a.id].town.bake, 1);
 });
 
-test('in the world every resident but the pose-sheet five is a chibi at a friend size; dialogue keeps the tall art', async () => {
+test('in the world every resident but the pose-sheet four is a chibi at a friend size; dialogue keeps the tall art', async () => {
   const fs = await import('node:fs');
   const { NPC_CHIBI } = await import('../app/lounge-npc-chibi.ts');
   const record = JSON.parse(fs.readFileSync(new URL('../public/assets/lounge/npc-chibi-generation.json', import.meta.url), 'utf8'));
-  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'];
+  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'realtor', 'misun'];
   assert.deepEqual(Object.keys(NPC_CHIBI).sort(), [...chibi].sort());
   for (const id of NPC_IDS) {
     const c = NPC_CHIBI[id];

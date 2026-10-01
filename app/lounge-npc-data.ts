@@ -20,7 +20,9 @@ export const NPC_IDS = [
   'lumi',
   'maehwa',
   'captain',
+  // 범마을 부동산: 신형만 keeps the old 'realtor' id (and its saved rows), 봉미선 joined 2026-10-02.
   'realtor',
+  'misun',
   'carpenter',
   'rose',
   'nyamo',
@@ -54,7 +56,7 @@ export type Stage2NpcId = (typeof STAGE2_NPCS)[number];
 
 export type NpcArt =
   /** A 3×2 pose sheet (lounge-host-sprites.ts). */
-  | { kind: 'sheet'; host: 'lumi' | 'maehwa' | 'captain' | 'realtor' | 'carpenter' }
+  | { kind: 'sheet'; host: 'lumi' | 'maehwa' | 'captain' | 'carpenter' }
   /** One keyed full-body image (660×990) and, for dialogue, a head-and-shoulders crop. */
   | { kind: 'image'; asset: string; portrait?: string; foot: number }
   /** No picture yet (stage 2): never drawn; `hasSprite` is false. */
@@ -134,18 +136,34 @@ export const NPCS: Record<NpcId, NpcDef> = {
     art: { kind: 'sheet', host: 'captain' },
     speech: 'casual',
   },
+  // 신형만 · 봉미선 (짱구는 못말려 / Crayon Shin-chan, Yoshito Usui / Futabasha): a married
+  // couple running 범마을 부동산 in turns (lounge-npc-schedule.ts realtyDuty).
   realtor: {
     id: 'realtor',
-    name: '문 사장',
-    age: 41,
-    role: '범마을 부동산 사장',
+    name: '신형만',
+    age: 35,
+    role: '범마을 부동산 중개인',
     place: '범마을 부동산',
-    intro: '마을 땅값을 다 외우고 다니지만 정작 자기 집은 좁아요.',
-    likesText: '보석, 금, 좋은 목재',
-    dislikesText: '벌레, 달팽이',
-    gifts: { loved: ['gem', 'gold'], liked: ['hardwood', 'iron', 'kind:dish'], disliked: ['kind:bug'] },
-    rewards: { 40: ['fertilizer-deluxe', 2], 100: ['gold', 3] },
-    art: { kind: 'sheet', host: 'realtor' },
+    intro: '월·수·금 부동산을 지키는 피곤하지만 다정한 아빠. 회사 다니던 시절 영업 실적 자랑이 끝이 없고, 퇴근 후 맥주 한 잔에 살아요.',
+    likesText: '맥주 안주(오징어, 생선구이, 해물파전), 든든한 요리',
+    dislikesText: '달팽이, 쓴 나물',
+    gifts: { loved: ['squid', 'grilledfish', 'haemuljeon', 'sashimi'], liked: ['kind:dish', 'kind:fish', 'roastchestnut', 'gamjajeon'], disliked: ['snail', 'mugwort', 'spinachnamul'] },
+    rewards: { 40: ['grilledfish', 2], 100: ['gold', 2] },
+    art: img(A.npc_shinhyungman, A.npc_shinhyungman_portrait),
+    speech: 'polite',
+  },
+  misun: {
+    id: 'misun',
+    name: '봉미선',
+    age: 29,
+    role: '범마을 부동산 실장',
+    place: '범마을 부동산',
+    intro: '화·목 부동산을 맡는 알뜰한 실장님. 흥정은 마을 최강이고, 세일 소식엔 누구보다 빨라요. 형만 씨 잔소리 담당.',
+    likesText: '달콤한 디저트, 반짝이는 보석, 싸고 싱싱한 작물',
+    dislikesText: '벌레, 쓸데없는 잡동사니',
+    gifts: { loved: ['pumpkinpie', 'vanillapudding', 'jam', 'gem'], liked: ['crop', 'fruit', 'kind:flower', 'mattang', 'hwachae'], disliked: ['kind:bug', 'stone', 'wood'] },
+    rewards: { 40: ['jam', 3], 100: ['gem', 1] },
+    art: img(A.npc_bongmison, A.npc_bongmison_portrait),
     speech: 'polite',
   },
   carpenter: {
@@ -438,6 +456,11 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'sinjjajang', b: 'nyamo', kind: 'regular', note: '은행 서류 배달' },
   { a: 'gwen', b: 'janna', kind: 'friend', note: '방송 전 머리 손질' },
   { a: 'realtor', b: 'carpenter', kind: 'partner', note: '집 확장 공사를 같이 하는 동업자' },
+  { a: 'misun', b: 'realtor', kind: 'partner', note: '부동산을 번갈아 지키는 부부. 미선이 형만의 용돈을 관리해요' },
+  { a: 'misun', b: 'carpenter', kind: 'regular', note: '공사비를 한 푼이라도 깎으려는 실장과 말없는 목수' },
+  { a: 'realtor', b: 'captain', kind: 'regular', note: '퇴근하면 주점 바에 앉는 단골' },
+  { a: 'misun', b: 'frieren', kind: 'regular', note: '마감 직전 빵 할인을 노리는 단골' },
+  { a: 'misun', b: 'nasera', kind: 'rival', note: '농협 시세를 두고 한 푼까지 흥정하는 사이' },
   // Stage 2 (design-npcs-stage2.md §3 and the cards).
   { a: 'lux', b: 'janna', kind: 'rival', note: '예보가 틀리면 조업을 망쳐서 늘 투덕거림' },
   { a: 'gabung', b: 'janna', kind: 'rival', note: '날씨 예보 대결, 누가 맞혔는지 신문에 실림' },

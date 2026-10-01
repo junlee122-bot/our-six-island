@@ -1,5 +1,5 @@
 'use client';
-// The counters of 범마을 부동산 (문 사장), 나무결 가구점 (결 목수) and the shop
+// The counters of 범마을 부동산 (신형만 · 봉미선 in turns), 나무결 가구점 (결 목수) and the shop
 // upgrade board (also 허 선장's in 허풍 주점). Keyboard first: Tab / ←→ switch
 // the counter's pages, ↑↓ (or ←→↑↓ in the showroom) move the selection,
 // Enter buys or chips in, +/− change the count, R rerolls today's stock.
@@ -35,6 +35,9 @@ import { ConfirmModal, Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useLifeAction } from './LifePanels';
 import { useNow } from './use-now';
+import { realtyDuty, type RealtyKeeper } from '../lounge-npc-schedule';
+import { weekdayOf } from '../lounge-calendar';
+import { kstDay } from '../lounge-economy';
 import './shop-counter.css';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
@@ -427,6 +430,22 @@ function ModelHouses({ room, view, notify, save, onVisit }: Omit<Base, 'onClose'
   );
 }
 
+/** The realty keepers' voices at the counter: 신형만 (영업맨) and 봉미선 (알뜰한 실장). */
+const REALTY_VOICE: Record<RealtyKeeper, { upgrade: string; models: string; next: (t: HouseTier) => string; done: string }> = {
+  realtor: {
+    upgrade: '사무소를 넓히면 도면실이 생겨서 공사비를 깎아 드릴 수 있어요.',
+    models: '예전 방들은 모델하우스로 잘 모셔 뒀어요. 벽지랑 바닥은 한 장씩 팔아요.',
+    next: (t) => `다음은 ${t.tier}단계 “${t.name}”이에요. 영업 십오 년 경력으로 도면 보여 드릴까요?`,
+    done: '집 확장은 다 끝났어요! 정말 멋진 집이에요. 오늘 맥주가 맛있겠네요.',
+  },
+  misun: {
+    upgrade: '사무소를 넓히면 도면실이 생겨요. 공사비 십 퍼센트, 그게 어디예요!',
+    models: '예전 방들은 모델하우스로 모셔 뒀어요. 벽지랑 바닥은 한 장씩, 알뜰하게 골라 가세요.',
+    next: (t) => `다음은 ${t.tier}단계 “${t.name}”이에요. 견적은 제가 한 푼까지 꼼꼼히 봐 드릴게요.`,
+    done: '집 확장 끝! 이렇게 알뜰하게 해낸 집은 처음 봐요.',
+  },
+};
+
 export function RealtyCounter({ room, view, notify, onClose, save }: Base & { save?: LoungeSave }) {
   const life = view.life;
   const [page, setPage] = useState<'house' | 'models' | 'upgrade'>('house');
@@ -445,21 +464,25 @@ export function RealtyCounter({ room, view, notify, onClose, save }: Base & { sa
     const id = requestAnimationFrame(() => body.current?.focus({ preventScroll: true }));
     return () => cancelAnimationFrame(id);
   }, [page]);
+  // Who keeps the counter today (KST weekday); at the weekend the other one shows the model houses.
+  const duty = realtyDuty(weekdayOf(kstDay(useNow(true, 60_000) + view.clockOffset)));
+  const keeper: RealtyKeeper = page === 'models' && duty.model ? duty.model : duty.counter;
+  const voice = REALTY_VOICE[keeper];
   const line = !life
     ? '마을에 연결되면 상담해 드릴게요.'
     : page === 'upgrade'
-      ? '사무소를 넓히면 도면실이 생겨서 공사비를 깎아 드릴 수 있어요.'
+      ? voice.upgrade
       : page === 'models'
-        ? '예전 방들은 모델하우스로 잘 모셔 뒀어요. 벽지랑 바닥은 한 장씩 팔아요.'
+        ? voice.models
         : next
-        ? `다음은 ${next.tier}단계 “${next.name}”이에요. 도면 보여 드릴까요?`
-        : '집 확장은 다 끝났어요! 정말 멋진 집이에요.';
+          ? voice.next(next)
+          : voice.done;
   const onKey = listKeys(HOUSE_TIERS.length, at, setAt, () => {
     if (next && t.tier === next.tier && price(next) <= balance) setConfirm(true);
   });
   return (
-    <Modal title={`${VENUE_NAME.realty} · 문 사장`} onClose={onClose} className="sc-counter sc-realty" wide>
-      <Keeper host="realtor" mood={page === 'upgrade' ? 'focus' : next ? 'smile' : 'wow'} line={line} />
+    <Modal title={`${VENUE_NAME.realty} · ${HOSTS[duty.counter].name}`} onClose={onClose} className="sc-counter sc-realty" wide>
+      <Keeper host={keeper} mood={page === 'upgrade' ? 'focus' : next ? 'smile' : 'wow'} line={line} />
       <Pages
         pages={[
           { id: 'house', label: '집 확장' },
@@ -472,7 +495,7 @@ export function RealtyCounter({ room, view, notify, onClose, save }: Base & { sa
       {!life ? (
         <p className="l-ledger-empty">마을에 연결되면 부동산에 들어갈 수 있어요.</p>
       ) : page === 'upgrade' ? (
-        <UpgradeBoard venue="realty" host="realtor" room={room} view={view} notify={notify} />
+        <UpgradeBoard venue="realty" host={duty.counter} room={room} view={view} notify={notify} />
       ) : page === 'models' ? (
         <ModelHouses room={room} view={view} notify={notify} save={save} onVisit={setTouring} />
       ) : (
@@ -634,7 +657,7 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
       : page === 'luxury'
         ? '이번 주에만 들어온 귀한 가구예요. 한 사람당 하나씩만 팔아요.'
         : page === 'basic'
-          ? '새 방에 맞춰 기본 가구를 늘 갖춰 뒀어요. 벽지랑 바닥은 부동산 문 사장님한테 가 보세요!'
+          ? '새 방에 맞춰 기본 가구를 늘 갖춰 뒀어요. 벽지랑 바닥은 범마을 부동산에 가 보세요!'
           : item
           ? `${josa(item.name, '은/는')} ${formatBeom(item.price)}이에요. 직접 다듬었어요!`
           : '오늘은 물건이 다 나갔어요.';
