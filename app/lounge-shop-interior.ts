@@ -42,7 +42,7 @@ const LOOK: Record<ShopArea, { panel: string; trim: string; rugs: readonly [x: n
     trim: '#f3e2c4',
     rugs: [
       [3.9, 0.9, 5.2, 4.9, '#d9b98f'],
-      [-0.4, -1.75, 3.4, 1.1, '#b9785a'],
+      [-0.32, -1.75, 3.0, 1.1, '#b9785a'],
     ],
     sign: ['#fff4dd', '#7a4a2a', '#c58d5a'],
   },

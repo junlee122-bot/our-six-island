@@ -139,18 +139,18 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
     district: 'market',
     owner: 'frieren',
     helper: 'himmel',
-    ownerAt: { x: -1.25, z: -4.15 },
-    helperAt: { x: 0.55, z: -4.15 },
-    desk: { x: -0.4, z: -3.2, w: 3.6, d: 0.85 },
-    front: toNet({ x: -0.4, z: -2.05 }),
+    ownerAt: { x: -1.05, z: -4.15 },
+    helperAt: { x: 0.4, z: -4.15 },
+    desk: { x: -0.32, z: -3.2, w: 2.95, d: 0.85 },
+    front: toNet({ x: -0.32, z: -2.05 }),
     staffGates: [
-      { x: -2.75, z: -3.75, w: 0.7, d: 1.75 },
-      { x: 2.0, z: -3.75, w: 1.2, d: 1.75 },
+      { x: -2.25, z: -3.75, w: 0.9, d: 1.75 },
+      { x: 1.65, z: -3.75, w: 1.0, d: 1.75 },
     ],
     items: [
       // The counter: a cake case and a pastry case side by side.
-      { id: 'cake-case', model: 'cakeCase', x: -1.3, z: -3.2, w: 1.75, h: 1.08, d: 0.85, solid: false },
-      { id: 'pastry-case', model: 'pastryCase', x: 0.55, z: -3.2, w: 1.75, h: 1.12, d: 0.85, solid: false },
+      { id: 'cake-case', model: 'cakeCase', x: -1.05, z: -3.2, w: 1.45, h: 1.08, d: 0.85, solid: false },
+      { id: 'pastry-case', model: 'pastryCase', x: 0.4, z: -3.2, w: 1.45, h: 1.12, d: 0.85, solid: false },
       // Behind the counter, against the back wall.
       { id: 'bread-back-1', model: 'breadStand', x: -3.3, z: -5.5, w: 1.0, h: 1.35, d: 0.8, solid: false },
       { id: 'bread-back-2', model: 'breadStand', x: -2.1, z: -5.5, w: 1.0, h: 1.35, d: 0.8, solid: false },
