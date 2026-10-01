@@ -258,6 +258,13 @@ try {
           await page.keyboard.up('Shift');
           await page.keyboard.up('ArrowDown');
           await page.keyboard.up('ArrowLeft');
+          // Slow frames can carry me past the door's reach: nudge back up until it is offered.
+          for (let i = 0; i < 12 && (await js(() => document.querySelector('[data-testid=interior-3d]')?.dataset.action)) !== 'door'; i++) {
+            await page.keyboard.down('ArrowUp');
+            await sleep(120);
+            await page.keyboard.up('ArrowUp');
+            await sleep(400);
+          }
           await page.keyboard.press('KeyE');
           await until((a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a, 60000, id);
           await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
