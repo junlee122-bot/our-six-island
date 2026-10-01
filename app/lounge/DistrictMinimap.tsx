@@ -90,7 +90,8 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
         if (d < 6 && (!best || d < best.d)) best = { id: pl.id, d };
       }
       setNearest(best?.id ?? null);
-      const now = latest.current.residents();
+      // Only residents on the map (one walking in from beyond the edge is not here yet).
+      const now = latest.current.residents().filter((r) => Math.abs(r.x) < map.bounds.w / 2 - 0.5 && Math.abs(r.z) < map.bounds.d / 2 - 0.5);
       setNpcs((was) =>
         was.length === now.length && was.every((r, i) => r.id === now[i].id && Math.abs(r.x - now[i].x) < 0.5 && Math.abs(r.z - now[i].z) < 0.5) ? was : now.map((r) => ({ ...r })),
       );
@@ -126,7 +127,8 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
   };
   // A resident gets a button only where it would not sit under a place's or another resident's pin
   // (at a shop counter the shop's pin walks there anyway); the dot is always drawn.
-  const reach = 20 / ((expanded ? 400 : 260) / w);
+  // A label is up to ~50px wide: keep a resident button 36px from any pin centre.
+  const reach = 36 / ((expanded ? 400 : 260) / w);
   const npcButtons: { id: NpcId; x: number; z: number }[] = [];
   for (const r of npcs)
     if (![...map.places, ...npcButtons].some((o) => Math.hypot(o.x - r.x, o.z - r.z) < reach)) npcButtons.push(r);
@@ -184,7 +186,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
                 {map.places.map((p) =>
                   p.kind === 'fish' ? <circle key={p.id} cx={p.x} cy={p.z} r={1.1 * scale} fill={TONE.water} stroke="#fff6dd" strokeWidth={0.4 * scale} /> : null,
                 )}
-                {npcButtons.map((r) => (
+                {npcs.map((r) => (
                   <circle key={r.id} cx={r.x} cy={r.z} r={1.1 * scale} fill={RESIDENT} stroke="#fff6dd" strokeWidth={0.4 * scale} />
                 ))}
                 <circle ref={selfRef} cx={start.x} cy={start.z} r={2 * scale} fill="#fff6dd" stroke="#536642" strokeWidth={scale} />
@@ -206,7 +208,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
                 <span aria-hidden="true">{p.label}</span>
               </button>
             ))}
-            {npcs.map((r) => (
+            {npcButtons.map((r) => (
               <button
                 key={r.id}
                 type="button"

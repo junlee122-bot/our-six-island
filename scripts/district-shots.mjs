@@ -12,6 +12,7 @@ import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { DISTRICTS } from '../app/lounge-districts.ts';
 import { REGIONS, regionToNetwork } from '../app/lounge-areas.ts';
 import { districtMinimap } from '../app/lounge-district-minimap.ts';
+import { measureInPage } from './ui-measure.mjs';
 import { districtCounters } from '../app/lounge-district-counters.ts';
 import { npcSpot } from '../app/lounge-npc-schedule.ts';
 import { NPC_IDS } from '../app/lounge-npc-data.ts';
@@ -198,10 +199,24 @@ try {
       const places = await js(() => document.querySelectorAll('[data-minimap-area] [data-minimap-place]').length);
       const expected = districtMinimap(id, new Date(Date.now() + 9 * 3_600_000).getUTCDay()).places.length;
       if (places !== expected) throw new Error(`${id}: ${places} places on the minimap, expected ${expected}`);
+      // The ui-shots measurements on the map's own controls: nothing covered, no small or faint text.
+      const check = async (name) => {
+        const m = await js(measureInPage);
+        const own = (list) => (list ?? []).filter((x) => /minimap/.test(x.cls ?? '') || /minimap/.test(x.by ?? ''));
+        const bad = { covered: own(m.covered), low: own(m.low), small: own(m.small) };
+        console.log(`   ${name}: covered ${bad.covered.length} low ${bad.low.length} small ${bad.small.length}`);
+        if (bad.covered.length || bad.low.length || bad.small.length) {
+          const pins = await js(() => [...document.querySelectorAll('[data-minimap-area] .hv-minimap-place')].map((b) => { const r = b.getBoundingClientRect(), t = b.querySelector('span')?.getBoundingClientRect(); return `${b.getAttribute('aria-label')} @${Math.round(r.x)},${Math.round(r.y)} label ${t ? Math.round(t.x) + '-' + Math.round(t.right) : '-'}`; }));
+          console.log(pins.join('\n'));
+          throw new Error(`${name}: ${JSON.stringify(bad)}`);
+        }
+      };
       await shot(`${id}-minimap`);
+      await check(`${id}-minimap`);
       await page.getByTestId('minimap-resize').click();
       await sleep(600);
       await shot(`${id}-minimap-big`);
+      await check(`${id}-minimap-big`);
       await page.getByTestId('minimap-resize').click();
       // Click the road home on the map: I walk there.
       const exit = REGIONS[id].exits[0].stand;
