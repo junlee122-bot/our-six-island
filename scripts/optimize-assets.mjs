@@ -7,6 +7,8 @@
 //   node scripts/optimize-assets.mjs images     # images only
 //   node scripts/optimize-assets.mjs models     # models only
 //   node scripts/optimize-assets.mjs models village/valley   # one folder
+//   node scripts/optimize-assets.mjs hosts      # table host sheets only
+//   node scripts/optimize-assets.mjs chibi      # in-world resident chibis only
 //
 // Character atlases are LOSSLESS WebP (`exact`): lounge-sprites.ts/lounge-color.ts
 // key the magenta background and dye the blue hair by exact RGB, so every pixel
@@ -45,6 +47,68 @@ const HOST_SHEETS = [
   'lounge/host-realtor.png',
   'lounge/host-carpenter.png',
 ];
+// 허 선장 · 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
+// pink line still rings their hair, hands and props on any ground. Pixels
+// within 6 px of transparency that carry a magenta cast are unmixed from the
+// (255, 0, 255) ground the way keyMagenta does it and lose that share of their
+// alpha (character QA 2026-10-01). Interior colours are never touched.
+function defringeMagenta(data, width, height, reach = 6) {
+  const n = width * height;
+  let near = new Uint8Array(n);
+  for (let i = 0; i < n; i++) near[i] = data[i * 4 + 3] < 16 ? 1 : 0;
+  for (let step = 0; step < reach; step++) {
+    const next = Uint8Array.from(near);
+    for (let i = 0; i < n; i++) {
+      if (near[i]) continue;
+      const x = i % width;
+      if ((x > 0 && near[i - 1]) || (x < width - 1 && near[i + 1]) || near[i - width] || near[i + width]) next[i] = 1;
+    }
+    near = next;
+  }
+  const out = Buffer.from(data);
+  for (let i = 0; i < n; i++) {
+    const alpha = data[i * 4 + 3];
+    if (!near[i] || alpha < 16) continue;
+    let r = data[i * 4],
+      g = data[i * 4 + 1],
+      b = data[i * 4 + 2];
+    const m = Math.min(r, b) - g;
+    if (m <= 12) continue;
+    let a = (255 - Math.min(255, m)) / 255;
+    a = a < 0.06 ? 0 : Math.min(1, (a - 0.06) / 0.94);
+    if (a <= 0) {
+      out[i * 4 + 3] = 0;
+      continue;
+    }
+    r = (r - (1 - a) * 255) / a;
+    g = g / a;
+    b = (b - (1 - a) * 255) / a;
+    if (Math.min(r, b) - g > 12) {
+      r = Math.min(r, g + 12);
+      b = Math.min(b, g + 12);
+    }
+    out[i * 4] = Math.max(0, Math.min(255, Math.round(r)));
+    out[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(g)));
+    out[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(b)));
+    out[i * 4 + 3] = Math.round(Math.min(alpha, a * 255));
+  }
+  return out;
+}
+const DEFRINGE_HOSTS = new Set(['lounge/host-captain.png', 'lounge/host-realtor.png', 'lounge/host-carpenter.png']);
+async function hostSheets() {
+  for (const name of HOST_SHEETS) {
+    const source = path.join(assets, name);
+    const target = source.replace(/\.png$/, '.webp');
+    let input = sharp(source);
+    if (DEFRINGE_HOSTS.has(name)) {
+      const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      input = sharp(defringeMagenta(data, info.width, info.height), { raw: { width: info.width, height: info.height, channels: 4 } });
+    }
+    await input.webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
+    console.log(`${name} -> .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`);
+  }
+}
+
 // Legacy pack (PNG sources in the repo) + current pack. The current pack's
 // 1024px PNG sources are kept out of the repository (not used at runtime), so
 // ids without a PNG next to the WebP are skipped and keep their committed WebP.
@@ -196,12 +260,7 @@ async function images() {
       `reactions/${id}.png -> 256px .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`,
     );
   }
-  for (const name of HOST_SHEETS) {
-    const source = path.join(assets, name);
-    const target = source.replace(/\.png$/, '.webp');
-    await sharp(source).webp({ quality: 90, alphaQuality: 100, effort: 6 }).toFile(target);
-    console.log(`${name} -> .webp ${kb(fs.statSync(source).size)} -> ${kb(fs.statSync(target).size)}`);
-  }
+  await hostSheets();
   for (const name of WALL_PRINTS) {
     const source = path.join(assets, name);
     const target = source.replace(/\.png$/, '.webp');
@@ -567,20 +626,52 @@ function keyChibi(data, width, height, { green = false, fgM = 0, seed = 40 } = {
   }
   return out;
 }
-/** Opaque box of columns [x0, x1) of a keyed RGBA buffer (alpha > 24). */
-function opaqueBox(data, width, height, x0, x1) {
+/**
+ * Opaque box of columns [x0, x1) of a keyed RGBA buffer (alpha > 24), over the
+ * connected pieces of at least `minArea` pixels: every generated original
+ * carries a few stray opaque pixels in its bottom-left corner, which once
+ * stretched the box to the canvas corner and left the figure floating above
+ * the feet line and off centre (character QA 2026-10-01).
+ */
+function opaqueBox(data, width, height, x0, x1, minArea = 400) {
+  const seen = new Uint8Array(width * height);
+  const solid = (i) => data[i * 4 + 3] > 24;
   let l = x1,
     r = x0 - 1,
     t = height,
     b = -1;
-  for (let y = 0; y < height; y++)
-    for (let x = x0; x < x1; x++)
-      if (data[(y * width + x) * 4 + 3] > 24) {
-        if (x < l) l = x;
-        if (x > r) r = x;
-        if (y < t) t = y;
-        if (y > b) b = y;
+  for (let y0 = 0; y0 < height; y0++)
+    for (let xs = x0; xs < x1; xs++) {
+      const start = y0 * width + xs;
+      if (seen[start] || !solid(start)) continue;
+      seen[start] = 1;
+      const stack = [start];
+      let area = 0,
+        cl = xs,
+        cr = xs,
+        ct = y0,
+        cb = y0;
+      while (stack.length) {
+        const i = stack.pop();
+        const x = i % width,
+          y = (i - x) / width;
+        area++;
+        if (x < cl) cl = x;
+        if (x > cr) cr = x;
+        if (y < ct) ct = y;
+        if (y > cb) cb = y;
+        for (const j of [x > x0 ? i - 1 : -1, x < x1 - 1 ? i + 1 : -1, y > 0 ? i - width : -1, y < height - 1 ? i + width : -1])
+          if (j >= 0 && !seen[j] && solid(j)) {
+            seen[j] = 1;
+            stack.push(j);
+          }
       }
+      if (area < minArea) continue;
+      l = Math.min(l, cl);
+      r = Math.max(r, cr);
+      t = Math.min(t, ct);
+      b = Math.max(b, cb);
+    }
   return r < l ? null : { left: l, top: t, width: r - l + 1, height: b - t + 1 };
 }
 async function chibiSprites() {
@@ -697,5 +788,6 @@ if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
 if (['all', 'images', 'npcs', 'chibi'].includes(mode)) await chibiSprites();
 if (['all', 'images', 'services', 'npcs'].includes(mode)) await servicePortraits();
+if (mode === 'hosts') await hostSheets();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();

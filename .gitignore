@@ -48,3 +48,4 @@ next-env.d.ts
 
 # UI screenshot reports (npm run ui:shots)
 /.ui-shots/
+.qa/
