@@ -7,24 +7,8 @@
   "background": "solid magenta #FF00FF (keyed at build)",
   "styleReference": "host-maehwa.png (style, layout, proportion only)",
   "layout": "3 columns x 2 rows of tall cells, same host sheet layout as host-carpenter/host-realtor",
-  "note": "User reference images (Groot, Hiroshi and Misae Nohara) were uploaded only as generation inputs and are not stored in this repository. Groot renders with the user's Groot photos as references were blocked by the provider filter; the used Groot sheet is text-described with only the style reference.",
+  "note": "User reference images (Hiroshi and Misae Nohara) were uploaded only as generation inputs and are not stored in this repository. A Groot carpenter was tried and dropped by the user (2026-10-01); 결 목수 stays as he was.",
   "assets": [
-    {
-      "id": "carpenter",
-      "name": "그루트 (나무결 가구점 목수)",
-      "job": "ca3c1767-e7a2-466f-a1c5-977bac56c19e",
-      "original": "_originals/host-groot.png",
-      "sha256": "E15AA9FABE095E121C9AAEF38C35E4FFFD69F91F9D6C5C6F55BBF99FC4A5762B",
-      "cells": [
-        "calm",
-        "smile",
-        "deal",
-        "focus",
-        "wow",
-        "sorry"
-      ],
-      "reference": "User-provided Groot images (Marvel, Guardians of the Galaxy) described in text."
-    },
     {
       "id": "realtor",
       "name": "신형만 (top row) / 봉미선 (bottom row), 범마을 부동산",
@@ -51,6 +35,39 @@
       "job": "c19c9144-9bf0-4d66-8d36-da0425afdb5e",
       "original": "_originals/host-realtor-nohara-alt.png",
       "sha256": "26DD173A7FBA5AE4744A34E225C684197C8AC70F0F8EAD0BEDE22C49746867AA"
+    },
+    {
+      "id": "realtor-shinhyungman-tall",
+      "name": "신형만 dialogue illustration",
+      "job": "5f6d0cd5-9717-4a9c-88fd-6e138ab9ce2b",
+      "aspect": "2:3",
+      "quality": "high",
+      "resolution": "2k",
+      "styleReference": "_originals/casino-lender-rose.png",
+      "original": "_originals/npc-shinhyungman.png",
+      "sha256": "71E32C92CFD0C459613CD25535AC686D30268EF2BA5B0F751D7A60DD91866342"
+    },
+    {
+      "id": "realtor-bongmison-tall",
+      "name": "봉미선 dialogue illustration",
+      "job": "05c360c5-e983-4f09-bf10-6b8973d3d924",
+      "aspect": "2:3",
+      "quality": "high",
+      "resolution": "2k",
+      "styleReference": "_originals/casino-lender-rose.png",
+      "original": "_originals/npc-bongmison.png",
+      "sha256": "15C9C39BF1B50C492E87F239AAA7BD62AAE1D93D1A270CFC5DDFEE16AB648B33"
+    },
+    {
+      "id": "realtor-chibi",
+      "name": "신형만 (left) / 봉미선 (right) in-world chibi, about 2 heads",
+      "job": "e89f0e55-57f6-43a0-a00c-6785fff09dc4",
+      "aspect": "3:2",
+      "quality": "high",
+      "resolution": "2k",
+      "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+      "original": "_originals/chibi/npc-chibi-shinhyungman-bongmison.png",
+      "sha256": "9979BA2F91B687B14D3B65E93E57877724AD81D2B9053137237AE6707EF925BD"
     }
   ]
 }
