@@ -89,12 +89,18 @@
 - **구역 3D**: `app/lounge-district-kit.ts`의 `DistrictSet`을 상속합니다. 평평한 잔디 바닥과 길·광장 판(`PAVING`), kArchive 모델을 부지 상자에 맞춰 넣기(`place`), 캔버스 간판(`signpost`), 가장자리 나무 띠(`ring`), 밤 등불(`lantern`·`gardenLamp`, 점광원 7개 이하). 집은 마을 중심과 같은 크기(문 높이 1.45, `villageHouseScale`)입니다.
 - **실내**(회관·카지노·허풍 주점·은행·미용실, 2026-10-02): 같은 카메라·걷기·캐릭터·빛을 `app/lounge-interior-view.ts`로 씁니다. 방은 자기 단위(네트워크 좌표 × 0.2)로 만들어져 있어서, 방 한 단위를 바깥 1.5 단위로 봅니다(`INTERIOR_VIEW_SCALE`). 그래서 화면에서 친구 키·걷는 빠르기·카메라 따라오기가 시장 거리와 똑같고, 방은 화면의 약 3/4을 채웁니다. 카메라가 옆으로 돌지 않아 양옆 벽은 얇은 띠로 보이므로, 벽에 거는 것은 뒷벽에 걸고 문은 왼쪽 벽 밖에 카메라를 보는 밝은 문으로 세웁니다. 어두운 방(카지노·주점)의 캐릭터는 등불 색으로 살짝 어둡게(`INTERIOR_FIGURE_TINT`) 합니다.
 - **가게 실내**(빵집 카페·농협·잡화점·어시장, 2026-10-02): 위 실내 규격을 그대로 쓰고, 시장 거리·항구의 가게 문에서 E로 들어갑니다(`app/lounge-shop-interiors.ts` 배치·`app/lounge-shop-interior.ts` 그리기). 계산대는 뒷벽 쪽에 놓고 주인은 그 뒤에 섭니다. 계산대 뒤 통로는 주민만 지나갑니다(플레이어는 `staffGates`로 막힘). 벽에 붙는 선반·간판은 뒷벽에, 바닥 가구는 문(왼쪽 아래) 앞을 비워 둡니다. 빵집 의자는 의자 자리에 서 있으면 앉은 것으로 그립니다(친구 화면에도 같음).
+- **출입구 규칙**(2026-10-02, `app/lounge-map-doors.ts`): 모든 문·관문·구역 출구는 같은 규칙을 씁니다. 도착하면 들어온 출입구의 서는 자리에서 안쪽으로 `reach + 0.9`만큼 들어와 안쪽을 보고 섭니다(`arrivalPoint`·`arrivalFacing`, 서버의 `AREA_DEFAULTS`도 같은 값). 도착 뒤 0.7초 동안은 출입구가 반응하지 않습니다(`doorClock`). E·버튼 말고도 출입구 쪽으로 계속 걸어가면(방향키나 그 너머 클릭) 지나갑니다(`walksInto`). 닫힌 관문은 2.5초에 한 번만 이유를 말합니다. 새 출입구를 만들 때는 `{x, z, stand, reach}`만 정하면 되고, `tests/lounge-map-doors.test.mjs`가 도착 자리·되돌아가는 길·걸어 들어가기를 검사합니다. 브라우저 확인은 `node --experimental-strip-types scripts/verify-doorways.mjs --pages <빌드>`.
 - **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다. 실내는 `scripts/interior-shots.mjs --pages <빌드>`(방마다 문 앞·테이블 앞 화면과 그리기 호출 수), 가게 실내는 `district-shots.mjs --shops --only market,harbor --at 11:30`(문 앞·계산대·창·나온 자리와 그리기 호출 수).
 
 ### 소리
 
 - 효과음은 Kenney CC0 파일과 코드 합성음입니다. 음악은 코드로 작곡한 합성곡입니다(`app/lounge-music-score.ts`, `lounge-music-synth.ts`).
 - 카지노·회관·주점에는 **음악 파일 슬롯**이 있습니다(`public/assets/lounge/music/casino|hall|tavern.ogg/.mp3`, `app/lounge-music-tracks.ts`). 사용자가 Suno로 곡을 만들어 넣을 예정입니다. 카지노는 타짜 영화음악 같은 느낌을 원합니다. 파일이 없으면 합성곡이 나옵니다.
+- **구역 음악**(2026-10-02): 구역마다 마을 오르골과 다른 합성곡이 나옵니다(`app/lounge-music-districts.ts`). 시장 거리는 G장조 장터 폴카(120bpm, 쿵짝 베이스·오프비트 피아노·킥/림/브러시, 뜯는 소리 선율), 항구는 A 도리안 바다 왈츠(3/4, 132bpm, 아코디언 선율과 대금 응답, 네 마디마다 파도 같은 노이즈), 언덕은 F장조 전원곡(72bpm, 북 없이 피아노 분산화음·대금·바이올린). 밤에는 북이 빠지고 음이 줄며 조금 느려집니다(`nightTempo`). 선율은 코드 톤 위의 시드 랜덤 워크라 기존 곡을 인용하지 않습니다.
+- **구역 소리 데이터**: 구역 하나는 `AREA_SOUND`(곡 + 바깥 소리: 물소리 세기, 파도, 낮 새/갈매기, 밤 풀벌레)와 `MUSIC_TRACKS` 슬롯(파일 없으면 `files: []`), `app/lounge-music-pieces.ts`의 `PIECES` 한 줄, `PieceSpec`(`bar` 함수로 마디를 씀)을 더하면 됩니다. 목장·과수원, 산기슭도 이렇게 붙입니다.
+- **가게 안 음악**: 구역 가게(`VENUES[*].music`)는 그 구역 곡을 그대로 틀고 저역 통과 필터로 벽 너머처럼 들리게 합니다(`scene.indoor`). 그래서 가게를 드나들어도 곡이 처음부터 다시 시작하지 않습니다. 장소가 바뀌면 곡은 약 0.9초 동안 페이드 아웃했다가 새 곡이 들어오고, 2.5초 안에 돌아오면 끊김 없이 이어집니다.
+- **발소리**: 파일 없이 엔진의 노이즈 버퍼를 표면마다 다르게 걸러 냅니다(`app/lounge-footsteps.ts` `STEP_SOUNDS`: 흙·풀·돌·나무 바닥·선착장 판자·모래·광산 자갈). 구역 표면은 각 배치 파일의 `*_PAVING` 직사각형에서 정해집니다(포장 = 돌, 나머지 = 풀, 항구 땅 = 모래, 선착장 = 판자, 방파제·등대 곶 = 돌). 실내·내 방은 나무 바닥입니다. 배경음 스위치와 효과음 크기를 따릅니다.
+- **확인**: 브라우저에서 `<html data-music>`(지금 나오는 곡: `box`, 구역·방 이름), `data-music-indoor`, `data-ambience`(`village`·`outdoor`·`surf`)로 확인합니다. `scripts/verify-doorways.mjs`가 문을 드나들며 이 값을 검사합니다.
 
 ### 확인 방법
 
@@ -142,7 +148,7 @@
 | 출처 | 내용 | 조건 |
 |---|---|---|
 | Kenney Casino Audio 1.1 · Interface Sounds 1.0 | 주사위·카드·타이머·투표·확인 효과음 13개 (`public/assets/lounge/sfx/`, `app/lounge-sfx-files.ts`) | CC0 |
-| 코드 합성 | 장소별 음악(카지노·회관·주점·마을 오르골), 발걸음·칩·UI 소리 | 자체 제작 |
+| 코드 합성 | 장소별 음악(카지노·회관·주점·마을 오르골, 시장 거리·항구·언덕 구역 곡), 파도·갈매기·새·풀벌레, 표면별 발걸음·칩·UI 소리 | 자체 제작 |
 | Suno (예정) | 카지노·회관·주점 음악 파일 슬롯 | 사용자가 직접 만들어 넣음. Suno 요금제의 상업·공개 이용 조건은 그때 확인 |
 
 ### 글꼴

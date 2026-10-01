@@ -68,6 +68,10 @@ export type PieceSpec = {
   sections: Record<Section, readonly Chord[]>;
   /** Section orders; the first cycle plays forms[0], later cycles pick one. */
   forms: readonly (readonly Section[])[];
+  /** The piece's own bar writer (the districts, lounge-music-districts.ts). */
+  bar?: (plan: BarPlan, state: ScoreState, rng: Rng) => NoteEvent[];
+  /** Tempo factor at night (e.g. 0.88: a little slower); the bar writer also thins out. */
+  nightTempo?: number;
 };
 export type BarPlan = {
   section: Section;
@@ -85,15 +89,18 @@ export type ScoreState = {
   cell: Rhythm | null;
   lead: number;
   high: number;
+  /** Night variant (district pieces: softer, sparser, no drums). */
+  night: boolean;
 };
 export const newScoreState = (): ScoreState => ({
   motifs: new Map(),
   cell: null,
   lead: 69,
   high: 76,
+  night: false,
 });
 
-const ch = (root: number, tones: readonly number[], bass?: number): Chord => ({
+export const ch = (root: number, tones: readonly number[], bass?: number): Chord => ({
   root,
   tones,
   bass,
@@ -191,7 +198,6 @@ export const TAVERN: PieceSpec = {
   ],
 };
 
-export const PIECES: Record<MusicPlace, PieceSpec> = { casino: CASINO, hall: HALL, tavern: TAVERN };
 /** Seconds per step. */
 export const stepSeconds = (spec: PieceSpec) => 60 / spec.bpm / spec.stepsPerBeat;
 
@@ -225,7 +231,7 @@ export function nearest(target: number, pcs: readonly number[], lo: number, hi: 
   return t;
 }
 /** One scale step up or down from `from`, turning back at the range edges. */
-function stepScale(from: number, dir: number, pcs: readonly number[], lo: number, hi: number) {
+export function stepScale(from: number, dir: number, pcs: readonly number[], lo: number, hi: number) {
   let m = from + dir;
   while (!pcs.includes(mod12(m)) && Math.abs(m - from) < 4) m += dir;
   if (m < lo || m > hi) return stepScale(from, -dir, pcs, lo, hi);
@@ -239,7 +245,7 @@ export function voicing(c: Chord, center = 64, lo = 57, hi = 72): number[] {
 export const bassOf = (c: Chord) => nearest(40, [c.bass ?? c.root], 33, 47);
 const fifthOf = (c: Chord) => nearest(bassOf(c) + 7, [(c.root + 7) % 12], 33, 52);
 /** A chromatic neighbour leading into the next bar's bass. */
-const approach = (next: Chord, rng: Rng) => bassOf(next) + (rng() < 0.5 ? 1 : -1);
+export const approach = (next: Chord, rng: Rng) => bassOf(next) + (rng() < 0.5 ? 1 : -1);
 /** D natural minor, or harmonic minor (C♯, the augmented second) when the chord has C♯. */
 export function casinoScale(c: Chord): number[] {
   return pcsOf(c).includes(1) ? [2, 4, 5, 7, 9, 10, 1] : [2, 4, 5, 7, 9, 10, 0];
@@ -249,7 +255,7 @@ export function hallScale(c: Chord): number[] {
   return pcsOf(c).includes(1) ? [2, 5, 7, 9, 1] : [2, 5, 7, 9, 0];
 }
 
-type Rhythm = readonly (readonly [number, number])[];
+export type Rhythm = readonly (readonly [number, number])[];
 /** Tango rhythm cells for the lead (step, length in 16ths). */
 export const CASINO_RHYTHMS: readonly Rhythm[] = [
   [[0, 3], [3, 1], [4, 2], [6, 2], [8, 8]],
@@ -269,7 +275,7 @@ export const HALL_RHYTHMS: readonly Rhythm[] = [
 ];
 
 /** A melodic bar: chord tones on strong steps, scale steps between. */
-function melody(
+export function melody(
   inst: Inst,
   chord: Chord,
   rhythm: Rhythm,
@@ -301,16 +307,16 @@ function melody(
   return out;
 }
 
-const hit = (step: number, inst: Inst, vel: number, dur = 1, midi = 0): NoteEvent => ({
+export const hit = (step: number, inst: Inst, vel: number, dur = 1, midi = 0): NoteEvent => ({
   step,
   inst,
   midi,
   vel,
   dur,
 });
-const chordAt = (step: number, inst: Inst, notes: number[], vel: number, dur: number) =>
+export const chordAt = (step: number, inst: Inst, notes: number[], vel: number, dur: number) =>
   notes.map((midi) => ({ step, inst, midi, vel, dur }));
-const last = (list: NoteEvent[]) => list[list.length - 1];
+export const last = (list: NoteEvent[]) => list[list.length - 1];
 
 /** One bar of the casino tango. */
 export function casinoBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[] {
@@ -678,6 +684,7 @@ export function tavernBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent
 }
 
 export function barEvents(spec: PieceSpec, plan: BarPlan, state: ScoreState, rng: Rng) {
+  if (spec.bar) return spec.bar(plan, state, rng);
   return spec.id === 'casino'
     ? casinoBar(plan, state, rng)
     : spec.id === 'tavern'

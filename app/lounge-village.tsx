@@ -76,6 +76,8 @@ import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESI
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
+import { VILLAGE_GATE } from './lounge-areas';
+import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto, type Doorway } from './lounge-map-doors';
 import { prefetchDistrict } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
 import './lounge-npc-figures.css';
@@ -995,6 +997,8 @@ export function Village3D(props: Props) {
       const current = latest.current;
       if (current.fishing) return;
       const t = action.target;
+      const doorway = t.type === 'door' || t.spot.kind === 'district' || t.spot.kind === 'gate';
+      if (doorway && !doors.ready()) return;
       if (t.type === 'door') {
         const { place, canEnter } = t.entrance;
         entryIntent = null;
@@ -1352,7 +1356,20 @@ export function Village3D(props: Props) {
       startY: number;
       dragged: boolean;
     } | null = null;
-    let locomotion: LocomotionState = { phase: 0, facing: 1 };
+    // The rim's gates (districts, 뒷산): walk on into one to take it.
+    const gates: { gate: Doorway; go: () => void }[] = [
+      ...DISTRICT_IDS.map((id) => ({ gate: DISTRICTS[id].gate, go: () => latest.current.onDistrict?.(id) })),
+      { gate: VILLAGE_GATE, go: () => latest.current.onGate?.() },
+    ];
+    // Doors and gates rest a moment after I arrive (no bounce back out).
+    const doors = doorClock();
+    let lastWalkInto = -1e9;
+    // Back through a gate: a step in from it, facing into the village.
+    const cameThrough = gates.find(({ gate }) => {
+      const a = arrivalPoint(gate);
+      return Math.hypot(a.x - position.x, a.z - position.z) < 1.5;
+    });
+    let locomotion: LocomotionState = { phase: 0, facing: cameThrough ? arrivalFacing(cameThrough.gate) : 1 };
     /** Floor point under the mouse (or null off the village). */
     const floorAt = (clientX: number, clientY: number) => {
       const r = canvas.getBoundingClientRect();
@@ -1910,6 +1927,19 @@ export function Village3D(props: Props) {
           position = next;
         }
         if (!path.length) marker.visible = false;
+      }
+      // Walking on into a gate (keys, or a click on it) takes it, like E.
+      const pushX = h || v ? h : position.x - before.x,
+        pushZ = h || v ? v : position.z - before.z;
+      if ((pushX || pushZ) && doors.ready() && now - lastWalkInto > LOCKED_NOTICE_MS && !latest.current.fishing) {
+        const goal = h || v ? null : path.at(-1);
+        const into = gates.find(({ gate }) => walksInto(position, { x: pushX, z: pushZ }, gate) && (h || v || routeGoesThrough(goal, gate)));
+        if (into) {
+          lastWalkInto = now;
+          path = [];
+          directions.current.clear();
+          queueMicrotask(into.go);
+        }
       }
       const movedX = position.x - before.x,
         movedZ = position.z - before.z,

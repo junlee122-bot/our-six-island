@@ -9,6 +9,7 @@
 // Doors face the camera (+z); each row has its lane just south of it. The
 // stairs down to the hub come in on the east edge.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
+import { arrivalPoint } from './lounge-map-doors.ts';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale, type VillageHouseModel } from './lounge-village-layout.ts';
 
 export const HILLSIDE_W = 50,
@@ -135,7 +136,8 @@ export const HILL_TREES: readonly { x: number; z: number; s: number; pine?: bool
 
 /** The stairs down to the hub (east edge). */
 export const HILLSIDE_EXIT = { x: HILLSIDE_W / 2 - 0.6, z: -3.5, stand: { x: HILLSIDE_W / 2 - 2, z: -3.5 }, reach: 1.9 } as const;
-export const HILLSIDE_ARRIVE: WalkPoint = { x: HILLSIDE_W / 2 - 2.4, z: -3.5 };
+/** Arriving from the hub: a step in from the exit, past its trigger (lounge-map-doors.ts). */
+export const HILLSIDE_ARRIVE: WalkPoint = arrivalPoint(HILLSIDE_EXIT);
 
 const box = (x: number, z: number, w: number, d: number): WalkCollider => ({ shape: 'box', x, z, w, d });
 const round = (n: number) => Math.round(n * 1000) / 1000;

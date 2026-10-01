@@ -15,6 +15,11 @@
 // tables it continues quietly when 게임 중 배경음 is on (settings.gameMusic) and
 // steps aside otherwise. Table hooks add a tension layer during a hand and
 // short stings for big moments (tableTension / sting).
+// The districts (시장 거리 / 항구 / 언덕) play their own pieces the same way
+// (scene.place, lounge-music-districts.ts) with a night variant, and their own
+// outdoor bed (scene.ambience: surf and gulls at the harbor); their shop rooms
+// hear the district's piece muffled (scene.indoor), so walking in or out
+// never restarts it. Footsteps follow the surface underfoot (lounge-footsteps.ts).
 import {
   getSettings,
   onSettingsChange,
@@ -22,6 +27,7 @@ import {
 } from './lounge-settings';
 import { NoirEngine } from './lounge-music-synth';
 import { SFX_FILES, type SfxId } from './lounge-sfx-files';
+import { STEP_GAP, STEP_SOUNDS, type Surface } from './lounge-footsteps';
 import type { StingKind } from './lounge-music-score';
 import {
   MUSIC_PLACES,
@@ -32,6 +38,7 @@ import {
   loopPoints,
   musicMix,
   trackCandidates,
+  type AreaSound,
   type MusicPlace,
 } from './lounge-music-tracks';
 
@@ -47,6 +54,10 @@ type Scene = {
   place: MusicPlace | null;
   /** The Esc menu is open: ambience and music step back (the world goes on). */
   paused: boolean;
+  /** A district's outdoor bed (lounge-music-tracks.ts AREA_SOUND), or null. */
+  ambience: AreaSound['ambience'] | null;
+  /** Inside a district shop: its piece is heard muffled, no outdoor bed. */
+  indoor: boolean;
 };
 
 const DAY_SCALE = [0, 2, 4, 7, 9]; // major pentatonic
@@ -75,6 +86,7 @@ const emptySlot = (): TrackSlot => ({
   stopAt: 0,
   heard: 0,
 });
+const emptySlots = () => Object.fromEntries(MUSIC_PLACES.map((p) => [p, emptySlot()])) as Record<MusicPlace, TrackSlot>;
 
 class LoungeAudio {
   private ctx: AudioContext | null = null;
@@ -83,7 +95,7 @@ class LoungeAudio {
   /** The music box under the music channel (crossfades with location tracks). */
   private box: GainNode | null = null;
   private boxOn = false;
-  private tracks: Record<MusicPlace, TrackSlot> = { casino: emptySlot(), hall: emptySlot(), tavern: emptySlot() };
+  private tracks = emptySlots();
   /** The generative room pieces (made on first need, then reused). */
   private noir: NoirEngine | null = null;
   private tension = false;
@@ -108,11 +120,19 @@ class LoungeAudio {
     game: false,
     place: null,
     paused: false,
+    ambience: null,
+    indoor: false,
   };
   private cleanup: (() => void) | null = null;
   /** Running water loop (only while the village is showing). */
-  private waterNodes: { source: AudioBufferSourceNode; lfo: OscillatorNode } | null =
-    null;
+  private waterNodes: {
+    source: AudioBufferSourceNode;
+    lfo: OscillatorNode;
+    band: BiquadFilterNode;
+    depth: GainNode;
+    swell: OscillatorNode;
+    swellDepth: GainNode;
+  } | null = null;
   /** Last applied gain targets, so repeated setScene calls are free. */
   private applied = '';
 
@@ -157,7 +177,7 @@ class LoungeAudio {
     void this.ctx?.close().catch(() => {});
     this.ctx = null;
     this.master = this.music = this.box = this.ambient = this.sfx = this.ui = this.waterGain = null;
-    this.tracks = { casino: emptySlot(), hall: emptySlot(), tavern: emptySlot() };
+    this.tracks = emptySlots();
     this.noir?.dispose();
     this.noir = null;
     this.boxOn = false;
@@ -176,6 +196,8 @@ class LoungeAudio {
       before.game === this.scene.game &&
       before.place === this.scene.place &&
       before.paused === this.scene.paused &&
+      before.ambience === this.scene.ambience &&
+      before.indoor === this.scene.indoor &&
       Math.abs(before.water - this.scene.water) < 0.02
     )
       return;
@@ -240,7 +262,10 @@ class LoungeAudio {
     const audible = settings.sound && settings.volume > 0 && !hidden;
     const t = ctx.currentTime;
     const musicOn = audible && settings.music;
-    const ambientOn = musicOn && this.scene.village && !this.scene.game;
+    // The hub's bed in the village; a district's own bed outdoors there.
+    const bed = this.scene.village ? null : this.scene.indoor ? null : this.scene.ambience;
+    const ambientOn = musicOn && (this.scene.village || !!bed) && !this.scene.game;
+    const water = bed ? bed.water : this.scene.water;
     // The Esc menu ducks music and ambience; the shared world keeps going.
     const duck = this.scene.paused ? 0.35 : 1;
     // Fetch the place's file on first entry (its synth piece plays meanwhile).
@@ -251,11 +276,18 @@ class LoungeAudio {
       (place) => this.tracks[place].status === 'ready',
     );
     this.boxOn = musicOn && mix.box > 0;
+    // For QA (the doorway walk-through): what the music channel and the bed play.
+    if (typeof document !== 'undefined') {
+      const flags = document.documentElement.dataset;
+      flags.music = musicOn ? (mix.track ?? mix.synth ?? (this.boxOn ? 'box' : 'off')) : 'off';
+      flags.musicIndoor = String(this.scene.indoor);
+      flags.ambience = ambientOn ? (bed ? (bed.waves ? 'surf' : 'outdoor') : 'village') : 'off';
+    }
     const targets = [
       audible ? settings.volume : 0,
       musicOn ? mix.channel * settings.musicVolume * duck : 0,
       ambientOn ? settings.musicVolume * duck : 0,
-      Math.round(Math.max(0, Math.min(1, this.scene.water)) * 50) / 50,
+      Math.round(Math.max(0, Math.min(1, water)) * 50) / 50,
       audible ? settings.effectsVolume : 0,
       audible ? settings.uiVolume : 0,
       this.boxOn ? mix.box : 0,
@@ -274,10 +306,16 @@ class LoungeAudio {
     for (const place of MUSIC_PLACES)
       this.fadeTrack(place, musicOn && mix.track === place, t);
     const synth = musicOn ? mix.synth : null;
-    if (synth || this.noir) this.noirEngine()?.setPiece(synth, t);
+    if (synth || this.noir) {
+      const noir = this.noirEngine();
+      noir?.setNight(this.scene.night);
+      noir?.setMuffled(this.scene.indoor, t);
+      noir?.setPiece(synth, t);
+    }
     // The water loop (noise + filter + LFO) only runs in the village.
     if (ambientOn && !this.waterNodes) this.startWater();
     else if (!ambientOn && this.waterNodes) this.stopWater();
+    this.shapeWater(!!bed?.waves, t);
     if (hidden || !settings.sound) {
       if (ctx.state === 'running')
         void ctx
@@ -314,12 +352,30 @@ class LoungeAudio {
     lfo.frequency.value = 0.17;
     depth.gain.value = 260;
     lfo.connect(depth).connect(band.frequency);
+    // The harbor's surf: a slow swell on the level (off in the village).
+    const swellGain = ctx.createGain(),
+      swell = ctx.createOscillator(),
+      swellDepth = ctx.createGain();
+    swell.frequency.value = 0.11;
+    swellDepth.gain.value = 0;
+    swell.connect(swellDepth).connect(swellGain.gain);
     this.waterGain = ctx.createGain();
     this.waterGain.gain.value = WATER_BASE_GAIN + WATER_PROXIMITY_GAIN * Math.max(0, Math.min(1, this.scene.water));
-    source.connect(band).connect(this.waterGain).connect(this.ambient!);
+    source.connect(band).connect(swellGain).connect(this.waterGain).connect(this.ambient!);
     source.start();
     lfo.start();
-    this.waterNodes = { source, lfo };
+    swell.start();
+    this.waterNodes = { source, lfo, band, depth, swell, swellDepth };
+    this.shapeWater(!!this.scene.ambience?.waves && !this.scene.village, ctx.currentTime);
+  }
+  /** River ripple (the hub) or a slow surf (waves: lower, deeper, swelling). */
+  private shapeWater(waves: boolean, t: number) {
+    const n = this.waterNodes;
+    if (!n) return;
+    n.band.frequency.setTargetAtTime(waves ? 480 : 700, t, 0.5);
+    n.depth.gain.setTargetAtTime(waves ? 380 : 260, t, 0.5);
+    n.lfo.frequency.setTargetAtTime(waves ? 0.09 : 0.17, t, 0.5);
+    n.swellDepth.gain.setTargetAtTime(waves ? 0.75 : 0, t, 0.5);
   }
   private stopWater() {
     const nodes = this.waterNodes;
@@ -330,6 +386,7 @@ class LoungeAudio {
     try {
       nodes.source.stop(at);
       nodes.lfo.stop(at);
+      nodes.swell.stop(at);
     } catch {}
   }
 
@@ -456,11 +513,18 @@ class LoungeAudio {
       this.nextNote += beat;
       this.step++;
     }
-    if (this.scene.village && ctx.currentTime > this.nextChirp) {
-      if (night) this.cricket(ctx.currentTime + 0.05);
-      else this.bird(ctx.currentTime + 0.05);
-      this.nextChirp = ctx.currentTime + (night ? 1.2 : 2.5) + Math.random() * 4;
-    }
+    this.chirps(ctx.currentTime);
+  }
+  /** Birds by day and crickets at night (the hub), a district's own (gulls at the harbor). */
+  private chirps(now: number) {
+    const night = this.scene.night;
+    const bed = this.scene.village ? null : this.scene.indoor || this.scene.game ? null : this.scene.ambience;
+    if ((!this.scene.village && !bed) || now <= this.nextChirp) return;
+    const kind = bed ? (night ? bed.night : bed.day) : night ? 'crickets' : 'birds';
+    if (kind === 'crickets') this.cricket(now + 0.05);
+    else if (kind === 'birds') this.bird(now + 0.05);
+    else if (kind === 'gulls') this.gull(now + 0.05);
+    this.nextChirp = now + (kind === 'crickets' ? 1.2 : kind === 'gulls' ? 4 : 2.5) + Math.random() * (kind === 'gulls' ? 7 : 4);
   }
 
   private playStep(t: number, night: boolean) {
@@ -545,6 +609,31 @@ class LoungeAudio {
       o.stop(start + 0.12);
     }
   }
+  /** A gull's call: two or three falling, slightly rough cries. */
+  private gull(t: number) {
+    const ctx = this.ctx!;
+    const cries = 2 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < cries; i++) {
+      const start = t + i * 0.24,
+        o = ctx.createOscillator(),
+        g = ctx.createGain(),
+        base = 1500 + Math.random() * 300;
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(base, start);
+      o.frequency.exponentialRampToValueAtTime(base * 1.18, start + 0.05);
+      o.frequency.exponentialRampToValueAtTime(base * 0.7, start + 0.2);
+      const tone = ctx.createBiquadFilter();
+      tone.type = 'bandpass';
+      tone.frequency.value = 1900;
+      tone.Q.value = 1.4;
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.012, start + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0004, start + 0.21);
+      o.connect(tone).connect(g).connect(this.ambient!);
+      o.start(start);
+      o.stop(start + 0.22);
+    }
+  }
   private cricket(t: number) {
     const ctx = this.ctx!;
     for (let i = 0; i < 3; i++) {
@@ -562,23 +651,45 @@ class LoungeAudio {
     }
   }
 
-  /** One footstep (rate-limited); `run` makes it a little brighter. */
-  footstep(run = false) {
+  /**
+   * One footstep (rate-limited) on `surface` (lounge-footsteps.ts); `run`
+   * makes it a little brighter. Same switches as before: 배경음 on, sfx level.
+   */
+  footstep(run = false, surface: Surface = 'dirt') {
     const ctx = this.ctx;
-    if (!ctx || ctx.state !== 'running' || !getSettings().music) return;
+    if (!ctx || ctx.state !== 'running' || !getSettings().music || !this.noise) return;
     const now = ctx.currentTime;
-    if (now - this.lastStep < (run ? 0.2 : 0.3)) return;
+    if (now - this.lastStep < (run ? STEP_GAP.run : STEP_GAP.walk)) return;
     this.lastStep = now;
-    const source = ctx.createBufferSource();
-    source.buffer = this.noise;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = (run ? 1100 : 750) + Math.random() * 200;
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0.1, now);
-    g.gain.exponentialRampToValueAtTime(0.0005, now + 0.07);
-    source.connect(filter).connect(g).connect(this.sfx!);
-    source.start(now, Math.random() * 1.5, 0.08);
+    const sound = STEP_SOUNDS[surface] ?? STEP_SOUNDS.dirt;
+    sound.layers.forEach((layer, i) => {
+      const source = ctx.createBufferSource();
+      source.buffer = this.noise;
+      const filter = ctx.createBiquadFilter();
+      filter.type = layer.filter;
+      filter.frequency.value = layer.freq * (run ? 1.4 : 1) + (i ? 0 : Math.random() * sound.spread);
+      if (layer.q) filter.Q.value = layer.q;
+      const g = ctx.createGain(),
+        attack = layer.attack ?? 0;
+      g.gain.setValueAtTime(attack ? 0 : layer.gain, now);
+      if (attack) g.gain.linearRampToValueAtTime(layer.gain, now + attack);
+      g.gain.exponentialRampToValueAtTime(0.0005, now + attack + layer.decay);
+      source.connect(filter).connect(g).connect(this.sfx!);
+      source.start(now, Math.random() * 1.5, attack + layer.decay + 0.01);
+    });
+    if (sound.knock) {
+      const { freq, gain, decay } = sound.knock;
+      const o = ctx.createOscillator(),
+        g = ctx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(freq * (0.95 + Math.random() * 0.1), now);
+      o.frequency.exponentialRampToValueAtTime(freq * 0.7, now + decay);
+      g.gain.setValueAtTime(gain, now);
+      g.gain.exponentialRampToValueAtTime(0.0005, now + decay);
+      o.connect(g).connect(this.sfx!);
+      o.start(now);
+      o.stop(now + decay + 0.02);
+    }
   }
   /** A soft UI click. */
   click() {

@@ -135,6 +135,8 @@ export function districtModel(id: DistrictId, url: string): Promise<THREE.Group>
 /** Starts (or joins) fetching every model of a district; resolves when all settle. */
 export function prefetchDistrict(id: DistrictId): Promise<void> {
   touch(id);
+  // The district scene's own code, too (Outdoor lazy-loads it).
+  void import('./lounge-area-3d').catch(() => {});
   const known = progress.get(id);
   if (known) return known.job;
   const urls = DISTRICT_MODEL_URLS[id] ?? [];

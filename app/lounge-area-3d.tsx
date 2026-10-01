@@ -55,6 +55,9 @@ import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
 import type { ShopArea } from './lounge-shop-interiors';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
+import { loungeAudio } from './lounge-audio';
+import { areaSurface } from './lounge-footsteps';
+import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto } from './lounge-map-doors';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -184,6 +187,18 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
   useLayoutEffect(() => {
     actionRef.current = action;
   });
+  /** Doorways (exits, shop doors, the ladder) rest a moment after I arrive. */
+  const doors = useRef(doorClock());
+  /** Runs an action, holding back doorways until they are awake. */
+  const act = (a: AreaAction) => {
+    const doorway = a.kind === 'exit' || a.kind === 'ladder' || (a.kind === 'counter' && !!a.enter);
+    if (doorway && !doors.current.ready()) return;
+    latest.current.onAction(a);
+  };
+  const actRef = useRef(act);
+  useLayoutEffect(() => {
+    actRef.current = act;
+  });
   // A new floor / region puts me at its arrival point.
   useEffect(() => {
     const l = live.current;
@@ -191,6 +206,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     l.route = [];
     l.target = null;
     l.lastSent = { x: NaN, z: NaN };
+    doors.current.arrive();
   }, [area, floorNo, spawn.x, spawn.z]);
 
   /** What is in reach at `p` (nearest wins). */
@@ -331,6 +347,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       applyVillageLight({ hemi, sun }, renderer, pal, weatherOf(kstDayOf(now)), light);
       night = pal.lamps > 0.5;
       tint = villageFigureTint(pal.lamps);
+      // The district's piece and bed follow its own clock (night variant, crickets).
+      loungeAudio.setScene({ village: false, night });
       return true;
     };
     sc.far = 80;
@@ -446,6 +464,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       f.texture.dispose();
     };
     const mineFig = makeFigure(latest.current.me.actor, latest.current.me.look, l.point);
+    // In through an exit: face into the map.
+    const cameThrough = region.exits.find((e) => {
+      const p = arrivalPoint(e);
+      return Math.hypot(p.x - l.point.x, p.z - l.point.z) < 1.5;
+    });
+    if (cameThrough) mineFig.locomotion = { phase: 0, facing: arrivalFacing(cameThrough) };
     host.dataset.walking = 'false';
     host.dataset.avatarX = l.point.x.toFixed(2);
     host.dataset.avatarZ = l.point.z.toFixed(2);
@@ -518,7 +542,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         const a = actionRef.current;
         if (a && !latest.current.paused && !('disabled' in a && a.disabled)) {
           event.preventDefault();
-          latest.current.onAction(a);
+          actRef.current(a);
         }
         return;
       }
@@ -573,6 +597,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       lastData = -1000,
       lastRender = -1000,
       lastAction = '',
+      lastWalkInto = -1e9,
       stateKey = '';
     const drawCost = new FrameCost();
     let fishKey: FishingFramePhase | null = null;
@@ -616,6 +641,36 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       }
       const before = l.point;
       const len = Math.hypot(dx, dz);
+      // Walking on into an exit (keys, or a click past it) takes it, like E.
+      if (len > 0 && doors.current.ready() && t - lastWalkInto > LOCKED_NOTICE_MS) {
+        const keyed = l.held.size > 0 && !l.target;
+        const goal = l.route.at(-1) ?? l.target;
+        for (const e of REGIONS[s.area].exits) {
+          if (!walksInto(l.point, { x: dx, z: dz }, e) || (!keyed && !routeGoesThrough(goal, e))) continue;
+          // The fallen log stays a wall until it is split (E there says so).
+          if (e.to === 'woods' && !s.logCleared && !s.regions?.pass) continue;
+          lastWalkInto = t;
+          l.held.clear();
+          l.route = [];
+          l.target = null;
+          queueMicrotask(() => actRef.current({ kind: 'exit', to: e.to, label: e.label }));
+          break;
+        }
+        // Shop doors face the street (+z): walking up into one at its door goes in.
+        if (s.area === 'market' || s.area === 'harbor')
+          for (const c of districtCounters(s.area, 1)) {
+            if (c.a.kind !== 'counter' || !c.a.enter || t - lastWalkInto <= LOCKED_NOTICE_MS) continue;
+            const doorway = { x: c.x, z: c.z - 1, stand: { x: c.x, z: c.z }, reach: c.reach };
+            if (!walksInto(l.point, { x: dx, z: dz }, doorway) || (!keyed && !routeGoesThrough(goal, doorway))) continue;
+            lastWalkInto = t;
+            l.held.clear();
+            l.route = [];
+            l.target = null;
+            const door = c.a;
+            queueMicrotask(() => actRef.current(door));
+            break;
+          }
+      }
       if (len > 0) {
         const stepLen = l.target ? Math.min(speed, len) : speed;
         l.point = s.walk.step(before, (dx / len) * stepLen, (dz / len) * stepLen);
@@ -643,6 +698,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       lantern.position.set(l.point.x, 1.8, l.point.z + 0.4);
       if (follow(l.point, false, dt)) dirty = true;
       const moving = moved > 0.0005;
+      if (moving && !s.paused) loungeAudio.footstep(l.shift, areaSurface(s.area, l.point));
       if ((moving && t - lastSend > 180) || (!moving && wasMoving)) {
         if (Math.hypot(l.point.x - l.lastSent.x, l.point.z - l.lastSent.z) > 0.01 || Number.isNaN(l.lastSent.x)) {
           const net = regionToNetwork(s.area, l.point);
@@ -719,6 +775,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (ak !== lastAction) {
         lastAction = ak;
         setAction(a);
+        host.dataset.action = a ? (a.kind === 'exit' ? `exit:${a.to}` : a.kind) : '';
       }
       // Redraw when something changed; otherwise ~4 times a second (the node marks bob).
       if (!dirty && t - lastRender < 250) return;
@@ -841,7 +898,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           label={action.label}
           disabled={'disabled' in action && !!action.disabled}
           shortcut={keyLabel(keys.action)}
-          onPress={() => onAction(action)}
+          onPress={() => act(action)}
         />
       )}
       <WalkHints className="ar-hint" />
