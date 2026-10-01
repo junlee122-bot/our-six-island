@@ -42,6 +42,7 @@ import { SHOP_INFO, isShopId, shopArea } from './lounge-shops.ts';
 import { DISH_BY_ID } from './lounge-items.ts';
 import { weekdayOf } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
+import { SHOP_INTERIORS, isShopArea, townActionShop } from './lounge-shop-interiors.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
@@ -442,7 +443,9 @@ export function cloudTransition(
             // 허풍 주점's food, 행상인 마키마 (시장 on Sundays, 항구 on Wednesdays and Saturdays).
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
             const where = townActionArea(command.action, weekdayOf(kstDay(now)) !== 0);
-            if (!lease || !player || player.area !== where)
+            // Inside the shop's own room counts too (lounge-shop-interiors.ts).
+            const shop = townActionShop(command.action.kind);
+            if (!lease || !player || (player.area !== where && (!shop || player.area !== shop)))
               throw new CloudError(`${where === 'tavern' ? '허풍 주점' : DISTRICTS[where].name}에 가서 해 주세요.`, 409);
           }
           {
@@ -453,7 +456,9 @@ export function cloudTransition(
               const player = entry?.snapshot.players.find((p) => p.id === member.id);
               const where = shopArea(at, now);
               if (!where) throw new CloudError('행상인 마키마는 수요일·토요일(항구)과 일요일(시장 거리)에만 와요.', 409);
-              if (!lease || !player || (player.area ?? 'village') !== where)
+              // Its counter inside the shop's own room counts too (lounge-shop-interiors.ts).
+              const inside = isShopArea(at) && player?.area === at;
+              if (!lease || !player || ((player.area ?? 'village') !== where && !inside))
                 throw new CloudError(`${SHOP_INFO[at].name}에 가서 해 주세요.`, 409);
             }
           }
@@ -557,9 +562,18 @@ export function cloudTransition(
               throw new CloudError(HOME_CLOSED, 403);
           }
           // 항구 구역 / 언덕 주택가 open only once their village goal is recorded.
-          if (action.kind === 'area' && (action.area === 'harbor' || action.area === 'hillside')) {
+          // A shop's room (가게 실내) is behind its district: the fish market needs the harbor.
+          const gated =
+            action.kind !== 'area'
+              ? null
+              : action.area === 'harbor' || action.area === 'hillside'
+                ? action.area
+                : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
+                  ? SHOP_INTERIORS[action.area].district
+                  : null;
+          if (gated === 'harbor' || gated === 'hillside') {
             const flags = readLife(g.life).flags ?? [];
-            if (!districtOpen(action.area, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[action.area].hint, 403);
+            if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);
           }
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;

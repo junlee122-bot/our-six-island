@@ -87,7 +87,8 @@
 - **빛**: 시각 팔레트 `dayLighting`에 공통 배율 `VIEW_LIGHT`(반구광 ×1.6/1.5, 해 ×2.2/3, 노출 ×1.05)와 날씨 어둡게(`weatherDim`)를 곱합니다. 설정의 낮밤 변화를 끄면 모든 곳이 한낮입니다.
 - **구역 3D**: `app/lounge-district-kit.ts`의 `DistrictSet`을 상속합니다. 평평한 잔디 바닥과 길·광장 판(`PAVING`), kArchive 모델을 부지 상자에 맞춰 넣기(`place`), 캔버스 간판(`signpost`), 가장자리 나무 띠(`ring`), 밤 등불(`lantern`·`gardenLamp`, 점광원 7개 이하). 집은 마을 중심과 같은 크기(문 높이 1.45, `villageHouseScale`)입니다.
 - **실내**(회관·카지노·허풍 주점·은행·미용실, 2026-10-02): 같은 카메라·걷기·캐릭터·빛을 `app/lounge-interior-view.ts`로 씁니다. 방은 자기 단위(네트워크 좌표 × 0.2)로 만들어져 있어서, 방 한 단위를 바깥 1.5 단위로 봅니다(`INTERIOR_VIEW_SCALE`). 그래서 화면에서 친구 키·걷는 빠르기·카메라 따라오기가 시장 거리와 똑같고, 방은 화면의 약 3/4을 채웁니다. 카메라가 옆으로 돌지 않아 양옆 벽은 얇은 띠로 보이므로, 벽에 거는 것은 뒷벽에 걸고 문은 왼쪽 벽 밖에 카메라를 보는 밝은 문으로 세웁니다. 어두운 방(카지노·주점)의 캐릭터는 등불 색으로 살짝 어둡게(`INTERIOR_FIGURE_TINT`) 합니다.
-- **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다. 실내는 `scripts/interior-shots.mjs --pages <빌드>`(방마다 문 앞·테이블 앞 화면과 그리기 호출 수).
+- **가게 실내**(빵집 카페·농협·잡화점·어시장, 2026-10-02): 위 실내 규격을 그대로 쓰고, 시장 거리·항구의 가게 문에서 E로 들어갑니다(`app/lounge-shop-interiors.ts` 배치·`app/lounge-shop-interior.ts` 그리기). 계산대는 뒷벽 쪽에 놓고 주인은 그 뒤에 섭니다. 계산대 뒤 통로는 주민만 지나갑니다(플레이어는 `staffGates`로 막힘). 벽에 붙는 선반·간판은 뒷벽에, 바닥 가구는 문(왼쪽 아래) 앞을 비워 둡니다. 빵집 의자는 의자 자리에 서 있으면 앉은 것으로 그립니다(친구 화면에도 같음).
+- **확인**: `node --experimental-strip-types scripts/district-shots.mjs --pages <빌드> --noon`으로 마을 중심과 구역을 같은 시각에 나란히 찍어 비교합니다. 실내는 `scripts/interior-shots.mjs --pages <빌드>`(방마다 문 앞·테이블 앞 화면과 그리기 호출 수), 가게 실내는 `district-shots.mjs --shops --only market,harbor --at 11:30`(문 앞·계산대·창·나온 자리와 그리기 호출 수).
 
 ### 소리
 
@@ -119,6 +120,7 @@
 | 출처 | 폴더 (개수) | 조건 |
 |---|---|---|
 | **kArchive** (karchive.vibeline.co.kr, 제작 공유: 쓰레드 dogfooter) | `public/models/lounge/` 소파·튤립, `lounge/club` (4), `lounge/friends` (7), `lounge/redesign` (4), `lounge/tavern` (34), `village/` 주택·나무·꽃·정원 소품, `village/civic` (10), `village/valley` (22), `village/shops` (4), `village/tavern` (5), `village/forge` (2), `village/life-services` (5: 은행·미용실 외관, 물고기 3종) | **출처 표기 필수**("자료: kArchive / 출처: 쓰레드 dogfooter"), 원본 재판매 금지, CC 라이선스가 아니며 약관이 바뀔 수 있음. 각 폴더 `assets.json`에 모델 주소·약관 원문·SHA-256 기록. 웹 최적화 사본은 약관의 수정 허용 범위 |
+| **kArchive** 가게 실내 (2026-10-02) | `village/shop-interiors` (13: 빵 진열대·케이크/구움과자 진열장·커피 머신, 곡물 자루 수레·저울·과일 상자·씨앗 보관장, 생활용품 진열대·장바구니 거치대·도구 상자, 얼음 통·냉동 진열고) | 위 kArchive와 같은 약관. 폴더 `assets.json`·`ATTRIBUTION.md`, 크레딧 창 표기 |
 | 3DAssets.dev Bedroom & Living Room | 방 가구 11개 `public/models/lounge/furniture/` | CC0 |
 | Three.js 절차 생성 | 회관·카지노 외형 일부, 나무, 가로등·울타리·강·다리·분수, 뒷산·숲·광산 지형 | 자체 제작 |
 

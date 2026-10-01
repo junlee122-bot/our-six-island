@@ -82,6 +82,10 @@ const AREA_WORD: Record<string, string> = {
   tavern: '허풍 주점',
   bank: '냐모 은행',
   salon: '보송 미용실',
+  bakery: '느긋한 빵집 카페',
+  coop: '범마을 농협',
+  general: '등불 잡화점',
+  fishmarket: '범마을 어시장',
   wardrobe: '분장실',
   home: '누군가의 방',
 };

@@ -19,8 +19,9 @@ import { DailyButton } from './WalletModal';
 import { linkLabel, offlineReason, retryDelay } from '../lounge-connection';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
+import { SHOP_INTERIORS, type ShopArea } from '../lounge-shop-interiors';
 
-export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom';
+export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom' | ShopArea;
 
 export const TAB_TITLES: Record<Tab, string> = {
   village: NAMES.village,
@@ -31,6 +32,10 @@ export const TAB_TITLES: Record<Tab, string> = {
   wardrobe: NAMES.wardrobe,
   salon: '미용실',
   bedroom: NAMES.home,
+  bakery: SHOP_INTERIORS.bakery.name,
+  coop: SHOP_INTERIORS.coop.name,
+  general: SHOP_INTERIORS.general.name,
+  fishmarket: SHOP_INTERIORS.fishmarket.name,
 };
 
 /**

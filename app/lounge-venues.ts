@@ -4,10 +4,14 @@
 // menus, so a new interior plugs in by adding one entry here instead of
 // widening `area === 'casino' ? … : …` forks across the app.
 import { NAMES } from './lounge-text.ts';
+import { SHOP_AREAS, SHOP_INTERIORS, type ShopArea } from './lounge-shop-interiors.ts';
 
-/** Server areas that are table interiors ('lounge' is the hall). */
-export type InteriorArea = 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon';
-export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern', 'bank', 'salon'];
+/**
+ * Server areas that are walkable interiors ('lounge' is the hall). The shops
+ * (lounge-shop-interiors.ts) are entered from their district, not the hub.
+ */
+export type InteriorArea = 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea;
+export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern', 'bank', 'salon', ...SHOP_AREAS];
 export const isInteriorArea = (a: unknown): a is InteriorArea =>
   typeof a === 'string' && (INTERIOR_AREAS as readonly string[]).includes(a);
 
@@ -22,8 +26,8 @@ export type Venue = {
   name: string;
   /** Short name for banners ("회관"). */
   short: string;
-  /** Its VILLAGE_PLACES id (the door you walk through). */
-  place: 'hall' | 'casino' | 'tavern' | 'bank' | 'wardrobe';
+  /** Its VILLAGE_PLACES id (the door you walk through), or the shop's own id for the district shops. */
+  place: 'hall' | 'casino' | 'tavern' | 'bank' | 'wardrobe' | ShopArea;
   music: VenueMusic;
   venue: TableVenue;
   /** Its own chat ("회관 수다"). */
@@ -34,7 +38,16 @@ export type Venue = {
   tagline: string;
 };
 
+const shopVenue = (area: ShopArea): Venue => {
+  const s = SHOP_INTERIORS[area];
+  return { area, name: s.name, short: s.short, place: area, music: 'hall', venue: 'hall', chat: s.chat, exposure: 1.08, tagline: s.tagline };
+};
+
 export const VENUES: Record<InteriorArea, Venue> = {
+  bakery: shopVenue('bakery'),
+  coop: shopVenue('coop'),
+  general: shopVenue('general'),
+  fishmarket: shopVenue('fishmarket'),
   salon: {
     area: 'salon', name: '보송 미용실', short: '미용실', place: 'wardrobe',
     music: 'hall', venue: 'hall', chat: '미용실 수다', exposure: 1.08,

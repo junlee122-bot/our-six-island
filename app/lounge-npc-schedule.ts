@@ -37,6 +37,7 @@ import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToI
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender.ts';
 import { BANKER_SPOT } from './lounge-bank-layout.ts';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout.ts';
+import { SHOP_AREAS, SHOP_INTERIORS, SHOP_STAFF_RADIUS, isShopArea, shopCanWalk, shopPath, shopWorld, type ShopArea } from './lounge-shop-interiors.ts';
 import { NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
@@ -67,9 +68,11 @@ export type NpcArea =
   | 'harbor'
   | 'hillside'
   /** Out of the village (마키마 on the days she does not visit). */
-  | 'away';
+  | 'away'
+  /** The shop rooms off 시장 거리 and the harbor (lounge-shop-interiors.ts, room world units). */
+  | ShopArea;
 /** Where residents are drawn walking about (the rest is drawn by its own scene or not at all). */
-export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside'];
+export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside', ...SHOP_AREAS];
 export type NpcActivity =
   | 'work'
   | 'stall'
@@ -134,6 +137,23 @@ const TAVERN_SCENE = {
   'bar-4': { x: 50, y: 46 },
 } as const;
 const tw = (k: keyof typeof TAVERN_SCENE) => interiorToWorld(TAVERN_SCENE[k]);
+
+/**
+ * Shop rooms: the door, the owner's (and helper's) spot behind the counter,
+ * the residents' café chairs and the floor spots, as `<area>.<spot>`.
+ */
+function shopPlaces(): Record<string, Place> {
+  const out: Record<string, Place> = {};
+  for (const area of SHOP_AREAS) {
+    const s = SHOP_INTERIORS[area];
+    out[`${area}.door`] = place(area, interiorToWorld(INTERIOR_DOOR), Math.PI / 2, `${s.name} 문 앞`);
+    out[`${area}.owner`] = place(area, s.ownerAt, 0, `${s.name} 계산대`);
+    if (s.helperAt) out[`${area}.helper`] = place(area, s.helperAt, 0, `${s.name} 계산대`);
+    for (const seat of s.seats) if (seat.npc) out[`${area}.seat-${seat.table}`] = place(area, seat, seat.face, `${s.name} 자리`);
+    for (const [k, p] of Object.entries(s.spots)) out[`${area}.${k}`] = place(area, p, p.face, s.name);
+  }
+  return out;
+}
 
 const market = MARKET_SPOTS;
 const hb = HARBOR_SPOTS_NPC,
@@ -234,9 +254,9 @@ export const NPC_PLACES: Record<string, Place> = {
     }),
   ),
   // 시장 거리.
-  'm.coop': place('market', market.coop, 0, '농협 매입 창구'),
-  'm.general': place('market', market.general, 0, '잡화점'),
-  'm.bakery': place('market', market.bakery, 0, '빵집 카페'),
+  'm.coop': place('market', market.coop, 0, '농협 앞'),
+  'm.general': place('market', market.general, 0, '잡화점 앞'),
+  'm.bakery': place('market', market.bakery, 0, '빵집 카페 앞'),
   'm.newspaper': place('market', market.newspaper, 0, '신문사'),
   'm.post': place('market', market.post, 0, '우체국'),
   'm.police': place('market', market.police, 0, '파출소'),
@@ -301,6 +321,8 @@ export const NPC_PLACES: Record<string, Place> = {
   'tavern.captain': place('tavern', TAVERN_HOST_AT, 0, '주점 바 안쪽'),
   'bank.nyamo': place('bank', interiorToWorld(BANKER_SPOT), 0, '은행 창구'),
   'salon.gwen': place('salon', interiorToWorld(SALON_STYLIST_SPOT), 0, '미용실'),
+  // 가게 실내 (the owners work inside during opening hours).
+  ...shopPlaces(),
 };
 export const npcPlace = (id: string) => NPC_PLACES[id];
 
@@ -310,6 +332,8 @@ export const npcPlace = (id: string) => NPC_PLACES[id];
  * appear at `to` in area B. Hidden areas have no inside to walk.
  */
 type Portal = { a: NpcArea; b: NpcArea; from: string; to: string; ms: number };
+/** The district spot in front of each shop's door (where its owner stood at the old counter). */
+const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = { bakery: 'm.bakery', coop: 'm.coop', general: 'm.general', fishmarket: 'hb.fishmarket' };
 const PORTALS: readonly Portal[] = [
   { a: 'village', b: 'market', from: 'v.market-gate', to: 'm.gate', ms: GATE_TRANSIT_MS },
   { a: 'market', b: 'village', from: 'm.gate', to: 'v.market-gate', ms: GATE_TRANSIT_MS },
@@ -329,6 +353,15 @@ const PORTALS: readonly Portal[] = [
   { a: 'realty', b: 'village', from: 'realty-in', to: 'v.realty-door', ms: DOOR_TRANSIT_MS },
   { a: 'village', b: 'furniture', from: 'v.furniture-door', to: 'furniture-in', ms: DOOR_TRANSIT_MS },
   { a: 'furniture', b: 'village', from: 'furniture-in', to: 'v.furniture-door', ms: DOOR_TRANSIT_MS },
+  // The shop rooms: in through the door by the old outdoor counter spot.
+  ...SHOP_AREAS.flatMap((area): Portal[] => {
+    const outside = SHOP_DOOR_OUTSIDE[area];
+    const by = SHOP_INTERIORS[area].district;
+    return [
+      { a: by, b: area, from: outside, to: `${area}.door`, ms: DOOR_TRANSIT_MS },
+      { a: area, b: by, from: `${area}.door`, to: outside, ms: DOOR_TRANSIT_MS },
+    ];
+  }),
 ];
 /** Area hops from A to B (breadth-first over the portals). */
 function areaRoute(a: NpcArea, b: NpcArea): Portal[] {
@@ -373,6 +406,9 @@ export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoi
     const s = worldToInterior(from),
       e = worldToInterior(to);
     pts = interiorPath(s, e, 'tavern').map((p) => interiorToWorld(p));
+  } else if (isShopArea(area)) {
+    // Residents walk as staff (round the counter's ends to the owner's spot).
+    pts = shopPath(area, worldToInterior(from), worldToInterior(to), { staff: true, radius: SHOP_STAFF_RADIUS }).map((p) => shopWorld(p));
   } else pts = [to];
   if (!pts.length) pts = [to];
   const last = pts[pts.length - 1];
@@ -387,6 +423,7 @@ export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
   if (area === 'village') return villageCanWalk(p);
   if (area === 'market' || area === 'harbor' || area === 'hillside') return walkerOf(area).canWalk(p);
   if (area === 'tavern') return interiorCanWalk(worldToInterior(p), 'tavern');
+  if (isShopArea(area)) return shopCanWalk(worldToInterior(p), area, SHOP_STAFF_RADIUS, true);
   return true;
 }
 
@@ -422,15 +459,15 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
   const seed = (salt: string, n: number) => hash32(`${id}:${k.day}:${salt}`) % n;
   switch (id) {
     case 'nasera': {
-      const lunch: Seg = k.rain ? [hm(12), 'm.cafe-4', 'eat', '빵집 카페에서 비 피하며 점심'] : [hm(12), 'library', 'read', '도서관에서 책 읽는 중'];
+      const lunch: Seg = k.rain ? [hm(12), 'bakery.seat-cafe-1', 'eat', '빵집 카페에서 비 피하며 점심'] : [hm(12), 'library', 'read', '도서관에서 책 읽는 중'];
       const plan: Seg[] = k.marketDay
         ? [
             [0, 'home', 'sleep'],
-            [hm(6), 'm.coop', 'work', '농협 매입 창구'],
+            [hm(6), 'coop.owner', 'work', '농협 매입 창구'],
             [hm(9), 'm.stall-e', 'stall', '장날 작물 좌판'],
             lunch,
             [hm(13), 'm.stall-e', 'stall', '장날 작물 좌판'],
-            [hm(16), 'm.coop', 'work', '장날 장부 정리'],
+            [hm(16), 'coop.owner', 'work', '장날 장부 정리'],
             [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
             [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
             [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
@@ -438,9 +475,9 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
           ]
         : [
             [0, 'home', 'sleep'],
-            [hm(6), 'm.coop', 'work', '농협 매입 창구'],
+            [hm(6), 'coop.owner', 'work', '농협 매입 창구'],
             lunch,
-            [hm(13), 'm.coop', 'work', '농협 매입 창구'],
+            [hm(13), 'coop.owner', 'work', '농협 매입 창구'],
             [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
             [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
             ...(k.weekday === 3
@@ -463,19 +500,19 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const plan: Seg[] = k.marketDay
         ? [
             [0, 'home', 'sleep'],
-            [open, 'm.bakery', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
+            [open, 'bakery.owner', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
             [hm(11, 30), 'm.stall-se', 'stall', '장날 빵 좌판'],
-            [hm(14), 'm.bakery', 'work', '빵집 카페'],
+            [hm(14), 'bakery.owner', 'work', '빵집 카페'],
             nap,
-            [hm(16), 'm.bakery', 'work', '빵집 카페'],
+            [hm(16), 'bakery.owner', 'work', '빵집 카페'],
             night,
             [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
           ]
         : [
             [0, 'home', 'sleep'],
-            [open, 'm.bakery', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
+            [open, 'bakery.owner', 'work', open > hm(10) ? '늦잠 자고 이제 가게 여는 중' : '빵집 카페'],
             nap,
-            [hm(16), 'm.bakery', 'work', '빵집 카페'],
+            [hm(16), 'bakery.owner', 'work', '빵집 카페'],
             night,
             [hm(21), 'home', 'sleep', '언덕 집에서 쉬는 중'],
           ];
@@ -485,11 +522,11 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const lantern = k.weekday === 6;
       const plan: Seg[] = [
         [0, 'home', 'sleep'],
-        [hm(8), 'm.general', 'work', '잡화점'],
-        ...(k.marketDay ? ([[hm(14), 'm.stall-w', 'stall', '장날 경매 여는 중'], [hm(17), 'm.general', 'work', '잡화점']] as Seg[]) : []),
+        [hm(8), 'general.owner', 'work', '잡화점'],
+        ...(k.marketDay ? ([[hm(14), 'm.stall-w', 'stall', '장날 경매 여는 중'], [hm(17), 'general.owner', 'work', '잡화점']] as Seg[]) : []),
         [hm(19), 'v.harbor', 'stroll', '밤바다 산책 중'],
         [hm(20), 'v.beach', 'stroll', '해변에서 등불 켜는 중'],
-        lantern ? [hm(21), 'm.general', 'work', '밤에만 여는 등불 상점'] : [hm(21), 't.fire', 'drink', '주점 벽난로 옆에서 수집품 자랑'],
+        lantern ? [hm(21), 'general.owner', 'work', '밤에만 여는 등불 상점'] : [hm(21), 't.fire', 'drink', '주점 벽난로 옆에서 수집품 자랑'],
         [hm(23), 'home', 'sleep', '언덕 집에서 쉬는 중'],
       ];
       return festival(plan, k, 2);
@@ -504,7 +541,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         ...round,
         [hm(10, 40), 'hb.lighthouse-yard', 'deliver', '항구 등대까지 배달 중'],
         [hm(12), 'm.cafe-1', 'eat', '빵집 카페에서 점심'],
-        [hm(13), 'm.coop-drop', 'deliver', '농협에 소포 전하는 중'],
+        [hm(13), 'coop.drop', 'deliver', '농협에 소포 전하는 중'],
         [hm(13, 30), 'v.museum', 'deliver', '박물관에 소포 배달 중'],
         [hm(14, 10), 'v.tavern-door', 'deliver', '허풍 주점에 편지 배달 중'],
         [hm(14, 50), 'v.board', 'deliver', '게시판에 공고 붙이는 중'],
@@ -528,7 +565,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       const plan: Seg[] = [
         [0, 'home', 'sleep'],
         [hm(8), 'm.police', 'work', '파출소 근무'],
-        [hm(12), 'm.cafe-2', 'eat', '빵집 카페에서 빵 먹는 중'],
+        [hm(12), 'bakery.seat-cafe-2', 'eat', '빵집 카페에서 빵 먹는 중'],
         ...hub,
         [hm(18), 'm.police', 'work', '파출소 근무'],
         ...(k.weekday === 5 ? ([[hm(20), 't.judge', 'drink', '허풍 경연 심판 보는 중']] as Seg[]) : []),
@@ -597,9 +634,9 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return [
         [0, 'home', 'sleep'],
         [hm(5), 'hb.auction', 'stall', '새벽 경매 여는 중'],
-        [hm(7), 'hb.fishmarket', 'work', '어시장'],
+        [hm(7), 'fishmarket.owner', 'work', '어시장'],
         [hm(12), 'hb.lighthouse-door', 'deliver', '등대에 도시락 배달 중'],
-        [hm(13), 'hb.fishmarket', 'work', '어시장'],
+        [hm(13), 'fishmarket.owner', 'work', '어시장'],
         [hm(15), 'hb.guild', 'work', '낚시조합'],
         [hm(18), 't.bar-1', 'drink', '주점에서 하루 마무리'],
         [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
@@ -607,8 +644,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
     case 'himmel':
       return [
         [0, 'home', 'sleep'],
-        [hm(8), 'm.bakery-2', 'work', '사장 대신 빵집 문 여는 중'],
-        [hm(9), 'm.bakery-2', 'work', '빵집 알바'],
+        [hm(8), 'bakery.helper', 'work', '사장 대신 빵집 문 여는 중'],
+        [hm(9), 'bakery.helper', 'work', '빵집 알바'],
         [hm(15), 'v.plaza', 'work', '광장에서 동상 청원 서명 받는 중'],
         [hm(17), 'hb.pier-root', 'deliver', '항구 심부름 중'],
         [hm(19), 'home', 'sleep', '청년 자취방에서 쉬는 중'],
@@ -619,7 +656,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(9), 'hl.library-in', 'work', '도서관 사서'],
         ...(k.rain
           ? ([
-              [hm(13), 'm.cafe-6', 'eat', '빵집 카페에서 홍차 마시는 중'],
+              [hm(13), 'bakery.seat-cafe-3', 'eat', '빵집 카페에서 홍차 마시는 중'],
               [hm(14), 'hl.library-in', 'work', '도서관 사서'],
             ] as Seg[])
           : []),
@@ -652,6 +689,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [0, 'home', 'sleep'],
         [hm(6), 'hl.garden-w', 'work', '텃밭 가꾸는 중'],
         [hm(10), 'hl.garden-e', 'work', '약초 손질 중'],
+        [hm(11, 20), 'coop.browse', 'stroll', '농협에서 씨앗 고르는 중'],
         [hm(12), 'm.cafe-7', 'eat', '빵집 카페에서 점심'],
         [hm(14), 'hl.garden-gate', 'work', '텃밭 앞에서 조언하는 중'],
         [hm(17), 'home', 'rest', '언덕 집에서 쉬는 중'],
@@ -758,7 +796,7 @@ const NIGHTS: Record<string, { eve: string; late: string }> = {
 const FIXED: Record<string, { place: string; hill?: boolean; label: string; act: NpcActivity; fallback: Venue }> = {
   S: { place: 't.stage', label: '주점 무대에서 공연 중', act: 'work', fallback: 'T' },
   J: { place: 't.judge', label: '허풍 경연 심판 보는 중', act: 'drink', fallback: 'T' },
-  G: { place: 'm.general', label: '밤에만 여는 등불 상점', act: 'work', fallback: 'M' },
+  G: { place: 'general.owner', label: '밤에만 여는 등불 상점', act: 'work', fallback: 'M' },
   D: { place: 'hb.lighthouse-door', label: '등대 앞에서 밤새 불 지키는 중', act: 'work', fallback: 'B' },
   K: { place: 'hl.library-club', hill: true, label: '도서관 독서 모임', act: 'read', fallback: 'T' },
   Y: { place: 'hl.library-steps', hill: true, label: '도서관 늦은 열람 시간', act: 'work', fallback: 'M' },
@@ -1004,6 +1042,10 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   harbor: '항구 구역',
   hillside: '언덕 주택가',
   away: '마을 밖',
+  bakery: SHOP_INTERIORS.bakery.name,
+  coop: SHOP_INTERIORS.coop.name,
+  general: SHOP_INTERIORS.general.name,
+  fishmarket: SHOP_INTERIORS.fishmarket.name,
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>

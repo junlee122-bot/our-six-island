@@ -130,6 +130,20 @@ const MODEL_TEXTURE_SIZE = {
   'lounge/tavern/barrelRack.glb': 512,
   'lounge/tavern/chestnutRoaster.glb': 512,
   'village/tavern/menuBoard.glb': 512,
+  // 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장, 2026-10-02): furniture up to about 2 m.
+  'village/shop-interiors/breadStand.glb': 512,
+  'village/shop-interiors/espresso.glb': 512,
+  'village/shop-interiors/cakeCase.glb': 512,
+  'village/shop-interiors/pastryCase.glb': 512,
+  'village/shop-interiors/flourCart.glb': 512,
+  'village/shop-interiors/scale.glb': 512,
+  'village/shop-interiors/fruitCrate.glb': 512,
+  'village/shop-interiors/seedCabinet.glb': 512,
+  'village/shop-interiors/goodsGondola.glb': 512,
+  'village/shop-interiors/basketStand.glb': 512,
+  'village/shop-interiors/toolTrunk.glb': 512,
+  'village/shop-interiors/iceBin.glb': 512,
+  'village/shop-interiors/fishFreezer.glb': 512,
 };
 
 async function sameRgba(a, b) {

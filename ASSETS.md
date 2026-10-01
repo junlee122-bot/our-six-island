@@ -28,6 +28,7 @@
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
+| D3 | kArchive (쓰레드 dogfooter, 2026-10-02) | 가게 실내 가구 13종: 빵 바구니 진열대·케이크 진열장·구움과자 진열장·커피 머신(빵집), 곡물 자루 수레·저울·과일 상자·씨앗 보관장(농협), 생활용품 진열대·장바구니 거치대·도구 상자(잡화점), 얼음 통·냉동 진열고(어시장) | `public/models/village/shop-interiors/` (13개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님, 2026-09-30 상세 페이지에서 재확인). `ATTRIBUTION.md`·`assets.json`(URL·약관·원본/웹 SHA-256·바운드) 보관, 크레딧 창 표기 | 빵집 카페·농협·잡화점·어시장 실내 |
 | E | 3DAssets.dev Bedroom & Living Room | 침대·책상·책장·러그·의자·조명·협탁·옷장·커피테이블·커튼·쿠션 GLB 11개 | `public/models/lounge/furniture/` | **CC0** (AI 생성 지오메트리 공개) | 사용 중(최적화 사본) |
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
@@ -680,3 +681,15 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - 런타임: `app/lounge-npc-chibi.ts`(크기), `ResidentLayer`의 `chibi` 옵션이 친구 그림 판과 같은 높이·발 선으로 세웁니다. 카지노 로제·은행 냐모·미용실 그웬(`lounge-interior-lender.ts`), 내 방 손님(`lounge-bedroom-npc.ts`), 간단 그래픽 화면도 치비를 씁니다.
 - IP는 큰 그림과 같습니다(위 IP 표).
 
+## 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장) · 2026-10-02
+
+자료: **kArchive** · 출처: **쓰레드 dogfooter**. 공개 GLB 13개를 새로 받았습니다. 주소·약관 원문·원본과 웹 사본의 SHA-256·삼각형·바운드·용도는 [모델 기록](public/models/village/shop-interiors/assets.json)에 있습니다.
+
+- 빵집 카페: 빵 바구니 진열대(`restaurant-bread-basket-display-stand-cottage-normal`), 케이크 진열장(`icecream-frosted-cake-display-freezer-cottage-normal`), 구움과자 진열장(`convenience-fried-snack-warming-case-cottage-normal`), 커피 머신(`rounded-restaurant-coffee-machine-cups-loaded`).
+- 농협: 곡물 자루 수레(`angular-restaurant-flour-sack-cart-two-sacks`), 저울(`rounded-restaurant-kitchen-scale-flour-bag`, 어시장도 씀), 과일 상자(`angular-restaurant-produce-crate-fruit`), 씨앗 보관장(`apocalypse-seed-storage-cabinet-cottage-normal`, 잡화점도 씀. 이름은 apocalypse 계열이지만 파손형이 아닌 일반형 목재 수납장).
+- 잡화점: 생활용품 진열대(`convenience-household-supplies-gondola-cottage-normal`), 장바구니 거치대(`convenience-shopping-basket-stack-stand-cottage-normal`), 도구 상자(`angular-common-furniture-storage-trunk-open-tools`).
+- 어시장: 얼음 통(`angular-restaurant-ice-bin-open-ice`), 냉동 진열고(`angular-restaurant-chest-freezer-open-stocked`).
+- 이미 있는 모델을 다시 씀(추가 0 KB): 카페 둥근 테이블·금전등록기·저장 선반·찻장·통 선반(`lounge/tavern`), 채소 상자·옹기·한지 등(`village/valley`), 연회 의자(`lounge/club`), 화분 선반(`lounge/redesign`), 정원등(`village/expansion`), 고등어·대구·갈치(`village/life-services`). 같은 kArchive 원본을 두 번 받지 않으려고 후보 중 카페 테이블·금전등록기·채소 상자는 빼고 기존 사본을 씁니다.
+- 상세 페이지 약관(2026-09-30 확인): 개인·상업 프로젝트 사용 및 수정 가능, AI 학습 사용 가능, 원본 자료 재판매 금지, 출처 표기 필수. Creative Commons 자료로 표기하지 않습니다.
+- 웹용 사본: 원본 7,621,992바이트 → 3,647,300바이트(13개, 텍스처 512px WebP q88, dedup/weld/resample/prune, 양자화). 방마다 자기 모델만 불러오고, 같은 모델을 여러 번 놓으면 인스턴스 한 번으로 그립니다. 원본 보관: `public/models/_originals/village/shop-interiors/`.
+- 그 밖의 계산대 몸체, 진열대, 얼음 판, 러그, 벽 판자와 간판은 Three.js 상자와 캔버스 글씨로 만들었습니다(같은 흙빛·나무색).

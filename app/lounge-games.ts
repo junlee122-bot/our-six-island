@@ -2,6 +2,7 @@
 // engine. Import from here (not lounge-room.ts) in client code so the entry
 // chunk does not pull in chess.js and every rules engine.
 import type { LoungeView } from './lounge-room.ts';
+import { SHOP_AREAS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 /** Must equal CHESS_MOVE_MS in lounge-chess.ts (checked by a test). */
 const CHESS_MOVE_LIMIT_MS = 120_000;
 export type GameKind =
@@ -169,8 +170,10 @@ export const LOOK_THROTTLE_MS = 300;
 // 'market' | 'harbor' | 'hillside': ① 시장 거리, ② 항구 구역, ③ 언덕 주택가 — the
 // districts around the hub (lounge-districts.ts). The cloud engine lets you
 // into the harbor and the hillside only once their village flag is set.
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside';
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside'];
+// 'bakery' | 'coop' | 'general' | 'fishmarket': the shop rooms entered from
+// 시장 거리 and the harbor (lounge-shop-interiors.ts).
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | ShopArea;
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', ...SHOP_AREAS];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -179,6 +182,11 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   casino: { x: 50, y: 79 },
   bank: { x: 17, y: 82 },
   salon: { x: 17, y: 82 },
+  // The shop rooms: just inside the shared door (INTERIOR_DOOR).
+  bakery: { x: 17, y: 82 },
+  coop: { x: 17, y: 82 },
+  general: { x: 17, y: 82 },
+  fishmarket: { x: 17, y: 82 },
   // Front left by the door, clear of the 허풍 카드 table (middle).
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },
@@ -199,7 +207,7 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
  * and each friend's room ('home' + owner actor) has its own chat.
  */
 export type HomeScope = `home-${number}`;
-export type ChatScope = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | HomeScope;
+export type ChatScope = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea | HomeScope;
 export const homeScope = (owner: number): HomeScope => `home-${owner}`;
 export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
@@ -207,7 +215,7 @@ export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
   area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside'
     ? 'village'
-    : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon'
+    : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon' || isShopArea(area)
       ? area
       : area === 'home' && validHomeOwner(home)
         ? homeScope(home)

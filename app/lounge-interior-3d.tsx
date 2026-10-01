@@ -17,7 +17,18 @@ import { interiorCanWalk, hostSpot, TABLE_HOST, TAVERN_HOST_AT } from './lounge-
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender';
 import { BANKER_SPOT } from './lounge-bank-layout';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout';
+import {
+  SHOP_INTERIORS,
+  SHOP_STAFF_RADIUS,
+  isShopArea,
+  nearShopCounter,
+  seatPoint,
+  shopCanWalk,
+  shopSeatAt,
+  standUpSpot,
+} from './lounge-shop-interiors';
 import { NPCS, type NpcId } from './lounge-npc-data';
+import { DISTRICTS } from './lounge-districts';
 import { GAME_KINDS } from './lounge-games';
 
 /** The residents who work here (their scene draws them), as spots for their bubbles. */
@@ -175,6 +186,8 @@ type Props = {
   onBanker?: () => void;
   /** Open customization after meeting the stylist in the salon. */
   onSalon?: () => void;
+  /** A shop room's counter: the shop's window (the old outdoor counter's). */
+  onCounter?: () => void;
   /** 허풍 주점 evenings: talk to a visiting resident (프리렌, 쓰레쉬, 볼리바스). */
   onResident?: (npc: NpcId) => void;
   /** I am near the door: preload the village. */
@@ -226,6 +239,7 @@ export function Interior3D({
   onLender,
   onBanker,
   onSalon,
+  onCounter,
   onResident,
   onNearDoor,
   seatedAt = null,
@@ -303,9 +317,9 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onResident, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onResident, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onResident, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onResident, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
@@ -334,6 +348,9 @@ export function Interior3D({
   }, [props]);
   const actionRef = useRef<InteriorAction | null>(null);
   const [residentNear, setResidentNear] = useState<NpcId | null>(null);
+  /** Shop rooms: which of its staff are behind the counter right now. */
+  const [staffHere, setStaffHere] = useState('');
+  const staffRef = useRef('');
   const residentNearRef = useRef<NpcId | null>(null);
   const exited = useRef(false);
   const runAction = (next: InteriorAction | null) => {
@@ -353,6 +370,35 @@ export function Interior3D({
       if (next.kind === 'salon') latest.current.onSalon?.();
       else if (next.kind === 'banker') latest.current.onBanker?.();
       else latest.current.onLender?.();
+    } else if (next.kind === 'counter') {
+      const l = live.current;
+      if (!nearShopCounter(l.point, area)) return;
+      l.held.clear();
+      l.target = l.goal = null;
+      l.route = [];
+      l.approach = null;
+      latest.current.onMove(l.point.x, l.point.y);
+      latest.current.onCounter?.();
+    } else if (next.kind === 'seat') {
+      // Walk onto the chair's spot: standing there is sitting (everyone sees it).
+      const seat = isShopArea(area) ? SHOP_INTERIORS[area].seats.find((q) => q.id === next.seat) : undefined;
+      if (seat) {
+        const l = live.current,
+          goal = seatPoint(seat);
+        l.held.clear();
+        l.approach = null;
+        l.route = interiorPath(l.point, goal, area);
+        l.target = l.route.shift() ?? null;
+        l.goal = goal;
+      }
+    } else if (next.kind === 'stand') {
+      const l = live.current;
+      const off = isShopArea(area) ? standUpSpot(l.point, area) : null;
+      if (off) {
+        l.point = off;
+        window.dispatchEvent(new CustomEvent(INTERIOR_PLACE_EVENT, { detail: off }));
+        latest.current.onMove(off.x, off.y);
+      }
     } else if (next.kind === 'host') latest.current.onHost?.();
     else latest.current.onTable(next.game);
   };
@@ -624,13 +670,17 @@ export function Interior3D({
     const mine = makeFigure(latest.current.me.actor, latest.current.me.look, l.point);
     mine.mesh.name = 'me';
     const others = new Map<string, Figure>();
-    const residents = area === 'tavern' && residentLabelsRef.current
+    const residents = (area === 'tavern' || isShopArea(area)) && residentLabelsRef.current
       ? new ResidentLayer(scene, residentLabelsRef.current, {
           height: INTERIOR_HOST_HEIGHT / INTERIOR_UP_Y,
           billboard: 'upright',
           speed: 2.1 / INTERIOR_VIEW_SCALE,
           chibi: { plane: INTERIOR_FIGURE_UPRIGHT, upY: INTERIOR_UP_Y },
           tint,
+          // A resident on a café chair (the far side) sinks behind the table, as if seated.
+          sit: isShopArea(area)
+            ? (x: number, z: number) => SHOP_INTERIORS[area].seats.some((q) => q.npc && Math.hypot(q.x - x, q.z - z) < 0.3)
+            : undefined,
         })
       : null;
     if (residents) residents.onChange = () => {
@@ -683,6 +733,11 @@ export function Interior3D({
       // The hips (the cut line) rest on the seat.
       f.lift = SEAT_HEIGHT + 0.015 - rowHeight(cut);
       dirty = true;
+    };
+    /** A shop's café chair someone standing at `p` sits on (standing there is sitting). */
+    const cafeChair = (p: ScenePoint): (Chair & { at: ScenePoint }) | null => {
+      const seat = shopSeatAt(p, area);
+      return seat ? { x: seat.x, z: seat.z, face: seat.face, at: seatPoint(seat) } : null;
     };
     // The seated figure stands a little in front of its chair's middle (toward
     // the camera), so the backrest stays behind and the table in front.
@@ -1023,7 +1078,7 @@ export function Interior3D({
         mine.rows = null;
       }
       // Sitting at a table: on my chair once the game has put me at my seat.
-      const myChair = current.seatedChair.get(current.self);
+      const myChair = current.seatedChair.get(current.self) ?? cafeChair(l.point);
       if (seatFigure(mine, myChair && Math.hypot(myChair.at.x - l.point.x, myChair.at.y - l.point.y) < 0.6 ? myChair : null))
         dirty = true;
       placeFigure(mine);
@@ -1083,7 +1138,7 @@ export function Interior3D({
         f.locomotion = fl.state;
         f.motion = fl.motion;
         // Arrived at a seat: sit on its chair.
-        const chair = current.seatedChair.get(p.id);
+        const chair = current.seatedChair.get(p.id) ?? cafeChair(goal);
         if (seatFigure(f, chair && Math.hypot(goal.x - f.pos.x, goal.y - f.pos.y) <= 0.1 ? chair : null)) dirty = true;
         placeFigure(f);
         drawFigure(f, t, fc);
@@ -1092,7 +1147,12 @@ export function Interior3D({
       for (const table of current.tables) hostTables.set(table.game, { phase: table.state.phase, seats: table.seats.length });
       if (hosts.update(t, hostTables, reduced.matches)) dirty = true;
       if (t - lastData > 150) {
-        const next = interiorAction(l.point, area);
+        // A café chair a friend or a resident is on is not offered.
+        const next = interiorAction(
+          l.point,
+          area,
+          isShopArea(area) ? [...[...others.values()].map((f) => f.pos), ...(residents?.positions() ?? []).map((r) => worldToInterior(r))] : [],
+        );
         const prev = actionRef.current;
         // A visiting resident within reach (only when nothing else is here to do).
         if (residents) {
@@ -1112,7 +1172,11 @@ export function Interior3D({
             setResidentNear(near);
           }
         }
-        if (next?.kind !== prev?.kind || (next?.kind === 'table' && prev?.kind === 'table' && next.game !== prev.game)) {
+        if (
+          next?.kind !== prev?.kind ||
+          (next?.kind === 'table' && prev?.kind === 'table' && next.game !== prev.game) ||
+          (next?.kind === 'seat' && prev?.kind === 'seat' && next.seat !== prev.seat)
+        ) {
           actionRef.current = next;
           setAction(next);
           if (next?.kind === 'door') current.onNearDoor?.();
@@ -1148,6 +1212,19 @@ export function Interior3D({
         if (area === 'bank') host.dataset.bankModels = String(studio.bankModels());
         host.dataset.nearSalon = String(nearSalon(l.point, area));
         if (area === 'salon') host.dataset.salonModels = String(studio.salonModels());
+        if (isShopArea(area)) {
+          host.dataset.shopModels = studio.shopModels();
+          host.dataset.nearCounter = String(nearShopCounter(l.point, area));
+          host.dataset.cafeSeat = shopSeatAt(l.point, area)?.id ?? '';
+          const ids = residents ? residents.positions().map((r) => r.id) : [];
+          host.dataset.residents = ids.join(',');
+          const shopDef = SHOP_INTERIORS[area];
+          const staff = [shopDef.owner, shopDef.helper].filter((id) => id && ids.includes(id)).join(',');
+          if (staff !== staffRef.current) {
+            staffRef.current = staff;
+            setStaffHere(staff);
+          }
+        }
         lastData = t;
       }
       // kArchive furniture arriving, or the VIP project finishing.
@@ -1162,11 +1239,13 @@ export function Interior3D({
           { id: 'self', name: ACTORS[latest.current.me.actor] ?? '', ...interiorToWorld(l.point) },
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
-        const frames = residentFrames(npcsIn('tavern', at), people, at, {
+        const shopRoom = isShopArea(area) ? area : null;
+        const frames = residentFrames(npcsIn(shopRoom ?? 'tavern', at), people, at, {
           rain: false,
-          night: true,
+          night: !shopRoom,
           memory: residentMemory,
-          canStand: (p) => interiorCanWalk(worldToInterior(p), 'tavern'),
+          canStand: (p) =>
+            shopRoom ? shopCanWalk(worldToInterior(p), shopRoom, SHOP_STAFF_RADIUS, true) : interiorCanWalk(worldToInterior(p), 'tavern'),
         });
         if (residents.update(frames, t, dt, camera)) dirty = true;
       }
@@ -1229,6 +1308,17 @@ export function Interior3D({
   }, [area, attempt]);
 
   const placeName = VENUES[area].name;
+  const shop = isShopArea(area) ? SHOP_INTERIORS[area] : null;
+  /** Talking to the shop's staff across the counter (they stand behind it, out of the walk reach). */
+  const staffIds = staffHere ? (staffHere.split(',') as NpcId[]) : [];
+  const approachCounter = () => {
+    const l = live.current;
+    if (!shop || l.locked || l.paused || latest.current.sheetOpen) return;
+    l.held.clear();
+    l.approach = null;
+    walkToRef.current({ ...shop.front });
+    hostRef.current?.focus({ preventScroll: true });
+  };
   const others = here.filter((p) => p.id !== self);
   const myPlayer = meHere;
   const actionState = action?.kind === 'table' ? tableState(view, action.game) : null;
@@ -1348,7 +1438,7 @@ export function Interior3D({
           />
         ))}
       </div>
-      <nav className="ih-tables" aria-label={`${placeName} ${area === 'bank' || area === 'salon' ? '이동 안내' : '테이블'}`}>
+      <nav className="ih-tables" aria-label={`${placeName} ${area === 'bank' || area === 'salon' || shop ? '이동 안내' : '테이블'}`}>
         <strong>{placeName}</strong>
         {tables.map((t) => (
           <button
@@ -1378,6 +1468,19 @@ export function Interior3D({
             <span>{SALON_STYLIST_NAME}</span><small>미용실 원장 · 걸어가기</small>
           </button>
         )}
+        {shop && (
+          <button type="button" data-testid="interior-counter-route" onClick={approachCounter}>
+            <span>{shop.short} 계산대</span>
+            <small>{staffIds.includes(shop.owner) ? `${NPCS[shop.owner].name} · 걸어가기` : '걸어가기'}</small>
+          </button>
+        )}
+        {shop &&
+          staffIds.map((id) => (
+            <button type="button" key={id} data-testid={`interior-talk-${id}`} onClick={() => onResident?.(id)}>
+              <span>{NPCS[id].name}</span>
+              <small>{id === shop.owner ? '주인' : '일손'} · 말 걸기</small>
+            </button>
+          ))}
       </nav>
       {state === 'loading' && (
         <output className="ih-loading">
@@ -1408,10 +1511,26 @@ export function Interior3D({
       {!seatedAt && !sheetOpen && state !== 'unavailable' && action && (
         <ActionButton
           className="ih-action"
-          kind={action.kind === 'door' ? 'exit' : action.kind === 'host' || action.kind === 'lender' || action.kind === 'banker' || action.kind === 'salon' ? 'talk' : actionKind}
+          kind={
+            action.kind === 'door'
+              ? 'exit'
+              : action.kind === 'seat'
+                ? 'sit'
+                : action.kind === 'stand'
+                  ? 'stand'
+                  : action.kind === 'host' || action.kind === 'lender' || action.kind === 'banker' || action.kind === 'salon' || action.kind === 'counter'
+                    ? 'talk'
+                    : actionKind
+          }
           label={
             action.kind === 'door'
-              ? `${NAMES.village}로 나가기`
+              ? `${josa(shop ? DISTRICTS[shop.district].name : NAMES.village, '으로/로')} 나가기`
+              : action.kind === 'counter' && shop
+                ? `${shop.short} 이용하기`
+                : action.kind === 'seat'
+                  ? '의자에 앉기'
+                  : action.kind === 'stand'
+                    ? '일어나기'
               : action.kind === 'host'
                 ? '허 선장과 이야기 · 주점 꾸미기'
                 : action.kind === 'lender'
@@ -1420,9 +1539,19 @@ export function Interior3D({
                     ? `${BANKER_NAME}와 은행 업무`
                     : action.kind === 'salon'
                       ? `${SALON_STYLIST_NAME}과 이야기 · 스타일 바꾸기`
-                : `${GAME_INFO[action.game].name} ${TABLE_ACTION_LABEL[actionKind!]}`
+                : action.kind === 'table'
+                  ? `${GAME_INFO[action.game].name} ${TABLE_ACTION_LABEL[actionKind!]}`
+                  : ''
           }
-          detail={actionState ? tableLabel(actionState).text : undefined}
+          detail={
+            actionState
+              ? tableLabel(actionState).text
+              : action.kind === 'counter' && shop
+                ? staffIds.includes(shop.owner)
+                  ? `${NPCS[shop.owner].name} · ${shop.name}`
+                  : shop.name
+                : undefined
+          }
           shortcut={keyLabel(keys.action)}
           onPress={() => runAction(action)}
         />
@@ -1436,7 +1565,7 @@ export function Interior3D({
           onPress={() => onResident?.(residentNear)}
         />
       )}
-      <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : '앉기'} className="ih-hint" />
+      <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : shop ? '이용' : '앉기'} className="ih-hint" />
     </div>
   );
 }
