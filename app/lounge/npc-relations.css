@@ -27,6 +27,7 @@
 .l-npc-gift label { flex: 1; display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
 .l-npc-gift select { width: 100%; min-width: 0; padding: var(--sp-2); border-radius: var(--r-s); background: var(--surface); color: var(--text); box-shadow: var(--edge-line); }
 .l-npc-location { padding: var(--sp-2); background: var(--surface-sunken); border-radius: var(--r-s); }
+.l-npc-love { margin: 0; padding: var(--sp-2); background: var(--accent-soft); color: var(--text); border-radius: var(--r-s); font-size: var(--fs-body); }
 @media (max-width: 860px) { .l-npc-book { grid-template-columns: 1fr; } .l-npc-list { max-height: 30vh; } }
 .l-npc-requests { display: grid; gap: var(--sp-3); margin: 0; padding: 0; list-style: none; }
 .l-npc-request { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }

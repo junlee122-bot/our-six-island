@@ -21,7 +21,7 @@
 // client sets it from the world with setNpcWorld, the server passes it).
 // Inside a house, the library or the lighthouse a resident is not drawn
 // (`hidden` places in a visible area). The eight residents who already work
-// indoors stay at their posts (their scenes draw them); 결 목수 takes an
+// indoors stay at their posts (their scenes draw them); 발키리 takes an
 // evening walk through the hub. 범마을 부동산 is kept in turns by a married
 // couple (realtyDuty): 신형만 on Mon/Wed/Fri, 봉미선 on Tue/Thu, both at the
 // weekend (one at the counter, the other showing the model house). Off duty

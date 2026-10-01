@@ -10,12 +10,13 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
-import { NPCS, assertNpcSocialContext, npcGiftReaction, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
+import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, assertNpcSocialContext, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
 import { NPC_TALK_POINTS } from '../lounge-npc-data';
+import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcSpot } from '../lounge-npc-schedule';
 import { npcGiftLine, npcTalk, npcTalkReply } from '../lounge-npc-dialog';
 import { npcRequestsOn } from '../lounge-npc-requests';
-import { npcHearts, npcTalkChoices, npcTalkFocus, npcTalkStatus } from '../lounge-npc-speech';
+import { npcHearts, npcLoveChoices, npcLoveStatus, npcLoveTalk, npcTalkChoices, npcTalkFocus, npcTalkStatus, type NpcLoveChoice } from '../lounge-npc-speech';
 import { kstDay } from '../lounge-economy';
 import { ACTORS } from '../lounge-roster';
 import { actionForCode } from '../lounge-keybinds';
@@ -45,12 +46,14 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
   const myName = me ? ACTORS[me.actor] ?? '친구' : '친구';
   const who = me?.actor ?? 0;
   const rows = view.life?.me.npcRelations ?? [];
-  const row = rows.find((r) => r.npc === npc) ?? { npc, points: 0, talked: false, gifted: false, level: '인사하는 사이', lastGift: undefined };
+  const row = rows.find((r) => r.npc === npc) ?? { npc, points: 0, talked: false, gifted: false, level: '인사하는 사이', lastGift: undefined, love: undefined, since: undefined, weddingDay: undefined };
+  const today = kstDay(now);
+  const loveTalk = npcLoveTalk(rows, npc, kstDay(opened));
   const relations: NpcRelations = Object.fromEntries(rows.map((r) => [r.npc, r]));
   const spot = npcSpot(npc, opened);
   const lastGiftName = row.lastGift ? itemName(row.lastGift) : undefined;
   // Pages: their lines, then (after a talk or a gift) what they answer.
-  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName }).lines);
+  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName, ...loveTalk }).lines);
   const [page, setPage] = useState(0);
   // Everything said so far, so the talk's answer never repeats a page.
   const said = useRef(pages);
@@ -93,16 +96,46 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
   const request = npcRequestsOn(kstDay(now)).find((r) => r.npc === npc);
   const requestDone = view.life?.me.npcBoard?.requests.find((r) => r.id === request?.id)?.done;
   const info = NPCS[npc];
+  const inv = view.life?.me.inv ?? {};
+  const love = npcLoveChoices({ npc, rows, day: today, bouquets: inv.bouquet ?? 0, rings: inv['pledge-ring'] ?? 0, area: me?.area ?? '' });
   const choices = npcTalkChoices({
     talked: row.talked,
     gifted: row.gifted,
     busy,
     blocked: talkBlock,
     request: request && !requestDone && onBoard ? `${itemName(request.item)} ${request.n}개` : null,
+    love,
   });
   const talk = () => {
-    const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName }, said.current);
+    const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, ...loveTalk }, said.current);
     void run(talkAction, [reply]);
+  };
+  const say = (line: string, vars: Record<string, string | number> = {}) => fillLoveLine(line, { me: myName, ...vars }, npc);
+  // Their answer to a 꽃다발 or a ring shows either way; only a yes goes to the server (and takes the item).
+  const answer = (lines: string[]) => {
+    said.current = [...said.current, ...lines];
+    setPages(lines);
+    setPage(0);
+    setFocusAfter('reply');
+  };
+  const takenBy = view.life?.npcSpouses?.[npc];
+  const loveKey = `${who}:${today}`;
+  const doLove = (id: NpcLoveChoice) => {
+    if (busy) return;
+    const op: NpcSocialAction = { kind: 'npcSocial', npc, op: id };
+    if (id === 'ask') {
+      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey))]);
+      if (row.points < NPC_DATING_POINTS) return answer([say(npcLoveLine(npc, 'ask-decline', loveKey))]);
+      return void run(op, [say(npcLoveLine(npc, 'ask-accept', loveKey))]);
+    }
+    if (id === 'propose') {
+      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey))]);
+      if (row.points < NPC_PROPOSE_POINTS || today - (row.since ?? today) < NPC_DATING_DAYS) return answer([say(npcLoveLine(npc, 'propose-decline', loveKey))]);
+      return void run(op, [say(npcLoveLine(npc, 'propose-accept', loveKey))]);
+    }
+    if (id === 'wedding') return void run(op, npcWeddingLines(npc).map((line) => say(line)));
+    const item = view.self ? spouseGiftOf(npc, view.self, today) : '';
+    return void run(op, [say(npcLoveLine(npc, 'gift', loveKey), { item: item ? itemName(item) : '' })]);
   };
   const give = (gift: GiftOption) => {
     if (busy || row.gifted || talkBlock) return;
@@ -115,6 +148,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
     if (!choice || choice.disabled) return;
     if (choice.id === 'talk') talk();
     else if (choice.id === 'gift') setPicking(true);
+    else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift') doLove(choice.id);
     else if (choice.id === 'book') onBook();
     else if (choice.id === 'request') onBoard?.();
     else onClose();
@@ -128,7 +162,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
       tall
       name={info.name}
       hearts={npcHearts(row.points)}
-      level={row.level}
+      level={npcLoveStatus(row, today) ?? row.level}
       status={npcTalkStatus(npc, spot)}
       pages={pages}
       page={page}

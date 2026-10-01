@@ -453,7 +453,7 @@ test('in the world every resident but the pose-sheet four is a chibi at a friend
   const fs = await import('node:fs');
   const { NPC_CHIBI } = await import('../app/lounge-npc-chibi.ts');
   const record = JSON.parse(fs.readFileSync(new URL('../public/assets/lounge/npc-chibi-generation.json', import.meta.url), 'utf8'));
-  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'realtor', 'misun'];
+  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'carpenter', 'realtor', 'misun'];
   assert.deepEqual(Object.keys(NPC_CHIBI).sort(), [...chibi].sort());
   for (const id of NPC_IDS) {
     const c = NPC_CHIBI[id];

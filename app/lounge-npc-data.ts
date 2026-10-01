@@ -166,18 +166,27 @@ export const NPCS: Record<NpcId, NpcDef> = {
     art: img(A.npc_bongmison, A.npc_bongmison_portrait),
     speech: 'polite',
   },
+  // 발키리 (Clash Royale / Clash of Clans, Supercell) recast as the village
+  // carpenter (user request 2026-10-01). The id stays 'carpenter' so hearts
+  // carry over; the counter keeps the pose sheet (host 'carpenter'), dialogue
+  // and the village use the tall art and the chibi. Voice and arc notes:
+  // app/lounge-npc-lines-carpenter.ts.
   carpenter: {
     id: 'carpenter',
-    name: '결 목수',
-    age: 34,
-    role: '나무결 가구점 주인',
+    name: '발키리',
+    age: 30,
+    role: '나무결 가구점 목수',
     place: '나무결 가구점',
-    intro: '말수는 적지만 나뭇결 얘기가 나오면 눈이 반짝여요.',
-    likesText: '단단한 나무, 솔방울, 도토리',
-    dislikesText: '돌덩이, 광석',
-    gifts: { loved: ['hardwood'], liked: ['wood', 'pinecone', 'acorn', 'chestnut', 'dotorimuk'], disliked: ['stone', 'copper', 'iron'] },
-    rewards: { 40: ['hardwood', 3], 100: ['hardwood', 10] },
-    art: { kind: 'sheet', host: 'carpenter' },
+    intro: '도끼 한 자루로 가구를 짜는 목수. 입만 열면 시비지만, 부탁하면 투덜대면서 다 해 줘요.',
+    likesText: '단단한 나무, 좋은 도끼날 감(철·금), 매운 음식',
+    dislikesText: '꽃다발, 달달한 차',
+    gifts: {
+      loved: ['hardwood', 'iron', 'gold', 'maeuntang', 'kimchi'],
+      liked: ['wood', 'copper', 'pinecone', 'acorn', 'fishstew', 'pepperpotato', 'grilledfish', 'roastchestnut'],
+      disliked: ['kind:flower', 'flowertea', 'jam'],
+    },
+    rewards: { 40: ['hardwood', 3], 100: ['iron', 5] },
+    art: img(A.npc_valkyrie, A.npc_valkyrie_portrait),
     speech: 'casual',
   },
   rose: {
@@ -432,6 +441,13 @@ export const NPCS: Record<NpcId, NpcDef> = {
   },
 };
 
+/**
+ * Friends (lounge-roster ACTORS names) 발키리 talks to as 언니·동생; everyone
+ * else gets her default 한남 ribbing (NpcLineSet.tone). The roster carries no
+ * gender, so this stays for the friends to fill in (one name per entry).
+ */
+export const NPC_SISTER_FRIENDS: readonly string[] = ['도원', '민서'];
+
 /** How residents relate to each other (their chats and a few events come from here). */
 export type NpcBond = { a: NpcId; b: NpcId; kind: 'rival' | 'friend' | 'regular' | 'mentor' | 'crush' | 'partner'; note: string };
 export const NPC_BONDS: readonly NpcBond[] = [
@@ -457,10 +473,15 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'gwen', b: 'janna', kind: 'friend', note: '방송 전 머리 손질' },
   { a: 'realtor', b: 'carpenter', kind: 'partner', note: '집 확장 공사를 같이 하는 동업자' },
   { a: 'misun', b: 'realtor', kind: 'partner', note: '부동산을 번갈아 지키는 부부. 미선이 형만의 용돈을 관리해요' },
-  { a: 'misun', b: 'carpenter', kind: 'regular', note: '공사비를 한 푼이라도 깎으려는 실장과 말없는 목수' },
+  { a: 'misun', b: 'carpenter', kind: 'regular', note: '공사비를 한 푼이라도 깎으려는 실장과 흥정ㄴㄴ 목수' },
   { a: 'realtor', b: 'captain', kind: 'regular', note: '퇴근하면 주점 바에 앉는 단골' },
   { a: 'misun', b: 'frieren', kind: 'regular', note: '마감 직전 빵 할인을 노리는 단골' },
   { a: 'misun', b: 'nasera', kind: 'rival', note: '농협 시세를 두고 한 푼까지 흥정하는 사이' },
+  // 발키리 (2026-10-01): 한남 둘과는 말싸움, 언니 하나와 기자 하나와는 친구.
+  { a: 'carpenter', b: 'captain', kind: 'rival', note: '주점 의자를 고쳐 주면서 허풍마다 시비' },
+  { a: 'carpenter', b: 'volibas', kind: 'rival', note: '도끼 들고 다닌다고 검문, 검문한다고 시비' },
+  { a: 'carpenter', b: 'janna', kind: 'friend', note: '가구점 바이럴을 태워 주는 기자' },
+  { a: 'carpenter', b: 'tsunade', kind: 'friend', note: '텃밭 울타리를 고쳐 주는 동생과 언니' },
   // Stage 2 (design-npcs-stage2.md §3 and the cards).
   { a: 'lux', b: 'janna', kind: 'rival', note: '예보가 틀리면 조업을 망쳐서 늘 투덕거림' },
   { a: 'gabung', b: 'janna', kind: 'rival', note: '날씨 예보 대결, 누가 맞혔는지 신문에 실림' },
@@ -481,6 +502,12 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'tsunade', b: 'gabung', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'tsunade', b: 'lux', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'sinjjajang', b: 'gabung', kind: 'regular', note: '항구 끝 등대까지 배달이 제일 먼 코스' },
+  // 연애 이야기 말풍선 (lounge-npc-love-banter-a.ts).
+  { a: 'lumi', b: 'maehwa', kind: 'friend', note: '퇴근길에 연애 이야기를 나누는 두 딜러' },
+  { a: 'lumi', b: 'rose', kind: 'regular', note: '같은 카지노에서 일하는 동료' },
+  { a: 'captain', b: 'rose', kind: 'regular', note: '바다 이야기로 통하는 주점 손님' },
+  { a: 'maehwa', b: 'captain', kind: 'regular', note: '회관 차 모임과 주점 안주를 바꿔 먹는 사이' },
+  { a: 'rose', b: 'nyamo', kind: 'rival', note: '대부 창구와 은행 창구의 이자 경쟁' },
 ];
 /** Whether a resident has a picture (drawn, listed and met). */
 export const npcVisible = (id: NpcId) => NPCS[id].hasSprite !== false;
@@ -497,6 +524,21 @@ export const NPC_REGULAR_POINTS = 40;
 export const NPC_DATE_POINTS = 60;
 export const NPC_SPECIAL_POINTS = 100;
 export const NPC_POINTS_MAX = 120;
+// 연애·결혼 (handover/design/design-romance.md). Hearts = points / 12.
+export const NPC_HEART_POINTS = 12;
+/** 8 hearts: a 꽃다발 is accepted, and points stop here until you date. */
+export const NPC_DATING_POINTS = 96;
+/** 10 hearts (and at least NPC_DATING_DAYS of dating): a 청혼 반지 is accepted. */
+export const NPC_PROPOSE_POINTS = 120;
+export const NPC_DATING_DAYS = 3;
+/** The wedding is held this many KST days after the proposal (at the village plaza). */
+export const NPC_WEDDING_DAYS = 3;
+/** Breaking up: points drop to at most this, and no new 꽃다발 for this many days. */
+export const NPC_BREAKUP = { points: 60, days: 7 } as const;
+/** Breaking an engagement or divorcing (the ring is not returned). */
+export const NPC_DIVORCE = { points: 36, days: 14 } as const;
+export type NpcLove = 'dating' | 'engaged' | 'married';
+export const NPC_LOVE_WORD: Record<NpcLove, string> = { dating: '연인', engaged: '약혼', married: '결혼' };
 /** Points for a gift by how the resident likes it. */
 export const NPC_GIFT_POINTS = { loved: 12, liked: 8, neutral: 5, disliked: -3 } as const;
 export type GiftReaction = keyof typeof NPC_GIFT_POINTS;

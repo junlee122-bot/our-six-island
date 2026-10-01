@@ -3,9 +3,10 @@
 // line files, like the dealers' voices). Pure; no randomness, no server.
 import { SEASON_INFO, WEATHER_INFO, seasonOf, timeOfDay, weatherOf, holidaysOn, hash32, type Weather } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
-import { NPCS, npcTier, type GiftReaction, type NpcId } from './lounge-npc-data.ts';
+import { NPCS, NPC_SISTER_FRIENDS, npcTier, type GiftReaction, type NpcId } from './lounge-npc-data.ts';
 import type { NpcLineSet } from './lounge-npc-line-types.ts';
 import { NPC_BANTER } from './lounge-npc-banter.ts';
+import { NPC_LOVE_BANTER, npcLoveOpener, npcLovePools, type NpcLoveContext } from './lounge-npc-love.ts';
 import type { NpcSpot } from './lounge-npc-schedule.ts';
 import { LUMI_LINES } from './lounge-npc-lines-lumi.ts';
 import { MAEHWA_LINES } from './lounge-npc-lines-maehwa.ts';
@@ -92,7 +93,7 @@ export type NpcTalkContext = {
   /** Item name of lastGift (the caller resolves names). */
   lastGiftName?: string;
   spot?: Pick<NpcSpot, 'activity' | 'area' | 'label'> | null;
-};
+} & Partial<Pick<NpcLoveContext, 'love' | 'days' | 'atHome' | 'otherPartner'>>;
 export type NpcTalk = { lines: string[]; tier: 0 | 1 | 2 | 3 | 4 };
 
 /** The fill-ins and the body pools of a talk (npcTalk, npcTalkReply). */
@@ -110,6 +111,8 @@ function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
     place: ctx.spot?.label,
     item: ctx.lastGiftName,
     forecast: jannaForecast(day).text,
+    partner: ctx.otherPartner,
+    days: ctx.days,
   };
   const f = (s: string | undefined) => (s ? fillNpcLine(s, vars) : '');
   // Body: what they are doing, you two, the season, a joke or a memory.
@@ -120,8 +123,11 @@ function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
       L.tier[tier],
       L.season[seasonOf(ctx.now)],
       L.jokes,
+      L.tone?.[NPC_SISTER_FRIENDS.includes(ctx.me) ? 'sister' : 'hannam'],
       ctx.lastGiftName ? L.gift.remember : undefined,
       ctx.npc === 'janna' && jannaMissedToday(day) ? JANNA_MISS : undefined,
+      // 연애·결혼 (lounge-npc-love.ts): the heart band or partner lines, home, jealousy.
+      ...npcLovePools(ctx, ctx.now),
     ].filter((p): p is string[] => !!p && p.length > 0);
   return { L, day, tier, key, weather, f, pools };
 }
@@ -138,6 +144,7 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
   if (festival && slot < 6) opener = pick(L.festival, key('festival'));
   else if (weather !== 'sunny' && weather !== 'cloudy' && slot < 5) opener = pick(L.weather[weather as keyof NpcLineSet['weather']], key('weather'));
   else if (marketDay && ctx.spot?.area === 'market' && slot < 5) opener = pick(L.marketDay, key('market'));
+  if (!opener && ctx.love) opener = npcLoveOpener(ctx.npc, ctx.now, weather, seasonOf(ctx.now), key('love'));
   opener ??= pick(L.greet[timeOfDay(ctx.now)], key('greet'));
   const body = pick(pick(pools(), key('pool')), key('body'));
   const lines = [f(opener), f(body)].filter((s, i, a) => s && a.indexOf(s) === i);
@@ -181,9 +188,12 @@ export function npcRequestLine(npc: NpcId, kind: 'post' | 'done' | 'coop', vars:
 }
 /** Banter between two residents: the exchange for this meeting (null when they have none). */
 export function npcBanter(a: NpcId, b: NpcId, key: string): { first: NpcId; second: NpcId; lines: readonly [string, string] } | null {
-  const entry = NPC_BANTER.find((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
-  if (!entry || !entry.lines.length) return null;
-  return { first: entry.a as NpcId, second: entry.b as NpcId, lines: entry.lines[hash32(`banter:${entry.a}:${entry.b}:${key}`) % entry.lines.length] };
+  // Everyday and love banter of the pair together (each keeps its own speaking order).
+  const entries = [...NPC_BANTER, ...NPC_LOVE_BANTER].filter((x) => (x.a === a && x.b === b) || (x.a === b && x.b === a));
+  const all = entries.flatMap((e) => e.lines.map((lines) => ({ first: e.a as NpcId, second: e.b as NpcId, lines })));
+  if (!all.length) return null;
+  const [x, y] = a < b ? [a, b] : [b, a];
+  return all[hash32(`banter:${x}:${y}:${key}`) % all.length];
 }
 /** Every line of a resident (tests: counts, no emoji). */
 export function allNpcLines(npc: NpcId): string[] {

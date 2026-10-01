@@ -1291,7 +1291,7 @@ export function Bedroom3D({
           {activeGuest && (
             <div className="b3-labels">
               <div className="b3-label" ref={(el) => { if (el) labelsRef.current.set('invited-npc', el); else labelsRef.current.delete('invited-npc'); }}>
-                {!visit && onNpcTalk ? <button type="button" className="b3-name b3-npc-talk" onClick={onNpcTalk} data-testid="bedroom-npc-talk">{NPCS[activeGuest.npc].name} <em>손님 · 이야기하기</em></button> : <span className="b3-name">{NPCS[activeGuest.npc].name} <em>초대된 주민</em></span>}
+                {!visit && onNpcTalk ? <button type="button" className="b3-name b3-npc-talk" onClick={onNpcTalk} data-testid="bedroom-npc-talk">{NPCS[activeGuest.npc].name} <em>{activeGuest.spouse ? '배우자' : '손님'} · 이야기하기</em></button> : <span className="b3-name">{NPCS[activeGuest.npc].name} <em>{activeGuest.spouse ? '함께 사는 주민' : '초대된 주민'}</em></span>}
               </div>
             </div>
           )}

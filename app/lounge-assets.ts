@@ -136,6 +136,9 @@ export const LOUNGE_ASSETS = {
   npc_bongmison: '/assets/lounge/npc-bongmison.webp',
   npc_shinhyungman_portrait: '/assets/lounge/npc-shinhyungman-portrait.webp',
   npc_bongmison_portrait: '/assets/lounge/npc-bongmison-portrait.webp',
+  // 나무결 가구점 목수 발키리 (carpenter-valkyrie-generation.json; keyed by optimize-assets.mjs npcs).
+  npc_valkyrie: '/assets/lounge/npc-valkyrie.webp',
+  npc_valkyrie_portrait: '/assets/lounge/npc-valkyrie-portrait.webp',
   // In-world chibi residents (npc-chibi-generation.json; keyed and sliced by optimize-assets.mjs chibi). The tall art above stays for dialogue.
   chibi_frieren: '/assets/lounge/chibi/npc-frieren.webp',
   chibi_nasera: '/assets/lounge/chibi/npc-nasera.webp',
@@ -156,6 +159,7 @@ export const LOUNGE_ASSETS = {
   chibi_yanineko: '/assets/lounge/chibi/npc-yanineko.webp',
   chibi_shinhyungman: '/assets/lounge/chibi/npc-shinhyungman.webp',
   chibi_bongmison: '/assets/lounge/chibi/npc-bongmison.webp',
+  chibi_valkyrie: '/assets/lounge/chibi/npc-valkyrie.webp',
   tavernCardKing: '/assets/lounge/cards/tavern-king.webp',
   tavernCardQueen: '/assets/lounge/cards/tavern-queen.webp',
   tavernCardAce: '/assets/lounge/cards/tavern-ace.webp',
@@ -167,7 +171,8 @@ export const LOUNGE_ASSETS = {
   // (shopkeepers-generation.json; optimize-assets.mjs hosts).
   hostRealtor: '/assets/lounge/host-realtor.webp',
   hostMisun: '/assets/lounge/host-misun.webp',
-  // 가구점 결 목수 (host-shopkeepers.prompt.txt).
+  // 가구점 발키리: carpenter-valkyrie-generation.json (her 3×2 original is laid
+  // out as a host sheet by optimize-assets.mjs hosts).
   hostCarpenter: '/assets/lounge/host-carpenter.webp',
   room: '/assets/lounge/club-room.webp',
   casino: '/assets/lounge/club-casino.webp',

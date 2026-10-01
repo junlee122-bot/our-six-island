@@ -25,6 +25,7 @@
 | C4 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 1단계 6명 전신 스프라이트와 대화창 초상: 나세라(농협)·프리렌(빵집 카페)·쓰레쉬(잡화점)·신짜장(우체국)·볼리바스(파출소)·잔나(신문사) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·참조: `public/assets/lounge/npc-stage1-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경). **Riot Games 캐릭터 팬아트 5명 + 『장송의 프리렌』 캐릭터 1명**(아래 IP 표) | 마을·시장 거리 NPC |
 | C5 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 2단계 8명 전신 스프라이트와 대화창 초상: 가붕(등대지기)·럭스(어시장)·힘멜(빵집 알바생)·베아트리스(사서)·봇치(악사)·츠나데(텃밭 할머니)·마키마(행상인)·야니네코(대학생) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·키잉 결과 해시: `public/assets/lounge/npc-stage2-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경, 야니네코 원본 파일명은 `npc-yaninekko.png`). **Riot Games 팬아트 2명 + 쇼가쿠칸·KADOKAWA·호분샤·슈에이샤(2)·코단샤 캐릭터 6명**(아래 IP 표) | 항구·언덕·시장 거리 NPC |
 | C6 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 주민 17명 게임 속 치비 스프라이트(친구들과 같은 2.5~3등신): 프리렌·나세라·로제·그웬·냐모·쓰레쉬·신짜장·볼리바스·잔나·가붕·럭스·힘멜·베아트리스·봇치·츠나데·마키마·야니네코 | `lounge/chibi/npc-*.webp` (512~514×640) | 유료 크레딧 생성. 원본 `_originals/chibi/npc-chibi-*.png`(한 장에 두 명, 왼쪽 이름이 먼저; 마젠타 배경, 베아트리스·봇치는 초록 배경), 작업 ID·SHA-256과 웹 사본 크기·해시: `public/assets/lounge/npc-chibi-generation.json`. 키 빼기·자르기: `node scripts/optimize-assets.mjs chibi` | 마을·구역·주점·카지노·은행·미용실·내 방에 서 있는 주민(대화창 초상은 C2·C4·C5의 큰 그림 그대로) |
+| C7 | Higgsfield (GPT Image 2.5, 2026-10-01) | 나무결 가구점 목수 발키리: 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 가구점 창구 6포즈 시트(평소·웃음·의자 들기·집중·놀람·미안) | `lounge/npc-valkyrie.webp`, `lounge/npc-valkyrie-portrait.webp`, `lounge/chibi/npc-valkyrie.webp`, `lounge/host-carpenter.*` | 유료 크레딧 생성. 원본 `_originals/npc-valkyrie.png`, `_originals/chibi/npc-chibi-valkyrie.png`, `_originals/host-valkyrie.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/carpenter-valkyrie-generation.json`. **Supercell 캐릭터 팬아트**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 가구점 창구·대화창·마을과 가게 안의 발키리 |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
@@ -67,6 +68,7 @@
 | 행상인 마키마 | 『체인소 맨』 마키마(후지모토 타츠키 / 슈에이샤, 애니메이션 MAPPA). 외형·말투를 원작대로 고증 | 비상업 유지. 공개 전 반드시 교체 |
 | 대학생 야니네코 | 『야니네코』(냥냥팩토리 / 코단샤) 그대로. 원작처럼 담배를 문 모습 | 비상업 유지. 공개 전 반드시 교체, 담배 묘사는 공개 등급 확인 |
 | 부동산 신형만·봉미선 | 『짱구는 못말려』(Crayon Shin-chan, 우스이 요시토 / 후타바샤) 노하라 히로시·미사에 부부 그대로. 이름은 한국판 이름, 외형·성격이 원작과 같음. 사용자 제공 참조 그림은 생성 입력으로만 쓰고 저장소에 두지 않음 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
+| 가구점 목수 발키리 | 『클래시 로얄』·『클래시 오브 클랜』 발키리(Supercell). 주황 머리·도끼·팔 보호대가 원작 디자인, 옷은 마을용으로 튜닉과 목수 앞치마로 바꿈. 사용자 레퍼런스 그림은 저장소에 없음 | 비상업 유지. 공개 홍보·출품·수익화 전 이름·외형 교체 |
 | 은행 직원 냐모 | 사용자 제공 고양이 수인 캐릭터 레퍼런스 기반. 원작 출처 미기록 | 레퍼런스 원작 확인 후 기록 |
 | 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
 | kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
@@ -618,7 +620,7 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 ## 허풍 주점 · 범마을 부동산 · 나무결 가구점 · 2026-09-26
 
 - **kArchive GLB 42개**(자료: kArchive · 출처: 쓰레드 dogfooter): 주점 실내 34개(`public/models/lounge/tavern/`, 기본 7 + 업그레이드 6분류 18단계), 주점 외관 5개(`village/tavern/`: 라멘 포장마차 기본, 칠판, 만두 가게·홍등 포장마차·생선구이 오두막 업그레이드), 가게 건물 4개(`village/shops/`: 부동산 사무소·2층 사무소, 가구점·쇼윈도 가구점). 약관 원문·URL·SHA-256·바이트·삼각형·바운드는 각 폴더 `assets.json`, 원본은 `_originals/`. 작은 소품은 512² WebP, 건물과 메인 테이블은 1024². 책장·옹기·한지 등·장작·알림종은 이미 받은 모델을 다시 씀(추가 0 KB). 주점 실내는 들어갈 때만 불러옵니다.
-- **Higgsfield GPT Image 2.5 2회(각 0.25 크레딧)**: 허 선장 6포즈 시트(`lounge/host-captain.*`, 프롬프트 `host-captain.prompt.txt`), 문 사장·결 목수 3포즈씩 한 장(`lounge/host-realtor.*`, `host-carpenter.*`, 프롬프트 `host-shopkeepers.prompt.txt`). 참조는 `host-maehwa.png`(스타일만). 마젠타 키잉 뒤 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 배치.
+- **Higgsfield GPT Image 2.5 2회(각 0.25 크레딧)**: 허 선장 6포즈 시트(`lounge/host-captain.*`, 프롬프트 `host-captain.prompt.txt`), 문 사장·결 목수 3포즈씩 한 장(`lounge/host-realtor.*`, `host-carpenter.*`, 프롬프트 `host-shopkeepers.prompt.txt`; 결 목수 시트는 2026-10-01 발키리 시트로 바뀜, C7). 참조는 `host-maehwa.png`(스타일만). 마젠타 키잉 뒤 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 배치.
 - **코드로 그린 것**: 뻥총(장난감 코르크 리볼버, 약 400삼각형 + 인라인 SVG), 다트판, 축음기, 현상수배 포스터, 타원 러그, 주기(酒) 깃발, 간판, 카드 문양(범 왕관·학·보름달·도깨비 방망이), 주점 배경음(`lounge-music-score.ts` TAVERN: D 도리안 셔플 88 bpm)과 뻥총·벨·심장 박동 합성음. `tavern` 음악 슬롯에 파일을 넣으면 그 파일이 우선합니다(`/assets/lounge/music/tavern.ogg|mp3`).
 
 ## kArchive 미용실·은행·낚시 모델 — 2026-09-28
@@ -675,12 +677,21 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 
 ## 마을 주민 치비 17명 · 2026-09-30
 
-큰 그림(C2·C4·C5)이 친구들 사이에서 너무 길어 보인다는 사용자 결정으로, 게임 속에 서 있거나 걷는 주민은 친구들과 같은 비율의 치비 그림을 씁니다. 큰 그림은 대화창 초상과 삽화로만 남깁니다. 루미·매화·허 선장·결 목수는 원래 치비(포즈 시트)라 그대로입니다(문 사장 자리는 2026-10-02 신형만·봉미선으로 바뀌어 치비와 큰 그림을 둘 다 가짐).
+큰 그림(C2·C4·C5)이 친구들 사이에서 너무 길어 보인다는 사용자 결정으로, 게임 속에 서 있거나 걷는 주민은 친구들과 같은 비율의 치비 그림을 씁니다. 큰 그림은 대화창 초상과 삽화로만 남깁니다. 루미·매화·허 선장은 원래 치비(포즈 시트)라 그대로입니다. 가구점 목수 발키리(C7)는 치비를 따로 두고, 포즈 시트는 가구점 창구에서만 씁니다. 문 사장 자리는 2026-10-02 신형만·봉미선으로 바뀌어 치비와 큰 그림을 둘 다 가지고, 포즈 시트는 부동산 카운터에서만 씁니다.
 
 - 원본: `public/assets/lounge/_originals/chibi/npc-chibi-*.png`(3:2 한 장에 두 명, 왼쪽 이름이 먼저. 야니네코만 한 명 세로 그림). 배경은 마젠타, 분홍 옷을 입은 베아트리스·봇치는 초록.
 - 웹 사본: `node scripts/optimize-assets.mjs chibi`가 테두리의 실제 배경색을 재서 키를 빼고(배경이 완전한 원색이 아니어서 옅은 막이 남지 않게), 가운데 근처의 가장 빈 세로줄에서 두 명을 나누고, 친구 그림과 같은 규칙(몸이 캔버스 높이의 94%, 발이 97% 선)으로 640px 높이 캔버스에 놓습니다. 쓰레쉬의 초록 도깨비불과 야니네코의 담배는 그대로입니다.
 - 런타임: `app/lounge-npc-chibi.ts`(크기), `ResidentLayer`의 `chibi` 옵션이 친구 그림 판과 같은 높이·발 선으로 세웁니다. 카지노 로제·은행 냐모·미용실 그웬(`lounge-interior-lender.ts`), 내 방 손님(`lounge-bedroom-npc.ts`), 간단 그래픽 화면도 치비를 씁니다.
 - IP는 큰 그림과 같습니다(위 IP 표).
+
+## 가구점 목수 발키리 · 2026-10-01
+
+사용자 요청으로 나무결 가구점 목수(결 목수)를 Supercell 『클래시 로얄』·『클래시 오브 클랜』의 발키리(서른 살 목수)로 바꿨습니다. Higgsfield GPT Image 2.5로 전신(2:3, 그림체 참조 `casino-lender-rose.png`), 치비(약 2등신, 참조 `npc-chibi-lux-himmel.png`), 3×2 창구 시트(1:1, 참조 `host-maehwa.png`)를 만들었습니다. 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않았습니다. 옷은 마을에 맞게 튜닉과 목수 앞치마로 바꿨습니다.
+
+- 원본과 작업 ID·SHA-256, 웹 사본 크기·SHA-256: [carpenter-valkyrie-generation.json](public/assets/lounge/carpenter-valkyrie-generation.json).
+- 웹 사본: `node scripts/optimize-assets.mjs npcs`(전신 660×990, 초상 384²), `chibi`(한 명 그림을 512×640 캔버스에 몸 94%·발 97% 선), `hosts`(3×2 원본을 키를 빼고 한 배율로 440×660 셀에 발바닥 648 px로 다시 배치해 `host-carpenter.png`를 만든 뒤 WebP로 인코딩. 의자 살 사이처럼 막힌 틈의 마젠타도 뺌).
+- 런타임: 주민 id는 그대로 `carpenter`(하트 유지). 대화창·주민 수첩은 전신·초상, 마을과 가게 안은 치비(`app/lounge-npc-chibi.ts`), 가구점 창구는 포즈 시트(`HOST_SHEET.carpenter`).
+- IP: Supercell 캐릭터 팬아트입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(위 IP 표).
 
 ## 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장) · 2026-10-02
 

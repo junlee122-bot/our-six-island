@@ -12,7 +12,7 @@
 import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, type Crop, type LifeAction } from '../lounge-life';
-import { ITEM_BY_ID, ITEM_PRICES } from '../lounge-items';
+import { ITEM_BY_ID, ITEM_PRICES, ROMANCE_ITEMS } from '../lounge-items';
 import { SHOP, type ShopItem } from '../lounge-life';
 import { PEDDLER_POOL, SPICES_IDS, type ShopId } from '../lounge-shops';
 import { FoodMenu, LunchShelf, ShopBuy, ShopSell } from './ShopGoods';
@@ -44,7 +44,8 @@ export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' |
 const SEEDS = SHOP.filter((i: ShopItem) => i.kind === 'seed' || i.kind === 'bundle').map((i) => i.id);
 const UNLOCKS = SHOP.filter((i: ShopItem) => i.kind === 'trophy' || i.kind === 'palette').map((i) => i.id);
 const SOIL = ['fertilizer', 'fertilizer-deluxe', 'speed-gro', 'retaining'];
-const TACKLE = [...Object.keys(ITEM_PRICES).filter((id) => !SOIL.includes(id)), 'rod'];
+const LOVE: readonly string[] = ROMANCE_ITEMS;
+const TACKLE = [...Object.keys(ITEM_PRICES).filter((id) => !SOIL.includes(id) && !LOVE.includes(id)), 'rod'];
 const PEDDLER_ITEMS = [...SPICES_IDS, ...PEDDLER_POOL.map((p) => p.item)];
 type Page = 'buy' | 'sell' | 'more';
 /** Where a friend can be found by the signpost (areas with a gate to walk to). */
@@ -173,6 +174,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
               <ShopBuy {...base} at="general" items={SEEDS} title="씨앗 · 꾸러미" />
               <ShopBuy {...base} at="general" items={SOIL} title="비료 · 흙" />
               <ShopBuy {...base} at="general" items={TACKLE} title="낚시 도구" />
+              <ShopBuy {...base} at="general" items={[...LOVE]} title="마음 전하기" hint="꽃다발은 8하트 주민에게, 청혼 반지는 10하트 연인에게 건네요." />
               <ShopBuy {...base} at="general" items={UNLOCKS} title="희귀 소품 · 머리색 팔레트" hint="소품은 수확 목표를 채우면, 팔레트는 한 단계씩 열려요." />
             </>
           ),

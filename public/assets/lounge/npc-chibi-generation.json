@@ -210,6 +210,12 @@
    "w": 512,
    "h": 640,
    "sha256": "641EC1CF1646F040812D703D862A1A59E02EA025EFAD35E3C069D25B392BE254"
+  },
+  "carpenter": {
+   "file": "chibi/npc-valkyrie.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "E8B567B1DBCEB02EA36AA21FE33AAFB6ABFF448AA83238011D8ECADE10A7DB31"
   }
  },
  "keying": "scripts/optimize-assets.mjs chibi: flood key from the border against the measured ground colour, unmix + despill on the rim, split at the emptiest column near the middle, figure at 94% of a 640px canvas with the feet on the 97% line."
