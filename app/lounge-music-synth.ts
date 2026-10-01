@@ -8,8 +8,8 @@
 // `output` is the piece fade: crossfades with the music box / files happen
 // on it, and a place change dips it before the new piece starts.
 // Per note only the oscillators / noise source and one envelope gain are made.
+import { PIECES } from './lounge-music-pieces.ts';
 import {
-  PIECES,
   barEvents,
   newScoreState,
   mulberry32,
@@ -75,6 +75,12 @@ export class NoirEngine {
   private state: ScoreState = newScoreState();
   private tension = false;
   private tensionBars = 0;
+  /** Night variant (district pieces): read at each new bar. */
+  private night = false;
+  /** Seconds per step of the bar being played (the night tempo applies per bar). */
+  private stepLength = 0.1;
+  /** Shop rooms: the district's piece through the wall (a lowpass on the output). */
+  private readonly tone: BiquadFilterNode;
 
   constructor(ctx: BaseAudioContext, noise: AudioBuffer, level: number, seed = Date.now()) {
     this.ctx = ctx;
@@ -89,7 +95,11 @@ export class NoirEngine {
     this.limiter.ratio.value = 12;
     this.limiter.attack.value = 0.003;
     this.limiter.release.value = 0.2;
-    this.limiter.connect(this.output);
+    this.tone = ctx.createBiquadFilter();
+    this.tone.type = 'lowpass';
+    this.tone.frequency.value = 18000;
+    this.tone.Q.value = 0.5;
+    this.limiter.connect(this.tone).connect(this.output);
     const mix = (this.mix = ctx.createGain());
     mix.gain.value = 0.45;
     mix.connect(this.limiter);
@@ -206,6 +216,16 @@ export class NoirEngine {
     g.setTargetAtTime(this.level, t, 0.6);
   }
 
+  /** Night variant: softer, sparser and (per piece) a little slower from the next bar. */
+  setNight(on: boolean) {
+    this.night = on;
+  }
+  /** Muffled (heard from a shop room) or open. */
+  setMuffled(on: boolean, t: number) {
+    this.tone.frequency.cancelScheduledValues(t);
+    this.tone.frequency.setTargetAtTime(on ? 1500 : 18000, t, 0.35);
+  }
+
   /** The tension layer during a hand (heartbeat + dominant pulse). */
   setTension(on: boolean) {
     if (on === this.tension) return;
@@ -227,13 +247,13 @@ export class NoirEngine {
     }
     const spec = this.spec;
     if (!spec) return;
-    const stepLength = stepSeconds(spec);
     // After a suspend (hidden tab), pick up from now instead of catching up.
     if (this.nextStep < now - 0.1) this.nextStep = now + 0.05;
     const limit = Math.min(until, this.stopAt || Infinity, this.switchAt || Infinity);
     while (this.nextStep < limit) {
       const inBar = this.step % spec.stepsPerBar;
       if (inBar === 0) this.newBar(spec);
+      const stepLength = this.stepLength;
       for (const e of this.events)
         if (Math.floor(e.step) === inBar) {
           const jitter = e.inst === 'kick' || e.inst === 'heart' ? 0 : (this.rng() - 0.5) * 0.008;
@@ -249,9 +269,11 @@ export class NoirEngine {
       this.bars = planCycle(spec, this.cycle, this.rng);
       this.barIndex = 0;
       const { lead, high } = this.state;
-      this.state = { ...newScoreState(), lead, high };
+      this.state = { ...newScoreState(), lead, high, night: this.night };
     }
     const plan = this.bars[this.barIndex++];
+    this.state.night = this.night;
+    this.stepLength = stepSeconds(spec) / (this.night && spec.nightTempo ? spec.nightTempo : 1);
     this.events = barEvents(spec, plan, this.state, this.rng);
     if (this.tension) {
       const level = tensionLevel(this.tensionBars++);

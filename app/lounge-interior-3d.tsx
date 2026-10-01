@@ -98,6 +98,8 @@ import { VENUES } from './lounge-venues';
 import type { TavernModel } from './lounge-model-assets';
 import './lounge-interior-3d.css';
 import { WalkHints } from './ui/WalkHints';
+import { loungeAudio } from './lounge-audio';
+import { INTERIOR_SURFACE } from './lounge-footsteps';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_LIGHT, VIEW_PITCH, followEase } from './lounge-village-camera';
 import {
   INTERIOR_FIGURE_CARD,
@@ -1065,6 +1067,7 @@ export function Interior3D({
       }
       const moved = Math.hypot(l.point.x - before.x, l.point.y - before.y);
       l.moving = moved > 0.005;
+      if (l.moving) loungeAudio.footstep(running, INTERIOR_SURFACE);
       const loco = advanceLocomotion(mine.locomotion, { distance: moved, horizontal: floorToScreenX(l.point.x - before.x, l.point.y - before.y) }, running ? 'run' : 'walk', WALK_SPEED);
       const changed = loco.motion !== mine.motion || loco.state.facing !== mine.locomotion.facing;
       mine.locomotion = loco.state;

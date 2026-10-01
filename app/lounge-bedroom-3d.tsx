@@ -90,6 +90,8 @@ import { keyLabel } from './lounge-keybinds';
 import './lounge-bedroom-3d.css';
 import './lounge-bedroom-edit-dock.css';
 import { WalkHints } from './ui/WalkHints';
+import { loungeAudio } from './lounge-audio';
+import { INTERIOR_SURFACE } from './lounge-footsteps';
 import { createBedroomNpc } from './lounge-bedroom-npc';
 import { NPCS, type NpcGuest } from './lounge-romance';
 
@@ -1025,6 +1027,7 @@ export function Bedroom3D({
         movedZ = position.z - before.z,
         moved = Math.hypot(movedX, movedZ);
       const walking = moved > 0.0001;
+      if (moved > 0.004) loungeAudio.footstep(running, INTERIOR_SURFACE);
       const motion = advanceLocomotion(me.locomotion, { distance: moved, horizontal: movedX * cameraRight.x + movedZ * cameraRight.z }, running ? 'run' : 'walk', VIEW_WALK_SPEED);
       const changed = motion.motion !== me.motion || motion.state.facing !== me.locomotion.facing;
       me.locomotion = motion.state;

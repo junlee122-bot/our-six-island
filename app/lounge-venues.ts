@@ -5,6 +5,7 @@
 // widening `area === 'casino' ? … : …` forks across the app.
 import { NAMES } from './lounge-text.ts';
 import { SHOP_AREAS, SHOP_INTERIORS, type ShopArea } from './lounge-shop-interiors.ts';
+import type { MusicPlace } from './lounge-music-tracks.ts';
 
 /**
  * Server areas that are walkable interiors ('lounge' is the hall). The shops
@@ -15,8 +16,12 @@ export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tav
 export const isInteriorArea = (a: unknown): a is InteriorArea =>
   typeof a === 'string' && (INTERIOR_AREAS as readonly string[]).includes(a);
 
-/** Music slot of a place (lounge-music-tracks.ts); the hall's is 'hall'. */
-export type VenueMusic = 'hall' | 'casino' | 'tavern';
+/**
+ * Music slot of a place (lounge-music-tracks.ts); the hall's is 'hall'. A
+ * district shop plays its district's piece (heard muffled, so stepping in or
+ * out never restarts it).
+ */
+export type VenueMusic = MusicPlace;
 /** Table look (GameScreen `data-venue`, lounge-table-venue.css). */
 export type TableVenue = 'hall' | 'casino' | 'tavern';
 
@@ -40,7 +45,7 @@ export type Venue = {
 
 const shopVenue = (area: ShopArea): Venue => {
   const s = SHOP_INTERIORS[area];
-  return { area, name: s.name, short: s.short, place: area, music: 'hall', venue: 'hall', chat: s.chat, exposure: 1.08, tagline: s.tagline };
+  return { area, name: s.name, short: s.short, place: area, music: s.district, venue: 'hall', chat: s.chat, exposure: 1.08, tagline: s.tagline };
 };
 
 export const VENUES: Record<InteriorArea, Venue> = {

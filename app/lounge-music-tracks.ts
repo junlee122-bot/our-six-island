@@ -7,8 +7,8 @@
 // paths that do not, so the standalone build never references a missing file.
 // Pure helpers only (no AudioContext here): lounge-audio.ts does the playback.
 
-export type MusicPlace = 'casino' | 'hall' | 'tavern';
-export const MUSIC_PLACES: readonly MusicPlace[] = ['casino', 'hall', 'tavern'];
+export type MusicPlace = 'casino' | 'hall' | 'tavern' | 'market' | 'harbor' | 'hillside';
+export const MUSIC_PLACES: readonly MusicPlace[] = ['casino', 'hall', 'tavern', 'market', 'harbor', 'hillside'];
 
 export type MusicTrack = {
   /** Candidate files, best first; the first one the browser can play is fetched. */
@@ -29,7 +29,33 @@ export const MUSIC_TRACKS: Record<MusicPlace, MusicTrack> = {
   tavern: {
     files: ['/assets/lounge/music/tavern.ogg', '/assets/lounge/music/tavern.mp3'],
   },
+  // The districts (lounge-districts.ts) play their generative pieces
+  // (lounge-music-districts.ts); list a file here to replace one.
+  market: { files: [] },
+  harbor: { files: [] },
+  hillside: { files: [] },
 };
+
+/** What a map plays: its piece, and the outdoor ambience under it. */
+export type AreaSound = {
+  music: MusicPlace;
+  /**
+   * Outdoor bed on the ambience channel: `water` 0..1 (the hub river's loop),
+   * `waves` turns it into a slow surf swell, `day` / `night` the chirps.
+   */
+  ambience: { water: number; waves?: boolean; day: 'birds' | 'gulls' | 'none'; night: 'crickets' | 'none' };
+};
+/**
+ * Music and ambience per outdoor district (a new district adds one entry
+ * here, a PieceSpec in lounge-music-districts.ts and a MUSIC_TRACKS slot).
+ * Its shop rooms play the same piece, muffled (lounge-venues.ts).
+ */
+export const AREA_SOUND: Partial<Record<string, AreaSound>> = {
+  market: { music: 'market', ambience: { water: 0, day: 'birds', night: 'crickets' } },
+  harbor: { music: 'harbor', ambience: { water: 0.7, waves: true, day: 'gulls', night: 'none' } },
+  hillside: { music: 'hillside', ambience: { water: 0, day: 'birds', night: 'crickets' } },
+};
+export const areaSound = (area: string | null | undefined): AreaSound | null => (area && AREA_SOUND[area]) || null;
 
 /**
  * Level of a location track under the music channel, so a file mastered to

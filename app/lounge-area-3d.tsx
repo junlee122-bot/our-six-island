@@ -55,6 +55,8 @@ import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
 import type { ShopArea } from './lounge-shop-interiors';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
+import { loungeAudio } from './lounge-audio';
+import { areaSurface } from './lounge-footsteps';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -331,6 +333,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       applyVillageLight({ hemi, sun }, renderer, pal, weatherOf(kstDayOf(now)), light);
       night = pal.lamps > 0.5;
       tint = villageFigureTint(pal.lamps);
+      // The district's piece and bed follow its own clock (night variant, crickets).
+      loungeAudio.setScene({ village: false, night });
       return true;
     };
     sc.far = 80;
@@ -643,6 +647,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       lantern.position.set(l.point.x, 1.8, l.point.z + 0.4);
       if (follow(l.point, false, dt)) dirty = true;
       const moving = moved > 0.0005;
+      if (moving && !s.paused) loungeAudio.footstep(l.shift, areaSurface(s.area, l.point));
       if ((moving && t - lastSend > 180) || (!moving && wasMoving)) {
         if (Math.hypot(l.point.x - l.lastSent.x, l.point.z - l.lastSent.z) > 0.01 || Number.isNaN(l.lastSent.x)) {
           const net = regionToNetwork(s.area, l.point);

@@ -70,6 +70,7 @@ import { roomUnlocks } from './lounge-bedroom-data';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
 import { useOutdoor } from './lounge/Outdoor';
+import { areaSound } from './lounge-music-tracks';
 import { DISH_BY_ID, BUFF_INFO, FISH_SPOTS, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
@@ -864,15 +865,21 @@ function AccountLounge({
   const inGame = !!gameScreen && view.status === 'connected';
   // Music: the casino / hall location track (lounge-music-tracks.ts) inside and
   // at their tables, quieter at a table; the village music box elsewhere.
+  // A district (lounge-music-tracks.ts AREA_SOUND) plays its own piece and
+  // outdoor bed; its shop rooms hear the same piece through the wall.
+  const outdoorArea = outdoorApi.outdoor?.area ?? null;
+  const districtSound = !inGame && !isInteriorArea(tab) ? areaSound(outdoorArea) : null;
+  const shopRoom = !inGame && visiting === null && isShopArea(tab);
   const musicPlace =
     inGame && gameScreen
       ? VENUES[TABLE_AREA[gameScreen]].music
       : visiting === null && isInteriorArea(tab)
         ? VENUES[tab].music
-        : null;
+        : (districtSound?.music ?? null);
+  const ambience = districtSound?.ambience ?? null;
   useEffect(
-    () => loungeAudio.setScene({ game: inGame, place: musicPlace }),
-    [inGame, musicPlace],
+    () => loungeAudio.setScene({ game: inGame, place: musicPlace, ambience, indoor: shopRoom }),
+    [inGame, musicPlace, ambience, shopRoom],
   );
   const appRef = useRef<HTMLElement>(null),
     shellScroll = useRef(0),
