@@ -391,7 +391,7 @@ type ModalName =
   | 'npcRequests'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
-  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 결 목수).
+  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 신형만/봉미선 · 결 목수).
   | 'realty'
   | 'furniture'
   | 'tavernUp'
@@ -3129,7 +3129,19 @@ function AccountLounge({
       )}
       </Suspense>
       <Suspense fallback={null}>
-        {modal === 'realty' && <RealtyCounter room={room} view={view} notify={notify} save={save} onClose={() => setModal(null)} />}
+        {modal === 'realty' && (
+          <RealtyCounter
+            room={room}
+            view={view}
+            notify={notify}
+            save={save}
+            onClose={() => setModal(null)}
+            onTalk={(npc) => {
+              setModal(null);
+              setResidentTalk(npc);
+            }}
+          />
+        )}
         {modal === 'furniture' && <FurnitureCounter room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
         {modal === 'tavernUp' && <TavernUpgrades room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       </Suspense>

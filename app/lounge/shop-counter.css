@@ -46,6 +46,32 @@ dialog.sc-counter {
   font-size: 16px;
   color: var(--sc-ink);
 }
+.sc-keeper.has-talk {
+  grid-template-columns: 96px 1fr auto;
+}
+.sc-keeper-talk {
+  border: 1px solid var(--sc-accent);
+  background: var(--note-50);
+  border-radius: var(--r-round);
+  padding: 7px 14px;
+  font-weight: 700;
+  color: var(--sc-accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sc-keeper-talk:hover,
+.sc-keeper-talk:focus-visible {
+  background: var(--sc-accent);
+  color: var(--note-50);
+}
+@media (max-width: 560px) {
+  .sc-keeper.has-talk {
+    grid-template-columns: 96px 1fr;
+  }
+  .sc-keeper.has-talk .sc-keeper-talk {
+    grid-column: 1 / -1;
+  }
+}
 .sc-pages,
 .sc-cats {
   display: flex;

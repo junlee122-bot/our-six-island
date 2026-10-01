@@ -43,10 +43,10 @@ import './shop-counter.css';
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const Bedroom3D = lazy(() => import('../lounge-bedroom-3d').then((m) => ({ default: m.Bedroom3D })));
 
-/** The shopkeeper at the counter: portrait (mood follows the moment) and a line. */
-function Keeper({ host, mood, line }: { host: HostId; mood: DealerMood; line: string }) {
+/** The shopkeeper at the counter: portrait (mood follows the moment), a line and, for residents, a way to talk. */
+function Keeper({ host, mood, line, onTalk }: { host: HostId; mood: DealerMood; line: string; onTalk?: () => void }) {
   return (
-    <div className="sc-keeper" data-testid="shop-keeper">
+    <div className={onTalk ? 'sc-keeper has-talk' : 'sc-keeper'} data-testid="shop-keeper" data-host={host}>
       <span className="sc-keeper-face">
         <DealerAvatar host={host} mood={mood} />
       </span>
@@ -55,6 +55,11 @@ function Keeper({ host, mood, line }: { host: HostId; mood: DealerMood; line: st
         <small>{HOSTS[host].title}</small>
         <span key={line}>{line}</span>
       </p>
+      {onTalk && (
+        <button type="button" className="sc-keeper-talk" onClick={onTalk} data-testid="keeper-talk">
+          이야기하기
+        </button>
+      )}
     </div>
   );
 }
@@ -446,7 +451,7 @@ const REALTY_VOICE: Record<RealtyKeeper, { upgrade: string; models: string; next
   },
 };
 
-export function RealtyCounter({ room, view, notify, onClose, save }: Base & { save?: LoungeSave }) {
+export function RealtyCounter({ room, view, notify, onClose, save, onTalk }: Base & { save?: LoungeSave; /** Talk to the keeper (the speech box). */ onTalk?: (npc: RealtyKeeper) => void }) {
   const life = view.life;
   const [page, setPage] = useState<'house' | 'models' | 'upgrade'>('house');
   const [touring, setTouring] = useState<number | null>(null);
@@ -482,7 +487,7 @@ export function RealtyCounter({ room, view, notify, onClose, save }: Base & { sa
   });
   return (
     <Modal title={`${VENUE_NAME.realty} · ${HOSTS[duty.counter].name}`} onClose={onClose} className="sc-counter sc-realty" wide>
-      <Keeper host={keeper} mood={page === 'upgrade' ? 'focus' : next ? 'smile' : 'wow'} line={line} />
+      <Keeper host={keeper} mood={page === 'upgrade' ? 'focus' : next ? 'smile' : 'wow'} line={line} onTalk={onTalk ? () => onTalk(keeper) : undefined} />
       <Pages
         pages={[
           { id: 'house', label: '집 확장' },

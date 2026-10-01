@@ -69,5 +69,22 @@
       "original": "_originals/chibi/npc-chibi-shinhyungman-bongmison.png",
       "sha256": "9979BA2F91B687B14D3B65E93E57877724AD81D2B9053137237AE6707EF925BD"
     }
-  ]
+  ],
+  "residents": {
+    "realtor": "신형만 (keeps the old realtor id and its saved relations)",
+    "misun": "봉미선 (new resident id)"
+  },
+  "web": {
+    "npc-shinhyungman.webp": "611CE0D30B359EA063F4AB423E77F04E90E4E21BA50709F398E3845D9FBE34E7",
+    "npc-shinhyungman-portrait.webp": "0DC33669A441AEF13D87612380E5E36746500D7E0B2F0D0485B5C0176A060BDA",
+    "npc-bongmison.webp": "AA34BF11B7F4DCA8FBBA7AE974F7BA84BDC739FF0DD1DC60D3AE7B1899B05A18",
+    "npc-bongmison-portrait.webp": "C491A5A07DDFA3D1A1828B3141B06A392212D881A8B134837750A8F3FFB03AD4",
+    "chibi/npc-shinhyungman.webp": "3C86B8E4A0181AC27CF9B7A21D962C1A9D55ABBA062997B3D770AE26D25113DD",
+    "chibi/npc-bongmison.webp": "641EC1CF1646F040812D703D862A1A59E02EA025EFAD35E3C069D25B392BE254",
+    "host-realtor.png": "742DE1ED17831A18728ECB9EF8D002FDB9072E70F3B7CB4B3AFEB9679280134B",
+    "host-realtor.webp": "1F92D6C130A05201B2EE118CBCF7DD6CDB228092545DAF61A1C4CFBFF0B8EA55",
+    "host-misun.png": "F331F5E06D76B01AC52ED2DFE78E863473F8A77CAD49C12D410C8C907C72DE96",
+    "host-misun.webp": "DC5DBDED05A9FD8A7C574E47CE180F69012FE22F668EEE3BF9E89AED22A2CBF9"
+  },
+  "keying": "scripts/optimize-assets.mjs: npcs (tall art 660x990 + 384px portrait, flood key from the border, unmix + despill), chibi (split at the emptiest column, figure at 94% of a 512x640 canvas, feet on the 97% line), hosts (host-realtor-nohara.png rows -> host-realtor / host-misun sheets, 440x660 cells, soles on 648 px, deal and wow = smile, sorry = calm, magenta defringe)."
 }
