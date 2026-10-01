@@ -1,0 +1,47 @@
+{
+  "createdAt": "2026-10-01",
+  "provider": "Higgsfield",
+  "model": "gpt_image_2_5",
+  "background": "solid magenta #FF00FF (keyed at build)",
+  "note": "나무결 가구점 목수 → 발키리 (Clash Royale / Clash of Clans, Supercell). User reference images were uploaded only as generation inputs and are not stored in this repository. Outfit made modest (tunic + carpenter apron) for the village game.",
+  "assets": [
+    {
+      "id": "carpenter-tall",
+      "job": "d777e310-d4cf-4850-995d-8fedf4aef280",
+      "aspect": "2:3",
+      "quality": "high",
+      "resolution": "2k",
+      "styleReference": "_originals/casino-lender-rose.png",
+      "original": "_originals/npc-valkyrie.png",
+      "sha256": "8D66CB74C465EA6960B02441B8D99E0E2621F205647E8FFDE9575161457EA415"
+    },
+    {
+      "id": "carpenter-chibi",
+      "job": "5101c26a-af3b-4007-9220-487277b5f99c",
+      "aspect": "2:3",
+      "quality": "high",
+      "resolution": "2k",
+      "proportion": "about 2 heads",
+      "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+      "original": "_originals/chibi/npc-chibi-valkyrie.png",
+      "sha256": "8D578710981C5EF4BE79AB1526F0F379758D025C985BA035ED8DF73D595BF51A"
+    },
+    {
+      "id": "carpenter-host-sheet",
+      "job": "d91671c5-d5d7-4800-bbd0-3f8afe4636d2",
+      "aspect": "1:1",
+      "cost": "0.25",
+      "styleReference": "host-maehwa.png",
+      "cells": [
+        "calm",
+        "smile",
+        "deal",
+        "focus",
+        "wow",
+        "sorry"
+      ],
+      "original": "_originals/host-valkyrie.png",
+      "sha256": "DAA8DB706AE8188CE6B378D1BF2447A9CD2944857EB16DCA7A13390DD7FAB767"
+    }
+  ]
+}
