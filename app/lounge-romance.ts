@@ -37,6 +37,7 @@ import {
   NPC_SPECIAL_POINTS,
   NPC_TALK_POINTS,
   giftReaction,
+  npcSpouseOf,
   isNpcId,
   npcLevel,
   type GiftReaction,
@@ -122,8 +123,12 @@ export function readNpcRelations(value: unknown): NpcRelations | undefined {
     if (safe(v.dates)) relation.dates = Math.min(10000, v.dates);
     if (typeof v.lastGift === 'string' && npcGiftable(v.lastGift)) relation.lastGift = v.lastGift;
     if (safe(v.rw) && v.rw > 0) relation.rw = v.rw & 3;
-    if (v.love === 'dating' || v.love === 'engaged' || v.love === 'married') relation.love = v.love;
-    for (const field of ['since', 'weddingDay', 'homeGiftDay', 'coolUntil'] as const) if (safe(v[field])) relation[field] = v[field];
+    // The realty couple are married to each other: an old row's love state (from before 신형만 · 봉미선) is dropped.
+    if (!npcSpouseOf(npc)) {
+      if (v.love === 'dating' || v.love === 'engaged' || v.love === 'married') relation.love = v.love;
+      for (const field of ['since', 'weddingDay', 'homeGiftDay'] as const) if (safe(v[field])) relation[field] = v[field];
+    }
+    if (safe(v.coolUntil)) relation.coolUntil = v.coolUntil;
     out[npc] = relation;
   }
   return Object.keys(out).length ? out : undefined;
@@ -297,6 +302,11 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
   const takenBy = () => Object.entries(life.ext ?? {}).find(([id, ext]) => id !== uid && ['engaged', 'married'].includes(ext?.npcRelations?.[action.npc]?.love ?? ''));
   const partner = npcPartnerOf(relations);
   const name = NPCS[action.npc].name;
+  // 신형만 · 봉미선 are married to each other: no 꽃다발 or 청혼 반지 (the item stays).
+  const married = () => {
+    const spouse = npcSpouseOf(action.npc);
+    if (spouse) fail(`${josa(name, '은/는')} ${josa(NPCS[spouse].name, '과/와')} 결혼한 사이예요.`);
+  };
   let reaction: GiftReaction | undefined;
   switch (action.op) {
     case 'talk':
@@ -336,6 +346,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       delete relation.invitedUntil;
       break;
     case 'ask': {
+      married();
       if (partner) fail(partner.npc === action.npc ? `${josa(name, '과/와')}는 이미 ${partner.love === 'dating' ? '사귀는' : '함께하는'} 사이예요.` : `${josa(NPCS[partner.npc].name, '과/와')} 함께하는 동안은 다른 주민에게 꽃다발을 건넬 수 없어요.`);
       const cool = Math.max(0, ...NPC_IDS.map((id) => relations[id]?.coolUntil ?? 0));
       if (cool > day) fail(`마음을 추스르는 중이에요. ${cool - day}일 뒤에 다시 꽃다발을 건넬 수 있어요.`);
@@ -348,6 +359,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       break;
     }
     case 'propose': {
+      married();
       if (relation.love !== 'dating') fail(relation.love ? '이미 약속한 사이예요.' : '먼저 꽃다발을 건네 연인이 되어 주세요.');
       if (itemCount(life, uid, 'pledge-ring') < 1) fail('청혼 반지가 없어요. 등불 잡화점에서 살 수 있어요.');
       if (takenBy()) fail(`${josa(name, '은/는')} 이미 다른 친구와 약속한 사이예요.`);

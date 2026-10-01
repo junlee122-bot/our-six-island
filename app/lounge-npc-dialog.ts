@@ -93,7 +93,7 @@ export type NpcTalkContext = {
   /** Item name of lastGift (the caller resolves names). */
   lastGiftName?: string;
   spot?: Pick<NpcSpot, 'activity' | 'area' | 'label'> | null;
-} & Partial<Pick<NpcLoveContext, 'love' | 'days' | 'atHome' | 'otherPartner'>>;
+} & Partial<Pick<NpcLoveContext, 'love' | 'days' | 'atHome' | 'otherPartner' | 'otherNpc' | 'otherLove'>>;
 export type NpcTalk = { lines: string[]; tier: 0 | 1 | 2 | 3 | 4 };
 
 /** The fill-ins and the body pools of a talk (npcTalk, npcTalkReply). */

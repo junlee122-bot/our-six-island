@@ -6,13 +6,14 @@
 // rest of the dialogue (lounge-npc-dialog.ts): same person, day and
 // situation give the same line on every screen.
 import { hash32, timeOfDay, type Season, type Weather } from './lounge-calendar.ts';
-import { NPC_HEART_POINTS, NPCS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
+import { NPC_HEART_POINTS, NPC_SISTER_FRIENDS, NPCS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
 import type { NpcBanter } from './lounge-npc-line-types.ts';
-import type { NpcLoveSet, NpcLoveTier } from './lounge-npc-love-types.ts';
+import type { NpcLoveSet, NpcLoveTier, NpcMarriedSet } from './lounge-npc-love-types.ts';
 import { NPC_LOVE_BANTER_A } from './lounge-npc-love-banter-a.ts';
 import { NPC_LOVE_BANTER_B } from './lounge-npc-love-banter-b.ts';
 import { NPC_LOVE_BANTER_C } from './lounge-npc-love-banter-c.ts';
 import { NPC_LOVE_BANTER_D } from './lounge-npc-love-banter-d.ts';
+import { NPC_LOVE_BANTER_E } from './lounge-npc-love-banter-e.ts';
 import { LUMI_LOVE } from './lounge-npc-love-lumi.ts';
 import { MAEHWA_LOVE } from './lounge-npc-love-maehwa.ts';
 import { CAPTAIN_LOVE } from './lounge-npc-love-captain.ts';
@@ -33,14 +34,17 @@ import { BOCCHI_LOVE } from './lounge-npc-love-bocchi.ts';
 import { TSUNADE_LOVE } from './lounge-npc-love-tsunade.ts';
 import { MAKIMA_LOVE } from './lounge-npc-love-makima.ts';
 import { YANINEKO_LOVE } from './lounge-npc-love-yanineko.ts';
+import { CARPENTER_LOVE } from './lounge-npc-love-carpenter.ts';
+import { REALTOR_LOVE } from './lounge-npc-love-realtor.ts';
+import { MISUN_LOVE } from './lounge-npc-love-misun.ts';
 
-export type { NpcLoveSet, NpcLoveTier };
+export type { NpcLoveSet, NpcLoveTier, NpcMarriedSet };
 export { NPC_LOVE_TIERS } from './lounge-npc-love-types.ts';
 
 /**
- * Every resident's love lines. 발키리 (carpenter) and the realty couple
- * 신형만 · 봉미선 (realtor, misun) have no love file yet; until theirs land
- * they use NPC_LOVE_FALLBACK.
+ * Every resident's love lines. The realty couple 신형만 · 봉미선 (realtor,
+ * misun) are married to each other and have friendship lines instead
+ * (NPC_LOVE_MARRIED).
  */
 export const NPC_LOVE: Partial<Record<NpcId, NpcLoveSet>> = {
   lumi: LUMI_LOVE,
@@ -63,6 +67,13 @@ export const NPC_LOVE: Partial<Record<NpcId, NpcLoveSet>> = {
   tsunade: TSUNADE_LOVE,
   makima: MAKIMA_LOVE,
   yanineko: YANINEKO_LOVE,
+  carpenter: CARPENTER_LOVE,
+};
+
+/** The married couple's lines (NPC_SPOUSES): friendship, refusals, cheering friends on. */
+export const NPC_LOVE_MARRIED: Partial<Record<NpcId, NpcMarriedSet>> = {
+  realtor: REALTOR_LOVE,
+  misun: MISUN_LOVE,
 };
 
 /** Plain 해요체 lines for a resident without a love file yet. */
@@ -95,9 +106,17 @@ export const NPC_LOVE_FALLBACK: NpcLoveSet = {
 };
 
 /** Love banter between residents (bubbles), merged with the everyday banter by pair. */
-export const NPC_LOVE_BANTER: readonly NpcBanter[] = [...NPC_LOVE_BANTER_A, ...NPC_LOVE_BANTER_B, ...NPC_LOVE_BANTER_C, ...NPC_LOVE_BANTER_D];
+export const NPC_LOVE_BANTER: readonly NpcBanter[] = [
+  ...NPC_LOVE_BANTER_A,
+  ...NPC_LOVE_BANTER_B,
+  ...NPC_LOVE_BANTER_C,
+  ...NPC_LOVE_BANTER_D,
+  ...NPC_LOVE_BANTER_E,
+];
 
 export const npcLoveSet = (npc: NpcId): NpcLoveSet => NPC_LOVE[npc] ?? NPC_LOVE_FALLBACK;
+/** 발키리 talks to these friends as 언니·동생 (NPC_SISTER_FRIENDS). */
+const sisterSet = (npc: NpcId, me: string | undefined) => (me !== undefined && NPC_SISTER_FRIENDS.includes(me) ? npcLoveSet(npc).sister : undefined);
 
 /** The heart band (0–2, 3–4, 5–6, 7+) or the partner state. */
 export function npcLoveTier(points: number, love?: NpcLove): NpcLoveTier {
@@ -124,6 +143,11 @@ export type NpcLoveContext = {
   atHome?: boolean;
   /** The friend's partner when it is someone else (their name). */
   otherPartner?: string;
+  /** That partner's resident id and how far the friend is with them. */
+  otherNpc?: NpcId;
+  otherLove?: NpcLove;
+  /** The friend's name (발키리's 언니·동생 lines). */
+  me?: string;
 };
 
 /**
@@ -132,15 +156,36 @@ export type NpcLoveContext = {
  * teasing when the friend is with someone else.
  */
 export function npcLovePools(ctx: NpcLoveContext, now: number): string[][] {
+  const M = NPC_LOVE_MARRIED[ctx.npc];
+  if (M) return marriedPools(M, ctx);
   const L = npcLoveSet(ctx.npc);
   const tier = npcLoveTier(ctx.points, ctx.love);
-  const pools: string[][] = [L.tier[tier], L.tier[tier]];
+  const band = sisterSet(ctx.npc, ctx.me)?.tier[tier] ?? L.tier[tier];
+  const pools: string[][] = [band, band];
   if (ctx.love === 'married' && ctx.atHome) {
     const t = timeOfDay(now);
     pools.push(t === 'dawn' || t === 'day' ? L.home.morning : t === 'evening' ? L.home.evening : L.home.night);
   }
   if (ctx.love && npcAnniversary(ctx.days ?? 0)) pools.push(L.home.anniversary, L.home.anniversary, L.home.anniversary);
   if (!ctx.love && ctx.otherPartner) pools.push(ctx.points >= 5 * NPC_HEART_POINTS ? L.jealous : L.tease);
+  return pools.filter((p) => p.length > 0);
+}
+
+/**
+ * A married resident's pools: the friendship band (twice), their spouse,
+ * 발키리 now and then, and cheering when the friend is with someone (a word
+ * about 발키리 when it is her, a married senior's advice once engaged).
+ */
+function marriedPools(M: NpcMarriedSet, ctx: NpcLoveContext): string[][] {
+  const tier = npcLoveTier(ctx.points);
+  const band = M.tier[tier === 'h0' || tier === 'h3' || tier === 'h5' ? tier : 'h7'];
+  const pools: string[][] = [band, band, M.spouse, M.carpenter];
+  if (ctx.otherPartner) {
+    const stage = ctx.otherLove ?? 'dating';
+    pools.push(M.news[stage], M.news[stage]);
+    if (ctx.otherNpc === 'carpenter') pools.push(M.newsCarpenter);
+    if (stage !== 'dating') pools.push(M.advice);
+  }
   return pools.filter((p) => p.length > 0);
 }
 
@@ -160,21 +205,29 @@ export function npcLoveOpener(npc: NpcId, now: number, weather: Weather, season:
 const pick = (pool: readonly string[] | undefined, key: string) => (pool && pool.length ? pool[hash32(key) % pool.length] : undefined);
 
 export type NpcLoveMoment = 'ask-accept' | 'ask-decline' | 'ask-taken' | 'propose-accept' | 'propose-decline' | 'breakup' | 'gift';
-/** One line for a moment (a 꽃다발, a 청혼 반지, a breakup, the morning present). */
-export function npcLoveLine(npc: NpcId, moment: NpcLoveMoment, key: string): string {
+/**
+ * One line for a moment (a 꽃다발, a 청혼 반지, a breakup, the morning
+ * present). A married resident (NPC_LOVE_MARRIED) turns every 꽃다발 and ring
+ * down; `me` picks 발키리's 언니·동생 answers.
+ */
+export function npcLoveLine(npc: NpcId, moment: NpcLoveMoment, key: string, me?: string): string {
+  const M = NPC_LOVE_MARRIED[npc];
+  if (M && moment.startsWith('ask-')) return pick(M.refuse.bouquet, `${npc}:love:${moment}:${key}`)!;
+  if (M && moment.startsWith('propose-')) return pick(M.refuse.ring, `${npc}:love:${moment}:${key}`)!;
   const L = npcLoveSet(npc);
+  const S = sisterSet(npc, me);
   const pool =
-    moment === 'ask-accept' ? L.ask.accept
-    : moment === 'ask-decline' ? L.ask.decline
+    moment === 'ask-accept' ? S?.ask.accept ?? L.ask.accept
+    : moment === 'ask-decline' ? S?.ask.decline ?? L.ask.decline
     : moment === 'ask-taken' ? L.ask.taken
-    : moment === 'propose-accept' ? L.propose.accept
-    : moment === 'propose-decline' ? L.propose.decline
+    : moment === 'propose-accept' ? S?.propose.accept ?? L.propose.accept
+    : moment === 'propose-decline' ? S?.propose.decline ?? L.propose.decline
     : moment === 'breakup' ? L.breakup
     : L.home.gift;
   return pick(pool, `${npc}:love:${moment}:${key}`) ?? pick(NPC_LOVE_FALLBACK.ask.accept, key)!;
 }
 /** The wedding vows, in order (one page each). */
-export const npcWeddingLines = (npc: NpcId) => [...npcLoveSet(npc).wedding];
+export const npcWeddingLines = (npc: NpcId, me?: string) => [...(sisterSet(npc, me)?.wedding ?? npcLoveSet(npc).wedding)];
 
 /** Fills the love placeholders ({me} {name} {item} {partner} {days} …); unknown keys stay visible. */
 export function fillLoveLine(template: string, vars: Record<string, string | number | undefined>, npc: NpcId) {
@@ -190,6 +243,6 @@ export function allNpcLoveLines(npc: NpcId): string[] {
     else if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === 'object') Object.values(v).forEach(walk);
   };
-  walk(NPC_LOVE[npc]);
+  walk(NPC_LOVE[npc] ?? NPC_LOVE_MARRIED[npc]);
   return out;
 }

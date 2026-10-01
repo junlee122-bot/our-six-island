@@ -11,7 +11,7 @@ import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcLoveStatus, npcLoveTalk } from '../lounge-npc-speech';
 import { kstDay } from '../lounge-economy';
 import { josa } from '../lounge-text';
-import { NPC_REGULAR_POINTS, NPC_SPECIAL_POINTS } from '../lounge-npc-data';
+import { NPC_REGULAR_POINTS, NPC_SPECIAL_POINTS, npcSpouseOf } from '../lounge-npc-data';
 import { npcSpot } from '../lounge-npc-schedule';
 import { npcGiftLine, npcTalk, npcVisitLine } from '../lounge-npc-dialog';
 import { ACTORS } from '../lounge-roster';
@@ -78,6 +78,9 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const partner = rows.find((r) => r.love);
   const takenBy = view.life?.npcSpouses?.[selected];
   const taken = takenBy !== undefined && takenBy !== who;
+  // 신형만 · 봉미선 are married to each other.
+  const spouse = npcSpouseOf(selected);
+  const wed = spouse ? `${josa(NPCS[spouse].name, '과/와')} 결혼한 사이예요.` : '';
   const loveSay = (line: string, vars: Record<string, string> = {}) => fillLoveLine(line, { me: myName, ...vars }, selected);
   const loveKey = `${who}:${day}`;
   const loveStatus = npcLoveStatus(row, day);
@@ -140,8 +143,8 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
             parting={parting === selected}
             busy={busy}
             reasons={{
-              ask: partner ? `${josa(NPCS[partner.npc].name, '과/와')} 함께하는 중이에요.` : taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv.bouquet ? '꽃다발은 등불 잡화점에서 팔아요.' : row.points < NPC_DATING_POINTS ? '8하트부터 꽃다발을 받아 줘요.' : blocked(action('ask')),
-              propose: taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv['pledge-ring'] ? '청혼 반지는 등불 잡화점에서 팔아요.' : row.points < NPC_PROPOSE_POINTS ? '10하트가 되면 청혼할 수 있어요.' : day - (row.since ?? day) < NPC_DATING_DAYS ? `사귄 지 ${NPC_DATING_DAYS}일이 지나면 청혼할 수 있어요.` : blocked(action('propose')),
+              ask: wed || (partner ? `${josa(NPCS[partner.npc].name, '과/와')} 함께하는 중이에요.` : taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv.bouquet ? '꽃다발은 등불 잡화점에서 팔아요.' : row.points < NPC_DATING_POINTS ? '8하트부터 꽃다발을 받아 줘요.' : blocked(action('ask'))),
+              propose: wed || (taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv['pledge-ring'] ? '청혼 반지는 등불 잡화점에서 팔아요.' : row.points < NPC_PROPOSE_POINTS ? '10하트가 되면 청혼할 수 있어요.' : day - (row.since ?? day) < NPC_DATING_DAYS ? `사귄 지 ${NPC_DATING_DAYS}일이 지나면 청혼할 수 있어요.` : blocked(action('propose'))),
               wedding: day < (row.weddingDay ?? day) ? `결혼식은 ${(row.weddingDay ?? day) - day}일 뒤예요.` : blocked(action('wedding')),
               homeGift: row.homeGifted ? '내일 아침에 또 챙겨 줘요.' : !row.atHome ? '배우자가 일하러 나갔어요. 밤이나 아침에 집에서 받아요.' : blocked(action('homeGift')),
               breakup: '',
@@ -149,9 +152,9 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
             homeGifted={!!row.homeGifted}
             onPart={() => setParting(selected)}
             onLove={(op) => void run(action(op), () => {
-              if (op === 'wedding') return npcWeddingLines(selected).map((line) => loveSay(line));
+              if (op === 'wedding') return npcWeddingLines(selected, myName).map((line) => loveSay(line));
               if (op === 'homeGift') return [loveSay(npcLoveLine(selected, 'gift', loveKey), { item: view.self ? itemName(spouseGiftOf(selected, view.self, day)) : '' })];
-              return [loveSay(npcLoveLine(selected, op === 'ask' ? 'ask-accept' : op === 'propose' ? 'propose-accept' : 'breakup', loveKey))];
+              return [loveSay(npcLoveLine(selected, op === 'ask' ? 'ask-accept' : op === 'propose' ? 'propose-accept' : 'breakup', loveKey, myName))];
             })}
           />
           <div className="l-npc-gift">

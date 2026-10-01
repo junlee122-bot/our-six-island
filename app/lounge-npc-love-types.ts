@@ -49,4 +49,35 @@ export type NpcLoveSet = {
   tease: string[];
   /** 헤어지거나 이혼했을 때. */
   breakup: string[];
+  /**
+   * 언니·동생으로 부르는 친구(NPC_SISTER_FRIENDS)에게만 쓰는 말(발키리).
+   * 있는 칸만 위의 것 대신 나와요.
+   */
+  sister?: {
+    tier: Record<NpcLoveTier, string[]>;
+    ask: { accept: string[]; decline: string[] };
+    propose: { accept: string[]; decline: string[] };
+    wedding: string[];
+  };
+};
+
+/**
+ * 서로 결혼한 주민(신형만 · 봉미선, NPC_SPOUSES)의 대사. 친구와는 연애하지
+ * 않으니 하트 단계는 우정뿐이고, 꽃다발·반지는 배우자 얘기를 하며 거절해요.
+ */
+export type NpcMarriedSet = {
+  /** 우정 단계별 이야기: h0 0~2하트 · h3 3~4하트 · h5 5~6하트 · h7 7하트 이상. */
+  tier: Record<'h0' | 'h3' | 'h5' | 'h7', string[]>;
+  /** 배우자 이야기(평소 대화에 섞여요). */
+  spouse: string[];
+  /** 발키리 이야기. */
+  carpenter: string[];
+  /** 꽃다발 · 청혼 반지를 받았을 때(언제나 거절, 배우자 언급). */
+  refuse: { bouquet: string[]; ring: string[] };
+  /** 친구가 다른 주민({partner})과 연인 · 약혼 · 결혼했을 때의 반응(축하). */
+  news: { dating: string[]; engaged: string[]; married: string[] };
+  /** 친구의 상대가 발키리일 때 덧붙는 말. */
+  newsCarpenter: string[];
+  /** 결혼 선배의 조언(친구가 약혼·결혼했을 때 섞여요). */
+  advice: string[];
 };

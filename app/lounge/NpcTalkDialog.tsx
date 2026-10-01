@@ -11,7 +11,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
 import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, assertNpcSocialContext, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
-import { NPC_TALK_POINTS } from '../lounge-npc-data';
+import { NPC_TALK_POINTS, npcSpouseOf } from '../lounge-npc-data';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcSpot } from '../lounge-npc-schedule';
 import { npcGiftLine, npcTalk, npcTalkReply } from '../lounge-npc-dialog';
@@ -123,17 +123,19 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
   const doLove = (id: NpcLoveChoice) => {
     if (busy) return;
     const op: NpcSocialAction = { kind: 'npcSocial', npc, op: id };
+    // 신형만 · 봉미선 are married to each other: they turn it down (no server call, the item stays).
+    if ((id === 'ask' || id === 'propose') && npcSpouseOf(npc)) return answer([say(npcLoveLine(npc, id === 'ask' ? 'ask-decline' : 'propose-decline', loveKey))]);
     if (id === 'ask') {
-      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey))]);
-      if (row.points < NPC_DATING_POINTS) return answer([say(npcLoveLine(npc, 'ask-decline', loveKey))]);
-      return void run(op, [say(npcLoveLine(npc, 'ask-accept', loveKey))]);
+      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey, myName))]);
+      if (row.points < NPC_DATING_POINTS) return answer([say(npcLoveLine(npc, 'ask-decline', loveKey, myName))]);
+      return void run(op, [say(npcLoveLine(npc, 'ask-accept', loveKey, myName))]);
     }
     if (id === 'propose') {
-      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey))]);
-      if (row.points < NPC_PROPOSE_POINTS || today - (row.since ?? today) < NPC_DATING_DAYS) return answer([say(npcLoveLine(npc, 'propose-decline', loveKey))]);
-      return void run(op, [say(npcLoveLine(npc, 'propose-accept', loveKey))]);
+      if (takenBy !== undefined && takenBy !== who) return answer([say(npcLoveLine(npc, 'ask-taken', loveKey, myName))]);
+      if (row.points < NPC_PROPOSE_POINTS || today - (row.since ?? today) < NPC_DATING_DAYS) return answer([say(npcLoveLine(npc, 'propose-decline', loveKey, myName))]);
+      return void run(op, [say(npcLoveLine(npc, 'propose-accept', loveKey, myName))]);
     }
-    if (id === 'wedding') return void run(op, npcWeddingLines(npc).map((line) => say(line)));
+    if (id === 'wedding') return void run(op, npcWeddingLines(npc, myName).map((line) => say(line)));
     const item = view.self ? spouseGiftOf(npc, view.self, today) : '';
     return void run(op, [say(npcLoveLine(npc, 'gift', loveKey), { item: item ? itemName(item) : '' })]);
   };

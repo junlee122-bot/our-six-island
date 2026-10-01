@@ -448,6 +448,15 @@ export const NPCS: Record<NpcId, NpcDef> = {
  */
 export const NPC_SISTER_FRIENDS: readonly string[] = ['도원', '민서'];
 
+/**
+ * Residents married to each other (신형만 · 봉미선, user request 2026-10-01).
+ * Friends cannot date, get engaged to or marry them: a 꽃다발 or a 청혼 반지
+ * is turned down (lounge-romance.ts) and their love lines are friendship only
+ * (NpcMarriedSet in lounge-npc-love-types.ts).
+ */
+export const NPC_SPOUSES: Partial<Record<NpcId, NpcId>> = { realtor: 'misun', misun: 'realtor' };
+export const npcSpouseOf = (npc: NpcId): NpcId | undefined => NPC_SPOUSES[npc];
+
 /** How residents relate to each other (their chats and a few events come from here). */
 export type NpcBond = { a: NpcId; b: NpcId; kind: 'rival' | 'friend' | 'regular' | 'mentor' | 'crush' | 'partner'; note: string };
 export const NPC_BONDS: readonly NpcBond[] = [

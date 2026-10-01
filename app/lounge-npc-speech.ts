@@ -97,7 +97,7 @@ export function npcLoveTalk(rows: readonly LoveRow[], npc: NpcId, day: number) {
   const from = love === 'married' ? row?.weddingDay : row?.since;
   return {
     ...(love ? { love, days: Math.max(0, day - (from ?? day)), atHome: !!row?.atHome } : {}),
-    ...(partner ? { otherPartner: NPCS[partner.npc].name } : {}),
+    ...(partner ? { otherPartner: NPCS[partner.npc].name, otherNpc: partner.npc, otherLove: partner.love } : {}),
   };
 }
 /** "연인 · 3일째", "약혼 · 결혼식까지 2일", "결혼 · 함께한 지 40일" (null: friends). */
