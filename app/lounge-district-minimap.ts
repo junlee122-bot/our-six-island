@@ -112,6 +112,9 @@ function wallShapes(area: OutdoorArea): MiniShape[] {
   );
 }
 
+/** A board's pin sits this far above where you stand to read it (so the label does not hide my dot). */
+const BOARD_LIFT = 2.8;
+
 /** Short pin names for the district counters (the full name goes in the title). */
 const COUNTER_SHORT: Record<string, string> = {
   coop: '농협',
@@ -174,7 +177,7 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
     const a = c.a;
     if (a.kind === 'signpost') continue;
     if (a.kind === 'board') {
-      out.push({ id: 'board', label: '게시판', title: `${a.label} · 걸어가기`, kind: 'board', x: go.x, z: go.z - 1, go, named: true });
+      out.push({ id: 'board', label: '게시판', title: `${a.label} · 걸어가기`, kind: 'board', x: go.x, z: go.z - BOARD_LIFT, go, named: true });
       continue;
     }
     if (a.kind === 'fish') {
@@ -191,7 +194,17 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
     // A second counter of the same place (항구's 새벽 경매장 and 대회 게시판): its own pin where it stands.
     if (out.some((p) => p.id === place)) {
       const short = a.label.replace(/ (보기|들르기)$/, '').replace('주간 낚시 대회 ', '대회 ').replace('새벽 ', '');
-      out.push({ id: `${place}-${out.filter((p) => p.id.startsWith(place)).length}`, label: short, title: `${a.label} · 걸어가기`, kind: 'board', x: go.x, z: go.z - 1, go, named: true });
+      const board = a.label.includes('게시판');
+      out.push({
+        id: `${place}-${out.filter((p) => p.id.startsWith(place)).length}`,
+        label: short,
+        title: `${a.label} · 걸어가기`,
+        kind: board ? 'board' : 'stall',
+        x: go.x,
+        z: board ? go.z - BOARD_LIFT : go.z + 0.4,
+        go,
+        named: true,
+      });
       continue;
     }
     const lot = buildingAt(place);

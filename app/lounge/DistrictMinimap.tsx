@@ -101,9 +101,11 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
   if (!map) return null;
 
   const { w, d } = map.bounds;
-  const pos = (p: { x: number; z: number }) => {
-    const x = Math.max(-w / 2 + 1, Math.min(w / 2 - 1, p.x)),
-      z = Math.max(-d / 2 + 1, Math.min(d / 2 - 1, p.z));
+  // Pins stay inside the map; a named pin keeps its label off the edge too.
+  const pos = (p: { x: number; z: number }, label = false) => {
+    const mx = label ? 4 : 1,
+      x = Math.max(-w / 2 + mx, Math.min(w / 2 - mx, p.x)),
+      z = Math.max(-d / 2 + 1.5, Math.min(d / 2 - 1.5, p.z));
     return { left: `${((x + w / 2) / w) * 100}%`, top: `${((z + d / 2) / d) * 100}%` };
   };
   const scale = w / 100;
@@ -191,7 +193,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
                 data-minimap-kind={p.kind}
                 data-named={String(p.named || expanded || p.id === nearest)}
                 data-nearest={String(p.id === nearest)}
-                style={pos(p)}
+                style={pos(p, true)}
                 onClick={() => go(p.go)}
                 aria-label={`${p.title}${p.id === nearest ? ' (가장 가까운 곳)' : ''}`}
               >

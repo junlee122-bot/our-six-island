@@ -367,7 +367,11 @@ async function runView(browser, base, view, report) {
       await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
       await sleep(6000);
       await snap('market');
-      await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: 0, z: 1.6 } })));
+      // The district's own minimap: its shops, the board and the road home; a click walks to the board.
+      const pins = await js(() => [...document.querySelectorAll('[data-minimap-area="market"] [data-minimap-place]')].map((e) => e.getAttribute('data-minimap-place')));
+      for (const id of ['coop', 'general', 'bakery', 'newspaper', 'post', 'police', 'board', 'exit-village'])
+        assert.ok(pins.includes(id), `시장 거리 미니맵에 ${id} 자리가 없습니다.`);
+      await page.locator('[data-minimap-area="market"] [data-minimap-place="board"]').click({ timeout: 60000 });
       assert.notEqual(await until(() => {
         const d = document.querySelector('[data-testid=area-3d]')?.dataset;
         return d?.walking === 'false' && Math.hypot(Number(d.avatarX), Number(d.avatarZ) - 1.6) < 1;

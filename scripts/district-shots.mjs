@@ -10,7 +10,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { DISTRICTS } from '../app/lounge-districts.ts';
-import { REGIONS } from '../app/lounge-areas.ts';
+import { REGIONS, regionToNetwork } from '../app/lounge-areas.ts';
+import { districtMinimap } from '../app/lounge-district-minimap.ts';
 import { districtCounters } from '../app/lounge-district-counters.ts';
 import { npcSpot } from '../app/lounge-npc-schedule.ts';
 import { NPC_IDS } from '../app/lounge-npc-data.ts';
@@ -34,6 +35,9 @@ const panels = args.includes('--panels');
 // the counter with its draw calls, open the counter's window, then walk out.
 // Two friends sit on the bakery's café chairs. Costs go to <out>/<view>-shops.json.
 const shops = args.includes('--shops');
+// --minimap: in each district put two friends on the map and one inside a shop room,
+// capture the minimap compact and enlarged, and walk somewhere by clicking a place on it.
+const minimap = args.includes('--minimap');
 // --residents: also walk to the biggest group of residents in the hub and capture it.
 const residents = args.includes('--residents');
 // --at HH:MM: run the mock world (and so the page's clock) at this KST time today.
@@ -181,6 +185,33 @@ try {
     await walkArea({ x: 0, z: 0 });
     await sleep(2500);
     await shot(`${id}-centre`);
+    if (minimap) {
+      // Two friends close together (a cluster) and one inside a shop room of this district (at its door).
+      const shop = Object.values(SHOP_INTERIORS).find((s) => s.district === id);
+      const [a, b, c] = H.bots;
+      await H.run(a, 'action', { action: { kind: 'area', area: id, ...regionToNetwork(id, { x: 6, z: 4 }) } });
+      await H.run(b, 'action', { action: { kind: 'area', area: id, ...regionToNetwork(id, { x: 6.6, z: 4.4 }) } });
+      if (shop) await H.run(c, 'action', { action: { kind: 'area', area: shop.area, ...shop.front } });
+      const want = 1 + (shop ? 1 : 0);
+      if ((await until((n) => document.querySelectorAll('[data-minimap-area] [data-minimap-friend], [data-minimap-area] [data-minimap-cluster]').length >= n, 30000, want)) < 0)
+        throw new Error(`${id}: friend pins did not appear on the minimap`);
+      const places = await js(() => document.querySelectorAll('[data-minimap-area] [data-minimap-place]').length);
+      const expected = districtMinimap(id, new Date(Date.now() + 9 * 3_600_000).getUTCDay()).places.length;
+      if (places !== expected) throw new Error(`${id}: ${places} places on the minimap, expected ${expected}`);
+      await shot(`${id}-minimap`);
+      await page.getByTestId('minimap-resize').click();
+      await sleep(600);
+      await shot(`${id}-minimap-big`);
+      await page.getByTestId('minimap-resize').click();
+      // Click the road home on the map: I walk there.
+      const exit = REGIONS[id].exits[0].stand;
+      await page.locator('[data-minimap-area] [data-minimap-place="exit-village"]').click();
+      if ((await until((q) => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < 1;
+      }, 600000, exit)) < 0) throw new Error(`${id}: clicking 마을로 on the minimap did not walk me there`);
+      for (const bot of [a, b, c]) await H.run(bot, 'action', { action: { kind: 'area', area: 'village' } });
+    }
     if (panels) {
       const weekday = new Date(Date.now() + 9 * 3_600_000).getUTCDay();
       const seen = new Set();
