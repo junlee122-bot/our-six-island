@@ -139,6 +139,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 게임 | `app/lounge-blackjack.ts`, `lounge-poker.ts`, `lounge-seotda*`, `lounge-gostop*`, `lounge-chess*`, `lounge-yacht.ts`, `lounge-liar.ts`, `lounge-liarsbar.ts`, 기록 `lounge-table-stats.ts`, 규칙 카드 `lounge/game-rules.ts`·`lounge/TableGuide.tsx` |
 | 마을 3D | `app/lounge-village*.ts(x)` |
 | 실내 3D | `app/lounge-venues.ts`, `lounge-interior-*.ts(x)`, `lounge-tavern-*.ts` |
+| 가게 실내(빵집·농협·잡화점·어시장) | `app/lounge-shop-interiors.ts`(배치·계산대·직원 통로·의자·서버 허용 행동), `lounge-shop-interior.ts`(3D), 문 `lounge-district-counters.ts`(`enter`, `shopDoorOutside`), 일과 `lounge-npc-schedule.ts`(`<가게>.owner` 등), 테스트 `tests/lounge-shop-interiors.test.mjs`, 확인 `scripts/district-shots.mjs --shops`, 전후 화면 `handover/design/img/shop-interiors/` |
 | 화면 | `app/lounge-game.tsx`(최상위), `app/lounge/*.tsx`, `app/ui/*` |
 | 문서 | `handover/STYLE-AND-SOURCES.md`(미감 규칙·자료 출처), `README.md`, `ACCOUNTS.md`(계정·배포), `ASSETS.md`(에셋 제작 기록), `GAME_PROGRESS.md`, `handover/design/*` |
 
