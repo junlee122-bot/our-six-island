@@ -245,7 +245,7 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       { id: 'shelf-back-2', model: 'storageShelf', x: 1.5, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
       { id: 'seed-cabinet', model: 'seedCabinet', x: 3.4, z: -5.45, w: 1.6, h: 1.2, d: 1.0, solid: false },
       { id: 'gondola-1', model: 'goodsGondola', x: -4.3, z: -2.9, w: 1.35, h: 1.55, d: 0.85 },
-      { id: 'gondola-2', model: 'goodsGondola', x: -2.5, z: -0.6, w: 1.35, h: 1.55, d: 0.85, turn: Math.PI / 2 },
+      { id: 'gondola-2', model: 'goodsGondola', x: -2.2, z: -0.4, w: 1.35, h: 1.55, d: 0.85 },
       { id: 'baskets', model: 'basketStand', x: -5.3, z: 0.5, w: 0.85, h: 1.1, d: 0.7, turn: 0.4 },
       { id: 'tool-trunk', model: 'toolTrunk', x: 4.8, z: 0.6, w: 0.95, h: 0.85, d: 0.65, turn: -0.3 },
       { id: 'lantern-floor', model: 'gardenLantern', x: 6.4, z: -3.6, w: 0.7, h: 1.4, d: 0.7 },
