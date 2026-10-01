@@ -20,6 +20,7 @@ import {
   type LedgerEntry,
 } from './lounge-economy.ts';
 import { CROP_INFO, SHOP_BY_ID, type Crop } from './lounge-life.ts';
+import { ITEM_BY_ID } from './lounge-items.ts';
 import { ACCOUNT_IDS } from './lounge-accounts.ts';
 import { ACTORS } from './lounge-roster.ts';
 
@@ -306,6 +307,11 @@ const LIFE_REASONS: Record<string, string> = {
   research: '마을 개척',
   respec: '전문가 다시 고르기',
   'venue-up': '가게 업그레이드(주점·부동산·가구점)',
+  // 가게 나누기 · 음식 시스템 (2026-10).
+  bakery: '빵집 음식',
+  'tavern-food': '주점 음식',
+  taste: '맛 도감 보상',
+  ship: '출하 상자 정산',
 };
 const TOOL_LABEL: Record<string, string> = { can: '물뿌리개', hoe: '괭이', rod: '낚싯대', axe: '도끼', pickaxe: '곡괭이' };
 /** Korean label of a ledger entry reason ('sell-tomato' → '토마토 판매'). */
@@ -322,7 +328,7 @@ export function reasonLabel(reason: string): string {
   if (reason.startsWith('buy-')) {
     const id = reason.slice(4),
       item = Object.hasOwn(SHOP_BY_ID, id) ? SHOP_BY_ID[id] : null;
-    return '상점: ' + (item ? item.name : id);
+    return '상점: ' + (item ? item.name : Object.hasOwn(ITEM_BY_ID, id) ? ITEM_BY_ID[id].name : id);
   }
   // 성장: 'tool-pickaxe-2' → '대장간: 곡괭이 2단계'.
   const tool = /^tool-([a-z]+)-([2-5])$/.exec(reason);

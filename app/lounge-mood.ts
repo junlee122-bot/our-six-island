@@ -874,7 +874,8 @@ export function moodTreat(
  * Returns false when this friend has no mood record.
  */
 export function moodTogether(life: LifeState, uid: string, now: number, tavern: boolean, social: number): boolean {
-  const u = moodTouch(life, uid, now);
+  // Like a cheer: the friend's record is read as it is (the eater's was just touched by the action).
+  const u = other(life, uid, now);
   if (!u) return false;
   addLet(u, tavern ? 'togetherTavern' : 'together', now);
   fill(u, 'social', social);
