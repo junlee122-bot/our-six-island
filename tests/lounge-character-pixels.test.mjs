@@ -133,7 +133,7 @@ test('friends’ walk and run frames: every pose inside its cell, soles on one l
         assert.ok(b.b - b.t > f.h * 0.75, `${actor} ${motion} ${k} is too small (a cropped pose?)`);
         soles.add(b.b);
       }
-    assert.ok(Math.max(...soles) - Math.min(...soles) <= 2, `${actor}: soles move between frames (${[...soles]})`);
+    assert.ok(Math.max(...soles) - Math.min(...soles) <= 2, `${actor}: soles move between frames (${[...soles].join(', ')})`);
     assert.equal(rimKey(img), 0, `${actor} motion sheet has a magenta rim`);
   }
 });
