@@ -133,6 +133,16 @@ export class ResidentLayer {
   private disposed = false;
   /** Called when a texture arrives (the scene redraws). */
   onChange: () => void = () => {};
+  /**
+   * The outdoor scenes' day/night colour (villageFigureTint), the one the
+   * friends' sprites get: without it the residents stayed lit like noon on a
+   * dark street (character QA 2026-10-01). Applies to every sprite, now and
+   * later.
+   */
+  setTint(color: THREE.Color) {
+    this.opts.tint = '#' + color.getHexString();
+    for (const m of this.mats.values()) m.color.copy(color);
+  }
 
   constructor(scene: THREE.Object3D, labels: HTMLElement, opts: ResidentLayerOptions) {
     this.opts = { y: 0.02, speed: 2.1, sitDrop: 0.28, ...opts };
