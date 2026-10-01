@@ -336,6 +336,8 @@ export const DISHES: readonly DishDef[] = [...RAW_DISHES.map((d): DishDef => ({
   sell: d.lunch && d.id !== 'lunchbox' ? LUNCH_SELL : Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
 })), ...FISH_DISHES];
 
+/** 연애·결혼 items (lounge-romance.ts): never gifts, bought at 등불 잡화점. */
+export const ROMANCE_ITEMS = ['bouquet', 'pledge-ring'] as const;
 /** Soil items the `fertilize` action takes (텃밭 확장 added the last three). */
 export const FERTILIZERS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
 export type FertilizerId = (typeof FERTILIZERS)[number];
@@ -344,13 +346,18 @@ export const ITEM_PRICES: Record<string, number> = {
   fertilizer: 400,
   'fertilizer-deluxe': 2_000,
   bait: 150,
+  // 연애·결혼 (handover/design/design-romance.md): sold at 등불 잡화점 only.
+  bouquet: 3_000,
+  'pledge-ring': 30_000,
   ...FISHING_ITEM_PRICES,
   ...FARM_ITEM_PRICES,
 };
 const tools: ItemDef[] = [
   { id: 'fertilizer', name: '비료', emoji: '🧪', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +1 (은별·금별 확률이 올라요)' },
   { id: 'fertilizer-deluxe', name: '고급 비료', emoji: '⚗️', cat: 'tool', kind: 'tool', sell: 0, note: '품질 +2, 성장 10% 빠르게' },
-  { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },  ...FISHING_TOOL_ITEMS,
+  { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },
+  { id: 'bouquet', name: '꽃다발', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '8하트 주민에게 건네면 연인이 될 수 있어요' },
+  { id: 'pledge-ring', name: '청혼 반지', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '10하트 연인에게 청혼해요' },  ...FISHING_TOOL_ITEMS,
   // 텃밭 확장: fixtures, machines and the new soil items (lounge-farm-data.ts).
   ...FARM_TOOL_ITEMS.map((t): ItemDef => ({ id: t.id, name: t.name, emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: t.note })),
 ];

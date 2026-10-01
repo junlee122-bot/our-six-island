@@ -458,6 +458,12 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'tsunade', b: 'gabung', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'tsunade', b: 'lux', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'sinjjajang', b: 'gabung', kind: 'regular', note: '항구 끝 등대까지 배달이 제일 먼 코스' },
+  // 연애 이야기 말풍선 (lounge-npc-love-banter-a.ts).
+  { a: 'lumi', b: 'maehwa', kind: 'friend', note: '퇴근길에 연애 이야기를 나누는 두 딜러' },
+  { a: 'lumi', b: 'rose', kind: 'regular', note: '같은 카지노에서 일하는 동료' },
+  { a: 'captain', b: 'rose', kind: 'regular', note: '바다 이야기로 통하는 주점 손님' },
+  { a: 'maehwa', b: 'captain', kind: 'regular', note: '회관 차 모임과 주점 안주를 바꿔 먹는 사이' },
+  { a: 'rose', b: 'nyamo', kind: 'rival', note: '대부 창구와 은행 창구의 이자 경쟁' },
 ];
 /** Whether a resident has a picture (drawn, listed and met). */
 export const npcVisible = (id: NpcId) => NPCS[id].hasSprite !== false;
@@ -474,6 +480,21 @@ export const NPC_REGULAR_POINTS = 40;
 export const NPC_DATE_POINTS = 60;
 export const NPC_SPECIAL_POINTS = 100;
 export const NPC_POINTS_MAX = 120;
+// 연애·결혼 (handover/design/design-romance.md). Hearts = points / 12.
+export const NPC_HEART_POINTS = 12;
+/** 8 hearts: a 꽃다발 is accepted, and points stop here until you date. */
+export const NPC_DATING_POINTS = 96;
+/** 10 hearts (and at least NPC_DATING_DAYS of dating): a 청혼 반지 is accepted. */
+export const NPC_PROPOSE_POINTS = 120;
+export const NPC_DATING_DAYS = 3;
+/** The wedding is held this many KST days after the proposal (at the village plaza). */
+export const NPC_WEDDING_DAYS = 3;
+/** Breaking up: points drop to at most this, and no new 꽃다발 for this many days. */
+export const NPC_BREAKUP = { points: 60, days: 7 } as const;
+/** Breaking an engagement or divorcing (the ring is not returned). */
+export const NPC_DIVORCE = { points: 36, days: 14 } as const;
+export type NpcLove = 'dating' | 'engaged' | 'married';
+export const NPC_LOVE_WORD: Record<NpcLove, string> = { dating: '연인', engaged: '약혼', married: '결혼' };
 /** Points for a gift by how the resident likes it. */
 export const NPC_GIFT_POINTS = { loved: 12, liked: 8, neutral: 5, disliked: -3 } as const;
 export type GiftReaction = keyof typeof NPC_GIFT_POINTS;

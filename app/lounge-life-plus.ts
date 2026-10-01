@@ -7,7 +7,7 @@
 // Cycle-safe: lounge-life.ts imports this module and this module imports it
 // back, so neither may use the other's bindings at the top level.
 import { cleanText, clipText } from './text-clean.ts';
-import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
+import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
@@ -2109,6 +2109,8 @@ export type PlusMe = {
 };
 export type PlusView = {
   npcGuests: Record<string, NpcGuest>;
+  /** Engaged or married residents → the friend (actor) they belong to. */
+  npcSpouses: Partial<Record<NpcId, number>>;
   calendar: CalendarView;
   weather: { today: Weather; tomorrow: Weather };
   shop: ShopView;
@@ -2222,6 +2224,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const calendar = calendarOf(now);
   return {
     me,
+    npcSpouses: npcSpouses(life),
     npcGuests: Object.fromEntries(Object.entries(life.actors).flatMap(([id, actor]) => {
       const guest = npcGuestOf(life.ext?.[id]?.npcRelations, now);
       return guest ? [[String(actor), guest]] : [];

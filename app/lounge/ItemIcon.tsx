@@ -964,6 +964,25 @@ const TOOL_ART: Record<string, ReactNode> = {
       <path d="M17 22 C10 16 10 12 14 11 M31 22 C38 16 38 12 34 11" stroke="#a8941a" strokeWidth="1.4" fill="none" />
     </>
   ),
+  bouquet: (
+    <>
+      <path d="M17 30 L24 45 L31 30 Z" fill="#f4e3c3" stroke="#b08a5a" strokeWidth="1.4" />
+      <path d="M20 36 h8" stroke="#d9573f" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="17" cy="20" r="6" fill="#ee7a96" stroke="#b84a66" strokeWidth="1.2" />
+      <circle cx="31" cy="20" r="6" fill="#f6c34a" stroke="#b8902a" strokeWidth="1.2" />
+      <circle cx="24" cy="13" r="6.5" fill="#e2334a" stroke="#a51f33" strokeWidth="1.2" />
+      <circle cx="24" cy="25" r="5" fill="#fff6f0" stroke="#c9a08a" strokeWidth="1.2" />
+      <path d="M12 27 C10 23 12 21 14 22 M36 27 C38 23 36 21 34 22" stroke="#4f9a3c" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+    </>
+  ),
+  'pledge-ring': (
+    <>
+      <circle cx="24" cy="30" r="12" fill="none" stroke="#d9a93a" strokeWidth="4" />
+      <circle cx="24" cy="30" r="12" fill="none" stroke="#f7d77a" strokeWidth="1.4" />
+      <path d="M18 12 L24 6 L30 12 L24 19 Z" fill="#bfe6f5" stroke="#5b9ab8" strokeWidth="1.4" />
+      <path d="M18 12 h12 M24 6 v13" stroke="#e8f7fd" strokeWidth=".9" />
+    </>
+  ),
   'tackle-float': (
     <>
       <path d="M24 4 v8 M24 38 v6" stroke="#4a3423" strokeWidth="1.6" />

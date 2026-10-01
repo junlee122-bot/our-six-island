@@ -6,6 +6,7 @@
 //
 //   가게             파는 것                                   사는 것 (100%)
 //   등불 잡화점       씨앗·꾸러미·비료·흙·소품·염색, 주간 특가,   채집물·꽃·재료·곤충
+//                    꽃다발·청혼 반지(연애·결혼)
 //                    토요일 밤 등불 상점(비싼 씨앗 할인)
 //   범마을 농협       일요일 작물 좌판(시세표 작물 씨앗)          작물·과일·가공품
 //   느긋한 빵집       빵·음료(그 자리에서), 도시락(가방)          —
@@ -23,7 +24,7 @@
 // and it imports them back, so their bindings are used inside functions only.
 import { hash32, kstHour, weekdayOf } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
-import { CROP_SELL_REF, FERTILIZERS, ITEM_BY_ID, ITEM_PRICES, SPICES } from './lounge-items.ts';
+import { CROP_SELL_REF, FERTILIZERS, ITEM_BY_ID, ITEM_PRICES, ROMANCE_ITEMS, SPICES } from './lounge-items.ts';
 import { ORE_ITEMS } from './lounge-growth-data.ts';
 import { isGoodId } from './lounge-farm-data.ts';
 import { CRAB_POT, FISHING_ITEM_PRICES } from './lounge-fish-data.ts';
@@ -175,6 +176,7 @@ export function shopOffer(life: Pick<LifeState, 'flags'>, actor: number, shop: S
   }
   const price = Object.hasOwn(ITEM_PRICES, item) ? ITEM_PRICES[item] : 0;
   if (!price) return null;
+  if ((ROMANCE_ITEMS as readonly string[]).includes(item)) return shop === 'general' ? { price, max: item === 'bouquet' ? 3 : 1 } : null;
   if (FISHING_GOODS.has(item)) return shop === fishShop ? { price, max: 20 } : null;
   if (shop !== 'general' || !GENERAL_GOODS.has(item)) return null;
   const special = weeklySpecial(week) === item;
