@@ -1210,7 +1210,7 @@ export function Interior3D({
         if (isShopArea(area)) {
           host.dataset.shopModels = studio.shopModels();
           host.dataset.nearCounter = String(nearShopCounter(l.point, area));
-          host.dataset.seated = shopSeatAt(l.point, area)?.id ?? '';
+          host.dataset.cafeSeat = shopSeatAt(l.point, area)?.id ?? '';
           const ids = residents ? residents.positions().map((r) => r.id) : [];
           host.dataset.residents = ids.join(',');
           const shopDef = SHOP_INTERIORS[area];

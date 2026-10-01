@@ -97,6 +97,7 @@ import { formatBeom, josa, NAMES } from './lounge-text';
 import { VENUES, isInteriorArea, type InteriorArea } from './lounge-venues';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors';
 import { shopDoorOutside } from './lounge-district-counters';
+import { DISTRICTS } from './lounge-districts';
 import { venueLook, venuesFromView } from './lounge-venue-data';
 import {
   getSettings,
@@ -2933,7 +2934,13 @@ function AccountLounge({
                     setModal(null);
                     leaveVisit();
                   }
-                : tab === 'bedroom' || isInteriorArea(tab)
+                : isShopArea(tab)
+                  ? () => {
+                      // A shop's room: back out to its door in the street.
+                      setModal(null);
+                      leaveShop(tab);
+                    }
+                  : tab === 'bedroom' || isInteriorArea(tab)
                   ? () => {
                       setModal(null);
                       enter('village');
@@ -2948,7 +2955,9 @@ function AccountLounge({
           leaveLabel={
             tab === 'wardrobe' && visiting === null && !inGame
               ? `${josa(backTo, '으로/로')} 나가기`
-              : undefined
+              : isShopArea(tab) && visiting === null && !inGame
+                ? `${josa(DISTRICTS[SHOP_INTERIORS[tab].district].name, '으로/로')} 나가기`
+                : undefined
           }
           onLogout={() => {
             setModal(null);
