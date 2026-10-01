@@ -124,6 +124,12 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
       setFriendGroup(null);
     }
   };
+  // A resident gets a button only where it would not sit under a place's or another resident's pin
+  // (at a shop counter the shop's pin walks there anyway); the dot is always drawn.
+  const reach = 20 / ((expanded ? 400 : 260) / w);
+  const npcButtons: { id: NpcId; x: number; z: number }[] = [];
+  for (const r of npcs)
+    if (![...map.places, ...npcButtons].some((o) => Math.hypot(o.x - r.x, o.z - r.z) < reach)) npcButtons.push(r);
   const near = map.places.find((p) => p.id === nearest);
   const start = where();
 
@@ -178,7 +184,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
                 {map.places.map((p) =>
                   p.kind === 'fish' ? <circle key={p.id} cx={p.x} cy={p.z} r={1.1 * scale} fill={TONE.water} stroke="#fff6dd" strokeWidth={0.4 * scale} /> : null,
                 )}
-                {npcs.map((r) => (
+                {npcButtons.map((r) => (
                   <circle key={r.id} cx={r.x} cy={r.z} r={1.1 * scale} fill={RESIDENT} stroke="#fff6dd" strokeWidth={0.4 * scale} />
                 ))}
                 <circle ref={selfRef} cx={start.x} cy={start.z} r={2 * scale} fill="#fff6dd" stroke="#536642" strokeWidth={scale} />
