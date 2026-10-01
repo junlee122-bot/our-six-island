@@ -369,7 +369,7 @@ function buildMarket(root: THREE.Object3D) {
       c.font = 'bold 44px sans-serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText('범타듀 상점', 128, 46);
+      c.fillText('가게 안내', 128, 46);
     },
     256,
     88,

@@ -3483,9 +3483,9 @@ function SpotPrompt({
     return (
       <div>
         <strong>
-          <Store size={14} /> 범타듀 상점
+          <Store size={14} /> 가게 안내판
         </strong>
-        <small>씨앗 · 희귀 소품 · 머리색 팔레트{key}</small>
+        <small>어느 가게에서 무엇을 사고파는지{key}</small>
       </div>
     );
   if (spot.kind === 'mailbox') {

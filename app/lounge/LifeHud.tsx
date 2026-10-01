@@ -33,6 +33,7 @@ import {
 import { ItemIcon } from './ItemIcon';
 import { useNow } from './use-now';
 import './life-plus.css';
+import { BuffSlots, leftText, slotsOf } from './ShopGoods';
 
 export const SEASON_ICON: Record<Season, IconComponent> = {
   spring: Flower2,
@@ -80,7 +81,6 @@ export function CalendarChip({
   const TodayIcon = WEATHER_ICON[life.weather.today];
   const TomorrowIcon = WEATHER_ICON[life.weather.tomorrow];
   const events = cal.events.filter((e) => e.kind !== 'weekly' || e.active !== false);
-  const buff = life.me.buff && life.me.buff.until > now ? life.me.buff : null;
   return (
     <div
       className="l-hud-calendar"
@@ -115,11 +115,8 @@ export function CalendarChip({
             {events[0].name}
           </span>
         )}
-        {buff && (
-          <span className="l-hud-buff" data-testid="hud-buff" title={buff.text}>
-            <Sparkles size={13} aria-hidden="true" /> {buff.name}
-          </span>
-        )}
+        {/* 음식 시스템: the 식사 칸 and 간식 칸 with time left. */}
+        <BuffSlots life={life} now={now} />
       </button>
       <div id={tipId} role="tooltip" className="l-hud-tip" data-open={open || undefined} data-testid="hud-tip">
         <p className="l-hud-tip-title">
@@ -154,11 +151,11 @@ export function CalendarChip({
             ))}
           </ul>
         )}
-        {buff && (
-          <p className="l-hud-tip-line">
-            <Sparkles size={13} aria-hidden="true" /> 오늘의 효과 <b>{buff.name}</b> · {buff.text}
+        {slotsOf(life, now).map((b) => (
+          <p key={b.slot} className="l-hud-tip-line">
+            <Sparkles size={13} aria-hidden="true" /> {b.slot === 'meal' ? '식사 칸' : '간식 칸'} <b>{b.name}</b> · {b.text} · {leftText(b.until, now)} 남음
           </p>
-        )}
+        ))}
       </div>
     </div>
   );

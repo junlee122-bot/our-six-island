@@ -76,7 +76,6 @@ import {
   FURNITURE_BY_REF,
   GROW_BUFF_SPEED,
   ITEM_BY_ID,
-  ITEM_PRICES,
   SHOP_BUY_MAX_N,
   SHOP_DAILY_ITEMS,
   SPAWN_SPOTS,
@@ -144,7 +143,7 @@ import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 import { moodBiteBoost } from './lounge-mood.ts';
 import { fishSaleMult, takeSoldFishQuality } from './lounge-fish-quality.ts';
 // 가게 나누기 · 음식 시스템 (design-food-and-shops.md).
-import { saleShare, shopOffer, isShopId, fishShopFor, shopsView, weekOf, type ShopId, type ShopsView } from './lounge-shops.ts';
+import { saleShare, shopOffer, isShopId, shopsView, weekOf, type ShopId, type ShopsView } from './lounge-shops.ts';
 import {
   EAT_PLACES,
   HAGGLE_CAP,

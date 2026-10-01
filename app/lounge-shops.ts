@@ -68,6 +68,7 @@ export const PEDDLER_POOL: readonly { item: string; price: number }[] = [
   { item: 'songi', price: 1_500 },
 ];
 export const SPICE_PRICE = 3_000;
+export const SPICES_IDS: readonly string[] = SPICES.map((sp) => sp.id);
 /** 계약: bring these instead of 범 and get the week's spice (one deal a week). */
 export const PEDDLER_DEALS: readonly { item: string; n: number }[] = [
   { item: 'wood', n: 30 },

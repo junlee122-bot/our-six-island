@@ -179,7 +179,7 @@ export function whereFrom(id: string): string {
   if ((CROPS as string[]).includes(raw)) {
     const info = CROP_INFO[raw as Crop];
     return joinDots([
-      id.startsWith('seed-') ? '범타듀 상점' : '내 텃밭',
+      id.startsWith('seed-') ? '등불 잡화점' : '내 텃밭',
       info.seasons ? `${seasonsText(info.seasons)}에 심어요` : '사계절 심어요',
       info.regrow && `${info.regrow.harvests}번 수확`,
     ]);
@@ -194,7 +194,8 @@ export function whereFrom(id: string): string {
   if (forage) return joinDots([`${forage.habitat.map((h) => HABITAT[h]).join('·')} 채집`, seasonsText(forage.seasons), SKY[forage.sky]]);
   const dish = DISH_BY_ID[id];
   if (dish) return `요리 · ${dish.needs.map((n) => needLabel(n) + ' ' + n.n).join(', ')}`;
-  if (id === 'fertilizer' || id === 'fertilizer-deluxe' || id === 'bait') return '범타듀 상점 · 공방에서 만들기';
+  if (id === 'fertilizer' || id === 'fertilizer-deluxe') return '등불 잡화점 · 공방에서 만들기';
+  if (id === 'bait') return '어시장 · 공방에서 만들기';
   const furn = FURNITURE_BY_REF[id];
   if (furn)
     return furn.unsold

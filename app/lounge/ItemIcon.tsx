@@ -787,6 +787,24 @@ const DISH_LOOK: Record<string, DishLook> = {
   guljeon: { shape: 'plate', food: '#efd07a', bits: '#b9b4a8' },
   kkotgetang: { shape: 'pot', food: '#d9542f', bits: '#e8a07a' },
   daseulgiguk: { shape: 'bowl', food: '#7fb0a0', bits: '#4f6a4a' },
+  // 음식 시스템: lunchboxes, 이국 요리, and the 빵집 / 주점 menus (eaten on the spot).
+  'bento-miner': { shape: 'box', food: '#f4f1e6', bits: '#b07a3a' },
+  'bento-river': { shape: 'box', food: '#f4f1e6', bits: '#c98a4a' },
+  'bento-field': { shape: 'box', food: '#f4f1e6', bits: '#6fa04a' },
+  saffronrice: { shape: 'pot', food: '#f0c23a', bits: '#e0562f' },
+  pepperpotato: { shape: 'plate', food: '#e3b85a', bits: '#3a2f28' },
+  vanillapudding: { shape: 'cup', food: '#f7e3a8', bits: '#8a5a34' },
+  milkbread: { shape: 'plate', food: '#f2dfb4', bits: '#d9b77a' },
+  coffee: { shape: 'cup', food: '#6b4a32' },
+  'flowertea-cup': { shape: 'cup', food: '#f3c677', bits: '#f28bb5' },
+  recipepie: { shape: 'pie', food: '#d98a4a' },
+  'sailor-snack': { shape: 'plate', food: '#d9a15a', bits: '#8a5a34' },
+  'merchant-cup': { shape: 'cup', food: '#c9793a', bits: '#f3cc3c' },
+  'captain-feast': { shape: 'pot', food: '#e0562f', bits: '#f2a08a' },
+  // 행상인 향신료 (drawn as little jars).
+  'spice-saffron': { shape: 'jar', food: '#d9492f' },
+  'spice-pepper': { shape: 'jar', food: '#3a2f28' },
+  'spice-vanilla': { shape: 'jar', food: '#6b4a32' },
 };
 function dishArt(id: string): ReactNode {
   const d = DISH_LOOK[id];

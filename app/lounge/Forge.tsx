@@ -27,6 +27,7 @@ import { ResearchBoard } from './GrowthResearch';
 import { TOOL_GLYPH } from './growth-glyphs';
 import './farm-fish.css';
 import './growth.css';
+import { ShopSell } from './ShopGoods';
 
 function untilText(ms: number) {
   const m = Math.max(1, Math.ceil(ms / 60_000));
@@ -386,6 +387,11 @@ export function ForgePanel({
             </p>
           </section>
         </div>
+        {/* 가게 나누기: the 대장간 buys ore and gems at full price. */}
+        <section className="l-forge-sell" aria-label="광석·보석 팔기">
+          <h3 className="l-town-head">광석 · 보석 팔기</h3>
+          <ShopSell room={room} view={view} notify={notify} at="forge" />
+        </section>
       </Modal>
       {confirm && confirm.next && (
         <ConfirmModal

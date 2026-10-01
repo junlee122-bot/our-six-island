@@ -261,7 +261,7 @@ async function runView(browser, base, view, report) {
   await step('village', () => snap('village'));
   await step('map', async () => { await focusScene(); await page.keyboard.press('KeyM'); await sleep(1000); await snap('map'); await focusScene(); await page.keyboard.press('KeyM'); await sleep(400); });
   await step('bag', async () => { await focusScene(); await page.keyboard.press('KeyI'); await sleep(1000); await snap('bag'); });
-  await step('shop', async () => { await menu(/범타듀 상점/); await snap('shop'); });
+  await step('shop', async () => { await menu(/가게 안내/); await snap('shop'); });
   await step('ledger', async () => { await menu(/내 텃밭/); await snap('ledger'); });
   // 텃밭 확장 tabs of the same window.
   for (const [name, tab] of [['farm-layout', /밭 배치/], ['farm-works', /^가공/], ['farm-market', /출하·품평회/]])
