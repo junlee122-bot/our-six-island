@@ -684,6 +684,12 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
                 : page === 'luxury'
                 ? `매주 월요일에 바뀌어요 (약 ${Math.max(1, Math.ceil(((shop?.luxuryResetAt ?? now) - now) / 86_400_000))}일 뒤).`
                 : `매일 자정에 바뀌어요 (약 ${hours}시간 뒤)${shop?.discount ? ` · 일요 장터 ${shop.discount}% 할인` : ''}.`}{' '}
+              {page === 'basic' && (
+                <span className="sc-room-size" data-testid="furniture-room-size">
+                  지금 내 방은 가로 {ROOM_TIERS[Math.min(ROOM_TIERS.length - 1, life?.me.house ?? 0)].w} × 깊이{' '}
+                  {ROOM_TIERS[Math.min(ROOM_TIERS.length - 1, life?.me.house ?? 0)].d}칸이에요. 방을 넓히려면 범마을 부동산의 집 확장에 가 보세요.{' '}
+                </span>
+              )}
               <kbd>←→↑↓</kbd> 둘러보기 <kbd>Enter</kbd> 사기 {page === 'today' && (<><kbd>+/−</kbd> 개수 <kbd>R</kbd> 새로 고치기</>)}
             </p>
             <ul className="sc-grid">
