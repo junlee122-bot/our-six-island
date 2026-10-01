@@ -137,7 +137,7 @@ export function EditCatalog({
         )}
         {category === 'rare' && !visible.length && (
           <p className="b3-empty-note">
-            아직 희귀 소품이 없어요. 마을 광장 옆 범타듀 상점에서 트로피와 과일 바구니를 살 수 있어요.
+            아직 희귀 소품이 없어요. 시장 거리 등불 잡화점에서 트로피와 과일 바구니를 살 수 있어요.
           </p>
         )}
       </div>

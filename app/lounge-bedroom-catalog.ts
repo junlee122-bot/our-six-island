@@ -151,7 +151,7 @@ const e = (
   d,
   h,
   // 새 방 (2026-10-02): every piece is bought at 나무결 가구점 and counted
-  // per owned copy, except the rare trophies (범타듀 상점 unlocks).
+  // per owned copy, except the rare trophies (unlocks bought at 등불 잡화점).
   ...(extra.unlock ? {} : { unlock: ref, premium: true }),
   ...extra,
 });
@@ -216,7 +216,7 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
   e('miku-rug', 'model', '민트 원형 러그', 'miku', 'rug', 2.64, 2.64, 0.04),
   e('miku-leek', 'model', '대파 인형', 'miku', 'small', 0.74, 0.26, 0.29),
   e('miku-figure-shelf', 'model', '피규어 진열장', 'miku', 'floor', 1.2, 0.53, 1.94),
-  // Rare props bought in the 범타듀 상점 (art: lounge-trophy-art.ts).
+  // Rare props bought at 등불 잡화점, 시장 거리 (art: lounge-trophy-art.ts).
   e('trophy-carrot', 'prop', '황금 당근 트로피', 'rare', 'small', 0.48, 0.36, 0.6, { unlock: 'trophy-carrot' }),
   e('trophy-tomato', 'prop', '루비 토마토 트로피', 'rare', 'small', 0.48, 0.36, 0.6, { unlock: 'trophy-tomato' }),
   e('trophy-pumpkin', 'prop', '대왕 호박 트로피', 'rare', 'small', 0.53, 0.36, 0.66, { unlock: 'trophy-pumpkin' }),
