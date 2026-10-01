@@ -92,6 +92,7 @@ import './lounge-bedroom-edit-dock.css';
 import { WalkHints } from './ui/WalkHints';
 import { loungeAudio } from './lounge-audio';
 import { INTERIOR_SURFACE } from './lounge-footsteps';
+import { doorClock } from './lounge-map-doors';
 import { createBedroomNpc } from './lounge-bedroom-npc';
 import { NPCS, type NpcGuest } from './lounge-romance';
 
@@ -265,9 +266,11 @@ export function Bedroom3D({
     flow.current = { onExit, onDress, onNearDoor, onCook };
   });
   const exited = useRef(false);
+  /** The doorway ignores me for a moment after I walk in (holding ↓ does not bounce me out). */
+  const doors = useRef(doorClock());
   const runAction = (kind: ActionKind | undefined) => {
     if (kind === 'exit') {
-      if (exited.current) return;
+      if (exited.current || !doors.current.ready()) return;
       exited.current = true;
       flow.current.onExit?.();
     } else if (kind === 'dress') flow.current.onDress?.();

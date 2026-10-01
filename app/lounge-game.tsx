@@ -108,7 +108,7 @@ import {
   remember,
   useSettings,
 } from './lounge-settings';
-import { INTERIOR_DOOR, INTERIOR_PLACE_EVENT } from './lounge-interior-layout';
+import { INTERIOR_PLACE_EVENT, interiorArrival } from './lounge-interior-layout';
 import { Modal, ConfirmModal } from './lounge/Modal';
 import { Toast, useBanners } from './lounge/Toast';
 import { dailyOf } from './lounge/WalletModal';
@@ -998,9 +998,9 @@ function AccountLounge({
     }
     const destination: Tab | 'village' = target === 'wardrobe' && place?.id === 'wardrobe' ? 'salon' : target;
     const from = visiting !== null ? 'village' : tab;
-    // Walking in from the village: just inside the hall's / casino's door.
+    // Walking in from the village: a step inside the door (past 나가기's reach).
     if (!at && from === 'village' && isInteriorArea(destination))
-      at = { ...INTERIOR_DOOR };
+      at = interiorArrival(destination);
     // Finishing a style change returns to the stylist, not the entrance.
     if (!at && from === 'wardrobe' && destination === 'salon')
       at = { ...SALON_FRONT };
@@ -1062,7 +1062,7 @@ function AccountLounge({
       setSheet(null);
       setTownPlace(null);
       setTab(area);
-      sendArea(area, { ...INTERIOR_DOOR });
+      sendArea(area, interiorArrival(area));
     });
   };
   useEffect(() => {

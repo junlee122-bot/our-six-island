@@ -27,7 +27,10 @@ import type { ShopArea } from '../lounge-shop-interiors';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
-const AreaScene = lazy(() => import('../lounge-area-3d').then((m) => ({ default: m.AreaScene })));
+const loadAreaScene = () => import('../lounge-area-3d');
+const AreaScene = lazy(() => loadAreaScene().then((m) => ({ default: m.AreaScene })));
+/** Warms the region scene's code before the fade (a cold chunk would show a blank map). */
+const preloadAreaScene = () => void loadAreaScene().catch(() => {});
 
 export type Outdoor = { area: OutdoorArea; spawn: WalkPoint };
 /** Items a region action can give (for the "얻었어요" line). */
@@ -114,6 +117,7 @@ export function useOutdoor({
       notify('마을 개척 “산길 정비”가 끝나면 뒷산에 올라갈 수 있어요.');
       return;
     }
+    preloadAreaScene();
     go({ area: 'hill', spawn: { ...REGIONS.hill.arrive.village! } });
   }, [room, notify, go]);
 
@@ -126,6 +130,7 @@ export function useOutdoor({
         return;
       }
       if (id !== 'market' && id !== 'harbor' && id !== 'hillside') return;
+      preloadAreaScene();
       void prefetchDistrict(id);
       go({ area: id, spawn: { ...REGIONS[id].arrive.village! } });
     },
@@ -150,6 +155,7 @@ export function useOutdoor({
       }
       if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
       if (!districtOpen(area, { flags: room.snapshot().life?.flags, pass: room.snapshot().life?.districts?.pass })) return;
+      preloadAreaScene();
       void prefetchDistrict(area);
       go({ area, spawn: { ...REGIONS[area].arrive.village! } });
     },
@@ -290,7 +296,15 @@ export function useOutdoor({
     const stops = m ? mineStops(m, pass) : [];
     return (
       <div className="l-village-world">
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <div className="l-empty l-screen-loading l-scene-wait" data-testid="area-loading">
+              <p>
+                <span className="l-spinner" /> {josa(REGIONS[outdoor.area].name, '으로/로')} 가는 중…
+              </p>
+            </div>
+          }
+        >
           <AreaScene
             area={outdoor.area}
             spawn={outdoor.spawn}
@@ -342,6 +356,7 @@ export function useOutdoor({
   /** Out of a shop's room: straight back to this district spot (the caller fades). */
   const enterAt = useCallback(
     (o: Outdoor) => {
+      preloadAreaScene();
       setOutdoor(o);
       ref.current = o;
       tell(o);

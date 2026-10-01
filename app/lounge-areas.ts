@@ -14,6 +14,7 @@ import { MARKET_ARRIVE, MARKET_COLLIDERS, MARKET_D, MARKET_EXIT, MARKET_W } from
 import { HARBOR_ARRIVE, HARBOR_COLLIDERS, HARBOR_D, HARBOR_EXIT, HARBOR_W } from './lounge-harbor-layout.ts';
 import { HILLSIDE_ARRIVE, HILLSIDE_COLLIDERS, HILLSIDE_D, HILLSIDE_EXIT, HILLSIDE_W } from './lounge-hillside-layout.ts';
 import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
+import { arrivalPoint } from './lounge-map-doors.ts';
 
 /**
  * 'market' is ① 시장 거리, 'harbor' ② 항구 구역 and 'hillside' ③ 언덕 주택가 —
@@ -87,10 +88,17 @@ const hillColliders: WalkCollider[] = [
 /** The fallen log across the path west (a wall until the gate is cleared). */
 export const HILL_LOG = { x: -26.6, z: -2, w: 1.4, d: 4.4 } as const;
 export const HILL_CAVE = { x: 16, z: -16.4 } as const;
+/** The trail's three doorways (arrivals are a step in from each, lounge-map-doors.ts). */
+const HILL_EXITS: readonly RegionExit[] = [
+  { id: 'village', to: 'village', x: 0, z: HILL_D / 2 - 0.6, stand: { x: 0, z: HILL_D / 2 - 2 }, label: '마을로 내려가기', reach: 1.8 },
+  { id: 'cave', to: 'mine', x: HILL_CAVE.x, z: HILL_CAVE.z, stand: { x: HILL_CAVE.x, z: HILL_CAVE.z + 2.6 }, label: '광산 들어가기', reach: 1.8 },
+  { id: 'woods', to: 'woods', x: HILL_LOG.x, z: HILL_LOG.z, stand: { x: HILL_LOG.x + 2.1, z: HILL_LOG.z }, label: '숲 깊은 곳으로', reach: 1.9 },
+];
 
 // ------------------------------------------------------------------ 숲 깊은 곳
 const WOODS_W = 44,
   WOODS_D = 36;
+const WOODS_EXIT: RegionExit = { id: 'hill', to: 'hill', x: WOODS_W / 2 - 0.6, z: 0, stand: { x: WOODS_W / 2 - 2, z: 0 }, label: '뒷산으로 돌아가기', reach: 1.8 };
 const woodsColliders: WalkCollider[] = [
   { shape: 'circle', x: -6, z: -9, r: 1.4 },
   { shape: 'circle', x: 9, z: -4, r: 1.3 },
@@ -109,15 +117,11 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     tagline: '나무꾼의 능선 · 곰바위 동굴',
     bounds: { w: HILL_W, d: HILL_D },
     colliders: hillColliders,
-    exits: [
-      { id: 'village', to: 'village', x: 0, z: HILL_D / 2 - 0.6, stand: { x: 0, z: HILL_D / 2 - 2 }, label: '마을로 내려가기', reach: 1.8 },
-      { id: 'cave', to: 'mine', x: HILL_CAVE.x, z: HILL_CAVE.z, stand: { x: HILL_CAVE.x, z: HILL_CAVE.z + 2.6 }, label: '광산 들어가기', reach: 1.8 },
-      { id: 'woods', to: 'woods', x: HILL_LOG.x, z: HILL_LOG.z, stand: { x: HILL_LOG.x + 2.1, z: HILL_LOG.z }, label: '숲 깊은 곳으로', reach: 1.9 },
-    ],
+    exits: HILL_EXITS,
     arrive: {
-      village: { x: 0, z: HILL_D / 2 - 2.2 },
-      mine: { x: HILL_CAVE.x, z: HILL_CAVE.z + 2.8 },
-      woods: { x: HILL_LOG.x + 2.4, z: HILL_LOG.z },
+      village: arrivalPoint(HILL_EXITS[0]),
+      mine: arrivalPoint(HILL_EXITS[1]),
+      woods: arrivalPoint(HILL_EXITS[2]),
     },
     look: { ground: '#7fa05a', groundFar: '#5f7f45', fog: '#c9dcc2', sky: '#bcd9e8' },
   },
@@ -128,8 +132,8 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     tagline: '오래된 그루터기 · 버섯 통나무',
     bounds: { w: WOODS_W, d: WOODS_D },
     colliders: woodsColliders,
-    exits: [{ id: 'hill', to: 'hill', x: WOODS_W / 2 - 0.6, z: 0, stand: { x: WOODS_W / 2 - 2, z: 0 }, label: '뒷산으로 돌아가기', reach: 1.8 }],
-    arrive: { hill: { x: WOODS_W / 2 - 2.4, z: 0 } },
+    exits: [WOODS_EXIT],
+    arrive: { hill: arrivalPoint(WOODS_EXIT) },
     look: { ground: '#5d7d43', groundFar: '#3f5a31', fog: '#9fb79a', sky: '#8fb2a4' },
   },
   mine: {
@@ -196,9 +200,12 @@ export const REGIONS: Record<OutdoorArea, Region> = {
 /** The village's north gate to 뒷산 (village coordinates, off every path). */
 export const VILLAGE_GATE = { x: 12, z: -43.4, stand: { x: 12, z: -41.8 }, reach: 1.9 } as const;
 export const villageGateDistance = (p: WalkPoint) => Math.hypot(p.x - VILLAGE_GATE.stand.x, p.z - VILLAGE_GATE.stand.z);
-/** Where I stand in the hub after leaving an outdoor area (its gate on the rim). */
+/**
+ * Where I stand in the hub after leaving an outdoor area: a step in from its
+ * gate on the rim, past the gate's trigger (lounge-map-doors.ts).
+ */
 export const outdoorReturnPoint = (area: OutdoorArea): WalkPoint =>
-  area === 'market' || area === 'harbor' || area === 'hillside' ? { ...DISTRICTS[area].gate.stand } : { ...VILLAGE_GATE.stand };
+  area === 'market' || area === 'harbor' || area === 'hillside' ? arrivalPoint(DISTRICTS[area].gate) : arrivalPoint(VILLAGE_GATE);
 
 /** Walls of a region; the hill's log counts until 숲 깊은 곳 is opened. */
 export function regionColliders(area: OutdoorArea, opts: { logCleared?: boolean; day?: number; floor?: number; lift?: boolean } = {}): WalkCollider[] {

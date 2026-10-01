@@ -2,6 +2,7 @@
 // shop doors (just right of where the owner stands), the boards, the harbor's
 // fishing and crab-pot spots, the stalls on their days and the 친구에게 가기
 // signpost. Pure data so tests can check every point is walkable.
+import { ARRIVE_CLEARANCE } from './lounge-map-doors.ts';
 import { MARKET_BOARD, MARKET_EXIT, MARKET_SHOPS, MARKET_SPOTS } from './lounge-market-layout.ts';
 import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPOTS } from './lounge-harbor-layout.ts';
 import { HILL_LIBRARY, HILLSIDE_EXIT } from './lounge-hillside-layout.ts';
@@ -50,7 +51,7 @@ export function districtCounters(area: 'market' | 'harbor' | 'hillside', weekday
   const door = (place: DistrictCounter, x: number, z: number) => {
     const enter = shopForCounter(place);
     return enter
-      ? { x, z, reach: 1.4, a: { kind: 'counter' as const, place, enter, label: `${SHOP_INTERIORS[enter].name} 들어가기` } }
+      ? { x, z, reach: SHOP_DOOR_REACH, a: { kind: 'counter' as const, place, enter, label: `${SHOP_INTERIORS[enter].name} 들어가기` } }
       : counter(place, x, z);
   };
   const out: { x: number; z: number; reach: number; a: DistrictTouch }[] = [];
@@ -75,13 +76,20 @@ export function districtCounters(area: 'market' | 'harbor' | 'hillside', weekday
 }
 
 
-/** Where you stand in the district after walking out of a shop's room (its door touch, a step toward the street). */
+/** A shop door's touch reach (E) in its district. */
+export const SHOP_DOOR_REACH = 1.4;
+/**
+ * Where you stand in the district after walking out of a shop's room: its door
+ * touch, then a step toward the street past the door's reach (so the door
+ * does not offer itself again at once; lounge-map-doors.ts).
+ */
 export function shopDoorOutside(area: ShopArea): { district: 'market' | 'harbor'; at: { x: number; z: number } } {
   const def = SHOP_INTERIORS[area];
+  const out = SHOP_DOOR_REACH + ARRIVE_CLEARANCE;
   if (def.district === 'market') {
     const shop = MARKET_SHOPS.find((s) => s.id === def.counter)!;
-    return { district: 'market', at: { x: shop.counter.x + 1.5, z: shop.counter.z + 0.9 } };
+    return { district: 'market', at: { x: shop.counter.x + 1.5, z: Math.round((shop.counter.z + 0.2 + out) * 100) / 100 } };
   }
   const b = HARBOR_BUILDINGS.find((h) => h.id === def.counter)!;
-  return { district: 'harbor', at: { x: b.door.x + 1.4, z: b.door.z + 0.7 } };
+  return { district: 'harbor', at: { x: b.door.x + 1.4, z: Math.round((b.door.z + out) * 100) / 100 } };
 }

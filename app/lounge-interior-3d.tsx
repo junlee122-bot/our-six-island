@@ -65,7 +65,9 @@ import {
 import { sceneTableSide, type SceneArea, type ScenePoint } from './lounge-scene-layout';
 import {
   INTERIOR_DOOR,
+  interiorArrival,
   INTERIOR_PLACE_EVENT,
+  nearDoor,
   TAVERN_BAR_FRONT,
   interiorAction,
   interiorHover,
@@ -100,6 +102,7 @@ import './lounge-interior-3d.css';
 import { WalkHints } from './ui/WalkHints';
 import { loungeAudio } from './lounge-audio';
 import { INTERIOR_SURFACE } from './lounge-footsteps';
+import { doorClock } from './lounge-map-doors';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_LIGHT, VIEW_PITCH, followEase } from './lounge-village-camera';
 import {
   INTERIOR_FIGURE_CARD,
@@ -324,7 +327,7 @@ export function Interior3D({
     latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onResident, onNearDoor, onUnavailable, sheetOpen };
   });
   const live = useRef({
-    point: meHere ? { x: meHere.x, y: meHere.y } : { ...INTERIOR_DOOR },
+    point: meHere ? { x: meHere.x, y: meHere.y } : interiorArrival(area),
     adopted: !!meHere,
     held: new Set<'up' | 'down' | 'left' | 'right'>(),
     shift: false,
@@ -335,6 +338,8 @@ export function Interior3D({
     goal: null as ScenePoint | null,
     lastSent: null as ScenePoint | null,
     moving: false,
+    /** Clicked the door: 나가기 runs once I reach it. */
+    exitIntent: false,
     approach: null as GameKind | null,
     locked: false,
     paused: false,
@@ -355,10 +360,12 @@ export function Interior3D({
   const staffRef = useRef('');
   const residentNearRef = useRef<NpcId | null>(null);
   const exited = useRef(false);
+  /** The door ignores me for a moment after I walk in (no bounce back out). */
+  const doors = useRef(doorClock());
   const runAction = (next: InteriorAction | null) => {
     if (!next || live.current.locked || live.current.paused) return;
     if (next.kind === 'door') {
-      if (exited.current) return;
+      if (exited.current || !doors.current.ready()) return;
       exited.current = true;
       latest.current.onExit();
     } else if (next.kind === 'lender' || next.kind === 'banker' || next.kind === 'salon') {
@@ -432,8 +439,9 @@ export function Interior3D({
   }, [meHere?.x, meHere?.y, meHere]);
 
   /** Walk somewhere, around the tables when they are in the way. */
-  const walkTo = (goal: ScenePoint) => {
+  const walkTo = (goal: ScenePoint, exit = false) => {
     const l = live.current;
+    l.exitIntent = exit;
     l.route = interiorPath(l.point, goal, area);
     l.target = l.route.shift() ?? null;
     l.goal = goal;
@@ -837,10 +845,11 @@ export function Interior3D({
       l.approach = null;
       walkToRef.current(
         hover?.kind === 'door'
-          ? { ...INTERIOR_DOOR }
+          ? { x: INTERIOR_DOOR.x + 1, y: INTERIOR_DOOR.y }
           : hover?.kind === 'host'
             ? { ...TAVERN_BAR_FRONT }
             : { x: Math.max(15, Math.min(85, at.floor!.x)), y: Math.max(42, Math.min(88, at.floor!.y)) },
+        hover?.kind === 'door',
       );
       showMarker(l.goal);
     };
@@ -1043,6 +1052,10 @@ export function Interior3D({
       if (Math.abs(dx) > 1e-6 || Math.abs(dy) > 1e-6) {
         l.target = null;
         l.approach = null;
+        l.exitIntent = false;
+        // Walking on into the door (left wall) takes it, like 나가기.
+        if (nearDoor(l.point) && l.point.x <= INTERIOR_DOOR.x + 1.5 && dx / Math.hypot(dx, dy) < -0.6 && doors.current.ready())
+          queueMicrotask(() => runRef.current({ kind: 'door' }));
       } else if (l.target && !l.locked && !l.paused) {
         dx = l.target.x - l.point.x;
         dy = l.target.y - l.point.y;
@@ -1183,6 +1196,11 @@ export function Interior3D({
           actionRef.current = next;
           setAction(next);
           if (next?.kind === 'door') current.onNearDoor?.();
+        }
+        // A click on the door walked me here: out I go.
+        if (l.exitIntent && next?.kind === 'door' && !l.target && doors.current.ready()) {
+          l.exitIntent = false;
+          queueMicrotask(() => runRef.current(next));
         }
         // Seat chairs and rings follow who sits where.
         for (const table of current.tables) {

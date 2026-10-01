@@ -57,6 +57,7 @@ import type { ShopArea } from './lounge-shop-interiors';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
 import { loungeAudio } from './lounge-audio';
 import { areaSurface } from './lounge-footsteps';
+import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, walksInto } from './lounge-map-doors';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -186,6 +187,18 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
   useLayoutEffect(() => {
     actionRef.current = action;
   });
+  /** Doorways (exits, shop doors, the ladder) rest a moment after I arrive. */
+  const doors = useRef(doorClock());
+  /** Runs an action, holding back doorways until they are awake. */
+  const act = (a: AreaAction) => {
+    const doorway = a.kind === 'exit' || a.kind === 'ladder' || (a.kind === 'counter' && !!a.enter);
+    if (doorway && !doors.current.ready()) return;
+    latest.current.onAction(a);
+  };
+  const actRef = useRef(act);
+  useLayoutEffect(() => {
+    actRef.current = act;
+  });
   // A new floor / region puts me at its arrival point.
   useEffect(() => {
     const l = live.current;
@@ -193,6 +206,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     l.route = [];
     l.target = null;
     l.lastSent = { x: NaN, z: NaN };
+    doors.current.arrive();
   }, [area, floorNo, spawn.x, spawn.z]);
 
   /** What is in reach at `p` (nearest wins). */
@@ -450,6 +464,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       f.texture.dispose();
     };
     const mineFig = makeFigure(latest.current.me.actor, latest.current.me.look, l.point);
+    // In through an exit: face into the map.
+    const cameThrough = region.exits.find((e) => {
+      const p = arrivalPoint(e);
+      return Math.hypot(p.x - l.point.x, p.z - l.point.z) < 1.5;
+    });
+    if (cameThrough) mineFig.locomotion = { phase: 0, facing: arrivalFacing(cameThrough) };
     host.dataset.walking = 'false';
     host.dataset.avatarX = l.point.x.toFixed(2);
     host.dataset.avatarZ = l.point.z.toFixed(2);
@@ -522,7 +542,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         const a = actionRef.current;
         if (a && !latest.current.paused && !('disabled' in a && a.disabled)) {
           event.preventDefault();
-          latest.current.onAction(a);
+          actRef.current(a);
         }
         return;
       }
@@ -577,6 +597,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       lastData = -1000,
       lastRender = -1000,
       lastAction = '',
+      lastWalkInto = -1e9,
       stateKey = '';
     const drawCost = new FrameCost();
     let fishKey: FishingFramePhase | null = null;
@@ -620,6 +641,20 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       }
       const before = l.point;
       const len = Math.hypot(dx, dz);
+      // Walking on into an exit (keys, or a click past it) takes it, like E.
+      if (len > 0 && doors.current.ready() && t - lastWalkInto > LOCKED_NOTICE_MS) {
+        for (const e of REGIONS[s.area].exits) {
+          if (!walksInto(l.point, { x: dx, z: dz }, e)) continue;
+          // The fallen log stays a wall until it is split (E there says so).
+          if (e.to === 'woods' && !s.logCleared && !s.regions?.pass) continue;
+          lastWalkInto = t;
+          l.held.clear();
+          l.route = [];
+          l.target = null;
+          queueMicrotask(() => actRef.current({ kind: 'exit', to: e.to, label: e.label }));
+          break;
+        }
+      }
       if (len > 0) {
         const stepLen = l.target ? Math.min(speed, len) : speed;
         l.point = s.walk.step(before, (dx / len) * stepLen, (dz / len) * stepLen);
@@ -846,7 +881,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           label={action.label}
           disabled={'disabled' in action && !!action.disabled}
           shortcut={keyLabel(keys.action)}
-          onPress={() => onAction(action)}
+          onPress={() => act(action)}
         />
       )}
       <WalkHints className="ar-hint" />

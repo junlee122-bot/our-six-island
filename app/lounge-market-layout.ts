@@ -9,6 +9,7 @@
 // The street runs west–east along z ≈ −6 in front of the north row; the
 // plaza fills the middle; 파출소 and 우체국 stand on the south side.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
+import { arrivalPoint } from './lounge-map-doors.ts';
 
 export const MARKET_W = 56,
   MARKET_D = 44;
@@ -148,7 +149,8 @@ export const marketShop = (id: MarketShopId) => MARKET_SHOPS.find((s) => s.id ==
 
 /** The west road back to the hub (its 큰길 comes in along z −3). */
 export const MARKET_EXIT = { x: -MARKET_W / 2 + 0.6, z: -3, stand: { x: -MARKET_W / 2 + 2, z: -3 }, reach: 1.9 } as const;
-export const MARKET_ARRIVE: WalkPoint = { x: -MARKET_W / 2 + 2.4, z: -3 };
+/** Arriving from the hub: a step in from the exit, past its trigger (lounge-map-doors.ts). */
+export const MARKET_ARRIVE: WalkPoint = arrivalPoint(MARKET_EXIT);
 
 /** 의뢰 게시판: residents' daily requests (lounge-npc-requests.ts), in the plaza. */
 export const MARKET_BOARD = { x: 0, z: 0.4, w: 1.6, d: 0.5, front: { x: 0, z: 1.5 }, reach: 1.6 } as const;

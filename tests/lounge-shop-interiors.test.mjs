@@ -26,7 +26,7 @@ import {
 } from '../app/lounge-shop-interiors.ts';
 import { AREAS, AREA_DEFAULTS, TABLE_AREA, chatScope } from '../app/lounge-games.ts';
 import { INTERIOR_AREAS, VENUES } from '../app/lounge-venues.ts';
-import { INTERIOR_DOOR, interiorAction, interiorCanWalk, interiorPath, interiorTables, segmentWalkable, worldToInterior } from '../app/lounge-interior-layout.ts';
+import { INTERIOR_DOOR, interiorArrival, interiorAction, interiorCanWalk, interiorPath, interiorTables, segmentWalkable, worldToInterior } from '../app/lounge-interior-layout.ts';
 import { sceneCanWalk } from '../app/lounge-scene-layout.ts';
 import { readReaction } from '../app/lounge-reactions.ts';
 import { districtCounters, shopDoorOutside } from '../app/lounge-district-counters.ts';
@@ -46,7 +46,8 @@ test('the four shop rooms are interior areas with their own chat and no game tab
     assert.ok(INTERIOR_AREAS.includes(area));
     assert.ok(isShopArea(area));
     assert.equal(chatScope(area), area);
-    assert.deepEqual(AREA_DEFAULTS[area], INTERIOR_DOOR);
+    // A step in from the door (past 나가기), lounge-map-doors.ts.
+    assert.deepEqual(AREA_DEFAULTS[area], interiorArrival(area));
     assert.deepEqual(interiorTables(area), []);
     assert.ok(!Object.values(TABLE_AREA).includes(area));
     assert.equal(VENUES[area].name, SHOP_INTERIORS[area].name);

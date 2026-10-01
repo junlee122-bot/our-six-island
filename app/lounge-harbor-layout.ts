@@ -11,6 +11,7 @@
 // The shore runs along z = SHORE_Z; everything south of it is water except
 // the pier and the breakwater.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
+import { arrivalPoint } from './lounge-map-doors.ts';
 
 export const HARBOR_W = 60,
   HARBOR_D = 40;
@@ -89,7 +90,8 @@ export const harborBuilding = (id: HarborBuildingId) => HARBOR_BUILDINGS.find((b
 
 /** The west road back to the hub (the 둑길). */
 export const HARBOR_EXIT = { x: -HARBOR_W / 2 + 0.6, z: -10, stand: { x: -HARBOR_W / 2 + 2, z: -10 }, reach: 1.9 } as const;
-export const HARBOR_ARRIVE: WalkPoint = { x: -HARBOR_W / 2 + 2.4, z: -10 };
+/** Arriving from the hub: a step in from the exit, past its trigger (lounge-map-doors.ts). */
+export const HARBOR_ARRIVE: WalkPoint = arrivalPoint(HARBOR_EXIT);
 
 /** 새벽 경매 yard: the stall with its bell, crates, and the board (auction + weekly cup). */
 export const HARBOR_AUCTION = { x: -13, z: -2.2, w: 3.2, d: 2.2, front: { x: -13, z: -0.2 }, reach: 1.8 } as const;

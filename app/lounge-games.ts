@@ -180,27 +180,28 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   // Front left, clear of the hall's 라이어 게임 table (front middle).
   lounge: { x: 28, y: 84 },
   casino: { x: 50, y: 79 },
-  bank: { x: 17, y: 82 },
-  salon: { x: 17, y: 82 },
-  // The shop rooms: just inside the shared door (INTERIOR_DOOR).
-  bakery: { x: 17, y: 82 },
-  coop: { x: 17, y: 82 },
-  general: { x: 17, y: 82 },
-  fishmarket: { x: 17, y: 82 },
+  // The bank, the salon and the shop rooms: a step in from the shared door,
+  // past its 나가기 reach (lounge-interior-layout.ts interiorArrival).
+  bank: { x: 27, y: 82 },
+  salon: { x: 24.66, y: 75.57 },
+  bakery: { x: 27, y: 82 },
+  coop: { x: 27, y: 82 },
+  general: { x: 27, y: 82 },
+  fishmarket: { x: 27, y: 82 },
   // Front left by the door, clear of the 허풍 카드 table (middle).
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },
   // Just inside the room's door (see ROOM_DOOR_POINT / roomToNetwork).
   home: { x: 12.22, y: 74.5 },
   // Region arrivals (lounge-areas.ts regionToNetwork of REGIONS[*].arrive).
-  hill: { x: 50, y: 94.5 },
-  woods: { x: 94.55, y: 50 },
+  hill: { x: 50, y: 88.25 },
+  woods: { x: 89.32, y: 50 },
   mine: { x: 50, y: 92.14 },
   // 시장 거리: arriving from the hub's east gate (MARKET_ARRIVE).
-  market: { x: 4.29, y: 43.18 },
+  market: { x: 8.57, y: 43.18 },
   // 항구 구역 / 언덕 주택가: arriving from the hub's south / west gates (HARBOR_ARRIVE, HILLSIDE_ARRIVE).
-  harbor: { x: 4, y: 25 },
-  hillside: { x: 95.2, y: 43 },
+  harbor: { x: 8, y: 25 },
+  hillside: { x: 90.4, y: 43 },
 };
 /**
  * Chat follows the area: village and casino chat are separate from the hall,

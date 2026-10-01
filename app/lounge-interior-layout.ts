@@ -59,6 +59,19 @@ export const INTERIOR_DOOR: ScenePoint = { x: 17, y: 82 };
 export const INTERIOR_DOOR_Z = { z0: 2.55, z1: 4.25 } as const;
 /** "나가기" is offered this close (network units) to the door spot. */
 export const INTERIOR_DOOR_REACH = 5.5;
+/**
+ * Where I appear after walking in: a step into the room from the door, past
+ * its "나가기" reach (lounge-map-doors.ts), on walkable floor of that room.
+ */
+export function interiorArrival(area: SceneArea): ScenePoint {
+  for (let d = 10; d >= INTERIOR_DOOR_REACH + 1; d -= 0.5)
+    for (const deg of [0, -20, 20, -40, 40, -60]) {
+      const r = (deg * Math.PI) / 180;
+      const p = { x: Math.round((INTERIOR_DOOR.x + Math.cos(r) * d) * 100) / 100, y: Math.round((INTERIOR_DOOR.y + Math.sin(r) * d) * 100) / 100 };
+      if (interiorCanWalk(p, area)) return p;
+    }
+  return { ...INTERIOR_DOOR };
+}
 
 /** The table hosts: 루미 deals in the casino, 매화 runs the hwatu tables. */
 export const TABLE_HOST: Record<GameKind, HostId | null> = {

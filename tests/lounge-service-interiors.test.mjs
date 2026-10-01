@@ -4,7 +4,7 @@ import { BANKER_FRONT, BANKER_SPOT, BANK_OBSTACLES, nearBanker } from '../app/lo
 import { SALON_FRONT, SALON_STYLIST_SPOT, SALON_OBSTACLES, nearSalon } from '../app/lounge-salon-layout.ts';
 import { AREA_DEFAULTS, AREAS, TABLE_AREA, chatScope } from '../app/lounge-games.ts';
 import { INTERIOR_AREAS, VENUES } from '../app/lounge-venues.ts';
-import { interiorAction, interiorCanWalk, interiorPath, interiorTables, segmentWalkable, INTERIOR_DOOR } from '../app/lounge-interior-layout.ts';
+import { interiorAction, interiorCanWalk, interiorPath, interiorTables, segmentWalkable, INTERIOR_DOOR, interiorArrival } from '../app/lounge-interior-layout.ts';
 import { sceneCanWalk } from '../app/lounge-scene-layout.ts';
 import { readReaction, reactionVisible } from '../app/lounge-reactions.ts';
 import { villageFriendPins } from '../app/lounge-village-minimap.ts';
@@ -17,7 +17,8 @@ for (const { area, front, npc, furniture, near, action } of [
   test(`${area} is a separate shared interior with chat and no game tables`, () => {
     assert.ok(AREAS.includes(area)); assert.ok(INTERIOR_AREAS.includes(area));
     assert.equal(chatScope(area), area);
-    assert.deepEqual(AREA_DEFAULTS[area], INTERIOR_DOOR);
+    // A step in from the door (past 나가기), lounge-map-doors.ts.
+    assert.deepEqual(AREA_DEFAULTS[area], interiorArrival(area));
     assert.deepEqual(interiorTables(area), []);
     assert.ok(!Object.values(TABLE_AREA).includes(area));
     assert.deepEqual(interiorAction(front, area), { kind: action });
