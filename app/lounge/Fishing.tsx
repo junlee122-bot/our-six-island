@@ -263,9 +263,11 @@ export function FishingOverlay({
           requestAnimationFrame(() => actRef.current?.focus({ preventScroll: true }));
         }, toBite),
         // Missed the window: hook anyway so the server records it and clears the cast.
+        // Only once the fish's grace is over (expiresAt: it follows the fish grade),
+        // so a press is taken all through the grace and no press is always a miss.
         setTimeout(() => {
           if (!cancelled && phaseRef.current === 'bite') void hook(false);
-        }, toBite + pending.windowMs + 350),
+        }, toBite + Math.max(pending.windowMs, pending.expiresAt - pending.biteAt) + 350),
       );
     })();
     return () => {

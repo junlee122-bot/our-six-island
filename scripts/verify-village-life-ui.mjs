@@ -16,8 +16,14 @@ import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.t
 import { VIEW_DIR, VIEW_DISTANCE, villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
 import { lifeView } from '../app/lounge-life.ts';
+import { rarityOf } from '../app/lounge-fish-engine.ts';
+import { FISH_BY_ID } from '../app/lounge-items.ts';
 import { dayStart, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
 import { kstDay } from '../app/lounge-economy.ts';
+
+// fishing-reel-fight: late hooks tolerated before the next miss fails, by the grade
+// of the fish that got away (its HOOK_SLACK_MS grace follows the same order).
+const LATE_MISSES = { common: 3, uncommon: 2, rare: 1, legend: 0 };
 
 const args = process.argv.slice(2);
 const opt = (key, fallback) => { const i = args.indexOf('--' + key); return i < 0 ? fallback : args[i + 1]; };
@@ -180,6 +186,29 @@ async function runView(mobile = false) {
       await runTo(async () => { await sleep(400); await stationary(); });
     };
     const pressAction = () => click('[data-testid=action-button].hv-action');
+    // Frame time and long tasks on the page (evidence only, never a pass/fail):
+    // start() samples animation-frame gaps and long tasks until stop() returns them.
+    const perf = {
+      start: () => js(() => {
+        const p = (window.__perfProbe = { gaps: [], long: [], t0: performance.now(), on: true });
+        let last = performance.now();
+        const tick = (t) => { if (!p.on) return; p.gaps.push(t - last); last = t; requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+        try {
+          p.observer = new PerformanceObserver((list) => { for (const e of list.getEntries()) p.long.push(e.duration); });
+          p.observer.observe({ type: 'longtask', buffered: false });
+        } catch {}
+      }),
+      stop: () => js(() => {
+        const p = window.__perfProbe;
+        if (!p) return null;
+        p.on = false; p.observer?.disconnect();
+        const sorted = [...p.gaps].sort((a, b) => a - b), at = (q) => Math.round(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))] ?? 0);
+        const ms = performance.now() - p.t0;
+        return { ms: Math.round(ms), frames: p.gaps.length, fps: +(p.gaps.length / (ms / 1000)).toFixed(2), frameP50: at(0.5), frameP90: at(0.9), frameMax: Math.round(sorted.at(-1) ?? 0),
+          longTasks: p.long.length, longTaskMs: Math.round(p.long.reduce((a, b) => a + b, 0)), longTaskMax: Math.round(Math.max(0, ...p.long)), busyPct: Math.round((p.long.reduce((a, b) => a + b, 0) / ms) * 100) };
+      }),
+    };
     const fishing = (phases, timeout) => wait((list) => list.includes(document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase')), phases, timeout);
     const guardedAction = async (kind, changed, label) => {
       const before = commands.length;
@@ -579,7 +608,10 @@ async function runView(mobile = false) {
       // 낚시 업그레이드: bite → hook → the reel fight shows, holding lifts the zone, Esc lets the fish go.
       await directory('fish-river');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.fishSpot === 'river');
+      res.fishingPerf = {};
+      await perf.start(); await sleep(4_000); res.fishingPerf.village = await perf.stop();
       await pressAction(); await page.getByTestId('fishing').waitFor();
+      await perf.start();
       // React the moment the float dips, like a player: a MutationObserver answers
       // right after the page draws it, where polling (one page task per poll, which
       // a software-GPU page can hold for seconds) can miss the bite window by itself.
@@ -594,26 +626,38 @@ async function runView(mobile = false) {
         done();
       }));
       res.fishingMisses = [];
+      res.fishingHooks = [];
       for (;;) {
         await dip();
+        // The hidden fish (server state, never sent to the page) sets its grade's grace.
+        const cast = H.world().life.angling?.u?.[H.uid]?.cast;
+        const grade = cast ? rarityOf(FISH_BY_ID[cast.fish]) : 'common';
         await page.keyboard.press('Space');
         await fishing(['fight', 'result'], 15_000);
-        if ((await page.getByTestId('fishing').getAttribute('data-phase')) === 'fight') break;
+        if ((await page.getByTestId('fishing').getAttribute('data-phase')) === 'fight') {
+          res.fishingHooks.push({ grade, reactionMs: model().angling.me.fight?.reactionMs });
+          break;
+        }
         // The server times the hook from its own bite, page delays included, and a
         // software GPU can hold even this key press for a frame of seconds: a late
-        // hook casts again (recorded). An early one would mean a wrong bite clock.
+        // hook casts again (recorded), as often as the fish's grade forgives
+        // (LATE_MISSES; a legend none). An early one would mean a wrong bite clock.
         const last = model().angling.me.last;
-        res.fishingMisses.push({ reason: last?.reason, reactionMs: last?.reactionMs });
+        res.fishingMisses.push({ grade, reason: last?.reason, reactionMs: last?.reactionMs });
         assert.equal(last?.reason, 'late', 'a missed hook is only late: ' + JSON.stringify(last));
-        assert.ok(res.fishingMisses.length < 3, 'hooked within three casts: ' + JSON.stringify(res.fishingMisses));
+        assert.ok(res.fishingMisses.length <= LATE_MISSES[grade], `late misses within a ${grade} fish's allowance: ` + JSON.stringify(res.fishingMisses));
         await click('[data-testid=fish-again]');
       }
+      res.fishingPerf.castToHook = await perf.stop();
       assert.ok(commands.some((c) => c.action?.kind === 'anglerHook'), 'hook came from browser UI');
       assert.ok(model().angling.me.fight?.setup, 'the server stored the fight seed');
       const zone = () => js(() => getComputedStyle(document.querySelector('[data-testid=fish-reel]')).getPropertyValue('--zone-y'));
+      await perf.start();
       await page.keyboard.down('Space'); await sleep(700);
       const lifted = parseFloat(await zone());
       await page.keyboard.up('Space');
+      res.fishingPerf.fight = await perf.stop();
+      console.log(`${name} fishing perf ` + JSON.stringify({ ...res.fishingPerf, hooks: res.fishingHooks, misses: res.fishingMisses }));
       assert.ok(lifted > 0, 'holding lifts the catch zone');
       await shot('fishing-fight');
       await page.keyboard.press('Escape');

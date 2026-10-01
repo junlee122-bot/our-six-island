@@ -2216,6 +2216,7 @@ function AccountLounge({
                 self,
                 me: { actor: save.actor, look: myLook },
                 paused: !!modal || !!coach || !!talk || !!residentTalk || !!townPlace || !!fishing,
+                fishing: fishing?.phase ?? null,
                 onChat: () => setModal('chat'),
                 onBag: () => setModal('bag'),
                 axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
