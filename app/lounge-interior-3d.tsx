@@ -1147,7 +1147,12 @@ export function Interior3D({
       for (const table of current.tables) hostTables.set(table.game, { phase: table.state.phase, seats: table.seats.length });
       if (hosts.update(t, hostTables, reduced.matches)) dirty = true;
       if (t - lastData > 150) {
-        const next = interiorAction(l.point, area, isShopArea(area) ? [...others.values()].map((f) => f.pos) : []);
+        // A café chair a friend or a resident is on is not offered.
+        const next = interiorAction(
+          l.point,
+          area,
+          isShopArea(area) ? [...[...others.values()].map((f) => f.pos), ...(residents?.positions() ?? []).map((r) => worldToInterior(r))] : [],
+        );
         const prev = actionRef.current;
         // A visiting resident within reach (only when nothing else is here to do).
         if (residents) {

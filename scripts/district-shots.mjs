@@ -215,10 +215,10 @@ try {
         const area = c.a.enter;
         console.log(' ', area);
         try {
-          // Two friends at the bakery's tables (standing on a chair's spot is sitting).
+          // Two friends on the bakery's front chairs (standing on a chair's spot is sitting; the far ones are the residents').
           if (area === 'bakery')
             for (const [i, b] of H.bots.slice(0, 2).entries()) {
-              const seat = seatPoint(SHOP_INTERIORS.bakery.seats[i === 0 ? 1 : 2]);
+              const seat = seatPoint(SHOP_INTERIORS.bakery.seats.filter((q) => !q.npc)[i]);
               await H.run(b, 'action', { action: { kind: 'area', area, x: seat.x, y: seat.y } }).catch(() => {});
             }
           await walkArea({ x: c.x, z: c.z }, 0.6);
