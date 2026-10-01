@@ -428,7 +428,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
  * else gets her default 한남 ribbing (NpcLineSet.tone). The roster carries no
  * gender, so this stays for the friends to fill in (one name per entry).
  */
-export const NPC_SISTER_FRIENDS: readonly string[] = [];
+export const NPC_SISTER_FRIENDS: readonly string[] = ['도원', '민서'];
 
 /** How residents relate to each other (their chats and a few events come from here). */
 export type NpcBond = { a: NpcId; b: NpcId; kind: 'rival' | 'friend' | 'regular' | 'mentor' | 'crush' | 'partner'; note: string };
