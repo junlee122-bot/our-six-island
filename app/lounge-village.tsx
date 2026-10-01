@@ -77,7 +77,7 @@ import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
 import { VILLAGE_GATE } from './lounge-areas';
-import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, walksInto, type Doorway } from './lounge-map-doors';
+import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto, type Doorway } from './lounge-map-doors';
 import { prefetchDistrict } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
 import './lounge-npc-figures.css';
@@ -1932,7 +1932,8 @@ export function Village3D(props: Props) {
       const pushX = h || v ? h : position.x - before.x,
         pushZ = h || v ? v : position.z - before.z;
       if ((pushX || pushZ) && doors.ready() && now - lastWalkInto > LOCKED_NOTICE_MS && !latest.current.fishing) {
-        const into = gates.find(({ gate }) => walksInto(position, { x: pushX, z: pushZ }, gate));
+        const goal = h || v ? null : path.at(-1);
+        const into = gates.find(({ gate }) => walksInto(position, { x: pushX, z: pushZ }, gate) && (h || v || routeGoesThrough(goal, gate)));
         if (into) {
           lastWalkInto = now;
           path = [];

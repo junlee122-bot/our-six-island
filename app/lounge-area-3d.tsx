@@ -57,7 +57,7 @@ import type { ShopArea } from './lounge-shop-interiors';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
 import { loungeAudio } from './lounge-audio';
 import { areaSurface } from './lounge-footsteps';
-import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, walksInto } from './lounge-map-doors';
+import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto } from './lounge-map-doors';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -643,8 +643,10 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const len = Math.hypot(dx, dz);
       // Walking on into an exit (keys, or a click past it) takes it, like E.
       if (len > 0 && doors.current.ready() && t - lastWalkInto > LOCKED_NOTICE_MS) {
+        const keyed = l.held.size > 0 && !l.target;
+        const goal = l.route.at(-1) ?? l.target;
         for (const e of REGIONS[s.area].exits) {
-          if (!walksInto(l.point, { x: dx, z: dz }, e)) continue;
+          if (!walksInto(l.point, { x: dx, z: dz }, e) || (!keyed && !routeGoesThrough(goal, e))) continue;
           // The fallen log stays a wall until it is split (E there says so).
           if (e.to === 'woods' && !s.logCleared && !s.regions?.pass) continue;
           lastWalkInto = t;
@@ -654,6 +656,20 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           queueMicrotask(() => actRef.current({ kind: 'exit', to: e.to, label: e.label }));
           break;
         }
+        // Shop doors face the street (+z): walking up into one at its door goes in.
+        if (s.area === 'market' || s.area === 'harbor')
+          for (const c of districtCounters(s.area, 1)) {
+            if (c.a.kind !== 'counter' || !c.a.enter || t - lastWalkInto <= LOCKED_NOTICE_MS) continue;
+            const doorway = { x: c.x, z: c.z - 1, stand: { x: c.x, z: c.z }, reach: c.reach };
+            if (!walksInto(l.point, { x: dx, z: dz }, doorway) || (!keyed && !routeGoesThrough(goal, doorway))) continue;
+            lastWalkInto = t;
+            l.held.clear();
+            l.route = [];
+            l.target = null;
+            const door = c.a;
+            queueMicrotask(() => actRef.current(door));
+            break;
+          }
       }
       if (len > 0) {
         const stepLen = l.target ? Math.min(speed, len) : speed;

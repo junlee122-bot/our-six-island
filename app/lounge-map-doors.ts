@@ -6,7 +6,8 @@
 //   face and a second press of E cannot bounce you straight back.
 // - Right after arriving, doorways ignore you for DOOR_COOLDOWN_MS.
 // - Besides E / Enter / the action button, walking on into a doorway (keys or
-//   a click past it) takes it: `walksInto`.
+//   a click past it) takes it: `walksInto`; a clicked route only when it aims
+//   past the doorway's stand (`routeGoesThrough`).
 import type { WalkPoint } from './lounge-walk-world.ts';
 
 /** Doorways do nothing this long after you arrive on a map. */
@@ -54,10 +55,23 @@ export function walksInto(p: WalkPoint, move: WalkPoint, d: Doorway): boolean {
   if ((-move.x * n.x - move.z * n.z) / len < 0.6) return false;
   const rx = p.x - d.stand.x,
     rz = p.z - d.stand.z;
-  const past = -(rx * n.x + rz * n.z); // how far beyond the stand toward the doorway
+  const past = pastStand(p, d);
   const side = Math.abs(rx * n.z - rz * n.x);
   return past >= -0.25 && side <= d.reach && Math.hypot(rx, rz) <= d.reach + 1.2;
 }
+
+/** How far `p` lies past the doorway's stand toward the doorway itself. */
+export function pastStand(p: WalkPoint, d: Doorway): number {
+  const n = inward(d);
+  return -((p.x - d.stand.x) * n.x + (p.z - d.stand.z) * n.z);
+}
+/**
+ * Whether a walk heading for `goal` means to go through `d`: keys always do
+ * (the caller checks `walksInto`); a clicked route only when its goal lies past
+ * the stand (a click on the doorway or beyond it), so walking up to a doorway
+ * (the minimap, "가 보기") still stops there for E.
+ */
+export const routeGoesThrough = (goal: WalkPoint | null | undefined, d: Doorway) => !!goal && pastStand(goal, d) >= 0.3;
 
 /** A small clock for a scene: doorways wake up DOOR_COOLDOWN_MS after `arrive()`. */
 export function doorClock(now: () => number = () => performance.now()) {

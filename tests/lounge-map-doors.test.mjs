@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ARRIVE_CLEARANCE, DOOR_COOLDOWN_MS, arrivalFacing, arrivalPoint, doorClock, inward, walksInto } from '../app/lounge-map-doors.ts';
+import { ARRIVE_CLEARANCE, DOOR_COOLDOWN_MS, arrivalFacing, arrivalPoint, doorClock, inward, pastStand, routeGoesThrough, walksInto } from '../app/lounge-map-doors.ts';
 import { OUTDOOR_AREAS, REGIONS, VILLAGE_GATE, nearestExit, outdoorReturnPoint, regionToNetwork, regionWalk } from '../app/lounge-areas.ts';
 import { AREA_DEFAULTS } from '../app/lounge-games.ts';
 import { BUILT_DISTRICTS, DISTRICTS, DISTRICT_IDS } from '../app/lounge-districts.ts';
@@ -28,6 +28,13 @@ test('arrival geometry: a step in from the stand, past the trigger, facing in', 
   assert.ok(!walksInto({ x: 8.3, z: 0 }, { x: 0, z: 0 }, d));
   assert.ok(!walksInto(arrivalPoint(d), { x: 1, z: 0 }, d));
   assert.ok(!walksInto({ x: 8.3, z: 4 }, { x: 1, z: 0 }, d), 'far to the side of the doorway');
+  // A clicked walk goes through only when it aims past the stand (the minimap and
+  // "가 보기" walk up to a doorway and stop there for E).
+  assert.equal(pastStand({ x: 9, z: 0 }, d), 1);
+  assert.ok(routeGoesThrough({ x: 9.5, z: 0 }, d));
+  assert.ok(!routeGoesThrough(d.stand, d));
+  assert.ok(!routeGoesThrough({ x: 5, z: 0 }, d));
+  assert.ok(!routeGoesThrough(null, d));
 });
 
 test('the door clock holds doorways for a moment after arriving', () => {
@@ -122,6 +129,17 @@ test('shop doors: out on the street a step from the door; in the room a step fro
       if (c.a.kind === 'counter' && c.a.enter) assert.ok(dist(out.at, c) > c.reach, `${area}: no shop door at my feet`);
     }
     assert.equal(nearestExit(out.district, out.at), null);
+    // Walking up into the shop front at its door goes in (as the district scene does).
+    const door = districtCounters(out.district, 1).find((c) => c.a.kind === 'counter' && c.a.enter === area);
+    const doorway = { x: door.x, z: door.z - 1, stand: { x: door.x, z: door.z }, reach: door.reach };
+    let q = { x: door.x, z: door.z },
+      took = false;
+    for (let i = 0; i < 20 && !took; i++) {
+      q = w.step(q, 0, -0.12);
+      took = walksInto(q, { x: 0, z: -1 }, doorway);
+    }
+    assert.ok(took, `${area}: walking into its door`);
+    assert.ok(!walksInto(out.at, { x: 0, z: -1 }, doorway), `${area}: not from where I come out`);
   }
   for (const area of INTERIOR_AREAS) {
     const p = interiorArrival(area);
