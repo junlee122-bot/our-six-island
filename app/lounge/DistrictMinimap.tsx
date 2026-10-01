@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Compass, Footprints, Minus, Plus, X } from '../ui/icons';
 import { districtFriendPins, districtMinimap, type MiniShape, type MiniTone } from '../lounge-district-minimap';
 import { villageFriendGroups } from '../lounge-village-minimap';
-import { setMinimap, useMinimap } from '../lounge-minimap-state';
 import type { OutdoorArea } from '../lounge-areas';
 import type { WalkPoint } from '../lounge-walk-world';
 import { ACTORS } from '../lounge-roster';
@@ -56,7 +55,8 @@ function Shape({ s }: { s: MiniShape }) {
 
 export function DistrictMinimap({ area, weekday, players, self, where, residents, onGo }: DistrictMinimapProps) {
   const map = useMemo(() => districtMinimap(area, weekday), [area, weekday]);
-  const { open, expanded } = useMinimap();
+  const [open, setOpen] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [friendGroup, setFriendGroup] = useState<string | null>(null);
   const [nearest, setNearest] = useState<string | null>(null);
   const [npcs, setNpcs] = useState<readonly { id: NpcId; x: number; z: number }[]>([]);
@@ -113,7 +113,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
   const go = (p: WalkPoint) => {
     onGo(p);
     setFriendGroup(null);
-    if (expanded) setMinimap({ expanded: false });
+    if (expanded) setExpanded(false);
   };
   const onFriendKey = (e: { key: string; preventDefault: () => void; stopPropagation: () => void }) => {
     if (e.key === 'Escape' && shown) {
@@ -139,7 +139,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
         aria-expanded={open}
         aria-controls="hv-district-minimap-body"
         onClick={() => {
-          setMinimap({ open: !open });
+          setOpen(!open);
           setFriendGroup(null);
         }}
         aria-label={open ? '미니맵 접기' : '미니맵 펼치기'}
@@ -155,7 +155,7 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
             <button
               type="button"
               onClick={() => {
-                setMinimap({ expanded: !expanded });
+                setExpanded(!expanded);
                 setFriendGroup(null);
               }}
               aria-expanded={expanded}
