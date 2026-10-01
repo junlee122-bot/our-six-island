@@ -3,7 +3,10 @@
 // the choices, the gift picker and their reaction), measured like ui:shots
 // (contrast, small / narrow / cut text) and checked for Esc + focus return.
 //
-//   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s,phone] [--skip-friend]
+//   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s,phone] [--skip-friend] [--npc carpenter]
+//
+// --npc <id> talks to another resident instead (the first half hour today
+// they stand in the village, e.g. 발키리's evening walk).
 //
 // The mock server's clock is moved to 22:05 KST today (or the first half hour
 // 프리렌 rests in the village, see below), when 프리렌 sits on the
@@ -36,6 +39,7 @@ const views = opt('views', 'fhd,s').split(',');
 const fullGraphics = args.includes('--full-graphics');
 // --skip-friend: only the resident (a friend resting on a bench can take minutes to find).
 const skipFriend = args.includes('--skip-friend');
+const NPC = opt('npc', 'frieren');
 fs.mkdirSync(out, { recursive: true });
 
 // Move this process's clock (the mock server's) before the harness starts.
@@ -43,7 +47,7 @@ const realNow = Date.now.bind(Date);
 // 22:05 when 프리렌 is on the plaza then; else the first half hour of today she
 // rests in the village (her evenings moved to 시장 거리, character QA 2026-10-01).
 const inVillage = (t) => {
-  const s = npcSpot('frieren', t);
+  const s = npcSpot(NPC, t);
   return s.area === 'village' && s.visible && !s.walking;
 };
 const dayStart = kstDayStart(kstDay(realNow()));
@@ -51,9 +55,9 @@ const defaultAt = [22 * 60 + 5, ...Array.from({ length: 36 }, (_, i) => 6 * 60 +
 const at = Number(opt('at', String(defaultAt)));
 const shift = at - realNow();
 Date.now = () => realNow() + shift;
-const bench = npcSpot('frieren', at);
-console.log(`server clock ${new Date(at).toISOString()} (shift ${(shift / 3_600_000).toFixed(2)} h) · 프리렌: ${bench.area} ${bench.label}`);
-assert.equal(bench.area, 'village', '프리렌이 그 시각 마을에 있어야 합니다.');
+const bench = npcSpot(NPC, at);
+console.log(`server clock ${new Date(at).toISOString()} (shift ${(shift / 3_600_000).toFixed(2)} h) · ${NPC}: ${bench.area} ${bench.label}`);
+assert.equal(bench.area, 'village', `${NPC}이(가) 그 시각 마을에 있어야 합니다.`);
 
 const { launchBrowser, login, serve, setup, VIEWS } = await import('./ui-harness.mjs');
 // A phone-width view for the box only (ui:shots keeps its own three).
@@ -65,7 +69,7 @@ function seedLife(life, uid) {
   const x = ((life.ext ??= {})[uid] ??= {});
   x.inv = { ...x.inv, crucian: 2, azalea: 3, wildflower: 2, pinecone: 4, copper: 6, wood: 20 };
   x.q2 = { ...x.q2, carrot: 2 };
-  x.npcRelations = { ...x.npcRelations, frieren: { points: 26 } };
+  x.npcRelations = { ...x.npcRelations, [NPC]: { points: 26 } };
   const bag = life.bag?.[uid];
   if (bag) {
     bag.produce.carrot = (bag.produce.carrot ?? 0) + 5;
@@ -264,7 +268,7 @@ async function runView(view) {
       await page.keyboard.press('KeyE');
       opened = (await until(() => !!document.querySelector('[data-testid=npc-dialog], dialog.l-npc-talk'), 60000)) >= 0;
     }
-    assert.ok(opened, '프리렌에게 말을 걸지 못했습니다.');
+    assert.ok(opened, `${NPC}에게 말을 걸지 못했습니다.`);
     const speechBox = await js(() => !!document.querySelector('[data-testid=npc-dialog]'));
     res.speechBox = speechBox;
     if (!speechBox) {
