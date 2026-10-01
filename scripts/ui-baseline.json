@@ -366,6 +366,15 @@
        "h": 44
       }
      }
+    },
+    "market": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     }
    }
   },
@@ -1078,6 +1087,15 @@
        "h": 44
       }
      }
+    },
+    "market": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     }
    }
   }
