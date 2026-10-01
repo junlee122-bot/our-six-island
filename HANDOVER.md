@@ -141,6 +141,8 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 마을 3D | `app/lounge-village*.ts(x)` |
 | 실내 3D | `app/lounge-venues.ts`, `lounge-interior-*.ts(x)`, `lounge-tavern-*.ts` |
 | 가게 실내(빵집·농협·잡화점·어시장) | `app/lounge-shop-interiors.ts`(배치·계산대·직원 통로·의자·서버 허용 행동), `lounge-shop-interior.ts`(3D), 문 `lounge-district-counters.ts`(`enter`, `shopDoorOutside`), 일과 `lounge-npc-schedule.ts`(`<가게>.owner` 등), 테스트 `tests/lounge-shop-interiors.test.mjs`, 확인 `scripts/district-shots.mjs --shops`, 전후 화면 `handover/design/img/shop-interiors/` |
+| 미니맵(마을·구역) | 마을 `app/lounge-village.tsx`(`hv-minimap`), 구역 `app/lounge-district-minimap.ts`(배치 데이터로 그림·장소·친구 표시, 그림이 없는 새 구역은 벽·출구·창구로 자동) + `lounge/DistrictMinimap.tsx`, 공통 CSS `app/lounge-minimap.css`, 테스트 `tests/lounge-district-minimap.test.mjs`, 확인 `scripts/district-shots.mjs --minimap` |
+| 가구점·부동산 위치 확인 | `app/lounge-hub-counters.ts`(가구 구입·새로 고치기는 가구점 문 앞, 집 확장·모델하우스는 부동산 문 앞, 4.5칸), 서버 `lounge-cloud-engine.ts`, 테스트 `tests/lounge-shop-locations.test.mjs`(가게 실내 `at` 매매 포함) |
 | 화면 | `app/lounge-game.tsx`(최상위), `app/lounge/*.tsx`, `app/ui/*` |
 | 문서 | `handover/STYLE-AND-SOURCES.md`(미감 규칙·자료 출처), `README.md`, `ACCOUNTS.md`(계정·배포), `ASSETS.md`(에셋 제작 기록), `GAME_PROGRESS.md`, `handover/design/*` |
 
