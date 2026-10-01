@@ -6,6 +6,7 @@ import type { FinanceAction } from '../lounge-finance';
 import { LENDER_NAME } from '../lounge-casino-lender';
 import { LOUNGE_ASSETS } from '../lounge-assets';
 import { formatBeom } from '../lounge-text';
+import { MONEY_CAT_LABEL } from '../lounge-money-log';
 import { GameButton } from '../ui/GameButton';
 import { Tabs, tabPanelProps } from '../ui/Tabs';
 import { Modal } from './Modal';
@@ -13,15 +14,18 @@ import { useNow } from './use-now';
 import './finance.css';
 
 type Mode = 'bank' | 'casino' | 'rob';
-type BankPage = 'bank' | 'notes';
-const pages = [{ id: 'bank', label: '보관함' }, { id: 'notes', label: '차용증' }] as const;
+type BankPage = 'bank' | 'notes' | 'money';
+const pages = [{ id: 'bank', label: '보관함' }, { id: 'notes', label: '차용증' }, { id: 'money', label: '범 내역' }] as const;
+type Span = 'today' | 'week' | 'month';
+const SPANS: readonly { id: Span; label: string }[] = [{ id: 'today', label: '오늘' }, { id: 'week', label: '7일' }, { id: 'month', label: '30일' }];
+const signed = (n: number) => (n > 0 ? '+' : n < 0 ? '−' : '') + formatBeom(Math.abs(n));
 const date = (at: number) => new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(at);
 export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
   room: CloudRoom; view: CloudRoomView; onClose: () => void; mode: Mode; initial?: BankPage;
 }) {
   const [page, setPage] = useState<BankPage>(initial), [showClerkPortrait, setShowClerkPortrait] = useState(false), [amount, setAmount] = useState(1000),
     [target, setTarget] = useState(''), [interest, setInterest] = useState(0), [days, setDays] = useState(3),
-    [loot, setLoot] = useState<'cash' | 'produce' | 'furniture'>('cash'), [busy, setBusy] = useState(false);
+    [loot, setLoot] = useState<'cash' | 'produce' | 'furniture'>('cash'), [busy, setBusy] = useState(false), [span, setSpan] = useState<Span>('week');
   const now = useNow(true, 30_000) + view.clockOffset;
   const inFlight = useRef(false);
   const data = view.finance, uid = view.self, mine = view.players.find((p) => p.id === uid),
@@ -42,7 +46,7 @@ export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
     {!data ? <p role="status">은행 장부를 불러오는 중이에요. 잠시 뒤 다시 열어 주세요.</p> : <>
       {mode === 'bank' && <div className="l-finance-clerk" data-testid="bank-clerk" data-portrait={showClerkPortrait ? 'photo' : 'sprite'}>
         <img className={showClerkPortrait ? 'is-photo' : undefined} src={showClerkPortrait ? LOUNGE_ASSETS.bankClerkPortrait : LOUNGE_ASSETS.bankClerkSprite} alt={showClerkPortrait ? '짙은 남청색 머리와 고양이 귀, 금빛 눈의 은행원 냐모' : '고양이 귀와 꼬리가 있는 은행원 냐모'} />
-        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{showClerkPortrait ? '오랜만에 왔네, 자기? …조금만 더 가까이 와. 오늘은 네 얘기부터 듣고 싶은데.' : page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
+        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{showClerkPortrait ? '오랜만에 왔네, 자기? …조금만 더 가까이 와. 오늘은 네 얘기부터 듣고 싶은데.' : page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : page === 'money' ? '어디에 얼마를 썼는지 제가 다 적어 뒀어요. 장부는 거짓말을 안 하거든요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
           <GameButton size="s" variant="ghost" data-testid="bank-clerk-portrait-toggle" onClick={() => setShowClerkPortrait((visible) => !visible)}>{showClerkPortrait ? '창구로 돌아가기' : '잠깐 창구 아래로 와보세요'}</GameButton>
         </div>
       </div>}
@@ -81,6 +85,28 @@ export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
             </article>;
           })}
         </>}
+        {activePage === 'money' && (() => {
+          const money = view.moneyLog, sum = money?.summary[span];
+          const most = Math.max(1, ...(sum?.cats.map((c) => c.spent) ?? [1]));
+          return <div className="l-money" data-testid="money-log">
+            <div className="l-money-spans" role="group" aria-label="기간">{SPANS.map((s) => <GameButton key={s.id} size="s" variant={span === s.id ? 'primary' : 'ghost'} aria-pressed={span === s.id} onClick={() => setSpan(s.id)}>{s.label}</GameButton>)}</div>
+            {!money || (!money.lines.length && !sum?.cats.length) ? <p>이번 업데이트부터 범이 오간 기록을 적어요. 물건을 사거나 팔면 여기에 쌓여요.</p> : <>
+              <div className="l-finance-balances"><span>쓴 범 <strong>{formatBeom(sum!.spent)}</strong></span><span>번 범 <strong>{formatBeom(sum!.earned)}</strong></span><span>차이 <strong>{signed(sum!.earned - sum!.spent)}</strong></span></div>
+              {sum!.cats.some((c) => c.spent) && <>
+                <h3>어디에 썼나</h3>
+                <ul className="l-money-cats">{sum!.cats.filter((c) => c.spent).map((c) => <li key={c.cat}>
+                  <span>{MONEY_CAT_LABEL[c.cat]}</span><span className="l-money-bar" aria-hidden="true"><i style={{ width: `${Math.max(3, Math.round((c.spent / most) * 100))}%` }} /></span><strong>{formatBeom(c.spent)}</strong>
+                </li>)}</ul>
+              </>}
+              {sum!.cats.some((c) => c.earned) && <p>번 곳: {sum!.cats.filter((c) => c.earned).sort((a, b) => b.earned - a.earned).map((c) => `${MONEY_CAT_LABEL[c.cat]} ${formatBeom(c.earned)}`).join(' · ')}</p>}
+              <h3>최근 기록</h3>
+              <ol className="l-money-lines">{money.lines.slice(0, 60).map((l, i) => <li key={`${l.at}-${i}`}>
+                <time>{date(l.at)}</time><span>{l.label}</span><strong className={l.amount < 0 ? 'is-out' : 'is-in'}>{signed(l.amount)}</strong>
+              </li>)}</ol>
+              <p>은행 보관함에 맡기고 찾은 범은 쓴 범·번 범에 넣지 않아요. 기록은 최근 120건, 합계는 30일까지 남아요.</p>
+            </>}
+          </div>;
+        })()}
         {activePage === 'casino' && <>
           <h3>오늘 루미의 장부</h3><div className="l-finance-balances"><span>받은 범 <strong>{formatBeom(data.casino.earned)}</strong></span><span>승자에게 준 범 <strong>{formatBeom(data.casino.paid)}</strong></span><span>환급 후 순수익 <strong>{formatBeom(data.casino.profit)}</strong></span></div>
           <p>한국 시간 오늘의 블랙잭 정산이에요. 포커 판돈은 친구끼리 나누므로 루미 수익에 포함하지 않아요. 기록은 이번 업데이트부터 쌓여요.</p>

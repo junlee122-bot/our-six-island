@@ -494,7 +494,7 @@ async function runView(mobile = false) {
       assert.equal(await page.locator('dialog[open].l-finance').count(), 0, 'approaching Nyamo does not transfer money or open a form');
       await page.keyboard.press('KeyE');
       await page.locator('dialog[open].l-finance').waitFor();
-      assert.deepEqual(await page.locator('dialog[open].l-finance [role="tab"]').allTextContents(), ['보관함', '차용증'], 'the bank only exposes storage and friend notes');
+      assert.deepEqual(await page.locator('dialog[open].l-finance [role="tab"]').allTextContents(), ['보관함', '차용증', '범 내역'], 'the bank exposes storage, friend notes and the 범 history');
       await wait(() => {
         const img = document.querySelector('[data-testid=bank-clerk] img');
         return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
@@ -530,6 +530,15 @@ async function runView(mobile = false) {
       await page.getByRole('button', { name: '찾기', exact: true }).click();
       await waitMock(() => H.world().ledger.vault?.[key] === 0, 'withdraw returns stored balance');
       assert.equal(H.world().ledger.vault[key], 0); assert.equal(H.world().ledger.accounts[key], before);
+      // 범 내역: the deposit and the withdrawal are listed, and neither counts as spending.
+      await page.getByRole('tab', { name: '범 내역', exact: true }).click();
+      await page.getByTestId('money-log').waitFor();
+      await wait(() => /은행 보관함에서 찾음/.test(document.querySelector('[data-testid=money-log]')?.textContent ?? ''), null, 30_000);
+      assert.match(await page.getByTestId('money-log').textContent(), /은행 보관함에 맡김/);
+      await shot('bank-money-log', true);
+      await page.setViewportSize({ width: 1920, height: 1080 }); await sleep(600);
+      await shot('bank-money-log-fhd', true);
+      await page.setViewportSize({ width: 1280, height: 720 }); await sleep(600);
       // Another synthetic friend offers; only the user's real Accept click transfers money.
       await H.run(H.bots[0], 'action', { action: { kind: 'finance', op: 'offer', to: 3, amount: 1000, interest: 0, days: 3 } });
       await page.getByRole('tab', { name: '차용증', exact: true }).click();

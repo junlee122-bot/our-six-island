@@ -3,6 +3,7 @@ import { emptyLoungeView } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
 import type { FinanceView } from './lounge-finance';
+import type { MoneyLogView } from './lounge-money-log';
 import type { TableStatsView } from './lounge-table-stats';
 import { cloud, cloudCall, AccountError } from './lounge-auth';
 import type { AccountProfile } from './lounge-accounts';
@@ -67,6 +68,8 @@ type Response = {
   life?: LifeView;
   lifeHash?: string;
   finance?: FinanceView;
+  /** 범 내역 (lounge-money-log.ts): where my 범 went, for the bank window. */
+  moneyLog?: MoneyLogView;
   /** 테이블 기록 (lounge-table-stats.ts): my totals and the weekly table. */
   tableStats?: TableStatsView;
 };
@@ -91,6 +94,7 @@ export type CloudRoomView = LoungeView & {
   /** Latest "범타듀의 하루" state from any response (null until the first one). */
   life: LifeView | null;
   finance?: FinanceView;
+  moneyLog?: MoneyLogView;
   tableStats?: TableStatsView;
   /** Connection health (lounge-connection.ts): 'offline' after two failed calls in a row. */
   link: Link;
@@ -307,6 +311,8 @@ export class CloudRoom {
     } else if (this.view.life && Number.isFinite(r.serverNow))
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };
     if (r.finance) this.view = { ...this.view, finance: r.finance };
+    if (r.moneyLog && JSON.stringify(r.moneyLog) !== JSON.stringify(this.view.moneyLog))
+      this.view = { ...this.view, moneyLog: r.moneyLog };
     if (r.tableStats && JSON.stringify(r.tableStats) !== JSON.stringify(this.view.tableStats))
       this.view = { ...this.view, tableStats: r.tableStats };
     if (r.packet && r.code) {

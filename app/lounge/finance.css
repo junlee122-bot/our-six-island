@@ -22,3 +22,16 @@
 .l-finance-history { padding: var(--sp-4); font-size: var(--fs-body-s); color: var(--text-soft); }
 .l-finance-history summary { cursor: pointer; min-height: var(--hit); color: var(--text); }
 .l-finance-history time { color: var(--text-soft); }
+/* 범 내역 (lounge-money-log.ts) */
+.l-money { display: grid; gap: var(--sp-3); }
+.l-money-spans { display: flex; gap: var(--sp-2); }
+.l-money-cats, .l-money-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.l-money-cats li { display: grid; grid-template-columns: 9em minmax(0, 1fr) 7em; align-items: center; gap: var(--sp-3); font-size: var(--fs-body); color: var(--text); }
+.l-money-cats strong, .l-money-lines strong { text-align: right; font-variant-numeric: tabular-nums; }
+.l-money-bar { display: block; height: var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); overflow: hidden; }
+.l-money-bar i { display: block; height: 100%; background: var(--accent); }
+.l-money-lines { max-height: 320px; overflow-y: auto; }
+.l-money-lines li { display: grid; grid-template-columns: 9em minmax(0, 1fr) 8em; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); font-size: var(--fs-body); color: var(--text); }
+.l-money-lines time { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-money-lines .is-out { color: var(--danger-edge); }
+.l-money-lines .is-in { color: var(--accent-edge); }

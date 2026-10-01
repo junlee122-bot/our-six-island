@@ -511,7 +511,7 @@ function AccountLounge({
     [residentTalk, setResidentTalk] = useState<NpcId | null>(null),
     [npcBookAt, setNpcBookAt] = useState<NpcId | undefined>(undefined),
     [financeMode, setFinanceMode] = useState<'bank' | 'casino' | 'rob'>('bank'),
-    [financePage, setFinancePage] = useState<'bank' | 'notes' | undefined>(undefined),
+    [financePage, setFinancePage] = useState<'bank' | 'notes' | 'money' | undefined>(undefined),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('graphics'),
     // 설정 / 조작 안내 opened from the Esc menu go back to it on close (Esc stack).
     [fromMenu, setFromMenu] = useState(false),

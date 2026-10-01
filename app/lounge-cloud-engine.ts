@@ -47,6 +47,7 @@ import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
+import { moneyHint, moneyLogView, readMoneyLog, recordMoney, type MoneyLog } from './lounge-money-log.ts';
 /** The life state without the reset's done-mark (for the "did anything change" check). */
 const withoutResetMark = (life: LifeState) => {
   const { roomsReset: _mark, ...rest } = life;
@@ -89,6 +90,8 @@ export type CloudWorld = {
   loginGifts?: Record<string, LoginGift>;
   /** 테이블 기록: per-game results and the weekly table (lounge-table-stats.ts). */
   tableStats?: TableStats;
+  /** 범 내역: each friend's money lines and daily totals (lounge-money-log.ts). */
+  moneyLog?: MoneyLog;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -661,6 +664,7 @@ export function cloudTransition(
   // Friday casino-night bonus and a digest line (life expansion).
   g.finance = recordCasino(g.finance, original.ledger, g.ledger, now);
   // An overdue casino loan takes whatever the borrower holds on their next request.
+  const beforeOverdue = g.ledger;
   if (mutating) ({ state: g.finance, ledger: g.ledger } = collectOverdue(g.finance, g.ledger, member.id, now));
   const settled = Object.entries(g.ledger.games)
     .filter(
@@ -685,6 +689,14 @@ export function cloudTransition(
     const next = recordTables(readLife(g.life), g.ledger, settled, now);
     g.life = next.life;
     g.ledger = next.ledger;
+  }
+  // 범 내역: one line per change to a wallet, named by its ledger entry, its
+  // table, the vault or this command (lounge-money-log.ts).
+  if (JSON.stringify(original.ledger.accounts) !== JSON.stringify(g.ledger.accounts) || JSON.stringify(original.ledger.vault ?? {}) !== JSON.stringify(g.ledger.vault ?? {})) {
+    let book = readMoneyLog(g.moneyLog);
+    book = recordMoney(book, original.ledger, beforeOverdue, now, command.op === 'action' && ok ? moneyHint(command.action) : null);
+    book = recordMoney(book, beforeOverdue, g.ledger, now, { label: '카지노 대출 연체 회수', cat: 'bank' });
+    if (Object.keys(book).length) g.moneyLog = book;
   }
   // 무드 (lounge-mood.ts): only on a row that is written anyway — a new command
   // or a read that refreshed its lease. A plain read never writes (D-3).
@@ -729,6 +741,7 @@ export function cloudTransition(
     ...(command.lifeHash === lifeHash ? {} : { life }),
     lifeHash,
     finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
+    moneyLog: moneyLogView(readMoneyLog(g.moneyLog), member.id, now),
     tableStats: tableStatsView(
       readTableStats(g.tableStats, now),
       member.id,
