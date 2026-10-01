@@ -60,6 +60,25 @@
 - 밤 주민 색조 (왼쪽 전, 오른쪽 후): ![night](img/character-qa/night-resident-tint-before-after.webp)
 - 광장 신짜장 (왼쪽 수정 전 빌드, 오른쪽 후: 조금 작고 오른쪽으로 치우쳤던 것이 친구와 같은 크기로): ![sinj](img/character-qa/hub-sinjjajang-before-after.webp)
 
+## 걷기·달리기 (스타듀밸리식으로)
+
+사용자 요청: "스타듀밸리 같은 게임처럼 걸었으면". 24프레임(2주기)씩 그려 머리 위치를 쟀습니다 (캔버스 220×320, 몸 키 약 300px).
+
+| | 수정 전 | 수정 후 |
+| --- | --- | --- |
+| 기본 의상(우리다운 하루) 걷기 | 손그림 6장: 정면↔3/4 시점이 섞이고 머리가 좌우 4~11px, 위아래 3~10px 흔들림 | 머리 좌우 0px, 위아래 1~2px |
+| 기본 의상 달리기 | 손그림 6장: 3·6번째가 웅크린 포즈라 머리가 20~54px(키의 10~18%) 출렁, 좌우 4~19px | 1~2px |
+| 다른 의상(리그) 달리기 | 한 포즈에서만 6~10px 툭 뛰어오름, 다리가 A자로 크게 벌어짐, 정면 그림이 옆으로 기울어짐 | 뜀 없음, 짧은 보폭, 거의 똑바로 |
+
+- `app/lounge-rig-frames.ts` `HAND_DRAWN_CLASSIC = false`: 기본 의상도 다른 의상과 같은 리그로 걷습니다 (손그림 시트 파일은 남겨 둠, 되돌리기 쉬움).
+- `app/lounge-gait.ts` `GAIT_STYLES`: 걷기 허벅지 18°→12°, 무릎 44°→30°, 기울임 1.5°→0 / 달리기 23°→15°, 55°→38°, 기울임 6°→1°, 공중 뜀 0.03→0. 발걸음마다 1~2px 통통, 달리기는 같은 걸음을 더 빠르게.
+- 테스트 `tests/lounge-gait.test.mjs`: 달리기도 공중에 뜨지 않음, 통통 높이 4% 미만.
+
+![전](img/character-qa/walk-before-anim.webp) ![후](img/character-qa/walk-after-anim.webp)
+프레임 나열: [전](img/character-qa/walk-before.webp) / [후](img/character-qa/walk-after.webp)
+
+남은 것: 친구 그림은 정면 한 방향뿐이라 스타듀밸리처럼 위·아래·옆 4방향 걷기는 새 그림(방향별 걷기 시트)이 있어야 합니다.
+
 ## 자동 검사
 
 `tests/lounge-character-pixels.test.mjs` (`npm test`에 포함, 약 3초, sharp로 디코딩):
