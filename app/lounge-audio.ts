@@ -276,6 +276,13 @@ class LoungeAudio {
       (place) => this.tracks[place].status === 'ready',
     );
     this.boxOn = musicOn && mix.box > 0;
+    // For QA (the doorway walk-through): what the music channel and the bed play.
+    if (typeof document !== 'undefined') {
+      const flags = document.documentElement.dataset;
+      flags.music = musicOn ? (mix.track ?? mix.synth ?? (this.boxOn ? 'box' : 'off')) : 'off';
+      flags.musicIndoor = String(this.scene.indoor);
+      flags.ambience = ambientOn ? (bed ? (bed.waves ? 'surf' : 'outdoor') : 'village') : 'off';
+    }
     const targets = [
       audible ? settings.volume : 0,
       musicOn ? mix.channel * settings.musicVolume * duck : 0,

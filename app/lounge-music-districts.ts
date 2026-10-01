@@ -238,11 +238,11 @@ export function hillsideBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEve
   const night = state.night;
   const ev: NoteEvent[] = [];
   const end = bar === plan.of - 1;
-  ev.push({ step: 0, inst: 'bass', midi: bassOf(chord), vel: night ? 0.4 : 0.52, dur: 7 });
+  ev.push({ step: 0, inst: 'bass', midi: bassOf(chord), vel: night ? 0.5 : 0.52, dur: 7 });
   const v = voicing(chord, 64, 57, 76);
   ARPEGGIO.forEach((i, step) => {
     if (night && step % 2) return;
-    ev.push({ step, inst: 'piano', midi: v[Math.min(i, v.length - 1)], vel: (step % 4 === 0 ? 0.3 : 0.22) * (night ? 0.75 : 1), dur: night ? 2 : 1.5 });
+    ev.push({ step, inst: 'piano', midi: v[Math.min(i, v.length - 1)], vel: (step % 4 === 0 ? 0.3 : 0.22) * (night ? 1.05 : 1), dur: night ? 2.5 : 1.5 });
   });
   if (s === 'A' || s === 'A2') {
     const line = motif(state, 'L' + bar, plan, () =>

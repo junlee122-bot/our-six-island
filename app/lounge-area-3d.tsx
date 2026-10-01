@@ -759,6 +759,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (ak !== lastAction) {
         lastAction = ak;
         setAction(a);
+        host.dataset.action = a ? (a.kind === 'exit' ? `exit:${a.to}` : a.kind) : '';
       }
       // Redraw when something changed; otherwise ~4 times a second (the node marks bob).
       if (!dirty && t - lastRender < 250) return;
