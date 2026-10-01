@@ -25,6 +25,8 @@ import type { TavernModel } from './lounge-model-assets';
 import { buildCorkGun, buildTavern, type TavernRoom } from './lounge-tavern-interior';
 import { buildBank } from './lounge-bank-interior';
 import { buildSalon } from './lounge-salon-interior';
+import { buildShop } from './lounge-shop-interior';
+import { isShopArea } from './lounge-shop-interiors';
 import { VIEW_LIGHT } from './lounge-village-camera';
 import {
   INTERIOR_DOOR_Z,
@@ -72,6 +74,44 @@ type Palette = {
   lampReach: number;
 };
 const PALETTE: Record<SceneArea, Palette> = {
+  // 가게 실내: warm plaster and oak (bakery), sage (co-op), lantern-lit green
+  // (general store), harbour blue-grey (fish market).
+  bakery: {
+    wall: '#f4e4cf', wainscot: '#c99a6b', rail: '#f8ecd8',
+    floor: ['#d4ad7f', '#cca476', '#dbb78b', '#c79e70'],
+    trim: '#9a7350', chair: '#9c7550', cushion: '#d9826a',
+    hemi: ['#fff5e2', '#a08a6c', 1.9], sun: ['#ffe9c8', 2.1],
+    lamp: '#ffd79a', background: '#eadcc4', fill: '#f2ead8',
+    outside: '#e3efcc', mat: '#b0784f', dark: false, wood: '#8e6540',
+    lamps: [[-3, 3.1, -1.2], [3.6, 3.1, 0.6]], lampPower: 6, lampReach: 11,
+  },
+  coop: {
+    wall: '#eef0e0', wainscot: '#8fa676', rail: '#f4ecd6',
+    floor: ['#cdb894', '#c5b08c', '#d4c09d', '#bfa985'],
+    trim: '#7f6a4c', chair: '#866b4d', cushion: '#6f8f5a',
+    hemi: ['#fff8e8', '#94a083', 1.9], sun: ['#fff0d5', 2.1],
+    lamp: '#fff0c5', background: '#e1e6d2', fill: '#eaf2e2',
+    outside: '#dcecc4', mat: '#6f8f5a', dark: false, wood: '#8c6a48',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
+  },
+  general: {
+    wall: '#d9d4c0', wainscot: '#3f5a4c', rail: '#e8dcbc',
+    floor: ['#8f6d4f', '#87664a', '#977555', '#816146'],
+    trim: '#4d3f33', chair: '#5a4a3a', cushion: '#58705f',
+    hemi: ['#ffeccd', '#5f5a4a', 1.7], sun: ['#ffe2b8', 1.9],
+    lamp: '#ffcf8a', background: '#2d2a24', fill: '#ffd9a8',
+    outside: '#dcecc4', mat: '#58705f', dark: false, wood: '#5a4a3a',
+    lamps: [[-3.5, 2.8, -1], [2.4, 2.6, 1.6], [6.4, 2.4, -3.4]], lampPower: 6.5, lampReach: 9,
+  },
+  fishmarket: {
+    wall: '#e4ecec', wainscot: '#5f8794', rail: '#eef3f0',
+    floor: ['#b9c4c2', '#b1bcba', '#c0cbc9', '#aab5b3'],
+    trim: '#4f6f78', chair: '#6b7f86', cushion: '#4f8aa0',
+    hemi: ['#f4fbff', '#8a9a9c', 1.9], sun: ['#fff4e0', 2.1],
+    lamp: '#fff4d8', background: '#d6e2e3', fill: '#e6f2f4',
+    outside: '#d8ecf2', mat: '#4f8aa0', dark: false, wood: '#6b5a48',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
+  },
   salon: {
     wall: '#f3e5df', wainscot: '#9eb6aa', rail: '#f8ead8',
     floor: ['#d8bd99', '#d0b28e', '#dfc6a6', '#cbaa85'],
@@ -180,6 +220,11 @@ export const INTERIOR_FIGURE_TINT: Record<SceneArea, string> = {
   lounge: '#ffffff',
   bank: '#ffffff',
   salon: '#ffffff',
+  bakery: '#ffffff',
+  coop: '#ffffff',
+  fishmarket: '#ffffff',
+  // The lantern-lit general store is a little dimmer.
+  general: '#f8efe2',
   casino: '#f6e8dc',
   tavern: '#f0dcc6',
 };
@@ -249,6 +294,7 @@ export function createInteriorScene(
   let tavern: TavernRoom | null = null;
   let bank: ReturnType<typeof buildBank> | null = null;
   let salon: ReturnType<typeof buildSalon> | null = null;
+  let shop: ReturnType<typeof buildShop> | null = null;
   /** Loaded kArchive models (shared by their clones in this scene). */
   const models: Partial<Record<ClubModel, THREE.Group>> = {};
   /** Set when a model arrived; refresh() reports it so the view re-renders. */
@@ -498,7 +544,7 @@ export function createInteriorScene(
   );
   bannerMesh.position.set(0, 2.72, minZ + 0.06);
   root.add(bannerMesh);
-  if (area === 'lounge' || area === 'bank' || area === 'salon') {
+  if (area === 'lounge' || area === 'bank' || area === 'salon' || isShopArea(area)) {
     const glass = new THREE.MeshBasicMaterial({ color: '#f6e7b8', toneMapped: false });
     for (const x of [-5.2, 5.2]) {
       box(2.1, 1.7, 0.1, x, 2.05, minZ + 0.05, pal.trim);
@@ -509,7 +555,8 @@ export function createInteriorScene(
     }
     // Wall lanterns (warm paper shades) along the back wall.
     const paper = surface('#fff1d6', { emissive: '#ffc978', emissiveIntensity: 0.9 });
-    for (const x of [-7.2, -3.0, 3.4, 7.2]) {
+    // (The shops hang their own signs there instead.)
+    for (const x of isShopArea(area) ? [-7.2, 7.2] : [-7.2, -3.0, 3.4, 7.2]) {
       const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), paper);
       lantern.scale.set(1, 1.3, 1);
       lantern.position.set(x, 2.55, minZ + 0.3);
@@ -557,7 +604,7 @@ export function createInteriorScene(
     }
   }
   // Potted plants in the corners (the tavern has its own corners).
-  if (area !== 'tavern' && area !== 'bank' && area !== 'salon')
+  if (area !== 'tavern' && area !== 'bank' && area !== 'salon' && !isShopArea(area))
   for (const [x, z] of [[minX + 0.6, minZ + 0.6], [maxX - 0.6, minZ + 0.6], [maxX - 0.6, maxZ - 0.6]] as const) {
     if (area === 'casino' && x > 0 && z < 0) continue;
     cylinder(0.3, 0.24, 0.5, x, 0.25, z, area === 'casino' ? '#c9a24a' : '#b5673f');
@@ -1084,6 +1131,7 @@ export function createInteriorScene(
   const loader = new GLTFLoader();
   if (area === 'bank') bank = buildBank(root, () => { modelsChanged = true; });
   if (area === 'salon') salon = buildSalon(root, () => { modelsChanged = true; });
+  if (isShopArea(area)) shop = buildShop(root, area, () => { modelsChanged = true; });
   /** 허풍 주점: the café table model under the 허풍 카드 felt (stretched to the table). */
   function placeTavernTable() {
     const node = nodes.get('liarsbar'),
@@ -1243,6 +1291,8 @@ export function createInteriorScene(
     tables,
     bankModels: () => bank?.loaded() ?? 0,
     salonModels: () => salon?.loaded() ?? 0,
+    /** Shop rooms: models placed / models wanted. */
+    shopModels: () => (shop ? `${shop.loaded()}/${shop.wanted}` : ''),
     setSeats,
     /**
      * Applies the VIP project state; true when the view should re-render
@@ -1270,6 +1320,7 @@ export function createInteriorScene(
       disposed = true;
       bank?.dispose();
       salon?.dispose();
+      shop?.dispose();
       scene.remove(root, hemi, sun, fill, ...lamps);
       if (hearth) {
         scene.remove(hearth);

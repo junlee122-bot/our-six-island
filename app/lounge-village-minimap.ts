@@ -1,4 +1,5 @@
 import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-village-layout.ts';
+import { SHOP_INTERIORS, isShopArea } from './lounge-shop-interiors.ts';
 import { VILLAGE_GATE } from './lounge-areas.ts';
 import { DISTRICTS } from './lounge-districts.ts';
 
@@ -50,6 +51,11 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
     // Out in a district: pinned at its gate on the rim.
     if (p.area === 'market')
       return [{ id: p.id, actor: p.actor, point: DISTRICTS.market.gate.stand, indoor: false, location: DISTRICTS.market.name }];
+    // In a shop's room (가게 실내): at its district's gate, named after the shop.
+    if (isShopArea(p.area)) {
+      const d = DISTRICTS[SHOP_INTERIORS[p.area].district];
+      return [{ id: p.id, actor: p.actor, point: d.gate.stand, indoor: true, location: SHOP_INTERIORS[p.area].name }];
+    }
     if (['hill', 'woods', 'mine'].includes(p.area))
       return [{ id: p.id, actor: p.actor, point: VILLAGE_GATE.stand, indoor: false,
         location: p.area === 'hill' ? '북쪽 언덕' : p.area === 'woods' ? '숲' : '광산' }];

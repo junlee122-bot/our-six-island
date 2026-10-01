@@ -46,6 +46,11 @@ export type ReactionScope =
   | 'tavern'
   | 'bank'
   | 'salon'
+  /** The shop rooms (lounge-shop-interiors.ts). */
+  | 'bakery'
+  | 'coop'
+  | 'general'
+  | 'fishmarket'
   /** Someone's room (visitors and owner in the same 'home'). */
   | 'home'
   | 'chess'
@@ -83,6 +88,10 @@ export function readReaction(value: unknown): Reaction | undefined {
       'tavern',
       'bank',
       'salon',
+      'bakery',
+      'coop',
+      'general',
+      'fishmarket',
       'home',
       'chess',
       'gostop',
@@ -102,6 +111,10 @@ export function readReaction(value: unknown): Reaction | undefined {
     r.scope !== 'tavern' &&
     r.scope !== 'bank' &&
     r.scope !== 'salon' &&
+    r.scope !== 'bakery' &&
+    r.scope !== 'coop' &&
+    r.scope !== 'general' &&
+    r.scope !== 'fishmarket' &&
     r.scope !== 'home';
   if (
     game &&

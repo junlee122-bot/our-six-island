@@ -37,6 +37,7 @@ import { assertNpcSocialContext } from './lounge-romance.ts';
 import { DISTRICTS, districtOpen } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
+import { SHOP_INTERIORS, isShopArea, townActionShop } from './lounge-shop-interiors.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
@@ -416,7 +417,9 @@ export function cloudTransition(
             // 새벽 경매 at the harbor, 시장 거리 shops and stalls, the library's reading club.
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
             const where = townActionArea(command.action);
-            if (!lease || !player || player.area !== where)
+            // Inside the shop's own room counts too (lounge-shop-interiors.ts).
+            const shop = townActionShop(command.action.kind);
+            if (!lease || !player || (player.area !== where && (!shop || player.area !== shop)))
               throw new CloudError(`${DISTRICTS[where].name}에 가서 해 주세요.`, 409);
           }
           if (command.action.kind === 'npcRequest') {
@@ -507,9 +510,18 @@ export function cloudTransition(
               throw new CloudError(HOME_CLOSED, 403);
           }
           // 항구 구역 / 언덕 주택가 open only once their village goal is recorded.
-          if (action.kind === 'area' && (action.area === 'harbor' || action.area === 'hillside')) {
+          // A shop's room (가게 실내) is behind its district: the fish market needs the harbor.
+          const gated =
+            action.kind !== 'area'
+              ? null
+              : action.area === 'harbor' || action.area === 'hillside'
+                ? action.area
+                : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
+                  ? SHOP_INTERIORS[action.area].district
+                  : null;
+          if (gated === 'harbor' || gated === 'hillside') {
             const flags = readLife(g.life).flags ?? [];
-            if (!districtOpen(action.area, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[action.area].hint, 403);
+            if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);
           }
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;

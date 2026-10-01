@@ -3,6 +3,7 @@ import type { InteriorArea } from './lounge-venues';
 import { CASINO_LENDER_SPOT, CASINO_LENDER_RADIUS } from './lounge-casino-lender.ts';
 import { bankCanWalk } from './lounge-bank-layout.ts';
 import { salonCanWalk } from './lounge-salon-layout.ts';
+import { isShopArea, shopCanWalk } from './lounge-shop-interiors.ts';
 
 /** Every interior with tables (lounge-venues.ts). */
 export type SceneArea = InteriorArea;
@@ -27,6 +28,10 @@ export const SCENE_LAYOUT: Record<
 > = {
   bank: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   salon: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  bakery: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  coop: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  general: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  fishmarket: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   lounge: {
     floor: { left: 12, right: 88, back: 58, front: 90 },
     tables: [
@@ -148,6 +153,7 @@ export function sceneCanWalk(point: ScenePoint, area: SceneArea): boolean {
   if (point.x < 15 || point.x > 85 || point.y < 42 || point.y > 88) return false;
   if (area === 'bank' && !bankCanWalk(point, SCENE_PLAYER_RADIUS)) return false;
   if (area === 'salon' && !salonCanWalk(point, SCENE_PLAYER_RADIUS)) return false;
+  if (isShopArea(area) && !shopCanWalk(point, area, SCENE_PLAYER_RADIUS)) return false;
   if (area === 'casino' && Math.hypot(point.x - CASINO_LENDER_SPOT.x, point.y - CASINO_LENDER_SPOT.y)
     < CASINO_LENDER_RADIUS + SCENE_PLAYER_RADIUS * 0.7) return false;
   return !sceneColliders(area).some(

@@ -5,6 +5,7 @@
 import { MARKET_BOARD, MARKET_EXIT, MARKET_SHOPS, MARKET_SPOTS } from './lounge-market-layout.ts';
 import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPOTS } from './lounge-harbor-layout.ts';
 import { HILL_LIBRARY, HILLSIDE_EXIT } from './lounge-hillside-layout.ts';
+import { SHOP_INTERIORS, shopForCounter, type ShopArea } from './lounge-shop-interiors.ts';
 
 export type DistrictCounter =
   | 'coop'
@@ -19,7 +20,8 @@ export type DistrictCounter =
   | 'stalls'
   | 'harborStall';
 export type DistrictTouch =
-  | { kind: 'counter'; place: DistrictCounter; label: string }
+  /** `enter`: the shop has a room (가게 실내) and E walks in instead of opening the counter. */
+  | { kind: 'counter'; place: DistrictCounter; label: string; enter?: ShopArea }
   | { kind: 'board'; label: string }
   | { kind: 'fish'; spot: 'breakwater' | 'pier'; label: string }
   | { kind: 'signpost'; label: string };
@@ -44,15 +46,22 @@ export const COUNTER_NAME: Record<DistrictCounter, string> = {
  */
 export function districtCounters(area: 'market' | 'harbor' | 'hillside', weekday: number): { x: number; z: number; reach: number; a: DistrictTouch }[] {
   const counter = (place: DistrictCounter, x: number, z: number, reach = 1.4, label = `${COUNTER_NAME[place]} 들르기`) => ({ x, z, reach, a: { kind: 'counter' as const, place, label } });
+  // A shop with a room: its door leads in (가게 실내).
+  const door = (place: DistrictCounter, x: number, z: number) => {
+    const enter = shopForCounter(place);
+    return enter
+      ? { x, z, reach: 1.4, a: { kind: 'counter' as const, place, enter, label: `${SHOP_INTERIORS[enter].name} 들어가기` } }
+      : counter(place, x, z);
+  };
   const out: { x: number; z: number; reach: number; a: DistrictTouch }[] = [];
   if (area === 'market') {
-    for (const shop of MARKET_SHOPS) out.push(counter(shop.id, shop.counter.x + 1.5, shop.counter.z + 0.2));
+    for (const shop of MARKET_SHOPS) out.push(door(shop.id, shop.counter.x + 1.5, shop.counter.z + 0.2));
     out.push({ x: MARKET_BOARD.front.x, z: MARKET_BOARD.front.z, reach: MARKET_BOARD.reach, a: { kind: 'board', label: '의뢰 게시판 보기' } });
     if (weekday === 0)
       for (const k of ['stall-w', 'stall-e', 'stall-sw', 'stall-se']) out.push(counter('stalls', MARKET_SPOTS[k].x + 1.1, MARKET_SPOTS[k].z, 1.3, '장날 좌판 보기'));
     out.push({ x: MARKET_EXIT.x + 1.6, z: MARKET_EXIT.z - 0.8, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
   } else if (area === 'harbor') {
-    for (const b of HARBOR_BUILDINGS) out.push(counter(b.id, b.door.x + 1.4, b.door.z));
+    for (const b of HARBOR_BUILDINGS) out.push(door(b.id, b.door.x + 1.4, b.door.z));
     out.push(counter('fishmarket', HARBOR_AUCTION.front.x, HARBOR_AUCTION.front.z, HARBOR_AUCTION.reach, '새벽 경매장'));
     out.push(counter('guild', HARBOR_BOARD.front.x, HARBOR_BOARD.front.z, HARBOR_BOARD.reach, '주간 낚시 대회 게시판'));
     for (const sp of HARBOR_SPOTS) out.push({ x: sp.stand.x, z: sp.stand.z, reach: sp.reach, a: { kind: 'fish', spot: sp.spot, label: sp.label } });
@@ -65,3 +74,14 @@ export function districtCounters(area: 'market' | 'harbor' | 'hillside', weekday
   return out;
 }
 
+
+/** Where you stand in the district after walking out of a shop's room (its door touch, a step toward the street). */
+export function shopDoorOutside(area: ShopArea): { district: 'market' | 'harbor'; at: { x: number; z: number } } {
+  const def = SHOP_INTERIORS[area];
+  if (def.district === 'market') {
+    const shop = MARKET_SHOPS.find((s) => s.id === def.counter)!;
+    return { district: 'market', at: { x: shop.counter.x + 1.5, z: shop.counter.z + 0.9 } };
+  }
+  const b = HARBOR_BUILDINGS.find((h) => h.id === def.counter)!;
+  return { district: 'harbor', at: { x: b.door.x + 1.4, z: b.door.z + 0.7 } };
+}

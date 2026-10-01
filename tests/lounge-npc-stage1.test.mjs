@@ -1,6 +1,8 @@
 // Stage 1 of the village expansion: hub growth + district gates, 시장 거리,
 // the residents' schedule engine, relations for every resident, the request
 // board and the dialogue files.
+import { SHOP_INTERIORS } from '../app/lounge-shop-interiors.ts';
+import { INTERIOR_DOOR } from '../app/lounge-interior-layout.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NPC_IDS, NPCS, WALKING_NPCS, giftReaction } from '../app/lounge-npc-data.ts';
@@ -73,9 +75,11 @@ test('시장 거리 is a separate area the server accepts, with an exit back to 
 
 // ---------------------------------------------------------------- schedule
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
+// 가게 실내: the shop rooms are walk areas too (owners behind their counters).
+const WALK_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
 test('every resident place is walkable in its area (posts are drawn by their own scenes)', () => {
   for (const [id, p] of Object.entries(NPC_PLACES)) {
-    if (POSTS.test(id) || !['village', 'market', 'tavern', 'harbor', 'hillside'].includes(p.area)) continue;
+    if (POSTS.test(id) || !WALK_AREAS.includes(p.area)) continue;
     assert.ok(npcCanStand(p.area, p), `${id} (${p.area} ${p.x}, ${p.z}) walkable`);
   }
 });
@@ -86,13 +90,15 @@ test('npcSpot is never off walkable ground over two weeks (every 2 minutes)', ()
       for (let m = 0; m < 1440; m += 2) {
         const s = npcSpot(id, kstDayStart(DAY0 + d) + m * 60_000 + 17_000);
         if (!s.visible) continue;
-        assert.ok(['village', 'market', 'tavern', 'harbor', 'hillside'].includes(s.area), `${id} visible only in walk areas`);
+        assert.ok(WALK_AREAS.includes(s.area), `${id} visible only in walk areas`);
         assert.ok(npcCanStand(s.area, s), `${id} day ${d} ${Math.floor(m / 60)}:${m % 60} ${s.area} (${s.x.toFixed(2)}, ${s.z.toFixed(2)})`);
       }
 });
 
 test('no teleports: timelines are continuous and areas change only through an exit', () => {
-  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in']);
+  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
+    // The shop rooms' doors and the street spots in front of them.
+    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, DAY0 + d);
@@ -147,10 +153,12 @@ test('walking legs follow walkable paths; two residents never share a spot while
 
 test('schedules follow the cards: 프리렌 opens late, 신짜장 delivers, everyone goes home at night', () => {
   const at = (id, h, m = 0, d = 0) => npcSpot(id, kstDayStart(DAY0 + d) + (h * 60 + m) * 60_000);
-  assert.equal(at('nasera', 7).place, 'm.coop');
+  // The shop owners work inside their rooms (가게 실내), behind the counter.
+  assert.equal(at('nasera', 7).place, 'coop.owner');
   assert.equal(at('frieren', 9).area, 'home');
-  assert.ok(['m.bakery', 'home', 'village', 'market'].includes(at('frieren', 10, 30).area) || at('frieren', 10, 30).area === 'market');
-  assert.equal(at('thresh', 9).place, 'm.general');
+  assert.ok(['home', 'village', 'market', 'bakery'].includes(at('frieren', 10, 30).area));
+  assert.equal(at('frieren', 11, 30).place, 'bakery.owner');
+  assert.equal(at('thresh', 9).place, 'general.owner');
   assert.ok(/배달|우체국|카페|점심/.test(at('sinjjajang', 11).label + at('sinjjajang', 12, 20).label));
   for (const id of WALKING_NPCS) assert.equal(at(id, 3).area, 'home', `${id} at home at 3am`);
   // The eight who work indoors stay at their posts (문 사장·결 목수 take an evening walk).
@@ -226,18 +234,22 @@ test('gift tastes point at real items; loved beats liked; level presents come on
 });
 
 test('meeting a walking resident needs the same area and to stand near them', () => {
-  const now = kstDayStart(DAY0) + 7 * 3_600_000; // 07:00 KST: 나세라 at the co-op counter
+  const now = kstDayStart(DAY0) + 7 * 3_600_000; // 07:00 KST: 나세라 behind the co-op's counter (inside)
   const spot = npcSpot('nasera', now);
-  assert.equal(spot.area, 'market');
-  const near = regionToNetwork('market', { x: spot.x + 1, z: spot.z + 1 });
-  const far = regionToNetwork('market', { x: spot.x + 20, z: spot.z });
+  assert.equal(spot.area, 'coop');
+  // Across the counter (the room's customer side) is near; the door is not.
+  const near = SHOP_INTERIORS.coop.front;
+  const far = INTERIOR_DOOR;
   const talk = { kind: 'npcSocial', npc: 'nasera', op: 'talk' };
   const ctx = (area, p) => ({ area, actor: 0, fishing: false, ...(p ?? {}) });
-  assert.doesNotThrow(() => assertNpcSocialContext(talk, {}, ctx('market', near), now));
-  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('market', far), now), /가까이/);
-  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('village', near), now), /시장 거리/);
+  assert.doesNotThrow(() => assertNpcSocialContext(talk, {}, ctx('coop', near), now));
+  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('coop', { x: 85, y: 88 }), now), /가까이/);
+  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('market', regionToNetwork('market', { x: spot.x, z: spot.z })), now), /범마을 농협/);
+  void far;
   // At 3am she is at home up the hill: nobody can meet her.
-  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('market', near), kstDayStart(DAY0) + 3 * 3_600_000), /만날 수 없어요/);
+  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('coop', near), kstDayStart(DAY0) + 3 * 3_600_000), /만날 수 없어요/);
+  // At lunch on a dry day she reads at the library; in the afternoon she is back at the counter.
+  assert.doesNotThrow(() => assertNpcSocialContext(talk, {}, ctx('coop', near), kstDayStart(DAY0) + 14 * 3_600_000));
   // Invited home, she can be met in my room whatever her schedule says.
   assert.doesNotThrow(() => assertNpcSocialContext(talk, { nasera: { points: 30, invitedUntil: now + 60_000 } }, { area: 'home', home: 0, actor: 0, fishing: false }, now));
 });
@@ -337,7 +349,7 @@ test('dialogue selection is deterministic and fills every placeholder', () => {
 
 test('late evening: every walking resident is out somewhere visible until 01:00 KST', async () => {
   const { npcSpot } = await import('../app/lounge-npc-schedule.ts');
-  const visible = new Set(['village', 'market', 'tavern', 'casino', 'lounge', 'bank', 'salon', 'realty', 'furniture']);
+  const visible = new Set(['village', 'market', 'tavern', 'casino', 'lounge', 'bank', 'salon', 'realty', 'furniture', 'bakery', 'coop', 'general', 'fishmarket']);
   const ids = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'];
   const KST = 9 * 3_600_000, DAY = 86_400_000;
   for (let d = 0; d < 14; d++) {

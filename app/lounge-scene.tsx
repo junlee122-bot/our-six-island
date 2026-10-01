@@ -43,6 +43,8 @@ import { interiorPath, interiorStep } from './lounge-interior-layout';
 import { CASINO_LENDER_SPOT, CASINO_LENDER_FRONT, LENDER_NAME, nearCasinoLender } from './lounge-casino-lender';
 import { BANKER_SPOT, BANKER_FRONT, BANKER_NAME, BANK_OBSTACLES, nearBanker } from './lounge-bank-layout';
 import { SALON_STYLIST_SPOT, SALON_FRONT, SALON_STYLIST_NAME, SALON_OBSTACLES, nearSalon } from './lounge-salon-layout';
+import { SHOP_INTERIORS, isShopArea, nearShopCounter, shopObstacles, type ShopArea } from './lounge-shop-interiors';
+import { NPCS } from './lounge-npc-data';
 
 type RoomFloorProps = {
   players: LoungePlayer[];
@@ -53,6 +55,8 @@ type RoomFloorProps = {
   onLender?: () => void;
   onBanker?: () => void;
   onSalon?: () => void;
+  /** A shop room's counter (opens the shop's window). */
+  onCounter?: () => void;
   view: LoungeView;
   area?: SceneArea;
   /** I sit at this forming table: walking is paused until I stand up. */
@@ -251,7 +255,18 @@ const SCENE_KEYS: Record<string, [number, number]> = {
 const SCENE_WALK_SPEED = 16;
 
 /** The flat (간단 그래픽) look of each interior; the tavern borrows the hall's art, tinted. */
+const shopArt = (area: ShopArea) => ({
+  src: LOUNGE_ASSETS.room,
+  alt: SHOP_INTERIORS[area].name,
+  short: SHOP_INTERIORS[area].short,
+  tagline: SHOP_INTERIORS[area].tagline,
+  title: SHOP_INTERIORS[area].name,
+});
 const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tagline: string; title: string }> = {
+  bakery: shopArt('bakery'),
+  coop: shopArt('coop'),
+  general: shopArt('general'),
+  fishmarket: shopArt('fishmarket'),
   salon: { src: LOUNGE_ASSETS.wardrobe, alt: '그웬의 미용실', short: '미용실', tagline: '그웬과 오늘의 모습을 골라요', title: '미용실' },
   bank: {
     src: LOUNGE_ASSETS.room, alt: '범마을 은행', short: '은행',
@@ -288,6 +303,7 @@ export function RoomFloor({
   onLender,
   onBanker,
   onSalon,
+  onCounter,
   view,
   area = 'lounge',
   seatedAt = null,
@@ -326,15 +342,15 @@ export function RoomFloor({
       live.current.approach = null;
     }
   }, [seatedAt, sheetOpen]);
-  const latest = useRef({ onMove, runMode, area, onTable, onLender, onBanker, onSalon });
+  const latest = useRef({ onMove, runMode, area, onTable, onLender, onBanker, onSalon, onCounter });
   useEffect(() => {
-    latest.current = { onMove, runMode, area, onTable, onLender, onBanker, onSalon };
-  }, [onMove, runMode, area, onTable, onLender, onBanker, onSalon]);
+    latest.current = { onMove, runMode, area, onTable, onLender, onBanker, onSalon, onCounter };
+  }, [onMove, runMode, area, onTable, onLender, onBanker, onSalon, onCounter]);
   // The one action button: the nearest table within reach ("둘러보기", E).
   const [near, setNear] = useState<GameKind | null>(null);
   const nearRef = useRef<GameKind | null>(null);
-  const [nearService, setNearService] = useState<'lender' | 'banker' | 'salon' | null>(null);
-  const serviceRef = useRef<'lender' | 'banker' | 'salon' | null>(null);
+  const [nearService, setNearService] = useState<'lender' | 'banker' | 'salon' | 'counter' | null>(null);
+  const serviceRef = useRef<'lender' | 'banker' | 'salon' | 'counter' | null>(null);
 
   // Adopt server positions (entering, seats after a game) while standing still.
   useEffect(() => {
@@ -440,7 +456,8 @@ export function RoomFloor({
         setNear(table);
       }
       const service = nearCasinoLender(state.point, latest.current.area) ? 'lender'
-        : nearBanker(state.point, latest.current.area) ? 'banker' : nearSalon(state.point, latest.current.area) ? 'salon' : null;
+        : nearBanker(state.point, latest.current.area) ? 'banker' : nearSalon(state.point, latest.current.area) ? 'salon'
+          : nearShopCounter(state.point, latest.current.area) ? 'counter' : null;
       if (service !== serviceRef.current) { serviceRef.current = service; setNearService(service); }
     };
     frame = requestAnimationFrame(tick);
@@ -466,9 +483,9 @@ export function RoomFloor({
   };
   const approachService = () => {
     const state = live.current;
-    if (state.locked || !state.point || (area !== 'casino' && area !== 'bank' && area !== 'salon')) return;
+    if (state.locked || !state.point || (area !== 'casino' && area !== 'bank' && area !== 'salon' && !isShopArea(area))) return;
     state.held.clear(); state.approach = null;
-    state.route = interiorPath(state.point, area === 'casino' ? CASINO_LENDER_FRONT : area === 'salon' ? SALON_FRONT : BANKER_FRONT, area);
+    state.route = interiorPath(state.point, isShopArea(area) ? SHOP_INTERIORS[area].front : area === 'casino' ? CASINO_LENDER_FRONT : area === 'salon' ? SALON_FRONT : BANKER_FRONT, area);
     state.target = state.route.shift() ?? null;
     ref.current?.focus({ preventScroll: true });
   };
@@ -478,8 +495,12 @@ export function RoomFloor({
     if (nearCasinoLender(state.point, area)) onLender?.();
     else if (nearBanker(state.point, area)) onBanker?.();
     else if (nearSalon(state.point, area)) onSalon?.();
+    else if (nearShopCounter(state.point, area)) onCounter?.();
   };
-  const serviceSpot = area === 'casino' ? CASINO_LENDER_SPOT : area === 'salon' ? SALON_STYLIST_SPOT : BANKER_SPOT;
+  const shop = isShopArea(area) ? SHOP_INTERIORS[area] : null;
+  const serviceSpot = shop ? { x: shop.front.x, y: shop.front.y - 9 } : area === 'casino' ? CASINO_LENDER_SPOT : area === 'salon' ? SALON_STYLIST_SPOT : BANKER_SPOT;
+  const serviceName = shop ? NPCS[shop.owner].name : area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME;
+  const serviceTitle = shop ? `${NPCS[shop.owner].name} · ${shop.short} 계산대` : area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구';
   const serviceFoot = projectPlayer(serviceSpot, area);
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
@@ -556,11 +577,15 @@ export function RoomFloor({
           const at = projectPlayer(o, area);
           return <span key={o.id} className={'cf-bank-fixture cf-bank-' + o.id} style={{ left: `${at.x}%`, top: `${at.y}%`, width: `${o.rx * 2}%`, height: `${o.ry * 1.3}%` }} aria-hidden="true" />;
         })}
-        {(area === 'casino' || area === 'bank' || area === 'salon') && <button type="button" className="cf-service" data-testid={area === 'casino' ? 'simple-lender' : area === 'salon' ? 'simple-stylist' : 'simple-banker'}
+        {shop && shopObstacles(shop.area).filter((o) => !o.staff).map((o) => {
+          const at = projectPlayer(o, area);
+          return <span key={o.id} className="cf-bank-fixture" style={{ left: `${at.x}%`, top: `${at.y}%`, width: `${o.rx * 2}%`, height: `${o.ry * 1.3}%` }} aria-hidden="true" />;
+        })}
+        {(area === 'casino' || area === 'bank' || area === 'salon' || shop) && <button type="button" className="cf-service" data-testid={shop ? 'simple-counter' : area === 'casino' ? 'simple-lender' : area === 'salon' ? 'simple-stylist' : 'simple-banker'}
           style={{ left: `${serviceFoot.x}%`, top: `${serviceFoot.y}%` }} onClick={approachService}
-          aria-label={`${area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME}에게 걸어가기`}>
-          <img src={area === 'casino' ? LOUNGE_ASSETS.chibi_rose : area === 'salon' ? LOUNGE_ASSETS.chibi_gwen : LOUNGE_ASSETS.chibi_nyamo} alt="" draggable={false} />
-          <span className="cf-service-name">{area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구'}</span>
+          aria-label={shop ? `${shop.short} 계산대로 걸어가기` : `${serviceName}에게 걸어가기`}>
+          <img src={shop ? LOUNGE_ASSETS[`chibi_${shop.owner}` as keyof typeof LOUNGE_ASSETS] : area === 'casino' ? LOUNGE_ASSETS.chibi_rose : area === 'salon' ? LOUNGE_ASSETS.chibi_gwen : LOUNGE_ASSETS.chibi_nyamo} alt="" draggable={false} />
+          <span className="cf-service-name">{serviceTitle}</span>
         </button>}
         <button
           type="button"
@@ -602,7 +627,7 @@ export function RoomFloor({
           클릭해서 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
-      {nearService && !seatedAt && !sheetOpen && <ActionButton className="cf-action" kind="talk" detail={nearService === 'lender' ? '로제 · 카지노 대부' : nearService === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행원'} label="이야기하기" onPress={openService} />}
+      {nearService && !seatedAt && !sheetOpen && <ActionButton className="cf-action" kind="talk" detail={nearService === 'counter' ? serviceTitle : nearService === 'lender' ? '로제 · 카지노 대부' : nearService === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행원'} label={nearService === 'counter' ? `${shop?.short ?? ''} 이용하기` : '이야기하기'} onPress={openService} />}
       {!nearService && near && !seatedAt && !sheetOpen && (() => {
         const state = tableState(view, near);
         const kind = tableAction(state);

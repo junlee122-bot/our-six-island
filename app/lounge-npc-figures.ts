@@ -113,6 +113,12 @@ export type ResidentLayerOptions = {
   chibi?: { plane: number; upY: number };
   /** Colour multiplied into every sprite (a dark room's warm dimness). */
   tint?: string;
+  /**
+   * A spot where a standing-still resident sits (a shop's far-side café
+   * chair): the figure sinks by `sitDrop` so the table hides the legs.
+   */
+  sit?: (x: number, z: number) => boolean;
+  sitDrop?: number;
 };
 
 export class ResidentLayer {
@@ -123,13 +129,13 @@ export class ResidentLayer {
   private shadowGeo = new THREE.CircleGeometry(0.34, 20);
   private shadowMat = new THREE.MeshBasicMaterial({ color: '#2d2418', transparent: true, opacity: 0.26, depthWrite: false });
   private labels: HTMLElement;
-  private opts: Required<Omit<ResidentLayerOptions, 'chibi' | 'tint'>> & Pick<ResidentLayerOptions, 'chibi' | 'tint'>;
+  private opts: Required<Omit<ResidentLayerOptions, 'chibi' | 'tint' | 'sit'>> & Pick<ResidentLayerOptions, 'chibi' | 'tint' | 'sit'>;
   private disposed = false;
   /** Called when a texture arrives (the scene redraws). */
   onChange: () => void = () => {};
 
   constructor(scene: THREE.Object3D, labels: HTMLElement, opts: ResidentLayerOptions) {
-    this.opts = { y: 0.02, speed: 2.1, ...opts };
+    this.opts = { y: 0.02, speed: 2.1, sitDrop: 0.28, ...opts };
     this.labels = labels;
     this.root.name = 'residents';
     scene.add(this.root);
@@ -286,7 +292,9 @@ export class ResidentLayer {
         }
       }
       fig.root.position.copy(fig.pos);
-      fig.sprite.position.y = bob;
+      const seated = !f.walking && !!this.opts.sit?.(f.x, f.z);
+      fig.sprite.position.y = bob - (seated ? this.opts.sitDrop : 0);
+      fig.shadow.visible = !seated;
       if (this.opts.billboard === 'screen') fig.sprite.quaternion.copy(camera.quaternion);
       else fig.sprite.rotation.set(0, Math.atan2(back.x, back.z), 0);
       fig.sprite.rotateZ(tilt);

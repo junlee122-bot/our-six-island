@@ -209,7 +209,8 @@ test('the server refuses the harbor and the hillside until their flags are set',
 });
 
 // ---------------------------------------------------------------- evenings and the commute
-const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside'];
+// 가게 실내: the shop rooms are walk areas too.
+const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 const seenAt = (id, now, world) => {
   const s = npcSpot(id, now, world);
@@ -242,7 +243,8 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
     assert.equal(s.area, 'hillside');
     assert.equal(npcSpot(id, at(2, 3), { hill: false }).area, 'home', `${id} before the move`);
   }
-  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in']);
+  const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
+    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, DAY0 + d, world);
@@ -292,7 +294,9 @@ test('stage-2 schedules follow their cards', () => {
   // 봇치 plays the tavern stage on show nights (Tue/Fri).
   assert.equal(npcSpot('bocchi', at(tue, 21)).place, 't.stage');
   // 힘멜 opens the bakery in the morning; 럭스 runs the dawn auction; 가붕 keeps the light.
-  assert.equal(npcSpot('himmel', at(mon, 8, 30)).place, 'm.bakery-2');
+  // 힘멜 helps behind the bakery's counter (가게 실내).
+  assert.equal(npcSpot('himmel', at(mon, 8, 30)).place, 'bakery.helper');
+  assert.equal(npcSpot('lux', at(mon, 9)).place, 'fishmarket.owner');
   assert.equal(npcSpot('lux', at(mon, 6)).place, 'hb.auction');
   assert.equal(npcSpot('gabung', at(mon, 23)).place, 'hb.lighthouse-door');
   // 베아트리스 hosts the Wednesday reading club with 나세라 once the hillside is open.

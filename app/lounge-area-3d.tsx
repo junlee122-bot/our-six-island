@@ -52,6 +52,7 @@ import { districtCounters, type DistrictCounter } from './lounge-district-counte
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
+import type { ShopArea } from './lounge-shop-interiors';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -80,7 +81,7 @@ export type AreaAction =
   /** 시장 거리's request board. */
   | { kind: 'board'; label: string }
   /** A district counter (E at the door): 농협, 잡화점, 빵집, 신문사, 우체국, 파출소, 어시장, 낚시조합, 도서관, 좌판. */
-  | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean }
+  | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean; enter?: ShopArea }
   /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot). */
   | { kind: 'fish'; spot: 'breakwater' | 'pier'; label: string }
   /** 친구에게 가기 signpost by each district's road out. */

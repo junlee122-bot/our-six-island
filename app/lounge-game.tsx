@@ -95,6 +95,8 @@ import {
 } from './lounge-reactions';
 import { formatBeom, josa, NAMES } from './lounge-text';
 import { VENUES, isInteriorArea, type InteriorArea } from './lounge-venues';
+import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors';
+import { shopDoorOutside } from './lounge-district-counters';
 import { venueLook, venuesFromView } from './lounge-venue-data';
 import {
   getSettings,
@@ -405,6 +407,10 @@ const TAB_AREA: Record<Tab, Area> = {
   salon: 'salon',
   wardrobe: 'wardrobe',
   bedroom: 'home',
+  bakery: 'bakery',
+  coop: 'coop',
+  general: 'general',
+  fishmarket: 'fishmarket',
 };
 
 const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
@@ -531,6 +537,10 @@ function AccountLounge({
       tavern: AREA_DEFAULTS.tavern,
       bank: AREA_DEFAULTS.bank,
       salon: AREA_DEFAULTS.salon,
+      bakery: AREA_DEFAULTS.bakery,
+      coop: AREA_DEFAULTS.coop,
+      general: AREA_DEFAULTS.general,
+      fishmarket: AREA_DEFAULTS.fishmarket,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -563,13 +573,20 @@ function AccountLounge({
   }, [myLook, tab]);
   // 성장 P2: 뒷산 / 숲 깊은 곳 / 광산 replace the village scene while I am out.
   const [townPlace, setTownPlace] = useState<TownPlace | null>(null);
+  /** Set below once enter() exists; the district's shop doors call it. */
+  const enterShopRef = useRef<(area: ShopArea) => void>(() => {});
   const outdoorApi = useOutdoor({
     room,
     notify,
     fade: playFade,
     onResident: (npc) => setResidentTalk(npc),
     onRequests: () => setModal('npcRequests'),
-    onCounter: (place) => {
+    onCounter: (place, enter) => {
+      // 가게 실내: the shop's door leads into its room (its counter opens the window there).
+      if (enter) {
+        enterShopRef.current(enter);
+        return;
+      }
       // 잡화점 and 우체국 open the shop and the mail window; the rest are counters.
       if (place === 'post') {
         setMailGift('none');
@@ -1008,9 +1025,44 @@ function AccountLounge({
       playFade(go);
     }
   };
-  /** 나가기 from an interior: the wardrobe opened from my room goes back there. */
+  /**
+   * 가게 실내: into a shop's room from its door in 시장 거리 / 항구 (standing
+   * just inside the door), and back out to the same door.
+   */
+  const enterShop = (area: ShopArea) => {
+    if (fishing) {
+      notify('낚시를 마치거나 취소한 뒤 이동해 주세요.');
+      return;
+    }
+    preloadTab(area, save);
+    playFade(() => {
+      outdoorApi.reset();
+      setVisiting(null);
+      setGameScreen(null);
+      setModal(null);
+      setSheet(null);
+      setTownPlace(null);
+      setTab(area);
+      sendArea(area, { ...INTERIOR_DOOR });
+    });
+  };
+  useEffect(() => {
+    enterShopRef.current = enterShop;
+  });
+  const leaveShop = (area: ShopArea) => {
+    const out = shopDoorOutside(area);
+    preloadTab('village', save);
+    playFade(() => {
+      setModal(null);
+      setSheet(null);
+      setTownPlace(null);
+      setTab('village');
+      outdoorApi.enterAt({ area: out.district, spawn: out.at });
+    });
+  };
+  /** 나가기 from an interior: the wardrobe opened from my room goes back there; a shop to its street. */
   const leaveInterior = () =>
-    enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
+    isShopArea(tab) ? leaveShop(tab) : enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
   const backTo =
     tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : tab === 'wardrobe' && wardrobeFrom === 'salon' ? '미용실' : NAMES.village;
   const moveInVillage = useCallback(
@@ -2438,10 +2490,11 @@ function AccountLounge({
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
+                onCounter={isShopArea(interior) ? () => setTownPlace(SHOP_INTERIORS[interior].counter) : undefined}
                 onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                sheetOpen={!!tableSheet || !!modal || !!residentTalk}
+                sheetOpen={!!tableSheet || !!modal || !!residentTalk || !!townPlace}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
@@ -2513,6 +2566,7 @@ function AccountLounge({
                     onLender={() => setModal('lender')}
                     onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                     onSalon={() => enter('wardrobe')}
+                    onCounter={isShopArea(flatArea) ? () => setTownPlace(SHOP_INTERIORS[flatArea].counter) : undefined}
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}

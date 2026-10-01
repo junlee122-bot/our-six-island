@@ -2,6 +2,7 @@ import { cleanText } from "./text-clean.ts";
 import { IslandRoom } from "./multiplayer-transport.ts";
 import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
 import { isInteriorArea } from "./lounge-venues.ts";
+import { isShopArea } from "./lounge-shop-interiors.ts";
 import { readLook, type Look } from "./lounge-look.ts";
 import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
 import { ACTORS } from "./lounge-roster.ts";
@@ -2148,6 +2149,7 @@ export class LoungeRoom {
         a.scope === "tavern" ||
         a.scope === "bank" ||
         a.scope === "salon" ||
+        isShopArea(a.scope) ||
         a.scope === "home"
       ) {
         if (member.area !== a.scope || a.matchId !== undefined)

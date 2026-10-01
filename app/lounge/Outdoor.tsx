@@ -22,6 +22,7 @@ import { josa } from '../lounge-text';
 import { useSettings } from '../lounge-settings';
 import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
+import type { ShopArea } from '../lounge-shop-interiors';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -68,8 +69,8 @@ export function useOutdoor({
   onResident?: (npc: NpcId) => void;
   /** 시장 거리's request board. */
   onRequests?: () => void;
-  /** A district counter (E at a shop door, a board or a stall). */
-  onCounter?: (place: DistrictCounter) => void;
+  /** A district counter (E at a shop door, a board or a stall); `enter`: walk into the shop's room. */
+  onCounter?: (place: DistrictCounter, enter?: ShopArea) => void;
   /** The harbor's fishing and crab-pot spots. */
   onFish?: (spot: 'breakwater' | 'pier') => void;
   /** 친구에게 가기. */
@@ -238,7 +239,7 @@ export function useOutdoor({
         onRequests?.();
         return;
       case 'counter':
-        onCounter?.(a.place);
+        onCounter?.(a.place, a.enter);
         return;
       case 'fish':
         onFish?.(a.spot);
@@ -334,6 +335,15 @@ export function useOutdoor({
       </div>
     );
   };
+  /** Out of a shop's room: straight back to this district spot (the caller fades). */
+  const enterAt = useCallback(
+    (o: Outdoor) => {
+      setOutdoor(o);
+      ref.current = o;
+      tell(o);
+    },
+    [tell],
+  );
   /** Leaves the region at once (another screen took over: a menu, a door…). */
   const reset = useCallback(() => {
     const was = ref.current;
@@ -342,5 +352,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset, enterAt };
 }

@@ -30,6 +30,7 @@ import { npcSpot } from './lounge-npc-schedule.ts';
 import { regionFromNetwork } from './lounge-areas.ts';
 import { villageFromNetwork, VILLAGE_PLACES } from './lounge-village-layout.ts';
 import { josa } from './lounge-text.ts';
+import { SHOP_AREAS, SHOP_INTERIORS, isShopArea, shopWorld } from './lounge-shop-interiors.ts';
 
 export { NPCS, NPC_IDS, NPC_INVITE_POINTS, NPC_DATE_POINTS, NPC_POINTS_MAX, isNpcId, npcLevel };
 export type { NpcId };
@@ -112,8 +113,8 @@ export function npcMeetAt(npc: NpcId, now: number, world: { hill?: boolean } = {
     const door = VILLAGE_PLACES.find((p) => p.id === s.area)!.entry;
     return { area: 'village', point: door, label: NPCS[npc].place, away: false };
   }
-  const walking = s.area === 'village' || s.area === 'market' || s.area === 'harbor' || s.area === 'hillside' || (s.area === 'tavern' && s.visible);
-  if (!s.visible && !['casino', 'lounge', 'bank', 'salon', 'tavern'].includes(s.area)) return { area: s.area, label: s.label, away: true };
+  const walking = s.area === 'village' || s.area === 'market' || s.area === 'harbor' || s.area === 'hillside' || ((s.area === 'tavern' || isShopArea(s.area)) && s.visible);
+  if (!s.visible && !['casino', 'lounge', 'bank', 'salon', 'tavern', ...SHOP_AREAS].includes(s.area)) return { area: s.area, label: s.label, away: true };
   return { area: s.area, point: walking ? { x: s.x, z: s.z } : undefined, label: s.label, away: false };
 }
 /** A network point (0–100) in an area → that area's world coordinates (null when it has none). */
@@ -121,6 +122,8 @@ function areaPoint(area: string, x?: number, y?: number) {
   if (typeof x !== 'number' || typeof y !== 'number') return null;
   if (area === 'village') return villageFromNetwork({ x, y });
   if (area === 'market' || area === 'harbor' || area === 'hillside') return regionFromNetwork(area, { x, y });
+  // The shop rooms: residents walk about in room world units.
+  if (isShopArea(area)) return shopWorld({ x, y });
   return null;
 }
 
@@ -148,7 +151,14 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
   if (meet.point && me && Math.hypot(me.x - meet.point.x, me.z - meet.point.z) > NPC_SOCIAL_REACH)
     fail(`${def.name}에게 조금 더 가까이 가서 말을 걸어 주세요.`);
 }
-const AREA_WORD: Record<string, string> = { village: '마을 중심', market: '시장 거리', harbor: '항구 구역', hillside: '언덕 주택가', tavern: '허풍 주점' };
+const AREA_WORD: Record<string, string> = {
+  village: '마을 중심',
+  market: '시장 거리',
+  harbor: '항구 구역',
+  hillside: '언덕 주택가',
+  tavern: '허풍 주점',
+  ...Object.fromEntries(SHOP_AREAS.map((a) => [a, SHOP_INTERIORS[a].name])),
+};
 const placeOf = (npc: NpcId, area: string) => (area in AREA_WORD && !['captain'].includes(npc) ? AREA_WORD[area] : NPCS[npc].place);
 
 /** Anything but tools can be a present: crops, fruit, fish, bugs, flowers, dishes, ores, fossils. */

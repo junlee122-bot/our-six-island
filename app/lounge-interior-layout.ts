@@ -21,6 +21,7 @@ import type { HostId } from './lounge-host-sprites.ts';
 import { CASINO_LENDER_SPOT, CASINO_LENDER_RADIUS, nearCasinoLender } from './lounge-casino-lender.ts';
 import { BANK_OBSTACLES, BANKER_SPOT, nearBanker } from './lounge-bank-layout.ts';
 import { SALON_OBSTACLES, nearSalon } from './lounge-salon-layout.ts';
+import { SHOP_INTERIORS, isShopArea, nearShopCounter, nearShopSeat, shopObstacles, shopSeatAt } from './lounge-shop-interiors.ts';
 
 export type InteriorWorld = { x: number; z: number };
 
@@ -179,9 +180,28 @@ export const TAVERN_BAR_REACH = 6;
 export const nearBar = (p: ScenePoint, area: SceneArea) =>
   area === 'tavern' && Math.hypot(p.x - TAVERN_BAR_FRONT.x, p.y - TAVERN_BAR_FRONT.y) <= TAVERN_BAR_REACH;
 
-/** What the one action button offers here: a table within reach, the tavern's host, else the door. */
-export type InteriorAction = { kind: 'table'; game: GameKind } | { kind: 'door' } | { kind: 'host' } | { kind: 'lender' } | { kind: 'banker' } | { kind: 'salon' };
-export function interiorAction(p: ScenePoint, area: SceneArea): InteriorAction | null {
+/**
+ * What the one action button offers here: a table within reach, the tavern's
+ * host, a shop's counter or café chair (`taken`: where others stand, so an
+ * occupied chair is skipped), else the door.
+ */
+export type InteriorAction =
+  | { kind: 'table'; game: GameKind }
+  | { kind: 'door' }
+  | { kind: 'host' }
+  | { kind: 'lender' }
+  | { kind: 'banker' }
+  | { kind: 'salon' }
+  | { kind: 'counter' }
+  | { kind: 'seat'; seat: string }
+  | { kind: 'stand' };
+export function interiorAction(p: ScenePoint, area: SceneArea, taken: readonly ScenePoint[] = []): InteriorAction | null {
+  if (isShopArea(area)) {
+    if (shopSeatAt(p, area)) return { kind: 'stand' };
+    if (nearShopCounter(p, area)) return { kind: 'counter' };
+    const seat = nearShopSeat(p, area, taken);
+    if (seat) return { kind: 'seat', seat: seat.id };
+  }
   if (nearSalon(p, area)) return { kind: 'salon' };
   if (nearBanker(p, area)) return { kind: 'banker' };
   if (nearCasinoLender(p, area)) return { kind: 'lender' };
@@ -194,6 +214,10 @@ export function interiorAction(p: ScenePoint, area: SceneArea): InteriorAction |
 /** What the mouse points at on the floor (for the cursor and for clicks). */
 export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | null {
   if (area === 'salon' && p.x >= 37 && p.x <= 67 && p.y >= 42 && p.y <= 58) return { kind: 'salon' };
+  if (isShopArea(area)) {
+    const d = SHOP_INTERIORS[area].desk;
+    if (Math.abs(p.x - (d.x * 5 + 50)) <= d.w * 2.5 + 1 && p.y >= 42 && p.y <= (d.z + d.d / 2) * 5 + 66) return { kind: 'counter' };
+  }
   if (area === 'bank' && Math.abs(p.x - BANKER_SPOT.x) < 11 && p.y >= 43 && p.y <= 57) return { kind: 'banker' };
   if (area === 'casino' && Math.hypot(p.x - CASINO_LENDER_SPOT.x, p.y - CASINO_LENDER_SPOT.y) <= CASINO_LENDER_RADIUS + 1)
     return { kind: 'lender' };
@@ -384,8 +408,8 @@ export function interiorWaypoints(area: SceneArea): ScenePoint[] {
       const a = (k / 8) * Math.PI * 2, r = CASINO_LENDER_RADIUS + SCENE_PLAYER_RADIUS + 1.2;
       push({ x: CASINO_LENDER_SPOT.x + r * Math.cos(a), y: CASINO_LENDER_SPOT.y + r * Math.sin(a) });
     }
-  if (area === 'bank' || area === 'salon')
-    for (const o of area === 'bank' ? BANK_OBSTACLES : SALON_OBSTACLES)
+  if (area === 'bank' || area === 'salon' || isShopArea(area))
+    for (const o of area === 'bank' ? BANK_OBSTACLES : area === 'salon' ? SALON_OBSTACLES : shopObstacles(area).filter((q) => !q.staff))
       for (const x of [-1, 1]) for (const y of [-1, 1])
         push({ x: o.x + x * (o.rx + SCENE_PLAYER_RADIUS + 1), y: o.y + y * (o.ry + SCENE_PLAYER_RADIUS + 1) });
   waypointCache.set(area, list);
