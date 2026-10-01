@@ -1054,7 +1054,7 @@ export function Interior3D({
         l.approach = null;
         l.exitIntent = false;
         // Walking on into the door (left wall) takes it, like 나가기.
-        if (nearDoor(l.point) && l.point.x <= INTERIOR_DOOR.x + 1.5 && dx / Math.hypot(dx, dy) < -0.6 && doors.current.ready())
+        if (nearDoor(l.point) && l.point.x <= INTERIOR_DOOR.x + 4 && dx / Math.hypot(dx, dy) < -0.6 && doors.current.ready())
           queueMicrotask(() => runRef.current({ kind: 'door' }));
       } else if (l.target && !l.locked && !l.paused) {
         dx = l.target.x - l.point.x;

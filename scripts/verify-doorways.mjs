@@ -25,6 +25,8 @@ const pages = opt('pages', '');
 if (!pages) throw new Error('--pages <Pages build> is required (node scripts/build-standalone.mjs --out <dir> --site-url /)');
 const view = opt('view', 's');
 const maxMs = Number(opt('max-ms', '1500000'));
+const only = opt('only', BUILT_DISTRICTS.join(',')).split(',');
+const shotDir = opt('shots', '');
 const started = Date.now();
 
 const server = await serve(pages);
@@ -75,19 +77,19 @@ const walk = async (sel, p, r = 0.8) => {
     await until((q) => {
       const d = document.querySelector(q.sel)?.dataset;
       return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - q.x, Number(d.avatarZ) - q.z) < q.r;
-    }, 600000, { ...p, sel, r });
+    }, 240000, { ...p, sel, r });
   } finally {
     await page.keyboard.up('Shift');
   }
 };
 /** Holds the keys that walk outward through `door` until `done` (or the timeout). */
-const pushInto = async (sel, door, done, ms = 120000) => {
+const pushInto = async (sel, door, done, ms = 120000, arg) => {
   const n = inward(door);
   const keys = keysFor(-n.x, -n.z);
   await focus(sel);
   for (const k of keys) await page.keyboard.down(k);
   try {
-    return await until(done, ms);
+    return await until(done, ms, arg);
   } finally {
     for (const k of keys) await page.keyboard.up(k);
   }
@@ -119,12 +121,12 @@ try {
     await sleep(1500);
   });
 
-  for (const id of BUILT_DISTRICTS) {
+  for (const id of BUILT_DISTRICTS.filter((d) => only.includes(d))) {
     const gate = DISTRICTS[id].gate;
     const exit = REGIONS[id].exits.find((e) => e.to === 'village');
     await step(`hub → ${id}: walking on into the gate`, async () => {
       await walk('[data-testid=village-3d]', arrivalPoint(gate), 0.9);
-      const took = await pushInto('[data-testid=village-3d]', gate, (a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a || !!document.querySelector('[data-testid=area-loading]'), 60000);
+      const took = await pushInto('[data-testid=village-3d]', gate, (a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a || !!document.querySelector('[data-testid=area-loading]'), 60000, id);
       check(took >= 0, `${id}: the gate takes me in without E`);
       check((await areaReady(id)) >= 0, `${id}: the map loads`);
       await fadeClear();
@@ -159,12 +161,14 @@ try {
         const m = await music();
         check(m.music === id && m.musicIndoor === 'true', `${shop}: the ${id} piece goes on, muffled (${m.music}, indoor ${m.musicIndoor})`);
         // Walking left into the door takes me out.
-        const out = await pushInto('[data-testid=interior-3d]', { x: 0, z: 0, stand: { x: 1, z: 0 }, reach: 1 }, (a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a, 120000);
+        const out = await pushInto('[data-testid=interior-3d]', { x: 0, z: 0, stand: { x: 1, z: 0 }, reach: 1 }, (a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a, 120000, id);
         if (out < 0) await H.clickSel('.ih-action, [data-testid=interior-3d] .l-action-button');
         check(out >= 0, `${shop}: walking into the door goes back out`);
         await areaReady(id);
         await fadeClear();
         await sleep(1200);
+        if (shotDir) await page.screenshot({ path: `${shotDir}/${shop}-out.png` });
+        console.log('  info scenes:', await js(() => [...document.querySelectorAll('[data-testid$=\"-3d\"]')].map((e) => `${e.dataset.testid}:${e.dataset.area ?? ''}`).join(' ')));
         const o = await data('[data-testid=area-3d]');
         check(near(o, shopDoorOutside(shop).at, 0.7), `${shop}: back in front of the shop (${o.avatarX}, ${o.avatarZ})`);
         check(o.action !== 'counter', `${shop}: its door is not in my face (${o.action || 'nothing'})`);
