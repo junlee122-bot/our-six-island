@@ -120,9 +120,10 @@ export function buildShop(parent: THREE.Group, area: ShopArea, changed: () => vo
 
   // Rugs with a cream border, low panelling on the back wall.
   for (const [x, z, w, d, color] of look.rugs) {
-    box(w, 0.012, d, x, 0.013, z, color);
-    for (const sx of [-1, 1]) box(0.035, 0.008, d - 0.14, x + sx * (w / 2 - 0.09), 0.022, z, look.trim);
-    for (const sz of [-1, 1]) box(w - 0.14, 0.008, 0.035, x, 0.022, z + sz * (d / 2 - 0.09), look.trim);
+    // Just above the floor planks (their tops are at y 0.02).
+    box(w, 0.012, d, x, 0.028, z, color);
+    for (const sx of [-1, 1]) box(0.035, 0.008, d - 0.14, x + sx * (w / 2 - 0.09), 0.037, z, look.trim);
+    for (const sz of [-1, 1]) box(w - 0.14, 0.008, 0.035, x, 0.037, z + sz * (d / 2 - 0.09), look.trim);
   }
   box(16.3, 0.64, 0.075, 0, 0.37, -5.84, look.panel);
   box(16.4, 0.065, 0.105, 0, 0.71, -5.83, look.trim);
@@ -175,7 +176,7 @@ export function buildShop(parent: THREE.Group, area: ShopArea, changed: () => vo
   const signMaterial = new THREE.MeshBasicMaterial({ map: atlas, toneMapped: false });
   resources.add(signMaterial);
   for (const [i, sign] of shop.signs.slice(0, 2).entries()) {
-    const h = sign.w / 4;
+    const h = sign.w / 3.6;
     const geometry = new THREE.PlaneGeometry(sign.w, h),
       uv = geometry.getAttribute('uv');
     for (let k = 0; k < uv.count; k++) uv.setXY(k, uv.getX(k), (uv.getY(k) + (i === 0 ? 1 : 0)) / 2);

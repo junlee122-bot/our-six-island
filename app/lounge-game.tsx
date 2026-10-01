@@ -1065,7 +1065,13 @@ function AccountLounge({
   const leaveInterior = () =>
     isShopArea(tab) ? leaveShop(tab) : enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
   const backTo =
-    tab === 'wardrobe' && wardrobeFrom === 'bedroom' ? NAMES.home : tab === 'wardrobe' && wardrobeFrom === 'salon' ? '미용실' : NAMES.village;
+    tab === 'wardrobe' && wardrobeFrom === 'bedroom'
+      ? NAMES.home
+      : tab === 'wardrobe' && wardrobeFrom === 'salon'
+        ? '미용실'
+        : isShopArea(tab)
+          ? DISTRICTS[SHOP_INTERIORS[tab].district].name
+          : NAMES.village;
   const moveInVillage = useCallback(
     (x: number, y: number) => {
       if (fishing) return;

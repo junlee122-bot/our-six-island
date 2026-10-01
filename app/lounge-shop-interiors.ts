@@ -170,8 +170,8 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       queue: { x: 0.9, z: -1.6, face: Math.PI },
     },
     signs: [
-      { text: '오늘의 빵', x: -3.05, y: 2.35, w: 1.5 },
-      { text: '차 · 커피', x: 3.05, y: 2.35, w: 1.4 },
+      { text: '오늘의 빵', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '차 · 커피', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
   coop: {
@@ -217,8 +217,8 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       drop: { x: 1.4, z: -2.1, face: Math.PI },
     },
     signs: [
-      { text: '작물 매입', x: -3.05, y: 2.45, w: 1.5 },
-      { text: '이번 주 시세', x: 3.05, y: 2.45, w: 1.6 },
+      { text: '작물 매입', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '이번 주 시세', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
   general: {
@@ -261,8 +261,8 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       lanterns: { x: 5.4, z: -2.2, face: -Math.PI / 2 },
     },
     signs: [
-      { text: '씨앗 · 도구', x: -3.05, y: 2.45, w: 1.6 },
-      { text: '등불', x: 3.05, y: 2.45, w: 1.0 },
+      { text: '씨앗 · 도구', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '등불', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
   fishmarket: {
@@ -308,8 +308,8 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       quay: { x: 1.6, z: 1.2, face: 0 },
     },
     signs: [
-      { text: '오늘 들어온 생선', x: -3.05, y: 2.45, w: 1.9 },
-      { text: '새벽 경매 여섯 시', x: 3.05, y: 2.45, w: 1.9 },
+      { text: '오늘 들어온 생선', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '새벽 경매 여섯 시', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
 };
