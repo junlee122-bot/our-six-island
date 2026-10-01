@@ -149,6 +149,9 @@ export const MOODLETS = {
   bed: ml('내 침대가 최고예요', 3, 3, 1, 'sofa', 2),
   back: ml('돌아왔어요!', 5, 12, 1, 'house'),
   tea: ml('촌장님의 따뜻한 차', 6, 4, 1, 'cup'),
+  // 함께 먹기 (lounge-food.ts): a friend ate in the same place within 5 minutes.
+  together: ml('친구와 함께 먹었어요', 5, 8, 1, 'bowl'),
+  togetherTavern: ml('주점에서 친구와 한 상', 8, 8, 1, 'cup'),
   // 농사 · 낚시 · 성취
   gold: ml('금별 수확!', 4, 6, 2, 'star'),
   rareFish: ml('드문 물고기를 낚았어요', 6, 6, 1, 'fish'),

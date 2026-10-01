@@ -107,7 +107,7 @@ function DexPage({ view, a, spot }: { view: CloudRoomView; a: AnglingView; spot?
           <p>{known ? f.note : POT_IDS.has(picked) ? '통발에 들어올지도 몰라요.' : '어디선가 헤엄치고 있어요.'}</p>
           <dl>
             <dt>사는 곳</dt>
-            <dd>{POT_IDS.has(picked) ? (['snail', 'shrimp'].includes(picked) ? '민물 통발' : '바다 통발') : f.spots.map((s) => SPOT_INFO[s].name).join(' · ')}</dd>
+            <dd>{POT_IDS.has(picked) ? (['daseulgi', 'shrimp'].includes(picked) ? '민물 통발' : '바다 통발') : f.spots.map((s) => SPOT_INFO[s].name).join(' · ')}</dd>
             <dt>희귀도</dt>
             <dd>{RARITY[rarityOf(f)]}</dd>
             {!POT_IDS.has(picked) && (

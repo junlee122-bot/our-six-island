@@ -35,6 +35,7 @@ import {
   invCount,
   addInv,
   onGift,
+  shopSaleAmount,
   type LifeExt,
   type PlusAction,
   type PlusView,
@@ -109,6 +110,9 @@ import {
 // 마을 확장 2단계: same cycle rule; the action kinds come from the leaf data module.
 import { TOWN_ACTION_KINDS, type TownAction } from './lounge-town-data.ts';
 import { townAction, townView, type TownView } from './lounge-town.ts';
+// 가게 나누기 · 음식 (design-food-and-shops.md): where goods are bought, 함께 먹기.
+import { isShopId, shopOffer, type ShopId } from './lounge-shops.ts';
+import { foodAfterAction } from './lounge-food.ts';
 import { districtsView, settleDistrictUnlocks, type DistrictsView } from './lounge-district-unlocks.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
@@ -529,8 +533,10 @@ export type LifeAction =
   | { kind: 'water'; plot: number }
   | { kind: 'harvest'; plot: number }
   | { kind: 'pick'; tree: string }
-  | { kind: 'sell'; crop: Crop | 'fruit'; n: number; quality?: Quality }
-  | { kind: 'buy'; item: string; n?: number }
+  /** `at`: the shop I stand at (농협 pays 100%); from the bag it is 85% (lounge-shops.ts). */
+  | { kind: 'sell'; crop: Crop | 'fruit'; n: number; quality?: Quality; at?: ShopId }
+  /** Seeds, bundles, 희귀 소품 and palettes, at the 등불 잡화점 (or the 농협's Sunday seeds). */
+  | { kind: 'buy'; item: string; n?: number; at?: ShopId }
   | { kind: 'guestbook'; owner: number | string; text: string }
   | {
       kind: 'mail';
@@ -607,6 +613,8 @@ export const LIFE_REJECT = {
   nothingToWater: '물을 줄 작물이 없어요.',
   locked: '아직 살 수 없는 물건이에요.',
   item: '상점에 없는 물건이에요.',
+  shopHere: '가게에 가서 사 주세요. 씨앗과 비료는 시장 거리 등불 잡화점에 있어요.',
+  shopItem: '이 가게에서는 팔지 않는 물건이에요.',
   owned: '이미 가지고 있는 물건이에요.',
   balance: '잔액이 부족해요.',
   text: '글자를 확인해 주세요.',
@@ -1025,6 +1033,8 @@ export function lifeAction(
   const before = moodBeforeLifeAction(original, member, now);
   const next = lifeActionCore(before, ledger, member, action, now);
   moodAfterLifeAction(before, next.life, member, action, now);
+  // 함께 먹기: after any meal, snack or shop food.
+  foodAfterAction(next.life, member, action as { kind: string }, now);
   // 마을 확장 2단계: record a district whose village goal was just reached.
   settleDistrictUnlocks(next.life, now);
   return next;
@@ -1221,6 +1231,8 @@ function lifeActionCore(
         amount += Math.round(sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount) * (1 + bonus));
         sold += n;
       });
+      // 가게 나누기: 100% at the 농협, 85% from the bag; 흥정 on top at the shop.
+      amount = shopSaleAmount(life, uid, member.actor, a.at, id, amount, now);
       const left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${beom(Math.max(0, left))}어치까지만 더 팔 수 있어요.`);
@@ -1243,8 +1255,11 @@ function lifeActionCore(
       break;
     }
     case 'buy': {
-      const item = typeof a.item === 'string' ? SHOP_BY_ID[a.item] : undefined;
+      const item = typeof a.item === 'string' && Object.hasOwn(SHOP_BY_ID, a.item) ? SHOP_BY_ID[a.item] : undefined;
       if (!item) fail(LIFE_REJECT.item);
+      if (!isShopId(a.at)) fail(LIFE_REJECT.shopHere);
+      const offer = shopOffer(life, member.actor, a.at!, item!.id, now);
+      if (!offer) fail(LIFE_REJECT.shopItem);
       const n = a.n ?? 1;
       const stacks = item!.kind === 'seed' || item!.kind === 'bundle';
       if (!safe(n) || n < 1 || n > (stacks ? BUY_MAX_N : 1))
@@ -1253,7 +1268,7 @@ function lifeActionCore(
       if (!stacks && owned.includes(item!.id)) fail(LIFE_REJECT.owned);
       if (shopLock(item!, owned, life.harvested?.[uid] ?? {}, life.flags ?? []))
         fail(LIFE_REJECT.locked);
-      const price = item!.price * n;
+      const price = offer!.price * n;
       if ((ledger.accounts[wallet] ?? 0) < price) fail(LIFE_REJECT.balance);
       nextLedger = spendBeom(
         ledger,

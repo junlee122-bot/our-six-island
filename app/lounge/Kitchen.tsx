@@ -15,6 +15,7 @@ import { ItemIcon } from './ItemIcon';
 import { useLifeAction } from './LifePanels';
 import { useNow } from './use-now';
 import './life-plus.css';
+import { TasteDex } from './ShopGoods';
 
 type Mode = 'cook' | 'craft';
 const madeName = (r: RecipeDef) => FURNITURE_BY_REF[r.makes]?.name ?? r.name;
@@ -36,6 +37,7 @@ export function KitchenPanel({
   const [mode, setMode] = useState<Mode>(initial);
   const [picked, setPicked] = useState<string>(initial === 'cook' ? DISHES[0].id : CRAFTS[0].id);
   const [n, setN] = useState(1);
+  const [taste, setTaste] = useState(false);
   const [run, busy] = useLifeAction(room, notify);
   const now = useNow(true, 60_000) + view.clockOffset;
   if (!life)
@@ -75,15 +77,16 @@ export function KitchenPanel({
         ) : me.ate ? (
           '오늘은 이미 든든하게 먹었어요.'
         ) : (
-          '효과가 있는 요리를 먹으면 오늘 하루 특별한 힘이 생겨요 (하루 한 번).'
+          '모든 요리에는 효과가 있어요. 방에서 먹으면 식사 칸에 자정까지 켜져요 (하루 한 번). 도시락은 밖에서도 먹어요.'
         )}
       </p>
       <div className="l-mail-tabs" role="tablist" aria-label="요리·만들기">
         <button
           role="tab"
-          aria-selected={mode === 'cook'}
+          aria-selected={!taste && mode === 'cook'}
           onClick={() => {
             setMode('cook');
+            setTaste(false);
             setPicked(DISHES[0].id);
             setN(1);
           }}
@@ -93,9 +96,10 @@ export function KitchenPanel({
         </button>
         <button
           role="tab"
-          aria-selected={mode === 'craft'}
+          aria-selected={!taste && mode === 'craft'}
           onClick={() => {
             setMode('craft');
+            setTaste(false);
             setPicked(CRAFTS[0].id);
             setN(1);
           }}
@@ -103,7 +107,13 @@ export function KitchenPanel({
         >
           <Hammer size={15} /> 만들기
         </button>
+        <button role="tab" aria-selected={taste} onClick={() => setTaste(true)} data-testid="kitchen-tab-taste">
+          <Soup size={15} /> 맛 도감 <small>{me.taste?.ids.length ?? 0}</small>
+        </button>
       </div>
+      {taste ? (
+        <TasteDex life={life} />
+      ) : (
       <div className="l-kitchen-body">
         <ul className="l-recipe-list" aria-label={mode === 'cook' ? '요리 목록' : '만들기 목록'}>
           {list.map((r) => {
@@ -207,6 +217,7 @@ export function KitchenPanel({
           )}
         </section>
       </div>
+      )}
     </Modal>
   );
 }

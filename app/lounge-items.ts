@@ -201,12 +201,23 @@ export const FORAGE: readonly ForageDef[] = [
   { id: 'ginseng', name: '산삼', emoji: '🥕', kind: 'forage', seasons: WARM, sky: 'any', habitat: ['forest'], weight: 1, sell: 5_000, note: '심봤다! 아주 드물게 나타나요.' },
   { id: 'icicle', name: '고드름', emoji: '🧊', kind: 'material', seasons: ['winter'], sky: 'any', habitat: ['forest', 'shore'], weight: 20, sell: 40, note: '처마 끝의 투명한 창.' },
 ];
-export type DishBuff = 'grow' | 'luck' | 'forage' | 'bug';
+/**
+ * Food buffs (handover/design/design-food-and-shops.md §2). A meal (home
+ * cooking or a lunchbox) fills the 식사 칸 until midnight; bakery and tavern
+ * food fills the 간식 칸 for an hour or two (lounge-food-data.ts). 함께 먹기
+ * is not a slot: it happens by itself when friends eat together.
+ */
+export type DishBuff = 'grow' | 'luck' | 'forage' | 'bug' | 'mine' | 'wood' | 'learn' | 'haggle' | 'charm';
 export const BUFF_INFO: Record<DishBuff, { name: string; text: string }> = {
-  grow: { name: '초록 손', text: '오늘 심거나 비료를 준 작물이 15% 빨리 자라요' },
-  luck: { name: '물고기의 행운', text: '오늘 희귀 물고기 확률 2배 · 입질 판정 +20%' },
-  forage: { name: '채집 달인', text: '오늘 채집할 때 1개씩 더' },
-  bug: { name: '곤충 박사', text: '오늘 곤충을 잡을 때 1마리씩 더' },
+  grow: { name: '초록 손', text: '심거나 비료를 준 작물이 15% 빨리 자라요' },
+  luck: { name: '물고기의 행운', text: '희귀 물고기 확률 2배 · 입질 판정 +20%' },
+  forage: { name: '채집 달인', text: '채집할 때 1개씩 더' },
+  bug: { name: '곤충 박사', text: '곤충을 잡을 때 1마리씩 더' },
+  mine: { name: '광부의 힘', text: '광산 바위 3개마다 광석 +1 · 광석이 조금 더 잘 나와요' },
+  wood: { name: '나무꾼', text: '나무를 벨 때 1개씩 더' },
+  learn: { name: '배움', text: '기술 경험치 +10% (하루 소프트캡까지)' },
+  haggle: { name: '흥정', text: '전용 가게에서 팔면 +5% (하루 3,000범까지)' },
+  charm: { name: '친화력', text: '주민과 이야기하거나 선물하면 친밀도 +50%' },
 };
 /** Buffed growth: speed-up percent applied at planting/fertilizing. */
 export const GROW_BUFF_SPEED = 15;
@@ -226,7 +237,16 @@ export type RecipeDef = {
   /** Village flag needed to cook/craft it. */
   flag?: string;
 };
-export type DishDef = RecipeDef & { sell: number; buff?: DishBuff; note: string };
+export type DishDef = RecipeDef & {
+  sell: number;
+  /** Every dish fills the 식사 칸 with this buff when eaten. */
+  buff?: DishBuff;
+  note: string;
+  /** 도시락: eaten anywhere (other dishes are eaten at home). */
+  lunch?: true;
+  /** 이국 요리 (행상인 향신료): the buff lasts 6 hours past midnight. */
+  long?: true;
+};
 /** Reference values for "any of a category" inputs (dish prices). */
 const CAT_VALUE = { fish: 300, bug: 150, flower: 80, forage: 100 } as const;
 const it = (item: string, n: number, q?: 0 | 1 | 2) => ({ item, n, ...(q ? { q } : {}) });
@@ -237,7 +257,7 @@ const dish = (
   emoji: string,
   needs: (Need & { n: number })[],
   note: string,
-  extra: { buff?: DishBuff; flag?: string } = {},
+  extra: { buff?: DishBuff; flag?: string; lunch?: true; long?: true } = {},
 ) => ({ id, name, emoji, needs, makes: id, count: 1, note, ...extra, sell: 0 });
 // Crop sell prices are repeated here (lounge-life.ts is the authority; a test pins them equal).
 export const CROP_SELL_REF: Record<string, number> = {
@@ -256,29 +276,45 @@ export const CROP_SELL_REF: Record<string, number> = {
 const RAW_DISHES = [
   // Legacy island meals (life-data.ts MEALS).
   dish('salad', '햇살 샐러드', '🥗', [it('carrot', 1), it('tomato', 1)], '갓 딴 채소 그대로.', { buff: 'grow' }),
-  dish('pumpkinsoup', '따끈한 호박 수프', '🍲', [it('carrot', 1), it('pumpkin', 1)], '쌀쌀한 날 한 그릇.'),
-  dish('lunchbox', '여섯섬 도시락', '🍱', [it('carrot', 1), it('tomato', 1), it('pumpkin', 1)], '소풍 가는 날의 도시락.', { buff: 'forage' }),
+  dish('pumpkinsoup', '따끈한 호박 수프', '🍲', [it('carrot', 1), it('pumpkin', 1)], '쌀쌀한 날 한 그릇.', { buff: 'mine' }),
+  dish('lunchbox', '여섯섬 도시락', '🍱', [it('carrot', 1), it('tomato', 1), it('pumpkin', 1)], '소풍 가는 날의 도시락.', { buff: 'forage', lunch: true }),
   // New dishes from crops, fish and forage.
   dish('grilledfish', '생선구이', '🐟', [anyOf('fish', 1), it('wood', 1)], '모닥불에 노릇노릇.', { buff: 'luck' }),
   dish('maeuntang', '매운탕', '🍲', [anyOf('fish', 2), it('cabbage', 1)], '얼큰하게 속을 풀어 줘요.', { buff: 'luck' }),
-  dish('jam', '딸기잼', '🍯', [it('strawberry', 2)], '빵에 발라 먹어요.'),
+  dish('jam', '딸기잼', '🍯', [it('strawberry', 2)], '빵에 발라 먹어요.', { buff: 'charm' }),
   dish('buttercorn', '옥수수 버터구이', '🌽', [it('corn', 2)], '여름 캠프의 맛.', { buff: 'bug' }),
   dish('hwachae', '수박화채', '🍉', [it('watermelon', 1), it('raspberry', 1)], '한여름 더위 탈출.', { buff: 'bug' }),
-  dish('mattang', '고구마 맛탕', '🍠', [it('sweetpotato', 2)], '달콤 바삭.'),
+  dish('mattang', '고구마 맛탕', '🍠', [it('sweetpotato', 2)], '달콤 바삭.', { buff: 'mine' }),
   dish('kimchi', '김치', '🥬', [it('cabbage', 2)], '마을 김장의 결과물.', { buff: 'grow' }),
   dish('mushroomhotpot', '버섯전골', '🍄', [it('mushroom', 2), it('cabbage', 1)], '비 오는 날엔 전골.', { buff: 'forage' }),
-  dish('ssukddeok', '쑥떡', '🍡', [it('mugwort', 3)], '봄을 한 입에.'),
+  dish('ssukddeok', '쑥떡', '🍡', [it('mugwort', 3)], '봄을 한 입에.', { buff: 'wood' }),
   dish('bibimbap', '봄나물 비빔밥', '🍚', [it('shepherd', 1), it('wildgarlic', 1), it('carrot', 1)], '냉이와 달래를 듬뿍.', { buff: 'grow' }),
   dish('dotorimuk', '도토리묵', '🟫', [it('acorn', 3)], '탱글탱글 가을 별미.', { buff: 'forage' }),
-  dish('roastchestnut', '군밤', '🌰', [it('chestnut', 3), it('wood', 1)], '호호 불어 먹어요.'),
+  dish('roastchestnut', '군밤', '🌰', [it('chestnut', 3), it('wood', 1)], '호호 불어 먹어요.', { buff: 'wood' }),
   dish('spinachnamul', '시금치나물', '🥬', [it('spinach', 2)], '겨울 섬초의 단맛.', { buff: 'grow' }),
-  dish('gamjajeon', '감자전', '🥔', [it('potato', 2)], '비 오는 날 생각나는 맛.'),
-  dish('pumpkinpie', '호박파이', '🥧', [it('pumpkin', 2), it('chestnut', 1)], '할로윈의 주인공.'),
-  dish('songpyeon', '송편', '🌙', [it('chestnut', 1), it('sweetpotato', 1), it('mugwort', 1)], '추석 보름달 아래 빚는 떡.', { flag: 'cafe' }),
-  dish('tteokguk', '떡국', '🍜', [it('potato', 1), it('spinach', 1), anyOf('forage', 1)], '한 그릇 먹으면 한 살 더.', { flag: 'cafe' }),
+  dish('gamjajeon', '감자전', '🥔', [it('potato', 2)], '비 오는 날 생각나는 맛.', { buff: 'mine' }),
+  dish('pumpkinpie', '호박파이', '🥧', [it('pumpkin', 2), it('chestnut', 1)], '할로윈의 주인공.', { buff: 'charm' }),
+  dish('songpyeon', '송편', '🌙', [it('chestnut', 1), it('sweetpotato', 1), it('mugwort', 1)], '추석 보름달 아래 빚는 떡.', { flag: 'cafe', buff: 'charm' }),
+  dish('tteokguk', '떡국', '🍜', [it('potato', 1), it('spinach', 1), anyOf('forage', 1)], '한 그릇 먹으면 한 살 더.', { flag: 'cafe', buff: 'wood' }),
   dish('fishstew', '해물탕', '🦑', [anyOf('fish', 3), it('potato', 1)], '바다 데크의 선물.', { flag: 'cafe', buff: 'luck' }),
   dish('flowertea', '꽃차', '🍵', [anyOf('flower', 3)], '향긋한 한 잔.', { flag: 'cafe', buff: 'bug' }),
+  // 도시락: the 빵집 sells them ready-made (lounge-food-data.ts LUNCH_PRICE); cooking one costs only the ingredients.
+  dish('bento-miner', '광부 도시락', '🍱', [it('potato', 1), it('carrot', 1)], '감자조림에 주먹밥. 광산에서 꺼내 먹어요.', { buff: 'mine', lunch: true }),
+  dish('bento-river', '강가 도시락', '🍱', [anyOf('fish', 1), it('carrot', 1)], '생선구이 한 토막. 낚시터에서 먹어요.', { buff: 'luck', lunch: true }),
+  dish('bento-field', '들판 도시락', '🍱', [anyOf('forage', 2)], '나물 비빔 주먹밥. 들판에서 먹어요.', { buff: 'forage', lunch: true }),
+  // 이국 요리: one spice a week from 마키마 the 행상인 (SPICES).
+  dish('saffronrice', '사프란 해물밥', '🥘', [it('spice-saffron', 1), anyOf('fish', 2)], '노란 향이 번지는 바닷가 밥.', { buff: 'luck', long: true }),
+  dish('pepperpotato', '흑후추 감자구이', '🥔', [it('spice-pepper', 1), it('potato', 2)], '톡 쏘는 후추 향이 광산까지 따라와요.', { buff: 'mine', long: true }),
+  dish('vanillapudding', '바닐라 푸딩', '🍮', [it('spice-vanilla', 1), it('strawberry', 1)], '달콤한 향에 주민들이 먼저 말을 걸어요.', { buff: 'charm', long: true }),
 ];
+/** 행상인 향신료 (not sold back; the key to one 이국 요리 each). */
+export const SPICES = [
+  { id: 'spice-saffron', name: '사프란', note: '먼 바다 건너 온 붉은 암술. 사프란 해물밥의 재료.' },
+  { id: 'spice-pepper', name: '통후추', note: '갈면 향이 확 퍼져요. 흑후추 감자구이의 재료.' },
+  { id: 'spice-vanilla', name: '바닐라 콩', note: '까만 꼬투리 속 달콤한 향. 바닐라 푸딩의 재료.' },
+] as const;
+/** Fixed sale value of a lunchbox (well under the 빵집 price, so buying to resell never pays). */
+export const LUNCH_SELL = 600;
 function valueOfNeed(n: Need & { n: number }): number {
   if ('beom' in n) return 0;
   if ('cat' in n) return CAT_VALUE[n.cat] * n.n;
@@ -296,7 +332,7 @@ function ITEM_BY_ID_RAW() {
 /** Dishes sell for 25% over their ingredients (+100범), rounded to 10. */
 export const DISHES: readonly DishDef[] = [...RAW_DISHES.map((d): DishDef => ({
   ...d,
-  sell: Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
+  sell: d.lunch && d.id !== 'lunchbox' ? LUNCH_SELL : Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
 })), ...FISH_DISHES];
 
 /** Soil items the `fertilize` action takes (텃밭 확장 added the last three). */
@@ -332,6 +368,7 @@ export const ITEMS: readonly ItemDef[] = [
   })),
   ...DISHES.map((d): ItemDef => ({ id: d.id, name: d.name, emoji: d.emoji, cat: 'dish', kind: 'dish', sell: d.sell, note: d.note, museum: true })),
   ...tools,
+  ...SPICES.map((sp): ItemDef => ({ id: sp.id, name: sp.name, emoji: '', cat: 'material', kind: 'material', sell: 0, note: sp.note })),
   // 성장 P1: ores for the blacksmith (lounge-growth-data.ts); copper drops from village rocks.
   ...ORE_ITEMS.map((o): ItemDef => ({ id: o.id, name: o.name, emoji: '', cat: 'material', kind: 'material', sell: o.sell, note: o.note })),
   // 성장 P2: 단단한 나무, 송이·영지 (museum), mine fossils (museum only, not sold).

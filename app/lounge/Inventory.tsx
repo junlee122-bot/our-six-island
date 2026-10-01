@@ -8,6 +8,9 @@ import { Coins, Gift, Landmark, Soup, Store } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, SELL_MAX_N, type Crop, type Quality } from '../lounge-life';
 import { ITEM_BY_ID, FURNITURE_BY_REF, DISH_BY_ID, BUFF_INFO } from '../lounge-items';
+import { SELL_AWAY, SHOP_INFO, buyerOf } from '../lounge-shops';
+import { snackable } from '../lounge-mood';
+import { FoodBuffLine } from './ShopGoods';
 import { formatBeom, josa } from '../lounge-text';
 import {
   INV_GROUPS,
@@ -101,7 +104,11 @@ export function InventoryPanel({
   const price = crop ? cropPrice(crop, q) : (entry?.sell ?? 0);
   const count = Math.max(1, Math.min(n, have, SELL_MAX_N));
   // Demand curves (ECON-2): the server pays less for each extra unit sold today.
-  const quote = (k: number) => (entry && price > 0 ? sellQuote(life, entry.id, q, k, clock).total : price * k);
+  // 가게 나누기: from the bag it is SELL_AWAY (85%); the item's own shop pays 100%.
+  const quote = (k: number) => (entry && price > 0 ? sellQuote(life, entry.id, q, k, clock, SELL_AWAY).total : Math.round(price * SELL_AWAY) * k);
+  const fullShop = entry ? buyerOf(entry.id, life.shops?.fishShop ?? 'general') : null;
+  const myArea = view.players.find((p) => p.id === view.self)?.area ?? 'village';
+  const snackKind = entry ? snackable(entry.id) : null;
   const total = quote(count);
   // "최대": as many as can be sold right now — the bag, the per-sale limit and
   // what today's cap still allows at the quoted (demand-adjusted) price.
@@ -239,8 +246,13 @@ export function InventoryPanel({
                     </button>
                   </div>
                   <button className="l-primary" disabled={busy || total > cap} onClick={() => void sell()} data-testid="inv-sell">
-                    <Coins size={15} /> {formatBeom(total)}에 팔기
+                    <Coins size={15} /> 가방에서 {formatBeom(total)}에 팔기 ({Math.round(SELL_AWAY * 100)}%)
                   </button>
+                  {fullShop && (
+                    <small className="l-help-text" data-testid="inv-sell-shop">
+                      {SHOP_INFO[fullShop].name} 창구에서 팔면 제값을 받아요.
+                    </small>
+                  )}
                   {total < price * count && (
                     <small className="l-help-text" data-testid="inv-sell-demand">
                       오늘 많이 팔아서 값이 내려갔어요 ({Math.round((total / (price * count)) * 100)}%). 자정에 시세가 돌아와요.
@@ -259,15 +271,28 @@ export function InventoryPanel({
                 {dish?.buff && (
                   <button
                     className="l-secondary"
-                    disabled={busy || !!life.me.ate}
+                    disabled={busy || !!life.me.ate || (!dish.lunch && myArea !== 'home')}
+                    title={!dish.lunch && myArea !== 'home' ? '집밥은 방에서 먹어요. 도시락은 어디서나 먹을 수 있어요.' : undefined}
                     onClick={() =>
-                      void run({ kind: 'eat', item: entry.id }, `${josa(entry.name, '을/를')} 먹었어요. 오늘은 ${BUFF_INFO[dish.buff!].name}!`).then(
+                      void run({ kind: 'eat', item: entry.id }, `${josa(entry.name, '을/를')} 먹었어요. 식사 칸에 ${BUFF_INFO[dish.buff!].name}!`).then(
                         (ok) => ok && lifeSfx('eat'),
                       )
                     }
                     data-testid="inv-eat"
                   >
-                    <Soup size={15} /> {life.me.ate ? '오늘은 이미 먹었어요' : `먹기 · ${BUFF_INFO[dish.buff].name}`}
+                    <Soup size={15} /> {life.me.ate ? '오늘 식사는 했어요' : !dish.lunch && myArea !== 'home' ? '방에서 먹기' : `먹기 · ${BUFF_INFO[dish.buff].name}`}
+                  </button>
+                )}
+                {snackKind && snackKind !== 'dish' && (
+                  <button
+                    className="l-secondary"
+                    disabled={busy}
+                    onClick={() =>
+                      void run({ kind: 'snack', item: entry.id, ...(crop && q < 3 ? { q } : {}) }, `${josa(entry.name, '을/를')} 간식으로 먹었어요. 배가 조금 불러요.`).then((ok) => ok && lifeSfx('eat'))
+                    }
+                    data-testid="inv-snack"
+                  >
+                    <Soup size={15} /> 간식으로 먹기
                   </button>
                 )}
                 {entry.group !== 'seed' && entry.group !== 'furniture' && ITEM_BY_ID[entry.id]?.kind !== 'tool' && (
@@ -281,7 +306,9 @@ export function InventoryPanel({
                   </span>
                 )}
               </div>
-              {dish?.buff && <p className="l-help-text">{BUFF_INFO[dish.buff].text}</p>}
+              {dish?.buff && <FoodBuffLine id={entry.id} />}
+              {dish && !dish.lunch && <p className="l-help-text">집밥은 방에서 먹어요. 도시락은 광산·낚시터 어디서나 먹을 수 있어요. 식사는 하루 한 번이에요.</p>}
+              {snackKind && snackKind !== 'dish' && <p className="l-help-text">간식은 버프 없이 배부름만 채워요 (하루 3번).</p>}
             </>
           )}
         </aside>

@@ -450,7 +450,7 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
                         {qName(g.q)}
                       </b>
                       <small>
-                        {g.n}개 · 한 개 {formatBeom(unit)}
+                        {g.n}개 · 여기서 팔면 한 개 {formatBeom(Math.round(unit * 0.85))} (농협 창구 {formatBeom(unit)})
                       </small>
                     </span>
                     <span className="l-fw-actions">

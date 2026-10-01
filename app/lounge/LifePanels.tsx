@@ -1,57 +1,39 @@
 'use client';
-// "범타듀의 하루" panels: farm, bag (sell), shop (buy), mail, guestbook and
+// "범타듀의 하루" panels: farm, mail, guestbook and
 // "오늘의 한마디". Every action goes through CloudRoom.life(), which works in
 // and out of rooms; server rejections arrive as the usual error toast.
 import { useState } from 'react';
 import {
-  Backpack,
-  Check,
-  FlaskConical,
   Gift,
-  House,
-  Sofa,
   Mail,
   MailOpen,
   Minus,
   Plus,
   Reply,
   Send,
-  Sprout,
-  Store,
 } from '../ui/icons';
 import { AvatarView } from '../avatar-view';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
   CROPS,
   CROP_INFO,
-  FRUIT_SELL,
-  cropInSeason,
   GUESTBOOK_TEXT_MAX,
   MAIL_TEXT_MAX,
-  PALETTES,
-  SELL_MAX_N,
-  BUY_MAX_N,
-  SHOP,
   STATUS_TEXT_MAX,
-  shopLock,
   type Crop,
   type Gift as LifeGift,
   type LifeAction,
   type LifeView,
-  type ShopItem,
 } from '../lounge-life';
-import { ROD_PRICE, itemName, sellQuote } from '../lounge-life-plus';
-import { ITEM_BY_ID, ITEM_PRICES } from '../lounge-items';
-import { SEASON_INFO } from '../lounge-calendar';
+import { itemName } from '../lounge-life-plus';
+import { ITEM_BY_ID } from '../lounge-items';
 import { giftTaste, tastesKnown } from '../lounge-life-ui';
-import { ItemIcon } from './ItemIcon';
 import { REACTIONS, reactionInfo } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
-import { TROPHY_ART, isTrophy } from '../lounge-trophy-art';
-import { formatBeom, josa } from '../lounge-text';
+import { josa } from '../lounge-text';
 import { loungeAudio } from '../lounge-audio';
 import { defaultLook, type Look } from '../lounge-look';
-import { ConfirmModal, Modal } from './Modal';
+import { Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useNow } from './use-now';
 import { lookFor } from './friend-looks';
@@ -114,7 +96,6 @@ const STICKER_GLYPH: Record<string, GlyphName> = {
   nonono: 'sticker-nonono',
 };
 const stickerGlyph = (id: string) => <Glyph name={STICKER_GLYPH[id] ?? 'letter'} size={20} />;
-const cropLabel = (crop: Crop) => CROP_INFO[crop].name;
 export function giftText(gift: LifeGift | undefined) {
   if (!gift) return '';
   return gift.kind === 'fruit'
@@ -224,474 +205,11 @@ export function FarmModal({
   );
 }
 
-/* ------------------------------------------------------------------ bag */
-
-export function BagModal({
-  room,
-  view,
-  notify,
-  onClose,
-  onShop,
-}: Base & { onShop: () => void }) {
-  const life = view.life;
-  const [run, busy] = useLifeAction(room, notify);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [earned, setEarned] = useState<{ id: number; amount: number } | null>(null);
-  const clock = useNow(true, 60_000);
-  if (!life)
-    return (
-      <Modal title="가방" onClose={onClose}>
-        <NoLife />
-      </Modal>
-    );
-  const bag = life.me.bag;
-  const cap = life.sellCapLeft;
-  const now = clock + view.clockOffset;
-  // Demand curves (ECON-2): the price of each crop sags as more is sold today.
-  const quote = (id: Crop | 'fruit', n: number) => sellQuote(life, id, 0, n, now);
-  const rows: { id: Crop | 'fruit'; name: string; have: number; price: number }[] = [
-    ...CROPS.map((crop) => ({
-      id: crop,
-      name: cropLabel(crop),
-      have: bag.produce[crop],
-      price: quote(crop, 1).unit,
-    })),
-    { id: 'fruit', name: '과일', have: bag.fruit, price: FRUIT_SELL },
-  ];
-  const sell = async (row: (typeof rows)[number], n: number) => {
-    const total = quote(row.id, n).total;
-    const ok = await run(
-      { kind: 'sell', crop: row.id, n },
-      `${row.name} ${n}개를 약 ${formatBeom(total)}에 팔았어요.`,
-      'coin',
-    );
-    if (ok) {
-      setCounts((prev) => ({ ...prev, [row.id]: 1 }));
-      setEarned((prev) => ({ id: (prev?.id ?? 0) + 1, amount: total }));
-    }
-  };
-  return (
-    <Modal title="가방" onClose={onClose} className="l-life-modal">
-      <section className="l-bag-section" aria-label="씨앗">
-        <h3>
-          <Sprout size={16} /> 씨앗
-        </h3>
-        <ul className="l-bag-chips">
-          {CROPS.map((crop) => (
-            <li key={crop}>
-              <ItemIcon id={'seed-' + crop} size={18} /> {cropLabel(crop)} <b>{bag.seeds[crop]}</b>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="l-bag-section" aria-label="수확물과 과일">
-        <h3>
-          <Backpack size={16} /> 수확물 · 과일
-        </h3>
-        <p className="l-sell-cap" data-testid="sell-cap">
-          <span className="l-wallet-line">
-            내 지갑 <b>{formatBeom(view.wallet.balance)}</b>
-            {earned && (
-              <em
-                key={earned.id}
-                className="l-coin-float"
-                aria-hidden="true"
-                data-testid="coin-float"
-              >
-                +{formatBeom(earned.amount)}
-              </em>
-            )}
-          </span>
-          <span>
-            같은 작물을 많이 팔수록 값이 내려가요. 여러 작물을 섞어 팔면 이득이에요.
-            <small> · 시세는 매일 자정(한국 시간)에 돌아와요 · 오늘 판 금액 {formatBeom(life.soldToday ?? 0)}</small>
-          </span>
-        </p>
-        <ul className="l-sell-list">
-          {rows.map((row) => {
-            const n = Math.min(counts[row.id] ?? 1, Math.max(1, row.have));
-            const q = quote(row.id, n);
-            const total = q.total;
-            // "모두 팔기": everything in the bag that still fits the daily safety ceiling.
-            let all = Math.min(row.have, SELL_MAX_N);
-            while (all > 1 && quote(row.id, all).total > cap) all--;
-            const capped = !!row.have && total > cap;
-            return (
-              <li key={row.id} data-testid={`sell-${row.id}`}>
-                <ItemIcon id={row.id} size={30} />
-                <span className="l-sell-name">
-                  <strong>{row.name}</strong>
-                  <small>
-                    {row.have}개 · 개당 {formatBeom(row.price)}
-                    {q.share < 0.995 && (
-                      <em className="l-demand" data-testid={`sell-demand-${row.id}`}>
-                        {' '}
-                        지금 {formatBeom(q.next)} ({Math.round(q.share * 100)}%)
-                      </em>
-                    )}
-                  </small>
-                </span>
-                {row.have > 1 && (
-                  <Stepper
-                    label={`${row.name} 팔 개수`}
-                    value={n}
-                    max={Math.min(row.have, SELL_MAX_N)}
-                    onChange={(v) => setCounts((prev) => ({ ...prev, [row.id]: v }))}
-                  />
-                )}
-                <span className="l-sell-buttons">
-                  <button
-                    className="l-primary"
-                    disabled={!row.have || busy || capped}
-                    onClick={() => void sell(row, n)}
-                  >
-                    {row.have ? `${formatBeom(total)}에 팔기` : '없음'}
-                  </button>
-                  {row.have > 1 && all > 1 && all !== n && (
-                    <button
-                      className="l-secondary"
-                      disabled={busy}
-                      onClick={() => void sell(row, all)}
-                      data-testid={`sell-all-${row.id}`}
-                    >
-                      {all < row.have ? `${all}개 팔기` : '모두 팔기'}
-                    </button>
-                  )}
-                </span>
-                {capped && (
-                  <small className="l-why" data-testid={`sell-why-${row.id}`}>
-                    오늘 판매 상한을 넘어요
-                  </small>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-      <button className="l-secondary" onClick={onShop}>
-        <Store size={16} /> 범타듀 상점 가기
-      </button>
-    </Modal>
-  );
-}
-
-/* ------------------------------------------------------------------ shop */
-
-function ShopArt({ item }: { item: ShopItem }) {
-  if ((item.kind === 'seed' || item.kind === 'bundle') && item.crop)
-    return (
-      <span className="l-shop-art">
-        <ItemIcon id={'seed-' + item.crop} size={40} />
-        {item.kind === 'bundle' && <small>×{item.seeds}</small>}
-      </span>
-    );
-  if (item.kind === 'palette')
-    return (
-      <span className="l-shop-art l-shop-swatches">
-        {(PALETTES[item.id as keyof typeof PALETTES] ?? []).map((hex) => (
-          <i key={hex} style={{ background: hex }} />
-        ))}
-      </span>
-    );
-  if (isTrophy(item.id))
-    return (
-      <span className="l-shop-art">
-        {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG art. */}
-        <img src={TROPHY_ART[item.id]} alt="" />
-      </span>
-    );
-  return (
-    <span className="l-shop-art">
-      <Gift size={28} aria-hidden="true" />
-    </span>
-  );
-}
-
-export type ShopTab = 'seeds' | 'tools' | 'furniture' | 'house';
-export function ShopModal({
-  room,
-  view,
-  notify,
-  onClose,
-  initialTab = 'seeds',
-  onGoShop,
-}: Base & { initialTab?: ShopTab; onGoShop?: (where: 'furniture' | 'realty') => void }) {
-  const life = view.life;
-  const [run] = useLifeAction(room, notify);
-  const [tab, setTab] = useState<ShopTab>(initialTab);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [confirm, setConfirm] = useState<{ item: ShopItem; n: number } | null>(null);
-  const balance = view.wallet.balance;
-  const ownedList = life?.me.unlocks ?? [];
-  const owned = new Set(ownedList);
-  const harvested = life?.me.harvested ?? {};
-  const groups: [ShopItem['kind'], string, string][] = [
-    ['seed', '씨앗', '심으면 실시간으로 자라요.'],
-    ['bundle', '씨앗 꾸러미', '밭 한 판을 조금 싸게.'],
-    ['trophy', '희귀 소품', '수확 목표를 채우면 살 수 있어요. 내 방 꾸미기의 “희귀 소품”에 생겨요.'],
-    ['palette', '머리색 팔레트·염색', '한 단계씩 열려요. 분장실 머리 색에 한 줄이 더 생겨요. 명품 염색은 오래 모아서 사는 한정 색이에요.'],
-  ];
-  const stacks = (item: ShopItem) => item.kind === 'seed' || item.kind === 'bundle';
-  return (
-    <Modal title="범타듀 상점" onClose={onClose} className="l-life-modal" wide>
-      <p className="l-modal-intro">
-        내 지갑 <b>{formatBeom(balance)}</b> · 수확물은 가방에서 팔 수 있어요.
-      </p>
-      <div className="l-mail-tabs" role="tablist" aria-label="상점">
-        <button role="tab" aria-selected={tab === 'seeds'} onClick={() => setTab('seeds')} data-testid="shop-tab-seeds">
-          <Sprout size={15} /> 씨앗·소품
-        </button>
-        <button role="tab" aria-selected={tab === 'tools'} onClick={() => setTab('tools')} data-testid="shop-tab-tools">
-          <FlaskConical size={15} /> 도구·비료
-        </button>
-        <button role="tab" aria-selected={tab === 'furniture'} onClick={() => setTab('furniture')} data-testid="shop-tab-furniture">
-          <Sofa size={15} /> 오늘의 가구
-        </button>
-        <button role="tab" aria-selected={tab === 'house'} onClick={() => setTab('house')} data-testid="shop-tab-house">
-          <House size={15} /> 집 확장
-        </button>
-      </div>
-      {!life && <NoLife />}
-      {tab === 'house' && life && <MovedShop where="realty" onGo={onGoShop} />}
-      {tab === 'tools' && life && <ToolShop room={room} view={view} notify={notify} />}
-      {tab === 'furniture' && life && <MovedShop where="furniture" onGo={onGoShop} />}
-      {tab === 'seeds' && groups.map(([kind, title, hint]) => (
-        <section key={kind} className="l-shop-group" aria-label={title}>
-          <h3>
-            {title} <small>{hint}</small>
-          </h3>
-          <ul className="l-shop-list">
-            {SHOP.filter((item) => item.kind === kind).map((item) => {
-              const have = owned.has(item.id);
-              const n = stacks(item) ? (counts[item.id] ?? 1) : 1;
-              const price = item.price * n;
-              const lock = have ? null : shopLock(item, ownedList, harvested, life?.flags ?? []);
-              const short = !lock && price > balance;
-              return (
-                <li
-                  key={item.id}
-                  data-owned={have || undefined}
-                  data-locked={lock ? true : undefined}
-                  data-testid={`shop-${item.id}`}
-                >
-                  <ShopArt item={item} />
-                  <span className="l-shop-text">
-                    <strong>{item.name}</strong>
-                    <small>
-                      {item.description}
-                      {item.crop && CROP_INFO[item.crop].seasons
-                        ? ` · ${CROP_INFO[item.crop].seasons!.map((x) => SEASON_INFO[x].name).join('·')} 작물${
-                            life && !cropInSeason(item.crop, life.calendar?.season ?? 'spring') && !life.flags?.includes('greenhouse')
-                              ? ' (지금은 못 심어요)'
-                              : ''
-                          }`
-                        : ''}
-                    </small>
-                    <b>{formatBeom(item.price)}</b>
-                    {item.requires && !have && (
-                      <progress
-                        className="l-plot-bar"
-                        aria-label="목표까지"
-                        max={item.requires.n}
-                        value={Math.min(item.requires.n, harvested[item.requires.kind] ?? 0)}
-                      />
-                    )}
-                  </span>
-                  {stacks(item) && (
-                    <Stepper
-                      label={`${item.name} 개수`}
-                      value={n}
-                      max={BUY_MAX_N}
-                      onChange={(v) => setCounts((prev) => ({ ...prev, [item.id]: v }))}
-                    />
-                  )}
-                  {have ? (
-                    <span className="l-owned">
-                      <Check size={15} /> 가지고 있어요
-                    </span>
-                  ) : (
-                    <span className="l-buy">
-                      <button
-                        className="l-primary"
-                        disabled={!life || !!lock || short}
-                        onClick={() => setConfirm({ item, n })}
-                      >
-                        {stacks(item) ? `${n}개 사기` : '사기'}
-                      </button>
-                      {(lock || short) && (
-                        <small className="l-why">{lock ?? '범이 모자라요'}</small>
-                      )}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-      {confirm && (
-        <ConfirmModal
-          title="살까요?"
-          body={
-            <>
-              <b>{confirm.item.name}</b>
-              {stacks(confirm.item) ? ` ${confirm.n}개` : ''}를{' '}
-              <b>{formatBeom(confirm.item.price * confirm.n)}</b>에 사요. 지갑에{' '}
-              {formatBeom(balance - confirm.item.price * confirm.n)}이 남아요.
-            </>
-          }
-          confirmLabel="사기"
-          busyLabel="사는 중…"
-          cancelLabel="다음에"
-          onClose={() => setConfirm(null)}
-          onConfirm={async () => {
-            const { item, n } = confirm;
-            const ok = await run(
-              { kind: 'buy', item: item.id, ...(stacks(item) ? { n } : {}) },
-              item.kind === 'trophy'
-                ? `${josa(item.name, '을/를')} 샀어요! 내 방 꾸미기의 희귀 소품에서 놓아 보세요.`
-                : item.kind === 'palette'
-                  ? `${josa(item.name, '을/를')} 샀어요! 분장실 머리 색에서 골라 보세요.`
-                  : item.kind === 'bundle'
-                    ? `${item.name} ${n}개를 샀어요. 씨앗 ${n * (item.seeds ?? 1)}개가 가방에 들어왔어요.`
-                    : `${item.name} ${n}개를 샀어요.`,
-              'coin',
-            );
-            if (ok) setConfirm(null);
-            return ok;
-          }}
-        />
-      )}
-    </Modal>
-  );
-}
-
-/** 도구·비료: fertilizer, bait, the fishing rod and farm expansion. */
-function ToolShop({ room, view, notify }: Omit<Base, 'onClose'>) {
-  const life = view.life!;
-  const [run, busy] = useLifeAction(room, notify);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [rodConfirm, setRodConfirm] = useState(false);
-  const balance = view.wallet.balance;
-  const rod = life.me.fishing?.rod ?? 1;
-  const nextRod = rod < 3 ? ((rod + 1) as 2 | 3) : null;
-  return (
-    <section className="l-shop-group" aria-label="도구와 비료">
-      <h3>
-        소모품 <small>비료는 작물 품질을, 미끼는 희귀 물고기 확률을 올려요.</small>
-      </h3>
-      <ul className="l-shop-list">
-        {Object.entries(ITEM_PRICES).map(([id, price]) => {
-          const n = counts[id] ?? 1;
-          const def = ITEM_BY_ID[id];
-          return (
-            <li key={id} data-testid={`shop-${id}`}>
-              <span className="l-shop-art">
-                <ItemIcon id={id} size={40} />
-              </span>
-              <span className="l-shop-text">
-                <strong>{def?.name ?? itemName(id)}</strong>
-                <small>
-                  {def?.note} · 가진 개수 {life.me.inv?.[id] ?? 0}
-                </small>
-                <b>{formatBeom(price)}</b>
-              </span>
-              <Stepper label={`${def?.name ?? id} 개수`} value={n} max={20} onChange={(v) => setCounts((p) => ({ ...p, [id]: v }))} />
-              <span className="l-buy">
-                <button
-                  className="l-primary"
-                  disabled={busy || price * n > balance}
-                  onClick={() =>
-                    void run({ kind: 'buyItem', item: id, n }, `${def?.name ?? id} ${n}개를 샀어요.`, 'coin').then(
-                      (ok) => ok && setCounts((p) => ({ ...p, [id]: 1 })),
-                    )
-                  }
-                  data-testid={`buy-${id}`}
-                >
-                  {formatBeom(price * n)}
-                </button>
-                {price * n > balance && <small className="l-why">범이 모자라요</small>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <h3>
-        낚싯대 <small>좋은 낚싯대는 입질을 더 오래 기다려 줘요.</small>
-      </h3>
-      <ul className="l-shop-list">
-        <li data-testid="shop-rod">
-          <span className="l-shop-art">
-            <ItemIcon id="rod" size={40} />
-          </span>
-          <span className="l-shop-text">
-            <strong>
-              {rod}단계 낚싯대{nextRod ? ` → ${nextRod}단계` : ''}
-            </strong>
-            <small>
-              {nextRod
-                ? `입질 판정 ${nextRod === 2 ? '1.25' : '1.5'}배${nextRod === 3 ? ' · 희귀 물고기 1.5배' : ''}`
-                : '가장 좋은 낚싯대예요.'}
-            </small>
-            {nextRod && <b>{formatBeom(ROD_PRICE[nextRod])}</b>}
-          </span>
-          {nextRod ? (
-            <span className="l-buy">
-              <button className="l-primary" disabled={busy || ROD_PRICE[nextRod] > balance} onClick={() => setRodConfirm(true)} data-testid="buy-rod">
-                바꾸기
-              </button>
-              {ROD_PRICE[nextRod] > balance && <small className="l-why">범이 모자라요</small>}
-            </span>
-          ) : (
-            <span className="l-owned">
-              <Check size={15} /> 최고 단계
-            </span>
-          )}
-        </li>
-      </ul>
-      {rodConfirm && nextRod && (
-        <ConfirmModal
-          title="낚싯대를 바꿀까요?"
-          body={
-            <>
-              <b>{nextRod}단계 낚싯대</b>를 <b>{formatBeom(ROD_PRICE[nextRod])}</b>에 사요.
-            </>
-          }
-          confirmLabel="바꾸기"
-          busyLabel="바꾸는 중…"
-          cancelLabel="다음에"
-          onClose={() => setRodConfirm(false)}
-          onConfirm={() => run({ kind: 'upgradeRod' }, `${nextRod}단계 낚싯대로 바꿨어요!`, 'coin')}
-        />
-      )}
-    </section>
-  );
-}
-
-/**
- * 오늘의 가구 and 집 확장 moved to their own buildings (2026-09-26): 나무결
- * 가구점 and 범마을 부동산 in 강 건너 상점가 (lounge/ShopCounter.tsx). The
- * store's tabs point there.
+/*
+ * The old 가방 (sell) and 범타듀 상점 windows are gone (가게 나누기, 2026-10):
+ * the bag is lounge/Inventory.tsx, and each shop sells and buys its own goods
+ * at its counter (lounge/TownPanel.tsx, lounge/ShopGoods.tsx).
  */
-function MovedShop({ where, onGo }: { where: 'furniture' | 'realty'; onGo?: (where: 'furniture' | 'realty') => void }) {
-  const furniture = where === 'furniture';
-  return (
-    <section className="l-shop-group l-shop-moved" aria-label={furniture ? '오늘의 가구' : '집 확장'} data-testid={furniture ? 'moved-furniture' : 'moved-house'}>
-      <h3>
-        {furniture ? '오늘의 가구는 나무결 가구점으로 옮겼어요' : '집 확장은 범마을 부동산에서 상담해요'}
-        <small>
-          서쪽 다리 건너 강 건너 상점가에 있어요.{' '}
-          {furniture ? '결 목수가 진열대를 보여 줘요 (오늘의 가구 · 이번 주 명품 · 새로 고치기).' : '문 사장이 단계별 도면과 미리보기를 보여 줘요.'}
-        </small>
-      </h3>
-      {onGo && (
-        <button type="button" className="l-primary" onClick={() => onGo(where)} data-testid={furniture ? 'go-furniture' : 'go-realty'}>
-          {furniture ? '가구점으로 가기' : '부동산으로 가기'}
-        </button>
-      )}
-    </section>
-  );
-}
 
 /* ------------------------------------------------------------------ mail */
 

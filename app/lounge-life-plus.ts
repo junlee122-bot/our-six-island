@@ -76,7 +76,6 @@ import {
   FURNITURE_BY_REF,
   GROW_BUFF_SPEED,
   ITEM_BY_ID,
-  ITEM_PRICES,
   SHOP_BUY_MAX_N,
   SHOP_DAILY_ITEMS,
   SPAWN_SPOTS,
@@ -143,6 +142,25 @@ import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
 import { moodBiteBoost } from './lounge-mood.ts';
 import { fishSaleMult, takeSoldFishQuality } from './lounge-fish-quality.ts';
+// 가게 나누기 · 음식 시스템 (design-food-and-shops.md).
+import { saleShare, shopOffer, isShopId, shopsView, weekOf, type ShopId, type ShopsView } from './lounge-shops.ts';
+import {
+  EAT_PLACES,
+  HAGGLE_CAP,
+  HAGGLE_SHARE,
+  LONG_MEAL_MS,
+  SHOP_FOOD_BY_ID,
+  TASTE_IDS,
+  foodPreview,
+  hasBuff,
+  isTasteId,
+  luckMods,
+  mealSlot,
+  snackSlot,
+  type EatPlace,
+  type SlotBuff,
+} from './lounge-food-data.ts';
+import { tasteNote } from './lounge-food.ts';
 /** 오늘의 가구 rerolls a day (+2 with 나무결 가구점's 단골 손님 대접). */
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
@@ -261,7 +279,21 @@ export type UserExt = {
   wf?: number[];
   ate?: string;
   wished?: boolean;
+  /** 식사 칸 (meal slot): today's dish or lunchbox buff. */
   buff?: { kind: DishBuff; dish: string; until: number };
+  /** 간식 칸 (snack slot): 빵집 / 주점 food, 1–2 hours. */
+  snack?: SlotBuff;
+  /** 맛 도감: foods tasted (dish and menu ids) and 도감 rewards paid (steps). */
+  taste?: string[];
+  tasteRw?: number;
+  /** When and where I last ate (함께 먹기). */
+  eatAt?: { at: number; w: EatPlace };
+  /** 흥정 범 added today (daily). */
+  hag?: number;
+  /** Mine rocks broken under 광부의 힘 (every third gives one more ore). */
+  mrk?: number;
+  /** 행상인 this KST week: rarities bought and the 계약 done. */
+  ped?: { w: number; got: string[]; deal?: true };
   /** Units sold today per crop/fruit/item id (demand curves; daily). */
   dem?: Record<string, number>;
   /** 오늘의 가구 rerolls today (daily). */
@@ -306,18 +338,21 @@ export type PlusAction =
   | { kind: 'expandFarm' }
   | { kind: 'waterFriend'; owner: number | string; plot: number }
   | { kind: 'buyFurniture'; ref: string; n?: number }
-  | { kind: 'buyItem'; item: string; n?: number }
-  | { kind: 'upgradeRod' }
+  /** `at`: the shop I stand at (lounge-shops.ts; the cloud engine checks the district). */
+  | { kind: 'buyItem'; item: string; n?: number; at?: ShopId }
+  | { kind: 'upgradeRod'; at?: ShopId }
   | { kind: 'cast'; spot: Spot }
   | { kind: 'reel'; token: string; timingMs: number }
   | { kind: 'cancelCast'; token: string }
   | { kind: 'forage'; spot: string }
   | { kind: 'catch'; spot: string }
-  | { kind: 'sellItem'; item: string; n: number }
+  /** Without `at` (from the bag) the price is SELL_AWAY (85%). */
+  | { kind: 'sellItem'; item: string; n: number; at?: ShopId }
   | { kind: 'donate'; item: string }
   | { kind: 'cook'; recipe: string; n?: number }
   | { kind: 'craft'; recipe: string; n?: number }
-  | { kind: 'eat'; item: string }
+  /** `where` is filled by the cloud engine from the real player (함께 먹기). */
+  | { kind: 'eat'; item: string; where?: EatPlace }
   | { kind: 'contribute'; bundle: string; slot: number; n: number }
   | { kind: 'deliver'; to: number }
   | { kind: 'claimEvent'; event: string }
@@ -353,7 +388,10 @@ export const PLUS_REJECT = {
   recipeLocked: '아직 배우지 못한 레시피예요. 마을 복원이 필요해요.',
   ingredients: '재료가 부족해요.',
   noBuff: '먹어도 특별한 효과가 없는 음식이에요.',
-  ate: '오늘은 이미 든든하게 먹었어요.',
+  ate: '오늘은 이미 든든하게 먹었어요. 식사 칸은 자정에 비어요.',
+  shopHere: '가게에 가서 사 주세요. 시장 거리·항구·주점에 가게마다 파는 물건이 달라요.',
+  shopItem: '이 가게에서는 팔지 않는 물건이에요.',
+  peddlerOnce: '이번 주에 이미 산 물건이에요. 다음 주에 새 물건이 들어와요.',
   bundle: '꾸러미를 확인해 주세요.',
   bundleDone: '이미 완성된 꾸러미예요.',
   slotFull: '이미 다 채운 칸이에요.',
@@ -511,6 +549,21 @@ function readUserExt(v: unknown): UserExt | undefined {
     const dem = counts(x.dem, isDemandId, DAILY_KEYS_MAX * 2);
     if (nonEmpty(dem)) out.dem = dem as Record<string, number>;
     if (safe(x.reroll) && x.reroll > 0) out.reroll = Math.min(SHOP_REROLL_MAX, x.reroll);
+    if (safe(x.hag) && x.hag > 0) out.hag = Math.min(HAGGLE_CAP, x.hag);
+  }
+  const sn = obj(x.snack);
+  if (typeof sn.kind === 'string' && own(BUFF_INFO, sn.kind) && typeof sn.food === 'string' && own(SHOP_FOOD_BY_ID, sn.food) && safe(sn.until))
+    out.snack = { kind: sn.kind as DishBuff, food: sn.food, until: sn.until, ...(sn.weak === true ? { weak: true as const } : {}) };
+  const taste = idList(x.taste, TASTE_IDS.length, isTasteId);
+  if (taste.length) out.taste = taste;
+  if (safe(x.tasteRw) && x.tasteRw > 0) out.tasteRw = Math.min(TASTE_IDS.length, x.tasteRw);
+  const ea = obj(x.eatAt);
+  if (safe(ea.at) && ea.at > 0 && (EAT_PLACES as readonly unknown[]).includes(ea.w)) out.eatAt = { at: ea.at, w: ea.w as EatPlace };
+  if (safe(x.mrk) && x.mrk > 0) out.mrk = Math.min(COUNT_MAX, x.mrk);
+  const ped = obj(x.ped);
+  if (safe(ped.w) && ped.w > 0) {
+    const got = idList(ped.got, 4, isItemId);
+    out.ped = { w: ped.w, got, ...(ped.deal === true ? { deal: true as const } : {}) };
   }
   if (x.house === 1 || x.house === 2 || x.house === 3 || x.house === 4) out.house = x.house;
   const lux = obj(x.lux);
@@ -659,19 +712,34 @@ function todayExt(life: LifeState, uid: string, now: number): UserExt {
     delete x.wished;
     delete x.dem;
     delete x.reroll;
+    delete x.hag;
   }
   return x;
 }
 export const farmSizeOf = (life: LifeState, uid: string): FarmSize =>
   life.ext?.[uid]?.plots ?? FARM_SIZES[0];
 export const hasFlag = (life: LifeState, flag: string) => !!life.flags?.includes(flag);
-const buffOf = (life: LifeState, uid: string, now: number) => {
-  const b = life.ext?.[uid]?.buff;
-  return b && now < b.until ? b : null;
-};
 /** Growth bonus for crops planted or fertilized now (초록 손 buff). */
 export const plantSpeed = (life: LifeState, uid: string, now: number) =>
-  buffOf(life, uid, now)?.kind === 'grow' ? GROW_BUFF_SPEED : 0;
+  hasBuff(life, uid, now, 'grow') ? GROW_BUFF_SPEED : 0;
+/**
+ * 범 for a sale of `base` 범 of `id`: the full price at the item's own shop
+ * (`at`), SELL_AWAY from the bag; 흥정 adds HAGGLE_SHARE at the shop (at most
+ * HAGGLE_CAP a day). Throws when `at` is a shop that does not buy the item.
+ */
+export function shopSaleAmount(life: LifeState, uid: string, actor: number, at: unknown, id: string, base: number, now: number) {
+  const share = saleShare(life, actor, at, id, now);
+  const amount = Math.round(base * share);
+  if (share < 1 || !hasBuff(life, uid, now, 'haggle')) return amount;
+  const x = todayExt(life, uid, now),
+    extra = Math.max(0, Math.min(Math.round(amount * HAGGLE_SHARE), HAGGLE_CAP - (x.hag ?? 0)));
+  if (extra) x.hag = (x.hag ?? 0) + extra;
+  return amount + extra;
+}
+/** 흥정 범 a sale of `amount` at its own shop would add now (quotes). */
+export const haggleLeft = (life: LifeState, uid: string, now: number) =>
+  hasBuff(life, uid, now, 'haggle') ? Math.max(0, HAGGLE_CAP - (demandDay(life, uid, now) ? (life.ext?.[uid]?.hag ?? 0) : 0)) : 0;
+const demandDay = (life: LifeState, uid: string, now: number) => life.ext?.[uid]?.day === kstDay(now);
 /** Village-wide growth bonus for newly planted crops (온실 확장). */
 export const villageGrowSpeed = (life: LifeState) => (hasFlag(life, 'greenhouse2') ? GREENHOUSE2_SPEED : 0);
 
@@ -752,8 +820,10 @@ export function sellQuote(
   q: Quality,
   n: number,
   now: number,
+  /** 1 at the item's own shop, SELL_AWAY (85%) from the bag or the shipping bin. */
+  share = 1,
 ) {
-  const unit = sellUnit(id, q, now, view.flags ?? []),
+  const unit = Math.round(sellUnit(id, q, now, view.flags ?? []) * share),
     sold = view.me.demand?.[id] ?? 0,
     soldBeom = view.soldToday ?? 0,
     bonus = view.growth ? sellBonus(view.growth.mods, id, q) : 0;
@@ -1474,14 +1544,25 @@ export function plusAction(
       break;
     }
     case 'buyItem': {
-      const price = typeof a.item === 'string' && own(ITEM_PRICES, a.item) ? ITEM_PRICES[a.item] : 0;
-      if (!price) fail(LIFE_REJECT.item);
-      const n = nInRange(a.n, 20);
-      next = spend(next, life, uid, price * n, 'buy-' + a.item, now);
+      // 가게 나누기: goods are bought at their own shop only (lounge-shops.ts shopOffer).
+      if (typeof a.item !== 'string' || !isItemId(a.item)) fail(LIFE_REJECT.item);
+      if (!isShopId(a.at)) fail(PLUS_REJECT.shopHere);
+      const offer = shopOffer(life, actor, a.at!, a.item, now);
+      if (!offer) fail(PLUS_REJECT.shopItem);
+      const n = nInRange(a.n, offer!.max);
+      if (offer!.once) {
+        const week = weekOf(kstDay(now)),
+          ped = x.ped?.w === week ? x.ped : { w: week, got: [] as string[] };
+        if (ped.got.includes(a.item)) fail(PLUS_REJECT.peddlerOnce);
+        x.ped = { ...ped, got: [...ped.got, a.item] };
+      }
+      next = spend(next, life, uid, offer!.price * n, 'buy-' + a.item, now);
       addInv(life, uid, a.item, n);
       break;
     }
     case 'upgradeRod': {
+      if (!isShopId(a.at)) fail(PLUS_REJECT.shopHere);
+      if (!shopOffer(life, actor, a.at!, 'rod', now)) fail(PLUS_REJECT.shopItem);
       const rod = x.rod ?? 1;
       if (rod >= 3) fail(PLUS_REJECT.rodMax);
       const to = (rod + 1) as 2 | 3;
@@ -1494,7 +1575,7 @@ export function plusAction(
       const season = seasonOf(now),
         weather = weatherOf(kstDay(now)),
         rod = x.rod ?? 1,
-        luck = buffOf(life, uid, now)?.kind === 'luck',
+        luck = luckMods(life, uid, now),
         bait = invCount(life, uid, 'bait') > 0,
         mods = growthMods(life, uid),
         insp = moodBiteBoost(life, uid, now);
@@ -1506,7 +1587,7 @@ export function plusAction(
         list = found.length ? found : FISH.filter((f) => f.spots.includes(a.spot) && f.weight >= 10);
       const lights = a.spot === 'sea' && isNighttime(now) && hasFlag(life, 'lights');
       const rareBoost =
-        (luck ? 2 : 1) *
+        luck.rare *
         (bait ? 2 : 1) *
         (rod === 3 ? 1.5 : 1) *
         (lights ? LIGHTS_RARE_BOOST : 1) *
@@ -1521,7 +1602,7 @@ export function plusAction(
       const [lo, hi] = fish.cm,
         cm = lo + (hash32(`cm:${token}`) % (hi - lo + 1)),
         biteAt = now + BITE_MIN_MS + (hash32(`bite:${token}`) % BITE_SPREAD_MS),
-        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * (luck ? 1.2 : 1) * (1 + mods.biteWindow) * insp.window);
+        windowMs = Math.round(fish.windowMs * ROD_WINDOW[rod] * luck.window * (1 + mods.biteWindow) * insp.window);
       x.pending = {
         token: token.slice(0, 24),
         spot: a.spot,
@@ -1611,7 +1692,7 @@ export function plusAction(
       const mods = growthMods(life, uid),
         flower = ITEM_BY_ID[item!]?.kind === 'flower',
         n =
-          (1 + (buffOf(life, uid, now)?.kind === 'forage' ? 1 : 0)) *
+          (1 + (hasBuff(life, uid, now, 'forage') ? 1 : 0)) *
             (flower && mods.flowerDouble ? 2 : 1) +
           (growthChance(life, uid, 'forage', mods.forageDouble, now) ? 1 : 0);
       (x.taken ??= []).push(key);
@@ -1636,7 +1717,7 @@ export function plusAction(
       const bug = bugAt(spot!.id, kstDay(now), slot);
       if (!bug) fail(PLUS_REJECT.nothingHere);
       (x.taken ??= []).push(key);
-      addInv(life, uid, bug!, 1 + (buffOf(life, uid, now)?.kind === 'bug' ? 1 : 0));
+      addInv(life, uid, bug!, 1 + (hasBuff(life, uid, now, 'bug') ? 1 : 0));
       bump(life, uid, 'bug', 1);
       gainXp(life, uid, 'forage', XP.bug, now);
       discover(life, uid, bug!);
@@ -1647,8 +1728,9 @@ export function plusAction(
       if (!def || def.sell <= 0) fail(PLUS_REJECT.noSell);
       if (!safe(a.n) || a.n < 1 || a.n > 999) fail(LIFE_REJECT.invalid);
       if (invCount(life, uid, def!.id) < a.n) fail(LIFE_REJECT.notEnough);
-      // Demand curve per item (fish per species): see demandMult. 성장 bonus on top.
-      const amount = Math.round(
+      // Demand curve per item (fish per species): see demandMult. 성장 bonus on top;
+      // then the shop share (100% at its own shop, 85% from the bag) and 흥정.
+      const base = Math.round(
           sellTotal(
             def!.id,
             sellUnit(def!.id, 0, now, life.flags ?? []),
@@ -1660,6 +1742,7 @@ export function plusAction(
             // 낚시 업그레이드: silver/gold fish sell best first (lounge-fish-quality).
             (def!.kind === 'fish' ? fishSaleMult(life, uid, def!.id, a.n) : 1),
         ),
+        amount = shopSaleAmount(life, uid, actor, a.at, def!.id, base, now),
         left = sellCapLeft(life, uid, now);
       if (amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
@@ -1743,6 +1826,8 @@ export function plusAction(
       break;
     }
     case 'eat': {
+      // 식사 칸: one meal a KST day (home cooking at home, a lunchbox anywhere — the
+      // cloud engine checks the place). Every dish has a buff since 2026-10.
       const dish = typeof a.item === 'string' && own(DISH_BY_ID, a.item) ? DISH_BY_ID[a.item] : undefined;
       if (!dish) fail(PLUS_REJECT.recipe);
       if (!dish!.buff) fail(PLUS_REJECT.noBuff);
@@ -1750,8 +1835,9 @@ export function plusAction(
       if (invCount(life, uid, dish!.id) < 1) fail(LIFE_REJECT.notEnough);
       addInv(life, uid, dish!.id, -1);
       x.ate = dish!.id;
-      // 성장: 미식가 keeps the buff until 06:00 KST the next day.
-      x.buff = { kind: dish!.buff!, dish: dish!.id, until: nextKstMidnight(now) + (growthMods(life, uid).longBuff ? 6 * 3_600_000 : 0) };
+      // 성장: 미식가 (and an 이국 요리) keeps the buff until 06:00 KST the next day.
+      x.buff = { kind: dish!.buff!, dish: dish!.id, until: nextKstMidnight(now) + (growthMods(life, uid).longBuff || dish!.long ? LONG_MEAL_MS : 0) };
+      next = tasteNote(life, next, uid, dish!.id, now);
       break;
     }
     case 'contribute': {
@@ -1970,7 +2056,14 @@ export type PlusMe = {
   spawns: { spot: string; district: string; kind: 'forage' | 'bug'; item: string; taken: boolean }[];
   requests: RequestView[];
   bonds: { actor: number; points: number; level: number; next: number | null }[];
+  /** 식사 칸 (meal slot). */
   buff: null | { kind: DishBuff; name: string; text: string; dish: string; until: number };
+  /** 간식 칸 (snack slot: 빵집 / 주점 food). */
+  snack: null | { kind: DishBuff; name: string; text: string; food: string; until: number; weak?: true };
+  /** 맛 도감: foods tasted and how many 도감 rewards were paid. */
+  taste: { ids: string[]; paid: number };
+  /** 흥정 범 still available today (0 without the buff). */
+  haggleLeft: number;
   ate: string | null;
   wished: boolean;
   claimed: string[];
@@ -2000,12 +2093,15 @@ export type PlusView = {
   festival: { week: number; got: number; goal: number; done: boolean; by: Record<string, number>; souvenir: string; resetAt: number };
   /** House tier per actor (houses in the village). */
   houses: Record<number, number>;
+  /** 가게 나누기: who buys fish, this week's specials, the 행상인. */
+  shops: ShopsView;
 };
 export function plusView(life: LifeState, uid: string, actor: number, now: number): PlusView & { me: PlusMe } {
   const day = kstDay(now),
     raw = life.ext?.[uid] ?? {},
     fresh = raw.day === day,
-    buff = buffOf(life, uid, now),
+    buff = mealSlot(life, uid, now),
+    snack = snackSlot(life, uid, now),
     slot = slotOf(now);
   const spawns: PlusMe['spawns'] = [];
   for (const spot of SPAWN_SPOTS) {
@@ -2073,7 +2169,12 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
           level = bondLevel(points);
         return { actor: f, points, level, next: BOND_LEVELS[level] ?? null };
       }),
-    buff: buff ? { kind: buff.kind, name: BUFF_INFO[buff.kind].name, text: BUFF_INFO[buff.kind].text, dish: buff.dish, until: buff.until } : null,
+    buff: buff ? { kind: buff.kind, name: BUFF_INFO[buff.kind].name, text: BUFF_INFO[buff.kind].text, dish: buff.food, until: buff.until } : null,
+    snack: snack
+      ? { kind: snack.kind, name: foodPreview(snack.food)?.name ?? BUFF_INFO[snack.kind].name, text: BUFF_INFO[snack.kind].text, food: snack.food, until: snack.until, ...(snack.weak ? { weak: true as const } : {}) }
+      : null,
+    taste: { ids: [...(raw.taste ?? [])], paid: raw.tasteRw ?? 0 },
+    haggleLeft: haggleLeft(life, uid, now),
     ate: fresh ? (raw.ate ?? null) : null,
     wished: fresh && !!raw.wished,
     claimed: [...(raw.claimed ?? [])],
@@ -2138,6 +2239,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
         .filter(([id, x]) => x.house && id in life.actors)
         .map(([id, x]) => [life.actors[id], x.house!]),
     ),
+    shops: shopsView(life, actor, now, raw.ped?.w === weekOf(day) ? [...raw.ped.got] : [], raw.ped?.w === weekOf(day) && !!raw.ped.deal),
   };
 }
 /** Owned premium furniture copies per ref (room-save validator input). */

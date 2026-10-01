@@ -311,7 +311,7 @@ test('a landed fish: bag, log, records, quality, weight, cup score, XP; selling 
   assert.equal(fishSaleMult(s.life, m.id, id, 1), 1.5);
   assert.equal(fishSaleMult(s.life, m.id, id, have), (1.5 + (have - 1)) / have);
   const before = s.ledger.accounts[`wallet-${m.id}`];
-  s.act(m, { kind: 'sellItem', item: id, n: 1 }, caught.landAt + 1000);
+  s.act(m, { kind: 'sellItem', item: id, n: 1, at: 'general' }, caught.landAt + 1000);
   const paid = s.ledger.accounts[`wallet-${m.id}`] - before;
   assert.ok(paid >= Math.round(FISH_BY_ID[id].sell * 1.5 * 0.9), `gold crucian paid ${paid}`);
   assert.equal(s.life.angling.u[m.id].fq?.[id], undefined, 'the gold mark went with the sale');
@@ -388,7 +388,7 @@ test('crab pots: need a pot and bait, fill after 4 hours, re-bait, pick up', () 
   s.fails(m, { kind: 'crabTake', spot: 'river' }, T0 + CRAB_READY_MS, ANGLING_REJECT.potFull);
   s.act(m, { kind: 'crabCollect', spot: 'river' }, T0 + CRAB_READY_MS);
   v = s.view(m, T0 + CRAB_READY_MS);
-  const got = ['snail', 'shrimp', 'crayfish'].filter((id) => v.me.inv[id]);
+  const got = ['daseulgi', 'shrimp', 'crayfish'].filter((id) => v.me.inv[id]);
   assert.equal(got.length, 1, 'a freshwater catch');
   assert.ok(v.me.dex.includes(got[0]));
   s.fails(m, { kind: 'crabCollect', spot: 'river' }, T0 + CRAB_READY_MS + 1, ANGLING_REJECT.potWait);

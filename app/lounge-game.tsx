@@ -57,10 +57,9 @@ import { loungeAudio } from './lounge-audio';
 import {
   FarmModal,
   MailModal,
-  ShopModal,
   StatusModal,
-  type ShopTab,
 } from './lounge/LifePanels';
+import { ShopsGuide } from './lounge/ShopGoods';
 import { CalendarChip, Hotbar, useHotbar, useHotbarKeys } from './lounge/LifeHud';
 import type { FishingPhase } from './lounge/Fishing';
 import type { BookTab } from './lounge/Collection';
@@ -543,7 +542,6 @@ function AccountLounge({
   // Life expansion (LIFE-B): panels, the hotbar and fishing.
   const [bookTab, setBookTab] = useState<BookTab>('fish'),
     [atMuseum, setAtMuseum] = useState(false),
-    [shopTab, setShopTab] = useState<ShopTab>('seeds'),
     [mailGift, setMailGift] = useState<string | undefined>(undefined),
     [requestFrom, setRequestFrom] = useState<number | null>(null),
     [talk, setTalk] = useState<{ script: DialogScript; hearts: number } | null>(null),
@@ -1073,10 +1071,8 @@ function AccountLounge({
     setAtMuseum(museum);
     setModal('collection');
   };
-  const openShop = (next: ShopTab = 'seeds') => {
-    setShopTab(next);
-    setModal('shop');
-  };
+  // 가게 나누기 (2026-10): the old 범타듀 상점 window is now the 가게 안내 card.
+  const openShop = () => setModal('shop');
   const giftItem = (item: string) => {
     setMailTo(undefined);
     setMailGift(item);
@@ -2265,7 +2261,7 @@ function AccountLounge({
                       dayNight={settings.dayNight}
                       onFarm={farmAct}
                       onPlot={plotAct}
-                      onShop={() => openShop('seeds')}
+                      onShop={() => openShop()}
                       onMail={() => openMail()}
                       onPick={(tree) => void pickFruit(tree)}
                       onVisit={visitHouse}
@@ -2435,7 +2431,7 @@ function AccountLounge({
                 onMove={move}
                 onTable={tableAct}
                 onExit={leaveInterior}
-                onHost={interior === 'tavern' ? () => setModal('tavernUp') : interior === 'casino' ? () => { setFinanceMode('casino'); setModal('bank'); } : undefined}
+                onHost={interior === 'tavern' ? () => setTownPlace('tavern') : interior === 'casino' ? () => { setFinanceMode('casino'); setModal('bank'); } : undefined}
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
@@ -2640,7 +2636,7 @@ function AccountLounge({
               items: [
                 { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
                 { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
-                { id: 'shop', label: '범타듀 상점', glyph: 'store', onClick: () => setModal('shop') },
+                { id: 'shop', label: '가게 안내', glyph: 'store', onClick: () => setModal('shop') },
                 { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); } },
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
@@ -2759,7 +2755,6 @@ function AccountLounge({
             onTravel={(area) => travelTo(area)}
             onOpen={(what) => {
               setTownPlace(null);
-              if (what === 'shop') setShopTab('seeds');
               setModal(what);
             }}
           />
@@ -2944,19 +2939,15 @@ function AccountLounge({
           onClose={() => setModal(null)}
           hotbar={hotbar}
           onGift={giftItem}
-          onShop={() => openShop('seeds')}
+          onShop={() => openShop()}
         />
       )}
       {modal === 'shop' && (
-        <ShopModal
-          room={room}
+        <ShopsGuide
           view={view}
-          notify={notify}
-          initialTab={shopTab}
-          onGoShop={(where) => {
+          onTravel={(area) => {
             setModal(null);
-            const place = VILLAGE_PLACES.find((p) => p.id === where);
-            if (place) walkTo(place.entry);
+            travelTo(area);
           }}
           onClose={() => setModal(null)}
         />

@@ -72,7 +72,9 @@ import {
   type ToolId,
 } from './lounge-growth-data.ts';
 import { LIFE_REJECT, LifeError, uidOf, type LifeState } from './lounge-life.ts';
-import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorPick, mineDrop, mineFloor } from './lounge-mine.ts';
+import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorOre, floorPick, mineDrop, mineFloor } from './lounge-mine.ts';
+// 음식 버프: 배움 (XP), 광부의 힘 (mine ore), 나무꾼 (wood) — lounge-food-data.ts.
+import { MINE_BUFF_EVERY, MINE_BUFF_VEIN, hasBuff, learnMult } from './lounge-food-data.ts';
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
 import { moodXpMult } from './lounge-mood.ts';
@@ -393,7 +395,7 @@ export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
  * bonus); the cap itself is unchanged. 1 = no change.
  */
 export function xpMultiplier(life: LifeState, uid: string, _skill: SkillId, now: number): number {
-  return moodXpMult(life, uid, now);
+  return moodXpMult(life, uid, now) * learnMult(life, uid, now);
 }
 /**
  * Adds XP from a life action: ×CATCH_UP when behind the village median, the
@@ -744,10 +746,10 @@ export function growthAction(
         addInv(life, uid, item, NODE_YIELD.shroom + (growthChance(life, uid, 'shroom', mods.forageDouble, now) ? 1 : 0));
         gainXp(life, uid, 'forage', NODE_XP.shroom, now);
       } else if (node!.kind === 'stump') {
-        addInv(life, uid, 'hardwood', Math.round(NODE_YIELD.stump * mods.woodMult));
+        addInv(life, uid, 'hardwood', Math.round(NODE_YIELD.stump * mods.woodMult) + (hasBuff(life, uid, now, 'wood') ? 1 : 0));
         gainXp(life, uid, 'forage', NODE_XP.stump, now);
       } else {
-        const wood = Math.round((NODE_YIELD[node!.kind] + mods.woodBonus) * mods.woodMult);
+        const wood = Math.round((NODE_YIELD[node!.kind] + mods.woodBonus) * mods.woodMult) + (hasBuff(life, uid, now, 'wood') ? 1 : 0);
         addInv(life, uid, 'wood', wood);
         gainXp(life, uid, NODE_INFO[node!.kind].skill, NODE_XP[node!.kind], now);
       }
@@ -779,10 +781,17 @@ export function growthAction(
       (u.mrock ??= []).push(key);
       const mods = growthMods(life, uid),
         seq = ++life.seq;
-      const drop = mineDrop(`${uid}:${day}:${key}:${seq}`, a.floor, rock!.vein, mods.copperPts);
+      const miner = hasBuff(life, uid, now, 'mine');
+      const drop = mineDrop(`${uid}:${day}:${key}:${seq}`, a.floor, rock!.vein, mods.copperPts + (miner ? MINE_BUFF_VEIN : 0));
       const ore = drop.item !== 'stone' && drop.item !== 'gem';
       const n = ore ? Math.round((drop.n + mods.oreBonus) * mods.oreMult) : drop.item === 'stone' ? Math.round(drop.n * mods.stoneMult) : drop.n;
       addInv(life, uid, drop.item, n);
+      // 광부의 힘: every third rock under the buff gives one more of the floor's ore.
+      if (miner) {
+        const x = ((life.ext ??= {})[uid] ??= {});
+        x.mrk = (x.mrk ?? 0) + 1;
+        if (x.mrk % MINE_BUFF_EVERY === 0) addInv(life, uid, floorOre(a.floor), 1);
+      }
       if (drop.fossil) {
         addInv(life, uid, drop.fossil, 1);
         const name = REGION_ITEMS.find((i) => i.id === drop.fossil)?.name ?? '화석';

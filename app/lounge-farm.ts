@@ -82,12 +82,15 @@ import {
   noteDemand,
   sellBonus,
   sellTotal,
+  shopSaleAmount,
   sellUnit,
   soldBeomToday,
   weekOfDay,
   weekResetAt,
 } from './lounge-life-plus.ts';
 import { gainXp, growthMods, skillLevel } from './lounge-growth.ts';
+// 가게 나누기: the shipping bin pays SELL_AWAY (85%); goods pay 100% at the 농협.
+import { SELL_AWAY, type ShopId } from './lounge-shops.ts';
 import { SKILL_INFO, XP } from './lounge-growth-data.ts';
 
 const HOUR = 3_600_000;
@@ -143,7 +146,8 @@ export type FarmAction =
   | { kind: 'farmCollect'; slot?: number; tile?: number }
   | { kind: 'ship'; item: string; q?: Quality; n: number }
   | { kind: 'unship'; item: string; q?: Quality; n: number }
-  | { kind: 'sellGoods'; item: string; q?: Quality; n: number }
+  /** `at`: 'coop' pays 100%; from the bag (no `at`) 85%. */
+  | { kind: 'sellGoods'; item: string; q?: Quality; n: number; at?: ShopId }
   | { kind: 'harvestFriend'; owner: number | string }
   | { kind: 'fairEnter'; item: string; q?: Quality };
 // Compile-time check that the action kinds and the data list agree.
@@ -497,7 +501,7 @@ function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: numb
     let got = 0,
       pay = 0;
     for (; got < n; got++) {
-      const one = Math.round(sellTotal(s.id, unit, sold + got, 1, before + pay) * (1 + bonus));
+      const one = Math.round(sellTotal(s.id, unit, sold + got, 1, before + pay) * (1 + bonus) * SELL_AWAY);
       if (amount + pay + one > cap) break;
       pay += one;
     }
@@ -914,7 +918,7 @@ export function farmAction(
       if (!isGoodId(s.id)) fail(FARM_REJECT.item);
       if (stockCount(life, uid, s.id, s.q) < n) fail(FARM_REJECT.stock);
       const unit = stockUnit(s.id, s.q, now, life.flags ?? []),
-        amount = sellTotal(s.id, unit, demandSold(life, uid, now, s.id), n, soldBeomToday(life, uid, now)),
+        amount = shopSaleAmount(life, uid, actor, a.at, s.id, sellTotal(s.id, unit, demandSold(life, uid, now, s.id), n, soldBeomToday(life, uid, now)), now),
         left = SELL_CAP_PER_DAY - soldBeomToday(life, uid, now);
       if (amount > left) fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
       stockAdd(life, uid, s.id, s.q, -n);
@@ -1016,7 +1020,7 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
       ? {
           day: x.bin.day,
           items: binItems,
-          value: binItems.reduce((t, s) => t + s.n * stockUnit(s.id, s.q, now, life.flags ?? []), 0),
+          value: Math.round(binItems.reduce((t, s) => t + s.n * stockUnit(s.id, s.q, now, life.flags ?? []), 0) * SELL_AWAY),
           payAt: nextKstMidnight(dayStart(x.bin.day)),
         }
       : null,

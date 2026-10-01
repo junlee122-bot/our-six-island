@@ -99,8 +99,8 @@ export function VillageLifeList({
           <button onClick={onShop} data-testid="simple-shop">
             <Store size={18} aria-hidden="true" />
             <span>
-              <strong>범타듀 상점</strong>
-              <small>씨앗 · 희귀 소품 · 머리색 팔레트</small>
+              <strong>가게 안내</strong>
+              <small>씨앗은 잡화점, 낚시 도구는 어시장</small>
             </span>
           </button>
         )}

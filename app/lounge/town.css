@@ -22,3 +22,19 @@
 .l-town-row strong { color: var(--text); font-size: var(--fs-body); }
 .l-town-row small { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); color: var(--text-soft); font-size: var(--fs-cap); }
 .l-town-head { margin: var(--sp-4) 0 var(--sp-2); font-family: var(--font-display); font-size: var(--fs-body); font-weight: 400; color: var(--text); }
+
+/* 가게 나누기 · 음식 시스템 (ShopGoods.tsx): tokens only. */
+.l-shop-tag { display: inline-block; margin-left: var(--sp-1); padding: 0 var(--sp-2); border-radius: var(--r-s); background: var(--highlight-soft); color: var(--text); font-size: var(--fs-cap); font-style: normal; font-weight: var(--fw-semi); }
+.l-food-buff { color: var(--pal-violet-35); font-weight: var(--fw-semi); }
+.l-food-buff[data-slot='meal'] { color: var(--leaf-800); }
+.l-buff-slots { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); }
+.l-buff-slot { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-s); background: var(--pal-grey-96); color: var(--pal-violet-35); font-size: var(--fs-cap); font-weight: var(--fw-bold); }
+.l-buff-slot[data-slot='meal'] { color: var(--leaf-800); }
+.l-buff-slot:not([data-on]) { color: var(--text-soft); font-weight: var(--fw-regular); }
+.l-buff-slot small { color: var(--text-soft); font-size: var(--fs-cap); font-weight: var(--fw-regular); }
+.l-taste-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.l-taste-grid li { display: grid; justify-items: center; gap: var(--sp-1); padding: var(--sp-2); border-radius: var(--r-m); background: var(--surface-sunken); text-align: center; }
+.l-taste-grid li:not([data-seen]) .l-item-icon { opacity: 0.35; filter: grayscale(1); }
+.l-taste-grid small { color: var(--text-soft); font-size: var(--fs-cap); line-height: var(--lh-tight); }
+.l-taste-grid li[data-seen] small { color: var(--text); }
+.l-shop-tabs { margin-bottom: var(--sp-3); }

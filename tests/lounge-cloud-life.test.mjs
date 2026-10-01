@@ -128,8 +128,15 @@ test('buy is idempotent: replaying the same request never charges twice', async 
   const h = harness(),
     a = member(0);
   await h.run(a, 'open');
+  // 가게 나누기: palettes are at the 등불 잡화점 in 시장 거리, bought only at its counter.
+  const away = await h.run(a, 'action', { action: { kind: 'buy', item: 'palette-pastel', at: 'general' } });
+  assert.equal(away.response.ok, false);
+  assert.equal(away.response.error, '등불 잡화점에 가서 해 주세요.');
+  const noShop = await h.run(a, 'action', { action: { kind: 'buy', item: 'palette-pastel' } });
+  assert.equal(noShop.response.ok, false);
+  assert.equal((await h.run(a, 'action', { action: { kind: 'area', area: 'market', x: 0, y: 0 } })).response.ok, true);
   const bought = await h.run(a, 'action', {
-    action: { kind: 'buy', item: 'palette-pastel' },
+    action: { kind: 'buy', item: 'palette-pastel', at: 'general' },
   });
   assert.equal(bought.response.ok, true);
   assert.equal(balance(h, a), INITIAL_BEOM - 30_000);
@@ -137,7 +144,7 @@ test('buy is idempotent: replaying the same request never charges twice', async 
   assert.equal(replay.response.ok, true);
   assert.equal(balance(h, a), INITIAL_BEOM - 30_000);
   const again = await h.run(a, 'action', {
-    action: { kind: 'buy', item: 'palette-pastel' },
+    action: { kind: 'buy', item: 'palette-pastel', at: 'general' },
   });
   assert.equal(again.response.ok, false);
   assert.equal(again.response.error, '이미 가지고 있는 물건이에요.');
@@ -174,11 +181,12 @@ test('sell and mail gifts through the cloud keep the ledger valid', async () => 
   await h.run(a, 'action', { action: { kind: 'pick', tree: 'tree-1' } });
   const fruit = h.world.life.bag[a.id].fruit;
   assert.ok(fruit >= 1);
+  // From the bag (not at the 농협 counter) fruit pays 85%: 150 → 128.
   const sold = await h.run(a, 'action', { action: { kind: 'sell', crop: 'fruit', n: 1 } });
   assert.equal(sold.response.ok, true);
-  assert.equal(balance(h, a), INITIAL_BEOM + 150);
-  assert.equal(sold.response.life.sellCapLeft, SELL_CAP_PER_DAY - 150);
-  assert.equal(sold.response.life.soldToday, 150);
+  assert.equal(balance(h, a), INITIAL_BEOM + 128);
+  assert.equal(sold.response.life.sellCapLeft, SELL_CAP_PER_DAY - 128);
+  assert.equal(sold.response.life.soldToday, 128);
   assert.equal(sold.response.life.me.demand.fruit, 1);
   h.world.life.bag[a.id].fruit = 3;
   {

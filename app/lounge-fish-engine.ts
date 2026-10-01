@@ -55,6 +55,8 @@ import {
 import { XP, fishXp } from './lounge-growth-data.ts';
 import { gainXp, growthChance, growthMods, skillLevel, toolTier } from './lounge-growth.ts';
 import { moodBiteBoost } from './lounge-mood.ts';
+// 물고기의 행운: the 식사 칸 (×2 rare, window ×1.2) or 뱃사람 안주 in the 간식 칸 (×1.5, ×1.1).
+import { luckMods } from './lounge-food-data.ts';
 
 // ---------------------------------------------------------------- constants
 /**
@@ -314,8 +316,10 @@ function readUser(v: unknown): AnglerUser | undefined {
   const last = readLast(x.last);
   if (last) out.last = last;
   const log: Record<string, SpeciesLog> = {};
-  for (const [id, e] of Object.entries(obj(x.log)).slice(0, FISH.length)) {
+  for (const [raw, e] of Object.entries(obj(x.log)).slice(0, FISH.length)) {
     const s = obj(e);
+    // 다슬기 was logged as 'snail' before it got its own id (달팽이 the bug keeps 'snail').
+    const id = raw === 'snail' ? 'daseulgi' : raw;
     if (isFish(id) && nat(s.n) && s.n > 0 && nat(s.cm) && nat(s.g) && isQ(s.q) && nat(s.first))
       log[id] = { n: Math.min(COUNT_MAX, s.n), cm: s.cm, g: s.g, q: s.q, first: s.first };
   }
@@ -446,7 +450,7 @@ const BUILD: Readonly<Record<string, number>> = {
   eel: 0.35, snakehead: 0.7, loach: 0.45, hairtail: 0.28, conger: 0.35, moonhairtail: 0.28,
   flounder: 1.25, puffer: 1.3, goldfish: 1.3, bluegill: 1.35, filefish: 1.2,
   squid: 0.75, mitre: 0.75, octopus: 0.9, crayfish: 1.6, lakelord: 0.8, icecod: 0.9,
-  snail: 2.2, shrimp: 1.1, crab: 2.2, clam: 2.4, oyster: 2.2, conch: 2.4,
+  daseulgi: 2.2, shrimp: 1.1, crab: 2.2, clam: 2.4, oyster: 2.2, conch: 2.4,
 };
 /** Weight in grams of a fish of `cm` (records, cards). */
 export const fishGrams = (id: string, cm: number) => Math.max(1, Math.round(15.5 * (BUILD[id] ?? 1) * (cm / 10) ** 3));
@@ -532,10 +536,7 @@ function pickWeighted<T>(list: readonly T[], weight: (t: T) => number, key: stri
   }
   return list[list.length - 1];
 }
-const buffKind = (life: LifeState, uid: string, now: number) => {
-  const b = life.ext?.[uid]?.buff;
-  return b && now < b.until ? b.kind : null;
-};
+
 /** Legends a friend already has (new flow, or a personal best from the legacy flow). */
 const legendsOf = (life: LifeState, uid: string) => {
   const mine = life.angling?.u?.[uid]?.legends ?? [],
@@ -625,7 +626,7 @@ export function anglingAction(
       const ctx = contextOf(life, uid, now),
         mods = growthMods(life, uid),
         rod = ctx.rod ?? 1,
-        luck = buffKind(life, uid, now) === 'luck',
+        luck = luckMods(life, uid, now),
         insp = moodBiteBoost(life, uid, now),
         night = isNighttime(now),
         sea = SEA_SPOTS.includes(spot),
@@ -637,7 +638,7 @@ export function anglingAction(
         list = found.length ? found : FISH.filter((f) => f.spots.includes(spot) && f.weight >= 10);
       const lights = spot === 'sea' && night && hasFlag(life, 'lights');
       const rareBoost =
-        (luck ? 2 : 1) *
+        luck.rare *
         (bait === 'bait' ? 2 : 1) *
         (bait === 'bait-shrimp' && sea ? 1.5 : 1) *
         (bait === 'bait-glow' && night ? 2 : 1) *
@@ -665,7 +666,7 @@ export function anglingAction(
       const wait = (BITE_MIN_MS + (hash32(`angle-bite:${token}`) % BITE_SPREAD_MS)) * (bait === 'bait-dough' && fresh ? 0.5 : 1),
         biteAt = now + Math.round(wait),
         rodWindow = rod >= 4 ? 1.75 : ROD_WINDOW[Math.max(1, Math.min(3, rod)) as 1 | 2 | 3],
-        windowMs = Math.round(fish.windowMs * rodWindow * (luck ? 1.2 : 1) * (1 + mods.biteWindow) * insp.window);
+        windowMs = Math.round(fish.windowMs * rodWindow * luck.window * (1 + mods.biteWindow) * insp.window);
       delete u.fight;
       u.cast = { token, spot, castAt: now, biteAt, windowMs, expiresAt: biteAt + windowMs + hookSlackMs(fish), fish: fish.id, cm, ...(bait ? { bait } : {}), coop };
       break;

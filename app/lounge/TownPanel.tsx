@@ -4,16 +4,25 @@
 // needs), 신문사 (yesterday's news and 잔나's forecast), 파출소 (볼리바스's robbery
 // board), 항구 어시장 (fish buying and the dawn auction), 낚시조합 (the weekly
 // cup), 언덕 도서관 (the reading club), 장날 좌판 and the 친구에게 가기 signpost.
-// 잡화점 and 우체국 open the existing shop and mail windows (lounge-game.tsx).
-// Every trade is a server action (lounge-town.ts, lounge-life.ts); this only
-// shows numbers from the view and sends the choice.
+// 가게 나누기 (2026-10): every shop sells its own goods here and buys its own
+// kind of goods at full price (ShopGoods.tsx); 허풍 주점's bar is a counter
+// too. 우체국 opens the mail window (lounge-game.tsx). Every trade is a server
+// action (lounge-town.ts, lounge-life.ts, lounge-shops.ts); this only shows
+// numbers from the view and sends the choice.
+import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROP_INFO, type Crop, type LifeAction } from '../lounge-life';
 import { ITEM_BY_ID, ITEM_PRICES } from '../lounge-items';
+import { SHOP, type ShopItem } from '../lounge-life';
+import { PEDDLER_POOL, SPICES_IDS, type ShopId } from '../lounge-shops';
+import { FoodMenu, LunchShelf, ShopBuy, ShopSell } from './ShopGoods';
+import { Tabs, tabPanelProps } from '../ui/Tabs';
+import { DealerAvatar } from '../lounge-dealer-host';
+import { HOSTS } from '../lounge-dealer-lines';
 import { itemName } from '../lounge-life-plus';
 import { NPCS, type NpcId } from '../lounge-npc-data';
 import { jannaForecast, jannaMissedToday } from '../lounge-npc-dialog';
-import { BAKERY_MENU, AUCTION_PREMIUM, COOP_WEEK_BONUS, READING_XP, STALL_PER_DAY, type StallId } from '../lounge-town';
+import { AUCTION_PREMIUM, COOP_WEEK_BONUS, READING_XP, STALL_PER_DAY, type StallId } from '../lounge-town';
 import { SKILLS, SKILL_INFO } from '../lounge-growth-data';
 import { FIXTURES } from '../lounge-farm-data';
 import { ACTORS } from '../lounge-roster';
@@ -30,11 +39,18 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './town.css';
 
-export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'signpost';
+export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'tavern' | 'signpost';
+/** Everything a counter may sell; ShopBuy shows only what that shop has now (lounge-shops.ts shopOffer). */
+const SEEDS = SHOP.filter((i: ShopItem) => i.kind === 'seed' || i.kind === 'bundle').map((i) => i.id);
+const UNLOCKS = SHOP.filter((i: ShopItem) => i.kind === 'trophy' || i.kind === 'palette').map((i) => i.id);
+const SOIL = ['fertilizer', 'fertilizer-deluxe', 'speed-gro', 'retaining'];
+const TACKLE = [...Object.keys(ITEM_PRICES).filter((id) => !SOIL.includes(id)), 'rod'];
+const PEDDLER_ITEMS = [...SPICES_IDS, ...PEDDLER_POOL.map((p) => p.item)];
+type Page = 'buy' | 'sell' | 'more';
 /** Where a friend can be found by the signpost (areas with a gate to walk to). */
 export type TravelArea = 'village' | DistrictId;
 
-const KEEPER: Record<Exclude<TownPlace, 'signpost'>, { npc: NpcId; title: string; line: string }> = {
+const KEEPER: Record<Exclude<TownPlace, 'signpost' | 'tavern'>, { npc: NpcId; title: string; line: string }> = {
   coop: { npc: 'nasera', title: '범마을 농협', line: '이번 주 시세표에 오른 작물은 웃돈을 드립니다. 규칙대로요.' },
   general: { npc: 'thresh', title: '등불 잡화점', line: '후후, 씨앗도 도구도 다 있어요. 밭 설비 도면도요.' },
   bakery: { npc: 'frieren', title: '느긋한 빵집 카페', line: '오늘 빵은 다 구웠어. 아마. 하나 골라.' },
@@ -83,8 +99,8 @@ type Props = {
   onClose: () => void;
   /** 친구에게 가기: walk in at this area's gate. */
   onTravel?: (area: TravelArea) => void;
-  /** 잡화점: the shop window (seeds, tools) or the farm window (building fixtures). */
-  onOpen?: (what: 'shop' | 'farm') => void;
+  /** 잡화점: the farm window (building fixtures); 허풍 주점: the shop upgrade board. */
+  onOpen?: (what: 'farm' | 'tavernUp') => void;
 };
 
 export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen }: Props) {
@@ -93,65 +109,72 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
   const [run, busy] = useLifeAction(room, notify);
   const now = useNow(true, 30_000) + view.clockOffset;
   const me = view.players.find((p) => p.id === view.self);
-  const keeper = place === 'signpost' ? null : KEEPER[place];
-  const title = place === 'signpost' ? '친구에게 가기' : keeper!.title;
+  const keeper = place === 'signpost' || place === 'tavern' ? null : KEEPER[place];
+  const title = place === 'signpost' ? '친구에게 가기' : place === 'tavern' ? '허풍 주점 · 허 선장' : keeper!.title;
   const act = (a: LifeAction, done: string) => void run(a, done, 'coin');
+  const [page, setPage] = useState<Page>('buy');
+  const base = { room, view, notify };
+  /** 사기 / 팔기 (/ extra) tabs of a shop counter. */
+  const tabs = (id: string, pages: { id: Page; label: string }[], body: Record<string, () => React.ReactNode>) => (
+    <>
+      <Tabs<Page> className="l-shop-tabs" label="가게" idBase={`shop-${id}`} value={pages.some((p) => p.id === page) ? page : pages[0].id} onChange={setPage} items={pages.map((p) => ({ id: p.id, label: p.label }))} />
+      <div {...tabPanelProps(`shop-${id}`, pages.some((p) => p.id === page) ? page : pages[0].id)}>{body[pages.some((p) => p.id === page) ? page : pages[0].id]()}</div>
+    </>
+  );
+  const fishShop: ShopId = life?.shops?.fishShop ?? 'general';
 
   const body = (() => {
     if (!life || !town) return <EmptyState glyph="store" title="마을에 접속한 뒤 이용할 수 있어요" />;
     switch (place) {
       case 'coop': {
-        const week = new Set<Crop>(town.coop.crops);
-        const crops = (Object.entries(life.me.bag.produce) as [Crop, number][]).filter(([, n]) => n > 0);
         return (
           <>
             <section className="l-town-notice" aria-label="나세라의 주간 시세">
               <strong>이번 주 시세표</strong>
               <p>
                 {town.coop.crops.map((c) => CROP_INFO[c]?.name ?? c).join(' · ')} — 팔면 {Math.round(COOP_WEEK_BONUS * 100)}% 웃돈 · 오늘 남은 웃돈 {formatBeom(town.coop.bonusLeft)}
+                {life.shops?.coopSeeds.open ? ' · 오늘은 일요 작물 좌판: 시세표 작물 씨앗 10% 할인' : ''}
               </p>
             </section>
-            {crops.length ? (
-              <ul className="l-town-list">
-                {crops.map(([c, n]) => (
-                  <li key={c} className="l-town-row" data-testid={`coop-${c}`}>
-                    <ItemIcon id={c} size={36} />
-                    <div>
-                      <strong>
-                        {CROP_INFO[c]?.name ?? c} <small>가진 개수 {n}</small>
-                      </strong>
-                      <small>
-                        기본 {formatBeom(CROP_INFO[c]?.sell ?? 0)}
-                        {week.has(c) ? ` · 시세표 작물 +${Math.round(COOP_WEEK_BONUS * 100)}%` : ''}
-                      </small>
-                    </div>
-                    <span className="l-town-buttons">
-                      <GameButton size="s" disabled={busy} onClick={() => act(week.has(c) ? { kind: 'coopSell', crop: c, n: 1 } : { kind: 'sell', crop: c, n: 1 }, `${CROP_INFO[c]?.name ?? c} 1개를 팔았어요.`)}>
-                        1개
-                      </GameButton>
-                      <GameButton size="s" variant="primary" disabled={busy} onClick={() => act(week.has(c) ? { kind: 'coopSell', crop: c, n } : { kind: 'sell', crop: c, n }, `${CROP_INFO[c]?.name ?? c} ${n}개를 팔았어요.`)}>
-                        모두
-                      </GameButton>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState glyph="wheat" title="팔 수확물이 없어요" />
-            )}
+            {tabs('coop', [
+              { id: 'sell', label: '작물·과일·가공품 팔기' },
+              { id: 'buy', label: '일요 작물 좌판' },
+            ], {
+              sell: () => <ShopSell {...base} at="coop" coopWeek={town.coop.crops as Crop[]} />,
+              buy: () =>
+                life.shops?.coopSeeds.open ? (
+                  <ShopBuy {...base} at="coop" items={SEEDS} />
+                ) : (
+                  <EmptyState glyph="sprout" title="작물 좌판은 일요일에 열려요" hint="시세표 작물의 씨앗을 10% 싸게 팔아요." />
+                ),
+            })}
           </>
         );
       }
       case 'general':
-        return (
+        return tabs('general', [
+          { id: 'buy', label: '사기' },
+          { id: 'sell', label: '팔기' },
+          { id: 'more', label: '밭 설비 도면' },
+        ], {
+          buy: () => (
+            <>
+              {life.shops && (
+                <p className="l-town-sub" data-testid="general-week">
+                  이번 주 특가 {itemName(life.shops.special.item)} {formatBeom(life.shops.special.price)}
+                  {life.shops.lantern.open ? ' · 지금은 토요일 밤 등불 상점! 비싼 씨앗 3종이 20% 싸요' : ' · 토요일 저녁 7시부터 자정까지 등불 상점이 열려요'}
+                  {fishShop === 'general' ? ' · 항구가 열리기 전까지 낚시 도구도 여기서 팔아요' : ''}
+                </p>
+              )}
+              <ShopBuy {...base} at="general" items={SEEDS} title="씨앗 · 꾸러미" />
+              <ShopBuy {...base} at="general" items={SOIL} title="비료 · 흙" />
+              <ShopBuy {...base} at="general" items={TACKLE} title="낚시 도구" />
+              <ShopBuy {...base} at="general" items={UNLOCKS} title="희귀 소품 · 머리색 팔레트" hint="소품은 수확 목표를 채우면, 팔레트는 한 단계씩 열려요." />
+            </>
+          ),
+          sell: () => <ShopSell {...base} at="general" />,
+          more: () => (
           <>
-            <section className="l-town-notice" aria-label="씨앗과 도구">
-              <strong>씨앗 · 도구 · 비료 · 미끼</strong>
-              <p>계절 씨앗과 꾸러미, 비료·미끼·통발 같은 소모품은 상점 창에서 골라요.</p>
-            </section>
-            <GameButton variant="primary" onClick={() => onOpen?.('shop')}>
-              씨앗과 도구 보기
-            </GameButton>
             <h3 className="l-town-head">밭 설비 도면</h3>
             <ul className="l-town-list">
               {FIXTURES.map((f) => (
@@ -171,29 +194,29 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
               ))}
             </ul>
           </>
-        );
+          ),
+        });
       case 'bakery':
+        return tabs('bakery', [
+          { id: 'buy', label: '빵과 음료' },
+          { id: 'more', label: '도시락' },
+        ], {
+          buy: () => <FoodMenu {...base} shop="bakery" />,
+          more: () => <LunchShelf {...base} />,
+        });
+      case 'tavern':
         return (
           <>
-            <p className="l-town-sub">오늘 {town.bakery.left}번 더 들를 수 있어요. 먹고 가면 바로 기운이 나요.</p>
-            <ul className="l-town-list">
-              {BAKERY_MENU.map((b) => (
-                <li key={b.id} className="l-town-row" data-testid={`bakery-${b.id}`}>
-                  <span className="l-town-art" aria-hidden="true">
-                    <ItemIcon id={b.let === 'drink' ? 'flowertea' : 'pumpkinpie'} size={36} />
-                  </span>
-                  <div>
-                    <strong>{b.name}</strong>
-                    <small>
-                      {b.note} · {formatBeom(b.price)}
-                    </small>
-                  </div>
-                  <GameButton size="s" variant="primary" disabled={busy || !town.bakery.left || view.wallet.balance < b.price} onClick={() => act({ kind: 'bakeryBuy', item: b.id }, `${josa(b.name, '을/를')} 먹었어요.`)}>
-                    먹기
-                  </GameButton>
-                </li>
-              ))}
-            </ul>
+            {tabs('tavern', [
+              { id: 'buy', label: '안주와 음료' },
+              { id: 'sell', label: '요리 팔기' },
+            ], {
+              buy: () => <FoodMenu {...base} shop="tavern" />,
+              sell: () => <ShopSell {...base} at="tavern" />,
+            })}
+            <GameButton size="s" variant="ghost" onClick={() => onOpen?.('tavernUp')} data-testid="tavern-upgrades">
+              주점 꾸미기 (업그레이드)
+            </GameButton>
           </>
         );
       case 'newspaper': {
@@ -242,7 +265,14 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
       case 'fishmarket': {
         const fish = Object.entries(life.me.inv ?? {}).filter(([id, n]) => n > 0 && ITEM_BY_ID[id]?.kind === 'fish');
         const a = town.auction;
-        return (
+        return tabs('fishmarket', [
+          { id: 'buy', label: '낚시 도구' },
+          { id: 'sell', label: '물고기 팔기' },
+          { id: 'more', label: '새벽 경매' },
+        ], {
+          buy: () => <ShopBuy {...base} at="fishmarket" items={TACKLE} />,
+          sell: () => <ShopSell {...base} at="fishmarket" />,
+          more: () => (
           <>
             <section className="l-town-notice" aria-label="새벽 경매">
               <strong>새벽 경매 {a.open ? '· 지금 열려 있어요' : `· ${dayWord(a.next, now)} ${hhmm(a.next)}`}</strong>
@@ -262,9 +292,6 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
                       <small>매입가 {formatBeom(ITEM_BY_ID[id]?.sell ?? 0)}</small>
                     </div>
                     <span className="l-town-buttons">
-                      <GameButton size="s" disabled={busy} onClick={() => act({ kind: 'sellItem', item: id, n: 1 }, `${itemName(id)} 1마리를 팔았어요.`)}>
-                        팔기
-                      </GameButton>
                       <GameButton
                         size="s"
                         variant="primary"
@@ -282,7 +309,8 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
               <EmptyState glyph="fish" title="가방에 물고기가 없어요" />
             )}
           </>
-        );
+          ),
+        });
       }
       case 'guild': {
         const cup = life.angling?.cup;
@@ -370,6 +398,28 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
                 );
               })}
             </ul>
+            {(place === 'harborStall' ? life.shops?.peddler.area === 'harbor' : life.shops?.peddler.area === 'market') && (
+              <>
+                <ShopBuy {...base} at="peddler" items={PEDDLER_ITEMS} title="마키마의 이번 주 희귀품" hint="다른 가게에는 없는 물건이에요. 한 사람에게 한 번씩, 매주 월요일에 바뀌어요." />
+                {life.shops && (
+                  <section className="l-town-notice" aria-label="이번 주 계약" data-testid="peddler-deal">
+                    <strong>이번 주 계약</strong>
+                    <p>
+                      {itemName(life.shops.peddler.deal.item)} {life.shops.peddler.deal.n}개를 가져오면 범 대신 {itemName(life.shops.peddler.stock[0].item)}을(를) 드려요. 가진 개수{' '}
+                      {life.me.inv?.[life.shops.peddler.deal.item] ?? 0}
+                    </p>
+                    <GameButton
+                      size="s"
+                      variant="primary"
+                      disabled={busy || life.shops.peddler.deal.done || (life.me.inv?.[life.shops.peddler.deal.item] ?? 0) < life.shops.peddler.deal.n}
+                      onClick={() => act({ kind: 'peddlerDeal' }, `마키마와 계약했어요. ${itemName(life.shops!.peddler.stock[0].item)}을(를) 받았어요.`)}
+                    >
+                      {life.shops.peddler.deal.done ? '이번 주 계약 끝' : '계약하기'}
+                    </GameButton>
+                  </section>
+                )}
+              </>
+            )}
           </>
         );
       }
@@ -416,6 +466,17 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
 
   return (
     <Modal title={title} wide onClose={onClose} className="l-town">
+      {place === 'tavern' && (
+        <div className="l-town-keeper">
+          <span className="l-town-art">
+            <DealerAvatar host="captain" mood="smile" />
+          </span>
+          <p>
+            <b>{HOSTS.captain.name}</b> <span>한 상 차려 줄까요? 요리를 가져오면 제값에 사 드려요!</span>
+          </p>
+          <small>지갑 {formatBeom(view.wallet.balance)}</small>
+        </div>
+      )}
       {keeper && (
         <div className="l-town-keeper">
           <NpcPortrait npc={keeper.npc} />

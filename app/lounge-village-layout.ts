@@ -453,10 +453,10 @@ export const VILLAGE_FARMLAND = {
   depth: 3,
 } as const;
 export const VILLAGE_FARMLAND_ENTRY: VillagePoint = { x: 8.75, z: 4.45 };
-/** "범타듀 상점": a small market stall west of the plaza (faces +z). */
+/** "가게 안내판" (was 범타듀 상점 until the shops split, 2026-10): a small stall west of the plaza (faces +z). */
 export const VILLAGE_MARKET = {
   id: 'market',
-  name: '범타듀 상점',
+  name: '가게 안내판',
   x: -11,
   z: -4.4,
   width: 2.4,

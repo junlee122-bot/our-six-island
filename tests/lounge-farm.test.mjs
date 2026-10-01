@@ -421,7 +421,7 @@ test('별빛 quality: only with 별빛 비료; sells ×2 and stacks as its own t
   assert.equal(s.life.ext[m.id].q3.carrot, 1);
   assert.equal(s.view(m, at + CROP_INFO.carrot.growMs).me.quality.star.carrot, 1);
   const b = s.balance(m);
-  s.act(m, { kind: 'sell', crop: 'carrot', n: 1, quality: 3 }, at + CROP_INFO.carrot.growMs);
+  s.act(m, { kind: 'sell', crop: 'carrot', n: 1, quality: 3, at: 'coop' }, at + CROP_INFO.carrot.growMs);
   assert.equal(s.balance(m) - b, CROP_INFO.carrot.sell * QUALITY_MULT[3]);
 });
 
@@ -477,7 +477,7 @@ test('machines: build by level, real-time durations, quality carries into the go
   assert.deepEqual(s.life.farmx[m.id].goods, { 'jar-cabbage': 1, 'keg-grape@2': 1 });
   // Selling the gold wine pays 3 × grape × 1.5.
   const b = s.balance(m);
-  s.act(m, { kind: 'sellGoods', item: 'keg-grape', q: 2, n: 1 }, t + MACHINE_BY_ID.keg.ms);
+  s.act(m, { kind: 'sellGoods', item: 'keg-grape', q: 2, n: 1, at: 'coop' }, t + MACHINE_BY_ID.keg.ms);
   assert.equal(s.balance(m) - b, Math.round(3 * CROP_INFO.grape.sell * 1.5));
   // A dehydrator takes five and keeps the lowest quality among them.
   s.level(m, 'farm', 5);
@@ -552,12 +552,13 @@ test('shipping bin: sells at the first action after KST midnight, as that day’
   const b0 = s.balance(m);
   s.act(m, { kind: 'status', text: '' }, t + 30 * MIN);
   assert.equal(s.balance(m), b0);
-  // After midnight the first action pays, with the demand curve starting from 0.
+  // After midnight the first action pays, with the demand curve starting from 0,
+  // at the bin's 85% (가게 나누기: only the 농협 counter pays the full price).
   const next = kst(2026, 10, 14, 7);
   s.act(m, { kind: 'status', text: '' }, next);
   const expected =
-    [0, 1, 2, 3, 4, 5].reduce((sum, k) => sum + Math.round(CROP_INFO.carrot.sell * demandMult('carrot', k)), 0) +
-    [0, 1].reduce((sum, k) => sum + Math.round(Math.round(CROP_INFO.strawberry.sell * 1.5) * demandMult('strawberry', k)), 0);
+    [0, 1, 2, 3, 4, 5].reduce((sum, k) => sum + Math.round(Math.round(CROP_INFO.carrot.sell * demandMult('carrot', k)) * 0.85), 0) +
+    [0, 1].reduce((sum, k) => sum + Math.round(Math.round(Math.round(CROP_INFO.strawberry.sell * 1.5) * demandMult('strawberry', k)) * 0.85), 0);
   assert.equal(s.balance(m) - b0, expected);
   assert.equal(s.life.farmx[m.id].bin, undefined);
   // …and it counts as today's demand (no second full price for the same carrots).
@@ -623,7 +624,7 @@ test('no minting: selling a flood of goods stays under the daily market ceiling'
   const x = ((s.life.farmx ??= {})[m.id] ??= {});
   x.goods = { 'keg-insam@2': 40, 'dry-strawberry@2': 40 };
   const b = s.balance(m);
-  s.act(m, { kind: 'sellGoods', item: 'keg-insam', q: 2, n: 1 }, t);
+  s.act(m, { kind: 'sellGoods', item: 'keg-insam', q: 2, n: 1, at: 'coop' }, t);
   const first = s.balance(m) - b;
   assert.equal(first, Math.round(goodsById()['keg-insam'].base * 1.5));
   // Everything else sells into the saturated market: the day's total stays capped.
@@ -632,7 +633,7 @@ test('no minting: selling a flood of goods stays under the daily market ceiling'
     for (const [item, q] of [['keg-insam', 2], ['dry-strawberry', 2]]) {
       try {
         const before = s.balance(m);
-        s.act(m, { kind: 'sellGoods', item, q, n: 1 }, t + i);
+        s.act(m, { kind: 'sellGoods', item, q, n: 1, at: 'coop' }, t + i);
         sold += s.balance(m) - before;
       } catch (e) {
         if (!(e instanceof LifeError)) throw e;

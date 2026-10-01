@@ -857,7 +857,7 @@ export function moodTreat(
   life: LifeState,
   uid: string,
   now: number,
-  t: { food?: number; rest?: number; fun?: number; let: 'snack' | 'drink' },
+  t: { food?: number; rest?: number; fun?: number; let: 'snack' | 'drink' | 'meal' },
 ): boolean {
   const u = moodTouch(life, uid, now);
   if (!u) return false;
@@ -865,6 +865,20 @@ export function moodTreat(
   if (t.rest) fill(u, 'rest', t.rest);
   if (t.fun) fill(u, 'fun', t.fun, 'bakery');
   addLet(u, t.let, now);
+  prune(u, now);
+  return true;
+}
+/**
+ * 함께 먹기 (lounge-food.ts): two friends ate in the same place within a few
+ * minutes. Both get the moodlet (the tavern's is stronger) and sociability.
+ * Returns false when this friend has no mood record.
+ */
+export function moodTogether(life: LifeState, uid: string, now: number, tavern: boolean, social: number): boolean {
+  // Like a cheer: the friend's record is read as it is (the eater's was just touched by the action).
+  const u = other(life, uid, now);
+  if (!u) return false;
+  addLet(u, tavern ? 'togetherTavern' : 'together', now);
+  fill(u, 'social', social);
   prune(u, now);
   return true;
 }

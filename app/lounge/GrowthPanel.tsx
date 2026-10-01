@@ -355,7 +355,8 @@ export function GrowthPanel({
                     onWalk={() => walk(FORGE_FRONT)}
                     onRod={() =>
                       void run(
-                        { kind: 'upgradeRod' },
+                        // 가게 나누기: the rod is the 어시장's (the 잡화점's before the harbor opens).
+                        { kind: 'upgradeRod', at: life.shops?.fishShop ?? 'general' },
                         `낚싯대를 ${tool.tier + 1}단계로 바꿨어요!`,
                       ).then((ok) => {
                         if (ok) lifeSfx('anvil');
