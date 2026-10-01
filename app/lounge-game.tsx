@@ -96,6 +96,7 @@ import {
 import { formatBeom, josa, NAMES } from './lounge-text';
 import { VENUES, isInteriorArea, type InteriorArea } from './lounge-venues';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors';
+import { atHubCounter, hubCounterDoor } from './lounge-hub-counters';
 import { shopDoorOutside } from './lounge-district-counters';
 import { DISTRICTS } from './lounge-districts';
 import { venueLook, venuesFromView } from './lounge-venue-data';
@@ -974,6 +975,17 @@ function AccountLounge({
     // 부동산 / 가구점: the door opens the shop's counter (no interior area).
     if (fishing) { notify('낚시를 마치거나 취소한 뒤 이동해 주세요.'); return; }
     if (target === 'realty' || target === 'furniture') {
+      // The server sells here only at the shop's door (lounge-hub-counters.ts); a
+      // click in the simple village or the 마을 안내 puts me there first.
+      if (tabRef.current === 'village' && visiting === null && !outdoorRef.current) {
+        const door = hubCounterDoor(target);
+        if (!atHubCounter(target, { area: 'village', ...villageToNetwork(villagePosition.current ?? VILLAGE_START) })) {
+          villagePosition.current = door;
+          setVillageSpawn(door);
+        }
+        const p = villageToNetwork(villagePosition.current ?? door);
+        move(p.x, p.y);
+      }
       setModal(target);
       return;
     }

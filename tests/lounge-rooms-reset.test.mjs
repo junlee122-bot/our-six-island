@@ -12,6 +12,8 @@ import { DEFAULT_BED, defaultBedroom, readBedroom } from '../app/lounge-bedroom-
 import { legacyRoomItems } from '../app/lounge-bedroom-layouts.ts';
 import { freshLounge } from '../app/lounge-look.ts';
 import { THEME_STYLES, THEME_STYLE_PRICE, BASIC_FURNITURE_PRICES, FURNITURE_BY_REF } from '../app/lounge-items.ts';
+import { hubCounterDoor } from '../app/lounge-hub-counters.ts';
+import { villageToNetwork } from '../app/lounge-village-layout.ts';
 
 const uuid = () => crypto.randomUUID();
 const T0 = Date.UTC(2026, 9, 2, 3, 0, 0); // 2026-10-02 12:00 KST
@@ -36,17 +38,26 @@ function harness(initial) {
         connection: p.connection,
         ...(!['read', 'wallet'].includes(op) ? { requestId: uuid(), sequence: ++p.sequence } : {}),
         ...(['open', 'join'].includes(op) ? { epoch: p.epoch } : {}),
+        ...(p.code ? { code: p.code } : {}),
         ...extra,
       };
       const result = cloudTransition(world, p, command, await commandHash(command), now);
       world = result.state;
       p.epoch = result.response.epoch;
+      if (result.response.code) p.code = result.response.code;
       validateLedger(world.ledger);
       return result;
     },
   };
 }
 const act = (h, p, action) => h.run(p, 'action', { action });
+/** 가구점 / 부동산 sell only at their door in the hub (lounge-hub-counters.ts): walk there first. */
+async function atCounter(h, p, counter) {
+  if (!p.code) await h.run(p, 'open', { code: 'BEMTADUVLY' });
+  const at = villageToNetwork(hubCounterDoor(counter));
+  const moved = await act(h, p, { kind: 'area', area: 'village', x: at.x, y: at.y });
+  assert.equal(moved.response.ok, true, moved.response.error);
+}
 function invariant(ledger) {
   validateLedger(ledger);
   const balances = Object.values(ledger.accounts).reduce((a, b) => a + b, 0);
@@ -150,6 +161,7 @@ test('the cloud transition runs it once: backup stored, ledger untouched, furnit
   assert.equal(life.ext[a.id].house, 2);
 
   // Idempotent: furniture bought after the reset stays through any number of transitions.
+  await atCounter(h, a, 'furniture');
   const bought = await act(h, a, { kind: 'buyFurniture', ref: 'desk', n: 1 });
   assert.equal(bought.response.ok, true, bought.response.error);
   const stored = JSON.stringify(h.world.life.roomsReset);
@@ -182,6 +194,7 @@ test('a fresh world only gets the mark with its first real write; later purchase
   const read = await h.run(a, 'read');
   assert.equal(read.changed, false);
   // Its next real write stores the mark, and the purchase in it stays.
+  await atCounter(h, a, 'furniture');
   const bought = await act(h, a, { kind: 'buyFurniture', ref: 'chair', n: 2 });
   assert.equal(bought.response.ok, true, bought.response.error);
   assert.equal(h.world.life.roomsReset.id, ROOMS_RESET_ID);
@@ -229,6 +242,7 @@ test('모델하우스 벽지·바닥 and 기본 가구 are bought through the le
     a = member(2);
   await act(h, a, { kind: 'plant', plot: 0, crop: 'carrot' });
   const wallet = () => h.world.ledger.accounts['wallet-' + a.id];
+  await atCounter(h, a, 'realty');
   const start = wallet();
   const ok = await act(h, a, { kind: 'buyRoomStyle', style: 'sage' });
   assert.equal(ok.response.ok, true, ok.response.error);
@@ -250,6 +264,7 @@ test('모델하우스 벽지·바닥 and 기본 가구 are bought through the le
   assert.equal(shelf.length, Object.keys(BASIC_FURNITURE_PRICES).length);
   for (const item of shelf) assert.equal(FURNITURE_BY_REF[item.ref].basic, true);
   assert.ok(!ok.response.life.shop.items.some((i) => FURNITURE_BY_REF[i.ref].basic), 'not in the daily rotation');
+  await atCounter(h, a, 'furniture');
   const before = wallet();
   const desk = await act(h, a, { kind: 'buyFurniture', ref: 'desk', n: 2 });
   assert.equal(desk.response.ok, true, desk.response.error);

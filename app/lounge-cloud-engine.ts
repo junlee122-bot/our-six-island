@@ -47,6 +47,7 @@ import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
+import { atHubCounter, hubCounterFor, hubCounterReject } from './lounge-hub-counters.ts';
 /** The life state without the reset's done-mark (for the "did anything change" check). */
 const withoutResetMark = (life: LifeState) => {
   const { roomsReset: _mark, ...rest } = life;
@@ -461,6 +462,12 @@ export function cloudTransition(
               if (!lease || !player || ((player.area ?? 'village') !== where && !inside))
                 throw new CloudError(`${SHOP_INFO[at].name}에 가서 해 주세요.`, 409);
             }
+          }
+          {
+            // 나무결 가구점 / 범마을 부동산: buying needs me at the shop's door in the hub (lounge-hub-counters.ts).
+            const counter = hubCounterFor(command.action.kind);
+            if (counter && (!lease || !atHubCounter(counter, entry?.snapshot.players.find((p) => p.id === member.id))))
+              throw new CloudError(hubCounterReject(counter), 409);
           }
           if (['eat', 'snack'].includes(command.action.kind)) {
             // 음식 시스템: the server says where I ate (함께 먹기); home cooking is eaten at home,
