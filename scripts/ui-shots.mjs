@@ -209,12 +209,12 @@ async function runView(browser, base, view, report) {
   // Each step reopens independently so --only bank-notes (etc.) also works.
   // Viewing these pages does not deposit, borrow, rob, gift or invite anyone.
   for (const [name, title] of [
-    ['bank', '보관함'], ['bank-notes', '차용증'],
+    ['bank', '보관함'], ['bank-notes', '차용증'], ['bank-money', '범 내역'],
   ]) {
     await step(name, async () => {
       if (!(await menu(/^은행 · 차용증$/))) throw new Error('은행 메뉴를 찾지 못했습니다.');
       await until(() => !!document.querySelector('dialog[open] .l-finance-balances'), 15000);
-      assert.deepEqual(await page.locator('dialog[open] [role="tab"]').allTextContents(), ['보관함', '차용증'], '은행에는 보관함과 차용증만 표시합니다.');
+      assert.deepEqual(await page.locator('dialog[open] [role="tab"]').allTextContents(), ['보관함', '차용증', '범 내역'], '은행에는 보관함, 차용증, 범 내역을 표시합니다.');
       if (!(await H.clickText(new RegExp(`^${title}$`), 'dialog[open] [role="tab"]'))) throw new Error(`${title} 탭을 찾지 못했습니다.`);
       await until((text) => document.querySelector('dialog[open] [role="tab"][aria-selected="true"]')?.textContent.trim() === text, 10000, title);
       if (name === 'bank' || name === 'bank-notes') {
