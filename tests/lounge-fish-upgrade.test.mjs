@@ -5,7 +5,8 @@ import { fishCandidates } from '../app/lounge-life-plus.ts';
 import { newLoungeLedger, registerWallet, validateLedger, kstDay } from '../app/lounge-economy.ts';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, ITEM_PRICES, DISH_BY_ID, CRAFT_BY_ID } from '../app/lounge-items.ts';
 import { seasonOf, weatherOf, kstHour } from '../app/lounge-calendar.ts';
-import { FISH_PROFILE, POT_FISH, EXTRA_FISH, inHours } from '../app/lounge-fish-data.ts';
+import { FISH_PROFILE, POT_FISH, EXTRA_FISH, MORE_FISH, inHours } from '../app/lounge-fish-data.ts';
+import { FISH_PAINTED } from '../app/lounge-assets.ts';
 import {
   MAX_TICKS,
   TICK_MS,
@@ -21,6 +22,8 @@ import {
   CRAB_READY_MS,
   CUP_PRIZES,
   HOOK_SLACK_MS,
+  RARITY_INFO,
+  RARITY_ORDER,
   anglerCandidates,
   anglingHooks,
   biteDelayMs,
@@ -249,6 +252,52 @@ test('the hook grace follows the fish grade: common forgives the most, legend th
     assert.equal(last.grade, 'E', 'a hook past the window keeps the slowest reaction grade');
   }
   assert.ok(seen.has('common') && seen.size >= 2, [...seen].join());
+});
+
+test('36 more species: unique, profiled, painted, and each one bites somewhere, sometime', () => {
+  assert.equal(MORE_FISH.length, 36);
+  const ids = FISH.map((f) => f.id);
+  assert.equal(new Set(ids).size, ids.length, 'fish ids are unique');
+  const count = (r) => MORE_FISH.filter((f) => rarityOf(f) === r).length;
+  assert.deepEqual([count('common'), count('uncommon'), count('rare'), count('legend')], [16, 11, 6, 3]);
+  for (const f of MORE_FISH) {
+    assert.ok(FISH_PROFILE[f.id], `${f.id} has a fight profile`);
+    assert.ok(FISH_PAINTED[f.id], `${f.id} has a painted icon`);
+    assert.ok(f.spots.length && f.note && f.cm[0] < f.cm[1], f.id);
+    if (rarityOf(f) === 'legend') {
+      assert.deepEqual(f.seasons, [], `${f.id}: the legacy cast never picks a legend`);
+      assert.ok(FISH_PROFILE[f.id].legend && FISH_PROFILE[f.id].season, f.id);
+    }
+  }
+  // Every new fish is available at one of its spots at some hour of some day
+  // (seasons and weather cycle over the year), for a strong angler.
+  const strong = { level: 10, rod: 5, caught: [] };
+  for (const f of MORE_FISH) {
+    let seen = false;
+    for (let t = T0; t < T0 + 366 * 24 * HOUR && !seen; t += HOUR)
+      seen = fishAvailable(f, { season: seasonOf(t), weather: weatherOf(kstDay(t)), now: t, ...strong });
+    assert.ok(seen, `${f.id} bites at some time of the year`);
+  }
+  assert.deepEqual(RARITY_ORDER.map((r) => RARITY_INFO[r].stars), [1, 2, 3, 4]);
+});
+
+test('the fight view shows the hooked fish grade, never the fish', () => {
+  const s = world(1), m = s.members[0];
+  let at = T0;
+  const grades = new Set();
+  for (let n = 0; n < 60 && grades.size < 2; n++) {
+    at += 60_000;
+    s.act(m, { kind: 'anglerCast', spot: n % 2 ? 'pond' : 'river' }, at);
+    const cast = s.view(m, at).angling.me.cast;
+    s.act(m, { kind: 'anglerHook', token: cast.token }, cast.biteAt + 100);
+    const fight = s.view(m, cast.biteAt + 100).angling.me.fight;
+    const hidden = FISH_BY_ID[s.life.angling.u[m.id].fight.fish];
+    assert.equal(fight.fish, undefined);
+    assert.equal(fight.rarity, rarityOf(hidden));
+    grades.add(fight.rarity);
+    s.act(m, { kind: 'anglerCancel', token: fight.token }, cast.biteAt + 200);
+  }
+  assert.ok(grades.size >= 2, [...grades].join());
 });
 
 test('the bite is timed from when the cast left, so a reply that runs late still hooks in time', () => {

@@ -204,6 +204,20 @@
   --info: var(--water-600);
   --highlight: var(--gold-400);
   --highlight-soft: var(--pal-amber-91);
+  /* Fish grades (흔함 · 보통 · 드묾 · 전설): badge fill, its text, a soft tint. */
+  --rarity-common: var(--pal-grey-41);
+  --rarity-common-ink: var(--paper-50);
+  --rarity-common-soft: var(--surface-sunken);
+  --rarity-uncommon: var(--pal-teal-43);
+  --rarity-uncommon-ink: var(--paper-50);
+  --rarity-uncommon-soft: var(--pal-teal-89);
+  --rarity-rare: var(--pal-amber-77);
+  --rarity-rare-ink: var(--pal-amber-19);
+  --rarity-rare-soft: var(--pal-amber-95);
+  --rarity-legend: var(--pal-violet-35);
+  --rarity-legend-ink: var(--paper-50);
+  --rarity-legend-soft: var(--pal-violet-83);
+  --rarity-legend-glow: var(--pal-amber-84);
   --text-on-highlight: var(--ink-900);
   --focus: #b8661a; /* 3px ring, ≥ 3:1 on paper and on wood-300 */
   --disabled-bg: #e5d9c0;
@@ -268,6 +282,14 @@
   --ring-focus: 0 0 0 3px var(--focus);
   --ring-highlight: 0 0 0 3px var(--highlight);
   --ring-line: 0 0 0 2px var(--line-strong);
+  /* Fish grade frames (fish-rarity.css picks one per [data-rarity] as --edge-tier). */
+  --edge-rarity-common: inset 0 0 0 2px var(--rarity-common), var(--lift-1);
+  --edge-rarity-uncommon: inset 0 0 0 2px var(--rarity-uncommon), var(--lift-1);
+  --edge-rarity-rare: inset 0 0 0 3px var(--rarity-rare), 0 0 18px color-mix(in srgb, var(--rarity-rare) 55%, transparent), var(--lift-1);
+  --edge-rarity-legend:
+    inset 0 0 0 3px var(--rarity-legend), inset 0 0 0 6px var(--rarity-legend-glow),
+    0 0 26px color-mix(in srgb, var(--rarity-legend-glow) 70%, transparent), var(--lift-1);
+  --ring-rarity-legend: 0 0 0 2px var(--rarity-legend-glow);
   --lift-up: 0 -6px 18px rgb(30 20 10 / 0.16);
   --ring-glow: 0 0 14px rgb(227 171 59 / 0.55);
 

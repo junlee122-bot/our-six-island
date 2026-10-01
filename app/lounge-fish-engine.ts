@@ -439,6 +439,14 @@ export function anglerCandidates(spot: Spot, ctx: AnglerContext): FishDef[] {
     .sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
   return [...current, ...visitors.slice(0, 3 - current.length)];
 }
+/** Rarity names and star counts, lowest first (catch card, reel, journal). */
+export const RARITY_ORDER: readonly FishRarity[] = ['common', 'uncommon', 'rare', 'legend'];
+export const RARITY_INFO: Readonly<Record<FishRarity, { name: string; stars: number }>> = {
+  common: { name: '흔함', stars: 1 },
+  uncommon: { name: '보통', stars: 2 },
+  rare: { name: '드묾', stars: 3 },
+  legend: { name: '전설', stars: 4 },
+};
 /** Rarity bucket (cup points, hook grace, UI). */
 export const rarityOf = (f: FishDef): FishRarity => (f.weight <= 1 ? 'legend' : f.weight < 10 ? 'rare' : f.weight < 20 ? 'uncommon' : 'common');
 /** Rough body build per fish look (g per cm³ ×1e-3): long fish are light for their length. */
@@ -949,7 +957,8 @@ export function biteDelayMs(cast: Pick<AnglerCastView, 'castAt' | 'biteAt'>, sin
   return Math.max(0, cast.biteAt - cast.castAt - Math.max(0, sinceSendMs));
 }
 export type AnglerCastView = Omit<AnglerCast, 'fish' | 'cm'>;
-export type AnglerFightView = Omit<AnglerFight, 'fish' | 'cm'> & { behaviourName: string };
+/** The fish stays hidden during the fight; its grade shows from the hook on. */
+export type AnglerFightView = Omit<AnglerFight, 'fish' | 'cm'> & { behaviourName: string; rarity: FishRarity };
 export type AnglingView = {
   me: {
     cast: AnglerCastView | null;
@@ -1013,6 +1022,7 @@ export function anglingView(life: LifeState, uid: string, _actor: number, now: n
             coop: fight.coop,
             reactionMs: fight.reactionMs,
             behaviourName: BEHAVIOUR_NAME[fight.setup.behaviour],
+            rarity: rarityOf(FISH_BY_ID[fight.fish] ?? FISH_BY_ID.crucian),
           }
         : null,
       last: u.last ? structuredClone(u.last) : null,

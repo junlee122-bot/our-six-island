@@ -50,6 +50,10 @@ const PAIRS = [
   ['--disabled-text', '--disabled-bg', 4.5],
   ['--keycap-text', '--keycap-bg', 4.5],
   ['--focus', '--surface', 3],
+  ['--rarity-common-ink', '--rarity-common', 4.5],
+  ['--rarity-uncommon-ink', '--rarity-uncommon', 4.5],
+  ['--rarity-rare-ink', '--rarity-rare', 4.5],
+  ['--rarity-legend-ink', '--rarity-legend', 4.5],
 ];
 
 for (const v of [null, 'hall', 'casino', 'tavern']) {

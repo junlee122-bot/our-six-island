@@ -6,7 +6,8 @@ import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
 import { BAITS, BEHAVIOUR_NAME, FISH_PROFILE, POT_FISH, TACKLES, type TackleId } from '../lounge-fish-data';
-import { gramsText, rarityOf, type AnglingView } from '../lounge-fish-engine';
+import { RARITY_INFO, RARITY_ORDER, gramsText, rarityOf, type AnglingView } from '../lounge-fish-engine';
+import { RarityBadge } from './FishRarity';
 import { SEASON_INFO } from '../lounge-calendar';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom } from '../lounge-text';
@@ -22,7 +23,6 @@ import { EmptyState } from '../ui/EmptyState';
 import './fishing-reel.css';
 
 type Tab = 'dex' | 'records' | 'cup' | 'gear';
-const RARITY = { legend: '전설', rare: '드묾', uncommon: '보통', common: '흔함' } as const;
 const WHEN = { day: '낮', night: '밤', any: '하루 종일' } as const;
 const SKY = { rain: '비 오는 날', dry: '맑은 날', any: '날씨 상관없음' } as const;
 const dateText = (at: number) => {
@@ -98,6 +98,16 @@ function DexPage({ view, a, spot }: { view: CloudRoomView; a: AnglingView; spot?
       <p>
         {found}/{BOOK.length}종을 만났어요. 못 만난 물고기는 그림자로 보여요. 그 물고기가 사는 낚시터에서 한 마리라도 낚으면 철·시각 힌트가 열려요.
       </p>
+      <ul className="l-fj-tiers" aria-label="등급별로 만난 물고기">
+        {RARITY_ORDER.map((r) => {
+          const all = BOOK.filter((x) => rarityOf(x) === r);
+          return (
+            <li key={r}>
+              <RarityBadge rarity={r} /> {all.filter((x) => dex.has(x.id)).length}/{all.length}
+            </li>
+          );
+        })}
+      </ul>
       <div className="l-fj-detail" data-unknown={!known || undefined} data-testid="fj-detail">
         <FishArt id={picked} size={88} unknown={!known} />
         <div>
@@ -109,7 +119,9 @@ function DexPage({ view, a, spot }: { view: CloudRoomView; a: AnglingView; spot?
             <dt>사는 곳</dt>
             <dd>{POT_IDS.has(picked) ? (['snail', 'shrimp'].includes(picked) ? '민물 통발' : '바다 통발') : f.spots.map((s) => SPOT_INFO[s].name).join(' · ')}</dd>
             <dt>희귀도</dt>
-            <dd>{RARITY[rarityOf(f)]}</dd>
+            <dd>
+              <RarityBadge rarity={rarityOf(f)} />
+            </dd>
             {!POT_IDS.has(picked) && (
               <>
                 <dt>나오는 때</dt>
@@ -146,7 +158,7 @@ function DexPage({ view, a, spot }: { view: CloudRoomView; a: AnglingView; spot?
           const k = dex.has(x.id);
           return (
             <li key={x.id} className="l-fj-cell" data-unknown={!k || undefined} data-rarity={rarityOf(x)}>
-              <button type="button" aria-pressed={picked === x.id} onClick={() => setPicked(x.id)} aria-label={k ? x.name : `못 만난 물고기 (${RARITY[rarityOf(x)]})`}>
+              <button type="button" aria-pressed={picked === x.id} onClick={() => setPicked(x.id)} aria-label={k ? `${x.name} (${RARITY_INFO[rarityOf(x)].name})` : `못 만난 물고기 (${RARITY_INFO[rarityOf(x)].name})`}>
                 <FishArt id={x.id} size={48} unknown={!k} />
                 <span>{k ? x.name : '?'}</span>
               </button>

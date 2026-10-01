@@ -81,3 +81,8 @@
 .ui-kit-reel {
   max-width: 600px;
 }
+.ui-kit-catch {
+  display: grid;
+  gap: var(--sp-4);
+  max-width: 640px;
+}

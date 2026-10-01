@@ -718,21 +718,6 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-angler-now li:not([data-known]) .l-item-icon {
   filter: brightness(0) opacity(0.35);
 }
-.l-angler-now li[data-rarity='rare']::after,
-.l-angler-now li[data-rarity='legend']::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  top: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ff-gold);
-  box-shadow: var(--ring-line);
-}
-.l-angler-now li[data-rarity='legend']::after {
-  background: var(--pal-violet-54);
-}
 .l-angler-quiet {
   width: auto !important;
   font-size: 12px !important;
@@ -887,9 +872,6 @@ dialog.l-modal.l-ledger > header .l-icon {
   margin: 0;
   animation: l-catch-flop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
-.l-catch-art[data-rarity='legend'] .l-item-icon {
-  filter: drop-shadow(0 0 10px var(--pal-amber-84));
-}
 .l-catch-ruler {
   width: 180px;
   height: 16px;
@@ -922,22 +904,6 @@ dialog.l-modal.l-ledger > header .l-icon {
   display: grid;
   align-content: start;
   gap: 4px;
-}
-.l-catch-rarity {
-  justify-self: start;
-  padding: 1px 8px;
-  border-radius: var(--r-s);
-  font-size: var(--fs-cap);
-  font-weight: 800;
-  color: var(--note-50);
-  background: var(--pal-grey-59);
-}
-.l-catch-rarity[data-rarity='rare'] {
-  background: var(--ff-gold);
-  color: var(--ff-ink);
-}
-.l-catch-rarity[data-rarity='legend'] {
-  background: var(--pal-violet-54);
 }
 .l-catch-text strong {
   font-size: 26px;

@@ -11,6 +11,9 @@ import { KeyHint, KeyHintBar } from './KeyHint';
 import { CloseButton, Panel } from './Panel';
 import { Tabs } from './Tabs';
 import { FishingReel } from '../lounge/FishingReel';
+import { CatchCard } from '../lounge/CatchCard';
+import { RARITY_ORDER } from '../lounge-fish-engine';
+import { FISH_BY_ID } from '../lounge-items';
 import './ui-kit.css';
 
 const VENUES = [
@@ -21,7 +24,7 @@ const VENUES = [
 ] as const;
 
 export default function UiKit() {
-  const [tab, setTab] = useState<'buttons' | 'panels' | 'glyphs' | 'reel'>('buttons');
+  const [tab, setTab] = useState<'buttons' | 'panels' | 'glyphs' | 'reel' | 'catch'>('buttons');
   const [reel, setReel] = useState(0);
   const [open, setOpen] = useState(false);
   return (
@@ -40,6 +43,7 @@ export default function UiKit() {
           { id: 'panels', label: '창 껍데기', glyph: 'book' },
           { id: 'glyphs', label: '글리프', glyph: 'star' },
           { id: 'reel', label: '손맛 겨루기', glyph: 'fish' },
+          { id: 'catch', label: '물고기 등급', glyph: 'star' },
         ]}
       />
       {tab === 'buttons' && (
@@ -141,8 +145,23 @@ export default function UiKit() {
             setup={{ seed: 1234 + reel, behaviour: 'mixed', difficulty: 45, bar: 2_800, gain: 42, loss: 45, treasure: { at: 20, pos: 6_000 } }}
             behaviourName="제멋대로"
             difficulty={45}
+            rarity={RARITY_ORDER[reel % RARITY_ORDER.length]}
             onDone={() => setTimeout(() => setReel((n) => n + 1), 1_200)}
           />
+        </div>
+      )}
+      {tab === 'catch' && (
+        <div className="ui-kit-catch" data-testid="ui-kit-catch">
+          {/* One catch card per grade (흔함 · 보통 · 드묾 · 전설), no server. */}
+          {(['crucian', 'salmon', 'tuna', 'startuna'] as const).map((id, i) => {
+            const fish = FISH_BY_ID[id];
+            const cm = Math.round((fish.cm[0] + fish.cm[1]) / 2);
+            return (
+              <div key={id} className="l-catch is-ok" data-rarity={RARITY_ORDER[i]}>
+                <CatchCard fish={fish} result={{ ok: true, fish: id, cm, quality: (i % 3) as 0 | 1 | 2, seconds: 6 + i * 3, isNew: i > 1 }} price={fish.sell} />
+              </div>
+            );
+          })}
         </div>
       )}
       {open && (

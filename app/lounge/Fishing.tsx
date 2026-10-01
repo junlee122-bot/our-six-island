@@ -9,18 +9,18 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
-import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
+import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type Spot } from '../lounge-items';
 import { REEL_REASON } from '../lounge-life-ui';
 import { sellQuote, itemName } from '../lounge-life-plus';
-import { anglerCandidates, biteDelayMs, fishGrams, gramsText, rarityOf, type AnglerLast, type AnglingView } from '../lounge-fish-engine';
+import { RARITY_INFO, anglerCandidates, biteDelayMs, fishGrams, gramsText, rarityOf, type AnglerLast, type AnglingView } from '../lounge-fish-engine';
 import { BAITS, BEHAVIOUR_NAME, CRAB_POT, FISH_PROFILE, type BaitId } from '../lounge-fish-data';
 import { FISH_QUALITY_MULT } from '../lounge-fish-quality';
 import type { FightResult } from '../lounge-fish-minigame';
 import { lifeSfx } from '../lounge-audio-life';
-import { formatBeom, josa } from '../lounge-text';
+import { josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
-import { ItemIcon, QualityStar } from './ItemIcon';
-import { FishCatchModel } from './FishCatchModel';
+import { ItemIcon } from './ItemIcon';
+import { CatchCard, type CatchResult as Result } from './CatchCard';
 import { FishArt } from './FishArt';
 import { FishingReel } from './FishingReel';
 import { FishingJournal } from './FishingJournal';
@@ -35,13 +35,9 @@ import './farm-fish.css';
 import './fishing-reel.css';
 
 export type FishingPhase = 'casting' | 'wait' | 'bite' | 'reeling' | 'fight' | 'result';
-type Result = Omit<AnglerLast, 'at'> & { isNew?: boolean; pressed?: boolean };
 
 /** An honest-looking weight for a fish of `cm` (display only). */
 export const fishWeight = (id: string, cm: number) => gramsText(fishGrams(id, cm));
-export const fishRarity = (f: FishDef) => (f.weight <= 1 ? 'legend' : f.weight < 10 ? 'rare' : 'common');
-const RARITY_NAME = { legend: '전설', rare: '드묾', common: '흔함' } as const;
-const QUALITY_NAME = ['보통', '은별', '금별'] as const;
 const BAIT_KEY = 'beomtadew.fishing.bait';
 const readBait = (): BaitId | '' => {
   try {
@@ -154,7 +150,11 @@ export function FishingOverlay({
     setResult({ ...last, isNew, pressed });
     setPhase('result');
     const f = last.fish ? FISH_BY_ID[last.fish] : undefined;
-    lifeSfx(!last.ok ? 'miss' : f && f.weight < 10 ? 'fanfare' : 'reel');
+    // The higher the grade, the bigger the cue: reel · reel + sparkle · fanfare · fanfare + sparkles.
+    const grade = last.ok && f ? rarityOf(f) : null;
+    lifeSfx(!last.ok ? 'miss' : grade === 'rare' || grade === 'legend' ? 'fanfare' : 'reel');
+    if (grade === 'uncommon' || grade === 'rare') timers.current.push(setTimeout(() => lifeSfx('sparkle'), 260));
+    if (grade === 'legend') for (const at of [420, 900, 1_400]) timers.current.push(setTimeout(() => lifeSfx('sparkle'), at));
     if (last.ok && (isNew || last.record || last.treasure)) timers.current.push(setTimeout(() => lifeSfx('sparkle'), 380));
   }, []);
 
@@ -412,7 +412,7 @@ export function FishingOverlay({
           {biting.slice(0, 8).map((f) => {
             const known = dex.includes(f.id);
             return (
-              <li key={f.id} data-known={known || undefined} data-rarity={fishRarity(f)} title={known ? `${f.name} · ${RARITY_NAME[fishRarity(f)]} · ${BEHAVIOUR_NAME[FISH_PROFILE[f.id]?.behaviour ?? 'mixed']}` : `아직 못 만난 물고기 · ${RARITY_NAME[fishRarity(f)]}`}>
+              <li key={f.id} data-known={known || undefined} data-rarity={rarityOf(f)} title={known ? `${f.name} · ${RARITY_INFO[rarityOf(f)].name} · ${BEHAVIOUR_NAME[FISH_PROFILE[f.id]?.behaviour ?? 'mixed']}` : `아직 못 만난 물고기 · ${RARITY_INFO[rarityOf(f)].name}`}>
                 <FishArt id={f.id} size={30} unknown={!known} />
                 <small>{known ? f.name : '?'}</small>
               </li>
@@ -461,64 +461,16 @@ export function FishingOverlay({
         </div>
       )}
       {fighting ? (
-        <FishingReel setup={fight.setup} behaviourName={fight.behaviourName} difficulty={fight.setup.difficulty} onDone={(runs, r) => void land(runs, r)} />
+        <FishingReel setup={fight.setup} behaviourName={fight.behaviourName} difficulty={fight.setup.difficulty} rarity={fight.rarity} onDone={(runs, r) => void land(runs, r)} />
       ) : phase === 'result' && result ? (
-        <div className={`l-catch${result.ok ? ' is-ok' : ''}`} data-testid="fish-result" data-fish={result.fish ?? ''}>
+        <div
+          className={`l-catch${result.ok ? ' is-ok' : ''}`}
+          data-testid="fish-result"
+          data-fish={result.fish ?? ''}
+          data-rarity={result.ok && fish ? rarityOf(fish) : undefined}
+        >
           {result.ok && fish ? (
-            <>
-              <figure className="l-catch-art" data-rarity={fishRarity(fish)}>
-                <FishCatchModel key={fish.id} fish={fish.id} />
-                <svg className="l-catch-ruler" viewBox="0 0 200 18" aria-hidden="true">
-                  <rect x="1" y="3" width="198" height="12" rx="2" fill="#f3dc9a" stroke="#a8743a" />
-                  {Array.from({ length: 21 }, (_, i) => (
-                    <path key={i} d={`M${6 + i * 9.4} 3 v${i % 5 ? 4 : 7}`} stroke="#8a5a34" strokeWidth="1" />
-                  ))}
-                </svg>
-                <figcaption>{result.cm}cm</figcaption>
-                {result.isNew && (
-                  <span className="l-stamp" aria-label="처음 낚았어요">
-                    첫<br />낚시
-                  </span>
-                )}
-              </figure>
-              <div className="l-catch-text">
-                <span className="l-catch-rarity" data-rarity={fishRarity(fish)}>
-                  {RARITY_NAME[fishRarity(fish)]}
-                </span>
-                <strong>
-                  {fish.name} {q > 0 && <QualityStar quality={q} size={16} />}
-                </strong>
-                <b>
-                  {result.cm}cm · {gramsText(result.grams ?? fishGrams(fish.id, result.cm ?? 0))} · {QUALITY_NAME[q]}
-                </b>
-                <span className="l-catch-tags">
-                  {result.perfect && <span className="l-catch-tag" data-kind="perfect">완벽하게 낚음</span>}
-                  {result.seconds !== undefined && <span className="l-catch-tag">겨루기 {result.seconds}초</span>}
-                  {result.coop ? <span className="l-catch-tag" data-kind="coop">함께 낚시 {result.coop}명</span> : null}
-                  {result.cupScore ? <span className="l-catch-tag">대회 점수 {result.cupScore}</span> : null}
-                  {result.pressed && (result.grade === 'S' || result.grade === 'A') && <span className="l-catch-tag">재빠르게 챘어요</span>}
-                </span>
-                <p>{fish.note}</p>
-                <dl>
-                  <dt>내 기록</dt>
-                  <dd>{result.best ? <span className="l-ribbon">새 기록</span> : best ? `${best.cm}cm · ${gramsText(best.g)}` : '—'}</dd>
-                  <dt>마을 최대어</dt>
-                  <dd>
-                    {result.record ? (
-                      <span className="l-ribbon is-gold">
-                        <Glyph name="star" size={13} /> 이 물고기예요
-                      </span>
-                    ) : record ? (
-                      `${record.cm}cm · ${ACTORS[record.actor] ?? '친구'}`
-                    ) : (
-                      '—'
-                    )}
-                  </dd>
-                  <dt>시세</dt>
-                  <dd>개당 {formatBeom(price ?? fish.sell)}{q > 0 ? ` (${QUALITY_NAME[q]} ×${FISH_QUALITY_MULT[q]})` : ''}</dd>
-                </dl>
-              </div>
-            </>
+            <CatchCard fish={fish} result={result} best={best} record={record} price={price} />
           ) : (
             <p className="l-catch-miss">
               <strong>앗, 놓쳤어요</strong>

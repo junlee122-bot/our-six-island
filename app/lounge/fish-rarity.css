@@ -1,0 +1,247 @@
+/* Fish grades (흔함 · 보통 · 드묾 · 전설): the badge, and the colours the catch
+   card, the reel and the journal pick up through [data-rarity]. */
+[data-rarity='common'] {
+  --tier: var(--rarity-common);
+  --tier-ink: var(--rarity-common-ink);
+  --tier-soft: var(--rarity-common-soft);
+  --edge-tier: var(--edge-rarity-common);
+}
+[data-rarity='uncommon'] {
+  --tier: var(--rarity-uncommon);
+  --tier-ink: var(--rarity-uncommon-ink);
+  --tier-soft: var(--rarity-uncommon-soft);
+  --edge-tier: var(--edge-rarity-uncommon);
+}
+[data-rarity='rare'] {
+  --tier: var(--rarity-rare);
+  --tier-ink: var(--rarity-rare-ink);
+  --tier-soft: var(--rarity-rare-soft);
+  --edge-tier: var(--edge-rarity-rare);
+}
+[data-rarity='legend'] {
+  --tier: var(--rarity-legend);
+  --tier-ink: var(--rarity-legend-ink);
+  --tier-soft: var(--rarity-legend-soft);
+  --edge-tier: var(--edge-rarity-legend);
+}
+
+.l-rarity {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  padding: 2px 9px 2px 6px;
+  border-radius: var(--r-round);
+  font-family: var(--font-display);
+  font-size: var(--fs-cap);
+  line-height: 1.4;
+  color: var(--tier-ink);
+  background: var(--tier);
+  box-shadow: var(--edge-line);
+  white-space: nowrap;
+}
+.l-rarity[data-size='l'] {
+  gap: 7px;
+  padding: 3px 12px 3px 8px;
+  font-size: var(--fs-title-s);
+}
+.l-rarity-stars {
+  display: inline-flex;
+  gap: 1px;
+}
+.l-rarity[data-rarity='legend'] {
+  box-shadow: var(--edge-line), var(--ring-rarity-legend);
+}
+
+/* ---- catch card ------------------------------------------------------------ */
+.l-catch[data-rarity] {
+  box-shadow: var(--edge-tier);
+}
+.l-catch[data-rarity='uncommon'] {
+  background:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--tier-soft) 80%, transparent) 0 80px, transparent 140px),
+    var(--paper-50);
+}
+.l-catch[data-rarity='rare'] {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 40%, var(--tier-soft) 0 90px, transparent 160px),
+    var(--paper-50);
+}
+.l-catch[data-rarity='legend'] {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 45%, color-mix(in srgb, var(--rarity-legend-glow) 45%, transparent) 0 70px, transparent 170px),
+    linear-gradient(160deg, var(--tier-soft), var(--paper-50) 55%);
+  animation: l-legend-glow 2.4s ease-in-out infinite;
+}
+/* One light sweep across a rare or legend card as it lands. */
+.l-catch[data-rarity='rare']::after,
+.l-catch[data-rarity='legend']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--paper-50) 75%, transparent) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: l-catch-sweep 1.1s ease-out 0.35s both;
+}
+.l-catch-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  margin: -2px 0 2px;
+  padding: 6px var(--sp-3);
+  border-radius: var(--r-m);
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  color: var(--tier-ink);
+  background: var(--tier);
+  animation: l-banner-in 520ms cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.l-catch[data-rarity='rare'] .l-catch-banner .l-rarity,
+.l-catch[data-rarity='legend'] .l-catch-banner .l-rarity {
+  background: var(--paper-50);
+  color: var(--text);
+}
+.l-catch[data-rarity='legend'] .l-catch-banner {
+  box-shadow: var(--ring-rarity-legend);
+}
+.l-catch-art[data-rarity] > :not(.l-catch-rays, .l-stamp) {
+  position: relative;
+}
+.l-catch-art[data-rarity='uncommon'] .l-item-icon {
+  filter: drop-shadow(0 0 6px var(--rarity-uncommon-soft));
+}
+.l-catch-art[data-rarity='rare'] .l-item-icon {
+  filter: drop-shadow(0 0 10px var(--rarity-rare));
+}
+.l-catch-art[data-rarity='legend'] .l-item-icon {
+  filter: drop-shadow(0 0 14px var(--rarity-legend-glow)) drop-shadow(0 0 4px var(--rarity-legend-glow));
+}
+/* Light rays turning slowly behind the fish (uncommon faint, legend bright). */
+.l-catch-rays {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 230px;
+  height: 230px;
+  margin: -115px 0 0 -115px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--tier) 30%, transparent) 0deg 10deg, transparent 10deg 30deg);
+  mask-image: radial-gradient(circle, black 25%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle, black 25%, transparent 70%);
+  opacity: 0.55;
+  animation: l-rays-turn 14s linear infinite;
+}
+.l-catch-art[data-rarity='rare'] .l-catch-rays {
+  opacity: 0.8;
+}
+.l-catch-art[data-rarity='legend'] .l-catch-rays {
+  width: 280px;
+  height: 280px;
+  margin: -140px 0 0 -140px;
+  background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--rarity-legend-glow) 60%, transparent) 0deg 9deg, transparent 9deg 24deg);
+  opacity: 1;
+  animation-duration: 9s;
+}
+.l-catch-art[data-rarity='legend'] figcaption {
+  color: var(--tier);
+}
+
+/* ---- the reel, the "biting now" strip and the journal ------------------- */
+.l-reel[data-rarity] {
+  box-shadow: var(--edge-tier);
+}
+.l-reel[data-rarity='rare'],
+.l-reel[data-rarity='legend'] {
+  background: linear-gradient(180deg, var(--tier-soft), var(--surface-sunken) 60%);
+}
+.l-reel[data-rarity='legend'] {
+  animation: l-legend-glow 2.4s ease-in-out infinite;
+}
+.l-reel-kind {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.l-angler-now li[data-rarity]:not([data-rarity='common'])::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: var(--ring-line);
+}
+.l-angler-now li[data-rarity]:not([data-rarity='common'])::after {
+  background: var(--tier);
+}
+.l-angler-now li[data-rarity='legend']::after {
+  box-shadow: var(--ring-rarity-legend);
+}
+.l-fj-cell[data-rarity] button {
+  border-bottom: 3px solid var(--tier);
+}
+.l-fj-cell[data-rarity='rare'] button,
+.l-fj-cell[data-rarity='legend'] button {
+  background: color-mix(in srgb, var(--tier-soft) 55%, var(--surface-raised));
+}
+.l-fj-cell[data-rarity='legend']:not([data-unknown]) button {
+  outline: 2px solid var(--rarity-legend-glow);
+  outline-offset: -2px;
+}
+.l-fj-tiers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-fj-tiers li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+
+@keyframes l-catch-sweep {
+  to {
+    transform: translateX(120%);
+  }
+}
+@keyframes l-banner-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes l-rays-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes l-legend-glow {
+  50% {
+    filter: brightness(1.04) saturate(1.08);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-catch[data-rarity],
+  .l-catch[data-rarity]::after,
+  .l-catch-banner,
+  .l-catch-rays,
+  .l-reel[data-rarity] {
+    animation: none !important;
+  }
+  .l-catch[data-rarity]::after {
+    display: none;
+  }
+}

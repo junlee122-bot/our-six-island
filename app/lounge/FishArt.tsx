@@ -14,13 +14,13 @@ export function FishArt({ id, size = 40, unknown = false, className = '' }: { id
   if (unknown)
     return (
       <span
-        className={`l-fish-art l-fish-shadow ${className}`.trim()}
+        className={`l-fish-paint l-fish-shadow ${className}`.trim()}
         style={{ width: size, height: size, maskImage: `url(${src})`, WebkitMaskImage: `url(${src})` }}
         aria-hidden="true"
       />
     );
   return (
-    <span className={`l-item-icon l-fish-art ${className}`.trim()} style={{ width: size, height: size }} aria-hidden="true">
+    <span className={`l-item-icon l-fish-paint ${className}`.trim()} style={{ width: size, height: size }} aria-hidden="true">
       {/* oxlint-disable-next-line nextjs/no-img-element -- Painted icon at a fixed size. */}
       <img src={src} alt="" width={size} height={size} draggable={false} />
     </span>

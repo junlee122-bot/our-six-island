@@ -266,9 +266,6 @@
 .l-fj-cell[data-unknown] .l-item-icon {
   filter: brightness(0) opacity(0.35);
 }
-.l-fj-cell[data-rarity='legend'] button {
-  background: color-mix(in srgb, var(--highlight) 22%, var(--surface-raised));
-}
 .l-fj-detail {
   display: grid;
   grid-template-columns: 96px 1fr;
@@ -388,11 +385,11 @@
   }
 }
 
-.l-fish-art {
+.l-fish-paint {
   display: inline-grid;
   place-items: center;
 }
-.l-fish-art img {
+.l-fish-paint img {
   width: 100%;
   height: 100%;
   object-fit: contain;

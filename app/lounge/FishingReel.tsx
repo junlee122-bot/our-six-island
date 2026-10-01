@@ -10,6 +10,8 @@ import { boundAction } from '../lounge-scene-keys';
 import { KeyHintBar } from '../ui/KeyHint';
 import { Glyph } from '../ui/Glyph';
 import { lifeSfx } from '../lounge-audio-life';
+import type { FishRarity } from '../lounge-fish-engine';
+import { RarityBadge } from './FishRarity';
 import './fishing-reel.css';
 
 /** Ticks simulated per animation frame at most (a stalled tab never fast-forwards the fight). */
@@ -20,17 +22,30 @@ export function FishingReel({
   setup,
   behaviourName,
   difficulty,
+  rarity,
   onDone,
 }: {
   setup: FightSetup;
   behaviourName: string;
   difficulty: number;
+  /** The hooked fish's grade (shown from the hook on; absent from an older server). */
+  rarity?: FishRarity;
   onDone: (runs: number[], result: FightResult) => void;
 }) {
   const track = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const hold = useRef(false);
-  const [status, setStatus] = useState('물고기가 걸렸어요. 초록 칸 안에 물고기를 잡아 두세요.');
+  const [status, setStatus] = useState(
+    rarity === 'legend'
+      ? '줄이 끊어질 듯 당겨요! 전설의 물고기예요. 초록 칸 안에 꼭 잡아 두세요.'
+      : rarity === 'rare'
+        ? '묵직해요! 드문 물고기가 걸렸어요. 초록 칸 안에 잡아 두세요.'
+        : '물고기가 걸렸어요. 초록 칸 안에 물고기를 잡아 두세요.',
+  );
+  // A big fish announces itself the moment it is hooked.
+  useEffect(() => {
+    if (rarity === 'rare' || rarity === 'legend') lifeSfx('sparkle');
+  }, [rarity]);
   const [pressed, setPressed] = useState(false);
   const done = useRef(onDone);
   useLayoutEffect(() => {
@@ -132,7 +147,7 @@ export function FishingReel({
 
   const level = difficulty >= 80 ? '아주 어려움' : difficulty >= 60 ? '어려움' : difficulty >= 35 ? '보통' : '쉬움';
   return (
-    <div ref={root} className="l-reel" data-testid="fish-reel" data-pressed={pressed || undefined}>
+    <div ref={root} className="l-reel" data-testid="fish-reel" data-pressed={pressed || undefined} data-rarity={rarity}>
       <button
         type="button"
         className="l-reel-hold"
@@ -167,6 +182,7 @@ export function FishingReel({
       </button>
       <div className="l-reel-side">
         <p className="l-reel-kind">
+          {rarity && <RarityBadge rarity={rarity} />}
           <strong>{behaviourName}</strong>
           <small>{level}</small>
         </p>
