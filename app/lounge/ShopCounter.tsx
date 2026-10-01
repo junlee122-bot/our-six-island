@@ -1,5 +1,5 @@
 'use client';
-// The counters of 범마을 부동산 (문 사장), 나무결 가구점 (결 목수) and the shop
+// The counters of 범마을 부동산 (문 사장), 나무결 가구점 (목수 발키리) and the shop
 // upgrade board (also 허 선장's in 허풍 주점). Keyboard first: Tab / ←→ switch
 // the counter's pages, ↑↓ (or ←→↑↓ in the showroom) move the selection,
 // Enter buys or chips in, +/− change the count, R rerolls today's stock.
@@ -655,7 +655,7 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
     }, cols)(e);
   };
   return (
-    <Modal title={`${VENUE_NAME.furniture} · 결 목수`} onClose={onClose} className="sc-counter sc-furniture" wide>
+    <Modal title={`${VENUE_NAME.furniture} · 발키리`} onClose={onClose} className="sc-counter sc-furniture" wide>
       <Keeper host="carpenter" mood={page === 'upgrade' ? 'focus' : bought ? 'calm' : 'smile'} line={line} />
       <Pages
         pages={[

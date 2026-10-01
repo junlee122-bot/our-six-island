@@ -21,7 +21,7 @@
 // client sets it from the world with setNpcWorld, the server passes it).
 // Inside a house, the library or the lighthouse a resident is not drawn
 // (`hidden` places in a visible area). The eight residents who already work
-// indoors stay at their posts (their scenes draw them); 문 사장 and 결 목수 take
+// indoors stay at their posts (their scenes draw them); 문 사장 and 발키리 take
 // an evening walk through the hub. Stage-2 residents (hasSprite: false) have
 // schedules too, but npcsIn leaves them out until they can be drawn.
 import { kstDay } from './lounge-economy.ts';

@@ -148,18 +148,27 @@ export const NPCS: Record<NpcId, NpcDef> = {
     art: { kind: 'sheet', host: 'realtor' },
     speech: 'polite',
   },
+  // 발키리 (Clash Royale / Clash of Clans, Supercell) recast as the village
+  // carpenter (user request 2026-10-01). The id stays 'carpenter' so hearts
+  // carry over; the counter keeps the pose sheet (host 'carpenter'), dialogue
+  // and the village use the tall art and the chibi. Voice and arc notes:
+  // app/lounge-npc-lines-carpenter.ts.
   carpenter: {
     id: 'carpenter',
-    name: '결 목수',
-    age: 34,
-    role: '나무결 가구점 주인',
+    name: '발키리',
+    age: 30,
+    role: '나무결 가구점 목수',
     place: '나무결 가구점',
-    intro: '말수는 적지만 나뭇결 얘기가 나오면 눈이 반짝여요.',
-    likesText: '단단한 나무, 솔방울, 도토리',
-    dislikesText: '돌덩이, 광석',
-    gifts: { loved: ['hardwood'], liked: ['wood', 'pinecone', 'acorn', 'chestnut', 'dotorimuk'], disliked: ['stone', 'copper', 'iron'] },
-    rewards: { 40: ['hardwood', 3], 100: ['hardwood', 10] },
-    art: { kind: 'sheet', host: 'carpenter' },
+    intro: '도끼 한 자루로 가구를 짜는 목수. 입만 열면 시비지만, 부탁하면 투덜대면서 다 해 줘요.',
+    likesText: '단단한 나무, 좋은 도끼날 감(철·금), 매운 음식',
+    dislikesText: '꽃다발, 달달한 차',
+    gifts: {
+      loved: ['hardwood', 'iron', 'gold', 'maeuntang', 'kimchi'],
+      liked: ['wood', 'copper', 'pinecone', 'acorn', 'fishstew', 'pepperpotato', 'grilledfish', 'roastchestnut'],
+      disliked: ['kind:flower', 'flowertea', 'jam'],
+    },
+    rewards: { 40: ['hardwood', 3], 100: ['iron', 5] },
+    art: img(A.npc_valkyrie, A.npc_valkyrie_portrait),
     speech: 'casual',
   },
   rose: {

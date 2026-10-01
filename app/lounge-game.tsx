@@ -391,7 +391,7 @@ type ModalName =
   | 'npcRequests'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
-  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 결 목수).
+  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 문 사장 · 발키리).
   | 'realty'
   | 'furniture'
   | 'tavernUp'
