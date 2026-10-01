@@ -14,6 +14,7 @@ import { REGIONS } from '../app/lounge-areas.ts';
 import { districtCounters } from '../app/lounge-district-counters.ts';
 import { npcSpot } from '../app/lounge-npc-schedule.ts';
 import { NPC_IDS } from '../app/lounge-npc-data.ts';
+import { SHOP_INTERIORS, seatPoint } from '../app/lounge-shop-interiors.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -29,6 +30,10 @@ const noon = args.includes('--noon');
 const view = opt('view', 'fhd');
 // --panels: also open each counter window (E at the door) and capture it.
 const panels = args.includes('--panels');
+// --shops: walk into each shop room (가게 실내), capture it at the door and at
+// the counter with its draw calls, open the counter's window, then walk out.
+// Two friends sit on the bakery's café chairs. Costs go to <out>/<view>-shops.json.
+const shops = args.includes('--shops');
 // --residents: also walk to the biggest group of residents in the hub and capture it.
 const residents = args.includes('--residents');
 // --at HH:MM: run the mock world (and so the page's clock) at this KST time today.
@@ -62,6 +67,7 @@ const H = await setup({
   },
 });
 const { page, js, sleep, until } = H;
+const shopCosts = {};
 if (noon) await H.ctx.addInitScript(() => localStorage.setItem('bumtadew-settings-v1', JSON.stringify({ version: 2, dayNight: false })));
 const shot = async (name) => {
   await js(() => document.fonts.ready);
@@ -180,7 +186,8 @@ try {
       const seen = new Set();
       for (const c of districtCounters(id, weekday)) {
         const key = c.a.kind === 'counter' ? c.a.place : c.a.kind;
-        if (seen.has(key) || c.a.kind === 'fish' || c.a.kind === 'board') continue;
+        // Shop doors walk in (see --shops), they open no window out here.
+        if (seen.has(key) || c.a.kind === 'fish' || c.a.kind === 'board' || (c.a.kind === 'counter' && c.a.enter)) continue;
         seen.add(key);
         await js((d) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: d })), { x: c.x, z: c.z });
         await until((q) => {
@@ -198,6 +205,71 @@ try {
         }
       }
     }
+    if (shops) {
+      const weekday = new Date(Date.now() + 9 * 3_600_000).getUTCDay();
+      const cost = () => js(() => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return { drawCalls: Number(d?.drawCalls), triangles: Number(d?.triangles), models: d?.shopModels ?? '', residents: d?.residents ?? '' };
+      });
+      for (const c of districtCounters(id, weekday).filter((t) => t.a.kind === 'counter' && t.a.enter)) {
+        const area = c.a.enter;
+        console.log(' ', area);
+        try {
+          // Two friends at the bakery's tables (standing on a chair's spot is sitting).
+          if (area === 'bakery')
+            for (const [i, b] of H.bots.slice(0, 2).entries()) {
+              const seat = seatPoint(SHOP_INTERIORS.bakery.seats[i === 0 ? 1 : 2]);
+              await H.run(b, 'action', { action: { kind: 'area', area, x: seat.x, y: seat.y } }).catch(() => {});
+            }
+          await walkArea({ x: c.x, z: c.z }, 0.6);
+          await sleep(1500);
+          await shot(`${area}-street`);
+          await scene('[data-testid=area-3d]');
+          await page.keyboard.press('KeyE');
+          if ((await until((a) => { const d = document.querySelector('[data-testid=interior-3d]')?.dataset; return d?.area === a && d.loadState === 'ready'; }, 180000, area)) < 0)
+            throw new Error('room did not load');
+          await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+          // Every model placed (or given up on), then a settled frame.
+          await until(() => { const d = document.querySelector('[data-testid=interior-3d]')?.dataset; const [a, b] = (d?.shopModels ?? '').split('/'); return !!b && a === b; }, 60000);
+          await sleep(3500);
+          shopCosts[area] = { door: await cost() };
+          await shot(`${area}-door`);
+          await H.clickSel('[data-testid=interior-counter-route]');
+          await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.walking === 'true', 10000);
+          await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.walking === 'false', 60000);
+          await sleep(2500);
+          shopCosts[area].counter = { ...(await cost()), action: await js(() => document.querySelector('[data-testid=interior-3d]')?.dataset.action) };
+          await shot(`${area}-counter`);
+          await scene('[data-testid=interior-3d]');
+          await page.keyboard.press('KeyE');
+          await until(() => !!document.querySelector('dialog[open]'), 15000);
+          await sleep(900);
+          await shot(`${area}-panel`);
+          for (let i = 0; i < 3 && (await js(() => !!document.querySelector('dialog[open]'))); i++) {
+            await page.keyboard.press('Escape');
+            await sleep(400);
+          }
+          // Out through the door (walk to it, then E): back in front of the shop.
+          await scene('[data-testid=interior-3d]');
+          await page.keyboard.down('ArrowLeft');
+          await page.keyboard.down('ArrowDown');
+          await page.keyboard.down('Shift');
+          await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.action === 'door', 20000);
+          await page.keyboard.up('Shift');
+          await page.keyboard.up('ArrowDown');
+          await page.keyboard.up('ArrowLeft');
+          await page.keyboard.press('KeyE');
+          await until((a) => document.querySelector('[data-testid=area-3d]')?.dataset.area === a, 60000, id);
+          await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+          await sleep(2500);
+          shopCosts[area].out = await js(() => { const d = document.querySelector('[data-testid=area-3d]')?.dataset; return { x: Number(d?.avatarX), z: Number(d?.avatarZ) }; });
+          await shot(`${area}-out`);
+        } catch (e) {
+          console.log('   failed:', e.message.split('\n')[0]);
+          shopCosts[area] = { ...shopCosts[area], error: e.message.split('\n')[0] };
+        }
+      }
+    }
     // Back to the hub through the exit (in reach first, or E does nothing and the next gate is walked to in here).
     const back = REGIONS[id].exits[0];
     if (back) {
@@ -211,6 +283,10 @@ try {
     }
   }
 } finally {
+  if (shops) {
+    fs.writeFileSync(path.join(out, `${view}-shops.json`), JSON.stringify(shopCosts, null, 2));
+    console.log(JSON.stringify(shopCosts, null, 2));
+  }
   if (H.errors.length) console.log('page errors:', H.errors.slice(0, 5));
   await H.close?.();
   await browser.close();

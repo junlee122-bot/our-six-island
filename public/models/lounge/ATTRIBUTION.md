@@ -215,3 +215,21 @@ Files under `public/models/village/shops/` (범마을 부동산 and 나무결 �
 Reused without new bytes: the room's archive bookcase (`redesign/archiveBookcase.glb`, the same kArchive model as the tavern's bookcase tier), the valley set's onggi, hanji lantern and firewood, and the friends' tables' service bell (the tavern's 거짓말! bell).
 
 Modifications: web-optimized copies as described at the top of this file (small props at 512² WebP textures, buildings and the main table at 1024²). At runtime the game sets position, orientation and scale (the holiday-set models, normalized to a 2 m longest side, are scaled down), tints the hanji lanterns' glow, and shows or swaps models by the shared shop upgrades (외관 · 바·카운터 · 좌석 · 조명 · 벽·장식 · 주방). The toy cork gun (뻥총), dartboard, gramophone, posters, rug and signs are drawn in code.
+
+Files under `public/models/village/shop-interiors/` (가게 실내: 빵집 카페 · 농협 · 잡화점 · 어시장 furniture, 2026-10-02; 13 files, originals 7,621,992 bytes, web copies 3,647,300 bytes):
+
+- breadStand.glb: https://karchive.vibeline.co.kr/models/restaurant-bread-basket-display-stand-cottage-normal — 빵집 빵 바구니 진열대
+- espresso.glb: https://karchive.vibeline.co.kr/models/rounded-restaurant-coffee-machine-cups-loaded — 빵집 커피 머신
+- cakeCase.glb: https://karchive.vibeline.co.kr/models/icecream-frosted-cake-display-freezer-cottage-normal — 빵집 케이크 진열장(계산대)
+- pastryCase.glb: https://karchive.vibeline.co.kr/models/convenience-fried-snack-warming-case-cottage-normal — 빵집 구움과자 진열장
+- flourCart.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-flour-sack-cart-two-sacks — 농협 곡물 자루 수레
+- scale.glb: https://karchive.vibeline.co.kr/models/rounded-restaurant-kitchen-scale-flour-bag — 농협·어시장 계량 저울
+- fruitCrate.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-produce-crate-fruit — 농협 과일 상자
+- seedCabinet.glb: https://karchive.vibeline.co.kr/models/apocalypse-seed-storage-cabinet-cottage-normal — 농협·잡화점 씨앗 보관장
+- goodsGondola.glb: https://karchive.vibeline.co.kr/models/convenience-household-supplies-gondola-cottage-normal — 잡화점 생활용품 진열대
+- basketStand.glb: https://karchive.vibeline.co.kr/models/convenience-shopping-basket-stack-stand-cottage-normal — 잡화점 장바구니 거치대
+- toolTrunk.glb: https://karchive.vibeline.co.kr/models/angular-common-furniture-storage-trunk-open-tools — 잡화점 도구 상자
+- iceBin.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-ice-bin-open-ice — 어시장 얼음 통
+- fishFreezer.glb: https://karchive.vibeline.co.kr/models/angular-restaurant-chest-freezer-open-stocked — 어시장 냉동 진열고
+
+The shop rooms also reuse, without new bytes, the tavern's café table, cash register, storage shelf, tea sideboard and barrel rack, the valley set's produce crate, onggi and hanji lantern, the club's banquet chair, the redesign plant stand, the expansion garden lantern and the catch-display mackerel, cod and hairtail. Small props use 512² WebP textures; at runtime only position, orientation and scale are set (repeated models are instanced).
