@@ -11,8 +11,10 @@ import {
   lockedRoomItems,
   lockedRoomStyle,
   readBedroom,
+  roomUnlocks,
   ROOM_ITEM_LOCKED,
 } from './lounge-bedroom-data.ts';
+import { afterRoomsReset } from './lounge-rooms-reset.ts';
 import { defaultLook, readLook, type Look } from './lounge-look.ts';
 import type { Bedroom } from './lounge-bedroom-data.ts';
 import {
@@ -79,12 +81,13 @@ export const serverAccountSave = (
   value: unknown,
   actor: number,
   previousSave?: unknown,
-  unlocks: readonly string[] = [],
+  unlocks: readonly string[] = roomUnlocks({}),
   furniture?: FurniturePolicy,
 ) => accountSave(value, actor, previousSave, { strict: true, unlocks, furniture });
 
 export function furniturePolicyOf(life: unknown, uid: string): FurniturePolicy {
-  const x = readLife(life).ext?.[uid];
+  // Before the one-time 새 방 reset is stored, the old counts no longer count.
+  const x = afterRoomsReset(readLife(life)).ext?.[uid];
   return { owned: x?.furn, strict: x?.furnStrict };
 }
 export const protectProfileFurniture = <T>(save: T, life: unknown, uid: string): T =>
@@ -95,11 +98,13 @@ export const protectProfileFurniture = <T>(save: T, life: unknown, uid: string):
  * owned copy of premium furniture ('furn-*', lounge-items FURNITURE).
  */
 export const lifeUnlocksOf = (life: unknown, uid: string): string[] => {
-  const state = readLife(life),
-    furniture = Object.entries(furnitureOf(state, uid)).flatMap(([ref, n]) =>
-      Array.from({ length: Math.min(n, 40) }, () => ref),
-    );
-  return [...(state.unlocks[uid] ?? []), ...houseUnlocksOf(state, uid), ...furniture];
+  const state = afterRoomsReset(readLife(life));
+  return roomUnlocks({
+    unlocks: state.unlocks[uid] ?? [],
+    house: houseUnlocksOf(state, uid).length,
+    styles: state.ext?.[uid]?.styles ?? [],
+    furniture: furnitureOf(state, uid),
+  });
 };
 /**
  * Normalizes a profile save for this account. Client-side (default) it is
@@ -328,6 +333,8 @@ export const SESSION_IDLE_DAYS = 30;
 /** Read-only view of a friend's room returned by hohyeon-api `{op:'visit'}`. */
 export type FriendVisit = {
   owner: number;
+  /** The owner's 집 확장 tier (their room is that big). */
+  house: number;
   name: string;
   bedroom: Bedroom | null;
   look: Look;
@@ -352,7 +359,7 @@ export function friendVisitView(
   life: unknown,
 ): FriendVisit {
   if (!visitOwnerValid(owner)) throw new RangeError(VISIT_BAD_OWNER);
-  const state = readLife(life), uid = uidOf(state, owner), owned = uid ? state.ext?.[uid] : undefined;
+  const state = afterRoomsReset(readLife(life)), uid = uidOf(state, owner), owned = uid ? state.ext?.[uid] : undefined;
   let bedroom: Bedroom | null = null,
     look = defaultLook(owner);
   if (save && typeof save === 'object') {
@@ -362,6 +369,7 @@ export function friendVisitView(
   }
   return {
     owner,
+    house: owned?.house ?? 0,
     name: ACTORS[owner],
     bedroom,
     look,

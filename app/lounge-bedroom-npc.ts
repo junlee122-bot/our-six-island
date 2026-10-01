@@ -22,7 +22,10 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
     }
     return g;
   };
-  const height = 1.7 * HOST_CELL.h / HOST_CELL.figure;
+  // Pose sheets and single images stand as tall as the friend plane implies
+  // (upright planes stretched like the friends', 1 / up.y).
+  const stretch = 1 / Math.max(0.2, up.y);
+  const height = (1.7 * HOST_CELL.h / HOST_CELL.figure) * stretch;
   const sheetGeometry = new THREE.PlaneGeometry(height * up.y * HOST_CELL.w / HOST_CELL.h, height);
   sheetGeometry.translate(0, height / 2 - height * (HOST_CELL.h - HOST_CELL.foot) / HOST_CELL.h, 0);
   const cell = hostCell('smile'), uv = sheetGeometry.attributes.uv as THREE.BufferAttribute;
@@ -30,7 +33,7 @@ export function createBedroomNpc(scene: THREE.Scene, camera: THREE.Camera, shado
   const top = 1 - cell.y / (HOST_CELL.h * HOST_CELL.rows), bottom = 1 - (cell.y + HOST_CELL.h) / (HOST_CELL.h * HOST_CELL.rows);
   uv.setXY(0, left, top); uv.setXY(1, right, top); uv.setXY(2, left, bottom); uv.setXY(3, right, bottom);
   // Single images are 660 × 990 with the soles near the bottom edge; the figure fills ~95% of the height.
-  const imageHeight = 1.7 / 0.95;
+  const imageHeight = (1.7 / 0.95) * stretch;
   const imageGeometries = new Map<number, THREE.PlaneGeometry>();
   const imageGeometry = (foot: number) => {
     let g = imageGeometries.get(foot);

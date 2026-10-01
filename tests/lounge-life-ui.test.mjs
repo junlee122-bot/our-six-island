@@ -221,7 +221,7 @@ test('village action: fishing, spawns, museum, board, friend farms, labels', () 
 });
 
 test('furniture: art for every premium piece, copies left and unlock entries', () => {
-  for (const f of FURNITURE) assert.match(FURNITURE_ART[f.ref] ?? '', /^data:image\/svg\+xml/, f.ref);
+  for (const f of FURNITURE) if (!f.basic) assert.match(FURNITURE_ART[f.ref] ?? '', /^data:image\/svg\+xml/, f.ref);
   assert.deepEqual(furnitureUnlocks({ 'furn-plant': 2, 'furn-fan': 0 }), ['furn-plant', 'furn-plant']);
   const left = furnitureLeft({ 'furn-plant': 2 }, [{ ref: 'furn-plant' }, { ref: 'bed' }]);
   assert.equal(left['furn-plant'], 1);

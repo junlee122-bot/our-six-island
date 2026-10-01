@@ -1,10 +1,13 @@
 /**
- * Room save format v3, shared by the browser and the hohyeon-api Edge function
- * (via lounge-accounts.ts / lounge-look.ts). No asset, DOM, or storage imports.
+ * Room save format v4 (새 방, 2026-10-02), shared by the browser and the
+ * hohyeon-api Edge function (via lounge-accounts.ts / lounge-look.ts). No
+ * asset, DOM, or storage imports.
  *
  * One room system: items are placed in walk-room world units and edited in 3D.
- * Older saves (v1 and the v2 "designVersion 2" percent canvas) are NOT migrated:
- * the friends asked for a full reset, so they become the actor's new default room.
+ * Older saves (v1–v3) are NOT migrated: the friends chose a full reset
+ * (handover/design/design-rooms-v2.md), so they read as the new default room —
+ * an empty room with one bed. The old themed layouts live on as 범마을
+ * 부동산's model houses (legacyThemeRoom).
  */
 import { BEDROOM_THEMES, bedroomTheme } from './lounge-bedroom-themes.ts';
 import {
@@ -13,22 +16,32 @@ import {
   type CatalogEntry,
   type RoomItemKind,
 } from './lounge-bedroom-catalog.ts';
-import { defaultRoomItems } from './lounge-bedroom-layouts.ts';
+import { legacyRoomItems } from './lounge-bedroom-layouts.ts';
+import { LEGACY_ROOM, ROOM_TIERS, roomShape, type RoomShape } from './lounge-bedroom-catalog.ts';
 export {
   ROOM,
   ROOM_DOOR_POINT,
+  ROOM_TIERS,
+  ROOM_FIXTURES,
+  LEGACY_ROOM,
+  MOUNT_NAME,
+  roomShape,
+  roomDoorPoint,
   ROOM_CATALOG,
   CATALOG_BY_REF,
   catalogEntry,
 } from './lounge-bedroom-catalog.ts';
 export type {
+  RoomFixture,
+  RoomShape,
   CatalogEntry,
   RoomCategory,
   RoomItemKind,
   RoomMount,
 } from './lounge-bedroom-catalog.ts';
 
-export const BEDROOM_VERSION = 3;
+export const BEDROOM_VERSION = 4;
+/** v4 rooms hang things on the back wall only ('left' is the old rooms' wall, model houses). */
 export type RoomWall = 'back' | 'left';
 export type RoomItem = {
   id: string;
@@ -72,8 +85,22 @@ export const FLOOR_KINDS = [
   'cherry',
   'ebony',
 ] as const;
-/** Room styles that need a house tier ('house-N' unlock). */
+/** Every room starts with these (the rest are bought at 범마을 부동산). */
+export const FREE_WALL = 'cream';
+export const FREE_FLOOR = 'oak';
+/**
+ * Room styles that need an unlock: a house tier ('house-N', 집 확장) or a
+ * model-house style bought at 범마을 부동산 ('style-<name>', 모델하우스 관람).
+ */
 export const STYLE_UNLOCK: Readonly<Record<string, string>> = {
+  sage: 'style-sage',
+  blush: 'style-blush',
+  blue: 'style-blue',
+  mint: 'style-mint',
+  dusk: 'style-dusk',
+  walnut: 'style-walnut',
+  pale: 'style-pale',
+  ash: 'style-ash',
   gold: 'house-1',
   navy: 'house-1',
   rose: 'house-1',
@@ -109,7 +136,7 @@ export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type BedroomThemeId = (typeof BEDROOM_THEMES)[number]['id'];
 export type Bedroom = {
-  version: 3;
+  version: 4;
   theme: BedroomThemeId;
   wall: (typeof WALL_COLORS)[number];
   floor: (typeof FLOOR_KINDS)[number];
@@ -127,17 +154,95 @@ export const BEDROOM_LIMITS = {
 } as const;
 const ITEM_ID = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,31}$/;
 
-/** Every friend's starting room (one per actor, see lounge-bedroom-layouts.ts). */
+/** The one bed every room keeps (free, apart from the furniture counts). */
+export const DEFAULT_BED: RoomItem = {
+  id: 'bed',
+  kind: 'model',
+  ref: 'bed',
+  x: 4.2,
+  z: -2.46,
+  rotY: 0,
+  scale: 1,
+};
+/** Every friend's starting room: the same empty room with one bed. */
 export function defaultBedroom(actor = 0): Bedroom {
-  const theme = bedroomTheme(actor);
   return {
-    version: 3,
-    theme: theme.id,
-    wall: theme.wall,
-    floor: theme.floor,
+    version: 4,
+    theme: bedroomTheme(actor).id,
+    wall: FREE_WALL,
+    floor: FREE_FLOOR,
     access: 'friends',
-    items: defaultRoomItems(actor).map((item) => ({ ...item })),
+    items: [{ ...DEFAULT_BED }],
   };
+}
+/**
+ * A friend's old themed room (the v3 starting layout) as 범마을 부동산 shows it
+ * in 모델하우스 관람: its theme wall and floor and every piece, in LEGACY_ROOM
+ * coordinates. Art on the old left wall moves to a free spot on the back wall
+ * (the straight-on camera sees the side walls edge-on) or is left out.
+ */
+export function legacyThemeRoom(actor = 0): Bedroom {
+  const theme = bedroomTheme(actor);
+  const items = legacyRoomItems(actor).map((item) => ({ ...item }));
+  const back = items.filter((i) => i.wall === 'back');
+  const out: RoomItem[] = [];
+  for (const item of items) {
+    if (item.wall !== 'left') {
+      out.push(item);
+      continue;
+    }
+    const entry = catalogEntry(item.ref);
+    if (!entry) continue;
+    const half = (entry.w * item.scale) / 2,
+      h = (entry.h * item.scale) / 2,
+      y = item.y ?? 2.3;
+    const win = LEGACY_ROOM.window;
+    for (let along = LEGACY_ROOM.minX + half + 0.2; along <= LEGACY_ROOM.maxX - half - 0.2; along += 0.2) {
+      const free = [...back].every((b) => {
+        const s = wallSpan(b)!;
+        return along + half < s.a0 - 0.1 || along - half > s.a1 + 0.1 || y + h < s.y0 - 0.1 || y - h > s.y1 + 0.1;
+      });
+      const clearWindow = along + half < win.x0 - 0.05 || along - half > win.x1 + 0.05 || y - h > win.y1;
+      if (free && clearWindow) {
+        const moved: RoomItem = { ...item, wall: 'back', x: Math.round(along * 1000) / 1000, z: LEGACY_ROOM.minZ, y };
+        back.push(moved);
+        out.push(moved);
+        break;
+      }
+    }
+  }
+  return { version: 4, theme: theme.id, wall: theme.wall, floor: theme.floor, access: 'public', items: out };
+}
+
+/**
+ * The room the editor, walking and conflicts use right now (the owner's
+ * tier, or a model house). Pure callers pass a shape; the default is this.
+ */
+let active: RoomShape = roomShape(0);
+export const setActiveRoomShape = (shape: RoomShape) => {
+  active = shape;
+};
+export const activeRoomShape = () => active;
+/** The room shape of a 집 확장 tier count (0–4). */
+export const roomOfHouse = (house: number | undefined) => roomShape(house ?? 0);
+/**
+ * What a room may hold: shop unlocks, house tiers, bought model-house styles,
+ * one entry per owned furniture copy, and the one free bed every room keeps.
+ * Shared by the room editor and the server's save check (lounge-accounts).
+ */
+export function roomUnlocks(input: {
+  unlocks?: readonly string[];
+  house?: number;
+  styles?: readonly string[];
+  furniture?: Readonly<Record<string, number>>;
+}): string[] {
+  const out = [...(input.unlocks ?? [])];
+  for (let i = 1; i <= Math.min(ROOM_TIERS.length - 1, input.house ?? 0); i++) out.push(`house-${i}`);
+  for (const style of input.styles ?? []) if (Object.hasOwn(STYLE_UNLOCK, style)) out.push(STYLE_UNLOCK[style]);
+  for (const [ref, n] of Object.entries(input.furniture ?? {}))
+    if (Number.isSafeInteger(n) && n > 0) for (let i = 0; i < Math.min(n, 40); i++) out.push(ref);
+  out.push(DEFAULT_BED.ref);
+  return out;
 }
 
 // ------------------------------------------------------------- geometry
@@ -186,21 +291,25 @@ export function blocksFloor(item: RoomItem, entry = catalogEntry(item.ref)) {
   if (entry.mount === 'floor') return true;
   return entry.mount === 'small' && (item.y ?? 0) < 0.05;
 }
-/** The strip in front of the door that must stay walkable. */
-export const DOOR_ZONE: Footprint = {
-  x0: ROOM.minX,
-  x1: ROOM.minX + 1.15,
-  z0: ROOM.door.z0 - 0.05,
-  z1: ROOM.door.z1 + 0.05,
-};
+/** The strip inside the door that must stay walkable. */
+export const doorZone = (shape: RoomShape = active): Footprint => ({
+  x0: shape.door.x0 - 0.2,
+  x1: shape.door.x1 + 0.2,
+  z0: shape.maxZ - 1.15,
+  z1: shape.maxZ,
+});
+/** A built-in fixture's floor box. */
+export const fixtureBox = (f: { x0: number; x1: number; z0: number; z1: number }): Footprint => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1 });
 export type RoomConflict = { id: string; reason: 'overlap' | 'door' | 'window' | 'outside'; with?: string };
 /**
  * Placement problems shown in 꾸미기 모드 (overlapping furniture, blocked door,
  * art over the window, things through a wall). Rugs never conflict, and small
  * items standing on a surface are not floor obstacles.
  */
-export function roomConflicts(room: Pick<Bedroom, 'items'>): RoomConflict[] {
+export function roomConflicts(room: Pick<Bedroom, 'items'>, shape: RoomShape = active): RoomConflict[] {
   const out: RoomConflict[] = [];
+  const ROOM = shape,
+    DOOR_ZONE = doorZone(shape);
   const floor: { item: RoomItem; box: Footprint }[] = [];
   const walls: { item: RoomItem; span: NonNullable<ReturnType<typeof wallSpan>> }[] = [];
   for (const item of room.items) {
@@ -220,13 +329,11 @@ export function roomConflicts(room: Pick<Bedroom, 'items'>): RoomConflict[] {
         span.y1 > ROOM.window.y0 + 0.02
       )
         out.push({ id: item.id, reason: 'window' });
-      if (
-        span.wall === 'left' &&
-        span.a0 < ROOM.door.z1 - 0.02 &&
-        span.a1 > ROOM.door.z0 + 0.02 &&
-        span.y0 < ROOM.door.height
-      )
-        out.push({ id: item.id, reason: 'door' });
+      if (span.wall === 'left' && shape.tier >= 0) out.push({ id: item.id, reason: 'outside' });
+      // Nothing hangs behind the kitchen counter or the closet.
+      if (span.wall === 'back')
+        for (const f of shape.fixtures)
+          if (span.a0 < f.x1 - 0.02 && span.a1 > f.x0 + 0.02 && span.y0 < f.h + 0.05) out.push({ id: item.id, reason: 'overlap', with: f.id });
       walls.push({ item, span });
       continue;
     }
@@ -240,6 +347,8 @@ export function roomConflicts(room: Pick<Bedroom, 'items'>): RoomConflict[] {
       out.push({ id: item.id, reason: 'outside' });
     if (!blocksFloor(item, entry)) continue;
     if (overlaps(box, DOOR_ZONE)) out.push({ id: item.id, reason: 'door' });
+    for (const f of shape.fixtures)
+      if (overlaps(box, fixtureBox(f))) out.push({ id: item.id, reason: 'overlap', with: f.id });
     floor.push({ item, box });
   }
   for (let i = 0; i < floor.length; i++)
@@ -348,12 +457,11 @@ function readItem(value: unknown, clamp: boolean): RoomItem | string {
       scale: round(scale),
     };
     if (entry.mount === 'wall') {
-      if (item.wall !== 'back' && item.wall !== 'left') throw 'wall';
+      if (item.wall !== 'back') throw 'wall';
       out.wall = item.wall;
       out.y = round(num(item.y ?? 2, 0, BEDROOM_LIMITS.maxY, 'y'));
       // A wall item hugs its wall: snap the cross-wall coordinate.
-      if (out.wall === 'back') out.z = ROOM.minZ;
-      else out.x = ROOM.minX;
+      out.z = ROOM.minZ;
     } else {
       if (item.wall !== undefined) throw 'wall';
       if (item.y !== undefined) {
@@ -406,10 +514,10 @@ function readRoom(value: unknown, actor: number, strict: boolean): Bedroom {
     ids.add(item.id);
     items.push(item);
   }
-  return { version: 3, theme, wall, floor, access, items };
+  return { version: 4, theme, wall, floor, access, items };
 }
 /**
- * Lenient reader (browser, friend visits): older or unreadable rooms become the
+ * Lenient reader (browser, friend visits): older (v3 and before) or unreadable rooms become the
  * actor's default v3 room; malformed v3 items are dropped or clamped.
  */
 export function readBedroom(value: unknown, actor = 0): Bedroom {
@@ -422,8 +530,10 @@ export function readBedroom(value: unknown, actor = 0): Bedroom {
 export function readBedroomStrict(value: unknown, actor = 0): Bedroom {
   return readRoom(value, actor, true);
 }
-export const isBedroomV3 = (value: unknown) =>
+export const isBedroomCurrent = (value: unknown) =>
   record(value)?.version === BEDROOM_VERSION;
+/** @deprecated name kept for older imports; true for the current (v4) format. */
+export const isBedroomV3 = isBedroomCurrent;
 
 // ------------------------------------------------------------- helpers
 export const roomHasMiku = (room: Pick<Bedroom, 'items'>) =>

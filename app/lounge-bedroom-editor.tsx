@@ -29,7 +29,7 @@ import {
 } from './lounge-bedroom-data';
 import { BEDROOM_THEMES } from './lounge-bedroom-themes';
 import { THUMBNAILS } from './lounge-bedroom-art';
-import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR } from './lounge-bedroom-scene';
+import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR } from './lounge-bedroom-styles';
 import { scaleRange } from './lounge-bedroom-edit';
 import { josa, particle } from './lounge-text';
 
@@ -44,31 +44,8 @@ export const CATEGORY_NAMES: readonly [RoomCategory | 'all', string][] = [
   ['wall', '벽 장식'],
   ['rare', '희귀 소품'],
 ];
-export const WALL_NAMES: Record<Bedroom['wall'], string> = {
-  cream: '크림',
-  sage: '세이지',
-  blush: '연분홍',
-  blue: '하늘색',
-  mint: '민트',
-  dusk: '밤보라',
-  gold: '샴페인 골드',
-  navy: '밤바다 남색',
-  rose: '로즈 스모크',
-  forest: '깊은 숲',
-  silver: '달빛 은색',
-  terracotta: '노을 테라코타',
-  velvet: '별밤 벨벳',
-};
-export const FLOOR_NAMES: Record<Bedroom['floor'], string> = {
-  oak: '내추럴 오크',
-  walnut: '짙은 월넛',
-  pale: '밝은 나무',
-  ash: '회색 애쉬',
-  marble: '대리석',
-  herringbone: '헤링본',
-  cherry: '체리목',
-  ebony: '흑단',
-};
+export { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
+import { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
 export const ACCESS_NAMES: Record<RoomAccess, [string, string]> = {
   public: ['활짝 열기', '누구나 편하게 놀러 와요. 친구 목록에 “놀러 오세요”가 떠요.'],
   friends: ['친구만', '일곱 친구 모두 놀러 올 수 있어요.'],
@@ -87,6 +64,7 @@ export function EditCatalog({
   onClose: () => void;
 }) {
   const [category, setCategory] = useState<RoomCategory | 'all' | 'premium'>('all');
+  // 새 방: only what I own (bought at 나무결 가구점, crafted or given) and my free bed.
   const owned = ROOM_CATALOG.filter((e) => !e.unlock || unlocks.includes(e.unlock));
   const visible = owned.filter((e) =>
     category === 'all' ? true : category === 'premium' ? !!e.premium : e.category === category,
@@ -149,7 +127,12 @@ export function EditCatalog({
         })}
         {category === 'premium' && (
           <p className="b3-empty-note">
-            가구 상점에서 산 가구와 공방에서 만든 가구예요. 가진 개수만큼 놓을 수 있어요.
+            나무결 가구점에서 산 가구와 공방에서 만든 가구예요. 가진 개수만큼 놓을 수 있어요.
+          </p>
+        )}
+        {!visible.length && category !== 'rare' && (
+          <p className="b3-empty-note" data-testid="catalog-empty">
+            아직 놓을 가구가 없어요. 나무결 가구점에서 가구를 사면 여기에 나와요.
           </p>
         )}
         {category === 'rare' && !visible.length && (
@@ -323,10 +306,15 @@ export function EditBar({
   );
 }
 
-/** A premium style is usable when unlocked by the house tier (or already in the room). */
+/** A style is usable when unlocked (house tier or bought model-house style) or already in the room. */
 const styleOpen = (id: string, current: string, unlocks: readonly string[]) =>
   !Object.hasOwn(STYLE_UNLOCK, id) || unlocks.includes(STYLE_UNLOCK[id]) || id === current;
-const styleTier = (id: string) => STYLE_UNLOCK[id]?.replace('house-', '') ?? '';
+const styleWhere = (id: string) => {
+  const need = STYLE_UNLOCK[id] ?? '';
+  return need.startsWith('house-')
+    ? `범마을 부동산 집 확장 ${need.replace('house-', '')}단계에서 열려요`
+    : '범마을 부동산 모델하우스에서 살 수 있어요';
+};
 
 export function RoomSettings({
   room,
@@ -358,7 +346,7 @@ export function RoomSettings({
               type="button"
               aria-pressed={room.wall === id}
               disabled={!styleOpen(id, room.wall, unlocks)}
-              title={styleOpen(id, room.wall, unlocks) ? undefined : `집 확장 ${styleTier(id)}단계에서 열려요`}
+              title={styleOpen(id, room.wall, unlocks) ? undefined : styleWhere(id)}
               data-locked={styleOpen(id, room.wall, unlocks) ? undefined : true}
               onClick={() => onChange({ ...room, wall: id }, `벽을 ${josa(WALL_NAMES[id], '으로/로')} 바꿨어요.`)}
             >
@@ -377,7 +365,7 @@ export function RoomSettings({
               type="button"
               aria-pressed={room.floor === id}
               disabled={!styleOpen(id, room.floor, unlocks)}
-              title={styleOpen(id, room.floor, unlocks) ? undefined : `집 확장 ${styleTier(id)}단계에서 열려요`}
+              title={styleOpen(id, room.floor, unlocks) ? undefined : styleWhere(id)}
               data-locked={styleOpen(id, room.floor, unlocks) ? undefined : true}
               onClick={() => onChange({ ...room, floor: id }, `바닥을 ${josa(FLOOR_NAMES[id], '으로/로')} 바꿨어요.`)}
             >
@@ -425,7 +413,7 @@ export function RoomSettings({
         </div>
       </fieldset>
       <button type="button" className="b3-reset" onClick={onReset}>
-        <RotateCcw size={15} /> 처음 배치로 되돌리기
+        <RotateCcw size={15} /> 가구 모두 치우기
       </button>
     </section>
   );
@@ -451,16 +439,16 @@ export function ResetRoomDialog({ onClose, onReset }: { onClose: () => void; onR
         onClose();
       }}
     >
-      <h2 id={`${id}-title`}>처음 배치로 되돌릴까요?</h2>
+      <h2 id={`${id}-title`}>가구를 모두 치울까요?</h2>
       <p id={`${id}-description`}>
-        지금 방을 처음 받은 배치로 바꿔요. 되돌린 뒤에도 실행 취소로 돌아갈 수 있어요.
+        침대 하나만 남기고 가구를 모두 치워요. 치운 가구는 없어지지 않고 “방에 놓을 것들”로 돌아가요. 실행 취소로 되돌릴 수도 있어요.
       </p>
       <div>
         <button type="button" data-cancel onClick={onClose}>
           취소
         </button>
         <button type="button" className="b3-primary" onClick={onReset}>
-          되돌리기
+          치우기
         </button>
       </div>
     </dialog>

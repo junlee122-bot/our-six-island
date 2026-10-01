@@ -10,6 +10,7 @@ import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
+import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
 import {
   grantBeom,
   spendBeom,
@@ -77,6 +78,9 @@ import {
   GROW_BUFF_SPEED,
   ITEM_BY_ID,
   SHOP_BUY_MAX_N,
+  THEME_STYLES,
+  THEME_STYLE_PRICE,
+  type ThemeStyle,
   SHOP_DAILY_ITEMS,
   SPAWN_SPOTS,
   SPOT_BY_ID,
@@ -263,6 +267,8 @@ export type UserExt = {
   /** 별빛 crops (텃밭 확장), counted like q1/q2. */
   q3?: Partial<Record<Crop, number>>;
   furn?: Record<string, number>;
+  /** Model-house wall/floor styles bought at 범마을 부동산 (lounge-bedroom-data STYLE_UNLOCK). */
+  styles?: string[];
   dex?: string[];
   stats?: Partial<Record<StatKey, number>>;
   ach?: string[];
@@ -331,6 +337,8 @@ export type LifeExt = {
   festival?: FestivalState;
   /** Friend-life state: NPC lines, heart rewards, museum stamps, festivals (lounge-life-social). */
   social?: SocialState;
+  /** 새 방 가구 초기화: done-mark and the backup of the old counts (lounge-rooms-reset.ts). */
+  roomsReset?: RoomsReset;
 };
 export type PlusAction =
   | NpcSocialAction
@@ -338,6 +346,8 @@ export type PlusAction =
   | { kind: 'expandFarm' }
   | { kind: 'waterFriend'; owner: number | string; plot: number }
   | { kind: 'buyFurniture'; ref: string; n?: number }
+  /** 모델하우스 관람 (범마을 부동산): an old themed room's wall or floor for my new room. */
+  | { kind: 'buyRoomStyle'; style: string }
   /** `at`: the shop I stand at (lounge-shops.ts; the cloud engine checks the district). */
   | { kind: 'buyItem'; item: string; n?: number; at?: ShopId }
   | { kind: 'upgradeRod'; at?: ShopId }
@@ -407,6 +417,8 @@ export const PLUS_REJECT = {
   give: '보탤 범을 확인해 주세요.',
   festivalDone: '이번 주 축제 기금은 다 모였어요. 다음 주 월요일에 새로 모아요.',
   houseMax: '집을 끝까지 넓혔어요.',
+  roomStyle: '모델하우스의 벽지·바닥을 확인해 주세요.',
+  roomStyleOwned: '이미 산 벽지·바닥이에요.',
   rerollMax: '오늘은 더 새로 고칠 수 없어요. 내일 새 가구가 들어와요.',
   luxuryBought: '이번 주에는 이미 산 명품 가구예요. 다음 주에 또 들어올 수도 있어요.',
   luxuryOne: '명품 가구는 한 번에 하나씩 살 수 있어요.',
@@ -504,6 +516,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (nonEmpty(q1)) out.q1 = q1;
   if (nonEmpty(q2)) out.q2 = q2;
   if (nonEmpty(q3)) out.q3 = q3;
+  const styles = idList(x.styles, 16, (id) => THEME_STYLES.includes(id as ThemeStyle));
+  if (styles.length) out.styles = styles;
   const furn = counts(x.furn, isFurnitureRef);
   if (nonEmpty(furn)) out.furn = furn as Record<string, number>;
   const furnStrict = Object.fromEntries(Object.entries(obj(x.furnStrict)).filter(([ref, yes]) => isFurnitureRef(ref) && yes === true)) as Record<string, true>;
@@ -609,6 +623,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     if (u) ext[uid] = u;
   }
   if (nonEmpty(ext)) out.ext = ext;
+  const roomsReset = readRoomsReset(v.roomsReset);
+  if (roomsReset) out.roomsReset = roomsReset;
   const museum: LifeExt['museum'] = {};
   for (const [id, m] of Object.entries(obj(v.museum)).slice(0, 400)) {
     const x = obj(m);
@@ -1135,6 +1151,8 @@ export type ShopView = {
   /** Rerolls used today and the price of the next one (null = none left). */
   rerolls?: number;
   rerollPrice?: number | null;
+  /** 기본 가구: always on the shelf (새 방, 2026-10-02). */
+  basic?: ShopItemView[];
 };
 /** This week's luxury pieces (weekly rarity; +1 with the 축제 무대 project). */
 export function luxuryStock(life: LifeState, now: number) {
@@ -1158,7 +1176,7 @@ export function shopStock(life: LifeState, now: number, uid?: string): ShopView 
     rerolls = x?.day === day ? (x.reroll ?? 0) : 0,
     seed = rerolls ? `shop:${day}:r${rerolls}:${uid}` : `shop:${day}`;
   const pool = FURNITURE.filter(
-    (f) => !f.unsold && !f.luxury && (!f.season || f.season === season) && (!f.holiday || holidayNear(f.holiday, day)),
+    (f) => !f.unsold && !f.luxury && !f.basic && (!f.season || f.season === season) && (!f.holiday || holidayNear(f.holiday, day)),
   );
   const limited = pool.filter((f) => f.season || f.holiday),
     regular = pool
@@ -1171,7 +1189,13 @@ export function shopStock(life: LifeState, now: number, uid?: string): ShopView 
     price: price(f.price),
     ...(f.holiday ? { limited: 'holiday' as const } : f.season ? { limited: 'season' as const } : {}),
   }));
-  const view: ShopView = { day, resetAt: nextKstMidnight(now), discount, items };
+  const view: ShopView = {
+    day,
+    resetAt: nextKstMidnight(now),
+    discount,
+    items,
+    basic: FURNITURE.filter((f) => f.basic).map((f) => ({ ref: f.ref, name: f.name, price: price(f.price) })),
+  };
   if (uid) {
     const week = weekOfDay(day);
     view.luxury = luxuryStock(life, now).map((f) => ({ ref: f.ref, name: f.name, price: f.price, limited: 'luxury' as const }));
@@ -1440,7 +1464,7 @@ export function plusAction(
       const n = nInRange(a.n, SHOP_BUY_MAX_N),
         view = shopStock(life, now, uid),
         luxury = view.luxury?.find((i) => i.ref === a.ref),
-        stock = luxury ?? view.items.find((i) => i.ref === a.ref);
+        stock = luxury ?? view.items.find((i) => i.ref === a.ref) ?? view.basic?.find((i) => i.ref === a.ref);
       if (!stock) fail(PLUS_REJECT.stock);
       if (luxury) {
         const week = weekOfDay(kstDay(now));
@@ -1460,6 +1484,14 @@ export function plusAction(
       const furn = (x.furn ??= {});
       furn[stock!.ref] = Math.min(COUNT_MAX, (furn[stock!.ref] ?? 0) + n);
       bump(life, uid, 'furniture', n);
+      break;
+    }
+    case 'buyRoomStyle': {
+      const style = typeof a.style === 'string' && THEME_STYLES.includes(a.style as ThemeStyle) ? (a.style as ThemeStyle) : null;
+      if (!style) fail(PLUS_REJECT.roomStyle);
+      if ((x.styles ?? []).includes(style!)) fail(PLUS_REJECT.roomStyleOwned);
+      next = spend(next, life, uid, THEME_STYLE_PRICE, 'room-style', now);
+      x.styles = [...(x.styles ?? []), style!];
       break;
     }
     case 'rerollShop': {
@@ -2041,6 +2073,8 @@ export type PlusMe = {
   quality: { silver: Partial<Record<Crop, number>>; gold: Partial<Record<Crop, number>>; star?: Partial<Record<Crop, number>> };
   furniture: Record<string, number>;
   furnitureStrict: Record<string, true>;
+  /** Model-house walls/floors bought at 범마을 부동산. */
+  styles: string[];
   dex: string[];
   stats: Partial<Record<StatKey, number>>;
   /** Static names/texts/goals/rewards: lounge-items ACHIEVEMENTS (same order). */
@@ -2135,6 +2169,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 }, ...(raw.q3 ? { star: { ...raw.q3 } } : {}) },
     furniture: { ...raw.furn },
     furnitureStrict: { ...raw.furnStrict },
+    styles: [...(raw.styles ?? [])],
     dex: [...(raw.dex ?? [])],
     stats: { ...raw.stats, ...(raw.dex?.length ? { dex: raw.dex.length } : {}) },
     achievements: ACHIEVEMENTS.map((a) => ({

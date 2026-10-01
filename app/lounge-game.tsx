@@ -65,7 +65,8 @@ import type { FishingPhase } from './lounge/Fishing';
 import type { BookTab } from './lounge/Collection';
 import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
-import { farmToolAction, furnitureUnlocks } from './lounge-life-ui';
+import { farmToolAction } from './lounge-life-ui';
+import { roomUnlocks } from './lounge-bedroom-data';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
 import { useOutdoor } from './lounge/Outdoor';
@@ -1234,12 +1235,12 @@ function AccountLounge({
     if (!dish?.buff) return;
     void lifeRun({ kind: 'eat', item: ref }, `${josa(dish.name, '을/를')} 먹었어요. 오늘은 ${BUFF_INFO[dish.buff].name}!`, 'eat');
   };
-  /** 요리·만들기 happens at a table in my room: walk there (going home first). */
+  /** 요리·만들기 happens at the kitchen counter in my room: walk there (going home first). */
   const openKitchen = () => {
     setModal(null);
     const go = () => {
       window.dispatchEvent(new CustomEvent('bumtadew:room-go', { detail: 'cook' }));
-      notify('책상으로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
+      notify('부엌 조리대로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
     };
     if (tabRef.current === 'bedroom' && visiting === null) go();
     else enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`), undefined, () => setTimeout(go, 900));
@@ -2345,11 +2346,12 @@ function AccountLounge({
               save={save}
               onChange={setSave}
               notice={(s) => notify(s)}
-              unlocks={[
-                ...(view.life?.me.unlocks ?? []),
-                ...Array.from({ length: view.life?.me.house ?? 0 }, (_, i) => `house-${i + 1}`),
-                ...furnitureUnlocks(view.life?.me.furniture),
-              ]}
+              unlocks={roomUnlocks({
+                unlocks: view.life?.me.unlocks,
+                house: view.life?.me.house,
+                styles: view.life?.me.styles,
+                furniture: view.life?.me.furniture,
+              })}
               presence={{
                 players: connected ? view.players : [],
                 self: view.self,
@@ -3046,7 +3048,7 @@ function AccountLounge({
       )}
       </Suspense>
       <Suspense fallback={null}>
-        {modal === 'realty' && <RealtyCounter room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+        {modal === 'realty' && <RealtyCounter room={room} view={view} notify={notify} save={save} onClose={() => setModal(null)} />}
         {modal === 'furniture' && <FurnitureCounter room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
         {modal === 'tavernUp' && <TavernUpgrades room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       </Suspense>

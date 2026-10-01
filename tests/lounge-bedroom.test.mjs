@@ -17,6 +17,12 @@ import {
   roomHasMiku,
   lockedRoomItems,
   ROOM_ITEM_LOCKED,
+  LEGACY_ROOM,
+  DEFAULT_BED,
+  legacyThemeRoom,
+  roomShape,
+  roomUnlocks,
+  ROOM_TIERS,
 } from '../app/lounge-bedroom-data.ts';
 import { freshLounge, readLounge, readLoungeStrict, defaultLook } from '../app/lounge-look.ts';
 import { accountSave, serverAccountSave, AccountSaveError, jsonbTextBytes, lifeUnlocksOf } from '../app/lounge-accounts.ts';
@@ -33,7 +39,7 @@ const item = (id, ref = 'bed', more = {}) => ({
   ...more,
 });
 const custom = {
-  version: 3,
+  version: 4,
   theme: 'study',
   wall: 'blue',
   floor: 'walnut',
@@ -54,7 +60,7 @@ const legacyV2 = {
   items: [{ id: 'old-desk', prop: 'desk', x: 45, y: 76, scale: 1, flip: false }],
 };
 
-test('v3 rooms round-trip exactly (order, rotation, wall items, surfaces, empty rooms)', () => {
+test('v4 rooms round-trip exactly (order, rotation, wall items, surfaces, empty rooms)', () => {
   assert.deepEqual(readBedroom(custom), custom);
   assert.deepEqual(readBedroomStrict(JSON.parse(JSON.stringify(custom))), custom);
   assert.deepEqual(readBedroom({ ...custom, items: [] }).items, []);
@@ -69,17 +75,21 @@ test('v3 rooms round-trip exactly (order, rotation, wall items, surfaces, empty 
   assert.equal(readBedroom({ ...custom, items: [item('r', 'sofa', { rotY: -90 })] }).items[0].rotY, 270);
   const a = defaultBedroom(),
     b = defaultBedroom();
-  a.items[0].x = 4;
+  a.items[0].x = 1;
   assert.notEqual(a.items[0].x, b.items[0].x);
 });
 
-test('RESET: every older room (v1, v2 percent canvas, unknown) becomes the actor’s new default v3 room', () => {
+test('RESET: every older room (v1, v2 percent canvas, the v3 themed rooms, unknown) becomes the new default room with one bed', () => {
+  const v3 = { ...custom, version: 3, items: [...custom.items, item('left-art', 'wall-clock', { x: -5, z: 0, wall: 'left', y: 2.4 })] };
   for (let actor = 0; actor < 7; actor++) {
-    for (const old of [legacyV2, { ...legacyV2, designVersion: undefined }, { version: 2, items: [] }, null, 'x', { version: 999 }]) {
+    for (const old of [legacyV2, { ...legacyV2, designVersion: undefined }, { version: 2, items: [] }, v3, null, 'x', { version: 999 }]) {
       assert.deepEqual(readBedroom(old, actor), defaultBedroom(actor));
       if (!(old && old.version === 999)) assert.deepEqual(readBedroomStrict(old, actor), defaultBedroom(actor));
     }
-    assert.equal(defaultBedroom(actor).version, 3);
+    assert.equal(defaultBedroom(actor).version, 4);
+    assert.deepEqual(defaultBedroom(actor).items, [DEFAULT_BED]);
+    assert.equal(defaultBedroom(actor).wall, 'cream');
+    assert.equal(defaultBedroom(actor).floor, 'oak');
     // A whole old profile save is read with the new default room, keeping outfits.
     const save = { ...freshLounge(actor), visits: 5, bedroom: legacyV2 };
     const read = readLounge(JSON.stringify(save), actor);
@@ -110,15 +120,16 @@ test('strict (server) validator rejects malformed v3 rooms; lenient reader repai
     { ...custom, items: [item('x', 'music-poster')] },
     { ...custom, items: [item('x', 'music-poster', { wall: 'ceiling', y: 2 })] },
     { ...custom, items: [item('x', 'music-poster', { wall: 'back', y: 50 })] },
+    { ...custom, items: [item('x', 'music-poster', { wall: 'left', y: 2 })] },
     { ...custom, items: [null] },
     { ...custom, items: Array.from({ length: BEDROOM_LIMITS.maxItems + 1 }, (_, i) => item('i' + i, 'cat-plush')) },
-    { ...custom, version: 4 },
+    { ...custom, version: 5 },
   ];
   for (const room of bad) {
     assert.throws(() => readBedroomStrict(room, 0), BedroomError, JSON.stringify(room).slice(0, 120));
-    // The browser never crashes on it: it gets a usable v3 room.
+    // The browser never crashes on it: it gets a usable v4 room.
     const lenient = readBedroom(room, 0);
-    assert.equal(lenient.version, 3);
+    assert.equal(lenient.version, 4);
     assert.ok(lenient.items.length <= BEDROOM_LIMITS.maxItems);
   }
   // A malformed room inside a whole save is a 400 with a room-specific message.
@@ -148,7 +159,7 @@ test('the largest valid room and outfits stay within the 64KB profile limit', ()
           z: -3.987654,
           rotY: 359.9,
           scale: 1.999,
-          ...(i % 2 ? { wall: 'left', y: 2.345678 } : { y: 1.234567 }),
+          ...(i % 2 ? { wall: 'back', y: 2.345678 } : { y: 1.234567 }),
         }),
       ),
     },
@@ -159,7 +170,7 @@ test('the largest valid room and outfits stay within the 64KB profile limit', ()
       look: defaultLook(0),
     })),
   };
-  const safe = serverAccountSave(maximized, 0);
+  const safe = serverAccountSave(maximized, 0, undefined, roomUnlocks({ styles: ['blue', 'walnut'], furniture: { 'miku-poster': 40, 'headband-display': 40 } }));
   assert.equal(safe.bedroom.items.length, BEDROOM_LIMITS.maxItems);
   assert.ok(jsonbTextBytes(safe) < 65536, String(jsonbTextBytes(safe)));
   assert.ok(Buffer.byteLength(JSON.stringify(safe, null, 2)) < 65536);
@@ -167,16 +178,17 @@ test('the largest valid room and outfits stay within the 64KB profile limit', ()
   assert.deepEqual(accountSave(safe, 0), safe);
 });
 
-test('older clients cannot overwrite a v3 room; missing bedroom keeps the server room', () => {
+test('older clients cannot overwrite a v4 room; missing bedroom keeps the server room', () => {
   const previous = { ...freshLounge(0), bedroom: custom };
   const incoming = { ...freshLounge(0), looks: freshLounge(0).looks.map((l, a) => (a === 0 ? { ...l, hair: 'ink' } : l)) };
   delete incoming.bedroom;
   const saved = accountSave(incoming, 0, previous);
   assert.deepEqual(saved.bedroom, custom);
   assert.equal(saved.looks[0].hair, 'ink');
-  // An old browser still writing the v2 canvas keeps the v3 room.
+  // An old browser still writing the v2 canvas or a v3 themed room keeps the v4 room.
   assert.deepEqual(accountSave({ ...incoming, bedroom: legacyV2 }, 0, previous).bedroom, custom);
   assert.deepEqual(serverAccountSave({ ...incoming, bedroom: legacyV2 }, 0, previous).bedroom, custom);
+  assert.deepEqual(accountSave({ ...incoming, bedroom: { ...custom, version: 3 } }, 0, previous).bedroom, custom);
   // An explicit null/unknown value is an intentional reset to the default v3 room.
   for (const invalid of [null, { version: 8 }, 'bad'])
     assert.deepEqual(accountSave({ ...incoming, bedroom: invalid }, 0, previous).bedroom, defaultBedroom(0));
@@ -236,41 +248,59 @@ test('catalog: unique refs, sane sizes, GLB furniture + painted props + Miku set
   for (const e of ROOM_CATALOG) assert.doesNotMatch(e.name, /hatsune|하츠네/i);
 });
 
-test('seven distinct default rooms; only Dowon’s is the Miku fan room', () => {
-  const rooms = Array.from({ length: 7 }, (_, a) => defaultBedroom(a));
+test('seven distinct model houses (the old themed rooms); only Dowon’s is the Miku fan room', () => {
+  const rooms = Array.from({ length: 7 }, (_, a) => legacyThemeRoom(a));
   assert.equal(new Set(rooms.map((r) => JSON.stringify(r))).size, 7);
   assert.equal(new Set(rooms.map((r) => r.theme)).size, 7);
   assert.equal(roomHasMiku(rooms[0]), true);
   assert.ok(rooms[0].items.filter((i) => catalogEntry(i.ref).category === 'miku').length >= 9);
-  // Others may own a single painted figure at most (호현's game shelf), never the fan-room set.
   for (let a = 1; a < 7; a++)
     assert.ok(rooms[a].items.filter((i) => catalogEntry(i.ref).category === 'miku').length <= 1, String(a));
-  assert.equal(roomHasMiku(rooms[3]), false);
   for (const [a, room] of rooms.entries()) {
-    assert.deepEqual(readBedroomStrict(JSON.parse(JSON.stringify(room)), a), room);
     assert.equal(new Set(room.items.map((i) => i.id)).size, room.items.length);
     const refs = room.items.map((i) => i.ref);
     for (const ref of ['bed', 'desk', 'chair']) assert.ok(refs.includes(ref), `${a} has ${ref}`);
     assert.ok(refs.some((r) => catalogEntry(r).mount === 'rug'), `${a} has a rug`);
+    // Art from the old left wall moved to the back wall (the camera sees side walls edge-on).
+    assert.ok(room.items.every((i) => i.wall !== 'left'), `${a} no left-wall art`);
+    // Believable and conflict-free in the old room's shape.
+    assert.deepEqual(roomConflicts(room, LEGACY_ROOM).filter((c) => c.reason !== 'door'), [], `room ${a}`);
+    const f = (ref) => itemFootprint(room.items.find((i) => i.ref === ref));
+    assert.ok(Math.abs(f('bed').z0 - LEGACY_ROOM.minZ) < 0.06, `${a} bed against the wall`);
+    const desk = f('desk'),
+      mid = (desk.x0 + desk.x1) / 2;
+    assert.ok(mid > LEGACY_ROOM.window.x0 && mid < LEGACY_ROOM.window.x1, `${a} desk under the window`);
   }
 });
 
-test('default rooms are believable: bed and desk against the back wall, desk under the window, rug centred, no conflicts', () => {
-  for (let a = 0; a < 7; a++) {
-    const room = defaultBedroom(a);
-    assert.deepEqual(roomConflicts(room), [], `room ${a}`);
-    const f = (ref) => itemFootprint(room.items.find((i) => i.ref === ref));
-    assert.ok(Math.abs(f('bed').z0 - ROOM.minZ) < 0.06, `${a} bed against the wall`);
-    assert.ok(Math.abs(f('desk').z0 - ROOM.minZ) < 0.06, `${a} desk against the wall`);
-    const desk = f('desk'),
-      mid = (desk.x0 + desk.x1) / 2;
-    assert.ok(mid > ROOM.window.x0 && mid < ROOM.window.x1, `${a} desk under the window`);
-    const rug = room.items.find((i) => catalogEntry(i.ref).mount === 'rug');
-    assert.ok(Math.abs(rug.x) < 3.2 && Math.abs(rug.z) < 1.6, `${a} rug near the centre`);
-    // Small items stand on something (surface) or the floor, never float.
-    for (const i of room.items.filter((i) => catalogEntry(i.ref).mount === 'small' && i.y))
-      assert.ok(i.y >= 0.5 && i.y <= 1.6, `${a} ${i.id} y`);
+test('new rooms: one shape for everyone, growing with 집 확장; the default bed fits every tier', () => {
+  assert.equal(ROOM_TIERS.length, 5);
+  let previous = null;
+  for (let tier = 0; tier < ROOM_TIERS.length; tier++) {
+    const shape = roomShape(tier);
+    // The back-left corner (kitchen, closet, door) never moves; the room only grows.
+    assert.equal(shape.minX, -6);
+    assert.equal(shape.minZ, -4);
+    if (previous) assert.ok(shape.maxX > previous.maxX && shape.maxZ > previous.maxZ, String(tier));
+    previous = shape;
+    for (let a = 0; a < 7; a++) assert.deepEqual(roomConflicts(defaultBedroom(a), shape), [], `tier ${tier} actor ${a}`);
+    const bed = itemFootprint(DEFAULT_BED);
+    assert.ok(Math.abs(bed.z0 - shape.minZ) < 0.06, 'bed headboard against the back wall');
+    assert.ok(shape.fixtures.some((f) => f.action === 'cook') && shape.fixtures.some((f) => f.action === 'dress'));
+    const w = shape.window;
+    assert.ok(shape.fixtures.every((f) => f.x1 < w.x0), 'kitchen and closet sit left of the window');
   }
+  assert.deepEqual(roomShape(4), ROOM);
+  // Tier-4 furniture outside a smaller room is reported (the editor keeps it in).
+  const far = { ...defaultBedroom(0), items: [{ ...DEFAULT_BED, id: 'far', x: 10 }] };
+  assert.deepEqual(roomConflicts(far, roomShape(4)), []);
+  assert.ok(roomConflicts(far, roomShape(0)).some((c) => c.reason === 'outside'));
+  // Nothing stands on the kitchen counter or in the doorway.
+  const onKitchen = { ...defaultBedroom(0), items: [item('desk', 'desk', { x: -5, z: -3.5 })] };
+  assert.ok(roomConflicts(onKitchen, roomShape(0)).some((c) => c.with === 'kitchen'));
+  const door = roomShape(0).door;
+  const inDoor = { ...defaultBedroom(0), items: [item('chair', 'chair', { x: (door.x0 + door.x1) / 2, z: 3.6 })] };
+  assert.ok(roomConflicts(inDoor, roomShape(0)).some((c) => c.reason === 'door'));
 });
 
 test('presence coordinates map the walk room onto 0..100 and back', () => {
@@ -292,8 +322,13 @@ test('shop rarities need ownership on the server save path; stored copies are ke
     () => serverAccountSave(save, 0, { ...freshLounge(0), bedroom: custom }),
     (e) => e instanceof AccountSaveError && e.status === 400 && e.message === ROOM_ITEM_LOCKED,
   );
-  // Owned: accepted.
-  assert.equal(serverAccountSave(save, 0, undefined, ['trophy-carrot']).bedroom.items.length, 5);
+  // Owned: accepted (every other piece is owned furniture now, 새 방).
+  const pieces = custom.items.map((i) => i.ref);
+  const styles = ['style-blue', 'style-walnut'];
+  assert.equal(serverAccountSave(save, 0, undefined, ['trophy-carrot', ...pieces, ...styles]).bedroom.items.length, 5);
+  assert.throws(() => serverAccountSave(save, 0, undefined, ['trophy-carrot', ...styles]), AccountSaveError);
+  // The model-house walls and floors need buying too (범마을 부동산).
+  assert.throws(() => serverAccountSave(save, 0, undefined, ['trophy-carrot', ...pieces]), AccountSaveError);
   // Already in the stored room: grandfathered, but not a second copy.
   const previous = { ...freshLounge(0), bedroom: withTrophy };
   assert.equal(serverAccountSave(save, 0, previous).bedroom.items.length, 5);
@@ -302,10 +337,17 @@ test('shop rarities need ownership on the server save path; stored copies are ke
   assert.deepEqual(lockedRoomItems(twice.bedroom, [], withTrophy), ['trophy-carrot']);
   // The client path (no unlock list) does not check.
   assert.equal(accountSave(save, 0).bedroom.items.length, 5);
-  // Default rooms never contain shop rarities.
-  for (let a = 0; a < 7; a++) assert.deepEqual(lockedRoomItems(defaultBedroom(a), []), []);
+  // Default rooms hold only the bed every room keeps for free.
+  for (let a = 0; a < 7; a++) {
+    assert.deepEqual(lockedRoomItems(defaultBedroom(a), roomUnlocks({})), []);
+    assert.deepEqual(lockedRoomItems(defaultBedroom(a), []), ['bed']);
+  }
+  // A second bed needs a bought one.
+  const twoBeds = { ...defaultBedroom(0), items: [DEFAULT_BED, { ...DEFAULT_BED, id: 'bed2', x: 0 }] };
+  assert.deepEqual(lockedRoomItems(twoBeds, roomUnlocks({})), ['bed']);
+  assert.deepEqual(lockedRoomItems(twoBeds, roomUnlocks({ furniture: { bed: 1 } })), []);
   // Unlocks come from the world's life state, per member uid.
   const uid = '11111111-1111-4111-8111-111111111111';
-  assert.deepEqual(lifeUnlocksOf(null, uid), []);
-  assert.deepEqual(lifeUnlocksOf({ unlocks: { [uid]: ['trophy-carrot', 'not-a-shop-item'] } }, uid), ['trophy-carrot']);
+  assert.deepEqual(lifeUnlocksOf(null, uid), ['bed']);
+  assert.deepEqual(lifeUnlocksOf({ unlocks: { [uid]: ['trophy-carrot', 'not-a-shop-item'] } }, uid), ['trophy-carrot', 'bed']);
 });

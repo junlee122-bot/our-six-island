@@ -69,6 +69,7 @@ import { accountSave, lifeUnlocksOf, ACCOUNT_IDS } from '../app/lounge-accounts.
 import { CO_DONATION_GRANT } from '../app/lounge-social-defs.ts';
 import { catalogEntry, ROOM_CATALOG } from '../app/lounge-bedroom-catalog.ts';
 import { defaultBedroom, lockedRoomItems } from '../app/lounge-bedroom-data.ts';
+import { ROOMS_RESET_ID } from '../app/lounge-rooms-reset.ts';
 import { freshLounge } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 
@@ -385,7 +386,7 @@ test('furniture shop: daily rotation, Sunday market, seasonal/holiday stock, pur
   assert.equal(s.ledger.spent, before - s.balance(m));
 });
 
-test('room save validator: premium furniture only up to owned copies; free items stay free', () => {
+test('room save validator: every piece only up to owned copies; one bed is free', () => {
   // Every FURNITURE entry exists in the room catalog as a premium prop.
   for (const f of FURNITURE) {
     const e = catalogEntry(f.ref);
@@ -394,21 +395,25 @@ test('room save validator: premium furniture only up to owned copies; free items
     assert.equal(e.premium, true);
     assert.equal(e.unlock, f.ref);
   }
-  // The existing room items stay free (47 free + 5 shop trophies).
-  assert.equal(ROOM_CATALOG.filter((e) => !e.unlock).length, 47);
+  // 새 방 (2026-10-02): nothing is free any more (the 47 old room pieces are
+  // 기본 가구 at 나무결 가구점); the 5 shop trophies stay unlocks.
+  assert.equal(ROOM_CATALOG.filter((e) => !e.unlock).length, 0);
+  assert.equal(FURNITURE.filter((f) => f.basic).length, 47);
   assert.equal(ROOM_CATALOG.filter((e) => e.unlock && !e.premium).length, 5);
   const s = world(1),
     [m] = s.members;
   s.life.ext = { [m.id]: { furn: { 'furn-chair': 1 } } };
+  // Bought after the 새 방 reset ran (its done-mark is stored).
+  s.life.roomsReset = { id: ROOMS_RESET_ID, at: 0, backup: {} };
   const unlocks = lifeUnlocksOf(JSON.parse(JSON.stringify(s.life)), m.id);
-  assert.deepEqual(unlocks, ['furn-chair']);
+  assert.deepEqual(unlocks, ['furn-chair', 'bed']);
   const room = defaultBedroom(0),
     item = (id, x) => ({ id, kind: 'prop', ref: 'furn-chair', x, z: 0, rotY: 0, scale: 1 });
   const one = { ...room, items: [...room.items, item('p1', 3.5)] },
     two = { ...one, items: [...one.items, item('p2', 3.5)] };
   assert.deepEqual(lockedRoomItems(one, unlocks), []);
   assert.deepEqual(lockedRoomItems(two, unlocks), ['furn-chair']);
-  assert.deepEqual(lockedRoomItems(one, []), ['furn-chair']);
+  assert.deepEqual(lockedRoomItems(one, []), ['bed', 'furn-chair']);
   // Grandfathered copies already saved in the room stay.
   assert.deepEqual(lockedRoomItems(two, unlocks, one), []);
   const save = { ...freshLounge(0), bedroom: one };
@@ -737,7 +742,7 @@ test('compatibility: older worlds read back unchanged; hostile ext values are bo
       [a.id]: {
         plots: 99,
         inv: { crucian: 5, nope: 3, __proto__: 1, bait: -4 },
-        furn: { 'furn-chair': 2, bed: 1 },
+        furn: { 'furn-chair': 2, 'no-such-piece': 1 },
         dex: ['crucian', 'x', 'crucian'],
         stats: { fish: 3, bogus: 9 },
         ach: ['fish-1', 'nope'],

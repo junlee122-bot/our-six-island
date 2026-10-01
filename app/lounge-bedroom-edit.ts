@@ -1,8 +1,12 @@
-/** Pure 꾸미기 모드 operations on a v3 room (no DOM, no three.js). */
+/**
+ * Pure 꾸미기 모드 operations on a room (no DOM, no three.js). Items stay
+ * inside the active room shape (the owner's 집 확장 tier, setActiveRoomShape);
+ * wall art hangs on the back wall.
+ */
 import {
   BEDROOM_LIMITS,
-  DOOR_ZONE,
-  ROOM,
+  activeRoomShape,
+  doorZone,
   catalogEntry,
   itemFootprint,
   normalizeDegrees,
@@ -32,26 +36,22 @@ export function scaleRange(ref: string) {
 
 /** Keeps an item inside the room (its whole footprint, or its whole wall span). */
 export function clampItem(item: RoomItem): RoomItem {
+  const ROOM = activeRoomShape();
   const entry = catalogEntry(item.ref);
   if (!entry) return item;
   const range = scaleRange(item.ref);
   const scale = r3(Math.max(range.min, Math.min(range.max, item.scale)));
   const next: RoomItem = { ...item, scale, rotY: normalizeDegrees(item.rotY) };
   if (entry.mount === 'wall') {
-    const wall: RoomWall = item.wall === 'left' ? 'left' : 'back';
+    const wall: RoomWall = 'back';
     const half = (entry.w * scale) / 2,
       halfH = (entry.h * scale) / 2;
     const y = Math.max(0.9 + halfH, Math.min(ROOM.wallHeight - 0.1 - halfH, item.y ?? 2));
     next.wall = wall;
     next.y = r3(y);
     next.rotY = 0;
-    if (wall === 'back') {
-      next.x = r3(Math.max(ROOM.minX + half, Math.min(ROOM.maxX - half, item.x)));
-      next.z = ROOM.minZ;
-    } else {
-      next.z = r3(Math.max(ROOM.minZ + half, Math.min(ROOM.maxZ - half, item.z)));
-      next.x = ROOM.minX;
-    }
+    next.x = r3(Math.max(ROOM.minX + half, Math.min(ROOM.maxX - half, item.x)));
+    next.z = ROOM.minZ;
     return next;
   }
   delete next.wall;
@@ -125,13 +125,13 @@ export const CONFLICT_TEXT: Record<RoomConflict['reason'], string> = {
 export function moveFloorItem(room: Bedroom, item: RoomItem, x: number, z: number) {
   return settleItem(room, clampItem({ ...item, x: r3(x), z: r3(z) }));
 }
-/** Moves a wall item: `along` runs along the chosen wall, `y` is height. */
-export function moveWallItem(item: RoomItem, wall: RoomWall, along: number, y: number) {
+/** Moves a wall item: `along` runs along the back wall, `y` is height. */
+export function moveWallItem(item: RoomItem, _wall: RoomWall, along: number, y: number) {
   return clampItem({
     ...item,
-    wall,
-    x: wall === 'back' ? along : ROOM.minX,
-    z: wall === 'left' ? along : ROOM.minZ,
+    wall: 'back',
+    x: along,
+    z: activeRoomShape().minZ,
     y,
   });
 }
@@ -163,23 +163,17 @@ export function placeNew(
   if (!entry) return null;
   const base: RoomItem = { id, kind: entry.kind, ref, x: near.x, z: near.z, rotY: 0, scale: 1 };
   if (entry.mount === 'wall') {
-    const toLeft = near.x - ROOM.minX,
-      toBack = near.z - ROOM.minZ;
-    const walls: RoomWall[] = toLeft < toBack ? ['left', 'back'] : ['back', 'left'];
-    for (const wall of walls) {
-      // Every spot along the wall, nearest to me first.
-      const [lo, hi] = wall === 'back' ? [ROOM.minX, ROOM.maxX] : [ROOM.minZ, ROOM.maxZ],
-        target = wall === 'back' ? near.x : near.z;
-      const spots = Array.from({ length: Math.round((hi - lo) / 0.25) + 1 }, (_, i) => lo + i * 0.25).sort(
-        (a, b) => Math.abs(a - target) - Math.abs(b - target),
-      );
-      for (const y of [2.3, 1.7, 2.9])
-        for (const along of spots) {
-          const candidate = moveWallItem(base, wall, along, y);
-          if (!blocking(room, candidate)) return candidate;
-        }
-    }
-    return moveWallItem(base, walls[0], walls[0] === 'back' ? near.x : near.z, 2.3);
+    const ROOM = activeRoomShape();
+    // Every spot along the back wall, nearest to me first.
+    const spots = Array.from({ length: Math.round((ROOM.maxX - ROOM.minX) / 0.25) + 1 }, (_, i) => ROOM.minX + i * 0.25).sort(
+      (a, b) => Math.abs(a - near.x) - Math.abs(b - near.x),
+    );
+    for (const y of [2.3, 1.7, 2.9])
+      for (const along of spots) {
+        const candidate = moveWallItem(base, 'back', along, y);
+        if (!blocking(room, candidate)) return candidate;
+      }
+    return moveWallItem(base, 'back', near.x, 2.3);
   }
   // Rugs may lie anywhere; they never block.
   if (entry.mount === 'rug') return moveFloorItem(room, base, near.x, near.z);
@@ -246,7 +240,8 @@ export function placeOpen(
   return placeNew(room, ref, near, id);
 }
 const doorBlocked = (item: RoomItem) => {
-  const f = itemFootprint(item);
+  const f = itemFootprint(item),
+    DOOR_ZONE = doorZone();
   return (
     !!f &&
     f.x0 < DOOR_ZONE.x1 &&
@@ -261,7 +256,7 @@ export function duplicateItem(room: Bedroom, item: RoomItem): RoomItem | null {
   if (!entry) return null;
   if (entry.mount === 'wall') {
     const span = wallSpan(item)!;
-    return placeNew(room, item.ref, item.wall === 'left' ? { x: ROOM.minX + 0.5, z: span.a1 + 0.3 } : { x: span.a1 + 0.3, z: ROOM.minZ + 0.5 });
+    return placeNew(room, item.ref, { x: span.a1 + 0.3, z: activeRoomShape().minZ + 0.5 });
   }
   const copy = placeNew(room, item.ref, { x: item.x + 0.4, z: item.z + 0.4 });
   return copy ? settleItem(room, clampItem({ ...copy, rotY: item.rotY, scale: item.scale })) : null;

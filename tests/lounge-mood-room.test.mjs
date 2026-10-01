@@ -2,17 +2,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROOM_COPIES_MAX, cozyScore, roomItemValue, roomScore } from '../app/lounge-mood-room.ts';
-import { catalogEntry, defaultBedroom } from '../app/lounge-bedroom-data.ts';
+import { catalogEntry, defaultBedroom, legacyThemeRoom } from '../app/lounge-bedroom-data.ts';
 import { COZY_TIERS, cozyOf } from '../app/lounge-mood-data.ts';
 
 const room = (items, extra = {}) => ({ bedroom: { ...defaultBedroom(3), ...extra, items } });
 const item = (ref, i) => ({ id: `${ref}-${i}`, kind: catalogEntry(ref).kind, ref, x: -3 + (i % 6), z: -2 + Math.floor(i / 6), rotY: 0, scale: 1 });
 
-test('every starting room is at least 아늑해요', () => {
+test('a new room (one bed) is 소박해요; the old themed rooms were at least 아늑해요', () => {
   for (let a = 0; a < 7; a++) {
-    const score = roomScore({ bedroom: defaultBedroom(a) }, a);
-    assert.ok(score >= 20, `actor ${a}: ${score}`);
-    assert.ok(cozyOf(score).value >= 2);
+    const fresh = roomScore({ bedroom: defaultBedroom(a) }, a);
+    assert.equal(fresh, 1 + 3, `actor ${a}: the bed and its category`);
+    assert.equal(cozyOf(fresh).value, 0);
+    const old = roomScore({ bedroom: legacyThemeRoom(a) }, a);
+    assert.ok(old >= 20, `actor ${a}: ${old}`);
   }
   // No save yet: the actor's default room.
   assert.equal(roomScore(null, 2), roomScore({ bedroom: defaultBedroom(2) }, 2));

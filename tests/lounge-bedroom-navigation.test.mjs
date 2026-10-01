@@ -1,19 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  WALK_START,
+  besideCookTable,
   canWalk,
+  walkStart,
   findWalkPath,
   nearestWalkable,
   roomObstacles,
   walkLineClear,
   walkStep,
 } from '../app/lounge-bedroom-navigation.ts';
-import { ROOM, catalogEntry, defaultBedroom, itemFootprint } from '../app/lounge-bedroom-data.ts';
+import { LEGACY_ROOM, ROOM_TIERS, catalogEntry, defaultBedroom, itemFootprint, legacyThemeRoom, roomShape, setActiveRoomShape } from '../app/lounge-bedroom-data.ts';
 import { withItem } from '../app/lounge-bedroom-edit.ts';
 
 /** A character is ~0.44 wide; paths must fit one with a little room to spare. */
 const WIDE = 0.25;
+/** Furnished rooms to walk in: the old themed rooms (model houses) in their shape. */
+function furnished(actor) {
+  setActiveRoomShape(LEGACY_ROOM);
+  return legacyThemeRoom(actor);
+}
+test.afterEach(() => setActiveRoomShape(roomShape(0)));
 const pathLength = (from, path) =>
   path.reduce((sum, p, i) => sum + Math.hypot(p.x - (i ? path[i - 1] : from).x, p.z - (i ? path[i - 1] : from).z), 0);
 /** A walkable spot next to an item (the side facing the room first). */
@@ -31,10 +38,34 @@ function besides(room, ref, obstacles) {
   return spots.find((p) => canWalk(p, obstacles, WIDE));
 }
 
-test('every default room is walkable: door → bed, desk and the middle of the room, one character wide', () => {
+test('a new room is walkable in every tier: door → bed, kitchen counter and closet', () => {
+  for (let tier = 0; tier < ROOM_TIERS.length; tier++) {
+    const shape = roomShape(tier);
+    setActiveRoomShape(shape);
+    const room = defaultBedroom(0),
+      obstacles = roomObstacles(room),
+      start = walkStart();
+    assert.ok(canWalk(start, obstacles, WIDE), `tier ${tier}: the door is clear`);
+    const targets = [
+      besides(room, 'bed', obstacles),
+      besideCookTable(room, obstacles),
+      { x: (shape.fixtures[1].x0 + shape.fixtures[1].x1) / 2, z: shape.fixtures[1].z1 + 0.4 },
+      { x: shape.maxX - 0.5, z: shape.maxZ - 0.5 },
+    ];
+    for (const target of targets) {
+      assert.ok(target && canWalk(target, obstacles, WIDE), `tier ${tier}: ${JSON.stringify(target)}`);
+      assert.ok(findWalkPath(start, target, obstacles, { radius: WIDE, exact: true }).length > 0, `tier ${tier}`);
+    }
+    // The built-ins are solid.
+    for (const f of shape.fixtures) assert.equal(canWalk({ x: (f.x0 + f.x1) / 2, z: (f.z0 + f.z1) / 2 }, obstacles), false, f.id);
+  }
+});
+
+test('every furnished model house is walkable: door → bed, desk and the middle of the room, one character wide', () => {
   for (let actor = 0; actor < 7; actor++) {
-    const room = defaultBedroom(actor),
-      obstacles = roomObstacles(room);
+    const room = furnished(actor),
+      obstacles = roomObstacles(room),
+      WALK_START = walkStart();
     assert.ok(canWalk(WALK_START, obstacles, WIDE), `${actor}: the door is clear`);
     /** @type {Array<[string, { x: number, z: number } | undefined]>} */
     const targets = [
@@ -60,8 +91,9 @@ test('every default room is walkable: door → bed, desk and the middle of the r
 });
 
 test('furniture blocks walking; rugs, wall art and things on surfaces do not', () => {
-  const room = defaultBedroom(0),
-    obstacles = roomObstacles(room);
+  const room = furnished(0),
+    obstacles = roomObstacles(room),
+    ROOM = LEGACY_ROOM;
   for (const item of room.items) {
     const entry = catalogEntry(item.ref);
     const blocked = obstacles.some((o) => o.id === item.id);
@@ -75,8 +107,9 @@ test('furniture blocks walking; rugs, wall art and things on surfaces do not', (
 });
 
 test('continuous movement cannot tunnel through furniture or walls', () => {
-  const room = defaultBedroom(3),
-    obstacles = roomObstacles(room);
+  const room = furnished(3),
+    obstacles = roomObstacles(room),
+    WALK_START = walkStart();
   const bed = room.items.find((i) => i.ref === 'bed');
   const f = itemFootprint(bed);
   const from = { x: bed.x, z: f.z1 + 0.6 };
@@ -88,7 +121,8 @@ test('continuous movement cannot tunnel through furniture or walls', () => {
 });
 
 test('pathfinding updates when the room changes, and blocked spots resolve to the nearest free one', () => {
-  let room = defaultBedroom(2);
+  let room = furnished(2);
+  const WALK_START = walkStart();
   const target = { x: 3.6, z: 2.0 };
   assert.ok(findWalkPath(WALK_START, target, roomObstacles(room), { exact: true }).length);
   // Wall the room in two with a row of wardrobes: the target becomes unreachable.

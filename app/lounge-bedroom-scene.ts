@@ -9,45 +9,30 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import {
-  ROOM,
   catalogEntry,
   itemFootprint,
+  roomShape,
   wallSpan,
   type Bedroom,
   type CatalogEntry,
   type RoomItem,
+  type RoomShape,
 } from './lounge-bedroom-data';
+import { VIEW_LIGHT, VIEW_PITCH } from './lounge-village-camera';
 import { MODEL_FILES, PROP_ART } from './lounge-bedroom-art';
 import { buildMiku } from './lounge-bedroom-miku3d';
 
-export const BEDROOM_WALL_COLOR: Record<Bedroom['wall'], string> = {
-  cream: '#eee6d7',
-  sage: '#cbd1bd',
-  blush: '#e8d3cb',
-  blue: '#c9d8d6',
-  mint: '#d3e8df',
-  dusk: '#a9a2b8',
-  gold: '#e9d8b0',
-  navy: '#5d6b86',
-  rose: '#d7b3b5',
-  forest: '#8fa58c',
-  silver: '#d4d8de',
-  terracotta: '#d39a7c',
-  velvet: '#4a3d63',
-};
-export const BEDROOM_FLOOR_COLOR: Record<Bedroom['floor'], string> = {
-  oak: '#c3a579',
-  walnut: '#8d7057',
-  pale: '#e0d1b7',
-  ash: '#cfc7bb',
-  marble: '#e8e4dd',
-  herringbone: '#a8825a',
-  cherry: '#9b5a45',
-  ebony: '#4a3a32',
-};
-/** The fixed camera looks in from here (front-right, elevated). */
-export const ROOM_CAMERA = { x: 11, y: 10, z: 13 } as const;
-export const CAMERA_YAW = Math.atan2(ROOM_CAMERA.x, ROOM_CAMERA.z);
+export { BEDROOM_WALL_COLOR, BEDROOM_FLOOR_COLOR } from './lounge-bedroom-styles';
+import { BEDROOM_WALL_COLOR, BEDROOM_FLOOR_COLOR } from './lounge-bedroom-styles';
+/**
+ * The room is seen like every district (구역 공통 규격): straight on, pitched
+ * VIEW_PITCH down, never turned sideways. Painted cards face it and are
+ * stretched by 1 / cos(pitch), exactly like the figures, so they read as the art.
+ */
+export const CAMERA_YAW = 0;
+export const CARD_STRETCH = 1 / Math.cos(VIEW_PITCH);
+/** VIEW_LIGHT (hemisphere × hemi / 1.5, sun × sun / 3) on the room's palette. */
+export const ROOM_LIGHT = { hemi: VIEW_LIGHT.hemi / 1.5, sun: VIEW_LIGHT.sun / 3, exposure: VIEW_LIGHT.exposure } as const;
 const DEG = Math.PI / 180;
 
 // ------------------------------------------------------------ caches
@@ -221,6 +206,7 @@ export function createBedroomScene(
   initial: Bedroom,
   host: HTMLElement,
   onChange: () => void,
+  shape: RoomShape = roomShape(0),
 ) {
   let disposed = false;
   const materials = new Map<string, THREE.MeshStandardMaterial>();
@@ -235,6 +221,8 @@ export function createBedroomScene(
   const shell = new THREE.Group();
   shell.name = 'shell';
   scene.add(shell);
+  // Outside the room is dark, like a drawn interior.
+  scene.background = new THREE.Color('#3b3029');
   const box = (
     w: number,
     h: number,
@@ -271,99 +259,151 @@ export function createBedroomScene(
         .offsetHSL(0, 0, ((index % 3) - 1) * 0.018),
     );
     const dusk = wallColor === 'dusk' || wallColor === 'navy' || wallColor === 'velvet';
-    hemi.intensity = dusk ? 1.55 : 2;
+    hemi.intensity = (dusk ? 1.55 : 2) * ROOM_LIGHT.hemi;
     sun.color.set(dusk ? '#ffd9b8' : '#ffefd5');
     onChange();
   };
-  const hemi = new THREE.HemisphereLight('#fff7e7', '#928e79', 2);
+  // 구역 공통 규격 light scale (VIEW_LIGHT) on the room's own warm palette.
+  const hemi = new THREE.HemisphereLight('#fff7e7', '#928e79', 2 * ROOM_LIGHT.hemi);
   scene.add(hemi);
-  const sun = new THREE.DirectionalLight('#ffefd5', 2.3);
-  sun.position.set(-4, 9, 5);
+  const { minX, maxX, minZ, maxZ } = shape,
+    width = maxX - minX,
+    depth = maxZ - minZ,
+    cx = (minX + maxX) / 2,
+    cz = (minZ + maxZ) / 2;
+  const sun = new THREE.DirectionalLight('#ffefd5', 2.3 * ROOM_LIGHT.sun);
+  // From the window side, above and in front (the camera never turns).
+  sun.position.set(cx - 5, 11, cz + 7);
+  sun.target.position.set(cx, 0, cz);
+  scene.add(sun.target);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
+  const reach = Math.max(width, depth) / 2 + 3;
   Object.assign(sun.shadow.camera, {
-    left: -8,
-    right: 8,
-    top: 8,
-    bottom: -8,
+    left: -reach,
+    right: reach,
+    top: reach,
+    bottom: -reach,
     near: 0.1,
-    far: 30,
+    far: 40,
   });
   sun.shadow.normalBias = 0.025;
   sun.shadow.bias = -0.00015;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight('#e4eee6', 1.1);
-  fill.position.set(7, 5, 1);
+  const fill = new THREE.DirectionalLight('#e4eee6', 1.1 * ROOM_LIGHT.sun);
+  fill.position.set(cx + 6, 6, cz + 4);
   scene.add(fill);
   setPaint(initial.wall, initial.floor);
 
-  // Plank floor, wainscoting and a picture rail make one coherent shell.
-  const { minX, minZ } = ROOM;
-  box(10.28, 0.3, 8.48, 0, -0.2, 0, '#937a5a');
-  const plankGeometry = new THREE.BoxGeometry(1.99, 0.065, 0.29);
+  // The shell seen straight on (구역 공통 규격): plank floor, a tall back wall
+  // with wainscoting and a picture rail, thick side walls and a low front wall
+  // with the doorway, all capped with a dark trim like a drawn room.
+  const H = shape.wallHeight,
+    T = 0.32,
+    trim = '#5b4636';
+  box(width + 2 * T, 0.3, depth + 2 * T, cx, -0.2, cz, '#937a5a');
+  // Planks run 2 long in staggered rows; the ones at either end are cut to the room.
+  const plankGeometry = new THREE.BoxGeometry(1, 0.065, 0.29);
+  const cols = Math.ceil(width / 2) + 2,
+    rows = Math.ceil(depth / 0.3);
   floors.forEach((material, color) => {
     const matrices: THREE.Matrix4[] = [];
-    for (let row = 0; row < 28; row++)
-      for (let col = 0; col < 5; col++)
-        if ((row + col * 2) % floors.length === color)
+    for (let row = 0; row < rows; row++)
+      for (let col = 0; col < cols; col++)
+        if ((row + col * 2) % floors.length === color) {
+          const x = minX + col * 2 + ((row % 2) - 0.5) * 0.5,
+            x0 = Math.max(minX, x - 0.995),
+            x1 = Math.min(maxX, x + 0.995);
+          if (x1 - x0 < 0.05) continue;
           matrices.push(
-            new THREE.Matrix4().makeTranslation(
-              -4 + col * 2 + ((row % 2) - 0.5) * 0.5,
-              -0.016,
-              minZ + row * 0.3 + 0.15,
+            new THREE.Matrix4().compose(
+              new THREE.Vector3((x0 + x1) / 2, -0.016, minZ + row * 0.3 + 0.15),
+              new THREE.Quaternion(),
+              new THREE.Vector3(x1 - x0, 1, 1),
             ),
           );
+        }
     const planks = new THREE.InstancedMesh(plankGeometry, material, matrices.length);
     matrices.forEach((matrix, index) => planks.setMatrixAt(index, matrix));
     planks.receiveShadow = true;
     shell.add(planks);
   });
-  box(10.23, 3.8, 0.16, 0, 1.85, minZ - 0.08, wall);
-  box(0.16, 3.8, 8.3, minX - 0.08, 1.85, 0, wall);
+  // Planks that run past the side walls are hidden under them; a skirting
+  // board in the trim colour closes the floor edge.
+  box(width + 2 * T, H, T, cx, H / 2 - 0.05, minZ - T / 2, wall);
+  // Side and front walls are seen end-on: dark frame pieces that cast no
+  // shadow into the room (like the drawn edge of a Stardew room).
+  const frame = (w: number, h: number, d: number, x: number, y: number, z: number) => {
+    const mesh = box(w, h, d, x, y, z, trim);
+    mesh.castShadow = false;
+    return mesh;
+  };
+  for (const side of [minX - T / 2, maxX + T / 2]) frame(T, H, depth + T, side, H / 2 - 0.05, cz + T / 2);
+  box(width + 2 * T + 0.02, 0.08, T + 0.02, cx, H - 0.02, minZ - T / 2, trim);
   const wainscot = '#d8d9c8';
-  box(10.1, 0.77, 0.03, 0, 0.47, minZ + 0.015, wainscot);
-  box(0.03, 0.77, 8.16, minX + 0.015, 0.47, 0, wainscot);
-  for (const y of [0.13, 0.88, 3.68]) {
-    box(10.16, 0.07, 0.06, 0, y, minZ + 0.03, '#f4eddf');
-    box(0.06, 0.07, 8.23, minX + 0.03, y, 0, '#f4eddf');
-  }
-  // Window over the desk nook.
-  const win = ROOM.window,
+  box(width, 0.77, 0.03, cx, 0.47, minZ + 0.015, wainscot);
+  for (const y of [0.13, 0.88, 3.68]) box(width + 0.06, 0.07, 0.06, cx, y, minZ + 0.03, '#f4eddf');
+  // Low front wall with the doorway (Stardew-like: the room's bottom edge).
+  const door = shape.door,
+    frontH = 0.55,
+    fz = maxZ + T / 2;
+  const segments: [number, number][] = [
+    [minX - T, door.x0],
+    [door.x1, maxX + T],
+  ];
+  for (const [a, b] of segments) if (b - a > 0.01) frame(b - a, frontH, T, (a + b) / 2, frontH / 2 - 0.05, fz);
+  // Doorway: a threshold, two short posts and a doormat inside.
+  const dx = (door.x0 + door.x1) / 2;
+  box(door.x1 - door.x0, 0.05, T, dx, 0.0, fz, '#a98e6a');
+  for (const x of [door.x0 - 0.05, door.x1 + 0.05]) frame(0.1, frontH + 0.12, T + 0.04, x, (frontH + 0.12) / 2 - 0.05, fz).material = surface('#a98e6a');
+  const doormat = new THREE.Mesh(new THREE.PlaneGeometry(door.x1 - door.x0 - 0.1, 0.62), surface('#b8a58a'));
+  doormat.rotation.x = -Math.PI / 2;
+  doormat.position.set(dx, 0.035, maxZ - 0.4);
+  doormat.receiveShadow = true;
+  shell.add(doormat);
+  // Window on the back wall.
+  const win = shape.window,
     wx = (win.x0 + win.x1) / 2,
     wy = (win.y0 + win.y1) / 2;
   box(win.x1 - win.x0 + 0.1, win.y1 - win.y0 + 0.02, 0.08, wx, wy, minZ + 0.02, '#ac9471');
-  box(
-    win.x1 - win.x0 - 0.16,
-    win.y1 - win.y0 - 0.24,
-    0.05,
-    wx,
-    wy,
-    minZ + 0.05,
-    new THREE.MeshBasicMaterial({ color: '#d4e5d3' }),
-  );
+  const pane = new THREE.MeshBasicMaterial({ color: '#d4e5d3' });
+  box(win.x1 - win.x0 - 0.16, win.y1 - win.y0 - 0.24, 0.05, wx, wy, minZ + 0.05, pane);
   for (const x of [win.x0 + 0.1, wx, win.x1 - 0.1])
     box(0.065, win.y1 - win.y0 - 0.12, 0.06, x, wy, minZ + 0.1, '#faf2df');
   for (const y of [win.y0 + 0.1, wy, win.y1 - 0.1])
     box(win.x1 - win.x0 - 0.1, 0.065, 0.06, wx, y, minZ + 0.1, '#faf2df');
   box(win.x1 - win.x0 + 0.2, 0.08, 0.2, wx, win.y0 - 0.02, minZ + 0.12, '#f3e8d2');
-  // Door at the front end of the left wall.
-  const door = ROOM.door,
-    dz = (door.z0 + door.z1) / 2;
-  box(0.06, door.height, door.z1 - door.z0, minX + 0.02, door.height / 2, dz, '#a98e6a');
-  box(0.07, door.height - 0.2, door.z1 - door.z0 - 0.19, minX + 0.06, door.height / 2 - 0.08, dz, '#c9b58f');
-  for (const y of [0.68, 1.72])
-    box(0.015, 0.8, 0.78, minX + 0.1, y, dz, '#dfcdaa');
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 8), surface('#b09557'));
-  knob.position.set(minX + 0.14, 1.23, dz + 0.34);
-  shell.add(knob);
-  const doormat = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.62, 1.05),
-    surface('#b8a58a'),
-  );
-  doormat.rotation.x = -Math.PI / 2;
-  doormat.position.set(minX + 0.4, 0.035, dz);
-  doormat.receiveShadow = true;
-  shell.add(doormat);
+  // Built-ins every room has: the kitchen counter (요리·만들기) and the closet (옷 갈아입기).
+  for (const f of shape.fixtures) {
+    const fw = f.x1 - f.x0,
+      fd = f.z1 - f.z0,
+      fx = (f.x0 + f.x1) / 2,
+      fzc = (f.z0 + f.z1) / 2;
+    if (f.id === 'kitchen') {
+      box(fw, 0.92, fd, fx, 0.46, fzc, '#e9dcc3');
+      box(fw + 0.06, 0.08, fd + 0.04, fx, 0.96, fzc + 0.02, '#9c7550');
+      for (let i = 0; i < 3; i++) box(fw / 3 - 0.08, 0.62, 0.02, f.x0 + (i + 0.5) * (fw / 3), 0.44, f.z1 + 0.005, '#f4eddf');
+      // Stove: two burners on a dark plate, and a tiled splash on the wall.
+      box(0.8, 0.02, 0.56, f.x1 - 0.55, 1.01, fzc, '#4d4640');
+      for (const bx of [f.x1 - 0.72, f.x1 - 0.38]) {
+        const burner = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 6, 16), surface('#2f2a26'));
+        burner.rotation.x = -Math.PI / 2;
+        burner.position.set(bx, 1.03, fzc);
+        shell.add(burner);
+      }
+      box(fw, 0.6, 0.03, fx, 1.3, minZ + 0.02, '#dfe7e3');
+      box(0.5, 0.36, 0.3, f.x0 + 0.45, 1.18, fzc - 0.1, '#b5c7c0');
+    } else {
+      box(fw, f.h, fd, fx, f.h / 2, fzc, '#b08a62');
+      box(fw + 0.06, 0.08, fd + 0.06, fx, f.h + 0.02, fzc, '#8d6a48');
+      for (const side of [-1, 1]) {
+        box(fw / 2 - 0.08, f.h - 0.3, 0.02, fx + side * (fw / 4), f.h / 2 + 0.05, f.z1 + 0.005, '#c49c72');
+        const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), surface('#6e5236'));
+        knob.position.set(fx + side * 0.09, f.h / 2 + 0.1, f.z1 + 0.04);
+        shell.add(knob);
+      }
+    }
+  }
   // Curtains belong to the window (not a placeable item).
   const curtainFallback = new THREE.Group();
   shell.add(curtainFallback);
@@ -421,6 +461,7 @@ export function createBedroomScene(
       group.rotation.set(0, CAMERA_YAW, 0);
       const flip = item.rotY > 90 && item.rotY < 270;
       content.scale.x = flip ? -1 : 1;
+      content.scale.y = CARD_STRETCH;
     } else group.rotation.set(0, item.rotY * DEG, 0);
   };
   const cardHeight = (node: Node, entry: CatalogEntry) =>

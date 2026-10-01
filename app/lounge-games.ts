@@ -183,7 +183,7 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },
   // Just inside the room's door (see ROOM_DOOR_POINT / roomToNetwork).
-  home: { x: 7.5, y: 85.85 },
+  home: { x: 12.22, y: 74.5 },
   // Region arrivals (lounge-areas.ts regionToNetwork of REGIONS[*].arrive).
   hill: { x: 50, y: 94.5 },
   woods: { x: 94.55, y: 50 },

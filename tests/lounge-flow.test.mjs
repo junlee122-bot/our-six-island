@@ -23,7 +23,7 @@ import {
   roomAction,
   roomObstacles,
 } from '../app/lounge-bedroom-navigation.ts';
-import { ROOM, ROOM_DOOR_POINT, defaultBedroom } from '../app/lounge-bedroom-data.ts';
+import { ROOM_DOOR_POINT, defaultBedroom, roomShape } from '../app/lounge-bedroom-data.ts';
 import {
   SCENE_LAYOUT,
   sceneCanWalk,
@@ -159,12 +159,13 @@ test('room button: 나가기 at the door, 꾸미기 elsewhere in my room, nothin
   assert.equal(roomAction({ x: 3, z: -2.6 }, withWardrobe, { own: true, canDress: false })?.kind, 'decorate');
 });
 
-test('walking into the left wall at the doorway leaves the room', () => {
-  const at = { x: ROOM.minX + 0.25, z: (ROOM.door.z0 + ROOM.door.z1) / 2 };
-  assert.ok(leavingThroughDoor(at, -0.02));
-  assert.ok(!leavingThroughDoor(at, 0.02), 'walking away');
-  assert.ok(!leavingThroughDoor({ x: at.x, z: 0 }, -0.02), 'not at the door');
-  assert.ok(!leavingThroughDoor(ROOM_DOOR_POINT, -0.02), 'just walked in');
+test('walking down into the front wall at the doorway leaves the room', () => {
+  const door = roomShape(0).door;
+  const at = { x: (door.x0 + door.x1) / 2, z: roomShape(0).maxZ - 0.25 };
+  assert.ok(leavingThroughDoor(at, 0.02));
+  assert.ok(!leavingThroughDoor(at, -0.02), 'walking away');
+  assert.ok(!leavingThroughDoor({ x: 0, z: at.z }, 0.02), 'not at the door');
+  assert.ok(!leavingThroughDoor(ROOM_DOOR_POINT, 0.02), 'just walked in');
 });
 
 /* ------------------------------------------------------------ hall / casino */

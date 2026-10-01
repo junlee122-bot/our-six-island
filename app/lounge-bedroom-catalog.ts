@@ -3,20 +3,95 @@
 // Sizes are in walk-room world units at scale 1. The character is ~1.8 tall
 // (chibi proportions), so furniture is drawn about 1.2× real size.
 
-/** Floor plan of the walk room. The camera looks from the open front-right corner. */
-export const ROOM = {
+/**
+ * 새 방 (rooms v2, 2026-10-02): every friend's room has the same shape, seen
+ * straight on by the 구역 공통 규격 camera (lounge-village-camera.ts): the back
+ * wall at the top of the screen, the door in the front wall at the bottom,
+ * a built-in kitchen counter and closet against the back wall. The room grows
+ * to the right and toward the front with the 집 확장 tier (범마을 부동산):
+ * the back-left corner stays put, so furniture never moves when it grows.
+ */
+export type RoomFixture = {
+  id: 'kitchen' | 'closet';
+  name: string;
+  /** Floor footprint (world units); both stand against the back wall. */
+  x0: number;
+  x1: number;
+  z0: number;
+  z1: number;
+  /** Height (wall items may hang above it). */
+  h: number;
+  /** The room action it offers (요리·만들기 / 옷 갈아입기). */
+  action: 'cook' | 'dress';
+};
+export type RoomShape = {
+  /** 집 확장 tier 0–4 (-1: an old themed room shown in the model house). */
+  tier: number;
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  wallHeight: number;
+  /** Window on the back wall (x range, y range). Wall items must not cover it. */
+  window: { x0: number; x1: number; y0: number; y1: number };
+  /** Entry door in the front wall (x range). Its floor strip stays clear. */
+  door: { x0: number; x1: number; height: number };
+  fixtures: readonly RoomFixture[];
+};
+/** Floor size per 집 확장 tier (width × depth), from the back-left corner. */
+export const ROOM_TIERS: readonly { w: number; d: number }[] = [
+  { w: 12, d: 8 },
+  { w: 13, d: 8.5 },
+  { w: 14, d: 9 },
+  { w: 16, d: 9.5 },
+  { w: 18, d: 10 },
+];
+const ORIGIN = { x: -6, z: -4 } as const;
+export const ROOM_FIXTURES: readonly RoomFixture[] = [
+  { id: 'kitchen', name: '부엌 조리대', x0: ORIGIN.x + 0.15, x1: ORIGIN.x + 2.45, z0: ORIGIN.z, z1: ORIGIN.z + 0.9, h: 1.05, action: 'cook' },
+  { id: 'closet', name: '붙박이 옷장', x0: ORIGIN.x + 2.65, x1: ORIGIN.x + 4.15, z0: ORIGIN.z, z1: ORIGIN.z + 0.75, h: 2.5, action: 'dress' },
+];
+const clampTier = (tier: number) => (Number.isSafeInteger(tier) ? Math.max(0, Math.min(ROOM_TIERS.length - 1, tier)) : 0);
+/** The room of a 집 확장 tier (0 = no expansion yet). */
+export function roomShape(tier = 0): RoomShape {
+  const t = clampTier(tier),
+    size = ROOM_TIERS[t];
+  return {
+    tier: t,
+    minX: ORIGIN.x,
+    maxX: ORIGIN.x + size.w,
+    minZ: ORIGIN.z,
+    maxZ: ORIGIN.z + size.d,
+    wallHeight: 3.8,
+    window: { x0: ORIGIN.x + 5.1, x1: ORIGIN.x + 8.1, y0: 1.54, y1: 3.44 },
+    door: { x0: ORIGIN.x + 1.6, x1: ORIGIN.x + 2.8, height: 2.63 },
+    fixtures: ROOM_FIXTURES,
+  };
+}
+/**
+ * The largest room (tier 4): what the server accepts. The editor keeps items
+ * inside the owner's current tier (roomConflicts 'outside').
+ */
+export const ROOM = roomShape(ROOM_TIERS.length - 1);
+/** Where you stand after walking in through the door. */
+export const roomDoorPoint = (shape: RoomShape) => ({ x: (shape.door.x0 + shape.door.x1) / 2, z: shape.maxZ - 0.55 });
+export const ROOM_DOOR_POINT = roomDoorPoint(roomShape(0));
+/**
+ * The old themed rooms (room format v3, one per friend) are kept as model
+ * houses at 범마을 부동산 (lounge-bedroom-layouts.ts): the old 10 × 8.2 floor,
+ * with its window, and a front door added so it reads like the new rooms.
+ */
+export const LEGACY_ROOM: RoomShape = {
+  tier: -1,
   minX: -5,
   maxX: 5,
   minZ: -4.1,
   maxZ: 4.1,
   wallHeight: 3.8,
-  /** Window on the back wall (x range, y range). Wall items must not cover it. */
   window: { x0: -3.58, x1: -0.62, y0: 1.54, y1: 3.44 },
-  /** Entry door on the left wall (z range). Its floor zone stays clear. */
-  door: { z0: 2.32, z1: 3.56, height: 2.63 },
-} as const;
-/** Where you stand after walking in through the door. */
-export const ROOM_DOOR_POINT = { x: -4.25, z: 2.94 } as const;
+  door: { x0: -4.7, x1: -3.5, height: 2.63 },
+  fixtures: [],
+};
 
 export type RoomCategory =
   | 'furniture'
@@ -47,7 +122,7 @@ export type CatalogEntry = {
   h: number;
   /** Height of a top surface small items can stand on. */
   top?: number;
-  /** Shop unlock needed before it appears in the catalog. */
+  /** Shop unlock needed before it can be placed (every piece but the trophies: its own ref). */
   unlock?: string;
   /**
    * Premium furniture bought in the rotating 가구 상점 (or crafted): the room
@@ -66,7 +141,27 @@ const e = (
   d: number,
   h: number,
   extra: Partial<Pick<CatalogEntry, 'top' | 'unlock' | 'premium'>> = {},
-): CatalogEntry => ({ ref, kind, name, category, mount, w, d, h, ...extra });
+): CatalogEntry => ({
+  ref,
+  kind,
+  name,
+  category,
+  mount,
+  w,
+  d,
+  h,
+  // 새 방 (2026-10-02): every piece is bought at 나무결 가구점 and counted
+  // per owned copy, except the rare trophies (범타듀 상점 unlocks).
+  ...(extra.unlock ? {} : { unlock: ref, premium: true }),
+  ...extra,
+});
+/** How a piece is placed (나무결 가구점 shows it next to the size). */
+export const MOUNT_NAME: Record<RoomMount, string> = {
+  floor: '바닥에 놓는 가구',
+  rug: '바닥에 까는 깔개',
+  small: '바닥이나 탁자 위 소품',
+  wall: '뒷벽에 거는 장식',
+};
 
 export const ROOM_CATALOG: readonly CatalogEntry[] = [
   // 3D furniture (3DAssets.dev CC0 and kArchive models).
