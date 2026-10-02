@@ -1,0 +1,72 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Recostumed as a village smith. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "assets": [
+  {
+   "id": "nilah-tall",
+   "job": "cb9b6e34-f341-4ccc-adcf-d0dfb1505f97",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-nilah.png",
+   "sha256": "B09365252F4F766E64911E072FD3A82E2A6E00D64AEE2B8D7975F87B32AB1B9E"
+  },
+  {
+   "id": "nilah-chibi",
+   "job": "8b956af1-1f41-4193-9a40-ca335816be53",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-nilah.png",
+   "sha256": "586536F833896D9F0C5B28AD2452F2CE70B7EA164473ABD3CFCEB1F6E2EC8FB6"
+  },
+  {
+   "id": "ornn-tall",
+   "job": "bda2b363-ae2f-40af-a0a6-4b997934b0e7",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-ornn.png",
+   "sha256": "9BB27FA1B1009F9562D2B4200CC2D1D0BF63AD0EB45EDFDF2ED25DFDED560443"
+  },
+  {
+   "id": "ornn-chibi",
+   "job": "632a2bee-7be7-4e1f-81ba-446cde8a7777",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-ornn.png",
+   "sha256": "6A3DB4EBC1F40AAE60AE6135E0CFAC117DCC67855EA2B4D57BB60AE0B353DAC6"
+  },
+  {
+   "id": "mercy-tall",
+   "job": "bb3db944-4368-4e25-a174-473c6fa6ade8",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-mercy.png",
+   "sha256": "A475BA98C519D1BFFD4CC099B37505017883A374DD5D7449B6A94127B3E8F770"
+  },
+  {
+   "id": "mercy-chibi",
+   "job": "09928274-cd66-4c0e-8f71-17c469cc8584",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-mercy.png",
+   "sha256": "250490CD5BC879284E481DD21A06325A5794DFF7D8257C5C13ED077CDAA3C802"
+  }
+ ]
+}
