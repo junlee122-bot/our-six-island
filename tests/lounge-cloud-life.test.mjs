@@ -231,3 +231,18 @@ test('light games module matches the engine', () => {
   assert.equal(room.GAME_INFO, GAME_INFO);
   assert.equal(room.emptyLoungeView().status, 'offline');
 });
+
+test('운명 다시 보기 is only at 신이치 (산기슭 마을), never from the village', async () => {
+  const h = harness(),
+    a = member(0);
+  await h.run(a, 'open');
+  const away = await h.run(a, 'action', { action: { kind: 'respec', skill: 'farm' } });
+  assert.equal(away.response.ok, false);
+  assert.equal(away.response.error, '운명 다시 보기는 산기슭 마을 점집의 신이치에게 부탁해요.');
+  // At his tent the place check passes and the engine decides (nothing to reset yet).
+  (h.world.life.flags ??= []).push('district-foothill');
+  assert.equal((await h.run(a, 'action', { action: { kind: 'area', area: 'foothill', x: 0, y: 0 } })).response.ok, true);
+  const there = await h.run(a, 'action', { action: { kind: 'respec', skill: 'farm' } });
+  assert.equal(there.response.ok, false);
+  assert.equal(there.response.error, '되돌릴 전문가나 재능이 없어요.');
+});

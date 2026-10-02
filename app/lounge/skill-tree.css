@@ -1,0 +1,276 @@
+/* 기술 트리 (GrowthSkillTree.tsx): the 마을 개척 chart's look for each skill —
+   paper grid, dashed trails, leaf roads, nodes by state. */
+.l-tree {
+  display: grid;
+  gap: 10px;
+}
+.l-tree-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.l-tree-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: var(--r-m);
+  font-size: var(--fs-body-s);
+  font-weight: 700;
+  color: var(--ink-700);
+  background: var(--paper-100);
+  box-shadow: var(--edge-line);
+}
+.l-tree-tab small {
+  font-size: var(--fs-cap);
+  font-weight: 400;
+  color: var(--text-soft);
+}
+.l-tree-tab[aria-selected='true'] {
+  color: var(--ink-900);
+  background: var(--paper-50);
+  box-shadow:
+    var(--edge-highlight), var(--lift-1);
+}
+.l-tree-tab:focus-visible,
+.l-tree-node:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+.l-tree-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--stamp-600);
+}
+.l-tree-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: var(--fs-body-s);
+}
+.l-tree-head strong {
+  font-size: 16px;
+}
+.l-tree-head small {
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+}
+.l-tree-chart {
+  position: relative;
+  aspect-ratio: 876 / 293;
+  min-height: 220px;
+  border-radius: var(--r-m);
+  background:
+    radial-gradient(circle at 18% 25%, rgb(143 169 104 / 0.16), transparent 35%),
+    repeating-linear-gradient(0deg, rgb(122 83 52 / 0.05) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgb(122 83 52 / 0.05) 0 1px, transparent 1px 24px),
+    var(--paper-200);
+  box-shadow:
+    var(--edge-line), var(--lift-1);
+}
+.l-tree-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.l-tree-lv {
+  position: absolute;
+  top: 2px;
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  color: var(--ink-600);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.l-tree-trail {
+  fill: none;
+  stroke: rgb(110 88 67 / 0.45);
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+}
+.l-tree-faint {
+  fill: none;
+  stroke: rgb(110 88 67 / 0.2);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 6;
+}
+.l-tree-road {
+  fill: none;
+  stroke: var(--leaf-600);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.l-tree-start {
+  fill: var(--leaf-600);
+}
+.l-tree-node {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 4px 5px;
+  white-space: nowrap;
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
+  line-height: 1.15;
+  text-align: left;
+  color: var(--ink-900);
+  background: var(--paper-50);
+  box-shadow:
+    var(--edge-line), var(--lift-1);
+  transform: translate(-50%, -50%);
+  transition: transform var(--dur-quick);
+}
+.l-tree-node[data-kind='prof'] {
+  padding: 6px 10px 6px 6px;
+  border-radius: var(--r-m);
+  font-size: var(--fs-body-s);
+}
+.l-tree-node[data-kind='perk'] {
+  padding: 0;
+  border-radius: 50%;
+}
+.l-tree-pip {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--paper-100);
+}
+.l-tree-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-s);
+  background: var(--paper-100);
+}
+.l-tree-node[data-state='got'] {
+  color: var(--ink-900);
+  background: var(--leaf-100);
+}
+.l-tree-node[data-state='got'] .l-tree-icon,
+.l-tree-node[data-state='got'] .l-tree-pip {
+  color: var(--paper-50);
+  background: var(--leaf-600);
+}
+.l-tree-node[data-state='open'] .l-tree-icon {
+  background: var(--pal-amber-91);
+  box-shadow: var(--edge-highlight);
+  animation: l-tree-pulse 1.8s ease-out infinite;
+}
+.l-tree-node[data-state='locked'],
+.l-tree-node[data-state='lock'] {
+  color: var(--ink-700);
+  background: var(--paper-200);
+}
+.l-tree-node[data-state='dim'] {
+  opacity: 0.45;
+}
+.l-tree-node[aria-selected='true'] {
+  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow:
+    var(--edge-highlight), var(--lift-1);
+  z-index: var(--z-base);
+}
+.l-tree-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-m);
+  background: var(--paper-50);
+  box-shadow:
+    var(--edge-line), var(--lift-1);
+}
+.l-tree-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.l-tree-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.l-tree-where {
+  padding: 2px 7px;
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
+  font-weight: 900;
+  color: var(--paper-50);
+  background: var(--ink-700);
+}
+.l-tree-stamp {
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 2px solid var(--stamp-600);
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
+  font-weight: 900;
+  color: var(--stamp-600);
+  transform: rotate(-4deg);
+}
+.l-tree-stamp[data-state='got'] {
+  color: var(--leaf-800);
+  border-color: var(--leaf-800);
+}
+.l-tree-stamp[data-state='locked'],
+.l-tree-stamp[data-state='lock'],
+.l-tree-stamp[data-state='dim'] {
+  color: var(--text-soft);
+  border-color: var(--pal-grey-63);
+}
+.l-tree-effect {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--fs-body-s);
+}
+.l-tree-req,
+.l-tree-why {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  font-size: var(--fs-body-s);
+  color: var(--text-soft);
+}
+@keyframes l-tree-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-tree-node[data-state='open'] .l-tree-icon {
+    animation: none;
+  }
+}
+@media (max-width: 640px) {
+  .l-tree-node {
+    padding: 3px 5px 3px 3px;
+  }
+  .l-tree-node b {
+    display: none;
+  }
+  .l-tree-node[aria-selected='true'] b {
+    display: inline;
+  }
+}
+.l-tree-progress {
+  flex-basis: 100%;
+  font-size: var(--fs-cap);
+  color: var(--text-soft);
+}

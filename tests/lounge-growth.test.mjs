@@ -240,8 +240,10 @@ test('level-ups are recorded once (news + banner list) and bounded', () => {
 });
 
 // ------------------------------------------------------------ professions
-test('professions: Lv5 pick, Lv10 pick under it, effects applied, respec for 50,000범', () => {
-  const s = world(1, 200_000);
+test('professions: Lv5 pick, Lv10 pick under it, effects applied, 운명 다시 보기 for 500,000범', () => {
+  const s = world(1, 1_000_000);
+  // 신이치's tent is in 산기슭 마을.
+  s.life.flags = [...(s.life.flags ?? []), 'district-foothill'];
   const [m] = s.members;
   s.fails(m, { kind: 'chooseProf', skill: 'farm', prof: 'farm-a' }, T0, GROWTH_REJECT.profLevel);
   setXp(s, m, 'farm', LEVEL_XP[4]);
@@ -266,6 +268,7 @@ test('professions: Lv5 pick, Lv10 pick under it, effects applied, respec for 50,
   assert.equal(s.life.growth.u[m.id].prof, undefined);
   assert.equal(s.ledger.entries.at(-1).reason, 'respec');
   s.fails(m, { kind: 'respec', skill: 'farm' }, T0 + 5000, GROWTH_REJECT.noProf);
+  assert.equal(s.life.growth.u[m.id].resp.farm, 1);
   // Picks again after the respec.
   s.act(m, { kind: 'chooseProf', skill: 'farm', prof: 'farm-b' }, T0 + 6000);
   assert.equal(growthMods(s.life, m.id).cropSell, 0.1);
@@ -561,7 +564,7 @@ test('catalog: ore items, research flags, professions and every research materia
     for (const id of Object.keys(def.mats)) assert.ok(ITEM_BY_ID[id], id);
   }
   for (const t of Object.values(TOOL_COST)) for (const id of Object.keys(t.mats)) assert.ok(ITEM_BY_ID[id], id);
-  for (const skill of ['farm', 'fish', 'forage', 'mine', 'craft']) {
+  for (const skill of ['farm', 'fish', 'forage', 'mine', 'craft', 'ranch']) {
     const five = PROFESSIONS.filter((p) => p.skill === skill && p.level === 5);
     assert.equal(five.length, 2);
     for (const p of five) assert.equal(PROFESSIONS.filter((q) => q.parent === p.id).length, 2);

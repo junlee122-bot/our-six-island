@@ -92,7 +92,7 @@ import {
   feteSpot,
 } from './lounge-village-spots';
 import { birthdayNames } from './lounge-birthday';
-import { FISH_SPOTS, SPOT_INFO, type Spot } from './lounge-items';
+import { FISH_SPOTS, SPAWN_SPOTS, SPOT_INFO, type Spot } from './lounge-items';
 import { fishCandidates, itemName, spotBlock } from './lounge-life-plus';
 import {
   DAY_PHASE_LABEL,
@@ -195,6 +195,8 @@ type ChatLine = { id: string; actor: number; text: string };
 /** A harvested crop rising from its plot (screen px in the scene). */
 type HarvestPop = { id: string; crop: Crop; quality: Quality; x: number; y: number; delay: number };
 
+/** Forage spots by id (재능 산나물 눈 minimap markers). */
+const SPAWN_BY_ID = Object.fromEntries(SPAWN_SPOTS.map((s) => [s.id, s]));
 /** Compact overview / minimap name: "도원", "회관", "카지노", "분장실". */
 const PLACE_SHORT: Record<VillagePlace['kind'], string> = {
   home: '',
@@ -2979,6 +2981,16 @@ export function Village3D(props: Props) {
                         fill={d.color}
                       />
                     ))}
+                    {/* 재능 산나물 눈: today's forage still to pick. */}
+                    {props.life?.growth?.mods.forageMap &&
+                      (props.life.me.spawns ?? [])
+                        .filter((sp) => sp.kind === 'forage' && !sp.taken)
+                        .map((sp) => {
+                          const at = SPAWN_BY_ID[sp.spot];
+                          return at ? (
+                            <circle key={'forage-' + sp.spot} cx={at.x} cy={at.z} r="1.1" fill="#7fae4f" stroke="#fff7d6" strokeWidth="0.4" data-testid="minimap-forage" />
+                          ) : null;
+                        })}
                     <circle
                       ref={miniSelfRef}
                       cx={VILLAGE_START.x}

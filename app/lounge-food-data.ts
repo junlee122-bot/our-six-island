@@ -17,7 +17,8 @@ export type BuffSlot = 'meal' | 'snack';
 /** Kinds a meal (dish or lunchbox) can give. */
 export const MEAL_BUFFS: readonly DishBuff[] = ['grow', 'luck', 'forage', 'bug', 'mine', 'wood', 'charm'];
 /** A slot as stored: `food` is a dish id (meal) or a menu id (snack). */
-export type SlotBuff = { kind: DishBuff; food: string; until: number; weak?: true };
+/** `p`: strength above 1 (a meal from forage with the 재능 약초 달이기). */
+export type SlotBuff = { kind: DishBuff; food: string; until: number; weak?: true; p?: number };
 
 /** 가게 음식: eaten on the spot. `buff` goes to the 간식 칸 for `hours`. */
 export type ShopFoodDef = {
@@ -94,23 +95,26 @@ export const isTasteId = (id: unknown): id is string => typeof id === 'string' &
 export const tasteName = (id: string) => DISH_BY_ID[id]?.name ?? SHOP_FOOD_BY_ID[id]?.name ?? id;
 
 // ---------------------------------------------------------------- readers
-type ExtLike = { buff?: { kind: DishBuff; dish: string; until: number }; snack?: SlotBuff; s3?: { fo?: { kind: DishBuff; until: number } } };
+type ExtLike = { buff?: { kind: DishBuff; dish: string; until: number; p?: number }; snack?: SlotBuff; s3?: { fo?: { kind: DishBuff; until: number } } };
 type LifeLike = { ext?: Record<string, ExtLike | undefined> };
 /** The 식사 칸 (the pre-2026-10 `ext.buff`) if still on. */
 export function mealSlot(life: LifeLike, uid: string, now: number): SlotBuff | null {
   const b = life.ext?.[uid]?.buff;
-  return b && now < b.until ? { kind: b.kind, food: b.dish, until: b.until } : null;
+  return b && now < b.until ? { kind: b.kind, food: b.dish, until: b.until, ...(b.p ? { p: b.p } : {}) } : null;
 }
 /** The 간식 칸 if still on. */
 export function snackSlot(life: LifeLike, uid: string, now: number): SlotBuff | null {
   const b = life.ext?.[uid]?.snack;
   return b && now < b.until ? b : null;
 }
-/** 1 when a slot gives `kind` at full strength, 0.5 when only a weak one does, else 0. */
+/**
+ * 1 when a slot gives `kind` at full strength, 0.5 when only a weak one does,
+ * else 0; a meal cooked with the 재능 약초 달이기 from forage is stronger (1.2).
+ */
 export function buffPower(life: LifeLike, uid: string, now: number, kind: DishBuff): number {
   let p = 0;
   for (const b of [mealSlot(life, uid, now), snackSlot(life, uid, now)])
-    if (b?.kind === kind) p = Math.max(p, b.weak ? 0.5 : 1);
+    if (b?.kind === kind) p = Math.max(p, b.weak ? 0.5 : (b.p ?? 1));
   // 운세 칸 (신이치's fortune, lounge-stage3.ts): always a small (weak) buff.
   const fo = life.ext?.[uid]?.s3?.fo;
   if (fo && now < fo.until && fo.kind === kind) p = Math.max(p, 0.5);
@@ -120,13 +124,18 @@ export const hasBuff = (life: LifeLike, uid: string, now: number, kind: DishBuff
 /** 물고기의 행운 multipliers for one cast. */
 export function luckMods(life: LifeLike, uid: string, now: number) {
   const p = buffPower(life, uid, now, 'luck');
-  return p >= 1 ? { rare: LUCK_RARE, window: LUCK_WINDOW } : p > 0 ? { rare: LUCK_WEAK_RARE, window: LUCK_WEAK_WINDOW } : { rare: 1, window: 1 };
+  return p >= 1 ? { rare: 1 + (LUCK_RARE - 1) * p, window: 1 + (LUCK_WINDOW - 1) * p } : p > 0 ? { rare: LUCK_WEAK_RARE, window: LUCK_WEAK_WINDOW } : { rare: 1, window: 1 };
 }
 /** 배움: the XP multiplier from food. */
-export const learnMult = (life: LifeLike, uid: string, now: number) => (hasBuff(life, uid, now, 'learn') ? LEARN_XP : 1);
+export const learnMult = (life: LifeLike, uid: string, now: number) => {
+  const p = buffPower(life, uid, now, 'learn');
+  return p > 0 ? 1 + (LEARN_XP - 1) * Math.max(1, p) : 1;
+};
+/** How much stronger the strongest `kind` buff is than a plain one (1, or the 약초 달이기 1.2). */
+export const buffBoost = (life: LifeLike, uid: string, now: number, kind: DishBuff) => Math.max(1, buffPower(life, uid, now, kind));
 /** 친화력: resident points after the buff (whole points, at least the base). */
 export const charmPoints = (life: LifeLike, uid: string, now: number, n: number) =>
-  n > 0 && hasBuff(life, uid, now, 'charm') ? Math.round(n * CHARM_MULT) : n;
+  n > 0 && hasBuff(life, uid, now, 'charm') ? Math.round(n * (1 + (CHARM_MULT - 1) * buffBoost(life, uid, now, 'charm'))) : n;
 /** What eating `id` would switch on (the preview on every 먹기 button). */
 export function foodPreview(id: string): { slot: BuffSlot; kind?: DishBuff; name?: string; text?: string; hours?: number; weak?: true } | null {
   const dish = DISH_BY_ID[id];

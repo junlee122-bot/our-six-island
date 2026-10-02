@@ -145,6 +145,8 @@ export function GrowthNotices({
             : perk
               ? `${perk.text}${perk.soon ? ` · ${perk.soon} 이후` : ''}`
               : '더 능숙해졌어요'}
+          {/* 기술 트리: a talent point at Lv2·4·6·8·10. */}
+          {current.level % 2 === 0 ? ' · 재능 점수 +1' : ''}
         </em>
       </span>
       <button

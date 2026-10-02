@@ -42,7 +42,6 @@ import {
   RESEARCH_HELPERS,
   RESEARCH_MIN_BEOM,
   RESEARCH_RELAX_DAYS,
-  RESPEC_PRICE,
   REST_MAX,
   REST_PER_DAY,
   RETRO_LEVEL,
@@ -73,9 +72,11 @@ import {
   type ToolId,
 } from './lounge-growth-data.ts';
 import { LIFE_REJECT, LifeError, uidOf, type LifeState } from './lounge-life.ts';
-import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorOre, floorPick, mineDrop, mineFloor } from './lounge-mine.ts';
+import { RESPEC_PRICE_MAX_TIMES, TALENT_BY_ID, isTalentId, respecPrice, talentPoints, type TalentDef } from './lounge-growth-talents.ts';
+import { DISTRICT_FLAG } from './lounge-districts.ts';
+import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorOre, floorPick, mineDrop, mineFloor, veinFloor } from './lounge-mine.ts';
 // 음식 버프: 배움 (XP), 광부의 힘 (mine ore), 나무꾼 (wood) — lounge-food-data.ts.
-import { MINE_BUFF_EVERY, MINE_BUFF_VEIN, hasBuff, learnMult } from './lounge-food-data.ts';
+import { MINE_BUFF_EVERY, MINE_BUFF_VEIN, buffBoost, hasBuff, learnMult } from './lounge-food-data.ts';
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
 import { moodXpMult } from './lounge-mood.ts';
@@ -106,6 +107,12 @@ export type GrowthUser = {
   retro?: number;
   /** Chosen professions (≤ 2 per skill). */
   prof?: string[];
+  /** Talents taken (design-skill-tree.md §2; ≤ 5 per skill, older saves: none). */
+  tal?: string[];
+  /** Talents taken today (the day's one batched news line). */
+  tn?: string[];
+  /** 운명 다시 보기 so far per skill (the price doubles each time). */
+  resp?: Partial<Record<SkillId, number>>;
   /** Tool tiers 2–5 (absent = 1; the rod's 2–3 live in ext.rod). */
   tools?: Partial<Record<ToolId, number>>;
   /** The tool at the forge. */
@@ -140,6 +147,7 @@ export type GrowthExt = { growth?: GrowthState };
 export type GrowthAction =
   | { kind: 'chooseProf'; skill: SkillId; prof: string }
   | { kind: 'respec'; skill: SkillId }
+  | { kind: 'pickTalent'; skill: SkillId; talent: string }
   | { kind: 'forge'; tool: ToolId }
   | { kind: 'forgePickup' }
   | { kind: 'forgeGift' }
@@ -154,9 +162,16 @@ export const GROWTH_REJECT = {
   skill: '기술을 확인해 주세요.',
   prof: '전문가를 확인해 주세요.',
   profLevel: '아직 고를 수 있는 레벨이 아니에요.',
-  profTaken: '이미 고른 전문가예요. 다시 고르려면 망설임 석상에서 바꿔 주세요.',
+  profTaken: '이미 고른 전문가예요. 다시 고르려면 점집 신이치에게 운명 다시 보기를 부탁해요.',
   profParent: '먼저 고른 전문가 아래에서만 고를 수 있어요.',
-  noProf: '아직 고른 전문가가 없어요.',
+  noProf: '되돌릴 전문가나 재능이 없어요.',
+  talent: '재능을 확인해 주세요.',
+  talentTaken: '이미 익힌 재능이에요.',
+  talentLevel: '아직 찍을 수 있는 레벨이 아니에요.',
+  talentPoints: '남은 재능 점수가 없어요. 2·4·6·8·10레벨에 1점씩 생겨요.',
+  talentAfter: '먼저 앞 칸의 재능을 익혀야 해요.',
+  talentBranch: '이 갈래의 5레벨 전문가를 고른 뒤에 찍을 수 있어요.',
+  respecShut: '운명 다시 보기는 산기슭 마을이 열리면 점집 신이치에게 부탁할 수 있어요.',
   tool: '도구를 확인해 주세요.',
   forgeClosed: '대장간은 마을 개척 “대장간 재건”이 끝나면 열려요.',
   forgeBusy: '이미 맡긴 도구가 있어요. 찾아간 뒤에 다른 도구를 맡겨 주세요.',
@@ -241,6 +256,21 @@ function readUser(v: unknown): GrowthUser | undefined {
     }
     if (prof.length) out.prof = prof;
   }
+  if (Array.isArray(x.tal)) {
+    const tal: string[] = [];
+    for (const id of x.tal) {
+      if (!isTalentId(id) || tal.includes(id)) continue;
+      const skill = TALENT_BY_ID[id].skill;
+      if (tal.filter((t) => TALENT_BY_ID[t].skill === skill).length < talentPoints(MAX_LEVEL)) tal.push(id);
+    }
+    if (tal.length) out.tal = tal;
+  }
+  const resp: Partial<Record<SkillId, number>> = {};
+  for (const s of SKILLS) {
+    const n = obj(x.resp)[s];
+    if (safe(n) && n > 0) resp[s] = Math.min(RESPEC_PRICE_MAX_TIMES, n);
+  }
+  if (Object.keys(resp).length) out.resp = resp;
   const tools: Partial<Record<ToolId, number>> = {};
   for (const t of TOOLS) {
     const n = obj(x.tools)[t];
@@ -258,6 +288,10 @@ function readUser(v: unknown): GrowthUser | undefined {
   if (safe(x.day) && x.day > 0 && Array.isArray(x.mrock)) {
     const mrock = [...new Set(x.mrock.filter((k): k is string => typeof k === 'string' && /^\d{1,2}:\d{1,2}$/.test(k)))];
     if (mrock.length) out.mrock = mrock.slice(0, MINE_FLOORS_P2 * 20);
+  }
+  if (safe(x.day) && x.day > 0 && Array.isArray(x.tn)) {
+    const tn = [...new Set(x.tn.filter(isTalentId))];
+    if (tn.length) out.tn = tn.slice(-12);
   }
   if (Array.isArray(x.ups)) {
     const ups = x.ups
@@ -325,8 +359,13 @@ const rawUser = (life: LifeState, uid: string): GrowthUser | undefined => life.g
 const userOf = (life: LifeState, uid: string): GrowthUser => ((growthOf(life).u ??= {})[uid] ??= {});
 export const skillXp = (life: LifeState, uid: string, skill: SkillId) => rawUser(life, uid)?.xp?.[skill] ?? 0;
 export const skillLevel = (life: LifeState, uid: string, skill: SkillId) => levelOf(skillXp(life, uid, skill));
-/** 06:00 KST of the next calendar day (tool pickup). */
-export const forgeReadyAt = (now: number) => dayStart(kstDay(now) + 1) + FORGE_READY_HOUR * HOUR;
+/** 06:00 KST of the next calendar day (tool pickup); 재능 용광로: 18:00 the same day when left before then. */
+export const forgeReadyAt = (now: number, fast = false) => {
+  const evening = dayStart(kstDay(now)) + FORGE_FAST_HOUR * HOUR;
+  return fast && now < evening ? evening : dayStart(kstDay(now) + 1) + FORGE_READY_HOUR * HOUR;
+};
+/** 재능 용광로: a tool left before this KST hour is ready the same evening. */
+export const FORGE_FAST_HOUR = 18;
 /** The next 06:00 KST after `now` (research completion). */
 export function nextSixAm(now: number) {
   const today = dayStart(kstDay(now)) + FORGE_READY_HOUR * HOUR;
@@ -363,6 +402,7 @@ function userToday(life: LifeState, uid: string, now: number): GrowthUser {
     delete u.dxp;
     delete u.nodes;
     delete u.mrock;
+    delete u.tn;
   }
   if (u.seen !== undefined && day > u.seen + 1) {
     const away = Math.min(REST_MAX / REST_PER_DAY, day - u.seen - 1);
@@ -460,6 +500,7 @@ export function growthMods(life: LifeState, uid: string): GrowthMods {
     for (const perk of LEVEL_PERKS[s]) if (perk.mods && !perk.soon && lv >= perk.level) addMods(out, perk.mods);
   }
   for (const id of u?.prof ?? []) if (own(PROF_BY_ID, id)) addMods(out, PROF_BY_ID[id].mods);
+  for (const id of u?.tal ?? []) if (own(TALENT_BY_ID, id) && !TALENT_BY_ID[id].lock) addMods(out, TALENT_BY_ID[id].mods ?? {});
   const can = toolTier(life, uid, 'can'),
     hoe = toolTier(life, uid, 'hoe'),
     axe = toolTier(life, uid, 'axe'),
@@ -472,6 +513,13 @@ export function growthMods(life: LifeState, uid: string): GrowthMods {
     copperPts: PICK_TIER_COPPER[pick],
   });
   return out;
+}
+/** 재능 꽃말 · 잔칫상: how much more a gift of `item` counts (flowers, dishes). */
+export function giftMult(life: LifeState, uid: string, item: string) {
+  const kind = ITEM_BY_ID[item]?.kind;
+  if (kind !== 'flower' && kind !== 'dish') return 1;
+  const mods = growthMods(life, uid);
+  return 1 + (kind === 'flower' ? mods.flowerGift : mods.dishGift);
 }
 /** Deterministic chance roll for an effect (key: what, who, sequence). */
 export const growthChance = (life: LifeState, uid: string, what: string, chance: number, now: number) =>
@@ -581,6 +629,10 @@ export function mineCanGo(life: LifeState, uid: string, floor: number, now: numb
     at = u?.mine?.at ?? 0,
     deep = u?.mine?.deep ?? 0;
   if (lift && floor % LIFT_EVERY === 0 && floor <= deep) return null;
+  // 재능 깊은 숨: the lift also stops `liftPlus` floors below each stop I reached.
+  const plus = growthMods(life, uid).liftPlus,
+    stop = floor - plus;
+  if (lift && plus > 0 && stop >= LIFT_EVERY && stop % LIFT_EVERY === 0 && stop <= deep) return null;
   if (floor === at + 1 && ladderFound(life, uid, at, now)) return null;
   if (floor <= at && floor >= 1 && at > 0 && floor === at) return null;
   return floor === at + 1 ? GROWTH_REJECT.mineLadder : GROWTH_REJECT.mineFloor;
@@ -591,11 +643,42 @@ export function ladderFound(life: LifeState, uid: string, floor: number, now: nu
   if (floor < 1) return false;
   const u = life.growth?.u?.[uid];
   if (u?.day !== kstDay(now)) return false;
-  return brokenOn(u, floor) >= mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed;
+  // 재능 사다리 감: one rock fewer.
+  return brokenOn(u, floor) >= Math.max(1, mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed - growthMods(life, uid).ladderEarly);
 }
 
 // ---------------------------------------------------------------- actions
 const skillArg = (s: unknown) => (isSkill(s) ? s : fail(GROWTH_REJECT.skill));
+/** Talent points earned in a skill and still free (design-skill-tree.md §2: floor(level/2) − taken). */
+export function talentsLeft(life: LifeState, uid: string, skill: SkillId) {
+  const taken = (rawUser(life, uid)?.tal ?? []).filter((t) => TALENT_BY_ID[t]?.skill === skill).length;
+  return Math.max(0, talentPoints(skillLevel(life, uid, skill)) - taken);
+}
+/** Why a talent cannot be taken now ('' = it can). */
+export function talentBlock(life: LifeState, uid: string, def: TalentDef): string {
+  const u = rawUser(life, uid);
+  if (u?.tal?.includes(def.id)) return GROWTH_REJECT.talentTaken;
+  if (def.lock) return def.lock;
+  if (skillLevel(life, uid, def.skill) < def.level) return GROWTH_REJECT.talentLevel;
+  if (def.branch && !u?.prof?.includes(def.branch)) return GROWTH_REJECT.talentBranch;
+  // A predecessor nobody can take yet (locked) does not hold its successor back.
+  if (def.after && !u?.tal?.includes(def.after) && !TALENT_BY_ID[def.after]?.lock) return GROWTH_REJECT.talentAfter;
+  if (talentsLeft(life, uid, def.skill) <= 0) return GROWTH_REJECT.talentPoints;
+  return '';
+}
+/** What the next 운명 다시 보기 of a skill costs this friend. */
+export const respecCost = (life: LifeState, uid: string, skill: SkillId) => respecPrice(rawUser(life, uid)?.resp?.[skill] ?? 0);
+/** The one news line a day per friend for talents ("… 재능 낚시 ‘밤낚시’·‘보물 냄새’를 익혔어요"). */
+function talentNews(life: LifeState, u: GrowthUser, now: number, actor: number) {
+  const key = `tal:${actor}`,
+    day = kstDay(now);
+  const names = (u.tn ?? []).filter(isTalentId).map((t) => `${SKILL_INFO[TALENT_BY_ID[t].skill].name} ‘${TALENT_BY_ID[t].name}’`);
+  const full = `${josaGa(nameOf(actor))} 재능 ${names.join('·')}을(를) 익혔어요`;
+  const text = full.length > 80 ? `${josaGa(nameOf(actor))} 오늘 재능 ${names.length}개를 익혔어요` : full;
+  const line = life.news?.find((d) => d.day === day)?.lines.find((l) => l.key === key);
+  if (line) line.text = text;
+  else addNews(life, now, key, 'growth', text, [actor]);
+}
 /**
  * Applies one growth action for `member` on an already-cloned life
  * (lounge-life.ts lifeAction clones and registers the member first).
@@ -621,6 +704,7 @@ export function growthAction(
     case 'chooseProf': {
       const skill = skillArg(a.skill);
       if (!isProfId(a.prof) || PROF_BY_ID[a.prof].skill !== skill) fail(GROWTH_REJECT.prof);
+      if (PROF_BY_ID[a.prof].lock) fail(PROF_BY_ID[a.prof].lock!);
       const def = PROF_BY_ID[a.prof],
         level = skillLevel(life, uid, skill),
         mine = (u.prof ?? []).filter((p) => PROF_BY_ID[p].skill === skill);
@@ -635,13 +719,31 @@ export function growthAction(
       addNews(life, now, `prof:${actor}:${def.id}`, 'growth', `${josaGa(nameOf(actor))} ${SKILL_INFO[skill].name} 전문가 “${def.name}”이(가) 됐어요`, [actor]);
       break;
     }
-    case 'respec': {
+    case 'pickTalent': {
       const skill = skillArg(a.skill);
+      const def = isTalentId(a.talent) ? TALENT_BY_ID[a.talent] : undefined;
+      if (!def || def.skill !== skill) fail(GROWTH_REJECT.talent);
+      const why = talentBlock(life, uid, def!);
+      if (why) fail(why);
+      u.tal = [...(u.tal ?? []), def!.id];
+      u.tn = [...(u.tn ?? []), def!.id].slice(-12);
+      talentNews(life, u, now, actor);
+      break;
+    }
+    case 'respec': {
+      // 운명 다시 보기 (신이치, design-skill-tree.md §2): a skill's professions and
+      // talents, 500,000범 doubling per skill each time (a pure sink).
+      const skill = skillArg(a.skill);
+      if (!life.flags?.includes(DISTRICT_FLAG.foothill!) && !hasExplorerPass(actor, now)) fail(GROWTH_REJECT.respecShut);
       const mine = (u.prof ?? []).filter((p) => PROF_BY_ID[p].skill === skill);
-      if (!mine.length) fail(GROWTH_REJECT.noProf);
-      spend(RESPEC_PRICE, 'respec');
+      const tal = (u.tal ?? []).filter((t) => TALENT_BY_ID[t]?.skill === skill);
+      if (!mine.length && !tal.length) fail(GROWTH_REJECT.noProf);
+      spend(respecPrice(u.resp?.[skill] ?? 0), 'respec');
+      (u.resp ??= {})[skill] = Math.min(RESPEC_PRICE_MAX_TIMES, (u.resp[skill] ?? 0) + 1);
       u.prof = (u.prof ?? []).filter((p) => !mine.includes(p));
       if (!u.prof.length) delete u.prof;
+      u.tal = (u.tal ?? []).filter((t) => !tal.includes(t));
+      if (!u.tal.length) delete u.tal;
       break;
     }
     case 'forge': {
@@ -655,7 +757,7 @@ export function growthAction(
       if ((next.accounts[wallet] ?? 0) < cost.beom) fail(LIFE_REJECT.balance);
       for (const [id, n] of Object.entries(cost.mats)) addInv(life, uid, id, -n);
       spend(cost.beom, `tool-${a.tool}-${cost.to}`);
-      u.forge = { tool: a.tool, to: cost.to, at: now, readyAt: forgeReadyAt(now) };
+      u.forge = { tool: a.tool, to: cost.to, at: now, readyAt: forgeReadyAt(now, growthMods(life, uid).forgeFast) };
       addNews(life, now, `forge:${actor}:${a.tool}:${cost.to}`, 'growth', `${josaGa(nameOf(actor))} 대장간에 ${josaUl(TOOL_INFO[a.tool].name)} 맡겼어요`, [actor]);
       break;
     }
@@ -784,7 +886,13 @@ export function growthAction(
       const mods = growthMods(life, uid),
         seq = ++life.seq;
       const miner = hasBuff(life, uid, now, 'mine');
-      const drop = mineDrop(`${uid}:${day}:${key}:${seq}`, a.floor, rock!.vein, mods.copperPts + (miner ? MINE_BUFF_VEIN : 0));
+      const drop = mineDrop(
+        `${uid}:${day}:${key}:${seq}`,
+        a.floor,
+        rock!.vein,
+        mods.copperPts + (miner ? MINE_BUFF_VEIN * buffBoost(life, uid, now, 'mine') : 0),
+        1 + mods.fossil,
+      );
       const ore = drop.item !== 'stone' && drop.item !== 'gem';
       const n = ore ? Math.round((drop.n + mods.oreBonus) * mods.oreMult) : drop.item === 'stone' ? Math.round(drop.n * mods.stoneMult) : drop.n;
       addInv(life, uid, drop.item, n);
@@ -850,6 +958,12 @@ export type SkillView = {
   prof: string[];
   /** A pick is waiting (Lv5 / Lv10 reached, not chosen yet). */
   choice: string[] | null;
+  /** Talents taken, points earned (≤ 5) and still free (absent from older servers). */
+  tal?: string[];
+  points?: number;
+  left?: number;
+  /** The next 운명 다시 보기 of this skill (신이치). */
+  respec?: number;
 };
 export type ToolView = {
   id: ToolId;
@@ -894,7 +1008,28 @@ export type GrowthView = {
   softCap: number;
   /** 성장 P2 regions (absent from older servers). */
   regions?: RegionsView;
+  /** Friends' skill trees, read-only (친구 창 → 기술; absent from older servers). */
+  friends?: FriendTreeView[];
 };
+export type FriendTreeView = { actor: number; skills: { id: SkillId; level: number; prof: string[]; tal: string[] }[] };
+/** Every other friend's levels, professions and talents (the 친구 창's tree view). */
+export function friendTrees(life: LifeState, uid: string): FriendTreeView[] {
+  return Object.entries(life.actors)
+    .filter(([id]) => id !== uid)
+    .map(([id, actor]) => {
+      const u = rawUser(life, id);
+      return {
+        actor,
+        skills: SKILLS.map((s) => ({
+          id: s,
+          level: skillLevel(life, id, s),
+          prof: (u?.prof ?? []).filter((p) => PROF_BY_ID[p]?.skill === s),
+          tal: (u?.tal ?? []).filter((t) => TALENT_BY_ID[t]?.skill === s),
+        })),
+      };
+    })
+    .sort((a, b) => a.actor - b.actor);
+}
 export type RegionsView = {
   /**
    * 승준's temporary explorer pass (lounge-explorer-pass.ts): the fallen log
@@ -920,6 +1055,10 @@ export type RegionsView = {
     /** Friends in the mine today: actor → floor. */
     friends: Record<number, number>;
     pickaxe: number;
+    /** 재능 광맥 냄새: today's vein floor (absent without it). */
+    vein?: number;
+    /** 재능 사다리 감: rocks fewer before a ladder shows. */
+    less?: number;
   };
 };
 export function growthView(state: LifeState, uid: string, now: number): GrowthView {
@@ -951,6 +1090,10 @@ export function growthView(state: LifeState, uid: string, now: number): GrowthVi
       median: villageMedian(life, id),
       prof,
       choice,
+      tal: (u.tal ?? []).filter((t) => TALENT_BY_ID[t]?.skill === id),
+      points: talentPoints(level),
+      left: ok ? talentsLeft(life, uid, id) : 0,
+      respec: respecPrice(u.resp?.[id] ?? 0),
     };
   });
   const tools = TOOLS.map((id): ToolView => {
@@ -999,9 +1142,10 @@ export function growthView(state: LifeState, uid: string, now: number): GrowthVi
     nodes: ok ? nodesFor(life, uid, day).map((n) => ({ ...n, taken: taken.has(n.id) })) : [],
     ups: [...(u.ups ?? [])],
     retroAt: u.retro ?? null,
-    respecPrice: RESPEC_PRICE,
+    respecPrice: respecPrice(0),
     softCap: SOFT_CAP,
     regions: regionsView(life, uid, u, taken, now),
+    friends: friendTrees(life, uid),
   };
 }
 function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<string>, now: number): RegionsView {
@@ -1032,6 +1176,8 @@ function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<str
       ladder: ok && at > 0 && (ladderFound(life, uid, at, now) || (pass && at < MINE_FLOORS_P2)),
       friends,
       pickaxe: ok ? toolTier(life, uid, 'pickaxe') : 1,
+      ...(ok && growthMods(life, uid).veinHint ? { vein: veinFloor(day, researchDone(life, 'lift', now)) } : {}),
+      ...(ok && growthMods(life, uid).ladderEarly ? { less: growthMods(life, uid).ladderEarly } : {}),
     },
   };
 }

@@ -34,6 +34,7 @@ import type { Notify } from './Toast';
 import { ItemIcon } from './ItemIcon';
 import { lookFor } from './friend-looks';
 import { useLifeAction } from './LifePanels';
+import { SkillTreeBoard } from './GrowthSkillTree';
 import { BOND_LEVELS } from '../lounge-life-plus';
 import {
   BOND_GRACE_DAYS,
@@ -76,6 +77,7 @@ export function FriendsLife({
   const others = ACTORS.map((_, a) => a).filter((a) => a !== selfActor);
   const [actor, setActor] = useState(initial ?? others[0]);
   const [writing, setWriting] = useState(false);
+  const [trees, setTrees] = useState(false);
   const [run, busy] = useLifeAction(room, notify);
   if (!life)
     return (
@@ -91,7 +93,10 @@ export function FriendsLife({
   const request = life.me.requests?.find((r) => r.from === actor);
   const have = request ? needHave(life.me, { item: request.item }) : 0;
   const birthday = life.calendar?.events.find((e) => e.kind === 'birthday' && e.actor === actor);
+  // 기술 트리 (design-skill-tree.md §3): who went which way, read-only.
+  const friendTree = life.growth?.friends?.find((f) => f.actor === actor);
   return (
+    <>
     <Modal title="친구 사이" onClose={onClose} className="l-life-modal l-bonds" wide>
       {!!life.social?.titles?.length && (
         <p className="l-modal-intro l-titles" data-testid="bond-titles">
@@ -210,6 +215,11 @@ export function FriendsLife({
             <button type="button" className="l-secondary" onClick={() => onVisit(actor)}>
               <Users size={15} /> 방에 놀러 가기
             </button>
+            {friendTree && (
+              <button type="button" className="l-secondary" onClick={() => setTrees(true)} data-testid="bond-trees">
+                <Sparkles size={15} /> 기술 트리 보기
+              </button>
+            )}
           </div>
           <HeartRewards
             level={level}
@@ -226,6 +236,12 @@ export function FriendsLife({
         )}
       </div>
     </Modal>
+    {trees && friendTree && (
+      <Modal title={`${ACTORS[actor]}의 기술 트리`} onClose={() => setTrees(false)} className="l-life-modal" wide>
+        <SkillTreeBoard skills={friendTree.skills} readOnly owner={ACTORS[actor]} />
+      </Modal>
+    )}
+    </>
   );
 }
 

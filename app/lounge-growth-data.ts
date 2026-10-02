@@ -1,4 +1,4 @@
-// 성장 (tech tree P1) static data: the five personal skills (XP curve, daily
+// 성장 (tech tree P1) static data: the six personal skills (XP curve, daily
 // cap, catch-up rules, level perks, professions), the blacksmith's tools and
 // tiers, the shared 마을 개척 research, the ores and the daily material nodes
 // (bushes, logs, rocks) around the village edge. A leaf module: no imports, so
@@ -7,14 +7,16 @@
 // Engine: lounge-growth.ts. UI: lounge/GrowthPanel.tsx, lounge/Forge.tsx.
 
 // ---------------------------------------------------------------- skills
-export type SkillId = 'farm' | 'fish' | 'forage' | 'mine' | 'craft';
-export const SKILLS: readonly SkillId[] = ['farm', 'fish', 'forage', 'mine', 'craft'];
+export type SkillId = 'farm' | 'fish' | 'forage' | 'mine' | 'craft' | 'ranch';
+/** The sixth, 목축 (design-skill-tree.md §6), came last: older saves simply have no 'ranch' XP. */
+export const SKILLS: readonly SkillId[] = ['farm', 'fish', 'forage', 'mine', 'craft', 'ranch'];
 export const SKILL_INFO: Record<SkillId, { name: string; verb: string; note: string; color: string }> = {
   farm: { name: '농사', verb: '심고 가꾸고 거두기', note: '물 주기와 수확에서 자라요. 오래 자라는 작물, 은별·금별일수록 더 많이.', color: '#5f8a55' },
   fish: { name: '낚시', verb: '물고기 낚기', note: '낚을 때마다 자라요. 드문 물고기일수록 훨씬 많이, 놓쳐도 조금.', color: '#4f8aa6' },
   forage: { name: '채집', verb: '줍고 잡고 베기', note: '채집·곤충 잡기와 마을 가장자리 잡목·통나무 베기에서 자라요.', color: '#a07a3c' },
   mine: { name: '광업', verb: '바위 깨기', note: '바위를 깨면 자라요. 광석·보석·화석이 나오면 더, 광산의 새 층에 처음 내려가면 또.', color: '#7a7f8c' },
   craft: { name: '솜씨', verb: '요리하고 만들기', note: '요리와 제작 한 번마다 자라요.', color: '#c2703a' },
+  ranch: { name: '목축', verb: '동물 돌보기', note: '목장 동물을 돌보고(건초 주기·쓰다듬기) 알·우유·털을 거두면 자라요.', color: '#b0646e' },
 };
 export const MAX_LEVEL = 10;
 /** Cumulative XP for Lv1..Lv10 (index = level − 1). */
@@ -40,8 +42,8 @@ export const CATCH_UP_GAP = 2;
 /** Retro XP from lifetime stats is capped at this level (professions stay a choice). */
 export const RETRO_LEVEL = 5;
 export const RETRO_PER: Record<string, number> = { harvest: 4, fish: 4, forage: 5, bug: 4, cook: 6, craft: 4 };
-/** Choosing again (both picks of one skill) costs this (a sink). */
-export const RESPEC_PRICE = 50_000;
+/** 운명 다시 보기 at 신이치's, the first time for a skill (doubles each time: lounge-growth-talents.ts respecPrice). */
+export const RESPEC_PRICE = 500_000;
 /** Base XP per action (before quality, catch-up, rest and the daily cap). */
 export const XP = {
   water: 1,
@@ -60,6 +62,9 @@ export const XP = {
   ore: 2,
   cook: 6,
   craft: 4,
+  /** 목축: each animal fed and petted, and each egg / milk / wool collected. */
+  care: 4,
+  product: 2,
 } as const;
 /** Fish XP by FishDef.weight (≥20 common, 10–19 uncommon, 2–9 rare, ≤1 legend). */
 export const fishXp = (weight: number) =>
@@ -125,7 +130,93 @@ export type GrowthMods = {
   /** Extra fertilizer per fertilizer craft (농사 Lv2). */
   fertExtra: number;
   /** Deluxe fertilizer needs one less fertilizer (농사 Lv7). */
-  deluxeCheap: boolean;
+  deluxeCheap: boolean;  // ---- 재능 · 목축 (design-skill-tree.md §4·§6)
+  /** Chance (0–1) a planted seed is not used up (재능 씨앗 아끼기). */
+  seedKeep: number;
+  /** Share of the crow chance taken away (0.5 = half). */
+  crowGuard: number;
+  /** Trellis crops cast no shade behind them. */
+  noShade: boolean;
+  /** Giant crop chance ×(1 + x). */
+  giantMult: number;
+  /** Demand steps softened for crops / fish / ranch goods (each 1 = one step less per sale band). */
+  demandCrop: number;
+  demandFish: number;
+  demandRanch: number;
+  /** 품평회 score ×(1 + x). */
+  fairBonus: number;
+  /** Reel gauge drains ×(1 − x). */
+  reelEase: number;
+  /** Chance (0–1) a crab pot gives one more. */
+  trapExtra: number;
+  /** Rare fish at night (game 20–05) ×(1 + x). */
+  nightRare: number;
+  /** Treasure chest chance ×(1 + x). */
+  treasure: number;
+  /** Fish size ×(1 + x). */
+  bigFish: number;
+  /** No seasickness at sea; one more game hour on a voyage. */
+  seaLegs: boolean;
+  /** Bait craft needs this many fewer of each material (≥ 1 kept). */
+  baitCheap: number;
+  /** Today's forage spots show on the minimap. */
+  forageMap: boolean;
+  /** Chance (0–1) a caught bug gives one more. */
+  bugExtra: number;
+  /** Fruit tree regrow wait ×(1 − x). */
+  fruitFast: number;
+  /** Dish buffs from forage dishes ×(1 + x). */
+  herbBuff: number;
+  /** Affinity from flower gifts ×(1 + x). */
+  flowerGift: number;
+  /** Wood sale price bonus. */
+  woodSell: number;
+  /** Today's vein floors show on the mine board. */
+  veinHint: boolean;
+  /** Fossil chance ×(1 + x). */
+  fossil: number;
+  /** Rocks fewer before the ladder shows. */
+  ladderEarly: number;
+  /** Gem sale price bonus. */
+  gemSell: number;
+  /** A tool at the forge is ready at 18:00 the same day (left before 18:00). */
+  forgeFast: boolean;
+  /** The lift starts this many floors deeper. */
+  liftPlus: number;
+  /** Processing machine time ×(1 − x). */
+  machineFast: number;
+  /** Artisan goods sale price bonus. */
+  artisanSell: number;
+  /** Dish buff duration ×(1 + x). */
+  buffLong: number;
+  /** Affinity from dish gifts ×(1 + x). */
+  dishGift: number;
+  /** Share of wood furniture materials saved. */
+  furnCheap: number;
+  /** Chance (0–1) my machine makes two. */
+  machineDouble: number;
+  /** 목축: 정 +x more on every care. */
+  petLove: number;
+  /** Chance (0–1) a care gives one more 정. */
+  loveExtra: number;
+  /** Chance (0–1) feeding keeps its hay. */
+  hayKeep: number;
+  /** Share off the hay price. */
+  hayCheap: number;
+  /** Missed days forgiven before 정 drops. */
+  loveGrace: number;
+  /** Extra wool when a sheep gives wool. */
+  woolExtra: number;
+  /** Chance +%p an animal not yet bonded gives the big product. */
+  bigPts: number;
+  /** Care XP ×(1 + x) at game 05–09. */
+  ranchMorning: number;
+  /** Animals say what they want (speech bubbles). */
+  animalTalk: boolean;
+  /** A 정 10 animal gives this many more products a day. */
+  bondExtra: number;
+  /** Share off animal prices. */
+  animalCheap: number;
 };
 export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   growSpeed: 0,
@@ -158,6 +249,50 @@ export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   toolBeom: 0,
   fertExtra: 0,
   deluxeCheap: false,
+  seedKeep: 0,
+  crowGuard: 0,
+  noShade: false,
+  giantMult: 0,
+  demandCrop: 0,
+  demandFish: 0,
+  demandRanch: 0,
+  fairBonus: 0,
+  reelEase: 0,
+  trapExtra: 0,
+  nightRare: 0,
+  treasure: 0,
+  bigFish: 0,
+  seaLegs: false,
+  baitCheap: 0,
+  forageMap: false,
+  bugExtra: 0,
+  fruitFast: 0,
+  herbBuff: 0,
+  flowerGift: 0,
+  woodSell: 0,
+  veinHint: false,
+  fossil: 0,
+  ladderEarly: 0,
+  gemSell: 0,
+  forgeFast: false,
+  liftPlus: 0,
+  machineFast: 0,
+  artisanSell: 0,
+  buffLong: 0,
+  dishGift: 0,
+  furnCheap: 0,
+  machineDouble: 0,
+  petLove: 0,
+  loveExtra: 0,
+  hayKeep: 0,
+  hayCheap: 0,
+  loveGrace: 0,
+  woolExtra: 0,
+  bigPts: 0,
+  ranchMorning: 0,
+  animalTalk: false,
+  bondExtra: 0,
+  animalCheap: 0,
 });
 type ModPatch = Partial<GrowthMods>;
 
@@ -220,6 +355,17 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
     { level: 9, text: '자개 가구 레시피 4종', soon: '깊은 굴' },
     { level: 10, text: '전문가 선택 ②' },
   ],
+  ranch: [
+    { level: 2, text: '돌볼 때 10% 확률로 애정 +1 더', mods: { loveExtra: 0.1 } },
+    { level: 3, text: '건초 값 −10%', mods: { hayCheap: 0.1 } },
+    { level: 4, text: '알·우유 은별 확률 +5%p', soon: '우리 농장' },
+    { level: 5, text: '전문가 선택 ①' },
+    { level: 6, text: '하루 못 와도 애정이 줄지 않아요 (한 번 봐줌)', mods: { loveGrace: 1 } },
+    { level: 7, text: '털 깎기 솜씨 · 양털 +1', mods: { woolExtra: 1 } },
+    { level: 8, text: '큰 알·진한 우유 확률 +5%p', mods: { bigPts: 5 } },
+    { level: 9, text: '동물 이름표 가구', soon: '우리 농장' },
+    { level: 10, text: '전문가 선택 ②' },
+  ],
 };
 
 // ---------------------------------------------------------------- professions
@@ -232,8 +378,10 @@ export type ProfDef = {
   name: string;
   text: string;
   mods: ModPatch;
+  /** Shown but not choosable yet, and why (치즈 장인: no animal artisan goods yet). */
+  lock?: string;
 };
-const prof = (id: string, skill: SkillId, level: 5 | 10, name: string, text: string, mods: ModPatch, parent?: string): ProfDef => ({
+const prof = (id: string, skill: SkillId, level: 5 | 10, name: string, text: string, mods: ModPatch, parent?: string, lock?: string): ProfDef => ({
   id,
   skill,
   level,
@@ -241,7 +389,10 @@ const prof = (id: string, skill: SkillId, level: 5 | 10, name: string, text: str
   text,
   mods,
   ...(parent ? { parent } : {}),
+  ...(lock ? { lock } : {}),
 });
+/** 축산 가공품 (치즈·마요) need milk and eggs in the jar and keg: they come with 우리 농장's barn (F4). */
+export const RANCH_ARTISAN_LOCK = '축산 가공품(치즈)은 우리 농장 축사와 함께 열려요';
 export const PROFESSIONS: readonly ProfDef[] = [
   prof('farm-a', 'farm', 5, '정원사', '새로 심는 작물이 10% 빨리 자라요', { growSpeed: 10 }),
   prof('farm-b', 'farm', 5, '장터 농부', '작물 판매가 +10%', { cropSell: 0.1 }),
@@ -273,6 +424,13 @@ export const PROFESSIONS: readonly ProfDef[] = [
   prof('craft-a2', 'craft', 10, '잔치꾼', '요리 판매가 +25%', { dishSell: 0.25 }, 'craft-a'),
   prof('craft-b1', 'craft', 10, '목수', '제작 재료 −40%', { craftDiscount: 0.15 }, 'craft-b'),
   prof('craft-b2', 'craft', 10, '대장간 단골', '도구 업그레이드 범 −20%', { toolBeom: 0.2 }, 'craft-b'),
+  // 목축 (design-skill-tree.md §6).
+  prof('ranch-a', 'ranch', 5, '목동', '돌볼 때 50% 확률로 애정 +1 더', { loveExtra: 0.5 }),
+  prof('ranch-b', 'ranch', 5, '치즈 장인', '축산 가공품 판매가 +20%', {}, undefined, RANCH_ARTISAN_LOCK),
+  prof('ranch-a1', 'ranch', 10, '동물 친구', '애정 10인 동물이 하루 한 번 축산물 하나 더', { bondExtra: 1 }, 'ranch-a'),
+  prof('ranch-a2', 'ranch', 10, '목장 주인', '동물 값 −25%', { animalCheap: 0.25 }, 'ranch-a'),
+  prof('ranch-b1', 'ranch', 10, '숙성 장인', '축산 가공품 시간 −25%', {}, 'ranch-b', RANCH_ARTISAN_LOCK),
+  prof('ranch-b2', 'ranch', 10, '장인 공방', '축산 가공품 판매가 +15% 더', {}, 'ranch-b', RANCH_ARTISAN_LOCK),
 ];
 export const PROF_BY_ID: Readonly<Record<string, ProfDef>> = Object.fromEntries(PROFESSIONS.map((p) => [p.id, p]));
 export const isProfId = (id: unknown): id is string =>
@@ -479,6 +637,8 @@ export const COPPER_CHANCE = 20;
 export const GROWTH_ACTION_KINDS = [
   'chooseProf',
   'respec',
+  // 기술 트리: a talent point spent (design-skill-tree.md §7).
+  'pickTalent',
   'forge',
   'forgePickup',
   'forgeGift',
