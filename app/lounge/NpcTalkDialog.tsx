@@ -30,6 +30,9 @@ import { giftOptions, type GiftOption } from './npc-gifts';
 import { useNow } from './use-now';
 import { PILL_PRICE, PILL_SELLERS, VOYAGE_LINES } from '../lounge-voyage-data';
 import { isNpcId } from '../lounge-npc-data';
+import { npcJoinLines, npcSocialExchange, npcSocialOf, type NpcSaid } from '../lounge-npc-social';
+import { npcRecentKinds } from '../lounge-npc-recent';
+import { rememberNpcTie } from './npc-ties-seen';
 import './npc-relations.css';
 
 export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop }: {
@@ -56,8 +59,18 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const relations: NpcRelations = Object.fromEntries(rows.map((r) => [r.npc, r]));
   const spot = npcSpot(npc, opened);
   const lastGiftName = row.lastGift ? itemName(row.lastGift) : undefined;
+  // What I did lately that they may bring up (lounge-npc-recent.ts).
+  const recent = npcRecentKinds({
+    now: opened,
+    actor: who,
+    fished: view.life?.angling?.me.last,
+    voyage: view.life?.voyage,
+    stocks: view.stocks?.me,
+    tables: view.tableStats?.week,
+    museum: view.life?.museum,
+  });
   // Pages: their lines, then (after a talk or a gift) what they answer.
-  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName, ...loveTalk }).lines);
+  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName, recent, ...loveTalk }).lines);
   const [page, setPage] = useState(0);
   // Everything said so far, so the talk's answer never repeats a page.
   const said = useRef(pages);
@@ -102,6 +115,11 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const info = NPCS[npc];
   const inv = view.life?.me.inv ?? {};
   const love = npcLoveChoices({ npc, rows, day: today, bouquets: inv.bouquet ?? 0, rings: inv['pledge-ring'] ?? 0, area: me?.area ?? '' });
+  // 주민끼리 어울리기: they are with another resident right now (lounge-npc-social.ts).
+  const meeting = npcSocialOf(npc, now);
+  const otherId = meeting ? (meeting.a === npc ? meeting.b : meeting.a) : null;
+  const joinAction: NpcSocialAction | null = otherId ? { kind: 'npcSocial', npc, op: 'join', with: otherId } : null;
+  const otherJoined = otherId ? rows.find((r) => r.npc === otherId)?.joinedDay === today : false;
   const choices = npcTalkChoices({
     talked: row.talked,
     gifted: row.gifted,
@@ -111,6 +129,9 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     love,
     shop: shop?.label ?? null,
     // 먼바다 낚싯배: 츠나데 (텃밭) and 메르시 (inside her 의원) sell the 멀미약 where they work.
+    social: otherId && joinAction
+      ? { other: josa(NPCS[otherId].name, '과/와'), joined: (row as { joinedDay?: number }).joinedDay === today && otherJoined, joinOff: blocked(joinAction) }
+      : null,
     pill:
       PILL_SELLERS.some((p) => p.npc === npc && isNpcId(p.npc) && (me?.area ?? '') === p.area) ? `멀미약 사기 · ${formatBeom(PILL_PRICE)}` : null,
   });
@@ -133,7 +154,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     }
   };
   const talk = () => {
-    const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, ...loveTalk }, said.current);
+    const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, recent, ...loveTalk }, said.current);
     void run(talkAction, [reply]);
   };
   const say = (line: string, vars: Record<string, string | number> = {}) => fillLoveLine(line, { me: myName, ...vars }, npc);
@@ -171,11 +192,24 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     const line = npcGiftLine(npc, reaction, { me: myName, item: itemName(gift.item), who, now });
     void run({ kind: 'npcSocial', npc, op: 'gift', item: gift.item, ...(gift.q ? { q: gift.q } : {}) }, [line]);
   };
+  const spoken = (lines: readonly NpcSaid[]) => lines.map((l) => `${NPCS[l.who].name}: ${l.text}`);
+  const overhear = () => {
+    if (!meeting || !otherId) return;
+    rememberNpcTie(npc, otherId);
+    answer(spoken(npcSocialExchange(meeting)));
+  };
+  const join = () => {
+    if (!meeting || !otherId || !joinAction) return;
+    rememberNpcTie(npc, otherId);
+    void run(joinAction, spoken(npcJoinLines({ ...meeting, a: npc, b: otherId }, myName)));
+  };
   const choose = (index: number) => {
     const choice = choices[index];
     if (!choice || choice.disabled) return;
     if (choice.id === 'talk') talk();
     else if (choice.id === 'gift') setPicking(true);
+    else if (choice.id === 'overhear') overhear();
+    else if (choice.id === 'join') join();
     else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift') doLove(choice.id);
     else if (choice.id === 'book') onBook();
     else if (choice.id === 'request') onBoard?.();

@@ -22,6 +22,9 @@ import { NpcPortrait } from './NpcPortrait';
 import { giftOptions } from './npc-gifts';
 import type { Notify } from './Toast';
 import { useNow } from './use-now';
+import { NPC_FRIEND_TIES, npcTiesOf, npcTieWord, NPC_TIES } from '../lounge-npc-social-ties';
+import { npcSocialOf, npcSulkingWith, NPC_SOCIAL_WORD } from '../lounge-npc-social';
+import { npcTieKnown, npcTiesSeen } from './npc-ties-seen';
 import './npc-relations.css';
 
 const REACTION_WORD = { loved: '아주 좋아해요', liked: '좋아해요', neutral: '무난해요', disliked: '싫어해요' } as const;
@@ -68,7 +71,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const spot = npcSpot(selected, now);
   const visiting = (row.invitedUntil ?? 0) > now;
   const chosen = gifts.find((g) => g.key === giftKey) ?? gifts[0];
-  const action = (op: Exclude<NpcSocialAction['op'], 'gift'>): NpcSocialAction => ({ kind: 'npcSocial', npc: selected, op });
+  const action = (op: Exclude<NpcSocialAction['op'], 'gift' | 'join'>): NpcSocialAction => ({ kind: 'npcSocial', npc: selected, op });
   const location = blocked(action('talk'));
   const who = me?.actor ?? 0;
   const day = kstDay(now);
@@ -127,6 +130,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
           </header>
           <p>{info.intro}</p>
           {loveStatus && <p className="l-npc-love" data-testid="npc-love-status">{loveStatus}</p>}
+          <NpcTiesSection npc={selected} now={now} me={myName} points={(id) => byId[id]?.points ?? 0} onPick={setSelected} />
           <label className="l-npc-progress">{row.level} · {Math.floor(row.points / 12)}하트 <strong>{row.points}/{NPC_POINTS_MAX}</strong><progress max={NPC_POINTS_MAX} value={row.points} aria-label={`${info.name} 친밀도`} /></label>
           <small>좋아하는 것: {info.likesText} · 싫어하는 것: {info.dislikesText}</small>
           <small>초대 {NPC_INVITE_POINTS} · 단골 선물 {NPC_REGULAR_POINTS} · 데이트 {NPC_DATE_POINTS} · 꽃다발 {NPC_DATING_POINTS}(8하트, 사귀기 전엔 여기까지) · 청혼 {NPC_PROPOSE_POINTS} · 특별한 선물 {NPC_SPECIAL_POINTS}{row.lastGift ? ` · 지난 선물: ${itemName(row.lastGift)}` : ''}</small>
@@ -207,5 +211,56 @@ function NpcLoveActions({ love, parting, busy, reasons, homeGifted, onPart, onLo
         </p>
       )}
     </>
+  );
+}
+
+/**
+ * 관계: who this resident is to the others (lounge-npc-social-ties.ts). A tie
+ * shows once found out (overheard or joined, or friends with either of them);
+ * the rest are question marks. Today's quarrel or meeting is noted beside it.
+ */
+function NpcTiesSection({ npc, now, me, points, onPick }: { npc: NpcId; now: number; me: string; points: (id: NpcId) => number; onPick: (id: NpcId) => void }) {
+  const seen = npcTiesSeen();
+  const ties = npcTiesOf(npc);
+  const known = ties.filter(({ other }) => npcTieKnown(npc, other, points, seen));
+  const day = kstDay(now);
+  const sulk = npcSulkingWith(npc, day);
+  const meeting = npcSocialOf(npc, now);
+  const friends = NPC_FRIEND_TIES.filter((t) => t.npc === npc);
+  const allKnown = NPC_TIES.filter((t) => npcTieKnown(t.a, t.b, points, seen)).length;
+  return (
+    <section className="l-npc-ties" aria-label="주민 관계" data-testid="npc-ties">
+      <h4>
+        관계 <small>알아낸 관계 {known.length}/{ties.length} · 마을 전체 {allKnown}/{NPC_TIES.length}</small>
+      </h4>
+      <ul>
+        {friends.map((t) => (
+          <li key={t.friend} data-kind={t.kind} className={t.friend === me ? 'is-me' : undefined}>
+            <strong>{t.friend}</strong>
+            <em>언니</em>
+            <span>{t.note}</span>
+          </li>
+        ))}
+        {ties.map(({ other, tie }) =>
+          known.some((k) => k.other === other) ? (
+            <li key={other} data-kind={tie.kind}>
+              <button type="button" className="l-npc-tie-name" onClick={() => onPick(other)}>
+                {NPCS[other].name}
+              </button>
+              <em>{npcTieWord(tie, npc)}</em>
+              <span>
+                {tie.note}
+                {sulk === other ? ' · 오늘은 서먹한 사이' : meeting && (meeting.a === other || meeting.b === other) ? ` · 지금 ${NPC_SOCIAL_WORD[meeting.kind]}` : ''}
+              </span>
+            </li>
+          ) : (
+            <li key={other} className="is-unknown">
+              <strong>???</strong>
+              <span>둘이 이야기하는 걸 엿듣거나, 둘 중 한 명과 친구가 되면 알 수 있어요.</span>
+            </li>
+          ),
+        )}
+      </ul>
+    </section>
   );
 }

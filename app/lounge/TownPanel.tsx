@@ -30,6 +30,7 @@ import { kstDay } from '../lounge-economy';
 import { formatBeom, josa } from '../lounge-text';
 import { BUILT_DISTRICTS, DISTRICTS, type DistrictId } from '../lounge-districts';
 import { GameButton } from '../ui/GameButton';
+import { npcSocialNews, npcSocialPresent } from '../lounge-npc-social';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from './Modal';
 import { Stage3Counter, isStage3Place, type Stage3Place } from './Stage3Panel';
@@ -262,6 +263,19 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
                 {jannaMissedToday(today) ? ' · 정정 보도: 어제 예보는 빗나갔어요.' : ''}
               </p>
             </section>
+            {(() => {
+              // 주민 소식 (lounge-npc-social.ts): yesterday among the residents.
+              const g = life.districts?.goals;
+              const lines = npcSocialNews(today - 1, npcSocialPresent({ hill: !!g?.hillside.open, ranch: !!g?.ranch?.open, foothill: !!g?.foothill?.open }));
+              return lines.length ? (
+                <section className="l-town-notice" aria-label="주민 소식" data-testid="newspaper-residents">
+                  <strong>주민 소식 · 어제</strong>
+                  {lines.map((l, i) => (
+                    <p key={i}>{l}</p>
+                  ))}
+                </section>
+              ) : null;
+            })()}
             {d.lines.length ? (
               <section className="l-town-news">
                 <h3>어제 소식 · {d.date}</h3>

@@ -50,6 +50,8 @@ import './life-plus.css';
 import './friend-life.css';
 import { EmptyState } from '../ui/EmptyState';
 import { Hearts } from './Hearts';
+import { kstDay } from '../lounge-economy';
+import { npcSocialNews, npcSocialPresent } from '../lounge-npc-social';
 
 type Base = { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void };
 const dateText = (at: number) => {
@@ -480,6 +482,9 @@ export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: ()
   const digest = life?.digest;
   const d = digest ? new Date(digest.date + 'T00:00:00Z') : null;
   const weekday = d ? '일월화수목금토'[d.getUTCDay()] : '';
+  // 주민 소식: yesterday's quarrels, make-ups and presents among residents (lounge-npc-social.ts).
+  const districts = life?.districts?.goals;
+  const residents = life ? npcSocialNews(kstDay(life.serverNow) - 1, npcSocialPresent({ hill: !!districts?.hillside.open, ranch: !!districts?.ranch?.open, foothill: !!districts?.foothill?.open })) : [];
   return (
     <Modal title="어제 마을 소식" onClose={onClose} className="l-life-modal l-digest">
       <p className="l-modal-intro">
@@ -502,6 +507,18 @@ export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: ()
             );
           })}
         </ul>
+      )}
+      {residents.length > 0 && (
+        <section className="l-digest-tomorrow" aria-label="주민 소식" data-testid="digest-residents">
+          <h3>
+            <Users size={15} aria-hidden="true" /> 주민 소식
+          </h3>
+          <ul>
+            {residents.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </section>
       )}
       {!!life?.social?.tomorrow?.length && (
         <section className="l-digest-tomorrow" aria-label="내일 예고" data-testid="digest-tomorrow">

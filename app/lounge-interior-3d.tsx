@@ -1289,7 +1289,7 @@ export function Interior3D({
           { id: 'self', name: ACTORS[latest.current.me.actor] ?? '', ...interiorToWorld(l.point) },
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
-        postBubbles.update(residentFrames(posts.filter((p) => duty.get(p.id) !== false), people, at, { rain: false, night: false, memory: postMemory }));
+        postBubbles.update(residentFrames(posts.filter((p) => duty.get(p.id) !== false), people, at, { rain: false, night: false, memory: postMemory, social: false }));
       }
       if (l.moving || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);

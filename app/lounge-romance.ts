@@ -47,6 +47,7 @@ import {
 import { hash32, kstHour } from './lounge-calendar.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { npcSpot, type NpcWorld } from './lounge-npc-schedule.ts';
+import { npcSocialOf, npcSocialSpot } from './lounge-npc-social.ts';
 import { isDistrictArea, regionFromNetwork } from './lounge-areas.ts';
 import { villageFromNetwork, VILLAGE_PLACES } from './lounge-village-layout.ts';
 import { josa } from './lounge-text.ts';
@@ -60,15 +61,21 @@ export const NPC_INVITE_MS = 20 * 60_000;
 export const NPC_SOCIAL_REACH = 6;
 export type NpcSocialAction =
   | { kind: 'npcSocial'; npc: NpcId; op: 'talk' | 'date' | 'invite' | 'dismiss' | NpcLoveOp }
-  | { kind: 'npcSocial'; npc: NpcId; op: 'gift'; item: string; q?: 0 | 1 | 2 };
+  | { kind: 'npcSocial'; npc: NpcId; op: 'gift'; item: string; q?: 0 | 1 | 2 }
+  /** 끼어들기: join `npc`'s meeting with `with` (lounge-npc-social.ts); a little with both, once a day each. */
+  | { kind: 'npcSocial'; npc: NpcId; op: 'join'; with: NpcId };
+/** Points for joining two residents' chat (each of them, once a KST day). */
+export const NPC_JOIN_POINTS = 2;
 /** 꽃다발 · 청혼 반지 · 결혼식 · 헤어지기 · 배우자의 아침 선물. */
 export type NpcLoveOp = 'ask' | 'propose' | 'wedding' | 'breakup' | 'homeGift';
 export const NPC_LOVE_OPS: readonly NpcLoveOp[] = ['ask', 'propose', 'wedding', 'breakup', 'homeGift'];
-const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', ...NPC_LOVE_OPS];
+const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', 'join', ...NPC_LOVE_OPS];
 export type NpcRelation = {
   points: number;
   talkedDay?: number;
   giftedDay?: number;
+  /** KST day I last joined their chat with another resident. */
+  joinedDay?: number;
   datedDay?: number;
   dates?: number;
   invitedUntil?: number;
@@ -119,7 +126,7 @@ export function readNpcRelations(value: unknown): NpcRelations | undefined {
     const v = row as Record<string, unknown>;
     if (!safe(v.points)) continue;
     const relation: NpcRelation = { points: Math.min(NPC_POINTS_MAX, v.points) };
-    for (const field of ['talkedDay', 'giftedDay', 'datedDay', 'invitedUntil'] as const) if (safe(v[field])) relation[field] = v[field];
+    for (const field of ['talkedDay', 'giftedDay', 'joinedDay', 'datedDay', 'invitedUntil'] as const) if (safe(v[field])) relation[field] = v[field];
     if (safe(v.dates)) relation.dates = Math.min(10000, v.dates);
     if (typeof v.lastGift === 'string' && npcGiftable(v.lastGift)) relation.lastGift = v.lastGift;
     if (safe(v.rw) && v.rw > 0) relation.rw = v.rw & 3;
@@ -201,11 +208,13 @@ export function npcGuestOf(relations: NpcRelations | undefined, now: number): Np
 }
 function validAction(action: NpcSocialAction) {
   if (!action || !isNpcId(action.npc) || !NPC_OPS.includes(action.op)) fail('마을 주민과 할 일을 다시 골라 주세요.');
+  if (action.op === 'join' && (!isNpcId(action.with) || action.with === action.npc)) fail('마을 주민과 할 일을 다시 골라 주세요.');
 }
 
 /** Where a resident can be met right now: area (and, when they walk about, a point). */
 export function npcMeetAt(npc: NpcId, now: number, world: NpcWorld = {}): { area: string; point?: { x: number; z: number }; label: string; away: boolean } {
-  const s = npcSpot(npc, now, world);
+  // A resident in a meeting stands beside the other one (lounge-npc-social.ts).
+  const s = npcSocialSpot(npcSpot(npc, now, world), now, world);
   // Counter shops (부동산·가구점) open from the village; you meet them at the door.
   if (s.area === 'realty' || s.area === 'furniture') {
     const door = VILLAGE_PLACES.find((p) => p.id === s.area)!.entry;
@@ -247,6 +256,15 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
   }
   if (action.op === 'date') {
     if (!ownHome || !invited) fail('내 방에 초대한 주민과 시간을 보내 주세요.');
+    return;
+  }
+  if (action.op === 'join') {
+    const world = { hill: !!ctx.hill, ranch: !!ctx.ranch, foothill: !!ctx.foothill };
+    const ev = npcSocialOf(action.npc, now, world);
+    if (!ev || (ev.a !== action.with && ev.b !== action.with)) fail(`${josa(NPCS[action.npc].name, '과/와')} ${josa(NPCS[action.with].name, '은/는')} 지금 함께 있지 않아요.`);
+    const me = areaPoint(ctx.area, ctx.x, ctx.y);
+    if (ctx.area !== ev!.area || (me && !Object.values(ev!.pos).some((p) => Math.hypot(me.x - p.x, me.z - p.z) <= NPC_SOCIAL_REACH)))
+      fail('두 주민 곁으로 조금 더 가까이 가 주세요.');
     return;
   }
   if (ownHome && invited) return;
@@ -316,6 +334,18 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       relation.talkedDay = day;
       add(NPC_TALK_POINTS);
       break;
+    case 'join': {
+      // Both of them: a little each, once a KST day each (assertNpcSocialContext checked they are together).
+      const other = (relations[action.with] ??= { points: 0 });
+      const fresh = [relation, other].filter((r) => r.joinedDay !== day);
+      if (!fresh.length) fail('오늘은 두 사람 이야기에 이미 끼어들었어요. 내일 또 함께해요.');
+      for (const r of fresh) {
+        r.joinedDay = day;
+        const cap = r.love ? NPC_POINTS_MAX : Math.min(NPC_POINTS_MAX, Math.max(NPC_DATING_POINTS, r.points));
+        r.points = Math.max(0, Math.min(cap, r.points + charmPoints(life, uid, now, NPC_JOIN_POINTS)));
+      }
+      break;
+    }
     case 'gift': {
       if (relation.giftedDay === day) fail('오늘 선물은 받았어요. 다음 선물은 내일 전해 주세요.');
       if (typeof action.item !== 'string' || !npcGiftable(action.item)) fail('꽃이나 요리, 작물처럼 선물할 수 있는 물건을 골라 주세요.');
@@ -442,6 +472,7 @@ export function npcReply(npc: NpcId, op: NpcSocialAction['op']) {
       invite: `${josa(name, '이/가')} 스무 분쯤 들렀다 가기로 했어요.`,
       date: `${josa(name, '과/와')} 느긋한 시간을 보냈어요.`,
       dismiss: `${josa(name, '을/를')} 배웅했어요.`,
+      join: `${josa(name, '과/와')} 함께 이야기를 나눴어요.`,
       ask: `${josa(name, '과/와')} 연인이 됐어요.`,
       propose: `${josa(name, '이/가')} 청혼을 받아 줬어요.`,
       wedding: `${josa(name, '과/와')} 결혼식을 올렸어요.`,

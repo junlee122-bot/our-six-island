@@ -10,6 +10,7 @@ import { hash32 } from './lounge-calendar.ts';
 import { npcBond, NPCS, type NpcId } from './lounge-npc-data.ts';
 import { npcBanter, npcBubble } from './lounge-npc-dialog.ts';
 import type { NpcSpot } from './lounge-npc-schedule.ts';
+import { npcSocialExchange, npcSocialLabel, npcSocialScene, type NpcSocialEvent } from './lounge-npc-social.ts';
 
 export type ResidentGesture = 'none' | 'wave' | 'nod' | 'look' | 'stretch' | 'shiver' | 'talk';
 export type ResidentFrame = {
@@ -42,6 +43,9 @@ const IDLE_PERIOD = 26_000;
 const BUBBLE_MS = 3_600;
 const CHAT_PERIOD = 42_000;
 const LINE_MS = 3_800;
+/** A meeting's four lines, then a pause; heard within this range. */
+const MEET_PERIOD = 24_000;
+export const HEAR_RANGE = 9;
 
 const angleTo = (from: { x: number; z: number }, to: { x: number; z: number }) => Math.atan2(to.x - from.x, to.z - from.z);
 
@@ -54,9 +58,31 @@ export function residentFrames(
   spots: readonly NpcSpot[],
   people: readonly NearbyPerson[],
   now: number,
-  ctx: { rain: boolean; night: boolean; memory: BehaviorMemory; canStand?: (p: { x: number; z: number }) => boolean },
+  ctx: {
+    rain: boolean;
+    night: boolean;
+    memory: BehaviorMemory;
+    canStand?: (p: { x: number; z: number }) => boolean;
+    /** false: fixed posts (dealers, desks) that never leave their spot to meet anyone. */
+    social?: boolean;
+  },
 ): ResidentFrame[] {
   const out: ResidentFrame[] = spots.map((s) => ({ id: s.id, x: s.x, z: s.z, facing: s.facing, walking: s.walking, gesture: 'none', bubble: null, label: s.label }));
+  // 0. Meetings (lounge-npc-social.ts): the pair stands together facing each other.
+  const meetings = ctx.social === false ? [] : npcSocialScene(spots, now);
+  const inMeeting = new Map<NpcId, NpcSocialEvent>();
+  for (const ev of meetings) {
+    for (const r of out) {
+      const p = ev.pos[r.id];
+      if (!p) continue;
+      r.x = p.x;
+      r.z = p.z;
+      r.facing = p.facing;
+      r.label = npcSocialLabel(ev, r.id);
+      inMeeting.set(r.id, ev);
+    }
+    if (ev.kind === 'stroll') stroll(out, ev, now, ctx.canStand);
+  }
   // 1. Step aside: residents from each other (in id order), then from people.
   for (let i = 0; i < out.length; i++)
     for (let j = i + 1; j < out.length; j++) {
@@ -86,7 +112,7 @@ export function residentFrames(
     for (let j = i + 1; j < out.length; j++) {
       const a = out[i],
         b = out[j];
-      if (a.walking || b.walking || chatting.has(a.id) || chatting.has(b.id)) continue;
+      if (a.walking || b.walking || chatting.has(a.id) || chatting.has(b.id) || inMeeting.has(a.id) || inMeeting.has(b.id)) continue;
       if (Math.hypot(a.x - b.x, a.z - b.z) > CHAT_RANGE || !npcBond(a.id, b.id)) continue;
       const pair = [a.id, b.id].sort().join(':');
       const window = Math.floor(now / CHAT_PERIOD);
@@ -106,8 +132,25 @@ export function residentFrames(
         second.gesture = 'talk';
       } else if (into < LINE_MS * 2 + 1_500) second.gesture = 'nod';
     }
+  // 2b. Meetings talk while a named person (me) is close enough to hear.
+  for (const ev of meetings) {
+    const pair = out.filter((r) => inMeeting.get(r.id) === ev);
+    if (pair.length < 2 || !people.some((p) => p.name && pair.some((r) => Math.hypot(p.x - r.x, p.z - r.z) <= HEAR_RANGE))) continue;
+    const lines = npcSocialExchange(ev);
+    const into = (now + (hash32(ev.key) % MEET_PERIOD)) % MEET_PERIOD;
+    const at = Math.floor(into / LINE_MS);
+    const said = lines[at];
+    for (const r of pair) {
+      if (said?.who === r.id) {
+        r.bubble = said.text;
+        r.gesture = 'talk';
+      } else if (said) r.gesture = ev.kind === 'quarrel' ? 'look' : 'nod';
+    }
+  }
   // 3. People nearby: turn to the closest, greet on arrival.
   for (const r of out) {
+    // Residents in a meeting keep facing each other.
+    if (inMeeting.has(r.id)) continue;
     let best: NearbyPerson | null = null,
       bestD = Infinity;
     for (const p of people) {
@@ -150,6 +193,37 @@ export function residentFrames(
     } else if (into > 20_000 && into < 21_600 && roll % 5 === 1) r.gesture = ctx.night ? 'stretch' : 'nod';
   }
   return out;
+}
+/** A walk together: the pair paces side by side a little way and back (16 s). */
+function stroll(out: ResidentFrame[], ev: NpcSocialEvent, now: number, canStand?: (p: { x: number; z: number }) => boolean) {
+  const a = out.find((r) => r.id === ev.a),
+    b = out.find((r) => r.id === ev.b);
+  if (!a || !b) return;
+  const t = ((now + (hash32(ev.key) % 16_000)) % 16_000) / 16_000;
+  // Out for 6 s, a short look, back for 6 s, a short rest.
+  const k = t < 0.375 ? t / 0.375 : t < 0.5 ? 1 : t < 0.875 ? 1 - (t - 0.5) / 0.375 : 0;
+  const moving = (t < 0.375 || (t >= 0.5 && t < 0.875));
+  const ax = b.x - a.x,
+    az = b.z - a.z,
+    len = Math.hypot(ax, az) || 1;
+  // Along the line at right angles to the pair, so they walk shoulder to shoulder.
+  const dx = (-az / len) * 1.6 * k,
+    dz = (ax / len) * 1.6 * k;
+  const pa = { x: a.x + dx, z: a.z + dz },
+    pb = { x: b.x + dx, z: b.z + dz };
+  if (canStand && (!canStand(pa) || !canStand(pb))) return;
+  const heading = Math.atan2(-az / len, ax / len) + (t >= 0.5 ? Math.PI : 0);
+  for (const [r, p] of [
+    [a, pa],
+    [b, pb],
+  ] as const) {
+    r.x = p.x;
+    r.z = p.z;
+    if (moving) {
+      r.walking = true;
+      r.facing = heading;
+    }
+  }
 }
 function nudge(r: ResidentFrame, dx: number, dz: number, canStand?: (p: { x: number; z: number }) => boolean) {
   const len = Math.hypot(dx, dz);

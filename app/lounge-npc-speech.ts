@@ -25,7 +25,7 @@ export function npcTalkStatus(npc: NpcId, spot: Pick<NpcSpot, 'label' | 'activit
   return spot.activity === 'work' || spot.activity === 'stall' ? `${role} · 일하는 중` : role;
 }
 
-export type NpcTalkChoiceId = 'talk' | 'gift' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
+export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
 export type NpcTalkChoice = { id: NpcTalkChoiceId; label: string; disabled: boolean };
 
 /**
@@ -48,12 +48,23 @@ export function npcTalkChoices(o: {
   shop?: string | null;
   /** 먼바다 낚싯배: this resident sells the 멀미약 (the label with its price). */
   pill?: string | null;
+  /**
+   * 주민끼리 어울리기 (lounge-npc-social.ts): they are with another resident —
+   * overhear them, or join in (`joinOff`: why not, '' when possible).
+   */
+  social?: { /** "닐라와" */ other: string; joined: boolean; joinOff: string } | null;
 }): NpcTalkChoice[] {
   const off = o.busy || !!o.blocked;
   const loveLabel: Record<NpcLoveChoice, string> = { ask: '꽃다발 건네기', propose: '청혼 반지 건네기', wedding: '결혼식 올리기', homeGift: '아침 선물 받기' };
   return [
     { id: 'talk', label: o.talked ? '오늘 대화 완료' : `이야기 나누기 · +${NPC_TALK_POINTS}`, disabled: off || o.talked },
     { id: 'gift', label: o.gifted ? '오늘 선물 완료' : '선물 주기', disabled: off || o.gifted },
+    ...(o.social
+      ? [
+          { id: 'overhear' as const, label: `${o.social.other} 나누는 이야기 엿듣기`, disabled: false },
+          { id: 'join' as const, label: o.social.joined ? '오늘 함께 이야기함' : '둘 이야기에 끼어들기 · 둘 다 +2', disabled: o.busy || o.social.joined || !!o.social.joinOff },
+        ]
+      : []),
     ...(o.love ?? []).map((id) => ({ id, label: loveLabel[id], disabled: o.busy || (id !== 'wedding' && !!o.blocked) })),
     { id: 'book', label: '주민 수첩', disabled: false },
     ...(o.request ? [{ id: 'request' as const, label: `부탁 보기 · ${o.request}`, disabled: false }] : []),
