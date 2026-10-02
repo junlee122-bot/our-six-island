@@ -1,0 +1,130 @@
+/* 생일 잔치: the plaza cake's 축하 방명록 (BirthdayCake.tsx) and the 🎂 marks. */
+.l-bday-books {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.l-bday-book {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+  box-shadow: var(--edge-soft);
+}
+.l-bday-book header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.l-bday-book small,
+.l-bday-empty,
+.l-bday-note {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-bday-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-bday-names li {
+  padding: 2px 8px;
+  border-radius: var(--r-round);
+  background: var(--highlight-soft);
+  color: var(--text);
+  font-family: var(--font-hand);
+  font-size: var(--fs-body);
+}
+.l-bday-sticker {
+  position: fixed;
+  z-index: var(--z-toast);
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  overflow: hidden;
+}
+.l-bday-stamp {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 18px 28px;
+  border-radius: var(--r-l);
+  background: var(--surface-raised);
+  box-shadow: var(--lift-3);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-title);
+  transform: rotate(-4deg);
+  animation: l-bday-pop var(--dur-ui) var(--ease-out);
+}
+.l-bday-sticker i {
+  position: absolute;
+  top: -12px;
+  width: 9px;
+  height: 14px;
+  border-radius: var(--r-s);
+  animation: l-bday-fall 2.2s linear forwards;
+}
+/* The 🎂 mark next to a birthday friend's name (friends list, minimap, nameplate). */
+.l-bday-badge {
+  display: inline-block;
+  margin-inline-start: 4px;
+  padding: 0 6px;
+  border-radius: var(--r-round);
+  background: var(--highlight-soft);
+  color: var(--text);
+  font-size: var(--fs-cap);
+  white-space: nowrap;
+}
+/* The minimap pin of a birthday friend: a small cake on its corner. */
+.l-bday-pin {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  font-size: var(--fs-cap);
+  font-style: normal;
+  line-height: 1;
+  pointer-events: none;
+}
+/* Village name tags: .hv-labels[data-bday] lists today's birthday actors. */
+.hv-labels[data-bday~='0'] .hv-tag[data-actor='0']::before,
+.hv-labels[data-bday~='1'] .hv-tag[data-actor='1']::before,
+.hv-labels[data-bday~='2'] .hv-tag[data-actor='2']::before,
+.hv-labels[data-bday~='3'] .hv-tag[data-actor='3']::before,
+.hv-labels[data-bday~='4'] .hv-tag[data-actor='4']::before,
+.hv-labels[data-bday~='5'] .hv-tag[data-actor='5']::before,
+.hv-labels[data-bday~='6'] .hv-tag[data-actor='6']::before {
+  content: '🎂';
+  margin-inline-end: 3px;
+}
+@keyframes l-bday-pop {
+  from {
+    opacity: 0;
+    transform: rotate(-4deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-4deg) scale(1);
+  }
+}
+@keyframes l-bday-fall {
+  to {
+    transform: translateY(105vh) rotate(540deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-bday-stamp {
+    animation: none;
+  }
+  .l-bday-sticker i {
+    display: none;
+  }
+}

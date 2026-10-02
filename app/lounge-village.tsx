@@ -91,6 +91,7 @@ import {
   bobberPoint,
   feteSpot,
 } from './lounge-village-spots';
+import { birthdayNames } from './lounge-birthday';
 import { FISH_SPOTS, SPOT_INFO, type Spot } from './lounge-items';
 import { fishCandidates, itemName, spotBlock } from './lounge-life-plus';
 import {
@@ -188,6 +189,7 @@ import { FrameCost, fishingFrameDue } from './lounge-fishing-frames';
 import { useMinimapOpen } from './lounge-minimap-state';
 import './lounge-minimap.css';
 import './lounge-village.css';
+import './lounge/birthday.css';
 
 type ChatLine = { id: string; actor: number; text: string };
 /** A harvested crop rising from its plot (screen px in the scene). */
@@ -286,6 +288,8 @@ type Props = {
   onWish?: () => void;
   /** The festival booth (C-6). */
   onFete?: () => void;
+  /** 생일 잔치: the plaza cake (its 축하 방명록). */
+  onCake?: () => void;
   /** 성장 P1: the blacksmith's door (ruined before 대장간 재건). */
   onForge?: () => void;
   /** 성장 P1: chop / smash one of today's material nodes. */
@@ -659,6 +663,9 @@ export function Village3D(props: Props) {
   const [miniOpen, setMiniOpen] = useMinimapOpen();
   const [miniExpanded, setMiniExpanded] = useState(false);
   const friendPins = villageFriendPins(props.players, props.self);
+  // 생일 잔치: "오늘 생일" next to today's birthday friends on the map.
+  const bdayToday = props.life?.birthday?.today ?? [];
+  const bdayNote = (actor: number) => (bdayToday.includes(actor) ? ' · 오늘 생일' : '');
   const friendGroups = villageFriendGroups(friendPins, (miniExpanded ? 400 : 260) / MINI_BOX.w);
   const [friendGroup, setFriendGroup] = useState<string | null>(null);
   const shownFriends = friendGroups.find((group) => group.key === friendGroup);
@@ -1018,6 +1025,7 @@ export function Village3D(props: Props) {
       else if (target.kind === 'friendFarm') current.onWaterFriend?.(target.actor);
       else if (target.kind === 'fountain') current.onWish?.();
       else if (target.kind === 'fete') current.onFete?.();
+      else if (target.kind === 'cake') current.onCake?.();
       else if (target.kind === 'forge') current.onForge?.();
       else if (target.kind === 'node') current.onNode?.(target.id, target.node);
       else if (target.kind === 'gate') current.onGate?.();
@@ -1064,6 +1072,9 @@ export function Village3D(props: Props) {
           stage: plot.crop ? plotStage(plot, at) : 0,
           ...plotExtras({ ...plot, growth: plot.crop ? growthStage(plot, at) : undefined }),
         }));
+      // 생일 잔치: 🎂 on today's birthday friends' name tags (birthday.css).
+      const bdayTags = (life?.birthday?.today ?? []).join(' ');
+      if ((labels.dataset.bday ?? '') !== bdayTags) labels.dataset.bday = bdayTags;
       const seasonChanged = life?.calendar
         ? world.season.update({
             season: life.calendar.season,
@@ -1076,6 +1087,7 @@ export function Village3D(props: Props) {
             fete: life.social?.fete?.active
               ? { kind: life.social.fete.kind, lanterns: life.social.fete.lanterns.length, at: feteSpot(life.flags ?? []) }
               : null,
+            cake: life.birthday?.today.length ? { names: birthdayNames(life.birthday.today) } : null,
           })
         : false;
       const civicChanged = world.karchive.update({
@@ -3031,7 +3043,7 @@ export function Village3D(props: Props) {
                   const friend = group.friends[0], clustered = group.friends.length > 1;
                   const label = clustered
                     ? group.friends.map((p) => ACTORS[p.actor]).join(' · ') + ' 위치 목록'
-                    : `${ACTORS[friend.actor]} · ${friend.location}${friend.indoor ? ' 안' : ''}`;
+                    : `${ACTORS[friend.actor]}${bdayNote(friend.actor)} · ${friend.location}${friend.indoor ? ' 안' : ''}`;
                   return <button type="button" key={group.key} className="hv-minimap-friend"
                     data-minimap-friend={clustered ? undefined : friend.actor}
                     data-minimap-cluster={clustered ? group.friends.length : undefined}
@@ -3043,7 +3055,8 @@ export function Village3D(props: Props) {
                     style={{ left: `${((miniEdge(group.point).x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((miniEdge(group.point).z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                     onClick={() => clustered ? setFriendGroup(friendGroup === group.key ? null : group.key) : followFriend(friend)}>
                     <b aria-hidden="true">{clustered ? group.friends.length : ACTORS[friend.actor].slice(0, 1)}</b>
-                    <span>{clustered ? `친구 ${group.friends.length}명` : ACTORS[friend.actor] + (friend.indoor ? ' · 실내' : '')}</span>
+                    <span>{clustered ? `친구 ${group.friends.length}명` : ACTORS[friend.actor] + bdayNote(friend.actor) + (friend.indoor ? ' · 실내' : '')}</span>
+                    {group.friends.some((p) => bdayToday.includes(p.actor)) && <i className="l-bday-pin" aria-hidden="true" data-testid="minimap-bday">🎂</i>}
                   </button>;
                 })}
               </div>
@@ -3059,7 +3072,7 @@ export function Village3D(props: Props) {
                   {shownFriends.friends.map((friend) => <button type="button" key={friend.id}
                     data-minimap-friend={friend.actor} data-indoor={String(friend.indoor)}
                     onKeyDown={onFriendKey} onClick={() => followFriend(friend)}>
-                    <strong>{ACTORS[friend.actor]}</strong>
+                    <strong>{ACTORS[friend.actor]}{bdayToday.includes(friend.actor) && <em className="l-bday-badge">오늘 생일</em>}</strong>
                     <small>{friend.location}{friend.indoor ? ' 안' : ''}</small>
                     <Footprints size={15} aria-hidden="true" />
                   </button>)}
@@ -3754,6 +3767,19 @@ function SpotPrompt({
         <small>
           {fete ? `${fete.game} · ${fete.extra}` : '오늘의 축제'}
           {key}
+        </small>
+      </div>
+    );
+  }
+  if (spot.kind === 'cake') {
+    const today = life?.birthday?.today ?? [];
+    return (
+      <div>
+        <strong>
+          <Sparkles size={14} /> {birthdayNames(today)} 생일 케이크
+        </strong>
+        <small>
+          축하 방명록에 이름 남기기 · 한 사람에 한 번{key}
         </small>
       </div>
     );

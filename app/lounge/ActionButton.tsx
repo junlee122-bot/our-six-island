@@ -73,6 +73,7 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   cook: CookingPot,
   wish: Sparkles,
   fete: PartyPopper,
+  cake: PartyPopper,
   forge: Anvil,
   chop: Axe,
   smash: Pickaxe,

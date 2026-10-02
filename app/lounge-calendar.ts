@@ -134,7 +134,7 @@ export type ItemCategory =
   | 'material'
   | 'dish';
 export type FriendProfile = {
-  /** 'MM-DD' (KST). PLACEHOLDER: null = no birthday event until the user fills it in. */
+  /** 'MM-DD' (KST) only, never a year. null = no birthday event. */
   birthday: string | null;
   /** Gift tastes by item category. PLACEHOLDERS for the user to edit. */
   likes: ItemCategory[];
@@ -142,22 +142,25 @@ export type FriendProfile = {
 };
 /**
  * ============================================================
- *  PLACEHOLDER TABLE — fill in the real friends' data here.
- *  Index = actor (0 도원, 1 강재, 2 민서, 3 승준, 4 민재, 5 재민, 6 호현).
- *  birthday: 'MM-DD' or null (null = no birthday event).
- *  likes / dislikes: gift categories (crop, fruit, fish, bug, forage,
- *  flower, material, dish). Liked gifts give 2× friendship, disliked 0.2×.
- *  The values below are NOT real preferences; they only vary the game.
+ *  FRIENDS TABLE. Index = actor (0 도원, 1 강재, 2 민서, 3 승준,
+ *  4 민재, 5 재민, 6 호현).
+ *  birthday: the real day, 'MM-DD' only (owner-provided 2026-10-03;
+ *  the repo is public, so no years or anything else). 도원 and 민서
+ *  share 08-02: one cake, one news line, one banner.
+ *  likes / dislikes: STILL PLACEHOLDERS for the user to fill in — gift
+ *  categories (crop, fruit, fish, bug, forage, flower, material, dish).
+ *  Liked gifts give 2× friendship, disliked 0.2×. The values below are
+ *  NOT real preferences; they only vary the game.
  * ============================================================
  */
 export const FRIEND_PROFILES: readonly FriendProfile[] = [
-  { birthday: null, likes: ['dish', 'flower'], dislikes: ['bug'] }, // 0 도원 (placeholder)
-  { birthday: null, likes: ['fish', 'dish'], dislikes: ['flower'] }, // 1 강재 (placeholder)
-  { birthday: null, likes: ['fruit', 'flower'], dislikes: ['material'] }, // 2 민서 (placeholder)
-  { birthday: null, likes: ['bug', 'fish'], dislikes: ['forage'] }, // 3 승준 (placeholder)
-  { birthday: null, likes: ['crop', 'forage'], dislikes: ['fish'] }, // 4 민재 (placeholder)
-  { birthday: null, likes: ['dish', 'fruit'], dislikes: ['bug'] }, // 5 재민 (placeholder)
-  { birthday: null, likes: ['material', 'crop'], dislikes: ['dish'] }, // 6 호현 (placeholder)
+  { birthday: '08-02', likes: ['dish', 'flower'], dislikes: ['bug'] }, // 0 도원 (tastes: placeholder)
+  { birthday: '10-06', likes: ['fish', 'dish'], dislikes: ['flower'] }, // 1 강재 (tastes: placeholder)
+  { birthday: '08-02', likes: ['fruit', 'flower'], dislikes: ['material'] }, // 2 민서 (tastes: placeholder)
+  { birthday: '01-22', likes: ['bug', 'fish'], dislikes: ['forage'] }, // 3 승준 (tastes: placeholder)
+  { birthday: '11-12', likes: ['crop', 'forage'], dislikes: ['fish'] }, // 4 민재 (tastes: placeholder)
+  { birthday: '06-15', likes: ['dish', 'fruit'], dislikes: ['bug'] }, // 5 재민 (tastes: placeholder)
+  { birthday: '07-10', likes: ['material', 'crop'], dislikes: ['dish'] }, // 6 호현 (tastes: placeholder)
 ];
 export const ACTOR_NAMES = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'] as const;
 /** Birthday bonus the birthday person may claim once on the day. */

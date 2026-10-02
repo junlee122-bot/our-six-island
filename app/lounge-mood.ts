@@ -559,6 +559,13 @@ export function moodAfterLifeAction(
       if (birthdayActors(kstDay(now)).includes(life.actors[toUid])) addLet(to, 'birthdayCheer', now);
     }
   }
+  // 생일 케이크 방명록: the signer feels good, the birthday friend feels celebrated.
+  if (kind === 'birthdayCheer') {
+    addLet(u, 'birthdaySign', now);
+    fill(u, 'social', FILL.giftSocial);
+    const them = other(life, uidOf(life, (action as { to?: unknown }).to), now);
+    if (them) addLet(them, 'birthdayCheer', now);
+  }
   // Hearts that went up with this action (me and the friend).
   for (let f = 0; f < 7; f++) {
     if (f === actor) continue;

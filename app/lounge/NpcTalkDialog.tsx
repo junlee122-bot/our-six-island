@@ -10,10 +10,11 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
-import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, assertNpcSocialContext, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
+import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, assertNpcSocialContext, birthdayGiftOf, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
 import { NPC_TALK_POINTS, npcSpouseOf } from '../lounge-npc-data';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcSpot } from '../lounge-npc-schedule';
+import { npcBirthdayGiftLine } from '../lounge-npc-birthday';
 import { npcGiftLine, npcTalk, npcTalkReply } from '../lounge-npc-dialog';
 import { npcRequestsOn } from '../lounge-npc-requests';
 import { npcHearts, npcLoveChoices, npcLoveStatus, npcLoveTalk, npcTalkChoices, npcTalkFocus, npcTalkStatus, type NpcLoveChoice } from '../lounge-npc-speech';
@@ -69,8 +70,10 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     tables: view.tableStats?.week,
     museum: view.life?.museum,
   });
+  // 생일 잔치: on my birthday every resident opens with a birthday line.
+  const birthday = !!view.life?.birthday?.today.includes(who);
   // Pages: their lines, then (after a talk or a gift) what they answer.
-  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName, recent, ...loveTalk }).lines);
+  const [pages, setPages] = useState(() => npcTalk({ npc, me: myName, who, now: opened, points: row.points, talkedToday: row.talked, spot, lastGiftName, recent, birthday, ...loveTalk }).lines);
   const [page, setPage] = useState(0);
   // Everything said so far, so the talk's answer never repeats a page.
   const said = useRef(pages);
@@ -114,7 +117,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const requestDone = view.life?.me.npcBoard?.requests.find((r) => r.id === request?.id)?.done;
   const info = NPCS[npc];
   const inv = view.life?.me.inv ?? {};
-  const love = npcLoveChoices({ npc, rows, day: today, bouquets: inv.bouquet ?? 0, rings: inv['pledge-ring'] ?? 0, area: me?.area ?? '' });
+  const love = npcLoveChoices({ npc, rows, day: today, bouquets: inv.bouquet ?? 0, rings: inv['pledge-ring'] ?? 0, area: me?.area ?? '', birthday });
   // 주민끼리 어울리기: they are with another resident right now (lounge-npc-social.ts).
   const meeting = npcSocialOf(npc, now);
   const otherId = meeting ? (meeting.a === npc ? meeting.b : meeting.a) : null;
@@ -183,6 +186,10 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       return void run(op, [say(npcLoveLine(npc, 'propose-accept', loveKey, myName))]);
     }
     if (id === 'wedding') return void run(op, npcWeddingLines(npc, myName).map((line) => say(line)));
+    if (id === 'bdayGift') {
+      const item = view.self ? birthdayGiftOf(npc, view.self, today) : '';
+      return void run(op, [say(npcBirthdayGiftLine(npc, loveKey), { item: item ? itemName(item) : '' })]);
+    }
     const item = view.self ? spouseGiftOf(npc, view.self, today) : '';
     return void run(op, [say(npcLoveLine(npc, 'gift', loveKey), { item: item ? itemName(item) : '' })]);
   };
@@ -212,7 +219,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     else if (choice.id === 'gift') setPicking(true);
     else if (choice.id === 'overhear') overhear();
     else if (choice.id === 'join') join();
-    else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift') doLove(choice.id);
+    else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift' || choice.id === 'bdayGift') doLove(choice.id);
     else if (choice.id === 'book') onBook();
     else if (choice.id === 'request') onBoard?.();
     else if (choice.id === 'shop') shop?.open();

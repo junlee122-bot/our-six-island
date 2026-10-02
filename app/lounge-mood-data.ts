@@ -184,6 +184,7 @@ export const MOODLETS = {
   // 달력 · 날씨
   birthdayCheer: ml('생일 축하받았어요', 15, 24, 1, 'party'),
   birthday: ml('오늘은 내 생일!', 5, 24, 1, 'party', 2),
+  birthdaySign: ml('친구 생일을 축하했어요', 3, 8, 1, 'party', 2),
   holiday: ml('명절이에요', 5, 24, 1, 'party', 2),
   festival: ml('축제에 참가했어요', 10, 12, 1, 'party'),
   sunny: ml('맑은 날 산책', 2, 4, 1, 'sun'),

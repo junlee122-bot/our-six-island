@@ -75,6 +75,7 @@ import { areaSound } from './lounge-music-tracks';
 import { DISH_BY_ID, BUFF_INFO, FISH_SPOTS, ITEM_BY_ID, type Spot } from './lounge-items';
 import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
+import { BIRTHDAY_CAKE_FRONT } from './lounge-birthday';
 import { friendDialog, type DialogScript } from './lounge-friend-dialog';
 import { AdaptChecklist, FeteBanner, markAdaptLocal } from './lounge/SocialHud';
 import { timeOfDay } from './lounge-calendar';
@@ -206,6 +207,7 @@ const DigestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.DigestC
 const RequestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.RequestCard })));
 // Friend-life (C-3..C-10): NPC talk box and the festival panel.
 const FriendDialog = lazyRetry(() => import('./lounge/FriendDialog').then((m) => ({ default: m.FriendDialog })));
+const BirthdayCakePanel = lazyRetry(() => import('./lounge/BirthdayCake').then((m) => ({ default: m.BirthdayCakePanel })));
 const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({ default: m.FestivalPanel })));
 // 성장 P1: the growth journal (T), the blacksmith and the level-up banner.
 const GrowthPanel = lazyRetry(() => import('./lounge/GrowthPanel').then((m) => ({ default: m.GrowthPanel })));
@@ -391,6 +393,8 @@ type ModalName =
   | 'digest'
   | 'lifeRequest'
   | 'fete'
+  // 생일 잔치: the plaza cake's 축하 방명록.
+  | 'cake'
   // 성장 P1 (T): the growth journal and the blacksmith.
   | 'growth'
   | 'forge'
@@ -1379,6 +1383,8 @@ function AccountLounge({
     selfActor: save.actor,
     onAchievements: () => openBook('achievements'),
     onGiftTo: giftTo,
+    // 생일 잔치: walk to the plaza cake (E opens its 방명록); simple graphics opens it at once.
+    onCake: () => (settings.simpleGraphics ? setModal('cake') : walkTo(BIRTHDAY_CAKE_FRONT)),
   });
   // Friends' rooms are shared: everyone in 'home' + owner sees each other.
   const visitHouse = (actor: number) => {
@@ -2395,6 +2401,7 @@ function AccountLounge({
                       onWaterFriend={waterFriend}
                       onWish={() => void wish()}
                       onFete={() => setModal('fete')}
+                      onCake={() => setModal('cake')}
                       onForge={() => setModal('forge')}
                       onNode={(id, kind) => void gatherNode(id, kind)}
                       onGate={outdoorApi.toHill}
@@ -3158,6 +3165,7 @@ function AccountLounge({
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />
       )}
+      {modal === 'cake' && <BirthdayCakePanel room={room} view={view} notify={notify} selfActor={save.actor} onClose={() => setModal(null)} />}
       {modal === 'fete' && (
         <FestivalPanel room={room} view={view} notify={notify} selfActor={save.actor} onClose={() => setModal(null)} />
       )}

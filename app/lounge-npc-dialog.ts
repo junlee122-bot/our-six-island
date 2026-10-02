@@ -28,6 +28,7 @@ import { LUX_LINES } from './lounge-npc-lines-lux.ts';
 import { HIMMEL_LINES } from './lounge-npc-lines-himmel.ts';
 import { BEATRICE_LINES } from './lounge-npc-lines-beatrice.ts';
 import { BOCCHI_LINES } from './lounge-npc-lines-bocchi.ts';
+import { npcBirthdayLine } from './lounge-npc-birthday.ts';
 import { TSUNADE_LINES } from './lounge-npc-lines-tsunade.ts';
 import { MAKIMA_LINES } from './lounge-npc-lines-makima.ts';
 import { YANINEKO_LINES } from './lounge-npc-lines-yanineko.ts';
@@ -110,6 +111,8 @@ export type NpcTalkContext = {
   spot?: Pick<NpcSpot, 'activity' | 'area' | 'label'> | null;
   /** What they did lately (lounge-npc-recent.ts): the resident may bring it up. */
   recent?: readonly NpcRecentKind[];
+  /** It is the speaker's birthday: every resident opens with a birthday line (lounge-npc-birthday.ts). */
+  birthday?: boolean;
 } & Partial<Pick<NpcLoveContext, 'love' | 'days' | 'atHome' | 'otherPartner' | 'otherNpc' | 'otherLove'>>;
 export type NpcTalk = { lines: string[]; tier: 0 | 1 | 2 | 3 | 4 };
 
@@ -162,7 +165,8 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
   // Opener.
   let opener: string | undefined;
   const slot = hash32(key('opener')) % 10;
-  if (festival && slot < 6) opener = pick(L.festival, key('festival'));
+  if (ctx.birthday) opener = npcBirthdayLine(ctx.npc, key('birthday'), !!ctx.love);
+  else if (festival && slot < 6) opener = pick(L.festival, key('festival'));
   else if (weather !== 'sunny' && weather !== 'cloudy' && slot < 5) opener = pick(L.weather[weather as keyof NpcLineSet['weather']], key('weather'));
   else if (marketDay && ctx.spot?.area === 'market' && slot < 5) opener = pick(L.marketDay, key('market'));
   if (!opener && ctx.love) opener = npcLoveOpener(ctx.npc, ctx.now, weather, seasonOf(ctx.now), key('love'));

@@ -18,6 +18,7 @@ import {
 } from './lounge-village-layout';
 import { VILLAGE_SEASON_MATERIALS, batchDirectMeshes } from './lounge-village-world';
 import { SPAWN_POINTS } from './lounge-village-spots';
+import { BIRTHDAY_CAKE_POINT } from './lounge-birthday';
 import { SEASON_TINT, ambienceOf } from './lounge-life-ui';
 import type { Season, Weather } from './lounge-calendar';
 
@@ -203,6 +204,8 @@ export type SeasonUpdate = {
   houses?: Readonly<Record<number, number>>;
   /** Today's participatory festival (C-6): booth, lights and its decorations. */
   fete?: { kind: 'chuseok' | 'blossom'; lanterns: number; at: VillagePoint } | null;
+  /** 생일 잔치: the plaza cake on a friend's birthday ("도원·민서" on a shared day). */
+  cake?: { names: string } | null;
 };
 export type FishingState = {
   phase: 'none' | 'wait' | 'bite' | 'fight' | 'caught';
@@ -574,6 +577,78 @@ export class VillageSeasonLayer {
   }
 
   /**
+   * 생일 잔치: a three-tier cake with candles on a small table south-west of
+   * the fountain, and a sign with whose birthday it is. Static (fine under
+   * reduced motion); the confetti is in the 방명록 panel.
+   */
+  private cakeGroup: THREE.Group | null = null;
+  private cakeKey = '';
+  private updateCake(cake: SeasonUpdate['cake']) {
+    const key = cake?.names ?? '';
+    if (key === this.cakeKey) return;
+    this.cakeKey = key;
+    if (this.cakeGroup) {
+      this.root.remove(this.cakeGroup);
+      const shared = new Set<unknown>([...Object.values(GEO), ...Object.values(MAT)]);
+      this.cakeGroup.traverse((o) => {
+        if (o instanceof THREE.Sprite) {
+          o.material.map?.dispose();
+          o.material.dispose();
+        } else if (o instanceof THREE.Mesh) {
+          if (!shared.has(o.geometry)) o.geometry.dispose();
+          for (const m of [o.material].flat()) if (!shared.has(m)) m.dispose();
+        }
+      });
+      this.cakeGroup = null;
+    }
+    if (!cake) return;
+    const g = new THREE.Group();
+    g.name = 'village-birthday-cake';
+    const { x, z } = BIRTHDAY_CAKE_POINT;
+    const body = new THREE.Group();
+    // Table: a round top on one leg.
+    cyl(body, MAT.woodDark, x, 0.32, z, 0.08, 0.64);
+    cyl(body, MAT.woodLight, x, 0.67, z, 0.62, 0.06);
+    // Three tiers: cream, strawberry, cream.
+    const berry = mat('#f4a7b9');
+    cyl(body, MAT.cream, x, 0.84, z, 0.46, 0.28);
+    cyl(body, berry, x, 1.08, z, 0.34, 0.2);
+    cyl(body, MAT.cream, x, 1.26, z, 0.22, 0.16);
+    batchDirectMeshes(body);
+    g.add(body);
+    // Candles and their flames (unlit glow, like the festival lights).
+    const flame = new THREE.MeshBasicMaterial({ color: '#ffd36a' });
+    const candles = [MAT.flag1, MAT.flag2, MAT.flag3];
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      const cx = x + Math.sin(a) * 0.12,
+        cz = z + Math.cos(a) * 0.12;
+      const c = new THREE.Mesh(GEO.cyl, candles[i % 3]);
+      c.position.set(cx, 1.42, cz);
+      c.scale.set(0.022, 0.16, 0.022);
+      g.add(c);
+      const f = new THREE.Mesh(GEO.sphere, flame);
+      f.position.set(cx, 1.53, cz);
+      f.scale.set(0.03, 0.05, 0.03);
+      g.add(f);
+    }
+    // Berries around the strawberry tier.
+    const red = mat('#d94a4a');
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const b = new THREE.Mesh(GEO.sphere, red);
+      b.position.set(x + Math.sin(a) * 0.36, 1.19, z + Math.cos(a) * 0.36);
+      b.scale.setScalar(0.045);
+      g.add(b);
+    }
+    const sign = signSprite(`${cake.names} 생일 축하해요`, 0.44);
+    sign.position.set(x, 2.05, z);
+    g.add(sign);
+    this.cakeGroup = g;
+    this.root.add(g);
+  }
+
+  /**
    * Festival decorations (C-6), rebuilt when the festival or its lantern
    * count changes: a booth with string lights where the festival happens,
    * then 추석's moon and the wish lanterns over the plaza, or 꽃놀이's
@@ -832,11 +907,12 @@ export class VillageSeasonLayer {
 
   /** Season, weather, flags and today's spawns (returns true when something changed). */
   update(u: SeasonUpdate): boolean {
-    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone, u.houses ?? {}, u.fete ?? null]);
+    const key = JSON.stringify([u.season, u.weather, u.flags, u.spawns.map((s) => s.spot + s.kind + s.taken), u.effects, u.bundlesDone, u.houses ?? {}, u.fete ?? null, u.cake ?? null]);
     if (key === this.lastKey) return false;
     this.lastKey = key;
     this.updateHouses(u.houses);
     this.updateFete(u.fete ?? null);
+    this.updateCake(u.cake ?? null);
     this.effects = u.effects && !this.reduced;
     // Season tint (winter frost, autumn gold…): a blend over the original colours.
     const tint = SEASON_TINT[u.season];

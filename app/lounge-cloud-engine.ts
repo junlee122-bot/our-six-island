@@ -34,6 +34,8 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
+import { assertBirthdayContext } from './lounge-birthday.ts';
+import { villageFromNetwork } from './lounge-village-layout.ts';
 import { DISTRICTS, districtOpen, isDistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
@@ -505,6 +507,13 @@ export function cloudTransition(
               ranch: (life.flags ?? []).includes('district-ranch'),
               foothill: (life.flags ?? []).includes('district-foothill'),
             }, now);
+          }
+          if ((command.action as { kind?: string }).kind === 'birthdayCheer') {
+            // 생일 케이크: in the village plaza, by the cake (the authoritative player, not client coordinates).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player) throw new CloudError('마을에 먼저 접속한 뒤 축하해 주세요.', 409);
+            const area = player.area ?? 'village';
+            assertBirthdayContext(area, area === 'village' ? villageFromNetwork({ x: player.x, y: player.y }) : null);
           }
           if (isVoyageAction(command.action)) {
             // Boarding at the pier; the 멀미약 at its seller (츠나데 텃밭, 메르시 의원).

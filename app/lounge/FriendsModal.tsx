@@ -17,6 +17,13 @@ import { FriendMoodBadge } from './MoodHud';
 import { GameButton } from '../ui/GameButton';
 import { Glyph } from '../ui/Glyph';
 import './friends.css';
+import './birthday.css';
+
+const BdayBadge = () => (
+  <em className="l-bday-badge" data-testid="friends-bday">
+    🎂 오늘 생일
+  </em>
+);
 
 export function FriendsModal({
   room,
@@ -53,6 +60,8 @@ export function FriendsModal({
   const offline = view.link.state === 'offline';
   const connected = view.status === 'connected' && !offline;
   const online = new Set(view.players.map((p) => p.actor));
+  // 생일 잔치: "오늘 생일" next to today's birthday friends.
+  const bday = view.life?.birthday?.today ?? [];
   const me = selfActor ?? view.players.find((p) => p.id === view.self)?.actor;
   const canOpenRobbery = connected && view.players.some((p) => p.id === view.self && p.area === 'village');
   // Friends who are not logged in: they walk their daily round in the village
@@ -95,7 +104,7 @@ export function FriendsModal({
               <FriendMoodBadge face={view.life?.mood?.faces[actor]} />
             </span>
             <span className="fr-who">
-              <strong>{ACTORS[actor]}</strong>
+              <strong>{ACTORS[actor]}{bday.includes(actor) && <BdayBadge />}</strong>
               <span>쉬는 중 · 마을을 산책해요</span>
             </span>
             <span className="fr-actions">
@@ -160,6 +169,7 @@ export function FriendsModal({
                   <span className="fr-who">
                     <strong>
                       {ACTORS[p.actor]}
+                      {bday.includes(p.actor) && <BdayBadge />}
                       {view.host === p.id && <em className="fr-host">방장</em>}
                     </strong>
                     <span>

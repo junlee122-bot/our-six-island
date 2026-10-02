@@ -44,7 +44,7 @@ import {
   type NpcId,
   type NpcLove,
 } from './lounge-npc-data.ts';
-import { GAME_MINUTE_MS, gameHour, hash32 } from './lounge-calendar.ts';
+import { GAME_MINUTE_MS, birthdayActors, gameHour, hash32 } from './lounge-calendar.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { npcSpot, type NpcWorld } from './lounge-npc-schedule.ts';
 import { npcSocialOf, npcSocialSpot } from './lounge-npc-social.ts';
@@ -61,7 +61,7 @@ export const NPC_INVITE_MS = 20 * 60_000;
 /** How far (world units) you may stand from a walking resident to talk or give. */
 export const NPC_SOCIAL_REACH = 6;
 export type NpcSocialAction =
-  | { kind: 'npcSocial'; npc: NpcId; op: 'talk' | 'date' | 'invite' | 'dismiss' | NpcLoveOp }
+  | { kind: 'npcSocial'; npc: NpcId; op: 'talk' | 'date' | 'invite' | 'dismiss' | 'bdayGift' | NpcLoveOp }
   | { kind: 'npcSocial'; npc: NpcId; op: 'gift'; item: string; q?: 0 | 1 | 2 }
   /** 끼어들기: join `npc`'s meeting with `with` (lounge-npc-social.ts); a little with both, once a day each. */
   | { kind: 'npcSocial'; npc: NpcId; op: 'join'; with: NpcId }
@@ -72,7 +72,7 @@ export const NPC_JOIN_POINTS = 2;
 /** 꽃다발 · 청혼 반지 · 결혼식 · 헤어지기 · 배우자의 아침 선물. */
 export type NpcLoveOp = 'ask' | 'propose' | 'wedding' | 'breakup' | 'homeGift';
 export const NPC_LOVE_OPS: readonly NpcLoveOp[] = ['ask', 'propose', 'wedding', 'breakup', 'homeGift'];
-const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', 'join', 'overhear', ...NPC_LOVE_OPS];
+const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', 'join', 'overhear', 'bdayGift', ...NPC_LOVE_OPS];
 export type NpcRelation = {
   points: number;
   talkedDay?: number;
@@ -94,6 +94,8 @@ export type NpcRelation = {
   weddingDay?: number;
   /** KST day the spouse's morning present was taken. */
   homeGiftDay?: number;
+  /** KST day my partner handed over my birthday present (op 'bdayGift'). */
+  bdayGiftDay?: number;
   /** After a breakup: no new 꽃다발 (for anyone) before this KST day. */
   coolUntil?: number;
 };
@@ -136,7 +138,7 @@ export function readNpcRelations(value: unknown): NpcRelations | undefined {
     // The realty couple are married to each other: an old row's love state (from before 신형만 · 봉미선) is dropped.
     if (!npcSpouseOf(npc)) {
       if (v.love === 'dating' || v.love === 'engaged' || v.love === 'married') relation.love = v.love;
-      for (const field of ['since', 'weddingDay', 'homeGiftDay'] as const) if (safe(v[field])) relation[field] = v[field];
+      for (const field of ['since', 'weddingDay', 'homeGiftDay', 'bdayGiftDay'] as const) if (safe(v[field])) relation[field] = v[field];
     }
     if (safe(v.coolUntil)) relation.coolUntil = v.coolUntil;
     out[npc] = relation;
@@ -188,12 +190,14 @@ export function npcSpouses(life: Pick<LifeState, 'ext' | 'actors'>): Partial<Rec
   }
   return out;
 }
+/** A partner's birthday present (op 'bdayGift'): from the same favourites, its own pick. */
+export const birthdayGiftOf = (npc: NpcId, uid: string, day: number) => spouseGiftOf(npc, uid, day, 'bday-gift');
 /** The spouse's present today: one of their own favourite things, the same all day. */
-export function spouseGiftOf(npc: NpcId, uid: string, day: number): string {
+export function spouseGiftOf(npc: NpcId, uid: string, day: number, salt = 'spouse-gift'): string {
   const def = NPCS[npc];
   const pool = [def.rewards[40][0], ...def.gifts.loved, ...def.gifts.liked].filter((id) => npcGiftable(id) && Object.prototype.hasOwnProperty.call(ITEM_BY_ID, id));
   const list = pool.length ? [...new Set(pool)] : ['flowertea'];
-  return list[hash32(`spouse-gift:${npc}:${uid}:${day}`) % list.length];
+  return list[hash32(`${salt}:${npc}:${uid}:${day}`) % list.length];
 }
 export function npcGuestOf(relations: NpcRelations | undefined, now: number): NpcGuest | undefined {
   for (const npc of NPC_IDS) {
@@ -430,9 +434,23 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
     case 'breakup': {
       if (!relation.love) fail('헤어질 사이가 아니에요.');
       const cost = relation.love === 'dating' ? NPC_BREAKUP : NPC_DIVORCE;
+      // The village hears about it too (decided 2026-10-03), kindly and lightly.
+      const actor = life.actors?.[uid];
+      const me = typeof actor === 'number' ? ACTORS[actor] ?? '친구' : '친구';
+      addNews(life, now, `breakup:${uid}:${action.npc}:${day}`, 'breakup', breakupNewsText(relation.love!, me, name), typeof actor === 'number' ? [actor] : []);
       relation.points = Math.min(relation.points, cost.points);
       relation.coolUntil = day + cost.days;
-      for (const field of ['love', 'since', 'weddingDay', 'homeGiftDay', 'invitedUntil', 'datedDay'] as const) delete relation[field];
+      for (const field of ['love', 'since', 'weddingDay', 'homeGiftDay', 'bdayGiftDay', 'invitedUntil', 'datedDay'] as const) delete relation[field];
+      break;
+    }
+    case 'bdayGift': {
+      // 생일 잔치: a lover, fiancé(e) or spouse has a present on my birthday, once that day.
+      const me = life.actors?.[uid];
+      if (typeof me !== 'number' || !birthdayActors(day).includes(me)) fail('생일 선물은 내 생일에 받아요.');
+      if (!relation.love) fail(`${josa(name, '은/는')} 생일을 축하해 줬어요. 선물은 연인에게 받는 걸로 해요.`);
+      if (relation.bdayGiftDay === day) fail('생일 선물은 이미 받았어요.');
+      relation.bdayGiftDay = day;
+      addInv(life, uid, birthdayGiftOf(action.npc, uid, day), 1);
       break;
     }
     case 'homeGift': {
@@ -455,6 +473,12 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       presents.push([item, n]);
     }
   return { reaction, presents };
+}
+/** The village news line of a breakup (연인 · 약혼 · 결혼): light, never mean. */
+export function breakupNewsText(love: NpcLove, me: string, name: string) {
+  if (love === 'dating') return `${josa(me, '과/와')} ${josa(name, '이/가')} 연인에서 좋은 친구로 돌아갔어요. 둘 다 씩씩하대요`;
+  if (love === 'engaged') return `${josa(me, '과/와')} ${name}의 약혼은 없던 일이 됐어요. 마을은 둘 다 응원해요`;
+  return `${josa(me, '과/와')} ${josa(name, '이/가')} 각자의 길을 가기로 했어요. 마을은 둘 다 응원해요`;
 }
 /** A short fallback reply per action (dialogue files have the full lines). */
 export function npcReply(npc: NpcId, op: NpcSocialAction['op']) {
@@ -490,6 +514,7 @@ export function npcReply(npc: NpcId, op: NpcSocialAction['op']) {
       wedding: `${josa(name, '과/와')} 결혼식을 올렸어요.`,
       breakup: `${josa(name, '과/와')} 헤어졌어요.`,
       homeGift: `${name}에게 아침 선물을 받았어요.`,
+      bdayGift: `${name}에게 생일 선물을 받았어요.`,
     }[op]
   );
 }

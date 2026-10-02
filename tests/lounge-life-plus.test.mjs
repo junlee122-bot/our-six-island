@@ -163,7 +163,7 @@ test('calendar: KST seasons rotate every 7 real days from the Monday anchor', ()
   assert.equal(timeOfDay(kst(2026, 9, 24, 23)), 'night');
 });
 
-test('calendar: Korean holidays 2026–2028, weekly events, placeholder birthdays', () => {
+test('calendar: Korean holidays 2026–2028, weekly events, the friends\' birthdays', () => {
   const ids = (y, m, d, h = 12) => calendarOf(kst(y, m, d, h)).events.map((e) => e.id);
   assert.ok(ids(2026, 9, 25).includes('chuseok-2026'));
   assert.ok(ids(2027, 2, 7).includes('seollal-2027'));
@@ -181,10 +181,12 @@ test('calendar: Korean holidays 2026–2028, weekly events, placeholder birthday
   assert.equal(calendarOf(kst(2026, 9, 25, 3)).events.find((e) => e.id === 'weekly-casino').active, true, 'game 03:00 is still the casino night');
   assert.equal(calendarOf(kst(2026, 9, 24, 20)).events.find((e) => e.id === 'weekly-casino'), undefined, 'Thursday (real) has none');
   assert.ok(ids(2026, 9, 27).includes('weekly-market'));
-  // Birthdays are placeholders (null) until the user fills them in.
+  // Birthdays are month-day only (filled 2026-10-03): seven friends on six days a year (도원·민서 share one).
   assert.equal(FRIEND_PROFILES.length, 7);
-  assert.ok(FRIEND_PROFILES.every((p) => p.birthday === null));
-  for (let d = 0; d < 366; d++) assert.deepEqual(birthdayActors(kstDay(T0) + d), []);
+  assert.ok(FRIEND_PROFILES.every((p) => /^\d{2}-\d{2}$/.test(p.birthday)));
+  let days = 0;
+  for (let d = 0; d < 365; d++) if (birthdayActors(kstDay(T0) + d).length) days++;
+  assert.equal(days, 6);
   const profiles = FRIEND_PROFILES.map((p, i) => (i === 2 ? { ...p, birthday: '09-24' } : p));
   assert.deepEqual(birthdayActors(kstDay(T0), profiles), [2]);
   const bday = eventsOn(kstDay(T0), T0, profiles).find((e) => e.kind === 'birthday');

@@ -15,6 +15,7 @@ import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lo
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
 import { itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
+import { birthdayCheer, birthdayPastText, birthdayView, readBdayBook, type BirthdayAction, type BirthdayBook, type BirthdayView } from './lounge-birthday.ts';
 import {
   grantBeom,
   spendBeom,
@@ -351,9 +352,13 @@ export type LifeExt = {
   social?: SocialState;
   /** 새 방 가구 초기화: done-mark and the backup of the old counts (lounge-rooms-reset.ts). */
   roomsReset?: RoomsReset;
+  /** 생일 축하 방명록: 'actor-YYYY' → signers (lounge-birthday.ts). */
+  bdayBook?: BirthdayBook;
 };
 export type PlusAction =
   | NpcSocialAction
+  /** 생일 케이크 앞에서 축하하기 (lounge-birthday.ts). */
+  | BirthdayAction
   /** 주민 관계도: pairs noted in this browser before they were kept with the account (sent once). */
   | { kind: 'npcTies'; pairs: string[] }
   | { kind: 'fertilize'; plot: number; item: string }
@@ -644,6 +649,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
   if (nonEmpty(ext)) out.ext = ext;
   const roomsReset = readRoomsReset(v.roomsReset);
   if (roomsReset) out.roomsReset = roomsReset;
+  const bdayBook = readBdayBook(v.bdayBook);
+  if (bdayBook) out.bdayBook = bdayBook;
   const museum: LifeExt['museum'] = {};
   for (const [id, m] of Object.entries(obj(v.museum)).slice(0, 400)) {
     const x = obj(m);
@@ -1415,6 +1422,10 @@ export function plusAction(
       npcSocialAction(life, uid, a, now);
       break;
     }
+    case 'birthdayCheer': {
+      birthdayCheer(life, member, a, now);
+      break;
+    }
     case 'npcTies': {
       // Once per member: the pairs an older client kept in this browser. Only
       // real tie keys count (capped); a later send changes nothing.
@@ -2177,6 +2188,8 @@ export type PlusView = {
   flags: string[];
   memories: Memory[];
   digest: { day: number; date: string; lines: { kind: string; text: string; actors: number[] }[] };
+  /** 생일 잔치: today's birthday friends, their 축하 방명록, and who signed mine this year. */
+  birthday: BirthdayView;
   records: Record<string, { actor: number; cm: number; at: number }>;
   /** Friendship between every pair of the seven ('a-b', a < b). */
   bondsAll: Record<string, number>;
@@ -2306,8 +2319,10 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     digest: {
       day: day - 1,
       date: calendarOf(now - 86_400_000).date,
-      lines: (yesterday?.lines ?? []).slice(-DIGEST_LINES).map((l) => ({ kind: l.kind, text: l.text, actors: [...l.actors] })),
+      // Yesterday's birthday line said "오늘은 …"; the digest tells it in the past.
+      lines: (yesterday?.lines ?? []).slice(-DIGEST_LINES).map((l) => ({ kind: l.kind, text: l.kind === 'birthday' && l.actors.length ? birthdayPastText(l.actors) : l.text, actors: [...l.actors] })),
     },
+    birthday: birthdayView(life, actor, now),
     records: Object.fromEntries(Object.entries(life.records ?? {}).map(([k, r]) => [k, { ...r }])),
     bondsAll: { ...life.bonds },
     projects: PROJECTS.map((p) => {

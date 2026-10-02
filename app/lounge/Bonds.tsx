@@ -50,6 +50,8 @@ import './life-plus.css';
 import './friend-life.css';
 import { EmptyState } from '../ui/EmptyState';
 import { Hearts } from './Hearts';
+import { GuestbookNames } from './BirthdayCake';
+import './birthday.css';
 import { kstDay } from '../lounge-economy';
 import { npcSocialNews, npcSocialPresent } from '../lounge-npc-social';
 
@@ -426,6 +428,15 @@ export function MemoriesAlbum({ view, onClose, selfActor }: { view: CloudRoomVie
           나의 추억 <small>{all.filter((m) => m.actors.includes(selfActor)).length}</small>
         </button>
       </div>
+      {mine && !!view.life?.birthday?.mine.length && (
+        <section className="l-bday-book" aria-label="올해 내 생일 방명록" data-testid="album-bday-book">
+          <header>
+            <strong>올해 내 생일 축하 방명록</strong>
+            <small>{view.life.birthday.mine.length}명이 축하했어요</small>
+          </header>
+          <GuestbookNames signers={view.life.birthday.mine} />
+        </section>
+      )}
       {!list.length ? (
         <EmptyState
           glyph="camera"
@@ -475,6 +486,8 @@ const DIGEST_ICON: Record<string, IconComponent> = {
   request: Handshake,
   bond: Heart,
   festival: PartyPopper,
+  birthday: PartyPopper,
+  breakup: Heart,
 };
 /** "어제 마을 소식": yesterday's village lines, shown once a day on the first login. */
 export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: () => void }) {

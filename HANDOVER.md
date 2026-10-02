@@ -22,6 +22,7 @@
 - **2026-10-02 새 방**(브랜치 `rooms-v2`): 7명 모두 같은 방(정면 구역 공통 규격 카메라, 붙박이 부엌·옷장, 앞벽 문, 집 확장 단계만큼 넓어짐), 방 저장 v4. 서버가 월드마다 한 번 가구 개수를 초기화(`app/lounge-rooms-reset.ts`, 백업은 `life.roomsReset`, 원장 불변), 기본 침대 하나 무료. 예전 테마 방은 범마을 부동산 “모델하우스 관람”(벽지·바닥 10,000범), 나무결 가구점 “기본 가구” 47종. 기록: [새 방 설계 구현 기록](handover/design/design-rooms-v2.md).
 - **2026-10-02 게임 시계**(브랜치 `game-clock`): 게임 하루 = 실제 1시간(팔리아 방식, 게임 1시간 = 2분 30초, 매시 정각이 게임 자정). 조명·밤 음악·인사·물고기/곤충 시간·주민 일과·시각 행사는 게임 시계(`gameHour`/`timeOfDay`), 하루 횟수·성장·날씨·계절·요일은 실제 KST 날(`kstDay`, `realKstHour`). HUD에 게임 시계. 분류표·바뀐 행사 시간, `broker-muzan` 병합 뒤 맞춘 것(증권: 게임 하루마다 장·실제 하루 168틱·σ/√24·±15%와 이자는 실제 날, 먼바다: 게임 정시 출항·다음 게임 새벽 초대, 3단계 주민·무잔 일정, 물고기 시각 창): [게임 시계 설계 8장](handover/design/design-game-clock.md).
 - **2026-10-02 가구 그림**(브랜치 `claude/furniture-art`): 나무결 가구점·명품·축제/공사 보상 가구 39종을 방 소품과 같은 손그림으로 교체(`node scripts/optimize-assets.mjs furniture`), 새 가구 8종(오늘의 가구 6 + 명품 2), 흔들의자 3D → 그림, 방패연·부채는 받침대 장식(예전 벽걸이 저장은 바닥으로 읽음). 기록: [가구 그림](handover/design/design-furniture-art.md).
+- **2026-10-03 생일 잔치**(브랜치 `claude/birthday-events`): 친구 7명 생일(월·일만) 반영, 생일날 광장 케이크와 축하 방명록(한 사람에 한 번, 무드·우정 조금, 범 없음, `life.bdayBook`), 아침 마을 소식, 주민 생일 인사와 연인의 생일 선물, 이름표·지도·친구 목록 🎂, 도원·민서 같은 날은 배너·소식 한 줄. 연애 6장 결정(헤어짐도 마을 소식). 기록: [연애·결혼 설계 6·7장](handover/design/design-romance.md).
 - **2026-10-02 연애·결혼**(브랜치 `romance-lines`): 친구 → 연인(8하트 + 꽃다발) → 약혼(10하트 + 청혼 반지) → 광장 결혼식(마을 소식), 사귀기 전 8하트 상한, 한 친구에 한 명, 배우자가 내 방에서 살며 아침 선물, 헤어지기 쿨타임, 주민 20명 하트 단계별 연애 대사. 기록: [연애·결혼 설계](handover/design/design-romance.md). 미니맵은 접으면 장면을 오가도 접힌 채로(`app/lounge-minimap-state.ts`).
 - **2026-10-02 먼바다 낚싯배·바다 어종**(브랜치 `sea-fishing`): 항구 큰 선착장의 허 선장 낚싯배(05~19시 30분마다, 4자리, 승선료 15,000범·하루 1회, 20분 항해, 폭풍 결항), 갑판 구역 `offshore`(일반 낚시 장소 목록에는 없음, 서버가 항해 중에만 허용), 바다 어종 51종(가까운 바다 13·먼바다 33·새벽 2·전설 3), 단골 새벽 초대(최근 7일 중 4일, 05~07시, 30% 할인·친구 3명), 멀미약(츠나데, 하루 동안 배·손맛 칸 흔들림 끔). 물고기 값 인상·판매 규칙(4마리 정가, 포화·한도 제외)이 먼바다 어종에도 그대로 적용되고, 사람 속도 20분 항해 순익은 약 3~4.5만 범(항구의 1.5~2.6배). 설계·수치: [먼바다 낚싯배](handover/design/design-sea-fishing.md). 엔진 `app/lounge-voyage.ts`, 데이터 `lounge-voyage-data.ts`·`lounge-fish-sea-data.ts`, 화면 `lounge-offshore-scene.ts`·`lounge-boat-model.ts`·`lounge/Voyage.tsx`.
 - **2026-10-02 범마을 증권**(브랜치 `claude/stock-exchange`): 시장 거리 동쪽 증권사(실내 포함, 사장 NPC 자리는 비워 둠)에서 주식 12종목(마을 가게 9 + 가상 테마 3) 거래. 09~15시 매시 시세, ±15% 상·하한가, 서버 전용 씨앗의 결정적 시세, 신용 2배·공매도·마진콜·반대매매, 주간 배당, 수익률 랭킹, 마을 소식·신문·범 지갑·경제 리포트 반영. 엔진 `app/lounge-stocks.ts`, 창 `app/lounge/StockPanel.tsx`, 상태 `world.stocks`, 원장 `ledger.marketNet`. 설계·수치: [증권 설계](handover/design/design-stocks.md).
@@ -117,7 +118,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 
 ## 6. 사용자가 정해야 할 것
 
-- 친구 7명의 실제 생일과 좋아하는/싫어하는 선물 (`app/lounge-calendar.ts`의 `FRIEND_PROFILES`, 지금은 임시값)
+- 친구 7명의 좋아하는/싫어하는 선물 (`app/lounge-calendar.ts`의 `FRIEND_PROFILES`, 지금은 임시값). 생일(월·일)은 2026-10-03에 채웠습니다.
 - 친구별 NPC 대사 (`app/lounge-friend-lines.ts`, 지금은 무난한 임시 성격)
 - 경제: 하루 판매 3만 범 이후 감소·10만 상한 유지(추천: 유지), 카지노 VIP룸 비용 150만 → 100만 인하(추천)
 - 활성화 코드 재발급 시점

@@ -860,6 +860,7 @@ export const PLUS_ACTION_KINDS = [
   'upgradeHouse',
   'rerollShop',
   'buyRoomStyle',
+  'birthdayCheer',
 ] as const;
 export type PlusActionKind = (typeof PLUS_ACTION_KINDS)[number];
 

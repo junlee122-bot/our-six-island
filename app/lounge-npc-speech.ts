@@ -25,7 +25,7 @@ export function npcTalkStatus(npc: NpcId, spot: Pick<NpcSpot, 'label' | 'activit
   return spot.activity === 'work' || spot.activity === 'stall' ? `${role} · 일하는 중` : role;
 }
 
-export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
+export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'bdayGift' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
 export type NpcTalkChoice = { id: NpcTalkChoiceId; label: string; disabled: boolean };
 
 /**
@@ -55,7 +55,7 @@ export function npcTalkChoices(o: {
   social?: { /** "닐라와" */ other: string; joined: boolean; joinOff: string } | null;
 }): NpcTalkChoice[] {
   const off = o.busy || !!o.blocked;
-  const loveLabel: Record<NpcLoveChoice, string> = { ask: '꽃다발 건네기', propose: '청혼 반지 건네기', wedding: '결혼식 올리기', homeGift: '아침 선물 받기' };
+  const loveLabel: Record<NpcLoveChoice, string> = { ask: '꽃다발 건네기', propose: '청혼 반지 건네기', wedding: '결혼식 올리기', homeGift: '아침 선물 받기', bdayGift: '생일 선물 받기' };
   return [
     { id: 'talk', label: o.talked ? '오늘 대화 완료' : `이야기 나누기 · +${NPC_TALK_POINTS}`, disabled: off || o.talked },
     { id: 'gift', label: o.gifted ? '오늘 선물 완료' : '선물 주기', disabled: off || o.gifted },
@@ -88,15 +88,15 @@ export function npcTalkFocus(choices: readonly NpcTalkChoice[], after: 'open' | 
   return choices.findIndex((c) => c.id === 'bye');
 }
 
-export type NpcLoveChoice = 'ask' | 'propose' | 'wedding' | 'homeGift';
-type LoveRow = { npc: NpcId; points: number; love?: NpcLove; since?: number; weddingDay?: number; atHome?: boolean; homeGifted?: boolean };
+export type NpcLoveChoice = 'ask' | 'propose' | 'wedding' | 'homeGift' | 'bdayGift';
+type LoveRow = { npc: NpcId; points: number; love?: NpcLove; since?: number; weddingDay?: number; atHome?: boolean; homeGifted?: boolean; bdayGiftDay?: number };
 /**
  * The love choices in a resident's box: a 꽃다발 while I have one and no
  * partner, a 청혼 반지 to my partner while I have one, the wedding once its
  * day has come, the spouse's morning present at home. Whether they say yes is
  * the server's call (lounge-romance.ts); a box shows their answer either way.
  */
-export function npcLoveChoices(o: { npc: NpcId; rows: readonly LoveRow[]; day: number; bouquets: number; rings: number; area: string }): NpcLoveChoice[] {
+export function npcLoveChoices(o: { npc: NpcId; rows: readonly LoveRow[]; day: number; bouquets: number; rings: number; area: string; /** It is my birthday today. */ birthday?: boolean }): NpcLoveChoice[] {
   const row = o.rows.find((r) => r.npc === o.npc);
   const partner = o.rows.find((r) => r.love);
   const out: NpcLoveChoice[] = [];
@@ -104,6 +104,8 @@ export function npcLoveChoices(o: { npc: NpcId; rows: readonly LoveRow[]; day: n
   if (row?.love === 'dating' && o.rings > 0) out.push('propose');
   if (row?.love === 'engaged' && o.day >= (row.weddingDay ?? o.day) && o.area === 'village') out.push('wedding');
   if (row?.love === 'married' && row.atHome && !row.homeGifted) out.push('homeGift');
+  // 생일 잔치: my partner has a present for me, once on my birthday.
+  if (o.birthday && row?.love && row.bdayGiftDay !== o.day) out.push('bdayGift');
   return out;
 }
 /** What a talk needs about my love life with `npc` (npcTalk's love fields). */

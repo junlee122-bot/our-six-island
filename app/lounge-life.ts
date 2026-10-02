@@ -120,6 +120,7 @@ import { stage3Action, stage3View, type Stage3View } from './lounge-stage3.ts';
 import { isShopId, shopOffer, type ShopId } from './lounge-shops.ts';
 import { foodAfterAction } from './lounge-food.ts';
 import { districtsView, settleDistrictUnlocks, type DistrictsView } from './lounge-district-unlocks.ts';
+import { settleBirthdayNews } from './lounge-birthday.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
 export type Crop =
@@ -1052,6 +1053,8 @@ export function lifeAction(
   foodAfterAction(next.life, member, action as { kind: string }, now);
   // 마을 확장 2단계: record a district whose village goal was just reached.
   settleDistrictUnlocks(next.life, now);
+  // 생일 잔치: the morning news line (once per birthday per year).
+  settleBirthdayNews(next.life, now);
   return next;
 }
 function lifeActionCore(

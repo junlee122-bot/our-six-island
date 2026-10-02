@@ -48,6 +48,10 @@ import { VILLAGE_GATE, villageGateDistance } from './lounge-areas.ts';
 import { DISTRICTS, DISTRICT_IDS, HUB_SIGNPOST, districtOpen, gateDistance, type DistrictId } from './lounge-districts.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import { josa } from './lounge-text.ts';
+import { BIRTHDAY_CAKE_POINT } from './lounge-birthday.ts';
+
+/** How close to the plaza cake the action button offers it (world units). */
+export const CAKE_REACH = 1.4;
 
 /** Something "범타듀의 하루" you can do where you stand (E / action button). */
 export type VillageSpot =
@@ -67,6 +71,8 @@ export type VillageSpot =
   | { kind: 'fountain' }
   /** Today's festival booth (C-6). */
   | { kind: 'fete' }
+  /** 생일 잔치: the plaza birthday cake and its 축하 방명록. */
+  | { kind: 'cake' }
   /** 성장 P1: the blacksmith (ruined until 마을 개척 “대장간 재건”). */
   | { kind: 'forge' }
   /** 성장 P1: today's bush / log / rock at the village edge. */
@@ -211,6 +217,19 @@ export function villageAction(
       reach: FOUNTAIN_REACH,
       target: { type: 'spot', spot: { kind: 'fountain' } },
     });
+  // 생일 잔치: the cake stands only on a friend's birthday; sign it (or, for
+  // the birthday friend and once signed, look at the 방명록).
+  const bday = life?.birthday;
+  if (bday?.today.length) {
+    const open = bday.today.filter((a) => a !== actor && !bday.books[a]?.includes(actor));
+    labels.set('cake', { label: open.length ? '생일 축하하기' : '생일 방명록 보기' });
+    candidates.push({
+      kind: 'cake',
+      distance: Math.max(0, Math.hypot(point.x - BIRTHDAY_CAKE_POINT.x, point.z - BIRTHDAY_CAKE_POINT.z) - 0.5),
+      reach: CAKE_REACH,
+      target: { type: 'spot', spot: { kind: 'cake' } },
+    });
+  }
   if (life?.social?.fete?.active)
     candidates.push({
       kind: 'fete',

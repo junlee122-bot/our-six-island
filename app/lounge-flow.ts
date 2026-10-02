@@ -35,6 +35,8 @@ export type ActionKind =
   | 'wish'
   // Participatory festivals (C-6).
   | 'fete'
+  // 생일 잔치: the plaza birthday cake (lounge-birthday.ts).
+  | 'cake'
   // 성장 P1: the blacksmith and the material nodes at the village edge.
   | 'forge'
   | 'chop'
@@ -68,6 +70,7 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   cook: '요리·만들기',
   wish: '소원 빌기',
   fete: '축제 참여하기',
+  cake: '생일 축하하기',
   forge: '대장간',
   chop: '베기',
   smash: '깨기',

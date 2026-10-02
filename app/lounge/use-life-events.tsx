@@ -13,6 +13,7 @@ import { recall, remember } from '../lounge-settings';
 import { lifeSfx } from '../lounge-audio-life';
 import { DISTRICT_OPEN_LINES, GOAL_DISTRICTS } from '../lounge-district-unlocks';
 import { DISTRICTS, DISTRICT_FLAG } from '../lounge-districts';
+import { birthdayBanners } from '../lounge-birthday';
 import type { Notify, PushBanner } from './Toast';
 
 const EVENTS_KEY = 'bumtadew-life-events-v1';
@@ -26,6 +27,7 @@ export function useLifeEvents({
   selfActor,
   onAchievements,
   onGiftTo,
+  onCake,
 }: {
   view: CloudRoomView;
   room: CloudRoom;
@@ -34,11 +36,13 @@ export function useLifeEvents({
   selfActor: number;
   onAchievements: () => void;
   onGiftTo: (actor: number) => void;
+  /** 생일 잔치: go to the plaza cake (its 축하 방명록). */
+  onCake?: () => void;
 }) {
   const life = view.life;
-  const cb = useRef({ onAchievements, onGiftTo, push, notify });
+  const cb = useRef({ onAchievements, onGiftTo, onCake, push, notify });
   useEffect(() => {
-    cb.current = { onAchievements, onGiftTo, push, notify };
+    cb.current = { onAchievements, onGiftTo, onCake, push, notify };
   });
 
   // Today's events: one banner each per day and device.
@@ -52,7 +56,24 @@ export function useLifeEvents({
         if (raw?.day === day && Array.isArray(raw.ids)) seen = raw;
       } catch {}
       const snapshot = room.snapshot().life;
-      for (const e of snapshot?.calendar?.events ?? []) {
+      const events = snapshot?.calendar?.events ?? [];
+      // Others' birthdays of the day are one banner (도원·민서 share a day);
+      // my own birthday keeps its [받기] in the loop below.
+      for (const b of birthdayBanners(events, selfActor)) {
+        if (b.mine || b.ids.every((id) => seen.ids.includes(id))) continue;
+        seen.ids.push(...b.ids);
+        const one = b.actors.length === 1 ? b.actors[0] : null;
+        cb.current.push('daily', b.text, {
+          key: 'event-' + b.ids.join('+'),
+          action:
+            one !== null
+              ? { label: '선물하기', run: () => cb.current.onGiftTo(one) }
+              : cb.current.onCake
+                ? { label: '축하하러 가기', run: () => cb.current.onCake?.() }
+                : undefined,
+        });
+      }
+      for (const e of events) {
         if (seen.ids.includes(e.id)) continue;
         if (e.kind === 'weekly' && e.active === false) continue;
         seen.ids.push(e.id);
