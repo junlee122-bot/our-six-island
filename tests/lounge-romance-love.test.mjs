@@ -19,13 +19,15 @@ import { NPC_IDS, NPCS, NPC_SPOUSES, NPC_SISTER_FRIENDS } from '../app/lounge-np
 import { shopOffer } from '../app/lounge-shops.ts';
 import { NPC_LOVE, NPC_LOVE_MARRIED, NPC_LOVE_BANTER, NPC_LOVE_TIERS, allNpcLoveLines, npcAnniversary, npcLoveLine, npcLovePools, npcLoveTier, npcWeddingLines } from '../app/lounge-npc-love.ts';
 import { npcTalk, npcBanter } from '../app/lounge-npc-dialog.ts';
+import { GAME_HOUR_MS, gameTimeOnDay } from '../app/lounge-calendar.ts';
 import { npcLoveChoices, npcLoveTalk, npcTalkChoices } from '../app/lounge-npc-speech.ts';
 
 const DAY = 86_400_000;
 const HOUR = 3_600_000;
 /** KST 12:00 of a day (03:00 UTC). */
 const T0 = Date.UTC(2026, 9, 5, 3);
-const at = (d, kstHour = 12) => T0 + d * DAY + (kstHour - 12) * HOUR;
+/** Game `hour` on real day `d` from T0 (게임 하루 = 실제 1시간). */
+const at = (d, hour = 12) => gameTimeOnDay(kstDay(T0) + d, hour);
 
 function world(n = 2) {
   const members = Array.from({ length: n }, (_, i) => ({ id: `0000000${i}-1111-4111-8111-111111111111`, actor: i }));
@@ -148,7 +150,7 @@ test('a spouse sleeps in my room, hands over one present a day there, and works 
   const guest = s.view(m, night).npcGuests['0'];
   assert.equal(guest.npc, 'lumi');
   assert.equal(guest.spouse, true);
-  assert.ok(guest.until > night && guest.until <= at(1, 8) + HOUR);
+  assert.ok(guest.until > night && guest.until <= at(1, 8) + GAME_HOUR_MS);
   assert.equal(npcGuestOf(s.life.ext[m.id].npcRelations, at(1, 14)), undefined);
   // The present: at home, once a day.
   const home = { area: 'home', home: 0, actor: 0, fishing: false };

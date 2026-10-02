@@ -8,10 +8,10 @@ import { NPCS, NPC_IDS, NPC_BONDS, giftReaction } from '../app/lounge-npc-data.t
 import { NPC_CHIBI } from '../app/lounge-npc-chibi.ts';
 import { HOST_SHEET } from '../app/lounge-host-sprites.ts';
 import { HOSTS } from '../app/lounge-dealer-lines.ts';
-import { npcSpot, kstDayStart, realtyDuty, realtyKeeper } from '../app/lounge-npc-schedule.ts';
+import { npcSpot, realtyDuty, realtyKeeper } from '../app/lounge-npc-schedule.ts';
 import { readNpcRelations, npcMeetAt, assertNpcSocialContext, npcSocialAction } from '../app/lounge-romance.ts';
 import { allNpcLines, npcBanter, npcTalk } from '../app/lounge-npc-dialog.ts';
-import { weekdayOf } from '../app/lounge-calendar.ts';
+import { dayStart, gameTimeOnDay, weekdayOf } from '../app/lounge-calendar.ts';
 import { kstDay } from '../app/lounge-economy.ts';
 import { VILLAGE_PLACES } from '../app/lounge-village-layout.ts';
 import { emptyLife, ensureLifeMember, readLife } from '../app/lounge-life.ts';
@@ -23,7 +23,8 @@ const dayOf = (weekday) => {
   for (let d = DAY0; d < DAY0 + 7; d++) if (weekdayOf(d) === weekday) return d;
   throw new Error('no day');
 };
-const at = (id, weekday, h, m = 0) => npcSpot(id, kstDayStart(dayOf(weekday)) + (h * 60 + m) * 60_000);
+/** Game h:m on the real day with this weekday (게임 하루 = 실제 1시간). */
+const at = (id, weekday, h, m = 0) => npcSpot(id, gameTimeOnDay(dayOf(weekday), h, m));
 const NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 test('weekday rule: 월·수·금 신형만, 화·목 봉미선, 토·일 both (one at the counter, one in the model house)', () => {
@@ -45,7 +46,7 @@ test('weekday rule: 월·수·금 신형만, 화·목 봉미선, 토·일 both (
     const keeper = at(duty.counter, w, 14);
     assert.equal(keeper.area, 'realty', `${NAMES[w]}: ${duty.counter} at the realty`);
     assert.equal(keeper.place, 'realty-in', `${NAMES[w]}: ${duty.counter} at the counter`);
-    assert.equal(realtyKeeper(kstDayStart(dayOf(w)) + 14 * 3_600_000), duty.counter);
+    assert.equal(realtyKeeper(gameTimeOnDay(dayOf(w), 14)), duty.counter);
     const other = duty.counter === 'realtor' ? 'misun' : 'realtor';
     const o = at(other, w, 14);
     if (duty.model) {
@@ -54,7 +55,7 @@ test('weekday rule: 월·수·금 신형만, 화·목 봉미선, 토·일 both (
     } else assert.notEqual(o.area, 'realty', `${NAMES[w]}: ${other} is off duty`);
   }
   // The rule follows the KST day, not the UTC day: Monday 00:30 KST is still Sunday in UTC.
-  const monday = kstDayStart(dayOf(1));
+  const monday = dayStart(dayOf(1));
   assert.equal(new Date(monday + 30 * 60_000).getUTCDay(), 0);
   assert.equal(realtyKeeper(monday + 30 * 60_000), 'realtor');
   assert.equal(realtyKeeper(monday - 30 * 60_000), 'misun');
@@ -96,7 +97,7 @@ test('off duty: 형만 works out of the village and drinks at the tavern; 미선
 
 test('the server meets either keeper at the realty door, and refuses the absent one', () => {
   const door = VILLAGE_PLACES.find((p) => p.id === 'realty').entry;
-  const friday = kstDayStart(dayOf(5)) + 14 * 3_600_000;
+  const friday = gameTimeOnDay(dayOf(5), 14);
   const meet = npcMeetAt('realtor', friday);
   assert.equal(meet.area, 'village');
   assert.deepEqual(meet.point, door);
@@ -107,7 +108,7 @@ test('the server meets either keeper at the realty door, and refuses the absent 
   assert.equal(npcMeetAt('misun', friday).area, 'market');
   assert.throws(() => assertNpcSocialContext({ kind: 'npcSocial', npc: 'misun', op: 'talk' }, undefined, near(), friday), /시장 거리/);
   // Saturday afternoon both are at the realty and both meet at its door.
-  const saturday = kstDayStart(dayOf(6)) + 14 * 3_600_000;
+  const saturday = gameTimeOnDay(dayOf(6), 14);
   for (const id of ['realtor', 'misun']) {
     const m = npcMeetAt(id, saturday);
     assert.equal(m.area, 'village', id);
@@ -115,7 +116,7 @@ test('the server meets either keeper at the realty door, and refuses the absent 
     assert.doesNotThrow(() => assertNpcSocialContext({ kind: 'npcSocial', npc: id, op: 'talk' }, undefined, near(), saturday));
   }
   // Tuesday: 형만 is out of the village.
-  const tuesday = kstDayStart(dayOf(2)) + 11 * 3_600_000;
+  const tuesday = gameTimeOnDay(dayOf(2), 11);
   assert.equal(npcMeetAt('realtor', tuesday).away, true);
   assert.throws(() => assertNpcSocialContext({ kind: 'npcSocial', npc: 'realtor', op: 'talk' }, undefined, near(), tuesday), /신형만/);
 });
@@ -135,7 +136,7 @@ test('migration: 문 사장’s saved realtor rows become 신형만’s; 봉미�
   assert.equal(life.ext[uid].npcRelations.realtor.points, 64);
   assert.equal(life.ext[uid].npcRelations.misun, undefined);
   // 봉미선 is met like anyone else; her row is her own.
-  const saturday = kstDayStart(dayOf(6)) + 14 * 3_600_000;
+  const saturday = gameTimeOnDay(dayOf(6), 14);
   npcSocialAction(life, uid, { kind: 'npcSocial', npc: 'misun', op: 'talk' }, saturday);
   assert.equal(life.ext[uid].npcRelations.misun.points > 0, true);
   assert.equal(life.ext[uid].npcRelations.realtor.points, 64);

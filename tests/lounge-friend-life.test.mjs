@@ -4,7 +4,7 @@
 // festivals, the calendar drift fix and the 마을 적응하기 checklist.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { kstDate, seasonOfDay, cycleSeasonOfDay, weatherOf, calendarOf, SEASONS } from '../app/lounge-calendar.ts';
+import { gameTimeOnDay, kstDate, seasonOfDay, cycleSeasonOfDay, weatherOf, calendarOf, SEASONS } from '../app/lounge-calendar.ts';
 import { DISH_BY_ID, FURNITURE_BY_REF, ITEM_BY_ID } from '../app/lounge-items.ts';
 import { LifeError, emptyLife, ensureLifeMember, isLifeAction, lifeAction, lifeView, readLife } from '../app/lounge-life.ts';
 import { BOND_LEVELS, BOND_POINTS, PLUS_REJECT, bondLevel, recordVisit } from '../app/lounge-life-plus.ts';
@@ -453,9 +453,9 @@ test('festival 추석: 송편 빚기 scored on the server, tries capped, lantern
   }
   s.fails(a, { kind: 'fete', op: 'start' }, T0 + 9 * HOUR, SOCIAL_REJECT.tries);
   assert.equal(s.view(a, T0 + 9 * HOUR).social.fete.board[0].actor, 1);
-  // Lanterns: only after dark, one each, text checked.
-  s.fails(c, { kind: 'fete', op: 'lantern', text: '소원' }, T0, SOCIAL_REJECT.night);
-  const night = kst(2026, 9, 25, 21);
+  // Lanterns: only after dark on the game clock, one each, text checked.
+  s.fails(c, { kind: 'fete', op: 'lantern', text: '소원' }, gameTimeOnDay(kstDay(T0), 12), SOCIAL_REJECT.night);
+  const night = gameTimeOnDay(kstDay(kst(2026, 9, 25)), 21);
   s.fails(c, { kind: 'fete', op: 'lantern', text: '‮' }, night, SOCIAL_REJECT.text);
   s.act(c, { kind: 'fete', op: 'lantern', text: '  모두 건강하게  ' }, night);
   s.fails(c, { kind: 'fete', op: 'lantern', text: '하나 더' }, night + 10_000, SOCIAL_REJECT.lanternDone);

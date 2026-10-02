@@ -41,7 +41,7 @@ import type { WalkPoint } from './lounge-walk-world';
 import './lounge-area-3d.css';
 import './lounge-npc-figures.css';
 import { WalkHints } from './ui/WalkHints';
-import { dayLighting } from './lounge-village-life';
+import { dayLighting, dayLightingAtHour } from './lounge-village-life';
 import { NPC_WALK_AREAS, npcsIn, type NpcArea } from './lounge-npc-schedule';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
@@ -342,7 +342,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (!light?.dayCycle || t - lastDay < 2000) return false;
       lastDay = t;
       const now = Date.now() + latest.current.clockOffset;
-      const pal = latest.current.dayNight === false ? dayLighting(Date.UTC(2026, 0, 1, 3)) : dayLighting(now);
+      const pal = latest.current.dayNight === false ? dayLightingAtHour(12) : dayLighting(now);
       scene.background = new THREE.Color(pal.sky);
       applyVillageLight({ hemi, sun }, renderer, pal, weatherOf(kstDayOf(now)), light);
       night = pal.lamps > 0.5;

@@ -6,7 +6,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { NPC_IDS, NPCS, NPC_POINTS_MAX, NPC_TALK_POINTS, npcLevel } from '../app/lounge-npc-data.ts';
-import { npcSpot, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { npcSpot } from '../app/lounge-npc-schedule.ts';
+import { GAME_MINUTE_MS, dayStart, gameTimeOnDay } from '../app/lounge-calendar.ts';
 import { kstDay } from '../app/lounge-economy.ts';
 import { npcHearts, npcTalkChoices, npcTalkFocus, npcTalkStatus } from '../app/lounge-npc-speech.ts';
 import { npcTalk, npcTalkReply } from '../app/lounge-npc-dialog.ts';
@@ -55,10 +56,10 @@ test('status: role, then what they are doing; a label that only names the workpl
   assert.equal(npcTalkStatus('nasera', { label: '농협 매입 창구', activity: 'work' }), '농협 조합장 · 농협 매입 창구');
   assert.equal(npcTalkStatus('thresh', { label: '잡화점', activity: 'rest' }), '잡화점 주인');
   assert.equal(npcTalkStatus('janna', { label: '  ', activity: 'work' }), '신문 기자');
-  // Every resident, every half hour of a week: short, Korean, never the role twice.
-  const start = kstDayStart(kstDay(T0));
+  // Every resident, a week of real days at every half game hour: short, Korean, never the role twice.
+  const start = dayStart(kstDay(T0));
   for (const npc of NPC_IDS)
-    for (let t = start; t < start + 7 * 1440 * MIN; t += 30 * MIN) {
+    for (let t = start; t < start + 7 * 1440 * MIN; t += 30 * GAME_MINUTE_MS + 30 * MIN) {
       const s = npcTalkStatus(npc, npcSpot(npc, t));
       const role = NPCS[npc].role;
       assert.ok(s.startsWith(role), `${npc}: ${s}`);
@@ -124,12 +125,11 @@ test('focus: holding E talks, then leaves; it never lands on a gift or another w
 });
 
 test('talk answer: never a line already said in the box, the same on every screen', () => {
-  const start = kstDayStart(kstDay(T0));
   let checked = 0;
   for (const npc of NPC_IDS)
     for (let d = 0; d < 6; d++)
       for (const points of [0, 30, 70, 110]) {
-        const now = start + d * 1440 * MIN + (9 + d * 2) * 60 * MIN;
+        const now = gameTimeOnDay(kstDay(T0) + d, 9 + d * 2);
         const spot = npcSpot(npc, now);
         const ctx = { npc, me: '민서', who: 2, now, points, spot, lastGiftName: d % 2 ? '당근' : undefined };
         const opening = npcTalk({ ...ctx, talkedToday: false }).lines;

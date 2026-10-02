@@ -119,6 +119,11 @@ body:has(.b3-room[data-editing]) .l-adapt {
   font-weight: var(--fw-regular);
   font-size: var(--fs-title-s);
 }
+/* the game clock: digits keep their width as the minutes turn */
+.l-hud-clock {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .l-hud-date small,
 .l-hud-weather,
 .l-hud-event-dot,

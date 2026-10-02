@@ -45,7 +45,7 @@ export type RegionExit = {
 export type RegionLook = { ground: string; groundFar: string; fog: string; sky: string };
 /**
  * A district's own light: hemisphere and sun strength, exposure and the sun
- * shadow's half-extent (world units). `dayCycle` follows the KST clock like the
+ * shadow's half-extent (world units). `dayCycle` follows the game clock like the
  * hub (dawn / day / evening / night palettes).
  */
 export type RegionLight = { hemi: number; sun: number; exposure: number; shadow: number; dayCycle?: boolean };

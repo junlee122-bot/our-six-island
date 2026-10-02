@@ -8,8 +8,12 @@ import {
   SEASON_DAYS,
   birthdayActors,
   calendarOf,
+  dayStart,
   eventsOn,
+  gameHour,
+  gameTimeOnDay,
   kstDate,
+  timeOfDay,
   weatherOf,
   weekdayOf,
 } from '../app/lounge-calendar.ts';
@@ -77,8 +81,13 @@ const uuid = () => crypto.randomUUID();
 const MIN = 60_000,
   HOUR = 3_600_000,
   DAY = 86_400_000;
-/** KST wall clock → epoch ms. */
-const kst = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
+/**
+ * Real KST date + game-clock time → epoch ms: game h:min in the game day of
+ * real 12:00–13:00 KST that day (게임 하루 = 실제 1시간, design-game-clock.md).
+ */
+const kst = (y, m, d, h = 12, min = 0) => gameTimeOnDay(kstDay(Date.UTC(y, m - 1, d, 3)), h, min);
+/** Real KST wall clock → epoch ms (growth, timers and daily resets run on it). */
+const real = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
 const T0 = kst(2026, 9, 24); // Thursday, autumn, 추석 (sunny)
 const RAIN = kst(2026, 10, 5, 9); // Monday, spring, rain
 
@@ -141,16 +150,17 @@ test('calendar: KST seasons rotate every 7 real days from the Monday anchor', ()
   assert.equal(c.yearDay, 18);
   assert.equal(c.year, 1);
   assert.equal(c.weekday, 4);
-  assert.equal(c.hour, 12);
-  assert.equal(c.timeOfDay, 'day');
-  assert.equal(c.seasonEndsAt, kst(2026, 9, 28, 0));
+  assert.equal(gameHour(T0), 12);
+  assert.equal(timeOfDay(T0), 'day');
+  assert.equal('hour' in c || 'timeOfDay' in c, false, 'the time of day is the game clock, not in the view');
+  assert.equal(c.seasonEndsAt, dayStart(kstDay(kst(2026, 9, 28))));
   // 28-day game years.
   assert.equal(calendarOf(T0 + 28 * DAY).year, 2);
   assert.equal(calendarOf(T0 + 28 * DAY).season, 'autumn');
   assert.equal(SEASON_DAYS, 7);
-  assert.equal(calendarOf(kst(2026, 9, 24, 6)).timeOfDay, 'dawn');
-  assert.equal(calendarOf(kst(2026, 9, 24, 18)).timeOfDay, 'evening');
-  assert.equal(calendarOf(kst(2026, 9, 24, 23)).timeOfDay, 'night');
+  assert.equal(timeOfDay(kst(2026, 9, 24, 6)), 'dawn');
+  assert.equal(timeOfDay(kst(2026, 9, 24, 18)), 'evening');
+  assert.equal(timeOfDay(kst(2026, 9, 24, 23)), 'night');
 });
 
 test('calendar: Korean holidays 2026–2028, weekly events, placeholder birthdays', () => {
@@ -163,11 +173,13 @@ test('calendar: Korean holidays 2026–2028, weekly events, placeholder birthday
   assert.ok(ids(2027, 5, 5).includes('childrensday-2027'));
   for (const h of HOLIDAYS)
     for (const d of h.dates ?? []) assert.match(d, /^202[678]-\d\d-\d\d$/, h.key);
-  // Weekly: Wed fishing, Fri casino (18–24 KST), Sun market.
+  // Weekly: Wed fishing, Fri casino (real Friday, game 18–06), Sun market.
   assert.ok(ids(2026, 9, 23).includes('weekly-fishing'));
   const fri = calendarOf(kst(2026, 9, 25, 12)).events.find((e) => e.id === 'weekly-casino');
   assert.equal(fri.active, false);
   assert.equal(calendarOf(kst(2026, 9, 25, 20)).events.find((e) => e.id === 'weekly-casino').active, true);
+  assert.equal(calendarOf(kst(2026, 9, 25, 3)).events.find((e) => e.id === 'weekly-casino').active, true, 'game 03:00 is still the casino night');
+  assert.equal(calendarOf(kst(2026, 9, 24, 20)).events.find((e) => e.id === 'weekly-casino'), undefined, 'Thursday (real) has none');
   assert.ok(ids(2026, 9, 27).includes('weekly-market'));
   // Birthdays are placeholders (null) until the user fills them in.
   assert.equal(FRIEND_PROFILES.length, 7);
@@ -229,13 +241,13 @@ test('farming: rain waters crops, watering is refused, today+tomorrow forecast',
   assert.equal(v.me.farm[0].rained, true);
   assert.equal(v.housesPlotsPublic[m.id][0].needsWater, false);
   // Planted the evening before a rainy day: rain waters it at 00:00 KST.
-  const t = kst(2026, 10, 4, 23);
+  const t = real(2026, 10, 4, 23);
   assert.notEqual(weatherOf(kstDay(t)), 'rain');
   s.life.bag[m.id].seeds.strawberry = 1;
   s.act(m, { kind: 'plant', plot: 1, crop: 'strawberry' }, t);
   const p1 = s.life.farms[m.id][1];
   assert.equal(plotReadyAt(p1, t + MIN), t + 8 * HOUR); // no rain yet
-  const midnight = kst(2026, 10, 5, 0);
+  const midnight = real(2026, 10, 5, 0);
   assert.equal(plotReadyAt(p1, midnight + MIN), midnight + Math.ceil((8 * HOUR - HOUR) * 0.6));
 });
 

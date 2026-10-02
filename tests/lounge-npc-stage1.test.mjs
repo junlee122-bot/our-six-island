@@ -5,8 +5,9 @@ import { SHOP_INTERIORS } from '../app/lounge-shop-interiors.ts';
 import { INTERIOR_DOOR } from '../app/lounge-interior-layout.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { GAME_DAY_MS, GAME_MINUTE_MS, dayStart, gameDay, gameTimeOnDay } from '../app/lounge-calendar.ts';
 import { NPC_IDS, NPCS, WALKING_NPCS, giftReaction } from '../app/lounge-npc-data.ts';
-import { NPC_PLACES, NPC_WALK_SPEED, npcCanStand, npcSpot, npcTimeline, kstDayStart, walkPath } from '../app/lounge-npc-schedule.ts';
+import { NPC_PLACES, NPC_WALK_SPEED, npcCanStand, npcSpot, npcTimeline, npcDayStart, walkPath } from '../app/lounge-npc-schedule.ts';
 import { readNpcRelations, npcSocialAction, assertNpcSocialContext, npcGiftable } from '../app/lounge-romance.ts';
 import { NPC_REQUEST_BEOM_CAP, npcRequestsOn, npcBoardView, readNpcBoard } from '../app/lounge-npc-requests.ts';
 import { NPC_LINES, allNpcLines, npcTalk, npcBanter, npcBubble, jannaForecast } from '../app/lounge-npc-dialog.ts';
@@ -24,6 +25,9 @@ import { CROPS } from '../app/lounge-life.ts';
 const DAY = 86_400_000;
 const T0 = Date.UTC(2026, 9, 1, 3); // 12:00 KST, Thursday 2026-10-01
 const DAY0 = kstDay(T0);
+/** Game day in real hour 12 (12:00 KST) of real day DAY0 + d, and game minute m of it (게임 하루 = 실제 1시간). */
+const G = (d) => gameDay(dayStart(DAY0 + d)) + 12;
+const T = (d, m) => npcDayStart(G(d)) + m * GAME_MINUTE_MS;
 
 // ---------------------------------------------------------------- hub + districts
 test('hub grew to 112 × 88 and every district gate stands on the rim, walkable and reachable', () => {
@@ -88,7 +92,7 @@ test('npcSpot is never off walkable ground over two weeks (every 2 minutes)', ()
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS)
       for (let m = 0; m < 1440; m += 2) {
-        const s = npcSpot(id, kstDayStart(DAY0 + d) + m * 60_000 + 17_000);
+        const s = npcSpot(id, T(d, m) + 17_000);
         if (!s.visible) continue;
         assert.ok(WALK_AREAS.includes(s.area), `${id} visible only in walk areas`);
         assert.ok(npcCanStand(s.area, s), `${id} day ${d} ${Math.floor(m / 60)}:${m % 60} ${s.area} (${s.x.toFixed(2)}, ${s.z.toFixed(2)})`);
@@ -101,11 +105,11 @@ test('no teleports: timelines are continuous and areas change only through an ex
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
-      const ev = npcTimeline(id, DAY0 + d);
-      assert.equal(ev[0].t0, kstDayStart(DAY0 + d), `${id} starts at midnight`);
-      assert.ok(ev.at(-1).t1 >= kstDayStart(DAY0 + d + 1), `${id} lasts the day`);
+      const ev = npcTimeline(id, G(d));
+      assert.equal(ev[0].t0, npcDayStart(G(d)), `${id} starts at midnight`);
+      assert.ok(ev.at(-1).t1 >= npcDayStart(G(d) + 1), `${id} lasts the day`);
       // Each day starts where the day before ended (no jump at midnight).
-      const first = ev[0], last = npcTimeline(id, DAY0 + d - 1).at(-1);
+      const first = ev[0], last = npcTimeline(id, G(d) - 1).at(-1);
       assert.equal(first.k, 'stay');
       assert.equal(last.k, 'stay');
       assert.equal(first.place, last.place, `${id} same place across midnight`);
@@ -122,9 +126,9 @@ test('no teleports: timelines are continuous and areas change only through an ex
       // Minute by minute, a visible resident never moves faster than walking.
       let prev = null;
       for (let m = 0; m < 1440; m++) {
-        const s = npcSpot(id, kstDayStart(DAY0 + d) + m * 60_000);
+        const s = npcSpot(id, T(d, m));
         if (prev && prev.visible && s.visible && prev.area === s.area)
-          assert.ok(Math.hypot(prev.x - s.x, prev.z - s.z) <= NPC_WALK_SPEED * 60 + 0.01, `${id} jumped at ${m}`);
+          assert.ok(Math.hypot(prev.x - s.x, prev.z - s.z) <= (NPC_WALK_SPEED * GAME_MINUTE_MS) / 1000 + 0.01, `${id} jumped at ${m}`);
         prev = s;
       }
     }
@@ -142,7 +146,7 @@ test('walking legs follow walkable paths; two residents never share a spot while
   }
   for (let d = 0; d < 7; d++)
     for (let m = 0; m < 1440; m += 10) {
-      const now = kstDayStart(DAY0 + d) + m * 60_000;
+      const now = T(d, m);
       const standing = WALKING_NPCS.map((id) => npcSpot(id, now)).filter((s) => s.visible && !s.walking);
       for (let i = 0; i < standing.length; i++)
         for (let j = i + 1; j < standing.length; j++)
@@ -152,7 +156,7 @@ test('walking legs follow walkable paths; two residents never share a spot while
 });
 
 test('schedules follow the cards: 프리렌 opens late, 신짜장 delivers, everyone goes home at night', () => {
-  const at = (id, h, m = 0, d = 0) => npcSpot(id, kstDayStart(DAY0 + d) + (h * 60 + m) * 60_000);
+  const at = (id, h, m = 0, d = 0) => npcSpot(id, T(d, h * 60 + m));
   // The shop owners work inside their rooms (가게 실내), behind the counter.
   assert.equal(at('nasera', 7).place, 'coop.owner');
   assert.equal(at('frieren', 9).area, 'home');
@@ -235,7 +239,7 @@ test('gift tastes point at real items; loved beats liked; level presents come on
 });
 
 test('meeting a walking resident needs the same area and to stand near them', () => {
-  const now = kstDayStart(DAY0) + 7 * 3_600_000; // 07:00 KST: 나세라 behind the co-op's counter (inside)
+  const now = T(0, 7 * 60); // game 07:00: 나세라 behind the co-op's counter (inside)
   const spot = npcSpot('nasera', now);
   assert.equal(spot.area, 'coop');
   // Across the counter (the room's customer side) is near; the door is not.
@@ -248,9 +252,9 @@ test('meeting a walking resident needs the same area and to stand near them', ()
   assert.throws(() => assertNpcSocialContext(talk, {}, ctx('market', regionToNetwork('market', { x: spot.x, z: spot.z })), now), /범마을 농협/);
   void far;
   // At 3am she is at home up the hill: nobody can meet her.
-  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('coop', near), kstDayStart(DAY0) + 3 * 3_600_000), /만날 수 없어요/);
+  assert.throws(() => assertNpcSocialContext(talk, {}, ctx('coop', near), T(0, 3 * 60)), /만날 수 없어요/);
   // At lunch on a dry day she reads at the library; in the afternoon she is back at the counter.
-  assert.doesNotThrow(() => assertNpcSocialContext(talk, {}, ctx('coop', near), kstDayStart(DAY0) + 14 * 3_600_000));
+  assert.doesNotThrow(() => assertNpcSocialContext(talk, {}, ctx('coop', near), T(0, 14 * 60)));
   // Invited home, she can be met in my room whatever her schedule says.
   assert.doesNotThrow(() => assertNpcSocialContext(talk, { nasera: { points: 30, invitedUntil: now + 60_000 } }, { area: 'home', home: 0, actor: 0, fishing: false }, now));
 });
@@ -348,15 +352,16 @@ test('dialogue selection is deterministic and fills every placeholder', () => {
   assert.deepEqual(jannaForecast(DAY0), jannaForecast(DAY0));
 });
 
-test('late evening: every walking resident is out somewhere visible until 01:00 KST', async () => {
+test('late evening: every walking resident is out somewhere visible until game 01:00', async () => {
   const { npcSpot } = await import('../app/lounge-npc-schedule.ts');
   const visible = new Set(['village', 'market', 'tavern', 'casino', 'lounge', 'bank', 'salon', 'realty', 'furniture', 'bakery', 'coop', 'general', 'fishmarket']);
   const ids = ['nasera', 'frieren', 'thresh', 'sinjjajang', 'volibas', 'janna'];
-  const KST = 9 * 3_600_000, DAY = 86_400_000;
+  const DAY = 86_400_000;
   for (let d = 0; d < 14; d++) {
     const day = Math.floor(Date.UTC(2026, 9, 1) / DAY) + d;
     for (const [h, m] of [[21, 0], [22, 0], [23, 30], [0, 30]]) {
-      const t = (day + (h < 12 ? 1 : 0)) * DAY - KST + (h * 60 + m) * 60_000;
+      // Game hh:mm of the game day in real hour 12 (after midnight: the next game day).
+      const t = gameTimeOnDay(day, h, m) + (h < 12 ? GAME_DAY_MS : 0);
       for (const id of ids) {
         const s = npcSpot(id, t);
         assert.ok(visible.has(s.area) || s.walking, `${id} hidden at ${h}:${m} (day ${d}): ${s.area} ${s.label}`);

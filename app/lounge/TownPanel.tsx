@@ -27,6 +27,7 @@ import { SKILLS, SKILL_INFO } from '../lounge-growth-data';
 import { FIXTURES } from '../lounge-farm-data';
 import { ACTORS } from '../lounge-roster';
 import { kstDay } from '../lounge-economy';
+import { gameClockText } from '../lounge-calendar';
 import { formatBeom, josa } from '../lounge-text';
 import { DISTRICTS, type DistrictId } from '../lounge-districts';
 import { GameButton } from '../ui/GameButton';
@@ -90,10 +91,17 @@ const AREA_WORD: Record<string, string> = {
   wardrobe: '분장실',
   home: '누군가의 방',
 };
+/** Real KST time and day word (records and weekly deadlines stay on the real clock). */
 const hhmm = (t: number) => new Date(t + 9 * 3_600_000).toISOString().slice(11, 16);
 const dayWord = (t: number, now: number) => {
   const d = kstDay(t) - kstDay(now);
   return d === 0 ? '오늘' : d === 1 ? '내일' : `${d}일 뒤`;
+};
+/** When a slot opens next, on the game clock: "3분 뒤 · 게임 오전 5:00" (내일 / n일 뒤 past today). */
+const nextWord = (t: number, now: number) => {
+  const d = kstDay(t) - kstDay(now);
+  const when = d === 0 ? `${Math.max(1, Math.ceil((t - now) / 60_000))}분 뒤` : d === 1 ? '내일' : `${d}일 뒤`;
+  return `${when} · 게임 ${gameClockText(t)}`;
 };
 
 type Props = {
@@ -167,7 +175,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
               {life.shops && (
                 <p className="l-town-sub" data-testid="general-week">
                   이번 주 특가 {itemName(life.shops.special.item)} {formatBeom(life.shops.special.price)}
-                  {life.shops.lantern.open ? ' · 지금은 토요일 밤 등불 상점! 비싼 씨앗 3종이 20% 싸요' : ' · 토요일 저녁 7시부터 자정까지 등불 상점이 열려요'}
+                  {life.shops.lantern.open ? ' · 지금은 토요일 밤 등불 상점! 비싼 씨앗 3종이 20% 싸요' : ' · 토요일, 게임 시각 저녁 6시부터 새벽 6시까지 등불 상점이 열려요(실제로는 매시간 30분)'}
                   {fishShop === 'general' ? ' · 항구가 열리기 전까지 낚시 도구도 여기서 팔아요' : ''}
                 </p>
               )}
@@ -281,7 +289,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
           more: () => (
           <>
             <section className="l-town-notice" aria-label="새벽 경매">
-              <strong>새벽 경매 {a.open ? '· 지금 열려 있어요' : `· ${dayWord(a.next, now)} ${hhmm(a.next)}`}</strong>
+              <strong>새벽 경매 {a.open ? '· 지금 열려 있어요' : `· ${nextWord(a.next, now)}`}</strong>
               <p>
                 경매에 올리면 +{Math.round(AUCTION_PREMIUM * 100)}% · 오늘 남은 웃돈 {formatBeom(a.premiumLeft)} · 남은 마리 {a.unitsLeft}
               </p>
@@ -302,7 +310,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
                         size="s"
                         variant="primary"
                         disabled={busy || !a.open || !a.unitsLeft}
-                        title={a.open ? undefined : '새벽 6시부터 7시까지 열려요'}
+                        title={a.open ? undefined : '게임 시각 새벽 5시부터 8시까지 열려요'}
                         onClick={() => act({ kind: 'auctionSell', item: id, n: Math.min(n, a.unitsLeft) }, `${itemName(id)} ${Math.min(n, a.unitsLeft)}마리를 경매에 올렸어요.`)}
                       >
                         경매
@@ -355,9 +363,9 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
         return (
           <>
             <section className="l-town-notice" aria-label="독서 모임">
-              <strong>독서 모임 {c.open ? '· 지금 열려 있어요' : `· ${dayWord(c.next, now)} ${hhmm(c.next)}`}</strong>
+              <strong>독서 모임 {c.open ? '· 지금 열려 있어요' : `· ${nextWord(c.next, now)}`}</strong>
               <p>
-                수요일 저녁 7시부터 9시까지. 참석하면 고른 기술 경험치 +{READING_XP}. {c.done ? '이번 주에는 이미 참석했어요.' : ''}
+                수요일, 게임 시각 저녁 6시부터 10시까지(실제로는 한 시간에 10분). 참석하면 고른 기술 경험치 +{READING_XP}. {c.done ? '이번 주에는 이미 참석했어요.' : ''}
               </p>
             </section>
             <ul className="l-town-skills">

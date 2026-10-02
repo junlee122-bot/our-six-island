@@ -1,6 +1,6 @@
 // "범타듀의 하루" in the village: where each friend's farm bed, the fruit
 // trees, the market stall and the mailboxes are, the deterministic wandering
-// schedule of offline friends' NPCs, and the KST day/night palette.
+// schedule of offline friends' NPCs, and the day/night palette (game clock).
 // Pure (no three.js / DOM) so the schedule and lighting are testable and every
 // client computes the same thing from the same clock.
 import { VIEW_DIR } from './lounge-village-camera.ts';
@@ -20,6 +20,7 @@ import {
   type VillagePoint,
 } from './lounge-village-layout.ts';
 import type { Crop, LifeView } from './lounge-life.ts';
+import { gameHourFrac } from './lounge-calendar.ts';
 
 /* ------------------------------------------------------------ farm beds */
 
@@ -450,12 +451,9 @@ export function npcLine(
 /* ------------------------------------------------------------ day / night */
 
 export type DayPhase = 'morning' | 'day' | 'evening' | 'night';
-export const KST_OFFSET_MS = 9 * 3_600_000;
-/** Hours (0..24, fractional) on the KST clock. */
-export const kstHour = (t: number) =>
-  ((((t + KST_OFFSET_MS) % 86_400_000) + 86_400_000) % 86_400_000) / 3_600_000;
-export function dayPhase(t: number): DayPhase {
-  const h = kstHour(t);
+/** Lighting phase on the game clock (lounge-calendar.ts: 게임 하루 = 실제 1시간). */
+export const dayPhase = (t: number) => dayPhaseAtHour(gameHourFrac(t));
+export function dayPhaseAtHour(h: number): DayPhase {
   if (h >= 5 && h < 9) return 'morning';
   if (h >= 9 && h < 17) return 'day';
   if (h >= 17 && h < 20) return 'evening';
@@ -521,7 +519,7 @@ export const DAY_PALETTES: Record<DayPhase, Palette> = {
     elevation: 0.7,
   },
 };
-/** Phase centres in KST hours; lighting blends linearly between them. */
+/** Phase centres in game hours; lighting blends linearly between them. */
 const KEYS: [number, DayPhase][] = [
   [3, 'night'],
   [7, 'morning'],
@@ -546,8 +544,10 @@ function mixColor(a: string, b: string, k: number) {
  * Continuous lighting for time `t`: blends the neighbouring phase palettes so
  * the change is smooth across the day. `phase` is the discrete label.
  */
-export function dayLighting(t: number): Palette & { phase: DayPhase } {
-  let h = kstHour(t);
+export const dayLighting = (t: number) => dayLightingAtHour(gameHourFrac(t));
+/** The lighting at game hour `hour` (0..24, fractional); `dayLightingAtHour(12)` is noon. */
+export function dayLightingAtHour(hour: number): Palette & { phase: DayPhase } {
+  let h = hour;
   if (h < KEYS[0][0]) h += 24;
   let i = 0;
   while (i < KEYS.length - 2 && h >= KEYS[i + 1][0]) i++;
@@ -561,7 +561,7 @@ export function dayLighting(t: number): Palette & { phase: DayPhase } {
     b = DAY_PALETTES[p1];
   const num = (x: number, y: number) => x + (y - x) * e;
   return {
-    phase: dayPhase(t),
+    phase: dayPhaseAtHour(hour),
     sky: mixColor(a.sky, b.sky, e),
     sun: mixColor(a.sun, b.sun, e),
     sunIntensity: num(a.sunIntensity, b.sunIntensity),

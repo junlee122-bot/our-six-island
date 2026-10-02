@@ -5,11 +5,11 @@
 //
 //   node --experimental-strip-types --no-warnings scripts/talk-shots.mjs --pages <pages-dir> [--out <dir>] [--views fhd,s,phone] [--skip-friend] [--npc carpenter]
 //
-// --npc <id> talks to another resident instead (the first half hour today
-// they stand in the village, e.g. 발키리's evening walk).
+// --npc <id> talks to another resident instead (the first half game hour of
+// the next game day they stand in the village, e.g. 발키리's evening walk).
 //
-// The mock server's clock is moved to 22:05 KST today (or the first half hour
-// 프리렌 rests in the village, see below), when 프리렌 sits on the
+// The mock server's clock is moved to game 22:05 of the next game day (or the
+// first half game hour 프리렌 rests in the village, see below), when 프리렌 sits on the
 // plaza bench looking at the stars ("빵집 카페 사장 · 광장 벤치에서 별 보는
 // 중"). The page reads that clock from the server like the real game, so the
 // talk and the gift really go through (only on this mock world). --at <ms>
@@ -22,8 +22,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
-import { kstDay } from '../app/lounge-economy.ts';
-import { kstDayStart, npcSpot } from '../app/lounge-npc-schedule.ts';
+import { npcDayStart, npcSpot } from '../app/lounge-npc-schedule.ts';
+import { GAME_MINUTE_MS, gameDay } from '../app/lounge-calendar.ts';
 import { npcPose } from '../app/lounge-village-life.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -50,8 +50,9 @@ const inVillage = (t) => {
   const s = npcSpot(NPC, t);
   return s.area === 'village' && s.visible && !s.walking;
 };
-const dayStart = kstDayStart(kstDay(realNow()));
-const defaultAt = [22 * 60 + 5, ...Array.from({ length: 36 }, (_, i) => 6 * 60 + i * 30)].map((m) => dayStart + m * 60_000).find(inVillage) ?? dayStart + (22 * 60 + 5) * 60_000;
+// Game times in the next game day (게임 하루 = 실제 1시간; a game minute is 2.5 s).
+const dayStart = npcDayStart(gameDay(realNow()) + 1);
+const defaultAt = [22 * 60 + 5, ...Array.from({ length: 36 }, (_, i) => 6 * 60 + i * 30)].map((m) => dayStart + m * GAME_MINUTE_MS).find(inVillage) ?? dayStart + (22 * 60 + 5) * GAME_MINUTE_MS;
 const at = Number(opt('at', String(defaultAt)));
 const shift = at - realNow();
 Date.now = () => realNow() + shift;

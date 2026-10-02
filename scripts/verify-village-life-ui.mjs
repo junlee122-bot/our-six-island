@@ -18,7 +18,7 @@ import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
 import { lifeView } from '../app/lounge-life.ts';
 import { rarityOf } from '../app/lounge-fish-engine.ts';
 import { FISH_BY_ID } from '../app/lounge-items.ts';
-import { dayStart, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
+import { gameTimeOnDay, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
 import { kstDay } from '../app/lounge-economy.ts';
 
 // fishing-reel-fight: late hooks tolerated before the next miss fails, by the grade
@@ -37,13 +37,15 @@ const onlySteps = opt('steps', '') ? new Set(['login-and-winter-world', ...opt('
 assert.ok(only.size && [...only].every((v) => v === 'desktop' || v === 'mobile'), '--only accepts desktop,mobile');
 fs.mkdirSync(out, { recursive: true });
 
-// A winter noon fixture, with real monotonic passage of time for casts and leases.
+// A winter daytime fixture, with real monotonic passage of time for casts and leases.
+// The clock runs a game day per real hour (design-game-clock.md): starting at
+// game 09:00 leaves about 20 real minutes of daylight for the run.
 // Date.now is restored in finally and this never changes OS/browser profile time.
 const realNow = Date.now;
 let winterDay = kstDay(realNow());
 for (let n = 0; n < 40 && seasonOfDay(winterDay) !== 'winter'; n++) winterDay++;
 assert.equal(seasonOfDay(winterDay), 'winter');
-const fixtureStart = dayStart(winterDay) + 12 * 3_600_000, started = performance.now();
+const fixtureStart = gameTimeOnDay(winterDay, 9), started = performance.now();
 Date.now = () => Math.floor(fixtureStart + performance.now() - started);
 const report = { createdAt: new Date(realNow()).toISOString(), fixtureAt: new Date(fixtureStart).toISOString(), build: path.resolve(pages), status: 'running', views: {}, failures: [] };
 const persistReport = () => fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));

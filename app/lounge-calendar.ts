@@ -47,10 +47,71 @@ export const seasonOfDay = (day: number): Season => holidaySeasonOf(day) ?? cycl
 export const seasonOf = (now: number) => seasonOfDay(kstDay(now));
 /** 0 = Sunday … 6 = Saturday (KST). Day 0 (1970-01-01) was a Thursday. */
 export const weekdayOf = (day: number) => mod(day + 4, 7);
-export const kstHour = (now: number) => Math.floor(mod(now + KST, DAY) / HOUR);
+/** Real KST hour 0–23. Only for things on the real clock (records, real timers); the village's time of day is the game clock. */
+export const realKstHour = (now: number) => Math.floor(mod(now + KST, DAY) / HOUR);
+
+// ---------------------------------------------------------------- game clock
+// 게임 하루 = 실제 1시간 (handover/design/design-game-clock.md): 24 game hours
+// in one real hour, game midnight on every real hour. KST is a whole number of
+// hours ahead of UTC, so a game day never straddles a real KST midnight. Pure
+// in `now`: the server and every friend's screen read the same clock, and it
+// runs while nobody is online. Only the time of day is on this clock; daily
+// limits, growth, weather, seasons and weekdays stay on the real KST day.
+export const GAME_DAY_MS = HOUR;
+export const GAME_HOUR_MS = GAME_DAY_MS / 24;
+export const GAME_MINUTE_MS = GAME_HOUR_MS / 60;
+/** Game day number (one per real hour since the epoch). */
+export const gameDay = (now: number) => Math.floor(now / GAME_DAY_MS);
+export const gameDayStart = (g: number) => g * GAME_DAY_MS;
+/** The real KST day a game day falls in (weekday, weather and the daily limits come from it). */
+export const realDayOfGameDay = (g: number) => kstDay(gameDayStart(g));
+/** Game hours 0..24, fractional. */
+export const gameHourFrac = (now: number) => mod(now, GAME_DAY_MS) / GAME_HOUR_MS;
+export const gameHour = (now: number) => Math.floor(gameHourFrac(now));
+/** Game minutes since game midnight, 0..1439. */
+export const gameMinuteOfDay = (now: number) => Math.floor(mod(now, GAME_DAY_MS) / GAME_MINUTE_MS);
+export const gameMinute = (now: number) => gameMinuteOfDay(now) % 60;
+/** When game day `g` reads hour:minute. */
+export const gameTimeAt = (g: number, hour: number, minute = 0) => gameDayStart(g) + hour * GAME_HOUR_MS + minute * GAME_MINUTE_MS;
+/**
+ * hour:minute on the game clock during real KST day `realDay`, in its game day
+ * number `slot` (0–23: the game day of real hour `slot`). Tests and screenshot
+ * scripts pin a game time on a real date with it.
+ */
+export const gameTimeOnDay = (realDay: number, hour: number, minute = 0, slot = 12) =>
+  gameTimeAt(gameDay(dayStart(realDay)) + slot, hour, minute);
+/** The real time it is hour:minute on the game clock in the game day of `now`. */
+export const gameTimeToday = (now: number, hour: number, minute = 0) => gameTimeAt(gameDay(now), hour, minute);
+/**
+ * The first game hour:minute at or after `now`, on a game day whose real KST
+ * day passes `ok` (e.g. a real weekday). Looks up to eight real days ahead.
+ */
+export function nextGameTime(now: number, hour: number, minute = 0, ok: (realDay: number) => boolean = () => true): number {
+  const g0 = gameDay(now);
+  for (let g = g0; g < g0 + 8 * 24 + 1; g++) {
+    if (!ok(realDayOfGameDay(g))) continue;
+    const at = gameTimeAt(g, hour, minute);
+    if (at >= now) return at;
+  }
+  return now;
+}
+/** Whether the game hour of `now` is in [from, to) (wraps past midnight: [18, 6)). */
+export function inGameHours(now: number, from: number, to: number) {
+  const h = gameHourFrac(now);
+  return from <= to ? h >= from && h < to : h >= from || h < to;
+}
+/** HUD clock: "오후 3:20" (game time, ten-minute steps like a farm-game clock). */
+export function gameClockText(now: number) {
+  const m = Math.floor(gameMinuteOfDay(now) / 10) * 10,
+    h = Math.floor(m / 60),
+    h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h < 12 ? '오전' : '오후'} ${h12}:${String(m % 60).padStart(2, '0')}`;
+}
+
 export type TimeOfDay = 'dawn' | 'day' | 'evening' | 'night';
+/** Time of day on the game clock: 새벽 05–08, 낮 08–17, 저녁 17–20, 밤 20–05. */
 export function timeOfDay(now: number): TimeOfDay {
-  const h = kstHour(now);
+  const h = gameHour(now);
   return h >= 5 && h < 8 ? 'dawn' : h >= 8 && h < 17 ? 'day' : h >= 17 && h < 20 ? 'evening' : 'night';
 }
 /** Day or night for fish/bug rules (dawn and evening count as both). */
@@ -207,8 +268,9 @@ export const WEEKLY_EVENTS = [
     weekday: 5,
     name: '금요 카지노의 밤',
     emoji: '🎰',
-    text: '18–24시 테이블 한 판을 마치면 500범 · 함께한 친구와 추억 2배',
+    text: '저녁 6시–새벽 6시(게임 시각) 테이블 한 판을 마치면 500범 · 함께한 친구와 추억 2배',
     fromHour: 18,
+    toHour: 6,
   },
   { key: 'market', weekday: 0, name: '일요 장터', emoji: '🧺', text: '가구 상점 3종 더 · 10% 할인' },
 ] as const;
@@ -217,11 +279,11 @@ export const FISH_DAY_BONUS = 0.2;
 export const CASINO_NIGHT_BONUS = 500;
 export const MARKET_EXTRA = 3;
 export const MARKET_DISCOUNT = 10;
-/** Whether a weekly event runs right now (hours included). */
+/** Whether a weekly event runs right now: its real weekday, and its game hours if it has any. */
 export function weeklyActive(key: WeeklyKey, now: number) {
   const ev = WEEKLY_EVENTS.find((e) => e.key === key)!;
   if (weekdayOf(kstDay(now)) !== ev.weekday) return false;
-  return !('fromHour' in ev) || kstHour(now) >= ev.fromHour;
+  return !('fromHour' in ev) || inGameHours(now, ev.fromHour, ev.toHour);
 }
 
 // ---------------------------------------------------------------- weather
@@ -301,13 +363,16 @@ export type CalendarView = {
   yearDay: number;
   year: number;
   weekday: number;
-  hour: number;
-  timeOfDay: TimeOfDay;
   events: CalendarEvent[];
   seasonEndsAt: number;
   /** Set on holiday days that pin the season (e.g. 추석 → autumn). */
   seasonNote?: string;
 };
+/**
+ * The real KST day's calendar. The time of day is not in it: it is the game
+ * clock (gameHour / timeOfDay of `now`), which every screen reads for itself,
+ * so the server's life view does not change every game minute.
+ */
 export function calendarOf(now: number): CalendarView {
   const day = kstDay(now),
     rel = day - CALENDAR_ANCHOR_DAY,
@@ -321,8 +386,6 @@ export function calendarOf(now: number): CalendarView {
     yearDay,
     year: Math.floor(rel / YEAR_DAYS) + 1,
     weekday: weekdayOf(day),
-    hour: kstHour(now),
-    timeOfDay: timeOfDay(now),
     events: eventsOn(day, now),
     seasonEndsAt: dayStart(day + (SEASON_DAYS - seasonDay + 1)),
     ...(holidaySeasonOf(day) && holidaySeasonOf(day) !== cycleSeasonOfDay(day)

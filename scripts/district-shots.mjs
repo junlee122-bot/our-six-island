@@ -41,14 +41,15 @@ const shops = args.includes('--shops');
 const minimap = args.includes('--minimap');
 // --residents: also walk to the biggest group of residents in the hub and capture it.
 const residents = args.includes('--residents');
-// --at HH:MM: run the mock world (and so the page's clock) at this KST time today.
+// --at HH:MM: run the mock world (and so the page's clock) at this game time
+// in the current game day (게임 하루 = 실제 1시간: game midnight on the real hour).
 const atOpt = opt('at', '');
 if (atOpt) {
   const [hh, mm] = atOpt.split(':').map(Number);
-  const DAY = 86_400_000,
-    KST = 9 * 3_600_000;
+  const HOUR = 3_600_000,
+    GAME_MINUTE = 2_500;
   const real = Date.now();
-  const shift = Math.floor((real + KST) / DAY) * DAY - KST + (hh * 60 + (mm || 0)) * 60_000 - real;
+  const shift = Math.floor(real / HOUR) * HOUR + (hh * 60 + (mm || 0)) * GAME_MINUTE - real;
   const original = Date.now;
   Date.now = () => original() + shift;
 }

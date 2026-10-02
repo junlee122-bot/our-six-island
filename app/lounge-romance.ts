@@ -44,7 +44,7 @@ import {
   type NpcId,
   type NpcLove,
 } from './lounge-npc-data.ts';
-import { hash32, kstHour } from './lounge-calendar.ts';
+import { GAME_MINUTE_MS, gameHour, hash32 } from './lounge-calendar.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { npcSpot } from './lounge-npc-schedule.ts';
 import { regionFromNetwork } from './lounge-areas.ts';
@@ -161,11 +161,11 @@ export function npcPartnerOf(relations: NpcRelations | undefined): { npc: NpcId;
 }
 /**
  * A spouse sleeps in the friend's room: whenever their day plan says they
- * sleep, and always 01:00–08:00 KST. The rest of the day they work and walk
- * about as before (npcSpot is the same for everyone).
+ * sleep, and always 01:00–08:00 on the game clock. The rest of the day they
+ * work and walk about as before (npcSpot is the same for everyone).
  */
 export function spouseAtHome(npc: NpcId, now: number) {
-  const h = kstHour(now);
+  const h = gameHour(now);
   return (h >= 1 && h < 8) || npcSpot(npc, now).activity === 'sleep';
 }
 /** Who (actor) an engaged or married resident belongs to, per resident. */
@@ -193,7 +193,7 @@ export function npcGuestOf(relations: NpcRelations | undefined, now: number): Np
   // The spouse, home for the night and the morning (until they leave for work).
   const partner = npcPartnerOf(relations);
   if (partner?.love === 'married' && spouseAtHome(partner.npc, now)) {
-    const step = 15 * 60_000;
+    const step = 15 * GAME_MINUTE_MS;
     let until = (Math.floor(now / step) + 1) * step;
     for (let i = 0; i < 96 && spouseAtHome(partner.npc, until); i++) until += step;
     return { npc: partner.npc, until, spouse: true };

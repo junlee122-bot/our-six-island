@@ -11,7 +11,7 @@
 import { districtFlagsFor } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { grantBeom, kstDay, type LoungeLedger } from './lounge-economy.ts';
-import { ACTOR_NAMES, hash32, kstHour, isDaytime, isNighttime, seasonOf, weatherOf, type Season, type Weather } from './lounge-calendar.ts';
+import { ACTOR_NAMES, hash32, gameHour, isDaytime, isNighttime, seasonOf, weatherOf, type Season, type Weather } from './lounge-calendar.ts';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, LIGHTS_RARE_BOOST, SPOT_INFO, eligibleSky, eligibleTime, isItemId, type FishDef, type Spot } from './lounge-items.ts';
 import {
   BAITS,
@@ -421,12 +421,12 @@ export type AnglerContext = {
   /** Legends this friend already caught (caught once each). */
   caught?: readonly string[];
 };
-/** Season, sky, day/night, KST hours and legend gates. */
+/** Season, sky, day/night, game-clock hours and legend gates. */
 export function fishAvailable(f: FishDef, ctx: AnglerContext): boolean {
   const p = profileOf(f),
     seasons = p.season ? [p.season] : f.seasons;
   if (!seasons.includes(ctx.season) || !eligibleSky(f.sky, ctx.weather)) return false;
-  if (!eligibleTime(f.time, isDaytime(ctx.now), isNighttime(ctx.now)) || !inHours(p.hours, kstHour(ctx.now))) return false;
+  if (!eligibleTime(f.time, isDaytime(ctx.now), isNighttime(ctx.now)) || !inHours(p.hours, gameHour(ctx.now))) return false;
   if (isLegend(f)) {
     if (ctx.caught?.includes(f.id)) return false;
     if (p.legend && ((ctx.level ?? 10) < p.legend.level || (ctx.rod ?? 5) < p.legend.rod)) return false;

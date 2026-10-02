@@ -4,7 +4,7 @@ import { emptyLife, ensureLifeMember, lifeAction, lifeView, readLife } from '../
 import { fishCandidates } from '../app/lounge-life-plus.ts';
 import { newLoungeLedger, registerWallet, validateLedger, kstDay } from '../app/lounge-economy.ts';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, ITEM_PRICES, DISH_BY_ID, CRAFT_BY_ID } from '../app/lounge-items.ts';
-import { seasonOf, weatherOf, kstHour } from '../app/lounge-calendar.ts';
+import { seasonOf, weatherOf, gameHour, GAME_HOUR_MS } from '../app/lounge-calendar.ts';
 import { FISH_PROFILE, POT_FISH, EXTRA_FISH, inHours } from '../app/lounge-fish-data.ts';
 import {
   MAX_TICKS,
@@ -70,9 +70,9 @@ function world(n = 1) {
   };
   return s;
 }
-/** First time from `from` (hour steps, 4 weeks) that matches. */
+/** First time from `from` (game-hour steps, 4 weeks) that matches. */
 function findTime(pred, from = T0) {
-  for (let t = from; t < from + 28 * 24 * HOUR; t += HOUR) if (pred(t)) return t;
+  for (let t = from; t < from + 28 * 24 * HOUR; t += GAME_HOUR_MS) if (pred(t)) return t;
   throw new Error('no time found');
 }
 /** Cast → hook → fight with the reference player → land. Returns the last result. */
@@ -92,7 +92,7 @@ function fishOnce(s, m, spot, at, opts = {}) {
 }
 
 // ------------------------------------------------------------ species
-test('species availability follows season, weather, KST hours and legend gates', () => {
+test('species availability follows season, weather, game-clock hours and legend gates', () => {
   const ctx = (now, extra = {}) => ({ season: seasonOf(now), weather: weatherOf(kstDay(now)), now, ...extra });
   // Hour windows wrap past midnight.
   assert.equal(inHours([20, 4], 21), true);
@@ -100,24 +100,24 @@ test('species availability follows season, weather, KST hours and legend gates',
   assert.equal(inHours([20, 4], 12), false);
   assert.equal(inHours(undefined, 12), true);
   const eel = FISH_BY_ID.eel;
-  const rainyNight = findTime((t) => eel.seasons.includes(seasonOf(t)) && weatherOf(kstDay(t)) === 'rain' && kstHour(t) === 22);
+  const rainyNight = findTime((t) => eel.seasons.includes(seasonOf(t)) && weatherOf(kstDay(t)) === 'rain' && gameHour(t) === 22);
   assert.equal(fishAvailable(eel, ctx(rainyNight)), true);
-  assert.equal(fishAvailable(eel, ctx(rainyNight - 3 * HOUR)), false, '19시: night, but outside 20–4');
-  const dry = findTime((t) => eel.seasons.includes(seasonOf(t)) && weatherOf(kstDay(t)) === 'sunny' && kstHour(t) === 22);
+  assert.equal(fishAvailable(eel, ctx(rainyNight - 3 * GAME_HOUR_MS)), false, '19시: night, but outside 20–4');
+  const dry = findTime((t) => eel.seasons.includes(seasonOf(t)) && weatherOf(kstDay(t)) === 'sunny' && gameHour(t) === 22);
   assert.equal(fishAvailable(eel, ctx(dry)), false, 'eel needs rain');
   const sandfish = FISH_BY_ID.sandfish;
   const winter = findTime((t) => seasonOf(t) === 'winter');
   const summer = findTime((t) => seasonOf(t) === 'summer');
   assert.equal(fishAvailable(sandfish, ctx(winter)), true);
   assert.equal(fishAvailable(sandfish, ctx(summer)), false);
-  // Legend: spring, dry, 06–10 KST, level 5, rod 3, once.
+  // Legend: spring, dry, game 06–10, level 5, rod 3, once.
   const bt = FISH_BY_ID.blossomtrout;
-  const spring = findTime((t) => seasonOf(t) === 'spring' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && kstHour(t) === 7);
+  const spring = findTime((t) => seasonOf(t) === 'spring' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && gameHour(t) === 7);
   assert.equal(fishAvailable(bt, ctx(spring, { level: 5, rod: 3 })), true);
   assert.equal(fishAvailable(bt, ctx(spring, { level: 4, rod: 3 })), false);
   assert.equal(fishAvailable(bt, ctx(spring, { level: 9, rod: 2 })), false);
   assert.equal(fishAvailable(bt, ctx(spring, { level: 9, rod: 3, caught: ['blossomtrout'] })), false);
-  assert.equal(fishAvailable(bt, ctx(spring + 4 * HOUR, { level: 9, rod: 3 })), false, '11시');
+  assert.equal(fishAvailable(bt, ctx(spring + 4 * GAME_HOUR_MS, { level: 9, rod: 3 })), false, '11시');
   assert.ok(anglerCandidates('falls', ctx(spring, { level: 9, rod: 3 })).some((f) => f.id === 'blossomtrout'));
   // The legacy table never offers the new legends or crab-pot catches.
   for (const f of [...EXTRA_FISH.filter((f) => f.weight <= 1), ...POT_FISH])
@@ -320,7 +320,7 @@ test('a landed fish: bag, log, records, quality, weight, cup score, XP; selling 
 test('legends are caught once per friend; co-op counts friends at the same spot', () => {
   const s = world(2), [m, n] = s.members;
   s.skill(m, 4_500, 3);
-  const spring = findTime((t) => seasonOf(t) === 'spring' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && kstHour(t) === 7);
+  const spring = findTime((t) => seasonOf(t) === 'spring' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && gameHour(t) === 7);
   s.life.flags = ['bridge'];
   const ctx = { season: 'spring', weather: weatherOf(kstDay(spring)), now: spring, level: 10, rod: 3 };
   assert.ok(fishAvailable(FISH_BY_ID.blossomtrout, ctx));

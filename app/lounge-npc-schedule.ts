@@ -1,12 +1,15 @@
-// Where every resident is, as a pure function of the KST clock
-// (design-village-2x-npcs.md §2 "NPC가 맵을 오가는 방식", §4 "일과표"):
+// Where every resident is, as a pure function of the game clock
+// (design-village-2x-npcs.md §2 "NPC가 맵을 오가는 방식", §4 "일과표";
+// design-game-clock.md: 게임 하루 = 실제 1시간):
 //
 //   npcSpot(id, now) → { area, x, z, facing, walking, activity, label }
 //
 // No server row, no realtime: every friend's screen computes the same spot
-// for the same instant. A day is a list of "be at place P from hh:mm"
-// segments picked by weekday, weather (lounge-calendar.ts weatherOf), market
-// day (Sunday, 일요 장터) and festival days. Changing place is a walk:
+// for the same instant. Every game day (one real hour) is a list of "be at
+// place P from hh:mm" segments in game minutes, picked by the real day the
+// game day falls in: its weekday, weather (lounge-calendar.ts weatherOf),
+// market day (Sunday, 일요 장터) and festival days. Walks and door/gate hops
+// keep real seconds (a later segment simply starts once they arrive). Changing place is a walk:
 // along the area's walking path to its exit, a hidden transit (~20 s through
 // a district gate, a few seconds through a door), then from the next area's
 // entrance on to the place. Places are named spots that tests check are
@@ -29,7 +32,7 @@
 // 시장 거리 and the bakery, then fetches him from the tavern. Stage-2 residents (hasSprite: false) have
 // schedules too, but npcsIn leaves them out until they can be drawn.
 import { kstDay } from './lounge-economy.ts';
-import { holidaysOn, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
+import { GAME_DAY_MS, GAME_MINUTE_MS, gameDay, gameDayStart, holidaysOn, realDayOfGameDay, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
 import { VILLAGE_PLACES, villagePath, villageCanWalk, VILLAGE_BOARD, VILLAGE_MUSEUM, VILLAGE_PAVILION, VILLAGE_HARBOR, type VillagePoint } from './lounge-village-layout.ts';
 import { walkableNear } from './lounge-village-life.ts';
 import { DISTRICTS } from './lounge-districts.ts';
@@ -46,10 +49,6 @@ import { NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
 
-const MIN = 60_000,
-  HOUR = 60 * MIN,
-  DAY = 24 * HOUR,
-  KST = 9 * HOUR;
 /** Resident walking speed (world units / s); friends walk 5.2. */
 export const NPC_WALK_SPEED = 2.1;
 /** Hidden time through a district gate / a building door. */
@@ -444,17 +443,19 @@ export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
 
 // ---------------------------------------------------------------- day plans
 type Seg = readonly [hhmm: number, place: string, act: NpcActivity, label?: string];
+/** `day` is the game day (varies the seeds); weekday, weather and festivals come from its real KST day. */
 export type DayKind = { weekday: number; rain: boolean; marketDay: boolean; festival: boolean; day: number; hill: boolean };
 export function dayKind(day: number, hill = false): DayKind {
-  const weekday = weekdayOf(day);
-  const w = weatherOf(day);
+  const real = realDayOfGameDay(day);
+  const weekday = weekdayOf(real);
+  const w = weatherOf(real);
   return {
     day,
     hill,
     weekday,
     rain: w === 'rain' || w === 'storm',
     marketDay: weekday === 0,
-    festival: holidaysOn(day).some((h) => !!h.claim),
+    festival: holidaysOn(real).some((h) => !!h.claim),
   };
 }
 const hm = (h: number, m = 0) => h * 60 + m;
@@ -498,7 +499,7 @@ export const realtyKeeper = (now: number): RealtyKeeper => realtyDuty(weekdayOf(
 
 function realtyPlan(id: RealtyKeeper, k: DayKind): Seg[] {
   const duty = realtyDuty(k.weekday);
-  // The friends play until 01:00 KST, so both stay out until then: 형만 on his
+  // The friends play late, so both stay out until 01:00 (game clock): 형만 on his
   // stool at the tavern, 미선 coming to fetch him (and staying for a glass).
   const night: Seg = id === 'realtor' ? [0, 't.bar-5', 'drink', '주점에서 늦게까지 한잔'] : [0, 't.misun', 'drink', '주점에서 형만 씨랑 한잔하는 중'];
   const morning: Seg[] = [night, [hm(1), 'home', 'sleep', '집에서 자는 중']];
@@ -706,7 +707,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return [
         [0, 'home', 'sleep'],
         [hm(5), 'hb.auction', 'stall', '새벽 경매 여는 중'],
-        [hm(7), 'fishmarket.owner', 'work', '어시장'],
+        [hm(8), 'fishmarket.owner', 'work', '어시장'],
         [hm(12), 'hb.lighthouse-door', 'deliver', '등대에 도시락 배달 중'],
         [hm(13), 'fishmarket.owner', 'work', '어시장'],
         [hm(15), 'hb.guild', 'work', '낚시조합'],
@@ -815,8 +816,9 @@ function homesOf(id: NpcId, plan: Seg[], hill: boolean): Seg[] {
 
 
 // ---------------------------------------------------------------- evenings
-// The friends play mostly 20:00–01:00 KST, so every resident who walks about
-// stays out until 01:00 and sleeps only 01:00–(morning). The day plans above
+// Every resident who walks about stays out until 01:00 and sleeps only
+// 01:00–(morning) on the game clock (this predates the game clock, when the
+// friends played 20:00–01:00 KST; the evening is kept as the village's night). The day plans above
 // cover the day until about 19:00; the evening comes from here: an evening
 // spot from 19:30 and a late spot from 22:30, which they keep past midnight —
 // the next day's timeline starts where the last one ended and sends them home
@@ -1004,7 +1006,7 @@ let worldDefault: NpcWorld = {};
 export const setNpcWorld = (w: NpcWorld) => {
   worldDefault = { hill: !!w.hill };
 };
-/** Every event of a resident's KST day (cached). */
+/** Every event of a resident's game day `day` (cached). Times are real ms. */
 export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefault): Ev[] {
   const hill = !!world.hill;
   const key = `${id}:${day}:${hill ? 1 : 0}`;
@@ -1012,8 +1014,8 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
   if (hit) return hit;
   const k = dayKind(day, hill);
   const plan = homesOf(id, withNight(id, planOf(id, k), day, hill), hill);
-  const start = day * DAY - KST;
-  const end = start + DAY;
+  const start = gameDayStart(day);
+  const end = start + GAME_DAY_MS;
   const ev: Ev[] = [];
   let cur = plan[0][1],
     curAct = plan[0][2],
@@ -1021,7 +1023,7 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
     t = start;
   for (let i = 1; i < plan.length; i++) {
     const [hhmm, to, act, label] = plan[i];
-    const at = Math.max(t, start + hhmm * MIN);
+    const at = Math.max(t, start + hhmm * GAME_MINUTE_MS);
     if (to === cur) {
       ev.push({ k: 'stay', t0: t, t1: at, place: cur, act: curAct, label: curLabel });
       t = at;
@@ -1029,8 +1031,16 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
       curLabel = label ?? NPC_PLACES[to].name;
       continue;
     }
-    ev.push({ k: 'stay', t0: t, t1: at, place: cur, act: curAct, label: curLabel });
-    const moves = route(cur, to, at, goingLabel(to, label));
+    // Leave early enough to be there at hh:mm: a walk takes real seconds,
+    // which are game minutes (a district gate alone is 8), so a resident who
+    // only set off at hh:mm would arrive a game hour late.
+    const going = goingLabel(to, label);
+    const trip = route(cur, to, 0, going),
+      tripMs = trip.length ? trip[trip.length - 1].t1 : 0;
+    // Bedtime is the exception: they stay out until then and walk home after.
+    const depart = act === 'sleep' ? at : Math.max(t, at - tripMs);
+    ev.push({ k: 'stay', t0: t, t1: depart, place: cur, act: curAct, label: curLabel });
+    const moves = route(cur, to, depart, going);
     ev.push(...moves);
     t = moves.length ? moves[moves.length - 1].t1 : at;
     cur = to;
@@ -1060,7 +1070,7 @@ function interp(e: Ev & { k: 'walk' }, now: number) {
 
 /** Where resident `id` is at `now` (ms, server clock). */
 export function npcSpot(id: NpcId, now: number, world: NpcWorld = worldDefault): NpcSpot {
-  const day = kstDay(now);
+  const day = gameDay(now);
   const ev = npcTimeline(id, day, world);
   let e = ev[ev.length - 1];
   for (const x of ev)
@@ -1119,7 +1129,8 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   general: SHOP_INTERIORS.general.name,
   fishmarket: SHOP_INTERIORS.fishmarket.name,
 };
-/** Test / debug helper: the day's plan as [minute, place]. */
+/** Test / debug helper: game day `day`'s plan as [game minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>
   homesOf(id, withNight(id, planOf(id, dayKind(day, !!world.hill)), day, !!world.hill), !!world.hill).map(([t, p]) => [t, p] as const);
-export const kstDayStart = (day: number) => day * DAY - KST;
+/** When game day `day` starts (real ms): the schedule's midnight. */
+export const npcDayStart = gameDayStart;

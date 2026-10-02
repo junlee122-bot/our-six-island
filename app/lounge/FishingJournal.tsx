@@ -29,7 +29,8 @@ const dateText = (at: number) => {
   const d = new Date(at + 9 * 3_600_000);
   return `${d.getUTCMonth() + 1}월 ${d.getUTCDate()}일`;
 };
-const hoursText = (h?: readonly [number, number]) => (h ? `${h[0]}시~${h[1]}시` : '');
+/** Bite hours on the game clock (게임 하루 = 실제 1시간). */
+const hoursText = (h?: readonly [number, number]) => (h ? `게임 ${h[0]}시~${h[1]}시` : '');
 const POT_IDS = new Set(POT_FISH.map((f) => f.id));
 const BOOK: readonly FishDef[] = [...FISH.filter((f) => f.spots.length), ...POT_FISH];
 

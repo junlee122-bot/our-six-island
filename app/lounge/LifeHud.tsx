@@ -20,7 +20,7 @@ import {
 } from '../ui/icons';
 import type { LifeView } from '../lounge-life';
 import type { Season, Weather } from '../lounge-calendar';
-import { SEASON_INFO, WEATHER_INFO } from '../lounge-calendar';
+import { SEASON_INFO, WEATHER_INFO, gameClockText, timeOfDay } from '../lounge-calendar';
 import {
   HOTBAR_KEY,
   HOTBAR_SIZE,
@@ -61,7 +61,11 @@ function hoursLeft(until: number, now: number) {
   return h >= 24 ? `${Math.ceil(h / 24)}일` : `${h}시간`;
 }
 
-/** Top HUD chip: "2년차 가을 5일 · 금요일 · 맑음" with today/tomorrow forecast. */
+/**
+ * Top HUD chip: the game clock "오후 3:20" over "가을 5일 · 금요일", the weather,
+ * and today/tomorrow's forecast. The clock is the game's (게임 하루 = 실제 1시간);
+ * the date, season and weekday are the real KST day's.
+ */
 export function CalendarChip({
   life,
   clockOffset,
@@ -74,7 +78,8 @@ export function CalendarChip({
 }) {
   const tipId = useId();
   const [open, setOpen] = useState(false);
-  const now = useNow(true, 60_000) + clockOffset;
+  // Ten game minutes are 25 real seconds: refresh often enough for the clock.
+  const now = useNow(true, 5_000) + clockOffset;
   const cal = life?.calendar;
   if (!cal || !life?.weather) return null;
   const SeasonIcon = SEASON_ICON[cal.season];
@@ -100,10 +105,12 @@ export function CalendarChip({
       >
         <SeasonIcon size={17} aria-hidden="true" className="l-hud-season" />
         <span className="l-hud-date">
-          <strong>
-            {SEASON_INFO[cal.season].name} {cal.seasonDay}일
+          <strong className="l-hud-clock" data-testid="hud-clock" data-tod={timeOfDay(now)}>
+            {gameClockText(now)}
           </strong>
-          <small>{calendarLine(cal).split(' · ')[1]}</small>
+          <small>
+            {SEASON_INFO[cal.season].name} {cal.seasonDay}일 · {calendarLine(cal).split(' · ')[1]}
+          </small>
         </span>
         <span className="l-hud-weather" data-weather={life.weather.today}>
           <TodayIcon size={17} aria-hidden="true" />
@@ -141,6 +148,7 @@ export function CalendarChip({
         <p className="l-hud-tip-line">
           {cal.seasonNote ?? `${SEASON_INFO[cal.season].name}이 ${hoursLeft(cal.seasonEndsAt, now)} 뒤에 끝나요 · 한 계절은 7일이에요.`}
         </p>
+        <p className="l-hud-tip-line">마을 시계는 실제 1시간이 하루예요. 날짜·계절·하루 횟수는 실제 날짜를 따라요.</p>
         {events.length > 0 && (
           <ul className="l-hud-events">
             {events.map((e) => (

@@ -337,7 +337,7 @@ export function SettingsModal({
               />
               <Toggle
                 label="낮과 밤"
-                hint="마을 조명이 한국 시간에 맞춰 아침·낮·저녁·밤으로 바뀌어요."
+                hint="마을 조명이 게임 시계(하루 = 실제 1시간)에 맞춰 아침·낮·저녁·밤으로 바뀌어요."
                 checked={settings.dayNight}
                 onChange={(dayNight) => update({ dayNight })}
               />

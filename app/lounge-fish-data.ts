@@ -62,7 +62,7 @@ export type FishProfile = {
   behaviour: Behaviour;
   /** 10 (easy) … 95 (legend). */
   difficulty: number;
-  /** KST hours [from, to) when it bites (wraps past midnight). */
+  /** Game-clock hours [from, to) when it bites (wraps past midnight). */
   hours?: readonly [number, number];
   /** Real season of the new legends (their catalog entry says none). */
   season?: Season;
@@ -127,7 +127,7 @@ export const FISH_PROFILE: Readonly<Record<string, FishProfile>> = {
 /** The two legends from before the upgrade: once per friend, no extra gates. */
 export const LEGACY_LEGENDS = ['goldcarp', 'moonhairtail'] as const;
 
-/** Hours window check (KST hour 0–23; [from, to) wraps past midnight). */
+/** Hours window check (game hour 0–23; [from, to) wraps past midnight). */
 export function inHours(hours: readonly [number, number] | undefined, hour: number) {
   if (!hours) return true;
   const [from, to] = hours;

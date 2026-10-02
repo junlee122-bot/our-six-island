@@ -6,7 +6,7 @@
 //   node --experimental-strip-types --no-warnings scripts/fishing-economy.mjs
 import { emptyLife, ensureLifeMember, lifeAction, lifeView, CROP_INFO, CROPS } from '../app/lounge-life.ts';
 import { newLoungeLedger, registerWallet, validateLedger, kstDay } from '../app/lounge-economy.ts';
-import { seasonOf, weatherOf, kstHour } from '../app/lounge-calendar.ts';
+import { seasonOf, weatherOf, gameHour, GAME_HOUR_MS } from '../app/lounge-calendar.ts';
 import { botPlay, TICK_MS } from '../app/lounge-fish-minigame.ts';
 
 const HOUR = 3_600_000;
@@ -15,10 +15,11 @@ const M = { id: UID, actor: 0 };
 /** Seconds around each fish that are not the bite wait or the fight. */
 const OVERHEAD_MS = 1_000 + 400 + 2_500; // cast swing, reaction, reading the card
 
+/** The first dry day of `season` at game hour `hour` (an hour of fishing then runs through a whole game day). */
 function findTime(season, hour) {
   const T0 = Date.UTC(2026, 8, 24, 3);
-  for (let t = T0; t < T0 + 28 * 24 * HOUR; t += HOUR)
-    if (seasonOf(t) === season && kstHour(t) === hour && !['rain', 'storm'].includes(weatherOf(kstDay(t)))) return t;
+  for (let t = T0; t < T0 + 28 * 24 * HOUR; t += GAME_HOUR_MS)
+    if (seasonOf(t) === season && gameHour(t) === hour && !['rain', 'storm'].includes(weatherOf(kstDay(t)))) return t;
   throw new Error('no time');
 }
 

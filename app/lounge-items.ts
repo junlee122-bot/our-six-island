@@ -24,7 +24,7 @@ export type SpotInfo = {
   flag?: string;
   /** Fishing rod level needed (strong water). */
   rod?: 2 | 3;
-  /** Open only at night (KST 19:00–05:00). */
+  /** Open only when isNighttime (game clock: 17:00–08:00). */
   night?: boolean;
   /** One line about the water, shown on the spot card. */
   note: string;

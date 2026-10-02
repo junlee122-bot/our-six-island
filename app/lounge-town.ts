@@ -28,7 +28,7 @@
 //
 // Per-friend state: life.ext[uid].town (absent in older worlds).
 import { grantBeom, kstDay, spendBeom, type LoungeLedger } from './lounge-economy.ts';
-import { hash32, kstHour, seasonOf, seasonOfDay, weekdayOf } from './lounge-calendar.ts';
+import { hash32, inGameHours, nextGameTime, seasonOf, seasonOfDay, weekdayOf } from './lounge-calendar.ts';
 import { ITEM_BY_ID, ITEM_PRICES, isItemId } from './lounge-items.ts';
 import { SHOP_FOODS, SHOP_FOOD_BY_ID, SHOP_FOOD_PER_DAY, type ShopFoodDef } from './lounge-food-data.ts';
 import { tasteNote } from './lounge-food.ts';
@@ -43,8 +43,8 @@ import { DISTRICT_FLAG, DISTRICT_IDS, type DistrictId } from './lounge-districts
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 
 // ---------------------------------------------------------------- numbers
-/** 새벽 경매: KST hours [from, to). */
-export const AUCTION_HOURS = [6, 7] as const;
+/** 새벽 경매: game hours [from, to) every game day (game clock: design-game-clock.md §5). */
+export const AUCTION_HOURS = [5, 8] as const;
 export const AUCTION_PREMIUM = 0.3;
 /** Premium 범 a friend can get from the dawn auction in one KST day. */
 export const AUCTION_PREMIUM_CAP = 3_000;
@@ -59,13 +59,13 @@ export const BAKERY_PER_DAY = SHOP_FOOD_PER_DAY;
 /** 장날 좌판: price share of the general-store price and purchases a day. */
 export const STALL_DISCOUNT = 0.8;
 export const STALL_PER_DAY = 3;
-/** 독서 모임: weekday (0 = Sunday), KST hours [from, to), XP for the chosen skill. */
+/** 독서 모임: real weekday (0 = Sunday), game hours [from, to), XP for the chosen skill. */
 export const READING_WEEKDAY = 3;
-export const READING_HOURS = [19, 21] as const;
+export const READING_HOURS = [18, 22] as const;
 export const READING_XP = 30;
-/** 공연 밤: weekdays and KST hours [from, to) (the tavern's stage slot). */
+/** 공연 밤: real weekdays and game hours [from, to) (the tavern's stage slot). */
 export const SHOW_WEEKDAYS = [2, 5] as const;
-export const SHOW_HOURS = [20, 22] as const;
+export const SHOW_HOURS = [19, 23] as const;
 
 export type BakeryItem = ShopFoodDef;
 /** Prices are sinks; fills are need points (0–100 scale). The menus live in lounge-food-data.ts. */
@@ -81,7 +81,7 @@ export type { TownAction, TownActionKind, StallId };
 export const TOWN_REJECT = {
   harborShut: '항구 구역이 아직 열리지 않았어요.',
   hillShut: '언덕 주택가가 아직 열리지 않았어요.',
-  auctionClosed: '새벽 경매는 아침 6시부터 7시까지만 열려요.',
+  auctionClosed: '새벽 경매는 게임 시각 새벽 5시부터 8시까지만 열려요.',
   auctionFish: '경매에는 물고기만 올릴 수 있어요.',
   auctionUnits: `경매에는 하루 ${AUCTION_UNITS_MAX}마리까지 올릴 수 있어요.`,
   coopCrop: '이번 주 시세표에 있는 작물만 웃돈을 받아요. 다른 작물은 텃밭 장부에서 팔아 주세요.',
@@ -95,7 +95,7 @@ export const TOWN_REJECT = {
   harborStallClosed: '마키마의 항구 좌판은 수요일과 토요일에만 열려요.',
   stallMax: `장날 좌판은 하루 ${STALL_PER_DAY}번까지 살 수 있어요.`,
   stallBought: '이 좌판 물건은 오늘 이미 샀어요.',
-  clubClosed: '독서 모임은 수요일 저녁 7시부터 9시까지 도서관에서 열려요.',
+  clubClosed: '독서 모임은 수요일, 게임 시각 저녁 6시부터 10시까지 도서관에서 열려요.',
   clubDone: '이번 주 독서 모임에는 이미 참석했어요.',
   clubSkill: '읽을 책을 다시 골라 주세요.',
   balance: '범이 부족해요.',
@@ -176,37 +176,20 @@ export function recordDistrictVisit(life: LifeState, uid: string, district: Dist
 }
 
 // ---------------------------------------------------------------- clocks
-export const auctionOpen = (now: number) => {
-  const h = kstHour(now);
-  return h >= AUCTION_HOURS[0] && h < AUCTION_HOURS[1];
-};
+export const auctionOpen = (now: number) => inGameHours(now, AUCTION_HOURS[0], AUCTION_HOURS[1]);
 export const marketDayOn = (day: number) => weekdayOf(day) === 0;
 /** 마키마 sets up at the harbor on Wednesdays and Saturdays. */
 export const HARBOR_STALL_DAYS = [3, 6] as const;
 export const harborStallOn = (day: number) => (HARBOR_STALL_DAYS as readonly number[]).includes(weekdayOf(day));
 /** Whether a stall is open on `day`. */
 export const stallOpenOn = (stall: StallId, day: number) => (stall === 'stall-harbor' ? harborStallOn(day) : marketDayOn(day));
-export const readingOpen = (now: number) => {
-  const h = kstHour(now);
-  return weekdayOf(kstDay(now)) === READING_WEEKDAY && h >= READING_HOURS[0] && h < READING_HOURS[1];
-};
-export const showNight = (now: number) => {
-  const h = kstHour(now);
-  return (SHOW_WEEKDAYS as readonly number[]).includes(weekdayOf(kstDay(now))) && h >= SHOW_HOURS[0] && h < SHOW_HOURS[1];
-};
-/** Next start of a weekly slot (weekdays, KST hour) at or after `now` (ms). */
-export function nextSlot(now: number, weekdays: readonly number[], hour: number): number {
-  const DAY = 86_400_000,
-    KST = 9 * 3_600_000;
-  const today = kstDay(now);
-  for (let d = 0; d < 8; d++) {
-    const day = today + d;
-    if (!weekdays.includes(weekdayOf(day))) continue;
-    const at = day * DAY - KST + hour * 3_600_000;
-    if (at >= now) return at;
-  }
-  return now;
-}
+export const readingOpen = (now: number) =>
+  weekdayOf(kstDay(now)) === READING_WEEKDAY && inGameHours(now, READING_HOURS[0], READING_HOURS[1]);
+export const showNight = (now: number) =>
+  (SHOW_WEEKDAYS as readonly number[]).includes(weekdayOf(kstDay(now))) && inGameHours(now, SHOW_HOURS[0], SHOW_HOURS[1]);
+/** Next start of a slot (real weekdays, game hour) at or after `now` (ms). */
+export const nextSlot = (now: number, weekdays: readonly number[], hour: number): number =>
+  nextGameTime(now, hour, 0, (day) => weekdays.includes(weekdayOf(day)));
 
 /** 나세라's weekly price notice: three crops in season this week (deterministic). */
 export function coopWeekCrops(week: number): Crop[] {

@@ -4,8 +4,9 @@
 // invariant, the district counters, and the eight stage-2 residents.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { GAME_MINUTE_MS, dayStart, gameDay } from '../app/lounge-calendar.ts';
 import { NPC_IDS, NPCS, STAGE2_NPCS, WALKING_NPCS, NPC_BONDS } from '../app/lounge-npc-data.ts';
-import { NIGHT_NPCS, NPC_PLACES, NPC_WALK_SPEED, npcCanStand, npcSpot, npcTimeline, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { NIGHT_NPCS, NPC_PLACES, NPC_WALK_SPEED, npcCanStand, npcSpot, npcTimeline, npcDayStart } from '../app/lounge-npc-schedule.ts';
 import { NPC_LINES, allNpcLines, npcBanter } from '../app/lounge-npc-dialog.ts';
 import { DISTRICTS, districtOpen, districtGoalText } from '../app/lounge-districts.ts';
 import { closeResidents, districtsView, museumFishSpecies, settleDistrictUnlocks } from '../app/lounge-district-unlocks.ts';
@@ -39,11 +40,14 @@ const DAY = 86_400_000,
   HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 9, 1, 3); // 12:00 KST, Thursday 2026-10-01
 const DAY0 = kstDay(T0);
-/** KST day `d` (from DAY0) at hh:mm. */
-const at = (d, h, m = 0) => kstDayStart(DAY0 + d) + h * HOUR + m * 60_000;
+/** Game day in real hour 12 (12:00 KST) of real day DAY0 + d, and game minute m of it (게임 하루 = 실제 1시간). */
+const G = (d) => gameDay(dayStart(DAY0 + d)) + 12;
+const T = (d, m) => npcDayStart(G(d)) + m * GAME_MINUTE_MS;
+/** Game hh:mm on real KST day `d` (from DAY0). */
+const at = (d, h, m = 0) => T(d, h * 60 + m);
 /** The next KST day at or after DAY0 with this weekday (0 = Sunday). */
 const dayWith = (weekday) => {
-  for (let d = 0; d < 7; d++) if (new Date(kstDayStart(DAY0 + d) + 9 * HOUR).getUTCDay() === weekday) return d;
+  for (let d = 0; d < 7; d++) if (new Date(npcDayStart(G(d)) + 9 * HOUR).getUTCDay() === weekday) return d;
 };
 
 function world(n = 1, flags = []) {
@@ -212,6 +216,14 @@ test('the server refuses the harbor and the hillside until their flags are set',
 // 가게 실내: the shop rooms are walk areas too.
 const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
+/**
+ * Walkable, or within 0.1 of walkable ground: the region walkers check a
+ * path's line of sight every 0.2 units, so a walk may graze a collider's
+ * margin by a few centimetres at a corner. Sampling every game minute (2.5 s)
+ * lands on those; whole-step clipping would still fail.
+ */
+const standsNear = (area, p) =>
+  npcCanStand(area, p) || [0, 1, 2, 3, 4, 5, 6, 7].some((i) => npcCanStand(area, { x: p.x + 0.1 * Math.cos((i * Math.PI) / 4), z: p.z + 0.1 * Math.sin((i * Math.PI) / 4) }));
 const seenAt = (id, now, world) => {
   const s = npcSpot(id, now, world);
   if (s.visible) return true;
@@ -219,11 +231,12 @@ const seenAt = (id, now, world) => {
   return POSTS.test(s.place ?? '') || s.area === 'realty' || s.area === 'furniture';
 };
 for (const hill of [false, true])
-  test(`every resident is out and visible at 22:00 and 00:30 KST, and asleep at 03:00 (hill ${hill ? 'open' : 'closed'})`, () => {
+  test(`every resident is out and visible at game 21:00 and 00:30, and asleep at 03:00 (hill ${hill ? 'open' : 'closed'})`, () => {
     const world = { hill };
     for (let d = 0; d < 14; d++)
       for (const id of NPC_IDS) {
-        assert.ok(seenAt(id, at(d, 22), world), `${id} day ${d} 22:00 (${npcSpot(id, at(d, 22), world).label})`);
+        // (By 22:00 some already set off for their 22:30 spot and may be passing a gate.)
+        assert.ok(seenAt(id, at(d, 21), world), `${id} day ${d} 21:00 (${npcSpot(id, at(d, 21), world).label})`);
         assert.ok(seenAt(id, at(d, 24, 30), world), `${id} day ${d} 00:30 (${npcSpot(id, at(d, 24, 30), world).label})`);
       }
     for (let d = 0; d < 7; d++)
@@ -247,8 +260,8 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
-      const ev = npcTimeline(id, DAY0 + d, world);
-      assert.equal(ev[0].place, npcTimeline(id, DAY0 + d - 1, world).at(-1).place, `${id} continuous at midnight`);
+      const ev = npcTimeline(id, G(d), world);
+      assert.equal(ev[0].place, npcTimeline(id, G(d) - 1, world).at(-1).place, `${id} continuous at midnight`);
       for (let i = 1; i < ev.length; i++) {
         const a = ev[i - 1],
           b = ev[i];
@@ -257,11 +270,11 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
       }
       let prev = null;
       for (let m = 0; m < 1440; m += 2) {
-        const s = npcSpot(id, kstDayStart(DAY0 + d) + m * 60_000 + 11_000, world);
+        const s = npcSpot(id, T(d, m) + 11_000, world);
         if (s.visible) {
           assert.ok(VISIBLE_AREAS.includes(s.area));
-          assert.ok(npcCanStand(s.area, s), `${id} day ${d} ${m} ${s.area} (${s.x.toFixed(2)}, ${s.z.toFixed(2)})`);
-          if (prev && prev.visible && prev.area === s.area) assert.ok(Math.hypot(prev.x - s.x, prev.z - s.z) <= NPC_WALK_SPEED * 120 + 0.01, `${id} jumped at ${m}`);
+          assert.ok(standsNear(s.area, s), `${id} day ${d} ${m} ${s.area} (${s.x.toFixed(2)}, ${s.z.toFixed(2)})`);
+          if (prev && prev.visible && prev.area === s.area) assert.ok(Math.hypot(prev.x - s.x, prev.z - s.z) <= (NPC_WALK_SPEED * 2 * GAME_MINUTE_MS) / 1000 + 0.01, `${id} jumped at ${m}`);
         }
         prev = s;
       }
@@ -272,7 +285,7 @@ test('evening seats never put two residents on the same spot', () => {
   for (const hill of [false, true])
     for (let d = 0; d < 7; d++)
       for (let m = 20 * 60; m < 25 * 60; m += 10) {
-        const now = kstDayStart(DAY0 + d) + m * 60_000;
+        const now = T(d, m);
         const standing = NIGHT_NPCS.map((id) => npcSpot(id, now, { hill })).filter((s) => s.visible && !s.walking);
         for (let i = 0; i < standing.length; i++)
           for (let j = i + 1; j < standing.length; j++)
@@ -340,13 +353,14 @@ test('stage-2 residents: sprites, gift tastes, relations, 80+ lines each and ban
 });
 
 // ---------------------------------------------------------------- town actions
-test('dawn auction: 06–07 KST only, harbor flag, capped premium through the ledger', () => {
+test('dawn auction: game 05–08 only, harbor flag, capped premium through the ledger', () => {
   const s = world(1, ['district-harbor']);
   const [a] = s.members;
   const fish = FISH.find((f) => f.sell >= 1_000 && f.weight > 1);
   s.life.ext[a.id].inv[fish.id] = 30;
   const dawn = at(1, 6, 30);
-  assert.throws(() => s.act(a, { kind: 'auctionSell', item: fish.id, n: 1 }, at(1, 8)), /6시부터 7시/);
+  assert.throws(() => s.act(a, { kind: 'auctionSell', item: fish.id, n: 1 }, at(1, 8)), /5시부터 8시/);
+  assert.throws(() => s.act(a, { kind: 'auctionSell', item: fish.id, n: 1 }, at(1, 4, 50)), /5시부터 8시/);
   const before = wallet(s, a);
   const v = s.act(a, { kind: 'auctionSell', item: fish.id, n: AUCTION_UNITS_MAX }, dawn);
   const gained = wallet(s, a) - before;
@@ -422,11 +436,12 @@ test('장날 좌판 on Sundays (and 마키마 at the harbor on Wed/Sat), three a
   assert.throws(() => t.act(t.members[0], { kind: 'stallBuy', stall: 'stall-harbor' }, at(wed, 12)), /항구 구역/);
 });
 
-test('독서 모임: Wednesday 19–21 at the library, once a week, skill XP only (no 범)', () => {
+test('독서 모임: real Wednesday, game 18–22 at the library, once a week, skill XP only (no 범)', () => {
   const wed = dayWith(3);
   const s = world(1, ['district-hillside']);
   const [a] = s.members;
-  assert.throws(() => s.act(a, { kind: 'readingClub', skill: 'farm' }, at(wed, 18)), /수요일 저녁/);
+  assert.throws(() => s.act(a, { kind: 'readingClub', skill: 'farm' }, at(wed, 17, 50)), /수요일, 게임 시각 저녁/);
+  assert.throws(() => s.act(a, { kind: 'readingClub', skill: 'farm' }, at(dayWith(4), 19, 30)), /수요일/, 'a real Thursday has none');
   const before = wallet(s, a);
   const xp0 = s.life.growth?.u?.[a.id]?.xp?.farm ?? 0;
   s.act(a, { kind: 'readingClub', skill: 'farm' }, at(wed, 19, 30));

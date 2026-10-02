@@ -22,7 +22,7 @@
 //
 // Cycle-safe: lounge-life / lounge-life-plus / lounge-town import this module
 // and it imports them back, so their bindings are used inside functions only.
-import { hash32, kstHour, weekdayOf } from './lounge-calendar.ts';
+import { hash32, inGameHours, weekdayOf } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
 import { CROP_SELL_REF, FERTILIZERS, ITEM_BY_ID, ITEM_PRICES, ROMANCE_ITEMS, SPICES } from './lounge-items.ts';
 import { ORE_ITEMS } from './lounge-growth-data.ts';
@@ -52,8 +52,8 @@ export const SHOP_INFO: Record<ShopId, ShopInfo> = {
 export const SELL_AWAY = 0.85;
 /** 등불 잡화점's 주간 특가: one consumable this much off for the KST week. */
 export const WEEKLY_SPECIAL_OFF = 0.2;
-/** 토요일 밤 등불 상점: KST hours [from, to) on Saturdays, share of the price, seeds. */
-export const LANTERN_HOURS = [19, 24] as const;
+/** 토요일 밤 등불 상점: game hours [from, to) (wraps past midnight) on real Saturdays, share of the price, seeds. */
+export const LANTERN_HOURS = [18, 6] as const;
 export const LANTERN_SHARE = 0.8;
 export const LANTERN_SEEDS = 3;
 /** 농협 일요일 작물 좌판: this week's notice crops' seeds at this share. */
@@ -99,10 +99,7 @@ export function shopArea(shop: ShopId, now: number): ShopArea | null {
   if (!peddlerOpenOn(day)) return null;
   return weekdayOf(day) === 0 ? 'market' : 'harbor';
 }
-export const lanternOpen = (now: number) => {
-  const h = kstHour(now);
-  return weekdayOf(kstDay(now)) === 6 && h >= LANTERN_HOURS[0] && h < LANTERN_HOURS[1];
-};
+export const lanternOpen = (now: number) => weekdayOf(kstDay(now)) === 6 && inGameHours(now, LANTERN_HOURS[0], LANTERN_HOURS[1]);
 
 // ---------------------------------------------------------------- selling
 /** The shop that pays full price for `id` (crop, 'fruit', goods key or item id); null = nobody buys it. */

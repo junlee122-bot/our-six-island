@@ -51,10 +51,11 @@ await page.keyboard.press('KeyE');
 await until(() => document.querySelector('[data-testid=area-3d]')?.dataset.loadState === 'ready', 180000);
 await sleep(15000);
 await shot('market-arrive');
-// Residents at lunch (12:20 KST today) on the bakery terrace.
+// Residents at lunch (game 12:20 of this game day; 게임 하루 = 실제 1시간,
+// game midnight on every real hour, a game minute is 2.5 s) on the bakery terrace.
 await js(() => {
-  const now = Date.now(), day = Math.floor((now + 9 * 3600e3) / 864e5);
-  const target = day * 864e5 - 9 * 3600e3 + (12 * 60 + 20) * 60e3;
+  const now = Date.now(), hour = 3600e3;
+  const target = Math.floor(now / hour) * hour + (12 * 60 + 20) * 2500;
   window.dispatchEvent(new CustomEvent('bumtadew:npc-clock', { detail: target - now }));
 });
 console.log('to plaza', await goTo(0, 4, 'area-3d'));

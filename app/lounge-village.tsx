@@ -261,7 +261,7 @@ type Props = {
   life?: LifeView | null;
   /** Server clock minus local clock (NPC schedule and timers agree across clients). */
   clockOffset?: number;
-  /** Village lighting follows KST time (settings toggle). */
+  /** Village lighting follows the game clock (settings toggle). */
   dayNight?: boolean;
   onFarm?: () => void;
   onShop?: () => void;

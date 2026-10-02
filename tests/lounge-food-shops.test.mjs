@@ -35,7 +35,7 @@ import {
   mealSlot,
 } from '../app/lounge-food-data.ts';
 import { INITIAL_BEOM, kstDay, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
-import { weekdayOf } from '../app/lounge-calendar.ts';
+import { gameTimeOnDay, weekdayOf } from '../app/lounge-calendar.ts';
 import { coopWeekCrops } from '../app/lounge-town.ts';
 import { gainXp, nodesFor } from '../app/lounge-growth.ts';
 import { mineFloor } from '../app/lounge-mine.ts';
@@ -52,7 +52,8 @@ const MIN = 60_000,
   DAY = 86_400_000;
 const kst = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
 const T0 = kst(2026, 9, 24); // Thursday
-const SAT_NIGHT = kst(2026, 9, 26, 20);
+/** Saturday 2026-09-26, game 20:00 (게임 하루 = 실제 1시간). */
+const SAT_NIGHT = gameTimeOnDay(kstDay(kst(2026, 9, 26)), 20);
 const SUNDAY = kst(2026, 9, 27, 12);
 
 function world(n = 2, actors) {
@@ -176,12 +177,14 @@ test('buying: only at the shop that carries it; specials, lantern night, Sunday 
   const week = weekOf(kstDay(T0)),
     special = weeklySpecial(week);
   assert.equal(shopOffer(s.life, 0, 'general', special, T0).price, Math.round((ITEM_PRICES[special] * (1 - WEEKLY_SPECIAL_OFF)) / 10) * 10);
-  // 토요일 밤 등불 상점: three dearer seeds 20% off, only Saturday 19:00–24:00.
+  // 토요일 밤 등불 상점: three dearer seeds 20% off, only on a real Saturday, game 18:00–06:00.
   const seeds = lanternSeeds(weekOf(kstDay(SAT_NIGHT)));
   assert.equal(seeds.length, 3);
   const seed = 'seed-' + seeds[0];
   assert.equal(shopOffer(s.life, 0, 'general', seed, SAT_NIGHT).price, Math.round((CROP_INFO[seeds[0]].seed * LANTERN_SHARE) / 10) * 10);
-  assert.equal(shopOffer(s.life, 0, 'general', seed, SAT_NIGHT - 3 * HOUR).price, CROP_INFO[seeds[0]].seed);
+  assert.equal(shopOffer(s.life, 0, 'general', seed, gameTimeOnDay(kstDay(SAT_NIGHT), 3)).price, Math.round((CROP_INFO[seeds[0]].seed * LANTERN_SHARE) / 10) * 10, 'game 03:00 is still the lantern night');
+  assert.equal(shopOffer(s.life, 0, 'general', seed, gameTimeOnDay(kstDay(SAT_NIGHT), 15)).price, CROP_INFO[seeds[0]].seed, 'closed by game day');
+  assert.equal(shopOffer(s.life, 0, 'general', seed, gameTimeOnDay(kstDay(SAT_NIGHT) - 1, 20)).price, CROP_INFO[seeds[0]].seed, 'closed on a real Friday');
   // 농협 일요 작물 좌판: only the notice crops, only on Sundays.
   const crop = coopWeekCrops(weekOf(kstDay(SUNDAY)))[0];
   assert.equal(shopOffer(s.life, 0, 'coop', 'seed-' + crop, SUNDAY).price, Math.round((CROP_INFO[crop].seed * COOP_SEED_SHARE) / 10) * 10);

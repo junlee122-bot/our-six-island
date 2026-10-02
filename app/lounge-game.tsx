@@ -76,6 +76,7 @@ import type { Crop } from './lounge-life';
 import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village-spots';
 import { friendDialog, type DialogScript } from './lounge-friend-dialog';
 import { AdaptChecklist, FeteBanner, markAdaptLocal } from './lounge/SocialHud';
+import { timeOfDay } from './lounge-calendar';
 import { farmBed, farmFront } from './lounge-village-life';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
@@ -1290,7 +1291,7 @@ function AccountLounge({
       me: save.actor,
       day: Math.floor((now + 9 * 3_600_000) / 86_400_000),
       visit,
-      timeOfDay: cal?.timeOfDay ?? 'day',
+      timeOfDay: timeOfDay(now),
       season: cal?.season ?? 'spring',
       weather: life.weather?.today ?? 'sunny',
       hearts,

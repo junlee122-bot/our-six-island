@@ -35,7 +35,7 @@ export type LoungeSettings = {
   attention: boolean;
   /** 2D village guide instead of the 3D scene (low-end devices). */
   simpleGraphics: boolean;
-  /** Village lighting follows the real KST time (morning/day/evening/night). */
+  /** Village lighting follows the game clock (게임 하루 = 실제 1시간) (morning/day/evening/night). */
   dayNight: boolean;
   /** Seasonal weather effects in the village (rain, snow, falling leaves). */
   seasonFx: boolean;

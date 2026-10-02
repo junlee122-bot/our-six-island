@@ -121,7 +121,7 @@ export const FETES: Record<FeteKind, FeteDef> = {
     game: '송편 빚기',
     gameHelp: '반죽이 둥글게 모이는 순간에 E나 Space를 눌러 송편을 빚어요. 다섯 번 빚어 점수를 모아요.',
     extra: '달맞이 등 날리기',
-    extraHelp: '해가 진 뒤(저녁 5시부터 새벽 5시)에 소원 한 줄을 적어 등을 띄워요. 한 사람에 한 번이에요.',
+    extraHelp: '해가 진 뒤(게임 시각 저녁 5시부터 새벽 5시)에 소원 한 줄을 적어 등을 띄워요. 한 사람에 한 번이에요.',
     joinBeom: 1_000,
     joinFurniture: 'furn-moon-lantern',
     joinItem: ['songpyeon', 2],

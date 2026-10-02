@@ -16,7 +16,7 @@ import {
   villageCameraFrame,
 } from './lounge-village-camera';
 import { VILLAGE_BOUNDS } from './lounge-village-layout';
-import { dayLighting } from './lounge-village-life';
+import { dayLighting, dayLightingAtHour } from './lounge-village-life';
 
 /** Camera offset from what it looks at. */
 export const VILLAGE_CAMERA_OFFSET = new THREE.Vector3(VIEW_DIR.x, VIEW_DIR.y, VIEW_DIR.z).multiplyScalar(VIEW_DISTANCE);
@@ -88,7 +88,7 @@ export function clampFollowTarget(
 // ---------------------------------------------------------------- light rig
 export type VillageLights = { hemi: THREE.HemisphereLight; sun: THREE.DirectionalLight };
 /** The palette for `now` (or noon when the day/night cycle is off, 설정 → 낮밤 변화). */
-export const VILLAGE_NOON = dayLighting(Date.UTC(2026, 0, 1, 3));
+export const VILLAGE_NOON = dayLightingAtHour(12);
 export const villageLightAt = (now: number, dayNight: boolean | undefined) => (dayNight === false ? VILLAGE_NOON : dayLighting(now));
 /** Grey days are a little dimmer (rain, storms, clouds, snow). */
 export const weatherDim = (sky: string | undefined) =>

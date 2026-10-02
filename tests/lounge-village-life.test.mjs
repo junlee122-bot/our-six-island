@@ -14,10 +14,10 @@ import {
   TREE_REACH,
   cropVisual,
   dayLighting,
+  dayLightingAtHour,
   dayPhase,
   farmBedRect,
   farmFront,
-  kstHour,
   nearCommons,
   nearFarm,
   nearMarket,
@@ -42,6 +42,8 @@ import {
   villagePath,
 } from '../app/lounge-village-layout.ts';
 import { FRUIT_TREES } from '../app/lounge-life.ts';
+import { gameHourFrac, gameTimeOnDay } from '../app/lounge-calendar.ts';
+import { kstDay } from '../app/lounge-economy.ts';
 import { villageAction } from '../app/lounge-village-actions.ts';
 import {
   catalogEntry,
@@ -61,7 +63,8 @@ const segmentDistance = (px, pz, [x1, z1, x2, z2]) => {
 const reachable = (point) =>
   villageCanWalk(point) && villagePath(VILLAGE_START, point).length > 0;
 // 12:00 KST on 2026-09-24 is 03:00 UTC.
-const kst = (h, m = 0) => Date.UTC(2026, 8, 24, h - 9, m);
+/** Game-clock h:m on 2026-09-24 (the game day of real 12:00 KST; 게임 하루 = 실제 1시간). */
+const kst = (h, m = 0) => gameTimeOnDay(kstDay(Date.UTC(2026, 8, 24, 3)), h, m);
 
 test('every friend has a front-yard farm: two beds, 6/9/12 plots that never overlap, off routes', () => {
   assert.equal(VILLAGE_YARDS.length, 7);
@@ -182,8 +185,14 @@ test('NPC line uses the friend status text, else a default', () => {
   assert.equal(npcLine(1, null, kst(10)), line);
 });
 
-test('day phase and lighting follow KST time smoothly', () => {
-  assert.equal(kstHour(kst(0)), 0);
+test('day phase and lighting follow the game clock smoothly', () => {
+  assert.equal(gameHourFrac(kst(0)), 0);
+  assert.equal(gameHourFrac(kst(13, 30)), 13.5);
+  // A game day is one real hour: the same phase an hour later, noon at :30 past.
+  assert.equal(dayPhase(kst(12) + 3_600_000), 'day');
+  assert.equal(dayPhase(Date.UTC(2026, 8, 24, 3, 30)), 'day');
+  assert.equal(dayPhase(Date.UTC(2026, 8, 24, 3, 55)), 'night');
+  assert.deepEqual(dayLightingAtHour(12), dayLighting(kst(12)));
   assert.equal(dayPhase(kst(6)), 'morning');
   assert.equal(dayPhase(kst(12)), 'day');
   assert.equal(dayPhase(kst(18)), 'evening');

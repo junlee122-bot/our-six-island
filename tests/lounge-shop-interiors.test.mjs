@@ -31,7 +31,8 @@ import { sceneCanWalk } from '../app/lounge-scene-layout.ts';
 import { readReaction } from '../app/lounge-reactions.ts';
 import { districtCounters, shopDoorOutside } from '../app/lounge-district-counters.ts';
 import { regionWalk } from '../app/lounge-areas.ts';
-import { NPC_PLACES, npcCanStand, npcSpot, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { NPC_PLACES, npcCanStand, npcSpot } from '../app/lounge-npc-schedule.ts';
+import { gameTimeOnDay } from '../app/lounge-calendar.ts';
 import { SHOP_INTERIOR_MODELS } from '../app/lounge-model-assets.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger, validateLedger } from '../app/lounge-economy.ts';
@@ -174,7 +175,7 @@ test('bakery: six café chairs; standing on one is sitting, an occupied one is s
 // ---------------------------------------------------------------- residents
 test('shop owners stand behind their counters during opening hours; residents visit', () => {
   const DAY0 = Math.floor(Date.UTC(2026, 9, 5) / 86_400_000); // a Monday
-  const at = (id, h, m = 0) => npcSpot(id, kstDayStart(DAY0) + (h * 60 + m) * 60_000);
+  const at = (id, h, m = 0) => npcSpot(id, gameTimeOnDay(DAY0, h, m));
   assert.equal(at('nasera', 9).place, 'coop.owner');
   assert.equal(at('thresh', 10).place, 'general.owner');
   assert.equal(at('frieren', 11, 30).place, 'bakery.owner');
