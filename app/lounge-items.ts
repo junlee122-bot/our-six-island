@@ -6,6 +6,8 @@ import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
 import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
+// 민물 어종 확장: 30 freshwater species and two legends (lounge-fish-data-fresh.ts).
+import { FRESH_FISH } from './lounge-fish-data-fresh.ts';
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
 import { catalogEntry } from './lounge-bedroom-catalog.ts';
 
@@ -128,6 +130,7 @@ const BASE_FISH: readonly FishDef[] = [
   { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 750, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },  // 낚시 업그레이드 (lounge-fish-data.ts).
   ...EXTRA_FISH,
   ...POT_FISH,
+  ...FRESH_FISH,
 ];
 /**
  * ② 항구 구역: the breakwater gets the sea and rock fish, the big pier the sea

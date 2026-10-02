@@ -6,6 +6,8 @@
 // import lounge-items at runtime (types only).
 import type { DishDef, FishDef, ItemDef, RecipeDef } from './lounge-items.ts';
 import type { Season } from './lounge-calendar.ts';
+// 민물 어종 확장: profiles and dishes of the new freshwater fish.
+import { FRESH_DISHES, FRESH_PROFILE } from './lounge-fish-data-fresh.ts';
 
 /** Action kinds of lounge-fish-engine (a leaf module, so lounge-life can spread them at load). */
 export const ANGLING_ACTION_KINDS = [
@@ -71,6 +73,7 @@ export type FishProfile = {
 };
 /** Every rod fish; missing ids fall back to profileOf's rarity default. */
 export const FISH_PROFILE: Readonly<Record<string, FishProfile>> = {
+  ...FRESH_PROFILE,
   crucian: { behaviour: 'calm', difficulty: 15 },
   carp: { behaviour: 'calm', difficulty: 30 },
   koi: { behaviour: 'float', difficulty: 60, hours: [9, 17] },
@@ -182,6 +185,7 @@ const dishOf = (id: string, name: string, needs: RecipeDef['needs'], note: strin
   ...(buff ? { buff } : {}),
 });
 export const FISH_DISHES: readonly DishDef[] = [
+  ...FRESH_DISHES,
   dishOf('sashimi', '모둠 회', [{ cat: 'fish', n: 2 }], '갓 잡은 물고기를 얇게 떴어요.', 'luck'),
   dishOf('haemuljeon', '해물파전', [{ item: 'clam', n: 2 }, { item: 'potato', n: 1 }], '바지락을 듬뿍 넣은 비 오는 날의 전.', 'mine'),
   dishOf('guljeon', '굴전', [{ item: 'oyster', n: 2 }, { item: 'potato', n: 1 }], '달걀옷을 입혀 노릇하게.', 'charm'),
