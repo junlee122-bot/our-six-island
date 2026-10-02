@@ -240,6 +240,12 @@ export const BUCKET_LABEL: Record<string, string> = {
   research: '마을 개척',
   respec: '전문가 다시 고르기',
   'venue-up': '가게 업그레이드',
+  'smith-ore': '오른의 오늘의 광석 웃돈',
+  smith: '오른의 대장간 범위 강화',
+  ranch: '닐라 목장(동물·건초)',
+  'orchard-sapling': '하쿠 과수원 묘목',
+  clinic: '메르시 의원',
+  fortune: '신이치 점집',
   'spend-other': '기타 지출',
 };
 const bucketLabel = (key: string) =>

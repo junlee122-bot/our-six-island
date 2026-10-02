@@ -190,8 +190,8 @@ export const FOOTHILL_SPOTS: Readonly<Record<string, WalkPoint & { face: number 
   plaza: { x: 2, z: 5.2, face: 0 },
   'plaza-e': { x: 5.4, z: 6.4, face: -Math.PI / 2 },
   'bench-plaza': { x: 3.6, z: 10.8, face: 0 },
-  // 신이치 behind his table in the tent's mouth.
-  tent: { x: -4.4, z: 5.9, face: 0 },
+  // 신이치 at the tent's mouth, beside his table (the customer stands at FOOTHILL_TENT.front).
+  tent: { x: -5.6, z: 6, face: 0.4 },
   onsen: { x: 12.6, z: -13.4, face: Math.PI },
   board: { x: 6.6, z: 2.8, face: Math.PI },
   path: { x: 0, z: 14, face: Math.PI },
