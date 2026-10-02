@@ -25,7 +25,7 @@ export function npcTalkStatus(npc: NpcId, spot: Pick<NpcSpot, 'label' | 'activit
   return spot.activity === 'work' || spot.activity === 'stall' ? `${role} · 일하는 중` : role;
 }
 
-export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
+export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'companion' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
 export type NpcTalkChoice = { id: NpcTalkChoiceId; label: string; disabled: boolean };
 
 /**
@@ -53,6 +53,12 @@ export function npcTalkChoices(o: {
    * overhear them, or join in (`joinOff`: why not, '' when possible).
    */
   social?: { /** "닐라와" */ other: string; joined: boolean; joinOff: string } | null;
+  /**
+   * 주민 동행 (lounge-companion.ts): "같이 다닐래요?" with the short reason
+   * when they cannot come now ('' when they can). Picking it anyway shows
+   * their answer (the reason), so it stays pickable unless out of reach.
+   */
+  companion?: { why: string } | null;
 }): NpcTalkChoice[] {
   const off = o.busy || !!o.blocked;
   const loveLabel: Record<NpcLoveChoice, string> = { ask: '꽃다발 건네기', propose: '청혼 반지 건네기', wedding: '결혼식 올리기', homeGift: '아침 선물 받기' };
@@ -66,6 +72,7 @@ export function npcTalkChoices(o: {
         ]
       : []),
     ...(o.love ?? []).map((id) => ({ id, label: loveLabel[id], disabled: o.busy || (id !== 'wedding' && !!o.blocked) })),
+    ...(o.companion ? [{ id: 'companion' as const, label: o.companion.why ? `같이 다닐래요? · ${o.companion.why}` : '같이 다닐래요?', disabled: off }] : []),
     { id: 'book', label: '주민 수첩', disabled: false },
     ...(o.request ? [{ id: 'request' as const, label: `부탁 보기 · ${o.request}`, disabled: false }] : []),
     ...(o.shop ? [{ id: 'shop' as const, label: o.shop, disabled: false }] : []),

@@ -41,6 +41,7 @@ import { moodTreat } from './lounge-mood.ts';
 import { STALL_IDS, TOWN_ACTION_AREA, TOWN_ACTION_KINDS, isTownAction, type StallId, type TownAction, type TownActionKind } from './lounge-town-data.ts';
 import { DISTRICT_FLAG, DISTRICT_IDS, type DistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
+import { companionPrice } from './lounge-companion-effects.ts';
 
 // ---------------------------------------------------------------- numbers
 /** 새벽 경매: game hours [from, to) every game day (game clock: design-game-clock.md §5). */
@@ -317,8 +318,10 @@ export function townAction(
       if ((t.stall ?? []).includes(a.stall)) fail(TOWN_REJECT.stallBought);
       if ((t.stall ?? []).length >= STALL_PER_DAY) fail(TOWN_REJECT.stallMax);
       const good = stallGoods(day)[a.stall];
-      if ((ledger.accounts[wallet] ?? 0) < good.price) fail(TOWN_REJECT.balance);
-      const next = spendBeom(ledger, wallet, good.price, `life-stall-${uid}-${++life.seq}`, now, 'stall');
+      // 주민 동행: 마키마 takes 5% off at the market-day stalls too.
+      const price = companionPrice(life, uid, a.stall, good.price, now);
+      if ((ledger.accounts[wallet] ?? 0) < price) fail(TOWN_REJECT.balance);
+      const next = spendBeom(ledger, wallet, price, `life-stall-${uid}-${++life.seq}`, now, 'stall');
       t.stall = [...(t.stall ?? []), a.stall];
       addInv(life, uid, good.item, 1);
       return { life, ledger: next };

@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
 import { PostBubbles, ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { companionNpcs } from './lounge-companion-scene';
 import { npcAtPost, npcsIn, type NpcSpot } from './lounge-npc-schedule';
 import { interiorCanWalk, hostSpot, TABLE_HOST, TAVERN_HOST_AT } from './lounge-interior-layout';
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender';
@@ -1274,7 +1275,9 @@ export function Interior3D({
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
         const shopRoom = isShopArea(area) ? area : null;
-        const frames = residentFrames(npcsIn(shopRoom ?? 'tavern', at), people, at, {
+        // 주민 동행: a resident walking with a friend waits outside, not at their spot in here.
+        const walking = companionNpcs(at);
+        const frames = residentFrames(npcsIn(shopRoom ?? 'tavern', at).filter((s) => !walking.has(s.id)), people, at, {
           rain: false,
           night: !shopRoom,
           memory: residentMemory,

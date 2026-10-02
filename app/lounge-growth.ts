@@ -80,6 +80,8 @@ import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
 import { moodXpMult } from './lounge-mood.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
+// 주민 동행: 럭스·무잔·잔나·메르시 (XP) and 볼리바스 (the ladder), lounge-companion-effects.ts.
+import { companionLadderEarly, companionXpMult } from './lounge-companion-effects.ts';
 
 const DAY = 86_400_000,
   HOUR = 3_600_000;
@@ -396,7 +398,7 @@ export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
  * bonus); the cap itself is unchanged. 1 = no change.
  */
 export function xpMultiplier(life: LifeState, uid: string, _skill: SkillId, now: number): number {
-  return moodXpMult(life, uid, now) * learnMult(life, uid, now);
+  return moodXpMult(life, uid, now) * learnMult(life, uid, now) * companionXpMult(life, uid, _skill, now);
 }
 /**
  * Adds XP from a life action: ×CATCH_UP when behind the village median, the
@@ -591,7 +593,7 @@ export function ladderFound(life: LifeState, uid: string, floor: number, now: nu
   if (floor < 1) return false;
   const u = life.growth?.u?.[uid];
   if (u?.day !== kstDay(now)) return false;
-  return brokenOn(u, floor) >= mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed;
+  return brokenOn(u, floor) >= mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed - companionLadderEarly(life, uid, now);
 }
 
 // ---------------------------------------------------------------- actions

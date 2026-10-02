@@ -112,7 +112,7 @@ export type NpcRelationView = NpcRelation & {
   atHome?: boolean;
   homeGifted?: boolean;
 };
-export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number; /** ③ 언덕 주택가 is open (residents sleep up there). */ hill?: boolean; /** ④ / ⑤ are open (their residents are out). */ ranch?: boolean; foothill?: boolean };
+export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number; /** ③ 언덕 주택가 is open (residents sleep up there). */ hill?: boolean; /** ④ / ⑤ are open (their residents are out). */ ranch?: boolean; foothill?: boolean; /** 주민 동행: the resident walking with me (always beside me, lounge-companion.ts). */ companion?: NpcId | null };
 const fail = (text: string): never => {
   throw new LifeError(text);
 };
@@ -271,6 +271,8 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
     return;
   }
   if (ownHome && invited) return;
+  // 주민 동행: the resident walking with me is right here, wherever their day plan says.
+  if (ctx.companion && ctx.companion === action.npc) return;
   const meet = npcMeetAt(action.npc, now, { hill: !!ctx.hill, ranch: !!ctx.ranch, foothill: !!ctx.foothill });
   const def = NPCS[action.npc];
   if (meet.away) fail(`${josa(def.name, '은/는')} 지금 ${meet.label}이라 만날 수 없어요. 조금 뒤에 찾아와 주세요.`);

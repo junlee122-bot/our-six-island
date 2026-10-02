@@ -119,6 +119,9 @@ import { stage3Action, stage3View, type Stage3View } from './lounge-stage3.ts';
 // 가게 나누기 · 음식 (design-food-and-shops.md): where goods are bought, 함께 먹기.
 import { isShopId, shopOffer, type ShopId } from './lounge-shops.ts';
 import { foodAfterAction } from './lounge-food.ts';
+// 주민 동행 (design-npc-companion.md): invite, the bond, effects after an action.
+import { COMPANION_ACTION_KINDS } from './lounge-companion-data.ts';
+import { companionAction, companionAfterAction, companionView, readCompanions, settleCompanion, type CompanionAction, type CompanionExt, type CompanionView } from './lounge-companion.ts';
 import { districtsView, settleDistrictUnlocks, type DistrictsView } from './lounge-district-unlocks.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
@@ -533,7 +536,8 @@ export type LifeState = {
   MoodExt &
   AnglingExt &
   VoyageExt &
-  FarmExt;
+  FarmExt &
+  CompanionExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -577,7 +581,9 @@ export type LifeAction =
   | FarmAction
   /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
   | TownAction
-  | Stage3Action;
+  | Stage3Action
+  /** 주민 동행: 같이 다닐래요? · 보내기 · 한 번뿐인 순간 (lounge-companion.ts). */
+  | CompanionAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -601,6 +607,7 @@ export const LIFE_ACTION_KINDS = [
   ...FARM_ACTION_KINDS,
   ...TOWN_ACTION_KINDS,
   ...STAGE3_ACTION_KINDS,
+  ...COMPANION_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -950,6 +957,7 @@ export function readLife(value: unknown): LifeState {
     ...readAngling(v.angling),
     ...readVoyage(v.voyage),
     ...readFarmExt(v),
+    ...readCompanions(v.companions),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -1050,6 +1058,8 @@ export function lifeAction(
   moodAfterLifeAction(before, next.life, member, action, now);
   // 함께 먹기: after any meal, snack or shop food.
   foodAfterAction(next.life, member, action as { kind: string }, now);
+  // 주민 동행: the bond hours, the companion's bubble, and its effect for this activity.
+  companionAfterAction(before, next.life, member, action as { kind: string }, now);
   // 마을 확장 2단계: record a district whose village goal was just reached.
   settleDistrictUnlocks(next.life, now);
   return next;
@@ -1117,6 +1127,16 @@ function lifeActionCore(
     // 오른's ore counter runs the ordinary sale first (same rules, same caps).
     const next = stage3Action(life, ledger, member, a as Stage3Action, now, (l, lg, sale) => lifeActionCore(l, lg, member, sale, now));
     return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((COMPANION_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const flags = life.flags ?? [];
+    settleCompanion(life, uid, now);
+    companionAction(life, member, a as CompanionAction, now, {
+      hill: flags.includes('district-hillside'),
+      ranch: flags.includes('district-ranch'),
+      foothill: flags.includes('district-foothill'),
+    });
+    return afterCoreAction(life, ledger, member, now);
   }
   if ((TOWN_ACTION_KINDS as readonly string[]).includes(kind)) {
     // The auction and the 농협 notice run the ordinary sale first (same rules, same caps).
@@ -1522,6 +1542,8 @@ export type LifeView = {
   town?: TownView;
   /** 마을 확장 3단계: my animals, fruit trees, range upgrades, clinic and fortune (lounge-stage3.ts). */
   stage3?: Stage3View;
+  /** 주민 동행: who walks with whom, and my outing (absent from older servers). */
+  companion?: CompanionView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1630,6 +1652,7 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
     districts: districtsView(life, actorValid(actor) ? actor : undefined, now),
     ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now), stage3: stage3View(life, uid, now) } : {}),
+    companion: companionView(life, uid, now),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

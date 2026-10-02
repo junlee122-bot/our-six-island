@@ -169,6 +169,7 @@ import {
   type SlotBuff,
 } from './lounge-food-data.ts';
 import { tasteNote } from './lounge-food.ts';
+import { companionPrice } from './lounge-companion-effects.ts';
 /** 오늘의 가구 rerolls a day (+2 with 나무결 가구점's 단골 손님 대접). */
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
@@ -1637,7 +1638,8 @@ export function plusAction(
         if (ped.got.includes(a.item)) fail(PLUS_REJECT.peddlerOnce);
         x.ped = { ...ped, got: [...ped.got, a.item] };
       }
-      next = spend(next, life, uid, offer!.price * n, 'buy-' + a.item, now);
+      // 주민 동행: 마키마 takes 5% off at the 행상 (lounge-companion-effects.ts).
+      next = spend(next, life, uid, companionPrice(life, uid, a.at, offer!.price, now) * n, 'buy-' + a.item, now);
       addInv(life, uid, a.item, n);
       break;
     }
