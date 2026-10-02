@@ -184,6 +184,14 @@
 - **항구**: 큰 선착장 서쪽에 같은 낚싯배(0.72배)가 뱃머리를 바다로 두고 정박(누가 항해 중이면 비어 있음), 선착장 머리에 출항 안내판과 허 선장(05~19시, 주점 그림 시트의 서 있는 모습), 출항 3초·귀항 1.6초 화면(배가 방파제를 빠져나감). 미니맵에 "먼바다 배".
 - **소리**: 먼바다 구역 오디오 — 엔진 웅웅, 뱃전 파도, 갈매기, 나무 갑판 발소리(`lounge-footsteps.ts`), 잔잔한 뱃노래 BGM(`lounge-music-districts.ts`).
 
+### 화면 (`district-shots.mjs --only harbor --offshore --view s`, 소프트웨어 렌더러)
+
+| 항구(정박한 배·안내판·허 선장) | 갑판(귀항까지 · 그만 돌아가기) |
+|---|---|
+| ![](img/sea-fishing/harbor-arrive.png) | ![](img/sea-fishing/offshore-deck.png) |
+| **뱃머리 난간에서 낚시(E)** | **귀항 뒤 어획 정리 · 럭스에게 팔기** |
+| ![](img/sea-fishing/offshore-rail.png) | ![](img/sea-fishing/offshore-summary.png) |
+
 ## 8. 구현 지도
 
 | 영역 | 파일 |
