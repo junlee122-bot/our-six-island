@@ -29,6 +29,8 @@ import {
   type FishProfile,
   type TackleId,
 } from './lounge-fish-data.ts';
+// 민물 어종 확장: rod/bait conditions and body builds of the new freshwater fish.
+import { FRESH_BUILD, fishGateOk } from './lounge-fish-data-fresh.ts';
 import { BAR_BASE, BAR_MAX, GAIN, MAX_TICKS, TICK_MS, baseLoss, replayTrace, type FightResult, type FightSetup } from './lounge-fish-minigame.ts';
 import { fishQualitySplit, type FishQ } from './lounge-fish-quality.ts';
 import { CROPS, CROP_INFO, LifeError, addCount, cropInSeason, type Crop, type LifeState, type Quality } from './lounge-life.ts';
@@ -420,6 +422,8 @@ export type AnglerContext = {
   rod?: number;
   /** Legends this friend already caught (caught once each). */
   caught?: readonly string[];
+  /** Bait on this cast (null: none); undefined skips bait conditions (spot card). */
+  bait?: BaitId | null;
 };
 /** Season, sky, day/night, KST hours and legend gates. */
 export function fishAvailable(f: FishDef, ctx: AnglerContext): boolean {
@@ -427,6 +431,7 @@ export function fishAvailable(f: FishDef, ctx: AnglerContext): boolean {
     seasons = p.season ? [p.season] : f.seasons;
   if (!seasons.includes(ctx.season) || !eligibleSky(f.sky, ctx.weather)) return false;
   if (!eligibleTime(f.time, isDaytime(ctx.now), isNighttime(ctx.now)) || !inHours(p.hours, kstHour(ctx.now))) return false;
+  if (!fishGateOk(f.id, ctx.rod, ctx.bait)) return false;
   if (isLegend(f)) {
     if (ctx.caught?.includes(f.id)) return false;
     if (p.legend && ((ctx.level ?? 10) < p.legend.level || (ctx.rod ?? 5) < p.legend.rod)) return false;
@@ -440,6 +445,7 @@ export function anglerCandidates(spot: Spot, ctx: AnglerContext): FishDef[] {
   if (current.length >= 3) return current;
   const visitors = local
     .filter((f) => f.weight >= 10 && !current.includes(f) && f.seasons.length > 0)
+    .filter((f) => fishGateOk(f.id, ctx.rod, ctx.bait))
     .sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
   return [...current, ...visitors.slice(0, 3 - current.length)];
 }
@@ -451,6 +457,7 @@ const BUILD: Readonly<Record<string, number>> = {
   flounder: 1.25, puffer: 1.3, goldfish: 1.3, bluegill: 1.35, filefish: 1.2,
   squid: 0.75, mitre: 0.75, octopus: 0.9, crayfish: 1.6, lakelord: 0.8, icecod: 0.9,
   daseulgi: 2.2, shrimp: 1.1, crab: 2.2, clam: 2.4, oyster: 2.2, conch: 2.4,
+  ...FRESH_BUILD,
 };
 /** Weight in grams of a fish of `cm` (records, cards). */
 export const fishGrams = (id: string, cm: number) => Math.max(1, Math.round(15.5 * (BUILD[id] ?? 1) * (cm / 10) ** 3));
@@ -623,7 +630,7 @@ export function anglingAction(
       const spot = spotCheck(life, uid, a.spot, now);
       const bait = a.bait === undefined || a.bait === null ? undefined : a.bait;
       if (bait !== undefined && (!isBait(bait) || invCount(life, uid, bait) < 1)) fail(ANGLING_REJECT.bait);
-      const ctx = contextOf(life, uid, now),
+      const ctx: AnglerContext = { ...contextOf(life, uid, now), bait: bait ?? null },
         mods = growthMods(life, uid),
         rod = ctx.rod ?? 1,
         luck = luckMods(life, uid, now),
