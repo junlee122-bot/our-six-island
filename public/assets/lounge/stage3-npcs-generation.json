@@ -3,7 +3,7 @@
  "provider": "Higgsfield",
  "model": "gpt_image_2_5",
  "background": "solid magenta #FF00FF (keyed at build)",
- "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. 점쟁이 → 쿠도 신이치 (Detective Conan, Gosho Aoyama), drawn as an adult in his mid-twenties for the dialogue art; the in-world chibi wears his 코난 disguise (user decision). User reference images were uploaded only as generation inputs and are not stored in this repository.",
  "assets": [
   {
    "id": "nilah-tall",
@@ -67,6 +67,27 @@
    "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
    "original": "_originals/chibi/npc-chibi-mercy.png",
    "sha256": "250490CD5BC879284E481DD21A06325A5794DFF7D8257C5C13ED077CDAA3C802"
+  },
+  {
+   "id": "shinichi-tall",
+   "job": "f183d470-47f3-48ab-ba45-8f2879dc36d7",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-shinichi.png",
+   "sha256": "335594357DA3952F4E7D454F123F289C92ADAA0C8A7BCD5961EE4D4E150901DB"
+  },
+  {
+   "id": "shinichi-chibi",
+   "job": "1e89d650-3d01-49a5-939c-5c504fc7222b",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-shinichi.png",
+   "sha256": "94682611E53516EFBB293F01043317A35699985D853050D8B890A164182BB09D"
   }
  ]
 }
