@@ -172,8 +172,10 @@ export const LOOK_THROTTLE_MS = 300;
 // into the harbor and the hillside only once their village flag is set.
 // 'bakery' | 'coop' | 'general' | 'fishmarket': the shop rooms entered from
 // 시장 거리 and the harbor (lounge-shop-interiors.ts).
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | ShopArea;
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', ...SHOP_AREAS];
+// 'offshore': 허 선장's boat out at sea (먼바다, lounge-voyage.ts); the cloud
+// engine lets you onto its deck only while your voyage is on.
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'offshore' | ShopArea;
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'offshore', ...SHOP_AREAS];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -202,6 +204,8 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   // 항구 구역 / 언덕 주택가: arriving from the hub's south / west gates (HARBOR_ARRIVE, HILLSIDE_ARRIVE).
   harbor: { x: 8, y: 25 },
   hillside: { x: 90.4, y: 43 },
+  // 먼바다: the middle of the deck (lounge-areas.ts REGIONS.offshore).
+  offshore: { x: 50, y: 50 },
 };
 /**
  * Chat follows the area: village and casino chat are separate from the hall,
@@ -214,7 +218,7 @@ export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
 export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
-  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside'
+  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside' || area === 'offshore'
     ? 'village'
     : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon' || isShopArea(area)
       ? area

@@ -805,6 +805,10 @@ export class LoungeRoom {
       .filter((m): m is NonNullable<typeof m> => !!m)
       .map((m) => m.id);
   }
+  /** One member as the room holds them (the cloud engine's 먼바다 return). */
+  hostedPlayer(id: string): LoungePlayer | undefined {
+    return this.members.get(id);
+  }
   hostedPacket(id: string) {
     if (!this.serverMode || !this.members.has(id))
       throw new Error("이 방에 먼저 들어와 주세요.");
@@ -2115,6 +2119,7 @@ export class LoungeRoom {
           member.area === "mine" ||
           member.area === "market" ||
           member.area === "harbor" ||
+          member.area === "offshore" ||
           member.area === "hillside"
           ? {
               ...member,

@@ -81,7 +81,7 @@ export const TOGETHER_MOOD = 5;
 export const TOGETHER_TAVERN_MOOD = 8;
 export const TOGETHER_SOCIAL = 30;
 /** Places a meal can be eaten (player areas; the cloud engine fills `where` from the real player). */
-export const EAT_PLACES = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside'] as const;
+export const EAT_PLACES = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'offshore'] as const;
 export type EatPlace = (typeof EAT_PLACES)[number];
 
 // ---------------------------------------------------------------- 맛 도감

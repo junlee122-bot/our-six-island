@@ -5,7 +5,9 @@
 // items, prices, crafts and dishes into its catalogs, so this module must not
 // import lounge-items at runtime (types only).
 import type { DishDef, FishDef, ItemDef, RecipeDef } from './lounge-items.ts';
-import type { Season } from './lounge-calendar.ts';
+import type { Season, Weather } from './lounge-calendar.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): the new sea and offshore species' profiles.
+import { SEA_PROFILE } from './lounge-fish-sea-data.ts';
 
 /** Action kinds of lounge-fish-engine (a leaf module, so lounge-life can spread them at load). */
 export const ANGLING_ACTION_KINDS = [
@@ -68,6 +70,12 @@ export type FishProfile = {
   season?: Season;
   /** Legendary: caught once per friend, with skill and rod gates. */
   legend?: { level: number; rod: number };
+  /** Bites only with this rod tier or more, or with this bait on the hook (먼바다 대물). */
+  need?: { rod?: number; bait?: BaitId };
+  /** Only on the captain's dawn sailing (lounge-voyage.ts). */
+  dawn?: true;
+  /** Only under these skies (a legend's 맑음); `sky` on the catalog entry still applies. */
+  weather?: readonly Weather[];
 };
 /** Every rod fish; missing ids fall back to profileOf's rarity default. */
 export const FISH_PROFILE: Readonly<Record<string, FishProfile>> = {
@@ -123,6 +131,7 @@ export const FISH_PROFILE: Readonly<Record<string, FishProfile>> = {
   blossomtrout: { behaviour: 'dart', difficulty: 80, hours: [6, 10], season: 'spring', legend: { level: 5, rod: 3 } },
   lakelord: { behaviour: 'sink', difficulty: 92, hours: [22, 3], season: 'summer', legend: { level: 7, rod: 3 } },
   icecod: { behaviour: 'mixed', difficulty: 88, hours: [5, 8], season: 'winter', legend: { level: 6, rod: 2 } },
+  ...SEA_PROFILE,
 };
 /** The two legends from before the upgrade: once per friend, no extra gates. */
 export const LEGACY_LEGENDS = ['goldcarp', 'moonhairtail'] as const;
