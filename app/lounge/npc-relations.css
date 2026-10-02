@@ -35,3 +35,14 @@
 .l-npc-request div { display: grid; gap: var(--sp-1); min-width: 0; }
 .l-npc-request p { margin: 0; color: var(--text); font-size: var(--fs-body); }
 .l-npc-request small { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); color: var(--text-soft); font-size: var(--fs-cap); }
+/* 관계 (주민 관계도) */
+.l-npc-ties { display: grid; gap: var(--sp-2); }
+.l-npc-ties h4 { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2); margin: 0; font-size: var(--fs-body); }
+.l-npc-ties ul { display: grid; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; max-height: 180px; overflow-y: auto; }
+.l-npc-ties li { display: grid; grid-template-columns: minmax(64px, auto) auto 1fr; align-items: baseline; gap: var(--sp-2); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-s); background: var(--surface-sunken); font-size: var(--fs-cap); }
+.l-npc-ties li em { font-style: normal; font-weight: 700; color: var(--accent); }
+.l-npc-ties li[data-kind='rival'] em { color: var(--text-soft); }
+.l-npc-ties li.is-unknown { grid-template-columns: minmax(64px, auto) 1fr; color: var(--text-soft); }
+.l-npc-ties li.is-me { box-shadow: var(--edge-line); }
+.l-npc-tie-name { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.l-npc-tie-name:hover, .l-npc-tie-name:focus-visible { text-decoration: underline; }
