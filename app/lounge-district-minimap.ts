@@ -38,6 +38,30 @@ import {
   HILL_YOUTH,
   HILLSIDE_PAVING,
 } from './lounge-hillside-layout.ts';
+import {
+  RANCH_BOARD,
+  RANCH_BRIDGE,
+  RANCH_BUILDINGS,
+  RANCH_COOP,
+  RANCH_D,
+  RANCH_HOUSES,
+  RANCH_PASTURE,
+  RANCH_PAVILION,
+  RANCH_PAVING,
+  RANCH_SILO,
+  RANCH_STREAM,
+  RANCH_TREES_FRUIT,
+} from './lounge-ranch-layout.ts';
+import {
+  FOOTHILL_BOARD,
+  FOOTHILL_BUILDINGS,
+  FOOTHILL_MINE,
+  FOOTHILL_ONSEN,
+  FOOTHILL_PAVING,
+  FOOTHILL_RIDGE,
+  FOOTHILL_TENT,
+  FOOTHILL_W,
+} from './lounge-foothill-layout.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
@@ -103,6 +127,28 @@ const DISTRICT_ART: Partial<Record<DistrictId, () => MiniShape[]>> = {
     rect(HILL_YOUTH.x, HILL_YOUTH.z, HILL_YOUTH.w, HILL_YOUTH.d, 'civic'),
     rect(HILL_LIBRARY.x, HILL_LIBRARY.z, HILL_LIBRARY.w, HILL_LIBRARY.d, 'civic'),
   ],
+  ranch: () => [
+    rect(RANCH_PASTURE.x, RANCH_PASTURE.z, RANCH_PASTURE.w, RANCH_PASTURE.d, 'lawn'),
+    ...RANCH_PAVING.filter((p) => p.tone !== 'wood').map((p) => rect(p.x, p.z, p.w, p.d, p.tone === 'yard' ? 'plaza' : 'road')),
+    rect(RANCH_STREAM.x, 0, RANCH_STREAM.w, RANCH_D, 'water'),
+    rect(RANCH_BRIDGE.x, RANCH_BRIDGE.z, RANCH_BRIDGE.w, RANCH_BRIDGE.d, 'deck'),
+    ...RANCH_TREES_FRUIT.map((t) => ({ kind: 'circle' as const, x: t.x, z: t.z, r: 0.9, tone: 'lawn' as const, fill: '#6f9f5a' })),
+    rect(RANCH_PAVILION.x, RANCH_PAVILION.z, RANCH_PAVILION.w, RANCH_PAVILION.d, 'deck'),
+    rect(RANCH_COOP.x, RANCH_COOP.z, RANCH_COOP.w, RANCH_COOP.d, 'stall'),
+    rect(RANCH_BOARD.x, RANCH_BOARD.z, RANCH_BOARD.w, Math.max(0.8, RANCH_BOARD.d), 'board'),
+    { kind: 'circle', x: RANCH_SILO.x, z: RANCH_SILO.z, r: RANCH_SILO.r, tone: 'stone' },
+    ...RANCH_HOUSES.map((h) => rect(h.x, h.z, h.w, h.d, 'civic')),
+    ...RANCH_BUILDINGS.map((b) => rect(b.x, b.z, b.w, b.d, 'civic', b.sign.line)),
+  ],
+  foothill: () => [
+    rect(0, FOOTHILL_RIDGE.z, FOOTHILL_W, FOOTHILL_RIDGE.d, 'wall'),
+    rect(FOOTHILL_MINE.x, FOOTHILL_RIDGE.z + 0.6, FOOTHILL_RIDGE.gap, FOOTHILL_RIDGE.d - 1.2, 'road'),
+    ...FOOTHILL_PAVING.map((p) => rect(p.x, p.z, p.w, p.d, p.tone === 'stone' ? 'plaza' : p.tone === 'yard' ? 'stone' : 'road')),
+    rect(FOOTHILL_ONSEN.x, FOOTHILL_ONSEN.z, FOOTHILL_ONSEN.w, FOOTHILL_ONSEN.d, 'water'),
+    { kind: 'circle', x: FOOTHILL_TENT.x, z: FOOTHILL_TENT.z, r: FOOTHILL_TENT.r, tone: 'stall' },
+    rect(FOOTHILL_BOARD.x, FOOTHILL_BOARD.z, FOOTHILL_BOARD.w, Math.max(0.8, FOOTHILL_BOARD.d), 'board'),
+    ...FOOTHILL_BUILDINGS.map((b) => rect(b.x, b.z, b.w, b.d, 'civic', b.sign.line)),
+  ],
 };
 
 /** A district without its own drawing: its walls (buildings as boxes, trees and posts as dots). */
@@ -126,10 +172,17 @@ const COUNTER_SHORT: Record<string, string> = {
   fishmarket: '어시장',
   guild: '낚시조합',
   library: '도서관',
+  barn: '목장',
+  orchardShop: '과수원',
+  smithy: '대장간',
+  clinic: '의원',
+  fortune: '점집',
 };
 
 /** Houses and buildings with no counter (언덕's residents' homes). */
 function extraPlaces(area: OutdoorArea): MiniPlace[] {
+  if (area === 'ranch')
+    return RANCH_HOUSES.map((h) => ({ id: h.id, label: h.name.replace(' 집', ''), title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false }));
   if (area !== 'hillside') return [];
   const npcName = (id: string) => (Object.hasOwn(NPCS, id) ? NPCS[id as NpcId].name : '');
   return [
@@ -163,9 +216,13 @@ function extraPlaces(area: OutdoorArea): MiniPlace[] {
  */
 function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
   const out: MiniPlace[] = [];
-  const counters = area === 'market' || area === 'harbor' || area === 'hillside' ? districtCounters(area, weekday) : [];
+  const counters = isDistrictArea(area) ? districtCounters(area, weekday) : [];
   const buildingAt = (place: string): WalkPoint | null => {
-    const shop = MARKET_SHOPS.find((s) => s.id === place) ?? HARBOR_BUILDINGS.find((b) => b.id === place);
+    const shop =
+      MARKET_SHOPS.find((s) => s.id === place) ??
+      HARBOR_BUILDINGS.find((b) => b.id === place) ??
+      RANCH_BUILDINGS.find((b) => b.id === place) ??
+      FOOTHILL_BUILDINGS.find((b) => b.id === place);
     if (shop) return { x: shop.x, z: shop.z };
     if (place === 'library') return { x: HILL_LIBRARY.x, z: HILL_LIBRARY.z };
     return null;

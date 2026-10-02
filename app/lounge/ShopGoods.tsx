@@ -5,6 +5,7 @@
 // buff slots and the 맛 도감 — plus the 가게 안내 card that replaced the old
 // single 범타듀 상점 window. Every price is the server's (lounge-shops.ts
 // shopOffer / sellQuote); the server checks I really stand at the counter.
+import { SMITH_ORES, type SmithOre } from '../lounge-stage3-data';
 import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROPS, CROP_INFO, FRUIT_SELL, SHOP_BY_ID, shopLock, type Crop, type LifeAction, type LifeView } from '../lounge-life';
@@ -55,8 +56,11 @@ function sellRows(life: LifeView, shop: ShopId): SellRow[] {
     if (n > 0 && buyerOf(c, fish) === shop) rows.push({ key: c, id: c, name: CROP_INFO[c].name, have: n });
   }
   if (life.me.bag.fruit > 0 && shop === 'coop') rows.push({ key: 'fruit', id: 'fruit', name: '과일', have: life.me.bag.fruit });
-  for (const [id, n] of Object.entries(life.me.inv ?? {}))
-    if (n > 0 && buyerOf(id, fish) === shop) rows.push({ key: id, id, name: itemName(id), have: n });
+  for (const [id, n] of Object.entries(life.me.inv ?? {})) {
+    const buyer = buyerOf(id, fish);
+    // 오른's 대장간 buys ores like the village forge (with today's-ore premium, lounge-stage3.ts).
+    if (n > 0 && (buyer === shop || (shop === 'smithy' && buyer === 'forge'))) rows.push({ key: id, id, name: itemName(id), have: n });
+  }
   if (shop === 'coop')
     for (const g of life.farmx?.goods ?? []) rows.push({ key: `${g.id}@${g.q}`, id: g.id, name: stockName(g.id), have: g.n, q: g.q, goods: true });
   return rows;
@@ -80,7 +84,9 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
         ? week.has(r.id)
           ? { kind: 'coopSell', crop: r.id as Crop, n }
           : { kind: 'sell', crop: r.id as Crop | 'fruit', n, at }
-        : { kind: 'sellItem', item: r.id, n, at };
+        : at === 'smithy' && (SMITH_ORES as readonly string[]).includes(r.id)
+          ? { kind: 'oreSell', item: r.id as SmithOre, n }
+          : { kind: 'sellItem', item: r.id, n, at };
   if (!rows.length)
     return <EmptyState glyph="bag" title={`${SHOP_INFO[at].name}에 팔 물건이 없어요`} hint={`여기서는 ${SHOP_INFO[at].buys}을(를) 제값에 사요.`} />;
   return (

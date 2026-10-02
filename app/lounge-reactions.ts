@@ -96,6 +96,10 @@ export function readReaction(value: unknown): Reaction | undefined {
       'coop',
       'general',
       'fishmarket',
+      'barn',
+      'orchardShop',
+      'smithy',
+      'clinic',
       'home',
       'chess',
       'gostop',
@@ -119,6 +123,10 @@ export function readReaction(value: unknown): Reaction | undefined {
     r.scope !== 'coop' &&
     r.scope !== 'general' &&
     r.scope !== 'fishmarket' &&
+    r.scope !== 'barn' &&
+    r.scope !== 'orchardShop' &&
+    r.scope !== 'smithy' &&
+    r.scope !== 'clinic' &&
     r.scope !== 'home';
   if (
     game &&

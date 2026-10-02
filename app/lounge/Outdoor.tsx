@@ -84,6 +84,8 @@ export function useOutdoor({
   const [liftOpen, setLiftOpen] = useState(false);
   const [{ dayNight }] = useSettings();
   const ref = useRef(outdoor);
+  /** Which way I came down into the mine (뒷산's cave or 산기슭 마을's entrance): the way back up. */
+  const mineFrom = useRef<'hill' | 'foothill'>('hill');
   useEffect(() => {
     ref.current = outdoor;
   }, [outdoor]);
@@ -181,6 +183,7 @@ export function useOutdoor({
     const r = regions(),
       m = r?.mine;
     if (!r || !m) return;
+    mineFrom.current = ref.current?.area === 'foothill' ? 'foothill' : 'hill';
     if (!r.pass && m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
     // With the lift (or 승준's explorer pass, every floor): pick a floor.
     if (r.pass || (m.lift && m.deep >= LIFT_EVERY)) setLiftOpen(true);
@@ -259,8 +262,11 @@ export function useOutdoor({
         if (a.to === 'mine') return enterMine();
         if (a.to === 'woods') return go({ area: 'woods', spawn: { ...REGIONS.woods.arrive.hill! } });
         if (a.to === 'hill') {
-          if (o.area === 'mine')
-            void act({ kind: 'mineGo', floor: 0 }).then((ok) => ok && go({ area: 'hill', spawn: { ...REGIONS.hill.arrive.mine! } }));
+          if (o.area === 'mine') {
+            // Back out the way I came in (산기슭 광산 입구 or 뒷산's cave).
+            const up = mineFrom.current;
+            void act({ kind: 'mineGo', floor: 0 }).then((ok) => ok && go({ area: up, spawn: { ...REGIONS[up].arrive.mine! } }));
+          }
           else go({ area: 'hill', spawn: { ...REGIONS.hill.arrive[o.area]! } });
         }
         return;

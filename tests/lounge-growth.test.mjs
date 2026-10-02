@@ -564,5 +564,6 @@ test('catalog: ore items, research flags, professions and every research materia
     assert.equal(five.length, 2);
     for (const p of five) assert.equal(PROFESSIONS.filter((q) => q.parent === p.id).length, 2);
   }
-  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge,trail,lift');
+  // V4 들길 개간 went live with stage 3 (it opens ④ 목장·과수원, design-npcs-stage3.md).
+  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge,trail,lift,orchardHill');
 });

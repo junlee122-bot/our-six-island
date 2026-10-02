@@ -80,7 +80,7 @@ test('every outdoor map: arrivals stand on open ground, out of every exit trigge
 });
 
 test('the server puts newcomers where the client arrives', () => {
-  for (const area of ['hill', 'woods', 'market', 'harbor', 'hillside']) {
+  for (const area of ['hill', 'woods', 'market', 'harbor', 'hillside', 'ranch', 'foothill']) {
     const from = area === 'woods' ? 'hill' : 'village';
     assert.deepEqual(AREA_DEFAULTS[area], regionToNetwork(area, REGIONS[area].arrive[from]), area);
   }

@@ -28,10 +28,11 @@ import { FIXTURES } from '../lounge-farm-data';
 import { ACTORS } from '../lounge-roster';
 import { kstDay } from '../lounge-economy';
 import { formatBeom, josa } from '../lounge-text';
-import { DISTRICTS, type DistrictId } from '../lounge-districts';
+import { BUILT_DISTRICTS, DISTRICTS, type DistrictId } from '../lounge-districts';
 import { GameButton } from '../ui/GameButton';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from './Modal';
+import { Stage3Counter, isStage3Place, type Stage3Place } from './Stage3Panel';
 import { ItemIcon } from './ItemIcon';
 import { NpcPortrait } from './NpcPortrait';
 import { useLifeAction } from './LifePanels';
@@ -39,7 +40,7 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './town.css';
 
-export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'tavern' | 'signpost';
+export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'tavern' | 'signpost' | Stage3Place;
 /** Everything a counter may sell; ShopBuy shows only what that shop has now (lounge-shops.ts shopOffer). */
 const SEEDS = SHOP.filter((i: ShopItem) => i.kind === 'seed' || i.kind === 'bundle').map((i) => i.id);
 const UNLOCKS = SHOP.filter((i: ShopItem) => i.kind === 'trophy' || i.kind === 'palette').map((i) => i.id);
@@ -62,6 +63,12 @@ const KEEPER: Record<Exclude<TownPlace, 'signpost' | 'tavern'>, { npc: NpcId; ti
   library: { npc: 'beatrice', title: '언덕 도서관', line: '조용히 하는 거야. 독서 모임은 수요일 저녁인 거야.' },
   stalls: { npc: 'makima', title: '장날 좌판', line: '오늘의 물건이에요. 마음에 들면 계약해요.' },
   harborStall: { npc: 'makima', title: '마키마의 항구 좌판', line: '바다 냄새가 나네요. 오늘은 여기서 계약해요.' },
+  // 3단계 (design-npcs-stage3.md): Stage3Panel.tsx draws their windows.
+  barn: { npc: 'nilah', title: '닐라 목장', line: '어서 와! 오늘은 누구부터 쓰다듬어 줄래? 내가 먼저 할까!' },
+  orchardShop: { npc: 'haku', title: '강물 과수원', line: '어서 오세요. 물길이 잘 든 나무는 열매가 달아요.' },
+  smithy: { npc: 'ornn', title: '오른의 대장간', line: '흠. 고칠 거 가져와. 광석도 받는다.' },
+  clinic: { npc: 'mercy', title: '메르시 의원', line: '어디 아픈 데 있어요? 무리했죠, 다 보여요.' },
+  fortune: { npc: 'shinichi', title: '신이치의 점집', line: '진실은 언제나 하나. 오늘 네 운세도 마찬가지야.' },
 };
 const STALL_NAME: Record<StallId, string> = {
   'stall-w': '서쪽 좌판',
@@ -75,6 +82,12 @@ const AREA_WORD: Record<string, string> = {
   market: '시장 거리',
   harbor: '항구 구역',
   hillside: '언덕 주택가',
+  ranch: '목장·과수원',
+  foothill: '산기슭 마을',
+  barn: '닐라 목장 축사',
+  orchardShop: '강물 과수원 창고',
+  smithy: '오른의 대장간',
+  clinic: '메르시 의원',
   hill: '뒷산',
   woods: '숲 깊은 곳',
   mine: '광산',
@@ -130,6 +143,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
 
   const body = (() => {
     if (!life || !town) return <EmptyState glyph="store" title="마을에 접속한 뒤 이용할 수 있어요" />;
+    if (isStage3Place(place)) return <Stage3Counter {...base} place={place} />;
     switch (place) {
       case 'coop': {
         return (
@@ -437,7 +451,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
           <ul className="l-town-list">
             {friends.map((p) => {
               const area = (p.area ?? 'village') as string;
-              const go = (['village', 'market', 'harbor', 'hillside'] as const).find((a) => a === area);
+              const go = (['village', ...BUILT_DISTRICTS] as const).find((a) => a === area);
               const can = !!go && seen.has(go) && open.has(go) && me?.area !== go;
               return (
                 <li key={p.id} className="l-town-row" data-testid={`travel-${p.actor}`}>
