@@ -105,7 +105,7 @@ const rows = [
   ['밤 항구 · 가을 22시 · 3단 · Lv6', { spot: 'harbor', season: 'autumn', hour: 22, rod: 3, level: 6 }],
   ['바다 데크 · 겨울 낮 · 4단 · Lv10 · 잘하는 친구', { spot: 'sea', season: 'winter', hour: 12, rod: 4, level: 10, bot: { react: 3, look: 6 } }],
 ];
-console.log('낚시 1시간 (첫 판매, 하루 수요 곡선·시장 포화 적용)');
+console.log('낚시 1시간 (첫 판매, 하루 수요 곡선 적용 · 물고기는 같은 어종 4마리까지 제값, 시장 포화·하루 한도 없음)');
 for (const [name, opts] of rows) {
   const r = hourOfFishing(opts);
   console.log(`  ${name.padEnd(34)} 시도 ${String(r.tries).padStart(3)} · 낚음 ${String(r.caught).padStart(3)} · 판매 ${r.earned.toLocaleString('en-US').padStart(7)}범 · 미끼 뺀 ${r.net.toLocaleString('en-US').padStart(7)}범`);

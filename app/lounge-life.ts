@@ -160,6 +160,8 @@ const MIN = 60_000,
  *   soon drops below its seed price. Seasonal crops pay +10% in season.
  *   Past MARKET_SOFT범 of sales in a day everything tapers (marketMult).
  *   SELL_CAP_PER_DAY is now only a safety ceiling. Quality: silver ×1.25, gold ×1.5.
+ *   Fish (2026-10-02): 4 of a species a day at the full price, and neither
+ *   the market saturation nor the cap; their 범 stay out of life.sold.
  * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
  *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
  *   The life expansion adds furniture (5k–40k each), fertilizer, farm
@@ -1442,7 +1444,7 @@ export type LifeView = {
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
   sellCapLeft: number;
-  /** 범 sold today (all goods; drives the market saturation, see marketMult). */
+  /** 범 sold today (all goods but fish; drives the market saturation, see marketMult). */
   soldToday: number;
   sellCapResetAt: number;
   serverNow: number;

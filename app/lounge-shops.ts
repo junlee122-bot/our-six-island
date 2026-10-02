@@ -16,7 +16,9 @@
 //   대장간           (도구 강화)                               광석·보석
 //
 // Selling the same goods from the bag or the shipping bin pays SELL_AWAY
-// (85%); the daily 100,000범 cap and the demand curves are unchanged. Until
+// (85%); the daily 100,000범 cap (lounge-life.ts SELL_CAP_PER_DAY) and the
+// demand curves are unchanged, except that fish skip the cap and the market
+// saturation (lounge-life-plus.ts isFishSale, 2026-10-02). Until
 // the 항구 구역 opens for a friend, the 잡화점 keeps the fishing goods and buys
 // fish for 럭스.
 //
