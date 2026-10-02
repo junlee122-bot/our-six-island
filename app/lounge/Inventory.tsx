@@ -28,7 +28,7 @@ import type { Notify } from './Toast';
 import { ItemIcon, QualityStar } from './ItemIcon';
 import { Hotbar, HOTBAR_DRAG_TYPE, type HotbarState } from './LifeHud';
 import { useLifeAction } from './LifePanels';
-import { sellQuote } from '../lounge-life-plus';
+import { isFishSale, sellQuote } from '../lounge-life-plus';
 import { useServerClock } from './use-server-clock';
 import { PILL } from '../lounge-voyage-data';
 import './life-plus.css';
@@ -113,8 +113,10 @@ export function InventoryPanel({
   const total = quote(count);
   // "최대": as many as can be sold right now — the bag, the per-sale limit and
   // what today's cap still allows at the quoted (demand-adjusted) price.
+  // Fish are outside the daily cap (lounge-life-plus isFishSale).
+  const limit = entry && isFishSale(entry.id) ? Infinity : cap;
   let most = price > 0 ? Math.min(have, SELL_MAX_N) : 0;
-  while (most > 0 && quote(most) > cap) most--;
+  while (most > 0 && quote(most) > limit) most--;
   const donated = !!(entry && life.museum?.[entry.id]);
   const sell = async () => {
     if (!entry) return;
@@ -246,7 +248,7 @@ export function InventoryPanel({
                       최대
                     </button>
                   </div>
-                  <button className="l-primary" disabled={busy || total > cap} onClick={() => void sell()} data-testid="inv-sell">
+                  <button className="l-primary" disabled={busy || total > limit} onClick={() => void sell()} data-testid="inv-sell">
                     <Coins size={15} /> 가방에서 {formatBeom(total)}에 팔기 ({Math.round(SELL_AWAY * 100)}%)
                   </button>
                   {fullShop && (
@@ -264,7 +266,7 @@ export function InventoryPanel({
                       오늘 판매 한도를 다 채웠어요. 자정(한국 시간)에 다시 팔 수 있어요.
                     </small>
                   ) : (
-                    total > cap && <small className="l-why">오늘 판매 한도를 넘어요. 지금은 {most}개까지 팔 수 있어요.</small>
+                    total > limit && <small className="l-why">오늘 판매 한도를 넘어요. 지금은 {most}개까지 팔 수 있어요.</small>
                   )}
                 </div>
               )}

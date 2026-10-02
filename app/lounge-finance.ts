@@ -4,7 +4,7 @@ import { CROPS, CROP_INFO, cloneLife, uidOf, type LifeState } from './lounge-lif
 import { addCropQ, cropQCount } from './lounge-life-plus.ts';
 import { FURNITURE_BY_REF } from './lounge-items.ts';
 import { ACTORS } from './lounge-roster.ts';
-import { LENDER_NAME, nearCasinoLender } from './lounge-casino-lender.ts';
+import { CASINO_LOAN_MIN, CASINO_LOAN_RATE, LENDER_NAME, casinoCreditOf, nearCasinoLender } from './lounge-casino-lender.ts';
 
 const DAY = 86_400_000;
 const wallet = (uid: string) => 'wallet-' + uid;
@@ -14,6 +14,8 @@ export type Loan = {
   id: string; lender: string; borrower: string; principal: number; interest: number;
   days: number; offeredAt: number; dueAt: number; paid: number;
   state: 'offered' | 'active' | 'paid' | 'declined'; remindedAt?: number;
+  /** A casino note settled after its due time (lowers 로제's credit tier for 30 days). */
+  late?: true;
 };
 export type FinanceLog = { id: number; users: string[]; at: number; text: string };
 export type CasinoDay = { day: number; earned: number; paid: number; net: Record<string, number>; mercy: Record<string, number> };
@@ -49,7 +51,7 @@ export function readFinance(raw?: FinanceState): FinanceState {
       !l || typeof l.id !== 'string' || !/^note-\d+$/.test(l.id) || !validUser(l.lender) || !validUser(l.borrower) || l.lender === l.borrower ||
       !integer(l.principal, 1, 500_000) || !integer(l.interest, 0, 150_000) || !integer(l.paid, 0, l.principal + l.interest) ||
       !['offered', 'active', 'paid', 'declined'].includes(l.state) || !integer(l.days, 1, 14) ||
-      !timeValue(l.offeredAt) || !timeValue(l.dueAt) || (l.remindedAt !== undefined && !timeValue(l.remindedAt))))
+      !timeValue(l.offeredAt) || !timeValue(l.dueAt) || (l.remindedAt !== undefined && !timeValue(l.remindedAt)) || (l.late !== undefined && l.late !== true)))
     fail('은행 장부를 읽을 수 없습니다.');
   if (new Set(raw.loans.map((l) => l.id)).size !== raw.loans.length ||
     raw.logs.some((l) => !l || !timeValue(l.id) || l.id > raw.seq || !timeValue(l.at) || !Array.isArray(l.users) || l.users.some((id) => !validUser(id)) || typeof l.text !== 'string' || l.text.length > 500) ||
@@ -102,6 +104,7 @@ export function collectOverdue(state: FinanceState | undefined, ledger: LoungeLe
   next = houseTransfer(next, w, -(fromWallet + fromVault));
   const s = readFinance(state), l = s.loans.find((x) => x.id === loan.id)!;
   l.paid += fromWallet + fromVault;
+  l.late = true;
   if (l.paid === l.principal + l.interest) l.state = 'paid';
   log(s, [uid], now, `카지노 대부 연체 회수 · ${(fromWallet + fromVault).toLocaleString('ko-KR')}범${fromVault ? ` (은행 예금 ${fromVault.toLocaleString('ko-KR')}범 포함)` : ''}${l.state === 'paid' ? ' · 완납했어요' : ''}`);
   return { state: s, ledger: next };
@@ -162,6 +165,7 @@ export function financeAction(
       if (loan.lender === 'house') requireCasinoLender(me);
       next = loan.lender === 'house' ? houseTransfer(next, w, -a.amount) : transferBeom(next, w, wallet(loan.lender), a.amount);
       loan.paid += a.amount;
+      if (loan.lender === 'house' && now >= loan.dueAt) loan.late = true;
       if (loan.paid === loan.principal + loan.interest) loan.state = 'paid';
       log(state, [uid, loan.lender], now, `${a.amount.toLocaleString('ko-KR')}범 상환${loan.state === 'paid' ? ' · 완납했어요' : ''}`);
     } else {
@@ -172,12 +176,14 @@ export function financeAction(
     }
   } else if (a.op === 'borrow') {
     requireCasinoLender(me);
-    if (!integer(a.amount, 1000, 30_000)) fail('1,000~30,000범 안에서 빌릴 수 있어요.');
+    // The limit and term follow the borrower's 30-day record (lounge-casino-lender.ts tiers).
+    const { tier } = casinoCreditOf(state.loans, uid, now);
+    if (!integer(a.amount, CASINO_LOAN_MIN, tier.max)) fail(`${tier.name} 단계는 ${CASINO_LOAN_MIN.toLocaleString('ko-KR')}~${tier.max.toLocaleString('ko-KR')}범 안에서 빌릴 수 있어요.`);
     if (state.loans.some((l) => l.borrower === uid && l.lender === 'house' && l.state === 'active')) fail('기존 카지노 빚을 먼저 갚아 주세요.');
     next = houseTransfer(next, w, a.amount);
-    const interest = Math.floor(a.amount * .3);
-    addLoan(state, { lender: 'house', borrower: uid, principal: a.amount, interest, days: 3, offeredAt: now, dueAt: now + 3 * DAY, paid: 0, state: 'active' });
-    log(state, [uid], now, `카지노 대부 · ${a.amount.toLocaleString('ko-KR')}범 받음 / 3일 뒤 ${(a.amount + interest).toLocaleString('ko-KR')}범 상환 (단리 30%, 추가 연체이자 없음, 기한이 지나면 소지금·예금에서 자동 회수)`);
+    const interest = Math.floor(a.amount * CASINO_LOAN_RATE);
+    addLoan(state, { lender: 'house', borrower: uid, principal: a.amount, interest, days: tier.days, offeredAt: now, dueAt: now + tier.days * DAY, paid: 0, state: 'active' });
+    log(state, [uid], now, `카지노 대부 · ${a.amount.toLocaleString('ko-KR')}범 받음 / ${tier.days}일 뒤 ${(a.amount + interest).toLocaleString('ko-KR')}범 상환 (${tier.name} 단계 · 단리 30%, 추가 연체이자 없음, 기한이 지나면 소지금·예금에서 자동 회수)`);
   } else if (a.op === 'protect') {
     if (a.item !== 'lock' && a.item !== 'whistle') fail('방범 물품을 선택해 주세요.');
     const guard = (state.protection[uid] ??= { until: 0, whistles: 0 });

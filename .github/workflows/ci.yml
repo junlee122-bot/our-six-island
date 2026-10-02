@@ -43,8 +43,20 @@ jobs:
   village-life:
     # Real UI input against the isolated mock world: no production accounts,
     # network writes or saved data. Linux avoids local SwiftShader contention.
+    # The suite outgrew one 20-minute run, so it runs as two shards in
+    # parallel; together they list every step in verify-village-life-ui.mjs
+    # (login-and-winter-world always runs first).
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - name: town
+            steps: pc-guidance-and-link,minimap-friends-museum-resize,museum-walk-and-open,salon-walk-and-customization,bank-deposit-withdraw-consent
+          - name: outdoors
+            steps: minimap-stays-folded,fruit-forage-chop,fishing-lock-cancel-resume,fishing-reel-fight
+    name: village-life (${{ matrix.shard.name }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -57,12 +69,12 @@ jobs:
       - name: Pages build (scratch output)
         run: node scripts/build-standalone.mjs --out /tmp/village-pages --site-url /
       - name: Village life interactions
-        run: node --experimental-strip-types scripts/verify-village-life-ui.mjs --pages /tmp/village-pages --out /tmp/village-life --max-ms 1200000
+        run: node --experimental-strip-types scripts/verify-village-life-ui.mjs --pages /tmp/village-pages --out /tmp/village-life --max-ms 1200000 --steps ${{ matrix.shard.steps }}
       - name: Keep village life evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: village-life
+          name: village-life-${{ matrix.shard.name }}
           path: /tmp/village-life
 
   check:

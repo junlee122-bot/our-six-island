@@ -155,8 +155,11 @@ export const SEA_BUILD: Readonly<Record<string, number>> = {
 };
 
 // ---------------------------------------------------------------- dishes
-const round10 = (n: number) => Math.round(n / 10) * 10;
-const dish = (id: string, name: string, needs: RecipeDef['needs'], value: number, note: string, buff?: DishDef['buff']): DishDef => ({
+/**
+ * Seafood from the new fish. Priced in lounge-items DISHES like every other
+ * dish (ingredients × 1.25 + 100, rounded to 10), so they follow the fish prices.
+ */
+const dishOf = (id: string, name: string, needs: RecipeDef['needs'], note: string, buff?: DishDef['buff']): DishDef => ({
   id,
   name,
   emoji: '',
@@ -164,14 +167,13 @@ const dish = (id: string, name: string, needs: RecipeDef['needs'], value: number
   makes: id,
   count: 1,
   note,
-  sell: round10(value * 1.25 + 100),
+  sell: 0,
   ...(buff ? { buff } : {}),
 });
-/** Seafood from the new fish (sell = ingredients × 1.25 + 100 like every dish). */
 export const SEA_DISHES: readonly DishDef[] = [
-  dish('tuna-sashimi', '참다랑어 회', [{ item: 'bluefin', n: 1 }], 10_500, '붉은 속살을 두툼하게. 선장님이 직접 썰었다고 우겨요.', 'luck'),
-  dish('grilled-spanish', '삼치구이', [{ item: 'spanishmackerel', n: 1 }, { item: 'wood', n: 1 }], 1_460, '기름이 지글지글. 겨울 밥도둑.', 'luck'),
-  dish('croaker-soup', '민어탕', [{ item: 'croaker', n: 1 }, { item: 'cabbage', n: 1 }], 2_900, '복날 한 그릇이면 여름이 거뜬해요.', 'grow'),
-  dish('steamed-crab', '대게찜', [{ item: 'snowcrab', n: 2 }], 6_100, '다리살이 쏙쏙. 말 없이 먹게 되는 요리.', 'charm'),
-  dish('monkfish-stew', '아귀찜', [{ item: 'monkfish', n: 1 }, { item: 'spinach', n: 1 }], 2_000, '콩나물 대신 시금치를 넣은 범마을식 아귀찜.', 'mine'),
+  dishOf('tuna-sashimi', '참다랑어 회', [{ item: 'bluefin', n: 1 }], '붉은 속살을 두툼하게. 선장님이 직접 썰었다고 우겨요.', 'luck'),
+  dishOf('grilled-spanish', '삼치구이', [{ item: 'spanishmackerel', n: 1 }, { item: 'wood', n: 1 }], '기름이 지글지글. 겨울 밥도둑.', 'luck'),
+  dishOf('croaker-soup', '민어탕', [{ item: 'croaker', n: 1 }, { item: 'cabbage', n: 1 }], '복날 한 그릇이면 여름이 거뜬해요.', 'grow'),
+  dishOf('steamed-crab', '대게찜', [{ item: 'snowcrab', n: 2 }], '다리살이 쏙쏙. 말 없이 먹게 되는 요리.', 'charm'),
+  dishOf('monkfish-stew', '아귀찜', [{ item: 'monkfish', n: 1 }, { item: 'spinach', n: 1 }], '콩나물 대신 시금치를 넣은 범마을식 아귀찜.', 'mine'),
 ];

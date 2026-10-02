@@ -109,9 +109,13 @@ test('an unchanged life view is not resent; the packet no longer repeats it', as
   assert.equal(first.response.packet.life, undefined);
   assert.equal(typeof first.response.lifeHash, 'string');
   h.advance(8000);
-  const again = await h.run(ps[4], 'read', { lifeHash: first.response.lifeHash });
+  const again = await h.run(ps[4], 'read', { lifeHash: first.response.lifeHash, stocksHash: first.response.stocksHash });
   assert.equal(again.response.lifeHash, first.response.lifeHash, 'a poll 8 s later sees the same life view');
   assert.equal(again.response.life, undefined);
+  // 범마을 증권: the market view is skipped the same way.
+  assert.equal(typeof first.response.stocksHash, 'string');
+  assert.ok(first.response.stocks, 'first read carries the market');
+  assert.equal(again.response.stocks, undefined);
   const stale = await h.run(ps[4], 'read', { lifeHash: 'old' });
   assert.deepEqual({ ...stale.response.life, serverNow: 0 }, { ...first.response.life, serverNow: 0 });
   const bytes = (o) => JSON.stringify(o).length;

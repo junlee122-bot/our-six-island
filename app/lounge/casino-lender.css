@@ -24,3 +24,9 @@
 .l-lender-history summary { display: list-item; padding: var(--sp-3) 0; cursor: pointer; min-height: var(--hit); }
 .l-lender-history article { display: grid; gap: var(--sp-2); padding: var(--sp-3); margin-bottom: var(--sp-2); border-radius: var(--r-s); background: var(--surface-sunken); }
 @media (max-height: 780px) { .l-lender-portrait { height: 230px; } .l-lender-layout { gap: var(--sp-4); } }
+.l-lender-away { margin: 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); color: var(--text); font-size: var(--fs-body-s); line-height: 1.5; }
+.l-lender-tier { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); line-height: 1.5; }
+.l-lender-tiers { font-size: var(--fs-body-s); }
+.l-lender-tiers summary { display: list-item; cursor: pointer; min-height: var(--hit); padding: var(--sp-2) 0; }
+.l-lender-tiers ul { margin: 0; padding-left: var(--sp-4); display: grid; gap: var(--sp-1); }
+.l-lender-tiers li[aria-current] { font-weight: 700; }

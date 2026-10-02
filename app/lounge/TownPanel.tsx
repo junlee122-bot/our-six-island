@@ -37,6 +37,7 @@ import { NpcPortrait } from './NpcPortrait';
 import { useLifeAction } from './LifePanels';
 import { useNow } from './use-now';
 import type { Notify } from './Toast';
+import { STOCK_BY_SYM } from '../lounge-stocks';
 import './town.css';
 
 export type TownPlace = 'coop' | 'general' | 'bakery' | 'newspaper' | 'police' | 'fishmarket' | 'guild' | 'library' | 'stalls' | 'harborStall' | 'tavern' | 'signpost';
@@ -87,6 +88,7 @@ const AREA_WORD: Record<string, string> = {
   coop: '범마을 농협',
   general: '등불 잡화점',
   fishmarket: '범마을 어시장',
+  broker: '범마을 증권',
   wardrobe: '분장실',
   home: '누군가의 방',
 };
@@ -229,8 +231,16 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
         const today = kstDay(now);
         const d = life.digest;
         const f = jannaForecast(today);
+        // 범마을 증권: the latest market headline (design-stocks.md §7.3).
+        const stock = view.stocks?.events.find((e) => e.kind === 'news' || e.kind === 'up' || e.kind === 'down');
         return (
           <>
+            {stock && (
+              <section className="l-town-notice" aria-label="주식 소식" data-testid="newspaper-stock">
+                <strong>주식 소식 · {kstDay(stock.at) === kstDay(now) ? '오늘' : kstDay(stock.at) === kstDay(now) - 1 ? '어제' : `${kstDay(now) - kstDay(stock.at)}일 전`} {hhmm(stock.at)}</strong>
+                <p>{stock.kind === 'news' ? `${STOCK_BY_SYM[stock.sym].name}: ${stock.text}` : stock.text}</p>
+              </section>
+            )}
             <section className="l-town-notice" aria-label="잔나의 예보">
               <strong>내일 날씨 · 잔나 예보</strong>
               <p>

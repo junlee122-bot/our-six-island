@@ -1,9 +1,9 @@
 // 먼바다 낚싯배 수익 점검 (design-sea-fishing.md §5): plays a 20-minute voyage
 // and 20 minutes on the harbor's breakwater through the real engine (cast →
-// hook → fight with the reference player → land) and values the catch on the
-// post-raise price scale (claude/fish-prices: older fish ×1.5, legends ×1.3;
-// the new species are already on it) with the new selling rule: the first
-// FULL_PRICE fish of a species at full price, every one after at AFTER_SHARE.
+// hook → fight with the reference player → land) and values the catch at the
+// 어시장 (full share) with the live fish prices and the live fish selling rule
+// (lounge-life-plus sellTotal: FISH_DEMAND_FREE of a species a day at full
+// price, then the usual demand curve; no market saturation or daily cap).
 //
 //   node --experimental-strip-types --no-warnings scripts/sea-fishing-economy.mjs
 import { emptyLife, ensureLifeMember, lifeAction, lifeView } from '../app/lounge-life.ts';
@@ -11,7 +11,7 @@ import { newLoungeLedger, registerWallet, kstDay } from '../app/lounge-economy.t
 import { seasonOf, weatherOf, kstHour } from '../app/lounge-calendar.ts';
 import { botPlay, TICK_MS } from '../app/lounge-fish-minigame.ts';
 import { FISH_BY_ID } from '../app/lounge-items.ts';
-import { SEA_FISH } from '../app/lounge-fish-sea-data.ts';
+import { FISH_DEMAND_FREE, sellTotal } from '../app/lounge-life-plus.ts';
 import { VOYAGE_FARE, VOYAGE_MS, boardingSailing } from '../app/lounge-voyage-data.ts';
 
 const HOUR = 3_600_000;
@@ -24,15 +24,8 @@ const OVERHEAD_MS = 1_000 + 400 + 2_500;
  * in 20 minutes, the pace the design assumes.
  */
 const PACE_MS = Number(process.env.PACE_MS ?? 34_000);
-/** The other session's rule (assumed shape): 4 at full price, then a lower share. */
-const FULL_PRICE = 4;
-const AFTER_SHARE = 0.6;
-const NEW = new Set(SEA_FISH.map((f) => f.id));
-const price = (id) => {
-  const f = FISH_BY_ID[id];
-  if (!f) return 0;
-  return NEW.has(id) ? f.sell : Math.round(f.sell * (f.weight <= 1 ? 1.3 : 1.5));
-};
+/** 범 for selling k of a species in one day at the 어시장 (fish skip saturation and the cap). */
+const saleOf = (id, k) => sellTotal(id, FISH_BY_ID[id]?.sell ?? 0, 0, k);
 
 function findTime(season, hour, minute, sky) {
   const T0 = Date.UTC(2026, 8, 24, 3);
@@ -82,7 +75,7 @@ function session({ spot, season, hour, rod, level, sky, bait, minutes = 20 }) {
     n = 0;
   for (const [id, k] of Object.entries(caught)) {
     n += k;
-    value += price(id) * Math.min(k, FULL_PRICE) + price(id) * AFTER_SHARE * Math.max(0, k - FULL_PRICE);
+    value += saleOf(id, k);
   }
   return { tries, n, value: Math.round(value), species: Object.keys(caught).length };
 }
@@ -98,7 +91,7 @@ const rows = [
   { label: '먼바다 · 봄 비 · 3단 · Lv6', opts: { spot: 'offshore', season: 'spring', hour: 12, rod: 3, level: 6, sky: 'rain' } },
 ];
 console.log(`한 마리 최소 ${PACE_MS / 1000}초`);
-console.log(`| 20분 | 시도 / 낚음 | 어종 | 판매(인상 후, ${FULL_PRICE}마리까지 정가·이후 ${AFTER_SHARE * 100}%) | 승선료 뺀 순익 |`);
+console.log(`| 20분 | 시도 / 낚음 | 어종 | 판매(어시장, ${FISH_DEMAND_FREE}마리까지 정가·이후 수요 곡선) | 승선료 뺀 순익 |`);
 console.log('|---|---|---|---|---|');
 for (const { label, opts } of rows) {
   const r = session(opts);

@@ -124,6 +124,25 @@ export class MarketSet extends DistrictSet {
       case 'police':
         this.lantern(s.x - 1.2, front + 0.3, '#8fb4ff', 2.3);
         break;
+      case 'broker': {
+        // 범마을 증권: a ticker board by the door (red up, blue down).
+        const g = new THREE.Group();
+        const panel = this.box(1.3, 0.62, 0.08, '#16233a');
+        panel.position.y = 1.55;
+        const legs = this.box(0.1, 1.25, 0.1, '#3a4a66');
+        legs.position.y = 0.62;
+        g.add(panel, legs);
+        for (let i = 0; i < 4; i++) {
+          const bar = this.box(0.22, 0.08 + 0.07 * ((i * 3) % 4), 0.02, i % 2 ? '#4f7fb2' : '#d0463b');
+          bar.position.set(-0.45 + i * 0.3, 1.38 + (0.04 + 0.035 * ((i * 3) % 4)), 0.05);
+          g.add(bar);
+        }
+        const p = at(-2.2, 0.6);
+        g.position.set(p.x, 0, p.z);
+        this.root.add(shadowed(g));
+        this.lantern(s.x - 1.1, front + 0.3, '#ffd36e', 2.1);
+        break;
+      }
     }
   }
   private buildPlaza() {

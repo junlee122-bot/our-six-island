@@ -3,6 +3,7 @@ import { emptyLoungeView } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
 import type { FinanceView } from './lounge-finance';
+import type { StocksView } from './lounge-stocks';
 import type { TableStatsView } from './lounge-table-stats';
 import { cloud, cloudCall, AccountError } from './lounge-auth';
 import type { AccountProfile } from './lounge-accounts';
@@ -69,6 +70,9 @@ type Response = {
   finance?: FinanceView;
   /** 테이블 기록 (lounge-table-stats.ts): my totals and the weekly table. */
   tableStats?: TableStatsView;
+  /** 범마을 증권 (lounge-stocks.ts), left out when unchanged (`stocksHash`). */
+  stocks?: StocksView;
+  stocksHash?: string;
 };
 
 type Area = import('./lounge-games').Area;
@@ -92,6 +96,8 @@ export type CloudRoomView = LoungeView & {
   life: LifeView | null;
   finance?: FinanceView;
   tableStats?: TableStatsView;
+  /** 범마을 증권: the market as last sent (null until the market is listed). */
+  stocks?: StocksView;
   /** Connection health (lounge-connection.ts): 'offline' after two failed calls in a row. */
   link: Link;
 };
@@ -307,6 +313,10 @@ export class CloudRoom {
     } else if (this.view.life && Number.isFinite(r.serverNow))
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };
     if (r.finance) this.view = { ...this.view, finance: r.finance };
+    if (r.stocks) {
+      this.view = { ...this.view, stocks: r.stocks };
+      this.stocksHash = r.stocksHash ?? '';
+    }
     if (r.tableStats && JSON.stringify(r.tableStats) !== JSON.stringify(this.view.tableStats))
       this.view = { ...this.view, tableStats: r.tableStats };
     if (r.packet && r.code) {
@@ -378,12 +388,20 @@ export class CloudRoom {
    */
   /** Hash of the life view in `view.life` (sent so an unchanged one is skipped). */
   private lifeHash = '';
+  /** Same for `view.stocks`. */
+  private stocksHash = '';
+  private hashes() {
+    return {
+      ...(this.view.life && this.lifeHash ? { lifeHash: this.lifeHash } : {}),
+      ...(this.view.stocks && this.stocksHash ? { stocksHash: this.stocksHash } : {}),
+    };
+  }
   private async send(command: CloudCommand, generation: number, background = false) {
     let result: Response | undefined;
     // Reads carry it; queued actions carry it from when they were queued (the
     // retry below reuses the same body, so its request hash stays the same).
     if (command.op === 'read' || command.op === 'wallet')
-      command = { ...command, ...(this.view.life && this.lifeHash ? { lifeHash: this.lifeHash } : {}) };
+      command = { ...command, ...this.hashes() };
     const attempts = background ? 1 : 2;
     for (let attempt = 0; attempt < attempts; attempt++) {
       try {
@@ -453,7 +471,7 @@ export class CloudRoom {
     const g = this.generation,
       body: CloudCommand = {
         ...command,
-        ...(this.view.life && this.lifeHash ? { lifeHash: this.lifeHash } : {}),
+        ...this.hashes(),
         requestId: crypto.randomUUID(),
         sequence: ++this.sequence,
         connection: this.connection,

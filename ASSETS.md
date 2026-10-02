@@ -541,7 +541,7 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 | 연회 의자 `banquetChair.glb` | 397,588 → 194,080 | 512² | 회관·카지노 모든 테이블 의자. 방석 높이 = `SEAT_HEIGHT`(0.36) |
 | 바 의자 `barStool.glb` | 487,112 → 207,932 | 512² | 카지노 바 앞 4개 |
 | 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후, 기둥 사이 벨벳 줄은 코드. 전에는 공사장) |
-| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 가구 상점 판매 품목 `furn-rocking-chair` '흔들의자'(26,000범, 산 개수만큼 방에 배치). 상점 아이콘은 같은 화풍의 SVG, 방 카탈로그 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
+| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 2026-10-02까지 가구 상점 품목 `furn-rocking-chair`의 방 모델. 지금 방과 상점은 가구 그림(`lounge/furniture/rocking-chair.webp`)을 쓰고, 이 GLB는 기록·재사용용으로 남겨 둡니다(방에서 받지 않음). 예전 렌더 썸네일은 지웠습니다 |
 
 - 원본 합계 7,880,560바이트 → 배포 사본 4,556,676바이트(+ 썸네일 14,834). 원본은 `public/models/_originals/` 같은 경로에 보관하고 `npm run optimize:assets`로 다시 만듭니다. 작게 보이는 반복 소품 8종은 `scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`로 512²까지 줄였습니다(기본 1024²).
 - GPU 텍스처 메모리(RGBA8, 밉맵 포함): 1024² 7장 × 5.3MB + 512² 8장 × 1.3MB ≈ 48MB. 장면별로는 마을 ≈ 33MB, 회관 ≈ 6.7MB, 카지노 ≈ 4MB, 방은 흔들의자를 놓을 때 5.3MB입니다. 모든 모델은 그 장면을 열 때만 받고(회관·카지노 가구는 실내 화면 청크에서), 모델이 도착하기 전에는 기존 도형이 대신 보입니다.
@@ -717,3 +717,9 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
   - 게임 속 치비(약 2등신): `_originals/chibi/npc-chibi-shinhyungman-bongmison.png`(왼쪽 신형만, 오른쪽 봉미선) → `optimize-assets.mjs chibi`가 가장 빈 세로줄에서 나누고 몸 94%·발 97% 선으로 `lounge/chibi/npc-shinhyungman.webp`·`npc-bongmison.webp`(512×640)를 만듭니다.
   - 카운터 포즈 시트: `_originals/host-realtor-nohara.png`(윗줄 신형만, 아랫줄 봉미선: 평소·웃음·집중) → `optimize-assets.mjs hosts`가 한 사람당 한 장씩 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 놓습니다. 딜·놀람 칸은 웃음, 미안 칸은 평소 그림을 씁니다. `lounge/host-realtor.*`(신형만, 문 사장 시트를 대체), `lounge/host-misun.*`(봉미선). `_originals/host-realtor-nohara-alt.png`는 쓰지 않는 후보입니다.
 - 키잉 검사: `tests/lounge-character-pixels.test.mjs`가 새 큰 그림·초상·치비·시트 모두 분홍 테두리 없음과 발 선을 확인합니다.
+
+## 나무결 가구점 가구 그림 (2026-10-02)
+
+- 원본: `public/assets/lounge/_originals/furniture/furniture-sheet-0..5.png` (Higgsfield GPT Image 2.5, 2048² 마젠타 배경, 0~2는 3×3·3~5는 2×2). 칸 순서·해시·작업 번호는 `public/assets/lounge/furniture-art-generation.json`.
+- 웹 사본: `node scripts/optimize-assets.mjs furniture`가 만듭니다. 원본 해시를 확인하고, keyMagenta(둘러싼 바탕 시드 90) + defringeMagenta로 배경을 빼고, 칸마다 자기 그림 조각만 남겨(옆 칸에서 넘어온 조각 제거) 카탈로그 비율(세워 두는 것·벽걸이 h/w, 러그 d/w 위에서 본 모양) 캔버스에 넣습니다. 긴 변 768px 이하 `lounge/furniture/<이름>.webp` 39장(합계 약 2.6MB) + 256² 썸네일 `lounge/furniture/thumbs/`. 크기와 SHA-256은 같은 json의 `web`에 스크립트가 적습니다(`tests/lounge-furniture-art.test.mjs`가 확인).
+- `app/lounge-assets.ts`의 `furniture_*` 항목이 빌드에 들어가는 목록입니다. 만들기 가구 16종은 아직 그림이 없어 SVG를 씁니다.

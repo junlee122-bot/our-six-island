@@ -23,8 +23,11 @@ import { CROP_INFO, SHOP_BY_ID, type Crop } from './lounge-life.ts';
 import { ITEM_BY_ID } from './lounge-items.ts';
 import { ACCOUNT_IDS } from './lounge-accounts.ts';
 import { ACTORS } from './lounge-roster.ts';
+import { STOCKS, equityOf, readStocks, type StockStatDay } from './lounge-stocks.ts';
 
 const DAY_MS = 86_400_000;
+/** Noon KST of a KST day number (for kstDate). */
+const dayStartMs = (day: number) => day * DAY_MS - 9 * 3_600_000 + 12 * 3_600_000;
 export const ECONOMY_GAMES: readonly EconomyGame[] = [
   'chess',
   'gostop',
@@ -100,7 +103,7 @@ export type AccountRow = {
   otherGranted: number;
   shopSpent: number;
   otherSpent: number;
-  /** 범 sold today (KST) against the daily sell cap. */
+  /** 범 sold today (KST) against the daily sell cap (fish are outside it). */
   soldToday: number;
   /** Lifetime harvest + fruit pick count (life.harvested). */
   harvested: number;
@@ -157,6 +160,8 @@ export type EconomyReport = {
     houseBalance: number;
     /** Loan payouts/repayments already included in houseBalance, not new supply. */
     financeHouseNet: number;
+    /** 범마을 증권: net share trades/collateral/dividends already in houseBalance. */
+    marketNet: number;
     /** Lifetime minted by grants (daily, relief, farm sales). */
     granted: number;
     /** Lifetime moved to the house by spends (shop). */
@@ -207,6 +212,14 @@ export type EconomyReport = {
     /** Last `days` days (report window) from the day counters. */
     recent: { granted: number; spent: number; sources: FlowRow[]; sinks: FlowRow[] };
   };
+  /** 범마을 증권 (lounge-stocks.ts); null before the market is listed. */
+  stocks: null | {
+    tick: number;
+    prices: { sym: string; name: string; px: number; prev: number }[];
+    accounts: { name: string; equity: number; paidIn: number; paidOut: number; profit: number; loans: number; shorts: number }[];
+    days: (StockStatDay & { date: string })[];
+    totals: Omit<StockStatDay, 'd'>;
+  };
   warnings: string[];
 };
 /** Korean label of a flow bucket (lounge-economy flowBucket). */
@@ -240,6 +253,7 @@ export const BUCKET_LABEL: Record<string, string> = {
   research: '마을 개척',
   respec: '전문가 다시 고르기',
   'venue-up': '가게 업그레이드',
+  'stock-fee': '주식 수수료',
   'spend-other': '기타 지출',
 };
 const bucketLabel = (key: string) =>
@@ -573,6 +587,7 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
     registered = Object.keys(accountsRaw).length,
     houseBalance = int(L.houseBalance),
     financeHouseNet = int(L.financeHouseNet),
+    marketNet = int(L.marketNet),
     granted = int(L.granted),
     spent = int(L.spent),
     initial = registered * INITIAL_BEOM,
@@ -635,6 +650,7 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
       playerMoney,
       houseBalance,
       financeHouseNet,
+      marketNet,
       granted,
       spent,
       initial,
@@ -667,7 +683,39 @@ export function economyReport(input: EconomyReportInput): EconomyReport {
     },
     daily: [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date)),
     flows,
+    stocks: stockReport(state.stocks, (uid) => row('wallet-' + uid).name, warnings),
     warnings,
+  };
+}
+/** 범마을 증권 for the report: prices, each friend's book and the daily totals. */
+function stockReport(raw: unknown, nameOf: (uid: string) => string, warnings: string[]): EconomyReport['stocks'] {
+  if (raw === undefined) return null;
+  let st;
+  try {
+    st = readStocks(raw);
+  } catch {
+    warnings.push('증권 장부(world.stocks)를 읽을 수 없습니다.');
+    return null;
+  }
+  const totals = { fee: 0, interest: 0, borrow: 0, dividend: 0, absorbed: 0, volume: 0, liquidations: 0 };
+  for (const d of st.stats) for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += d[k];
+  return {
+    tick: st.tick,
+    prices: STOCKS.map((d) => ({ sym: d.sym, name: d.name, px: st.px[d.sym], prev: st.prev[d.sym] })),
+    accounts: Object.entries(st.acct).map(([uid, a]) => {
+      const equity = equityOf(st, a);
+      return {
+        name: nameOf(uid),
+        equity,
+        paidIn: a.paidIn,
+        paidOut: a.paidOut,
+        profit: a.paidOut + equity - a.paidIn,
+        loans: Object.values(a.long).reduce((n, l) => n + (l?.loan ?? 0), 0),
+        shorts: Object.values(a.short).reduce((n, s) => n + (s?.val ?? 0), 0),
+      };
+    }),
+    days: [...st.stats].reverse().map((d) => ({ ...d, date: kstDate(dayStartMs(d.d)) })),
+    totals,
   };
 }
 /** Admin cross-check: old SQL functions lack bank fields and need an update. */
@@ -825,6 +873,7 @@ function tables(r: EconomyReport): Table[] {
         ['통화량(플레이어 보유 = 잔액+예약+보관금)', beomText(t.playerMoney)],
         ['하우스(카지노+상점+금융)', beomText(t.houseBalance)],
         ['하우스 중 금융 순액(상환−대출)', signed(t.financeHouseNet)],
+        ['하우스 중 증권 순액(매수·증거금−매도·배당)', signed(t.marketNet)],
         ['초기 지급(지갑×100,000)', beomText(t.initial)],
         ['누적 발행(오늘의 범·판매)', beomText(t.granted)],
         ['누적 상점 지출', beomText(t.spent)],
@@ -844,7 +893,7 @@ function tables(r: EconomyReport): Table[] {
         '농사 수입*',
         '오늘의 범*',
         '상점 지출*',
-        '오늘 판매',
+        '오늘 판매(물고기 제외)',
       ],
       right: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       rows: r.accounts.map((a) => [
@@ -954,6 +1003,28 @@ function tables(r: EconomyReport): Table[] {
         signed(d.net),
       ]),
     },
+    ...(r.stocks
+      ? [
+          {
+            title: `범마을 증권: 계정별 (수수료 ${beomText(r.stocks.totals.fee)} · 이자 ${beomText(r.stocks.totals.interest)} · 대차 ${beomText(r.stocks.totals.borrow)} · 배당 ${beomText(r.stocks.totals.dividend)} · 증권사 부담 ${beomText(r.stocks.totals.absorbed)} · 반대매매 ${r.stocks.totals.liquidations}건, 최근 30일)`,
+            head: ['친구', '평가', '넣은 돈', '받은 돈', '손익', '신용 빚', '공매도'],
+            right: [1, 2, 3, 4, 5, 6],
+            rows: r.stocks.accounts.map((a) => [a.name, beomText(a.equity), beomText(a.paidIn), beomText(a.paidOut), signed(a.profit), beomText(a.loans), beomText(a.shorts)]),
+          },
+          {
+            title: '범마을 증권: 시세',
+            head: ['종목', '현재가', '전일 종가', '등락'],
+            right: [1, 2, 3],
+            rows: r.stocks.prices.map((p) => [p.name, beomText(p.px), beomText(p.prev), `${(((p.px - p.prev) / p.prev) * 100).toFixed(2)}%`]),
+          },
+          {
+            title: '범마을 증권: 일별',
+            head: ['날짜', '거래대금', '수수료', '이자', '대차', '배당', '증권사 부담', '반대매매'],
+            right: [1, 2, 3, 4, 5, 6, 7],
+            rows: r.stocks.days.map((d) => [d.date, beomText(d.volume), beomText(d.fee), beomText(d.interest), beomText(d.borrow), beomText(d.dividend), beomText(d.absorbed), String(d.liquidations)]),
+          },
+        ]
+      : []),
     {
       title: '보관 기록 전체 공급원/소비처*',
       head: ['사유', '분류', '건수', '금액'],

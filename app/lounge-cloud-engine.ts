@@ -48,6 +48,9 @@ import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
 import { atHubCounter, hubCounterFor, hubCounterReject } from './lounge-hub-counters.ts';
+import { listStocks, materializeStocks, stocksAction, stocksView, stockWealth, type StockNews, type StockState } from './lounge-stocks.ts';
+import { addNews } from './lounge-life-plus.ts';
+import { ACTORS } from './lounge-roster.ts';
 // 먼바다 낚싯배 (design-sea-fishing.md): the deck only while a voyage is on; boarding at the pier.
 import { isVoyageAction } from './lounge-voyage-data.ts';
 import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
@@ -97,6 +100,8 @@ export type CloudWorld = {
   loginGifts?: Record<string, LoginGift>;
   /** 테이블 기록: per-game results and the weekly table (lounge-table-stats.ts). */
   tableStats?: TableStats;
+  /** 범마을 증권 (lounge-stocks.ts). Its seed never leaves the server. */
+  stocks?: StockState;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -112,6 +117,8 @@ export type CloudCommand = {
    * leaves `life` out when it has not changed (most polls during a game).
    */
   lifeHash?: string;
+  /** Same for the stock market view (lounge-stocks.ts stocksView). */
+  stocksHash?: string;
 };
 export class CloudError extends Error {
   status: number;
@@ -198,16 +205,35 @@ export async function commandHash(c: CloudCommand) {
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
 }
-function wallet(ledger: LoungeLedger, id: string, now: number, life?: LifeState) {
+function wallet(ledger: LoungeLedger, id: string, now: number, life?: LifeState, stocks?: StockState) {
   const bank = new LoungeBank(null);
   bank.commit(ledger);
-  return bank.view('wallet-' + id, now, life ? lifeWealth(life, id) : 0);
+  return bank.view('wallet-' + id, now, (life ? lifeWealth(life, id) : 0) + stockWealth(stocks, id));
 }
-/** Village context a hosted room needs: flags (VIP stakes) and bag wealth (relief). */
-function roomContext(r: LoungeRoom, life: LifeState) {
+/** Village context a hosted room needs: flags (VIP stakes) and bag and share wealth (relief). */
+function roomContext(r: LoungeRoom, life: LifeState, stocks?: StockState) {
   r.villageFlags = [...(life.flags ?? [])];
-  r.wealthOf = (w) => lifeWealth(life, w.replace(/^wallet-/, ''));
+  r.wealthOf = (w) => lifeWealth(life, w.replace(/^wallet-/, '')) + stockWealth(stocks, w.replace(/^wallet-/, ''));
   return r;
+}
+/** 범마을 증권: a fresh 128-bit seed for a new market (server only). */
+const stockSeed = () => [...crypto.getRandomValues(new Uint8Array(16))].map((n) => n.toString(16).padStart(2, '0')).join('');
+/** Market lines a day may add to the village news (상한가·하한가, 반대매매, the day's headline). */
+const STOCK_NEWS_DAY = 4;
+function stockNewsInto(life: LifeState, news: StockNews[], now: number) {
+  const today = kstDay(now);
+  let added = false;
+  for (const n of news) {
+    const day = kstDay(n.at);
+    if (day < today - 1) continue;
+    const lines = life.news?.find((d) => d.day === day)?.lines ?? [];
+    if (lines.some((l) => l.key === n.key) || lines.filter((l) => l.kind === 'stock').length >= STOCK_NEWS_DAY) continue;
+    const actors = n.uids.flatMap((u) => (Object.hasOwn(life.actors, u) ? [life.actors[u]] : []));
+    const text = n.text.replace('{actor}', actors.length ? (ACTORS[actors[0]] ?? '누군가') : '누군가');
+    addNews(life, n.at, n.key, n.kind, text, actors);
+    added = true;
+  }
+  return added;
 }
 /** Refund whatever a broken room still holds, so one room cannot wedge the world. */
 function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
@@ -314,6 +340,24 @@ export function cloudTransition(
       notifications.add(c);
   }
   g.ledger = registerWallet(g.ledger, 'wallet-' + member.id);
+  const mutating = !['read', 'wallet'].includes(command.op);
+  // 범마을 증권: catch the market up to now (prices, dividends, interest, forced
+  // sales). Only a command that writes anyway stores it; a read looks only.
+  if (mutating) {
+    const inputs = { ledger: g.ledger, casino: g.finance?.casino };
+    if (!g.stocks) g.stocks = listStocks(stockSeed(), now, inputs);
+    else {
+      const m = materializeStocks(g.stocks, g.ledger, inputs, now);
+      if (m.changed) {
+        g.stocks = m.state;
+        g.ledger = m.ledger;
+        if (m.news.length) {
+          const life = readLife(g.life);
+          if (stockNewsInto(life, m.news, now)) g.life = life;
+        }
+      }
+    }
+  }
   let current = Object.keys(g.rooms).find((c) => g.rooms[c].leases[member.id]),
     target = command.code ? roomCode(command.code) : null;
   let ok = true,
@@ -321,7 +365,6 @@ export function cloudTransition(
     status = 200;
   /** A read's lease whose `seen` is refreshed only if we commit anyway (D-3). */
   let piggyback: Lease | null = null;
-  const mutating = !['read', 'wallet'].includes(command.op);
   if (
     mutating &&
     (!UUID.test(command.requestId ?? '') ||
@@ -395,6 +438,20 @@ export function cloudTransition(
         current = target;
         notifications.add(target);
         g.life = ensureLifeMember(readLife(g.life), member.id, member.actor);
+      } else if (command.op === 'action' && command.action?.kind === 'stock') {
+        // 범마을 증권: orders at the server's price; new positions only inside the 증권사.
+        const entry = target ? g.rooms[target] : undefined, lease = entry?.leases[member.id];
+        if (!entry || !lease || lease.connection !== command.connection)
+          throw new CloudError('마을에 다시 접속한 뒤 주문해 주세요.', 409);
+        if (!Number.isSafeInteger(command.sequence) || command.sequence! <= lease.sequence)
+          throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
+        lease.sequence = command.sequence!;
+        lease.seen = now;
+        const player = entry.snapshot.players.find((p) => p.id === member.id);
+        if (!player || !g.stocks) throw new CloudError('마을에 다시 접속한 뒤 주문해 주세요.', 409);
+        const next = stocksAction(g.stocks, g.ledger, member.id, command.action, now, { area: player.area ?? 'village' });
+        g.stocks = next.state;
+        g.ledger = next.ledger;
       } else if (command.op === 'action' && command.action?.kind === 'finance') {
         const entry = target ? g.rooms[target] : undefined, lease = entry?.leases[member.id];
         if (!entry || !lease || lease.connection !== command.connection)
@@ -543,7 +600,7 @@ export function cloudTransition(
         const id = 'wallet-' + member.id;
         if (!dailyGrantInfo(g.ledger, id, now).available)
           throw new CloudError(REJECT.daily, 409);
-        g.ledger = claimDailyGrant(g.ledger, id, now, lifeWealth(readLife(g.life), member.id));
+        g.ledger = claimDailyGrant(g.ledger, id, now, lifeWealth(readLife(g.life), member.id) + stockWealth(g.stocks, member.id));
       } else if (
         command.op === 'action' ||
         command.op === 'leave' ||
@@ -567,7 +624,7 @@ export function cloudTransition(
         if (mutating) lease.sequence = command.sequence!;
         if (mutating || now - lease.seen > SEEN_REFRESH_MS) lease.seen = now;
         else if (now - lease.seen > SEEN_PIGGYBACK_MS) piggyback = lease;
-        const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life));
+        const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life), g.stocks);
         if (command.op === 'leave') {
           r.hostedDrop(member.id);
           delete entry.leases[member.id];
@@ -753,6 +810,12 @@ export function cloudTransition(
   const packet = runtime ? runtime.hostedPacket(member.id) : null;
   // serverNow ticks on every call; the client stamps it from the response.
   const lifeHash = viewHash({ ...life, serverNow: 0 });
+  // 범마을 증권: a read shows the market caught up in memory only.
+  const shown = g.stocks
+    ? mutating ? g.stocks : materializeStocks(g.stocks, g.ledger, { ledger: g.ledger, casino: g.finance?.casino }, now).state
+    : null;
+  const stocks = shown ? stocksView(shown, member.id, lifeState.actors, now) : null;
+  const stocksHash = stocks ? viewHash(stocks) : '';
   const nextDue =
     entry && allowed ? snapshotNextDue(entry.snapshot) : Infinity;
   const response = {
@@ -762,9 +825,11 @@ export function cloudTransition(
     code: allowed ? target : '',
     host: allowed ? entry.snapshot.host : null,
     packet,
-    wallet: wallet(g.ledger, member.id, now, lifeState),
+    wallet: wallet(g.ledger, member.id, now, lifeState, g.stocks),
     ...(command.lifeHash === lifeHash ? {} : { life }),
     lifeHash,
+    ...(stocks && command.stocksHash !== stocksHash ? { stocks } : {}),
+    stocksHash,
     finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
     tableStats: tableStatsView(
       readTableStats(g.tableStats, now),

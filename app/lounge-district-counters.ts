@@ -20,6 +20,7 @@ export type DistrictCounter =
   | 'library'
   | 'stalls'
   | 'harborStall'
+  | 'broker'
   /** 먼바다 낚싯배's timetable board at the pier (design-sea-fishing.md). */
   | 'voyage';
 export type DistrictTouch =
@@ -41,6 +42,7 @@ export const COUNTER_NAME: Record<DistrictCounter, string> = {
   library: '도서관',
   stalls: '장날 좌판',
   harborStall: '마키마의 항구 좌판',
+  broker: '범마을 증권',
   voyage: '먼바다 출항 안내판',
 };
 /**

@@ -61,6 +61,15 @@ const LOOK: Record<ShopArea, { panel: string; trim: string; rugs: readonly [x: n
     ],
     sign: ['#23302b', '#bff0d4', '#58b98a'],
   },
+  broker: {
+    panel: '#2f3e5a',
+    trim: '#d9e2ef',
+    rugs: [
+      [0, -1.75, 3.6, 1.1, '#3d5478'],
+      [0, 1.6, 6.4, 2.6, '#53698c'],
+    ],
+    sign: ['#16233a', '#ffd36e', '#5a78ad'],
+  },
   fishmarket: {
     panel: '#5f8794',
     trim: '#e3eef2',

@@ -32,6 +32,7 @@ export const SCENE_LAYOUT: Record<
   coop: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   general: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   fishmarket: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  broker: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   lounge: {
     floor: { left: 12, right: 88, back: 58, front: 90 },
     tables: [

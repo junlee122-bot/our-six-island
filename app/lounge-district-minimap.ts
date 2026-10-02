@@ -126,6 +126,7 @@ const COUNTER_SHORT: Record<string, string> = {
   fishmarket: '어시장',
   guild: '낚시조합',
   library: '도서관',
+  broker: '증권사',
   voyage: '먼바다 배',
 };
 

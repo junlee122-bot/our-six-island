@@ -180,8 +180,6 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
   e('cushions', 'model', '쿠션 세트', 'soft', 'small', 1.08, 0.66, 0.6),
   e('plant-stand', 'model', '화분 선반', 'plant', 'floor', 1.18, 0.48, 1.44),
   e('tulips', 'model', '튤립 화분', 'plant', 'small', 0.89, 0.46, 1.01),
-  // Furniture shop piece (lounge-items FURNITURE): a kArchive 3D model, owned copies only.
-  e('furn-rocking-chair', 'model', '흔들의자', 'furniture', 'floor', 0.91, 1.2, 1.25, { unlock: 'furn-rocking-chair', premium: true }),
   // Painted props (Higgsfield art) shown as upright cards.
   e('vanity', 'prop', '화장대', 'furniture', 'floor', 1.32, 0.6, 1.8),
   e('clothes-rack', 'prop', '옷걸이 행거', 'furniture', 'floor', 1.5, 0.6, 1.92),
@@ -241,43 +239,62 @@ export const ROOM_CATALOG: readonly CatalogEntry[] = [
       ['furn-planter', '정원 화단', 'plant', 'floor', 1.4, 0.6, 0.7],
       ['furn-fireplace', '따뜻한 벽난로', 'furniture', 'floor', 1.8, 0.7, 1.6],
       ['furn-fruit-tree', '작은 귤나무', 'plant', 'floor', 1.0, 1.0, 1.8],
-      ['furn-bed-mint', '민트 침대', 'furniture', 'floor', 2.36, 3.02, 1.52, 0.74],
-      ['furn-sofa-rose', '로즈 벤치 소파', 'furniture', 'floor', 2.34, 1.14, 1.14],
-      ['furn-armchair-navy', '네이비 1인 소파', 'furniture', 'floor', 1.14, 0.9, 1.2],
+      ['furn-bed-mint', '민트 침대', 'furniture', 'floor', 2.36, 3.02, 2.38, 0.74],
+      ['furn-sofa-rose', '로즈 벤치 소파', 'furniture', 'floor', 2.34, 1.14, 1.92],
+      ['furn-armchair-navy', '네이비 1인 소파', 'furniture', 'floor', 1.14, 0.9, 1.32],
       ['furn-rug-lilac', '라일락 울 러그', 'soft', 'rug', 3.18, 2.46, 0.05],
-      ['furn-bookcase-walnut', '월넛 5단 책장', 'furniture', 'floor', 1.27, 0.48, 2.8],
-      ['furn-wardrobe-white', '화이트 옷장', 'furniture', 'floor', 1.68, 0.86, 2.8],
-      ['furn-cherry-vase', '벚꽃 가지 화병', 'plant', 'small', 0.45, 0.35, 0.8],
-      ['furn-fan', '레트로 선풍기', 'furniture', 'floor', 0.5, 0.4, 1.1],
-      ['furn-maple-garland', '단풍 가랜드', 'wall', 'wall', 2.0, 0.04, 0.6],
-      ['furn-snowman', '눈사람 인형', 'soft', 'small', 0.5, 0.5, 0.8],
-      ['furn-moon-lantern', '보름달 등', 'small', 'small', 0.5, 0.5, 0.7],
-      ['furn-lucky-pouch', '복주머니 장식', 'wall', 'wall', 0.6, 0.04, 0.8],
-      ['furn-jack-lantern', '호박 등불', 'small', 'small', 0.5, 0.5, 0.5],
-      ['furn-xmas-tree', '크리스마스 트리', 'plant', 'floor', 1.2, 1.2, 2.4],
-      ['furn-village-medal', '마을 복원 기념패', 'rare', 'wall', 0.6, 0.04, 0.7],
+      ['furn-bookcase-walnut', '월넛 5단 책장', 'furniture', 'floor', 1.27, 0.48, 2.11],
+      ['furn-wardrobe-white', '화이트 옷장', 'furniture', 'floor', 1.68, 0.86, 2.55],
+      // Was the kArchive 3D model until 2026-10-02 (stored rooms: LEGACY_ITEM_KIND).
+      ['furn-rocking-chair', '흔들의자', 'furniture', 'floor', 1.0, 1.2, 1.22],
+      ['furn-cherry-vase', '벚꽃 가지 화병', 'plant', 'small', 0.5, 0.35, 0.65],
+      ['furn-fan', '레트로 선풍기', 'furniture', 'floor', 0.5, 0.4, 0.95],
+      ['furn-maple-garland', '단풍 가랜드', 'wall', 'wall', 1.8, 0.04, 0.9],
+      ['furn-snowman', '눈사람 인형', 'soft', 'small', 0.55, 0.5, 0.75],
+      ['furn-moon-lantern', '보름달 등', 'small', 'small', 0.5, 0.5, 0.85],
+      ['furn-lucky-pouch', '복주머니 장식', 'wall', 'wall', 0.45, 0.04, 1.0],
+      ['furn-jack-lantern', '호박 등불', 'small', 'small', 0.5, 0.5, 0.52],
+      ['furn-xmas-tree', '크리스마스 트리', 'plant', 'floor', 1.2, 1.2, 1.9],
+      ['furn-village-medal', '마을 복원 기념패', 'rare', 'wall', 0.8, 0.04, 0.78],
+      // 나무결 가구점 새 가구 (2026-10-02, furniture-art-generation.json sheet 2).
+      ['furn-round-dining-set', '원목 2인 식탁', 'furniture', 'floor', 2.0, 1.2, 1.68],
+      ['furn-beanbag', '빈백 소파', 'soft', 'floor', 1.1, 1.0, 1.08],
+      ['furn-hanging-planter', '행잉 플랜트', 'plant', 'wall', 0.8, 0.04, 1.37],
+      ['furn-cat-tower', '캣타워', 'furniture', 'floor', 1.3, 0.8, 1.68],
+      ['furn-retro-tv', '레트로 TV', 'music', 'floor', 1.2, 0.6, 1.21],
+      ['furn-wall-shelf', '벽걸이 선반', 'wall', 'wall', 1.4, 0.04, 0.95],
       // 이번 주 명품 가구 (weekly luxury rotation).
-      ['furn-grand-piano', '그랜드 피아노', 'music', 'floor', 2.0, 1.6, 1.3],
-      ['furn-canopy-bed', '캐노피 침대', 'furniture', 'floor', 2.4, 3.0, 2.4, 0.74],
-      ['furn-aquarium', '대형 수족관', 'furniture', 'floor', 1.8, 0.6, 1.5, 1.5],
-      ['furn-crystal-lamp', '크리스탈 스탠드', 'small', 'small', 0.5, 0.5, 0.9],
-      ['furn-gold-mirror', '금테 전신 거울', 'furniture', 'floor', 0.8, 0.4, 2.1],
-      ['furn-arcade', '레트로 오락기', 'furniture', 'floor', 0.9, 0.8, 1.8],
-      ['furn-telescope', '별 보는 망원경', 'furniture', 'floor', 0.9, 0.9, 1.7],
-      ['furn-mother-pearl', '자개 병풍', 'rare', 'floor', 2.4, 0.3, 1.6],
-      ['furn-velvet-sofa', '벨벳 체스터필드 소파', 'furniture', 'floor', 2.4, 1.1, 1.0],
-      ['furn-bonsai', '명품 분재', 'plant', 'small', 0.7, 0.5, 0.8],
+      ['furn-grand-piano', '그랜드 피아노', 'music', 'floor', 2.0, 1.6, 2.12],
+      ['furn-canopy-bed', '캐노피 침대', 'furniture', 'floor', 2.4, 3.0, 2.47, 0.74],
+      ['furn-aquarium', '대형 수족관', 'furniture', 'floor', 1.8, 0.6, 1.73, 1.5],
+      ['furn-crystal-lamp', '크리스탈 스탠드', 'small', 'small', 0.5, 0.5, 0.93],
+      ['furn-gold-mirror', '금테 전신 거울', 'furniture', 'floor', 0.95, 0.4, 1.95],
+      ['furn-arcade', '레트로 오락기', 'furniture', 'floor', 1.05, 0.8, 1.77],
+      ['furn-telescope', '별 보는 망원경', 'furniture', 'floor', 1.1, 0.9, 1.53],
+      ['furn-mother-pearl', '자개 병풍', 'rare', 'floor', 2.4, 0.3, 2.35],
+      ['furn-velvet-sofa', '벨벳 체스터필드 소파', 'furniture', 'floor', 2.4, 1.1, 1.44],
+      ['furn-bonsai', '명품 분재', 'plant', 'small', 0.7, 0.5, 0.76],
+      ['furn-marble-fireplace', '대리석 벽난로', 'furniture', 'floor', 2.0, 0.6, 2.14],
+      ['furn-najeon-wardrobe', '자개 장롱', 'furniture', 'floor', 1.7, 0.75, 2.4],
       // 마을 공사 / 축제 rewards.
-      ['furn-project-plaque', '마을 공사 현판', 'rare', 'wall', 1.2, 0.04, 0.5],
+      ['furn-project-plaque', '마을 공사 현판', 'rare', 'wall', 1.2, 0.04, 0.96],
       ['furn-festival-lantern', '축제 청사초롱', 'rare', 'small', 0.45, 0.45, 0.9],
-      ['furn-festival-drum', '축제 북', 'rare', 'floor', 0.9, 0.9, 1.0],
-      ['furn-festival-kite', '축제 방패연', 'rare', 'wall', 0.8, 0.04, 1.0],
-      ['furn-festival-fan', '축제 부채', 'rare', 'wall', 0.9, 0.04, 0.6],
+      ['furn-festival-drum', '축제 북', 'rare', 'floor', 0.9, 0.9, 1.04],
+      ['furn-festival-kite', '축제 방패연', 'rare', 'small', 0.8, 0.3, 0.93],
+      ['furn-festival-fan', '축제 부채', 'rare', 'small', 0.9, 0.3, 0.71],
     ] as const
   ).map(([ref, name, category, mount, w, d, h, top]: readonly [string, string, RoomCategory, RoomMount, number, number, number, number?]) =>
     e(ref, 'prop', name, category, mount, w, d, h, { unlock: ref, premium: true, ...(top ? { top } : {}) }),
   ),
 ];
+/**
+ * Pieces whose kind or mount changed after rooms were saved with them
+ * (2026-10-02 furniture art): readers accept the old form and store the new.
+ * 흔들의자 was a 3D model; the festival kite and fan hung on the back wall and
+ * now stand (their paintings have stands).
+ */
+export const LEGACY_ITEM_KIND: Readonly<Record<string, RoomItemKind>> = { 'furn-rocking-chair': 'model' };
+export const LEGACY_WALL_ITEM: readonly string[] = ['furn-festival-kite', 'furn-festival-fan'];
 export const CATALOG_BY_REF: Readonly<Record<string, CatalogEntry>> =
   Object.fromEntries(ROOM_CATALOG.map((entry) => [entry.ref, entry]));
 export const catalogEntry = (ref: string): CatalogEntry | undefined =>

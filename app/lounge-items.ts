@@ -9,6 +9,8 @@ import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FI
 // 먼바다 낚싯배: 51 new sea species, seafood dishes, the boat spot and the 멀미약.
 import { SEA_DISHES, SEA_FISH } from './lounge-fish-sea-data.ts';
 import { VOYAGE_ITEM_PRICES, VOYAGE_TOOL_ITEMS } from './lounge-voyage-data.ts';
+// 민물 어종 확장: 30 freshwater species and two legends (lounge-fish-data-fresh.ts).
+import { FRESH_FISH } from './lounge-fish-data-fresh.ts';
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
 import { catalogEntry } from './lounge-bedroom-catalog.ts';
 
@@ -87,55 +89,56 @@ export type FishDef = {
 };
 const BASE_FISH: readonly FishDef[] = [
   // Legacy island fish (life-data.ts COLLECTION) first.
-  { id: 'crucian', name: '붕어', emoji: '🐟', spots: ['river', 'pond', 'lake', 'bridge'], seasons: ALL, time: 'any', sky: 'any', weight: 60, sell: 120, cm: [10, 30], windowMs: 1_100, note: '호수에서 자주 만날 수 있는 느긋한 물고기.' },
-  { id: 'carp', name: '잉어', emoji: '🐠', spots: ['river', 'pond', 'lake'], seasons: WARM, time: 'any', sky: 'any', weight: 35, sell: 250, cm: [30, 70], windowMs: 950, note: '부두 그늘 아래 숨어 있어요.' },
-  { id: 'koi', name: '비단잉어', emoji: '🐠', spots: ['pond'], seasons: ALL, time: 'day', sky: 'dry', weight: 6, sell: 1_500, cm: [30, 80], windowMs: 650, note: '반짝이는 비늘이 무척 아름다워요.' },
-  { id: 'bass', name: '농어', emoji: '🐟', spots: ['sea'], seasons: ['summer', 'autumn'], time: 'any', sky: 'any', weight: 25, sell: 650, cm: [40, 90], windowMs: 800, note: '힘차게 헤엄치는 멋진 친구예요.' },
-  { id: 'minnow', name: '피라미', emoji: '🐟', spots: ['river', 'rapids', 'bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 70, sell: 60, cm: [6, 15], windowMs: 1_200, note: '여울에서 반짝 튀어 올라요.' },
-  { id: 'sweetfish', name: '은어', emoji: '🐟', spots: ['river', 'rapids'], seasons: ['summer'], time: 'day', sky: 'dry', weight: 18, sell: 500, cm: [15, 30], windowMs: 800, note: '맑은 여름 강에서만 보여요. 수박 향이 난대요.' },
-  { id: 'mandarin', name: '쏘가리', emoji: '🐟', spots: ['river', 'bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 10, sell: 900, cm: [20, 50], windowMs: 700, note: '바위틈의 강의 왕.' },
-  { id: 'catfish', name: '메기', emoji: '🐟', spots: ['river', 'pond', 'lake'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 22, sell: 800, cm: [30, 90], windowMs: 900, note: '비 오는 밤에 수염을 흔들며 나와요.' },
-  { id: 'eel', name: '뱀장어', emoji: '🐍', spots: ['river', 'bridge'], seasons: ['spring', 'summer'], time: 'night', sky: 'rain', weight: 9, sell: 1_200, cm: [40, 100], windowMs: 600, note: '미끌미끌, 놓치기 쉬워요.' },
-  { id: 'trout', name: '산천어', emoji: '🐟', spots: ['river', 'rapids', 'falls'], seasons: ['winter'], time: 'day', sky: 'any', weight: 20, sell: 700, cm: [20, 45], windowMs: 850, note: '차가운 겨울 강의 보석.' },
-  { id: 'medaka', name: '송사리', emoji: '🐟', spots: ['pond'], seasons: ['spring', 'summer'], time: 'day', sky: 'any', weight: 60, sell: 40, cm: [2, 5], windowMs: 1_200, note: '작디작은 연못 친구.' },
-  { id: 'goldfish', name: '금붕어', emoji: '🐡', spots: ['pond'], seasons: ALL, time: 'any', sky: 'any', weight: 25, sell: 150, cm: [5, 20], windowMs: 1_000, note: '누군가 풀어 준 걸까요?' },
-  { id: 'snakehead', name: '가물치', emoji: '🐟', spots: ['pond'], seasons: ['summer'], time: 'night', sky: 'any', weight: 12, sell: 700, cm: [40, 90], windowMs: 750, note: '연못 깊은 곳의 터줏대감.' },
-  { id: 'smelt', name: '빙어', emoji: '🐟', spots: ['pond', 'lake'], seasons: ['winter'], time: 'any', sky: 'any', weight: 55, sell: 200, cm: [8, 15], windowMs: 1_000, note: '얼음 아래에서 떼 지어 다녀요.' },
-  { id: 'loach', name: '미꾸라지', emoji: '🐟', spots: ['pond', 'river'], seasons: WARM, time: 'any', sky: 'rain', weight: 30, sell: 180, cm: [10, 20], windowMs: 1_000, note: '비 온 뒤 진흙 속에서 꿈틀.' },
-  { id: 'crayfish', name: '가재', emoji: '🦞', spots: ['pond', 'river'], seasons: WARM, time: 'night', sky: 'any', weight: 20, sell: 300, cm: [6, 14], windowMs: 1_000, note: '돌을 들추면 집게를 번쩍.' },
-  { id: 'mackerel', name: '고등어', emoji: '🐟', spots: ['sea', 'harbor'], seasons: ALL, time: 'any', sky: 'any', weight: 60, sell: 200, cm: [25, 45], windowMs: 1_000, note: '바다 데크의 단골손님.' },
-  { id: 'shad', name: '전어', emoji: '🐟', spots: ['sea'], seasons: ['autumn'], time: 'any', sky: 'any', weight: 35, sell: 450, cm: [15, 30], windowMs: 900, note: '가을 전어 굽는 냄새에 집 나간 친구도 돌아온대요.' },
-  { id: 'flounder', name: '광어', emoji: '🐟', spots: ['sea'], seasons: ALL, time: 'any', sky: 'any', weight: 20, sell: 600, cm: [30, 80], windowMs: 850, note: '모래 바닥에 납작 숨어 있어요.' },
-  { id: 'squid', name: '오징어', emoji: '🦑', spots: ['sea', 'harbor'], seasons: ['summer'], time: 'night', sky: 'dry', weight: 25, sell: 500, cm: [20, 50], windowMs: 850, note: '여름밤 불빛을 따라 올라와요.' },
-  { id: 'yellowtail', name: '방어', emoji: '🐟', spots: ['sea'], seasons: ['winter'], time: 'any', sky: 'any', weight: 18, sell: 1_100, cm: [50, 100], windowMs: 700, note: '겨울 바다의 기름진 주인공.' },
-  { id: 'puffer', name: '복어', emoji: '🐡', spots: ['sea'], seasons: ['summer'], time: 'day', sky: 'any', weight: 10, sell: 900, cm: [15, 40], windowMs: 750, note: '화나면 빵빵해져요.' },
-  { id: 'seabream', name: '참돔', emoji: '🐟', spots: ['sea'], seasons: ['spring', 'autumn'], time: 'day', sky: 'any', weight: 5, sell: 2_000, cm: [30, 90], windowMs: 600, note: '바다의 여왕, 행운의 붉은 물고기.' },
-  { id: 'goldcarp', name: '황금 잉어', emoji: '✨', spots: ['river'], seasons: ALL, time: 'any', sky: 'rain', weight: 1, sell: 8_000, cm: [60, 120], windowMs: 450, note: '폭우 속 강에 나타난다는 전설의 물고기.' },
+  { id: 'crucian', name: '붕어', emoji: '🐟', spots: ['river', 'pond', 'lake', 'bridge'], seasons: ALL, time: 'any', sky: 'any', weight: 60, sell: 180, cm: [10, 30], windowMs: 1_100, note: '호수에서 자주 만날 수 있는 느긋한 물고기.' },
+  { id: 'carp', name: '잉어', emoji: '🐠', spots: ['river', 'pond', 'lake'], seasons: WARM, time: 'any', sky: 'any', weight: 35, sell: 380, cm: [30, 70], windowMs: 950, note: '부두 그늘 아래 숨어 있어요.' },
+  { id: 'koi', name: '비단잉어', emoji: '🐠', spots: ['pond'], seasons: ALL, time: 'day', sky: 'dry', weight: 6, sell: 2_250, cm: [30, 80], windowMs: 650, note: '반짝이는 비늘이 무척 아름다워요.' },
+  { id: 'bass', name: '농어', emoji: '🐟', spots: ['sea'], seasons: ['summer', 'autumn'], time: 'any', sky: 'any', weight: 25, sell: 980, cm: [40, 90], windowMs: 800, note: '힘차게 헤엄치는 멋진 친구예요.' },
+  { id: 'minnow', name: '피라미', emoji: '🐟', spots: ['river', 'rapids', 'bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 70, sell: 90, cm: [6, 15], windowMs: 1_200, note: '여울에서 반짝 튀어 올라요.' },
+  { id: 'sweetfish', name: '은어', emoji: '🐟', spots: ['river', 'rapids'], seasons: ['summer'], time: 'day', sky: 'dry', weight: 18, sell: 750, cm: [15, 30], windowMs: 800, note: '맑은 여름 강에서만 보여요. 수박 향이 난대요.' },
+  { id: 'mandarin', name: '쏘가리', emoji: '🐟', spots: ['river', 'bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 10, sell: 1_350, cm: [20, 50], windowMs: 700, note: '바위틈의 강의 왕.' },
+  { id: 'catfish', name: '메기', emoji: '🐟', spots: ['river', 'pond', 'lake'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 22, sell: 1_200, cm: [30, 90], windowMs: 900, note: '비 오는 밤에 수염을 흔들며 나와요.' },
+  { id: 'eel', name: '뱀장어', emoji: '🐍', spots: ['river', 'bridge'], seasons: ['spring', 'summer'], time: 'night', sky: 'rain', weight: 9, sell: 1_800, cm: [40, 100], windowMs: 600, note: '미끌미끌, 놓치기 쉬워요.' },
+  { id: 'trout', name: '산천어', emoji: '🐟', spots: ['river', 'rapids', 'falls'], seasons: ['winter'], time: 'day', sky: 'any', weight: 20, sell: 1_050, cm: [20, 45], windowMs: 850, note: '차가운 겨울 강의 보석.' },
+  { id: 'medaka', name: '송사리', emoji: '🐟', spots: ['pond'], seasons: ['spring', 'summer'], time: 'day', sky: 'any', weight: 60, sell: 60, cm: [2, 5], windowMs: 1_200, note: '작디작은 연못 친구.' },
+  { id: 'goldfish', name: '금붕어', emoji: '🐡', spots: ['pond'], seasons: ALL, time: 'any', sky: 'any', weight: 25, sell: 230, cm: [5, 20], windowMs: 1_000, note: '누군가 풀어 준 걸까요?' },
+  { id: 'snakehead', name: '가물치', emoji: '🐟', spots: ['pond'], seasons: ['summer'], time: 'night', sky: 'any', weight: 12, sell: 1_050, cm: [40, 90], windowMs: 750, note: '연못 깊은 곳의 터줏대감.' },
+  { id: 'smelt', name: '빙어', emoji: '🐟', spots: ['pond', 'lake'], seasons: ['winter'], time: 'any', sky: 'any', weight: 55, sell: 300, cm: [8, 15], windowMs: 1_000, note: '얼음 아래에서 떼 지어 다녀요.' },
+  { id: 'loach', name: '미꾸라지', emoji: '🐟', spots: ['pond', 'river'], seasons: WARM, time: 'any', sky: 'rain', weight: 30, sell: 270, cm: [10, 20], windowMs: 1_000, note: '비 온 뒤 진흙 속에서 꿈틀.' },
+  { id: 'crayfish', name: '가재', emoji: '🦞', spots: ['pond', 'river'], seasons: WARM, time: 'night', sky: 'any', weight: 20, sell: 450, cm: [6, 14], windowMs: 1_000, note: '돌을 들추면 집게를 번쩍.' },
+  { id: 'mackerel', name: '고등어', emoji: '🐟', spots: ['sea', 'harbor'], seasons: ALL, time: 'any', sky: 'any', weight: 60, sell: 300, cm: [25, 45], windowMs: 1_000, note: '바다 데크의 단골손님.' },
+  { id: 'shad', name: '전어', emoji: '🐟', spots: ['sea'], seasons: ['autumn'], time: 'any', sky: 'any', weight: 35, sell: 680, cm: [15, 30], windowMs: 900, note: '가을 전어 굽는 냄새에 집 나간 친구도 돌아온대요.' },
+  { id: 'flounder', name: '광어', emoji: '🐟', spots: ['sea'], seasons: ALL, time: 'any', sky: 'any', weight: 20, sell: 900, cm: [30, 80], windowMs: 850, note: '모래 바닥에 납작 숨어 있어요.' },
+  { id: 'squid', name: '오징어', emoji: '🦑', spots: ['sea', 'harbor'], seasons: ['summer'], time: 'night', sky: 'dry', weight: 25, sell: 750, cm: [20, 50], windowMs: 850, note: '여름밤 불빛을 따라 올라와요.' },
+  { id: 'yellowtail', name: '방어', emoji: '🐟', spots: ['sea'], seasons: ['winter'], time: 'any', sky: 'any', weight: 18, sell: 1_650, cm: [50, 100], windowMs: 700, note: '겨울 바다의 기름진 주인공.' },
+  { id: 'puffer', name: '복어', emoji: '🐡', spots: ['sea'], seasons: ['summer'], time: 'day', sky: 'any', weight: 10, sell: 1_350, cm: [15, 40], windowMs: 750, note: '화나면 빵빵해져요.' },
+  { id: 'seabream', name: '참돔', emoji: '🐟', spots: ['sea'], seasons: ['spring', 'autumn'], time: 'day', sky: 'any', weight: 5, sell: 3_000, cm: [30, 90], windowMs: 600, note: '바다의 여왕, 행운의 붉은 물고기.' },
+  { id: 'goldcarp', name: '황금 잉어', emoji: '✨', spots: ['river'], seasons: ALL, time: 'any', sky: 'rain', weight: 1, sell: 10_400, cm: [60, 120], windowMs: 450, note: '폭우 속 강에 나타난다는 전설의 물고기.' },
   // VILL-2 spots: 윗물 여울, 폭포 소, 호숫가 선착장, 갯바위, 밤 항구, 다리 위.
-  { id: 'kkeokji', name: '꺽지', emoji: '🐟', spots: ['rapids'], seasons: WARM, time: 'any', sky: 'any', weight: 35, sell: 340, cm: [12, 25], windowMs: 850, note: '여울 바위틈을 제 집처럼 지켜요.' },
-  { id: 'shiri', name: '쉬리', emoji: '🐟', spots: ['rapids'], seasons: ALL, time: 'day', sky: 'dry', weight: 30, sell: 300, cm: [8, 14], windowMs: 800, note: '맑은 여울에만 사는 우리 물고기. 줄무늬가 선명해요.' },
-  { id: 'lenok', name: '열목어', emoji: '🐟', spots: ['rapids', 'falls'], seasons: ['winter', 'spring'], time: 'day', sky: 'any', weight: 7, sell: 1_600, cm: [30, 70], windowMs: 600, note: '눈이 붉은 찬물의 물고기. 쉽게 볼 수 없어요.' },
-  { id: 'beodeulchi', name: '버들치', emoji: '🐟', spots: ['falls'], seasons: ALL, time: 'any', sky: 'any', weight: 55, sell: 120, cm: [6, 15], windowMs: 1_100, note: '폭포 소의 맑은 물을 떼 지어 헤엄쳐요.' },
-  { id: 'rainbow', name: '무지개송어', emoji: '🐟', spots: ['falls'], seasons: ['autumn', 'winter', 'spring'], time: 'any', sky: 'any', weight: 25, sell: 620, cm: [25, 60], windowMs: 800, note: '물보라 속에서 옆구리가 무지개빛으로 번쩍여요.' },
-  { id: 'mochi', name: '금강모치', emoji: '🐟', spots: ['falls'], seasons: ['spring', 'summer'], time: 'day', sky: 'dry', weight: 6, sell: 1_700, cm: [6, 10], windowMs: 550, note: '차고 맑은 물에서만 사는 작고 귀한 물고기.' },
-  { id: 'bluegill', name: '블루길', emoji: '🐟', spots: ['lake'], seasons: WARM, time: 'day', sky: 'any', weight: 55, sell: 90, cm: [8, 20], windowMs: 1_100, note: '선착장 기둥 아래 떼 지어 모여요.' },
-  { id: 'blackbass', name: '큰입배스', emoji: '🐟', spots: ['lake'], seasons: WARM, time: 'any', sky: 'any', weight: 25, sell: 560, cm: [25, 55], windowMs: 800, note: '미끼를 덥석 무는 욕심쟁이.' },
-  { id: 'skygazer', name: '강준치', emoji: '🐟', spots: ['lake'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 8, sell: 1_300, cm: [40, 90], windowMs: 650, note: '달을 올려다보듯 입이 위로 향해 있어요.' },
-  { id: 'greenling', name: '노래미', emoji: '🐟', spots: ['rocks'], seasons: ['autumn', 'winter', 'spring'], time: 'day', sky: 'any', weight: 40, sell: 240, cm: [15, 35], windowMs: 950, note: '갯바위 해초 사이에 숨어 있어요.' },
-  { id: 'rockfish', name: '볼락', emoji: '🐟', spots: ['rocks', 'harbor'], seasons: ALL, time: 'night', sky: 'any', weight: 40, sell: 280, cm: [12, 28], windowMs: 950, note: '밤이면 눈을 반짝이며 떠올라요.' },
-  { id: 'jacopever', name: '우럭', emoji: '🐟', spots: ['rocks', 'harbor'], seasons: ALL, time: 'any', sky: 'any', weight: 30, sell: 360, cm: [20, 45], windowMs: 900, note: '바위 그늘의 듬직한 조피볼락.' },
-  { id: 'octopus', name: '문어', emoji: '🐙', spots: ['rocks'], seasons: ['summer', 'autumn'], time: 'any', sky: 'rain', weight: 12, sell: 850, cm: [30, 90], windowMs: 700, note: '비 오는 날 바위 구멍에서 다리를 쭉.' },
-  { id: 'blackbream', name: '감성돔', emoji: '🐟', spots: ['rocks'], seasons: ['autumn', 'winter'], time: 'any', sky: 'any', weight: 6, sell: 1_700, cm: [25, 55], windowMs: 600, note: '갯바위 낚시꾼들이 꿈꾸는 은빛 돔.' },
-  { id: 'horsemackerel', name: '전갱이', emoji: '🐟', spots: ['harbor'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 45, sell: 170, cm: [15, 30], windowMs: 1_000, note: '항구 등불 아래 떼로 몰려와요.' },
-  { id: 'hairtail', name: '갈치', emoji: '🐟', spots: ['harbor'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 25, sell: 620, cm: [60, 120], windowMs: 800, note: '은빛 칼처럼 번쩍이는 밤바다의 물고기.' },
-  { id: 'conger', name: '붕장어', emoji: '🐍', spots: ['harbor'], seasons: ALL, time: 'night', sky: 'any', weight: 25, sell: 480, cm: [40, 90], windowMs: 850, note: '방파제 틈에서 스르륵 나와요.' },
-  { id: 'mitre', name: '한치', emoji: '🦑', spots: ['harbor'], seasons: ['summer'], time: 'night', sky: 'dry', weight: 20, sell: 650, cm: [15, 35], windowMs: 850, note: '한 치밖에 안 되는 다리. 여름밤 집어등의 손님.' },
-  { id: 'moonhairtail', name: '달빛 갈치', emoji: '✨', spots: ['harbor'], seasons: ['autumn'], time: 'night', sky: 'dry', weight: 1, sell: 7_000, cm: [120, 180], windowMs: 450, note: '보름달 뜬 가을밤 항구에 나타난다는 전설.' },
-  { id: 'kkeuri', name: '끄리', emoji: '🐟', spots: ['bridge'], seasons: WARM, time: 'any', sky: 'any', weight: 30, sell: 260, cm: [20, 40], windowMs: 900, note: '다리 아래 물살을 거슬러 사냥해요.' },
-  { id: 'nuchi', name: '누치', emoji: '🐟', spots: ['bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 30, sell: 220, cm: [25, 50], windowMs: 950, note: '모래 바닥을 입으로 뒤지는 강의 청소부.' },
-  { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 500, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },  // 낚시 업그레이드 (lounge-fish-data.ts).
+  { id: 'kkeokji', name: '꺽지', emoji: '🐟', spots: ['rapids'], seasons: WARM, time: 'any', sky: 'any', weight: 35, sell: 510, cm: [12, 25], windowMs: 850, note: '여울 바위틈을 제 집처럼 지켜요.' },
+  { id: 'shiri', name: '쉬리', emoji: '🐟', spots: ['rapids'], seasons: ALL, time: 'day', sky: 'dry', weight: 30, sell: 450, cm: [8, 14], windowMs: 800, note: '맑은 여울에만 사는 우리 물고기. 줄무늬가 선명해요.' },
+  { id: 'lenok', name: '열목어', emoji: '🐟', spots: ['rapids', 'falls'], seasons: ['winter', 'spring'], time: 'day', sky: 'any', weight: 7, sell: 2_400, cm: [30, 70], windowMs: 600, note: '눈이 붉은 찬물의 물고기. 쉽게 볼 수 없어요.' },
+  { id: 'beodeulchi', name: '버들치', emoji: '🐟', spots: ['falls'], seasons: ALL, time: 'any', sky: 'any', weight: 55, sell: 180, cm: [6, 15], windowMs: 1_100, note: '폭포 소의 맑은 물을 떼 지어 헤엄쳐요.' },
+  { id: 'rainbow', name: '무지개송어', emoji: '🐟', spots: ['falls'], seasons: ['autumn', 'winter', 'spring'], time: 'any', sky: 'any', weight: 25, sell: 930, cm: [25, 60], windowMs: 800, note: '물보라 속에서 옆구리가 무지개빛으로 번쩍여요.' },
+  { id: 'mochi', name: '금강모치', emoji: '🐟', spots: ['falls'], seasons: ['spring', 'summer'], time: 'day', sky: 'dry', weight: 6, sell: 2_550, cm: [6, 10], windowMs: 550, note: '차고 맑은 물에서만 사는 작고 귀한 물고기.' },
+  { id: 'bluegill', name: '블루길', emoji: '🐟', spots: ['lake'], seasons: WARM, time: 'day', sky: 'any', weight: 55, sell: 140, cm: [8, 20], windowMs: 1_100, note: '선착장 기둥 아래 떼 지어 모여요.' },
+  { id: 'blackbass', name: '큰입배스', emoji: '🐟', spots: ['lake'], seasons: WARM, time: 'any', sky: 'any', weight: 25, sell: 840, cm: [25, 55], windowMs: 800, note: '미끼를 덥석 무는 욕심쟁이.' },
+  { id: 'skygazer', name: '강준치', emoji: '🐟', spots: ['lake'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 8, sell: 1_950, cm: [40, 90], windowMs: 650, note: '달을 올려다보듯 입이 위로 향해 있어요.' },
+  { id: 'greenling', name: '노래미', emoji: '🐟', spots: ['rocks'], seasons: ['autumn', 'winter', 'spring'], time: 'day', sky: 'any', weight: 40, sell: 360, cm: [15, 35], windowMs: 950, note: '갯바위 해초 사이에 숨어 있어요.' },
+  { id: 'rockfish', name: '볼락', emoji: '🐟', spots: ['rocks', 'harbor'], seasons: ALL, time: 'night', sky: 'any', weight: 40, sell: 420, cm: [12, 28], windowMs: 950, note: '밤이면 눈을 반짝이며 떠올라요.' },
+  { id: 'jacopever', name: '우럭', emoji: '🐟', spots: ['rocks', 'harbor'], seasons: ALL, time: 'any', sky: 'any', weight: 30, sell: 540, cm: [20, 45], windowMs: 900, note: '바위 그늘의 듬직한 조피볼락.' },
+  { id: 'octopus', name: '문어', emoji: '🐙', spots: ['rocks'], seasons: ['summer', 'autumn'], time: 'any', sky: 'rain', weight: 12, sell: 1_280, cm: [30, 90], windowMs: 700, note: '비 오는 날 바위 구멍에서 다리를 쭉.' },
+  { id: 'blackbream', name: '감성돔', emoji: '🐟', spots: ['rocks'], seasons: ['autumn', 'winter'], time: 'any', sky: 'any', weight: 6, sell: 2_550, cm: [25, 55], windowMs: 600, note: '갯바위 낚시꾼들이 꿈꾸는 은빛 돔.' },
+  { id: 'horsemackerel', name: '전갱이', emoji: '🐟', spots: ['harbor'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 45, sell: 260, cm: [15, 30], windowMs: 1_000, note: '항구 등불 아래 떼로 몰려와요.' },
+  { id: 'hairtail', name: '갈치', emoji: '🐟', spots: ['harbor'], seasons: ['summer', 'autumn'], time: 'night', sky: 'any', weight: 25, sell: 930, cm: [60, 120], windowMs: 800, note: '은빛 칼처럼 번쩍이는 밤바다의 물고기.' },
+  { id: 'conger', name: '붕장어', emoji: '🐍', spots: ['harbor'], seasons: ALL, time: 'night', sky: 'any', weight: 25, sell: 720, cm: [40, 90], windowMs: 850, note: '방파제 틈에서 스르륵 나와요.' },
+  { id: 'mitre', name: '한치', emoji: '🦑', spots: ['harbor'], seasons: ['summer'], time: 'night', sky: 'dry', weight: 20, sell: 980, cm: [15, 35], windowMs: 850, note: '한 치밖에 안 되는 다리. 여름밤 집어등의 손님.' },
+  { id: 'moonhairtail', name: '달빛 갈치', emoji: '✨', spots: ['harbor'], seasons: ['autumn'], time: 'night', sky: 'dry', weight: 1, sell: 9_100, cm: [120, 180], windowMs: 450, note: '보름달 뜬 가을밤 항구에 나타난다는 전설.' },
+  { id: 'kkeuri', name: '끄리', emoji: '🐟', spots: ['bridge'], seasons: WARM, time: 'any', sky: 'any', weight: 30, sell: 390, cm: [20, 40], windowMs: 900, note: '다리 아래 물살을 거슬러 사냥해요.' },
+  { id: 'nuchi', name: '누치', emoji: '🐟', spots: ['bridge'], seasons: ALL, time: 'day', sky: 'any', weight: 30, sell: 330, cm: [25, 50], windowMs: 950, note: '모래 바닥을 입으로 뒤지는 강의 청소부.' },
+  { id: 'bagrid', name: '동자개', emoji: '🐟', spots: ['bridge'], seasons: ['summer', 'autumn'], time: 'night', sky: 'rain', weight: 18, sell: 750, cm: [15, 30], windowMs: 900, note: '낚으면 "빠가빠가" 운다는 빠가사리.' },  // 낚시 업그레이드 (lounge-fish-data.ts).
   ...EXTRA_FISH,
   ...POT_FISH,
+  ...FRESH_FISH,
   ...SEA_FISH,
 ];
 /**
@@ -257,8 +260,8 @@ export type DishDef = RecipeDef & {
   /** 이국 요리 (행상인 향신료): the buff lasts 6 hours past midnight. */
   long?: true;
 };
-/** Reference values for "any of a category" inputs (dish prices). */
-const CAT_VALUE = { fish: 300, bug: 150, flower: 80, forage: 100 } as const;
+/** Reference values for "any of a category" inputs (dish prices; fish ×1.5 with the 2026-10-02 prices). */
+const CAT_VALUE = { fish: 450, bug: 150, flower: 80, forage: 100 } as const;
 const it = (item: string, n: number, q?: 0 | 1 | 2) => ({ item, n, ...(q ? { q } : {}) });
 const anyOf = (cat: 'fish' | 'bug' | 'flower' | 'forage', n: number) => ({ cat, n });
 const dish = (
@@ -336,14 +339,15 @@ function ITEM_BY_ID_RAW() {
   if (!rawItems) {
     rawItems = {};
     for (const f of FORAGE) rawItems[f.id] = f;
+    for (const f of BASE_FISH) rawItems[f.id] = f;
   }
   return rawItems;
 }
 /** Dishes sell for 25% over their ingredients (+100범), rounded to 10. */
-export const DISHES: readonly DishDef[] = [...RAW_DISHES.map((d): DishDef => ({
+export const DISHES: readonly DishDef[] = [...RAW_DISHES, ...FISH_DISHES, ...SEA_DISHES].map((d): DishDef => ({
   ...d,
   sell: d.lunch && d.id !== 'lunchbox' ? LUNCH_SELL : Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
-})), ...FISH_DISHES, ...SEA_DISHES];
+}));
 
 /** 연애·결혼 items (lounge-romance.ts): never gifts, bought at 등불 잡화점. */
 export const ROMANCE_ITEMS = ['bouquet', 'pledge-ring'] as const;
@@ -531,8 +535,16 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-rug-lilac', name: '라일락 울 러그', price: 15_000 },
   { ref: 'furn-bookcase-walnut', name: '월넛 5단 책장', price: 25_000 },
   { ref: 'furn-wardrobe-white', name: '화이트 옷장', price: 28_000 },
-  // kArchive 3D model (lounge-bedroom-catalog.ts 'model' entry).
+  // A painting since 2026-10-02 (was the kArchive 3D model; stored rooms read on, LEGACY_ITEM_KIND).
   { ref: 'furn-rocking-chair', name: '흔들의자', price: 26_000 },
+  // 나무결 가구점 새 가구 (2026-10-02, furniture sheet 2): daily rotation, priced
+  // between the small props (12,000–16,000) and the big colorways (25,000–35,000).
+  { ref: 'furn-round-dining-set', name: '원목 2인 식탁', price: 24_000 },
+  { ref: 'furn-beanbag', name: '빈백 소파', price: 16_000 },
+  { ref: 'furn-hanging-planter', name: '행잉 플랜트', price: 9_000 },
+  { ref: 'furn-cat-tower', name: '캣타워', price: 22_000 },
+  { ref: 'furn-retro-tv', name: '레트로 TV', price: 20_000 },
+  { ref: 'furn-wall-shelf', name: '벽걸이 선반', price: 10_000 },
   // Seasonal limited.
   { ref: 'furn-cherry-vase', name: '벚꽃 가지 화병', price: 12_000, season: 'spring' },
   { ref: 'furn-fan', name: '레트로 선풍기', price: 14_000, season: 'summer' },
@@ -556,6 +568,8 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-mother-pearl', name: '자개 병풍', price: 220_000, luxury: true },
   { ref: 'furn-velvet-sofa', name: '벨벳 체스터필드 소파', price: 190_000, luxury: true },
   { ref: 'furn-bonsai', name: '명품 분재', price: 110_000, luxury: true },
+  { ref: 'furn-marble-fireplace', name: '대리석 벽난로', price: 230_000, luxury: true },
+  { ref: 'furn-najeon-wardrobe', name: '자개 장롱', price: 260_000, luxury: true },
   // Project and festival rewards (not sold).
   { ref: 'furn-project-plaque', name: '마을 공사 현판', price: 0, unsold: true },
   { ref: 'furn-festival-lantern', name: '축제 청사초롱', price: 0, unsold: true },

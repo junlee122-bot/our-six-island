@@ -39,8 +39,9 @@ import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { BAKERY_MENU } from '../app/lounge-town.ts';
 
 // ---------------------------------------------------------------- registry
-test('the four shop rooms are interior areas with their own chat and no game tables', () => {
-  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket']);
+test('the shop rooms are interior areas with their own chat and no game tables', () => {
+  // 범마을 증권 (design-stocks.md) is the fifth room.
+  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket', 'broker']);
   for (const area of SHOP_AREAS) {
     assert.ok(AREAS.includes(area));
     assert.ok(INTERIOR_AREAS.includes(area));

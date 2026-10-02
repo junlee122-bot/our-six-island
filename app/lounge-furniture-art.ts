@@ -1,9 +1,18 @@
-// Procedural vector art for the premium 'furn-*' room props (life expansion
-// furniture shop, crafting and bundle rewards). Inline SVG data URIs in the
-// room's painted style: warm outlines, soft fills and one highlight. The image
-// aspect follows the catalog size, because the room draws props as cards of
-// width w and height w × aspect (rugs: w × d from above).
+// Room and shop art for the 'furn-*' pieces.
+//
+// 나무결 가구점 pieces, luxury pieces and the festival / project / bundle
+// rewards are Higgsfield paintings in the bedroom props' style
+// (furniture-art-generation.json), cut by `node scripts/optimize-assets.mjs
+// furniture` into public/assets/lounge/furniture/<name>.webp on a canvas of the
+// catalog aspect, with a 256² thumbnail in furniture/thumbs/.
+//
+// The 16 craftable pieces (the legacy island DECOR, 만들기 recipes) have no
+// painting yet and keep the procedural vector art below: inline SVG data URIs
+// with warm outlines, soft fills and one highlight. Their image aspect follows
+// the catalog size, because the room draws props as cards of width w and
+// height w × aspect (rugs: w × d from above).
 import { catalogEntry } from './lounge-bedroom-catalog.ts';
+import { LOUNGE_ASSETS } from './lounge-assets.ts';
 
 const W = 200;
 const OUT = '#5a4636';
@@ -39,14 +48,6 @@ const sofa = (fabric: string, trim: string): Draw => (H) => `
   <rect x="20" y="${H * 0.8}" width="160" height="${H * 0.06}" rx="3" fill="${trim}"/>
   <rect x="26" y="${H * 0.86}" width="10" height="${H * 0.12}" fill="${trim}"/><rect x="164" y="${H * 0.86}" width="10" height="${H * 0.12}" fill="${trim}"/>
   ${hi(40, H * 0.2, 150, H * 0.2)}`;
-const armchair = (fabric: string): Draw => (H) => `
-  <rect x="34" y="${H * 0.06}" width="132" height="${H * 0.56}" rx="36" fill="${fabric}"/>
-  <rect x="10" y="${H * 0.36}" width="46" height="${H * 0.46}" rx="20" fill="${fabric}"/>
-  <rect x="144" y="${H * 0.36}" width="46" height="${H * 0.46}" rx="20" fill="${fabric}"/>
-  <rect x="48" y="${H * 0.52}" width="104" height="${H * 0.28}" rx="14" fill="${fabric}"/>
-  ${shade(48, H * 0.68, 104, H * 0.12)}
-  <rect x="30" y="${H * 0.82}" width="12" height="${H * 0.16}" rx="4" fill="#8a5a34"/><rect x="158" y="${H * 0.82}" width="12" height="${H * 0.16}" rx="4" fill="#8a5a34"/>
-  ${hi(60, H * 0.14, 130, H * 0.14)}`;
 const shelf = (wood: string, dark: string, rows: number): Draw => (H) => {
   const top = H * 0.04,
     bottom = H * 0.96,
@@ -69,14 +70,6 @@ const shelf = (wood: string, dark: string, rows: number): Draw => (H) => {
   return `<rect x="12" y="${top}" width="176" height="${bottom - top}" rx="6" fill="${wood}"/>
     <rect x="22" y="${top + 8}" width="156" height="${bottom - top - 16}" fill="${dark}" opacity=".45"/>${books}`;
 };
-const wardrobe = (body: string, knob: string): Draw => (H) => `
-  <rect x="14" y="${H * 0.04}" width="172" height="${H * 0.88}" rx="8" fill="${body}"/>
-  <path d="M100 ${H * 0.08} V${H * 0.88}" fill="none"/>
-  <rect x="26" y="${H * 0.1}" width="64" height="${H * 0.74}" rx="6" fill="#fff" opacity=".35"/>
-  <rect x="110" y="${H * 0.1}" width="64" height="${H * 0.74}" rx="6" fill="#fff" opacity=".35"/>
-  <circle cx="90" cy="${H * 0.48}" r="5" fill="${knob}"/><circle cx="110" cy="${H * 0.48}" r="5" fill="${knob}"/>
-  <rect x="22" y="${H * 0.92}" width="14" height="${H * 0.07}" fill="${body}"/><rect x="164" y="${H * 0.92}" width="14" height="${H * 0.07}" fill="${body}"/>
-  ${hi(30, H * 0.14, 30, H * 0.6)}`;
 const rug = (base: string, a: string, b: string, checks = false): Draw => (H) => {
   if (checks) {
     let cells = '';
@@ -162,177 +155,6 @@ const DRAW: Record<string, Draw> = {
     <circle cx="100" cy="${H * 0.3}" r="${H * 0.24}" fill="#5e9d4c"/>
     <circle cx="70" cy="${H * 0.38}" r="${H * 0.14}" fill="#6aa84f"/><circle cx="132" cy="${H * 0.36}" r="${H * 0.14}" fill="#6aa84f"/>
     ${[[80, 0.22], [118, 0.2], [100, 0.36], [66, 0.4], [136, 0.4], [96, 0.14]].map(([x, y]) => `<circle cx="${x}" cy="${H * y}" r="9" fill="#f28c28" stroke-width="2"/>`).join('')}`,
-  'furn-bed-mint': bed('#9fd8c8', '#fbfaf5', '#7cc9b4'),
-  'furn-sofa-rose': sofa('#e8a3b1', '#8a5a4a'),
-  'furn-armchair-navy': armchair('#3f5a86'),
-  'furn-rug-lilac': rug('#d9c8ee', '#c3aee3', '#ece2f8'),
-  'furn-bookcase-walnut': shelf('#6b4a33', '#3e2a1c', 5),
-  'furn-wardrobe-white': wardrobe('#f6f2ea', '#c9a36a'),
-  // Shop icon of the kArchive rocking chair (the room shows the 3D model).
-  'furn-rocking-chair': (H) => `
-    <rect x="54" y="${H * 0.04}" width="92" height="${H * 0.5}" rx="16" fill="#e9a24b"/>
-    <rect x="64" y="${H * 0.08}" width="72" height="${H * 0.1}" rx="8" fill="#f6ecd6"/>
-    <rect x="64" y="${H * 0.18}" width="72" height="${H * 0.32}" rx="12" fill="#4f9a8a"/>
-    <rect x="40" y="${H * 0.46}" width="120" height="${H * 0.16}" rx="12" fill="#5aa594"/>
-    <rect x="30" y="${H * 0.36}" width="22" height="${H * 0.3}" rx="8" fill="#e9a24b"/>
-    <rect x="148" y="${H * 0.36}" width="22" height="${H * 0.3}" rx="8" fill="#e9a24b"/>
-    <circle cx="41" cy="${H * 0.4}" r="6" fill="#d9573f"/>
-    <path d="M52 ${H * 0.62} L46 ${H * 0.86} M148 ${H * 0.62} L154 ${H * 0.86}" stroke="#c9822f" stroke-width="9" fill="none"/>
-    <path d="M14 ${H * 0.8} Q100 ${H * 0.98} 186 ${H * 0.8}" stroke="#e9a24b" stroke-width="10" fill="none"/>
-    ${hi(64, H * 0.22, 64, H * 0.44)}`,
-  'furn-cherry-vase': (H) => `
-    <path d="M78 ${H * 0.62} C66 ${H * 0.72} 70 ${H * 0.96} 100 ${H * 0.96} C130 ${H * 0.96} 134 ${H * 0.72} 122 ${H * 0.62} V${H * 0.54} H78Z" fill="#8fb8d9"/>
-    <path d="M100 ${H * 0.56} C96 ${H * 0.36} 72 ${H * 0.24} 56 ${H * 0.1} M100 ${H * 0.56} C108 ${H * 0.34} 130 ${H * 0.22} 150 ${H * 0.08} M100 ${H * 0.5} C102 ${H * 0.34} 98 ${H * 0.2} 102 ${H * 0.04}" stroke="#6b4222" stroke-width="4" fill="none"/>
-    ${[[56, 0.1], [72, 0.2], [150, 0.08], [132, 0.2], [102, 0.05], [96, 0.22], [118, 0.3], [80, 0.32]].map(([x, y]) => `<circle cx="${x}" cy="${H * y}" r="11" fill="#f7c1d2" stroke-width="2"/><circle cx="${x}" cy="${H * y}" r="3" fill="#e2708f" stroke="none"/>`).join('')}`,
-  'furn-fan': (H) => `
-    <circle cx="100" cy="${H * 0.28}" r="${H * 0.24}" fill="#bfe3d9"/>
-    ${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="100" cy="${H * 0.18}" rx="16" ry="${H * 0.08}" fill="#fff" stroke-width="2" transform="rotate(${a} 100 ${H * 0.28})"/>`).join('')}
-    <circle cx="100" cy="${H * 0.28}" r="10" fill="#6fb3a3"/>
-    <rect x="94" y="${H * 0.52}" width="12" height="${H * 0.36}" fill="#6fb3a3"/>
-    <ellipse cx="100" cy="${H * 0.92}" rx="52" ry="${H * 0.05}" fill="#6fb3a3"/>`,
-  'furn-maple-garland': (H) =>
-    `<path d="M4 ${H * 0.2} Q100 ${H * 0.62} 196 ${H * 0.2}" fill="none" stroke-width="3"/>
-    ${Array.from({ length: 9 }, (_, i) => {
-      const x = 14 + i * 21.5,
-        y = H * 0.2 + Math.sin((i / 8) * Math.PI) * H * 0.3;
-      return `<path d="M${x} ${y} l-10 8 4 2 -8 10 10 -2 4 12 4 -12 10 2 -8 -10 4 -2z" fill="${['#e0823a', '#d9452f', '#f2b233'][i % 3]}" stroke-width="2"/>`;
-    }).join('')}`,
-  'furn-snowman': (H) => `
-    <circle cx="100" cy="${H * 0.7}" r="${H * 0.26}" fill="#fbfdff"/>
-    <circle cx="100" cy="${H * 0.32}" r="${H * 0.18}" fill="#fbfdff"/>
-    <path d="M66 ${H * 0.18} H134 L124 ${H * 0.02} H76Z" fill="#3d3d4a"/><rect x="58" y="${H * 0.16}" width="84" height="10" rx="4" fill="#3d3d4a"/>
-    <circle cx="90" cy="${H * 0.3}" r="4" fill="${OUT}"/><circle cx="110" cy="${H * 0.3}" r="4" fill="${OUT}"/>
-    <path d="M100 ${H * 0.35} l22 5 -22 4z" fill="#f28c28" stroke-width="2"/>
-    <path d="M70 ${H * 0.48} Q100 ${H * 0.56} 130 ${H * 0.48} L136 ${H * 0.62} L124 ${H * 0.6}" fill="#d9452f"/>`,
-  'furn-moon-lantern': (H) => `
-    <path d="M100 0 V${H * 0.12}" stroke-width="3"/>
-    <circle cx="100" cy="${H * 0.5}" r="${H * 0.36}" fill="#ffe7a0"/>
-    <circle cx="100" cy="${H * 0.5}" r="${H * 0.44}" fill="#fff3c0" opacity=".35" stroke="none"/>
-    <circle cx="84" cy="${H * 0.42}" r="10" fill="#f2d27a" stroke="none"/><circle cx="116" cy="${H * 0.58}" r="7" fill="#f2d27a" stroke="none"/>
-    <rect x="80" y="${H * 0.1}" width="40" height="${H * 0.06}" rx="3" fill="#b9854a"/><rect x="80" y="${H * 0.86}" width="40" height="${H * 0.06}" rx="3" fill="#b9854a"/>
-    <path d="M100 ${H * 0.92} V${H}" stroke="#d9452f" stroke-width="4"/>`,
-  'furn-lucky-pouch': (H) => `
-    <path d="M60 ${H * 0.34} C20 ${H * 0.5} 26 ${H * 0.94} 100 ${H * 0.94} C174 ${H * 0.94} 180 ${H * 0.5} 140 ${H * 0.34}Z" fill="#d9313f"/>
-    <path d="M60 ${H * 0.34} C70 ${H * 0.2} 130 ${H * 0.2} 140 ${H * 0.34}" fill="#e9c46a"/>
-    <path d="M70 ${H * 0.3} Q100 ${H * 0.4} 130 ${H * 0.3}" stroke="#f5c518" stroke-width="5" fill="none"/>
-    <circle cx="100" cy="${H * 0.64}" r="${H * 0.12}" fill="#f5c518"/>
-    <path d="M100 ${H * 0.56} v${H * 0.16} M92 ${H * 0.6} h16 M92 ${H * 0.68} h16" stroke="#d9313f" stroke-width="3" fill="none"/>
-    <path d="M100 ${H * 0.2} V${H * 0.02}" stroke-width="3"/>`,
-  'furn-jack-lantern': (H) => `
-    <ellipse cx="100" cy="${H * 0.58}" rx="88" ry="${H * 0.38}" fill="#ee8a2c"/>
-    <path d="M100 ${H * 0.2} C80 ${H * 0.3} 80 ${H * 0.86} 100 ${H * 0.96} M100 ${H * 0.2} C120 ${H * 0.3} 120 ${H * 0.86} 100 ${H * 0.96}" stroke="#b85f14" fill="none"/>
-    <path d="M60 ${H * 0.46} l14 -14 14 14z M112 ${H * 0.46} l14 -14 14 14z" fill="#fff1a8"/>
-    <path d="M56 ${H * 0.66} Q100 ${H * 0.92} 144 ${H * 0.66} l-12 4 -8 -8 -10 10 -14 -10 -14 10 -10 -10 -8 8z" fill="#fff1a8"/>
-    <path d="M100 ${H * 0.22} C98 ${H * 0.1} 106 ${H * 0.04} 116 ${H * 0.02}" stroke="#5b7a2e" stroke-width="7" fill="none"/>`,
-  'furn-xmas-tree': (H) => `
-    <path d="M100 ${H * 0.04} L40 ${H * 0.36} H70 L24 ${H * 0.62} H62 L12 ${H * 0.86} H188 L138 ${H * 0.62} H176 L130 ${H * 0.36} H160Z" fill="#3f8a4c"/>
-    <rect x="88" y="${H * 0.86}" width="24" height="${H * 0.12}" fill="#8a5a34"/>
-    <path d="M100 2 l5 10 11 1 -8 7 3 11 -11 -6 -11 6 3 -11 -8 -7 11 -1z" fill="#f5c518" stroke-width="2"/>
-    ${[[80, 0.3], [120, 0.44], [70, 0.56], [134, 0.66], [90, 0.72], [60, 0.8], [148, 0.8], [110, 0.24]].map(([x, y], i) => `<circle cx="${x}" cy="${H * y}" r="7" fill="${['#e2334a', '#f5c518', '#5b8fb9', '#fff'][i % 4]}" stroke-width="2"/>`).join('')}`,
-  // 이번 주 명품 가구.
-  'furn-grand-piano': (H) => `
-    <path d="M14 ${H * 0.34} H150 C190 ${H * 0.34} 196 ${H * 0.06} 150 ${H * 0.06} C110 ${H * 0.06} 96 ${H * 0.2} 60 ${H * 0.2} H14Z" fill="#22201f"/>
-    <rect x="10" y="${H * 0.34}" width="180" height="${H * 0.22}" rx="6" fill="#2d2a28"/>
-    <rect x="18" y="${H * 0.36}" width="118" height="${H * 0.08}" fill="#fbf8f0" stroke-width="2"/>
-    ${Array.from({ length: 10 }, (_, i) => `<rect x="${22 + i * 11.5}" y="${H * 0.36}" width="6" height="${H * 0.05}" fill="#22201f" stroke="none"/>`).join('')}
-    <path d="M30 ${H * 0.56} V${H * 0.96} M170 ${H * 0.56} V${H * 0.96} M100 ${H * 0.56} V${H * 0.9}" stroke="#22201f" stroke-width="9" fill="none"/>
-    <path d="M150 ${H * 0.06} L120 ${H * 0.3}" stroke="#c9a36a" stroke-width="3"/>
-    ${hi(40, H * 0.25, 130, H * 0.25)}`,
-  'furn-canopy-bed': (H) => `
-    <path d="M12 ${H * 0.06} H188" stroke="#c9a36a" stroke-width="8"/>
-    <path d="M16 ${H * 0.08} V${H * 0.96} M184 ${H * 0.08} V${H * 0.96}" stroke="#c9a36a" stroke-width="7"/>
-    <path d="M20 ${H * 0.08} Q40 ${H * 0.4} 22 ${H * 0.62} M180 ${H * 0.08} Q160 ${H * 0.4} 178 ${H * 0.62}" stroke="#f3d9e6" stroke-width="10" fill="none" opacity=".9"/>
-    <path d="M20 ${H * 0.08} Q100 ${H * 0.2} 180 ${H * 0.08}" fill="#f7e6ef"/>
-    <rect x="28" y="${H * 0.5}" width="144" height="${H * 0.28}" rx="10" fill="#fbf6f0"/>
-    <rect x="40" y="${H * 0.46}" width="46" height="${H * 0.1}" rx="8" fill="#fff"/><rect x="114" y="${H * 0.46}" width="46" height="${H * 0.1}" rx="8" fill="#fff"/>
-    <path d="M28 ${H * 0.6} H172 V${H * 0.8} Q100 ${H * 0.86} 28 ${H * 0.8}Z" fill="#d98fae"/>
-    <rect x="24" y="${H * 0.8}" width="152" height="${H * 0.1}" rx="5" fill="#c9a36a"/>`,
-  'furn-aquarium': (H) => `
-    <rect x="8" y="${H * 0.06}" width="184" height="${H * 0.62}" rx="6" fill="#8fd0e6"/>
-    <rect x="8" y="${H * 0.06}" width="184" height="${H * 0.1}" fill="#3d4a55"/>
-    <path d="M14 ${H * 0.6} Q60 ${H * 0.5} 100 ${H * 0.6} T186 ${H * 0.6} V${H * 0.66} H14Z" fill="#e9d8a6" stroke-width="2"/>
-    <path d="M40 ${H * 0.6} C36 ${H * 0.44} 50 ${H * 0.36} 44 ${H * 0.24} M150 ${H * 0.6} C156 ${H * 0.46} 144 ${H * 0.36} 152 ${H * 0.28}" stroke="#4f8a3c" stroke-width="5" fill="none"/>
-    <path d="M78 ${H * 0.34} q14 -10 28 0 q-14 10 -28 0z l-10 -6 v12z" fill="#f28c28" stroke-width="2"/>
-    <path d="M120 ${H * 0.46} q10 -7 20 0 q-10 7 -20 0z l-7 -4 v8z" fill="#f5c518" stroke-width="2"/>
-    <rect x="14" y="${H * 0.68}" width="172" height="${H * 0.3}" rx="4" fill="#6b4a33"/>
-    ${hi(20, H * 0.2, 20, H * 0.5)}`,
-  'furn-crystal-lamp': (H) => `
-    <path d="M56 ${H * 0.08} H144 L164 ${H * 0.42} H36Z" fill="#fdf7e8"/>
-    ${[60, 80, 100, 120, 140].map((x) => `<path d="M${x} ${H * 0.42} l-6 ${H * 0.1} 6 ${H * 0.06} 6 -${H * 0.06}z" fill="#dff3fb" stroke-width="2"/>`).join('')}
-    <rect x="94" y="${H * 0.5}" width="12" height="${H * 0.34}" fill="#c9a36a"/>
-    <ellipse cx="100" cy="${H * 0.9}" rx="44" ry="${H * 0.06}" fill="#c9a36a"/>
-    <ellipse cx="100" cy="${H * 0.3}" rx="92" ry="${H * 0.26}" fill="#fff3c0" opacity=".25" stroke="none"/>`,
-  'furn-gold-mirror': (H) => `
-    <ellipse cx="100" cy="${H * 0.46}" rx="80" ry="${H * 0.42}" fill="#d9b25a"/>
-    <ellipse cx="100" cy="${H * 0.46}" rx="64" ry="${H * 0.36}" fill="#dfeff4"/>
-    ${hi(70, H * 0.22, 60, H * 0.5)}${hi(84, H * 0.2, 76, H * 0.36)}
-    <path d="M60 ${H * 0.86} L50 ${H} M140 ${H * 0.86} L150 ${H}" stroke="#b08a3a" stroke-width="7"/>`,
-  'furn-arcade': (H) => `
-    <path d="M30 ${H * 0.04} H170 L160 ${H * 0.2} V${H * 0.98} H40 V${H * 0.2}Z" fill="#6c4bb8"/>
-    <rect x="48" y="${H * 0.08}" width="104" height="${H * 0.08}" rx="4" fill="#f5c518"/>
-    <rect x="52" y="${H * 0.22}" width="96" height="${H * 0.28}" rx="6" fill="#1f2a44"/>
-    <path d="M70 ${H * 0.42} h14 v-10 h10 v10 h14" stroke="#39ff14" stroke-width="3" fill="none"/>
-    <rect x="44" y="${H * 0.54}" width="112" height="${H * 0.1}" fill="#8a6ad0"/>
-    <circle cx="74" cy="${H * 0.59}" r="6" fill="#e2334a"/><circle cx="118" cy="${H * 0.59}" r="6" fill="#5b8fb9"/><circle cx="134" cy="${H * 0.59}" r="6" fill="#f5c518"/>
-    <rect x="80" y="${H * 0.74}" width="40" height="${H * 0.12}" rx="3" fill="#1f2a44"/>`,
-  'furn-telescope': (H) => `
-    <path d="M40 ${H * 0.36} L160 ${H * 0.08} L168 ${H * 0.2} L48 ${H * 0.48}Z" fill="#3f5a86"/>
-    <rect x="150" y="${H * 0.04}" width="26" height="${H * 0.2}" rx="4" fill="#c9a36a" transform="rotate(-13 163 ${H * 0.14})"/>
-    <circle cx="100" cy="${H * 0.34}" r="10" fill="#c9a36a"/>
-    <path d="M100 ${H * 0.36} L50 ${H * 0.96} M100 ${H * 0.36} L150 ${H * 0.96} M100 ${H * 0.36} V${H * 0.96}" stroke="#6b4a33" stroke-width="6" fill="none"/>
-    ${[[30, 0.1], [70, 0.06], [120, 0.3]].map(([x, y]) => `<path d="M${x} ${H * y} l3 6 7 1 -5 5 1 7 -6 -3 -6 3 1 -7 -5 -5 7 -1z" fill="#f5c518" stroke-width="1.5"/>`).join('')}`,
-  'furn-mother-pearl': (H) => `
-    ${[0, 1, 2, 3].map((i) => `<rect x="${6 + i * 47.5}" y="${H * 0.04}" width="44" height="${H * 0.9}" rx="3" fill="#1d1a22"/>
-    <rect x="${10 + i * 47.5}" y="${H * 0.08}" width="36" height="${H * 0.82}" fill="#2a2433" stroke="#c9a36a" stroke-width="2"/>
-    <circle cx="${28 + i * 47.5}" cy="${H * (0.3 + (i % 2) * 0.2)}" r="${H * 0.08}" fill="#d9f0ea" opacity=".85" stroke="#b9e3f0" stroke-width="2"/>
-    <path d="M${16 + i * 47.5} ${H * 0.72} q12 -${H * 0.1} 24 0" stroke="#e6d4f2" stroke-width="3" fill="none"/>`).join('')}`,
-  'furn-velvet-sofa': (H) => `
-    <rect x="12" y="${H * 0.12}" width="176" height="${H * 0.46}" rx="16" fill="#6b2d3f"/>
-    ${[40, 70, 100, 130, 160].map((x) => `<circle cx="${x}" cy="${H * 0.28}" r="3" fill="#3d1824" stroke="none"/><circle cx="${x - 15}" cy="${H * 0.42}" r="3" fill="#3d1824" stroke="none"/>`).join('')}
-    <rect x="2" y="${H * 0.34}" width="40" height="${H * 0.46}" rx="18" fill="#7a3448"/>
-    <rect x="158" y="${H * 0.34}" width="40" height="${H * 0.46}" rx="18" fill="#7a3448"/>
-    <rect x="36" y="${H * 0.52}" width="128" height="${H * 0.26}" rx="10" fill="#7a3448"/>
-    <rect x="22" y="${H * 0.8}" width="10" height="${H * 0.16}" fill="#c9a36a"/><rect x="168" y="${H * 0.8}" width="10" height="${H * 0.16}" fill="#c9a36a"/>`,
-  'furn-bonsai': (H) => `
-    <rect x="44" y="${H * 0.74}" width="112" height="${H * 0.2}" rx="6" fill="#3f5a86"/>
-    <path d="M100 ${H * 0.76} C92 ${H * 0.6} 120 ${H * 0.52} 104 ${H * 0.36} C96 ${H * 0.28} 80 ${H * 0.32} 70 ${H * 0.3}" stroke="#6b4a33" stroke-width="9" fill="none"/>
-    <ellipse cx="68" cy="${H * 0.24}" rx="40" ry="${H * 0.1}" fill="#4f8a3c"/>
-    <ellipse cx="126" cy="${H * 0.36}" rx="36" ry="${H * 0.09}" fill="#5e9d4c"/>
-    <ellipse cx="96" cy="${H * 0.12}" rx="30" ry="${H * 0.08}" fill="#6aa84f"/>`,
-  // 마을 공사 / 축제 rewards.
-  'furn-project-plaque': (H) => `
-    <rect x="6" y="${H * 0.12}" width="188" height="${H * 0.76}" rx="8" fill="#8a5a34"/>
-    <rect x="16" y="${H * 0.24}" width="168" height="${H * 0.52}" rx="4" fill="#e9c46a"/>
-    <path d="M40 ${H * 0.5} H160" stroke="#8a5a34" stroke-width="6"/>
-    <path d="M60 ${H * 0.36} H140 M60 ${H * 0.64} H140" stroke="#8a5a34" stroke-width="3"/>`,
-  'furn-festival-lantern': (H) => `
-    <path d="M100 0 V${H * 0.1}" stroke-width="3"/>
-    <rect x="70" y="${H * 0.1}" width="60" height="${H * 0.08}" rx="3" fill="#8a5a34"/>
-    <rect x="62" y="${H * 0.18}" width="76" height="${H * 0.28}" rx="10" fill="#d9313f"/>
-    <rect x="62" y="${H * 0.46}" width="76" height="${H * 0.28}" rx="10" fill="#3f5ab8"/>
-    <rect x="70" y="${H * 0.74}" width="60" height="${H * 0.06}" rx="3" fill="#8a5a34"/>
-    <path d="M86 ${H * 0.8} V${H * 0.98} M100 ${H * 0.8} V${H} M114 ${H * 0.8} V${H * 0.98}" stroke="#d9313f" stroke-width="3"/>`,
-  'furn-festival-drum': (H) => `
-    <ellipse cx="100" cy="${H * 0.28}" rx="80" ry="${H * 0.14}" fill="#fbeedd"/>
-    <path d="M20 ${H * 0.28} V${H * 0.72} Q100 ${H * 0.9} 180 ${H * 0.72} V${H * 0.28} Q100 ${H * 0.46} 20 ${H * 0.28}Z" fill="#d9313f"/>
-    <circle cx="100" cy="${H * 0.28}" r="${H * 0.08}" fill="#f5c518" stroke-width="2"/>
-    <path d="M30 ${H * 0.9} L60 ${H * 0.7} M170 ${H * 0.9} L140 ${H * 0.7}" stroke="#6b4a33" stroke-width="8"/>`,
-  'furn-festival-kite': (H) => `
-    <rect x="30" y="${H * 0.06}" width="140" height="${H * 0.78}" rx="4" fill="#fbf6ea"/>
-    <circle cx="100" cy="${H * 0.45}" r="${H * 0.12}" fill="none"/>
-    <path d="M30 ${H * 0.06} L170 ${H * 0.84} M170 ${H * 0.06} L30 ${H * 0.84} M100 ${H * 0.06} V${H * 0.84}" stroke-width="2" fill="none"/>
-    <path d="M30 ${H * 0.06} H170 V${H * 0.2} H30Z" fill="#d9313f"/>
-    <path d="M60 ${H * 0.84} Q70 ${H * 0.94} 56 ${H} M140 ${H * 0.84} Q130 ${H * 0.94} 144 ${H}" stroke="#3f5ab8" stroke-width="4" fill="none"/>`,
-  'furn-festival-fan': (H) => `
-    <path d="M100 ${H * 0.92} L8 ${H * 0.36} A100 ${H * 0.8} 0 0 1 192 ${H * 0.36}Z" fill="#f28bb5"/>
-    <path d="M100 ${H * 0.92} L30 ${H * 0.2} M100 ${H * 0.92} L70 ${H * 0.08} M100 ${H * 0.92} L130 ${H * 0.08} M100 ${H * 0.92} L170 ${H * 0.2}" stroke-width="2" fill="none"/>
-    <circle cx="100" cy="${H * 0.36}" r="${H * 0.14}" fill="#f5c518" stroke-width="2"/>
-    <rect x="94" y="${H * 0.84}" width="12" height="${H * 0.16}" fill="#6b4a33"/>`,
-  'furn-village-medal': (H) => `
-    <path d="M70 0 L86 ${H * 0.36} M130 0 L114 ${H * 0.36}" stroke="#5b8fb9" stroke-width="10"/>
-    <circle cx="100" cy="${H * 0.62}" r="${H * 0.3}" fill="#e9c46a"/>
-    <circle cx="100" cy="${H * 0.62}" r="${H * 0.22}" fill="#f5d77a" stroke-width="2"/>
-    <path d="M100 ${H * 0.46} l8 15 17 2 -12 11 3 17 -16 -8 -16 8 3 -17 -12 -11 17 -2z" fill="#fff6c8" stroke-width="2"/>`,
 };
 
 function aspectHeight(ref: string) {
@@ -342,10 +164,64 @@ function aspectHeight(ref: string) {
   return Math.max(40, Math.min(W * 3, W * ratio));
 }
 
-/** Room / catalog art for every premium furniture piece (ref → data URI). */
-export const FURNITURE_ART: Record<string, string> = Object.fromEntries(
-  Object.entries(DRAW).map(([ref, draw]) => {
-    const h = aspectHeight(ref);
-    return [ref, svg(h, draw(h))];
-  }),
-);
+/** Pieces painted on the furniture sheets (web copy furniture/<ref without 'furn-'>.webp). */
+export const PAINTED_FURNITURE: readonly string[] = [
+  'furn-bed-mint',
+  'furn-sofa-rose',
+  'furn-armchair-navy',
+  'furn-rug-lilac',
+  'furn-bookcase-walnut',
+  'furn-wardrobe-white',
+  'furn-rocking-chair',
+  'furn-cherry-vase',
+  'furn-fan',
+  'furn-maple-garland',
+  'furn-snowman',
+  'furn-moon-lantern',
+  'furn-lucky-pouch',
+  'furn-jack-lantern',
+  'furn-xmas-tree',
+  'furn-village-medal',
+  'furn-project-plaque',
+  'furn-festival-lantern',
+  'furn-festival-drum',
+  'furn-festival-kite',
+  'furn-festival-fan',
+  'furn-round-dining-set',
+  'furn-beanbag',
+  'furn-hanging-planter',
+  'furn-cat-tower',
+  'furn-retro-tv',
+  'furn-wall-shelf',
+  'furn-grand-piano',
+  'furn-canopy-bed',
+  'furn-aquarium',
+  'furn-crystal-lamp',
+  'furn-gold-mirror',
+  'furn-arcade',
+  'furn-telescope',
+  'furn-mother-pearl',
+  'furn-velvet-sofa',
+  'furn-bonsai',
+  'furn-marble-fireplace',
+  'furn-najeon-wardrobe',
+];
+// LOUNGE_ASSETS lists each file literally so the Pages build content-hashes it.
+const painted = (ref: string, thumb = false) =>
+  (LOUNGE_ASSETS as Record<string, string>)[`furniture_${thumb ? 'thumb_' : ''}${ref.replace(/^furn-/, '').replaceAll('-', '_')}`];
+
+/** Room / shop art for every premium furniture piece (ref → image URL or data URI). */
+export const FURNITURE_ART: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(DRAW).map(([ref, draw]) => {
+      const h = aspectHeight(ref);
+      return [ref, svg(h, draw(h))];
+    }),
+  ),
+  ...Object.fromEntries(PAINTED_FURNITURE.map((ref) => [ref, painted(ref)])),
+};
+/** Small square previews (room editor list, item icons): the painted pieces' thumbnails, else the art. */
+export const FURNITURE_THUMBS: Record<string, string> = {
+  ...FURNITURE_ART,
+  ...Object.fromEntries(PAINTED_FURNITURE.map((ref) => [ref, painted(ref, true)])),
+};

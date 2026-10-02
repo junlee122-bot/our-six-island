@@ -4,7 +4,7 @@
 // silhouettes in one 48×48 box; colour comes from the item. Furniture uses its
 // room art (lounge-furniture-art.ts).
 import type { ReactNode } from 'react';
-import { FURNITURE_ART } from '../lounge-furniture-art';
+import { FURNITURE_THUMBS } from '../lounge-furniture-art';
 import { THUMBNAILS } from '../lounge-bedroom-art';
 import { FURNITURE_BY_REF } from '../lounge-items';
 import type { Quality } from '../lounge-life';
@@ -294,6 +294,39 @@ const FISH_LOOK: Record<string, FishLook> = {
   kkeuri: { shape: 'fish', body: '#8fa0a8', belly: '#eef0ea', mark: '#e08a4a' },
   nuchi: { shape: 'fish', body: '#b3a37f', belly: '#efe6cf', mark: '#7d6e4f' },
   bagrid: { shape: 'fish', body: '#b58a3f', belly: '#f0dca0', mark: '#4a3a1f' },
+  // 민물 어종 확장 (lounge-fish-data-fresh.ts).
+  moraemuji: { shape: 'fish', body: '#c9b48a', belly: '#f2e8d0', mark: '#7a6545' },
+  ureo: { shape: 'long', body: '#c8d4dc', belly: '#f6f8fa', mark: '#8ea2b0' },
+  hwangeo: { shape: 'fish', body: '#6f7f6a', belly: '#e9c08a', mark: '#e07a3a' },
+  lamprey: { shape: 'long', body: '#6a6352', belly: '#b5ad94', mark: '#2f2b22' },
+  swampeel: { shape: 'long', body: '#9a7a3e', belly: '#d9c084', mark: '#5a4420' },
+  dongsari: { shape: 'fish', body: '#7a6a4a', belly: '#cbbf98', mark: '#3e3424' },
+  ddeokbungeo: { shape: 'fish', body: '#a3a68a', belly: '#e2e2c6' },
+  gaksibungeo: { shape: 'tiny', body: '#b9a8d0', mark: '#e0708a' },
+  napjaru: { shape: 'tiny', body: '#a9b8a0', mark: '#4f6a8a' },
+  hyangeo: { shape: 'fish', body: '#7a7a6a', belly: '#d2ccb4', mark: '#4a4a3c' },
+  gasigogi: { shape: 'tiny', body: '#6a8a5a', mark: '#2f3f28' },
+  galgyeoni: { shape: 'tiny', body: '#b0c0c8', mark: '#2f3a44' },
+  dolgogi: { shape: 'tiny', body: '#8a8060', mark: '#3f3a2a' },
+  eoreumchi: { shape: 'fish', body: '#b8ae8a', belly: '#f0e8cf', mark: '#3a3428' },
+  jagasari: { shape: 'fish', body: '#c08a4a', belly: '#ecd0a0', mark: '#7a5226' },
+  kkuguri: { shape: 'tiny', body: '#a89a72', mark: '#4a3e26' },
+  beodeulgae: { shape: 'tiny', body: '#8f9a7a', mark: '#4f5a40' },
+  yeonjunmochi: { shape: 'tiny', body: '#c4d0d6', mark: '#5a6e7a' },
+  songeo: { shape: 'fish', body: '#8a9aa6', belly: '#f6d6c8', mark: '#d0705a' },
+  dukjunggae: { shape: 'fish', body: '#6a6a50', belly: '#b8b496', mark: '#35352a' },
+  miyugi: { shape: 'fish', body: '#5e5a48', belly: '#aaa48a', mark: '#c9e07a' },
+  tunggari: { shape: 'fish', body: '#b07a3a', belly: '#e6c48a', mark: '#6a4420' },
+  sturgeon: { shape: 'long', body: '#6f7a80', belly: '#d0d6d8', mark: '#e8ecee' },
+  nunbulgae: { shape: 'fish', body: '#b0bcc4', belly: '#f2f4f5', mark: '#d0402f' },
+  keungasigogi: { shape: 'tiny', body: '#5a7a6a', mark: '#d8452f' },
+  salchi: { shape: 'fish', body: '#c8d2d8', belly: '#f6f8f9', mark: '#90a0aa' },
+  baekjoeo: { shape: 'fish', body: '#d6dde2', belly: '#ffffff', mark: '#a0aeb8' },
+  chammaja: { shape: 'fish', body: '#b8ad90', belly: '#efe8d4', mark: '#3a342a' },
+  daenong: { shape: 'fish', body: '#a07a3a', belly: '#e6cf98', mark: '#4a3a1c' },
+  hwangssogari: { shape: 'fish', body: '#e8b84a', belly: '#fff0b8', mark: '#b07a1c' },
+  baekdutrout: { shape: 'fish', body: '#9aa8b4', belly: '#fff4ee', mark: '#d2384a' },
+  millcatfish: { shape: 'fish', body: '#3e3a32', belly: '#8a8470', mark: '#d9c27a' },
   // 낚시 업그레이드 (lounge-fish-data.ts).
   mullet: { shape: 'fish', body: '#8f9aa3', belly: '#eef1f2', mark: '#5f6a73' },
   sandfish: { shape: 'fish', body: '#a39a7c', belly: '#f1ebd8', mark: '#7a6e50' },
@@ -1347,11 +1380,11 @@ export function ItemIcon({
   className?: string;
 }) {
   // 'furn-*': drawn art; 기본 가구 (새 방): the room catalog thumbnail.
-  const furn = id.startsWith('furn-') ? FURNITURE_ART[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
+  const furn = id.startsWith('furn-') ? FURNITURE_THUMBS[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
   return (
     <span className={`l-item-icon ${className}`} style={{ width: size, height: size }} title={title} aria-hidden={title ? undefined : true}>
       {furn ? (
-        // oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art.
+        // oxlint-disable-next-line nextjs/no-img-element -- Furniture thumbnail (webp, or inline SVG for crafted pieces).
         <img src={furn} alt="" draggable={false} />
       ) : (
         <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
