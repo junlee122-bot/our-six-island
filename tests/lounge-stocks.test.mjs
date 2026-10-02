@@ -63,7 +63,7 @@ function order(m, action, now, place = broker, uid = UID) {
 test('stocks: twelve listings, nine shops and three themes, no real company names', () => {
   assert.equal(STOCKS.length, 12);
   assert.equal(STOCKS.filter((s) => s.kind === 'shop').length, 9);
-  assert.deepEqual(STOCKS.filter((s) => s.kind === 'theme').map((s) => s.name), ['범전자', '범바이오', '범우주항공']);
+  assert.deepEqual(STOCKS.filter((s) => s.kind === 'theme').map((s) => s.name), ['범성전자', '범이닉스', '범비디아']);
   assert.equal(new Set(STOCKS.map((s) => s.code)).size, 12);
   for (const s of STOCKS) {
     assert.ok(s.news.up.length && s.news.down.length, s.sym);
@@ -148,21 +148,21 @@ test('stocks: buying pays the ask plus a 0.3% fee (rounded up) to the house', ()
 test('stocks: the server sets the price — a price field is refused, the fill is the server quote', () => {
   const m = market();
   advance(m, T0);
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'elec', qty: 1, price: 1 }, T0, broker), /가격은 서버 시세/);
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bsung', qty: 1, price: 1 }, T0, broker), /가격은 서버 시세/);
   assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'nope', qty: 1 }, T0, broker), /종목/);
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'elec', qty: 1.5 }, T0, broker), /정수/);
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'mint', sym: 'elec', qty: 1 }, T0, broker), /주문 종류/);
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bsung', qty: 1.5 }, T0, broker), /정수/);
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'mint', sym: 'bsung', qty: 1 }, T0, broker), /주문 종류/);
   // A stale market (not caught up to now) cannot take orders.
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'elec', qty: 1 }, T0 + 3 * 3_600_000, broker), /시세를 다시/);
-  order(m, { op: 'buy', sym: 'elec', qty: 1 }, T0);
-  assert.equal(m.st.acct[UID].log[0].px, quoteOf(m.st.px.elec, limitsOf(m.st.prev.elec)).ask);
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bsung', qty: 1 }, T0 + 3 * 3_600_000, broker), /시세를 다시/);
+  order(m, { op: 'buy', sym: 'bsung', qty: 1 }, T0);
+  assert.equal(m.st.acct[UID].log[0].px, quoteOf(m.st.px.bsung, limitsOf(m.st.prev.bsung)).ask);
   // The view never carries the seed or anyone else's account.
   order(m, { op: 'buy', sym: 'coop', qty: 2 }, T0, broker, UID2);
   const view = stocksView(m.st, UID, { [UID]: 0, [UID2]: 3 }, T0);
   const text = JSON.stringify(view);
   assert.ok(!text.includes(SEED), 'no seed');
   assert.ok(!text.includes(UID2), 'no other uid');
-  assert.deepEqual(view.me.positions.map((p) => p.sym), ['elec']);
+  assert.deepEqual(view.me.positions.map((p) => p.sym), ['bsung']);
   assert.deepEqual(view.ranking.map((r) => r.actor).sort((x, y) => x - y), [0, 3]);
 });
 
@@ -206,10 +206,10 @@ test('stocks: margin buys borrow half (2× at most) within the 300,000범 credit
   const big = { ...m, ledger: { ...m.ledger, accounts: { ...m.ledger.accounts, [W]: 2_000_000 } } };
   big.ledger.granted = (big.ledger.granted ?? 0) + 2_000_000 - m.ledger.accounts[W];
   validateLedger(big.ledger);
-  assert.throws(() => stocksAction(big.st, big.ledger, UID, { kind: 'stock', op: 'margin', sym: 'elec', qty: 40 }, T0, broker), /신용 한도/);
+  assert.throws(() => stocksAction(big.st, big.ledger, UID, { kind: 'stock', op: 'margin', sym: 'bsung', qty: 40 }, T0, broker), /신용 한도/);
   // Per-stock holding limit: 10% of the float.
-  assert.equal(holdLimit('elec'), 40);
-  assert.throws(() => stocksAction(big.st, big.ledger, UID, { kind: 'stock', op: 'buy', sym: 'elec', qty: 41 }, T0, broker), /유통 주식의 10%/);
+  assert.equal(holdLimit('bsung'), 40);
+  assert.throws(() => stocksAction(big.st, big.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bsung', qty: 41 }, T0, broker), /유통 주식의 10%/);
   assert.ok(STOCK_CREDIT_LIMIT === 300_000);
 });
 
@@ -253,32 +253,32 @@ test('stocks: interest accrues at the close; a margin call is sold at the next d
 test('stocks: a short loses at most its collateral and fee; the house absorbs a gap', () => {
   const m = market();
   const start = m.ledger.accounts[W];
-  order(m, { op: 'short', sym: 'bio', qty: 10 }, T0);
-  const s = m.st.acct[UID].short.bio;
-  const { bid } = quoteOf(m.st.px.bio, limitsOf(m.st.prev.bio));
-  assert.equal(s.val, 10 * bid);
-  assert.equal(s.coll, Math.ceil(10 * bid * 0.5));
+  order(m, { op: 'short', sym: 'bnix', qty: 5 }, T0);
+  const s = m.st.acct[UID].short.bnix;
+  const { bid } = quoteOf(m.st.px.bnix, limitsOf(m.st.prev.bnix));
+  assert.equal(s.val, 5 * bid);
+  assert.equal(s.coll, Math.ceil(5 * bid * 0.5));
   const paid = start - m.ledger.accounts[W];
-  assert.equal(paid, s.coll + stockFee(10 * bid));
+  assert.equal(paid, s.coll + stockFee(5 * bid));
   // Same stock long and short at once is refused.
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bio', qty: 1 }, T0, broker), /환매수/);
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'buy', sym: 'bnix', qty: 1 }, T0, broker), /환매수/);
   // As if the price had tripled overnight: the position is worth less than nothing.
   s.val = 1;
   const after = m.ledger.accounts[W];
   advance(m, kst(2026, 10, 1, 11, 1));
-  assert.equal(m.st.acct[UID].short.bio, undefined, 'forced cover');
+  assert.equal(m.st.acct[UID].short.bnix, undefined, 'forced cover');
   assert.equal(m.ledger.accounts[W], after, 'nothing more is taken from the wallet');
   assert.ok(start - m.ledger.accounts[W] <= paid, 'total loss ≤ collateral + fee');
   assert.ok(m.st.stats.at(-1).absorbed > 0, 'the broker absorbed the shortfall');
   // Borrow fee at the close comes out of the collateral.
   const m2 = market();
-  order(m2, { op: 'short', sym: 'space', qty: 5 }, T0);
-  const c0 = m2.st.acct[UID].short.space.coll;
+  order(m2, { op: 'short', sym: 'bvidia', qty: 5 }, T0);
+  const c0 = m2.st.acct[UID].short.bvidia.coll;
   advance(m2, kst(2026, 10, 1, 15, 2));
-  const c1 = m2.st.acct[UID].short.space?.coll;
+  const c1 = m2.st.acct[UID].short.bvidia?.coll;
   if (c1 !== undefined) assert.ok(c1 < c0, 'borrow fee taken');
   // Holding limit applies to shorts too (10% of the float).
-  assert.throws(() => order(market(), { op: 'short', sym: 'elec', qty: 41 }, T0), /유통 주식의 10%/);
+  assert.throws(() => order(market(), { op: 'short', sym: 'bsung', qty: 41 }, T0), /유통 주식의 10%/);
 });
 
 test('stocks: weekly dividends on Monday’s open — longs paid, shorts charged', () => {
@@ -298,7 +298,7 @@ test('stocks: weekly dividends on Monday’s open — longs paid, shorts charged
   assert.equal(div.amount, 20 * dps);
   const coopDps = Math.floor(sunday.coop * 0.004);
   assert.ok(m.st.acct[UID2].short.coop.coll <= coll - 3 * coopDps, 'the short paid the dividend from its collateral');
-  assert.equal(m.st.div.elec, undefined, 'themes pay no dividend');
+  assert.equal(m.st.div.bsung, undefined, 'themes pay no dividend');
   assert.ok(m.st.events.some((e) => e.kind === 'dividend' && e.sym === 'bakery'));
 });
 
@@ -313,7 +313,7 @@ test('stocks: a busy shop is pulled up, a dead one down (turnover from the ledge
   const ra = materializeStocks(a, ledger, busy, kst(2026, 10, 3, 15, 5)).state,
     rb = materializeStocks(b, ledger, quiet, kst(2026, 10, 3, 15, 5)).state;
   assert.ok(ra.px.bakery > rb.px.bakery, `${ra.px.bakery} > ${rb.px.bakery}`);
-  assert.equal(ra.px.elec, rb.px.elec, 'themes ignore shop turnover');
+  assert.equal(ra.px.bsung, rb.px.bsung, 'themes ignore shop turnover');
 });
 
 test('stocks: friends’ buying nudges the next tick by at most 0.6% (less than a round trip costs)', () => {

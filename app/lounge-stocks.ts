@@ -62,7 +62,7 @@ const REV_K = 3_000,
 const HOUR = 3_600_000;
 
 // ---------------------------------------------------------------- the stocks
-export type StockSym = 'coop' | 'general' | 'bakery' | 'fishmarket' | 'furniture' | 'realty' | 'casino' | 'tavern' | 'forge' | 'elec' | 'bio' | 'space';
+export type StockSym = 'coop' | 'general' | 'bakery' | 'fishmarket' | 'furniture' | 'realty' | 'casino' | 'tavern' | 'forge' | 'bsung' | 'bnix' | 'bvidia';
 export type StockDef = {
   sym: StockSym;
   code: string;
@@ -145,27 +145,27 @@ export const STOCKS: readonly StockDef[] = [
     down: ['숯이 모자라 화덕이 식어', '광석 값 약세', '대장간 망치 수리'],
   }),
   {
-    sym: 'elec', code: '900210', name: '범전자', kind: 'theme', p0: 52_000, float: 400, sigma: 0.018, gap: 0.03, kappa: 0.01,
+    sym: 'bsung', code: '900210', name: '범성전자', kind: 'theme', p0: 52_000, float: 400, sigma: 0.018, gap: 0.03, kappa: 0.01,
     news: {
-      up: ['범전자, 마을 첫 반도체 공방 착공', '범전자 새 계산기 예약 몰려', '범전자 공장 불빛이 밤새 켜져'],
-      down: ['범전자 공방 정전으로 생산 멈춰', '범전자 신제품 출시 미뤄', '범전자 창고 부품 모자라'],
+      up: ['범성전자, 마을 첫 반도체 공방 착공', '범성전자 새 접이식 계산기 예약 몰려', '범성전자 공장 불빛이 밤새 켜져'],
+      down: ['범성전자 공방 정전으로 생산 멈춰', '범성전자 신제품 출시 미뤄', '범성전자 창고에 부품 모자라'],
       min: 0.06, max: 0.12, chance: 0.2,
     },
   },
   {
-    sym: 'bio', code: '900220', name: '범바이오', kind: 'theme', p0: 9_800, float: 1_500, sigma: 0.026, gap: 0.035, kappa: 0.01,
+    sym: 'bnix', code: '900220', name: '범이닉스', kind: 'theme', p0: 18_500, float: 800, sigma: 0.022, gap: 0.03, kappa: 0.01,
     news: {
-      up: ['범바이오 “감기약 실험 순조롭다”', '범바이오 연구소 새 약초 발견', '범바이오 임상 다음 단계로'],
-      down: ['범바이오 실험 결과 기대 못 미쳐', '범바이오 연구소 실험실 청소로 휴업', '범바이오 약초 밭 서리 피해'],
+      up: ['범이닉스 기억 칩 주문 줄 서', '범이닉스 “칩 값 오른다” 전망', '범이닉스 새 공정 수율 쑥쑥'],
+      down: ['범이닉스 칩 재고 창고에 쌓여', '범이닉스 기억 칩 값 미끄럼', '범이닉스 공방 먼지 청소로 하루 쉬어'],
+      min: 0.06, max: 0.12, chance: 0.2,
+    },
+  },
+  {
+    sym: 'bvidia', code: '900230', name: '범비디아', kind: 'theme', p0: 30_000, float: 600, sigma: 0.026, gap: 0.035, kappa: 0.01,
+    news: {
+      up: ['범비디아 그림 칩, 마을 컴퓨터마다 품절', '범비디아 “똑똑한 기계 붐 이제 시작”', '범비디아 새 칩 발표회 박수 쏟아져'],
+      down: ['범비디아 칩 너무 뜨거워 회수 소동', '범비디아 거품 논란', '범비디아 큰손 친구들 차익 실현'],
       min: 0.07, max: 0.13, chance: 0.2,
-    },
-  },
-  {
-    sym: 'space', code: '900230', name: '범우주항공', kind: 'theme', p0: 18_500, float: 800, sigma: 0.022, gap: 0.03, kappa: 0.01,
-    news: {
-      up: ['범우주항공 종이 로켓 시험 비행 성공', '범우주항공 언덕 발사대 짓는다', '범우주항공 별 지도 완성'],
-      down: ['범우주항공 시험 로켓이 나무에 걸려', '범우주항공 발사 날씨 탓에 연기', '범우주항공 연료 값 올라'],
-      min: 0.06, max: 0.12, chance: 0.2,
     },
   },
 ];
