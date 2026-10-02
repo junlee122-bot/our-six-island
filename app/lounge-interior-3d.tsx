@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { AvatarView } from './avatar-view';
 import { PostBubbles, ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
-import { npcsIn, type NpcSpot } from './lounge-npc-schedule';
+import { npcAtPost, npcsIn, type NpcSpot } from './lounge-npc-schedule';
 import { interiorCanWalk, hostSpot, TABLE_HOST, TAVERN_HOST_AT } from './lounge-interior-layout';
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender';
 import { BANKER_SPOT } from './lounge-bank-layout';
@@ -47,6 +47,9 @@ function postSpots(area: SceneArea): NpcSpot[] {
   if (area === 'salon') add('gwen', interiorToWorld(SALON_STYLIST_SPOT));
   return out;
 }
+/** 루미 · 매화 · 로제 walk the village on breaks (lounge-npc-schedule.ts); the tables and the desk keep working. */
+const ROAMING_POSTS: readonly NpcId[] = ['lumi', 'maehwa', 'rose'];
+const onDuty = (id: NpcId, now: number) => !ROAMING_POSTS.includes(id) || npcAtPost(id, now);
 const RESIDENT_TALK_REACH = 1.9;
 import './lounge-npc-figures.css';
 import { loungeSprites } from './lounge-sprites';
@@ -268,6 +271,8 @@ export function Interior3D({
   const [attempt, setAttempt] = useState(0);
   const [action, setAction] = useState<InteriorAction | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  /** Server time for who is at their post (the labels; the frame loop uses clockRef). */
+  const dutyAt = now + offsetOf(view);
   const layout = useMemo(() => interiorTables(area), [area]);
 
   // Who is here, and where the seated ones sit (their table seat wins over
@@ -1026,7 +1031,9 @@ export function Interior3D({
       lastRender = -100,
       lastData = -100,
       lastSend = 0,
+      lastDuty = -2000,
       wasMoving = false;
+    const duty = new Map<NpcId, boolean>();
     const animate = (t: number) => {
       if (disposed) return;
       frame = requestAnimationFrame(animate);
@@ -1161,7 +1168,13 @@ export function Interior3D({
         if (step) dirty = true;
       }
       for (const table of current.tables) hostTables.set(table.game, { phase: table.state.phase, seats: table.seats.length });
-      if (hosts.update(t, hostTables, reduced.matches)) dirty = true;
+      if (t - lastDuty > 1000) {
+        lastDuty = t;
+        const at = Date.now() + clockRef.current;
+        for (const id of ROAMING_POSTS) duty.set(id, onDuty(id, at));
+        if (lender?.setPresent(duty.get('rose') !== false)) dirty = true;
+      }
+      if (hosts.update(t, hostTables, reduced.matches, (id) => duty.get(id) !== false)) dirty = true;
       if (t - lastData > 150) {
         // A café chair a friend or a resident is on is not offered.
         const next = interiorAction(
@@ -1276,7 +1289,7 @@ export function Interior3D({
           { id: 'self', name: ACTORS[latest.current.me.actor] ?? '', ...interiorToWorld(l.point) },
           ...[...others.entries()].map(([id, f]) => ({ id, name: '', ...interiorToWorld(f.pos) })),
         ];
-        postBubbles.update(residentFrames(posts, people, at, { rain: false, night: false, memory: postMemory }));
+        postBubbles.update(residentFrames(posts.filter((p) => duty.get(p.id) !== false), people, at, { rain: false, night: false, memory: postMemory }));
       }
       if (l.moving || dirty || t - lastRender > 120) {
         renderer.render(scene, camera);
@@ -1393,7 +1406,8 @@ export function Interior3D({
           t.host ? (
             <div
               key={'host-' + t.game}
-              className="ih-label ih-host"
+              className={'ih-label ih-host' + (onDuty(t.host as NpcId, dutyAt) ? '' : ' away')}
+              data-testid={'interior-host-' + t.game}
               ref={(el) => {
                 if (el) labelsRef.current.set('host-' + t.game, el);
                 else labelsRef.current.delete('host-' + t.game);
@@ -1402,7 +1416,7 @@ export function Interior3D({
               <span className="ih-name ih-host-name">
                 <DealerAvatar host={t.host} mood={t.state.phase === 'playing' ? 'focus' : 'smile'} />
                 {HOSTS[t.host].name}
-                <em>{t.host === 'lumi' ? '딜러' : t.host === 'captain' ? '주인' : '진행자'}</em>
+                <em>{!onDuty(t.host as NpcId, dutyAt) ? '자동 진행' : t.host === 'lumi' ? '딜러' : t.host === 'captain' ? '주인' : '진행자'}</em>
               </span>
             </div>
           ) : null,
@@ -1441,7 +1455,7 @@ export function Interior3D({
               else labelsRef.current.delete('casino-lender');
             }}
           >
-            <strong>{LENDER_NAME}</strong><span>대출 상담</span>
+            <strong>{LENDER_NAME}</strong><span>{onDuty('rose', dutyAt) ? '대출 상담' : '자리 비움 · 창구 장부 운영 중'}</span>
           </button>
         )}
         {tables.map((t) => (

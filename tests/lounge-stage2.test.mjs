@@ -244,6 +244,8 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
     assert.equal(npcSpot(id, at(2, 3), { hill: false }).area, 'home', `${id} before the move`);
   }
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
+    // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
+    'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
