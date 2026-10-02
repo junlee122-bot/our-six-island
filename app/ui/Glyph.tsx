@@ -341,6 +341,14 @@ const PATHS = {
     </>
   ),
   // ---- more objects in the same hand (UI audit stage B: replaces lucide) ----
+  // 범마을 증권: a rising chart on a slate.
+  chart: (
+    <>
+      <path d="M3.5 4.5 h17 v15 h-17z" fill="#22324f" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M6 16 l3.5 -4 l3 2.5 l5 -6.5" fill="none" stroke="#ff7b6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15 8 h2.5 v2.5" fill="none" stroke="#ff7b6e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  ),
   store: (
     <>
       <path d="M4 10 v10 h16 v-10" fill="#f2e3c2" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />

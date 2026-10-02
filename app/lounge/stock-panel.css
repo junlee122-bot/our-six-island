@@ -1,0 +1,108 @@
+/* 범마을 증권 — the HTS-style window (StockPanel.tsx). Tokens only (app/ui/tokens.css, [data-venue='broker']). */
+.l-modal.l-stock { width: min(1180px, 96vw); }
+.l-stock .is-up { color: var(--stock-up); }
+.l-stock .is-down { color: var(--stock-down); }
+
+.l-stock-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.l-stock-status { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-stock-status.is-open { color: var(--accent); box-shadow: var(--edge-line); }
+.l-stock-summary { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin: 0; }
+.l-stock-summary div { display: grid; gap: var(--sp-1); }
+.l-stock-summary dt { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-stock-summary dd { margin: 0; font-size: var(--fs-body); font-weight: var(--fw-semi); font-variant-numeric: tabular-nums; }
+.l-stock-warn { margin: 0 0 var(--sp-3); padding: var(--sp-3); border-radius: var(--r-s); background: var(--danger); color: var(--text); font-size: var(--fs-body-s); line-height: var(--lh-body); }
+.l-stock-empty { margin: var(--sp-4) 0; color: var(--text-soft); font-size: var(--fs-body); }
+.l-stock-fine, .l-stock-desk { margin: var(--sp-2) 0 0; color: var(--text-soft); font-size: var(--fs-cap); line-height: var(--lh-body); }
+
+/* 시세 · 주문: list | chart + book | order. */
+.l-stock-board { display: grid; grid-template-columns: minmax(230px, 0.9fr) minmax(320px, 1.4fr) minmax(250px, 1fr); gap: var(--sp-4); margin-top: var(--sp-3); align-items: start; }
+.l-stock-list { display: grid; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; max-height: 520px; overflow-y: auto; }
+.l-stock-list button { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; gap: 0 var(--sp-2); width: 100%; min-height: var(--hit); padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-s); background: var(--surface-raised); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.l-stock-list button:hover { box-shadow: var(--edge-line); }
+.l-stock-list button[aria-pressed='true'] { box-shadow: var(--edge-highlight); background: var(--surface-sunken); }
+.l-stock-list button:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.l-stock-name { grid-row: span 2; display: grid; font-size: var(--fs-body); font-weight: var(--fw-semi); }
+.l-stock-name small { color: var(--text-soft); font-size: var(--fs-cap); font-weight: var(--fw-regular); }
+.l-stock-px { text-align: right; font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+.l-stock-chg { text-align: right; font-size: var(--fs-cap); font-variant-numeric: tabular-nums; }
+.l-stock-badge { display: inline-block; margin-left: var(--sp-1); padding: 0 var(--sp-1); border-radius: var(--r-s); box-shadow: var(--edge-line); font-size: var(--fs-cap); }
+
+.l-stock-detail { display: grid; gap: var(--sp-3); min-width: 0; }
+.l-stock-head h3 { margin: 0; font: var(--fs-title-s)/var(--lh-tight) var(--font-display); }
+.l-stock-head h3 small { color: var(--text-soft); font: var(--fs-cap) var(--font-body); }
+.l-stock-head p { margin: var(--sp-1) 0 0; font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+.l-stock-head strong { font: var(--fs-title)/var(--lh-tight) var(--font-display); }
+.l-stock-head .l-stock-meta { color: var(--text-soft); font-size: var(--fs-cap); line-height: var(--lh-body); }
+.l-stock-chart-wrap { padding: var(--sp-2); border-radius: var(--r-m); background: var(--surface-sunken); }
+.l-stock-modes { display: flex; gap: var(--sp-1); margin-bottom: var(--sp-2); }
+.l-stock-modes button { min-height: 32px; padding: 0 var(--sp-3); border: 0; border-radius: var(--r-s); background: var(--surface-raised); color: var(--text-soft); font: inherit; font-size: var(--fs-cap); cursor: pointer; }
+.l-stock-modes button[aria-pressed='true'] { color: var(--accent); box-shadow: var(--edge-line); }
+.l-stock-modes button:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.l-stock-chart { display: block; width: 100%; height: auto; }
+.l-stock-chart .l-stock-band { stroke-width: 1; stroke-dasharray: 3 4; opacity: 0.7; }
+.l-stock-chart .l-stock-band.is-up { stroke: var(--stock-up); }
+.l-stock-chart .l-stock-band.is-down { stroke: var(--stock-down); }
+.l-stock-chart .l-stock-prev { stroke: var(--text-soft); stroke-width: 1; stroke-dasharray: 6 4; }
+.l-stock-chart .l-stock-line { fill: none; stroke: var(--text); stroke-width: 2.4; stroke-linejoin: round; }
+.l-stock-chart .l-stock-line.is-up { stroke: var(--stock-up); }
+.l-stock-chart .l-stock-line.is-down { stroke: var(--stock-down); }
+.l-stock-chart .l-stock-dot { fill: var(--text); }
+.l-stock-chart .l-stock-dot.is-up { fill: var(--stock-up); }
+.l-stock-chart .l-stock-dot.is-down { fill: var(--stock-down); }
+.l-stock-chart .l-stock-axis { fill: var(--text-soft); font-size: 12px; }
+.l-stock-candle line { stroke: var(--text-soft); stroke-width: 1; }
+.l-stock-candle rect { fill: var(--text-soft); }
+.l-stock-candle.is-up line { stroke: var(--stock-up); }
+.l-stock-candle.is-up rect { fill: var(--stock-up); }
+.l-stock-candle.is-down line { stroke: var(--stock-down); }
+.l-stock-candle.is-down rect { fill: var(--stock-down); }
+.l-stock-book { width: 100%; border-collapse: collapse; font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.l-stock-book th, .l-stock-book td { padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--line); text-align: left; }
+.l-stock-book td:nth-child(2) { text-align: right; font-weight: var(--fw-semi); }
+.l-stock-book td:last-child { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-stock-book .is-ask th, .l-stock-book .is-ask td:nth-child(2) { color: var(--stock-down); }
+.l-stock-book .is-bid th, .l-stock-book .is-bid td:nth-child(2) { color: var(--stock-up); }
+.l-stock-book .is-now { background: var(--surface-sunken); }
+
+.l-stock-order { display: grid; align-content: start; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); min-width: 0; }
+.l-stock-order h3 { margin: 0; font: var(--fs-title-s)/var(--lh-tight) var(--font-display); }
+.l-stock-hold { margin: 0; color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-stock-order label, .l-stock-repay label { display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
+.l-stock-order input { width: 100%; min-height: var(--hit); padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-s); box-shadow: var(--ring-line); background: var(--surface-sunken); color: var(--text); font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+.l-stock-order input:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.l-stock-preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin: 0; }
+.l-stock-preview dt { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-stock-preview dd { margin: 0; font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.l-stock-note { display: block; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); color: var(--text-soft); font-size: var(--fs-cap); line-height: var(--lh-body); }
+.l-stock-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+.l-stock-repay { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
+
+/* 내 잔고 */
+.l-stock-account { margin-top: var(--sp-3); }
+.l-stock-account h3 { margin: var(--sp-4) 0 var(--sp-2); font: var(--fs-title-s)/var(--lh-tight) var(--font-display); }
+.l-stock-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.l-stock-table th, .l-stock-table td { padding: var(--sp-2); border-bottom: 1px solid var(--line); text-align: right; }
+.l-stock-table th:first-child, .l-stock-table td:nth-child(2) { text-align: left; }
+.l-stock-table thead th { color: var(--text-soft); font-size: var(--fs-cap); font-weight: var(--fw-regular); }
+.l-stock-table tr.is-call { background: var(--accent-soft); }
+.l-stock-link { padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--fw-semi); text-decoration: underline; cursor: pointer; }
+.l-stock-link:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+.l-stock-log, .l-stock-news ul, .l-stock-ranking ol { display: grid; gap: var(--sp-1); margin: 0; padding: 0; list-style: none; }
+.l-stock-log li { display: grid; grid-template-columns: 110px 1fr auto; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.l-stock-log li span:first-child { color: var(--text-soft); }
+
+/* 랭킹 · 소식 */
+.l-stock-ranking, .l-stock-news { margin-top: var(--sp-3); }
+.l-stock-ranking li { display: grid; grid-template-columns: 36px 1fr auto auto; align-items: center; gap: var(--sp-3); min-height: var(--hit); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); font-size: var(--fs-body); }
+.l-stock-ranking li:first-child { box-shadow: var(--edge-highlight); }
+.l-stock-rank { font: var(--fs-title-s)/1 var(--font-display); color: var(--accent); }
+.l-stock-ranking small { font-size: var(--fs-body-s); font-variant-numeric: tabular-nums; }
+.l-stock-news li { display: grid; grid-template-columns: 110px 1fr; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); color: var(--text); font-size: var(--fs-body-s); line-height: var(--lh-body); }
+.l-stock-news li span:first-child { color: var(--text-soft); font-variant-numeric: tabular-nums; }
+.l-stock-news li.is-up b { color: var(--stock-up); }
+.l-stock-news li.is-down b { color: var(--stock-down); }
+
+@media (max-width: 1100px) {
+  .l-stock-board { grid-template-columns: minmax(210px, 0.8fr) minmax(0, 1.4fr); }
+  .l-stock-order { grid-column: 1 / -1; }
+}

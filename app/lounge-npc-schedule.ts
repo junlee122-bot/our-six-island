@@ -348,7 +348,7 @@ export const npcPlace = (id: string) => NPC_PLACES[id];
  */
 type Portal = { a: NpcArea; b: NpcArea; from: string; to: string; ms: number };
 /** The district spot in front of each shop's door (where its owner stood at the old counter). */
-const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = { bakery: 'm.bakery', coop: 'm.coop', general: 'm.general', fishmarket: 'hb.fishmarket' };
+const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = { bakery: 'm.bakery', coop: 'm.coop', general: 'm.general', fishmarket: 'hb.fishmarket', broker: 'm.broker' };
 const PORTALS: readonly Portal[] = [
   { a: 'village', b: 'market', from: 'v.market-gate', to: 'm.gate', ms: GATE_TRANSIT_MS },
   { a: 'market', b: 'village', from: 'm.gate', to: 'v.market-gate', ms: GATE_TRANSIT_MS },
@@ -1118,6 +1118,7 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   coop: SHOP_INTERIORS.coop.name,
   general: SHOP_INTERIORS.general.name,
   fishmarket: SHOP_INTERIORS.fishmarket.name,
+  broker: SHOP_INTERIORS.broker.name,
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>

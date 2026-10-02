@@ -1491,8 +1491,8 @@ export function Interior3D({
         )}
         {shop && (
           <button type="button" data-testid="interior-counter-route" onClick={approachCounter}>
-            <span>{shop.short} 계산대</span>
-            <small>{staffIds.includes(shop.owner) ? `${NPCS[shop.owner].name} · 걸어가기` : '걸어가기'}</small>
+            <span>{shop.short} {shop.owner ? '계산대' : '창구'}</span>
+            <small>{shop.owner && staffIds.includes(shop.owner) ? `${NPCS[shop.owner].name} · 걸어가기` : '걸어가기'}</small>
           </button>
         )}
         {shop &&
@@ -1568,7 +1568,7 @@ export function Interior3D({
             actionState
               ? tableLabel(actionState).text
               : action.kind === 'counter' && shop
-                ? staffIds.includes(shop.owner)
+                ? shop.owner && staffIds.includes(shop.owner)
                   ? `${NPCS[shop.owner].name} · ${shop.name}`
                   : shop.name
                 : undefined

@@ -218,6 +218,9 @@
   --keycap-text: var(--ink-900);
   --keycap-edge: rgb(61 43 29 / 0.35);
   --glyph-ink: #4a3423;
+  /* 범마을 증권: Korean market colours — red up, blue down. */
+  --stock-up: #b93a33;
+  --stock-down: #2f5fa8;
 
   /* ---- type ----------------------------------------------------------------
      display = Jua (signs, titles, big numbers) · body = Pretendard · hand = Gaegu.
@@ -365,4 +368,31 @@
   --focus: #8a4a12;
   --disabled-bg: #dfc89c;
   --disabled-text: #574230;
+}
+[data-venue='broker'] {
+  --surface: #14203a; /* trading-floor navy */
+  --surface-raised: #1c2b4a;
+  --surface-sunken: #0e1729;
+  --frame: #0a1222;
+  --frame-edge: #050a14;
+  --text: #eef2fa;
+  --text-soft: #b8c3d9;
+  --text-on-frame: #eef2fa;
+  --text-on-accent: #14100a;
+  --line: rgb(238 242 250 / 0.16);
+  --line-strong: #5a78ad;
+  --accent: #ffd36e; /* ticker gold */
+  --accent-edge: #b8902e;
+  --accent-soft: rgb(255 211 110 / 0.16);
+  --danger: #c2413a;
+  --danger-edge: #7a231d;
+  --focus: #ffd36e;
+  --disabled-bg: #24324f;
+  --disabled-text: #c4cde0;
+  --disabled-edge: #3d5478;
+  --keycap-bg: #eef2fa;
+  --keycap-text: #14100a;
+  --glyph-ink: #eef2fa;
+  --stock-up: #ff7b6e;
+  --stock-down: #7fb2ff;
 }

@@ -16,8 +16,8 @@
 import type { DistrictCounter } from './lounge-district-counters.ts';
 import type { NpcId } from './lounge-npc-data.ts';
 
-export type ShopArea = 'bakery' | 'coop' | 'general' | 'fishmarket';
-export const SHOP_AREAS: readonly ShopArea[] = ['bakery', 'coop', 'general', 'fishmarket'];
+export type ShopArea = 'bakery' | 'coop' | 'general' | 'fishmarket' | 'broker';
+export const SHOP_AREAS: readonly ShopArea[] = ['bakery', 'coop', 'general', 'fishmarket', 'broker'];
 export const isShopArea = (a: unknown): a is ShopArea => typeof a === 'string' && (SHOP_AREAS as readonly string[]).includes(a);
 
 type World = { x: number; z: number };
@@ -86,10 +86,15 @@ export type ShopInterior = {
   tagline: string;
   chat: string;
   /** The district counter (TownPanel place) the room's counter opens. */
-  counter: Extract<DistrictCounter, 'bakery' | 'coop' | 'general' | 'fishmarket'>;
+  counter: Extract<DistrictCounter, 'bakery' | 'coop' | 'general' | 'fishmarket' | 'broker'>;
   /** Where the shop's front door is. */
   district: 'market' | 'harbor';
-  owner: NpcId;
+  /**
+   * Who stands behind the counter. 범마을 증권 has nobody yet (design-stocks.md
+   * §7.1): its counter opens the stock window directly, and a resident can be
+   * given the spot later (`ownerAt`, the staff strip and a `broker.owner` plan).
+   */
+  owner?: NpcId;
   /** Second staff member behind the counter (힘멜 helps at the bakery). */
   helper?: NpcId;
   /** The owner's (and helper's) spot behind the counter, world units. */
@@ -127,6 +132,55 @@ const cafeTable = (id: string, x: number, z: number): { table: ShopItem; seats: 
   ],
 });
 const cafe = [cafeTable('cafe-1', 2.5, -0.5), cafeTable('cafe-2', 5.3, -0.5), cafeTable('cafe-3', 3.9, 2.55)];
+/** 범마을 증권's consultation tables (two chairs each, like the café's). */
+const consult = [cafeTable('consult-1', -4.4, 1.6), cafeTable('consult-2', 4.4, 1.6)];
+
+/** 범마을 증권 (design-stocks.md §7.1): the stock exchange's floor, no owner yet. */
+const BROKER: ShopInterior = {
+  area: 'broker',
+  name: '범마을 증권',
+  short: '증권사',
+  tagline: '오늘의 시세, 내일의 꿈',
+  chat: '객장 수다',
+  counter: 'broker',
+  district: 'market',
+  ownerAt: { x: 0, z: -4.15 },
+  desk: { x: 0, z: -3.2, w: 3.6, d: 0.85 },
+  front: toNet({ x: 0, z: -2.05 }),
+  staffGates: [
+    { x: -2.25, z: -3.75, w: 0.9, d: 1.75 },
+    { x: 2.25, z: -3.75, w: 0.9, d: 1.75 },
+  ],
+  items: [
+    // The counter with two trading terminals.
+    { id: 'desk', model: null, x: 0, z: -3.2, w: 3.6, h: 0.98, d: 0.85, solid: false, color: '#2c3e5c' },
+    { id: 'terminal-1', model: 'register', x: -0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
+    { id: 'terminal-2', model: 'register', x: 0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
+    // Behind it: the ticker board (wall signs above), files and a tea sideboard.
+    { id: 'ticker', model: null, x: 0, z: -5.75, w: 5.6, h: 0.9, d: 0.12, y: 1.5, solid: false, color: '#16233a' },
+    { id: 'files-1', model: 'storageShelf', x: -3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+    { id: 'files-2', model: 'storageShelf', x: 3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+    { id: 'tea', model: 'teaSideboard', x: 0, z: -5.45, w: 1.6, h: 0.95, d: 0.75, solid: false },
+    // Quote terminals along the walls for walk-in traders.
+    { id: 'quotes-left', model: null, x: -5.6, z: -1.6, w: 1.0, h: 0.8, d: 2.2, color: '#3a4a66' },
+    { id: 'quotes-left-screen', model: 'register', x: -5.6, z: -1.6, w: 0.55, h: 0.45, d: 0.45, y: 0.8, turn: Math.PI / 2, solid: false },
+    { id: 'quotes-right', model: null, x: 5.6, z: -1.6, w: 1.0, h: 0.8, d: 2.2, color: '#3a4a66' },
+    { id: 'quotes-right-screen', model: 'register', x: 5.6, z: -1.6, w: 0.55, h: 0.45, d: 0.45, y: 0.8, turn: -Math.PI / 2, solid: false },
+    { id: 'plant-left', model: 'plantStand', x: -6.45, z: -4.3, w: 1.0, h: 1.2, d: 0.45 },
+    { id: 'plant-right', model: 'plantStand', x: 6.45, z: 3.9, w: 1.0, h: 1.2, d: 0.45 },
+    ...consult.map((c) => c.table),
+  ],
+  seats: consult.flatMap((c) => c.seats),
+  spots: {
+    browse: { x: -4.4, z: -1.2, face: -Math.PI / 2 },
+    'browse-2': { x: 4.4, z: -1.2, face: Math.PI / 2 },
+    board: { x: 0, z: 0.4, face: Math.PI },
+  },
+  signs: [
+    { text: '오늘의 시세', x: -3.05, y: 2.4, w: 2.0 },
+    { text: '주식 · 신용 · 공매도', x: 3.05, y: 2.4, w: 2.0 },
+  ],
+};
 
 export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
   bakery: {
@@ -312,6 +366,7 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       { text: '새벽 경매 여섯 시', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
+  broker: BROKER,
 };
 
 export const shopOf = (area: ShopArea) => SHOP_INTERIORS[area];

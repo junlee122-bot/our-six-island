@@ -53,6 +53,7 @@ export const VENUES: Record<InteriorArea, Venue> = {
   coop: shopVenue('coop'),
   general: shopVenue('general'),
   fishmarket: shopVenue('fishmarket'),
+  broker: shopVenue('broker'),
   salon: {
     area: 'salon', name: '보송 미용실', short: '미용실', place: 'wardrobe',
     music: 'hall', venue: 'hall', chat: '미용실 수다', exposure: 1.08,

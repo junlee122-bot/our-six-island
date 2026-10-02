@@ -124,6 +124,7 @@ import { NpcTalkDialog } from './lounge/NpcTalkDialog';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
 import type { TownPlace, TravelArea } from './lounge/TownPanel';
 const TownPanel = lazyRetry(() => import('./lounge/TownPanel').then((m) => ({ default: m.TownPanel })));
+const StockPanel = lazyRetry(() => import('./lounge/StockPanel').then((m) => ({ default: m.StockPanel })));
 import { outdoorReturnPoint } from './lounge-areas';
 import type { NpcId } from './lounge-npc-data';
 import { AccountModal } from './lounge/AccountModal';
@@ -390,6 +391,8 @@ type ModalName =
   | 'forge'
   // 시장 거리: residents' request board (lounge-npc-requests.ts).
   | 'npcRequests'
+  // 범마을 증권 (lounge/StockPanel.tsx).
+  | 'stocks'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
   // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 신형만/봉미선 · 발키리).
@@ -414,6 +417,7 @@ const TAB_AREA: Record<Tab, Area> = {
   coop: 'coop',
   general: 'general',
   fishmarket: 'fishmarket',
+  broker: 'broker',
 };
 
 const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
@@ -544,6 +548,7 @@ function AccountLounge({
       coop: AREA_DEFAULTS.coop,
       general: AREA_DEFAULTS.general,
       fishmarket: AREA_DEFAULTS.fishmarket,
+      broker: AREA_DEFAULTS.broker,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -577,6 +582,8 @@ function AccountLounge({
   const [townPlace, setTownPlace] = useState<TownPlace | null>(null);
   /** Set below once enter() exists; the district's shop doors call it. */
   const enterShopRef = useRef<(area: ShopArea) => void>(() => {});
+  /** A shop room's counter: its town window, or the stock window at 범마을 증권. */
+  const openShopCounter = (place: Exclude<TownPlace, 'signpost' | 'tavern'> | 'broker') => (place === 'broker' ? setModal('stocks') : setTownPlace(place));
   const outdoorApi = useOutdoor({
     room,
     notify,
@@ -593,7 +600,8 @@ function AccountLounge({
       if (place === 'post') {
         setMailGift('none');
         setModal('mail');
-      } else setTownPlace(place);
+      } else if (place === 'broker') setModal('stocks');
+      else setTownPlace(place);
     },
     onFish: (spot) => startFishing(spot),
     onSignpost: () => setTownPlace('signpost'),
@@ -2515,7 +2523,7 @@ function AccountLounge({
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
-                onCounter={isShopArea(interior) ? () => setTownPlace(SHOP_INTERIORS[interior].counter) : undefined}
+                onCounter={isShopArea(interior) ? () => openShopCounter(SHOP_INTERIORS[interior].counter) : undefined}
                 onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
@@ -2591,7 +2599,7 @@ function AccountLounge({
                     onLender={() => setModal('lender')}
                     onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                     onSalon={() => enter('wardrobe')}
-                    onCounter={isShopArea(flatArea) ? () => setTownPlace(SHOP_INTERIORS[flatArea].counter) : undefined}
+                    onCounter={isShopArea(flatArea) ? () => openShopCounter(SHOP_INTERIORS[flatArea].counter) : undefined}
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
@@ -2719,6 +2727,7 @@ function AccountLounge({
                 { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
                 { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
                 { id: 'shop', label: '가게 안내', glyph: 'store', onClick: () => setModal('shop') },
+                { id: 'stocks', label: '주식 · 범마을 증권', glyph: 'chart', onClick: () => setModal('stocks') },
                 { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); } },
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
@@ -2824,6 +2833,11 @@ function AccountLounge({
       )}
       {modal === 'bank' && <FinancePanel key={`${financeMode}:${financePage ?? 'bank'}`} room={room} view={view} mode={financeMode} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? 'bank'} />}
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
+      {modal === 'stocks' && (
+        <Suspense fallback={null}>
+          <StockPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />
+        </Suspense>
+      )}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} initial={npcBookAt} onClose={() => setModal(null)} />}
       {modal === 'npcRequests' && <NpcRequestBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {townPlace && !modal && (

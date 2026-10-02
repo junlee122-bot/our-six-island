@@ -163,7 +163,7 @@ P(T) = 호가단위로 반올림(P(T−1)·e^r), [하한가, 상한가] 안으�
 
 ### 7.1 범마을 증권 건물
 
-- **시장 거리 동쪽**(신문사와 우체국 사이 빈터, 문은 남쪽). kArchive 건물 모델 `realtyOffice`(신문사와 같은 사무실 건물, CC0·출처 표기 기존 그대로)를 짙은 남색 간판 “범마을 증권 · 주식 · 신용 · 공매도”로 구분합니다. 새 모델을 들이지 않아 에셋 예산과 출처 기록이 늘지 않습니다.
+- **시장 거리 동쪽**(신문사와 우체국 사이 빈터 x 22.6, z 0.4, 문은 남쪽, 그 자리의 소나무 한 그루는 남동쪽으로 옮김). 건물은 kArchive 사무실 모델 `bankBuilding`(“office reception building”, 마을 중심 은행과 같은 모델, 자료: kArchive · 출처: 쓰레드 dogfooter, `public/models/village/life-services/assets.json`에 이미 기록)을 다시 쓰고, 짙은 남색 간판 “범마을 증권 · 주식 · 신용 · 공매도”와 문 옆 시세 전광판(빨강·파랑 막대)으로 구분합니다. 새 모델을 내려받지 않아 에셋 예산과 출처 기록이 늘지 않습니다.
 - **실내**는 가게 실내 공통 규격(`lounge-shop-interiors.ts`)의 다섯 번째 방 `broker`: 뒤쪽 시세 전광판(벽 간판 두 장 + 상단 띠), 객장 의자 줄, 상담 창구(계산대), 화분. 모델은 이미 출처가 기록된 kArchive/카페 가구(`cafeTable`, `register`, `storageShelf`, `teaSideboard`, `plantStand`, `banquetChair`)만 다시 씁니다.
 - **사장 NPC 자리**: `SHOP_INTERIORS.broker.owner`를 비워 두고(`ownerAt`·창구 뒤 직원 통로는 이미 있음), 창구의 E는 바로 주식 창을 엽니다. 나중에 주민을 붙일 때는 `owner`에 NPC id, `npc-schedule`에 `broker.owner` 일과만 넣으면 됩니다.
 - **미니맵**: 시장 거리 미니맵에 “범마을 증권” 문 표시(가게와 같은 방식, 자동), 실내에 있는 친구는 증권사 문 앞에 “실내” 점으로.

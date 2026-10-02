@@ -19,7 +19,8 @@ export type DistrictCounter =
   | 'guild'
   | 'library'
   | 'stalls'
-  | 'harborStall';
+  | 'harborStall'
+  | 'broker';
 export type DistrictTouch =
   /** `enter`: the shop has a room (가게 실내) and E walks in instead of opening the counter. */
   | { kind: 'counter'; place: DistrictCounter; label: string; enter?: ShopArea }
@@ -39,6 +40,7 @@ export const COUNTER_NAME: Record<DistrictCounter, string> = {
   library: '도서관',
   stalls: '장날 좌판',
   harborStall: '마키마의 항구 좌판',
+  broker: '범마을 증권',
 };
 /**
  * What E reaches in a district besides residents and exits: shop doors (just
