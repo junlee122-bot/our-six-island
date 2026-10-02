@@ -10,7 +10,7 @@
 //   so the village news can tell yesterday's from the day number alone.
 //
 //   Meetings (npcSocialScene): two tied residents standing in the same area
-//   close to each other meet in a 2-hour slot (kstHour helper, the same
+//   close to each other meet in a 2-game-hour slot (game clock, the same
 //   clock the schedule reads): chat, a meal, a short walk together, the
 //   present of the day, the quarrel or the making up. One of them (the one at
 //   work, else the receiver of a present, else by id) stays; the other comes
@@ -22,7 +22,7 @@
 //   friend nearby can overhear the whole exchange or join it (3 lines, a
 //   small friendship gain with both; the server checks the meeting with the
 //   same functions, lounge-romance.ts).
-import { SEASON_INFO, WEATHER_INFO, hash32, kstHour, seasonOfDay, weatherOf } from './lounge-calendar.ts';
+import { GAME_HOUR_MS, SEASON_INFO, WEATHER_INFO, hash32, seasonOfDay, weatherOf } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
 import { NPCS, NPC_IDS, VISIBLE_NPC_IDS, type NpcId } from './lounge-npc-data.ts';
 import { NPC_EXTRA } from './lounge-npc-extra.ts';
@@ -98,9 +98,10 @@ export function npcSulkingWith(npc: NpcId, day: number): NpcId | null {
 }
 
 // ---------------------------------------------------------------- meetings
-/** Two hours a slot: who meets whom changes through the day. */
+/** Two game hours a slot: who meets whom changes through each game day. */
 export const SOCIAL_SLOT_HOURS = 2;
-export const socialSlotOf = (now: number) => Math.floor(kstHour(now) / SOCIAL_SLOT_HOURS);
+/** Absolute slot number on the game clock (unique across game days, like the schedule). */
+export const socialSlotOf = (now: number) => Math.floor(now / (SOCIAL_SLOT_HOURS * GAME_HOUR_MS));
 /** Residents this close (area units) can meet; the one who comes over stands this far from the other. */
 export const MEET_RANGE = 8;
 export const MEET_GAP = 1.5;

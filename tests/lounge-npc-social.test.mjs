@@ -25,7 +25,8 @@ import {
 import { NPC_EXTRA } from '../app/lounge-npc-extra.ts';
 import { NPC_RECENT_KINDS } from '../app/lounge-npc-extra-types.ts';
 import { npcRecentKinds } from '../app/lounge-npc-recent.ts';
-import { npcCanStand, npcSpot, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { npcCanStand, npcSpot } from '../app/lounge-npc-schedule.ts';
+import { dayStart as kstDayStart } from '../app/lounge-calendar.ts';
 import { npcTalk, npcTalkReply, NPC_LINES } from '../app/lounge-npc-dialog.ts';
 import { assertNpcSocialContext, npcSocialAction, npcMeetAt, NPC_JOIN_POINTS, readNpcRelations } from '../app/lounge-romance.ts';
 import { regionToNetwork } from '../app/lounge-areas.ts';
