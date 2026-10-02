@@ -14,7 +14,7 @@ import {
   PROJECT_MIN_GIVE,
   VILLAGE_FLAGS,
 } from '../lounge-items';
-import { FURNITURE_ART } from '../lounge-furniture-art';
+import { FURNITURE_THUMBS } from '../lounge-furniture-art';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { needHave, needLabel } from '../lounge-life-ui';
@@ -249,7 +249,7 @@ function FestivalPanel({ room, view, notify }: { room: CloudRoom; view: CloudRoo
       </p>
       <div className="l-festival-souvenir">
         {/* oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art. */}
-        <img src={FURNITURE_ART[fest.souvenir]} alt="" />
+        <img src={FURNITURE_THUMBS[fest.souvenir]} alt="" />
         <span>
           <strong>이번 주 기념품 · {souvenir?.name ?? '축제 기념품'}</strong>
           <small>내 방 꾸미기의 “내 가구”에 생겨요. 주마다 다른 기념품이 돌아가요.</small>

@@ -520,8 +520,16 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-rug-lilac', name: '라일락 울 러그', price: 15_000 },
   { ref: 'furn-bookcase-walnut', name: '월넛 5단 책장', price: 25_000 },
   { ref: 'furn-wardrobe-white', name: '화이트 옷장', price: 28_000 },
-  // kArchive 3D model (lounge-bedroom-catalog.ts 'model' entry).
+  // A painting since 2026-10-02 (was the kArchive 3D model; stored rooms read on, LEGACY_ITEM_KIND).
   { ref: 'furn-rocking-chair', name: '흔들의자', price: 26_000 },
+  // 나무결 가구점 새 가구 (2026-10-02, furniture sheet 2): daily rotation, priced
+  // between the small props (12,000–16,000) and the big colorways (25,000–35,000).
+  { ref: 'furn-round-dining-set', name: '원목 2인 식탁', price: 24_000 },
+  { ref: 'furn-beanbag', name: '빈백 소파', price: 16_000 },
+  { ref: 'furn-hanging-planter', name: '행잉 플랜트', price: 9_000 },
+  { ref: 'furn-cat-tower', name: '캣타워', price: 22_000 },
+  { ref: 'furn-retro-tv', name: '레트로 TV', price: 20_000 },
+  { ref: 'furn-wall-shelf', name: '벽걸이 선반', price: 10_000 },
   // Seasonal limited.
   { ref: 'furn-cherry-vase', name: '벚꽃 가지 화병', price: 12_000, season: 'spring' },
   { ref: 'furn-fan', name: '레트로 선풍기', price: 14_000, season: 'summer' },
@@ -545,6 +553,8 @@ export const FURNITURE: readonly FurnitureDef[] = [
   { ref: 'furn-mother-pearl', name: '자개 병풍', price: 220_000, luxury: true },
   { ref: 'furn-velvet-sofa', name: '벨벳 체스터필드 소파', price: 190_000, luxury: true },
   { ref: 'furn-bonsai', name: '명품 분재', price: 110_000, luxury: true },
+  { ref: 'furn-marble-fireplace', name: '대리석 벽난로', price: 230_000, luxury: true },
+  { ref: 'furn-najeon-wardrobe', name: '자개 장롱', price: 260_000, luxury: true },
   // Project and festival rewards (not sold).
   { ref: 'furn-project-plaque', name: '마을 공사 현판', price: 0, unsold: true },
   { ref: 'furn-festival-lantern', name: '축제 청사초롱', price: 0, unsold: true },

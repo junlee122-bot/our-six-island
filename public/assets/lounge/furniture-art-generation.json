@@ -111,5 +111,320 @@
    ],
    "sha256": "03CE6BB1666E87DF76CA3F6E5B137A8D5F3C90BF18C4F1A1402D2C748F84E024"
   }
- ]
+ ],
+ "web": {
+  "furn-bed-mint": {
+   "file": "furniture/bed-mint.webp",
+   "w": 553,
+   "h": 558,
+   "thumb": "furniture/thumbs/bed-mint.webp",
+   "sha256": "1A51524B36AE0E042EAAFDB67EC53C8151A6FB6CDCEF8973AA4FEE569880CF61",
+   "thumbSha256": "48A3B06A82D457407EC06611B47F701FED0DB83FD42F374206475D62D46C4EAE"
+  },
+  "furn-sofa-rose": {
+   "file": "furniture/sofa-rose.webp",
+   "w": 546,
+   "h": 448,
+   "thumb": "furniture/thumbs/sofa-rose.webp",
+   "sha256": "DAECA1B68A04C8DF11B5741B8714BD182DCF08B46B71490BC1F90BCD3C3D9C7D",
+   "thumbSha256": "98283F96F05B12A550F06F837947C41DB9E81263C21F5F185B906ED4CBD36F51"
+  },
+  "furn-armchair-navy": {
+   "file": "furniture/armchair-navy.webp",
+   "w": 424,
+   "h": 491,
+   "thumb": "furniture/thumbs/armchair-navy.webp",
+   "sha256": "FD275291DCF0EC6ABC19AF7B3B9A4148A3A48AF898B995EDA5E33A30BC78A61C",
+   "thumbSha256": "03F8A2CC5E993EF3C7634FEB743C827EED749B4FF28565AB5B910DB5B79A9E47"
+  },
+  "furn-rug-lilac": {
+   "file": "furniture/rug-lilac.webp",
+   "w": 586,
+   "h": 453,
+   "thumb": "furniture/thumbs/rug-lilac.webp",
+   "sha256": "96EB64ADBD1B6D5E8A970B7C2E3A6AC236F8B6BEAE444CF1EE9C0D3CDDE5311A",
+   "thumbSha256": "D04EC95E9EDBBD937C86F1625E650018CA448B848A5B4092EB5256E1F0F15E4A"
+  },
+  "furn-bookcase-walnut": {
+   "file": "furniture/bookcase-walnut.webp",
+   "w": 382,
+   "h": 635,
+   "thumb": "furniture/thumbs/bookcase-walnut.webp",
+   "sha256": "2A79753B9C5F7353357EB383FFE50B7AA77F02DDB7F307373A9F82496BE7575F",
+   "thumbSha256": "1ECF5241C4E5397A9FE32F238ECE4A78190944D8F2896E129591893AA11E2A32"
+  },
+  "furn-wardrobe-white": {
+   "file": "furniture/wardrobe-white.webp",
+   "w": 417,
+   "h": 633,
+   "thumb": "furniture/thumbs/wardrobe-white.webp",
+   "sha256": "04386A0D2E77C19436A369B97707F11DC070E6DE4F7D0DDC170FECCFA831C48E",
+   "thumbSha256": "B2C3F8D48D97362F10CC3D9EAAD5594F097E6F667457395096FEDE61E40C651E"
+  },
+  "furn-rocking-chair": {
+   "file": "furniture/rocking-chair.webp",
+   "w": 472,
+   "h": 576,
+   "thumb": "furniture/thumbs/rocking-chair.webp",
+   "sha256": "E1F05A72BA9CC83CD4FFD39100460204DD68073038F85005EBDC83EDC5F62DEF",
+   "thumbSha256": "EE71FED02F55A87131F02FFBC31799C8D0C647ADD7C62037DC2EC693E0B684C1"
+  },
+  "furn-cherry-vase": {
+   "file": "furniture/cherry-vase.webp",
+   "w": 447,
+   "h": 581,
+   "thumb": "furniture/thumbs/cherry-vase.webp",
+   "sha256": "981D1875BBF5DE51AE0C5D7DD5C7D385457596F4A75ED7801FF19F6825437CC0",
+   "thumbSha256": "BA223BE1DC738A54A734E0B9E999DDA0736FE14EBF5FC09140830B37BDAC7FF3"
+  },
+  "furn-fan": {
+   "file": "furniture/fan.webp",
+   "w": 292,
+   "h": 555,
+   "thumb": "furniture/thumbs/fan.webp",
+   "sha256": "0BE2EBD498FB953C3B0BDC798FDAFCEF71F152DFD80AE0F10F094275EB1FF819",
+   "thumbSha256": "652C607FC755D8CD1A752E0BC1AC4C710F30DDD5A83471AF548C0D84F5B773C4"
+  },
+  "furn-maple-garland": {
+   "file": "furniture/maple-garland.webp",
+   "w": 598,
+   "h": 299,
+   "thumb": "furniture/thumbs/maple-garland.webp",
+   "sha256": "B3DB204D138EFD23D7B494CFB9A6451D928F3619E5276E0BC4C0067DE81244BF",
+   "thumbSha256": "35881395AAC97B93EFA8F7A8A303A42B0CDA026067CC2A1485EFBC917977C5AA"
+  },
+  "furn-snowman": {
+   "file": "furniture/snowman.webp",
+   "w": 417,
+   "h": 569,
+   "thumb": "furniture/thumbs/snowman.webp",
+   "sha256": "BAE875F6720B3614ED718133B91F6E8F5E74BDFA96C85C8AFAFDE465D5ADCB66",
+   "thumbSha256": "3610AA3B3C46651B5940C13F91632F3838D659F0E5E8E1D4C29020198D3E88E6"
+  },
+  "furn-moon-lantern": {
+   "file": "furniture/moon-lantern.webp",
+   "w": 326,
+   "h": 554,
+   "thumb": "furniture/thumbs/moon-lantern.webp",
+   "sha256": "62DFE9F5CC6E4B0DD53953F143E078075EA796E9C160C69B9C3803016CB343AC",
+   "thumbSha256": "E9B83C0BCC471A0BF5CDE774E3A1C20F7E594E690DCE4252BDB5B81D67507178"
+  },
+  "furn-lucky-pouch": {
+   "file": "furniture/lucky-pouch.webp",
+   "w": 299,
+   "h": 664,
+   "thumb": "furniture/thumbs/lucky-pouch.webp",
+   "sha256": "4FE06F51A9D7FC4EF065CCA894610B19D1BD7F563CAD9DCD6D2F8BDDA93001A1",
+   "thumbSha256": "50B5F81EF1E79D74B59BDD430D3918EE155D77A174E6AEB014DBDB3F1AAD25D6"
+  },
+  "furn-jack-lantern": {
+   "file": "furniture/jack-lantern.webp",
+   "w": 455,
+   "h": 473,
+   "thumb": "furniture/thumbs/jack-lantern.webp",
+   "sha256": "D49B687A7905909F856348DCCDEE5A509E087EC47A7D95C5155ACA84A056592C",
+   "thumbSha256": "6015C11A4C4A4B1AB9A807A745FA41629DF337324BE1950ED689B333D3E67726"
+  },
+  "furn-xmas-tree": {
+   "file": "furniture/xmas-tree.webp",
+   "w": 413,
+   "h": 654,
+   "thumb": "furniture/thumbs/xmas-tree.webp",
+   "sha256": "7ED849CEAB0FE2BEFB200002F60735473FC8FA572A2D434232CE68163103399F",
+   "thumbSha256": "1E29B80CDC766E67B4CC43BFA396F8DB076FCC69672132408455063FEF00F96E"
+  },
+  "furn-village-medal": {
+   "file": "furniture/village-medal.webp",
+   "w": 449,
+   "h": 438,
+   "thumb": "furniture/thumbs/village-medal.webp",
+   "sha256": "70BCA93636A7B085F445FEFAF181A968A58153E85533FD475AC20FE8D2AC952C",
+   "thumbSha256": "CD4466CFF75A3CF17F387A3CDC97B846C6EEFF62AFC0900851A1C31412B1829C"
+  },
+  "furn-project-plaque": {
+   "file": "furniture/project-plaque.webp",
+   "w": 547,
+   "h": 438,
+   "thumb": "furniture/thumbs/project-plaque.webp",
+   "sha256": "A8FADBA262F4D420131FF6396C4251A13B2A22031E6CF15382C54516902BE316",
+   "thumbSha256": "A73FF5370AB4AE622C324E70F117109D93BD2ECA4BD889639CA73CAE701AA5A4"
+  },
+  "furn-festival-lantern": {
+   "file": "furniture/festival-lantern.webp",
+   "w": 294,
+   "h": 588,
+   "thumb": "furniture/thumbs/festival-lantern.webp",
+   "sha256": "08BB5701B0973681E713926684446554B0376C9ECCA9D3F213768E890CA6AB6A",
+   "thumbSha256": "2DEDB0BA59D8A22E2379079D27561DA03F4A778C902A6A0E527B2249542D6E9A"
+  },
+  "furn-festival-drum": {
+   "file": "furniture/festival-drum.webp",
+   "w": 453,
+   "h": 523,
+   "thumb": "furniture/thumbs/festival-drum.webp",
+   "sha256": "CEAD9964C524C79CFFF0554B85755A2F1A167729D9AC4596C155AF63D84D5B86",
+   "thumbSha256": "73465616E40FD9D3626562186F4A485FE1187ACFA8EFA6A412A8306637B48633"
+  },
+  "furn-festival-kite": {
+   "file": "furniture/festival-kite.webp",
+   "w": 475,
+   "h": 552,
+   "thumb": "furniture/thumbs/festival-kite.webp",
+   "sha256": "FA2723333E4E91F4A00F4D10AFFE2E5B815705BB3007A295B1ECDBD33D5F6212",
+   "thumbSha256": "928700DE24E402FA4D9F0E947FA439EA18BDD5073BAA14E24329B8B21FCE9242"
+  },
+  "furn-festival-fan": {
+   "file": "furniture/festival-fan.webp",
+   "w": 574,
+   "h": 453,
+   "thumb": "furniture/thumbs/festival-fan.webp",
+   "sha256": "A9381B8F0BD185A3B05DA054A8E96A64C645DF37CCE50DF9432D330647B5F906",
+   "thumbSha256": "E95B0B583D44B83F45150FFA7EB9325476186F18EDF1E2379FDD4F4AC346B8EF"
+  },
+  "furn-round-dining-set": {
+   "file": "furniture/round-dining-set.webp",
+   "w": 600,
+   "h": 504,
+   "thumb": "furniture/thumbs/round-dining-set.webp",
+   "sha256": "2EC9F9EA620F6281791C939078B03EC7205C32F49F9CC08DD57FC3C86C25C359",
+   "thumbSha256": "1E5C8CD138E3B9D81F7578CFA8E58306AF9E77D4B3277CFAFE34668DD51B5E52"
+  },
+  "furn-beanbag": {
+   "file": "furniture/beanbag.webp",
+   "w": 506,
+   "h": 497,
+   "thumb": "furniture/thumbs/beanbag.webp",
+   "sha256": "A9A26BB45CF28E2A05B09059FC7D85A5F3C895DA65A491897FEC28AB864EBB68",
+   "thumbSha256": "70CB0621AADB050BC277A7A96E61A90875CD216B62F3C8E70FB1BDFF1D69D706"
+  },
+  "furn-hanging-planter": {
+   "file": "furniture/hanging-planter.webp",
+   "w": 391,
+   "h": 670,
+   "thumb": "furniture/thumbs/hanging-planter.webp",
+   "sha256": "13ED027FEDAA517253D2FC519D28EC94D5D1640D3B118DC9ABDD98A4B05F6AE3",
+   "thumbSha256": "B86A5E9E8F058FC9C321ECB47C9B04BD71D9BFA9F2F09B504E88CC43637D36FA"
+  },
+  "furn-cat-tower": {
+   "file": "furniture/cat-tower.webp",
+   "w": 484,
+   "h": 625,
+   "thumb": "furniture/thumbs/cat-tower.webp",
+   "sha256": "412BAAA25C6831493EFCA69FF98081D4FC56D237EA6003CF06ED7EE8CAD39735",
+   "thumbSha256": "FBE10048C4ECEEBF460F2F380A3C7B4E9214DECBA89374424D536650ED15B1F4"
+  },
+  "furn-retro-tv": {
+   "file": "furniture/retro-tv.webp",
+   "w": 505,
+   "h": 509,
+   "thumb": "furniture/thumbs/retro-tv.webp",
+   "sha256": "DE884FDBE638591CBF17E64B8743420F2B6BB20460E5E63C2D7C89A35698D6B5",
+   "thumbSha256": "AC9EA410F7BD33FA2DE0A269D6DD60F991784AAF4210CF13C872842C7494CDB4"
+  },
+  "furn-wall-shelf": {
+   "file": "furniture/wall-shelf.webp",
+   "w": 619,
+   "h": 420,
+   "thumb": "furniture/thumbs/wall-shelf.webp",
+   "sha256": "E96EDDF5F1BA5749616724B70B79BA4A998984F7114B80F17F6A23D1FE439AA8",
+   "thumbSha256": "5AB6E9743BA7E7DAA6183BBBC1FEE71768BE73C77F104B8EE0EF3F79BD7284F0"
+  },
+  "furn-grand-piano": {
+   "file": "furniture/grand-piano.webp",
+   "w": 725,
+   "h": 768,
+   "thumb": "furniture/thumbs/grand-piano.webp",
+   "sha256": "BD8E290A575147F5EBB411B4041E0AA98BDCA7C577253A78C9811C46D738F3DE",
+   "thumbSha256": "B8AE2099E8A18479DDF4491FF8F6CA334276D078EC7B48AE26F29A5C2DFABD9E"
+  },
+  "furn-canopy-bed": {
+   "file": "furniture/canopy-bed.webp",
+   "w": 746,
+   "h": 768,
+   "thumb": "furniture/thumbs/canopy-bed.webp",
+   "sha256": "53E2225B5035535F8762D0D66548DA8FF11B59DAD181BA99AEABE3C6FE57442B",
+   "thumbSha256": "C2B4D6BC6353BB335DAF51E0E477D193064D6A3CAB79FC081F6BCCB2132C950B"
+  },
+  "furn-aquarium": {
+   "file": "furniture/aquarium.webp",
+   "w": 768,
+   "h": 738,
+   "thumb": "furniture/thumbs/aquarium.webp",
+   "sha256": "F4158856D2F5F86CC4CCDBA029181E735AE41FA0BB461D4AD585D9281C619EC4",
+   "thumbSha256": "50DFBAA2E10B966290C119481CB659D0D4D5B8CFA0AD2ADB5246E18A7723C5A1"
+  },
+  "furn-crystal-lamp": {
+   "file": "furniture/crystal-lamp.webp",
+   "w": 413,
+   "h": 768,
+   "thumb": "furniture/thumbs/crystal-lamp.webp",
+   "sha256": "7CC0B31A176865241D67C474B8256B2279C6AE16812D1D967EBA02B1CBEB9842",
+   "thumbSha256": "D8D770B54C97686B171FF6CF97ADE31A94660ABA1491414B0993DC3F05493D34"
+  },
+  "furn-gold-mirror": {
+   "file": "furniture/gold-mirror.webp",
+   "w": 374,
+   "h": 768,
+   "thumb": "furniture/thumbs/gold-mirror.webp",
+   "sha256": "04AE21A02CCC3C1AC75F5FFD3B530DA8082B241A3D5B213E5C0628CF5FEC762E",
+   "thumbSha256": "67955470B9CD97DFBB1E6E01ABFB4B686C0D3F5384CB6660D1E3DB68E01B6D44"
+  },
+  "furn-arcade": {
+   "file": "furniture/arcade.webp",
+   "w": 456,
+   "h": 768,
+   "thumb": "furniture/thumbs/arcade.webp",
+   "sha256": "2BA2606C405668B97278E41AFDD193DD4A8CF590F805A9CE9206067432F93907",
+   "thumbSha256": "BF9CCDD5AAE53433C4AE2642CF6119EDF7DB1DAFB3B21AE06C2F0330374A146A"
+  },
+  "furn-telescope": {
+   "file": "furniture/telescope.webp",
+   "w": 552,
+   "h": 768,
+   "thumb": "furniture/thumbs/telescope.webp",
+   "sha256": "A18D710E84D2DE9E06D6B070260DD8EB616E95BFEDE46C826E00F2F3A6750308",
+   "thumbSha256": "E9B4318BA32BB01254BD41412E4A829EF7FC41B557E067CA1E88805CE51C63CF"
+  },
+  "furn-mother-pearl": {
+   "file": "furniture/mother-pearl.webp",
+   "w": 768,
+   "h": 752,
+   "thumb": "furniture/thumbs/mother-pearl.webp",
+   "sha256": "5E98C786C6856BED4229DDF3C10D535009250610408DEA4C8D439C3CE889C5C2",
+   "thumbSha256": "FF0F876C6B9A24DBE6E36713C773B0FEEB6D55CF920918B93CBC862A7162CEDE"
+  },
+  "furn-velvet-sofa": {
+   "file": "furniture/velvet-sofa.webp",
+   "w": 768,
+   "h": 461,
+   "thumb": "furniture/thumbs/velvet-sofa.webp",
+   "sha256": "1C08CEB6EBB945744A87FBFFFD91BEF537E39560BFC90844801D661E12E840CD",
+   "thumbSha256": "A575DB47EDACC8831BE75DC0A164664D1F429E0D0302BC8DB47F379DA435332D"
+  },
+  "furn-bonsai": {
+   "file": "furniture/bonsai.webp",
+   "w": 707,
+   "h": 768,
+   "thumb": "furniture/thumbs/bonsai.webp",
+   "sha256": "DB8F84B9B0F21C048289EEB927E6899A3BFE987F44467A94B53D42BAC0E00350",
+   "thumbSha256": "8CBBF4C6AA7F6455E9F4E5A14249935234F0C93F40F3D385C06DCDE26F917F49"
+  },
+  "furn-marble-fireplace": {
+   "file": "furniture/marble-fireplace.webp",
+   "w": 718,
+   "h": 768,
+   "thumb": "furniture/thumbs/marble-fireplace.webp",
+   "sha256": "62A6182D37596420F1389000EEFA4A69BCAD62318D35E4CC9964A0C486860220",
+   "thumbSha256": "B75037EB4C63023A7D2331951D8DE86E21767EA87B15559CE6B388B9F45F7F0E"
+  },
+  "furn-najeon-wardrobe": {
+   "file": "furniture/najeon-wardrobe.webp",
+   "w": 544,
+   "h": 768,
+   "thumb": "furniture/thumbs/najeon-wardrobe.webp",
+   "sha256": "54B5768E787CE6FEC96BD4BB6B528AAAFAB9DEFFDC629F5F36052153AC92A7AD",
+   "thumbSha256": "AAC4E2B6BFFFED9517056D52965D052F431E87A69996ED4D48582F7AAEA33F5E"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs furniture: keyMagenta flood from the border + defringeMagenta rim, each cell trimmed to its opaque pieces and contained in a canvas of the catalog aspect (h / w, standing on the bottom edge; wall pieces centred; rugs stretched to d / w as a top view), long side at most 768 px, plus a 256² thumbnail."
 }

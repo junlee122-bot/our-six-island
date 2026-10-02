@@ -21,6 +21,7 @@ import {
   FORAGE,
   FURNITURE,
   FURNITURE_BY_REF,
+  FESTIVAL_SOUVENIRS,
   ITEM_BY_ID,
   SPOT_INFO,
   type Need,
@@ -194,16 +195,30 @@ export function whereFrom(id: string): string {
   if (forage) return joinDots([`${forage.habitat.map((h) => HABITAT[h]).join('·')} 채집`, seasonsText(forage.seasons), SKY[forage.sky]]);
   const dish = DISH_BY_ID[id];
   if (dish) return `요리 · ${dish.needs.map((n) => needLabel(n) + ' ' + n.n).join(', ')}`;
-  if (id === 'fertilizer' || id === 'fertilizer-deluxe') return '등불 잡화점 · 공방에서 만들기';
-  if (id === 'bait') return '어시장 · 공방에서 만들기';
+  if (id === 'fertilizer' || id === 'fertilizer-deluxe') return '등불 잡화점 · 요리·만들기';
+  if (id === 'bait') return '어시장 · 요리·만들기';
   const furn = FURNITURE_BY_REF[id];
-  if (furn)
-    return furn.unsold
-      ? '마을 꾸러미 완성 보상'
-      : joinDots([
-          furn.season ? `${SEASON_INFO[furn.season].name} 한정 가구 상점` : furn.holiday ? '명절 한정 가구 상점' : '오늘의 가구 상점',
-          furn.craft && '공방에서 만들 수 있어요',
-        ]);
+  if (furn) {
+    // 'furn-*' rewards: 마을 꾸러미 (기념패), 마을 공사 (현판), 주간 축제 기금 (기념품).
+    if (furn.unsold)
+      return id === 'furn-project-plaque'
+        ? '마을 공사 완공 보상'
+        : (FESTIVAL_SOUVENIRS as readonly string[]).includes(id)
+          ? '주간 마을 축제 기금 기념품'
+          : '마을 꾸러미 완성 보상';
+    return joinDots([
+      furn.luxury
+        ? '나무결 가구점 이번 주 명품'
+        : furn.basic
+          ? '나무결 가구점 기본 가구'
+          : furn.season
+            ? `나무결 가구점 ${SEASON_INFO[furn.season].name} 한정`
+            : furn.holiday
+              ? '나무결 가구점 명절 한정'
+              : '나무결 가구점 오늘의 가구',
+      furn.craft && '내 방 요리·만들기에서 만들 수 있어요',
+    ]);
+  }
   return '';
 }
 

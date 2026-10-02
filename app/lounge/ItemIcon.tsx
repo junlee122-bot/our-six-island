@@ -4,7 +4,7 @@
 // silhouettes in one 48×48 box; colour comes from the item. Furniture uses its
 // room art (lounge-furniture-art.ts).
 import type { ReactNode } from 'react';
-import { FURNITURE_ART } from '../lounge-furniture-art';
+import { FURNITURE_THUMBS } from '../lounge-furniture-art';
 import { THUMBNAILS } from '../lounge-bedroom-art';
 import { FURNITURE_BY_REF } from '../lounge-items';
 import type { Quality } from '../lounge-life';
@@ -1295,11 +1295,11 @@ export function ItemIcon({
   className?: string;
 }) {
   // 'furn-*': drawn art; 기본 가구 (새 방): the room catalog thumbnail.
-  const furn = id.startsWith('furn-') ? FURNITURE_ART[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
+  const furn = id.startsWith('furn-') ? FURNITURE_THUMBS[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
   return (
     <span className={`l-item-icon ${className}`} style={{ width: size, height: size }} title={title} aria-hidden={title ? undefined : true}>
       {furn ? (
-        // oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art.
+        // oxlint-disable-next-line nextjs/no-img-element -- Furniture thumbnail (webp, or inline SVG for crafted pieces).
         <img src={furn} alt="" draggable={false} />
       ) : (
         <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">
