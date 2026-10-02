@@ -9,6 +9,8 @@ import {
   STOCK_BY_SYM,
   STOCK_CREDIT_LIMIT,
   STOCK_TICKS,
+  STOCK_REAL_DAY_TICKS,
+  STOCK_MAX_IMPACT,
   limitsOf,
   quoteOf,
   stockFee,
@@ -22,14 +24,23 @@ import {
   marketOpen,
   newsOf,
   longRatio,
+  readStocks,
+  realDayOfTick,
 } from '../app/lounge-stocks.ts';
+import { GAME_DAY_MS, GAME_HOUR_MS, gameDay, gameTimeAt, gameTimeOnDay } from '../app/lounge-calendar.ts';
 
-const kst = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
+// The market runs on the game clock (게임 하루 = 실제 1시간, design-game-clock.md §8.1).
+const real = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
+/** Game h:min on real KST day y-m-d, in the game day of real hour `slot` (12 = noon's hour). */
+const kst = (y, m, d, h = 12, min = 0, slot = 12) => gameTimeOnDay(kstDay(real(y, m, d)), h, min, slot);
+/** Just after the real day's close (its last game day's 15:00 tick) and its first game open. */
+const closeOf = (y, m, d, min = 5) => kst(y, m, d, 15, min, 23);
+const openOf = (y, m, d, min = 5) => kst(y, m, d, 9, min, 0);
 const SEED = '0123456789abcdef0123456789abcdef';
 const UID = 'aaaaaaaa-0000-4000-8000-000000000001';
 const UID2 = 'aaaaaaaa-0000-4000-8000-000000000002';
 const W = 'wallet-' + UID;
-const T0 = kst(2026, 10, 1, 10, 20); // Thursday 10:20 KST
+const T0 = kst(2026, 10, 1, 10, 20); // Thursday 2026-10-01, game 10:20 in real hour 12
 const broker = { area: 'broker' };
 
 function invariant(ledger) {
@@ -72,18 +83,32 @@ test('stocks: twelve listings, nine shops and three themes, no real company name
   }
 });
 
-test('stocks: market hours and ticks (09:00–15:00 hourly, orders until 15:30)', () => {
-  const day = kstDay(T0);
-  assert.equal(tickOf(kst(2026, 10, 1, 9, 0)), day * STOCK_TICKS);
-  assert.equal(tickOf(kst(2026, 10, 1, 10, 59)), day * STOCK_TICKS + 1);
-  assert.equal(tickOf(kst(2026, 10, 1, 15, 10)), day * STOCK_TICKS + 6);
-  assert.equal(tickOf(kst(2026, 10, 1, 23, 0)), day * STOCK_TICKS + 6);
-  assert.equal(tickOf(kst(2026, 10, 1, 8, 59)), day * STOCK_TICKS - 1, 'before 09:00 it is still yesterday’s close');
-  assert.equal(tickAt(day * STOCK_TICKS + 3), kst(2026, 10, 1, 12));
+test('stocks: market hours and ticks on the game clock (game 09:00–15:00 hourly, orders until 15:30)', () => {
+  const g = gameDay(T0);
+  assert.equal(tickOf(kst(2026, 10, 1, 9, 0)), g * STOCK_TICKS);
+  assert.equal(tickOf(kst(2026, 10, 1, 10, 59)), g * STOCK_TICKS + 1);
+  assert.equal(tickOf(kst(2026, 10, 1, 15, 10)), g * STOCK_TICKS + 6);
+  assert.equal(tickOf(kst(2026, 10, 1, 23, 0)), g * STOCK_TICKS + 6);
+  assert.equal(tickOf(kst(2026, 10, 1, 8, 59)), g * STOCK_TICKS - 1, 'before game 09:00 it is still the last game day’s close');
+  assert.equal(tickAt(g * STOCK_TICKS + 3), kst(2026, 10, 1, 12));
+  assert.equal(tickAt(g * STOCK_TICKS + 3), gameTimeAt(g, 12));
   assert.equal(marketOpen(kst(2026, 10, 1, 8, 59)), false);
   assert.equal(marketOpen(kst(2026, 10, 1, 9, 0)), true);
   assert.equal(marketOpen(kst(2026, 10, 1, 15, 29)), true);
   assert.equal(marketOpen(kst(2026, 10, 1, 15, 30)), false);
+  // Tick numbers are a pure function of time: game day × 7 + game hour − 9, the next game day 7 later.
+  assert.equal(tickOf(T0 + GAME_DAY_MS), tickOf(T0) + STOCK_TICKS);
+  for (let t = 0; t < 3 * STOCK_TICKS; t++) assert.equal(tickOf(tickAt(g * STOCK_TICKS + t)), g * STOCK_TICKS + t);
+  // Every game day opens: the real hour has 16¼ minutes of trading (game 09:00–15:30 = 6.5 × 2.5 min).
+  let open = 0;
+  for (let t = real(2026, 10, 1, 20); t < real(2026, 10, 1, 21); t += 15_000) open += marketOpen(t) ? 1 : 0;
+  assert.equal(open * 15_000, 6.5 * GAME_HOUR_MS);
+  // A real KST day is 24 game days: 168 ticks, all in that real day.
+  const first = gameDay(real(2026, 10, 1, 0)) * STOCK_TICKS;
+  assert.equal(realDayOfTick(first), kstDay(T0));
+  assert.equal(realDayOfTick(first + STOCK_REAL_DAY_TICKS - 1), kstDay(T0));
+  assert.equal(realDayOfTick(first + STOCK_REAL_DAY_TICKS), kstDay(T0) + 1);
+  assert.equal(realDayOfTick(first - 1), kstDay(T0) - 1);
 });
 
 test('stocks: prices are deterministic — the same seed and inputs, at once or hour by hour', () => {
@@ -92,7 +117,7 @@ test('stocks: prices are deterministic — the same seed and inputs, at once or 
   assert.deepEqual(a.st, b.st, 'listing is reproducible');
   const end = kst(2026, 10, 4, 14, 5);
   advance(a, end);
-  for (let t = T0; t <= end; t += 3_600_000) advance(b, t);
+  for (let t = T0; t <= end; t += 3_600_000 + 7 * GAME_HOUR_MS / 3) advance(b, t);
   advance(b, end);
   assert.deepEqual(a.st.px, b.st.px);
   assert.deepEqual(a.st.days, b.st.days);
@@ -100,7 +125,7 @@ test('stocks: prices are deterministic — the same seed and inputs, at once or 
   const c = market(T0, 'fedcba9876543210fedcba9876543210');
   advance(c, end);
   assert.notDeepEqual(a.st.px, c.st.px, 'another seed, another market');
-  // News is seeded too, and some stock gets news within a fortnight.
+  // News is seeded too (at most once a real day per stock), and some stock gets news within a fortnight.
   let any = 0;
   for (let d = kstDay(T0); d < kstDay(T0) + 14; d++) for (const s of STOCKS) any += newsOf(SEED, s, d) ? 1 : 0;
   assert.ok(any > 5, `news days: ${any}`);
@@ -110,6 +135,7 @@ test('stocks: prelisting history fills the chart and every price stays in the ±
   const m = market();
   advance(m, kst(2026, 10, 20, 15, 10));
   for (const sym of STOCK_SYMS) {
+    // Candles are real days (24 game days each), the band is around the real day before.
     const days = m.st.days[sym];
     assert.ok(days.length >= 20, `${sym}: ${days.length} days of candles`);
     for (let i = 1; i < days.length; i++) {
@@ -177,6 +203,8 @@ test('stocks: orders outside 09:00–15:30 are refused; repaying a loan works an
   shut(kst(2026, 10, 1, 15, 30));
   shut(kst(2026, 10, 1, 22, 0));
   const night = kst(2026, 10, 1, 22, 0);
+  // The next game day opens one real hour after the last.
+  assert.equal(stocksView(m.st, UID, {}, night).nextOpenAt, kst(2026, 10, 1, 9, 0, 13));
   const loan = m.st.acct[UID].long.coop.loan;
   order(m, { op: 'repay', sym: 'coop', amount: 1_000 }, night, { area: 'village' });
   assert.equal(m.st.acct[UID].long.coop.loan, loan - 1_000);
@@ -213,11 +241,13 @@ test('stocks: margin buys borrow half (2× at most) within the 300,000범 credit
   assert.ok(STOCK_CREDIT_LIMIT === 300_000);
 });
 
-test('stocks: interest accrues at the close; a margin call is sold at the next day’s close; below 30% at once', () => {
+test('stocks: interest accrues once a real day at its close; a margin call is sold at the next real day’s close; below 30% at once', () => {
   const m = market();
   order(m, { op: 'margin', sym: 'coop', qty: 6 }, T0);
   const l0 = m.st.acct[UID].long.coop.loan;
-  advance(m, kst(2026, 10, 1, 15, 5));
+  advance(m, kst(2026, 10, 1, 15, 5, 22));
+  assert.equal(m.st.acct[UID].long.coop.loan, l0, 'game days’ closes before the real day’s last charge nothing');
+  advance(m, closeOf(2026, 10, 1));
   const l1 = m.st.acct[UID].long.coop;
   assert.equal(l1.loan, l0 + Math.ceil(l0 * 0.001), 'one day of interest');
   assert.equal(l1.int, l1.loan - l0);
@@ -225,16 +255,16 @@ test('stocks: interest accrues at the close; a margin call is sold at the next d
   const bid = quoteOf(m.st.px.coop, limitsOf(m.st.prev.coop)).bid;
   l1.loan = Math.round(6 * bid * 0.65);
   l1.int = 0;
-  advance(m, kst(2026, 10, 2, 9, 5));
+  advance(m, openOf(2026, 10, 2));
   const called = m.st.acct[UID].long.coop;
   assert.ok(called, 'still held');
   assert.ok(called.call !== undefined, `call set (ratio ${longRatio(called, quoteOf(m.st.px.coop, limitsOf(m.st.prev.coop)).bid).toFixed(3)})`);
   assert.ok(m.st.acct[UID].log.some((x) => x.op === 'call'));
   // More margin is refused while called.
-  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'margin', sym: 'forge', qty: 1 }, kst(2026, 10, 2, 9, 5), broker), /마진콜/);
-  // Unresolved by the next day's close → forced sale.
+  assert.throws(() => stocksAction(m.st, m.ledger, UID, { kind: 'stock', op: 'margin', sym: 'forge', qty: 1 }, openOf(2026, 10, 2), broker), /마진콜/);
+  // Unresolved by the next real day's close → forced sale.
   const wallet = m.ledger.accounts[W];
-  const r = advance(m, kst(2026, 10, 3, 15, 5));
+  const r = advance(m, closeOf(2026, 10, 3));
   assert.equal(m.st.acct[UID].long.coop, undefined, 'sold by the broker');
   assert.ok(m.st.acct[UID].log.some((x) => x.op === 'liquidate'));
   assert.ok(m.ledger.accounts[W] >= wallet, 'a forced sale never takes from the wallet');
@@ -274,23 +304,23 @@ test('stocks: a short loses at most its collateral and fee; the house absorbs a 
   const m2 = market();
   order(m2, { op: 'short', sym: 'bvidia', qty: 5 }, T0);
   const c0 = m2.st.acct[UID].short.bvidia.coll;
-  advance(m2, kst(2026, 10, 1, 15, 2));
+  advance(m2, closeOf(2026, 10, 1, 2));
   const c1 = m2.st.acct[UID].short.bvidia?.coll;
   if (c1 !== undefined) assert.ok(c1 < c0, 'borrow fee taken');
   // Holding limit applies to shorts too (10% of the float).
   assert.throws(() => order(market(), { op: 'short', sym: 'bsung', qty: 41 }, T0), /유통 주식의 10%/);
 });
 
-test('stocks: weekly dividends on Monday’s open — longs paid, shorts charged', () => {
+test('stocks: weekly dividends on the real Monday’s first open — longs paid, shorts charged', () => {
   const m = market(kst(2026, 10, 2, 10)); // Friday
   order(m, { op: 'buy', sym: 'bakery', qty: 20 }, kst(2026, 10, 2, 10));
   order(m, { op: 'short', sym: 'coop', qty: 3 }, kst(2026, 10, 2, 10), broker, UID2);
   const w = m.ledger.accounts[W],
     coll = m.st.acct[UID2].short.coop.coll;
-  advance(m, kst(2026, 10, 4, 15, 5)); // Sunday close: nothing yet
+  advance(m, closeOf(2026, 10, 4)); // Sunday's last close: nothing yet
   assert.equal(m.ledger.accounts[W], w);
   const sunday = { bakery: m.st.px.bakery, coop: m.st.px.coop };
-  advance(m, kst(2026, 10, 5, 9, 5)); // Monday open
+  advance(m, openOf(2026, 10, 5)); // Monday's first game open
   const dps = Math.floor(sunday.bakery * 0.004);
   assert.equal(m.st.div.bakery, dps);
   assert.equal(m.ledger.accounts[W], w + 20 * dps);
@@ -316,7 +346,7 @@ test('stocks: a busy shop is pulled up, a dead one down (turnover from the ledge
   assert.equal(ra.px.bsung, rb.px.bsung, 'themes ignore shop turnover');
 });
 
-test('stocks: friends’ buying nudges the next tick by at most 0.6% (less than a round trip costs)', () => {
+test('stocks: friends’ buying nudges the next tick by at most 0.12% (0.6% / √24; less than a round trip costs)', () => {
   const m = market(),
     n = market();
   advance(m, T0);
@@ -326,7 +356,8 @@ test('stocks: friends’ buying nudges the next tick by at most 0.6% (less than 
   advance(m, kst(2026, 10, 1, 11, 1));
   advance(n, kst(2026, 10, 1, 11, 1));
   const ratio = m.st.px.bakery / n.st.px.bakery;
-  assert.ok(ratio >= 1 && ratio <= 1.006 + 0.002, `impact ${ratio}`);
+  assert.equal(STOCK_MAX_IMPACT, 0.0012);
+  assert.ok(ratio >= 1 && ratio <= 1 + STOCK_MAX_IMPACT + 0.002, `impact ${ratio}`);
   // The cheapest round trip costs more than the cap: two fees plus a tick each way.
   for (const def of STOCKS) {
     const p = def.p0;
@@ -337,14 +368,14 @@ test('stocks: friends’ buying nudges the next tick by at most 0.6% (less than 
   assert.equal(STOCK_BY_SYM.bakery.float, 1_500);
 });
 
-test('stocks: catching up after weeks offline matches catching up daily', () => {
+test('stocks: catching up after days offline matches catching up hourly', () => {
   const a = market(),
     b = market();
   order(a, { op: 'buy', sym: 'furniture', qty: 3 }, T0);
   order(b, { op: 'buy', sym: 'furniture', qty: 3 }, T0);
-  const end = kst(2026, 10, 30, 13, 30);
+  const end = kst(2026, 10, 7, 13, 30);
   advance(a, end);
-  for (let t = T0; t < end; t += 86_400_000) advance(b, t);
+  for (let t = T0; t < end; t += 3_600_000) advance(b, t);
   advance(b, end);
   assert.deepEqual(a.st, b.st);
   assert.deepEqual(a.ledger.accounts, b.ledger.accounts);
@@ -487,4 +518,44 @@ test('범마을 증권 stands in 시장 거리: a walkable door, a room behind i
   assert.ok(walk.path({ x: -26, z: -3 }, { x: touch.x, z: touch.z }).length > 0, 'from the road in');
   // 지점장 무잔 keeps the counter (tests/lounge-broker-muzan.test.mjs).
   assert.equal(SHOP_INTERIORS.broker.owner, 'muzan');
+});
+
+test('stocks: a real day of 168 game ticks moves about as much as the old seven-tick day', () => {
+  const m = market();
+  advance(m, closeOf(2026, 12, 31));
+  // Daily log returns of the real-day candles (no friends trading, news included).
+  const sd = (xs) => {
+    const mu = xs.reduce((a, b) => a + b, 0) / xs.length;
+    return Math.sqrt(xs.reduce((a, b) => a + (b - mu) ** 2, 0) / xs.length);
+  };
+  for (const def of STOCKS) {
+    const c = m.st.days[def.sym].map((x) => x[3]);
+    const r = c.slice(1).map((p, i) => Math.log(p / c[i]));
+    const want = Math.sqrt(7 * def.sigma ** 2 + def.gap ** 2);
+    const got = sd(r);
+    assert.ok(got > want * 0.5 && got < want * 1.8, `${def.sym}: daily σ ${got.toFixed(4)} vs ${want.toFixed(4)}`);
+  }
+});
+
+test('stocks: a long-idle market catches up in bounded work, and a v1 market moves onto game ticks', () => {
+  const m = market();
+  const t0 = performance.now();
+  advance(m, kst(2027, 3, 1, 10, 0));
+  assert.ok(performance.now() - t0 < 5_000, 'months away do not replay every tick');
+  assert.equal(m.st.tick, tickOf(kst(2027, 3, 1, 10, 0)));
+  // A v1 state (seven ticks per real day: T = day × 7 + hour − 9) is renumbered on read.
+  const v1 = structuredClone(m.st);
+  const day = kstDay(T0);
+  v1.v = 1;
+  v1.listed = day * STOCK_TICKS - 20 * STOCK_TICKS;
+  v1.tick = day * STOCK_TICKS + 1; // 10:00 KST
+  v1.events = [{ tick: day * STOCK_TICKS + 1, sym: 'coop', kind: 'news', text: 'x' }];
+  const st = readStocks(v1);
+  assert.equal(st.v, 2);
+  assert.equal(st.tick, tickOf(real(2026, 10, 1, 10, 0)));
+  assert.equal(st.events[0].tick, st.tick);
+  assert.ok(st.listed <= st.tick);
+  const r = materializeStocks(v1, m.ledger, { ledger: m.ledger }, T0);
+  assert.equal(r.state.v, 2);
+  assert.equal(r.state.tick, tickOf(T0));
 });

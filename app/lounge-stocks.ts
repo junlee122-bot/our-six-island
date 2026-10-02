@@ -3,12 +3,21 @@
 // `materializeStocks` on every command (reads only look, they never write)
 // and `stocksAction` for orders; `stocksView` is what a friend may see.
 //
-// Prices move once an hour from 09:00 to 15:00 KST (seven ticks a day) by a
-// random walk drawn from SHA-256 of a server-only seed, pulled toward a
-// target that follows each shop's real turnover (the ledger's daily flow
-// buckets), the season and the weather, plus seeded news shocks and a small,
-// capped effect of friends' own net buying. Every input of a tick is fixed
-// once the tick has passed, so catching up later gives the same prices.
+// The market runs on the game clock (design-game-clock.md §8.1): it opens
+// every game day (one real hour) from game 09:00 to 15:30, and prices move on
+// the game hour from 09:00 to 15:00 (seven ticks a game day, 168 a real day).
+// Tick numbers are a pure function of time: T = gameDay × 7 + game hour − 9.
+// Prices are a random walk drawn from SHA-256 of a server-only seed, pulled
+// toward a target that follows each shop's real turnover (the ledger's daily
+// flow buckets), the season and the weather, plus seeded news shocks and a
+// small, capped effect of friends' own net buying. Every input of a tick is
+// fixed once the tick has passed, so catching up later gives the same prices.
+//
+// The money side stays on the real KST day: the ±15% band is around the
+// previous real day's close, candles, interest, borrow fees, statistics and
+// news are per real day, dividends per real week. The volatility per tick is
+// scaled so that a real day of 24 game days moves as much as a day of the
+// old seven-tick market did (perTick below).
 //
 // Money only moves between a wallet and the house (`marketTransfer`, tracked
 // as ledger.marketNet) and fees are `spend` entries, so the ledger invariant
@@ -16,15 +25,18 @@
 // forced sale never takes more than the position itself holds.
 import { sha256Hex } from './lounge-sha256.ts';
 import { kstDay, marketTransfer, spendBeom, type LoungeLedger } from './lounge-economy.ts';
-import { dayStart, seasonOfDay, weatherOf, type Season, type Weather } from './lounge-calendar.ts';
+import { GAME_DAY_MS, dayStart, gameDay, gameMinuteOfDay, gameTimeAt, gameTimeToday, realDayOfGameDay, seasonOfDay, weatherOf, type Season, type Weather } from './lounge-calendar.ts';
 
 // ---------------------------------------------------------------- rules
-/** Ticks a day: 09:00, 10:00 … 15:00 KST. */
+/** Ticks a game day: game 09:00, 10:00 … 15:00. */
 export const STOCK_TICKS = 7;
+/** Game days in a real KST day (game day = one real hour), and ticks in a real day. */
+export const GAME_DAYS_PER_REAL_DAY = 24;
+export const STOCK_REAL_DAY_TICKS = STOCK_TICKS * GAME_DAYS_PER_REAL_DAY;
 export const STOCK_OPEN_HOUR = 9;
-/** Orders are taken until 15:30 (the last half hour trades at the close). */
+/** Orders are taken until game 15:30 (the last half hour trades at the close). */
 export const STOCK_CLOSE_MINUTE = 15 * 60 + 30;
-/** Daily price band around the previous close. */
+/** Price band around the previous real KST day's close (상한가·하한가 per real day). */
 export const STOCK_LIMIT = 0.15;
 /** Commission on every buy and sell (rounded up). */
 export const STOCK_FEE = 0.003;
@@ -35,22 +47,26 @@ export const STOCK_CALL = 0.4;
 export const STOCK_MAINTENANCE = 0.3;
 /** Margin loans plus short entry value per friend. */
 export const STOCK_CREDIT_LIMIT = 300_000;
-/** Daily margin interest and short borrow fee, charged at the 15:00 close. */
+/** Daily margin interest and short borrow fee, charged once a real day at its last close. */
 export const STOCK_INTEREST = 0.001;
 export const STOCK_BORROW_FEE = 0.001;
 /** One friend holds (long or short) at most this share of a stock's float. */
 export const STOCK_HOLD_SHARE = 0.1;
 /** All friends' short positions in one stock stay under this share of its float. */
 export const STOCK_SHORT_POOL = 0.3;
-/** Friends' net buying moves the next tick by at most this much (below the round-trip cost). */
-export const STOCK_MAX_IMPACT = 0.006;
+/**
+ * Friends' net buying moves the next tick by at most this much (below the
+ * round-trip cost). 0.006 per tick at seven ticks a day, over √24 now that a
+ * real day has 24 times the ticks, so the same buying does not count 24 times.
+ */
+export const STOCK_MAX_IMPACT = 0.0012;
 /** Net buying worth this share of the market cap reaches STOCK_MAX_IMPACT. */
 export const STOCK_IMPACT_SCALE = 0.25;
 /** Weekly dividend of a shop stock at its usual turnover, share of the close. */
 export const STOCK_DIVIDEND = 0.004;
 export const STOCK_DIVIDEND_MAX = 2.5;
 export const STOCK_MIN_PRICE = 50;
-/** Days of candles kept, days of history made up at listing. */
+/** Real days of candles kept, real days of history made up at listing. */
 const HIST_DAYS = 30,
   PRELIST_DAYS = 20,
   ACCOUNT_LOG = 30,
@@ -59,7 +75,6 @@ const HIST_DAYS = 30,
 /** Turnover smoothing (범) of the shop signal and its weight on the target. */
 const REV_K = 3_000,
   REV_BETA = 0.12;
-const HOUR = 3_600_000;
 
 // ---------------------------------------------------------------- the stocks
 export type StockSym = 'coop' | 'general' | 'bakery' | 'fishmarket' | 'furniture' | 'realty' | 'casino' | 'tavern' | 'forge' | 'bsung' | 'bnix' | 'bvidia';
@@ -72,7 +87,10 @@ export type StockDef = {
   keeper?: string;
   p0: number;
   float: number;
-  /** Hourly and overnight volatility, mean reversion per tick. */
+  /**
+   * Volatility per market hour and over the night, mean reversion per tick,
+   * as in a seven-tick real day; perTick scales them to the game-clock ticks.
+   */
   sigma: number;
   gap: number;
   kappa: number;
@@ -182,7 +200,7 @@ export function tickSize(p: number) {
 const roundTick = (p: number) => Math.round(p / tickSize(p)) * tickSize(p);
 const floorTick = (p: number) => Math.floor(p / tickSize(p)) * tickSize(p);
 const ceilTick = (p: number) => Math.ceil(p / tickSize(p)) * tickSize(p);
-/** The day's band around the previous close [lower, upper]. */
+/** The real day's band around the previous real day's close [lower, upper]. */
 export function limitsOf(prevClose: number): [number, number] {
   return [Math.max(STOCK_MIN_PRICE, ceilTick(prevClose * (1 - STOCK_LIMIT))), floorTick(prevClose * (1 + STOCK_LIMIT))];
 }
@@ -191,26 +209,37 @@ export function quoteOf(p: number, band: [number, number]) {
   return { ask: Math.min(band[1], p + tickSize(p)), bid: Math.max(band[0], p - tickSize(p)) };
 }
 export const stockFee = (value: number) => Math.ceil(value * STOCK_FEE);
-/** Epoch ms of global tick T (day × 7 + hour − 9). */
-export const tickAt = (t: number) => dayStart(Math.floor(t / STOCK_TICKS)) + (STOCK_OPEN_HOUR + (t % STOCK_TICKS)) * HOUR;
-/** The latest tick at or before `now` (before 09:00 it is yesterday's close). */
+/** Epoch ms of global tick T (game day × 7 + game hour − 9). */
+export const tickAt = (t: number) => gameTimeAt(Math.floor(t / STOCK_TICKS), STOCK_OPEN_HOUR + (((t % STOCK_TICKS) + STOCK_TICKS) % STOCK_TICKS));
+/** The latest tick at or before `now` (before game 09:00 it is the last game day's close). */
 export function tickOf(now: number) {
-  const day = kstDay(now),
-    hour = Math.floor((now - dayStart(day)) / HOUR);
-  if (hour < STOCK_OPEN_HOUR) return day * STOCK_TICKS - 1;
-  return day * STOCK_TICKS + Math.min(STOCK_TICKS - 1, hour - STOCK_OPEN_HOUR);
+  const g = gameDay(now),
+    hour = Math.floor(gameMinuteOfDay(now) / 60);
+  if (hour < STOCK_OPEN_HOUR) return g * STOCK_TICKS - 1;
+  return g * STOCK_TICKS + Math.min(STOCK_TICKS - 1, hour - STOCK_OPEN_HOUR);
 }
-/** Orders are taken 09:00 ≤ KST time < 15:30. */
+/** The game day of tick t, and the real KST day it falls in. */
+const gameDayOfTick = (t: number) => Math.floor(t / STOCK_TICKS);
+export const realDayOfTick = (t: number) => realDayOfGameDay(gameDayOfTick(t));
+/** Orders are taken game 09:00 ≤ time < 15:30, every game day. */
 export function marketOpen(now: number) {
-  const minute = Math.floor((now - dayStart(kstDay(now))) / 60_000);
+  const minute = gameMinuteOfDay(now);
   return minute >= STOCK_OPEN_HOUR * 60 && minute < STOCK_CLOSE_MINUTE;
 }
-/** Next opening (09:00 KST) at or after `now`. */
+/** Next opening (game 09:00) at or after `now`. */
 export function nextOpenAt(now: number) {
-  const day = kstDay(now),
-    open = dayStart(day) + STOCK_OPEN_HOUR * HOUR;
-  return now < open ? open : open + 24 * HOUR;
+  const open = gameTimeToday(now, STOCK_OPEN_HOUR);
+  return now <= open ? open : open + GAME_DAY_MS;
 }
+/**
+ * A per-tick volatility, gap or mean reversion from its seven-tick-day value:
+ * the real day's variance 24 × (7σ'² + σo'²) equals 7σ² + σo² when σ' = σ/√24,
+ * and 24 ticks of reversion κ' pull as far as one of κ when κ' = 1 − (1 − κ)^(1/24).
+ */
+export const perTick = {
+  sigma: (s: number) => s / Math.sqrt(GAME_DAYS_PER_REAL_DAY),
+  kappa: (k: number) => 1 - (1 - k) ** (1 / GAME_DAYS_PER_REAL_DAY),
+};
 const weekOfDay = (day: number) => Math.floor((day + 3) / 7);
 
 // ---------------------------------------------------------------- state
@@ -234,16 +263,18 @@ export type StockEventKind = 'news' | 'up' | 'down' | 'dividend' | 'liquidate';
 export type StockEvent = { tick: number; sym: StockSym; kind: StockEventKind; text: string; uid?: string; good?: boolean };
 export type StockStatDay = { d: number; fee: number; interest: number; borrow: number; dividend: number; absorbed: number; volume: number; liquidations: number };
 export type StockState = {
-  v: 1;
+  /** 2: game-clock ticks (v1 counted seven ticks per real day; readStocks moves it on). */
+  v: 2;
   /** Server-only randomness; never leaves stocksView. */
   seed: string;
   listed: number;
   tick: number;
   seq: number;
   px: Record<StockSym, number>;
-  /** Close of the day before `tick`'s day (the band's base). */
+  /** Close of the real day before `tick`'s real day (the band's base). */
   prev: Record<StockSym, number>;
   days: Record<StockSym, Candle[]>;
+  /** Ticks of the current game day (≤ 7). */
   today: Record<StockSym, number[]>;
   /** Friends' net buying (범) since the last tick. */
   flow: Partial<Record<StockSym, number>>;
@@ -270,14 +301,27 @@ const validUid = (v: string) => /^[a-zA-Z0-9-]{1,80}$/.test(v) && !['constructor
 const OPS: readonly StockOp[] = ['buy', 'margin', 'sell', 'short', 'cover', 'repay', 'dividend', 'liquidate', 'call'];
 const KINDS: readonly StockEventKind[] = ['news', 'up', 'down', 'dividend', 'liquidate'];
 
-/** Validates a stored state (throws on damage) and returns a private copy. */
+/**
+ * A v1 market (seven ticks per real KST day, T = day × 7 + hour − 9) on the
+ * game-clock numbering: every stored tick becomes the game tick at the same
+ * real moment. Prices, the band's base (the real day's previous close),
+ * candles (per real day) and statistics (per real day) mean the same.
+ */
+function fromV1(v: StockState): StockState {
+  const at = (t: number) => dayStart(Math.floor(t / STOCK_TICKS)) + (STOCK_OPEN_HOUR + (((t % STOCK_TICKS) + STOCK_TICKS) % STOCK_TICKS)) * 3_600_000;
+  const map = (t: number) => tickOf(at(t));
+  for (const a of Object.values(v.acct)) for (const p of [...Object.values(a.long), ...Object.values(a.short)]) if (p && p.call !== undefined) p.call = map(p.call);
+  return { ...v, v: 2, listed: map(v.listed), tick: map(v.tick), today: Object.fromEntries(STOCK_SYMS.map((s) => [s, [] as number[]])) as Record<StockSym, number[]>, events: v.events.map((e) => ({ ...e, tick: map(e.tick) })) };
+}
+
+/** Validates a stored state (throws on damage) and returns a private copy (a v1 market moved onto game ticks). */
 export function readStocks(raw: unknown): StockState {
   const v = raw as StockState;
   const perSym = (o: unknown, ok: (x: unknown) => boolean, all = true) =>
     dict(o) && Object.keys(o).every((k) => isStockSym(k)) && (!all || STOCK_SYMS.every((s) => Object.hasOwn(o, s))) && Object.values(o).every(ok);
   const candle = (c: unknown) => Array.isArray(c) && c.length === 4 && c.every((n) => nat(n) && n > 0);
   if (
-    !dict(v) || v.v !== 1 || typeof v.seed !== 'string' || !/^[0-9a-f]{16,64}$/.test(v.seed) ||
+    !dict(v) || ((v.v as number) !== 1 && v.v !== 2) || typeof v.seed !== 'string' || !/^[0-9a-f]{16,64}$/.test(v.seed) ||
     !safe(v.listed) || !safe(v.tick) || v.tick < v.listed || !nat(v.seq) ||
     !perSym(v.px, (n) => nat(n) && (n as number) >= STOCK_MIN_PRICE) ||
     !perSym(v.prev, (n) => nat(n) && (n as number) >= STOCK_MIN_PRICE) ||
@@ -306,7 +350,8 @@ export function readStocks(raw: unknown): StockState {
     v.stats.some((d) => !dict(d) || !safe(d.d) || !['fee', 'interest', 'borrow', 'dividend', 'absorbed', 'volume', 'liquidations'].every((k) => nat((d as Record<string, unknown>)[k])))
   )
     fail('증권 장부를 읽을 수 없습니다.');
-  return structuredClone(v);
+  const copy = structuredClone(v);
+  return (copy.v as number) === 1 ? fromV1(copy) : copy;
 }
 
 // ---------------------------------------------------------------- randomness
@@ -363,18 +408,23 @@ function targetLog(def: StockDef, day: number, seed: string, inputs: StockInputs
   cache.set(key, t);
   return t;
 }
-/** The day's seeded news of a stock: at which tick, up or down, how much, which headline. */
+/**
+ * The real day's seeded news of a stock (at most one a real day, as before the
+ * game clock): at which of the real day's 168 ticks, up or down, how much,
+ * which headline.
+ */
 export function newsOf(seed: string, def: StockDef, day: number) {
   const u = draws(seed, `news|${def.sym}|${day}`);
   if (u[0] >= def.news.chance) return null;
   const up = u[2] < 0.5,
     list = up ? def.news.up : def.news.down;
-  return { hour: Math.floor(u[1] * STOCK_TICKS), up, size: def.news.min + u[3] * (def.news.max - def.news.min), text: list[Math.floor(u[4] * list.length)] };
+  return { at: Math.floor(u[1] * STOCK_REAL_DAY_TICKS), up, size: def.news.min + u[3] * (def.news.max - def.news.min), text: list[Math.floor(u[4] * list.length)] };
 }
 
 // ---------------------------------------------------------------- listing and ticks
 const perSym = <T>(f: (d: StockDef) => T) => Object.fromEntries(STOCKS.map((d) => [d.sym, f(d)])) as Record<StockSym, T>;
-const dayOfTick = (t: number) => Math.floor(t / STOCK_TICKS);
+/** The first tick of tick t's real day (real days start on a game midnight). */
+const realDayFirstTick = (t: number) => gameDay(dayStart(realDayOfTick(t))) * STOCK_TICKS;
 const statDay = (st: StockState, d: number) => {
   let s = st.stats.find((x) => x.d === d);
   if (!s) {
@@ -394,15 +444,22 @@ const note = (a: StockAccount, l: StockLog) => {
 /** A village news line (lounge-life-plus addNews) the cloud engine adds for a market event. */
 export type StockNews = { at: number; key: string; kind: 'stock'; text: string; uids: string[] };
 
-type Run = { st: StockState; ledger: LoungeLedger; inputs: StockInputs; news: StockNews[]; cache: Map<string, number>; quiet: boolean };
+type Run = { st: StockState; ledger: LoungeLedger; inputs: StockInputs; news: StockNews[]; cache: Map<string, number>; newsCache?: Map<string, ReturnType<typeof newsOf>>; quiet: boolean };
+/** newsOf, once per stock and real day in a run. */
+function newsIn(run: Run, def: StockDef, day: number) {
+  const cache = (run.newsCache ??= new Map());
+  const key = `${def.sym}:${day}`;
+  if (!cache.has(key)) cache.set(key, newsOf(run.st.seed, def, day));
+  return cache.get(key) ?? null;
+}
 
 /** A fresh market listed at `now`, with PRELIST_DAYS of seeded history behind it. */
 export function listStocks(seed: string, now: number, inputs: StockInputs): StockState {
   if (!/^[0-9a-f]{16,64}$/.test(seed)) fail('증권 씨앗이 올바르지 않습니다.');
   const listed = tickOf(now);
-  const start = (dayOfTick(listed) - PRELIST_DAYS) * STOCK_TICKS - 1;
+  const start = realDayFirstTick(listed) - PRELIST_DAYS * STOCK_REAL_DAY_TICKS - 1;
   const st: StockState = {
-    v: 1, seed, listed, tick: start, seq: 0,
+    v: 2, seed, listed, tick: start, seq: 0,
     px: perSym((d) => d.p0), prev: perSym((d) => d.p0),
     days: perSym(() => [] as Candle[]), today: perSym(() => []),
     flow: {}, div: {}, acct: {}, events: [], stats: [],
@@ -417,20 +474,20 @@ export function listStocks(seed: string, now: number, inputs: StockInputs): Stoc
 /** Price of one stock at tick t (state holds tick t − 1). */
 function priceAt(run: Run, def: StockDef, t: number) {
   const { st } = run,
-    day = dayOfTick(t),
-    hour = t % STOCK_TICKS,
+    day = realDayOfTick(t),
+    open = t % STOCK_TICKS === 0,
     before = st.px[def.sym];
   const u = draws(st.seed, `tick|${def.sym}|${t}`);
-  const open = hour === 0;
-  let r = (open ? def.gap : def.sigma) * gauss(u[0], u[1]);
-  r += (open ? 2 : 1) * def.kappa * (targetLog(def, day, st.seed, run.inputs, run.cache) - Math.log(before));
+  let r = perTick.sigma(open ? def.gap : def.sigma) * gauss(u[0], u[1]);
+  r += (open ? 2 : 1) * perTick.kappa(def.kappa) * (targetLog(def, day, st.seed, run.inputs, run.cache) - Math.log(before));
   const cap = def.float * before;
   r += STOCK_MAX_IMPACT * Math.max(-1, Math.min(1, (st.flow[def.sym] ?? 0) / (cap * STOCK_IMPACT_SCALE)));
-  const news = newsOf(st.seed, def, day);
-  if (news && news.hour === hour) r += news.up ? news.size : -news.size;
+  const news = newsIn(run, def, day);
+  const hit = news && news.at === t - realDayFirstTick(t) ? news : null;
+  if (hit) r += hit.up ? hit.size : -hit.size;
   const band = limitsOf(st.prev[def.sym]);
   const p = Math.max(band[0], Math.min(band[1], roundTick(before * Math.exp(r))));
-  return { p, band, news: news && news.hour === hour ? news : null };
+  return { p, band, news: hit };
 }
 
 /** Collateral ratio of a position at a price (1 = no borrowing). */
@@ -443,7 +500,7 @@ export const shortRatio = (s: StockShort, ask: number) => (s.coll + s.val - s.q 
  */
 function settle(run: Run, uid: string, gross: number, fee: number, t: number, reason: string) {
   const w = 'wallet-' + uid,
-    stats = statDay(run.st, dayOfTick(t));
+    stats = statDay(run.st, realDayOfTick(t));
   if (gross <= 0) {
     stats.absorbed += -gross;
     return { paid: 0, fee: 0 };
@@ -477,27 +534,29 @@ function liquidate(run: Run, uid: string, sym: StockSym, t: number) {
     q = l.q;
     px = bid;
     delete a.long[sym];
-    statDay(st, dayOfTick(t)).volume += value;
+    statDay(st, realDayOfTick(t)).volume += value;
   } else if (s) {
     const cost = s.q * ask;
     r = settle(run, uid, s.coll + s.val - cost, stockFee(cost), t, `liq-${sym}`);
     q = s.q;
     px = ask;
     delete a.short[sym];
-    statDay(st, dayOfTick(t)).volume += cost;
+    statDay(st, realDayOfTick(t)).volume += cost;
   } else return;
   a.paidOut += r.paid;
   note(a, { at, sym, op: 'liquidate', q, px, amount: r.paid, fee: r.fee });
-  statDay(st, dayOfTick(t)).liquidations++;
+  statDay(st, realDayOfTick(t)).liquidations++;
   const text = `${def.name} ${l ? '신용' : '공매도'} ${q.toLocaleString('ko-KR')}주 반대매매`;
   event(st, { tick: t, sym, kind: 'liquidate', text, uid });
   if (!run.quiet) run.news.push({ at, key: `stock-liq-${t}-${uid}-${sym}`, kind: 'stock', text: `주식 소식: {actor}의 ${text}(담보 부족)`, uids: [uid] });
 }
 
+/** The real day's last tick (its close: interest, fees, the margin-call deadline). */
+const isRealDayClose = (t: number) => realDayOfTick(t + 1) !== realDayOfTick(t);
 /** Margin calls and forced sales of every position at tick t's prices. */
 function checkMargins(run: Run, t: number) {
   const { st } = run,
-    close = t % STOCK_TICKS === STOCK_TICKS - 1;
+    close = isRealDayClose(t);
   for (const [uid, a] of Object.entries(st.acct)) {
     for (const sym of STOCK_SYMS) {
       const l = a.long[sym],
@@ -506,7 +565,8 @@ function checkMargins(run: Run, t: number) {
       const { ask, bid } = quoteOf(st.px[sym], limitsOf(st.prev[sym]));
       const ratio = l ? longRatio(l, bid) : shortRatio(s!, ask);
       const pos = (l ?? s)!;
-      if (ratio < STOCK_MAINTENANCE || (close && pos.call !== undefined && t - pos.call >= STOCK_TICKS && ratio < STOCK_CALL)) {
+      // A call left standing a whole real day is closed out at the real day's close.
+      if (ratio < STOCK_MAINTENANCE || (close && pos.call !== undefined && t - pos.call >= STOCK_REAL_DAY_TICKS && ratio < STOCK_CALL)) {
         liquidate(run, uid, sym, t);
         continue;
       }
@@ -520,7 +580,7 @@ function checkMargins(run: Run, t: number) {
   }
 }
 
-/** Monday's open: last week's dividend for shop stocks (longs paid, shorts charged). */
+/** The real Monday's first tick: last week's dividend for shop stocks (longs paid, shorts charged). */
 function payDividends(run: Run, day: number, t: number) {
   const { st } = run,
     at = tickAt(t),
@@ -560,16 +620,15 @@ function payDividends(run: Run, day: number, t: number) {
 /** Applies tick t (the state holds t − 1). */
 function step(run: Run, t: number) {
   const { st } = run,
-    day = dayOfTick(t),
-    hour = t % STOCK_TICKS,
+    day = realDayOfTick(t),
+    newDay = day !== realDayOfTick(t - 1),
+    gameOpen = t % STOCK_TICKS === 0,
     at = tickAt(t);
-  if (hour === 0) {
-    for (const def of STOCKS) {
-      st.prev[def.sym] = st.px[def.sym];
-      st.today[def.sym] = [];
-    }
+  if (newDay) {
+    for (const def of STOCKS) st.prev[def.sym] = st.px[def.sym];
     if (!run.quiet && weekOfDay(day) !== weekOfDay(day - 1)) payDividends(run, day, t);
   }
+  if (gameOpen) for (const def of STOCKS) st.today[def.sym] = [];
   let biggest: { text: string; size: number } | null = null;
   for (const def of STOCKS) {
     const { p, band, news } = priceAt(run, def, t);
@@ -577,7 +636,7 @@ function step(run: Run, t: number) {
     st.px[def.sym] = p;
     st.today[def.sym].push(p);
     const days = st.days[def.sym];
-    if (hour === 0) {
+    if (newDay || !days.length) {
       days.push([p, p, p, p]);
       if (days.length > HIST_DAYS) days.splice(0, days.length - HIST_DAYS);
     } else {
@@ -591,9 +650,9 @@ function step(run: Run, t: number) {
       event(st, { tick: t, sym: def.sym, kind: 'news', text: news.text, good: news.up });
       if (!biggest || news.size > biggest.size) biggest = { text: `${def.name}: ${news.text}`, size: news.size };
     }
-    // The first touch of the band today is an event (and a village news line).
+    // The first touch of the band in a real day is an event (and a village news line).
     const limit = p === band[1] && p > st.prev[def.sym] ? 'up' : p === band[0] && p < st.prev[def.sym] ? 'down' : null;
-    if (limit && before !== p && !st.events.some((e) => e.sym === def.sym && e.kind === limit && dayOfTick(e.tick) === day)) {
+    if (limit && before !== p && !st.events.some((e) => e.sym === def.sym && e.kind === limit && realDayOfTick(e.tick) === day)) {
       const text = `${def.name} ${limit === 'up' ? '상한가' : '하한가'} ${p.toLocaleString('ko-KR')}범`;
       event(st, { tick: t, sym: def.sym, kind: limit, text, good: limit === 'up' });
       run.news.push({ at, key: `stock-${limit}-${day}-${def.sym}`, kind: 'stock', text: `주식 소식: ${text}`, uids: [] });
@@ -601,8 +660,8 @@ function step(run: Run, t: number) {
   }
   if (biggest) run.news.push({ at, key: `stock-news-${day}`, kind: 'stock', text: `주식 소식: ${biggest.text}`, uids: [] });
   st.flow = {};
-  if (!run.quiet && hour === STOCK_TICKS - 1) {
-    // The close: a day's margin interest onto each loan, a day's borrow fee out of each short's collateral.
+  if (!run.quiet && isRealDayClose(t)) {
+    // The real day's close: a day's margin interest onto each loan, a day's borrow fee out of each short's collateral.
     const stats = statDay(st, day);
     for (const a of Object.values(st.acct)) {
       for (const l of Object.values(a.long))
@@ -624,8 +683,13 @@ function step(run: Run, t: number) {
   st.tick = t;
 }
 
-/** At most this many ticks are caught up in one call (about two months). */
-const CATCH_UP_MAX = 60 * STOCK_TICKS;
+/**
+ * At most this many ticks are caught up in full in one call (a week), and at
+ * most QUIET_MAX more with quiet prices; a market left alone longer than that
+ * skips the rest with its prices unchanged (bounded work on a request).
+ */
+const CATCH_UP_MAX = 7 * STOCK_REAL_DAY_TICKS,
+  QUIET_MAX = 21 * STOCK_REAL_DAY_TICKS;
 
 /**
  * Brings the market up to `now`: every tick since the last one, with its
@@ -637,10 +701,16 @@ export function materializeStocks(raw: StockState, ledger: LoungeLedger, inputs:
   if (raw.tick >= target) return { state: raw, ledger, news: [] as StockNews[], changed: false };
   const st = readStocks(raw);
   const run: Run = { st, ledger, inputs, news: [], cache: new Map(), quiet: false };
-  // A market left alone for months skips straight on (prices quiet, positions kept).
+  // A market left alone for weeks skips straight on (prices quiet, positions kept).
   if (target - st.tick > CATCH_UP_MAX) {
+    const from = Math.max(st.tick + 1, target - CATCH_UP_MAX - QUIET_MAX);
+    if (from > st.tick + 1) {
+      // Jumped over: the band's base and the day's ticks start again from the last prices.
+      st.tick = from - 1;
+      for (const def of STOCKS) st.today[def.sym] = [];
+    }
     run.quiet = true;
-    for (let t = st.tick + 1; t <= target - CATCH_UP_MAX; t++) step(run, t);
+    for (let t = from; t <= target - CATCH_UP_MAX; t++) step(run, t);
     run.quiet = false;
   }
   for (let t = st.tick + 1; t <= target; t++) step(run, t);
@@ -720,7 +790,7 @@ export function stocksAction(raw: StockState, ledger: LoungeLedger, uid: string,
     return { state: st, ledger: run.ledger };
   }
   const q = action.qty;
-  if (!marketOpen(now)) fail('장이 닫혀 있어요. 09:00~15:30(한국 시간)에 주문할 수 있어요.');
+  if (!marketOpen(now)) fail('장이 닫혀 있어요. 게임 시각 09:00~15:30(실제로는 매시 22분~38분)에 주문할 수 있어요.');
   if (!safe(q) || q < 1) fail('수량은 1주 이상의 정수로 정해 주세요.');
   if ((STOCK_OPENING_OPS as readonly string[]).includes(action.op) && place.area !== 'broker')
     fail('새 주문(매수·신용 매수·공매도)은 시장 거리 범마을 증권 안에서 해요.');

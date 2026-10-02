@@ -24,6 +24,7 @@ import { ACTORS } from '../lounge-roster';
 import { brokerRemark } from '../lounge-broker-voice';
 import { DealerAvatar } from '../lounge-dealer-host';
 import { npcSpot } from '../lounge-npc-schedule';
+import { gameClockText } from '../lounge-calendar';
 import { useNow } from './use-now';
 import { formatBeom } from '../lounge-text';
 import { GameButton } from '../ui/GameButton';
@@ -51,7 +52,7 @@ const OP_WORD: Record<string, string> = {
   call: '마진콜',
 };
 
-/** A small SVG chart: today's hourly line or the last 20 daily candles. */
+/** A small SVG chart: this game day's hourly line or the last 20 real days' candles. */
 function StockChart({ q, mode }: { q: StockQuote; mode: ChartMode }) {
   const W = 360,
     H = 170,
@@ -165,11 +166,11 @@ export function StockPanel({ room, view, notify, onClose, onTalk }: { room: Clou
   const openReason = offline
     ? '마을에 다시 연결되면 주문할 수 있어요.'
     : closed
-      ? '장이 닫혀 있어요. 09:00~15:30(한국 시간)에 주문해요.'
+      ? '장이 닫혀 있어요. 게임 시각 09:00~15:30(실제로는 매시 22분~38분)에 주문해요.'
       : !inBroker
         ? '새 주문(매수·신용 매수·공매도)은 시장 거리 범마을 증권 안에서 해요.'
         : '';
-  const closeReason = offline ? '마을에 다시 연결되면 주문할 수 있어요.' : closed ? '장이 닫혀 있어요. 09:00~15:30(한국 시간)에 주문해요.' : '';
+  const closeReason = offline ? '마을에 다시 연결되면 주문할 수 있어요.' : closed ? '장이 닫혀 있어요. 게임 시각 09:00~15:30(실제로는 매시 22분~38분)에 주문해요.' : '';
   const balance = view.wallet.balance;
   const buyNeed = cost + stockFee(cost),
     marginNeed = cost - marginLoan + stockFee(cost),
@@ -181,9 +182,9 @@ export function StockPanel({ room, view, notify, onClose, onTalk }: { room: Clou
     ? '시세를 불러오는 중'
     : market.open
       ? nextTick
-        ? `장중 · 다음 시세 ${hhmm(nextTick)}`
-        : '장 마감 전 종가 거래(15:00~15:30)'
-      : `장 마감 · 다음 개장 ${mmdd(market.nextOpenAt)} ${hhmm(market.nextOpenAt)}`;
+        ? `장중 · 다음 시세 게임 ${gameClockText(nextTick)} (실제 ${hhmm(nextTick)})`
+        : '장 마감 전 종가 거래(게임 15:00~15:30)'
+      : `장 마감 · 다음 개장 게임 오전 9:00 (실제 ${mmdd(market.nextOpenAt)} ${hhmm(market.nextOpenAt)})`;
 
   return (
     <Modal title="범마을 증권" wide venue="broker" className="l-stock" onClose={onClose}>
@@ -274,10 +275,10 @@ export function StockPanel({ room, view, notify, onClose, onTalk }: { room: Clou
               <div className="l-stock-chart-wrap">
                 <div className="l-stock-modes">
                   <button type="button" aria-pressed={mode === 'today'} onClick={() => setMode('today')}>
-                    오늘(1시간)
+                    오늘 장(게임 1시간)
                   </button>
                   <button type="button" aria-pressed={mode === 'days'} onClick={() => setMode('days')}>
-                    일봉(20일)
+                    일봉(실제 20일)
                   </button>
                 </div>
                 <StockChart q={q} mode={mode} />
@@ -292,7 +293,7 @@ export function StockPanel({ room, view, notify, onClose, onTalk }: { room: Clou
                   <tr className="is-now">
                     <th scope="row">현재가</th>
                     <td>{q.px.toLocaleString('ko-KR')}</td>
-                    <td>{q.today.length ? `${8 + q.today.length}:00 시세` : '어제 종가'}</td>
+                    <td>{q.today.length ? `게임 ${8 + q.today.length}:00 시세` : '지난 장 종가'}</td>
                   </tr>
                   <tr className="is-bid">
                     <th scope="row">매수1호가</th>
@@ -475,7 +476,7 @@ export function StockPanel({ room, view, notify, onClose, onTalk }: { room: Clou
           )}
         </section>
       )}
-      <p className="l-stock-desk">지점장 무잔은 장 시간(일요일 휴무)에 창구를 지켜요. 자리에 없어도 단말기로 주문할 수 있어요. 시세는 09:00~15:00 매시 정각에 바뀌어요.</p>
+      <p className="l-stock-desk">지점장 무잔은 장 시간(일요일 휴무)에 창구를 지켜요. 자리에 없어도 단말기로 주문할 수 있어요. 장은 게임 하루(실제 1시간)마다 열리고, 시세는 게임 09:00~15:00 매시 정각(실제 2분 30초마다)에 바뀌어요. 상한가·하한가(±15%)와 이자는 실제 하루 기준이에요.</p>
     </Modal>
   );
 }

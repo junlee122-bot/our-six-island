@@ -9,7 +9,7 @@
 // dividend → news on 범성전자 · 범이닉스 · 범비디아 → the open / the close
 // bell → the day's mood. When 무잔 is not at his counter the card says where
 // he is instead and the terminal works on its own.
-import { hash32 } from './lounge-calendar.ts';
+import { GAME_HOUR_MS, gameMinuteOfDay, hash32 } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
 import { fillLine, type DealerMood } from './lounge-dealer-lines.ts';
 import type { StockSym, StocksView } from './lounge-stocks.ts';
@@ -140,8 +140,10 @@ const MOOD: Record<BrokerSituation, DealerMood> = {
 /** What fits the friend's market right now (the first match of the order above). */
 export function brokerSituation(market: StocksView | undefined, now: number): { situation: BrokerSituation; sym?: StockSym } {
   if (!market) return { situation: 'offline' };
+  // Liquidations and news count by the real day; the open, the close and the
+  // dividend morning by the game clock (the market opens every game day).
   const today = dayStart(kstDay(now));
-  const minute = Math.floor((now - today) / 60_000);
+  const minute = gameMinuteOfDay(now);
   const liq = market.me.log.find((l) => l.op === 'liquidate' && l.at >= today);
   if (liq) return { situation: 'liquidated', sym: liq.sym };
   const call = market.me.positions.find((p) => p.call);
@@ -176,7 +178,7 @@ export function brokerSituation(market: StocksView | undefined, now: number): { 
 export function brokerRemark(market: StocksView | undefined, me: string, who: string | number, now: number): BrokerRemark {
   const { situation, sym } = brokerSituation(market, now);
   const pool = BROKER_LINES[situation];
-  const hour = Math.floor((now + KST) / HOUR);
+  const hour = Math.floor(now / GAME_HOUR_MS);
   const template = pool[hash32(`muzan:desk:${who}:${hour}:${situation}:${sym ?? ''}`) % pool.length];
   const stock = sym ? (market?.stocks.find((q) => q.sym === sym)?.name ?? '') : '';
   const line = fillLine(template, { me: me || '손님', stock });
