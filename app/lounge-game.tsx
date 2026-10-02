@@ -125,6 +125,7 @@ import { NpcTalkDialog } from './lounge/NpcTalkDialog';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
 import type { TownPlace, TravelArea } from './lounge/TownPanel';
 const TownPanel = lazyRetry(() => import('./lounge/TownPanel').then((m) => ({ default: m.TownPanel })));
+const StockPanel = lazyRetry(() => import('./lounge/StockPanel').then((m) => ({ default: m.StockPanel })));
 import { outdoorReturnPoint } from './lounge-areas';
 import type { NpcId } from './lounge-npc-data';
 import { AccountModal } from './lounge/AccountModal';
@@ -216,6 +217,8 @@ const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) 
 // 무드 (U): the HUD chip rides in the header; the panel loads when opened.
 import { MoodHud, MoodNotices, MoodShareToggle } from './lounge/MoodHud';
 import { WalkHints } from './ui/WalkHints';
+// 먼바다 낚싯배 (design-sea-fishing.md): boarding window, deck timer, sail-out, catch summary, dawn knock.
+import { DawnKnock, SailOut, VoyageBoard, VoyageHud, VoyageSummary, useVoyageFlow } from './lounge/Voyage';
 const MoodPanel = lazyRetry(() => import('./lounge/MoodPanel').then((m) => ({ default: m.MoodPanel })));
 
 /**
@@ -391,6 +394,8 @@ type ModalName =
   | 'forge'
   // 시장 거리: residents' request board (lounge-npc-requests.ts).
   | 'npcRequests'
+  // 범마을 증권 (lounge/StockPanel.tsx).
+  | 'stocks'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
   // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 신형만/봉미선 · 발키리).
@@ -415,6 +420,11 @@ const TAB_AREA: Record<Tab, Area> = {
   coop: 'coop',
   general: 'general',
   fishmarket: 'fishmarket',
+  barn: 'barn',
+  orchardShop: 'orchardShop',
+  smithy: 'smithy',
+  clinic: 'clinic',
+  broker: 'broker',
 };
 
 const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
@@ -545,6 +555,11 @@ function AccountLounge({
       coop: AREA_DEFAULTS.coop,
       general: AREA_DEFAULTS.general,
       fishmarket: AREA_DEFAULTS.fishmarket,
+      barn: AREA_DEFAULTS.barn,
+      orchardShop: AREA_DEFAULTS.orchardShop,
+      smithy: AREA_DEFAULTS.smithy,
+      clinic: AREA_DEFAULTS.clinic,
+      broker: AREA_DEFAULTS.broker,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -560,7 +575,9 @@ function AccountLounge({
     [mailGift, setMailGift] = useState<string | undefined>(undefined),
     [requestFrom, setRequestFrom] = useState<number | null>(null),
     [talk, setTalk] = useState<{ script: DialogScript; hearts: number } | null>(null),
-    [fishing, setFishing] = useState<{ spot: Spot; phase: FishingPhase } | null>(null);
+    [fishing, setFishing] = useState<{ spot: Spot; phase: FishingPhase } | null>(null),
+    [voyageOpen, setVoyageOpen] = useState(false),
+    [knockShut, setKnockShut] = useState(false);
   const hotbar = useHotbar();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
     // Leaving my room at the start of the day comes out of my own front door.
@@ -578,6 +595,8 @@ function AccountLounge({
   const [townPlace, setTownPlace] = useState<TownPlace | null>(null);
   /** Set below once enter() exists; the district's shop doors call it. */
   const enterShopRef = useRef<(area: ShopArea) => void>(() => {});
+  /** A shop room's counter: its town window, or the stock window at 범마을 증권. */
+  const openShopCounter = (place: Exclude<TownPlace, 'signpost' | 'tavern'> | 'broker') => (place === 'broker' ? setModal('stocks') : setTownPlace(place));
   const outdoorApi = useOutdoor({
     room,
     notify,
@@ -594,7 +613,9 @@ function AccountLounge({
       if (place === 'post') {
         setMailGift('none');
         setModal('mail');
-      } else setTownPlace(place);
+      } else if (place === 'broker') setModal('stocks');
+      else if (place === 'voyage') setVoyageOpen(true);
+      else setTownPlace(place);
     },
     onFish: (spot) => startFishing(spot),
     onSignpost: () => setTownPlace('signpost'),
@@ -864,6 +885,14 @@ function AccountLounge({
   // A game screen covers the shell (the village stays mounted and paused), and
   // closing it restores the shell's scroll position (e.g. in the hall).
   const inGame = !!gameScreen && view.status === 'connected';
+  // 먼바다: the boat leaves with me when I am at the harbor and brings me back to the pier.
+  const voyageFlow = useVoyageFlow({
+    view,
+    area: outdoorApi.outdoor?.area ?? null,
+    busy: inGame || !!fishing || visiting !== null || view.status !== 'connected',
+    toDeck: outdoorApi.toDeck,
+    toPier: outdoorApi.toPier,
+  });
   // Music: the casino / hall location track (lounge-music-tracks.ts) inside and
   // at their tables, quieter at a table; the village music box elsewhere.
   // A district (lounge-music-tracks.ts AREA_SOUND) plays its own piece and
@@ -2516,7 +2545,7 @@ function AccountLounge({
                 onLender={() => setModal('lender')}
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
-                onCounter={isShopArea(interior) ? () => setTownPlace(SHOP_INTERIORS[interior].counter) : undefined}
+                onCounter={isShopArea(interior) ? () => openShopCounter(SHOP_INTERIORS[interior].counter) : undefined}
                 onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
@@ -2592,7 +2621,7 @@ function AccountLounge({
                     onLender={() => setModal('lender')}
                     onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                     onSalon={() => enter('wardrobe')}
-                    onCounter={isShopArea(flatArea) ? () => setTownPlace(SHOP_INTERIORS[flatArea].counter) : undefined}
+                    onCounter={isShopArea(flatArea) ? () => openShopCounter(SHOP_INTERIORS[flatArea].counter) : undefined}
                     view={view}
                     area={flatArea}
                     seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
@@ -2720,6 +2749,7 @@ function AccountLounge({
                 { id: 'bag', label: '가방', glyph: 'bag', kbd: keyLabel(settings.keys.inventory), onClick: () => setModal('bag') },
                 { id: 'mail', label: '우편함', glyph: 'letter', badge: unread, onClick: () => openMail() },
                 { id: 'shop', label: '가게 안내', glyph: 'store', onClick: () => setModal('shop') },
+                { id: 'stocks', label: '주식 · 범마을 증권', glyph: 'chart', onClick: () => setModal('stocks') },
                 { id: 'bank', label: '은행 · 차용증', glyph: 'coin', onClick: () => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); } },
                 { id: 'farm', label: '내 텃밭', glyph: 'sprout', onClick: () => setModal('farm') },
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
@@ -2825,8 +2855,42 @@ function AccountLounge({
       )}
       {modal === 'bank' && <FinancePanel key={`${financeMode}:${financePage ?? 'bank'}`} room={room} view={view} mode={financeMode} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? 'bank'} />}
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
+      {modal === 'stocks' && (
+        <Suspense fallback={null}>
+          <StockPanel
+            room={room}
+            view={view}
+            notify={notify}
+            onClose={() => setModal(null)}
+            onTalk={() => {
+              setModal(null);
+              setResidentTalk('muzan');
+            }}
+          />
+        </Suspense>
+      )}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} initial={npcBookAt} onClose={() => setModal(null)} />}
       {modal === 'npcRequests' && <NpcRequestBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+      {outdoorApi.outdoor?.area === 'offshore' && tab === 'village' && !inGame && (
+        <VoyageHud view={view} onLeave={() => void room.life({ kind: 'voyageLeave' })} />
+      )}
+      {voyageFlow.sailing && <SailOut back={voyageFlow.sailing === 'back'} />}
+      {voyageOpen && !modal && <VoyageBoard room={room} view={view} notify={notify} onClose={() => setVoyageOpen(false)} />}
+      {voyageFlow.summaryOpen && !modal && !voyageOpen && !inGame && (
+        <VoyageSummary room={room} view={view} notify={notify} onClose={voyageFlow.closeSummary} />
+      )}
+      {view.life?.voyage?.knock && !knockShut && !modal && !inGame && tab === 'village' && visiting === null && !fishing && !voyageOpen && (
+        <DawnKnock
+          room={room}
+          view={view}
+          notify={notify}
+          onClose={() => setKnockShut(true)}
+          onAccepted={() => {
+            // The captain walks me to the boat: off to the harbor if I am not there.
+            if (outdoorApi.outdoor?.area !== 'harbor') travelTo('harbor');
+          }}
+        />
+      )}
       {townPlace && !modal && (
         <Suspense fallback={null}>
           <TownPanel
@@ -2856,6 +2920,8 @@ function AccountLounge({
             setModal('npc');
           }}
           onBoard={view.players.find((p) => p.id === view.self)?.area === 'market' ? () => { setResidentTalk(null); setModal('npcRequests'); } : undefined}
+          // 신이치's tent travels to the plaza on festival days (lounge-stage3-data.ts): 운세 from the talk.
+          shop={residentTalk === 'shinichi' ? { label: '운세 보기', open: () => { setResidentTalk(null); setTownPlace('fortune'); } } : undefined}
         />
       )}
       {modal === 'wallet' && (

@@ -62,6 +62,12 @@ export type LoungeLedger = {
   vault?: Record<string, number>;
   /** Net account → house transfers from loans and dealer refunds (no minting). */
   financeHouseNet?: number;
+  /**
+   * 범마을 증권 (lounge-stocks.ts): net account → house transfers of share
+   * trades, margin, short collateral and dividends (no minting; fees are
+   * `spend` entries).
+   */
+  marketNet?: number;
 };
 /** One KST day of grant (`g`) and spend (`s`) totals per bucket. */
 export type FlowDay = { d: number; g: Record<string, number>; s: Record<string, number> };
@@ -134,7 +140,8 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
     if (reason.startsWith('sell-')) return reason.slice(0, 24);
     if (
       // 마을 확장 2단계: the dawn auction and 농협 weekly premiums (lounge-town.ts, each capped per friend per day).
-      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night', 'auction', 'coop-week'].includes(reason)
+      // 3단계: 오른's today's-ore premium (lounge-stage3.ts, capped per friend per day).
+      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night', 'auction', 'coop-week', 'smith-ore'].includes(reason)
     )
       return reason;
     return 'grant-other';
@@ -148,9 +155,13 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('house-')) return 'house';
   // 성장 P1: blacksmith upgrades ('tool-pickaxe-2'), 마을 개척, profession respec.
   if (reason.startsWith('tool-')) return 'tool';
+  // 3단계 shops (lounge-stage3.ts): 오른's range upgrades ('smith-can-2'), 목장, 과수원, 의원, 점집.
+  if (reason.startsWith('smith-')) return 'smith';
+  if (reason.startsWith('ranch-')) return 'ranch';
+  if (reason === 'orchard-sapling' || reason === 'clinic' || reason === 'fortune') return reason;
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall', 'stock-fee', 'voyage'].includes(reason)
   )
     return reason;
   return 'spend-other';
@@ -205,6 +216,9 @@ const DAY_SELL_KEYS = new Set([
   'sell-material',
   'sell-dish',
   'sell-fruit',
+  // 3단계: 닐라 목장's goods and 하쿠 과수원's fruit (itemSaleReason).
+  'sell-ranch',
+  'sell-orchard',
 ]);
 
 export function validateLedger(value: unknown): asserts value is LoungeLedger {
@@ -313,7 +327,8 @@ export function validateLedger(value: unknown): asserts value is LoungeLedger {
   if (
     !safe(houseBalance) ||
     !safe(v.financeHouseNet ?? 0) ||
-    houseBalance !== casinoNet + archive.houseNet + spent + (v.financeHouseNet ?? 0) ||
+    !safe(v.marketNet ?? 0) ||
+    houseBalance !== casinoNet + archive.houseNet + spent + (v.financeHouseNet ?? 0) + (v.marketNet ?? 0) ||
     !safe(held) ||
     sum(accounts.map(([, amount]) => amount)) + held + houseBalance - granted !==
       accounts.length * INITIAL_BEOM
@@ -382,6 +397,22 @@ export function houseTransfer(ledger: LoungeLedger, wallet: string, amount: numb
   next.accounts[wallet] += amount;
   next.houseBalance = (next.houseBalance ?? 0) - amount;
   next.financeHouseNet = (next.financeHouseNet ?? 0) - amount;
+  validateLedger(next);
+  return next;
+}
+/**
+ * 범마을 증권: positive amount pays a wallet from the house (a sale, a
+ * dividend), negative moves it to the house (a purchase, collateral).
+ */
+export function marketTransfer(ledger: LoungeLedger, wallet: string, amount: number) {
+  validateLedger(ledger);
+  if (!walletKey(wallet) || !own(ledger.accounts, wallet) || !safe(amount) || !amount)
+    fail('거래 금액을 확인해 주세요.');
+  if (ledger.accounts[wallet] + amount < 0) fail('사용할 수 있는 범이 부족해요.');
+  const next = changed(ledger);
+  next.accounts[wallet] += amount;
+  next.houseBalance = (next.houseBalance ?? 0) - amount;
+  next.marketNet = (next.marketNet ?? 0) - amount;
   validateLedger(next);
   return next;
 }

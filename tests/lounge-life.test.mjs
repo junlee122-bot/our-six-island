@@ -31,6 +31,7 @@ import {
 } from '../app/lounge-economy.ts';
 import {
   DEMAND_FLOOR,
+  FISH_DEMAND_FREE,
   MARKET_HALF,
   MARKET_SOFT,
   demandMult,
@@ -240,27 +241,62 @@ test('selling grants 범 through the ledger; demand curves per crop recover at K
 test('market saturation tapers very long selling days; the safety ceiling still holds', () => {
   assert.equal(marketMult(MARKET_SOFT), 1);
   assert.equal(marketMult(MARKET_SOFT + MARKET_HALF), 0.5);
-  // Quote helper = what the server pays.
+  // Quote helper = what the server pays (crops keep the old rules).
   const s = world(1),
     [m] = s.members;
-  s.life.ext = { [m.id]: { inv: { carp: 50, crucian: 50, koi: 20 } } };
+  s.life.bag[m.id].produce.carrot = 50;
   const view = () => lifeView(s.life, m.id, 0, T0);
-  const q = sellQuote(view(), 'koi', 0, 20, T0);
-  const before = s.balance(m);
-  s.act(m, { kind: 'sellItem', item: 'koi', n: 20, at: 'general' }, T0);
-  assert.equal(s.balance(m) - before, q.total);
-  // Rare fish sag fast (half-life 2): the 3rd koi pays half.
-  assert.equal(view().me.demand.koi, 20);
-  assert.equal(
-    sellQuote(view(), 'koi', 0, 1, T0).next,
-    Math.round(sellUnit('koi', 0, T0) * DEMAND_FLOOR * marketMult(view().soldToday)),
-  );
-  // Past MARKET_SOFT범 everything tapers.
+  // Past MARKET_SOFT범 crops and goods taper.
   s.life.sold[m.id] = { day: kstDay(T0), amount: MARKET_SOFT + MARKET_HALF };
-  const carp = sellQuote(view(), 'carp', 0, 1, T0);
-  assert.equal(carp.next, Math.round(sellUnit('carp', 0, T0) * 0.5));
+  const carrot = sellQuote(view(), 'carrot', 0, 1, T0);
+  assert.equal(carrot.next, Math.round(sellUnit('carrot', 0, T0) * 0.5));
+  const q = sellQuote(view(), 'carrot', 0, 5, T0);
+  let before = s.balance(m);
+  s.act(m, { kind: 'sell', crop: 'carrot', n: 5, at: 'coop' }, T0);
+  assert.equal(s.balance(m) - before, q.total);
+  assert.equal(view().soldToday, MARKET_SOFT + MARKET_HALF + q.total);
+  // The daily ceiling still stops crops.
   s.life.sold[m.id] = { day: kstDay(T0), amount: SELL_CAP_PER_DAY - 100 };
-  s.fails(m, { kind: 'sellItem', item: 'carp', n: 50, at: 'general' }, T0);
+  s.fails(m, { kind: 'sell', crop: 'carrot', n: 45, at: 'coop' }, T0);
+  invariant(s.ledger);
+});
+
+test('fish: 4 of a species a day at the full price, then the curve; no saturation, no cap', () => {
+  // Fish skip the first FISH_DEMAND_FREE units, then sag on their half-life.
+  assert.equal(FISH_DEMAND_FREE, 4);
+  for (const k of [0, 1, 2, 3]) assert.equal(demandMult('koi', k), 1);
+  assert.equal(demandMult('koi', 4), 0.5 ** (1 / 2));
+  assert.equal(demandMult('koi', 5), 0.5);
+  assert.ok(demandMult('crucian', 4) < 1);
+  // Crops keep the old curve: the 2nd strawberry already pays less.
+  assert.ok(demandMult('strawberry', 1) < 1);
+  const s = world(1),
+    [m] = s.members;
+  s.life.ext = { [m.id]: { inv: { koi: 20, carp: 10 } } };
+  const view = () => lifeView(s.life, m.id, 0, T0);
+  // A long selling day (past the soft limit, at the very ceiling) changes nothing for fish.
+  s.life.sold[m.id] = { day: kstDay(T0), amount: SELL_CAP_PER_DAY - 100 };
+  const unit = sellUnit('koi', 0, T0);
+  const four = sellQuote(view(), 'koi', 0, 4, T0);
+  assert.equal(four.total, unit * 4);
+  let before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 4, at: 'general' }, T0);
+  assert.equal(s.balance(m) - before, unit * 4);
+  // The 5th koi is the first one that pays less; the preview says so.
+  const fifth = sellQuote(view(), 'koi', 0, 1, T0);
+  assert.equal(fifth.next, Math.round(unit * 0.5 ** (1 / 2)));
+  before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 1, at: 'general' }, T0);
+  assert.equal(s.balance(m) - before, fifth.next);
+  // Many more fish sell past the ceiling, and none of it counts in life.sold.
+  const rest = sellQuote(view(), 'koi', 0, 15, T0).total;
+  before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 15, at: 'general' }, T0);
+  assert.equal(s.balance(m) - before, rest);
+  s.act(m, { kind: 'sellItem', item: 'carp', n: 10, at: 'general' }, T0);
+  assert.equal(view().soldToday, SELL_CAP_PER_DAY - 100);
+  assert.equal(view().sellCapLeft, 100);
+  assert.equal(view().me.demand.koi, 20);
   invariant(s.ledger);
 });
 

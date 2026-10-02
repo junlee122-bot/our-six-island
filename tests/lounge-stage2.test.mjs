@@ -30,6 +30,7 @@ import {
   stallGoods,
 } from '../app/lounge-town.ts';
 import { townActionArea } from '../app/lounge-town-data.ts';
+import { fortuneOpenOn } from '../app/lounge-stage3-data.ts';
 import { weekOfDay } from '../app/lounge-life-plus.ts';
 import { NEW_CROP_IDS } from '../app/lounge-farm-data.ts';
 const isNewCrop = (c) => NEW_CROP_IDS.includes(c);
@@ -214,7 +215,7 @@ test('the server refuses the harbor and the hillside until their flags are set',
 
 // ---------------------------------------------------------------- evenings and the commute
 // 가게 실내: the shop rooms are walk areas too.
-const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
+const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 /**
  * Walkable, or within 0.1 of walkable ground: the region walkers check a
@@ -232,9 +233,11 @@ const seenAt = (id, now, world) => {
 };
 for (const hill of [false, true])
   test(`every resident is out and visible at game 21:00 and 00:30, and asleep at 03:00 (hill ${hill ? 'open' : 'closed'})`, () => {
-    const world = { hill };
+    // Stage 3's districts open (tests/lounge-stage3.test.mjs covers them shut, and 신이치's away days).
+    const world = { hill, ranch: true, foothill: true };
     for (let d = 0; d < 14; d++)
       for (const id of NPC_IDS) {
+        if (id === 'shinichi' && !fortuneOpenOn(kstDay(at(d, 21)))) continue;
         // (By 22:00 some already set off for their 22:30 spot and may be passing a gate.)
         assert.ok(seenAt(id, at(d, 21), world), `${id} day ${d} 21:00 (${npcSpot(id, at(d, 21), world).label})`);
         assert.ok(seenAt(id, at(d, 24, 30), world), `${id} day ${d} 00:30 (${npcSpot(id, at(d, 24, 30), world).label})`);
@@ -257,7 +260,11 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
     assert.equal(npcSpot(id, at(2, 3), { hill: false }).area, 'home', `${id} before the move`);
   }
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
-    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
+    // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
+    'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
+    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door',
+    // 무잔 walks into 범마을 증권 through its door.
+    'm.broker', 'broker.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, G(d), world);
@@ -464,16 +471,16 @@ test('town state round-trips through a save and ignores junk', () => {
   assert.equal(loaded.ext[a.id].town.bake, 1);
 });
 
-test('in the world every resident but the pose-sheet four is a chibi at a friend size; dialogue keeps the tall art', async () => {
+test('in the world every resident but 허 선장 (pose sheet) is a chibi at a friend size; dialogue keeps the tall art', async () => {
   const fs = await import('node:fs');
   const { NPC_CHIBI } = await import('../app/lounge-npc-chibi.ts');
   const record = JSON.parse(fs.readFileSync(new URL('../public/assets/lounge/npc-chibi-generation.json', import.meta.url), 'utf8'));
-  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'carpenter', 'realtor', 'misun'];
+  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'carpenter', 'realtor', 'misun', 'nilah', 'haku', 'ornn', 'mercy', 'shinichi', 'lumi', 'maehwa', 'muzan'];
   assert.deepEqual(Object.keys(NPC_CHIBI).sort(), [...chibi].sort());
   for (const id of NPC_IDS) {
     const c = NPC_CHIBI[id];
-    if (NPCS[id].art.kind === 'sheet') {
-      assert.equal(c, undefined, `${id} keeps its chibi pose sheet`);
+    if (id === 'captain') {
+      assert.equal(c, undefined, `${id} keeps its pose sheet`);
       continue;
     }
     assert.ok(c, `${id} has a chibi`);
@@ -483,7 +490,8 @@ test('in the world every resident but the pose-sheet four is a chibi at a friend
     assert.deepEqual([record.web[id].w, record.web[id].h], [c.w, c.h], `${id} size`);
     assert.equal(c.h, 640);
     assert.ok(c.w >= 512 && c.w <= 640);
-    // The tall art still serves the dialogue portrait.
+    // The tall art (or 루미 · 매화's pose sheet) still serves the dialogue portrait.
+    if (NPCS[id].art.kind === 'sheet') continue;
     assert.equal(NPCS[id].art.kind, 'image');
     assert.ok(NPCS[id].art.portrait);
   }
@@ -498,7 +506,7 @@ test('승준 explorer pass: the harbor and the hillside and their counters are o
     other = s.members[0];
   const mine = lifeView(s.life, me.id, me.actor, T0).districts;
   assert.equal(mine.pass, true);
-  assert.deepEqual([...mine.open].sort(), ['harbor', 'hillside', 'market']);
+  assert.deepEqual([...mine.open].sort(), ['foothill', 'harbor', 'hillside', 'market', 'ranch']);
   assert.equal(mine.goals.harbor.open, false, 'the village has not opened it');
   const theirs = lifeView(s.life, other.id, other.actor, T0).districts;
   assert.equal(theirs.pass, false);

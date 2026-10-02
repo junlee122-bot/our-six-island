@@ -150,7 +150,8 @@ test('a spouse sleeps in my room, hands over one present a day there, and works 
   const guest = s.view(m, night).npcGuests['0'];
   assert.equal(guest.npc, 'lumi');
   assert.equal(guest.spouse, true);
-  assert.ok(guest.until > night && guest.until <= at(1, 8) + GAME_HOUR_MS);
+  // 루미 deals until 01:00 and sleeps in until her late-morning café (lounge-npc-schedule.ts hostPlan).
+  assert.ok(guest.until > night && guest.until <= at(1, 11) + GAME_HOUR_MS);
   assert.equal(npcGuestOf(s.life.ext[m.id].npcRelations, at(1, 14)), undefined);
   // The present: at home, once a day.
   const home = { area: 'home', home: 0, actor: 0, fishing: false };

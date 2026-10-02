@@ -1,0 +1,75 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "범마을 증권 직원 → 무잔 (Demon Slayer / 鬼滅の刃, Koyoharu Gotouge), recostumed as the village stock broker (white suit, fedora, cape, ticker tape). User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "assets": [
+  {
+   "id": "broker-tall",
+   "job": "cf69140c-564b-46fc-a7f2-9b266a352479",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-muzan.png",
+   "sha256": "82511ED4F95C7B665534E4CAB0F92E464054AB4A396205DC92D3695841F50930"
+  },
+  {
+   "id": "broker-chibi",
+   "job": "d0606001-be93-42f6-a374-b5d1540e528f",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-muzan.png",
+   "sha256": "2C09C76F4A793554A1215F0DE472CFE26EC5C8A83FB6C756D54CC9E0F0A7E258"
+  },
+  {
+   "id": "broker-host-sheet",
+   "job": "a49be7bf-34e0-4062-8a7c-5c8e0ace958d",
+   "aspect": "1:1",
+   "cost": "0.25",
+   "styleReference": "host-maehwa.png",
+   "cells": [
+    "calm",
+    "smile",
+    "deal",
+    "focus",
+    "wow",
+    "sorry"
+   ],
+   "original": "_originals/host-muzan.png",
+   "sha256": "B425AE8B8FC757FE2C62D93275AF8817A1847EC6261758D09AB6CBF232A7E52E"
+  }
+ ],
+ "web": {
+  "npc-muzan.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "411C1E5649870CBDB2CC9D9C1D36FD1165141FE516D339C59E4E68E5F167DA7A"
+  },
+  "npc-muzan-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "DAA1FFFC5CF77184F81FDE7073493DE3AEC905B5868D0BE53C01184449DE02E9"
+  },
+  "chibi/npc-muzan.webp": {
+   "w": 512,
+   "h": 640,
+   "sha256": "A78D15B764B68F0F173A5392EF0A9073C819EB7B99EF7CC816680747E84E4AF9"
+  },
+  "host-broker.png": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "00801A5A131C2E4646E1252D00A99DF386D6D4C7C09EDC03EDBABC9A3587EFD5"
+  },
+  "host-broker.webp": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "E2AAB5DAD6010FB72CC2FC34692C52300032EDA991ABE61970CE32FD9A46AD1B"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-broker.png, then encodes host-broker.webp."
+}

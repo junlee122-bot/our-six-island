@@ -75,7 +75,7 @@ import { npcsIn, npcSpot } from './lounge-npc-schedule';
 import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
-import { DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, type DistrictId } from './lounge-districts';
+import { BUILT_DISTRICTS, DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, goalProgressText, type DistrictId } from './lounge-districts';
 import { VILLAGE_GATE } from './lounge-areas';
 import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto, type Doorway } from './lounge-map-doors';
 import { prefetchDistrict } from './lounge-district-models';
@@ -311,9 +311,7 @@ type Props = {
 function goalText(id: DistrictId, life: LifeView | null | undefined) {
   const g = life?.districts?.goals;
   if (!g) return '';
-  if (id === 'harbor') return ` · 박물관 물고기 ${Math.min(g.harbor.have, g.harbor.need)}/${g.harbor.need}종`;
-  if (id === 'hillside') return ` · 친한 주민 ${Math.min(g.hillside.have, g.hillside.need)}/${g.hillside.need}명`;
-  return '';
+  return id === 'market' || !g[id] ? '' : ` · ${goalProgressText(id, g)}`;
 }
 type Direction = 'up' | 'down' | 'left' | 'right';
 const WALK_SPEED = 5.2;
@@ -1097,8 +1095,9 @@ export function Village3D(props: Props) {
         dv
           ? {
               market: { open: true, progress: '' },
-              harbor: { open: dv.open.includes('harbor'), progress: `박물관 물고기 ${Math.min(dv.goals.harbor.have, dv.goals.harbor.need)}/${dv.goals.harbor.need}종` },
-              hillside: { open: dv.open.includes('hillside'), progress: `친한 주민 ${Math.min(dv.goals.hillside.have, dv.goals.hillside.need)}/${dv.goals.hillside.need}명` },
+              ...Object.fromEntries(
+                DISTRICT_IDS.filter((id) => id !== 'market' && (dv.goals as Partial<Record<DistrictId, unknown>>)[id]).map((id) => [id, { open: dv.open.includes(id), progress: goalProgressText(id, dv.goals) }]),
+              ),
             }
           : {},
       );
@@ -1979,7 +1978,7 @@ export function Village3D(props: Props) {
           if (id.startsWith('friend-'))
             npcs.push({ actor: Number(id.slice(7)), point: figure.point });
         // Walking up to an open district's gate starts fetching its models (before the fade).
-        for (const id of ['market', 'harbor', 'hillside'] as const)
+        for (const id of BUILT_DISTRICTS)
           if (!prefetched.has(id) && districtOpen(id, { flags: latest.current.life?.flags, pass: latest.current.life?.districts?.pass }) && gateDistance(id, position) < DISTRICT_PREFETCH_RADIUS) {
             prefetched.add(id);
             void prefetchDistrict(id);
@@ -3674,7 +3673,7 @@ function SpotPrompt({
     return (
       <div>
         <strong>
-          <Anvil size={14} /> {g?.forgeOpen ? '대장간 · 무쇠 아저씨' : '무너진 공방'}
+          <Anvil size={14} /> {g?.forgeOpen ? '대장간 · 오른' : '무너진 공방'}
         </strong>
         <small>
           {!g?.forgeOpen

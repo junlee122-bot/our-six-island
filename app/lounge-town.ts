@@ -221,7 +221,7 @@ export type SellRunner = (
 /**
  * One town action on an already-cloned, settled life (lounge-life.ts
  * lifeAction). `sell` runs the ordinary sale so every existing rule (demand,
- * daily cap, quality, 성장 bonus) applies; the town only adds its capped extra.
+ * daily cap for crops, quality, 성장 bonus) applies; the town only adds its capped extra.
  */
 export function townAction(
   life: LifeState,
@@ -243,10 +243,11 @@ export function townAction(
       const n = a.n;
       if (!safe(n) || n < 1) fail(TOWN_REJECT.auctionUnits);
       if ((townRead(life, uid, now).aucN ?? 0) + n > AUCTION_UNITS_MAX) fail(TOWN_REJECT.auctionUnits);
-      const before = soldBeomToday(life, uid, now);
+      // Fish sales stay out of life.sold (no daily cap), so the sale is read off the wallet.
+      const before = ledger.accounts[wallet] ?? 0;
       // The auction is at the 어시장, so the fish fetch their full price before the premium.
       const base = sell(life, ledger, { kind: 'sellItem', item: a.item, n, at: 'fishmarket' });
-      const amount = soldBeomToday(base.life, uid, now) - before;
+      const amount = (base.ledger.accounts[wallet] ?? 0) - before;
       const t = townOf(base.life, uid, now);
       t.aucN = (t.aucN ?? 0) + n;
       const premium = Math.min(Math.round(amount * AUCTION_PREMIUM), AUCTION_PREMIUM_CAP - (t.auc ?? 0));

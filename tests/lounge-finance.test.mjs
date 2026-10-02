@@ -90,7 +90,8 @@ test('casino contracts require an idle player at Rosé, while friend repayments 
   const restored = { ...loan, state: readFinance(JSON.parse(JSON.stringify(loan.state))) };
   assert.deepEqual(restored.state.loans[0], loan.state.loans[0]);
   const partlyPaid = act(restored, 0, { op: 'repay', id, amount: 300 }, now + 20 * day, casino);
-  assert.deepEqual(partlyPaid.state.loans[0], { ...loan.state.loans[0], paid: 300 });
+  // Twenty days after the 3-day term: the payment is marked late (로제's credit tier drops).
+  assert.deepEqual(partlyPaid.state.loans[0], { ...loan.state.loans[0], paid: 300, late: true });
   const paid = act(partlyPaid, 0, { op: 'repay', id, amount: 12700 }, now + 20 * day, casino);
   assert.equal(paid.state.loans[0].state, 'paid');
   const friend = act(world(), 0, { op: 'offer', to: 1, amount: 1000, interest: 0, days: 1 });

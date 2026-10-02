@@ -26,6 +26,7 @@ export const HOSTS = {
   realtor: { name: '신형만', title: '범마을 부동산 중개인' },
   misun: { name: '봉미선', title: '범마을 부동산 실장' },
   carpenter: { name: '발키리', title: '나무결 가구점 목수' },
+  muzan: { name: '무잔', title: '범마을 증권 지점장' },
 } as const;
 
 /** FNV-1a 32-bit: stable across browsers and the server. */

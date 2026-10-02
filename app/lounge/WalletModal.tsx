@@ -4,6 +4,7 @@ import { Gift } from '../ui/icons';
 import { GAME_INFO, type GameKind } from '../lounge-games';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { formatBeom, josa } from '../lounge-text';
+import { STOCK_BY_SYM } from '../lounge-stocks';
 import { Details, Modal } from './Modal';
 import type { Notify } from './Toast';
 import { useNow } from './use-now';
@@ -71,6 +72,8 @@ export function DailyButton({
   );
 }
 
+const STOCK_WORD: Record<string, string> = { buy: '매수', margin: '신용 매수', sell: '매도', short: '공매도', cover: '환매수', repay: '신용 상환', dividend: '배당', liquidate: '반대매매' };
+
 export function WalletModal({
   room,
   view,
@@ -108,6 +111,25 @@ export function WalletModal({
         정산하고, 코디 초기화로는 다시 지급되지 않아요. 오늘의 범은 한국 시간
         기준 하루에 한 번 3,000범이에요.
       </Details>
+      {!!view.stocks?.me.log.length && (
+        // 범마을 증권: the latest share trades, dividends and forced sales (design-stocks.md §7.3).
+        <ul className="l-wallet-history" aria-label="주식 거래" data-testid="wallet-stocks">
+          {view.stocks.me.log
+            .filter((l) => l.amount !== 0)
+            .slice(0, 5)
+            .map((l, i) => (
+              <li key={`stock-${i}`}>
+                <span>
+                  주식 · {STOCK_BY_SYM[l.sym].name} {STOCK_WORD[l.op] ?? l.op}
+                </span>
+                <b className={l.amount < 0 ? 'is-loss' : ''}>
+                  {l.amount > 0 ? '+' : ''}
+                  {formatBeom(l.amount)}
+                </b>
+              </li>
+            ))}
+        </ul>
+      )}
       {view.wallet.history.length > 0 && (
         <ul className="l-wallet-history">
           {view.wallet.history.map((h) => (

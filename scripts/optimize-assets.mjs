@@ -10,6 +10,8 @@
 //   node scripts/optimize-assets.mjs hosts      # table host sheets only (rebuilds 발키리's from her 3×2 original)
 //   node scripts/optimize-assets.mjs chibi      # in-world resident chibis only
 //   node scripts/optimize-assets.mjs npcs shinhyungman bongmison   # only these residents' files
+//   node scripts/optimize-assets.mjs npcs muzan / chibi muzan / hosts   # 범마을 증권 무잔 (also writes broker-muzan-generation.json)
+//   node scripts/optimize-assets.mjs furniture  # 나무결 가구점 furniture art from the six magenta sheets
 //
 // Character atlases are LOSSLESS WebP (`exact`): lounge-sprites.ts/lounge-color.ts
 // key the magenta background and dye the blue hair by exact RGB, so every pixel
@@ -26,8 +28,10 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const assets = path.join(root, 'public/assets');
 const mode = process.argv[2] ?? 'all';
 /** Optional names after `npcs` / `chibi`: only those residents' files are rebuilt. */
-const onlyNames = ['npcs', 'chibi'].includes(mode) ? process.argv.slice(3) : [];
+const onlyNames = ['npcs', 'chibi', 'hosts'].includes(mode) ? process.argv.slice(3) : [];
 const wanted = (...names) => !onlyNames.length || names.some((n) => onlyNames.includes(n));
+/** `hosts broker` rebuilds only lounge/host-broker.*; plain `hosts` rebuilds every sheet. */
+const wantedHost = (file) => !onlyNames.length || onlyNames.some((n) => file === `lounge/host-${n}.png`);
 
 const LOSSLESS_ATLASES = [
   'friends-motion.png',
@@ -51,6 +55,7 @@ const HOST_SHEETS = [
   'lounge/host-realtor.png',
   'lounge/host-carpenter.png',
   'lounge/host-misun.png',
+  'lounge/host-broker.png',
 ];
 // 허 선장 · 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
 // pink line still rings their hair, hands and props on any ground. Pixels
@@ -163,10 +168,12 @@ async function noharaHostSheets() {
 // calm figure HOST_CELL.figure tall, centred in a 440 × 660 cell with the
 // soles on the 648 px line, and written as the keyed host-carpenter.png that
 // hostSheets() encodes.
-const HOST_FROM_GRID = { 'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png' };
+// 범마을 증권 무잔 (broker-muzan-generation.json) is laid out the same way.
+const HOST_FROM_GRID = { 'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png', 'lounge/host-broker.png': 'lounge/_originals/host-muzan.png' };
 async function hostSheetsFromGrid() {
   const CELL = { w: 440, h: 660, foot: 648, figure: 600 };
   for (const [name, original] of Object.entries(HOST_FROM_GRID)) {
+    if (!wantedHost(name)) continue;
     const source = path.join(assets, original);
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -206,8 +213,9 @@ async function hostSheetsFromGrid() {
 }
 async function hostSheets() {
   await hostSheetsFromGrid();
-  await noharaHostSheets();
+  if (!onlyNames.length) await noharaHostSheets();
   for (const name of HOST_SHEETS) {
+    if (!wantedHost(name)) continue;
     const source = path.join(assets, name);
     const target = source.replace(/\.png$/, '.webp');
     let input = sharp(source);
@@ -509,8 +517,15 @@ const NPC_SPRITES_REALTY = ['shinhyungman', 'bongmison'];
 // 나무결 가구점 목수 발키리 (carpenter-valkyrie-generation.json): the web file
 // is named after her, the resident id stays 'carpenter' (hearts carry over).
 const NPC_SPRITES_3 = ['valkyrie'];
+// 범마을 증권 무잔 (broker-muzan-generation.json): the resident id is 'muzan' too.
+const NPC_SPRITES_BROKER = ['muzan'];
+// Stage-3 residents (stage3-npcs-generation.json): 목장 닐라, 과수원 하쿠,
+// 대장간 오른, 의원 메르시, 점쟁이 신이치. Their web copies' sizes and hashes are
+// written back into that record (`web`).
+const NPC_SPRITES_STAGE3 = ['nilah', 'haku', 'ornn', 'mercy', 'shinichi'];
 const NPC_ORIGINAL = { yanineko: 'yaninekko' };
-const NPC_SEED = { beatrice: 150, bocchi: 150 };
+// 오른's red beard and lavender skin sit close to the magenta key: only the near-pure ground floods.
+const NPC_SEED = { beatrice: 150, bocchi: 150, ornn: 150 };
 /** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
 const NPC_PORTRAITS = {
   nasera: { cx: 0.5, top: 0.02, size: 0.36 },
@@ -530,6 +545,12 @@ const NPC_PORTRAITS = {
   shinhyungman: { cx: 0.5, top: 0.005, size: 0.32 },
   bongmison: { cx: 0.48, top: 0.01, size: 0.32 },
   valkyrie: { cx: 0.48, top: 0.025, size: 0.3 },
+  muzan: { cx: 0.5, top: 0.02, size: 0.3 },
+  nilah: { cx: 0.49, top: 0.02, size: 0.3 },
+  haku: { cx: 0.5, top: 0.02, size: 0.3 },
+  ornn: { cx: 0.47, top: 0.03, size: 0.36 },
+  mercy: { cx: 0.5, top: 0.02, size: 0.3 },
+  shinichi: { cx: 0.5, top: 0.02, size: 0.3 },
 };
 // `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
 // skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
@@ -613,7 +634,8 @@ function keyMagenta(data, width, height, fgM = 0, seed = 40, pocket = 200) {
   return out;
 }
 async function npcSprites() {
-  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3]) {
+  const stage3Web = {};
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_STAGE3, ...NPC_SPRITES_BROKER]) {
     if (!wanted(id)) continue;
     const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
@@ -636,6 +658,18 @@ async function npcSprites() {
       .webp({ quality: 88, alphaQuality: 100, effort: 6 })
       .toFile(portrait);
     console.log(`npc-${id}.png -> 660x990 .webp ${kb(fs.statSync(target).size)} · portrait ${kb(fs.statSync(portrait).size)}`);
+    if (NPC_SPRITES_STAGE3.includes(id)) {
+      const hash = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').toUpperCase();
+      stage3Web[`npc-${id}.webp`] = { w: 660, h: 990, sha256: hash(target) };
+      stage3Web[`npc-${id}-portrait.webp`] = { w: 384, h: 384, sha256: hash(portrait) };
+    }
+  }
+  const record = path.join(assets, 'lounge/stage3-npcs-generation.json');
+  if (Object.keys(stage3Web).length && fs.existsSync(record)) {
+    const json = JSON.parse(fs.readFileSync(record, 'utf8'));
+    json.web = { ...json.web, ...stage3Web };
+    json.keying = 'scripts/optimize-assets.mjs npcs: flood key from the border (오른 with a higher seed for his red beard), unmix + despill, 660x990 sprite and a 384px head-and-shoulders portrait; chibi: figure at 94% of a 640px canvas with the feet on the 97% line (sizes and hashes in npc-chibi-generation.json web).';
+    fs.writeFileSync(record, JSON.stringify(json, null, 1) + '\n');
   }
 }
 // In-world chibi residents (npc-chibi-generation.json): two figures per 3:2
@@ -659,6 +693,15 @@ const CHIBI_FILES = [
   ['yaninekko'],
   ['shinhyungman', 'bongmison'],
   ['valkyrie'],
+  // Stage 3 (stage3-npcs-generation.json): one figure per original.
+  ['nilah'],
+  ['haku'],
+  ['ornn'],
+  ['mercy'],
+  ['shinichi'],
+  ['lumi'],
+  ['maehwa'],
+  ['muzan'],
 ];
 /** Chibi files named after the person; the record keys them by resident id. */
 const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun', valkyrie: 'carpenter' };
@@ -810,7 +853,7 @@ async function chibiSprites() {
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width, height } = info;
-    const keyed = keyChibi(data, width, height, { green: CHIBI_GREEN.has(base), fgM: names.includes('thresh') ? -120 : 0, seed: CHIBI_GREEN.has(base) ? 60 : 40 });
+    const keyed = keyChibi(data, width, height, { green: CHIBI_GREEN.has(base), fgM: names.includes('thresh') ? -120 : 0, seed: CHIBI_GREEN.has(base) ? 60 : base === 'ornn' ? 150 : 40 });
     // Split two figures at the emptiest column between 40% and 60% of the width.
     let cut = width;
     if (names.length === 2) {
@@ -911,11 +954,186 @@ async function tavernCards() {
     console.log(`tavern-${name}.webp ${kb(fs.statSync(target).size)}`);
   }
 }
+// 나무결 가구점 furniture art (furniture-art-generation.json): six square sheets
+// on solid magenta, 3×3 or 2×2 cells read left to right, top to bottom, one
+// 'furn-*' piece per cell ("NEW:slug (…)" / "NEW-LUXURY:slug (…)" cells are the
+// pieces added with the sheets, ref 'furn-' + slug). Each sheet is keyed like
+// the tall sprites (keyMagenta, then defringeMagenta for the rim), each cell is
+// trimmed to its opaque pieces and placed on a transparent canvas whose aspect
+// is the room catalog's: h / w for standing cards and wall pieces (the art
+// contained, standing on the bottom edge, centred), d / w for rugs (stretched to
+// the floor footprint: the room lays rugs flat, so a top view). The room draws a
+// card w wide and w × aspect tall, so the catalog height is the drawn height.
+// A 256² thumbnail goes to furniture/thumbs/. The web copies' sizes and hashes
+// are written back into the record.
+const FURNITURE_LONG_SIDE = 768;
+const furnitureRef = (cell) => {
+  const m = /^NEW(?:-LUXURY)?:([a-z0-9-]+)/.exec(cell);
+  return m ? `furn-${m[1]}` : cell;
+};
+/**
+ * Keeps a furniture cell's own painting: the connected opaque pieces (alpha >
+ * 24) of at least 1% of the largest one, minus pieces touching the cell edge
+ * (a neighbour's spill), and the faint rim within 2 px of them. Everything else
+ * is cleared. Returns the kept pieces' box (null when the cell is empty).
+ */
+function furnitureCell(data, width, height) {
+  const n = width * height,
+    label = new Int32Array(n).fill(-1),
+    pieces = [];
+  for (let start = 0; start < n; start++) {
+    if (label[start] >= 0 || data[start * 4 + 3] <= 24) continue;
+    const id = pieces.length,
+      stack = [start],
+      p = { area: 0, l: width, r: -1, t: height, b: -1, edge: false };
+    label[start] = id;
+    while (stack.length) {
+      const i = stack.pop(),
+        x = i % width,
+        y = (i - x) / width;
+      p.area++;
+      p.l = Math.min(p.l, x);
+      p.r = Math.max(p.r, x);
+      p.t = Math.min(p.t, y);
+      p.b = Math.max(p.b, y);
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) p.edge = true;
+      for (const j of [x > 0 ? i - 1 : -1, x < width - 1 ? i + 1 : -1, y > 0 ? i - width : -1, y < height - 1 ? i + width : -1])
+        if (j >= 0 && label[j] < 0 && data[j * 4 + 3] > 24) {
+          label[j] = id;
+          stack.push(j);
+        }
+    }
+    pieces.push(p);
+  }
+  if (!pieces.length) return null;
+  const largest = Math.max(...pieces.map((p) => p.area));
+  const keep = pieces.map((p) => p.area === largest || (p.area >= Math.max(40, largest * 0.01) && !p.edge));
+  let mask = new Uint8Array(n);
+  for (let i = 0; i < n; i++) if (label[i] >= 0 && keep[label[i]]) mask[i] = 1;
+  for (let step = 0; step < 2; step++) {
+    const next = Uint8Array.from(mask);
+    for (let i = 0; i < n; i++) {
+      if (mask[i]) continue;
+      const x = i % width;
+      if ((x > 0 && mask[i - 1]) || (x < width - 1 && mask[i + 1]) || mask[i - width] || mask[i + width]) next[i] = 1;
+    }
+    mask = next;
+  }
+  for (let i = 0; i < n; i++) if (!mask[i]) data[i * 4 + 3] = 0;
+  const kept = pieces.filter((_, i) => keep[i]);
+  const l = Math.max(0, Math.min(...kept.map((p) => p.l)) - 2),
+    t = Math.max(0, Math.min(...kept.map((p) => p.t)) - 2),
+    r = Math.min(width - 1, Math.max(...kept.map((p) => p.r)) + 2),
+    b = Math.min(height - 1, Math.max(...kept.map((p) => p.b)) + 2);
+  return { left: l, top: t, width: r - l + 1, height: b - t + 1 };
+}
+async function furnitureArt() {
+  const { catalogEntry } = await import('../app/lounge-bedroom-catalog.ts');
+  const recordPath = path.join(assets, 'lounge/furniture-art-generation.json');
+  const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+  const outDir = path.join(assets, 'lounge/furniture');
+  fs.mkdirSync(path.join(outDir, 'thumbs'), { recursive: true });
+  const web = {};
+  const clear = { r: 0, g: 0, b: 0, alpha: 0 };
+  for (const sheet of record.sheets) {
+    const source = path.join(assets, 'lounge', sheet.original);
+    const hash = crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex').toUpperCase();
+    if (hash !== sheet.sha256) throw new Error(`${sheet.original}: sha256 ${hash} is not the recorded ${sheet.sha256}`);
+    const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+    // Pocket seed 90: the ground seen through the fan's grille, the rug's fringe
+    // and the chairs' spindles is enclosed and a little blended (m ≈ 100–230).
+    const keyed = defringeMagenta(keyMagenta(data, width, height, 0, 40, 90), width, height);
+    const raw = { raw: { width, height, channels: 4 } };
+    const [cols, rows] = sheet.grid.split('x').map(Number);
+    if (sheet.cells.length !== cols * rows) throw new Error(`${sheet.original}: ${sheet.cells.length} cells for a ${sheet.grid} grid`);
+    for (const [c, cell] of sheet.cells.entries()) {
+      const ref = furnitureRef(cell);
+      const entry = catalogEntry(ref);
+      if (!entry) throw new Error(`${sheet.original} cell ${c}: ${ref} is not in the room catalog`);
+      const x0 = Math.round(((c % cols) * width) / cols),
+        x1 = Math.round((((c % cols) + 1) * width) / cols),
+        y0 = Math.round((Math.floor(c / cols) * height) / rows),
+        y1 = Math.round(((Math.floor(c / cols) + 1) * height) / rows);
+      const cellBuf = await sharp(keyed, raw).extract({ left: x0, top: y0, width: x1 - x0, height: y1 - y0 }).raw().toBuffer();
+      const box = furnitureCell(cellBuf, x1 - x0, y1 - y0);
+      if (!box) throw new Error(`${sheet.original} cell ${c} (${ref}) is empty`);
+      const art = await sharp(cellBuf, { raw: { width: x1 - x0, height: y1 - y0, channels: 4 } }).extract(box).png().toBuffer();
+      const rug = entry.mount === 'rug';
+      const aspect = rug ? entry.d / entry.w : entry.h / entry.w;
+      // The smallest canvas of the catalog aspect that holds the art (rugs: the art's width).
+      let cw = rug ? box.width : Math.max(box.width, box.height / aspect),
+        ch = cw * aspect;
+      const scale = Math.min(1, FURNITURE_LONG_SIDE / Math.max(cw, ch));
+      cw = Math.round(cw * scale);
+      ch = Math.round(ch * scale);
+      let canvas;
+      if (rug) canvas = sharp(art).resize(cw, ch, { fit: 'fill', kernel: 'lanczos3' });
+      else {
+        const fw = Math.min(cw, Math.round(box.width * scale)),
+          fh = Math.min(ch, Math.round(box.height * scale));
+        const fitted = await sharp(art).resize(fw, fh, { fit: 'fill', kernel: 'lanczos3' }).png().toBuffer();
+        // Standing pieces stand on the bottom edge; wall pieces hang centred.
+        const top = entry.mount === 'wall' ? Math.round((ch - fh) / 2) : ch - fh;
+        canvas = sharp({ create: { width: cw, height: ch, channels: 4, background: clear } }).composite([{ input: fitted, left: Math.round((cw - fw) / 2), top }]);
+      }
+      const name = ref.replace(/^furn-/, '');
+      const target = path.join(outDir, `${name}.webp`);
+      await canvas.webp({ quality: 86, alphaQuality: 100, effort: 6 }).toFile(target);
+      const thumb = path.join(outDir, 'thumbs', `${name}.webp`);
+      await sharp(art)
+        .resize(232, 232, { fit: 'contain', background: clear, kernel: 'lanczos3' })
+        .extend({ top: 12, bottom: 12, left: 12, right: 12, background: clear })
+        .webp({ quality: 86, alphaQuality: 100, effort: 6 })
+        .toFile(thumb);
+      const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').toUpperCase();
+      web[ref] = { file: `furniture/${name}.webp`, w: cw, h: ch, thumb: `furniture/thumbs/${name}.webp`, sha256: sha(target), thumbSha256: sha(thumb) };
+      console.log(`${ref} ${entry.mount} ${cw}x${ch} (art ${box.width}x${box.height}, aspect ${(box.height / box.width).toFixed(2)} vs catalog ${aspect.toFixed(2)}) ${kb(fs.statSync(target).size)}`);
+    }
+  }
+  record.web = web;
+  record.keying = 'scripts/optimize-assets.mjs furniture: keyMagenta flood from the border + defringeMagenta rim, each cell trimmed to its opaque pieces and contained in a canvas of the catalog aspect (h / w, standing on the bottom edge; wall pieces centred; rugs stretched to d / w as a top view), long side at most 768 px, plus a 256² thumbnail.';
+  fs.writeFileSync(recordPath, JSON.stringify(record, null, 1) + '\n');
+}
+// 범마을 증권 무잔: the web copies' sizes and SHA-256 go into his generation record
+// (like the 발키리 record), next to the originals' jobs and hashes.
+const ART_RECORDS = [
+  {
+    record: 'lounge/broker-muzan-generation.json',
+    files: ['npc-muzan.webp', 'npc-muzan-portrait.webp', 'chibi/npc-muzan.webp', 'host-broker.png', 'host-broker.webp'],
+    keying:
+      'scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-broker.png, then encodes host-broker.webp.',
+  },
+];
+async function artRecords() {
+  for (const r of ART_RECORDS) {
+    const recordPath = path.join(assets, r.record);
+    if (!fs.existsSync(recordPath)) continue;
+    const json = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    for (const a of json.assets ?? []) {
+      const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(assets, 'lounge', a.original))).digest('hex').toUpperCase();
+      if (hash !== a.sha256) throw new Error(`${a.original}: sha256 ${hash} is not the recorded ${a.sha256}`);
+    }
+    const web = {};
+    for (const f of r.files) {
+      const file = path.join(assets, 'lounge', f);
+      if (!fs.existsSync(file)) continue;
+      const { width, height } = await sharp(file).metadata();
+      web[f] = { w: width, h: height, sha256: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').toUpperCase() };
+    }
+    json.web = web;
+    json.keying = r.keying;
+    fs.writeFileSync(recordPath, JSON.stringify(json, null, 1) + '\n');
+    console.log(`${r.record}: ${Object.keys(web).length} web copies recorded`);
+  }
+}
 if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
 if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
 if (['all', 'images', 'npcs', 'chibi'].includes(mode)) await chibiSprites();
 if (['all', 'images', 'services', 'npcs'].includes(mode)) await servicePortraits();
 if (mode === 'hosts') await hostSheets();
+if (mode === 'furniture') await furnitureArt();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();
+if (['all', 'images', 'npcs', 'chibi', 'hosts'].includes(mode)) await artRecords();

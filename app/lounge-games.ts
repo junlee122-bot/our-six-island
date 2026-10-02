@@ -75,7 +75,7 @@ export const isPracticeAi = (id: unknown): id is string =>
 export const PRACTICE_NAMES: Partial<Record<GameKind, readonly string[]>> = {
   chess: ['루미'],
   gostop: ['매화', '루미'],
-  liarsbar: ['루미', '매화', '무쇠'],
+  liarsbar: ['루미', '매화', '오른'],
 };
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
 export const FLEX_GAMES: readonly GameKind[] = [
@@ -167,13 +167,16 @@ export const READY_LIMIT_MS = 60_000;
 /** Minimum spacing of committed `look` changes per member. */
 export const LOOK_THROTTLE_MS = 300;
 // 'hill' | 'woods' | 'mine': 성장 P2 outdoor regions (lounge-areas.ts REGIONS).
-// 'market' | 'harbor' | 'hillside': ① 시장 거리, ② 항구 구역, ③ 언덕 주택가 — the
-// districts around the hub (lounge-districts.ts). The cloud engine lets you
-// into the harbor and the hillside only once their village flag is set.
+// 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill': ① 시장 거리, ② 항구 구역,
+// ③ 언덕 주택가, ④ 목장·과수원, ⑤ 산기슭 마을 — the districts around the hub
+// (lounge-districts.ts). The cloud engine lets you into ②–⑤ only once their
+// village flag is set.
 // 'bakery' | 'coop' | 'general' | 'fishmarket': the shop rooms entered from
 // 시장 거리 and the harbor (lounge-shop-interiors.ts).
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | ShopArea;
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', ...SHOP_AREAS];
+// 'offshore': 허 선장's boat out at sea (먼바다, lounge-voyage.ts); the cloud
+// engine lets you onto its deck only while your voyage is on.
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore' | ShopArea;
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore', ...SHOP_AREAS];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -188,6 +191,11 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   coop: { x: 27, y: 82 },
   general: { x: 27, y: 82 },
   fishmarket: { x: 27, y: 82 },
+  barn: { x: 27, y: 82 },
+  orchardShop: { x: 27, y: 82 },
+  smithy: { x: 27, y: 82 },
+  clinic: { x: 27, y: 82 },
+  broker: { x: 27, y: 82 },
   // Front left by the door, clear of the 허풍 카드 table (middle).
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },
@@ -202,6 +210,11 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   // 항구 구역 / 언덕 주택가: arriving from the hub's south / west gates (HARBOR_ARRIVE, HILLSIDE_ARRIVE).
   harbor: { x: 8, y: 25 },
   hillside: { x: 90.4, y: 43 },
+  // 목장·과수원 / 산기슭 마을: arriving from the hub's north-east and north gates (RANCH_ARRIVE, FOOTHILL_ARRIVE).
+  ranch: { x: 30, y: 90.4 },
+  foothill: { x: 50, y: 89.09 },
+  // 먼바다: the middle of the deck (lounge-areas.ts REGIONS.offshore).
+  offshore: { x: 50, y: 50 },
 };
 /**
  * Chat follows the area: village and casino chat are separate from the hall,
@@ -214,7 +227,7 @@ export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
 export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
-  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside'
+  area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside' || area === 'ranch' || area === 'foothill' || area === 'offshore'
     ? 'village'
     : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon' || isShopArea(area)
       ? area

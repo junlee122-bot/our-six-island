@@ -5,6 +5,8 @@
 import { HARBOR_BREAKWATER, HARBOR_PAVING, HARBOR_PIER, HARBOR_POINT, HARBOR_SHORE_Z } from './lounge-harbor-layout.ts';
 import { HILLSIDE_PAVING } from './lounge-hillside-layout.ts';
 import { MARKET_PAVING } from './lounge-market-layout.ts';
+import { RANCH_BRIDGE, RANCH_PAVING, RANCH_STONES } from './lounge-ranch-layout.ts';
+import { FOOTHILL_PAVING } from './lounge-foothill-layout.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 
 export type Surface = 'dirt' | 'grass' | 'stone' | 'wood' | 'planks' | 'sand' | 'gravel';
@@ -87,8 +89,21 @@ export function areaSurface(area: string, p: WalkPoint): Surface {
       if (inRect(p, HARBOR_PIER, 0.1) && p.z > HARBOR_SHORE_Z - 0.2) return 'planks';
       if (inRect(p, HARBOR_BREAKWATER, 0.1) || Math.hypot(p.x - HARBOR_POINT.x, p.z - HARBOR_POINT.z) <= HARBOR_POINT.r) return 'stone';
       return HARBOR_PAVING.some((r) => inRect(p, r, 0.1)) ? 'stone' : 'sand';
+    case 'ranch':
+      // The timber bridge and the stepping stones over the stream; dirt roads and yards; grass.
+      if (inRect(p, RANCH_BRIDGE, 0.1)) return 'planks';
+      if (inRect(p, RANCH_STONES, 0.1)) return 'stone';
+      return RANCH_PAVING.some((r) => r.tone !== 'wood' && inRect(p, r, 0.1)) ? 'dirt' : 'grass';
+    case 'foothill': {
+      // The 산길 and the paths are gravel, the plaza and the forge yard stone.
+      const r = FOOTHILL_PAVING.find((q) => inRect(p, q, 0.1));
+      return r ? (r.tone === 'gravel' ? 'gravel' : 'stone') : 'grass';
+    }
     case 'mine':
       return 'gravel';
+    // 먼바다: the boat's wooden deck.
+    case 'offshore':
+      return 'planks';
     case 'hill':
     case 'woods':
       return 'grass';

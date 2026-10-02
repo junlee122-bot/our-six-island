@@ -80,7 +80,7 @@ test('시장 거리 is a separate area the server accepts, with an exit back to 
 // ---------------------------------------------------------------- schedule
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 // 가게 실내: the shop rooms are walk areas too (owners behind their counters).
-const WALK_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
+const WALK_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket', 'broker'];
 test('every resident place is walkable in its area (posts are drawn by their own scenes)', () => {
   for (const [id, p] of Object.entries(NPC_PLACES)) {
     if (POSTS.test(id) || !WALK_AREAS.includes(p.area)) continue;
@@ -101,8 +101,10 @@ test('npcSpot is never off walkable ground over two weeks (every 2 minutes)', ()
 
 test('no teleports: timelines are continuous and areas change only through an exit', () => {
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
+    // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
+    'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
     // The shop rooms' doors and the street spots in front of them.
-    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
+    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door', 'm.broker', 'broker.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, G(d));
@@ -165,9 +167,12 @@ test('schedules follow the cards: 프리렌 opens late, 신짜장 delivers, ever
   assert.equal(at('thresh', 9).place, 'general.owner');
   assert.ok(/배달|우체국|카페|점심/.test(at('sinjjajang', 11).label + at('sinjjajang', 12, 20).label));
   for (const id of WALKING_NPCS) assert.equal(at(id, 3).area, 'home', `${id} at home at 3am`);
-  // The ones who work indoors stay at their posts (발키리 takes an evening walk;
+  // The ones who work indoors are at their posts by day (발키리 takes an evening walk;
+  // 루미 · 매화 · 로제 have breaks and a day off, tests/lounge-host-roaming.test.mjs;
   // 신형만, off duty on Thursdays, ends the day at the tavern).
   assert.equal(at('lumi', 14).area, 'casino');
+  assert.equal(at('maehwa', 12).area, 'lounge');
+  assert.equal(at('rose', 21).area, 'casino');
   assert.equal(at('captain', 22).area, 'tavern');
   assert.equal(at('realtor', 19, 40).area, 'tavern');
 });

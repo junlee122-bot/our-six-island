@@ -52,7 +52,7 @@ const PAIRS = [
   ['--focus', '--surface', 3],
 ];
 
-for (const v of [null, 'hall', 'casino', 'tavern']) {
+for (const v of [null, 'hall', 'casino', 'tavern', 'broker']) {
   test(`${v ?? 'village'} tokens meet contrast targets`, () => {
     const vars = venue(v);
     for (const [fg, bg, need] of PAIRS) {

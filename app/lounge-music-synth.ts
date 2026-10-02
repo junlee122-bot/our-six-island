@@ -439,6 +439,19 @@ export class NoirEngine {
         this.osc('triangle', 830, g, t, end);
         return;
       }
+      case 'anvil': {
+        // A hammer on the anvil: a click and an inharmonic metal ring that dies fast.
+        this.noiseHit(out ?? bus.rim, t, 0.16 * v, 0.001, 0.02);
+        for (const [ratio, level, len] of [
+          [1, 0.07, 0.5],
+          [2.76, 0.045, 0.32],
+          [5.4, 0.03, 0.18],
+        ] as const) {
+          const { g, end } = this.decay(out ?? bus.drums, t, level * v, 0.001, len);
+          this.osc('sine', f * ratio, g, t, end);
+        }
+        return;
+      }
       case 'deok': {
         // 채편: a dry bamboo crack.
         this.noiseHit(out ?? bus.deok, t, 0.3 * v, 0.001, 0.06);

@@ -1,0 +1,167 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. 점쟁이 → 쿠도 신이치 (Detective Conan, Gosho Aoyama), drawn as an adult in his mid-twenties for the dialogue art; the in-world chibi wears his 코난 disguise (user decision). 과수원 주인 → 하쿠 (Spirited Away, Studio Ghibli), drawn as an adult in his mid-twenties. User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "assets": [
+  {
+   "id": "nilah-tall",
+   "job": "cb9b6e34-f341-4ccc-adcf-d0dfb1505f97",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-nilah.png",
+   "sha256": "B09365252F4F766E64911E072FD3A82E2A6E00D64AEE2B8D7975F87B32AB1B9E"
+  },
+  {
+   "id": "nilah-chibi",
+   "job": "8b956af1-1f41-4193-9a40-ca335816be53",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-nilah.png",
+   "sha256": "586536F833896D9F0C5B28AD2452F2CE70B7EA164473ABD3CFCEB1F6E2EC8FB6"
+  },
+  {
+   "id": "ornn-tall",
+   "job": "b0f09644-ae45-43b0-8d17-4896c4be5759",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-ornn.png",
+   "sha256": "0D628006D1B6588E016D7D206F2FBE0D5C7B33B7BA8269118C1D08D5BACA1440"
+  },
+  {
+   "id": "ornn-chibi",
+   "job": "6001ef0a-b204-493c-8745-fd931a402997",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-ornn.png",
+   "sha256": "78F009FBD0B92DCA05795B70874E32C82555F2DBFC0BF0BA986AE5C85B91E813"
+  },
+  {
+   "id": "mercy-tall",
+   "job": "bb3db944-4368-4e25-a174-473c6fa6ade8",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-mercy.png",
+   "sha256": "A475BA98C519D1BFFD4CC099B37505017883A374DD5D7449B6A94127B3E8F770"
+  },
+  {
+   "id": "mercy-chibi",
+   "job": "09928274-cd66-4c0e-8f71-17c469cc8584",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-mercy.png",
+   "sha256": "250490CD5BC879284E481DD21A06325A5794DFF7D8257C5C13ED077CDAA3C802"
+  },
+  {
+   "id": "shinichi-tall",
+   "job": "f183d470-47f3-48ab-ba45-8f2879dc36d7",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-shinichi.png",
+   "sha256": "335594357DA3952F4E7D454F123F289C92ADAA0C8A7BCD5961EE4D4E150901DB"
+  },
+  {
+   "id": "shinichi-chibi",
+   "job": "1e89d650-3d01-49a5-939c-5c504fc7222b",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-shinichi.png",
+   "sha256": "94682611E53516EFBB293F01043317A35699985D853050D8B890A164182BB09D"
+  },
+  {
+   "id": "haku-tall",
+   "job": "a0e10f82-6bdc-401b-8f4f-b5d5825a6c8a",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-haku.png",
+   "sha256": "91059F743B8DF7AC54D2048B64227CB6254261B19E08420EBCD900B4E498C672"
+  },
+  {
+   "id": "haku-chibi",
+   "job": "20bacc55-b9b4-41a1-a2c9-1efb71736cd1",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-haku.png",
+   "sha256": "C091E28F76DE9BAFDB821E63975E774858DD1E29C71F781A186E7D8E2C778D3C"
+  }
+ ],
+ "web": {
+  "npc-nilah.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "99713068E3DF54B49763D29332477BCCB562DCFBC57B05B001722C4A7D966C8E"
+  },
+  "npc-nilah-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "36D273996BE8457F6E6840DFFC7D6FE749A3A322CFE897413BFEB053D49B8F86"
+  },
+  "npc-haku.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "6247B8D1E630CBFD5FED7840E90CE7DAA92335BF94DDFB383DC3F4DD7E308392"
+  },
+  "npc-haku-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "39CFBFFB1A6D3FB761CE12FCAAE64E34C8ABFC07E8EE6ECED9F470685192AD14"
+  },
+  "npc-ornn.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "601B42994CB32D6FD8BF146B1828DDC08B2F01DAC02C6A16A48B2DB675DEFD96"
+  },
+  "npc-ornn-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "6DF9AE06AD89307EC6ED66ECD79AD768ED7B06968D73E42D54200D102C9D812D"
+  },
+  "npc-mercy.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "EC68CB9AED358A30B12F069FBCF1633B21B9111C04533C9316A04CD19FE74566"
+  },
+  "npc-mercy-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "7C2E4FDA6BE481452B959FC69F734A0F28F60FF8E9C6279699F0EAEE687F4C0A"
+  },
+  "npc-shinichi.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "96EF5152B6790F26D370B259A5EA3E30884888724023BD5858DD317E76E39B68"
+  },
+  "npc-shinichi-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "1766E5EE0F476D4A61EB6855F73C1D83A234EC95B54E642E2738928C541AF8FE"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs npcs: flood key from the border (오른 with a higher seed for his red beard), unmix + despill, 660x990 sprite and a 384px head-and-shoulders portrait; chibi: figure at 94% of a 640px canvas with the feet on the 97% line (sizes and hashes in npc-chibi-generation.json web)."
+}

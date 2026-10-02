@@ -43,7 +43,8 @@ import {
 } from './lounge-life-plus.ts';
 import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
 // 텃밭 확장: static data (leaf) and the farm engine (same cycle rule: functions only).
-import { FARM_ACTION_KINDS, NEW_CROP_IDS, NEW_CROP_INFO, STAR_CHANCE, STAR_MULT, type NewCrop } from './lounge-farm-data.ts';
+import { FARM_ACTION_KINDS, NEW_CROP_IDS, NEW_CROP_INFO, STAR_CHANCE, STAR_MULT, tileDist, tileRC, type NewCrop } from './lounge-farm-data.ts';
+import { basketExtra, smithTier } from './lounge-stage3-data.ts';
 import {
   applySprinklers,
   farmAction,
@@ -94,6 +95,9 @@ import { socialAction, socialView, type SocialAction, type SocialView } from './
 // 낚시 업그레이드: same cycle rule; the action kinds come from the leaf data module.
 import { ANGLING_ACTION_KINDS } from './lounge-fish-data.ts';
 import { anglingAction, anglingView, readAngling, type AnglingAction, type AnglingExt, type AnglingView } from './lounge-fish-engine.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): same cycle rule; the action kinds come from the leaf data module.
+import { VOYAGE_ACTION_KINDS, type VoyageAction } from './lounge-voyage-data.ts';
+import { readVoyage, voyageAction, voyageView, type VoyageExt, type VoyageView } from './lounge-voyage.ts';
 // 무드(기분): same cycle rule (functions only); the action kinds come from the leaf data module.
 import { MOOD_ACTION_KINDS } from './lounge-mood-data.ts';
 import {
@@ -110,6 +114,8 @@ import {
 // 마을 확장 2단계: same cycle rule; the action kinds come from the leaf data module.
 import { TOWN_ACTION_KINDS, type TownAction } from './lounge-town-data.ts';
 import { townAction, townView, type TownView } from './lounge-town.ts';
+import { STAGE3_ACTION_KINDS, type Stage3Action } from './lounge-stage3-data.ts';
+import { stage3Action, stage3View, type Stage3View } from './lounge-stage3.ts';
 // 가게 나누기 · 음식 (design-food-and-shops.md): where goods are bought, 함께 먹기.
 import { isShopId, shopOffer, type ShopId } from './lounge-shops.ts';
 import { foodAfterAction } from './lounge-food.ts';
@@ -160,6 +166,8 @@ const MIN = 60_000,
  *   soon drops below its seed price. Seasonal crops pay +10% in season.
  *   Past MARKET_SOFT범 of sales in a day everything tapers (marketMult).
  *   SELL_CAP_PER_DAY is now only a safety ceiling. Quality: silver ×1.25, gold ×1.5.
+ *   Fish (2026-10-02): 4 of a species a day at the full price, and neither
+ *   the market saturation nor the cap; their 범 stay out of life.sold.
  * - Sinks: trophies need a harvest milestone *and* 20k–150k범, palettes come
  *   in tiers (30k → 80k → 150k), seed bundles. All unlocks ≈ 580,000범.
  *   The life expansion adds furniture (5k–40k each), fertilizer, farm
@@ -524,6 +532,7 @@ export type LifeState = {
   VenueExt &
   MoodExt &
   AnglingExt &
+  VoyageExt &
   FarmExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
@@ -562,10 +571,13 @@ export type LifeAction =
   | MoodAction
   /** 낚시 업그레이드: cast/hook/fight, tackle, crab pots, weekly cup (lounge-fish-engine.ts). */
   | AnglingAction
+  /** 먼바다 낚싯배: board, come back, the dawn knock, 멀미약 (lounge-voyage.ts). */
+  | VoyageAction
   /** 텃밭 확장: fixtures, machines, shipping bin, helping, 품평회 (lounge-farm.ts). */
   | FarmAction
   /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
-  | TownAction;
+  | TownAction
+  | Stage3Action;
 export const LIFE_ACTION_KINDS = [
   'plant',
   'water',
@@ -585,8 +597,10 @@ export const LIFE_ACTION_KINDS = [
   ...VENUE_ACTION_KINDS,
   ...MOOD_ACTION_KINDS,
   ...ANGLING_ACTION_KINDS,
+  ...VOYAGE_ACTION_KINDS,
   ...FARM_ACTION_KINDS,
   ...TOWN_ACTION_KINDS,
+  ...STAGE3_ACTION_KINDS,
 ] as const;
 export const isLifeAction = (a: unknown): a is LifeAction =>
   !!a &&
@@ -934,6 +948,7 @@ export function readLife(value: unknown): LifeState {
     ...readVenues(v.venues),
     ...readMood(v.mood),
     ...readAngling(v.angling),
+    ...readVoyage(v.voyage),
     ...readFarmExt(v),
   };
 }
@@ -1086,12 +1101,21 @@ function lifeActionCore(
     const next = anglingAction(life, ledger, member, a as AnglingAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
+  if ((VOYAGE_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = voyageAction(life, ledger, member, a as VoyageAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
   if ((MOOD_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = moodAction(life, ledger, member, a as MoodAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((SOCIAL_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = socialAction(life, ledger, member, a as SocialAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((STAGE3_ACTION_KINDS as readonly string[]).includes(kind)) {
+    // 오른's ore counter runs the ordinary sale first (same rules, same caps).
+    const next = stage3Action(life, ledger, member, a as Stage3Action, now, (l, lg, sale) => lifeActionCore(l, lg, member, sale, now));
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((TOWN_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1110,6 +1134,21 @@ function lifeActionCore(
     return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
   };
   /** 텃밭 확장: shade from a trellis in front, then sprinklers, for tiles just planted. */
+  /**
+   * 오른's range upgrades (lounge-stage3-data.ts): the other tiles a single
+   * watering or planting at `i` also reaches — its row at tier 2, the 3×3
+   * around it at tier 3.
+   */
+  const rangeOf = (tool: 'can' | 'hoe', i: number) => {
+    const tier = smithTier(life, uid, tool);
+    if (tier < 2) return [];
+    const out: number[] = [];
+    for (let j = 0; j < size; j++) {
+      if (j === i) continue;
+      if (tier === 2 ? tileRC(j).r === tileRC(i).r : tileDist(i, j) <= 1) out.push(j);
+    }
+    return out;
+  };
   const afterPlant = (tiles: number[]) => {
     for (const i of tiles) {
       const sl = shadeFor(life, uid, i);
@@ -1141,7 +1180,16 @@ function lifeActionCore(
       if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
       bag.seeds[a.crop] -= 1;
       farm[i] = newPlot(a.crop);
-      afterPlant([i]);
+      // 괭이 범위: the same seed on the empty tiles in range while seeds last.
+      const planted = [i];
+      for (const j of rangeOf('hoe', i)) {
+        if (bag.seeds[a.crop] < 1) break;
+        if (farm[j].crop || fixtureAt(life, uid, j)) continue;
+        bag.seeds[a.crop] -= 1;
+        farm[j] = newPlot(a.crop);
+        planted.push(j);
+      }
+      afterPlant(planted);
       break;
     }
     case 'water': {
@@ -1171,8 +1219,17 @@ function lifeActionCore(
       if (plotRainAt(plot, now) !== null) fail(LIFE_REJECT.rained);
       plot.wateredAt = now;
       if (mods.waterPts) plot.w = mods.waterPts;
-      bump(life, uid, 'water', 1);
-      gainXp(life, uid, 'farm', XP.water, now);
+      // 물뿌리개 범위: the thirsty tiles in range get watered too.
+      let watered = 1;
+      for (const j of rangeOf('can', i)) {
+        const q = farm[j];
+        if (!q.crop || q.wateredAt !== null || plotRainAt(q, now) !== null || now >= plotReadyAt(q, now)!) continue;
+        q.wateredAt = now;
+        if (mods.waterPts) q.w = mods.waterPts;
+        watered++;
+      }
+      bump(life, uid, 'water', watered);
+      gainXp(life, uid, 'farm', XP.water * watered, now);
       break;
     }
     case 'harvest': {
@@ -1192,7 +1249,8 @@ function lifeActionCore(
       if (now - (picked[a.tree] ?? -Infinity) < FRUIT_COOLDOWN_MS)
         fail(LIFE_REJECT.treeWait);
       picked[a.tree] = now;
-      const got = fruitYield(uid, a.tree, now, ++life.seq);
+      // 채집 바구니 (오른's range upgrade): sometimes one more.
+      const got = fruitYield(uid, a.tree, now, ++life.seq) + basketExtra(life, uid, `pick:${a.tree}:${life.seq}`);
       bag.fruit = addCount(bag.fruit, got);
       countHarvest(life, uid, 'fruit', got);
       break;
@@ -1442,7 +1500,7 @@ export type LifeView = {
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
   sellCapLeft: number;
-  /** 범 sold today (all goods; drives the market saturation, see marketMult). */
+  /** 범 sold today (all goods but fish; drives the market saturation, see marketMult). */
   soldToday: number;
   sellCapResetAt: number;
   serverNow: number;
@@ -1456,10 +1514,14 @@ export type LifeView = {
   mood?: MoodView;
   /** 낚시 업그레이드: my cast/fight, tackle, pots, log; the weekly cup (lounge-fish-engine.ts). */
   angling?: AnglingView;
+  /** 먼바다 낚싯배: timetable, my trip, the dawn knock, 멀미약 (lounge-voyage.ts). */
+  voyage?: VoyageView;
   /** 마을 확장 2단계: which districts are open and the goals behind the locked ones. */
   districts?: DistrictsView;
   /** 마을 확장 2단계: auction, shops, stalls, reading club, visited districts (lounge-town.ts). */
   town?: TownView;
+  /** 마을 확장 3단계: my animals, fruit trees, range upgrades, clinic and fortune (lounge-stage3.ts). */
+  stage3?: Stage3View;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1564,9 +1626,10 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
     venues: venuesView(life),
     ...(UUID.test(uid) && actorValid(actor) ? { angling: anglingView(life, uid, actor, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) ? { voyage: voyageView(life, uid, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
     districts: districtsView(life, actorValid(actor) ? actor : undefined, now),
-    ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now), stage3: stage3View(life, uid, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

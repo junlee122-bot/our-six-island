@@ -34,9 +34,10 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
-import { DISTRICTS, districtOpen } from './lounge-districts.ts';
+import { DISTRICTS, districtOpen, isDistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
+import { STAGE3_ACTION_PLACE, festivalDay, isStage3Action, stage3ActionAreas } from './lounge-stage3-data.ts';
 // 가게 나누기 · 음식 시스템: shops' districts and where meals are eaten.
 import { SHOP_INFO, isShopId, shopArea } from './lounge-shops.ts';
 import { DISH_BY_ID } from './lounge-items.ts';
@@ -48,6 +49,16 @@ import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
 import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
 import { atHubCounter, hubCounterFor, hubCounterReject } from './lounge-hub-counters.ts';
+import { listStocks, materializeStocks, stocksAction, stocksView, stockWealth, type StockNews, type StockState } from './lounge-stocks.ts';
+import { addNews } from './lounge-life-plus.ts';
+import { ACTORS } from './lounge-roster.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): the deck only while a voyage is on; boarding at the pier.
+import { isVoyageAction } from './lounge-voyage-data.ts';
+import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
+import { regionToNetwork } from './lounge-areas.ts';
+import { HARBOR_VOYAGE } from './lounge-harbor-layout.ts';
+/** A voyage's deck accepts me a few seconds before the departure (clock slack). */
+const DECK_EARLY_MS = 5_000;
 /** The life state without the reset's done-mark (for the "did anything change" check). */
 const withoutResetMark = (life: LifeState) => {
   const { roomsReset: _mark, ...rest } = life;
@@ -90,6 +101,8 @@ export type CloudWorld = {
   loginGifts?: Record<string, LoginGift>;
   /** 테이블 기록: per-game results and the weekly table (lounge-table-stats.ts). */
   tableStats?: TableStats;
+  /** 범마을 증권 (lounge-stocks.ts). Its seed never leaves the server. */
+  stocks?: StockState;
 };
 export type CloudCommand = {
   op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
@@ -105,6 +118,8 @@ export type CloudCommand = {
    * leaves `life` out when it has not changed (most polls during a game).
    */
   lifeHash?: string;
+  /** Same for the stock market view (lounge-stocks.ts stocksView). */
+  stocksHash?: string;
 };
 export class CloudError extends Error {
   status: number;
@@ -191,16 +206,35 @@ export async function commandHash(c: CloudCommand) {
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
 }
-function wallet(ledger: LoungeLedger, id: string, now: number, life?: LifeState) {
+function wallet(ledger: LoungeLedger, id: string, now: number, life?: LifeState, stocks?: StockState) {
   const bank = new LoungeBank(null);
   bank.commit(ledger);
-  return bank.view('wallet-' + id, now, life ? lifeWealth(life, id) : 0);
+  return bank.view('wallet-' + id, now, (life ? lifeWealth(life, id) : 0) + stockWealth(stocks, id));
 }
-/** Village context a hosted room needs: flags (VIP stakes) and bag wealth (relief). */
-function roomContext(r: LoungeRoom, life: LifeState) {
+/** Village context a hosted room needs: flags (VIP stakes) and bag and share wealth (relief). */
+function roomContext(r: LoungeRoom, life: LifeState, stocks?: StockState) {
   r.villageFlags = [...(life.flags ?? [])];
-  r.wealthOf = (w) => lifeWealth(life, w.replace(/^wallet-/, ''));
+  r.wealthOf = (w) => lifeWealth(life, w.replace(/^wallet-/, '')) + stockWealth(stocks, w.replace(/^wallet-/, ''));
   return r;
+}
+/** 범마을 증권: a fresh 128-bit seed for a new market (server only). */
+const stockSeed = () => [...crypto.getRandomValues(new Uint8Array(16))].map((n) => n.toString(16).padStart(2, '0')).join('');
+/** Market lines a day may add to the village news (상한가·하한가, 반대매매, the day's headline). */
+const STOCK_NEWS_DAY = 4;
+function stockNewsInto(life: LifeState, news: StockNews[], now: number) {
+  const today = kstDay(now);
+  let added = false;
+  for (const n of news) {
+    const day = kstDay(n.at);
+    if (day < today - 1) continue;
+    const lines = life.news?.find((d) => d.day === day)?.lines ?? [];
+    if (lines.some((l) => l.key === n.key) || lines.filter((l) => l.kind === 'stock').length >= STOCK_NEWS_DAY) continue;
+    const actors = n.uids.flatMap((u) => (Object.hasOwn(life.actors, u) ? [life.actors[u]] : []));
+    const text = n.text.replace('{actor}', actors.length ? (ACTORS[actors[0]] ?? '누군가') : '누군가');
+    addNews(life, n.at, n.key, n.kind, text, actors);
+    added = true;
+  }
+  return added;
 }
 /** Refund whatever a broken room still holds, so one room cannot wedge the world. */
 function isolateRoom(ledger: LoungeLedger, snapshot: HostedRoomSnapshot) {
@@ -307,6 +341,24 @@ export function cloudTransition(
       notifications.add(c);
   }
   g.ledger = registerWallet(g.ledger, 'wallet-' + member.id);
+  const mutating = !['read', 'wallet'].includes(command.op);
+  // 범마을 증권: catch the market up to now (prices, dividends, interest, forced
+  // sales). Only a command that writes anyway stores it; a read looks only.
+  if (mutating) {
+    const inputs = { ledger: g.ledger, casino: g.finance?.casino };
+    if (!g.stocks) g.stocks = listStocks(stockSeed(), now, inputs);
+    else {
+      const m = materializeStocks(g.stocks, g.ledger, inputs, now);
+      if (m.changed) {
+        g.stocks = m.state;
+        g.ledger = m.ledger;
+        if (m.news.length) {
+          const life = readLife(g.life);
+          if (stockNewsInto(life, m.news, now)) g.life = life;
+        }
+      }
+    }
+  }
   let current = Object.keys(g.rooms).find((c) => g.rooms[c].leases[member.id]),
     target = command.code ? roomCode(command.code) : null;
   let ok = true,
@@ -314,7 +366,6 @@ export function cloudTransition(
     status = 200;
   /** A read's lease whose `seen` is refreshed only if we commit anyway (D-3). */
   let piggyback: Lease | null = null;
-  const mutating = !['read', 'wallet'].includes(command.op);
   if (
     mutating &&
     (!UUID.test(command.requestId ?? '') ||
@@ -388,6 +439,20 @@ export function cloudTransition(
         current = target;
         notifications.add(target);
         g.life = ensureLifeMember(readLife(g.life), member.id, member.actor);
+      } else if (command.op === 'action' && command.action?.kind === 'stock') {
+        // 범마을 증권: orders at the server's price; new positions only inside the 증권사.
+        const entry = target ? g.rooms[target] : undefined, lease = entry?.leases[member.id];
+        if (!entry || !lease || lease.connection !== command.connection)
+          throw new CloudError('마을에 다시 접속한 뒤 주문해 주세요.', 409);
+        if (!Number.isSafeInteger(command.sequence) || command.sequence! <= lease.sequence)
+          throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
+        lease.sequence = command.sequence!;
+        lease.seen = now;
+        const player = entry.snapshot.players.find((p) => p.id === member.id);
+        if (!player || !g.stocks) throw new CloudError('마을에 다시 접속한 뒤 주문해 주세요.', 409);
+        const next = stocksAction(g.stocks, g.ledger, member.id, command.action, now, { area: player.area ?? 'village' });
+        g.stocks = next.state;
+        g.ledger = next.ledger;
       } else if (command.op === 'action' && command.action?.kind === 'finance') {
         const entry = target ? g.rooms[target] : undefined, lease = entry?.leases[member.id];
         if (!entry || !lease || lease.connection !== command.connection)
@@ -432,7 +497,21 @@ export function cloudTransition(
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
               x: player.x, y: player.y,
               hill: (life.flags ?? []).includes('district-hillside'),
+              ranch: (life.flags ?? []).includes('district-ranch'),
+              foothill: (life.flags ?? []).includes('district-foothill'),
             }, now);
+          }
+          if (isVoyageAction(command.action)) {
+            // Boarding at the pier; the 멀미약 at its seller (츠나데 텃밭, 메르시 의원).
+            const where = voyageActionArea(command.action);
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (where && (!lease || !player || (player.area ?? 'village') !== where))
+              throw new CloudError(where === 'harbor' ? '항구 큰 선착장의 출항 안내판 앞에서 타 주세요.' : '멀미약은 파는 곳에 가서 사 주세요.', 409);
+          }
+          if ((command.action as { kind?: string; spot?: unknown }).kind === 'anglerCast' && (command.action as { spot?: unknown }).spot === 'offshore') {
+            // 먼바다: casting from the deck only (the fishing engine checks the voyage itself).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'offshore') throw new CloudError('배 위에서만 먼바다 낚시를 할 수 있어요.', 409);
           }
           if ((command.action as { kind?: string }).kind === 'cupClaim' && (readLife(g.life).flags ?? []).includes('district-harbor')) {
             // 주간 낚시 대회 is held at the harbor once it is open: prizes are handed out at 낚시조합.
@@ -448,6 +527,14 @@ export function cloudTransition(
             const shop = townActionShop(command.action.kind);
             if (!lease || !player || (player.area !== where && (!shop || player.area !== shop)))
               throw new CloudError(`${where === 'tavern' ? '허풍 주점' : DISTRICTS[where].name}에 가서 해 주세요.`, 409);
+          }
+          if (isStage3Action(command.action)) {
+            // 3단계: 목장·과수원 / 산기슭 마을 (in the district or the shop's own room; 운세 on a
+            // festival day also on the hub plaza, lounge-stage3-data.ts).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            const places = stage3ActionAreas(command.action.kind, festivalDay(kstDay(now)));
+            if (!lease || !player || !places.includes(player.area ?? 'village'))
+              throw new CloudError(`${DISTRICTS[STAGE3_ACTION_PLACE[command.action.kind].district].name}에 가서 해 주세요.`, 409);
           }
           {
             // 가게 나누기: buying or selling "at" a shop needs me at its counter's district.
@@ -524,7 +611,7 @@ export function cloudTransition(
         const id = 'wallet-' + member.id;
         if (!dailyGrantInfo(g.ledger, id, now).available)
           throw new CloudError(REJECT.daily, 409);
-        g.ledger = claimDailyGrant(g.ledger, id, now, lifeWealth(readLife(g.life), member.id));
+        g.ledger = claimDailyGrant(g.ledger, id, now, lifeWealth(readLife(g.life), member.id) + stockWealth(g.stocks, member.id));
       } else if (
         command.op === 'action' ||
         command.op === 'leave' ||
@@ -548,7 +635,7 @@ export function cloudTransition(
         if (mutating) lease.sequence = command.sequence!;
         if (mutating || now - lease.seen > SEEN_REFRESH_MS) lease.seen = now;
         else if (now - lease.seen > SEEN_PIGGYBACK_MS) piggyback = lease;
-        const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life));
+        const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life), g.stocks);
         if (command.op === 'leave') {
           r.hostedDrop(member.id);
           delete entry.leases[member.id];
@@ -573,15 +660,18 @@ export function cloudTransition(
           const gated =
             action.kind !== 'area'
               ? null
-              : action.area === 'harbor' || action.area === 'hillside'
+              : isDistrictId(action.area) && action.area !== 'market'
                 ? action.area
                 : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
                   ? SHOP_INTERIORS[action.area].district
                   : null;
-          if (gated === 'harbor' || gated === 'hillside') {
+          if (gated) {
             const flags = readLife(g.life).flags ?? [];
             if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);
           }
+          // 먼바다: the deck is there only while my voyage is out.
+          if (action.kind === 'area' && action.area === 'offshore' && !voyageAt(readLife(g.life), member.id, now, DECK_EARLY_MS))
+            throw new CloudError('배가 떠 있을 때만 갑판에 오를 수 있어요.', 409);
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;
           if (action.kind === 'party') {
@@ -610,7 +700,7 @@ export function cloudTransition(
             if (after !== before) g.life = after;
           }
           // The first walk into a district (for the 친구에게 가기 signpost).
-          if (action.kind === 'area' && (action.area === 'market' || action.area === 'harbor' || action.area === 'hillside')) {
+          if (action.kind === 'area' && isDistrictId(action.area)) {
             const life = readLife(g.life);
             if (!life.ext?.[member.id]?.town?.seen?.includes(action.area)) {
               const next = ensureLifeMember(life, member.id, member.actor);
@@ -619,6 +709,14 @@ export function cloudTransition(
           }
           // A coalesced look is applied by a later tick; no broadcast now.
           quiet = r.hostedCoalesced;
+        }
+        // 먼바다: a voyage that ran out (or ended early) puts me back on the pier
+        // with my next command or read (nothing has to run at the 20-minute mark).
+        const aboard = r.hostedPlayer(member.id);
+        if (aboard?.area === 'offshore' && !voyageAt(readLife(g.life), member.id, now, DECK_EARLY_MS)) {
+          const pier = regionToNetwork('harbor', HARBOR_VOYAGE.landing);
+          r.hostedAttempt(member.id, { kind: 'area', area: 'harbor', x: pier.x, y: pier.y }, now);
+          quiet = false;
         }
         r.hostedTick(now);
         saveRoom(target, r, entry.leases);
@@ -723,6 +821,12 @@ export function cloudTransition(
   const packet = runtime ? runtime.hostedPacket(member.id) : null;
   // serverNow ticks on every call; the client stamps it from the response.
   const lifeHash = viewHash({ ...life, serverNow: 0 });
+  // 범마을 증권: a read shows the market caught up in memory only.
+  const shown = g.stocks
+    ? mutating ? g.stocks : materializeStocks(g.stocks, g.ledger, { ledger: g.ledger, casino: g.finance?.casino }, now).state
+    : null;
+  const stocks = shown ? stocksView(shown, member.id, lifeState.actors, now) : null;
+  const stocksHash = stocks ? viewHash(stocks) : '';
   const nextDue =
     entry && allowed ? snapshotNextDue(entry.snapshot) : Infinity;
   const response = {
@@ -732,9 +836,11 @@ export function cloudTransition(
     code: allowed ? target : '',
     host: allowed ? entry.snapshot.host : null,
     packet,
-    wallet: wallet(g.ledger, member.id, now, lifeState),
+    wallet: wallet(g.ledger, member.id, now, lifeState, g.stocks),
     ...(command.lifeHash === lifeHash ? {} : { life }),
     lifeHash,
+    ...(stocks && command.stocksHash !== stocksHash ? { stocks } : {}),
+    stocksHash,
     finance: financeView(g.finance, g.ledger, lifeState, member.id, now),
     tableStats: tableStatsView(
       readTableStats(g.tableStats, now),

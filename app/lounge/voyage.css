@@ -1,0 +1,44 @@
+/* 먼바다 낚싯배 (Voyage.tsx): tokens only. */
+.l-voyage-keeper { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--surface-sunken); }
+.l-voyage-keeper p { display: grid; gap: var(--sp-1); margin: 0; color: var(--text); font-size: var(--fs-body); }
+.l-voyage-keeper b { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; }
+.l-voyage-facts { display: grid; gap: var(--sp-2); margin: 0 0 var(--sp-3); }
+.l-voyage-facts div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: var(--sp-2); align-items: baseline; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-voyage-facts dt { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-voyage-facts dd { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; color: var(--text); font-size: var(--fs-body); }
+.l-voyage-facts dd[data-storm] { color: var(--pal-red-42); font-weight: var(--fw-semi); }
+.l-voyage-seats { display: inline-flex; gap: var(--sp-1); }
+.l-voyage-seats i { width: 14px; height: 14px; border-radius: 50%; background: var(--pal-teal-79); box-shadow: var(--edge-line); }
+.l-voyage-seats i[data-taken] { background: var(--pal-blue-42); }
+.l-voyage-aboard { margin: 0 0 var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--accent-soft); color: var(--text); font-size: var(--fs-body-s); }
+.l-voyage-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-3); }
+.l-voyage-haul { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.l-voyage-haul li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-1) var(--sp-2); padding: var(--sp-2); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); color: var(--text); font-size: var(--fs-body-s); }
+.l-voyage-haul em { font-style: normal; font-weight: var(--fw-semi); }
+.l-voyage-haul small { grid-column: 2 / 4; color: var(--text-soft); font-size: var(--fs-cap); }
+.l-voyage-total { margin: var(--sp-3) 0 0; color: var(--text); font-size: var(--fs-body); font-weight: var(--fw-semi); }
+.l-voyage-guests { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); margin: var(--sp-3) 0 0; padding: var(--sp-2) var(--sp-3); border: 0; border-radius: var(--r-m); background: var(--surface-sunken); }
+.l-voyage-guests legend { padding: 0; color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-voyage-guests label { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--text); font-size: var(--fs-body); }
+
+/* On the deck: the time left and 그만 돌아가기, top centre. */
+.l-voyage-hud { position: absolute; bottom: 92px; left: 50%; z-index: var(--z-hud-bar); display: inline-flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-size: var(--fs-body); transform: translateX(-50%); }
+.l-voyage-hud strong { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; color: var(--pal-blue-31); }
+.l-voyage-hud b { font-variant-numeric: tabular-nums; font-size: var(--fs-title-s); }
+.l-voyage-hud small { color: var(--leaf-800); font-size: var(--fs-cap); font-weight: var(--fw-semi); }
+
+/* The 3-second cast-off (and the way back): a boat slipping past the breakwater. */
+.l-sailout { position: fixed; inset: 0; z-index: var(--z-overlay); display: grid; place-items: end center; overflow: hidden; background: var(--pal-blue-74); }
+.l-sailout-sea { position: absolute; inset: 45% 0 0; background: linear-gradient(var(--pal-cyan-39), var(--pal-blue-24)); }
+.l-sailout-sea::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(176deg, transparent 0 26px, var(--pal-cyan-61) 26px 29px, transparent 29px 60px); opacity: 0.35; animation: l-sailout-waves 3s linear infinite; }
+.l-sailout-wall { position: absolute; left: 0; bottom: 30%; width: 38%; height: 9%; background: var(--pal-grey-62); clip-path: polygon(0 30%, 100% 0, 100% 100%, 0 100%); animation: l-sailout-wall 3s ease-in forwards; }
+.l-sailout-boat { position: absolute; left: 30%; bottom: 33%; width: 150px; height: 70px; background: linear-gradient(var(--pal-grey-96) 0 55%, var(--pal-blue-42) 55% 68%, var(--pal-red-45) 68%); clip-path: polygon(0 40%, 62% 40%, 62% 0, 82% 0, 82% 40%, 100% 40%, 92% 100%, 8% 100%); animation: l-sailout-boat 3s ease-in-out forwards; }
+.l-sailout p { position: relative; margin: 0 0 var(--sp-6); padding: var(--sp-2) var(--sp-4); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-family: var(--font-display); font-size: var(--fs-title-s); }
+.l-sailout[data-back] .l-sailout-boat { animation-direction: reverse; }
+.l-sailout[data-back] .l-sailout-wall { animation-direction: reverse; }
+@keyframes l-sailout-boat { from { transform: translate(-40vw, 0) scale(1); } to { transform: translate(55vw, -14vh) scale(0.55); } }
+@keyframes l-sailout-wall { from { transform: translateX(0); } to { transform: translateX(-60%); } }
+@keyframes l-sailout-waves { from { background-position: 0 0; } to { background-position: 240px 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .l-sailout-boat, .l-sailout-wall, .l-sailout-sea::after { animation: none; }
+}

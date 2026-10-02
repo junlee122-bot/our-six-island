@@ -6,6 +6,7 @@ import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
 import { BAITS, BEHAVIOUR_NAME, FISH_PROFILE, POT_FISH, TACKLES, type TackleId } from '../lounge-fish-data';
+import { FISH_GATE, gateText } from '../lounge-fish-data-fresh';
 import { gramsText, rarityOf, type AnglingView } from '../lounge-fish-engine';
 import { SEASON_INFO } from '../lounge-calendar';
 import { ACTORS } from '../lounge-roster';
@@ -129,6 +130,12 @@ function DexPage({ view, a, spot }: { view: CloudRoomView; a: AnglingView; spot?
                 <dd>
                   낚시 Lv{p.legend.level} · 낚싯대 {p.legend.rod}단 이상 · 친구마다 한 번
                 </dd>
+              </>
+            )}
+            {FISH_GATE[picked] && (
+              <>
+                <dt>조건</dt>
+                <dd>{gateText(FISH_GATE[picked])}</dd>
               </>
             )}
             <dt>크기</dt>

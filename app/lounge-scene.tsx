@@ -267,6 +267,11 @@ const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tag
   coop: shopArt('coop'),
   general: shopArt('general'),
   fishmarket: shopArt('fishmarket'),
+  barn: shopArt('barn'),
+  orchardShop: shopArt('orchardShop'),
+  smithy: shopArt('smithy'),
+  clinic: shopArt('clinic'),
+  broker: shopArt('broker'),
   salon: { src: LOUNGE_ASSETS.wardrobe, alt: '그웬의 미용실', short: '미용실', tagline: '그웬과 오늘의 모습을 골라요', title: '미용실' },
   bank: {
     src: LOUNGE_ASSETS.room, alt: '범마을 은행', short: '은행',
@@ -499,8 +504,8 @@ export function RoomFloor({
   };
   const shop = isShopArea(area) ? SHOP_INTERIORS[area] : null;
   const serviceSpot = shop ? { x: shop.front.x, y: shop.front.y - 9 } : area === 'casino' ? CASINO_LENDER_SPOT : area === 'salon' ? SALON_STYLIST_SPOT : BANKER_SPOT;
-  const serviceName = shop ? NPCS[shop.owner].name : area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME;
-  const serviceTitle = shop ? `${NPCS[shop.owner].name} · ${shop.short} 계산대` : area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구';
+  const serviceName = shop ? (shop.owner ? NPCS[shop.owner].name : shop.short) : area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME;
+  const serviceTitle = shop ? (shop.owner ? `${NPCS[shop.owner].name} · ${shop.short} ${shop.deskWord ?? '계산대'}` : `${shop.short} 창구`) : area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구';
   const serviceFoot = projectPlayer(serviceSpot, area);
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
@@ -583,8 +588,8 @@ export function RoomFloor({
         })}
         {(area === 'casino' || area === 'bank' || area === 'salon' || shop) && <button type="button" className="cf-service" data-testid={shop ? 'simple-counter' : area === 'casino' ? 'simple-lender' : area === 'salon' ? 'simple-stylist' : 'simple-banker'}
           style={{ left: `${serviceFoot.x}%`, top: `${serviceFoot.y}%` }} onClick={approachService}
-          aria-label={shop ? `${shop.short} 계산대로 걸어가기` : `${serviceName}에게 걸어가기`}>
-          <img src={shop ? LOUNGE_ASSETS[`chibi_${shop.owner}` as keyof typeof LOUNGE_ASSETS] : area === 'casino' ? LOUNGE_ASSETS.chibi_rose : area === 'salon' ? LOUNGE_ASSETS.chibi_gwen : LOUNGE_ASSETS.chibi_nyamo} alt="" draggable={false} />
+          aria-label={shop ? `${shop.short} ${shop.deskWord ?? '계산대'}로 걸어가기` : `${serviceName}에게 걸어가기`}>
+          {(!shop || shop.owner) && <img src={shop ? LOUNGE_ASSETS[`chibi_${shop.owner}` as keyof typeof LOUNGE_ASSETS] : area === 'casino' ? LOUNGE_ASSETS.chibi_rose : area === 'salon' ? LOUNGE_ASSETS.chibi_gwen : LOUNGE_ASSETS.chibi_nyamo} alt="" draggable={false} />}
           <span className="cf-service-name">{serviceTitle}</span>
         </button>}
         <button

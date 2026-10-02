@@ -38,7 +38,24 @@ export type FightSetup = {
   loss: number;
   /** A chest that shows up at tick `at` at height `pos` (null: none this time). */
   treasure: null | { at: number; pos: number };
+  /**
+   * 먼바다: the swell rocks the catch zone up and down by this much (track
+   * units, a triangle wave of SWAY_PERIOD ticks). Absent or 0 ashore and after
+   * a 멀미약.
+   */
+  sway?: number;
 };
+/** Ticks per swell (4 s). */
+export const SWAY_PERIOD = 160;
+/** The swell's offset at a tick: an integer triangle wave in [−amp, +amp]. */
+export function swayAt(amp: number, tick: number): number {
+  if (!amp) return 0;
+  const q = SWAY_PERIOD / 4,
+    p = ((tick % SWAY_PERIOD) + SWAY_PERIOD) % SWAY_PERIOD;
+  // 0 → +amp → 0 → −amp → 0 over one period.
+  const v = p < q ? p : p < 3 * q ? 2 * q - p : p - 4 * q;
+  return Math.trunc((amp * v) / q);
+}
 export type FightResult = {
   caught: boolean;
   ticks: number;
@@ -108,8 +125,14 @@ export class FightSim {
   get bar() {
     return this.setup.bar;
   }
+  /** Where the catch zone really is this tick (the bar plus the swell). */
+  zoneY() {
+    const amp = this.setup.sway ?? 0;
+    return amp ? clamp(this.state.barY + swayAt(amp, this.state.tick), 0, TRACK - this.setup.bar) : this.state.barY;
+  }
   inZone(y = this.state.fishY) {
-    return y >= this.state.barY && y <= this.state.barY + this.setup.bar;
+    const z = this.zoneY();
+    return y >= z && y <= z + this.setup.bar;
   }
   step(hold: boolean): FightState {
     const s = this.state,
@@ -252,7 +275,7 @@ export function botPlay(setup: FightSetup, { react = 3, look = 6 } = {}): { runs
     hold = false;
   while (!sim.state.done) {
     const s = sim.state,
-      mid = s.barY + div(setup.bar, 2) + s.barV * look;
+      mid = sim.zoneY() + div(setup.bar, 2) + s.barV * look;
     // Reaction: re-decide only every `react` ticks (3 = 75 ms), like a person.
     if (lag <= 0) {
       hold = s.fishY > mid;

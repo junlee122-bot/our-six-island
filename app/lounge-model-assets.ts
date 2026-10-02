@@ -185,3 +185,18 @@ export const SHOP_INTERIOR_MODELS = {
   iceBin: '/models/village/shop-interiors/iceBin.glb',
   fishFreezer: '/models/village/shop-interiors/fishFreezer.glb',
 } as const;
+/**
+ * 먼바다 낚싯배 (design-sea-fishing.md): Kenney Watercraft Kit 2.1 (CC0,
+ * kenney.nl), the shared colormap packed into each GLB
+ * (scripts/embed-glb-textures.mjs; originals in _originals/village/watercraft).
+ * Boats passing on the horizon, the harbor's small craft and buoys; the boat
+ * you walk on is built in code (lounge-boat-model.ts).
+ */
+export const WATERCRAFT_MODELS = {
+  boatFishing: '/models/village/watercraft/boat-fishing-small.glb',
+  boatTug: '/models/village/watercraft/boat-tug-a.glb',
+  boatRow: '/models/village/watercraft/boat-row-small.glb',
+  buoy: '/models/village/watercraft/buoy.glb',
+  buoyFlag: '/models/village/watercraft/buoy-flag.glb',
+} as const;
+export type WatercraftModel = keyof typeof WATERCRAFT_MODELS;

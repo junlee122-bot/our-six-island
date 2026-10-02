@@ -110,6 +110,13 @@
 .ih-casino .ih-host-name em {
   color: var(--pal-amber-77);
 }
+/* The host is out on a break: the table deals on its own (lounge-npc-schedule.ts npcAtPost). */
+.ih-host.away .ih-host-name {
+  opacity: 0.82;
+}
+.ih-host.away .ih-host-name .dh-face {
+  filter: grayscale(0.7);
+}
 .ih-lender-name {
   min-height: 44px;
   grid-auto-flow: column;

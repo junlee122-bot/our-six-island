@@ -10,6 +10,9 @@ import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
+import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lounge-shop-sales.ts';
+import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
+import { itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
 import {
   grantBeom,
@@ -310,6 +313,8 @@ export type UserExt = {
   lux?: { w: number; refs: string[] };
   /** 마을 확장 2단계: auction, shops, reading club, visited districts (lounge-town.ts). */
   town?: TownUser;
+  /** 마을 확장 3단계: animals, fruit trees, range upgrades, clinic and fortune (lounge-stage3.ts). */
+  s3?: Stage3User;
 };
 export type Memory = { id: string; kind: string; actors: number[]; text: string; at: number };
 export type NewsLine = { key: string; kind: string; text: string; actors: number[] };
@@ -333,6 +338,8 @@ export type LifeExt = {
   bondDay?: { day: number; keys: string[] };
   /** 마을 공사 2차 (PROJECTS). */
   projects?: Record<string, ProjectState>;
+  /** 3단계 가게 매출 집계 (lounge-shop-sales.ts; for the stock exchange). */
+  shopSales?: ShopSales;
   /** This week's festival fund. */
   festival?: FestivalState;
   /** Friend-life state: NPC lines, heart rewards, museum stamps, festivals (lounge-life-social). */
@@ -548,6 +555,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (npcBoard) out.npcBoard = npcBoard;
   const town = readTownUser(x.town);
   if (town) out.town = town;
+  const s3 = readStage3User(x.s3);
+  if (s3) out.s3 = s3;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {
@@ -669,6 +678,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     if (safe(fest.doneAt) && fest.doneAt > 0) state.doneAt = fest.doneAt;
     out.festival = state;
   }
+  const shopSales = readShopSales(v.shopSales);
+  if (shopSales) out.shopSales = shopSales;
   const flags = idList(v.flags, 32, (f) => own(VILLAGE_FLAGS, f));
   if (flags.length) out.flags = flags;
   const memories = Array.isArray(v.memories)
@@ -797,13 +808,29 @@ export function demandHalfLife(id: string): number {
   if (def.kind === 'dish') return 4;
   return 10;
 }
-/** Price multiplier of the k-th unit (0-based) of `id` sold today. */
-export const demandMult = (id: string, k: number) =>
-  Math.max(DEMAND_FLOOR, 0.5 ** (Math.max(0, k) / demandHalfLife(id)));
+/**
+ * Fish and crab-pot catches (item kind 'fish'). They have their own selling
+ * rules (decided 2026-10-02): FISH_DEMAND_FREE of a species a day at the full
+ * price, and no market saturation or daily sell cap (their 범 never counts in
+ * life.sold, so they do not tire the market for crops and goods either).
+ */
+export const isFishSale = (id: string) => ITEM_BY_ID[id]?.kind === 'fish';
+/** Units of the same fish a day that still fetch the full price. */
+export const FISH_DEMAND_FREE = 4;
+/**
+ * Price multiplier of the k-th unit (0-based) of `id` sold today. Fish skip
+ * the first FISH_DEMAND_FREE units, then sag on the usual half-life curve
+ * (the 5th pays what the 2nd used to).
+ */
+export function demandMult(id: string, k: number) {
+  let step = Math.max(0, k);
+  if (isFishSale(id)) step = step < FISH_DEMAND_FREE ? 0 : step - FISH_DEMAND_FREE + 1;
+  return Math.max(DEMAND_FLOOR, 0.5 ** (step / demandHalfLife(id)));
+}
 /**
  * Market saturation: once a friend has sold MARKET_SOFT범 today (all goods
- * together), each further 범 of sales pays 0.5^(over / MARKET_HALF). Casual
- * days never reach it; it only tapers very long selling days (no hard stop).
+ * together, fish aside), each further 범 of sales pays 0.5^(over / MARKET_HALF).
+ * Casual days never reach it; it only tapers very long selling days (no hard stop).
  */
 export const MARKET_SOFT = 30_000;
 export const MARKET_HALF = 20_000;
@@ -811,12 +838,13 @@ export const marketMult = (soldBeom: number) =>
   soldBeom <= MARKET_SOFT ? 1 : 0.5 ** ((soldBeom - MARKET_SOFT) / MARKET_HALF);
 /**
  * 범 for selling n more units at `unit` each after `sold` units of the same
- * thing and `soldBeom` 범 of everything today.
+ * thing and `soldBeom` 범 of everything today (ignored for fish).
  */
 export function sellTotal(id: string, unit: number, sold: number, n: number, soldBeom = 0) {
+  const fish = isFishSale(id);
   let total = 0;
   for (let i = 0; i < n; i++)
-    total += Math.max(1, Math.round(unit * demandMult(id, sold + i) * marketMult(soldBeom + total)));
+    total += Math.max(1, Math.round(unit * demandMult(id, sold + i) * (fish ? 1 : marketMult(soldBeom + total))));
   return total;
 }
 /**
@@ -1775,17 +1803,23 @@ export function plusAction(
             (def!.kind === 'fish' ? fishSaleMult(life, uid, def!.id, a.n) : 1),
         ),
         amount = shopSaleAmount(life, uid, actor, a.at, def!.id, base, now),
+        fish = def!.kind === 'fish',
         left = sellCapLeft(life, uid, now);
-      if (amount > left)
+      // Fish are outside the daily cap and the market saturation (see isFishSale).
+      if (!fish && amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
-      if (def!.kind === 'fish') takeSoldFishQuality(life, uid, def!.id, a.n);
+      if (fish) takeSoldFishQuality(life, uid, def!.id, a.n);
       addInv(life, uid, def!.id, -a.n);
       noteDemand(life, uid, now, def!.id, a.n);
-      const day = kstDay(now),
-        prev = life.sold[uid];
-      life.sold[uid] = { day, amount: (prev?.day === day ? prev.amount : 0) + amount };
+      if (!fish) {
+        const day = kstDay(now),
+          prev = life.sold[uid];
+        life.sold[uid] = { day, amount: (prev?.day === day ? prev.amount : 0) + amount };
+      }
       bump(life, uid, 'earned', amount);
-      next = grant(next, life, uid, amount, 'sell-' + def!.kind, now);
+      next = grant(next, life, uid, amount, itemSaleReason(def!.id, def!.kind), now);
+      // 가게 매출 집계: what a stage-3 shop paid at its own counter (lounge-shop-sales.ts).
+      if (isStockShop(a.at)) recordShopSale(life, a.at, { buy: amount }, now);
       break;
     }
     case 'donate': {

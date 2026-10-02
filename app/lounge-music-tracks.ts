@@ -7,8 +7,8 @@
 // paths that do not, so the standalone build never references a missing file.
 // Pure helpers only (no AudioContext here): lounge-audio.ts does the playback.
 
-export type MusicPlace = 'casino' | 'hall' | 'tavern' | 'market' | 'harbor' | 'hillside';
-export const MUSIC_PLACES: readonly MusicPlace[] = ['casino', 'hall', 'tavern', 'market', 'harbor', 'hillside'];
+export type MusicPlace = 'casino' | 'hall' | 'tavern' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore';
+export const MUSIC_PLACES: readonly MusicPlace[] = ['casino', 'hall', 'tavern', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore'];
 
 export type MusicTrack = {
   /** Candidate files, best first; the first one the browser can play is fetched. */
@@ -34,6 +34,10 @@ export const MUSIC_TRACKS: Record<MusicPlace, MusicTrack> = {
   market: { files: [] },
   harbor: { files: [] },
   hillside: { files: [] },
+  ranch: { files: [] },
+  foothill: { files: [] },
+  // 먼바다 낚싯배's deck: the shanty in lounge-music-districts.ts (OFFSHORE).
+  offshore: { files: [] },
 };
 
 /** What a map plays: its piece, and the outdoor ambience under it. */
@@ -43,7 +47,7 @@ export type AreaSound = {
    * Outdoor bed on the ambience channel: `water` 0..1 (the hub river's loop),
    * `waves` turns it into a slow surf swell, `day` / `night` the chirps.
    */
-  ambience: { water: number; waves?: boolean; day: 'birds' | 'gulls' | 'none'; night: 'crickets' | 'none' };
+  ambience: { water: number; waves?: boolean; day: 'birds' | 'gulls' | 'none'; night: 'crickets' | 'none'; engine?: boolean };
 };
 /**
  * Music and ambience per outdoor district (a new district adds one entry
@@ -54,6 +58,11 @@ export const AREA_SOUND: Partial<Record<string, AreaSound>> = {
   market: { music: 'market', ambience: { water: 0, day: 'birds', night: 'crickets' } },
   harbor: { music: 'harbor', ambience: { water: 0.7, waves: true, day: 'gulls', night: 'none' } },
   hillside: { music: 'hillside', ambience: { water: 0, day: 'birds', night: 'crickets' } },
+  // The stream through the ranch, birds by day; the foothill's mountain wind is in its piece.
+  ranch: { music: 'ranch', ambience: { water: 0.25, day: 'birds', night: 'crickets' } },
+  foothill: { music: 'foothill', ambience: { water: 0, day: 'birds', night: 'crickets' } },
+  // 먼바다: surf against the hull, gulls by day and the boat's idling engine.
+  offshore: { music: 'offshore', ambience: { water: 1, waves: true, day: 'gulls', night: 'none', engine: true } },
 };
 export const areaSound = (area: string | null | undefined): AreaSound | null => (area && AREA_SOUND[area]) || null;
 

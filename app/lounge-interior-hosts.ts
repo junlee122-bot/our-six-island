@@ -31,6 +31,8 @@ type Host = {
   since: number;
   lift: number;
   seed: number;
+  /** The table this host would stand at (shown, or empty while she is out). */
+  best?: boolean;
 };
 
 export function createInteriorHosts(
@@ -134,6 +136,8 @@ export function createInteriorHosts(
       t: number,
       tables: ReadonlyMap<GameKind, { phase: TablePhase; seats: number }>,
       reduced: boolean,
+      /** Whether the host is at her post (lounge-npc-schedule.ts npcAtPost); out, the table deals on its own. */
+      present: (id: HostId) => boolean = () => true,
     ) {
       let changed = false;
       // One figure per host: 루미 (or 매화) stands at the busiest of her
@@ -149,7 +153,8 @@ export function createInteriorHosts(
         if (!best || score(host) > score(best)) busiest.set(host.id, host);
       }
       for (const host of hosts) {
-        const shown = busiest.get(host.id) === host;
+        host.best = busiest.get(host.id) === host;
+        const shown = host.best && present(host.id);
         if (host.mesh.visible !== shown) {
           host.mesh.visible = shown;
           host.shadow.visible = shown;
@@ -187,10 +192,10 @@ export function createInteriorHosts(
       }
       return changed && hosts.some((h) => h.mesh.material.visible);
     },
-    /** Where the host at a table stands now (for her name tag). */
+    /** Where the host at a table stands now, or her empty spot while she is out (for her name tag). */
     standAt(game: GameKind) {
       const host = hosts.find((h) => h.game === game);
-      return host?.mesh.visible ? { x: host.mesh.position.x, z: host.mesh.position.z } : null;
+      return host?.best ? { x: host.mesh.position.x, z: host.mesh.position.z } : null;
     },
     dispose() {
       disposed = true;

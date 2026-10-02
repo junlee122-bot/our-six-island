@@ -8,6 +8,13 @@
 //   whistle) answer, string swells and a surf-like noise swell every few bars.
 // - ③ 언덕 주택가: a calm F-major pastoral, 72 bpm, no drums: soft piano broken
 //   chords, a 대금 flute line and a quiet violin counter-line (library-quiet).
+// - ④ 목장·과수원 "들길의 오후": a lilting D-major 6/8 country tune, 104 bpm:
+//   a strummed pluck (가야금 voice in short chord strums like a ukulele), a
+//   dotted bass, a 대금 pipe tune with a reed answer and a soft brush on two.
+// - ⑤ 산기슭 마을 "풀무와 산바람": a D-dorian work song, 92 bpm in 4/4: the
+//   anvil rings on the beat with a hammer pickup, low strings and a bass
+//   drone, a brass call answered by the 대금, a mountain-wind swell. At night
+//   the hammer rests and only the wind, the drone and a slow pipe stay.
 // Every piece has a night variant (state.night: no drums, sparser, softer, and
 // `nightTempo` slows it a little). Melodies are seeded random walks over chord
 // tones (lounge-music-score.ts melody), so no existing tune is quoted.
@@ -283,5 +290,223 @@ export const HILLSIDE: PieceSpec = {
     ['A', 'A2', 'C', 'B', 'T'],
   ],
   bar: hillsideBar,
+  nightTempo: 0.9,
+};
+
+// ------------------------------------------------------------ ④ 목장·과수원
+const Dr = ch(2, [0, 4, 7]),
+  Gr = ch(7, [0, 4, 7]),
+  Ar = ch(9, [0, 4, 7]),
+  A7r = ch(9, [0, 4, 7, 10]),
+  Bmr = ch(11, [0, 3, 7]),
+  Emr = ch(4, [0, 3, 7]),
+  F7r = ch(6, [0, 3, 7]),
+  DGr = ch(2, [0, 4, 7], 7);
+export const D_MAJOR = [2, 4, 6, 7, 9, 11, 1];
+/** Lilting 6/8 cells (eighths). */
+export const RANCH_RHYTHMS: readonly Rhythm[] = [
+  [[0, 2], [2, 1], [3, 2], [5, 1]],
+  [[0, 3], [3, 3]],
+  [[0, 1], [1, 1], [2, 1], [3, 3]],
+  [[0, 2], [2, 1], [3, 3]],
+];
+
+export function ranchBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[] {
+  const { section: s, bar, chord } = plan;
+  const night = state.night;
+  const ev: NoteEvent[] = [];
+  const b = bassOf(chord),
+    fifth = nearest(b + 7, pcsOf(chord), 33, 52),
+    end = bar === plan.of - 1;
+  // A dotted country bass: root on one, fifth on four.
+  ev.push({ step: 0, inst: 'bass', midi: b, vel: night ? 0.55 : 0.78, dur: 2.5 });
+  if (!night) ev.push({ step: 3, inst: 'bass', midi: fifth, vel: 0.6, dur: 2.5 });
+  // The strum: short chords on one and four, a lighter off-beat by day.
+  const strum = voicing(chord, 62, 55, 74);
+  for (const [step, vel] of night ? ([[0, 0.16]] as const) : ([[0, 0.24], [2, 0.14], [3, 0.2], [5, 0.12]] as const))
+    strum.forEach((m, i) => ev.push({ step: step + i * 0.06, inst: 'gayageum', midi: m, vel: vel * (night ? 1 : 0.9), dur: night ? 5 : 1.2 }));
+  if (!night) ev.push(hit(3, 'brush', 0.08, 1));
+  if (s === 'A' || s === 'A2') {
+    const line = motif(state, 'R' + bar, plan, () =>
+      melody('daegeum', chord, RANCH_RHYTHMS[bar % RANCH_RHYTHMS.length], D_MAJOR, state.lead, 69, 86, rng, { cadence: s === 'A2' && end, strong: 3 }),
+    );
+    state.lead = last(line).midi;
+    ev.push(...soften(line, night ? 0.42 : 0.6));
+  } else if (s === 'B') {
+    // The reed answers a third lower, every other bar the pipe returns.
+    const inst = bar % 2 ? 'daegeum' : 'reed';
+    const line = melody(inst, chord, RANCH_RHYTHMS[(bar + 1) % RANCH_RHYTHMS.length], D_MAJOR, state.high, 64, 81, rng, { strong: 3 });
+    state.high = last(line).midi;
+    ev.push(...soften(line, night ? 0.36 : 0.5));
+  } else if (s === 'C') {
+    ev.push({ step: 0, inst: 'violin', midi: nearest(state.lead - 3, pcsOf(chord), 62, 78), vel: night ? 0.35 : 0.5, dur: 6 });
+  } else if (end) ev.push(...chordAt(0, 'piano', voicing(chord, 67, 60, 79), 0.24, 6));
+  else ev.push({ step: 0, inst: 'daegeum', midi: nearest(state.lead, pcsOf(chord), 69, 84), vel: night ? 0.3 : 0.42, dur: 5 });
+  return ev;
+}
+
+export const RANCH: PieceSpec = {
+  id: 'ranch',
+  bpm: 104,
+  stepsPerBeat: 2,
+  stepsPerBar: 6,
+  sections: {
+    A: [Dr, Gr, Dr, Ar, Dr, Gr, A7r, Dr],
+    B: [Gr, Gr, Dr, Bmr, Emr, Emr, A7r, A7r],
+    A2: [Dr, Gr, Dr, Ar, Bmr, Gr, A7r, Dr],
+    C: [Bmr, F7r, Gr, Dr, Emr, Ar, DGr, A7r],
+    T: [Dr, Gr, A7r, Dr],
+  },
+  forms: [
+    ['A', 'B', 'A2', 'C', 'T'],
+    ['A', 'A2', 'C', 'B', 'T'],
+    ['A', 'C', 'A2', 'B', 'T'],
+  ],
+  bar: ranchBar,
+  nightTempo: 0.88,
+};
+
+// ------------------------------------------------------------ ⑤ 산기슭 마을
+const Dmf = ch(2, [0, 3, 7]),
+  Dm7f = ch(2, [0, 3, 7, 10]),
+  Gf = ch(7, [0, 4, 7]),
+  Cf = ch(0, [0, 4, 7]),
+  Fmf = ch(5, [0, 4, 7]),
+  Amf = ch(9, [0, 3, 7]),
+  Bbf = ch(10, [0, 4, 7]);
+export const D_DORIAN = [2, 4, 5, 7, 9, 11, 0];
+/** Work-song cells (16ths). */
+export const FOOTHILL_RHYTHMS: readonly Rhythm[] = [
+  [[0, 4], [4, 2], [6, 2], [8, 8]],
+  [[0, 6], [6, 2], [8, 4], [12, 4]],
+  [[0, 2], [2, 2], [4, 4], [8, 8]],
+  [[0, 8], [8, 4], [12, 4]],
+];
+/** The anvil's pattern by day: on the beats, with a hammer pickup before three. */
+const ANVIL_STEPS: readonly (readonly [number, number])[] = [
+  [0, 0.5],
+  [4, 0.32],
+  [7, 0.2],
+  [8, 0.44],
+  [12, 0.3],
+];
+
+export function foothillBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[] {
+  const { section: s, bar, chord } = plan;
+  const night = state.night;
+  const ev: NoteEvent[] = [];
+  const b = bassOf(chord),
+    end = bar === plan.of - 1;
+  // A low drone under everything.
+  ev.push({ step: 0, inst: 'bass', midi: b, vel: night ? 0.5 : 0.7, dur: night ? 15 : 7 });
+  if (!night) ev.push({ step: 8, inst: 'bass', midi: b, vel: 0.55, dur: 7 });
+  // The anvil (the smith's hammer) — resting in section C and at night.
+  if (!night && s !== 'C') for (const [step, vel] of ANVIL_STEPS) ev.push({ step, inst: 'anvil', midi: 84, vel, dur: 1 });
+  if (!night && s !== 'C') ev.push(hit(0, 'kick', 0.36), hit(8, 'kick', 0.3));
+  // Low strings hold the chord.
+  ev.push(...chordAt(0, 'strings', voicing(chord, 55, 48, 67), night ? 0.16 : 0.24, 15));
+  // Mountain wind every four bars.
+  if (bar % 4 === 0) ev.push({ step: 0, inst: 'swell', midi: 0, vel: night ? 0.34 : 0.26, dur: 12 });
+  if (s === 'A' || s === 'A2') {
+    const inst = night ? 'daegeum' : 'brass';
+    const line = motif(state, 'F' + bar, plan, () =>
+      melody(inst, chord, FOOTHILL_RHYTHMS[bar % FOOTHILL_RHYTHMS.length], D_DORIAN, state.lead, 62, 77, rng, { cadence: s === 'A2' && end, strong: 8 }),
+    );
+    state.lead = last(line).midi;
+    ev.push(...soften(line, night ? 0.4 : 0.5));
+  } else if (s === 'B') {
+    const line = melody('daegeum', chord, FOOTHILL_RHYTHMS[(bar + 2) % FOOTHILL_RHYTHMS.length], D_DORIAN, state.high, 69, 84, rng, { strong: 8 });
+    state.high = last(line).midi;
+    ev.push(...soften(line, night ? 0.38 : 0.55));
+  } else if (s === 'C') {
+    if (bar % 2 === 0) ev.push({ step: 0, inst: 'daegeum', midi: nearest(state.high, pcsOf(chord), 69, 84), vel: night ? 0.3 : 0.4, dur: 14 });
+  } else if (end) ev.push(...chordAt(0, 'piano', voicing(chord, 62, 55, 74), 0.22, 14));
+  else ev.push({ step: 0, inst: 'violin', midi: nearest(state.lead, pcsOf(chord), 62, 77), vel: night ? 0.3 : 0.42, dur: 12 });
+  return ev;
+}
+
+export const FOOTHILL: PieceSpec = {
+  id: 'foothill',
+  bpm: 92,
+  stepsPerBeat: 4,
+  stepsPerBar: 16,
+  sections: {
+    A: [Dmf, Dmf, Cf, Gf, Dmf, Fmf, Cf, Dmf],
+    B: [Fmf, Cf, Gf, Dm7f, Bbf, Fmf, Amf, Amf],
+    A2: [Dmf, Dmf, Cf, Gf, Dmf, Fmf, Amf, Dmf],
+    C: [Bbf, Bbf, Fmf, Fmf, Gf, Gf, Amf, Amf],
+    T: [Dmf, Cf, Amf, Dmf],
+  },
+  forms: [
+    ['A', 'B', 'A2', 'C', 'T'],
+    ['A', 'A2', 'B', 'C', 'T'],
+    ['A', 'C', 'B', 'A2', 'T'],
+  ],
+  bar: foothillBar,
+  nightTempo: 0.86,
+};
+
+// ------------------------------------------------------------ 먼바다 (허 선장's boat)
+// A slow D-mixolydian shanty in 6/8 (84 bpm): the bass rocks on one and four
+// like the swell, the accordion hums the tune, the 대금 answers far off, a
+// surf swell every two bars and no drums at all (design-sea-fishing.md §7).
+const Dd = ch(2, [0, 4, 7]),
+  Cd = ch(0, [0, 4, 7]),
+  Gd = ch(7, [0, 4, 7]),
+  Bmd = ch(11, [0, 3, 7]),
+  A7d = ch(9, [0, 4, 7, 10]);
+export const D_MIXOLYDIAN = [2, 4, 6, 7, 9, 11, 0];
+/** Rolling cells in eighths (6 per bar). */
+export const OFFSHORE_RHYTHMS: readonly Rhythm[] = [
+  [[0, 3], [3, 3]],
+  [[0, 2], [2, 1], [3, 3]],
+  [[0, 4], [4, 2]],
+  [[0, 6]],
+];
+export function offshoreBar(plan: BarPlan, state: ScoreState, rng: Rng): NoteEvent[] {
+  const { section: s, bar, chord } = plan;
+  const night = state.night;
+  const ev: NoteEvent[] = [];
+  const end = bar === plan.of - 1;
+  // The swell under it: bass on one and four, a soft chord on the dotted beats.
+  ev.push({ step: 0, inst: 'bass', midi: bassOf(chord), vel: night ? 0.5 : 0.62, dur: 3 });
+  ev.push({ step: 3, inst: 'bass', midi: bassOf(chord) + 7, vel: night ? 0.36 : 0.44, dur: 3 });
+  ev.push(...chordAt(0, night ? 'piano' : 'strings', voicing(chord, 62, 55, 69), night ? 0.14 : 0.2, 6));
+  if (bar % 2 === 0) ev.push({ step: 0, inst: 'swell', midi: 0, vel: night ? 0.3 : 0.38, dur: 6 });
+  if (s === 'A' || s === 'A2') {
+    const line = motif(state, 'O' + bar, plan, () =>
+      melody('reed', chord, OFFSHORE_RHYTHMS[bar % OFFSHORE_RHYTHMS.length], D_MIXOLYDIAN, state.lead, 62, 76, rng, { cadence: s === 'A2' && end, strong: 3 }),
+    );
+    state.lead = last(line).midi;
+    ev.push(...soften(line, night ? 0.42 : 0.55));
+  } else if (s === 'B') {
+    if (bar % 2 === 0) {
+      const line = melody('daegeum', chord, OFFSHORE_RHYTHMS[3], D_MIXOLYDIAN, state.high, 69, 83, rng, { strong: 3 });
+      state.high = last(line).midi;
+      ev.push(...soften(line, night ? 0.38 : 0.5));
+    }
+  } else if (s === 'C') {
+    ev.push({ step: 0, inst: 'violin', midi: nearest(state.lead + 4, pcsOf(chord), 62, 79), vel: night ? 0.32 : 0.45, dur: 6 });
+  } else if (end) ev.push(...chordAt(0, 'piano', voicing(chord, 66, 59, 78), 0.22, 6));
+  else ev.push({ step: 0, inst: 'reed', midi: nearest(state.lead, pcsOf(chord), 62, 76), vel: night ? 0.26 : 0.36, dur: 6 });
+  return ev;
+}
+export const OFFSHORE: PieceSpec = {
+  id: 'offshore',
+  bpm: 84,
+  stepsPerBeat: 2,
+  stepsPerBar: 6,
+  sections: {
+    A: [Dd, Dd, Cd, Gd, Dd, Bmd, A7d, Dd],
+    B: [Gd, Gd, Dd, Dd, Cd, Cd, A7d, A7d],
+    A2: [Dd, Dd, Cd, Gd, Dd, Bmd, A7d, Dd],
+    C: [Bmd, Bmd, Gd, Gd, Cd, Cd, A7d, A7d],
+    T: [Dd, Cd, A7d, Dd],
+  },
+  forms: [
+    ['A', 'B', 'A2', 'C', 'T'],
+    ['A', 'A2', 'C', 'B', 'T'],
+  ],
+  bar: offshoreBar,
   nightTempo: 0.9,
 };

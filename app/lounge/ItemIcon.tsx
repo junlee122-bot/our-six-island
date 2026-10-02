@@ -4,7 +4,7 @@
 // silhouettes in one 48×48 box; colour comes from the item. Furniture uses its
 // room art (lounge-furniture-art.ts).
 import type { ReactNode } from 'react';
-import { FURNITURE_ART } from '../lounge-furniture-art';
+import { FURNITURE_THUMBS } from '../lounge-furniture-art';
 import { THUMBNAILS } from '../lounge-bedroom-art';
 import { FURNITURE_BY_REF } from '../lounge-items';
 import type { Quality } from '../lounge-life';
@@ -294,6 +294,39 @@ const FISH_LOOK: Record<string, FishLook> = {
   kkeuri: { shape: 'fish', body: '#8fa0a8', belly: '#eef0ea', mark: '#e08a4a' },
   nuchi: { shape: 'fish', body: '#b3a37f', belly: '#efe6cf', mark: '#7d6e4f' },
   bagrid: { shape: 'fish', body: '#b58a3f', belly: '#f0dca0', mark: '#4a3a1f' },
+  // 민물 어종 확장 (lounge-fish-data-fresh.ts).
+  moraemuji: { shape: 'fish', body: '#c9b48a', belly: '#f2e8d0', mark: '#7a6545' },
+  ureo: { shape: 'long', body: '#c8d4dc', belly: '#f6f8fa', mark: '#8ea2b0' },
+  hwangeo: { shape: 'fish', body: '#6f7f6a', belly: '#e9c08a', mark: '#e07a3a' },
+  lamprey: { shape: 'long', body: '#6a6352', belly: '#b5ad94', mark: '#2f2b22' },
+  swampeel: { shape: 'long', body: '#9a7a3e', belly: '#d9c084', mark: '#5a4420' },
+  dongsari: { shape: 'fish', body: '#7a6a4a', belly: '#cbbf98', mark: '#3e3424' },
+  ddeokbungeo: { shape: 'fish', body: '#a3a68a', belly: '#e2e2c6' },
+  gaksibungeo: { shape: 'tiny', body: '#b9a8d0', mark: '#e0708a' },
+  napjaru: { shape: 'tiny', body: '#a9b8a0', mark: '#4f6a8a' },
+  hyangeo: { shape: 'fish', body: '#7a7a6a', belly: '#d2ccb4', mark: '#4a4a3c' },
+  gasigogi: { shape: 'tiny', body: '#6a8a5a', mark: '#2f3f28' },
+  galgyeoni: { shape: 'tiny', body: '#b0c0c8', mark: '#2f3a44' },
+  dolgogi: { shape: 'tiny', body: '#8a8060', mark: '#3f3a2a' },
+  eoreumchi: { shape: 'fish', body: '#b8ae8a', belly: '#f0e8cf', mark: '#3a3428' },
+  jagasari: { shape: 'fish', body: '#c08a4a', belly: '#ecd0a0', mark: '#7a5226' },
+  kkuguri: { shape: 'tiny', body: '#a89a72', mark: '#4a3e26' },
+  beodeulgae: { shape: 'tiny', body: '#8f9a7a', mark: '#4f5a40' },
+  yeonjunmochi: { shape: 'tiny', body: '#c4d0d6', mark: '#5a6e7a' },
+  songeo: { shape: 'fish', body: '#8a9aa6', belly: '#f6d6c8', mark: '#d0705a' },
+  dukjunggae: { shape: 'fish', body: '#6a6a50', belly: '#b8b496', mark: '#35352a' },
+  miyugi: { shape: 'fish', body: '#5e5a48', belly: '#aaa48a', mark: '#c9e07a' },
+  tunggari: { shape: 'fish', body: '#b07a3a', belly: '#e6c48a', mark: '#6a4420' },
+  sturgeon: { shape: 'long', body: '#6f7a80', belly: '#d0d6d8', mark: '#e8ecee' },
+  nunbulgae: { shape: 'fish', body: '#b0bcc4', belly: '#f2f4f5', mark: '#d0402f' },
+  keungasigogi: { shape: 'tiny', body: '#5a7a6a', mark: '#d8452f' },
+  salchi: { shape: 'fish', body: '#c8d2d8', belly: '#f6f8f9', mark: '#90a0aa' },
+  baekjoeo: { shape: 'fish', body: '#d6dde2', belly: '#ffffff', mark: '#a0aeb8' },
+  chammaja: { shape: 'fish', body: '#b8ad90', belly: '#efe8d4', mark: '#3a342a' },
+  daenong: { shape: 'fish', body: '#a07a3a', belly: '#e6cf98', mark: '#4a3a1c' },
+  hwangssogari: { shape: 'fish', body: '#e8b84a', belly: '#fff0b8', mark: '#b07a1c' },
+  baekdutrout: { shape: 'fish', body: '#9aa8b4', belly: '#fff4ee', mark: '#d2384a' },
+  millcatfish: { shape: 'fish', body: '#3e3a32', belly: '#8a8470', mark: '#d9c27a' },
   // 낚시 업그레이드 (lounge-fish-data.ts).
   mullet: { shape: 'fish', body: '#8f9aa3', belly: '#eef1f2', mark: '#5f6a73' },
   sandfish: { shape: 'fish', body: '#a39a7c', belly: '#f1ebd8', mark: '#7a6e50' },
@@ -307,6 +340,58 @@ const FISH_LOOK: Record<string, FishLook> = {
   clam: { shape: 'shell', body: '#c9b48f', mark: '#7a6546' },
   oyster: { shape: 'shell', body: '#a9a49a', mark: '#6d685e' },
   conch: { shape: 'shell', body: '#e0b890', mark: '#a8704a' },
+  // 먼바다 낚싯배 · 바다 어종 (lounge-fish-sea-data.ts).
+  halfbeak: { shape: 'long', body: '#a9c4d6', belly: '#f4f8fa', mark: '#e3a14a' },
+  goby: { shape: 'fish', body: '#a08c66', belly: '#ece0c4', mark: '#5e4f34' },
+  beka: { shape: 'squid', body: '#e8b9a7' },
+  webfoot: { shape: 'octo', body: '#c98a6a' },
+  whiting: { shape: 'long', body: '#d8cfb8', belly: '#fbf7ec', mark: '#b9ab86' },
+  gurnard: { shape: 'fish', body: '#c4574a', belly: '#f3d9cf', mark: '#3e7fc1' },
+  lionfish: { shape: 'fish', body: '#e9d3c2', belly: '#fff3ea', mark: '#b2332c' },
+  opaleye: { shape: 'fish', body: '#33464f', belly: '#8aa0a8', mark: '#1e2b31' },
+  herring: { shape: 'fish', body: '#5d7f9c', belly: '#eef3f6', mark: '#3a5874' },
+  dodari: { shape: 'flat', body: '#9a8a62', mark: '#5f5236' },
+  saury: { shape: 'long', body: '#4d6a8c', belly: '#eef2f6', mark: '#e0b64a' },
+  blenny: { shape: 'long', body: '#a6884f', belly: '#e9dcb6', mark: '#5e4a26' },
+  stingray: { shape: 'flat', body: '#c9a24a', mark: '#7a5f22' },
+  spanishmackerel: { shape: 'long', body: '#6f8ea6', belly: '#f1f5f8', mark: '#2f4d66' },
+  amberjack: { shape: 'fish', body: '#7c95a8', belly: '#eef2f4', mark: '#d9b84a' },
+  croaker: { shape: 'fish', body: '#8d8a7c', belly: '#ece8da', mark: '#5a564a' },
+  knifejaw: { shape: 'fish', body: '#b9b6a8', belly: '#f2f0e8', mark: '#2a2a2a' },
+  longtooth: { shape: 'fish', body: '#7a6a5a', belly: '#d9cdbd', mark: '#3f342a' },
+  giantsquid: { shape: 'squid', body: '#c25a45' },
+  sunfish: { shape: 'round', body: '#9fa8ae', belly: '#e7ecef' },
+  bluefin: { shape: 'fish', body: '#26476b', belly: '#dfe8ef', mark: '#e3c14a' },
+  marlin: { shape: 'long', body: '#2d4f86', belly: '#e5ecf3', mark: '#7fb3e0' },
+  swordfish: { shape: 'long', body: '#5a5f6c', belly: '#d9dce2', mark: '#2e323a' },
+  mahimahi: { shape: 'fish', body: '#4fa45a', belly: '#f2e04a', mark: '#2e7bc2' },
+  skipjack: { shape: 'fish', body: '#34506e', belly: '#e9eef3', mark: '#1f3247' },
+  flyingfish: { shape: 'fish', body: '#4c7cb0', belly: '#eef4fa', mark: '#9cc3e8' },
+  scorpionfish: { shape: 'fish', body: '#c0673e', belly: '#f1cfb2', mark: '#6e3220' },
+  stonefish: { shape: 'round', body: '#7d6a55', belly: '#b9a68b', mark: '#4a3c2d' },
+  skate: { shape: 'flat', body: '#8a7d70', mark: '#5c5146' },
+  monkfish: { shape: 'round', body: '#6d5a48', belly: '#c9b59a', mark: '#3c2f24' },
+  atka: { shape: 'fish', body: '#b9a24a', belly: '#f3ecc6', mark: '#3c3a30' },
+  snowcrab: { shape: 'claw', body: '#e08a5a' },
+  kingcrab: { shape: 'claw', body: '#b23a2a' },
+  barracuda: { shape: 'long', body: '#7f97a6', belly: '#f0f4f6', mark: '#3e5361' },
+  stripedbonito: { shape: 'fish', body: '#4e6c8a', belly: '#eef2f6', mark: '#26394d' },
+  grunt: { shape: 'fish', body: '#b6a47a', belly: '#f2ead2', mark: '#6b5c3a' },
+  tigerperch: { shape: 'round', body: '#f0d36a', belly: '#fff6d2', mark: '#2f2a1a' },
+  grouper: { shape: 'fish', body: '#7d6f8a', belly: '#d9d0e2', mark: '#3e3349' },
+  kelpgrouper: { shape: 'fish', body: '#6a5642', belly: '#c9b49a', mark: '#3a2c1f' },
+  redrockfish: { shape: 'fish', body: '#d3593e', belly: '#f7d3c3', mark: '#8a2f1d' },
+  goldrockfish: { shape: 'fish', body: '#d6a63a', belly: '#f7e7b6', mark: '#8a6a1f' },
+  anglerlamp: { shape: 'round', body: '#2f3340', belly: '#5a6070', mark: '#f6e27a' },
+  snailfish: { shape: 'long', body: '#c7b3a3', belly: '#f1e7df', mark: '#8f7a6a' },
+  hagfish: { shape: 'long', body: '#9b7b72', belly: '#e0cdc6', mark: '#5f4740' },
+  greateramberjack: { shape: 'fish', body: '#8a6e86', belly: '#efe6ee', mark: '#d9b84a' },
+  sailfish: { shape: 'long', body: '#2a4a7a', belly: '#e3ebf5', mark: '#4f8fd6' },
+  dawnbream: { shape: 'fish', body: '#f0a7a3', belly: '#fff0ee', mark: '#d96a72' },
+  morningstar: { shape: 'long', body: '#b7c7e8', belly: '#fffbe8', mark: '#f5d36a' },
+  goldtuna: { shape: 'fish', body: '#e6b93a', belly: '#fff3c4', mark: '#a8781a' },
+  deeplantern: { shape: 'round', body: '#1f2a44', belly: '#3d4a6a', mark: '#ffe58a' },
+  rainbowsunfish: { shape: 'round', body: '#b8a6e8', belly: '#f6e9ff', mark: '#6ac7d9' },
 };
 function fishArt(id: string): ReactNode {
   const f = FISH_LOOK[id];
@@ -1089,6 +1174,65 @@ const TOOL_ART: Record<string, ReactNode> = {
 };
 
 /** The painted icon for any life item id (crops, 'seed-*', fish, bugs, forage, dishes, tools). */
+/* ------------------------------------------------------------ 3단계: 목장·과수원 (design-npcs-stage3.md) */
+const fruit = (body: string, dark: string, leaf = '#5f9e48', blush?: string) => (
+  <>
+    <path d="M24 12 C34 10 40 18 39 27 C38 37 31 42 24 42 C17 42 10 37 9 27 C8 18 14 10 24 12Z" fill={body} stroke={dark} strokeWidth="1.5" />
+    {blush ? <ellipse cx="18" cy="24" rx="5" ry="7" fill={blush} opacity=".45" /> : null}
+    <path d="M24 13 C24 9 25 7 27 5" stroke="#6b4b33" strokeWidth="2" fill="none" strokeLinecap="round" />
+    <path d="M26 9 C30 4 36 5 37 7 C33 10 29 10 26 9Z" fill={leaf} />
+    <ellipse cx="17" cy="20" rx="2.5" ry="4" fill="#ffffff" opacity=".35" />
+  </>
+);
+const egg = (big: boolean) => (
+  <>
+    <path d={big ? 'M24 5 C34 5 40 21 40 30 C40 39 33 44 24 44 C15 44 8 39 8 30 C8 21 14 5 24 5Z' : 'M24 9 C32 9 37 22 37 30 C37 37 31 41 24 41 C17 41 11 37 11 30 C11 22 16 9 24 9Z'} fill="#f6ead2" stroke="#b9956a" strokeWidth="1.5" />
+    <ellipse cx="19" cy="22" rx="3" ry="5" fill="#ffffff" opacity=".6" />
+    {big ? <path d="M30 12 l1.5 3 3 .5 -2.2 2 .6 3 -2.9 -1.5 -2.9 1.5 .6 -3 -2.2 -2 3 -.5z" fill="#f3c332" /> : null}
+  </>
+);
+const milk = (rich: boolean) => (
+  <>
+    <path d="M17 6 h14 v6 l5 7 v21 c0 2 -2 3 -4 3 h-16 c-2 0 -4 -1 -4 -3 v-21 l5 -7z" fill="#fbf8f0" stroke="#8fa3b0" strokeWidth="1.5" />
+    <rect x="17" y="4" width="14" height="4" rx="1" fill={rich ? '#c98a4a' : '#5f8fb0'} />
+    <path d="M13 24 h22 v10 h-22z" fill={rich ? '#f1d9a8' : '#cfe3ee'} />
+    <path d="M18 29 c3 -3 9 -3 12 0" stroke={rich ? '#a8722e' : '#5f8fb0'} strokeWidth="1.5" fill="none" />
+  </>
+);
+const STAGE3_ART: Record<string, ReactNode> = {
+  egg: egg(false),
+  'egg-big': egg(true),
+  milk: milk(false),
+  'milk-big': milk(true),
+  wool: (
+    <>
+      <circle cx="18" cy="22" r="9" fill="#f6f2e8" stroke="#bdb39f" strokeWidth="1.5" />
+      <circle cx="30" cy="20" r="9" fill="#f6f2e8" stroke="#bdb39f" strokeWidth="1.5" />
+      <circle cx="24" cy="31" r="10" fill="#fbf8f0" stroke="#bdb39f" strokeWidth="1.5" />
+      <path d="M16 31 c4 2 12 2 16 0" stroke="#d8cfbd" strokeWidth="1.5" fill="none" />
+    </>
+  ),
+  apricot: fruit('#f2a43a', '#b8701e', '#5f9e48', '#e86a3a'),
+  peach: fruit('#f7b8a0', '#c9786a', '#5f9e48', '#e85a6a'),
+  apple: fruit('#d9402f', '#8f2418', '#5f9e48'),
+  pear: (
+    <>
+      <path d="M24 10 C29 10 31 16 31 20 C36 24 38 30 37 35 C35 42 29 44 24 44 C19 44 13 42 11 35 C10 30 12 24 17 20 C17 16 19 10 24 10Z" fill="#d8d06a" stroke="#9a8f2e" strokeWidth="1.5" />
+      <path d="M24 11 C24 7 25 5 27 4" stroke="#6b4b33" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M26 8 C30 3 35 4 36 6 C32 9 29 9 26 8Z" fill="#5f9e48" />
+    </>
+  ),
+  tangerine: fruit('#f39a2a', '#b8641a', '#3f7a34'),
+  hay: (
+    <>
+      <path d="M8 18 h32 v20 h-32z" fill="#d8b864" stroke="#9a7a2e" strokeWidth="1.5" />
+      <path d="M8 26 h32 M8 32 h32" stroke="#b8963e" strokeWidth="1.2" />
+      <path d="M14 18 v20 M34 18 v20" stroke="#8a5a34" strokeWidth="2" />
+      <path d="M10 18 l3 -5 M18 18 l2 -6 M26 18 l-1 -6 M34 18 l3 -5" stroke="#cfae58" strokeWidth="1.5" />
+    </>
+  ),
+};
+
 export function itemArt(id: string): ReactNode {
   if (id.startsWith('seed-')) {
     const crop = CROP_ART[id.slice(5)];
@@ -1101,7 +1245,7 @@ export function itemArt(id: string): ReactNode {
       </>
     );
   }
-  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? goodArt(id) ?? null;
+  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? goodArt(id) ?? STAGE3_ART[id] ?? null;
 }
 
 /* ------------------------------------------------------------ artisan goods (텃밭 확장) */
@@ -1295,11 +1439,11 @@ export function ItemIcon({
   className?: string;
 }) {
   // 'furn-*': drawn art; 기본 가구 (새 방): the room catalog thumbnail.
-  const furn = id.startsWith('furn-') ? FURNITURE_ART[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
+  const furn = id.startsWith('furn-') ? FURNITURE_THUMBS[id] : FURNITURE_BY_REF[id]?.basic ? THUMBNAILS[id] : undefined;
   return (
     <span className={`l-item-icon ${className}`} style={{ width: size, height: size }} title={title} aria-hidden={title ? undefined : true}>
       {furn ? (
-        // oxlint-disable-next-line nextjs/no-img-element -- Inline SVG furniture art.
+        // oxlint-disable-next-line nextjs/no-img-element -- Furniture thumbnail (webp, or inline SVG for crafted pieces).
         <img src={furn} alt="" draggable={false} />
       ) : (
         <svg viewBox="0 0 48 48" width={size} height={size} aria-hidden="true">

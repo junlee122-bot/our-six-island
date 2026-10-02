@@ -42,6 +42,14 @@ export const NPC_IDS = [
   'tsunade',
   'makima',
   'yanineko',
+  // 범마을 증권 지점장 (2026-10-02, design-broker-muzan.md).
+  'muzan',
+  // Stage 3 (목장·과수원, 산기슭 마을; design-npcs-stage3.md).
+  'nilah',
+  'haku',
+  'ornn',
+  'mercy',
+  'shinichi',
 ] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 export const isNpcId = (id: unknown): id is NpcId => typeof id === 'string' && (NPC_IDS as readonly string[]).includes(id);
@@ -53,6 +61,9 @@ export const isWalkingNpc = (id: unknown): id is WalkingNpcId =>
 /** The stage-2 residents of the harbor and the hillside (they walk like the six above). */
 export const STAGE2_NPCS = ['gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko'] as const;
 export type Stage2NpcId = (typeof STAGE2_NPCS)[number];
+/** The stage-3 residents of 목장·과수원 and 산기슭 마을 (design-npcs-stage3.md §3). */
+export const STAGE3_NPCS = ['nilah', 'haku', 'ornn', 'mercy', 'shinichi'] as const;
+export type Stage3NpcId = (typeof STAGE3_NPCS)[number];
 
 export type NpcArt =
   /** A 3×2 pose sheet (lounge-host-sprites.ts). */
@@ -87,7 +98,7 @@ export type NpcDef = {
   /** False until the resident has a sprite: not drawn, not listed, cannot be met. */
   hasSprite?: boolean;
   /** Expansion stage the resident arrived with. */
-  stage?: 2;
+  stage?: 2 | 3;
 };
 
 const img = (asset: string, portrait?: string, foot = 0.985): NpcArt => ({ kind: 'image', asset, ...(portrait ? { portrait } : {}), foot });
@@ -439,6 +450,113 @@ export const NPCS: Record<NpcId, NpcDef> = {
     speech: 'casual',
     stage: 2,
   },
+  // 범마을 증권 지점장 무잔 (user request 2026-10-02): a parody of 키부츠지 무잔
+  // (『귀멸의 칼날』, Koyoharu Gotouge / Shueisha) recast as an elegant, smug
+  // stock broker. Only the look and the air of superiority come along: no
+  // demons, no threats, no lines from the original (lounge-npc-lines-muzan.ts).
+  muzan: {
+    id: 'muzan',
+    name: '무잔',
+    age: 38,
+    ageText: '나이는 영업 비밀',
+    role: '범마을 증권 지점장',
+    place: '범마을 증권',
+    intro: '흰 정장에 흰 중절모, 검은 망토의 지점장. 정중한 말투에 계산이 묻어나고, 장이 끝나면 시장 거리와 주점·카지노 앞을 우아하게 거닐어요.',
+    likesText: '보석·금처럼 값이 변하지 않는 것, 붉은 동백, 오래 사는 영지',
+    dislikesText: '해바라기처럼 너무 밝은 것, 흔한 돌, 달팽이',
+    gifts: {
+      loved: ['gem', 'gold', 'camellia', 'yeongji', 'saffronrice'],
+      liked: ['kind:flower', 'flowertea', 'sashimi', 'vanillapudding', 'goldcarp', 'koi', 'ginseng', 'spice-saffron'],
+      disliked: ['sunflower', 'stone', 'snail'],
+    },
+    rewards: { 40: ['gold', 2], 100: ['gem', 2] },
+    art: img(A.npc_muzan, A.npc_muzan_portrait),
+    speech: 'polite',
+  },
+  // ---------------------------------------------------------------- stage 3 (design-npcs-stage3.md §3)
+  // 닐라 (League of Legends, Riot Games) as the rancher.
+  nilah: {
+    id: 'nilah',
+    name: '닐라',
+    age: 26,
+    role: '목장주',
+    place: '닐라 목장',
+    intro: '밝고 호쾌한 목장주. 도전과 모험이라면 뭐든 좋아하고, 물을 다루는 솜씨로 동물 목욕을 한 번에 끝내요.',
+    likesText: '진한 우유, 큰 달걀, 매운탕, 방어',
+    dislikesText: '달팽이, 쑥',
+    gifts: { loved: ['milk-big', 'egg-big', 'maeuntang', 'yellowtail'], liked: ['kind:fish', 'milk', 'egg', 'peach', 'kind:dish'], disliked: ['snail', 'mugwort'] },
+    rewards: { 40: ['egg-big', 3], 100: ['gem', 1] },
+    art: img(A.npc_nilah, A.npc_nilah_portrait),
+    speech: 'casual',
+    stage: 3,
+  },
+  // 하쿠 (Spirited Away, Studio Ghibli), drawn as an adult in his mid-twenties.
+  haku: {
+    id: 'haku',
+    name: '하쿠',
+    age: 25,
+    role: '과수원 주인',
+    place: '강물 과수원',
+    intro: '차분하고 다정한 과수원 주인. 개울과 과일나무를 아끼고, 오래전엔 강이었던 것 같다는 말을 가끔 해요.',
+    likesText: '복숭아, 살구, 송편, 꽃차',
+    dislikesText: '조약돌, 곤충',
+    gifts: { loved: ['peach', 'apricot', 'songpyeon', 'flowertea'], liked: ['fruit', 'kind:flower', 'apple', 'pear', 'tangerine', 'sweetfish'], disliked: ['stone', 'kind:bug'] },
+    rewards: { 40: ['peach', 3], 100: ['fertilizer-star', 1] },
+    art: img(A.npc_haku, A.npc_haku_portrait),
+    speech: 'polite',
+    stage: 3,
+  },
+  // 오른 (League of Legends, Riot Games) as the foothill smith.
+  ornn: {
+    id: 'ornn',
+    name: '오른',
+    age: 40,
+    ageText: '나이는 묻지 마',
+    role: '대장장이',
+    place: '오른의 대장간',
+    intro: '과묵한 장인 대장장이. 폭포 아래 마을 대장간과 산기슭 대장간을 함께 맡아요. 말은 짧고 무뚝뚝하지만, 맡긴 도구는 누구보다 정성껏 벼려 줘요.',
+    likesText: '철·금 광석, 단단한 나무, 보석 원석',
+    dislikesText: '꽃, 바닐라 푸딩, 수박화채',
+    gifts: { loved: ['iron', 'gold', 'hardwood', 'gem'], liked: ['copper', 'stone', 'roastchestnut', 'grilledfish', 'milk'], disliked: ['kind:flower', 'vanillapudding', 'hwachae'] },
+    rewards: { 40: ['iron', 5], 100: ['gold', 3] },
+    art: img(A.npc_ornn, A.npc_ornn_portrait),
+    speech: 'casual',
+    stage: 3,
+  },
+  // 메르시 (Overwatch, Blizzard) as the village doctor.
+  mercy: {
+    id: 'mercy',
+    name: '메르시',
+    age: 32,
+    role: '마을 의사',
+    place: '메르시 의원',
+    intro: '다정한 마을 의사. 무리하는 사람을 그냥 못 보고, 진료 중에도 살짝 장난을 쳐요.',
+    likesText: '산삼, 꽃차, 바닐라 푸딩, 영지',
+    dislikesText: '곤충, 복어',
+    gifts: { loved: ['ginseng', 'flowertea', 'vanillapudding', 'yeongji'], liked: ['kind:flower', 'fruit', 'apple', 'milk', 'salad'], disliked: ['kind:bug', 'puffer'] },
+    rewards: { 40: ['flowertea', 2], 100: ['ginseng', 1] },
+    art: img(A.npc_mercy, A.npc_mercy_portrait),
+    speech: 'polite',
+    stage: 3,
+  },
+  // 쿠도 신이치 (Detective Conan, Gosho Aoyama / Shogakukan), an adult in his
+  // mid-twenties. Dialogue art is the adult; the in-world chibi wears his 코난
+  // disguise (user decision) — lines joke about the disguise only, never treat him as a child.
+  shinichi: {
+    id: 'shinichi',
+    name: '쿠도 신이치',
+    age: 25,
+    role: '떠돌이 점쟁이',
+    place: '산기슭 점집 천막',
+    intro: '주말과 축제 때만 천막을 여는 탐정 점쟁이. 추리하듯 오늘의 운세를 짚어 줘요.',
+    likesText: '호박파이, 수박화채, 보석 원석',
+    dislikesText: '달팽이, 매미',
+    gifts: { loved: ['pumpkinpie', 'hwachae', 'gem'], liked: ['kind:dish', 'fruit', 'fossil', 'kind:fish'], disliked: ['snail', 'cicada'] },
+    rewards: { 40: ['bait-glow', 3], 100: ['tackle-treasure', 1] },
+    art: img(A.npc_shinichi, A.npc_shinichi_portrait),
+    speech: 'casual',
+    stage: 3,
+  },
 };
 
 /**
@@ -511,12 +629,36 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'tsunade', b: 'gabung', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'tsunade', b: 'lux', kind: 'mentor', note: '어릴 때부터 돌봐 준 동네 어른' },
   { a: 'sinjjajang', b: 'gabung', kind: 'regular', note: '항구 끝 등대까지 배달이 제일 먼 코스' },
+  // Stage 3 (design-npcs-stage3.md §3 관계).
+  { a: 'nilah', b: 'lux', kind: 'friend', note: '물 좋아하는 둘, 낚시 내기 상대' },
+  { a: 'nilah', b: 'haku', kind: 'friend', note: '이웃. 우유와 과일을 바꿔 먹는 사이' },
+  { a: 'nilah', b: 'gabung', kind: 'rival', note: '팔씨름 맞수' },
+  { a: 'nilah', b: 'ornn', kind: 'regular', note: '목장 울타리 못을 대장간에서 받아 감' },
+  { a: 'haku', b: 'tsunade', kind: 'mentor', note: '과일나무에 좋은 약초 거름을 가르쳐 준 스승' },
+  { a: 'haku', b: 'beatrice', kind: 'friend', note: '오래된 강 이야기 책을 빌려 읽는 사이' },
+  { a: 'haku', b: 'frieren', kind: 'regular', note: '빵집에 제철 과일을 대 주는 사이' },
+  { a: 'haku', b: 'mercy', kind: 'regular', note: '의원에 허브차 거리를 대 주는 사이' },
+  { a: 'ornn', b: 'carpenter', kind: 'regular', note: '도끼날을 벼려 주며 서로 투덜대는 사이' },
+  { a: 'ornn', b: 'thresh', kind: 'rival', note: '광석 값을 두고 맞서는 사이' },
+  { a: 'ornn', b: 'gabung', kind: 'regular', note: '등대 등불 갓을 고쳐 주는 사이' },
+  { a: 'ornn', b: 'mercy', kind: 'regular', note: '데인 손을 치료받으며 잔소리 듣는 사이' },
+  { a: 'mercy', b: 'tsunade', kind: 'rival', note: '의술과 약초, 서로 인정하는 맞수' },
+  { a: 'mercy', b: 'janna', kind: 'friend', note: '신문 건강 칼럼을 같이 쓰는 사이' },
+  { a: 'mercy', b: 'volibas', kind: 'regular', note: '순찰 중에 다친 데를 치료받는 단골' },
+  { a: 'shinichi', b: 'janna', kind: 'friend', note: '사건과 특종을 주고받는 사이' },
+  { a: 'shinichi', b: 'volibas', kind: 'friend', note: '마을 사건 수사 협력' },
+  { a: 'shinichi', b: 'makima', kind: 'rival', note: '수상한 사람이라며 추리 대상으로 삼음' },
   // 연애 이야기 말풍선 (lounge-npc-love-banter-a.ts).
   { a: 'lumi', b: 'maehwa', kind: 'friend', note: '퇴근길에 연애 이야기를 나누는 두 딜러' },
   { a: 'lumi', b: 'rose', kind: 'regular', note: '같은 카지노에서 일하는 동료' },
   { a: 'captain', b: 'rose', kind: 'regular', note: '바다 이야기로 통하는 주점 손님' },
   { a: 'maehwa', b: 'captain', kind: 'regular', note: '회관 차 모임과 주점 안주를 바꿔 먹는 사이' },
   { a: 'rose', b: 'nyamo', kind: 'rival', note: '대부 창구와 은행 창구의 이자 경쟁' },
+  // 무잔 (범마을 증권, lounge-npc-banter-muzan.ts).
+  { a: 'muzan', b: 'rose', kind: 'rival', note: '신용 창구와 대부 창구. 이자를 두고 겨루다가도 큰손 앞에선 손을 잡는 사이' },
+  { a: 'muzan', b: 'janna', kind: 'regular', note: '주식 소식을 쓰는 기자와 꼭 한마디 얹는 지점장' },
+  { a: 'muzan', b: 'realtor', kind: 'rival', note: '부동산이냐 주식이냐, 주점 바에서 끝나지 않는 투자 논쟁' },
+  { a: 'muzan', b: 'lumi', kind: 'regular', note: '카지노 앞에서 확률 이야기를 늘어놓는 저녁 손님' },
 ];
 /** Whether a resident has a picture (drawn, listed and met). */
 export const npcVisible = (id: NpcId) => NPCS[id].hasSprite !== false;

@@ -14,6 +14,12 @@ import { NPC_LOVE_BANTER_B } from './lounge-npc-love-banter-b.ts';
 import { NPC_LOVE_BANTER_C } from './lounge-npc-love-banter-c.ts';
 import { NPC_LOVE_BANTER_D } from './lounge-npc-love-banter-d.ts';
 import { NPC_LOVE_BANTER_E } from './lounge-npc-love-banter-e.ts';
+import { NPC_LOVE_BANTER_F } from './lounge-npc-love-banter-f.ts';
+import { NILAH_LOVE } from './lounge-npc-love-nilah.ts';
+import { HAKU_LOVE } from './lounge-npc-love-haku.ts';
+import { ORNN_LOVE } from './lounge-npc-love-ornn.ts';
+import { MERCY_LOVE } from './lounge-npc-love-mercy.ts';
+import { SHINICHI_LOVE } from './lounge-npc-love-shinichi.ts';
 import { LUMI_LOVE } from './lounge-npc-love-lumi.ts';
 import { MAEHWA_LOVE } from './lounge-npc-love-maehwa.ts';
 import { CAPTAIN_LOVE } from './lounge-npc-love-captain.ts';
@@ -37,6 +43,7 @@ import { YANINEKO_LOVE } from './lounge-npc-love-yanineko.ts';
 import { CARPENTER_LOVE } from './lounge-npc-love-carpenter.ts';
 import { REALTOR_LOVE } from './lounge-npc-love-realtor.ts';
 import { MISUN_LOVE } from './lounge-npc-love-misun.ts';
+import { MUZAN_LOVE } from './lounge-npc-love-muzan.ts';
 
 export type { NpcLoveSet, NpcLoveTier, NpcMarriedSet };
 export { NPC_LOVE_TIERS } from './lounge-npc-love-types.ts';
@@ -68,6 +75,12 @@ export const NPC_LOVE: Partial<Record<NpcId, NpcLoveSet>> = {
   makima: MAKIMA_LOVE,
   yanineko: YANINEKO_LOVE,
   carpenter: CARPENTER_LOVE,
+  muzan: MUZAN_LOVE,
+  nilah: NILAH_LOVE,
+  haku: HAKU_LOVE,
+  ornn: ORNN_LOVE,
+  mercy: MERCY_LOVE,
+  shinichi: SHINICHI_LOVE,
 };
 
 /** The married couple's lines (NPC_SPOUSES): friendship, refusals, cheering friends on. */
@@ -112,6 +125,7 @@ export const NPC_LOVE_BANTER: readonly NpcBanter[] = [
   ...NPC_LOVE_BANTER_C,
   ...NPC_LOVE_BANTER_D,
   ...NPC_LOVE_BANTER_E,
+  ...NPC_LOVE_BANTER_F,
 ];
 
 export const npcLoveSet = (npc: NpcId): NpcLoveSet => NPC_LOVE[npc] ?? NPC_LOVE_FALLBACK;

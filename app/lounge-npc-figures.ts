@@ -165,6 +165,7 @@ export class ResidentLayer {
       }
       return g;
     }
+    // No chibi (허 선장, or a layer without chibi sizes): the tall art or the pose sheet's calm cell.
     const art = NPCS[id].art;
     const foot = art.kind === 'image' ? art.foot : 0.985;
     const key = art.kind === 'sheet' ? 'sheet' : `img:${foot}`;

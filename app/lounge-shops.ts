@@ -14,9 +14,15 @@
 //   허풍 주점         안주·음료(그 자리에서)                    요리
 //   행상인 마키마     주마다 바뀌는 희귀품 3종, 계약 한 건        —
 //   대장간           (도구 강화)                               광석·보석
+//   닐라 목장(축사)   동물·건초(lounge-stage3.ts)                 달걀·우유·양털
+//   강물 과수원 창고   묘목(lounge-stage3.ts)                      과수원 과일
+//   오른의 대장간     범위 강화(lounge-stage3.ts)                 광석·보석(+오늘의 광석 웃돈)
+//   메르시 의원       진료·수액·허브차(그 자리에서)               —
 //
 // Selling the same goods from the bag or the shipping bin pays SELL_AWAY
-// (85%); the daily 100,000범 cap and the demand curves are unchanged. Until
+// (85%); the daily 100,000범 cap (lounge-life.ts SELL_CAP_PER_DAY) and the
+// demand curves are unchanged, except that fish skip the cap and the market
+// saturation (lounge-life-plus.ts isFishSale, 2026-10-02). Until
 // the 항구 구역 opens for a friend, the 잡화점 keeps the fishing goods and buys
 // fish for 럭스.
 //
@@ -32,12 +38,13 @@ import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { LUNCHES, LUNCH_PRICE } from './lounge-food-data.ts';
 import { CROP_INFO, LifeError, SHOP_BY_ID, type Crop, type LifeState } from './lounge-life.ts';
 import { coopWeekCrops } from './lounge-town.ts';
+import { ORCHARD_FRUITS, RANCH_GOODS } from './lounge-stage3-data.ts';
 
-export type ShopId = 'general' | 'coop' | 'bakery' | 'fishmarket' | 'tavern' | 'peddler' | 'forge';
-export const SHOP_IDS: readonly ShopId[] = ['general', 'coop', 'bakery', 'fishmarket', 'tavern', 'peddler', 'forge'];
+export type ShopId = 'general' | 'coop' | 'bakery' | 'fishmarket' | 'tavern' | 'peddler' | 'forge' | 'barn' | 'orchardShop' | 'smithy' | 'clinic';
+export const SHOP_IDS: readonly ShopId[] = ['general', 'coop', 'bakery', 'fishmarket', 'tavern', 'peddler', 'forge', 'barn', 'orchardShop', 'smithy', 'clinic'];
 export const isShopId = (s: unknown): s is ShopId => typeof s === 'string' && (SHOP_IDS as readonly string[]).includes(s);
 /** Where a shop's counter is (player.area); the 행상인 moves with the week. */
-export type ShopArea = 'market' | 'harbor' | 'tavern' | 'village';
+export type ShopArea = 'market' | 'harbor' | 'tavern' | 'village' | 'ranch' | 'foothill';
 export type ShopInfo = { name: string; keeper: string; area: ShopArea; sells: string; buys: string };
 export const SHOP_INFO: Record<ShopId, ShopInfo> = {
   general: { name: '등불 잡화점', keeper: '쓰레쉬', area: 'market', sells: '씨앗 · 비료 · 흙 · 희귀 소품 · 염색 팔레트', buys: '채집물 · 꽃 · 재료 · 곤충' },
@@ -47,6 +54,11 @@ export const SHOP_INFO: Record<ShopId, ShopInfo> = {
   tavern: { name: '허풍 주점', keeper: '허 선장', area: 'tavern', sells: '안주와 음료(그 자리에서)', buys: '요리' },
   peddler: { name: '행상인 마키마', keeper: '마키마', area: 'market', sells: '이번 주 희귀품 3종 · 계약', buys: '' },
   forge: { name: '대장간', keeper: '대장장이', area: 'village', sells: '도구 강화', buys: '광석 · 보석' },
+  // Stage 3 (design-npcs-stage3.md §2): the shop ids are their rooms' ids (lounge-shop-interiors.ts).
+  barn: { name: '닐라 목장', keeper: '닐라', area: 'ranch', sells: '닭 · 소 · 양 · 건초', buys: '달걀 · 우유 · 양털' },
+  orchardShop: { name: '강물 과수원', keeper: '하쿠', area: 'ranch', sells: '과일나무 묘목', buys: '과수원 과일' },
+  smithy: { name: '오른의 대장간', keeper: '오른', area: 'foothill', sells: '물뿌리개·괭이 범위 · 채집 바구니', buys: '광석 · 보석' },
+  clinic: { name: '메르시 의원', keeper: '메르시', area: 'foothill', sells: '진료 · 수액 · 허브차', buys: '' },
 };
 /** Share of the price when the goods are sold from the bag or the shipping bin. */
 export const SELL_AWAY = 0.85;
@@ -105,6 +117,8 @@ export const lanternOpen = (now: number) => weekdayOf(kstDay(now)) === 6 && inGa
 /** The shop that pays full price for `id` (crop, 'fruit', goods key or item id); null = nobody buys it. */
 export function buyerOf(id: string, fishShop: ShopId = 'fishmarket'): ShopId | null {
   if (id === 'fruit' || Object.hasOwn(CROP_SELL_REF, id) || isGoodId(id)) return 'coop';
+  if (RANCH_GOODS.includes(id)) return 'barn';
+  if (ORCHARD_FRUITS.includes(id)) return 'orchardShop';
   const def = Object.hasOwn(ITEM_BY_ID, id) ? ITEM_BY_ID[id] : undefined;
   if (!def || def.sell <= 0) return null;
   if (def.kind === 'fish') return fishShop;
@@ -119,6 +133,8 @@ export function buyerOf(id: string, fishShop: ShopId = 'fishmarket'): ShopId | n
 export function saleShare(life: Pick<LifeState, 'flags'>, actor: number, at: unknown, id: string, now: number): number {
   if (at === undefined || at === null) return SELL_AWAY;
   const buyer = buyerOf(id, fishShopFor(life, actor, now));
+  // 오른's 대장간 buys ores and gems at full price like the village forge.
+  if (at === 'smithy' && buyer === 'forge') return 1;
   if (!isShopId(at) || at !== buyer) throw new LifeError(buyer ? `${SHOP_INFO[buyer].name}에서 제값을 받아요. 가방에서 팔면 ${Math.round(SELL_AWAY * 100)}%예요.` : '팔 수 없는 물건이에요.');
   return 1;
 }

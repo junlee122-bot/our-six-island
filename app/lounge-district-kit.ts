@@ -68,7 +68,13 @@ export function signTexture(text: string, sub: string, colors: SignColors) {
 
 /** Paving tones (canvas colours for flat strips; tokens are CSS-only). */
 export const PAVING = { road: '#b8a07c', plaza: '#d2bf98', stone: '#a59a88', quay: '#c8b894', wood: '#9c7550', lane: '#c9b58f' } as const;
-export type DistrictUpdate = { marketDay: boolean; night: boolean };
+export type DistrictUpdate = {
+  marketDay: boolean;
+  night: boolean;
+  /** 항구: 허 선장's boat is out at sea; he stands at the pier in sailing hours. */
+  boatOut?: boolean;
+  captain?: boolean;
+};
 
 export class DistrictSet {
   readonly root = new THREE.Group();

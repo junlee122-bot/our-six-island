@@ -318,10 +318,10 @@ export const ROOM_DOOR_REACH = 1.1;
 const fixtureRect = (f: { x0: number; x1: number; z0: number; z1: number }) => ({ x0: f.x0, x1: f.x1, z0: f.z0, z1: f.z1 });
 /** "옷 갈아입기" this close to the wardrobe or the mirror. */
 export const ROOM_DRESS_REACH = 0.9;
-const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white']);
+const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white', 'furn-gold-mirror', 'furn-najeon-wardrobe']);
 /** Tables and the hearth double as the kitchen counter / workbench (요리·만들기). */
 export const ROOM_COOK_REACH = 0.9;
-export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace']);
+export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace', 'furn-round-dining-set', 'furn-marble-fireplace']);
 /** Furniture with its own action in my room (the pointer cursor shows over it; the built-ins always count). */
 export const roomItemUsable = (ref: string) => DRESS_REFS.has(ref) || COOK_REFS.has(ref);
 

@@ -113,7 +113,7 @@ export const VENUE_UPGRADES: readonly UpgradeDef[] = [
   up({ id: 'furniture-stock-1', venue: 'furniture', category: 'stock', tier: 1, name: '진열대 늘리기', cost: 250_000, note: '오늘의 가구가 매일 2종 더 들어와요.' }),
   up({ id: 'furniture-stock-2', venue: 'furniture', category: 'stock', tier: 2, name: '창고 진열대', cost: 500_000, note: '오늘의 가구가 매일 2종 더 들어와요(모두 4종).' }),
   up({ id: 'furniture-luxury-1', venue: 'furniture', category: 'luxury', tier: 1, name: '명품관 한 칸', cost: 400_000, note: '이번 주 명품 가구가 1종 더 들어와요.' }),
-  up({ id: 'furniture-luxury-2', venue: 'furniture', category: 'luxury', tier: 2, name: '명품관 두 칸', cost: 800_000, note: '이번 주 명품 가구가 1종 더 들어와요(모두 2종).' }),
+  up({ id: 'furniture-luxury-2', venue: 'furniture', category: 'luxury', tier: 2, name: '명품관 두 칸', cost: 800_000, note: '이번 주 명품 가구가 1종 더 들어와요(명품관으로 모두 2종 더).' }),
   up({ id: 'furniture-service-1', venue: 'furniture', category: 'service', tier: 1, name: '단골 손님 대접', cost: 150_000, note: '오늘의 가구를 하루 2번 더 새로 고칠 수 있어요.' }),
 ];
 export const VENUE_UPGRADE_BY_ID: Readonly<Record<string, UpgradeDef>> = Object.fromEntries(

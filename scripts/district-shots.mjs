@@ -36,9 +36,15 @@ const panels = args.includes('--panels');
 // the counter with its draw calls, open the counter's window, then walk out.
 // Two friends sit on the bakery's café chairs. Costs go to <out>/<view>-shops.json.
 const shops = args.includes('--shops');
+// --shop <room>: with --shops, only this room (e.g. --shop broker).
+const shopOnly = opt('shop', '');
 // --minimap: in each district put two friends on the map and one inside a shop room,
 // capture the minimap compact and enlarged, and walk somewhere by clicking a place on it.
 const minimap = args.includes('--minimap');
+// --offshore: at the harbor, put me on a boat that is just leaving (먼바다 낚싯배):
+// the sail-out takes me to the deck; capture it, walk to a rail, then 그만
+// 돌아가기 and capture the catch summary on the pier (design-sea-fishing.md).
+const offshore = args.includes('--offshore');
 // --residents: also walk to the biggest group of residents in the hub and capture it.
 const residents = args.includes('--residents');
 // --at HH:MM: run the mock world (and so the page's clock) at this game time
@@ -63,13 +69,13 @@ const H = await setup({
   base,
   view,
   seedLife: (life, uid) => {
-    life.flags = [...new Set([...(life.flags ?? []), 'district-harbor', 'district-hillside'])];
+    life.flags = [...new Set([...(life.flags ?? []), 'district-harbor', 'district-hillside', 'district-ranch', 'district-foothill'])];
     // Something to sell at 농협 and 어시장, and a visited harbor for the signpost.
     const bag = life.bag?.[uid];
     if (bag) Object.assign(bag.produce, { carrot: 6, tomato: 3, potato: 4 });
     const x = ((life.ext ??= {})[uid] ??= {});
     x.inv = { ...(x.inv ?? {}), mackerel: 3, crucian: 2, hairtail: 1 };
-    x.town = { seen: ['market', 'harbor', 'hillside'] };
+    x.town = { seen: ['market', 'harbor', 'hillside', 'ranch', 'foothill'] };
   },
 });
 const { page, js, sleep, until } = H;
@@ -183,6 +189,33 @@ try {
     await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
     await sleep(6000);
     await shot(`${id}-arrive`);
+    if (offshore && id === 'harbor') {
+      const dep = Date.now() + 5_000;
+      const life = H.world().life;
+      ((life.voyage ??= {}).u ??= {})[H.uid] = {
+        trip: { id: `s${Math.floor(dep / 60_000)}`, dep, fare: 15_000, haul: { bluefin: 1, spanishmackerel: 3, scorpionfish: 2, redrockfish: 4 } },
+        days: [Math.floor((dep + 9 * 3_600_000) / 86_400_000)],
+      };
+      const x = ((life.ext ??= {})[H.uid] ??= {});
+      x.inv = { ...(x.inv ?? {}), bluefin: 1, spanishmackerel: 3, scorpionfish: 2, redrockfish: 4 };
+      const onDeck = () => until(() => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.area === 'offshore' && d.loadState === 'ready';
+      }, 300000);
+      if ((await onDeck()) < 0) throw new Error('offshore: the boat did not take me to the deck');
+      await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+      await sleep(5000);
+      await shot('offshore-deck');
+      await walkArea({ x: -2.2, z: -3.4 });
+      await sleep(2500);
+      await shot('offshore-rail');
+      await page.getByTestId('voyage-leave').click();
+      if ((await until(() => !!document.querySelector('[data-testid=voyage-done]'), 300000)) < 0) throw new Error('offshore: no catch summary after coming back');
+      await sleep(3000);
+      await shot('offshore-summary');
+      await page.getByTestId('voyage-done').click();
+      await sleep(1500);
+    }
     // A second look further in (the district's centre).
     await walkArea({ x: 0, z: 0 });
     await sleep(2500);
@@ -258,7 +291,7 @@ try {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
         return { drawCalls: Number(d?.drawCalls), triangles: Number(d?.triangles), models: d?.shopModels ?? '', residents: d?.residents ?? '' };
       });
-      for (const c of districtCounters(id, weekday).filter((t) => t.a.kind === 'counter' && t.a.enter)) {
+      for (const c of districtCounters(id, weekday).filter((t) => t.a.kind === 'counter' && t.a.enter && (!shopOnly || t.a.enter === shopOnly))) {
         const area = c.a.enter;
         console.log(' ', area);
         try {

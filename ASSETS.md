@@ -26,6 +26,8 @@
 | C5 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 NPC 2단계 8명 전신 스프라이트와 대화창 초상: 가붕(등대지기)·럭스(어시장)·힘멜(빵집 알바생)·베아트리스(사서)·봇치(악사)·츠나데(텃밭 할머니)·마키마(행상인)·야니네코(대학생) | `lounge/npc-*.webp`, `lounge/npc-*-portrait.webp` | 유료 크레딧 생성. 작업 ID·SHA-256·키잉 결과 해시: `public/assets/lounge/npc-stage2-generation.json`, 원본 `_originals/npc-*.png`(마젠타 배경, 야니네코 원본 파일명은 `npc-yaninekko.png`). **Riot Games 팬아트 2명 + 쇼가쿠칸·KADOKAWA·호분샤·슈에이샤(2)·코단샤 캐릭터 6명**(아래 IP 표) | 항구·언덕·시장 거리 NPC |
 | C6 | Higgsfield (GPT Image 2.5, 2026-09-30) | 마을 주민 17명 게임 속 치비 스프라이트(친구들과 같은 2.5~3등신): 프리렌·나세라·로제·그웬·냐모·쓰레쉬·신짜장·볼리바스·잔나·가붕·럭스·힘멜·베아트리스·봇치·츠나데·마키마·야니네코 | `lounge/chibi/npc-*.webp` (512~514×640) | 유료 크레딧 생성. 원본 `_originals/chibi/npc-chibi-*.png`(한 장에 두 명, 왼쪽 이름이 먼저; 마젠타 배경, 베아트리스·봇치는 초록 배경), 작업 ID·SHA-256과 웹 사본 크기·해시: `public/assets/lounge/npc-chibi-generation.json`. 키 빼기·자르기: `node scripts/optimize-assets.mjs chibi` | 마을·구역·주점·카지노·은행·미용실·내 방에 서 있는 주민(대화창 초상은 C2·C4·C5의 큰 그림 그대로) |
 | C7 | Higgsfield (GPT Image 2.5, 2026-10-01) | 나무결 가구점 목수 발키리: 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 가구점 창구 6포즈 시트(평소·웃음·의자 들기·집중·놀람·미안) | `lounge/npc-valkyrie.webp`, `lounge/npc-valkyrie-portrait.webp`, `lounge/chibi/npc-valkyrie.webp`, `lounge/host-carpenter.*` | 유료 크레딧 생성. 원본 `_originals/npc-valkyrie.png`, `_originals/chibi/npc-chibi-valkyrie.png`, `_originals/host-valkyrie.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/carpenter-valkyrie-generation.json`. **Supercell 캐릭터 팬아트**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 가구점 창구·대화창·마을과 가게 안의 발키리 |
+| C8 | Higgsfield (GPT Image 2.5, 2026-10-02) | 마을 NPC 3단계 5명: 닐라(목장주)·하쿠(과수원 주인)·오른(대장장이)·메르시(의사)·쿠도 신이치(점쟁이)의 전신 대화창 그림·초상과 게임 속 치비(약 2등신, 한 장에 한 명; 신이치 치비는 '코난' 변장 차림, 사용자 결정) | `lounge/npc-{nilah,haku,ornn,mercy,shinichi}.webp`, `lounge/npc-*-portrait.webp`, `lounge/chibi/npc-{nilah,haku,ornn,mercy,shinichi}.webp` | 유료 크레딧 생성. 원본 `_originals/npc-*.png`, `_originals/chibi/npc-chibi-*.png`(마젠타 배경), 작업 ID·원본 SHA-256: `public/assets/lounge/stage3-npcs-generation.json`; 키잉한 웹 사본의 크기·SHA-256은 `node scripts/optimize-assets.mjs npcs`·`chibi`가 같은 파일(`web`)과 `npc-chibi-generation.json`(`web`)에 기록(오른은 붉은 수염 때문에 키 기준을 높임). **Riot Games 팬아트 2명 + 스튜디오 지브리·Blizzard·쇼가쿠칸 캐릭터 3명**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 목장·과수원·산기슭 마을 주민(대화창·마을) |
+| C9 | Higgsfield (GPT Image 2.5, 2026-10-02) | 범마을 증권 지점장 무잔: 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 증권사 창구 6포즈 시트(평소·웃음·시세표 내밀기·집중·놀람·미안) | `lounge/npc-muzan.webp`, `lounge/npc-muzan-portrait.webp`, `lounge/chibi/npc-muzan.webp`, `lounge/host-broker.*` | 유료 크레딧 생성. 원본 `_originals/npc-muzan.png`, `_originals/chibi/npc-chibi-muzan.png`, `_originals/host-muzan.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/broker-muzan-generation.json`(웹 사본 항목은 `optimize-assets.mjs`가 씀). **『귀멸의 칼날』 캐릭터 패러디**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 증권사 창구·주식 창·대화창·마을과 증권사 안의 무잔 |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
@@ -34,9 +36,10 @@
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
 | H | chess.js 1.4.0 | 체스 규칙 | npm | BSD-2 | 사용 중 |
-| I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부 | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`) | 자체 제작 | 사용 중 |
+| I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부, 허 선장의 낚싯배·먼바다 수면 셰이더·수평선(2026-10-02) | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`, `lounge-boat-model.ts`, `lounge-offshore-scene.ts`) | 자체 제작 | 사용 중 |
 | J | Canvas 런타임 가공 | 머리·피부 RGB 염색, 마젠타 배경 제거, 의상 보행 변형 | 코드(`lounge-color.ts`, `lounge-gait.ts`, `lounge-sprites.ts`) | 자체 제작 | 사용 중 |
 | K | Kenney Casino Audio 1.1 · Interface Sounds 1.0 | 야추 주사위(흔들기·던지기·잡기·한 개 던지기)·라이어 카드·타이머 틱·투표·확인 효과음 13종 | `public/assets/lounge/sfx/*.ogg`(원본) + `*.m4a`(AAC 사본) | **CC0**, `LICENSE-KENNEY.txt` 보관 | 사용 중(없거나 디코딩 실패 시 합성음) |
+| K2 | Kenney Watercraft Kit 2.1 (kenney.nl, 2026-10-02 내려받음) | 먼바다 낚싯배: 지나가는 배(작은 어선·예인선)·작은 배·부표 GLB 5개 (`boat-fishing-small`, `boat-tug-a`, `boat-row-small`, `buoy`, `buoy-flag`). 공용 `Textures/colormap.png`를 각 GLB 안에 넣음(`scripts/embed-glb-textures.mjs`) | `public/models/village/watercraft/` (원본 GLB·colormap은 `public/models/_originals/village/watercraft/`) | **CC0**, `public/models/village/watercraft/LICENSE-KENNEY.txt` 보관 | 먼바다 장면의 지나가는 배. 친구들이 걷는 낚싯배는 갑판 6×14칸·난간 네 곳이 필요해 키트 배(조타실이 갑판을 거의 덮음) 대신 코드로 만듦(`lounge-boat-model.ts`, I행) |
 | L | 글꼴 Jua · Pretendard 1.3.9 · Gaegu | 창 제목·간판(Jua), 본문(Pretendard 400/600/700), 쪽지·편지(Gaegu 400/700) | `app/ui/fonts/*.woff2` (`npm run fonts` → `scripts/build-fonts.mjs`) | **SIL OFL 1.1**, `licenses/OFL-Jua.txt`·`OFL-Pretendard.txt`·`OFL-Gaegu.txt`. Jua·Gaegu는 앱 문구+KS X 1001 서브셋(core/ext), Pretendard는 예약 글꼴명이 있어 제작자 배포 서브셋을 그대로 씀 | 사용 중 |
 | — | 그 밖의 사운드 | 음악·발걸음·카드·칩·UI는 합성 코드 | — | — | — |
 
@@ -69,6 +72,12 @@
 | 대학생 야니네코 | 『야니네코』(냥냥팩토리 / 코단샤) 그대로. 원작처럼 담배를 문 모습 | 비상업 유지. 공개 전 반드시 교체, 담배 묘사는 공개 등급 확인 |
 | 부동산 신형만·봉미선 | 『짱구는 못말려』(Crayon Shin-chan, 우스이 요시토 / 후타바샤) 노하라 히로시·미사에 부부 그대로. 이름은 한국판 이름, 외형·성격이 원작과 같음. 사용자 제공 참조 그림은 생성 입력으로만 쓰고 저장소에 두지 않음 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
 | 가구점 목수 발키리 | 『클래시 로얄』·『클래시 오브 클랜』 발키리(Supercell). 주황 머리·도끼·팔 보호대가 원작 디자인, 옷은 마을용으로 튜닉과 목수 앞치마로 바꿈. 사용자 레퍼런스 그림은 저장소에 없음 | 비상업 유지. 공개 홍보·출품·수익화 전 이름·외형 교체 |
+| 증권사 지점장 무잔 | 『귀멸의 칼날』 키부츠지 무잔(고토게 코요하루 / 슈에이샤) 패러디. 흰 정장·흰 중절모·검은 망토 차림과 거만한 분위기만 빌렸고, 마을용으로 증권사 직원(시세표)으로 바꿈. 원작의 혈귀·식인 설정과 대사는 쓰지 않고 모든 대사는 새로 씀. 사용자 레퍼런스 그림은 저장소에 없음 | 비상업 유지. 공개 홍보·출품·수익화 전 이름·외형 교체 |
+| 목장주 닐라 | 『리그 오브 레전드』 닐라(Riot Games). 이름·외형이 원작과 같고 옷만 목장주 차림(우유 통·밧줄) | 비상업 유지. 공개 전 이름·외형 교체 우선 |
+| 과수원 주인 하쿠 | 『센과 치히로의 행방불명』 하쿠(스튜디오 지브리). 20대 중반 성인으로 그림, 과일 바구니 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
+| 대장장이 오른 | 『리그 오브 레전드』 오른(Riot Games). 원작 색(분홍 수염·라벤더 피부·청동 갑옷) 그대로 | 비상업 유지. 공개 전 외형 교체 |
+| 의사 메르시 | 『오버워치』 메르시(Blizzard). 마을 여름 의사 차림으로 바꿨지만 얼굴·후광·이름이 원작 | 비상업 유지. 공개 전 이름·외형 교체 우선 |
+| 점쟁이 쿠도 신이치 | 『명탐정 코난』 쿠도 신이치(아오야마 고쇼 / 쇼가쿠칸). 대화 그림은 20대 중반 성인, 마을 치비는 '코난' 변장 차림(사용자 결정). 연애 대사는 성인 신이치로만 씀 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
 | 은행 직원 냐모 | 사용자 제공 고양이 수인 캐릭터 레퍼런스 기반. 원작 출처 미기록 | 레퍼런스 원작 확인 후 기록 |
 | 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
 | kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
@@ -540,7 +549,7 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 | 연회 의자 `banquetChair.glb` | 397,588 → 194,080 | 512² | 회관·카지노 모든 테이블 의자. 방석 높이 = `SEAT_HEIGHT`(0.36) |
 | 바 의자 `barStool.glb` | 487,112 → 207,932 | 512² | 카지노 바 앞 4개 |
 | 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후, 기둥 사이 벨벳 줄은 코드. 전에는 공사장) |
-| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 가구 상점 판매 품목 `furn-rocking-chair` '흔들의자'(26,000범, 산 개수만큼 방에 배치). 상점 아이콘은 같은 화풍의 SVG, 방 카탈로그 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
+| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 2026-10-02까지 가구 상점 품목 `furn-rocking-chair`의 방 모델. 지금 방과 상점은 가구 그림(`lounge/furniture/rocking-chair.webp`)을 쓰고, 이 GLB는 기록·재사용용으로 남겨 둡니다(방에서 받지 않음). 예전 렌더 썸네일은 지웠습니다 |
 
 - 원본 합계 7,880,560바이트 → 배포 사본 4,556,676바이트(+ 썸네일 14,834). 원본은 `public/models/_originals/` 같은 경로에 보관하고 `npm run optimize:assets`로 다시 만듭니다. 작게 보이는 반복 소품 8종은 `scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`로 512²까지 줄였습니다(기본 1024²).
 - GPU 텍스처 메모리(RGBA8, 밉맵 포함): 1024² 7장 × 5.3MB + 512² 8장 × 1.3MB ≈ 48MB. 장면별로는 마을 ≈ 33MB, 회관 ≈ 6.7MB, 카지노 ≈ 4MB, 방은 흔들의자를 놓을 때 5.3MB입니다. 모든 모델은 그 장면을 열 때만 받고(회관·카지노 가구는 실내 화면 청크에서), 모델이 도착하기 전에는 기존 도형이 대신 보입니다.
@@ -693,6 +702,15 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - 런타임: 주민 id는 그대로 `carpenter`(하트 유지). 대화창·주민 수첩은 전신·초상, 마을과 가게 안은 치비(`app/lounge-npc-chibi.ts`), 가구점 창구는 포즈 시트(`HOST_SHEET.carpenter`).
 - IP: Supercell 캐릭터 팬아트입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(위 IP 표).
 
+## 범마을 증권 지점장 무잔 · 2026-10-02
+
+사용자 요청으로 비워 둔 범마을 증권 창구(`SHOP_INTERIORS.broker.owner`)에 『귀멸의 칼날』 키부츠지 무잔을 패러디한 지점장 무잔(성인 남성)을 넣었습니다. Higgsfield GPT Image 2.5로 전신(2:3, 그림체 참조 `casino-lender-rose.png`), 치비(약 2등신, 참조 `npc-chibi-lux-himmel.png`), 3×2 창구 시트(1:1, 참조 `host-maehwa.png`)를 만들었습니다. 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않았습니다.
+
+- 원본과 작업 ID·SHA-256, 웹 사본 크기·SHA-256: [broker-muzan-generation.json](public/assets/lounge/broker-muzan-generation.json). 웹 사본 항목(`web`, `keying`)은 스크립트가 원본 해시를 확인한 뒤 씁니다.
+- 웹 사본: `node scripts/optimize-assets.mjs npcs muzan`(전신 660×990, 초상 384², 치비도 함께), `chibi muzan`(512×640, 몸 94%·발 97% 선), `hosts broker`(3×2 원본을 한 배율로 440×660 셀·발바닥 648 px에 다시 배치한 `host-broker.png` → WebP).
+- 런타임: 주민 id `muzan`. 대화창·주민 수첩은 전신·초상, 마을과 증권사 안은 치비(`app/lounge-npc-chibi.ts`), 주식 창 머리의 지점장 카드는 포즈 시트(`HOST_SHEET.muzan`).
+- IP: 『귀멸의 칼날』 캐릭터 패러디입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(위 IP 표).
+
 ## 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장) · 2026-10-02
 
 자료: **kArchive** · 출처: **쓰레드 dogfooter**. 공개 GLB 13개를 새로 받았습니다. 주소·약관 원문·원본과 웹 사본의 SHA-256·삼각형·바운드·용도는 [모델 기록](public/models/village/shop-interiors/assets.json)에 있습니다.
@@ -716,3 +734,15 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
   - 게임 속 치비(약 2등신): `_originals/chibi/npc-chibi-shinhyungman-bongmison.png`(왼쪽 신형만, 오른쪽 봉미선) → `optimize-assets.mjs chibi`가 가장 빈 세로줄에서 나누고 몸 94%·발 97% 선으로 `lounge/chibi/npc-shinhyungman.webp`·`npc-bongmison.webp`(512×640)를 만듭니다.
   - 카운터 포즈 시트: `_originals/host-realtor-nohara.png`(윗줄 신형만, 아랫줄 봉미선: 평소·웃음·집중) → `optimize-assets.mjs hosts`가 한 사람당 한 장씩 호스트 시트 규격(3×2, 440×660 셀, 발바닥 648 px)으로 다시 놓습니다. 딜·놀람 칸은 웃음, 미안 칸은 평소 그림을 씁니다. `lounge/host-realtor.*`(신형만, 문 사장 시트를 대체), `lounge/host-misun.*`(봉미선). `_originals/host-realtor-nohara-alt.png`는 쓰지 않는 후보입니다.
 - 키잉 검사: `tests/lounge-character-pixels.test.mjs`가 새 큰 그림·초상·치비·시트 모두 분홍 테두리 없음과 발 선을 확인합니다.
+
+## 3단계 구역 · 목장·과수원 · 산기슭 마을 (2026-10-02)
+
+- **새 다운로드 없음.** 두 구역과 실내 4곳(축사·과수원 창고·대장간·의원)은 저장소에 이미 있는 kArchive(D·D2·D3, 쓰레드 dogfooter)와 3DAssets CC0 모델을 다시 씁니다: 도구 창고(축사·닭장), 코너 하우스(과수원 창고), 대장간 공방(오른의 대장간), 중정 주택(메르시 의원), 오두막(닐라·하쿠 집), 과일나무, 정자(원두막), 밧줄 울타리, 허수아비, 펌프, 바위·나무, 주점 화덕·솥·술통·코너장 등. 배치는 `app/lounge-ranch-layout.ts`, `app/lounge-foothill-layout.ts`, `app/lounge-shop-interiors.ts`.
+- **코드로 그린 것**: 소·양·닭, 사일로, 개울과 나무 다리·징검다리, 산등성이 바위벽과 광산 입구(버팀목·등불), 모루, 별무늬 점집 천막과 수정 구슬, 온천 공사장 김, 의원 붉은 십자 간판(`lounge-ranch-scene.ts`, `lounge-foothill-scene.ts`).
+- **구역 음악**(합성, 파일 없음): 목장·과수원 "들길의 오후"(D장조 6/8, 104 bpm, 가야금 음색의 짧은 스트럼·대금·리드), 산기슭 마을 "풀무와 산바람"(D 도리안 4/4, 92 bpm, 새 악기 `anvil` 모루 소리·낮은 현·브라스·대금·바람 스웰, 밤에는 망치를 쉼). `app/lounge-music-districts.ts`, 악기 `app/lounge-music-synth.ts`. 파일을 넣고 싶으면 `lounge-music-tracks.ts`의 `ranch`·`foothill` 슬롯에 적습니다.
+
+## 나무결 가구점 가구 그림 (2026-10-02)
+
+- 원본: `public/assets/lounge/_originals/furniture/furniture-sheet-0..5.png` (Higgsfield GPT Image 2.5, 2048² 마젠타 배경, 0~2는 3×3·3~5는 2×2). 칸 순서·해시·작업 번호는 `public/assets/lounge/furniture-art-generation.json`.
+- 웹 사본: `node scripts/optimize-assets.mjs furniture`가 만듭니다. 원본 해시를 확인하고, keyMagenta(둘러싼 바탕 시드 90) + defringeMagenta로 배경을 빼고, 칸마다 자기 그림 조각만 남겨(옆 칸에서 넘어온 조각 제거) 카탈로그 비율(세워 두는 것·벽걸이 h/w, 러그 d/w 위에서 본 모양) 캔버스에 넣습니다. 긴 변 768px 이하 `lounge/furniture/<이름>.webp` 39장(합계 약 2.6MB) + 256² 썸네일 `lounge/furniture/thumbs/`. 크기와 SHA-256은 같은 json의 `web`에 스크립트가 적습니다(`tests/lounge-furniture-art.test.mjs`가 확인).
+- `app/lounge-assets.ts`의 `furniture_*` 항목이 빌드에 들어가는 목록입니다. 만들기 가구 16종은 아직 그림이 없어 SVG를 씁니다.

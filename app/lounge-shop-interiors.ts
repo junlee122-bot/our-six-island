@@ -16,8 +16,8 @@
 import type { DistrictCounter } from './lounge-district-counters.ts';
 import type { NpcId } from './lounge-npc-data.ts';
 
-export type ShopArea = 'bakery' | 'coop' | 'general' | 'fishmarket';
-export const SHOP_AREAS: readonly ShopArea[] = ['bakery', 'coop', 'general', 'fishmarket'];
+export type ShopArea = 'bakery' | 'coop' | 'general' | 'fishmarket' | 'barn' | 'orchardShop' | 'smithy' | 'clinic' | 'broker';
+export const SHOP_AREAS: readonly ShopArea[] = ['bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
 export const isShopArea = (a: unknown): a is ShopArea => typeof a === 'string' && (SHOP_AREAS as readonly string[]).includes(a);
 
 type World = { x: number; z: number };
@@ -53,7 +53,13 @@ export type ShopModel =
   | 'barrelRack'
   | 'fishMackerel'
   | 'fishCod'
-  | 'fishHairtail';
+  | 'fishHairtail'
+  // Stage 3 rooms (축사 · 과수원 창고 · 대장간 · 의원), models already credited.
+  | 'stove'
+  | 'cauldron'
+  | 'keg'
+  | 'firewood'
+  | 'cornerCabinet';
 
 /**
  * One piece of furniture: a model fitted into its box without stretching
@@ -86,10 +92,18 @@ export type ShopInterior = {
   tagline: string;
   chat: string;
   /** The district counter (TownPanel place) the room's counter opens. */
-  counter: Extract<DistrictCounter, 'bakery' | 'coop' | 'general' | 'fishmarket'>;
+  counter: Extract<DistrictCounter, 'bakery' | 'coop' | 'general' | 'fishmarket' | 'barn' | 'orchardShop' | 'smithy' | 'clinic' | 'broker'>;
   /** Where the shop's front door is. */
-  district: 'market' | 'harbor';
-  owner: NpcId;
+  district: 'market' | 'harbor' | 'ranch' | 'foothill';
+  /**
+   * Who stands behind the counter (their `<area>.owner` plan in
+   * lounge-npc-schedule.ts). 범마을 증권's is 지점장 무잔 (design-broker-muzan.md);
+   * its counter opens the stock window whether he is in or not.
+   */
+  owner?: NpcId;
+  /** What the counter and its keeper are called ('계산대' · '주인' unless set). */
+  deskWord?: string;
+  ownerWord?: string;
   /** Second staff member behind the counter (힘멜 helps at the bakery). */
   helper?: NpcId;
   /** The owner's (and helper's) spot behind the counter, world units. */
@@ -127,6 +141,62 @@ const cafeTable = (id: string, x: number, z: number): { table: ShopItem; seats: 
   ],
 });
 const cafe = [cafeTable('cafe-1', 2.5, -0.5), cafeTable('cafe-2', 5.3, -0.5), cafeTable('cafe-3', 3.9, 2.55)];
+/** 범마을 증권's consultation tables (two chairs each, like the café's). */
+const consult = [cafeTable('consult-1', -4.4, 1.6), cafeTable('consult-2', 4.4, 1.6)];
+
+/** 범마을 증권 (design-stocks.md §7.1): the stock exchange's floor, kept by 지점장 무잔. */
+const BROKER: ShopInterior = {
+  area: 'broker',
+  name: '범마을 증권',
+  short: '증권사',
+  tagline: '오늘의 시세, 내일의 꿈',
+  chat: '객장 수다',
+  counter: 'broker',
+  district: 'market',
+  owner: 'muzan',
+  deskWord: '창구',
+  ownerWord: '지점장',
+  ownerAt: { x: 0, z: -4.15 },
+  desk: { x: 0, z: -3.2, w: 3.6, d: 0.85 },
+  front: toNet({ x: 0, z: -2.05 }),
+  staffGates: [
+    { x: -2.25, z: -3.75, w: 0.9, d: 1.75 },
+    { x: 2.25, z: -3.75, w: 0.9, d: 1.75 },
+  ],
+  items: [
+    // The counter with two trading terminals.
+    { id: 'desk', model: null, x: 0, z: -3.2, w: 3.6, h: 0.98, d: 0.85, solid: false, color: '#2c3e5c' },
+    { id: 'terminal-1', model: 'register', x: -0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
+    { id: 'terminal-2', model: 'register', x: 0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
+    // Behind it: the ticker board (wall signs above), files and a tea sideboard.
+    { id: 'ticker', model: null, x: 0, z: -5.75, w: 5.6, h: 0.75, d: 0.12, y: 1.05, solid: false, color: '#16233a' },
+    // The board's bars: red up, blue down.
+    ...[0.18, 0.32, 0.12, 0.4, 0.24, 0.3, 0.14, 0.36].map((h, i): ShopItem => ({
+      id: `ticker-bar-${i}`, model: null, x: -2.35 + i * 0.67, z: -5.68, w: 0.34, h, d: 0.04, y: 1.15, solid: false, color: i % 3 === 1 ? '#4f7fb2' : '#d0463b',
+    })),
+    { id: 'files-1', model: 'storageShelf', x: -3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+    { id: 'files-2', model: 'storageShelf', x: 3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+    { id: 'tea', model: 'teaSideboard', x: 0, z: -5.45, w: 1.6, h: 0.95, d: 0.75, solid: false },
+    // Quote terminals along the walls for walk-in traders.
+    { id: 'quotes-left', model: null, x: -5.6, z: -1.6, w: 1.0, h: 0.8, d: 2.2, color: '#3a4a66' },
+    { id: 'quotes-left-screen', model: 'register', x: -5.6, z: -1.6, w: 0.55, h: 0.45, d: 0.45, y: 0.8, turn: Math.PI / 2, solid: false },
+    { id: 'quotes-right', model: null, x: 5.6, z: -1.6, w: 1.0, h: 0.8, d: 2.2, color: '#3a4a66' },
+    { id: 'quotes-right-screen', model: 'register', x: 5.6, z: -1.6, w: 0.55, h: 0.45, d: 0.45, y: 0.8, turn: -Math.PI / 2, solid: false },
+    { id: 'plant-left', model: 'plantStand', x: -6.45, z: -4.3, w: 1.0, h: 1.2, d: 0.45 },
+    { id: 'plant-right', model: 'plantStand', x: 6.45, z: 3.9, w: 1.0, h: 1.2, d: 0.45 },
+    ...consult.map((c) => c.table),
+  ],
+  seats: consult.flatMap((c) => c.seats),
+  spots: {
+    browse: { x: -4.4, z: -1.2, face: -Math.PI / 2 },
+    'browse-2': { x: 4.4, z: -1.2, face: Math.PI / 2 },
+    board: { x: 0, z: 0.4, face: Math.PI },
+  },
+  signs: [
+    { text: '오늘의 시세', x: -3.05, y: 2.4, w: 2.0 },
+    { text: '주식 · 신용 · 공매도', x: 3.05, y: 2.4, w: 2.0 },
+  ],
+};
 
 export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
   bakery: {
@@ -312,6 +382,181 @@ export const SHOP_INTERIORS: Record<ShopArea, ShopInterior> = {
       { text: '새벽 경매 여섯 시', x: 3.05, y: 2.4, w: 2.0 },
     ],
   },
+
+  // ------------------------------------------------ stage 3 (design-npcs-stage3.md §1)
+  barn: {
+    area: 'barn',
+    name: '닐라 목장 축사',
+    short: '축사',
+    tagline: '건초 냄새, 따뜻한 우유',
+    chat: '축사 수다',
+    counter: 'barn',
+    district: 'ranch',
+    owner: 'nilah',
+    ownerAt: { x: 0, z: -4.15 },
+    desk: { x: 0, z: -3.2, w: 3.4, d: 0.85 },
+    front: toNet({ x: 0, z: -2.05 }),
+    staffGates: [
+      { x: -2.15, z: -3.75, w: 0.9, d: 1.75 },
+      { x: 2.15, z: -3.75, w: 0.9, d: 1.75 },
+    ],
+    items: [
+      { id: 'desk', model: null, x: 0, z: -3.2, w: 3.4, h: 0.95, d: 0.85, solid: false, color: '#8a6440' },
+      { id: 'scale', model: 'scale', x: -1, z: -3.2, w: 0.55, h: 0.5, d: 0.5, y: 0.95, solid: false },
+      { id: 'pail', model: 'onggi', x: 1, z: -3.2, w: 0.45, h: 0.5, d: 0.45, y: 0.95, solid: false },
+      { id: 'hay-back-1', model: null, x: -3.4, z: -5.4, w: 1.6, h: 1.2, d: 0.9, solid: false, color: '#d6b562' },
+      { id: 'hay-back-2', model: null, x: -1.6, z: -5.4, w: 1.4, h: 0.8, d: 0.9, solid: false, color: '#cdaa58' },
+      { id: 'shelf-back', model: 'storageShelf', x: 2.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+      // Stalls along the walls: hay bales, milk churns, a tool trunk.
+      { id: 'hay-left-1', model: null, x: -5.6, z: -1.6, w: 1.4, h: 0.85, d: 1.0, color: '#d8b864' },
+      { id: 'hay-left-2', model: null, x: -5.6, z: 0.2, w: 1.4, h: 0.85, d: 1.0, color: '#cfae58' },
+      { id: 'hay-left-top', model: null, x: -5.6, z: -0.7, w: 1.2, h: 0.7, d: 0.9, y: 0.85, solid: false, color: '#dcc072' },
+      { id: 'churn-1', model: 'onggi', x: 5.6, z: -1.8, w: 0.7, h: 0.85, d: 0.7 },
+      { id: 'churn-2', model: 'onggi', x: 6.3, z: -1.2, w: 0.6, h: 0.75, d: 0.6 },
+      { id: 'barrels', model: 'barrelRack', x: 6.1, z: 2.6, w: 1.3, h: 1.1, d: 0.9, turn: -Math.PI / 2 },
+      { id: 'tool-trunk', model: 'toolTrunk', x: -2.4, z: 4.2, w: 0.95, h: 0.85, d: 0.65, turn: 0.3 },
+      { id: 'eggs', model: 'basketStand', x: 3.2, z: 3.6, w: 0.85, h: 1.1, d: 0.7, turn: -0.3 },
+      { id: 'lantern', model: 'hanjiLantern', x: 0, z: 3.9, w: 0.5, h: 0.7, d: 0.5 },
+    ],
+    seats: [],
+    spots: {
+      browse: { x: -4, z: -0.6, face: -Math.PI / 2 },
+      'browse-2': { x: 4.4, z: 0.4, face: Math.PI / 2 },
+      stall: { x: 1.8, z: 1.6, face: Math.PI },
+    },
+    signs: [
+      { text: '오늘의 돌봄', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '건초 · 우유', x: 3.05, y: 2.4, w: 2.0 },
+    ],
+  },
+  orchardShop: {
+    area: 'orchardShop',
+    name: '강물 과수원 창고',
+    short: '과수원 창고',
+    tagline: '물길이 기른 과일',
+    chat: '과수원 수다',
+    counter: 'orchardShop',
+    district: 'ranch',
+    owner: 'haku',
+    ownerAt: { x: -0.4, z: -4.15 },
+    desk: { x: -0.4, z: -3.2, w: 3.2, d: 0.85 },
+    front: toNet({ x: -0.4, z: -2.05 }),
+    staffGates: [
+      { x: -2.45, z: -3.75, w: 0.9, d: 1.75 },
+      { x: 1.65, z: -3.75, w: 0.9, d: 1.75 },
+    ],
+    items: [
+      { id: 'desk', model: null, x: -0.4, z: -3.2, w: 3.2, h: 0.95, d: 0.85, solid: false, color: '#7d6a4a' },
+      { id: 'scale', model: 'scale', x: -1.3, z: -3.2, w: 0.55, h: 0.5, d: 0.5, y: 0.95, solid: false },
+      { id: 'register', model: 'register', x: 0.6, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.95, solid: false },
+      { id: 'crates-back-1', model: 'fruitCrate', x: -3.2, z: -5.45, w: 1.0, h: 0.6, d: 0.8, solid: false },
+      { id: 'crates-back-2', model: 'fruitCrate', x: -3.2, z: -5.45, w: 1.0, h: 0.6, d: 0.8, y: 0.6, solid: false },
+      { id: 'shelf-back', model: 'storageShelf', x: 2.4, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+      // Fruit tables and sapling pots.
+      { id: 'table-left', model: null, x: -4.4, z: -0.75, w: 2.4, h: 0.62, d: 1.05, color: '#7a6448' },
+      { id: 'fruit-left-1', model: 'fruitCrate', x: -5.0, z: -0.75, w: 0.95, h: 0.5, d: 0.75, y: 0.62, solid: false },
+      { id: 'fruit-left-2', model: 'fruitCrate', x: -3.8, z: -0.75, w: 0.95, h: 0.5, d: 0.75, y: 0.62, solid: false },
+      { id: 'baskets', model: 'basketStand', x: 4.6, z: -0.6, w: 0.85, h: 1.1, d: 0.7, turn: -0.2 },
+      { id: 'saplings-1', model: 'plantStand', x: 6.3, z: -3.4, w: 1.0, h: 1.2, d: 0.45 },
+      { id: 'saplings-2', model: 'plantStand', x: 6.3, z: 1.6, w: 1.0, h: 1.2, d: 0.45 },
+      { id: 'crate-floor', model: 'produceCrate', x: 1.6, z: 3.4, w: 0.95, h: 0.5, d: 0.75, turn: 0.25 },
+      { id: 'lantern', model: 'hanjiLantern', x: -6.4, z: -3.4, w: 0.5, h: 0.7, d: 0.5 },
+    ],
+    seats: [],
+    spots: {
+      browse: { x: -4.3, z: 0.5, face: Math.PI },
+      'browse-2': { x: 4.2, z: 0.6, face: Math.PI },
+      saplings: { x: 5.2, z: -1.6, face: -Math.PI / 2 },
+    },
+    signs: [
+      { text: '제철 과일', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '묘목', x: 3.05, y: 2.4, w: 2.0 },
+    ],
+  },
+  smithy: {
+    area: 'smithy',
+    name: '오른의 대장간',
+    short: '대장간',
+    tagline: '불과 쇠, 그리고 망치',
+    chat: '대장간 수다',
+    counter: 'smithy',
+    district: 'foothill',
+    owner: 'ornn',
+    ownerAt: { x: 0.6, z: -4.15 },
+    desk: { x: 0.6, z: -3.2, w: 3.2, d: 0.85 },
+    front: toNet({ x: 0.6, z: -2.05 }),
+    staffGates: [
+      { x: -1.45, z: -3.75, w: 0.9, d: 1.75 },
+      { x: 2.65, z: -3.75, w: 0.9, d: 1.75 },
+    ],
+    items: [
+      { id: 'desk', model: null, x: 0.6, z: -3.2, w: 3.2, h: 0.95, d: 0.85, solid: false, color: '#4a3a30' },
+      { id: 'ore-tray', model: null, x: -0.3, z: -3.2, w: 0.8, h: 0.12, d: 0.5, y: 0.95, solid: false, color: '#7d7468' },
+      { id: 'scale', model: 'scale', x: 1.6, z: -3.2, w: 0.55, h: 0.5, d: 0.5, y: 0.95, solid: false },
+      { id: 'forge', model: 'stove', x: -3.4, z: -5.4, w: 1.6, h: 1.5, d: 1.0, solid: false },
+      { id: 'quench', model: 'cauldron', x: -1.6, z: -5.3, w: 0.8, h: 0.7, d: 0.8, solid: false },
+      { id: 'shelf-back', model: 'storageShelf', x: 3, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
+      // The anvil on its stump, a tool trunk, firewood and kegs of water.
+      { id: 'anvil-stump', model: null, x: -4.4, z: -0.6, w: 0.8, h: 0.55, d: 0.8, color: '#6b4e36' },
+      { id: 'anvil', model: null, x: -4.4, z: -0.6, w: 1.0, h: 0.35, d: 0.45, y: 0.55, solid: false, color: '#4b4f55' },
+      { id: 'tool-trunk', model: 'toolTrunk', x: -6.2, z: -2.8, w: 0.95, h: 0.85, d: 0.65, turn: 0.4 },
+      { id: 'firewood', model: 'firewood', x: 5.6, z: -2.2, w: 1.2, h: 0.6, d: 0.7 },
+      { id: 'keg', model: 'keg', x: 6.2, z: 1.8, w: 0.8, h: 1.0, d: 0.8 },
+      { id: 'barrels', model: 'barrelRack', x: 4.2, z: 3.6, w: 1.3, h: 1.1, d: 0.9 },
+    ],
+    seats: [],
+    spots: {
+      browse: { x: -3.2, z: 0.6, face: Math.PI },
+      'browse-2': { x: 4.2, z: 0.2, face: Math.PI },
+      anvil: { x: -3.2, z: -0.6, face: -Math.PI / 2 },
+    },
+    signs: [
+      { text: '범위 강화', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '광석 매입', x: 3.05, y: 2.4, w: 2.0 },
+    ],
+  },
+  clinic: {
+    area: 'clinic',
+    name: '메르시 의원',
+    short: '의원',
+    tagline: '무리하지 말아요',
+    chat: '의원 수다',
+    counter: 'clinic',
+    district: 'foothill',
+    owner: 'mercy',
+    ownerAt: { x: 0, z: -4.15 },
+    desk: { x: 0, z: -3.2, w: 3.0, d: 0.85 },
+    front: toNet({ x: 0, z: -2.05 }),
+    staffGates: [
+      { x: -1.95, z: -3.75, w: 0.9, d: 1.75 },
+      { x: 1.95, z: -3.75, w: 0.9, d: 1.75 },
+    ],
+    items: [
+      { id: 'desk', model: null, x: 0, z: -3.2, w: 3.0, h: 0.95, d: 0.85, solid: false, color: '#e9e2d4' },
+      { id: 'register', model: 'register', x: 0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.95, solid: false },
+      { id: 'kit', model: null, x: -0.8, z: -3.2, w: 0.6, h: 0.35, d: 0.4, y: 0.95, solid: false, color: '#c0392b' },
+      { id: 'cabinet-back', model: 'cornerCabinet', x: -3.2, z: -5.45, w: 1.4, h: 1.8, d: 0.8, solid: false },
+      { id: 'tea-back', model: 'teaSideboard', x: 2.6, z: -5.55, w: 1.6, h: 0.95, d: 0.75, solid: false },
+      // Waiting chairs and a bed by the wall.
+      { id: 'bed', model: null, x: 5.4, z: -1.4, w: 1.2, h: 0.55, d: 2.2, color: '#f2efe6' },
+      { id: 'pillow', model: null, x: 5.4, z: -2.2, w: 0.9, h: 0.15, d: 0.4, y: 0.55, solid: false, color: '#ffffff' },
+      { id: 'chair-1', model: 'banquetChair', x: -5.4, z: -0.6, w: 0.6, h: 0.95, d: 0.6, turn: Math.PI / 2 },
+      { id: 'chair-2', model: 'banquetChair', x: -5.4, z: 0.6, w: 0.6, h: 0.95, d: 0.6, turn: Math.PI / 2 },
+      { id: 'plant', model: 'plantStand', x: -6.3, z: -3.4, w: 1.0, h: 1.2, d: 0.45 },
+      { id: 'shelf', model: 'storageShelf', x: 6.2, z: 3.2, w: 1.4, h: 1.6, d: 0.6, turn: -Math.PI / 2 },
+    ],
+    seats: [],
+    spots: {
+      browse: { x: -4.2, z: 1.6, face: Math.PI / 2 },
+      'browse-2': { x: 3.8, z: 0.6, face: Math.PI },
+      bed: { x: 4, z: -1.4, face: Math.PI / 2 },
+    },
+    signs: [
+      { text: '진료 · 수액', x: -3.05, y: 2.4, w: 2.0 },
+      { text: '허브차', x: 3.05, y: 2.4, w: 2.0 },
+    ],
+  },
+  broker: BROKER,
 };
 
 export const shopOf = (area: ShopArea) => SHOP_INTERIORS[area];
@@ -480,6 +725,7 @@ const TOWN_ACTION_SHOP: Readonly<Record<string, ShopArea>> = {
   bakeryBuy: 'bakery',
   auctionSell: 'fishmarket',
 };
+// The stage-3 actions (lounge-stage3-data.ts) carry their own place rule.
 export const townActionShop = (kind: unknown): ShopArea | null =>
   typeof kind === 'string' && Object.prototype.hasOwnProperty.call(TOWN_ACTION_SHOP, kind) ? TOWN_ACTION_SHOP[kind] : null;
 
