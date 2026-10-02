@@ -110,5 +110,58 @@
    "original": "_originals/chibi/npc-chibi-haku.png",
    "sha256": "C091E28F76DE9BAFDB821E63975E774858DD1E29C71F781A186E7D8E2C778D3C"
   }
- ]
+ ],
+ "web": {
+  "npc-nilah.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "99713068E3DF54B49763D29332477BCCB562DCFBC57B05B001722C4A7D966C8E"
+  },
+  "npc-nilah-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "36D273996BE8457F6E6840DFFC7D6FE749A3A322CFE897413BFEB053D49B8F86"
+  },
+  "npc-haku.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "6247B8D1E630CBFD5FED7840E90CE7DAA92335BF94DDFB383DC3F4DD7E308392"
+  },
+  "npc-haku-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "39CFBFFB1A6D3FB761CE12FCAAE64E34C8ABFC07E8EE6ECED9F470685192AD14"
+  },
+  "npc-ornn.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "601B42994CB32D6FD8BF146B1828DDC08B2F01DAC02C6A16A48B2DB675DEFD96"
+  },
+  "npc-ornn-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "6DF9AE06AD89307EC6ED66ECD79AD768ED7B06968D73E42D54200D102C9D812D"
+  },
+  "npc-mercy.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "EC68CB9AED358A30B12F069FBCF1633B21B9111C04533C9316A04CD19FE74566"
+  },
+  "npc-mercy-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "7C2E4FDA6BE481452B959FC69F734A0F28F60FF8E9C6279699F0EAEE687F4C0A"
+  },
+  "npc-shinichi.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "96EF5152B6790F26D370B259A5EA3E30884888724023BD5858DD317E76E39B68"
+  },
+  "npc-shinichi-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "1766E5EE0F476D4A61EB6855F73C1D83A234EC95B54E642E2738928C541AF8FE"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs npcs: flood key from the border (오른 with a higher seed for his red beard), unmix + despill, 660x990 sprite and a 384px head-and-shoulders portrait; chibi: figure at 94% of a 640px canvas with the feet on the 97% line (sizes and hashes in npc-chibi-generation.json web)."
 }
