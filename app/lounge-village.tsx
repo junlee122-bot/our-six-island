@@ -71,7 +71,7 @@ import { VillageShopsLayer } from './lounge-village-shops';
 import { VillageDistrictGates } from './lounge-village-districts-3d';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
-import { companionBubbles, companionSpots, companionStep } from './lounge-companion-scene';
+import { companionBubbles, companionNpcs, companionSpots, companionStep } from './lounge-companion-scene';
 import { npcsIn, npcSpot } from './lounge-npc-schedule';
 import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
@@ -3740,7 +3740,7 @@ function SpotPrompt({
         </strong>
         <small>
           {NPCS[spot.npc].role}
-          {s ? ` · ${s.label}` : ''}
+          {companionNpcs(life?.serverNow ?? 0).has(spot.npc) ? ' · 같이 다니는 중' : s ? ` · ${s.label}` : ''}
           {key}
         </small>
       </div>

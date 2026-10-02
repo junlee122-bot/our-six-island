@@ -162,8 +162,9 @@ try {
   await snap('talk-more');
   await js(() => document.querySelector('[data-testid=companion-choice-dismiss]')?.click());
   await until(() => !document.querySelector('[data-testid=companion-hud]'), 30000);
-  await typed();
-  report.part = await js(() => document.querySelector('[data-testid=companion-dialog-text]')?.textContent ?? '');
+  await sleep(800);
+  // Their parting line comes as a toast.
+  report.part = await js(() => [...document.querySelectorAll('[role=status], [role=alert]')].map((n) => n.textContent ?? '').find((t) => t.includes('“')) ?? '');
   await snap('parted');
 } finally {
   await browser.close();

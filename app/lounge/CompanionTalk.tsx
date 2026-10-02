@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { NPCS, type NpcId } from '../lounge-npc-data';
 import { npcHearts } from '../lounge-npc-speech';
-import { companionTalk, companionPartLine, type CompanionTalkLine } from '../lounge-npc-companion-lines';
+import { companionAcceptLine, companionTalk, type CompanionTalkLine } from '../lounge-npc-companion-lines';
 import type { CompanionActivity, CompanionReact } from '../lounge-npc-companion-line-types';
 import { COMPANION_EFFECTS } from '../lounge-companion-data';
 import { VILLAGE_DISTRICTS } from '../lounge-village-layout';
@@ -32,6 +32,8 @@ const ACTIVITY_OF: Record<CompanionReact, CompanionActivity | null> = {
   idle: null,
 };
 const DISTRICT_NAME: Record<string, string> = Object.fromEntries(VILLAGE_DISTRICTS.map((d) => [d.id, d.name]));
+/** An outing this fresh opens with their accept line. */
+const ACCEPT_FRESH_MS = 20_000;
 /** Presses of E this outing (the talk walks through its kinds), per outing. */
 const turns = new Map<string, number>();
 
@@ -72,7 +74,11 @@ export function CompanionTalk({ npc, room, view, onClose, onUsual }: {
   const nextTalk = (said: readonly string[]) => {
     const turn = (turns.get(outing) ?? 0) + 1;
     turns.set(outing, turn);
-    const line = lineAt(turn, Date.now() + view.clockOffset, said);
+    const at = Date.now() + view.clockOffset;
+    // Just said yes (the talk box hands over to this one): their accept line first.
+    if (turn === 1 && out && at - out.at < ACCEPT_FRESH_MS)
+      return { pages: [companionAcceptLine(npc, { first: !!out.f, love: !!row?.love, me: myName, now: out.at })], moment: null, said: [...said] };
+    const line = lineAt(turn, at, said);
     return { pages: [line.text], moment: line.moment ?? null, said: line.moment ? [...said, `${npc}:${line.moment}`] : [...said] };
   };
   const [talk, setTalk] = useState(() => nextTalk(c?.said ?? []));
@@ -84,7 +90,6 @@ export function CompanionTalk({ npc, room, view, onClose, onUsual }: {
     told.current.add(talk.moment);
     void room.life({ kind: 'companion', op: 'moment', moment: talk.moment });
   }, [talk.moment, room]);
-  const setPages = (lines: string[]) => setTalk((t) => ({ ...t, pages: lines, moment: null }));
   const [busy, setBusy] = useState(false);
   const info = NPCS[npc];
   const choices = [
@@ -101,7 +106,8 @@ export function CompanionTalk({ npc, room, view, onClose, onUsual }: {
       setBusy(true);
       const ok = await room.life({ kind: 'companion', op: 'dismiss' });
       setBusy(false);
-      if (ok) setPages([companionPartLine(npc, { love: !!row?.love, me: myName, now: Date.now() + view.clockOffset, end: 'dismiss' })]);
+      // Their parting line comes as the HUD's toast; the box closes.
+      if (ok) onClose();
     } else onClose();
   };
   return (

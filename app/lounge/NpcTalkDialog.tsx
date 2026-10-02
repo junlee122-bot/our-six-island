@@ -34,7 +34,7 @@ import { npcJoinLines, npcSocialExchange, npcSocialOf, type NpcSaid } from '../l
 import { npcRecentKinds } from '../lounge-npc-recent';
 import { NPC_TIE_KEYS, pairKey } from '../lounge-npc-social-ties';
 import { COMPANION_REJECT, companionWhyNot, companionWhyShort } from '../lounge-companion';
-import { companionAcceptLine, companionBusyLine } from '../lounge-npc-companion-lines';
+import { companionBusyLine } from '../lounge-npc-companion-lines';
 import './npc-relations.css';
 
 export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop }: {
@@ -221,13 +221,10 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     if (busyRef.current) return;
     // Not now: their answer says why (a shopkeeper in character, the rest plainly).
     if (companionWhy) return answer([companionWhy === COMPANION_REJECT.shop || companionWhy === COMPANION_REJECT.night ? companionBusyLine(npc, myName, now) : companionWhy]);
-    const first = !companions?.me.met.includes(npc);
     busyRef.current = true;
     setBusy(true);
+    // A yes: the companion talk takes over at once and opens with their accept line.
     void Promise.resolve(room.life({ kind: 'companion', op: 'invite', npc }))
-      .then((ok) => {
-        if (ok) answer([companionAcceptLine(npc, { first, love: !!row.love, me: myName, now })]);
-      })
       .finally(() => {
         busyRef.current = false;
         setBusy(false);

@@ -63,6 +63,8 @@ export type CompanionOuting = {
   end: CompanionEnd;
   /** Game hours already counted toward the bond. */
   h: number;
+  /** The first outing ever with this resident (their first-accept line). */
+  f?: 1;
 };
 export type CompanionUser = {
   out?: CompanionOuting;
@@ -124,7 +126,7 @@ function readUser(v: unknown): CompanionUser | undefined {
     out: CompanionUser = {};
   const o = obj(x.out);
   if (isNpcId(o.npc) && nat(o.at) && nat(o.until) && o.until > o.at && o.until - o.at <= COMPANION_MS && isEnd(o.end) && nat(o.h))
-    out.out = { npc: o.npc, at: o.at, until: o.until, end: o.end, h: Math.min(o.h, 24) };
+    out.out = { npc: o.npc, at: o.at, until: o.until, end: o.end, h: Math.min(o.h, 24), ...(o.f === 1 ? { f: 1 as const } : {}) };
   if (nat(x.d) && nat(x.b)) {
     out.d = x.d;
     out.b = Math.min(x.b, COMPANION_BOND_DAY_CAP);
@@ -350,10 +352,10 @@ export function companionAction(
       });
       if (why) fail(why);
       const { until, end } = companionUntil(npc, now, world);
-      u.out = { npc, at: now, until, end, h: 0 };
+      const first = !u.met?.includes(npc);
+      u.out = { npc, at: now, until, end, h: 0, ...(first ? { f: 1 as const } : {}) };
       delete u.pend;
       delete u.ev;
-      const first = !u.met?.includes(npc);
       if (first) {
         u.met = [...(u.met ?? []), npc];
         const actor = life.actors?.[uid];

@@ -2169,22 +2169,7 @@ function AccountLounge({
         onBag={() => setModal('bag')}
         mood={
           connected && !inGame ? (
-            <>
-              <MoodHud life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('mood')} />
-              <CompanionHud
-                room={room}
-                view={view}
-                notify={notify}
-                onTalk={() => {
-                  const npc = view.life?.companion?.me.out?.npc;
-                  if (npc) setResidentTalk(npc);
-                }}
-                onBank={() => {
-                  setFinanceMode('bank');
-                  setModal('bank');
-                }}
-              />
-            </>
+            <MoodHud life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('mood')} />
           ) : undefined
         }
       />
@@ -2192,6 +2177,24 @@ function AccountLounge({
         status={cloudSave.status}
         onRetry={() => void cloudSave.flush()}
       />
+      {connected && !inGame && (
+        // 주민 동행: the companion chip (face, effect, time left, 보내기) under the camera buttons.
+        <div className="l-companion-dock">
+          <CompanionHud
+            room={room}
+            view={view}
+            notify={notify}
+            onTalk={() => {
+              const npc = view.life?.companion?.me.out?.npc;
+              if (npc) setResidentTalk(npc);
+            }}
+            onBank={() => {
+              setFinanceMode('bank');
+              setModal('bank');
+            }}
+          />
+        </div>
+      )}
       <div className="l-world-alerts">
         {(view.status === 'error' || view.lost) && (
           <aside className="l-connection-alert" role="alert">
