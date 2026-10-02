@@ -489,7 +489,7 @@ export const NPCS: Record<NpcId, NpcDef> = {
     ageText: '나이는 묻지 마',
     role: '대장장이',
     place: '오른의 대장간',
-    intro: '과묵한 장인 대장장이. 말은 짧고 무뚝뚝하지만, 맡긴 도구는 누구보다 정성껏 벼려 줘요.',
+    intro: '과묵한 장인 대장장이. 폭포 아래 마을 대장간과 산기슭 대장간을 함께 맡아요. 말은 짧고 무뚝뚝하지만, 맡긴 도구는 누구보다 정성껏 벼려 줘요.',
     likesText: '철·금 광석, 단단한 나무, 보석 원석',
     dislikesText: '꽃, 바닐라 푸딩, 수박화채',
     gifts: { loved: ['iron', 'gold', 'hardwood', 'gem'], liked: ['copper', 'stone', 'roastchestnut', 'grilledfish', 'milk'], disliked: ['kind:flower', 'vanillapudding', 'hwachae'] },

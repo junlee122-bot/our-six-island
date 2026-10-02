@@ -3673,7 +3673,7 @@ function SpotPrompt({
     return (
       <div>
         <strong>
-          <Anvil size={14} /> {g?.forgeOpen ? '대장간 · 무쇠 아저씨' : '무너진 공방'}
+          <Anvil size={14} /> {g?.forgeOpen ? '대장간 · 오른' : '무너진 공방'}
         </strong>
         <small>
           {!g?.forgeOpen

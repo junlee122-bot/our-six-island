@@ -389,7 +389,7 @@ export type ResearchDef = {
   live: boolean;
 };
 export const RESEARCH: readonly ResearchDef[] = [
-  { id: 'forge', code: 'V1', name: '대장간 재건', flag: 'forge', requires: [], beom: 150_000, mats: { wood: 120, stone: 100 }, opens: '대장간과 무쇠 아저씨 · 도구 2단계', preview: '북서쪽 폭포 아래 무너진 공방을 다시 세워요. 맡긴 도구는 다음 날 아침 6시에 찾아요.', live: true },
+  { id: 'forge', code: 'V1', name: '대장간 재건', flag: 'forge', requires: [], beom: 150_000, mats: { wood: 120, stone: 100 }, opens: '대장간과 대장장이 오른 · 도구 2단계', preview: '북서쪽 폭포 아래 무너진 공방을 다시 세워요. 맡긴 도구는 다음 날 아침 6시에 찾아요.', live: true },
   { id: 'trail', code: 'V2', name: '산길 정비', flag: 'trail', requires: ['forge'], beom: 250_000, mats: { wood: 150, stone: 200 }, opens: '뒷산 · 광산 1~10층 · 숲 깊은 곳 입구', preview: '북쪽 돌담 틈 너머 산길 계단. 소나무 능선과 곰 동굴 광산 입구, 서쪽엔 쓰러진 통나무가 막은 숲 깊은 곳.', live: true },
   { id: 'lift', code: 'V3', name: '광산 승강기', flag: 'lift', requires: ['trail'], beom: 350_000, mats: { copper: 60, stone: 150, wood: 100 }, opens: '광산 11~20층 · 5층마다 승강기', preview: '광차 레일과 등불이 이어진 깊은 굴. 5층마다 승강기로 곧장 내려가요.', live: true },
   // Stage 3 (design-npcs-stage3.md §1): finishing it opens ④ 목장·과수원 (village flag 'district-ranch').

@@ -75,7 +75,7 @@ export const isPracticeAi = (id: unknown): id is string =>
 export const PRACTICE_NAMES: Partial<Record<GameKind, readonly string[]>> = {
   chess: ['루미'],
   gostop: ['매화', '루미'],
-  liarsbar: ['루미', '매화', '무쇠'],
+  liarsbar: ['루미', '매화', '오른'],
 };
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
 export const FLEX_GAMES: readonly GameKind[] = [
