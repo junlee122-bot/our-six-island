@@ -89,6 +89,26 @@
 - SQL 편집기: `select jsonb_pretty(public.hh_economy_report(7));` — 같은 항목의 간단한 요약(service_role/postgres 전용).
 - 은행·금융 보고서에는 `20260927201400_hohyeon_economy_vault_report.sql` 적용이 필요합니다. 기존 보고서 함수의 집계만 교체하며 원장·잔액·스냅샷은 변경하지 않습니다. 이전 월드의 보관금·금융 순액 누락 필드는 0으로 취급합니다. `--check-sql`은 구 SQL 함수의 필드 누락을 금액 불일치와 구분해 마이그레이션 필요를 알립니다.
 
+## 점검 모드 ("범타듀 밸리가 예뻐지는 중")
+
+Edge 비밀값 `HH_MAINTENANCE` 하나로 켜고 끕니다. 비밀값은 재배포 없이 바로 반영됩니다(Supabase 문서 기준).
+
+- 켜기: 대시보드 → Edge Functions → Secrets에서 `HH_MAINTENANCE`를 `1`로 저장하거나, 끝나는 시각과 한 줄 안내를 넣습니다: `{"until":"2026-10-03T06:20:00Z","note":"새 지역을 다듬고 있어요"}`. CLI: `supabase secrets set HH_MAINTENANCE=1 --project-ref ogfpeqeoaznwjbrbedbx`.
+- 끄기: 값을 `0`으로 바꾸거나 비밀값을 지웁니다. 접속해 있던 화면은 20초 안에 저절로 마을로 돌아갑니다.
+- 켜져 있는 동안 `hohyeon-api`·`hohyeon-auth`는 `status` 확인 요청만 받고, 나머지는 DB에 닿기 전에 503 + `maintenance`로 거절합니다. 웹과 데스크톱 앱은 이 응답을 받으면 게임 위에 점검 화면(`app/lounge/Maintenance.tsx`)을 띄우고, 게임은 아래에서 조용히 다시 시도합니다. 저장된 데이터는 건드리지 않습니다.
+- 서비스 키로 DB를 직접 다루는 관리 스크립트(백업, 부하 테스트, 코드 재발급)는 점검 중에도 동작합니다.
+
+## 동시 접속 부하 테스트
+
+`scripts/load-test-world.mjs`는 Edge 함수와 같은 방식(world 읽기 → 읽은 revision으로 CAS 저장 → 지면 같은 백오프로 최대 12번 재시도)으로 친구 여러 명이 동시에 걷는 상황을 흉내 냅니다. 읽은 상태를 **그대로** 다시 저장하므로 마을 내용은 바뀌지 않고 revision만 올라갑니다. 다른 요청이 사이에 저장했다면 CAS가 실패하므로 남의 변경을 덮어쓰지 않습니다.
+
+1. 점검 모드를 켭니다(위).
+2. 로컬에서 실행합니다(서비스 키는 환경 변수로만, 파일·대화에 남기지 않습니다):
+   `SUPABASE_URL=https://ogfpeqeoaznwjbrbedbx.supabase.co SUPABASE_SERVICE_ROLE_KEY=… node --experimental-strip-types scripts/load-test-world.mjs --yes --clients=7 --seconds=120`
+   시작 전에 `hh_world_snapshot('load-test')` 백업을 남깁니다.
+3. 결과: 쓰기 지연(p50/p95/max), 쓰기당 시도 횟수, 경쟁에서 진 횟수, 4번 이상 시도(`cas_contention`), 12번 모두 실패(`cas_exhausted`, 실제로는 503) 횟수, 테스트 전후 상태가 같은지.
+4. 점검 모드를 끕니다.
+
 ## 배포 순서
 
 **새 클라이언트는 새 서버가 있어야 동작합니다.** 이번 화면은 private Realtime 채널(`config: { private: true }`), v3 방 저장(3D 꾸미기, `readBedroomStrict`), `world.life` 작업(텃밭·상점·우편·방명록·방 공개 설정), 친구 방 방문(`op: 'visit'`)과 `home` 접속 표시를 전제합니다. 예전 `hohyeon-api`는 v3 방을 v2 기본 방으로 되돌리고 이 작업들을 모르므로, 반드시 아래 순서를 지킵니다. 순서를 바꾸면 방 편집이 사라지거나 게임 알림이 오지 않습니다.

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { MAINTENANCE_ERROR, readMaintenance } from '../../../app/lounge-maintenance.ts';
 export const url = Deno.env.get('SUPABASE_URL')!;
 export const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 export const admin = createClient(url, key, {
@@ -108,6 +109,10 @@ const cors = {
     'authorization, apikey, content-type, x-client-info',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Expose-Headers': 'x-request-id',
+  // Browsers ask with an OPTIONS request before each POST unless they may
+  // reuse the answer: without this they kept it ~5 s, so about one call in
+  // three paid an extra ~0.3 s round trip. 2 h is the most Chromium keeps.
+  'Access-Control-Max-Age': '7200',
   'Cache-Control': 'no-store',
 };
 export type RequestContext = { requestId: string; fn: string };
@@ -136,7 +141,14 @@ export function serve(
       }
       if (!body || Array.isArray(body) || typeof body !== 'object')
         throw new HttpError('올바르지 않은 요청입니다.');
-      data = await handler(body, req, ctx);
+      // 점검 중 (HH_MAINTENANCE, lounge-maintenance.ts): `status` says so;
+      // everything else is refused before it touches the database.
+      const maintenance = readMaintenance(Deno.env.get('HH_MAINTENANCE'));
+      if (body.op === 'status') data = { ok: true, maintenance };
+      else if (maintenance) {
+        status = 503;
+        data = { error: MAINTENANCE_ERROR, maintenance };
+      } else data = await handler(body, req, ctx);
     } catch (e) {
       const known = e instanceof HttpError;
       status = known ? e.status : 500;

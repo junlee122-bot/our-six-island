@@ -1,0 +1,244 @@
+/* 점검 중 화면 ("범타듀 밸리가 예뻐지는 중"): a morning sky over a little
+   house getting a fresh coat of paint, and a paper note in front. */
+.l-fix {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-banner);
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: var(--sp-4);
+  padding: var(--sp-6) 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--pal-cyan-85) 0%, var(--pal-cyan-91) 55%, var(--paper-100) 100%);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+.l-fix-sky {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.l-fix-cloud {
+  position: absolute;
+  width: 140px;
+  height: 40px;
+  border-radius: var(--r-round);
+  background: var(--paper-50);
+  opacity: 0.85;
+  animation: l-fix-drift 38s linear infinite;
+}
+.l-fix-cloud::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  top: -22px;
+  width: 64px;
+  height: 52px;
+  border-radius: 50%;
+  background: inherit;
+}
+.l-fix-cloud.is-a {
+  top: 12%;
+  left: -160px;
+}
+.l-fix-cloud.is-b {
+  top: 26%;
+  left: -160px;
+  transform: scale(0.7);
+  animation-duration: 52s;
+  animation-delay: -20s;
+}
+@keyframes l-fix-drift {
+  to {
+    translate: calc(100vw + 320px) 0;
+  }
+}
+.l-fix-spark {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--gold-400);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: l-fix-twinkle 2.4s ease-in-out infinite;
+}
+.l-fix-spark.is-a {
+  top: 18%;
+  left: 22%;
+}
+.l-fix-spark.is-b {
+  top: 30%;
+  right: 20%;
+  animation-delay: -0.8s;
+}
+.l-fix-spark.is-c {
+  top: 52%;
+  left: 14%;
+  animation-delay: -1.6s;
+}
+@keyframes l-fix-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    scale: 0.6;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.2;
+  }
+}
+
+.l-fix-scene {
+  position: relative;
+  width: min(420px, 90vw);
+  height: auto;
+  overflow: visible;
+}
+.l-fix-hill {
+  fill: var(--leaf-600);
+}
+.l-fix-wall {
+  fill: var(--paper-200);
+  stroke: var(--wood-900);
+  stroke-width: 2.4;
+}
+.l-fix-roof {
+  fill: var(--stamp-600);
+  stroke: var(--wood-900);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+}
+.l-fix-door {
+  fill: var(--wood-500);
+  stroke: var(--wood-900);
+  stroke-width: 2;
+}
+.l-fix-window {
+  fill: var(--pal-cyan-61);
+  stroke: var(--wood-900);
+  stroke-width: 2;
+}
+/* The window being painted: its colour comes in stroke by stroke. */
+.l-fix-wet {
+  fill: var(--gold-400);
+  stroke: var(--wood-900);
+  stroke-width: 2;
+  animation: l-fix-wet 3s ease-in-out infinite;
+}
+@keyframes l-fix-wet {
+  0%,
+  100% {
+    fill: var(--paper-200);
+  }
+  50% {
+    fill: var(--gold-400);
+  }
+}
+.l-fix-ladder path {
+  fill: none;
+  stroke: var(--wood-700);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.l-fix-roller {
+  transform-origin: 196px 58px;
+  animation: l-fix-roll 1.6s ease-in-out infinite;
+}
+.l-fix-stick {
+  fill: none;
+  stroke: var(--wood-900);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.l-fix-paint {
+  fill: var(--gold-400);
+  stroke: var(--wood-900);
+  stroke-width: 2;
+}
+@keyframes l-fix-roll {
+  0%,
+  100% {
+    rotate: -8deg;
+  }
+  50% {
+    rotate: 10deg;
+  }
+}
+.l-fix-flowers circle {
+  fill: var(--stamp-100);
+  stroke: var(--stamp-600);
+  stroke-width: 2;
+}
+.l-fix-flowers path {
+  fill: none;
+  stroke: var(--leaf-800);
+  stroke-width: 2.4;
+}
+.l-fix-sign {
+  fill: var(--wood-300);
+  stroke: var(--wood-900);
+  stroke-width: 2.4;
+}
+
+.l-fix-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  width: min(460px, 100%);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-radius: var(--r-l);
+  background: var(--note);
+  box-shadow: var(--lift-2);
+  text-align: center;
+}
+.l-fix-card small {
+  padding: 2px var(--sp-3);
+  border-radius: var(--r-round);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-bold);
+}
+.l-fix-card h1 {
+  margin: var(--sp-1) 0 0;
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-display);
+  line-height: 1.2;
+}
+.l-fix-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+}
+.l-fix-card .l-fix-note {
+  color: var(--text);
+  font-family: var(--font-hand);
+  font-size: var(--fs-title-s);
+}
+.l-fix-card .l-fix-until {
+  color: var(--text);
+  font-weight: var(--fw-bold);
+}
+.l-fix-card .l-fix-safe {
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-body-s);
+}
+.l-fix-auto {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-fix-cloud,
+  .l-fix-spark,
+  .l-fix-wet,
+  .l-fix-roller {
+    animation: none;
+  }
+}
+/* The game's wrapper (app/page.tsx) adds no box of its own. */
+.l-fix-host {
+  display: contents;
+}

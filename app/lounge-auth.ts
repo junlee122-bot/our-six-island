@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { AccountProfile } from './lounge-accounts';
+import { maintenanceOf, setMaintenance } from './lounge-maintenance';
 export const CLOUD_URL = 'https://ogfpeqeoaznwjbrbedbx.supabase.co';
 export const CLOUD_KEY = 'sb_publishable_qoHHUYiC5jBUSK3vpYPV2A_LOLiGR7L';
 export const cloud = createClient(CLOUD_URL, CLOUD_KEY, {
@@ -76,12 +77,21 @@ export async function cloudCall<T = unknown>(
     if (data.session?.access_token === token)
       window.dispatchEvent(new Event('hohyeon-session-expired'));
   }
+  // 점검 중: a notice turns the maintenance page on, any normal answer off.
+  const notice = response.status === 503 ? maintenanceOf(result) : null;
+  if (notice) setMaintenance(notice);
+  else if (response.ok) setMaintenance(null);
   if (!response.ok)
     throw new AccountError(
       result.error ?? '계정 요청을 처리하지 못했어요.',
       response.status,
     );
   return result as T;
+}
+/** Asks whether maintenance is still on (no login needed); updates the page either way. */
+export async function pingMaintenance() {
+  const r = await cloudCall<{ maintenance?: unknown }>('hohyeon-auth', { op: 'status' }, false, undefined, 8000);
+  setMaintenance(maintenanceOf(r));
 }
 export const fetchProfile = async () =>
   (
