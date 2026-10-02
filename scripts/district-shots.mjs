@@ -36,6 +36,8 @@ const panels = args.includes('--panels');
 // the counter with its draw calls, open the counter's window, then walk out.
 // Two friends sit on the bakery's café chairs. Costs go to <out>/<view>-shops.json.
 const shops = args.includes('--shops');
+// --shop <room>: with --shops, only this room (e.g. --shop broker).
+const shopOnly = opt('shop', '');
 // --minimap: in each district put two friends on the map and one inside a shop room,
 // capture the minimap compact and enlarged, and walk somewhere by clicking a place on it.
 const minimap = args.includes('--minimap');
@@ -257,7 +259,7 @@ try {
         const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
         return { drawCalls: Number(d?.drawCalls), triangles: Number(d?.triangles), models: d?.shopModels ?? '', residents: d?.residents ?? '' };
       });
-      for (const c of districtCounters(id, weekday).filter((t) => t.a.kind === 'counter' && t.a.enter)) {
+      for (const c of districtCounters(id, weekday).filter((t) => t.a.kind === 'counter' && t.a.enter && (!shopOnly || t.a.enter === shopOnly))) {
         const area = c.a.enter;
         console.log(' ', area);
         try {

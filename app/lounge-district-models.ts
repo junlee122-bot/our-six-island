@@ -19,6 +19,7 @@ export const MARKET_MODEL_URLS: Record<MarketModel, string> = {
   furnitureShowroom: SHOP_MODELS.furnitureShowroom,
   dumplingShop: SHOP_MODELS.dumplingShop,
   realtyOffice: SHOP_MODELS.realtyOffice,
+  bankBuilding: SHOP_MODELS.bankBuilding,
   tavernStall: SHOP_MODELS.tavernStall,
   grillHut: SHOP_MODELS.grillHut,
   stallHeritage: SHOP_MODELS.stallHeritage,

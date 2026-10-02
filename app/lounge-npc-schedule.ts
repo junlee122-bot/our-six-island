@@ -20,9 +20,11 @@
 // resident commutes to their own house there instead (`hill` option; the
 // client sets it from the world with setNpcWorld, the server passes it).
 // Inside a house, the library or the lighthouse a resident is not drawn
-// (`hidden` places in a visible area). The eight residents who already work
-// indoors stay at their posts (their scenes draw them); 발키리 takes an
-// evening walk through the hub. 범마을 부동산 is kept in turns by a married
+// (`hidden` places in a visible area). The residents who work indoors are
+// drawn at their posts by their scenes; 발키리 takes an evening walk through
+// the hub, and 루미 · 매화 · 로제 leave the casino and the hall through their
+// doors for breaks and a weekly day off (hostPlan; the tables and the
+// lender's desk keep working without them, npcAtPost). 범마을 부동산 is kept in turns by a married
 // couple (realtyDuty): 신형만 on Mon/Wed/Fri, 봉미선 on Tue/Thu, both at the
 // weekend (one at the counter, the other showing the model house). Off duty
 // 형만 works out of the village and ends the day at the tavern; 미선 shops in
@@ -157,6 +159,10 @@ const TAVERN_SCENE = {
   'bar-4': { x: 50, y: 46 },
   'bar-5': { x: 57, y: 47 },
   misun: { x: 61, y: 51 },
+  // 루미 · 매화 · 로제 on their breaks and days off (kept off the evening seat pool).
+  lumi: { x: 28, y: 68 },
+  maehwa: { x: 36, y: 62 },
+  rose: { x: 62, y: 88 },
 } as const;
 const tw = (k: keyof typeof TAVERN_SCENE) => interiorToWorld(TAVERN_SCENE[k]);
 
@@ -317,6 +323,15 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.tavern-door': place('village', entryOf('tavern'), Math.PI, '허풍 주점 앞'),
   'v.realty-door': place('village', entryOf('realty'), Math.PI, '부동산 앞'),
   'v.furniture-door': place('village', entryOf('furniture'), Math.PI, '가구점 앞'),
+  'v.casino-door': place('village', entryOf('casino'), Math.PI, '별빛 카지노 앞'),
+  'v.hall-door': place('village', entryOf('hall'), Math.PI, '범마을 회관 앞'),
+  // 루미 · 매화's breaks and days off (off the evening seats).
+  'v.lumi-flower': place('village', vSnap({ x: -33.5, z: -9.4 }), -Math.PI / 2, '연못가 꽃밭'),
+  'v.lumi-late': place('village', vSnap({ x: -1.8, z: 8.4 }), Math.PI / 2, '광장 가로등 아래'),
+  'v.casino-yard': place('village', vSnap({ x: 18.6, z: 9.6 }), -Math.PI / 2, '카지노 처마 밑'),
+  'v.hall-yard': place('village', vSnap({ x: -13.4, z: 9.6 }), Math.PI / 2, '회관 앞마당'),
+  'v.hall-late': place('village', vSnap({ x: -18.6, z: 9.8 }), -Math.PI / 2, '회관 앞 골목'),
+  'v.maehwa-orchard': place('village', vSnap({ x: -26, z: 6 }), 0, '과수원 길'),
   // 신형만 · 봉미선's Sunday evening walk (side by side, off the evening seats).
   'v.couple-a': place('village', vSnap({ x: VILLAGE_PAVILION.x - 1.2, z: VILLAGE_PAVILION.z + 3.4 }), Math.PI / 2, '팔각정 산책길'),
   'v.couple-b': place('village', vSnap({ x: VILLAGE_PAVILION.x + 0.4, z: VILLAGE_PAVILION.z + 3.4 }), -Math.PI / 2, '팔각정 산책길'),
@@ -359,12 +374,19 @@ export const NPC_PLACES: Record<string, Place> = {
   'm.cafe-5': place('market', { x: 8, z: -10.2 }, 0.9, '빵집 카페 테라스'),
   'm.cafe-6': place('market', { x: 11, z: -6.1 }, -0.9, '빵집 카페 테라스'),
   'm.cafe-7': place('market', { x: 14.2, z: -7.4 }, -1.6, '빵집 카페 테라스'),
+  // 루미's café seat and flower stall, 매화's grocery round.
+  'm.lumi-cafe': place('market', { x: 9.6, z: -9.2 }, 0.4, '빵집 카페 테라스'),
+  'm.lumi-flowers': place('market', { x: 0.6, z: 11.4 }, Math.PI, '시장 꽃 좌판'),
+  'm.maehwa': place('market', { x: -6.4, z: -4.4 }, 0, '시장 거리 장보기'),
   // 봉미선's shopping round.
   'm.misun': place('market', { x: market['plaza-n'].x + 2.2, z: market['plaza-n'].z + 0.6 }, Math.PI, '시장 광장'),
   // ② 항구 구역.
   ...Object.fromEntries(Object.entries(hb).map(([k, p]) => [`hb.${k}`, place('harbor', p, p.face, HARBOR_NAMES[k] ?? '항구')])),
   'hb.quay-2': place('harbor', { x: 15.4, z: -0.6 }, 0, '항구 좌판'),
   'hb.lighthouse-in': inside('harbor', hb['lighthouse-door'], '등대 안'),
+  // 로제's sea walks.
+  'hb.rose': place('harbor', { x: -0.2, z: 10.5 }, 0, '큰 선착장'),
+  'hb.rose-sunset': place('harbor', { x: 23.4, z: 11.2 }, -Math.PI / 2, '방파제'),
   // ③ 언덕 주택가 (visible once it is open; the plans map these to 'home' / 'library' before).
   ...Object.fromEntries(Object.entries(hl).map(([k, p]) => [`hl.${k}`, place('hillside', p, p.face, hillName(k))])),
   'hl.library-club': place('hillside', { x: hl['library-steps'].x - 1.6, z: hl['library-steps'].z + 0.2 }, -0.3, '도서관 독서 모임'),
@@ -393,6 +415,9 @@ export const NPC_PLACES: Record<string, Place> = {
   // 신형만's after-work stool (kept off the evening seat pool).
   't.bar-5': place('tavern', tw('bar-5'), Math.PI, '주점 바 끝자리'),
   't.misun': place('tavern', tw('misun'), -Math.PI / 2, '주점 바 끝자리 옆'),
+  't.lumi': place('tavern', tw('lumi'), -Math.PI / 2, '주점 창가 탁자'),
+  't.maehwa': place('tavern', tw('maehwa'), Math.PI, '주점 탁자'),
+  't.rose': place('tavern', tw('rose'), Math.PI, '주점 바다 그림 아래'),
   't.table-1': place('tavern', tw('table-1'), -Math.PI / 2, '주점 창가 탁자'),
   't.table-2': place('tavern', tw('table-2'), -Math.PI / 2, '주점 탁자'),
   't.table-3': place('tavern', tw('table-3'), Math.PI, '주점 탁자'),
@@ -405,6 +430,9 @@ export const NPC_PLACES: Record<string, Place> = {
   'casino.lumi': place('casino', { x: 0, z: 0 }, 0, '블랙잭 테이블'),
   'casino.rose': place('casino', interiorToWorld(CASINO_LENDER_SPOT), 0, '대부 창구'),
   'lounge.maehwa': place('lounge', { x: 0, z: 0 }, 0, '화투방'),
+  // The casino's and the hall's doors (inside, not drawn: the scenes draw the posts).
+  'casino.door': place('casino', interiorToWorld(INTERIOR_DOOR), 0, '별빛 카지노'),
+  'lounge.door': place('lounge', interiorToWorld(INTERIOR_DOOR), 0, '범마을 회관'),
   'tavern.captain': place('tavern', TAVERN_HOST_AT, 0, '주점 바 안쪽'),
   'bank.nyamo': place('bank', interiorToWorld(BANKER_SPOT), 0, '은행 창구'),
   'salon.gwen': place('salon', interiorToWorld(SALON_STYLIST_SPOT), 0, '미용실'),
@@ -429,6 +457,7 @@ const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = {
   orchardShop: 'rc.orchard-door',
   smithy: 'fh.smithy-door',
   clinic: 'fh.clinic-door',
+  broker: 'm.broker',
 };
 const PORTALS: readonly Portal[] = [
   { a: 'village', b: 'market', from: 'v.market-gate', to: 'm.gate', ms: GATE_TRANSIT_MS },
@@ -457,6 +486,10 @@ const PORTALS: readonly Portal[] = [
   { a: 'realty', b: 'village', from: 'realty-in', to: 'v.realty-door', ms: DOOR_TRANSIT_MS },
   { a: 'village', b: 'furniture', from: 'v.furniture-door', to: 'furniture-in', ms: DOOR_TRANSIT_MS },
   { a: 'furniture', b: 'village', from: 'furniture-in', to: 'v.furniture-door', ms: DOOR_TRANSIT_MS },
+  { a: 'village', b: 'casino', from: 'v.casino-door', to: 'casino.door', ms: DOOR_TRANSIT_MS },
+  { a: 'casino', b: 'village', from: 'casino.door', to: 'v.casino-door', ms: DOOR_TRANSIT_MS },
+  { a: 'village', b: 'lounge', from: 'v.hall-door', to: 'lounge.door', ms: DOOR_TRANSIT_MS },
+  { a: 'lounge', b: 'village', from: 'lounge.door', to: 'v.hall-door', ms: DOOR_TRANSIT_MS },
   // The shop rooms: in through the door by the old outdoor counter spot.
   ...SHOP_AREAS.flatMap((area): Portal[] => {
     const outside = SHOP_DOOR_OUTSIDE[area];
@@ -621,6 +654,98 @@ function realtyPlan(id: RealtyKeeper, k: DayKind): Seg[] {
   ];
 }
 
+// ---------------------------------------------------------------- the casino and the hall
+// 루미 (블랙잭 딜러), 매화 (화투방) and 로제 (대부 창구) work the evening rush
+// at their posts and walk the village on their breaks and one day off a week
+// (루미 화, 매화 수, 로제 월). The tables and the desk never wait for them:
+// the games are dealt by the server and the lender's book is a desk at a fixed
+// spot (nearCasinoLender), so while they are out the scenes show an empty
+// post with an "자동 진행 / 창구 장부" note (npcAtPost).
+type HostNpc = 'lumi' | 'maehwa' | 'rose';
+export const NPC_POSTS: Readonly<Record<HostNpc, string>> = { lumi: 'casino.lumi', maehwa: 'lounge.maehwa', rose: 'casino.rose' };
+/** KST weekday off (0 = Sunday). */
+export const HOST_DAY_OFF: Readonly<Record<HostNpc, number>> = { lumi: 2, maehwa: 3, rose: 1 };
+const POST_LABEL: Record<HostNpc, string> = { lumi: '별빛 카지노 딜러', maehwa: '회관 화투방', rose: '카지노 대부 창구' };
+/** Where a host is as day `k` ends (the next day starts there and sends them home at 01:00). */
+function hostLate(id: HostNpc, k: DayKind): Seg {
+  if (k.weekday !== HOST_DAY_OFF[id]) return [0, NPC_POSTS[id], 'work', POST_LABEL[id]];
+  if (id === 'lumi') return k.rain ? [0, 't.lumi', 'drink', '주점 창가에서 꽃차 마시는 중'] : [0, 'v.lumi-late', 'stroll', '광장 가로등 아래서 밤 산책 중'];
+  if (id === 'maehwa') return k.rain ? [0, 't.maehwa', 'eat', '주점에서 안주 나눠 먹는 중'] : [0, 'v.hall-late', 'stroll', '회관 앞 골목 밤 산책 중'];
+  return k.rain ? [0, 't.rose', 'drink', '주점에서 허 선장과 바다 이야기 중'] : [0, 'hb.rose', 'stroll', '밤 선착장에서 바다 보는 중'];
+}
+function hostPlan(id: HostNpc, k: DayKind): Seg[] {
+  const start: Seg[] = [hostLate(id, dayKind(k.day - 1, k.hill)), [hm(1), 'home', 'sleep']];
+  const post = (t: number): Seg => [t, NPC_POSTS[id], 'work', POST_LABEL[id]];
+  const late = hostLate(id, k);
+  const off = k.weekday === HOST_DAY_OFF[id];
+  if (id === 'lumi')
+    return off
+      ? [
+          ...start,
+          [hm(11), 'm.lumi-cafe', 'eat', '빵집 카페 테라스에서 브런치 중'],
+          [hm(12, 30), 'm.lumi-flowers', 'stroll', '시장 꽃 좌판 구경 중'],
+          [hm(14), k.rain ? 'v.casino-yard' : 'v.lumi-flower', 'stroll', k.rain ? '카지노 처마 밑에서 비 구경 중' : '연못가 꽃밭 산책 중'],
+          [hm(16, 30), 'm.lumi-cafe', 'eat', '빵집 카페에서 달콤한 음료 마시는 중'],
+          [hm(19, 30), 't.lumi', 'drink', '주점 창가에서 꽃차 마시는 중'],
+          [hm(22, 30), late[1], late[2], late[3]],
+        ]
+      : [
+          ...start,
+          [hm(10, 30), 'm.lumi-cafe', 'eat', '출근 전 빵집 카페에서 달콤한 음료 한잔'],
+          post(hm(11, 30)),
+          [hm(15), k.rain ? 'v.casino-yard' : 'v.lumi-flower', 'rest', k.rain ? '카지노 처마 밑에서 쉬는 시간' : '쉬는 시간에 연못가 꽃 구경 중'],
+          post(hm(16)),
+        ];
+  if (id === 'maehwa')
+    return off
+      ? [
+          ...start,
+          [hm(9), 'm.maehwa', 'stroll', '시장 거리에서 찻감·요리 재료 장보는 중'],
+          [hm(10, 30), 'coop.drop', 'stroll', '농협에서 햇곡식 고르는 중'],
+          [hm(12), 't.maehwa', 'eat', '주점에서 허 선장과 안주 바꿔 먹는 중'],
+          [hm(14), k.rain ? 'v.hall-yard' : 'v.maehwa-orchard', 'stroll', k.rain ? '회관 처마 밑에서 비 구경 중' : '과수원 길 산책 중'],
+          [hm(16), 'v.hall-yard', 'rest', '회관 앞마당에서 차 한잔 중'],
+          [hm(19, 30), 't.maehwa', 'eat', '주점에서 직접 만든 안주 나누는 중'],
+          [hm(22, 30), late[1], late[2], late[3]],
+        ]
+      : [
+          ...start,
+          [hm(8, 30), 'm.maehwa', 'stroll', '시장 거리에서 찻감·요리 재료 장보는 중'],
+          post(hm(9, 30)),
+          [hm(13), 't.maehwa', 'eat', '주점에서 허 선장과 안주 바꿔 먹는 점심'],
+          post(hm(14)),
+          [hm(18), k.rain ? NPC_POSTS.maehwa : 'v.hall-yard', k.rain ? 'work' : 'rest', k.rain ? POST_LABEL.maehwa : '회관 앞마당에서 차 한잔 쉬는 중'],
+          post(hm(18, 40)),
+        ];
+  return off
+    ? [
+        ...start,
+        [hm(9), k.rain ? 'fishmarket.browse' : 'hb.rose', 'stroll', k.rain ? '어시장에서 비 피하며 생선 구경 중' : '선착장에서 아침 바다 보는 중'],
+        [hm(10, 30), 'fishmarket.browse', 'stroll', '어시장에서 귀한 바닷고기 고르는 중'],
+        [hm(12), 't.rose', 'eat', '주점에서 허 선장과 바다 이야기 중'],
+        [hm(14), 'general.browse', 'stroll', '잡화점에서 보석 값 흥정 중'],
+        [hm(15, 30), k.rain ? 't.rose' : 'hb.rose-sunset', 'stroll', k.rain ? '주점에서 비 그치길 기다리는 중' : '방파제에서 바다 보는 중'],
+        [hm(19, 30), 't.rose', 'drink', '주점에서 허 선장과 바다 이야기 중'],
+        [hm(22, 30), late[1], late[2], late[3]],
+      ]
+    : [
+        ...start,
+        [hm(9, 30), k.rain ? 'general.browse' : 'hb.rose', 'stroll', k.rain ? '잡화점에서 보석 구경 중' : '출근 전 선착장에서 바다 보는 중'],
+        [hm(10, 40), 'general.browse', 'stroll', '잡화점에서 보석 값 흥정 중'],
+        post(hm(11, 30)),
+        [hm(17, 30), k.rain ? NPC_POSTS.rose : 'hb.rose-sunset', k.rain ? 'work' : 'rest', k.rain ? POST_LABEL.rose : '쉬는 시간에 방파제에서 노을 보는 중'],
+        post(hm(18, 30)),
+      ];
+}
+/**
+ * Whether a resident is at their indoor post right now (the scenes draw them
+ * there; otherwise the table runs on its own and the desk shows its book).
+ */
+export function npcAtPost(id: NpcId, now: number, world: NpcWorld = worldDefault): boolean {
+  const s = npcSpot(id, now, world);
+  return isPostPlace(s.place) && s.activity !== 'transit' && !s.place.endsWith('.door');
+}
+
 function planOf(id: NpcId, k: DayKind): Seg[] {
   const seed = (salt: string, n: number) => hash32(`${id}:${k.day}:${salt}`) % n;
   switch (id) {
@@ -767,13 +892,11 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(19, 10), 'furniture-in', 'work', '나무결 가구점'],
       ];
     case 'lumi':
-      return [[0, 'casino.lumi', 'work', '별빛 카지노 딜러']];
     case 'maehwa':
-      return [[0, 'lounge.maehwa', 'work', '회관 화투방']];
+    case 'rose':
+      return hostPlan(id, k);
     case 'captain':
       return [[0, 'tavern.captain', 'work', '허풍 주점 바']];
-    case 'rose':
-      return [[0, 'casino.rose', 'work', '카지노 대부 창구']];
     case 'nyamo':
       return [[0, 'bank.nyamo', 'work', '은행 창구']];
     case 'gwen':
@@ -1315,6 +1438,7 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   orchardShop: SHOP_INTERIORS.orchardShop.name,
   smithy: SHOP_INTERIORS.smithy.name,
   clinic: SHOP_INTERIORS.clinic.name,
+  broker: SHOP_INTERIORS.broker.name,
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>

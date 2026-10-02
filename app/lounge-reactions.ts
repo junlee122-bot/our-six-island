@@ -55,6 +55,7 @@ export type ReactionScope =
   | 'orchardShop'
   | 'smithy'
   | 'clinic'
+  | 'broker'
   /** Someone's room (visitors and owner in the same 'home'). */
   | 'home'
   | 'chess'
@@ -100,6 +101,7 @@ export function readReaction(value: unknown): Reaction | undefined {
       'orchardShop',
       'smithy',
       'clinic',
+      'broker',
       'home',
       'chess',
       'gostop',
@@ -127,6 +129,7 @@ export function readReaction(value: unknown): Reaction | undefined {
     r.scope !== 'orchardShop' &&
     r.scope !== 'smithy' &&
     r.scope !== 'clinic' &&
+    r.scope !== 'broker' &&
     r.scope !== 'home';
   if (
     game &&

@@ -40,8 +40,9 @@ import { BAKERY_MENU } from '../app/lounge-town.ts';
 
 // ---------------------------------------------------------------- registry
 test('the shop rooms are interior areas with their own chat and no game tables', () => {
-  // Stage 2's four, then stage 3's 축사 · 과수원 창고 · 대장간 · 의원 (design-npcs-stage3.md).
-  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic']);
+  // Stage 2's four, then stage 3's 축사 · 과수원 창고 · 대장간 · 의원 (design-npcs-stage3.md),
+  // then 범마을 증권 (design-stocks.md).
+  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker']);
   for (const area of SHOP_AREAS) {
     assert.ok(AREAS.includes(area));
     assert.ok(INTERIOR_AREAS.includes(area));

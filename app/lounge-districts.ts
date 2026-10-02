@@ -62,7 +62,7 @@ export const DISTRICTS: Record<DistrictId, District> = {
     id: 'market',
     no: 1,
     name: '시장 거리',
-    tagline: '농협 · 잡화점 · 빵집 카페 · 신문사 · 우체국 · 파출소',
+    tagline: '농협 · 잡화점 · 빵집 카페 · 신문사 · 증권사 · 우체국 · 파출소',
     size: { w: 56, d: 44 },
     stage: 1,
     gate: { x: 55.3, z: -5, stand: { x: 53.6, z: -5 }, reach: 1.9, road: '큰길', rot: -Math.PI / 2 },

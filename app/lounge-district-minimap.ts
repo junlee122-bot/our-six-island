@@ -177,6 +177,7 @@ const COUNTER_SHORT: Record<string, string> = {
   smithy: '대장간',
   clinic: '의원',
   fortune: '점집',
+  broker: '증권사',
 };
 
 /** Houses and buildings with no counter (언덕's residents' homes). */

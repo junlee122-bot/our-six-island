@@ -56,7 +56,7 @@ export function Modal({
   /** Key hints pinned under the page ("[Esc] 닫기" is added when closable). */
   keyHints?: KeyHintItem[];
   /** Venue tokens for the window (tokens.css [data-venue]): oak in the tavern… */
-  venue?: 'hall' | 'casino' | 'tavern';
+  venue?: 'hall' | 'casino' | 'tavern' | 'broker';
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {

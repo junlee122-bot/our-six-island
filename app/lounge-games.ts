@@ -193,6 +193,7 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   orchardShop: { x: 27, y: 82 },
   smithy: { x: 27, y: 82 },
   clinic: { x: 27, y: 82 },
+  broker: { x: 27, y: 82 },
   // Front left by the door, clear of the 허풍 카드 table (middle).
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },

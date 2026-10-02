@@ -35,5 +35,8 @@ export const NPC_CHIBI: Partial<Record<NpcId, NpcChibi>> = {
   ornn: { asset: A.chibi_ornn, w: 512, h: 640 },
   mercy: { asset: A.chibi_mercy, w: 512, h: 640 },
   shinichi: { asset: A.chibi_shinichi, w: 512, h: 640 },
+  // 루미 · 매화 walk the village on breaks; at their tables they keep the pose sheet.
+  lumi: { asset: A.chibi_lumi, w: 512, h: 640 },
+  maehwa: { asset: A.chibi_maehwa, w: 512, h: 640 },
 };
 export const npcChibi = (id: NpcId): NpcChibi | undefined => NPC_CHIBI[id];

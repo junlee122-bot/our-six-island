@@ -28,7 +28,8 @@ export type DistrictCounter =
   | 'orchardShop'
   | 'smithy'
   | 'clinic'
-  | 'fortune';
+  | 'fortune'
+  | 'broker';
 export type DistrictTouch =
   /** `enter`: the shop has a room (가게 실내) and E walks in instead of opening the counter. */
   | { kind: 'counter'; place: DistrictCounter; label: string; enter?: ShopArea }
@@ -53,6 +54,7 @@ export const COUNTER_NAME: Record<DistrictCounter, string> = {
   smithy: '오른의 대장간',
   clinic: '메르시 의원',
   fortune: '신이치의 점집',
+  broker: '범마을 증권',
 };
 /** The stage-3 buildings' doors lead to these counters (their rooms open the same windows). */
 const STAGE3_COUNTER: Record<string, DistrictCounter> = { barn: 'barn', orchardShop: 'orchardShop', smithy: 'smithy', clinic: 'clinic' };

@@ -752,7 +752,7 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
               <PlacementPreview refId={item.ref} />
               <p>
                 {formatBeom(item.price)} · 가진 개수 {owned[item.ref] ?? 0}
-                {FURNITURE_BY_REF[item.ref]?.craft ? ' · 공방에서 만들 수도 있어요' : ''}
+                {FURNITURE_BY_REF[item.ref]?.craft ? ' · 내 방 요리·만들기에서 만들 수도 있어요' : ''}
               </p>
               {page !== 'luxury' && (
                 <div className="sc-count" aria-label="개수">

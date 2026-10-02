@@ -546,7 +546,7 @@ Wanted 프로젝트 1641의 실제 연결 소스인 [aldegad/sprite-gen](https:/
 | 연회 의자 `banquetChair.glb` | 397,588 → 194,080 | 512² | 회관·카지노 모든 테이블 의자. 방석 높이 = `SEAT_HEIGHT`(0.36) |
 | 바 의자 `barStool.glb` | 487,112 → 207,932 | 512² | 카지노 바 앞 4개 |
 | 차단봉 `queueRope.glb` | 460,672 → 218,776 | 512² | 카지노 입구, VIP 구역('vip' 완공 후, 기둥 사이 벨벳 줄은 코드. 전에는 공사장) |
-| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 가구 상점 판매 품목 `furn-rocking-chair` '흔들의자'(26,000범, 산 개수만큼 방에 배치). 상점 아이콘은 같은 화풍의 SVG, 방 카탈로그 썸네일 `bedroom/thumbs/rocking-chair.webp`(14,834바이트)는 직접 렌더링 |
+| 흔들의자 `lounge/redesign/rockingChair.glb` | 481,632 → 306,448 | 1024² | 2026-10-02까지 가구 상점 품목 `furn-rocking-chair`의 방 모델. 지금 방과 상점은 가구 그림(`lounge/furniture/rocking-chair.webp`)을 쓰고, 이 GLB는 기록·재사용용으로 남겨 둡니다(방에서 받지 않음). 예전 렌더 썸네일은 지웠습니다 |
 
 - 원본 합계 7,880,560바이트 → 배포 사본 4,556,676바이트(+ 썸네일 14,834). 원본은 `public/models/_originals/` 같은 경로에 보관하고 `npm run optimize:assets`로 다시 만듭니다. 작게 보이는 반복 소품 8종은 `scripts/optimize-assets.mjs`의 `MODEL_TEXTURE_SIZE`로 512²까지 줄였습니다(기본 1024²).
 - GPU 텍스처 메모리(RGBA8, 밉맵 포함): 1024² 7장 × 5.3MB + 512² 8장 × 1.3MB ≈ 48MB. 장면별로는 마을 ≈ 33MB, 회관 ≈ 6.7MB, 카지노 ≈ 4MB, 방은 흔들의자를 놓을 때 5.3MB입니다. 모든 모델은 그 장면을 열 때만 받고(회관·카지노 가구는 실내 화면 청크에서), 모델이 도착하기 전에는 기존 도형이 대신 보입니다.
@@ -728,3 +728,9 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - **새 다운로드 없음.** 두 구역과 실내 4곳(축사·과수원 창고·대장간·의원)은 저장소에 이미 있는 kArchive(D·D2·D3, 쓰레드 dogfooter)와 3DAssets CC0 모델을 다시 씁니다: 도구 창고(축사·닭장), 코너 하우스(과수원 창고), 대장간 공방(오른의 대장간), 중정 주택(메르시 의원), 오두막(닐라·하쿠 집), 과일나무, 정자(원두막), 밧줄 울타리, 허수아비, 펌프, 바위·나무, 주점 화덕·솥·술통·코너장 등. 배치는 `app/lounge-ranch-layout.ts`, `app/lounge-foothill-layout.ts`, `app/lounge-shop-interiors.ts`.
 - **코드로 그린 것**: 소·양·닭, 사일로, 개울과 나무 다리·징검다리, 산등성이 바위벽과 광산 입구(버팀목·등불), 모루, 별무늬 점집 천막과 수정 구슬, 온천 공사장 김, 의원 붉은 십자 간판(`lounge-ranch-scene.ts`, `lounge-foothill-scene.ts`).
 - **구역 음악**(합성, 파일 없음): 목장·과수원 "들길의 오후"(D장조 6/8, 104 bpm, 가야금 음색의 짧은 스트럼·대금·리드), 산기슭 마을 "풀무와 산바람"(D 도리안 4/4, 92 bpm, 새 악기 `anvil` 모루 소리·낮은 현·브라스·대금·바람 스웰, 밤에는 망치를 쉼). `app/lounge-music-districts.ts`, 악기 `app/lounge-music-synth.ts`. 파일을 넣고 싶으면 `lounge-music-tracks.ts`의 `ranch`·`foothill` 슬롯에 적습니다.
+
+## 나무결 가구점 가구 그림 (2026-10-02)
+
+- 원본: `public/assets/lounge/_originals/furniture/furniture-sheet-0..5.png` (Higgsfield GPT Image 2.5, 2048² 마젠타 배경, 0~2는 3×3·3~5는 2×2). 칸 순서·해시·작업 번호는 `public/assets/lounge/furniture-art-generation.json`.
+- 웹 사본: `node scripts/optimize-assets.mjs furniture`가 만듭니다. 원본 해시를 확인하고, keyMagenta(둘러싼 바탕 시드 90) + defringeMagenta로 배경을 빼고, 칸마다 자기 그림 조각만 남겨(옆 칸에서 넘어온 조각 제거) 카탈로그 비율(세워 두는 것·벽걸이 h/w, 러그 d/w 위에서 본 모양) 캔버스에 넣습니다. 긴 변 768px 이하 `lounge/furniture/<이름>.webp` 39장(합계 약 2.6MB) + 256² 썸네일 `lounge/furniture/thumbs/`. 크기와 SHA-256은 같은 json의 `web`에 스크립트가 적습니다(`tests/lounge-furniture-art.test.mjs`가 확인).
+- `app/lounge-assets.ts`의 `furniture_*` 항목이 빌드에 들어가는 목록입니다. 만들기 가구 16종은 아직 그림이 없어 SVG를 씁니다.

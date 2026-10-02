@@ -143,7 +143,8 @@ test('shop rooms: buying and selling with `at` works inside the shop and nowhere
     orchardShop: { kind: 'sellItem', item: 'apple', n: 1, at: 'orchardShop' },
     smithy: { kind: 'sellItem', item: 'copper', n: 1, at: 'smithy' },
   };
-  const AT_SHOPS = SHOP_AREAS.filter((s) => s !== 'clinic');
+  // 의원 trades no goods at its counter; 범마을 증권 sells no goods (its orders are checked in lounge-stocks.test.mjs).
+  const AT_SHOPS = SHOP_AREAS.filter((s) => s !== 'clinic' && s !== 'broker');
   assert.deepEqual(Object.keys(deals).sort(), [...AT_SHOPS].sort(), 'every shop room with a counter trade is covered');
   for (const shop of AT_SHOPS) {
     give('pumpkin', 3);

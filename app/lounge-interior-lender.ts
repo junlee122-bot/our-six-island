@@ -31,7 +31,7 @@ function createResident(scene: THREE.Scene, view: ResidentView, kind: 'lender' |
   scene.add(root);
   const ownedGeometry: THREE.BufferGeometry[] = [], ownedMaterial: THREE.Material[] = [];
   const textures: THREE.Texture[] = [];
-  let disposed = false, loaded = false;
+  let disposed = false, loaded = false, present = true;
   // In the world they are chibi at a friend's size (lounge-npc-chibi.ts); the tall art stays for dialogue.
   const chibi = npcChibi(kind === 'banker' ? 'nyamo' : kind === 'stylist' ? 'gwen' : 'rose');
   // Upright, stretched by 1 / cos(pitch): on screen exactly a friend's card (구역 공통 규격).
@@ -104,7 +104,14 @@ function createResident(scene: THREE.Scene, view: ResidentView, kind: 'lender' |
 
   return {
     at,
-    hits: () => loaded ? [figure] : [],
+    hits: () => loaded && present ? [figure] : [],
+    /** Out on a break (lounge-npc-schedule.ts npcAtPost): the desk, rug and sign stay. Returns true if it changed. */
+    setPresent(here: boolean) {
+      if (here === present) return false;
+      present = here;
+      figure.visible = shadow.visible = here;
+      return true;
+    },
     dispose() {
       disposed = true;
       scene.remove(root);

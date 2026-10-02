@@ -183,6 +183,15 @@ export const STAGE3_ITEMS = {
 export type Stage3ItemId = keyof typeof STAGE3_ITEMS;
 export const RANCH_GOODS: readonly string[] = ['egg', 'egg-big', 'milk', 'milk-big', 'wool'];
 export const ORCHARD_FRUITS: readonly string[] = ['apricot', 'peach', 'apple', 'pear', 'tangerine'];
+/**
+ * Ledger reason of an item sale: the ranch's goods and the orchard's fruit get
+ * their own buckets ('sell-ranch', 'sell-orchard') instead of their item kind's
+ * ('sell-material', 'sell-forage'), so they don't count as 대장간 / 등불 잡화점
+ * turnover on the stock exchange and a 목장·과수원 stock can be listed on them
+ * later (design-stocks.md §11).
+ */
+export const itemSaleReason = (id: string, kind: string) =>
+  RANCH_GOODS.includes(id) ? 'sell-ranch' : ORCHARD_FRUITS.includes(id) ? 'sell-orchard' : 'sell-' + kind;
 
 // ---------------------------------------------------------------- readers (no engine imports)
 type SmithLike = { ext?: Record<string, { s3?: { sm?: Partial<Record<SmithTool, SmithTier>> } } | undefined> };

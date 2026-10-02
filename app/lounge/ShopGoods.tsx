@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROPS, CROP_INFO, FRUIT_SELL, SHOP_BY_ID, shopLock, type Crop, type LifeAction, type LifeView } from '../lounge-life';
 import { BUFF_INFO, DISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
-import { itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
+import { FISH_DEMAND_FREE, isFishSale, itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
 import { SELL_AWAY, SHOP_INFO, buyerOf, shopOffer, type ShopId } from '../lounge-shops';
 import { stockName, stockUnit } from '../lounge-farm';
 import {
@@ -92,13 +92,15 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
   return (
     <>
       <p className="l-town-sub" data-testid="shop-sell-note">
-        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. 오늘 더 팔 수 있어요 {formatBeom(cap)}
+        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. {at === 'fishmarket' ? `물고기는 하루 한도 없이 팔 수 있고, 같은 물고기는 하루 ${FISH_DEMAND_FREE}마리까지 제값이에요.` : `오늘 더 팔 수 있어요 ${formatBeom(cap)}`}
         {life.me.haggleLeft ? ` · 흥정 +5% (남은 ${formatBeom(life.me.haggleLeft)})` : ''}
       </p>
       <ul className="l-town-list">
         {rows.map((r) => {
+          // Fish are outside the daily cap (lounge-life-plus isFishSale).
+          const limit = r.goods || !isFishSale(r.id) ? cap : Infinity;
           let most = Math.min(r.have, 999);
-          while (most > 1 && total(r, most) > cap) most--;
+          while (most > 1 && total(r, most) > limit) most--;
           const one = total(r, 1);
           return (
             <li key={r.key} className="l-town-row" data-testid={`shop-sell-${r.key}`}>
@@ -113,7 +115,7 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
                 </small>
               </div>
               <span className="l-town-buttons">
-                <GameButton size="s" disabled={busy || one > cap} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
+                <GameButton size="s" disabled={busy || one > limit} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
                   1개
                 </GameButton>
                 {most > 1 && (

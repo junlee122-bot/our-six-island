@@ -21,6 +21,8 @@ import { HOST_CELL, HOST_PORTRAIT, HOST_SHEET, hostCell, type HostId } from './l
 import { loungeAudio } from './lounge-audio';
 import type { StingKind } from './lounge-music-score';
 import { recall, remember } from './lounge-settings';
+import { npcAtPost } from './lounge-npc-schedule';
+import { useNow } from './lounge/use-now';
 import './lounge-dealer-host.css';
 
 export type { HostId };
@@ -123,12 +125,17 @@ export function DealerHost({
   children?: ReactNode;
 }) {
   const info = HOSTS[host];
+  // 루미 · 매화 walk the village on breaks and days off; the table keeps dealing (자동 진행).
+  const roams = host === 'lumi' || host === 'maehwa';
+  const now = useNow(roams, 30_000);
+  const away = roams && !npcAtPost(host, now);
   return (
     <div
       className={
         'dh-host dh-' + host + (compact ? ' compact' : '') + ' ' + className
       }
       data-mood={line.mood}
+      data-away={away || undefined}
       data-testid="dealer-host"
     >
       <span className="dh-portrait">
@@ -136,7 +143,7 @@ export function DealerHost({
       </span>
       <div className="dh-body">
         <small className="dh-name">
-          {info.name} <span>{info.title}</span>
+          {info.name} <span>{away ? `${info.title} · 휴식 중이라 자동 진행` : info.title}</span>
         </small>
         <p className="dh-line" aria-live="polite" key={line.text}>
           {line.text}

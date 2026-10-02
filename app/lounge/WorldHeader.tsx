@@ -40,6 +40,7 @@ export const TAB_TITLES: Record<Tab, string> = {
   orchardShop: SHOP_INTERIORS.orchardShop.name,
   smithy: SHOP_INTERIORS.smithy.name,
   clinic: SHOP_INTERIORS.clinic.name,
+  broker: SHOP_INTERIORS.broker.name,
 };
 
 /**

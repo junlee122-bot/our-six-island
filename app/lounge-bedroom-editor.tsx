@@ -127,7 +127,7 @@ export function EditCatalog({
         })}
         {category === 'premium' && (
           <p className="b3-empty-note">
-            나무결 가구점에서 산 가구와 공방에서 만든 가구예요. 가진 개수만큼 놓을 수 있어요.
+            나무결 가구점에서 산 가구, 부엌 조리대에서 만든 가구, 선물·축제·마을 공사로 받은 가구예요. 가진 개수만큼 놓을 수 있어요.
           </p>
         )}
         {!visible.length && category !== 'rare' && (
@@ -137,7 +137,7 @@ export function EditCatalog({
         )}
         {category === 'rare' && !visible.length && (
           <p className="b3-empty-note">
-            아직 희귀 소품이 없어요. 수확 목표를 채우면 시장 거리 등불 잡화점에서 트로피와 과일 바구니를 살 수 있어요.
+            아직 희귀 소품이 없어요. 수확 목표를 채우면 시장 거리 등불 잡화점에서 트로피와 과일 바구니를 살 수 있어요. 축제 기념품과 마을 공사 현판도 여기에 나와요.
           </p>
         )}
       </div>

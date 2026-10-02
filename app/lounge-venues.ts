@@ -57,6 +57,7 @@ export const VENUES: Record<InteriorArea, Venue> = {
   orchardShop: shopVenue('orchardShop'),
   smithy: shopVenue('smithy'),
   clinic: shopVenue('clinic'),
+  broker: shopVenue('broker'),
   salon: {
     area: 'salon', name: '보송 미용실', short: '미용실', place: 'wardrobe',
     music: 'hall', venue: 'hall', chat: '미용실 수다', exposure: 1.08,

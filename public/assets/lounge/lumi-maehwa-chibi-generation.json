@@ -1,0 +1,33 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "Walking chibis for 루미 and 매화, who now walk around the village. Each drawn from the calm cell of her own host sheet (host-lumi.png / host-maehwa.png) in the chibi style of npc-chibi-lux-himmel.png.",
+ "assets": [
+  {
+   "id": "lumi-chibi",
+   "job": "384487eb-d1e5-41df-97b7-f8cedc1ffcd2",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "characterReference": "host-lumi.png (calm cell)",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-lumi.png",
+   "sha256": "49812921E50F2599DBAA13221CB630EC546B34B27F942EE4420F7928D6F8DC76"
+  },
+  {
+   "id": "maehwa-chibi",
+   "job": "8d11ff20-96f2-48e0-91e8-8fc049ea305e",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "characterReference": "host-maehwa.png (calm cell)",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-maehwa.png",
+   "sha256": "5C9E64257010453EC3BF6E4DBD40EDC2801824690F12BE6BB7D7A3D343B51BE3"
+  }
+ ]
+}
