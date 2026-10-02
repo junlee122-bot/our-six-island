@@ -3,7 +3,7 @@
  "provider": "Higgsfield",
  "model": "gpt_image_2_5",
  "background": "solid magenta #FF00FF (keyed at build)",
- "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Recostumed as a village smith. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. User reference images were uploaded only as generation inputs and are not stored in this repository.",
  "assets": [
   {
    "id": "nilah-tall",
@@ -28,24 +28,24 @@
   },
   {
    "id": "ornn-tall",
-   "job": "bda2b363-ae2f-40af-a0a6-4b997934b0e7",
+   "job": "b0f09644-ae45-43b0-8d17-4896c4be5759",
    "aspect": "2:3",
    "quality": "high",
    "resolution": "2k",
    "styleReference": "_originals/casino-lender-rose.png",
    "original": "_originals/npc-ornn.png",
-   "sha256": "9BB27FA1B1009F9562D2B4200CC2D1D0BF63AD0EB45EDFDF2ED25DFDED560443"
+   "sha256": "0D628006D1B6588E016D7D206F2FBE0D5C7B33B7BA8269118C1D08D5BACA1440"
   },
   {
    "id": "ornn-chibi",
-   "job": "632a2bee-7be7-4e1f-81ba-446cde8a7777",
+   "job": "6001ef0a-b204-493c-8745-fd931a402997",
    "aspect": "2:3",
    "quality": "high",
    "resolution": "2k",
    "proportion": "about 2 heads",
    "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
    "original": "_originals/chibi/npc-chibi-ornn.png",
-   "sha256": "6A3DB4EBC1F40AAE60AE6135E0CFAC117DCC67855EA2B4D57BB60AE0B353DAC6"
+   "sha256": "78F009FBD0B92DCA05795B70874E32C82555F2DBFC0BF0BA986AE5C85B91E813"
   },
   {
    "id": "mercy-tall",
