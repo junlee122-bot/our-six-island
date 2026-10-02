@@ -29,21 +29,21 @@ const ALL: readonly Season[] = ['spring', 'summer', 'autumn', 'winter'];
  * real season and conditions live in FISH_PROFILE below.
  */
 export const EXTRA_FISH: readonly FishDef[] = [
-  { id: 'mullet', name: '숭어', emoji: '', spots: ['sea', 'harbor'], seasons: ['winter', 'spring'], time: 'any', sky: 'any', weight: 30, sell: 320, cm: [30, 70], windowMs: 900, note: '물 위로 펄쩍 뛰어오르는 겨울 바다의 단골.' },
-  { id: 'sandfish', name: '도루묵', emoji: '', spots: ['sea'], seasons: ['winter'], time: 'any', sky: 'any', weight: 28, sell: 380, cm: [15, 26], windowMs: 900, note: '말짱 도루묵이라지만 알이 꽉 찼어요.' },
-  { id: 'filefish', name: '쥐치', emoji: '', spots: ['rocks'], seasons: ['summer', 'autumn'], time: 'day', sky: 'any', weight: 22, sell: 420, cm: [15, 35], windowMs: 850, note: '미끼만 쏙 빼 먹는 갯바위 얌체.' },
-  { id: 'blossomtrout', name: '벚꽃 산천어', emoji: '', spots: ['falls'], seasons: [], time: 'day', sky: 'dry', weight: 1, sell: 6_000, cm: [40, 70], windowMs: 450, note: '벚꽃잎이 폭포 소를 덮는 봄 아침에만 나온다는 전설.' },
-  { id: 'lakelord', name: '호수의 주인', emoji: '', spots: ['lake'], seasons: [], time: 'night', sky: 'rain', weight: 1, sell: 7_500, cm: [120, 200], windowMs: 450, note: '여름 장맛비 내리는 한밤, 선착장 밑 그림자가 움직여요.' },
-  { id: 'icecod', name: '겨울 왕대구', emoji: '', spots: ['rocks'], seasons: [], time: 'any', sky: 'any', weight: 1, sell: 7_000, cm: [90, 140], windowMs: 450, note: '겨울 새벽 갯바위에만 들른다는 커다란 대구.' },
+  { id: 'mullet', name: '숭어', emoji: '', spots: ['sea', 'harbor'], seasons: ['winter', 'spring'], time: 'any', sky: 'any', weight: 30, sell: 480, cm: [30, 70], windowMs: 900, note: '물 위로 펄쩍 뛰어오르는 겨울 바다의 단골.' },
+  { id: 'sandfish', name: '도루묵', emoji: '', spots: ['sea'], seasons: ['winter'], time: 'any', sky: 'any', weight: 28, sell: 570, cm: [15, 26], windowMs: 900, note: '말짱 도루묵이라지만 알이 꽉 찼어요.' },
+  { id: 'filefish', name: '쥐치', emoji: '', spots: ['rocks'], seasons: ['summer', 'autumn'], time: 'day', sky: 'any', weight: 22, sell: 630, cm: [15, 35], windowMs: 850, note: '미끼만 쏙 빼 먹는 갯바위 얌체.' },
+  { id: 'blossomtrout', name: '벚꽃 산천어', emoji: '', spots: ['falls'], seasons: [], time: 'day', sky: 'dry', weight: 1, sell: 7_800, cm: [40, 70], windowMs: 450, note: '벚꽃잎이 폭포 소를 덮는 봄 아침에만 나온다는 전설.' },
+  { id: 'lakelord', name: '호수의 주인', emoji: '', spots: ['lake'], seasons: [], time: 'night', sky: 'rain', weight: 1, sell: 9_750, cm: [120, 200], windowMs: 450, note: '여름 장맛비 내리는 한밤, 선착장 밑 그림자가 움직여요.' },
+  { id: 'icecod', name: '겨울 왕대구', emoji: '', spots: ['rocks'], seasons: [], time: 'any', sky: 'any', weight: 1, sell: 9_100, cm: [90, 140], windowMs: 450, note: '겨울 새벽 갯바위에만 들른다는 커다란 대구.' },
 ];
 /** Crab-pot catches: museum and cooking items with no rod spot. */
 export const POT_FISH: readonly FishDef[] = [
-  { id: 'daseulgi', name: '다슬기', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 40, sell: 60, cm: [2, 4], windowMs: 1_000, note: '맑은 물 돌바닥에 붙어 살아요. 통발로 건져요.' },
-  { id: 'shrimp', name: '민물새우', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 30, sell: 90, cm: [3, 6], windowMs: 1_000, note: '톡톡 튀는 새뱅이. 통발로 건져요.' },
-  { id: 'crab', name: '꽃게', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 15, sell: 450, cm: [12, 22], windowMs: 1_000, note: '집게를 들고 통발 안에서 버텨요.' },
-  { id: 'clam', name: '바지락', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 40, sell: 120, cm: [3, 6], windowMs: 1_000, note: '칼국수에 넣으면 국물이 시원해요.' },
-  { id: 'oyster', name: '굴', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 25, sell: 260, cm: [6, 12], windowMs: 1_000, note: '바위에 붙어 자라는 바다의 우유.' },
-  { id: 'conch', name: '소라', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 20, sell: 320, cm: [7, 14], windowMs: 1_000, note: '귀에 대면 파도 소리가 들린대요.' },
+  { id: 'daseulgi', name: '다슬기', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 40, sell: 90, cm: [2, 4], windowMs: 1_000, note: '맑은 물 돌바닥에 붙어 살아요. 통발로 건져요.' },
+  { id: 'shrimp', name: '민물새우', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 30, sell: 140, cm: [3, 6], windowMs: 1_000, note: '톡톡 튀는 새뱅이. 통발로 건져요.' },
+  { id: 'crab', name: '꽃게', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 15, sell: 680, cm: [12, 22], windowMs: 1_000, note: '집게를 들고 통발 안에서 버텨요.' },
+  { id: 'clam', name: '바지락', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 40, sell: 180, cm: [3, 6], windowMs: 1_000, note: '칼국수에 넣으면 국물이 시원해요.' },
+  { id: 'oyster', name: '굴', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 25, sell: 390, cm: [6, 12], windowMs: 1_000, note: '바위에 붙어 자라는 바다의 우유.' },
+  { id: 'conch', name: '소라', emoji: '', spots: [], seasons: ALL, time: 'any', sky: 'any', weight: 20, sell: 480, cm: [7, 14], windowMs: 1_000, note: '귀에 대면 파도 소리가 들린대요.' },
 ];
 export const POT_FRESH = ['daseulgi', 'shrimp', 'crayfish'] as const;
 export const POT_SEA = ['clam', 'oyster', 'conch', 'crab'] as const;
@@ -166,9 +166,11 @@ export const FISHING_CRAFTS: readonly RecipeDef[] = [
 ];
 
 // ---------------------------------------------------------------- dishes
-/** Seafood dishes (sell = ingredients × 1.25 + 100, like lounge-items DISHES). */
-const round10 = (n: number) => Math.round(n / 10) * 10;
-const dishOf = (id: string, name: string, needs: RecipeDef['needs'], value: number, note: string, buff?: DishDef['buff']): DishDef => ({
+/**
+ * Seafood dishes. Priced in lounge-items DISHES like every other dish
+ * (ingredients × 1.25 + 100, rounded to 10), so they follow the fish prices.
+ */
+const dishOf = (id: string, name: string, needs: RecipeDef['needs'], note: string, buff?: DishDef['buff']): DishDef => ({
   id,
   name,
   emoji: '',
@@ -176,13 +178,13 @@ const dishOf = (id: string, name: string, needs: RecipeDef['needs'], value: numb
   makes: id,
   count: 1,
   note,
-  sell: round10(value * 1.25 + 100),
+  sell: 0,
   ...(buff ? { buff } : {}),
 });
 export const FISH_DISHES: readonly DishDef[] = [
-  dishOf('sashimi', '모둠 회', [{ cat: 'fish', n: 2 }], 600, '갓 잡은 물고기를 얇게 떴어요.', 'luck'),
-  dishOf('haemuljeon', '해물파전', [{ item: 'clam', n: 2 }, { item: 'potato', n: 1 }], 1_140, '바지락을 듬뿍 넣은 비 오는 날의 전.', 'mine'),
-  dishOf('guljeon', '굴전', [{ item: 'oyster', n: 2 }, { item: 'potato', n: 1 }], 1_420, '달걀옷을 입혀 노릇하게.', 'charm'),
-  dishOf('kkotgetang', '꽃게탕', [{ item: 'crab', n: 1 }, { item: 'potato', n: 1 }, { cat: 'fish', n: 1 }], 1_650, '빨간 국물에 게살이 가득.', 'luck'),
-  dishOf('daseulgiguk', '다슬기국', [{ item: 'daseulgi', n: 3 }, { item: 'carrot', n: 1 }], 380, '맑고 파란 국물. 속이 편해져요.', 'wood'),
+  dishOf('sashimi', '모둠 회', [{ cat: 'fish', n: 2 }], '갓 잡은 물고기를 얇게 떴어요.', 'luck'),
+  dishOf('haemuljeon', '해물파전', [{ item: 'clam', n: 2 }, { item: 'potato', n: 1 }], '바지락을 듬뿍 넣은 비 오는 날의 전.', 'mine'),
+  dishOf('guljeon', '굴전', [{ item: 'oyster', n: 2 }, { item: 'potato', n: 1 }], '달걀옷을 입혀 노릇하게.', 'charm'),
+  dishOf('kkotgetang', '꽃게탕', [{ item: 'crab', n: 1 }, { item: 'potato', n: 1 }, { cat: 'fish', n: 1 }], '빨간 국물에 게살이 가득.', 'luck'),
+  dishOf('daseulgiguk', '다슬기국', [{ item: 'daseulgi', n: 3 }, { item: 'carrot', n: 1 }], '맑고 파란 국물. 속이 편해져요.', 'wood'),
 ];

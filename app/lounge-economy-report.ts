@@ -103,7 +103,7 @@ export type AccountRow = {
   otherGranted: number;
   shopSpent: number;
   otherSpent: number;
-  /** 범 sold today (KST) against the daily sell cap. */
+  /** 범 sold today (KST) against the daily sell cap (fish are outside it). */
   soldToday: number;
   /** Lifetime harvest + fruit pick count (life.harvested). */
   harvested: number;
@@ -893,7 +893,7 @@ function tables(r: EconomyReport): Table[] {
         '농사 수입*',
         '오늘의 범*',
         '상점 지출*',
-        '오늘 판매',
+        '오늘 판매(물고기 제외)',
       ],
       right: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       rows: r.accounts.map((a) => [

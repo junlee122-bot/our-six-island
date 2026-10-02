@@ -505,3 +505,20 @@ test('weekly cup: best three per friend, results archived, top three claim prize
   validateLedger(s.ledger);
   assert.equal(anglingHooks.tournamentResult(s.life, week0).ranks[0].actor, ranks[0].actor);
 });
+
+test('fish prices (2026-10-02): regular fish and pot catches ×1.5, legends ×1.3, all in 10범 steps', () => {
+  const pins = { crucian: 180, minnow: 90, mackerel: 300, koi: 2_250, seabream: 3_000, crab: 680, shrimp: 140, goldcarp: 10_400, moonhairtail: 9_100, blossomtrout: 7_800, lakelord: 9_750, icecod: 9_100 };
+  for (const [id, sell] of Object.entries(pins)) assert.equal(FISH_BY_ID[id].sell, sell, id);
+  for (const f of FISH) {
+    assert.equal(f.sell % 10, 0, f.id);
+    assert.equal(ITEM_BY_ID[f.id].sell, f.sell, f.id);
+  }
+  // Seafood dishes follow the fish through the dish formula (ingredients × 1.25 + 100, to 10).
+  const round10 = (n) => Math.round(n / 10) * 10;
+  assert.equal(DISH_BY_ID.sashimi.sell, round10(2 * 450 * 1.25 + 100));
+  assert.equal(DISH_BY_ID.haemuljeon.sell, round10((2 * FISH_BY_ID.clam.sell + 900) * 1.25 + 100));
+  assert.equal(DISH_BY_ID.guljeon.sell, round10((2 * FISH_BY_ID.oyster.sell + 900) * 1.25 + 100));
+  assert.equal(DISH_BY_ID.kkotgetang.sell, round10((FISH_BY_ID.crab.sell + 900 + 450) * 1.25 + 100));
+  assert.equal(DISH_BY_ID.daseulgiguk.sell, round10((3 * FISH_BY_ID.daseulgi.sell + 200) * 1.25 + 100));
+  assert.equal(DISH_BY_ID.grilledfish.sell, round10((450 + ITEM_BY_ID.wood.sell) * 1.25 + 100));
+});
