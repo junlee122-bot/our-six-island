@@ -37,6 +37,7 @@ import { YANINEKO_LOVE } from './lounge-npc-love-yanineko.ts';
 import { CARPENTER_LOVE } from './lounge-npc-love-carpenter.ts';
 import { REALTOR_LOVE } from './lounge-npc-love-realtor.ts';
 import { MISUN_LOVE } from './lounge-npc-love-misun.ts';
+import { MUZAN_LOVE } from './lounge-npc-love-muzan.ts';
 
 export type { NpcLoveSet, NpcLoveTier, NpcMarriedSet };
 export { NPC_LOVE_TIERS } from './lounge-npc-love-types.ts';
@@ -68,6 +69,7 @@ export const NPC_LOVE: Partial<Record<NpcId, NpcLoveSet>> = {
   makima: MAKIMA_LOVE,
   yanineko: YANINEKO_LOVE,
   carpenter: CARPENTER_LOVE,
+  muzan: MUZAN_LOVE,
 };
 
 /** The married couple's lines (NPC_SPOUSES): friendship, refusals, cheering friends on. */

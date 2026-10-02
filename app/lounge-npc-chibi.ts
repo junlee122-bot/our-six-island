@@ -33,5 +33,7 @@ export const NPC_CHIBI: Partial<Record<NpcId, NpcChibi>> = {
   // 루미 · 매화 walk the village on breaks; at their tables they keep the pose sheet.
   lumi: { asset: A.chibi_lumi, w: 512, h: 640 },
   maehwa: { asset: A.chibi_maehwa, w: 512, h: 640 },
+  // 범마을 증권 무잔 behind the broker's counter and on his evening walks.
+  muzan: { asset: A.chibi_muzan, w: 512, h: 640 },
 };
 export const npcChibi = (id: NpcId): NpcChibi | undefined => NPC_CHIBI[id];

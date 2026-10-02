@@ -485,5 +485,6 @@ test('범마을 증권 stands in 시장 거리: a walkable door, a room behind i
   const walk = regionWalk('market');
   assert.ok(walk.canWalk({ x: touch.x, z: touch.z }), 'the door is reachable');
   assert.ok(walk.path({ x: -26, z: -3 }, { x: touch.x, z: touch.z }).length > 0, 'from the road in');
-  assert.equal(SHOP_INTERIORS.broker.owner, undefined, 'no resident yet (a seat for one later)');
+  // 지점장 무잔 keeps the counter (tests/lounge-broker-muzan.test.mjs).
+  assert.equal(SHOP_INTERIORS.broker.owner, 'muzan');
 });

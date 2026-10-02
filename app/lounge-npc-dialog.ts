@@ -31,6 +31,7 @@ import { BOCCHI_LINES } from './lounge-npc-lines-bocchi.ts';
 import { TSUNADE_LINES } from './lounge-npc-lines-tsunade.ts';
 import { MAKIMA_LINES } from './lounge-npc-lines-makima.ts';
 import { YANINEKO_LINES } from './lounge-npc-lines-yanineko.ts';
+import { MUZAN_LINES } from './lounge-npc-lines-muzan.ts';
 
 export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   lumi: LUMI_LINES,
@@ -56,6 +57,7 @@ export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   tsunade: TSUNADE_LINES,
   makima: MAKIMA_LINES,
   yanineko: YANINEKO_LINES,
+  muzan: MUZAN_LINES,
 };
 
 const pick = <T>(pool: readonly T[] | undefined, key: string): T | undefined => (pool && pool.length ? pool[hash32(key) % pool.length] : undefined);

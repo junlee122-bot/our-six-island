@@ -3,6 +3,18 @@
 .l-stock .is-up { color: var(--stock-up); }
 .l-stock .is-down { color: var(--stock-down); }
 
+/* 지점장 무잔 at the counter: his face, name and a line about my market. */
+.l-stock-keeper { display: grid; grid-template-columns: 72px 1fr auto; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-m); background: var(--surface-raised); box-shadow: var(--edge-line); }
+.l-stock-keeper.is-away { grid-template-columns: 72px 1fr; opacity: 0.8; }
+.l-stock-keeper-face .dh-face { display: block; width: 72px; height: 72px; }
+.l-stock-keeper p { display: grid; gap: var(--sp-1); margin: 0; }
+.l-stock-keeper b { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: var(--fw-regular); color: var(--text); }
+.l-stock-keeper small { color: var(--text-soft); font-size: var(--fs-cap); }
+.l-stock-keeper span { color: var(--text); font-size: var(--fs-body); line-height: var(--lh-body); }
+.l-stock-keeper-talk { min-height: var(--hit); padding: 0 var(--sp-3); border: 0; border-radius: var(--r-s); background: var(--surface-sunken); color: var(--accent); font: inherit; font-weight: var(--fw-semi); white-space: nowrap; cursor: pointer; box-shadow: var(--edge-line); }
+.l-stock-keeper-talk:hover { box-shadow: var(--edge-highlight); }
+.l-stock-keeper-talk:focus-visible { outline: none; box-shadow: var(--ring-focus); }
+
 .l-stock-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-3); }
 .l-stock-status { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-sunken); color: var(--text-soft); font-size: var(--fs-body-s); }
 .l-stock-status.is-open { color: var(--accent); box-shadow: var(--edge-line); }

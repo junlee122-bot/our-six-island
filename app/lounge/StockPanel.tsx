@@ -21,6 +21,10 @@ import {
   type StocksView,
 } from '../lounge-stocks';
 import { ACTORS } from '../lounge-roster';
+import { brokerRemark } from '../lounge-broker-voice';
+import { DealerAvatar } from '../lounge-dealer-host';
+import { npcSpot } from '../lounge-npc-schedule';
+import { useNow } from './use-now';
 import { formatBeom } from '../lounge-text';
 import { GameButton } from '../ui/GameButton';
 import { Tabs, tabPanelProps } from '../ui/Tabs';
@@ -94,7 +98,34 @@ function StockChart({ q, mode }: { q: StockQuote; mode: ChartMode }) {
   );
 }
 
-export function StockPanel({ room, view, notify, onClose }: { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void }) {
+/**
+ * 지점장 무잔 at the counter (lounge-broker-voice.ts): his line for my market
+ * now, or where he is when he is away (the terminal works without him).
+ */
+function BrokerKeeper({ market, name, who, now, onTalk }: { market: StocksView | undefined; name: string; who: string | number; now: number; onTalk?: () => void }) {
+  const spot = npcSpot('muzan', now);
+  const atDesk = spot.place === 'broker.owner' && spot.activity !== 'transit';
+  const remark = brokerRemark(market, name, who, now);
+  return (
+    <div className={`l-stock-keeper${atDesk ? '' : ' is-away'}`} data-testid="stock-keeper" data-situation={remark.situation}>
+      <span className="l-stock-keeper-face">
+        <DealerAvatar host="muzan" mood={atDesk ? remark.mood : 'calm'} />
+      </span>
+      <p>
+        <b>무잔</b>
+        <small>범마을 증권 지점장{atDesk ? '' : ` · 지금은 ${spot.label}`}</small>
+        <span key={remark.line}>{atDesk ? remark.line : '지점장은 자리를 비웠어요. 단말기로 직접 주문할 수 있어요.'}</span>
+      </p>
+      {atDesk && onTalk && (
+        <button type="button" className="l-stock-keeper-talk" onClick={onTalk} data-testid="stock-keeper-talk">
+          이야기하기
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function StockPanel({ room, view, notify, onClose, onTalk }: { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void; /** Talk to 무잔 (the speech box). */ onTalk?: () => void }) {
   const market: StocksView | undefined = view.stocks;
   const [page, setPage] = useState<Page>('quotes');
   const [sym, setSym] = useState<StockSym>('coop');
@@ -105,6 +136,7 @@ export function StockPanel({ room, view, notify, onClose }: { room: CloudRoom; v
   const inFlight = useRef(false);
   const me = view.players.find((p) => p.id === view.self);
   const inBroker = me?.area === 'broker';
+  const now = useNow(true, 30_000) + view.clockOffset;
   const q = market?.stocks.find((s) => s.sym === sym);
   const position = market?.me.positions.find((p) => p.sym === sym);
 
@@ -155,6 +187,7 @@ export function StockPanel({ room, view, notify, onClose }: { room: CloudRoom; v
 
   return (
     <Modal title="범마을 증권" wide venue="broker" className="l-stock" onClose={onClose}>
+      <BrokerKeeper market={market} name={me ? (ACTORS[me.actor] ?? '') : ''} who={me?.actor ?? 'guest'} now={now} onTalk={inBroker ? onTalk : undefined} />
       <div className="l-stock-top" data-testid="stock-panel" aria-busy={busy}>
         <output className={`l-stock-status ${market?.open ? 'is-open' : ''}`} data-testid="stock-status">
           {status}
@@ -442,7 +475,7 @@ export function StockPanel({ room, view, notify, onClose }: { room: CloudRoom; v
           )}
         </section>
       )}
-      <p className="l-stock-desk">아직 창구 직원은 없어요. 단말기로 직접 주문해요. 시세는 09:00~15:00 매시 정각에 바뀌어요.</p>
+      <p className="l-stock-desk">지점장 무잔은 장 시간(일요일 휴무)에 창구를 지켜요. 자리에 없어도 단말기로 주문할 수 있어요. 시세는 09:00~15:00 매시 정각에 바뀌어요.</p>
     </Modal>
   );
 }

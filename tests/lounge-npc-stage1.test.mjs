@@ -76,7 +76,7 @@ test('시장 거리 is a separate area the server accepts, with an exit back to 
 // ---------------------------------------------------------------- schedule
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 // 가게 실내: the shop rooms are walk areas too (owners behind their counters).
-const WALK_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket'];
+const WALK_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'bakery', 'coop', 'general', 'fishmarket', 'broker'];
 test('every resident place is walkable in its area (posts are drawn by their own scenes)', () => {
   for (const [id, p] of Object.entries(NPC_PLACES)) {
     if (POSTS.test(id) || !WALK_AREAS.includes(p.area)) continue;
@@ -100,7 +100,7 @@ test('no teleports: timelines are continuous and areas change only through an ex
     // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
     'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
     // The shop rooms' doors and the street spots in front of them.
-    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door']);
+    'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door', 'm.broker', 'broker.door']);
   for (let d = 0; d < 14; d++)
     for (const id of NPC_IDS) {
       const ev = npcTimeline(id, DAY0 + d);

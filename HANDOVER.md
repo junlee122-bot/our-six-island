@@ -22,6 +22,7 @@
 - **2026-10-02 가구 그림**(브랜치 `claude/furniture-art`): 나무결 가구점·명품·축제/공사 보상 가구 39종을 방 소품과 같은 손그림으로 교체(`node scripts/optimize-assets.mjs furniture`), 새 가구 8종(오늘의 가구 6 + 명품 2), 흔들의자 3D → 그림, 방패연·부채는 받침대 장식(예전 벽걸이 저장은 바닥으로 읽음). 기록: [가구 그림](handover/design/design-furniture-art.md).
 - **2026-10-02 연애·결혼**(브랜치 `romance-lines`): 친구 → 연인(8하트 + 꽃다발) → 약혼(10하트 + 청혼 반지) → 광장 결혼식(마을 소식), 사귀기 전 8하트 상한, 한 친구에 한 명, 배우자가 내 방에서 살며 아침 선물, 헤어지기 쿨타임, 주민 20명 하트 단계별 연애 대사. 기록: [연애·결혼 설계](handover/design/design-romance.md). 미니맵은 접으면 장면을 오가도 접힌 채로(`app/lounge-minimap-state.ts`).
 - **2026-10-02 범마을 증권**(브랜치 `claude/stock-exchange`): 시장 거리 동쪽 증권사(실내 포함, 사장 NPC 자리는 비워 둠)에서 주식 12종목(마을 가게 9 + 가상 테마 3) 거래. 09~15시 매시 시세, ±15% 상·하한가, 서버 전용 씨앗의 결정적 시세, 신용 2배·공매도·마진콜·반대매매, 주간 배당, 수익률 랭킹, 마을 소식·신문·범 지갑·경제 리포트 반영. 엔진 `app/lounge-stocks.ts`, 창 `app/lounge/StockPanel.tsx`, 상태 `world.stocks`, 원장 `ledger.marketNet`. 설계·수치: [증권 설계](handover/design/design-stocks.md).
+- **2026-10-02 증권 지점장 무잔**(브랜치 `claude/broker-muzan`): 비워 둔 범마을 증권 창구에 지점장 무잔(『귀멸의 칼날』 패러디, 대사는 모두 새로 씀). 장 시간 창구 근무·일요일 휴무·저녁엔 카지노 앞/주점/시장 등불, 주식 창 머리의 지점장 카드가 상한가·반대매매·배당·테마주 소식에 반응(`app/lounge-broker-voice.ts`), 연애 가능, 로제·잔나·신형만·루미와 말풍선. 기록: [무잔 설계](handover/design/design-broker-muzan.md).
 - **2026-09-28 생활 업데이트**: 미용실·은행, 지도 친구 위치, 낚시 반응 등급·보너스, 차용증·방어 물품·강도, 루미 장부·대부 창구, NPC 친밀도/방 초대. 구현 범위·수치·검증은 [생활 업데이트](handover/design/life-services-2026-09-28.md)를 보세요. 은행 보관금도 위 원장의 예약 합계에 포함합니다.
 
 ## 2. 처음 ChatGPT 코드와 얼마나 달라졌나
@@ -145,7 +146,7 @@ npm run ui:shots       # UI 회귀 캡처(로컬 목 서버, 실제 Supabase 접
 | 실내 3D | `app/lounge-venues.ts`, `lounge-interior-*.ts(x)`, `lounge-tavern-*.ts` |
 | 가게 실내(빵집·농협·잡화점·어시장) | `app/lounge-shop-interiors.ts`(배치·계산대·직원 통로·의자·서버 허용 행동), `lounge-shop-interior.ts`(3D), 문 `lounge-district-counters.ts`(`enter`, `shopDoorOutside`), 일과 `lounge-npc-schedule.ts`(`<가게>.owner` 등), 테스트 `tests/lounge-shop-interiors.test.mjs`, 확인 `scripts/district-shots.mjs --shops`, 전후 화면 `handover/design/img/shop-interiors/` |
 | 미니맵(마을·구역) | 마을 `app/lounge-village.tsx`(`hv-minimap`), 구역 `app/lounge-district-minimap.ts`(배치 데이터로 그림·장소·친구 표시, 그림이 없는 새 구역은 벽·출구·창구로 자동) + `lounge/DistrictMinimap.tsx`, 공통 CSS `app/lounge-minimap.css`, 테스트 `tests/lounge-district-minimap.test.mjs`, 확인 `scripts/district-shots.mjs --minimap` |
-| 범마을 증권(주식) | `app/lounge-stocks.ts`(시세·주문·신용·공매도·배당·화면용 view, 서버 권위), 연결 `lounge-cloud-engine.ts`(`world.stocks`, 명령마다 따라잡기, 읽기는 저장 안 함), 창 `lounge/StockPanel.tsx`·`lounge/stock-panel.css`, 건물 `lounge-market-layout.ts`(`broker`), 실내 `lounge-shop-interiors.ts`(`broker`, `owner` 비움), 테스트 `tests/lounge-stocks.test.mjs` |
+| 범마을 증권(주식) | `app/lounge-stocks.ts`(시세·주문·신용·공매도·배당·화면용 view, 서버 권위), 연결 `lounge-cloud-engine.ts`(`world.stocks`, 명령마다 따라잡기, 읽기는 저장 안 함), 창 `lounge/StockPanel.tsx`·`lounge/stock-panel.css`, 건물 `lounge-market-layout.ts`(`broker`), 실내 `lounge-shop-interiors.ts`(`broker`, 지점장 `muzan`), 지점장 한마디 `lounge-broker-voice.ts`, 테스트 `tests/lounge-stocks.test.mjs` |
 | 가구점·부동산 위치 확인 | `app/lounge-hub-counters.ts`(가구 구입·새로 고치기는 가구점 문 앞, 집 확장·모델하우스는 부동산 문 앞, 4.5칸), 서버 `lounge-cloud-engine.ts`, 테스트 `tests/lounge-shop-locations.test.mjs`(가게 실내 `at` 매매 포함) |
 | 화면 | `app/lounge-game.tsx`(최상위), `app/lounge/*.tsx`, `app/ui/*` |
 | 문서 | `handover/STYLE-AND-SOURCES.md`(미감 규칙·자료 출처), `README.md`, `ACCOUNTS.md`(계정·배포), `ASSETS.md`(에셋 제작 기록), `GAME_PROGRESS.md`, `handover/design/*` |

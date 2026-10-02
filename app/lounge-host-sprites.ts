@@ -18,6 +18,7 @@ export const HOST_SHEET: Record<HostId, string> = {
   realtor: LOUNGE_ASSETS.hostRealtor,
   misun: LOUNGE_ASSETS.hostMisun,
   carpenter: LOUNGE_ASSETS.hostCarpenter,
+  muzan: LOUNGE_ASSETS.hostBroker,
 };
 
 /**

@@ -28,7 +28,9 @@
 // couple (realtyDuty): 신형만 on Mon/Wed/Fri, 봉미선 on Tue/Thu, both at the
 // weekend (one at the counter, the other showing the model house). Off duty
 // 형만 works out of the village and ends the day at the tavern; 미선 shops in
-// 시장 거리 and the bakery, then fetches him from the tavern. Stage-2 residents (hasSprite: false) have
+// 시장 거리 and the bakery, then fetches him from the tavern. 지점장 무잔 keeps the
+// 범마을 증권 counter in market hours (muzanPlan, Sunday off) and spends his
+// evenings by the casino, in the tavern or under 시장 거리's lamps. Stage-2 residents (hasSprite: false) have
 // schedules too, but npcsIn leaves them out until they can be drawn.
 import { kstDay } from './lounge-economy.ts';
 import { holidaysOn, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
@@ -143,6 +145,8 @@ const TAVERN_SCENE = {
   'bar-4': { x: 50, y: 46 },
   'bar-5': { x: 57, y: 47 },
   misun: { x: 61, y: 51 },
+  // 무잔's stool after the market closes (off the evening seat pool).
+  muzan: { x: 45, y: 72 },
   // 루미 · 매화 · 로제 on their breaks and days off (kept off the evening seat pool).
   lumi: { x: 28, y: 68 },
   maehwa: { x: 36, y: 62 },
@@ -270,6 +274,8 @@ export const NPC_PLACES: Record<string, Place> = {
   // 신형만 · 봉미선's Sunday evening walk (side by side, off the evening seats).
   'v.couple-a': place('village', vSnap({ x: VILLAGE_PAVILION.x - 1.2, z: VILLAGE_PAVILION.z + 3.4 }), Math.PI / 2, '팔각정 산책길'),
   'v.couple-b': place('village', vSnap({ x: VILLAGE_PAVILION.x + 0.4, z: VILLAGE_PAVILION.z + 3.4 }), -Math.PI / 2, '팔각정 산책길'),
+  // 무잔 watching the casino crowd after the market closes.
+  'v.muzan-casino': place('village', vSnap({ x: 21.8, z: 10.2 }), -Math.PI / 2, '카지노 앞 가로등 아래'),
   ...Object.fromEntries(homes.map((h) => [`v.home-${h.actor}`, place('village', vSnap({ x: h.entry.x - 1.2, z: h.entry.z + 1.9 }), Math.PI, `${h.name} 집 앞`)])),
   // Festival ring on the plaza.
   ...Object.fromEntries(
@@ -315,6 +321,10 @@ export const NPC_PLACES: Record<string, Place> = {
   'm.maehwa': place('market', { x: -6.4, z: -4.4 }, 0, '시장 거리 장보기'),
   // 봉미선's shopping round.
   'm.misun': place('market', { x: market['plaza-n'].x + 2.2, z: market['plaza-n'].z + 0.6 }, Math.PI, '시장 광장'),
+  // 범마을 증권: the door (his way in) and 무잔's walks along the east street.
+  'm.broker': place('market', market.broker, Math.PI, '범마을 증권 앞'),
+  'm.muzan': place('market', { x: 17.6, z: 5.6 }, -Math.PI / 2, '시장 거리 동쪽'),
+  'm.muzan-lamp': place('market', { x: 16, z: -1.4 }, Math.PI / 2, '시장 거리 등불 아래'),
   // ② 항구 구역.
   ...Object.fromEntries(Object.entries(hb).map(([k, p]) => [`hb.${k}`, place('harbor', p, p.face, HARBOR_NAMES[k] ?? '항구')])),
   'hb.quay-2': place('harbor', { x: 15.4, z: -0.6 }, 0, '항구 좌판'),
@@ -343,6 +353,7 @@ export const NPC_PLACES: Record<string, Place> = {
   // 신형만's after-work stool (kept off the evening seat pool).
   't.bar-5': place('tavern', tw('bar-5'), Math.PI, '주점 바 끝자리'),
   't.misun': place('tavern', tw('misun'), -Math.PI / 2, '주점 바 끝자리 옆'),
+  't.muzan': place('tavern', tw('muzan'), Math.PI, '주점 안쪽 탁자'),
   't.lumi': place('tavern', tw('lumi'), -Math.PI / 2, '주점 창가 탁자'),
   't.maehwa': place('tavern', tw('maehwa'), Math.PI, '주점 탁자'),
   't.rose': place('tavern', tw('rose'), Math.PI, '주점 바다 그림 아래'),
@@ -559,6 +570,48 @@ function realtyPlan(id: RealtyKeeper, k: DayKind): Seg[] {
     [hm(13), 'm.misun', 'stroll', '장바구니 들고 시장 구경 중'],
     [hm(16, 30), 'bakery.browse', 'eat', '빵집 마감 할인 기다리는 중'],
     ...evening,
+  ];
+}
+
+// ---------------------------------------------------------------- 범마을 증권
+/** 무잔's weekly day off (KST weekday, 0 = Sunday: the 일요 장터 he walks as a customer). */
+export const MUZAN_DAY_OFF = 0;
+/**
+ * 지점장 무잔 (design-broker-muzan.md): behind the broker's counter before the
+ * 09:00 open until the books are closed after 15:30, tea at the ticker board
+ * at noon, then a walk along 시장 거리 counting the shops' trade. Evenings by
+ * weekday: the casino's lamp (Mon/Thu), the tavern (Tue/Fri), the market's
+ * lamps (Wed/Sat); rain sends him to the tavern. He always ends the night at
+ * his tavern table and goes home at 01:00. Sunday is his day off.
+ */
+function muzanPlan(k: DayKind): Seg[] {
+  const late: Seg = [hm(22, 30), 't.muzan', 'drink', '주점에서 늦게까지 장부 이야기 중'];
+  const start: Seg[] = [[0, 't.muzan', 'drink', '주점에서 늦게까지 장부 이야기 중'], [hm(1), 'home', 'sleep', '집에서 쉬는 중']];
+  const evening: Seg =
+    k.rain || k.weekday === 2 || k.weekday === 5
+      ? [hm(18), 't.muzan', 'drink', '주점에서 와인 한잔하며 오늘 장 복기 중']
+      : k.weekday === 1 || k.weekday === 4 || k.weekday === 0
+        ? [hm(18), 'v.muzan-casino', 'stroll', '카지노 앞에서 오늘의 확률 구경 중']
+        : [hm(18), 'm.muzan-lamp', 'stroll', '시장 거리 등불 아래 우아하게 산책 중'];
+  if (k.weekday === MUZAN_DAY_OFF)
+    return [
+      ...start,
+      [hm(10), 'm.muzan', 'stroll', '휴무일 · 장날 좌판 사이 시장 조사 중'],
+      [hm(12), 'bakery.seat-cafe-3', 'eat', '빵집 카페에서 느긋한 점심'],
+      [hm(13, 30), k.rain ? 't.muzan' : 'hb.bench-e', k.rain ? 'drink' : 'stroll', k.rain ? '주점에서 비 피하며 신문 읽는 중' : '항구에서 어시장 경기 살피는 중'],
+      evening,
+      late,
+    ];
+  return [
+    ...start,
+    [hm(8, 20), 'broker.owner', 'work', '개장 전 시황 점검 중'],
+    [hm(9), 'broker.owner', 'work', '범마을 증권 창구'],
+    [hm(12), 'broker.board', 'eat', '전광판 앞에서 점심 대신 차 한잔'],
+    [hm(12, 40), 'broker.owner', 'work', '범마을 증권 창구'],
+    [hm(15, 30), 'broker.owner', 'work', '장 마감 정리 · 매매 일지 쓰는 중'],
+    [hm(16, 30), k.rain ? 'bakery.seat-cafe-3' : 'm.muzan', k.rain ? 'eat' : 'stroll', k.rain ? '빵집 카페에서 비 피하며 홍차 한잔' : '시장 거리 산책 · 가게 매출 살피는 중'],
+    evening,
+    late,
   ];
 }
 
@@ -905,6 +958,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         ];
       return [[0, 'away', 'sleep', '마을 밖']];
     }
+    case 'muzan':
+      return muzanPlan(k);
     case 'yanineko':
       // Wakes at 11; naps in the library until 베아트리스 chases her out; sunbathes at the harbor.
       return [

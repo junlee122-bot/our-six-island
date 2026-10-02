@@ -2835,7 +2835,16 @@ function AccountLounge({
       {modal === 'lender' && <CasinoLenderPanel room={room} view={view} onClose={() => setModal(null)} />}
       {modal === 'stocks' && (
         <Suspense fallback={null}>
-          <StockPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />
+          <StockPanel
+            room={room}
+            view={view}
+            notify={notify}
+            onClose={() => setModal(null)}
+            onTalk={() => {
+              setModal(null);
+              setResidentTalk('muzan');
+            }}
+          />
         </Suspense>
       )}
       {modal === 'npc' && <NpcRelationsPanel room={room} view={view} notify={notify} initial={npcBookAt} onClose={() => setModal(null)} />}

@@ -10,6 +10,7 @@
 //   node scripts/optimize-assets.mjs hosts      # table host sheets only (rebuilds 발키리's from her 3×2 original)
 //   node scripts/optimize-assets.mjs chibi      # in-world resident chibis only
 //   node scripts/optimize-assets.mjs npcs shinhyungman bongmison   # only these residents' files
+//   node scripts/optimize-assets.mjs npcs muzan / chibi muzan / hosts   # 범마을 증권 무잔 (also writes broker-muzan-generation.json)
 //   node scripts/optimize-assets.mjs furniture  # 나무결 가구점 furniture art from the six magenta sheets
 //
 // Character atlases are LOSSLESS WebP (`exact`): lounge-sprites.ts/lounge-color.ts
@@ -27,8 +28,10 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const assets = path.join(root, 'public/assets');
 const mode = process.argv[2] ?? 'all';
 /** Optional names after `npcs` / `chibi`: only those residents' files are rebuilt. */
-const onlyNames = ['npcs', 'chibi'].includes(mode) ? process.argv.slice(3) : [];
+const onlyNames = ['npcs', 'chibi', 'hosts'].includes(mode) ? process.argv.slice(3) : [];
 const wanted = (...names) => !onlyNames.length || names.some((n) => onlyNames.includes(n));
+/** `hosts broker` rebuilds only lounge/host-broker.*; plain `hosts` rebuilds every sheet. */
+const wantedHost = (file) => !onlyNames.length || onlyNames.some((n) => file === `lounge/host-${n}.png`);
 
 const LOSSLESS_ATLASES = [
   'friends-motion.png',
@@ -52,6 +55,7 @@ const HOST_SHEETS = [
   'lounge/host-realtor.png',
   'lounge/host-carpenter.png',
   'lounge/host-misun.png',
+  'lounge/host-broker.png',
 ];
 // 허 선장 · 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
 // pink line still rings their hair, hands and props on any ground. Pixels
@@ -164,10 +168,12 @@ async function noharaHostSheets() {
 // calm figure HOST_CELL.figure tall, centred in a 440 × 660 cell with the
 // soles on the 648 px line, and written as the keyed host-carpenter.png that
 // hostSheets() encodes.
-const HOST_FROM_GRID = { 'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png' };
+// 범마을 증권 무잔 (broker-muzan-generation.json) is laid out the same way.
+const HOST_FROM_GRID = { 'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png', 'lounge/host-broker.png': 'lounge/_originals/host-muzan.png' };
 async function hostSheetsFromGrid() {
   const CELL = { w: 440, h: 660, foot: 648, figure: 600 };
   for (const [name, original] of Object.entries(HOST_FROM_GRID)) {
+    if (!wantedHost(name)) continue;
     const source = path.join(assets, original);
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
@@ -207,8 +213,9 @@ async function hostSheetsFromGrid() {
 }
 async function hostSheets() {
   await hostSheetsFromGrid();
-  await noharaHostSheets();
+  if (!onlyNames.length) await noharaHostSheets();
   for (const name of HOST_SHEETS) {
+    if (!wantedHost(name)) continue;
     const source = path.join(assets, name);
     const target = source.replace(/\.png$/, '.webp');
     let input = sharp(source);
@@ -510,6 +517,8 @@ const NPC_SPRITES_REALTY = ['shinhyungman', 'bongmison'];
 // 나무결 가구점 목수 발키리 (carpenter-valkyrie-generation.json): the web file
 // is named after her, the resident id stays 'carpenter' (hearts carry over).
 const NPC_SPRITES_3 = ['valkyrie'];
+// 범마을 증권 무잔 (broker-muzan-generation.json): the resident id is 'muzan' too.
+const NPC_SPRITES_BROKER = ['muzan'];
 const NPC_ORIGINAL = { yanineko: 'yaninekko' };
 const NPC_SEED = { beatrice: 150, bocchi: 150 };
 /** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
@@ -531,6 +540,7 @@ const NPC_PORTRAITS = {
   shinhyungman: { cx: 0.5, top: 0.005, size: 0.32 },
   bongmison: { cx: 0.48, top: 0.01, size: 0.32 },
   valkyrie: { cx: 0.48, top: 0.025, size: 0.3 },
+  muzan: { cx: 0.5, top: 0.02, size: 0.3 },
 };
 // `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
 // skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
@@ -614,7 +624,7 @@ function keyMagenta(data, width, height, fgM = 0, seed = 40, pocket = 200) {
   return out;
 }
 async function npcSprites() {
-  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3]) {
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_BROKER]) {
     if (!wanted(id)) continue;
     const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
@@ -662,6 +672,7 @@ const CHIBI_FILES = [
   ['valkyrie'],
   ['lumi'],
   ['maehwa'],
+  ['muzan'],
 ];
 /** Chibi files named after the person; the record keys them by resident id. */
 const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun', valkyrie: 'carpenter' };
@@ -1055,6 +1066,38 @@ async function furnitureArt() {
   record.keying = 'scripts/optimize-assets.mjs furniture: keyMagenta flood from the border + defringeMagenta rim, each cell trimmed to its opaque pieces and contained in a canvas of the catalog aspect (h / w, standing on the bottom edge; wall pieces centred; rugs stretched to d / w as a top view), long side at most 768 px, plus a 256² thumbnail.';
   fs.writeFileSync(recordPath, JSON.stringify(record, null, 1) + '\n');
 }
+// 범마을 증권 무잔: the web copies' sizes and SHA-256 go into his generation record
+// (like the 발키리 record), next to the originals' jobs and hashes.
+const ART_RECORDS = [
+  {
+    record: 'lounge/broker-muzan-generation.json',
+    files: ['npc-muzan.webp', 'npc-muzan-portrait.webp', 'chibi/npc-muzan.webp', 'host-broker.png', 'host-broker.webp'],
+    keying:
+      'scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-broker.png, then encodes host-broker.webp.',
+  },
+];
+async function artRecords() {
+  for (const r of ART_RECORDS) {
+    const recordPath = path.join(assets, r.record);
+    if (!fs.existsSync(recordPath)) continue;
+    const json = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    for (const a of json.assets ?? []) {
+      const hash = crypto.createHash('sha256').update(fs.readFileSync(path.join(assets, 'lounge', a.original))).digest('hex').toUpperCase();
+      if (hash !== a.sha256) throw new Error(`${a.original}: sha256 ${hash} is not the recorded ${a.sha256}`);
+    }
+    const web = {};
+    for (const f of r.files) {
+      const file = path.join(assets, 'lounge', f);
+      if (!fs.existsSync(file)) continue;
+      const { width, height } = await sharp(file).metadata();
+      web[f] = { w: width, h: height, sha256: crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex').toUpperCase() };
+    }
+    json.web = web;
+    json.keying = r.keying;
+    fs.writeFileSync(recordPath, JSON.stringify(json, null, 1) + '\n');
+    console.log(`${r.record}: ${Object.keys(web).length} web copies recorded`);
+  }
+}
 if (['all', 'images', 'services', 'lender'].includes(mode)) await serviceSprites();
 if (['all', 'images', 'cards'].includes(mode)) await tavernCards();
 if (['all', 'images', 'npcs'].includes(mode)) await npcSprites();
@@ -1064,3 +1107,4 @@ if (mode === 'hosts') await hostSheets();
 if (mode === 'furniture') await furnitureArt();
 if (mode === 'all' || mode === 'images') await images();
 if (mode === 'all' || mode === 'models') await models();
+if (['all', 'images', 'npcs', 'chibi', 'hosts'].includes(mode)) await artRecords();

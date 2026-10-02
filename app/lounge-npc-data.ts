@@ -42,6 +42,8 @@ export const NPC_IDS = [
   'tsunade',
   'makima',
   'yanineko',
+  // 범마을 증권 지점장 (2026-10-02, design-broker-muzan.md).
+  'muzan',
 ] as const;
 export type NpcId = (typeof NPC_IDS)[number];
 export const isNpcId = (id: unknown): id is NpcId => typeof id === 'string' && (NPC_IDS as readonly string[]).includes(id);
@@ -439,6 +441,29 @@ export const NPCS: Record<NpcId, NpcDef> = {
     speech: 'casual',
     stage: 2,
   },
+  // 범마을 증권 지점장 무잔 (user request 2026-10-02): a parody of 키부츠지 무잔
+  // (『귀멸의 칼날』, Koyoharu Gotouge / Shueisha) recast as an elegant, smug
+  // stock broker. Only the look and the air of superiority come along: no
+  // demons, no threats, no lines from the original (lounge-npc-lines-muzan.ts).
+  muzan: {
+    id: 'muzan',
+    name: '무잔',
+    age: 38,
+    ageText: '나이는 영업 비밀',
+    role: '범마을 증권 지점장',
+    place: '범마을 증권',
+    intro: '흰 정장에 흰 중절모, 검은 망토의 지점장. 정중한 말투에 계산이 묻어나고, 장이 끝나면 시장 거리와 주점·카지노 앞을 우아하게 거닐어요.',
+    likesText: '보석·금처럼 값이 변하지 않는 것, 붉은 동백, 오래 사는 영지',
+    dislikesText: '해바라기처럼 너무 밝은 것, 흔한 돌, 달팽이',
+    gifts: {
+      loved: ['gem', 'gold', 'camellia', 'yeongji', 'saffronrice'],
+      liked: ['kind:flower', 'flowertea', 'sashimi', 'vanillapudding', 'goldcarp', 'koi', 'ginseng', 'spice-saffron'],
+      disliked: ['sunflower', 'stone', 'snail'],
+    },
+    rewards: { 40: ['gold', 2], 100: ['gem', 2] },
+    art: img(A.npc_muzan, A.npc_muzan_portrait),
+    speech: 'polite',
+  },
 };
 
 /**
@@ -517,6 +542,11 @@ export const NPC_BONDS: readonly NpcBond[] = [
   { a: 'captain', b: 'rose', kind: 'regular', note: '바다 이야기로 통하는 주점 손님' },
   { a: 'maehwa', b: 'captain', kind: 'regular', note: '회관 차 모임과 주점 안주를 바꿔 먹는 사이' },
   { a: 'rose', b: 'nyamo', kind: 'rival', note: '대부 창구와 은행 창구의 이자 경쟁' },
+  // 무잔 (범마을 증권, lounge-npc-banter-muzan.ts).
+  { a: 'muzan', b: 'rose', kind: 'rival', note: '신용 창구와 대부 창구. 이자를 두고 겨루다가도 큰손 앞에선 손을 잡는 사이' },
+  { a: 'muzan', b: 'janna', kind: 'regular', note: '주식 소식을 쓰는 기자와 꼭 한마디 얹는 지점장' },
+  { a: 'muzan', b: 'realtor', kind: 'rival', note: '부동산이냐 주식이냐, 주점 바에서 끝나지 않는 투자 논쟁' },
+  { a: 'muzan', b: 'lumi', kind: 'regular', note: '카지노 앞에서 확률 이야기를 늘어놓는 저녁 손님' },
 ];
 /** Whether a resident has a picture (drawn, listed and met). */
 export const npcVisible = (id: NpcId) => NPCS[id].hasSprite !== false;

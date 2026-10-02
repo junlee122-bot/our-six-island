@@ -129,6 +129,12 @@ const COUNTER_SHORT: Record<string, string> = {
   broker: '증권사',
 };
 
+/** " (지점장 무잔)": who keeps a shop room, for its door pin's title. */
+function keeperOf(area: ShopArea) {
+  const s = SHOP_INTERIORS[area];
+  return s.owner ? ` (${s.ownerWord ?? '주인'} ${NPCS[s.owner].name})` : '';
+}
+
 /** Houses and buildings with no counter (언덕's residents' homes). */
 function extraPlaces(area: OutdoorArea): MiniPlace[] {
   if (area !== 'hillside') return [];
@@ -214,7 +220,7 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
     out.push({
       id: place,
       label,
-      title: enter ? `${SHOP_INTERIORS[enter].name} 문 앞으로 걸어가기` : `${COUNTER_NAME[place]} 앞으로 걸어가기`,
+      title: enter ? `${SHOP_INTERIORS[enter].name}${keeperOf(enter)} 문 앞으로 걸어가기` : `${COUNTER_NAME[place]} 앞으로 걸어가기`,
       kind: enter ? 'door' : lot ? 'shop' : 'place',
       x: lot?.x ?? go.x,
       z: lot?.z ?? go.z,

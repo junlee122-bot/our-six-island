@@ -43,5 +43,33 @@
    "original": "_originals/host-muzan.png",
    "sha256": "B425AE8B8FC757FE2C62D93275AF8817A1847EC6261758D09AB6CBF232A7E52E"
   }
- ]
+ ],
+ "web": {
+  "npc-muzan.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "411C1E5649870CBDB2CC9D9C1D36FD1165141FE516D339C59E4E68E5F167DA7A"
+  },
+  "npc-muzan-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "DAA1FFFC5CF77184F81FDE7073493DE3AEC905B5868D0BE53C01184449DE02E9"
+  },
+  "chibi/npc-muzan.webp": {
+   "w": 512,
+   "h": 640,
+   "sha256": "A78D15B764B68F0F173A5392EF0A9073C819EB7B99EF7CC816680747E84E4AF9"
+  },
+  "host-broker.png": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "00801A5A131C2E4646E1252D00A99DF386D6D4C7C09EDC03EDBABC9A3587EFD5"
+  },
+  "host-broker.webp": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "E2AAB5DAD6010FB72CC2FC34692C52300032EDA991ABE61970CE32FD9A46AD1B"
+  }
+ },
+ "keying": "scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-broker.png, then encodes host-broker.webp."
 }

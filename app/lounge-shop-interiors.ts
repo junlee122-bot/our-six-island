@@ -90,11 +90,14 @@ export type ShopInterior = {
   /** Where the shop's front door is. */
   district: 'market' | 'harbor';
   /**
-   * Who stands behind the counter. 범마을 증권 has nobody yet (design-stocks.md
-   * §7.1): its counter opens the stock window directly, and a resident can be
-   * given the spot later (`ownerAt`, the staff strip and a `broker.owner` plan).
+   * Who stands behind the counter (their `<area>.owner` plan in
+   * lounge-npc-schedule.ts). 범마을 증권's is 지점장 무잔 (design-broker-muzan.md);
+   * its counter opens the stock window whether he is in or not.
    */
   owner?: NpcId;
+  /** What the counter and its keeper are called ('계산대' · '주인' unless set). */
+  deskWord?: string;
+  ownerWord?: string;
   /** Second staff member behind the counter (힘멜 helps at the bakery). */
   helper?: NpcId;
   /** The owner's (and helper's) spot behind the counter, world units. */
@@ -135,7 +138,7 @@ const cafe = [cafeTable('cafe-1', 2.5, -0.5), cafeTable('cafe-2', 5.3, -0.5), ca
 /** 범마을 증권's consultation tables (two chairs each, like the café's). */
 const consult = [cafeTable('consult-1', -4.4, 1.6), cafeTable('consult-2', 4.4, 1.6)];
 
-/** 범마을 증권 (design-stocks.md §7.1): the stock exchange's floor, no owner yet. */
+/** 범마을 증권 (design-stocks.md §7.1): the stock exchange's floor, kept by 지점장 무잔. */
 const BROKER: ShopInterior = {
   area: 'broker',
   name: '범마을 증권',
@@ -144,6 +147,9 @@ const BROKER: ShopInterior = {
   chat: '객장 수다',
   counter: 'broker',
   district: 'market',
+  owner: 'muzan',
+  deskWord: '창구',
+  ownerWord: '지점장',
   ownerAt: { x: 0, z: -4.15 },
   desk: { x: 0, z: -3.2, w: 3.6, d: 0.85 },
   front: toNet({ x: 0, z: -2.05 }),

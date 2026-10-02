@@ -1505,7 +1505,7 @@ export function Interior3D({
         )}
         {shop && (
           <button type="button" data-testid="interior-counter-route" onClick={approachCounter}>
-            <span>{shop.short} {shop.owner ? '계산대' : '창구'}</span>
+            <span>{shop.short} {shop.owner ? (shop.deskWord ?? '계산대') : '창구'}</span>
             <small>{shop.owner && staffIds.includes(shop.owner) ? `${NPCS[shop.owner].name} · 걸어가기` : '걸어가기'}</small>
           </button>
         )}
@@ -1513,7 +1513,7 @@ export function Interior3D({
           staffIds.map((id) => (
             <button type="button" key={id} data-testid={`interior-talk-${id}`} onClick={() => onResident?.(id)}>
               <span>{NPCS[id].name}</span>
-              <small>{id === shop.owner ? '주인' : '일손'} · 말 걸기</small>
+              <small>{id === shop.owner ? (shop.ownerWord ?? '주인') : '일손'} · 말 걸기</small>
             </button>
           ))}
       </nav>
