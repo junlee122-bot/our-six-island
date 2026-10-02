@@ -62,7 +62,7 @@ import {
   FOOTHILL_TENT,
   FOOTHILL_W,
 } from './lounge-foothill-layout.ts';
-import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_LATER, FARM_MAILBOX, FARM_PAVING } from './lounge-farm-layout.ts';
+import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_LATER, FARM_PAVING } from './lounge-farm-layout.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
@@ -205,7 +205,6 @@ function extraPlaces(area: OutdoorArea): MiniPlace[] {
       ...FARM_HOUSES.map((h) => ({ id: `home-${h.actor}`, label: `${ACTORS[h.actor]}네`, title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false })),
       { id: 'bin', label: '출하함', title: '출하함 앞으로 걸어가기', kind: 'place', x: FARM_BIN.x, z: FARM_BIN.z, go: { ...FARM_BIN.front }, named: true },
       { id: 'board', label: '게시판', title: '농장 게시판 앞으로 걸어가기', kind: 'board', x: FARM_BOARD.front.x, z: FARM_BOARD.front.z - BOARD_LIFT, go: { ...FARM_BOARD.front }, named: false },
-      { id: 'mailbox', label: '우체통', title: '우체통 앞으로 걸어가기', kind: 'place', x: FARM_MAILBOX.x, z: FARM_MAILBOX.z, go: { ...FARM_MAILBOX.front }, named: false },
     ];
   if (area === 'ranch')
     return RANCH_HOUSES.map((h) => ({ id: h.id, label: h.name.replace(' 집', ''), title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false }));
