@@ -30,7 +30,7 @@ import { giftOptions, type GiftOption } from './npc-gifts';
 import { useNow } from './use-now';
 import './npc-relations.css';
 
-export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
+export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop }: {
   npc: NpcId;
   room: CloudRoom;
   view: CloudRoomView;
@@ -39,6 +39,8 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
   onBook: () => void;
   /** Opens the request board (when they have a request today). */
   onBoard?: () => void;
+  /** Their counter opened from the talk (label and opener), e.g. 신이치's 운세 보기. */
+  shop?: { label: string; open: () => void };
 }) {
   const now = useNow(true, 5000) + view.clockOffset;
   const [opened] = useState(() => Date.now() + view.clockOffset);
@@ -105,6 +107,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
     blocked: talkBlock,
     request: request && !requestDone && onBoard ? `${itemName(request.item)} ${request.n}개` : null,
     love,
+    shop: shop?.label ?? null,
   });
   const talk = () => {
     const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, ...loveTalk }, said.current);
@@ -153,6 +156,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
     else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift') doLove(choice.id);
     else if (choice.id === 'book') onBook();
     else if (choice.id === 'request') onBoard?.();
+    else if (choice.id === 'shop') shop?.open();
     else onClose();
   };
   return (

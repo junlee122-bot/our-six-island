@@ -1089,6 +1089,65 @@ const TOOL_ART: Record<string, ReactNode> = {
 };
 
 /** The painted icon for any life item id (crops, 'seed-*', fish, bugs, forage, dishes, tools). */
+/* ------------------------------------------------------------ 3단계: 목장·과수원 (design-npcs-stage3.md) */
+const fruit = (body: string, dark: string, leaf = '#5f9e48', blush?: string) => (
+  <>
+    <path d="M24 12 C34 10 40 18 39 27 C38 37 31 42 24 42 C17 42 10 37 9 27 C8 18 14 10 24 12Z" fill={body} stroke={dark} strokeWidth="1.5" />
+    {blush ? <ellipse cx="18" cy="24" rx="5" ry="7" fill={blush} opacity=".45" /> : null}
+    <path d="M24 13 C24 9 25 7 27 5" stroke="#6b4b33" strokeWidth="2" fill="none" strokeLinecap="round" />
+    <path d="M26 9 C30 4 36 5 37 7 C33 10 29 10 26 9Z" fill={leaf} />
+    <ellipse cx="17" cy="20" rx="2.5" ry="4" fill="#ffffff" opacity=".35" />
+  </>
+);
+const egg = (big: boolean) => (
+  <>
+    <path d={big ? 'M24 5 C34 5 40 21 40 30 C40 39 33 44 24 44 C15 44 8 39 8 30 C8 21 14 5 24 5Z' : 'M24 9 C32 9 37 22 37 30 C37 37 31 41 24 41 C17 41 11 37 11 30 C11 22 16 9 24 9Z'} fill="#f6ead2" stroke="#b9956a" strokeWidth="1.5" />
+    <ellipse cx="19" cy="22" rx="3" ry="5" fill="#ffffff" opacity=".6" />
+    {big ? <path d="M30 12 l1.5 3 3 .5 -2.2 2 .6 3 -2.9 -1.5 -2.9 1.5 .6 -3 -2.2 -2 3 -.5z" fill="#f3c332" /> : null}
+  </>
+);
+const milk = (rich: boolean) => (
+  <>
+    <path d="M17 6 h14 v6 l5 7 v21 c0 2 -2 3 -4 3 h-16 c-2 0 -4 -1 -4 -3 v-21 l5 -7z" fill="#fbf8f0" stroke="#8fa3b0" strokeWidth="1.5" />
+    <rect x="17" y="4" width="14" height="4" rx="1" fill={rich ? '#c98a4a' : '#5f8fb0'} />
+    <path d="M13 24 h22 v10 h-22z" fill={rich ? '#f1d9a8' : '#cfe3ee'} />
+    <path d="M18 29 c3 -3 9 -3 12 0" stroke={rich ? '#a8722e' : '#5f8fb0'} strokeWidth="1.5" fill="none" />
+  </>
+);
+const STAGE3_ART: Record<string, ReactNode> = {
+  egg: egg(false),
+  'egg-big': egg(true),
+  milk: milk(false),
+  'milk-big': milk(true),
+  wool: (
+    <>
+      <circle cx="18" cy="22" r="9" fill="#f6f2e8" stroke="#bdb39f" strokeWidth="1.5" />
+      <circle cx="30" cy="20" r="9" fill="#f6f2e8" stroke="#bdb39f" strokeWidth="1.5" />
+      <circle cx="24" cy="31" r="10" fill="#fbf8f0" stroke="#bdb39f" strokeWidth="1.5" />
+      <path d="M16 31 c4 2 12 2 16 0" stroke="#d8cfbd" strokeWidth="1.5" fill="none" />
+    </>
+  ),
+  apricot: fruit('#f2a43a', '#b8701e', '#5f9e48', '#e86a3a'),
+  peach: fruit('#f7b8a0', '#c9786a', '#5f9e48', '#e85a6a'),
+  apple: fruit('#d9402f', '#8f2418', '#5f9e48'),
+  pear: (
+    <>
+      <path d="M24 10 C29 10 31 16 31 20 C36 24 38 30 37 35 C35 42 29 44 24 44 C19 44 13 42 11 35 C10 30 12 24 17 20 C17 16 19 10 24 10Z" fill="#d8d06a" stroke="#9a8f2e" strokeWidth="1.5" />
+      <path d="M24 11 C24 7 25 5 27 4" stroke="#6b4b33" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M26 8 C30 3 35 4 36 6 C32 9 29 9 26 8Z" fill="#5f9e48" />
+    </>
+  ),
+  tangerine: fruit('#f39a2a', '#b8641a', '#3f7a34'),
+  hay: (
+    <>
+      <path d="M8 18 h32 v20 h-32z" fill="#d8b864" stroke="#9a7a2e" strokeWidth="1.5" />
+      <path d="M8 26 h32 M8 32 h32" stroke="#b8963e" strokeWidth="1.2" />
+      <path d="M14 18 v20 M34 18 v20" stroke="#8a5a34" strokeWidth="2" />
+      <path d="M10 18 l3 -5 M18 18 l2 -6 M26 18 l-1 -6 M34 18 l3 -5" stroke="#cfae58" strokeWidth="1.5" />
+    </>
+  ),
+};
+
 export function itemArt(id: string): ReactNode {
   if (id.startsWith('seed-')) {
     const crop = CROP_ART[id.slice(5)];
@@ -1101,7 +1160,7 @@ export function itemArt(id: string): ReactNode {
       </>
     );
   }
-  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? goodArt(id) ?? null;
+  return CROP_ART[id] ?? fishArt(id) ?? bugArt(id) ?? FORAGE_ART[id] ?? dishArt(id) ?? TOOL_ART[id] ?? goodArt(id) ?? STAGE3_ART[id] ?? null;
 }
 
 /* ------------------------------------------------------------ artisan goods (텃밭 확장) */

@@ -223,7 +223,7 @@
 | 미니맵 | 두 구역 그림(초원·개울·과일나무·능선·광산·천막)과 장소 핀 | `lounge-district-minimap.ts` |
 | 시스템 | 2장 그대로. 행동 `animalBuy · animalCare · hayBuy · treePlant · treePick · treeClear · smithUpgrade · oreSell · clinicCare · fortuneRead`, 저장 `life.ext[uid].s3`, 보기 `lifeView().stage3`, 창 `lounge/Stage3Panel.tsx` | `lounge-stage3-data.ts`, `lounge-stage3-state.ts`, `lounge-stage3.ts` |
 | 범위 강화 효과 | 물뿌리개: 한 칸 물 주기가 그 줄(2단계)·둘레 3×3(3단계)까지, 괭이: 한 칸 심기가 같은 범위에 같은 씨앗(씨앗이 있는 만큼), 바구니: 과수원·마을 과일나무·버섯 채집 때 30%/60% 덤 | `lounge-life.ts`(`rangeOf`), `lounge-growth.ts` |
-| 운세 칸 | 식사·간식 칸과 따로, 항상 약한 버프(`buffPower` 0.5) 3시간 | `lounge-food-data.ts` |
+| 운세 칸 | 식사·간식 칸과 따로, 항상 약한 버프(`buffPower` 0.5) 3시간. 천막(E)이나 신이치 대화창의 "운세 보기"로 엶(축제 날 광장에서도) | `lounge-food-data.ts`, `lounge/NpcTalkDialog.tsx` |
 | 매출 집계 | `life.shopSales[barn|orchardShop|smithy|clinic|fortune][KST일] = { rev, buy }` 최근 30일, 판매(`sellItem` at 가게)·웃돈도 `buy`로 | `lounge-shop-sales.ts`, `lounge-life-plus.ts` |
 | 주민 | 데이터·선물·관계 18쌍·일정(구역이 닫혀 있으면 들길/산길 너머 숨김, 신이치는 주말·축제만)·저녁 자리(R 목장, F 산기슭, A 대장간 모루), 평소 대사 약 107~112줄, 연애 대사 약 107~110줄, 말풍선 18쌍·연애 말풍선 8쌍 | `lounge-npc-data.ts`, `lounge-npc-schedule.ts`, `lounge-npc-lines-*.ts`, `lounge-npc-love-*.ts`, `lounge-npc-banter-stage3.ts`, `lounge-npc-love-banter-f.ts` |
 | 그림 | `optimize-assets.mjs npcs`에 3단계 5명(오른은 키 기준을 높임), `chibi`에 한 장 한 명 5개. 웹 사본 크기·해시를 `stage3-npcs-generation.json`·`npc-chibi-generation.json`의 `web`에 스크립트가 기록 | `scripts/optimize-assets.mjs`, `lounge-assets.ts`, `lounge-npc-chibi.ts` |
@@ -232,6 +232,5 @@
 경제: 새로 생기는 범은 오늘의 광석 웃돈뿐이고 친구별 하루 3,000범 상한입니다(새벽 경매·농협 주간 시세와 같은 크기). 산물·과일·광석 판매는 기존 판매 경로(수요 곡선·하루 10만 범 상한)를 그대로 지나가고, 동물·건초·묘목·강화·처치·운세는 모두 소각입니다. 원장 이유는 경제 리포트 묶음(`smith-ore`, `smith`, `ranch`, `orchard-sapling`, `clinic`, `fortune`)에 이름이 붙었습니다.
 
 남은 일(다음 단계)
-- 축제 날 신이치는 마을 광장 자리에 서고 서버도 광장에서 운세를 받아 주지만, 광장에서 여는 창(대화창의 "운세 보기")은 아직 없습니다. 지금은 산기슭 천막에서만 엽니다.
 - 내 동물·과일나무를 3D 맵에 친구별로 그리기, 동물 이름·팔기·출산, 목장 축제, V5 공동 외양간.
 - 가져가는 약, 감기 유행, 광산 사고 구조·명검 의뢰, 광산 21~30층, 온천.

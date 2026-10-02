@@ -2863,6 +2863,8 @@ function AccountLounge({
             setModal('npc');
           }}
           onBoard={view.players.find((p) => p.id === view.self)?.area === 'market' ? () => { setResidentTalk(null); setModal('npcRequests'); } : undefined}
+          // 신이치's tent travels to the plaza on festival days (lounge-stage3-data.ts): 운세 from the talk.
+          shop={residentTalk === 'shinichi' ? { label: '운세 보기', open: () => { setResidentTalk(null); setTownPlace('fortune'); } } : undefined}
         />
       )}
       {modal === 'wallet' && (
