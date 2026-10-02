@@ -66,8 +66,8 @@ export class HarborSet extends DistrictSet {
     this.own(boat);
     this.boat = boat;
     this.signpost('먼바다 출항', '05~19시 · 30분마다', { bg: '#e8f1f6', ink: '#1f4a6a', line: '#3f7fae' }, HARBOR_VOYAGE.board.x, HARBOR_VOYAGE.board.z, {
-      w: 1.6,
-      h: 1.3,
+      w: 2.2,
+      h: 1.5,
       name: 'harbor-voyage-board',
     });
     // 허 선장 from his tavern sheet (calm pose), standing like a resident.

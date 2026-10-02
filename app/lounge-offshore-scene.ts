@@ -77,13 +77,15 @@ void main() {
   vec3 V = normalize(vec3(0.0, 0.788, 0.616));
   vec3 H = normalize(L + V);
   float spec = pow(max(dot(n, H), 0.0), 120.0);
-  float sparkle = step(0.985, hash(floor(vWorld.xz * 6.0) + floor(uTime * 3.0)));
-  col += uSun * (spec * 1.4 + sparkle * spec * 6.0) * uGlitter;
+  float sparkle = step(0.992, hash(floor(vWorld.xz * 16.0) + floor(uTime * 4.0))) * step(0.2, spec);
+  col += uSun * (spec * 1.2 + sparkle * 2.5) * uGlitter;
   // Foam: wave crests, and a lapping band along the hull.
-  float crest = smoothstep(0.62, 0.95, vCrest) * uFoamOn;
-  float e = length(vec2(rel.x / 3.55, (rel.y + 0.45) / 8.25));
-  float lap = smoothstep(1.16, 1.0, e) * (0.55 + 0.45 * sin(uTime * 2.4 + vWorld.z * 2.7 + vWorld.x * 1.3));
-  col = mix(col, uFoam, clamp(crest * 0.5 + lap * 0.7, 0.0, 1.0));
+  // Crest foam in thin streaks (noise along the wave), never whole patches.
+  float streak = smoothstep(0.55, 0.9, hash(floor(vWorld.xz * vec2(3.0, 9.0))));
+  float crest = smoothstep(0.82, 1.0, vCrest) * streak * uFoamOn;
+  float e = length(vec2(rel.x / 3.45, (rel.y + 0.48) / 7.95));
+  float lap = smoothstep(1.09, 1.0, e) * (0.5 + 0.5 * sin(uTime * 2.4 + vWorld.z * 2.7 + vWorld.x * 1.3));
+  col = mix(col, uFoam, clamp(crest * 0.45 + lap * 0.55, 0.0, 1.0));
   // The moon's path toward the horizon.
   float path = smoothstep(1.4, 0.0, abs(vWorld.x - 1.5 + sin(vWorld.z * 1.1 + uTime * 0.6) * 0.35));
   col += uMoon * vec3(0.62, 0.68, 0.85) * path * smoothstep(2.0, -10.0, vWorld.z) * (0.25 + spec * 3.0 + sparkle * 0.8);
@@ -208,9 +210,10 @@ export class OffshoreSet {
     for (let i = 0; i < 3; i++) {
       const d = new THREE.Group();
       const b = new THREE.Mesh(body, mat);
-      b.scale.set(0.55, 0.5, 1.6);
+      b.scale.set(0.8, 0.75, 2.4);
       const f = new THREE.Mesh(fin, mat);
-      f.position.set(0, 0.28, -0.1);
+      f.position.set(0, 0.42, -0.15);
+      f.scale.setScalar(1.4);
       d.add(b, f);
       d.userData.lag = i * 0.35;
       d.userData.dx = (i - 1) * 0.9;
@@ -378,8 +381,8 @@ export class OffshoreSet {
     this.setRain(rainy || look.weather === 'snow', look.low, look.weather === 'snow');
     if (first && !look.low) {
       // Boats passing on either side, far enough not to cross the deck.
-      this.loadPasser('boatFishing', -10.5, -14, 0.0011, 1.6);
-      this.loadPasser('boatTug', 11, 16, -0.0008, 1.3);
+      this.loadPasser('boatFishing', -11, -14, 0.0011, 1.1);
+      this.loadPasser('boatTug', 11.5, 16, -0.0008, 0.85);
     }
     this.onChange();
   }

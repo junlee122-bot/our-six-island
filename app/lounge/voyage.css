@@ -30,7 +30,7 @@
 /* The 3-second cast-off (and the way back): a boat slipping past the breakwater. */
 .l-sailout { position: fixed; inset: 0; z-index: var(--z-overlay); display: grid; place-items: end center; overflow: hidden; background: var(--pal-blue-74); }
 .l-sailout-sea { position: absolute; inset: 45% 0 0; background: linear-gradient(var(--pal-cyan-39), var(--pal-blue-24)); }
-.l-sailout-sea::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(100deg, transparent 0 34px, var(--pal-cyan-61) 34px 38px, transparent 38px 90px); opacity: 0.35; animation: l-sailout-waves 3s linear infinite; }
+.l-sailout-sea::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(176deg, transparent 0 26px, var(--pal-cyan-61) 26px 29px, transparent 29px 60px); opacity: 0.35; animation: l-sailout-waves 3s linear infinite; }
 .l-sailout-wall { position: absolute; left: 0; bottom: 30%; width: 38%; height: 9%; background: var(--pal-grey-62); clip-path: polygon(0 30%, 100% 0, 100% 100%, 0 100%); animation: l-sailout-wall 3s ease-in forwards; }
 .l-sailout-boat { position: absolute; left: 30%; bottom: 33%; width: 150px; height: 70px; background: linear-gradient(var(--pal-grey-96) 0 55%, var(--pal-blue-42) 55% 68%, var(--pal-red-45) 68%); clip-path: polygon(0 40%, 62% 40%, 62% 0, 82% 0, 82% 40%, 100% 40%, 92% 100%, 8% 100%); animation: l-sailout-boat 3s ease-in-out forwards; }
 .l-sailout p { position: relative; margin: 0 0 var(--sp-6); padding: var(--sp-2) var(--sp-4); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-family: var(--font-display); font-size: var(--fs-title-s); }
@@ -38,7 +38,7 @@
 .l-sailout[data-back] .l-sailout-wall { animation-direction: reverse; }
 @keyframes l-sailout-boat { from { transform: translate(-40vw, 0) scale(1); } to { transform: translate(55vw, -14vh) scale(0.55); } }
 @keyframes l-sailout-wall { from { transform: translateX(0); } to { transform: translateX(-60%); } }
-@keyframes l-sailout-waves { from { background-position: 0 0; } to { background-position: 180px 0; } }
+@keyframes l-sailout-waves { from { background-position: 0 0; } to { background-position: 240px 0; } }
 @media (prefers-reduced-motion: reduce) {
   .l-sailout-boat, .l-sailout-wall, .l-sailout-sea::after { animation: none; }
 }

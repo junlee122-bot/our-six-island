@@ -34,9 +34,10 @@
 | F | Chessnut (Alexis Luengas) | 체스 말 SVG 12개 | `lounge/[wb][KQRBNP].svg` | Apache-2.0, LICENSE·COPYRIGHT 보관 | 사용 중 |
 | G | hwatu (Spenĉjo / Marcus Richert / Louie Mantia Jr.) | 화투 48장 SVG | `lounge/m01-01.svg`~`m12-04.svg` | **CC BY-SA 4.0**, 출처 파일 보관 | 고스톱 48장, 섯다 20장 |
 | H | chess.js 1.4.0 | 체스 규칙 | npm | BSD-2 | 사용 중 |
-| I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부 | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`) | 자체 제작 | 사용 중 |
+| I | Three.js 절차 생성 | 회관·카지노·분장실 건물, 나무, 가로등·울타리·강·다리·분수, 방 소품 일부, 허 선장의 낚싯배·먼바다 수면 셰이더·수평선(2026-10-02) | 코드(`lounge-village-world.ts`, `lounge-bedroom-scene.ts`, `lounge-boat-model.ts`, `lounge-offshore-scene.ts`) | 자체 제작 | 사용 중 |
 | J | Canvas 런타임 가공 | 머리·피부 RGB 염색, 마젠타 배경 제거, 의상 보행 변형 | 코드(`lounge-color.ts`, `lounge-gait.ts`, `lounge-sprites.ts`) | 자체 제작 | 사용 중 |
 | K | Kenney Casino Audio 1.1 · Interface Sounds 1.0 | 야추 주사위(흔들기·던지기·잡기·한 개 던지기)·라이어 카드·타이머 틱·투표·확인 효과음 13종 | `public/assets/lounge/sfx/*.ogg`(원본) + `*.m4a`(AAC 사본) | **CC0**, `LICENSE-KENNEY.txt` 보관 | 사용 중(없거나 디코딩 실패 시 합성음) |
+| K2 | Kenney Watercraft Kit 2.1 (kenney.nl, 2026-10-02 내려받음) | 먼바다 낚싯배: 지나가는 배(작은 어선·예인선)·작은 배·부표 GLB 5개 (`boat-fishing-small`, `boat-tug-a`, `boat-row-small`, `buoy`, `buoy-flag`). 공용 `Textures/colormap.png`를 각 GLB 안에 넣음(`scripts/embed-glb-textures.mjs`) | `public/models/village/watercraft/` (원본 GLB·colormap은 `public/models/_originals/village/watercraft/`) | **CC0**, `public/models/village/watercraft/LICENSE-KENNEY.txt` 보관 | 먼바다 장면의 지나가는 배. 친구들이 걷는 낚싯배는 갑판 6×14칸·난간 네 곳이 필요해 키트 배(조타실이 갑판을 거의 덮음) 대신 코드로 만듦(`lounge-boat-model.ts`, I행) |
 | L | 글꼴 Jua · Pretendard 1.3.9 · Gaegu | 창 제목·간판(Jua), 본문(Pretendard 400/600/700), 쪽지·편지(Gaegu 400/700) | `app/ui/fonts/*.woff2` (`npm run fonts` → `scripts/build-fonts.mjs`) | **SIL OFL 1.1**, `licenses/OFL-Jua.txt`·`OFL-Pretendard.txt`·`OFL-Gaegu.txt`. Jua·Gaegu는 앱 문구+KS X 1001 서브셋(core/ext), Pretendard는 예약 글꼴명이 있어 제작자 배포 서브셋을 그대로 씀 | 사용 중 |
 | — | 그 밖의 사운드 | 음악·발걸음·카드·칩·UI는 합성 코드 | — | — | — |
 

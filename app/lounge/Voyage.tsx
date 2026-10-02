@@ -5,7 +5,7 @@
 // (럭스에게 팔기) and 허 선장's dawn knock. Everything the server decides comes
 // from `view.life.voyage` (lounge-voyage.ts voyageView); the phase is
 // recomputed here from the clock so the countdown never waits for a poll.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
 import { formatBeom, josa } from '../lounge-text';
@@ -144,6 +144,8 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
         </p>
       )}
       {why && <p className="l-why" data-testid="voyage-why">{why}</p>}
+      {!phase && v.unlocked && (view.wallet?.balance ?? 0) < v.fare && <p className="l-help-text">{VOYAGE_LINES.rose.fare[0]} — 로제</p>}
+      <p className="l-help-text">{VOYAGE_LINES.gabung.tomorrow[v.stormTomorrow ? 1 : 0]} — 가붕</p>
       <div className="l-voyage-actions">
         {phase === 'boarding' ? (
           <button type="button" className="l-secondary" disabled={busy} onClick={() => void run({ kind: 'voyageLeave' }, '배에서 내렸어요. 승선료를 돌려받았어요.')} data-testid="voyage-off">
@@ -390,30 +392,41 @@ export function useVoyageFlow({
   const [sailing, setSailing] = useState<'out' | 'back' | null>(null);
   /** The trip whose summary I closed (it stays open until 닫기 sends voyageDone). */
   const [closed, setClosed] = useState<string | null>(null);
+  /** The scene change waiting under the overlay (kept across re-renders). */
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const goTo = useRef({ toDeck, toPier });
   useEffect(() => {
-    if (busy || sailing || !trip) return;
-    const out = phase === 'sailing' && area === 'harbor',
-      back = phase === 'back' && area === 'offshore';
-    if (!out && !back) return;
+    goTo.current = { toDeck, toPier };
+  });
+  useEffect(() => {
+    if (busy || pending.current || !trip) return;
+    const kind = phase === 'sailing' && area === 'harbor' ? 'out' : phase === 'back' && area === 'offshore' ? 'back' : null;
+    if (!kind) return;
     // The overlay first, then the scene change under it.
-    const show = setTimeout(() => setSailing(out ? 'out' : 'back'), 0);
-    const go = setTimeout(
+    pending.current = setTimeout(
       () => {
+        pending.current = null;
         setSailing(null);
-        if (out) toDeck();
-        else toPier();
+        if (kind === 'out') goTo.current.toDeck();
+        else goTo.current.toPier();
       },
-      out ? 3_000 : 1_600,
+      kind === 'out' ? 3_000 : 1_600,
     );
-    return () => {
-      clearTimeout(show);
-      clearTimeout(go);
-    };
-  }, [busy, sailing, trip, phase, area, toDeck, toPier]);
+    const show = setTimeout(() => setSailing(kind), 0);
+    return () => clearTimeout(show);
+  }, [busy, trip, phase, area]);
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
+    },
+    [],
+  );
+  // Once I am where the overlay was taking me, it is gone.
+  const shown = sailing === 'out' ? (area === 'offshore' ? null : sailing) : sailing === 'back' ? (area === 'offshore' ? sailing : null) : null;
   return {
     phase,
-    sailing,
-    summaryOpen: !!trip && phase === 'back' && area !== 'offshore' && !sailing && closed !== trip.id,
+    sailing: shown,
+    summaryOpen: !!trip && phase === 'back' && area !== 'offshore' && !shown && closed !== trip.id,
     closeSummary: () => setClosed(trip?.id ?? null),
   };
 }

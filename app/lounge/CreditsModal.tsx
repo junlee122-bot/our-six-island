@@ -26,7 +26,7 @@ export function CreditsModal({ onClose }: { onClose: () => void }) {
           의자·벽난로·전구 줄·가마솥·아궁이 등 업그레이드 소품, 범마을 부동산과 나무결 가구점 건물, 빵집·농협·잡화점·어시장
           안의 빵 진열대·케이크 진열장·구움과자 진열장·커피 머신·곡물 자루 수레·저울·과일 상자·씨앗 보관장·생활용품
           진열대·장바구니 거치대·도구 상자·얼음 통·냉동 진열고 원본 모델을 사용했습니다. 테라스와 방의 가구는 3DAssets.dev (CC0)입니다. 주사위·카드·
-          타이머 효과음은 Kenney의 Casino Audio·Interface Sounds (CC0)입니다. 허 선장
+          타이머 효과음은 Kenney의 Casino Audio·Interface Sounds (CC0), 먼바다를 지나가는 배는 Kenney Watercraft Kit (CC0)입니다. 허 선장
           그림은 Higgsfield(gpt_image_2_5)로 만들었고, 뻥총·다트판·축음기와 주점 음악은 코드로 그렸어요.
           로제·냐모·그웬과 허풍 카드 그림도 Higgsfield로 제작했습니다. 로제와 그웬은
           Riot Games의 미스 포츈·그웬, 냐모는 사용자가 제공한 캐릭터 그림을 참고한 팬 창작입니다.
