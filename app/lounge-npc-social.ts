@@ -198,7 +198,7 @@ export function npcSocialScene(spots: readonly NpcSpot[], now: number): NpcSocia
 function kindOf(a: NpcSpot, b: NpcSpot, h: number): NpcSocialKind {
   if (a.activity === 'eat' || b.activity === 'eat' || a.activity === 'drink' || b.activity === 'drink') return 'meal';
   const loose = (s: NpcSpot) => s.activity === 'stroll' || s.activity === 'rest' || s.activity === 'gather';
-  if (loose(a) && loose(b) && (a.area === 'village' || a.area === 'market' || a.area === 'harbor' || a.area === 'hillside' || a.area === 'ranch' || a.area === 'foothill') && (h >> 2) % 3 === 0) return 'stroll';
+  if (loose(a) && loose(b) && (a.area === 'village' || a.area === 'market' || a.area === 'harbor' || a.area === 'hillside' || a.area === 'ranch' || a.area === 'foothill' || a.area === 'farm') && (h >> 2) % 3 === 0) return 'stroll';
   return 'chat';
 }
 /** A free walkable tile next to `stay`, toward where `come` was (null when there is none). */

@@ -215,7 +215,7 @@ test('the server refuses the harbor and the hillside until their flags are set',
 
 // ---------------------------------------------------------------- evenings and the commute
 // 가게 실내: the shop rooms are walk areas too.
-const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
+const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'farm', 'bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 /**
  * Walkable, or within 0.1 of walkable ground: the region walkers check a
@@ -262,6 +262,8 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
     // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
     'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
+    // 우리 농장: through the farm gate on the hub's north edge.
+    'v.farm-gate', 'fa.gate',
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door',
     // 무잔 walks into 범마을 증권 through its door.
     'm.broker', 'broker.door']);

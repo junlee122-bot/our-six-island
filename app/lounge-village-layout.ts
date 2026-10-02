@@ -175,47 +175,11 @@ export const VILLAGE_SCENIC_TREES = [
   { x: 24, z: 26, radius: 0.8, scale: 0.86 },
 ] as const;
 
-const homeNames = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'];
-/** Every home stands in one row; its front yard (farm) fills the strip down to the lane. */
-export const VILLAGE_HOME_ROW_Z = -22;
-const homePositions: readonly VillagePoint[] = [
-  { x: -14, z: VILLAGE_HOME_ROW_Z },
-  { x: -7, z: VILLAGE_HOME_ROW_Z },
-  { x: 0, z: VILLAGE_HOME_ROW_Z },
-  { x: 7, z: VILLAGE_HOME_ROW_Z },
-  { x: 14, z: VILLAGE_HOME_ROW_Z },
-  { x: -23.2, z: VILLAGE_HOME_ROW_Z },
-  { x: 23.2, z: VILLAGE_HOME_ROW_Z },
-];
-// The five middle houses alternate the two narrower models; the wide
-// courtyard houses close the row at both ends.
-const homeModels: readonly VillageHouseModel[] = [
-  'cornerHouse',
-  'cottage',
-  'cornerHouse',
-  'cottage',
-  'cornerHouse',
-  'courtyardHouse',
-  'courtyardHouse',
-];
-const homeColors = [
-  '#f2c789',
-  '#e9b9a7',
-  '#b7d4b1',
-  '#e7d58e',
-  '#a9c8da',
-  '#d0b0dc',
-  '#dfaa9c',
-];
-const roofColors = [
-  '#9d5946',
-  '#557a74',
-  '#927047',
-  '#526c8b',
-  '#9a604e',
-  '#75608c',
-  '#a56851',
-];
+// 우리 농장 (design-our-farm.md §5, 2026-10-03): the seven houses and their
+// front-yard beds moved from the row at z −22 to the farm behind the north
+// gate (lounge-farm-layout.ts). The hub keeps the plaza, the civic buildings
+// and the shops; the old row is a tree-lined lane up to the farm gate, a small
+// park in the west and the Sunday-market stall spots in the east.
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
 
@@ -232,29 +196,6 @@ const makePlace = (
 });
 
 export const VILLAGE_PLACES: readonly VillagePlace[] = [
-  ...homePositions.map((point, actor) => {
-    const model = homeModels[actor];
-    const spec = VILLAGE_HOUSE_MODELS[model],
-      scale = villageHouseScale(model);
-    return makePlace(
-      {
-        id: `home-${actor}`,
-        name: `${homeNames[actor]}의 집`,
-        subtitle: '주민의 집',
-        kind: 'home',
-        actor,
-        ...point,
-        // Colliders follow the scaled model's real footprint.
-        width: round(spec.width * scale + 0.1),
-        depth: round(spec.depth * scale + 0.1),
-        color: homeColors[actor],
-        roofColor: roofColors[actor],
-        destination: 'bedroom',
-        model,
-      },
-      spec.doorX * scale,
-    );
-  }),
   makePlace({
     id: 'hall',
     name: '범마을 회관',
@@ -385,6 +326,7 @@ export type FarmYard = {
    */
   scarecrow: VillagePoint;
 };
+/** 우리 농장: no yards in the hub any more (the fields are on the farm, lounge-farm-layout.ts). */
 export const VILLAGE_YARDS: readonly FarmYard[] = (() => {
   const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home').sort((a, b) => a.x - b.x);
   return homes.map((home, i): FarmYard => {
@@ -586,10 +528,6 @@ export const VILLAGE_FURNISHINGS = [
 
 /** Walking routes drawn by the world builder and the minimap: [x1, z1, x2, z2, width]. */
 export type VillagePathSegment = readonly [number, number, number, number, number];
-// Each door path runs through the friend's yard and out of its gate to the lane.
-const homeSpurs: VillagePathSegment[] = VILLAGE_PLACES.filter(
-  (place) => place.kind === 'home',
-).map((place) => [place.entry.x, place.entry.z - 0.4, place.entry.x, VILLAGE_LANE_Z, 1.3] as const);
 export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   // Three crossings fan the expanded valley out from the civic green.
   [-16, 10, -27, 10, 1.7],
@@ -647,8 +585,12 @@ export const VILLAGE_PATHS: readonly VillagePathSegment[] = [
   [2.7, 0.7, 2.7, -0.7, 1.7],
   [2.7, -0.7, 1.9, -2.05, 1.7],
   [1.9, -2.05, 0, -2.7, 1.7],
-  // Door spurs are generated from each home's real entrance.
-  ...homeSpurs,
+  // 우리 농장: the tree-lined lane north from the old yard lane to the farm gate,
+  // and spurs to the west park and the east stall spots.
+  [0, -9, 0, -33, 1.6],
+  [0, -33, -4, -42, 1.4],
+  [-15.2, -9, -16, -15.6, 1.3],
+  [14, -9, 16, -14.8, 1.3],
   [-15.2, -9, -7, -9, 1.5],
   [-7, -9, 0, -9, 1.5],
   [0, -9, 7, -9, 1.5],
@@ -892,85 +834,16 @@ decor.push(
   }),
 );
 
-// Resident front gardens are derived from each home's real footprint.
-for (const place of VILLAGE_PLACES) {
-  if (place.kind !== 'home' || place.actor === undefined) continue;
-  const front = place.z + place.depth / 2,
-    half = place.width / 2,
-    home = place.actor;
-  decor.push(
-    {
-      id: `mailbox-${home}`,
-      kind: 'mailbox',
-      x: place.entry.x - 1.2,
-      // A walker fits between the post and the wall (no dead-end niche).
-      z: front + 1.0,
-      home,
-      // The post is thin; the box sits above head height.
-      collider: circle(0.14),
-    },
-    {
-      id: `hydrangea-${home}`,
-      kind: 'hydrangea',
-      x: place.entry.x + 1.5,
-      z: front + 0.55,
-      home,
-      // Knee-high: walkable like the flower beds (a collider here left a
-      // narrow niche against the wall that caught walkers).
-      collider: null,
-    },
-    {
-      id: `garden-flowers-${home}`,
-      kind: 'flowers',
-      x: place.x + (place.entry.x < place.x ? half - 0.6 : -half + 0.6),
-      z: front + 0.45,
-      scale: 4,
-      variant: home + 1,
-      home,
-      collider: null,
-    },
-  );
-  for (const side of [-1, 1])
-    decor.push({
-      id: `fence-${home}-${side}`,
-      kind: 'fence',
-      x: place.x + side * (half + 0.18),
-      z: front - 1.2,
-      home,
-      collider: boxCollider(0.14, 2.3),
-    });
-}
-
-// Yard fronts: one picket run along the lane, open at every yard's gate, and
-// a well beside each gate. (The fence is a straight wall with free ends and
-// the well stands clear of everything, so neither leaves a pocket.)
-{
-  const gates = VILLAGE_YARDS.map((y) => y.pathX).sort((a, b) => a - b);
-  const start = VILLAGE_YARDS[0].x0,
-    end = VILLAGE_YARDS[VILLAGE_YARDS.length - 1].x1;
-  const cuts = [start, ...gates.flatMap((g) => [g - YARD_GATE_HALF, g + YARD_GATE_HALF]), end];
-  for (let i = 0; i < cuts.length; i += 2) {
-    const a = cuts[i],
-      b = cuts[i + 1];
-    if (b - a < 0.3) continue;
-    decor.push({
-      id: `yard-fence-${i / 2}`,
-      kind: 'fence',
-      x: round((a + b) / 2),
-      z: YARD_FENCE_Z,
-      collider: boxCollider(round(b - a), 0.14),
-    });
-  }
-  for (const yard of VILLAGE_YARDS)
-    decor.push({
-      id: `well-${yard.actor}`,
-      kind: 'well',
-      x: yard.well.x,
-      z: yard.well.z,
-      home: yard.actor,
-      collider: circle(0.32),
-    });
-}
+// 우리 농장 (§5): the lane's trees, the west park's benches and flower beds.
+for (const z of [-12.6, -16.2, -19.8, -23.4, -26.8])
+  for (const x of [-2.5, 2.5]) addTree(x, z, 0.78, Math.abs(Math.round(z * 3 + x)));
+decor.push(
+  { id: 'park-bench-e', kind: 'bench', x: -12.6, z: -19.4, rotation: -Math.PI / 2, collider: boxCollider(0.55, 1.65) },
+  { id: 'park-bench-s', kind: 'bench', x: -18.6, z: -15.4, rotation: Math.PI, collider: boxCollider(1.65, 0.55) },
+  { id: 'park-flowers-w', kind: 'flowers', x: -22, z: -16, scale: 9, variant: 2, collider: null },
+  { id: 'park-flowers-n', kind: 'flowers', x: -15, z: -24, scale: 8, variant: 5, collider: null },
+  { id: 'stall-flowers', kind: 'flowers', x: 20.5, z: -21.5, scale: 7, variant: 3, collider: null },
+);
 
 // Boardwalk rails are solid; the deck between them stays 1.9 wide.
 for (const railZ of VILLAGE_BOARDWALK.railZ)
@@ -1090,32 +963,30 @@ export type ValleyProp = {
   yard?: { actor: number; plots: 9 | 12 };
   collider?: VillageCollider;
 };
+/** 우리 농장 (§5): the small park west of the farm lane (a 정자 and benches) — a meeting place. */
+export const VILLAGE_PARK = { x: -16.5, z: -19.5, pavilion: { x: -18.8, z: -21.2 } } as const;
+/** The Sunday-market stall spots east of the farm lane (fixed pitches, crates and a lantern). */
+export const VILLAGE_STALL_SPOTS: readonly VillagePoint[] = [
+  { x: 12, z: -17.6 },
+  { x: 16.5, z: -17.6 },
+  { x: 21, z: -17.6 },
+];
 /** 팔각정 by the lake: a landmark you walk around (solid octagon). */
 export const VILLAGE_PAVILION = { x: 34.2, z: -19.8, scale: 1.9, radius: 1.5 } as const;
-/** Dry-stone wall behind the homes, open at three alley gaps. */
+/** Dry-stone wall along the north woods (behind the old house row), open at three alley gaps. */
 export const VILLAGE_STONE_WALL = { z: -29.5, x0: -26, x1: 26, gaps: [-13.5, 0, 13.5], gapHalf: 1.1, scale: 0.6 } as const;
 
 const valleyProps: ValleyProp[] = [];
-// Friends' yards: pump by the well, an open gate leaf, a jar terrace (장독대),
-// firewood, and — for bigger farms — a produce crate (9+), a tool shed and a
-// scarecrow (12). Knee-high props and the size-gated ones are walkable
-// decoration (no collider), like the flowers.
-for (const yard of VILLAGE_YARDS) {
-  const west = yard.pathX - yard.x0;
+// 우리 농장 (§5): the west park's 정자, and the Sunday-market stall spots in the
+// east (a paved pitch with crates and a lantern; the stalls themselves are in
+// 시장 거리 — these are their fixed places in the hub).
+valleyProps.push({ model: 'pavilion', x: VILLAGE_PARK.pavilion.x, z: VILLAGE_PARK.pavilion.z, s: 1.6, rot: Math.PI / 8, zone: 'village', collider: circle(1.25) });
+for (const st of VILLAGE_STALL_SPOTS) {
   valleyProps.push(
-    { model: 'waterPump', x: yard.well.x, z: yard.well.z, s: 1.1, rot: Math.PI / 2, zone: 'village' },
-    { model: 'picketGate', x: round(yard.pathX - YARD_GATE_HALF - 0.04), z: round(YARD_FENCE_Z - 0.45), s: 0.78, rot: Math.PI / 2, zone: 'village' },
-    { model: 'stonePaver', x: yard.pathX, z: YARD_FENCE_Z, s: [1.2, 1, 1.2], y: 0.09, zone: 'village' },
-  );
-  const jx = round(yard.pathX - Math.min(1.5, west - 0.7));
-  for (const [dx, dz, sc] of [[0, 0, 0.3], [0.45, 0.25, 0.23], [-0.2, 0.5, 0.2]] as const)
-    valleyProps.push({ model: 'onggi', x: round(jx + dx), z: round(-15.6 + dz), s: sc, rot: dx * 3, zone: 'village' });
-  valleyProps.push({ model: 'firewood', x: round(yard.x1 - 0.75), z: round(yard.z0 + 0.7), s: 0.35, zone: 'village' });
-  const bed = yard.beds[0];
-  valleyProps.push(
-    { model: 'produceCrate', x: round(bed.x - bed.w / 2 + 0.3), z: -12.6, s: 1.2, rot: 0.2, zone: 'village', yard: { actor: yard.actor, plots: 9 } },
-    { model: 'toolShed', x: round(yard.pathX - Math.min(1.55, west / 2 + 0.3)), z: -13.3, s: 0.45, rot: Math.PI / 2, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
-    { model: 'scarecrow', x: yard.scarecrow.x, z: yard.scarecrow.z, s: 0.7, rot: -0.3, zone: 'village', yard: { actor: yard.actor, plots: 12 } },
+    { model: 'stonePaver', x: st.x, z: st.z, s: [2.2, 1, 1.6], y: 0.09, zone: 'village' },
+    { model: 'produceCrate', x: round(st.x - 0.55), z: round(st.z - 0.45), s: 1.3, rot: 0.15, zone: 'village', collider: boxCollider(0.75, 0.55) },
+    { model: 'produceCrate', x: round(st.x + 0.5), z: round(st.z - 0.5), s: 1.2, rot: -0.2, zone: 'village', collider: boxCollider(0.7, 0.5) },
+    { model: 'hanjiLantern', x: round(st.x + 1), z: round(st.z + 0.5), s: 0.36, zone: 'village' },
   );
 }
 // Main green: stone pavers down the plaza walk to the middle bridge.

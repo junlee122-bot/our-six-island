@@ -9,14 +9,12 @@ import {
   villageNearbyEntrance,
   villageReturnPoint,
 } from '../app/lounge-village-entrance.ts';
+import { FARM_HOME_PLACES } from '../app/lounge-farm-layout.ts';
 
 test('public buildings and only the player-owned home can be entered', () => {
-  const ownHome = VILLAGE_PLACES.find(
-    (place) => place.kind === 'home' && place.actor === 2,
-  );
-  const otherHome = VILLAGE_PLACES.find(
-    (place) => place.kind === 'home' && place.actor === 1,
-  );
+  // 우리 농장: the houses are on the farm; the same door rule applies there.
+  const ownHome = FARM_HOME_PLACES.find((place) => place.actor === 2);
+  const otherHome = FARM_HOME_PLACES.find((place) => place.actor === 1);
   const hall = VILLAGE_PLACES.find((place) => place.kind === 'hall');
   assert.ok(ownHome && otherHome && hall);
   assert.equal(villageCanEnterPlace(ownHome, 2), true);
@@ -26,31 +24,19 @@ test('public buildings and only the player-owned home can be entered', () => {
 });
 
 test('nearby entrance requires proximity and clear walkable ground', () => {
-  const home = VILLAGE_PLACES.find(
-    (place) => place.kind === 'home' && place.actor === 0,
-  );
-  assert.ok(home);
-  const near = villageNearbyEntrance(home.entry, 0);
-  assert.equal(near?.place.id, home.id);
+  const hall = VILLAGE_PLACES.find((place) => place.kind === 'hall');
+  const near = villageNearbyEntrance(hall.entry, 0);
+  assert.equal(near?.place.id, hall.id);
   assert.equal(near?.canEnter, true);
-  assert.equal(
-    villageNearbyEntrance({ x: home.entry.x, z: home.entry.z + 1.41 }, 0),
-    null,
-  );
-
-  const throughWall = { x: home.entry.x, z: home.z - home.depth / 2 - 0.9 };
+  assert.equal(villageNearbyEntrance({ x: hall.entry.x, z: hall.entry.z + 1.41 }, 0), null);
+  const throughWall = { x: hall.entry.x, z: hall.z - hall.depth / 2 - 0.9 };
   assert.equal(villageCanWalk(throughWall), true);
   assert.equal(villageNearbyEntrance(throughWall, 0, 7), null);
 });
 
-test('approaching another resident home reports no entry access', () => {
-  const home = VILLAGE_PLACES.find(
-    (place) => place.kind === 'home' && place.actor === 1,
-  );
-  assert.ok(home);
-  const nearby = villageNearbyEntrance(home.entry, 2);
-  assert.equal(nearby?.place.id, home.id);
-  assert.equal(nearby?.canEnter, false);
+test('the hub has no house doors any more (우리 농장 has them)', () => {
+  assert.equal(VILLAGE_PLACES.filter((place) => place.kind === 'home').length, 0);
+  for (const x of [-23.2, -14, -7, 0, 7, 14, 23.2]) assert.equal(villageNearbyEntrance({ x, z: -18.3 }, 2), null);
 });
 
 test('interior return points remain walkable outside every matching entrance', () => {

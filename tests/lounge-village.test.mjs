@@ -18,29 +18,13 @@ import {
   villageToNetwork,
 } from '../app/lounge-village-layout.ts';
 
-test('village places retain all resident homes and public destinations', () => {
-  const homes = VILLAGE_PLACES.filter((place) => place.kind === 'home');
-  assert.deepEqual(
-    homes.map((place) => place.name),
-    [
-      '도원의 집',
-      '강재의 집',
-      '민서의 집',
-      '승준의 집',
-      '민재의 집',
-      '재민의 집',
-      '호현의 집',
-    ],
-  );
-  assert.deepEqual(
-    homes.map((place) => place.actor),
-    [0, 1, 2, 3, 4, 5, 6],
-  );
+test('village places: the public destinations stay; the homes moved to 우리 농장', () => {
+  assert.equal(VILLAGE_PLACES.filter((place) => place.kind === 'home').length, 0);
   assert.deepEqual(
     VILLAGE_PLACES.filter((place) => place.kind !== 'home').map((place) => place.destination),
     ['lounge', 'casino', 'wardrobe', 'tavern', 'realty', 'furniture', 'bank'],
   );
-  assert.equal(VILLAGE_PLACES.length, 14);
+  assert.equal(VILLAGE_PLACES.length, 7);
   assert.deepEqual(VILLAGE_TERRACE, {
     id: 'terrace',
     x: -8,

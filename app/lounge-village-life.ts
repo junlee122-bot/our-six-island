@@ -337,15 +337,20 @@ export function visibleNear(target: VillagePoint): VillagePoint {
   return start;
 }
 
-/** House front, the plaza benches and the friend's own farm. */
+/**
+ * The way home, the plaza benches and the friend's own farm. 우리 농장: the
+ * houses and fields are behind the north gate, so in the hub "home" is a spot
+ * on the farm lane and "the farm" the park or the stall spots beside it.
+ */
 export function npcWaypoints(actor: number): VillagePoint[] {
   const cached = waypointCache.get(actor);
   if (cached) return cached;
   const place = VILLAGE_PLACES.find((p) => p.actor === actor);
   const home = place
     ? visibleNear({ x: place.entry.x + 1.3, z: place.entry.z + 0.5 })
-    : visibleNear({ x: 0, z: 8 });
+    : visibleNear({ x: actor % 2 ? 1.1 : -1.1, z: -11.5 - actor * 2.2 });
   const bed = farmBed(actor);
+  const lane = actor % 2 ? visibleNear({ x: 16.5, z: -15.6 }) : visibleNear({ x: -14.6, z: -18.2 });
   const benchWest = visibleNear({ x: -3.3, z: -0.6 }),
     benchEast = visibleNear({ x: 3.3, z: 0.6 });
   // Alternate benches so two NPCs rarely share one.
@@ -353,7 +358,7 @@ export function npcWaypoints(actor: number): VillagePoint[] {
   const plaza = visibleNear({ x: (actor - 3) * 1.4, z: 6.2 });
   // Tending their farm, NPCs stand where the camera can see them (a bed
   // tucked beside 분장실 would otherwise hide them under its roof).
-  const list = [home, bench, bed ? visibleNear(farmFront(bed)) : plaza, plaza];
+  const list = [home, bench, bed ? visibleNear(farmFront(bed)) : lane, plaza];
   waypointCache.set(actor, list);
   return list;
 }

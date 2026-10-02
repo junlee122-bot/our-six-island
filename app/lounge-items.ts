@@ -741,8 +741,8 @@ export type HouseTier = {
 export const HOUSE_TIERS: readonly HouseTier[] = [
   { tier: 1, name: '벽지 리모델링', price: 150_000, note: '프리미엄 벽지 4종(샴페인 골드·밤바다 남색·로즈 스모크·깊은 숲)', walls: ['gold', 'navy', 'rose', 'forest'] },
   { tier: 2, name: '바닥 시공', price: 400_000, note: '프리미엄 바닥 3종(대리석·헤링본·체리목)', floors: ['marble', 'herringbone', 'cherry'] },
-  { tier: 3, name: '앞마당 정원', price: 900_000, note: '마을의 내 집 앞에 꽃밭과 등불이 생기고, 벽지 2종(달빛 은색·노을 테라코타)이 더 열려요', walls: ['silver', 'terracotta'] },
-  { tier: 4, name: '2층 증축', price: 2_000_000, note: '마을의 내 집에 2층 다락과 명패가 올라가고, 벽지 “별밤 벨벳”과 바닥 “흑단”이 열려요', walls: ['velvet'], floors: ['ebony'] },
+  { tier: 3, name: '앞마당 정원', price: 900_000, note: '우리 농장의 내 집 앞에 꽃밭과 등불이 생기고, 벽지 2종(달빛 은색·노을 테라코타)이 더 열려요', walls: ['silver', 'terracotta'] },
+  { tier: 4, name: '2층 증축', price: 2_000_000, note: '우리 농장의 내 집에 2층 다락과 명패가 올라가고, 벽지 “별밤 벨벳”과 바닥 “흑단”이 열려요', walls: ['velvet'], floors: ['ebony'] },
 ];
 export const HOUSE_UNLOCK = (tier: number) => `house-${tier}`;
 /** 오늘의 가구 새로고침: price of the n-th reroll today (n from 0), at most SHOP_REROLL_MAX. */

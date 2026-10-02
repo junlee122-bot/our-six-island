@@ -1024,10 +1024,9 @@ export function Village3D(props: Props) {
       else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
-      else if (target.kind === 'commons') {
-        const bed = farmBed(current.save.actor);
-        if (bed) goTo(farmFront(bed));
-      } else if (target.kind === 'tree') {
+      // 우리 농장: my field is on the farm now; the plaza's plot points the way there.
+      else if (target.kind === 'commons') current.onDistrict?.('farm');
+      else if (target.kind === 'tree') {
         const readyAt = current.life?.me.fruitReadyAt?.[target.id] ?? target.readyAt;
         if (current.life && readyAt <= serverNow()) current.onPick?.(target.id);
       } else if (target.kind === 'npc') {
@@ -3517,7 +3516,7 @@ function SpotPrompt({
         <strong>
           <Sprout size={14} /> 마을 공동 밭
         </strong>
-        <small>함께 가꾸는 밭이에요 · 내 텃밭은 {ACTORS[actor]}의 집 앞에 있어요</small>
+        <small>함께 가꾸는 밭이에요 · {ACTORS[actor]}의 밭은 우리 농장의 집 앞에 있어요{key}</small>
       </div>
     );
   if (spot.kind === 'market')
