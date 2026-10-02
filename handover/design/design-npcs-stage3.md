@@ -210,3 +210,28 @@
 - 가져가는 약·감기 유행 이벤트, 광산 사고 구조, 명검 의뢰.
 - 광산 21~30층(V9 깊은 굴)·온천(V6). 산기슭의 온천 입구는 공사 중 팻말만.
 - 주식 시스템 자체(`claude/stock-exchange`).
+
+## 6. 구현 기록 (2026-10-02)
+
+| 항목 | 들어간 것 | 코드 |
+|---|---|---|
+| ④ 목장·과수원 | 60×50. 서쪽 닐라 목장(도구 창고 모델의 축사, 코드로 그린 사일로, 닭장, 밧줄 울타리 초원에 소 2·양 3, 닭장 앞 닭 3, 건초 더미, 게시판), 가운데 개울(나무 다리·징검다리, 그 밖은 벽), 동쪽 과수원(코너 하우스 창고, 과일나무 16그루, 원두막), 닐라·하쿠 집 | `lounge-ranch-layout.ts`, `lounge-ranch-scene.ts` |
+| ⑤ 산기슭 마을 | 50×44. 대장간(kArchive 공방)과 모루 마당·불씨, 의원(중정 주택, 붉은 십자), 돌 광장과 별무늬 점집 천막, 북쪽 바위 능선과 광산 입구(버팀목·등불, 광산 1층으로 내려가고 나오면 다시 산기슭), 온천 공사장(김) | `lounge-foothill-layout.ts`, `lounge-foothill-scene.ts`, `lounge/Outdoor.tsx`(`mineFrom`) |
+| 해금 | `GOAL_DISTRICTS`에 ranch·foothill. ④: 연구 `orchardHill`(V4 들길 개간, 이번에 `live`) 깃발, ⑤: 친구들 광산 기록 중 가장 깊은 층 ≥ 10. 깃발 `district-ranch`·`district-foothill`, 소식·추억·기기별 배너, 잠긴 입구 진행도("들길 개간 연구 전", "광산 7/10층"), 탐험 패스 | `lounge-district-unlocks.ts`, `lounge-districts.ts`, `lounge-cloud-engine.ts` |
+| 소리 | "들길의 오후"(D장조 6/8 104bpm), "풀무와 산바람"(D 도리안 92bpm, 새 악기 `anvil`), 목장은 개울 물소리 약하게, 발소리: 다리 나무판·징검다리 돌·흙길·풀, 산길 자갈·광장 돌 | `lounge-music-districts.ts`, `lounge-music-synth.ts`, `lounge-music-tracks.ts`, `lounge-footsteps.ts` |
+| 실내 | 축사·과수원 창고·대장간·의원(가게 실내 규격, 주인은 계산대 뒤, 계산대가 3단계 창을 엶). 새 다운로드 없이 기존 kArchive·주점 소품(화덕·솥·술통·코너장) | `lounge-shop-interiors.ts`, `lounge-shop-interior.ts`, `lounge-interior-scene.ts` |
+| 미니맵 | 두 구역 그림(초원·개울·과일나무·능선·광산·천막)과 장소 핀 | `lounge-district-minimap.ts` |
+| 시스템 | 2장 그대로. 행동 `animalBuy · animalCare · hayBuy · treePlant · treePick · treeClear · smithUpgrade · oreSell · clinicCare · fortuneRead`, 저장 `life.ext[uid].s3`, 보기 `lifeView().stage3`, 창 `lounge/Stage3Panel.tsx` | `lounge-stage3-data.ts`, `lounge-stage3-state.ts`, `lounge-stage3.ts` |
+| 범위 강화 효과 | 물뿌리개: 한 칸 물 주기가 그 줄(2단계)·둘레 3×3(3단계)까지, 괭이: 한 칸 심기가 같은 범위에 같은 씨앗(씨앗이 있는 만큼), 바구니: 과수원·마을 과일나무·버섯 채집 때 30%/60% 덤 | `lounge-life.ts`(`rangeOf`), `lounge-growth.ts` |
+| 운세 칸 | 식사·간식 칸과 따로, 항상 약한 버프(`buffPower` 0.5) 3시간 | `lounge-food-data.ts` |
+| 매출 집계 | `life.shopSales[barn|orchardShop|smithy|clinic|fortune][KST일] = { rev, buy }` 최근 30일, 판매(`sellItem` at 가게)·웃돈도 `buy`로 | `lounge-shop-sales.ts`, `lounge-life-plus.ts` |
+| 주민 | 데이터·선물·관계 18쌍·일정(구역이 닫혀 있으면 들길/산길 너머 숨김, 신이치는 주말·축제만)·저녁 자리(R 목장, F 산기슭, A 대장간 모루), 평소 대사 약 107~112줄, 연애 대사 약 107~110줄, 말풍선 18쌍·연애 말풍선 8쌍 | `lounge-npc-data.ts`, `lounge-npc-schedule.ts`, `lounge-npc-lines-*.ts`, `lounge-npc-love-*.ts`, `lounge-npc-banter-stage3.ts`, `lounge-npc-love-banter-f.ts` |
+| 그림 | `optimize-assets.mjs npcs`에 3단계 5명(오른은 키 기준을 높임), `chibi`에 한 장 한 명 5개. 웹 사본 크기·해시를 `stage3-npcs-generation.json`·`npc-chibi-generation.json`의 `web`에 스크립트가 기록 | `scripts/optimize-assets.mjs`, `lounge-assets.ts`, `lounge-npc-chibi.ts` |
+| 테스트 | 해금·입장 거절, 맵·문·미니맵·소리, 주민(성인·그림·대사·신이치 연애 대사에 변장 언급 없음), 그림 기록 해시, 일정, 연애 흐름, 동물·과수원·강화·광석·의원·운세, 저장 읽기 | `tests/lounge-stage3.test.mjs` |
+
+경제: 새로 생기는 범은 오늘의 광석 웃돈뿐이고 친구별 하루 3,000범 상한입니다(새벽 경매·농협 주간 시세와 같은 크기). 산물·과일·광석 판매는 기존 판매 경로(수요 곡선·하루 10만 범 상한)를 그대로 지나가고, 동물·건초·묘목·강화·처치·운세는 모두 소각입니다. 원장 이유는 경제 리포트 묶음(`smith-ore`, `smith`, `ranch`, `orchard-sapling`, `clinic`, `fortune`)에 이름이 붙었습니다.
+
+남은 일(다음 단계)
+- 축제 날 신이치는 마을 광장 자리에 서고 서버도 광장에서 운세를 받아 주지만, 광장에서 여는 창(대화창의 "운세 보기")은 아직 없습니다. 지금은 산기슭 천막에서만 엽니다.
+- 내 동물·과일나무를 3D 맵에 친구별로 그리기, 동물 이름·팔기·출산, 목장 축제, V5 공동 외양간.
+- 가져가는 약, 감기 유행, 광산 사고 구조·명검 의뢰, 광산 21~30층, 온천.

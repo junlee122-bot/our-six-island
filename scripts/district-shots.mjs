@@ -62,13 +62,13 @@ const H = await setup({
   base,
   view,
   seedLife: (life, uid) => {
-    life.flags = [...new Set([...(life.flags ?? []), 'district-harbor', 'district-hillside'])];
+    life.flags = [...new Set([...(life.flags ?? []), 'district-harbor', 'district-hillside', 'district-ranch', 'district-foothill'])];
     // Something to sell at 농협 and 어시장, and a visited harbor for the signpost.
     const bag = life.bag?.[uid];
     if (bag) Object.assign(bag.produce, { carrot: 6, tomato: 3, potato: 4 });
     const x = ((life.ext ??= {})[uid] ??= {});
     x.inv = { ...(x.inv ?? {}), mackerel: 3, crucian: 2, hairtail: 1 };
-    x.town = { seen: ['market', 'harbor', 'hillside'] };
+    x.town = { seen: ['market', 'harbor', 'hillside', 'ranch', 'foothill'] };
   },
 });
 const { page, js, sleep, until } = H;

@@ -113,7 +113,7 @@ export class RanchSet extends DistrictSet {
     for (const [i, f] of pastureFence().entries()) {
       const long = Math.max(f.w, f.d),
         along = f.w >= f.d;
-      const n = Math.max(1, Math.round(long / 3));
+      const n = Math.max(1, Math.round(long / 1.1));
       for (let k = 0; k < n; k++) {
         const t = -long / 2 + (k + 0.5) * (long / n);
         this.place('ropeFence', f.x + (along ? t : 0), f.z + (along ? 0 : t), { w: along ? long / n : 0.3, h: 0.9, d: along ? 0.3 : long / n }, along ? 0 : Math.PI / 2, `ranch-fence-${i}-${k}`);
