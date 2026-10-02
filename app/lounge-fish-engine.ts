@@ -676,7 +676,9 @@ export function anglingAction(
         (rod >= 3 ? 1.5 : 1) *
         (lights ? LIGHTS_RARE_BOOST : 1) *
         insp.rare *
-        (sea ? 1 + mods.seaRare : 1);
+        (sea ? 1 + mods.seaRare : 1) *
+        // 재능 밤낚시: game 20:00–05:00.
+        (gameHour(now) >= 20 || gameHour(now) < 5 ? 1 + mods.nightRare : 1);
       const legendBoost = (1 + mods.legend) * (rod >= 5 ? 1.3 : 1) * (bait === 'bait-glow' && night ? 1.5 : 1) * (ctx.dawn ? DAWN_LEGEND : 1);
       const previous = u.last?.ok ? u.last.fish : undefined;
       const fish =
@@ -694,6 +696,8 @@ export function anglingAction(
       let cm = lo + (hash32(`angle-cm:${token}`) % (hi - lo + 1));
       if (bait === 'bait-shrimp' && sea) cm = Math.round(cm * 1.1);
       cm = Math.min(hi, Math.round(cm * (1 + COOP_SIZE * coop)));
+      // 재능 대물 감각: my fish measure a tenth bigger (past the usual top size).
+      if (mods.bigFish > 0) cm = Math.round(cm * (1 + mods.bigFish));
       // 먼바다: rain brings the bite sooner (입질 +15%).
       const rainy = spot === 'offshore' && (ctx.weather === 'rain' || ctx.weather === 'storm');
       const wait = ((BITE_MIN_MS + (hash32(`angle-bite:${token}`) % BITE_SPREAD_MS)) * (bait === 'bait-dough' && fresh ? 0.5 : 1)) / (rainy ? RAIN_BITE : 1),
@@ -720,6 +724,7 @@ export function anglingAction(
         break;
       }
       const f = FISH_BY_ID[c!.fish],
+        mods = growthMods(life, uid),
         p = profileOf(f),
         level = skillLevel(life, uid, 'fish'),
         rod = toolTier(life, uid, 'rod'),
@@ -727,9 +732,11 @@ export function anglingAction(
       const seed = hash32(`fight:${c!.token}:${uid}:${now}`) >>> 0,
         loss = Math.max(
           1,
-          Math.round((baseLoss(p.difficulty) * (tackle.includes('tackle-trap') ? 2 : 3)) / 3 * (100 - COOP_LOSS * c!.coop) / 100),
+          // 재능 잔잔한 손: the gauge drains 10% slower.
+          Math.round((baseLoss(p.difficulty) * (tackle.includes('tackle-trap') ? 2 : 3)) / 3 * (100 - COOP_LOSS * c!.coop) / 100 * (1 - Math.min(0.5, mods.reelEase))),
         ),
-        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop, c!.spot === 'offshore'),
+        // 재능 보물 냄새: ×1.5.
+        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop, c!.spot === 'offshore') * (1 + mods.treasure),
         sway = c!.spot === 'offshore' ? voyageSway(life, uid, now) : 0,
         treasure =
           hash32(`fight-treasure:${c!.token}`) % 100 < chance
@@ -918,7 +925,8 @@ export function anglingAction(
       if (!pot) fail(ANGLING_REJECT.potHere);
       if (!pot!.bait || now < pot!.at + CRAB_READY_MS) fail(ANGLING_REJECT.potWait);
       const item = crabCatch(uid, pot!);
-      addInv(life, uid, item, 1);
+      // 재능 통발 장인: sometimes one more.
+      addInv(life, uid, item, 1 + (growthChance(life, uid, `pot:${a.spot}`, growthMods(life, uid).trapExtra, now) ? 1 : 0));
       discover(life, uid, item);
       const log = (u.log ??= {}),
         prev = log[item],

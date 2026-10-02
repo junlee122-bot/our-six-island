@@ -13,7 +13,7 @@ import { addTiesSeen, readTiesSeen } from './lounge-npc-social-ties.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
 import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lounge-shop-sales.ts';
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
-import { itemSaleReason } from './lounge-stage3-data.ts';
+import { RANCH_GOODS, itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
 import {
   grantBeom,
@@ -145,7 +145,7 @@ import { XP, fishXp } from './lounge-growth-data.ts';
 // 텃밭 확장: leaf data, and the farm engine (functions only; see the cycle note above).
 import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId } from './lounge-farm-data.ts';
 import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
-import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
+import { gainXp, giftMult, growthChance, growthMods } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
 import { moodBiteBoost } from './lounge-mood.ts';
@@ -161,6 +161,7 @@ import {
   TASTE_IDS,
   foodPreview,
   hasBuff,
+  buffBoost,
   isTasteId,
   luckMods,
   mealSlot,
@@ -294,7 +295,7 @@ export type UserExt = {
   ate?: string;
   wished?: boolean;
   /** 식사 칸 (meal slot): today's dish or lunchbox buff. */
-  buff?: { kind: DishBuff; dish: string; until: number };
+  buff?: { kind: DishBuff; dish: string; until: number; p?: number };
   /** 간식 칸 (snack slot): 빵집 / 주점 food, 1–2 hours. */
   snack?: SlotBuff;
   /** 맛 도감: foods tasted (dish and menu ids) and 도감 rewards paid (steps). */
@@ -612,7 +613,7 @@ function readUserExt(v: unknown): UserExt | undefined {
     own(DISH_BY_ID, b.dish) &&
     safe(b.until)
   )
-    out.buff = { kind: b.kind as DishBuff, dish: b.dish, until: b.until };
+    out.buff = { kind: b.kind as DishBuff, dish: b.dish, until: b.until, ...(typeof b.p === 'number' && b.p > 1 && b.p <= 2 ? { p: b.p } : {}) };
   return nonEmpty(out) ? out : undefined;
 }
 function readMemory(v: unknown): Memory | null {
@@ -769,7 +770,7 @@ export function shopSaleAmount(life: LifeState, uid: string, actor: number, at: 
   const amount = Math.round(base * share);
   if (share < 1 || !hasBuff(life, uid, now, 'haggle')) return amount;
   const x = todayExt(life, uid, now),
-    extra = Math.max(0, Math.min(Math.round(amount * HAGGLE_SHARE), HAGGLE_CAP - (x.hag ?? 0)));
+    extra = Math.max(0, Math.min(Math.round(amount * HAGGLE_SHARE * buffBoost(life, uid, now, 'haggle')), HAGGLE_CAP - (x.hag ?? 0)));
   if (extra) x.hag = (x.hag ?? 0) + extra;
   return amount + extra;
 }
@@ -777,6 +778,9 @@ export function shopSaleAmount(life: LifeState, uid: string, actor: number, at: 
 export const haggleLeft = (life: LifeState, uid: string, now: number) =>
   hasBuff(life, uid, now, 'haggle') ? Math.max(0, HAGGLE_CAP - (demandDay(life, uid, now) ? (life.ext?.[uid]?.hag ?? 0) : 0)) : 0;
 const demandDay = (life: LifeState, uid: string, now: number) => life.ext?.[uid]?.day === kstDay(now);
+/** A dish cooked from forage (재능 약초 달이기): any forage-category need or a forage item. */
+export const herbDish = (dish: { needs: readonly Need[] }) =>
+  dish.needs.some((n) => ('cat' in n && n.cat === 'forage') || ('item' in n && ITEM_BY_ID[n.item]?.kind === 'forage'));
 /** Village-wide growth bonus for newly planted crops (온실 확장). */
 export const villageGrowSpeed = (life: LifeState) => (hasFlag(life, 'greenhouse2') ? GREENHOUSE2_SPEED : 0);
 
@@ -832,10 +836,19 @@ export const FISH_DEMAND_FREE = 4;
  * the first FISH_DEMAND_FREE units, then sag on the usual half-life curve
  * (the 5th pays what the 2nd used to).
  */
-export function demandMult(id: string, k: number) {
+export function demandMult(id: string, k: number, soft = 0) {
   let step = Math.max(0, k);
   if (isFishSale(id)) step = step < FISH_DEMAND_FREE ? 0 : step - FISH_DEMAND_FREE + 1;
-  return Math.max(DEMAND_FLOOR, 0.5 ** (step / demandHalfLife(id)));
+  return Math.max(DEMAND_FLOOR, 0.5 ** (step / (demandHalfLife(id) * (1 + DEMAND_SOFT_STEP * Math.max(0, soft)))));
+}
+/** 재능 단골 손님 · 어시장 흥정 · 납품 단골: each point stretches the item's demand half-life this much. */
+export const DEMAND_SOFT_STEP = 0.25;
+/** Demand softening a friend's talents give for `id` (crops, fish, ranch goods). */
+export function demandSoft(mods: { demandCrop?: number; demandFish?: number; demandRanch?: number } | undefined, id: string) {
+  if (!mods) return 0;
+  if (isCropId(id)) return mods.demandCrop ?? 0;
+  if (isFishSale(id)) return mods.demandFish ?? 0;
+  return RANCH_GOODS.includes(id) ? (mods.demandRanch ?? 0) : 0;
 }
 /**
  * Market saturation: once a friend has sold MARKET_SOFT범 today (all goods
@@ -850,11 +863,11 @@ export const marketMult = (soldBeom: number) =>
  * 범 for selling n more units at `unit` each after `sold` units of the same
  * thing and `soldBeom` 범 of everything today (ignored for fish).
  */
-export function sellTotal(id: string, unit: number, sold: number, n: number, soldBeom = 0) {
+export function sellTotal(id: string, unit: number, sold: number, n: number, soldBeom = 0, soft = 0) {
   const fish = isFishSale(id);
   let total = 0;
   for (let i = 0; i < n; i++)
-    total += Math.max(1, Math.round(unit * demandMult(id, sold + i) * (fish ? 1 : marketMult(soldBeom + total))));
+    total += Math.max(1, Math.round(unit * demandMult(id, sold + i, soft) * (fish ? 1 : marketMult(soldBeom + total))));
   return total;
 }
 /**
@@ -868,7 +881,7 @@ export function sellQuote(
     me: { demand?: Record<string, number> };
     soldToday?: number;
     flags?: readonly string[];
-    growth?: { mods: { cropSell: number; starSell: number; fishSell: number; dishSell: number } };
+    growth?: { mods: SellMods };
   },
   id: string,
   q: Quality,
@@ -880,22 +893,35 @@ export function sellQuote(
   const unit = Math.round(sellUnit(id, q, now, view.flags ?? []) * share),
     sold = view.me.demand?.[id] ?? 0,
     soldBeom = view.soldToday ?? 0,
-    bonus = view.growth ? sellBonus(view.growth.mods, id, q) : 0;
+    bonus = view.growth ? sellBonus(view.growth.mods, id, q) : 0,
+    soft = demandSoft(view.growth?.mods, id);
   return {
     unit,
-    total: n > 0 ? Math.round(sellTotal(id, unit, sold, n, soldBeom) * (1 + bonus)) : 0,
-    next: sellTotal(id, unit, sold, 1, soldBeom),
+    total: n > 0 ? Math.round(sellTotal(id, unit, sold, n, soldBeom, soft) * (1 + bonus)) : 0,
+    next: sellTotal(id, unit, sold, 1, soldBeom, soft),
     /** Share of the full price the next unit fetches (demand × market). */
-    share: unit > 0 ? sellTotal(id, unit, sold, 1, soldBeom) / unit : 1,
+    share: unit > 0 ? sellTotal(id, unit, sold, 1, soldBeom, soft) / unit : 1,
   };
 }
-/** 성장 sale bonus share for an item (crops by star, fish, dishes). */
-export function sellBonus(
-  mods: { cropSell: number; starSell: number; fishSell: number; dishSell: number },
-  id: string,
-  q: Quality = 0,
-) {
+/** The growth mods a sale reads (the talent ones are absent from older servers). */
+export type SellMods = {
+  cropSell: number;
+  starSell: number;
+  fishSell: number;
+  dishSell: number;
+  woodSell?: number;
+  gemSell?: number;
+  artisanSell?: number;
+  demandCrop?: number;
+  demandFish?: number;
+  demandRanch?: number;
+};
+/** 성장 sale bonus share for an item (crops by star, fish, dishes; 재능: wood, gems, artisan goods). */
+export function sellBonus(mods: SellMods, id: string, q: Quality = 0) {
   if (isCropId(id)) return mods.cropSell + (q > 0 ? mods.starSell : 0);
+  if (isGoodId(id)) return mods.artisanSell ?? 0;
+  if (id === 'wood' || id === 'hardwood') return mods.woodSell ?? 0;
+  if (id === 'gem') return mods.gemSell ?? 0;
   const kind = ITEM_BY_ID[id]?.kind;
   return kind === 'fish' ? mods.fishSell : kind === 'dish' ? mods.dishSell : 0;
 }
@@ -1798,7 +1824,8 @@ export function plusAction(
       const bug = bugAt(spot!.id, kstDay(now), slot);
       if (!bug) fail(PLUS_REJECT.nothingHere);
       (x.taken ??= []).push(key);
-      addInv(life, uid, bug!, 1 + (hasBuff(life, uid, now, 'bug') ? 1 : 0));
+      // 재능 벌레잡이: sometimes one more.
+      addInv(life, uid, bug!, 1 + (hasBuff(life, uid, now, 'bug') ? 1 : 0) + (growthChance(life, uid, 'bug', growthMods(life, uid).bugExtra, now) ? 1 : 0));
       bump(life, uid, 'bug', 1);
       gainXp(life, uid, 'forage', XP.bug, now);
       discover(life, uid, bug!);
@@ -1811,6 +1838,7 @@ export function plusAction(
       if (invCount(life, uid, def!.id) < a.n) fail(LIFE_REJECT.notEnough);
       // Demand curve per item (fish per species): see demandMult. 성장 bonus on top;
       // then the shop share (100% at its own shop, 85% from the bag) and 흥정.
+      const mods = growthMods(life, uid);
       const base = Math.round(
           sellTotal(
             def!.id,
@@ -1818,8 +1846,9 @@ export function plusAction(
             demandSold(life, uid, now, def!.id),
             a.n,
             soldBeomToday(life, uid, now),
+            demandSoft(mods, def!.id),
           ) *
-            (1 + sellBonus(growthMods(life, uid), def!.id)) *
+            (1 + sellBonus(mods, def!.id)) *
             // 낚시 업그레이드: silver/gold fish sell best first (lounge-fish-quality).
             (def!.kind === 'fish' ? fishSaleMult(life, uid, def!.id, a.n) : 1),
         ),
@@ -1889,7 +1918,10 @@ export function plusAction(
         if (a.kind !== 'craft' || 'beom' in need) return need.n;
         let k = need.n;
         if (recipe!.id === 'fertilizer-deluxe' && 'item' in need && need.item === 'fertilizer' && mods.deluxeCheap) k -= 1;
-        if (mods.craftDiscount > 0 && k >= 2) k -= Math.floor(k * mods.craftDiscount);
+        // 재능 미끼 상인: one less of each bait material; 가구 장인: wood furniture −20%.
+        if (recipe!.makes.startsWith('bait') && mods.baitCheap) k -= mods.baitCheap;
+        const discount = mods.craftDiscount + (recipe!.makes.startsWith('furn-') && 'item' in need && need.item === 'wood' ? mods.furnCheap : 0);
+        if (discount > 0 && k >= 2) k -= Math.floor(k * Math.min(0.9, discount));
         return Math.max(1, k);
       };
       for (let i = 0; i < n; i++) for (const need of recipe!.needs) takeNeed(life, uid, need, needOf(need));
@@ -1922,8 +1954,12 @@ export function plusAction(
       if (invCount(life, uid, dish!.id) < 1) fail(LIFE_REJECT.notEnough);
       addInv(life, uid, dish!.id, -1);
       x.ate = dish!.id;
-      // 성장: 미식가 (and an 이국 요리) keeps the buff until 06:00 KST the next day.
-      x.buff = { kind: dish!.buff!, dish: dish!.id, until: nextKstMidnight(now) + (growthMods(life, uid).longBuff || dish!.long ? LONG_MEAL_MS : 0) };
+      // 성장: 미식가 (and an 이국 요리) keeps the buff until 06:00 KST the next day;
+      // 재능 양념 솜씨 makes it last 30% longer, 약초 달이기 a forage dish 20% stronger.
+      const mods = growthMods(life, uid),
+        until = nextKstMidnight(now) + (mods.longBuff || dish!.long ? LONG_MEAL_MS : 0),
+        power = herbDish(dish!) ? 1 + mods.herbBuff : 1;
+      x.buff = { kind: dish!.buff!, dish: dish!.id, until: now + Math.round((until - now) * (1 + mods.buffLong)), ...(power > 1 ? { p: Math.min(2, power) } : {}) };
       next = tasteNote(life, next, uid, dish!.id, now);
       break;
     }
@@ -2033,7 +2069,7 @@ export function onGift(life: LifeState, member: { id: string; actor: number }, t
   const birthday = birthdayActors(kstDay(now)).includes(toActor) ? BIRTHDAY_GIFT_BONUS : 1;
   bump(life, member.id, 'gift', 1);
   if (bondGate(life, `g:${member.actor}>${toActor}`, now))
-    addBond(life, member.actor, toActor, BOND_POINTS.gift * taste * birthday, now);
+    addBond(life, member.actor, toActor, BOND_POINTS.gift * taste * birthday * (gift.kind === 'item' ? giftMult(life, member.id, gift.item) : 1), now);
   addNews(
     life,
     now,

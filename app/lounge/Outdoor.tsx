@@ -313,7 +313,7 @@ export function useOutdoor({
     const m = r?.mine;
     // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
     const pass = !!r?.pass;
-    const stops = m ? mineStops(m, pass) : [];
+    const stops = m ? mineStops(m, pass, view.life?.growth?.mods.liftPlus ?? 0) : [];
     // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
     const voyage = view.life?.voyage;
     // 허 선장 is at the pier through the game day's sailings (game 05–19).
@@ -370,6 +370,7 @@ export function useOutdoor({
               {pass
                 ? '탐험 패스로 어느 층이든 갈 수 있어요. 바위는 곡괭이 단계가 맞아야 깨져요.'
                 : `가 본 층까지 ${LIFT_EVERY}층마다 내려갈 수 있어요. 곡괭이 단계가 모자라면 그 층에는 못 가요.`}
+              {m.vein ? ` 오늘의 광맥은 ${m.vein}층이에요.` : ''}
             </p>
             <div className="ar-lift" data-testid="mine-lift">
               {stops.map(({ floor: f, pick }) => (

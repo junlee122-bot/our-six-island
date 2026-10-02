@@ -897,6 +897,8 @@ export function AreaScene({
   const tags = here.map((p) => ({ id: p.id, name: ACTORS[p.actor] }));
   const mineInfo = area === 'mine' && floor && mine;
   const brokenHere = broken.length;
+  // 재능 사다리 감: one rock fewer (the server decides when the ladder shows).
+  const ladderNeed = floor ? Math.max(1, floor.ladderNeed - (mine?.less ?? 0)) : 0;
   return (
     <div
       ref={hostRef}
@@ -929,13 +931,13 @@ export function AreaScene({
           {mineInfo
             ? mine.ladder
               ? '사다리가 보여요 · 아래층으로 내려갈 수 있어요'
-              : `바위 ${Math.min(brokenHere, floor.ladderNeed)}/${floor.ladderNeed} 깨면 사다리가 나와요`
+              : `바위 ${Math.min(brokenHere, ladderNeed)}/${ladderNeed} 깨면 사다리가 나와요`
             : region.tagline}
         </span>
         {mineInfo && (
           <span className="ar-plate-sub">
             <Pickaxe size={12} aria-hidden="true" /> 곡괭이 {mine.pickaxe}단계 · 가장 깊이 {mine.deep}층
-            {floor.vein ? ' · 오늘의 광맥 층' : ''}
+            {floor.vein ? ' · 오늘의 광맥 층' : mine.vein ? ` · 오늘의 광맥 ${mine.vein}층` : ''}
             {mine.lift ? ` · 승강기 ${LIFT_EVERY}층마다` : ''}
           </span>
         )}

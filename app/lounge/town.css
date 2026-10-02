@@ -38,3 +38,5 @@
 .l-taste-grid small { color: var(--text-soft); font-size: var(--fs-cap); line-height: var(--lh-tight); }
 .l-taste-grid li[data-seen] small { color: var(--text); }
 .l-shop-tabs { margin-bottom: var(--sp-3); }
+/* 재능 동물 말: what an animal wants (Stage3Panel). */
+.l-animal-want { display: block; font-style: italic; color: var(--ink-700); }

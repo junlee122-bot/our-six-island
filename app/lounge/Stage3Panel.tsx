@@ -39,6 +39,8 @@ import { EmptyState } from '../ui/EmptyState';
 import { ItemIcon } from './ItemIcon';
 import { ShopSell } from './ShopGoods';
 import { useLifeAction } from './LifePanels';
+import { ConfirmModal } from './Modal';
+import { RESPEC_PRICE, SKILL_INFO, type SkillId } from '../lounge-growth-data';
 import type { Notify } from './Toast';
 
 export type Stage3Place = 'barn' | 'orchardShop' | 'smithy' | 'clinic' | 'fortune';
@@ -64,6 +66,8 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
   switch (place) {
     case 'barn': {
       const todo = s3.animals.filter((a) => !a.cared).length;
+      // 목축 Lv3 makes hay cheaper (the server's unit price; older servers: the list price).
+      const hay = s3.price?.hay ?? HAY_PRICE;
       return (
         <>
           <section className="l-town-notice" aria-label="오늘의 돌봄" data-testid="ranch-care">
@@ -90,21 +94,24 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
                     </strong>
                     <small aria-label={`정 ${a.love}`}>{hearts(a.love)}</small>
                   </div>
-                  <small>{a.cared ? '오늘 돌봤어요' : a.product ? `돌보면 ${itemName(a.product)}` : '내일 양털'}</small>
+                  <small>
+                    {a.cared ? '오늘 돌봤어요' : a.product ? `돌보면 ${itemName(a.product)}` : '내일 양털'}
+                    {a.want ? <span className="l-animal-want" data-testid={`animal-want-${i}`}>“{a.want}”</span> : null}
+                  </small>
                 </li>
               ))}
             </ul>
           )}
           <section className="l-town-notice" aria-label="건초 사기">
-            <strong>건초 {formatBeom(HAY_PRICE)}</strong>
+            <strong>건초 {formatBeom(hay)}</strong>
             <p>동물 한 마리의 하루 먹이예요. 한 번에 {HAY_PER_BUY}개까지.</p>
             <span className="l-town-buttons">
               {[4, 8, HAY_PER_BUY].map((n) => (
-                <GameButton key={n} size="s" variant={hayN === n ? 'primary' : undefined} disabled={busy || balance < n * HAY_PRICE} onClick={() => {
+                <GameButton key={n} size="s" variant={hayN === n ? 'primary' : undefined} disabled={busy || balance < Math.round(n * hay)} onClick={() => {
                   setHayN(n);
                   act({ kind: 'hayBuy', n }, `건초 ${n}개를 샀어요.`);
                 }}>
-                  {n}개 · {formatBeom(n * HAY_PRICE)}
+                  {n}개 · {formatBeom(Math.round(n * hay))}
                 </GameButton>
               ))}
             </span>
@@ -112,6 +119,7 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
           <ul className="l-town-list" aria-label="동물 사기">
             {ANIMAL_KINDS.map((k: AnimalKind) => {
               const def = ANIMALS[k];
+              const price = s3.price?.animals[k] ?? def.price;
               const left = def.home === 'coop' ? s3.room.coop : s3.room.barn;
               return (
                 <li key={k} className="l-town-row" data-testid={`animal-buy-${k}`}>
@@ -124,8 +132,8 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
                       {k === 'sheep' ? '이틀마다 양털(정들면 매일)' : `매일 ${itemName(def.product)}(정들면 ${itemName(def.bonded)})`} · {itemName(def.product)} {formatBeom(STAGE3_ITEMS[def.product as keyof typeof STAGE3_ITEMS].sell)}
                     </small>
                   </div>
-                  <GameButton size="s" variant="primary" disabled={busy || !left || balance < def.price} onClick={() => act({ kind: 'animalBuy', animal: k }, `${josa(def.name, '을/를')} 데려왔어요.`)}>
-                    {formatBeom(def.price)}
+                  <GameButton size="s" variant="primary" disabled={busy || !left || balance < price} onClick={() => act({ kind: 'animalBuy', animal: k }, `${josa(def.name, '을/를')} 데려왔어요.`)}>
+                    {formatBeom(price)}
                   </GameButton>
                 </li>
               );
@@ -267,6 +275,7 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
     case 'fortune': {
       const f = s3.fortune;
       return (
+        <>
         <section className="l-town-notice" aria-label="오늘의 운세" data-testid="fortune">
           <strong>{f.read ? `오늘의 운세 · ${f.name}` : f.open ? '오늘의 운세' : '점집은 쉬는 날이에요'}</strong>
           <p>
@@ -282,7 +291,64 @@ export function Stage3Counter({ room, view, notify, place }: Props) {
             </GameButton>
           )}
         </section>
+        <FateReset {...base} />
+        </>
       );
     }
   }
+}
+
+/**
+ * 운명 다시 보기 (design-skill-tree.md §2): 신이치 resets one skill's
+ * professions and talents. 500,000범, doubling for that skill every time.
+ */
+function FateReset({ room, view, notify }: { room: CloudRoom; view: CloudRoomView; notify: Notify }) {
+  const [run, busy] = useLifeAction(room, notify);
+  const [skill, setSkill] = useState<SkillId | null>(null);
+  const skills = view.life?.growth?.skills ?? [];
+  const balance = view.wallet.balance;
+  const picked = skills.find((k) => k.id === skill);
+  return (
+    <section className="l-town-notice" aria-label="운명 다시 보기" data-testid="fate-reset">
+      <strong>운명 다시 보기</strong>
+      <p>
+        한 기술의 전문가와 재능을 모두 되돌려요. 처음엔 {formatBeom(RESPEC_PRICE)}이고, 같은 기술을 다시 되돌릴 때마다 두 배가 돼요.
+      </p>
+      <ul className="l-town-list" aria-label="되돌릴 기술">
+        {skills.map((k) => {
+          const has = k.prof.length + (k.tal?.length ?? 0);
+          const price = k.respec ?? RESPEC_PRICE;
+          return (
+            <li key={k.id} className="l-town-row" data-testid={`fate-${k.id}`}>
+              <div>
+                <strong>
+                  {SKILL_INFO[k.id].name} <small>Lv{k.level}</small>
+                </strong>
+                <small>{has ? `전문가 ${k.prof.length} · 재능 ${k.tal?.length ?? 0}` : '되돌릴 것이 없어요'}</small>
+              </div>
+              <GameButton size="s" disabled={busy || !has || balance < price} onClick={() => setSkill(k.id)}>
+                {formatBeom(price)}
+              </GameButton>
+            </li>
+          );
+        })}
+      </ul>
+      {skill && picked && (
+        <ConfirmModal
+          title={`${SKILL_INFO[skill].name}의 운명을 다시 볼까요?`}
+          body={
+            <>
+              {SKILL_INFO[skill].name} 전문가와 재능을 모두 내려놓고 다시 고를 수 있어요. <b>{formatBeom(picked.respec ?? RESPEC_PRICE)}</b>이 들어요. 지갑에{' '}
+              {formatBeom(balance)}이 있어요. 다음에 이 기술을 또 되돌리면 두 배예요.
+            </>
+          }
+          confirmLabel="다시 보기"
+          busyLabel="점치는 중…"
+          cancelLabel="그대로 두기"
+          onClose={() => setSkill(null)}
+          onConfirm={() => run({ kind: 'respec', skill }, `${SKILL_INFO[skill].name}의 운명이 새로 열렸어요. 전문가와 재능을 다시 골라요.`)}
+        />
+      )}
+    </section>
+  );
 }

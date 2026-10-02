@@ -251,7 +251,7 @@ export const BUCKET_LABEL: Record<string, string> = {
   festival: '마을 축제 기금',
   tool: '대장간 도구',
   research: '마을 개척',
-  respec: '전문가 다시 고르기',
+  respec: '운명 다시 보기',
   'venue-up': '가게 업그레이드',
   'smith-ore': '오른의 오늘의 광석 웃돈',
   smith: '오른의 대장간 범위 강화',
@@ -329,7 +329,7 @@ const LIFE_REASONS: Record<string, string> = {
   'house-3': '집 확장 3단계',
   'house-4': '집 확장 4단계',
   research: '마을 개척',
-  respec: '전문가 다시 고르기',
+  respec: '운명 다시 보기',
   'venue-up': '가게 업그레이드(주점·부동산·가구점)',
   // 가게 나누기 · 음식 시스템 (2026-10).
   bakery: '빵집 음식',

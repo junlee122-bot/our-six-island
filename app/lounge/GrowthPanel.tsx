@@ -1,9 +1,11 @@
 'use client';
 // 성장 수첩 (T): the growth window as a leather-strapped field journal like the
-// 텃밭 장부 — bookmark ribbons for 기술 · 도구 · 마을 개척, the left page lists,
-// the right page details, and a “오늘 할 수 있는 것” strip. Keyboard: 1–3 or
-// Tab/Shift+Tab switch ribbons (while the journal has focus), ↑↓ pick a row,
-// Enter acts (choose a profession, go to the blacksmith), Esc closes.
+// 텃밭 장부 — bookmark ribbons for 기술 · 도구 · 마을 개척. 기술 is six small
+// trees (GrowthSkillTree.tsx: 기본기, 전문가, 재능); 도구 lists on the left page
+// and details on the right with a “오늘 할 수 있는 것” strip. Keyboard: 1–3 or
+// Tab/Shift+Tab switch ribbons (while the journal has focus), arrows pick,
+// Q/E switch skills, Enter acts (take a talent, choose a profession, go to
+// the blacksmith), Esc closes.
 import {
   useEffect,
   useMemo,
@@ -13,8 +15,6 @@ import {
 } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
-  LEVEL_PERKS,
-  MAX_LEVEL,
   NODE_INFO,
   PROF_BY_ID,
   RESPEC_PRICE,
@@ -36,13 +36,15 @@ import { formatBeom, josa } from '../lounge-text';
 import { lifeSfx } from '../lounge-audio-life';
 import { FORGE_FRONT, nodeFront } from '../lounge-village-growth';
 import type { VillagePoint } from '../lounge-village-layout';
-import { ConfirmModal, Modal } from './Modal';
+import { Modal } from './Modal';
 import { Glyph, type GlyphName } from './field-glyphs';
 import { ItemIcon } from './ItemIcon';
 import type { Notify } from './Toast';
 import { useLifeAction } from './LifePanels';
 import { useServerClock } from './use-server-clock';
 import { ResearchBoard } from './GrowthResearch';
+import { SkillTreeBoard, canPickTalent, type TreeSkill } from './GrowthSkillTree';
+import { TALENT_BY_ID } from '../lounge-growth-talents';
 import { SKILL_GLYPH, TOOL_GLYPH, profGlyph } from './growth-glyphs';
 import './farm-fish.css';
 import './growth.css';
@@ -64,6 +66,22 @@ function untilText(ms: number) {
     : `${h}시간 ${m % 60 ? `${m % 60}분` : ''}`.trim();
 }
 
+/** A skill view as a tree (older servers send no talents). */
+const treeOf = (s: SkillView): TreeSkill => ({
+  id: s.id,
+  level: s.level,
+  prof: s.prof,
+  tal: s.tal ?? [],
+  left: s.left ?? 0,
+  choice: s.choice,
+  progress: [
+    s.next === null ? '최고 레벨' : `${Math.floor(s.xp - s.from)} / ${s.next - s.from} XP`,
+    `오늘 ${Math.min(SOFT_CAP, Math.round(s.today))}/${SOFT_CAP}`,
+    ...(s.rest > 0 ? [`휴식 +${Math.round(s.rest)}`] : []),
+    ...(s.behind ? ['선배의 가르침 ×1.5'] : []),
+  ].join(' · '),
+});
+
 /** What to do today (at most three lines). */
 export function growthTodos(g: GrowthView, now: number) {
   const out: { glyph: GlyphName; text: string; key: string }[] = [];
@@ -73,6 +91,13 @@ export function growthTodos(g: GrowthView, now: number) {
       glyph: 'spark',
       text: `${SKILL_INFO[pick.id].name} 전문가를 고를 수 있어요`,
       key: 'prof',
+    });
+  const points = g.skills.find((s) => (s.left ?? 0) > 0 && canPickTalent(treeOf(s)));
+  if (points)
+    out.push({
+      glyph: 'spark',
+      text: `${SKILL_INFO[points.id].name} 재능 점수 ${points.left}점을 찍을 수 있어요`,
+      key: 'talent',
     });
   if (g.forge?.ready)
     out.push({
@@ -143,7 +168,7 @@ export function GrowthPanel({
   const g = life?.growth;
   const now = useServerClock(view.clockOffset, [g?.forge?.readyAt], 30_000);
   const [tab, setTab] = useState<GrowthTab>(initialTab);
-  const [skillAt, setSkillAt] = useState(() =>
+  const [skillAt] = useState(() =>
     Math.max(
       0,
       SKILLS.indexOf(
@@ -153,7 +178,6 @@ export function GrowthPanel({
   );
   const [toolAt, setToolAt] = useState(0);
   const [choose, setChoose] = useState<SkillId | null>(null);
-  const [respec, setRespec] = useState<SkillId | null>(null);
   const [run, busy] = useLifeAction(room, notify);
   const bookRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -162,14 +186,14 @@ export function GrowthPanel({
     );
     return () => cancelAnimationFrame(id);
   }, []);
-  // Back to the journal's keys when the profession pick or the respec confirm closes.
+  // Back to the journal's keys when the profession pick closes.
   useEffect(() => {
-    if (choose || respec) return;
+    if (choose) return;
     const id = requestAnimationFrame(() => {
       if (bookRef.current && !bookRef.current.contains(document.activeElement)) bookRef.current.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(id);
-  }, [choose, respec]);
+  }, [choose]);
   const todos = useMemo(() => (g ? growthTodos(g, now) : []), [g, now]);
   if (!life || !g)
     return (
@@ -197,7 +221,7 @@ export function GrowthPanel({
       (e.key === 'Enter' || e.key === ' ')
     )
       return;
-    if (target.closest('.l-research')) {
+    if (target.closest('.l-research') || target.closest('.l-tree')) {
       if (/^[123]$/.test(e.key)) {
         setTab(TABS[Number(e.key) - 1].id);
         e.preventDefault();
@@ -211,14 +235,11 @@ export function GrowthPanel({
       setTab(TABS[(i + (e.shiftKey ? -1 : 1) + TABS.length) % TABS.length].id);
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       const d = e.key === 'ArrowDown' ? 1 : -1;
-      if (tab === 'skills')
-        setSkillAt((i) => (i + d + SKILLS.length) % SKILLS.length);
-      else if (tab === 'tools')
+      if (tab === 'tools')
         setToolAt((i) => (i + d + TOOLS.length) % TOOLS.length);
       else handled = false;
     } else if (e.key === 'Enter' || e.key === ' ') {
-      if (tab === 'skills' && skill.choice) setChoose(skill.id);
-      else if (tab === 'tools' && onWalk && !simple) walk(FORGE_FRONT);
+      if (tab === 'tools' && onWalk && !simple) walk(FORGE_FRONT);
       else handled = false;
     } else handled = false;
     if (handled) {
@@ -226,7 +247,7 @@ export function GrowthPanel({
       e.stopPropagation();
     }
   };
-  // The pick and the respec confirm are siblings of the journal (not inside its
+  // The profession pick is a sibling of the journal (not inside its
   // dialog), so their Esc closes only themselves.
   return (
     <>
@@ -238,8 +259,9 @@ export function GrowthPanel({
         wide
         keyHints={[
           { keys: [{ label: '1–3' }], does: '쪽 넘기기' },
-          { keys: [{ label: '↑↓' }], does: '고르기' },
-          ...(tab === 'research' ? [] : [{ keys: [{ code: 'Enter' }], does: tab === 'skills' ? '전문가 고르기' : '대장간 가기' }]),
+          { keys: [{ label: tab === 'tools' ? '↑↓' : '←↑→↓' }], does: '고르기' },
+          ...(tab === 'skills' ? [{ keys: [{ label: 'Q' }, { label: 'E' }], does: '기술 넘기기' }] : []),
+          ...(tab === 'research' ? [] : [{ keys: [{ code: 'Enter' }], does: tab === 'skills' ? '찍기 · 고르기' : '대장간 가기' }]),
         ]}
       >
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 1–3, Tab, arrows and Enter move and act inside the journal. */}
@@ -279,25 +301,34 @@ export function GrowthPanel({
             >
               <ResearchBoard room={room} view={view} notify={notify} compact />
             </section>
+          ) : tab === 'skills' ? (
+            <section className="l-growth-page l-growth-wide" aria-label="기술 트리">
+              <SkillTreeBoard
+                key={skill.id}
+                skills={g.skills.map(treeOf)}
+                initial={skill.id}
+                busy={busy}
+                onChooseProf={(id) => setChoose(id)}
+                onPickTalent={async (id, talent) => {
+                  const ok = await run(
+                    { kind: 'pickTalent', skill: id, talent },
+                    `${SKILL_INFO[id].name} 재능 “${TALENT_BY_ID[talent]?.name}”을 익혔어요!`,
+                  );
+                  if (ok) lifeSfx('fanfare');
+                  return ok;
+                }}
+              />
+              <p className="l-ledger-aside" data-testid="skill-respec">
+                전문가와 재능을 다시 고르려면 산기슭 마을 점집의 신이치에게 “운명 다시 보기”를 부탁해요 · 처음 {formatBeom(RESPEC_PRICE)}, 같은 기술은 할 때마다 두 배.
+              </p>
+            </section>
           ) : (
             <>
               <section
                 className="l-growth-page l-growth-left"
-                aria-label={tab === 'skills' ? '기술 목록' : '도구 목록'}
+                aria-label="도구 목록"
               >
-                {tab === 'skills' ? (
-                  <ul className="l-skill-list" aria-label="기술 (↑↓로 고르기)">
-                    {g.skills.map((s, i) => (
-                      <SkillRow
-                        key={s.id}
-                        s={s}
-                        selected={i === skillAt}
-                        onPick={() => setSkillAt(i)}
-                        onChoose={() => setChoose(s.id)}
-                      />
-                    ))}
-                  </ul>
-                ) : (
+                {(
                   <ul className="l-tool-rack" aria-label="도구 (↑↓로 고르기)">
                     {g.tools.map((t, i) => (
                       <ToolRow
@@ -336,14 +367,7 @@ export function GrowthPanel({
                 className="l-growth-page l-growth-right"
                 aria-live="polite"
               >
-                {tab === 'skills' ? (
-                  <SkillDetail
-                    g={g}
-                    s={skill}
-                    onChoose={() => setChoose(skill.id)}
-                    onRespec={() => setRespec(skill.id)}
-                  />
-                ) : (
+                {(
                   <ToolDetail
                     g={g}
                     t={tool}
@@ -417,271 +441,7 @@ export function GrowthPanel({
           }}
         />
       )}
-      {respec && (
-        <ConfirmModal
-          title="망설임 석상에 빌까요?"
-          body={
-            <>
-              {SKILL_INFO[respec].name} 전문가를 모두 내려놓고 다시 고를 수
-              있어요. <b>{formatBeom(RESPEC_PRICE)}</b>이 들어요. 지갑에{' '}
-              {formatBeom(view.wallet.balance)}이 있어요.
-            </>
-          }
-          confirmLabel="다시 고르기"
-          busyLabel="비는 중…"
-          cancelLabel="그대로 두기"
-          onClose={() => setRespec(null)}
-          onConfirm={() =>
-            run(
-              { kind: 'respec', skill: respec },
-              `${SKILL_INFO[respec].name} 전문가를 다시 고를 수 있어요.`,
-            )
-          }
-        />
-      )}
     </>
-  );
-}
-
-function SkillRow({
-  s,
-  selected,
-  onPick,
-  onChoose,
-}: {
-  s: SkillView;
-  selected: boolean;
-  onPick: () => void;
-  onChoose: () => void;
-}) {
-  const info = SKILL_INFO[s.id];
-  const span = s.next === null ? 1 : s.next - s.from;
-  const into = s.next === null ? 1 : Math.min(1, (s.xp - s.from) / span);
-  return (
-    <li>
-      <button
-        type="button"
-        aria-current={selected || undefined}
-        className="l-skill-row"
-        style={{ ['--c' as string]: info.color }}
-        onClick={onPick}
-        onDoubleClick={() => s.choice && onChoose()}
-        data-testid={`skill-${s.id}`}
-      >
-        <span className="l-skill-medal" aria-hidden="true">
-          <Glyph name={SKILL_GLYPH[s.id]} size={26} />
-        </span>
-        <span className="l-skill-main">
-          <span className="l-skill-name">
-            <strong>{info.name}</strong>
-            <span
-              className="l-skill-lv"
-              data-max={s.level === MAX_LEVEL || undefined}
-            >
-              Lv{s.level}
-            </span>
-            {s.prof.map((p) => (
-              <span key={p} className="l-skill-prof">
-                {PROF_BY_ID[p]?.name}
-              </span>
-            ))}
-            {s.choice && (
-              <span className="l-skill-pick" data-tip="Enter로 전문가 고르기">
-                <Glyph name="spark" size={13} /> 고르기
-              </span>
-            )}
-          </span>
-          <span
-            className="l-skill-notches"
-            aria-label={`레벨 ${s.level} / ${MAX_LEVEL}`}
-          >
-            {Array.from({ length: MAX_LEVEL }, (_, k) => (
-              <i
-                key={k}
-                data-on={k < s.level - 1 || s.level === MAX_LEVEL || undefined}
-                data-now={
-                  k === s.level - 1 && s.level < MAX_LEVEL ? true : undefined
-                }
-                data-mark={k === 4 || k === 9 || undefined}
-              >
-                {k === s.level - 1 && s.level < MAX_LEVEL ? (
-                  <b style={{ width: `${into * 100}%` }} />
-                ) : null}
-              </i>
-            ))}
-          </span>
-          <small className="l-skill-sub">
-            {s.next === null
-              ? '최고 레벨'
-              : `${Math.floor(s.xp - s.from)} / ${span} XP`}
-            <span
-              className="l-skill-cap"
-              data-tip={`하루 ${SOFT_CAP} XP까지는 온전히, 그 뒤는 20%만 쌓여요`}
-            >
-              오늘 {Math.min(SOFT_CAP, Math.round(s.today))}/{SOFT_CAP}
-            </span>
-            {s.rest > 0 && (
-              <span
-                className="l-skill-rest"
-                data-tip="쉬고 온 날마다 100씩 쌓여요 (최대 300). 남아 있는 동안 XP 두 배"
-              >
-                <Glyph name="moon" size={12} /> 휴식 +{Math.round(s.rest)}
-              </span>
-            )}
-            {s.behind && (
-              <span
-                className="l-skill-behind"
-                data-tip={`마을 친구들 가운데 레벨(Lv${s.median})보다 2레벨 이상 낮으면 XP ×1.5`}
-              >
-                선배의 가르침 ×1.5
-              </span>
-            )}
-          </small>
-        </span>
-      </button>
-    </li>
-  );
-}
-
-function SkillDetail({
-  g,
-  s,
-  onChoose,
-  onRespec,
-}: {
-  g: GrowthView;
-  s: SkillView;
-  onChoose: () => void;
-  onRespec: () => void;
-}) {
-  const info = SKILL_INFO[s.id];
-  const five = profChoices(s.id);
-  const mine5 = s.prof.find((p) => PROF_BY_ID[p]?.level === 5);
-  const mine10 = s.prof.find((p) => PROF_BY_ID[p]?.level === 10);
-  return (
-    <article
-      className="l-skill-card"
-      style={{ ['--c' as string]: info.color }}
-      data-testid="skill-detail"
-    >
-      <header>
-        <span className="l-skill-medal big" aria-hidden="true">
-          <Glyph name={SKILL_GLYPH[s.id]} size={34} />
-        </span>
-        <div>
-          <h3>
-            {info.name} <span className="l-skill-lv">Lv{s.level}</span>
-          </h3>
-          <p>{info.note}</p>
-          {s.id === 'mine' && g.regions?.mine.open && (
-            <p className="l-skill-region" data-testid="mine-depth">
-              광산 가장 깊이 {g.regions.mine.deep}층 · 곡괭이 {g.regions.mine.pickaxe}단계
-              {g.regions.mine.lift ? ' · 승강기 운행 중' : ''}
-            </p>
-          )}
-          {s.id === 'forage' && g.regions?.hill.open && (
-            <p className="l-skill-region">
-              뒷산 {g.regions.hill.nodes.filter((n) => !n.taken).length}곳
-              {g.regions.woods.open ? ` · 숲 깊은 곳 ${g.regions.woods.nodes.filter((n) => !n.taken).length}곳` : ' · 숲 깊은 곳은 쓰러진 통나무에 막혀 있어요'}
-            </p>
-          )}
-        </div>
-      </header>
-      <ol className="l-perk-ladder" aria-label="레벨 보상">
-        {LEVEL_PERKS[s.id].map((perk) => {
-          const got = s.level >= perk.level;
-          const prof = perk.level === 5 || perk.level === 10;
-          return (
-            <li
-              key={perk.level}
-              data-got={got || undefined}
-              data-soon={perk.soon ? true : undefined}
-              data-prof={prof || undefined}
-            >
-              <span className="l-perk-lv">{perk.level}</span>
-              <span>
-                {prof ? (
-                  <>
-                    {perk.text}
-                    {perk.level === 5 && mine5
-                      ? ` · ${PROF_BY_ID[mine5].name}`
-                      : ''}
-                    {perk.level === 10 && mine10
-                      ? ` · ${PROF_BY_ID[mine10].name}`
-                      : ''}
-                  </>
-                ) : (
-                  perk.text
-                )}
-                {perk.soon ? <small> · {perk.soon} 이후</small> : null}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-      <div className="l-prof-tree" aria-label="전문가 갈래">
-        {five.map((p) => {
-          const chosen = s.prof.includes(p.id);
-          return (
-            <div
-              key={p.id}
-              className="l-prof-branch"
-              data-chosen={chosen || undefined}
-              data-dim={!!mine5 && !chosen ? true : undefined}
-            >
-              <span className="l-prof-node" data-tip={p.text}>
-                <b>{p.name}</b>
-                <small>{p.text}</small>
-              </span>
-              <span className="l-prof-kids">
-                {profChoices(s.id, p.id).map((k) => (
-                  <span
-                    key={k.id}
-                    className="l-prof-node small"
-                    data-chosen={s.prof.includes(k.id) || undefined}
-                    data-tip={k.text}
-                  >
-                    <b>{k.name}</b>
-                    <small>{k.text}</small>
-                  </span>
-                ))}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="l-ledger-row-actions">
-        {s.choice ? (
-          <button
-            type="button"
-            className="l-leaf"
-            onClick={onChoose}
-            data-testid="skill-choose"
-          >
-            <Glyph name="spark" /> 전문가 고르기 <kbd>Enter</kbd>
-          </button>
-        ) : (
-          <span className="l-ledger-aside">
-            {s.level < 5
-              ? `Lv5가 되면 전문가를 골라요 · ${Math.max(0, Math.ceil(560 - s.xp))} XP 남음`
-              : s.level < 10 && mine5
-                ? 'Lv10에 두 번째 전문가를 골라요'
-                : ''}
-          </span>
-        )}
-        {s.prof.length > 0 && (
-          <button
-            type="button"
-            className="l-ink l-small"
-            onClick={onRespec}
-            data-testid="skill-respec"
-            data-tip={`망설임 석상 · ${formatBeom(g.respecPrice)}`}
-          >
-            다시 고르기
-          </button>
-        )}
-      </div>
-    </article>
   );
 }
 
@@ -952,7 +712,7 @@ export function ProfessionChooser({
   onPick: (prof: string) => Promise<boolean>;
 }) {
   const options = skill.choice ?? [];
-  const [at, setAt] = useState(0);
+  const [at, setAt] = useState(() => Math.max(0, options.findIndex((id) => !PROF_BY_ID[id]?.lock)));
   const [sure, setSure] = useState(false);
   const info = SKILL_INFO[skill.id];
   const level = options.length ? PROF_BY_ID[options[0]].level : 5;
@@ -968,6 +728,7 @@ export function ProfessionChooser({
       e.key === 'Enter' &&
       !(e.target as HTMLElement).closest('button')
     ) {
+      if (PROF_BY_ID[options[at]]?.lock) return;
       if (sure) void onPick(options[at]);
       else setSure(true);
     } else return;
@@ -997,7 +758,7 @@ export function ProfessionChooser({
           {level === 5
             ? 'Lv10에서는 고른 쪽 아래 두 갈래 중 하나를 또 골라요.'
             : '마지막 선택이에요.'}{' '}
-          나중에 바꾸려면 망설임 석상에서 {formatBeom(RESPEC_PRICE)}이 들어요.
+          나중에 바꾸려면 점집 신이치의 “운명 다시 보기”({formatBeom(RESPEC_PRICE)}부터)를 받아요.
         </p>
         <div className="l-prof-cards" role="radiogroup" aria-label="전문가">
           {options.map((id, i) => {
@@ -1022,6 +783,7 @@ export function ProfessionChooser({
                 </span>
                 <strong>{p.name}</strong>
                 <span className="l-prof-effect">{p.text}</span>
+                {p.lock && <span className="l-prof-then">잠김 · {p.lock}</span>}
                 {kids.length > 0 && (
                   <span className="l-prof-then">
                     Lv10에서: {kids.map((k) => k.name).join(' 또는 ')}
@@ -1038,7 +800,7 @@ export function ProfessionChooser({
           <button
             type="button"
             className="l-primary"
-            disabled={busy}
+            disabled={busy || !!chosen.lock}
             onClick={() => (sure ? void onPick(chosen.id) : setSure(true))}
             data-testid="prof-confirm"
           >

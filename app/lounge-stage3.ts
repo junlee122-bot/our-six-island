@@ -14,10 +14,11 @@
 //
 // Every trade is also tallied for the stock exchange (lounge-shop-sales.ts).
 import { grantBeom, kstDay, spendBeom, type LoungeLedger } from './lounge-economy.ts';
-import { seasonOfDay } from './lounge-calendar.ts';
+import { gameHour, seasonOfDay } from './lounge-calendar.ts';
 import { LifeError, type LifeState } from './lounge-life.ts';
 import { addInv, hasFlag, invCount, soldBeomToday } from './lounge-life-plus.ts';
-import { gainXp } from './lounge-growth.ts';
+import { gainXp, growthChance, growthMods } from './lounge-growth.ts';
+import { XP } from './lounge-growth-data.ts';
 import { moodTreat } from './lounge-mood.ts';
 import { itemName } from './lounge-life-plus.ts';
 import { DISTRICT_FLAG } from './lounge-districts.ts';
@@ -115,6 +116,10 @@ const stateRead = (life: LifeState, uid: string, now: number): Stage3User => {
 };
 const roomOf = (k: AnimalKind) => ANIMALS[k].home;
 const used = (animals: readonly Animal[], home: 'coop' | 'barn') => animals.filter((a) => roomOf(a.k) === home).length;
+/** An animal's price for this friend (목장 주인 −25%). */
+export const animalPrice = (life: LifeState, uid: string, k: AnimalKind) => Math.round(ANIMALS[k].price * (1 - Math.min(0.9, growthMods(life, uid).animalCheap)));
+/** 범 for `n` 건초 (목축 Lv3 −10%). */
+export const hayCost = (life: LifeState, uid: string, n: number) => Math.round(n * HAY_PRICE * (1 - Math.min(0.9, growthMods(life, uid).hayCheap)));
 /** Whether an animal is bonded (큰 달걀 · 진한 우유 · daily wool). */
 export const animalBonded = (a: Animal) => a.love >= ANIMAL_BOND;
 /** What caring for `a` gives today (null: a sheep between wool days). */
@@ -163,7 +168,7 @@ export function stage3Action(
       const animals = (s.a ??= []);
       const home = roomOf(a.animal);
       if (used(animals, home) >= (home === 'coop' ? COOP_ROOM : BARN_ROOM)) fail(home === 'coop' ? STAGE3_REJECT.coopFull : STAGE3_REJECT.barnFull);
-      const price = ANIMALS[a.animal].price;
+      const price = animalPrice(life, uid, a.animal);
       const next = pay(price, 'ranch-animal', 'animal');
       const n = Math.max(0, ...animals.filter((x) => x.k === a.animal).map((x) => x.n)) + 1;
       animals.push({ k: a.animal, n, love: 0, cares: 0 });
@@ -174,9 +179,10 @@ export function stage3Action(
       ranch();
       const n = a.n;
       if (!Number.isSafeInteger(n) || n < 1 || n > HAY_PER_BUY) fail(STAGE3_REJECT.hayN);
-      const next = pay(n * HAY_PRICE, 'ranch-hay', 'hay');
+      const cost = hayCost(life, uid, n);
+      const next = pay(cost, 'ranch-hay', 'hay');
       addInv(life, uid, 'hay', n);
-      recordShopSale(life, 'barn', { rev: n * HAY_PRICE }, now);
+      recordShopSale(life, 'barn', { rev: cost }, now);
       return { life, ledger: next };
     }
     case 'animalCare': {
@@ -188,17 +194,32 @@ export function stage3Action(
       const todo = animals.filter((x, i) => x.last !== day && (a.i === undefined || a.i === i));
       if (!todo.length) fail(STAGE3_REJECT.cared);
       if (invCount(life, uid, 'hay') < todo.length) fail(STAGE3_REJECT.hay);
-      addInv(life, uid, 'hay', -todo.length);
+      const mods = growthMods(life, uid);
+      let products = 0;
       for (const x of todo) {
-        // 정: −1 for each day missed since the last care, then +1 for today.
-        const missed = x.last ? Math.max(0, day - x.last - 1) : 0;
-        x.love = Math.max(0, Math.min(ANIMAL_LOVE_MAX, x.love - missed + 1));
+        const i = animals.indexOf(x);
+        // 재능 건초 아끼기: sometimes the hay is not used up.
+        if (!growthChance(life, uid, `hay:${i}`, mods.hayKeep, now)) addInv(life, uid, 'hay', -1);
+        // 정: −1 for each day missed since the last care (목축 Lv6 forgives one), then
+        // +1 for today (+1 다정한 손, and a chance of +1 more: 목축 Lv2, 목동).
+        const missed = x.last ? Math.max(0, day - x.last - 1 - mods.loveGrace) : 0;
+        const gain = 1 + mods.petLove + (growthChance(life, uid, `love:${i}`, mods.loveExtra, now) ? 1 : 0);
+        x.love = Math.max(0, Math.min(ANIMAL_LOVE_MAX, x.love - missed + gain));
         x.cares += 1;
         x.last = day;
-        const got = careProduct(x);
-        if (got) addInv(life, uid, got, 1);
+        let got = careProduct(x);
+        // 목축 Lv8: an animal not yet bonded sometimes gives the big one.
+        const def = ANIMALS[x.k];
+        if (got === def.product && def.bonded !== def.product && growthChance(life, uid, `big:${i}`, mods.bigPts / 100, now)) got = def.bonded;
+        if (!got) continue;
+        // 목축 Lv7 (털 깎기 솜씨) and 동물 친구 (정 10: one more a day).
+        const n = 1 + (got === 'wool' ? mods.woolExtra : 0) + (x.love >= ANIMAL_LOVE_MAX ? mods.bondExtra : 0);
+        addInv(life, uid, got, n);
+        products += n;
       }
-      gainXp(life, uid, 'farm', 3 * todo.length, now);
+      // 목축 XP: feeding and petting each animal, and each product; 부지런한 아침 (game 05–09) ×1.5.
+      const hour = gameHour(now);
+      gainXp(life, uid, 'ranch', (XP.care * todo.length + XP.product * products) * (hour >= 5 && hour < 9 ? 1 + mods.ranchMorning : 1), now);
       return { life, ledger };
     }
     case 'treePlant': {
@@ -302,7 +323,9 @@ export function stage3Action(
 
 // ---------------------------------------------------------------- view
 export type Stage3View = {
-  animals: { k: AnimalKind; n: number; name: string; love: number; bonded: boolean; cared: boolean; product: string | null }[];
+  animals: { k: AnimalKind; n: number; name: string; love: number; bonded: boolean; cared: boolean; product: string | null; want?: string }[];
+  /** My prices (목축 talents and professions; absent from older servers). */
+  price?: { hay: number; animals: Record<AnimalKind, number> };
   room: { coop: number; barn: number };
   hay: number;
   trees: ({ k: FruitTreeKind; name: string; age: number; grown: boolean; inSeason: boolean; ripe: boolean; picked: boolean; n: number } | null)[];
@@ -316,12 +339,15 @@ export function stage3View(life: LifeState, uid: string, now: number): Stage3Vie
     day = kstDay(now);
   const animals = s.a ?? [];
   const fo = s.fo?.day === day ? fortuneFor(uid, day) : null;
+  const talk = life.actors[uid] !== undefined && growthMods(life, uid).animalTalk;
   return {
     animals: animals.map((a) => {
       // What tomorrow's (or today's) care gives, from the 정 it would have then.
       const preview = { ...a, love: a.last === day ? a.love : Math.min(ANIMAL_LOVE_MAX, Math.max(0, a.love - (a.last ? Math.max(0, day - a.last - 1) : 0) + 1)), cares: a.last === day ? a.cares : a.cares + 1 };
-      return { k: a.k, n: a.n, name: `${ANIMALS[a.k].name} ${a.n}`, love: a.love, bonded: animalBonded(a), cared: a.last === day, product: careProduct(preview) };
+      const out = { k: a.k, n: a.n, name: `${ANIMALS[a.k].name} ${a.n}`, love: a.love, bonded: animalBonded(a), cared: a.last === day, product: careProduct(preview) };
+      return talk ? { ...out, want: animalWant(a, day) } : out;
     }),
+    price: { hay: hayCost(life, uid, 1), animals: { chicken: animalPrice(life, uid, 'chicken'), cow: animalPrice(life, uid, 'cow'), sheep: animalPrice(life, uid, 'sheep') } },
     room: { coop: COOP_ROOM - used(animals, 'coop'), barn: BARN_ROOM - used(animals, 'barn') },
     hay: invCount(life, uid, 'hay'),
     trees: Array.from({ length: ORCHARD_SLOTS }, (_, i) => {
@@ -335,6 +361,15 @@ export function stage3View(life: LifeState, uid: string, now: number): Stage3Vie
     clinic: { left: Math.max(0, CLINIC_PER_DAY - (s.cl ?? 0)) },
     fortune: { open: fortuneOpenOn(day), read: !!fo, ...(fo ? { name: fo.name, line: fo.line, until: s.fo!.until } : {}) },
   };
+}
+/** 재능 동물 말: what an animal wants right now (its speech bubble). */
+export function animalWant(a: Animal, day: number): string {
+  const missed = a.last ? day - a.last - 1 : 0;
+  if (a.last !== day && missed > 0) return '어제 안 와서 서운했어요. 건초 주세요!';
+  if (a.last !== day) return a.k === 'sheep' ? '배고파요. 건초랑 빗질 부탁해요!' : '배고파요. 건초 주세요!';
+  if (a.love < ANIMAL_BOND) return '쓰다듬어 줘서 좋아요. 내일도 와 줄 거죠?';
+  if (a.love < ANIMAL_LOVE_MAX) return '오늘도 고마워요. 같이 있으면 편해요.';
+  return '세상에서 제일 좋아요!';
 }
 /** "물뿌리개 범위 2단계" for notices. */
 export const smithLabel = (tool: SmithTool, tier: number) => `${SMITH_TOOL_NAME[tool]} ${tier}단계`;

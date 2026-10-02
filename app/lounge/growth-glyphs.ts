@@ -8,6 +8,7 @@ export const SKILL_GLYPH: Record<SkillId, GlyphName> = {
   forage: 'basket',
   mine: 'pickaxe',
   craft: 'book',
+  ranch: 'heart',
 };
 export const TOOL_GLYPH: Record<ToolId, GlyphName> = {
   can: 'can',
@@ -28,5 +29,7 @@ export const PROF_GLYPH: Record<string, GlyphName> = {
   'mine-b': 'ore',
   'craft-a': 'bell',
   'craft-b': 'anvil',
+  'ranch-a': 'hand',
+  'ranch-b': 'flask',
 };
 export const profGlyph = (id: string): GlyphName | undefined => PROF_GLYPH[id] ?? PROF_GLYPH[id.replace(/[12]$/, '')];

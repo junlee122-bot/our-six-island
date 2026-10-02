@@ -26,6 +26,7 @@ import {
   noteDemand,
   sellTotal,
   sellUnit,
+  demandSoft,
   soldBeomToday,
   hasFlag,
   bump,
@@ -53,6 +54,7 @@ import {
   fairView,
   fixtureAt,
   giantBed,
+  giantChance,
   growthStage,
   harvestFarm,
   projectFarms,
@@ -81,6 +83,7 @@ import {
 import {
   gainXp,
   growthAction,
+  growthChance,
   growthMods,
   growthNeedsSettle,
   growthView,
@@ -280,6 +283,8 @@ export const FRUIT_TREES = [
 ] as const;
 export type FruitTree = (typeof FRUIT_TREES)[number];
 export const FRUIT_COOLDOWN_MS = 6 * HOUR;
+/** 재능 열매 털기: the village trees refill 20% sooner for me. */
+const fruitCooldown = (mods: { fruitFast: number }) => Math.round(FRUIT_COOLDOWN_MS * (1 - Math.min(0.9, mods.fruitFast)));
 /** Safety ceiling of 범 from selling per KST day (demand curves do the pacing). */
 export const SELL_CAP_PER_DAY = 100_000;
 export const GUESTBOOK_MAX = 30;
@@ -1151,10 +1156,15 @@ function lifeActionCore(
   };
   const afterPlant = (tiles: number[]) => {
     for (const i of tiles) {
-      const sl = shadeFor(life, uid, i);
+      // 재능 덩굴 손질: my trellis crops cast no shade.
+      const sl = mods.noShade ? 0 : shadeFor(life, uid, i);
       if (sl) farm[i].sl = sl;
     }
     for (const i of tiles) applySprinklers(life, uid, i, farm[i], now);
+  };
+  /** 재능 씨앗 아끼기: a planted seed is sometimes not used up. */
+  const spendSeed = (crop: Crop, tile: number) => {
+    if (!growthChance(life, uid, `seed:${tile}`, mods.seedKeep, now)) bag.seeds[crop] -= 1;
   };
   switch (a.kind) {
     case 'plant': {
@@ -1166,10 +1176,12 @@ function lifeActionCore(
         const empty = farm.flatMap((p, i) => (p.crop || fixtureAt(life, uid, i) ? [] : [i]));
         if (!empty.length) fail(LIFE_REJECT.noEmpty);
         if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
-        const planted = empty.slice(0, bag.seeds[a.crop]);
-        for (const i of planted) {
-          bag.seeds[a.crop] -= 1;
+        const planted: number[] = [];
+        for (const i of empty) {
+          if (bag.seeds[a.crop] < 1) break;
+          spendSeed(a.crop, i);
           farm[i] = newPlot(a.crop);
+          planted.push(i);
         }
         afterPlant(planted);
         break;
@@ -1178,14 +1190,14 @@ function lifeActionCore(
       if (farm[i].crop) fail(LIFE_REJECT.occupied);
       if (fixtureAt(life, uid, i)) fail(LIFE_REJECT.fixture);
       if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
-      bag.seeds[a.crop] -= 1;
+      spendSeed(a.crop, i);
       farm[i] = newPlot(a.crop);
       // 괭이 범위: the same seed on the empty tiles in range while seeds last.
       const planted = [i];
       for (const j of rangeOf('hoe', i)) {
         if (bag.seeds[a.crop] < 1) break;
         if (farm[j].crop || fixtureAt(life, uid, j)) continue;
-        bag.seeds[a.crop] -= 1;
+        spendSeed(a.crop, j);
         farm[j] = newPlot(a.crop);
         planted.push(j);
       }
@@ -1246,7 +1258,7 @@ function lifeActionCore(
       if (!(FRUIT_TREES as readonly string[]).includes(a.tree))
         fail(LIFE_REJECT.tree);
       const picked = (life.fruitPickedAt[uid] ??= {});
-      if (now - (picked[a.tree] ?? -Infinity) < FRUIT_COOLDOWN_MS)
+      if (now - (picked[a.tree] ?? -Infinity) < fruitCooldown(mods))
         fail(LIFE_REJECT.treeWait);
       picked[a.tree] = now;
       // 채집 바구니 (오른's range upgrade): sometimes one more.
@@ -1286,7 +1298,7 @@ function lifeActionCore(
         if (!n) return;
         // 성장: 장터 농부 / 명인 add a share on top (the demand curve stays the same).
         const bonus = fruit ? 0 : mods.cropSell + (t > 0 ? mods.starSell : 0);
-        amount += Math.round(sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount) * (1 + bonus));
+        amount += Math.round(sellTotal(id, sellUnit(id, t as Quality, now, flags), sold, n, soldBeom + amount, demandSoft(mods, id)) * (1 + bonus));
         sold += n;
       });
       // 가게 나누기: 100% at the 농협, 85% from the bag; 흥정 on top at the shop.
@@ -1562,7 +1574,7 @@ export function lifeView(
       };
     });
   const sheltered = farmSheltered(life, uid),
-    giants = [0, 1].filter((b) => giantBed(farm, uid, b, now));
+    giants = [0, 1].filter((b) => giantBed(farm, uid, b, now, giantChance(life, uid)));
   const base = {
     me: {
       farm: farm.map((p, i) => {
@@ -1596,8 +1608,8 @@ export function lifeView(
       fruitReadyAt: Object.fromEntries(
         FRUIT_TREES.map((t) => [
           t,
-          picked[t] && now - picked[t] < FRUIT_COOLDOWN_MS
-            ? picked[t] + FRUIT_COOLDOWN_MS
+          picked[t] && now - picked[t] < fruitCooldown(growthMods(life, uid))
+            ? picked[t] + fruitCooldown(growthMods(life, uid))
             : 0,
         ]),
       ),

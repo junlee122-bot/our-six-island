@@ -31,10 +31,12 @@ export const VEIN_MULT = 3;
  * it is every floor. `pick` is the pickaxe tier a floor needs when mine is
  * lower: the lift will not stop there; the pass goes anyway (the rocks stay hard).
  */
-export function mineStops(m: { deep: number; pickaxe: number }, pass = false): { floor: number; pick: number | null }[] {
+export function mineStops(m: { deep: number; pickaxe: number }, pass = false, plus = 0): { floor: number; pick: number | null }[] {
+  const stops = Array.from({ length: Math.floor(Math.min(m.deep, MINE_FLOORS_P2) / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY);
   const floors = pass
     ? Array.from({ length: MINE_FLOORS_P2 }, (_, i) => i + 1)
-    : [1, ...Array.from({ length: Math.floor(Math.min(m.deep, MINE_FLOORS_P2) / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY)];
+    : // 재능 깊은 숨: each stop also goes `plus` floors deeper.
+      [1, ...stops.flatMap((f) => (plus > 0 && f + plus <= MINE_FLOORS_P2 ? [f, f + plus] : [f]))];
   return floors.map((floor) => ({ floor, pick: floorPick(floor) > m.pickaxe ? floorPick(floor) : null }));
 }
 /** Rocks broken on a floor today before its ladder down shows (4–6). */
@@ -144,7 +146,7 @@ export function floorOre(floor: number): 'copper' | 'iron' | 'gold' {
   const b = bandOf(floor);
   return b.gold ? 'gold' : b.iron ? 'iron' : 'copper';
 }
-export function mineDrop(key: string, floor: number, vein: boolean, orePts = 0): MineDrop {
+export function mineDrop(key: string, floor: number, vein: boolean, orePts = 0, fossilMult = 1): MineDrop {
   const b = bandOf(floor);
   const r = (mh(`drop:${key}`) % 10_000) / 100;
   const ore = b.copper + b.iron + b.gold;
@@ -167,6 +169,6 @@ export function mineDrop(key: string, floor: number, vein: boolean, orePts = 0):
   let n = 1 + (mh(`n:${key}`) % 10 < 3 ? 1 : 0);
   if (vein && item !== 'gem') n *= VEIN_MULT;
   const fossils = b.fossils as readonly string[];
-  const fossil = mh(`fos:${key}`) % 100 < FOSSIL_CHANCE ? fossils[mh(`fk:${key}`) % fossils.length] : undefined;
+  const fossil = mh(`fos:${key}`) % 100 < Math.round(FOSSIL_CHANCE * fossilMult) ? fossils[mh(`fk:${key}`) % fossils.length] : undefined;
   return { item, n, ...(fossil ? { fossil } : {}) };
 }

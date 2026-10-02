@@ -19,6 +19,7 @@ import { ITEM_BY_ID } from './lounge-items.ts';
 import { CROPS, LifeError, type LifeState } from './lounge-life.ts';
 import { addInv, addMemory, addNews, itemCount, takeItem } from './lounge-life-plus.ts';
 import { charmPoints } from './lounge-food-data.ts';
+import { giftMult } from './lounge-growth.ts';
 import {
   NPCS,
   NPC_BREAKUP,
@@ -367,7 +368,8 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       relation.giftedDay = day;
       relation.lastGift = action.item;
       reaction = npcGiftReaction(action.npc, action.item, q);
-      add(NPC_GIFT_POINTS[reaction]);
+      // 재능 꽃말 · 잔칫상: a welcome flower or dish counts more.
+      add(NPC_GIFT_POINTS[reaction] > 0 ? Math.round(NPC_GIFT_POINTS[reaction] * giftMult(life, uid, action.item)) : NPC_GIFT_POINTS[reaction]);
       break;
     }
     case 'invite': {

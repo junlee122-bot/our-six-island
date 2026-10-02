@@ -541,6 +541,12 @@ export function cloudTransition(
             if (!lease || !player || !places.includes(player.area ?? 'village'))
               throw new CloudError(`${DISTRICTS[STAGE3_ACTION_PLACE[command.action.kind].district].name}에 가서 해 주세요.`, 409);
           }
+          if ((command.action as { kind?: string }).kind === 'respec') {
+            // 운명 다시 보기 is 신이치's (design-skill-tree.md §2): where his 운세 is read.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || !stage3ActionAreas('fortuneRead', festivalDay(kstDay(now))).includes(player.area ?? 'village'))
+              throw new CloudError('운명 다시 보기는 산기슭 마을 점집의 신이치에게 부탁해요.', 409);
+          }
           {
             // 가게 나누기: buying or selling "at" a shop needs me at its counter's district.
             const at = (command.action as { at?: unknown }).at;

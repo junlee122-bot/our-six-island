@@ -81,6 +81,7 @@ import {
   invCount,
   noteDemand,
   sellBonus,
+  demandSoft,
   sellTotal,
   shopSaleAmount,
   sellUnit,
@@ -88,7 +89,7 @@ import {
   weekOfDay,
   weekResetAt,
 } from './lounge-life-plus.ts';
-import { gainXp, growthMods, skillLevel } from './lounge-growth.ts';
+import { gainXp, growthChance, growthMods, skillLevel } from './lounge-growth.ts';
 // 가게 나누기: the shipping bin pays SELL_AWAY (85%); goods pay 100% at the 농협.
 import { SELL_AWAY, type ShopId } from './lounge-shops.ts';
 import { SKILL_INFO, XP } from './lounge-growth-data.ts';
@@ -420,7 +421,7 @@ export function growthStage(plot: Plot, now: number): 0 | 1 | 2 | 3 | 4 {
   return Math.min(3, Math.floor(p * 4)) as 0 | 1 | 2 | 3;
 }
 /** Whether bed `bed` is one giant crop right now (all six ripe, planted together; hash roll). */
-export function giantBed(farm: readonly Plot[], uid: string, bed: number, now: number): boolean {
+export function giantBed(farm: readonly Plot[], uid: string, bed: number, now: number, chance = GIANT_CHANCE): boolean {
   const tiles = bedTiles(bed);
   if (tiles[5] >= farm.length) return false;
   const first = farm[tiles[0]];
@@ -429,8 +430,10 @@ export function giantBed(farm: readonly Plot[], uid: string, bed: number, now: n
     const p = farm[t];
     if (p.crop !== first.crop || p.plantedAt !== first.plantedAt || (p.n ?? 0) > 0 || now < plotReadyAt(p, now)!) return false;
   }
-  return hash32(`giant:${uid}:${bed}:${first.plantedAt}`) % 100 < GIANT_CHANCE;
+  return hash32(`giant:${uid}:${bed}:${first.plantedAt}`) % 100 < chance;
 }
+/** Giant crop chance (%) on a friend's farm (재능 큰 작물 doubles it). */
+export const giantChance = (life: LifeState, uid: string) => GIANT_CHANCE * (1 + growthMods(life, uid).giantMult);
 
 // ---------------------------------------------------------------- settling
 /** Crows at 05:00 KST of day `d` (see design §4-7). */
@@ -440,7 +443,9 @@ function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   const growing = farm.flatMap((p, i) =>
     p.crop && p.plantedAt <= at && plotReadyAt(p, at)! > at && (witherAt(p, sheltered) ?? Infinity) > at ? [i] : [],
   );
-  if (growing.length < CROW_MIN_CROPS || hash32(`crow:${uid}:${d}`) % 100 >= CROW_CHANCE) return;
+  // 재능 까마귀 쫓기 halves the chance.
+  const chance = CROW_CHANCE * (1 - Math.min(1, growthMods(life, uid).crowGuard));
+  if (growing.length < CROW_MIN_CROPS || hash32(`crow:${uid}:${d}`) % 100 >= chance) return;
   const guard = FIXTURE_BY_ID.scarecrow.guard!,
     fx = Object.entries(life.farmx?.[uid]?.fx ?? {});
   const guarded = (i: number) => fx.some(([t, f]) => f.k === 'scarecrow' && f.at <= at && tileDist(Number(t), i) <= guard);
@@ -495,13 +500,14 @@ function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: numb
     const s = parseStock(key);
     if (!s) continue;
     const unit = stockUnit(s.id, s.q, now, flags),
-      bonus = isCropId(s.id) ? sellBonus(mods, s.id, s.q) : 0,
+      bonus = isCropId(s.id) || isGoodId(s.id) ? sellBonus(mods, s.id, s.q) : 0,
+      soft = demandSoft(mods, s.id),
       sold = demandSold(life, uid, now, s.id),
       before = soldBeomToday(life, uid, now) + amount;
     let got = 0,
       pay = 0;
     for (; got < n; got++) {
-      const one = Math.round(sellTotal(s.id, unit, sold + got, 1, before + pay) * (1 + bonus) * SELL_AWAY);
+      const one = Math.round(sellTotal(s.id, unit, sold + got, 1, before + pay, soft) * (1 + bonus) * SELL_AWAY);
       if (amount + pay + one > cap) break;
       pay += one;
     }
@@ -579,7 +585,7 @@ export function harvestFarm(
   opts: { xpTo: string; lift?: (q: Quality) => Quality },
 ): number {
   const farm = life.farms[owner],
-    giants = [0, 1].filter((b) => giantBed(farm, owner, b, now));
+    giants = [0, 1].filter((b) => giantBed(farm, owner, b, now, giantChance(life, owner)));
   let targets = plot === -1 ? farm.map((_, i) => i) : [plot];
   if (plot !== -1 && giants.includes(tileBed(plot))) targets = bedTiles(tileBed(plot));
   let harvested = 0;
@@ -843,13 +849,15 @@ export function farmAction(
           if (!left) break;
         }
       }
-      const seeds = m!.k === 'seedmaker';
+      const seeds = m!.k === 'seedmaker',
+        mods = growthMods(life, uid);
       m!.out = out!;
-      m!.n = seeds ? 1 + (hash32(`seed:${uid}:${slot}:${now}:${life.seq}`) % 2) : 1;
+      // 재능 수리공: my machine sometimes makes two; 손이 빠른: a little faster.
+      m!.n = seeds ? 1 + (hash32(`seed:${uid}:${slot}:${now}:${life.seq}`) % 2) : 1 + (growthChance(life, uid, `mach:${slot}`, mods.machineDouble, now) ? 1 : 0);
       if (!seeds && q > 0) m!.q = q;
       else delete m!.q;
       m!.at = now;
-      m!.done = now + def.ms;
+      m!.done = now + Math.round(def.ms * (1 - Math.min(0.9, mods.machineFast)));
       break;
     }
     case 'farmCollect': {
@@ -918,7 +926,9 @@ export function farmAction(
       if (!isGoodId(s.id)) fail(FARM_REJECT.item);
       if (stockCount(life, uid, s.id, s.q) < n) fail(FARM_REJECT.stock);
       const unit = stockUnit(s.id, s.q, now, life.flags ?? []),
-        amount = shopSaleAmount(life, uid, actor, a.at, s.id, sellTotal(s.id, unit, demandSold(life, uid, now, s.id), n, soldBeomToday(life, uid, now)), now),
+        // 재능 포장의 달인: a share on top of the demand curve.
+        bonus = sellBonus(growthMods(life, uid), s.id, s.q),
+        amount = shopSaleAmount(life, uid, actor, a.at, s.id, Math.round(sellTotal(s.id, unit, demandSold(life, uid, now, s.id), n, soldBeomToday(life, uid, now)) * (1 + bonus)), now),
         left = SELL_CAP_PER_DAY - soldBeomToday(life, uid, now);
       if (amount > left) fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
       stockAdd(life, uid, s.id, s.q, -n);
@@ -958,7 +968,8 @@ export function farmAction(
       if ((ledger.accounts[walletOf(uid)] ?? 0) < FAIR_FEE) fail(LIFE_REJECT.balance);
       next = spendBeom(next, walletOf(uid), FAIR_FEE, `life-fairfee-${uid}-${++life.seq}`, now, 'fair-fee');
       stockAdd(life, uid, s.id, s.q, -1);
-      const score = fairScore(s.id, s.q, now, life.flags ?? []);
+      // 재능 품평회 단골: +10% on my entry's score.
+      const score = Math.round(fairScore(s.id, s.q, now, life.flags ?? []) * (1 + growthMods(life, uid).fairBonus));
       fair.entries.push({ actor, uid, item: s.id, q: s.q, score, at: now });
       addNews(life, now, `fairin:${actor}:${week}`, 'fair', `${josaGa(nameOf(actor))} 품평회에 ${stockName(s.id)}을 냈어요`, [actor]);
       break;
@@ -1025,7 +1036,7 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
         }
       : null,
     log: [...(x.log ?? [])],
-    giants: [0, 1].filter((b) => giantBed(farm, uid, b, now)),
+    giants: [0, 1].filter((b) => giantBed(farm, uid, b, now, giantChance(life, uid))),
     helped: x.hf?.day === today ? [...x.hf.actors] : [],
   };
 }
@@ -1048,7 +1059,7 @@ export function farmsPublic(life: LifeState, now: number) {
   const out: Record<string, { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[] }> = {};
   for (const [uid, farm] of Object.entries(life.farms)) {
     const x = life.farmx?.[uid],
-      giants = [0, 1].filter((b) => giantBed(farm, uid, b, now));
+      giants = [0, 1].filter((b) => giantBed(farm, uid, b, now, giantChance(life, uid)));
     if (!x?.fx && !x?.mach && !giants.length) continue;
     out[uid] = {
       fx: Object.entries(x?.fx ?? {}).map(([t, f]) => [Number(t), f.k]),
