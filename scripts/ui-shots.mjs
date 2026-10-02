@@ -611,7 +611,7 @@ function summarize(r) {
 }
 
 const before = baselineFile ? JSON.parse(fs.readFileSync(baselineFile, 'utf8')) : undefined;
-const coverageFailures = reportFailures(report, { views, only, withGames, baseline: before });
+const coverageFailures = reportFailures(report, { views, only, withGames, withStage3: flag('stage3'), baseline: before });
 if (coverageFailures.length) {
   fs.writeFileSync(path.join(out, 'coverage-errors.json'), JSON.stringify(coverageFailures, null, 1));
   console.error(coverageFailures.join('\n'));

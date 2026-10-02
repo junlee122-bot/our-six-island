@@ -13,8 +13,8 @@ const GROUPS = {
 };
 export const UI_METRICS = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'];
 
-export function reportFailures(report, { views, only = [], withGames = false, baseline } = {}) {
-  const groups = { ...GROUPS, ...(withGames ? {
+export function reportFailures(report, { views, only = [], withGames = false, withStage3 = false, baseline } = {}) {
+  const groups = { ...GROUPS, ...(withStage3 ? { ranch: ['ranch'], foothill: ['foothill'] } : {}), ...(withGames ? {
     'game-blackjack': ['sheet-blackjack', 'game-blackjack'],
     'game-seotda': ['sheet-seotda', 'game-seotda'],
   } : {}) };
