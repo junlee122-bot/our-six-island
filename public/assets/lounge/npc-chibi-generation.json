@@ -217,6 +217,36 @@
    "h": 640,
    "sha256": "E8B567B1DBCEB02EA36AA21FE33AAFB6ABFF448AA83238011D8ECADE10A7DB31"
   },
+  "nilah": {
+   "file": "chibi/npc-nilah.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "DCD6DE72340A2988849B24931C4CF4C8A7ED877759BF5A01448E1A7B3E2D3CC7"
+  },
+  "haku": {
+   "file": "chibi/npc-haku.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "6AEEBAA4CB47DDCD212DEC75038A33942206527C9132608FC862E4F75C434983"
+  },
+  "ornn": {
+   "file": "chibi/npc-ornn.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "3909C96BD86B99A982884BECBC2AC7B930199E487C3A03F37620E0ACC2073B54"
+  },
+  "mercy": {
+   "file": "chibi/npc-mercy.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "29D417C277E3E8DD5E6981E9131F7F9DC5ADEB315B99A5D4C0C08301ACD77EE9"
+  },
+  "shinichi": {
+   "file": "chibi/npc-shinichi.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "7BE63F6CC676BFCA62CB867D18FBCD5D01CE6B42683E052A6B78CF78B12FADD3"
+  },
   "lumi": {
    "file": "chibi/npc-lumi.webp",
    "w": 512,

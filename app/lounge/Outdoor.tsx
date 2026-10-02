@@ -9,7 +9,7 @@ import { Backpack, MessageCircle } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import type { Look } from '../lounge-look';
-import { REGIONS, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '../lounge-areas';
+import { REGIONS, isDistrictArea, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '../lounge-areas';
 import { DISTRICTS, districtOpen, type DistrictId } from '../lounge-districts';
 import { prefetchDistrict } from '../lounge-district-models';
 import type { NpcId } from '../lounge-npc-data';
@@ -24,6 +24,9 @@ import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import type { FishingFramePhase } from '../lounge-fishing-frames';
 import type { ShopArea } from '../lounge-shop-interiors';
+import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
+import { kstHourOf } from '../lounge-voyage-data';
+import { FISH_BY_ID } from '../lounge-items';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -76,7 +79,7 @@ export function useOutdoor({
   /** A district counter (E at a shop door, a board or a stall); `enter`: walk into the shop's room. */
   onCounter?: (place: DistrictCounter, enter?: ShopArea) => void;
   /** The harbor's fishing and crab-pot spots. */
-  onFish?: (spot: 'breakwater' | 'pier') => void;
+  onFish?: (spot: 'breakwater' | 'pier' | 'offshore') => void;
   /** 친구에게 가기. */
   onSignpost?: () => void;
 }) {
@@ -84,6 +87,8 @@ export function useOutdoor({
   const [liftOpen, setLiftOpen] = useState(false);
   const [{ dayNight }] = useSettings();
   const ref = useRef(outdoor);
+  /** Which way I came down into the mine (뒷산's cave or 산기슭 마을's entrance): the way back up. */
+  const mineFrom = useRef<'hill' | 'foothill'>('hill');
   useEffect(() => {
     ref.current = outdoor;
   }, [outdoor]);
@@ -129,7 +134,7 @@ export function useOutdoor({
         notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
         return;
       }
-      if (id !== 'market' && id !== 'harbor' && id !== 'hillside') return;
+      if (!isDistrictArea(id)) return;
       preloadAreaScene();
       void prefetchDistrict(id);
       go({ area: id, spawn: { ...REGIONS[id].arrive.village! } });
@@ -153,7 +158,7 @@ export function useOutdoor({
         });
         return;
       }
-      if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
+      if (!isDistrictArea(area)) return;
       if (!districtOpen(area, { flags: room.snapshot().life?.flags, pass: room.snapshot().life?.districts?.pass })) return;
       preloadAreaScene();
       void prefetchDistrict(area);
@@ -161,6 +166,17 @@ export function useOutdoor({
     },
     [fade, go, onVillage, room],
   );
+
+  /** 먼바다: onto the deck when my boat leaves, back on the pier when it is over. */
+  const toDeck = useCallback(() => {
+    preloadAreaScene();
+    go({ area: 'offshore', spawn: { ...REGIONS.offshore.arrive.harbor! } });
+  }, [go]);
+  const toPier = useCallback(() => {
+    preloadAreaScene();
+    void prefetchDistrict('harbor');
+    go({ area: 'harbor', spawn: { ...HARBOR_VOYAGE.landing } });
+  }, [go]);
 
   const leaveToVillage = () => {
     const from = ref.current?.area ?? 'hill';
@@ -181,6 +197,7 @@ export function useOutdoor({
     const r = regions(),
       m = r?.mine;
     if (!r || !m) return;
+    mineFrom.current = ref.current?.area === 'foothill' ? 'foothill' : 'hill';
     if (!r.pass && m.pickaxe < floorPick(1)) return notify(GROWTH_REJECT.minePick);
     // With the lift (or 승준's explorer pass, every floor): pick a floor.
     if (r.pass || (m.lift && m.deep >= LIFT_EVERY)) setLiftOpen(true);
@@ -259,8 +276,11 @@ export function useOutdoor({
         if (a.to === 'mine') return enterMine();
         if (a.to === 'woods') return go({ area: 'woods', spawn: { ...REGIONS.woods.arrive.hill! } });
         if (a.to === 'hill') {
-          if (o.area === 'mine')
-            void act({ kind: 'mineGo', floor: 0 }).then((ok) => ok && go({ area: 'hill', spawn: { ...REGIONS.hill.arrive.mine! } }));
+          if (o.area === 'mine') {
+            // Back out the way I came in (산기슭 광산 입구 or 뒷산's cave).
+            const up = mineFrom.current;
+            void act({ kind: 'mineGo', floor: 0 }).then((ok) => ok && go({ area: up, spawn: { ...REGIONS[up].arrive.mine! } }));
+          }
           else go({ area: 'hill', spawn: { ...REGIONS.hill.arrive[o.area]! } });
         }
         return;
@@ -294,6 +314,13 @@ export function useOutdoor({
     // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
     const pass = !!r?.pass;
     const stops = m ? mineStops(m, pass) : [];
+    // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
+    const voyage = view.life?.voyage;
+    const hour = kstHourOf(Date.now() + view.clockOffset);
+    const harborBoat = voyage ? { out: voyage.sailing.length > 0, captain: !voyage.storm && hour >= 5 && hour < 19 } : undefined;
+    // A big fish (rare or better) just landed out at sea: it jumps once by the bobber.
+    const last = view.life?.angling?.me.last;
+    const bigCatch = outdoor.area === 'offshore' && last?.ok && last.fish && (FISH_BY_ID[last.fish]?.weight ?? 99) < 10 ? last.at : 0;
     return (
       <div className="l-village-world">
         <Suspense
@@ -317,6 +344,9 @@ export function useOutdoor({
             paused={paused || liftOpen}
             fishing={fishing}
             dayNight={dayNight}
+            steady={!!voyage?.pillUntil}
+            bigCatch={bigCatch}
+            harborBoat={harborBoat}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}
@@ -371,5 +401,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset, enterAt };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset, enterAt, toDeck, toPier };
 }

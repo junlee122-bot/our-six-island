@@ -34,9 +34,10 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
-import { DISTRICTS, districtOpen } from './lounge-districts.ts';
+import { DISTRICTS, districtOpen, isDistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
+import { STAGE3_ACTION_PLACE, festivalDay, isStage3Action, stage3ActionAreas } from './lounge-stage3-data.ts';
 // 가게 나누기 · 음식 시스템: shops' districts and where meals are eaten.
 import { SHOP_INFO, isShopId, shopArea } from './lounge-shops.ts';
 import { DISH_BY_ID } from './lounge-items.ts';
@@ -51,6 +52,13 @@ import { atHubCounter, hubCounterFor, hubCounterReject } from './lounge-hub-coun
 import { listStocks, materializeStocks, stocksAction, stocksView, stockWealth, type StockNews, type StockState } from './lounge-stocks.ts';
 import { addNews } from './lounge-life-plus.ts';
 import { ACTORS } from './lounge-roster.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): the deck only while a voyage is on; boarding at the pier.
+import { isVoyageAction } from './lounge-voyage-data.ts';
+import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
+import { regionToNetwork } from './lounge-areas.ts';
+import { HARBOR_VOYAGE } from './lounge-harbor-layout.ts';
+/** A voyage's deck accepts me a few seconds before the departure (clock slack). */
+const DECK_EARLY_MS = 5_000;
 /** The life state without the reset's done-mark (for the "did anything change" check). */
 const withoutResetMark = (life: LifeState) => {
   const { roomsReset: _mark, ...rest } = life;
@@ -489,7 +497,21 @@ export function cloudTransition(
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
               x: player.x, y: player.y,
               hill: (life.flags ?? []).includes('district-hillside'),
+              ranch: (life.flags ?? []).includes('district-ranch'),
+              foothill: (life.flags ?? []).includes('district-foothill'),
             }, now);
+          }
+          if (isVoyageAction(command.action)) {
+            // Boarding at the pier; the 멀미약 at its seller (츠나데 텃밭, 메르시 의원).
+            const where = voyageActionArea(command.action);
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (where && (!lease || !player || (player.area ?? 'village') !== where))
+              throw new CloudError(where === 'harbor' ? '항구 큰 선착장의 출항 안내판 앞에서 타 주세요.' : '멀미약은 파는 곳에 가서 사 주세요.', 409);
+          }
+          if ((command.action as { kind?: string; spot?: unknown }).kind === 'anglerCast' && (command.action as { spot?: unknown }).spot === 'offshore') {
+            // 먼바다: casting from the deck only (the fishing engine checks the voyage itself).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'offshore') throw new CloudError('배 위에서만 먼바다 낚시를 할 수 있어요.', 409);
           }
           if ((command.action as { kind?: string }).kind === 'cupClaim' && (readLife(g.life).flags ?? []).includes('district-harbor')) {
             // 주간 낚시 대회 is held at the harbor once it is open: prizes are handed out at 낚시조합.
@@ -505,6 +527,14 @@ export function cloudTransition(
             const shop = townActionShop(command.action.kind);
             if (!lease || !player || (player.area !== where && (!shop || player.area !== shop)))
               throw new CloudError(`${where === 'tavern' ? '허풍 주점' : DISTRICTS[where].name}에 가서 해 주세요.`, 409);
+          }
+          if (isStage3Action(command.action)) {
+            // 3단계: 목장·과수원 / 산기슭 마을 (in the district or the shop's own room; 운세 on a
+            // festival day also on the hub plaza, lounge-stage3-data.ts).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            const places = stage3ActionAreas(command.action.kind, festivalDay(kstDay(now)));
+            if (!lease || !player || !places.includes(player.area ?? 'village'))
+              throw new CloudError(`${DISTRICTS[STAGE3_ACTION_PLACE[command.action.kind].district].name}에 가서 해 주세요.`, 409);
           }
           {
             // 가게 나누기: buying or selling "at" a shop needs me at its counter's district.
@@ -630,15 +660,18 @@ export function cloudTransition(
           const gated =
             action.kind !== 'area'
               ? null
-              : action.area === 'harbor' || action.area === 'hillside'
+              : isDistrictId(action.area) && action.area !== 'market'
                 ? action.area
                 : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
                   ? SHOP_INTERIORS[action.area].district
                   : null;
-          if (gated === 'harbor' || gated === 'hillside') {
+          if (gated) {
             const flags = readLife(g.life).flags ?? [];
             if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);
           }
+          // 먼바다: the deck is there only while my voyage is out.
+          if (action.kind === 'area' && action.area === 'offshore' && !voyageAt(readLife(g.life), member.id, now, DECK_EARLY_MS))
+            throw new CloudError('배가 떠 있을 때만 갑판에 오를 수 있어요.', 409);
           // 파티 판: the crop must be in the bag; it is eaten only on success.
           let eat: PartyItem | null = null;
           if (action.kind === 'party') {
@@ -667,7 +700,7 @@ export function cloudTransition(
             if (after !== before) g.life = after;
           }
           // The first walk into a district (for the 친구에게 가기 signpost).
-          if (action.kind === 'area' && (action.area === 'market' || action.area === 'harbor' || action.area === 'hillside')) {
+          if (action.kind === 'area' && isDistrictId(action.area)) {
             const life = readLife(g.life);
             if (!life.ext?.[member.id]?.town?.seen?.includes(action.area)) {
               const next = ensureLifeMember(life, member.id, member.actor);
@@ -676,6 +709,14 @@ export function cloudTransition(
           }
           // A coalesced look is applied by a later tick; no broadcast now.
           quiet = r.hostedCoalesced;
+        }
+        // 먼바다: a voyage that ran out (or ended early) puts me back on the pier
+        // with my next command or read (nothing has to run at the 20-minute mark).
+        const aboard = r.hostedPlayer(member.id);
+        if (aboard?.area === 'offshore' && !voyageAt(readLife(g.life), member.id, now, DECK_EARLY_MS)) {
+          const pier = regionToNetwork('harbor', HARBOR_VOYAGE.landing);
+          r.hostedAttempt(member.id, { kind: 'area', area: 'harbor', x: pier.x, y: pier.y }, now);
+          quiet = false;
         }
         r.hostedTick(now);
         saveRoom(target, r, entry.leases);

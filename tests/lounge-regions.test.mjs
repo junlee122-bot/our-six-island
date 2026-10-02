@@ -92,7 +92,7 @@ test('walk world: bounds, colliders, sliding and paths around a wall', () => {
 });
 
 test('regions: registry, arrivals, exits and every node reachable', () => {
-  assert.deepEqual([...OUTDOOR_AREAS], ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside']);
+  assert.deepEqual([...OUTDOOR_AREAS], ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore']);
   assert.ok(isOutdoorArea('mine') && !isOutdoorArea('village') && !isOutdoorArea('tavern'));
   for (const area of ['hill', 'woods']) {
     for (const logCleared of [false, true]) {

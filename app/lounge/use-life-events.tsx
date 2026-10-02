@@ -11,7 +11,7 @@ import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { recall, remember } from '../lounge-settings';
 import { lifeSfx } from '../lounge-audio-life';
-import { DISTRICT_OPEN_LINES } from '../lounge-district-unlocks';
+import { DISTRICT_OPEN_LINES, GOAL_DISTRICTS } from '../lounge-district-unlocks';
 import { DISTRICTS, DISTRICT_FLAG } from '../lounge-districts';
 import type { Notify, PushBanner } from './Toast';
 
@@ -115,7 +115,7 @@ export function useLifeEvents({
     if (!flags) return;
     // 마을 확장 2단계: a district that opened (항구) or the move-in day (언덕 이사)
     // shows its banner once per device, even if it opened while I was away.
-    for (const id of ['harbor', 'hillside'] as const) {
+    for (const id of GOAL_DISTRICTS) {
       const flag = DISTRICT_FLAG[id]!;
       const key = `bumtadew-district-banner-${id}`;
       if (!flags.includes(flag) || recall(key)) continue;

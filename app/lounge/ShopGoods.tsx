@@ -5,11 +5,12 @@
 // buff slots and the 맛 도감 — plus the 가게 안내 card that replaced the old
 // single 범타듀 상점 window. Every price is the server's (lounge-shops.ts
 // shopOffer / sellQuote); the server checks I really stand at the counter.
+import { SMITH_ORES, type SmithOre } from '../lounge-stage3-data';
 import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROPS, CROP_INFO, FRUIT_SELL, SHOP_BY_ID, shopLock, type Crop, type LifeAction, type LifeView } from '../lounge-life';
 import { BUFF_INFO, DISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
-import { itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
+import { FISH_DEMAND_FREE, isFishSale, itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
 import { SELL_AWAY, SHOP_INFO, buyerOf, shopOffer, type ShopId } from '../lounge-shops';
 import { stockName, stockUnit } from '../lounge-farm';
 import {
@@ -55,8 +56,11 @@ function sellRows(life: LifeView, shop: ShopId): SellRow[] {
     if (n > 0 && buyerOf(c, fish) === shop) rows.push({ key: c, id: c, name: CROP_INFO[c].name, have: n });
   }
   if (life.me.bag.fruit > 0 && shop === 'coop') rows.push({ key: 'fruit', id: 'fruit', name: '과일', have: life.me.bag.fruit });
-  for (const [id, n] of Object.entries(life.me.inv ?? {}))
-    if (n > 0 && buyerOf(id, fish) === shop) rows.push({ key: id, id, name: itemName(id), have: n });
+  for (const [id, n] of Object.entries(life.me.inv ?? {})) {
+    const buyer = buyerOf(id, fish);
+    // 오른's 대장간 buys ores like the village forge (with today's-ore premium, lounge-stage3.ts).
+    if (n > 0 && (buyer === shop || (shop === 'smithy' && buyer === 'forge'))) rows.push({ key: id, id, name: itemName(id), have: n });
+  }
   if (shop === 'coop')
     for (const g of life.farmx?.goods ?? []) rows.push({ key: `${g.id}@${g.q}`, id: g.id, name: stockName(g.id), have: g.n, q: g.q, goods: true });
   return rows;
@@ -80,19 +84,23 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
         ? week.has(r.id)
           ? { kind: 'coopSell', crop: r.id as Crop, n }
           : { kind: 'sell', crop: r.id as Crop | 'fruit', n, at }
-        : { kind: 'sellItem', item: r.id, n, at };
+        : at === 'smithy' && (SMITH_ORES as readonly string[]).includes(r.id)
+          ? { kind: 'oreSell', item: r.id as SmithOre, n }
+          : { kind: 'sellItem', item: r.id, n, at };
   if (!rows.length)
     return <EmptyState glyph="bag" title={`${SHOP_INFO[at].name}에 팔 물건이 없어요`} hint={`여기서는 ${SHOP_INFO[at].buys}을(를) 제값에 사요.`} />;
   return (
     <>
       <p className="l-town-sub" data-testid="shop-sell-note">
-        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. 오늘 더 팔 수 있어요 {formatBeom(cap)}
+        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. {at === 'fishmarket' ? `물고기는 하루 한도 없이 팔 수 있고, 같은 물고기는 하루 ${FISH_DEMAND_FREE}마리까지 제값이에요.` : `오늘 더 팔 수 있어요 ${formatBeom(cap)}`}
         {life.me.haggleLeft ? ` · 흥정 +5% (남은 ${formatBeom(life.me.haggleLeft)})` : ''}
       </p>
       <ul className="l-town-list">
         {rows.map((r) => {
+          // Fish are outside the daily cap (lounge-life-plus isFishSale).
+          const limit = r.goods || !isFishSale(r.id) ? cap : Infinity;
           let most = Math.min(r.have, 999);
-          while (most > 1 && total(r, most) > cap) most--;
+          while (most > 1 && total(r, most) > limit) most--;
           const one = total(r, 1);
           return (
             <li key={r.key} className="l-town-row" data-testid={`shop-sell-${r.key}`}>
@@ -107,7 +115,7 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
                 </small>
               </div>
               <span className="l-town-buttons">
-                <GameButton size="s" disabled={busy || one > cap} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
+                <GameButton size="s" disabled={busy || one > limit} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
                   1개
                 </GameButton>
                 {most > 1 && (

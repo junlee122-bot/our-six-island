@@ -220,6 +220,17 @@ export const LOUNGE_ASSETS = {
   // 범마을 증권 무잔 (broker-muzan-generation.json; keyed by optimize-assets.mjs npcs).
   npc_muzan: '/assets/lounge/npc-muzan.webp',
   npc_muzan_portrait: '/assets/lounge/npc-muzan-portrait.webp',
+  // Village NPCs, stage 3 (stage3-npcs-generation.json; keyed by optimize-assets.mjs npcs).
+  npc_nilah: '/assets/lounge/npc-nilah.webp',
+  npc_haku: '/assets/lounge/npc-haku.webp',
+  npc_ornn: '/assets/lounge/npc-ornn.webp',
+  npc_mercy: '/assets/lounge/npc-mercy.webp',
+  npc_shinichi: '/assets/lounge/npc-shinichi.webp',
+  npc_nilah_portrait: '/assets/lounge/npc-nilah-portrait.webp',
+  npc_haku_portrait: '/assets/lounge/npc-haku-portrait.webp',
+  npc_ornn_portrait: '/assets/lounge/npc-ornn-portrait.webp',
+  npc_mercy_portrait: '/assets/lounge/npc-mercy-portrait.webp',
+  npc_shinichi_portrait: '/assets/lounge/npc-shinichi-portrait.webp',
   // In-world chibi residents (npc-chibi-generation.json; keyed and sliced by optimize-assets.mjs chibi). The tall art above stays for dialogue.
   chibi_frieren: '/assets/lounge/chibi/npc-frieren.webp',
   chibi_nasera: '/assets/lounge/chibi/npc-nasera.webp',
@@ -241,6 +252,12 @@ export const LOUNGE_ASSETS = {
   chibi_shinhyungman: '/assets/lounge/chibi/npc-shinhyungman.webp',
   chibi_bongmison: '/assets/lounge/chibi/npc-bongmison.webp',
   chibi_valkyrie: '/assets/lounge/chibi/npc-valkyrie.webp',
+  chibi_nilah: '/assets/lounge/chibi/npc-nilah.webp',
+  chibi_haku: '/assets/lounge/chibi/npc-haku.webp',
+  chibi_ornn: '/assets/lounge/chibi/npc-ornn.webp',
+  chibi_mercy: '/assets/lounge/chibi/npc-mercy.webp',
+  // 신이치's chibi wears his 코난 disguise (user decision).
+  chibi_shinichi: '/assets/lounge/chibi/npc-shinichi.webp',
   // 루미 · 매화 walking chibis (lumi-maehwa-chibi-generation.json); the tables keep their pose sheets.
   chibi_lumi: '/assets/lounge/chibi/npc-lumi.webp',
   chibi_maehwa: '/assets/lounge/chibi/npc-maehwa.webp',

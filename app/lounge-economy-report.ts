@@ -103,7 +103,7 @@ export type AccountRow = {
   otherGranted: number;
   shopSpent: number;
   otherSpent: number;
-  /** 범 sold today (KST) against the daily sell cap. */
+  /** 범 sold today (KST) against the daily sell cap (fish are outside it). */
   soldToday: number;
   /** Lifetime harvest + fruit pick count (life.harvested). */
   harvested: number;
@@ -253,6 +253,12 @@ export const BUCKET_LABEL: Record<string, string> = {
   research: '마을 개척',
   respec: '전문가 다시 고르기',
   'venue-up': '가게 업그레이드',
+  'smith-ore': '오른의 오늘의 광석 웃돈',
+  smith: '오른의 대장간 범위 강화',
+  ranch: '닐라 목장(동물·건초)',
+  'orchard-sapling': '하쿠 과수원 묘목',
+  clinic: '메르시 의원',
+  fortune: '신이치 점집',
   'stock-fee': '주식 수수료',
   'spend-other': '기타 지출',
 };
@@ -293,6 +299,8 @@ const LIFE_REASONS: Record<string, string> = {
   'sell-forage': '채집물 판매',
   'sell-flower': '꽃 판매',
   'sell-material': '재료 판매',
+  'sell-ranch': '목장 산물 판매',
+  'sell-orchard': '과수원 과일 판매',
   'sell-dish': '요리 판매',
   'buy-fertilizer': '상점: 비료',
   'buy-fertilizer-deluxe': '상점: 고급 비료',
@@ -893,7 +901,7 @@ function tables(r: EconomyReport): Table[] {
         '농사 수입*',
         '오늘의 범*',
         '상점 지출*',
-        '오늘 판매',
+        '오늘 판매(물고기 제외)',
       ],
       right: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
       rows: r.accounts.map((a) => [

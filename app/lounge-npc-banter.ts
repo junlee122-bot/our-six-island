@@ -4,6 +4,7 @@
 // line under about 24 characters. No emoji, no English.
 import type { NpcBanter } from './lounge-npc-line-types.ts';
 import { NPC_BANTER_MUZAN } from './lounge-npc-banter-muzan.ts';
+import { NPC_BANTER_STAGE3 } from './lounge-npc-banter-stage3.ts';
 
 export const NPC_BANTER: readonly NpcBanter[] = [
   {
@@ -410,4 +411,6 @@ export const NPC_BANTER: readonly NpcBanter[] = [
   },
   // 범마을 증권 무잔 (lounge-npc-banter-muzan.ts).
   ...NPC_BANTER_MUZAN,
+  // Stage 3 (목장·과수원, 산기슭 마을).
+  ...NPC_BANTER_STAGE3,
 ];

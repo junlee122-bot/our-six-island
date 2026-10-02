@@ -12,6 +12,7 @@
 //
 // Cycle-safe: lounge-life.ts and lounge-life-plus.ts import this module and it
 // imports them back, so their bindings are only used inside functions.
+import { basketExtra } from './lounge-stage3-data.ts';
 import { spendBeom, kstDay, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, dayStart, hash32 } from './lounge-calendar.ts';
 import { ITEM_BY_ID } from './lounge-items.ts';
@@ -743,7 +744,8 @@ export function growthAction(
       } else if (node!.kind === 'shroom') {
         // 송이 or 영지 (영지 1 in 3); 약초꾼's double chance applies.
         const item = roll(`shroom:${uid}:${node!.id}:${seq}`) < 34 ? 'yeongji' : 'songi';
-        addInv(life, uid, item, NODE_YIELD.shroom + (growthChance(life, uid, 'shroom', mods.forageDouble, now) ? 1 : 0));
+        // 채집 바구니 (오른's range upgrade, lounge-stage3-data.ts) may add one more.
+        addInv(life, uid, item, NODE_YIELD.shroom + (growthChance(life, uid, 'shroom', mods.forageDouble, now) ? 1 : 0) + basketExtra(life, uid, `shroom:${node!.id}:${seq}`));
         gainXp(life, uid, 'forage', NODE_XP.shroom, now);
       } else if (node!.kind === 'stump') {
         addInv(life, uid, 'hardwood', Math.round(NODE_YIELD.stump * mods.woodMult) + (hasBuff(life, uid, now, 'wood') ? 1 : 0));

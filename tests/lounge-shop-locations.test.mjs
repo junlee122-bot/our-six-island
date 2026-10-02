@@ -130,7 +130,7 @@ test('범마을 부동산: house upgrades and model-house styles only at its doo
 test('shop rooms: buying and selling with `at` works inside the shop and nowhere else', async () => {
   const c = await cloud(3);
   await c.run('open', { code: 'BEMTADUVLY' });
-  c.w.life.flags = [...(c.w.life.flags ?? []), 'district-harbor'];
+  c.w.life.flags = [...(c.w.life.flags ?? []), 'district-harbor', 'district-ranch', 'district-foothill'];
   const uid = c.uid();
   const give = (crop, n) => (c.w.life.bag[uid].produce[crop] = n);
   const deals = {
@@ -138,19 +138,25 @@ test('shop rooms: buying and selling with `at` works inside the shop and nowhere
     general: { kind: 'buy', item: 'seed-carrot', n: 1, at: 'general' },
     coop: { kind: 'sell', crop: 'pumpkin', n: 1, at: 'coop' },
     fishmarket: { kind: 'buyItem', item: 'bait', n: 1, at: 'fishmarket' },
+    // Stage 3: 닐라 buys eggs, 하쿠 fruit, 오른 ores (메르시 의원 only gives care, no `at` trade).
+    barn: { kind: 'sellItem', item: 'egg', n: 1, at: 'barn' },
+    orchardShop: { kind: 'sellItem', item: 'apple', n: 1, at: 'orchardShop' },
+    smithy: { kind: 'sellItem', item: 'copper', n: 1, at: 'smithy' },
   };
-  // 범마을 증권 sells no goods; its orders are checked in lounge-stocks.test.mjs.
-  const goods = SHOP_AREAS.filter((s) => s !== 'broker');
-  assert.deepEqual(Object.keys(deals).sort(), [...goods].sort(), 'every shop room is covered');
-  for (const shop of goods) {
+  // 의원 trades no goods at its counter; 범마을 증권 sells no goods (its orders are checked in lounge-stocks.test.mjs).
+  const AT_SHOPS = SHOP_AREAS.filter((s) => s !== 'clinic' && s !== 'broker');
+  assert.deepEqual(Object.keys(deals).sort(), [...AT_SHOPS].sort(), 'every shop room with a counter trade is covered');
+  for (const shop of AT_SHOPS) {
     give('pumpkin', 3);
+    const inv = (((c.w.life.ext ??= {})[uid] ??= {}).inv ??= {});
+    for (const id of ['egg', 'apple', 'copper']) inv[id] = 3;
     const deal = deals[shop],
       name = SHOP_INTERIORS[shop].name.split(' ').at(-1);
     // From the hub and from another shop's room: refused, nothing paid.
     await c.go('village', 50, 60);
     let before = c.wallet();
     assert.match((await c.act(deal)).error ?? '', /에 가서 해 주세요/, `${shop} from the village`);
-    const other = SHOP_AREAS.find((s) => s !== shop && SHOP_INTERIORS[s].district === SHOP_INTERIORS[shop].district) ?? SHOP_AREAS.find((s) => s !== shop);
+    const other = AT_SHOPS.find((s) => s !== shop && SHOP_INTERIORS[s].district === SHOP_INTERIORS[shop].district) ?? AT_SHOPS.find((s) => s !== shop);
     await c.go(other, SHOP_INTERIORS[other].front.x, SHOP_INTERIORS[other].front.y);
     assert.match((await c.act(deal)).error ?? '', /에 가서 해 주세요/, `${shop} from inside ${other}`);
     assert.equal(c.wallet(), before);

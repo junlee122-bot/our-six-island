@@ -40,8 +40,9 @@ import { BAKERY_MENU } from '../app/lounge-town.ts';
 
 // ---------------------------------------------------------------- registry
 test('the shop rooms are interior areas with their own chat and no game tables', () => {
-  // 범마을 증권 (design-stocks.md) is the fifth room.
-  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket', 'broker']);
+  // Stage 2's four, then stage 3's 축사 · 과수원 창고 · 대장간 · 의원 (design-npcs-stage3.md),
+  // then 범마을 증권 (design-stocks.md).
+  assert.deepEqual([...SHOP_AREAS], ['bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker']);
   for (const area of SHOP_AREAS) {
     assert.ok(AREAS.includes(area));
     assert.ok(INTERIOR_AREAS.includes(area));
@@ -62,7 +63,7 @@ test('the shop rooms are interior areas with their own chat and no game tables',
 });
 
 test('district doors lead in; the harbor auction yard stays an outdoor counter', () => {
-  for (const area of ['market', 'harbor']) {
+  for (const area of ['market', 'harbor', 'ranch', 'foothill']) {
     const touches = districtCounters(area, 1).filter((c) => c.a.kind === 'counter');
     for (const shop of SHOP_AREAS.filter((s) => SHOP_INTERIORS[s].district === area))
       assert.ok(touches.some((c) => c.a.enter === shop && /들어가기/.test(c.a.label)), `${shop} door in ${area}`);
@@ -105,7 +106,7 @@ for (const area of SHOP_AREAS) {
     }
     for (const it of s.items) {
       assert.ok(it.x - it.w / 2 >= -8.45 && it.x + it.w / 2 <= 8.45 && it.z - it.d / 2 >= -6.05 && it.z + it.d / 2 <= 5.25, `${it.id} inside the room`);
-      if (it.model) assert.ok(it.model in SHOP_INTERIOR_MODELS || ['cafeTable', 'register', 'storageShelf', 'teaSideboard', 'produceCrate', 'banquetChair', 'plantStand', 'hanjiLantern', 'gardenLantern', 'onggi', 'barrelRack', 'fishMackerel', 'fishCod', 'fishHairtail'].includes(it.model), it.id);
+      if (it.model) assert.ok(it.model in SHOP_INTERIOR_MODELS || ['cafeTable', 'register', 'storageShelf', 'teaSideboard', 'produceCrate', 'banquetChair', 'plantStand', 'hanjiLantern', 'gardenLantern', 'onggi', 'barrelRack', 'fishMackerel', 'fishCod', 'fishHairtail', 'stove', 'cauldron', 'keg', 'firewood', 'cornerCabinet'].includes(it.model), it.id);
     }
     // Every walkable start (every 40 cm) reaches the door and the counter.
     let starts = 0;

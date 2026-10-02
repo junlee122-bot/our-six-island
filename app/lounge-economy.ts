@@ -140,7 +140,8 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
     if (reason.startsWith('sell-')) return reason.slice(0, 24);
     if (
       // 마을 확장 2단계: the dawn auction and 농협 weekly premiums (lounge-town.ts, each capped per friend per day).
-      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night', 'auction', 'coop-week'].includes(reason)
+      // 3단계: 오른's today's-ore premium (lounge-stage3.ts, capped per friend per day).
+      ['ach', 'request', 'event', 'wish', 'donate', 'bundle-done', 'casino-night', 'auction', 'coop-week', 'smith-ore'].includes(reason)
     )
       return reason;
     return 'grant-other';
@@ -154,9 +155,13 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason.startsWith('house-')) return 'house';
   // 성장 P1: blacksmith upgrades ('tool-pickaxe-2'), 마을 개척, profession respec.
   if (reason.startsWith('tool-')) return 'tool';
+  // 3단계 shops (lounge-stage3.ts): 오른's range upgrades ('smith-can-2'), 목장, 과수원, 의원, 점집.
+  if (reason.startsWith('smith-')) return 'smith';
+  if (reason.startsWith('ranch-')) return 'ranch';
+  if (reason === 'orchard-sapling' || reason === 'clinic' || reason === 'fortune') return reason;
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall', 'stock-fee'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall', 'stock-fee', 'voyage'].includes(reason)
   )
     return reason;
   return 'spend-other';
@@ -211,6 +216,9 @@ const DAY_SELL_KEYS = new Set([
   'sell-material',
   'sell-dish',
   'sell-fruit',
+  // 3단계: 닐라 목장's goods and 하쿠 과수원's fruit (itemSaleReason).
+  'sell-ranch',
+  'sell-orchard',
 ]);
 
 export function validateLedger(value: unknown): asserts value is LoungeLedger {

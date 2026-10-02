@@ -267,6 +267,10 @@ const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tag
   coop: shopArt('coop'),
   general: shopArt('general'),
   fishmarket: shopArt('fishmarket'),
+  barn: shopArt('barn'),
+  orchardShop: shopArt('orchardShop'),
+  smithy: shopArt('smithy'),
+  clinic: shopArt('clinic'),
   broker: shopArt('broker'),
   salon: { src: LOUNGE_ASSETS.wardrobe, alt: '그웬의 미용실', short: '미용실', tagline: '그웬과 오늘의 모습을 골라요', title: '미용실' },
   bank: {

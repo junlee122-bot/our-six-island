@@ -139,8 +139,9 @@ export const STOCKS: readonly StockDef[] = [
     down: ['허풍 카드 판이 뜸해', '주점 술통이 바닥났다', '허 선장 항해 이야기만 길어'],
   }),
   shop({
-    sym: 'forge', code: '900190', name: '대장간', keeper: '대장장이', p0: 7_700, float: 900,
-    g: ['sell-material'], s: ['tool'],
+    // 마을 대장간(도구 등급) and 산기슭 오른의 대장간(범위 강화, 오늘의 광석) are one smith's two shops.
+    sym: 'forge', code: '900190', name: '대장간', keeper: '오른', p0: 7_700, float: 900,
+    g: ['sell-material', 'smith-ore'], s: ['tool', 'smith'],
     up: ['대장간 별빛 도구 주문 늘어', '광산 깊은 층 광석 쏟아져', '대장간 새 화덕 들여'],
     down: ['숯이 모자라 화덕이 식어', '광석 값 약세', '대장간 망치 수리'],
   }),

@@ -519,8 +519,13 @@ const NPC_SPRITES_REALTY = ['shinhyungman', 'bongmison'];
 const NPC_SPRITES_3 = ['valkyrie'];
 // 범마을 증권 무잔 (broker-muzan-generation.json): the resident id is 'muzan' too.
 const NPC_SPRITES_BROKER = ['muzan'];
+// Stage-3 residents (stage3-npcs-generation.json): 목장 닐라, 과수원 하쿠,
+// 대장간 오른, 의원 메르시, 점쟁이 신이치. Their web copies' sizes and hashes are
+// written back into that record (`web`).
+const NPC_SPRITES_STAGE3 = ['nilah', 'haku', 'ornn', 'mercy', 'shinichi'];
 const NPC_ORIGINAL = { yanineko: 'yaninekko' };
-const NPC_SEED = { beatrice: 150, bocchi: 150 };
+// 오른's red beard and lavender skin sit close to the magenta key: only the near-pure ground floods.
+const NPC_SEED = { beatrice: 150, bocchi: 150, ornn: 150 };
 /** Head-and-shoulders square per NPC as fractions of the keyed full body (x centre, top, size). */
 const NPC_PORTRAITS = {
   nasera: { cx: 0.5, top: 0.02, size: 0.36 },
@@ -541,6 +546,11 @@ const NPC_PORTRAITS = {
   bongmison: { cx: 0.48, top: 0.01, size: 0.32 },
   valkyrie: { cx: 0.48, top: 0.025, size: 0.3 },
   muzan: { cx: 0.5, top: 0.02, size: 0.3 },
+  nilah: { cx: 0.49, top: 0.02, size: 0.3 },
+  haku: { cx: 0.5, top: 0.02, size: 0.3 },
+  ornn: { cx: 0.47, top: 0.03, size: 0.36 },
+  mercy: { cx: 0.5, top: 0.02, size: 0.3 },
+  shinichi: { cx: 0.5, top: 0.02, size: 0.3 },
 };
 // `fgM`: the magenta-ness of what the ground blends into. 0 suits outlines and
 // skin; 쓰레쉬's mint wisps sit near −120, so her glow unmixes to green.
@@ -624,7 +634,8 @@ function keyMagenta(data, width, height, fgM = 0, seed = 40, pocket = 200) {
   return out;
 }
 async function npcSprites() {
-  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_BROKER]) {
+  const stage3Web = {};
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_STAGE3, ...NPC_SPRITES_BROKER]) {
     if (!wanted(id)) continue;
     const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
@@ -647,6 +658,18 @@ async function npcSprites() {
       .webp({ quality: 88, alphaQuality: 100, effort: 6 })
       .toFile(portrait);
     console.log(`npc-${id}.png -> 660x990 .webp ${kb(fs.statSync(target).size)} · portrait ${kb(fs.statSync(portrait).size)}`);
+    if (NPC_SPRITES_STAGE3.includes(id)) {
+      const hash = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex').toUpperCase();
+      stage3Web[`npc-${id}.webp`] = { w: 660, h: 990, sha256: hash(target) };
+      stage3Web[`npc-${id}-portrait.webp`] = { w: 384, h: 384, sha256: hash(portrait) };
+    }
+  }
+  const record = path.join(assets, 'lounge/stage3-npcs-generation.json');
+  if (Object.keys(stage3Web).length && fs.existsSync(record)) {
+    const json = JSON.parse(fs.readFileSync(record, 'utf8'));
+    json.web = { ...json.web, ...stage3Web };
+    json.keying = 'scripts/optimize-assets.mjs npcs: flood key from the border (오른 with a higher seed for his red beard), unmix + despill, 660x990 sprite and a 384px head-and-shoulders portrait; chibi: figure at 94% of a 640px canvas with the feet on the 97% line (sizes and hashes in npc-chibi-generation.json web).';
+    fs.writeFileSync(record, JSON.stringify(json, null, 1) + '\n');
   }
 }
 // In-world chibi residents (npc-chibi-generation.json): two figures per 3:2
@@ -670,6 +693,12 @@ const CHIBI_FILES = [
   ['yaninekko'],
   ['shinhyungman', 'bongmison'],
   ['valkyrie'],
+  // Stage 3 (stage3-npcs-generation.json): one figure per original.
+  ['nilah'],
+  ['haku'],
+  ['ornn'],
+  ['mercy'],
+  ['shinichi'],
   ['lumi'],
   ['maehwa'],
   ['muzan'],
@@ -824,7 +853,7 @@ async function chibiSprites() {
     if (!fs.existsSync(source)) continue;
     const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
     const { width, height } = info;
-    const keyed = keyChibi(data, width, height, { green: CHIBI_GREEN.has(base), fgM: names.includes('thresh') ? -120 : 0, seed: CHIBI_GREEN.has(base) ? 60 : 40 });
+    const keyed = keyChibi(data, width, height, { green: CHIBI_GREEN.has(base), fgM: names.includes('thresh') ? -120 : 0, seed: CHIBI_GREEN.has(base) ? 60 : base === 'ornn' ? 150 : 40 });
     // Split two figures at the emptiest column between 40% and 60% of the width.
     let cut = width;
     if (names.length === 2) {

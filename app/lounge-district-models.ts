@@ -10,6 +10,8 @@ import { LOUNGE_MODELS, SHOP_MODELS, TAVERN_MODELS, VALLEY_MODELS } from './loun
 import type { MarketModel } from './lounge-market-layout';
 import type { HarborModel } from './lounge-harbor-layout';
 import type { HillsideModel } from './lounge-hillside-layout';
+import type { RanchModel } from './lounge-ranch-layout';
+import type { FoothillModel } from './lounge-foothill-layout';
 import type { DistrictId } from './lounge-districts';
 
 export const MARKET_MODEL_URLS: Record<MarketModel, string> = {
@@ -82,11 +84,56 @@ export const HILLSIDE_MODEL_URLS: Record<HillsideModel, string> = {
   hydrangea: LOUNGE_MODELS.hydrangea,
   noticeBoard: LOUNGE_MODELS.noticeBoard,
 };
+export const RANCH_MODEL_URLS: Record<RanchModel, string> = {
+  toolShed: VALLEY_MODELS.toolShed,
+  cottage: LOUNGE_MODELS.cottage,
+  cornerHouse: LOUNGE_MODELS.cornerHouse,
+  pavilion: VALLEY_MODELS.pavilion,
+  fruitTree: LOUNGE_MODELS.fruitTree,
+  ropeFence: VALLEY_MODELS.ropeFence,
+  picketFence: LOUNGE_MODELS.picketFence,
+  scarecrow: VALLEY_MODELS.scarecrow,
+  waterPump: VALLEY_MODELS.waterPump,
+  produceCrate: VALLEY_MODELS.produceCrate,
+  barrelRack: TAVERN_MODELS.barrelRack,
+  firewood: VALLEY_MODELS.firewood,
+  onggi: VALLEY_MODELS.onggi,
+  parkBench: LOUNGE_MODELS.parkBench,
+  gardenLantern: LOUNGE_MODELS.gardenLantern,
+  noticeBoard: LOUNGE_MODELS.noticeBoard,
+  broadleafTree: VALLEY_MODELS.broadleafTree,
+  smallPine: VALLEY_MODELS.smallPine,
+  shrub: VALLEY_MODELS.shrub,
+  meadowGrass: VALLEY_MODELS.meadowGrass,
+  valleyRocks: VALLEY_MODELS.valleyRocks,
+};
+export const FOOTHILL_MODEL_URLS: Record<FoothillModel, string> = {
+  forgeWorkshop: LOUNGE_MODELS.forgeWorkshop,
+  courtyardHouse: LOUNGE_MODELS.courtyardHouse,
+  cottage: LOUNGE_MODELS.cottage,
+  barrelRack: TAVERN_MODELS.barrelRack,
+  firewood: VALLEY_MODELS.firewood,
+  onggi: VALLEY_MODELS.onggi,
+  produceCrate: VALLEY_MODELS.produceCrate,
+  parkBench: LOUNGE_MODELS.parkBench,
+  gardenLantern: LOUNGE_MODELS.gardenLantern,
+  noticeBoard: LOUNGE_MODELS.noticeBoard,
+  smallPine: VALLEY_MODELS.smallPine,
+  broadleafTree: VALLEY_MODELS.broadleafTree,
+  shrub: VALLEY_MODELS.shrub,
+  graniteBoulder: VALLEY_MODELS.graniteBoulder,
+  valleyRocks: VALLEY_MODELS.valleyRocks,
+  volcanicRock: VALLEY_MODELS.volcanicRock,
+  stonePaver: VALLEY_MODELS.stonePaver,
+  hydrangea: LOUNGE_MODELS.hydrangea,
+};
 /** Every model a district needs (built districts only). */
 export const DISTRICT_MODEL_URLS: Partial<Record<DistrictId, readonly string[]>> = {
   market: [...new Set(Object.values(MARKET_MODEL_URLS))],
   harbor: [...new Set(Object.values(HARBOR_MODEL_URLS))],
   hillside: [...new Set(Object.values(HILLSIDE_MODEL_URLS))],
+  ranch: [...new Set(Object.values(RANCH_MODEL_URLS))],
+  foothill: [...new Set(Object.values(FOOTHILL_MODEL_URLS))],
 };
 export const DISTRICT_CACHE_SIZE = 2;
 

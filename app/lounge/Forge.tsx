@@ -1,5 +1,6 @@
 'use client';
-// 대장간 (성장 P1): 무쇠 아저씨's counter. Before 마을 개척 “대장간 재건” the
+// 대장간 (성장 P1): 오른's village workshop (the same smith as 산기슭 오른의 대장간,
+// design-npcs-stage3.md §2-3). Before 마을 개척 “대장간 재건” the
 // workshop is a ruin and the dialog shows the shared project (you can give
 // right here). Afterwards: the tool rack (↑↓ + Enter), dropping a tool off
 // (next day 06:00 KST; you keep working with the old one), picking it up with
@@ -92,8 +93,8 @@ export function ForgePanel({
             <Glyph name="anvil" size={22} />
             <span>
               지붕이 내려앉은 옛 공방이에요. 모루는 아직 멀쩡해 보여요. 마을
-              친구들이 범과 나무·돌을 모으면 대장장이 <b>무쇠 아저씨</b>가 다시
-              불을 지펴 준대요.
+              친구들이 범과 나무·돌을 모으면 대장장이 <b>오른</b>이 다시 불을
+              지펴 준대요.
             </span>
           </p>
           <ResearchBoard room={room} view={view} notify={notify} compact />
@@ -104,12 +105,12 @@ export function ForgePanel({
   const tool = tools[at] ?? tools[0];
   const job = g.forge;
   const say = lifted
-    ? `자, ${toolWord(lifted.tool, lifted.tier)}다! 손에 착 붙지?`
+    ? `${toolWord(lifted.tool, lifted.tier)}다. 손에 붙을 거다.`
     : job?.ready
-      ? `${josa(TOOL_INFO[job.tool].name, '이/가')} 다 됐다! 한번 쥐어 봐.`
+      ? `${josa(TOOL_INFO[job.tool].name, '이/가')} 다 됐다. 쥐어 봐.`
       : job
-        ? `${josa(TOOL_INFO[job.tool].name, '을/를')} 두드리는 중이야. 내일 아침 여섯 시에 와. 그동안은 쓰던 걸로 일하면 돼.`
-        : '어서 와. 뭐 두드려 줄까? 맡기면 다음 날 아침 여섯 시에 찾아가.';
+        ? `${josa(TOOL_INFO[job.tool].name, '을/를')} 두드리는 중이다. 내일 아침 여섯 시에 와. 그동안은 쓰던 걸로 해.`
+        : '왔나. 뭘 두드려 줄까. 맡기면 다음 날 아침 여섯 시에 찾아가.';
   const pickup = async () => {
     if (!job) return;
     const ok = await run(
@@ -145,7 +146,7 @@ export function ForgePanel({
   return (
     <>
       <Modal
-        title="대장간 · 무쇠 아저씨"
+        title="대장간 · 오른"
         onClose={onClose}
         className="l-forge l-growth"
         panel="plain"
@@ -167,7 +168,7 @@ export function ForgePanel({
                 <Glyph name="anvil" size={30} />
               </span>
               <span>
-                <b>무쇠 아저씨</b> {say}
+                <b>오른</b> {say}
               </span>
             </p>
             {lifted ? (

@@ -25,6 +25,7 @@ import {
   HILL_LOG,
   MINE_LIFT,
   REGIONS,
+  isDistrictArea,
   nearestExit,
   regionFromNetwork,
   regionToNetwork,
@@ -58,6 +59,9 @@ import { DistrictMinimap } from './lounge/DistrictMinimap';
 import { loungeAudio } from './lounge-audio';
 import { areaSurface } from './lounge-footsteps';
 import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto } from './lounge-map-doors';
+// 먼바다 낚싯배 (design-sea-fishing.md): the rails to fish from and the swell.
+import { DECK_RAILS, RAIL_REACH } from './lounge-voyage-data';
+import { SWELL_AMP, boatMotion } from './lounge-boat-model';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -87,8 +91,8 @@ export type AreaAction =
   | { kind: 'board'; label: string }
   /** A district counter (E at the door): 농협, 잡화점, 빵집, 신문사, 우체국, 파출소, 어시장, 낚시조합, 도서관, 좌판. */
   | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean; enter?: ShopArea }
-  /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot). */
-  | { kind: 'fish'; spot: 'breakwater' | 'pier'; label: string }
+  /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot); 먼바다: the boat's rails. */
+  | { kind: 'fish'; spot: 'breakwater' | 'pier' | 'offshore'; label: string }
   /** 친구에게 가기 signpost by each district's road out. */
   | { kind: 'signpost'; label: string };
 export type { DistrictCounter } from './lounge-district-counters';
@@ -124,17 +128,40 @@ export type AreaSceneProps = {
   fishing?: FishingFramePhase | null;
   /** 설정 → 낮밤 변화 (false: always lit like noon). */
   dayNight?: boolean;
+  /** 먼바다: the deck holds still (멀미약 taken today). */
+  steady?: boolean;
+  /** 항구: a voyage is out (the moored boat is gone) and 허 선장 waits at the pier. */
+  harborBoat?: { out: boolean; captain: boolean };
+  /** 먼바다: a big catch just landed (its time): the fish jumps once by the bobber. */
+  bigCatch?: number;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
 
-export function AreaScene({ area, spawn, players, self, me, regions, clockOffset, axeTier, paused = false, fishing = null, dayNight = true, onMove, onAction }: AreaSceneProps) {
+export function AreaScene({
+  area,
+  spawn,
+  players,
+  self,
+  me,
+  regions,
+  clockOffset,
+  axeTier,
+  paused = false,
+  fishing = null,
+  dayNight = true,
+  steady = false,
+  harborBoat,
+  bigCatch = 0,
+  onMove,
+  onAction,
+}: AreaSceneProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const labelsRef = useRef(new Map<string, HTMLElement>());
   const labelLayerRef = useRef<HTMLDivElement>(null);
   /** Where residents are drawn right now (talk reach). */
   const residentsRef = useRef<{ id: NpcId; x: number; z: number }[]>([]);
-  const districtId = area === 'market' || area === 'harbor' || area === 'hillside' ? area : null;
+  const districtId = isDistrictArea(area) ? area : null;
   const [loadPct, setLoadPct] = useState(() => (districtId ? districtProgress(districtId) : 1));
   useEffect(() => {
     if (!districtId || loadPct >= 1) return;
@@ -179,9 +206,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     target: null as WalkPoint | null,
     lastSent: { x: NaN, z: NaN },
   });
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight });
+  const boatOut = !!harborBoat?.out,
+    captainHere = !!harborBoat?.captain;
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -248,7 +277,12 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const d = Math.hypot(p.x - r.x, p.z - r.z);
       if (d <= RESIDENT_REACH) found.push({ d: d - 0.3, a: { kind: 'npc', npc: r.id, label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` } });
     }
-    if (s.area === 'market' || s.area === 'harbor' || s.area === 'hillside') {
+    if (s.area === 'offshore')
+      for (const r of DECK_RAILS) {
+        const d = Math.hypot(p.x - r.x, p.z - r.z);
+        if (d <= RAIL_REACH) found.push({ d, a: { kind: 'fish', spot: 'offshore', label: r.label } });
+      }
+    if (isDistrictArea(s.area)) {
       const now = Date.now() + s.clockOffset;
       const weekday = new Date(now + 9 * 3_600_000).getUTCDay();
       for (const c of districtCounters(s.area, weekday)) {
@@ -337,6 +371,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     // A district's own day and night (the hub's palettes, lounge-village-life.ts).
     let lastDay = -1e9,
       night = false,
+      weather = weatherOf(kstDayOf(Date.now() + latest.current.clockOffset)),
       tint = new THREE.Color('#ffffff');
     const applyDay = (t: number) => {
       if (!light?.dayCycle || t - lastDay < 2000) return false;
@@ -347,6 +382,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       applyVillageLight({ hemi, sun }, renderer, pal, weatherOf(kstDayOf(now)), light);
       night = pal.lamps > 0.5;
       tint = villageFigureTint(pal.lamps);
+      weather = weatherOf(kstDayOf(now));
+      set.offshore?.setLook({ sky: pal.sky, sun: pal.sun, lamps: pal.lamps, phase: pal.phase, weather, low: !quality.effects, swell: SWELL_AMP[weather] });
       // The district's piece and bed follow its own clock (night variant, crickets).
       loungeAudio.setScene({ village: false, night });
       return true;
@@ -374,6 +411,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         lift: !!s.regions?.mine.lift,
         marketDay: marketDayNow(),
         night,
+        boatOut: s.boatOut,
+        captain: s.captainHere,
       });
       dirty = true;
     };
@@ -436,6 +475,8 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
     // Figures: sprite canvases on camera-facing planes (the village's look).
     // An upright plane stretched by 1 / cos(pitch) projects exactly like a
     // camera-facing one but never leans back into a wall behind it (구역 공통 규격).
+    // 먼바다: friends stand on the boat, so they ride its swell.
+    const carrier: THREE.Object3D = set.offshore?.ship ?? scene;
     const planeH = (FIGURE_HEIGHT * FIGURE_H) / FIGURE_BODY_H;
     const figureGeo = new THREE.PlaneGeometry(planeH * (FIGURE_W / FIGURE_H), planeH / Math.cos(PITCH));
     figureGeo.translate(0, (planeH / Math.cos(PITCH)) * 0.47, 0);
@@ -455,11 +496,11 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       mesh.rotation.set(0, 0, 0);
       const shadow = new THREE.Mesh(shadowGeo, shadowMat);
       shadow.rotation.x = -Math.PI / 2;
-      scene.add(mesh, shadow);
+      carrier.add(mesh, shadow);
       return { canvas: c, texture, mesh, shadow, actor, look: lk, pos: { ...at }, locomotion: { phase: 0, facing: 1 }, motion: 'idle', drawnAt: -1000 };
     };
     const dropFigure = (f: Figure) => {
-      scene.remove(f.mesh, f.shadow);
+      carrier.remove(f.mesh, f.shadow);
       (f.mesh.material as THREE.Material).dispose();
       f.texture.dispose();
     };
@@ -621,7 +662,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
         for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
         residents?.setTint(tint);
       }
-      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow()]);
+      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere]);
       if (key !== stateKey) {
         stateKey = key;
         applyState();
@@ -657,7 +698,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           break;
         }
         // Shop doors face the street (+z): walking up into one at its door goes in.
-        if (s.area === 'market' || s.area === 'harbor')
+        if (isDistrictArea(s.area) && s.area !== 'hillside')
           for (const c of districtCounters(s.area, 1)) {
             if (c.a.kind !== 'counter' || !c.a.enter || t - lastWalkInto <= LOCKED_NOTICE_MS) continue;
             const doorway = { x: c.x, z: c.z - 1, stand: { x: c.x, z: c.z }, reach: c.reach };
@@ -697,6 +738,24 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       if (moved > 0) dirty = true;
       lantern.position.set(l.point.x, 1.8, l.point.z + 0.4);
       if (follow(l.point, false, dt)) dirty = true;
+      if (set.offshore) {
+        // The swell: the boat and everyone on it roll, pitch and heave; the camera
+        // takes half (멀미 방지), nothing with a 멀미약 or reduced motion.
+        const amp = s.steady || reduced.matches ? 0 : SWELL_AMP[weather];
+        const m = boatMotion(t, amp);
+        set.offshore.ship.rotation.set(m.pitch, 0, m.roll);
+        set.offshore.ship.position.y = m.heave;
+        camera.position.y += m.heave * 0.5;
+        camera.rotateZ(m.roll * 0.5);
+        set.offshore.onCamera(camera, scene);
+        // My line from the nearest rail while the fishing window is open.
+        let rail: (typeof DECK_RAILS)[number] | null = null;
+        for (const r of DECK_RAILS) if (!rail || Math.hypot(l.point.x - r.x, l.point.z - r.z) < Math.hypot(l.point.x - rail.x, l.point.z - rail.z)) rail = r;
+        set.offshore.setFishing(s.fishing, rail, t);
+        set.offshore.jump(s.bigCatch, t);
+        // The sea moves all the time (low graphics: about 30 frames a second).
+        if (quality.effects || t - lastRender > 33) dirty = true;
+      }
       const moving = moved > 0.0005;
       if (moving && !s.paused) loungeAudio.footstep(l.shift, areaSurface(s.area, l.point));
       if ((moving && t - lastSend > 180) || (!moving && wasMoving)) {

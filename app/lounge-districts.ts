@@ -1,14 +1,16 @@
 // The five new districts around the hub (handover/design/design-village-2x-npcs.md
 // §2): each one is a separate map behind a gate on the hub's rim, like 뒷산
 // behind the north gate. ① 시장 거리 is open from the start; stage 2 builds
-// ② 항구 구역 and ③ 언덕 주택가, which open by a village goal (the server keeps
-// the result as a village flag, lounge-district-unlocks.ts); ④ and ⑤ stand
-// locked with a sign that says what will open them. Pure data; the gates are
+// ② 항구 구역 and ③ 언덕 주택가, stage 3 ④ 목장·과수원 and ⑤ 산기슭 마을
+// (design-npcs-stage3.md); each opens by a village goal (the server keeps the
+// result as a village flag, lounge-district-unlocks.ts) and its gate stands
+// locked with a sign that says what will open it. Pure data; the gates are
 // in hub (village) coordinates, the maps themselves are regions in
 // lounge-areas.ts.
 
 export type DistrictId = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
 export const DISTRICT_IDS: readonly DistrictId[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export const isDistrictId = (a: unknown): a is DistrictId => typeof a === 'string' && (DISTRICT_IDS as readonly string[]).includes(a);
 
 /** How a district opens (design doc §2 "구역 해금"). */
 export type DistrictUnlock =
@@ -94,18 +96,19 @@ export const DISTRICTS: Record<DistrictId, District> = {
     id: 'ranch',
     no: 4,
     name: '목장·과수원',
-    tagline: '목장 · 과수원 · 동물병원',
+    tagline: '닐라 목장 · 강물 과수원 · 개울과 원두막',
     size: { w: 60, d: 50 },
     stage: 3,
     gate: { x: 40, z: -43.4, stand: { x: 40, z: -42 }, reach: 1.9, road: '들길', rot: 0 },
-    unlock: { kind: 'research', project: 'P3' },
-    hint: '마을 개척 연구 3단계(과수원·목장)를 마치면 들길이 열려요.',
+    // The village research 'orchardHill' (V4 들길 개간, lounge-growth-data.ts RESEARCH).
+    unlock: { kind: 'research', project: 'orchardHill' },
+    hint: '마을 개척 연구 “들길 개간”을 마치면 들길이 열려요.',
   },
   foothill: {
     id: 'foothill',
     no: 5,
     name: '산기슭 마을',
-    tagline: '대장간 · 의원 · 온천 입구',
+    tagline: '오른의 대장간 · 메르시 의원 · 광산 입구 · 점집',
     size: { w: 50, d: 44 },
     stage: 3,
     gate: { x: -20, z: -43.4, stand: { x: -20, z: -42 }, reach: 1.9, road: '산길', rot: 0 },
@@ -114,14 +117,19 @@ export const DISTRICTS: Record<DistrictId, District> = {
   },
 };
 
-/** Districts with a map (stage 2 adds the harbor and the hillside); the rest stay shut. */
-export const BUILT_DISTRICTS: readonly DistrictId[] = ['market', 'harbor', 'hillside'];
+/** Districts with a map (stage 2 adds the harbor and the hillside, stage 3 the ranch and the foothill). */
+export const BUILT_DISTRICTS: readonly DistrictId[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
 export const districtBuilt = (id: DistrictId) => BUILT_DISTRICTS.includes(id);
 /**
  * The village flag (world.life.flags) the server sets the moment a
  * district's goal is reached; once set it never closes again.
  */
-export const DISTRICT_FLAG: Partial<Record<DistrictId, string>> = { harbor: 'district-harbor', hillside: 'district-hillside' };
+export const DISTRICT_FLAG: Partial<Record<DistrictId, string>> = {
+  harbor: 'district-harbor',
+  hillside: 'district-hillside',
+  ranch: 'district-ranch',
+  foothill: 'district-foothill',
+};
 
 export type DistrictCtx = {
   /** Village flags (the server's record of opened districts). */
@@ -132,7 +140,9 @@ export type DistrictCtx = {
   fishSpecies?: number;
   /** Stage-1 residents some friend is 친한 사이 with. */
   residentFriends?: number;
+  /** The deepest mine floor any friend has reached. */
   mineDeep?: number;
+  /** Finished village research (their flags). */
   research?: readonly string[];
 };
 /** Whether a district's rule is met right now (the goal itself, not the flag). */
@@ -208,4 +218,22 @@ export function nearestDistrictGate(p: { x: number; z: number }, radius?: number
     if (d <= (radius ?? DISTRICTS[id].gate.reach) && (!best || d < best.distance)) best = { id, distance: d };
   }
   return best;
+}
+
+/** "박물관 물고기 7/12종" — a locked gate's progress line from the life view's goals (lounge-district-unlocks.ts). */
+export function goalProgressText(id: DistrictId, goals: Partial<Record<DistrictId, { have: number; need: number }>>): string {
+  const g = goals[id];
+  if (!g) return '';
+  switch (id) {
+    case 'harbor':
+      return `박물관 물고기 ${Math.min(g.have, g.need)}/${g.need}종`;
+    case 'hillside':
+      return `친한 주민 ${Math.min(g.have, g.need)}/${g.need}명`;
+    case 'ranch':
+      return g.have >= g.need ? '들길 개간 완료' : '들길 개간 연구 전';
+    case 'foothill':
+      return `광산 ${Math.min(g.have, g.need)}/${g.need}층`;
+    case 'market':
+      return '';
+  }
 }
