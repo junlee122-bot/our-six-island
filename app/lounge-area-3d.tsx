@@ -131,6 +131,8 @@ export type AreaSceneProps = {
   steady?: boolean;
   /** 항구: a voyage is out (the moored boat is gone) and 허 선장 waits at the pier. */
   harborBoat?: { out: boolean; captain: boolean };
+  /** 먼바다: a big catch just landed (its time): the fish jumps once by the bobber. */
+  bigCatch?: number;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
@@ -149,6 +151,7 @@ export function AreaScene({
   dayNight = true,
   steady = false,
   harborBoat,
+  bigCatch = 0,
   onMove,
   onAction,
 }: AreaSceneProps) {
@@ -204,9 +207,9 @@ export function AreaScene({
   });
   const boatOut = !!harborBoat?.out,
     captainHere = !!harborBoat?.captain;
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere });
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -744,6 +747,11 @@ export function AreaScene({
         camera.position.y += m.heave * 0.5;
         camera.rotateZ(m.roll * 0.5);
         set.offshore.onCamera(camera, scene);
+        // My line from the nearest rail while the fishing window is open.
+        let rail: (typeof DECK_RAILS)[number] | null = null;
+        for (const r of DECK_RAILS) if (!rail || Math.hypot(l.point.x - r.x, l.point.z - r.z) < Math.hypot(l.point.x - rail.x, l.point.z - rail.z)) rail = r;
+        set.offshore.setFishing(s.fishing, rail, t);
+        set.offshore.jump(s.bigCatch, t);
         // The sea moves all the time (low graphics: about 30 frames a second).
         if (quality.effects || t - lastRender > 33) dirty = true;
       }

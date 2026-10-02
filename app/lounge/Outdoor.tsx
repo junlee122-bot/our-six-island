@@ -26,6 +26,7 @@ import type { FishingFramePhase } from '../lounge-fishing-frames';
 import type { ShopArea } from '../lounge-shop-interiors';
 import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
 import { kstHourOf } from '../lounge-voyage-data';
+import { FISH_BY_ID } from '../lounge-items';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -311,6 +312,9 @@ export function useOutdoor({
     const voyage = view.life?.voyage;
     const hour = kstHourOf(Date.now() + view.clockOffset);
     const harborBoat = voyage ? { out: voyage.sailing.length > 0, captain: !voyage.storm && hour >= 5 && hour < 19 } : undefined;
+    // A big fish (rare or better) just landed out at sea: it jumps once by the bobber.
+    const last = view.life?.angling?.me.last;
+    const bigCatch = outdoor.area === 'offshore' && last?.ok && last.fish && (FISH_BY_ID[last.fish]?.weight ?? 99) < 10 ? last.at : 0;
     return (
       <div className="l-village-world">
         <Suspense
@@ -335,6 +339,7 @@ export function useOutdoor({
             fishing={fishing}
             dayNight={dayNight}
             steady={!!voyage?.pillUntil}
+            bigCatch={bigCatch}
             harborBoat={harborBoat}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });

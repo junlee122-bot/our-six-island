@@ -15,6 +15,7 @@ import { WATERCRAFT_MODELS, type WatercraftModel } from './lounge-model-assets';
 import { buildFishingBoat, type FishingBoat } from './lounge-boat-model';
 import { DISTRICT_FONT } from './lounge-district-kit';
 import type { Weather } from './lounge-calendar';
+import type { FishingFramePhase } from './lounge-fishing-frames';
 
 /** The water line in world units (the deck is y = 0). */
 export const SEA_Y = -0.9;
@@ -137,6 +138,16 @@ export class OffshoreSet {
   private owned: { dispose: () => void }[] = [];
   private look: OffshoreLook | null = null;
   private disposed = false;
+  // Fishing from a rail: the line, the bobber on the swell, a splash ring and a big fish's jump.
+  private line: THREE.Line;
+  private bobber: THREE.Mesh;
+  private splash: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  private jumper: THREE.Mesh;
+  private cast: { phase: FishingFramePhase; x: number; z: number; side: number; since: number } | null = null;
+  private splashAt = -1e9;
+  private jumpAt = -1e9;
+  private jumpKey = 0;
+  private tip = new THREE.Vector3();
 
   constructor() {
     this.root.name = 'offshore';
@@ -179,6 +190,90 @@ export class OffshoreSet {
     this.root.add(this.gulls);
     this.swimmers = [this.makeDolphins(), this.makeWhale()];
     for (const s of this.swimmers) this.root.add(s.group);
+    const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const lineMat = new THREE.LineBasicMaterial({ color: '#f4f1e8', transparent: true, opacity: 0.85 });
+    this.line = new THREE.Line(lineGeo, lineMat);
+    this.line.frustumCulled = false;
+    const bobGeo = new THREE.SphereGeometry(0.11, 10, 8);
+    const bobMat = new THREE.MeshStandardMaterial({ color: '#e8452f', emissive: '#5a120a', roughness: 0.4 });
+    this.bobber = new THREE.Mesh(bobGeo, bobMat);
+    const ringGeo = new THREE.RingGeometry(0.2, 0.32, 24);
+    ringGeo.rotateX(-Math.PI / 2);
+    const ringMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0 });
+    this.splash = new THREE.Mesh(ringGeo, ringMat);
+    const fishGeo = new THREE.SphereGeometry(0.35, 12, 8);
+    const fishMat = new THREE.MeshStandardMaterial({ color: '#b9c7d2', metalness: 0.4, roughness: 0.35 });
+    this.jumper = new THREE.Mesh(fishGeo, fishMat);
+    this.jumper.scale.set(0.45, 0.5, 1.8);
+    for (const o of [this.line, this.bobber, this.splash, this.jumper]) {
+      o.visible = false;
+      this.root.add(o);
+    }
+    this.owned.push(lineGeo, lineMat, bobGeo, bobMat, ringGeo, ringMat, fishGeo, fishMat);
+  }
+
+  /**
+   * What the angler on the deck is doing (the fishing window's phase) and at
+   * which rail (x, z, side −1 port / +1 starboard); null when nobody fishes.
+   */
+  setFishing(phase: FishingFramePhase | null, rail: { x: number; z: number; side: number } | null, t: number) {
+    if (!phase || !rail || !rail.side) {
+      this.cast = null;
+      return;
+    }
+    if (!this.cast || this.cast.x !== rail.x || this.cast.z !== rail.z || (this.cast.phase !== phase && phase === 'casting')) this.cast = { phase, ...rail, since: t };
+    else if (this.cast.phase !== phase) {
+      if (phase === 'bite' || phase === 'fight') this.splashAt = t;
+      this.cast = { ...this.cast, phase, since: t };
+    }
+  }
+  /** A big catch jumps once out of the water by the bobber (`key` changes per catch). */
+  jump(key: number, t: number) {
+    if (!key || key === this.jumpKey) return;
+    this.jumpKey = key;
+    this.jumpAt = t;
+    this.splashAt = t;
+  }
+  private fishTick(t: number) {
+    const c = this.cast;
+    const show = !!c && c.phase !== 'result';
+    this.line.visible = this.bobber.visible = show;
+    const s = t / 1000;
+    let bx = 0,
+      bz = 0;
+    if (c) {
+      // Rod tip over the rail (ship space → world), the bobber three units out on the water.
+      this.tip.set(c.x + c.side * 1.95, 2.05, c.z + 0.5);
+      this.ship.localToWorld(this.tip);
+      bx = c.x + c.side * 4.2;
+      bz = c.z + 0.6;
+      const k = c.phase === 'casting' ? Math.min(1, (t - c.since) / 600) : 1;
+      const swell = Math.sin(s * 1.7 + bx) * 0.07 + Math.sin(s * 2.9) * 0.03;
+      const dip = c.phase === 'bite' ? -0.16 + Math.sin(s * 20) * 0.04 : c.phase === 'fight' || c.phase === 'reeling' ? Math.sin(s * 9) * 0.08 - 0.08 : 0;
+      const jerk = c.phase === 'fight' ? Math.sin(s * 6.3) * 0.35 : 0;
+      const x = this.tip.x + (bx + jerk - this.tip.x) * k,
+        z = this.tip.z + (bz - this.tip.z) * k,
+        y = this.tip.y + (SEA_Y + 0.05 + swell + dip - this.tip.y) * k + Math.sin(k * Math.PI) * 1.2;
+      this.bobber.position.set(x, y, z);
+      const pos = this.line.geometry.attributes.position as THREE.BufferAttribute;
+      pos.setXYZ(0, this.tip.x, this.tip.y, this.tip.z);
+      pos.setXYZ(1, x, y, z);
+      pos.needsUpdate = true;
+    }
+    const sp = (t - this.splashAt) / 900;
+    this.splash.visible = sp >= 0 && sp < 1 && !!c;
+    if (this.splash.visible) {
+      this.splash.position.set(this.bobber.position.x, SEA_Y + 0.06, this.bobber.position.z);
+      this.splash.scale.setScalar(1 + sp * 2.4);
+      this.splash.material.opacity = 0.8 * (1 - sp);
+    }
+    const j = (t - this.jumpAt) / 1400;
+    this.jumper.visible = j >= 0 && j < 1 && !!c;
+    if (this.jumper.visible && c) {
+      const arc = Math.sin(j * Math.PI);
+      this.jumper.position.set(bx + c.side * (j - 0.5) * 1.6, SEA_Y + arc * 1.6, bz);
+      this.jumper.rotation.set(0, Math.PI / 2, -c.side * (j - 0.5) * 2.4);
+    }
   }
 
   // ---------------------------------------------------------- pieces
@@ -435,6 +530,7 @@ export class OffshoreSet {
       this.rain.position.y = -((s * (this.look?.weather === 'snow' ? 1.2 : 9)) % 10) + 5;
     }
     for (const sw of this.swimmers) this.swim(sw, t);
+    this.fishTick(t);
   }
   private swim(sw: Swimmer, t: number) {
     if (this.look?.low && sw.kind === 'whale') return;

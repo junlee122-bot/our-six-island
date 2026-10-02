@@ -126,6 +126,7 @@ const COUNTER_SHORT: Record<string, string> = {
   fishmarket: '어시장',
   guild: '낚시조합',
   library: '도서관',
+  voyage: '먼바다 배',
 };
 
 /** Houses and buildings with no counter (언덕's residents' homes). */
