@@ -160,7 +160,25 @@ async function runView(browser, base, view, report) {
     await sleep(900);
     return ok;
   };
+  // 우리 농장: out a district (the farm, where my room's door opens) by its road home.
+  const leaveDistrict = async () => {
+    const area = await js(() => document.querySelector('[data-testid=area-3d]')?.dataset.area ?? '');
+    if (!area) return;
+    const exits = { farm: { x: 0, z: 30 }, market: { x: -26, z: -3 } };
+    const at = exits[area];
+    if (!at) return;
+    await closeAll();
+    await js((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), at);
+    await until((p) => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 1;
+    }, 120000, at);
+    await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+    await page.keyboard.press('KeyE');
+    await until(() => !document.querySelector('[data-testid=area-3d]'), 30000);
+  };
   const returnToVillage = async () => {
+    await leaveDistrict();
     for (let i = 0; i < 4 && (await js(() => document.querySelector('main.l-app')?.dataset.space)) !== 'village'; i++) {
       await closeAll();
       await focusScene();
@@ -259,6 +277,25 @@ async function runView(browser, base, view, report) {
     if (!(await menu(/^주민 수첩$/))) throw new Error('주민 수첩 메뉴를 찾지 못했습니다.');
     await until(() => !!document.querySelector('dialog[open] [data-testid="npc-lumi"]') && !!document.querySelector('dialog[open] [data-testid="npc-maehwa"]'), 15000);
     await snap('npc');
+  });
+
+  // 우리 농장: out of my room I stand in front of my own house on the farm.
+  await step('farm', async () => {
+    await closeAll();
+    await focusScene();
+    await page.keyboard.press('Escape');
+    await sleep(700);
+    if (!(await H.clickText(/마을로 나가기/, 'dialog[open] button'))) { await closeAll(); await H.clickText(/^나가기/); }
+    assert.notEqual(await until(() => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.area === 'farm' && d.loadState === 'ready';
+    }, 180000), -1, '우리 농장을 불러오지 못했습니다.');
+    await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+    await sleep(6000);
+    await snap('farm');
+    const pins = await js(() => [...document.querySelectorAll('[data-minimap-area="farm"] [data-minimap-place]')].map((e) => e.getAttribute('data-minimap-place')));
+    for (const id of ['home-0', 'home-3', 'bin', 'board', 'exit-village'])
+      assert.ok(pins.includes(id), `우리 농장 미니맵에 ${id} 자리가 없습니다.`);
   });
 
   // village

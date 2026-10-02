@@ -202,7 +202,7 @@ function keeperOf(area: ShopArea) {
 function extraPlaces(area: OutdoorArea): MiniPlace[] {
   if (area === 'farm')
     return [
-      ...FARM_HOUSES.map((h) => ({ id: `home-${h.actor}`, label: `${ACTORS[h.actor]}네`, title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: true })),
+      ...FARM_HOUSES.map((h) => ({ id: `home-${h.actor}`, label: `${ACTORS[h.actor]}네`, title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false })),
       { id: 'bin', label: '출하함', title: '출하함 앞으로 걸어가기', kind: 'place', x: FARM_BIN.x, z: FARM_BIN.z, go: { ...FARM_BIN.front }, named: true },
       { id: 'board', label: '게시판', title: '농장 게시판 앞으로 걸어가기', kind: 'board', x: FARM_BOARD.front.x, z: FARM_BOARD.front.z - BOARD_LIFT, go: { ...FARM_BOARD.front }, named: true },
       { id: 'mailbox', label: '우체통', title: '우체통 앞으로 걸어가기', kind: 'place', x: FARM_MAILBOX.x, z: FARM_MAILBOX.z, go: { ...FARM_MAILBOX.front }, named: false },

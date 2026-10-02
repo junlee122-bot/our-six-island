@@ -76,7 +76,7 @@ import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESI
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { BUILT_DISTRICTS, DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, goalProgressText, type DistrictId } from './lounge-districts';
-import { VILLAGE_GATE } from './lounge-areas';
+import { REGIONS, VILLAGE_GATE } from './lounge-areas';
 import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto, type Doorway } from './lounge-map-doors';
 import { prefetchDistrict } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
@@ -3022,7 +3022,8 @@ export function Village3D(props: Props) {
                       data-named={String(open || miniExpanded)} data-nearest="false"
                       style={{ left: `${((pin.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((pin.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                       onClick={() => controls.current?.visit(d.gate.stand)} aria-label={`${d.name}${open ? '' : ' (아직 닫힘)'} 입구로 걸어가기`}>
-                      <span aria-hidden="true">{open ? d.name : `${d.name} · 닫힘`}</span>
+                      {/* The north gates sit close together: the compact map uses the short names. */}
+                      <span aria-hidden="true">{open ? (miniExpanded ? d.name : REGIONS[id].short) : `${miniExpanded ? d.name : REGIONS[id].short} · 닫힘`}</span>
                     </button>
                   );
                 })}
