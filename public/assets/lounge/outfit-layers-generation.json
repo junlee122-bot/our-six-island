@@ -1,7 +1,12 @@
 {
   "model": "gpt_image_2_5",
   "createdAt": "2026-10-02",
-  "params": { "quality": "high", "resolution": "2k", "aspect_ratio": "3:2", "count": 1 },
+  "params": {
+    "quality": "high",
+    "resolution": "2k",
+    "aspect_ratio": "3:2",
+    "count": 1
+  },
   "estimatedCreditsEach": 2.75,
   "purpose": "Trial of the layered character look (head from the existing art, shared bodies, outfits drawn once per body type). Not wired into the game.",
   "reference": "akatsuki-atlas.png (style, proportions, pose)",
@@ -9,11 +14,46 @@
     {
       "file": "_originals/outfit-layers/bodies-knit-trial.png",
       "jobId": "fdadf061-2c6f-40a9-a41b-2ecf6852cbe2",
-      "cells": ["slim body (도원, 민서, 도원 buns)", "regular body (강재, 승준, 민재, 재민, 호현)"],
+      "cells": [
+        "slim body (도원, 민서, 도원 buns)",
+        "regular body (강재, 승준, 민재, 재민, 호현)"
+      ],
       "outfit": "mustard cable-knit sweater with a white collar, brown corduroy wide trousers, brown loafers",
       "prompt": "Two front-facing chibi body templates on magenta in the reference sheet's style and pose, slim and regular, each with a blank bald mannequin head (replaced in compositing), wearing the same mustard knit sweater, brown corduroy trousers and loafers."
+    },
+    {
+      "file": "_originals/outfit-layers/face-bases-trial.png",
+      "jobId": "1e9d7010-4bd5-4b03-ac10-fb0234779862",
+      "cells": [
+        "도원",
+        "강재",
+        "민서",
+        "승준",
+        "민재",
+        "재민",
+        "호현",
+        "blank mannequin head"
+      ],
+      "prompt": "4x2 sheet of the seven friends' faces from the reference, completely bald (forehead, skull and both ears visible), same size and position per cell, plus a blank mannequin head; magenta background."
+    },
+    {
+      "file": "_originals/outfit-layers/hairstyles-trial.png",
+      "jobId": "e5169fd3-84e5-44a2-96b5-826be12ad78d",
+      "cells": [
+        "bob with full bangs",
+        "shoulder wavy center part",
+        "waist-long straight with bangs",
+        "short textured two-block",
+        "chin-length center part behind ears",
+        "short messy fringe",
+        "short swept-back side part",
+        "double buns with cream ribbons"
+      ],
+      "prompt": "4x2 sheet of the reference sheet's eight hairstyles on one blank mannequin head, all hair in the royal-blue dye key; magenta background."
     }
   ],
   "compose": "scripts/outfit-layers/trial-compose.py: heads cut just under the chin from akatsuki-atlas.png (hair keyed blue kept below the chin, old collar removed), body scaled to each friend's original height and torso width, hair dyed and skin toned by mask.",
-  "preview": "_originals/outfit-layers/trial-sheet.webp (row 1 original, row 2 same heads on the shared knit body, row 3 skin tones and hair colours)"
+  "preview": "_originals/outfit-layers/trial-sheet.webp (row 1 original, row 2 same heads on the shared knit body, row 3 skin tones and hair colours)",
+  "compose_layers": "scripts/outfit-layers/trial-layers.py: body (mannequin head removed) -> bald face base -> hairstyle (mannequin skin and jaw line removed, scaled x1.16 and raised to fit the face bases) -> hair dye and skin tone by mask.",
+  "preview_layers": "_originals/outfit-layers/layers-sheet.webp (row 1 own hairstyles, row 2 swapped hairstyles and colours, row 3 skin tones)"
 }
