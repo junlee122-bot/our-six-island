@@ -83,10 +83,16 @@ for i in range(8):
         al[chin_local + 4:] = 0
         rr, gg, bb = bc[..., 0], bc[..., 1], bc[..., 2]
         sk = (rr > 190) & (gg > 150) & (bb > 115) & (rr > bb + 20)
-        red = (rr > gg + 60) & (rr > bb + 40) & ~sk
-        drk = (rr + gg + bb) < 200
-        zone = np.zeros(al.shape, bool); zone[max(chin_local - 60, 0):] = True
-        al[zone & (red | (drk & ~binary_dilation(sk, iterations=3)))] = 0
+        # head silhouette below the eyes: the skin (face, ears, neck) and the outline hugging it
+        from scipy.ndimage import binary_fill_holes
+        lab_s, ns = label(sk)
+        cy_local = chin_local - 60; cx_local = m['fcx'] - (x0 - cx0)
+        core = lab_s == lab_s[cy_local, cx_local] if lab_s[cy_local, cx_local] else sk
+        sil = binary_dilation(binary_fill_holes(binary_dilation(core | (sk & binary_dilation(core, iterations=12)), iterations=2)), iterations=3)
+        eye_local = int(chars_eye_y) if False else chin_local - 200
+        below = np.zeros(al.shape, bool); below[eye_local:] = True
+        al[below & ~sil] = 0
+        al[chin_local + 3:] = 0
         face = Image.new('RGBA', (cw, ch), (0, 0, 0, 0))
         face.alpha_composite(rgba(bc, al), (x0 - cx0, y0 - cy0))
         face_img = face
@@ -103,9 +109,9 @@ for half in (0, 1):
     white = (r > 235) & (g > 235) & (b > 235)
     ys, xs = np.where(fg); cx = int(np.median(xs[ys < ys.min() + 200]))
     collar = int(np.where(white[:, cx - 25:cx + 25].sum(1) > 10)[0].min())
-    cut = collar - 14
+    cut = collar - 34
     al = fg.astype(float); al[:cut] = 0
-    bodies.append(dict(img=rgba(c, al), cut=cut, feet=int(ys.max()), cx=cx))
+    bodies.append(dict(img=rgba(c, al), cut=cut, feet=int(ys.max()), cx=cx, collar=collar))
 
 def width_at(mask, y, cx):
     row = np.where(mask[y])[0]; row = row[np.abs(row - cx) < 260]
@@ -113,13 +119,13 @@ def width_at(mask, y, cx):
 
 def place_body(out, ci, bi):
     c, bd = chars[ci], bodies[bi]
-    s = (c['feet'] - c['chin']) / (bd['feet'] - bd['cut'] - 14)
+    s = (c['feet'] - c['chin'] - 14) / (bd['feet'] - bd['collar'])
     ow = np.median([width_at(c['torso'], c['chin'] + d, c['fcx']) for d in range(150, 260, 10)])
     bm = np.asarray(bd['img'])[..., 3] > 0
-    bwid = np.median([width_at(bm, int(bd['cut'] + 14 + d / s), bd['cx']) for d in range(150, 260, 10)])
+    bwid = np.median([width_at(bm, int(bd['collar'] + d / s), bd['cx']) for d in range(150, 260, 10)])
     sx = min(max(ow / bwid, s), s * 1.35)
     im = bd['img'].resize((int(bd['img'].width * sx), int(bd['img'].height * s)), Image.LANCZOS)
-    out.alpha_composite(im, (int(c['fcx'] - bd['cx'] * sx), int(c['chin'] - 12 - bd['cut'] * s)))
+    out.alpha_composite(im, (int(c['fcx'] - bd['cx'] * sx), int(c['chin'] + 14 - bd['collar'] * s)))
 
 def place_hair(out, fi, hi):
     # move hair of hi onto the face of fi by matching eye centres and eye spacing
@@ -173,3 +179,12 @@ for ri, row in enumerate([r0, r1, r2, r3]):
         im = im.crop(im.getbbox()); im.thumbnail((T - 20, 390), Image.LANCZOS)
         sheet.paste(im, (j * T + (T - im.width) // 2, ri * 400 + 395 - im.height), im)
 sheet.save(f'{S}/layers2-sheet.png'); print('ok')
+
+if len(sys.argv) > 2 and sys.argv[2] == 'zoom':
+    z = Image.new('RGB', (4 * 400, 2 * 400), (236, 232, 222))
+    for j, i in enumerate([0, 3, 2, 6]):
+        c = chars[i]; y = c['chin']; x = c['fcx']
+        box = (x - 200, y - 260, x + 200, y + 140)
+        o = r0[i].crop(box); n = r1[i].crop(box)
+        z.paste(o, (j * 400, 0), o); z.paste(n, (j * 400, 400), n)
+    z.save(f'{S}/zoom.png')
