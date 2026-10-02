@@ -137,6 +137,8 @@ test('fishing XP by rarity, 1 XP for a miss; forage 5, bugs 4; cooking 6 and cra
   const fish = p.fish;
   s.act(m, { kind: 'reel', token: p.token, timingMs: 10 }, p.biteAt + 10);
   assert.equal(s.xp(m, 'fish'), XP.fishMiss + fishXp(FISH_BY_ID[fish].weight));
+  // A lucky rare catch can lift the mood into its XP bonus; forage and craft XP are checked at ×1.
+  if (s.life.mood) delete s.life.mood[m.id];
   s.give(m, 'mushroom', 0);
   const spot = lifeView(s.life, m.id, m.actor, T0 + 2 * 60_000).me.spawns.find((x) => x.kind === 'forage');
   if (spot) {
