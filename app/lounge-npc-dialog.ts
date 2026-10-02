@@ -37,6 +37,9 @@ import { HAKU_LINES } from './lounge-npc-lines-haku.ts';
 import { ORNN_LINES } from './lounge-npc-lines-ornn.ts';
 import { MERCY_LINES } from './lounge-npc-lines-mercy.ts';
 import { SHINICHI_LINES } from './lounge-npc-lines-shinichi.ts';
+import { NPC_EXTRA, withExtraLines } from './lounge-npc-extra.ts';
+import type { NpcRecentKind } from './lounge-npc-extra-types.ts';
+import { npcSocialTalkPool } from './lounge-npc-social.ts';
 
 export const NPC_LINES: Record<NpcId, NpcLineSet> = {
   lumi: LUMI_LINES,
@@ -105,12 +108,15 @@ export type NpcTalkContext = {
   /** Item name of lastGift (the caller resolves names). */
   lastGiftName?: string;
   spot?: Pick<NpcSpot, 'activity' | 'area' | 'label'> | null;
+  /** What they did lately (lounge-npc-recent.ts): the resident may bring it up. */
+  recent?: readonly NpcRecentKind[];
 } & Partial<Pick<NpcLoveContext, 'love' | 'days' | 'atHome' | 'otherPartner' | 'otherNpc' | 'otherLove'>>;
 export type NpcTalk = { lines: string[]; tier: 0 | 1 | 2 | 3 | 4 };
 
 /** The fill-ins and the body pools of a talk (npcTalk, npcTalkReply). */
 function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
-  const L = NPC_LINES[ctx.npc];
+  // The line file plus the extra lines (lounge-npc-extra-<id>.ts).
+  const L = withExtraLines(ctx.npc, NPC_LINES[ctx.npc]);
   const day = kstDay(ctx.now);
   const tier = npcTier(ctx.points);
   const key = (k: string) => `${ctx.npc}:${ctx.who}:${day}:${k}`;
@@ -141,12 +147,15 @@ function talkParts(ctx: Omit<NpcTalkContext, 'talkedToday'>) {
       // 연애·결혼 (lounge-npc-love.ts): the heart band or partner lines, home, jealousy.
       ...npcLovePools(ctx, ctx.now),
     ].filter((p): p is string[] => !!p && p.length > 0);
-  return { L, day, tier, key, weather, f, pools };
+  // What {me} did lately (the two most notable) and a quarrel with a neighbor
+  // still on their mind: said in place of the greeting now and then.
+  const news = [...(ctx.recent ?? []).slice(0, 2).flatMap((k) => NPC_EXTRA[ctx.npc].react[k]), ...npcSocialTalkPool(ctx.npc, day)];
+  return { L, day, tier, key, weather, f, pools, news };
 }
 
 /** Two lines: an opener (time/weather/festival) and something about them, you, the season or a joke. */
 export function npcTalk(ctx: NpcTalkContext): NpcTalk {
-  const { L, day, tier, key, weather, f, pools } = talkParts(ctx);
+  const { L, day, tier, key, weather, f, pools, news } = talkParts(ctx);
   if (ctx.talkedToday) return { lines: [f(pick(L.talked, key('talked')))], tier };
   const festival = holidaysOn(day).some((h) => !!h.claim);
   const marketDay = new Date(ctx.now + 9 * 3_600_000).getUTCDay() === 0;
@@ -157,6 +166,7 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
   else if (weather !== 'sunny' && weather !== 'cloudy' && slot < 5) opener = pick(L.weather[weather as keyof NpcLineSet['weather']], key('weather'));
   else if (marketDay && ctx.spot?.area === 'market' && slot < 5) opener = pick(L.marketDay, key('market'));
   if (!opener && ctx.love) opener = npcLoveOpener(ctx.npc, ctx.now, weather, seasonOf(ctx.now), key('love'));
+  if (!opener && slot >= 5) opener = pick(news, key('news'));
   opener ??= pick(L.greet[timeOfDay(ctx.now)], key('greet'));
   const body = pick(pick(pools(), key('pool')), key('body'));
   const lines = [f(opener), f(body)].filter((s, i, a) => s && a.indexOf(s) === i);
@@ -170,8 +180,8 @@ export function npcTalk(ctx: NpcTalkContext): NpcTalk {
  * Same person, day and lines give the same answer on every screen.
  */
 export function npcTalkReply(ctx: Omit<NpcTalkContext, 'talkedToday'>, said: readonly string[]): string {
-  const { L, key, f, pools } = talkParts(ctx);
-  const fresh = [...new Set(pools().flat().map(f))].filter((s) => s && !said.includes(s));
+  const { L, key, f, pools, news } = talkParts(ctx);
+  const fresh = [...new Set([...pools().flat(), ...news].map(f))].filter((s) => s && !said.includes(s));
   return pick(fresh, key('reply')) ?? f(pick(L.talked, key('talked')));
 }
 const JANNA_MISS = ['어제 예보가 빗나갔어요. 정정 보도 나갑니다. 죄송해요!', '어제 제가 뭐라고 했죠? …못 들은 걸로 해 주세요.'];
