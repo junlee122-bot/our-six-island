@@ -148,6 +148,7 @@ import {
   AREAS,
   AREA_DEFAULTS,
   chatScope,
+  moveClamp,
   validHomeOwner,
   FLEX_GAMES,
   TABLE_AREA,
@@ -2112,28 +2113,8 @@ export class LoungeRoom {
         isInteriorArea(member.area)
       )
         return true;
-      this.members.set(
-        id,
-        member.area === "village" ||
-          member.area === "home" ||
-          member.area === "hill" ||
-          member.area === "woods" ||
-          member.area === "mine" ||
-          member.area === "market" ||
-          member.area === "harbor" ||
-          member.area === "offshore" ||
-          member.area === "hillside"
-          ? {
-              ...member,
-              x: Math.max(0, Math.min(100, a.x)),
-              y: Math.max(0, Math.min(100, a.y)),
-            }
-          : {
-              ...member,
-              x: Math.max(15, Math.min(85, a.x)),
-              y: Math.max(42, Math.min(88, a.y)),
-            },
-      );
+      // Outdoors (ranch and foothill too) and rooms use the full map.
+      this.members.set(id, { ...member, ...moveClamp(member.area, a.x, a.y) });
     } else if (a.kind === "look") {
       const last = this.lookAt.get(id) ?? -Infinity;
       if (this.serverMode && now - last < LOOK_THROTTLE_MS) {
@@ -2159,7 +2140,12 @@ export class LoungeRoom {
         isShopArea(a.scope) ||
         a.scope === "home"
       ) {
-        if (member.area !== a.scope || a.matchId !== undefined)
+        // Out in a district or region the client's scope is 'village' (they
+        // share its chat), so a sticker from 시장 거리 or the deck is accepted.
+        const here =
+          member.area === a.scope ||
+          (a.scope === "village" && chatScope(member.area) === "village");
+        if (!here || a.matchId !== undefined)
           return this.reject(REJECT.invalid);
       } else {
         if (!GAME_KINDS.includes(a.scope)) return this.reject(REJECT.invalid);

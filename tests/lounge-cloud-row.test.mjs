@@ -68,7 +68,7 @@ function harness() {
   };
 }
 
-test('D-3: idle reads only rewrite the row to refresh a lease older than SEEN_REFRESH_MS', async () => {
+test('D-3: idle reads only rewrite the row to refresh a lease at least SEEN_REFRESH_MS old', async () => {
   const h = harness(),
     a = member(0),
     b = member(1);
@@ -86,8 +86,9 @@ test('D-3: idle reads only rewrite the row to refresh a lease older than SEEN_RE
       assert.equal(r.response.ok, true);
     }
   }
-  // 15 s refresh used to commit ~1 read in 4; now about one per minute each.
-  assert.ok(commits / reads < 0.1, `${commits}/${reads}`);
+  // 15 s refresh used to commit ~1 read in 4; now one per SEEN_REFRESH_MS
+  // (40 s) each, i.e. about 1 read in 10 at this 4 s cadence (8 s in the app).
+  assert.ok(commits / reads <= 4000 / SEEN_REFRESH_MS + 0.01, `${commits}/${reads}`);
   // Presence still holds: nobody's lease expired while polling.
   for (const p of [a, b]) {
     const lease = h.world.rooms[a.code].leases[p.id];
@@ -206,4 +207,27 @@ test('D-8: engine bugs are not stored as receipts nor committed; rejections are'
   };
   assert.throws(() => cloudTransition(before, a, c, 'e'.repeat(64), h.now), TypeError);
   assert.ok(!before.receipts[a.id].some((r) => r.id === c.requestId));
+});
+
+test('presence: a background tab (45–60 s polls, two in a row lost) keeps its lease in any area', async () => {
+  for (const gap of [46000, 60000]) {
+    const h = harness(),
+      a = member(0),
+      b = member(1);
+    await h.run(a, 'open');
+    b.code = a.code;
+    await h.run(b, 'join');
+    for (const [p, area] of [[a, 'market'], [b, 'hill']])
+      assert.equal((await h.run(p, 'action', { action: { kind: 'area', area } })).response.ok, true);
+    for (let i = 0; i < 20; i++) {
+      // Two polls of a in a row are lost now and then (a slow network, a frozen
+      // timer): with the old 60 s rule a 46 s poll refreshed only every other
+      // time, so two lost polls let the 180 s lease run out.
+      h.advance(gap);
+      if (i % 6 !== 1 && i % 6 !== 2) assert.equal((await h.run(a, 'read')).response.ok, true, `gap ${gap} poll ${i}`);
+      assert.equal((await h.run(b, 'read')).response.ok, true);
+    }
+    const packet = (await h.run(b, 'read')).response.packet;
+    assert.deepEqual(packet.players.map((p) => p.area).sort(), ['hill', 'market'], `gap ${gap}`);
+  }
 });

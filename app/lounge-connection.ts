@@ -106,3 +106,12 @@ export function shouldToastError(
   if (!text) return false;
   return !last || last.text !== text || now - last.at >= quietMs;
 }
+
+/**
+ * Whether a dropped room should be rejoined on its own: only a lease that ran
+ * out (never a takeover by another window), once at a time, with the tab in
+ * view (a hidden tab would only expire again) and a look to walk in with.
+ */
+export function shouldRecover(s: { lost: boolean; expired: boolean; stopped: boolean; recovering: boolean; visible: boolean; look: boolean }) {
+  return s.lost && s.expired && !s.stopped && !s.recovering && s.visible && s.look;
+}

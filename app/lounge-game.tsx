@@ -40,6 +40,7 @@ import { LoungePlayHub } from './lounge-play-hub';
 import { gameFlow } from './lounge-game-flow';
 import {
   AREA_DEFAULTS,
+  chatScope,
   GAME_INFO,
   GAME_KINDS,
   TABLE_AREA,
@@ -122,6 +123,7 @@ import { FinancePanel } from './lounge/FinancePanel';
 import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { NpcTalkDialog } from './lounge/NpcTalkDialog';
+import { migrateNpcTiesSeen } from './lounge/npc-ties-seen';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
 import type { TownPlace, TravelArea } from './lounge/TownPanel';
 const TownPanel = lazyRetry(() => import('./lounge/TownPanel').then((m) => ({ default: m.TownPanel })));
@@ -966,6 +968,16 @@ function AccountLounge({
     },
     [room, outdoorRef, tellOutdoor],
   );
+  // 주민 관계도: pairs an older client kept in this browser go to the account once.
+  const tiesMigrated = useRef(false);
+  const hasLife = !!view.life;
+  useEffect(() => {
+    if (!connected || !hasLife || tiesMigrated.current) return;
+    tiesMigrated.current = true;
+    void migrateNpcTiesSeen(room).then((done) => {
+      if (!done) tiesMigrated.current = false;
+    });
+  }, [connected, hasLife, room]);
   // Also (re)send after (re)connecting, so presence matches the current screen.
   useEffect(() => {
     if (connected) sendArea(tabRef.current);
@@ -2017,7 +2029,7 @@ function AccountLounge({
   const chatTitle =
     myArea === 'home'
       ? '이 방 수다'
-      : myArea === 'village'
+      : chatScope(myArea as Area) === 'village'
       ? NAMES.chatVillage
       : isInteriorArea(myArea)
         ? VENUES[myArea].chat

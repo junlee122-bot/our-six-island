@@ -48,6 +48,7 @@ import { GAME_MINUTE_MS, gameHour, hash32 } from './lounge-calendar.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { npcSpot, type NpcWorld } from './lounge-npc-schedule.ts';
 import { npcSocialOf, npcSocialSpot } from './lounge-npc-social.ts';
+import { addTiesSeen } from './lounge-npc-social-ties.ts';
 import { isDistrictArea, regionFromNetwork } from './lounge-areas.ts';
 import { villageFromNetwork, VILLAGE_PLACES } from './lounge-village-layout.ts';
 import { josa } from './lounge-text.ts';
@@ -63,13 +64,15 @@ export type NpcSocialAction =
   | { kind: 'npcSocial'; npc: NpcId; op: 'talk' | 'date' | 'invite' | 'dismiss' | NpcLoveOp }
   | { kind: 'npcSocial'; npc: NpcId; op: 'gift'; item: string; q?: 0 | 1 | 2 }
   /** 끼어들기: join `npc`'s meeting with `with` (lounge-npc-social.ts); a little with both, once a day each. */
-  | { kind: 'npcSocial'; npc: NpcId; op: 'join'; with: NpcId };
+  | { kind: 'npcSocial'; npc: NpcId; op: 'join'; with: NpcId }
+  /** 엿듣기: overhear `npc`'s meeting with `with`; no points, the pair's tie is noted on the 관계 page. */
+  | { kind: 'npcSocial'; npc: NpcId; op: 'overhear'; with: NpcId };
 /** Points for joining two residents' chat (each of them, once a KST day). */
 export const NPC_JOIN_POINTS = 2;
 /** 꽃다발 · 청혼 반지 · 결혼식 · 헤어지기 · 배우자의 아침 선물. */
 export type NpcLoveOp = 'ask' | 'propose' | 'wedding' | 'breakup' | 'homeGift';
 export const NPC_LOVE_OPS: readonly NpcLoveOp[] = ['ask', 'propose', 'wedding', 'breakup', 'homeGift'];
-const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', 'join', ...NPC_LOVE_OPS];
+const NPC_OPS = ['talk', 'gift', 'date', 'invite', 'dismiss', 'join', 'overhear', ...NPC_LOVE_OPS];
 export type NpcRelation = {
   points: number;
   talkedDay?: number;
@@ -208,7 +211,7 @@ export function npcGuestOf(relations: NpcRelations | undefined, now: number): Np
 }
 function validAction(action: NpcSocialAction) {
   if (!action || !isNpcId(action.npc) || !NPC_OPS.includes(action.op)) fail('마을 주민과 할 일을 다시 골라 주세요.');
-  if (action.op === 'join' && (!isNpcId(action.with) || action.with === action.npc)) fail('마을 주민과 할 일을 다시 골라 주세요.');
+  if ((action.op === 'join' || action.op === 'overhear') && (!isNpcId(action.with) || action.with === action.npc)) fail('마을 주민과 할 일을 다시 골라 주세요.');
 }
 
 /** Where a resident can be met right now: area (and, when they walk about, a point). */
@@ -258,7 +261,7 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
     if (!ownHome || !invited) fail('내 방에 초대한 주민과 시간을 보내 주세요.');
     return;
   }
-  if (action.op === 'join') {
+  if (action.op === 'join' || action.op === 'overhear') {
     const world = { hill: !!ctx.hill, ranch: !!ctx.ranch, foothill: !!ctx.foothill };
     const ev = npcSocialOf(action.npc, now, world);
     if (!ev || (ev.a !== action.with && ev.b !== action.with)) fail(`${josa(NPCS[action.npc].name, '과/와')} ${josa(NPCS[action.with].name, '은/는')} 지금 함께 있지 않아요.`);
@@ -305,10 +308,18 @@ const LEVEL_REWARDS = [
   [NPC_SPECIAL_POINTS, 2, 100],
 ] as const;
 
+/** Notes the pair's tie (when they have one) on the member's 관계 page. */
+function noteTieSeen(user: { npcTiesSeen?: string[] }, a: NpcId, b: NpcId) {
+  const next = addTiesSeen(user.npcTiesSeen, [a < b ? `${a}:${b}` : `${b}:${a}`]);
+  if (next) user.npcTiesSeen = next;
+}
 /** Runs on a cloned LifeState; currency and friend bonds are untouched. Returns the gift reaction (gifts) and presents given. */
 export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialAction, now: number) {
   validAction(action);
   const user = ((life.ext ??= {})[uid] ??= {});
+  // 엿듣기 and 끼어들기 note the pair on my 관계 page (kept with my account).
+  if (action.op === 'overhear' || action.op === 'join') noteTieSeen(user, action.npc, action.with);
+  if (action.op === 'overhear') return { reaction: undefined as GiftReaction | undefined, presents: [] as [string, number][] };
   const relations = (user.npcRelations ??= {});
   const relation = (relations[action.npc] ??= { points: 0 });
   const day = kstDay(now);
@@ -473,6 +484,7 @@ export function npcReply(npc: NpcId, op: NpcSocialAction['op']) {
       date: `${josa(name, '과/와')} 느긋한 시간을 보냈어요.`,
       dismiss: `${josa(name, '을/를')} 배웅했어요.`,
       join: `${josa(name, '과/와')} 함께 이야기를 나눴어요.`,
+      overhear: `${name}의 이야기를 살짝 엿들었어요.`,
       ask: `${josa(name, '과/와')} 연인이 됐어요.`,
       propose: `${josa(name, '이/가')} 청혼을 받아 줬어요.`,
       wedding: `${josa(name, '과/와')} 결혼식을 올렸어요.`,

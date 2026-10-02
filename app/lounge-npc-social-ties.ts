@@ -87,3 +87,22 @@ export function npcTieWord(tie: NpcTie, id: NpcId): string {
 }
 /** A stable key for a pair (sorted ids). */
 export const pairKey = (a: NpcId, b: NpcId) => (a < b ? `${a}:${b}` : `${b}:${a}`);
+
+/** Every pair key that has a tie (the only keys a member's 관계 page may store). */
+export const NPC_TIE_KEYS: ReadonlySet<string> = new Set(tieIndex.keys());
+/** A stored list of found-out pairs, cleaned: known tie keys only, no repeats, at most one per tie. */
+export function readTiesSeen(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return;
+  const out = [...new Set(value.filter((k): k is string => typeof k === 'string' && NPC_TIE_KEYS.has(k)))].slice(0, NPC_TIE_KEYS.size);
+  return out.length ? out : undefined;
+}
+/**
+ * `list` with the valid new `keys` added, or null when nothing changes.
+ * Unknown keys are ignored; at most NPC_TIE_KEYS.size keys are looked at.
+ */
+export function addTiesSeen(list: readonly string[] | undefined, keys: readonly unknown[]): string[] | null {
+  const seen = new Set(list ?? []);
+  const size = seen.size;
+  for (const k of keys.slice(0, NPC_TIE_KEYS.size)) if (typeof k === 'string' && NPC_TIE_KEYS.has(k)) seen.add(k);
+  return seen.size === size ? null : [...seen];
+}

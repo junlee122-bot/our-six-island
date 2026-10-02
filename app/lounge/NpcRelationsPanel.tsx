@@ -24,7 +24,7 @@ import type { Notify } from './Toast';
 import { useNow } from './use-now';
 import { NPC_FRIEND_TIES, npcTiesOf, npcTieWord, NPC_TIES } from '../lounge-npc-social-ties';
 import { npcSocialOf, npcSulkingWith, NPC_SOCIAL_WORD } from '../lounge-npc-social';
-import { npcTieKnown, npcTiesSeen } from './npc-ties-seen';
+import { npcTieKnown } from './npc-ties-seen';
 import './npc-relations.css';
 
 const REACTION_WORD = { loved: '아주 좋아해요', liked: '좋아해요', neutral: '무난해요', disliked: '싫어해요' } as const;
@@ -45,6 +45,8 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const rows = view.life?.me.npcRelations ?? [];
   const byId = Object.fromEntries(rows.map((row) => [row.npc, row]));
   const relations: NpcRelations = byId;
+  // 주민 관계도: the pairs I overheard or joined, kept with my account.
+  const seenTies = new Set(view.life?.me.npcTiesSeen ?? []);
   const gifts = giftOptions(view.life);
   const myName = me ? ACTORS[me.actor] ?? '친구' : '친구';
   const context = { area: me?.area ?? '', home: me?.home, actor: me?.actor ?? -1, fishing: !!view.life?.me.fishing.pending, x: me?.x, y: me?.y };
@@ -71,7 +73,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const spot = npcSpot(selected, now);
   const visiting = (row.invitedUntil ?? 0) > now;
   const chosen = gifts.find((g) => g.key === giftKey) ?? gifts[0];
-  const action = (op: Exclude<NpcSocialAction['op'], 'gift' | 'join'>): NpcSocialAction => ({ kind: 'npcSocial', npc: selected, op });
+  const action = (op: Exclude<NpcSocialAction['op'], 'gift' | 'join' | 'overhear'>): NpcSocialAction => ({ kind: 'npcSocial', npc: selected, op });
   const location = blocked(action('talk'));
   const who = me?.actor ?? 0;
   const day = kstDay(now);
@@ -130,7 +132,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
           </header>
           <p>{info.intro}</p>
           {loveStatus && <p className="l-npc-love" data-testid="npc-love-status">{loveStatus}</p>}
-          <NpcTiesSection npc={selected} now={now} me={myName} points={(id) => byId[id]?.points ?? 0} onPick={setSelected} />
+          <NpcTiesSection npc={selected} now={now} me={myName} seen={seenTies} points={(id) => byId[id]?.points ?? 0} onPick={setSelected} />
           <label className="l-npc-progress">{row.level} · {Math.floor(row.points / 12)}하트 <strong>{row.points}/{NPC_POINTS_MAX}</strong><progress max={NPC_POINTS_MAX} value={row.points} aria-label={`${info.name} 친밀도`} /></label>
           <small>좋아하는 것: {info.likesText} · 싫어하는 것: {info.dislikesText}</small>
           <small>초대 {NPC_INVITE_POINTS} · 단골 선물 {NPC_REGULAR_POINTS} · 데이트 {NPC_DATE_POINTS} · 꽃다발 {NPC_DATING_POINTS}(8하트, 사귀기 전엔 여기까지) · 청혼 {NPC_PROPOSE_POINTS} · 특별한 선물 {NPC_SPECIAL_POINTS}{row.lastGift ? ` · 지난 선물: ${itemName(row.lastGift)}` : ''}</small>
@@ -219,8 +221,7 @@ function NpcLoveActions({ love, parting, busy, reasons, homeGifted, onPart, onLo
  * shows once found out (overheard or joined, or friends with either of them);
  * the rest are question marks. Today's quarrel or meeting is noted beside it.
  */
-function NpcTiesSection({ npc, now, me, points, onPick }: { npc: NpcId; now: number; me: string; points: (id: NpcId) => number; onPick: (id: NpcId) => void }) {
-  const seen = npcTiesSeen();
+function NpcTiesSection({ npc, now, me, seen, points, onPick }: { npc: NpcId; now: number; me: string; seen: ReadonlySet<string>; points: (id: NpcId) => number; onPick: (id: NpcId) => void }) {
   const ties = npcTiesOf(npc);
   const known = ties.filter(({ other }) => npcTieKnown(npc, other, points, seen));
   const day = kstDay(now);

@@ -1,5 +1,5 @@
 import { setNpcWorld } from './lounge-npc-schedule';
-import { emptyLoungeView } from './lounge-games';
+import { emptyLoungeView, moveClamp } from './lounge-games';
 import type { LoungeView, LoungeWorld, LoungeAction } from './lounge-room';
 import type { LifeAction, LifeView } from './lounge-life';
 import type { FinanceView } from './lounge-finance';
@@ -23,6 +23,7 @@ import {
   isNetworkFailure,
   nextLink,
   retryDelay,
+  shouldRecover,
   type Link,
 } from './lounge-connection';
 
@@ -195,7 +196,7 @@ export class CloudRoom {
         this.schedule();
         return;
       }
-      void this.refresh();
+      if (!this.recover()) void this.refresh();
     };
     const online = () => void this.refresh();
     const offline = () => {
@@ -367,12 +368,18 @@ export class CloudRoom {
           wallet: r.wallet,
           lost: true,
         });
-        this.update({
-          error:
-            r.status === 404
-              ? '연결이 오래 끊겨 마을에서 나왔어요. 다시 들어가기를 눌러 주세요.'
-              : friendlyError(r.error),
-        });
+        // 404: my lease ran out (a long background, a frozen tab). Being away
+        // is not leaving: walk straight back in instead of waiting for a click.
+        // 409 (another window took over) never comes back by itself.
+        this.expired = r.status === 404;
+        if (this.expired && this.recover()) this.update({});
+        else
+          this.update({
+            error:
+              r.status === 404
+                ? '연결이 오래 끊겨 마을에서 나왔어요. 다시 들어가기를 눌러 주세요.'
+                : friendlyError(r.error),
+          });
       }
     }
     this.schedule(
@@ -556,6 +563,29 @@ export class CloudRoom {
     else if (this.view.status !== 'connected') this.update({ status: 'error' });
     return ok;
   }
+  /** The room dropped me because my lease ran out (not another window taking over). */
+  private expired = false;
+  private recovering = false;
+  /**
+   * After an expired lease: rejoin the last room once the tab is visible
+   * (a hidden tab would only expire again). True when a rejoin started.
+   */
+  private recover() {
+    const visible = typeof document === 'undefined' || document.visibilityState !== 'hidden';
+    if (!shouldRecover({ lost: this.view.lost, expired: this.expired, stopped: this.stopped, recovering: this.recovering, visible, look: !!this.look }))
+      return false;
+    this.recovering = true;
+    this.expired = false;
+    void this.rejoin()
+      .then((ok) => {
+        if (!ok && !this.stopped && this.view.status !== 'connected')
+          this.update({ error: '연결이 오래 끊겨 마을에서 나왔어요. 다시 들어가기를 눌러 주세요.' });
+      })
+      .finally(() => {
+        this.recovering = false;
+      });
+    return true;
+  }
   /** Joins (or rejoins) the always-on village room. */
   joinVillage(look?: Look) {
     const l = look ?? this.look;
@@ -624,13 +654,7 @@ export class CloudRoom {
       this.movement = action;
       this.update({
         players: this.view.players.map((p) =>
-          p.id === this.account.id
-            ? {
-                ...p,
-                x: Math.max(15, Math.min(85, action.x)),
-                y: Math.max(42, Math.min(88, action.y)),
-              }
-            : p,
+          p.id === this.account.id ? { ...p, ...moveClamp(p.area, action.x, action.y) } : p,
         ),
       });
       if (!this.moveTimer && !this.moving)

@@ -9,7 +9,7 @@ import {
 } from '../lounge-cloud-room';
 import type { Look } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
-import { NAMES } from '../lounge-text';
+import { presenceLine } from '../lounge-presence';
 import { Modal } from './Modal';
 import { lookFor } from './friend-looks';
 import type { Notify } from './Toast';
@@ -17,19 +17,6 @@ import { FriendMoodBadge } from './MoodHud';
 import { GameButton } from '../ui/GameButton';
 import { Glyph } from '../ui/Glyph';
 import './friends.css';
-
-export const AREA_NAMES: Record<string, string> = {
-  village: NAMES.village,
-  lounge: '회관',
-  casino: '카지노',
-  tavern: '허풍 주점',
-  wardrobe: NAMES.wardrobe,
-  home: NAMES.home,
-  // 성장 P2 regions (lounge-areas.ts).
-  hill: '뒷산',
-  woods: '숲 깊은 곳',
-  mine: '광산',
-};
 
 export function FriendsModal({
   room,
@@ -176,11 +163,7 @@ export function FriendsModal({
                       {view.host === p.id && <em className="fr-host">방장</em>}
                     </strong>
                     <span>
-                      {p.id === view.self
-                        ? '나'
-                        : p.area === 'home'
-                          ? `${ACTORS[p.home ?? p.actor]}의 방`
-                          : (AREA_NAMES[p.area] ?? NAMES.village)}
+                      {p.id === view.self ? '나' : `접속 중 · ${presenceLine(p, me)}`}
                     </span>
                   </span>
                   {onVisit &&

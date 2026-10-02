@@ -26,9 +26,9 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import { ACTORS } from '../lounge-roster';
 import { TABLE_PLACE, tableState } from '../lounge-table-state';
-import { formatBeom, josa, NAMES } from '../lounge-text';
+import { formatBeom, josa } from '../lounge-text';
 import { GAME_COPY } from './game-copy';
-import { AREA_NAMES } from './FriendsModal';
+import { areaPlace } from '../lounge-presence';
 import { SCENE_LAYOUT } from '../lounge-scene-layout';
 import { VENUES } from '../lounge-venues';
 import { TABLE_AREA } from '../lounge-games';
@@ -72,10 +72,7 @@ export function whereIs(view: CloudRoomView, p: LoungePlayer): string {
       view.tables?.[k]?.members.includes(p.id) ||
       (view.seats[k].includes(p.id) && !!view[k]),
   );
-  const place =
-    p.area === 'home'
-      ? `${ACTORS[p.home ?? p.actor]}의 방`
-      : (AREA_NAMES[p.area] ?? NAMES.village);
+  const place = areaPlace(p.area, p.home ?? p.actor);
   return game ? `${place} · ${GAME_INFO[game].name} 테이블` : place;
 }
 

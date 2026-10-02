@@ -234,6 +234,16 @@ export const chatScope = (area: Area, home?: number): ChatScope =>
       : area === 'home' && validHomeOwner(home)
         ? homeScope(home)
         : 'lounge';
+/**
+ * Where a move puts a member: outdoors (every region and district, the deck)
+ * and friends' rooms use the whole 0–100 map; the hall-style interiors keep
+ * their floor box. The server and the client's own preview use the same rule.
+ */
+export function moveClamp(area: Area, x: number, y: number) {
+  return area === 'home' || chatScope(area) === 'village'
+    ? { x: Math.max(0, Math.min(100, x)), y: Math.max(0, Math.min(100, y)) }
+    : { x: Math.max(15, Math.min(85, x)), y: Math.max(42, Math.min(88, y)) };
+}
 /** Who can walk into a friend's room (stored in the room save and in world.life). */
 export type HomeAccess = 'public' | 'friends' | 'closed';
 export const HOME_CLOSED = '지금은 방문을 닫아 둔 방이에요.';

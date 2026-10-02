@@ -833,6 +833,7 @@ export const ACHIEVEMENT_BY_ID: Readonly<Record<string, AchievementDef>> = Objec
 /** Life-expansion action kinds (handled by lounge-life-plus.ts). */
 export const PLUS_ACTION_KINDS = [
   'npcSocial',
+  'npcTies',
   'npcRequest',
   'fertilize',
   'expandFarm',

@@ -32,7 +32,7 @@ import { PILL_PRICE, PILL_SELLERS, VOYAGE_LINES } from '../lounge-voyage-data';
 import { isNpcId } from '../lounge-npc-data';
 import { npcJoinLines, npcSocialExchange, npcSocialOf, type NpcSaid } from '../lounge-npc-social';
 import { npcRecentKinds } from '../lounge-npc-recent';
-import { rememberNpcTie } from './npc-ties-seen';
+import { NPC_TIE_KEYS, pairKey } from '../lounge-npc-social-ties';
 import './npc-relations.css';
 
 export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop }: {
@@ -195,12 +195,14 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const spoken = (lines: readonly NpcSaid[]) => lines.map((l) => `${NPCS[l.who].name}: ${l.text}`);
   const overhear = () => {
     if (!meeting || !otherId) return;
-    rememberNpcTie(npc, otherId);
     answer(spoken(npcSocialExchange(meeting)));
+    // The server notes the pair on my 관계 page (same meeting and reach check as 끼어들기).
+    const action: NpcSocialAction = { kind: 'npcSocial', npc, op: 'overhear', with: otherId };
+    const key = pairKey(npc, otherId);
+    if (NPC_TIE_KEYS.has(key) && !view.life?.me.npcTiesSeen?.includes(key) && !blocked(action)) void room.life(action);
   };
   const join = () => {
     if (!meeting || !otherId || !joinAction) return;
-    rememberNpcTie(npc, otherId);
     void run(joinAction, spoken(npcJoinLines({ ...meeting, a: npc, b: otherId }, myName)));
   };
   const choose = (index: number) => {

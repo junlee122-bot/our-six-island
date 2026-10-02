@@ -147,11 +147,16 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const CLOUD_LEASE_MS = 180000;
 /**
  * D-3: a plain `read` only rewrites the world row to refresh `lease.seen` when
- * the lease is older than this (well under CLOUD_LEASE_MS even with the 45 s
- * hidden-tab poll and one missed poll). Fresher leases are refreshed only when
- * the transition commits anyway (SEEN_PIGGYBACK_MS granularity).
+ * the lease is at least this old. Fresher leases are refreshed only when the
+ * transition commits anyway (SEEN_PIGGYBACK_MS granularity).
+ * It sits below the 45 s hidden-tab poll + a few seconds and below the
+ * one-a-minute timers browsers give background tabs, so every hidden poll
+ * refreshes: at 60 s (and `>`), a poll landing at exactly 60 s did not, the
+ * next one did at ~120 s, and one slow or missed poll on top let the 180 s
+ * lease run out — the friend dropped out of everyone's list while they sat
+ * fishing or waiting on the 먼바다 deck with the tab in the background.
  */
-export const SEEN_REFRESH_MS = 60000;
+export const SEEN_REFRESH_MS = 40000;
 const SEEN_PIGGYBACK_MS = 15000;
 /**
  * D-4: receipts made up ~98% of the world row at 512 per member. A client
@@ -633,7 +638,7 @@ export function cloudTransition(
         )
           throw new CloudError('이미 처리했거나 순서가 지난 요청입니다.', 409);
         if (mutating) lease.sequence = command.sequence!;
-        if (mutating || now - lease.seen > SEEN_REFRESH_MS) lease.seen = now;
+        if (mutating || now - lease.seen >= SEEN_REFRESH_MS) lease.seen = now;
         else if (now - lease.seen > SEEN_PIGGYBACK_MS) piggyback = lease;
         const r = roomContext(LoungeRoom.hosted(entry.snapshot, g.ledger), readLife(g.life), g.stocks);
         if (command.op === 'leave') {

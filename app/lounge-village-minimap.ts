@@ -1,7 +1,7 @@
 import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-village-layout.ts';
 import { SHOP_INTERIORS, isShopArea } from './lounge-shop-interiors.ts';
 import { VILLAGE_GATE } from './lounge-areas.ts';
-import { DISTRICTS } from './lounge-districts.ts';
+import { DISTRICTS, isDistrictId } from './lounge-districts.ts';
 
 type Presence = { id: string; actor: number; area: string; x: number; y: number; home?: number };
 export type VillageFriendPin = {
@@ -49,8 +49,10 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
     const place = VILLAGE_PLACES.find((v) => v.id === placeId);
     if (place) return [{ id: p.id, actor: p.actor, point: place.entry, indoor: true, placeId, location: place.name }];
     // Out in a district: pinned at its gate on the rim.
-    if (p.area === 'market')
-      return [{ id: p.id, actor: p.actor, point: DISTRICTS.market.gate.stand, indoor: false, location: DISTRICTS.market.name }];
+    // (먼바다's deck sails out from the harbor.)
+    const district = p.area === 'offshore' ? 'harbor' : p.area;
+    if (isDistrictId(district))
+      return [{ id: p.id, actor: p.actor, point: DISTRICTS[district].gate.stand, indoor: false, location: p.area === 'offshore' ? '먼바다' : DISTRICTS[district].name }];
     // In a shop's room (가게 실내): at its district's gate, named after the shop.
     if (isShopArea(p.area)) {
       const d = DISTRICTS[SHOP_INTERIORS[p.area].district];

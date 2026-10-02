@@ -9,6 +9,7 @@
 import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
+import { addTiesSeen, readTiesSeen } from './lounge-npc-social-ties.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
 import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lounge-shop-sales.ts';
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
@@ -261,6 +262,10 @@ export type UserExt = {
   /** Refs whose room placements must obey current ownership after a theft. */
   furnStrict?: Record<string, true>;
   npcRelations?: NpcRelations;
+  /** 주민 관계도: pair keys (lounge-npc-social-ties.ts pairKey) I overheard or joined. */
+  npcTiesSeen?: string[];
+  /** The pairs this browser had noted before they were kept with the account were sent once. */
+  npcTiesImported?: true;
   /** 의뢰 게시판 progress today (lounge-npc-requests.ts). */
   npcBoard?: NpcBoardState;
   plots?: 9 | 12;
@@ -349,6 +354,8 @@ export type LifeExt = {
 };
 export type PlusAction =
   | NpcSocialAction
+  /** 주민 관계도: pairs noted in this browser before they were kept with the account (sent once). */
+  | { kind: 'npcTies'; pairs: string[] }
   | { kind: 'fertilize'; plot: number; item: string }
   | { kind: 'expandFarm' }
   | { kind: 'waterFriend'; owner: number | string; plot: number }
@@ -551,6 +558,9 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (last) out.last = last;
   const npcRelations = readNpcRelations(x.npcRelations);
   if (npcRelations) out.npcRelations = npcRelations;
+  const npcTiesSeen = readTiesSeen(x.npcTiesSeen);
+  if (npcTiesSeen) out.npcTiesSeen = npcTiesSeen;
+  if (x.npcTiesImported === true) out.npcTiesImported = true;
   const npcBoard = readNpcBoard(x.npcBoard);
   if (npcBoard) out.npcBoard = npcBoard;
   const town = readTownUser(x.town);
@@ -1405,6 +1415,17 @@ export function plusAction(
       npcSocialAction(life, uid, a, now);
       break;
     }
+    case 'npcTies': {
+      // Once per member: the pairs an older client kept in this browser. Only
+      // real tie keys count (capped); a later send changes nothing.
+      if (!Array.isArray(a.pairs)) throw new LifeError('보낼 관계를 확인해 주세요.');
+      const user = ((life.ext ??= {})[uid] ??= {});
+      if (user.npcTiesImported) break;
+      const next = addTiesSeen(user.npcTiesSeen, a.pairs);
+      if (next) user.npcTiesSeen = next;
+      user.npcTiesImported = true;
+      break;
+    }
     case 'npcRequest': {
       next = npcRequestAction(life, next, uid, a, now).ledger;
       break;
@@ -2100,6 +2121,8 @@ export function recordTables(
 // ---------------------------------------------------------------- views
 export type PlusMe = {
   npcRelations: NpcRelationView[];
+  /** 주민 관계도: the pairs I overheard or joined (pair keys). */
+  npcTiesSeen: string[];
   /** Residents' requests on today's board (시장 거리). */
   npcBoard: NpcBoardView;
   plots: FarmSize;
@@ -2199,6 +2222,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const yesterday = life.news?.find((d) => d.day === day - 1);
   const me: PlusMe = {
     npcRelations: npcRelationsView(raw.npcRelations, now),
+    npcTiesSeen: [...(raw.npcTiesSeen ?? [])],
     npcBoard: npcBoardView(life, uid, now),
     plots: raw.plots ?? 6,
     inv: { ...raw.inv },

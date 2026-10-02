@@ -9,6 +9,7 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { josa } from '../lounge-text';
+import { presenceLine } from '../lounge-presence';
 import { boundAction, globalKeyTarget } from '../lounge-scene-keys';
 import { visitFriend, type FriendVisit } from '../lounge-visit';
 import { friendlyError } from './feedback';
@@ -45,13 +46,6 @@ function takeVisit(owner: number, fresh: boolean) {
   if (!fresh && hit && Date.now() - hit.at < PREFETCH_MS) return hit.job;
   return visitFriend(owner);
 }
-
-const AREA_NAMES: Record<string, string> = {
-  village: '마을',
-  lounge: '회관',
-  casino: '카지노',
-  home: '다른 친구 집',
-};
 
 /** Live presence for a room from the cloud view (players, room chat, my moves). */
 export function roomPresence(room: CloudRoom, view: CloudRoomView) {
@@ -188,11 +182,11 @@ export function FriendVisitScreen({
   const ownerHere = here.some((p) => p.actor === owner);
   const guests = here.filter((p) => p.actor !== owner);
   // Where the owner is when not home (online players only).
-  const ownerAt = view.players.find((p) => p.actor === owner)?.area;
+  const ownerAt = view.players.find((p) => p.actor === owner);
   const ownerLine = ownerHere
     ? `${name}도 방에 있어요`
     : ownerAt
-      ? `${josa(name, '은/는')} 지금 ${AREA_NAMES[ownerAt] ?? '마을'}에 있어요`
+      ? `${josa(name, '은/는')} 지금 ${presenceLine(ownerAt)}`
       : `${josa(name, '은/는')} 지금 쉬는 중이에요`;
   return (
     <section className="l-visit b3-visit" aria-label={`${name}의 방`} data-testid="friend-visit">
