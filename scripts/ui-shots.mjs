@@ -7,6 +7,7 @@
 //   npm run ui:shots -- --games                    # also casino/hall table screens
 //   npm run ui:shots -- --low-graphics             # software GPU: low quality, 30 FPS
 //   npm run ui:shots -- --fishing-fight            # also the reel fight (needs a fast mock round trip)
+//   npm run ui:shots -- --stage3                   # also ④ 목장·과수원 and ⑤ 산기슭 마을 (opened in the mock world)
 //
 // For each key screen at 1920×1080 (fhd), 1440×900 (d) and 1280×720 (s) it saves
 // a PNG and measures, inside the top dialog (or the whole HUD when none is open):
@@ -93,6 +94,8 @@ function seedLife(life, uid) {
     st: day,
     log: [{ kind: 'guard', at: now - 7 * 3_600_000 }, { kind: 'ship', at: now - 8 * 3_600_000, n: 9, beom: 4_320 }],
   };
+  // --stage3: the two stage-3 districts are open (design-npcs-stage3.md).
+  if (flag('stage3')) life.flags = [...new Set([...(life.flags ?? []), 'district-ranch', 'district-foothill'])];
 }
 
 async function runView(browser, base, view, report) {
@@ -401,6 +404,55 @@ async function runView(browser, base, view, report) {
       await returnToVillage();
     }
   });
+
+  // 3단계 (--stage3): through the 들길 to 목장·과수원 and the 산길 to 산기슭 마을, a capture of each and its minimap pins.
+  if (flag('stage3'))
+    for (const [area, gate, home, pins] of [
+      ['ranch', { x: 40, z: -42 }, { x: -12, z: 23 }, ['barn', 'orchardShop', 'exit-village']],
+      ['foothill', { x: -20, z: -42 }, { x: 0, z: 20 }, ['smithy', 'clinic', 'fortune', 'exit-mine', 'exit-village']],
+    ])
+      await step(area, async () => {
+        try {
+          await closeAll();
+          await focusScene();
+          await js((g) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: g })), gate);
+          await page.keyboard.down('Shift');
+          try {
+            assert.notEqual(await until((g) => {
+              const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+              return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - g.x, Number(d.avatarZ) - g.z) < 1.2;
+            }, 900000, gate), -1, `${area} 입구까지 걷지 못했습니다.`);
+          } finally { await page.keyboard.up('Shift'); }
+          await focusScene();
+          await page.keyboard.press('KeyE');
+          assert.notEqual(await until((a) => {
+            const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+            return d?.area === a && d.loadState === 'ready';
+          }, 180000, area), -1, `${area}를 불러오지 못했습니다.`);
+          await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+          await sleep(6000);
+          await snap(area);
+          const have = await js((a) => [...document.querySelectorAll(`[data-minimap-area="${a}"] [data-minimap-place]`)].map((e) => e.getAttribute('data-minimap-place')), area);
+          for (const id of pins) assert.ok(have.includes(id), `${area} 미니맵에 ${id} 자리가 없습니다.`);
+        } finally {
+          await closeAll();
+          if (await js(() => !!document.querySelector('[data-testid=area-3d]'))) {
+            await js((h) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: h })), home);
+            await until((h) => {
+              const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+              return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - h.x, Number(d.avatarZ) - h.z) < 1;
+            }, 120000, home);
+            await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+            await page.keyboard.press('KeyE');
+            await until(() => {
+              const s = document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state');
+              return !!s && s !== 'loading';
+            }, 180000);
+            await sleep(1500);
+          }
+          await returnToVillage();
+        }
+      });
 
   // Historical baseline names are retained, but each service now has its own
   // visible entry point. These are read-only captures, never robbery/loan actions.
