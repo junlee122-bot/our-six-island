@@ -157,7 +157,11 @@ const BROKER: ShopInterior = {
     { id: 'terminal-1', model: 'register', x: -0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
     { id: 'terminal-2', model: 'register', x: 0.9, z: -3.25, w: 0.55, h: 0.45, d: 0.45, y: 0.98, solid: false },
     // Behind it: the ticker board (wall signs above), files and a tea sideboard.
-    { id: 'ticker', model: null, x: 0, z: -5.75, w: 5.6, h: 0.9, d: 0.12, y: 1.5, solid: false, color: '#16233a' },
+    { id: 'ticker', model: null, x: 0, z: -5.75, w: 5.6, h: 0.75, d: 0.12, y: 1.05, solid: false, color: '#16233a' },
+    // The board's bars: red up, blue down.
+    ...[0.18, 0.32, 0.12, 0.4, 0.24, 0.3, 0.14, 0.36].map((h, i): ShopItem => ({
+      id: `ticker-bar-${i}`, model: null, x: -2.35 + i * 0.67, z: -5.68, w: 0.34, h, d: 0.04, y: 1.15, solid: false, color: i % 3 === 1 ? '#4f7fb2' : '#d0463b',
+    })),
     { id: 'files-1', model: 'storageShelf', x: -3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
     { id: 'files-2', model: 'storageShelf', x: 3.6, z: -5.55, w: 1.5, h: 1.8, d: 0.7, solid: false },
     { id: 'tea', model: 'teaSideboard', x: 0, z: -5.45, w: 1.6, h: 0.95, d: 0.75, solid: false },
