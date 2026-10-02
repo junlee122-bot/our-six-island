@@ -134,6 +134,13 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
   await ctx.routeWebSocket(/./, () => {});
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror ' + e.message.slice(0, 160)));
+  // A crashed tab fails every evaluate, which `until` reads as "not yet":
+  // without this a crash would look like a slow screen until the timeout.
+  let crashed = false;
+  page.on('crash', () => {
+    crashed = true;
+    errors.push('page crashed');
+  });
   const external = new Set();
   let lastMe = null;
   await ctx.route('**/*', async (r) => {
@@ -184,11 +191,25 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
   });
 
   const js = (f, a) => page.evaluate(f, a);
+  // page.evaluate has no timeout: a page whose main thread never comes back
+  // would hold a poll (and the job) forever. Polls give up after `ms`.
+  const jsWithin = (f, a, ms = 120000) => {
+    let timer;
+    const late = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`page did not answer within ${ms / 1000}s (main thread busy or hung)`)), ms);
+    });
+    return Promise.race([js(f, a), late]).finally(() => clearTimeout(timer));
+  };
   const sleep = (ms) => page.waitForTimeout(ms);
   async function until(pred, ms = 30000, arg) {
     const t = Date.now();
     while (Date.now() - t < ms) {
-      if (await js(pred, arg).catch(() => false)) return Date.now() - t;
+      if (crashed) throw new Error('page crashed (renderer process gone)');
+      const ok = await jsWithin(pred, arg).catch((e) => {
+        if (e.message.startsWith('page did not answer')) throw e;
+        return false;
+      });
+      if (ok) return Date.now() - t;
       await sleep(120);
     }
     return -1;
@@ -231,7 +252,7 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
     clearInterval(hb);
     await ctx.close().catch(() => {});
   };
-  return { page, ctx, js, sleep, until, clickSel, clickText, run, bots, uid, VW, errors, external, world: () => world, close };
+  return { page, ctx, js, jsWithin, sleep, until, clickSel, clickText, run, bots, uid, VW, errors, external, world: () => world, close };
 }
 
 export async function login(H, base) {

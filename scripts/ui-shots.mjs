@@ -288,6 +288,48 @@ async function runView(browser, base, view, report) {
   });
   await step('bonds', async () => { await focusScene(); await page.keyboard.press('KeyL'); await sleep(1000); await snap('bonds'); });
   await step('collection', async () => { await focusScene(); await page.keyboard.press('KeyK'); await sleep(1000); await snap('collection'); });
+  // A walk across the hub (bumtadew:go, Shift held). A walk that stops short
+  // (the avatar has not moved for `stallMs`) or runs past `maxMs` fails with
+  // what kept it: where the avatar stands, the scene's state, an open panel
+  // or dialog, focus. The step's catch saves the failure screenshot.
+  const walkTo = async (goal, what, { stallMs = 45000, maxMs = 180000 } = {}) => {
+    const state = (g) => {
+      const host = document.querySelector('[data-testid=village-3d]');
+      const d = host?.dataset ?? {};
+      return {
+        arrived: d.walking === 'false' && Math.hypot(Number(d.avatarX) - g.x, Number(d.avatarZ) - g.z) < 1.2,
+        space: document.querySelector('main.l-app')?.dataset.space,
+        avatar: d.avatarX ? `${d.avatarX},${d.avatarZ}` : null,
+        walking: d.walking,
+        load: host?.getAttribute('data-load-state') ?? null,
+        fishing: document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') ?? null,
+        dialogs: [...document.querySelectorAll('dialog[open]')].map((e) => e.getAttribute('aria-label') || e.className).join(' | '),
+        area: document.querySelector('[data-testid=area-3d]')?.dataset.area ?? null,
+        focus: document.activeElement?.getAttribute('data-testid') || document.activeElement?.tagName,
+      };
+    };
+    await js((g) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: g })), goal);
+    await page.keyboard.down('Shift');
+    try {
+      const start = Date.now();
+      let at = null,
+        movedAt = start;
+      for (;;) {
+        const s = await H.jsWithin(state, goal);
+        if (s.arrived) return;
+        const now = Date.now();
+        if (s.avatar !== at) [at, movedAt] = [s.avatar, now];
+        if (now - movedAt > stallMs || now - start > maxMs) {
+          const why = now - movedAt > stallMs ? `${Math.round((now - movedAt) / 1000)}초째 제자리` : `${Math.round((now - start) / 1000)}초 안에 닿지 못함`;
+          const { arrived, ...rest } = s;
+          throw new Error(`${what} (${goal.x}, ${goal.z}): ${why} ${JSON.stringify(rest)}`);
+        }
+        await sleep(500);
+      }
+    } finally {
+      await page.keyboard.up('Shift');
+    }
+  };
   // 낚시 업그레이드: the tackle board, the 낚시 수첩 and the reel fight at the river.
   const phase = () => js(() => document.querySelector('[data-testid=fishing]')?.getAttribute('data-phase') ?? '');
   const openFishing = async () => {
@@ -329,6 +371,8 @@ async function runView(browser, base, view, report) {
       await page.keyboard.press('Escape');
       await until(() => !document.querySelector('[data-testid=fishing]'), 10000);
     }
+    // While it is up the village ignores bumtadew:go, so the walk below could never start.
+    assert.ok(!(await js(() => !!document.querySelector('[data-testid=fishing]'))), `낚시 창이 닫히지 않았습니다 (${await phase()}).`);
   });
   // The fight needs a quick hook reply; under a software GPU the mock round
   // trip can outlast the bite window, so this capture is opt-in (--fishing-fight).
@@ -355,14 +399,7 @@ async function runView(browser, base, view, report) {
     try {
       await closeAll();
       await focusScene();
-      await js(() => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: { x: 53.6, z: -5 } })));
-      await page.keyboard.down('Shift');
-      try {
-        assert.notEqual(await until(() => {
-          const d = document.querySelector('[data-testid=village-3d]')?.dataset;
-          return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - 53.6, Number(d.avatarZ) + 5) < 1.2;
-        }, 900000), -1, '시장 거리 입구까지 걷지 못했습니다.');
-      } finally { await page.keyboard.up('Shift'); }
+      await walkTo({ x: 53.6, z: -5 }, '시장 거리 입구까지 걷지 못했습니다');
       await focusScene();
       await page.keyboard.press('KeyE');
       assert.notEqual(await until(() => {
@@ -417,14 +454,7 @@ async function runView(browser, base, view, report) {
         try {
           await closeAll();
           await focusScene();
-          await js((g) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: g })), gate);
-          await page.keyboard.down('Shift');
-          try {
-            assert.notEqual(await until((g) => {
-              const d = document.querySelector('[data-testid=village-3d]')?.dataset;
-              return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - g.x, Number(d.avatarZ) - g.z) < 1.2;
-            }, 900000, gate), -1, `${area} 입구까지 걷지 못했습니다.`);
-          } finally { await page.keyboard.up('Shift'); }
+          await walkTo(gate, `${area} 입구까지 걷지 못했습니다`, { maxMs: 300000 });
           await focusScene();
           await page.keyboard.press('KeyE');
           assert.notEqual(await until((a) => {
