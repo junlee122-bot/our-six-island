@@ -3,6 +3,7 @@
 // romance, art records) and the server systems (animals, fruit trees, range
 // upgrades, ore buying, clinic, fortune), with the ledger checked after every
 // action.
+import { GAME_MINUTE_MS, dayStart, gameDay } from '../app/lounge-calendar.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +13,7 @@ import { newLoungeLedger, registerWallet, validateLedger, kstDay, flowBucket } f
 import { NPC_IDS, NPCS, STAGE3_NPCS, NPC_BONDS, NPC_DATING_POINTS } from '../app/lounge-npc-data.ts';
 import { NPC_CHIBI } from '../app/lounge-npc-chibi.ts';
 import { LOUNGE_ASSETS } from '../app/lounge-assets.ts';
-import { NPC_PLACES, npcCanStand, npcPlan, npcSpot, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { NPC_PLACES, npcCanStand, npcPlan, npcSpot, npcDayStart } from '../app/lounge-npc-schedule.ts';
 import { NPC_LINES, allNpcLines, npcBanter } from '../app/lounge-npc-dialog.ts';
 import { NPC_LOVE, allNpcLoveLines } from '../app/lounge-npc-love.ts';
 import { BUILT_DISTRICTS, DISTRICTS, districtOpen, goalProgressText } from '../app/lounge-districts.ts';
@@ -51,11 +52,11 @@ import {
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 
-const DAY = 86_400_000,
-  HOUR = 3_600_000;
+const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 9, 1, 3); // 12:00 KST, Thursday 2026-10-01
 const DAY0 = kstDay(T0);
-const at = (d, h = 12, m = 0) => kstDayStart(DAY0 + d) + h * HOUR + m * 60_000;
+/** Game h:m on real KST day DAY0 + d (its game day in real hour 12; 게임 하루 = 실제 1시간). */
+const at = (d, h = 12, m = 0) => npcDayStart(gameDay(dayStart(DAY0 + d)) + 12) + (h * 60 + m) * GAME_MINUTE_MS;
 /** The first day offset ≥ `from` whose KST day passes `ok`. */
 const dayWhere = (ok, from = 0) => {
   for (let d = from; d < from + 60; d++) if (ok(DAY0 + d)) return d;
@@ -466,10 +467,11 @@ test('clinic: care twice a day fills rest; fortune: weekends and festivals, once
   const v = s.act(m, { kind: 'fortuneRead' }, at(sat, 10));
   assert.equal(wallet(s, m), before - FORTUNE_PRICE);
   assert.ok(v.stage3.fortune.read && v.stage3.fortune.line);
-  s.fails(m, { kind: 'fortuneRead' }, /이미 봤/, at(sat, 11));
+  s.fails(m, { kind: 'fortuneRead' }, /이미 봤/, at(sat, 10) + HOUR);
   const kind = s.life.ext[m.id].s3.fo.kind;
-  assert.equal(buffPower(s.life, m.id, at(sat, 11), kind), 0.5, 'a weak buff');
-  assert.equal(buffPower(s.life, m.id, at(sat, 14), kind), 0, 'gone after three hours');
+  // The buff is a real-time timer (three real hours), like the cooking buffs.
+  assert.equal(buffPower(s.life, m.id, at(sat, 10) + HOUR, kind), 0.5, 'a weak buff');
+  assert.equal(buffPower(s.life, m.id, at(sat, 10) + 3 * HOUR + 60_000, kind), 0, 'gone after three hours');
   // Saves keep it; junk drops.
   const read = readLifeExt({ ext: { [m.id]: { s3: { ...s.life.ext[m.id].s3, junk: 1, a: [{ k: 'dragon' }] } } }, shopSales: { clinic: { 1: { rev: -5 } }, zoo: {} } });
   assert.equal(read.ext[m.id].s3.fo.kind, kind);

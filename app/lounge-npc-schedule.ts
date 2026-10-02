@@ -691,7 +691,8 @@ function muzanPlan(k: DayKind): Seg[] {
       ...start,
       [hm(10), 'm.muzan', 'stroll', '휴무일 · 장날 좌판 사이 시장 조사 중'],
       [hm(12), 'bakery.seat-cafe-3', 'eat', '빵집 카페에서 느긋한 점심'],
-      [hm(12, 50), k.rain ? 't.muzan' : 'hb.bench-e', k.rain ? 'drink' : 'stroll', k.rain ? '주점에서 비 피하며 신문 읽는 중' : '항구에서 어시장 경기 살피는 중'],
+      // The harbor is two district gates away (game minutes on the game clock): a long lunch first.
+      [hm(14), k.rain ? 't.muzan' : 'hb.bench-e', k.rain ? 'drink' : 'stroll', k.rain ? '주점에서 비 피하며 신문 읽는 중' : '항구에서 어시장 경기 살피는 중'],
       evening,
       late,
     ];
@@ -787,8 +788,9 @@ function hostPlan(id: HostNpc, k: DayKind): Seg[] {
         [hm(9, 30), k.rain ? 'general.browse' : 'hb.rose', 'stroll', k.rain ? '잡화점에서 보석 구경 중' : '출근 전 선착장에서 바다 보는 중'],
         [hm(10, 40), 'general.browse', 'stroll', '잡화점에서 보석 값 흥정 중'],
         post(hm(11, 30)),
-        [hm(17, 30), k.rain ? NPC_POSTS.rose : 'hb.rose-sunset', k.rain ? 'work' : 'rest', k.rain ? POST_LABEL.rose : '쉬는 시간에 방파제에서 노을 보는 중'],
-        post(hm(18, 30)),
+        // A long break: the breakwater is two district gates from the casino, and walks take game minutes.
+        [hm(17), k.rain ? NPC_POSTS.rose : 'hb.rose-sunset', k.rain ? 'work' : 'rest', k.rain ? POST_LABEL.rose : '쉬는 시간에 방파제에서 노을 보는 중'],
+        post(hm(19)),
       ];
 }
 /**
@@ -1090,8 +1092,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(9), 'clinic.owner', 'work', '메르시 의원 진료 중'],
         [hm(12), 'fh.bench-clinic', 'eat', '의원 앞에서 커피 한 잔'],
         [hm(13), 'clinic.owner', 'work', '메르시 의원 진료 중'],
-        [hm(17), k.rain ? 'clinic.owner' : 'v.housecall', 'work', k.rain ? '비 오는 날 의원 지키는 중' : '마을 광장 왕진 중'],
-        [hm(18, 30), 'clinic.owner', 'work', '저녁 진료 중'],
+        [hm(16, 30), k.rain ? 'clinic.owner' : 'v.housecall', 'work', k.rain ? '비 오는 날 의원 지키는 중' : '마을 광장 왕진 중'],
+        [hm(18), 'clinic.owner', 'work', '저녁 진료 중'],
       ];
     case 'shinichi': {
       if (!fortuneOpenOn(realDayOfGameDay(k.day))) return [[0, 'away', 'sleep', '사건 의뢰로 마을 밖']];
@@ -1113,7 +1115,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return [
         [0, 'home', 'sleep'],
         [hm(11, 30), 'hl.library-steps', 'nap', '도서관에서 조는 중'],
-        [hm(15), k.rain ? 'hb.shed' : 'hb.pier-mid', 'rest', k.rain ? '항구 창고 처마 밑에서 비 피하는 중' : '선착장에서 해바라기 중'],
+        // (Not the harbor shed: 봇치 may be practising there.)
+        [hm(15), k.rain ? 'fishmarket.browse' : 'hb.pier-mid', 'rest', k.rain ? '어시장 처마 밑에서 생선 냄새 맡으며 비 피하는 중' : '선착장에서 해바라기 중'],
         [hm(18), 'v.plaza', 'rest', '광장에서 어슬렁거리는 중'],
         [hm(20), 'home', 'sleep', '청년 자취방에서 뒹구는 중'],
       ];

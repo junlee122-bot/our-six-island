@@ -10,7 +10,11 @@ import type { ItemDef } from './lounge-items.ts';
 const MIN = 60_000,
   HOUR = 60 * MIN,
   DAY = 24 * HOUR,
-  KST = 9 * HOUR;
+  KST = 9 * HOUR,
+  // The game clock (lounge-calendar.ts, design-game-clock.md): a game day is
+  // one real hour from every real hour on the hour, a game hour 2 min 30 s.
+  GAME_DAY = HOUR,
+  GAME_HOUR = GAME_DAY / 24;
 
 // ---------------------------------------------------------------- fares and clock
 /** 승선료 (each friend pays their own seat). */
@@ -18,18 +22,22 @@ export const VOYAGE_FARE = 15_000;
 /** 새벽 초대 배: this share off the fare (the inviter and the friends they bring). */
 export const DAWN_DISCOUNT = 0.3;
 export const DAWN_FARE = Math.round((VOYAGE_FARE * (1 - DAWN_DISCOUNT)) / 10) * 10;
-/** One voyage a KST day (a dawn sailing counts). */
+/** One voyage a real KST day (a dawn sailing counts), however many game days pass. */
 export const VOYAGES_PER_DAY = 1;
-/** A sailing lasts this long from its departure (real time). */
+/** A sailing lasts this long from its departure (real time: eight game hours, so a dawn boat comes back in the game afternoon). */
 export const VOYAGE_MS = 20 * MIN;
 /** Boarding opens this long before a departure. */
 export const BOARDING_MS = 2 * MIN;
 /** Seats per boat. */
 export const SEATS = 4;
-/** Departures every half hour from 05:00 to 19:00 KST (both included). */
+/**
+ * Departures on every game hour from game 05:00 to 19:00 (both included), every
+ * game day: fifteen boats a real hour, one every 2 min 30 s (a game half hour
+ * would be 75 seconds, too close for the two-minute boarding).
+ */
 export const FIRST_HOUR = 5;
 export const LAST_HOUR = 19;
-export const SAILING_STEP_MS = 30 * MIN;
+export const SAILING_STEP_MS = GAME_HOUR;
 /** The cast-out animation before the deck shows (client only). */
 export const SAIL_OUT_MS = 3_000;
 /** Unlock: the 항구 구역 flag and 낚시 Lv. */
@@ -44,7 +52,10 @@ export const DAWN_LEGEND = 1.2;
 /** The captain knocks for friends with this many voyage days in the last seven (today not counted). */
 export const REGULAR_TRIPS = 4;
 export const REGULAR_DAYS = 7;
-/** KST hours [from, to) when the captain comes to the door. */
+/**
+ * Game hours [from, to) when the captain comes to the door: the next game dawn
+ * while the friend is in the village (a real hour never passes without one).
+ */
 export const DAWN_HOURS = [5, 7] as const;
 /** The dawn boat leaves this long after the invitation is accepted. */
 export const DAWN_LEAD_MS = 3 * MIN;
@@ -99,27 +110,28 @@ export const isVoyageAction = (a: unknown): a is VoyageAction =>
 
 // ---------------------------------------------------------------- clock helpers
 export const kstDayOf = (now: number) => Math.floor((now + KST) / DAY);
-export const kstHourOf = (now: number) => Math.floor(((now + KST) % DAY) / HOUR);
-const dayStart = (day: number) => day * DAY - KST;
-/** Every departure of a KST day (epoch ms). */
-export function sailingsOf(day: number): number[] {
+/** Game day number and game hour (lounge-calendar gameDay / gameHour, without the import). */
+export const gameDayOf = (now: number) => Math.floor(now / GAME_DAY);
+export const gameHourOf = (now: number) => Math.floor((((now % GAME_DAY) + GAME_DAY) % GAME_DAY) / GAME_HOUR);
+/** Every departure of a game day (epoch ms). */
+export function sailingsOf(gameDay: number): number[] {
   const out: number[] = [];
-  for (let t = dayStart(day) + FIRST_HOUR * HOUR; t <= dayStart(day) + LAST_HOUR * HOUR; t += SAILING_STEP_MS) out.push(t);
+  for (let h = FIRST_HOUR; h <= LAST_HOUR; h++) out.push(gameDay * GAME_DAY + h * SAILING_STEP_MS);
   return out;
 }
 /** The departure whose boarding is open at `now` (null between windows). */
 export function boardingSailing(now: number): number | null {
-  return sailingsOf(kstDayOf(now)).find((t) => now >= t - BOARDING_MS && now < t) ?? null;
+  return sailingsOf(gameDayOf(now)).find((t) => now >= t - BOARDING_MS && now < t) ?? null;
 }
-/** The next departure at or after `now` (today or tomorrow's first). */
+/** The next departure after `now` (this game day or the next one's first). */
 export function nextSailing(now: number): number {
-  const day = kstDayOf(now);
-  return sailingsOf(day).find((t) => t > now) ?? sailingsOf(day + 1)[0];
+  const g = gameDayOf(now);
+  return sailingsOf(g).find((t) => t > now) ?? sailingsOf(g + 1)[0];
 }
 export const sailingId = (dep: number) => `s${Math.floor(dep / MIN)}`;
 export const dawnId = (dep: number, actor: number) => `d${Math.floor(dep / MIN)}a${actor}`;
 export const inDawnHours = (now: number) => {
-  const h = kstHourOf(now);
+  const h = gameHourOf(now);
   return h >= DAWN_HOURS[0] && h < DAWN_HOURS[1];
 };
 

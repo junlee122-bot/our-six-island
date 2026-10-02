@@ -25,7 +25,7 @@ import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import type { FishingFramePhase } from '../lounge-fishing-frames';
 import type { ShopArea } from '../lounge-shop-interiors';
 import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
-import { kstHourOf } from '../lounge-voyage-data';
+import { gameHourOf } from '../lounge-voyage-data';
 import { FISH_BY_ID } from '../lounge-items';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
@@ -316,7 +316,8 @@ export function useOutdoor({
     const stops = m ? mineStops(m, pass) : [];
     // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
     const voyage = view.life?.voyage;
-    const hour = kstHourOf(Date.now() + view.clockOffset);
+    // 허 선장 is at the pier through the game day's sailings (game 05–19).
+    const hour = gameHourOf(Date.now() + view.clockOffset);
     const harborBoat = voyage ? { out: voyage.sailing.length > 0, captain: !voyage.storm && hour >= 5 && hour < 19 } : undefined;
     // A big fish (rare or better) just landed out at sea: it jumps once by the bobber.
     const last = view.life?.angling?.me.last;

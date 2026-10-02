@@ -2,9 +2,10 @@
 // 로제's credit tiers (lounge-casino-lender.ts). The tables and the lender's
 // desk never wait for them: blackjack, go-stop practice, borrowing,
 // repaying and overdue collection all work while they are out.
+import { GAME_MINUTE_MS, dayStart, gameDay } from '../app/lounge-calendar.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HOST_DAY_OFF, NPC_POSTS, NPC_WALK_AREAS, npcAtPost, npcCanStand, npcSpot, kstDayStart } from '../app/lounge-npc-schedule.ts';
+import { HOST_DAY_OFF, NPC_POSTS, NPC_WALK_AREAS, npcAtPost, npcCanStand, npcSpot, npcDayStart } from '../app/lounge-npc-schedule.ts';
 import { weatherOf, weekdayOf } from '../app/lounge-calendar.ts';
 import { kstDay, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
 import { ensureLifeMember, readLife } from '../app/lounge-life.ts';
@@ -18,7 +19,8 @@ import { NPC_LINES } from '../app/lounge-npc-dialog.ts';
 const HOUR = 3_600_000, DAY = 86_400_000;
 const DAY0 = kstDay(Date.UTC(2026, 9, 1, 3));
 const HOSTS = ['lumi', 'maehwa', 'rose'];
-const at = (day, h, m = 0) => kstDayStart(day) + (h * 60 + m) * 60_000;
+/** Game h:m on real KST day `day` (its game day in real hour 12; 게임 하루 = 실제 1시간). */
+const at = (day, h, m = 0) => npcDayStart(gameDay(dayStart(day)) + 12) + (h * 60 + m) * GAME_MINUTE_MS;
 /** The first day from DAY0 with this KST weekday. */
 const nextWeekday = (wd, from = DAY0) => { let d = from; while (weekdayOf(d) !== wd) d++; return d; };
 const dry = (d) => !['rain', 'storm'].includes(weatherOf(d));

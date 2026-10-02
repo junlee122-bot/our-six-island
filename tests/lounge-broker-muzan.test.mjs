@@ -1,13 +1,14 @@
 // 범마을 증권 지점장 무잔 (handover/design/design-broker-muzan.md): his day,
 // the broker's counter, the generated art's record, his lines (everyday,
 // love, banter, the counter's stock remarks) and courting him.
+import { GAME_MINUTE_MS, dayStart, gameDay } from '../app/lounge-calendar.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import sharp from 'sharp';
 import { kstDay, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
-import { NPC_PLACES, MUZAN_DAY_OFF, kstDayStart, npcCanStand, npcSpot, npcPlan } from '../app/lounge-npc-schedule.ts';
+import { NPC_PLACES, MUZAN_DAY_OFF, npcDayStart, npcCanStand, npcSpot, npcPlan } from '../app/lounge-npc-schedule.ts';
 import { SHOP_INTERIORS } from '../app/lounge-shop-interiors.ts';
 import { NPCS, NPC_BONDS, NPC_IDS, npcBond } from '../app/lounge-npc-data.ts';
 import { NPC_CHIBI } from '../app/lounge-npc-chibi.ts';
@@ -24,8 +25,9 @@ import { NPC_DATING_POINTS } from '../app/lounge-romance.ts';
 const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 9, 5, 3);
 const DAY0 = kstDay(T0);
-const at = (d, h, m = 0) => kstDayStart(DAY0 + d) + h * HOUR + m * 60_000;
-const weekdayOf = (d) => new Date(kstDayStart(DAY0 + d) + 9 * HOUR).getUTCDay();
+/** Game h:m on real KST day DAY0 + d (its game day in real hour 12; 게임 하루 = 실제 1시간). */
+const at = (d, h, m = 0) => npcDayStart(gameDay(dayStart(DAY0 + d)) + 12) + (h * 60 + m) * GAME_MINUTE_MS;
+const weekdayOf = (d) => new Date(dayStart(DAY0 + d) + 9 * HOUR).getUTCDay();
 const dayWith = (weekday) => [0, 1, 2, 3, 4, 5, 6].find((d) => weekdayOf(d) === weekday);
 
 /** Words that do not belong in a village game (the original's demons, threats, violence). */

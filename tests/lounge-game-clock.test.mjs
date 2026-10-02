@@ -219,3 +219,43 @@ test('events: real weekday + game hours, and when they open next', () => {
   assert.equal(inGameHours(gameTimeOnDay(fri, 5, 59), 18, 6), true);
   assert.equal(inGameHours(gameTimeOnDay(fri, 6), 18, 6), false);
 });
+
+test('resident schedules on the game clock: no two residents share a spot at once (stage 3 and 무잔 included)', async () => {
+  const { NPC_IDS } = await import('../app/lounge-npc-data.ts');
+  const { NPC_PLACES } = await import('../app/lounge-npc-schedule.ts');
+  // Stand-ins shared by design: not drawn anywhere.
+  const SHARED = new Set(['home', 'away', 'library', 'fields', 'mountain']);
+  for (const world of [{}, { hill: true, ranch: true, foothill: true }])
+    for (let d = 0; d < 7; d++)
+      for (const slot of [0, 13]) {
+        const g = gameDay(dayStart(DAY0 + d)) + slot;
+        for (let m = 0; m < 1440; m += 5) {
+          const t = gameDayStart(g) + m * GAME_MINUTE_MS;
+          const seen = new Map();
+          for (const id of NPC_IDS) {
+            const s = npcSpot(id, t, world);
+            if (s.walking || s.activity === 'transit' || SHARED.has(s.place) || NPC_PLACES[s.place]?.hidden) continue;
+            assert.ok(!seen.has(s.place), `${seen.get(s.place)} and ${id} both at ${s.place} (real day +${d}, game ${Math.floor(m / 60)}:${m % 60})`);
+            seen.set(s.place, id);
+          }
+        }
+      }
+});
+
+test('stage-3 residents and 무잔 keep game hours on real weekdays', async () => {
+  const { MUZAN_DAY_OFF } = await import('../app/lounge-npc-schedule.ts');
+  const world = { hill: true, ranch: true, foothill: true };
+  for (let d = 0; d < 7; d++) {
+    const real = DAY0 + d;
+    for (const slot of [1, 20]) {
+      const g = gameDay(dayStart(real)) + slot;
+      // 메르시 sees patients at game 10:00, 오른 is at the forge at game 14:00, every game day.
+      assert.equal(npcSpot('mercy', gameTimeAt(g, 10), world).place, 'clinic.owner');
+      assert.equal(npcSpot('ornn', gameTimeAt(g, 14), world).place, 'smithy.owner');
+      // 무잔 opens the counter at game 09:00 on real workdays.
+      const muzan = npcSpot('muzan', gameTimeAt(g, 10), world).place;
+      if (weekdayOf(real) === MUZAN_DAY_OFF) assert.notEqual(muzan, 'broker.owner');
+      else assert.equal(muzan, 'broker.owner');
+    }
+  }
+});

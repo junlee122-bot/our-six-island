@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { emptyLife, ensureLifeMember, lifeAction, lifeView } from '../app/lounge-life.ts';
 import { newLoungeLedger, registerWallet, validateLedger, kstDay } from '../app/lounge-economy.ts';
 import { FISH, FISH_BY_ID, ITEM_BY_ID, ITEM_PRICES, DISH_BY_ID, ALL_FISH_SPOTS, FISH_SPOTS, SPOT_INFO } from '../app/lounge-items.ts';
-import { weatherOf, seasonOf } from '../app/lounge-calendar.ts';
+import { GAME_HOUR_MS, gameDay, gameTimeAt, gameTimeOnDay, weatherOf, seasonOf } from '../app/lounge-calendar.ts';
 import { BAITS, FISH_PROFILE } from '../app/lounge-fish-data.ts';
 import { DAWN_FISH, OFFSHORE_FISH, SEA_FISH, SEA_LEGENDS, SHORE_FISH, SEA_PROFILE } from '../app/lounge-fish-sea-data.ts';
 import { TICK_MS, botPlay, replayTrace, swayAt, SWAY_PERIOD, FightSim } from '../app/lounge-fish-minigame.ts';
@@ -35,8 +35,14 @@ import { SHOP_INTERIORS } from '../app/lounge-shop-interiors.ts';
 const MIN = 60_000,
   HOUR = 60 * MIN;
 const UIDS = [0, 1, 2, 3, 4, 5].map((i) => `${i}${i}${i}${i}${i}${i}${i}${i}-1111-4111-8111-11111111111${i}`);
-/** KST clock: day `d` from 2026-09-24, hh:mm:ss. */
-const kst = (d, h, m = 0, s = 0) => Date.UTC(2026, 8, 24 + d, h - 9, m, s);
+/** Real KST clock: day `d` from 2026-09-24, hh:mm:ss (fares, the one-a-day limit and the 멀미약 run on it). */
+const real = (d, h, m = 0, s = 0) => Date.UTC(2026, 8, 24 + d, h - 9, m, s);
+/**
+ * Game clock (게임 하루 = 실제 1시간): game hh:mm on real day `d`, in the game
+ * day of its real noon hour, plus `s` real seconds. Sailings and the dawn
+ * knock run on it.
+ */
+const kst = (d, h, m = 0, s = 0) => gameTimeAt(gameDay(real(d, 12)), h, m) + s * 1_000;
 /** The first day from `from` whose weather matches. */
 const dayWith = (pred, from = 0) => {
   for (let d = from; d < from + 120; d++) if (pred(weatherOf(kstDay(kst(d, 12))), d)) return d;
@@ -113,7 +119,7 @@ test('sea species: 40+ new, unique ids and names, valid conditions and prices', 
     let some = false;
     for (let d = 0; d < 400 && !some; d += 3)
       for (let h = 0; h < 24 && !some; h++) {
-        const now = Date.UTC(2026, 0, 1 + d, h - 9);
+        const now = gameTimeOnDay(kstDay(Date.UTC(2026, 0, 1 + d, 3)), h);
         if (!season.includes(seasonOf(now))) continue;
         some = fishAvailable(f, { season: seasonOf(now), weather: weatherOf(kstDay(now)), now, level: 10, rod: 5, caught: [], dawn: true });
       }
@@ -143,18 +149,25 @@ test('sea species: 40+ new, unique ids and names, valid conditions and prices', 
   assert.equal(ITEM_BY_ID[PILL].kind, 'tool');
 });
 
-test('timetable: half-hourly 05:00–19:00, boarding two minutes before', () => {
-  const day = kstDay(kst(CALM, 12));
-  const list = sailingsOf(day);
-  assert.equal(list.length, 29);
+test('timetable: every game hour 05:00–19:00 of every game day, boarding two real minutes before', () => {
+  const g = gameDay(kst(CALM, 12));
+  const list = sailingsOf(g);
+  assert.equal(list.length, 15);
   assert.equal(list[0], kst(CALM, 5));
   assert.equal(list.at(-1), kst(CALM, 19));
-  assert.equal(boardingSailing(kst(CALM, 9, 58)), kst(CALM, 10));
-  assert.equal(boardingSailing(kst(CALM, 9, 57, 59)), null);
-  assert.equal(boardingSailing(kst(CALM, 10)), null, 'the gangway is up at departure');
+  for (let i = 1; i < list.length; i++) assert.equal(list[i] - list[i - 1], GAME_HOUR_MS, '2 min 30 s apart');
+  const dep = kst(CALM, 10);
+  assert.equal(boardingSailing(dep - 2 * MIN), dep);
+  assert.equal(boardingSailing(dep - 2 * MIN - 1), null);
+  assert.equal(boardingSailing(dep), null, 'the gangway is up at departure');
   assert.equal(boardingSailing(kst(CALM, 4, 59)), kst(CALM, 5));
-  assert.equal(nextSailing(kst(CALM, 19, 10)), kst(CALM + 1, 5));
+  // After the game day's last boat the next one is the next game day's first: one real hour later.
+  assert.equal(nextSailing(kst(CALM, 19, 10)), kst(CALM, 5) + 3_600_000);
   assert.equal(BOARDING_MS, 2 * MIN);
+  // Fifteen boats every real hour, 360 a real day.
+  let n = 0;
+  for (let t = real(CALM, 0); t < real(CALM + 1, 0); t = nextSailing(t)) if (t > real(CALM, 0)) n++;
+  assert.equal(n, 360);
 });
 
 test('deck: every rail can be walked to from where you board', () => {
@@ -172,7 +185,7 @@ test('deck: every rail can be walked to from where you board', () => {
 test('boarding: unlock, window, fare, seats, once a day, refund before departure', () => {
   const s = world(6),
     [a, b, c, d, e, f] = s.members,
-    at = kst(CALM, 9, 58, 30);
+    at = kst(CALM, 10) - 90_000;
   // Locked: Lv4 and the harbor.
   s.skill(a, 0);
   s.fails(a, { kind: 'voyageBoard' }, at, VOYAGE_REJECT.locked);
@@ -181,7 +194,7 @@ test('boarding: unlock, window, fare, seats, once a day, refund before departure
   s.fails(a, { kind: 'voyageBoard' }, at, VOYAGE_REJECT.locked);
   s.life.flags.push('district-harbor');
   // Outside the window.
-  s.fails(a, { kind: 'voyageBoard' }, kst(CALM, 9, 50), VOYAGE_REJECT.window);
+  s.fails(a, { kind: 'voyageBoard' }, kst(CALM, 10) - 2 * MIN - 10_000, VOYAGE_REJECT.window);
   // Not enough 범.
   s.ledger.accounts[`wallet-${a.id}`] = 10_000;
   s.ledger.houseBalance = (s.ledger.houseBalance ?? 0) + 90_000;
@@ -205,8 +218,8 @@ test('boarding: unlock, window, fare, seats, once a day, refund before departure
   assert.equal(s.wallet(d), mid + VOYAGE_FARE);
   assert.equal(s.view(d, at).voyage.sailedToday, false);
   s.act(e, { kind: 'voyageBoard' }, at + 2_000);
-  // Once a day: the next sailing refuses those who already went.
-  const later = kst(CALM, 13, 59);
+  // Once a real day: a later game day's sailing refuses those who already went.
+  const later = nextSailing(kst(CALM, 10) + VOYAGE_MS + 5 * MIN) - MIN;
   s.fails(a, { kind: 'voyageBoard' }, later, VOYAGE_REJECT.today);
   s.act(f, { kind: 'voyageBoard' }, later);
   // The next day it is open again.
@@ -226,8 +239,8 @@ test('storm days: no sailings (결항), and 가붕 can tell the day before', () 
 test('voyage clock: deck only while sailing; back by the clock or early, no refund', () => {
   const s = world(2),
     [a, b] = s.members,
-    at = kst(CALM, 9, 59),
-    dep = kst(CALM, 10);
+    dep = kst(CALM, 10),
+    at = dep - 90_000;
   s.act(a, { kind: 'voyageBoard' }, at);
   s.act(b, { kind: 'voyageBoard' }, at);
   // Before departure: no offshore casting.
@@ -333,10 +346,10 @@ test('dawn knock: regulars only, 05–07, once a day; the discount and up to thr
   }
   for (const [i, day] of days.slice(0, 5).entries()) {
     s.act(a, { kind: 'voyageBoard' }, kst(day, 7, 59));
-    s.act(a, { kind: 'voyageDone' }, kst(day, 8, 30));
+    s.act(a, { kind: 'voyageDone' }, kst(day, 8) + VOYAGE_MS + 1_000);
     if (i < 2) {
       s.act(b, { kind: 'voyageBoard' }, kst(day, 7, 59));
-      s.act(b, { kind: 'voyageDone' }, kst(day, 8, 30));
+      s.act(b, { kind: 'voyageDone' }, kst(day, 8) + VOYAGE_MS + 1_000);
     }
   }
   const today = days[5];
@@ -416,13 +429,13 @@ test('멀미약: sellers, one KST day of calm deck, no swell on the reel', () =>
   assert.equal(voyageSway(s.life, a.id, now), SWAY[w]);
   s.act(a, { kind: 'pillTake' }, now);
   assert.equal(voyageSway(s.life, a.id, now), 0);
-  assert.equal(s.view(a, now).voyage.pillUntil, kst(CALM + 1, 0));
+  assert.equal(s.view(a, now).voyage.pillUntil, real(CALM + 1, 0), 'until the real midnight');
   s.fails(a, { kind: 'pillTake' }, now + HOUR, VOYAGE_REJECT.pillToday);
   // Midnight: the swell is back; the second pill works the next day.
-  assert.equal(voyageSway(s.life, a.id, kst(CALM + 1, 0)) > 0, true);
-  s.act(a, { kind: 'pillTake' }, kst(CALM + 1, 1));
+  assert.equal(voyageSway(s.life, a.id, real(CALM + 1, 0)) > 0, true);
+  s.act(a, { kind: 'pillTake' }, real(CALM + 1, 1));
   assert.equal(s.life.ext[a.id].inv?.[PILL] ?? 0, 0);
-  s.fails(a, { kind: 'pillTake' }, kst(CALM + 2, 1), VOYAGE_REJECT.pillNone);
+  s.fails(a, { kind: 'pillTake' }, real(CALM + 2, 1), VOYAGE_REJECT.pillNone);
 });
 
 test('swell: a deterministic integer wave; the replay agrees with the live fight', () => {
@@ -472,7 +485,7 @@ test('determinism: the same cast at the same moment picks the same fish', () => 
 const uuid = () => crypto.randomUUID();
 test('cloud: boarding at the pier, the deck only while sailing, back on the pier after', async () => {
   let w = { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} },
-    now = kst(CALM, 9, 58, 40);
+    now = kst(CALM, 10) - 80_000;
   const p = { id: uuid(), actor: 0, username: ACCOUNT_IDS[0], connection: uuid(), sequence: 0, epoch: 0, code: '' };
   const run = async (op, extra = {}) => {
     const command = {
@@ -512,12 +525,12 @@ test('cloud: boarding at the pier, the deck only while sailing, back on the pier
   now += MIN;
   assert.equal((await run('action', { action: { kind: 'anglerCast', spot: 'offshore' } })).ok, true);
   // The client polls while at sea; time's up: the next read puts me back on the pier.
-  while (now + 60_000 < kst(CALM, 10, 20)) {
+  while (now + 60_000 < kst(CALM, 10) + VOYAGE_MS) {
     now += 60_000;
     await run('read');
     assert.equal(me().area, 'offshore');
   }
-  now = kst(CALM, 10, 20, 2);
+  now = kst(CALM, 10) + VOYAGE_MS + 2_000;
   await run('read');
   assert.equal(me().area, 'harbor');
   assert.equal((await area('offshore')).ok, false);

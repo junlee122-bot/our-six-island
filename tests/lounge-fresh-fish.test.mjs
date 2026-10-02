@@ -8,12 +8,11 @@ import { emptyLife, ensureLifeMember, lifeAction } from '../app/lounge-life.ts';
 import { fishCandidates } from '../app/lounge-life-plus.ts';
 import { newLoungeLedger, registerWallet, kstDay } from '../app/lounge-economy.ts';
 import { BUNDLE_BY_ID, CROP_SELL_REF, DISH_BY_ID, FISH, FISH_BY_ID, FISH_SPOTS, ITEMS, ITEM_BY_ID } from '../app/lounge-items.ts';
-import { seasonOf, weatherOf, kstHour, isDaytime, isNighttime } from '../app/lounge-calendar.ts';
+import { GAME_HOUR_MS, seasonOf, weatherOf, gameHour, gameTimeOnDay, isDaytime, isNighttime } from '../app/lounge-calendar.ts';
 import { BAITS, FISH_PROFILE } from '../app/lounge-fish-data.ts';
 import { FISH_GATE, FRESH_DISHES, FRESH_DISH_CROPS, FRESH_FISH, FRESH_FISH_IDS, FRESH_PROFILE, fishGateOk, gateText } from '../app/lounge-fish-data-fresh.ts';
 import { anglerCandidates, fishAvailable, isLegend } from '../app/lounge-fish-engine.ts';
 
-const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 8, 24, 3); // 12:00 KST
 const DAYS = 28;
 const FRESH = ['river', 'pond', 'rapids', 'falls', 'lake', 'bridge'];
@@ -21,8 +20,13 @@ const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 const BEHAVIOURS = ['calm', 'dart', 'sink', 'float', 'mixed'];
 const OLD = FISH.filter((f) => !FRESH_FISH_IDS.has(f.id));
 const ctxAt = (t, extra = {}) => ({ season: seasonOf(t), weather: weatherOf(kstDay(t)), now: t, ...extra });
+/**
+ * Every game hour of DAYS real days (게임 하루 = 실제 1시간): game hour h of
+ * real day d is read in the game day of real hour h, so the samples spread
+ * over the real day like the old hourly ones did.
+ */
 const hours = function* (from = T0, step = 1) {
-  for (let t = from; t < from + DAYS * 24 * HOUR; t += step * HOUR) yield t;
+  for (let i = 0; i < DAYS * 24; i += step) yield gameTimeOnDay(kstDay(from) + Math.floor(i / 24), i % 24, 0, i % 24);
 };
 
 test('new fish: 30 species and 2 legends, unique ids and names, freshwater spots only', () => {
@@ -63,7 +67,7 @@ test('profiles: every new fish has one, hour windows fit its day/night, gates ar
       assert.ok(from >= 0 && from < 24 && to >= 0 && to <= 24 && from !== to, `${f.id} hours`);
       // Some hour of the window must also be inside the fish's day/night.
       const ok = [...Array(24).keys()].some((h) => {
-        const t = Date.UTC(2026, 8, 24, (h + 15) % 24); // KST hour h
+        const t = gameTimeOnDay(kstDay(T0), h); // game hour h
         const inWindow = from <= to ? h >= from && h < to : h >= from || h < to;
         return inWindow && (f.time === 'any' || (f.time === 'day' ? isDaytime(t) : isNighttime(t)));
       });
@@ -165,20 +169,20 @@ test('legends: their own season, hours, weather and gates, once per friend, neve
   assert.equal(new Set(keys).size, keys.length, 'legends keep apart');
 
   const bt = FISH_BY_ID.baekdutrout;
-  const dawn = [...hours()].find((t) => seasonOf(t) === 'autumn' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && kstHour(t) === 6);
+  const dawn = [...hours()].find((t) => seasonOf(t) === 'autumn' && !['rain', 'storm'].includes(weatherOf(kstDay(t))) && gameHour(t) === 6);
   assert.equal(fishAvailable(bt, ctxAt(dawn, { level: 6, rod: 3 })), true);
   assert.equal(fishAvailable(bt, ctxAt(dawn, { level: 5, rod: 3 })), false, 'level gate');
   assert.equal(fishAvailable(bt, ctxAt(dawn, { level: 9, rod: 2 })), false, 'rod gate');
   assert.equal(fishAvailable(bt, ctxAt(dawn, { level: 9, rod: 3, caught: ['baekdutrout'] })), false, 'once per friend');
-  assert.equal(fishAvailable(bt, ctxAt(dawn + 3 * HOUR, { level: 9, rod: 3 })), false, '9시 is past the dawn window');
+  assert.equal(fishAvailable(bt, ctxAt(dawn + 3 * GAME_HOUR_MS, { level: 9, rod: 3 })), false, '9시 is past the dawn window');
   assert.ok(anglerCandidates('rapids', ctxAt(dawn, { level: 9, rod: 3, bait: null })).some((f) => f.id === 'baekdutrout'));
 
   const mc = FISH_BY_ID.millcatfish;
-  const night = [...hours()].find((t) => seasonOf(t) === 'summer' && weatherOf(kstDay(t)) === 'rain' && kstHour(t) === 1);
+  const night = [...hours()].find((t) => seasonOf(t) === 'summer' && weatherOf(kstDay(t)) === 'rain' && gameHour(t) === 1);
   assert.equal(fishAvailable(mc, ctxAt(night, { level: 8, rod: 3 })), true);
   assert.equal(fishAvailable(mc, ctxAt(night, { level: 7, rod: 3 })), false);
   assert.equal(fishAvailable(mc, ctxAt(night, { level: 8, rod: 3, caught: ['millcatfish'] })), false);
-  const dryNight = [...hours()].find((t) => seasonOf(t) === 'summer' && weatherOf(kstDay(t)) === 'sunny' && kstHour(t) === 1);
+  const dryNight = [...hours()].find((t) => seasonOf(t) === 'summer' && weatherOf(kstDay(t)) === 'sunny' && gameHour(t) === 1);
   assert.equal(fishAvailable(mc, ctxAt(dryNight, { level: 9, rod: 5 })), false, 'needs rain');
 
   for (const t of hours(T0, 5))

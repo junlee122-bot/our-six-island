@@ -10,9 +10,9 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
 import { formatBeom, josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
-import { WEATHER_INFO, weatherOf } from '../lounge-calendar';
+import { WEATHER_INFO, gameClockText, weatherOf } from '../lounge-calendar';
 import { kstDay } from '../lounge-economy';
-import { BOARDING_MS, DAWN_GUESTS, PILL, SEATS, VOYAGE_LINES, VOYAGE_MS, sailingsOf } from '../lounge-voyage-data';
+import { BOARDING_MS, DAWN_GUESTS, PILL, SEATS, VOYAGE_LINES, VOYAGE_MS, boardingSailing, nextSailing } from '../lounge-voyage-data';
 import type { VoyageView } from '../lounge-voyage';
 import { lifeSfx } from '../lounge-audio-life';
 import { Modal } from './Modal';
@@ -68,8 +68,8 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
       </Modal>
     );
   const phase = tripPhaseNow(v.trip, now);
-  const boardingDep = sailingsOf(day).find((t) => now >= t - BOARDING_MS && now < t) ?? null;
-  const next = sailingsOf(day).find((t) => t > now) ?? sailingsOf(day + 1)[0];
+  const boardingDep = boardingSailing(now);
+  const next = nextSailing(now);
   const seats = v.boarding && boardingDep === v.boarding.dep ? v.boarding.seats : 0;
   const guest = v.guestOf && now < v.guestOf.dep ? v.guestOf : null;
   const say = v.storm
@@ -107,7 +107,7 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
         <div>
           <dt>{boardingDep ? '이번 배' : '다음 배'}</dt>
           <dd data-testid="voyage-next">
-            {hhmm(boardingDep ?? next)} 출항 · {boardingDep ? `${mmss(boardingDep - now)} 남음` : `승선 ${hhmm((boardingDep ?? next) - BOARDING_MS)}부터`}
+            게임 {gameClockText(boardingDep ?? next)}(실제 {hhmm(boardingDep ?? next)}) 출항 · {boardingDep ? `${mmss(boardingDep - now)} 남음` : `승선 ${hhmm((boardingDep ?? next) - BOARDING_MS)}부터`}
           </dd>
         </div>
         <div>
@@ -130,7 +130,7 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
         </div>
         <div>
           <dt>항해</dt>
-          <dd>{VOYAGE_MS / 60_000}분 · 05~19시 정시와 30분마다 · 보물 상자 +5%p</dd>
+          <dd>{VOYAGE_MS / 60_000}분 · 게임 시각 05~19시 매 정시(실제 2분 30초마다) · 보물 상자 +5%p</dd>
         </div>
         <div>
           <dt>멀미약</dt>

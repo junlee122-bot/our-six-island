@@ -8,7 +8,7 @@
 //   node --experimental-strip-types --no-warnings scripts/sea-fishing-economy.mjs
 import { emptyLife, ensureLifeMember, lifeAction, lifeView } from '../app/lounge-life.ts';
 import { newLoungeLedger, registerWallet, kstDay } from '../app/lounge-economy.ts';
-import { seasonOf, weatherOf, kstHour } from '../app/lounge-calendar.ts';
+import { GAME_MINUTE_MS, seasonOf, weatherOf, gameHour } from '../app/lounge-calendar.ts';
 import { botPlay, TICK_MS } from '../app/lounge-fish-minigame.ts';
 import { FISH_BY_ID } from '../app/lounge-items.ts';
 import { FISH_DEMAND_FREE, sellTotal } from '../app/lounge-life-plus.ts';
@@ -27,11 +27,12 @@ const PACE_MS = Number(process.env.PACE_MS ?? 34_000);
 /** 범 for selling k of a species in one day at the 어시장 (fish skip saturation and the cap). */
 const saleOf = (id, k) => sellTotal(id, FISH_BY_ID[id]?.sell ?? 0, 0, k);
 
+/** The first game hour:minute (게임 하루 = 실제 1시간) in that season and sky. */
 function findTime(season, hour, minute, sky) {
   const T0 = Date.UTC(2026, 8, 24, 3);
-  for (let t = T0; t < T0 + 200 * 24 * HOUR; t += HOUR) {
+  for (let t = T0; t < T0 + 200 * 24 * HOUR; t += HOUR / 24) {
     const w = weatherOf(kstDay(t));
-    if (seasonOf(t) === season && kstHour(t) === hour && (sky === 'rain' ? w === 'rain' : !['rain', 'storm', 'snow'].includes(w))) return t + minute * 60_000;
+    if (seasonOf(t) === season && gameHour(t) === hour && (sky === 'rain' ? w === 'rain' : !['rain', 'storm', 'snow'].includes(w))) return t + minute * GAME_MINUTE_MS;
   }
   throw new Error('no time');
 }
