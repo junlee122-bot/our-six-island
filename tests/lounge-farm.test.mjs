@@ -24,7 +24,9 @@ import {
   FAIR_FEE,
   GIANT_CHANCE,
   GIANT_CROPS,
+  FIXTURES,
   GRID_TILES,
+  MACHINES,
   MACHINE_BY_ID,
   NEW_CROP_IDS,
   WORK_SLOTS,
@@ -40,14 +42,17 @@ import {
   giantBed,
   goodsById,
   parseStock,
+  sellCapAllows,
   settleFarmPlots,
   stockKey,
+  stockName,
   witherAt,
 } from '../app/lounge-farm.ts';
 import { demandMult, marketMult } from '../app/lounge-life-plus.ts';
 import { seasonOf, hash32, dayStart } from '../app/lounge-calendar.ts';
 import { INITIAL_BEOM, kstDay, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
-import { LEVEL_XP } from '../app/lounge-growth-data.ts';
+import { LEVEL_PERKS, LEVEL_XP } from '../app/lounge-growth-data.ts';
+import { farmToolAction, plantsAnySeason } from '../app/lounge-life-ui.ts';
 import { ITEM_BY_ID } from '../app/lounge-items.ts';
 
 const uuid = () => crypto.randomUUID();
@@ -627,20 +632,24 @@ test('no minting: selling a flood of goods stays under the daily market ceiling'
   s.act(m, { kind: 'sellGoods', item: 'keg-insam', q: 2, n: 1, at: 'coop' }, t);
   const first = s.balance(m) - b;
   assert.equal(first, Math.round(goodsById()['keg-insam'].base * 1.5));
-  // Everything else sells into the saturated market: the day's total stays capped.
-  let sold = first;
+  // Everything else sells into the saturated market: the day's total stays capped
+  // (a last single unit may run past the ceiling, which then counts as reached).
+  let sold = first,
+    last = 0;
   for (let i = 0; i < 20; i++) {
     for (const [item, q] of [['keg-insam', 2], ['dry-strawberry', 2]]) {
       try {
         const before = s.balance(m);
         s.act(m, { kind: 'sellGoods', item, q, n: 1, at: 'coop' }, t + i);
-        sold += s.balance(m) - before;
+        last = s.balance(m) - before;
+        sold += last;
       } catch (e) {
         if (!(e instanceof LifeError)) throw e;
       }
     }
   }
-  assert.ok(sold <= 100_000, String(sold));
+  assert.ok(sold - last <= 100_000, String(sold));
+  assert.ok(sold < 100_000 + last + 1 && last < 20_000, String(last));
   assert.ok(marketMult(sold) < 0.2);
 });
 
@@ -714,4 +723,166 @@ test('settleFarmPlots is idempotent and a view never writes', () => {
   const once = JSON.stringify(copy);
   settleFarmPlots(copy, m.id, kst(2026, 10, 20, 12));
   assert.equal(JSON.stringify(copy), once);
+});
+
+// ------------------------------------------------------------ audit fixes (10월 3일)
+test('top goods: one unit worth more than the daily cap still sells at the 농협, from the bag and from the bin', () => {
+  const s = world(1),
+    [m] = s.members,
+    t = kst(2026, 10, 13, 10);
+  const x = ((s.life.farmx ??= {})[m.id] ??= {});
+  x.goods = { 'keg-insam@3': 3, 'dry-watermelon@3': 3 };
+  const insam = Math.round(goodsById()['keg-insam'].base * QUALITY_MULT[3]),
+    melon = Math.round(goodsById()['dry-watermelon'].base * QUALITY_MULT[3]);
+  assert.equal(insam, 108_000);
+  assert.equal(melon, 120_050);
+  assert.equal(sellCapAllows(insam, 1, 100_000), true);
+  assert.equal(sellCapAllows(insam, 1, 0), false);
+  assert.equal(sellCapAllows(2 * insam, 2, 100_000), false);
+  // Two at once are still refused; one alone sells at the full price.
+  s.fails(m, { kind: 'sellGoods', item: 'keg-insam', q: 3, n: 2, at: 'coop' }, t);
+  let b = s.balance(m);
+  s.act(m, { kind: 'sellGoods', item: 'keg-insam', q: 3, n: 1, at: 'coop' }, t);
+  assert.equal(s.balance(m) - b, insam);
+  // The day's cap now counts as reached: nothing more sells today.
+  assert.ok(s.view(m, t).sellCapLeft <= 0);
+  s.fails(m, { kind: 'sellGoods', item: 'keg-insam', q: 3, n: 1, at: 'coop' }, t + MIN);
+  s.fails(m, { kind: 'sellGoods', item: 'dry-watermelon', q: 3, n: 1 }, t + MIN);
+  // Next day, from the bag (85%): the 별빛 dried watermelon is over the cap too.
+  b = s.balance(m);
+  s.act(m, { kind: 'sellGoods', item: 'dry-watermelon', q: 3, n: 1 }, t + DAY);
+  assert.equal(s.balance(m) - b, Math.round(melon * 0.85));
+  // The shipping bin sells one such unit per settlement and keeps the rest.
+  s.act(m, { kind: 'ship', item: 'dry-watermelon', q: 3, n: 2 }, t + DAY + HOUR);
+  b = s.balance(m);
+  s.act(m, { kind: 'status', text: '' }, t + 2 * DAY);
+  assert.equal(s.balance(m) - b, Math.round(melon * 0.85));
+  assert.deepEqual(s.life.farmx[m.id].bin.items, { 'dry-watermelon@3': 1 });
+  b = s.balance(m);
+  s.act(m, { kind: 'status', text: '' }, t + 3 * DAY);
+  assert.equal(s.balance(m) - b, Math.round(melon * 0.85));
+  assert.equal(s.life.farmx[m.id].bin, undefined);
+});
+
+test('regrow keeps the planting’s quality (g) and watering-can (w) bonuses', () => {
+  const s = world(1),
+    [m] = s.members,
+    t = SUMMER;
+  s.level(m, 'farm', 3);
+  s.life.growth.u[m.id].tools = { can: 5, hoe: 5 };
+  s.seeds(m, 'blueberry', 1);
+  s.act(m, { kind: 'plant', plot: 0, crop: 'blueberry' }, t);
+  s.act(m, { kind: 'water', plot: 0 }, t);
+  const p = s.life.farms[m.id][0];
+  assert.equal(p.g, 12 + 2);
+  assert.equal(p.w, 20);
+  const ready = plotReadyAt(p, t);
+  s.act(m, { kind: 'harvest', plot: 0 }, ready);
+  const again = s.life.farms[m.id][0];
+  assert.equal(again.n, 1);
+  assert.equal(again.g, 14);
+  assert.equal(again.w, 20);
+  assert.deepEqual(readLife(JSON.parse(JSON.stringify(s.life))).farms[m.id][0], again);
+});
+
+test('sprinklers water with the owner’s watering-can bonus when it is better', () => {
+  const s = world(1),
+    [m] = s.members,
+    t = SUMMER;
+  s.life.farmx = { [m.id]: { fx: { 1: { k: 'sprinkler-q', at: t - HOUR } } } };
+  s.level(m, 'farm', 1);
+  s.life.growth.u[m.id].tools = { can: 5 };
+  s.seeds(m, 'blueberry', 1);
+  s.act(m, { kind: 'plant', plot: 0, crop: 'blueberry' }, t);
+  const p = s.life.farms[m.id][0];
+  assert.equal(p.wateredAt, t);
+  assert.equal(p.w, 20);
+  assert.equal(plotReadyAt(p, t), t + Math.ceil(CROP_INFO.blueberry.growMs * (1 - 0.4 - 20 / 100)));
+  // A low-tier can: the sprinkler's own bonus still counts.
+  s.life.growth.u[m.id].tools = { can: 2 };
+  s.seeds(m, 'blueberry', 1);
+  s.act(m, { kind: 'plant', plot: 2, crop: 'blueberry' }, t);
+  assert.equal(s.life.farms[m.id][2].w, 5);
+});
+
+test('skill perk labels match the real recipe gates (no "after a region" note)', () => {
+  const recipes = [...FIXTURES, ...MACHINES].filter((d) => d.id !== 'sprinkler-s' && d.id !== 'scarecrow');
+  const label = { jar: '옹기', keg: '숙성통', dehydrator: null, seedmaker: '씨앗 제조기', beehouse: '벌통', sprinkler: '기본 스프링클러', 'sprinkler-q': '품질 스프링클러' };
+  for (const d of recipes) {
+    if (!label[d.id]) continue;
+    const perk = LEVEL_PERKS[d.recipe.skill].find((p) => p.text.includes(label[d.id]));
+    assert.ok(perk, d.id);
+    assert.equal(perk.level, d.recipe.level, d.id);
+    assert.equal(perk.soon, undefined, d.id);
+  }
+});
+
+test('E key: 온실지기 plants off-season seeds; 별빛 비료 · 성장 촉진제 · 보습 흙 work like the panel', () => {
+  const s = world(1),
+    [m] = s.members,
+    t = kst(2026, 10, 20, 10); // autumn
+  assert.equal(seasonOf(t), 'autumn');
+  s.seeds(m, 'watermelon', 3);
+  let v = s.view(m, t);
+  assert.equal(farmToolAction(v.me.farm, v.me, 'seed-watermelon', t, 'autumn', plantsAnySeason(v)), null);
+  s.fails(m, { kind: 'plant', plot: -1, crop: 'watermelon' }, t);
+  // 온실지기 (farm-a2): the E path, like the server, now plants them.
+  s.level(m, 'farm', 10);
+  s.life.growth.u[m.id].prof = ['farm-a', 'farm-a2'];
+  v = s.view(m, t);
+  assert.equal(plantsAnySeason(v), true);
+  const plant = farmToolAction(v.me.farm, v.me, 'seed-watermelon', t, 'autumn', plantsAnySeason(v));
+  assert.equal(plant.n, 3);
+  s.act(m, { kind: 'plant', plot: -1, crop: 'watermelon' }, t);
+  assert.equal(s.life.farms[m.id].filter((p) => p.crop === 'watermelon').length, plant.n);
+  // Soil items: the quick action counts exactly the plots the server treats.
+  s.give(m, 'fertilizer-star', 5);
+  s.give(m, 'speed-gro', 2);
+  s.give(m, 'retaining', 5);
+  s.life.farms[m.id][1].fert = 3;
+  for (const [item, field] of [['fertilizer-star', 'fert'], ['speed-gro', 'sg'], ['retaining', 'rs']]) {
+    v = s.view(m, t + MIN);
+    const quick = farmToolAction(v.me.farm, v.me, item, t + MIN, 'autumn', true);
+    assert.ok(quick && quick.kind === 'fertilize', item);
+    const before = s.life.ext[m.id].inv[item];
+    s.act(m, { kind: 'fertilize', plot: -1, item }, t + MIN);
+    assert.equal(before - (s.life.ext[m.id].inv?.[item] ?? 0), quick.n, item);
+    assert.ok(s.life.farms[m.id].filter((p) => p.crop && p[field]).length >= quick.n, item);
+    v = s.view(m, t + MIN);
+    const left = farmToolAction(v.me.farm, v.me, item, t + MIN, 'autumn', true);
+    if (left) s.act(m, { kind: 'fertilize', plot: -1, item }, t + MIN);
+  }
+  assert.equal(farmToolAction(s.view(m, t + MIN).me.farm, s.view(m, t + MIN).me, 'retaining', t + MIN, 'autumn', true), null);
+});
+
+test('orchard fruit goes in the jar (2× + 50), the keg (3×) and the dryer, not the seed maker', () => {
+  const s = world(1),
+    [m] = s.members,
+    t = SUMMER;
+  s.life.farmx = { [m.id]: { mach: { 0: { k: 'jar' }, 1: { k: 'keg' }, 2: { k: 'dehydrator' }, 3: { k: 'seedmaker' } } } };
+  s.give(m, 'apricot', 7);
+  s.give(m, 'peach', 1);
+  s.fails(m, { kind: 'farmLoad', slot: 3, item: 'apricot' }, t, FARM_REJECT.machineInput);
+  s.fails(m, { kind: 'farmLoad', slot: 0, item: 'apricot', q: 1 }, t, LIFE_REJECT.quality);
+  s.act(m, { kind: 'farmLoad', slot: 0, item: 'apricot' }, t);
+  s.act(m, { kind: 'farmLoad', slot: 1, item: 'peach', q: 0 }, t);
+  s.act(m, { kind: 'farmLoad', slot: 2, item: 'apricot' }, t);
+  assert.equal(s.life.ext[m.id].inv.apricot, 1);
+  assert.equal(s.life.ext[m.id].inv.peach, undefined);
+  s.fails(m, { kind: 'farmLoad', slot: 2, item: 'apricot' }, t, FARM_REJECT.machineBusy);
+  s.act(m, { kind: 'farmCollect', slot: -1 }, t + DAY);
+  assert.deepEqual(s.life.farmx[m.id].goods, { 'jar-apricot': 1, 'keg-peach': 1, 'dry-apricot': 1 });
+  const g = goodsById();
+  assert.equal(g['jar-apricot'].base, 2 * ITEM_BY_ID.apricot.sell + 50);
+  assert.equal(g['keg-peach'].base, 3 * ITEM_BY_ID.peach.sell);
+  assert.equal(g['dry-apricot'].base, Math.round(7.5 * ITEM_BY_ID.apricot.sell + 25));
+  assert.equal(stockName('jar-apricot'), '살구 잼');
+  assert.equal(stockName('keg-peach'), '복숭아주');
+  assert.equal(stockName('apricot'), '살구');
+  const b = s.balance(m);
+  s.act(m, { kind: 'sellGoods', item: 'keg-peach', n: 1, at: 'coop' }, t + DAY);
+  assert.equal(s.balance(m) - b, g['keg-peach'].base);
+  // Raw orchard fruit still cannot go in the shipping bin or the fair (they sell at 하쿠's).
+  s.fails(m, { kind: 'ship', item: 'apricot', n: 1 }, t + DAY, FARM_REJECT.item);
+  assert.deepEqual(readLife(JSON.parse(JSON.stringify(s.life))), s.life);
 });

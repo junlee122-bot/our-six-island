@@ -43,11 +43,13 @@ export type NewCropInfo = {
   trellis?: true;
 };
 /*
- * Profit per hour for a full 6-tile bed, watered (growth × 0.6), seed bought
- * (regrowing crops: every harvest counted, one seed): all new crops land
- * between 1,800/h (flowers, which also feed bee houses) and 5,400/h (인삼,
- * which sags fast on the market) — inside the 1,700–5,400/h band of the
- * original crops. Table: design-farming-upgrade.md §5.
+ * Profit per hour for a full 6-tile bed, watered (growth × 0.6), seed bought,
+ * at full price (regrowing crops: every harvest counted, one seed): the new
+ * crops land between ~1,800/h (국화; 튤립·백일홍·상추 2,000/h) and ~5,400/h
+ * (인삼, which sags fast on the market), around the 2,000–5,300/h of the
+ * original ten. Flowers earn no more for feeding bee houses: a ripe flower
+ * within 2 tiles only turns the house's honey (one jar per 16 h, however many
+ * flowers) into flower honey. Table: design-farming-upgrade.md §5.
  */
 export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
   garlic: { name: '마늘', growMs: 4 * HOUR, seed: 500, sell: 1_900, emoji: '🧄', seasons: ['spring'] },
@@ -134,7 +136,7 @@ export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
   },
   insam: { name: '인삼', growMs: 24 * HOUR, seed: 5_000, sell: 18_000, emoji: '🌿', seasons: ['autumn', 'winter'] },
 };
-/** Machine category of every crop (the 10 original ones included). */
+/** Machine category of every crop (the 10 original ones included), village fruit and orchard fruit. */
 export const CROP_CAT: Readonly<Record<string, CropCat>> = {
   carrot: 'veg',
   tomato: 'veg',
@@ -163,6 +165,12 @@ export const CROP_CAT: Readonly<Record<string, CropCat>> = {
   greenonion: 'veg',
   insam: 'herb',
   fruit: 'fruit',
+  // 과수원 fruit (bag items from 하쿠's orchard, lounge-stage3-data ORCHARD_FRUITS).
+  apricot: 'fruit',
+  peach: 'fruit',
+  apple: 'fruit',
+  pear: 'fruit',
+  tangerine: 'fruit',
 };
 /** Crops that may merge into one giant crop when a whole bed (3 × 2) ripens together. */
 export const GIANT_CROPS: readonly string[] = ['pumpkin', 'cabbage', 'watermelon'];

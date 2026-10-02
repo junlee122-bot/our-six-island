@@ -168,12 +168,12 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   farm: [
     { level: 2, text: '퇴비 · 비료를 만들면 1개 더', mods: { fertExtra: 1 } },
     { level: 3, text: '괭이 손맛 · 금별 확률 +2%p', mods: { goldPts: 2 } },
-    { level: 4, text: '옹기 레시피', soon: '과수원 언덕' },
+    { level: 4, text: '옹기 레시피' },
     { level: 5, text: '전문가 선택 ①' },
-    { level: 6, text: '기본 스프링클러', soon: '기상 관측소' },
+    { level: 6, text: '기본 스프링클러' },
     { level: 7, text: '고급 비료 재료 −1', mods: { deluxeCheap: true } },
-    { level: 8, text: '품질 스프링클러', soon: '기상 관측소' },
-    { level: 9, text: '씨앗 제조기', soon: '목장 초원' },
+    { level: 8, text: '품질 스프링클러' },
+    { level: 9, text: '씨앗 제조기' },
     { level: 10, text: '전문가 선택 ②' },
   ],
   fish: [
@@ -190,7 +190,7 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   forage: [
     { level: 2, text: '나무 바구니 가구', soon: '과수원 언덕' },
     { level: 3, text: '잡목 1곳 더 (매일)', mods: { extraBush: 1 } },
-    { level: 4, text: '벌통 레시피', soon: '과수원 언덕' },
+    { level: 4, text: '벌통 레시피' },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '채집할 때 10% 확률로 하나 더', mods: { forageDouble: 0.1 } },
     { level: 7, text: '계절 씨앗 제작', soon: '과수원 언덕' },
@@ -212,7 +212,7 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   craft: [
     { level: 2, text: '요리할 때 5% 확률로 하나 더', mods: { cookExtra: 0.05 } },
     { level: 3, text: '제작 재료 −10%', mods: { craftDiscount: 0.1 } },
-    { level: 4, text: '숙성통 레시피', soon: '과수원 언덕' },
+    { level: 4, text: '숙성통 레시피' },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '베틀', soon: '목장 초원' },
     { level: 7, text: '새 요리 3종', soon: '온천 발굴' },

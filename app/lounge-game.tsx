@@ -66,7 +66,7 @@ import type { FishingPhase } from './lounge/Fishing';
 import type { BookTab } from './lounge/Collection';
 import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
-import { farmToolAction } from './lounge-life-ui';
+import { farmToolAction, isSoilItem, plantsAnySeason, soilOpen } from './lounge-life-ui';
 import { roomUnlocks } from './lounge-bedroom-data';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
@@ -1218,7 +1218,7 @@ function AccountLounge({
       return;
     }
     const quick = life
-      ? farmToolAction(life.me.farm, life.me, hotbar.tool, now, life.calendar?.season ?? 'spring', !!life.flags?.includes('greenhouse'))
+      ? farmToolAction(life.me.farm, life.me, hotbar.tool, now, life.calendar?.season ?? 'spring', plantsAnySeason(life))
       : null;
     if (!quick) {
       setModal('farm');
@@ -1249,7 +1249,7 @@ function AccountLounge({
       void lifeRun({ kind: 'harvest', plot: i }, '', 'pop').then((ok) => ok && loungeAudio.chime('harvest'));
     else if (!plot.crop && tool.startsWith('seed-') && (life.me.bag.seeds[tool.slice(5) as Crop] ?? 0) > 0)
       void lifeRun({ kind: 'plant', plot: i, crop: tool.slice(5) as Crop }, '').then((ok) => ok && loungeAudio.chime('plant'));
-    else if (plot.crop && (tool === 'fertilizer' || tool === 'fertilizer-deluxe') && (life.me.inv?.[tool] ?? 0) > 0)
+    else if (isSoilItem(tool) && (life.me.inv?.[tool] ?? 0) > 0 && soilOpen(plot, tool, now))
       void lifeRun({ kind: 'fertilize', plot: i, item: tool }, `${itemName(tool)}를 뿌렸어요.`, 'pickup');
     else if (plot.crop && plot.wateredAt === null && !plot.rained)
       void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));
