@@ -58,7 +58,7 @@ export type SoloActivity = {
 
 type SoloLife = {
   me: {
-    farm?: readonly { crop: unknown; ready?: boolean }[];
+    farm?: readonly { crop: unknown; ready?: boolean; locked?: boolean; fixture?: string }[];
     requests?: readonly { done?: boolean }[];
   };
 } | null;
@@ -69,7 +69,7 @@ export function soloActivities(
 ): SoloActivity[] {
   const farm = life?.me.farm ?? [];
   const ripe = farm.filter((plot) => plot.crop && plot.ready).length;
-  const empty = farm.filter((plot) => !plot.crop).length;
+  const empty = farm.filter((plot) => !plot.crop && !plot.locked && !plot.fixture).length;
   const open = (life?.me.requests ?? []).filter((r) => !r.done).length;
   return [
     {

@@ -374,7 +374,7 @@ test('풍작 영감 through a real harvest: the whole field one step better', ()
   s.life.bag[m.id].seeds.carrot = 6;
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0);
   const ready = Math.max(...lifeView(s.life, m.id, m.actor, T0).me.farm.map((p) => p.readyAt));
-  const plain = lifeView(s.life, m.id, m.actor, ready).me.farm.map((p) => p.quality);
+  const plain = lifeView(s.life, m.id, m.actor, ready).me.farm.filter((p) => p.crop).map((p) => p.quality);
   s.mood(m).i = { k: 'harvest', at: T0, until: ready + DAY, left: 12 };
   s.act(m, { kind: 'harvest', plot: -1 }, ready);
   const x = s.life.ext?.[m.id] ?? {};

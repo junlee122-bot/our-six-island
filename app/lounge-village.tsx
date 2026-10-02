@@ -3488,7 +3488,7 @@ function SpotPrompt({
   if (spot.kind === 'farm') {
     const farm = life?.me.farm ?? [];
     const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;
-    const empty = farm.filter((p) => !p.crop).length;
+    const empty = farm.filter((p) => !p.crop && !p.locked && !p.fixture).length;
     const thirsty = farm.filter(
       (p) => p.crop && p.wateredAt === null && !p.rained && (p.readyAt ?? Infinity) > clock,
     ).length;

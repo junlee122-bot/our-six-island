@@ -165,7 +165,9 @@ test('old saves: plots stay on the same tiles and read back identically', () => 
     ext: { [uid]: { q1: { carrot: 1 }, q2: { carrot: 1 } } },
   };
   const life = readLife(JSON.parse(JSON.stringify(old)));
-  assert.deepEqual(life.farms[uid].slice(0, 4), old.farms[uid].slice(0, 4));
+  // 우리 농장: old tiles 0–5 (the front bed) land on rows 2–3 of the field's top-left block.
+  assert.deepEqual([20, 21, 22, 30].map((t) => life.farms[uid][t]), old.farms[uid].slice(0, 4));
+  assert.equal(life.farms[uid].length, GRID_TILES);
   assert.equal(life.farmx, undefined);
   assert.equal(life.fair, undefined);
   // New crops read as 0 in old bags.
@@ -174,17 +176,15 @@ test('old saves: plots stay on the same tiles and read back identically', () => 
   // Round trip stays equal, and a view of it works (no crows before the first settle).
   assert.deepEqual(readLife(JSON.parse(JSON.stringify(life))), life);
   const view = lifeView(life, uid, 0, 20_000);
-  assert.equal(view.me.farm[0].crop, 'carrot');
+  assert.equal(view.me.farm[20].crop, 'carrot');
   assert.equal(view.farmx.fixtures.length, 0);
-  // Tile numbers are the old plot numbers: 0–5 front bed (south), 6–11 back bed (north).
-  assert.deepEqual(tileRC(0), { r: 2, c: 0 });
-  assert.deepEqual(tileRC(5), { r: 3, c: 2 });
-  assert.deepEqual(tileRC(6), { r: 0, c: 0 });
-  assert.deepEqual(tileRC(11), { r: 1, c: 2 });
-  assert.equal(tileBehind(3), 0);
-  assert.equal(tileBehind(0), null); // across the aisle: another bed
-  assert.equal(tileFront(9), null);
-  assert.equal(tileFront(6), 9);
+  // Tile = row × 10 + column; beds are 3 × 2 blocks (rows 0–1, 2–3…).
+  assert.deepEqual(tileRC(0), { r: 0, c: 0 });
+  assert.deepEqual(tileRC(35), { r: 3, c: 5 });
+  assert.equal(tileBehind(30), 20);
+  assert.equal(tileBehind(20), null); // across the aisle: another bed
+  assert.equal(tileFront(10), null);
+  assert.equal(tileFront(0), 10);
 });
 
 test('bounded read: hostile farm extension values are clipped', () => {
@@ -202,7 +202,8 @@ test('bounded read: hostile farm extension values are clipped', () => {
     },
     fair: { week: 3, entries: [{ actor: 9, uid, item: 'carrot', q: 0, score: 1, at: 1 }] },
   });
-  assert.deepEqual(Object.keys(life.farmx[uid].fx), ['0']);
+  // Old yard tile 0 (front bed) → field tile 20; 99 is no tile.
+  assert.deepEqual(Object.keys(life.farmx[uid].fx), ['20']);
   assert.deepEqual(Object.keys(life.farmx[uid].mach), ['0']);
   assert.deepEqual(life.farmx[uid].goods, { 'keg-grape@2': 3 });
   assert.deepEqual(life.farmx[uid].bin.items, { carrot: 999 });
@@ -211,12 +212,14 @@ test('bounded read: hostile farm extension values are clipped', () => {
 });
 
 // ------------------------------------------------------------ tiles and sprinklers
-test('sprinkler coverage: plus 4, ring 8, wide 5×5 on the 3×4 grid', () => {
+test('sprinkler coverage: plus 4, ring 8, wide 5×5 on the 10 × 8 field', () => {
   const covered = (kind, at) => Array.from({ length: GRID_TILES }, (_, t) => t).filter((t) => sprinklerCovers(kind, at, t));
-  // Tile 1 (front bed back row, middle): north across the aisle is tile 10.
-  assert.deepEqual(covered('sprinkler', 1).sort((a, b) => a - b), [0, 2, 4, 10]);
-  assert.deepEqual(covered('sprinkler-q', 1).sort((a, b) => a - b), [0, 2, 3, 4, 5, 9, 10, 11]);
-  assert.equal(covered('sprinkler-s', 1).length, 11);
+  // Tile 22 (row 2, column 2): a whole 5 × 5 fits around it.
+  assert.deepEqual(covered('sprinkler', 22).sort((a, b) => a - b), [12, 21, 23, 32]);
+  assert.deepEqual(covered('sprinkler-q', 22).sort((a, b) => a - b), [11, 12, 13, 21, 23, 31, 32, 33]);
+  assert.equal(covered('sprinkler-s', 22).length, 24);
+  // At the north-west corner the field edge cuts it.
+  assert.deepEqual(covered('sprinkler', 0).sort((a, b) => a - b), [1, 10]);
   assert.deepEqual(covered('scarecrow', 1), []);
 });
 
@@ -231,7 +234,7 @@ test('placing: fixtures sit on empty tiles, block planting, water new plantings,
   s.act(m, { kind: 'farmBuild', item: 'sprinkler' }, t);
   assert.equal(before - s.balance(m), 3_000);
   assert.equal(s.life.ext[m.id].inv.sprinkler, 1);
-  // Locked tiles (farm of 6) and busy tiles are refused.
+  // Untilled tiles (column 8 of a 6 × 4 field) and busy tiles are refused.
   s.fails(m, { kind: 'farmPlace', item: 'sprinkler', tile: 8 }, t, FARM_REJECT.tileLocked);
   s.seeds(m, 'carrot', 10);
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, t);
@@ -240,16 +243,18 @@ test('placing: fixtures sit on empty tiles, block planting, water new plantings,
   s.act(m, { kind: 'farmPlace', item: 'sprinkler', tile: 1 }, t + MIN);
   assert.equal(s.life.farms[m.id][0].wateredAt, t + MIN);
   s.fails(m, { kind: 'plant', plot: 1, crop: 'carrot' }, t + MIN, LIFE_REJECT.fixture);
-  // Plant-all skips the fixture tile and waters what the sprinkler covers (2, 4) at once.
+  // Plant-all skips the fixture tile and waters what the sprinkler covers (2, 11) at once.
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, t + 2 * MIN);
   const farm = s.life.farms[m.id];
   assert.equal(farm[1].crop, null);
   assert.equal(farm[2].wateredAt, t + 2 * MIN);
-  assert.equal(farm[4].wateredAt, t + 2 * MIN);
+  assert.equal(farm[11].wateredAt, t + 2 * MIN);
   assert.equal(farm[3].wateredAt, null);
+  // Never past the tilled block.
+  assert.ok(farm.every((p, i) => !p.crop || (i % 10 < 6 && i < 40)));
   const v = s.view(m, t + 3 * MIN);
-  assert.equal(v.me.farm[4].sprinkled, true);
-  assert.equal(v.me.farm[3].sprinkled, false);
+  assert.equal(v.me.farm[11].sprinkled, true);
+  assert.ok(!v.me.farm[3].sprinkled);
   assert.deepEqual(v.farmx.fixtures.map((f) => [f.tile, f.kind]), [[1, 'sprinkler']]);
   // Harvest, then move the sprinkler onto an empty tile.
   s.act(m, { kind: 'harvest', plot: -1 }, t + HOUR);
@@ -303,8 +308,8 @@ test('trellis shade: a crop planted behind a trellis crop in the same bed grows 
     t = SUMMER;
   s.seeds(m, 'cucumber', 1);
   s.seeds(m, 'carrot', 2);
-  s.act(m, { kind: 'plant', plot: 3, crop: 'cucumber' }, t);
-  s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, t); // behind tile 3
+  s.act(m, { kind: 'plant', plot: 10, crop: 'cucumber' }, t);
+  s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, t); // behind tile 10
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' }, t);
   const farm = s.life.farms[m.id];
   assert.equal(farm[0].sl, 10);
@@ -372,9 +377,9 @@ test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radi
   t.act(n, { kind: 'status', text: '' }, evening - HOUR);
   t.life.flags = ['greenhouse'];
   t.seeds(n, 'insam', 6);
-  t.act(n, { kind: 'plant', plot: -1, crop: 'insam' }, evening);
-  t.life.farms[m.id][1] = { crop: null, plantedAt: 0, wateredAt: null };
-  t.life.farmx[m.id].fx = { 1: { k: 'scarecrow', at: evening } };
+  for (const tile of [0, 1, 2, 10, 11, 12]) t.act(n, { kind: 'plant', plot: tile, crop: 'insam' }, evening);
+  t.life.farms[m.id][11] = { crop: null, plantedAt: 0, wateredAt: null };
+  t.life.farmx[m.id].fx = { 11: { k: 'scarecrow', at: evening } };
   t.act(n, { kind: 'status', text: '' }, dawn + MIN);
   assert.equal(t.life.farms[m.id].filter((p) => p.crop).length, 5);
   assert.equal(t.life.farmx[m.id].log.at(-1).kind, 'guard');
@@ -382,22 +387,26 @@ test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radi
 
 // ------------------------------------------------------------ giant crops and quality
 test('giant crops: a full bed of one giant crop planted together may merge; one click reaps the bed ×2', () => {
-  // Find a planting time whose hash makes bed 0 giant.
+  // Find a planting time whose hash makes bed 0 (tiles 0–2, 10–12) giant; its roll
+  // keeps the old back bed's seed (1) so crops planted before 우리 농장 keep theirs.
   const s = world(1),
     [m] = s.members;
   let t = SUMMER;
-  while (hash32(`giant:${m.id}:0:${t}`) % 100 >= GIANT_CHANCE) t += 1_000;
-  s.seeds(m, 'pumpkin', 6);
+  while (hash32(`giant:${m.id}:1:${t}`) % 100 >= GIANT_CHANCE) t += 1_000;
+  s.seeds(m, 'pumpkin', 12);
+  // Plant-all fills rows 0–1 of the 6 × 4 block: beds 0 and 1 at once.
   s.act(m, { kind: 'plant', plot: -1, crop: 'pumpkin' }, t);
   const ripe = t + CROP_INFO.pumpkin.growMs;
   assert.equal(giantBed(s.life.farms[m.id], m.id, 0, ripe - 1), false);
   assert.equal(giantBed(s.life.farms[m.id], m.id, 0, ripe), true);
   assert.ok(GIANT_CROPS.includes('pumpkin'));
-  assert.deepEqual(s.view(m, ripe).farmx.giants, [0]);
+  assert.ok(s.view(m, ripe).farmx.giants.includes(0));
+  const before = s.life.bag[m.id].produce.pumpkin;
   s.act(m, { kind: 'harvest', plot: 2 }, ripe);
-  assert.equal(s.life.bag[m.id].produce.pumpkin, 12);
-  assert.ok(s.life.farms[m.id].slice(0, 6).every((p) => !p.crop));
-  assert.deepEqual(bedTiles(1), [6, 7, 8, 9, 10, 11]);
+  assert.equal(s.life.bag[m.id].produce.pumpkin - before, 12);
+  assert.ok(bedTiles(0).every((i) => !s.life.farms[m.id][i].crop));
+  assert.deepEqual(bedTiles(0), [0, 1, 2, 10, 11, 12]);
+  assert.deepEqual(bedTiles(1), [3, 4, 5, 13, 14, 15]);
 });
 
 test('별빛 quality: only with 별빛 비료; sells ×2 and stacks as its own tier', () => {
@@ -511,7 +520,7 @@ test('bee house: honey every 16h, flower honey from a ripe flower within 2 tiles
   s.act(m, { kind: 'farmCollect', tile: 5 }, t + BEE_MS);
   assert.equal(s.life.farmx[m.id].goods.honey, 1);
   s.seeds(m, 'zinnia', 1);
-  s.act(m, { kind: 'plant', plot: 1, crop: 'zinnia' }, t + BEE_MS);
+  s.act(m, { kind: 'plant', plot: 3, crop: 'zinnia' }, t + BEE_MS);
   s.act(m, { kind: 'farmCollect', slot: -1 }, t + 2 * BEE_MS);
   assert.equal(s.life.farmx[m.id].goods['honey-zinnia'], 1);
 });

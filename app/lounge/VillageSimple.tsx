@@ -69,7 +69,7 @@ export function VillageLifeList({
   const [talk, setTalk] = useState<{ actor: number; text: string } | null>(null);
   const farm = life?.me.farm ?? [];
   const ready = farm.filter((p) => p.crop && plotStage(p, now) === 3).length;
-  const empty = farm.filter((p) => !p.crop).length;
+  const empty = farm.filter((p) => !p.crop && !p.locked && !p.fixture).length;
   const unread = life?.me.mailUnread ?? 0;
   const friends = ACTORS.map((name, a) => ({ name, actor: a })).filter(
     (f) => f.actor !== actor,

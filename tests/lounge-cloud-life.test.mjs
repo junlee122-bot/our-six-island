@@ -84,7 +84,7 @@ test('old worlds without life load; every response carries a life view', async (
   assert.equal(h.world.life.actors[a.id], 0);
   assert.ok(opened.response.packet);
   assert.equal(opened.response.packet.life, undefined, "life travels once, at the top level");
-  assert.equal(opened.response.life.me.farm.length, 6);
+  assert.equal(opened.response.life.me.farm.filter((p) => !p.locked).length, 24);
 });
 
 test('life actions work outside rooms and inside the village room', async () => {

@@ -403,3 +403,22 @@
   gap: var(--sp-2);
   align-items: flex-start;
 }
+/* 우리 농장: the whole 10 × 8 field in small tiles. */
+.l-fw-field .l-fw-row {
+  grid-template-columns: repeat(10, 34px);
+  gap: 3px;
+}
+.l-fw-field .l-fw-tile {
+  width: 34px;
+  height: 34px;
+}
+@media (width <= 560px) {
+  .l-fw-field .l-fw-row {
+    grid-template-columns: repeat(10, 27px);
+    gap: 2px;
+  }
+  .l-fw-field .l-fw-tile {
+    width: 27px;
+    height: 27px;
+  }
+}

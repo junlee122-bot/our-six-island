@@ -25,19 +25,26 @@ import {
   GIANT_CHANCE,
   GIANT_CROPS,
   GIANT_YIELD,
+  FIELD_BEDS,
   GRID_COLS,
   GRID_ROWS,
+  GRID_TILES,
   MACHINE_BY_ID,
   STAR_FERT_RECIPE,
   TRELLIS_SHADE,
   WORK_SLOTS,
+  bedSeed,
+  bedTiles,
+  fieldBlock,
   buildGoods,
   isGoodId,
+  legacyTile,
   productOf,
   sprinklerCovers,
   tileBed,
   tileDist,
   tileFront,
+  tileOpen,
   type FarmActionKind,
   type FixtureKind,
   type GoodDef,
@@ -77,6 +84,7 @@ import {
   cropQCount,
   demandSold,
   discover,
+  farmSizeOf,
   hasFlag,
   invCount,
   noteDemand,
@@ -256,26 +264,33 @@ function readCounts(v: unknown, ok: (key: string) => boolean, max: number, cap =
   }
   return out;
 }
-function readLog(v: unknown): FarmLog | null {
+function readLog(v: unknown, legacy = false): FarmLog | null {
   const x = obj(v);
   const kinds: readonly FarmLogKind[] = ['crow', 'guard', 'wither', 'giant', 'ship', 'help', 'fair'];
   if (!kinds.includes(x.kind as FarmLogKind)) return null;
   const out: FarmLog = { kind: x.kind as FarmLogKind, at: time(x.at) };
   if (isCropId(x.crop) || x.crop === 'fruit' || isGoodId(x.crop)) out.crop = x.crop as string;
-  if (safe(x.tile) && x.tile >= 0 && x.tile < GRID_COLS * GRID_ROWS) out.tile = x.tile;
+  if (safe(x.tile) && x.tile >= 0 && x.tile < GRID_TILES) {
+    const t = legacy ? legacyTile(x.tile) : x.tile;
+    if (t !== null) out.tile = t;
+  }
   if (safe(x.n) && x.n > 0) out.n = Math.min(COUNT_MAX, x.n);
   if (safe(x.beom) && x.beom > 0) out.beom = x.beom;
   if (actorValid(x.actor)) out.actor = x.actor;
   return out;
 }
-function readFarmX(v: unknown): FarmX | undefined {
+/**
+ * `legacy`: the owner's farm is still in the old 3 × 4 yard shape (lounge-farm-data
+ * legacyTile), so fixture tiles and log tiles move into the field's top-left block.
+ */
+function readFarmX(v: unknown, legacy = false): FarmX | undefined {
   const x = obj(v),
     out: FarmX = {};
   const fx: Record<string, Fixture> = {};
-  for (const [k, f] of Object.entries(obj(x.fx)).slice(0, 24)) {
-    const tile = Number(k);
-    const r = /^\d{1,2}$/.test(k) && tile < GRID_COLS * GRID_ROWS ? readFixture(f) : undefined;
-    if (r) fx[k] = r;
+  for (const [k, f] of Object.entries(obj(x.fx)).slice(0, GRID_TILES)) {
+    const tile = /^\d{1,2}$/.test(k) ? (legacy ? legacyTile(Number(k)) : Number(k)) : null;
+    const r = tile !== null && tile < GRID_TILES ? readFixture(f) : undefined;
+    if (r) fx[String(tile)] = r;
   }
   if (nonEmpty(fx)) out.fx = fx;
   const mach: Record<string, MachineSlot> = {};
@@ -298,7 +313,7 @@ function readFarmX(v: unknown): FarmX | undefined {
     if (actors.length) out.hf = { day: hf.day, actors };
   }
   const log = Array.isArray(x.log)
-    ? x.log.slice(-FARM_LOG_MAX).map(readLog).filter((l): l is FarmLog => !!l)
+    ? x.log.slice(-FARM_LOG_MAX).map((l) => readLog(l, legacy)).filter((l): l is FarmLog => !!l)
     : [];
   if (log.length) out.log = log;
   return nonEmpty(out) ? out : undefined;
@@ -344,9 +359,10 @@ function readFair(v: unknown): FairState | undefined {
 export function readFarmExt(v: Record<string, unknown>): FarmExt {
   const out: FarmExt = {};
   const farmx: Record<string, FarmX> = {};
+  const farms = obj(v.farms);
   for (const [uid, x] of Object.entries(obj(v.farmx)).slice(0, 32)) {
     if (!UUID.test(uid) || Object.keys(farmx).length >= 16) continue;
-    const f = readFarmX(x);
+    const f = readFarmX(x, isLegacyFarm(farms[uid]));
     if (f) farmx[uid] = f;
   }
   if (nonEmpty(farmx)) out.farmx = farmx;
@@ -354,6 +370,13 @@ export function readFarmExt(v: Record<string, unknown>): FarmExt {
   if (fair) out.fair = fair;
   return out;
 }
+
+/**
+ * Whether a stored farm is still in the old yard shape: an array of 6 / 9 / 12
+ * plots (anything but a full 80-tile array). New worlds store the field
+ * sparse ({ tile: plot }) and hold it as an 80-tile array in memory.
+ */
+export const isLegacyFarm = (f: unknown) => Array.isArray(f) && f.length !== GRID_TILES;
 
 // ---------------------------------------------------------------- small helpers
 const farmxOf = (life: LifeState, uid: string): FarmX => ((life.farmx ??= {})[uid] ??= {});
@@ -370,8 +393,10 @@ function pushLog(life: LifeState, uid: string, entry: FarmLog) {
 }
 export const fixtureAt = (life: LifeState, uid: string, tile: number): Fixture | null =>
   life.farmx?.[uid]?.fx?.[String(tile)] ?? null;
-/** Tiles of a bed (0 front: tiles 0–5, 1 back: 6–11). */
-export const bedTiles = (bed: number) => Array.from({ length: 6 }, (_, i) => bed * 6 + i);
+/** Tiles of a bed (lounge-farm-data.ts: 3 × 2 blocks of the field). */
+export { bedTiles };
+/** Every bed of the field (giant crops). */
+const ALL_BEDS = Array.from({ length: FIELD_BEDS }, (_, b) => b);
 /** Best water bonus (%p) of the sprinklers covering `tile`, or null when none does. */
 export function sprinklerBonus(life: LifeState, uid: string, tile: number): number | null {
   let best: number | null = null;
@@ -421,16 +446,19 @@ export function growthStage(plot: Plot, now: number): 0 | 1 | 2 | 3 | 4 {
 }
 /** Whether bed `bed` is one giant crop right now (all six ripe, planted together; hash roll). */
 export function giantBed(farm: readonly Plot[], uid: string, bed: number, now: number): boolean {
+  if (!Number.isSafeInteger(bed) || bed < 0 || bed >= FIELD_BEDS) return false;
   const tiles = bedTiles(bed);
-  if (tiles[5] >= farm.length) return false;
+  if (tiles.some((t) => t >= farm.length)) return false;
   const first = farm[tiles[0]];
   if (!first.crop || !GIANT_CROPS.includes(first.crop)) return false;
   for (const t of tiles) {
     const p = farm[t];
     if (p.crop !== first.crop || p.plantedAt !== first.plantedAt || (p.n ?? 0) > 0 || now < plotReadyAt(p, now)!) return false;
   }
-  return hash32(`giant:${uid}:${bed}:${first.plantedAt}`) % 100 < GIANT_CHANCE;
+  return hash32(`giant:${uid}:${bedSeed(bed)}:${first.plantedAt}`) % 100 < GIANT_CHANCE;
 }
+/** Beds that are one giant crop right now. */
+export const giantBeds = (farm: readonly Plot[], uid: string, now: number) => ALL_BEDS.filter((b) => giantBed(farm, uid, b, now));
 
 // ---------------------------------------------------------------- settling
 /** Crows at 05:00 KST of day `d` (see design §4-7). */
@@ -579,9 +607,10 @@ export function harvestFarm(
   opts: { xpTo: string; lift?: (q: Quality) => Quality },
 ): number {
   const farm = life.farms[owner],
-    giants = [0, 1].filter((b) => giantBed(farm, owner, b, now));
+    giants = giantBeds(farm, owner, now);
   let targets = plot === -1 ? farm.map((_, i) => i) : [plot];
-  if (plot !== -1 && giants.includes(tileBed(plot))) targets = bedTiles(tileBed(plot));
+  const plotBed = plot === -1 ? null : tileBed(plot);
+  if (plotBed !== null && giants.includes(plotBed)) targets = bedTiles(plotBed);
   let harvested = 0;
   const giantLogged = new Set<number>();
   for (const i of targets) {
@@ -596,7 +625,7 @@ export function harvestFarm(
     }
     const crop = p.crop,
       bed = tileBed(i),
-      giant = giants.includes(bed),
+      giant = bed !== null && giants.includes(bed),
       base = plotQuality(owner, i, p),
       quality = opts.lift ? opts.lift(base) : base,
       n = giant ? GIANT_YIELD : 1;
@@ -606,7 +635,7 @@ export function harvestFarm(
     if (quality >= 2) bump(life, owner, 'gold', 1);
     discover(life, owner, crop);
     gainXp(life, opts.xpTo, 'farm', (XP.harvestBase + Math.min(XP.harvestHourMax, plotGrowMs(p) / HOUR)) * QUALITY_MULT[quality], now);
-    if (giant && !giantLogged.has(bed)) {
+    if (giant && bed !== null && !giantLogged.has(bed)) {
       giantLogged.add(bed);
       pushLog(life, owner, { kind: 'giant', at: now, crop, n: 6 * GIANT_YIELD });
     }
@@ -697,8 +726,8 @@ export function buildBlock(life: LifeState, uid: string, item: string, balance: 
 
 // ---------------------------------------------------------------- actions
 const tileIndex = (life: LifeState, uid: string, tile: unknown) => {
-  if (!safe(tile) || tile < 0 || tile >= GRID_COLS * GRID_ROWS) fail(FARM_REJECT.tile);
-  if (tile >= life.farms[uid].length) fail(FARM_REJECT.tileLocked);
+  if (!safe(tile) || tile < 0 || tile >= GRID_TILES) fail(FARM_REJECT.tile);
+  if (tile >= life.farms[uid].length || !tileOpen(farmSizeOf(life, uid), tile as number)) fail(FARM_REJECT.tileLocked);
   return tile as number;
 };
 const slotIndex = (slot: unknown) => (safe(slot) && slot >= 0 && slot < WORK_SLOTS ? slot : fail(FARM_REJECT.slot));
@@ -972,13 +1001,14 @@ export const fairScore = (id: string, q: Quality, now: number, flags: readonly s
 
 // ---------------------------------------------------------------- views
 export type FarmXView = {
-  grid: { cols: number; rows: number };
+  /** The whole field grid and its open (tilled) block. */
+  grid: { cols: number; rows: number; size: number; open: { cols: number; rows: number } };
   fixtures: { tile: number; kind: FixtureKind; at: number; readyAt?: number }[];
   machines: { slot: number; kind: MachineKind; out?: string; q?: Quality; n?: number; startAt?: number; doneAt?: number }[];
   goods: { id: string; q: Quality; n: number }[];
   bin: { day: number; items: { id: string; q: Quality; n: number }[]; value: number; payAt: number } | null;
   log: FarmLog[];
-  /** Beds (0 front, 1 back) that are one giant crop now. */
+  /** Beds (lounge-farm-data tileBed) that are one giant crop now. */
   giants: number[];
   /** Friends whose farm I helped harvest today. */
   helped: number[];
@@ -1003,7 +1033,7 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
     today = kstDay(now);
   const binItems = x.bin ? splitStock(x.bin.items) : [];
   return {
-    grid: { cols: GRID_COLS, rows: GRID_ROWS },
+    grid: { cols: GRID_COLS, rows: GRID_ROWS, size: farmSizeOf(life, uid), open: fieldBlock(farmSizeOf(life, uid)) },
     fixtures: Object.entries(x.fx ?? {}).map(([t, f]) => ({
       tile: Number(t),
       kind: f.k,
@@ -1025,7 +1055,7 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
         }
       : null,
     log: [...(x.log ?? [])],
-    giants: [0, 1].filter((b) => giantBed(farm, uid, b, now)),
+    giants: giantBeds(farm, uid, now),
     helped: x.hf?.day === today ? [...x.hf.actors] : [],
   };
 }
@@ -1048,7 +1078,7 @@ export function farmsPublic(life: LifeState, now: number) {
   const out: Record<string, { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[] }> = {};
   for (const [uid, farm] of Object.entries(life.farms)) {
     const x = life.farmx?.[uid],
-      giants = [0, 1].filter((b) => giantBed(farm, uid, b, now));
+      giants = giantBeds(farm, uid, now);
     if (!x?.fx && !x?.mach && !giants.length) continue;
     out[uid] = {
       fx: Object.entries(x?.fx ?? {}).map(([t, f]) => [Number(t), f.k]),
