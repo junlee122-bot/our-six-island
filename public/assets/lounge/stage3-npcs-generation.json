@@ -3,7 +3,7 @@
  "provider": "Higgsfield",
  "model": "gpt_image_2_5",
  "background": "solid magenta #FF00FF (keyed at build)",
- "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. 점쟁이 → 쿠도 신이치 (Detective Conan, Gosho Aoyama), drawn as an adult in his mid-twenties for the dialogue art; the in-world chibi wears his 코난 disguise (user decision). User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "note": "목장주 → 닐라 (League of Legends, Riot Games). Recostumed as a ranch owner. 대장장이 → 오른 (League of Legends, Riot Games). Classic look (pink beard, lavender skin, bronze armor) as the village smith; user added two more references. 의사 → 메르시 (Overwatch, Blizzard). Recostumed as a summer village doctor. 점쟁이 → 쿠도 신이치 (Detective Conan, Gosho Aoyama), drawn as an adult in his mid-twenties for the dialogue art; the in-world chibi wears his 코난 disguise (user decision). 과수원 주인 → 하쿠 (Spirited Away, Studio Ghibli), drawn as an adult in his mid-twenties. User reference images were uploaded only as generation inputs and are not stored in this repository.",
  "assets": [
   {
    "id": "nilah-tall",
@@ -88,6 +88,27 @@
    "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
    "original": "_originals/chibi/npc-chibi-shinichi.png",
    "sha256": "94682611E53516EFBB293F01043317A35699985D853050D8B890A164182BB09D"
+  },
+  {
+   "id": "haku-tall",
+   "job": "a0e10f82-6bdc-401b-8f4f-b5d5825a6c8a",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-haku.png",
+   "sha256": "91059F743B8DF7AC54D2048B64227CB6254261B19E08420EBCD900B4E498C672"
+  },
+  {
+   "id": "haku-chibi",
+   "job": "20bacc55-b9b4-41a1-a2c9-1efb71736cd1",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-haku.png",
+   "sha256": "C091E28F76DE9BAFDB821E63975E774858DD1E29C71F781A186E7D8E2C778D3C"
   }
  ]
 }
