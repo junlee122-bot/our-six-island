@@ -1,0 +1,47 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "범마을 증권 직원 → 무잔 (Demon Slayer / 鬼滅の刃, Koyoharu Gotouge), recostumed as the village stock broker (white suit, fedora, cape, ticker tape). User reference images were uploaded only as generation inputs and are not stored in this repository.",
+ "assets": [
+  {
+   "id": "broker-tall",
+   "job": "cf69140c-564b-46fc-a7f2-9b266a352479",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-muzan.png",
+   "sha256": "82511ED4F95C7B665534E4CAB0F92E464054AB4A396205DC92D3695841F50930"
+  },
+  {
+   "id": "broker-chibi",
+   "job": "d0606001-be93-42f6-a374-b5d1540e528f",
+   "aspect": "2:3",
+   "quality": "high",
+   "resolution": "2k",
+   "proportion": "about 2 heads",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-muzan.png",
+   "sha256": "2C09C76F4A793554A1215F0DE472CFE26EC5C8A83FB6C756D54CC9E0F0A7E258"
+  },
+  {
+   "id": "broker-host-sheet",
+   "job": "a49be7bf-34e0-4062-8a7c-5c8e0ace958d",
+   "aspect": "1:1",
+   "cost": "0.25",
+   "styleReference": "host-maehwa.png",
+   "cells": [
+    "calm",
+    "smile",
+    "deal",
+    "focus",
+    "wow",
+    "sorry"
+   ],
+   "original": "_originals/host-muzan.png",
+   "sha256": "B425AE8B8FC757FE2C62D93275AF8817A1847EC6261758D09AB6CBF232A7E52E"
+  }
+ ]
+}
