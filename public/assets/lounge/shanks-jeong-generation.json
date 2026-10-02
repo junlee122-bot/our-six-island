@@ -3,7 +3,7 @@
  "provider": "Higgsfield",
  "model": "gpt_image_2_5",
  "background": "solid magenta #FF00FF (keyed at build)",
- "note": "허풍 주점 허 선장 → 샹크스 (ONE PIECE), 화투방 매화 → 예림이 (motif: 정마담 from 타짜; at the owner's request drawn after the actress's likeness as a chibi caricature). Owner-provided reference images were uploaded to Higgsfield only as generation inputs and are not stored in this repository. The cigarette was replaced with hwatu cards. Shanks' cloak covers his left side as in the source.",
+ "note": "허풍 주점 허 선장 → 샹크스 (ONE PIECE), 화투방 매화 → 예림이 (motif: 정마담 from 타짜, drawn from the film character's styling only — bob hair, white halter top, pearls; no real person's likeness). Owner-provided reference images were uploaded to Higgsfield only as generation inputs and are not stored in this repository. The cigarette was replaced with hwatu cards. Shanks' cloak covers his left side as in the source.",
  "assets": [
   {
    "id": "shanks-tall",
@@ -39,25 +39,23 @@
   },
   {
    "id": "jeong-tall",
-   "job": "e5c32e84-eace-45be-8e61-dad7b4cedd43",
+   "job": "99c0fb3c-a274-4f6a-9cc5-bb0c8d22815a",
    "aspect": "2:3",
    "styleReference": "_originals/casino-lender-rose.png",
    "original": "_originals/npc-jeong.png",
-   "sha256": "A8E6945FCCD41A2CA40BA0C8A95F58E49793A68716C7DD04FB32BF58330E1738",
-   "likeness": "owner request: likeness of the actress in the reference stills"
+   "sha256": "902E291F9496C9E2067710712778A5F7D6F96BC47607FFBB8378C9AEF8C59B12"
   },
   {
    "id": "jeong-chibi",
-   "job": "e2b85836-2b6c-45dd-953a-794b9e55cc36",
+   "job": "d0ed192c-8700-4621-a599-c47effea7e1d",
    "aspect": "2:3",
    "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
    "original": "_originals/chibi/npc-chibi-jeong.png",
-   "sha256": "5885646121B49556812EDC938C2DB87373282BE1618EC305C91919CA7F59ECBA",
-   "likeness": "owner request: likeness of the actress in the reference stills"
+   "sha256": "48CF3CA4B342CEDA7E90B64F9A59B31D734B81A099ACDF0D8D20235259BCC381"
   },
   {
    "id": "jeong-host-sheet",
-   "job": "c6add8b6-3ae5-4572-9592-033a26c38537",
+   "job": "9b4affc7-71de-4fe9-aeac-32c8dc3c2110",
    "aspect": "1:1",
    "styleReference": "host-maehwa.png",
    "cells": [
@@ -69,8 +67,7 @@
     "sorry"
    ],
    "original": "_originals/host-jeong.png",
-   "sha256": "4D660FB68FF5E33722228F0777F6E5A08FCCB9EC60469CA815326DEA5714C2B3",
-   "likeness": "owner request: likeness of the actress in the reference stills"
+   "sha256": "52FA63793AB926A2F362DB329DB1FC1234D44794523E59A2E310FC3F5E170801"
   }
  ],
  "keying": "Same as carpenter-valkyrie-generation.json: scripts/optimize-assets.mjs (npcs / chibi / hosts) — done by the swap session."
