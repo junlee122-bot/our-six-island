@@ -12,7 +12,7 @@ import { CROPS, CROP_INFO, FRUIT_SELL, SHOP_BY_ID, shopLock, type Crop, type Lif
 import { BUFF_INFO, DISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
 import { FISH_DEMAND_FREE, isFishSale, itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
 import { SELL_AWAY, SHOP_INFO, buyerOf, shopOffer, type ShopId } from '../lounge-shops';
-import { stockName, stockUnit } from '../lounge-farm';
+import { sellCapAllows, stockName, stockUnit } from '../lounge-farm';
 import {
   LUNCHES,
   SHOP_FOODS,
@@ -115,7 +115,8 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
                 </small>
               </div>
               <span className="l-town-buttons">
-                <GameButton size="s" disabled={busy || one > limit} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
+                {/* A good worth more than today's cap still sells one at a time (lounge-farm sellCapAllows). */}
+                <GameButton size="s" disabled={busy || (r.goods ? !sellCapAllows(one, 1, limit) : one > limit)} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
                   1개
                 </GameButton>
                 {most > 1 && (
