@@ -50,10 +50,88 @@
         "double buns with cream ribbons"
       ],
       "prompt": "4x2 sheet of the reference sheet's eight hairstyles on one blank mannequin head, all hair in the royal-blue dye key; magenta background."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head0.png",
+      "jobId": "da3f2cf5-2a25-440e-b179-9d107b8488e0",
+      "character": "도원",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 0 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head1.png",
+      "jobId": "31116505-90f4-4437-8c8d-8ba5c0e211ba",
+      "character": "강재",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 1 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head2.png",
+      "jobId": "f2435e98-99a3-4359-966f-54aaeda9deba",
+      "character": "민서",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 2 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head3.png",
+      "jobId": "d7fe46cf-bc08-4f48-80d9-18b414c84e7a",
+      "character": "승준",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 3 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head4.png",
+      "jobId": "a52de2b0-eef5-4e07-b087-3c826232b178",
+      "character": "민재",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 4 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head5.png",
+      "jobId": "da5064d9-bce0-420e-af09-62edc75e13c6",
+      "character": "재민",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 5 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
+    },
+    {
+      "file": "_originals/outfit-layers/bald-head6.png",
+      "jobId": "2f111eaf-9722-4def-9d56-a52edf093ab0",
+      "character": "호현",
+      "params": {
+        "aspect_ratio": "1:1",
+        "quality": "high"
+      },
+      "source": "akatsuki-atlas.png cell 6 head crop (box in bald-head-crops.json), 720 px -> 1024 px",
+      "prompt": "Edit the attached image: remove all of the hair so the character is bald (forehead, skull outline, both ears in the same skin, outline and cel shading); keep the face, eyebrows, collar, framing and magenta background identical."
     }
   ],
   "compose": "scripts/outfit-layers/trial-compose.py: heads cut just under the chin from akatsuki-atlas.png (hair keyed blue kept below the chin, old collar removed), body scaled to each friend's original height and torso width, hair dyed and skin toned by mask.",
   "preview": "_originals/outfit-layers/trial-sheet.webp (row 1 original, row 2 same heads on the shared knit body, row 3 skin tones and hair colours)",
   "compose_layers": "scripts/outfit-layers/trial-layers.py: body (mannequin head removed) -> bald face base -> hairstyle (mannequin skin and jaw line removed, scaled x1.16 and raised to fit the face bases) -> hair dye and skin tone by mask.",
-  "preview_layers": "_originals/outfit-layers/layers-sheet.webp (row 1 own hairstyles, row 2 swapped hairstyles and colours, row 3 skin tones)"
+  "preview_layers": "_originals/outfit-layers/layers-sheet.webp (row 1 own hairstyles, row 2 swapped hairstyles and colours, row 3 skin tones)",
+  "v2": "Faces are the friends' own heads with only the hair edited away; hairstyles are the original hair pixels (blue dye key) lifted from akatsuki-atlas.png, moved between faces by eye position. scripts/outfit-layers/trial-layers-v2.py; preview _originals/outfit-layers/layers-v2-sheet.webp (row 1 original, row 2 rebuilt from layers, row 3 swapped hairstyles and colours, row 4 skin tones). The v1 face-bases/hairstyles sheets are superseded."
 }
