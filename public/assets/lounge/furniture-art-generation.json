@@ -1,0 +1,115 @@
+{
+ "createdAt": "2026-10-02",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "styleReference": "bedroom/armchair, vanity, floor-lamp, record-player, plant, wardrobe (composite)",
+ "note": "Painted art for every furniture-shop piece (replacing the procedural SVG in lounge-furniture-art.ts) plus new pieces marked NEW. Sheets 0-2 are 3x3 grids, 3-5 are 2x2 grids, cells read left-to-right, top-to-bottom.",
+ "sheets": [
+  {
+   "original": "_originals/furniture/furniture-sheet-0.png",
+   "job": "40bdb60c-9ad4-4faf-ae6a-a2e65f1b2327",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "3x3",
+   "cells": [
+    "furn-bed-mint",
+    "furn-sofa-rose",
+    "furn-armchair-navy",
+    "furn-rug-lilac",
+    "furn-bookcase-walnut",
+    "furn-wardrobe-white",
+    "furn-rocking-chair",
+    "furn-cherry-vase",
+    "furn-fan"
+   ],
+   "sha256": "054CF40E6D78E7760E9A88F14B6793D80A2E606D2E364BAE2338993F53D86E58"
+  },
+  {
+   "original": "_originals/furniture/furniture-sheet-1.png",
+   "job": "b9ca1de3-0f4f-4500-b4c2-d59c6ee8ca75",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "3x3",
+   "cells": [
+    "furn-maple-garland",
+    "furn-snowman",
+    "furn-moon-lantern",
+    "furn-lucky-pouch",
+    "furn-jack-lantern",
+    "furn-xmas-tree",
+    "furn-village-medal",
+    "furn-project-plaque",
+    "furn-festival-lantern"
+   ],
+   "sha256": "6C888F8899F811CE86E90C60B096401E3D85B30CD90F4159EBE67EF51340532D"
+  },
+  {
+   "original": "_originals/furniture/furniture-sheet-2.png",
+   "job": "da0971cc-befd-4b9a-bf72-7dec29d6cbdf",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "3x3",
+   "cells": [
+    "furn-festival-drum",
+    "furn-festival-kite",
+    "furn-festival-fan",
+    "NEW:round-dining-set (원목 2인 식탁)",
+    "NEW:beanbag (빈백 소파)",
+    "NEW:hanging-planter (행잉 플랜트)",
+    "NEW:cat-tower (캣타워)",
+    "NEW:retro-tv (레트로 TV)",
+    "NEW:wall-shelf (벽걸이 선반, wall)"
+   ],
+   "sha256": "E59219ECB218DE373DB69B7F3BC2F26DB80CDDE3B21CDC6E472F64BAAEA7E963"
+  },
+  {
+   "original": "_originals/furniture/furniture-sheet-3.png",
+   "job": "40d075d4-6bd4-4f22-9f33-08a71b1cd8e4",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "2x2",
+   "cells": [
+    "furn-grand-piano",
+    "furn-canopy-bed",
+    "furn-aquarium",
+    "furn-crystal-lamp"
+   ],
+   "sha256": "04ED45BE829C16DE59AE22787ABA02D24A9AA57D916D371F515BC70EAC5707DD"
+  },
+  {
+   "original": "_originals/furniture/furniture-sheet-4.png",
+   "job": "2efaa808-58ca-4b88-9498-40a1ed64c6eb",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "2x2",
+   "cells": [
+    "furn-gold-mirror",
+    "furn-arcade",
+    "furn-telescope",
+    "furn-mother-pearl"
+   ],
+   "sha256": "918CC71208BE2BFFE6356F04F8B94D9BB18667C602D8691BCD1BF51B889E6D5D"
+  },
+  {
+   "original": "_originals/furniture/furniture-sheet-5.png",
+   "job": "711837b0-c978-4791-a05d-68194c872338",
+   "aspect": "1:1",
+   "quality": "high",
+   "resolution": "2k",
+   "grid": "2x2",
+   "cells": [
+    "furn-velvet-sofa",
+    "furn-bonsai",
+    "NEW-LUXURY:marble-fireplace (대리석 벽난로)",
+    "NEW-LUXURY:najeon-wardrobe (자개 장롱)"
+   ],
+   "sha256": "03CE6BB1666E87DF76CA3F6E5B137A8D5F3C90BF18C4F1A1402D2C748F84E024"
+  }
+ ]
+}
