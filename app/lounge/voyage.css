@@ -22,7 +22,7 @@
 .l-voyage-guests label { display: inline-flex; align-items: center; gap: var(--sp-1); color: var(--text); font-size: var(--fs-body); }
 
 /* On the deck: the time left and 그만 돌아가기, top centre. */
-.l-voyage-hud { position: absolute; top: var(--sp-3); left: 50%; z-index: var(--z-hud-bar); display: inline-flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-size: var(--fs-body); transform: translateX(-50%); }
+.l-voyage-hud { position: absolute; bottom: 92px; left: 50%; z-index: var(--z-hud-bar); display: inline-flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-size: var(--fs-body); transform: translateX(-50%); }
 .l-voyage-hud strong { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; color: var(--pal-blue-31); }
 .l-voyage-hud b { font-variant-numeric: tabular-nums; font-size: var(--fs-title-s); }
 .l-voyage-hud small { color: var(--leaf-800); font-size: var(--fs-cap); font-weight: var(--fw-semi); }

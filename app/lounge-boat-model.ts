@@ -203,15 +203,15 @@ export function buildFishingBoat({ detail = true, name = '범마을호' } = {}):
   house.add(ring);
   group.add(house);
 
-  // ---- gear (DECK_COLLIDERS: ice box at (−1.9, 1.6), bait tub at (1.9, 1.6)).
+  // ---- gear (DECK_COLLIDERS: ice box at (−1.7, 5.1), bait tub at (1.7, 5.1)).
   const ice = box(0.9, 0.62, 0.7, icebox);
-  ice.position.set(-1.9, 0.31, 1.6);
+  ice.position.set(-1.7, 0.31, 5.1);
   group.add(ice);
   const iceLid = box(0.94, 0.08, 0.74, blue);
-  iceLid.position.set(-1.9, 0.66, 1.6);
+  iceLid.position.set(-1.7, 0.66, 5.1);
   group.add(iceLid);
   const tub = cyl(0.42, 0.36, 0.5, green, 14);
-  tub.position.set(1.9, 0.25, 1.6);
+  tub.position.set(1.7, 0.25, 5.1);
   group.add(tub);
   // Rod holders at the four fishing places, a rod leaning out over the side.
   const rodMat = own(mat('#2e2a26'));
@@ -232,7 +232,7 @@ export function buildFishingBoat({ detail = true, name = '범마을호' } = {}):
     for (let i = 0; i < 5; i++) {
       const lump = new THREE.Mesh(own(new THREE.SphereGeometry(0.42, 8, 6)), netMat);
       lump.scale.set(1.3, 0.32, 1);
-      lump.position.set(-0.9 + i * 0.45, 0.1, 5.8 + (i % 2) * 0.25);
+      lump.position.set(-0.9 + i * 0.45, 0.1, 6.2 + (i % 2) * 0.2);
       lump.castShadow = true;
       group.add(lump);
     }

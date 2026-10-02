@@ -116,10 +116,10 @@ const woodsColliders: WalkCollider[] = [
  * are walls, the rails are the edges.
  */
 export const DECK_COLLIDERS: readonly WalkCollider[] = [
-  // Wheelhouse amidships, the ice box and the bait tub beside it.
+  // Wheelhouse amidships; the ice box and the bait tub aft, clear of the side passages.
   { shape: 'box', x: 0, z: -0.2, w: 2.4, d: 2.4 },
-  { shape: 'box', x: -1.9, z: 1.6, w: 0.9, d: 0.7 },
-  { shape: 'box', x: 1.9, z: 1.6, w: 0.8, d: 0.8 },
+  { shape: 'box', x: -1.7, z: 5.1, w: 0.9, d: 0.7 },
+  { shape: 'box', x: 1.7, z: 5.1, w: 0.8, d: 0.8 },
   // The bow narrows: its corners are hull.
   { shape: 'box', x: -2.5, z: -6.2, w: 1.4, d: 2.2 },
   { shape: 'box', x: 2.5, z: -6.2, w: 1.4, d: 2.2 },

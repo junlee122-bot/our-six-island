@@ -27,6 +27,8 @@ import { SWAY, VOYAGE_REJECT, readVoyage, voyageActionArea, voyageAt, voyageSway
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { NPC_IDS } from '../app/lounge-npc-data.ts';
+import { REGIONS, regionWalk } from '../app/lounge-areas.ts';
+import { DECK_RAILS } from '../app/lounge-voyage-data.ts';
 
 const MIN = 60_000,
   HOUR = 60 * MIN;
@@ -151,6 +153,17 @@ test('timetable: half-hourly 05:00–19:00, boarding two minutes before', () => 
   assert.equal(boardingSailing(kst(CALM, 4, 59)), kst(CALM, 5));
   assert.equal(nextSailing(kst(CALM, 19, 10)), kst(CALM + 1, 5));
   assert.equal(BOARDING_MS, 2 * MIN);
+});
+
+test('deck: every rail can be walked to from where you board', () => {
+  const w = regionWalk('offshore'),
+    start = REGIONS.offshore.arrive.harbor;
+  assert.ok(w.canWalk(start));
+  assert.equal(DECK_RAILS.length, 4);
+  for (const r of DECK_RAILS) {
+    const end = w.path(start, r).at(-1);
+    assert.ok(end && Math.hypot(end.x - r.x, end.z - r.z) < 0.05, `${r.id} reachable`);
+  }
 });
 
 // ---------------------------------------------------------------- boarding
