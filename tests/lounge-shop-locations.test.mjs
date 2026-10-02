@@ -139,8 +139,10 @@ test('shop rooms: buying and selling with `at` works inside the shop and nowhere
     coop: { kind: 'sell', crop: 'pumpkin', n: 1, at: 'coop' },
     fishmarket: { kind: 'buyItem', item: 'bait', n: 1, at: 'fishmarket' },
   };
-  assert.deepEqual(Object.keys(deals).sort(), [...SHOP_AREAS].sort(), 'every shop room is covered');
-  for (const shop of SHOP_AREAS) {
+  // 범마을 증권 sells no goods; its orders are checked in lounge-stocks.test.mjs.
+  const goods = SHOP_AREAS.filter((s) => s !== 'broker');
+  assert.deepEqual(Object.keys(deals).sort(), [...goods].sort(), 'every shop room is covered');
+  for (const shop of goods) {
     give('pumpkin', 3);
     const deal = deals[shop],
       name = SHOP_INTERIORS[shop].name.split(' ').at(-1);

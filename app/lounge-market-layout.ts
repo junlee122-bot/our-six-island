@@ -36,15 +36,16 @@ export type MarketModel =
   | 'smallPine'
   | 'shrub'
   | 'barrelRack'
-  | 'menuBoard';
+  | 'menuBoard'
+  | 'bankBuilding';
 
-export type MarketShopId = 'coop' | 'general' | 'bakery' | 'newspaper' | 'post' | 'police';
+export type MarketShopId = 'coop' | 'general' | 'bakery' | 'newspaper' | 'post' | 'police' | 'broker';
 export type MarketShop = {
   id: MarketShopId;
   name: string;
   sub: string;
-  /** Who runs it (lounge-npc-data.ts). */
-  npc: 'nasera' | 'thresh' | 'frieren' | 'janna' | 'sinjjajang' | 'volibas';
+  /** Who runs it (lounge-npc-data.ts); 범마을 증권 has no resident yet (design-stocks.md §7.1). */
+  npc?: 'nasera' | 'thresh' | 'frieren' | 'janna' | 'sinjjajang' | 'volibas';
   model: MarketModel;
   /** The lot: centre and size (the building is fitted into it, front on z + d/2). */
   x: number;
@@ -144,6 +145,20 @@ export const MARKET_SHOPS: readonly MarketShop[] = [
     sign: { bg: '#e4e9f3', ink: '#1f3561', line: '#4a64a0' },
     counter: { x: -18.5, z: 13.1 },
   },
+  {
+    // 범마을 증권 (design-stocks.md §7.1): the east lot between 신문사 and 우체국, door south.
+    id: 'broker',
+    name: '범마을 증권',
+    sub: '주식 · 신용 · 공매도',
+    model: 'bankBuilding',
+    x: 22.6,
+    z: 0.4,
+    w: 6,
+    d: 5,
+    h: 3.6,
+    sign: { bg: '#16233a', ink: '#ffd36e', line: '#5a78ad' },
+    counter: { x: 22.6, z: 4.1 },
+  },
 ];
 export const marketShop = (id: MarketShopId) => MARKET_SHOPS.find((s) => s.id === id)!;
 
@@ -200,7 +215,7 @@ export const MARKET_TREES: readonly { x: number; z: number; s: number; pine?: bo
   { x: 24.8, z: -18.6, s: 2 },
   { x: -25.8, z: -11, s: 1.8, pine: true },
   { x: 25.6, z: -11.4, s: 1.9 },
-  { x: 25.8, z: 1.6, s: 1.8, pine: true },
+  { x: 26.6, z: 7.4, s: 1.6, pine: true },
   { x: 25.4, z: 18.6, s: 1.9 },
   { x: -25.6, z: 18.4, s: 1.8 },
   { x: -25.8, z: 5.2, s: 1.7, pine: true },

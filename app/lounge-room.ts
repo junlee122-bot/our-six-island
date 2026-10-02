@@ -181,6 +181,7 @@ export {
 };
 export type { GameKind, Area, ChatScope };
 import type { FinanceAction } from './lounge-finance.ts';
+import type { StockAction } from './lounge-stocks.ts';
 export type ChatLine = {
   id: string;
   actor: number;
@@ -352,6 +353,7 @@ function playersRead(value: unknown): LoungePlayer[] | null {
 export type LoungeAction =
   | LifeAction
   | FinanceAction
+  | StockAction
   | {
       kind: "invite";
       game: GameKind;

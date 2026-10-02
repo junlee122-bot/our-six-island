@@ -74,6 +74,16 @@ type Palette = {
   lampReach: number;
 };
 const PALETTE: Record<SceneArea, Palette> = {
+  // 범마을 증권: navy panelling, cool office light and a polished floor.
+  broker: {
+    wall: '#e6eaf1', wainscot: '#2f3e5a', rail: '#eef1f6',
+    floor: ['#b9bfca', '#b1b8c3', '#c1c7d1', '#aab1bc'],
+    trim: '#2c3e5c', chair: '#3a4a66', cushion: '#5a78ad',
+    hemi: ['#f5f8ff', '#8a93a3', 1.9], sun: ['#fff6e6', 2.0],
+    lamp: '#fff3d6', background: '#d9dee8', fill: '#e8edf6',
+    outside: '#dcecc4', mat: '#3d5478', dark: false, wood: '#4a5770',
+    lamps: [[-3.6, 3.1, -0.8], [3.6, 3.1, -0.8]], lampPower: 6, lampReach: 11,
+  },
   // 가게 실내: warm plaster and oak (bakery), sage (co-op), lantern-lit green
   // (general store), harbour blue-grey (fish market).
   bakery: {
@@ -223,6 +233,7 @@ export const INTERIOR_FIGURE_TINT: Record<SceneArea, string> = {
   bakery: '#ffffff',
   coop: '#ffffff',
   fishmarket: '#ffffff',
+  broker: '#ffffff',
   // The lantern-lit general store is a little dimmer.
   general: '#f8efe2',
   casino: '#f6e8dc',
