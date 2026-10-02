@@ -2,7 +2,7 @@
 // the rooms (lounge-music-score.ts) and the districts
 // (lounge-music-districts.ts). A new place adds its PieceSpec here.
 import { CASINO, HALL, TAVERN, type PieceSpec } from './lounge-music-score.ts';
-import { FOOTHILL, HARBOR, HILLSIDE, MARKET, RANCH } from './lounge-music-districts.ts';
+import { FOOTHILL, HARBOR, HILLSIDE, MARKET, OFFSHORE, RANCH } from './lounge-music-districts.ts';
 import type { MusicPlace } from './lounge-music-tracks.ts';
 
 export const PIECES: Record<MusicPlace, PieceSpec> = {
@@ -14,4 +14,5 @@ export const PIECES: Record<MusicPlace, PieceSpec> = {
   hillside: HILLSIDE,
   ranch: RANCH,
   foothill: FOOTHILL,
+  offshore: OFFSHORE,
 };

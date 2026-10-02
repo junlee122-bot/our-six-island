@@ -89,7 +89,8 @@ test('prices sit on the raised scale and follow rarity', () => {
     const band = f.weight < 10 ? [1_800, 4_000] : f.weight < 20 ? [600, 1_400] : [120, 600];
     assert.ok(f.sell >= band[0] && f.sell <= band[1], `${f.id} ${f.sell} in ${band.join('~')}`);
   }
-  const top = Math.max(...FISH.filter((f) => f.weight > 1).map((f) => f.sell));
+  // Above every plain fish of the village waters (먼바다 offshore fish from the boat are their own scale).
+  const top = Math.max(...FISH.filter((f) => f.weight > 1 && !f.spots.includes('offshore')).map((f) => f.sell));
   for (const f of FRESH_FISH.filter((f) => f.weight <= 1)) assert.ok(f.sell > top && f.sell <= 10_400, f.id);
 });
 

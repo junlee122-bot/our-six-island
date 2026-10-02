@@ -28,11 +28,18 @@ import {
   HARBOR_W,
 } from './lounge-harbor-layout';
 import { HARBOR_MODEL_URLS } from './lounge-district-models';
+// 먼바다 낚싯배: the boat moored at the pier, its timetable board and 허 선장.
+import { HARBOR_VOYAGE } from './lounge-harbor-layout';
+import { buildFishingBoat, type FishingBoat } from './lounge-boat-model';
+import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
+import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT, RESIDENT_SCALE } from './lounge-village-camera';
 import { DistrictSet, PAVING, districtMat, rnd, shadowed, type DistrictUpdate } from './lounge-district-kit';
 
 export class HarborSet extends DistrictSet {
   private auctionGoods = new THREE.Group();
   private beam: THREE.Mesh | null = null;
+  private boat: FishingBoat | null = null;
+  private captain: THREE.Mesh | null = null;
 
   constructor(look: { ground: string; groundFar: string }) {
     super('harbor', HARBOR_MODEL_URLS);
@@ -45,6 +52,39 @@ export class HarborSet extends DistrictSet {
     this.buildEdge();
     this.auctionGoods.name = 'harbor-auction-goods';
     this.root.add(this.auctionGoods);
+    this.buildVoyage();
+  }
+
+  /** 허 선장's boat alongside the pier (bow out to sea), the timetable board and the captain. */
+  private buildVoyage() {
+    const boat = buildFishingBoat({ detail: false });
+    boat.group.scale.setScalar(0.72);
+    boat.group.rotation.y = Math.PI;
+    boat.group.position.set(HARBOR_VOYAGE.boat.x, 0.45, HARBOR_VOYAGE.boat.z);
+    boat.group.name = 'harbor-voyage-boat';
+    this.root.add(boat.group);
+    this.own(boat);
+    this.boat = boat;
+    this.signpost('먼바다 출항', '05~19시 · 30분마다', { bg: '#e8f1f6', ink: '#1f4a6a', line: '#3f7fae' }, HARBOR_VOYAGE.board.x, HARBOR_VOYAGE.board.z, {
+      w: 2.2,
+      h: 1.5,
+      name: 'harbor-voyage-board',
+    });
+    // 허 선장 from his tavern sheet (calm pose), standing like a resident.
+    const tex = this.own(new THREE.TextureLoader().load(HOST_SHEET.captain, () => this.onChange()));
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const cell = hostCell('calm');
+    tex.repeat.set(1 / HOST_CELL.cols, 1 / HOST_CELL.rows);
+    tex.offset.set(cell.x / (HOST_CELL.w * HOST_CELL.cols), 1 - (cell.y + HOST_CELL.h) / (HOST_CELL.h * HOST_CELL.rows));
+    const h = ((VILLAGE_FIGURE_HEIGHT * RESIDENT_SCALE * HOST_CELL.h) / HOST_CELL.figure) / Math.cos(VIEW_PITCH);
+    const geo = this.own(new THREE.PlaneGeometry(h * (HOST_CELL.w / HOST_CELL.h), h));
+    geo.translate(0, h * (1 - HOST_CELL.foot / HOST_CELL.h) + h / 2 - h * 0.02, 0);
+    const captain = new THREE.Mesh(geo, this.own(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.12, toneMapped: false })));
+    captain.position.set(HARBOR_VOYAGE.captain.x, 0.02, HARBOR_VOYAGE.captain.z);
+    captain.name = 'harbor-captain';
+    captain.visible = false;
+    this.root.add(captain);
+    this.captain = captain;
   }
 
   private buildSea() {
@@ -231,10 +271,19 @@ export class HarborSet extends DistrictSet {
 
   override update(u: DistrictUpdate) {
     super.update(u);
+    if (this.boat) {
+      this.boat.group.visible = !u.boatOut;
+      this.boat.setNight(u.night);
+    }
+    if (this.captain) this.captain.visible = !!u.captain;
     if (this.beam) (this.beam.material as THREE.MeshBasicMaterial).opacity = u.night ? 0.16 : 0;
   }
   override tick(t: number) {
     super.tick(t);
+    if (this.boat?.group.visible) {
+      this.boat.group.position.y = 0.45 + Math.sin(t / 1300) * 0.04;
+      this.boat.group.rotation.z = Math.sin(t / 1700) * 0.015;
+    }
     if (this.beam?.parent && this.state.night) this.beam.parent.rotation.y = (t / 4000) % (Math.PI * 2);
   }
 }

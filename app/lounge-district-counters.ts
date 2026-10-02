@@ -4,7 +4,7 @@
 // signpost. Pure data so tests can check every point is walkable.
 import { ARRIVE_CLEARANCE } from './lounge-map-doors.ts';
 import { MARKET_BOARD, MARKET_EXIT, MARKET_SHOPS, MARKET_SPOTS } from './lounge-market-layout.ts';
-import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPOTS } from './lounge-harbor-layout.ts';
+import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPOTS, HARBOR_VOYAGE } from './lounge-harbor-layout.ts';
 import { HILL_LIBRARY, HILLSIDE_EXIT } from './lounge-hillside-layout.ts';
 import { RANCH_BUILDINGS, RANCH_EXIT } from './lounge-ranch-layout.ts';
 import { FOOTHILL_BUILDINGS, FOOTHILL_EXIT, FOOTHILL_TENT } from './lounge-foothill-layout.ts';
@@ -29,7 +29,9 @@ export type DistrictCounter =
   | 'smithy'
   | 'clinic'
   | 'fortune'
-  | 'broker';
+  | 'broker'
+  /** 먼바다 낚싯배's timetable board at the pier (design-sea-fishing.md). */
+  | 'voyage';
 export type DistrictTouch =
   /** `enter`: the shop has a room (가게 실내) and E walks in instead of opening the counter. */
   | { kind: 'counter'; place: DistrictCounter; label: string; enter?: ShopArea }
@@ -55,6 +57,7 @@ export const COUNTER_NAME: Record<DistrictCounter, string> = {
   clinic: '메르시 의원',
   fortune: '신이치의 점집',
   broker: '범마을 증권',
+  voyage: '먼바다 출항 안내판',
 };
 /** The stage-3 buildings' doors lead to these counters (their rooms open the same windows). */
 const STAGE3_COUNTER: Record<string, DistrictCounter> = { barn: 'barn', orchardShop: 'orchardShop', smithy: 'smithy', clinic: 'clinic' };
@@ -84,6 +87,7 @@ export function districtCounters(area: DistrictArea, weekday: number): { x: numb
     out.push(counter('fishmarket', HARBOR_AUCTION.front.x, HARBOR_AUCTION.front.z, HARBOR_AUCTION.reach, '새벽 경매장'));
     out.push(counter('guild', HARBOR_BOARD.front.x, HARBOR_BOARD.front.z, HARBOR_BOARD.reach, '주간 낚시 대회 게시판'));
     for (const sp of HARBOR_SPOTS) out.push({ x: sp.stand.x, z: sp.stand.z, reach: sp.reach, a: { kind: 'fish', spot: sp.spot, label: sp.label } });
+    out.push(counter('voyage', HARBOR_VOYAGE.stand.x, HARBOR_VOYAGE.stand.z, HARBOR_VOYAGE.reach, '먼바다 출항 안내판 보기'));
     if (weekday === 3 || weekday === 6) out.push(counter('harborStall', 15.4, 0.8, 1.4, '마키마의 좌판 보기'));
     out.push({ x: HARBOR_EXIT.stand.x + 1.6, z: HARBOR_EXIT.stand.z + 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
   } else if (area === 'ranch') {

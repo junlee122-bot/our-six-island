@@ -7,6 +7,9 @@ import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
 import { EXTRA_FISH, FISHING_CRAFTS, FISHING_ITEM_PRICES, FISHING_TOOL_ITEMS, FISH_DISHES, POT_FISH } from './lounge-fish-data.ts';
+// 먼바다 낚싯배: 51 new sea species, seafood dishes, the boat spot and the 멀미약.
+import { SEA_DISHES, SEA_FISH } from './lounge-fish-sea-data.ts';
+import { VOYAGE_ITEM_PRICES, VOYAGE_TOOL_ITEMS } from './lounge-voyage-data.ts';
 // 민물 어종 확장: 30 freshwater species and two legends (lounge-fish-data-fresh.ts).
 import { FRESH_FISH } from './lounge-fish-data-fresh.ts';
 import { FARM_ITEM_PRICES, FARM_TOOL_ITEMS, NEW_CROP_INFO } from './lounge-farm-data.ts';
@@ -15,8 +18,12 @@ import { catalogEntry } from './lounge-bedroom-catalog.ts';
 /** Crop ids live in lounge-life.ts; they are repeated here as a string set only. */
 /** Fishing spots in the hub (each has a stand in lounge-village-spots.ts). */
 export type VillageSpot = 'river' | 'pond' | 'sea' | 'rapids' | 'falls' | 'lake' | 'rocks' | 'harbor' | 'bridge';
-/** Every spot the fishing engine knows: the hub's and ② 항구 구역's 방파제 and 큰 선착장. */
-export type Spot = VillageSpot | 'breakwater' | 'pier';
+/**
+ * Every spot the fishing engine knows: the hub's, ② 항구 구역's 방파제 and 큰
+ * 선착장, and 'offshore' (먼바다, only from the boat while a voyage is on; it is
+ * in no spot list so nothing offers it ashore).
+ */
+export type Spot = VillageSpot | 'breakwater' | 'pier' | 'offshore';
 export const FISH_SPOTS: readonly VillageSpot[] = ['river', 'pond', 'sea', 'rapids', 'falls', 'lake', 'rocks', 'harbor', 'bridge'];
 /** Spots in the harbor district (lounge-harbor-layout.ts HARBOR_SPOTS); open with its village flag. */
 export const HARBOR_FISH_SPOTS: readonly Spot[] = ['breakwater', 'pier'];
@@ -44,6 +51,7 @@ export const SPOT_INFO: Record<Spot, SpotInfo> = {
   bridge: { name: '다리 위', note: '다리 난간에서 내려 던지는 낚시. 강 한가운데 물고기가 와요.' },
   breakwater: { name: '방파제', flag: 'district-harbor', note: '등대 아래 돌 방파제. 바다와 갯바위 물고기가 낮밤 없이 와요.' },
   pier: { name: '큰 선착장', flag: 'district-harbor', note: '항구의 긴 나무 선착장. 바다 물고기와 밤 항구 물고기가 모여요.' },
+  offshore: { name: '먼바다', flag: 'district-harbor', note: '허 선장의 낚싯배를 타고 나간 먼바다. 큼직한 대물이 뱃전 아래를 지나가요.' },
 };
 type When = 'day' | 'night' | 'any';
 type Sky = 'rain' | 'dry' | 'any';
@@ -132,6 +140,7 @@ const BASE_FISH: readonly FishDef[] = [
   ...EXTRA_FISH,
   ...POT_FISH,
   ...FRESH_FISH,
+  ...SEA_FISH,
 ];
 /**
  * ② 항구 구역: the breakwater gets the sea and rock fish, the big pier the sea
@@ -336,7 +345,7 @@ function ITEM_BY_ID_RAW() {
   return rawItems;
 }
 /** Dishes sell for 25% over their ingredients (+100범), rounded to 10. */
-export const DISHES: readonly DishDef[] = [...RAW_DISHES, ...FISH_DISHES].map((d): DishDef => ({
+export const DISHES: readonly DishDef[] = [...RAW_DISHES, ...FISH_DISHES, ...SEA_DISHES].map((d): DishDef => ({
   ...d,
   sell: d.lunch && d.id !== 'lunchbox' ? LUNCH_SELL : Math.round((d.needs.reduce((s, n) => s + valueOfNeed(n), 0) * 1.25 + 100) / 10) * 10,
 }));
@@ -355,6 +364,7 @@ export const ITEM_PRICES: Record<string, number> = {
   bouquet: 3_000,
   'pledge-ring': 30_000,
   ...FISHING_ITEM_PRICES,
+  ...VOYAGE_ITEM_PRICES,
   ...FARM_ITEM_PRICES,
 };
 const tools: ItemDef[] = [
@@ -363,6 +373,7 @@ const tools: ItemDef[] = [
   { id: 'bait', name: '미끼', emoji: '🪱', cat: 'tool', kind: 'tool', sell: 0, note: '다음 낚시 한 번: 희귀 확률 2배' },
   { id: 'bouquet', name: '꽃다발', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '8하트 주민에게 건네면 연인이 될 수 있어요' },
   { id: 'pledge-ring', name: '청혼 반지', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '10하트 연인에게 청혼해요' },  ...FISHING_TOOL_ITEMS,
+  ...VOYAGE_TOOL_ITEMS,
   // 텃밭 확장: fixtures, machines and the new soil items (lounge-farm-data.ts).
   ...FARM_TOOL_ITEMS.map((t): ItemDef => ({ id: t.id, name: t.name, emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: t.note })),
 ];

@@ -125,6 +125,8 @@ class LoungeAudio {
   };
   private cleanup: (() => void) | null = null;
   /** Running water loop (only while the village is showing). */
+  /** 먼바다: the boat's idling diesel (two detuned low saws through a lowpass, a slow throb). */
+  private engineNodes: { oscs: OscillatorNode[]; lfo: OscillatorNode; gain: GainNode } | null = null;
   private waterNodes: {
     source: AudioBufferSourceNode;
     lfo: OscillatorNode;
@@ -182,6 +184,7 @@ class LoungeAudio {
     this.noir = null;
     this.boxOn = false;
     this.waterNodes = null;
+    this.engineNodes = null;
     this.applied = '';
   }
 
@@ -316,6 +319,9 @@ class LoungeAudio {
     if (ambientOn && !this.waterNodes) this.startWater();
     else if (!ambientOn && this.waterNodes) this.stopWater();
     this.shapeWater(!!bed?.waves, t);
+    const engineOn = ambientOn && !!bed?.engine;
+    if (engineOn && !this.engineNodes) this.startEngine();
+    else if (!engineOn && this.engineNodes) this.stopEngine();
     if (hidden || !settings.sound) {
       if (ctx.state === 'running')
         void ctx
@@ -376,6 +382,45 @@ class LoungeAudio {
     n.depth.gain.setTargetAtTime(waves ? 380 : 260, t, 0.5);
     n.lfo.frequency.setTargetAtTime(waves ? 0.09 : 0.17, t, 0.5);
     n.swellDepth.gain.setTargetAtTime(waves ? 0.75 : 0, t, 0.5);
+  }
+  private startEngine() {
+    const ctx = this.ctx!;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(0.022, ctx.currentTime, 1.2);
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 180;
+    low.Q.value = 0.7;
+    const throb = ctx.createGain();
+    throb.gain.value = 0.75;
+    const lfo = ctx.createOscillator(),
+      depth = ctx.createGain();
+    lfo.frequency.value = 6.5;
+    depth.gain.value = 0.25;
+    lfo.connect(depth).connect(throb.gain);
+    const oscs = [42, 42.7].map((f) => {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      o.connect(low);
+      o.start();
+      return o;
+    });
+    low.connect(throb).connect(gain).connect(this.ambient!);
+    lfo.start();
+    this.engineNodes = { oscs, lfo, gain };
+  }
+  private stopEngine() {
+    const nodes = this.engineNodes;
+    this.engineNodes = null;
+    if (!nodes || !this.ctx) return;
+    const at = this.ctx.currentTime + 1.5;
+    nodes.gain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.4);
+    try {
+      for (const o of nodes.oscs) o.stop(at);
+      nodes.lfo.stop(at);
+    } catch {}
   }
   private stopWater() {
     const nodes = this.waterNodes;

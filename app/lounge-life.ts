@@ -95,6 +95,9 @@ import { socialAction, socialView, type SocialAction, type SocialView } from './
 // 낚시 업그레이드: same cycle rule; the action kinds come from the leaf data module.
 import { ANGLING_ACTION_KINDS } from './lounge-fish-data.ts';
 import { anglingAction, anglingView, readAngling, type AnglingAction, type AnglingExt, type AnglingView } from './lounge-fish-engine.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): same cycle rule; the action kinds come from the leaf data module.
+import { VOYAGE_ACTION_KINDS, type VoyageAction } from './lounge-voyage-data.ts';
+import { readVoyage, voyageAction, voyageView, type VoyageExt, type VoyageView } from './lounge-voyage.ts';
 // 무드(기분): same cycle rule (functions only); the action kinds come from the leaf data module.
 import { MOOD_ACTION_KINDS } from './lounge-mood-data.ts';
 import {
@@ -529,6 +532,7 @@ export type LifeState = {
   VenueExt &
   MoodExt &
   AnglingExt &
+  VoyageExt &
   FarmExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
@@ -567,6 +571,8 @@ export type LifeAction =
   | MoodAction
   /** 낚시 업그레이드: cast/hook/fight, tackle, crab pots, weekly cup (lounge-fish-engine.ts). */
   | AnglingAction
+  /** 먼바다 낚싯배: board, come back, the dawn knock, 멀미약 (lounge-voyage.ts). */
+  | VoyageAction
   /** 텃밭 확장: fixtures, machines, shipping bin, helping, 품평회 (lounge-farm.ts). */
   | FarmAction
   /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
@@ -591,6 +597,7 @@ export const LIFE_ACTION_KINDS = [
   ...VENUE_ACTION_KINDS,
   ...MOOD_ACTION_KINDS,
   ...ANGLING_ACTION_KINDS,
+  ...VOYAGE_ACTION_KINDS,
   ...FARM_ACTION_KINDS,
   ...TOWN_ACTION_KINDS,
   ...STAGE3_ACTION_KINDS,
@@ -941,6 +948,7 @@ export function readLife(value: unknown): LifeState {
     ...readVenues(v.venues),
     ...readMood(v.mood),
     ...readAngling(v.angling),
+    ...readVoyage(v.voyage),
     ...readFarmExt(v),
   };
 }
@@ -1091,6 +1099,10 @@ function lifeActionCore(
   }
   if ((ANGLING_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = anglingAction(life, ledger, member, a as AnglingAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((VOYAGE_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = voyageAction(life, ledger, member, a as VoyageAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((MOOD_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1502,6 +1514,8 @@ export type LifeView = {
   mood?: MoodView;
   /** 낚시 업그레이드: my cast/fight, tackle, pots, log; the weekly cup (lounge-fish-engine.ts). */
   angling?: AnglingView;
+  /** 먼바다 낚싯배: timetable, my trip, the dawn knock, 멀미약 (lounge-voyage.ts). */
+  voyage?: VoyageView;
   /** 마을 확장 2단계: which districts are open and the goals behind the locked ones. */
   districts?: DistrictsView;
   /** 마을 확장 2단계: auction, shops, stalls, reading club, visited districts (lounge-town.ts). */
@@ -1612,6 +1626,7 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { growth: growthView(life, uid, now) } : {}),
     venues: venuesView(life),
     ...(UUID.test(uid) && actorValid(actor) ? { angling: anglingView(life, uid, actor, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) ? { voyage: voyageView(life, uid, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { mood: moodView(life, uid, now) } : {}),
     districts: districtsView(life, actorValid(actor) ? actor : undefined, now),
     ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now), stage3: stage3View(life, uid, now) } : {}),

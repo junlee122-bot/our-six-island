@@ -161,7 +161,7 @@ export function flowBucket(type: LedgerEntry['type'], reason: string): string {
   if (reason === 'orchard-sapling' || reason === 'clinic' || reason === 'fortune') return reason;
   if (reason === 'research' || reason === 'respec') return reason;
   if (
-    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall', 'stock-fee'].includes(reason)
+    ['furn', 'furn-premium', 'shop-reroll', 'room-style', 'bundle', 'project', 'festival', 'venue-up', 'bar-drink', 'bakery', 'stall', 'stock-fee', 'voyage'].includes(reason)
   )
     return reason;
   return 'spend-other';

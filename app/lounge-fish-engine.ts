@@ -59,6 +59,10 @@ import { gainXp, growthChance, growthMods, skillLevel, toolTier } from './lounge
 import { moodBiteBoost } from './lounge-mood.ts';
 // 물고기의 행운: the 식사 칸 (×2 rare, window ×1.2) or 뱃사람 안주 in the 간식 칸 (×1.5, ×1.1).
 import { luckMods } from './lounge-food-data.ts';
+// 먼바다 낚싯배 (design-sea-fishing.md): the boat spot, dawn fish, swell and the catch log.
+import { SEA_BUILD } from './lounge-fish-sea-data.ts';
+import { DAWN_LEGEND, OFFSHORE_TREASURE, RAIN_BITE } from './lounge-voyage-data.ts';
+import { noteVoyageCatch, voyageAt, voyageSway } from './lounge-voyage.ts';
 
 // ---------------------------------------------------------------- constants
 /**
@@ -96,7 +100,9 @@ export const CUP_PRIZES = [5_000, 3_000, 1_500] as const;
 export const CUP_MIN_PLAYERS = 3;
 export const CUP_HISTORY = 4;
 const FRESH_SPOTS: readonly Spot[] = ['river', 'pond', 'rapids', 'falls', 'lake', 'bridge'];
-const SEA_SPOTS: readonly Spot[] = ['sea', 'rocks', 'harbor'];
+const SEA_SPOTS: readonly Spot[] = ['sea', 'rocks', 'harbor', 'offshore'];
+/** Largest swell the reader accepts (lounge-voyage SWAY by weather stays below). */
+const SWAY_MAX = 1_500;
 const COUNT_MAX = 99_999;
 
 export const ANGLING_REJECT = {
@@ -104,6 +110,8 @@ export const ANGLING_REJECT = {
   spotLocked: '아직 복원되지 않은 곳이에요. 마을 꾸러미를 채워 주세요.',
   spotRod: '물살이 세서 낚싯대 2단계부터 던질 수 있어요.',
   spotNight: '항구는 해가 진 뒤(저녁 7시~새벽 5시)에만 열려요.',
+  spotBoat: '먼바다는 허 선장의 배를 타고 나가야 낚을 수 있어요.',
+  potBoat: '배 위에는 통발을 놓을 수 없어요.',
   bait: '그 미끼가 없어요.',
   token: '낚싯대를 다시 던져 주세요.',
   tackle: '그 찌가 가방에 없어요.',
@@ -231,7 +239,8 @@ function readSetup(v: unknown): FightSetup | undefined {
     s.seed > 0xffffffff ||
     !(BEHAVIOURS as readonly unknown[]).includes(s.behaviour) ||
     ![s.difficulty, s.bar, s.gain, s.loss].every((n) => nat(n) && n <= 10_000) ||
-    (t && (!nat(t.at) || !nat(t.pos) || t.at > MAX_TICKS || t.pos > 10_000))
+    (t && (!nat(t.at) || !nat(t.pos) || t.at > MAX_TICKS || t.pos > 10_000)) ||
+    (s.sway !== undefined && (!nat(s.sway) || s.sway > SWAY_MAX))
   )
     return;
   return {
@@ -242,6 +251,7 @@ function readSetup(v: unknown): FightSetup | undefined {
     gain: s.gain as number,
     loss: s.loss as number,
     treasure: t ? { at: t.at as number, pos: t.pos as number } : null,
+    ...(s.sway ? { sway: s.sway as number } : {}),
   };
 }
 function readCast(v: unknown): AnglerCast | undefined {
@@ -422,6 +432,8 @@ export type AnglerContext = {
   rod?: number;
   /** Legends this friend already caught (caught once each). */
   caught?: readonly string[];
+  /** On the captain's dawn sailing (dawn fish bite). */
+  dawn?: boolean;
   /** Bait on this cast (null: none); undefined skips bait conditions (spot card). */
   bait?: BaitId | null;
 };
@@ -431,6 +443,10 @@ export function fishAvailable(f: FishDef, ctx: AnglerContext): boolean {
     seasons = p.season ? [p.season] : f.seasons;
   if (!seasons.includes(ctx.season) || !eligibleSky(f.sky, ctx.weather)) return false;
   if (!eligibleTime(f.time, isDaytime(ctx.now), isNighttime(ctx.now)) || !inHours(p.hours, kstHour(ctx.now))) return false;
+  if (p.weather && !p.weather.includes(ctx.weather)) return false;
+  if (p.dawn && !ctx.dawn) return false;
+  if (p.need?.rod && (ctx.rod ?? 5) < p.need.rod) return false;
+  if (p.need?.bait && ctx.bait !== undefined && ctx.bait !== p.need.bait) return false;
   if (!fishGateOk(f.id, ctx.rod, ctx.bait)) return false;
   if (isLegend(f)) {
     if (ctx.caught?.includes(f.id)) return false;
@@ -443,8 +459,12 @@ export function anglerCandidates(spot: Spot, ctx: AnglerContext): FishDef[] {
   const local = FISH.filter((f) => f.spots.includes(spot));
   const current = local.filter((f) => fishAvailable(f, ctx));
   if (current.length >= 3) return current;
+  // Gated fish (dawn, rod, bait, one sky) never drop in as quiet-water visitors.
   const visitors = local
-    .filter((f) => f.weight >= 10 && !current.includes(f) && f.seasons.length > 0)
+    .filter((f) => {
+      const p = profileOf(f);
+      return f.weight >= 10 && !current.includes(f) && f.seasons.length > 0 && !p.dawn && !p.need && !p.weather;
+    })
     .filter((f) => fishGateOk(f.id, ctx.rod, ctx.bait))
     .sort((a, b) => b.weight - a.weight || a.id.localeCompare(b.id));
   return [...current, ...visitors.slice(0, 3 - current.length)];
@@ -458,6 +478,7 @@ const BUILD: Readonly<Record<string, number>> = {
   squid: 0.75, mitre: 0.75, octopus: 0.9, crayfish: 1.6, lakelord: 0.8, icecod: 0.9,
   daseulgi: 2.2, shrimp: 1.1, crab: 2.2, clam: 2.4, oyster: 2.2, conch: 2.4,
   ...FRESH_BUILD,
+  ...SEA_BUILD,
 };
 /** Weight in grams of a fish of `cm` (records, cards). */
 export const fishGrams = (id: string, cm: number) => Math.max(1, Math.round(15.5 * (BUILD[id] ?? 1) * (cm / 10) ** 3));
@@ -518,9 +539,9 @@ export function treasureLoot(key: string, season: Season): TreasureLoot {
     }
   }
 }
-/** Treasure chance in percent for a fight. */
-export const treasureChance = (level: number, tackle: boolean, coop: number) =>
-  TREASURE_BASE + (tackle ? TREASURE_TACKLE : 0) + Math.floor(level / 2) + COOP_TREASURE * Math.min(COOP_MAX, coop);
+/** Treasure chance in percent for a fight (먼바다 +5%p). */
+export const treasureChance = (level: number, tackle: boolean, coop: number, offshore = false) =>
+  TREASURE_BASE + (tackle ? TREASURE_TACKLE : 0) + Math.floor(level / 2) + COOP_TREASURE * Math.min(COOP_MAX, coop) + (offshore ? OFFSHORE_TREASURE : 0);
 
 // ---------------------------------------------------------------- helpers
 const userOf = (life: LifeState, uid: string): AnglerUser => (((life.angling ??= {}).u ??= {})[uid] ??= {});
@@ -550,13 +571,14 @@ const legendsOf = (life: LifeState, uid: string) => {
     best = life.ext?.[uid]?.best ?? {};
   return [...new Set([...mine, ...LEGACY_LEGENDS.filter((id) => best[id])])];
 };
-const contextOf = (life: LifeState, uid: string, now: number): AnglerContext => ({
+const contextOf = (life: LifeState, uid: string, now: number, spot?: Spot): AnglerContext => ({
   season: seasonOf(now),
   weather: weatherOf(kstDay(now)),
   now,
   level: skillLevel(life, uid, 'fish'),
   rod: toolTier(life, uid, 'rod'),
   caught: legendsOf(life, uid),
+  ...(spot === 'offshore' && voyageAt(life, uid, now)?.dawn ? { dawn: true } : {}),
 });
 /** Other friends who cast at the same spot in the last 90 s (함께 낚시). */
 export function coopCount(life: LifeState, uid: string, spot: Spot, now: number) {
@@ -579,6 +601,8 @@ function spotCheck(life: LifeState, uid: string, spot: unknown, now: number, clo
   if (block === 'flag') fail(ANGLING_REJECT.spotLocked);
   if (block === 'rod') fail(ANGLING_REJECT.spotRod);
   if (block === 'night' && clock) fail(ANGLING_REJECT.spotNight);
+  // 먼바다: only from a boat that has left and not yet come back.
+  if (spot === 'offshore' && !voyageAt(life, uid, now)) fail(ANGLING_REJECT.spotBoat);
   return spot as Spot;
 }
 /** Rolls the cup week over (archives the finished week with its top three). */
@@ -630,7 +654,7 @@ export function anglingAction(
       const spot = spotCheck(life, uid, a.spot, now);
       const bait = a.bait === undefined || a.bait === null ? undefined : a.bait;
       if (bait !== undefined && (!isBait(bait) || invCount(life, uid, bait) < 1)) fail(ANGLING_REJECT.bait);
-      const ctx: AnglerContext = { ...contextOf(life, uid, now), bait: bait ?? null },
+      const ctx: AnglerContext = { ...contextOf(life, uid, now, spot), bait: bait ?? null },
         mods = growthMods(life, uid),
         rod = ctx.rod ?? 1,
         luck = luckMods(life, uid, now),
@@ -642,7 +666,7 @@ export function anglingAction(
       const seq = ++life.seq,
         token = (hash32(`angle:${uid}:${seq}:${now}`).toString(36) + seq.toString(36)).slice(0, 24);
       const found = anglerCandidates(spot, ctx),
-        list = found.length ? found : FISH.filter((f) => f.spots.includes(spot) && f.weight >= 10);
+        list = found.length ? found : FISH.filter((f) => f.spots.includes(spot) && f.weight >= 10 && !profileOf(f).dawn && !profileOf(f).need);
       const lights = spot === 'sea' && night && hasFlag(life, 'lights');
       const rareBoost =
         luck.rare *
@@ -653,7 +677,7 @@ export function anglingAction(
         (lights ? LIGHTS_RARE_BOOST : 1) *
         insp.rare *
         (sea ? 1 + mods.seaRare : 1);
-      const legendBoost = (1 + mods.legend) * (rod >= 5 ? 1.3 : 1) * (bait === 'bait-glow' && night ? 1.5 : 1);
+      const legendBoost = (1 + mods.legend) * (rod >= 5 ? 1.3 : 1) * (bait === 'bait-glow' && night ? 1.5 : 1) * (ctx.dawn ? DAWN_LEGEND : 1);
       const previous = u.last?.ok ? u.last.fish : undefined;
       const fish =
         pickWeighted(
@@ -670,7 +694,9 @@ export function anglingAction(
       let cm = lo + (hash32(`angle-cm:${token}`) % (hi - lo + 1));
       if (bait === 'bait-shrimp' && sea) cm = Math.round(cm * 1.1);
       cm = Math.min(hi, Math.round(cm * (1 + COOP_SIZE * coop)));
-      const wait = (BITE_MIN_MS + (hash32(`angle-bite:${token}`) % BITE_SPREAD_MS)) * (bait === 'bait-dough' && fresh ? 0.5 : 1),
+      // 먼바다: rain brings the bite sooner (입질 +15%).
+      const rainy = spot === 'offshore' && (ctx.weather === 'rain' || ctx.weather === 'storm');
+      const wait = ((BITE_MIN_MS + (hash32(`angle-bite:${token}`) % BITE_SPREAD_MS)) * (bait === 'bait-dough' && fresh ? 0.5 : 1)) / (rainy ? RAIN_BITE : 1),
         biteAt = now + Math.round(wait),
         rodWindow = rod >= 4 ? 1.75 : ROD_WINDOW[Math.max(1, Math.min(3, rod)) as 1 | 2 | 3],
         windowMs = Math.round(fish.windowMs * rodWindow * luck.window * (1 + mods.biteWindow) * insp.window);
@@ -703,7 +729,8 @@ export function anglingAction(
           1,
           Math.round((baseLoss(p.difficulty) * (tackle.includes('tackle-trap') ? 2 : 3)) / 3 * (100 - COOP_LOSS * c!.coop) / 100),
         ),
-        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop),
+        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop, c!.spot === 'offshore'),
+        sway = c!.spot === 'offshore' ? voyageSway(life, uid, now) : 0,
         treasure =
           hash32(`fight-treasure:${c!.token}`) % 100 < chance
             ? { at: 40 + (hash32(`fight-at:${c!.token}`) % 160), pos: 1_000 + (hash32(`fight-pos:${c!.token}`) % 8_001) }
@@ -716,6 +743,7 @@ export function anglingAction(
         gain: GAIN,
         loss,
         treasure,
+        ...(sway ? { sway } : {}),
       };
       // Tackle wears one use per hooked fish.
       if (u.tackle) {
@@ -781,6 +809,7 @@ export function anglingAction(
         first: prev?.first ?? now,
       };
       if (!(u.spots ??= []).includes(fight!.spot)) u.spots.push(fight!.spot);
+      if (fight!.spot === 'offshore') noteVoyageCatch(life, uid, f.id, now);
       if (legend) {
         if (!(u.legends ??= []).includes(f.id)) u.legends.push(f.id);
         const text = `${josaGa(nameOf(actor))} 전설의 ${josaUl(f.name)} 낚았어요!`;
@@ -862,6 +891,7 @@ export function anglingAction(
       break;
     }
     case 'crabSet': {
+      if (a.spot === 'offshore') fail(ANGLING_REJECT.potBoat);
       const spot = spotCheck(life, uid, a.spot, now, false);
       const pots = (u.pots ??= []),
         pot = pots.find((p) => p.spot === spot);

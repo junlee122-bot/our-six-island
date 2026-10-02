@@ -16,6 +16,7 @@ import { HILLSIDE_ARRIVE, HILLSIDE_COLLIDERS, HILLSIDE_D, HILLSIDE_EXIT, HILLSID
 import { RANCH_ARRIVE, RANCH_COLLIDERS, RANCH_D, RANCH_EXIT, RANCH_W } from './lounge-ranch-layout.ts';
 import { FOOTHILL_ARRIVE, FOOTHILL_COLLIDERS, FOOTHILL_D, FOOTHILL_EXIT, FOOTHILL_MINE, FOOTHILL_MINE_ARRIVE, FOOTHILL_W } from './lounge-foothill-layout.ts';
 import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
+import { DECK_D, DECK_W } from './lounge-voyage-data.ts';
 import { arrivalPoint } from './lounge-map-doors.ts';
 
 /**
@@ -23,8 +24,8 @@ import { arrivalPoint } from './lounge-map-doors.ts';
  * 'ranch' ④ 목장·과수원 and 'foothill' ⑤ 산기슭 마을 — districts around the
  * hub (lounge-districts.ts): separate maps behind gates on the hub's rim.
  */
-export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
-export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore';
+export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore'];
 /** A district map (an outdoor area that is also a district). */
 export type DistrictArea = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
 /** Districts (separate maps around the hub) among the outdoor areas. */
@@ -114,6 +115,21 @@ const woodsColliders: WalkCollider[] = [
   { shape: 'circle', x: -18, z: -3, r: 1.1 },
   { shape: 'circle', x: 18, z: -12, r: 1.2 },
   { shape: 'circle', x: -1, z: 14, r: 1 },
+];
+
+/**
+ * 먼바다 낚싯배's deck (lounge-voyage-data.ts DECK_*): no exits (the voyage ends
+ * by the clock or 그만 돌아가기), the wheelhouse and the gear in the middle
+ * are walls, the rails are the edges.
+ */
+export const DECK_COLLIDERS: readonly WalkCollider[] = [
+  // Wheelhouse amidships; the ice box and the bait tub aft, clear of the side passages.
+  { shape: 'box', x: 0, z: -0.2, w: 2.4, d: 2.4 },
+  { shape: 'box', x: -1.7, z: 5.1, w: 0.9, d: 0.7 },
+  { shape: 'box', x: 1.7, z: 5.1, w: 0.8, d: 0.8 },
+  // The bow narrows: its corners are hull.
+  { shape: 'box', x: -2.5, z: -6.2, w: 1.4, d: 2.2 },
+  { shape: 'box', x: 2.5, z: -6.2, w: 1.4, d: 2.2 },
 ];
 
 export const REGIONS: Record<OutdoorArea, Region> = {
@@ -232,6 +248,19 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     look: { ground: '#8da36a', groundFar: '#6c7f52', fog: '#dfe3d6', sky: '#c2d6e4' },
     light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
     view: 11,
+  },
+  offshore: {
+    area: 'offshore',
+    name: '먼바다',
+    short: '먼바다',
+    tagline: '허 선장의 낚싯배 · 뱃전마다 낚시',
+    bounds: { w: DECK_W, d: DECK_D },
+    colliders: DECK_COLLIDERS,
+    exits: [],
+    arrive: { harbor: { x: 0, z: 2.8 } },
+    look: { ground: '#9a7650', groundFar: '#2c5d78', fog: '#bcd4de', sky: '#a9cfe2' },
+    light: { hemi: 1.6, sun: 2.3, exposure: 1.05, shadow: 14, dayCycle: true },
+    view: 7.2,
   },
 };
 

@@ -101,6 +101,9 @@ export function areaSurface(area: string, p: WalkPoint): Surface {
     }
     case 'mine':
       return 'gravel';
+    // 먼바다: the boat's wooden deck.
+    case 'offshore':
+      return 'planks';
     case 'hill':
     case 'woods':
       return 'grass';

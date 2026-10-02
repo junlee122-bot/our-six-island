@@ -16,6 +16,7 @@ import { HarborSet } from './lounge-harbor-scene';
 import { HillsideSet } from './lounge-hillside-scene';
 import { RanchSet } from './lounge-ranch-scene';
 import { FoothillSet } from './lounge-foothill-scene';
+import { OffshoreSet } from './lounge-offshore-scene';
 import type { DistrictSet } from './lounge-district-kit';
 
 let loader: GLTFLoader | null = null;
@@ -82,6 +83,9 @@ export type RegionUpdate = {
   /** Districts: Sunday market goods, lamps at night. */
   marketDay?: boolean;
   night?: boolean;
+  /** 항구: 허 선장's boat is out (a voyage is on) and whether he waits at the pier. */
+  boatOut?: boolean;
+  captain?: boolean;
 };
 
 export class RegionSet {
@@ -99,6 +103,8 @@ export class RegionSet {
   private disposables: { dispose: () => void }[] = [];
   /** A district's own set (시장 거리); the generic outdoor set otherwise. */
   private district: DistrictSet | null = null;
+  /** 먼바다: the boat on the open sea (lounge-offshore-scene.ts). */
+  readonly offshore: OffshoreSet | null = null;
   /** Called when a model arrives (the scene redraws). */
   onChange: () => void = () => {};
 
@@ -120,6 +126,10 @@ export class RegionSet {
                 : new FoothillSet(look);
       this.district.onChange = () => this.onChange();
       this.root.add(this.district.root);
+    } else if (area === 'offshore') {
+      this.offshore = new OffshoreSet();
+      this.offshore.onChange = () => this.onChange();
+      this.root.add(this.offshore.root);
     } else this.buildOutdoor();
   }
 
@@ -491,7 +501,7 @@ export class RegionSet {
 
   update(u: RegionUpdate) {
     this.state = u;
-    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night });
+    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night, boatOut: !!u.boatOut, captain: !!u.captain });
     const up = new Set(u.nodes.filter((n) => !n.taken).map((n) => n.id));
     for (const n of u.nodes) this.nodeObject(n);
     for (const [id, e] of this.nodes) {
@@ -516,11 +526,13 @@ export class RegionSet {
   /** Marks bob a little. */
   tick(t: number) {
     this.district?.tick(t);
+    this.offshore?.tick(t);
     const y = Math.sin(t / 420) * 0.08;
     for (const e of this.nodes.values()) if (e.mark.visible) e.mark.position.y = (e.mark.userData.y0 ??= e.mark.position.y) + y;
   }
   dispose() {
     this.district?.dispose();
+    this.offshore?.dispose();
     for (const d of this.disposables) d.dispose();
     this.disposables = [];
     if (this.floorGroup)

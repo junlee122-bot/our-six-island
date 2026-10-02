@@ -107,6 +107,20 @@ export const HARBOR_PIER = { x: 0, z: HARBOR_SHORE_Z + 5.5, w: 4, d: 11 } as con
 /** The breakwater (방파제): a stone arm running south from the point. */
 export const HARBOR_BREAKWATER = { x: 23, z: HARBOR_SHORE_Z + 6.8, w: 3, d: 13.6 } as const;
 
+/**
+ * 먼바다 낚싯배 (design-sea-fishing.md): the boat moors along the pier's west
+ * side; its timetable board and 허 선장 stand at the pier's root, and you step
+ * back onto the pier at the gangway when a voyage ends.
+ */
+export const HARBOR_VOYAGE = {
+  boat: { x: -5.4, z: 9, rot: 0 },
+  board: { x: -1.5, z: 4.2, w: 0.9, d: 0.3 },
+  stand: { x: -1.1, z: 5.4 },
+  reach: 1.5,
+  captain: { x: 1.2, z: 5.6 },
+  landing: { x: -1.2, z: 8.2 },
+} as const;
+
 /** Fishing and crab-pot spots (fishing engine spots) and where you stand for them. */
 export type HarborSpot = { id: string; spot: 'breakwater' | 'pier'; stand: WalkPoint; reach: number; label: string; pot?: boolean };
 export const HARBOR_SPOTS: readonly HarborSpot[] = [
@@ -119,9 +133,8 @@ export const HARBOR_SPOTS: readonly HarborSpot[] = [
 
 /** Moored boats beside the pier (drawn only; on the water). */
 export const HARBOR_BOATS: readonly { x: number; z: number; len: number; rot: number; color: string }[] = [
-  { x: -4.6, z: 8.5, len: 5.2, rot: 0.08, color: '#b55a3c' },
   { x: 4.8, z: 10.5, len: 4.4, rot: -0.12, color: '#3f6f8f' },
-  { x: -10, z: 7, len: 3.6, rot: 0.3, color: '#e0d2b0' },
+  { x: -11, z: 7, len: 3.6, rot: 0.3, color: '#e0d2b0' },
 ];
 
 export const HARBOR_BENCHES: readonly { id: string; x: number; z: number; w: number; d: number }[] = [
@@ -196,6 +209,7 @@ export const HARBOR_COLLIDERS: readonly WalkCollider[] = [
   { shape: 'circle', x: HARBOR_LIGHTHOUSE.x, z: HARBOR_LIGHTHOUSE.z, r: HARBOR_LIGHTHOUSE.r },
   box(HARBOR_AUCTION.x, HARBOR_AUCTION.z, HARBOR_AUCTION.w, HARBOR_AUCTION.d),
   box(HARBOR_BOARD.x, HARBOR_BOARD.z, HARBOR_BOARD.w, HARBOR_BOARD.d),
+  box(HARBOR_VOYAGE.board.x, HARBOR_VOYAGE.board.z, HARBOR_VOYAGE.board.w, HARBOR_VOYAGE.board.d),
   ...HARBOR_BENCHES.map((b) => box(b.x, b.z, b.w, b.d)),
   ...HARBOR_LAMPS.map((l) => ({ shape: 'circle' as const, x: l.x, z: l.z, r: 0.14 })),
   ...HARBOR_PROPS.map((p) => box(p.x, p.z, p.w, p.d)),
@@ -226,6 +240,7 @@ export const HARBOR_SPOTS_NPC: Readonly<Record<string, WalkPoint & { face: numbe
   'pier-root': { x: 0, z: 2.2, face: 0 },
   'pier-mid': { x: 1, z: 8, face: Math.PI / 2 },
   'pier-end': { x: 0.9, z: 13.1, face: 0 },
+  'pier-boat': { ...HARBOR_VOYAGE.captain, face: Math.PI / 2 },
   'lighthouse-door': { ...HARBOR_LIGHTHOUSE.door, face: 0 },
   'lighthouse-yard': { x: 19.6, z: -3.2, face: 0.6 },
   'breakwater-mid': { x: 23.6, z: 8, face: -Math.PI / 2 },
