@@ -1,0 +1,74 @@
+{
+ "createdAt": "2026-10-03",
+ "provider": "Higgsfield",
+ "model": "gpt_image_2_5",
+ "background": "solid magenta #FF00FF (keyed at build)",
+ "note": "허풍 주점 허 선장 → 샹크스 (ONE PIECE), 화투방 매화 → 정마담 (타짜). Owner-provided reference images were uploaded to Higgsfield only as generation inputs and are not stored in this repository. 정마담 is drawn as the film character's styling only (bob hair, white halter top, pearls); no real person's likeness was targeted, and the cigarette was replaced with hwatu cards. Shanks' cloak covers his left side as in the source.",
+ "assets": [
+  {
+   "id": "shanks-tall",
+   "job": "ff5136cb-9f37-4447-8d79-6c86c990cdc8",
+   "aspect": "2:3",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-shanks.png",
+   "sha256": "5194862F3C476EF93691DBBF670002724ABB1624C929F07259947FC7CFFDBF79"
+  },
+  {
+   "id": "shanks-chibi",
+   "job": "007eeb8b-3ac3-4718-bfd7-dfa68c9dc0ca",
+   "aspect": "2:3",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-shanks.png",
+   "sha256": "842C322E5C8FC2536A11BEE9AD4929EACE5CA3DCE1AC977714B8195C412789FE"
+  },
+  {
+   "id": "shanks-host-sheet",
+   "job": "1476fb2a-d613-4fc1-830d-538413f3eecc",
+   "aspect": "1:1",
+   "styleReference": "host-maehwa.png",
+   "cells": [
+    "calm",
+    "smile",
+    "deal",
+    "focus",
+    "wow",
+    "sorry"
+   ],
+   "original": "_originals/host-shanks.png",
+   "sha256": "233F7FC57A81A954500ABBE7D2C5FE9C8DC25AEAF3A90A16F579F134782EDA74"
+  },
+  {
+   "id": "jeong-tall",
+   "job": "99c0fb3c-a274-4f6a-9cc5-bb0c8d22815a",
+   "aspect": "2:3",
+   "styleReference": "_originals/casino-lender-rose.png",
+   "original": "_originals/npc-jeong.png",
+   "sha256": "902E291F9496C9E2067710712778A5F7D6F96BC47607FFBB8378C9AEF8C59B12"
+  },
+  {
+   "id": "jeong-chibi",
+   "job": "d0ed192c-8700-4621-a599-c47effea7e1d",
+   "aspect": "2:3",
+   "styleReference": "_originals/chibi/npc-chibi-lux-himmel.png",
+   "original": "_originals/chibi/npc-chibi-jeong.png",
+   "sha256": "48CF3CA4B342CEDA7E90B64F9A59B31D734B81A099ACDF0D8D20235259BCC381"
+  },
+  {
+   "id": "jeong-host-sheet",
+   "job": "9b4affc7-71de-4fe9-aeac-32c8dc3c2110",
+   "aspect": "1:1",
+   "styleReference": "host-maehwa.png",
+   "cells": [
+    "calm",
+    "smile",
+    "deal",
+    "focus",
+    "wow",
+    "sorry"
+   ],
+   "original": "_originals/host-jeong.png",
+   "sha256": "52FA63793AB926A2F362DB329DB1FC1234D44794523E59A2E310FC3F5E170801"
+  }
+ ],
+ "keying": "Same as carpenter-valkyrie-generation.json: scripts/optimize-assets.mjs (npcs / chibi / hosts) — done by the swap session."
+}
