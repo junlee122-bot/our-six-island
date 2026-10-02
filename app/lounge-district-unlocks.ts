@@ -118,7 +118,7 @@ export function districtsView(life: LifeState, actor?: number, now = 0): Distric
     foot = DISTRICTS.foothill.unlock;
   const flagged = (id: GoalDistrict) => hasFlag(life, DISTRICT_FLAG[id]!);
   return {
-    open: ['market', ...GOAL_DISTRICTS.filter((id) => pass || flagged(id))] as DistrictId[],
+    open: ['farm', 'market', ...GOAL_DISTRICTS.filter((id) => pass || flagged(id))] as DistrictId[],
     pass,
     goals: {
       harbor: { have: ctx.fishSpecies ?? 0, need: harbor.kind === 'fish' ? harbor.species : 0, open: flagged('harbor') },

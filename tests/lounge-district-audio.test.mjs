@@ -30,7 +30,8 @@ test('every music slot has a piece and a track entry; every built district has i
   for (const area of DISTRICT_AREAS) {
     const sound = areaSound(area);
     assert.ok(sound, area);
-    assert.equal(sound.music, area);
+    // 우리 농장 borrows the ranch's pastoral piece until it has a track of its own.
+    assert.equal(sound.music, area === 'farm' ? 'ranch' : area);
     assert.ok(!['hall', 'casino', 'tavern'].includes(sound.music), 'districts never reuse a room piece');
   }
   assert.equal(areaSound('village'), null);

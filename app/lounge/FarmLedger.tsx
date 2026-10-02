@@ -26,8 +26,6 @@ import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { loungeAudio } from '../lounge-audio';
 import { lifeSfx } from '../lounge-audio-life';
-import { farmBed, farmFront } from '../lounge-village-life';
-import type { VillagePoint } from '../lounge-village-layout';
 import { CropStageArt, ItemIcon, QualityStar } from './ItemIcon';
 import { Glyph } from './field-glyphs';
 import { ConfirmModal, Modal } from './Modal';
@@ -86,8 +84,8 @@ type LedgerProps = {
   onClose: () => void;
   onShop: () => void;
   onBag?: () => void;
-  /** Walks there in the village (switching to the village first). */
-  onWalk?: (point: VillagePoint) => void;
+  /** 우리 농장: walks to a friend's field (onto the farm first). */
+  onFriendField?: (actor: number) => void;
   /** 텃밭 확장: opens another page of the farm window (a fixture tile → 밭 배치). */
   onPage?: (page: 'layout' | 'works' | 'market') => void;
 };
@@ -101,7 +99,7 @@ export function FarmLedger(props: LedgerProps) {
   );
 }
 /** The ledger pages (my yard + the selected plot); FarmModal puts it under its tabs. */
-export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onWalk, actor, onPage }: LedgerProps) {
+export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onFriendField, actor, onPage }: LedgerProps) {
   const life = view.life;
   const now = useServerClock(view.clockOffset, life?.me.farm.map((p) => p.readyAt) ?? [], 5000);
   const [busy, setBusy] = useState(false);
@@ -613,7 +611,6 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
             {friends.length ? (
               <ul>
                 {friends.slice(0, 6).map((f) => {
-                  const bed = farmBed(f.actor);
                   return (
                     <li key={f.actor} data-done={f.done || undefined}>
                       <span className="l-ledger-friend">{ACTORS[f.actor]}네</span>
@@ -632,13 +629,13 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
                           <Glyph name="basket" size={14} /> 거들기
                         </button>
                       )}
-                      {!f.done && bed && onWalk && (
+                      {!f.done && onFriendField && (
                         <button
                           type="button"
                           className="l-ink l-small"
                           onClick={() => {
                             onClose();
-                            onWalk(farmFront(bed));
+                            onFriendField(f.actor);
                           }}
                         >
                           <Glyph name="walk" size={14} /> 가 보기

@@ -203,3 +203,112 @@ test('cloud: a plain read of an old world writes nothing; the first write stores
   // The move costs nobody anything.
   assert.deepEqual(wrote.state.ledger.accounts, world.ledger.accounts);
 });
+
+// ------------------------------------------------------------ the farm map
+import { REGIONS, regionWalk, nearestExit } from '../app/lounge-areas.ts';
+import { DISTRICTS, districtOpen } from '../app/lounge-districts.ts';
+import {
+  FARM_BIN,
+  FARM_BOARD,
+  FARM_COLLIDERS,
+  FARM_FIELDS,
+  FARM_HOUSES,
+  FARM_LATER,
+  FARM_MAILBOX,
+  FARM_W,
+  FARM_D,
+  farmStart,
+  fieldTileAt,
+  fieldTileCenter,
+  houseOutside,
+} from '../app/lounge-farm-layout.ts';
+import { farmReach, farmSceneState } from '../app/lounge-farm-view.ts';
+import { districtMinimap } from '../app/lounge-district-minimap.ts';
+import { AREA_DEFAULTS } from '../app/lounge-games.ts';
+import { regionToNetwork } from '../app/lounge-areas.ts';
+
+test('우리 농장: open from the start behind the hub north gate; 84 × 64; arrival on the road', () => {
+  assert.equal(districtOpen('farm'), true);
+  assert.deepEqual({ x: DISTRICTS.farm.gate.x, z: DISTRICTS.farm.gate.z }, { x: -4, z: -43.4 });
+  assert.deepEqual(REGIONS.farm.bounds, { w: 84, d: 64 });
+  assert.deepEqual(AREA_DEFAULTS.farm, regionToNetwork('farm', REGIONS.farm.arrive.village));
+  assert.equal(nearestExit('farm', REGIONS.farm.exits[0].stand)?.to, 'village');
+});
+
+test('the farm map: seven houses in a row, each field in front of its door, everything reachable', () => {
+  const w = regionWalk('farm');
+  const start = REGIONS.farm.arrive.village;
+  assert.ok(w.canWalk(start));
+  const reach = (p, label) => {
+    assert.ok(w.canWalk(p), `${label} walkable`);
+    const end = w.path(start, p).at(-1);
+    assert.ok(end && Math.hypot(end.x - p.x, end.z - p.z) < 0.05, `${label} reachable`);
+  };
+  assert.deepEqual(new Set(FARM_HOUSES.map((h) => h.actor)), new Set([0, 1, 2, 3, 4, 5, 6]));
+  for (const h of FARM_HOUSES) {
+    assert.ok(Math.abs(h.x) + h.w / 2 < FARM_W / 2 && h.z - h.d / 2 > -FARM_D / 2, `house ${h.actor} inside`);
+    reach(h.door, `door ${h.actor}`);
+    reach(houseOutside(h), `outside ${h.actor}`);
+    reach(farmStart(h.actor), `start ${h.actor}`);
+    const f = FARM_FIELDS.find((x) => x.actor === h.actor);
+    // The field is right in front of the house, under its door.
+    assert.ok(f.z0 > h.door.z && f.z0 - h.door.z < 3, `field ${h.actor} by the door`);
+    assert.ok(Math.abs(f.x0 + f.w / 2 - h.x) < 0.01);
+    // Every tile is walkable ground (fields are not walls) and maps back to itself.
+    for (let t = 0; t < 80; t++) {
+      const c = fieldTileCenter(f, t);
+      assert.equal(fieldTileAt(f, c), t);
+      assert.ok(w.canWalk(c), `tile ${t} of ${h.actor}`);
+    }
+  }
+  // Fields never overlap each other.
+  const sorted = [...FARM_FIELDS].sort((a, b) => a.x0 - b.x0);
+  for (let i = 1; i < sorted.length; i++) assert.ok(sorted[i].x0 >= sorted[i - 1].x0 + sorted[i - 1].w + 1);
+  reach(FARM_BIN.front, 'bin');
+  reach(FARM_MAILBOX.front, 'mailbox');
+  reach(FARM_BOARD.front, 'board');
+  for (const l of FARM_LATER) reach({ x: l.x, z: l.z }, l.id);
+  assert.ok(FARM_COLLIDERS.length > 7);
+  // The minimap names every house and the yard.
+  const map = districtMinimap('farm', 1);
+  for (const a of [0, 1, 2, 3, 4, 5, 6]) assert.ok(map.places.some((p) => p.id === `home-${a}`));
+  for (const p of map.places) if (p.kind !== 'exit') reach(p.go, `pin ${p.id}`);
+});
+
+test('farm touches: my field farms, a friend\'s field waters once a day, doors go in, the yard opens', () => {
+  const uidMe = uuid(),
+    uidB = uuid();
+  const life = {
+    me: { farm: Array.from({ length: 80 }, (_, i) => (i === 3 ? { crop: 'carrot', readyAt: 0, wateredAt: null } : { crop: null, readyAt: null, wateredAt: null })), plots: 24, waterFriend: [] },
+    actors: { [uidMe]: 3, [uidB]: 1 },
+    housesPlotsPublic: { [uidB]: [{ tile: 0, crop: 'carrot', stage: 1, needsWater: true }] },
+    fieldSizes: { [uidB]: 48 },
+    farmsPublic: {},
+    houses: { 1: 4 },
+  };
+  const field = (a) => FARM_FIELDS.find((f) => f.actor === a);
+  const mine = farmReach(fieldTileCenter(field(3), 3), life, 3, 10)[0];
+  assert.equal(mine.touch.kind, 'field');
+  assert.equal(mine.label, '거두기 (1)');
+  assert.equal(mine.action, 'harvest');
+  // Untilled tiles of my field are out of E's reach (column 9 at 6 × 4).
+  assert.ok(!farmReach(fieldTileCenter(field(3), 79), life, 3, 10).some((r) => r.touch.kind === 'field'));
+  const friend = farmReach(fieldTileCenter(field(1), 0), life, 3, 10)[0];
+  assert.deepEqual(friend.touch, { kind: 'friendField', actor: 1 });
+  assert.equal(friend.action, 'waterFriend');
+  life.me.waterFriend = [1];
+  assert.equal(farmReach(fieldTileCenter(field(1), 0), life, 3, 10)[0].disabled, true);
+  const door = farmReach(FARM_HOUSES.find((h) => h.actor === 3).door, life, 3, 10)[0];
+  assert.deepEqual(door.touch, { kind: 'home', actor: 3 });
+  assert.equal(door.label, '내 집 들어가기');
+  assert.equal(farmReach(FARM_HOUSES.find((h) => h.actor === 1).door, life, 3, 10)[0].label, '강재네 집 놀러 가기');
+  assert.equal(farmReach(FARM_BIN.front, life, 3, 10)[0].touch.kind, 'bin');
+  assert.equal(farmReach(FARM_MAILBOX.front, life, 3, 10)[0].touch.kind, 'mailbox');
+  assert.equal(farmReach(FARM_BOARD.front, life, 3, 10)[0].touch.kind, 'board');
+  // The scene state: all seven fields, friends' sizes and house tiers.
+  const state = farmSceneState(life, 3);
+  assert.equal(state.fields.length, 7);
+  assert.equal(state.fields.find((f) => f.actor === 1).size, 48);
+  assert.deepEqual(state.fields.find((f) => f.actor === 3).plots, [{ tile: 3, crop: 'carrot', growth: 0 }]);
+  assert.equal(state.houses[1], 4);
+});

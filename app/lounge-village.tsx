@@ -311,7 +311,7 @@ type Props = {
 function goalText(id: DistrictId, life: LifeView | null | undefined) {
   const g = life?.districts?.goals;
   if (!g) return '';
-  return id === 'market' || !g[id] ? '' : ` · ${goalProgressText(id, g)}`;
+  return id === 'market' || id === 'farm' || !g[id] ? '' : ` · ${goalProgressText(id, g)}`;
 }
 type Direction = 'up' | 'down' | 'left' | 'right';
 const WALK_SPEED = 5.2;
@@ -3720,7 +3720,7 @@ function SpotPrompt({
     return (
       <div>
         <strong>
-          <Store size={14} /> {d.no}. {d.name}
+          <Store size={14} /> {d.no ? `${d.no}. ` : ''}{d.name}
         </strong>
         <small>
           {districtOpen(spot.id, { flags: life?.flags, pass: life?.districts?.pass }) ? `${d.gate.road} · ${d.tagline}` : `${d.hint}${goalText(spot.id, life)}`}

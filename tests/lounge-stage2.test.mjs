@@ -506,11 +506,11 @@ test('승준 explorer pass: the harbor and the hillside and their counters are o
     other = s.members[0];
   const mine = lifeView(s.life, me.id, me.actor, T0).districts;
   assert.equal(mine.pass, true);
-  assert.deepEqual([...mine.open].sort(), ['foothill', 'harbor', 'hillside', 'market', 'ranch']);
+  assert.deepEqual([...mine.open].sort(), ['farm', 'foothill', 'harbor', 'hillside', 'market', 'ranch']);
   assert.equal(mine.goals.harbor.open, false, 'the village has not opened it');
   const theirs = lifeView(s.life, other.id, other.actor, T0).districts;
   assert.equal(theirs.pass, false);
-  assert.deepEqual(theirs.open, ['market']);
+  assert.deepEqual(theirs.open, ['farm', 'market']);
   assert.equal(districtOpen('harbor', { flags: [], pass: true }), true);
   // Server rules honour it: dawn auction, reading club and the harbor rod spots.
   const fish = FISH.find((f) => f.sell >= 500 && f.weight > 1);
@@ -525,7 +525,7 @@ test('승준 explorer pass: the harbor and the hillside and their counters are o
   s.act(me, { kind: 'anglerCast', spot: 'breakwater' }, at(1, 12));
   // After it ends he follows the village's record like everyone else.
   const late = world(4);
-  assert.deepEqual(lifeView(late.life, late.members[seungjun].id, seungjun, EXPLORER_PASS.until).districts.open, ['market']);
+  assert.deepEqual(lifeView(late.life, late.members[seungjun].id, seungjun, EXPLORER_PASS.until).districts.open, ['farm', 'market']);
 });
 
 test('승준 explorer pass: the server lets him into the districts, not the others', async () => {

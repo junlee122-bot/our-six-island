@@ -23,6 +23,7 @@ import { useSettings } from '../lounge-settings';
 import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import type { FishingFramePhase } from '../lounge-fishing-frames';
+import type { FarmTouch } from '../lounge-farm-view';
 import type { ShopArea } from '../lounge-shop-interiors';
 import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
 import { gameHourOf } from '../lounge-voyage-data';
@@ -65,6 +66,7 @@ export function useOutdoor({
   onCounter,
   onFish,
   onSignpost,
+  onFarm,
 }: {
   room: CloudRoom;
   notify: Notify;
@@ -82,6 +84,8 @@ export function useOutdoor({
   onFish?: (spot: 'breakwater' | 'pier' | 'offshore') => void;
   /** 친구에게 가기. */
   onSignpost?: () => void;
+  /** 우리 농장: my field, a friend's field, a house door, the bin, the mailbox, the board. */
+  onFarm?: (touch: FarmTouch) => void;
 }) {
   const [outdoor, setOutdoor] = useState<Outdoor | null>(null);
   const [liftOpen, setLiftOpen] = useState(false);
@@ -271,6 +275,9 @@ export function useOutdoor({
       case 'signpost':
         onSignpost?.();
         return;
+      case 'farm':
+        if (!a.disabled) onFarm?.(a.touch);
+        return;
       case 'exit':
         if (a.to === 'village') return leaveToVillage();
         if (a.to === 'mine') return enterMine();
@@ -348,6 +355,7 @@ export function useOutdoor({
             steady={!!voyage?.pillUntil}
             bigCatch={bigCatch}
             harborBoat={harborBoat}
+            life={outdoor.area === 'farm' ? view.life : null}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}

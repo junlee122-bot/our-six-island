@@ -107,7 +107,7 @@ const wallet = (s, m) => s.ledger.accounts[`wallet-${m.id}`];
 
 // ---------------------------------------------------------------- districts and unlocks
 test('the ranch opens with 들길 개간, the foothill at mine floor 10; flags never close', () => {
-  assert.deepEqual([...BUILT_DISTRICTS], ['market', 'harbor', 'hillside', 'ranch', 'foothill']);
+  assert.deepEqual([...BUILT_DISTRICTS], ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill']);
   assert.equal(RESEARCH_BY_ID.orchardHill.live, true);
   const s = world(2, []);
   const [a, b] = s.members;

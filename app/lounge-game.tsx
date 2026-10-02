@@ -78,7 +78,9 @@ import { BOARD_FRONT, MUSEUM_FRONT, POND_EDGE, feteSpot } from './lounge-village
 import { friendDialog, type DialogScript } from './lounge-friend-dialog';
 import { AdaptChecklist, FeteBanner, markAdaptLocal } from './lounge/SocialHud';
 import { timeOfDay } from './lounge-calendar';
-import { farmBed, farmFront } from './lounge-village-life';
+import { farmField, farmHomePlace, farmHouse, houseOutside } from './lounge-farm-layout';
+import type { FarmTouch } from './lounge-farm-view';
+import type { FarmPage } from './lounge/FarmWorks';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
@@ -583,9 +585,7 @@ function AccountLounge({
   const hotbar = useHotbar();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
     // Leaving my room at the start of the day comes out of my own front door.
-    enteredPlace = useRef<VillagePlace | null>(
-      VILLAGE_PLACES.find((p) => p.id === `home-${account.actor}`) ?? null,
-    ),
+    enteredPlace = useRef<VillagePlace | null>(farmHomePlace(account.actor)),
     lookRef = useRef(save.looks[save.actor]),
     tabRef = useRef(tab);
   const myLook = save.looks[save.actor];
@@ -599,6 +599,9 @@ function AccountLounge({
   const enterShopRef = useRef<(area: ShopArea) => void>(() => {});
   /** A shop room's counter: its town window, or the stock window at 범마을 증권. */
   const openShopCounter = (place: Exclude<TownPlace, 'signpost' | 'tavern'> | 'broker') => (place === 'broker' ? setModal('stocks') : setTownPlace(place));
+  /** 우리 농장's E actions (set below once the handlers exist). */
+  const farmTouchRef = useRef<(touch: FarmTouch) => void>(() => {});
+  const [farmPage, setFarmPage] = useState<FarmPage>('ledger');
   const outdoorApi = useOutdoor({
     room,
     notify,
@@ -621,6 +624,7 @@ function AccountLounge({
     },
     onFish: (spot) => startFishing(spot),
     onSignpost: () => setTownPlace('signpost'),
+    onFarm: (touch) => farmTouchRef.current(touch),
     onVillage: (at) => {
       setVillageSpawn(at);
       villagePosition.current = at;
@@ -1059,11 +1063,16 @@ function AccountLounge({
       }
       if (place) enteredPlace.current = place;
       if (destination === 'village' && from !== 'village') {
-        const position = enteredPlace.current
-          ? villageReturnPoint(enteredPlace.current)
-          : villagePosition.current;
-        setVillageSpawn(position);
-        villagePosition.current = position;
+        // 우리 농장: out of a house onto the farm, in front of its door.
+        const house = enteredPlace.current?.kind === 'home' && enteredPlace.current.actor !== undefined ? farmHouse(enteredPlace.current.actor) : null;
+        if (house) outdoorApi.enterAt({ area: 'farm', spawn: houseOutside(house) });
+        else {
+          const position = enteredPlace.current
+            ? villageReturnPoint(enteredPlace.current)
+            : villagePosition.current;
+          setVillageSpawn(position);
+          villagePosition.current = position;
+        }
         enteredPlace.current = null;
       }
       if (destination === 'village' && from === 'wardrobe')
@@ -1363,7 +1372,26 @@ function AccountLounge({
       notify('부엌 조리대로 걸어가요. 도착하면 E로 요리하고 만들어요.', 'info');
     };
     if (tabRef.current === 'bedroom' && visiting === null) go();
-    else enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`), undefined, () => setTimeout(go, 900));
+    else enter('bedroom', farmHomePlace(save.actor) ?? undefined, undefined, () => setTimeout(go, 900));
+  };
+  /**
+   * 우리 농장: to `actor`'s field (just south of it, on the lane) — walking if I
+   * am on the farm already, else in by its road first.
+   */
+  const goFarm = (actor: number) => {
+    setModal(null);
+    const f = farmField(actor);
+    const at = f ? { x: f.x0 + f.w / 2, z: f.z0 + f.d + 0.8 } : null;
+    const walk = () => at && window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: at }));
+    const into = () => {
+      if (outdoorRef.current?.area === 'farm') walk();
+      else {
+        outdoorApi.toDistrict('farm');
+        setTimeout(walk, 900);
+      }
+    };
+    if (tabRef.current === 'village' && visiting === null) into();
+    else enter('village', undefined, undefined, () => setTimeout(into, 600));
   };
   const walkTo = (point: VillagePoint) => {
     setModal(null);
@@ -1384,7 +1412,7 @@ function AccountLounge({
   const visitHouse = (actor: number) => {
     if (actor === save.actor) {
       setVisiting(null);
-      enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${actor}`));
+      enter('bedroom', farmHomePlace(actor) ?? undefined);
       return;
     }
     if (view.life?.rooms?.[actor]?.access === 'closed') {
@@ -1394,6 +1422,8 @@ function AccountLounge({
     setModal(null);
     if (connected) void prefetchVisit(actor).catch(() => {});
     playFade(() => {
+      // Out of 우리 농장 (its scene) into their room.
+      outdoorApi.reset();
       setVisiting(actor);
       if (connected)
         void room
@@ -1406,13 +1436,9 @@ function AccountLounge({
   const leaveVisit = (owner = visiting) => {
     playFade(() => {
       setVisiting(null);
-      // Back out through their front door.
-      const place = VILLAGE_PLACES.find((p) => p.id === `home-${owner}`);
-      const spot = place ? villageReturnPoint(place) : villagePosition.current;
-      if (spot) {
-        villagePosition.current = spot;
-        setVillageSpawn(spot);
-      }
+      // Back out through their front door on 우리 농장.
+      const house = owner === null ? null : farmHouse(owner);
+      if (house) outdoorApi.enterAt({ area: 'farm', spawn: houseOutside(house) });
       if (tabRef.current !== 'village') setTab('village');
       sendArea('village');
     });
@@ -1485,6 +1511,21 @@ function AccountLounge({
     setMailTo(to);
     setModal('mail');
   };
+  // 우리 농장: E on my field works like the hub's yard did (F1 keeps the old E);
+  // a friend's field is today's watering; doors go in; the yard opens its windows.
+  useLayoutEffect(() => {
+    farmTouchRef.current = (t) => {
+      if (t.kind === 'field') farmAct();
+      else if (t.kind === 'friendField') waterFriend(t.actor);
+      else if (t.kind === 'home') {
+        if (t.actor === save.actor) enter('bedroom', farmHomePlace(t.actor) ?? undefined);
+        else visitHouse(t.actor);
+      } else if (t.kind === 'bin' || t.kind === 'board') {
+        setFarmPage(t.kind === 'bin' ? 'market' : 'layout');
+        setModal('farm');
+      } else if (t.kind === 'mailbox') openMail();
+    };
+  });
   // Opens a table screen (banner [가기], retained-table button).
   const openGame = (kind: GameKind) => {
     setModal(null);
@@ -1579,7 +1620,7 @@ function AccountLounge({
       enterRoom: () => {
         if (visiting !== null) leaveVisit();
         if (tabRef.current !== 'bedroom')
-          enter('bedroom', VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`));
+          enter('bedroom', farmHomePlace(save.actor) ?? undefined);
       },
       openGame,
       openInvites: () => setModal('invitations'),
@@ -1883,10 +1924,8 @@ function AccountLounge({
       goToTable(soloGame, undefined, true);
       return;
     }
-    if (kind === 'farm') {
-      const bed = farmBed(save.actor);
-      if (bed) walkTo(farmFront(bed));
-    } else if (kind === 'fish') walkTo(POND_EDGE);
+    if (kind === 'farm') goFarm(save.actor);
+    else if (kind === 'fish') walkTo(POND_EDGE);
     else if (kind === 'museum') walkTo(MUSEUM_FRONT);
     else if (kind === 'requests') {
       const open = view.life?.me.requests?.find((r) => !r.done);
@@ -1899,7 +1938,7 @@ function AccountLounge({
       else
         enter(
           'bedroom',
-          VILLAGE_PLACES.find((p) => p.id === `home-${save.actor}`),
+          farmHomePlace(save.actor) ?? undefined,
           undefined,
           () => setTimeout(decorate, 900),
         );
@@ -3092,11 +3131,15 @@ function AccountLounge({
           room={room}
           view={view}
           notify={notify}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            setModal(null);
+            setFarmPage('ledger');
+          }}
           onShop={() => setModal('shop')}
           onBag={() => setModal('bag')}
-          onWalk={walkTo}
+          onFriendField={goFarm}
           actor={save.actor}
+          initialPage={farmPage}
         />
       )}
       <Suspense fallback={null}>

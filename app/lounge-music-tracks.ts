@@ -61,6 +61,8 @@ export const AREA_SOUND: Partial<Record<string, AreaSound>> = {
   // The stream through the ranch, birds by day; the foothill's mountain wind is in its piece.
   ranch: { music: 'ranch', ambience: { water: 0.25, day: 'birds', night: 'crickets' } },
   foothill: { music: 'foothill', ambience: { water: 0, day: 'birds', night: 'crickets' } },
+  // 우리 농장: the ranch's pastoral piece until a farm track exists; birds and crickets.
+  farm: { music: 'ranch', ambience: { water: 0, day: 'birds', night: 'crickets' } },
   // 먼바다: surf against the hull, gulls by day and the boat's idling engine.
   offshore: { music: 'offshore', ambience: { water: 1, waves: true, day: 'gulls', night: 'none', engine: true } },
 };

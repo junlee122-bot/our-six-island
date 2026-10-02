@@ -5,6 +5,7 @@
 import { HARBOR_BREAKWATER, HARBOR_PAVING, HARBOR_PIER, HARBOR_POINT, HARBOR_SHORE_Z } from './lounge-harbor-layout.ts';
 import { HILLSIDE_PAVING } from './lounge-hillside-layout.ts';
 import { MARKET_PAVING } from './lounge-market-layout.ts';
+import { FARM_FIELDS, FARM_PAVING } from './lounge-farm-layout.ts';
 import { RANCH_BRIDGE, RANCH_PAVING, RANCH_STONES } from './lounge-ranch-layout.ts';
 import { FOOTHILL_PAVING } from './lounge-foothill-layout.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
@@ -94,6 +95,10 @@ export function areaSurface(area: string, p: WalkPoint): Surface {
       if (inRect(p, RANCH_BRIDGE, 0.1)) return 'planks';
       if (inRect(p, RANCH_STONES, 0.1)) return 'stone';
       return RANCH_PAVING.some((r) => r.tone !== 'wood' && inRect(p, r, 0.1)) ? 'dirt' : 'grass';
+    case 'farm':
+      // 우리 농장: tilled fields and the dirt lane / 농장 길; grass elsewhere.
+      if (FARM_FIELDS.some((f) => inRect(p, { x: f.x0 + f.w / 2, z: f.z0 + f.d / 2, w: f.w, d: f.d }, 0))) return 'dirt';
+      return FARM_PAVING.some((r) => inRect(p, r, 0.1)) ? 'dirt' : 'grass';
     case 'foothill': {
       // The 산길 and the paths are gravel, the plaza and the forge yard stone.
       const r = FOOTHILL_PAVING.find((q) => inRect(p, q, 0.1));

@@ -91,7 +91,7 @@ export class VillageDistrictGates {
     beam.castShadow = true;
     const board = new THREE.Mesh(
       this.own(new THREE.PlaneGeometry(2.2, 0.82)),
-      this.own(new THREE.MeshBasicMaterial({ map: this.own(boardTexture([`${d.no}. ${d.name}`, open ? `${d.gate.road} · ${d.tagline}` : hint], open)), toneMapped: false, side: THREE.DoubleSide })),
+      this.own(new THREE.MeshBasicMaterial({ map: this.own(boardTexture([`${d.no ? `${d.no}. ` : ''}${d.name}`, open ? `${d.gate.road} · ${d.tagline}` : hint], open)), toneMapped: false, side: THREE.DoubleSide })),
     );
     board.position.set(0, 2.05, 0.14);
     // The board always turns toward the camera (straight down −z, 구역 공통 규격) so it reads the right way round.

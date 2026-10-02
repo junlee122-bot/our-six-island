@@ -62,6 +62,8 @@ import {
   FOOTHILL_TENT,
   FOOTHILL_W,
 } from './lounge-foothill-layout.ts';
+import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_LATER, FARM_MAILBOX, FARM_PAVING } from './lounge-farm-layout.ts';
+import { ACTORS } from './lounge-roster.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
@@ -140,6 +142,15 @@ const DISTRICT_ART: Partial<Record<DistrictId, () => MiniShape[]>> = {
     ...RANCH_HOUSES.map((h) => rect(h.x, h.z, h.w, h.d, 'civic')),
     ...RANCH_BUILDINGS.map((b) => rect(b.x, b.z, b.w, b.d, 'civic', b.sign.line)),
   ],
+  farm: () => [
+    ...FARM_PAVING.map((p) => rect(p.x, p.z, p.w, p.d, p.tone === 'yard' ? 'plaza' : 'road')),
+    // The fields (soil brown), the spots for later (lawn), the houses.
+    ...FARM_FIELDS.map((f) => rect(f.x0 + f.w / 2, f.z0 + f.d / 2, f.w, f.d, 'deck', '#9a7650')),
+    ...FARM_LATER.map((l) => rect(l.x, l.z, l.w, l.d, 'lawn')),
+    rect(FARM_BIN.x, FARM_BIN.z, FARM_BIN.w, FARM_BIN.d, 'stall'),
+    rect(FARM_BOARD.x, FARM_BOARD.z, FARM_BOARD.w, Math.max(0.8, FARM_BOARD.d), 'board'),
+    ...FARM_HOUSES.map((h) => rect(h.x, h.z, h.w, h.d, 'civic')),
+  ],
   foothill: () => [
     rect(0, FOOTHILL_RIDGE.z, FOOTHILL_W, FOOTHILL_RIDGE.d, 'wall'),
     rect(FOOTHILL_MINE.x, FOOTHILL_RIDGE.z + 0.6, FOOTHILL_RIDGE.gap, FOOTHILL_RIDGE.d - 1.2, 'road'),
@@ -189,6 +200,13 @@ function keeperOf(area: ShopArea) {
 
 /** Houses and buildings with no counter (언덕's residents' homes). */
 function extraPlaces(area: OutdoorArea): MiniPlace[] {
+  if (area === 'farm')
+    return [
+      ...FARM_HOUSES.map((h) => ({ id: `home-${h.actor}`, label: `${ACTORS[h.actor]}네`, title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: true })),
+      { id: 'bin', label: '출하함', title: '출하함 앞으로 걸어가기', kind: 'place', x: FARM_BIN.x, z: FARM_BIN.z, go: { ...FARM_BIN.front }, named: true },
+      { id: 'board', label: '게시판', title: '농장 게시판 앞으로 걸어가기', kind: 'board', x: FARM_BOARD.front.x, z: FARM_BOARD.front.z - BOARD_LIFT, go: { ...FARM_BOARD.front }, named: true },
+      { id: 'mailbox', label: '우체통', title: '우체통 앞으로 걸어가기', kind: 'place', x: FARM_MAILBOX.x, z: FARM_MAILBOX.z, go: { ...FARM_MAILBOX.front }, named: false },
+    ];
   if (area === 'ranch')
     return RANCH_HOUSES.map((h) => ({ id: h.id, label: h.name.replace(' 집', ''), title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false }));
   if (area !== 'hillside') return [];

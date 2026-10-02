@@ -82,6 +82,7 @@ const STALL_NAME: Record<StallId, string> = {
 };
 const AREA_WORD: Record<string, string> = {
   village: '마을 중심',
+  farm: '우리 농장',
   market: '시장 거리',
   harbor: '항구 구역',
   hillside: '언덕 주택가',
@@ -476,8 +477,9 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
         );
       }
       case 'signpost': {
-        const seen = new Set<string>(['village', ...town.seen]);
-        const open = new Set<string>(['village', ...(life.districts?.open ?? [])]);
+        // 우리 농장 is everyone's own farm: always reachable, like the village.
+        const seen = new Set<string>(['village', 'farm', ...town.seen]);
+        const open = new Set<string>(['village', 'farm', ...(life.districts?.open ?? [])]);
         const friends = view.players.filter((p) => p.id !== view.self);
         return friends.length ? (
           <ul className="l-town-list">

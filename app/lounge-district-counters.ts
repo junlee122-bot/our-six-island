@@ -8,6 +8,7 @@ import { HARBOR_AUCTION, HARBOR_BOARD, HARBOR_BUILDINGS, HARBOR_EXIT, HARBOR_SPO
 import { HILL_LIBRARY, HILLSIDE_EXIT } from './lounge-hillside-layout.ts';
 import { RANCH_BUILDINGS, RANCH_EXIT } from './lounge-ranch-layout.ts';
 import { FOOTHILL_BUILDINGS, FOOTHILL_EXIT, FOOTHILL_TENT } from './lounge-foothill-layout.ts';
+import { FARM_EXIT } from './lounge-farm-layout.ts';
 import type { DistrictArea } from './lounge-areas.ts';
 import { SHOP_INTERIORS, shopForCounter, type ShopArea } from './lounge-shop-interiors.ts';
 
@@ -98,6 +99,9 @@ export function districtCounters(area: DistrictArea, weekday: number): { x: numb
     // The tent opens on weekends (the window says when it is shut on other days).
     out.push(counter('fortune', FOOTHILL_TENT.front.x, FOOTHILL_TENT.front.z, FOOTHILL_TENT.reach, weekday === 0 || weekday === 6 ? '점집에서 오늘의 운세 보기' : '점집 천막 살펴보기'));
     out.push({ x: FOOTHILL_EXIT.stand.x + 1.6, z: FOOTHILL_EXIT.stand.z - 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
+  } else if (area === 'farm') {
+    // 우리 농장's own touches (fields, doors, bin, mailbox, board) are lounge-farm-view.ts farmReach.
+    out.push({ x: FARM_EXIT.stand.x + 1.6, z: FARM_EXIT.stand.z - 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
   } else {
     out.push(counter('library', HILL_LIBRARY.door.x, HILL_LIBRARY.door.z, HILL_LIBRARY.reach, '도서관 들어가기'));
     out.push({ x: HILLSIDE_EXIT.stand.x - 0.8, z: HILLSIDE_EXIT.stand.z - 1.2, reach: 1.3, a: { kind: 'signpost', label: '친구에게 가기' } });
