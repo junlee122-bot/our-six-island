@@ -9,7 +9,7 @@ import { Backpack, MessageCircle } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import type { Look } from '../lounge-look';
-import { REGIONS, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '../lounge-areas';
+import { REGIONS, isDistrictArea, outdoorReturnPoint, regionToNetwork, type OutdoorArea } from '../lounge-areas';
 import { DISTRICTS, districtOpen, type DistrictId } from '../lounge-districts';
 import { prefetchDistrict } from '../lounge-district-models';
 import type { NpcId } from '../lounge-npc-data';
@@ -129,7 +129,7 @@ export function useOutdoor({
         notify(`${DISTRICTS[id].name}: ${DISTRICTS[id].hint}`);
         return;
       }
-      if (id !== 'market' && id !== 'harbor' && id !== 'hillside') return;
+      if (!isDistrictArea(id)) return;
       preloadAreaScene();
       void prefetchDistrict(id);
       go({ area: id, spawn: { ...REGIONS[id].arrive.village! } });
@@ -153,7 +153,7 @@ export function useOutdoor({
         });
         return;
       }
-      if (area !== 'market' && area !== 'harbor' && area !== 'hillside') return;
+      if (!isDistrictArea(area)) return;
       if (!districtOpen(area, { flags: room.snapshot().life?.flags, pass: room.snapshot().life?.districts?.pass })) return;
       preloadAreaScene();
       void prefetchDistrict(area);

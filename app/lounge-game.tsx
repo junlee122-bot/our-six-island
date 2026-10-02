@@ -414,6 +414,10 @@ const TAB_AREA: Record<Tab, Area> = {
   coop: 'coop',
   general: 'general',
   fishmarket: 'fishmarket',
+  barn: 'barn',
+  orchardShop: 'orchardShop',
+  smithy: 'smithy',
+  clinic: 'clinic',
 };
 
 const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
@@ -544,6 +548,10 @@ function AccountLounge({
       coop: AREA_DEFAULTS.coop,
       general: AREA_DEFAULTS.general,
       fishmarket: AREA_DEFAULTS.fishmarket,
+      barn: AREA_DEFAULTS.barn,
+      orchardShop: AREA_DEFAULTS.orchardShop,
+      smithy: AREA_DEFAULTS.smithy,
+      clinic: AREA_DEFAULTS.clinic,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),

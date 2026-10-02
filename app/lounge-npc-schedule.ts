@@ -28,6 +28,13 @@
 // 형만 works out of the village and ends the day at the tavern; 미선 shops in
 // 시장 거리 and the bakery, then fetches him from the tavern. Stage-2 residents (hasSprite: false) have
 // schedules too, but npcsIn leaves them out until they can be drawn.
+//
+// Stage 3 (design-npcs-stage3.md): 닐라·하쿠 live and work in ④ 목장·과수원,
+// 오른·메르시·신이치 in ⑤ 산기슭 마을. Until a district opens (village flags
+// 'district-ranch' / 'district-foothill', the `ranch` / `foothill` options of
+// NpcWorld) its residents stay out of sight beyond its gate (the hidden
+// 'fields' / 'mountain' stand-ins) all day. 신이치 keeps his tent only on
+// weekends and festival days; on other days he is away on a case.
 import { kstDay } from './lounge-economy.ts';
 import { holidaysOn, weatherOf, weekdayOf, hash32 } from './lounge-calendar.ts';
 import { VILLAGE_PLACES, villagePath, villageCanWalk, VILLAGE_BOARD, VILLAGE_MUSEUM, VILLAGE_PAVILION, VILLAGE_HARBOR, type VillagePoint } from './lounge-village-layout.ts';
@@ -36,15 +43,18 @@ import { DISTRICTS } from './lounge-districts.ts';
 import { MARKET_SPOTS } from './lounge-market-layout.ts';
 import { HARBOR_SPOTS_NPC } from './lounge-harbor-layout.ts';
 import { HILLSIDE_SPOTS } from './lounge-hillside-layout.ts';
+import { RANCH_SPOTS } from './lounge-ranch-layout.ts';
+import { FOOTHILL_SPOTS } from './lounge-foothill-layout.ts';
 import { regionWalk } from './lounge-areas.ts';
 import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToInterior, TAVERN_HOST_AT } from './lounge-interior-layout.ts';
 import { CASINO_LENDER_SPOT } from './lounge-casino-lender.ts';
 import { BANKER_SPOT } from './lounge-bank-layout.ts';
 import { SALON_STYLIST_SPOT } from './lounge-salon-layout.ts';
 import { SHOP_AREAS, SHOP_INTERIORS, SHOP_STAFF_RADIUS, isShopArea, shopCanWalk, shopPath, shopWorld, type ShopArea } from './lounge-shop-interiors.ts';
-import { NPCS, STAGE2_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
+import { NPCS, STAGE2_NPCS, STAGE3_NPCS, VISIBLE_NPC_IDS, WALKING_NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
+import { fortuneOpenOn } from './lounge-stage3-data.ts';
 
 const MIN = 60_000,
   HOUR = 60 * MIN,
@@ -71,12 +81,18 @@ export type NpcArea =
   | 'library'
   | 'harbor'
   | 'hillside'
+  /** ④ 목장·과수원 and ⑤ 산기슭 마을 (stage 3). */
+  | 'ranch'
+  | 'foothill'
+  /** Beyond the 들길 / 산길 gates while those districts are shut (hidden). */
+  | 'fields'
+  | 'mountain'
   /** Out of the village (마키마 on the days she does not visit). */
   | 'away'
   /** The shop rooms off 시장 거리 and the harbor (lounge-shop-interiors.ts, room world units). */
   | ShopArea;
 /** Where residents are drawn walking about (the rest is drawn by its own scene or not at all). */
-export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside', ...SHOP_AREAS];
+export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', ...SHOP_AREAS];
 export type NpcActivity =
   | 'work'
   | 'stall'
@@ -199,6 +215,48 @@ const HARBOR_NAMES: Record<string, string> = {
   shed: '항구 창고',
   quay: '항구 부두',
 };
+const RANCH_NAMES: Record<string, string> = {
+  gate: '들길 어귀',
+  'barn-door': '축사 앞',
+  'barn-yard': '목장 마당',
+  'pasture-gate': '초원 울타리 문',
+  pasture: '목장 초원',
+  coop: '닭장 앞',
+  'nilah-door': '닐라네 집 앞',
+  'stream-w': '개울가',
+  'stream-e': '개울가',
+  stones: '징검다리',
+  bridge: '나무 다리',
+  'orchard-door': '과수원 창고 앞',
+  'orchard-row-a': '과수원',
+  'orchard-row-b': '과수원',
+  'orchard-row-c': '과수원',
+  pavilion: '원두막',
+  'pavilion-2': '원두막',
+  'haku-door': '하쿠네 집 앞',
+  'bench-stream': '개울가 벤치',
+  'bench-orchard': '과수원 벤치',
+  board: '목장 게시판',
+  road: '들길',
+};
+const FOOTHILL_NAMES: Record<string, string> = {
+  gate: '산길 어귀',
+  'smithy-door': '대장간 앞',
+  anvil: '대장간 모루',
+  'smithy-yard': '대장간 마당',
+  'bench-forge': '대장간 옆 벤치',
+  'mine-yard': '광산 입구',
+  'mine-mouth': '광산 입구',
+  'clinic-door': '의원 앞',
+  'bench-clinic': '의원 앞 벤치',
+  plaza: '산기슭 광장',
+  'plaza-e': '산기슭 광장',
+  'bench-plaza': '광장 벤치',
+  tent: '점집 천막',
+  onsen: '온천 공사장',
+  board: '산기슭 게시판',
+  path: '산길',
+};
 const hillName = (k: string) => {
   if (HILL_NAMES[k]) return HILL_NAMES[k];
   const who = k.startsWith('door-') ? k.slice(5) : '';
@@ -226,6 +284,8 @@ export const NPC_PLACES: Record<string, Place> = {
   home: place('home', DISTRICTS.hillside.gate.stand, 0, '언덕 집'),
   library: place('library', DISTRICTS.hillside.gate.stand, 0, '언덕 도서관'),
   away: place('away', DISTRICTS.market.gate.stand, 0, '마을 밖'),
+  fields: place('fields', DISTRICTS.ranch.gate.stand, 0, '들길 너머'),
+  mountain: place('mountain', DISTRICTS.foothill.gate.stand, 0, '산길 너머'),
   'realty-in': place('realty', entryOf('realty'), 0, '범마을 부동산'),
   'realty-model': place('realty', entryOf('realty'), 0, '범마을 부동산 모델하우스'),
   'furniture-in': place('furniture', entryOf('furniture'), 0, '나무결 가구점'),
@@ -249,6 +309,11 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.market-gate': place('village', DISTRICTS.market.gate.stand, -Math.PI / 2, '큰길 입구'),
   'v.home-gate': place('village', DISTRICTS.hillside.gate.stand, Math.PI / 2, '언덕 계단'),
   'v.harbor-gate': place('village', DISTRICTS.harbor.gate.stand, Math.PI, '둑길 입구'),
+  'v.ranch-gate': place('village', DISTRICTS.ranch.gate.stand, 0, '들길 입구'),
+  'v.foothill-gate': place('village', DISTRICTS.foothill.gate.stand, 0, '산길 입구'),
+  // 메르시's house call and 신이치's festival table on the plaza (off the festival ring and the evening seats).
+  'v.housecall': place('village', vSnap({ x: -5.2, z: 3.8 }), 0.6, '마을 광장 왕진'),
+  'v.fortune': place('village', vSnap({ x: 5.6, z: 3.2 }), -0.6, '광장 축제 점집'),
   'v.tavern-door': place('village', entryOf('tavern'), Math.PI, '허풍 주점 앞'),
   'v.realty-door': place('village', entryOf('realty'), Math.PI, '부동산 앞'),
   'v.furniture-door': place('village', entryOf('furniture'), Math.PI, '가구점 앞'),
@@ -309,6 +374,13 @@ export const NPC_PLACES: Record<string, Place> = {
       .filter(([k]) => k.startsWith('door-'))
       .map(([k, p]) => [`hl.in-${k.slice(5)}`, inside('hillside', p, HOUSE_NAMES[k.slice(5)] ?? '언덕 집')]),
   ),
+  // ④ 목장·과수원 and ⑤ 산기슭 마을 (stage 3).
+  ...Object.fromEntries(Object.entries(RANCH_SPOTS).map(([k, p]) => [`rc.${k}`, place('ranch', p, p.face, RANCH_NAMES[k] ?? '목장·과수원')])),
+  'rc.in-nilah': inside('ranch', RANCH_SPOTS['nilah-door'], '닐라네 집'),
+  'rc.in-haku': inside('ranch', RANCH_SPOTS['haku-door'], '하쿠네 집'),
+  ...Object.fromEntries(Object.entries(FOOTHILL_SPOTS).map(([k, p]) => [`fh.${k}`, place('foothill', p, p.face, FOOTHILL_NAMES[k] ?? '산기슭 마을')])),
+  'fh.in-ornn': inside('foothill', FOOTHILL_SPOTS['smithy-door'], '대장간 안채'),
+  'fh.in-mercy': inside('foothill', FOOTHILL_SPOTS['clinic-door'], '의원 2층'),
   // 허풍 주점 (interior world units).
   't.door': place('tavern', tw('door'), Math.PI / 2, '주점 문 앞'),
   't.bar-1': place('tavern', tw('bar-1'), Math.PI, '주점 바'),
@@ -348,7 +420,16 @@ export const npcPlace = (id: string) => NPC_PLACES[id];
  */
 type Portal = { a: NpcArea; b: NpcArea; from: string; to: string; ms: number };
 /** The district spot in front of each shop's door (where its owner stood at the old counter). */
-const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = { bakery: 'm.bakery', coop: 'm.coop', general: 'm.general', fishmarket: 'hb.fishmarket' };
+const SHOP_DOOR_OUTSIDE: Record<ShopArea, string> = {
+  bakery: 'm.bakery',
+  coop: 'm.coop',
+  general: 'm.general',
+  fishmarket: 'hb.fishmarket',
+  barn: 'rc.barn-door',
+  orchardShop: 'rc.orchard-door',
+  smithy: 'fh.smithy-door',
+  clinic: 'fh.clinic-door',
+};
 const PORTALS: readonly Portal[] = [
   { a: 'village', b: 'market', from: 'v.market-gate', to: 'm.gate', ms: GATE_TRANSIT_MS },
   { a: 'market', b: 'village', from: 'm.gate', to: 'v.market-gate', ms: GATE_TRANSIT_MS },
@@ -362,6 +443,14 @@ const PORTALS: readonly Portal[] = [
   { a: 'harbor', b: 'village', from: 'hb.gate', to: 'v.harbor-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'hillside', from: 'v.home-gate', to: 'hl.gate', ms: GATE_TRANSIT_MS },
   { a: 'hillside', b: 'village', from: 'hl.gate', to: 'v.home-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'ranch', from: 'v.ranch-gate', to: 'rc.gate', ms: GATE_TRANSIT_MS },
+  { a: 'ranch', b: 'village', from: 'rc.gate', to: 'v.ranch-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'foothill', from: 'v.foothill-gate', to: 'fh.gate', ms: GATE_TRANSIT_MS },
+  { a: 'foothill', b: 'village', from: 'fh.gate', to: 'v.foothill-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'fields', from: 'v.ranch-gate', to: 'fields', ms: GATE_TRANSIT_MS },
+  { a: 'fields', b: 'village', from: 'fields', to: 'v.ranch-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'mountain', from: 'v.foothill-gate', to: 'mountain', ms: GATE_TRANSIT_MS },
+  { a: 'mountain', b: 'village', from: 'mountain', to: 'v.foothill-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'away', from: 'v.market-gate', to: 'away', ms: GATE_TRANSIT_MS },
   { a: 'away', b: 'village', from: 'away', to: 'v.market-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'realty', from: 'v.realty-door', to: 'realty-in', ms: DOOR_TRANSIT_MS },
@@ -404,7 +493,9 @@ function areaRoute(a: NpcArea, b: NpcArea): Portal[] {
 // ---------------------------------------------------------------- walking paths
 const pathCache = new Map<string, WalkPoint[]>();
 const walkers = new Map<string, ReturnType<typeof regionWalk>>();
-const walkerOf = (area: 'market' | 'harbor' | 'hillside') => {
+type WalkDistrict = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
+const isWalkDistrict = (a: NpcArea): a is WalkDistrict => a === 'market' || a === 'harbor' || a === 'hillside' || a === 'ranch' || a === 'foothill';
+const walkerOf = (area: WalkDistrict) => {
   let w = walkers.get(area);
   if (!w) walkers.set(area, (w = regionWalk(area)));
   return w;
@@ -416,7 +507,7 @@ export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoi
   if (hit) return hit;
   let pts: WalkPoint[];
   if (area === 'village') pts = villagePath(from, to);
-  else if (area === 'market' || area === 'harbor' || area === 'hillside') pts = walkerOf(area).path(from, to);
+  else if (isWalkDistrict(area)) pts = walkerOf(area).path(from, to);
   else if (area === 'tavern') {
     const s = worldToInterior(from),
       e = worldToInterior(to);
@@ -436,7 +527,7 @@ export function walkPath(area: NpcArea, from: WalkPoint, to: WalkPoint): WalkPoi
 /** Whether a point is walkable in its area (tests). */
 export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
   if (area === 'village') return villageCanWalk(p);
-  if (area === 'market' || area === 'harbor' || area === 'hillside') return walkerOf(area).canWalk(p);
+  if (isWalkDistrict(area)) return walkerOf(area).canWalk(p);
   if (area === 'tavern') return interiorCanWalk(worldToInterior(p), 'tavern');
   if (isShopArea(area)) return shopCanWalk(worldToInterior(p), area, SHOP_STAFF_RADIUS, true);
   return true;
@@ -783,6 +874,61 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         ];
       return [[0, 'away', 'sleep', '마을 밖']];
     }
+    // ---------------------------------------------------------- stage 3 (design-npcs-stage3.md §3)
+    case 'nilah':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(5), 'barn.owner', 'work', '축사 동물 돌보는 중'],
+        [hm(7), 'rc.pasture', 'work', '초원에서 소 몰이 중'],
+        [hm(9), 'barn.owner', 'work', '닐라 목장'],
+        [hm(12), 'rc.pavilion', 'eat', '원두막에서 점심'],
+        [hm(13), 'barn.owner', 'work', '닐라 목장'],
+        [hm(16), k.rain ? 'barn.browse' : 'rc.stream-w', 'rest', k.rain ? '축사에서 비 구경' : '개울에서 물놀이 중'],
+        [hm(18), 'rc.coop', 'work', '닭장 문 닫는 중'],
+      ];
+    case 'haku':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(6), 'rc.orchard-row-a', 'patrol', '과수원 순찰 중'],
+        [hm(9), 'orchardShop.owner', 'work', '강물 과수원 창고'],
+        [hm(12), 'rc.pavilion-2', 'eat', '원두막에서 점심'],
+        [hm(14), 'rc.orchard-row-c', 'work', '과일나무 손질 중'],
+        [hm(16), 'orchardShop.owner', 'work', '강물 과수원 창고'],
+        [hm(17, 30), 'rc.stones', 'rest', '징검다리에서 물소리 듣는 중'],
+      ];
+    case 'ornn':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(6), 'smithy.owner', 'work', '풀무에 불 지피는 중'],
+        [hm(12), 'fh.bench-forge', 'eat', '대장간 옆에서 점심'],
+        [hm(13), 'smithy.owner', 'work', '오른의 대장간'],
+        [hm(15), 'fh.mine-yard', 'work', '광산 입구에서 광석 감정 중'],
+        [hm(16, 30), 'smithy.owner', 'work', '오른의 대장간'],
+      ];
+    case 'mercy':
+      return [
+        [0, 'home', 'sleep'],
+        [hm(9), 'clinic.owner', 'work', '메르시 의원 진료 중'],
+        [hm(12), 'fh.bench-clinic', 'eat', '의원 앞에서 커피 한 잔'],
+        [hm(13), 'clinic.owner', 'work', '메르시 의원 진료 중'],
+        [hm(17), k.rain ? 'clinic.owner' : 'v.housecall', 'work', k.rain ? '비 오는 날 의원 지키는 중' : '마을 광장 왕진 중'],
+        [hm(18, 30), 'clinic.owner', 'work', '저녁 진료 중'],
+      ];
+    case 'shinichi': {
+      if (!fortuneOpenOn(k.day)) return [[0, 'away', 'sleep', '사건 의뢰로 마을 밖']];
+      if (k.festival)
+        return [
+          [0, 'away', 'sleep', '마을 밖'],
+          [hm(10), 'fh.tent', 'stall', '점집 천막에서 운세 보는 중'],
+          [hm(15), 'v.fortune', 'stall', '광장 축제에서 운세 보는 중'],
+        ];
+      return [
+        [0, 'away', 'sleep', '마을 밖'],
+        [hm(10), 'fh.tent', 'stall', '점집 천막에서 운세 보는 중'],
+        [hm(13), 'fh.plaza-e', 'stroll', '산기슭 광장에서 단서 찾는 중'],
+        [hm(14), 'fh.tent', 'stall', '점집 천막에서 운세 보는 중'],
+      ];
+    }
     case 'yanineko':
       // Wakes at 11; naps in the library until 베아트리스 chases her out; sunbathes at the harbor.
       return [
@@ -825,7 +971,7 @@ function homesOf(id: NpcId, plan: Seg[], hill: boolean): Seg[] {
 const NIGHT_START = hm(19, 30),
   LATE_START = hm(22, 30),
   BED_TIME = hm(1);
-type Venue = 'T' | 'P' | 'M' | 'H' | 'B' | 'L';
+type Venue = 'T' | 'P' | 'M' | 'H' | 'B' | 'L' | 'R' | 'F';
 /** Seats per venue (the fixed spots below are never in a pool). */
 const VENUE_SEATS: Record<Venue, readonly string[]> = {
   T: ['t.bar-1', 't.bar-2', 't.bar-3', 't.bar-4', 't.fire', 't.booth', 't.table-1', 't.table-2', 't.table-3', 't.table-4', 't.window', 't.corner'],
@@ -834,6 +980,8 @@ const VENUE_SEATS: Record<Venue, readonly string[]> = {
   H: ['v.harbor', 'v.beach', 'v.camp', 'v.lake'],
   B: ['hb.bench-w', 'hb.bench-e', 'hb.quay', 'hb.pier-mid', 'hb.pier-end', 'hb.auction-crowd', 'hb.board'],
   L: ['hl.park-bench-w', 'hl.park-bench-e', 'hl.plaza', 'hl.park-corner', 'hl.lane-n', 'hl.lane-s', 'hl.garden-gate'],
+  R: ['rc.bench-stream', 'rc.stream-e', 'rc.pavilion', 'rc.bridge', 'rc.bench-orchard', 'rc.board'],
+  F: ['fh.bench-plaza', 'fh.plaza', 'fh.bench-clinic', 'fh.board', 'fh.path'],
 };
 const VENUE_LABEL: Record<Venue, [eve: string, late: string]> = {
   T: ['주점에서 한잔하는 중', '주점에서 늦게까지 수다 중'],
@@ -842,6 +990,8 @@ const VENUE_LABEL: Record<Venue, [eve: string, late: string]> = {
   H: ['밤바다 보러 나온 중', '해변에서 별 보는 중'],
   B: ['항구에서 밤바다 구경 중', '항구 벤치에서 쉬는 중'],
   L: ['언덕 공원에서 쉬는 중', '언덕 골목에서 산책 중'],
+  R: ['개울가에서 반딧불 보는 중', '목장 밤바람 쐬는 중'],
+  F: ['산기슭 광장에서 쉬는 중', '산바람 맞으며 별 보는 중'],
 };
 /**
  * Evening and late codes for Sunday…Saturday. A venue letter, or a fixed
@@ -864,24 +1014,41 @@ const NIGHTS: Record<string, { eve: string; late: string }> = {
   tsunade: { eve: 'TLTTLTT', late: 'TTLTTTT' },
   makima: { eve: 'TTTTTTT', late: 'TTTTTTT' },
   yanineko: { eve: 'BPHBPBH', late: 'PTLPMTL' },
+  // Stage 3 (R 목장 저녁, F 산기슭 저녁, A 대장간 모루).
+  nilah: { eve: 'TRBRTRT', late: 'RTRTRBT' },
+  haku: { eve: 'RRPRRPR', late: 'RRRTRRR' },
+  ornn: { eve: 'AAATAAA', late: 'AAAAAAT' },
+  mercy: { eve: 'TFPFTFM', late: 'FTFFTFT' },
+  shinichi: { eve: 'TTTTTTT', late: 'TFFFFFT' },
 };
-const FIXED: Record<string, { place: string; hill?: boolean; label: string; act: NpcActivity; fallback: Venue }> = {
+const FIXED: Record<string, { place: string; hill?: boolean; foothill?: boolean; label: string; act: NpcActivity; fallback: Venue }> = {
   S: { place: 't.stage', label: '주점 무대에서 공연 중', act: 'work', fallback: 'T' },
   J: { place: 't.judge', label: '허풍 경연 심판 보는 중', act: 'drink', fallback: 'T' },
   G: { place: 'general.owner', label: '밤에만 여는 등불 상점', act: 'work', fallback: 'M' },
   D: { place: 'hb.lighthouse-door', label: '등대 앞에서 밤새 불 지키는 중', act: 'work', fallback: 'B' },
   K: { place: 'hl.library-club', hill: true, label: '도서관 독서 모임', act: 'read', fallback: 'T' },
   Y: { place: 'hl.library-steps', hill: true, label: '도서관 늦은 열람 시간', act: 'work', fallback: 'M' },
+  A: { place: 'fh.anvil', foothill: true, label: '대장간 모루에서 혼자 망치질 중', act: 'work', fallback: 'T' },
 };
 /** Residents with an evening (the rest keep their posts). */
-export const NIGHT_NPCS: readonly NpcId[] = [...WALKING_NPCS, ...STAGE2_NPCS];
+export const NIGHT_NPCS: readonly NpcId[] = [...WALKING_NPCS, ...STAGE2_NPCS, ...STAGE3_NPCS];
 /** Where each resident sleeps (01:00 until their day starts). */
-const BED: Partial<Record<NpcId, string>> = { gabung: 'hb.lighthouse-in', beatrice: 'hl.library-in', makima: 'away' };
+const BED: Partial<Record<NpcId, string>> = {
+  gabung: 'hb.lighthouse-in',
+  beatrice: 'hl.library-in',
+  makima: 'away',
+  nilah: 'rc.in-nilah',
+  haku: 'rc.in-haku',
+  ornn: 'fh.in-ornn',
+  mercy: 'fh.in-mercy',
+  shinichi: 'away',
+};
 type NightSpot = { place: string; act: NpcActivity; label: string };
 const nightCache = new Map<string, Record<string, { eve: NightSpot; late: NightSpot }>>();
 /** Every resident's evening and late spot on `day` (seats handed out without clashes). */
-function nightsOn(day: number, hill: boolean) {
-  const key = `${day}:${hill ? 1 : 0}`;
+function nightsOn(day: number, w: OpenWorld) {
+  const hill = w.hill;
+  const key = `${day}:${worldKey(w)}`;
   const hit = nightCache.get(key);
   if (hit) return hit;
   const k = dayKind(day, hill);
@@ -891,8 +1058,9 @@ function nightsOn(day: number, hill: boolean) {
     const fixed = FIXED[code];
     let v = (fixed ? fixed.fallback : code) as Venue;
     if (v === 'L' && !hill) v = 'P';
-    // Rainy nights move the seaside and hillside evenings indoors.
-    if (k.rain && (v === 'H' || v === 'B' || v === 'L')) v = 'T';
+    if ((v === 'R' && !w.ranch) || (v === 'F' && !w.foothill)) v = 'P';
+    // Rainy nights move the seaside, hillside and stage-3 evenings indoors.
+    if (k.rain && (v === 'H' || v === 'B' || v === 'L' || v === 'R' || v === 'F')) v = 'T';
     const seats = VENUE_SEATS[v];
     const start = hash32(`night:${day}:${v}:${when}`) % seats.length;
     for (const venue of [v, 'T', 'P', 'M'] as Venue[]) {
@@ -911,7 +1079,7 @@ function nightsOn(day: number, hill: boolean) {
   for (const when of ['eve', 'late'] as const)
     for (const id of NIGHT_NPCS) {
       const f = FIXED[NIGHTS[id][when][k.weekday]];
-      if (f && (!f.hill || hill)) taken[when].add(f.place);
+      if (f && (!f.hill || hill) && (!f.foothill || w.foothill)) taken[when].add(f.place);
     }
   for (const id of NIGHT_NPCS) {
     const n = NIGHTS[id];
@@ -919,7 +1087,7 @@ function nightsOn(day: number, hill: boolean) {
       lateCode = n.late[k.weekday];
     const pick = (code: string, when: 'eve' | 'late') => {
       const f = FIXED[code];
-      if (f && (!f.hill || hill)) return { place: f.place, act: f.act, label: f.label };
+      if (f && (!f.hill || hill) && (!f.foothill || w.foothill)) return { place: f.place, act: f.act, label: f.label };
       return resolve(code, when);
     };
     out[id] = { eve: pick(eveCode, 'eve'), late: pick(lateCode, 'late') };
@@ -932,11 +1100,16 @@ function nightsOn(day: number, hill: boolean) {
  * A resident's full day: yesterday's late spot until 01:00, bed, the day
  * plan until 19:30, the evening spot, then the late spot past midnight.
  */
-function withNight(id: NpcId, plan: Seg[], day: number, hill: boolean): Seg[] {
+function withNight(id: NpcId, plan: Seg[], day: number, w: OpenWorld): Seg[] {
   if (!NIGHT_NPCS.includes(id)) return plan;
-  const prev = nightsOn(day - 1, hill)[id].late,
-    today = nightsOn(day, hill)[id];
+  const prev = nightsOn(day - 1, w)[id].late,
+    today = nightsOn(day, w)[id];
   const bed = BED[id] ?? 'home';
+  // 신이치 is in the village only on tent days (and the night after one).
+  if (id === 'shinichi' && !fortuneOpenOn(day))
+    return fortuneOpenOn(day - 1) ? [[0, prev.place, prev.act, prev.label], [BED_TIME, 'away', 'sleep', '사건 의뢰로 마을 밖']] : plan;
+  if (id === 'shinichi' && !fortuneOpenOn(day - 1))
+    return [[0, 'away', 'sleep', '마을 밖'], ...plan.filter(([t]) => t > 0 && t < NIGHT_START), [NIGHT_START, today.eve.place, today.eve.act, today.eve.label], [LATE_START, today.late.place, today.late.act, today.late.label]];
   const body = plan.filter(([t]) => t > 0 && t < NIGHT_START);
   return [
     [0, prev.place, prev.act, prev.label],
@@ -998,20 +1171,36 @@ function route(from: string, to: string, t: number, label: string): Ev[] {
 }
 const timelines = new Map<string, Ev[]>();
 /** World facts a schedule depends on: whether ③ 언덕 주택가 is open. */
-export type NpcWorld = { hill?: boolean };
+export type NpcWorld = { hill?: boolean; ranch?: boolean; foothill?: boolean };
+type OpenWorld = { hill: boolean; ranch: boolean; foothill: boolean };
+const openWorld = (w: NpcWorld): OpenWorld => ({ hill: !!w.hill, ranch: !!w.ranch, foothill: !!w.foothill });
+const worldKey = (w: OpenWorld) => `${w.hill ? 1 : 0}${w.ranch ? 1 : 0}${w.foothill ? 1 : 0}`;
 let worldDefault: NpcWorld = {};
 /** The client's current world (the server always passes its own). */
 export const setNpcWorld = (w: NpcWorld) => {
-  worldDefault = { hill: !!w.hill };
+  worldDefault = openWorld(w);
 };
+/** Where stage-3 residents wait while their district is shut. */
+const STAGE3_HOME: Record<(typeof STAGE3_NPCS)[number], { district: 'ranch' | 'foothill'; stand: string; label: string }> = {
+  nilah: { district: 'ranch', stand: 'fields', label: '들길 너머에서 목장 준비 중' },
+  haku: { district: 'ranch', stand: 'fields', label: '들길 너머에서 과수원 가꾸는 중' },
+  ornn: { district: 'foothill', stand: 'mountain', label: '산길 너머에서 대장간 짓는 중' },
+  mercy: { district: 'foothill', stand: 'mountain', label: '산길 너머에서 의원 준비 중' },
+  shinichi: { district: 'foothill', stand: 'away', label: '사건 의뢰로 마을 밖' },
+};
+/** A resident's whole day, with the stage-3 districts' gates applied. */
+function dayPlan(id: NpcId, day: number, w: OpenWorld): Seg[] {
+  const shut = (STAGE3_NPCS as readonly string[]).includes(id) ? STAGE3_HOME[id as (typeof STAGE3_NPCS)[number]] : null;
+  if (shut && !w[shut.district]) return [[0, shut.stand, 'sleep', shut.label]];
+  return homesOf(id, withNight(id, planOf(id, dayKind(day, w.hill)), day, w), w.hill);
+}
 /** Every event of a resident's KST day (cached). */
 export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefault): Ev[] {
-  const hill = !!world.hill;
-  const key = `${id}:${day}:${hill ? 1 : 0}`;
+  const w = openWorld(world);
+  const key = `${id}:${day}:${worldKey(w)}`;
   const hit = timelines.get(key);
   if (hit) return hit;
-  const k = dayKind(day, hill);
-  const plan = homesOf(id, withNight(id, planOf(id, k), day, hill), hill);
+  const plan = dayPlan(id, day, w);
   const start = day * DAY - KST;
   const end = start + DAY;
   const ev: Ev[] = [];
@@ -1113,13 +1302,21 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   library: '언덕 도서관',
   harbor: '항구 구역',
   hillside: '언덕 주택가',
+  ranch: '목장·과수원',
+  foothill: '산기슭 마을',
+  fields: '들길 너머',
+  mountain: '산길 너머',
   away: '마을 밖',
   bakery: SHOP_INTERIORS.bakery.name,
   coop: SHOP_INTERIORS.coop.name,
   general: SHOP_INTERIORS.general.name,
   fishmarket: SHOP_INTERIORS.fishmarket.name,
+  barn: SHOP_INTERIORS.barn.name,
+  orchardShop: SHOP_INTERIORS.orchardShop.name,
+  smithy: SHOP_INTERIORS.smithy.name,
+  clinic: SHOP_INTERIORS.clinic.name,
 };
 /** Test / debug helper: the day's plan as [minute, place]. */
 export const npcPlan = (id: NpcId, day: number, world: NpcWorld = worldDefault) =>
-  homesOf(id, withNight(id, planOf(id, dayKind(day, !!world.hill)), day, !!world.hill), !!world.hill).map(([t, p]) => [t, p] as const);
+  dayPlan(id, day, openWorld(world)).map(([t, p]) => [t, p] as const);
 export const kstDayStart = (day: number) => day * DAY - KST;

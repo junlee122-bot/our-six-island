@@ -42,7 +42,9 @@ export type Inst =
   | 'gayageum'
   | 'daegeum'
   | 'kung'
-  | 'deok';
+  | 'deok'
+  /** 산기슭 대장간: a hammer on the anvil (inharmonic ring, lounge-music-districts.ts). */
+  | 'anvil';
 /** 농현 on a held note: vibrato, a scoop up into it, or a drop at its end. */
 export type Bend = 'vib' | 'up' | 'down';
 export type NoteEvent = {

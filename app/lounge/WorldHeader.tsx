@@ -36,6 +36,10 @@ export const TAB_TITLES: Record<Tab, string> = {
   coop: SHOP_INTERIORS.coop.name,
   general: SHOP_INTERIORS.general.name,
   fishmarket: SHOP_INTERIORS.fishmarket.name,
+  barn: SHOP_INTERIORS.barn.name,
+  orchardShop: SHOP_INTERIORS.orchardShop.name,
+  smithy: SHOP_INTERIORS.smithy.name,
+  clinic: SHOP_INTERIORS.clinic.name,
 };
 
 /**

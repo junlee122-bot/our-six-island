@@ -30,5 +30,10 @@ export const NPC_CHIBI: Partial<Record<NpcId, NpcChibi>> = {
   realtor: { asset: A.chibi_shinhyungman, w: 512, h: 640 },
   misun: { asset: A.chibi_bongmison, w: 512, h: 640 },
   carpenter: { asset: A.chibi_valkyrie, w: 512, h: 640 },
+  nilah: { asset: A.chibi_nilah, w: 512, h: 640 },
+  haku: { asset: A.chibi_haku, w: 512, h: 640 },
+  ornn: { asset: A.chibi_ornn, w: 512, h: 640 },
+  mercy: { asset: A.chibi_mercy, w: 512, h: 640 },
+  shinichi: { asset: A.chibi_shinichi, w: 512, h: 640 },
 };
 export const npcChibi = (id: NpcId): NpcChibi | undefined => NPC_CHIBI[id];

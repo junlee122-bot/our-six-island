@@ -81,7 +81,7 @@ export const TOGETHER_MOOD = 5;
 export const TOGETHER_TAVERN_MOOD = 8;
 export const TOGETHER_SOCIAL = 30;
 /** Places a meal can be eaten (player areas; the cloud engine fills `where` from the real player). */
-export const EAT_PLACES = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside'] as const;
+export const EAT_PLACES = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill'] as const;
 export type EatPlace = (typeof EAT_PLACES)[number];
 
 // ---------------------------------------------------------------- 맛 도감
@@ -94,7 +94,7 @@ export const isTasteId = (id: unknown): id is string => typeof id === 'string' &
 export const tasteName = (id: string) => DISH_BY_ID[id]?.name ?? SHOP_FOOD_BY_ID[id]?.name ?? id;
 
 // ---------------------------------------------------------------- readers
-type ExtLike = { buff?: { kind: DishBuff; dish: string; until: number }; snack?: SlotBuff };
+type ExtLike = { buff?: { kind: DishBuff; dish: string; until: number }; snack?: SlotBuff; s3?: { fo?: { kind: DishBuff; until: number } } };
 type LifeLike = { ext?: Record<string, ExtLike | undefined> };
 /** The 식사 칸 (the pre-2026-10 `ext.buff`) if still on. */
 export function mealSlot(life: LifeLike, uid: string, now: number): SlotBuff | null {
@@ -111,6 +111,9 @@ export function buffPower(life: LifeLike, uid: string, now: number, kind: DishBu
   let p = 0;
   for (const b of [mealSlot(life, uid, now), snackSlot(life, uid, now)])
     if (b?.kind === kind) p = Math.max(p, b.weak ? 0.5 : 1);
+  // 운세 칸 (신이치's fortune, lounge-stage3.ts): always a small (weak) buff.
+  const fo = life.ext?.[uid]?.s3?.fo;
+  if (fo && now < fo.until && fo.kind === kind) p = Math.max(p, 0.5);
   return p;
 }
 export const hasBuff = (life: LifeLike, uid: string, now: number, kind: DishBuff) => buffPower(life, uid, now, kind) > 0;

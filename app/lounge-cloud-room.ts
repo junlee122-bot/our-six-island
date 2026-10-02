@@ -302,7 +302,7 @@ export class CloudRoom {
     if (life) {
       this.view = { ...this.view, life };
       // Residents sleep in their hillside houses once 언덕 주택가 is open.
-      setNpcWorld({ hill: !!life.districts?.goals.hillside.open });
+      setNpcWorld({ hill: !!life.districts?.goals.hillside.open, ranch: !!life.districts?.goals.ranch?.open, foothill: !!life.districts?.goals.foothill?.open });
       this.lifeHash = r.lifeHash ?? '';
     } else if (this.view.life && Number.isFinite(r.serverNow))
       this.view = { ...this.view, life: { ...this.view.life, serverNow: r.serverNow } };

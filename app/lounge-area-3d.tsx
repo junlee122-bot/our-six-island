@@ -25,6 +25,7 @@ import {
   HILL_LOG,
   MINE_LIFT,
   REGIONS,
+  isDistrictArea,
   nearestExit,
   regionFromNetwork,
   regionToNetwork,
@@ -134,7 +135,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
   const labelLayerRef = useRef<HTMLDivElement>(null);
   /** Where residents are drawn right now (talk reach). */
   const residentsRef = useRef<{ id: NpcId; x: number; z: number }[]>([]);
-  const districtId = area === 'market' || area === 'harbor' || area === 'hillside' ? area : null;
+  const districtId = isDistrictArea(area) ? area : null;
   const [loadPct, setLoadPct] = useState(() => (districtId ? districtProgress(districtId) : 1));
   useEffect(() => {
     if (!districtId || loadPct >= 1) return;
@@ -248,7 +249,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
       const d = Math.hypot(p.x - r.x, p.z - r.z);
       if (d <= RESIDENT_REACH) found.push({ d: d - 0.3, a: { kind: 'npc', npc: r.id, label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` } });
     }
-    if (s.area === 'market' || s.area === 'harbor' || s.area === 'hillside') {
+    if (isDistrictArea(s.area)) {
       const now = Date.now() + s.clockOffset;
       const weekday = new Date(now + 9 * 3_600_000).getUTCDay();
       for (const c of districtCounters(s.area, weekday)) {
@@ -657,7 +658,7 @@ export function AreaScene({ area, spawn, players, self, me, regions, clockOffset
           break;
         }
         // Shop doors face the street (+z): walking up into one at its door goes in.
-        if (s.area === 'market' || s.area === 'harbor')
+        if (isDistrictArea(s.area) && s.area !== 'hillside')
           for (const c of districtCounters(s.area, 1)) {
             if (c.a.kind !== 'counter' || !c.a.enter || t - lastWalkInto <= LOCKED_NOTICE_MS) continue;
             const doorway = { x: c.x, z: c.z - 1, stand: { x: c.x, z: c.z }, reach: c.reach };

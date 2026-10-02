@@ -13,19 +13,26 @@ import { MINE_ARRIVE, MINE_LIFT_AT, MINE_ROOM, mineFloor } from './lounge-mine.t
 import { MARKET_ARRIVE, MARKET_COLLIDERS, MARKET_D, MARKET_EXIT, MARKET_W } from './lounge-market-layout.ts';
 import { HARBOR_ARRIVE, HARBOR_COLLIDERS, HARBOR_D, HARBOR_EXIT, HARBOR_W } from './lounge-harbor-layout.ts';
 import { HILLSIDE_ARRIVE, HILLSIDE_COLLIDERS, HILLSIDE_D, HILLSIDE_EXIT, HILLSIDE_W } from './lounge-hillside-layout.ts';
+import { RANCH_ARRIVE, RANCH_COLLIDERS, RANCH_D, RANCH_EXIT, RANCH_W } from './lounge-ranch-layout.ts';
+import { FOOTHILL_ARRIVE, FOOTHILL_COLLIDERS, FOOTHILL_D, FOOTHILL_EXIT, FOOTHILL_MINE, FOOTHILL_MINE_ARRIVE, FOOTHILL_W } from './lounge-foothill-layout.ts';
 import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
 import { arrivalPoint } from './lounge-map-doors.ts';
 
 /**
- * 'market' is ① 시장 거리, 'harbor' ② 항구 구역 and 'hillside' ③ 언덕 주택가 —
- * districts around the hub (lounge-districts.ts): separate maps behind gates
- * on the hub's rim.
+ * 'market' is ① 시장 거리, 'harbor' ② 항구 구역, 'hillside' ③ 언덕 주택가,
+ * 'ranch' ④ 목장·과수원 and 'foothill' ⑤ 산기슭 마을 — districts around the
+ * hub (lounge-districts.ts): separate maps behind gates on the hub's rim.
  */
-export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside';
-export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside'];
+export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
+export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
+/** A district map (an outdoor area that is also a district). */
+export type DistrictArea = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
 /** Districts (separate maps around the hub) among the outdoor areas. */
-export const DISTRICT_AREAS: readonly (OutdoorArea & DistrictId)[] = ['market', 'harbor', 'hillside'];
-export const isDistrictArea = (a: unknown): a is OutdoorArea => typeof a === 'string' && (DISTRICT_AREAS as readonly string[]).includes(a);
+export const DISTRICT_AREAS: readonly DistrictArea[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export const isDistrictArea = (a: unknown): a is DistrictArea => typeof a === 'string' && (DISTRICT_AREAS as readonly string[]).includes(a);
+// Keeps DistrictArea a subset of both unions.
+const _districtArea: readonly (OutdoorArea & DistrictId)[] = DISTRICT_AREAS;
+void _districtArea;
 export const isOutdoorArea = (a: unknown): a is OutdoorArea =>
   typeof a === 'string' && (OUTDOOR_AREAS as readonly string[]).includes(a);
 
@@ -147,7 +154,7 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     exits: [
       { id: 'up', to: 'hill', x: MINE_ARRIVE.x, z: MINE_ROOM.d / 2 - 0.4, stand: { ...MINE_ARRIVE }, label: '밖으로 나가기', reach: 1.4 },
     ],
-    arrive: { hill: { ...MINE_ARRIVE }, mine: { ...MINE_ARRIVE } },
+    arrive: { hill: { ...MINE_ARRIVE }, mine: { ...MINE_ARRIVE }, foothill: { ...MINE_ARRIVE } },
     look: { ground: '#5a4a3c', groundFar: '#3a2f27', fog: '#1d1712', sky: '#140f0b' },
   },
   market: {
@@ -195,6 +202,37 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
     view: 11,
   },
+  ranch: {
+    area: 'ranch',
+    name: DISTRICTS.ranch.name,
+    short: '목장',
+    tagline: DISTRICTS.ranch.tagline,
+    bounds: { w: RANCH_W, d: RANCH_D },
+    colliders: RANCH_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: RANCH_EXIT.x, z: RANCH_EXIT.z, stand: { ...RANCH_EXIT.stand }, label: '들길 따라 마을로', reach: RANCH_EXIT.reach },
+    ],
+    arrive: { village: { ...RANCH_ARRIVE } },
+    look: { ground: '#9cbb68', groundFar: '#78984f', fog: '#e4ead0', sky: '#c4def0' },
+    light: { hemi: 1.6, sun: 2.3, exposure: 1.05, shadow: 32, dayCycle: true },
+    view: 11.5,
+  },
+  foothill: {
+    area: 'foothill',
+    name: DISTRICTS.foothill.name,
+    short: '산기슭',
+    tagline: DISTRICTS.foothill.tagline,
+    bounds: { w: FOOTHILL_W, d: FOOTHILL_D },
+    colliders: FOOTHILL_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: FOOTHILL_EXIT.x, z: FOOTHILL_EXIT.z, stand: { ...FOOTHILL_EXIT.stand }, label: '산길 내려가 마을로', reach: FOOTHILL_EXIT.reach },
+      { id: 'mine', to: 'mine', x: FOOTHILL_MINE.x, z: FOOTHILL_MINE.z, stand: { ...FOOTHILL_MINE.stand }, label: '산기슭 광산 들어가기', reach: FOOTHILL_MINE.reach },
+    ],
+    arrive: { village: { ...FOOTHILL_ARRIVE }, mine: { ...FOOTHILL_MINE_ARRIVE } },
+    look: { ground: '#8da36a', groundFar: '#6c7f52', fog: '#dfe3d6', sky: '#c2d6e4' },
+    light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
+    view: 11,
+  },
 };
 
 /** The village's north gate to 뒷산 (village coordinates, off every path). */
@@ -205,7 +243,7 @@ export const villageGateDistance = (p: WalkPoint) => Math.hypot(p.x - VILLAGE_GA
  * gate on the rim, past the gate's trigger (lounge-map-doors.ts).
  */
 export const outdoorReturnPoint = (area: OutdoorArea): WalkPoint =>
-  area === 'market' || area === 'harbor' || area === 'hillside' ? arrivalPoint(DISTRICTS[area].gate) : arrivalPoint(VILLAGE_GATE);
+  isDistrictArea(area) ? arrivalPoint(DISTRICTS[area].gate) : arrivalPoint(VILLAGE_GATE);
 
 /** Walls of a region; the hill's log counts until 숲 깊은 곳 is opened. */
 export function regionColliders(area: OutdoorArea, opts: { logCleared?: boolean; day?: number; floor?: number; lift?: boolean } = {}): WalkCollider[] {

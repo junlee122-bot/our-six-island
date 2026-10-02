@@ -10,6 +10,8 @@ import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
 import { readTownUser, type TownUser } from './lounge-town.ts';
+import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lounge-shop-sales.ts';
+import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
 import {
   grantBeom,
@@ -310,6 +312,8 @@ export type UserExt = {
   lux?: { w: number; refs: string[] };
   /** 마을 확장 2단계: auction, shops, reading club, visited districts (lounge-town.ts). */
   town?: TownUser;
+  /** 마을 확장 3단계: animals, fruit trees, range upgrades, clinic and fortune (lounge-stage3.ts). */
+  s3?: Stage3User;
 };
 export type Memory = { id: string; kind: string; actors: number[]; text: string; at: number };
 export type NewsLine = { key: string; kind: string; text: string; actors: number[] };
@@ -333,6 +337,8 @@ export type LifeExt = {
   bondDay?: { day: number; keys: string[] };
   /** 마을 공사 2차 (PROJECTS). */
   projects?: Record<string, ProjectState>;
+  /** 3단계 가게 매출 집계 (lounge-shop-sales.ts; for the stock exchange). */
+  shopSales?: ShopSales;
   /** This week's festival fund. */
   festival?: FestivalState;
   /** Friend-life state: NPC lines, heart rewards, museum stamps, festivals (lounge-life-social). */
@@ -548,6 +554,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (npcBoard) out.npcBoard = npcBoard;
   const town = readTownUser(x.town);
   if (town) out.town = town;
+  const s3 = readStage3User(x.s3);
+  if (s3) out.s3 = s3;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
   if (safe(x.day) && x.day > 0) {
@@ -669,6 +677,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     if (safe(fest.doneAt) && fest.doneAt > 0) state.doneAt = fest.doneAt;
     out.festival = state;
   }
+  const shopSales = readShopSales(v.shopSales);
+  if (shopSales) out.shopSales = shopSales;
   const flags = idList(v.flags, 32, (f) => own(VILLAGE_FLAGS, f));
   if (flags.length) out.flags = flags;
   const memories = Array.isArray(v.memories)
@@ -1786,6 +1796,8 @@ export function plusAction(
       life.sold[uid] = { day, amount: (prev?.day === day ? prev.amount : 0) + amount };
       bump(life, uid, 'earned', amount);
       next = grant(next, life, uid, amount, 'sell-' + def!.kind, now);
+      // 가게 매출 집계: what a stage-3 shop paid at its own counter (lounge-shop-sales.ts).
+      if (isStockShop(a.at)) recordShopSale(life, a.at, { buy: amount }, now);
       break;
     }
     case 'donate': {

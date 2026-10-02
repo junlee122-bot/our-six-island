@@ -34,9 +34,10 @@ import { PARTY_REJECT, eatPartyItem, isPartyItem, partyCount, type PartyItem } f
 import { moodAfterCloud, moodWritesAnyway } from './lounge-mood.ts';
 import { collectOverdue, financeAction, financeView, recordCasino, type FinanceState, type FinancePresence } from './lounge-finance.ts';
 import { assertNpcSocialContext } from './lounge-romance.ts';
-import { DISTRICTS, districtOpen } from './lounge-districts.ts';
+import { DISTRICTS, districtOpen, isDistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
+import { STAGE3_ACTION_PLACE, festivalDay, isStage3Action, stage3ActionAreas } from './lounge-stage3-data.ts';
 // 가게 나누기 · 음식 시스템: shops' districts and where meals are eaten.
 import { SHOP_INFO, isShopId, shopArea } from './lounge-shops.ts';
 import { DISH_BY_ID } from './lounge-items.ts';
@@ -432,6 +433,8 @@ export function cloudTransition(
               fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
               x: player.x, y: player.y,
               hill: (life.flags ?? []).includes('district-hillside'),
+              ranch: (life.flags ?? []).includes('district-ranch'),
+              foothill: (life.flags ?? []).includes('district-foothill'),
             }, now);
           }
           if ((command.action as { kind?: string }).kind === 'cupClaim' && (readLife(g.life).flags ?? []).includes('district-harbor')) {
@@ -448,6 +451,14 @@ export function cloudTransition(
             const shop = townActionShop(command.action.kind);
             if (!lease || !player || (player.area !== where && (!shop || player.area !== shop)))
               throw new CloudError(`${where === 'tavern' ? '허풍 주점' : DISTRICTS[where].name}에 가서 해 주세요.`, 409);
+          }
+          if (isStage3Action(command.action)) {
+            // 3단계: 목장·과수원 / 산기슭 마을 (in the district or the shop's own room; 운세 on a
+            // festival day also on the hub plaza, lounge-stage3-data.ts).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            const places = stage3ActionAreas(command.action.kind, festivalDay(kstDay(now)));
+            if (!lease || !player || !places.includes(player.area ?? 'village'))
+              throw new CloudError(`${DISTRICTS[STAGE3_ACTION_PLACE[command.action.kind].district].name}에 가서 해 주세요.`, 409);
           }
           {
             // 가게 나누기: buying or selling "at" a shop needs me at its counter's district.
@@ -573,12 +584,12 @@ export function cloudTransition(
           const gated =
             action.kind !== 'area'
               ? null
-              : action.area === 'harbor' || action.area === 'hillside'
+              : isDistrictId(action.area) && action.area !== 'market'
                 ? action.area
                 : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
                   ? SHOP_INTERIORS[action.area].district
                   : null;
-          if (gated === 'harbor' || gated === 'hillside') {
+          if (gated) {
             const flags = readLife(g.life).flags ?? [];
             if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);
           }
@@ -610,7 +621,7 @@ export function cloudTransition(
             if (after !== before) g.life = after;
           }
           // The first walk into a district (for the 친구에게 가기 signpost).
-          if (action.kind === 'area' && (action.area === 'market' || action.area === 'harbor' || action.area === 'hillside')) {
+          if (action.kind === 'area' && isDistrictId(action.area)) {
             const life = readLife(g.life);
             if (!life.ext?.[member.id]?.town?.seen?.includes(action.area)) {
               const next = ensureLifeMember(life, member.id, member.actor);

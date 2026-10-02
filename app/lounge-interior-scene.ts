@@ -112,6 +112,44 @@ const PALETTE: Record<SceneArea, Palette> = {
     outside: '#d8ecf2', mat: '#4f8aa0', dark: false, wood: '#6b5a48',
     lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
   },
+  // Stage 3: the 축사 (warm timber and straw), the 과수원 창고 (sage and pale wood),
+  // 오른's forge (soot-dark with an ember glow) and 메르시 의원 (clean white and gold).
+  barn: {
+    wall: '#e8d2b0', wainscot: '#a0623c', rail: '#f1dfbf',
+    floor: ['#b28a5a', '#a98252', '#ba9262', '#a37c4d'],
+    trim: '#7a4e30', chair: '#8a6440', cushion: '#c9a35a',
+    hemi: ['#fff2dc', '#a08766', 1.9], sun: ['#ffe8c4', 2.1],
+    lamp: '#ffd38a', background: '#e2ccaa', fill: '#f2e4c8',
+    outside: '#e3efcc', mat: '#b4763f', dark: false, wood: '#8a6440',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
+  },
+  orchardShop: {
+    wall: '#eef0e2', wainscot: '#7f9c74', rail: '#f4ecd6',
+    floor: ['#cbb592', '#c3ad8a', '#d2bd9b', '#bea783'],
+    trim: '#6f5c42', chair: '#7d6a4a', cushion: '#6f9f74',
+    hemi: ['#fff8e8', '#92a083', 1.9], sun: ['#fff0d5', 2.1],
+    lamp: '#fff0c5', background: '#e0e6d0', fill: '#eaf2e2',
+    outside: '#dcecc4', mat: '#5f8a62', dark: false, wood: '#7a6448',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
+  },
+  smithy: {
+    wall: '#cfc2b2', wainscot: '#5a4136', rail: '#dcc9b0',
+    floor: ['#7d7268', '#756a60', '#857a70', '#6f645a'],
+    trim: '#3f2f26', chair: '#4a3a30', cushion: '#b05a32',
+    hemi: ['#ffe8cc', '#5c5048', 1.7], sun: ['#ffd8a8', 1.9],
+    lamp: '#ffb46a', background: '#2e2622', fill: '#ffcf9a',
+    outside: '#dcecc4', mat: '#6e4a36', dark: false, wood: '#4a3a30',
+    lamps: [[-3.4, 2.4, -4.6], [3, 3.1, -0.6]], lampPower: 6.5, lampReach: 10,
+  },
+  clinic: {
+    wall: '#f6f4ee', wainscot: '#c9d8d4', rail: '#fbf8f0',
+    floor: ['#e0d8c8', '#d8d0c0', '#e6dfd0', '#d2c9b8'],
+    trim: '#b8a27a', chair: '#c8b896', cushion: '#d8b25a',
+    hemi: ['#fffcf4', '#a6b0aa', 2], sun: ['#fff6e6', 2.1],
+    lamp: '#fff6e0', background: '#eef0ea', fill: '#f4f8f4',
+    outside: '#dcecc4', mat: '#cfe0dc', dark: false, wood: '#b8a27a',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
+  },
   salon: {
     wall: '#f3e5df', wainscot: '#9eb6aa', rail: '#f8ead8',
     floor: ['#d8bd99', '#d0b28e', '#dfc6a6', '#cbaa85'],
@@ -225,6 +263,11 @@ export const INTERIOR_FIGURE_TINT: Record<SceneArea, string> = {
   fishmarket: '#ffffff',
   // The lantern-lit general store is a little dimmer.
   general: '#f8efe2',
+  barn: '#ffffff',
+  orchardShop: '#ffffff',
+  clinic: '#ffffff',
+  // The forge is lit by its fire.
+  smithy: '#f6e6d6',
   casino: '#f6e8dc',
   tavern: '#f0dcc6',
 };

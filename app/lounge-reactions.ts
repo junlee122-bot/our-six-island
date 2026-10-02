@@ -51,6 +51,10 @@ export type ReactionScope =
   | 'coop'
   | 'general'
   | 'fishmarket'
+  | 'barn'
+  | 'orchardShop'
+  | 'smithy'
+  | 'clinic'
   /** Someone's room (visitors and owner in the same 'home'). */
   | 'home'
   | 'chess'

@@ -2,6 +2,7 @@
 // fertilizer; recipes (cooking + crafting), village bundles, achievements,
 // forage/bug spots and the rotating furniture shop pool. Pure data + tiny
 // helpers; shared by the client and the hohyeon-api Edge function.
+import { RANCH_GOODS, STAGE3_ITEMS } from './lounge-stage3-data.ts';
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
@@ -392,6 +393,19 @@ export const ITEMS: readonly ItemDef[] = [
       ...(o.museum ? { museum: true } : {}),
     }),
   ),
+  // 3단계 (design-npcs-stage3.md §2): 닐라 목장's goods, 하쿠 과수원's fruit and the 건초 for the animals.
+  ...Object.entries(STAGE3_ITEMS).map(
+    ([id, o]): ItemDef => ({
+      id,
+      name: o.name,
+      emoji: '',
+      cat: RANCH_GOODS.includes(id) ? 'material' : 'forage',
+      kind: RANCH_GOODS.includes(id) ? 'material' : 'forage',
+      sell: o.sell,
+      note: o.note,
+    }),
+  ),
+  { id: 'hay', name: '건초', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '목장 동물 한 마리의 하루 먹이(닐라 목장)' },
 ];
 export const ITEM_BY_ID: Readonly<Record<string, ItemDef>> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 export const isItemId = (id: unknown): id is string =>
@@ -642,6 +656,8 @@ export const VILLAGE_FLAGS: Record<string, string> = {
   // 마을 확장 2단계: districts opened by a village goal (lounge-district-unlocks.ts).
   'district-harbor': '항구 구역 · 어시장 · 낚시조합 · 등대 · 방파제 낚시터',
   'district-hillside': '언덕 주택가 · 주민 집 · 도서관 · 작은 공원',
+  'district-ranch': '목장·과수원 · 닐라 목장 · 강물 과수원 · 개울과 원두막',
+  'district-foothill': '산기슭 마을 · 오른의 대장간 · 메르시 의원 · 산기슭 광산 입구 · 점집',
 };
 /**
  * 마을 공사 2차: shared 범-only public projects. Friends contribute any

@@ -8,12 +8,14 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { VALLEY_MODELS } from './lounge-model-assets';
 import { VALLEY_MODEL_SIZE, type ValleyModelKey } from './lounge-village-layout';
-import { HILL_CAVE, HILL_LOG, MINE_LIFT, REGIONS, type OutdoorArea } from './lounge-areas';
+import { HILL_CAVE, HILL_LOG, MINE_LIFT, REGIONS, isDistrictArea, type OutdoorArea } from './lounge-areas';
 import { MINE_ARRIVE, MINE_ROOM, bandOf, type MineFloor } from './lounge-mine';
 import type { NodeKind } from './lounge-growth-data';
 import { MarketSet } from './lounge-market-scene';
 import { HarborSet } from './lounge-harbor-scene';
 import { HillsideSet } from './lounge-hillside-scene';
+import { RanchSet } from './lounge-ranch-scene';
+import { FoothillSet } from './lounge-foothill-scene';
 import type { DistrictSet } from './lounge-district-kit';
 
 let loader: GLTFLoader | null = null;
@@ -104,9 +106,18 @@ export class RegionSet {
     this.area = area;
     this.root.name = 'region-' + area;
     if (area === 'mine') this.buildMineShell();
-    else if (area === 'market' || area === 'harbor' || area === 'hillside') {
+    else if (isDistrictArea(area)) {
       const look = REGIONS[area].look;
-      this.district = area === 'market' ? new MarketSet(look) : area === 'harbor' ? new HarborSet(look) : new HillsideSet(look);
+      this.district =
+        area === 'market'
+          ? new MarketSet(look)
+          : area === 'harbor'
+            ? new HarborSet(look)
+            : area === 'hillside'
+              ? new HillsideSet(look)
+              : area === 'ranch'
+                ? new RanchSet(look)
+                : new FoothillSet(look);
       this.district.onChange = () => this.onChange();
       this.root.add(this.district.root);
     } else this.buildOutdoor();

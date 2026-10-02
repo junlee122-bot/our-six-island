@@ -46,8 +46,8 @@ import {
 } from './lounge-npc-data.ts';
 import { hash32, kstHour } from './lounge-calendar.ts';
 import { ACTORS } from './lounge-roster.ts';
-import { npcSpot } from './lounge-npc-schedule.ts';
-import { regionFromNetwork } from './lounge-areas.ts';
+import { npcSpot, type NpcWorld } from './lounge-npc-schedule.ts';
+import { isDistrictArea, regionFromNetwork } from './lounge-areas.ts';
 import { villageFromNetwork, VILLAGE_PLACES } from './lounge-village-layout.ts';
 import { josa } from './lounge-text.ts';
 import { SHOP_AREAS, SHOP_INTERIORS, isShopArea, shopWorld } from './lounge-shop-interiors.ts';
@@ -102,7 +102,7 @@ export type NpcRelationView = NpcRelation & {
   atHome?: boolean;
   homeGifted?: boolean;
 };
-export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number; /** ③ 언덕 주택가 is open (residents sleep up there). */ hill?: boolean };
+export type NpcSocialContext = { area: string; home?: number | null; actor: number; fishing: boolean; x?: number; y?: number; /** ③ 언덕 주택가 is open (residents sleep up there). */ hill?: boolean; /** ④ / ⑤ are open (their residents are out). */ ranch?: boolean; foothill?: boolean };
 const fail = (text: string): never => {
   throw new LifeError(text);
 };
@@ -204,14 +204,14 @@ function validAction(action: NpcSocialAction) {
 }
 
 /** Where a resident can be met right now: area (and, when they walk about, a point). */
-export function npcMeetAt(npc: NpcId, now: number, world: { hill?: boolean } = {}): { area: string; point?: { x: number; z: number }; label: string; away: boolean } {
+export function npcMeetAt(npc: NpcId, now: number, world: NpcWorld = {}): { area: string; point?: { x: number; z: number }; label: string; away: boolean } {
   const s = npcSpot(npc, now, world);
   // Counter shops (부동산·가구점) open from the village; you meet them at the door.
   if (s.area === 'realty' || s.area === 'furniture') {
     const door = VILLAGE_PLACES.find((p) => p.id === s.area)!.entry;
     return { area: 'village', point: door, label: NPCS[npc].place, away: false };
   }
-  const walking = s.area === 'village' || s.area === 'market' || s.area === 'harbor' || s.area === 'hillside' || ((s.area === 'tavern' || isShopArea(s.area)) && s.visible);
+  const walking = s.area === 'village' || isDistrictArea(s.area) || ((s.area === 'tavern' || isShopArea(s.area)) && s.visible);
   if (!s.visible && !['casino', 'lounge', 'bank', 'salon', 'tavern', ...SHOP_AREAS].includes(s.area)) return { area: s.area, label: s.label, away: true };
   return { area: s.area, point: walking ? { x: s.x, z: s.z } : undefined, label: s.label, away: false };
 }
@@ -219,7 +219,7 @@ export function npcMeetAt(npc: NpcId, now: number, world: { hill?: boolean } = {
 function areaPoint(area: string, x?: number, y?: number) {
   if (typeof x !== 'number' || typeof y !== 'number') return null;
   if (area === 'village') return villageFromNetwork({ x, y });
-  if (area === 'market' || area === 'harbor' || area === 'hillside') return regionFromNetwork(area, { x, y });
+  if (isDistrictArea(area)) return regionFromNetwork(area, { x, y });
   // The shop rooms: residents walk about in room world units.
   if (isShopArea(area)) return shopWorld({ x, y });
   return null;
@@ -250,7 +250,7 @@ export function assertNpcSocialContext(action: NpcSocialAction, relations: NpcRe
     return;
   }
   if (ownHome && invited) return;
-  const meet = npcMeetAt(action.npc, now, { hill: !!ctx.hill });
+  const meet = npcMeetAt(action.npc, now, { hill: !!ctx.hill, ranch: !!ctx.ranch, foothill: !!ctx.foothill });
   const def = NPCS[action.npc];
   if (meet.away) fail(`${josa(def.name, '은/는')} 지금 ${meet.label}이라 만날 수 없어요. 조금 뒤에 찾아와 주세요.`);
   if (ctx.area !== meet.area) fail(`${placeOf(action.npc, meet.area)}에서 만나거나 내 방에 초대해 주세요.`);
@@ -263,6 +263,8 @@ const AREA_WORD: Record<string, string> = {
   market: '시장 거리',
   harbor: '항구 구역',
   hillside: '언덕 주택가',
+  ranch: '목장·과수원',
+  foothill: '산기슭 마을',
   tavern: '허풍 주점',
   ...Object.fromEntries(SHOP_AREAS.map((a) => [a, SHOP_INTERIORS[a].name])),
 };

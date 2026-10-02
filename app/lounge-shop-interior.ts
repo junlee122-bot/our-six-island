@@ -33,6 +33,11 @@ const MODEL_URL: Record<ShopModel, string> = {
   fishMackerel: LOUNGE_MODELS.fishMackerel,
   fishCod: LOUNGE_MODELS.fishCod,
   fishHairtail: LOUNGE_MODELS.fishHairtail,
+  stove: TAVERN_MODELS.stove,
+  cauldron: TAVERN_MODELS.cauldron,
+  keg: TAVERN_MODELS.keg,
+  firewood: VALLEY_MODELS.firewood,
+  cornerCabinet: TAVERN_MODELS.cornerCabinet,
 };
 
 /** Each room's own touches: rugs, panelling colour and the signs' colours. */
@@ -66,6 +71,36 @@ const LOOK: Record<ShopArea, { panel: string; trim: string; rugs: readonly [x: n
     trim: '#e3eef2',
     rugs: [[-0.8, -1.75, 3.2, 1.1, '#46717f']],
     sign: ['#e3eef2', '#1f4a5c', '#4f8aa0'],
+  },
+  barn: {
+    panel: '#a0623c',
+    trim: '#f1dfbf',
+    rugs: [
+      [0, -1.75, 3.4, 1.1, '#c9a35a'],
+      [0, 1.6, 6, 3.2, '#cbb07a'],
+    ],
+    sign: ['#f6e7cf', '#6a3a1e', '#b4763f'],
+  },
+  orchardShop: {
+    panel: '#7f9c74',
+    trim: '#efe6cc',
+    rugs: [[-0.4, -1.75, 3.2, 1.1, '#5f8a62']],
+    sign: ['#e7f1e3', '#2e5a3c', '#6f9f74'],
+  },
+  smithy: {
+    panel: '#5a4136',
+    trim: '#c9a27a',
+    rugs: [[0.6, -1.75, 3.2, 1.1, '#6e4a36']],
+    sign: ['#f1e0d0', '#5a2a16', '#b05a32'],
+  },
+  clinic: {
+    panel: '#dfe8e6',
+    trim: '#f7f3e8',
+    rugs: [
+      [0, -1.75, 3.0, 1.1, '#cfe0dc'],
+      [-4.6, 0, 2.4, 3.2, '#e6d6b4'],
+    ],
+    sign: ['#f7f3e8', '#7a2a2a', '#d8b25a'],
   },
 };
 
