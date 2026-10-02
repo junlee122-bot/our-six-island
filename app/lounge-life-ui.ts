@@ -294,8 +294,25 @@ export function placeInHotbar(slots: readonly string[], i: number, ref: string):
 
 type Plot = LifeMe['farm'][number];
 /**
+ * Whether off-season seeds can be planted on my farm: the village greenhouse
+ * or the 온실지기 profession (the server's plant check and the farm panel).
+ */
+export const plantsAnySeason = (life: Pick<LifeView, 'flags' | 'growth'> | null | undefined) =>
+  !!life?.flags?.includes('greenhouse') || !!life?.growth?.mods.offSeason;
+/** Soil items for growing plots: quality levels 1–3, then the two treatments (성장 촉진제, 보습 흙). */
+export const SOIL_ITEMS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
+export type SoilItem = (typeof SOIL_ITEMS)[number];
+export const SOIL_LEVEL: Record<SoilItem, number> = { fertilizer: 1, 'fertilizer-deluxe': 2, 'fertilizer-star': 3, 'speed-gro': 0, retaining: 0 };
+export const isSoilItem = (id: string): id is SoilItem => (SOIL_ITEMS as readonly string[]).includes(id);
+/** Whether `item` would still help this plot (growing, and not given yet / a lower level) — the server's rule. */
+export const soilOpen = (p: Plot, item: SoilItem, now: number) =>
+  !!p.crop &&
+  (p.readyAt ?? Infinity) > now &&
+  (item === 'speed-gro' ? !p.sg : item === 'retaining' ? !p.rs : (p.fert ?? 0) < SOIL_LEVEL[item]);
+/**
  * What E does at my farm with the selected hotbar item: plant that seed in
- * every empty plot, fertilize every growing plot, water every thirsty plot.
+ * every empty plot, give a soil item to every growing plot it helps, water
+ * every thirsty plot. `anySeason`: off-season seeds too (plantsAnySeason).
  * null = no quick action (the farm panel opens instead).
  */
 export function farmToolAction(
@@ -304,7 +321,7 @@ export function farmToolAction(
   tool: string,
   now: number,
   season: Season,
-  greenhouse = false,
+  anySeason = false,
 ): { kind: 'plant' | 'fertilize' | 'water'; label: string; n: number } | null {
   if (!me || !tool) return null;
   const growing = (p: Plot) => !!p.crop && (p.readyAt ?? Infinity) > now;
@@ -314,14 +331,13 @@ export function farmToolAction(
   }
   if (tool.startsWith('seed-')) {
     const crop = tool.slice(5) as Crop;
-    if (!CROP_INFO[crop] || !(greenhouse || cropInSeason(crop, season))) return null;
+    if (!CROP_INFO[crop] || !(anySeason || cropInSeason(crop, season))) return null;
     const n = Math.min(farm.filter((p) => !p.crop && !p.locked && !p.fixture).length, me.bag.seeds[crop] ?? 0);
     return n ? { kind: 'plant', label: `${CROP_INFO[crop].name} 심기 (${n})`, n } : null;
   }
-  if (tool === 'fertilizer' || tool === 'fertilizer-deluxe') {
-    const level = tool === 'fertilizer' ? 1 : 2;
-    const n = Math.min(farm.filter((p) => growing(p) && (p.fert ?? 0) < level).length, me.inv?.[tool] ?? 0);
-    return n ? { kind: 'fertilize', label: `${level === 2 ? '고급 비료' : '비료'} 주기 (${n})`, n } : null;
+  if (isSoilItem(tool)) {
+    const n = Math.min(farm.filter((p) => soilOpen(p, tool, now)).length, me.inv?.[tool] ?? 0);
+    return n ? { kind: 'fertilize', label: `${itemName(tool)} 주기 (${n})`, n } : null;
   }
   return null;
 }

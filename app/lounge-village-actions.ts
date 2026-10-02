@@ -41,7 +41,7 @@ import {
 } from './lounge-village-spots.ts';
 import type { Spot } from './lounge-items.ts';
 import { itemName, spotBlock } from './lounge-life-plus.ts';
-import { farmToolAction } from './lounge-life-ui.ts';
+import { farmToolAction, plantsAnySeason } from './lounge-life-ui.ts';
 import { FORGE_REACH, NODE_REACH, forgeDistance, nearestNode } from './lounge-village-growth.ts';
 import { NODE_INFO, type NodeKind } from './lounge-growth-data.ts';
 import { VILLAGE_GATE, villageGateDistance } from './lounge-areas.ts';
@@ -136,7 +136,7 @@ export function villageAction(
         tool,
         now,
         life.calendar?.season ?? 'spring',
-        !!life.flags?.includes('greenhouse'),
+        plantsAnySeason(life),
       )
     : null;
   candidates.push({

@@ -100,6 +100,7 @@ import { gainXp, growthMods, skillLevel } from './lounge-growth.ts';
 // 가게 나누기: the shipping bin pays SELL_AWAY (85%); goods pay 100% at the 농협.
 import { SELL_AWAY, type ShopId } from './lounge-shops.ts';
 import { SKILL_INFO, XP } from './lounge-growth-data.ts';
+import { ORCHARD_FRUITS, STAGE3_ITEMS, type Stage3ItemId } from './lounge-stage3-data.ts';
 
 const HOUR = 3_600_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,6 +113,15 @@ const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k)
 const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
 const isCropId = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as string[]).includes(c);
 const COUNT_MAX = 99_999;
+/** 과수원 fruit (bag items, normal quality only) that the jar, keg and dryer take. */
+const isOrchard = (id: unknown): id is Stage3ItemId => typeof id === 'string' && ORCHARD_FRUITS.includes(id);
+/**
+ * Whether a sale of `n` units worth `amount` fits today's sell cap (`left`
+ * still open). One unit worth more than what is left (a 별빛 인삼주 is worth
+ * more than the whole cap) still sells when it is the only unit in the sale
+ * and the cap is not yet reached; the day's cap then counts as reached.
+ */
+export const sellCapAllows = (amount: number, n: number, left: number) => amount <= left || (n === 1 && left > 0);
 /** Kept "밭 소식" lines per farm. */
 export const FARM_LOG_MAX = 8;
 /** Kinds of artisan goods one friend may hold at once. */
@@ -197,8 +207,8 @@ let goodsMemo: Readonly<Record<string, GoodDef>> | null = null;
 export function goodsById(): Readonly<Record<string, GoodDef>> {
   goodsMemo ??= Object.fromEntries(
     buildGoods(
-      (id) => (id === 'fruit' ? '과일' : CROP_INFO[id as Crop].name),
-      (id) => (id === 'fruit' ? FRUIT_SELL : CROP_INFO[id as Crop].sell),
+      (id) => (id === 'fruit' ? '과일' : isOrchard(id) ? STAGE3_ITEMS[id].name : CROP_INFO[id as Crop].name),
+      (id) => (id === 'fruit' ? FRUIT_SELL : isOrchard(id) ? STAGE3_ITEMS[id].sell : CROP_INFO[id as Crop].sell),
     ).map((g) => [g.id, g]),
   );
   return goodsMemo;
@@ -207,6 +217,7 @@ export function goodsById(): Readonly<Record<string, GoodDef>> {
 export function stockName(id: string) {
   if (id === 'fruit') return '과일';
   if (isCropId(id)) return CROP_INFO[id].name;
+  if (isOrchard(id)) return STAGE3_ITEMS[id].name;
   return goodsById()[id]?.name ?? id;
 }
 /** Bin / goods / fair key of an item at a quality ('carrot', 'jar-grape@2'). */
@@ -415,7 +426,9 @@ export function applySprinklers(life: LifeState, uid: string, tile: number, plot
   const bonus = sprinklerBonus(life, uid, tile);
   if (bonus !== null) {
     plot.wateredAt = now;
-    if (bonus) plot.w = Math.max(plot.w ?? 0, bonus);
+    // The owner's watering can (성장 tier) counts as much as watering by hand.
+    const best = Math.max(bonus, growthMods(life, uid).waterPts);
+    if (best) plot.w = Math.max(plot.w ?? 0, best);
   } else if (plot.rs) plot.wateredAt = now;
 }
 /** % slower growth for a crop planted now on `tile` (a trellis crop right in front shades it). */
@@ -530,7 +543,8 @@ function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: numb
       pay = 0;
     for (; got < n; got++) {
       const one = Math.round(sellTotal(s.id, unit, sold + got, 1, before + pay) * (1 + bonus) * SELL_AWAY);
-      if (amount + pay + one > cap) break;
+      // One unit over the cap still ships when it is the first thing sold (see sellCapAllows).
+      if (amount + pay + one > cap && !(amount + pay === 0 && cap > 0)) break;
       pay += one;
     }
     if (got) {
@@ -652,6 +666,9 @@ export function harvestFarm(
         ...(p.sg ? { sg: 1 as const } : {}),
         ...(p.rs ? { rs: 1 as const } : {}),
         ...(p.sl ? { sl: p.sl } : {}),
+        // The planting's quality (hoe, 금손, Lv3) and watering-can bonuses carry over.
+        ...(p.g ? { g: p.g } : {}),
+        ...(p.w ? { w: p.w } : {}),
       };
       farm[i] = again;
       applySprinklers(life, owner, i, again, now);
@@ -666,6 +683,7 @@ export function harvestFarm(
 export function stockCount(life: LifeState, uid: string, id: string, q: Quality): number {
   if (isCropId(id)) return cropQCount(life, uid, id, q);
   if (id === 'fruit') return q === 0 ? (life.bag[uid]?.fruit ?? 0) : 0;
+  if (isOrchard(id)) return q === 0 ? invCount(life, uid, id) : 0;
   return life.farmx?.[uid]?.goods?.[stockKey(id, q)] ?? 0;
 }
 function stockAdd(life: LifeState, uid: string, id: string, q: Quality, n: number) {
@@ -675,6 +693,10 @@ function stockAdd(life: LifeState, uid: string, id: string, q: Quality, n: numbe
     if (n < 0 && bag.fruit < -n) fail(FARM_REJECT.stock);
     bag.fruit = n >= 0 ? addCount(bag.fruit, n) : bag.fruit + n;
     return;
+  }
+  if (isOrchard(id)) {
+    if (q !== 0 || (n < 0 && invCount(life, uid, id) < -n)) fail(FARM_REJECT.stock);
+    return addInv(life, uid, id, n);
   }
   const x = farmxOf(life, uid),
     goods = (x.goods ??= {}),
@@ -848,13 +870,13 @@ export function farmAction(
       if (m!.out) fail(m!.done! > now ? FARM_REJECT.machineBusy : FARM_REJECT.machineFull);
       const def = MACHINE_BY_ID[m!.k],
         item = a.item;
-      if (typeof item !== 'string' || !(isCropId(item) || item === 'fruit')) fail(FARM_REJECT.machineInput);
+      if (typeof item !== 'string' || !(isCropId(item) || item === 'fruit' || isOrchard(item))) fail(FARM_REJECT.machineInput);
       const out = m!.k === 'seedmaker' ? (isCropId(item) ? `seed-${item}` : null) : productOf(m!.k, item);
       if (!out) fail(FARM_REJECT.machineInput);
       // Quality: the one asked for, else the lowest first (the batch keeps its lowest).
       let q: Quality;
       if (a.q !== undefined) {
-        if (!stockOk(item, a.q)) fail(LIFE_REJECT.quality);
+        if (isOrchard(item) ? a.q !== 0 : !stockOk(item, a.q)) fail(LIFE_REJECT.quality);
         q = a.q;
         if (stockCount(life, uid, item, q) < def.per) fail(FARM_REJECT.stock);
         stockAdd(life, uid, item, q, -def.per);
@@ -949,7 +971,7 @@ export function farmAction(
       const unit = stockUnit(s.id, s.q, now, life.flags ?? []),
         amount = shopSaleAmount(life, uid, actor, a.at, s.id, sellTotal(s.id, unit, demandSold(life, uid, now, s.id), n, soldBeomToday(life, uid, now)), now),
         left = SELL_CAP_PER_DAY - soldBeomToday(life, uid, now);
-      if (amount > left) fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
+      if (!sellCapAllows(amount, n, left)) fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
       stockAdd(life, uid, s.id, s.q, -n);
       noteDemand(life, uid, now, s.id, n);
       const day = kstDay(now),

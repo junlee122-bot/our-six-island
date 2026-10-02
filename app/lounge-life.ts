@@ -166,10 +166,14 @@ const MIN = 60_000,
 /*
  * Economy (documented in GAME_PROGRESS / POLISH-B / LIFE-A notes; tests pin it):
  * - Start 100,000범, daily grant 3,000범, table stakes ~10,000범.
- * - Profit per hour with all 6 plots watered rises with the crop's length, so
- *   the "twice a day" rhythm (long crops) beats clicking carrots every few
- *   minutes: carrot 2,000/h < tomato 2,800/h < pumpkin ~4,300/h < strawberry
- *   5,000/h. One overnight strawberry bed = 30,000범 (3 table stakes).
+ * - Profit per hour of the starting 6-tile farm, all watered (growth × 0.6),
+ *   at full price, rises with the crop's length, so the "twice a day" rhythm
+ *   (long crops) beats clicking carrots every few minutes: carrot 2,000/h <
+ *   tomato 2,800/h < pumpkin ~4,300/h ≈ strawberry ~4,400/h (per 6 tiles).
+ *   우리 농장 fields open 24, then 48 and 80 tiles (FARM_SIZES); the daily sell
+ *   cap and the demand curve below stay, so a bigger field feeds machines,
+ *   the fair, bundles and gifts more than the wallet: six strawberries fetch
+ *   ~18,000범, not 27,000.
  * - The four base crops grow in every season (old bags stay useful). The six
  *   seasonal crops grow only in their seasons (or anywhere once the village
  *   greenhouse is restored) and land in the same 3,000–5,400/h band; corn

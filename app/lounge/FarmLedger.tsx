@@ -19,7 +19,7 @@ import {
 import { FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
 import { FIXTURE_BY_ID, GRID_COLS, GRID_ROWS, fieldBlock, tileAt, tileOpen, tileRC } from '../lounge-farm-data';
 import { witherAt } from '../lounge-farm';
-import { harvestOf, harvestText, type Harvest } from '../lounge-life-ui';
+import { SOIL_ITEMS, harvestOf, harvestText, plantsAnySeason, soilOpen as soilHelps, type Harvest, type SoilItem } from '../lounge-life-ui';
 import { ITEM_BY_ID } from '../lounge-items';
 import { SEASON_INFO, WEATHER_INFO } from '../lounge-calendar';
 import { ACTORS } from '../lounge-roster';
@@ -41,10 +41,6 @@ const STAGE_NAME = ['씨앗', '새싹', '자라는 중', '수확할 때'] as con
 /** Field rows on the page, north (the house) at the top. */
 const PAGE_ROWS = Array.from({ length: GRID_ROWS }, (_, r) => Array.from({ length: GRID_COLS }, (_, c) => r * GRID_COLS + c));
 const SEED_KEY = 'bumtadew-last-seed';
-/** Soil items the ledger offers (quality 1–3, then the two treatments). */
-const SOIL_ITEMS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
-type SoilItem = (typeof SOIL_ITEMS)[number];
-const SOIL_LEVEL: Record<SoilItem, number> = { fertilizer: 1, 'fertilizer-deluxe': 2, 'fertilizer-star': 3, 'speed-gro': 0, retaining: 0 };
 const FERT_NAME: Record<1 | 2 | 3, string> = { 1: '비료', 2: '고급 비료', 3: '별빛 비료' };
 const QUALITY_WORD = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' } as const;
 /** "3시간 뒤" / "내일 0시" style time for a future moment. */
@@ -135,14 +131,15 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const size = life?.me.plots ?? 24;
   const open = (i: number) => tileOpen(size, i);
   const season = life?.calendar?.season ?? 'spring';
-  const greenhouse = !!life?.flags?.includes('greenhouse');
-  const plantable = (c: Crop) => greenhouse || cropInSeason(c, season);
+  // The village greenhouse or 온실지기: off-season seeds plant too (same rule as the server and E).
+  const anySeason = plantsAnySeason(life);
+  const plantable = (c: Crop) => anySeason || cropInSeason(c, season);
   const seeds = life?.me.bag.seeds;
   const pouch = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && plantable(c));
   const offSeason = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && !plantable(c));
   const chosen = packet && pouch.includes(packet) ? packet : (pouch[0] ?? null);
   /** The season ends before this crop could ripen even when watered (it would wither). */
-  const sheltered = greenhouse || !!life?.growth?.mods.offSeason;
+  const sheltered = anySeason;
   const withersSoon = (crop: Crop) => {
     const w = witherAt({ crop, plantedAt: now, wateredAt: null }, sheltered);
     return w !== null && w < now + CROP_INFO[crop].growMs * 0.6;
@@ -153,9 +150,8 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const thirstyOf = (p: Plot) => !!p.crop && stageOf(p) < 3 && p.wateredAt === null && !p.rained;
   const thirsty = farm.filter(thirstyOf).length;
   const inv = life?.me.inv ?? {};
-  /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙). */
-  const soilOpen = (p: Plot, item: SoilItem) =>
-    !!p.crop && stageOf(p) < 3 && (item === 'speed-gro' ? !p.sg : item === 'retaining' ? !p.rs : (p.fert ?? 0) < SOIL_LEVEL[item]);
+  /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙; lounge-life-ui soilOpen). */
+  const soilOpen = (p: Plot, item: SoilItem) => soilHelps(p, item, now);
   const fertOf = (item: SoilItem) => farm.filter((p) => soilOpen(p, item)).length;
   const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
   const nextBlock = fieldBlock(nextSize);
