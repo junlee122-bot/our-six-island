@@ -1,0 +1,19 @@
+{
+  "model": "gpt_image_2_5",
+  "createdAt": "2026-10-02",
+  "params": { "quality": "high", "resolution": "2k", "aspect_ratio": "3:2", "count": 1 },
+  "estimatedCreditsEach": 2.75,
+  "purpose": "Trial of the layered character look (head from the existing art, shared bodies, outfits drawn once per body type). Not wired into the game.",
+  "reference": "akatsuki-atlas.png (style, proportions, pose)",
+  "outputs": [
+    {
+      "file": "_originals/outfit-layers/bodies-knit-trial.png",
+      "jobId": "fdadf061-2c6f-40a9-a41b-2ecf6852cbe2",
+      "cells": ["slim body (도원, 민서, 도원 buns)", "regular body (강재, 승준, 민재, 재민, 호현)"],
+      "outfit": "mustard cable-knit sweater with a white collar, brown corduroy wide trousers, brown loafers",
+      "prompt": "Two front-facing chibi body templates on magenta in the reference sheet's style and pose, slim and regular, each with a blank bald mannequin head (replaced in compositing), wearing the same mustard knit sweater, brown corduroy trousers and loafers."
+    }
+  ],
+  "compose": "scripts/outfit-layers/trial-compose.py: heads cut just under the chin from akatsuki-atlas.png (hair keyed blue kept below the chin, old collar removed), body scaled to each friend's original height and torso width, hair dyed and skin toned by mask.",
+  "preview": "_originals/outfit-layers/trial-sheet.webp (row 1 original, row 2 same heads on the shared knit body, row 3 skin tones and hair colours)"
+}
