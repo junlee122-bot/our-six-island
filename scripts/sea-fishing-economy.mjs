@@ -88,19 +88,19 @@ function session({ spot, season, hour, rod, level, sky, bait, minutes = 20 }) {
 }
 
 const rows = [
-  ['방파제 · 가을 낮 · 3단 · Lv6', { spot: 'breakwater', season: 'autumn', hour: 12, rod: 3, level: 6 }],
-  ['먼바다 · 가을 낮 · 3단 · Lv6', { spot: 'offshore', season: 'autumn', hour: 12, rod: 3, level: 6 }],
-  ['방파제 · 여름 낮 · 2단 · Lv4', { spot: 'breakwater', season: 'summer', hour: 10, rod: 2, level: 4 }],
-  ['먼바다 · 여름 낮 · 2단 · Lv4', { spot: 'offshore', season: 'summer', hour: 10, rod: 2, level: 4 }],
-  ['먼바다 · 여름 낮 · 3단 · Lv8 · 새우', { spot: 'offshore', season: 'summer', hour: 10, rod: 3, level: 8, bait: 'bait-shrimp' }],
-  ['방파제 · 겨울 밤 · 3단 · Lv6', { spot: 'breakwater', season: 'winter', hour: 18, rod: 3, level: 6 }],
-  ['먼바다 · 겨울 저녁 · 3단 · Lv6', { spot: 'offshore', season: 'winter', hour: 18, rod: 3, level: 6 }],
-  ['먼바다 · 봄 비 · 3단 · Lv6', { spot: 'offshore', season: 'spring', hour: 12, rod: 3, level: 6, sky: 'rain' }],
+  { label: '방파제 · 가을 낮 · 3단 · Lv6', opts: { spot: 'breakwater', season: 'autumn', hour: 12, rod: 3, level: 6 } },
+  { label: '먼바다 · 가을 낮 · 3단 · Lv6', opts: { spot: 'offshore', season: 'autumn', hour: 12, rod: 3, level: 6 } },
+  { label: '방파제 · 여름 낮 · 2단 · Lv4', opts: { spot: 'breakwater', season: 'summer', hour: 10, rod: 2, level: 4 } },
+  { label: '먼바다 · 여름 낮 · 2단 · Lv4', opts: { spot: 'offshore', season: 'summer', hour: 10, rod: 2, level: 4 } },
+  { label: '먼바다 · 여름 낮 · 3단 · Lv8 · 새우', opts: { spot: 'offshore', season: 'summer', hour: 10, rod: 3, level: 8, bait: 'bait-shrimp' } },
+  { label: '방파제 · 겨울 밤 · 3단 · Lv6', opts: { spot: 'breakwater', season: 'winter', hour: 18, rod: 3, level: 6 } },
+  { label: '먼바다 · 겨울 저녁 · 3단 · Lv6', opts: { spot: 'offshore', season: 'winter', hour: 18, rod: 3, level: 6 } },
+  { label: '먼바다 · 봄 비 · 3단 · Lv6', opts: { spot: 'offshore', season: 'spring', hour: 12, rod: 3, level: 6, sky: 'rain' } },
 ];
 console.log(`한 마리 최소 ${PACE_MS / 1000}초`);
 console.log(`| 20분 | 시도 / 낚음 | 어종 | 판매(인상 후, ${FULL_PRICE}마리까지 정가·이후 ${AFTER_SHARE * 100}%) | 승선료 뺀 순익 |`);
 console.log('|---|---|---|---|---|');
-for (const [label, opts] of rows) {
+for (const { label, opts } of rows) {
   const r = session(opts);
   const net = opts.spot === 'offshore' ? r.value - VOYAGE_FARE : r.value;
   console.log(`| ${label} | ${r.tries} / ${r.n} | ${r.species} | ${r.value.toLocaleString('en-US')} | ${net.toLocaleString('en-US')} |`);

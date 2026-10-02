@@ -21,13 +21,15 @@ import { kstDay } from '../lounge-economy';
 import { ACTORS } from '../lounge-roster';
 import { actionForCode } from '../lounge-keybinds';
 import { getSettings } from '../lounge-settings';
-import { josa } from '../lounge-text';
+import { formatBeom, josa } from '../lounge-text';
 import { MessageCircle } from '../ui/icons';
 import { ItemIcon } from './ItemIcon';
 import { NpcFigure } from './NpcPortrait';
 import { SpeechBox } from './SpeechBox';
 import { giftOptions, type GiftOption } from './npc-gifts';
 import { useNow } from './use-now';
+import { PILL_PRICE, PILL_SELLERS, VOYAGE_LINES } from '../lounge-voyage-data';
+import { isNpcId } from '../lounge-npc-data';
 import './npc-relations.css';
 
 export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
@@ -105,7 +107,28 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
     blocked: talkBlock,
     request: request && !requestDone && onBoard ? `${itemName(request.item)} ${request.n}개` : null,
     love,
+    // 먼바다 낚싯배: 츠나데 (and 메르시 once she lives here) sell the 멀미약 where they work.
+    pill:
+      PILL_SELLERS.some((p) => p.npc === npc && isNpcId(p.npc) && (me?.area ?? '') === p.area) ? `멀미약 사기 · ${formatBeom(PILL_PRICE)}` : null,
   });
+  const buyPill = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      if (await room.life({ kind: 'pillBuy', from: npc })) {
+        const lines = (VOYAGE_LINES as Record<string, { pill?: readonly string[] }>)[npc]?.pill ?? ['멀미약이에요. 배 타기 전에 드세요.'];
+        const line = lines[today % lines.length];
+        said.current = [...said.current, line];
+        setPages([line]);
+        setPage(0);
+        setFocusAfter('reply');
+      }
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  };
   const talk = () => {
     const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, ...loveTalk }, said.current);
     void run(talkAction, [reply]);
@@ -153,6 +176,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard }: {
     else if (choice.id === 'ask' || choice.id === 'propose' || choice.id === 'wedding' || choice.id === 'homeGift') doLove(choice.id);
     else if (choice.id === 'book') onBook();
     else if (choice.id === 'request') onBoard?.();
+    else if (choice.id === 'pill') void buyPill();
     else onClose();
   };
   return (

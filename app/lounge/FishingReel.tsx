@@ -51,7 +51,8 @@ export function FishingReel({
     const paint = () => {
       if (!el || !tr) return;
       const s = sim.state;
-      el.style.setProperty('--zone-y', pct(s.barY, TRACK));
+      // 먼바다: the swell rocks the zone (the same offset the server replays).
+      el.style.setProperty('--zone-y', pct(sim.zoneY(), TRACK));
       el.style.setProperty('--zone-h', pct(setup.bar, TRACK));
       el.style.setProperty('--fish-y', pct(s.fishY, TRACK));
       el.style.setProperty('--progress', pct(s.progress, FULL));

@@ -29,8 +29,7 @@ import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { NPC_IDS } from '../app/lounge-npc-data.ts';
 
 const MIN = 60_000,
-  HOUR = 60 * MIN,
-  DAY = 24 * HOUR;
+  HOUR = 60 * MIN;
 const UIDS = [0, 1, 2, 3, 4, 5].map((i) => `${i}${i}${i}${i}${i}${i}${i}${i}-1111-4111-8111-11111111111${i}`);
 /** KST clock: day `d` from 2026-09-24, hh:mm:ss. */
 const kst = (d, h, m = 0, s = 0) => Date.UTC(2026, 8, 24 + d, h - 9, m, s);

@@ -30,6 +30,7 @@ import { Hotbar, HOTBAR_DRAG_TYPE, type HotbarState } from './LifeHud';
 import { useLifeAction } from './LifePanels';
 import { sellQuote } from '../lounge-life-plus';
 import { useServerClock } from './use-server-clock';
+import { PILL } from '../lounge-voyage-data';
 import './life-plus.css';
 
 function EntryTip({ entry, museum }: { entry: InvEntry; museum: boolean }) {
@@ -293,6 +294,16 @@ export function InventoryPanel({
                     data-testid="inv-snack"
                   >
                     <Soup size={15} /> 간식으로 먹기
+                  </button>
+                )}
+                {entry.id === PILL && (
+                  <button
+                    className="l-secondary"
+                    disabled={busy || !!life.voyage?.pillUntil}
+                    onClick={() => void run({ kind: 'pillTake' }, '멀미약을 먹었어요. 오늘 자정까지 배가 덜 흔들려요.').then((ok) => ok && lifeSfx('sip'))}
+                    data-testid="inv-pill"
+                  >
+                    <Soup size={15} /> {life.voyage?.pillUntil ? '오늘은 먹었어요' : '먹기 · 배 흔들림 줄이기'}
                   </button>
                 )}
                 {entry.group !== 'seed' && entry.group !== 'furniture' && ITEM_BY_ID[entry.id]?.kind !== 'tool' && (

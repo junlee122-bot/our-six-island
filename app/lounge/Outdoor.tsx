@@ -24,6 +24,8 @@ import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import type { FishingFramePhase } from '../lounge-fishing-frames';
 import type { ShopArea } from '../lounge-shop-interiors';
+import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
+import { kstHourOf } from '../lounge-voyage-data';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
 
@@ -76,7 +78,7 @@ export function useOutdoor({
   /** A district counter (E at a shop door, a board or a stall); `enter`: walk into the shop's room. */
   onCounter?: (place: DistrictCounter, enter?: ShopArea) => void;
   /** The harbor's fishing and crab-pot spots. */
-  onFish?: (spot: 'breakwater' | 'pier') => void;
+  onFish?: (spot: 'breakwater' | 'pier' | 'offshore') => void;
   /** 친구에게 가기. */
   onSignpost?: () => void;
 }) {
@@ -161,6 +163,17 @@ export function useOutdoor({
     },
     [fade, go, onVillage, room],
   );
+
+  /** 먼바다: onto the deck when my boat leaves, back on the pier when it is over. */
+  const toDeck = useCallback(() => {
+    preloadAreaScene();
+    go({ area: 'offshore', spawn: { ...REGIONS.offshore.arrive.harbor! } });
+  }, [go]);
+  const toPier = useCallback(() => {
+    preloadAreaScene();
+    void prefetchDistrict('harbor');
+    go({ area: 'harbor', spawn: { ...HARBOR_VOYAGE.landing } });
+  }, [go]);
 
   const leaveToVillage = () => {
     const from = ref.current?.area ?? 'hill';
@@ -294,6 +307,10 @@ export function useOutdoor({
     // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
     const pass = !!r?.pass;
     const stops = m ? mineStops(m, pass) : [];
+    // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
+    const voyage = view.life?.voyage;
+    const hour = kstHourOf(Date.now() + view.clockOffset);
+    const harborBoat = voyage ? { out: voyage.sailing.length > 0, captain: !voyage.storm && hour >= 5 && hour < 19 } : undefined;
     return (
       <div className="l-village-world">
         <Suspense
@@ -317,6 +334,8 @@ export function useOutdoor({
             paused={paused || liftOpen}
             fishing={fishing}
             dayNight={dayNight}
+            steady={!!voyage?.pillUntil}
+            harborBoat={harborBoat}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}
@@ -371,5 +390,5 @@ export function useOutdoor({
     setLiftOpen(false);
     return was;
   }, []);
-  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset, enterAt };
+  return { outdoor, outdoorRef: ref, toHill, toDistrict, travel, render, tell, reset, enterAt, toDeck, toPier };
 }
