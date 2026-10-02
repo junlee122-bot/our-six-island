@@ -13,6 +13,7 @@
 // functions, never at the top level.
 import { grantBeom, kstDay, nextKstMidnight, spendBeom, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, GAME_HOUR_MS, weatherOf, type Weather } from './lounge-calendar.ts';
+import { companionNow } from './lounge-companion-effects.ts';
 import { districtFlagsFor } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { FISH_BY_ID } from './lounge-items.ts';
@@ -80,6 +81,8 @@ export type VoyageTrip = {
   haul?: Record<string, number>;
   /** 재능 바다 체질: I stay out this much longer (one game hour). */
   more?: number;
+  /** 주민 동행: extra time at sea with 허 선장 along (ms, one game hour at most). */
+  x?: number;
 };
 /** 멀미약: a buff slot shaped like the food slots (lounge-food-data SlotBuff), until KST midnight. */
 export type PillSlot = { kind: 'steady'; food: string; until: number };
@@ -108,6 +111,7 @@ function readTrip(v: unknown): VoyageTrip | undefined {
   if (t.dawn === true) out.dawn = true;
   if (nat(t.left)) out.left = t.left;
   if (nat(t.more) && t.more > 0) out.more = Math.min(GAME_HOUR_MS, t.more);
+  if (nat(t.x) && t.x > 0) out.x = Math.min(t.x, GAME_HOUR_MS);
   const haul: Record<string, number> = {};
   for (const [id, n] of Object.entries(obj(t.haul)).slice(0, 80)) if (Object.hasOwn(FISH_BY_ID, id) && nat(n) && n > 0) haul[id] = Math.min(9_999, n);
   if (Object.keys(haul).length) out.haul = haul;
@@ -143,7 +147,7 @@ export function readVoyage(value: unknown): VoyageExt {
 
 // ---------------------------------------------------------------- rules
 /** When a trip is over: 20 minutes after it left, or when I went back early. */
-export const tripEnd = (t: VoyageTrip) => Math.min(t.dep + VOYAGE_MS + (t.more ?? 0), t.left ?? Infinity);
+export const tripEnd = (t: VoyageTrip) => Math.min(t.dep + VOYAGE_MS + (t.more ?? 0) + (t.x ?? 0), t.left ?? Infinity);
 export type TripPhase = 'boarding' | 'sailing' | 'back';
 export const tripPhase = (t: VoyageTrip, now: number): TripPhase => (now < t.dep ? 'boarding' : now < tripEnd(t) ? 'sailing' : 'back');
 const userOf = (life: LifeState, uid: string): VoyageUser => (((life.voyage ??= {}).u ??= {})[uid] ??= {});
@@ -165,8 +169,8 @@ export const pillOn = (life: LifeState, uid: string, now: number) => {
 /** The swell on the catch zone by today's sky (0 after a 멀미약). */
 export const SWAY: Record<Weather, number> = { sunny: 220, cloudy: 320, snow: 420, rain: 480, storm: 600 };
 export function voyageSway(life: LifeState, uid: string, now: number): number {
-  // 재능 바다 체질: never seasick.
-  return pillOn(life, uid, now) || growthMods(life, uid).seaLegs ? 0 : SWAY[weatherOf(kstDay(now))];
+  // 재능 바다 체질 or 주민 동행 with 허 선장: never seasick.
+  return pillOn(life, uid, now) || growthMods(life, uid).seaLegs || companionNow(life, uid, now) === 'captain' ? 0 : SWAY[weatherOf(kstDay(now))];
 }
 /** 재능 바다 체질: one game hour more on board. */
 const seaMore = (life: LifeState, uid: string) => (growthMods(life, uid).seaLegs ? { more: GAME_HOUR_MS } : {});

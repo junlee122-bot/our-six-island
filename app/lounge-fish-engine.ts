@@ -63,6 +63,8 @@ import { luckMods } from './lounge-food-data.ts';
 import { SEA_BUILD } from './lounge-fish-sea-data.ts';
 import { DAWN_LEGEND, OFFSHORE_TREASURE, RAIN_BITE } from './lounge-voyage-data.ts';
 import { noteVoyageCatch, voyageAt, voyageSway } from './lounge-voyage.ts';
+// 주민 동행: 하쿠·쓰레쉬 (희귀), 봇치 (입질 창), 로제 (보물 상자), 가붕 (릴 게이지).
+import { companionFishMods } from './lounge-companion-effects.ts';
 
 // ---------------------------------------------------------------- constants
 /**
@@ -678,7 +680,8 @@ export function anglingAction(
         insp.rare *
         (sea ? 1 + mods.seaRare : 1) *
         // 재능 밤낚시: game 20:00–05:00.
-        (gameHour(now) >= 20 || gameHour(now) < 5 ? 1 + mods.nightRare : 1);
+        (gameHour(now) >= 20 || gameHour(now) < 5 ? 1 + mods.nightRare : 1) *
+        companionFishMods(life, uid, spot, now).rare;
       const legendBoost = (1 + mods.legend) * (rod >= 5 ? 1.3 : 1) * (bait === 'bait-glow' && night ? 1.5 : 1) * (ctx.dawn ? DAWN_LEGEND : 1);
       const previous = u.last?.ok ? u.last.fish : undefined;
       const fish =
@@ -703,7 +706,7 @@ export function anglingAction(
       const wait = ((BITE_MIN_MS + (hash32(`angle-bite:${token}`) % BITE_SPREAD_MS)) * (bait === 'bait-dough' && fresh ? 0.5 : 1)) / (rainy ? RAIN_BITE : 1),
         biteAt = now + Math.round(wait),
         rodWindow = rod >= 4 ? 1.75 : ROD_WINDOW[Math.max(1, Math.min(3, rod)) as 1 | 2 | 3],
-        windowMs = Math.round(fish.windowMs * rodWindow * luck.window * (1 + mods.biteWindow) * insp.window);
+        windowMs = Math.round(fish.windowMs * rodWindow * luck.window * (1 + mods.biteWindow) * insp.window * companionFishMods(life, uid, spot, now, coop).window);
       delete u.fight;
       u.cast = { token, spot, castAt: now, biteAt, windowMs, expiresAt: biteAt + windowMs + hookSlackMs(fish), fish: fish.id, cm, ...(bait ? { bait } : {}), coop };
       break;
@@ -733,10 +736,11 @@ export function anglingAction(
         loss = Math.max(
           1,
           // 재능 잔잔한 손: the gauge drains 10% slower.
-          Math.round((baseLoss(p.difficulty) * (tackle.includes('tackle-trap') ? 2 : 3)) / 3 * (100 - COOP_LOSS * c!.coop) / 100 * (1 - Math.min(0.5, mods.reelEase))),
+          Math.round((baseLoss(p.difficulty) * (tackle.includes('tackle-trap') ? 2 : 3)) / 3 * (100 - COOP_LOSS * c!.coop) / 100 * (1 - Math.min(0.5, mods.reelEase)) * companionFishMods(life, uid, c!.spot, now).loss),
         ),
+        companion = companionFishMods(life, uid, c!.spot, now, c!.coop),
         // 재능 보물 냄새: ×1.5.
-        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop, c!.spot === 'offshore') * (1 + mods.treasure),
+        chance = treasureChance(level, tackle.includes('tackle-treasure'), c!.coop, c!.spot === 'offshore') * (1 + mods.treasure) * companion.treasure,
         sway = c!.spot === 'offshore' ? voyageSway(life, uid, now) : 0,
         treasure =
           hash32(`fight-treasure:${c!.token}`) % 100 < chance

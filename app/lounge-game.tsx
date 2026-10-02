@@ -124,6 +124,8 @@ import { FinancePanel } from './lounge/FinancePanel';
 import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { NpcTalkDialog } from './lounge/NpcTalkDialog';
+import { CompanionHud } from './lounge/CompanionHud';
+import { CompanionTalk } from './lounge/CompanionTalk';
 import { migrateNpcTiesSeen } from './lounge/npc-ties-seen';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
 import type { TownPlace, TravelArea } from './lounge/TownPanel';
@@ -528,6 +530,8 @@ function AccountLounge({
     [modal, setModal] = useState<ModalName | null>(null),
     // Talking to a resident where they stand (hub / 시장 거리), and the notebook's first page.
     [residentTalk, setResidentTalk] = useState<NpcId | null>(null),
+    /** 주민 동행: E on my companion opens the companion talk; their usual box once this names them. */
+    [usualTalk, setUsualTalk] = useState<NpcId | null>(null),
     [npcBookAt, setNpcBookAt] = useState<NpcId | undefined>(undefined),
     [financeMode, setFinanceMode] = useState<'bank' | 'casino' | 'rob'>('bank'),
     [financePage, setFinancePage] = useState<'bank' | 'notes' | undefined>(undefined),
@@ -2179,6 +2183,24 @@ function AccountLounge({
         status={cloudSave.status}
         onRetry={() => void cloudSave.flush()}
       />
+      {connected && !inGame && (
+        // 주민 동행: the companion chip (face, effect, time left, 보내기) under the camera buttons.
+        <div className="l-companion-dock">
+          <CompanionHud
+            room={room}
+            view={view}
+            notify={notify}
+            onTalk={() => {
+              const npc = view.life?.companion?.me.out?.npc;
+              if (npc) setResidentTalk(npc);
+            }}
+            onBank={() => {
+              setFinanceMode('bank');
+              setModal('bank');
+            }}
+          />
+        </div>
+      )}
       <div className="l-world-alerts">
         {(view.status === 'error' || view.lost) && (
           <aside className="l-connection-alert" role="alert">
@@ -2926,13 +2948,26 @@ function AccountLounge({
           />
         </Suspense>
       )}
-      {residentTalk && !modal && (
+      {residentTalk && !modal && usualTalk !== residentTalk && residentTalk === view.life?.companion?.me.out?.npc && (
+        <CompanionTalk
+          key={`companion-${residentTalk}`}
+          npc={residentTalk}
+          room={room}
+          view={view}
+          onClose={() => setResidentTalk(null)}
+          onUsual={() => setUsualTalk(residentTalk)}
+        />
+      )}
+      {residentTalk && !modal && (usualTalk === residentTalk || residentTalk !== view.life?.companion?.me.out?.npc) && (
         <NpcTalkDialog
           key={residentTalk}
           npc={residentTalk}
           room={room}
           view={view}
-          onClose={() => setResidentTalk(null)}
+          onClose={() => {
+            setResidentTalk(null);
+            setUsualTalk(null);
+          }}
           onBook={() => {
             setNpcBookAt(residentTalk);
             setResidentTalk(null);

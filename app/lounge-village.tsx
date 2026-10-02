@@ -71,6 +71,7 @@ import { VillageShopsLayer } from './lounge-village-shops';
 import { VillageDistrictGates } from './lounge-village-districts-3d';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { companionBubbles, companionNpcs, companionSpots, companionStep } from './lounge-companion-scene';
 import { npcsIn, npcSpot } from './lounge-npc-schedule';
 import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESIDENT_HEIGHT, applyVillageLight, clampFollowTarget, followEase, villageFigureGeometry, villageFigureTint, villageLightAt, villageSkyBackground } from './lounge-village-view';
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
@@ -1907,11 +1908,11 @@ export function Village3D(props: Props) {
         desiredZoom = Math.max(desiredZoom, followZoom);
         const len = Math.hypot(h, v),
           speed =
-            ((run ? WALK_SPEED * RUN_SPEED_MULTIPLIER : WALK_SPEED) * dt) / len;
+            ((run ? WALK_SPEED * RUN_SPEED_MULTIPLIER : WALK_SPEED) * companionStep() * dt) / len;
         // The camera never turns sideways: arrow keys move along the screen's axes.
         position = villageStep(position, h * speed, v * speed);
       } else if (path.length) {
-        let budget = WALK_SPEED * (run ? RUN_SPEED_MULTIPLIER : 1) * dt;
+        let budget = WALK_SPEED * (run ? RUN_SPEED_MULTIPLIER : 1) * companionStep() * dt;
         while (path.length && budget > 0) {
           const to = path[0],
             dx = to.x - position.x,
@@ -2333,12 +2334,13 @@ export function Village3D(props: Props) {
           z: f.point.z,
         }));
         const w = weatherOf(Math.floor((at + 9 * 3_600_000) / 86_400_000));
-        const frames = residentFrames(npcsIn('village', at), people, at, {
+        // 주민 동행: companions walk beside their friend (lounge-companion-scene.ts).
+        const frames = companionBubbles(residentFrames(companionSpots(npcsIn('village', at), people, 'village', at), people, at, {
           rain: w === 'rain' || w === 'storm',
           night,
           memory: residentMemory,
           canStand: villageCanWalk,
-        });
+        }), at);
         if (residentLayer.update(frames, now, dt, camera)) {
           needsRender = true;
           anyWalking = true;
@@ -3763,7 +3765,7 @@ function SpotPrompt({
         </strong>
         <small>
           {NPCS[spot.npc].role}
-          {s ? ` · ${s.label}` : ''}
+          {companionNpcs(life?.serverNow ?? 0).has(spot.npc) ? ' · 같이 다니는 중' : s ? ` · ${s.label}` : ''}
           {key}
         </small>
       </div>

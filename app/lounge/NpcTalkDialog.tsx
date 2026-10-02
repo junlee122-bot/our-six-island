@@ -34,6 +34,8 @@ import { isNpcId } from '../lounge-npc-data';
 import { npcJoinLines, npcSocialExchange, npcSocialOf, type NpcSaid } from '../lounge-npc-social';
 import { npcRecentKinds } from '../lounge-npc-recent';
 import { NPC_TIE_KEYS, pairKey } from '../lounge-npc-social-ties';
+import { COMPANION_REJECT, companionWhyNot, companionWhyShort } from '../lounge-companion';
+import { companionBusyLine } from '../lounge-npc-companion-lines';
 import './npc-relations.css';
 
 export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop }: {
@@ -82,7 +84,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const gifts = giftOptions(view.life);
-  const context = { area: me?.area ?? '', home: me?.home, actor: me?.actor ?? -1, fishing: !!view.life?.me.fishing.pending, x: me?.x, y: me?.y };
+  const context = { area: me?.area ?? '', home: me?.home, actor: me?.actor ?? -1, fishing: !!view.life?.me.fishing.pending, x: me?.x, y: me?.y, companion: view.life?.companion?.me.out?.npc ?? null };
   const blocked = (action: NpcSocialAction) => {
     if (!me) return '마을에 연결되면 이야기할 수 있어요.';
     try {
@@ -123,6 +125,15 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const otherId = meeting ? (meeting.a === npc ? meeting.b : meeting.a) : null;
   const joinAction: NpcSocialAction | null = otherId ? { kind: 'npcSocial', npc, op: 'join', with: otherId } : null;
   const otherJoined = otherId ? rows.find((r) => r.npc === otherId)?.joinedDay === today : false;
+  // 주민 동행: "같이 다닐래요?" with why not (hearts, their shop, another friend, my own companion).
+  const companions = view.life?.companion;
+  const holderUid = Object.entries(companions?.all ?? {}).find(([uid, c]) => c.npc === npc && uid !== view.self)?.[0];
+  const holder = holderUid ? ACTORS[companions!.all[holderUid].actor] ?? '친구' : null;
+  const mine = companions?.me.out?.npc ?? null;
+  const flags = view.life?.flags ?? [];
+  const companionWhy = companions
+    ? companionWhyNot({ npc, points: row.points, mine, holder, now, world: { hill: flags.includes('district-hillside'), ranch: flags.includes('district-ranch'), foothill: flags.includes('district-foothill') } })
+    : '';
   const choices = npcTalkChoices({
     talked: row.talked,
     gifted: row.gifted,
@@ -135,6 +146,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     social: otherId && joinAction
       ? { other: josa(NPCS[otherId].name, '과/와'), joined: (row as { joinedDay?: number }).joinedDay === today && otherJoined, joinOff: blocked(joinAction) }
       : null,
+    companion: companions ? { why: companionWhyShort(companionWhy, npc, holder) } : null,
     pill:
       PILL_SELLERS.some((p) => p.npc === npc && isNpcId(p.npc) && (me?.area ?? '') === p.area) ? `멀미약 사기 · ${formatBeom(PILL_PRICE)}` : null,
   });
@@ -212,9 +224,23 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     if (!meeting || !otherId || !joinAction) return;
     void run(joinAction, spoken(npcJoinLines({ ...meeting, a: npc, b: otherId }, myName)));
   };
+  const invite = () => {
+    if (busyRef.current) return;
+    // Not now: their answer says why (a shopkeeper in character, the rest plainly).
+    if (companionWhy) return answer([companionWhy === COMPANION_REJECT.shop || companionWhy === COMPANION_REJECT.night ? companionBusyLine(npc, myName, now) : companionWhy]);
+    busyRef.current = true;
+    setBusy(true);
+    // A yes: the companion talk takes over at once and opens with their accept line.
+    void Promise.resolve(room.life({ kind: 'companion', op: 'invite', npc }))
+      .finally(() => {
+        busyRef.current = false;
+        setBusy(false);
+      });
+  };
   const choose = (index: number) => {
     const choice = choices[index];
     if (!choice || choice.disabled) return;
+    if (choice.id === 'companion') return invite();
     if (choice.id === 'talk') talk();
     else if (choice.id === 'gift') setPicking(true);
     else if (choice.id === 'overhear') overhear();

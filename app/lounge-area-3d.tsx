@@ -46,6 +46,8 @@ import { dayLighting, dayLightingAtHour } from './lounge-village-life';
 import { NPC_WALK_AREAS, npcsIn, type NpcArea } from './lounge-npc-schedule';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
+import { companionBubbles, companionSpots, companionStep } from './lounge-companion-scene';
+import { isCompanionPlace } from './lounge-npc-companion-line-types';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { districtProgress } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
@@ -419,7 +421,8 @@ export function AreaScene({
     applyDay(performance.now());
     applyState();
     // Residents walking about here (the district's shops, their errands).
-    const residents = NPC_WALK_AREAS.includes(area as NpcArea) && labelLayerRef.current
+    // 주민 동행: every outdoor map draws the companion beside its friend.
+    const residents = (NPC_WALK_AREAS.includes(area as NpcArea) || isCompanionPlace(area)) && labelLayerRef.current
       ? new ResidentLayer(scene, labelLayerRef.current, {
           height: (FIGURE_HEIGHT * RESIDENT_SCALE) / Math.cos(PITCH),
           billboard: 'upright',
@@ -671,7 +674,7 @@ export function AreaScene({
       let dx = Number(l.held.has('right')) - Number(l.held.has('left')),
         dz = Number(l.held.has('down')) - Number(l.held.has('up'));
       if (s.paused) dx = dz = 0;
-      const speed = WALK_SPEED * (l.shift ? RUN_SPEED_MULTIPLIER : 1) * dt;
+      const speed = WALK_SPEED * (l.shift ? RUN_SPEED_MULTIPLIER : 1) * companionStep() * dt;
       if (!dx && !dz && l.target && !s.paused) {
         dx = l.target.x - l.point.x;
         dz = l.target.z - l.point.z;
@@ -819,12 +822,13 @@ export function AreaScene({
           ...[...others.entries()].map(([id, f]) => ({ id, name: ACTORS[f.actor] ?? '', x: f.pos.x, z: f.pos.z })),
         ];
         const w = weatherOf(Math.floor((now + 9 * 3_600_000) / DAY));
-        const frames = residentFrames(npcsIn(s.area as NpcArea, now), people, now, {
+        const spots = NPC_WALK_AREAS.includes(s.area as NpcArea) ? npcsIn(s.area as NpcArea, now) : [];
+        const frames = companionBubbles(residentFrames(companionSpots(spots, people, s.area, now), people, now, {
           rain: w === 'rain' || w === 'storm',
           night,
           memory,
           canStand: s.walk.canWalk,
-        });
+        }), now);
         if (residents.update(frames, t, dt, camera)) dirty = true;
         residentsRef.current = residents.positions();
       }

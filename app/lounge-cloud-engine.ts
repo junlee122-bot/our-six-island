@@ -36,6 +36,9 @@ import { collectOverdue, financeAction, financeView, recordCasino, type FinanceS
 import { assertNpcSocialContext } from './lounge-romance.ts';
 import { assertBirthdayContext } from './lounge-birthday.ts';
 import { villageFromNetwork } from './lounge-village-layout.ts';
+import { companionLogout } from './lounge-companion.ts';
+import { companionNow } from './lounge-companion-effects.ts';
+import type { NpcId } from './lounge-npc-data.ts';
 import { DISTRICTS, districtOpen, isDistrictId } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 import { isTownAction, townActionArea } from './lounge-town-data.ts';
@@ -328,6 +331,11 @@ export function cloudTransition(
         if (lease.seen < now - CLOUD_LEASE_MS) {
           r.hostedDrop(id, 'expired');
           delete entry.leases[id];
+          // 주민 동행: logging out (the lease running out) sends the companion home.
+          if (g.life && readLife(g.life).companions?.[id]?.out) {
+            const life = readLife(g.life);
+            if (companionLogout(life, id, now)) g.life = life;
+          }
         }
       // A room its owner has closed: visitors still inside go back to the village.
       r.hostedEvictHomes(mayStay);
@@ -506,6 +514,7 @@ export function cloudTransition(
               hill: (life.flags ?? []).includes('district-hillside'),
               ranch: (life.flags ?? []).includes('district-ranch'),
               foothill: (life.flags ?? []).includes('district-foothill'),
+              companion: companionNow(life, member.id, now),
             }, now);
           }
           if ((command.action as { kind?: string }).kind === 'birthdayCheer') {
@@ -514,6 +523,24 @@ export function cloudTransition(
             if (!lease || !player) throw new CloudError('마을에 먼저 접속한 뒤 축하해 주세요.', 409);
             const area = player.area ?? 'village';
             assertBirthdayContext(area, area === 'village' ? villageFromNetwork({ x: player.x, y: player.y }) : null);
+          }
+          if (command.action.kind === 'companion') {
+            // 주민 동행: inviting needs me beside the resident (like talking); the server says where I stand.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player) throw new CloudError('마을에 먼저 접속한 뒤 주민을 만나 주세요.', 409);
+            const act = command.action as { op?: unknown; npc?: unknown; where?: unknown };
+            if (act.op === 'invite') {
+              const life = readLife(g.life);
+              assertNpcSocialContext({ kind: 'npcSocial', npc: act.npc as NpcId, op: 'talk' }, life.ext?.[member.id]?.npcRelations, {
+                area: player.area ?? 'village', home: player.home, actor: member.actor,
+                fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
+                x: player.x, y: player.y,
+                hill: (life.flags ?? []).includes('district-hillside'),
+                ranch: (life.flags ?? []).includes('district-ranch'),
+                foothill: (life.flags ?? []).includes('district-foothill'),
+              }, now);
+            }
+            if (act.op === 'moment') act.where = player.area ?? 'village';
           }
           if (isVoyageAction(command.action)) {
             // Boarding at the pier; the 멀미약 at its seller (츠나데 텃밭, 메르시 의원).
@@ -660,6 +687,11 @@ export function cloudTransition(
           r.hostedDrop(member.id);
           delete entry.leases[member.id];
           current = undefined;
+          // 주민 동행: leaving the village sends the companion home.
+          if (g.life && readLife(g.life).companions?.[member.id]?.out) {
+            const life = readLife(g.life);
+            if (companionLogout(life, member.id, now)) g.life = life;
+          }
         }
         let quiet = command.op === 'read';
         if (command.op === 'action') {
