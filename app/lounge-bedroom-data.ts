@@ -12,6 +12,8 @@
 import { BEDROOM_THEMES, bedroomTheme } from './lounge-bedroom-themes.ts';
 import {
   ROOM,
+  LEGACY_ITEM_KIND,
+  LEGACY_WALL_ITEM,
   catalogEntry,
   type CatalogEntry,
   type RoomItemKind,
@@ -436,7 +438,8 @@ function readItem(value: unknown, clamp: boolean): RoomItem | string {
   if (typeof item.ref !== 'string') return 'ref';
   const entry = catalogEntry(item.ref);
   if (!entry) return 'ref';
-  if (item.kind !== entry.kind) return 'kind';
+  // A piece saved before its kind changed (흔들의자: 3D model → painting) reads as the new kind.
+  if (item.kind !== entry.kind && item.kind !== LEGACY_ITEM_KIND[entry.ref]) return 'kind';
   const num = (v: unknown, min: number, max: number, name: string) => {
     if (inRange(v, min, max)) return v;
     if (clamp && finite(v)) return Math.max(min, Math.min(max, v));
@@ -462,6 +465,9 @@ function readItem(value: unknown, clamp: boolean): RoomItem | string {
       out.y = round(num(item.y ?? 2, 0, BEDROOM_LIMITS.maxY, 'y'));
       // A wall item hugs its wall: snap the cross-wall coordinate.
       out.z = ROOM.minZ;
+    } else if (item.wall === 'back' && LEGACY_WALL_ITEM.includes(entry.ref)) {
+      // Hung on the back wall before it got a stand: it now stands on the floor below that spot.
+      out.z = round(Math.min(ROOM.maxZ, ROOM.minZ + (entry.d * scale) / 2 + 0.05));
     } else {
       if (item.wall !== undefined) throw 'wall';
       if (item.y !== undefined) {

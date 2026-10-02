@@ -7,6 +7,7 @@
 //   npm run ui:shots -- --games                    # also casino/hall table screens
 //   npm run ui:shots -- --low-graphics             # software GPU: low quality, 30 FPS
 //   npm run ui:shots -- --fishing-fight            # also the reel fight (needs a fast mock round trip)
+//   npm run ui:shots -- --furniture-room --views fhd   # only a furnished room (painted furniture next to 3D pieces) and its catalog
 //
 // For each key screen at 1920×1080 (fhd), 1440×900 (d) and 1280×720 (s) it saves
 // a PNG and measures, inside the top dialog (or the whole HUD when none is open):
@@ -31,6 +32,7 @@ import { measureInPage } from './ui-measure.mjs';
 import { verifyMeasurements } from './ui-measure-fixtures.mjs';
 import { reportFailures, UI_METRICS } from './ui-report.mjs';
 import { kstDay } from '../app/lounge-economy.ts';
+import { freshLounge } from '../app/lounge-look.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const args = process.argv.slice(2);
@@ -519,6 +521,78 @@ async function runView(browser, base, view, report) {
   await H.close();
 }
 
+// ---- furnished room (--furniture-room) --------------------------------------
+// 나무결 가구점 paintings next to the 3D basic bed and desk in a tier-0 room:
+// floor cards, a rug, a lamp on the desk and back-wall pieces, all owned.
+const FURNISHED = [
+  ['bed', 'model', 'bed', 4.2, -2.46],
+  ['desk', 'model', 'desk', 0.6, -3.42],
+  ['lamp', 'prop', 'furn-crystal-lamp', 1.25, -3.42, { y: 1.03 }],
+  ['tv', 'prop', 'furn-retro-tv', 2.4, -3.6],
+  ['rug', 'prop', 'furn-rug-lilac', 0.2, 1.2],
+  ['table', 'prop', 'furn-round-dining-set', 0.2, 0.9],
+  ['cat', 'prop', 'furn-cat-tower', -1.6, -2.6],
+  ['bean', 'prop', 'furn-beanbag', -3.4, 1.4],
+  ['arm', 'prop', 'furn-armchair-navy', 2.6, 1.0],
+  ['rock', 'prop', 'furn-rocking-chair', 4.6, 1.6],
+  ['vase', 'prop', 'furn-cherry-vase', -4.9, -1.2],
+  ['shelf', 'prop', 'furn-wall-shelf', 4.4, -4, { wall: 'back', y: 2.35 }],
+  ['garland', 'prop', 'furn-maple-garland', 4.4, -4, { wall: 'back', y: 3.3 }],
+  ['plant', 'prop', 'furn-hanging-planter', 2.75, -4, { wall: 'back', y: 2.6 }],
+  ['medal', 'prop', 'furn-village-medal', -1.35, -4, { wall: 'back', y: 3.05 }],
+];
+async function furnitureRoomView(browser, base, view, report) {
+  const save = freshLounge(3);
+  save.bedroom = {
+    ...save.bedroom,
+    items: FURNISHED.map(([id, kind, ref, x, z, extra = {}]) => ({ id, kind, ref, x, z, rotY: 0, scale: 1, ...extra })),
+  };
+  const seed = (life, uid) => {
+    seedLife(life, uid);
+    const x = ((life.ext ??= {})[uid] ??= {});
+    x.furn = { ...(x.furn ?? {}), 'furn-marble-fireplace': 1, 'furn-najeon-wardrobe': 1, 'furn-canopy-bed': 1 };
+    for (const [, , ref] of FURNISHED) if (ref !== 'bed') x.furn[ref] = (x.furn[ref] ?? 0) + 1;
+  };
+  const H = await setup({ browser, base, view, seedLife: seed, seedSave: save });
+  const { page, js, sleep, until } = H;
+  const res = (report.views[view] = { screens: {}, notes: [] });
+  const snap = async (name) => {
+    await js(() => document.fonts.ready);
+    await sleep(450);
+    const file = `${view}-${name}.png`;
+    await page.screenshot({ path: path.join(out, file), timeout: 90000 });
+    res.screens[name] = { file, ...(await js(measureInPage).catch((e) => ({ err: e.message }))) };
+    console.log(`  ${view} ${name}`);
+  };
+  try {
+    await page.goto(base);
+    await page.waitForSelector('.l-auth-card', { timeout: 90000 });
+    await login(H, base);
+    await until(() => { const s = document.querySelector('[data-testid=bedroom-3d]')?.getAttribute('data-load-state'); return !!s && s !== 'loading'; }, 180000);
+    await sleep(2500);
+    for (let i = 0; i < 4 && (await js(() => document.querySelectorAll('dialog[open]').length)); i++) {
+      await page.keyboard.press('Escape');
+      await sleep(400);
+    }
+    res.items = await js(() => document.querySelector('[data-testid=bedroom-3d]')?.dataset.items);
+    await snap('room-furniture');
+    await H.clickText(/^꾸미기/);
+    await until(() => !!document.querySelector('[data-testid=room-done]'), 10000);
+    await sleep(800);
+    res.conflicts = await js(() => document.body.innerText.match(/겹친 곳 \d+/)?.[0] ?? 'none');
+    await H.clickText(/놓을 것 고르기|^놓기$/);
+    await until(() => !!document.querySelector('[data-testid=catalog-premium]'), 10000);
+    await H.clickSel('[data-testid=catalog-premium]');
+    await sleep(1500);
+    await snap('room-furniture-catalog');
+  } catch (e) {
+    res.notes.push(e.stack || String(e));
+    console.error(`  ${view} furniture room: ${e.message}`);
+  }
+  res.errors = H.errors.slice(0, 10);
+  await H.close();
+}
+
 // ---- run --------------------------------------------------------------------
 const server = await serve(pages);
 const browser = await launchBrowser();
@@ -530,7 +604,8 @@ try {
   await verifyMeasurements(browser);
   for (const view of views) {
     console.log(`view ${view} (${VIEWS[view].width}x${VIEWS[view].height})`);
-    await runView(browser, server.url, view, report);
+    if (flag('furniture-room')) await furnitureRoomView(browser, server.url, view, report);
+    else await runView(browser, server.url, view, report);
   }
 } finally {
   await browser.close();

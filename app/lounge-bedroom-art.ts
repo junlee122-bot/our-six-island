@@ -2,7 +2,7 @@ import { LOUNGE_ASSETS } from './lounge-assets';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import { MIKU_ROOM_ART } from './lounge-bedroom-collection';
 import { TROPHY_ART } from './lounge-trophy-art';
-import { FURNITURE_ART } from './lounge-furniture-art';
+import { FURNITURE_ART, FURNITURE_THUMBS } from './lounge-furniture-art';
 
 /** Images drawn as upright cards (or flat rugs / wall art) in the room. */
 export const PROP_ART: Record<string, string> = {
@@ -31,7 +31,7 @@ export const PROP_ART: Record<string, string> = {
   'miku-poster': MIKU_ROOM_ART['miku-poster'],
   'miku-banner': MIKU_ROOM_ART['miku-banner'],
   ...TROPHY_ART,
-  // Premium furniture (life expansion): procedural SVG in the room's painted style.
+  // Premium furniture: the furniture-sheet paintings (crafted pieces: procedural SVG).
   ...FURNITURE_ART,
 };
 
@@ -52,12 +52,12 @@ export const MODEL_FILES: Record<string, string> = {
   cushions: LOUNGE_MODELS.cushions,
   'plant-stand': LOUNGE_MODELS.plantStand,
   tulips: LOUNGE_MODELS.tulips,
-  'furn-rocking-chair': LOUNGE_MODELS.rockingChair,
 };
 
 /** Catalog thumbnails: rendered previews of the 3D models, and the prop art itself. */
 export const THUMBNAILS: Record<string, string> = {
   ...PROP_ART,
+  ...FURNITURE_THUMBS,
   ...MIKU_ROOM_ART,
   bed: LOUNGE_ASSETS.bedroom_thumb_bed,
   desk: LOUNGE_ASSETS.bedroom_thumb_desk,
@@ -74,5 +74,4 @@ export const THUMBNAILS: Record<string, string> = {
   cushions: LOUNGE_ASSETS.bedroom_thumb_cushions,
   'plant-stand': LOUNGE_ASSETS.bedroom_thumb_plant_stand,
   tulips: LOUNGE_ASSETS.bedroom_thumb_tulips,
-  'furn-rocking-chair': LOUNGE_ASSETS.bedroom_thumb_rocking_chair,
 };
