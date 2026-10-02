@@ -160,6 +160,9 @@ export const LOUNGE_ASSETS = {
   chibi_shinhyungman: '/assets/lounge/chibi/npc-shinhyungman.webp',
   chibi_bongmison: '/assets/lounge/chibi/npc-bongmison.webp',
   chibi_valkyrie: '/assets/lounge/chibi/npc-valkyrie.webp',
+  // 루미 · 매화 walking chibis (lumi-maehwa-chibi-generation.json); the tables keep their pose sheets.
+  chibi_lumi: '/assets/lounge/chibi/npc-lumi.webp',
+  chibi_maehwa: '/assets/lounge/chibi/npc-maehwa.webp',
   tavernCardKing: '/assets/lounge/cards/tavern-king.webp',
   tavernCardQueen: '/assets/lounge/cards/tavern-queen.webp',
   tavernCardAce: '/assets/lounge/cards/tavern-ace.webp',

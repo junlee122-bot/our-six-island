@@ -78,7 +78,9 @@
 
 ## 4. 그림
 
-루미·로제·매화가 걷는 동안의 그림은 기존 주민 레이어(`ResidentLayer`)가 그린다. 로제는 치비(`chibi_rose`)가 있다. 루미·매화는 치비가 없어 기존 방식대로 진행자 포즈 시트의 기본 자세(calm)로 그려진다. 마을에서 스크린샷으로 확인했고 다른 주민과 비슷한 크기로 깨짐 없이 보이지만, 걷는 동안에도 같은 자세(주민 레이어의 걸음 흔들림만)다. 치비 원본(`public/assets/lounge/_originals/chibi/npc-chibi-lumi-maehwa.png`)을 넣고 `node scripts/optimize-assets.mjs chibi lumi maehwa` 후 `NPC_CHIBI`에 두 줄을 더하면 다른 주민과 같은 그림 체계가 된다(스크립트의 `CHIBI_FILES`에도 한 줄 필요).
+루미·로제·매화가 걷는 동안의 그림은 기존 주민 레이어(`ResidentLayer`)가 그린다. 세 사람 모두 치비(`chibi_rose`, `chibi_lumi`, `chibi_maehwa`)로 다른 주민과 같은 판 높이·발 선으로 걷는다. 루미·매화 치비 원본은 `public/assets/lounge/_originals/chibi/npc-chibi-lumi.png`, `npc-chibi-maehwa.png`(기록 `lumi-maehwa-chibi-generation.json`, 각자 진행자 시트의 calm 칸을 캐릭터 레퍼런스로, 럭스·힘멜 치비를 스타일 레퍼런스로 생성)이고, 웹 사본 `chibi/npc-lumi.webp`·`npc-maehwa.webp`(512×640)와 `npc-chibi-generation.json`의 `web` 기록은 `node scripts/optimize-assets.mjs chibi lumi maehwa`가 만든다(`CHIBI_FILES`에 한 명짜리 줄 둘). 인물 상자는 다른 치비와 같은 y 19~620(640 캔버스의 94%, 발 97% 선)이라 키가 같다.
+
+테이블·화투방 진행자 자리(`lounge-interior-hosts.ts`), 게임 화면 띠(`DealerHost`), 대화 초상(`NpcPortrait`)은 그대로 진행자 포즈 시트를 쓴다. 주민 레이어·침실의 포즈 시트 calm 칸 그림은 치비가 없을 때(지금은 허 선장)만 쓰는 대체 경로다.
 
 ## 5. 테스트
 

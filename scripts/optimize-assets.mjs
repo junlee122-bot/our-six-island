@@ -659,6 +659,8 @@ const CHIBI_FILES = [
   ['yaninekko'],
   ['shinhyungman', 'bongmison'],
   ['valkyrie'],
+  ['lumi'],
+  ['maehwa'],
 ];
 /** Chibi files named after the person; the record keys them by resident id. */
 const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun', valkyrie: 'carpenter' };
