@@ -221,7 +221,7 @@ test('freshwater dishes: dish formula, buffs, museum; bundles are unchanged', ()
   for (const d of FRESH_DISHES) {
     const value = d.needs.reduce((s, n) => s + (FISH_BY_ID[n.item]?.sell ?? CROP_SELL_REF[n.item]) * n.n, 0);
     assert.equal(d.sell, Math.round((value * 1.25 + 100) / 10) * 10, d.id);
-    assert.equal(DISH_BY_ID[d.id], d);
+    assert.deepStrictEqual(DISH_BY_ID[d.id], d, `${d.id} is registered as written`);
     assert.ok(d.buff && ITEM_BY_ID[d.id].museum, d.id);
     assert.ok(d.needs.some((n) => FRESH_FISH_IDS.has(n.item)), `${d.id} uses a new fish`);
   }
