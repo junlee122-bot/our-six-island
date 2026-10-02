@@ -245,7 +245,8 @@ test('chess and Go-Stop can run concurrently with independent seats and departur
   // automatically by the server until the round ends.
   assert.equal(r.go.phase, goPhase);
   assert.equal(r.go.revision, goRevision);
-  assert.deepEqual(r.view.seats.gostop, ['p2', 'p3', 'p4']);
+  // A round that the deal already ended (e.g. a 4-of-a-kind hand) frees the seat at once.
+  assert.deepEqual(r.view.seats.gostop, goPhase === 'over' ? ['p2', null, 'p4'] : ['p2', 'p3', 'p4']);
   assert.equal(r.goAway.has(1), goPhase !== 'over');
   assert.equal(r.chess.id, chessId);
   assert.equal(r.chess.winner, null);
