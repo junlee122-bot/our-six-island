@@ -407,9 +407,9 @@ async function runView(browser, base, view, report) {
 
   // 3단계 (--stage3): through the 들길 to 목장·과수원 and the 산길 to 산기슭 마을, a capture of each and its minimap pins.
   if (flag('stage3'))
-    for (const [area, gate, home, pins] of [
-      ['ranch', { x: 40, z: -42 }, { x: -12, z: 23 }, ['barn', 'orchardShop', 'exit-village']],
-      ['foothill', { x: -20, z: -42 }, { x: 0, z: 20 }, ['smithy', 'clinic', 'fortune', 'exit-mine', 'exit-village']],
+    for (const { area, gate, home, pins } of [
+      { area: 'ranch', gate: { x: 40, z: -42 }, home: { x: -12, z: 23 }, pins: ['barn', 'orchardShop', 'exit-village'] },
+      { area: 'foothill', gate: { x: -20, z: -42 }, home: { x: 0, z: 20 }, pins: ['smithy', 'clinic', 'fortune', 'exit-mine', 'exit-village'] },
     ])
       await step(area, async () => {
         try {
