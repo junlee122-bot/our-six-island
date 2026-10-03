@@ -103,7 +103,7 @@ export const NPC_LOVE_FALLBACK: NpcLoveSet = {
   greet: { dawn: ['{me}, 일찍 일어났네요.'], day: ['{me}, 점심은 먹었어요?'], evening: ['{me}, 오늘 하루 수고했어요.'], night: ['{me}, 늦었어요. 같이 들어가요.'] },
   weather: { rain: ['비 오는 날엔 우산 하나로 같이 걸어요.'], snow: ['눈 오는 날, 손 시리면 내 주머니에 넣어요.'], sunny: ['날이 좋네요. 같이 걸을래요?'] },
   season: { spring: ['봄이에요. 꽃 보러 가요.'], summer: ['여름밤엔 바람 쐬러 가요.'], autumn: ['가을엔 같이 낙엽 길을 걸어요.'], winter: ['겨울엔 따뜻한 차 한 잔 해요.'] },
-  ask: { accept: ['…네. 저도 같은 마음이었어요.'], decline: ['고마워요. 그래도 조금만 더 친해진 다음에요.'], taken: ['미안해요. 마음을 정한 사람이 있어요.'] },
+  ask: { accept: ['…네. 저도 같은 마음이었어요.'], decline: ['고마워요. 그래도 조금만 더 친해진 다음에요.'], taken: ['미안해요. 마음을 정한 사람이 있어요.'], cool: ['지금은 마음부터 쉬어요. 꽃다발은 나중에요.'] },
   propose: { accept: ['네. 평생 옆에 있을게요.'], decline: ['조금만 더 기다려 줘요. 진심이니까요.'] },
   wedding: ['오늘 이 광장에서 약속해요.', '좋은 날도 궂은 날도 {me} 옆에 있을게요.', '앞으로 잘 부탁해요.'],
   home: {
@@ -218,11 +218,13 @@ export function npcLoveOpener(npc: NpcId, now: number, weather: Weather, season:
 
 const pick = (pool: readonly string[] | undefined, key: string) => (pool && pool.length ? pool[hash32(key) % pool.length] : undefined);
 
-export type NpcLoveMoment = 'ask-accept' | 'ask-decline' | 'ask-taken' | 'propose-accept' | 'propose-decline' | 'breakup' | 'gift';
+export type NpcLoveMoment = 'ask-accept' | 'ask-decline' | 'ask-taken' | 'ask-cool' | 'propose-accept' | 'propose-decline' | 'breakup' | 'gift';
 /**
  * One line for a moment (a 꽃다발, a 청혼 반지, a breakup, the morning
- * present). A married resident (NPC_LOVE_MARRIED) turns every 꽃다발 and ring
- * down; `me` picks 발키리's 언니·동생 answers.
+ * present). The refusals (npcLoveRefusal says which) are in the resident's
+ * own voice: not yet, already promised to another friend, or 'ask-cool'
+ * while my breakup cooldown runs. A married resident (NPC_LOVE_MARRIED)
+ * turns every 꽃다발 and ring down; `me` picks 발키리's 언니·동생 answers.
  */
 export function npcLoveLine(npc: NpcId, moment: NpcLoveMoment, key: string, me?: string): string {
   const M = NPC_LOVE_MARRIED[npc];
@@ -234,6 +236,7 @@ export function npcLoveLine(npc: NpcId, moment: NpcLoveMoment, key: string, me?:
     moment === 'ask-accept' ? S?.ask.accept ?? L.ask.accept
     : moment === 'ask-decline' ? S?.ask.decline ?? L.ask.decline
     : moment === 'ask-taken' ? L.ask.taken
+    : moment === 'ask-cool' ? L.ask.cool ?? L.ask.decline
     : moment === 'propose-accept' ? S?.propose.accept ?? L.propose.accept
     : moment === 'propose-decline' ? S?.propose.decline ?? L.propose.decline
     : moment === 'breakup' ? L.breakup

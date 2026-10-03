@@ -3,7 +3,7 @@
 // and the choices offered after the lines. The rules themselves (one talk
 // and one gift a day, where they can be met) stay in lounge-romance.ts;
 // this only says what the box shows.
-import { NPCS, NPC_POINTS_MAX, NPC_TALK_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
+import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_POINTS_MAX, NPC_PROPOSE_POINTS, NPC_TALK_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
 import type { NpcSpot } from './lounge-npc-schedule.ts';
 
 /** Relation points (0–120) as the ten hearts a friend shows: one heart per 12 points. */
@@ -114,6 +114,33 @@ export function npcLoveChoices(o: { npc: NpcId; rows: readonly LoveRow[]; day: n
   // 생일 잔치: my partner has a present for me, once on my birthday.
   if (o.birthday && row?.love && row.bdayGiftDay !== o.day) out.push('bdayGift');
   return out;
+}
+export type NpcLoveRefusal = 'ask-cool' | 'ask-taken' | 'ask-decline' | 'propose-decline';
+/**
+ * Whether a resident turns down my 꽃다발 or 청혼 반지 and why, checked in
+ * the server's order (lounge-romance.ts): my breakup cooldown, then a
+ * resident already promised to another friend, then too few hearts (or, for
+ * the ring, too few days together). null: they say yes. Their answer is a
+ * line in their own voice (npcLoveLine), and the item stays with me.
+ */
+export function npcLoveRefusal(o: {
+  op: 'ask' | 'propose';
+  points: number;
+  /** KST day the dating began (the ring). */
+  since?: number;
+  day: number;
+  /** The latest coolUntil over my rows (0: none). */
+  coolUntil: number;
+  /** Engaged or married to another friend. */
+  takenByOther: boolean;
+}): NpcLoveRefusal | null {
+  if (o.op === 'ask') {
+    if (o.coolUntil > o.day) return 'ask-cool';
+    if (o.takenByOther) return 'ask-taken';
+    return o.points < NPC_DATING_POINTS ? 'ask-decline' : null;
+  }
+  if (o.takenByOther) return 'ask-taken';
+  return o.points < NPC_PROPOSE_POINTS || o.day - (o.since ?? o.day) < NPC_DATING_DAYS ? 'propose-decline' : null;
 }
 /** What a talk needs about my love life with `npc` (npcTalk's love fields). */
 export function npcLoveTalk(rows: readonly LoveRow[], npc: NpcId, day: number) {

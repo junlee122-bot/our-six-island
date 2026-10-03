@@ -36,8 +36,13 @@ export type NpcLoveSet = {
   greet: Record<TimeOfDay, string[]>;
   weather: { rain: string[]; snow: string[]; sunny: string[] };
   season: Record<Season, string[]>;
-  /** 꽃다발을 받았을 때: 수락(8하트 이상) · 거절(아직 아님) · 다른 사람과 사귀는 중이라 거절. */
-  ask: { accept: string[]; decline: string[]; taken: string[] };
+  /**
+   * 꽃다발을 받았을 때: 수락(8하트 이상) · 거절(아직 아님) · 이미 다른 친구와
+   * 약혼·결혼해서 거절(청혼 반지도 같은 말) · 헤어진 지 얼마 안 된 친구에게
+   * "지금은 쉬어요"(cool, 꽃다발 쿨타임). 거절은 모두 다정하게, 그 주민 말투로.
+   * cool이 없는 주민(발키리)은 decline으로 대답해요.
+   */
+  ask: { accept: string[]; decline: string[]; taken: string[]; cool?: string[] };
   /** 청혼 반지를 받았을 때: 수락(10하트, 사귄 지 사흘 이상) · 거절(아직 아님). */
   propose: { accept: string[]; decline: string[] };
   /** 결혼식에서 하는 말(혼인 서약), 순서대로 한 장씩. */
