@@ -161,6 +161,11 @@ test('room button: 나가기 at the door, 꾸미기 elsewhere in my room, nothin
   };
   assert.equal(roomAction({ x: 3, z: -2.6 }, withWardrobe, { own: true })?.kind, 'dress');
   assert.equal(roomAction({ x: 3, z: -2.6 }, withWardrobe, { own: true, canDress: false })?.kind, 'decorate');
+  // 시간 체계 P1: beside my bed, 하루 마감 (only when the room offers it; never a friend's bed).
+  const bed = besideBed(room);
+  assert.equal(roomAction(bed, room, { own: true, canSleep: true })?.kind, 'sleep');
+  assert.notEqual(roomAction(bed, room, { own: true })?.kind, 'sleep');
+  assert.notEqual(roomAction(bed, room, { own: false, canSleep: true })?.kind, 'sleep');
 });
 
 test('walking down into the front wall at the doorway leaves the room', () => {
