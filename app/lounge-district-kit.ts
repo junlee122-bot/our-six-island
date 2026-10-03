@@ -17,6 +17,8 @@ import * as THREE from 'three';
 import { districtModel } from './lounge-district-models';
 import type { DistrictId } from './lounge-districts';
 
+/** Height between stacked paving strips (well above the depth buffer's step at the area cameras' range). */
+const PAVE_STEP = 0.002;
 export const DISTRICT_FONT = '"Jua", "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
 export type SignColors = { bg: string; ink: string; line: string };
 export const districtMat = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) =>
@@ -111,10 +113,16 @@ export class DistrictSet {
     this.root.add(this.plane(w + 70, d + 70, look.groundFar, -0.02));
     this.root.add(this.plane(w, d, look.ground, 0));
   }
-  /** A flat paving strip. */
+  /**
+   * Paving strips laid so far: each later strip sits a hair higher, so where
+   * a road crosses a yard the two never share a depth (they flickered there).
+   */
+  private paved = 0;
+  /** A flat paving strip (later strips draw on top of earlier ones). */
   protected pave(p: { x: number; z: number; w: number; d: number }, color: string, y = 0.012) {
-    const m = this.plane(p.w, p.d, color, y);
-    m.position.set(p.x, y, p.z);
+    const at = y + Math.min(this.paved++, 40) * PAVE_STEP;
+    const m = this.plane(p.w, p.d, color, at);
+    m.position.set(p.x, at, p.z);
     this.root.add(m);
     return m;
   }
