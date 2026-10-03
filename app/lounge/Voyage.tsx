@@ -12,7 +12,7 @@ import { formatBeom, josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
 import { WEATHER_INFO, gameClockText, weatherOf } from '../lounge-calendar';
 import { kstDay } from '../lounge-economy';
-import { BOARDING_MS, DAWN_GUESTS, PILL, SEATS, VOYAGE_LINES, VOYAGE_MS, boardingSailing, nextSailing } from '../lounge-voyage-data';
+import { BOARD_GRACE_MS, BOARDING_MS, DAWN_GUESTS, PILL, SAILING_STEP_MS, SEATS, VOYAGE_LINES, VOYAGE_MS, boardingSailing, lastSailing, nextSailing, nightHarbor } from '../lounge-voyage-data';
 import type { VoyageView } from '../lounge-voyage';
 import { lifeSfx } from '../lounge-audio-life';
 import { Modal } from './Modal';
@@ -44,8 +44,10 @@ export function tripPhaseNow(trip: VoyageView['trip'], now: number): TripPhase |
 // ---------------------------------------------------------------- boarding window
 export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; view: CloudRoomView; notify: Notify; onClose: () => void }) {
   const v = view.life?.voyage;
-  const now = useNow(true, 1000) + view.clockOffset;
+  const now = useNow(true, 250) + view.clockOffset;
   const [busy, setBusy] = useState(false);
+  /** The boat the server just put me on, until the next view carries the trip. */
+  const [boarded, setBoarded] = useState<number | null>(null);
   const me = view.players.find((p) => p.id === view.self);
   const myName = me ? (ACTORS[me.actor] ?? '친구') : '친구';
   const day = kstDay(now);
@@ -61,35 +63,62 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
       setBusy(false);
     }
   };
+  const phase = v ? tripPhaseNow(v.trip, now) : null;
+  // My boat is leaving: the board steps aside so the sail-out (and the deck) show.
+  const sailed = phase === 'sailing' && !!v?.trip && !v.trip.left;
+  useEffect(() => {
+    if (sailed) onClose();
+  }, [sailed, onClose]);
   if (!v)
     return (
       <Modal title="먼바다 출항 안내판" onClose={onClose}>
         <p className="l-help-text">서버 정보를 받는 중이에요.</p>
       </Modal>
     );
-  const phase = tripPhaseNow(v.trip, now);
   const boardingDep = boardingSailing(now);
   const next = nextSailing(now);
+  // A boat that left a moment ago (until the next one's boarding opens): the board says so instead of jumping to the next one.
+  const left = lastSailing(now);
+  const justLeft = !boardingDep && left !== null && now < left + SAILING_STEP_MS - BOARDING_MS ? left : null;
   const seats = v.boarding && boardingDep === v.boarding.dep ? v.boarding.seats : 0;
   const guest = v.guestOf && now < v.guestOf.dep ? v.guestOf : null;
+  // Boarded (the trip, or the server's yes before the view caught up): the boat's own countdown.
+  const myDep = phase === 'boarding' && v.trip ? v.trip.dep : boarded !== null && !v.trip && now < boarded + BOARD_GRACE_MS ? boarded : null;
   const say = v.storm
     ? lineOf(VOYAGE_LINES.captain.storm, day)
     : !v.unlocked
       ? lineOf(VOYAGE_LINES.captain.board, day)
       : fill(lineOf(VOYAGE_LINES.captain.board, day + 1), myName);
   const why = v.storm
-    ? '오늘은 폭풍이라 결항이에요.'
+    ? '오늘은 폭풍이라 결항이에요. 내일 다시 와 주세요.'
     : !v.unlocked
       ? `항구 구역이 열리고 낚시 Lv${v.level}이 되면 탈 수 있어요.`
-      : v.sailedToday && !phase
-        ? '배는 하루에 한 번만 탈 수 있어요.'
-        : phase && phase !== 'back'
+      : phase === 'sailing'
+        ? '지금 배를 타고 있어요.'
+        : myDep !== null
           ? ''
-          : !boardingDep
-            ? `다음 배는 ${hhmm(next)}에 떠요. 출항 2분 전부터 타요.`
-            : seats >= SEATS
-              ? '이 배는 자리가 다 찼어요.'
-              : '';
+          : v.sailedToday
+            ? '배는 하루에 한 번만 탈 수 있어요. 내일 또 와 주세요.'
+            : justLeft !== null
+              ? `${hhmm(justLeft)} 배가 방금 떠났어요. 다음 배는 ${hhmm(next - BOARDING_MS)}부터 탈 수 있어요.`
+              : !boardingDep
+                ? nightHarbor(now)
+                  ? `밤에는 배가 쉬어요. 첫 배는 ${hhmm(next)}에 떠요(게임 새벽 5시, 승선 ${hhmm(next - BOARDING_MS)}부터).`
+                  : `다음 배는 ${hhmm(next)}에 떠요. 출항 2분 전(${hhmm(next - BOARDING_MS)})부터 타요.`
+                : seats >= SEATS
+                  ? '이 배는 자리가 다 찼어요. 다음 배를 기다려 주세요.'
+                  : !v.trip && (view.wallet?.balance ?? 0) < v.fare
+                    ? `승선료가 모자라요(${formatBeom(v.fare)}).`
+                    : '';
+  const board = async () => {
+    const dep = boardingDep;
+    if (dep === null) return;
+    const ok = await run({ kind: 'voyageBoard', sailing: dep }, `${hhmm(dep)} 배에 탔어요! 곧 출항해요.`);
+    if (ok) {
+      setBoarded(dep);
+      lifeSfx('pop');
+    }
+  };
   return (
     <Modal title="먼바다 출항 안내판" onClose={onClose} className="l-voyage-board">
       <div className="l-voyage-keeper">
@@ -105,9 +134,11 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
           <dd>{formatBeom(v.fare)} · 하루 한 번</dd>
         </div>
         <div>
-          <dt>{boardingDep ? '이번 배' : '다음 배'}</dt>
+          <dt>{myDep !== null ? '내 배' : boardingDep ? '이번 배' : '다음 배'}</dt>
           <dd data-testid="voyage-next">
-            게임 {gameClockText(boardingDep ?? next)}(실제 {hhmm(boardingDep ?? next)}) 출항 · {boardingDep ? `${mmss(boardingDep - now)} 남음` : `승선 ${hhmm((boardingDep ?? next) - BOARDING_MS)}부터`}
+            {myDep !== null
+              ? `게임 ${gameClockText(myDep)}(실제 ${hhmm(myDep)}) 출항 · ${myDep > now ? `${mmss(myDep - now)} 남음` : '출항해요!'}`
+              : `게임 ${gameClockText(boardingDep ?? next)}(실제 ${hhmm(boardingDep ?? next)}) 출항 · ${boardingDep ? `${mmss(boardingDep - now)} 남음` : `승선 ${hhmm(next - BOARDING_MS)}부터`}`}
           </dd>
         </div>
         <div>
@@ -137,18 +168,18 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
           <dd>{v.pillUntil ? `먹었어요 · 자정까지 배가 덜 흔들려요` : (view.life?.me.inv?.[PILL] ?? 0) > 0 ? '가방에 있어요 · 가방에서 먹기' : '츠나데 텃밭에서 팔아요'}</dd>
         </div>
       </dl>
-      {phase === 'boarding' && v.trip && (
+      {myDep !== null && (
         <p className="l-voyage-aboard" data-testid="voyage-aboard">
-          {v.trip.dawn ? '새벽 배' : `${hhmm(v.trip.dep)} 배`}에 자리를 잡았어요. {mmss(v.trip.dep - now)} 뒤 출항해요.
-          {v.trip.seats.length > 1 && ` 함께: ${v.trip.seats.map((a) => ACTORS[a]).join(', ')}`}
+          {v.trip?.dawn ? '새벽 배' : `${hhmm(myDep)} 배`}에 자리를 잡았어요. {myDep > now ? `${mmss(myDep - now)} 뒤 출항해요. 선착장을 떠나지 마세요!` : '지금 출항해요!'}
+          {v.trip && v.trip.seats.length > 1 && ` 함께: ${v.trip.seats.map((a) => ACTORS[a]).join(', ')}`}
         </p>
       )}
       {why && <p className="l-why" data-testid="voyage-why">{why}</p>}
-      {!phase && v.unlocked && (view.wallet?.balance ?? 0) < v.fare && <p className="l-help-text">{VOYAGE_LINES.rose.fare[0]} — 미스 포츈</p>}
+      {!phase && myDep === null && v.unlocked && (view.wallet?.balance ?? 0) < v.fare && <p className="l-help-text">{VOYAGE_LINES.rose.fare[0]} — 미스 포츈</p>}
       <p className="l-help-text">{VOYAGE_LINES.gabung.tomorrow[v.stormTomorrow ? 1 : 0]} — 가붕</p>
       <div className="l-voyage-actions">
-        {phase === 'boarding' ? (
-          <button type="button" className="l-secondary" disabled={busy} onClick={() => void run({ kind: 'voyageLeave' }, '배에서 내렸어요. 승선료를 돌려받았어요.')} data-testid="voyage-off">
+        {myDep !== null ? (
+          <button type="button" className="l-secondary" disabled={busy || myDep <= now} onClick={() => void run({ kind: 'voyageLeave' }, '배에서 내렸어요. 승선료를 돌려받았어요.')} data-testid="voyage-off">
             내리기 (환불)
           </button>
         ) : (
@@ -164,13 +195,7 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
                 {ACTORS[guest.from]}의 새벽 배 타기 · {formatBeom(v.dawnFare)}
               </button>
             )}
-            <button
-              type="button"
-              className="l-primary"
-              disabled={busy || !!why || phase === 'sailing'}
-              onClick={() => void run({ kind: 'voyageBoard' }, `${hhmm(boardingDep ?? next)} 배에 탔어요! 곧 출항해요.`).then((ok) => ok && lifeSfx('pop'))}
-              data-testid="voyage-board"
-            >
+            <button type="button" className="l-primary" disabled={busy || !!why || !boardingDep} onClick={() => void board()} data-testid="voyage-board">
               타기 · {formatBeom(v.fare)}
             </button>
           </>
@@ -378,6 +403,7 @@ export function useVoyageFlow({
   busy,
   toDeck,
   toPier,
+  notify,
 }: {
   view: CloudRoomView;
   area: string | null;
@@ -385,6 +411,8 @@ export function useVoyageFlow({
   busy: boolean;
   toDeck: () => void;
   toPier: () => void;
+  /** Says why the boat left without me (I was not at the pier). */
+  notify?: Notify;
 }) {
   const trip = view.life?.voyage?.trip ?? null;
   const now = useNow(!!trip, 500) + view.clockOffset;
@@ -421,6 +449,15 @@ export function useVoyageFlow({
     },
     [],
   );
+  // My boat left while I was away from the pier (or busy): say so once, and
+  // that coming to the harbor still takes me aboard while it is out.
+  const told = useRef<string | null>(null);
+  const away = phase === 'sailing' && !!trip && !trip.left && area !== 'harbor' && area !== 'offshore';
+  useEffect(() => {
+    if (!away || !trip || told.current === trip.id) return;
+    told.current = trip.id;
+    notify?.(`${trip.dawn ? '새벽 배' : `${hhmm(trip.dep)} 배`}가 출항했어요! 항구 큰 선착장에 오면 바로 갑판에 올라요.`, 'info');
+  }, [away, trip, notify]);
   // Once I am where the overlay was taking me, it is gone.
   const shown = sailing === 'out' ? (area === 'offshore' ? null : sailing) : sailing === 'back' ? (area === 'offshore' ? sailing : null) : null;
   return {

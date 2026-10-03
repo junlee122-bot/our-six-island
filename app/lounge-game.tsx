@@ -911,6 +911,7 @@ function AccountLounge({
     busy: inGame || !!fishing || visiting !== null || view.status !== 'connected',
     toDeck: outdoorApi.toDeck,
     toPier: outdoorApi.toPier,
+    notify,
   });
   // Music: the casino / hall location track (lounge-music-tracks.ts) inside and
   // at their tables, quieter at a table; the village music box elsewhere.

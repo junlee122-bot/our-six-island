@@ -153,7 +153,8 @@ body:has(.b3-room[data-editing]) .l-adapt {
 }
 .l-hud-weather[data-weather='snow'] {
   background: var(--note-50);
-  color: var(--water-600);
+  /* --water-600 read 4.47:1 on the paper tag (under 4.5:1 on snow days) */
+  color: var(--pal-cyan-39);
 }
 .l-hud-event-dot {
   background: var(--ink-on-wood);

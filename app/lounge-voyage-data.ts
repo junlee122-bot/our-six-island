@@ -28,6 +28,14 @@ export const VOYAGES_PER_DAY = 1;
 export const VOYAGE_MS = 20 * MIN;
 /** Boarding opens this long before a departure. */
 export const BOARDING_MS = 2 * MIN;
+/**
+ * The gangway stays down this long after a departure for a boarding the
+ * player sent in time: a tap on the last second of the countdown reaches the
+ * server a moment later (network, a client clock a little behind), and must
+ * still put them on that boat, never on the next one. Far below the 30 s gap
+ * before the next boat's boarding opens.
+ */
+export const BOARD_GRACE_MS = 5_000;
 /** Seats per boat. */
 export const SEATS = 4;
 /**
@@ -95,8 +103,12 @@ export const RAIL_REACH = 1.3;
 // ---------------------------------------------------------------- actions
 export const VOYAGE_ACTION_KINDS = ['voyageBoard', 'voyageLeave', 'voyageDone', 'voyageInvite', 'pillBuy', 'pillTake'] as const;
 export type VoyageAction =
-  /** Board the next departure at the pier (or the dawn boat I was invited onto: `dawn` = its id). */
-  | { kind: 'voyageBoard'; dawn?: string }
+  /**
+   * Board at the pier: `sailing` is the departure the board showed me (the
+   * server puts me on exactly that boat or says why not, never on another);
+   * without it, the one boarding now. `dawn`: the dawn boat I was invited onto (its id).
+   */
+  | { kind: 'voyageBoard'; dawn?: string; sailing?: number }
   /** 그만 돌아가기 (no refund), or step off before the boat leaves (refund). */
   | { kind: 'voyageLeave' }
   /** Close the catch summary after coming back. */
@@ -123,6 +135,21 @@ export function sailingsOf(gameDay: number): number[] {
 export function boardingSailing(now: number): number | null {
   return sailingsOf(gameDayOf(now)).find((t) => now >= t - BOARDING_MS && now < t) ?? null;
 }
+/**
+ * The departure a boarding sent at `now` goes on: the one boarding now, or one
+ * that left less than BOARD_GRACE_MS ago (the server decides; null between).
+ */
+export function boardableSailing(now: number): number | null {
+  const g = gameDayOf(now);
+  return [...sailingsOf(g - 1).slice(-1), ...sailingsOf(g)].find((t) => now >= t - BOARDING_MS && now < t + BOARD_GRACE_MS) ?? null;
+}
+/** The departure that left most recently at or before `now` (this game day or the previous one; null if none). */
+export function lastSailing(now: number): number | null {
+  const g = gameDayOf(now);
+  return [...sailingsOf(g - 1), ...sailingsOf(g)].filter((t) => t <= now).at(-1) ?? null;
+}
+/** Night at the harbor: no boat for more than a game hour (after the 19:00 boat until the 04:00 hour). */
+export const nightHarbor = (now: number) => nextSailing(now) - now > SAILING_STEP_MS;
 /** The next departure after `now` (this game day or the next one's first). */
 export function nextSailing(now: number): number {
   const g = gameDayOf(now);

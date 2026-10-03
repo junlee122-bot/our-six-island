@@ -69,7 +69,7 @@ export class HarborSet extends DistrictSet {
     this.root.add(boat.group);
     this.own(boat);
     this.boat = boat;
-    this.signpost('먼바다 출항', '05~19시 · 30분마다', { bg: '#e8f1f6', ink: '#1f4a6a', line: '#3f7fae' }, HARBOR_VOYAGE.board.x, HARBOR_VOYAGE.board.z, {
+    this.signpost('먼바다 출항', '05~19시 · 매 정시', { bg: '#e8f1f6', ink: '#1f4a6a', line: '#3f7fae' }, HARBOR_VOYAGE.board.x, HARBOR_VOYAGE.board.z, {
       w: 2.2,
       h: 1.5,
       name: 'harbor-voyage-board',
