@@ -442,3 +442,7 @@
   outline: 2px dashed var(--ff-wood-dark);
   outline-offset: -3px;
 }
+/* The field's name sits above the house-side yard spots, not on them. */
+.l-fw-bed.l-fw-field {
+  padding-top: var(--sp-5);
+}

@@ -611,7 +611,7 @@ export function AreaScene({
         const a = actionRef.current;
         // 우리 농장 F2: holding E keeps working the field tile by tile (the frame loop), not by key repeat.
         const fieldTile = a?.kind === 'farm' && a.touch.kind === 'tile';
-        if (event.repeat && (fieldTile || l.acting)) {
+        if (event.repeat && fieldTile) {
           event.preventDefault();
           return;
         }
