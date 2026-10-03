@@ -132,7 +132,7 @@ export type AreaSceneProps = {
   dayNight?: boolean;
   /** 먼바다: the deck holds still (멀미약 taken today). */
   steady?: boolean;
-  /** 항구: a voyage is out (the moored boat is gone) and 허 선장 waits at the pier. */
+  /** 항구: a voyage is out (the moored boat is gone) and 샹크스 waits at the pier. */
   harborBoat?: { out: boolean; captain: boolean };
   /** 먼바다: a big catch just landed (its time): the fish jumps once by the bobber. */
   bigCatch?: number;

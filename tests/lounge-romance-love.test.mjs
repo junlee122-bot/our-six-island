@@ -150,7 +150,7 @@ test('a spouse sleeps in my room, hands over one present a day there, and works 
   const guest = s.view(m, night).npcGuests['0'];
   assert.equal(guest.npc, 'lumi');
   assert.equal(guest.spouse, true);
-  // 루미 deals until 01:00 and sleeps in until her late-morning café (lounge-npc-schedule.ts hostPlan).
+  // 미쿠 deals until 01:00 and sleeps in until her late-morning café (lounge-npc-schedule.ts hostPlan).
   assert.ok(guest.until > night && guest.until <= at(1, 11) + GAME_HOUR_MS);
   assert.equal(npcGuestOf(s.life.ext[m.id].npcRelations, at(1, 14)), undefined);
   // The present: at home, once a day.
@@ -247,8 +247,8 @@ test('talks unlock the love lines by hearts and state', () => {
       if (date.some((l) => L.tier.dating.some((t) => l === t.replaceAll('{me}', '도원')) || Object.values(L.greet).flat().some((t) => l === t.replaceAll('{me}', '도원')))) seen.dating = true;
       const wed = npcTalk({ ...base, now: at(d, 6), points: 120, love: 'married', days: d + 1, atHome: true }).lines;
       if (wed.some((l) => [...L.tier.married, ...L.home.morning].some((t) => l === t.replaceAll('{me}', '도원')))) seen.married = true;
-      const jealous = npcTalk({ ...base, points: 80, otherPartner: '루미' }).lines;
-      if (jealous.some((l) => L.jealous.some((t) => l === t.replaceAll('{me}', '도원').replaceAll('{partner}', '루미')))) seen.jealous = true;
+      const jealous = npcTalk({ ...base, points: 80, otherPartner: '미쿠' }).lines;
+      if (jealous.some((l) => L.jealous.some((t) => l === t.replaceAll('{me}', '도원').replaceAll('{partner}', '미쿠')))) seen.jealous = true;
     }
     assert.deepEqual(seen, { dating: true, married: true, jealous: true }, id);
   }
@@ -375,7 +375,7 @@ test('the realty couple have friendship lines by hearts, banter about each other
     const plain = npcLovePools(base, T0);
     assert.deepEqual(plain, [M.tier.h5, M.tier.h5, M.spouse, M.carpenter]);
     assert.equal(npcLovePools({ ...base, points: 120 }, T0)[0], M.tier.h7);
-    const dating = npcLovePools({ ...base, otherPartner: '루미', otherNpc: 'lumi', otherLove: 'dating' }, T0);
+    const dating = npcLovePools({ ...base, otherPartner: '미쿠', otherNpc: 'lumi', otherLove: 'dating' }, T0);
     assert.ok(dating.includes(M.news.dating) && !dating.includes(M.advice) && !dating.includes(M.newsCarpenter));
     const wed = npcLovePools({ ...base, otherPartner: '발키리', otherNpc: 'carpenter', otherLove: 'married' }, T0);
     assert.ok(wed.includes(M.news.married) && wed.includes(M.advice) && wed.includes(M.newsCarpenter));

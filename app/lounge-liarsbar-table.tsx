@@ -1,5 +1,5 @@
 'use client';
-// 허풍 카드 table (허풍 주점): 허 선장's strip, the seats around the table
+// 허풍 카드 table (허풍 주점): 샹크스's strip, the seats around the table
 // (hand-back counts, each toy revolver's pulls and next risk), 오늘의 카드 in
 // the middle, my hand, and the roulette moment (reveal → trigger → shot) as a
 // push-in overlay. Only the public view is ever shown (lounge-liarsbar.ts).

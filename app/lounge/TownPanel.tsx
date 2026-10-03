@@ -97,7 +97,7 @@ const AREA_WORD: Record<string, string> = {
   casino: '별빛 카지노',
   lounge: '범마을 회관',
   tavern: '허풍 주점',
-  bank: '냐모 은행',
+  bank: '나모 은행',
   salon: '보송 미용실',
   bakery: '느긋한 빵집 카페',
   coop: '범마을 농협',
@@ -139,7 +139,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
   const now = useNow(true, 30_000) + view.clockOffset;
   const me = view.players.find((p) => p.id === view.self);
   const keeper = place === 'signpost' || place === 'tavern' ? null : KEEPER[place];
-  const title = place === 'signpost' ? '친구에게 가기' : place === 'tavern' ? '허풍 주점 · 허 선장' : keeper!.title;
+  const title = place === 'signpost' ? '친구에게 가기' : place === 'tavern' ? '허풍 주점 · 샹크스' : keeper!.title;
   const act = (a: LifeAction, done: string) => void run(a, done, 'coin');
   const [page, setPage] = useState<Page>('buy');
   const base = { room, view, notify };
@@ -524,7 +524,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
             <DealerAvatar host="captain" mood="smile" />
           </span>
           <p>
-            <b>{HOSTS.captain.name}</b> <span>한 상 차려 줄까요? 요리를 가져오면 제값에 사 드려요!</span>
+            <b>{HOSTS.captain.name}</b> <span>한 상 차려 줄까? 요리를 가져오면 제값 쳐서 사 주지. 하하!</span>
           </p>
           <small>지갑 {formatBeom(view.wallet.balance)}</small>
         </div>

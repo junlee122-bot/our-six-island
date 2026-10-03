@@ -1,5 +1,5 @@
 /** Rosé's independent casino desk. All positions use the shared network floor. */
-export const LENDER_NAME = '로제';
+export const LENDER_NAME = '미스 포츈';
 export const CASINO_LENDER_SPOT = { x: 50, y: 45 } as const;
 export const CASINO_LENDER_FRONT = { x: 50, y: 51 } as const;
 export const CASINO_LENDER_REACH = 7.5;
@@ -13,7 +13,7 @@ export function nearCasinoLender(point: { x: number; y: number }, area: string):
 }
 
 // ---------------------------------------------------------------- credit tiers
-// 로제's limit grows with the borrower's record over the last 30 days (the
+// 미스 포츈's limit grows with the borrower's record over the last 30 days (the
 // window the finance book keeps settled notes for). Only notes of at least
 // CASINO_CREDIT_MIN_PRINCIPAL repaid before their due time count, so tiers
 // cannot be farmed with tiny loans; any late note in the window (collected
@@ -30,7 +30,7 @@ export const CASINO_CREDIT_TIERS: readonly CasinoCreditTier[] = [
   { id: 'new', name: '새 손님', repaid: 0, max: 60_000, days: 3 },
   { id: 'regular', name: '단골', repaid: 2, max: 80_000, days: 4 },
   { id: 'trusted', name: '믿을 손님', repaid: 4, max: 100_000, days: 5 },
-  { id: 'vip', name: '로제의 VIP', repaid: 6, max: 120_000, days: 5 },
+  { id: 'vip', name: '미스 포츈의 VIP', repaid: 6, max: 120_000, days: 5 },
 ];
 type CreditNote = { lender: string; borrower: string; principal: number; offeredAt: number; dueAt: number; state: string; late?: boolean };
 /** The borrower's tier now, the on-time count behind it and the next step (null at the top or while late). */

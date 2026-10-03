@@ -316,7 +316,7 @@ export function useOutdoor({
     const stops = m ? mineStops(m, pass, view.life?.growth?.mods.liftPlus ?? 0) : [];
     // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
     const voyage = view.life?.voyage;
-    // 허 선장 is at the pier through the game day's sailings (game 05–19).
+    // 샹크스 is at the pier through the game day's sailings (game 05–19).
     const hour = gameHourOf(Date.now() + view.clockOffset);
     const harborBoat = voyage ? { out: voyage.sailing.length > 0, captain: !voyage.storm && hour >= 5 && hour < 19 } : undefined;
     // A big fish (rare or better) just landed out at sea: it jumps once by the bobber.

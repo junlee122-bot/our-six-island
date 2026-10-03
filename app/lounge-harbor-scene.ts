@@ -28,7 +28,7 @@ import {
   HARBOR_W,
 } from './lounge-harbor-layout';
 import { HARBOR_MODEL_URLS } from './lounge-district-models';
-// 먼바다 낚싯배: the boat moored at the pier, its timetable board and 허 선장.
+// 먼바다 낚싯배: the boat moored at the pier, its timetable board and 샹크스.
 import { HARBOR_VOYAGE } from './lounge-harbor-layout';
 import { buildFishingBoat, type FishingBoat } from './lounge-boat-model';
 import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
@@ -55,7 +55,7 @@ export class HarborSet extends DistrictSet {
     this.buildVoyage();
   }
 
-  /** 허 선장's boat alongside the pier (bow out to sea), the timetable board and the captain. */
+  /** 샹크스's boat alongside the pier (bow out to sea), the timetable board and the captain. */
   private buildVoyage() {
     const boat = buildFishingBoat({ detail: false });
     boat.group.scale.setScalar(0.72);
@@ -70,7 +70,7 @@ export class HarborSet extends DistrictSet {
       h: 1.5,
       name: 'harbor-voyage-board',
     });
-    // 허 선장 from his tavern sheet (calm pose), standing like a resident.
+    // 샹크스 from his tavern sheet (calm pose), standing like a resident.
     const tex = this.own(new THREE.TextureLoader().load(HOST_SHEET.captain, () => this.onChange()));
     tex.colorSpace = THREE.SRGBColorSpace;
     const cell = hostCell('calm');

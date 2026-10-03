@@ -26,7 +26,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
   const active = loans.find((l) => l.state === 'active');
   const remaining = active ? active.principal + active.interest - active.paid : 0;
   const credit = casinoCreditOf(loans, view.self ?? '', now), { tier } = credit;
-  // 로제 walks about on her breaks and days off (lounge-npc-schedule.ts); the desk book keeps working.
+  // 미스 포츈 walks about on her breaks and days off (lounge-npc-schedule.ts); the desk book keeps working.
   const away = !npcAtPost('rose', now);
   const roseNow = away ? npcSpot('rose', now).label : '';
   const paying = Math.min(repay, remaining);
@@ -39,7 +39,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
     ? '약속한 날이 지났네. 이제부턴 네가 가진 범에서 알아서 걷어 갈게.'
     : '네 이름은 장부에 있어. 약속한 날까지 정리해 줘. 나도 약속은 지키거든.'
     : loans.some((l) => l.state === 'paid') ? '깔끔하게 갚았네. 그런 손님은 기억해 두지. 다음 거래도 조건부터 읽어.'
-      : '난 로제. 급한 범이 필요해? 조건은 간단해. 잘 읽고 네가 결정해.';
+      : '난 미스 포츈. 급한 범이 필요해? 조건은 간단해. 잘 읽고 네가 결정해.';
   const run = async (action: FinanceAction) => {
     if (inFlight.current || unavailable) return;
     inFlight.current = true;
@@ -59,7 +59,7 @@ export function CasinoLenderPanel({ room, view, onClose }: {
   return <Modal title={`${LENDER_NAME}의 대출 장부`} wide venue="casino" className="l-casino-lender" onClose={onClose}>
     <div className="l-lender-layout" data-testid="casino-lender-panel" aria-busy={busy}>
       <aside className="l-lender-host">
-        <img src={LOUNGE_ASSETS.casinoLenderSprite} alt="붉은 머리의 해적 상인 로제" className="l-lender-portrait" />
+        <img src={LOUNGE_ASSETS.casinoLenderSprite} alt="붉은 머리의 해적 상인 미스 포츈" className="l-lender-portrait" />
         <h3>{LENDER_NAME}</h3><p>별빛 카지노의 해적 상인</p>
         <output className="l-lender-speech" aria-live="polite">{reply.until > now ? reply.text : greeting}</output>
         {away && <p className="l-lender-away" data-testid="lender-away">{LENDER_NAME}는 지금 자리를 비웠어요({roseNow}). 창구에 남겨 둔 장부로 대출·상환은 그대로 돼요.</p>}

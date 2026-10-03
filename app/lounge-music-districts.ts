@@ -446,7 +446,7 @@ export const FOOTHILL: PieceSpec = {
   nightTempo: 0.86,
 };
 
-// ------------------------------------------------------------ 먼바다 (허 선장's boat)
+// ------------------------------------------------------------ 먼바다 (샹크스's boat)
 // A slow D-mixolydian shanty in 6/8 (84 bpm): the bass rocks on one and four
 // like the swell, the accordion hums the tune, the 대금 answers far off, a
 // surf swell every two bars and no drums at all (design-sea-fishing.md §7).

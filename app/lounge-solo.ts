@@ -24,25 +24,25 @@ export const SOLO_TABLE_GAME: Record<SoloTableKind, 'blackjack' | 'gostop' | 'ch
 export const SOLO_TABLES: readonly SoloActivity[] = [
   {
     kind: 'blackjack',
-    title: '딜러 루미와 블랙잭',
+    title: '딜러 미쿠와 블랙잭',
     detail: '카지노 · 혼자 1:1 · 범이 걸려요',
     hot: false,
   },
   {
     kind: 'practice-gostop',
     title: '고스톱 연습 판',
-    detail: '회관 · 매화·루미(AI)와 · 범 없이',
+    detail: '회관 · 예림이·미쿠(AI)와 · 범 없이',
     hot: false,
   },
   {
     kind: 'practice-chess',
     title: '체스 연습 판',
-    detail: '카지노 · 루미(AI)와 · 범 없이',
+    detail: '카지노 · 미쿠(AI)와 · 범 없이',
     hot: false,
   },
   {
     kind: 'practice-liarsbar',
-    title: '허 선장네 연습 판',
+    title: '샹크스네 연습 판',
     detail: '허풍 주점 · 봇 셋과 · 범 없이',
     hot: false,
   },

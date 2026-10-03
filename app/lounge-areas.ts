@@ -253,7 +253,7 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     area: 'offshore',
     name: '먼바다',
     short: '먼바다',
-    tagline: '허 선장의 낚싯배 · 뱃전마다 낚시',
+    tagline: '샹크스의 낚싯배 · 뱃전마다 낚시',
     bounds: { w: DECK_W, d: DECK_D },
     colliders: DECK_COLLIDERS,
     exits: [],

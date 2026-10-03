@@ -373,7 +373,7 @@ test('staked: two automatic moves in a row forfeit; a real move resets the count
 
 // ---------------------------------------------------------------- lines
 
-test('허 선장 never urges more 범 and always has a line', () => {
+test('샹크스 never urges more 범 and always has a line', () => {
   for (const line of allCaptainLines()) assert.doesNotMatch(line, FORBIDDEN_LINE, line);
   const r = rng(40);
   const { seen } = playOut(newLiarsBar('lines', 3, 0, 0, undefined, r.pick), r);
@@ -493,7 +493,7 @@ test('파티 판 with 대타 봇: two friends and two bots; bots move on the ser
   assert.equal(h.act(b, { kind: 'reply', id: h.waiting().id, accept: true }), '');
   const p = h.packet(a);
   assert.equal(p.liarsbar.n, 4);
-  assert.deepEqual(p.names.liarsbar.slice(2), ['루미', '매화']);
+  assert.deepEqual(p.names.liarsbar.slice(2), ['미쿠', '예림이']);
   assert.equal(p.tables.liarsbar.bots, 2);
   assert.equal(p.wallet.held, 0);
   const g = drive(h);

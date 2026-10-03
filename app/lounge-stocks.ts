@@ -145,16 +145,16 @@ export const STOCKS: readonly StockDef[] = [
     down: ['집 확장 상담 뜸해', '봉미선 “장부부터 다시 봐요”', '모델하우스 벽지 교체로 휴관'],
   }),
   shop({
-    sym: 'casino', code: '900170', name: '별빛 카지노', keeper: '루미 · 매화', p0: 31_000, float: 400,
+    sym: 'casino', code: '900170', name: '별빛 카지노', keeper: '미쿠 · 예림이', p0: 31_000, float: 400,
     casino: true,
     up: ['금요 카지노의 밤 손님 북적', '카지노 새 테이블 들여', '블랙잭 테이블 대기 줄'],
     down: ['카지노가 큰 판을 내줬다는 소문', '카지노 조명 수리로 일찍 닫아', '블랙잭 손님 뜸해'],
   }),
   shop({
-    sym: 'tavern', code: '900180', name: '허풍 주점', keeper: '허 선장', p0: 4_800, float: 1_200,
+    sym: 'tavern', code: '900180', name: '허풍 주점', keeper: '샹크스', p0: 4_800, float: 1_200,
     g: ['sell-dish'], s: ['bar-drink', 'venue-up'], season: { winter: 0.02 },
-    up: ['허풍 주점 새 안주 인기', '허 선장 “오늘은 내가 쏜다!”', '주점 업그레이드 마쳐'],
-    down: ['허풍 카드 판이 뜸해', '주점 술통이 바닥났다', '허 선장 항해 이야기만 길어'],
+    up: ['허풍 주점 새 안주 인기', '샹크스 “오늘은 내가 쏜다!”', '주점 업그레이드 마쳐'],
+    down: ['허풍 카드 판이 뜸해', '주점 술통이 바닥났다', '샹크스 항해 이야기만 길어'],
   }),
   shop({
     // 마을 대장간(도구 등급) and 산기슭 오른의 대장간(범위 강화, 오늘의 광석) are one smith's two shops.

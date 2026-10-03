@@ -51,7 +51,7 @@ type Figure = {
 
 /**
  * Speech bubbles only, for residents another scene already draws (the
- * dealers, 허 선장, 로제, 냐모, 그웬 at their posts): greetings, idle lines and
+ * dealers, 샹크스, 미스 포츈, 나모, 그웬 at their posts): greetings, idle lines and
  * chats from lounge-npc-behavior.ts over their heads.
  */
 export class PostBubbles {
@@ -165,7 +165,7 @@ export class ResidentLayer {
       }
       return g;
     }
-    // No chibi (허 선장, or a layer without chibi sizes): the tall art or the pose sheet's calm cell.
+    // No chibi (a layer without chibi sizes): the tall art or the pose sheet's calm cell.
     const art = NPCS[id].art;
     const foot = art.kind === 'image' ? art.foot : 0.985;
     const key = art.kind === 'sheet' ? 'sheet' : `img:${foot}`;

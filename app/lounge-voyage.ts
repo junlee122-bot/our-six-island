@@ -44,7 +44,7 @@ import {
 } from './lounge-voyage-data.ts';
 
 export const VOYAGE_REJECT = {
-  locked: '항구 구역이 열리고 낚시 Lv4가 되면 허 선장의 배를 탈 수 있어요.',
+  locked: '항구 구역이 열리고 낚시 Lv4가 되면 샹크스의 배를 탈 수 있어요.',
   storm: '오늘은 폭풍이라 배가 뜨지 않아요(결항). 가붕이 전날 예보해 줘요.',
   today: '배는 하루에 한 번만 탈 수 있어요. 내일 또 와 주세요.',
   aboard: '이미 배에 타 있어요.',
@@ -54,7 +54,7 @@ export const VOYAGE_REJECT = {
   none: '타고 있는 배가 없어요.',
   notBack: '아직 항해 중이에요.',
   dawn: '새벽 초대 배를 찾을 수 없어요. 출항했거나 초대가 끝났어요.',
-  knock: '지금은 허 선장이 찾아오지 않았어요.',
+  knock: '지금은 샹크스가 찾아오지 않았어요.',
   guests: '함께 갈 친구를 확인해 주세요(최대 3명).',
   seller: '멀미약을 파는 곳이 아니에요.',
   pillNone: '멀미약이 없어요. 츠나데 텃밭에서 살 수 있어요.',
@@ -81,7 +81,7 @@ export type VoyageTrip = {
   haul?: Record<string, number>;
   /** 재능 바다 체질: I stay out this much longer (one game hour). */
   more?: number;
-  /** 주민 동행: extra time at sea with 허 선장 along (ms, one game hour at most). */
+  /** 주민 동행: extra time at sea with 샹크스 along (ms, one game hour at most). */
   x?: number;
 };
 /** 멀미약: a buff slot shaped like the food slots (lounge-food-data SlotBuff), until KST midnight. */
@@ -169,7 +169,7 @@ export const pillOn = (life: LifeState, uid: string, now: number) => {
 /** The swell on the catch zone by today's sky (0 after a 멀미약). */
 export const SWAY: Record<Weather, number> = { sunny: 220, cloudy: 320, snow: 420, rain: 480, storm: 600 };
 export function voyageSway(life: LifeState, uid: string, now: number): number {
-  // 재능 바다 체질 or 주민 동행 with 허 선장: never seasick.
+  // 재능 바다 체질 or 주민 동행 with 샹크스: never seasick.
   return pillOn(life, uid, now) || growthMods(life, uid).seaLegs || companionNow(life, uid, now) === 'captain' ? 0 : SWAY[weatherOf(kstDay(now))];
 }
 /** 재능 바다 체질: one game hour more on board. */
@@ -302,7 +302,7 @@ export function voyageAction(
       u.knock = { day, answer: 'yes' };
       markDay(u, day);
       for (const g of guestUids) userOf(life, g).guestOf = { id, dep, from: member.actor };
-      addNews(life, now, `dawnboat:${member.actor}`, 'event', `허 선장이 ${nameOf(member.actor)}의 문을 두드렸어요. 새벽 배가 떠요!`, [member.actor]);
+      addNews(life, now, `dawnboat:${member.actor}`, 'event', `샹크스가 ${nameOf(member.actor)}의 문을 두드렸어요. 새벽 배가 떠요!`, [member.actor]);
       break;
     }
     case 'pillBuy': {

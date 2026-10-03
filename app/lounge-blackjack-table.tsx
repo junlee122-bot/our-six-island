@@ -151,7 +151,7 @@ export function BlackjackTable({
         </div>
         <div className={'bj-house' + (!hidden ? ' revealed' : '')}>
           <div className="bj-seat-title">
-            <strong>딜러 루미</strong>
+            <strong>딜러 미쿠</strong>
             <span className={dealerValue.bust ? 'bust' : ''}>
               {hidden ? '홀카드 비공개' : blackjackTotalLabel(dealerCards)}
             </span>
@@ -300,7 +300,7 @@ export function BlackjackTable({
               {myTurn
                 ? '21을 넘지 않게, 딜러보다 높게.'
                 : dealerTurn
-                  ? '모든 선택이 끝났어요. 루미가 카드를 받는 동안 기다려 주세요.'
+                  ? '모든 선택이 끝났어요. 미쿠가 카드를 받는 동안 기다려 주세요.'
                   : '친구들의 카드와 선택을 함께 볼 수 있어요.'}
             </span>
             {g.phase === 'players' && g.turn >= 0 && (
@@ -378,7 +378,7 @@ export function BlackjackTable({
           <strong>
             {seat >= 0 ? signed(g.result[seat]) : `${names.length}명 정산 완료`}
           </strong>
-          {/* The verdict is said once, in 루미's line above the table. */}
+          {/* The verdict is said once, in 미쿠's line above the table. */}
           <ul className="bj-report" aria-label="손별 결과">
             {reports.map((r) => (
               <li key={r.seat + ':' + r.hand} className={r.outcome}>

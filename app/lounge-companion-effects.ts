@@ -78,7 +78,7 @@ const SEA_SPOTS = ['sea', 'rocks', 'harbor', 'breakwater', 'pier', 'offshore'];
 export type CompanionFishMods = { rare: number; window: number; treasure: number; loss: number };
 /**
  * One cast / one hooked fish: rare-fish weight (하쿠 강, 쓰레쉬 밤), the bite
- * window (봇치 밤, alone at the spot), treasure chance (로제 먼바다) and the
+ * window (봇치 밤, alone at the spot), treasure chance (미스 포츈 먼바다) and the
  * reel gauge's loss (가붕 바다).
  */
 export function companionFishMods(life: WithCompanions, uid: string, spot: string, now: number, coop = 0): CompanionFishMods {

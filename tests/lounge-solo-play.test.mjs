@@ -190,7 +190,7 @@ test('go-stop 연습 판: me and two practice AIs, played to the end with no 범
   const seats = sat.packet.seats.gostop;
   assert.equal(seats[0], a.id);
   assert.equal(seats.filter(isPracticeAi).length, 2);
-  assert.deepEqual(sat.packet.names.gostop.slice(1), ['매화', '루미']);
+  assert.deepEqual(sat.packet.names.gostop.slice(1), ['예림이', '미쿠']);
   assert.equal(sat.packet.tables.gostop.practice, true);
   assert.equal(sat.packet.wallet.held, 0);
   let g = sat.packet.gostop;
@@ -237,7 +237,7 @@ test('chess 연습 판: the practice AI answers my moves on the server clock', a
   assert.equal(sat.ok, true, sat.error);
   assert.equal(sat.packet.seats.chess[0], a.id);
   assert.ok(isPracticeAi(sat.packet.seats.chess[1]));
-  assert.deepEqual(sat.packet.names.chess, [sat.packet.names.chess[0], '루미']);
+  assert.deepEqual(sat.packet.names.chess, [sat.packet.names.chess[0], '미쿠']);
   let c = sat.packet.chess;
   for (let ply = 0; ply < 6 && !c.winner; ply += 2) {
     const m = chessPracticeMove(c);

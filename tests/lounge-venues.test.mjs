@@ -1,5 +1,5 @@
 // Venues: the interior registry (회관 · 카지노 · 허풍 주점), the tavern's room
-// layout (every prop off the walkable floor, seats reachable, 허 선장 behind
+// layout (every prop off the walkable floor, seats reachable, 샹크스 behind
 // the bar), the three new village buildings (lots clear of routes, doors
 // reachable), their kArchive records, and the shared shop upgrades (tier
 // order, capped contributions, ledger invariant, rules for the furniture
@@ -86,7 +86,7 @@ test('tavern: every prop stands off the walkable floor and inside the room', () 
   for (const p of VENUE_BASE.tavern.props) assert.ok(TAVERN_SPOTS[p] || p === 'cafeTable' || p === 'saddleStool', p);
 });
 
-test('tavern: the door, the default spot and every seat of 2–4 are reachable; 허 선장 is behind the bar', () => {
+test('tavern: the door, the default spot and every seat of 2–4 are reachable; 샹크스 is behind the bar', () => {
   assert.ok(interiorCanWalk(AREA_DEFAULTS.tavern, 'tavern'));
   assert.ok(interiorCanWalk(INTERIOR_DOOR, 'tavern'));
   const [table] = interiorTables('tavern');

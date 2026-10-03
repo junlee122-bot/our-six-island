@@ -377,7 +377,7 @@ export function PokerTable({
               </span>
             ))}
           </div>
-          {/* Who won what and why is said once, in 루미's line above the table. */}
+          {/* Who won what and why is said once, in 미쿠's line above the table. */}
           {sidePots && (
             <small>
               메인 팟과 사이드 팟은 각 팟에 참가한 친구들끼리 따로 정산했어요.
@@ -401,7 +401,7 @@ export function PokerTable({
                 : legal.enabled
                   ? '어떻게 플레이할까요?'
                   : g.turn < 0
-                    ? '루미가 다음 카드를 준비해요'
+                    ? '미쿠가 다음 카드를 준비해요'
                     : `${sir(names[g.turn])} 차례`}
             </strong>
             <small>

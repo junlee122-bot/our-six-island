@@ -51,7 +51,7 @@ export const SPOT_INFO: Record<Spot, SpotInfo> = {
   bridge: { name: '다리 위', note: '다리 난간에서 내려 던지는 낚시. 강 한가운데 물고기가 와요.' },
   breakwater: { name: '방파제', flag: 'district-harbor', note: '등대 아래 돌 방파제. 바다와 갯바위 물고기가 낮밤 없이 와요.' },
   pier: { name: '큰 선착장', flag: 'district-harbor', note: '항구의 긴 나무 선착장. 바다 물고기와 밤 항구 물고기가 모여요.' },
-  offshore: { name: '먼바다', flag: 'district-harbor', note: '허 선장의 낚싯배를 타고 나간 먼바다. 큼직한 대물이 뱃전 아래를 지나가요.' },
+  offshore: { name: '먼바다', flag: 'district-harbor', note: '샹크스의 낚싯배를 타고 나간 먼바다. 큼직한 대물이 뱃전 아래를 지나가요.' },
 };
 type When = 'day' | 'night' | 'any';
 type Sky = 'rain' | 'dry' | 'any';

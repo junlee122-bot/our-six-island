@@ -1,6 +1,6 @@
 /**
- * The table hosts in the 3D hall and casino: 루미 deals hold'em and blackjack,
- * 매화 runs 섯다 and 고스톱. Each stands at her table's end as an illustrated
+ * The table hosts in the 3D hall and casino: 미쿠 deals hold'em and blackjack,
+ * 예림이 runs 섯다 and 고스톱. Each stands at her table's end as an illustrated
  * upright plane facing the camera (like the friends' figures, 구역 공통 규격:
  * stretched by 1 / cos(pitch), RESIDENT_SCALE × a friend's height), cut from the host's
  * pose sheet by UV (one texture per host, shared by her tables), breathes a
@@ -140,7 +140,7 @@ export function createInteriorHosts(
       present: (id: HostId) => boolean = () => true,
     ) {
       let changed = false;
-      // One figure per host: 루미 (or 매화) stands at the busiest of her
+      // One figure per host: 미쿠 (or 예림이) stands at the busiest of her
       // tables — a game in play first, then the most seats taken, else her
       // first table — and the other stays without a second copy of her.
       const busiest = new Map<HostId, Host>();

@@ -40,7 +40,7 @@ export const INTERIOR_FIGURE_CARD = INTERIOR_FIGURE_HEIGHT * FIGURE_CANVAS_RATIO
  * camera (stretched by 1 / cos(pitch), so it never leans into a wall).
  */
 export const INTERIOR_FIGURE_UPRIGHT = INTERIOR_FIGURE_CARD / Math.cos(VIEW_PITCH);
-/** Pose-sheet hosts (루미, 매화, 허 선장): their calm figure, a little taller than friends. */
+/** Pose-sheet hosts (미쿠, 예림이, 샹크스): their calm figure, a little taller than friends. */
 export const INTERIOR_HOST_HEIGHT = INTERIOR_FIGURE_HEIGHT * RESIDENT_SCALE;
 /** Screen-up of a point `h` above the ground, per room unit of height on an upright plane. */
 export const INTERIOR_UP_Y = Math.cos(VIEW_PITCH);

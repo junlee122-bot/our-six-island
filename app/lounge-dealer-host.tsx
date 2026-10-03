@@ -1,5 +1,5 @@
 'use client';
-// The table hosts on screen: 루미 (별빛 카지노 딜러) and 매화 (화투방 진행자).
+// The table hosts on screen: 미쿠 (별빛 카지노 딜러) and 예림이 (화투방 진행자).
 // A small round portrait cut from the host's pose sheet (DealerMood), the
 // host's line in a speech bubble, and a few table hooks (per-table memory for
 // streak lines, sticker replies, card sounds, the beginner-tip toggle).
@@ -125,7 +125,7 @@ export function DealerHost({
   children?: ReactNode;
 }) {
   const info = HOSTS[host];
-  // 루미 · 매화 walk the village on breaks and days off; the table keeps dealing (자동 진행).
+  // 미쿠 · 예림이 walk the village on breaks and days off; the table keeps dealing (자동 진행).
   const roams = host === 'lumi' || host === 'maehwa';
   const now = useNow(roams, 30_000);
   const away = roams && !npcAtPost(host, now);

@@ -73,7 +73,7 @@ export const OFFSHORE_FISH: readonly FishDef[] = [
 
 /** Only on the captain's dawn sailing (새벽 초대 배). */
 export const DAWN_FISH: readonly FishDef[] = [
-  fish({ id: 'dawnbream', name: '여명 참돔', spots: ['offshore'], seasons: ALL, time: 'any', sky: 'any', weight: 6, sell: 5_500, cm: [40, 90], windowMs: 650, note: '해 뜨기 직전 분홍 물빛을 닮은 참돔. 허 선장 단골 자리에서만.' }),
+  fish({ id: 'dawnbream', name: '여명 참돔', spots: ['offshore'], seasons: ALL, time: 'any', sky: 'any', weight: 6, sell: 5_500, cm: [40, 90], windowMs: 650, note: '해 뜨기 직전 분홍 물빛을 닮은 참돔. 샹크스 단골 자리에서만.' }),
   fish({ id: 'morningstar', name: '샛별 삼치', spots: ['offshore'], seasons: ALL, time: 'any', sky: 'any', weight: 8, sell: 3_200, cm: [60, 110], windowMs: 700, note: '샛별이 질 때까지만 무는 은빛 삼치. 늦잠꾸러기는 못 봐요.' }),
 ];
 

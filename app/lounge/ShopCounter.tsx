@@ -1,6 +1,6 @@
 'use client';
 // The counters of 범마을 부동산 (신형만 · 봉미선 in turns), 나무결 가구점 (목수 발키리) and the shop
-// upgrade board (also 허 선장's in 허풍 주점). Keyboard first: Tab / ←→ switch
+// upgrade board (also 샹크스's in 허풍 주점). Keyboard first: Tab / ←→ switch
 // the counter's pages, ↑↓ (or ←→↑↓ in the showroom) move the selection,
 // Enter buys or chips in, +/− change the count, R rerolls today's stock.
 import { Suspense, lazy, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
@@ -832,18 +832,18 @@ export function FurnitureCounter({ room, view, notify, onClose }: Base) {
   );
 }
 
-/** 허풍 주점: 허 선장 at the bar — the tavern's upgrade board. */
+/** 허풍 주점: 샹크스 at the bar — the tavern's upgrade board. */
 export function TavernUpgrades({ room, view, notify, onClose }: Base) {
   const done = (view.life?.venues ?? []).filter((v) => v.done && v.id.startsWith('tavern-')).length;
   return (
-    <Modal title={`${VENUE_NAME.tavern} · 허 선장`} onClose={onClose} className="sc-counter sc-tavern" venue="tavern" wide>
+    <Modal title={`${VENUE_NAME.tavern} · 샹크스`} onClose={onClose} className="sc-counter sc-tavern" venue="tavern" wide>
       <Keeper
         host="captain"
         mood={done ? 'smile' : 'calm'}
         line={
           done
-            ? `벌써 ${done}번이나 가게를 꾸몄어요. 내가 젊을 땐 배 한 척을 통째로 꾸몄다니까요!`
-            : '우리 주점, 조금만 손보면 항구에서 제일가는 곳이 될 거예요. 같이 꾸며 볼래요?'
+            ? `벌써 ${done}번이나 꾸몄구나! 하하, 이 정도면 잔치 한 번 크게 열어도 되겠는데.`
+            : '이 주점, 조금만 손보면 친구들이 밤새 떠들 만한 곳이 될 거야. 같이 꾸며 볼래?'
         }
       />
       <UpgradeBoard venue="tavern" host="captain" room={room} view={view} notify={notify} />

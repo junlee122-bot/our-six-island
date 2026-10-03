@@ -1,4 +1,4 @@
-// The table hosts' illustrated sprite sheets (루미 in the casino, 매화 in the
+// The table hosts' illustrated sprite sheets (미쿠 in the casino, 예림이 in the
 // hall): six full-body poses per host in one 3×2 sheet, already keyed to real
 // transparency (public/assets/lounge/host-*.png, prompts next to them). The 3D
 // interiors stand them behind their tables as billboards and the dealer

@@ -1,6 +1,6 @@
 'use client';
-// The friends' tables have no dealer ("딜러 빼고 진행"): instead of 루미 /
-// 매화 a small 진행 strip in the same place says whose move it is and what
+// The friends' tables have no dealer ("딜러 빼고 진행"): instead of 미쿠 /
+// 예림이 a small 진행 strip in the same place says whose move it is and what
 // happened, with the game's badge where the host's portrait would be.
 import type { ReactNode } from 'react';
 import './lounge-friend-host.css';

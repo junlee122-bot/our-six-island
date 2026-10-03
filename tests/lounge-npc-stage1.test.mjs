@@ -101,7 +101,7 @@ test('npcSpot is never off walkable ground over two weeks (every 2 minutes)', ()
 
 test('no teleports: timelines are continuous and areas change only through an exit', () => {
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
-    // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
+    // 미쿠 · 예림이 · 미스 포츈 leave their posts through the casino's and the hall's doors.
     'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
     // The shop rooms' doors and the street spots in front of them.
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door', 'm.broker', 'broker.door']);
@@ -168,7 +168,7 @@ test('schedules follow the cards: 프리렌 opens late, 신짜장 delivers, ever
   assert.ok(/배달|우체국|카페|점심/.test(at('sinjjajang', 11).label + at('sinjjajang', 12, 20).label));
   for (const id of WALKING_NPCS) assert.equal(at(id, 3).area, 'home', `${id} at home at 3am`);
   // The ones who work indoors are at their posts by day (발키리 takes an evening walk;
-  // 루미 · 매화 · 로제 have breaks and a day off, tests/lounge-host-roaming.test.mjs;
+  // 미쿠 · 예림이 · 미스 포츈 have breaks and a day off, tests/lounge-host-roaming.test.mjs;
   // 신형만, off duty on Thursdays, ends the day at the tavern).
   assert.equal(at('lumi', 14).area, 'casino');
   assert.equal(at('maehwa', 12).area, 'lounge');
@@ -203,7 +203,7 @@ function world(n = 1) {
   };
 }
 
-test('relation migration: old 루미/매화 rows stay, unknown ids and bad fields drop, new fields round-trip', () => {
+test('relation migration: old 미쿠/예림이 rows stay, unknown ids and bad fields drop, new fields round-trip', () => {
   const old = { lumi: { points: 44, talkedDay: 20000, dates: 2 }, maehwa: { points: 12 }, nobody: { points: 50 }, frieren: { points: 30, lastGift: 'jam', rw: 7 }, janna: { points: 10, lastGift: 'not-an-item' } };
   const read = readNpcRelations(old);
   assert.deepEqual(read.lumi, { points: 44, talkedDay: 20000, dates: 2 });

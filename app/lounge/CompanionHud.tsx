@@ -1,7 +1,7 @@
 'use client';
 // 주민 동행 HUD (design-npc-companion.md 1-6): the chip beside the mood face —
 // the companion's face, their effect in one line, the time left and 보내기
-// (and 냐모's bank, 신이치's hint, the realty couple's news). It also keeps
+// (and 나모's bank, 신이치's hint, the realty couple's news). It also keeps
 // the scenes' companion store in step with the life view (who walks with
 // whom, my companion's last event) and says the parting line when an outing
 // ends (보내기, the clock, the shop's opening, logging out).
@@ -29,7 +29,7 @@ export function CompanionHud({ room, view, notify, onTalk, onBank }: {
   notify: Notify;
   /** Opens the companion talk (same as E beside them). */
   onTalk: () => void;
-  /** 냐모 along: the bank window from anywhere. */
+  /** 나모 along: the bank window from anywhere. */
   onBank: () => void;
 }) {
   const now = useNow(true, 15_000) + view.clockOffset;

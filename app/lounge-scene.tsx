@@ -505,7 +505,7 @@ export function RoomFloor({
   const shop = isShopArea(area) ? SHOP_INTERIORS[area] : null;
   const serviceSpot = shop ? { x: shop.front.x, y: shop.front.y - 9 } : area === 'casino' ? CASINO_LENDER_SPOT : area === 'salon' ? SALON_STYLIST_SPOT : BANKER_SPOT;
   const serviceName = shop ? (shop.owner ? NPCS[shop.owner].name : shop.short) : area === 'casino' ? LENDER_NAME : area === 'salon' ? SALON_STYLIST_NAME : BANKER_NAME;
-  const serviceTitle = shop ? (shop.owner ? `${NPCS[shop.owner].name} · ${shop.short} ${shop.deskWord ?? '계산대'}` : `${shop.short} 창구`) : area === 'casino' ? '로제 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행 창구';
+  const serviceTitle = shop ? (shop.owner ? `${NPCS[shop.owner].name} · ${shop.short} ${shop.deskWord ?? '계산대'}` : `${shop.short} 창구`) : area === 'casino' ? '미스 포츈 · 대출과 상환' : area === 'salon' ? '그웬 · 미용실 원장' : '나모 · 은행 창구';
   const serviceFoot = projectPlayer(serviceSpot, area);
   return (
     <div className={`cf-scene-shell cf-scene-${area}`}>
@@ -632,7 +632,7 @@ export function RoomFloor({
           클릭해서 이동<span> · 방향키 / WASD</span>
         </span>
       </div>
-      {nearService && !seatedAt && !sheetOpen && <ActionButton className="cf-action" kind="talk" detail={nearService === 'counter' ? serviceTitle : nearService === 'lender' ? '로제 · 카지노 대부' : nearService === 'salon' ? '그웬 · 미용실 원장' : '냐모 · 은행원'} label={nearService === 'counter' ? `${shop?.short ?? ''} 이용하기` : '이야기하기'} onPress={openService} />}
+      {nearService && !seatedAt && !sheetOpen && <ActionButton className="cf-action" kind="talk" detail={nearService === 'counter' ? serviceTitle : nearService === 'lender' ? '미스 포츈 · 카지노 대부' : nearService === 'salon' ? '그웬 · 미용실 원장' : '나모 · 은행원'} label={nearService === 'counter' ? `${shop?.short ?? ''} 이용하기` : '이야기하기'} onPress={openService} />}
       {!nearService && near && !seatedAt && !sheetOpen && (() => {
         const state = tableState(view, near);
         const kind = tableAction(state);

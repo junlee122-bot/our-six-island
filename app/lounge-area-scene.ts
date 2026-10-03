@@ -83,7 +83,7 @@ export type RegionUpdate = {
   /** Districts: Sunday market goods, lamps at night. */
   marketDay?: boolean;
   night?: boolean;
-  /** 항구: 허 선장's boat is out (a voyage is on) and whether he waits at the pier. */
+  /** 항구: 샹크스's boat is out (a voyage is on) and whether he waits at the pier. */
   boatOut?: boolean;
   captain?: boolean;
 };

@@ -172,7 +172,7 @@ test('breakups are village news too: kind and light, for 연인 · 약혼 · 결
     assert.ok(line, love);
     assert.match(line.text, re);
     assert.match(line.text, /도원/);
-    assert.match(line.text, /루미/);
+    assert.match(line.text, /미쿠/);
     assert.deepEqual(line.actors, [0]);
     assert.ok(!/차였|버림|배신/.test(line.text));
   }

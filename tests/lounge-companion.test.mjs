@@ -110,7 +110,7 @@ test('shopkeepers refuse in their shop hours and go back when the shop opens; �
   assert.equal(s.view(A, until.until).me.out, null);
   settleCompanion(s.life, A.id, until.until + 1);
   assert.equal(s.life.companions[A.id].last.end, 'shop');
-  // The fixed-hour keepers: the bank keeps 냐모 in during the day.
+  // The fixed-hour keepers: the bank keeps 나모 in during the day.
   assert.equal(companionBusy('nyamo', gameTimeOnDay(kstDay(T0), 12)), 'shop');
   assert.equal(companionBusy('nyamo', gameTimeOnDay(kstDay(T0), 21)), null);
   // 무잔: not by day; by night yes (and away at dawn's end).
@@ -249,7 +249,7 @@ test('effects apply only to the matching activity', () => {
   const noon = findTime((t) => !isNighttime(t));
   assert.equal(companionXpMult(at('muzan'), A.id, 'mine', night), 1.15);
   assert.equal(companionXpMult(at('muzan'), A.id, 'mine', noon), 1);
-  // Fishing: 하쿠 on the river, not the sea; 로제 offshore only; 가붕 at sea only; 봇치 at night and alone.
+  // Fishing: 하쿠 on the river, not the sea; 미스 포츈 offshore only; 가붕 at sea only; 봇치 at night and alone.
   assert.equal(companionFishMods(at('haku'), A.id, 'river', T0).rare, 1.05);
   assert.equal(companionFishMods(at('haku'), A.id, 'sea', T0).rare, 1);
   assert.equal(companionFishMods(at('rose'), A.id, 'offshore', T0).treasure, 1.3);

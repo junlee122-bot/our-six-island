@@ -37,7 +37,7 @@ export const GAME_KINDS: GameKind[] = [
 export const gameReservation = (game: GameKind, stake: number) =>
   game === 'blackjack' ? stake * 4 : stake;
 /**
- * Friend-only tables with no dealer (진행 strip instead of 루미 / 매화).
+ * Friend-only tables with no dealer (진행 strip instead of 미쿠 / 예림이).
  * 라이어 게임 never has 범 at stake; 야추 may (winner takes the pot).
  */
 export const FRIEND_GAMES: readonly GameKind[] = ['yacht', 'liar', 'liarsbar'];
@@ -58,7 +58,7 @@ export const SEAT_RANGE: Partial<Record<GameKind, readonly [number, number]>> = 
   liarsbar: [2, 4],
 };
 /**
- * 혼자 하기: blackjack can be played alone against the dealer (루미) with the
+ * 혼자 하기: blackjack can be played alone against the dealer (미쿠) with the
  * usual stake; chess and go-stop have a 연습 판 against the practice AI with
  * no 범 at stake. Everything else needs friends.
  */
@@ -73,9 +73,9 @@ export const isPracticeAi = (id: unknown): id is string =>
   typeof id === 'string' && id.startsWith(PRACTICE_AI_PREFIX);
 /** The practice AI's names, seat by seat after mine. */
 export const PRACTICE_NAMES: Partial<Record<GameKind, readonly string[]>> = {
-  chess: ['루미'],
-  gostop: ['매화', '루미'],
-  liarsbar: ['루미', '매화', '오른'],
+  chess: ['미쿠'],
+  gostop: ['예림이', '미쿠'],
+  liarsbar: ['미쿠', '예림이', '오른'],
 };
 /** Seat counts a flexible table (poker, blackjack, seotda) can be set up for. */
 export const FLEX_GAMES: readonly GameKind[] = [
@@ -173,7 +173,7 @@ export const LOOK_THROTTLE_MS = 300;
 // village flag is set.
 // 'bakery' | 'coop' | 'general' | 'fishmarket': the shop rooms entered from
 // 시장 거리 and the harbor (lounge-shop-interiors.ts).
-// 'offshore': 허 선장's boat out at sea (먼바다, lounge-voyage.ts); the cloud
+// 'offshore': 샹크스's boat out at sea (먼바다, lounge-voyage.ts); the cloud
 // engine lets you onto its deck only while your voyage is on.
 export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore' | ShopArea;
 export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore', ...SHOP_AREAS];

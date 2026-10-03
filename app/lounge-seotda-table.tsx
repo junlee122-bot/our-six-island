@@ -395,7 +395,7 @@ export function SeotdaTable({
         <output className="s-result">
           <Crown size={24} />
           <strong>{g.winners.map((i) => names[i]).join(' · ')}의 승리</strong>
-          {/* The hand that won is said once, in 매화's line above the table. */}
+          {/* The hand that won is said once, in 예림이's line above the table. */}
           <span>남은 칩과 판돈을 범 지갑에 반영했어요.</span>
         </output>
       )}

@@ -1,5 +1,5 @@
-// 루미 · 매화 · 로제 walk the village (lounge-npc-schedule.ts hostPlan) and
-// 로제's credit tiers (lounge-casino-lender.ts). The tables and the lender's
+// 미쿠 · 예림이 · 미스 포츈 walk the village (lounge-npc-schedule.ts hostPlan) and
+// 미스 포츈's credit tiers (lounge-casino-lender.ts). The tables and the lender's
 // desk never wait for them: blackjack, go-stop practice, borrowing,
 // repaying and overdue collection all work while they are out.
 import { GAME_MINUTE_MS, dayStart, gameDay } from '../app/lounge-calendar.ts';
@@ -40,7 +40,7 @@ test('the three hosts work the evening rush, take breaks and one day off a week,
         for (const [h, m] of [[12, 0], [20, 0], [21, 30], [23, 30]]) assert.ok(npcAtPost(id, at(d, h, m)), `${id} at ${NPC_POSTS[id]} ${h}:${m} day ${d}`);
       }
     }
-  // Breaks on a dry working day: 루미 at the pond's flowers, 매화 in the hall's yard, 로제 on the breakwater.
+  // Breaks on a dry working day: 미쿠 at the pond's flowers, 예림이 in the hall's yard, 미스 포츈 on the breakwater.
   const lumiDay = [DAY0, DAY0 + 1, DAY0 + 2, DAY0 + 3, DAY0 + 4, DAY0 + 5, DAY0 + 6].find((d) => dry(d) && weekdayOf(d) !== HOST_DAY_OFF.lumi);
   assert.equal(npcSpot('lumi', at(lumiDay, 15, 30)).place, 'v.lumi-flower');
   const maehwaDay = [0, 1, 2, 3, 4, 5, 6].map((i) => DAY0 + i).find((d) => dry(d) && weekdayOf(d) !== HOST_DAY_OFF.maehwa);
@@ -93,7 +93,7 @@ function harness(start) {
   };
 }
 
-test('blackjack deals and settles while 루미 is out on her day off', async () => {
+test('blackjack deals and settles while 미쿠 is out on her day off', async () => {
   const t = at(nextWeekday(HOST_DAY_OFF.lumi), 14, 30);
   assert.equal(npcAtPost('lumi', t), false);
   const h = harness(t), a = member(3);
@@ -112,7 +112,7 @@ test('blackjack deals and settles while 루미 is out on her day off', async () 
   assert.equal(h.world.ledger.games[bj.id]?.state, 'settled');
 });
 
-test('the hall’s go-stop practice table opens while 매화 is out on her day off', async () => {
+test('the hall’s go-stop practice table opens while 예림이 is out on her day off', async () => {
   const t = at(nextWeekday(HOST_DAY_OFF.maehwa), 14, 30);
   assert.equal(npcAtPost('maehwa', t), false);
   const h = harness(t), a = member(2);
@@ -124,7 +124,7 @@ test('the hall’s go-stop practice table opens while 매화 is out on her day o
   assert.ok(sat.packet.gostop);
 });
 
-// ---------------------------------------------------------------- 로제's desk and credit
+// ---------------------------------------------------------------- 미스 포츈's desk and credit
 const ids = [0, 1].map((i) => `00000000-0000-4000-8000-00000000000${i}`);
 const wallets = ids.map((id) => 'wallet-' + id);
 function world() {
@@ -143,7 +143,7 @@ const borrowAndRepay = (w, amount, now) => {
   return act(b, { op: 'repay', id: loan.id, amount: loan.principal + loan.interest }, now + HOUR);
 };
 
-test('로제’s desk lends, takes repayments and collects overdue debt while she is out', () => {
+test('미스 포츈’s desk lends, takes repayments and collects overdue debt while she is out', () => {
   const t = at(nextWeekday(HOST_DAY_OFF.rose), 14, 30);
   assert.equal(npcAtPost('rose', t), false);
   const w = act(world(), { op: 'borrow', amount: 20_000 }, t);
@@ -179,7 +179,7 @@ test('credit tiers: twice the old limit to start, more for on-time repayments, b
   assert.equal(big.state.loans.at(-1).interest, 24_000);
   assert.equal(big.state.loans.at(-1).dueAt, t0 + 9 * DAY);
   assert.match(big.state.logs.at(-1).text, /4일 뒤 104,000범 상환 \(단골 단계/);
-  // Four, then six → 믿을 손님, then 로제의 VIP (120,000 for 5 days, still 30%).
+  // Four, then six → 믿을 손님, then 미스 포츈의 VIP (120,000 for 5 days, still 30%).
   w = borrowAndRepay(w, 10_000, t0 + 5 * DAY);
   w = borrowAndRepay(w, 10_000, t0 + 6 * DAY);
   assert.equal(casinoCreditOf(w.state.loans, ids[0], t0 + 7 * DAY).tier.id, 'trusted');

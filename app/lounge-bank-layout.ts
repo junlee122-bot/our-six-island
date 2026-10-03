@@ -1,5 +1,5 @@
 /** Bank network floor. The scene, simple floor and server share these positions. */
-export const BANKER_NAME = '냐모';
+export const BANKER_NAME = '나모';
 export const BANKER_SPOT = { x: 50, y: 46 } as const;
 export const BANKER_FRONT = { x: 50, y: 62 } as const;
 export const BANKER_REACH = 6;

@@ -51,7 +51,7 @@ export const SHOP_INFO: Record<ShopId, ShopInfo> = {
   coop: { name: '범마을 농협', keeper: '나세라', area: 'market', sells: '일요일 작물 좌판(시세표 작물 씨앗)', buys: '작물 · 과일 · 가공품' },
   bakery: { name: '느긋한 빵집', keeper: '프리렌 · 힘멜', area: 'market', sells: '빵과 음료(그 자리에서) · 도시락', buys: '' },
   fishmarket: { name: '범마을 어시장', keeper: '럭스', area: 'harbor', sells: '미끼 · 찌 · 통발 · 낚싯대', buys: '물고기 · 통발 해산물' },
-  tavern: { name: '허풍 주점', keeper: '허 선장', area: 'tavern', sells: '안주와 음료(그 자리에서)', buys: '요리' },
+  tavern: { name: '허풍 주점', keeper: '샹크스', area: 'tavern', sells: '안주와 음료(그 자리에서)', buys: '요리' },
   peddler: { name: '행상인 마키마', keeper: '마키마', area: 'market', sells: '이번 주 희귀품 3종 · 계약', buys: '' },
   forge: { name: '대장간', keeper: '대장장이', area: 'village', sells: '도구 강화', buys: '광석 · 보석' },
   // Stage 3 (design-npcs-stage3.md §2): the shop ids are their rooms' ids (lounge-shop-interiors.ts).

@@ -227,7 +227,7 @@ async function runView(browser, base, view, report) {
           const img = document.querySelector('[data-testid=bank-clerk] img');
           return img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
         }, 15000);
-        if (loaded < 0) throw new Error('은행원 냐모의 그림을 불러오지 못했습니다.');
+        if (loaded < 0) throw new Error('은행원 나모의 그림을 불러오지 못했습니다.');
         assert.equal(await page.getByTestId('bank-clerk').getAttribute('data-portrait'), 'sprite');
       }
       await snap(name);
@@ -239,7 +239,7 @@ async function runView(browser, base, view, report) {
           const clerk = document.querySelector('[data-testid=bank-clerk]');
           const img = clerk?.querySelector('img');
           return clerk?.getAttribute('data-portrait') === 'photo' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
-        }, 15000), -1, '은행원 냐모의 사진을 불러오지 못했습니다.');
+        }, 15000), -1, '은행원 나모의 사진을 불러오지 못했습니다.');
         assert.equal((await toggle.textContent()).trim(), '창구로 돌아가기');
         assert.match(await page.getByTestId('bank-clerk').locator('p').innerText(), /오랜만에 왔네, 자기/);
         await snap('bank-portrait');
@@ -249,7 +249,7 @@ async function runView(browser, base, view, report) {
           const clerk = document.querySelector('[data-testid=bank-clerk]');
           const img = clerk?.querySelector('img');
           return clerk?.getAttribute('data-portrait') === 'sprite' && img instanceof HTMLImageElement && img.complete && img.naturalWidth > 0;
-        }, 15000), -1, '은행원 냐모의 창구 모습으로 돌아오지 못했습니다.');
+        }, 15000), -1, '은행원 나모의 창구 모습으로 돌아오지 못했습니다.');
         assert.equal((await toggle.textContent()).trim(), '잠깐 창구 아래로 와보세요');
         assert.doesNotMatch(await page.getByTestId('bank-clerk').locator('p').innerText(), /자기/);
       }
@@ -518,9 +518,9 @@ async function runView(browser, base, view, report) {
       }, 180000), -1, '카지노 실내를 불러오지 못했습니다.');
       assert.notEqual(await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000), -1, '카지노 입장 효과가 끝나지 않았습니다.');
       await page.getByTestId('casino-lumi-ledger').click();
-      const dialog = page.getByRole('dialog', { name: '루미의 카지노 장부', exact: true });
+      const dialog = page.getByRole('dialog', { name: '미쿠의 카지노 장부', exact: true });
       await dialog.waitFor({ state: 'visible' });
-      assert.equal(await dialog.getByRole('tab').count(), 0, '루미 장부는 은행 탭과 분리됩니다.');
+      assert.equal(await dialog.getByRole('tab').count(), 0, '미쿠 장부는 은행 탭과 분리됩니다.');
       assert.equal(await dialog.getByTestId('bank-clerk').count(), 0);
       await snap('bank-casino');
     } finally { await returnToVillage(); }

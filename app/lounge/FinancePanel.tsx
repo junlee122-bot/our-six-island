@@ -38,11 +38,11 @@ export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
     } finally { inFlight.current = false; setBusy(false); }
   };
   const button = (label: string, action: FinanceAction, off = false) => <GameButton disabled={busy || off} onClick={() => void run(action)}>{label}</GameButton>;
-  return <Modal title={mode === 'bank' ? '범마을 은행' : mode === 'casino' ? '루미의 카지노 장부' : '강도·방범'} wide className="l-finance" venue={mode === 'casino' ? 'casino' : undefined} onClose={onClose}>
+  return <Modal title={mode === 'bank' ? '범마을 은행' : mode === 'casino' ? '미쿠의 카지노 장부' : '강도·방범'} wide className="l-finance" venue={mode === 'casino' ? 'casino' : undefined} onClose={onClose}>
     {!data ? <p role="status">은행 장부를 불러오는 중이에요. 잠시 뒤 다시 열어 주세요.</p> : <>
       {mode === 'bank' && <div className="l-finance-clerk" data-testid="bank-clerk" data-portrait={showClerkPortrait ? 'photo' : 'sprite'}>
-        <img className={showClerkPortrait ? 'is-photo' : undefined} src={showClerkPortrait ? LOUNGE_ASSETS.bankClerkPortrait : LOUNGE_ASSETS.bankClerkSprite} alt={showClerkPortrait ? '짙은 남청색 머리와 고양이 귀, 금빛 눈의 은행원 냐모' : '고양이 귀와 꼬리가 있는 은행원 냐모'} />
-        <div><h3>냐모 <span>범마을 은행원</span></h3><p>{showClerkPortrait ? '오랜만에 왔네, 자기? …조금만 더 가까이 와. 오늘은 네 얘기부터 듣고 싶은데.' : page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
+        <img className={showClerkPortrait ? 'is-photo' : undefined} src={showClerkPortrait ? LOUNGE_ASSETS.bankClerkPortrait : LOUNGE_ASSETS.bankClerkSprite} alt={showClerkPortrait ? '짙은 남청색 머리와 고양이 귀, 금빛 눈의 은행원 나모' : '고양이 귀와 꼬리가 있는 은행원 나모'} />
+        <div><h3>나모 <span>범마을 은행원</span></h3><p>{showClerkPortrait ? '오랜만에 왔네, 자기? …조금만 더 가까이 와. 오늘은 네 얘기부터 듣고 싶은데.' : page === 'notes' ? '친구와의 약속은 차용증에 남겨요. 조건을 함께 확인한 뒤에 범을 보내 드릴게요.' : data.stored > 0 ? '맡긴 범은 잘 지키고 있어요. 필요한 만큼 찾아가세요.' : '어서 와요. 오늘은 얼마를 맡길까요? 보관함은 제가 지킬게요.'}</p>
           <GameButton size="s" variant="ghost" data-testid="bank-clerk-portrait-toggle" onClick={() => setShowClerkPortrait((visible) => !visible)}>{showClerkPortrait ? '창구로 돌아가기' : '잠깐 창구 아래로 와보세요'}</GameButton>
         </div>
       </div>}
@@ -82,12 +82,12 @@ export function FinancePanel({ room, view, onClose, mode, initial = 'bank' }: {
           })}
         </>}
         {activePage === 'casino' && <>
-          <h3>오늘 루미의 장부</h3><div className="l-finance-balances"><span>받은 범 <strong>{formatBeom(data.casino.earned)}</strong></span><span>승자에게 준 범 <strong>{formatBeom(data.casino.paid)}</strong></span><span>환급 후 순수익 <strong>{formatBeom(data.casino.profit)}</strong></span></div>
-          <p>한국 시간 오늘의 블랙잭 정산이에요. 포커 판돈은 친구끼리 나누므로 루미 수익에 포함하지 않아요. 기록은 이번 업데이트부터 쌓여요.</p>
+          <h3>오늘 미쿠의 장부</h3><div className="l-finance-balances"><span>받은 범 <strong>{formatBeom(data.casino.earned)}</strong></span><span>승자에게 준 범 <strong>{formatBeom(data.casino.paid)}</strong></span><span>환급 후 순수익 <strong>{formatBeom(data.casino.profit)}</strong></span></div>
+          <p>한국 시간 오늘의 블랙잭 정산이에요. 포커 판돈은 친구끼리 나누므로 미쿠 수익에 포함하지 않아요. 기록은 이번 업데이트부터 쌓여요.</p>
           <p>내 블랙잭 순손익 <strong>{formatBeom(data.casino.myNet)}</strong></p>
-          {button(data.casino.mercyUsed ? `오늘 부탁 완료 · ${formatBeom(data.casino.refund)} 환급` : '루미에게 싹싹 빌기', { kind: 'finance', op: 'mercy' }, !casino || data.casino.mercyUsed || data.casino.myNet >= 0)}
+          {button(data.casino.mercyUsed ? `오늘 부탁 완료 · ${formatBeom(data.casino.refund)} 환급` : '미쿠에게 싹싹 빌기', { kind: 'finance', op: 'mercy' }, !casino || data.casino.mercyUsed || data.casino.myNet >= 0)}
           <p>하루 한 번 · 성공 30% · 오늘 블랙잭 순손실의 50%를 돌려줘요. 금액 상한은 없어요.</p>
-          {!casino && <p>루미에게 부탁하기는 카지노에 들어가서 이용해 주세요.</p>}
+          {!casino && <p>미쿠에게 부탁하기는 카지노에 들어가서 이용해 주세요.</p>}
           <p>카지노 대출과 상환은 카지노 안의 {LENDER_NAME}에게 직접 찾아가세요.</p>
         </>}
         {activePage === 'rob' && <>

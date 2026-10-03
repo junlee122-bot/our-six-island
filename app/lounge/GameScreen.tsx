@@ -246,7 +246,7 @@ export function GameScreen({
   const sendReaction = (id: ReactionId) =>
     room.action({ kind: 'reaction', id, scope: kind, matchId: match?.id });
   const empty = table ? Math.max(0, table.required - table.members.length) : 0;
-  // The table host (루미 / 매화) greets by round and answers stickers.
+  // The table host (미쿠 / 예림이) greets by round and answers stickers.
   const host = {
     round: table?.round,
     reaction: reactionsHidden

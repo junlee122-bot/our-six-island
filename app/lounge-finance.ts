@@ -14,7 +14,7 @@ export type Loan = {
   id: string; lender: string; borrower: string; principal: number; interest: number;
   days: number; offeredAt: number; dueAt: number; paid: number;
   state: 'offered' | 'active' | 'paid' | 'declined'; remindedAt?: number;
-  /** A casino note settled after its due time (lowers 로제's credit tier for 30 days). */
+  /** A casino note settled after its due time (lowers 미스 포츈's credit tier for 30 days). */
   late?: true;
 };
 export type FinanceLog = { id: number; users: string[]; at: number; text: string };
@@ -235,14 +235,14 @@ export function financeAction(
       log(state, [uid, target], now, `강도 놀이 발각 · ${fine.toLocaleString('ko-KR')}범을 상대에게 줬어요.`);
     }
   } else if (a.op === 'mercy') {
-    if (me.area !== 'casino') fail('카지노에서 루미에게 부탁해 주세요.');
+    if (me.area !== 'casino') fail('카지노에서 미쿠에게 부탁해 주세요.');
     const today = state.casino.find((d) => d.day === day), loss = -(today?.net[w] ?? 0);
-    if (!today || loss <= 0) fail('오늘 루미와 한 블랙잭에서 순손실이 있을 때 부탁할 수 있어요.');
+    if (!today || loss <= 0) fail('오늘 미쿠와 한 블랙잭에서 순손실이 있을 때 부탁할 수 있어요.');
     if (Object.hasOwn(today.mercy, uid)) fail('오늘은 이미 부탁했어요.');
     const amount = roll() < .3 ? Math.floor(loss * .5) : 0;
     today.mercy[uid] = amount;
     if (amount) next = houseTransfer(next, w, amount);
-    log(state, [uid], now, amount ? `루미가 ${amount.toLocaleString('ko-KR')}범을 돌려줬어요. 오늘 순손실의 일부예요.` : '루미: 오늘은 어렵겠어요. 다음에는 좋은 패가 오길 바랄게요.');
+    log(state, [uid], now, amount ? `미쿠가 ${amount.toLocaleString('ko-KR')}범을 돌려줬어요. 오늘 순손실의 일부예요.` : '미쿠: 오늘은 어렵겠어요. 다음에는 좋은 패가 오길 바랄게요.');
   } else fail('은행 요청을 확인해 주세요.');
   validateLedger(next);
   return { state, ledger: next, life };

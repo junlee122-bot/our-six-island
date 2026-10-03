@@ -21,7 +21,7 @@ const sec = (ms: number) => `${Math.round(ms / 1000)}초`;
 
 export const GAME_RULES: Record<GameKind, RulesCard> = {
   blackjack: {
-    goal: '21을 넘지 않으면서 딜러 루미보다 21에 가까우면 이겨요.',
+    goal: '21을 넘지 않으면서 딜러 미쿠보다 21에 가까우면 이겨요.',
     turn: [
       '히트: 한 장 더 받아요. 21을 넘으면 버스트로 바로 져요.',
       '스탠드: 지금 합으로 멈춰요.',

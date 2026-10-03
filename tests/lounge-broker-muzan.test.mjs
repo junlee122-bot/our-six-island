@@ -165,7 +165,7 @@ test('무잔 dates, gets engaged and marries like anyone else', () => {
   assert.match(life.news.flatMap((d) => d.lines).find((l) => l.kind === 'wedding').text, /무잔이 광장에서 결혼식을 올렸어요/);
 });
 
-test('neighbours: 로제 the rival lender, 잔나 the reporter, 신형만 the land man, 루미 at the casino', () => {
+test('neighbours: 미스 포츈 the rival lender, 잔나 the reporter, 신형만 the land man, 미쿠 at the casino', () => {
   for (const [b, kind] of [['rose', 'rival'], ['janna', 'regular'], ['realtor', 'rival'], ['lumi', 'regular']]) {
     assert.equal(npcBond('muzan', b)?.kind, kind, b);
     assert.ok(npcBanter('muzan', b, 'k'), `${b} banter`);

@@ -71,7 +71,7 @@ export const PAVING = { road: '#b8a07c', plaza: '#d2bf98', stone: '#a59a88', qua
 export type DistrictUpdate = {
   marketDay: boolean;
   night: boolean;
-  /** 항구: 허 선장's boat is out at sea; he stands at the pier in sailing hours. */
+  /** 항구: 샹크스's boat is out at sea; he stands at the pier in sailing hours. */
   boatOut?: boolean;
   captain?: boolean;
 };

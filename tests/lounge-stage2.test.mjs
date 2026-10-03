@@ -260,7 +260,7 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
     assert.equal(npcSpot(id, at(2, 3), { hill: false }).area, 'home', `${id} before the move`);
   }
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
-    // 루미 · 매화 · 로제 leave their posts through the casino's and the hall's doors.
+    // 미쿠 · 예림이 · 미스 포츈 leave their posts through the casino's and the hall's doors.
     'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door',
     // 무잔 walks into 범마을 증권 through its door.
@@ -471,18 +471,14 @@ test('town state round-trips through a save and ignores junk', () => {
   assert.equal(loaded.ext[a.id].town.bake, 1);
 });
 
-test('in the world every resident but 허 선장 (pose sheet) is a chibi at a friend size; dialogue keeps the tall art', async () => {
+test('in the world every resident is a chibi at a friend size; dialogue keeps the tall art', async () => {
   const fs = await import('node:fs');
   const { NPC_CHIBI } = await import('../app/lounge-npc-chibi.ts');
   const record = JSON.parse(fs.readFileSync(new URL('../public/assets/lounge/npc-chibi-generation.json', import.meta.url), 'utf8'));
-  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'carpenter', 'realtor', 'misun', 'nilah', 'haku', 'ornn', 'mercy', 'shinichi', 'lumi', 'maehwa', 'muzan'];
+  const chibi = ['frieren', 'nasera', 'rose', 'gwen', 'nyamo', 'thresh', 'sinjjajang', 'volibas', 'janna', 'gabung', 'lux', 'himmel', 'beatrice', 'bocchi', 'tsunade', 'makima', 'yanineko', 'carpenter', 'realtor', 'misun', 'nilah', 'haku', 'ornn', 'mercy', 'shinichi', 'lumi', 'maehwa', 'muzan', 'captain'];
   assert.deepEqual(Object.keys(NPC_CHIBI).sort(), [...chibi].sort());
   for (const id of NPC_IDS) {
     const c = NPC_CHIBI[id];
-    if (id === 'captain') {
-      assert.equal(c, undefined, `${id} keeps its pose sheet`);
-      continue;
-    }
     assert.ok(c, `${id} has a chibi`);
     const file = new URL(`../public${c.asset}`, import.meta.url);
     assert.ok(fs.existsSync(file), `${id} chibi file`);
@@ -490,7 +486,7 @@ test('in the world every resident but 허 선장 (pose sheet) is a chibi at a fr
     assert.deepEqual([record.web[id].w, record.web[id].h], [c.w, c.h], `${id} size`);
     assert.equal(c.h, 640);
     assert.ok(c.w >= 512 && c.w <= 640);
-    // The tall art (or 루미 · 매화's pose sheet) still serves the dialogue portrait.
+    // The tall art (or 미쿠's pose sheet) still serves the dialogue portrait.
     if (NPCS[id].art.kind === 'sheet') continue;
     assert.equal(NPCS[id].art.kind, 'image');
     assert.ok(NPCS[id].art.portrait);

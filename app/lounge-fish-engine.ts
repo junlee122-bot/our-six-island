@@ -63,7 +63,7 @@ import { luckMods } from './lounge-food-data.ts';
 import { SEA_BUILD } from './lounge-fish-sea-data.ts';
 import { DAWN_LEGEND, OFFSHORE_TREASURE, RAIN_BITE } from './lounge-voyage-data.ts';
 import { noteVoyageCatch, voyageAt, voyageSway } from './lounge-voyage.ts';
-// 주민 동행: 하쿠·쓰레쉬 (희귀), 봇치 (입질 창), 로제 (보물 상자), 가붕 (릴 게이지).
+// 주민 동행: 하쿠·쓰레쉬 (희귀), 봇치 (입질 창), 미스 포츈 (보물 상자), 가붕 (릴 게이지).
 import { companionFishMods } from './lounge-companion-effects.ts';
 
 // ---------------------------------------------------------------- constants
@@ -112,7 +112,7 @@ export const ANGLING_REJECT = {
   spotLocked: '아직 복원되지 않은 곳이에요. 마을 꾸러미를 채워 주세요.',
   spotRod: '물살이 세서 낚싯대 2단계부터 던질 수 있어요.',
   spotNight: '항구는 해가 진 뒤(저녁 7시~새벽 5시)에만 열려요.',
-  spotBoat: '먼바다는 허 선장의 배를 타고 나가야 낚을 수 있어요.',
+  spotBoat: '먼바다는 샹크스의 배를 타고 나가야 낚을 수 있어요.',
   potBoat: '배 위에는 통발을 놓을 수 없어요.',
   bait: '그 미끼가 없어요.',
   token: '낚싯대를 다시 던져 주세요.',

@@ -438,7 +438,7 @@ export function TableSheet({
         <p>
           <strong>{solo === 'dealer' ? '혼자 하기' : '연습 판'}</strong>
           {solo === 'dealer'
-            ? ` 딜러 루미와 1:1로 쳐요. 판돈 ${formatBeom(tableStake)} · 최대 ${formatBeom(reservation)} 예약, 정산은 테이블과 같아요.`
+            ? ` 딜러 미쿠와 1:1로 쳐요. 판돈 ${formatBeom(tableStake)} · 최대 ${formatBeom(reservation)} 예약, 정산은 테이블과 같아요.`
             : ` ${(PRACTICE_NAMES[game] ?? []).join('·')}(AI)와 쳐요. 범은 오가지 않아요.`}
         </p>
         <button

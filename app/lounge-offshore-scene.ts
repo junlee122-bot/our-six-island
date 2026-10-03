@@ -1,4 +1,4 @@
-// 먼바다 in three.js (design-sea-fishing.md §7): 허 선장's boat
+// 먼바다 in three.js (design-sea-fishing.md §7): 샹크스's boat
 // (lounge-boat-model.ts) on a sea that fills the screen. The sea is one shader
 // (lounge-offshore-water): waves that move with time, deep navy far out and
 // teal by the hull, foam on the crests and along the hull, the sun's glitter

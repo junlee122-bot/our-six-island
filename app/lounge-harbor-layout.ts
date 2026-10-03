@@ -109,7 +109,7 @@ export const HARBOR_BREAKWATER = { x: 23, z: HARBOR_SHORE_Z + 6.8, w: 3, d: 13.6
 
 /**
  * 먼바다 낚싯배 (design-sea-fishing.md): the boat moors along the pier's west
- * side; its timetable board and 허 선장 stand at the pier's root, and you step
+ * side; its timetable board and 샹크스 stand at the pier's root, and you step
  * back onto the pier at the gangway when a voyage ends.
  */
 export const HARBOR_VOYAGE = {

@@ -406,7 +406,7 @@ type ModalName =
   | 'stocks'
   // 무드 (U): needs, thoughts, inspiration, 응원하기.
   | 'mood'
-  // 부동산 · 가구점 counters and the shop upgrade board (허 선장 · 신형만/봉미선 · 발키리).
+  // 부동산 · 가구점 counters and the shop upgrade board (샹크스 · 신형만/봉미선 · 발키리).
   | 'realty'
   | 'furniture'
   | 'tavernUp'
@@ -2602,7 +2602,7 @@ function AccountLounge({
           </ScreenBoundary>
           {sheetNode}
           <div className="l-world-social">
-            {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => { setFinanceMode('casino'); setModal('bank'); }} aria-label="루미 장부 열기"><Glyph name="coin" size={19} /><span>루미 장부</span></button>}
+            {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => { setFinanceMode('casino'); setModal('bank'); }} aria-label="미쿠 장부 열기"><Glyph name="coin" size={19} /><span>미쿠 장부</span></button>}
             <button
               className="l-world-chat-button"
               aria-label={`${chatTitle} 열기`}

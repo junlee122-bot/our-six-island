@@ -48,7 +48,7 @@ function postSpots(area: SceneArea): NpcSpot[] {
   if (area === 'salon') add('gwen', interiorToWorld(SALON_STYLIST_SPOT));
   return out;
 }
-/** 루미 · 매화 · 로제 walk the village on breaks (lounge-npc-schedule.ts); the tables and the desk keep working. */
+/** 미쿠 · 예림이 · 미스 포츈 walk the village on breaks (lounge-npc-schedule.ts); the tables and the desk keep working. */
 const ROAMING_POSTS: readonly NpcId[] = ['lumi', 'maehwa', 'rose'];
 const onDuty = (id: NpcId, now: number) => !ROAMING_POSTS.includes(id) || npcAtPost(id, now);
 const RESIDENT_TALK_REACH = 1.9;
@@ -187,11 +187,11 @@ type Props = {
   onTable: (game: GameKind) => void;
   /** 나가기 at the door. */
   onExit: () => void;
-  /** 허풍 주점: talk to 허 선장 at the bar (the upgrade board). */
+  /** 허풍 주점: talk to 샹크스 at the bar (the upgrade board). */
   onHost?: () => void;
   /** Talk to the casino lender only after walking within her shared reach. */
   onLender?: () => void;
-  /** Talk to 냐모 from the public side of the bank's counter. */
+  /** Talk to 나모 from the public side of the bank's counter. */
   onBanker?: () => void;
   /** Open customization after meeting the stylist in the salon. */
   onSalon?: () => void;
@@ -600,7 +600,7 @@ export function Interior3D({
     shadowTexture.colorSpace = THREE.SRGBColorSpace;
     const shadowMaterial = new THREE.MeshBasicMaterial({ map: shadowTexture, transparent: true, depthWrite: false, toneMapped: false });
     const shadowGeometry = new THREE.PlaneGeometry(0.66, 0.5);
-    // The table hosts (루미 / 매화) stand at their tables' ends.
+    // The table hosts (미쿠 / 예림이) stand at their tables' ends.
     const tint = INTERIOR_FIGURE_TINT[area];
     const figureView = { card: INTERIOR_FIGURE_CARD, upY: INTERIOR_UP_Y, tint };
     const hosts = createInteriorHosts(scene, studio.tables, {
@@ -1570,7 +1570,7 @@ export function Interior3D({
                   : action.kind === 'stand'
                     ? '일어나기'
               : action.kind === 'host'
-                ? '허 선장과 이야기 · 주점 꾸미기'
+                ? '샹크스와 이야기 · 주점 꾸미기'
                 : action.kind === 'lender'
                   ? `${LENDER_NAME}와 대출 상담`
                   : action.kind === 'banker'

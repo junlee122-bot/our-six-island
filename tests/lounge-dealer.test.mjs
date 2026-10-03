@@ -1,4 +1,4 @@
-// AI dealer 루미 / 진행자 매화: engine dealer events, step delays, all-in
+// AI dealer 미쿠 / 진행자 예림이: engine dealer events, step delays, all-in
 // run-out reveal, and the curated lines (tone, josa, determinism, facts).
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -378,7 +378,7 @@ test('sticker replies answer the newest seated sticker for this match', () => {
     assert.ok(reactionLine('m', { seat: 0, id, at: 1 }, NAMES), id);
   assert.equal(reactionLine('m', { seat: 0, id: 'hello', at: 1 }, NAMES).includes('도원 님'), true);
 });
-test('seotda host 매화 explains the win and the pot; go-stop host is light', () => {
+test('seotda host 예림이 explains the win and the pot; go-stop host is light', () => {
   const over = {
     id: 's1',
     phase: 'over',

@@ -14,7 +14,7 @@ import {
 } from '../app/lounge-interior-layout.ts';
 
 test('casino lender reach is shared, bounded and only available inside the casino', () => {
-  assert.equal(LENDER_NAME, '로제');
+  assert.equal(LENDER_NAME, '미스 포츈');
   assert.ok(nearCasinoLender(CASINO_LENDER_FRONT, 'casino'));
   assert.ok(nearCasinoLender({ x: 50 + CASINO_LENDER_REACH, y: 45 }, 'casino'));
   for (const point of [

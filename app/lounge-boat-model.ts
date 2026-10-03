@@ -1,4 +1,4 @@
-// 허 선장's fishing boat in three.js (design-sea-fishing.md §7), built in code
+// 샹크스's fishing boat in three.js (design-sea-fishing.md §7), built in code
 // so its deck is exactly the walkable 6 × 14 of lounge-voyage-data.ts: a
 // curved hull (white topsides, a blue sheer stripe, red antifouling below the
 // waterline), a low bulwark with a rail on posts, the wheelhouse amidships

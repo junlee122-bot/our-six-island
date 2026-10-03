@@ -3,8 +3,8 @@
 // friends' actor ids or shared friendship scores. Points, one talk and one
 // gift a day, gift tastes, level presents, invitations home and dates.
 //
-// Saved rows: life.ext[uid].npcRelations[npc]. Older worlds only had 루미 and
-// 매화; their rows load unchanged and every other resident starts at 0.
+// Saved rows: life.ext[uid].npcRelations[npc]. Older worlds only had lumi and
+// maehwa (now 미쿠 and 예림이); their rows load unchanged and every other resident starts at 0.
 // Unknown ids and malformed fields are dropped by readNpcRelations.
 //
 // 연애·결혼 (handover/design/design-romance.md): 친구 → 연인 (8 hearts + a
@@ -488,18 +488,18 @@ export function breakupNewsText(love: NpcLove, me: string, name: string) {
 export function npcReply(npc: NpcId, op: NpcSocialAction['op']) {
   const lines: Partial<Record<NpcId, Partial<Record<NpcSocialAction['op'], string>>>> = {
     lumi: {
-      talk: '오늘 꽃집 앞을 지나는데 네가 생각났어. 다음에는 같이 걸을래?',
-      gift: '나를 생각하면서 골라 준 거지? 고마워. 오래 기억할게!',
-      invite: '초대해 줘서 고마워! 스무 분쯤 쉬었다 가도 될까?',
-      date: '이렇게 나란히 앉아 있으니 좋다. 다음 쉬는 날도 함께하자.',
-      dismiss: '오늘 즐거웠어. 카지노에서 또 만나!',
+      talk: '오늘 카드 섞다가 새 멜로디가 떠올랐어. 첫 소절은 너한테 먼저 들려줄게!',
+      gift: '나 생각하면서 골라 준 거지? 삼구, 땡큐! 오래 기억할게!',
+      invite: '초대해 줘서 고마워! 리허설 전까지 스무 분쯤 놀다 가도 돼?',
+      date: '이렇게 나란히 앉아 있으니까 박자가 딱 맞는 기분이야. 다음 쉬는 날도 같이하자.',
+      dismiss: '오늘 무대 최고였어. 카지노에서 또 만나!',
     },
     maehwa: {
-      talk: '마을이 조용해지는 저녁을 좋아해. 너는 어떤 때가 제일 좋아?',
-      gift: '정성이 느껴지는 선물이네. 고맙게 받을게.',
-      invite: '차 한 잔 마시며 이야기하자. 스무 분쯤 머물게.',
-      date: '너와 이야기하면 시간이 빨리 가네. 오늘을 기억해 둘게.',
-      dismiss: '편히 쉬어. 회관에 오면 반갑게 맞아 줄게.',
+      talk: '판이 끝난 회관은 조용해서 좋아. 사람 속도 그때 제일 잘 보이거든.',
+      gift: '고르느라 고민한 티가 나네. 그런 패는 언니가 안 버려.',
+      invite: '차 한 잔 내와. 스무 분, 딱 그만큼만 머물다 갈게.',
+      date: '너랑 있으면 패를 안 읽어도 돼서 편해. 오늘은 기억해 둘게.',
+      dismiss: '들어가. 회관 오면 자리 하나는 늘 비워 둘 테니까.',
     },
   };
   const name = NPCS[npc].name;

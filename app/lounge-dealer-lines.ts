@@ -1,4 +1,4 @@
-// Table hosts' voices: 루미 (별빛 카지노 딜러: 블랙잭·홀덤) and 매화 (화투방 진행자:
+// Table hosts' voices: 미쿠 (별빛 카지노 딜러: 블랙잭·홀덤) and 예림이 (화투방 진행자:
 // 섯다·고스톱). The engines only emit facts (events); every line here is built
 // from the public view, so no hidden card can leak through a sentence.
 // Variety comes from curated pools chosen by hash(matchId + revision + event):
@@ -20,9 +20,9 @@ import {
 export type DealerMood = 'calm' | 'smile' | 'wow' | 'sorry' | 'focus';
 export type DealerLine = { text: string; mood: DealerMood };
 export const HOSTS = {
-  lumi: { name: '루미', title: '별빛 카지노 딜러' },
-  maehwa: { name: '매화', title: '화투방 진행자' },
-  captain: { name: '허 선장', title: '허풍 주점 주인' },
+  lumi: { name: '미쿠', title: '별빛 카지노 딜러' },
+  maehwa: { name: '예림이', title: '화투방 진행자' },
+  captain: { name: '샹크스', title: '허풍 주점 주인' },
   realtor: { name: '신형만', title: '범마을 부동산 중개인' },
   misun: { name: '봉미선', title: '범마을 부동산 실장' },
   carpenter: { name: '발키리', title: '나무결 가구점 목수' },
@@ -68,13 +68,13 @@ export const DEALER_LINES = {
   greet: [
     '{names}, 어서 오세요. 카드 나눠 드릴게요.',
     '{names}, 반가워요. 오늘 테이블은 제가 맡을게요.',
-    '{names}, 어서 오세요. 편하게 즐겨 주세요.',
-    '{names}, 자리해 주셔서 고마워요. 시작할게요.',
+    '{names}, 어서 오세요. 박자 맞춰 카드 나눠 드릴게요.',
+    '{names}, 무대에 와 주셔서 고마워요. 시작할게요.',
   ],
   greetRound: [
     '{names}, 다시 만나 반가워요. {round}번째 판이에요.',
     '{names}, {round}번째 판이에요. 이번에도 제가 나눌게요.',
-    '{round}번째 판이에요. {names}, 편하게 즐겨 주세요.',
+    '{round}번째 판이에요. {names}, 이번 곡도 편하게 즐겨 주세요.',
   ],
   bigPot: [
     '팟이 꽤 커졌어요.',
@@ -89,12 +89,12 @@ export const DEALER_LINES = {
   consolation: [
     '오늘 카드가 좀 심술궂네요.',
     '속상하죠. 쉬어 가도 괜찮아요.',
-    '카드가 도와주지 않는 날도 있어요.',
+    '카드가 도와주지 않는 날도 있어요. 쉼표도 노래의 일부예요.',
   ],
   dealerBustStreak: [
     '오늘 제 손이 영 말을 안 듣네요.',
     '제가 또 넘겼네요. 오늘은 카드가 저를 싫어하나 봐요.',
-    '딜러 체면이 말이 아니에요.',
+    '딜러 체면이 말이 아니에요. 박자를 놓쳤나 봐요.',
   ],
   dealerHit: [
     '한 장 더 받을게요… {card}! 합계 {total|이에요/예요}.',
@@ -677,7 +677,7 @@ export function reactionLine(
 }
 
 // ---------------------------------------------------------------------------
-// 섯다 · 매화
+// 섯다 · 예림이
 export function seotdaLine(
   g: SeotdaView,
   seat: number,
@@ -721,7 +721,7 @@ export function seotdaLine(
 }
 
 // ---------------------------------------------------------------------------
-// 체스 · 루미 (the casino's host watches the board; she does not play)
+// 체스 · 미쿠 (the casino's host watches the board; she does not play)
 export function chessHostLine(
   g: {
     id: string;
@@ -763,7 +763,7 @@ export function chessHostLine(
 }
 
 // ---------------------------------------------------------------------------
-// 고스톱 · 매화 (light)
+// 고스톱 · 예림이 (light)
 export function gostopHostLine(
   g: { id: string; phase: string; turn: number; ply?: number },
   seat: number,

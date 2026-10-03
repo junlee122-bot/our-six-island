@@ -2,7 +2,7 @@
 // 먼바다 낚싯배 화면 (handover/design/design-sea-fishing.md §2): the boarding
 // window at the pier's 출항 안내판, the "귀항까지 mm:ss" bar on the deck with
 // 그만 돌아가기, the 3-second sail-out, the catch summary after coming back
-// (럭스에게 팔기) and 허 선장's dawn knock. Everything the server decides comes
+// (럭스에게 팔기) and 샹크스's dawn knock. Everything the server decides comes
 // from `view.life.voyage` (lounge-voyage.ts voyageView); the phase is
 // recomputed here from the clock so the countdown never waits for a poll.
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -95,7 +95,7 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
       <div className="l-voyage-keeper">
         <NpcPortrait npc="captain" mood={v.storm ? 'sorry' : 'smile'} />
         <p>
-          <b>허 선장</b>
+          <b>샹크스</b>
           <span>{say}</span>
         </p>
       </div>
@@ -144,7 +144,7 @@ export function VoyageBoard({ room, view, notify, onClose }: { room: CloudRoom; 
         </p>
       )}
       {why && <p className="l-why" data-testid="voyage-why">{why}</p>}
-      {!phase && v.unlocked && (view.wallet?.balance ?? 0) < v.fare && <p className="l-help-text">{VOYAGE_LINES.rose.fare[0]} — 로제</p>}
+      {!phase && v.unlocked && (view.wallet?.balance ?? 0) < v.fare && <p className="l-help-text">{VOYAGE_LINES.rose.fare[0]} — 미스 포츈</p>}
       <p className="l-help-text">{VOYAGE_LINES.gabung.tomorrow[v.stormTomorrow ? 1 : 0]} — 가붕</p>
       <div className="l-voyage-actions">
         {phase === 'boarding' ? (
@@ -258,7 +258,7 @@ export function VoyageSummary({ room, view, notify, onClose }: { room: CloudRoom
       <div className="l-voyage-keeper">
         <NpcPortrait npc="captain" mood="smile" />
         <p>
-          <b>허 선장</b>
+          <b>샹크스</b>
           <span>{line}</span>
         </p>
       </div>
@@ -324,11 +324,11 @@ export function DawnKnock({ room, view, notify, onClose, onAccepted }: { room: C
   };
   if (!v) return null;
   return (
-    <Modal title="허 선장이 찾아왔어요" onClose={() => void answer(false)} className="l-voyage-knock">
+    <Modal title="샹크스가 찾아왔어요" onClose={() => void answer(false)} className="l-voyage-knock">
       <div className="l-voyage-keeper">
         <NpcPortrait npc="captain" mood="smile" />
         <p>
-          <b>허 선장</b>
+          <b>샹크스</b>
           <span data-testid="voyage-knock-line">{fill(lineOf(VOYAGE_LINES.captain.knock, day), myName)}</span>
         </p>
       </div>

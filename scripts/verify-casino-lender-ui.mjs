@@ -101,7 +101,7 @@ try {
   const rejected = async (p, a) => {
     const ledger = structuredClone(H.world().ledger), finance = structuredClone(H.world().finance);
     const r = await action(p, a);
-    assert.match(r.error?.message ?? r.error ?? '', /로제|거래|앞으로/);
+    assert.match(r.error?.message ?? r.error ?? '', /미스 포츈|거래|앞으로/);
     assert.deepEqual(H.world().ledger, ledger, 'rejected remote action cannot change wallet, bank or house');
     assert.deepEqual(H.world().finance, finance, 'rejected remote action cannot change notes');
   };
@@ -177,7 +177,7 @@ try {
     assert.ok(Math.hypot(underModal.x - stopped.x, underModal.y - stopped.y) <= .05, 'modal stops queued walking and ignores movement keys');
     assert.equal(await page.getByTestId('casino-lender-panel').count(), 0);
     assert.equal(await page.getByTestId('lender-borrow').count(), 0);
-    assert.match(await page.locator('dialog[open]').innerText(), /루미/);
+    assert.match(await page.locator('dialog[open]').innerText(), /미쿠/);
     await closeDialogs();
     await wait(() => document.querySelector('[data-testid=interior-3d]')?.dataset.paused === 'false');
     await sleep(450);
@@ -213,7 +213,7 @@ try {
     await click('[aria-label="마을 메뉴"]');
     await page.getByRole('button', { name: '은행 · 차용증', exact: true }).click();
     await page.getByRole('tab', { name: '차용증', exact: true }).click();
-    assert.match(await page.locator('dialog[open]').innerText(), /로제/);
+    assert.match(await page.locator('dialog[open]').innerText(), /미스 포츈/);
     assert.equal(await page.getByRole('button', { name: /전액 갚기|1,000범 갚기|입력한 금액 갚기/ }).count(), 0, 'bank lists a casino note but cannot repay it remotely');
     await closeDialogs(); await approachLender();
   });

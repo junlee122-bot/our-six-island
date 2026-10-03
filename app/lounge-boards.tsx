@@ -89,7 +89,7 @@ export function ChessBoard({
     } else
       setSelected(board.get(sq as Square)?.color === board.turn() ? sq : null);
   };
-  // 루미 hosts the casino's chess table too: the same strip as the card tables.
+  // 미쿠 hosts the casino's chess table too: the same strip as the card tables.
   const history = board.history();
   const line = chessHostLine(match, seat, names, history.at(-1), round);
   const aside = useReactionReply(match.id, reaction, names);

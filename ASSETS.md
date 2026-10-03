@@ -28,6 +28,7 @@
 | C7 | Higgsfield (GPT Image 2.5, 2026-10-01) | 나무결 가구점 목수 발키리: 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 가구점 창구 6포즈 시트(평소·웃음·의자 들기·집중·놀람·미안) | `lounge/npc-valkyrie.webp`, `lounge/npc-valkyrie-portrait.webp`, `lounge/chibi/npc-valkyrie.webp`, `lounge/host-carpenter.*` | 유료 크레딧 생성. 원본 `_originals/npc-valkyrie.png`, `_originals/chibi/npc-chibi-valkyrie.png`, `_originals/host-valkyrie.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/carpenter-valkyrie-generation.json`. **Supercell 캐릭터 팬아트**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 가구점 창구·대화창·마을과 가게 안의 발키리 |
 | C8 | Higgsfield (GPT Image 2.5, 2026-10-02) | 마을 NPC 3단계 5명: 닐라(목장주)·하쿠(과수원 주인)·오른(대장장이)·메르시(의사)·쿠도 신이치(점쟁이)의 전신 대화창 그림·초상과 게임 속 치비(약 2등신, 한 장에 한 명; 신이치 치비는 '코난' 변장 차림, 사용자 결정) | `lounge/npc-{nilah,haku,ornn,mercy,shinichi}.webp`, `lounge/npc-*-portrait.webp`, `lounge/chibi/npc-{nilah,haku,ornn,mercy,shinichi}.webp` | 유료 크레딧 생성. 원본 `_originals/npc-*.png`, `_originals/chibi/npc-chibi-*.png`(마젠타 배경), 작업 ID·원본 SHA-256: `public/assets/lounge/stage3-npcs-generation.json`; 키잉한 웹 사본의 크기·SHA-256은 `node scripts/optimize-assets.mjs npcs`·`chibi`가 같은 파일(`web`)과 `npc-chibi-generation.json`(`web`)에 기록(오른은 붉은 수염 때문에 키 기준을 높임). **Riot Games 팬아트 2명 + 스튜디오 지브리·Blizzard·쇼가쿠칸 캐릭터 3명**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 목장·과수원·산기슭 마을 주민(대화창·마을) |
 | C9 | Higgsfield (GPT Image 2.5, 2026-10-02) | 범마을 증권 지점장 무잔: 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 증권사 창구 6포즈 시트(평소·웃음·시세표 내밀기·집중·놀람·미안) | `lounge/npc-muzan.webp`, `lounge/npc-muzan-portrait.webp`, `lounge/chibi/npc-muzan.webp`, `lounge/host-broker.*` | 유료 크레딧 생성. 원본 `_originals/npc-muzan.png`, `_originals/chibi/npc-chibi-muzan.png`, `_originals/host-muzan.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/broker-muzan-generation.json`(웹 사본 항목은 `optimize-assets.mjs`가 씀). **『귀멸의 칼날』 캐릭터 패러디**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음 | 증권사 창구·주식 창·대화창·마을과 증권사 안의 무잔 |
+| C10 | Higgsfield (GPT Image 2.5, 2026-10-03) | 허풍 주점 샹크스·화투방 예림이: 각자 전신 대화창 그림·초상, 게임 속 치비(약 2등신, 한 명), 6포즈 시트(평소·웃음·패 내밀기·집중·놀람·미안) | `lounge/npc-{shanks,jeong}.webp`, `lounge/npc-{shanks,jeong}-portrait.webp`, `lounge/chibi/npc-{shanks,jeong}.webp`, `lounge/host-captain.*`, `lounge/host-maehwa.*` | 유료 크레딧 생성. 원본 `_originals/npc-{shanks,jeong}.png`, `_originals/chibi/npc-chibi-{shanks,jeong}.png`, `_originals/host-{shanks,jeong}.png`(모두 마젠타 배경), 작업 ID·원본과 웹 사본 SHA-256: `public/assets/lounge/shanks-jeong-generation.json`(웹 사본 항목은 `optimize-assets.mjs`가 씀). **『원피스』 캐릭터 팬아트 + 영화 『타짜』 정마담 모티프의 오리지널 캐릭터**(아래 IP 표). 사용자 레퍼런스 그림은 생성 입력으로만 쓰고 저장소에 넣지 않음. 예전 허 선장 시트·매화 시트와 매화 치비(`chibi/npc-maehwa.webp`)는 이것으로 바뀜 | 주점 바·먼바다 선착장·화투방·대화창·마을의 샹크스와 예림이 |
 | A2 | OpenAI 내장 image_gen (2026-09-28) | 냐모 은행 대화창 초상(실사풍, 대화창 전용) | `lounge/bank-clerk-nyamo-portrait.webp` | 사용자 제공 레퍼런스 기반, 기록 `public/assets/lounge/nyamo-portrait-generation.json` | 은행 대화창 |
 | D | kArchive (쓰레드 dogfooter) | 소파·튤립, 주택 3종, 과일나무, 수국, 피크닉 테이블, 벤치, 정원등, 책장, 화분 선반, 티 테이블, 흔들의자 + 공공시설 세트(회관 한옥·온실·박물관·게시판·축제 무대·등나무 쉼터·텃밭 틀·울타리·바다 데크·난간, 카드 테이블·연회 의자·바 의자·차단봉) + 야추·라이어 테이블 소품(타원 회의 테이블·알림종 2종·발언대·투표함·탁상 달력·연필) + 대장간(공방 일반형·파괴형, 2026-09-26) — GLB 37개 | `public/models/lounge/*.glb`, `lounge/redesign/`, `lounge/club/`, `lounge/friends/`, `village/`, `village/expansion/`, `village/civic/`, `village/forge/` | 사용·수정 허용, **출처 표기 필수, 원본 재판매 금지**, CC 아님 | 사용 중(최적화 사본) |
 | D2 | kArchive (쓰레드 dogfooter, 2026-09-28, 2026-09-30 추가) | 은행·미용실 외관, 낚시 결과 물고기 7종(메기·잉어·고등어 + 붕어·쏘가리·갈치·대구) | `public/models/village/life-services/` (9개) | D와 같은 약관(출처 표기 필수·원본 재판매 금지·CC 아님). `ATTRIBUTION.md`·`assets.json` 보관, 크레딧 창 표기 | 사용 중 |
@@ -54,7 +55,7 @@
 | 하츠네 미쿠 코디·미쿠 테마 소품 | 크립톤 퓨처 미디어 캐릭터. 비상업 2차 창작 가이드라인 범위 확인 필요 | 비상업 유지, 공식 로고·이름 노출 최소화, 필요하면 오마주 디자인으로 교체 |
 | 아카츠키 망토 | 『나루토』 의상 디자인 | 비상업 유지, 공개 홍보·출품 시 교체 검토 |
 | 샴푸 중국풍·만두머리 | 『란마½』·『스트리트 파이터』 참조 | 일반적 의상 요소. 화면 이름에서 원작명 빼기 권장 |
-| 카지노 대부 로제 | 사용자 제공 『리그 오브 레전드』 미스 포츈 그림을 참조한 팬아트(해적 모자·붉은 머리) | 비상업 유지. 공개 홍보·출품·수익화 전 디자인 교체 |
+| 카지노 대부 미스 포츈 (2026-10-03까지 '로제') | 사용자 제공 『리그 오브 레전드』 미스 포츈 그림을 참조한 팬아트(해적 모자·붉은 머리). 2026-10-03부터 이름도 원작과 같음 | 비상업 유지. 공개 홍보·출품·수익화 전 디자인 교체 |
 | 미용실 그웬 | 『리그 오브 레전드』 그웬 팬아트. 이름과 외형(파란 드릴 트윈테일·가위)이 원작과 거의 같음 | 비상업 유지. 공개 전에 이름·외형 교체가 가장 우선 |
 | 농협 조합장 나세라 | 사용자 제공 『리그 오브 레전드』 나서스 여성화 팬아트 기반. 자칼 투구·청록 금 갑옷이 원작 디자인 | 비상업 유지. 공개 홍보·출품·수익화 전 디자인 교체 |
 | 잡화점 쓰레쉬 | 『리그 오브 레전드』 쓰레쉬 여성화 팬아트. 이름·낫·등불·초록 도깨비불이 원작 그대로 | 비상업 유지. 공개 전 이름·외형 교체 우선 |
@@ -78,7 +79,10 @@
 | 대장장이 오른 | 『리그 오브 레전드』 오른(Riot Games). 원작 색(분홍 수염·라벤더 피부·청동 갑옷) 그대로 | 비상업 유지. 공개 전 외형 교체 |
 | 의사 메르시 | 『오버워치』 메르시(Blizzard). 마을 여름 의사 차림으로 바꿨지만 얼굴·후광·이름이 원작 | 비상업 유지. 공개 전 이름·외형 교체 우선 |
 | 점쟁이 쿠도 신이치 | 『명탐정 코난』 쿠도 신이치(아오야마 고쇼 / 쇼가쿠칸). 대화 그림은 20대 중반 성인, 마을 치비는 '코난' 변장 차림(사용자 결정). 연애 대사는 성인 신이치로만 씀 | 비상업 유지. 공개 홍보·출품·수익화 전 반드시 교체 |
-| 은행 직원 냐모 | 『사니양 연구실』 나모(테일즈샵) 기반, 사용자 확인(2026-10-02). 원작의 푸른 장발 수인 대학원생을 마을 은행원으로 옮김. 대사는 원작 설정(실무 도맡는 일벌레, 허당, 저질 체력, 덕질)만 빌려 새로 씀 | 비상업 유지. 공개 홍보·출품·수익화 전 이름·외형 교체 |
+| 은행 직원 나모 (2026-10-03까지 '냐모') | 『사니양 연구실』 나모(테일즈샵) 기반, 이름도 원작과 같음, 사용자 확인(2026-10-02). 원작의 푸른 장발 수인 대학원생을 마을 은행원으로 옮김. 대사는 원작 설정(실무 도맡는 일벌레, 허당, 저질 체력, 덕질)만 빌려 새로 씀 | 비상업 유지. 공개 홍보·출품·수익화 전 이름·외형 교체 |
+| 주점 주인 샹크스 | 『원피스』 샹크스(오다 에이치로 / 슈에이샤). 이름·빨간 머리·눈가 흉터·왼쪽을 덮는 검은 망토가 원작 디자인. 대사는 말투·소재(술, 친구, 모험, 밀짚모자 약속)만 빌려 새로 씀 | 비상업 유지. 공개 전 반드시 교체 |
+| 화투방 예림이 | 영화 『타짜』(원작 허영만·김세영 만화, 2006 영화)의 정마담을 모티프로 한 오리지널 캐릭터. 그림은 영화 속 차림(단발·흰 홀터넥·진주)만 참고했고 배우 얼굴은 쓰지 않음, 담배 대신 화투패. 대사는 원작 대사를 옮기지 않고 새로 씀 | 비상업 유지. 실존 배우를 닮게 바꾸지 않기. 공개 전 외형 재검토 |
+| 카지노 딜러 미쿠 (2026-10-03까지 '루미') | 크립톤 퓨처 미디어의 하츠네 미쿠 풍 그림(청록 트윈테일)에 2026-10-03부터 이름·말투(노래·무대·파)도 미쿠. 실제 곡 가사·곡명은 쓰지 않음 | 비상업 유지(피아프로 캐릭터 라이선스 범위). 공개 홍보·출품·수익화 전 이름·외형 교체 |
 | 화투 SVG | CC BY-SA 4.0 — 변형해 배포하면 변형물도 같은 라이선스 | 무변형 사용 + 출처 표기 유지 |
 | kArchive GLB | 출처 표기 필수·원본 재판매 금지, CC 아님(약관 변경 가능) | 화면 크레딧 유지, 다운로드 시점 약관 기록 보관. 웹용 최적화 사본은 "수정 허용" 범위 |
 | 3DAssets CC0 | 제약 없음 | — |
@@ -710,6 +714,23 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - 웹 사본: `node scripts/optimize-assets.mjs npcs muzan`(전신 660×990, 초상 384², 치비도 함께), `chibi muzan`(512×640, 몸 94%·발 97% 선), `hosts broker`(3×2 원본을 한 배율로 440×660 셀·발바닥 648 px에 다시 배치한 `host-broker.png` → WebP).
 - 런타임: 주민 id `muzan`. 대화창·주민 수첩은 전신·초상, 마을과 증권사 안은 치비(`app/lounge-npc-chibi.ts`), 주식 창 머리의 지점장 카드는 포즈 시트(`HOST_SHEET.muzan`).
 - IP: 『귀멸의 칼날』 캐릭터 패러디입니다. 권리 허락을 받은 에셋으로 표기하지 않습니다(위 IP 표).
+
+## 주민 이름·모습 교체 (샹크스 · 예림이 · 미쿠 · 미스 포츈 · 나모) · 2026-10-03
+
+사용자 요청(설계 `handover/design/character-swaps-2026-10-03.md`). 주민 id는 그대로라 하트·연애·동행 기록이 이어집니다.
+
+| id | 전 | 후 | 그림 |
+|---|---|---|---|
+| `captain` | 허 선장 | 샹크스(『원피스』) | 새 전신·치비·6포즈 시트 |
+| `maehwa` | 매화 | 예림이(모티프: 『타짜』 정마담) | 새 전신·치비·6포즈 시트 |
+| `lumi` | 루미 | 미쿠(하츠네 미쿠) | 그대로 |
+| `rose` | 로제 | 미스 포츈 | 그대로 |
+| `nyamo` | 냐모 | 나모 | 그대로 |
+
+- 새 그림: Higgsfield GPT Image 2.5로 전신(2:3, 그림체 참조 `casino-lender-rose.png`), 치비(참조 `npc-chibi-lux-himmel.png`), 3×2 시트(1:1, 참조 `host-maehwa.png`). 원본·작업 ID·SHA-256과 웹 사본 크기·SHA-256: [shanks-jeong-generation.json](public/assets/lounge/shanks-jeong-generation.json).
+- 웹 사본: `node scripts/optimize-assets.mjs npcs shanks jeong`(전신 660×990, 초상 384², 치비 512×640), `hosts captain maehwa`(3×2 원본을 한 배율로 440×660 셀·발바닥 648 px에 다시 배치한 `host-captain.png`·`host-maehwa.png` → WebP). 파일 이름은 그림 쪽(`shanks`, `jeong`), 치비 기록(`npc-chibi-generation.json`)은 주민 id(`captain`, `maehwa`)로 적힙니다.
+- 런타임: 대화창·주민 수첩은 전신·초상(`NPCS.captain.art`, `NPCS.maehwa.art`), 마을은 치비(샹크스도 이제 치비로 걷기), 주점 바·선착장·화투방 테이블은 포즈 시트(`HOST_SHEET.captain`, `HOST_SHEET.maehwa`). 예전 허 선장 시트의 프롬프트 기록 `host-captain.prompt.txt`와 매화 치비 원본은 기록으로 남깁니다.
+- IP: 위 IP 표. 권리 허락을 받은 에셋으로 표기하지 않습니다.
 
 ## 가게 실내 (빵집 카페 · 농협 · 잡화점 · 어시장) · 2026-10-02
 

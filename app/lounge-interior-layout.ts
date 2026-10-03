@@ -73,7 +73,7 @@ export function interiorArrival(area: SceneArea): ScenePoint {
   return { ...INTERIOR_DOOR };
 }
 
-/** The table hosts: 루미 deals in the casino, 매화 runs the hwatu tables. */
+/** The table hosts: 미쿠 deals in the casino, 예림이 runs the hwatu tables. */
 export const TABLE_HOST: Record<GameKind, HostId | null> = {
   blackjack: 'lumi',
   poker: 'lumi',
@@ -83,12 +83,12 @@ export const TABLE_HOST: Record<GameKind, HostId | null> = {
   // Friends' tables: no host (the game shows a 진행 strip instead).
   yacht: null,
   liar: null,
-  // 허풍 주점: 허 선장 stands behind the bar (TAVERN_HOST_AT), not at the table.
+  // 허풍 주점: 샹크스 stands behind the bar (TAVERN_HOST_AT), not at the table.
   liarsbar: 'captain',
 };
 
 /**
- * 허 선장 stands behind the tavern's bar counter (world units), off the
+ * 샹크스 stands behind the tavern's bar counter (world units), off the
  * walkable floor: he blocks nothing and never moves with the seats.
  */
 export const TAVERN_HOST_AT: InteriorWorld = { x: -3.6, z: -5.68 };
@@ -185,7 +185,7 @@ export const nearDoor = (p: ScenePoint) =>
   Math.hypot(p.x - INTERIOR_DOOR.x, p.y - INTERIOR_DOOR.y) <= INTERIOR_DOOR_REACH;
 
 /**
- * 허풍 주점: where you stand to talk to 허 선장 across the bar (network units;
+ * 허풍 주점: where you stand to talk to 샹크스 across the bar (network units;
  * world (−3.6, −4.2), just in front of the counter).
  */
 export const TAVERN_BAR_FRONT: ScenePoint = { x: 32, y: 44 };
@@ -238,7 +238,7 @@ export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | 
     if (((p.x - c.x) / (c.rx + 1)) ** 2 + ((p.y - c.y) / (c.ry + 1)) ** 2 <= 1)
       return { kind: 'table', game: c.game };
   if (p.x < 15.5 && Math.abs(p.y - INTERIOR_DOOR.y) < 5) return { kind: 'door' };
-  // The tavern's bar (허 선장 behind it).
+  // The tavern's bar (샹크스 behind it).
   if (area === 'tavern' && p.y < 44.5 && p.x > 20 && p.x < 44) return { kind: 'host' };
   return null;
 }
