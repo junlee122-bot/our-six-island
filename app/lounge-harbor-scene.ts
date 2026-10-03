@@ -31,8 +31,12 @@ import { HARBOR_MODEL_URLS } from './lounge-district-models';
 // 먼바다 낚싯배: the boat moored at the pier, its timetable board and 샹크스.
 import { HARBOR_VOYAGE } from './lounge-harbor-layout';
 import { buildFishingBoat, type FishingBoat } from './lounge-boat-model';
-import { HOST_CELL, HOST_SHEET, hostCell } from './lounge-host-sprites';
-import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT, RESIDENT_SCALE } from './lounge-village-camera';
+import { HOST_SHEET } from './lounge-host-sprites';
+import { npcChibi } from './lounge-npc-chibi';
+import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
+/** A friend's canvas (640 px) over their body (540 px): the chibi plane's height (lounge-area-3d.tsx). */
+const CHIBI_CANVAS_H = 640,
+  CHIBI_BODY_H = 540;
 import { DistrictSet, PAVING, districtMat, rnd, shadowed, type DistrictUpdate } from './lounge-district-kit';
 
 export class HarborSet extends DistrictSet {
@@ -70,15 +74,19 @@ export class HarborSet extends DistrictSet {
       h: 1.5,
       name: 'harbor-voyage-board',
     });
-    // 샹크스 from his tavern sheet (calm pose), standing like a resident.
-    const tex = this.own(new THREE.TextureLoader().load(HOST_SHEET.captain, () => this.onChange()));
+    // 샹크스 as the chibi he walks the village in (same size, feet line and
+    // texture settings as the residents, lounge-npc-figures.ts). His tavern
+    // pose sheet, drawn tiny and slanted here, came out blurred.
+    const chibi = npcChibi('captain');
+    const tex = this.own(new THREE.TextureLoader().load(chibi?.asset ?? HOST_SHEET.captain, () => this.onChange()));
     tex.colorSpace = THREE.SRGBColorSpace;
-    const cell = hostCell('calm');
-    tex.repeat.set(1 / HOST_CELL.cols, 1 / HOST_CELL.rows);
-    tex.offset.set(cell.x / (HOST_CELL.w * HOST_CELL.cols), 1 - (cell.y + HOST_CELL.h) / (HOST_CELL.h * HOST_CELL.rows));
-    const h = ((VILLAGE_FIGURE_HEIGHT * RESIDENT_SCALE * HOST_CELL.h) / HOST_CELL.figure) / Math.cos(VIEW_PITCH);
-    const geo = this.own(new THREE.PlaneGeometry(h * (HOST_CELL.w / HOST_CELL.h), h));
-    geo.translate(0, h * (1 - HOST_CELL.foot / HOST_CELL.h) + h / 2 - h * 0.02, 0);
+    tex.minFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    const plane = (VILLAGE_FIGURE_HEIGHT * CHIBI_CANVAS_H) / CHIBI_BODY_H / Math.cos(VIEW_PITCH),
+      upY = Math.cos(VIEW_PITCH);
+    const geo = this.own(new THREE.PlaneGeometry(plane * upY * ((chibi?.w ?? 4) / (chibi?.h ?? 5)), plane));
+    // Feet on the 97% line, like a friend's canvas.
+    geo.translate(0, plane * 0.47, 0);
     const captain = new THREE.Mesh(geo, this.own(new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.12, toneMapped: false })));
     captain.position.set(HARBOR_VOYAGE.captain.x, 0.02, HARBOR_VOYAGE.captain.z);
     captain.name = 'harbor-captain';
