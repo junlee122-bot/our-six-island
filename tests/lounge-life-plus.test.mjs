@@ -1007,7 +1007,8 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
   }
   assert.ok(worldBytes < 6 * 1024 * 1024, 'world under 6MB');
   assert.ok(lifeBytes < 400 * 1024, `life ${lifeBytes} bytes`);
-  assert.ok(viewBytes < 64 * 1024, `view ${viewBytes} bytes`);
+  // 우리 농장 (80-tile fields) plus 기술 트리 and 주민 동행 raised the year-end view; budget 72KB.
+  assert.ok(viewBytes < 72 * 1024, `view ${viewBytes} bytes`);
   assert.ok((s.life.flags ?? []).length >= 2, 'some bundles completed');
   assert.ok(report.spent > 0);
   const back = readLife(JSON.parse(JSON.stringify(s.life)));

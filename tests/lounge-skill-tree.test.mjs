@@ -313,14 +313,17 @@ test('talent effects reach the systems: demand, sale bonus, gifts, crows, seeds'
   // 씨앗 아끼기: over many plantings some seeds are kept.
   setLevel(s, m, 'farm', 2);
   pick(s, m, 'farm', 'farm-t1');
-  let kept = 0;
+  let kept = 0, total = 0;
   for (let i = 0; i < 60; i++) {
     s.life.farms[m.id] = s.life.farms[m.id].map(() => ({ crop: null, plantedAt: 0, wateredAt: null }));
-    s.life.bag[m.id].seeds.carrot = 6;
+    // 우리 농장: a field has more open tiles than seeds handed out, so count seeds kept per planting.
+    s.life.bag[m.id].seeds.carrot = 200;
     s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0 + i * 1000);
-    kept += s.life.bag[m.id].seeds.carrot;
+    const planted = s.life.farms[m.id].filter((p) => p?.crop === 'carrot').length;
+    kept += planted - (200 - s.life.bag[m.id].seeds.carrot);
+    total += planted;
   }
-  assert.ok(kept > 0 && kept < 60, `kept ${kept}`);
+  assert.ok(kept > 0 && kept < total * 0.3, `kept ${kept} of ${total}`);
 });
 
 // ------------------------------------------------------------ saves
