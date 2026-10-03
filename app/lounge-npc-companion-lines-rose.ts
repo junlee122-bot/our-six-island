@@ -1,4 +1,4 @@
-// 로제 — 동행 대사 (카지노 대부). 짧고 단호한 반말, 조건은 정확하게. 바다·현상금·옛 빚 얘기엔 선장 같은 배짱이 묻어나요.
+// 미스 포츈 — 동행 대사 (카지노 대부). 짧고 단호한 반말, 조건은 정확하게. 바다·현상금·옛 빚 얘기엔 선장 같은 배짱이 묻어나요.
 import type { CompanionLineSet } from './lounge-npc-companion-line-types.ts';
 
 export const ROSE_COMPANION: CompanionLineSet = {
@@ -51,7 +51,7 @@ export const ROSE_COMPANION: CompanionLineSet = {
     '옛날에 내 배를 태운 놈이 있었어. 빚은 갚게 했지. 정확하게.',
     '현상금 붙은 놈들 명단, 아직 외워. 창구 손님 얼굴 보는 버릇이 그래서야.',
     '보물 냄새는 내가 맡아. 먼바다 나가면 상자 하나는 꼭 건지게 해 줄게.',
-    '냐모네 은행이랑 이자 싸움 중이야. 지는 건 내 장부에 없어.',
+    '나모네 은행이랑 이자 싸움 중이야. 지는 건 내 장부에 없어.',
     '{me}, 넌 운 대신 손을 쓰지. 그래서 같이 다니는 거야.',
   ],
   suggest: {
@@ -89,7 +89,7 @@ export const ROSE_COMPANION: CompanionLineSet = {
     badPlace: ['채소밭이네. 미안한데 코가 먼저 거절해. 빨리 지나가자.'],
   },
   love: {
-    accept: ['네가 부르면 창구는 냐모한테 맡겨. 가자, {me}.'],
+    accept: ['네가 부르면 창구는 나모한테 맡겨. 가자, {me}.'],
     chat: [
       '손 잡는 건 계약서에 없어. 그래도 허락할게. 평생.',
       '언젠가 배 살 거야. 선장은 나, 갑판엔 너. 조건은 그거야.',

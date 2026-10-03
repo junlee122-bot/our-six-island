@@ -25,7 +25,7 @@
 // Inside a house, the library or the lighthouse a resident is not drawn
 // (`hidden` places in a visible area). The residents who work indoors are
 // drawn at their posts by their scenes; 발키리 takes an evening walk through
-// the hub, and 루미 · 매화 · 로제 leave the casino and the hall through their
+// the hub, and 미쿠 · 예림이 · 미스 포츈 leave the casino and the hall through their
 // doors for breaks and a weekly day off (hostPlan; the tables and the
 // lender's desk keep working without them, npcAtPost). 범마을 부동산 is kept in turns by a married
 // couple (realtyDuty): 신형만 on Mon/Wed/Fri, 봉미선 on Tue/Thu, both at the
@@ -162,7 +162,7 @@ const TAVERN_SCENE = {
   misun: { x: 61, y: 51 },
   // 무잔's stool after the market closes (off the evening seat pool).
   muzan: { x: 45, y: 72 },
-  // 루미 · 매화 · 로제 on their breaks and days off (kept off the evening seat pool).
+  // 미쿠 · 예림이 · 미스 포츈 on their breaks and days off (kept off the evening seat pool).
   lumi: { x: 28, y: 68 },
   maehwa: { x: 36, y: 62 },
   rose: { x: 62, y: 88 },
@@ -328,7 +328,7 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.furniture-door': place('village', entryOf('furniture'), Math.PI, '가구점 앞'),
   'v.casino-door': place('village', entryOf('casino'), Math.PI, '별빛 카지노 앞'),
   'v.hall-door': place('village', entryOf('hall'), Math.PI, '범마을 회관 앞'),
-  // 루미 · 매화's breaks and days off (off the evening seats).
+  // 미쿠 · 예림이's breaks and days off (off the evening seats).
   'v.lumi-flower': place('village', vSnap({ x: -33.5, z: -9.4 }), -Math.PI / 2, '연못가 꽃밭'),
   'v.lumi-late': place('village', vSnap({ x: -1.8, z: 8.4 }), Math.PI / 2, '광장 가로등 아래'),
   'v.casino-yard': place('village', vSnap({ x: 18.6, z: 9.6 }), -Math.PI / 2, '카지노 처마 밑'),
@@ -379,7 +379,7 @@ export const NPC_PLACES: Record<string, Place> = {
   'm.cafe-5': place('market', { x: 8, z: -10.2 }, 0.9, '빵집 카페 테라스'),
   'm.cafe-6': place('market', { x: 11, z: -6.1 }, -0.9, '빵집 카페 테라스'),
   'm.cafe-7': place('market', { x: 14.2, z: -7.4 }, -1.6, '빵집 카페 테라스'),
-  // 루미's café seat and flower stall, 매화's grocery round.
+  // 미쿠's café seat and flower stall, 예림이's grocery round.
   'm.lumi-cafe': place('market', { x: 9.6, z: -9.2 }, 0.4, '빵집 카페 테라스'),
   'm.lumi-flowers': place('market', { x: 0.6, z: 11.4 }, Math.PI, '시장 꽃 좌판'),
   'm.maehwa': place('market', { x: -6.4, z: -4.4 }, 0, '시장 거리 장보기'),
@@ -393,7 +393,7 @@ export const NPC_PLACES: Record<string, Place> = {
   ...Object.fromEntries(Object.entries(hb).map(([k, p]) => [`hb.${k}`, place('harbor', p, p.face, HARBOR_NAMES[k] ?? '항구')])),
   'hb.quay-2': place('harbor', { x: 15.4, z: -0.6 }, 0, '항구 좌판'),
   'hb.lighthouse-in': inside('harbor', hb['lighthouse-door'], '등대 안'),
-  // 로제's sea walks.
+  // 미스 포츈's sea walks.
   'hb.rose': place('harbor', { x: -0.2, z: 10.5 }, 0, '큰 선착장'),
   'hb.rose-sunset': place('harbor', { x: 23.4, z: 11.2 }, -Math.PI / 2, '방파제'),
   // ③ 언덕 주택가 (visible once it is open; the plans map these to 'home' / 'library' before).
@@ -710,9 +710,9 @@ function muzanPlan(k: DayKind): Seg[] {
 }
 
 // ---------------------------------------------------------------- the casino and the hall
-// 루미 (블랙잭 딜러), 매화 (화투방) and 로제 (대부 창구) work the evening rush
+// 미쿠 (블랙잭 딜러), 예림이 (화투방) and 미스 포츈 (대부 창구) work the evening rush
 // at their posts and walk the village on their breaks and one day off a week
-// (루미 화, 매화 수, 로제 월). The tables and the desk never wait for them:
+// (미쿠 화, 예림이 수, 미스 포츈 월). The tables and the desk never wait for them:
 // the games are dealt by the server and the lender's book is a desk at a fixed
 // spot (nearCasinoLender), so while they are out the scenes show an empty
 // post with an "자동 진행 / 창구 장부" note (npcAtPost).
@@ -726,7 +726,7 @@ function hostLate(id: HostNpc, k: DayKind): Seg {
   if (k.weekday !== HOST_DAY_OFF[id]) return [0, NPC_POSTS[id], 'work', POST_LABEL[id]];
   if (id === 'lumi') return k.rain ? [0, 't.lumi', 'drink', '주점 창가에서 꽃차 마시는 중'] : [0, 'v.lumi-late', 'stroll', '광장 가로등 아래서 밤 산책 중'];
   if (id === 'maehwa') return k.rain ? [0, 't.maehwa', 'eat', '주점에서 안주 나눠 먹는 중'] : [0, 'v.hall-late', 'stroll', '회관 앞 골목 밤 산책 중'];
-  return k.rain ? [0, 't.rose', 'drink', '주점에서 허 선장과 바다 이야기 중'] : [0, 'hb.rose', 'stroll', '밤 선착장에서 바다 보는 중'];
+  return k.rain ? [0, 't.rose', 'drink', '주점에서 샹크스와 바다 이야기 중'] : [0, 'hb.rose', 'stroll', '밤 선착장에서 바다 보는 중'];
 }
 function hostPlan(id: HostNpc, k: DayKind): Seg[] {
   const start: Seg[] = [hostLate(id, dayKind(k.day - 1, k.hill)), [hm(1), 'home', 'sleep']];
@@ -740,7 +740,7 @@ function hostPlan(id: HostNpc, k: DayKind): Seg[] {
           [hm(11), 'm.lumi-cafe', 'eat', '빵집 카페 테라스에서 브런치 중'],
           [hm(12, 30), 'm.lumi-flowers', 'stroll', '시장 꽃 좌판 구경 중'],
           [hm(14), k.rain ? 'v.casino-yard' : 'v.lumi-flower', 'stroll', k.rain ? '카지노 처마 밑에서 비 구경 중' : '연못가 꽃밭 산책 중'],
-          [hm(16, 30), 'm.lumi-cafe', 'eat', '빵집 카페에서 달콤한 음료 마시는 중'],
+          [hm(16, 30), 'm.lumi-cafe', 'eat', '빵집 카페에서 흥얼거리며 음료 마시는 중'],
           [hm(19, 30), 't.lumi', 'drink', '주점 창가에서 꽃차 마시는 중'],
           [hm(22, 30), late[1], late[2], late[3]],
         ]
@@ -757,7 +757,7 @@ function hostPlan(id: HostNpc, k: DayKind): Seg[] {
           ...start,
           [hm(9), 'm.maehwa', 'stroll', '시장 거리에서 찻감·요리 재료 장보는 중'],
           [hm(10, 30), 'coop.drop', 'stroll', '농협에서 햇곡식 고르는 중'],
-          [hm(12), 't.maehwa', 'eat', '주점에서 허 선장과 안주 바꿔 먹는 중'],
+          [hm(12), 't.maehwa', 'eat', '주점에서 샹크스와 안주 나눠 먹는 중'],
           [hm(14), k.rain ? 'v.hall-yard' : 'v.maehwa-orchard', 'stroll', k.rain ? '회관 처마 밑에서 비 구경 중' : '과수원 길 산책 중'],
           [hm(16), 'v.hall-yard', 'rest', '회관 앞마당에서 차 한잔 중'],
           [hm(19, 30), 't.maehwa', 'eat', '주점에서 직접 만든 안주 나누는 중'],
@@ -767,7 +767,7 @@ function hostPlan(id: HostNpc, k: DayKind): Seg[] {
           ...start,
           [hm(8, 30), 'm.maehwa', 'stroll', '시장 거리에서 찻감·요리 재료 장보는 중'],
           post(hm(9, 30)),
-          [hm(13), 't.maehwa', 'eat', '주점에서 허 선장과 안주 바꿔 먹는 점심'],
+          [hm(13), 't.maehwa', 'eat', '주점에서 샹크스와 안주 나눠 먹는 점심'],
           post(hm(14)),
           [hm(18), k.rain ? NPC_POSTS.maehwa : 'v.hall-yard', k.rain ? 'work' : 'rest', k.rain ? POST_LABEL.maehwa : '회관 앞마당에서 차 한잔 쉬는 중'],
           post(hm(18, 40)),
@@ -777,10 +777,10 @@ function hostPlan(id: HostNpc, k: DayKind): Seg[] {
         ...start,
         [hm(9), k.rain ? 'fishmarket.browse' : 'hb.rose', 'stroll', k.rain ? '어시장에서 비 피하며 생선 구경 중' : '선착장에서 아침 바다 보는 중'],
         [hm(10, 30), 'fishmarket.browse', 'stroll', '어시장에서 귀한 바닷고기 고르는 중'],
-        [hm(12), 't.rose', 'eat', '주점에서 허 선장과 바다 이야기 중'],
+        [hm(12), 't.rose', 'eat', '주점에서 샹크스와 바다 이야기 중'],
         [hm(14), 'general.browse', 'stroll', '잡화점에서 보석 값 흥정 중'],
         [hm(15, 30), k.rain ? 't.rose' : 'hb.rose-sunset', 'stroll', k.rain ? '주점에서 비 그치길 기다리는 중' : '방파제에서 바다 보는 중'],
-        [hm(19, 30), 't.rose', 'drink', '주점에서 허 선장과 바다 이야기 중'],
+        [hm(19, 30), 't.rose', 'drink', '주점에서 샹크스와 바다 이야기 중'],
         [hm(22, 30), late[1], late[2], late[3]],
       ]
     : [

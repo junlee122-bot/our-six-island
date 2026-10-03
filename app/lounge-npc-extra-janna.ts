@@ -110,7 +110,7 @@ export const JANNA_EXTRA: NpcExtraLines = {
       '{me} 님, 내일 장 예보는 맑음이에요! …아마도요.',
     ],
     casinoWin: [
-      '카지노 대박 제보예요! 루미 씨랑 같이 취재 갈게요!',
+      '카지노 대박 제보예요! 미쿠 씨랑 같이 취재 갈게요!',
       '{me} 님, 행운의 바람이 불었네요! 사진 찍어도 돼요?',
     ],
     casinoLose: [
