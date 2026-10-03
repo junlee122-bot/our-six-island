@@ -91,8 +91,9 @@ export function DayEndPanel({ room, view, notify, onClose }: { room: CloudRoom; 
 
 /** The 결산 card (any key or click closes it). */
 export function DayEndCard({ report, left, onClose }: { report: DayEndReport; left: number; onClose: () => void }) {
-  const opened = useRef(Date.now());
+  const opened = useRef(0);
   useEffect(() => {
+    opened.current = Date.now();
     const key = () => {
       // The key that opened the card (E at the bed) does not close it at once.
       if (Date.now() - opened.current > 400) onClose();
