@@ -381,7 +381,8 @@ async function runView(browser, base, view, report) {
       assert.notEqual(await until(() => {
         const d = document.querySelector('[data-testid=village-3d]')?.dataset;
         return d?.fishSpot === 'river' && d.walking === 'false';
-      }, 180000), -1, '강 낚시터까지 걷지 못했습니다.');
+        // From 우리 농장's side of the hub the river walk runs ~110 s at fhd and close to 180 s at s.
+      }, 300000), -1, '강 낚시터까지 걷지 못했습니다.');
     } finally { await page.keyboard.up('Shift'); }
     await H.clickSel('[data-testid=action-button].hv-action');
     assert.notEqual(await until(() => !!document.querySelector('[data-testid=fishing]'), 20000), -1, '낚시 창이 열리지 않았습니다.');
