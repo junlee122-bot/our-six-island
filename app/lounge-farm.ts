@@ -538,7 +538,7 @@ export function addImprovedSeeds(life: LifeState, uid: string, crop: Crop, n: nu
   if (!nonEmpty(is)) delete x.is;
 }
 /** Plants one improved seed (the plant action). */
-export const useImprovedSeed = (life: LifeState, uid: string, crop: Crop) => addImprovedSeeds(life, uid, crop, -1);
+export const spendImprovedSeed = (life: LifeState, uid: string, crop: Crop) => addImprovedSeeds(life, uid, crop, -1);
 /** Visual growth stage 0–4 (seed, sprout, leaves, flower / green fruit, ripe). */
 export function growthStage(plot: Plot, now: number): 0 | 1 | 2 | 3 | 4 {
   if (!plot.crop) return 0;

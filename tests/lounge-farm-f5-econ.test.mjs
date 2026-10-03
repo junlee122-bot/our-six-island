@@ -42,7 +42,8 @@ const CROPS_BY_SEASON = {
 };
 
 function simulate(f5) {
-  const members = Array.from({ length: 7 }, (_, actor) => ({ id: crypto.randomUUID(), actor }));
+  // Fixed ids: both runs roll the same quality, crows and fish (the result does not wobble).
+  const members = Array.from({ length: 7 }, (_, actor) => ({ id: `0000000${actor}-f5f5-4f5f-8f5f-00000000000${actor}`, actor }));
   let ledger = newLoungeLedger(),
     life = emptyLife();
   for (const m of members) {

@@ -82,7 +82,7 @@ import {
   farmSheltered,
   frostCovered,
   improvedSeeds,
-  useImprovedSeed,
+  spendImprovedSeed,
   type FairView,
   type FarmAction,
   type FarmExt,
@@ -1351,7 +1351,7 @@ function lifeActionCore(
       const improved = a.improved === true,
         crop = a.crop;
       const seeds = () => (improved ? improvedSeeds(life, uid, crop) : bag.seeds[crop]);
-      const spendSeed = (tile: number) => (improved ? useImprovedSeed(life, uid, crop) : spendShopSeed(crop, tile));
+      const spendSeed = (tile: number) => (improved ? spendImprovedSeed(life, uid, crop) : spendShopSeed(crop, tile));
       if (whole(a.plot)) {
         if (!farm.some((_, i) => seasonFits(crop, i))) plantOk(crop);
         const empty = farm.flatMap((_, i) => (plantable(crop, i) && seasonFits(crop, i) ? [i] : []));

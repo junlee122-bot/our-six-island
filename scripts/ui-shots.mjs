@@ -103,6 +103,8 @@ function seedLife(life, uid) {
     sites: {
       M1: { kind: 'machineYard', tier: 2, owner: 'shared', state: {}, paid: { 3: { wood: 60, stone: 40 } } },
       L1: { kind: 'greenhouse', tier: 0, owner: 'shared', state: {}, fund: { to: 1, got: 42_000, mat: { wood: 60 }, by: { 3: 2, 1: 1 } } },
+      // 우리 농장 F5: my 양식장 on my second personal site, three carp and something to collect.
+      Q3: { kind: 'fishPond', tier: 1, owner: uid, state: { pond: { f: 'carp', n: 3, g: day - 1, o: ['carp', 'roe'] } }, paid: { 3: { stone: 80, wood: 30 } } },
     },
     till: Array.from({ length: 18 }, (_, i) => i),
     field: Object.fromEntries(Array.from({ length: 6 }, (_, i) => [String(i), { crop: 'carrot', plantedAt: now - 3_600_000, wateredAt: now - 3_000_000 }])),
@@ -325,6 +327,22 @@ async function runView(browser, base, view, report) {
     assert.notEqual(await until(() => !!document.querySelector('dialog[open] [data-testid=common-goal]'), 15000), -1, '공동 밭 창이 열리지 않았습니다.');
     await sleep(600);
     await snap('farm-sites');
+  });
+
+  // 우리 농장 F5: my 양식장 (E on my second personal site).
+  await step('farm-pond', async () => {
+    await closeAll();
+    const at = { x: 17.1, z: -5.3 };
+    await js((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), at);
+    assert.notEqual(await until((p) => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 1;
+    }, 120000, at), -1, '양식장까지 걷지 못했습니다.');
+    await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+    await page.keyboard.press('KeyE');
+    assert.notEqual(await until(() => !!document.querySelector('dialog[open] [data-testid=pond]'), 15000), -1, '양식장 창이 열리지 않았습니다.');
+    await sleep(600);
+    await snap('farm-pond');
   });
 
   // village
