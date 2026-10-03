@@ -2,7 +2,7 @@
  "label": "current",
  "commit": "ccec5a7",
  "summary": {
-  "screens": 84,
+  "screens": 86,
   "low": 0,
   "small": 0,
   "narrow": 0,
@@ -366,6 +366,15 @@
        "h": 44
       }
      }
+    },
+    "farm": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     },
     "market": {
      "lowCount": 0,
@@ -1087,6 +1096,15 @@
        "h": 44
       }
      }
+    },
+    "farm": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     },
     "market": {
      "lowCount": 0,
