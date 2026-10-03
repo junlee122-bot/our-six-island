@@ -265,3 +265,25 @@ export async function login(H, base) {
   await inputs[0].fill('password1234');
   await H.clickSel('.l-auth-submit');
 }
+
+/** 우리 농장: "마을로 나가기" opens on the farm in front of my house; walk its south road to the hub. */
+export async function farmToVillage(page, timeout = 180_000) {
+  const area = () => page.evaluate(() => {
+    const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+    return document.querySelector('[data-testid=village-3d]') ? 'village' : d?.loadState === 'ready' ? d.area : '';
+  });
+  const t0 = Date.now();
+  let at = '';
+  while (Date.now() - t0 < timeout && !(at = await area())) await new Promise((r) => setTimeout(r, 250));
+  if (at !== 'farm') return;
+  await page.waitForFunction(() => !document.querySelector('[data-testid=scene-fade].is-active'), null, { timeout: 30_000 });
+  const exit = { x: 0, z: 30 };
+  await page.evaluate((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), exit);
+  await page.waitForFunction((p) => {
+    const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+    return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 1;
+  }, exit, { timeout: 120_000 });
+  await page.evaluate(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+  await page.keyboard.press('KeyE');
+  await page.waitForFunction(() => !document.querySelector('[data-testid=area-3d]'), null, { timeout: 30_000 });
+}

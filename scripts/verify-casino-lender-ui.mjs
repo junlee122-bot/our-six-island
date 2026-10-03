@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
+import { farmToVillage, launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
 import { validateLedger } from '../app/lounge-economy.ts';
@@ -112,6 +112,7 @@ try {
       await sceneFocus(); await page.keyboard.press('Escape');
       await page.getByRole('button', { name: /마을로 나가기/ }).click();
     }
+    await farmToVillage(page);
     await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.loadState === 'ready', null, 180_000);
     if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
     await click('[data-minimap-place=casino]'); await sceneFocus();

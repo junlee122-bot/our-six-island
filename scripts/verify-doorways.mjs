@@ -8,7 +8,7 @@
 // piece, its shop room hears it muffled).
 //
 //   node --experimental-strip-types --no-warnings scripts/verify-doorways.mjs --pages /tmp/pages [--view s] [--max-ms 1200000]
-import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
+import { farmToVillage, launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { BUILT_DISTRICTS, DISTRICTS } from '../app/lounge-districts.ts';
 import { REGIONS, outdoorReturnPoint } from '../app/lounge-areas.ts';
 import { arrivalPoint, inward } from '../app/lounge-map-doors.ts';
@@ -108,7 +108,7 @@ try {
     await sleep(250);
     await page.keyboard.up('ArrowDown');
     // …then walking on down through the doorway takes it.
-    const out = await pushInto('[data-testid=bedroom-3d]', { x: 0, z: 1, stand: { x: 0, z: 0 }, reach: 1 }, () => !!document.querySelector('[data-testid=village-3d]'), 60000);
+    const out = await pushInto('[data-testid=bedroom-3d]', { x: 0, z: 1, stand: { x: 0, z: 0 }, reach: 1 }, () => !!document.querySelector('[data-testid=village-3d], [data-testid=area-3d][data-area=farm]'), 60000);
     if (out < 0) {
       await page.keyboard.press('Escape');
       await sleep(700);
@@ -116,6 +116,7 @@ try {
     }
     // (I may wake up beside the bed, away from the door: then the menu takes me out.)
     console.log(`  info walking down ${out >= 0 ? 'took' : 'did not reach'} my room's door; out via ${out >= 0 ? 'the doorway' : 'the menu'}`);
+    await farmToVillage(page);
     await villageReady();
     await fadeClear();
     await sleep(1500);

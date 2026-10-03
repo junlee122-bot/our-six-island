@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
+import { farmToVillage, launchBrowser, login, serve, setup, VIEWS } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
 import { LB_DECK, liarsBarKey } from '../app/lounge-liarsbar.ts';
@@ -99,6 +99,7 @@ try {
     await wait(() => document.querySelector('[data-testid=bedroom-3d]')?.dataset.loadState === 'ready', null, 180_000);
     await closeDialogs(); await focusScene(); await page.keyboard.press('Escape');
     await page.getByRole('button', { name: /마을로 나가기/ }).click();
+    await farmToVillage(page);
     await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.loadState === 'ready', null, 180_000);
     if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
     await click('[data-minimap-place=tavern]'); await focusScene(); await page.keyboard.down('Shift');

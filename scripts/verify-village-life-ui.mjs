@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { launchBrowser, login, serve, setup } from './ui-harness.mjs';
+import { farmToVillage, launchBrowser, login, serve, setup } from './ui-harness.mjs';
 import { measureInPage } from './ui-measure.mjs';
 import { UI_METRICS } from './ui-report.mjs';
 import { actionAttemptEvidence, assertSingleLogicalAction, assertSingleResourceChange, resourceActionState } from './ui-action-guard.mjs';
@@ -164,12 +164,14 @@ async function runView(mobile = false) {
       for (let i = 0; i < 5 && await page.locator('dialog[open]').count(); i++) { await page.keyboard.press('Escape'); await sleep(250); }
     };
     const village = async () => {
+      if (await js(() => !!document.querySelector('[data-testid=village-3d]'))) return;
+      if (await js(() => document.querySelector('[data-testid=area-3d]')?.dataset.area === 'farm')) { await closeDialogs(); await farmToVillage(page); }
       if (await js(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'village')) return;
       await closeDialogs();
       await page.keyboard.press('Escape');
       await sleep(250);
       if (!(await js(() => document.querySelector('main.l-app')?.getAttribute('data-space') === 'village')))
-        await page.getByRole('button', { name: /마을로 나가기/ }).click();
+        { await page.getByRole('button', { name: /마을로 나가기/ }).click(); await farmToVillage(page); }
       await wait(() => document.querySelector('[data-testid=village-3d]')?.getAttribute('data-load-state') === 'ready', null, 180_000);
       await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
     };
