@@ -388,8 +388,14 @@ export function AreaScene({
     sun.position.set(-12, 22, 10);
     sun.castShadow = quality.shadows;
     sun.shadow.mapSize.set(2048, 2048);
+    // Without a bias the flat ground shadows itself in speckles, and as the
+    // light follows me the speckles crawl: paved yards and piers flickered.
+    sun.shadow.bias = -0.0005;
+    sun.shadow.normalBias = 0.04;
     const sc = sun.shadow.camera as THREE.OrthographicCamera;
     const shadowHalf = light?.shadow ?? 24;
+    // The light moves in whole shadow-map texels, so shadow edges hold still.
+    const texel = (shadowHalf * 2) / 2048;
     sc.left = -shadowHalf;
     sc.right = shadowHalf;
     sc.top = shadowHalf;
@@ -493,8 +499,10 @@ export function AreaScene({
       const moving = !snap && far >= 0.005;
       camera.position.copy(look).add(offset);
       camera.lookAt(look);
-      sun.position.set(look.x - 12, 22, look.z + 10);
-      sun.target.position.copy(look);
+      const sx = Math.round(look.x / texel) * texel,
+        sz = Math.round(look.z / texel) * texel;
+      sun.position.set(sx - 12, 22, sz + 10);
+      sun.target.position.set(sx, 0, sz);
       return moving;
     };
     follow(l.point, true);
