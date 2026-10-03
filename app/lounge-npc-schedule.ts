@@ -51,6 +51,7 @@ import { MARKET_SPOTS } from './lounge-market-layout.ts';
 import { HARBOR_SPOTS_NPC } from './lounge-harbor-layout.ts';
 import { HILLSIDE_SPOTS } from './lounge-hillside-layout.ts';
 import { RANCH_SPOTS } from './lounge-ranch-layout.ts';
+import { FARM_HOUSES, FARM_SPOTS } from './lounge-farm-layout.ts';
 import { FOOTHILL_SPOTS } from './lounge-foothill-layout.ts';
 import { regionWalk } from './lounge-areas.ts';
 import { INTERIOR_DOOR, interiorCanWalk, interiorPath, interiorToWorld, worldToInterior, TAVERN_HOST_AT } from './lounge-interior-layout.ts';
@@ -87,6 +88,8 @@ export type NpcArea =
   /** ④ 목장·과수원 and ⑤ 산기슭 마을 (stage 3). */
   | 'ranch'
   | 'foothill'
+  /** 우리 농장: the friends' houses and fields behind the hub's north gate. */
+  | 'farm'
   /** Beyond the 들길 / 산길 gates while those districts are shut (hidden). */
   | 'fields'
   | 'mountain'
@@ -95,7 +98,7 @@ export type NpcArea =
   /** The shop rooms off 시장 거리 and the harbor (lounge-shop-interiors.ts, room world units). */
   | ShopArea;
 /** Where residents are drawn walking about (the rest is drawn by its own scene or not at all). */
-export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', ...SHOP_AREAS];
+export const NPC_WALK_AREAS: readonly NpcArea[] = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'farm', ...SHOP_AREAS];
 export type NpcActivity =
   | 'work'
   | 'stall'
@@ -287,7 +290,16 @@ const HILL_NAMES: Record<string, string> = {
   'lane-s': '아랫골목',
   board: '언덕 게시판',
 };
-const homes = VILLAGE_PLACES.filter((p) => p.kind === 'home' && p.actor !== undefined).sort((a, b) => a.actor! - b.actor!);
+/** 우리 농장's spot names (lounge-farm-layout.ts FARM_SPOTS; the doors are named per house). */
+const FARM_NAMES: Record<string, string> = {
+  gate: '농장 길 어귀',
+  bin: '농장 출하함 앞',
+  board: '농장 게시판',
+  yard: '농장 마당',
+  'bench-yard': '농장 마당 벤치',
+  lane: '밭 사이 길',
+  ...Object.fromEntries(FARM_HOUSES.map((h) => [`door-${h.actor}`, `${h.name} 앞`])),
+};
 export const NPC_PLACES: Record<string, Place> = {
   // Hidden areas (their "position" is the gate they left by).
   home: place('home', DISTRICTS.hillside.gate.stand, 0, '언덕 집'),
@@ -307,8 +319,14 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.pavilion': place('village', vSnap({ x: VILLAGE_PAVILION.x - 2.4, z: VILLAGE_PAVILION.z + 1.2 }), 0.8, '팔각정'),
   'v.lake': place('village', vSnap({ x: 34.2, z: -24.6 }), Math.PI / 2, '호숫가'),
   'v.pond': place('village', vSnap({ x: -30.8, z: -13.2 }), -Math.PI / 2, '연못가'),
-  'v.lane-w': place('village', vSnap({ x: -20.5, z: -8.4 }), Math.PI, '텃밭 길'),
-  'v.lane-e': place('village', vSnap({ x: 19.6, z: -8.4 }), Math.PI, '텃밭 길'),
+  'v.lane-w': place('village', vSnap({ x: -20.5, z: -8.4 }), Math.PI, '윗길'),
+  'v.lane-e': place('village', vSnap({ x: 19.6, z: -8.4 }), Math.PI, '윗길'),
+  // 우리 농장 (§5): the farm lane's gate, the west park and the east stall spots.
+  'v.farm-gate': place('village', DISTRICTS.farm.gate.stand, 0, '농장 길 입구'),
+  'v.farm-lane': place('village', vSnap({ x: 1.2, z: -20 }), -Math.PI / 2, '농장 가로수길'),
+  'v.park': place('village', vSnap({ x: -14.6, z: -18.2 }), Math.PI / 2, '작은 공원'),
+  'v.park-2': place('village', vSnap({ x: -16.4, z: -17.2 }), -Math.PI / 2, '작은 공원 정자 옆'),
+  'v.stalls': place('village', vSnap({ x: 16.5, z: -15.6 }), Math.PI, '장터 자리'),
   'v.orchard': place('village', vSnap({ x: -29.5, z: 3.4 }), 0, '과수원'),
   'v.camp': place('village', vSnap({ x: 4.4, z: 23.6 }), 0, '강변 캠프'),
   'v.beach': place('village', vSnap({ x: 12, z: 35.4 }), 0, '남쪽 해변'),
@@ -340,7 +358,6 @@ export const NPC_PLACES: Record<string, Place> = {
   'v.couple-b': place('village', vSnap({ x: VILLAGE_PAVILION.x + 0.4, z: VILLAGE_PAVILION.z + 3.4 }), -Math.PI / 2, '팔각정 산책길'),
   // 무잔 watching the casino crowd after the market closes.
   'v.muzan-casino': place('village', vSnap({ x: 21.8, z: 10.2 }), -Math.PI / 2, '카지노 앞 가로등 아래'),
-  ...Object.fromEntries(homes.map((h) => [`v.home-${h.actor}`, place('village', vSnap({ x: h.entry.x - 1.2, z: h.entry.z + 1.9 }), Math.PI, `${h.name} 집 앞`)])),
   // Festival ring on the plaza.
   ...Object.fromEntries(
     [0, 1, 2, 3, 4, 5].map((i) => {
@@ -409,6 +426,7 @@ export const NPC_PLACES: Record<string, Place> = {
   ...Object.fromEntries(Object.entries(RANCH_SPOTS).map(([k, p]) => [`rc.${k}`, place('ranch', p, p.face, RANCH_NAMES[k] ?? '목장·과수원')])),
   'rc.in-nilah': inside('ranch', RANCH_SPOTS['nilah-door'], '닐라네 집'),
   'rc.in-haku': inside('ranch', RANCH_SPOTS['haku-door'], '하쿠네 집'),
+  ...Object.fromEntries(Object.entries(FARM_SPOTS).map(([k, p]) => [`fa.${k}`, place('farm', p, p.face, FARM_NAMES[k] ?? '우리 농장')])),
   ...Object.fromEntries(Object.entries(FOOTHILL_SPOTS).map(([k, p]) => [`fh.${k}`, place('foothill', p, p.face, FOOTHILL_NAMES[k] ?? '산기슭 마을')])),
   'fh.in-ornn': inside('foothill', FOOTHILL_SPOTS['smithy-door'], '대장간 안채'),
   'fh.in-mercy': inside('foothill', FOOTHILL_SPOTS['clinic-door'], '의원 2층'),
@@ -484,6 +502,8 @@ const PORTALS: readonly Portal[] = [
   { a: 'hillside', b: 'village', from: 'hl.gate', to: 'v.home-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'ranch', from: 'v.ranch-gate', to: 'rc.gate', ms: GATE_TRANSIT_MS },
   { a: 'ranch', b: 'village', from: 'rc.gate', to: 'v.ranch-gate', ms: GATE_TRANSIT_MS },
+  { a: 'village', b: 'farm', from: 'v.farm-gate', to: 'fa.gate', ms: GATE_TRANSIT_MS },
+  { a: 'farm', b: 'village', from: 'fa.gate', to: 'v.farm-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'foothill', from: 'v.foothill-gate', to: 'fh.gate', ms: GATE_TRANSIT_MS },
   { a: 'foothill', b: 'village', from: 'fh.gate', to: 'v.foothill-gate', ms: GATE_TRANSIT_MS },
   { a: 'village', b: 'fields', from: 'v.ranch-gate', to: 'fields', ms: GATE_TRANSIT_MS },
@@ -536,8 +556,8 @@ function areaRoute(a: NpcArea, b: NpcArea): Portal[] {
 // ---------------------------------------------------------------- walking paths
 const pathCache = new Map<string, WalkPoint[]>();
 const walkers = new Map<string, ReturnType<typeof regionWalk>>();
-type WalkDistrict = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
-const isWalkDistrict = (a: NpcArea): a is WalkDistrict => a === 'market' || a === 'harbor' || a === 'hillside' || a === 'ranch' || a === 'foothill';
+type WalkDistrict = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'farm';
+const isWalkDistrict = (a: NpcArea): a is WalkDistrict => a === 'market' || a === 'harbor' || a === 'hillside' || a === 'ranch' || a === 'foothill' || a === 'farm';
 const walkerOf = (area: WalkDistrict) => {
   let w = walkers.get(area);
   if (!w) walkers.set(area, (w = regionWalk(area)));
@@ -815,8 +835,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
             lunch,
             [hm(13), 'm.stall-e', 'stall', '장날 작물 좌판'],
             [hm(16), 'coop.owner', 'work', '장날 장부 정리'],
-            [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
-            [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
+            [hm(18), 'fa.lane', 'patrol', '농장 밭 순찰 중'],
+            [hm(18, 40), 'fa.yard', 'patrol', '농장 밭 순찰 중'],
             [hm(19, 20), 'v.orchard', 'patrol', '과수원 살피는 중'],
             [hm(20), 'home', 'sleep', '언덕 집에서 쉬는 중'],
           ]
@@ -825,8 +845,8 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
             [hm(6), 'coop.owner', 'work', '농협 매입 창구'],
             lunch,
             [hm(13), 'coop.owner', 'work', '농협 매입 창구'],
-            [hm(18), 'v.lane-w', 'patrol', '텃밭 순찰 중'],
-            [hm(18, 40), 'v.lane-e', 'patrol', '텃밭 순찰 중'],
+            [hm(18), 'fa.lane', 'patrol', '농장 밭 순찰 중'],
+            [hm(18, 40), 'fa.yard', 'patrol', '농장 밭 순찰 중'],
             ...(k.weekday === 3
               ? ([
                   [hm(19), 'hl.library-club', 'read', '도서관 독서 모임'],
@@ -879,9 +899,9 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
       return festival(plan, k, 2);
     }
     case 'sinjjajang': {
-      // The morning round visits the friends' mailboxes in a daily order, then the harbor.
+      // The morning round visits the friends' houses on 우리 농장 in a daily order, then the harbor.
       const order = [0, 1, 2, 3, 4, 5, 6].sort((a, b) => hash32(`mail:${k.day}:${a}`) - hash32(`mail:${k.day}:${b}`)).slice(0, 4);
-      const round: Seg[] = order.map((a, i) => [hm(9) + i * 22, `v.home-${a}`, 'deliver', `${homes[a]?.name ?? '친구'} 집에 편지 배달 중`] as Seg);
+      const round: Seg[] = order.map((a, i) => [hm(9) + i * 22, `fa.door-${a}`, 'deliver', `${FARM_HOUSES.find((h) => h.actor === a)?.name ?? '친구 집'}에 편지 배달 중`] as Seg);
       const plan: Seg[] = [
         [0, 'home', 'sleep'],
         [hm(7), 'm.post', 'work', '우체국에서 우편 분류'],
@@ -904,7 +924,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
         [hm(13), 'm.street-e', 'patrol', '시장 거리 순찰 중'],
         [hm(13, 40), 'v.plaza-e', 'patrol', '광장 순찰 중'],
         [hm(14, 20), 'v.pond', 'patrol', '연못가 순찰 중'],
-        [hm(15), 'v.forest', 'patrol', '북쪽 숲길 순찰 중'],
+        [hm(15), 'fa.lane', 'patrol', '우리 농장 집 앞 순찰 중'],
         [hm(15, 40), k.rain ? 'v.bridge' : 'v.beach', 'patrol', k.rain ? '다리 위에서 물길 살피는 중' : '해변 순찰 중'],
         [hm(16, 20), 'hb.quay', 'patrol', '항구 순찰 중'],
         [hm(17, 10), 'm.board', 'patrol', '수배 전단 붙이는 중'],
@@ -1158,7 +1178,8 @@ type Venue = 'T' | 'P' | 'M' | 'H' | 'B' | 'L' | 'R' | 'F';
 /** Seats per venue (the fixed spots below are never in a pool). */
 const VENUE_SEATS: Record<Venue, readonly string[]> = {
   T: ['t.bar-1', 't.bar-2', 't.bar-3', 't.bar-4', 't.fire', 't.booth', 't.table-1', 't.table-2', 't.table-3', 't.table-4', 't.window', 't.corner'],
-  P: ['v.plaza', 'v.plaza-bench', 'v.plaza-e', 'v.pavilion', 'v.board', 'v.museum', 'v.bridge'],
+  // 우리 농장 (§5): the new west park takes the evening crowd the plaza cannot seat.
+  P: ['v.plaza', 'v.plaza-bench', 'v.plaza-e', 'v.pavilion', 'v.board', 'v.museum', 'v.bridge', 'v.park', 'v.park-2'],
   M: ['m.bench-w', 'm.bench-e', 'm.plaza-n', 'm.plaza-s', 'm.cafe-1', 'm.cafe-2', 'm.cafe-3', 'm.cafe-4', 'm.board'],
   H: ['v.harbor', 'v.beach', 'v.camp', 'v.lake'],
   B: ['hb.bench-w', 'hb.bench-e', 'hb.quay', 'hb.pier-mid', 'hb.pier-end', 'hb.auction-crowd', 'hb.board'],
@@ -1496,6 +1517,7 @@ export const NPC_AREA_NAMES: Record<NpcArea, string> = {
   hillside: '언덕 주택가',
   ranch: '목장·과수원',
   foothill: '산기슭 마을',
+  farm: '우리 농장',
   fields: '들길 너머',
   mountain: '산길 너머',
   away: '마을 밖',

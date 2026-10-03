@@ -1,7 +1,7 @@
 'use client';
 // 텃밭 장부 (VILL-2): the farm window as a wooden-bound notebook. The left
-// page draws my yard the way it stands in the village (back bed above, front
-// bed below, fallow rows until the farm is expanded); the right page is the
+// page draws my field the way it lies on 우리 농장 (10 × 8 tiles, the house to
+// the north, grass beyond the tilled block until it is expanded); the right page is the
 // selected plot with the seed pouch (only seeds I own that grow now) and the
 // friends whose plots need water. Keyboard: arrows pick a plot, E / Enter /
 // Space tends it, 1–9 select a seed packet, H harvests all, W waters all.
@@ -17,7 +17,7 @@ import {
   type LifeView,
 } from '../lounge-life';
 import { FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
-import { FIXTURE_BY_ID } from '../lounge-farm-data';
+import { FIXTURE_BY_ID, GRID_COLS, GRID_ROWS, fieldBlock, tileAt, tileOpen, tileRC } from '../lounge-farm-data';
 import { witherAt } from '../lounge-farm';
 import { SOIL_ITEMS, harvestOf, harvestText, plantsAnySeason, soilOpen as soilHelps, type Harvest, type SoilItem } from '../lounge-life-ui';
 import { ITEM_BY_ID } from '../lounge-items';
@@ -26,8 +26,6 @@ import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { loungeAudio } from '../lounge-audio';
 import { lifeSfx } from '../lounge-audio-life';
-import { farmBed, farmFront } from '../lounge-village-life';
-import type { VillagePoint } from '../lounge-village-layout';
 import { CropStageArt, ItemIcon, QualityStar } from './ItemIcon';
 import { Glyph } from './field-glyphs';
 import { ConfirmModal, Modal } from './Modal';
@@ -40,13 +38,8 @@ import './farm-fish.css';
 
 type Plot = LifeView['me']['farm'][number];
 const STAGE_NAME = ['씨앗', '새싹', '자라는 중', '수확할 때'] as const;
-/** Plot order on the page: back bed (7–12) above, front bed (1–6) below. */
-const PAGE_ROWS = [
-  [6, 7, 8],
-  [9, 10, 11],
-  [0, 1, 2],
-  [3, 4, 5],
-] as const;
+/** Field rows on the page, north (the house) at the top. */
+const PAGE_ROWS = Array.from({ length: GRID_ROWS }, (_, r) => Array.from({ length: GRID_COLS }, (_, c) => r * GRID_COLS + c));
 const SEED_KEY = 'bumtadew-last-seed';
 const FERT_NAME: Record<1 | 2 | 3, string> = { 1: '비료', 2: '고급 비료', 3: '별빛 비료' };
 const QUALITY_WORD = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' } as const;
@@ -63,7 +56,7 @@ function duration(ms: number) {
     m = minutes % 60;
   return m ? `${h}시간 ${m}분` : `${h}시간`;
 }
-const bedName = (i: number) => `${i < 6 ? '앞' : '뒤'} 두둑 ${(i % 6) + 1}`;
+const bedName = (i: number) => `${tileRC(i).r + 1}줄 ${tileRC(i).c + 1}칸`;
 function rememberSeed(crop: Crop) {
   try {
     globalThis.localStorage?.setItem(SEED_KEY, crop);
@@ -87,8 +80,8 @@ type LedgerProps = {
   onClose: () => void;
   onShop: () => void;
   onBag?: () => void;
-  /** Walks there in the village (switching to the village first). */
-  onWalk?: (point: VillagePoint) => void;
+  /** 우리 농장: walks to a friend's field (onto the farm first). */
+  onFriendField?: (actor: number) => void;
   /** 텃밭 확장: opens another page of the farm window (a fixture tile → 밭 배치). */
   onPage?: (page: 'layout' | 'works' | 'market') => void;
 };
@@ -102,7 +95,7 @@ export function FarmLedger(props: LedgerProps) {
   );
 }
 /** The ledger pages (my yard + the selected plot); FarmModal puts it under its tabs. */
-export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onWalk, actor, onPage }: LedgerProps) {
+export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onFriendField, actor, onPage }: LedgerProps) {
   const life = view.life;
   const now = useServerClock(view.clockOffset, life?.me.farm.map((p) => p.readyAt) ?? [], 5000);
   const [busy, setBusy] = useState(false);
@@ -135,7 +128,8 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
   };
 
   const farm: readonly Plot[] = life?.me.farm ?? [];
-  const size = life?.me.plots ?? farm.length;
+  const size = life?.me.plots ?? 24;
+  const open = (i: number) => tileOpen(size, i);
   const season = life?.calendar?.season ?? 'spring';
   // The village greenhouse or 온실지기: off-season seeds plant too (same rule as the server and E).
   const anySeason = plantsAnySeason(life);
@@ -152,21 +146,22 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
   };
   const stageOf = (p: Plot) => (p.crop ? plotStage(p, now) : 0);
   const ready = farm.filter((p) => p.crop && stageOf(p) === 3).length;
-  const empty = farm.filter((p) => !p.crop).length;
+  const empty = farm.filter((p, i) => !p.crop && open(i) && !p.fixture).length;
   const thirstyOf = (p: Plot) => !!p.crop && stageOf(p) < 3 && p.wateredAt === null && !p.rained;
   const thirsty = farm.filter(thirstyOf).length;
   const inv = life?.me.inv ?? {};
   /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙; lounge-life-ui soilOpen). */
   const soilOpen = (p: Plot, item: SoilItem) => soilHelps(p, item, now);
   const fertOf = (item: SoilItem) => farm.filter((p) => soilOpen(p, item)).length;
-  const nextSize = size === 6 ? 9 : size === 9 ? 12 : 0;
+  const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
+  const nextBlock = fieldBlock(nextSize);
   // Default selection: something to do first (ripe, then empty, then thirsty).
   const current =
-    sel !== null && sel < farm.length
+    sel !== null && open(sel)
       ? sel
       : Math.max(
           0,
-          [farm.findIndex((p) => p.crop && stageOf(p) === 3), farm.findIndex((p) => !p.crop), farm.findIndex(thirstyOf)].find((i) => i >= 0) ?? 0,
+          [farm.findIndex((p) => p.crop && stageOf(p) === 3), farm.findIndex((p, i) => !p.crop && open(i)), farm.findIndex(thirstyOf)].find((i) => i >= 0) ?? 0,
         );
   const plot = farm[current];
 
@@ -243,18 +238,10 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
     else if (thirstyOf(p)) void run({ kind: 'water', plot: i }, `${bedName(i)}에 물을 줬어요.`, 'water');
   };
   const move = (dx: number, dy: number) => {
-    let r = PAGE_ROWS.findIndex((row) => (row as readonly number[]).includes(current)),
-      c = (PAGE_ROWS[r] as readonly number[]).indexOf(current);
-    for (let step = 0; step < 4; step++) {
-      r = (r + dy + PAGE_ROWS.length) % PAGE_ROWS.length;
-      c = Math.max(0, Math.min(2, c + dx));
-      const next = PAGE_ROWS[r][c];
-      if (next < farm.length) {
-        setSel(next);
-        return;
-      }
-      if (!dy) return;
-    }
+    const b = fieldBlock(size),
+      { r, c } = tileRC(current);
+    const next = tileAt((r + dy + b.rows) % b.rows, Math.max(0, Math.min(b.cols - 1, c + dx)));
+    if (next !== null && open(next)) setSel(next);
   };
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
@@ -309,98 +296,75 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
               익음 <b>{ready}</b> · 목마름 <b>{thirsty}</b> · 빈 칸 <b>{empty}</b>
             </span>
           </header>
-          <div className="l-ledger-yard" role="grid" aria-label={`텃밭 ${farm.length}칸 (방향키로 고르기)`}>
-            {[0, 1].map((part) => {
-              const rows = PAGE_ROWS.slice(part === 0 ? 2 : 0, part === 0 ? 4 : 2);
-              const locked = part === 1 && size < 9;
-              return (
-                <div
-                  key={part}
-                  className="l-ledger-bed"
-                  data-part={part === 0 ? 'front' : 'back'}
-                  data-locked={locked || undefined}
-                  style={{ order: part === 0 ? 2 : 0 }}
-                >
-                  <span className="l-ledger-bedname">{part === 0 ? '앞 두둑' : '뒤 두둑'}</span>
-                  {rows.map((row, r) => (
-                    <div key={r} className="l-ledger-row" role="row">
-                      {row.map((i) => {
-                        const p = farm[i];
-                        if (!p)
-                          return (
-                            <span key={i} className="l-ledger-plot" data-state="fallow" aria-hidden="true">
-                              <span className="l-ledger-fallow" />
-                            </span>
-                          );
-                        const s = stageOf(p);
-                        const fixture = fixtureAt(i);
-                        const state = fixture ? 'fixture' : !p.crop ? (p.dead ? 'dead' : 'empty') : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            role="gridcell"
-                            className="l-ledger-plot"
-                            data-state={state}
-                            data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
-                            aria-selected={current === i}
-                            aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : '빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}`}
-                            data-testid={`plot-${i}`}
-                            onClick={() => setSel(i)}
-                            onDoubleClick={() => primary(i)}
-                          >
-                            <span className="l-ledger-soil" />
-                            {fixture ? <ItemIcon id={fixture.kind} size={46} /> : p.crop ? <CropStageArt crop={p.crop} stage={s} size={60} /> : null}
-                            {!fixture && !p.crop && p.dead ? (
-                              <span className="l-ledger-dead" aria-hidden="true">
-                                <CropStageArt crop={p.dead} stage={1} size={40} />
-                              </span>
-                            ) : null}
-                            {p.crop && p.sprinkled && state !== 'ready' ? (
-                              <span className="l-ledger-mark l-ledger-spr" title="스프링클러가 물을 줘요">
-                                <Glyph name="drop" size={12} />
-                              </span>
-                            ) : null}
-                            {state === 'thirsty' && (
-                              <span className="l-ledger-mark l-ledger-thirst">
-                                <Glyph name="drop" size={14} />
-                              </span>
-                            )}
-                            {p.crop && p.quality ? (
-                              <span className="l-ledger-mark l-ledger-q">
-                                <QualityStar quality={p.quality} size={13} />
-                              </span>
-                            ) : null}
-                            {p.crop && p.fert ? (
-                              <span className="l-ledger-mark l-ledger-fert" title={FERT_NAME[p.fert]}>
-                                <Glyph name="leaf" size={12} />
-                              </span>
-                            ) : null}
-                            <i className="l-ledger-num">{i + 1}</i>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  ))}
-                  {locked && (
-                    <div className="l-ledger-lock">
-                      <Glyph name="lock" size={16} />
-                      <span>
-                        뒤 두둑은 아직 풀밭이에요
-                        <small>
-                          {nextSize}칸으로 넓히면 여기부터 갈아요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}
-                        </small>
-                      </span>
-                      <button type="button" className="l-ink" onClick={() => setExpand(true)} data-testid="farm-expand">
-                        밭 넓히기
+          <div className="l-ledger-yard" role="grid" aria-label={`밭 ${size}칸 (방향키로 고르기)`}>
+            <div className="l-ledger-bed l-ledger-field" data-part="field" data-size={size}>
+              <span className="l-ledger-bedname">집 앞 밭 · {size}칸</span>
+              {PAGE_ROWS.map((row, r) => (
+                <div key={r} className="l-ledger-row" role="row">
+                  {row.map((i) => {
+                    const p = farm[i];
+                    if (!p || !open(i))
+                      return (
+                        <span key={i} className="l-ledger-plot" data-state="fallow" data-next={(nextSize && tileOpen(nextSize, i)) || undefined} aria-hidden="true">
+                          <span className="l-ledger-fallow" />
+                        </span>
+                      );
+                    const s = stageOf(p);
+                    const fixture = fixtureAt(i);
+                    const state = fixture ? 'fixture' : !p.crop ? (p.dead ? 'dead' : 'empty') : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        role="gridcell"
+                        className="l-ledger-plot"
+                        data-state={state}
+                        data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
+                        aria-selected={current === i}
+                        aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : '빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}`}
+                        data-testid={`plot-${i}`}
+                        onClick={() => setSel(i)}
+                        onDoubleClick={() => primary(i)}
+                      >
+                        <span className="l-ledger-soil" />
+                        {fixture ? <ItemIcon id={fixture.kind} size={28} /> : p.crop ? <CropStageArt crop={p.crop} stage={s} size={34} /> : null}
+                        {!fixture && !p.crop && p.dead ? (
+                          <span className="l-ledger-dead" aria-hidden="true">
+                            <CropStageArt crop={p.dead} stage={1} size={24} />
+                          </span>
+                        ) : null}
+                        {state === 'thirsty' && (
+                          <span className="l-ledger-mark l-ledger-thirst">
+                            <Glyph name="drop" size={10} />
+                          </span>
+                        )}
+                        {p.crop && p.quality ? (
+                          <span className="l-ledger-mark l-ledger-q">
+                            <QualityStar quality={p.quality} size={10} />
+                          </span>
+                        ) : null}
                       </button>
-                    </div>
-                  )}
+                    );
+                  })}
                 </div>
-              );
-            })}
+              ))}
+            </div>
+            {nextSize ? (
+              <div className="l-ledger-lock l-ledger-lock-field">
+                <Glyph name="lock" size={16} />
+                <span>
+                  바깥은 아직 풀밭이에요
+                  <small>
+                    {nextBlock.cols}×{nextBlock.rows} = {nextSize}칸으로 넓히면 갈아요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}
+                  </small>
+                </span>
+                <button type="button" className="l-ink" onClick={() => setExpand(true)} data-testid="farm-expand">
+                  밭 넓히기
+                </button>
+              </div>
+            ) : null}
             <span className="l-ledger-path" aria-hidden="true">
-              대문 쪽
+              농장 마당 쪽
             </span>
           </div>
           <p className="l-ledger-aside">칸을 눌러 고르고 {actKey}로 가꿔요 · 두 번 누르면 바로 실행해요.</p>
@@ -431,11 +395,6 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
                 </button>
               );
             })}
-            {nextSize && size >= 9 ? (
-              <button type="button" className="l-ink" onClick={() => setExpand(true)} data-testid="farm-expand">
-                {nextSize}칸으로 넓히기
-              </button>
-            ) : null}
           </footer>
         </section>
 
@@ -648,7 +607,6 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
             {friends.length ? (
               <ul>
                 {friends.slice(0, 6).map((f) => {
-                  const bed = farmBed(f.actor);
                   return (
                     <li key={f.actor} data-done={f.done || undefined}>
                       <span className="l-ledger-friend">{ACTORS[f.actor]}네</span>
@@ -667,13 +625,13 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
                           <Glyph name="basket" size={14} /> 거들기
                         </button>
                       )}
-                      {!f.done && bed && onWalk && (
+                      {!f.done && onFriendField && (
                         <button
                           type="button"
                           className="l-ink l-small"
                           onClick={() => {
                             onClose();
-                            onWalk(farmFront(bed));
+                            onFriendField(f.actor);
                           }}
                         >
                           <Glyph name="walk" size={14} /> 가 보기
@@ -697,7 +655,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onW
           title="밭을 넓힐까요?"
           body={
             <>
-              뒤 두둑을 갈아 <b>{nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as 9 | 12])}</b>이 들어요. 지갑에{' '}
+              밭을 더 갈아 <b>{nextBlock.cols}×{nextBlock.rows} = {nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}</b>이 들어요. 지갑에{' '}
               {formatBeom(view.wallet.balance)}이 있어요.
             </>
           }

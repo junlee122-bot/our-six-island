@@ -111,7 +111,8 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
     await run(meC, 'wallet');
     await run(meC, 'open', { code: 'BEMTADUVLY' });
     for (let i = 0; i < 4; i++) await run(meC, 'action', { action: { kind: 'plant', plot: i, crop: 'carrot' } });
-    for (const p of world.life.farms[uid]) if (p.crop) p.plantedAt -= 3 * 3600e3;
+    // Fields are stored sparse ({ tile: plot }, lounge-life.ts packLife).
+    for (const p of Object.values(world.life.farms[uid])) if (p?.crop) p.plantedAt -= 3 * 3600e3;
     await run(meC, 'leave');
     await run(bots[0], 'action', { action: { kind: 'mail', to: 3, text: '어제 고스톱 재밌었어! 오늘 저녁에 또 하자', sticker: 'heart' } });
     await run(bots[0], 'action', { action: { kind: 'guestbook', owner: 3, text: '방 너무 예쁘다~ 다녀감!' } });

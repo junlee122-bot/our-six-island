@@ -215,7 +215,7 @@ test('the server refuses the harbor and the hillside until their flags are set',
 
 // ---------------------------------------------------------------- evenings and the commute
 // 가게 실내: the shop rooms are walk areas too.
-const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
+const VISIBLE_AREAS = ['village', 'market', 'tavern', 'harbor', 'hillside', 'ranch', 'foothill', 'farm', 'bakery', 'coop', 'general', 'fishmarket', 'barn', 'orchardShop', 'smithy', 'clinic', 'broker'];
 const POSTS = /^(casino|lounge|bank|salon|tavern)\./;
 /**
  * Walkable, or within 0.1 of walkable ground: the region walkers check a
@@ -262,6 +262,8 @@ test('once 언덕 is open residents go home to their own hillside house; paths s
   const portalEnds = new Set(['v.market-gate', 'm.gate', 'v.tavern-door', 't.door', 'v.home-gate', 'home', 'library', 'v.harbor-gate', 'hb.gate', 'hl.gate', 'away', 'v.realty-door', 'realty-in', 'v.furniture-door', 'furniture-in',
     // 미쿠 · 예림이 · 미스 포츈 leave their posts through the casino's and the hall's doors.
     'v.casino-door', 'casino.door', 'v.hall-door', 'lounge.door',
+    // 우리 농장: through the farm gate on the hub's north edge.
+    'v.farm-gate', 'fa.gate',
     'm.bakery', 'bakery.door', 'm.coop', 'coop.door', 'm.general', 'general.door', 'hb.fishmarket', 'fishmarket.door',
     // 무잔 walks into 범마을 증권 through its door.
     'm.broker', 'broker.door']);
@@ -502,11 +504,11 @@ test('승준 explorer pass: the harbor and the hillside and their counters are o
     other = s.members[0];
   const mine = lifeView(s.life, me.id, me.actor, T0).districts;
   assert.equal(mine.pass, true);
-  assert.deepEqual([...mine.open].sort(), ['foothill', 'harbor', 'hillside', 'market', 'ranch']);
+  assert.deepEqual([...mine.open].sort(), ['farm', 'foothill', 'harbor', 'hillside', 'market', 'ranch']);
   assert.equal(mine.goals.harbor.open, false, 'the village has not opened it');
   const theirs = lifeView(s.life, other.id, other.actor, T0).districts;
   assert.equal(theirs.pass, false);
-  assert.deepEqual(theirs.open, ['market']);
+  assert.deepEqual(theirs.open, ['farm', 'market']);
   assert.equal(districtOpen('harbor', { flags: [], pass: true }), true);
   // Server rules honour it: dawn auction, reading club and the harbor rod spots.
   const fish = FISH.find((f) => f.sell >= 500 && f.weight > 1);
@@ -521,7 +523,7 @@ test('승준 explorer pass: the harbor and the hillside and their counters are o
   s.act(me, { kind: 'anglerCast', spot: 'breakwater' }, at(1, 12));
   // After it ends he follows the village's record like everyone else.
   const late = world(4);
-  assert.deepEqual(lifeView(late.life, late.members[seungjun].id, seungjun, EXPLORER_PASS.until).districts.open, ['market']);
+  assert.deepEqual(lifeView(late.life, late.members[seungjun].id, seungjun, EXPLORER_PASS.until).districts.open, ['farm', 'market']);
 });
 
 test('승준 explorer pass: the server lets him into the districts, not the others', async () => {

@@ -12,6 +12,7 @@ import type { HarborModel } from './lounge-harbor-layout';
 import type { HillsideModel } from './lounge-hillside-layout';
 import type { RanchModel } from './lounge-ranch-layout';
 import type { FoothillModel } from './lounge-foothill-layout';
+import type { FarmModel } from './lounge-farm-layout';
 import type { DistrictId } from './lounge-districts';
 
 export const MARKET_MODEL_URLS: Record<MarketModel, string> = {
@@ -127,6 +128,25 @@ export const FOOTHILL_MODEL_URLS: Record<FoothillModel, string> = {
   stonePaver: VALLEY_MODELS.stonePaver,
   hydrangea: LOUNGE_MODELS.hydrangea,
 };
+export const FARM_MODEL_URLS: Record<FarmModel, string> = {
+  cottage: LOUNGE_MODELS.cottage,
+  cornerHouse: LOUNGE_MODELS.cornerHouse,
+  courtyardHouse: LOUNGE_MODELS.courtyardHouse,
+  noticeBoard: LOUNGE_MODELS.noticeBoard,
+  gardenLantern: LOUNGE_MODELS.gardenLantern,
+  parkBench: LOUNGE_MODELS.parkBench,
+  produceCrate: VALLEY_MODELS.produceCrate,
+  barrelRack: TAVERN_MODELS.barrelRack,
+  onggi: VALLEY_MODELS.onggi,
+  waterPump: VALLEY_MODELS.waterPump,
+  scarecrow: VALLEY_MODELS.scarecrow,
+  toolShed: VALLEY_MODELS.toolShed,
+  hydrangea: LOUNGE_MODELS.hydrangea,
+  picketFence: LOUNGE_MODELS.picketFence,
+  broadleafTree: VALLEY_MODELS.broadleafTree,
+  smallPine: VALLEY_MODELS.smallPine,
+  shrub: VALLEY_MODELS.shrub,
+};
 /** Every model a district needs (built districts only). */
 export const DISTRICT_MODEL_URLS: Partial<Record<DistrictId, readonly string[]>> = {
   market: [...new Set(Object.values(MARKET_MODEL_URLS))],
@@ -134,6 +154,7 @@ export const DISTRICT_MODEL_URLS: Partial<Record<DistrictId, readonly string[]>>
   hillside: [...new Set(Object.values(HILLSIDE_MODEL_URLS))],
   ranch: [...new Set(Object.values(RANCH_MODEL_URLS))],
   foothill: [...new Set(Object.values(FOOTHILL_MODEL_URLS))],
+  farm: [...new Set(Object.values(FARM_MODEL_URLS))],
 };
 export const DISTRICT_CACHE_SIZE = 2;
 

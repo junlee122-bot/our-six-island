@@ -295,7 +295,7 @@ function RoomPreview({ tier }: { tier: HouseTier }) {
       {tier.tier >= 3 && (
         <span className="sc-house" data-tier={tier.tier}>
           <House size={42} aria-hidden="true" />
-          <small>{tier.tier === 3 ? '마을의 내 집 앞 꽃밭과 등불' : '2층 다락과 명패'}</small>
+          <small>{tier.tier === 3 ? '우리 농장의 내 집 앞 꽃밭과 등불' : '2층 다락과 명패'}</small>
         </span>
       )}
     </div>

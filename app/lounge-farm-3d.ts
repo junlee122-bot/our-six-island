@@ -194,7 +194,7 @@ export function giantShapes(out: Instance[], crop: string) {
 
 // ---------------------------------------------------------------- fixtures and machines
 const SPRINKLER_HEAD: Record<string, string> = { sprinkler: '#c77a3f', 'sprinkler-q': '#a9b4be', 'sprinkler-s': '#b99cf0' };
-function fixtureShapes(out: Instance[], kind: FixtureKind) {
+export function fixtureShapes(out: Instance[], kind: FixtureKind) {
   if (kind === 'beehouse') {
     out.push({ geo: G.box, mat: tone('#e2b870'), m: matrix(0, 0.2, 0, 0.34, 0.32, 0.3) });
     out.push({ geo: G.pyramid, mat: tone('#8a5a34'), m: matrix(0, 0.44, 0, 0.3, 0.16, 0.3, Math.PI / 4) });
@@ -218,7 +218,7 @@ function fixtureShapes(out: Instance[], kind: FixtureKind) {
     out.push({ geo: G.sphere, mat: tone('#8fd0f0'), m: matrix(Math.cos(a) * 0.1, 0.3, Math.sin(a) * 0.1, 0.015, 0.015, 0.015) });
   }
 }
-function machineShapes(out: Instance[], kind: MachineKind, busy: boolean, hasOnggi: boolean) {
+export function machineShapes(out: Instance[], kind: MachineKind, busy: boolean, hasOnggi: boolean) {
   if (kind === 'jar') {
     if (!hasOnggi) {
       out.push({ geo: G.sphere, mat: tone('#7a4a2a'), m: matrix(0, 0.2, 0, 0.2, 0.22, 0.2) });

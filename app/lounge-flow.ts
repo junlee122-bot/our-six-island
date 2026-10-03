@@ -128,11 +128,11 @@ export function pickAction<T>(
 
 /** Farm button label from my plots: 수확 > 심기 > 물 주기 > 돌보기. */
 export function farmAction(
-  plots: readonly { crop: string | null; readyAt?: number | null; wateredAt?: number | null }[],
+  plots: readonly { crop: string | null; readyAt?: number | null; wateredAt?: number | null; locked?: boolean; fixture?: string }[],
   now: number,
 ): 'harvest' | 'plant' | 'water' | 'tend' {
   if (plots.some((p) => p.crop && (p.readyAt ?? Infinity) <= now)) return 'harvest';
-  if (plots.some((p) => !p.crop)) return 'plant';
+  if (plots.some((p) => !p.crop && !p.locked && !p.fixture)) return 'plant';
   if (plots.some((p) => p.crop && p.wateredAt === null && (p.readyAt ?? Infinity) > now))
     return 'water';
   return 'tend';

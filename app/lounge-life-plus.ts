@@ -144,7 +144,7 @@ import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 // 성장 P1: XP and skill/tool effects (functions only; see the cycle note above).
 import { XP, fishXp } from './lounge-growth-data.ts';
 // 텃밭 확장: leaf data, and the farm engine (functions only; see the cycle note above).
-import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId } from './lounge-farm-data.ts';
+import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId, tileOpen } from './lounge-farm-data.ts';
 import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
 import { gainXp, giftMult, growthChance, growthMods } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
@@ -176,8 +176,8 @@ import { companionPrice } from './lounge-companion-effects.ts';
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
 // ---------------------------------------------------------------- constants
-/** 6 → 9 and 9 → 12 plots. */
-export const FARM_EXPAND_PRICE: Record<9 | 12, number> = { 9: 150_000, 12: 400_000 };
+/** 우리 농장 field tiers: 24 → 48 (8 × 6) and 48 → 80 (10 × 8) tiles (design-our-farm.md §3-1). */
+export const FARM_EXPAND_PRICE: Record<48 | 80, number> = { 48: 150_000, 80: 400_000 };
 export const ROD_PRICE: Record<2 | 3, number> = { 2: 30_000, 3: 120_000 };
 /** Bite window multiplier per rod level (rod 3 also makes rare fish 1.5× likelier). */
 export const ROD_WINDOW: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.25, 3: 1.5 };
@@ -271,7 +271,8 @@ export type UserExt = {
   npcTiesImported?: true;
   /** 의뢰 게시판 progress today (lounge-npc-requests.ts). */
   npcBoard?: NpcBoardState;
-  plots?: 9 | 12;
+  /** Field tier paid for (24 is the free start; old saves held 9 / 12, read as 48 / 80). */
+  plots?: 48 | 80;
   inv?: Record<string, number>;
   q1?: Partial<Record<Crop, number>>;
   q2?: Partial<Record<Crop, number>>;
@@ -399,7 +400,7 @@ export const PLUS_REJECT = {
   fertDone: '이미 그 비료를 준 칸이에요.',
   fixture: '설비가 놓인 칸이에요.',
   nothingToFert: '비료를 줄 작물이 없어요.',
-  farmMax: '밭은 12칸까지 넓힐 수 있어요.',
+  farmMax: '밭은 80칸(10×8)까지 넓힐 수 있어요.',
   friendFarm: '친구의 밭을 찾을 수 없어요.',
   friendWatered: '오늘은 이미 이 친구 밭에 물을 줬어요. 내일 또 도와줘요.',
   stock: '오늘 상점에 없는 가구예요.',
@@ -528,7 +529,9 @@ function readLast(v: unknown): FishLast | undefined {
 function readUserExt(v: unknown): UserExt | undefined {
   const x = obj(v),
     out: UserExt = {};
-  if (x.plots === 9 || x.plots === 12) out.plots = x.plots;
+  // Old yard tiers (9 / 12 plots) carry over to the same field tier (48 / 80 tiles).
+  const plots = x.plots === 9 ? 48 : x.plots === 12 ? 80 : x.plots;
+  if (plots === 48 || plots === 80) out.plots = plots;
   const inv = counts(x.inv, isItemId);
   if (nonEmpty(inv)) out.inv = inv as Record<string, number>;
   const q1 = counts<Crop>(x.q1, isCropId),
@@ -1482,7 +1485,7 @@ export function plusAction(
       let targets: number[];
       if (a.plot === -1) targets = farm.flatMap((_, i) => (open(i) ? [i] : []));
       else {
-        if (!safe(a.plot) || a.plot < 0 || a.plot >= farm.length) fail(LIFE_REJECT.plot);
+        if (!safe(a.plot) || a.plot < 0 || a.plot >= farm.length || !tileOpen(farmSizeOf(life, uid), a.plot)) fail(LIFE_REJECT.plot);
         const p = farm[a.plot];
         if (!p.crop) fail(fixtureAt(life, uid, a.plot) ? PLUS_REJECT.fixture : LIFE_REJECT.empty);
         if (done(p)) fail(PLUS_REJECT.fertDone);
@@ -1506,11 +1509,11 @@ export function plusAction(
     }
     case 'expandFarm': {
       const size = farmSizeOf(life, uid),
-        to = size === 6 ? 9 : size === 9 ? 12 : 0;
+        to = size === 24 ? 48 : size === 48 ? 80 : 0;
       if (!to) fail(PLUS_REJECT.farmMax);
-      next = spend(next, life, uid, FARM_EXPAND_PRICE[to as 9 | 12], 'farm-' + to, now);
-      x.plots = to as 9 | 12;
-      while (farm.length < to) farm.push({ crop: null, plantedAt: 0, wateredAt: null });
+      next = spend(next, life, uid, FARM_EXPAND_PRICE[to as 48 | 80], 'farm-' + to, now);
+      // The field is always the full grid in memory; the tier opens more of it.
+      x.plots = to as 48 | 80;
       break;
     }
     case 'waterFriend': {
@@ -1528,7 +1531,7 @@ export function plusAction(
       let targets: number[];
       if (a.plot === -1) targets = theirs.flatMap((_, i) => (needs(i) ? [i] : []));
       else {
-        if (!safe(a.plot) || a.plot < 0 || a.plot >= theirs.length) fail(LIFE_REJECT.plot);
+        if (!safe(a.plot) || a.plot < 0 || a.plot >= theirs.length || !tileOpen(farmSizeOf(life, owner!), a.plot)) fail(LIFE_REJECT.plot);
         targets = needs(a.plot) ? [a.plot] : [];
       }
       if (!targets.length) fail(LIFE_REJECT.nothingToWater);
@@ -2275,7 +2278,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     npcRelations: npcRelationsView(raw.npcRelations, now),
     npcTiesSeen: [...(raw.npcTiesSeen ?? [])],
     npcBoard: npcBoardView(life, uid, now),
-    plots: raw.plots ?? 6,
+    plots: raw.plots ?? FARM_SIZES[0],
     inv: { ...raw.inv },
     quality: { silver: { ...raw.q1 }, gold: { ...raw.q2 }, ...(raw.q3 ? { star: { ...raw.q3 } } : {}) },
     furniture: { ...raw.furn },

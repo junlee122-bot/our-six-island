@@ -44,6 +44,7 @@ import {
   plotReadyAt,
   readLife,
   sellCapLeft,
+  packLife,
 } from '../app/lounge-life.ts';
 import {
   BOND_LEVELS,
@@ -304,7 +305,7 @@ test('farming: regrowing corn, quality stars from fertilizer, quality sell price
   s.fails(m, { kind: 'sell', crop: 'pumpkin', n: 1, quality: 1 }, t, LIFE_REJECT.notEnough);
 });
 
-test('farming: fertilizer purchase and use, farm expansion 6→9→12', () => {
+test('farming: fertilizer purchase and use, field expansion 24→48→80', () => {
   const s = world(1),
     [m] = s.members;
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0);
@@ -318,7 +319,7 @@ test('farming: fertilizer purchase and use, farm expansion 6→9→12', () => {
   assert.equal(s.life.farms[m.id][0].speed, 10);
   s.fails(m, { kind: 'fertilize', plot: 0, item: 'fertilizer' }, T0, PLUS_REJECT.fertDone);
   s.act(m, { kind: 'fertilize', plot: -1, item: 'fertilizer' }, T0);
-  assert.deepEqual(s.life.farms[m.id].map((p) => p.fert ?? 0), [2, 1, 1, 0, 0, 0]);
+  assert.deepEqual(s.life.farms[m.id].slice(0, 6).map((p) => p.fert ?? 0), [2, 1, 1, 0, 0, 0]);
   assert.equal(s.view(m, T0).me.inv.fertilizer, undefined);
   // Expansion.
   const rich = world(1),
@@ -327,26 +328,28 @@ test('farming: fertilizer purchase and use, farm expansion 6→9→12', () => {
   rich.fails(r, { kind: 'expandFarm' }, T0, LIFE_REJECT.balance);
   // Sell a lot over several days to afford it.
   let t = T0;
-  while (rich.balance(r) < FARM_EXPAND_PRICE[9]) {
+  while (rich.balance(r) < FARM_EXPAND_PRICE[48]) {
     rich.life.bag[r.id].produce.strawberry = 8;
     rich.act(r, { kind: 'sell', crop: 'strawberry', n: 8 }, t);
     t += DAY;
   }
+  rich.fails(r, { kind: 'plant', plot: 7, crop: 'carrot' }, t, LIFE_REJECT.plot);
   rich.act(r, { kind: 'expandFarm' }, t);
-  assert.equal(rich.life.farms[r.id].length, 9);
-  assert.equal(rich.view(r, t).me.plots, 9);
-  rich.act(r, { kind: 'plant', plot: 8, crop: 'carrot' }, t);
-  // Reload keeps the 9-plot farm.
+  assert.equal(rich.view(r, t).me.plots, 48);
+  // Row 0, column 7: tilled at 8 × 6.
+  rich.act(r, { kind: 'plant', plot: 7, crop: 'carrot' }, t);
+  // Reload keeps the 48-tile field.
   const back = readLife(JSON.parse(JSON.stringify(rich.life)));
-  assert.equal(back.farms[r.id].length, 9);
-  assert.equal(ensureLifeMember(back, r.id, 0).farms[r.id].length, 9);
-  while (rich.balance(r) < FARM_EXPAND_PRICE[12]) {
+  assert.equal(back.farms[r.id][7].crop, 'carrot');
+  assert.equal(back.ext[r.id].plots, 48);
+  assert.equal(ensureLifeMember(back, r.id, 0).farms[r.id].length, 80);
+  while (rich.balance(r) < FARM_EXPAND_PRICE[80]) {
     rich.life.bag[r.id].produce.strawberry = 8;
     rich.act(r, { kind: 'sell', crop: 'strawberry', n: 8 }, t);
     t += DAY;
   }
   rich.act(r, { kind: 'expandFarm' }, t);
-  assert.equal(rich.life.farms[r.id].length, 12);
+  assert.equal(rich.view(r, t).me.plots, 80);
   rich.fails(r, { kind: 'expandFarm' }, t, PLUS_REJECT.farmMax);
 });
 
@@ -950,7 +953,7 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
       }
       if ((ev.me.inv.wood ?? 0) > 1 && (ev.me.inv.pinecone ?? 0) > 0) act(m, { kind: 'craft', recipe: 'fertilizer' }, evening);
       if (d % 30 === 10) {
-        if (s.balance(m) > FARM_EXPAND_PRICE[9] + 50_000) act(m, { kind: 'expandFarm' }, evening);
+        if (s.balance(m) > FARM_EXPAND_PRICE[48] + 50_000) act(m, { kind: 'expandFarm' }, evening);
         if (s.balance(m) > ROD_PRICE[2] + 50_000) act(m, { kind: 'upgradeRod', at: 'general' }, evening);
         const stock = ev.shop.items[m.actor % ev.shop.items.length];
         if (s.balance(m) > stock.price + 50_000) act(m, { kind: 'buyFurniture', ref: stock.ref }, evening);
@@ -977,7 +980,8 @@ test('one simulated year, 7 players: world size bounded and the ledger invariant
   );
   const cloud = { schema: 1, ledger: s.ledger, rooms: {}, receipts, life: s.life },
     worldBytes = Buffer.byteLength(JSON.stringify(cloud)),
-    lifeBytes = Buffer.byteLength(JSON.stringify(s.life)),
+    // As written to the world row (fields sparse, packLife).
+    lifeBytes = Buffer.byteLength(JSON.stringify(packLife(s.life))),
     ledgerBytes = Buffer.byteLength(JSON.stringify(s.ledger)),
     viewBytes = Buffer.byteLength(JSON.stringify(lifeView(s.life, s.members[0].id, 0, end)));
   const balances = s.members.map((m) => s.balance(m));

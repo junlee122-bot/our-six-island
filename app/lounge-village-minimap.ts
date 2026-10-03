@@ -2,6 +2,7 @@ import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-
 import { SHOP_INTERIORS, isShopArea } from './lounge-shop-interiors.ts';
 import { VILLAGE_GATE } from './lounge-areas.ts';
 import { DISTRICTS, isDistrictId } from './lounge-districts.ts';
+import { FARM_HOUSES } from './lounge-farm-layout.ts';
 
 type Presence = { id: string; actor: number; area: string; x: number; y: number; home?: number };
 export type VillageFriendPin = {
@@ -43,8 +44,10 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
     ids.add(p.id);
     if (p.area === 'village')
       return [{ id: p.id, actor: p.actor, point: villageFromNetwork(p), indoor: false, location: '마을' }];
-    const placeId = p.area === 'home' ? `home-${p.home ?? p.actor}`
-      : p.area === 'lounge' ? 'hall' : p.area === 'salon' ? 'wardrobe'
+    // 우리 농장: in a friend's room = in their house on the farm, pinned at the farm gate.
+    if (p.area === 'home')
+      return [{ id: p.id, actor: p.actor, point: DISTRICTS.farm.gate.stand, indoor: true, placeId: 'district-farm', location: `${FARM_HOUSES.find((h) => h.actor === (p.home ?? p.actor))?.name ?? '친구 집'}` }];
+    const placeId = p.area === 'lounge' ? 'hall' : p.area === 'salon' ? 'wardrobe'
       : ['casino', 'wardrobe', 'tavern', 'bank'].includes(p.area) ? p.area : undefined;
     const place = VILLAGE_PLACES.find((v) => v.id === placeId);
     if (place) return [{ id: p.id, actor: p.actor, point: place.entry, indoor: true, placeId, location: place.name }];

@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { DISTRICTS } from '../app/lounge-districts.ts';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -33,7 +34,11 @@ test('minimap translates village coordinates but maps interior friends to their 
   assert.equal(pins.length, 5);
   assert.ok(Math.hypot(pins[0].point.x - outdoor.x, pins[0].point.z - outdoor.z) < 1e-8);
   assert.equal(pins[0].indoor, false);
-  for (const [pin, placeId] of [[pins[1], 'home-4'], [pins[2], 'casino'], [pins[3], 'wardrobe'], [pins[4], 'hall']]) {
+  // 우리 농장: a friend in a room is in their house on the farm (pinned at the farm gate).
+  assert.equal(pins[1].indoor, true);
+  assert.deepEqual(pins[1].point, DISTRICTS.farm.gate.stand);
+  assert.equal(pins[1].location, '민재의 집');
+  for (const [pin, placeId] of [[pins[2], 'casino'], [pins[3], 'wardrobe'], [pins[4], 'hall']]) {
     assert.equal(pin.indoor, true);
     assert.equal(pin.placeId, placeId);
     assert.deepEqual(pin.point, VILLAGE_PLACES.find((v) => v.id === placeId).entry);

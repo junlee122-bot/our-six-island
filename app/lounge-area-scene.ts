@@ -16,6 +16,8 @@ import { HarborSet } from './lounge-harbor-scene';
 import { HillsideSet } from './lounge-hillside-scene';
 import { RanchSet } from './lounge-ranch-scene';
 import { FoothillSet } from './lounge-foothill-scene';
+import { FarmSet } from './lounge-farm-scene';
+import type { FarmSceneState } from './lounge-farm-view';
 import { OffshoreSet } from './lounge-offshore-scene';
 import type { DistrictSet } from './lounge-district-kit';
 
@@ -86,6 +88,9 @@ export type RegionUpdate = {
   /** 항구: 샹크스's boat is out (a voyage is on) and whether he waits at the pier. */
   boatOut?: boolean;
   captain?: boolean;
+  /** 우리 농장: every friend's field and house tier (lounge-farm-view.ts), and me. */
+  farm?: FarmSceneState;
+  me?: number;
 };
 
 export class RegionSet {
@@ -123,7 +128,9 @@ export class RegionSet {
               ? new HillsideSet(look)
               : area === 'ranch'
                 ? new RanchSet(look)
-                : new FoothillSet(look);
+                : area === 'farm'
+                  ? new FarmSet(look)
+                  : new FoothillSet(look);
       this.district.onChange = () => this.onChange();
       this.root.add(this.district.root);
     } else if (area === 'offshore') {
@@ -501,7 +508,7 @@ export class RegionSet {
 
   update(u: RegionUpdate) {
     this.state = u;
-    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night, boatOut: !!u.boatOut, captain: !!u.captain });
+    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night, boatOut: !!u.boatOut, captain: !!u.captain, ...(u.farm ? { farm: u.farm, me: u.me } : {}) });
     const up = new Set(u.nodes.filter((n) => !n.taken).map((n) => n.id));
     for (const n of u.nodes) this.nodeObject(n);
     for (const [id, e] of this.nodes) {

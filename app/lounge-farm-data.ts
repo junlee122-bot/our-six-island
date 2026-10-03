@@ -207,25 +207,65 @@ export const STAR_MULT = 2;
 
 // ---------------------------------------------------------------- the tile grid
 /**
- * A yard's farm is a 3 × 4 tile grid over its two raised beds (the village
- * layout fixes where the beds stand). Tile index = the old plot index, so old
- * saves need no move: rows north → south are the back bed (6–8, 9–11), then
- * the front bed (0–2, 3–5). Each tile holds soil (a plot) or one fixture.
+ * 우리 농장 (design-our-farm.md §3-1): every friend's field is a 10 × 8 tile
+ * grid in front of their house on the farm. Tile index = row × 10 + column,
+ * row 0 at the north (by the house). Size tiers open the top-left block:
+ * 6 × 4 = 24 tiles to start, 8 × 6 = 48 and 10 × 8 = 80 when the field is
+ * expanded. Each tile holds soil (a plot) or one fixture.
  */
-export const GRID_COLS = 3;
-export const GRID_ROWS = 4;
+export const GRID_COLS = 10;
+export const GRID_ROWS = 8;
 export const GRID_TILES = GRID_COLS * GRID_ROWS;
-/** Grid row (0 = north, the back bed's back row) and column of a tile. */
+export type FieldSize = 24 | 48 | 80;
+export const FIELD_TIERS: readonly { size: FieldSize; cols: number; rows: number }[] = [
+  { size: 24, cols: 6, rows: 4 },
+  { size: 48, cols: 8, rows: 6 },
+  { size: 80, cols: 10, rows: 8 },
+];
+/** The open block (columns × rows) of a field of `size` tiles. */
+export function fieldBlock(size: number): { cols: number; rows: number } {
+  const t = FIELD_TIERS.find((f) => f.size === size) ?? FIELD_TIERS[0];
+  return { cols: t.cols, rows: t.rows };
+}
+/** Grid row (0 = north, by the house) and column of a tile. */
 export function tileRC(tile: number): { r: number; c: number } {
-  const c = tile % GRID_COLS;
-  return tile < 6 ? { r: 2 + Math.floor(tile / GRID_COLS), c } : { r: Math.floor((tile - 6) / GRID_COLS), c };
+  return { r: Math.floor(tile / GRID_COLS), c: tile % GRID_COLS };
 }
 export function tileAt(r: number, c: number): number | null {
   if (r < 0 || r >= GRID_ROWS || c < 0 || c >= GRID_COLS) return null;
-  return r >= 2 ? (r - 2) * GRID_COLS + c : 6 + r * GRID_COLS + c;
+  return r * GRID_COLS + c;
 }
-/** Which bed a tile is in: 0 front (tiles 0–5), 1 back (6–11). */
-export const tileBed = (tile: number) => (tile < 6 ? 0 : 1);
+/** Whether `tile` is a real tile and open (tilled) on a field of `size` tiles. */
+export function tileOpen(size: number, tile: number): boolean {
+  if (!Number.isSafeInteger(tile) || tile < 0 || tile >= GRID_TILES) return false;
+  const { r, c } = tileRC(tile),
+    b = fieldBlock(size);
+  return r < b.rows && c < b.cols;
+}
+/** Open tiles of a field of `size`, in index order. */
+export const openTiles = (size: number) => Array.from({ length: GRID_TILES }, (_, i) => i).filter((i) => tileOpen(size, i));
+/**
+ * Beds: the field splits into 3 × 2 blocks (columns 0–2, 3–5, 6–8; row pairs),
+ * the unit of a giant crop and of trellis shade. Column 9 is in no bed.
+ */
+export const BED_COLS = 3;
+export const BED_ROWS = 2;
+const BEDS_ACROSS = Math.floor(GRID_COLS / BED_COLS);
+export const FIELD_BEDS = BEDS_ACROSS * Math.floor(GRID_ROWS / BED_ROWS);
+/** Which bed a tile is in (null: column 9, outside every bed). */
+export function tileBed(tile: number): number | null {
+  const { r, c } = tileRC(tile);
+  if (c >= BEDS_ACROSS * BED_COLS) return null;
+  return Math.floor(r / BED_ROWS) * BEDS_ACROSS + Math.floor(c / BED_COLS);
+}
+/** The six tiles of bed `bed`, row-major from its north-west corner. */
+export function bedTiles(bed: number): number[] {
+  const r0 = Math.floor(bed / BEDS_ACROSS) * BED_ROWS,
+    c0 = (bed % BEDS_ACROSS) * BED_COLS;
+  const out: number[] = [];
+  for (let r = 0; r < BED_ROWS; r++) for (let c = 0; c < BED_COLS; c++) out.push((r0 + r) * GRID_COLS + c0 + c);
+  return out;
+}
 /** Chebyshev distance between two tiles on the grid. */
 export function tileDist(a: number, b: number) {
   const p = tileRC(a),
@@ -236,14 +276,45 @@ export function tileDist(a: number, b: number) {
 export function tileFront(tile: number): number | null {
   const { r, c } = tileRC(tile);
   const front = tileAt(r + 1, c);
-  return front !== null && tileBed(front) === tileBed(tile) ? front : null;
+  return front !== null && tileBed(tile) !== null && tileBed(front) === tileBed(tile) ? front : null;
 }
 /** The tile right behind (north of) `tile` in the same bed, or null. */
 export function tileBehind(tile: number): number | null {
   const { r, c } = tileRC(tile);
   const behind = tileAt(r - 1, c);
-  return behind !== null && tileBed(behind) === tileBed(tile) ? behind : null;
+  return behind !== null && tileBed(tile) !== null && tileBed(behind) === tileBed(tile) ? behind : null;
 }
+
+// ---------------------------------------------------------------- the old yard grid (read-time migration)
+/**
+ * Before 우리 농장 a yard was a 3 × 4 grid over two raised beds in the hub:
+ * tiles 0–5 the front bed (rows 2–3), 6–11 the back bed (rows 0–1), and the
+ * farm was 6 / 9 / 12 tiles. Saved worlds still hold that shape; reading them
+ * moves every old tile into the field's top-left 3 × 4 block, same shape
+ * (back bed on top, front bed below), and the paid size to the same tier.
+ */
+export const LEGACY_SIZES = [6, 9, 12] as const;
+export const LEGACY_SIZE_TO_FIELD: Readonly<Record<number, FieldSize>> = { 6: 24, 9: 48, 12: 80 };
+/** New tile index of old yard tile `old` (0–11), or null for anything else. */
+export function legacyTile(old: number): number | null {
+  if (!Number.isSafeInteger(old) || old < 0 || old >= 12) return null;
+  const c = old % 3,
+    r = old < 6 ? 2 + Math.floor(old / 3) : Math.floor((old - 6) / 3);
+  return r * GRID_COLS + c;
+}
+/** Old yard tile of a field tile in the top-left 3 × 4 block (inverse of legacyTile), else null. */
+export function legacyIndexOf(tile: number): number | null {
+  const { r, c } = tileRC(tile);
+  if (r >= 4 || c >= 3) return null;
+  return r >= 2 ? (r - 2) * 3 + c : 6 + r * 3 + c;
+}
+/**
+ * Seed for per-tile rolls (quality, giant beds): the old yard index inside
+ * the migrated block, so crops planted before the move keep their rolls.
+ */
+export const tileSeed = (tile: number) => legacyIndexOf(tile) ?? 100 + tile;
+/** Seed of a bed (the old front bed was 0, the back bed 1). */
+export const bedSeed = (bed: number) => (bed === 3 ? 0 : bed === 0 ? 1 : 100 + bed);
 
 // ---------------------------------------------------------------- fixtures (tile objects)
 export type FixtureKind = 'sprinkler' | 'sprinkler-q' | 'sprinkler-s' | 'scarecrow' | 'beehouse';

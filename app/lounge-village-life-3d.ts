@@ -39,7 +39,7 @@ import { batchDirectMeshes } from './lounge-village-world';
 
 const std = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...extra });
-const MAT = {
+export const MAT = {
   frame: std('#8a6242'),
   soil: std('#7a5234'),
   soilWet: std('#4f3421'),
@@ -70,7 +70,7 @@ const MAT = {
   crate: std('#c49058'),
   mine: new THREE.MeshBasicMaterial({ color: '#f4c54a', toneMapped: false }),
 };
-const GEO = {
+export const GEO = {
   box: new THREE.BoxGeometry(1, 1, 1),
   sphere: new THREE.SphereGeometry(1, 10, 8),
   cone: new THREE.ConeGeometry(1, 1, 7),
@@ -78,9 +78,9 @@ const GEO = {
   disc: new THREE.CircleGeometry(1, 28),
 };
 
-type Instance = { geo: THREE.BufferGeometry; mat: THREE.Material; m: THREE.Matrix4 };
+export type Instance = { geo: THREE.BufferGeometry; mat: THREE.Material; m: THREE.Matrix4 };
 const tmp = new THREE.Object3D();
-function matrix(
+export function matrix(
   x: number,
   y: number,
   z: number,
@@ -99,7 +99,7 @@ function matrix(
 }
 
 /** Instanced batches rebuilt whenever the plot set changes (cheap, rare). */
-class Batches {
+export class Batches {
   private meshes = new Map<string, THREE.InstancedMesh>();
   private root: THREE.Group;
   constructor(root: THREE.Group) {
@@ -142,12 +142,20 @@ class Batches {
       mesh.instanceMatrix.needsUpdate = true;
     }
   }
+  /** Frees the instanced meshes (the shared geometries and materials stay). */
+  dispose() {
+    for (const mesh of this.meshes.values()) {
+      this.root.remove(mesh);
+      mesh.dispose();
+    }
+    this.meshes.clear();
+  }
 }
 
-const SOIL_TOP = 0.2;
+export const SOIL_TOP = 0.2;
 /** Crops are drawn a little larger than life so they read from the follow camera. */
 const CROP_SCALE = 1.5;
-function cropInstances(
+export function cropInstances(
   out: Instance[],
   at: { x: number; z: number },
   crop: Crop,

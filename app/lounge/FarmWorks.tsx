@@ -20,7 +20,11 @@ import {
   WORK_SLOTS,
   productOf,
   sprinklerCovers,
+  GRID_COLS,
+  GRID_ROWS,
   tileDist,
+  tileOpen,
+  tileRC,
   type Recipe,
 } from '../lounge-farm-data';
 import { fairScore, stockName, stockUnit, type FarmLog } from '../lounge-farm';
@@ -46,13 +50,9 @@ type Life = LifeView;
 type Run = (action: LifeAction, done: string, chime?: 'plant' | 'water' | 'harvest') => Promise<boolean>;
 type StockRow = { id: string; q: Quality; n: number };
 
-/** Tile rows as the yard stands: back bed (north) on top, the front bed by the gate below. */
-const GRID_ROWS_VIEW = [
-  [6, 7, 8],
-  [9, 10, 11],
-  [0, 1, 2],
-  [3, 4, 5],
-] as const;
+/** Field rows as the field lies on 우리 농장: north (the house) on top. */
+const GRID_ROWS_VIEW = Array.from({ length: GRID_ROWS }, (_, r) => Array.from({ length: GRID_COLS }, (_, c) => r * GRID_COLS + c));
+const tileName = (tile: number) => `${tileRC(tile).r + 1}줄 ${tileRC(tile).c + 1}칸`;
 const STAGE_TEXT = ['씨앗', '새싹', '잎', '꽃·열매', '수확'] as const;
 
 function left(ms: number) {
@@ -152,11 +152,12 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
 // ---------------------------------------------------------------- 밭 배치
 function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; busy: boolean; balance: number; now: number }) {
   const farm = life.me.farm,
-    size = farm.length,
+    size = life.me.plots,
+    open = (tile: number) => tileOpen(size, tile),
     fx = life.farmx?.fixtures ?? [];
   const fixtureOf = (tile: number) => fx.find((f) => f.tile === tile) ?? null;
   const [sel, setSel] = useState<number>(() => {
-    const first = fx[0]?.tile ?? farm.findIndex((p) => !p.crop);
+    const first = fx[0]?.tile ?? farm.findIndex((p, i) => !p.crop && tileOpen(life.me.plots, i));
     return first >= 0 ? first : 0;
   });
   const [moving, setMoving] = useState<number | null>(null);
@@ -170,8 +171,8 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
   const placeable = FIXTURES.filter((f) => (life.me.inv[f.id] ?? 0) > 0);
   const click = (tile: number) => {
     if (moving !== null) {
-      if (tile !== moving && tile < size && !farm[tile].crop && !fixtureOf(tile)) {
-        void run({ kind: 'farmMove', from: moving, to: tile }, `${FIXTURE_BY_ID[fixtureOf(moving)!.kind].name}를 ${tile + 1}번 칸으로 옮겼어요.`).then((ok) => ok && setSel(tile));
+      if (tile !== moving && open(tile) && !farm[tile].crop && !fixtureOf(tile)) {
+        void run({ kind: 'farmMove', from: moving, to: tile }, `${FIXTURE_BY_ID[fixtureOf(moving)!.kind].name}를 ${tileName(tile)}으로 옮겼어요.`).then((ok) => ok && setSel(tile));
       }
       setMoving(null);
       return;
@@ -187,18 +188,18 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
           <Glyph name="grid" size={16} /> 칸을 골라 설비를 놓거나 옮겨요. 설비가 있는 칸에는 심을 수 없어요.
         </p>
         <div className="l-fw-grid" role="grid" aria-label={`밭 ${size}칸`}>
-          {[GRID_ROWS_VIEW.slice(0, 2), GRID_ROWS_VIEW.slice(2)].map((bedRows, b) => (
-            <div key={b} className="l-fw-bed" data-bed={b === 0 ? 'back' : 'front'}>
-              <span className="l-fw-bedname">{b === 0 ? '뒤 두둑 (집 쪽)' : '앞 두둑 (대문 쪽)'}</span>
+          {[GRID_ROWS_VIEW].map((bedRows, b) => (
+            <div key={b} className="l-fw-bed l-fw-field" data-bed="field">
+              <span className="l-fw-bedname">집 앞 밭 (위쪽이 집)</span>
               {bedRows.map((row, r) => (
             <div key={r} className="l-fw-row" role="row">
               {row.map((tile) => {
                 const p = farm[tile],
                   f = fixtureOf(tile);
-                if (!p)
+                if (!p || !open(tile))
                   return (
                     <span key={tile} className="l-fw-tile" data-state="fallow" aria-hidden="true">
-                      <Glyph name="lock" size={14} />
+                      <Glyph name="lock" size={10} />
                     </span>
                   );
                 const state = f ? 'fixture' : p.crop ? 'crop' : p.dead ? 'dead' : 'empty';
@@ -213,17 +214,16 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
                     data-target={(moving !== null && state !== 'fixture' && state !== 'crop') || undefined}
                     data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
                     aria-selected={sel === tile}
-                    aria-label={`${tile + 1}번 칸 · ${f ? FIXTURE_BY_ID[f.kind].name : p.crop ? itemName(p.crop) : p.dead ? '시든 작물' : '빈 흙'}`}
+                    aria-label={`${tileName(tile)} · ${f ? FIXTURE_BY_ID[f.kind].name : p.crop ? itemName(p.crop) : p.dead ? '시든 작물' : '빈 흙'}`}
                     onClick={() => click(tile)}
                     data-testid={`farm-tile-${tile}`}
                   >
-                    {f ? <ItemIcon id={f.kind} size={40} /> : p.crop ? <CropStageArt crop={p.crop} stage={p.stage} size={44} /> : null}
+                    {f ? <ItemIcon id={f.kind} size={26} /> : p.crop ? <CropStageArt crop={p.crop} stage={p.stage} size={28} /> : null}
                     {p.sprinkled && !f ? (
                       <span className="l-fw-mark" data-kind="water">
                         <Glyph name="drop" size={12} />
                       </span>
                     ) : null}
-                    <i className="l-fw-num">{tile + 1}</i>
                   </button>
                 );
               })}
@@ -240,8 +240,8 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
       </section>
 
       <section className="l-fw-side" aria-label="고른 칸">
-        <Panel variant="note" title={`${sel + 1}번 칸`} className="l-fw-card">
-          {sel >= size ? (
+        <Panel variant="note" title={tileName(sel)} className="l-fw-card">
+          {!open(sel) ? (
             <EmptyState glyph="lock" title="아직 풀밭이에요" hint="텃밭 장부에서 밭을 넓히면 이 칸을 써요." />
           ) : chosen ? (
             <div className="l-fw-detail">
@@ -284,7 +284,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
                     <GameButton
                       size="s"
                       disabled={busy}
-                      onClick={() => void run({ kind: 'farmPlace', item: f.id, tile: sel }, `${sel + 1}번 칸에 ${josa(f.name, '을/를')} 놓았어요.`, 'plant')}
+                      onClick={() => void run({ kind: 'farmPlace', item: f.id, tile: sel }, `${tileName(sel)}에 ${josa(f.name, '을/를')} 놓았어요.`, 'plant')}
                       data-testid={`farm-place-${f.id}`}
                     >
                       <ItemIcon id={f.id} size={24} /> {f.name} <small>{life.me.inv[f.id]}</small>

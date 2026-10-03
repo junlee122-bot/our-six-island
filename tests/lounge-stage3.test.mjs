@@ -107,7 +107,7 @@ const wallet = (s, m) => s.ledger.accounts[`wallet-${m.id}`];
 
 // ---------------------------------------------------------------- districts and unlocks
 test('the ranch opens with 들길 개간, the foothill at mine floor 10; flags never close', () => {
-  assert.deepEqual([...BUILT_DISTRICTS], ['market', 'harbor', 'hillside', 'ranch', 'foothill']);
+  assert.deepEqual([...BUILT_DISTRICTS], ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill']);
   assert.equal(RESEARCH_BY_ID.orchardHill.live, true);
   const s = world(2, []);
   const [a, b] = s.members;
@@ -400,7 +400,7 @@ test('range upgrades: tiers 2–3 like the rod; the can and the hoe reach their 
   assert.equal(s.inv(m, 'copper'), 10);
   assert.equal(wallet(s, m), 100_000 - SMITH_COST.can[2].beom);
   assert.equal(s.view(m).stage3.smith.can, 2);
-  // Watering one tile waters its row (three tiles).
+  // Watering one tile waters its bed's row (three tiles).
   const bag = s.life.bag[m.id];
   bag.seeds.carrot = 12;
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' });

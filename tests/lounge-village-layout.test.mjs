@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { FARM_HOME_PLACES } from '../app/lounge-farm-layout.ts';
 import {
   VILLAGE_BOARDWALK,
   VILLAGE_COLLIDERS,
@@ -60,7 +61,8 @@ test('every tree, lamp, bench, fence and rail blocks walking; flowers and hydran
     kinds.add(item.kind);
     assert.equal(villageCanWalk(item), false, `${item.id} must block walking`);
   }
-  for (const kind of ['tree', 'lamp', 'bench', 'fence', 'rail', 'mailbox', 'shrub'])
+  // 우리 농장: the yard fences and the mailboxes moved to the farm with the houses.
+  for (const kind of ['tree', 'lamp', 'bench', 'rail', 'shrub'])
     assert.ok(kinds.has(kind), `${kind} colliders exist`);
   // The former road trees at (±23, 10) and the lamp inside the camp picnic table are gone.
   for (const x of [-23, 23]) assert.ok(villageCanWalk({ x, z: 10 }));
@@ -180,7 +182,10 @@ test('home colliders come from the real model bounds at door scale', () => {
       );
     assert.ok(Math.abs(villageHouseScale(model) * spec.door - VILLAGE_DOOR_HEIGHT) < 1e-9);
   }
-  for (const place of VILLAGE_PLACES.filter((item) => item.kind === 'home')) {
+  // The houses stand on 우리 농장 now, at the same scale (lounge-farm-layout.ts).
+  assert.equal(VILLAGE_PLACES.filter((item) => item.kind === 'home').length, 0);
+  assert.equal(FARM_HOME_PLACES.length, 7);
+  for (const place of FARM_HOME_PLACES) {
     const spec = VILLAGE_HOUSE_MODELS[place.model],
       scale = villageHouseScale(place.model);
     assert.ok(Math.abs(place.width - (spec.width * scale + 0.1)) < 0.002);
@@ -188,7 +193,7 @@ test('home colliders come from the real model bounds at door scale', () => {
     assert.ok(Math.abs(place.entry.x - (place.x + spec.doorX * scale)) < 0.002);
   }
   // Neighbouring homes never overlap.
-  const homes = VILLAGE_PLACES.filter((item) => item.kind === 'home');
+  const homes = FARM_HOME_PLACES;
   for (const a of homes)
     for (const b of homes)
       if (a !== b)

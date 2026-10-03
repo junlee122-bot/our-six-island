@@ -40,7 +40,6 @@ import { lookFor } from './friend-looks';
 import { FarmLedgerBody } from './FarmLedger';
 import { FarmWorks, type FarmPage } from './FarmWorks';
 import { Tabs, tabPanelProps } from '../ui/Tabs';
-import type { VillagePoint } from '../lounge-village-layout';
 import './life.css';
 import { Glyph, type GlyphName } from '../ui/Glyph';
 
@@ -164,15 +163,19 @@ export function FarmModal({
   onClose,
   onShop,
   onBag,
-  onWalk,
+  onFriendField,
   actor,
+  initialPage = 'ledger',
 }: Base & {
   onShop: () => void;
   onBag?: () => void;
-  onWalk?: (point: VillagePoint) => void;
+  /** 우리 농장: walk to a friend's field (가 보기). */
+  onFriendField?: (actor: number) => void;
   actor?: number;
+  /** The page it opens on (the farm's shipping bin opens 출하·판매, its board 밭 배치). */
+  initialPage?: FarmPage;
 }) {
-  const [page, setPage] = useState<FarmPage>('ledger');
+  const [page, setPage] = useState<FarmPage>(initialPage);
   const me = actor ?? view.life?.actors?.[view.self] ?? 0;
   const farmx = view.life?.farmx;
   const now = useNow(true, 15_000) + view.clockOffset;
@@ -196,7 +199,7 @@ export function FarmModal({
       />
       <div {...tabPanelProps('farm', page)}>
         {page === 'ledger' ? (
-          <FarmLedgerBody room={room} view={view} notify={notify} onClose={onClose} onShop={onShop} onBag={onBag} onWalk={onWalk} actor={me} onPage={setPage} />
+          <FarmLedgerBody room={room} view={view} notify={notify} onClose={onClose} onShop={onShop} onBag={onBag} onFriendField={onFriendField} actor={me} onPage={setPage} />
         ) : (
           <FarmWorks page={page} room={room} view={view} notify={notify} />
         )}

@@ -77,10 +77,13 @@ function invariant(ledger) {
   );
 }
 
-test('new members start with 3 carrot + 2 tomato seeds and six empty plots', () => {
+test('new members start with 3 carrot + 2 tomato seeds and a 24-tile field', () => {
   const { members, life } = world(1);
   const v = lifeView(life, members[0].id, 0, T0);
-  assert.equal(v.me.farm.length, PLOTS_PER_USER);
+  // The whole 10 × 8 grid; the 6 × 4 block is tilled.
+  assert.equal(v.me.farm.length, 80);
+  assert.equal(v.me.farm.filter((p) => !p.locked).length, PLOTS_PER_USER);
+  assert.equal(v.me.plots, PLOTS_PER_USER);
   assert.ok(v.me.farm.every((p) => p.crop === null && p.stage === 0));
   assert.deepEqual(v.me.bag.seeds, {
     carrot: 3,
@@ -162,7 +165,7 @@ test('plant and water every plot in one request (plot -1)', () => {
   // Five empty plots, four carrot seeds: four are planted, one stays empty.
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0 + 1);
   const farm = s.life.farms[m.id];
-  assert.deepEqual(farm.map((p) => p.crop), ['carrot', 'tomato', 'carrot', 'carrot', 'carrot', null]);
+  assert.deepEqual(farm.slice(0, 6).map((p) => p.crop), ['carrot', 'tomato', 'carrot', 'carrot', 'carrot', null]);
   assert.equal(s.life.bag[m.id].seeds.carrot, 0);
   s.fails(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0 + 2, LIFE_REJECT.noSeed);
   s.fails(m, { kind: 'plant', plot: -1, crop: 'gold' }, T0 + 2, LIFE_REJECT.invalid);
@@ -171,8 +174,10 @@ test('plant and water every plot in one request (plot -1)', () => {
   assert.ok(s.life.farms[m.id].every((p) => !p.crop || p.wateredAt !== null));
   assert.equal(s.life.farms[m.id][1].wateredAt, T0 + 2); // not re-watered
   s.fails(m, { kind: 'water', plot: -1 }, T0 + 4, LIFE_REJECT.nothingToWater);
-  s.life.bag[m.id].seeds.pumpkin = 1;
+  // The rest of the 24 tilled tiles (and nothing past them).
+  s.life.bag[m.id].seeds.pumpkin = 30;
   s.act(m, { kind: 'plant', plot: -1, crop: 'pumpkin' }, T0 + 5);
+  assert.equal(s.life.bag[m.id].seeds.pumpkin, 30 - 19);
   s.fails(m, { kind: 'plant', plot: -1, crop: 'tomato' }, T0 + 6, LIFE_REJECT.noEmpty);
 });
 
@@ -439,9 +444,10 @@ test('readLife: old worlds load empty, hostile data is bounded and cleaned', () 
   };
   const life = readLife(hostile);
   assert.equal(Object.keys(life.farms).length, 1);
-  assert.equal(life.farms[id].length, PLOTS_PER_USER);
-  assert.deepEqual(life.farms[id][0], { crop: 'carrot', plantedAt: 5, wateredAt: 0 });
-  assert.equal(life.farms[id][1].crop, null);
+  // An old 2-plot array reads as a 6-plot yard moved onto the field (old tile 0 → 20).
+  assert.equal(life.farms[id].length, 80);
+  assert.deepEqual(life.farms[id][20], { crop: 'carrot', plantedAt: 5, wateredAt: 0 });
+  assert.equal(life.farms[id][21].crop, null);
   assert.equal(life.bag[id].seeds.carrot, 0);
   assert.equal(life.bag[id].seeds.tomato, 0);
   assert.equal(life.bag[id].produce.pumpkin, 3);

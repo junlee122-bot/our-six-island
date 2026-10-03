@@ -25,6 +25,7 @@ import {
   lifeView,
   readLife,
   LifeError,
+  packLife,
   mayEnterRoom,
   type LifeState,
 } from './lounge-life.ts';
@@ -911,6 +912,10 @@ export function cloudTransition(
     (g.life as LifeState).roomsReset = { id: ROOMS_RESET_ID, at: now, backup: {} };
     resetMarkOnly = true;
   }
+  // 우리 농장: fields are written sparse (packLife). Only a life this command
+  // changed is packed, so a plain read of an older world still writes nothing;
+  // its 6 / 9 / 12-plot yards move to the new field on the first write.
+  if (g.life && JSON.stringify(g.life) !== JSON.stringify(original.life)) g.life = packLife(g.life) as unknown as LifeState;
   const changed =
     resetMarkOnly && !original.life?.roomsReset
       ? JSON.stringify({ ...g, life: withoutResetMark(g.life!) }) !== JSON.stringify(original)

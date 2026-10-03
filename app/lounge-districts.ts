@@ -7,9 +7,12 @@
 // locked with a sign that says what will open it. Pure data; the gates are
 // in hub (village) coordinates, the maps themselves are regions in
 // lounge-areas.ts.
+//
+// 우리 농장 (design-our-farm.md, F1) is the friends' own farm behind the north
+// gate: the seven houses and their fields. Open from the start, no number.
 
-export type DistrictId = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
-export const DISTRICT_IDS: readonly DistrictId[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export type DistrictId = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'farm';
+export const DISTRICT_IDS: readonly DistrictId[] = ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
 export const isDistrictId = (a: unknown): a is DistrictId => typeof a === 'string' && (DISTRICT_IDS as readonly string[]).includes(a);
 
 /** How a district opens (design doc §2 "구역 해금"). */
@@ -45,7 +48,8 @@ export type DistrictGate = {
 };
 export type District = {
   id: DistrictId;
-  no: 1 | 2 | 3 | 4 | 5;
+  /** ① – ⑤ around the hub; 0: 우리 농장 (the friends' farm, not a town district). */
+  no: 0 | 1 | 2 | 3 | 4 | 5;
   name: string;
   tagline: string;
   /** Map size (world units), as planned. */
@@ -58,6 +62,18 @@ export type District = {
 };
 
 export const DISTRICTS: Record<DistrictId, District> = {
+  farm: {
+    id: 'farm',
+    no: 0,
+    name: '우리 농장',
+    tagline: '일곱 친구의 집 · 집 앞 밭 · 출하함',
+    size: { w: 84, d: 64 },
+    stage: 1,
+    // The middle of the north edge, where the house row's lane used to lead (§9-1).
+    gate: { x: -4, z: -43.4, stand: { x: -4, z: -42 }, reach: 1.9, road: '농장 길', rot: 0 },
+    unlock: { kind: 'open' },
+    hint: '북쪽 농장 길을 따라가면 우리 농장이에요.',
+  },
   market: {
     id: 'market',
     no: 1,
@@ -118,7 +134,7 @@ export const DISTRICTS: Record<DistrictId, District> = {
 };
 
 /** Districts with a map (stage 2 adds the harbor and the hillside, stage 3 the ranch and the foothill). */
-export const BUILT_DISTRICTS: readonly DistrictId[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export const BUILT_DISTRICTS: readonly DistrictId[] = ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
 export const districtBuilt = (id: DistrictId) => BUILT_DISTRICTS.includes(id);
 /**
  * The village flag (world.life.flags) the server sets the moment a
@@ -234,6 +250,7 @@ export function goalProgressText(id: DistrictId, goals: Partial<Record<DistrictI
     case 'foothill':
       return `광산 ${Math.min(g.have, g.need)}/${g.need}층`;
     case 'market':
+    case 'farm':
       return '';
   }
 }

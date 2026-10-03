@@ -119,7 +119,7 @@ test('farming gives XP for watering (1 per plot) and harvest by growth time and 
   assert.equal(s.xp(m, 'farm'), 6 * XP.water);
   const ready = Math.max(...s.life.farms[m.id].map((p) => plotReadyAt(p)));
   const view = lifeView(s.life, m.id, m.actor, ready);
-  const expected = view.me.farm.reduce((sum, p) => sum + Math.round((2 + 8) * [1, 1.25, 1.5][p.quality] * 10) / 10, 6);
+  const expected = view.me.farm.filter((p) => p.crop).reduce((sum, p) => sum + Math.round((2 + 8) * [1, 1.25, 1.5][p.quality] * 10) / 10, 6);
   s.act(m, { kind: 'harvest', plot: -1 }, ready);
   assert.ok(Math.abs(s.xp(m, 'farm') - expected) < 0.5, `${s.xp(m, 'farm')} vs ${expected}`);
   assert.equal(skillLevel(s.life, m.id, 'farm'), 2);

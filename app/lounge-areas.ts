@@ -14,6 +14,7 @@ import { MARKET_ARRIVE, MARKET_COLLIDERS, MARKET_D, MARKET_EXIT, MARKET_W } from
 import { HARBOR_ARRIVE, HARBOR_COLLIDERS, HARBOR_D, HARBOR_EXIT, HARBOR_W } from './lounge-harbor-layout.ts';
 import { HILLSIDE_ARRIVE, HILLSIDE_COLLIDERS, HILLSIDE_D, HILLSIDE_EXIT, HILLSIDE_W } from './lounge-hillside-layout.ts';
 import { RANCH_ARRIVE, RANCH_COLLIDERS, RANCH_D, RANCH_EXIT, RANCH_W } from './lounge-ranch-layout.ts';
+import { FARM_ARRIVE, FARM_COLLIDERS, FARM_D, FARM_EXIT, FARM_W } from './lounge-farm-layout.ts';
 import { FOOTHILL_ARRIVE, FOOTHILL_COLLIDERS, FOOTHILL_D, FOOTHILL_EXIT, FOOTHILL_MINE, FOOTHILL_MINE_ARRIVE, FOOTHILL_W } from './lounge-foothill-layout.ts';
 import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
 import { DECK_D, DECK_W } from './lounge-voyage-data.ts';
@@ -23,13 +24,14 @@ import { arrivalPoint } from './lounge-map-doors.ts';
  * 'market' is ① 시장 거리, 'harbor' ② 항구 구역, 'hillside' ③ 언덕 주택가,
  * 'ranch' ④ 목장·과수원 and 'foothill' ⑤ 산기슭 마을 — districts around the
  * hub (lounge-districts.ts): separate maps behind gates on the hub's rim.
+ * 'farm' is 우리 농장, the friends' houses and fields behind the north gate.
  */
-export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore';
-export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore'];
+export type OutdoorArea = 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore' | 'farm';
+export const OUTDOOR_AREAS: readonly OutdoorArea[] = ['hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore', 'farm'];
 /** A district map (an outdoor area that is also a district). */
-export type DistrictArea = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill';
+export type DistrictArea = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'farm';
 /** Districts (separate maps around the hub) among the outdoor areas. */
-export const DISTRICT_AREAS: readonly DistrictArea[] = ['market', 'harbor', 'hillside', 'ranch', 'foothill'];
+export const DISTRICT_AREAS: readonly DistrictArea[] = ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
 export const isDistrictArea = (a: unknown): a is DistrictArea => typeof a === 'string' && (DISTRICT_AREAS as readonly string[]).includes(a);
 // Keeps DistrictArea a subset of both unions.
 const _districtArea: readonly (OutdoorArea & DistrictId)[] = DISTRICT_AREAS;
@@ -248,6 +250,21 @@ export const REGIONS: Record<OutdoorArea, Region> = {
     look: { ground: '#8da36a', groundFar: '#6c7f52', fog: '#dfe3d6', sky: '#c2d6e4' },
     light: { hemi: 1.6, sun: 2.2, exposure: 1.05, shadow: 30, dayCycle: true },
     view: 11,
+  },
+  farm: {
+    area: 'farm',
+    name: DISTRICTS.farm.name,
+    short: '농장',
+    tagline: DISTRICTS.farm.tagline,
+    bounds: { w: FARM_W, d: FARM_D },
+    colliders: FARM_COLLIDERS,
+    exits: [
+      { id: 'village', to: 'village', x: FARM_EXIT.x, z: FARM_EXIT.z, stand: { ...FARM_EXIT.stand }, label: '농장 길 따라 마을로', reach: FARM_EXIT.reach },
+    ],
+    arrive: { village: { ...FARM_ARRIVE } },
+    look: { ground: '#98b866', groundFar: '#76954e', fog: '#e3ead0', sky: '#c4def0' },
+    light: { hemi: 1.6, sun: 2.3, exposure: 1.05, shadow: 34, dayCycle: true },
+    view: 11.5,
   },
   offshore: {
     area: 'offshore',

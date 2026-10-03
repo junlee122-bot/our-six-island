@@ -77,7 +77,7 @@ import { VILLAGE_CAMERA_OFFSET, VILLAGE_CHIBI, VILLAGE_FIGURE_BODY, VILLAGE_RESI
 import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { BUILT_DISTRICTS, DISTRICTS, DISTRICT_IDS, DISTRICT_PREFETCH_RADIUS, districtOpen, gateDistance, goalProgressText, type DistrictId } from './lounge-districts';
-import { VILLAGE_GATE } from './lounge-areas';
+import { REGIONS, VILLAGE_GATE } from './lounge-areas';
 import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThrough, walksInto, type Doorway } from './lounge-map-doors';
 import { prefetchDistrict } from './lounge-district-models';
 import { weatherOf } from './lounge-calendar';
@@ -318,7 +318,7 @@ type Props = {
 function goalText(id: DistrictId, life: LifeView | null | undefined) {
   const g = life?.districts?.goals;
   if (!g) return '';
-  return id === 'market' || !g[id] ? '' : ` · ${goalProgressText(id, g)}`;
+  return id === 'market' || id === 'farm' || !g[id] ? '' : ` · ${goalProgressText(id, g)}`;
 }
 type Direction = 'up' | 'down' | 'left' | 'right';
 const WALK_SPEED = 5.2;
@@ -1035,10 +1035,9 @@ export function Village3D(props: Props) {
       else if (target.kind === 'farm') current.onFarm?.();
       else if (target.kind === 'market') current.onShop?.();
       else if (target.kind === 'mailbox') current.onMail?.();
-      else if (target.kind === 'commons') {
-        const bed = farmBed(current.save.actor);
-        if (bed) goTo(farmFront(bed));
-      } else if (target.kind === 'tree') {
+      // 우리 농장: my field is on the farm now; the plaza's plot points the way there.
+      else if (target.kind === 'commons') current.onDistrict?.('farm');
+      else if (target.kind === 'tree') {
         const readyAt = current.life?.me.fruitReadyAt?.[target.id] ?? target.readyAt;
         if (current.life && readyAt <= serverNow()) current.onPick?.(target.id);
       } else if (target.kind === 'npc') {
@@ -3049,7 +3048,8 @@ export function Village3D(props: Props) {
                       data-named={String(open || miniExpanded)} data-nearest="false"
                       style={{ left: `${((pin.x - MINI_BOX.x) / MINI_BOX.w) * 100}%`, top: `${((pin.z - MINI_BOX.y) / MINI_BOX.h) * 100}%` }}
                       onClick={() => controls.current?.visit(d.gate.stand)} aria-label={`${d.name}${open ? '' : ' (아직 닫힘)'} 입구로 걸어가기`}>
-                      <span aria-hidden="true">{open ? d.name : `${d.name} · 닫힘`}</span>
+                      {/* The north gates sit close together: the compact map uses the short names. */}
+                      <span aria-hidden="true">{open ? (miniExpanded ? d.name : REGIONS[id].short) : `${miniExpanded ? d.name : REGIONS[id].short} · 닫힘`}</span>
                     </button>
                   );
                 })}
@@ -3515,7 +3515,7 @@ function SpotPrompt({
   if (spot.kind === 'farm') {
     const farm = life?.me.farm ?? [];
     const ready = farm.filter((p) => p.crop && (p.readyAt ?? Infinity) <= clock).length;
-    const empty = farm.filter((p) => !p.crop).length;
+    const empty = farm.filter((p) => !p.crop && !p.locked && !p.fixture).length;
     const thirsty = farm.filter(
       (p) => p.crop && p.wateredAt === null && !p.rained && (p.readyAt ?? Infinity) > clock,
     ).length;
@@ -3544,7 +3544,7 @@ function SpotPrompt({
         <strong>
           <Sprout size={14} /> 마을 공동 밭
         </strong>
-        <small>함께 가꾸는 밭이에요 · 내 텃밭은 {ACTORS[actor]}의 집 앞에 있어요</small>
+        <small>함께 가꾸는 밭이에요 · {ACTORS[actor]}의 밭은 우리 농장의 집 앞에 있어요{key}</small>
       </div>
     );
   if (spot.kind === 'market')
@@ -3747,7 +3747,7 @@ function SpotPrompt({
     return (
       <div>
         <strong>
-          <Store size={14} /> {d.no}. {d.name}
+          <Store size={14} /> {d.no ? `${d.no}. ` : ''}{d.name}
         </strong>
         <small>
           {districtOpen(spot.id, { flags: life?.flags, pass: life?.districts?.pass }) ? `${d.gate.road} · ${d.tagline}` : `${d.hint}${goalText(spot.id, life)}`}

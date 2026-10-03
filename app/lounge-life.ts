@@ -44,7 +44,22 @@ import {
 } from './lounge-life-plus.ts';
 import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
 // 텃밭 확장: static data (leaf) and the farm engine (same cycle rule: functions only).
-import { FARM_ACTION_KINDS, NEW_CROP_IDS, NEW_CROP_INFO, STAR_CHANCE, STAR_MULT, tileDist, tileRC, type NewCrop } from './lounge-farm-data.ts';
+import {
+  FARM_ACTION_KINDS,
+  GRID_TILES,
+  LEGACY_SIZES,
+  NEW_CROP_IDS,
+  NEW_CROP_INFO,
+  STAR_CHANCE,
+  STAR_MULT,
+  legacyTile,
+  tileDist,
+  tileOpen,
+  tileRC,
+  tileSeed,
+  tileBed,
+  type NewCrop,
+} from './lounge-farm-data.ts';
 import { basketExtra, smithTier } from './lounge-stage3-data.ts';
 import {
   applySprinklers,
@@ -53,7 +68,7 @@ import {
   farmXView,
   fairView,
   fixtureAt,
-  giantBed,
+  giantBeds,
   giantChance,
   growthStage,
   harvestFarm,
@@ -161,9 +176,11 @@ const MIN = 60_000,
  * - Profit per hour of the starting 6-tile farm, all watered (growth × 0.6),
  *   at full price, rises with the crop's length, so the "twice a day" rhythm
  *   (long crops) beats clicking carrots every few minutes: carrot 2,000/h <
- *   tomato 2,800/h < pumpkin ~4,300/h ≈ strawberry ~4,400/h. Farms expand to 9
- *   and 12 tiles (FARM_SIZES), and the demand curve below pays less for a
- *   whole bed of one crop: six strawberries fetch ~18,000범, not 27,000.
+ *   tomato 2,800/h < pumpkin ~4,300/h ≈ strawberry ~4,400/h (per 6 tiles).
+ *   우리 농장 fields open 24, then 48 and 80 tiles (FARM_SIZES); the daily sell
+ *   cap and the demand curve below stay, so a bigger field feeds machines,
+ *   the fair, bundles and gifts more than the wallet: six strawberries fetch
+ *   ~18,000범, not 27,000.
  * - The four base crops grow in every season (old bags stay useful). The six
  *   seasonal crops grow only in their seasons (or anywhere once the village
  *   greenhouse is restored) and land in the same 3,000–5,400/h band; corn
@@ -275,9 +292,10 @@ export const MAX_SPEED = 40;
 export const FRUIT_SELL = 150;
 /** Watering makes the remaining growth 40% shorter (runs at 1/0.6 speed). */
 export const WATER_SPEEDUP = 0.4;
-export const PLOTS_PER_USER = 6;
-/** Farm sizes: 6 plots, expandable to 9 and 12 (see FARM_EXPAND_PRICE). */
-export const FARM_SIZES = [6, 9, 12] as const;
+/** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 10 × 8 grid). */
+export const PLOTS_PER_USER = 24;
+/** Field sizes: 24 tiles, expandable to 48 and 80 (see FARM_EXPAND_PRICE). */
+export const FARM_SIZES = [24, 48, 80] as const;
 export type FarmSize = (typeof FARM_SIZES)[number];
 export const FRUIT_TREES = [
   'tree-1',
@@ -514,6 +532,11 @@ export type MailItem = {
   read: boolean;
 };
 export type LifeState = {
+  /**
+   * 우리 농장 fields: in memory the whole 10 × 8 grid (GRID_TILES plots, index
+   * = row × 10 + column); stored sparse as { tile: plot } (packLife), and old
+   * 6 / 9 / 12-plot yards are moved into the top-left block on read.
+   */
   farms: Record<string, Plot[]>;
   bag: Record<string, Bag>;
   fruitPickedAt: Record<string, Record<string, number>>;
@@ -762,7 +785,7 @@ export function plotReadyAt(plot: Plot, now = Infinity): number | null {
 /** Quality this plot will give at harvest (deterministic per planting). */
 export function plotQuality(uid: string, index: number, plot: Plot): Quality {
   if (!plot.crop) return 0;
-  const roll = hash32(`q:${uid}:${index}:${plot.plantedAt}:${plot.crop}`) % 100,
+  const roll = hash32(`q:${uid}:${tileSeed(index)}:${plot.plantedAt}:${plot.crop}`) % 100,
     [gold, silver] = QUALITY_ODDS[plot.fert ?? 0],
     bonus = plot.g ?? 0;
   // 별빛 비료: the lowest rolls become 별빛 (farming/hoe bonus adds half).
@@ -812,9 +835,43 @@ function readPlot(value: unknown): Plot {
   if (safe(p.w) && p.w > 0) out.w = Math.min(30, p.w);
   return out;
 }
-/** Farm length for a stored array (6, 9 or 12; anything else → 6). */
-const farmLength = (f: unknown) =>
-  Array.isArray(f) && (FARM_SIZES as readonly number[]).includes(f.length) ? f.length : PLOTS_PER_USER;
+/**
+ * A stored field → the full grid (read-time migration, design-our-farm.md §6):
+ *  - sparse { "tile": plot } (how fields are stored now, packLife),
+ *  - a full GRID_TILES array (in memory, or an unpacked write),
+ *  - an old yard array of 6 / 9 / 12 plots (anything else counts as 6): old
+ *    tile i lands on legacyTile(i), the field's top-left 3 × 4 block.
+ * Idempotent: reading its own output (or packLife's) gives the same field.
+ */
+export function readField(f: unknown): Plot[] {
+  const field = Array.from({ length: GRID_TILES }, emptyPlot);
+  if (Array.isArray(f) && f.length === GRID_TILES) {
+    for (let i = 0; i < GRID_TILES; i++) field[i] = readPlot(f[i]);
+  } else if (Array.isArray(f)) {
+    const n = (LEGACY_SIZES as readonly number[]).includes(f.length) ? f.length : LEGACY_SIZES[0];
+    for (let i = 0; i < n; i++) field[legacyTile(i)!] = readPlot(f[i]);
+  } else
+    for (const [k, p] of Object.entries(obj(f)).slice(0, GRID_TILES * 2)) {
+      if (!/^\d{1,2}$/.test(k) || Number(k) >= GRID_TILES) continue;
+      field[Number(k)] = readPlot(p);
+    }
+  return field;
+}
+/** A field as stored: only tiles with something on them (a crop or a withered plant). */
+export function packField(field: readonly Plot[]): Record<string, Plot> {
+  const out: Record<string, Plot> = {};
+  field.forEach((p, i) => {
+    if (p.crop || p.dead) out[String(i)] = p;
+  });
+  return out;
+}
+/**
+ * `life` as it is written to the world row: fields sparse (packField). Pure;
+ * readLife(packLife(x)) equals readLife(x).
+ */
+export function packLife(life: LifeState): Omit<LifeState, 'farms'> & { farms: Record<string, Record<string, Plot>> } {
+  return { ...life, farms: Object.fromEntries(Object.entries(life.farms).map(([uid, f]) => [uid, packField(readField(f))])) };
+}
 function readBag(value: unknown): Bag {
   const b = (value ?? {}) as Partial<Bag>,
     bag = emptyBag();
@@ -906,11 +963,7 @@ export function readLife(value: unknown): LifeState {
     };
   };
   return {
-    farms: users(v.farms, (f) =>
-      Array.from({ length: farmLength(f) }, (_, i) =>
-        readPlot(Array.isArray(f) ? f[i] : null),
-      ),
-    ),
+    farms: users(v.farms, readField),
     bag: users(v.bag, readBag),
     fruitPickedAt: users(v.fruitPickedAt, (t) => {
       const out: Record<string, number> = {};
@@ -991,8 +1044,7 @@ export function ensureLifeMember(
   actor: number,
 ): LifeState {
   if (!UUID.test(uid) || !actorValid(actor)) fail(LIFE_REJECT.invalid);
-  const size = farmSizeOf(life, uid);
-  if (life.actors[uid] === actor && life.bag[uid] && life.farms[uid]?.length === size)
+  if (life.actors[uid] === actor && life.bag[uid] && life.farms[uid]?.length === GRID_TILES)
     return life;
   const next = cloneLife(life);
   // One uid per actor: a re-created account replaces the old mapping.
@@ -1001,8 +1053,8 @@ export function ensureLifeMember(
   next.actors[uid] = actor;
   next.bag[uid] ??= starterBag();
   const farm = (next.farms[uid] ??= []);
-  while (farm.length < size) farm.push(emptyPlot());
-  farm.length = size;
+  while (farm.length < GRID_TILES) farm.push(emptyPlot());
+  farm.length = GRID_TILES;
   return next;
 }
 export const uidOf = (life: LifeState, target: unknown): string | null => {
@@ -1017,8 +1069,9 @@ export function sellCapLeft(life: LifeState, uid: string, now: number) {
   const s = life.sold[uid];
   return SELL_CAP_PER_DAY - (s && s.day === kstDay(now) ? s.amount : 0);
 }
+/** A tile of my field that is open at its size tier (24 / 48 / 80). */
 const plotIndex = (plot: unknown, size: number) =>
-  safe(plot) && plot >= 0 && plot < size ? plot : fail(LIFE_REJECT.plot);
+  safe(plot) && tileOpen(size, plot) ? plot : fail(LIFE_REJECT.plot);
 const pushBounded = <T>(list: T[] | undefined, item: T, max: number) =>
   [...(list ?? []), item].slice(-max);
 export const addCount = (n: number, add: number) => Math.min(BAG_MAX, n + add);
@@ -1153,7 +1206,7 @@ function lifeActionCore(
     const next = townAction(life, ledger, member, a as TownAction, now, (l, lg, sale) => lifeActionCore(l, lg, member, sale, now));
     return afterCoreAction(next.life, next.ledger, member, now);
   }
-  const size = farm.length;
+  const size = farmSizeOf(life, uid);
   const mods = growthMods(life, uid);
   const plantOk = (crop: Crop) => {
     if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse') && !mods.offSeason)
@@ -1173,9 +1226,10 @@ function lifeActionCore(
     const tier = smithTier(life, uid, tool);
     if (tier < 2) return [];
     const out: number[] = [];
-    for (let j = 0; j < size; j++) {
-      if (j === i) continue;
-      if (tier === 2 ? tileRC(j).r === tileRC(i).r : tileDist(i, j) <= 1) out.push(j);
+    for (let j = 0; j < farm.length; j++) {
+      if (j === i || !tileOpen(size, j)) continue;
+      // Tier 2: the row of its bed (three tiles, like the old yard's row); tier 3: the 3×3.
+      if (tier === 2 ? tileRC(j).r === tileRC(i).r && tileBed(i) !== null && tileBed(j) === tileBed(i) : tileDist(i, j) <= 1) out.push(j);
     }
     return out;
   };
@@ -1198,7 +1252,7 @@ function lifeActionCore(
       if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
       plantOk(a.crop);
       if (a.plot === -1) {
-        const empty = farm.flatMap((p, i) => (p.crop || fixtureAt(life, uid, i) ? [] : [i]));
+        const empty = farm.flatMap((p, i) => (p.crop || !tileOpen(size, i) || fixtureAt(life, uid, i) ? [] : [i]));
         if (!empty.length) fail(LIFE_REJECT.noEmpty);
         if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
         const planted: number[] = [];
@@ -1499,9 +1553,13 @@ export type PlotView = Plot & {
   sprinkled?: boolean;
   /** 텃밭 확장: the fixture standing on this tile (the plot is then empty). */
   fixture?: string;
+  /** 우리 농장: a tile beyond my field's size tier (not tilled yet; expand to use it). */
+  locked?: true;
 };
 /** A friend's plot as the village draws it (optional fields: 텃밭 확장). */
 export type PublicPlotView = {
+  /** 우리 농장: the field tile (only tiles with a crop or a withered plant are listed). */
+  tile: number;
   crop: Crop | null;
   stage: 0 | 1 | 2 | 3;
   needsWater: boolean;
@@ -1526,7 +1584,10 @@ export type LifeView = {
     harvested: Partial<Record<HarvestKind, number>>;
   } & PlusMe;
   statuses: Record<string, { actor: number; text: string; at: number }>;
+  /** Friends' fields, sparse: the tiles with something on them. */
   housesPlotsPublic: Record<string, PublicPlotView[]>;
+  /** 우리 농장: every friend's field size tier (24 / 48 / 80), by uid. */
+  fieldSizes?: Record<string, FarmSize>;
   /** 텃밭 확장: my yard's fixtures, machines, goods, shipping bin and farm news. */
   farmx?: FarmXView;
   /** 텃밭 확장: this week's 품평회 and past results (judge: 나세라). */
@@ -1587,10 +1648,14 @@ export function lifeView(
     if (id in life.actors)
       statuses[id] = { actor: life.actors[id], text: s.text, at: s.at };
   const housesPlotsPublic: LifeView['housesPlotsPublic'] = {};
-  for (const [id, plots] of Object.entries(life.farms))
-    housesPlotsPublic[id] = plots.map((p) => {
+  const fieldSizes: Record<string, FarmSize> = {};
+  for (const [id, plots] of Object.entries(life.farms)) {
+    fieldSizes[id] = farmSizeOf(life, id);
+    housesPlotsPublic[id] = plots.flatMap((p, tile) => {
+      if (!p.crop && !p.dead) return [];
       const wet = !!p.crop && plotWateredAt(p, now) !== null;
       return {
+        tile,
         crop: p.crop,
         stage: plotStage(p, now),
         needsWater: !!p.crop && !wet && now < plotReadyAt(p, now)!,
@@ -1600,11 +1665,19 @@ export function lifeView(
         ...(p.dead ? { dead: p.dead } : {}),
       };
     });
+  }
   const sheltered = farmSheltered(life, uid),
-    giants = [0, 1].filter((b) => giantBed(farm, uid, b, now, giantChance(life, uid)));
+    giants = giantBeds(farm, uid, now, giantChance(life, uid)),
+    size = farmSizeOf(life, uid);
   const base = {
     me: {
-      farm: farm.map((p, i) => {
+      farm: farm.map((p, i): PlotView => {
+        // Untilled and empty tiles: just the plot and its marks (80 tiles; keeps the view small).
+        if (!tileOpen(size, i)) return { ...p, readyAt: null, stage: 0, ready: false, rained: false, quality: 0, harvestsLeft: 1, locked: true };
+        if (!p.crop) {
+          const f = fixtureAt(life, uid, i);
+          return { ...p, readyAt: null, stage: 0, ready: false, rained: false, quality: 0, harvestsLeft: 1, ...(f ? { fixture: f.k } : {}), ...(sprinklerBonus(life, uid, i) !== null ? { sprinkled: true } : {}) };
+        }
         const readyAt = plotReadyAt(p, now),
           regrow = p.crop ? CROP_INFO[p.crop].regrow : undefined;
         return {
@@ -1616,9 +1689,10 @@ export function lifeView(
           quality: plotQuality(uid, i, p),
           harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
           growth: growthStage(p, now),
-          witherAt: witherAt(p, sheltered),
-          giant: giants.includes(i < 6 ? 0 : 1),
-          sprinkled: sprinklerBonus(life, uid, i) !== null,
+          // Only when set (80 tiles a view): absent = no / never.
+          ...(witherAt(p, sheltered) !== null ? { witherAt: witherAt(p, sheltered) } : {}),
+          ...(giants.includes(tileBed(i) ?? -1) ? { giant: true } : {}),
+          ...(sprinklerBonus(life, uid, i) !== null ? { sprinkled: true } : {}),
           ...(fixtureAt(life, uid, i) ? { fixture: fixtureAt(life, uid, i)!.k } : {}),
         };
       }),
@@ -1643,6 +1717,7 @@ export function lifeView(
     },
     statuses,
     housesPlotsPublic,
+    fieldSizes,
     actors: { ...life.actors },
     rooms: Object.fromEntries(
       Object.entries(life.rooms ?? {})

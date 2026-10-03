@@ -64,6 +64,9 @@ import { LOCKED_NOTICE_MS, arrivalFacing, arrivalPoint, doorClock, routeGoesThro
 // 먼바다 낚싯배 (design-sea-fishing.md): the rails to fish from and the swell.
 import { DECK_RAILS, RAIL_REACH } from './lounge-voyage-data';
 import { SWELL_AMP, boatMotion } from './lounge-boat-model';
+// 우리 농장 (design-our-farm.md): friends' fields and houses, what E reaches there.
+import { farmReach, farmSceneState, type FarmTouch } from './lounge-farm-view';
+import type { LifeView } from './lounge-life';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -96,7 +99,9 @@ export type AreaAction =
   /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot); 먼바다: the boat's rails. */
   | { kind: 'fish'; spot: 'breakwater' | 'pier' | 'offshore'; label: string }
   /** 친구에게 가기 signpost by each district's road out. */
-  | { kind: 'signpost'; label: string };
+  | { kind: 'signpost'; label: string }
+  /** 우리 농장: my field, a friend's field, a house door, the bin, the mailbox, the board. */
+  | { kind: 'farm'; touch: FarmTouch; label: string; act: ActionKind; disabled?: boolean };
 export type { DistrictCounter } from './lounge-district-counters';
 
 type Figure = {
@@ -136,6 +141,8 @@ export type AreaSceneProps = {
   harborBoat?: { out: boolean; captain: boolean };
   /** 먼바다: a big catch just landed (its time): the fish jumps once by the bobber. */
   bigCatch?: number;
+  /** 우리 농장: the life view (fields, house tiers, my farm). */
+  life?: LifeView | null;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
@@ -155,6 +162,7 @@ export function AreaScene({
   steady = false,
   harborBoat,
   bigCatch = 0,
+  life = null,
   onMove,
   onAction,
 }: AreaSceneProps) {
@@ -210,9 +218,10 @@ export function AreaScene({
   });
   const boatOut = !!harborBoat?.out,
     captainHere = !!harborBoat?.captain;
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch });
+  const farm = useMemo(() => (area === 'farm' ? farmSceneState(life, me.actor) : null), [area, life, me.actor]);
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -222,7 +231,7 @@ export function AreaScene({
   const doors = useRef(doorClock());
   /** Runs an action, holding back doorways until they are awake. */
   const act = (a: AreaAction) => {
-    const doorway = a.kind === 'exit' || a.kind === 'ladder' || (a.kind === 'counter' && !!a.enter);
+    const doorway = a.kind === 'exit' || a.kind === 'ladder' || (a.kind === 'counter' && !!a.enter) || (a.kind === 'farm' && a.touch.kind === 'home');
     if (doorway && !doors.current.ready()) return;
     latest.current.onAction(a);
   };
@@ -292,6 +301,9 @@ export function AreaScene({
         if (d <= c.reach) found.push({ d: d + (c.a.kind === 'counter' ? 0.15 : 0), a: c.a });
       }
     }
+    if (s.area === 'farm')
+      for (const r of farmReach(p, s.life, s.me.actor, Date.now() + s.clockOffset))
+        found.push({ d: r.d, a: { kind: 'farm', touch: r.touch, label: r.label, act: r.action, ...(r.disabled ? { disabled: true } : {}) } });
     const exit = nearestExit(s.area, p);
     if (exit) {
       // The fallen log stays for everyone until someone splits it; 승준's explorer pass walks him past it.
@@ -415,6 +427,7 @@ export function AreaScene({
         night,
         boatOut: s.boatOut,
         captain: s.captainHere,
+        ...(s.farm ? { farm: s.farm, me: s.me.actor } : {}),
       });
       dirty = true;
     };
@@ -665,7 +678,7 @@ export function AreaScene({
         for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
         residents?.setTint(tint);
       }
-      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere]);
+      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere, s.farm]);
       if (key !== stateKey) {
         stateKey = key;
         applyState();
@@ -879,7 +892,9 @@ export function AreaScene({
 
   const kind: ActionKind | null = !action
     ? null
-    : action.kind === 'npc'
+    : action.kind === 'farm'
+      ? action.act
+      : action.kind === 'npc'
       ? 'talk'
       : action.kind === 'board' || action.kind === 'signpost'
         ? 'board'

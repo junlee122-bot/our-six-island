@@ -1,4 +1,6 @@
 import test from 'node:test';
+import { FARM_FIELDS, FARM_HOUSES } from '../app/lounge-farm-layout.ts';
+import { farmReach } from '../app/lounge-farm-view.ts';
 import assert from 'node:assert/strict';
 import {
   ACTION_LABEL,
@@ -14,7 +16,7 @@ import {
 } from '../app/lounge-flow.ts';
 import { villageAction, villageActionKey } from '../app/lounge-village-actions.ts';
 import { VILLAGE_PLACES } from '../app/lounge-village-layout.ts';
-import { farmBed, farmFront, FRUIT_TREE_POINTS, walkableNear } from '../app/lounge-village-life.ts';
+import { FRUIT_TREE_POINTS, walkableNear } from '../app/lounge-village-life.ts';
 import {
   ROOM_DOOR_REACH,
   besideBed,
@@ -92,27 +94,29 @@ test('farm label: 수확 > 심기 > 물 주기 > 돌보기', () => {
 
 /* ------------------------------------------------------------ village */
 
-test('village: at my door the button enters, at my farm it farms', () => {
+test('우리 농장: at my door the button enters, at my field it farms (the hub has no houses now)', () => {
   const actor = 3;
-  const home = VILLAGE_PLACES.find((p) => p.id === `home-${actor}`);
-  const atDoor = villageAction(home.entry, actor, { now: 0 });
-  assert.equal(atDoor?.kind, 'enter');
-  assert.equal(atDoor.target.type, 'door');
-  assert.equal(atDoor.target.entrance.place.id, home.id);
-  const bed = farmBed(actor);
-  const front = farmFront(bed);
-  const atFarm = villageAction(front, actor, { now: 0 });
-  assert.ok(['plant', 'tend', 'water', 'harvest'].includes(atFarm?.kind), atFarm?.kind);
-  assert.equal(atFarm.target.spot.kind, 'farm');
-  assert.notEqual(villageActionKey(atDoor), villageActionKey(atFarm));
+  const house = FARM_HOUSES.find((h) => h.actor === actor);
+  const life = { me: { farm: [], plots: 24 }, actors: {}, housesPlotsPublic: {} };
+  const atDoor = farmReach(house.door, life, actor, 0)[0];
+  assert.equal(atDoor.action, 'enter');
+  assert.deepEqual(atDoor.touch, { kind: 'home', actor });
+  const field = FARM_FIELDS.find((f) => f.actor === actor);
+  const atField = farmReach({ x: field.x0 + 1.5, z: field.z0 + 1.5 }, life, actor, 0)[0];
+  assert.ok(['plant', 'tend', 'water', 'harvest'].includes(atField.action), atField.action);
+  assert.equal(atField.touch.kind, 'field');
+  // The old house row in the hub is a lane now: no door, no farm there.
+  const oldDoor = { x: 0, z: -18.3 };
+  const hub = villageAction(oldDoor, actor, { now: 0 });
+  assert.ok(!hub || (hub.target.type !== 'door' && hub.target.spot.kind !== 'farm'));
   assert.equal(villageActionKey(null), '');
 });
 
-test("village: a friend's door visits only when visiting is possible", () => {
-  const friend = VILLAGE_PLACES.find((p) => p.kind === 'home' && p.actor === 0);
-  assert.equal(villageAction(friend.entry, 3, { now: 0 })?.kind, 'enter');
-  const noVisit = villageAction(friend.entry, 3, { now: 0, canVisit: false });
-  assert.notEqual(noVisit?.target.type, 'door');
+test("우리 농장: a friend's door offers a visit", () => {
+  const house = FARM_HOUSES.find((h) => h.actor === 0);
+  const r = farmReach(house.door, { me: { farm: [], plots: 24 }, actors: {}, housesPlotsPublic: {} }, 3, 0)[0];
+  assert.deepEqual(r.touch, { kind: 'home', actor: 0 });
+  assert.equal(r.label, '도원네 집 놀러 가기');
 });
 
 test('village: civic doors enter; a ripe tree is picked; a nearby friend is talked to', () => {

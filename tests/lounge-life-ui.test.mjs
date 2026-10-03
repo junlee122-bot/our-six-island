@@ -1,6 +1,8 @@
 // LIFE-B client helpers: inventory rows, hotbar, farm quick actions, fishing
 // phases, recipes, village spots and actions, furniture art and room copies.
 import test from 'node:test';
+import { FARM_FIELDS } from '../app/lounge-farm-layout.ts';
+import { farmReach } from '../app/lounge-farm-view.ts';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_HOTBAR,
@@ -209,11 +211,13 @@ test('village action: fishing, spawns, museum, board, friend farms, labels', () 
   assert.equal(spawn?.label, '들꽃 줍기');
   assert.equal(at(MUSEUM_FRONT)?.kind, 'museum');
   assert.equal(at(BOARD_FRONT)?.kind, 'board');
-  const bed0 = FARM_BEDS.find((b) => b.actor === 0);
-  const friend = at(farmFront(bed0));
-  assert.equal(friend?.kind, 'waterFriend');
-  assert.equal(friend?.label, '물 주기 (오늘 1번)');
-  const done = at(farmFront(bed0), { ...life, me: { ...life.me, waterFriend: [0] } });
+  // 우리 농장: friends' fields are on the farm now (lounge-farm-view.ts farmReach).
+  const field0 = FARM_FIELDS.find((f) => f.actor === 0);
+  const onField = { x: field0.x0 + 0.5, z: field0.z0 + 0.5 };
+  const friend = farmReach(onField, { ...life, housesPlotsPublic: { u0: [{ tile: 0, crop: 'carrot', stage: 1, needsWater: true }] } }, 3, 0)[0];
+  assert.equal(friend?.action, 'waterFriend');
+  assert.equal(friend?.label, '도원 밭에 물 주기 (오늘 1번)');
+  const done = farmReach(onField, { ...life, me: { ...life.me, waterFriend: [0] } }, 3, 0)[0];
   assert.equal(done?.disabled, true);
   assert.equal(done?.label, '오늘 물 줬어요');
   for (const kind of ['fish', 'forage', 'catch', 'museum', 'board', 'waterFriend', 'cook', 'wish'])

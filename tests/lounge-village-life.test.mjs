@@ -1,4 +1,7 @@
 import test from 'node:test';
+import { FARM_FIELDS } from '../app/lounge-farm-layout.ts';
+import { DISTRICTS } from '../app/lounge-districts.ts';
+import { VILLAGE_STALL_SPOTS } from '../app/lounge-village-layout.ts';
 import assert from 'node:assert/strict';
 import {
   FARM_BEDS,
@@ -66,61 +69,17 @@ const reachable = (point) =>
 /** Game-clock h:m on 2026-09-24 (the game day of real 12:00 KST; 게임 하루 = 실제 1시간). */
 const kst = (h, m = 0) => gameTimeOnDay(kstDay(Date.UTC(2026, 8, 24, 3)), h, m);
 
-test('every friend has a front-yard farm: two beds, 6/9/12 plots that never overlap, off routes', () => {
-  assert.equal(VILLAGE_YARDS.length, 7);
-  assert.equal(FARM_BEDS.length, 14);
-  assert.deepEqual(
-    [...new Set(FARM_BEDS.map((b) => b.actor))].sort((a, b) => a - b),
-    [0, 1, 2, 3, 4, 5, 6],
-  );
-  const allPlots = [];
-  for (const yard of VILLAGE_YARDS) {
-    const home = VILLAGE_PLACES.find((p) => p.actor === yard.actor);
-    // The yard sits in front of the friend's own door, between house and lane fence.
-    assert.ok(yard.pathX === home.entry.x && yard.x0 < home.entry.x && home.entry.x < yard.x1);
-    assert.ok(Math.abs(yard.z0 - (home.z + home.depth / 2)) < 0.01 && yard.z1 < -9.75);
-    for (const bed of yard.beds) {
-      assert.ok(bed.x - bed.w / 2 > yard.x0 && bed.x + bed.w / 2 < yard.x1, `bed of ${yard.actor} inside its yard`);
-      assert.ok(bed.z - bed.d / 2 > yard.z0 + 1 && bed.z + bed.d / 2 < yard.z1 - 1, `bed of ${yard.actor} leaves walkways`);
-      // Raised frames are solid, and never on a route.
-      assert.equal(villageCanWalk(bed), false);
-      for (const s of VILLAGE_PATHS)
-        assert.ok(
-          segmentDistance(bed.x, bed.z, s) >= s[4] / 2 + Math.min(bed.w, bed.d) / 2 - 0.01,
-          `bed of ${yard.actor} on route ${s.join(',')}`,
-        );
-    }
-    for (const total of [6, 9, 12]) {
-      const centres = Array.from({ length: total }, (_, i) => plotCenter(farmBed(yard.actor), i));
-      // Full-size plots: no two centres closer than one plot plus the gap.
-      for (let i = 0; i < total; i++)
-        for (let j = i + 1; j < total; j++)
-          assert.ok(
-            Math.max(Math.abs(centres[i].x - centres[j].x), Math.abs(centres[i].z - centres[j].z)) >= PLOT_SIZE + PLOT_GAP - 1e-6,
-            `${yard.actor}: plots ${i} and ${j} overlap at ${total}`,
-          );
-      centres.forEach((c, i) => {
-        const bed = yard.beds[i < 6 ? 0 : 1];
-        assert.ok(Math.abs(c.x - bed.x) + PLOT_SIZE / 2 <= bed.w / 2 && Math.abs(c.z - bed.z) + PLOT_SIZE / 2 <= bed.d / 2);
-        assert.deepEqual(plotAt(c), { actor: yard.actor, index: i });
-      });
-      if (total === 12) allPlots.push(...centres);
-    }
-    for (const bed of farmBeds(yard.actor)) {
-      const front = farmFront(bed);
-      assert.ok(reachable(front), `bed ${yard.actor}/${bed.part} front reachable`);
-      assert.ok(nearFarm(front, yard.actor));
-    }
-    assert.ok(!nearFarm(VILLAGE_START, yard.actor));
-    // The door, the mailbox and the lane stay out of farm reach (their prompts win).
-    assert.equal(villageAction(home.entry, yard.actor, { now: 0 })?.kind, 'enter', `door of ${yard.actor}`);
-    assert.ok(!nearFarm({ x: yard.pathX, z: -9 }, yard.actor));
-    assert.equal(yardOwnerAt(farmFront(farmBed(yard.actor))), yard.actor);
-  }
-  // No plot of one friend overlaps another friend's.
-  for (let i = 0; i < allPlots.length; i++)
-    for (let j = i + 1; j < allPlots.length; j++)
-      assert.ok(Math.max(Math.abs(allPlots[i].x - allPlots[j].x), Math.abs(allPlots[i].z - allPlots[j].z)) >= PLOT_SIZE);
+test('우리 농장: the hub has no yards any more; every friend has a field in front of their farm house', () => {
+  // design-our-farm.md §5: the seven houses and fourteen beds left the hub.
+  assert.equal(VILLAGE_YARDS.length, 0);
+  assert.equal(FARM_BEDS.length, 0);
+  assert.equal(VILLAGE_PLACES.filter((p) => p.kind === 'home').length, 0);
+  assert.deepEqual(FARM_FIELDS.map((f) => f.actor).sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6]);
+  // The old row is open ground now: the lane to the farm gate is walkable and reachable.
+  for (const p of [{ x: 0, z: -20 }, { x: 0, z: -30 }, DISTRICTS.farm.gate.stand]) assert.ok(reachable(p), JSON.stringify(p));
+  // The park and the stall spots are reachable too.
+  assert.ok(reachable({ x: -14.6, z: -18.2 }));
+  for (const st of VILLAGE_STALL_SPOTS) assert.ok(reachable({ x: st.x, z: st.z + 1.6 }));
 });
 
 test('fruit trees map every FRUIT_TREES id to a reachable orchard tree', () => {
@@ -283,6 +242,6 @@ test('NPC waypoints stay where the camera can see them (not behind roofs)', () =
 test('the decorative shared field points to my own plots', () => {
   assert.equal(nearCommons(VILLAGE_FARMLAND_ENTRY), true);
   assert.equal(nearCommons({ x: VILLAGE_FARMLAND.x, z: VILLAGE_FARMLAND.z + 10 }), false);
-  // No farm bed is near the shared field, so the prompts never compete.
-  for (const bed of FARM_BEDS) assert.equal(nearCommons(farmFront(bed)), false, String(bed.actor));
+  // It is the only farm prompt in the hub now (the fields are on 우리 농장).
+  assert.equal(FARM_BEDS.length, 0);
 });

@@ -357,6 +357,37 @@ dialog.l-modal.l-ledger > header .l-icon {
   color: var(--ink-700);
   background: var(--paper-300);
 }
+/* 우리 농장: the whole 10 × 8 field (small tiles; grass beyond the tilled block). */
+.l-ledger-field {
+  gap: 3px;
+  padding: 14px 8px 8px;
+}
+.l-ledger-field .l-ledger-row {
+  grid-template-columns: repeat(10, 34px);
+  gap: 3px;
+}
+.l-ledger-field .l-ledger-plot {
+  width: 34px;
+  height: 32px;
+  padding: 0 0 2px;
+}
+.l-ledger-field .l-ledger-plot[data-next] .l-ledger-fallow {
+  box-shadow: var(--edge-soft);
+}
+.l-ledger-lock-field {
+  position: static;
+  width: 100%;
+}
+@media (width <= 560px) {
+  .l-ledger-field .l-ledger-row {
+    grid-template-columns: repeat(10, 27px);
+    gap: 2px;
+  }
+  .l-ledger-field .l-ledger-plot {
+    width: 27px;
+    height: 26px;
+  }
+}
 .l-ledger-actions {
   display: flex;
   flex-wrap: wrap;
