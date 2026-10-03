@@ -12,7 +12,7 @@
 //  - Tool reach: 1 tile → its row (1 × 3) → the 3 × 3 around it.
 //  - Front-yard spots for scarecrows and bee houses, and the 덩굴 시렁 (trellis).
 import { dayStart, rainsOn } from './lounge-calendar.ts';
-import { GRID_COLS, GRID_ROWS, GRID_TILES, tileAt, tileRC } from './lounge-farm-data.ts';
+import { CORE_ROWS, GRID_COLS, GRID_ROWS, GRID_TILES, tileAt, tileRC } from './lounge-farm-data.ts';
 
 const HOUR = 3_600_000,
   DAY = 24 * HOUR,
@@ -176,7 +176,7 @@ export function legacyWet(plantedAt: number, wateredAt: number | null, grow: num
   return { wetMs: grow, wetUntil: ready };
 }
 
-/** Tilled tiles of a field as 20 hex digits (tile i = bit i), for the small friends' view. */
+/** Tilled tiles of a field as 30 hex digits (tile i = bit i; 20 before F5's stage 4), for the small friends' view. */
 export function tilledMask(field: readonly { t?: 1; crop?: unknown; dead?: unknown }[]): string {
   const digits = Array.from({ length: GRID_TILES / 4 }, () => 0);
   field.forEach((p, i) => {
@@ -211,30 +211,42 @@ export const CAN_FORGE_REACH: readonly ReachTier[] = [1, 1, 2, 2, 3, 3];
  * Scarecrows and bee houses stand on the field's edge, not on its tiles:
  * spots in grid coordinates (row −1 = the house side, row 8 = the lane side),
  * clear of the path from the door. Key in the fixture map: 'y0' … 'y4'.
+ * A stage-4 field (F5, 12 × 10) reaches row 9 and column 11, so its spots move
+ * out with it (YARD_SPOTS_WIDE): the lane side under row 9, the east ones
+ * over column 10.
  */
 export const YARD_SPOTS: readonly { r: number; c: number }[] = [
   { r: -1, c: 1 },
   { r: -1, c: 8 },
-  { r: GRID_ROWS, c: 1 },
-  { r: GRID_ROWS, c: 4 },
-  { r: GRID_ROWS, c: 8 },
+  { r: CORE_ROWS, c: 1 },
+  { r: CORE_ROWS, c: 4 },
+  { r: CORE_ROWS, c: 8 },
 ];
+export const YARD_SPOTS_WIDE: readonly { r: number; c: number }[] = [
+  { r: -1, c: 1 },
+  { r: -1, c: 10 },
+  { r: GRID_ROWS, c: 1 },
+  { r: GRID_ROWS, c: 5 },
+  { r: GRID_ROWS, c: 10 },
+];
+/** The front-yard spots of a field of `size` tiles. */
+export const yardSpots = (size = 0) => (size >= GRID_TILES ? YARD_SPOTS_WIDE : YARD_SPOTS);
 export const yardKey = (spot: number) => 'y' + spot;
 /** Spot of a fixture key ('y2' → 2), null for a tile key. */
 export function yardOf(key: string): number | null {
   const m = /^y(\d)$/.exec(key);
   return m && Number(m[1]) < YARD_SPOTS.length ? Number(m[1]) : null;
 }
-/** Grid position (row, column) of a fixture key: a tile or a yard spot. */
-export function fixturePos(key: string): { r: number; c: number } | null {
+/** Grid position (row, column) of a fixture key on a field of `size`: a tile or a yard spot. */
+export function fixturePos(key: string, size = 0): { r: number; c: number } | null {
   const y = yardOf(key);
-  if (y !== null) return YARD_SPOTS[y];
-  if (!/^\d{1,2}$/.test(key) || Number(key) >= GRID_TILES) return null;
+  if (y !== null) return yardSpots(size)[y];
+  if (!/^\d{1,3}$/.test(key) || Number(key) >= GRID_TILES) return null;
   return tileRC(Number(key));
 }
-/** Chebyshev distance from a fixture key's position to a tile. */
-export function fixtureDist(key: string, tile: number) {
-  const p = fixturePos(key),
+/** Chebyshev distance from a fixture key's position to a tile (on a field of `size`). */
+export function fixtureDist(key: string, tile: number, size = 0) {
+  const p = fixturePos(key, size),
     q = tileRC(tile);
   return p ? Math.max(Math.abs(p.r - q.r), Math.abs(p.c - q.c)) : Infinity;
 }
@@ -271,9 +283,9 @@ export const TRELLIS_LEN = 3;
 /** Tiles of a trellis anchored at `tile` (null when it would run off the grid). */
 export function trellisTiles(tile: number): number[] | null {
   if (!Number.isSafeInteger(tile) || tile < 0 || tile >= GRID_TILES) return null;
-  const { c } = tileRC(tile);
+  const { r, c } = tileRC(tile);
   if (c + TRELLIS_LEN > GRID_COLS) return null;
-  return Array.from({ length: TRELLIS_LEN }, (_, i) => tile + i);
+  return Array.from({ length: TRELLIS_LEN }, (_, i) => tileAt(r, c + i)!);
 }
 /** The anchor of the trellis over `tile` in a trellis map (anchor → placed at), or null. */
 export function trellisOver(tr: Readonly<Record<string, number>> | undefined, tile: number): number | null {

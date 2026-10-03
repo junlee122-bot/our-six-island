@@ -3,6 +3,7 @@
 // forage/bug spots and the rotating furniture shop pool. Pure data + tiny
 // helpers; shared by the client and the hohyeon-api Edge function.
 import { RANCH_GOODS, STAGE3_ITEMS } from './lounge-stage3-data.ts';
+import { ROE_IDS, ROE_ITEMS } from './lounge-farm-pond-data.ts';
 import type { ItemCategory, Season, Weather } from './lounge-calendar.ts';
 import { ORE_ITEMS, REGION_ITEMS, RESEARCH_FLAGS } from './lounge-growth-data.ts';
 // 낚시 업그레이드: new species, crab-pot catches, bait/tackle, seafood dishes.
@@ -421,6 +422,8 @@ export const ITEMS: readonly ItemDef[] = [
     }),
   ),
   { id: 'hay', name: '건초', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '목장 동물 한 마리의 하루 먹이(닐라 목장)' },
+  // 우리 농장 F5: roe from the 양식장 (lounge-farm-pond-data.ts); the jar makes 젓갈 / 캐비아.
+  ...ROE_IDS.map((id): ItemDef => ({ id, name: ROE_ITEMS[id].name, emoji: '', cat: 'material', kind: 'material', sell: ROE_ITEMS[id].sell, note: ROE_ITEMS[id].note })),
 ];
 export const ITEM_BY_ID: Readonly<Record<string, ItemDef>> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 export const isItemId = (id: unknown): id is string =>

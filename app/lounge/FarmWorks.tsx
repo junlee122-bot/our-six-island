@@ -17,18 +17,18 @@ import {
   FIXTURE_BY_ID,
   MACHINES,
   MACHINE_BY_ID,
+  FROST_COVER_RECIPE,
   STAR_FERT_RECIPE,
   WORK_SLOTS,
   productOf,
   sprinklerCovers,
-  GRID_COLS,
-  GRID_ROWS,
+  fieldViewRows,
   tileOpen,
   tileRC,
   type Recipe,
 } from '../lounge-farm-data';
 import { fairScore, stockName, stockUnit, type FarmLog } from '../lounge-farm';
-import { BEE_REACH, YARD_SPOTS } from '../lounge-farm-soil';
+import { BEE_REACH, yardSpots } from '../lounge-farm-soil';
 import { cropSplit, QUALITY_LABEL } from '../lounge-life-ui';
 import { SKILL_INFO } from '../lounge-growth-data';
 import { ORCHARD_FRUITS } from '../lounge-stage3-data';
@@ -52,7 +52,6 @@ type Run = (action: LifeAction, done: string, chime?: 'plant' | 'water' | 'harve
 type StockRow = { id: string; q: Quality; n: number };
 
 /** Field rows as the field lies on 우리 농장: north (the house) on top. */
-const GRID_ROWS_VIEW = Array.from({ length: GRID_ROWS }, (_, r) => Array.from({ length: GRID_COLS }, (_, c) => r * GRID_COLS + c));
 const tileName = (tile: number) => `${tileRC(tile).r + 1}줄 ${tileRC(tile).c + 1}칸`;
 const STAGE_TEXT = ['씨앗', '새싹', '잎', '꽃·열매', '수확'] as const;
 
@@ -153,13 +152,16 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
 // ---------------------------------------------------------------- 밭 배치
 /** A place on the layout page: a field tile (≥ 0) or a front-yard spot (−1 − spot). */
 const spotSel = (spot: number) => -1 - spot;
-const spotName = (spot: number) => `${YARD_SPOTS[spot].r < 0 ? '집 쪽' : '길 쪽'} 앞마당 ${spot + 1}`;
+const spotName = (spot: number) => `${yardSpots()[spot].r < 0 ? '집 쪽' : '길 쪽'} 앞마당 ${spot + 1}`;
 function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; busy: boolean; balance: number; now: number }) {
   const farm = life.me.farm,
     size = life.me.plots,
     open = (tile: number) => tileOpen(size, tile),
     fx = life.farmx?.fixtures ?? [],
-    yard = life.farmx?.yard ?? [];
+    yard = life.farmx?.yard ?? [],
+    // F5: a stage-4 field shows its whole 12 × 10 grid (and its spots move out with it).
+    rows = fieldViewRows(size),
+    spots = yardSpots(size);
   const fixtureOf = (tile: number) => fx.find((f) => f.tile === tile) ?? null;
   const yardAt = (spot: number) => yard.find((f) => f.spot === spot) ?? null;
   const [sel, setSel] = useState<number>(() => {
@@ -175,7 +177,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
     if (!chosen) return false;
     const def = FIXTURE_BY_ID[chosen.kind];
     if (!isYard) return tile !== sel && !!def.water && sprinklerCovers(chosen.kind, sel, tile);
-    const s = YARD_SPOTS[spot],
+    const s = spots[spot],
       { r, c } = tileRC(tile),
       d = Math.max(Math.abs(r - s.r), Math.abs(c - s.c));
     return d <= (chosen.kind === 'scarecrow' ? (def.guard ?? 0) : BEE_REACH);
@@ -199,7 +201,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
     log = life.farmx?.log ?? [];
   const where = isYard ? spotName(spot) : tileName(sel);
   const yardRow = (side: number) => {
-    const cells = Array.from({ length: GRID_COLS }, (_, c) => YARD_SPOTS.findIndex((s) => s.r === side && s.c === c));
+    const cells = Array.from({ length: rows[0].length }, (_, c) => spots.findIndex((s) => s.r === side && s.c === c));
     return (
       <div className="l-fw-row" role="row" data-part="yard">
         {cells.map((k, c) => {
@@ -232,10 +234,10 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
           <Glyph name="grid" size={16} /> 스프링클러와 덩굴 시렁은 밭 칸에, 허수아비와 벌통은 밭 가장자리 앞마당 자리에 놓아요.
         </p>
         <div className="l-fw-grid" role="grid" aria-label={`밭 ${size}칸과 앞마당`}>
-          <div className="l-fw-bed l-fw-field" data-bed="field">
+          <div className="l-fw-bed l-fw-field" data-bed="field" data-wide={rows[0].length > 10 || undefined}>
             <span className="l-fw-bedname">집 앞 밭 (위쪽이 집)</span>
             {yardRow(-1)}
-            {GRID_ROWS_VIEW.map((row, r) => (
+            {rows.map((row, r) => (
               <div key={r} className="l-fw-row" role="row">
                 {row.map((tile) => {
                   const p = farm[tile],
@@ -275,7 +277,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
                 })}
               </div>
             ))}
-            {yardRow(GRID_ROWS)}
+            {yardRow(rows.length)}
           </div>
         </div>
         {moving !== null && (
@@ -386,8 +388,18 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
             run={run}
             busy={busy}
             balance={balance}
-            items={[...FIXTURES, { id: 'fertilizer-star', name: '별빛 비료', note: '품질 3단계 · 별빛 작물이 나올 수 있어요', recipe: STAR_FERT_RECIPE }]}
+            items={[
+              ...FIXTURES,
+              { id: 'fertilizer-star', name: '별빛 비료', note: '품질 3단계 · 별빛 작물이 나올 수 있어요', recipe: STAR_FERT_RECIPE },
+              ...(life.farmx?.frost ? [] : [{ id: 'frostcover', name: '서리 덮개', note: '밭의 4분의 1을 덮어 겨울에도 무엇이든 자라요', recipe: FROST_COVER_RECIPE }]),
+            ]}
           />
+          {(life.me.inv.frostcover ?? 0) > 0 && !life.farmx?.frost && (
+            <GameButton variant="primary" disabled={busy} onClick={() => void run({ kind: 'farmPlace', item: 'frostcover' }, '밭의 4분의 1에 서리 덮개를 씌웠어요. 겨울에도 무엇이든 자라요.', 'plant')} data-testid="farm-frostcover">
+              <ItemIcon id="frostcover" size={20} /> 서리 덮개 씌우기
+            </GameButton>
+          )}
+          {life.farmx?.frost && <p className="l-fw-hint">서리 덮개를 씌웠어요 · 덮인 {life.farmx.frost.length}칸은 겨울에도 무엇이든 자라요.</p>}
         </Panel>
         <Panel variant="note" title="밭 소식" className="l-fw-card">
           {log.length ? (

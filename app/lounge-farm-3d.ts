@@ -61,7 +61,15 @@ const LOOK: Record<NewCrop, { form: Form; leaf: string; fruit: string; green?: s
   greenonion: { form: 'stalk', leaf: '#4f9a3c', fruit: '#efebe0' },
   insam: { form: 'herb', leaf: '#4f8a3a', fruit: '#cf3a2c' },
   hop: { form: 'trellis', leaf: '#5f9a45', fruit: '#c6dd84' },
+  // 우리 농장 F5 flowers and 깻잎.
+  rapeseed: { form: 'flower', leaf: '#6aa54c', fruit: '#f2d43a' },
+  lavender: { form: 'flower', leaf: '#7f9a7a', fruit: '#9a7ad0' },
+  buckwheat: { form: 'flower', leaf: '#7aa85a', fruit: '#f6f2ea' },
+  narcissus: { form: 'flower', leaf: '#5f9e48', fruit: '#f6e27a' },
+  perilla: { form: 'leafy', leaf: '#4f8a3a', fruit: '#6fa850' },
 };
+/** F5 서리 덮개: milky plastic over the covered tiles (see-through, no shadow). */
+export const FROST_MAT = new THREE.MeshStandardMaterial({ color: '#eef5f7', transparent: true, opacity: 0.38, roughness: 0.35, depthWrite: false });
 const GREEN_FRUIT = '#9bc45a',
   MOUND = '#6a452b',
   STAKE = '#9a6a42',

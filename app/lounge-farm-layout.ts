@@ -1,19 +1,21 @@
-// 우리 농장 (design-our-farm.md §2): the friends' farm, 84 × 64, up the 농장 길
+// 우리 농장 (design-our-farm.md §2): the friends' farm, 100 × 64, up the 농장 길
 // from the hub's north gate. Pure data: the seven houses in one row along the
 // north edge (the same kArchive houses that stood in the hub; rooms and doors
-// unchanged, only where the door is), each friend's 10 × 8 field right in front
-// of their house, a lane under the fields, and the central yard with the
-// shipping bin, the mailbox and the farm board. F3's facility sites and the
+// unchanged, only where the door is), each friend's 12 × 10 field right in
+// front of their house (F5's stage 4; smaller stages open its top-left block),
+// a lane under the fields, and the central yard with the shipping bin, the
+// mailbox and the farm board. F3's facility sites and the
 // 공동 밭 are lounge-farm-sites-layout.ts (on the ground F1 left empty). The 3D
 // set is lounge-farm-scene.ts; walking uses lounge-areas.ts (regionWalk).
 //
 // Coordinates: x to the right, z toward the camera, (0, 0) in the middle.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
 import { arrivalPoint } from './lounge-map-doors.ts';
-import { GRID_COLS, GRID_ROWS, fieldBlock, tileAt, tileOpen } from './lounge-farm-data.ts';
+import { GRID_COLS, GRID_ROWS, MASTER_FIELD, fieldBlock, tileAt, tileOpen, tileRC } from './lounge-farm-data.ts';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale, type VillageHouseModel, type VillagePlace } from './lounge-village-layout.ts';
 
-export const FARM_W = 84,
+/** F5 widened the farm from 84 to 100 so seven 12-tile fields fit (houses and the road keep their places along z). */
+export const FARM_W = 100,
   FARM_D = 64;
 
 /** Models the farm uses (kArchive and CC0, already in the manifest). */
@@ -38,15 +40,15 @@ export type FarmModel =
   // 우리 농장 F3: the shared greenhouse's potting house (placed only once it is built).
   | 'greenhouse';
 
-/** One field tile is FIELD_TILE world units; a 10 × 8 field is 10 × 8 units. */
+/** One field tile is FIELD_TILE world units; a 12 × 10 field is 12 × 10 units. */
 export const FIELD_TILE = 1;
 /** House row (centres) and the fields' north edge, right in front of the doors. */
 export const FARM_HOUSE_Z = -27;
 export const FIELD_TOP_Z = -20.6;
-/** The lane under the fields (east–west). */
-export const FARM_LANE_Z = -10.6;
-/** Slot pitch: a field (10) and a 1.6 path between neighbours. */
-const PITCH = 11.6;
+/** The lane under the fields (east–west), past the lane-side front-yard spots. */
+export const FARM_LANE_Z = -8.8;
+/** Slot pitch: a field (12) and a 1.6 path between neighbours. */
+const PITCH = 13.6;
 /** Left-to-right house order, the hub's old row (west end 재민, east end 호현). */
 export const FARM_ORDER: readonly number[] = [5, 0, 1, 2, 3, 4, 6];
 const HOME_NAMES = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'];
@@ -131,12 +133,16 @@ export const FARM_FIELDS: readonly FarmField[] = FARM_ORDER.map((actor, i) => ({
   d: GRID_ROWS * FIELD_TILE,
 }));
 export const farmField = (actor: number) => FARM_FIELDS.find((f) => f.actor === actor) ?? null;
-/** Centre of tile `tile` (row × 10 + column) of a field. */
+/** Centre of tile `tile` of a field (lounge-farm-data tileRC numbering). */
 export function fieldTileCenter(f: FarmField, tile: number): WalkPoint {
-  const r = Math.floor(tile / GRID_COLS),
-    c = tile % GRID_COLS;
+  const { r, c } = tileRC(tile);
   return { x: round(f.x0 + (c + 0.5) * FIELD_TILE), z: round(f.z0 + (r + 0.5) * FIELD_TILE) };
 }
+/** Centre of grid cell (row, column) of a field, also off the tiles (front-yard spots). */
+export const fieldCellCenter = (f: FarmField, r: number, c: number): WalkPoint => ({
+  x: round(f.x0 + (c + 0.5) * FIELD_TILE),
+  z: round(f.z0 + (r + 0.5) * FIELD_TILE),
+});
 /** The tile under `p` on a field, or null off it. */
 export function fieldTileAt(f: FarmField, p: WalkPoint): number | null {
   const c = Math.floor((p.x - f.x0) / FIELD_TILE),
@@ -170,6 +176,13 @@ export function farmWorkSlot(h: FarmHouse, slot: number): WalkPoint {
   return { x: round(h.door.x - 2.4 - col * 0.8), z: round(h.door.z - 0.2 + row * 0.8) };
 }
 
+/**
+ * 명인 표지판 (F5): a stage-4 field (120 tiles) gets a sign with its owner's
+ * name in front of it, on the lane side between the front-yard spots.
+ */
+export const masterSign = (f: FarmField): WalkPoint => fieldCellCenter(f, GRID_ROWS, 7.5);
+export const isMasterField = (size: number) => size >= MASTER_FIELD;
+
 /** The road back to the hub (농장 길, south edge, the middle). */
 export const FARM_EXIT = { x: 0, z: FARM_D / 2 - 0.6, stand: { x: 0, z: FARM_D / 2 - 2 }, reach: 1.9 } as const;
 export const FARM_ARRIVE: WalkPoint = arrivalPoint(FARM_EXIT);
@@ -193,8 +206,9 @@ export const FARM_LAMPS: readonly WalkPoint[] = [
   { x: 2.4, z: 26 },
   { x: -8, z: 1.4 },
   { x: 8, z: 1.4 },
-  { x: -23.2, z: -9 },
-  { x: 23.2, z: -9 },
+  // On the paths between the fields, under the lane.
+  { x: round(-1.5 * PITCH), z: -5.6 },
+  { x: round(1.5 * PITCH), z: -5.6 },
 ];
 export const FARM_BENCHES: readonly { id: string; x: number; z: number; w: number; d: number }[] = [
   { id: 'bench-yard', x: 8.2, z: 9.4, w: 2.2, d: 0.9 },
@@ -210,14 +224,14 @@ export const FARM_PROPS: readonly { model: FarmModel; x: number; z: number; w: n
 ];
 /** Shade trees in the yard and along the road (off the fields). */
 export const FARM_TREES: readonly { x: number; z: number; s: number; pine?: boolean }[] = [
-  { x: -38, z: 22, s: 1.8, pine: true },
+  { x: -44, z: 22, s: 1.8, pine: true },
   { x: -16.6, z: 26, s: 1.7 },
   { x: -9, z: 28, s: 1.6 },
   { x: 6, z: 28.6, s: 1.7, pine: true },
   { x: 22, z: 24, s: 1.8 },
-  { x: 38, z: 21, s: 1.7 },
-  { x: -39, z: -4, s: 1.6 },
-  { x: 39, z: -4, s: 1.6, pine: true },
+  { x: 44, z: 21, s: 1.7 },
+  { x: -46, z: -2, s: 1.6 },
+  { x: 46, z: -2, s: 1.6, pine: true },
 ];
 
 const box = (x: number, z: number, w: number, d: number): WalkCollider => ({ shape: 'box', x, z, w, d });
@@ -237,7 +251,7 @@ export const FARM_COLLIDERS: readonly WalkCollider[] = [
 export const FARM_PAVING: readonly { x: number; z: number; w: number; d: number; tone: 'road' | 'yard' | 'lane' }[] = [
   // The lane under the fields and the paths up between them to the houses.
   { x: 0, z: FARM_LANE_Z, w: FARM_W - 4, d: 2.2, tone: 'lane' },
-  ...FARM_ORDER.slice(0, -1).map((_, i) => ({ x: round(slotX(i) + PITCH / 2), z: -16.8, w: 1.4, d: 10.6, tone: 'lane' as const })),
+  ...FARM_ORDER.slice(0, -1).map((_, i) => ({ x: round(slotX(i) + PITCH / 2), z: -15.7, w: 1.4, d: 12.4, tone: 'lane' as const })),
   // The house fronts (door yards).
   { x: 0, z: round(FIELD_TOP_Z - 1.2), w: FARM_W - 4, d: 2, tone: 'lane' },
   // 농장 길 down to the hub, and the central yard.

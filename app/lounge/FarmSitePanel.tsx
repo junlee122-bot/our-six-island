@@ -3,8 +3,9 @@
 // E opens on a facility site, the 공동 밭 and the 공동 창고. An empty site
 // lists what may stand there with its unlock and cost; a shared one being
 // built shows the funding (범 and materials, like 마을 개척); a built one its
-// own page (greenhouse beds, fruit trees, the machine yard's tier), its
-// upgrade and demolishing. Every change is a server action
+// own page (greenhouse beds, fruit trees, the machine yard's tier; F5: the
+// 양식장's fish and requests, the 품종 개량소's batches), its upgrade and
+// demolishing. Every change is a server action
 // (lounge-farm-sites.ts); this only shows the view and sends the choice.
 import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
@@ -25,12 +26,15 @@ import {
   tierCost,
   unlockBlock,
   unlockText,
+  upgradeBlock,
   type FacilityCost,
   type FacilityDef,
 } from '../lounge-farm-sites-data';
 import type { FarmSitesView, SitePlotView, SiteView } from '../lounge-farm-sites';
 import { FRUIT_TREE_KINDS, SAPLINGS, type FruitTreeKind } from '../lounge-stage3-data';
-import { BUNDLES } from '../lounge-items';
+import { BUNDLES, FISH_BY_ID } from '../lounge-items';
+import { POND_GROW_DAYS, POND_HOLD, isRoeId, pondFishOk } from '../lounge-farm-pond-data';
+import { IMPROVED_GOLD_PTS, SEEDLAB_MS } from '../lounge-farm-data';
 import { SEASON_INFO } from '../lounge-calendar';
 import { kstDay } from '../lounge-economy';
 import { itemName } from '../lounge-life-plus';
@@ -233,12 +237,19 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
   const balance = view.wallet.balance,
     inv = view.life!.me.inv ?? {};
   const canPay = !!next && balance >= next.beom && Object.entries(next.mats).every(([m, n]) => (inv[m] ?? 0) >= n);
+  const life = view.life!;
+  // F5: a tier may need a level (양식장 중간 연못: 낚시 Lv8).
+  const tierLock = next ? upgradeBlock(def, v.t + 1, { flags: life.flags ?? [], level: (s) => life.growth?.skills.find((x) => x.id === s)?.level ?? 1 }) : null;
   return (
     <>
       {def.id === 'greenhouse' || def.id === 'greenhouseMini' ? (
         <Greenhouse {...props} mine={mine} />
       ) : def.id === 'orchardPlot' ? (
         <Orchard {...props} mine={mine} />
+      ) : def.id === 'fishPond' ? (
+        <Pond {...props} mine={mine} />
+      ) : def.id === 'seedLab' ? (
+        <SeedLab {...props} mine={mine} />
       ) : def.id === 'machineYard' ? (
         <section className="l-town-notice" aria-label="가공 마당">
           <strong>
@@ -259,10 +270,10 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
           <GameButton
             size="s"
             variant="primary"
-            disabled={busy || (def.owner === 'personal' && !canPay)}
+            disabled={busy || !!tierLock || (def.owner === 'personal' && !canPay)}
             onClick={() => act({ kind: 'siteUpgrade', site: id }, def.owner === 'personal' ? '넓혔어요!' : '넓히는 공사를 시작했어요. 친구들과 보태 주세요.')}
           >
-            {def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작'}
+            {tierLock ?? (def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작')}
           </GameButton>
         </section>
       )}
@@ -275,7 +286,7 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
         <ConfirmModal
           title={`${def.name} 헐기`}
           body="헐면 지을 때 낸 재료의 절반이 낸 사람에게 돌아가요. 범은 돌아오지 않아요."
-          consequences={def.id === 'orchardPlot' ? ['심은 나무도 함께 사라져요.'] : undefined}
+          consequences={def.id === 'orchardPlot' ? ['심은 나무도 함께 사라져요.'] : def.id === 'fishPond' ? ['물고기를 먼저 내보내야 헐 수 있어요.'] : undefined}
           confirmLabel="헐기"
           danger
           onConfirm={() => {
@@ -426,6 +437,115 @@ function Orchard({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: S
           {fruit ? `과일 따기 (${fruit})` : '딸 과일이 없어요'}
         </GameButton>
       )}
+    </>
+  );
+}
+
+/** F5 양식장: stock it with a fish from my bag, see it grow, collect fish and roe, meet its requests. */
+function Pond({ view, act, busy, id, v, mine }: Ctx & { id: string; v: SiteView; def: FacilityDef; mine: boolean }) {
+  const today = kstDay(useNow(true, 60_000) + view.clockOffset);
+  const inv = view.life!.me.inv ?? {};
+  const p = v.pond;
+  if (!p) {
+    const fish = Object.entries(inv)
+      .filter(([id2, n]) => n > 0 && pondFishOk(FISH_BY_ID[id2]))
+      .sort(([a], [b]) => FISH_BY_ID[b].sell - FISH_BY_ID[a].sell);
+    return (
+      <>
+        <p className="l-farm-site-note">내가 잡은 물고기 한 마리를 넣으면 그 물고기의 양식장이 돼요. 전설 물고기와 먼바다 대형 어종은 넣을 수 없어요.</p>
+        {!mine ? null : fish.length ? (
+          <span className="l-farm-site-seeds" aria-label="넣을 물고기">
+            {fish.map(([f, n]) => (
+              <GameButton key={f} size="s" disabled={busy} onClick={() => act({ kind: 'pondStock', site: id, fish: f }, `${josa(itemName(f), '을/를')} 양식장에 넣었어요.`)}>
+                {itemName(f)} {n}
+              </GameButton>
+            ))}
+          </span>
+        ) : (
+          <EmptyState glyph="fish" title="넣을 물고기가 없어요" hint="강·바다·호수에서 한 마리 잡아 와요." />
+        )}
+      </>
+    );
+  }
+  const name = itemName(p.f);
+  return (
+    <>
+      <section className="l-town-notice" aria-label="양식장" data-testid="pond">
+        <strong>
+          {name} {p.n}/{p.cap}마리{p.cap < p.max ? ` (최대 ${p.max})` : ''}
+        </strong>
+        <p>
+          {p.n < p.cap ? `${Math.max(0, p.growAt - today)}일 뒤 한 마리 늘어요(${POND_GROW_DAYS}일마다). ` : '지금은 꽉 찼어요. '}
+          매일 {name}나 어란이 나와요(마리가 많을수록 자주). {POND_HOLD}개까지 모아 둬요. 양식한 물고기도 같은 종류는 하루 4마리까지 제값이에요.
+        </p>
+      </section>
+      {p.want && (
+        <section className="l-town-notice" aria-label="양식장이 바라는 것">
+          <strong>
+            💬 {p.want.name} {p.want.n}개가 있으면 좋겠어요
+          </strong>
+          <p>가져다주면 물고기를 한 마리 더 키울 수 있어요.</p>
+          {mine && (
+            <GameButton size="s" disabled={busy} onClick={() => act({ kind: 'pondGive', site: id }, `${p.want!.name} ${p.want!.n}개를 줬어요. 양식장이 넓어졌어요.`)}>
+              건네기
+            </GameButton>
+          )}
+        </section>
+      )}
+      {mine && (
+        <span className="l-town-buttons l-farm-site-actions">
+          <GameButton variant="primary" disabled={busy || !p.o.length} onClick={() => act({ kind: 'pondCollect', site: id }, `${p.o.map((o) => itemName(o)).join(', ')}을(를) 거뒀어요.`)}>
+            {p.o.length ? `거두기 (${p.o.map((o) => (isRoeId(o) ? itemName(o) : '물고기')).join(' · ')})` : '아직 거둘 게 없어요'}
+          </GameButton>
+          <GameButton size="s" variant="ghost" disabled={busy || p.o.length > 0} onClick={() => act({ kind: 'pondEmpty', site: id }, `양식장을 비웠어요. 처음 넣은 ${name}은 가방으로 돌아왔어요.`)}>
+            비우기
+          </GameButton>
+        </span>
+      )}
+    </>
+  );
+}
+
+/** F5 품종 개량소: five crops of a kind → one improved seed (twice a day). */
+function SeedLab({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: SiteView; def: FacilityDef; mine: boolean }) {
+  const now = useNow(true, 30_000) + view.clockOffset;
+  const lab = v.lab ?? { q: [], today: 0, perDay: 2, input: 5 };
+  const life = view.life!;
+  const produce = life.me.bag.produce;
+  const ready = lab.q.filter((b) => b.done <= now).length;
+  const full = lab.q.length >= slotsAt(def, v.t) || lab.today >= lab.perDay;
+  const crops = CROPS.filter((c) => (produce[c] ?? 0) >= lab.input);
+  const improved = life.farmx?.improved ?? [];
+  return (
+    <>
+      <p className="l-farm-site-note">
+        같은 작물 {lab.input}개를 넣으면 {Math.round(SEEDLAB_MS / 3_600_000)}시간 뒤 개량 씨앗 1개가 나와요. 하루 {lab.perDay}번까지예요. 개량 씨앗으로 심으면 금별 확률 +{IMPROVED_GOLD_PTS}%p, 한 두둑(3×2)을 다 개량 씨앗으로 한꺼번에 심으면 대형 작물이 두 배로 잘 돼요.
+      </p>
+      <section className="l-town-notice" aria-label="개량 중">
+        <strong>
+          오늘 {lab.today}/{lab.perDay}번
+        </strong>
+        <p>{lab.q.length ? lab.q.map((b) => `${CROP_INFO[b.c].name} ${b.done <= now ? '다 됐어요' : `${Math.ceil((b.done - now) / 60_000)}분 남음`}`).join(' · ') : '개량 중인 씨앗이 없어요.'}</p>
+      </section>
+      {mine && (
+        <>
+          {crops.length ? (
+            <span className="l-farm-site-seeds" aria-label="넣을 작물">
+              {crops.map((c) => (
+                <GameButton key={c} size="s" disabled={busy || full} onClick={() => act({ kind: 'labLoad', site: id, crop: c }, `${CROP_INFO[c].name} ${lab.input}개를 넣었어요.`)}>
+                  {CROP_INFO[c].emoji} {CROP_INFO[c].name} {produce[c]}
+                </GameButton>
+              ))}
+            </span>
+          ) : (
+            <p className="l-farm-site-note">같은 작물이 {lab.input}개 이상 있어야 해요.</p>
+          )}
+          <GameButton variant="primary" disabled={busy || !ready} onClick={() => act({ kind: 'labCollect', site: id }, `개량 씨앗 ${ready}개를 거뒀어요.`)}>
+            {ready ? `개량 씨앗 거두기 (${ready})` : '아직 다 된 씨앗이 없어요'}
+          </GameButton>
+        </>
+      )}
+      {improved.length > 0 && <p className="l-farm-site-note">가진 개량 씨앗: {improved.map((x) => `${CROP_INFO[x.crop].name} ${x.n}`).join(' · ')} (텃밭 장부에서 심어요)</p>}
     </>
   );
 }

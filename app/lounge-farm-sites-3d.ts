@@ -41,6 +41,8 @@ const SOIL = 0.9;
 const STAKE = '#8a6242';
 const ROPE = '#e8dcc0';
 const GLASS = new THREE.MeshStandardMaterial({ color: '#d6eef2', transparent: true, opacity: 0.26, roughness: 0.15, metalness: 0.1, depthWrite: false });
+/** F5 양식장: the pond's water (a little sheen, opaque so it never sorts wrong). */
+const WATER = new THREE.MeshStandardMaterial({ color: '#4f93b8', roughness: 0.12, metalness: 0.15, emissive: '#1d4f6a', emissiveIntensity: 0.25 });
 const FRUIT_COLOR: Readonly<Record<string, string>> = { apricot: '#f2a33a', peach: '#f7a6a0', apple: '#e04a3a', pear: '#e8d36a', tangerine: '#f28c28' };
 export const SIGN_SITE: SignColors = { bg: '#efe9dc', ink: '#5a4a3a', line: '#a89a84' };
 export const SIGN_BUILT: SignColors = { bg: '#f6e7cf', ink: '#6a3a1e', line: '#b4763f' };
@@ -140,6 +142,66 @@ function orchardInstances(out: Instance[], s: FarmSite, v: SiteView, day: number
   }
 }
 /**
+ * F5 양식장 (procedural): a round pond of water in a ring of field stones
+ * (wider at the medium tier), its fish as small coloured backs near the
+ * surface, and a basket by the rim when fish or roe wait to be collected.
+ */
+function pondInstances(out: Instance[], s: FarmSite, v: SiteView) {
+  const r = v.t >= 2 ? 1.62 : 1.3;
+  out.push({ geo: G.box, mat: tone('#a9c47a'), m: matrix(s.x, 0.012, s.z, s.w - 0.3, 0.02, s.d - 0.3) });
+  out.push({ geo: G.cylinder, mat: tone('#6d5a44'), m: matrix(s.x, 0.02, s.z, r + 0.05, 0.04, r + 0.05) });
+  out.push({ geo: G.cylinder, mat: WATER, m: matrix(s.x, 0.06, s.z, r, 0.04, r) });
+  const stones = Math.round(r * 13);
+  for (let i = 0; i < stones; i++) {
+    const a = (i / stones) * Math.PI * 2,
+      big = 0.17 + ((i * 7) % 3) * 0.03;
+    out.push({ geo: G.sphere, mat: tone(i % 3 ? '#9c968a' : '#b5ae9f'), m: matrix(s.x + Math.cos(a) * (r + 0.08), 0.1, s.z + Math.sin(a) * (r + 0.08), big, big * 0.62, big) });
+  }
+  const pond = v.pond;
+  if (pond) {
+    const shown = Math.min(8, pond.n);
+    for (let i = 0; i < shown; i++) {
+      const a = i * 2.39 + 0.4,
+        d = 0.35 + ((i * 37) % 10) / 14;
+      out.push({ geo: G.sphere, mat: tone(i % 2 ? '#e8823a' : '#d8d0c2'), m: matrix(s.x + Math.cos(a) * d * r * 0.7, 0.09, s.z + Math.sin(a) * d * r * 0.7, 0.18, 0.04, 0.07, -a) });
+    }
+    if (pond.o.length) {
+      const bx = s.x + r + 0.3,
+        bz = s.z + r * 0.6;
+      out.push({ geo: G.cylinder, mat: tone('#b8894f'), m: matrix(bx, 0.14, bz, 0.26, 0.28, 0.26) });
+      for (let i = 0; i < Math.min(3, pond.o.length); i++)
+        out.push({ geo: G.sphere, mat: tone(pond.o[i].endsWith('roe') ? '#f2a33a' : '#c9d6dc'), m: matrix(bx - 0.08 + i * 0.08, 0.3, bz, 0.09, 0.06, 0.09) });
+    }
+  }
+}
+/** F5 품종 개량소 (procedural): a potting bench with seed trays; sprouts glow over a batch at work. */
+function labInstances(out: Instance[], s: FarmSite, v: SiteView, seed: number) {
+  out.push({ geo: G.box, mat: tone('#d6c7a4'), m: matrix(s.x, 0.012, s.z, s.w - 0.3, 0.02, s.d - 0.3) });
+  // The bench: a top on four legs, a shelf under it.
+  const bx = s.x + 0.2,
+    bz = s.z + 0.3;
+  out.push({ geo: G.box, mat: tone('#9a6a42'), m: matrix(bx, 0.72, bz, 2.4, 0.08, 0.9) });
+  out.push({ geo: G.box, mat: tone('#8a5a3a'), m: matrix(bx, 0.3, bz, 2.3, 0.05, 0.8) });
+  for (const [dx, dz] of [
+    [-1.1, -0.38],
+    [1.1, -0.38],
+    [-1.1, 0.38],
+    [1.1, 0.38],
+  ])
+    out.push({ geo: G.box, mat: tone('#7a5234'), m: matrix(bx + dx, 0.36, bz + dz, 0.08, 0.72, 0.08) });
+  // Two trays on the bench: green sprouts while a batch works, bare soil otherwise.
+  const batches = v.lab?.q ?? [];
+  for (let t = 0; t < 2; t++) {
+    const tx = bx - 0.6 + t * 1.2;
+    out.push({ geo: G.box, mat: tone('#5a3a24'), m: matrix(tx, 0.8, bz, 0.9, 0.08, 0.6) });
+    if (!batches[t]) continue;
+    for (let i = 0; i < 6; i++)
+      out.push({ geo: G.cone, mat: tone(i % 2 ? '#7fc35a' : '#a6d86e'), m: matrix(tx - 0.3 + (i % 3) * 0.3, 0.92, bz - 0.15 + Math.floor(i / 3) * 0.3, 0.06, 0.18, 0.06, seed + i) });
+  }
+  // Seed jars on the shelf.
+  for (let i = 0; i < 3; i++) out.push({ geo: G.cylinder, mat: tone(['#e9d9a8', '#d8b96a', '#c8e0b0'][i]), m: matrix(bx - 0.6 + i * 0.6, 0.42, bz, 0.12, 0.2, 0.12) });
+}
+/**
  * Every instanced piece of the sites and the 공동 밭 (`day`: the KST day, for
  * when a sapling has grown). Machines in the yard are drawn with the fields.
  */
@@ -168,6 +230,10 @@ export function siteInstances(sites: FarmSitesView | undefined, day: number): In
     } else if (v.k === 'orchardPlot') {
       out.push({ geo: G.box, mat: tone('#9fbf6a'), m: matrix(s.x, 0.012, s.z, s.w - 0.3, 0.02, s.d - 0.3) });
       orchardInstances(out, s, v, day);
+    } else if (v.k === 'fishPond') {
+      pondInstances(out, s, v);
+    } else if (v.k === 'seedLab') {
+      labInstances(out, s, v, seed);
     } else {
       // A facility without its own look yet (later stages): its ground.
       out.push({ geo: G.box, mat: tone('#d2bf98'), m: matrix(s.x, 0.012, s.z, s.w - 0.2, 0.02, s.d - 0.2) });

@@ -42,6 +42,8 @@ export type FarmFieldDraw = {
   /** Work-yard machines (slot, kind, working). */
   mach: [number, MachineKind, boolean][];
   giants: number[];
+  /** F5: a 서리 덮개 over the field's first quarter. */
+  frost?: boolean;
 };
 export type FarmSceneState = {
   fields: FarmFieldDraw[];
@@ -74,7 +76,15 @@ export function farmSceneState(life: LifeView | null | undefined, me: number): F
   const fields = FARM_FIELDS.map((f): FarmFieldDraw => {
     const uid = byActor.get(f.actor);
     const pub = uid ? life?.farmsPublic?.[uid] : undefined;
-    const base = { actor: f.actor, fx: pub?.fx ?? [], yard: pub?.yard ?? [], trellis: pub?.tr ?? [], mach: pub?.mach ?? [], giants: pub?.giants ?? [] };
+    const base = {
+      actor: f.actor,
+      fx: pub?.fx ?? [],
+      yard: pub?.yard ?? [],
+      trellis: pub?.tr ?? [],
+      mach: pub?.mach ?? [],
+      giants: pub?.giants ?? [],
+      ...(pub?.fc ? { frost: true } : {}),
+    };
     if (f.actor === me && life) {
       return {
         ...base,
@@ -85,6 +95,7 @@ export function farmSceneState(life: LifeView | null | undefined, me: number): F
         trellis: life.farmx?.trellises ?? base.trellis,
         mach: (life.farmx?.machines ?? []).map((m) => [m.slot, m.kind, !!m.out] as [number, MachineKind, boolean]),
         giants: life.farmx?.giants ?? base.giants,
+        ...(life.farmx?.frost?.length ? { frost: true } : {}),
         plots: life.me.farm.flatMap((p, tile) =>
           p.crop || p.dead || p.t
             ? [

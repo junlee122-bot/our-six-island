@@ -215,6 +215,10 @@ export type GrowthMods = {
   bondExtra: number;
   /** Share off animal prices. */
   animalCheap: number;
+  /** 우리 농장 F5 양식장: more fish the pond holds (재능 양식장 지기). */
+  pondCap: number;
+  /** 양식장: roe chance +%p per output (재능 알 받기). */
+  pondRoe: number;
 };
 export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   growSpeed: 0,
@@ -290,6 +294,8 @@ export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   animalTalk: false,
   bondExtra: 0,
   animalCheap: 0,
+  pondCap: 0,
+  pondRoe: 0,
 });
 type ModPatch = Partial<GrowthMods>;
 
@@ -304,18 +310,18 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
     { level: 5, text: '전문가 선택 ① · 덩굴 시렁 (포도·완두콩·홉)' },
     { level: 6, text: '기본 스프링클러 · 밭 3단계(10×8) 열림' },
     { level: 7, text: '고급 비료 재료 −1 · 개인 온실(내 부지)', mods: { deluxeCheap: true } },
-    { level: 8, text: '품질 스프링클러' },
-    { level: 9, text: '씨앗 제조기' },
-    { level: 10, text: '전문가 선택 ②' },
+    { level: 8, text: '품질 스프링클러 · 품종 개량소(내 부지)' },
+    { level: 9, text: '씨앗 제조기 · 서리 덮개(겨울에도 밭 1/4)' },
+    { level: 10, text: '전문가 선택 ② · 밭 4단계(12×10) · 명인 표지판' },
   ],
   fish: [
     { level: 2, text: '미끼 제작 3→4개', mods: { baitExtra: 1 } },
     { level: 3, text: '통발 레시피', soon: '광산 승강기' },
     { level: 4, text: '입질 창 +5%', mods: { biteWindow: 0.05 } },
-    { level: 5, text: '전문가 선택 ①' },
+    { level: 5, text: '전문가 선택 ① · 양식장(내 부지, 작은 연못 5마리)' },
     { level: 6, text: '통발 +1', soon: '광산 승강기' },
     { level: 7, text: '입질 창 +5% 더', mods: { biteWindow: 0.05 } },
-    { level: 8, text: '희귀 물고기 알림', soon: '기상 관측소' },
+    { level: 8, text: '양식장 중간 연못(10마리) · 희귀 물고기 알림은 기상 관측소 뒤' },
     { level: 9, text: '전설 물고기 힌트 편지', soon: '여섯섬 항로' },
     { level: 10, text: '전문가 선택 ②' },
   ],
