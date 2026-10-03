@@ -476,7 +476,7 @@ function Pond({ view, act, busy, id, v, mine }: Ctx & { id: string; v: SiteView;
         </strong>
         <p>
           {p.n < p.cap ? `${Math.max(0, p.growAt - today)}일 뒤 한 마리 늘어요(${POND_GROW_DAYS}일마다). ` : '지금은 꽉 찼어요. '}
-          매일 {name}나 어란이 나와요(마리가 많을수록 자주). {POND_HOLD}개까지 모아 둬요. 양식한 물고기도 같은 종류는 하루 4마리까지 제값이에요.
+          매일 {name} 한 마리나 어란 하나가 나와요(마리가 많을수록 자주). {POND_HOLD}개까지 모아 둬요. 양식한 물고기도 같은 종류는 하루 4마리까지 제값이에요.
         </p>
       </section>
       {p.want && (

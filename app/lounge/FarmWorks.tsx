@@ -1,6 +1,6 @@
 'use client';
 // 텃밭 확장 pages of the farm window (design-farming-upgrade.md §8):
-//   밭 배치 — the 10 × 8 field and its front-yard spots: place / move / pick
+//   밭 배치 — the field (10 × 8, 12 × 10 at stage 4) and its front-yard spots: place / move / pick
 //             up sprinklers and 덩굴 시렁 (tiles), scarecrows and bee houses
 //             (front-yard spots, F2); build them; the farm's news.
 //   가공    — the four work-yard slots (옹기, 숙성통, 건조기, 씨앗 제조기) and the

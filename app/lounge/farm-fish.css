@@ -371,7 +371,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   color: var(--ink-700);
   background: var(--paper-300);
 }
-/* 우리 농장: the whole 10 × 8 field (small tiles; grass beyond the tilled block). */
+/* 우리 농장: the 10 × 8 field (small tiles; grass beyond the tilled block; 12 × 10 at stage 4, below). */
 .l-ledger-field {
   gap: 3px;
   padding: 14px 8px 8px;

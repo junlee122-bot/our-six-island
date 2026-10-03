@@ -316,7 +316,7 @@ export const QUALITY_ODDS: Record<0 | FertLevel, [number, number]> = {
 export const DELUXE_SPEED = 10;
 export const MAX_SPEED = 40;
 export const FRUIT_SELL = 150;
-/** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 10 × 8 grid). */
+/** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 12 × 10 grid). */
 export const PLOTS_PER_USER = 24;
 /** Field sizes: 24 tiles, expandable to 48, 80 and (F5, farm Lv10) 120 (see FARM_EXPAND_PRICE). */
 export const FARM_SIZES = [24, 48, 80, 120] as const;
@@ -567,8 +567,8 @@ export type MailItem = {
 };
 export type LifeState = {
   /**
-   * 우리 농장 fields: in memory the whole 10 × 8 grid (GRID_TILES plots, index
-   * = row × 10 + column); stored sparse as { tile: plot } (packLife), and old
+   * 우리 농장 fields: in memory the whole 12 × 10 grid (GRID_TILES plots, index
+   * by lounge-farm-data tileRC); stored sparse as { tile: plot } (packLife), and old
    * 6 / 9 / 12-plot yards are moved into the top-left block on read.
    */
   farms: Record<string, Plot[]>;

@@ -403,7 +403,7 @@
   gap: var(--sp-2);
   align-items: flex-start;
 }
-/* 우리 농장: the whole 10 × 8 field in small tiles. */
+/* 우리 농장: the 10 × 8 field in small tiles (12 × 10 at stage 4, below). */
 .l-fw-field .l-fw-row {
   grid-template-columns: repeat(10, 34px);
   gap: 3px;
