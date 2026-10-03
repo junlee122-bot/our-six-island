@@ -306,15 +306,17 @@ function SeedPick({ view, anySeason, value, onChange }: { view: CloudRoomView; a
   );
 }
 
-function PlotGrid({ cols, n, plots, me }: { cols: number; n: number; plots: readonly SitePlotView[]; me: number }) {
+/** `owners`: label whose crop a tile is (the shared greenhouse); `tilled`: the shared field's tilled tiles (others are grass). */
+function PlotGrid({ cols, n, plots, me, owners = false, tilled }: { cols: number; n: number; plots: readonly SitePlotView[]; me: number; owners?: boolean; tilled?: ReadonlySet<number> }) {
   const byTile = new Map(plots.map((p) => [p.t, p]));
   return (
     <ol className="l-farm-site-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }} aria-label="칸">
       {Array.from({ length: n }, (_, t) => {
         const p = byTile.get(t);
-        const who = p?.c ? (p.o === undefined ? '공용' : p.o === me ? '내 작물' : `${ACTORS[p.o] ?? '친구'}`) : '';
+        const who = owners && p?.c ? (p.o === undefined ? '공용' : p.o === me ? '내 작물' : `${ACTORS[p.o] ?? '친구'}`) : '';
+        const grass = !!tilled && !tilled.has(t);
         return (
-          <li key={t} className={`l-farm-site-tile${p?.r ? ' is-ready' : ''}${p?.o === me ? ' is-mine' : ''}`} title={`${t + 1}번 칸 · ${plotLabel(p)}${who ? ` · ${who}` : ''}`}>
+          <li key={t} className={`l-farm-site-tile${p?.r ? ' is-ready' : ''}${owners && p?.o === me ? ' is-mine' : ''}${grass ? ' is-grass' : ''}`} title={`${t + 1}번 칸 · ${grass ? '아직 갈지 않았어요' : plotLabel(p)}${who ? ` · ${who}` : ''}`}>
             <span aria-hidden="true">{plotFace(p)}</span>
             {who && <small>{who}</small>}
           </li>
@@ -340,7 +342,7 @@ function Greenhouse({ view, act, busy, me, id, v, def, mine }: Ctx & { id: strin
           ? `온실 안에서는 계절과 상관없이 자라요. 한 사람 ${GREENHOUSE_PER_FRIEND}칸까지 내 작물(내 가방으로), 남는 칸은 공용 작물(공동 창고로). 지금 내 칸 ${myCount}/${GREENHOUSE_PER_FRIEND}.`
           : '내 온실이에요. 계절과 상관없이 자라요.'}
       </p>
-      <PlotGrid cols={shared ? 6 : 4} n={n} plots={plots} me={me} />
+      <PlotGrid cols={shared ? 6 : 4} n={n} plots={plots} me={me} owners={shared} />
       {mine ? (
         <>
           <SeedPick view={view} anySeason value={seed} onChange={setSeed} />
@@ -450,7 +452,7 @@ function CommonPage({ view, act, busy, me, sites }: Ctx) {
         </p>
       </section>
       <p className="l-farm-site-note">누구나 갈고 심고 물 주고 거둘 수 있어요. 거둔 것은 공동 창고로 가서 꾸러미와 축제 기금에 써요. 씨앗은 심는 사람이 내요.</p>
-      <PlotGrid cols={6} n={36} plots={field.p.map((p) => ({ ...p, o: undefined }))} me={me} />
+      <PlotGrid cols={6} n={36} plots={field.p} me={me} tilled={till} />
       <SeedPick view={view} anySeason={false} value={seed} onChange={setSeed} />
       <span className="l-town-buttons l-farm-site-actions">
         <GameButton size="s" disabled={busy || till.size >= 36} onClick={() => act({ kind: 'commonTill', tile: -1 }, '공동 밭을 갈았어요.')}>

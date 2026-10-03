@@ -67,3 +67,6 @@
 .l-farm-site-tile.is-ready {
   background: var(--leaf-800);
 }
+.l-farm-site-tile.is-grass {
+  background: var(--leaf-600);
+}

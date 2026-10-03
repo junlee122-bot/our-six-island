@@ -384,6 +384,20 @@
      "overlapCount": 0,
      "coveredCount": 0,
      "dialog": null
+    },
+    "farm-sites": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
     }
    }
   },
@@ -728,6 +742,20 @@
      }
     },
     "npc": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "farm-sites": {
      "lowCount": 0,
      "smallCount": 0,
      "narrowCount": 0,
@@ -1114,6 +1142,20 @@
      "overlapCount": 0,
      "coveredCount": 0,
      "dialog": null
+    },
+    "farm-sites": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
     }
    }
   }
