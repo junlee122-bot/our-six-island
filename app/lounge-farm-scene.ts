@@ -3,8 +3,8 @@
 // (the hub's house models, door height as before; 자료: kArchive · 출처: 쓰레드
 // dogfooter), each friend's 10 × 8 field right in front, the lane and the
 // paths between the fields, the central yard (shipping bin, mailbox, farm
-// board), the staked-out spots for the shared field, the greenhouse, the
-// machine yard and the barn, and the road south to the hub. Tilled tiles and
+// board), F3's facility sites and the 공동 밭 (lounge-farm-sites-3d.ts), and
+// the road south to the hub. Tilled tiles and
 // crops are instanced (the hub's crop shapes, lounge-village-life-3d.ts), so
 // all 560 tiles cost a handful of draw calls. Layout: lounge-farm-layout.ts;
 // what to draw comes from lounge-farm-view.ts (farmSceneState). No React.
@@ -18,7 +18,6 @@ import {
   FARM_FIELDS,
   FARM_HOUSES,
   FARM_LAMPS,
-  FARM_LATER,
   FARM_MAILBOX,
   FARM_PAVING,
   FARM_PROPS,
@@ -41,10 +40,13 @@ import { GRID_COLS, bedTiles, tileOpen } from './lounge-farm-data';
 import { YARD_SPOTS } from './lounge-farm-soil';
 import type { FarmSceneState } from './lounge-farm-view';
 import type { Crop } from './lounge-life';
+import { SiteDecor, machineYardSite, siteInstances } from './lounge-farm-sites-3d';
+import { yardMachineAt } from './lounge-farm-sites-layout';
+import { ACTOR_NAMES } from './lounge-calendar';
+import { kstDay } from './lounge-economy';
 
 const SIGN_ROAD = { bg: '#c49a62', ink: '#3c2716', line: '#7d5a36' };
 const SIGN_FARM = { bg: '#f6e7cf', ink: '#6a3a1e', line: '#b4763f' };
-const SIGN_LATER = { bg: '#efe9dc', ink: '#5a4a3a', line: '#a89a84' };
 const FIELD_GRASS = '#8eac5c';
 const SOIL_SIZE = FIELD_TILE * 0.9;
 
@@ -57,6 +59,8 @@ export class FarmSet extends DistrictSet {
   /** Per house: the 앞마당 정원 (tier 3) and the 2층 다락 (tier 4). */
   private tiers = new Map<number, { garden: THREE.Object3D[]; attic: THREE.Object3D }>();
   private mine = new THREE.Group();
+  /** 우리 농장 F3: the facility sites' models and signs. */
+  private sites: SiteDecor;
 
   constructor(look: { ground: string; groundFar: string }) {
     super('farm', FARM_MODEL_URLS);
@@ -65,7 +69,17 @@ export class FarmSet extends DistrictSet {
     for (const f of FARM_FIELDS) this.buildFieldBase(f.x0, f.z0, f.w, f.d, f.actor);
     for (const h of FARM_HOUSES) this.buildHouse(h);
     this.buildYard();
-    this.buildLater();
+    this.sites = new SiteDecor(
+      this.root,
+      {
+        place: (model, x, z, size, rot, name) => this.place(model, x, z, size, rot, name),
+        signpost: (text, sub, colors, x, z, opts) => this.signpost(text, sub, colors, x, z, opts),
+        plane: (w, d, color, y) => this.plane(w, d, color, y),
+        box: (w, h, d, color) => this.box(w, h, d, color),
+      },
+      ACTOR_NAMES,
+    );
+    this.sites.update(undefined, 0);
     this.buildEdge();
     this.dynamic.name = 'farm-fields';
     this.root.add(this.dynamic);
@@ -155,34 +169,6 @@ export class FarmSet extends DistrictSet {
     for (const [i, b] of FARM_BENCHES.entries()) this.place('parkBench', b.x, b.z, { w: b.w, h: 1.1, d: b.d }, b.w < b.d ? Math.PI / 2 : 0, 'farm-bench-' + i);
   }
 
-  /** The spots for later stages: staked outlines with a sign (nothing to walk around). */
-  private buildLater() {
-    for (const l of FARM_LATER) {
-      const x0 = l.x - l.w / 2,
-        z0 = l.z - l.d / 2;
-      const line = (x: number, z: number, w: number, d: number) => {
-        const m = this.box(w, 0.04, d, '#e8dcc0');
-        m.position.set(x, 0.03, z);
-        this.root.add(m);
-      };
-      line(l.x, z0, l.w, 0.08);
-      line(l.x, z0 + l.d, l.w, 0.08);
-      line(x0, l.z, 0.08, l.d);
-      line(x0 + l.w, l.z, 0.08, l.d);
-      for (const [sx, sz] of [
-        [x0, z0],
-        [x0 + l.w, z0],
-        [x0, z0 + l.d],
-        [x0 + l.w, z0 + l.d],
-      ]) {
-        const stake = this.box(0.08, 0.5, 0.08, '#8a6242');
-        stake.position.set(sx, 0.25, sz);
-        this.root.add(shadowed(stake));
-      }
-      this.signpost(l.name, l.stage, SIGN_LATER, l.x, l.z - l.d / 2 + 0.4, { w: 2.2, h: 1.4, name: 'farm-later-' + l.id });
-    }
-  }
-
   private buildEdge() {
     FARM_LAMPS.forEach((l, i) => this.gardenLamp(l.x, l.z, i));
     for (const [i, t] of FARM_TREES.entries()) this.tree(t.x, t.z, t.s, !!t.pine, i);
@@ -198,6 +184,7 @@ export class FarmSet extends DistrictSet {
     if (key === this.farmKey) return;
     this.farmKey = key;
     this.drawFields(u.farm);
+    this.sites.update(u.farm.sites, kstDay(Date.now()));
     for (const [actor, t] of this.tiers) {
       const tier = u.farm.houses[actor] ?? 0;
       for (const g of t.garden) g.visible = tier >= 3;
@@ -210,7 +197,8 @@ export class FarmSet extends DistrictSet {
   /** Tilled tiles, crops, withered plants, giant beds, fixtures and work-yard machines (instanced). */
   private drawFields(state: FarmSceneState) {
     const soil: Instance[] = [],
-      crops: Instance[] = [];
+      crops: Instance[] = [],
+      yard = machineYardSite(state.sites);
     for (const field of state.fields) {
       const f = FARM_FIELDS.find((x) => x.actor === field.actor);
       if (!f) continue;
@@ -275,16 +263,18 @@ export class FarmSet extends DistrictSet {
         for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
       }
       const house = farmHouse(field.actor);
+      // 우리 농장 F3: once the machine yard stands, everyone's machines stand there (small).
       if (house)
         for (const [slot, kind, busy] of field.mach) {
-          const at = farmWorkSlot(house, slot);
+          const at = yard ? yardMachineAt(yard, field.actor, slot) : farmWorkSlot(house, slot);
           const place = new THREE.Matrix4().makeTranslation(at.x, 0.03, at.z);
+          if (yard) place.multiply(new THREE.Matrix4().makeScale(0.55, 0.55, 0.55));
           const local: Instance[] = [];
           machineShapes(local, kind, busy, false);
           for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
         }
     }
-    this.batches.set([...soil, ...crops]);
+    this.batches.set([...soil, ...crops, ...siteInstances(state.sites, kstDay(Date.now()))]);
   }
 
   /** A thin gold outline round my own tilled block. */

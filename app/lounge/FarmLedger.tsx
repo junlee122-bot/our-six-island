@@ -133,7 +133,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const open = (i: number) => tileOpen(size, i);
   const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
   const season = life?.calendar?.season ?? 'spring';
-  // The village greenhouse or 온실지기: off-season seeds plant too (same rule as the server and E).
+  // 온실지기: off-season seeds plant too (same rule as the server and E; greenhouses are their own panel).
   const anySeason = plantsAnySeason(life);
   const plantable = (c: Crop) => anySeason || cropInSeason(c, season);
   const seeds = life?.me.bag.seeds;

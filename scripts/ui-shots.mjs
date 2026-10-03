@@ -96,6 +96,20 @@ function seedLife(life, uid) {
     st: day,
     log: [{ kind: 'guard', at: now - 7 * 3_600_000 }, { kind: 'ship', at: now - 8 * 3_600_000, n: 9, beom: 4_320 }],
   };
+  // 우리 농장 F3: a machine yard (tier 2), a greenhouse being funded, the
+  // shared field half tilled with carrots, a little in the shared store.
+  life.flags = [...new Set([...(life.flags ?? []), 'greenhouse'])];
+  life.farm = {
+    sites: {
+      M1: { kind: 'machineYard', tier: 2, owner: 'shared', state: {}, paid: { 3: { wood: 60, stone: 40 } } },
+      L1: { kind: 'greenhouse', tier: 0, owner: 'shared', state: {}, fund: { to: 1, got: 42_000, mat: { wood: 60 }, by: { 3: 2, 1: 1 } } },
+    },
+    till: Array.from({ length: 18 }, (_, i) => i),
+    field: Object.fromEntries(Array.from({ length: 6 }, (_, i) => [String(i), { crop: 'carrot', plantedAt: now - 3_600_000, wateredAt: now - 3_000_000 }])),
+    store: { tomato: 4, 'carrot@1': 3 },
+    d: day,
+    gm: now - DAY,
+  };
   // --stage3: the two stage-3 districts are open (design-npcs-stage3.md).
   if (flag('stage3')) life.flags = [...new Set([...(life.flags ?? []), 'district-ranch', 'district-foothill'])];
 }
@@ -294,8 +308,23 @@ async function runView(browser, base, view, report) {
     await sleep(6000);
     await snap('farm');
     const pins = await js(() => [...document.querySelectorAll('[data-minimap-area="farm"] [data-minimap-place]')].map((e) => e.getAttribute('data-minimap-place')));
-    for (const id of ['home-0', 'home-3', 'bin', 'board', 'exit-village'])
+    for (const id of ['home-0', 'home-3', 'bin', 'board', 'common', 'exit-village'])
       assert.ok(pins.includes(id), `우리 농장 미니맵에 ${id} 자리가 없습니다.`);
+  });
+  // 우리 농장 F3: the 공동 밭 window (E on the shared field).
+  await step('farm-sites', async () => {
+    await closeAll();
+    const at = { x: -13.6, z: 7 };
+    await js((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), at);
+    assert.notEqual(await until((p) => {
+      const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+      return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 1;
+    }, 120000, at), -1, '공동 밭까지 걷지 못했습니다.');
+    await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+    await page.keyboard.press('KeyE');
+    assert.notEqual(await until(() => !!document.querySelector('dialog[open] [data-testid=common-goal]'), 15000), -1, '공동 밭 창이 열리지 않았습니다.');
+    await sleep(600);
+    await snap('farm-sites');
   });
 
   // village

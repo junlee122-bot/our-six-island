@@ -300,10 +300,10 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   farm: [
     { level: 2, text: '퇴비 · 비료를 만들면 1개 더', mods: { fertExtra: 1 } },
     { level: 3, text: '괭이 손맛 · 금별 확률 +2%p · 밭 2단계(8×6) 열림', mods: { goldPts: 2 } },
-    { level: 4, text: '옹기 레시피' },
+    { level: 4, text: '옹기 레시피 · 과일나무 자리(내 부지)' },
     { level: 5, text: '전문가 선택 ① · 덩굴 시렁 (포도·완두콩·홉)' },
     { level: 6, text: '기본 스프링클러 · 밭 3단계(10×8) 열림' },
-    { level: 7, text: '고급 비료 재료 −1', mods: { deluxeCheap: true } },
+    { level: 7, text: '고급 비료 재료 −1 · 개인 온실(내 부지)', mods: { deluxeCheap: true } },
     { level: 8, text: '품질 스프링클러' },
     { level: 9, text: '씨앗 제조기' },
     { level: 10, text: '전문가 선택 ②' },

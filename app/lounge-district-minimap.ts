@@ -62,7 +62,8 @@ import {
   FOOTHILL_TENT,
   FOOTHILL_W,
 } from './lounge-foothill-layout.ts';
-import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_LATER, FARM_PAVING } from './lounge-farm-layout.ts';
+import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_PAVING } from './lounge-farm-layout.ts';
+import { FARM_COMMON, FARM_SITES } from './lounge-farm-sites-layout.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
@@ -144,9 +145,10 @@ const DISTRICT_ART: Partial<Record<DistrictId, () => MiniShape[]>> = {
   ],
   farm: () => [
     ...FARM_PAVING.map((p) => rect(p.x, p.z, p.w, p.d, p.tone === 'yard' ? 'plaza' : 'road')),
-    // The fields (soil brown), the spots for later (lawn), the houses.
+    // The fields and the 공동 밭 (soil brown), the facility sites (lawn), the houses.
     ...FARM_FIELDS.map((f) => rect(f.x0 + f.w / 2, f.z0 + f.d / 2, f.w, f.d, 'deck', '#9a7650')),
-    ...FARM_LATER.map((l) => rect(l.x, l.z, l.w, l.d, 'lawn')),
+    rect(FARM_COMMON.x, FARM_COMMON.z, FARM_COMMON.w, FARM_COMMON.d, 'deck', '#9a7650'),
+    ...FARM_SITES.map((l) => rect(l.x, l.z, l.w, l.d, 'lawn')),
     rect(FARM_BIN.x, FARM_BIN.z, FARM_BIN.w, FARM_BIN.d, 'stall'),
     rect(FARM_BOARD.x, FARM_BOARD.z, FARM_BOARD.w, Math.max(0.8, FARM_BOARD.d), 'board'),
     ...FARM_HOUSES.map((h) => rect(h.x, h.z, h.w, h.d, 'civic')),
@@ -205,6 +207,7 @@ function extraPlaces(area: OutdoorArea): MiniPlace[] {
       ...FARM_HOUSES.map((h) => ({ id: `home-${h.actor}`, label: `${ACTORS[h.actor]}네`, title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false })),
       { id: 'bin', label: '출하함', title: '출하함 앞으로 걸어가기', kind: 'place', x: FARM_BIN.x, z: FARM_BIN.z, go: { ...FARM_BIN.front }, named: true },
       { id: 'board', label: '게시판', title: '농장 게시판 앞으로 걸어가기', kind: 'board', x: FARM_BOARD.front.x, z: FARM_BOARD.front.z - BOARD_LIFT, go: { ...FARM_BOARD.front }, named: false },
+      { id: 'common', label: '공동 밭', title: '공동 밭으로 걸어가기', kind: 'place', x: FARM_COMMON.x, z: FARM_COMMON.z, go: { x: FARM_COMMON.x + FARM_COMMON.w / 2 + 0.4, z: FARM_COMMON.z }, named: true },
     ];
   if (area === 'ranch')
     return RANCH_HOUSES.map((h) => ({ id: h.id, label: h.name.replace(' 집', ''), title: `${h.name} 앞으로 걸어가기`, kind: 'house' as const, x: h.x, z: h.z, go: { ...h.door }, named: false }));

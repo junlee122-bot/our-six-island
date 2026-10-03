@@ -228,8 +228,9 @@ test('farming: seasonal crops, greenhouse, base crops all year', () => {
   s.fails(m, { kind: 'plant', plot: 0, crop: 'watermelon' }, T0, '지금은 수박 철이 아니라 심을 수 없어요.');
   s.act(m, { kind: 'plant', plot: 0, crop: 'sweetpotato' }, T0);
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' }, T0);
+  // 우리 농장 F3: the bundle's greenhouse is a building on the farm now; my field keeps the season.
   s.life.flags = ['greenhouse'];
-  s.act(m, { kind: 'plant', plot: 2, crop: 'watermelon' }, T0);
+  s.fails(m, { kind: 'plant', plot: 2, crop: 'watermelon' }, T0, '지금은 수박 철이 아니라 심을 수 없어요.');
   // Catalog: crop sell prices are shared with lounge-items (dish values).
   for (const c of CROPS) assert.equal(CROP_SELL_REF[c], CROP_INFO[c].sell, c);
   assert.equal(CROPS.filter((c) => !CROP_INFO[c].seasons).length, 4);

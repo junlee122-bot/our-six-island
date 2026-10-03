@@ -228,7 +228,6 @@ import {
   FARM_COLLIDERS,
   FARM_FIELDS,
   FARM_HOUSES,
-  FARM_LATER,
   FARM_MAILBOX,
   FARM_W,
   FARM_D,
@@ -238,6 +237,7 @@ import {
   houseOutside,
 } from '../app/lounge-farm-layout.ts';
 import { farmReach, farmSceneState } from '../app/lounge-farm-view.ts';
+import { FARM_SITES } from '../app/lounge-farm-sites-layout.ts';
 import { districtMinimap } from '../app/lounge-district-minimap.ts';
 import { AREA_DEFAULTS } from '../app/lounge-games.ts';
 import { regionToNetwork } from '../app/lounge-areas.ts';
@@ -282,7 +282,8 @@ test('the farm map: seven houses in a row, each field in front of its door, ever
   reach(FARM_BIN.front, 'bin');
   reach(FARM_MAILBOX.front, 'mailbox');
   reach(FARM_BOARD.front, 'board');
-  for (const l of FARM_LATER) reach({ x: l.x, z: l.z }, l.id);
+  // F3's facility sites (tests/lounge-farm-sites.test.mjs checks them in full).
+  for (const l of FARM_SITES) reach({ x: l.x, z: l.z }, l.id);
   assert.ok(FARM_COLLIDERS.length > 7);
   // The minimap names every house and the yard.
   const map = districtMinimap('farm', 1);

@@ -294,11 +294,12 @@ export function placeInHotbar(slots: readonly string[], i: number, ref: string):
 
 type Plot = LifeMe['farm'][number];
 /**
- * Whether off-season seeds can be planted on my farm: the village greenhouse
- * or the 온실지기 profession (the server's plant check and the farm panel).
+ * Whether off-season seeds can be planted on my field: the 온실지기 profession
+ * (the server's plant check and the farm panel). 우리 농장 F3: the village
+ * greenhouse no longer lifts the season everywhere; off-season seeds grow in
+ * the farm's greenhouses (lounge-farm-sites.ts).
  */
-export const plantsAnySeason = (life: Pick<LifeView, 'flags' | 'growth'> | null | undefined) =>
-  !!life?.flags?.includes('greenhouse') || !!life?.growth?.mods.offSeason;
+export const plantsAnySeason = (life: Pick<LifeView, 'growth'> | null | undefined) => !!life?.growth?.mods.offSeason;
 /** Soil items for growing plots: quality levels 1–3, then the two treatments (성장 촉진제, 보습 흙). */
 export const SOIL_ITEMS = ['fertilizer', 'fertilizer-deluxe', 'fertilizer-star', 'speed-gro', 'retaining'] as const;
 export type SoilItem = (typeof SOIL_ITEMS)[number];

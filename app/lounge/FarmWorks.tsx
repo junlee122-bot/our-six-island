@@ -412,7 +412,9 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
   const machines = life.farmx?.machines ?? [],
     ownedMachines = MACHINES.filter((m) => (life.me.inv[m.id] ?? 0) > 0),
     goods = life.farmx?.goods ?? [],
-    flags = life.flags ?? [];
+    flags = life.flags ?? [],
+    // 우리 농장 F3: the machine yard's tier sets the slots (4 → 8 → 12).
+    slots = life.farmSites?.slots ?? WORK_SLOTS;
   const readyMachines = machines.filter((m) => m.out && (m.doneAt ?? Infinity) <= now).length,
     readyBees = (life.farmx?.fixtures ?? []).filter((f) => f.kind === 'beehouse' && (f.readyAt ?? Infinity) <= now).length;
   // 과수원 fruit (bag items) go in the jar, keg and dryer like other fruit.
@@ -426,7 +428,7 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
       <section className="l-fw-yard" aria-label="작업 마당">
         <header className="l-fw-head">
           <p className="l-fw-hint">
-            <Glyph name="pot" size={16} /> 장독대 옆 작업 마당 {WORK_SLOTS}자리. 넣은 작물의 품질이 가공품에 그대로 이어져요.
+            <Glyph name="pot" size={16} /> {life.farmSites?.sites.some((x) => x.k === 'machineYard' && x.t >= 1) ? '농장 가공 마당' : '장독대 옆 작업 마당'} {slots}자리. 넣은 작물의 품질이 가공품에 그대로 이어져요.
           </p>
           <GameButton
             variant="primary"
@@ -440,7 +442,7 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
           </GameButton>
         </header>
         <ol className="l-fw-slots">
-          {Array.from({ length: WORK_SLOTS }, (_, slot) => {
+          {Array.from({ length: Math.max(slots, ...machines.map((m) => m.slot + 1)) }, (_, slot) => {
             const m = machines.find((x) => x.slot === slot);
             if (!m)
               return (

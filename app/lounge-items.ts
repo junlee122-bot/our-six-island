@@ -663,7 +663,7 @@ export type BundleDef = {
 };
 export const VILLAGE_FLAGS: Record<string, string> = {
   bridge: '동쪽 다리 수리 · 바다 낚시터와 동쪽 채집 자리 2곳',
-  greenhouse: '마을 온실 · 계절과 상관없이 심을 수 있어요',
+  greenhouse: '농장 공용 온실 · 우리 농장에 온실을 지을 수 있어요(온실 칸은 계절과 상관없이)',
   cafe: '노을 카페 · 송편·떡국·해물탕·꽃차 레시피',
   fountain: '광장 분수 · 매일 분수에 소원 빌기(작은 행운)',
   stage: '축제 무대 · 주간 이벤트 보너스 2배',
@@ -750,7 +750,7 @@ export const SHOP_REROLL_MAX = 5;
 export const shopRerollPrice = (n: number) => 3_000 * 2 ** n;
 export const BUNDLES: readonly BundleDef[] = [
   { id: 'spring-forage', name: '봄나물 꾸러미', flag: 'bridge', reward: '동쪽 다리 수리', slots: [it('mugwort', 5), it('shepherd', 5), it('wildgarlic', 3), it('azalea', 3), { beom: true, n: 100_000 }] },
-  { id: 'summer-harvest', name: '여름 수확 꾸러미', flag: 'greenhouse', reward: '마을 온실', slots: [it('tomato', 10, 1), it('corn', 8), it('watermelon', 3), it('strawberry', 3, 2), { beom: true, n: 300_000 }] },
+  { id: 'summer-harvest', name: '여름 수확 꾸러미', flag: 'greenhouse', reward: '농장 공용 온실 짓기', slots: [it('tomato', 10, 1), it('corn', 8), it('watermelon', 3), it('strawberry', 3, 2), { beom: true, n: 300_000 }] },
   { id: 'autumn-harvest', name: '가을 수확 꾸러미', flag: 'cafe', reward: '노을 카페', slots: [it('pumpkin', 10), it('sweetpotato', 8), it('cabbage', 6), it('chestnut', 5)] },
   { id: 'winter-gifts', name: '겨울 선물 꾸러미', flag: 'fountain', reward: '광장 분수', slots: [it('spinach', 5), it('camellia', 3), it('smelt', 3), it('snowfly', 2), it('pinecone', 10)] },
   { id: 'river-fish', name: '강의 물고기 꾸러미', flag: 'stage', reward: '축제 무대', slots: [it('crucian', 3), it('carp', 2), it('sweetfish', 1), it('catfish', 1), it('mandarin', 1), it('trout', 1)] },

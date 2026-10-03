@@ -147,6 +147,7 @@ import { XP, fishXp } from './lounge-growth-data.ts';
 import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId, tileOpen } from './lounge-farm-data.ts';
 import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
 import { soilCheckpoint, soilWater } from './lounge-farm-soil.ts';
+import { greenhouseBuilt, storeCount, storeStock, storeValue, takeStore } from './lounge-farm-sites.ts';
 import { gainXp, giftMult, growthChance, growthMods, skillLevel } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
@@ -391,12 +392,14 @@ export type PlusAction =
   | { kind: 'craft'; recipe: string; n?: number }
   /** `where` is filled by the cloud engine from the real player (함께 먹기). */
   | { kind: 'eat'; item: string; where?: EatPlace }
-  | { kind: 'contribute'; bundle: string; slot: number; n: number }
+  /** `from: 'store'`: crops from the 우리 농장 공동 창고 instead of my bag (lounge-farm-sites.ts). */
+  | { kind: 'contribute'; bundle: string; slot: number; n: number; from?: 'store' }
   | { kind: 'deliver'; to: number }
   | { kind: 'claimEvent'; event: string }
   | { kind: 'wish' }
   | { kind: 'project'; project: string; n: number }
-  | { kind: 'festival'; n: number }
+  /** 범, or with `item` that many crops from the 공동 창고 (counted at their base price). */
+  | { kind: 'festival'; n: number; item?: string; q?: Quality }
   | { kind: 'upgradeHouse' }
   | { kind: 'rerollShop' }
   | NpcRequestAction;
@@ -1352,7 +1355,8 @@ function requestItemValue(id: string) {
   return ITEM_BY_ID[id]?.sell ?? 0;
 }
 function requestCandidates(life: LifeState, cat: ItemCategory, season: Season): string[] {
-  const greenhouse = hasFlag(life, 'greenhouse');
+  // 우리 농장 F3: off-season crops come from the farm's shared greenhouse once it stands.
+  const greenhouse = greenhouseBuilt(life);
   switch (cat) {
     case 'crop':
       return CROPS.filter((c) => greenhouse || cropInSeason(c, season));
@@ -1648,9 +1652,22 @@ export function plusAction(
       const fest = life.festival;
       if (fest.doneAt || fest.got >= FESTIVAL_GOAL) fail(PLUS_REJECT.festivalDone);
       const left = FESTIVAL_GOAL - fest.got;
-      if (!safe(a.n) || a.n < Math.min(PROJECT_MIN_GIVE, left)) fail(PLUS_REJECT.give);
-      const amount = Math.min(a.n, left);
-      next = spend(next, life, uid, amount, 'festival', now);
+      let amount: number;
+      if (a.item !== undefined) {
+        // 우리 농장 공동 창고: crops counted at their base price (no 범 changes hands).
+        const s = storeStock(a.item, a.q);
+        if (!safe(a.n) || a.n < 1) fail(PLUS_REJECT.give);
+        const unit = storeValue(s.id, s.q, 1),
+          n = Math.min(a.n, Math.max(1, Math.ceil(left / unit)));
+        // Exactly that quality (takeStore takes the lowest eligible first).
+        if (storeCount(life, s.id, s.q) < n) fail(LIFE_REJECT.notEnough);
+        takeStore(life, s.id, n, s.q);
+        amount = Math.min(left, unit * n);
+      } else {
+        if (!safe(a.n) || a.n < Math.min(PROJECT_MIN_GIVE, left)) fail(PLUS_REJECT.give);
+        amount = Math.min(a.n, left);
+        next = spend(next, life, uid, amount, 'festival', now);
+      }
       fest.got += amount;
       fest.by[String(actor)] = Math.min(Number.MAX_SAFE_INTEGER, (fest.by[String(actor)] ?? 0) + amount);
       addNews(life, now, `fest:${week}:${actor}`, 'bundle', `${josaGa(nameOf(actor))} 이번 주 마을 축제 기금에 범을 보탰어요`, [actor]);
@@ -1999,7 +2016,11 @@ export function plusAction(
       const slot = def!.slots[a.slot],
         amount = Math.min(a.n, slot.n - state.got[a.slot]);
       if (amount <= 0) fail(PLUS_REJECT.slotFull);
-      if ('beom' in slot) next = spend(next, life, uid, amount, 'bundle', now);
+      if (a.from === 'store') {
+        // 우리 농장 공동 창고: crop slots only (lowest eligible quality first).
+        if (!('item' in slot) || !isCropId(slot.item)) fail(PLUS_REJECT.bundle);
+        takeStore(life, (slot as { item: string }).item, amount, (slot as { q?: Quality }).q ?? 0);
+      } else if ('beom' in slot) next = spend(next, life, uid, amount, 'bundle', now);
       else takeNeed(life, uid, slot, amount);
       state.got[a.slot] += amount;
       state.by[String(actor)] = (state.by[String(actor)] ?? 0) + 1;
