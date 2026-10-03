@@ -28,7 +28,7 @@ test('the five residents keep their ids and carry their new names everywhere', (
 
 test('no old name is left in the game text', () => {
   const dir = new URL('../app/', import.meta.url);
-  const files = fs.readdirSync(dir, { recursive: true }).filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith('lounge-changelog.ts'));
+  const files = fs.readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith('lounge-changelog.ts'));
   const hits = [];
   for (const f of files) {
     const text = fs.readFileSync(new URL(f, dir), 'utf8');
