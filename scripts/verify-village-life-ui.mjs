@@ -15,7 +15,7 @@ import { actionAttemptEvidence, assertSingleLogicalAction, assertSingleResourceC
 import { VILLAGE_BOUNDS, villageToNetwork } from '../app/lounge-village-layout.ts';
 import { VIEW_DIR, VIEW_DISTANCE, villageCameraFrame } from '../app/lounge-village-camera.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
-import { lifeView } from '../app/lounge-life.ts';
+import { lifeView, readLife } from '../app/lounge-life.ts';
 import { rarityOf } from '../app/lounge-fish-engine.ts';
 import { FISH_BY_ID } from '../app/lounge-items.ts';
 import { gameTimeOnDay, seasonOf, seasonOfDay } from '../app/lounge-calendar.ts';
@@ -123,7 +123,7 @@ async function runView(mobile = false) {
       while (!check() && performance.now() < end) await sleep(100);
       assert.ok(check(), label);
     };
-    const model = () => lifeView(H.world().life, H.uid, 3, Date.now());
+    const model = () => lifeView(readLife(H.world().life), H.uid, 3, Date.now());
     const shot = async (label, allMetrics = false) => {
       await js(() => document.fonts.ready);
       const file = `${name}-${label}.png`;
