@@ -6,11 +6,12 @@ import { harvestOf, harvestText } from '../app/lounge-life-ui.ts';
 import { newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
 import { FISH, FISH_SPOTS } from '../app/lounge-items.ts';
 import { seasonOf, isNighttime } from '../app/lounge-calendar.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const T0 = Date.UTC(2026, 8, 24, 3);
 function world() {
   const m = { id: '11111111-1111-4111-8111-111111111111', actor: 0 };
-  const s = { m, life: ensureLifeMember(emptyLife(), m.id, m.actor), ledger: registerWallet(newLoungeLedger(), `wallet-${m.id}`) };
+  const s = { m, life: tillField(ensureLifeMember(emptyLife(), m.id, m.actor), m.id), ledger: registerWallet(newLoungeLedger(), `wallet-${m.id}`) };
   s.act = (a, now = T0) => {
     const next = lifeAction(s.life, s.ledger, m, a, now);
     s.life = next.life;
@@ -150,6 +151,7 @@ test('harvest feedback reports actual quality yield and preserves other plots on
   const s = world();
   s.act({ kind: 'plant', plot: 0, crop: 'carrot' });
   s.act({ kind: 'plant', plot: 1, crop: 'carrot' });
+  s.act({ kind: 'water', plot: -1 });
   const now = plotReadyAt(s.life.farms[s.m.id][0], T0) + 1;
   const before = s.view(now);
   s.act({ kind: 'harvest', plot: 0 }, now);

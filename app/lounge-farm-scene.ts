@@ -36,8 +36,9 @@ import { FARM_MODEL_URLS } from './lounge-district-models';
 import { DistrictSet, PAVING, districtMat, shadowed, type DistrictUpdate } from './lounge-district-kit';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale } from './lounge-village-layout';
 import { Batches, GEO, MAT, SOIL_TOP, cropInstances, matrix, type Instance } from './lounge-village-life-3d';
-import { deadShapes, fixtureShapes, giantShapes, machineShapes } from './lounge-farm-3d';
-import { bedTiles, tileOpen } from './lounge-farm-data';
+import { deadShapes, fixtureShapes, giantShapes, machineShapes, trellisShapes } from './lounge-farm-3d';
+import { GRID_COLS, bedTiles, tileOpen } from './lounge-farm-data';
+import { YARD_SPOTS } from './lounge-farm-soil';
 import type { FarmSceneState } from './lounge-farm-view';
 import type { Crop } from './lounge-life';
 
@@ -232,8 +233,12 @@ export class FarmSet extends DistrictSet {
         if (!tileOpen(field.size, tile)) continue;
         const at = fieldTileCenter(f, tile),
           p = plots.get(tile);
-        soil.push({ geo: GEO.box, mat: p?.wet ? MAT.soilWet : MAT.soil, m: matrix(at.x, 0.14, at.z, SOIL_SIZE, 0.12, SOIL_SIZE) });
-        if (!p) continue;
+        // F2: only tilled tiles are soil; the rest of the open block is short grass (fallow).
+        if (!p?.tilled) {
+          soil.push({ geo: GEO.box, mat: MAT.fallow, m: matrix(at.x, 0.03, at.z, SOIL_SIZE, 0.04, SOIL_SIZE) });
+          continue;
+        }
+        soil.push({ geo: GEO.box, mat: p.wet ? MAT.soilWet : MAT.soil, m: matrix(at.x, 0.14, at.z, SOIL_SIZE, 0.12, SOIL_SIZE) });
         const seed = field.actor * 1.7 + tile;
         if (!p.crop && p.dead) {
           const local: Instance[] = [];
@@ -249,6 +254,24 @@ export class FarmSet extends DistrictSet {
         const place = new THREE.Matrix4().makeTranslation(at.x, SOIL_TOP, at.z);
         const local: Instance[] = [];
         fixtureShapes(local, kind);
+        for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
+      }
+      // F2: scarecrows and bee houses on the field's front-yard spots (just off its edge).
+      for (const [spot, kind] of field.yard) {
+        const s = YARD_SPOTS[spot];
+        if (!s) continue;
+        const place = new THREE.Matrix4().makeTranslation(f.x0 + (s.c + 0.5) * FIELD_TILE, 0.02, f.z0 + (s.r + 0.5) * FIELD_TILE);
+        const local: Instance[] = [];
+        fixtureShapes(local, kind);
+        for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
+      }
+      // F2: 덩굴 시렁 over three tiles in a row.
+      for (const anchor of field.trellis) {
+        if (anchor % GRID_COLS > GRID_COLS - 3 || !tileOpen(field.size, anchor + 2)) continue;
+        const a = fieldTileCenter(f, anchor + 1);
+        const place = new THREE.Matrix4().makeTranslation(a.x, SOIL_TOP, a.z).multiply(new THREE.Matrix4().makeScale(FIELD_TILE / 1.4 * 0.95, 1, 1));
+        const local: Instance[] = [];
+        trellisShapes(local);
         for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
       }
       const house = farmHouse(field.actor);

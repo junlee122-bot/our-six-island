@@ -255,6 +255,16 @@ dialog.l-modal.l-ledger > header .l-icon {
     radial-gradient(circle at 30% 35%, rgb(255 230 190 / 0.2) 0 1.5px, transparent 2px) 0 0 / 11px 9px,
     var(--wood-300);
 }
+/* 우리 농장 F2: open grass not tilled yet (E tills it). */
+.l-ledger-plot[data-state='grass'] .l-ledger-soil {
+  background:
+    radial-gradient(circle at 30% 40%, var(--pal-lime-60) 0 3px, transparent 4px) 0 0 / 14px 12px,
+    var(--pal-lime-51);
+}
+.l-ledger-plot[data-trellis] .l-ledger-soil {
+  outline: 2px dashed var(--wood-700);
+  outline-offset: -3px;
+}
 .l-ledger-plot .l-stage-art {
   position: relative;
   z-index: var(--z-base);

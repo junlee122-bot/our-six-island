@@ -66,7 +66,7 @@ import type { FishingPhase } from './lounge/Fishing';
 import type { BookTab } from './lounge/Collection';
 import { Celebration, useLifeEvents } from './lounge/use-life-events';
 import { lifeSfx } from './lounge-audio-life';
-import { farmToolAction, isSoilItem, plantsAnySeason, soilOpen } from './lounge-life-ui';
+import { farmTileAction, farmToolAction, isSoilItem, plantsAnySeason, soilOpen } from './lounge-life-ui';
 import { roomUnlocks } from './lounge-bedroom-data';
 import { itemName } from './lounge-life-plus';
 import { NODE_INFO, type NodeKind, type SkillId } from './lounge-growth-data';
@@ -1238,7 +1238,9 @@ function AccountLounge({
       return;
     }
     if (quick.kind === 'water')
-      void lifeRun({ kind: 'water', plot: -1 }, `${quick.n}칸에 물을 줬어요. 더 빨리 자라요!`).then((ok) => ok && loungeAudio.chime('water'));
+      void lifeRun({ kind: 'water', plot: -1 }, `${quick.n}칸에 물을 줬어요. 내일 아침까지 촉촉해요!`).then((ok) => ok && loungeAudio.chime('water'));
+    else if (quick.kind === 'till')
+      void lifeRun({ kind: 'till', plot: -1 }, `풀밭 ${quick.n}칸을 괭이로 갈았어요. 이제 씨앗을 심어요.`, 'pickup');
     else if (quick.kind === 'plant') {
       const crop = hotbar.tool.slice(5) as Crop;
       void lifeRun({ kind: 'plant', plot: -1, crop }, `${itemName(crop)} ${quick.n}칸을 심었어요.`).then(
@@ -1250,6 +1252,32 @@ function AccountLounge({
         `${quick.n}칸에 ${itemName(hotbar.tool)}를 줬어요.`,
         'pickup',
       );
+  };
+  /**
+   * 우리 농장 F2: E on the tile of my (bigger) field I face — the same choice
+   * the prompt showed (lounge-life-ui farmTileAction), on the freshest state;
+   * the server works the whole tool reach. Quiet but for harvests: holding E
+   * runs this tile after tile.
+   */
+  const tileAct = (i: number) => {
+    const life = room.snapshot().life;
+    if (!life) return;
+    const now = Date.now() + room.snapshot().clockOffset,
+      tool = hotbar.tool;
+    const act = farmTileAction(life.me.farm[i], life.me, tool, now, life.calendar?.season ?? 'spring', plantsAnySeason(life));
+    if (act.kind === 'harvest') {
+      const before = life.me.bag.produce;
+      void lifeRun({ kind: 'harvest', plot: i }, '', 'pop').then((ok) => {
+        if (!ok) return;
+        loungeAudio.chime('harvest');
+        const after = room.snapshot().life?.me.bag.produce;
+        const got = after ? Object.entries(after).reduce((n, [c, k]) => n + Math.max(0, k - (before[c as Crop] ?? 0)), 0) : 0;
+        if (got) notify(`${got}개를 거뒀어요. 가방에 담았어요.`);
+      });
+    } else if (act.kind === 'till') void lifeRun({ kind: 'till', plot: i }, '', 'pickup');
+    else if (act.kind === 'plant') void lifeRun({ kind: 'plant', plot: i, crop: tool.slice(5) as Crop }, '').then((ok) => ok && loungeAudio.chime('plant'));
+    else if (act.kind === 'fertilize') void lifeRun({ kind: 'fertilize', plot: i, item: tool }, '', 'pickup');
+    else if (act.kind === 'water') void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));
   };
   /** A click on one of my plots in the village (VILL-2): harvest, plant the held seed, water, fertilize, else the ledger. */
   const plotAct = (i: number) => {
@@ -1264,7 +1292,7 @@ function AccountLounge({
       void lifeRun({ kind: 'plant', plot: i, crop: tool.slice(5) as Crop }, '').then((ok) => ok && loungeAudio.chime('plant'));
     else if (isSoilItem(tool) && (life.me.inv?.[tool] ?? 0) > 0 && soilOpen(plot, tool, now))
       void lifeRun({ kind: 'fertilize', plot: i, item: tool }, `${itemName(tool)}를 뿌렸어요.`, 'pickup');
-    else if (plot.crop && plot.wateredAt === null && !plot.rained)
+    else if (plot.thirsty)
       void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));
     else setModal('farm');
   };
@@ -1526,6 +1554,7 @@ function AccountLounge({
   useLayoutEffect(() => {
     farmTouchRef.current = (t) => {
       if (t.kind === 'field') farmAct();
+      else if (t.kind === 'tile') tileAct(t.tile);
       else if (t.kind === 'friendField') waterFriend(t.actor);
       else if (t.kind === 'home') {
         if (t.actor === save.actor) enter('bedroom', farmHomePlace(t.actor) ?? undefined);
@@ -2404,6 +2433,7 @@ function AccountLounge({
                 onChat: () => setModal('chat'),
                 onBag: () => setModal('bag'),
                 axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
+                farmTool: hotbar.tool,
               })
             ) : settings.simpleGraphics ? (
               <VillageSimple

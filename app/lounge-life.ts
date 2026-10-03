@@ -9,7 +9,8 @@ import {
   nextKstMidnight,
   type LoungeLedger,
 } from './lounge-economy.ts';
-import { dayStart, hash32, rainsOn, seasonOf, type Season } from './lounge-calendar.ts';
+import { hash32, seasonOf, type Season } from './lounge-calendar.ts';
+import { GROW_WET, legacyWet, soilGrowth, soilReadyAt, soilWetBy, tilledMask } from './lounge-farm-soil.ts';
 import { cleanText, hasUnsafeText, textLength } from './text-clean.ts';
 import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
 // Cycle-safe: lounge-life-plus.ts imports this module back, so neither module
@@ -53,16 +54,14 @@ import {
   STAR_CHANCE,
   STAR_MULT,
   legacyTile,
-  tileDist,
   tileOpen,
-  tileRC,
   tileSeed,
   tileBed,
   type NewCrop,
 } from './lounge-farm-data.ts';
 import { basketExtra, smithTier } from './lounge-stage3-data.ts';
+import { CAN_FORGE_REACH, reachTiles, soilWater, trellisOver } from './lounge-farm-soil.ts';
 import {
-  applySprinklers,
   farmAction,
   farmsPublic,
   farmXView,
@@ -76,7 +75,8 @@ import {
   readFarmExt,
   settleFarm,
   shadeFor,
-  sprinklerBonus,
+  sprinklerCovering,
+  syncSprinklers,
   witherAt,
   farmSheltered,
   type FairView,
@@ -104,6 +104,7 @@ import {
   growthView,
   readGrowth,
   settleResearch,
+  toolTier,
   touchGrowth,
   type GrowthAction,
   type GrowthExt,
@@ -212,8 +213,16 @@ export type CropInfo = {
   regrow?: { ms: number; harvests: number };
   /** Grows up a stake and shades the tile behind it (텃밭 확장). */
   trellis?: true;
+  /** 덩굴 작물: planted only under a 덩굴 시렁 (우리 농장 F2, farm Lv5). */
+  vine?: true;
 };
-export const CROP_INFO: Record<Crop, CropInfo> = {
+/**
+ * The catalog below is written in the old "unwatered" times; wet soil (F2)
+ * grows a crop only while it is wet and every time is GROW_WET (0.6×) of
+ * these, so a crop watered every day comes up exactly as fast as a watered
+ * one did before (lounge-farm-soil.ts).
+ */
+const RAW_CROP_INFO: Record<Crop, CropInfo> = {
   carrot: { name: '당근', growMs: 30 * MIN, seed: 100, sell: 200, emoji: '🥕' },
   tomato: { name: '토마토', growMs: HOUR, seed: 200, sell: 480, emoji: '🍅' },
   pumpkin: { name: '호박', growMs: 3 * HOUR, seed: 500, sell: 1_800, emoji: '🎃' },
@@ -268,6 +277,16 @@ export const CROP_INFO: Record<Crop, CropInfo> = {
   },
   ...NEW_CROP_INFO,
 };
+export const CROP_INFO: Record<Crop, CropInfo> = Object.fromEntries(
+  Object.entries(RAW_CROP_INFO).map(([id, info]) => [
+    id,
+    {
+      ...info,
+      growMs: Math.round(info.growMs * GROW_WET),
+      ...(info.regrow ? { regrow: { ...info.regrow, ms: Math.round(info.regrow.ms * GROW_WET) } } : {}),
+    },
+  ]),
+) as Record<Crop, CropInfo>;
 /** Whether a crop can be planted in a season (base crops: always). */
 export const cropInSeason = (crop: Crop, season: Season) =>
   !CROP_INFO[crop].seasons || CROP_INFO[crop].seasons!.includes(season);
@@ -290,8 +309,6 @@ export const QUALITY_ODDS: Record<0 | FertLevel, [number, number]> = {
 export const DELUXE_SPEED = 10;
 export const MAX_SPEED = 40;
 export const FRUIT_SELL = 150;
-/** Watering makes the remaining growth 40% shorter (runs at 1/0.6 speed). */
-export const WATER_SPEEDUP = 0.4;
 /** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 10 × 8 grid). */
 export const PLOTS_PER_USER = 24;
 /** Field sizes: 24 tiles, expandable to 48 and 80 (see FARM_EXPAND_PRICE). */
@@ -348,10 +365,13 @@ export type ShopItem = {
 };
 /** Korean thousands format without importing UI helpers into the engine. */
 const beom = (n: number) => n.toLocaleString('en-US') + '범';
-const growText = (crop: Crop) =>
-  CROP_INFO[crop].growMs >= HOUR
-    ? CROP_INFO[crop].growMs / HOUR + '시간'
-    : CROP_INFO[crop].growMs / MIN + '분';
+/** Wet-soil grow time as 시간·분 ("1시간 48분"). */
+const growText = (crop: Crop) => {
+  const minutes = Math.round(CROP_INFO[crop].growMs / MIN),
+    h = Math.floor(minutes / 60),
+    m = minutes % 60;
+  return h ? (m ? `${h}시간 ${m}분` : `${h}시간`) : `${m}분`;
+};
 const trophy = (
   id: string,
   name: string,
@@ -376,7 +396,7 @@ export const SHOP: ShopItem[] = [
       price: CROP_INFO[crop].seed,
       kind: 'seed',
       crop,
-      description: `${growText(crop)} 뒤 수확 · ${beom(CROP_INFO[crop].sell)}에 팔려요`,
+      description: `물 준 흙에서 ${growText(crop)} 뒤 수확 · ${beom(CROP_INFO[crop].sell)}에 팔려요${CROP_INFO[crop].vine ? ' · 덩굴 시렁 아래에 심어요' : ''}`,
     }),
   ),
   ...(['pumpkin', 'strawberry'] as const).map(
@@ -490,7 +510,14 @@ export function shopLock(
 export type Plot = {
   crop: Crop | null;
   plantedAt: number;
-  wateredAt: number | null;
+  /** 우리 농장 F2: tilled soil (a crop's tile always is; it stays tilled after the harvest). */
+  t?: 1;
+  /** F2 wet soil: growth (ms) by `wetUntil` (lounge-farm-soil.ts). */
+  wetMs?: number;
+  /** F2 wet soil: when the last hand watering dries out (06:00 KST). */
+  wetUntil?: number;
+  /** F2: under a sprinkler since then. */
+  sp?: number;
   /** Fertilizer level (quality odds; deluxe also grows faster; 3 = 별빛 비료). */
   fert?: FertLevel;
   /** 텃밭 확장: 성장 촉진제 given (its speed is already in `speed`). */
@@ -507,8 +534,6 @@ export type Plot = {
   n?: number;
   /** 성장: gold-star chance +%p from the planter's hoe and farming (set at planting). */
   g?: number;
-  /** 성장: watering speed-up +%p from the waterer's can (set when watered by hand). */
-  w?: number;
 };
 export type Bag = {
   seeds: Record<Crop, number>;
@@ -574,6 +599,8 @@ export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', '
 export type RoomState = { access: RoomAccess; rev: number };
 export type LifeAction =
   | { kind: 'plant'; plot: number; crop: Crop }
+  /** 우리 농장 F2: grass → tilled soil (plot -1: the whole stage-1 field). */
+  | { kind: 'till'; plot: number }
   | { kind: 'water'; plot: number }
   | { kind: 'harvest'; plot: number }
   | { kind: 'pick'; tree: string }
@@ -617,6 +644,7 @@ export type LifeAction =
   | CompanionAction;
 export const LIFE_ACTION_KINDS = [
   'plant',
+  'till',
   'water',
   'harvest',
   'pick',
@@ -653,7 +681,7 @@ export const LIFE_REJECT = {
   occupied: '이미 작물이 자라고 있는 칸이에요.',
   noSeed: '씨앗이 없어요. 상점에서 씨앗을 사 주세요.',
   empty: '비어 있는 칸이에요.',
-  watered: '이미 물을 줬어요.',
+  watered: '이미 물을 줬어요. 내일 아침 6시까지 촉촉해요.',
   grown: '이미 다 자랐어요. 수확해 주세요.',
   notReady: '아직 다 자라지 않았어요.',
   nothingReady: '수확할 작물이 없어요.',
@@ -681,6 +709,14 @@ export const LIFE_REJECT = {
   rained: '비가 와서 이미 촉촉해요.',
   quality: '품질을 확인해 주세요.',
   fixture: '설비가 놓인 칸이에요.',
+  wholeField: '밭이 넓어져서 한 번에 다 할 수는 없어요. 바라보는 칸부터 도구 범위만큼 가꿔요.',
+  untilled: '아직 풀밭이에요. 괭이로 먼저 갈아 주세요.',
+  tilled: '이미 갈아 둔 칸이에요.',
+  noGrass: '갈 풀밭이 없어요.',
+  vineOnly: '덩굴 작물은 덩굴 시렁 아래에만 심을 수 있어요.',
+  trellisOnly: '덩굴 시렁 아래에는 덩굴 작물만 심어요.',
+  sprinkled: '스프링클러가 물을 주고 있어요.',
+  retaining: '보습 흙이라 늘 촉촉해요.',
 } as const;
 export class LifeError extends Error {
   status = 409;
@@ -701,7 +737,7 @@ const isCrop = (c: unknown): c is Crop => CROPS.includes(c as Crop);
 const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
 const cropCounts = (): Record<Crop, number> =>
   Object.fromEntries(CROPS.map((c) => [c, 0])) as Record<Crop, number>;
-const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0, wateredAt: null });
+const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0 });
 export const emptyBag = (): Bag => ({
   seeds: cropCounts(),
   produce: cropCounts(),
@@ -748,40 +784,28 @@ export function plotGrowMs(plot: Plot) {
   return Math.ceil((base * (100 - Math.min(MAX_SPEED, plot.speed ?? 0) + (plot.sl ?? 0))) / 100);
 }
 /**
- * When rain watered this plot (the start of the first rainy KST day on or
- * after planting, never before planting), or null. Only rain that has begun
- * by `now` counts; the forecast is deterministic (lounge-calendar weatherOf).
+ * What keeps this crop's soil wet at `now` (hand, rain, sprinkler, 보습 흙),
+ * or null when it is dry (lounge-farm-soil.ts soilWetBy).
  */
-export function plotRainAt(plot: Plot, now = Infinity): number | null {
-  if (!plot.crop) return null;
-  const end = Math.min(now, plot.plantedAt + plotGrowMs(plot));
-  for (let d = kstDay(plot.plantedAt); d <= kstDay(end) && d <= kstDay(plot.plantedAt) + 3; d++)
-    if (rainsOn(d)) {
-      const at = Math.max(plot.plantedAt, dayStart(d));
-      return at <= end ? at : null;
-    }
-  return null;
+export function plotWetBy(plot: Plot, now: number) {
+  return plot.crop ? soilWetBy(plot, now) : null;
 }
-/** Effective watering time: by hand or by rain, whichever came first. */
-export function plotWateredAt(plot: Plot, now = Infinity): number | null {
-  const rain = plotRainAt(plot, now),
-    hand = plot.wateredAt !== null && plot.wateredAt >= plot.plantedAt ? plot.wateredAt : null;
-  return rain === null ? hand : hand === null ? rain : Math.min(rain, hand);
+/** Wet growth (ms) the crop has at `now`, at most its grow time. */
+export function plotGrowth(plot: Plot, now: number) {
+  return plot.crop ? soilGrowth(plot, now, plotGrowMs(plot)) : 0;
 }
 /**
- * When a planted crop is ready (server clock), or null for an empty plot.
- * Rain that has started by `now` waters the plot (default: the whole forecast).
+ * When a planted crop is ripe (server clock), or null for an empty plot:
+ * when it ripened, else when it will if its soil stays wet the way it is at
+ * `now` (default: with the whole rain forecast); Infinity while it is dry
+ * and waits for water (lounge-farm-soil.ts).
  */
 export function plotReadyAt(plot: Plot, now = Infinity): number | null {
   if (!plot.crop) return null;
-  const grow = plotGrowMs(plot),
-    w = plotWateredAt(plot, now);
-  if (w === null) return plot.plantedAt + grow;
-  const done = w - plot.plantedAt;
-  if (done >= grow) return plot.plantedAt + grow;
-  // After watering, the remaining growth runs 40% shorter (+ the can's tier, 성장).
-  return w + Math.ceil((grow - done) * (1 - WATER_SPEEDUP - (plot.w ?? 0) / 100));
+  return soilReadyAt(plot, plotGrowMs(plot), now);
 }
+/** Whether a growing crop wants water now (not ripe, soil dry). */
+export const plotThirsty = (plot: Plot, now: number) => !!plot.crop && plotWetBy(plot, now) === null && now < plotReadyAt(plot, now)!;
 /** Quality this plot will give at harvest (deterministic per planting). */
 export function plotQuality(uid: string, index: number, plot: Plot): Quality {
   if (!plot.crop) return 0;
@@ -793,11 +817,9 @@ export function plotQuality(uid: string, index: number, plot: Plot): Quality {
   return roll < gold + bonus ? 2 : roll < silver + bonus ? 1 : 0;
 }
 export function plotProgress(plot: Plot, now: number) {
-  const ready = plotReadyAt(plot, now);
-  if (ready === null) return 0;
-  if (now >= ready) return 1;
-  const total = ready - plot.plantedAt;
-  return total <= 0 ? 1 : Math.max(0, (now - plot.plantedAt) / total);
+  if (!plot.crop) return 0;
+  const grow = plotGrowMs(plot);
+  return grow <= 0 ? 1 : Math.min(1, plotGrowth(plot, now) / grow);
 }
 /** 0 = empty or just planted, 1 = sprout, 2 = growing, 3 = ready. */
 export function plotStage(plot: Plot, now: number): 0 | 1 | 2 | 3 {
@@ -816,14 +838,15 @@ function fruitYield(uid: string, tree: string, now: number, seq: number) {
 }
 
 // ---------------------------------------------------------------- loading
+/** A plot saved before wet soil (F2) still has `wateredAt` (null or a time). */
+const legacyPlot = (value: unknown) => !!value && typeof value === 'object' && Object.hasOwn(value, 'wateredAt');
 function readPlot(value: unknown): Plot {
-  const p = (value ?? {}) as Partial<Plot>;
-  if (!isCrop(p.crop)) return isCrop(p.dead) ? { ...emptyPlot(), dead: p.dead } : emptyPlot();
-  const out: Plot = {
-    crop: p.crop,
-    plantedAt: time(p.plantedAt),
-    wateredAt: p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt),
-  };
+  const p = (value ?? {}) as Partial<Plot> & { wateredAt?: unknown; w?: unknown };
+  if (!isCrop(p.crop)) {
+    if (isCrop(p.dead)) return { ...emptyPlot(), t: 1, dead: p.dead };
+    return p.t === 1 ? { ...emptyPlot(), t: 1 } : emptyPlot();
+  }
+  const out: Plot = { crop: p.crop, plantedAt: time(p.plantedAt), t: 1 };
   if (p.fert === 1 || p.fert === 2 || p.fert === 3) out.fert = p.fert;
   if (p.sg === 1) out.sg = 1;
   if (p.rs === 1) out.rs = 1;
@@ -832,7 +855,15 @@ function readPlot(value: unknown): Plot {
   const regrow = CROP_INFO[p.crop].regrow;
   if (regrow && safe(p.n) && p.n > 0) out.n = Math.min(regrow.harvests - 1, p.n);
   if (safe(p.g) && p.g > 0) out.g = Math.min(40, p.g);
-  if (safe(p.w) && p.w > 0) out.w = Math.min(30, p.w);
+  if (legacyPlot(p)) {
+    // Read-time migration (F2): the old save reads as already watered.
+    const at = p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt);
+    Object.assign(out, legacyWet(out.plantedAt, at, plotGrowMs(out), safe(p.w) && p.w > 0 ? Math.min(30, p.w) : 0));
+  } else if (safe(p.wetUntil) && p.wetUntil >= 0 && safe(p.wetMs) && p.wetMs >= 0) {
+    out.wetMs = Math.min(p.wetMs, 400 * 86_400_000);
+    out.wetUntil = p.wetUntil;
+  }
+  if (safe(p.sp) && p.sp >= 0) out.sp = p.sp;
   return out;
 }
 /**
@@ -845,23 +876,33 @@ function readPlot(value: unknown): Plot {
  */
 export function readField(f: unknown): Plot[] {
   const field = Array.from({ length: GRID_TILES }, emptyPlot);
+  // Tilling (F2): the tiles a save from before it was already working stay tilled.
+  let legacy: number[] = [];
   if (Array.isArray(f) && f.length === GRID_TILES) {
     for (let i = 0; i < GRID_TILES; i++) field[i] = readPlot(f[i]);
+    if (f.some(legacyPlot)) legacy = LEGACY_BLOCK;
   } else if (Array.isArray(f)) {
     const n = (LEGACY_SIZES as readonly number[]).includes(f.length) ? f.length : LEGACY_SIZES[0];
     for (let i = 0; i < n; i++) field[legacyTile(i)!] = readPlot(f[i]);
-  } else
-    for (const [k, p] of Object.entries(obj(f)).slice(0, GRID_TILES * 2)) {
+    legacy = LEGACY_BLOCK.slice(0, n);
+  } else {
+    const entries = Object.entries(obj(f)).slice(0, GRID_TILES * 2);
+    for (const [k, p] of entries) {
       if (!/^\d{1,2}$/.test(k) || Number(k) >= GRID_TILES) continue;
       field[Number(k)] = readPlot(p);
     }
+    if (entries.some(([, p]) => legacyPlot(p))) legacy = LEGACY_BLOCK;
+  }
+  for (const i of legacy) field[i].t = 1;
   return field;
 }
-/** A field as stored: only tiles with something on them (a crop or a withered plant). */
+/** The old yard's 12 tiles on the new field (lounge-farm-data legacyTile). */
+const LEGACY_BLOCK: number[] = Array.from({ length: 12 }, (_, i) => legacyTile(i)!);
+/** A field as stored: only tiles with something on them (tilled soil, a crop or a withered plant). */
 export function packField(field: readonly Plot[]): Record<string, Plot> {
   const out: Record<string, Plot> = {};
   field.forEach((p, i) => {
-    if (p.crop || p.dead) out[String(i)] = p;
+    if (p.crop || p.dead || p.t) out[String(i)] = p;
   });
   return out;
 }
@@ -1214,46 +1255,76 @@ function lifeActionCore(
   };
   const newPlot = (crop: Crop): Plot => {
     const speed = Math.min(MAX_SPEED, plantSpeed(life, uid, now) + villageGrowSpeed(life) + mods.growSpeed);
-    return { crop, plantedAt: now, wateredAt: null, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
+    return { crop, plantedAt: now, t: 1, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
   };
-  /** 텃밭 확장: shade from a trellis in front, then sprinklers, for tiles just planted. */
   /**
-   * 오른's range upgrades (lounge-stage3-data.ts): the other tiles a single
-   * watering or planting at `i` also reaches — its row at tier 2, the 3×3
-   * around it at tier 3.
+   * 우리 농장 F2 (design-our-farm.md §3-4, §12-1): a stage-1 field (24
+   * tiles) is still worked all at once (plot -1); a bigger one tile by tile,
+   * as far as the tool reaches.
    */
-  const rangeOf = (tool: 'can' | 'hoe', i: number) => {
-    const tier = smithTier(life, uid, tool);
-    if (tier < 2) return [];
-    const out: number[] = [];
-    for (let j = 0; j < farm.length; j++) {
-      if (j === i || !tileOpen(size, j)) continue;
-      // Tier 2: the row of its bed (three tiles, like the old yard's row); tier 3: the 3×3.
-      if (tier === 2 ? tileRC(j).r === tileRC(i).r && tileBed(i) !== null && tileBed(j) === tileBed(i) : tileDist(i, j) <= 1) out.push(j);
-    }
-    return out;
+  const whole = (plot: unknown) => {
+    if (plot !== -1) return false;
+    if (size !== PLOTS_PER_USER) fail(LIFE_REJECT.wholeField);
+    return true;
   };
+  /**
+   * Tiles a tool reaches from `i` (open ones, `i` first): the hoe (tilling,
+   * planting) by 오른's range upgrade, the can by that or its forge tier,
+   * bare hands (harvest) as far as the longer of the two.
+   */
+  const reachOf = (tool: 'can' | 'hoe' | 'hand', i: number) => {
+    const hoe = smithTier(life, uid, 'hoe'),
+      can = Math.max(smithTier(life, uid, 'can'), CAN_FORGE_REACH[toolTier(life, uid, 'can')] ?? 1);
+    return reachTiles(i, tool === 'hoe' ? hoe : tool === 'can' ? can : Math.max(hoe, can)).filter((j) => tileOpen(size, j));
+  };
+  const tilled = (i: number) => !!(farm[i].t || farm[i].crop || farm[i].dead);
+  const trellises = life.farmx?.[uid]?.tr;
+  /** Why `crop` cannot go on tile `i` (덩굴 시렁: vines only under one, nothing else there), or null. */
+  const tileFor = (crop: Crop, i: number) =>
+    !!CROP_INFO[crop].vine !== (trellisOver(trellises, i) !== null) ? (CROP_INFO[crop].vine ? LIFE_REJECT.vineOnly : LIFE_REJECT.trellisOnly) : null;
+  const plantable = (crop: Crop, i: number) => tileOpen(size, i) && tilled(i) && !farm[i].crop && !fixtureAt(life, uid, i) && !tileFor(crop, i);
+  /** 텃밭 확장: shade from a trellis crop in front, then sprinklers, for tiles just planted. */
   const afterPlant = (tiles: number[]) => {
     for (const i of tiles) {
       // 재능 덩굴 손질: my trellis crops cast no shade.
       const sl = mods.noShade ? 0 : shadeFor(life, uid, i);
       if (sl) farm[i].sl = sl;
     }
-    for (const i of tiles) applySprinklers(life, uid, i, farm[i], now);
+    syncSprinklers(life, uid, now);
   };
   /** 재능 씨앗 아끼기: a planted seed is sometimes not used up. */
   const spendSeed = (crop: Crop, tile: number) => {
     if (!growthChance(life, uid, `seed:${tile}`, mods.seedKeep, now)) bag.seeds[crop] -= 1;
   };
+  const waterTiles = (tiles: number[]) => {
+    for (const i of tiles) soilWater(farm[i], now);
+    bump(life, uid, 'water', tiles.length);
+    gainXp(life, uid, 'farm', XP.water * tiles.length, now);
+  };
   switch (a.kind) {
+    case 'till': {
+      // 괭이 (F2): grass → tilled soil, as far as the hoe reaches.
+      const grass = (i: number) => tileOpen(size, i) && !tilled(i) && !fixtureAt(life, uid, i);
+      let targets: number[];
+      if (whole(a.plot)) targets = farm.flatMap((_, i) => (grass(i) ? [i] : []));
+      else {
+        const i = plotIndex(a.plot, size);
+        if (fixtureAt(life, uid, i)) fail(LIFE_REJECT.fixture);
+        targets = reachOf('hoe', i).filter(grass);
+        if (!targets.length) fail(tilled(i) ? LIFE_REJECT.tilled : LIFE_REJECT.plot);
+      }
+      if (!targets.length) fail(LIFE_REJECT.noGrass);
+      for (const i of targets) farm[i] = { ...emptyPlot(), t: 1 };
+      break;
+    }
     case 'plant': {
-      // plot -1 plants every empty plot (as many as there are seeds): one
-      // request and one friend broadcast instead of six.
+      // plot -1 (stage-1 field) plants every tilled empty tile, as many as
+      // there are seeds: one request and one friend broadcast.
       if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
       plantOk(a.crop);
-      if (a.plot === -1) {
-        const empty = farm.flatMap((p, i) => (p.crop || !tileOpen(size, i) || fixtureAt(life, uid, i) ? [] : [i]));
-        if (!empty.length) fail(LIFE_REJECT.noEmpty);
+      if (whole(a.plot)) {
+        const empty = farm.flatMap((_, i) => (plantable(a.crop, i) ? [i] : []));
+        if (!empty.length) fail(CROP_INFO[a.crop].vine ? LIFE_REJECT.vineOnly : farm.some((p, i) => tileOpen(size, i) && !tilled(i)) ? LIFE_REJECT.untilled : LIFE_REJECT.noEmpty);
         if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
         const planted: number[] = [];
         for (const i of empty) {
@@ -1268,14 +1339,16 @@ function lifeActionCore(
       const i = plotIndex(a.plot, size);
       if (farm[i].crop) fail(LIFE_REJECT.occupied);
       if (fixtureAt(life, uid, i)) fail(LIFE_REJECT.fixture);
+      if (!tilled(i)) fail(LIFE_REJECT.untilled);
+      const why = tileFor(a.crop, i);
+      if (why) fail(why);
       if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
       spendSeed(a.crop, i);
       farm[i] = newPlot(a.crop);
-      // 괭이 범위: the same seed on the empty tiles in range while seeds last.
+      // 괭이 범위: the same seed on the tilled empty tiles in reach while seeds last.
       const planted = [i];
-      for (const j of rangeOf('hoe', i)) {
-        if (bag.seeds[a.crop] < 1) break;
-        if (farm[j].crop || fixtureAt(life, uid, j)) continue;
+      for (const j of reachOf('hoe', i)) {
+        if (j === i || bag.seeds[a.crop] < 1 || !plantable(a.crop, j)) continue;
         spendSeed(a.crop, j);
         farm[j] = newPlot(a.crop);
         planted.push(j);
@@ -1284,49 +1357,31 @@ function lifeActionCore(
       break;
     }
     case 'water': {
-      if (a.plot === -1) {
-        let watered = 0;
-        for (const plot of farm)
-          if (
-            plot.crop &&
-            plot.wateredAt === null &&
-            plotRainAt(plot, now) === null &&
-            now < plotReadyAt(plot, now)!
-          ) {
-            plot.wateredAt = now;
-            if (mods.waterPts) plot.w = mods.waterPts;
-            watered++;
-          }
-        if (!watered) fail(LIFE_REJECT.nothingToWater);
-        bump(life, uid, 'water', watered);
-        gainXp(life, uid, 'farm', XP.water * watered, now);
+      // Wet soil (F2): a watered tile stays wet until the next 06:00 KST.
+      if (whole(a.plot)) {
+        const thirsty = farm.flatMap((p, i) => (tileOpen(size, i) && plotThirsty(p, now) ? [i] : []));
+        if (!thirsty.length) fail(LIFE_REJECT.nothingToWater);
+        waterTiles(thirsty);
         break;
       }
       const i = plotIndex(a.plot, size),
         plot = farm[i];
-      if (!plot.crop) fail(LIFE_REJECT.empty);
-      if (plot.wateredAt !== null) fail(LIFE_REJECT.watered);
-      if (now >= plotReadyAt(plot, now)!) fail(LIFE_REJECT.grown);
-      if (plotRainAt(plot, now) !== null) fail(LIFE_REJECT.rained);
-      plot.wateredAt = now;
-      if (mods.waterPts) plot.w = mods.waterPts;
-      // 물뿌리개 범위: the thirsty tiles in range get watered too.
-      let watered = 1;
-      for (const j of rangeOf('can', i)) {
-        const q = farm[j];
-        if (!q.crop || q.wateredAt !== null || plotRainAt(q, now) !== null || now >= plotReadyAt(q, now)!) continue;
-        q.wateredAt = now;
-        if (mods.waterPts) q.w = mods.waterPts;
-        watered++;
+      // 물뿌리개 범위: every thirsty tile in reach (the one I face first).
+      const targets = reachOf('can', i).filter((j) => plotThirsty(farm[j], now));
+      if (!targets.length) {
+        if (!plot.crop) fail(fixtureAt(life, uid, i) ? LIFE_REJECT.fixture : LIFE_REJECT.empty);
+        if (now >= plotReadyAt(plot, now)!) fail(LIFE_REJECT.grown);
+        const by = plotWetBy(plot, now);
+        fail(by === 'rain' ? LIFE_REJECT.rained : by === 'sprinkler' ? LIFE_REJECT.sprinkled : by === 'soil' ? LIFE_REJECT.retaining : LIFE_REJECT.watered);
       }
-      bump(life, uid, 'water', watered);
-      gainXp(life, uid, 'farm', XP.water * watered, now);
+      waterTiles(targets);
       break;
     }
     case 'harvest': {
-      if (a.plot !== -1) plotIndex(a.plot, size);
       // 텃밭 확장: giant beds, regrow + sprinklers (lounge-farm.ts harvestFarm).
-      harvestFarm(life, uid, a.plot as number, now, {
+      // F2: every ripe tile within reach of the one I face.
+      const tiles = whole(a.plot) ? -1 : reachOf('hand', plotIndex(a.plot, size));
+      harvestFarm(life, uid, tiles, now, {
         xpTo: uid,
         // 무드: 풍작 영감 lifts the plot one quality step.
         lift: (q) => moodHarvestQuality(life, uid, q, now),
@@ -1537,11 +1592,21 @@ function lifeActionCore(
 
 // ---------------------------------------------------------------- views
 export type PlotView = Plot & {
+  /** When it is ripe; null for an empty tile, or a crop waiting dry for water. */
   readyAt: number | null;
   stage: 0 | 1 | 2 | 3;
   ready: boolean;
-  /** Watered by rain today (no watering can needed). */
+  /** Rain keeps the soil wet right now (no watering can needed). */
   rained: boolean;
+  /**
+   * F2 wet soil: watered by hand, a sprinkler or 보습 흙 and still wet now —
+   * until when (null: not wet that way). The name stays from before wet soil.
+   */
+  wateredAt: number | null;
+  /** F2: a growing crop whose soil is dry (it waits for water). */
+  thirsty?: true;
+  /** F2: the 덩굴 시렁 over this tile (its anchor tile). */
+  trellis?: number;
   /** Quality the harvest will have (0 normal, 1 silver, 2 gold). */
   quality: Quality;
   /** Harvests left including the next one (regrowing crops), else 1. */
@@ -1588,6 +1653,8 @@ export type LifeView = {
   housesPlotsPublic: Record<string, PublicPlotView[]>;
   /** 우리 농장: every friend's field size tier (24 / 48 / 80), by uid. */
   fieldSizes?: Record<string, FarmSize>;
+  /** F2: every friend's tilled tiles, by uid (lounge-farm-soil tilledMask: 20 hex digits). */
+  fieldTilled?: Record<string, string>;
   /** 텃밭 확장: my yard's fixtures, machines, goods, shipping bin and farm news. */
   farmx?: FarmXView;
   /** 텃밭 확장: this week's 품평회 and past results (judge: 나세라). */
@@ -1649,16 +1716,18 @@ export function lifeView(
       statuses[id] = { actor: life.actors[id], text: s.text, at: s.at };
   const housesPlotsPublic: LifeView['housesPlotsPublic'] = {};
   const fieldSizes: Record<string, FarmSize> = {};
+  const fieldTilled: Record<string, string> = {};
   for (const [id, plots] of Object.entries(life.farms)) {
     fieldSizes[id] = farmSizeOf(life, id);
+    fieldTilled[id] = tilledMask(plots);
     housesPlotsPublic[id] = plots.flatMap((p, tile) => {
       if (!p.crop && !p.dead) return [];
-      const wet = !!p.crop && plotWateredAt(p, now) !== null;
+      const wet = !!p.crop && plotWetBy(p, now) !== null;
       return {
         tile,
         crop: p.crop,
         stage: plotStage(p, now),
-        needsWater: !!p.crop && !wet && now < plotReadyAt(p, now)!,
+        needsWater: plotThirsty(p, now),
         ...(p.crop ? { growth: growthStage(p, now) } : {}),
         ...(p.fert ? { fert: p.fert } : {}),
         ...(wet ? { wet } : {}),
@@ -1672,27 +1741,33 @@ export function lifeView(
   const base = {
     me: {
       farm: farm.map((p, i): PlotView => {
-        // Untilled and empty tiles: just the plot and its marks (80 tiles; keeps the view small).
-        if (!tileOpen(size, i)) return { ...p, readyAt: null, stage: 0, ready: false, rained: false, quality: 0, harvestsLeft: 1, locked: true };
+        // Tiles beyond my size tier and empty tiles: just the plot and its marks (80 tiles; keeps the view small).
+        const empty = { readyAt: null, stage: 0, ready: false, rained: false, wateredAt: null, quality: 0, harvestsLeft: 1 } as const;
+        if (!tileOpen(size, i)) return { ...p, ...empty, locked: true };
+        const trellis = trellisOver(life.farmx?.[uid]?.tr, i);
         if (!p.crop) {
           const f = fixtureAt(life, uid, i);
-          return { ...p, readyAt: null, stage: 0, ready: false, rained: false, quality: 0, harvestsLeft: 1, ...(f ? { fixture: f.k } : {}), ...(sprinklerBonus(life, uid, i) !== null ? { sprinkled: true } : {}) };
+          return { ...p, ...empty, ...(f ? { fixture: f.k } : {}), ...(sprinklerCovering(life, uid, i) ? { sprinkled: true } : {}), ...(trellis !== null ? { trellis } : {}) };
         }
-        const readyAt = plotReadyAt(p, now),
-          regrow = p.crop ? CROP_INFO[p.crop].regrow : undefined;
+        const ready = plotReadyAt(p, now)!,
+          regrow = p.crop ? CROP_INFO[p.crop].regrow : undefined,
+          wet = plotWetBy(p, now);
         return {
           ...p,
-          readyAt,
+          readyAt: Number.isFinite(ready) ? ready : null,
           stage: plotStage(p, now),
-          ready: readyAt !== null && now >= readyAt,
-          rained: plotRainAt(p, now) !== null,
+          ready: now >= ready,
+          rained: wet === 'rain',
+          wateredAt: wet === 'hand' ? p.wetUntil! : wet ? now : null,
+          ...(!wet && now < ready ? { thirsty: true as const } : {}),
+          ...(trellis !== null ? { trellis } : {}),
           quality: plotQuality(uid, i, p),
           harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
           growth: growthStage(p, now),
           // Only when set (80 tiles a view): absent = no / never.
           ...(witherAt(p, sheltered) !== null ? { witherAt: witherAt(p, sheltered) } : {}),
           ...(giants.includes(tileBed(i) ?? -1) ? { giant: true } : {}),
-          ...(sprinklerBonus(life, uid, i) !== null ? { sprinkled: true } : {}),
+          ...(sprinklerCovering(life, uid, i) ? { sprinkled: true } : {}),
           ...(fixtureAt(life, uid, i) ? { fixture: fixtureAt(life, uid, i)!.k } : {}),
         };
       }),
@@ -1718,6 +1793,7 @@ export function lifeView(
     statuses,
     housesPlotsPublic,
     fieldSizes,
+    fieldTilled,
     actors: { ...life.actors },
     rooms: Object.fromEntries(
       Object.entries(life.rooms ?? {})

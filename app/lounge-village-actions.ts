@@ -146,7 +146,7 @@ export function villageAction(
       )
     : null;
   candidates.push({
-    kind: quick ? (quick.kind === 'fertilize' ? 'tend' : quick.kind) : farmAction(life?.me.farm ?? [], now),
+    kind: quick ? (quick.kind === 'fertilize' || quick.kind === 'till' ? 'tend' : quick.kind) : farmAction(life?.me.farm ?? [], now),
     distance: farmDistance(point, actor),
     reach: FARM_REACH,
     target: { type: 'spot', spot: { kind: 'farm' } },

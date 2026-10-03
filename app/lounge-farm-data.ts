@@ -28,6 +28,8 @@ export const NEW_CROP_IDS = [
   'chrysanthemum',
   'greenonion',
   'insam',
+  // 우리 농장 F2: the third vine under the 덩굴 시렁 (with grape and pea).
+  'hop',
 ] as const;
 export type NewCrop = (typeof NEW_CROP_IDS)[number];
 /** Same shape as lounge-life CropInfo (kept structural so this stays a leaf). */
@@ -41,6 +43,8 @@ export type NewCropInfo = {
   regrow?: { ms: number; harvests: number };
   /** Grows up a stake: tall, and shades the tile right behind it (north) in its bed. */
   trellis?: true;
+  /** 덩굴 작물 (F2): planted only under a 덩굴 시렁, and nothing else goes there. */
+  vine?: true;
 };
 /*
  * Profit per hour for a full 6-tile bed, watered (growth × 0.6), seed bought,
@@ -62,6 +66,7 @@ export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
     seasons: ['spring'],
     regrow: { ms: 2.5 * HOUR, harvests: 4 },
     trellis: true,
+    vine: true,
   },
   lettuce: {
     name: '상추',
@@ -113,6 +118,7 @@ export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
     seasons: ['autumn'],
     regrow: { ms: 4 * HOUR, harvests: 4 },
     trellis: true,
+    vine: true,
   },
   radish: { name: '무', growMs: 4 * HOUR, seed: 400, sell: 1_500, emoji: '🥕', seasons: ['autumn', 'winter'] },
   eggplant: {
@@ -135,6 +141,18 @@ export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
     regrow: { ms: 3 * HOUR, harvests: 3 },
   },
   insam: { name: '인삼', growMs: 24 * HOUR, seed: 5_000, sell: 18_000, emoji: '🌿', seasons: ['autumn', 'winter'] },
+  // A modest vine: ~270범/h a tile over its four harvests (grape ~300, pea ~340).
+  hop: {
+    name: '홉',
+    growMs: 7 * HOUR,
+    seed: 1_200,
+    sell: 1_500,
+    emoji: '🍃',
+    seasons: ['summer'],
+    regrow: { ms: 3.5 * HOUR, harvests: 4 },
+    trellis: true,
+    vine: true,
+  },
 };
 /** Machine category of every crop (the 10 original ones included), village fruit and orchard fruit. */
 export const CROP_CAT: Readonly<Record<string, CropCat>> = {
@@ -164,6 +182,7 @@ export const CROP_CAT: Readonly<Record<string, CropCat>> = {
   chrysanthemum: 'flower',
   greenonion: 'veg',
   insam: 'herb',
+  hop: 'herb',
   fruit: 'fruit',
   // 과수원 fruit (bag items from 하쿠's orchard, lounge-stage3-data ORCHARD_FRUITS).
   apricot: 'fruit',
@@ -198,6 +217,7 @@ export const NEW_CROP_HALF_LIFE: Readonly<Record<NewCrop, number>> = {
   chrysanthemum: 8,
   greenonion: 8,
   insam: 2,
+  hop: 8,
 };
 
 // ---------------------------------------------------------------- quality
@@ -317,7 +337,7 @@ export const tileSeed = (tile: number) => legacyIndexOf(tile) ?? 100 + tile;
 export const bedSeed = (bed: number) => (bed === 3 ? 0 : bed === 0 ? 1 : 100 + bed);
 
 // ---------------------------------------------------------------- fixtures (tile objects)
-export type FixtureKind = 'sprinkler' | 'sprinkler-q' | 'sprinkler-s' | 'scarecrow' | 'beehouse';
+export type FixtureKind = 'sprinkler' | 'sprinkler-q' | 'sprinkler-s' | 'scarecrow' | 'beehouse' | 'trellis';
 export type MachineKind = 'jar' | 'keg' | 'dehydrator' | 'seedmaker';
 export type Recipe = { beom: number; mats: Record<string, number>; skill: 'farm' | 'forage' | 'craft'; level: number };
 export type FixtureDef = {
@@ -325,45 +345,58 @@ export type FixtureDef = {
   name: string;
   note: string;
   recipe: Recipe;
-  /** Sprinklers: tiles watered around it (Chebyshev radius, orthogonal only for radius 0.5). */
-  water?: { reach: 'plus' | 'ring' | 'wide'; bonus: number };
-  /** Scarecrow: Chebyshev radius protected from crows. */
+  /** Sprinklers: the tiles around it kept wet (plus: the four beside it; ring: 3 × 3; wide: 5 × 5). */
+  water?: { reach: 'plus' | 'ring' | 'wide' };
+  /** Scarecrow: Chebyshev radius (tiles, from its front-yard spot) protected from crows. */
   guard?: number;
+  /** Stands on a front-yard spot, not on a field tile (F2: scarecrow, bee house). */
+  yard?: true;
+  /** 덩굴 시렁: lies over three field tiles in a row; vines grow under it. */
+  span?: number;
 };
 export const FIXTURES: readonly FixtureDef[] = [
   {
     id: 'sprinkler',
     name: '스프링클러',
-    note: '상하좌우 4칸에 물을 줘요. 새로 심거나 다시 자랄 때 바로 촉촉해요.',
+    note: '밭 칸 하나에 세워요. 상하좌우 4칸이 늘 촉촉해요.',
     recipe: { beom: 3_000, mats: { copper: 4, stone: 4 }, skill: 'farm', level: 6 },
-    water: { reach: 'plus', bonus: 0 },
+    water: { reach: 'plus' },
   },
   {
     id: 'sprinkler-q',
     name: '품질 스프링클러',
-    note: '둘레 8칸에 물을 줘요. 물 효과 +5%p.',
+    note: '밭 칸 하나에 세워요. 둘레 3×3이 늘 촉촉해요.',
     recipe: { beom: 10_000, mats: { iron: 4, gold: 1 }, skill: 'farm', level: 8 },
-    water: { reach: 'ring', bonus: 5 },
+    water: { reach: 'ring' },
   },
   {
     id: 'sprinkler-s',
     name: '별빛 스프링클러',
-    note: '둘레 두 겹(5×5)에 물을 줘요. 물 효과 +10%p.',
+    note: '밭 칸 하나에 세워요. 둘레 두 겹(5×5)이 늘 촉촉해요.',
     recipe: { beom: 40_000, mats: { gold: 6, gem: 1 }, skill: 'farm', level: 10 },
-    water: { reach: 'wide', bonus: 10 },
+    water: { reach: 'wide' },
   },
   {
     id: 'scarecrow',
     name: '허수아비',
-    note: '둘레 2칸 안의 작물을 까마귀가 못 건드려요.',
+    note: '밭 가장자리 앞마당에 세워요. 반경 4칸 안의 작물을 까마귀가 못 건드려요.',
     recipe: { beom: 2_000, mats: { wood: 10 }, skill: 'farm', level: 1 },
-    guard: 2,
+    guard: 4,
+    yard: true,
   },
   {
     id: 'beehouse',
     name: '벌통',
-    note: '16시간마다 꿀 1병. 둘레 2칸에 다 핀 꽃이 있으면 꽃꿀이 돼요.',
+    note: '밭 가장자리 앞마당에 놓아요. 16시간마다 꿀 1병. 2칸 안에 다 핀 꽃이 있으면 꽃꿀이 돼요.',
     recipe: { beom: 12_000, mats: { wood: 30, copper: 2 }, skill: 'forage', level: 4 },
+    yard: true,
+  },
+  {
+    id: 'trellis',
+    name: '덩굴 시렁',
+    note: '밭 위 가로 3칸에 걸쳐요. 그 아래에는 포도·완두콩·홉 같은 덩굴 작물만 심어요.',
+    recipe: { beom: 4_000, mats: { wood: 20, copper: 2 }, skill: 'farm', level: 5 },
+    span: 3,
   },
 ];
 export const FIXTURE_BY_ID: Readonly<Record<string, FixtureDef>> = Object.fromEntries(FIXTURES.map((f) => [f.id, f]));
@@ -441,7 +474,7 @@ const JAR_NAME: Readonly<Record<string, string>> = {
   pepper: '고추장아찌',
   tomato: '토마토 절임',
 };
-const KEG_NAME: Readonly<Record<string, string>> = { insam: '인삼주', grape: '포도주', fruit: '과일주' };
+const KEG_NAME: Readonly<Record<string, string>> = { insam: '인삼주', grape: '포도주', hop: '맥주', fruit: '과일주' };
 const DRY_NAME: Readonly<Record<string, string>> = { pepper: '고춧가루', chrysanthemum: '국화차', fruit: '말린 과일' };
 /** Artisan product of `crop` in `machine` (null: the machine does not take it). */
 export function productOf(machine: MachineKind, crop: string): string | null {

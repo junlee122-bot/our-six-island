@@ -7,7 +7,8 @@ import assert from 'node:assert/strict';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
-import { QUALITY_ODDS, emptyLife, ensureLifeMember, lifeView, packField, packLife, plotQuality, readField, readLife } from '../app/lounge-life.ts';
+import { QUALITY_ODDS, emptyLife, ensureLifeMember, lifeView, packField, packLife, plotGrowMs, plotQuality, readField, readLife } from '../app/lounge-life.ts';
+import { legacyWet } from '../app/lounge-farm-soil.ts';
 import {
   FIELD_TIERS,
   GRID_TILES,
@@ -32,6 +33,16 @@ function oldYard(n = 12) {
   return Array.from({ length: n }, (_, i) =>
     i === 4 ? { ...empty(), dead: 'watermelon' } : i === 7 ? empty() : { crop: i % 2 ? 'carrot' : 'tomato', plantedAt: 1_000 + i, wateredAt: i % 3 ? null : 2_000 + i, ...(i === 5 ? { fert: 2, speed: 10 } : {}) },
   );
+}
+/**
+ * An old plot as F2 reads it: tilled, and a crop already watered (it grows on
+ * until the old rules had it ripe; lounge-farm-soil legacyWet).
+ */
+function migrated(p) {
+  const { wateredAt, ...rest } = p;
+  if (!p.crop) return { ...rest, t: 1 };
+  const plot = { ...rest, t: 1 };
+  return { ...plot, ...legacyWet(p.plantedAt, wateredAt, plotGrowMs(plot)) };
 }
 function oldWorldLife() {
   const a = uuid(),
@@ -114,17 +125,18 @@ test('old world → new: no plot, fixture or farm news lost; tiers 6/9/12 → 24
     const before = old.farms[uid],
       after = life.farms[uid];
     assert.equal(after.length, GRID_TILES);
-    before.forEach((p, i) => assert.deepEqual(after[legacyTile(i)], p, `${uid} tile ${i}`));
-    // Nothing else on the field.
+    before.forEach((p, i) => assert.deepEqual(after[legacyTile(i)], migrated(p), `${uid} tile ${i}`));
+    // Nothing else on the field: grass (F2: not tilled).
     const moved = new Set(before.map((_, i) => legacyTile(i)));
-    after.forEach((p, i) => moved.has(i) || assert.deepEqual(p, empty()));
+    after.forEach((p, i) => moved.has(i) || assert.deepEqual(p, { crop: null, plantedAt: 0 }));
   }
-  // Fixtures move with their tile; the work yard and goods do not change.
+  // Sprinklers move with their tile; scarecrows and bee houses (F2) to the
+  // free front-yard spot nearest them; the work yard and goods do not change.
   const c = ids[2];
   assert.deepEqual(life.farmx[c].fx, {
     [legacyTile(3)]: { k: 'sprinkler', at: 5 },
-    [legacyTile(11)]: { k: 'scarecrow', at: 6 },
-    [legacyTile(8)]: { k: 'beehouse', at: 7, h: 9 },
+    y0: { k: 'beehouse', at: 7, h: 9 },
+    y1: { k: 'scarecrow', at: 6 },
   });
   assert.deepEqual(life.farmx[c].mach, { 0: { k: 'jar' } });
   assert.equal(life.farmx[c].log[0].tile, legacyTile(9));
@@ -149,12 +161,12 @@ test('the conversion is pure and idempotent; packLife round-trips', () => {
   const packed = packLife(once);
   assert.equal(JSON.stringify(packLife(packed)), JSON.stringify(packed));
   assert.deepEqual(readLife(JSON.parse(JSON.stringify(packed))), once);
-  // Stored sparse: only tiles with a crop or a withered plant.
+  // Stored sparse: only tiles with tilled soil, a crop or a withered plant.
   for (const [uid, f] of Object.entries(packed.farms)) {
     assert.ok(!Array.isArray(f));
     assert.deepEqual(
       Object.keys(f).map(Number).sort((a, b) => a - b),
-      once.farms[uid].flatMap((p, i) => (p.crop || p.dead ? [i] : [])),
+      once.farms[uid].flatMap((p, i) => (p.crop || p.dead || p.t ? [i] : [])),
     );
   }
   // A full field of 80 crops stays small (design §6: about 30KB for everyone).
@@ -193,7 +205,10 @@ test('cloud: a plain read of an old world writes nothing; the first write stores
   assert.equal(wrote.response.ok, true, wrote.response.error);
   const stored = wrote.state.life;
   for (const id of ids) assert.ok(!Array.isArray(stored.farms[id]) && typeof stored.farms[id] === 'object');
-  assert.deepEqual(readLife(stored).farms, readLife(life).farms);
+  // The same fields (the first settle only starts the old sprinkler's wet soil, F2).
+  const soilless = (farms) => Object.fromEntries(Object.entries(farms).map(([uid, f]) => [uid, f.map((p) => ({ ...p, sp: undefined, wetMs: undefined, wetUntil: undefined }))]));
+  assert.deepEqual(soilless(readLife(stored).farms), soilless(readLife(life).farms));
+  assert.ok(readLife(stored).farms[ids[2]].some((p) => p.sp));
   // Fixtures, machines and news as they were (settling only stamps the crow day, `st`).
   for (const [uid, x] of Object.entries(readLife(life).farmx)) {
     const { st, ...rest } = readLife(stored).farmx[uid];
@@ -309,6 +324,6 @@ test('farm touches: my field farms, a friend\'s field waters once a day, doors g
   const state = farmSceneState(life, 3);
   assert.equal(state.fields.length, 7);
   assert.equal(state.fields.find((f) => f.actor === 1).size, 48);
-  assert.deepEqual(state.fields.find((f) => f.actor === 3).plots, [{ tile: 3, crop: 'carrot', growth: 0 }]);
+  assert.deepEqual(state.fields.find((f) => f.actor === 3).plots, [{ tile: 3, crop: 'carrot', growth: 0, tilled: true }]);
   assert.equal(state.houses[1], 4);
 });

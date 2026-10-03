@@ -37,6 +37,7 @@ import { reasonLabel } from '../app/lounge-economy-report.ts';
 import { SPAWN_POINTS } from '../app/lounge-village-spots.ts';
 import { villageCanWalk, VILLAGE_PATHS } from '../app/lounge-village-layout.ts';
 import { KARCHIVE_FORGE } from '../app/lounge-village-karchive-layout.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const HOUR = 3_600_000,
   DAY = 86_400_000;
@@ -52,6 +53,8 @@ function world(n = 3, rich = 0) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     if (rich) ledger = grantBeom(ledger, 'wallet-' + m.id, rich, 'test-' + m.id, T0, 'test');
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
   }
   const s = { members, ledger, life };
   s.act = (m, action, now) => {
@@ -392,12 +395,14 @@ test('blacksmith: closed before 대장간 재건; drop off → pickup at 06:00 K
   s.act(m, { kind: 'forgePickup' }, kst(2026, 9, 25, 6));
   assert.equal(toolTier(s.life, m.id, 'can'), 2);
   s.fails(m, { kind: 'forgePickup' }, kst(2026, 9, 25, 7), GROWTH_REJECT.forgeNone);
-  // Tier 2 can: watering takes 45% off the rest (plot.w = 5).
+  // Tier 2 can (F2 wet soil): no faster growth, a wider watering — its row (1 × 3).
   s.act(m, { kind: 'plant', plot: 0, crop: 'tomato' }, kst(2026, 9, 25, 8));
+  s.act(m, { kind: 'plant', plot: 1, crop: 'tomato' }, kst(2026, 9, 25, 8));
   s.act(m, { kind: 'water', plot: 0 }, kst(2026, 9, 25, 8));
   const plot = s.life.farms[m.id][0];
-  assert.equal(plot.w, 5);
-  assert.equal(plotReadyAt(plot) - plot.plantedAt, Math.ceil(HOUR * (1 - 0.4 - 0.05)));
+  assert.equal(plot.w, undefined);
+  assert.equal(plotReadyAt(plot, plot.plantedAt) - plot.plantedAt, Math.round(HOUR * 0.6));
+  assert.ok(s.life.farms[m.id][1].wetUntil > kst(2026, 9, 25, 8));
   // Tier 3 needs iron (the mine is a later region).
   const up = toolUpgrade(s.life, m.id, 'can', kst(2026, 9, 25, 9));
   assert.deepEqual(up.mats, { iron: 8, copper: 4 });

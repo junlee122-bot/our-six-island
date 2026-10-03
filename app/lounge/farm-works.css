@@ -422,3 +422,23 @@
     height: 27px;
   }
 }
+/* 우리 농장 F2: grass not yet tilled, the front-yard spots, the 덩굴 시렁. */
+.l-fw-tile[data-state='grass'] {
+  background: var(--pal-lime-51);
+  color: var(--ink-on-wood);
+}
+.l-fw-tile[data-state='spacer'] {
+  visibility: hidden;
+}
+.l-fw-tile[data-state='yard'],
+.l-fw-tile[data-state='yard-empty'] {
+  background: var(--paper-200);
+  color: var(--text-soft);
+}
+.l-fw-tile[data-state='yard-empty'] {
+  opacity: 0.75;
+}
+.l-fw-tile[data-trellis] {
+  outline: 2px dashed var(--ff-wood-dark);
+  outline-offset: -3px;
+}

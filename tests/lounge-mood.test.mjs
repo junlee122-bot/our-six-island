@@ -39,6 +39,7 @@ import { sellTotal, sellUnit } from '../app/lounge-life-plus.ts';
 import { cloudTransition, commandHash, CLOUD_LEASE_MS, SEEN_REFRESH_MS } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { weatherOf } from '../app/lounge-calendar.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const DAY = 24 * HOUR;
 const kst = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
@@ -55,6 +56,8 @@ function world(n = 2, rich = 0) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     if (rich) ledger = grantBeom(ledger, 'wallet-' + m.id, rich, 'test-' + m.id, T0 - DAY, 'test');
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
   }
   const s = { members, ledger, life };
   s.act = (m, action, now) => {
@@ -373,6 +376,7 @@ test('풍작 영감 through a real harvest: the whole field one step better', ()
   const [m] = s.members;
   s.life.bag[m.id].seeds.carrot = 6;
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0);
+  s.act(m, { kind: 'water', plot: -1 }, T0);
   const ready = Math.max(...lifeView(s.life, m.id, m.actor, T0).me.farm.map((p) => p.readyAt));
   const plain = lifeView(s.life, m.id, m.actor, ready).me.farm.filter((p) => p.crop).map((p) => p.quality);
   s.mood(m).i = { k: 'harvest', at: T0, until: ready + DAY, left: 12 };

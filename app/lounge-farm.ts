@@ -42,7 +42,6 @@ import {
   productOf,
   sprinklerCovers,
   tileBed,
-  tileDist,
   tileFront,
   tileOpen,
   type FarmActionKind,
@@ -64,7 +63,6 @@ import {
   isQuality,
   plotGrowMs,
   plotQuality,
-  plotRainAt,
   plotReadyAt,
   uidOf,
   type Crop,
@@ -102,6 +100,18 @@ import { gainXp, growthChance, growthMods, skillLevel } from './lounge-growth.ts
 import { SELL_AWAY, type ShopId } from './lounge-shops.ts';
 import { SKILL_INFO, XP } from './lounge-growth-data.ts';
 import { ORCHARD_FRUITS, STAGE3_ITEMS, type Stage3ItemId } from './lounge-stage3-data.ts';
+import {
+  BEE_REACH,
+  GROW_WET,
+  YARD_SPOTS,
+  fixtureDist,
+  moveYardFixtures,
+  soilCheckpoint,
+  trellisOver,
+  trellisTiles,
+  yardKey,
+  yardOf,
+} from './lounge-farm-soil.ts';
 
 const HOUR = 3_600_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -129,15 +139,17 @@ export const FARM_LOG_MAX = 8;
 const GOODS_KINDS_MAX = 64;
 
 // ---------------------------------------------------------------- types
-/** A fixture on a tile: kind, when it was placed, and (bee house) the last honey. */
+/** A fixture on a tile or a front-yard spot: kind, when it was placed, and (bee house) the last honey. */
 export type Fixture = { k: FixtureKind; at: number; h?: number };
 /** A machine in a work-yard slot; `out` while it works (a good id or 'seed-<crop>'). */
 export type MachineSlot = { k: MachineKind; out?: string; q?: Quality; n?: number; at?: number; done?: number };
 export type FarmLogKind = 'crow' | 'guard' | 'wither' | 'giant' | 'ship' | 'help' | 'fair';
 export type FarmLog = { kind: FarmLogKind; at: number; crop?: string; tile?: number; n?: number; beom?: number; actor?: number };
 export type FarmX = {
-  /** Tile → fixture. */
+  /** Tile ('0'–'79') or front-yard spot ('y0'–'y4', F2) → fixture. */
   fx?: Record<string, Fixture>;
+  /** F2 덩굴 시렁: anchor tile → when it was put up (it spans three tiles east). */
+  tr?: Record<string, number>;
   /** Work-yard slot → machine. */
   mach?: Record<string, MachineSlot>;
   /** Artisan goods: 'id' or 'id@q' → count. */
@@ -158,11 +170,12 @@ export type FairState = { week: number; entries: FairEntry[]; results?: FairResu
 export type FarmExt = { farmx?: Record<string, FarmX>; fair?: FairState };
 export type FarmAction =
   | { kind: 'farmBuild'; item: string }
-  | { kind: 'farmPlace'; item: string; tile?: number; slot?: number }
-  | { kind: 'farmPickup'; tile?: number; slot?: number }
-  | { kind: 'farmMove'; from: number; to: number; area?: 'tile' | 'slot' }
+  /** `yard`: a front-yard spot (scarecrow, bee house); `tile`: a sprinkler's tile or a 덩굴 시렁's west end. */
+  | { kind: 'farmPlace'; item: string; tile?: number; slot?: number; yard?: number }
+  | { kind: 'farmPickup'; tile?: number; slot?: number; yard?: number }
+  | { kind: 'farmMove'; from: number; to: number; area?: 'tile' | 'slot' | 'yard' }
   | { kind: 'farmLoad'; slot: number; item: string; q?: Quality }
-  | { kind: 'farmCollect'; slot?: number; tile?: number }
+  | { kind: 'farmCollect'; slot?: number; tile?: number; yard?: number }
   | { kind: 'ship'; item: string; q?: Quality; n: number }
   | { kind: 'unship'; item: string; q?: Quality; n: number }
   /** `at`: 'coop' pays 100%; from the bag (no `at`) 85%. */
@@ -177,6 +190,13 @@ export const FARM_REJECT = {
   tile: '밭 칸을 확인해 주세요.',
   tileLocked: '아직 갈지 않은 칸이에요. 밭을 넓히면 쓸 수 있어요.',
   tileBusy: '작물이나 설비가 있는 칸이에요.',
+  yard: '앞마당 자리를 확인해 주세요.',
+  yardBusy: '그 자리에는 이미 설비가 있어요.',
+  yardOnly: '허수아비와 벌통은 밭 가장자리 앞마당에 놓아요.',
+  tileOnly: '이 설비는 밭 칸 위에 놓아요.',
+  trellisRoom: '덩굴 시렁은 빈 칸 가로 3칸이 필요해요.',
+  trellisBusy: '시렁 아래에 작물이 자라고 있어요. 다 거둔 뒤에 치워 주세요.',
+  trellisMove: '덩굴 시렁은 가방에 넣었다가 다시 세워 주세요.',
   fixture: '설비가 놓인 칸이에요.',
   noFixture: '그 칸에는 설비가 없어요.',
   slot: '작업 마당 자리를 확인해 주세요.',
@@ -249,7 +269,7 @@ export function stockUnit(id: string, q: Quality, now: number, flags: readonly s
 // ---------------------------------------------------------------- reading
 function readFixture(v: unknown): Fixture | undefined {
   const x = obj(v);
-  if (typeof x.k !== 'string' || !own(FIXTURE_BY_ID, x.k)) return;
+  if (typeof x.k !== 'string' || !own(FIXTURE_BY_ID, x.k) || FIXTURE_BY_ID[x.k].span) return;
   const out: Fixture = { k: x.k as FixtureKind, at: time(x.at) };
   if (x.k === 'beehouse' && safe(x.h) && x.h > 0) out.h = x.h;
   return out;
@@ -298,13 +318,27 @@ function readLog(v: unknown, legacy = false): FarmLog | null {
 function readFarmX(v: unknown, legacy = false): FarmX | undefined {
   const x = obj(v),
     out: FarmX = {};
-  const fx: Record<string, Fixture> = {};
-  for (const [k, f] of Object.entries(obj(x.fx)).slice(0, GRID_TILES)) {
+  let fx: Record<string, Fixture> = {};
+  for (const [k, f] of Object.entries(obj(x.fx)).slice(0, GRID_TILES + YARD_SPOTS.length)) {
+    const r = readFixture(f);
+    if (!r) continue;
+    if (yardOf(k) !== null) {
+      if (FIXTURE_BY_ID[r.k].yard) fx[k] = r;
+      continue;
+    }
     const tile = /^\d{1,2}$/.test(k) ? (legacy ? legacyTile(Number(k)) : Number(k)) : null;
-    const r = tile !== null && tile < GRID_TILES ? readFixture(f) : undefined;
-    if (r) fx[String(tile)] = r;
+    if (tile !== null && tile < GRID_TILES) fx[String(tile)] = r;
   }
+  // F2: scarecrows and bee houses move off the field to the front-yard spots.
+  fx = moveYardFixtures(fx);
   if (nonEmpty(fx)) out.fx = fx;
+  const tr: Record<string, number> = {};
+  for (const [k, at] of Object.entries(obj(x.tr)).slice(0, GRID_TILES)) {
+    const tiles = /^\d{1,2}$/.test(k) ? trellisTiles(Number(k)) : null;
+    if (!tiles || legacy || tiles.some((t) => fx[String(t)] || trellisOver(tr, t) !== null)) continue;
+    tr[k] = time(at);
+  }
+  if (nonEmpty(tr)) out.tr = tr;
   const mach: Record<string, MachineSlot> = {};
   for (const [k, m] of Object.entries(obj(x.mach)).slice(0, 8)) {
     const r = /^\d$/.test(k) && Number(k) < WORK_SLOTS ? readMachine(m) : undefined;
@@ -392,7 +426,9 @@ export const isLegacyFarm = (f: unknown) => Array.isArray(f) && f.length !== GRI
 
 // ---------------------------------------------------------------- small helpers
 const farmxOf = (life: LifeState, uid: string): FarmX => ((life.farmx ??= {})[uid] ??= {});
-const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0, wateredAt: null });
+const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0 });
+/** Tilled soil with nothing on it (F2: a harvested or cleared tile stays tilled). */
+const tilledPlot = (): Plot => ({ crop: null, plantedAt: 0, t: 1 });
 const walletOf = (uid: string) => 'wallet-' + uid;
 const nameOf = (actor: number) => ACTOR_NAMES[actor] ?? '친구';
 const josaGa = (name: string) => {
@@ -403,34 +439,38 @@ function pushLog(life: LifeState, uid: string, entry: FarmLog) {
   const x = farmxOf(life, uid);
   x.log = [...(x.log ?? []), entry].slice(-FARM_LOG_MAX);
 }
-export const fixtureAt = (life: LifeState, uid: string, tile: number): Fixture | null =>
+/** The fixture on a tile (or a front-yard spot key such as 'y0'), or null. */
+export const fixtureAt = (life: LifeState, uid: string, tile: number | string): Fixture | null =>
   life.farmx?.[uid]?.fx?.[String(tile)] ?? null;
 /** Tiles of a bed (lounge-farm-data.ts: 3 × 2 blocks of the field). */
 export { bedTiles };
 /** Every bed of the field (giant crops). */
 const ALL_BEDS = Array.from({ length: FIELD_BEDS }, (_, b) => b);
-/** Best water bonus (%p) of the sprinklers covering `tile`, or null when none does. */
-export function sprinklerBonus(life: LifeState, uid: string, tile: number): number | null {
-  let best: number | null = null;
-  for (const [t, f] of Object.entries(life.farmx?.[uid]?.fx ?? {}))
-    if (sprinklerCovers(f.k, Number(t), tile)) best = Math.max(best ?? 0, FIXTURE_BY_ID[f.k].water!.bonus);
-  return best;
+/** Whether a sprinkler keeps `tile` wet. */
+export function sprinklerCovering(life: LifeState, uid: string, tile: number): boolean {
+  for (const [t, f] of Object.entries(life.farmx?.[uid]?.fx ?? {})) if (yardOf(t) === null && sprinklerCovers(f.k, Number(t), tile)) return true;
+  return false;
 }
 /**
- * Sprinklers (and 보습 흙) water a plot the moment it is planted or regrows,
- * or a sprinkler is placed: written as an ordinary `wateredAt`, so moving the
- * sprinkler later never rewrites growth that already happened.
+ * F2 wet soil: marks each crop under a sprinkler (Plot.sp, wet since then)
+ * and unmarks the ones no longer under one, writing the growth so far first
+ * so a sprinkler placed, moved or taken away never rewrites past growth.
+ * Runs when the farm settles and after anything is planted or placed.
  */
-export function applySprinklers(life: LifeState, uid: string, tile: number, plot: Plot, now: number) {
-  if (!plot.crop || plot.wateredAt !== null || plotRainAt(plot, now) !== null) return;
-  if (now >= plotReadyAt(plot, now)!) return;
-  const bonus = sprinklerBonus(life, uid, tile);
-  if (bonus !== null) {
-    plot.wateredAt = now;
-    // The owner's watering can (성장 tier) counts as much as watering by hand.
-    const best = Math.max(bonus, growthMods(life, uid).waterPts);
-    if (best) plot.w = Math.max(plot.w ?? 0, best);
-  } else if (plot.rs) plot.wateredAt = now;
+export function syncSprinklers(life: LifeState, uid: string, now: number) {
+  const farm = life.farms[uid];
+  if (!farm) return;
+  farm.forEach((p, i) => {
+    if (!p.crop) {
+      delete p.sp;
+      return;
+    }
+    const covered = sprinklerCovering(life, uid, i);
+    if (covered === (p.sp !== undefined)) return;
+    soilCheckpoint(p, now);
+    if (covered) p.sp = now;
+    else delete p.sp;
+  });
 }
 /** % slower growth for a crop planted now on `tile` (a trellis crop right in front shades it). */
 export function shadeFor(life: LifeState, uid: string, tile: number) {
@@ -490,7 +530,8 @@ function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   if (growing.length < CROW_MIN_CROPS || hash32(`crow:${uid}:${d}`) % 100 >= chance) return;
   const guard = FIXTURE_BY_ID.scarecrow.guard!,
     fx = Object.entries(life.farmx?.[uid]?.fx ?? {});
-  const guarded = (i: number) => fx.some(([t, f]) => f.k === 'scarecrow' && f.at <= at && tileDist(Number(t), i) <= guard);
+  // F2: a scarecrow guards from its front-yard spot (or a tile it was left on).
+  const guarded = (i: number) => fx.some(([t, f]) => f.k === 'scarecrow' && f.at <= at && fixtureDist(t, i) <= guard);
   const open = growing.filter((i) => !guarded(i));
   if (!open.length) {
     pushLog(life, uid, { kind: 'guard', at });
@@ -498,7 +539,7 @@ function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   }
   const i = open[hash32(`crowpick:${uid}:${d}`) % open.length];
   pushLog(life, uid, { kind: 'crow', at, crop: farm[i].crop!, tile: i });
-  farm[i] = emptyPlot();
+  farm[i] = tilledPlot();
 }
 /**
  * Brings a farm up to `now`: the 05:00 crow rolls of every day since the last
@@ -522,9 +563,10 @@ export function settleFarmPlots(life: LifeState, uid: string, now: number) {
     const w = witherAt(p, sheltered);
     if (w !== null && now >= w) {
       pushLog(life, uid, { kind: 'wither', at: w, crop: p.crop!, tile: i });
-      farm[i] = { ...emptyPlot(), dead: p.crop! };
+      farm[i] = { ...tilledPlot(), dead: p.crop! };
     }
   });
+  syncSprinklers(life, uid, now);
 }
 /** The shipping bin sells as the first sale of the day it is settled on (after its own day). */
 function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: number) {
@@ -615,33 +657,48 @@ export function projectFarms(life: LifeState, now: number): LifeState {
 
 // ---------------------------------------------------------------- harvest (self and friends)
 /**
- * Harvests plot `plot` (-1: every ripe plot) of `owner`'s farm into the
- * owner's bag: quality per plot (`lift` = 풍작 영감 for my own harvest),
- * giant beds (the whole bed at once, GIANT_YIELD each), regrowing crops
- * (sprinklers / 보습 흙 water the new cycle). XP goes to `xpTo`.
+ * Harvests plot `plot` (-1: every ripe plot; a list: the ripe ones among
+ * those tiles, F2's reach) of `owner`'s farm into the owner's bag: quality per
+ * plot (`lift` = 풍작 영감 for my own harvest), giant beds (the whole bed at
+ * once, GIANT_YIELD each), regrowing crops (the new cycle keeps today's
+ * watering). XP goes to `xpTo`.
  */
 export function harvestFarm(
   life: LifeState,
   owner: string,
-  plot: number,
+  plot: number | readonly number[],
   now: number,
   opts: { xpTo: string; lift?: (q: Quality) => Quality },
 ): number {
   const farm = life.farms[owner],
     giants = giantBeds(farm, owner, now, giantChance(life, owner));
-  let targets = plot === -1 ? farm.map((_, i) => i) : [plot];
-  const plotBed = plot === -1 ? null : tileBed(plot);
-  if (plotBed !== null && giants.includes(plotBed)) targets = bedTiles(plotBed);
+  let targets: number[],
+    single = -2;
+  if (typeof plot !== 'number') {
+    // A reach: the ripe tiles in it (the one I face first), giant beds whole.
+    const ripe = plot.filter((i) => farm[i]?.crop && now >= plotReadyAt(farm[i], now)!);
+    if (!ripe.length && plot.length) {
+      const first = farm[plot[0]];
+      if (!first?.crop) fail(fixtureAt(life, owner, plot[0]) ? FARM_REJECT.fixture : plot.length === 1 ? LIFE_REJECT.empty : LIFE_REJECT.nothingReady);
+      fail(plot.length === 1 ? LIFE_REJECT.notReady : LIFE_REJECT.nothingReady);
+    }
+    targets = [...new Set(ripe.flatMap((i) => (tileBed(i) !== null && giants.includes(tileBed(i)!) ? bedTiles(tileBed(i)!) : [i])))];
+  } else {
+    single = plot;
+    targets = plot === -1 ? farm.map((_, i) => i) : [plot];
+    const plotBed = plot === -1 ? null : tileBed(plot);
+    if (plotBed !== null && giants.includes(plotBed)) targets = bedTiles(plotBed);
+  }
   let harvested = 0;
   const giantLogged = new Set<number>();
   for (const i of targets) {
     const p = farm[i];
     if (!p.crop) {
-      if (i === plot && targets.length === 1) fail(fixtureAt(life, owner, i) ? FARM_REJECT.fixture : LIFE_REJECT.empty);
+      if (i === single && targets.length === 1) fail(fixtureAt(life, owner, i) ? FARM_REJECT.fixture : LIFE_REJECT.empty);
       continue;
     }
     if (now < plotReadyAt(p, now)!) {
-      if (i === plot && targets.length === 1) fail(LIFE_REJECT.notReady);
+      if (i === single && targets.length === 1) fail(LIFE_REJECT.notReady);
       continue;
     }
     const crop = p.crop,
@@ -655,7 +712,8 @@ export function harvestFarm(
     bump(life, owner, 'harvest', n);
     if (quality >= 2) bump(life, owner, 'gold', 1);
     discover(life, owner, crop);
-    gainXp(life, opts.xpTo, 'farm', (XP.harvestBase + Math.min(XP.harvestHourMax, plotGrowMs(p) / HOUR)) * QUALITY_MULT[quality], now);
+    // XP by the crop's old (unwatered) hours, so wet soil changes no level pace.
+    gainXp(life, opts.xpTo, 'farm', (XP.harvestBase + Math.min(XP.harvestHourMax, plotGrowMs(p) / GROW_WET / HOUR)) * QUALITY_MULT[quality], now);
     if (giant && bed !== null && !giantLogged.has(bed)) {
       giantLogged.add(bed);
       pushLog(life, owner, { kind: 'giant', at: now, crop, n: 6 * GIANT_YIELD });
@@ -666,20 +724,21 @@ export function harvestFarm(
       const again: Plot = {
         crop,
         plantedAt: now,
-        wateredAt: null,
+        t: 1,
+        // Watered today: the next cycle starts as wet until 06:00.
+        ...(p.wetUntil !== undefined && p.wetUntil > now ? { wetMs: p.wetUntil - now, wetUntil: p.wetUntil } : {}),
+        ...(p.sp !== undefined ? { sp: now } : {}),
         ...(p.fert ? { fert: p.fert } : {}),
         ...(p.speed ? { speed: p.speed } : {}),
         n: k,
         ...(p.sg ? { sg: 1 as const } : {}),
         ...(p.rs ? { rs: 1 as const } : {}),
         ...(p.sl ? { sl: p.sl } : {}),
-        // The planting's quality (hoe, 금손, Lv3) and watering-can bonuses carry over.
+        // The planting's quality (hoe, 금손, Lv3) carries over.
         ...(p.g ? { g: p.g } : {}),
-        ...(p.w ? { w: p.w } : {}),
       };
       farm[i] = again;
-      applySprinklers(life, owner, i, again, now);
-    } else farm[i] = emptyPlot();
+    } else farm[i] = tilledPlot();
     harvested++;
   }
   if (!harvested) fail(LIFE_REJECT.nothingReady);
@@ -760,17 +819,14 @@ const tileIndex = (life: LifeState, uid: string, tile: unknown) => {
   return tile as number;
 };
 const slotIndex = (slot: unknown) => (safe(slot) && slot >= 0 && slot < WORK_SLOTS ? slot : fail(FARM_REJECT.slot));
-/** Sprinkler placed or moved to `tile`: water the growing plots it now covers. */
-function sprinklerPlaced(life: LifeState, uid: string, now: number) {
-  life.farms[uid].forEach((p, i) => applySprinklers(life, uid, i, p, now));
-}
-/** Honey of the bee house on `tile` (flower honey from the best ripe flower within 2 tiles). */
-function honeyOf(life: LifeState, uid: string, tile: number, now: number) {
+const yardIndex = (spot: unknown) => (safe(spot) && spot >= 0 && spot < YARD_SPOTS.length ? spot : fail(FARM_REJECT.yard));
+/** Honey of the bee house at fixture key `key` (flower honey from the best ripe flower within BEE_REACH). */
+function honeyOf(life: LifeState, uid: string, key: string, now: number) {
   let best: Crop | null = null;
   const farm = life.farms[uid];
   for (let i = 0; i < farm.length; i++) {
     const p = farm[i];
-    if (!p.crop || CROP_CAT[p.crop] !== 'flower' || tileDist(i, tile) > 2 || now < plotReadyAt(p, now)!) continue;
+    if (!p.crop || CROP_CAT[p.crop] !== 'flower' || fixtureDist(key, i) > BEE_REACH || now < plotReadyAt(p, now)!) continue;
     if (best === null || CROP_INFO[p.crop].sell > CROP_INFO[best].sell) best = p.crop;
   }
   return best === null ? 'honey' : 'honey-' + best;
@@ -804,14 +860,37 @@ export function farmAction(
       if (typeof a.item !== 'string') fail(FARM_REJECT.place);
       // Where first, then whether the bag has one (clearer messages).
       const have = () => invCount(life, uid, a.item) >= 1 || fail(FARM_REJECT.place);
-      if (own(FIXTURE_BY_ID, a.item)) {
-        const tile = tileIndex(life, uid, a.tile);
-        if (farm[tile].crop || fixtureAt(life, uid, tile)) fail(FARM_REJECT.tileBusy);
+      const def = own(FIXTURE_BY_ID, a.item) ? FIXTURE_BY_ID[a.item] : null;
+      if (def?.yard) {
+        // F2: scarecrows and bee houses stand on the field's front-yard spots.
+        if (a.yard === undefined) fail(FARM_REJECT.yardOnly);
+        const key = yardKey(yardIndex(a.yard));
+        if (fixtureAt(life, uid, key)) fail(FARM_REJECT.yardBusy);
         have();
-        farm[tile] = emptyPlot(); // clears a withered plant
+        addInv(life, uid, a.item, -1);
+        (farmxOf(life, uid).fx ??= {})[key] = { k: a.item as FixtureKind, at: now };
+      } else if (def?.span) {
+        // 덩굴 시렁: three empty tiles in a row (anchor = the west end); they end up tilled.
+        if (a.yard !== undefined) fail(FARM_REJECT.tileOnly);
+        const tile = tileIndex(life, uid, a.tile),
+          tiles = trellisTiles(tile),
+          x = farmxOf(life, uid);
+        if (!tiles || tiles.some((t) => !tileOpen(farmSizeOf(life, uid), t) || farm[t].crop || fixtureAt(life, uid, t) || trellisOver(x.tr, t) !== null))
+          fail(FARM_REJECT.trellisRoom);
+        have();
+        addInv(life, uid, a.item, -1);
+        for (const t of tiles!) farm[t] = tilledPlot();
+        (x.tr ??= {})[String(tile)] = now;
+      } else if (def) {
+        if (a.yard !== undefined) fail(FARM_REJECT.tileOnly);
+        const tile = tileIndex(life, uid, a.tile);
+        if (farm[tile].crop || fixtureAt(life, uid, tile) || trellisOver(life.farmx?.[uid]?.tr, tile) !== null) fail(FARM_REJECT.tileBusy);
+        have();
+        // Clears a withered plant; the soil stays as tilled as it was.
+        farm[tile] = farm[tile].t ? tilledPlot() : emptyPlot();
         addInv(life, uid, a.item, -1);
         (farmxOf(life, uid).fx ??= {})[String(tile)] = { k: a.item as FixtureKind, at: now };
-        if (FIXTURE_BY_ID[a.item].water) sprinklerPlaced(life, uid, now);
+        syncSprinklers(life, uid, now);
       } else if (own(MACHINE_BY_ID, a.item)) {
         const slot = slotIndex(a.slot),
           mach = (farmxOf(life, uid).mach ??= {});
@@ -824,13 +903,23 @@ export function farmAction(
     }
     case 'farmPickup': {
       const x = farmxOf(life, uid);
-      if (a.tile !== undefined) {
-        const tile = tileIndex(life, uid, a.tile),
-          f = fixtureAt(life, uid, tile);
-        if (!f) fail(FARM_REJECT.noFixture);
-        delete x.fx![String(tile)];
+      if (a.yard !== undefined || a.tile !== undefined) {
+        const key = a.yard !== undefined ? yardKey(yardIndex(a.yard)) : String(tileIndex(life, uid, a.tile)),
+          f = fixtureAt(life, uid, key);
+        if (!f) {
+          // A 덩굴 시렁 over this tile (nothing growing under it) goes back in the bag.
+          const anchor = a.yard === undefined ? trellisOver(x.tr, Number(key)) : null;
+          if (anchor === null) fail(FARM_REJECT.noFixture);
+          if (trellisTiles(anchor!)!.some((t) => farm[t].crop)) fail(FARM_REJECT.trellisBusy);
+          delete x.tr![String(anchor)];
+          if (!nonEmpty(x.tr!)) delete x.tr;
+          addInv(life, uid, 'trellis', 1);
+          break;
+        }
+        delete x.fx![key];
         if (!nonEmpty(x.fx!)) delete x.fx;
         addInv(life, uid, f!.k, 1);
+        syncSprinklers(life, uid, now);
       } else {
         const slot = slotIndex(a.slot),
           m = x.mach?.[String(slot)];
@@ -856,17 +945,29 @@ export function farmAction(
         if (there) mach[String(from)] = there;
         else delete mach[String(from)];
         x.mach = mach;
+      } else if (a.area === 'yard') {
+        // Front-yard spots: a fixture moves to a free spot or swaps with the one there.
+        const from = yardKey(yardIndex(a.from)),
+          to = yardKey(yardIndex(a.to)),
+          f = fixtureAt(life, uid, from);
+        if (!f) fail(FARM_REJECT.noFixture);
+        if (from === to) break;
+        const there = fixtureAt(life, uid, to);
+        x.fx![to] = f!;
+        if (there) x.fx![from] = there;
+        else delete x.fx![from];
       } else {
         const from = tileIndex(life, uid, a.from),
           to = tileIndex(life, uid, a.to),
           f = fixtureAt(life, uid, from);
-        if (!f) fail(FARM_REJECT.noFixture);
+        if (!f) fail(trellisOver(x.tr, from) !== null ? FARM_REJECT.trellisMove : FARM_REJECT.noFixture);
         if (from === to) break;
-        if (farm[to].crop || fixtureAt(life, uid, to)) fail(FARM_REJECT.tileBusy);
-        farm[to] = emptyPlot();
+        if (farm[to].crop || fixtureAt(life, uid, to) || trellisOver(x.tr, to) !== null) fail(FARM_REJECT.tileBusy);
+        farm[to] = farm[to].t ? tilledPlot() : emptyPlot();
         delete x.fx![String(from)];
-        x.fx![String(to)] = f!;
-        if (FIXTURE_BY_ID[f!.k].water) sprinklerPlaced(life, uid, now);
+        // A sprinkler waters its new tiles from now on (sp marks restart).
+        x.fx![String(to)] = { ...f!, at: now };
+        syncSprinklers(life, uid, now);
       }
       break;
     }
@@ -930,12 +1031,13 @@ export function farmAction(
       const collectBee = (key: string) => {
         const f = x.fx?.[key];
         if (f?.k !== 'beehouse' || now < beeReadyAt(f)) return false;
-        const honey = honeyOf(life, uid, Number(key), now);
+        const honey = honeyOf(life, uid, key, now);
         stockAdd(life, uid, honey, 0, 1);
         f.h = now;
         return true;
       };
-      if (a.tile !== undefined) got += Number(collectBee(String(tileIndex(life, uid, a.tile))));
+      if (a.yard !== undefined) got += Number(collectBee(yardKey(yardIndex(a.yard))));
+      else if (a.tile !== undefined) got += Number(collectBee(String(tileIndex(life, uid, a.tile))));
       else if (a.slot === undefined || a.slot === -1) {
         for (const key of Object.keys(x.mach ?? {})) got += Number(collectSlot(key));
         for (const key of Object.keys(x.fx ?? {})) got += Number(collectBee(key));
@@ -1038,6 +1140,10 @@ export type FarmXView = {
   /** The whole field grid and its open (tilled) block. */
   grid: { cols: number; rows: number; size: number; open: { cols: number; rows: number } };
   fixtures: { tile: number; kind: FixtureKind; at: number; readyAt?: number }[];
+  /** F2: front-yard spots (YARD_SPOTS) holding a scarecrow or a bee house. */
+  yard: { spot: number; kind: FixtureKind; at: number; readyAt?: number }[];
+  /** F2: 덩굴 시렁 anchors (each spans its tile and the next two east). */
+  trellises: number[];
   machines: { slot: number; kind: MachineKind; out?: string; q?: Quality; n?: number; startAt?: number; doneAt?: number }[];
   goods: { id: string; q: Quality; n: number }[];
   bin: { day: number; items: { id: string; q: Quality; n: number }[]; value: number; payAt: number } | null;
@@ -1068,12 +1174,13 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
   const binItems = x.bin ? splitStock(x.bin.items) : [];
   return {
     grid: { cols: GRID_COLS, rows: GRID_ROWS, size: farmSizeOf(life, uid), open: fieldBlock(farmSizeOf(life, uid)) },
-    fixtures: Object.entries(x.fx ?? {}).map(([t, f]) => ({
-      tile: Number(t),
-      kind: f.k,
-      at: f.at,
-      ...(f.k === 'beehouse' ? { readyAt: beeReadyAt(f) } : {}),
-    })),
+    fixtures: Object.entries(x.fx ?? {}).flatMap(([t, f]) =>
+      yardOf(t) === null ? [{ tile: Number(t), kind: f.k, at: f.at, ...(f.k === 'beehouse' ? { readyAt: beeReadyAt(f) } : {}) }] : [],
+    ),
+    yard: Object.entries(x.fx ?? {}).flatMap(([t, f]) =>
+      yardOf(t) !== null ? [{ spot: yardOf(t)!, kind: f.k, at: f.at, ...(f.k === 'beehouse' ? { readyAt: beeReadyAt(f) } : {}) }] : [],
+    ),
+    trellises: Object.keys(x.tr ?? {}).map(Number),
     machines: Object.entries(x.mach ?? {}).map(([s, m]) => ({
       slot: Number(s),
       kind: m.k,
@@ -1109,15 +1216,23 @@ export function fairView(life: LifeState, uid: string, now: number): FairView {
 }
 /** Friends' yards for the 3D village: fixtures, machines and giant beds (small). */
 export function farmsPublic(life: LifeState, now: number) {
-  const out: Record<string, { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[] }> = {};
+  const out: Record<
+    string,
+    { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[]; yard?: [number, FixtureKind][]; tr?: number[] }
+  > = {};
   for (const [uid, farm] of Object.entries(life.farms)) {
     const x = life.farmx?.[uid],
       giants = giantBeds(farm, uid, now, giantChance(life, uid));
-    if (!x?.fx && !x?.mach && !giants.length) continue;
+    if (!x?.fx && !x?.mach && !x?.tr && !giants.length) continue;
+    const fx = Object.entries(x?.fx ?? {});
+    const yard = fx.flatMap(([t, f]) => (yardOf(t) !== null ? [[yardOf(t)!, f.k] as [number, FixtureKind]] : []));
     out[uid] = {
-      fx: Object.entries(x?.fx ?? {}).map(([t, f]) => [Number(t), f.k]),
+      fx: fx.flatMap(([t, f]) => (yardOf(t) === null ? [[Number(t), f.k] as [number, FixtureKind]] : [])),
       mach: Object.entries(x?.mach ?? {}).map(([s, m]) => [Number(s), m.k, !!m.out]),
       giants,
+      // F2 (only when there are any, so older clients' payloads stay the same).
+      ...(yard.length ? { yard } : {}),
+      ...(x?.tr ? { tr: Object.keys(x.tr).map(Number) } : {}),
     };
   }
   return out;

@@ -116,7 +116,7 @@ import {
   cloneLife,
   cropInSeason,
   emptyBag,
-  plotRainAt,
+  plotThirsty,
   plotReadyAt,
   sellCapLeft,
   uidOf,
@@ -146,7 +146,8 @@ import { XP, fishXp } from './lounge-growth-data.ts';
 // 텃밭 확장: leaf data, and the farm engine (functions only; see the cycle note above).
 import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId, tileOpen } from './lounge-farm-data.ts';
 import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
-import { gainXp, giftMult, growthChance, growthMods } from './lounge-growth.ts';
+import { soilCheckpoint, soilWater } from './lounge-farm-soil.ts';
+import { gainXp, giftMult, growthChance, growthMods, skillLevel } from './lounge-growth.ts';
 import { furnitureBonus, housePrice } from './lounge-venue-data.ts';
 // 무드: 입질 영감 (functions only; see the cycle note above).
 import { moodBiteBoost } from './lounge-mood.ts';
@@ -178,6 +179,11 @@ const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).re
 // ---------------------------------------------------------------- constants
 /** 우리 농장 field tiers: 24 → 48 (8 × 6) and 48 → 80 (10 × 8) tiles (design-our-farm.md §3-1). */
 export const FARM_EXPAND_PRICE: Record<48 | 80, number> = { 48: 150_000, 80: 400_000 };
+/**
+ * 농사 레벨 (design-our-farm.md §11-4): the farming level a field stage needs
+ * before it can be bought. A stage already bought stays, whatever the level.
+ */
+export const FARM_EXPAND_LEVEL: Record<48 | 80, number> = { 48: 3, 80: 6 };
 export const ROD_PRICE: Record<2 | 3, number> = { 2: 30_000, 3: 120_000 };
 /** Bite window multiplier per rod level (rod 3 also makes rare fish 1.5× likelier). */
 export const ROD_WINDOW: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.25, 3: 1.5 };
@@ -1483,8 +1489,11 @@ export function plusAction(
         return !!p.crop && !done(p) && now < plotReadyAt(p, now)!;
       };
       let targets: number[];
-      if (a.plot === -1) targets = farm.flatMap((_, i) => (open(i) ? [i] : []));
-      else {
+      if (a.plot === -1) {
+        // 우리 농장 F2: all at once only on a stage-1 field (24 tiles).
+        if (farmSizeOf(life, uid) !== FARM_SIZES[0]) fail(LIFE_REJECT.wholeField);
+        targets = farm.flatMap((_, i) => (open(i) ? [i] : []));
+      } else {
         if (!safe(a.plot) || a.plot < 0 || a.plot >= farm.length || !tileOpen(farmSizeOf(life, uid), a.plot)) fail(LIFE_REJECT.plot);
         const p = farm[a.plot];
         if (!p.crop) fail(fixtureAt(life, uid, a.plot) ? PLUS_REJECT.fixture : LIFE_REJECT.empty);
@@ -1499,11 +1508,11 @@ export function plusAction(
       for (const i of targets) {
         const p = farm[i];
         addInv(life, uid, a.item, -1);
+        // 보습 흙: wet from now on (growth so far written first, F2 wet soil).
+        if (soil === 'rs') soilCheckpoint(p, now);
         if (level) p.fert = level as 1 | 2 | 3;
         else if (soil) p[soil] = 1;
         if (speedUp) p.speed = Math.min(MAX_SPEED, (p.speed ?? 0) + speedUp);
-        // 보습 흙: the soil is wet right now (if it still needed water).
-        if (soil === 'rs' && p.wateredAt === null && plotRainAt(p, now) === null) p.wateredAt = now;
       }
       break;
     }
@@ -1511,6 +1520,8 @@ export function plusAction(
       const size = farmSizeOf(life, uid),
         to = size === 24 ? 48 : size === 48 ? 80 : 0;
       if (!to) fail(PLUS_REJECT.farmMax);
+      const need = FARM_EXPAND_LEVEL[to as 48 | 80];
+      if (skillLevel(life, uid, 'farm') < need) fail(`농사 Lv${need}부터 밭을 ${to}칸으로 넓힐 수 있어요.`);
       next = spend(next, life, uid, FARM_EXPAND_PRICE[to as 48 | 80], 'farm-' + to, now);
       // The field is always the full grid in memory; the tier opens more of it.
       x.plots = to as 48 | 80;
@@ -1524,10 +1535,7 @@ export function plusAction(
       if (x.wf?.includes(ownerActor)) fail(PLUS_REJECT.friendWatered);
       // 텃밭 확장: crows and withering on the friend's farm settle first.
       settleFarmPlots(life, owner!, now);
-      const needs = (i: number) => {
-        const p = theirs[i];
-        return !!p.crop && p.wateredAt === null && plotRainAt(p, now) === null && now < plotReadyAt(p, now)!;
-      };
+      const needs = (i: number) => plotThirsty(theirs[i], now);
       let targets: number[];
       if (a.plot === -1) targets = theirs.flatMap((_, i) => (needs(i) ? [i] : []));
       else {
@@ -1535,7 +1543,8 @@ export function plusAction(
         targets = needs(a.plot) ? [a.plot] : [];
       }
       if (!targets.length) fail(LIFE_REJECT.nothingToWater);
-      for (const i of targets) theirs[i].wateredAt = now;
+      // F2 wet soil: wet until the next 06:00 KST, like my own watering.
+      for (const i of targets) soilWater(theirs[i], now);
       (x.wf ??= []).push(ownerActor);
       bump(life, uid, 'waterFriend', 1);
       gainXp(life, uid, 'farm', XP.water * targets.length, now);

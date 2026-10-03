@@ -304,6 +304,7 @@ export function useOutdoor({
     onChat,
     onBag,
     axeTier,
+    farmTool,
   }: {
     view: CloudRoomView;
     players: LoungePlayer[];
@@ -314,6 +315,8 @@ export function useOutdoor({
     onChat: () => void;
     onBag: () => void;
     axeTier: number;
+    /** 우리 농장 F2: the hotbar item in hand (what E does on the tile I face). */
+    farmTool?: string;
   }): ReactNode => {
     if (!outdoor) return null;
     const r = view.life?.growth?.regions ?? null;
@@ -356,6 +359,7 @@ export function useOutdoor({
             bigCatch={bigCatch}
             harborBoat={harborBoat}
             life={outdoor.area === 'farm' ? view.life : null}
+            farmTool={outdoor.area === 'farm' ? farmTool : undefined}
             onMove={(x, y) => {
               if (room.snapshot().status === 'connected') void room.action({ kind: 'move', x, y });
             }}

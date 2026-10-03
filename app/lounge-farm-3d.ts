@@ -60,6 +60,7 @@ const LOOK: Record<NewCrop, { form: Form; leaf: string; fruit: string; green?: s
   chrysanthemum: { form: 'flower', leaf: '#4f7e40', fruit: '#e8bf3a' },
   greenonion: { form: 'stalk', leaf: '#4f9a3c', fruit: '#efebe0' },
   insam: { form: 'herb', leaf: '#4f8a3a', fruit: '#cf3a2c' },
+  hop: { form: 'trellis', leaf: '#5f9a45', fruit: '#c6dd84' },
 };
 const GREEN_FRUIT = '#9bc45a',
   MOUND = '#6a452b',
@@ -217,6 +218,12 @@ export function fixtureShapes(out: Instance[], kind: FixtureKind) {
     const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
     out.push({ geo: G.sphere, mat: tone('#8fd0f0'), m: matrix(Math.cos(a) * 0.1, 0.3, Math.sin(a) * 0.1, 0.015, 0.015, 0.015) });
   }
+}
+/** 덩굴 시렁 (F2): posts at both ends and the middle, a top rail and two strings, over three tiles (local x −1…+1). */
+export function trellisShapes(out: Instance[]) {
+  for (const x of [-1.4, 0, 1.4]) out.push({ geo: G.cylinder, mat: tone(STAKE), m: matrix(x, 0.42, 0, 0.025, 0.84, 0.025) });
+  out.push({ geo: G.box, mat: tone(STAKE), m: matrix(0, 0.84, 0, 2.9, 0.035, 0.035) });
+  for (const y of [0.34, 0.6]) out.push({ geo: G.box, mat: tone('#d8c39a'), m: matrix(0, y, 0, 2.8, 0.012, 0.012) });
 }
 export function machineShapes(out: Instance[], kind: MachineKind, busy: boolean, hasOnggi: boolean) {
   if (kind === 'jar') {

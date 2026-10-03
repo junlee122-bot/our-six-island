@@ -91,11 +91,16 @@ test('life actions work outside rooms and inside the village room', async () => 
   const h = harness(),
     a = member(0),
     b = member(1);
-  // Outside any room.
+  // Outside any room (우리 농장 F2: a new field is grass; the hoe first).
+  const tilled = await h.run(a, 'action', { action: { kind: 'till', plot: 0 } });
+  assert.equal(tilled.response.ok, true, tilled.response.error);
   const planted = await h.run(a, 'action', {
     action: { kind: 'plant', plot: 0, crop: 'carrot' },
   });
   assert.equal(planted.response.ok, true, planted.response.error);
+  // Wet soil: it grows while watered.
+  const watered = await h.run(a, 'action', { action: { kind: 'water', plot: 0 } });
+  assert.equal(watered.response.ok, true, watered.response.error);
   assert.equal(planted.response.life.me.farm[0].crop, 'carrot');
   // Inside a room: the lease sequence is honoured and friends are notified.
   await h.run(a, 'open');

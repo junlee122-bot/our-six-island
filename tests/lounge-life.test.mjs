@@ -22,6 +22,7 @@ import {
   plotStage,
   readLife,
 } from '../app/lounge-life.ts';
+import { rainsOn } from '../app/lounge-calendar.ts';
 import {
   INITIAL_BEOM,
   kstDay,
@@ -39,10 +40,12 @@ import {
   sellQuote,
   sellUnit,
 } from '../app/lounge-life-plus.ts';
+import { tillAll } from './farm-test-help.mjs';
 
 const uuid = () => crypto.randomUUID();
 const T0 = Date.UTC(2026, 8, 24, 3, 0, 0); // 12:00 KST
-const MIN = 60_000;
+const MIN = 60_000,
+  HOUR = 60 * MIN;
 
 function world(n = 2) {
   const members = Array.from({ length: n }, (_, actor) => ({ id: uuid(), actor }));
@@ -52,6 +55,8 @@ function world(n = 2) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     life = ensureLifeMember(life, m.id, m.actor);
   }
+  // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+  tillAll(life);
   const s = { members, ledger, life };
   s.act = (m, action, now) => {
     const r = lifeAction(s.life, s.ledger, m, action, now);
@@ -103,28 +108,34 @@ test('new members start with 3 carrot + 2 tomato seeds and a 24-tile field', () 
   assert.equal(v.actors[members[0].id], 0);
 });
 
-test('growth timing: stages, readiness and the 40% watering speed-up', () => {
+test('growth timing: wet soil grows a crop, dry soil waits, a watering lasts until 06:00 KST', () => {
   const s = world(1),
     [m] = s.members;
+  // T0 and the next days are dry (no rain to water anything).
+  assert.ok([0, 1, 2].every((d) => !rainsOn(kstDay(T0) + d)));
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, T0);
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' }, T0);
+  // Wet soil: every grow time is 0.6× the old one (the old "watered" speed).
   const grow = CROP_INFO.carrot.growMs;
-  assert.equal(grow, 30 * MIN);
-  const [p0] = s.life.farms[m.id];
-  assert.equal(plotReadyAt(p0), T0 + grow);
-  assert.equal(plotStage(p0, T0), 0);
-  assert.equal(plotStage(p0, T0 + grow / 3), 1);
-  assert.equal(plotStage(p0, T0 + (2 * grow) / 3), 2);
-  assert.equal(plotStage(p0, T0 + grow - 1), 2);
-  assert.equal(plotStage(p0, T0 + grow), 3);
-  // Watering right after planting: 30 min → 18 min.
+  assert.equal(grow, 18 * MIN);
+  const farm = () => s.life.farms[m.id];
+  // Dry: it waits (and never dies of thirst).
+  assert.equal(plotReadyAt(farm()[0], T0 + HOUR), Infinity);
+  assert.equal(plotStage(farm()[0], T0 + 10 * HOUR), 0);
+  // Watering right after planting: ripe 18 minutes later.
   s.act(m, { kind: 'water', plot: 1 }, T0);
-  assert.equal(plotReadyAt(s.life.farms[m.id][1]), T0 + 18 * MIN);
+  const p1 = farm()[1];
+  assert.equal(plotReadyAt(p1, T0), T0 + grow);
+  assert.equal(plotStage(p1, T0), 0);
+  assert.equal(plotStage(p1, T0 + grow / 3), 1);
+  assert.equal(plotStage(p1, T0 + (2 * grow) / 3), 2);
+  assert.equal(plotStage(p1, T0 + grow - 1), 2);
+  assert.equal(plotStage(p1, T0 + grow), 3);
   s.fails(m, { kind: 'water', plot: 1 }, T0 + MIN, LIFE_REJECT.watered);
-  // Watering halfway: remaining 15 min → 9 min.
+  // Watering later: it grows from then on.
   s.act(m, { kind: 'water', plot: 0 }, T0 + 15 * MIN);
-  assert.equal(plotReadyAt(s.life.farms[m.id][0]), T0 + 24 * MIN);
-  s.fails(m, { kind: 'harvest', plot: 0 }, T0 + 23 * MIN, LIFE_REJECT.notReady);
+  assert.equal(plotReadyAt(farm()[0], T0 + 15 * MIN), T0 + 33 * MIN);
+  s.fails(m, { kind: 'harvest', plot: 0 }, T0 + 32 * MIN, LIFE_REJECT.notReady);
   s.fails(m, { kind: 'water', plot: 2 }, T0, LIFE_REJECT.empty);
   s.fails(m, { kind: 'plant', plot: 0, crop: 'carrot' }, T0, LIFE_REJECT.occupied);
   s.fails(m, { kind: 'plant', plot: 6, crop: 'carrot' }, T0, LIFE_REJECT.plot);
@@ -134,6 +145,21 @@ test('growth timing: stages, readiness and the 40% watering speed-up', () => {
   assert.equal(view.me.farm[1].ready, true);
   assert.equal(view.me.farm[0].ready, false);
   assert.equal(view.housesPlotsPublic[m.id][1].stage, 3);
+  // The watering dries out at 06:00 KST (T0 is 12:00): a crop still growing then waits for water.
+  s.life.bag[m.id].seeds.pumpkin = 1;
+  s.act(m, { kind: 'plant', plot: 2, crop: 'pumpkin' }, T0 + 17 * HOUR);
+  s.act(m, { kind: 'water', plot: 2 }, T0 + 17 * HOUR);
+  const pumpkin = () => s.life.farms[m.id][2];
+  assert.equal(pumpkin().wetUntil, T0 + 18 * HOUR);
+  assert.equal(plotReadyAt(pumpkin(), T0 + 19 * HOUR), Infinity);
+  const dry = lifeView(s.life, m.id, 0, T0 + 19 * HOUR).me.farm[2];
+  assert.equal(dry.thirsty, true);
+  assert.equal(dry.readyAt, null);
+  assert.equal(dry.wateredAt, null);
+  // An hour of growth was kept; the other 48 minutes start with the next watering.
+  s.act(m, { kind: 'water', plot: 2 }, T0 + 20 * HOUR);
+  assert.equal(plotReadyAt(pumpkin(), T0 + 20 * HOUR), T0 + 20 * HOUR + CROP_INFO.pumpkin.growMs - HOUR);
+  assert.equal(pumpkin().wetUntil, T0 + 42 * HOUR);
 });
 
 test('harvest one plot or every ready plot (-1)', () => {
@@ -142,6 +168,7 @@ test('harvest one plot or every ready plot (-1)', () => {
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, T0);
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' }, T0);
   s.act(m, { kind: 'plant', plot: 2, crop: 'tomato' }, T0);
+  s.act(m, { kind: 'water', plot: -1 }, T0);
   s.fails(m, { kind: 'harvest', plot: -1 }, T0 + MIN, LIFE_REJECT.nothingReady);
   s.act(m, { kind: 'harvest', plot: 0 }, T0 + 30 * MIN);
   assert.equal(s.life.bag[m.id].produce.carrot, 1);
@@ -170,9 +197,11 @@ test('plant and water every plot in one request (plot -1)', () => {
   s.fails(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0 + 2, LIFE_REJECT.noSeed);
   s.fails(m, { kind: 'plant', plot: -1, crop: 'gold' }, T0 + 2, LIFE_REJECT.invalid);
   s.act(m, { kind: 'water', plot: 1 }, T0 + 2);
+  const wet1 = s.life.farms[m.id][1].wetMs;
   s.act(m, { kind: 'water', plot: -1 }, T0 + 3);
-  assert.ok(s.life.farms[m.id].every((p) => !p.crop || p.wateredAt !== null));
-  assert.equal(s.life.farms[m.id][1].wateredAt, T0 + 2); // not re-watered
+  // Every crop is wet until the next 06:00 KST (T0 is 12:00 KST).
+  assert.ok(s.life.farms[m.id].every((p) => !p.crop || p.wetUntil === T0 + 18 * HOUR));
+  assert.equal(s.life.farms[m.id][1].wetMs, wet1); // not re-watered
   s.fails(m, { kind: 'water', plot: -1 }, T0 + 4, LIFE_REJECT.nothingToWater);
   // The rest of the 24 tilled tiles (and nothing past them).
   s.life.bag[m.id].seeds.pumpkin = 30;
@@ -444,9 +473,10 @@ test('readLife: old worlds load empty, hostile data is bounded and cleaned', () 
   };
   const life = readLife(hostile);
   assert.equal(Object.keys(life.farms).length, 1);
-  // An old 2-plot array reads as a 6-plot yard moved onto the field (old tile 0 → 20).
+  // An old 2-plot array reads as a 6-plot yard moved onto the field (old tile 0 → 20),
+  // tilled and already watered (F2): wet until the old rules had it ripe.
   assert.equal(life.farms[id].length, 80);
-  assert.deepEqual(life.farms[id][20], { crop: 'carrot', plantedAt: 5, wateredAt: 0 });
+  assert.deepEqual(life.farms[id][20], { crop: 'carrot', plantedAt: 5, t: 1, wetMs: CROP_INFO.carrot.growMs, wetUntil: 5 + CROP_INFO.carrot.growMs });
   assert.equal(life.farms[id][21].crop, null);
   assert.equal(life.bag[id].seeds.carrot, 0);
   assert.equal(life.bag[id].seeds.tomato, 0);
@@ -464,7 +494,8 @@ test('readLife: old worlds load empty, hostile data is bounded and cleaned', () 
 
 test('crop and shop catalog match the contract', () => {
   assert.deepEqual(
-    CROPS.map((c) => [c, CROP_INFO[c].growMs / MIN, CROP_INFO[c].seed, CROP_INFO[c].sell]),
+    // Grow minutes in the old (unwatered) catalog; wet soil grows each in 0.6× of it (F2).
+    CROPS.map((c) => [c, Math.round(CROP_INFO[c].growMs / MIN / 0.6), CROP_INFO[c].seed, CROP_INFO[c].sell]),
     [
       ['carrot', 30, 100, 200],
       ['tomato', 60, 200, 480],
@@ -493,6 +524,8 @@ test('crop and shop catalog match the contract', () => {
       ['chrysanthemum', 360, 600, 1700],
       ['greenonion', 180, 600, 900],
       ['insam', 1440, 5000, 18000],
+      // 우리 농장 F2: the third vine under the 덩굴 시렁.
+      ['hop', 420, 1200, 1500],
     ],
   );
   // Longer base crops earn more per hour (watered, all six plots), so the

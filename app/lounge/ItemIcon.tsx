@@ -234,6 +234,23 @@ const CROP_ART: Record<string, ReactNode> = {
       <circle cx="30" cy="5" r="2.2" fill="#d8352a" />
     </>
   ),
+  // 홉 (F2 덩굴 작물): pale green cones on a twining bine.
+  hop: (
+    <>
+      <path d="M8 8 C16 10 20 16 24 20 C28 24 32 30 40 34" stroke="#4f8a3a" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <path d="M14 10 C10 4 6 6 6 10 M32 26 C38 22 42 26 40 30" stroke="#5f9a45" strokeWidth="2" fill="#7fb85a" strokeLinecap="round" />
+      {[
+        [18, 24],
+        [27, 33],
+        [34, 40],
+      ].map(([x, y]) => (
+        <g key={x} transform={`translate(${x} ${y})`}>
+          <path d="M0 -8 C6 -6 6 4 0 8 C-6 4 -6 -6 0 -8Z" fill="#c6dd84" stroke="#7a9a44" strokeWidth="1.2" />
+          <path d="M-4 -2 C0 0 4 -2 4 -2 M-4 3 C0 5 4 3 4 3" stroke="#9ab85a" strokeWidth="1" fill="none" />
+        </g>
+      ))}
+    </>
+  ),
   fruit: (
     <>
       <path d="M24 16 C14 8 6 18 8 28 C10 38 18 44 24 40 C30 44 38 38 40 28 C42 18 34 8 24 16Z" fill="#d9412e" stroke="#9e2a1c" strokeWidth="1.5" />
@@ -1110,6 +1127,17 @@ const TOOL_ART: Record<string, ReactNode> = {
       <path d="M21 12 h1 M26 12 h1 M21 15 q3 2 6 0" stroke={INK} strokeWidth="1.3" strokeLinecap="round" fill="none" />
     </>
   ),
+  // 덩굴 시렁 (F2): two posts, a top rail, strings and a vine.
+  trellis: (
+    <>
+      <path d="M8 44 V10 M24 44 V10 M40 44 V10" stroke="#8a5a34" strokeWidth="3" strokeLinecap="round" />
+      <path d="M5 11 H43" stroke="#6a4424" strokeWidth="3.4" strokeLinecap="round" />
+      <path d="M8 22 H40 M8 32 H40" stroke="#d8c39a" strokeWidth="1.4" />
+      <path d="M14 44 C10 36 18 30 14 22 C12 16 18 12 18 12 M32 44 C36 36 28 30 32 22" stroke="#5f9a45" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+      <circle cx="15" cy="27" r="2.6" fill="#7fb85a" />
+      <circle cx="33" cy="30" r="2.6" fill="#7fb85a" />
+    </>
+  ),
   beehouse: (
     <>
       <path d="M10 18 L24 8 L38 18Z" fill="#9a6a3a" stroke="#6a4424" strokeWidth="1.3" strokeLinejoin="round" />
@@ -1324,6 +1352,7 @@ const CROP_LEAF: Record<string, { leaf: Leaf; tone: string; dark: string; hint: 
   chrysanthemum: { leaf: 'bush', tone: '#5f8e48', dark: '#3f6a34', hint: '#f0c83c' },
   greenonion: { leaf: 'stalk', tone: '#4f9a3c', dark: '#3a7a2e', hint: '#f4f1e6' },
   insam: { leaf: 'feather', tone: '#5f9e48', dark: '#3f7a34', hint: '#d8352a' },
+  hop: { leaf: 'vine', tone: '#5f9a45', dark: '#3f7a34', hint: '#c6dd84' },
 };
 function leaves(kind: Leaf, tone: string, dark: string, grow: number) {
   const s = 0.55 + grow * 0.45;

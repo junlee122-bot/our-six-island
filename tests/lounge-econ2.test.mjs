@@ -53,6 +53,7 @@ import { catalogEntry } from '../app/lounge-bedroom-catalog.ts';
 import { FURNITURE_ART } from '../app/lounge-furniture-art.ts';
 import { freshLounge } from '../app/lounge-look.ts';
 import { newBlackjack } from '../app/lounge-blackjack.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const uuid = () => crypto.randomUUID();
 const DAY = 86_400_000;
@@ -77,6 +78,8 @@ function world(n = 2) {
   for (const m of members) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
   }
   const s = { members, ledger, life };
   s.act = (m, action, now) => {

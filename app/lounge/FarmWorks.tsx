@@ -1,7 +1,8 @@
 'use client';
 // 텃밭 확장 pages of the farm window (design-farming-upgrade.md §8):
-//   밭 배치 — the yard's 3 × 4 tile grid: place / move / pick up sprinklers,
-//             scarecrows and bee houses; build them; the farm's news.
+//   밭 배치 — the 10 × 8 field and its front-yard spots: place / move / pick
+//             up sprinklers and 덩굴 시렁 (tiles), scarecrows and bee houses
+//             (front-yard spots, F2); build them; the farm's news.
 //   가공    — the four work-yard slots (옹기, 숙성통, 건조기, 씨앗 제조기) and the
 //             저장고 of artisan goods (sell or ship).
 //   출하·품평회 — the shipping bin (sold after KST midnight) and the weekly fair
@@ -22,12 +23,12 @@ import {
   sprinklerCovers,
   GRID_COLS,
   GRID_ROWS,
-  tileDist,
   tileOpen,
   tileRC,
   type Recipe,
 } from '../lounge-farm-data';
 import { fairScore, stockName, stockUnit, type FarmLog } from '../lounge-farm';
+import { BEE_REACH, YARD_SPOTS } from '../lounge-farm-soil';
 import { cropSplit, QUALITY_LABEL } from '../lounge-life-ui';
 import { SKILL_INFO } from '../lounge-growth-data';
 import { ORCHARD_FRUITS } from '../lounge-stage3-data';
@@ -150,99 +151,144 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
 }
 
 // ---------------------------------------------------------------- 밭 배치
+/** A place on the layout page: a field tile (≥ 0) or a front-yard spot (−1 − spot). */
+const spotSel = (spot: number) => -1 - spot;
+const spotName = (spot: number) => `${YARD_SPOTS[spot].r < 0 ? '집 쪽' : '길 쪽'} 앞마당 ${spot + 1}`;
 function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; busy: boolean; balance: number; now: number }) {
   const farm = life.me.farm,
     size = life.me.plots,
     open = (tile: number) => tileOpen(size, tile),
-    fx = life.farmx?.fixtures ?? [];
+    fx = life.farmx?.fixtures ?? [],
+    yard = life.farmx?.yard ?? [];
   const fixtureOf = (tile: number) => fx.find((f) => f.tile === tile) ?? null;
+  const yardAt = (spot: number) => yard.find((f) => f.spot === spot) ?? null;
   const [sel, setSel] = useState<number>(() => {
     const first = fx[0]?.tile ?? farm.findIndex((p, i) => !p.crop && tileOpen(life.me.plots, i));
     return first >= 0 ? first : 0;
   });
   const [moving, setMoving] = useState<number | null>(null);
-  const chosen = fixtureOf(sel);
+  const isYard = sel < 0,
+    spot = -1 - sel;
+  const chosen = isYard ? yardAt(spot) : fixtureOf(sel);
+  /** Tiles the chosen fixture reaches (sprinklers: water; scarecrow 4; bee house 2). */
   const reach = (tile: number) => {
-    if (!chosen || tile === sel) return false;
+    if (!chosen) return false;
     const def = FIXTURE_BY_ID[chosen.kind];
-    if (def.water) return sprinklerCovers(chosen.kind, sel, tile);
-    return tileDist(sel, tile) <= 2;
+    if (!isYard) return tile !== sel && !!def.water && sprinklerCovers(chosen.kind, sel, tile);
+    const s = YARD_SPOTS[spot],
+      { r, c } = tileRC(tile),
+      d = Math.max(Math.abs(r - s.r), Math.abs(c - s.c));
+    return d <= (chosen.kind === 'scarecrow' ? (def.guard ?? 0) : BEE_REACH);
   };
-  const placeable = FIXTURES.filter((f) => (life.me.inv[f.id] ?? 0) > 0);
-  const click = (tile: number) => {
+  const owned = FIXTURES.filter((f) => (life.me.inv[f.id] ?? 0) > 0);
+  const placeable = owned.filter((f) => !!f.yard === isYard);
+  const click = (target: number) => {
     if (moving !== null) {
-      if (tile !== moving && open(tile) && !farm[tile].crop && !fixtureOf(tile)) {
-        void run({ kind: 'farmMove', from: moving, to: tile }, `${FIXTURE_BY_ID[fixtureOf(moving)!.kind].name}를 ${tileName(tile)}으로 옮겼어요.`).then((ok) => ok && setSel(tile));
-      }
+      const from = moving;
       setMoving(null);
+      if (from < 0 && target < 0 && target !== from) {
+        void run({ kind: 'farmMove', from: -1 - from, to: -1 - target, area: 'yard' }, `${spotName(-1 - target)}으로 옮겼어요.`).then((ok) => ok && setSel(target));
+      } else if (from >= 0 && target >= 0 && target !== from && open(target) && !farm[target].crop && !fixtureOf(target) && farm[target].trellis === undefined) {
+        void run({ kind: 'farmMove', from, to: target }, `${FIXTURE_BY_ID[fixtureOf(from)!.kind].name}를 ${tileName(target)}으로 옮겼어요.`).then((ok) => ok && setSel(target));
+      }
       return;
     }
-    setSel(tile);
+    setSel(target);
   };
-  const plot = farm[sel],
+  const plot = isYard ? undefined : farm[sel],
     log = life.farmx?.log ?? [];
+  const where = isYard ? spotName(spot) : tileName(sel);
+  const yardRow = (side: number) => {
+    const cells = Array.from({ length: GRID_COLS }, (_, c) => YARD_SPOTS.findIndex((s) => s.r === side && s.c === c));
+    return (
+      <div className="l-fw-row" role="row" data-part="yard">
+        {cells.map((k, c) => {
+          if (k < 0) return <span key={c} className="l-fw-tile" data-state="spacer" aria-hidden="true" />;
+          const f = yardAt(k);
+          return (
+            <button
+              key={c}
+              type="button"
+              role="gridcell"
+              className="l-fw-tile"
+              data-state={f ? 'yard' : 'yard-empty'}
+              data-target={(moving !== null && moving < 0 && moving !== spotSel(k)) || undefined}
+              aria-selected={sel === spotSel(k)}
+              aria-label={`${spotName(k)} · ${f ? FIXTURE_BY_ID[f.kind].name : '빈 자리'}`}
+              onClick={() => click(spotSel(k))}
+              data-testid={`farm-yard-${k}`}
+            >
+              {f ? <ItemIcon id={f.kind} size={26} /> : <Glyph name="pin" size={12} />}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
   return (
     <div className="l-fw-cols">
       <section className="l-fw-yard" aria-label="밭 격자">
         <p className="l-fw-hint">
-          <Glyph name="grid" size={16} /> 칸을 골라 설비를 놓거나 옮겨요. 설비가 있는 칸에는 심을 수 없어요.
+          <Glyph name="grid" size={16} /> 스프링클러와 덩굴 시렁은 밭 칸에, 허수아비와 벌통은 밭 가장자리 앞마당 자리에 놓아요.
         </p>
-        <div className="l-fw-grid" role="grid" aria-label={`밭 ${size}칸`}>
-          {[GRID_ROWS_VIEW].map((bedRows, b) => (
-            <div key={b} className="l-fw-bed l-fw-field" data-bed="field">
-              <span className="l-fw-bedname">집 앞 밭 (위쪽이 집)</span>
-              {bedRows.map((row, r) => (
-            <div key={r} className="l-fw-row" role="row">
-              {row.map((tile) => {
-                const p = farm[tile],
-                  f = fixtureOf(tile);
-                if (!p || !open(tile))
-                  return (
-                    <span key={tile} className="l-fw-tile" data-state="fallow" aria-hidden="true">
-                      <Glyph name="lock" size={10} />
-                    </span>
-                  );
-                const state = f ? 'fixture' : p.crop ? 'crop' : p.dead ? 'dead' : 'empty';
-                return (
-                  <button
-                    key={tile}
-                    type="button"
-                    role="gridcell"
-                    className="l-fw-tile"
-                    data-state={state}
-                    data-reach={reach(tile) || undefined}
-                    data-target={(moving !== null && state !== 'fixture' && state !== 'crop') || undefined}
-                    data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
-                    aria-selected={sel === tile}
-                    aria-label={`${tileName(tile)} · ${f ? FIXTURE_BY_ID[f.kind].name : p.crop ? itemName(p.crop) : p.dead ? '시든 작물' : '빈 흙'}`}
-                    onClick={() => click(tile)}
-                    data-testid={`farm-tile-${tile}`}
-                  >
-                    {f ? <ItemIcon id={f.kind} size={26} /> : p.crop ? <CropStageArt crop={p.crop} stage={p.stage} size={28} /> : null}
-                    {p.sprinkled && !f ? (
-                      <span className="l-fw-mark" data-kind="water">
-                        <Glyph name="drop" size={12} />
+        <div className="l-fw-grid" role="grid" aria-label={`밭 ${size}칸과 앞마당`}>
+          <div className="l-fw-bed l-fw-field" data-bed="field">
+            <span className="l-fw-bedname">집 앞 밭 (위쪽이 집)</span>
+            {yardRow(-1)}
+            {GRID_ROWS_VIEW.map((row, r) => (
+              <div key={r} className="l-fw-row" role="row">
+                {row.map((tile) => {
+                  const p = farm[tile],
+                    f = fixtureOf(tile);
+                  if (!p || !open(tile))
+                    return (
+                      <span key={tile} className="l-fw-tile" data-state="fallow" aria-hidden="true">
+                        <Glyph name="lock" size={10} />
                       </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-              ))}
-            </div>
-          ))}
+                    );
+                  const grass = !p.t && !p.crop && !p.dead && !f;
+                  const state = f ? 'fixture' : p.crop ? 'crop' : p.dead ? 'dead' : grass ? 'grass' : 'empty';
+                  return (
+                    <button
+                      key={tile}
+                      type="button"
+                      role="gridcell"
+                      className="l-fw-tile"
+                      data-state={state}
+                      data-reach={reach(tile) || undefined}
+                      data-target={(moving !== null && moving >= 0 && state !== 'fixture' && state !== 'crop' && p.trellis === undefined) || undefined}
+                      data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
+                      data-trellis={p.trellis !== undefined || undefined}
+                      aria-selected={sel === tile}
+                      aria-label={`${tileName(tile)} · ${f ? FIXTURE_BY_ID[f.kind].name : p.crop ? itemName(p.crop) : p.dead ? '시든 작물' : grass ? '풀밭' : '빈 흙'}${p.trellis !== undefined ? ' · 덩굴 시렁' : ''}`}
+                      onClick={() => click(tile)}
+                      data-testid={`farm-tile-${tile}`}
+                    >
+                      {f ? <ItemIcon id={f.kind} size={26} /> : p.crop ? <CropStageArt crop={p.crop} stage={p.stage} size={28} /> : null}
+                      {p.sprinkled && !f ? (
+                        <span className="l-fw-mark" data-kind="water">
+                          <Glyph name="drop" size={12} />
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+            {yardRow(GRID_ROWS)}
+          </div>
         </div>
         {moving !== null && (
           <p className="l-fw-moving" role="status">
-            <Glyph name="arrow" size={14} /> 옮길 빈 칸을 누르세요 · 같은 칸을 다시 누르면 그만둬요
+            <Glyph name="arrow" size={14} /> {moving < 0 ? '옮길 앞마당 자리를 누르세요' : '옮길 빈 칸을 누르세요'} · 같은 곳을 다시 누르면 그만둬요
           </p>
         )}
       </section>
 
       <section className="l-fw-side" aria-label="고른 칸">
-        <Panel variant="note" title={tileName(sel)} className="l-fw-card">
-          {!open(sel) ? (
-            <EmptyState glyph="lock" title="아직 풀밭이에요" hint="텃밭 장부에서 밭을 넓히면 이 칸을 써요." />
+        <Panel variant="note" title={where} className="l-fw-card">
+          {!isYard && !open(sel) ? (
+            <EmptyState glyph="lock" title="아직 밭 밖이에요" hint="텃밭 장부에서 밭을 넓히면 이 칸을 써요." />
           ) : chosen ? (
             <div className="l-fw-detail">
               <p className="l-fw-title">
@@ -254,14 +300,38 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
               )}
               <div className="l-fw-actions">
                 {chosen.kind === 'beehouse' && chosen.readyAt !== undefined && now >= chosen.readyAt && (
-                  <GameButton variant="primary" size="s" glyph="basket" disabled={busy} onClick={() => void run({ kind: 'farmCollect', tile: sel }, '꿀 한 병을 저장고에 담았어요.', 'harvest')}>
+                  <GameButton
+                    variant="primary"
+                    size="s"
+                    glyph="basket"
+                    disabled={busy}
+                    onClick={() => void run(isYard ? { kind: 'farmCollect', yard: spot } : { kind: 'farmCollect', tile: sel }, '꿀 한 병을 저장고에 담았어요.', 'harvest')}
+                  >
                     꿀 거두기
                   </GameButton>
                 )}
                 <GameButton size="s" glyph="arrow" disabled={busy} onClick={() => setMoving(sel)} data-testid="farm-move">
                   옮기기
                 </GameButton>
-                <GameButton size="s" variant="ghost" glyph="bag" disabled={busy} onClick={() => void run({ kind: 'farmPickup', tile: sel }, `${FIXTURE_BY_ID[chosen.kind].name}를 가방에 넣었어요.`)}>
+                <GameButton
+                  size="s"
+                  variant="ghost"
+                  glyph="bag"
+                  disabled={busy}
+                  onClick={() => void run(isYard ? { kind: 'farmPickup', yard: spot } : { kind: 'farmPickup', tile: sel }, `${FIXTURE_BY_ID[chosen.kind].name}를 가방에 넣었어요.`)}
+                >
+                  가방에 넣기
+                </GameButton>
+              </div>
+            </div>
+          ) : plot?.trellis !== undefined && !plot?.crop ? (
+            <div className="l-fw-detail">
+              <p className="l-fw-title">
+                <ItemIcon id="trellis" size={36} /> <b>덩굴 시렁</b>
+              </p>
+              <p>{FIXTURE_BY_ID.trellis.note}</p>
+              <div className="l-fw-actions">
+                <GameButton size="s" variant="ghost" glyph="bag" disabled={busy} onClick={() => void run({ kind: 'farmPickup', tile: sel }, '덩굴 시렁을 가방에 넣었어요.')}>
                   가방에 넣기
                 </GameButton>
               </div>
@@ -277,14 +347,23 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
             </div>
           ) : placeable.length ? (
             <div className="l-fw-detail">
-              <p>{plot?.dead ? `시든 ${itemName(plot.dead)}를 치우고 ` : ''}여기에 놓을 설비를 고르세요.</p>
+              <p>
+                {plot?.dead ? `시든 ${itemName(plot.dead)}를 치우고 ` : ''}여기에 놓을 설비를 고르세요.
+                {!isYard && placeable.some((f) => f.span) ? ' 덩굴 시렁은 이 칸부터 오른쪽으로 3칸에 걸쳐요.' : ''}
+              </p>
               <ul className="l-fw-pick">
                 {placeable.map((f) => (
                   <li key={f.id}>
                     <GameButton
                       size="s"
                       disabled={busy}
-                      onClick={() => void run({ kind: 'farmPlace', item: f.id, tile: sel }, `${tileName(sel)}에 ${josa(f.name, '을/를')} 놓았어요.`, 'plant')}
+                      onClick={() =>
+                        void run(
+                          isYard ? { kind: 'farmPlace', item: f.id, yard: spot } : { kind: 'farmPlace', item: f.id, tile: sel },
+                          `${where}에 ${josa(f.name, '을/를')} 놓았어요.`,
+                          'plant',
+                        )
+                      }
                       data-testid={`farm-place-${f.id}`}
                     >
                       <ItemIcon id={f.id} size={24} /> {f.name} <small>{life.me.inv[f.id]}</small>
@@ -294,7 +373,11 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
               </ul>
             </div>
           ) : (
-            <EmptyState glyph="hammer" title="가방에 설비가 없어요" hint="아래 목록에서 만들면 여기 놓을 수 있어요." />
+            <EmptyState
+              glyph="hammer"
+              title={isYard ? '앞마당에 놓을 설비가 없어요' : '밭 칸에 놓을 설비가 없어요'}
+              hint={isYard ? '허수아비나 벌통을 만들면 여기 놓을 수 있어요.' : '스프링클러나 덩굴 시렁을 만들면 여기 놓을 수 있어요.'}
+            />
           )}
         </Panel>
         <Panel variant="note" title="설비 만들기" className="l-fw-card">

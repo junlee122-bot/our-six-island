@@ -77,8 +77,6 @@ export type GrowthMods = {
   growSpeed: number;
   /** Gold-star chance +%p for crops planted now. */
   goldPts: number;
-  /** Watering speed-up +%p (on top of WATER_SPEEDUP 40%). */
-  waterPts: number;
   /** Seasonal crops may be planted in any season on my own farm. */
   offSeason: boolean;
   /** Crop sale price bonus (share, 0.1 = +10%). */
@@ -221,7 +219,6 @@ export type GrowthMods = {
 export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   growSpeed: 0,
   goldPts: 0,
-  waterPts: 0,
   offSeason: false,
   cropSell: 0,
   starSell: 0,
@@ -302,10 +299,10 @@ export type LevelPerk = { level: number; text: string; mods?: ModPatch; soon?: s
 export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   farm: [
     { level: 2, text: '퇴비 · 비료를 만들면 1개 더', mods: { fertExtra: 1 } },
-    { level: 3, text: '괭이 손맛 · 금별 확률 +2%p', mods: { goldPts: 2 } },
+    { level: 3, text: '괭이 손맛 · 금별 확률 +2%p · 밭 2단계(8×6) 열림', mods: { goldPts: 2 } },
     { level: 4, text: '옹기 레시피' },
-    { level: 5, text: '전문가 선택 ①' },
-    { level: 6, text: '기본 스프링클러' },
+    { level: 5, text: '전문가 선택 ① · 덩굴 시렁 (포도·완두콩·홉)' },
+    { level: 6, text: '기본 스프링클러 · 밭 3단계(10×8) 열림' },
     { level: 7, text: '고급 비료 재료 −1', mods: { deluxeCheap: true } },
     { level: 8, text: '품질 스프링클러' },
     { level: 9, text: '씨앗 제조기' },
@@ -482,7 +479,8 @@ export const TOOL_INFO: Record<ToolId, { name: string; skill: SkillId; tiers: Re
   can: {
     name: '물뿌리개',
     skill: 'farm',
-    tiers: { 1: '물 주면 남은 시간 40% 단축', 2: '45% 단축', 3: '50% 단축', 4: '55% 단축', 5: '60% 단축' },
+    // Reach of a watering (lounge-farm-soil CAN_FORGE_REACH; 오른's range upgrade can give more).
+    tiers: { 1: '한 칸씩 물 주기', 2: '한 번에 가로 3칸(1×3)', 3: '가로 3칸(1×3)', 4: '한 번에 둘레 3×3', 5: '둘레 3×3' },
   },
   hoe: {
     name: '괭이',
@@ -515,7 +513,6 @@ export const TOOL_COST: Record<2 | 3 | 4 | 5, { beom: number; mats: Readonly<Rec
 /** The rod keeps its fishing-shop path for tiers 2–3 (lounge-life-plus ROD_PRICE); 4–5 open with 여섯섬 항로. */
 export const ROD_FORGE_FROM = 4;
 /** Tool effects the engines read. */
-export const WATER_TIER_PTS = [0, 0, 5, 10, 15, 20] as const;
 export const HOE_TIER_PTS = [0, 0, 3, 6, 9, 12] as const;
 export const AXE_TIER_WOOD = [0, 0, 1, 2, 2, 2] as const;
 export const AXE_TIER_MULT = [1, 1, 1, 1, 1.5, 2] as const;

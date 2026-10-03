@@ -110,9 +110,16 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
     const meC = { ...me, connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' };
     await run(meC, 'wallet');
     await run(meC, 'open', { code: 'BEMTADUVLY' });
+    // 우리 농장 F2: a new field is grass (the hoe first), and crops grow while watered.
+    await run(meC, 'action', { action: { kind: 'till', plot: -1 } });
     for (let i = 0; i < 4; i++) await run(meC, 'action', { action: { kind: 'plant', plot: i, crop: 'carrot' } });
-    // Fields are stored sparse ({ tile: plot }, lounge-life.ts packLife).
-    for (const p of Object.values(world.life.farms[uid])) if (p?.crop) p.plantedAt -= 3 * 3600e3;
+    await run(meC, 'action', { action: { kind: 'water', plot: -1 } });
+    // Fields are stored sparse ({ tile: plot }, lounge-life.ts packLife); the watering moves back with the planting.
+    for (const p of Object.values(world.life.farms[uid]))
+      if (p?.crop) {
+        p.plantedAt -= 3 * 3600e3;
+        if (p.wetUntil) p.wetUntil -= 3 * 3600e3;
+      }
     await run(meC, 'leave');
     await run(bots[0], 'action', { action: { kind: 'mail', to: 3, text: '어제 고스톱 재밌었어! 오늘 저녁에 또 하자', sticker: 'heart' } });
     await run(bots[0], 'action', { action: { kind: 'guestbook', owner: 3, text: '방 너무 예쁘다~ 다녀감!' } });

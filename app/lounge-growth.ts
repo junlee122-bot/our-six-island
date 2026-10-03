@@ -55,7 +55,6 @@ import {
   TOOLS,
   TOOL_COST,
   TOOL_INFO,
-  WATER_TIER_PTS,
   XP,
   GATES,
   MINE_XP,
@@ -503,12 +502,11 @@ export function growthMods(life: LifeState, uid: string): GrowthMods {
   }
   for (const id of u?.prof ?? []) if (own(PROF_BY_ID, id)) addMods(out, PROF_BY_ID[id].mods);
   for (const id of u?.tal ?? []) if (own(TALENT_BY_ID, id) && !TALENT_BY_ID[id].lock) addMods(out, TALENT_BY_ID[id].mods ?? {});
-  const can = toolTier(life, uid, 'can'),
-    hoe = toolTier(life, uid, 'hoe'),
+  // The can's tiers give reach now (lounge-farm-soil CAN_FORGE_REACH), no mod.
+  const hoe = toolTier(life, uid, 'hoe'),
     axe = toolTier(life, uid, 'axe'),
     pick = toolTier(life, uid, 'pickaxe');
   addMods(out, {
-    waterPts: WATER_TIER_PTS[can],
     goldPts: HOE_TIER_PTS[hoe],
     woodBonus: AXE_TIER_WOOD[axe],
     woodMult: AXE_TIER_MULT[axe],

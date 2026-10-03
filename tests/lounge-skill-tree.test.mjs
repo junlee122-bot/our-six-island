@@ -12,6 +12,7 @@ import { DEMAND_SOFT_STEP, demandHalfLife, demandMult, demandSoft, sellBonus } f
 import { mineStops } from '../app/lounge-mine.ts';
 import { ANIMALS, HAY_PRICE } from '../app/lounge-stage3-data.ts';
 import { GAME_HOUR_MS, gameDayStart, gameDay } from '../app/lounge-calendar.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const DAY = 86_400_000;
 const kst = (y, m, d, h = 12, min = 0) => Date.UTC(y, m - 1, d, h - 9, min);
@@ -26,6 +27,8 @@ function world(n = 1, rich = 0) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     if (rich) ledger = grantBeom(ledger, 'wallet-' + m.id, rich, 'test-' + m.id, T0, 'test');
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
   }
   life.flags = ['district-ranch', 'district-foothill'];
   const s = { members, ledger, life };
@@ -315,7 +318,7 @@ test('talent effects reach the systems: demand, sale bonus, gifts, crows, seeds'
   pick(s, m, 'farm', 'farm-t1');
   let kept = 0, total = 0;
   for (let i = 0; i < 60; i++) {
-    s.life.farms[m.id] = s.life.farms[m.id].map(() => ({ crop: null, plantedAt: 0, wateredAt: null }));
+    s.life.farms[m.id] = s.life.farms[m.id].map(() => ({ crop: null, plantedAt: 0, t: 1 }));
     // 우리 농장: a field has more open tiles than seeds handed out, so count seeds kept per planting.
     s.life.bag[m.id].seeds.carrot = 200;
     s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, T0 + i * 1000);

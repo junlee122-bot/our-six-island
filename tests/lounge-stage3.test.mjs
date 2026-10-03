@@ -51,6 +51,7 @@ import {
 } from '../app/lounge-stage3-data.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const HOUR = 3_600_000;
 const T0 = Date.UTC(2026, 9, 1, 3); // 12:00 KST, Thursday 2026-10-01
@@ -70,6 +71,8 @@ function world(n = 1, flags = OPEN) {
   let ledger = newLoungeLedger();
   for (const m of members) {
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
     ledger = registerWallet(ledger, `wallet-${m.id}`);
   }
   life.flags = [...flags];
@@ -400,16 +403,16 @@ test('range upgrades: tiers 2–3 like the rod; the can and the hoe reach their 
   assert.equal(s.inv(m, 'copper'), 10);
   assert.equal(wallet(s, m), 100_000 - SMITH_COST.can[2].beom);
   assert.equal(s.view(m).stage3.smith.can, 2);
-  // Watering one tile waters its bed's row (three tiles).
+  // Watering one tile waters its row: the tiles left and right of it (1 × 3).
   const bag = s.life.bag[m.id];
   bag.seeds.carrot = 12;
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' });
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' });
   s.act(m, { kind: 'plant', plot: 2, crop: 'carrot' });
   s.act(m, { kind: 'plant', plot: 3, crop: 'carrot' });
-  s.act(m, { kind: 'water', plot: 0 });
+  s.act(m, { kind: 'water', plot: 1 });
   const farm = () => s.life.farms[m.id];
-  assert.deepEqual([0, 1, 2, 3].map((i) => farm()[i].wateredAt !== null), [true, true, true, false]);
+  assert.deepEqual([0, 1, 2, 3].map((i) => !!farm()[i].wetUntil), [true, true, true, false]);
   // The hoe at tier 2 plants the row too.
   s.act(m, { kind: 'smithUpgrade', tool: 'hoe' });
   const seeds = s.life.bag[m.id].seeds.carrot;

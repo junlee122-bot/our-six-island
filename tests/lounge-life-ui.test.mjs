@@ -11,6 +11,7 @@ import {
   MUSEUM_IDS,
   ambienceOf,
   cropSplit,
+  farmTileAction,
   farmToolAction,
   fishPhase,
   furnitureLeft,
@@ -107,7 +108,15 @@ test('hotbar: 9 slots, tolerant storage, no duplicates, counts', () => {
 test('farm quick action follows the selected tool and the season', () => {
   const now = 1_000_000;
   const plot = (crop, extra = {}) => ({ crop, plantedAt: now - 1000, wateredAt: null, readyAt: crop ? now + 60_000 : null, rained: false, quality: 0, harvestsLeft: 1, stage: 1, ready: false, ...extra });
-  const farm = [plot(null), plot(null), plot('carrot'), plot('carrot', { wateredAt: now }), plot('tomato', { rained: true }), plot('tomato', { fert: 1 })];
+  // F2: empty tiles are tilled (t), growing dry crops are thirsty.
+  const farm = [
+    plot(null, { t: 1 }),
+    plot(null, { t: 1 }),
+    plot('carrot', { t: 1, thirsty: true }),
+    plot('carrot', { t: 1, wateredAt: now }),
+    plot('tomato', { t: 1, rained: true }),
+    plot('tomato', { t: 1, fert: 1, thirsty: true }),
+  ];
   const m = me({ farm, bag: { seeds: crops({ carrot: 1, watermelon: 5 }), produce: crops(), fruit: 0 }, inv: { fertilizer: 9, 'fertilizer-deluxe': 1 } });
   assert.deepEqual(farmToolAction(farm, m, 'seed-carrot', now, 'autumn'), { kind: 'plant', label: '당근 심기 (1)', n: 1 });
   // Watermelon is a summer crop: nothing in autumn unless the greenhouse is restored.
@@ -118,6 +127,33 @@ test('farm quick action follows the selected tool and the season', () => {
   assert.equal(farmToolAction(farm, m, 'fertilizer', now, 'autumn').n, 3);
   assert.equal(farmToolAction(farm, m, 'fertilizer-deluxe', now, 'autumn').n, 1);
   assert.equal(farmToolAction(farm, m, 'rod', now, 'autumn'), null);
+  // F2: with no tilled tile left, a seed in hand tills the grass first (stage-1 field).
+  const grass = [plot(null), plot(null), plot('carrot', { t: 1 })];
+  assert.deepEqual(farmToolAction(grass, me({ farm: grass, bag: { seeds: crops({ carrot: 1 }), produce: crops(), fruit: 0 } }), 'seed-carrot', now, 'autumn'), {
+    kind: 'till',
+    label: '풀밭 갈기 (2)',
+    n: 2,
+  });
+});
+
+test('F2: E on the tile I face — ripe → harvest, grass → till, tilled + seed → plant, dry → water', () => {
+  const now = 1_000_000;
+  const plot = (crop, extra = {}) => ({ crop, plantedAt: now - 1000, readyAt: null, wateredAt: null, rained: false, quality: 0, harvestsLeft: 1, stage: 1, ready: false, ...extra });
+  const m = me({ bag: { seeds: crops({ carrot: 2, grape: 1 }), produce: crops(), fruit: 0 }, inv: { fertilizer: 1 } });
+  const act = (p, tool = '') => farmTileAction(p, m, tool, now, 'autumn');
+  assert.equal(act(plot('carrot', { t: 1, ready: true })).kind, 'harvest');
+  assert.equal(act(plot(null)).kind, 'till');
+  assert.equal(act(plot(null, { t: 1 }), 'seed-carrot').kind, 'plant');
+  assert.equal(act(plot(null, { t: 1 })).kind, null);
+  assert.equal(act(plot('carrot', { t: 1, thirsty: true })).kind, 'water');
+  assert.equal(act(plot('carrot', { t: 1, thirsty: true }), 'fertilizer').kind, 'fertilize');
+  assert.equal(act(plot('carrot', { t: 1, wateredAt: now })).kind, null);
+  assert.equal(act(plot(null, { locked: true })).kind, null);
+  assert.equal(act(plot(null, { fixture: 'sprinkler' })).kind, null);
+  // 덩굴 시렁: vines only under one, nothing else there.
+  assert.equal(act(plot(null, { t: 1 }), 'seed-grape').kind, null);
+  assert.equal(act(plot(null, { t: 1, trellis: 3 }), 'seed-grape').kind, 'plant');
+  assert.equal(act(plot(null, { t: 1, trellis: 3 }), 'seed-carrot').kind, null);
 });
 
 test('fishing phases on the server clock', () => {

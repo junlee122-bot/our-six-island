@@ -482,7 +482,7 @@ export function moodBeforeLifeAction(life: LifeState, member: { id: string; acto
   return next;
 }
 
-const OUTDOOR = new Set(['plant', 'water', 'harvest', 'pick', 'cast', 'reel', 'forage', 'catch', 'chop', 'smash', 'waterFriend', 'anglerCast', 'anglerLand', 'crabCollect']);
+const OUTDOOR = new Set(['plant', 'till', 'water', 'harvest', 'pick', 'cast', 'reel', 'forage', 'catch', 'chop', 'smash', 'waterFriend', 'anglerCast', 'anglerLand', 'crabCollect']);
 type Stats = Record<string, number | undefined>;
 const statsOf = (life: LifeState, uid: string): Stats => (life.ext?.[uid]?.stats ?? {}) as Stats;
 const grew = (a: Stats, b: Stats, k: string) => (b[k] ?? 0) - (a[k] ?? 0);

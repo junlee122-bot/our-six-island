@@ -309,11 +309,16 @@ export const soilOpen = (p: Plot, item: SoilItem, now: number) =>
   !!p.crop &&
   (p.readyAt ?? Infinity) > now &&
   (item === 'speed-gro' ? !p.sg : item === 'retaining' ? !p.rs : (p.fert ?? 0) < SOIL_LEVEL[item]);
+/** F2: grass on my field (open, never tilled, nothing on it). */
+export const isGrass = (p: Plot) => !p.locked && !p.t && !p.crop && !p.dead && !p.fixture;
+/** F2: whether `crop` goes on this tile (vines only under a 덩굴 시렁, nothing else there). */
+export const seedFits = (p: Plot, crop: Crop) => !!CROP_INFO[crop]?.vine === (p.trellis !== undefined);
 /**
- * What E does at my farm with the selected hotbar item: plant that seed in
- * every empty plot, give a soil item to every growing plot it helps, water
- * every thirsty plot. `anySeason`: off-season seeds too (plantsAnySeason).
- * null = no quick action (the farm panel opens instead).
+ * What E does at my farm with the selected hotbar item, on a stage-1 field
+ * (24 tiles, worked all at once): plant that seed in every tilled empty
+ * plot (grass first gets tilled), give a soil item to every growing plot it
+ * helps, water every thirsty plot. `anySeason`: off-season seeds too
+ * (plantsAnySeason). null = no quick action (the farm panel opens instead).
  */
 export function farmToolAction(
   farm: readonly Plot[],
@@ -322,24 +327,57 @@ export function farmToolAction(
   now: number,
   season: Season,
   anySeason = false,
-): { kind: 'plant' | 'fertilize' | 'water'; label: string; n: number } | null {
+): { kind: 'plant' | 'fertilize' | 'water' | 'till'; label: string; n: number } | null {
   if (!me || !tool) return null;
-  const growing = (p: Plot) => !!p.crop && (p.readyAt ?? Infinity) > now;
   if (tool === 'can') {
-    const n = farm.filter((p) => growing(p) && p.wateredAt === null && !p.rained).length;
+    const n = farm.filter((p) => p.thirsty).length;
     return n ? { kind: 'water', label: `물 주기 (${n})`, n } : null;
   }
   if (tool.startsWith('seed-')) {
     const crop = tool.slice(5) as Crop;
     if (!CROP_INFO[crop] || !(anySeason || cropInSeason(crop, season))) return null;
-    const n = Math.min(farm.filter((p) => !p.crop && !p.locked && !p.fixture).length, me.bag.seeds[crop] ?? 0);
-    return n ? { kind: 'plant', label: `${CROP_INFO[crop].name} 심기 (${n})`, n } : null;
+    const n = Math.min(farm.filter((p) => !p.crop && !p.locked && !p.fixture && !isGrass(p) && seedFits(p, crop)).length, me.bag.seeds[crop] ?? 0);
+    if (n) return { kind: 'plant', label: `${CROP_INFO[crop].name} 심기 (${n})`, n };
+    const grass = farm.filter(isGrass).length;
+    return grass && (me.bag.seeds[crop] ?? 0) > 0 && !CROP_INFO[crop].vine ? { kind: 'till', label: `풀밭 갈기 (${grass})`, n: grass } : null;
   }
   if (isSoilItem(tool)) {
     const n = Math.min(farm.filter((p) => soilOpen(p, tool, now)).length, me.inv?.[tool] ?? 0);
     return n ? { kind: 'fertilize', label: `${itemName(tool)} 주기 (${n})`, n } : null;
   }
   return null;
+}
+/** What E does on one tile of a bigger field (F2: the tile I face, as far as the tool reaches). */
+export type TileAct = { kind: 'harvest' | 'till' | 'plant' | 'fertilize' | 'water'; label: string };
+/**
+ * F2 (design-our-farm.md §3-4): E on the tile I face. Ripe → harvest (every
+ * ripe tile in reach), grass → till, tilled and empty + a seed in hand →
+ * plant, growing + a soil item that helps → give it, dry → water. null: E
+ * does nothing here (`why` says what the tile is).
+ */
+export function farmTileAction(
+  p: Plot | undefined,
+  me: LifeMe | null | undefined,
+  tool: string,
+  now: number,
+  season: Season,
+  anySeason = false,
+): TileAct | { kind: null; label: string } {
+  if (!p || !me || p.locked) return { kind: null, label: '아직 풀밭이에요 · 밭을 넓히면 써요' };
+  if (p.fixture) return { kind: null, label: '설비가 있는 칸' };
+  if (p.crop && p.ready) return { kind: 'harvest', label: `${CROP_INFO[p.crop].name} 거두기` };
+  if (isGrass(p)) return { kind: 'till', label: '괭이로 갈기' };
+  if (!p.crop) {
+    if (tool.startsWith('seed-')) {
+      const crop = tool.slice(5) as Crop;
+      if (CROP_INFO[crop] && (me.bag.seeds[crop] ?? 0) > 0 && (anySeason || cropInSeason(crop, season)))
+        return seedFits(p, crop) ? { kind: 'plant', label: `${CROP_INFO[crop].name} 심기` } : { kind: null, label: CROP_INFO[crop].vine ? '덩굴 작물은 시렁 아래에 심어요' : '시렁 아래에는 덩굴 작물만' };
+    }
+    return { kind: null, label: p.trellis !== undefined ? '덩굴 시렁 아래 빈 칸 · 씨앗을 들어요' : '갈아 둔 빈 칸 · 씨앗을 들어요' };
+  }
+  if (isSoilItem(tool) && (me.inv?.[tool] ?? 0) > 0 && soilOpen(p, tool, now)) return { kind: 'fertilize', label: `${itemName(tool)} 주기` };
+  if (p.thirsty) return { kind: 'water', label: '물 주기' };
+  return { kind: null, label: `${CROP_INFO[p.crop].name} · 자라는 중` };
 }
 
 /* ------------------------------------------------------------ fishing */

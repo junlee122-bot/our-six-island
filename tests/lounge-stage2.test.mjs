@@ -36,6 +36,7 @@ import { NEW_CROP_IDS } from '../app/lounge-farm-data.ts';
 const isNewCrop = (c) => NEW_CROP_IDS.includes(c);
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
+import { tillField } from './farm-test-help.mjs';
 
 const DAY = 86_400_000,
   HOUR = 3_600_000;
@@ -57,6 +58,8 @@ function world(n = 1, flags = []) {
   let ledger = newLoungeLedger();
   for (const m of members) {
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
     ledger = registerWallet(ledger, `wallet-${m.id}`);
   }
   life.flags = [...flags];

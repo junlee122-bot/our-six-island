@@ -77,6 +77,9 @@ import { defaultBedroom, lockedRoomItems } from '../app/lounge-bedroom-data.ts';
 import { ROOMS_RESET_ID } from '../app/lounge-rooms-reset.ts';
 import { freshLounge } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
+import { tillField } from './farm-test-help.mjs';
+import { nextWetEnd } from '../app/lounge-farm-soil.ts';
+import { LEVEL_XP } from '../app/lounge-growth-data.ts';
 
 const uuid = () => crypto.randomUUID();
 const MIN = 60_000,
@@ -99,6 +102,8 @@ function world(n = 2) {
   for (const m of members) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     life = ensureLifeMember(life, m.id, m.actor);
+    // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+    tillField(life, m.id);
   }
   const s = { members, ledger, life };
   s.act = (m, action, now) => {
@@ -249,9 +254,13 @@ test('farming: rain waters crops, watering is refused, today+tomorrow forecast',
   s.life.bag[m.id].seeds.strawberry = 1;
   s.act(m, { kind: 'plant', plot: 1, crop: 'strawberry' }, t);
   const p1 = s.life.farms[m.id][1];
-  assert.equal(plotReadyAt(p1, t + MIN), t + 8 * HOUR); // no rain yet
+  // F2 wet soil: dry, it waits (no rain yet); the rain wets it from 00:00 KST.
+  assert.equal(plotReadyAt(p1, t + MIN), Infinity);
+  assert.equal(s.view(m, t + MIN).me.farm[1].thirsty, true);
   const midnight = real(2026, 10, 5, 0);
-  assert.equal(plotReadyAt(p1, midnight + MIN), midnight + Math.ceil((8 * HOUR - HOUR) * 0.6));
+  assert.equal(plotReadyAt(p1, midnight + MIN), midnight + CROP_INFO.strawberry.growMs);
+  // The whole forecast (now = Infinity) sees the same rain coming.
+  assert.equal(plotReadyAt(p1, Infinity), midnight + CROP_INFO.strawberry.growMs);
 });
 
 test('farming: regrowing corn, quality stars from fertilizer, quality sell prices', () => {
@@ -260,6 +269,7 @@ test('farming: regrowing corn, quality stars from fertilizer, quality sell price
     summer = kst(2026, 9, 14, 8);
   s.life.bag[m.id].seeds.corn = 1;
   s.act(m, { kind: 'plant', plot: 0, crop: 'corn' }, summer);
+  s.life.farms[m.id][0].rs = 1; // 보습 흙: wet all the way through
   let t = summer;
   for (let i = 0; i < 3; i++) {
     t = plotReadyAt(s.life.farms[m.id][0], Infinity);
@@ -325,6 +335,10 @@ test('farming: fertilizer purchase and use, field expansion 24→48→80', () =>
   const rich = world(1),
     [r] = rich.members;
   rich.ledger = claimDailyGrant(rich.ledger, 'wallet-' + r.id, T0);
+  // 농사 레벨 (F2): 48 tiles from farming Lv3, 80 from Lv6.
+  rich.fails(r, { kind: 'expandFarm' }, T0, '농사 Lv3부터 밭을 48칸으로 넓힐 수 있어요.');
+  const farmLv = (lv) => ((((rich.life.growth ??= {}).u ??= {})[r.id] ??= {}).xp = { farm: LEVEL_XP[lv - 1] });
+  farmLv(3);
   rich.fails(r, { kind: 'expandFarm' }, T0, LIFE_REJECT.balance);
   // Sell a lot over several days to afford it.
   let t = T0;
@@ -336,7 +350,9 @@ test('farming: fertilizer purchase and use, field expansion 24→48→80', () =>
   rich.fails(r, { kind: 'plant', plot: 7, crop: 'carrot' }, t, LIFE_REJECT.plot);
   rich.act(r, { kind: 'expandFarm' }, t);
   assert.equal(rich.view(r, t).me.plots, 48);
-  // Row 0, column 7: tilled at 8 × 6.
+  // Row 0, column 7: open at 8 × 6, grass until it is tilled.
+  rich.fails(r, { kind: 'plant', plot: 7, crop: 'carrot' }, t, LIFE_REJECT.untilled);
+  rich.act(r, { kind: 'till', plot: 7 }, t);
   rich.act(r, { kind: 'plant', plot: 7, crop: 'carrot' }, t);
   // Reload keeps the 48-tile field.
   const back = readLife(JSON.parse(JSON.stringify(rich.life)));
@@ -348,7 +364,12 @@ test('farming: fertilizer purchase and use, field expansion 24→48→80', () =>
     rich.act(r, { kind: 'sell', crop: 'strawberry', n: 8 }, t);
     t += DAY;
   }
+  rich.fails(r, { kind: 'expandFarm' }, t, '농사 Lv6부터 밭을 80칸으로 넓힐 수 있어요.');
+  farmLv(6);
   rich.act(r, { kind: 'expandFarm' }, t);
+  assert.equal(rich.view(r, t).me.plots, 80);
+  // A friend who already expanded keeps the field, whatever the level.
+  farmLv(1);
   assert.equal(rich.view(r, t).me.plots, 80);
   rich.fails(r, { kind: 'expandFarm' }, t, PLUS_REJECT.farmMax);
 });
@@ -359,10 +380,11 @@ test('friend watering: once per friend farm per KST day, friendship and stats', 
   s.act(b, { kind: 'plant', plot: -1, crop: 'carrot' }, T0);
   s.fails(a, { kind: 'waterFriend', owner: 0, plot: -1 }, T0, PLUS_REJECT.friendFarm);
   s.act(a, { kind: 'waterFriend', owner: 1, plot: 0 }, T0 + MIN);
-  assert.equal(s.life.farms[b.id][0].wateredAt, T0 + MIN);
+  // Wet until the next 06:00 KST, like my own watering (F2).
+  assert.equal(s.life.farms[b.id][0].wetUntil, nextWetEnd(T0 + MIN));
   s.fails(a, { kind: 'waterFriend', owner: 1, plot: 1 }, T0 + 2 * MIN, PLUS_REJECT.friendWatered);
   s.act(c, { kind: 'waterFriend', owner: b.id, plot: -1 }, T0 + 2 * MIN);
-  assert.ok(s.life.farms[b.id].filter((p) => p.crop).every((p) => p.wateredAt !== null));
+  assert.ok(s.life.farms[b.id].filter((p) => p.crop).every((p) => p.wetUntil > T0 + 2 * MIN));
   const v = s.view(a, T0 + 3 * MIN);
   assert.deepEqual(v.me.waterFriend, [1]);
   assert.equal(v.me.stats.waterFriend, 1);

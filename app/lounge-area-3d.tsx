@@ -79,6 +79,8 @@ const FIGURE_W = 440,
   FIGURE_BODY_H = 540;
 const NODE_REACH = 1.35;
 const ROCK_REACH = 1.3;
+/** 우리 농장 F2: E held while walking works a new field tile at most this often. */
+const FIELD_HOLD_MS = 160;
 const PITCH = VIEW_PITCH;
 const DAY = 86_400_000;
 const kstDayOf = (now: number) => Math.floor((now + 9 * 3_600_000) / DAY);
@@ -143,6 +145,8 @@ export type AreaSceneProps = {
   bigCatch?: number;
   /** 우리 농장: the life view (fields, house tiers, my farm). */
   life?: LifeView | null;
+  /** 우리 농장 F2: the hotbar item in hand (what E does on the tile I face). */
+  farmTool?: string;
   onMove: (x: number, y: number) => void;
   onAction: (action: AreaAction) => void;
 };
@@ -163,6 +167,7 @@ export function AreaScene({
   harborBoat,
   bigCatch = 0,
   life = null,
+  farmTool = '',
   onMove,
   onAction,
 }: AreaSceneProps) {
@@ -215,13 +220,20 @@ export function AreaScene({
     route: [] as WalkPoint[],
     target: null as WalkPoint | null,
     lastSent: { x: NaN, z: NaN },
+    /** Which way I last walked (우리 농장 F2: the tile I face). */
+    face: { x: 0, z: 1 } as WalkPoint,
+    /** E held down (F2: it keeps working the field tile by tile while I walk). */
+    acting: false,
+    /** The field tile E last worked while held, and when. */
+    actTile: -1,
+    actAt: 0,
   });
   const boatOut = !!harborBoat?.out,
     captainHere = !!harborBoat?.captain;
   const farm = useMemo(() => (area === 'farm' ? farmSceneState(life, me.actor) : null), [area, life, me.actor]);
-  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm });
+  const latest = useRef({ walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm, farmTool });
   useLayoutEffect(() => {
-    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm };
+    latest.current = { walk, nodes, broken, floor, here, me, paused, fishing, onMove, onAction, regions, axeTier, logCleared, area, clockOffset, dayNight, steady, boatOut, captainHere, bigCatch, life, farm, farmTool };
   });
   const actionRef = useRef<AreaAction | null>(null);
   useLayoutEffect(() => {
@@ -302,7 +314,7 @@ export function AreaScene({
       }
     }
     if (s.area === 'farm')
-      for (const r of farmReach(p, s.life, s.me.actor, Date.now() + s.clockOffset))
+      for (const r of farmReach(p, s.life, s.me.actor, Date.now() + s.clockOffset, live.current.face, s.farmTool))
         found.push({ d: r.d, a: { kind: 'farm', touch: r.touch, label: r.label, act: r.action, ...(r.disabled ? { disabled: true } : {}) } });
     const exit = nearestExit(s.area, p);
     if (exit) {
@@ -597,6 +609,15 @@ export function AreaScene({
       const bound = boundAction(event);
       if (bound === 'action' || (event.key === 'Enter' && at === 'scene')) {
         const a = actionRef.current;
+        // 우리 농장 F2: holding E keeps working the field tile by tile (the frame loop), not by key repeat.
+        const fieldTile = a?.kind === 'farm' && a.touch.kind === 'tile';
+        if (event.repeat && (fieldTile || l.acting)) {
+          event.preventDefault();
+          return;
+        }
+        if (bound === 'action') l.acting = true;
+        l.actTile = fieldTile && a.touch.kind === 'tile' ? a.touch.tile : -1;
+        l.actAt = performance.now();
         if (a && !latest.current.paused && !('disabled' in a && a.disabled)) {
           event.preventDefault();
           actRef.current(a);
@@ -612,6 +633,7 @@ export function AreaScene({
       l.route = [];
     };
     const keyup = (event: KeyboardEvent) => {
+      if (boundAction(event) === 'action') l.acting = false;
       const dir = boundDirection(event);
       if (dir) l.held.delete(dir);
       if (event.key === 'Shift') l.shift = false;
@@ -619,6 +641,7 @@ export function AreaScene({
     const release = () => {
       l.held.clear();
       l.shift = false;
+      l.acting = false;
     };
     window.addEventListener('keydown', keydown);
     window.addEventListener('keyup', keyup);
@@ -739,6 +762,7 @@ export function AreaScene({
       const mx = l.point.x - before.x,
         mz = l.point.z - before.z,
         moved = Math.hypot(mx, mz);
+      if (len > 0) l.face = { x: dx / len, z: dz / len };
       const loco = advanceLocomotion(mineFig.locomotion, { distance: moved, horizontal: mx }, l.shift ? 'run' : 'walk', WALK_SPEED);
       const changed = loco.motion !== mineFig.motion || loco.state.facing !== mineFig.locomotion.facing;
       mineFig.locomotion = loco.state;
@@ -847,6 +871,12 @@ export function AreaScene({
       }
       // What E does here.
       const a = findActionRef.current(l.point);
+      // 우리 농장 F2: E held while walking works each new field tile I face.
+      if (l.acting && !s.paused && a?.kind === 'farm' && a.touch.kind === 'tile' && !a.disabled && a.touch.tile !== l.actTile && t - l.actAt > FIELD_HOLD_MS) {
+        l.actTile = a.touch.tile;
+        l.actAt = t;
+        actRef.current(a);
+      }
       const ak = a ? JSON.stringify(a) : '';
       if (ak !== lastAction) {
         lastAction = ak;

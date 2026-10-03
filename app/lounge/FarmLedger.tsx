@@ -4,7 +4,8 @@
 // the north, grass beyond the tilled block until it is expanded); the right page is the
 // selected plot with the seed pouch (only seeds I own that grow now) and the
 // friends whose plots need water. Keyboard: arrows pick a plot, E / Enter /
-// Space tends it, 1–9 select a seed packet, H harvests all, W waters all.
+// Space tends it (grass: till it), 1–9 select a seed packet; on a stage-1
+// field (24 tiles) H harvests all and W waters all (우리 농장 F2 §12-1).
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import {
@@ -16,7 +17,7 @@ import {
   type LifeAction,
   type LifeView,
 } from '../lounge-life';
-import { FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
+import { FARM_EXPAND_LEVEL, FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
 import { FIXTURE_BY_ID, GRID_COLS, GRID_ROWS, fieldBlock, tileAt, tileOpen, tileRC } from '../lounge-farm-data';
 import { witherAt } from '../lounge-farm';
 import { SOIL_ITEMS, harvestOf, harvestText, plantsAnySeason, soilOpen as soilHelps, type Harvest, type SoilItem } from '../lounge-life-ui';
@@ -130,6 +131,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const farm: readonly Plot[] = life?.me.farm ?? [];
   const size = life?.me.plots ?? 24;
   const open = (i: number) => tileOpen(size, i);
+  const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
   const season = life?.calendar?.season ?? 'spring';
   // The village greenhouse or 온실지기: off-season seeds plant too (same rule as the server and E).
   const anySeason = plantsAnySeason(life);
@@ -141,19 +143,24 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   /** The season ends before this crop could ripen even when watered (it would wither). */
   const sheltered = anySeason;
   const withersSoon = (crop: Crop) => {
-    const w = witherAt({ crop, plantedAt: now, wateredAt: null }, sheltered);
-    return w !== null && w < now + CROP_INFO[crop].growMs * 0.6;
+    const w = witherAt({ crop, plantedAt: now }, sheltered);
+    return w !== null && w < now + CROP_INFO[crop].growMs;
   };
   const stageOf = (p: Plot) => (p.crop ? plotStage(p, now) : 0);
+  /** F2: a stage-1 field (24 tiles) is still tended all at once; a bigger one tile by tile. */
+  const whole = size === 24;
   const ready = farm.filter((p) => p.crop && stageOf(p) === 3).length;
-  const empty = farm.filter((p, i) => !p.crop && open(i) && !p.fixture).length;
+  const grassOf = (p: Plot, i: number) => open(i) && !p.t && !p.crop && !p.dead && !p.fixture;
+  const empty = farm.filter((p, i) => !p.crop && open(i) && !p.fixture && !grassOf(p, i) && p.trellis === undefined).length;
+  const grass = farm.filter(grassOf).length;
   const thirstyOf = (p: Plot) => !!p.crop && stageOf(p) < 3 && p.wateredAt === null && !p.rained;
   const thirsty = farm.filter(thirstyOf).length;
+  const farmLv = life?.growth?.skills.find((s) => s.id === 'farm')?.level ?? 1;
+  const needLv = nextSize ? FARM_EXPAND_LEVEL[nextSize as 48 | 80] : 0;
   const inv = life?.me.inv ?? {};
   /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙; lounge-life-ui soilOpen). */
   const soilOpen = (p: Plot, item: SoilItem) => soilHelps(p, item, now);
   const fertOf = (item: SoilItem) => farm.filter((p) => soilOpen(p, item)).length;
-  const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
   const nextBlock = fieldBlock(nextSize);
   // Default selection: something to do first (ripe, then empty, then thirsty).
   const current =
@@ -164,6 +171,9 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
           [farm.findIndex((p) => p.crop && stageOf(p) === 3), farm.findIndex((p, i) => !p.crop && open(i)), farm.findIndex(thirstyOf)].find((i) => i >= 0) ?? 0,
         );
   const plot = farm[current];
+  /** F2: vines only under a 덩굴 시렁, and nothing else there. */
+  const fitsOn = (p: Plot | undefined, c: Crop) => !!CROP_INFO[c].vine === (p?.trellis !== undefined);
+  const sown = chosen && fitsOn(plot, chosen) ? chosen : (pouch.find((c) => fitsOn(plot, c)) ?? null);
 
   const fixtures = life?.farmx?.fixtures ?? [];
   const fixtureAt = (i: number) => fixtures.find((f) => f.tile === i) ?? null;
@@ -204,6 +214,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
     }
   };
   const harvestAll = () => harvest(-1);
+  const till = (i: number) => void run({ kind: 'till', plot: i }, `${bedName(i)}을 괭이로 갈았어요.`, 'plant');
   const harvestOne = (i: number) => harvest(i);
   const plantOne = (i: number, crop: Crop) => {
     setPacket(crop);
@@ -229,8 +240,13 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
       onPage?.('layout');
       return;
     }
+    if (grassOf(p, i)) {
+      till(i);
+      return;
+    }
     if (!p.crop) {
-      if (chosen) plantOne(i, chosen);
+      const c = chosen && fitsOn(p, chosen) ? chosen : pouch.find((k) => fitsOn(p, k));
+      if (c) plantOne(i, c);
       return;
     }
     const st = stageOf(p);
@@ -255,8 +271,8 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
     else if (e.key === 'ArrowUp') move(0, -1);
     else if (e.key === 'ArrowDown') move(0, 1);
     else if (boundAction(e.nativeEvent) === 'action' || e.key === 'Enter' || e.key === ' ') primary(current);
-    else if (k === 'h' && ready) void harvestAll();
-    else if (k === 'w' && thirsty) waterAll();
+    else if (k === 'h' && ready && whole) void harvestAll();
+    else if (k === 'w' && thirsty && whole) waterAll();
     else if (/^[1-9]$/.test(e.key) && pouch[Number(e.key) - 1]) {
       const crop = pouch[Number(e.key) - 1];
       setPacket(crop);
@@ -293,7 +309,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
             </span>
             <span>{weather ? WEATHER_INFO[weather].name : ''}</span>
             <span className="l-ledger-tally">
-              익음 <b>{ready}</b> · 목마름 <b>{thirsty}</b> · 빈 칸 <b>{empty}</b>
+              익음 <b>{ready}</b> · 목마름 <b>{thirsty}</b> · 빈 칸 <b>{empty}</b>{grass ? <> · 풀밭 <b>{grass}</b></> : null}
             </span>
           </header>
           <div className="l-ledger-yard" role="grid" aria-label={`밭 ${size}칸 (방향키로 고르기)`}>
@@ -311,7 +327,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                       );
                     const s = stageOf(p);
                     const fixture = fixtureAt(i);
-                    const state = fixture ? 'fixture' : !p.crop ? (p.dead ? 'dead' : 'empty') : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
+                    const state = fixture ? 'fixture' : !p.crop ? (p.dead ? 'dead' : grassOf(p, i) ? 'grass' : 'empty') : s === 3 ? 'ready' : thirstyOf(p) ? 'thirsty' : 'growing';
                     return (
                       <button
                         key={i}
@@ -320,8 +336,9 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                         className="l-ledger-plot"
                         data-state={state}
                         data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
+                        data-trellis={p.trellis !== undefined || undefined}
                         aria-selected={current === i}
-                        aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : '빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}`}
+                        aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : state === 'grass' ? '풀밭' : '갈아 둔 빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}${p.trellis !== undefined ? ' · 덩굴 시렁' : ''}`}
                         data-testid={`plot-${i}`}
                         onClick={() => setSel(i)}
                         onDoubleClick={() => primary(i)}
@@ -355,10 +372,11 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                 <span>
                   바깥은 아직 풀밭이에요
                   <small>
-                    {nextBlock.cols}×{nextBlock.rows} = {nextSize}칸으로 넓히면 갈아요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}
+                    {nextBlock.cols}×{nextBlock.rows} = {nextSize}칸으로 넓히면 괭이로 갈아 쓸 수 있어요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}
+                    {farmLv < needLv ? ` · 농사 Lv${needLv}부터` : ''}
                   </small>
                 </span>
-                <button type="button" className="l-ink" onClick={() => setExpand(true)} data-testid="farm-expand">
+                <button type="button" className="l-ink" disabled={farmLv < needLv} onClick={() => setExpand(true)} data-testid="farm-expand">
                   밭 넓히기
                 </button>
               </div>
@@ -367,7 +385,11 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
               농장 마당 쪽
             </span>
           </div>
-          <p className="l-ledger-aside">칸을 눌러 고르고 {actKey}로 가꿔요 · 두 번 누르면 바로 실행해요.</p>
+          <p className="l-ledger-aside">
+            칸을 눌러 고르고 {actKey}로 가꿔요 · 두 번 누르면 바로 실행해요.
+            {whole ? '' : ' 밭이 넓어져서 한 번에 다 하기는 없어요. 도구 범위만큼씩 가꿔요.'}
+          </p>
+          {whole ? (
           <footer className="l-ledger-actions">
             <button type="button" className="l-leaf" disabled={!ready || busy} onClick={() => void harvestAll()} data-testid="farm-harvest-all">
               <Glyph name="basket" /> 모두 거두기{ready ? ` ${ready}` : ''} <kbd>H</kbd>
@@ -396,6 +418,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
               );
             })}
           </footer>
+          ) : null}
         </section>
 
         <section className="l-ledger-page l-ledger-right" aria-label="고른 칸">
@@ -441,11 +464,30 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
               )}
             </article>
           ) : null}
-          {plot && !fixtureAt(current) && (
+          {plot && !fixtureAt(current) && grassOf(plot, current) ? (
+            <article className="l-ledger-card" data-state="grass">
+              <header>
+                <span className="l-ledger-where">{bedName(current)}</span>
+                <h3>풀밭</h3>
+              </header>
+              <p className="l-ledger-note">괭이로 갈아야 씨앗을 심을 수 있어요. 한 번 간 칸은 거둔 뒤에도 그대로 갈려 있어요.</p>
+              <div className="l-ledger-row-actions">
+                <button type="button" className="l-leaf" disabled={busy} onClick={() => till(current)} data-testid={`plot-${current}-till`}>
+                  <Glyph name="seed" /> 괭이로 갈기 <kbd>{actKey}</kbd>
+                </button>
+                {whole && grass > 1 ? (
+                  <button type="button" className="l-ink" disabled={busy} onClick={() => till(-1)} data-testid="farm-till-all">
+                    풀밭 {grass}칸 모두 갈기
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          ) : null}
+          {plot && !fixtureAt(current) && !grassOf(plot, current) && (
             <article className="l-ledger-card" data-state={!plot.crop ? 'empty' : st === 3 ? 'ready' : 'growing'}>
               <header>
                 <span className="l-ledger-where">{bedName(current)}</span>
-                <h3>{plot.crop ? CROP_INFO[plot.crop].name : '빈 칸'}</h3>
+                <h3>{plot.crop ? CROP_INFO[plot.crop].name : plot.trellis !== undefined ? '덩굴 시렁 아래' : '갈아 둔 빈 칸'}</h3>
                 {plot.crop ? (
                   <ol className="l-ledger-stages" aria-label={`자란 단계 ${STAGE_NAME[st]}`}>
                     {STAGE_NAME.map((label, k) => (
@@ -461,9 +503,21 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                 <>
                   <dl className="l-ledger-facts">
                     <dt>수확</dt>
-                    <dd>{st === 3 ? '지금 거둘 수 있어요' : `${duration(readyAt - now)} 뒤`}</dd>
+                    <dd>{st === 3 ? '지금 거둘 수 있어요' : plot.readyAt === null ? '흙이 말라서 쉬는 중이에요' : `${duration(readyAt - now)} 뒤`}</dd>
                     <dt>물</dt>
-                    <dd>{plot.rained ? '오늘 비가 적셔 줬어요' : plot.sprinkled && plot.wateredAt !== null ? '스프링클러가 줬어요' : plot.wateredAt !== null ? '오늘 줬어요' : st === 3 ? '다 자랐어요' : '목말라요 · 주면 40% 빨리 자라요'}</dd>
+                    <dd>
+                      {st === 3
+                        ? '다 자랐어요'
+                        : plot.rained
+                          ? '비가 적셔 줘서 촉촉해요'
+                          : plot.rs
+                            ? '보습 흙이라 늘 촉촉해요'
+                            : plot.sprinkled && plot.wateredAt !== null
+                              ? '스프링클러가 늘 적셔 줘요'
+                              : plot.wateredAt !== null
+                                ? '내일 아침 6시까지 촉촉해요'
+                                : '목말라요 · 젖어 있어야 자라요'}
+                    </dd>
                     <dt>거름</dt>
                     <dd>
                       {plot.fert ? FERT_NAME[plot.fert] : '아직 안 줬어요'}
@@ -565,12 +619,12 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                           </li>
                         ))}
                       </ul>
-                      {chosen && (
-                        <button type="button" className="l-leaf" disabled={busy} onClick={() => plantOne(current, chosen)} data-testid="farm-plant-selected">
-                          <Glyph name="seed" /> 이 칸에 {itemName(chosen)} 심기 <kbd>{actKey}</kbd>
+                      {sown && (
+                        <button type="button" className="l-leaf" disabled={busy} onClick={() => plantOne(current, sown)} data-testid="farm-plant-selected">
+                          <Glyph name="seed" /> 이 칸에 {itemName(sown)} 심기 <kbd>{actKey}</kbd>
                         </button>
                       )}
-                      {empty > 1 && chosen && (
+                      {whole && empty > 1 && chosen && !CROP_INFO[chosen].vine && (
                         <button
                           type="button"
                           className="l-leaf l-ledger-all"

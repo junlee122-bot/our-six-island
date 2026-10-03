@@ -14,10 +14,12 @@ import {
   ensureLifeMember,
   lifeAction,
   lifeView,
+  plotGrowMs,
   plotQuality,
   plotReadyAt,
   readLife,
 } from '../app/lounge-life.ts';
+import { legacyWet } from '../app/lounge-farm-soil.ts';
 import {
   BEE_MS,
   CROW_CHANCE,
@@ -54,6 +56,7 @@ import { INITIAL_BEOM, kstDay, newLoungeLedger, registerWallet, validateLedger }
 import { LEVEL_PERKS, LEVEL_XP } from '../app/lounge-growth-data.ts';
 import { farmToolAction, plantsAnySeason } from '../app/lounge-life-ui.ts';
 import { ITEM_BY_ID } from '../app/lounge-items.ts';
+import { tillAll } from './farm-test-help.mjs';
 
 const uuid = () => crypto.randomUUID();
 const MIN = 60_000,
@@ -83,6 +86,8 @@ function world(n = 2) {
     ledger = registerWallet(ledger, 'wallet-' + m.id);
     life = ensureLifeMember(life, m.id, m.actor);
   }
+  // 우리 농장 F2: fields start as grass; these tests start from a tilled field.
+  tillAll(life);
   const s = { members, ledger, life };
   s.act = (m, action, now) => {
     const r = lifeAction(s.life, s.ledger, m, action, now);
@@ -123,17 +128,18 @@ function world(n = 2) {
 }
 
 // ------------------------------------------------------------ catalog
-test('26 crops: the ten originals unchanged, the new ones seasonal; goods ids round-trip', () => {
-  assert.equal(CROPS.length, 26);
+test('27 crops: the ten originals unchanged, the new ones seasonal; goods ids round-trip', () => {
+  assert.equal(CROPS.length, 27);
   assert.deepEqual(CROPS.slice(10), [...NEW_CROP_IDS]);
   // Crop ids never collide with bag items (forage 해바라기 / 산삼 exist as items).
   for (const c of CROPS) assert.equal(ITEM_BY_ID[c], undefined, c);
   for (const c of NEW_CROP_IDS) {
     assert.ok(CROP_INFO[c].seasons?.length, c);
-    // Every new crop pays in the same band per hour as the originals (6 tiles, watered).
+    // Every new crop pays in the same band per hour as the originals (6 tiles,
+    // kept wet: the catalog's times are already the wet-soil ones, F2).
     const info = CROP_INFO[c],
       k = info.regrow?.harvests ?? 1,
-      hours = ((info.growMs + (k - 1) * (info.regrow?.ms ?? 0)) * 0.6) / HOUR,
+      hours = (info.growMs + (k - 1) * (info.regrow?.ms ?? 0)) / HOUR,
       perHour = (6 * (k * info.sell - info.seed)) / hours;
     assert.ok(perHour >= 1_800 && perHour <= 5_500, `${c} ${perHour}`);
   }
@@ -170,8 +176,17 @@ test('old saves: plots stay on the same tiles and read back identically', () => 
     ext: { [uid]: { q1: { carrot: 1 }, q2: { carrot: 1 } } },
   };
   const life = readLife(JSON.parse(JSON.stringify(old)));
-  // 우리 농장: old tiles 0–5 (the front bed) land on rows 2–3 of the field's top-left block.
-  assert.deepEqual([20, 21, 22, 30].map((t) => life.farms[uid][t]), old.farms[uid].slice(0, 4));
+  // 우리 농장: old tiles 0–5 (the front bed) land on rows 2–3 of the field's top-left block,
+  // tilled (F2), and every crop reads as already watered (legacyWet).
+  const field = life.farms[uid];
+  assert.deepEqual(field[20], { crop: 'carrot', plantedAt: 1_000, t: 1, fert: 1, ...legacyWet(1_000, 2_000, CROP_INFO.carrot.growMs) });
+  assert.deepEqual(field[21], { crop: 'corn', plantedAt: 5_000, t: 1, speed: 10, n: 1, ...legacyWet(5_000, null, plotGrowMs(field[21])) });
+  assert.deepEqual(field[22], { crop: null, plantedAt: 0, t: 1 });
+  assert.deepEqual(field[30], { crop: 'pumpkin', plantedAt: 9_000, t: 1, g: 2, ...legacyWet(9_000, null, CROP_INFO.pumpkin.growMs) });
+  // The six old tiles are tilled; the rest of the field is grass.
+  assert.deepEqual(field.flatMap((p, i) => (p.t ? [i] : [])), [20, 21, 22, 30, 31, 32]);
+  // Watered at 2 s, the carrot keeps growing until the old rules had it ripe.
+  assert.equal(plotReadyAt(field[20], 0), 2_000 + Math.ceil((30 * MIN - 1_000) * 0.6));
   assert.equal(life.farms[uid].length, GRID_TILES);
   assert.equal(life.farmx, undefined);
   assert.equal(life.fair, undefined);
@@ -228,7 +243,7 @@ test('sprinkler coverage: plus 4, ring 8, wide 5×5 on the 10 × 8 field', () =>
   assert.deepEqual(covered('scarecrow', 1), []);
 });
 
-test('placing: fixtures sit on empty tiles, block planting, water new plantings, and move', () => {
+test('placing: sprinklers sit on empty tiles, block planting, keep their tiles wet, and move', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
@@ -239,37 +254,53 @@ test('placing: fixtures sit on empty tiles, block planting, water new plantings,
   s.act(m, { kind: 'farmBuild', item: 'sprinkler' }, t);
   assert.equal(before - s.balance(m), 3_000);
   assert.equal(s.life.ext[m.id].inv.sprinkler, 1);
-  // Untilled tiles (column 8 of a 6 × 4 field) and busy tiles are refused.
+  // Tiles past the field's tier (column 8 of a 6 × 4 field), busy tiles and yard spots are refused.
   s.fails(m, { kind: 'farmPlace', item: 'sprinkler', tile: 8 }, t, FARM_REJECT.tileLocked);
+  s.fails(m, { kind: 'farmPlace', item: 'sprinkler', yard: 0 }, t, FARM_REJECT.tileOnly);
   s.seeds(m, 'carrot', 10);
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, t);
   s.fails(m, { kind: 'farmPlace', item: 'sprinkler', tile: 0 }, t, FARM_REJECT.tileBusy);
-  // Placing waters the growing carrot at tile 0 (left of tile 1).
+  // Placing wets the growing carrot at tile 0 (left of tile 1) from now on.
   s.act(m, { kind: 'farmPlace', item: 'sprinkler', tile: 1 }, t + MIN);
-  assert.equal(s.life.farms[m.id][0].wateredAt, t + MIN);
+  assert.equal(s.life.farms[m.id][0].sp, t + MIN);
+  assert.equal(plotReadyAt(s.life.farms[m.id][0], t + MIN), t + MIN + CROP_INFO.carrot.growMs);
   s.fails(m, { kind: 'plant', plot: 1, crop: 'carrot' }, t + MIN, LIFE_REJECT.fixture);
-  // Plant-all skips the fixture tile and waters what the sprinkler covers (2, 11) at once.
+  // Plant-all skips the fixture tile; what the sprinkler covers (2, 11) is wet at once.
   s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, t + 2 * MIN);
   const farm = s.life.farms[m.id];
   assert.equal(farm[1].crop, null);
-  assert.equal(farm[2].wateredAt, t + 2 * MIN);
-  assert.equal(farm[11].wateredAt, t + 2 * MIN);
-  assert.equal(farm[3].wateredAt, null);
-  // Never past the tilled block.
+  assert.equal(farm[2].sp, t + 2 * MIN);
+  assert.equal(farm[11].sp, t + 2 * MIN);
+  assert.equal(farm[3].sp, undefined);
+  // Never past the field's tier.
   assert.ok(farm.every((p, i) => !p.crop || (i % 10 < 6 && i < 40)));
   const v = s.view(m, t + 3 * MIN);
   assert.equal(v.me.farm[11].sprinkled, true);
+  assert.equal(v.me.farm[11].wateredAt, t + 3 * MIN);
   assert.ok(!v.me.farm[3].sprinkled);
+  assert.equal(v.me.farm[3].thirsty, true);
   assert.deepEqual(v.farmx.fixtures.map((f) => [f.tile, f.kind]), [[1, 'sprinkler']]);
-  // Harvest, then move the sprinkler onto an empty tile.
+  // Harvest what the sprinkler grew, then move it onto a harvested tile: its new tiles get wet.
   s.act(m, { kind: 'harvest', plot: -1 }, t + HOUR);
-  s.act(m, { kind: 'farmMove', from: 1, to: 3 }, t + HOUR);
-  assert.deepEqual(Object.keys(s.life.farmx[m.id].fx), ['3']);
-  s.act(m, { kind: 'farmPickup', tile: 3 }, t + HOUR);
+  assert.equal(s.life.bag[m.id].produce.carrot, 3);
+  assert.equal(farm.length, 80);
+  s.act(m, { kind: 'farmMove', from: 1, to: 2 }, t + HOUR);
+  assert.deepEqual(Object.keys(s.life.farmx[m.id].fx), ['2']);
+  assert.equal(s.life.farms[m.id][3].sp, t + HOUR);
+  assert.equal(s.life.farms[m.id][12].sp, t + HOUR);
+  // Taken away: the growth so far stays, and the tile is dry again.
+  s.act(m, { kind: 'farmPickup', tile: 2 }, t + HOUR + 10 * MIN);
+  const p3 = s.life.farms[m.id][3];
+  assert.equal(p3.sp, undefined);
+  assert.equal(p3.wetMs, 10 * MIN);
+  assert.equal(p3.wetUntil, t + HOUR + 10 * MIN);
+  assert.equal(plotReadyAt(p3, t + 2 * HOUR), Infinity);
   assert.equal(s.life.ext[m.id].inv.sprinkler, 1);
+  // A harvested tile stays tilled.
+  assert.equal(s.life.farms[m.id][0].t, 1);
 });
 
-test('sprinkler-watered crops ripen 40% sooner (+ quality bonus) and regrow wet', () => {
+test('a sprinkler keeps its tiles wet: crops ripen in their wet time and regrow wet', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
@@ -278,22 +309,22 @@ test('sprinkler-watered crops ripen 40% sooner (+ quality bonus) and regrow wet'
   s.act(m, { kind: 'plant', plot: 0, crop: 'blueberry' }, t);
   const p = s.life.farms[m.id][0],
     grow = CROP_INFO.blueberry.growMs;
-  assert.equal(p.wateredAt, t);
-  assert.equal(p.w, 5);
-  assert.equal(plotReadyAt(p, t), t + Math.ceil(grow * (1 - 0.4 - 5 / 100)));
-  // Regrowing: the next cycle (4h) starts watered too.
+  assert.equal(p.sp, t);
+  assert.equal(plotReadyAt(p, t), t + grow);
+  // Regrowing: the next cycle starts under the sprinkler too.
   const ready = plotReadyAt(p, t);
   s.act(m, { kind: 'harvest', plot: 0 }, ready);
   const again = s.life.farms[m.id][0];
   assert.equal(again.n, 1);
-  assert.equal(again.wateredAt, ready);
-  assert.equal(plotReadyAt(again, ready), ready + Math.ceil(CROP_INFO.blueberry.regrow.ms * (1 - 0.4 - 5 / 100)));
+  assert.equal(again.sp, ready);
+  assert.equal(plotReadyAt(again, ready), ready + CROP_INFO.blueberry.regrow.ms);
 });
 
 test('regrow timing: a regrowing crop gives exactly `harvests` crops, then the tile is empty', () => {
   const s = world(1),
     [m] = s.members;
   let t = SUMMER;
+  s.life.farmx = { [m.id]: { fx: { 4: { k: 'sprinkler', at: t - HOUR } } } };
   s.seeds(m, 'cucumber', 1);
   s.act(m, { kind: 'plant', plot: 3, crop: 'cucumber' }, t);
   const info = CROP_INFO.cucumber;
@@ -305,6 +336,7 @@ test('regrow timing: a regrowing crop gives exactly `harvests` crops, then the t
   }
   assert.equal(s.life.bag[m.id].produce.cucumber, info.regrow.harvests);
   assert.equal(s.life.farms[m.id][3].crop, null);
+  assert.equal(s.life.farms[m.id][3].t, 1);
 });
 
 test('trellis shade: a crop planted behind a trellis crop in the same bed grows 10% slower', () => {
@@ -316,6 +348,7 @@ test('trellis shade: a crop planted behind a trellis crop in the same bed grows 
   s.act(m, { kind: 'plant', plot: 10, crop: 'cucumber' }, t);
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, t); // behind tile 10
   s.act(m, { kind: 'plant', plot: 1, crop: 'carrot' }, t);
+  s.act(m, { kind: 'water', plot: 0 }, t);
   const farm = s.life.farms[m.id];
   assert.equal(farm[0].sl, 10);
   assert.equal(farm[1].sl, undefined);
@@ -351,7 +384,7 @@ test('wither: a summer-only crop dies at 00:00 KST of the first autumn day; shel
   assert.equal(witherAt({ crop: 'watermelon', plantedAt: late, wateredAt: null }, true), null);
 });
 
-test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radius 2', () => {
+test('crows: deterministic 05:00 rolls, never retroactive, a front-yard scarecrow guards radius 4', () => {
   // Find a summer day whose roll draws crows for some uid.
   const s = world(1),
     [m] = s.members;
@@ -373,21 +406,29 @@ test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radi
   s.act(m, { kind: 'status', text: '' }, dawn + MIN);
   assert.equal(s.life.farms[m.id].filter((p) => p.crop).length, 5);
   assert.equal(s.life.farmx[m.id].log.at(-1).kind, 'crow');
-  // A scarecrow placed before 05:00 in the middle guards everything within 2 tiles.
-  const t = world(1),
-    [n] = t.members;
-  n.id = m.id; // same uid → same roll
-  t.life = ensureLifeMember(emptyLife(), m.id, 0);
-  t.ledger = registerWallet(newLoungeLedger(), 'wallet-' + m.id);
-  t.act(n, { kind: 'status', text: '' }, evening - HOUR);
-  t.life.flags = ['greenhouse'];
-  t.seeds(n, 'insam', 6);
-  for (const tile of [0, 1, 2, 10, 11, 12]) t.act(n, { kind: 'plant', plot: tile, crop: 'insam' }, evening);
-  t.life.farms[m.id][11] = { crop: null, plantedAt: 0, wateredAt: null };
-  t.life.farmx[m.id].fx = { 11: { k: 'scarecrow', at: evening } };
-  t.act(n, { kind: 'status', text: '' }, dawn + MIN);
-  assert.equal(t.life.farms[m.id].filter((p) => p.crop).length, 5);
-  assert.equal(t.life.farmx[m.id].log.at(-1).kind, 'guard');
+  // A scarecrow on the house-side yard spot 0 (row −1, column 1), placed before
+  // 05:00, guards everything within 4 tiles: the whole 6 × 4 field.
+  const guarded = (spot) => {
+    const t = world(1),
+      [n] = t.members;
+    n.id = m.id; // same uid → same roll
+    t.life = tillAll(ensureLifeMember(emptyLife(), m.id, 0));
+    t.ledger = registerWallet(newLoungeLedger(), 'wallet-' + m.id);
+    t.act(n, { kind: 'status', text: '' }, evening - HOUR);
+    t.life.flags = ['greenhouse'];
+    t.seeds(n, 'insam', 6);
+    for (const tile of [0, 1, 2, 30, 34, 35]) t.act(n, { kind: 'plant', plot: tile, crop: 'insam' }, evening);
+    t.life.farmx[m.id].fx = { ['y' + spot]: { k: 'scarecrow', at: evening } };
+    t.act(n, { kind: 'status', text: '' }, dawn + MIN);
+    return t;
+  };
+  const near = guarded(0);
+  assert.equal(near.life.farms[m.id].filter((p) => p.crop).length, 6);
+  assert.equal(near.life.farmx[m.id].log.at(-1).kind, 'guard');
+  // On the lane side (row 8), rows 0–3 are out of its reach: the crows eat one.
+  const far = guarded(2);
+  assert.equal(far.life.farms[m.id].filter((p) => p.crop).length, 5);
+  assert.equal(far.life.farmx[m.id].log.at(-1).kind, 'crow');
 });
 
 // ------------------------------------------------------------ giant crops and quality
@@ -401,6 +442,7 @@ test('giant crops: a full bed of one giant crop planted together may merge; one 
   s.seeds(m, 'pumpkin', 12);
   // Plant-all fills rows 0–1 of the 6 × 4 block: beds 0 and 1 at once.
   s.act(m, { kind: 'plant', plot: -1, crop: 'pumpkin' }, t);
+  s.act(m, { kind: 'water', plot: -1 }, t);
   const ripe = t + CROP_INFO.pumpkin.growMs;
   assert.equal(giantBed(s.life.farms[m.id], m.id, 0, ripe - 1), false);
   assert.equal(giantBed(s.life.farms[m.id], m.id, 0, ripe), true);
@@ -430,6 +472,7 @@ test('별빛 quality: only with 별빛 비료; sells ×2 and stacks as its own t
   assert.equal(plotQuality(m.id, 0, { ...plot(at), fert: 2 }) < 3, true);
   s.seeds(m, 'carrot', 1);
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, at);
+  s.act(m, { kind: 'water', plot: 0 }, at);
   s.act(m, { kind: 'fertilize', plot: 0, item: 'fertilizer-star' }, at);
   s.act(m, { kind: 'harvest', plot: 0 }, at + CROP_INFO.carrot.growMs);
   assert.equal(s.life.ext[m.id].q3.carrot, 1);
@@ -439,7 +482,7 @@ test('별빛 quality: only with 별빛 비료; sells ×2 and stacks as its own t
   assert.equal(s.balance(m) - b, CROP_INFO.carrot.sell * QUALITY_MULT[3]);
 });
 
-test('soil items: 성장 촉진제 speeds up with a quality fertilizer; 보습 흙 waters at once', () => {
+test('soil items: 성장 촉진제 speeds up with a quality fertilizer; 보습 흙 keeps the soil wet', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
@@ -457,7 +500,15 @@ test('soil items: 성장 촉진제 speeds up with a quality fertilizer; 보습 �
   assert.equal(p.speed, 15);
   s.act(m, { kind: 'plant', plot: 1, crop: 'strawberry' }, t);
   s.act(m, { kind: 'fertilize', plot: 1, item: 'retaining' }, t + MIN);
-  assert.equal(s.life.farms[m.id][1].wateredAt, t + MIN);
+  // Dry for its first minute, wet from then on (without any watering).
+  const p1 = s.life.farms[m.id][1];
+  assert.equal(p1.rs, 1);
+  assert.equal(plotReadyAt(p1, t + MIN), t + MIN + CROP_INFO.strawberry.growMs);
+  assert.equal(plotReadyAt(p1, t + 2 * DAY), t + MIN + CROP_INFO.strawberry.growMs);
+  const v = s.view(m, t + 2 * MIN).me.farm[1];
+  assert.equal(v.thirsty, undefined);
+  assert.equal(v.wateredAt, t + 2 * MIN);
+  s.fails(m, { kind: 'water', plot: 1 }, t + 2 * MIN, LIFE_REJECT.retaining);
 });
 
 // ------------------------------------------------------------ machines
@@ -512,7 +563,7 @@ test('machines: build by level, real-time durations, quality carries into the go
   assert.deepEqual(readLife(JSON.parse(JSON.stringify(s.life))), s.life);
 });
 
-test('bee house: honey every 16h, flower honey from a ripe flower within 2 tiles', () => {
+test('bee house: on a front-yard spot, honey every 16h, flower honey from a ripe flower within 2 tiles', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
@@ -520,9 +571,14 @@ test('bee house: honey every 16h, flower honey from a ripe flower within 2 tiles
   s.give(m, 'wood', 30);
   s.give(m, 'copper', 2);
   s.act(m, { kind: 'farmBuild', item: 'beehouse' }, t);
-  s.act(m, { kind: 'farmPlace', item: 'beehouse', tile: 5 }, t);
-  s.fails(m, { kind: 'farmCollect', tile: 5 }, t + BEE_MS - 1, FARM_REJECT.nothing);
-  s.act(m, { kind: 'farmCollect', tile: 5 }, t + BEE_MS);
+  // F2: bee houses and scarecrows stand in the front yard, not on field tiles.
+  s.fails(m, { kind: 'farmPlace', item: 'beehouse', tile: 5 }, t, FARM_REJECT.yardOnly);
+  s.fails(m, { kind: 'farmPlace', item: 'beehouse', yard: 9 }, t, FARM_REJECT.yard);
+  s.act(m, { kind: 'farmPlace', item: 'beehouse', yard: 0 }, t);
+  assert.deepEqual(s.view(m, t).farmx.yard.map((f) => [f.spot, f.kind]), [[0, 'beehouse']]);
+  assert.deepEqual(s.view(m, t).farmx.fixtures, []);
+  s.fails(m, { kind: 'farmCollect', yard: 0 }, t + BEE_MS - 1, FARM_REJECT.nothing);
+  s.act(m, { kind: 'farmCollect', yard: 0 }, t + BEE_MS);
   assert.equal(s.life.farmx[m.id].goods.honey, 1);
   s.seeds(m, 'zinnia', 1);
   s.act(m, { kind: 'plant', plot: 3, crop: 'zinnia' }, t + BEE_MS);
@@ -587,6 +643,7 @@ test('helping a friend harvest: crops go to the owner, once a day, bond and XP f
     t = SUMMER;
   s.seeds(b, 'carrot', 3);
   s.act(b, { kind: 'plant', plot: -1, crop: 'carrot' }, t);
+  s.act(b, { kind: 'water', plot: -1 }, t);
   s.fails(a, { kind: 'harvestFriend', owner: 1 }, t + MIN, LIFE_REJECT.nothingReady);
   const ripe = t + CROP_INFO.carrot.growMs;
   s.act(a, { kind: 'harvestFriend', owner: 1 }, ripe);
@@ -674,7 +731,7 @@ test('the ledger invariant holds through a farming week with every new action', 
     for (const item of ['sprinkler', 'sprinkler-q', 'scarecrow', 'beehouse', 'jar', 'keg', 'dehydrator', 'seedmaker', 'fertilizer-star'])
       s.act(m, { kind: 'farmBuild', item }, t);
     s.act(m, { kind: 'farmPlace', item: 'sprinkler-q', tile: 1 }, t);
-    s.act(m, { kind: 'farmPlace', item: 'scarecrow', tile: 4 }, t);
+    s.act(m, { kind: 'farmPlace', item: 'scarecrow', yard: 0 }, t);
     ['jar', 'keg', 'dehydrator', 'seedmaker'].forEach((item, slot) => s.act(m, { kind: 'farmPlace', item, slot }, t));
     s.seeds(m, 'blueberry', 20);
   }
@@ -688,6 +745,11 @@ test('the ledger invariant holds through a farming week with every new action', 
       }
       try {
         s.act(m, { kind: 'plant', plot: -1, crop: 'blueberry' }, at);
+      } catch (e) {
+        if (!(e instanceof LifeError)) throw e;
+      }
+      try {
+        s.act(m, { kind: 'water', plot: -1 }, at);
       } catch (e) {
         if (!(e instanceof LifeError)) throw e;
       }
@@ -773,7 +835,7 @@ test('top goods: one unit worth more than the daily cap still sells at the 농�
   assert.equal(s.life.farmx[m.id].bin, undefined);
 });
 
-test('regrow keeps the planting’s quality (g) and watering-can (w) bonuses', () => {
+test('regrow keeps the planting’s quality (g) and today’s watering', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
@@ -784,39 +846,41 @@ test('regrow keeps the planting’s quality (g) and watering-can (w) bonuses', (
   s.act(m, { kind: 'water', plot: 0 }, t);
   const p = s.life.farms[m.id][0];
   assert.equal(p.g, 12 + 2);
-  assert.equal(p.w, 20);
+  assert.equal(p.w, undefined);
   const ready = plotReadyAt(p, t);
+  assert.equal(ready, t + CROP_INFO.blueberry.growMs);
   s.act(m, { kind: 'harvest', plot: 0 }, ready);
   const again = s.life.farms[m.id][0];
   assert.equal(again.n, 1);
   assert.equal(again.g, 14);
-  assert.equal(again.w, 20);
+  // Watered this morning: the new cycle is wet until the same 06:00.
+  assert.equal(again.wetUntil, p.wetUntil);
+  assert.equal(again.wetMs, p.wetUntil - ready);
   assert.deepEqual(readLife(JSON.parse(JSON.stringify(s.life))).farms[m.id][0], again);
 });
 
-test('sprinklers water with the owner’s watering-can bonus when it is better', () => {
+test('watering-can reach: forge tier 3 waters its row (1 × 3), tier 4 the 3 × 3; 오른’s range counts too', () => {
   const s = world(1),
     [m] = s.members,
     t = SUMMER;
-  s.life.farmx = { [m.id]: { fx: { 1: { k: 'sprinkler-q', at: t - HOUR } } } };
-  s.level(m, 'farm', 1);
-  s.life.growth.u[m.id].tools = { can: 5 };
-  s.seeds(m, 'blueberry', 1);
-  s.act(m, { kind: 'plant', plot: 0, crop: 'blueberry' }, t);
-  const p = s.life.farms[m.id][0];
-  assert.equal(p.wateredAt, t);
-  assert.equal(p.w, 20);
-  assert.equal(plotReadyAt(p, t), t + Math.ceil(CROP_INFO.blueberry.growMs * (1 - 0.4 - 20 / 100)));
-  // A low-tier can: the sprinkler's own bonus still counts.
-  s.life.growth.u[m.id].tools = { can: 2 };
-  s.seeds(m, 'blueberry', 1);
-  s.act(m, { kind: 'plant', plot: 2, crop: 'blueberry' }, t);
-  assert.equal(s.life.farms[m.id][2].w, 5);
+  s.seeds(m, 'carrot', 24);
+  s.act(m, { kind: 'plant', plot: -1, crop: 'carrot' }, t);
+  const wet = () => s.life.farms[m.id].flatMap((p, i) => (p.wetUntil ? [i] : []));
+  s.act(m, { kind: 'water', plot: 11 }, t);
+  assert.deepEqual(wet(), [11]);
+  s.life.growth.u[m.id].tools = { can: 3 };
+  s.act(m, { kind: 'water', plot: 14 }, t);
+  assert.deepEqual(wet(), [11, 13, 14, 15]);
+  s.life.growth.u[m.id].tools = { can: 4 };
+  s.act(m, { kind: 'water', plot: 22 }, t);
+  assert.deepEqual(wet(), [11, 12, 13, 14, 15, 21, 22, 23, 31, 32, 33]);
+  // Nothing thirsty in reach: the tile I face says why.
+  s.fails(m, { kind: 'water', plot: 22 }, t + MIN, LIFE_REJECT.watered);
 });
 
 test('skill perk labels match the real recipe gates (no "after a region" note)', () => {
   const recipes = [...FIXTURES, ...MACHINES].filter((d) => d.id !== 'sprinkler-s' && d.id !== 'scarecrow');
-  const label = { jar: '옹기', keg: '숙성통', dehydrator: null, seedmaker: '씨앗 제조기', beehouse: '벌통', sprinkler: '기본 스프링클러', 'sprinkler-q': '품질 스프링클러' };
+  const label = { jar: '옹기', keg: '숙성통', dehydrator: null, seedmaker: '씨앗 제조기', beehouse: '벌통', sprinkler: '기본 스프링클러', 'sprinkler-q': '품질 스프링클러', trellis: '덩굴 시렁' };
   for (const d of recipes) {
     if (!label[d.id]) continue;
     const perk = LEVEL_PERKS[d.recipe.skill].find((p) => p.text.includes(label[d.id]));

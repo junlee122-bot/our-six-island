@@ -76,6 +76,8 @@ async function oldWorld() {
   const h = harness(),
     [a, b, c] = [member(0), member(3), member(6)];
   for (const p of [a, b, c]) {
+    // 우리 농장 F2: a new field is grass; the hoe first.
+    await act(h, p, { kind: 'till', plot: 0 });
     const r = await act(h, p, { kind: 'plant', plot: 0, crop: 'carrot' });
     assert.equal(r.response.ok, true, r.response.error);
   }
@@ -182,8 +184,8 @@ test('the cloud transition runs it once: backup stored, ledger untouched, furnit
 test('a fresh world only gets the mark with its first real write; later purchases are never wiped', async () => {
   const h = harness(),
     a = member(1);
-  // Life is created by this action; the mark comes with it.
-  const planted = await act(h, a, { kind: 'plant', plot: 0, crop: 'carrot' });
+  // Life is created by this action; the mark comes with it (F2: the hoe is a first write too).
+  const planted = await act(h, a, { kind: 'till', plot: 0 });
   assert.equal(planted.response.ok, true);
   assert.equal(h.world.life.roomsReset.id, ROOMS_RESET_ID);
   assert.deepEqual(h.world.life.roomsReset.backup, {});
