@@ -302,3 +302,18 @@ test("cloud op 'endDay': in my own room only; the server re-checks the night and
   const third = await run(a, 'endDay');
   assert.equal(third.response.error, MYDAY_REJECT.enough);
 });
+
+test('economy: ending every day twice for a week never sells past the real day cap', () => {
+  const s = world();
+  const [m] = s.members;
+  for (let d = D; d < D + 7; d++) {
+    for (let i = 0; i < EXTRA_DAYS_PER_REAL_DAY; i++) {
+      s.life.bag[m.id].produce.pumpkin = 400;
+      s.act(m, { kind: 'ship', item: 'pumpkin', n: 300 }, night(d, 13 + i));
+      s.act(m, { kind: 'endDay' }, night(d, 13 + i) + 1000);
+      const sold = s.life.sold[m.id];
+      assert.equal(sold.day, d);
+      assert.ok(sold.amount <= SELL_CAP_PER_DAY, `${sold.amount} on day ${d}`);
+    }
+  }
+});

@@ -942,7 +942,7 @@ class LoungeAudio {
     })();
   }
   /** Little rewards: plant, water, harvest, coin. */
-  chime(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail') {
+  chime(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail' | 'dayEnd') {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const sets = {
@@ -951,9 +951,12 @@ class LoungeAudio {
       harvest: [659.25, 783.99, 1046.5],
       coin: [1318.5, 1760],
       mail: [783.99, 987.77],
+      // 시간 체계 P1 하루 마감: a short, slow music-box lullaby (Suno 'day-end' stand-in).
+      dayEnd: [783.99, 659.25, 523.25, 587.33, 659.25, 523.25],
     } as const;
+    const step = kind === 'dayEnd' ? 0.22 : 0.08;
     sets[kind].forEach((f, i) =>
-      this.musicBoxTo(this.sfx!, ctx.currentTime + i * 0.08, f, 0.06, 0.6),
+      this.musicBoxTo(this.sfx!, ctx.currentTime + i * step, f, 0.06, kind === 'dayEnd' ? 1.1 : 0.6),
     );
   }
   private musicBoxTo(

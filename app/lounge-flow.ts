@@ -40,7 +40,9 @@ export type ActionKind =
   // 성장 P1: the blacksmith and the material nodes at the village edge.
   | 'forge'
   | 'chop'
-  | 'smash';
+  | 'smash'
+  // 시간 체계 P1: 하루 마감 at my bed (lounge-myday.ts).
+  | 'sleep';
 
 export const ACTION_LABEL: Record<ActionKind, string> = {
   enter: '들어가기',
@@ -74,6 +76,7 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   forge: '대장간',
   chop: '베기',
   smash: '깨기',
+  sleep: '하루 마감',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

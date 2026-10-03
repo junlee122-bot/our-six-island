@@ -33,6 +33,7 @@ import {
 import { ItemIcon } from './ItemIcon';
 import { useNow } from './use-now';
 import './life-plus.css';
+import './day-end.css';
 import { BuffSlots, leftText, slotsOf } from './ShopGoods';
 
 export const SEASON_ICON: Record<Season, IconComponent> = {
@@ -107,6 +108,12 @@ export function CalendarChip({
         <span className="l-hud-date">
           <strong className="l-hud-clock" data-testid="hud-clock" data-tod={timeOfDay(now)}>
             {gameClockText(now)}
+            {/* 시간 체계 P1: how many 하루 마감 I did today (나의 하루 +n). */}
+            {(life.myday?.n ?? 0) > 0 && (
+              <span className="l-hud-myday" data-testid="hud-myday" title="오늘 하루 마감을 한 횟수예요. 나의 하루가 그만큼 앞서 있어요.">
+                나의 하루 +{life.myday!.n}
+              </span>
+            )}
           </strong>
           <small>
             {SEASON_INFO[cal.season].name} {cal.seasonDay}일 · {calendarLine(cal).split(' · ')[1]}
@@ -148,7 +155,10 @@ export function CalendarChip({
         <p className="l-hud-tip-line">
           {cal.seasonNote ?? `${SEASON_INFO[cal.season].name}이 ${hoursLeft(cal.seasonEndsAt, now)} 뒤에 끝나요 · 한 계절은 7일이에요.`}
         </p>
-        <p className="l-hud-tip-line">마을 시계는 실제 1시간이 하루예요. 날짜·계절·하루 횟수는 실제 날짜를 따라요.</p>
+        <p className="l-hud-tip-line">
+          마을 시계는 실제 1시간이 하루예요. 날짜·계절·판매 한도는 실제 날짜를 따르고, 채집·대화·돌보기 같은 내 하루 활동은 밤에 침대에서 하루 마감을 하면 다시 할 수 있어요
+          {life.myday ? ` (오늘 ${life.myday.left}번 남음)` : ''}.
+        </p>
         {events.length > 0 && (
           <ul className="l-hud-events">
             {events.map((e) => (

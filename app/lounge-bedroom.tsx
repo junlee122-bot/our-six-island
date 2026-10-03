@@ -34,6 +34,8 @@ export function BedroomEditor(props: {
   onExit?: () => void;
   onDress?: () => void;
   onCook?: () => void;
+  /** 시간 체계 P1: 하루 마감 at my bed. */
+  onSleep?: () => void;
   onNpcTalk?: () => void;
   spawn?: 'door' | 'bed';
   onNearDoor?: () => void;
@@ -58,6 +60,7 @@ export function BedroomEditor(props: {
         onExit={props.onExit}
         onDress={props.onDress}
         onCook={props.onCook}
+        onSleep={props.onSleep}
         guest={props.view?.life?.npcGuests?.[String(props.save.actor)]}
         clockOffset={props.view?.clockOffset}
         onNpcTalk={props.onNpcTalk}

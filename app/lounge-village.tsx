@@ -191,6 +191,8 @@ import { useMinimapOpen } from './lounge-minimap-state';
 import './lounge-minimap.css';
 import './lounge-village.css';
 import './lounge/birthday.css';
+import './lounge/day-end.css';
+import { ZZZ_MS } from './lounge-myday';
 
 type ChatLine = { id: string; actor: number; text: string };
 /** A harvested crop rising from its plot (screen px in the scene). */
@@ -1077,6 +1079,12 @@ export function Village3D(props: Props) {
       // 생일 잔치: 🎂 on today's birthday friends' name tags (birthday.css).
       const bdayTags = (life?.birthday?.today ?? []).join(' ');
       if ((labels.dataset.bday ?? '') !== bdayTags) labels.dataset.bday = bdayTags;
+      // 시간 체계 P1: 💤 over a friend who just ended their day (30 seconds, day-end.css).
+      const zz = Object.entries(life?.myday?.zz ?? {})
+        .filter(([, t]) => at - t < ZZZ_MS)
+        .map(([a]) => a)
+        .join(' ');
+      if ((labels.dataset.zz ?? '') !== zz) labels.dataset.zz = zz;
       const seasonChanged = life?.calendar
         ? world.season.update({
             season: life.calendar.season,
