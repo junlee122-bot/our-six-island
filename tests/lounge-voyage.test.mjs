@@ -11,6 +11,7 @@ import { TICK_MS, botPlay, replayTrace, swayAt, SWAY_PERIOD, FightSim } from '..
 import { ANGLING_REJECT, anglerCandidates, fishAvailable, treasureChance } from '../app/lounge-fish-engine.ts';
 import {
   BOARDING_MS,
+  BOARD_GRACE_MS,
   DAWN_FARE,
   DAWN_LEAD_MS,
   PILL,
@@ -20,8 +21,12 @@ import {
   SEATS,
   VOYAGE_FARE,
   VOYAGE_MS,
+  boardableSailing,
   boardingSailing,
+  lastSailing,
   nextSailing,
+  nightHarbor,
+  sailingId,
   sailingsOf,
 } from '../app/lounge-voyage-data.ts';
 import { SWAY, VOYAGE_REJECT, readVoyage, voyageActionArea, voyageAt, voyageSway } from '../app/lounge-voyage.ts';
@@ -194,7 +199,7 @@ test('boarding: unlock, window, fare, seats, once a day, refund before departure
   s.fails(a, { kind: 'voyageBoard' }, at, VOYAGE_REJECT.locked);
   s.life.flags.push('district-harbor');
   // Outside the window.
-  s.fails(a, { kind: 'voyageBoard' }, kst(CALM, 10) - 2 * MIN - 10_000, VOYAGE_REJECT.window);
+  s.fails(a, { kind: 'voyageBoard' }, kst(CALM, 10) - 2 * MIN - 10_000, new RegExp(`^${VOYAGE_REJECT.window}`));
   // Not enough 범.
   s.ledger.accounts[`wallet-${a.id}`] = 10_000;
   s.ledger.houseBalance = (s.ledger.houseBalance ?? 0) + 90_000;
@@ -225,6 +230,92 @@ test('boarding: unlock, window, fare, seats, once a day, refund before departure
   // The next day it is open again.
   const tomorrow = dayWith((w) => w !== 'storm', CALM + 1);
   s.act(a, { kind: 'voyageBoard' }, kst(tomorrow, 5, 59));
+});
+
+test('boarding at the edge: the server picks the boat, a short grace after departure, never the next boat', () => {
+  const dep = kst(CALM, 10),
+    nextDep = dep + GAME_HOUR_MS;
+  // The grace window sits well inside the 30 s gap before the next boarding opens.
+  assert.ok(BOARD_GRACE_MS > 0 && BOARD_GRACE_MS < GAME_HOUR_MS - BOARDING_MS);
+  assert.equal(boardableSailing(dep - BOARDING_MS), dep);
+  assert.equal(boardableSailing(dep - 500), dep);
+  assert.equal(boardableSailing(dep), dep);
+  assert.equal(boardableSailing(dep + BOARD_GRACE_MS - 1), dep);
+  assert.equal(boardableSailing(dep + BOARD_GRACE_MS), null);
+  assert.equal(boardableSailing(nextDep - BOARDING_MS), nextDep);
+  assert.equal(lastSailing(dep + 1_000), dep);
+  // The last boat of a game day still has its grace across the game midnight hour.
+  assert.equal(boardableSailing(kst(CALM, 19) + 1_000), kst(CALM, 19));
+  // Night: no boat for more than a game hour.
+  assert.equal(nightHarbor(kst(CALM, 21)), true);
+  assert.equal(nightHarbor(kst(CALM, 3)), true);
+  assert.equal(nightHarbor(kst(CALM, 12, 30)), false);
+
+  const board = (offset, sailing, m) => {
+    const s = world(1),
+      [a] = s.members;
+    const now = dep + offset;
+    const act = { kind: 'voyageBoard', ...(sailing === undefined ? {} : { sailing }) };
+    if (m) return s.fails(a, act, now, m);
+    s.act(a, act, now);
+    return s.view(a, now).voyage.trip;
+  };
+  // In time (dep−60 s, dep−5 s, dep−0.5 s): on that boat, with or without the board's sailing.
+  for (const off of [-60_000, -5_000, -500]) {
+    for (const sailing of [undefined, dep]) {
+      const t = board(off, sailing);
+      assert.equal(t.dep, dep, `${off} ms`);
+      assert.equal(t.id, sailingId(dep));
+      assert.equal(t.phase, 'boarding');
+    }
+  }
+  // A tap on the last second that reaches the server just after departure (+0.5 s, +3 s skew): still that boat, already sailing.
+  for (const off of [500, 3_000]) {
+    const t = board(off, dep);
+    assert.equal(t.dep, dep);
+    assert.equal(t.phase, 'sailing');
+  }
+  // Too late for that boat: told it left (and when the next boards), never put on the next one.
+  board(BOARD_GRACE_MS + 1_000, dep, new RegExp(`^${VOYAGE_REJECT.missed}`));
+  board(GAME_HOUR_MS - BOARDING_MS + 1_000, dep, VOYAGE_REJECT.missed);
+  // The next boat's own board press, once its boarding opens, gets the next boat.
+  assert.equal(board(GAME_HOUR_MS - BOARDING_MS + 1_000, nextDep).dep, nextDep);
+  // A boat whose boarding has not opened yet, or a made-up departure: the window line.
+  board(-BOARDING_MS - 10_000, dep, new RegExp(`^${VOYAGE_REJECT.window}.*초 뒤`));
+  board(-30_000, dep + 7, new RegExp(`^${VOYAGE_REJECT.window}`));
+  // Between boats with no sailing named: the window line says when the next boards.
+  board(BOARD_GRACE_MS + 1_000, undefined, /다음 배는 .*부터 탈 수 있어요/);
+  // At night the harbor says so.
+  {
+    const s = world(1),
+      [a] = s.members;
+    s.fails(a, { kind: 'voyageBoard' }, kst(CALM, 22), VOYAGE_REJECT.night);
+  }
+});
+
+test('boarded through departure: the trip, its end with a talent and a companion, the deck slack', () => {
+  const s = world(2),
+    [a, b] = s.members,
+    dep = kst(CALM, 10);
+  s.act(a, { kind: 'voyageBoard', sailing: dep }, dep - 500);
+  // Late by a hair (in the grace): boarded and sailing at once, the deck is mine.
+  s.act(b, { kind: 'voyageBoard', sailing: dep }, dep + 1_500);
+  assert.equal(voyageAt(s.life, b.id, dep + 1_500).dep, dep);
+  assert.deepEqual(s.view(a, dep + 2_000).voyage.trip.seats.sort(), [0, 1]);
+  // Already aboard: a second press says so.
+  s.fails(a, { kind: 'voyageBoard', sailing: dep }, dep - 100, VOYAGE_REJECT.aboard);
+  // Stepping off is refunded only before departure.
+  const w = s.wallet(b);
+  s.act(b, { kind: 'voyageLeave' }, dep + 2_000);
+  assert.equal(s.wallet(b), w);
+  // 바다 체질 (more) and 주민 동행 (x) stretch the trip end; the phase follows.
+  const t = s.life.voyage.u[a.id].trip;
+  t.more = GAME_HOUR_MS;
+  t.x = GAME_HOUR_MS;
+  const end = dep + VOYAGE_MS + 2 * GAME_HOUR_MS;
+  assert.equal(s.view(a, end - 1).voyage.trip.phase, 'sailing');
+  assert.equal(s.view(a, end).voyage.trip.phase, 'back');
+  assert.equal(s.view(a, end).voyage.trip.endsAt, end);
 });
 
 test('storm days: no sailings (결항), and 가붕 can tell the day before', () => {

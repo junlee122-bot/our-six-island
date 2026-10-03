@@ -35,10 +35,12 @@ import {
   VOYAGE_FARE,
   VOYAGE_LEVEL,
   VOYAGE_MS,
+  boardableSailing,
   boardingSailing,
   dawnId,
   inDawnHours,
   nextSailing,
+  nightHarbor,
   sailingId,
   type VoyageAction,
 } from './lounge-voyage-data.ts';
@@ -49,6 +51,8 @@ export const VOYAGE_REJECT = {
   today: '배는 하루에 한 번만 탈 수 있어요. 내일 또 와 주세요.',
   aboard: '이미 배에 타 있어요.',
   window: '지금은 승선 시간이 아니에요. 출항 2분 전부터 탈 수 있어요.',
+  missed: '배가 방금 떠났어요. 다음 배를 타 주세요.',
+  night: '밤에는 배가 쉬어요. 게임 시각 새벽 5시 배부터 다시 떠요.',
   full: '이 배는 자리가 다 찼어요(4명). 다음 배를 기다려 주세요.',
   balance: '승선료가 모자라요.',
   none: '타고 있는 배가 없어요.',
@@ -64,6 +68,18 @@ export const VOYAGE_REJECT = {
 const fail = (message: string): never => {
   throw new LifeError(message);
 };
+/** Real KST hh:mm. */
+const hhmm = (t: number) => {
+  const d = new Date(t + 9 * 3_600_000);
+  return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`;
+};
+/** When the next boat's boarding opens, in words. */
+const nextBoardingText = (now: number) => {
+  const open = nextSailing(now) - BOARDING_MS;
+  return open <= now ? '' : ` 다음 배는 ${hhmm(open)}부터 탈 수 있어요(${Math.ceil((open - now) / 1000)}초 뒤).`;
+};
+const windowLine = (now: number) => (nightHarbor(now) ? VOYAGE_REJECT.night : VOYAGE_REJECT.window + nextBoardingText(now));
+const missedLine = (now: number) => (boardingSailing(now) !== null ? VOYAGE_REJECT.missed : VOYAGE_REJECT.missed + nextBoardingText(now));
 
 // ---------------------------------------------------------------- types
 export type VoyageTrip = {
@@ -253,8 +269,16 @@ export function voyageAction(
         u.trip = { id: g!.id, dep: g!.dep, fare: DAWN_FARE, dawn: true, ...seaMore(life, uid) };
         delete u.guestOf;
       } else {
-        const dep = boardingSailing(now);
-        if (dep === null) fail(VOYAGE_REJECT.window);
+        // The server decides the boat: the one boarding now, or one that left
+        // less than BOARD_GRACE_MS ago (a tap on the countdown's last second).
+        // When the board showed me a boat (`sailing`), only that boat: a late tap
+        // is told it missed it, never moved onto the next one.
+        const dep = boardableSailing(now);
+        if (a.sailing !== undefined) {
+          if (!nat(a.sailing)) fail(VOYAGE_REJECT.window);
+          if (dep !== a.sailing) fail(a.sailing < now ? missedLine(now) : windowLine(now));
+        }
+        if (dep === null) fail(windowLine(now));
         const id = sailingId(dep!);
         if (seatsTaken(life, id).length >= SEATS) fail(VOYAGE_REJECT.full);
         pay(VOYAGE_FARE, 'voyage');

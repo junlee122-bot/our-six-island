@@ -65,7 +65,12 @@ export async function launchBrowser() {
  * A logged-in-able mock world: three friends online, a ripe farm, a letter.
  * Returns helpers bound to one page at the given viewport.
  */
-export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, onboard = false }) {
+/**
+ * `serverSkew()`: optional, ms added to the `serverNow` the page receives (a
+ * client clock that runs ahead (+) or behind (−) the server's, the way a slow
+ * response skews it); the engine itself still runs on Date.now().
+ */
+export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, onboard = false, serverSkew }) {
   const VW = VIEWS[view];
   const uid = '11111111-2222-4333-8444-555555555553';
   const me = { id: uid, actor: 3, username: 'seungjun' };
@@ -187,7 +192,9 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
         if (t.response.code && lastMe) lastMe.code = t.response.code;
         world = t.state;
         if (t.changed) revision++;
-        return json({ ...t.response, revision }, t.response.status || 200);
+        const skew = serverSkew?.() ?? 0;
+        const res = skew && Number.isFinite(t.response.serverNow) ? { ...t.response, serverNow: t.response.serverNow + skew } : t.response;
+        return json({ ...res, revision }, t.response.status || 200);
       } catch (e) {
         return json({ error: e.message }, e.status || 400);
       }
