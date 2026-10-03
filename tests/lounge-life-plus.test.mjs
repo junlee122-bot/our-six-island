@@ -65,6 +65,7 @@ import {
 import {
   INITIAL_BEOM,
   claimDailyGrant,
+  grantBeom,
   kstDay,
   newLoungeLedger,
   registerWallet,
@@ -359,7 +360,7 @@ test('farming: fertilizer purchase and use, field expansion 24→48→80', () =>
   const back = readLife(JSON.parse(JSON.stringify(rich.life)));
   assert.equal(back.farms[r.id][7].crop, 'carrot');
   assert.equal(back.ext[r.id].plots, 48);
-  assert.equal(ensureLifeMember(back, r.id, 0).farms[r.id].length, 80);
+  assert.equal(ensureLifeMember(back, r.id, 0).farms[r.id].length, 120);
   while (rich.balance(r) < FARM_EXPAND_PRICE[80]) {
     rich.life.bag[r.id].produce.strawberry = 8;
     rich.act(r, { kind: 'sell', crop: 'strawberry', n: 8 }, t);
@@ -372,6 +373,16 @@ test('farming: fertilizer purchase and use, field expansion 24→48→80', () =>
   // A friend who already expanded keeps the field, whatever the level.
   farmLv(1);
   assert.equal(rich.view(r, t).me.plots, 80);
+  // 우리 농장 F5: the last stage (12 × 10 = 120) needs 농사 Lv10 and 900,000범; the 명인 표지판 goes up.
+  rich.ledger = grantBeom(rich.ledger, 'wallet-' + r.id, FARM_EXPAND_PRICE[120], 'test-rich-120', t, 'test');
+  rich.fails(r, { kind: 'expandFarm' }, t, '농사 Lv10부터 밭을 120칸으로 넓힐 수 있어요.');
+  farmLv(10);
+  const before120 = rich.balance(r);
+  rich.act(r, { kind: 'expandFarm' }, t);
+  assert.equal(before120 - rich.balance(r), 900_000);
+  assert.equal(rich.view(r, t).me.plots, 120);
+  assert.equal(rich.view(r, t).me.farm.filter((p) => !p.locked).length, 120);
+  assert.ok(rich.life.news.some((d) => d.lines.some((l) => l.key === 'master:0')));
   rich.fails(r, { kind: 'expandFarm' }, t, PLUS_REJECT.farmMax);
 });
 

@@ -128,8 +128,8 @@ function world(n = 2) {
 }
 
 // ------------------------------------------------------------ catalog
-test('27 crops: the ten originals unchanged, the new ones seasonal; goods ids round-trip', () => {
-  assert.equal(CROPS.length, 27);
+test('32 crops: the ten originals unchanged, the new ones seasonal; goods ids round-trip', () => {
+  assert.equal(CROPS.length, 32);
   assert.deepEqual(CROPS.slice(10), [...NEW_CROP_IDS]);
   // Crop ids never collide with bag items (forage 해바라기 / 산삼 exist as items).
   for (const c of CROPS) assert.equal(ITEM_BY_ID[c], undefined, c);
@@ -284,7 +284,7 @@ test('placing: sprinklers sit on empty tiles, block planting, keep their tiles w
   // Harvest what the sprinkler grew, then move it onto a harvested tile: its new tiles get wet.
   s.act(m, { kind: 'harvest', plot: -1 }, t + HOUR);
   assert.equal(s.life.bag[m.id].produce.carrot, 3);
-  assert.equal(farm.length, 80);
+  assert.equal(farm.length, 120);
   s.act(m, { kind: 'farmMove', from: 1, to: 2 }, t + HOUR);
   assert.deepEqual(Object.keys(s.life.farmx[m.id].fx), ['2']);
   assert.equal(s.life.farms[m.id][3].sp, t + HOUR);

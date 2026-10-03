@@ -37,10 +37,10 @@ export const LAB_REJECT = {
 export function readLab(v: unknown, slots: number): LabState | undefined {
   const x = obj(v),
     out: LabState = {};
-  const q = (Array.isArray(x.q) ? x.q : [])
-    .slice(0, slots)
+  const q = (Array.isArray(x.q) ? x.q.slice(0, slots * 4) : [])
     .map((b) => obj(b))
     .filter((b) => isCrop(b.c) && safe(b.done) && b.done > 0)
+    .slice(0, slots)
     .map((b): LabBatch => ({ c: b.c as Crop, done: b.done as number }));
   if (q.length) out.q = q;
   if (safe(x.d) && x.d > 0 && safe(x.k) && x.k > 0) {

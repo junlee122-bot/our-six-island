@@ -185,9 +185,9 @@ test('E on the farm: empty sites build, a friend\'s site is theirs, the shared f
 });
 
 // ------------------------------------------------------------ the facility table
-test('FacilityDef table: the F3 four are live, later ones are data hooks; sizes fit their sites', () => {
-  assert.deepEqual(FACILITIES.filter((f) => f.live).map((f) => f.id), ['greenhouse', 'machineYard', 'orchardPlot', 'greenhouseMini']);
-  for (const id of ['barn', 'coop', 'fishPond', 'beeYard', 'mushroomCave', 'seedLab']) {
+test('FacilityDef table: F3 four and F5 양식장 · 품종 개량소 are live, later ones are data hooks; sizes fit their sites', () => {
+  assert.deepEqual(FACILITIES.filter((f) => f.live).map((f) => f.id), ['greenhouse', 'machineYard', 'orchardPlot', 'greenhouseMini', 'fishPond', 'seedLab']);
+  for (const id of ['barn', 'coop', 'beeYard', 'mushroomCave']) {
     const f = FACILITY_BY_ID[id];
     assert.ok(f && !f.live && f.daily, id);
     assert.match(unlockBlock(f, { flags: ['ranch'], level: () => 10 }), /준비 중/);
@@ -199,16 +199,29 @@ test('FacilityDef table: the F3 four are live, later ones are data hooks; sizes 
   assert.deepEqual(FACILITY_BY_ID.greenhouseMini.unlock, { skill: 'farm', level: 7 });
   assert.equal(slotsAt(FACILITY_BY_ID.greenhouse, 1), 24);
   assert.equal(slotsAt(FACILITY_BY_ID.greenhouseMini, 1), 12);
-  assert.equal(FACILITY_BY_ID.fishPond.unlock.skill, 'fish');
-  assert.equal(FACILITY_BY_ID.fishPond.unlock.level, 5);
+  // F5: the pond opens at 낚시 Lv5 (small, 5 fish) and widens at Lv8 (10); the lab at 농사 Lv8.
+  assert.deepEqual(FACILITY_BY_ID.fishPond.unlock, { skill: 'fish', level: 5 });
+  assert.deepEqual(FACILITY_BY_ID.fishPond.slots, [5, 10]);
+  assert.equal(FACILITY_BY_ID.fishPond.upgrades[0].level, 8);
+  assert.equal(FACILITY_BY_ID.fishPond.daily, 'fishPond');
+  assert.deepEqual(FACILITY_BY_ID.seedLab.unlock, { skill: 'farm', level: 8 });
+  assert.equal(FACILITY_BY_ID.seedLab.owner, 'personal');
+  assert.equal(unlockBlock(FACILITY_BY_ID.fishPond, { flags: [], level: () => 4 }), '낚시 Lv5부터 지을 수 있어요.');
+  assert.equal(unlockBlock(FACILITY_BY_ID.fishPond, { flags: [], level: () => 5 }), null);
   // Large sites take the greenhouse (and later the barn); personal sites personal facilities.
   assert.ok(facilitiesFor('L1').some((f) => f.id === 'greenhouse'));
   assert.ok(!facilitiesFor('L1').some((f) => f.owner === 'personal'));
   assert.deepEqual(facilitiesFor('P0').map((f) => f.id), ['orchardPlot', 'greenhouseMini', 'fishPond', 'seedLab']);
-  // The level perks say what Lv4 and Lv7 open.
+  assert.deepEqual(facilitiesFor('Q0').map((f) => f.id), ['orchardPlot', 'greenhouseMini', 'fishPond', 'seedLab']);
+  // The level perks say what Lv4, Lv7, Lv8, Lv9 and Lv10 open (and fishing Lv5 / Lv8).
   const farm = LEVEL_PERKS.farm;
   assert.match(farm.find((p) => p.level === 4).text, /과일나무 자리/);
   assert.match(farm.find((p) => p.level === 7).text, /개인 온실/);
+  assert.match(farm.find((p) => p.level === 8).text, /품종 개량소/);
+  assert.match(farm.find((p) => p.level === 9).text, /서리 덮개/);
+  assert.match(farm.find((p) => p.level === 10).text, /12×10/);
+  assert.match(LEVEL_PERKS.fish.find((p) => p.level === 5).text, /양식장/);
+  assert.match(LEVEL_PERKS.fish.find((p) => p.level === 8).text, /중간 연못/);
 });
 
 // ------------------------------------------------------------ personal facilities

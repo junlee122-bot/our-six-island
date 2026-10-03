@@ -68,12 +68,14 @@ function setLevel(s, m, skill, level) {
 const pick = (s, m, skill, talent, now) => s.act(m, { kind: 'pickTalent', skill, talent }, now);
 
 // ------------------------------------------------------------ data
-test('every skill has a tree: 8 talents (4 shared Lv2/4, 2+2 under the Lv5 picks at Lv6/8), 6 professions', () => {
+test('every skill has a tree: 8 talents (4 shared Lv2/4, 2+2 under the Lv5 picks at Lv6/8; 낚시 2+3 since F5), 6 professions', () => {
   assert.deepEqual([...SKILLS], ['farm', 'fish', 'forage', 'mine', 'craft', 'ranch']);
-  assert.equal(TALENTS.length, 48);
+  assert.equal(TALENTS.length, 50);
   for (const skill of SKILLS) {
     const tal = talentsOf(skill);
-    assert.equal(tal.length, 8, skill);
+    // 우리 농장 F5: 낚시 has a second Lv8 pick under each 갈래 (양식장 지기 · 알 받기).
+    const pond = skill === 'fish';
+    assert.equal(tal.length, pond ? 10 : 8, skill);
     const shared = tal.filter((t) => !t.branch);
     assert.equal(shared.length, 4);
     assert.deepEqual(shared.map((t) => t.level).sort((a, b) => a - b), [2, 2, 4, 4]);
@@ -81,9 +83,12 @@ test('every skill has a tree: 8 talents (4 shared Lv2/4, 2+2 under the Lv5 picks
     assert.equal(five.length, 2);
     for (const p of five) {
       const branch = tal.filter((t) => t.branch === p.id);
-      assert.deepEqual(branch.map((t) => t.level), [6, 8], `${p.id} branch`);
-      assert.equal(branch[1].after, branch[0].id);
+      assert.deepEqual(branch.map((t) => t.level), pond ? [6, 8, 8] : [6, 8], `${p.id} branch`);
+      for (const t of branch.slice(1)) assert.equal(t.after, branch[0].id);
     }
+    // Talent points stay five (Lv2·4·6·8·10): with six or seven talents in reach, at least one is left out.
+    const reach = shared.length + tal.filter((t) => t.branch === five[0].id).length;
+    assert.ok(reach > talentPoints(10), skill);
     for (const t of tal) if (t.after) assert.equal(TALENT_BY_ID[t.after].skill, skill);
     assert.equal(LEVEL_PERKS[skill].length, 9);
   }
@@ -94,6 +99,8 @@ test('every skill has a tree: 8 talents (4 shared Lv2/4, 2+2 under the Lv5 picks
   // Every talent that can be taken changes something.
   for (const t of TALENTS) if (!t.lock) assert.ok(t.mods && Object.keys(t.mods).length, t.id);
   for (const t of TALENTS) for (const k of Object.keys(t.mods ?? {})) assert.ok(k in NO_MODS, `${t.id} ${k}`);
+  assert.deepEqual(TALENT_BY_ID['fish-a-t3'].mods, { pondCap: 2 });
+  assert.deepEqual(TALENT_BY_ID['fish-b-t3'].mods, { pondRoe: 20 });
 });
 
 test('talent points: one at Lv2·4·6·8·10, at most 5; free = floor(level/2) − taken', () => {
