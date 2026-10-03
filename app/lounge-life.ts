@@ -28,7 +28,6 @@ import {
   sellUnit,
   demandSoft,
   soldBeomToday,
-  hasFlag,
   bump,
   addCropQ,
   cropQCount,
@@ -141,6 +140,9 @@ import { foodAfterAction } from './lounge-food.ts';
 import { COMPANION_ACTION_KINDS } from './lounge-companion-data.ts';
 import { companionAction, companionAfterAction, companionView, readCompanions, settleCompanion, type CompanionAction, type CompanionExt, type CompanionView } from './lounge-companion.ts';
 import { districtsView, settleDistrictUnlocks, type DistrictsView } from './lounge-district-unlocks.ts';
+// 우리 농장 F3: facility sites, the 공동 밭 (same cycle rule; kinds from the leaf data module).
+import { SITE_ACTION_KINDS } from './lounge-farm-sites-data.ts';
+import { farmSitesView, legacyShelter, readFarmCommons, siteAction, type FarmSitesExt, type FarmSitesView, type SiteAction } from './lounge-farm-sites.ts';
 import { settleBirthdayNews } from './lounge-birthday.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
@@ -568,6 +570,7 @@ export type LifeState = {
   AnglingExt &
   VoyageExt &
   FarmExt &
+  FarmSitesExt &
   CompanionExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
@@ -610,6 +613,8 @@ export type LifeAction =
   | VoyageAction
   /** 텃밭 확장: fixtures, machines, shipping bin, helping, 품평회 (lounge-farm.ts). */
   | FarmAction
+  /** 우리 농장 F3: facility sites (build, fund, demolish, greenhouses, orchard) and the 공동 밭. */
+  | SiteAction
   /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
   | TownAction
   | Stage3Action
@@ -636,6 +641,7 @@ export const LIFE_ACTION_KINDS = [
   ...ANGLING_ACTION_KINDS,
   ...VOYAGE_ACTION_KINDS,
   ...FARM_ACTION_KINDS,
+  ...SITE_ACTION_KINDS,
   ...TOWN_ACTION_KINDS,
   ...STAGE3_ACTION_KINDS,
   ...COMPANION_ACTION_KINDS,
@@ -1018,6 +1024,7 @@ export function readLife(value: unknown): LifeState {
     ...readAngling(v.angling),
     ...readVoyage(v.voyage),
     ...readFarmExt(v),
+    ...readFarmCommons(v.farm),
     ...readCompanions(v.companions),
   };
 }
@@ -1158,6 +1165,10 @@ function lifeActionCore(
     const next = farmAction(life, ledger, member, a as FarmAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
+  if ((SITE_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = siteAction(life, ledger, member, a as SiteAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
   if ((GROWTH_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = growthAction(life, ledger, member, a as GrowthAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
@@ -1209,7 +1220,8 @@ function lifeActionCore(
   const size = farmSizeOf(life, uid);
   const mods = growthMods(life, uid);
   const plantOk = (crop: Crop) => {
-    if (!cropInSeason(crop, seasonOf(now)) && !hasFlag(life, 'greenhouse') && !mods.offSeason)
+    // 우리 농장 F3: off-season seeds grow only inside a greenhouse (lounge-farm-sites.ts) or with 온실지기.
+    if (!cropInSeason(crop, seasonOf(now)) && !mods.offSeason)
       fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
   };
   const newPlot = (crop: Crop): Plot => {
@@ -1594,6 +1606,8 @@ export type LifeView = {
   fair?: FairView;
   /** 텃밭 확장: friends' fixtures / machines / giant beds for the 3D village. */
   farmsPublic?: ReturnType<typeof farmsPublic>;
+  /** 우리 농장 F3: the facility sites, the 공동 밭, its store and goal (absent until the farm has any). */
+  farmSites?: FarmSitesView;
   actors: Record<string, number>;
   /** Room access and revision per owner actor (absent = 'friends', rev 0). */
   rooms: Record<number, RoomState>;
@@ -1666,6 +1680,7 @@ export function lifeView(
       };
     });
   }
+  const sitesView = farmSitesView(life, now);
   const sheltered = farmSheltered(life, uid),
     giants = giantBeds(farm, uid, now, giantChance(life, uid)),
     size = farmSizeOf(life, uid);
@@ -1690,7 +1705,7 @@ export function lifeView(
           harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
           growth: growthStage(p, now),
           // Only when set (80 tiles a view): absent = no / never.
-          ...(witherAt(p, sheltered) !== null ? { witherAt: witherAt(p, sheltered) } : {}),
+          ...(witherAt(p, sheltered || legacyShelter(life, p)) !== null ? { witherAt: witherAt(p, sheltered || legacyShelter(life, p)) } : {}),
           ...(giants.includes(tileBed(i) ?? -1) ? { giant: true } : {}),
           ...(sprinklerBonus(life, uid, i) !== null ? { sprinkled: true } : {}),
           ...(fixtureAt(life, uid, i) ? { fixture: fixtureAt(life, uid, i)!.k } : {}),
@@ -1730,6 +1745,7 @@ export function lifeView(
     serverNow: now,
     ...(UUID.test(uid) && actorValid(actor) ? { farmx: farmXView(life, uid, now), fair: fairView(life, uid, now) } : {}),
     farmsPublic: farmsPublic(life, now),
+    ...(sitesView ? { farmSites: sitesView } : {}),
   };
   const { me, ...plus } = plusView(life, uid, actor, now);
   return {

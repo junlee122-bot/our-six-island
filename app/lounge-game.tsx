@@ -82,6 +82,7 @@ import { timeOfDay } from './lounge-calendar';
 import { farmField, farmHomePlace, farmHouse, houseOutside } from './lounge-farm-layout';
 import type { FarmTouch } from './lounge-farm-view';
 import type { FarmPage } from './lounge/FarmWorks';
+import type { SiteTarget } from './lounge/FarmSitePanel';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
 import type { GameInvite, LoungePlayer } from './lounge-room';
@@ -133,6 +134,8 @@ import { NpcRequestBoard } from './lounge/NpcRequestBoard';
 import type { TownPlace, TravelArea } from './lounge/TownPanel';
 const TownPanel = lazyRetry(() => import('./lounge/TownPanel').then((m) => ({ default: m.TownPanel })));
 const StockPanel = lazyRetry(() => import('./lounge/StockPanel').then((m) => ({ default: m.StockPanel })));
+// 우리 농장 F3: facility sites, the 공동 밭 and the 공동 창고.
+const FarmSitePanel = lazyRetry(() => import('./lounge/FarmSitePanel').then((m) => ({ default: m.FarmSitePanel })));
 import { outdoorReturnPoint } from './lounge-areas';
 import type { NpcId } from './lounge-npc-data';
 import { AccountModal } from './lounge/AccountModal';
@@ -610,6 +613,8 @@ function AccountLounge({
   /** 우리 농장's E actions (set below once the handlers exist). */
   const farmTouchRef = useRef<(touch: FarmTouch) => void>(() => {});
   const [farmPage, setFarmPage] = useState<FarmPage>('ledger');
+  /** 우리 농장 F3: the site / 공동 밭 / 공동 창고 window E opened. */
+  const [siteTarget, setSiteTarget] = useState<SiteTarget | null>(null);
   const outdoorApi = useOutdoor({
     room,
     notify,
@@ -1534,6 +1539,7 @@ function AccountLounge({
         setFarmPage(t.kind === 'bin' ? 'market' : 'layout');
         setModal('farm');
       } else if (t.kind === 'mailbox') openMail();
+      else if (t.kind === 'site' || t.kind === 'common' || t.kind === 'store') setSiteTarget(t);
     };
   });
   // Opens a table screen (banner [가기], retained-table button).
@@ -2399,7 +2405,7 @@ function AccountLounge({
                 players,
                 self,
                 me: { actor: save.actor, look: myLook },
-                paused: !!modal || !!coach || !!talk || !!residentTalk || !!townPlace || !!fishing,
+                paused: !!modal || !!coach || !!talk || !!residentTalk || !!townPlace || !!siteTarget || !!fishing,
                 fishing: fishing?.phase ?? null,
                 onChat: () => setModal('chat'),
                 onBag: () => setModal('bag'),
@@ -3185,6 +3191,9 @@ function AccountLounge({
         />
       )}
       <Suspense fallback={null}>
+      {siteTarget && (
+        <FarmSitePanel room={room} view={view} notify={notify} target={siteTarget} onClose={() => setSiteTarget(null)} />
+      )}
       {modal === 'bag' && (
         <InventoryPanel
           room={room}

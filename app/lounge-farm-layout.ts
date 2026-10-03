@@ -3,10 +3,9 @@
 // north edge (the same kArchive houses that stood in the hub; rooms and doors
 // unchanged, only where the door is), each friend's 10 × 8 field right in front
 // of their house, a lane under the fields, and the central yard with the
-// shipping bin, the mailbox and the farm board. Spots for later stages (the
-// shared field, the greenhouse, the machine yard and the barn: F3 / F4) are
-// marked out but empty. The 3D set is lounge-farm-scene.ts; walking uses
-// lounge-areas.ts (regionWalk).
+// shipping bin, the mailbox and the farm board. F3's facility sites and the
+// 공동 밭 are lounge-farm-sites-layout.ts (on the ground F1 left empty). The 3D
+// set is lounge-farm-scene.ts; walking uses lounge-areas.ts (regionWalk).
 //
 // Coordinates: x to the right, z toward the camera, (0, 0) in the middle.
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
@@ -35,7 +34,9 @@ export type FarmModel =
   | 'picketFence'
   | 'broadleafTree'
   | 'smallPine'
-  | 'shrub';
+  | 'shrub'
+  // 우리 농장 F3: the shared greenhouse's potting house (placed only once it is built).
+  | 'greenhouse';
 
 /** One field tile is FIELD_TILE world units; a 10 × 8 field is 10 × 8 units. */
 export const FIELD_TILE = 1;
@@ -162,7 +163,7 @@ export const onOpenTile = (f: FarmField, size: number, p: WalkPoint) => {
   return t !== null && tileOpen(size, t);
 };
 
-/** Where work-yard slot `slot` (0–3) of a house stands: west of its door, 2 × 2 (F3 moves them to the machine yard). */
+/** Where work-yard slot `slot` (0–3) of a house stands: west of its door, 2 × 2 (once the machine yard stands, there instead). */
 export function farmWorkSlot(h: FarmHouse, slot: number): WalkPoint {
   const col = slot % 2,
     row = Math.floor(slot / 2);
@@ -186,21 +187,6 @@ export const FARM_YARD = { x: 0, z: 6, w: 22, d: 10 } as const;
 export const FARM_BIN = { x: 4.4, z: 3.4, w: 1.8, d: 1.1, h: 1, front: { x: 4.4, z: 4.8 }, reach: 1.3 } as const;
 export const FARM_MAILBOX = { x: -2.6, z: 3.2, w: 0.6, d: 0.5, front: { x: -2.6, z: 4.4 }, reach: 1.2 } as const;
 export const FARM_BOARD = { x: -6.2, z: 3, w: 1.6, d: 0.45, front: { x: -6.2, z: 4.3 }, reach: 1.3 } as const;
-/** Marked-out spots for later stages (drawn as staked outlines with a sign; no walls). */
-export type FarmLater = { id: 'greenhouse' | 'shared' | 'works' | 'barn'; name: string; stage: string; x: number; z: number; w: number; d: number };
-export const FARM_LATER: readonly FarmLater[] = [
-  { id: 'greenhouse', name: '공용 온실 자리', stage: '다음 공사', x: -30, z: 9, w: 10, d: 8 },
-  { id: 'shared', name: '공동 밭 자리', stage: '다음 공사', x: -15.5, z: 11, w: 7.2, d: 7.2 },
-  { id: 'works', name: '가공 마당 자리', stage: '다음 공사', x: 16, z: 10, w: 9, d: 6 },
-  { id: 'barn', name: '축사 자리', stage: '목장 울타리 뒤', x: 31, z: 10, w: 12, d: 9 },
-];
-export const LATER_REACH = 1.6;
-/** Distance to a marked-out spot's outline area (0 inside). */
-export function laterDistance(l: FarmLater, p: WalkPoint) {
-  const dx = Math.max(0, Math.abs(p.x - l.x) - l.w / 2),
-    dz = Math.max(0, Math.abs(p.z - l.z) - l.d / 2);
-  return Math.hypot(dx, dz);
-}
 
 export const FARM_LAMPS: readonly WalkPoint[] = [
   { x: -2.4, z: 18 },
@@ -225,9 +211,9 @@ export const FARM_PROPS: readonly { model: FarmModel; x: number; z: number; w: n
 /** Shade trees in the yard and along the road (off the fields). */
 export const FARM_TREES: readonly { x: number; z: number; s: number; pine?: boolean }[] = [
   { x: -38, z: 22, s: 1.8, pine: true },
-  { x: -22, z: 25, s: 1.7 },
+  { x: -16.6, z: 26, s: 1.7 },
   { x: -9, z: 28, s: 1.6 },
-  { x: 10, z: 27, s: 1.7, pine: true },
+  { x: 6, z: 28.6, s: 1.7, pine: true },
   { x: 22, z: 24, s: 1.8 },
   { x: 38, z: 21, s: 1.7 },
   { x: -39, z: -4, s: 1.6 },

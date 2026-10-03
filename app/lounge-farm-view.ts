@@ -1,9 +1,9 @@
 // 우리 농장 on screen (pure): what the farm scene draws from the life view
 // (every friend's field, its crops, fixtures and giant beds, the house tiers)
 // and what E reaches where I stand (my field, a friend's field, the house
-// doors, the shipping bin, the mailbox, the farm board, the spots marked for
-// later). lounge-farm-scene.ts draws, lounge-area-3d.tsx asks; the tests
-// check the touches without a renderer.
+// doors, the shipping bin, the mailbox, the farm board; F3: the facility
+// sites, the 공동 밭 and the 공동 창고). lounge-farm-scene.ts draws,
+// lounge-area-3d.tsx asks; the tests check the touches without a renderer.
 import type { LifeView } from './lounge-life.ts';
 import type { FixtureKind, MachineKind } from './lounge-farm-data.ts';
 import { FIELD_TIERS } from './lounge-farm-data.ts';
@@ -12,14 +12,14 @@ import {
   FARM_BOARD,
   FARM_FIELDS,
   FARM_HOUSES,
-  FARM_LATER,
   FARM_MAILBOX,
   FIELD_REACH,
   HOUSE_DOOR_REACH,
-  LATER_REACH,
   fieldDistance,
-  type FarmLater,
 } from './lounge-farm-layout.ts';
+import { FARM_COMMON, FARM_SITES, FARM_STORE, SITE_REACH, siteDistance } from './lounge-farm-sites-layout.ts';
+import { FACILITY_BY_ID, SITE_SIZE_NAME } from './lounge-farm-sites-data.ts';
+import type { FarmSitesView } from './lounge-farm-sites.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { farmAction, type ActionKind } from './lounge-flow.ts';
 import { ACTORS } from './lounge-roster.ts';
@@ -35,7 +35,12 @@ export type FarmFieldDraw = {
   mach: [number, MachineKind, boolean][];
   giants: number[];
 };
-export type FarmSceneState = { fields: FarmFieldDraw[]; houses: Record<number, number> };
+export type FarmSceneState = {
+  fields: FarmFieldDraw[];
+  houses: Record<number, number>;
+  /** 우리 농장 F3: the facility sites, the 공동 밭 and the store (absent until the farm has any). */
+  sites?: FarmSitesView;
+};
 
 const SMALLEST = FIELD_TIERS[0].size;
 /** Every friend's field as the farm draws it (friends with no life yet: an empty small field). */
@@ -73,7 +78,7 @@ export function farmSceneState(life: LifeView | null | undefined, me: number): F
       })),
     };
   });
-  return { fields, houses: { ...life?.houses } };
+  return { fields, houses: { ...life?.houses }, ...(life?.farmSites ? { sites: life.farmSites } : {}) };
 }
 
 /** Something E reaches on the farm. */
@@ -84,7 +89,10 @@ export type FarmTouch =
   | { kind: 'bin' }
   | { kind: 'mailbox' }
   | { kind: 'board' }
-  | { kind: 'later'; id: FarmLater['id'] };
+  /** 우리 농장 F3: a facility site (build list, funding, the facility's own panel). */
+  | { kind: 'site'; id: string }
+  | { kind: 'common' }
+  | { kind: 'store' };
 export type FarmReach = { d: number; touch: FarmTouch; label: string; action: ActionKind; disabled?: boolean };
 
 /**
@@ -139,10 +147,43 @@ export function farmReach(p: WalkPoint, life: LifeView | null | undefined, me: n
   spot(FARM_BIN.front, FARM_BIN.reach, { kind: 'bin' }, '출하함 열기', 'board');
   spot(FARM_MAILBOX.front, FARM_MAILBOX.reach, { kind: 'mailbox' }, '우체통 열기', 'mail');
   spot(FARM_BOARD.front, FARM_BOARD.reach, { kind: 'board' }, '농장 게시판 보기', 'board');
-  for (const l of FARM_LATER) {
-    const d = Math.hypot(Math.max(0, Math.abs(p.x - l.x) - l.w / 2), Math.max(0, Math.abs(p.z - l.z) - l.d / 2));
-    if (d <= LATER_REACH)
-      out.push({ d: d + 0.4, touch: { kind: 'later', id: l.id }, action: 'look', label: `${l.name} · ${l.stage}`, disabled: true });
-  }
+  spot(FARM_STORE.front, FARM_STORE.reach, { kind: 'store' }, '공동 창고 열기', 'board');
+  out.push(...siteReach(p, life, me));
   return out.sort((a, b) => a.d - b.d);
+}
+
+/**
+ * 우리 농장 F3: the 공동 밭 and the facility sites in reach of `p`. Standing on
+ * a site counts as near (sites are walkable ground), a little behind the
+ * fields and the yard's fixtures so those win when they overlap.
+ */
+export function siteReach(p: WalkPoint, life: LifeView | null | undefined, me: number): FarmReach[] {
+  const out: FarmReach[] = [];
+  const common = siteDistance(FARM_COMMON, p);
+  if (common <= SITE_REACH) {
+    const ripe = (life?.farmSites?.field.p ?? []).filter((x) => x.r).length;
+    out.push({ d: common + 0.2, touch: { kind: 'common' }, action: ripe ? 'harvest' : 'tend', label: ripe ? `공동 밭 거두기 (${ripe})` : '공동 밭 가꾸기' });
+  }
+  for (const s of FARM_SITES) {
+    const d = siteDistance(s, p);
+    if (d > SITE_REACH) continue;
+    const built = life?.farmSites?.sites.find((x) => x.id === s.id);
+    const def = built ? FACILITY_BY_ID[built.k] : null;
+    const friend = s.actor !== undefined && s.actor !== me ? (ACTORS[s.actor] ?? '친구') : null;
+    const label = def
+      ? built!.t < 1
+        ? `${def.name} 공사 · 힘 보태기`
+        : friend
+          ? `${friend}의 ${def.name}`
+          : def.id === 'machineYard'
+            ? `${def.name} · 기계 칸 ${life?.farmSites?.slots ?? 4}`
+            : `${def.name} 돌보기`
+      : friend
+        ? `${friend}의 부지 · 비어 있어요`
+        : s.actor === me
+          ? '내 부지 · 시설 짓기'
+          : `빈 ${SITE_SIZE_NAME[s.size]} · 시설 짓기`;
+    out.push({ d: d + 0.3, touch: { kind: 'site', id: s.id }, action: def ? 'tend' : 'board', label, ...(friend && !def ? { disabled: true } : {}) });
+  }
+  return out;
 }

@@ -199,7 +199,8 @@ test('bounded read: hostile farm extension values are clipped', () => {
     farmx: {
       [uid]: {
         fx: { 0: { k: 'sprinkler', at: 1 }, 99: { k: 'sprinkler', at: 1 }, 3: { k: 'bogus', at: 1 } },
-        mach: { 0: { k: 'keg', out: 'keg-grape', done: 5, q: 3, n: 1 }, 7: { k: 'jar' } },
+        // Slots go up to the machine yard's 12 (0–11); 12 is no slot.
+        mach: { 0: { k: 'keg', out: 'keg-grape', done: 5, q: 3, n: 1 }, 7: { k: 'jar' }, 12: { k: 'jar' } },
         goods: { 'keg-grape@2': 3, 'nope': 4, 'honey@1': 2 },
         bin: { day: 5, items: { carrot: 5000, 'fruit@2': 1 } },
         log: Array.from({ length: 30 }, () => ({ kind: 'crow', at: 1, tile: 2 })),
@@ -209,7 +210,7 @@ test('bounded read: hostile farm extension values are clipped', () => {
   });
   // Old yard tile 0 (front bed) → field tile 20; 99 is no tile.
   assert.deepEqual(Object.keys(life.farmx[uid].fx), ['20']);
-  assert.deepEqual(Object.keys(life.farmx[uid].mach), ['0']);
+  assert.deepEqual(Object.keys(life.farmx[uid].mach), ['0', '7']);
   assert.deepEqual(life.farmx[uid].goods, { 'keg-grape@2': 3 });
   assert.deepEqual(life.farmx[uid].bin.items, { carrot: 999 });
   assert.equal(life.farmx[uid].log.length, 8);
@@ -346,11 +347,16 @@ test('wither: a summer-only crop dies at 00:00 KST of the first autumn day; shel
   s.seeds(m, 'carrot', 1);
   s.act(m, { kind: 'plant', plot: 0, crop: 'carrot' }, midnight + 2 * MIN);
   assert.equal(s.life.farms[m.id][0].dead, undefined);
-  // Base crops never wither; the village greenhouse shelters seasonal ones.
+  // Base crops never wither; a greenhouse (or 온실지기) shelters seasonal ones.
   assert.equal(witherAt(s.life.farms[m.id][0], false), null);
   assert.equal(witherAt({ crop: 'watermelon', plantedAt: late, wateredAt: null }, true), null);
 });
 
+/** 온실지기 (farm-a2): off-season seeds on my own field (우리 농장 F3: the village greenhouse no longer does it). */
+function greenThumb(w, uid) {
+  const u = ((w.life.growth ??= {}).u ??= {});
+  u[uid] = { ...u[uid], prof: ['farm-a2'] };
+}
 test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radius 2', () => {
   // Find a summer day whose roll draws crows for some uid.
   const s = world(1),
@@ -363,7 +369,7 @@ test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radi
   s.act(m, { kind: 'status', text: '' }, evening - HOUR);
   assert.equal(s.life.farmx[m.id].st, day - 1);
   s.seeds(m, 'insam', 6);
-  s.life.flags = ['greenhouse']; // plant ginseng in any season for this test
+  greenThumb(s, m.id); // 온실지기: plant ginseng in any season for this test
   s.act(m, { kind: 'plant', plot: -1, crop: 'insam' }, evening);
   // Before 05:00 nothing happens; after it one ginseng is gone.
   const beforeView = s.view(m, dawn - MIN);
@@ -380,7 +386,7 @@ test('crows: deterministic 05:00 rolls, never retroactive, scarecrows guard radi
   t.life = ensureLifeMember(emptyLife(), m.id, 0);
   t.ledger = registerWallet(newLoungeLedger(), 'wallet-' + m.id);
   t.act(n, { kind: 'status', text: '' }, evening - HOUR);
-  t.life.flags = ['greenhouse'];
+  greenThumb(t, m.id);
   t.seeds(n, 'insam', 6);
   for (const tile of [0, 1, 2, 10, 11, 12]) t.act(n, { kind: 'plant', plot: tile, crop: 'insam' }, evening);
   t.life.farms[m.id][11] = { crop: null, plantedAt: 0, wateredAt: null };

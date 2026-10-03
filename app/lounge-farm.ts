@@ -32,7 +32,6 @@ import {
   MACHINE_BY_ID,
   STAR_FERT_RECIPE,
   TRELLIS_SHADE,
-  WORK_SLOTS,
   bedSeed,
   bedTiles,
   fieldBlock,
@@ -85,7 +84,6 @@ import {
   demandSold,
   discover,
   farmSizeOf,
-  hasFlag,
   invCount,
   noteDemand,
   sellBonus,
@@ -102,6 +100,9 @@ import { gainXp, growthChance, growthMods, skillLevel } from './lounge-growth.ts
 import { SELL_AWAY, type ShopId } from './lounge-shops.ts';
 import { SKILL_INFO, XP } from './lounge-growth-data.ts';
 import { ORCHARD_FRUITS, STAGE3_ITEMS, type Stage3ItemId } from './lounge-stage3-data.ts';
+// 우리 농장 F3: the facility sites settle with the shipping bin; the machine yard sets the slots.
+import { legacyShelter, projectSites, settleSites, workSlots } from './lounge-farm-sites.ts';
+import { MAX_WORK_SLOTS } from './lounge-farm-sites-data.ts';
 
 const HOUR = 3_600_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -306,8 +307,9 @@ function readFarmX(v: unknown, legacy = false): FarmX | undefined {
   }
   if (nonEmpty(fx)) out.fx = fx;
   const mach: Record<string, MachineSlot> = {};
-  for (const [k, m] of Object.entries(obj(x.mach)).slice(0, 8)) {
-    const r = /^\d$/.test(k) && Number(k) < WORK_SLOTS ? readMachine(m) : undefined;
+  for (const [k, m] of Object.entries(obj(x.mach)).slice(0, MAX_WORK_SLOTS * 2)) {
+    // Up to the machine yard's 12 slots (machines beyond today's slots stay until picked up).
+    const r = /^\d{1,2}$/.test(k) && Number(k) < MAX_WORK_SLOTS ? readMachine(m) : undefined;
     if (r) mach[k] = r;
   }
   if (nonEmpty(mach)) out.mach = mach;
@@ -438,8 +440,12 @@ export function shadeFor(life: LifeState, uid: string, tile: number) {
     p = front === null ? null : life.farms[uid]?.[front];
   return p?.crop && CROP_INFO[p.crop].trellis ? TRELLIS_SHADE : 0;
 }
-/** Seasonal crops on this farm never wither (village greenhouse, 온실지기). */
-export const farmSheltered = (life: LifeState, uid: string) => hasFlag(life, 'greenhouse') || growthMods(life, uid).offSeason;
+/**
+ * Seasonal crops on this farm never wither with 온실지기. (우리 농장 F3: the
+ * village greenhouse moved into the farm's greenhouse; crops planted under the
+ * old rule keep their shelter, lounge-farm-sites.ts legacyShelter.)
+ */
+export const farmSheltered = (life: LifeState, uid: string) => growthMods(life, uid).offSeason;
 /** When a seasonal crop withers: 00:00 KST of the first day after planting outside its seasons. */
 export function witherAt(plot: Plot, sheltered: boolean): number | null {
   if (!plot.crop || sheltered) return null;
@@ -483,7 +489,7 @@ function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   const farm = life.farms[uid],
     at = dayStart(d) + CROW_HOUR * HOUR;
   const growing = farm.flatMap((p, i) =>
-    p.crop && p.plantedAt <= at && plotReadyAt(p, at)! > at && (witherAt(p, sheltered) ?? Infinity) > at ? [i] : [],
+    p.crop && p.plantedAt <= at && plotReadyAt(p, at)! > at && (witherAt(p, sheltered || legacyShelter(life, p)) ?? Infinity) > at ? [i] : [],
   );
   // 재능 까마귀 쫓기 halves the chance.
   const chance = CROW_CHANCE * (1 - Math.min(1, growthMods(life, uid).crowGuard));
@@ -519,7 +525,7 @@ export function settleFarmPlots(life: LifeState, uid: string, now: number) {
     x.st = d;
   }
   farm.forEach((p, i) => {
-    const w = witherAt(p, sheltered);
+    const w = witherAt(p, sheltered || legacyShelter(life, p));
     if (w !== null && now >= w) {
       pushLog(life, uid, { kind: 'wither', at: w, crop: p.crop!, tile: i });
       farm[i] = { ...emptyPlot(), dead: p.crop! };
@@ -603,12 +609,14 @@ function settleFair(life: LifeState, ledger: LoungeLedger, now: number) {
  * (crows, withering), their shipping bin, and last week's 품평회.
  */
 export function settleFarm(life: LifeState, ledger: LoungeLedger, member: { id: string; actor: number }, now: number) {
+  // 우리 농장 F3: the facilities' daily hooks (same settle point as the shipping bin).
+  settleSites(life, now);
   settleFarmPlots(life, member.id, now);
   return settleFair(life, settleBin(life, ledger, member.id, now), now);
 }
 /** A copy of `life` whose farms are settled to `now` (views never write). */
 export function projectFarms(life: LifeState, now: number): LifeState {
-  const out: LifeState = { ...life, farms: structuredClone(life.farms), farmx: structuredClone(life.farmx ?? {}) };
+  const out: LifeState = { ...projectSites(life, now), farms: structuredClone(life.farms), farmx: structuredClone(life.farmx ?? {}) };
   for (const uid of Object.keys(out.farms)) settleFarmPlots(out, uid, now);
   return out;
 }
@@ -759,7 +767,9 @@ const tileIndex = (life: LifeState, uid: string, tile: unknown) => {
   if (tile >= life.farms[uid].length || !tileOpen(farmSizeOf(life, uid), tile as number)) fail(FARM_REJECT.tileLocked);
   return tile as number;
 };
-const slotIndex = (slot: unknown) => (safe(slot) && slot >= 0 && slot < WORK_SLOTS ? slot : fail(FARM_REJECT.slot));
+/** A machine slot I have now (4, or the machine yard's 8 / 12); `any`: every stored slot (picking up). */
+const slotIndex = (life: LifeState, slot: unknown, any = false) =>
+  safe(slot) && slot >= 0 && slot < (any ? MAX_WORK_SLOTS : workSlots(life)) ? slot : fail(FARM_REJECT.slot);
 /** Sprinkler placed or moved to `tile`: water the growing plots it now covers. */
 function sprinklerPlaced(life: LifeState, uid: string, now: number) {
   life.farms[uid].forEach((p, i) => applySprinklers(life, uid, i, p, now));
@@ -813,7 +823,7 @@ export function farmAction(
         (farmxOf(life, uid).fx ??= {})[String(tile)] = { k: a.item as FixtureKind, at: now };
         if (FIXTURE_BY_ID[a.item].water) sprinklerPlaced(life, uid, now);
       } else if (own(MACHINE_BY_ID, a.item)) {
-        const slot = slotIndex(a.slot),
+        const slot = slotIndex(life, a.slot),
           mach = (farmxOf(life, uid).mach ??= {});
         if (mach[String(slot)]) fail(FARM_REJECT.slotBusy);
         have();
@@ -832,7 +842,7 @@ export function farmAction(
         if (!nonEmpty(x.fx!)) delete x.fx;
         addInv(life, uid, f!.k, 1);
       } else {
-        const slot = slotIndex(a.slot),
+        const slot = slotIndex(life, a.slot, true),
           m = x.mach?.[String(slot)];
         if (!m) fail(FARM_REJECT.noMachine);
         if (m!.out) fail(FARM_REJECT.machineFull);
@@ -845,8 +855,8 @@ export function farmAction(
     case 'farmMove': {
       const x = farmxOf(life, uid);
       if (a.area === 'slot') {
-        const from = slotIndex(a.from),
-          to = slotIndex(a.to),
+        const from = slotIndex(life, a.from, true),
+          to = slotIndex(life, a.to),
           mach = x.mach ?? {};
         if (!mach[String(from)]) fail(FARM_REJECT.noMachine);
         if (from === to) break;
@@ -871,7 +881,7 @@ export function farmAction(
       break;
     }
     case 'farmLoad': {
-      const slot = slotIndex(a.slot),
+      const slot = slotIndex(life, a.slot),
         m = life.farmx?.[uid]?.mach?.[String(slot)];
       if (!m) fail(FARM_REJECT.noMachine);
       if (m!.out) fail(m!.done! > now ? FARM_REJECT.machineBusy : FARM_REJECT.machineFull);
@@ -939,7 +949,7 @@ export function farmAction(
       else if (a.slot === undefined || a.slot === -1) {
         for (const key of Object.keys(x.mach ?? {})) got += Number(collectSlot(key));
         for (const key of Object.keys(x.fx ?? {})) got += Number(collectBee(key));
-      } else got += Number(collectSlot(String(slotIndex(a.slot))));
+      } else got += Number(collectSlot(String(slotIndex(life, a.slot, true))));
       if (!got) fail(FARM_REJECT.nothing);
       bump(life, uid, 'craft', got);
       gainXp(life, uid, 'craft', 3 * got, now);

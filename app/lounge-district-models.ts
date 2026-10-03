@@ -146,6 +146,7 @@ export const FARM_MODEL_URLS: Record<FarmModel, string> = {
   broadleafTree: VALLEY_MODELS.broadleafTree,
   smallPine: VALLEY_MODELS.smallPine,
   shrub: VALLEY_MODELS.shrub,
+  greenhouse: LOUNGE_MODELS.greenhouse,
 };
 /** Every model a district needs (built districts only). */
 export const DISTRICT_MODEL_URLS: Partial<Record<DistrictId, readonly string[]>> = {
