@@ -321,6 +321,8 @@ export const ROOM_DRESS_REACH = 0.9;
 const DRESS_REFS = new Set(['wardrobe', 'mirror', 'furn-wardrobe-white', 'furn-gold-mirror', 'furn-najeon-wardrobe']);
 /** Tables and the hearth double as the kitchen counter / workbench (요리·만들기). */
 export const ROOM_COOK_REACH = 0.9;
+/** How close to the bed 하루 마감 is offered. */
+export const ROOM_SLEEP_REACH = 0.9;
 export const COOK_REFS = new Set(['desk', 'tea-table', 'coffee-table', 'furn-table', 'furn-fireplace', 'furn-round-dining-set', 'furn-marble-fireplace']);
 /** Furniture with its own action in my room (the pointer cursor shows over it; the built-ins always count). */
 export const roomItemUsable = (ref: string) => DRESS_REFS.has(ref) || COOK_REFS.has(ref);
@@ -410,7 +412,8 @@ export function roomAction(
     canExit = true,
     canDress = own,
     canCook = false,
-  }: { own: boolean; canExit?: boolean; canDress?: boolean; canCook?: boolean },
+    canSleep = false,
+  }: { own: boolean; canExit?: boolean; canDress?: boolean; canCook?: boolean; canSleep?: boolean },
 ): { kind: ActionKind; item?: string } | null {
   const candidates: ActionCandidate<string>[] = [];
   const shape = activeRoomShape(),
@@ -454,6 +457,14 @@ export function roomAction(
         reach: ROOM_COOK_REACH,
         target: item.id,
       });
+    }
+  // 시간 체계 P1: 하루 마감 at my own bed (lounge-myday.ts).
+  if (own && canSleep)
+    for (const item of room.items) {
+      if (item.ref !== 'bed') continue;
+      const box = itemFootprint(item);
+      if (!box) continue;
+      candidates.push({ kind: 'sleep' as const, distance: rectDistance(point, box), reach: ROOM_SLEEP_REACH, target: item.id });
     }
   if (own) candidates.push({ kind: 'decorate' as const, distance: 0, reach: 1, fallback: true });
   const best = pickAction<string>(candidates);

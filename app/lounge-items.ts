@@ -420,7 +420,9 @@ export const ITEMS: readonly ItemDef[] = [
       note: o.note,
     }),
   ),
-  { id: 'hay', name: '건초', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '목장 동물 한 마리의 하루 먹이(닐라 목장)' },
+  { id: 'hay', name: '건초', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '목장 동물 한 마리의 하루 먹이(닐라 목장 · 우리 농장 사일로)' },
+  // 우리 농장 F4: what the farm barn and coop make every day (lounge-farm-barn.ts).
+  { id: 'manure', name: '거름', emoji: '', cat: 'tool', kind: 'tool', sell: 0, note: '축사·닭장에서 매일 나와요. 거름 2개로 비료 1개를 만들어요(축사 퇴비)' },
 ];
 export const ITEM_BY_ID: Readonly<Record<string, ItemDef>> = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
 export const isItemId = (id: unknown): id is string =>

@@ -39,6 +39,7 @@ import { sellTotal, sellUnit } from '../app/lounge-life-plus.ts';
 import { cloudTransition, commandHash, CLOUD_LEASE_MS, SEEN_REFRESH_MS } from '../app/lounge-cloud-engine.ts';
 import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { weatherOf } from '../app/lounge-calendar.ts';
+import { FISH_BY_ID } from '../app/lounge-items.ts';
 import { tillField } from './farm-test-help.mjs';
 
 const DAY = 24 * HOUR;
@@ -403,9 +404,11 @@ test('입질 영감 widens the bite window of a real cast by 20%', () => {
   a.mood(n).i = { k: 'bite', at: T0, until: T0 + DAY, left: 10 };
   s.act(m, { kind: 'cast', spot: 'river' }, T0 + 1000);
   a.act(n, { kind: 'cast', spot: 'river' }, T0 + 1000);
-  const w0 = s.life.ext[m.id].pending.windowMs,
-    w1 = a.life.ext[n.id].pending.windowMs;
-  assert.ok(Math.abs(w1 - w0 * 1.2) <= 1, `${w1} vs ${w0}`);
+  // The 영감's rarer pick may roll another fish: compare each window to its fish's own.
+  const per = (p) => p.windowMs / FISH_BY_ID[p.fish].windowMs;
+  const w0 = per(s.life.ext[m.id].pending),
+    w1 = per(a.life.ext[n.id].pending);
+  assert.ok(Math.abs(w1 - w0 * 1.2) <= 0.005, `${w1} vs ${w0}`);
   assert.equal(a.mood(n).i.left, 9);
 });
 

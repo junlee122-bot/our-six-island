@@ -647,6 +647,11 @@ export class CloudRoom {
     if (this.view.status === 'connected') return this.action(a, onSend);
     return this.enqueue({ op: 'action', action: a }, onSend);
   }
+  /** 시간 체계 P1: 하루 마감 at my bed (op 'endDay'; the server checks the room, the night and the count). */
+  endDay() {
+    if (this.view.status !== 'connected') return Promise.resolve(false);
+    return this.enqueue({ op: 'endDay', code: this.view.code });
+  }
   /** Sends an action; resolves when the server answered (true = accepted). */
   action(action: LoungeAction, onSend?: (at: number) => void): Promise<boolean> {
     if (this.view.status !== 'connected') return Promise.resolve(false);

@@ -206,6 +206,7 @@ const InventoryPanel = lazyRetry(() => import('./lounge/Inventory').then((m) => 
 const FishingOverlay = lazyRetry(() => import('./lounge/Fishing').then((m) => ({ default: m.FishingOverlay })));
 const CollectionBook = lazyRetry(() => import('./lounge/Collection').then((m) => ({ default: m.CollectionBook })));
 const KitchenPanel = lazyRetry(() => import('./lounge/Kitchen').then((m) => ({ default: m.KitchenPanel })));
+const DayEndPanel = lazyRetry(() => import('./lounge/DayEnd').then((m) => ({ default: m.DayEndPanel })));
 const BundleBoard = lazyRetry(() => import('./lounge/Bundles').then((m) => ({ default: m.BundleBoard })));
 const loadBonds = () => import('./lounge/Bonds');
 const FriendsLife = lazyRetry(() => loadBonds().then((m) => ({ default: m.FriendsLife })));
@@ -415,6 +416,8 @@ type ModalName =
   | 'realty'
   | 'furniture'
   | 'tavernUp'
+  // 시간 체계 P1: my bed (하루 마감 and the 결산 card).
+  | 'dayEnd'
   // PC: the Esc menu and 조작 안내.
   | 'system'
   | 'help';
@@ -2566,6 +2569,7 @@ function AccountLounge({
               onExit={() => enter('village')}
               onDress={() => enter('wardrobe')}
               onCook={() => setModal('kitchen')}
+              onSleep={() => setModal('dayEnd')}
               onNearDoor={() => preloadTab('village')}
               save={save}
               onChange={setSave}
@@ -3257,6 +3261,7 @@ function AccountLounge({
           onClose={() => setModal(null)}
         />
       )}
+      {modal === 'dayEnd' && <DayEndPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'kitchen' && (
         <KitchenPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />
       )}

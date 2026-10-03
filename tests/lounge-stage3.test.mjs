@@ -345,10 +345,15 @@ test('animals: buy, feed hay daily, bond, and get eggs, milk and wool', () => {
   const v = s.act(m, { kind: 'animalCare' }, at(ANIMAL_BOND));
   assert.ok(v.stage3.animals.every((a) => a.bonded));
   assert.ok(s.inv(m, 'egg-big') >= 1);
-  // Missed days cost 정.
+  // A missed day costs 정.
   const love = s.life.ext[m.id].s3.a[0].love;
-  s.act(m, { kind: 'animalCare' }, at(ANIMAL_BOND + 4));
-  assert.equal(s.life.ext[m.id].s3.a[0].love, love - 3 + 1);
+  s.act(m, { kind: 'animalCare' }, at(ANIMAL_BOND + 2));
+  assert.equal(s.life.ext[m.id].s3.a[0].love, love - 1 + 1);
+  // 시간 체계 §1-4 목장 도우미: three days away — the helper cared (200범 a day an animal), no 정 lost.
+  const paid = wallet(s, m);
+  s.act(m, { kind: 'animalCare' }, at(ANIMAL_BOND + 6));
+  assert.equal(s.life.ext[m.id].s3.a[0].love, Math.min(10, love + 1));
+  assert.equal(paid - wallet(s, m), 2 * 3 * 200);
   // The coop holds four hens.
   for (let i = 1; i < COOP_ROOM; i++) s.act(m, { kind: 'animalBuy', animal: 'chicken' }, at(20));
   s.fails(m, { kind: 'animalBuy', animal: 'chicken' }, /닭장/, at(20));

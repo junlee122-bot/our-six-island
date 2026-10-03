@@ -17,6 +17,7 @@
 // Cycle-safe: lounge-life.ts, lounge-life-plus.ts and lounge-growth.ts import
 // this module and it imports them back, so their bindings are only used
 // inside functions.
+import { myDay } from './lounge-myday.ts';
 import { kstDay, spendBeom, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, birthdayActors, hash32, holidaysOn, weatherOf } from './lounge-calendar.ts';
 import { DISH_BY_ID, FISH_BY_ID, ITEM_BY_ID } from './lounge-items.ts';
@@ -348,9 +349,8 @@ function prune(u: MoodUser, now: number) {
     if (!u.cb.length) delete u.cb;
   }
 }
-/** Resets the daily fields at KST midnight. */
-function today(u: MoodUser, now: number) {
-  const day = kstDay(now);
+/** Resets the daily fields when 나의 하루 changes (lounge-myday.ts; the KST day before 하루 마감). */
+function today(u: MoodUser, day: number) {
   if (u.d === day) return;
   u.d = day;
   delete u.sn;
@@ -456,7 +456,7 @@ export function moodTouch(life: LifeState, uid: string, now: number, others?: nu
     else delete u.o;
     if (others + 1 >= LIVELY_ONLINE) addLet(u, 'lively', now);
   }
-  today(u, now);
+  today(u, myDay(life, uid, now));
   settle(life, uid, u, now);
   return u;
 }
@@ -464,7 +464,7 @@ export function moodTouch(life: LifeState, uid: string, now: number, others?: nu
 function other(life: LifeState, uid: string | null | undefined, now: number) {
   if (!uid) return null;
   const u = userOf(life, uid, now);
-  if (u) today(u, now);
+  if (u) today(u, myDay(life, uid, now));
   return u;
 }
 
@@ -893,10 +893,10 @@ export const isMoodAction = (kind: string) => (MOOD_ACTION_KINDS as readonly str
 
 // ---------------------------------------------------------------- views
 /** A copy of `u` projected to `now` with the same rules as a write (no state change). */
-function moodNow(u: MoodUser, now: number): MoodUser {
+function moodNow(u: MoodUser, now: number, day = kstDay(now)): MoodUser {
   const c = structuredClone(u);
   advance(c, now);
-  today(c, now);
+  today(c, day);
   prune(c, now);
   return c;
 }
@@ -986,7 +986,7 @@ export function moodFaces(life: LifeState, now: number): Record<number, MoodFace
  */
 export function moodView(life: LifeState, uid: string, now: number): MoodView {
   const raw = life.mood?.[uid];
-  const u = raw ? moodNow(raw, now) : blank(now);
+  const u = raw ? moodNow(raw, now, myDay(life, uid, now)) : blank(now);
   const s = moodletSums(u, now);
   const target = moodTarget(u, now);
   const day = kstDay(now);

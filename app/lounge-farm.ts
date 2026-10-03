@@ -486,13 +486,26 @@ export function shadeFor(life: LifeState, uid: string, tile: number) {
  * old rule keep their shelter, lounge-farm-sites.ts legacyShelter.)
  */
 export const farmSheltered = (life: LifeState, uid: string) => growthMods(life, uid).offSeason;
-/** When a seasonal crop withers: 00:00 KST of the first day after planting outside its seasons. */
+/**
+ * 막바지 수확 보장 (design-time-and-endgame.md §1-5): a crop already ripe when
+ * its season ends keeps this much longer (until 06:00 of the new season's
+ * second day), so a friend who plays only some days still gets to harvest it.
+ */
+export const LATE_HARVEST_MS = 30 * HOUR;
+/**
+ * When a seasonal crop withers: 00:00 KST of the first day after planting
+ * outside its seasons, or LATE_HARVEST_MS later for a crop ripe by then.
+ */
 export function witherAt(plot: Plot, sheltered: boolean): number | null {
   if (!plot.crop || sheltered) return null;
   const seasons = CROP_INFO[plot.crop].seasons;
   if (!seasons) return null;
   const d0 = kstDay(plot.plantedAt);
-  for (let d = d0 + 1; d <= d0 + 60; d++) if (!seasons.includes(seasonOfDay(d))) return dayStart(d);
+  for (let d = d0 + 1; d <= d0 + 60; d++) {
+    if (seasons.includes(seasonOfDay(d))) continue;
+    const end = dayStart(d);
+    return plotReadyAt(plot, end)! <= end ? end + LATE_HARVEST_MS : end;
+  }
   return null;
 }
 /** Visual growth stage 0–4 (seed, sprout, leaves, flower / green fruit, ripe). */
@@ -574,12 +587,16 @@ export function settleFarmPlots(life: LifeState, uid: string, now: number) {
   });
   syncSprinklers(life, uid, now);
 }
-/** The shipping bin sells as the first sale of the day it is settled on (after its own day). */
-function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: number) {
+/**
+ * The shipping bin sells as the first sale of the day it is settled on (after
+ * its own day). `force` (하루 마감, lounge-myday.ts): it sells right now,
+ * still under today's sell cap and demand curve.
+ */
+export function settleBin(life: LifeState, ledger: LoungeLedger, uid: string, now: number, force = false) {
   const x = life.farmx?.[uid],
     bin = x?.bin,
     today = kstDay(now);
-  if (!x || !bin || bin.day >= today || !own(ledger.accounts, walletOf(uid))) return ledger;
+  if (!x || !bin || (bin.day >= today && !force) || !own(ledger.accounts, walletOf(uid))) return ledger;
   const flags = life.flags ?? [],
     mods = growthMods(life, uid),
     cap = SELL_CAP_PER_DAY - soldBeomToday(life, uid, now),

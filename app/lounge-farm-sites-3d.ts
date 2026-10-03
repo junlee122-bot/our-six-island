@@ -273,6 +273,20 @@ export class SiteDecor {
           wants.push([`tree:${s.id}:${t.s}`, () => [this.kit.place('broadleafTree', p.x, p.z, { w: 1.3, h: 2, d: 1.3 }, t.s, `farm-orchard-${s.id}-${t.s}`)]]);
         }
         wants.push([`orchard:${s.id}`, () => [sign()]]);
+      } else if (v.k === 'barn') {
+        // 우리 농장 F4: the 축사 (the tool shed scaled up, like 닐라's) and its 사일로; 2층 stands taller.
+        const h = v.t >= 2 ? 3.4 : 2.6;
+        wants.push([
+          `barn:${s.id}:${v.t}`,
+          () => {
+            const silo = this.kit.box(1.3, 3.6, 1.3, '#c9b48a');
+            silo.position.set(s.x + s.w / 2 - 1.2, 1.8, s.z - s.d / 2 + 1.4);
+            silo.name = 'farm-silo-' + s.id;
+            return [sign(), this.kit.place('toolShed', s.x + 0.6, s.z - s.d / 2 + 2, { w: 4.4, h, d: 3 }, 0, 'farm-barn-' + s.id), silo];
+          },
+        ]);
+      } else if (v.k === 'coop') {
+        wants.push([`coop:${s.id}:${v.t}`, () => [sign(), this.kit.place('toolShed', s.x + 1, s.z - s.d / 2 + 1.5, { w: v.t >= 2 ? 3 : 2.2, h: 1.8, d: 1.8 }, 0, 'farm-coop-' + s.id)]]);
       } else {
         wants.push([`site:${s.id}:${v.k}`, () => [sign()]]);
       }

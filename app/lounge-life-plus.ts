@@ -6,6 +6,7 @@
 //
 // Cycle-safe: lounge-life.ts imports this module and this module imports it
 // back, so neither may use the other's bindings at the top level.
+import { myDay } from './lounge-myday.ts';
 import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
@@ -296,8 +297,12 @@ export type UserExt = {
   last?: FishLast;
   /** Personal best length (cm) per fish id (VILL-2 fish card). */
   best?: Record<string, number>;
-  /** KST day of the daily fields below. */
+  /** KST day of the daily fields below (money: wished, dem, hag, reroll). */
   day?: number;
+  /** 나의 하루 of taken, req, wf, ate (lounge-myday.ts; absent: the same as `day`). */
+  pd?: number;
+  /** Friend requests paid in 범 today (the real day: REQUESTS_PER_DAY at most). */
+  rqn?: number;
   taken?: string[];
   req?: number[];
   claimed?: string[];
@@ -588,6 +593,7 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (s3) out.s3 = s3;
   const best = counts(x.best, (id) => own(FISH_BY_ID, id), FISH.length);
   if (nonEmpty(best)) out.best = best as Record<string, number>;
+  if (safe(x.pd) && x.pd > 0) out.pd = x.pd;
   if (safe(x.day) && x.day > 0) {
     out.day = x.day;
     const taken = idList(x.taken, DAILY_KEYS_MAX, (s) => /^[a-z0-9:-]+$/.test(s));
@@ -602,6 +608,7 @@ function readUserExt(v: unknown): UserExt | undefined {
     if (nonEmpty(dem)) out.dem = dem as Record<string, number>;
     if (safe(x.reroll) && x.reroll > 0) out.reroll = Math.min(SHOP_REROLL_MAX, x.reroll);
     if (safe(x.hag) && x.hag > 0) out.hag = Math.min(HAGGLE_CAP, x.hag);
+    if (safe(x.rqn) && x.rqn > 0) out.rqn = Math.min(REQUESTS_PER_DAY, x.rqn);
   }
   const sn = obj(x.snack);
   if (typeof sn.kind === 'string' && own(BUFF_INFO, sn.kind) && typeof sn.food === 'string' && own(SHOP_FOOD_BY_ID, sn.food) && safe(sn.until))
@@ -757,23 +764,36 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
 
 // ---------------------------------------------------------------- helpers
 const extOf = (life: LifeState, uid: string): UserExt => ((life.ext ??= {})[uid] ??= {});
-/** The user's ext with daily fields reset when the KST day changed. */
+/**
+ * The user's ext with daily fields reset: money ones (소원, demand, 흥정,
+ * rerolls) when the real KST day changed, my own ones (forage and bugs taken,
+ * friend requests, watering friends, today's meal) when 나의 하루 changed
+ * (lounge-myday.ts). Older saves kept both on `day`.
+ */
 function todayExt(life: LifeState, uid: string, now: number): UserExt {
   const x = extOf(life, uid),
-    day = kstDay(now);
+    day = kstDay(now),
+    pday = myDay(life, uid, now),
+    was = x.pd ?? x.day;
   if (x.day !== day) {
     x.day = day;
-    delete x.taken;
-    delete x.req;
-    delete x.wf;
-    delete x.ate;
     delete x.wished;
     delete x.dem;
     delete x.reroll;
     delete x.hag;
+    delete x.rqn;
   }
+  if (was !== pday) {
+    delete x.taken;
+    delete x.req;
+    delete x.wf;
+    delete x.ate;
+  }
+  if (pday !== day || x.pd !== undefined) x.pd = pday;
   return x;
 }
+/** Whether my own daily fields (taken, req, wf, ate) belong to this 나의 하루. */
+const myFresh = (x: UserExt | undefined, pday: number) => !!x && (x.pd ?? x.day) === pday;
 export const farmSizeOf = (life: LifeState, uid: string): FarmSize =>
   life.ext?.[uid]?.plots ?? FARM_SIZES[0];
 export const hasFlag = (life: LifeState, flag: string) => !!life.flags?.includes(flag);
@@ -2051,13 +2071,17 @@ export function plusAction(
       break;
     }
     case 'deliver': {
-      const req = requestsFor(life, actor, kstDay(now)).find((r) => r.from === a.to);
+      // 나의 하루: new requests each of my days; the 범 stays at REQUESTS_PER_DAY paid a real day.
+      const req = requestsFor(life, actor, myDay(life, uid, now)).find((r) => r.from === a.to);
       if (!req) fail(PLUS_REJECT.request);
       if (x.req?.includes(req!.from)) fail(PLUS_REJECT.requestDone);
       if (itemCount(life, uid, req!.item) < req!.n) fail(LIFE_REJECT.notEnough);
       takeItem(life, uid, req!.item, req!.n);
       (x.req ??= []).push(req!.from);
-      next = grant(next, life, uid, req!.reward, 'request', now);
+      if ((x.rqn ?? 0) < REQUESTS_PER_DAY) {
+        x.rqn = (x.rqn ?? 0) + 1;
+        next = grant(next, life, uid, req!.reward, 'request', now);
+      }
       bump(life, uid, 'request', 1);
       addBond(life, actor, req!.from, BOND_POINTS.request, now);
       addNews(
@@ -2277,6 +2301,8 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const day = kstDay(now),
     raw = life.ext?.[uid] ?? {},
     fresh = raw.day === day,
+    // 나의 하루 (lounge-myday.ts): forage, bugs, requests, meal, watering friends.
+    mine = myFresh(raw, myDay(life, uid, now)),
     buff = mealSlot(life, uid, now),
     snack = snackSlot(life, uid, now),
     slot = slotOf(now);
@@ -2290,7 +2316,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
         district: spot.district,
         kind: 'forage',
         item: f,
-        taken: fresh && !!raw.taken?.includes(`f:${spot.id}`),
+        taken: mine && !!raw.taken?.includes(`f:${spot.id}`),
       });
     const b = bugAt(spot.id, day, slot);
     if (b)
@@ -2299,13 +2325,13 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
         district: spot.district,
         kind: 'bug',
         item: b,
-        taken: fresh && !!raw.taken?.includes(`b:${spot.id}:${slot}`),
+        taken: mine && !!raw.taken?.includes(`b:${spot.id}:${slot}`),
       });
   }
   const pending = raw.pending && now <= raw.pending.expiresAt ? raw.pending : null;
   const yesterday = life.news?.find((d) => d.day === day - 1);
   const me: PlusMe = {
-    npcRelations: npcRelationsView(raw.npcRelations, now),
+    npcRelations: npcRelationsView(raw.npcRelations, now, myDay(life, uid, now)),
     npcTiesSeen: [...(raw.npcTiesSeen ?? [])],
     npcBoard: npcBoardView(life, uid, now),
     plots: raw.plots ?? FARM_SIZES[0],
@@ -2339,7 +2365,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     },
     spawns,
     requests: actorValid(actor)
-      ? requestsFor(life, actor, day).map((r) => ({ ...r, done: fresh && !!raw.req?.includes(r.from) }))
+      ? requestsFor(life, actor, myDay(life, uid, now)).map((r) => ({ ...r, done: mine && !!raw.req?.includes(r.from), ...(fresh && (raw.rqn ?? 0) >= REQUESTS_PER_DAY ? { reward: 0 } : {}) }))
       : [],
     bonds: [0, 1, 2, 3, 4, 5, 6]
       .filter((f) => f !== actor)
@@ -2354,10 +2380,10 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
       : null,
     taste: { ids: [...(raw.taste ?? [])], paid: raw.tasteRw ?? 0 },
     haggleLeft: haggleLeft(life, uid, now),
-    ate: fresh ? (raw.ate ?? null) : null,
+    ate: mine ? (raw.ate ?? null) : null,
     wished: fresh && !!raw.wished,
     claimed: [...(raw.claimed ?? [])],
-    waterFriend: fresh ? [...(raw.wf ?? [])] : [],
+    waterFriend: mine ? [...(raw.wf ?? [])] : [],
     demand: fresh ? { ...raw.dem } : {},
     house: raw.house ?? 0,
   };

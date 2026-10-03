@@ -44,6 +44,8 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './town.css';
 import './farm-sites.css';
+import { FarmBarn } from './FarmBarn';
+import { SKILL_INFO } from '../lounge-growth-data';
 
 export type SiteTarget = { kind: 'site'; id: string } | { kind: 'common' } | { kind: 'store' };
 type Props = { room: CloudRoom; view: CloudRoomView; notify: Notify; target: SiteTarget; onClose: () => void };
@@ -233,12 +235,22 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
   const balance = view.wallet.balance,
     inv = view.life!.me.inv ?? {};
   const canPay = !!next && balance >= next.beom && Object.entries(next.mats).every(([m, n]) => (inv[m] ?? 0) >= n);
+  // F4 (§11-5): 닭장 증축 needs 목축 Lv3, 축사 2층 Lv7 (whoever starts it).
+  const upNeed = def.upgrades?.find((u) => u.tier === v.t + 1)?.need;
+  const need = upNeed
+    ? {
+        label: `${SKILL_INFO[upNeed.skill].name} Lv${upNeed.level}부터`,
+        short: (view.life!.growth?.skills.find((x) => x.id === upNeed.skill)?.level ?? 1) < upNeed.level,
+      }
+    : null;
   return (
     <>
       {def.id === 'greenhouse' || def.id === 'greenhouseMini' ? (
         <Greenhouse {...props} mine={mine} />
       ) : def.id === 'orchardPlot' ? (
         <Orchard {...props} mine={mine} />
+      ) : def.id === 'barn' || def.id === 'coop' ? (
+        <FarmBarn view={view} act={act} busy={busy} kind={def.id} />
       ) : def.id === 'machineYard' ? (
         <section className="l-town-notice" aria-label="가공 마당">
           <strong>
@@ -255,14 +267,17 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
           <strong>
             {v.t + 1}단계 · {def.upgrades?.find((u) => u.tier === v.t + 1)?.effect}
           </strong>
-          <p>{costText(next)}</p>
+          <p>
+            {costText(next)}
+            {need && ` · ${need.label}`}
+          </p>
           <GameButton
             size="s"
             variant="primary"
-            disabled={busy || (def.owner === 'personal' && !canPay)}
+            disabled={busy || (def.owner === 'personal' && !canPay) || !!need?.short}
             onClick={() => act({ kind: 'siteUpgrade', site: id }, def.owner === 'personal' ? '넓혔어요!' : '넓히는 공사를 시작했어요. 친구들과 보태 주세요.')}
           >
-            {def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작'}
+            {need?.short ? `${need.label} 넓힐 수 있어요` : def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작'}
           </GameButton>
         </section>
       )}

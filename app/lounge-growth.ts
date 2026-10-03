@@ -13,6 +13,7 @@
 // Cycle-safe: lounge-life.ts and lounge-life-plus.ts import this module and it
 // imports them back, so their bindings are only used inside functions.
 import { basketExtra } from './lounge-stage3-data.ts';
+import { myDay } from './lounge-myday.ts';
 import { spendBeom, kstDay, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, dayStart, hash32 } from './lounge-calendar.ts';
 import { ITEM_BY_ID } from './lounge-items.ts';
@@ -398,8 +399,10 @@ function userToday(life: LifeState, uid: string, now: number): GrowthUser {
     }
     u.retro = now;
   }
-  if (u.day !== day) {
-    u.day = day;
+  // 나의 하루 (lounge-myday.ts): the daily XP cap, nodes and mine rocks are mine.
+  const pday = myDay(life, uid, now);
+  if (u.day !== pday) {
+    u.day = pday;
     delete u.dxp;
     delete u.nodes;
     delete u.mrock;
@@ -642,7 +645,7 @@ const brokenOn = (u: GrowthUser | undefined, floor: number) => (u?.mrock ?? []).
 export function ladderFound(life: LifeState, uid: string, floor: number, now: number) {
   if (floor < 1) return false;
   const u = life.growth?.u?.[uid];
-  if (u?.day !== kstDay(now)) return false;
+  if (u?.day !== myDay(life, uid, now)) return false;
   // 재능 사다리 감 and 주민 동행: one rock fewer each.
   return brokenOn(u, floor) >= Math.max(1, mineFloor(kstDay(now), floor, researchDone(life, 'lift', now)).ladderNeed - growthMods(life, uid).ladderEarly - companionLadderEarly(life, uid, now));
 }
@@ -1160,7 +1163,7 @@ function regionsView(life: LifeState, uid: string, u: GrowthUser, taken: Set<str
   }
   const friends: Record<number, number> = {};
   for (const [id, x] of Object.entries(life.growth?.u ?? {}))
-    if (id !== uid && id in life.actors && x.day === day && (x.mine?.at ?? 0) > 0) friends[life.actors[id]] = x.mine!.at;
+    if (id !== uid && id in life.actors && x.day === myDay(life, id, now) && (x.mine?.at ?? 0) > 0) friends[life.actors[id]] = x.mine!.at;
   const at = u.mine?.at ?? 0;
   const pass = ok && hasExplorerPass(life.actors[uid], now);
   return {

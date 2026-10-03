@@ -20,8 +20,14 @@ import {
   type SmithTool,
 } from './lounge-stage3-data.ts';
 
-/** One animal: kind, its number among that kind ("닭 2"), 정 (0–10), the last KST day cared for, cares so far. */
-export type Animal = { k: AnimalKind; n: number; love: number; last?: number; cares: number };
+/**
+ * One animal: kind, its number among that kind ("닭 2"), 정 (0–10), the last
+ * day cared for (나의 하루, lounge-myday.ts), cares so far; `f`: it lives in
+ * the 우리 농장 축사·닭장 (F4) instead of 닐라's ranch.
+ */
+export type Animal = { k: AnimalKind; n: number; love: number; last?: number; cares: number; f?: 1 };
+/** 우리 농장 F4: animals one friend may keep in the farm barn or coop at its highest tier. */
+export const FARM_ROOM_MAX = 8;
 /** One fruit tree: kind, the KST day planted, the last KST day picked. */
 export type FruitTree = { k: FruitTreeKind; at: number; picked?: number };
 export type Stage3User = {
@@ -30,10 +36,12 @@ export type Stage3User = {
   t?: (FruitTree | null)[];
   /** Range upgrades bought at 오른's (absent = tier 1). */
   sm?: Partial<Record<SmithTool, SmithTier>>;
-  /** KST day of the daily fields below. */
+  /** 나의 하루 (lounge-myday.ts) of the clinic count below. */
   day?: number;
   /** Clinic visits today. */
   cl?: number;
+  /** KST day of the ore premium below (money stays on the real day; older saves: `day`). */
+  od?: number;
   /** Today's-ore premium 범 today. */
   ore?: number;
   /** Today's fortune: its buff and the KST day it was read. */
@@ -51,13 +59,14 @@ export function readStage3User(v: unknown): Stage3User | undefined {
   if (Array.isArray(x.a)) {
     const counts: Record<string, number> = {};
     const animals: Animal[] = [];
-    for (const raw of x.a.slice(0, COOP_ROOM + BARN_ROOM)) {
+    for (const raw of x.a.slice(0, COOP_ROOM + BARN_ROOM + 2 * FARM_ROOM_MAX)) {
       const a = obj(raw);
       if (!(ANIMAL_KINDS as readonly unknown[]).includes(a.k)) continue;
       const k = a.k as AnimalKind;
-      const home = k === 'chicken' ? 'coop' : 'barn';
-      const inHome = animals.filter((o) => (o.k === 'chicken' ? 'coop' : 'barn') === home).length;
-      if (inHome >= (home === 'coop' ? COOP_ROOM : BARN_ROOM)) continue;
+      const home = k === 'chicken' ? 'coop' : 'barn',
+        farm = a.f === 1;
+      const inHome = animals.filter((o) => (o.k === 'chicken' ? 'coop' : 'barn') === home && !!o.f === farm).length;
+      if (inHome >= (farm ? FARM_ROOM_MAX : home === 'coop' ? COOP_ROOM : BARN_ROOM)) continue;
       counts[k] = (counts[k] ?? 0) + 1;
       animals.push({
         k,
@@ -65,6 +74,7 @@ export function readStage3User(v: unknown): Stage3User | undefined {
         love: safe(a.love) ? Math.min(ANIMAL_LOVE_MAX, a.love) : 0,
         cares: safe(a.cares) ? Math.min(1_000_000, a.cares) : 0,
         ...(safe(a.last) && a.last > 0 ? { last: a.last } : {}),
+        ...(farm ? { f: 1 as const } : {}),
       });
     }
     if (animals.length) out.a = animals;
@@ -86,7 +96,11 @@ export function readStage3User(v: unknown): Stage3User | undefined {
   if (safe(x.day) && x.day > 0) {
     out.day = x.day;
     if (safe(x.cl) && x.cl > 0) out.cl = Math.min(CLINIC_PER_DAY, x.cl);
-    if (safe(x.ore) && x.ore > 0) out.ore = Math.min(ORE_PREMIUM_CAP, x.ore);
+  }
+  const od = safe(x.od) && x.od > 0 ? x.od : out.day;
+  if (od !== undefined && safe(x.ore) && x.ore > 0) {
+    out.od = od;
+    out.ore = Math.min(ORE_PREMIUM_CAP, x.ore);
   }
   const fo = obj(x.fo);
   if (typeof fo.kind === 'string' && FORTUNE_KINDS.has(fo.kind) && safe(fo.until) && safe(fo.day) && fo.day > 0)

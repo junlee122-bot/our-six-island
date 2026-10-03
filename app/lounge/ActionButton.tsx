@@ -23,6 +23,7 @@ import {
   Eye,
   Mail,
   MessageCircle,
+  Moon,
   Palette,
   PartyPopper,
   Shirt,
@@ -77,6 +78,7 @@ const ICON: Record<ActionKind, typeof DoorOpen> = {
   forge: Anvil,
   chop: Axe,
   smash: Pickaxe,
+  sleep: Moon,
 };
 
 export function ActionButton({

@@ -308,6 +308,9 @@ test('hearts: points above ♥5 fade slowly after 3 idle days, never below the f
   assert.equal(decayedBond(1_000, 100, 104), BOND_DECAY_FLOOR + Math.floor(600 * 0.99));
   assert.equal(decayedBond(BOND_DECAY_FLOOR - 5, 0, 500), BOND_DECAY_FLOOR - 5);
   assert.ok(decayedBond(4_000, 0, 1_000) >= BOND_DECAY_FLOOR);
+  // 시간 체계 §1-4: a long break counts at most 3 idle days.
+  assert.equal(decayedBond(1_000, 100, 200), decayedBond(1_000, 100, 106));
+  assert.equal(decayedBond(1_000, 100, 106), BOND_DECAY_FLOOR + Math.floor(600 * 0.99 ** 3));
   const s = world(2),
     [a] = s.members;
   s.life.bonds = { '0-1': BOND_LEVELS[6] + 100 };

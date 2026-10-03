@@ -170,6 +170,7 @@ export function Bedroom3D({
   onExit,
   onDress,
   onCook,
+  onSleep,
   spawn = 'door',
   onNearDoor,
   house = 0,
@@ -198,6 +199,8 @@ export function Bedroom3D({
   onDress?: () => void;
   /** 요리·만들기 at a table or the hearth (my room). */
   onCook?: () => void;
+  /** 시간 체계 P1: 하루 마감 at my bed (my room). */
+  onSleep?: () => void;
   /** Where I appear: at the door (walked in) or beside the bed (day start). */
   spawn?: 'door' | 'bed';
   /** I am near the door: preload the village. */
@@ -261,9 +264,9 @@ export function Bedroom3D({
   );
   const [action, setAction] = useState<{ kind: ActionKind; item?: string } | null>(null);
   const [{ keys }] = useSettings();
-  const flow = useRef({ onExit, onDress, onNearDoor, onCook });
+  const flow = useRef({ onExit, onDress, onNearDoor, onCook, onSleep });
   useLayoutEffect(() => {
-    flow.current = { onExit, onDress, onNearDoor, onCook };
+    flow.current = { onExit, onDress, onNearDoor, onCook, onSleep };
   });
   const exited = useRef(false);
   /** The doorway ignores me for a moment after I walk in (holding ↓ does not bounce me out). */
@@ -275,6 +278,7 @@ export function Bedroom3D({
       flow.current.onExit?.();
     } else if (kind === 'dress') flow.current.onDress?.();
     else if (kind === 'cook') flow.current.onCook?.();
+    else if (kind === 'sleep') flow.current.onSleep?.();
     else if (kind === 'decorate' && canEditRef.current) {
       setEditing(true);
       hostRef.current?.focus({ preventScroll: true });
@@ -1106,6 +1110,7 @@ export function Bedroom3D({
               canExit: !!flow.current.onExit,
               canDress: !!flow.current.onDress,
               canCook: !!flow.current.onCook,
+              canSleep: !!flow.current.onSleep,
             });
         if (
           nextAction?.kind !== actionRef.current?.kind ||

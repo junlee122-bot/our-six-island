@@ -163,6 +163,17 @@ export function soilCheckpoint(p: SoilPlot, now: number) {
   p.wetUntil = now;
 }
 /**
+ * 하루 마감 (lounge-myday.ts): `ms` more wet growth for a crop whose soil is
+ * wet at `now` (watered by hand, rain, a sprinkler or 보습 흙). A dry crop
+ * waits, as it would overnight. Returns whether the crop grew.
+ */
+export function soilAdvance(p: SoilPlot, ms: number, now: number): boolean {
+  if (!(ms > 0) || soilWetBy(p, now) === null) return false;
+  soilCheckpoint(p, now);
+  p.wetMs = (p.wetMs ?? 0) + ms;
+  return true;
+}
+/**
  * Read-time migration of a plot saved before wet soil (`wateredAt`, and `w`
  * the can's speed-up): it reads as already watered. It keeps growing until
  * the moment the old rules had it ripe (a crop never left unwatered there

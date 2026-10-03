@@ -1,0 +1,81 @@
+/*
+ * 시간 체계 P1: the bed's 하루 마감 window, the dark fade and the 결산 card
+ * (DayEnd.tsx). Tokens only (app/ui/tokens.css).
+ */
+.l-dayend-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+.l-dayend-rules,
+.l-dayend-lines {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: var(--fs-body-s);
+}
+.l-dayend-rules li {
+  color: var(--text-soft);
+}
+.l-dayend-lines li {
+  display: grid;
+  grid-template-columns: auto 6em 1fr;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-body);
+}
+.l-dayend-lines span {
+  color: var(--text-soft);
+}
+.l-dayend-fade {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--ink-900);
+  animation: l-dayend-dim 1.4s ease-in-out both;
+  pointer-events: none;
+}
+@keyframes l-dayend-dim {
+  0% {
+    opacity: 0;
+  }
+  40%,
+  70% {
+    opacity: 0.92;
+  }
+  100% {
+    opacity: 0.6;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-dayend-fade {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+/* HUD: 나의 하루 +n beside the game clock. */
+.l-hud-myday {
+  margin-left: var(--sp-1);
+  padding: 0 var(--sp-1);
+  border-radius: var(--r-s);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Village name tags: .hv-labels[data-zz] lists friends who just ended their day. */
+.hv-labels[data-zz~='0'] .hv-tag[data-actor='0']::after,
+.hv-labels[data-zz~='1'] .hv-tag[data-actor='1']::after,
+.hv-labels[data-zz~='2'] .hv-tag[data-actor='2']::after,
+.hv-labels[data-zz~='3'] .hv-tag[data-actor='3']::after,
+.hv-labels[data-zz~='4'] .hv-tag[data-actor='4']::after,
+.hv-labels[data-zz~='5'] .hv-tag[data-actor='5']::after,
+.hv-labels[data-zz~='6'] .hv-tag[data-actor='6']::after {
+  content: '💤';
+  margin-inline-start: var(--sp-1);
+}
