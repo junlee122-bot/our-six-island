@@ -14,6 +14,7 @@
 // friend only. Without dating, points stop at 8 hearts. Breaking up costs
 // hearts and starts a cooldown. A spouse sleeps in the friend's room and
 // hands over a small present once a day. Currency is never touched.
+import { myDay } from './lounge-myday.ts';
 import { kstDay } from './lounge-economy.ts';
 import { ITEM_BY_ID } from './lounge-items.ts';
 import { CROPS, LifeError, type LifeState } from './lounge-life.ts';
@@ -146,7 +147,8 @@ export function readNpcRelations(value: unknown): NpcRelations | undefined {
   }
   return Object.keys(out).length ? out : undefined;
 }
-export function npcRelationsView(relations: NpcRelations | undefined, now: number): NpcRelationView[] {
+/** `pday`: my 나의 하루 (lounge-myday.ts) — talked, gifted and dated count on it. */
+export function npcRelationsView(relations: NpcRelations | undefined, now: number, pday = kstDay(now)): NpcRelationView[] {
   const day = kstDay(now);
   return NPC_IDS.map((npc) => {
     const relation = relations?.[npc] ?? { points: 0 };
@@ -154,9 +156,9 @@ export function npcRelationsView(relations: NpcRelations | undefined, now: numbe
       ...relation,
       npc,
       level: npcLevel(relation.points),
-      talked: relation.talkedDay === day,
-      gifted: relation.giftedDay === day,
-      dated: relation.datedDay === day,
+      talked: relation.talkedDay === pday,
+      gifted: relation.giftedDay === pday,
+      dated: relation.datedDay === pday,
       visiting: (relation.invitedUntil ?? 0) > now,
       hearts: npcHeartsOf(relation.points),
       ...(relation.love === 'married' ? { atHome: spouseAtHome(npc, now), homeGifted: relation.homeGiftDay === day } : {}),
@@ -329,7 +331,9 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
   if (action.op === 'overhear') return { reaction: undefined as GiftReaction | undefined, presents: [] as [string, number][] };
   const relations = (user.npcRelations ??= {});
   const relation = (relations[action.npc] ??= { points: 0 });
-  const day = kstDay(now);
+  const day = kstDay(now),
+    // 나의 하루 (lounge-myday.ts): a talk, a gift, a date and a join a day are mine.
+    pday = myDay(life, uid, now);
   // 친화력 (food buff): talks and gifts count half again.
   // Without dating, points stop at 8 hearts (older rows above it keep what they have).
   const add = (n: number) => {
@@ -348,30 +352,30 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
   let reaction: GiftReaction | undefined;
   switch (action.op) {
     case 'talk':
-      if (relation.talkedDay === day) fail('오늘 이야기는 나눴어요. 내일 또 만나 주세요.');
-      relation.talkedDay = day;
+      if (relation.talkedDay === pday) fail('오늘 이야기는 나눴어요. 내일 또 만나 주세요.');
+      relation.talkedDay = pday;
       add(NPC_TALK_POINTS);
       break;
     case 'join': {
       // Both of them: a little each, once a KST day each (assertNpcSocialContext checked they are together).
       const other = (relations[action.with] ??= { points: 0 });
-      const fresh = [relation, other].filter((r) => r.joinedDay !== day);
+      const fresh = [relation, other].filter((r) => r.joinedDay !== pday);
       if (!fresh.length) fail('오늘은 두 사람 이야기에 이미 끼어들었어요. 내일 또 함께해요.');
       for (const r of fresh) {
-        r.joinedDay = day;
+        r.joinedDay = pday;
         const cap = r.love ? NPC_POINTS_MAX : Math.min(NPC_POINTS_MAX, Math.max(NPC_DATING_POINTS, r.points));
         r.points = Math.max(0, Math.min(cap, r.points + charmPoints(life, uid, now, NPC_JOIN_POINTS)));
       }
       break;
     }
     case 'gift': {
-      if (relation.giftedDay === day) fail('오늘 선물은 받았어요. 다음 선물은 내일 전해 주세요.');
+      if (relation.giftedDay === pday) fail('오늘 선물은 받았어요. 다음 선물은 내일 전해 주세요.');
       if (typeof action.item !== 'string' || !npcGiftable(action.item)) fail('꽃이나 요리, 작물처럼 선물할 수 있는 물건을 골라 주세요.');
       const q = action.q === 1 || action.q === 2 ? action.q : 0;
       if (action.q !== undefined && action.q !== 0 && action.q !== 1 && action.q !== 2) fail('꽃이나 요리, 작물처럼 선물할 수 있는 물건을 골라 주세요.');
       if (itemCount(life, uid, action.item, q) < 1) fail('선물할 물건이 주머니에 없어요.');
       takeItem(life, uid, action.item, 1, q);
-      relation.giftedDay = day;
+      relation.giftedDay = pday;
       relation.lastGift = action.item;
       reaction = npcGiftReaction(action.npc, action.item, q);
       // 재능 꽃말 · 잔칫상: a welcome flower or dish counts more.
@@ -388,8 +392,8 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
     case 'date':
       if ((relation.invitedUntil ?? 0) <= now && !(relation.love === 'married' && spouseAtHome(action.npc, now))) fail('내 방에 초대한 주민과 시간을 보내 주세요.');
       if (relation.points < NPC_DATE_POINTS) fail('친밀도 60부터 데이트를 제안할 수 있어요.');
-      if (relation.datedDay === day) fail('오늘 데이트는 함께했어요. 다음 약속은 내일 잡아요.');
-      relation.datedDay = day;
+      if (relation.datedDay === pday) fail('오늘 데이트는 함께했어요. 다음 약속은 내일 잡아요.');
+      relation.datedDay = pday;
       relation.dates = Math.min(10000, (relation.dates ?? 0) + 1);
       add(10);
       break;

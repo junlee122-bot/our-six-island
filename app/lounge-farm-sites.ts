@@ -76,10 +76,13 @@ import { soilWater } from './lounge-farm-soil.ts';
 import { addCropQ, addInv, addMemory, addNews, bump, discover, hasFlag, invCount, plantSpeed, villageGrowSpeed } from './lounge-life-plus.ts';
 import { gainXp, growthMods, skillLevel } from './lounge-growth.ts';
 import { XP } from './lounge-growth-data.ts';
-import { GIANT_CROPS, GIANT_YIELD } from './lounge-farm-data.ts';
+import { GIANT_CROPS, GIANT_YIELD, GRID_TILES } from './lounge-farm-data.ts';
+import { farmShelter, shelterDaily } from './lounge-farm-barn.ts';
+import { MANURE_HOLD } from './lounge-farm-barn-data.ts';
 import { growthStage, parseStock, stockKey, stockName, witherAt } from './lounge-farm.ts';
 
 const HOUR = 3_600_000;
+const SKILL_NAME_KO: Readonly<Record<string, string>> = { farm: '농사', fish: '낚시', forage: '채집', mine: '광업', craft: '솜씨', ranch: '목축' };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const safe = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n);
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
@@ -106,8 +109,17 @@ function fail(message: string): never {
 /** A greenhouse plot; `o` = the friend (actor) growing it for themselves, absent = for the shared store. */
 export type SitePlot = Plot & { o?: number };
 export type OrchardTree = { f: FruitTreeKind; at: number; n?: number };
-/** Per-kind facility state (small; validated on read by the kind). */
-export type SiteFacilityState = { plots?: Record<string, SitePlot>; trees?: Record<string, OrchardTree> };
+/**
+ * Per-kind facility state (small; validated on read by the kind). F4 barn /
+ * coop: `mn` 거름 waiting per actor; barn: `cut` the 사일로's grass tiles cut
+ * per actor on their 나의 하루 `d`.
+ */
+export type SiteFacilityState = {
+  plots?: Record<string, SitePlot>;
+  trees?: Record<string, OrchardTree>;
+  mn?: Record<string, number>;
+  cut?: Record<string, { d: number; t: number[] }>;
+};
 /** An open shared funding: for tier `to` (1 = the build). `by`: gifts per actor. */
 export type SiteFund = { to: number; got: number; mat: Record<string, number>; by: Record<string, number> };
 export type SiteRecord = {
@@ -185,6 +197,7 @@ export const SITE_REJECT = {
   untilled: '먼저 괭이로 갈아 주세요.',
   tilled: '이미 갈아 둔 칸이에요.',
   store: '공동 창고에 그만큼 없어요.',
+  animals: '여기 사는 동물들을 먼저 닐라 목장으로 옮겨 주세요.',
   storeFull: '공동 창고가 가득 찼어요.',
 } as const;
 
@@ -223,6 +236,19 @@ function readState(def: FacilityDef, tier: number, v: unknown): SiteFacilityStat
   } else if (def.id === 'orchardPlot') {
     const trees = readTrees(x.trees, slotsAt(def, tier));
     if (nonEmpty(trees)) out.trees = trees;
+  } else if (def.id === 'barn' || def.id === 'coop') {
+    const mn: Record<string, number> = {};
+    for (const [a, n] of Object.entries(obj(x.mn))) if (/^[0-6]$/.test(a) && safe(n) && n > 0) mn[a] = Math.min(MANURE_HOLD, n);
+    if (nonEmpty(mn)) out.mn = mn;
+    const cut: Record<string, { d: number; t: number[] }> = {};
+    if (def.id === 'barn')
+      for (const [a, c] of Object.entries(obj(x.cut))) {
+        const v = obj(c);
+        if (!/^[0-6]$/.test(a) || !safe(v.d) || v.d <= 0 || !Array.isArray(v.t)) continue;
+        const t = [...new Set(v.t.filter((i): i is number => safe(i) && i >= 0 && i < GRID_TILES))].sort((i, j) => i - j);
+        if (t.length) cut[a] = { d: v.d, t };
+      }
+    if (nonEmpty(cut)) out.cut = cut;
   }
   return out;
 }
@@ -496,6 +522,9 @@ const DAILY: Partial<Record<DailyId, (c: DailyCtx) => void>> = {
       t.n = Math.min(ORCHARD_PLOT_HOLD, (t.n ?? 0) + 1);
     }
   },
+  // 우리 농장 F4: every animal living at the farm makes 거름 (lounge-farm-barn.ts).
+  barn: ({ life, site }) => shelterDaily(life, site),
+  coop: ({ life, site }) => shelterDaily(life, site),
 };
 /**
  * Brings the farm's facilities up to `now`: each built facility's daily hook
@@ -618,6 +647,9 @@ export function siteAction(
         cost = tierCost(def, to);
       if (!cost) fail(SITE_REJECT.maxTier);
       if (site!.fund) fail(SITE_REJECT.upgrading);
+      // F4 (§11-5): some upgrades open with a skill level of whoever starts them.
+      const need = def.upgrades?.find((u) => u.tier === to)?.need;
+      if (need && skillLevel(life, uid, need.skill) < need.level) fail(`${SKILL_NAME_KO[need.skill]} Lv${need.level}부터 넓힐 수 있어요.`);
       if (def.owner === 'personal') {
         if ((ledger.accounts[walletOf(uid)] ?? 0) < cost!.beom) fail(LIFE_REJECT.balance);
         payMats(life, uid, cost!.mats);
@@ -639,6 +671,12 @@ export function siteAction(
       const f = site!.fund;
       if (f && (f.got > 0 || nonEmpty(f.mat))) fail(SITE_REJECT.funded);
       if (Object.values(site!.state.plots ?? {}).some((p) => p.crop)) fail(SITE_REJECT.growing);
+      // F4: animals living in the only barn / coop go back to 닐라's ranch first.
+      if ((site!.kind === 'barn' || site!.kind === 'coop') && site!.tier >= 1 && farmShelter(life, site!.kind)?.site === site) {
+        const home = site!.kind;
+        if (Object.values(life.ext ?? {}).some((x) => (x.s3?.a ?? []).some((an) => an.f && (an.k === 'chicken' ? 'coop' : 'barn') === home)))
+          fail(SITE_REJECT.animals);
+      }
       if (site!.kind === 'machineYard' && site!.tier >= 1 && Object.values(life.farmx ?? {}).some((x) => Object.keys(x.mach ?? {}).some((k) => Number(k) >= BASE_WORK_SLOTS)))
         fail(SITE_REJECT.machines);
       // Half of the materials go back to whoever paid them (범 stays spent).

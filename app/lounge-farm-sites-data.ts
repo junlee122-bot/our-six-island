@@ -64,8 +64,8 @@ export type FacilityDef = {
   owner: 'shared' | 'personal';
   unlock: FacilityUnlock;
   build: FacilityCost;
-  /** Tier 2, 3… (tier 1 is the build). */
-  upgrades?: readonly (FacilityCost & { tier: number; effect: string })[];
+  /** Tier 2, 3… (tier 1 is the build). `need`: a skill level whoever starts the upgrade needs (§11-5). */
+  upgrades?: readonly (FacilityCost & { tier: number; effect: string; need?: { skill: SkillId; level: number } })[];
   /** Per tier (index = tier − 1): machine slots, tiles, trees, animals… */
   slots?: readonly number[];
   daily?: DailyId;
@@ -133,6 +133,7 @@ export const FACILITIES: readonly FacilityDef[] = [
     live: true,
   },
   // ---- hooks for later stages (data only; design-our-farm.md §4, §10-3, §10-4, §11-3)
+  // 우리 농장 F4 (design-our-farm.md §4, §11-5): V5 목장 울타리 moved into the farm.
   {
     id: 'barn',
     name: '축사',
@@ -140,12 +141,12 @@ export const FACILITIES: readonly FacilityDef[] = [
     owner: 'shared',
     unlock: { research: 'ranch' },
     build: { beom: 300_000, mats: { wood: 300, stone: 150 } },
-    slots: [8],
+    upgrades: [{ tier: 2, beom: 250_000, mats: { wood: 200, stone: 100, iron: 20 }, effect: '축사 2층 · 친구마다 소·양 칸 +4', need: { skill: 'ranch', level: 7 } }],
+    slots: [4, 8],
     daily: 'barn',
     model: 'barn',
-    note: '소·양, 사일로와 건초, 거름',
-    live: false,
-    stage: '목장 울타리(V5) 뒤',
+    note: '친구마다 소·양 4마리(2층을 올리면 8마리). 사일로에서 내 밭 풀을 베어 건초를 만들고, 매일 거름이 나와요',
+    live: true,
   },
   {
     id: 'coop',
@@ -154,12 +155,12 @@ export const FACILITIES: readonly FacilityDef[] = [
     owner: 'shared',
     unlock: { research: 'ranch' },
     build: { beom: 120_000, mats: { wood: 150, stone: 50 } },
-    slots: [8],
+    upgrades: [{ tier: 2, beom: 80_000, mats: { wood: 100, stone: 40 }, effect: '닭장 증축 · 친구마다 닭 칸 +4', need: { skill: 'ranch', level: 3 } }],
+    slots: [4, 8],
     daily: 'coop',
     model: 'coop',
-    note: '닭과 달걀',
-    live: false,
-    stage: '목장 울타리(V5) 뒤',
+    note: '친구마다 닭 4마리(증축하면 8마리). 매일 거름이 나와요',
+    live: true,
   },
   {
     id: 'fishPond',

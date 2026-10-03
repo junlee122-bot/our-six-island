@@ -308,7 +308,7 @@ test('research: 범 and materials, three helpers (reserved share), finishes at t
     s.give(m, 'wood', 60);
     s.give(m, 'stone', 60);
   }
-  s.fails(a, { kind: 'research', project: 'ranch', beom: 10_000 }, T0, GROWTH_REJECT.projectSoon);
+  s.fails(a, { kind: 'research', project: 'weather', beom: 10_000 }, T0, GROWTH_REJECT.projectSoon);
   // 산길 정비 (P2) is live but waits for 대장간 재건.
   s.fails(a, { kind: 'research', project: 'trail', beom: 10_000 }, T0, GROWTH_REJECT.projectLocked);
   s.fails(a, { kind: 'research', project: 'forge', item: 'shell', n: 1 }, T0, GROWTH_REJECT.giveItem);
@@ -574,6 +574,7 @@ test('catalog: ore items, research flags, professions and every research materia
     assert.equal(five.length, 2);
     for (const p of five) assert.equal(PROFESSIONS.filter((q) => q.parent === p.id).length, 2);
   }
-  // V4 들길 개간 went live with stage 3 (it opens ④ 목장·과수원, design-npcs-stage3.md).
-  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge,trail,lift,orchardHill');
+  // V4 들길 개간 went live with stage 3 (it opens ④ 목장·과수원, design-npcs-stage3.md);
+  // V5 목장 울타리 with 우리 농장 F4 (the farm barn and coop, design-our-farm.md §4).
+  assert.equal(RESEARCH.filter((r) => r.live).map((r) => r.id).join(), 'forge,trail,lift,orchardHill,ranch');
 });

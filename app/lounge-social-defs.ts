@@ -29,6 +29,8 @@ export const TALK_POINTS = 4;
 export const BOND_GRACE_DAYS = 3;
 /** Share kept per further idle day (only the part above BOND_DECAY_FLOOR fades). */
 export const BOND_DECAY_KEEP = 0.99;
+/** 시간 체계 §1-4 부재 보호: at most this many idle days ever count (a long break costs no more). */
+export const BOND_DECAY_MAX_DAYS = 3;
 /**
  * The heart curve before C-4 (♥10 = 2,000). Worlds from before it are
  * migrated once (lounge-life-social migrateBonds): every pair keeps at least

@@ -36,6 +36,7 @@ import {
   ADAPT_STEPS,
   BOND_DECAY_FLOOR,
   BOND_DECAY_KEEP,
+  BOND_DECAY_MAX_DAYS,
   BOND_GRACE_DAYS,
   CROWN_FLOWERS,
   FETES,
@@ -314,7 +315,7 @@ export function decayedBond(points: number, lastDay: number | undefined, day: nu
   if (lastDay === undefined || points <= BOND_DECAY_FLOOR) return points;
   const idle = day - lastDay - BOND_GRACE_DAYS;
   if (idle <= 0) return points;
-  return Math.max(BOND_DECAY_FLOOR, Math.floor(BOND_DECAY_FLOOR + (points - BOND_DECAY_FLOOR) * BOND_DECAY_KEEP ** Math.min(idle, 365)));
+  return Math.max(BOND_DECAY_FLOOR, Math.floor(BOND_DECAY_FLOOR + (points - BOND_DECAY_FLOOR) * BOND_DECAY_KEEP ** Math.min(idle, BOND_DECAY_MAX_DAYS)));
 }
 /** Last KST day a friendship source counted for a pair (undefined = never tracked). */
 export const bondLastDay = (life: LifeState, key: string) =>

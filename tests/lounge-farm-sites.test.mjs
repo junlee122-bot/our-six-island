@@ -185,9 +185,9 @@ test('E on the farm: empty sites build, a friend\'s site is theirs, the shared f
 });
 
 // ------------------------------------------------------------ the facility table
-test('FacilityDef table: the F3 four are live, later ones are data hooks; sizes fit their sites', () => {
-  assert.deepEqual(FACILITIES.filter((f) => f.live).map((f) => f.id), ['greenhouse', 'machineYard', 'orchardPlot', 'greenhouseMini']);
-  for (const id of ['barn', 'coop', 'fishPond', 'beeYard', 'mushroomCave', 'seedLab']) {
+test('FacilityDef table: the F3 four and F4 barn and coop are live, later ones are data hooks; sizes fit their sites', () => {
+  assert.deepEqual(FACILITIES.filter((f) => f.live).map((f) => f.id), ['greenhouse', 'machineYard', 'orchardPlot', 'greenhouseMini', 'barn', 'coop']);
+  for (const id of ['fishPond', 'beeYard', 'mushroomCave', 'seedLab']) {
     const f = FACILITY_BY_ID[id];
     assert.ok(f && !f.live && f.daily, id);
     assert.match(unlockBlock(f, { flags: ['ranch'], level: () => 10 }), /준비 중/);

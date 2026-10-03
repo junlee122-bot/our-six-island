@@ -61,6 +61,7 @@ import {
   type Stage3Action,
 } from './lounge-stage3-data.ts';
 import { FORTUNE_MS, type Animal, type FruitTree, type Stage3User } from './lounge-stage3-state.ts';
+import { HELPER_AFTER_DAYS, HELPER_FEE, HELPER_LOVE_CAP, myDay } from './lounge-myday.ts';
 
 export { STAGE3_ACTION_KINDS };
 export type { Stage3Action };
@@ -99,23 +100,34 @@ const fail = (text: string): never => {
 
 // ---------------------------------------------------------------- state
 type Ext = { s3?: Stage3User };
+/**
+ * My stage-3 record with the daily fields reset: the clinic on 나의 하루
+ * (lounge-myday.ts), the ore premium (범) on the real KST day.
+ */
 function stateOf(life: LifeState, uid: string, now: number): Stage3User {
   const x = ((life.ext ??= {})[uid] ??= {}) as Ext;
   const s = (x.s3 ??= {});
-  const day = kstDay(now);
+  const day = myDay(life, uid, now),
+    real = kstDay(now);
   if (s.day !== day) {
     s.day = day;
     delete s.cl;
+  }
+  if ((s.od ?? s.day) !== real) {
+    delete s.od;
     delete s.ore;
   }
   return s;
 }
 const stateRead = (life: LifeState, uid: string, now: number): Stage3User => {
   const s = ((life.ext?.[uid] ?? {}) as Ext).s3 ?? {};
-  return s.day === kstDay(now) ? s : { ...s, cl: undefined, ore: undefined };
+  const fresh = s.day === myDay(life, uid, now),
+    ore = s.od === kstDay(now);
+  return fresh && ore ? s : { ...s, ...(fresh ? {} : { cl: undefined }), ...(ore ? {} : { ore: undefined }) };
 };
 const roomOf = (k: AnimalKind) => ANIMALS[k].home;
-const used = (animals: readonly Animal[], home: 'coop' | 'barn') => animals.filter((a) => roomOf(a.k) === home).length;
+/** My animals at 닐라's ranch (`farm`: at the 우리 농장 barn / coop instead) living in `home`. */
+const used = (animals: readonly Animal[], home: 'coop' | 'barn', farm = false) => animals.filter((a) => roomOf(a.k) === home && !!a.f === farm).length;
 /** An animal's price for this friend (목장 주인 −25%). */
 export const animalPrice = (life: LifeState, uid: string, k: AnimalKind) => Math.round(ANIMALS[k].price * (1 - Math.min(0.9, growthMods(life, uid).animalCheap)));
 /** 범 for `n` 건초 (목축 Lv3 −10%). */
@@ -152,7 +164,9 @@ export function stage3Action(
 ): { life: LifeState; ledger: LoungeLedger } {
   const uid = member.id,
     wallet = walletOf(uid),
-    day = kstDay(now);
+    // 나의 하루: animal care, fruit picking, the clinic and 운세 are mine (lounge-myday.ts).
+    day = myDay(life, uid, now),
+    real = kstDay(now);
   const opened = (id: 'ranch' | 'foothill') => hasFlag(life, DISTRICT_FLAG[id]!) || hasExplorerPass(member.actor, now);
   const ranch = () => opened('ranch') || fail(STAGE3_REJECT.ranchShut);
   const foothill = () => opened('foothill') || fail(STAGE3_REJECT.foothillShut);
@@ -187,40 +201,9 @@ export function stage3Action(
     }
     case 'animalCare': {
       ranch();
-      const s = stateOf(life, uid, now);
-      const animals = s.a ?? [];
-      if (!animals.length) fail(STAGE3_REJECT.noAnimals);
-      if (a.i !== undefined && (!Number.isSafeInteger(a.i) || a.i < 0 || a.i >= animals.length)) fail(STAGE3_REJECT.animal);
-      const todo = animals.filter((x, i) => x.last !== day && (a.i === undefined || a.i === i));
-      if (!todo.length) fail(STAGE3_REJECT.cared);
-      if (invCount(life, uid, 'hay') < todo.length) fail(STAGE3_REJECT.hay);
-      const mods = growthMods(life, uid);
-      let products = 0;
-      for (const x of todo) {
-        const i = animals.indexOf(x);
-        // 재능 건초 아끼기: sometimes the hay is not used up.
-        if (!growthChance(life, uid, `hay:${i}`, mods.hayKeep, now)) addInv(life, uid, 'hay', -1);
-        // 정: −1 for each day missed since the last care (목축 Lv6 forgives one), then
-        // +1 for today (+1 다정한 손, and a chance of +1 more: 목축 Lv2, 목동).
-        const missed = x.last ? Math.max(0, day - x.last - 1 - mods.loveGrace) : 0;
-        const gain = 1 + mods.petLove + (growthChance(life, uid, `love:${i}`, mods.loveExtra, now) ? 1 : 0);
-        x.love = Math.max(0, Math.min(ANIMAL_LOVE_MAX, x.love - missed + gain));
-        x.cares += 1;
-        x.last = day;
-        let got = careProduct(x);
-        // 목축 Lv8: an animal not yet bonded sometimes gives the big one.
-        const def = ANIMALS[x.k];
-        if (got === def.product && def.bonded !== def.product && growthChance(life, uid, `big:${i}`, mods.bigPts / 100, now)) got = def.bonded;
-        if (!got) continue;
-        // 목축 Lv7 (털 깎기 솜씨) and 동물 친구 (정 10: one more a day).
-        const n = 1 + (got === 'wool' ? mods.woolExtra : 0) + (x.love >= ANIMAL_LOVE_MAX ? mods.bondExtra : 0);
-        addInv(life, uid, got, n);
-        products += n;
-      }
-      // 목축 XP: feeding and petting each animal, and each product; 부지런한 아침 (game 05–09) ×1.5.
-      const hour = gameHour(now);
-      gainXp(life, uid, 'ranch', (XP.care * todo.length + XP.product * products) * (hour >= 5 && hour < 9 ? 1 + mods.ranchMorning : 1), now);
-      return { life, ledger };
+      const animals = stateOf(life, uid, now).a ?? [];
+      if (!animals.some((x) => !x.f)) fail(STAGE3_REJECT.noAnimals);
+      return careAnimals(life, ledger, uid, now, (x, i) => !x.f && (a.i === undefined || a.i === i));
     }
     case 'treePlant': {
       ranch();
@@ -284,10 +267,11 @@ export function stage3Action(
       const amount = soldBeomToday(base.life, uid, now) - before;
       const s = stateOf(base.life, uid, now);
       let next = base.ledger;
-      if (a.item === oreOfDay(day)) {
+      if (a.item === oreOfDay(real)) {
         const premium = Math.min(Math.round(amount * ORE_OF_DAY_PREMIUM), ORE_PREMIUM_CAP - (s.ore ?? 0));
         if (premium > 0 && Object.prototype.hasOwnProperty.call(next.accounts, wallet)) {
           s.ore = (s.ore ?? 0) + premium;
+          s.od = kstDay(now);
           next = grantBeom(next, wallet, premium, `life-smith-ore-${uid}-${++base.life.seq}`, now, 'smith-ore');
           recordShopSale(base.life, 'smithy', { buy: premium }, now);
         }
@@ -308,7 +292,7 @@ export function stage3Action(
     }
     case 'fortuneRead': {
       foothill();
-      if (!fortuneOpenOn(day)) fail(STAGE3_REJECT.fortuneShut);
+      if (!fortuneOpenOn(real)) fail(STAGE3_REJECT.fortuneShut);
       const s = stateOf(life, uid, now);
       if (s.fo?.day === day) fail(STAGE3_REJECT.fortuneDone);
       const next = pay(FORTUNE_PRICE, 'fortune', 'fortune');
@@ -321,9 +305,76 @@ export function stage3Action(
   }
 }
 
+// ---------------------------------------------------------------- care
+/**
+ * Feeds (one 건초) and pets my animals that `pick` chooses and that were not
+ * cared for on this 나의 하루: 정, products, 목축 XP. 목장 도우미 (시간 개편
+ * §1-4): an animal left HELPER_AFTER_DAYS days or more was looked after by
+ * the helper (HELPER_FEE범 a day, paid now) and loses no 정; without the 범
+ * it loses at most HELPER_LOVE_CAP. Used at 닐라's ranch and the farm barn.
+ */
+export function careAnimals(
+  life: LifeState,
+  ledger: LoungeLedger,
+  uid: string,
+  now: number,
+  pick: (a: Animal, i: number) => boolean,
+): { life: LifeState; ledger: LoungeLedger } {
+  const s = stateOf(life, uid, now),
+    day = myDay(life, uid, now),
+    wallet = walletOf(uid);
+  const animals = s.a ?? [];
+  const todo = animals.filter((x, i) => x.last !== day && pick(x, i));
+  if (!todo.length) fail(STAGE3_REJECT.cared);
+  if (invCount(life, uid, 'hay') < todo.length) fail(STAGE3_REJECT.hay);
+  const mods = growthMods(life, uid);
+  let products = 0,
+    next = ledger;
+  for (const x of todo) {
+    const i = animals.indexOf(x);
+    // 재능 건초 아끼기: sometimes the hay is not used up.
+    if (!growthChance(life, uid, `hay:${i}`, mods.hayKeep, now)) addInv(life, uid, 'hay', -1);
+    // 정: −1 for each day missed since the last care (목축 Lv6 forgives one), then
+    // +1 for today (+1 다정한 손, and a chance of +1 more: 목축 Lv2, 목동).
+    let missed = x.last ? Math.max(0, day - x.last - 1 - mods.loveGrace) : 0;
+    if (missed >= HELPER_AFTER_DAYS) {
+      const fee = HELPER_FEE * missed;
+      if ((next.accounts[wallet] ?? 0) >= fee && Object.prototype.hasOwnProperty.call(next.accounts, wallet)) {
+        next = spendBeom(next, wallet, fee, `life-ranch-helper-${uid}-${++life.seq}`, now, 'ranch-helper');
+        missed = 0;
+      } else missed = Math.min(missed, HELPER_LOVE_CAP);
+    }
+    const gain = 1 + mods.petLove + (growthChance(life, uid, `love:${i}`, mods.loveExtra, now) ? 1 : 0);
+    x.love = Math.max(0, Math.min(ANIMAL_LOVE_MAX, x.love - missed + gain));
+    x.cares += 1;
+    x.last = day;
+    let got = careProduct(x);
+    // 목축 Lv8: an animal not yet bonded sometimes gives the big one.
+    const def = ANIMALS[x.k];
+    if (got === def.product && def.bonded !== def.product && growthChance(life, uid, `big:${i}`, mods.bigPts / 100, now)) got = def.bonded;
+    if (!got) continue;
+    // 목축 Lv7 (털 깎기 솜씨) and 동물 친구 (정 10: one more a day).
+    const n = 1 + (got === 'wool' ? mods.woolExtra : 0) + (x.love >= ANIMAL_LOVE_MAX ? mods.bondExtra : 0);
+    addInv(life, uid, got, n);
+    products += n;
+  }
+  // 목축 XP: feeding and petting each animal, and each product; 부지런한 아침 (game 05–09) ×1.5.
+  const hour = gameHour(now);
+  gainXp(life, uid, 'ranch', (XP.care * todo.length + XP.product * products) * (hour >= 5 && hour < 9 ? 1 + mods.ranchMorning : 1), now);
+  return { life, ledger: next };
+}
+/** My animals (and the stage-3 record) for the farm barn (lounge-farm-barn.ts). */
+export const myAnimals = (life: LifeState, uid: string, now: number) => stateOf(life, uid, now).a ?? [];
+/** Ranch room left for `home` (my animals still at 닐라's). */
+export const ranchRoomLeft = (animals: readonly Animal[], home: 'coop' | 'barn') => (home === 'coop' ? COOP_ROOM : BARN_ROOM) - used(animals, home);
+/** My animals at the farm in `home`. */
+export const farmUsed = (animals: readonly Animal[], home: 'coop' | 'barn') => used(animals, home, true);
+export { roomOf as animalHome };
+
 // ---------------------------------------------------------------- view
 export type Stage3View = {
-  animals: { k: AnimalKind; n: number; name: string; love: number; bonded: boolean; cared: boolean; product: string | null; want?: string }[];
+  /** `farm`: it lives in the 우리 농장 barn / coop (F4). */
+  animals: { k: AnimalKind; n: number; name: string; love: number; bonded: boolean; cared: boolean; product: string | null; want?: string; farm?: true }[];
   /** My prices (목축 talents and professions; absent from older servers). */
   price?: { hay: number; animals: Record<AnimalKind, number> };
   room: { coop: number; barn: number };
@@ -336,15 +387,18 @@ export type Stage3View = {
 };
 export function stage3View(life: LifeState, uid: string, now: number): Stage3View {
   const s = stateRead(life, uid, now),
-    day = kstDay(now);
+    day = myDay(life, uid, now),
+    real = kstDay(now);
   const animals = s.a ?? [];
   const fo = s.fo?.day === day ? fortuneFor(uid, day) : null;
   const talk = life.actors[uid] !== undefined && growthMods(life, uid).animalTalk;
   return {
     animals: animals.map((a) => {
       // What tomorrow's (or today's) care gives, from the 정 it would have then.
-      const preview = { ...a, love: a.last === day ? a.love : Math.min(ANIMAL_LOVE_MAX, Math.max(0, a.love - (a.last ? Math.max(0, day - a.last - 1) : 0) + 1)), cares: a.last === day ? a.cares : a.cares + 1 };
-      const out = { k: a.k, n: a.n, name: `${ANIMALS[a.k].name} ${a.n}`, love: a.love, bonded: animalBonded(a), cared: a.last === day, product: careProduct(preview) };
+      // (Days missed beyond the helper's reach count at most HELPER_LOVE_CAP.)
+      const missed = a.last ? Math.max(0, day - a.last - 1) : 0;
+      const preview = { ...a, love: a.last === day ? a.love : Math.min(ANIMAL_LOVE_MAX, Math.max(0, a.love - (missed >= HELPER_AFTER_DAYS ? Math.min(missed, HELPER_LOVE_CAP) : missed) + 1)), cares: a.last === day ? a.cares : a.cares + 1 };
+      const out = { k: a.k, n: a.n, name: `${ANIMALS[a.k].name} ${a.n}`, love: a.love, bonded: animalBonded(a), cared: a.last === day, product: careProduct(preview), ...(a.f ? { farm: true as const } : {}) };
       return talk ? { ...out, want: animalWant(a, day) } : out;
     }),
     price: { hay: hayCost(life, uid, 1), animals: { chicken: animalPrice(life, uid, 'chicken'), cow: animalPrice(life, uid, 'cow'), sheep: animalPrice(life, uid, 'sheep') } },
@@ -357,9 +411,9 @@ export function stage3View(life: LifeState, uid: string, now: number): Stage3Vie
       return { k: t.k, name: SAPLINGS[t.k].name, age: st.age, grown: st.grown, inSeason: st.inSeason, ripe: st.ripe, picked: t.picked === day, n: st.n };
     }),
     smith: { can: s.sm?.can ?? 1, hoe: s.sm?.hoe ?? 1, basket: s.sm?.basket ?? 1 },
-    ore: { today: oreOfDay(day), premiumLeft: Math.max(0, ORE_PREMIUM_CAP - (s.ore ?? 0)) },
+    ore: { today: oreOfDay(real), premiumLeft: Math.max(0, ORE_PREMIUM_CAP - (s.ore ?? 0)) },
     clinic: { left: Math.max(0, CLINIC_PER_DAY - (s.cl ?? 0)) },
-    fortune: { open: fortuneOpenOn(day), read: !!fo, ...(fo ? { name: fo.name, line: fo.line, until: s.fo!.until } : {}) },
+    fortune: { open: fortuneOpenOn(real), read: !!fo, ...(fo ? { name: fo.name, line: fo.line, until: s.fo!.until } : {}) },
   };
 }
 /** 재능 동물 말: what an animal wants right now (its speech bubble). */

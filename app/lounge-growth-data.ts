@@ -354,11 +354,11 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   ],
   ranch: [
     { level: 2, text: '돌볼 때 10% 확률로 애정 +1 더', mods: { loveExtra: 0.1 } },
-    { level: 3, text: '건초 값 −10%', mods: { hayCheap: 0.1 } },
+    { level: 3, text: '건초 값 −10% · 농장 닭장 증축(닭 칸 +4) 열림', mods: { hayCheap: 0.1 } },
     { level: 4, text: '알·우유 은별 확률 +5%p', soon: '우리 농장' },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '하루 못 와도 애정이 줄지 않아요 (한 번 봐줌)', mods: { loveGrace: 1 } },
-    { level: 7, text: '털 깎기 솜씨 · 양털 +1', mods: { woolExtra: 1 } },
+    { level: 7, text: '털 깎기 솜씨 · 양털 +1 · 농장 축사 2층(소·양 칸 +4) 열림', mods: { woolExtra: 1 } },
     { level: 8, text: '큰 알·진한 우유 확률 +5%p', mods: { bigPts: 5 } },
     { level: 9, text: '동물 이름표 가구', soon: '우리 농장' },
     { level: 10, text: '전문가 선택 ②' },
@@ -549,7 +549,7 @@ export const RESEARCH: readonly ResearchDef[] = [
   { id: 'lift', code: 'V3', name: '광산 승강기', flag: 'lift', requires: ['trail'], beom: 350_000, mats: { copper: 60, stone: 150, wood: 100 }, opens: '광산 11~20층 · 5층마다 승강기', preview: '광차 레일과 등불이 이어진 깊은 굴. 5층마다 승강기로 곧장 내려가요.', live: true },
   // Stage 3 (design-npcs-stage3.md §1): finishing it opens ④ 목장·과수원 (village flag 'district-ranch').
   { id: 'orchardHill', code: 'V4', name: '들길 개간', flag: 'orchardHill', requires: ['trail'], beom: 400_000, mats: { wood: 200, fertilizer: 30 }, opens: '④ 목장·과수원 구역 · 닐라와 하쿠 · 친구마다 과일나무 3그루', preview: '북동쪽 들길 너머 닐라의 목장과 하쿠의 강물 과수원. 닭·소·양, 살구·복숭아·사과·배·귤.', live: true },
-  { id: 'ranch', code: 'V5', name: '목장 울타리', flag: 'ranch', requires: ['orchardHill'], beom: 600_000, mats: { wood: 300, stone: 150, iron: 30 }, opens: '목장 초원 · 닭장·외양간 · 공동 외양간', preview: '윗물 여울 징검다리 건너 풍차와 곡물 창고가 있는 초원.', live: false },
+  { id: 'ranch', code: 'V5', name: '목장 울타리', flag: 'ranch', requires: ['orchardHill'], beom: 600_000, mats: { wood: 300, stone: 150, iron: 30 }, opens: '우리 농장 축사·닭장 · 사일로 건초 · 매일 거름', preview: '우리 농장 동쪽 부지에 친구들이 함께 짓는 축사와 닭장. 내 동물을 닐라 목장에서 데려와 키우고, 풀은 건초로, 거름은 비료로.', live: true },
   { id: 'weather', code: 'V8', name: '기상 관측소', flag: 'weather', requires: ['lift'], beom: 500_000, mats: { copper: 40, iron: 40 }, opens: '내일 날씨 예보 · 스프링클러 레시피', preview: '뒷산 능선의 작은 풍향계 관측소.', live: false },
   { id: 'onsen', code: 'V6', name: '온천 발굴', flag: 'onsen', requires: ['lift'], beom: 900_000, mats: { iron: 60, gold: 20, stone: 300 }, opens: '온천 마을 · 노곤노곤 버프', preview: '뒷산 동쪽 능선의 김 오르는 노천탕과 족욕.', live: false },
   { id: 'ferry', code: 'V7', name: '여섯섬 항로', flag: 'ferry', requires: ['ranch'], requiresFlag: 'dock', beom: 1_200_000, mats: { wood: 400, iron: 80, gold: 30 }, opens: '여섯섬 · 배 · 낚싯대 4·5단계', preview: '밤 항구에서 배를 타고 가는 야자수와 현무암 섬.', live: false },

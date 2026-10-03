@@ -1,4 +1,5 @@
 // This module runs in the Edge Function and tests, never as a client authority.
+import { MYDAY_REJECT } from './lounge-myday.ts';
 import {
   LoungeRoom,
   snapshotNextDue,
@@ -111,7 +112,8 @@ export type CloudWorld = {
   stocks?: StockState;
 };
 export type CloudCommand = {
-  op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet';
+  /** 'endDay': 시간 체계 P1 하루 마감 at my bed (the life action { kind: 'endDay' }, lounge-myday.ts). */
+  op: 'open' | 'join' | 'read' | 'action' | 'leave' | 'wallet' | 'endDay';
   code?: string;
   connection?: string;
   sequence?: number;
@@ -289,6 +291,9 @@ export function cloudTransition(
     throw new CloudError('등록된 계정이 아닙니다.', 403);
   if (command.code !== undefined && typeof command.code !== 'string')
     throw new CloudError('초대 코드를 확인해 주세요.', 400);
+  // 하루 마감 is one life action; the life engine re-checks the night and the
+  // count, and the bed is checked below (I stand in my own room).
+  if (command.op === 'endDay') command = { ...command, op: 'action', action: { kind: 'endDay' } as LoungeAction };
   const g = structuredClone(original),
     notifications = new Set<string>();
   // 새 방 가구 초기화 (lounge-rooms-reset.ts): once per world, before anything
@@ -615,6 +620,11 @@ export function cloudTransition(
             const dish = act.kind === 'eat' && typeof act.item === 'string' && Object.hasOwn(DISH_BY_ID, act.item) ? DISH_BY_ID[act.item] : undefined;
             if (dish && !dish.lunch && area !== 'home')
               throw new CloudError('집밥은 방에서 먹어요. 밖에서는 도시락을 먹을 수 있어요.', 409);
+          }
+          if ((command.action as { kind?: string }).kind === 'endDay') {
+            // 하루 마감: at my bed, in my own room (the server says where I stand).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'home' || (player.home ?? member.actor) !== member.actor) throw new CloudError(MYDAY_REJECT.bed, 409);
           }
           if (command.action.kind === 'npcRequest') {
             // 의뢰 게시판 stands in 시장 거리 (lounge-market-layout.ts MARKET_BOARD).

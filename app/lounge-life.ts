@@ -145,6 +145,11 @@ import { districtsView, settleDistrictUnlocks, type DistrictsView } from './loun
 import { SITE_ACTION_KINDS } from './lounge-farm-sites-data.ts';
 import { farmSitesView, legacyShelter, readFarmCommons, siteAction, type FarmSitesExt, type FarmSitesView, type SiteAction } from './lounge-farm-sites.ts';
 import { settleBirthdayNews } from './lounge-birthday.ts';
+// 시간 체계 P1: 나의 하루 and 하루 마감 (lounge-myday.ts).
+import { endDayAction, myDayView, noteActive, readMyDay, type MyDayExt, type MyDayView } from './lounge-myday.ts';
+// 우리 농장 F4: the farm's barn and coop (lounge-farm-barn.ts).
+import { BARN_ACTION_KINDS, type BarnAction } from './lounge-farm-barn-data.ts';
+import { barnAction, barnView, type BarnView } from './lounge-farm-barn.ts';
 
 /** Base crops (all seasons) first, then the seasonal crops of the life expansion. */
 export type Crop =
@@ -596,6 +601,7 @@ export type LifeState = {
   VoyageExt &
   FarmExt &
   FarmSitesExt &
+  MyDayExt &
   CompanionExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
@@ -642,6 +648,10 @@ export type LifeAction =
   | FarmAction
   /** 우리 농장 F3: facility sites (build, fund, demolish, greenhouses, orchard) and the 공동 밭. */
   | SiteAction
+  /** 시간 체계 P1: 하루 마감 at my bed (lounge-myday.ts; the cloud op 'endDay'). */
+  | { kind: 'endDay' }
+  /** 우리 농장 F4: animals to the farm, care there, the 사일로, 거름 and 퇴비 (lounge-farm-barn.ts). */
+  | BarnAction
   /** 마을 확장 2단계: dawn auction, 농협 weekly notice, bakery, market-day stalls, reading club (lounge-town.ts). */
   | TownAction
   | Stage3Action
@@ -670,6 +680,8 @@ export const LIFE_ACTION_KINDS = [
   ...VOYAGE_ACTION_KINDS,
   ...FARM_ACTION_KINDS,
   ...SITE_ACTION_KINDS,
+  'endDay',
+  ...BARN_ACTION_KINDS,
   ...TOWN_ACTION_KINDS,
   ...STAGE3_ACTION_KINDS,
   ...COMPANION_ACTION_KINDS,
@@ -1066,6 +1078,7 @@ export function readLife(value: unknown): LifeState {
     ...readVoyage(v.voyage),
     ...readFarmExt(v),
     ...readFarmCommons(v.farm),
+    ...readMyDay(v.myday),
     ...readCompanions(v.companions),
   };
 }
@@ -1197,6 +1210,8 @@ function lifeActionCore(
   const nextId = (prefix: string) => `${prefix}-${uid}-${++life.seq}`;
   let nextLedger = ledger;
   const kind = a.kind as string;
+  // 시간 체계 P1: I was around today (밀린 기회, lounge-myday.ts).
+  noteActive(life, uid, now);
   // 성장: today's fields, rested/retro XP and finished 마을 개척 settle first.
   touchGrowth(life, uid, now);
   // 텃밭 확장: crows, withering, my shipping bin and last week's 품평회.
@@ -1208,6 +1223,14 @@ function lifeActionCore(
   }
   if ((SITE_ACTION_KINDS as readonly string[]).includes(kind)) {
     const next = siteAction(life, ledger, member, a as SiteAction, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if (kind === 'endDay') {
+    const next = endDayAction(life, ledger, member, now);
+    return afterCoreAction(next.life, next.ledger, member, now);
+  }
+  if ((BARN_ACTION_KINDS as readonly string[]).includes(kind)) {
+    const next = barnAction(life, ledger, member, a as BarnAction, now);
     return afterCoreAction(next.life, next.ledger, member, now);
   }
   if ((GROWTH_ACTION_KINDS as readonly string[]).includes(kind)) {
@@ -1703,6 +1726,10 @@ export type LifeView = {
   stage3?: Stage3View;
   /** 주민 동행: who walks with whom, and my outing (absent from older servers). */
   companion?: CompanionView;
+  /** 시간 체계 P1: 나의 하루, 하루 마감 left, the last 결산 card, friends' 💤. */
+  myday?: MyDayView;
+  /** 우리 농장 F4: my room in the farm barn / coop, 거름, grass to cut (absent until one stands). */
+  barn?: BarnView;
 } & PlusView;
 export function lifeView(
   state: LifeState,
@@ -1837,6 +1864,8 @@ export function lifeView(
     districts: districtsView(life, actorValid(actor) ? actor : undefined, now),
     ...(UUID.test(uid) && actorValid(actor) ? { town: townView(life, uid, now), stage3: stage3View(life, uid, now) } : {}),
     companion: companionView(life, uid, now),
+    ...(UUID.test(uid) && actorValid(actor) ? { myday: myDayView(life, uid, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) && barnView(life, uid, now) ? { barn: barnView(life, uid, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

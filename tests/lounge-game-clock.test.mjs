@@ -113,8 +113,9 @@ test('game days never straddle a real KST midnight; daily resets stay on the rea
   assert.equal(realDayOfGameDay(gameDay(dayStart(DAY0))), DAY0, 'the real 00:00 hour starts the real day');
   assert.equal(realDayOfGameDay(gameDay(dayStart(DAY0)) - 1), DAY0 - 1, 'the real 23:00 hour ends the day before');
   assert.equal(gameTimeOnDay(DAY0, 6, 30), dayStart(DAY0) + 12 * HOUR + 6.5 * GAME_HOUR_MS);
-  // Foraging is once per spot per real day: a later game day of the same
-  // real day is still "already foraged"; the next real day is a new day.
+  // Foraging is once per spot per 나의 하루 (시간 체계 P1): a later game day of
+  // the same real day is still "already foraged"; the next real day is a new
+  // day, and so is 하루 마감 at my bed (game night).
   const spot = SPAWN_SPOTS.find((sp) => !sp.flag && forageAt(sp.id, DAY0) && forageAt(sp.id, DAY0 + 1));
   assert.ok(spot, 'a spot with forage two days running');
   const m = { id: '11111111-1111-4111-8111-111111111111', actor: 0 };
@@ -129,6 +130,11 @@ test('game days never straddle a real KST midnight; daily resets stay on the rea
   assert.throws(() => act(gameTimeOnDay(DAY0, 9, 0, 11)), (e) => e instanceof LifeError && e.message === PLUS_REJECT.foraged, 'the next game day, same real day');
   assert.throws(() => act(gameTimeOnDay(DAY0, 9, 0, 23)), (e) => e instanceof LifeError && e.message === PLUS_REJECT.foraged, 'the last game day of the real day');
   act(gameTimeOnDay(DAY0 + 1, 9, 0, 0));
+  assert.throws(() => act(gameTimeOnDay(DAY0 + 1, 9, 0, 1)), (e) => e instanceof LifeError && e.message === PLUS_REJECT.foraged, 'still my day');
+  const end = lifeAction(life, ledger, m, { kind: 'endDay' }, gameTimeOnDay(DAY0 + 1, 22, 0, 1));
+  life = end.life;
+  ledger = end.ledger;
+  act(gameTimeOnDay(DAY0 + 1, 9, 0, 2));
 });
 
 test('fish time windows are read on the game clock', () => {
