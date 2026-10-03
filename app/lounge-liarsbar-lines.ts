@@ -1,4 +1,4 @@
-// 허 선장's lines at the 허풍 카드 table (허풍 주점). Built only from the
+// 샹크스's lines at the 허풍 카드 table (허풍 주점), in his easy, laughing 반말. Built only from the
 // public view (lounge-liarsbar.ts liarsBarView), so a line can never hint at
 // a face-down card or a chamber; the pick is a hash of the match, revision
 // and event, so every client shows the same line. Every pool entry passes
@@ -9,29 +9,29 @@ import { josa } from './lounge-text.ts';
 
 export const CAPTAIN_LINES = {
   start: [
-    '어서 와요, 허풍 주점이에요. 오늘 밤도 허풍 한 판!',
-    '탄창은 제가 방금 채웠어요. 다들 행운을 빌어요.',
-    '자리 잡았으면 시작해요. 뻔뻔한 사람이 이기는 곳이에요.',
+    '어서 와, 허풍 주점이다! 오늘 밤 제일 뻔뻔한 얼굴은 누굴까. 하하!',
+    '탄창은 방금 내가 채웠다. 한 손으로도 금방이지. 다들 행운을 빈다.',
+    '자리 잡았으면 시작하자. 여긴 웃으면서 속이는 사람이 이기는 데다.',
   ],
   round: [
-    '이번 판 오늘의 카드는 {card}예요.',
-    '{card}! 자, 누가 제일 뻔뻔한지 볼까요?',
-    '오늘의 카드는 {card}. 내가 젊을 때는 이 카드로 고래도 속였어요.',
+    '이번 판 오늘의 카드는 {card}다.',
+    '{card}! 자, 누가 제일 시치미를 잘 떼나 보자.',
+    '오늘의 카드는 {card}. 다하하, 얼굴 표정 관리 잘해라.',
   ],
-  play: ['{name|이/가} {n}장이래요.', '{n}장이라… 배짱 좋네요.', '{name} 님, {n}장을 내려놨어요.'],
-  myTurnCall: ['{prev} 님이 {n}장이래요. 믿을까요, 말까요?', '내 차례예요. 1–5로 카드를 고르고 Enter, 의심되면 L이에요.'],
-  myTurn: ['내 차례예요. 1–5로 1~3장을 고르고 Enter로 내요.', '내 차례예요. “전부 {card}”라고 우겨 봐요.'],
-  forced: ['다른 사람 손이 다 비었어요. 이번엔 “거짓말!”만 할 수 있어요.'],
-  waiting: ['{name} 님 차례예요.', '{name} 님이 카드를 고르는 중이에요.'],
-  call: ["{name|이/가} '거짓말!'을 외쳤어요!", '딸랑! {name|이/가} 벨을 눌렀어요.'],
-  truth: ['진짜였네요! 이번엔 {shooter|이/가} 당겨야겠어요.', '전부 진짜! {shooter} 님, 뻥총 앞으로요.'],
-  lie: ['뻥이었어요! {shooter} 님, 방아쇠 앞으로요.', '들켰네요! {shooter} 님이 당길 차례예요.'],
-  trigger: ['천천히 숨 한 번 쉬고요.', '내가 젊을 때 고래 앞에서도 이렇게 떨진 않았어요.', '{shooter} 님, 준비되면 당겨요.'],
-  myTrigger: ['내가 당길 차례예요. Space로 방아쇠를 당겨요.', '숨 한 번 쉬고, Space로 당겨요.'],
-  safe: ['휴, 딸깍! 살았다!', '하늘이 도왔네요.', '딸깍! {shooter} 님은 아직 버텨요.'],
-  out: ['뻥! {shooter} 님은 오늘 여기까지예요. 검댕은 제가 닦아 줄게요.', '뻥! {shooter} 님이 뻗었어요. 한숨 돌리고 구경해요.'],
-  win: ['마지막까지 버틴 {name} 님! 오늘의 허풍왕이에요!', '{name} 님 우승! 라고 내가 그랬지!'],
-  away: ['{name} 님이 잠깐 자리를 비웠어요. 제가 대신 한 장 내 둘게요.'],
+  play: ['{name|이/가} {n}장이래.', '{n}장이라… 배짱 좋네. 하하!', '{name}, {n}장 내려놨다.'],
+  myTurnCall: ['{prev}, {n}장이래. 믿을래, 말래?', '네 차례다. 1–5로 카드를 고르고 Enter, 수상하면 L이다.'],
+  myTurn: ['네 차례다. 1–5로 1~3장을 고르고 Enter로 내.', '네 차례다. 웃으면서 “전부 {card}”라고 우겨 봐.'],
+  forced: ['다른 사람 손이 다 비었다. 이번엔 “거짓말!”만 할 수 있어.'],
+  waiting: ['{name} 차례다.', '{name}, 카드 고르는 중이다. 느긋하게 기다리자.'],
+  call: ["{name|이/가} '거짓말!'을 외쳤다!", '딸랑! {name|이/가} 벨을 눌렀다.'],
+  truth: ['진짜였네! 이번엔 {shooter|이/가} 당길 차례다.', '전부 진짜! {shooter}, 뻥총 앞으로.'],
+  lie: ['뻥이었구나! {shooter}, 방아쇠 앞으로. 하하!', '들켰네! {shooter|이/가} 당길 차례다.'],
+  trigger: ['천천히, 숨 한 번 쉬고.', '떨리지? 그 떨림까지가 이 판의 재미다.', '{shooter}, 준비되면 당겨.'],
+  myTrigger: ['네가 당길 차례다. Space로 방아쇠를 당겨.', '숨 한 번 쉬고, Space로 당겨.'],
+  safe: ['딸깍! 살았다! 다하하!', '하늘이 도왔네.', '딸깍! {shooter}, 아직 버틴다.'],
+  out: ['뻥! {shooter}, 오늘은 여기까지다. 검댕은 내가 닦아 줄게.', '뻥! {shooter|이/가} 뻗었다. 한숨 돌리고 구경하자.'],
+  win: ['마지막까지 버틴 {name}! 오늘의 허풍왕이다! 하하하!', '{name} 우승! 오늘 밤은 네 이야기로 잔치다!'],
+  away: ['{name|이/가} 잠깐 자리를 비웠다. 내가 대신 한 장 내 둘게.'],
 } as const;
 
 type Ctx = Record<string, string | number>;
@@ -47,7 +47,7 @@ function say(key: keyof typeof CAPTAIN_LINES, v: Pick<LiarsBarView, 'id' | 'revi
   return { text: fill(pickLine(CAPTAIN_LINES[key], `${v.id}:${v.revision}:${key}`), ctx), mood };
 }
 
-/** 허 선장's line for the current public state (`names` by seat). */
+/** 샹크스's line for the current public state (`names` by seat). */
 export function captainLine(v: LiarsBarView, names: readonly string[], away: readonly number[] = []): DealerLine {
   const card = LB_FACE_NAME[v.table];
   const shooter = v.shooter >= 0 ? (names[v.shooter] ?? '') : '';

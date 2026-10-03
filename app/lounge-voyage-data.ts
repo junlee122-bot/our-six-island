@@ -1,6 +1,6 @@
 // 먼바다 낚싯배 data (handover/design/design-sea-fishing.md): fares, the
 // sailing timetable, seats, the deck's fishing rails, the captain's dawn
-// invitation, the 멀미약 and its sellers, and the voyage lines of 허 선장 and
+// invitation, the 멀미약 and its sellers, and the voyage lines of 샹크스 and
 // friends. Pure data plus clock helpers with no engine imports, so
 // lounge-life.ts can list the action kinds at load time and lounge-items.ts
 // can spread the 멀미약 into its catalogs without an import cycle. The engine
@@ -139,16 +139,16 @@ export const inDawnHours = (now: number) => {
 /** What residents say about the boat (shown on the boarding board, the knock and the summary). */
 export const VOYAGE_LINES = {
   captain: {
-    board: ['먼바다 가는 배다! 자리 넷, 늦으면 다음 배다.', '배 타기 전에 화장실 다녀와라. 바다엔 없다.', '오늘 바다는 내가 보증한다. 고기는 보증 못 한다.'],
-    storm: ['오늘은 결항이다. 이런 날 나가면 배가 거꾸로 선다. 진짜다.', '폭풍 앞에선 선장도 주점에 있는다. 내일 보자.'],
-    sail: ['닻 올려라! 방파제만 지나면 바다가 달라진다.', '꽉 잡아라, 선원들! 출항이다!'],
-    back: ['돌아왔다! 오늘 어획은 내 허풍보다 크구먼.', '뭍이다! 다리가 아직 출렁이지? 그게 바다다.'],
-    knock: ['오늘 새벽 배, 먼저 갈래? 단골한테만 묻는 거다.', '{me}, 문 열어라. 새벽 물때가 딱이다. 같이 가자.'],
-    decline: ['그래, 오늘은 푹 자라. 내일 또 물어보마. 아니, 내일은 안 물어본다. 모레.'],
-    sick: ['멀미 나면 수평선을 봐라. 그래도 나면… 츠나데 할멈 약을 먹어라.'],
+    board: ['먼바다 가는 배다! 자리 넷, 늦으면 다음 배 타면 돼. 하하!', '배 타기 전에 화장실 다녀와라. 바다 한가운데엔 없거든.', '오늘 바다 기분은 좋아 보인다. 고기 기분은 가 봐야 알지.'],
+    storm: ['오늘은 결항이다. 바다가 성났을 땐 기다려 주는 게 예의야.', '폭풍 앞에선 나도 주점에 있는다. 내일 같이 나가자.'],
+    sail: ['닻 올려라! 방파제만 지나면 바다가 달라진다.', '꽉 잡아라, 다들! 출항이다! 다하하!'],
+    back: ['돌아왔다! 오늘 어획이면 주점에서 잔치 열 만하다.', '뭍이다! 다리가 아직 출렁이지? 그게 바다 맛이다.'],
+    knock: ['오늘 새벽 배, 먼저 갈래? 단골한테만 묻는 거다.', '{me}, 일어났어? 새벽 물때가 딱이다. 같이 가자.'],
+    decline: ['그래, 오늘은 푹 자라. 바다는 어디 안 가. 다음에 또 두드릴게.'],
+    sick: ['멀미 나면 수평선을 봐라. 그래도 나면… 츠나데 할멈 약이 잘 듣는다.'],
   },
   gabung: {
-    tomorrow: ['내일 바다 예보! 배 뜨는 날이에요.', '내일은 폭풍이에요. 허 선장님 배는 결항이래요!'],
+    tomorrow: ['내일 바다 예보! 배 뜨는 날이에요.', '내일은 폭풍이에요. 샹크스 선장님 배는 결항이래요!'],
   },
   lux: {
     buy: ['먼바다 물건이네! 경매장보다 내가 먼저 봐야지.', '이 녀석들 어디서 낚았어? 아, 선장님 배구나.'],
