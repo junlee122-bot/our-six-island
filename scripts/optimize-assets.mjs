@@ -57,7 +57,7 @@ const HOST_SHEETS = [
   'lounge/host-misun.png',
   'lounge/host-broker.png',
 ];
-// 허 선장 · 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
+// 문 사장 · 결 목수 were keyed before the encoder unmixed the rim: a
 // pink line still rings their hair, hands and props on any ground. Pixels
 // within 6 px of transparency that carry a magenta cast are unmixed from the
 // (255, 0, 255) ground the way keyMagenta does it and lose that share of their
@@ -104,7 +104,7 @@ function defringeMagenta(data, width, height, reach = 6) {
   }
   return out;
 }
-const DEFRINGE_HOSTS = new Set(['lounge/host-captain.png', 'lounge/host-realtor.png', 'lounge/host-misun.png']);
+const DEFRINGE_HOSTS = new Set(['lounge/host-realtor.png', 'lounge/host-misun.png']);
 // 범마을 부동산 신형만 · 봉미선 (shopkeepers-generation.json): one 3×2 magenta
 // original, 신형만 on the top row and 봉미선 on the bottom (calm, smile, focus).
 // Each row becomes its own keyed host sheet in the usual 3×2 layout (calm,
@@ -168,8 +168,15 @@ async function noharaHostSheets() {
 // calm figure HOST_CELL.figure tall, centred in a 440 × 660 cell with the
 // soles on the 648 px line, and written as the keyed host-carpenter.png that
 // hostSheets() encodes.
-// 범마을 증권 무잔 (broker-muzan-generation.json) is laid out the same way.
-const HOST_FROM_GRID = { 'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png', 'lounge/host-broker.png': 'lounge/_originals/host-muzan.png' };
+// 범마을 증권 무잔 (broker-muzan-generation.json) is laid out the same way, and
+// so are 허풍 주점 샹크스 and 화투방 예림이 (shanks-jeong-generation.json): their
+// sheets keep the resident ids' file names (host-captain / host-maehwa).
+const HOST_FROM_GRID = {
+  'lounge/host-carpenter.png': 'lounge/_originals/host-valkyrie.png',
+  'lounge/host-broker.png': 'lounge/_originals/host-muzan.png',
+  'lounge/host-captain.png': 'lounge/_originals/host-shanks.png',
+  'lounge/host-maehwa.png': 'lounge/_originals/host-jeong.png',
+};
 async function hostSheetsFromGrid() {
   const CELL = { w: 440, h: 660, foot: 648, figure: 600 };
   for (const [name, original] of Object.entries(HOST_FROM_GRID)) {
@@ -519,6 +526,9 @@ const NPC_SPRITES_REALTY = ['shinhyungman', 'bongmison'];
 const NPC_SPRITES_3 = ['valkyrie'];
 // 범마을 증권 무잔 (broker-muzan-generation.json): the resident id is 'muzan' too.
 const NPC_SPRITES_BROKER = ['muzan'];
+// 허풍 주점 샹크스 · 화투방 예림이 (shanks-jeong-generation.json): the web files are
+// named after the art, the resident ids stay 'captain' / 'maehwa' (hearts carry over).
+const NPC_SPRITES_SWAP = ['shanks', 'jeong'];
 // Stage-3 residents (stage3-npcs-generation.json): 목장 닐라, 과수원 하쿠,
 // 대장간 오른, 의원 메르시, 점쟁이 신이치. Their web copies' sizes and hashes are
 // written back into that record (`web`).
@@ -546,6 +556,8 @@ const NPC_PORTRAITS = {
   bongmison: { cx: 0.48, top: 0.01, size: 0.32 },
   valkyrie: { cx: 0.48, top: 0.025, size: 0.3 },
   muzan: { cx: 0.5, top: 0.02, size: 0.3 },
+  shanks: { cx: 0.5, top: 0.02, size: 0.3 },
+  jeong: { cx: 0.5, top: 0.02, size: 0.3 },
   nilah: { cx: 0.49, top: 0.02, size: 0.3 },
   haku: { cx: 0.5, top: 0.02, size: 0.3 },
   ornn: { cx: 0.47, top: 0.03, size: 0.36 },
@@ -635,7 +647,7 @@ function keyMagenta(data, width, height, fgM = 0, seed = 40, pocket = 200) {
 }
 async function npcSprites() {
   const stage3Web = {};
-  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_STAGE3, ...NPC_SPRITES_BROKER]) {
+  for (const id of [...NPC_SPRITES, ...NPC_SPRITES_2, ...NPC_SPRITES_REALTY, ...NPC_SPRITES_3, ...NPC_SPRITES_STAGE3, ...NPC_SPRITES_BROKER, ...NPC_SPRITES_SWAP]) {
     if (!wanted(id)) continue;
     const source = path.join(assets, `lounge/_originals/npc-${NPC_ORIGINAL[id] ?? id}.png`);
     if (!fs.existsSync(source)) continue;
@@ -700,11 +712,13 @@ const CHIBI_FILES = [
   ['mercy'],
   ['shinichi'],
   ['lumi'],
-  ['maehwa'],
   ['muzan'],
+  // 샹크스 · 예림이 (shanks-jeong-generation.json): the record keys them as captain / maehwa.
+  ['shanks'],
+  ['jeong'],
 ];
 /** Chibi files named after the person; the record keys them by resident id. */
-const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun', valkyrie: 'carpenter' };
+const CHIBI_NPC_ID = { yaninekko: 'yanineko', shinhyungman: 'realtor', bongmison: 'misun', valkyrie: 'carpenter', shanks: 'captain', jeong: 'maehwa' };
 const CHIBI_GREEN = new Set(['beatrice-bocchi']);
 const CHIBI_H = 640;
 /** Magenta-ness (or green-ness) of a pixel: 255 on the key, ≤ 0 on the figure. */
@@ -1095,14 +1109,32 @@ async function furnitureArt() {
   record.keying = 'scripts/optimize-assets.mjs furniture: keyMagenta flood from the border + defringeMagenta rim, each cell trimmed to its opaque pieces and contained in a canvas of the catalog aspect (h / w, standing on the bottom edge; wall pieces centred; rugs stretched to d / w as a top view), long side at most 768 px, plus a 256² thumbnail.';
   fs.writeFileSync(recordPath, JSON.stringify(record, null, 1) + '\n');
 }
-// 범마을 증권 무잔: the web copies' sizes and SHA-256 go into his generation record
-// (like the 발키리 record), next to the originals' jobs and hashes.
+// 범마을 증권 무잔, 허풍 주점 샹크스 and 화투방 예림이: the web copies' sizes and
+// SHA-256 go into their generation records (like the 발키리 record), next to the
+// originals' jobs and hashes.
 const ART_RECORDS = [
   {
     record: 'lounge/broker-muzan-generation.json',
     files: ['npc-muzan.webp', 'npc-muzan-portrait.webp', 'chibi/npc-muzan.webp', 'host-broker.png', 'host-broker.webp'],
     keying:
       'scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays the 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-broker.png, then encodes host-broker.webp.',
+  },
+  {
+    record: 'lounge/shanks-jeong-generation.json',
+    files: [
+      'npc-shanks.webp',
+      'npc-shanks-portrait.webp',
+      'chibi/npc-shanks.webp',
+      'host-captain.png',
+      'host-captain.webp',
+      'npc-jeong.webp',
+      'npc-jeong-portrait.webp',
+      'chibi/npc-jeong.webp',
+      'host-maehwa.png',
+      'host-maehwa.webp',
+    ],
+    keying:
+      'scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays each 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-captain.png (샹크스) and host-maehwa.png (예림이), then encodes the .webp copies. The resident ids stay captain / maehwa.',
   },
 ];
 async function artRecords() {

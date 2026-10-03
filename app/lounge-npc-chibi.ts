@@ -35,9 +35,11 @@ export const NPC_CHIBI: Partial<Record<NpcId, NpcChibi>> = {
   ornn: { asset: A.chibi_ornn, w: 512, h: 640 },
   mercy: { asset: A.chibi_mercy, w: 512, h: 640 },
   shinichi: { asset: A.chibi_shinichi, w: 512, h: 640 },
-  // 루미 · 매화 walk the village on breaks; at their tables they keep the pose sheet.
+  // 미쿠 · 예림이 walk the village on breaks; at their tables they keep the pose sheet.
   lumi: { asset: A.chibi_lumi, w: 512, h: 640 },
-  maehwa: { asset: A.chibi_maehwa, w: 512, h: 640 },
+  maehwa: { asset: A.chibi_jeong, w: 512, h: 640 },
+  // 샹크스 behind the tavern's bar, at the pier and on his walks.
+  captain: { asset: A.chibi_shanks, w: 512, h: 640 },
   // 범마을 증권 무잔 behind the broker's counter and on his evening walks.
   muzan: { asset: A.chibi_muzan, w: 512, h: 640 },
 };

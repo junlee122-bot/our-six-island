@@ -254,16 +254,22 @@
    "sha256": "86002F98BF7E673228E8D6E0FA720531711956A92DEE88207822034B97AD3215"
   },
   "maehwa": {
-   "file": "chibi/npc-maehwa.webp",
+   "file": "chibi/npc-jeong.webp",
    "w": 512,
    "h": 640,
-   "sha256": "69A84BE4A9358A28AFAEAC6FFFD88A1B2ACC94A6102B3C08DE7B6F26913C038D"
+   "sha256": "320306842C011BE72B3D8B5090C41F0EFFCECE1FD7DA581B772A1372F647BC31"
   },
   "muzan": {
    "file": "chibi/npc-muzan.webp",
    "w": 512,
    "h": 640,
    "sha256": "A78D15B764B68F0F173A5392EF0A9073C819EB7B99EF7CC816680747E84E4AF9"
+  },
+  "captain": {
+   "file": "chibi/npc-shanks.webp",
+   "w": 512,
+   "h": 640,
+   "sha256": "2FC9EA3E6BC9E2104C4E7162A2E9D9A9B4AFF21C3A269D80A2CF33A9FE5DCED6"
   }
  },
  "keying": "scripts/optimize-assets.mjs chibi: flood key from the border against the measured ground colour, unmix + despill on the rim, split at the emptiest column near the middle, figure at 94% of a 640px canvas with the feet on the 97% line."

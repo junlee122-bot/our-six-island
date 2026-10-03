@@ -70,5 +70,57 @@
    "sha256": "52FA63793AB926A2F362DB329DB1FC1234D44794523E59A2E310FC3F5E170801"
   }
  ],
- "keying": "Same as carpenter-valkyrie-generation.json: scripts/optimize-assets.mjs (npcs / chibi / hosts) — done by the swap session."
+ "keying": "scripts/optimize-assets.mjs: npcs keys the tall art (flood from the border, unmix + despill) into a 660x990 sprite and a 384px head-and-shoulders portrait; chibi places the single figure at 94% of a 512x640 canvas with the feet on the 97% line; hosts lays each 3x2 original out as a host sheet (440x660 cells, soles on 648 px, calm figure 600 px, enclosed pockets keyed) in host-captain.png (샹크스) and host-maehwa.png (예림이), then encodes the .webp copies. The resident ids stay captain / maehwa.",
+ "web": {
+  "npc-shanks.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "32E61EEA4DC1A00C10411DE057BB6C43A01287DBC926BA4CA0D3F4EFD33FEBBD"
+  },
+  "npc-shanks-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "22E52B6A9ED436C413CBB5693840D9828A2EFF78F964D86EB5B54D744B36F44C"
+  },
+  "chibi/npc-shanks.webp": {
+   "w": 512,
+   "h": 640,
+   "sha256": "2FC9EA3E6BC9E2104C4E7162A2E9D9A9B4AFF21C3A269D80A2CF33A9FE5DCED6"
+  },
+  "host-captain.png": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "C4987E4F48F145A025B7950289E78F38F79C5DE6099A9981D3E696ECA5342CEF"
+  },
+  "host-captain.webp": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "AEC973E0B23AAE7832156C4EFC5DF5DF67D9E2C3314DF8C7D84BB3C6104BEA6C"
+  },
+  "npc-jeong.webp": {
+   "w": 660,
+   "h": 990,
+   "sha256": "33F635B39260280FF5317A79876C717021FAD99033911D889F4A2A569E572E5D"
+  },
+  "npc-jeong-portrait.webp": {
+   "w": 384,
+   "h": 384,
+   "sha256": "7667CEB6172CA08D3FC22CF628809AB812F2AF0195CF8146BB059271FB46DCA9"
+  },
+  "chibi/npc-jeong.webp": {
+   "w": 512,
+   "h": 640,
+   "sha256": "320306842C011BE72B3D8B5090C41F0EFFCECE1FD7DA581B772A1372F647BC31"
+  },
+  "host-maehwa.png": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "EFDE75AD1DCF985372EA706359A0B252C54ECA74CC21A3BFFC2EFBB19F9FA666"
+  },
+  "host-maehwa.webp": {
+   "w": 1320,
+   "h": 1320,
+   "sha256": "C7308D5B0DC308352867D5FA671CEF1D11B171ED9DC93C09EFCD50ECEE8D9C97"
+  }
+ }
 }

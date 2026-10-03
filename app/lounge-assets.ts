@@ -168,14 +168,15 @@ export const LOUNGE_ASSETS = {
   daowonBuns: '/assets/lounge/daowon-buns.webp',
   daowonOutfits: '/assets/lounge/daowon-outfits.webp',
   hachimaki: '/assets/lounge/hachimaki.webp',
-  // Table hosts (루미 / 매화): keyed 3×2 pose sheets, see lounge-host-sprites.ts.
+  // Table hosts (미쿠 / 예림이): keyed 3×2 pose sheets, see lounge-host-sprites.ts.
+  // 예림이's sheet is laid out from _originals/host-jeong.png (shanks-jeong-generation.json).
   hostLumi: '/assets/lounge/host-lumi.webp',
   hostMaehwa: '/assets/lounge/host-maehwa.webp',
   casinoLenderSprite: '/assets/lounge/casino-lender-rose.webp',
   bankClerkSprite: '/assets/lounge/bank-clerk-nyamo.webp',
   bankClerkPortrait: '/assets/lounge/bank-clerk-nyamo-portrait.webp',
   salonStylistSprite: '/assets/lounge/salon-stylist-gwen.webp',
-  // Round notebook portraits of 로제 / 냐모 / 그웬, cut from their sprites (optimize-assets.mjs npcs).
+  // Round notebook portraits of 미스 포츈 / 나모 / 그웬, cut from their sprites (optimize-assets.mjs npcs).
   casinoLenderFace: '/assets/lounge/casino-lender-rose-face.webp',
   bankClerkFace: '/assets/lounge/bank-clerk-nyamo-face.webp',
   salonStylistFace: '/assets/lounge/salon-stylist-gwen-face.webp',
@@ -220,6 +221,11 @@ export const LOUNGE_ASSETS = {
   // 범마을 증권 무잔 (broker-muzan-generation.json; keyed by optimize-assets.mjs npcs).
   npc_muzan: '/assets/lounge/npc-muzan.webp',
   npc_muzan_portrait: '/assets/lounge/npc-muzan-portrait.webp',
+  // 허풍 주점 샹크스 · 화투방 예림이 (shanks-jeong-generation.json; keyed by optimize-assets.mjs npcs).
+  npc_shanks: '/assets/lounge/npc-shanks.webp',
+  npc_shanks_portrait: '/assets/lounge/npc-shanks-portrait.webp',
+  npc_jeong: '/assets/lounge/npc-jeong.webp',
+  npc_jeong_portrait: '/assets/lounge/npc-jeong-portrait.webp',
   // Village NPCs, stage 3 (stage3-npcs-generation.json; keyed by optimize-assets.mjs npcs).
   npc_nilah: '/assets/lounge/npc-nilah.webp',
   npc_haku: '/assets/lounge/npc-haku.webp',
@@ -258,16 +264,19 @@ export const LOUNGE_ASSETS = {
   chibi_mercy: '/assets/lounge/chibi/npc-mercy.webp',
   // 신이치's chibi wears his 코난 disguise (user decision).
   chibi_shinichi: '/assets/lounge/chibi/npc-shinichi.webp',
-  // 루미 · 매화 walking chibis (lumi-maehwa-chibi-generation.json); the tables keep their pose sheets.
+  // 미쿠's walking chibi (lumi-maehwa-chibi-generation.json); the tables keep their pose sheets.
   chibi_lumi: '/assets/lounge/chibi/npc-lumi.webp',
-  chibi_maehwa: '/assets/lounge/chibi/npc-maehwa.webp',
+  // 샹크스 · 예림이 walking chibis (shanks-jeong-generation.json).
+  chibi_shanks: '/assets/lounge/chibi/npc-shanks.webp',
+  chibi_jeong: '/assets/lounge/chibi/npc-jeong.webp',
   chibi_muzan: '/assets/lounge/chibi/npc-muzan.webp',
   tavernCardKing: '/assets/lounge/cards/tavern-king.webp',
   tavernCardQueen: '/assets/lounge/cards/tavern-queen.webp',
   tavernCardAce: '/assets/lounge/cards/tavern-ace.webp',
   tavernCardJoker: '/assets/lounge/cards/tavern-joker.webp',
   tavernCardBack: '/assets/lounge/cards/tavern-back.webp',
-  // 허 선장 (허풍 주점): same 3×2 layout, generated 2026-09-26 (host-captain.prompt.txt).
+  // 샹크스 (허풍 주점): same 3×2 layout, laid out from _originals/host-shanks.png
+  // (shanks-jeong-generation.json; optimize-assets.mjs hosts).
   hostCaptain: '/assets/lounge/host-captain.webp',
   // 부동산 신형만 · 봉미선: one sheet per person cut from _originals/host-realtor-nohara.png
   // (shopkeepers-generation.json; optimize-assets.mjs hosts).
