@@ -49,7 +49,11 @@ import {
   type FacilityDef,
   type FacilityId,
   type SiteActionKind,
+  upgradeBlock,
 } from './lounge-farm-sites-data.ts';
+// 우리 농장 F5: the 양식장 and the 품종 개량소 (their own modules, called from here).
+import { dailyPond, pondAction, pondView, readPond, type PondAction, type PondState, type PondView } from './lounge-farm-pond.ts';
+import { labAction, labView, readLab, type LabAction, type LabState, type LabView } from './lounge-farm-seedlab.ts';
 import { FRUIT_TREE_KINDS, SAPLINGS, type FruitTreeKind } from './lounge-stage3-data.ts';
 import {
   CROP_INFO,
@@ -112,13 +116,15 @@ export type OrchardTree = { f: FruitTreeKind; at: number; n?: number };
 /**
  * Per-kind facility state (small; validated on read by the kind). F4 barn /
  * coop: `mn` 거름 waiting per actor; barn: `cut` the 사일로's grass tiles cut
- * per actor on their 나의 하루 `d`.
+ * per actor on their 나의 하루 `d`. F5: `pond` (양식장), `lab` (품종 개량소).
  */
 export type SiteFacilityState = {
   plots?: Record<string, SitePlot>;
   trees?: Record<string, OrchardTree>;
   mn?: Record<string, number>;
   cut?: Record<string, { d: number; t: number[] }>;
+  pond?: PondState;
+  lab?: LabState;
 };
 /** An open shared funding: for tier `to` (1 = the build). `by`: gifts per actor. */
 export type SiteFund = { to: number; got: number; mat: Record<string, number>; by: Record<string, number> };
@@ -164,7 +170,9 @@ export type SiteAction =
   | { kind: 'commonTill'; tile: number }
   | { kind: 'commonPlant'; tile: number; crop: Crop }
   | { kind: 'commonWater'; tile: number }
-  | { kind: 'commonHarvest'; tile: number };
+  | { kind: 'commonHarvest'; tile: number }
+  | PondAction
+  | LabAction;
 type _Kinds = SiteAction['kind'] extends SiteActionKind ? (SiteActionKind extends SiteAction['kind'] ? true : never) : never;
 export const SITE_KINDS_OK: _Kinds = true;
 
@@ -199,6 +207,8 @@ export const SITE_REJECT = {
   store: '공동 창고에 그만큼 없어요.',
   animals: '여기 사는 동물들을 먼저 닐라 목장으로 옮겨 주세요.',
   storeFull: '공동 창고가 가득 찼어요.',
+  pondFish: '양식장 물고기를 먼저 내보내 주세요.',
+  labBusy: '품종 개량소에서 개량 중인 씨앗을 먼저 거둬 주세요.',
 } as const;
 
 // ---------------------------------------------------------------- reading
@@ -249,6 +259,12 @@ function readState(def: FacilityDef, tier: number, v: unknown): SiteFacilityStat
         if (t.length) cut[a] = { d: v.d, t };
       }
     if (nonEmpty(cut)) out.cut = cut;
+  } else if (def.id === 'fishPond') {
+    const pond = readPond(x.pond, tier);
+    if (pond) out.pond = pond;
+  } else if (def.id === 'seedLab') {
+    const lab = readLab(x.lab, slotsAt(def, tier));
+    if (lab) out.lab = lab;
   }
   return out;
 }
@@ -525,6 +541,10 @@ const DAILY: Partial<Record<DailyId, (c: DailyCtx) => void>> = {
   // 우리 농장 F4: every animal living at the farm makes 거름 (lounge-farm-barn.ts).
   barn: ({ life, site }) => shelterDaily(life, site),
   coop: ({ life, site }) => shelterDaily(life, site),
+  // 양식장 (F5): growth, then today's fish or roe (lounge-farm-pond.ts).
+  fishPond: ({ life, id, site, day }) => {
+    if (site.state.pond) dailyPond(life, id, site.tier, site.owner, site.state.pond, day);
+  },
 };
 /**
  * Brings the farm's facilities up to `now`: each built facility's daily hook
@@ -650,6 +670,9 @@ export function siteAction(
       // F4 (§11-5): some upgrades open with a skill level of whoever starts them.
       const need = def.upgrades?.find((u) => u.tier === to)?.need;
       if (need && skillLevel(life, uid, need.skill) < need.level) fail(`${SKILL_NAME_KO[need.skill]} Lv${need.level}부터 넓힐 수 있어요.`);
+      // F5: a tier may need a level (양식장 중간 연못: 낚시 Lv8).
+      const lvBlock = upgradeBlock(def, to, unlockCtx(life, uid));
+      if (lvBlock) fail(lvBlock);
       if (def.owner === 'personal') {
         if ((ledger.accounts[walletOf(uid)] ?? 0) < cost!.beom) fail(LIFE_REJECT.balance);
         payMats(life, uid, cost!.mats);
@@ -677,6 +700,8 @@ export function siteAction(
         if (Object.values(life.ext ?? {}).some((x) => (x.s3?.a ?? []).some((an) => an.f && (an.k === 'chicken' ? 'coop' : 'barn') === home)))
           fail(SITE_REJECT.animals);
       }
+      if (site!.state.pond) fail(SITE_REJECT.pondFish);
+      if (site!.state.lab?.q?.length) fail(SITE_REJECT.labBusy);
       if (site!.kind === 'machineYard' && site!.tier >= 1 && Object.values(life.farmx ?? {}).some((x) => Object.keys(x.mach ?? {}).some((k) => Number(k) >= BASE_WORK_SLOTS)))
         fail(SITE_REJECT.machines);
       // Half of the materials go back to whoever paid them (범 stays spent).
@@ -811,6 +836,22 @@ export function siteAction(
       gainXp(life, uid, 'forage', 4 * got, now);
       break;
     }
+    case 'pondStock':
+    case 'pondCollect':
+    case 'pondGive':
+    case 'pondEmpty': {
+      const site = builtSite(life, a.site, ['fishPond']);
+      if (site.owner !== uid) fail(SITE_REJECT.notMine);
+      pondAction(life, uid, a.site, site.tier, site.state, a, now, kstDay(now));
+      break;
+    }
+    case 'labLoad':
+    case 'labCollect': {
+      const site = builtSite(life, a.site, ['seedLab']);
+      if (site.owner !== uid) fail(SITE_REJECT.notMine);
+      labAction(life, uid, slotsAt(FACILITY_BY_ID.seedLab, site.tier), site.state, a, now, kstDay(now));
+      break;
+    }
     case 'commonTill': {
       const c = commonsOf(life),
         till = new Set(c.till ?? []);
@@ -935,6 +976,9 @@ export type SiteView = {
   fund?: { to: number; got: number; mat: Record<string, number>; by: number[] };
   p?: SitePlotView[];
   tr?: { s: number; f: FruitTreeKind; at: number; n: number; from: number }[];
+  /** F5 양식장 (stocked) and 품종 개량소. */
+  pond?: PondView;
+  lab?: LabView;
 };
 export type FarmSitesView = {
   sites: SiteView[];
@@ -975,6 +1019,8 @@ export function farmSitesView(life: LifeState, now: number): FarmSitesView | und
         ...(s.state.trees
           ? { tr: Object.entries(s.state.trees).map(([slot, t]) => ({ s: Number(slot), f: t.f, at: t.at, n: t.n ?? 0, from: kstDay(t.at) + ORCHARD_PLOT_DAYS })) }
           : {}),
+        ...(s.kind === 'fishPond' && s.state.pond ? { pond: pondView(life, id, s.tier, s.owner, s.state.pond, kstDay(now))! } : {}),
+        ...(s.kind === 'seedLab' && s.tier >= 1 ? { lab: labView(s.state.lab, kstDay(now)) } : {}),
       };
     }),
     field: {

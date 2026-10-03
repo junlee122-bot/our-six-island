@@ -1,7 +1,9 @@
 // 기술 트리 재능 (handover/design/design-skill-tree.md §2·§4·§6): eight talents
 // per skill, bought with talent points (one at Lv2·4·6·8·10, five at most), so
 // a friend reaches six of them and leaves one out. Four are shared from Lv2/4;
-// four hang under the two Lv5 professions (two each, Lv6/8). 운명 다시 보기 at
+// four hang under the two Lv5 professions (two each, Lv6/8). 낚시 has two more
+// since 우리 농장 F5 (양식장 지기 · 알 받기, a second Lv8 pick under each
+// 갈래): the same five points over seven reachable talents. 운명 다시 보기 at
 // 신이치's resets a skill's professions and talents for a doubling price.
 //
 // A leaf like lounge-growth-data.ts (types and data only). Talents marked
@@ -69,6 +71,9 @@ export const TALENTS: readonly TalentDef[] = [
   t('fish-a-t2', 'fish', 8, '바다 체질', '먼바다 뱃멀미 없음, 출항 시간 +1', { seaLegs: true }, { branch: 'fish-a', after: 'fish-a-t1' }),
   t('fish-b-t1', 'fish', 6, '미끼 상인', '미끼를 만들 때 재료 −1', { baitCheap: 1 }, { branch: 'fish-b' }),
   t('fish-b-t2', 'fish', 8, '어시장 흥정', '물고기 판매 수요가 덜 빨리 줄어요', { demandFish: 1 }, { branch: 'fish-b', after: 'fish-b-t1' }),
+  // 우리 농장 F5 양식장: one more Lv8 pick under each 갈래 (the points stay five, so one more is left out).
+  t('fish-a-t3', 'fish', 8, '양식장 지기', '양식장 물고기 상한 +2', { pondCap: 2 }, { branch: 'fish-a', after: 'fish-a-t1' }),
+  t('fish-b-t3', 'fish', 8, '알 받기', '양식장에서 어란이 나올 확률 +20%p', { pondRoe: 20 }, { branch: 'fish-b', after: 'fish-b-t1' }),
   // 채집
   t('forage-t1', 'forage', 2, '산나물 눈', '오늘 채집할 곳을 미니맵에 표시', { forageMap: true }),
   t('forage-t2', 'forage', 2, '벌레잡이', '벌레를 잡을 때 15% 확률로 하나 더', { bugExtra: 0.15 }),

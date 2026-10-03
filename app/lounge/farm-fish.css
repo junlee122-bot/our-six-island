@@ -265,6 +265,10 @@ dialog.l-modal.l-ledger > header .l-icon {
   outline: 2px dashed var(--wood-700);
   outline-offset: -3px;
 }
+/* F5: under the 서리 덮개 (a milky film over the soil). */
+.l-ledger-plot[data-frost] .l-ledger-soil {
+  box-shadow: var(--ring-highlight);
+}
 .l-ledger-plot .l-stage-art {
   position: relative;
   z-index: var(--z-base);
@@ -367,7 +371,7 @@ dialog.l-modal.l-ledger > header .l-icon {
   color: var(--ink-700);
   background: var(--paper-300);
 }
-/* 우리 농장: the whole 10 × 8 field (small tiles; grass beyond the tilled block). */
+/* 우리 농장: the 10 × 8 field (small tiles; grass beyond the tilled block; 12 × 10 at stage 4, below). */
 .l-ledger-field {
   gap: 3px;
   padding: 14px 8px 8px;
@@ -396,6 +400,24 @@ dialog.l-modal.l-ledger > header .l-icon {
   .l-ledger-field .l-ledger-plot {
     width: 27px;
     height: 26px;
+  }
+}
+/* F5: a stage-4 field is 12 tiles across (a little smaller so the page keeps its width). */
+.l-ledger-field[data-wide] .l-ledger-row {
+  grid-template-columns: repeat(12, 29px);
+  gap: 2px;
+}
+.l-ledger-field[data-wide] .l-ledger-plot {
+  width: 29px;
+  height: 28px;
+}
+@media (width <= 560px) {
+  .l-ledger-field[data-wide] .l-ledger-row {
+    grid-template-columns: repeat(12, 23px);
+  }
+  .l-ledger-field[data-wide] .l-ledger-plot {
+    width: 23px;
+    height: 22px;
   }
 }
 .l-ledger-actions {

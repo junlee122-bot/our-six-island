@@ -26,11 +26,16 @@ import {
   GIANT_CROPS,
   GIANT_YIELD,
   FIELD_BEDS,
+  CORE_TILES,
+  FROST_COVER_RECIPE,
   GRID_COLS,
   GRID_ROWS,
   GRID_TILES,
+  IMPROVED_GIANT_MULT,
   MACHINE_BY_ID,
   STAR_FERT_RECIPE,
+  fairPoints,
+  frostTiles,
   TRELLIS_SHADE,
   bedSeed,
   bedTiles,
@@ -113,6 +118,8 @@ import {
 // 우리 농장 F3: the facility sites settle with the shipping bin; the machine yard sets the slots.
 import { legacyShelter, projectSites, settleSites, workSlots } from './lounge-farm-sites.ts';
 import { MAX_WORK_SLOTS } from './lounge-farm-sites-data.ts';
+// 우리 농장 F5: 양식장 roe goes into the jar (bag items like the orchard fruit).
+import { ROE_ITEMS, isRoeId } from './lounge-farm-pond-data.ts';
 
 const HOUR = 3_600_000;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -127,6 +134,8 @@ const isCropId = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as s
 const COUNT_MAX = 99_999;
 /** 과수원 fruit (bag items, normal quality only) that the jar, keg and dryer take. */
 const isOrchard = (id: unknown): id is Stage3ItemId => typeof id === 'string' && ORCHARD_FRUITS.includes(id);
+/** Bag items (not crops) the machines take: 과수원 fruit and 양식장 roe (normal quality only). */
+const isBagInput = (id: unknown): id is string => isOrchard(id) || isRoeId(id);
 /**
  * Whether a sale of `n` units worth `amount` fits today's sell cap (`left`
  * still open). One unit worth more than what is left (a 별빛 인삼주 is worth
@@ -147,7 +156,7 @@ export type MachineSlot = { k: MachineKind; out?: string; q?: Quality; n?: numbe
 export type FarmLogKind = 'crow' | 'guard' | 'wither' | 'giant' | 'ship' | 'help' | 'fair';
 export type FarmLog = { kind: FarmLogKind; at: number; crop?: string; tile?: number; n?: number; beom?: number; actor?: number };
 export type FarmX = {
-  /** Tile ('0'–'79') or front-yard spot ('y0'–'y4', F2) → fixture. */
+  /** Tile ('0'–'119') or front-yard spot ('y0'–'y4', F2) → fixture. */
   fx?: Record<string, Fixture>;
   /** F2 덩굴 시렁: anchor tile → when it was put up (it spans three tiles east). */
   tr?: Record<string, number>;
@@ -162,6 +171,10 @@ export type FarmX = {
   /** Friends helped (harvest) today. */
   hf?: { day: number; actors: number[] };
   log?: FarmLog[];
+  /** F5 서리 덮개: when it was put over the field (it covers frostTiles of the field). */
+  fc?: number;
+  /** F5 improved seeds from the 품종 개량소: crop → count. */
+  is?: Record<string, number>;
 };
 export type FairEntry = { actor: number; uid: string; item: string; q: Quality; score: number; at: number };
 export type FairRank = { actor: number; item: string; q: Quality; score: number; prize: number };
@@ -172,6 +185,7 @@ export type FarmExt = { farmx?: Record<string, FarmX>; fair?: FairState };
 export type FarmAction =
   | { kind: 'farmBuild'; item: string }
   /** `yard`: a front-yard spot (scarecrow, bee house); `tile`: a sprinkler's tile or a 덩굴 시렁's west end. */
+  /** F5: the 서리 덮개 (item 'frostcover') takes no tile: it covers the field's first quarter. */
   | { kind: 'farmPlace'; item: string; tile?: number; slot?: number; yard?: number }
   | { kind: 'farmPickup'; tile?: number; slot?: number; yard?: number }
   | { kind: 'farmMove'; from: number; to: number; area?: 'tile' | 'slot' | 'yard' }
@@ -218,6 +232,7 @@ export const FARM_REJECT = {
   fairDone: '이번 주 품평회에는 이미 출품했어요.',
   fairFull: '이번 주 품평회는 자리가 다 찼어요.',
   goodsFull: '저장고가 가득 찼어요. 가공품을 조금 팔아 주세요.',
+  covered: '밭에 이미 서리 덮개가 있어요.',
 } as const;
 function fail(message: string): never {
   throw new LifeError(message);
@@ -229,8 +244,8 @@ let goodsMemo: Readonly<Record<string, GoodDef>> | null = null;
 export function goodsById(): Readonly<Record<string, GoodDef>> {
   goodsMemo ??= Object.fromEntries(
     buildGoods(
-      (id) => (id === 'fruit' ? '과일' : isOrchard(id) ? STAGE3_ITEMS[id].name : CROP_INFO[id as Crop].name),
-      (id) => (id === 'fruit' ? FRUIT_SELL : isOrchard(id) ? STAGE3_ITEMS[id].sell : CROP_INFO[id as Crop].sell),
+      (id) => (id === 'fruit' ? '과일' : isOrchard(id) ? STAGE3_ITEMS[id].name : isRoeId(id) ? ROE_ITEMS[id].name : CROP_INFO[id as Crop].name),
+      (id) => (id === 'fruit' ? FRUIT_SELL : isOrchard(id) ? STAGE3_ITEMS[id].sell : isRoeId(id) ? ROE_ITEMS[id].sell : CROP_INFO[id as Crop].sell),
     ).map((g) => [g.id, g]),
   );
   return goodsMemo;
@@ -240,6 +255,7 @@ export function stockName(id: string) {
   if (id === 'fruit') return '과일';
   if (isCropId(id)) return CROP_INFO[id].name;
   if (isOrchard(id)) return STAGE3_ITEMS[id].name;
+  if (isRoeId(id)) return ROE_ITEMS[id].name;
   return goodsById()[id]?.name ?? id;
 }
 /** Bin / goods / fair key of an item at a quality ('carrot', 'jar-grape@2'). */
@@ -327,7 +343,7 @@ function readFarmX(v: unknown, legacy = false): FarmX | undefined {
       if (FIXTURE_BY_ID[r.k].yard) fx[k] = r;
       continue;
     }
-    const tile = /^\d{1,2}$/.test(k) ? (legacy ? legacyTile(Number(k)) : Number(k)) : null;
+    const tile = /^\d{1,3}$/.test(k) ? (legacy ? legacyTile(Number(k)) : Number(k)) : null;
     if (tile !== null && tile < GRID_TILES) fx[String(tile)] = r;
   }
   // F2: scarecrows and bee houses move off the field to the front-yard spots.
@@ -335,7 +351,7 @@ function readFarmX(v: unknown, legacy = false): FarmX | undefined {
   if (nonEmpty(fx)) out.fx = fx;
   const tr: Record<string, number> = {};
   for (const [k, at] of Object.entries(obj(x.tr)).slice(0, GRID_TILES)) {
-    const tiles = /^\d{1,2}$/.test(k) ? trellisTiles(Number(k)) : null;
+    const tiles = /^\d{1,3}$/.test(k) ? trellisTiles(Number(k)) : null;
     if (!tiles || legacy || tiles.some((t) => fx[String(t)] || trellisOver(tr, t) !== null)) continue;
     tr[k] = time(at);
   }
@@ -364,6 +380,9 @@ function readFarmX(v: unknown, legacy = false): FarmX | undefined {
     ? x.log.slice(-FARM_LOG_MAX).map((l) => readLog(l, legacy)).filter((l): l is FarmLog => !!l)
     : [];
   if (log.length) out.log = log;
+  if (safe(x.fc) && x.fc > 0) out.fc = x.fc;
+  const is = readCounts(x.is, isCropId, CROPS.length);
+  if (nonEmpty(is)) out.is = is;
   return nonEmpty(out) ? out : undefined;
 }
 function readFair(v: unknown): FairState | undefined {
@@ -424,7 +443,7 @@ export function readFarmExt(v: Record<string, unknown>): FarmExt {
  * plots (anything but a full 80-tile array). New worlds store the field
  * sparse ({ tile: plot }) and hold it as an 80-tile array in memory.
  */
-export const isLegacyFarm = (f: unknown) => Array.isArray(f) && f.length !== GRID_TILES;
+export const isLegacyFarm = (f: unknown) => Array.isArray(f) && f.length !== GRID_TILES && f.length !== CORE_TILES;
 
 // ---------------------------------------------------------------- small helpers
 const farmxOf = (life: LifeState, uid: string): FarmX => ((life.farmx ??= {})[uid] ??= {});
@@ -495,19 +514,40 @@ export const LATE_HARVEST_MS = 30 * HOUR;
 /**
  * When a seasonal crop withers: 00:00 KST of the first day after planting
  * outside its seasons, or LATE_HARVEST_MS later for a crop ripe by then.
+ * `frost` (F5): the tile is under a 서리 덮개, where winter counts as in
+ * season for every crop.
  */
-export function witherAt(plot: Plot, sheltered: boolean): number | null {
+export function witherAt(plot: Plot, sheltered: boolean, frost = false): number | null {
   if (!plot.crop || sheltered) return null;
   const seasons = CROP_INFO[plot.crop].seasons;
   if (!seasons) return null;
   const d0 = kstDay(plot.plantedAt);
   for (let d = d0 + 1; d <= d0 + 60; d++) {
-    if (seasons.includes(seasonOfDay(d))) continue;
+    const season = seasonOfDay(d);
+    if (seasons.includes(season) || (frost && season === 'winter')) continue;
     const end = dayStart(d);
     return plotReadyAt(plot, end)! <= end ? end + LATE_HARVEST_MS : end;
   }
   return null;
 }
+/** F5 서리 덮개: the tiles of my field under it (none until it is put up). */
+export function frostCovered(life: LifeState, uid: string): number[] {
+  return life.farmx?.[uid]?.fc ? frostTiles(farmSizeOf(life, uid)) : [];
+}
+/** F5 품종 개량소: improved seeds of `crop` I hold. */
+export const improvedSeeds = (life: LifeState, uid: string, crop: string) => life.farmx?.[uid]?.is?.[crop] ?? 0;
+/** Adds (or with a negative `n` takes) improved seeds. */
+export function addImprovedSeeds(life: LifeState, uid: string, crop: Crop, n: number) {
+  const x = farmxOf(life, uid),
+    is = (x.is ??= {}),
+    next = (is[crop] ?? 0) + n;
+  if (next < 0) fail(LIFE_REJECT.noSeed);
+  if (next > 0) is[crop] = Math.min(COUNT_MAX, next);
+  else delete is[crop];
+  if (!nonEmpty(is)) delete x.is;
+}
+/** Plants one improved seed (the plant action). */
+export const spendImprovedSeed = (life: LifeState, uid: string, crop: Crop) => addImprovedSeeds(life, uid, crop, -1);
 /** Visual growth stage 0–4 (seed, sprout, leaves, flower / green fruit, ripe). */
 export function growthStage(plot: Plot, now: number): 0 | 1 | 2 | 3 | 4 {
   if (!plot.crop) return 0;
@@ -528,7 +568,9 @@ export function giantBed(farm: readonly Plot[], uid: string, bed: number, now: n
     const p = farm[t];
     if (p.crop !== first.crop || p.plantedAt !== first.plantedAt || (p.n ?? 0) > 0 || now < plotReadyAt(p, now)!) return false;
   }
-  return hash32(`giant:${uid}:${bedSeed(bed)}:${first.plantedAt}`) % 100 < chance;
+  // F5: a bed of six improved seeds is twice as likely to turn giant.
+  const improved = tiles.every((t) => farm[t].iv);
+  return hash32(`giant:${uid}:${bedSeed(bed)}:${first.plantedAt}`) % 100 < chance * (improved ? IMPROVED_GIANT_MULT : 1);
 }
 /** Giant crop chance (%) on a friend's farm (재능 큰 작물 doubles it). */
 export const giantChance = (life: LifeState, uid: string) => GIANT_CHANCE * (1 + growthMods(life, uid).giantMult);
@@ -540,9 +582,10 @@ export const giantBeds = (farm: readonly Plot[], uid: string, now: number, chanc
 /** Crows at 05:00 KST of day `d` (see design §4-7). */
 function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   const farm = life.farms[uid],
-    at = dayStart(d) + CROW_HOUR * HOUR;
+    at = dayStart(d) + CROW_HOUR * HOUR,
+    frost = new Set(frostCovered(life, uid));
   const growing = farm.flatMap((p, i) =>
-    p.crop && p.plantedAt <= at && plotReadyAt(p, at)! > at && (witherAt(p, sheltered || legacyShelter(life, p)) ?? Infinity) > at ? [i] : [],
+    p.crop && p.plantedAt <= at && plotReadyAt(p, at)! > at && (witherAt(p, sheltered || legacyShelter(life, p), frost.has(i)) ?? Infinity) > at ? [i] : [],
   );
   // 재능 까마귀 쫓기 halves the chance.
   const chance = CROW_CHANCE * (1 - Math.min(1, growthMods(life, uid).crowGuard));
@@ -550,7 +593,8 @@ function crowDay(life: LifeState, uid: string, d: number, sheltered: boolean) {
   const guard = FIXTURE_BY_ID.scarecrow.guard!,
     fx = Object.entries(life.farmx?.[uid]?.fx ?? {});
   // F2: a scarecrow guards from its front-yard spot (or a tile it was left on).
-  const guarded = (i: number) => fx.some(([t, f]) => f.k === 'scarecrow' && f.at <= at && fixtureDist(t, i) <= guard);
+  const size = farmSizeOf(life, uid),
+    guarded = (i: number) => fx.some(([t, f]) => f.k === 'scarecrow' && f.at <= at && fixtureDist(t, i, size) <= guard);
   const open = growing.filter((i) => !guarded(i));
   if (!open.length) {
     pushLog(life, uid, { kind: 'guard', at });
@@ -578,8 +622,9 @@ export function settleFarmPlots(life: LifeState, uid: string, now: number) {
     crowDay(life, uid, d, sheltered);
     x.st = d;
   }
+  const frost = new Set(frostCovered(life, uid));
   farm.forEach((p, i) => {
-    const w = witherAt(p, sheltered || legacyShelter(life, p));
+    const w = witherAt(p, sheltered || legacyShelter(life, p), frost.has(i));
     if (w !== null && now >= w) {
       pushLog(life, uid, { kind: 'wither', at: w, crop: p.crop!, tile: i });
       farm[i] = { ...tilledPlot(), dead: p.crop! };
@@ -759,8 +804,9 @@ export function harvestFarm(
         ...(p.sg ? { sg: 1 as const } : {}),
         ...(p.rs ? { rs: 1 as const } : {}),
         ...(p.sl ? { sl: p.sl } : {}),
-        // The planting's quality (hoe, 금손, Lv3) carries over.
+        // The planting's quality (hoe, 금손, Lv3, an improved seed) carries over.
         ...(p.g ? { g: p.g } : {}),
+        ...(p.iv ? { iv: 1 as const } : {}),
       };
       farm[i] = again;
     } else farm[i] = tilledPlot();
@@ -774,7 +820,7 @@ export function harvestFarm(
 export function stockCount(life: LifeState, uid: string, id: string, q: Quality): number {
   if (isCropId(id)) return cropQCount(life, uid, id, q);
   if (id === 'fruit') return q === 0 ? (life.bag[uid]?.fruit ?? 0) : 0;
-  if (isOrchard(id)) return q === 0 ? invCount(life, uid, id) : 0;
+  if (isBagInput(id)) return q === 0 ? invCount(life, uid, id) : 0;
   return life.farmx?.[uid]?.goods?.[stockKey(id, q)] ?? 0;
 }
 function stockAdd(life: LifeState, uid: string, id: string, q: Quality, n: number) {
@@ -785,7 +831,7 @@ function stockAdd(life: LifeState, uid: string, id: string, q: Quality, n: numbe
     bag.fruit = n >= 0 ? addCount(bag.fruit, n) : bag.fruit + n;
     return;
   }
-  if (isOrchard(id)) {
+  if (isBagInput(id)) {
     if (q !== 0 || (n < 0 && invCount(life, uid, id) < -n)) fail(FARM_REJECT.stock);
     return addInv(life, uid, id, n);
   }
@@ -825,6 +871,7 @@ const nIn = (n: unknown, max: number) => (safe(n) && n >= 1 && n <= max ? n : fa
 /** What building `item` needs (null: not a farm build). */
 export function buildRecipe(item: string): Recipe | null {
   if (item === 'fertilizer-star') return STAR_FERT_RECIPE;
+  if (item === 'frostcover') return FROST_COVER_RECIPE;
   return FIXTURE_BY_ID[item]?.recipe ?? MACHINE_BY_ID[item]?.recipe ?? null;
 }
 /** Why `uid` cannot build `item` now (null = can), for the UI and the action. */
@@ -850,10 +897,11 @@ const yardIndex = (spot: unknown) => (safe(spot) && spot >= 0 && spot < YARD_SPO
 /** Honey of the bee house at fixture key `key` (flower honey from the best ripe flower within BEE_REACH). */
 function honeyOf(life: LifeState, uid: string, key: string, now: number) {
   let best: Crop | null = null;
-  const farm = life.farms[uid];
+  const farm = life.farms[uid],
+    size = farmSizeOf(life, uid);
   for (let i = 0; i < farm.length; i++) {
     const p = farm[i];
-    if (!p.crop || CROP_CAT[p.crop] !== 'flower' || fixtureDist(key, i) > BEE_REACH || now < plotReadyAt(p, now)!) continue;
+    if (!p.crop || CROP_CAT[p.crop] !== 'flower' || fixtureDist(key, i, size) > BEE_REACH || now < plotReadyAt(p, now)!) continue;
     if (best === null || CROP_INFO[p.crop].sell > CROP_INFO[best].sell) best = p.crop;
   }
   return best === null ? 'honey' : 'honey-' + best;
@@ -888,7 +936,14 @@ export function farmAction(
       // Where first, then whether the bag has one (clearer messages).
       const have = () => invCount(life, uid, a.item) >= 1 || fail(FARM_REJECT.place);
       const def = own(FIXTURE_BY_ID, a.item) ? FIXTURE_BY_ID[a.item] : null;
-      if (def?.yard) {
+      if (a.item === 'frostcover') {
+        // F5 서리 덮개: over the field's first quarter, for good (it grows with the field).
+        const x = farmxOf(life, uid);
+        if (x.fc) fail(FARM_REJECT.covered);
+        have();
+        addInv(life, uid, a.item, -1);
+        x.fc = now;
+      } else if (def?.yard) {
         // F2: scarecrows and bee houses stand on the field's front-yard spots.
         if (a.yard === undefined) fail(FARM_REJECT.yardOnly);
         const key = yardKey(yardIndex(a.yard));
@@ -1005,13 +1060,13 @@ export function farmAction(
       if (m!.out) fail(m!.done! > now ? FARM_REJECT.machineBusy : FARM_REJECT.machineFull);
       const def = MACHINE_BY_ID[m!.k],
         item = a.item;
-      if (typeof item !== 'string' || !(isCropId(item) || item === 'fruit' || isOrchard(item))) fail(FARM_REJECT.machineInput);
+      if (typeof item !== 'string' || !(isCropId(item) || item === 'fruit' || isBagInput(item))) fail(FARM_REJECT.machineInput);
       const out = m!.k === 'seedmaker' ? (isCropId(item) ? `seed-${item}` : null) : productOf(m!.k, item);
       if (!out) fail(FARM_REJECT.machineInput);
       // Quality: the one asked for, else the lowest first (the batch keeps its lowest).
       let q: Quality;
       if (a.q !== undefined) {
-        if (isOrchard(item) ? a.q !== 0 : !stockOk(item, a.q)) fail(LIFE_REJECT.quality);
+        if (isBagInput(item) ? a.q !== 0 : !stockOk(item, a.q)) fail(LIFE_REJECT.quality);
         q = a.q;
         if (stockCount(life, uid, item, q) < def.per) fail(FARM_REJECT.stock);
         stockAdd(life, uid, item, q, -def.per);
@@ -1158,9 +1213,14 @@ export function farmAction(
   }
   return { life, ledger: next };
 }
-/** 품평회 score: the item's full price at its quality (crops in season +10%), goods +10%. */
-export const fairScore = (id: string, q: Quality, now: number, flags: readonly string[] = []) =>
-  Math.round(stockUnit(id, q, now, flags) * (isGoodId(id) ? 1.1 : 1));
+/**
+ * 품평회 score (F5, lounge-farm-data fairPoints): stars first, then √ of the
+ * price (normal quality, capped), + a crop in its season, + a hand-made good.
+ */
+export function fairScore(id: string, q: Quality, now: number, flags: readonly string[] = []) {
+  const seasons = isCropId(id) ? CROP_INFO[id].seasons : undefined;
+  return fairPoints(stockUnit(id, 0, now, flags), q, { season: !!seasons?.includes(seasonOfDay(kstDay(now))), good: isGoodId(id) });
+}
 
 // ---------------------------------------------------------------- views
 export type FarmXView = {
@@ -1179,6 +1239,10 @@ export type FarmXView = {
   giants: number[];
   /** Friends whose farm I helped harvest today. */
   helped: number[];
+  /** F5: tiles under my 서리 덮개 (absent until it is up). */
+  frost?: number[];
+  /** F5: improved seeds from the 품종 개량소 (absent when none). */
+  improved?: { crop: Crop; n: number }[];
 };
 export type FairView = {
   week: number;
@@ -1225,6 +1289,8 @@ export function farmXView(life: LifeState, uid: string, now: number): FarmXView 
     log: [...(x.log ?? [])],
     giants: giantBeds(farm, uid, now, giantChance(life, uid)),
     helped: x.hf?.day === today ? [...x.hf.actors] : [],
+    ...(x.fc ? { frost: frostCovered(life, uid) } : {}),
+    ...(x.is ? { improved: Object.entries(x.is).map(([crop, n]) => ({ crop: crop as Crop, n })) } : {}),
   };
 }
 export function fairView(life: LifeState, uid: string, now: number): FairView {
@@ -1245,12 +1311,12 @@ export function fairView(life: LifeState, uid: string, now: number): FairView {
 export function farmsPublic(life: LifeState, now: number) {
   const out: Record<
     string,
-    { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[]; yard?: [number, FixtureKind][]; tr?: number[] }
+    { fx: [number, FixtureKind][]; mach: [number, MachineKind, boolean][]; giants: number[]; yard?: [number, FixtureKind][]; tr?: number[]; fc?: 1 }
   > = {};
   for (const [uid, farm] of Object.entries(life.farms)) {
     const x = life.farmx?.[uid],
       giants = giantBeds(farm, uid, now, giantChance(life, uid));
-    if (!x?.fx && !x?.mach && !x?.tr && !giants.length) continue;
+    if (!x?.fx && !x?.mach && !x?.tr && !x?.fc && !giants.length) continue;
     const fx = Object.entries(x?.fx ?? {});
     const yard = fx.flatMap(([t, f]) => (yardOf(t) !== null ? [[yardOf(t)!, f.k] as [number, FixtureKind]] : []));
     out[uid] = {
@@ -1260,6 +1326,8 @@ export function farmsPublic(life: LifeState, now: number) {
       // F2 (only when there are any, so older clients' payloads stay the same).
       ...(yard.length ? { yard } : {}),
       ...(x?.tr ? { tr: Object.keys(x.tr).map(Number) } : {}),
+      // F5: the 서리 덮개 over the field's first quarter.
+      ...(x?.fc ? { fc: 1 as const } : {}),
     };
   }
   return out;

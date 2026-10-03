@@ -20,16 +20,22 @@ export const SITE_TILES: Readonly<Record<SiteSize, { cols: number; rows: number 
   large: { cols: 10, rows: 8 },
 };
 export const SITE_SIZE_NAME: Readonly<Record<SiteSize, string>> = { small: '작은 부지', medium: '중간 부지', large: '큰 부지' };
-/** Shared site ids (east and south edges of the farm) and the personal ones (one per friend, by actor). */
+/**
+ * Shared site ids (east and south edges of the farm) and the personal ones:
+ * two small sites per friend under their field (P, and Q since F5 brought the
+ * 양식장 and the 품종 개량소, so a friend can keep an orchard and a pond).
+ */
 export const SHARED_SITE_IDS = ['L1', 'L2', 'M1', 'M2', 'M3', 'M4', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6'] as const;
 export const personalSiteId = (actor: number) => `P${actor}`;
-export const PERSONAL_SITE_IDS = [0, 1, 2, 3, 4, 5, 6].map(personalSiteId);
+/** A friend's second personal site (F5). */
+export const secondSiteId = (actor: number) => `Q${actor}`;
+export const PERSONAL_SITE_IDS = [0, 1, 2, 3, 4, 5, 6].flatMap((a) => [personalSiteId(a), secondSiteId(a)]);
 export const SITE_IDS: readonly string[] = [...SHARED_SITE_IDS, ...PERSONAL_SITE_IDS];
-/** Size of a site by id (L = large, M = medium, S / P = small). */
+/** Size of a site by id (L = large, M = medium, S / P / Q = small). */
 export const siteSize = (id: string): SiteSize | null =>
   !SITE_IDS.includes(id) ? null : id[0] === 'L' ? 'large' : id[0] === 'M' ? 'medium' : 'small';
 /** The actor a personal site belongs to, or null for a shared site. */
-export const siteActor = (id: string): number | null => (/^P[0-6]$/.test(id) ? Number(id[1]) : null);
+export const siteActor = (id: string): number | null => (/^[PQ][0-6]$/.test(id) ? Number(id[1]) : null);
 
 // ---------------------------------------------------------------- facilities
 export type FacilityId =
@@ -64,8 +70,12 @@ export type FacilityDef = {
   owner: 'shared' | 'personal';
   unlock: FacilityUnlock;
   build: FacilityCost;
-  /** Tier 2, 3… (tier 1 is the build). `need`: a skill level whoever starts the upgrade needs (§11-5). */
-  upgrades?: readonly (FacilityCost & { tier: number; effect: string; need?: { skill: SkillId; level: number } })[];
+  /**
+   * Tier 2, 3… (tier 1 is the build). `need` (F4, §11-5): a skill level whoever
+   * starts the upgrade needs; `level` (F5): the unlock skill's level the tier
+   * needs (양식장 중간 연못: 낚시 Lv8).
+   */
+  upgrades?: readonly (FacilityCost & { tier: number; effect: string; need?: { skill: SkillId; level: number }; level?: number })[];
   /** Per tier (index = tier − 1): machine slots, tiles, trees, animals… */
   slots?: readonly number[];
   daily?: DailyId;
@@ -168,13 +178,13 @@ export const FACILITIES: readonly FacilityDef[] = [
     size: 'small',
     owner: 'personal',
     unlock: { skill: 'fish', level: 5 },
-    build: { beom: 80_000, mats: { stone: 120, wood: 40 } },
-    slots: [5],
+    build: { beom: 80_000, mats: { stone: 80, wood: 30 } },
+    upgrades: [{ tier: 2, beom: 200_000, mats: { stone: 120, copper: 20 }, effect: '중간 연못 · 물고기 10마리까지', level: 8 }],
+    slots: [5, 10],
     daily: 'fishPond',
     model: 'fishPond',
-    note: '잡은 물고기 한 마리로 시작해서 늘어나요. 같은 어종 하루 4마리까지 제값(낚시 Lv8 중간 연못은 10마리)',
-    live: false,
-    stage: '다음 공사',
+    note: '내가 잡은 물고기 한 마리를 넣으면 며칠마다 한 마리씩 늘고, 매일 물고기나 어란을 줘요. 작은 연못 5마리, 낚시 Lv8 중간 연못 10마리',
+    live: true,
   },
   {
     id: 'beeYard',
@@ -210,11 +220,10 @@ export const FACILITIES: readonly FacilityDef[] = [
     owner: 'personal',
     unlock: { skill: 'farm', level: 8 },
     build: { beom: 200_000, mats: { wood: 80, iron: 20 } },
-    daily: 'seedLab',
+    slots: [2],
     model: 'seedLab',
-    note: '작물 5개 → 개량 씨앗 1개, 하루 2번',
-    live: false,
-    stage: '다음 공사',
+    note: '같은 작물 5개 → 개량 씨앗 1개(4시간), 하루 2번. 개량 씨앗은 금별이 잘 나오고, 한 두둑을 다 심으면 대형 작물이 두 배로 잘 돼요',
+    live: true,
   },
 ];
 export const FACILITY_BY_ID: Readonly<Record<string, FacilityDef>> = Object.fromEntries(FACILITIES.map((f) => [f.id, f]));
@@ -248,6 +257,13 @@ export function unlockText(def: FacilityDef) {
   if (u.research) out.push(FLAG_NAME[u.research] ?? `마을 개척 “${u.research}”`);
   if (u.flag) out.push(FLAG_NAME[u.flag] ?? u.flag);
   return out.join(' · ');
+}
+/** Why tier `tier` of a built facility cannot be reached by this builder yet (null = open). */
+export function upgradeBlock(def: FacilityDef, tier: number, ctx: UnlockCtx): string | null {
+  const up = def.upgrades?.find((u) => u.tier === tier),
+    skill = def.unlock.skill;
+  if (up?.level && skill && ctx.level(skill) < up.level) return `${SKILL_NAME[skill]} Lv${up.level}부터 넓힐 수 있어요.`;
+  return null;
 }
 /** Why a facility is locked for this builder (null = open). Levels only open, building still costs. */
 export function unlockBlock(def: FacilityDef, ctx: UnlockCtx): string | null {
@@ -329,5 +345,12 @@ export const SITE_ACTION_KINDS = [
   'commonPlant',
   'commonWater',
   'commonHarvest',
+  // 우리 농장 F5: 양식장 (lounge-farm-pond.ts) and 품종 개량소 (lounge-farm-seedlab.ts).
+  'pondStock',
+  'pondCollect',
+  'pondGive',
+  'pondEmpty',
+  'labLoad',
+  'labCollect',
 ] as const;
 export type SiteActionKind = (typeof SITE_ACTION_KINDS)[number];

@@ -371,7 +371,8 @@ export function farmTileAction(
   if (!p.crop) {
     if (tool.startsWith('seed-')) {
       const crop = tool.slice(5) as Crop;
-      if (CROP_INFO[crop] && (me.bag.seeds[crop] ?? 0) > 0 && (anySeason || cropInSeason(crop, season)))
+      // F5: under the 서리 덮개 in winter, any seed goes in.
+      if (CROP_INFO[crop] && (me.bag.seeds[crop] ?? 0) > 0 && (anySeason || cropInSeason(crop, season) || (season === 'winter' && p.frost)))
         return seedFits(p, crop) ? { kind: 'plant', label: `${CROP_INFO[crop].name} 심기` } : { kind: null, label: CROP_INFO[crop].vine ? '덩굴 작물은 시렁 아래에 심어요' : '시렁 아래에는 덩굴 작물만' };
     }
     return { kind: null, label: p.trellis !== undefined ? '덩굴 시렁 아래 빈 칸 · 씨앗을 들어요' : '갈아 둔 빈 칸 · 씨앗을 들어요' };

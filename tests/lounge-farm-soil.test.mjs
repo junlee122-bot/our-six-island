@@ -215,12 +215,15 @@ test('front-yard spots: old scarecrows and bee houses move off the field (pure),
   assert.ok(YARD_SPOTS.every((s) => s.r === -1 || s.r === 8));
 });
 
-test('tilled masks for friends are 20 hex digits and round-trip', () => {
+test('tilled masks for friends are 30 hex digits (20 before F5) and round-trip', () => {
   const field = Array.from({ length: GRID_TILES }, (_, i) => ({ crop: null, plantedAt: 0, ...(i % 7 === 0 ? { t: 1 } : {}) }));
   field[13] = { crop: 'carrot', plantedAt: 1 };
   const mask = tilledMask(field);
-  assert.equal(mask.length, 20);
+  assert.equal(mask.length, 30);
   for (let i = 0; i < GRID_TILES; i++) assert.equal(maskHas(mask, i), i % 7 === 0 || i === 13, String(i));
+  // A mask from before stage 4 (20 digits) still reads: the tiles past it are grass.
+  const old = mask.slice(0, 20);
+  for (let i = 0; i < GRID_TILES; i++) assert.equal(maskHas(old, i), i < 80 && (i % 7 === 0 || i === 13), String(i));
 });
 
 // ------------------------------------------------------------ tilling and reach
@@ -257,8 +260,11 @@ test('reach tiers: 1 the tile, 2 its row (1 × 3), 3 the 3 × 3 — cut at the f
   assert.deepEqual(reachTiles(22, 2), [22, 21, 23]);
   assert.deepEqual(reachTiles(22, 3).sort((a, b) => a - b), [11, 12, 13, 21, 22, 23, 31, 32, 33]);
   assert.deepEqual(reachTiles(0, 3).sort((a, b) => a - b), [0, 1, 10, 11]);
-  assert.deepEqual(reachTiles(9, 2), [9, 8]);
-  assert.deepEqual(reachTiles(80, 3), []);
+  // F5: column 9 now has the stage-4 columns east of it (tiles 80–95, numbered after the old block).
+  assert.deepEqual(reachTiles(9, 2), [9, 8, 80]);
+  assert.deepEqual(reachTiles(80, 3).sort((a, b) => a - b), [9, 19, 80, 81, 82, 83]);
+  assert.deepEqual(reachTiles(119, 3).sort((a, b) => a - b), [106, 107, 118, 119]);
+  assert.deepEqual(reachTiles(120, 3), []);
 });
 
 test('§12-1: a stage-1 field works all at once; a bigger one only tile by tile, harvest taking every ripe tile in reach', () => {
@@ -364,8 +370,8 @@ test('덩굴 시렁: farm Lv5, over three tiles; vines (grape, pea, hop) only un
 });
 
 // ------------------------------------------------------------ farming-level gates
-test('§11-4: field stages need farming Lv3 (48) and Lv6 (80); a stage already bought stays', () => {
-  assert.deepEqual(FARM_EXPAND_LEVEL, { 48: 3, 80: 6 });
+test('§11-4: field stages need farming Lv3 (48), Lv6 (80) and Lv10 (120); a stage already bought stays', () => {
+  assert.deepEqual(FARM_EXPAND_LEVEL, { 48: 3, 80: 6, 120: 10 });
   const perks = LEVEL_PERKS.farm;
   assert.match(perks.find((p) => p.level === 3).text, /8×6/);
   assert.match(perks.find((p) => p.level === 6).text, /10×8/);

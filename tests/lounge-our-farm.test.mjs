@@ -10,8 +10,11 @@ import { ACCOUNT_IDS } from '../app/lounge-accounts.ts';
 import { QUALITY_ODDS, emptyLife, ensureLifeMember, lifeView, packField, packLife, plotGrowMs, plotQuality, readField, readLife } from '../app/lounge-life.ts';
 import { legacyWet } from '../app/lounge-farm-soil.ts';
 import {
+  FIELD_BEDS,
   FIELD_TIERS,
   GRID_TILES,
+  tileAt,
+  tileRC,
   bedSeed,
   bedTiles,
   fieldBlock,
@@ -67,25 +70,40 @@ function oldWorldLife() {
   };
 }
 
-test('the field grid: 10 × 8, tiers open the top-left 6 × 4, 8 × 6 and 10 × 8 blocks', () => {
-  assert.equal(GRID_TILES, 80);
+test('the field grid: 12 × 10, tiers open the top-left 6 × 4, 8 × 6, 10 × 8 and (F5) 12 × 10 blocks', () => {
+  assert.equal(GRID_TILES, 120);
   assert.deepEqual(
     FIELD_TIERS.map((t) => [t.size, openTiles(t.size).length]),
     [
       [24, 24],
       [48, 48],
       [80, 80],
+      [120, 120],
     ],
   );
   assert.deepEqual(fieldBlock(48), { cols: 8, rows: 6 });
+  assert.deepEqual(fieldBlock(120), { cols: 12, rows: 10 });
   assert.equal(tileOpen(24, 5), true);
   assert.equal(tileOpen(24, 6), false);
   assert.equal(tileOpen(24, 40), false);
   assert.equal(tileOpen(80, 79), true);
   assert.equal(tileOpen(80, 80), false);
-  // Beds: 3 × 2 blocks; column 9 belongs to none.
-  assert.equal(tileBed(9), null);
+  assert.equal(tileOpen(120, 119), true);
+  assert.equal(tileOpen(120, 120), false);
+  // Saved tile numbers stay: the 10 × 8 block is row × 10 + column as before;
+  // the stage-4 ring comes after it (east columns, then the south rows).
+  assert.deepEqual(tileRC(79), { r: 7, c: 9 });
+  assert.deepEqual(tileRC(80), { r: 0, c: 10 });
+  assert.deepEqual(tileRC(95), { r: 7, c: 11 });
+  assert.deepEqual(tileRC(96), { r: 8, c: 0 });
+  assert.deepEqual(tileRC(119), { r: 9, c: 11 });
+  for (let t = 0; t < GRID_TILES; t++) assert.equal(tileAt(tileRC(t).r, tileRC(t).c), t);
+  // Beds: 3 × 2 blocks; the old twelve keep their numbers, eight more cover columns 9–11 and the south rows.
+  assert.equal(FIELD_BEDS, 20);
   assert.deepEqual(bedTiles(tileBed(77)), [66, 67, 68, 76, 77, 78]);
+  assert.deepEqual(bedTiles(tileBed(9)), [9, 80, 81, 19, 82, 83]);
+  assert.deepEqual(bedTiles(tileBed(119)), [105, 106, 107, 117, 118, 119]);
+  for (let b = 0; b < FIELD_BEDS; b++) for (const t of bedTiles(b)) assert.equal(tileBed(t), b);
 });
 
 test('old yard tiles keep their shape in the top-left 3 × 4 block (and their rolls)', () => {
@@ -169,9 +187,9 @@ test('the conversion is pure and idempotent; packLife round-trips', () => {
       once.farms[uid].flatMap((p, i) => (p.crop || p.dead || p.t ? [i] : [])),
     );
   }
-  // A full field of 80 crops stays small (design §6: about 30KB for everyone).
+  // A full field of 120 crops stays small (design §6: about 30KB for everyone at 80; F5's stage 4 ~80KB).
   const full = Array.from({ length: GRID_TILES }, (_, i) => ({ crop: 'carrot', plantedAt: 1_700_000_000_000 + i, wateredAt: 1_700_000_100_000, fert: 2, speed: 10 }));
-  assert.ok(JSON.stringify(packField(full)).length * 7 < 60_000);
+  assert.ok(JSON.stringify(packField(full)).length * 7 < 90_000);
   // A new member starts with the empty grid; nothing is stored for it.
   const fresh = ensureLifeMember(emptyLife(), uuid(), 3);
   assert.deepEqual(Object.values(packLife(fresh).farms), [{}]);
@@ -242,10 +260,10 @@ import { districtMinimap } from '../app/lounge-district-minimap.ts';
 import { AREA_DEFAULTS } from '../app/lounge-games.ts';
 import { regionToNetwork } from '../app/lounge-areas.ts';
 
-test('우리 농장: open from the start behind the hub north gate; 84 × 64; arrival on the road', () => {
+test('우리 농장: open from the start behind the hub north gate; 100 × 64 (F5: wide enough for 12-tile fields); arrival on the road', () => {
   assert.equal(districtOpen('farm'), true);
   assert.deepEqual({ x: DISTRICTS.farm.gate.x, z: DISTRICTS.farm.gate.z }, { x: -4, z: -43.4 });
-  assert.deepEqual(REGIONS.farm.bounds, { w: 84, d: 64 });
+  assert.deepEqual(REGIONS.farm.bounds, { w: 100, d: 64 });
   assert.deepEqual(AREA_DEFAULTS.farm, regionToNetwork('farm', REGIONS.farm.arrive.village));
   assert.equal(nearestExit('farm', REGIONS.farm.exits[0].stand)?.to, 'village');
 });
@@ -270,7 +288,7 @@ test('the farm map: seven houses in a row, each field in front of its door, ever
     assert.ok(f.z0 > h.door.z && f.z0 - h.door.z < 3, `field ${h.actor} by the door`);
     assert.ok(Math.abs(f.x0 + f.w / 2 - h.x) < 0.01);
     // Every tile is walkable ground (fields are not walls) and maps back to itself.
-    for (let t = 0; t < 80; t++) {
+    for (let t = 0; t < GRID_TILES; t++) {
       const c = fieldTileCenter(f, t);
       assert.equal(fieldTileAt(f, c), t);
       assert.ok(w.canWalk(c), `tile ${t} of ${h.actor}`);

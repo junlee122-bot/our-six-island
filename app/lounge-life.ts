@@ -45,8 +45,10 @@ import {
 import { SOCIAL_ACTION_KINDS } from './lounge-social-defs.ts';
 // 텃밭 확장: static data (leaf) and the farm engine (same cycle rule: functions only).
 import {
+  CORE_TILES,
   FARM_ACTION_KINDS,
   GRID_TILES,
+  IMPROVED_GOLD_PTS,
   LEGACY_SIZES,
   NEW_CROP_IDS,
   NEW_CROP_INFO,
@@ -78,6 +80,9 @@ import {
   syncSprinklers,
   witherAt,
   farmSheltered,
+  frostCovered,
+  improvedSeeds,
+  spendImprovedSeed,
   type FairView,
   type FarmAction,
   type FarmExt,
@@ -316,10 +321,10 @@ export const QUALITY_ODDS: Record<0 | FertLevel, [number, number]> = {
 export const DELUXE_SPEED = 10;
 export const MAX_SPEED = 40;
 export const FRUIT_SELL = 150;
-/** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 10 × 8 grid). */
+/** 우리 농장: a field starts with 24 open tiles (6 × 4 of its 12 × 10 grid). */
 export const PLOTS_PER_USER = 24;
-/** Field sizes: 24 tiles, expandable to 48 and 80 (see FARM_EXPAND_PRICE). */
-export const FARM_SIZES = [24, 48, 80] as const;
+/** Field sizes: 24 tiles, expandable to 48, 80 and (F5, farm Lv10) 120 (see FARM_EXPAND_PRICE). */
+export const FARM_SIZES = [24, 48, 80, 120] as const;
 export type FarmSize = (typeof FARM_SIZES)[number];
 export const FRUIT_TREES = [
   'tree-1',
@@ -541,6 +546,8 @@ export type Plot = {
   n?: number;
   /** 성장: gold-star chance +%p from the planter's hoe and farming (set at planting). */
   g?: number;
+  /** 우리 농장 F5: planted from an improved seed (품종 개량소): more gold, giant beds twice as likely. */
+  iv?: 1;
 };
 export type Bag = {
   seeds: Record<Crop, number>;
@@ -565,8 +572,8 @@ export type MailItem = {
 };
 export type LifeState = {
   /**
-   * 우리 농장 fields: in memory the whole 10 × 8 grid (GRID_TILES plots, index
-   * = row × 10 + column); stored sparse as { tile: plot } (packLife), and old
+   * 우리 농장 fields: in memory the whole 12 × 10 grid (GRID_TILES plots, index
+   * by lounge-farm-data tileRC); stored sparse as { tile: plot } (packLife), and old
    * 6 / 9 / 12-plot yards are moved into the top-left block on read.
    */
   farms: Record<string, Plot[]>;
@@ -607,7 +614,8 @@ export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
 export type LifeAction =
-  | { kind: 'plant'; plot: number; crop: Crop }
+  /** `improved`: plant 품종 개량소 seeds (lounge-farm.ts improvedSeeds) instead of shop seeds. */
+  | { kind: 'plant'; plot: number; crop: Crop; improved?: boolean }
   /** 우리 농장 F2: grass → tilled soil (plot -1: the whole stage-1 field). */
   | { kind: 'till'; plot: number }
   | { kind: 'water'; plot: number }
@@ -873,6 +881,7 @@ function readPlot(value: unknown): Plot {
   const regrow = CROP_INFO[p.crop].regrow;
   if (regrow && safe(p.n) && p.n > 0) out.n = Math.min(regrow.harvests - 1, p.n);
   if (safe(p.g) && p.g > 0) out.g = Math.min(40, p.g);
+  if (p.iv === 1) out.iv = 1;
   if (legacyPlot(p)) {
     // Read-time migration (F2): the old save reads as already watered.
     const at = p.wateredAt === null || p.wateredAt === undefined ? null : time(p.wateredAt);
@@ -896,8 +905,9 @@ export function readField(f: unknown): Plot[] {
   const field = Array.from({ length: GRID_TILES }, emptyPlot);
   // Tilling (F2): the tiles a save from before it was already working stay tilled.
   let legacy: number[] = [];
-  if (Array.isArray(f) && f.length === GRID_TILES) {
-    for (let i = 0; i < GRID_TILES; i++) field[i] = readPlot(f[i]);
+  // A full grid (before F5's stage 4 it was the 80-tile 10 × 8 block, same tile numbers).
+  if (Array.isArray(f) && (f.length === GRID_TILES || f.length === CORE_TILES)) {
+    for (let i = 0; i < f.length; i++) field[i] = readPlot(f[i]);
     if (f.some(legacyPlot)) legacy = LEGACY_BLOCK;
   } else if (Array.isArray(f)) {
     const n = (LEGACY_SIZES as readonly number[]).includes(f.length) ? f.length : LEGACY_SIZES[0];
@@ -906,7 +916,7 @@ export function readField(f: unknown): Plot[] {
   } else {
     const entries = Object.entries(obj(f)).slice(0, GRID_TILES * 2);
     for (const [k, p] of entries) {
-      if (!/^\d{1,2}$/.test(k) || Number(k) >= GRID_TILES) continue;
+      if (!/^\d{1,3}$/.test(k) || Number(k) >= GRID_TILES) continue;
       field[Number(k)] = readPlot(p);
     }
     if (entries.some(([, p]) => legacyPlot(p))) legacy = LEGACY_BLOCK;
@@ -1283,14 +1293,18 @@ function lifeActionCore(
   }
   const size = farmSizeOf(life, uid);
   const mods = growthMods(life, uid);
-  const plantOk = (crop: Crop) => {
+  // 우리 농장 F5: in winter the 서리 덮개's quarter of the field takes any crop.
+  const frost = seasonOf(now) === 'winter' ? new Set(frostCovered(life, uid)) : new Set<number>();
+  /** Whether `crop` may go in now (on tile `i`: under the frost cover in winter, anything may). */
+  const seasonFits = (crop: Crop, i?: number) => cropInSeason(crop, seasonOf(now)) || mods.offSeason || (i !== undefined && frost.has(i));
+  const plantOk = (crop: Crop, i?: number) => {
     // 우리 농장 F3: off-season seeds grow only inside a greenhouse (lounge-farm-sites.ts) or with 온실지기.
-    if (!cropInSeason(crop, seasonOf(now)) && !mods.offSeason)
-      fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
+    if (!seasonFits(crop, i)) fail(`지금은 ${CROP_INFO[crop].name} 철이 아니라 심을 수 없어요.`);
   };
-  const newPlot = (crop: Crop): Plot => {
-    const speed = Math.min(MAX_SPEED, plantSpeed(life, uid, now) + villageGrowSpeed(life) + mods.growSpeed);
-    return { crop, plantedAt: now, t: 1, ...(speed ? { speed } : {}), ...(mods.goldPts ? { g: mods.goldPts } : {}) };
+  const newPlot = (crop: Crop, improved = false): Plot => {
+    const speed = Math.min(MAX_SPEED, plantSpeed(life, uid, now) + villageGrowSpeed(life) + mods.growSpeed),
+      g = mods.goldPts + (improved ? IMPROVED_GOLD_PTS : 0);
+    return { crop, plantedAt: now, t: 1, ...(speed ? { speed } : {}), ...(g ? { g } : {}), ...(improved ? { iv: 1 as const } : {}) };
   };
   /**
    * 우리 농장 F2 (design-our-farm.md §3-4, §12-1): a stage-1 field (24
@@ -1328,7 +1342,7 @@ function lifeActionCore(
     syncSprinklers(life, uid, now);
   };
   /** 재능 씨앗 아끼기: a planted seed is sometimes not used up. */
-  const spendSeed = (crop: Crop, tile: number) => {
+  const spendShopSeed = (crop: Crop, tile: number) => {
     if (!growthChance(life, uid, `seed:${tile}`, mods.seedKeep, now)) bag.seeds[crop] -= 1;
   };
   const waterTiles = (tiles: number[]) => {
@@ -1356,36 +1370,42 @@ function lifeActionCore(
       // plot -1 (stage-1 field) plants every tilled empty tile, as many as
       // there are seeds: one request and one friend broadcast.
       if (!isCrop(a.crop)) fail(LIFE_REJECT.invalid);
-      plantOk(a.crop);
+      // 우리 농장 F5: 품종 개량소 seeds (kept with the farm, not in the seed bag).
+      const improved = a.improved === true,
+        crop = a.crop;
+      const seeds = () => (improved ? improvedSeeds(life, uid, crop) : bag.seeds[crop]);
+      const spendSeed = (tile: number) => (improved ? spendImprovedSeed(life, uid, crop) : spendShopSeed(crop, tile));
       if (whole(a.plot)) {
-        const empty = farm.flatMap((_, i) => (plantable(a.crop, i) ? [i] : []));
-        if (!empty.length) fail(CROP_INFO[a.crop].vine ? LIFE_REJECT.vineOnly : farm.some((p, i) => tileOpen(size, i) && !tilled(i)) ? LIFE_REJECT.untilled : LIFE_REJECT.noEmpty);
-        if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
+        if (!farm.some((_, i) => seasonFits(crop, i))) plantOk(crop);
+        const empty = farm.flatMap((_, i) => (plantable(crop, i) && seasonFits(crop, i) ? [i] : []));
+        if (!empty.length) fail(CROP_INFO[crop].vine ? LIFE_REJECT.vineOnly : farm.some((p, i) => tileOpen(size, i) && !tilled(i)) ? LIFE_REJECT.untilled : LIFE_REJECT.noEmpty);
+        if (seeds() < 1) fail(LIFE_REJECT.noSeed);
         const planted: number[] = [];
         for (const i of empty) {
-          if (bag.seeds[a.crop] < 1) break;
-          spendSeed(a.crop, i);
-          farm[i] = newPlot(a.crop);
+          if (seeds() < 1) break;
+          spendSeed(i);
+          farm[i] = newPlot(crop, improved);
           planted.push(i);
         }
         afterPlant(planted);
         break;
       }
       const i = plotIndex(a.plot, size);
+      plantOk(crop, i);
       if (farm[i].crop) fail(LIFE_REJECT.occupied);
       if (fixtureAt(life, uid, i)) fail(LIFE_REJECT.fixture);
       if (!tilled(i)) fail(LIFE_REJECT.untilled);
-      const why = tileFor(a.crop, i);
+      const why = tileFor(crop, i);
       if (why) fail(why);
-      if (bag.seeds[a.crop] < 1) fail(LIFE_REJECT.noSeed);
-      spendSeed(a.crop, i);
-      farm[i] = newPlot(a.crop);
+      if (seeds() < 1) fail(LIFE_REJECT.noSeed);
+      spendSeed(i);
+      farm[i] = newPlot(crop, improved);
       // 괭이 범위: the same seed on the tilled empty tiles in reach while seeds last.
       const planted = [i];
       for (const j of reachOf('hoe', i)) {
-        if (j === i || bag.seeds[a.crop] < 1 || !plantable(a.crop, j)) continue;
-        spendSeed(a.crop, j);
-        farm[j] = newPlot(a.crop);
+        if (j === i || seeds() < 1 || !plantable(crop, j) || !seasonFits(crop, j)) continue;
+        spendSeed(j);
+        farm[j] = newPlot(crop, improved);
         planted.push(j);
       }
       afterPlant(planted);
@@ -1653,9 +1673,16 @@ export type PlotView = Plot & {
   sprinkled?: boolean;
   /** 텃밭 확장: the fixture standing on this tile (the plot is then empty). */
   fixture?: string;
-  /** 우리 농장: a tile beyond my field's size tier (not tilled yet; expand to use it). */
+  /**
+   * 우리 농장: a tile beyond my field's size tier (not tilled yet; expand to
+   * use it). Such a tile is sent as { crop: null, plantedAt: 0, locked } only.
+   */
   locked?: true;
+  /** F5: under my 서리 덮개 (any crop may go in in winter, and none withers when winter comes). */
+  frost?: true;
 };
+/** What a locked tile looks like in the view (the rest of PlotView is left out). */
+const lockedTile = () => ({ crop: null, plantedAt: 0, locked: true }) as PlotView;
 /** A friend's plot as the village draws it (optional fields: 텃밭 확장). */
 export type PublicPlotView = {
   /** 우리 농장: the field tile (only tiles with a crop or a withered plant are listed). */
@@ -1779,17 +1806,20 @@ export function lifeView(
   const sitesView = farmSitesView(life, now);
   const sheltered = farmSheltered(life, uid),
     giants = giantBeds(farm, uid, now, giantChance(life, uid)),
-    size = farmSizeOf(life, uid);
+    size = farmSizeOf(life, uid),
+    frost = new Set(frostCovered(life, uid));
   const base = {
     me: {
       farm: farm.map((p, i): PlotView => {
-        // Tiles beyond my size tier and empty tiles: just the plot and its marks (80 tiles; keeps the view small).
+        // Tiles beyond my size tier: only the mark (F5: up to 96 of the 120 tiles; keeps the view small).
+        if (!tileOpen(size, i)) return lockedTile();
+        // Empty tiles: just the plot and its marks.
         const empty = { readyAt: null, stage: 0, ready: false, rained: false, wateredAt: null, quality: 0, harvestsLeft: 1 } as const;
-        if (!tileOpen(size, i)) return { ...p, ...empty, locked: true };
-        const trellis = trellisOver(life.farmx?.[uid]?.tr, i);
+        const trellis = trellisOver(life.farmx?.[uid]?.tr, i),
+          cover = frost.has(i) ? { frost: true as const } : {};
         if (!p.crop) {
           const f = fixtureAt(life, uid, i);
-          return { ...p, ...empty, ...(f ? { fixture: f.k } : {}), ...(sprinklerCovering(life, uid, i) ? { sprinkled: true } : {}), ...(trellis !== null ? { trellis } : {}) };
+          return { ...p, ...empty, ...cover, ...(f ? { fixture: f.k } : {}), ...(sprinklerCovering(life, uid, i) ? { sprinkled: true } : {}), ...(trellis !== null ? { trellis } : {}) };
         }
         const ready = plotReadyAt(p, now)!,
           regrow = p.crop ? CROP_INFO[p.crop].regrow : undefined,
@@ -1807,7 +1837,8 @@ export function lifeView(
           harvestsLeft: regrow ? regrow.harvests - (p.n ?? 0) : 1,
           growth: growthStage(p, now),
           // Only when set (80 tiles a view): absent = no / never.
-          ...(witherAt(p, sheltered || legacyShelter(life, p)) !== null ? { witherAt: witherAt(p, sheltered || legacyShelter(life, p)) } : {}),
+          ...cover,
+          ...(witherAt(p, sheltered || legacyShelter(life, p), frost.has(i)) !== null ? { witherAt: witherAt(p, sheltered || legacyShelter(life, p), frost.has(i)) } : {}),
           ...(giants.includes(tileBed(i) ?? -1) ? { giant: true } : {}),
           ...(sprinklerCovering(life, uid, i) ? { sprinkled: true } : {}),
           ...(fixtureAt(life, uid, i) ? { fixture: fixtureAt(life, uid, i)!.k } : {}),

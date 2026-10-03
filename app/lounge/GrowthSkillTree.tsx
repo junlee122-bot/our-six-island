@@ -64,6 +64,7 @@ const yOf = (row: number) => PAD_Y + row * ROW_H;
 /** Rows: the 기본기 spine, two shared rows, then 갈래 A and B (their Lv10 picks fan out). */
 const BRANCH_ROW = [3.25, 4.75];
 const KID_SPREAD = 0.4;
+const TWIN_SPREAD = 0.32;
 
 const STATE_WORD: Record<NodeState, string> = {
   got: '익혔어요',
@@ -115,7 +116,10 @@ export function treeNodes(s: TreeSkill, readOnly = false): TreeNode[] {
   };
   for (const t of talentsOf(s.id)) {
     const head = t.after ? TALENT_BY_ID[t.after] : t;
-    const row = t.branch ? BRANCH_ROW[branchOf(t.branch)] : 1 + Math.max(0, heads.findIndex((h) => h.id === (head.after ?? head.id)));
+    // Two picks of one level in a 갈래 (낚시 Lv8, F5) sit just above and below its row.
+    const twins = t.branch ? talentsOf(s.id).filter((o) => o.branch === t.branch && o.level === t.level) : [],
+      nudge = twins.length > 1 ? (twins.indexOf(t) ? TWIN_SPREAD : -TWIN_SPREAD) : 0;
+    const row = t.branch ? BRANCH_ROW[branchOf(t.branch)] + nudge : 1 + Math.max(0, heads.findIndex((h) => h.id === (head.after ?? head.id)));
     const [state, why] = talentState(t);
     out.push({
       key: t.id,
@@ -147,7 +151,9 @@ export function treeNodes(s: TreeSkill, readOnly = false): TreeNode[] {
     profsOf(s.id)
       .ten.filter((k) => k.parent === p.id)
       .forEach((k, j) => {
-        const lastTalent = talentsOf(s.id).filter((t) => t.branch === p.id).at(-1);
+        const mine = talentsOf(s.id).filter((t) => t.branch === p.id),
+          top = Math.max(0, ...mine.map((t) => t.level)),
+          lastTalents = mine.filter((t) => t.level === top).map((t) => t.id);
         const [ks, kw] = profState(k);
         out.push({
           key: k.id,
@@ -158,7 +164,7 @@ export function treeNodes(s: TreeSkill, readOnly = false): TreeNode[] {
           text: k.text,
           state: ks,
           why: kw,
-          from: [lastTalent?.id ?? p.id],
+          from: lastTalents.length ? lastTalents : [p.id],
           prof: k,
         });
       });

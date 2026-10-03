@@ -17,8 +17,8 @@ import {
   type LifeAction,
   type LifeView,
 } from '../lounge-life';
-import { FARM_EXPAND_LEVEL, FARM_EXPAND_PRICE, itemName } from '../lounge-life-plus';
-import { FIXTURE_BY_ID, GRID_COLS, GRID_ROWS, fieldBlock, tileAt, tileOpen, tileRC } from '../lounge-farm-data';
+import { FARM_EXPAND_LEVEL, FARM_EXPAND_PRICE, itemName, nextFieldSize, type ExpandSize } from '../lounge-life-plus';
+import { FIXTURE_BY_ID, fieldBlock, fieldViewRows, tileAt, tileOpen, tileRC } from '../lounge-farm-data';
 import { witherAt } from '../lounge-farm';
 import { SOIL_ITEMS, harvestOf, harvestText, plantsAnySeason, soilOpen as soilHelps, type Harvest, type SoilItem } from '../lounge-life-ui';
 import { ITEM_BY_ID } from '../lounge-items';
@@ -40,7 +40,6 @@ import './farm-fish.css';
 type Plot = LifeView['me']['farm'][number];
 const STAGE_NAME = ['씨앗', '새싹', '자라는 중', '수확할 때'] as const;
 /** Field rows on the page, north (the house) at the top. */
-const PAGE_ROWS = Array.from({ length: GRID_ROWS }, (_, r) => Array.from({ length: GRID_COLS }, (_, c) => r * GRID_COLS + c));
 const SEED_KEY = 'bumtadew-last-seed';
 const FERT_NAME: Record<1 | 2 | 3, string> = { 1: '비료', 2: '고급 비료', 3: '별빛 비료' };
 const QUALITY_WORD = { 0: '보통', 1: '은별', 2: '금별', 3: '별빛' } as const;
@@ -131,11 +130,14 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const farm: readonly Plot[] = life?.me.farm ?? [];
   const size = life?.me.plots ?? 24;
   const open = (i: number) => tileOpen(size, i);
-  const nextSize = size === 24 ? 48 : size === 48 ? 80 : 0;
+  const nextSize = nextFieldSize(size) ?? 0;
+  const pageRows = fieldViewRows(size);
   const season = life?.calendar?.season ?? 'spring';
   // 온실지기: off-season seeds plant too (same rule as the server and E; greenhouses are their own panel).
   const anySeason = plantsAnySeason(life);
-  const plantable = (c: Crop) => anySeason || cropInSeason(c, season);
+  // F5: in winter the 서리 덮개's quarter takes any seed (the server checks the tile).
+  const frostOpen = season === 'winter' && farm.some((p) => p.frost);
+  const plantable = (c: Crop) => anySeason || frostOpen || cropInSeason(c, season);
   const seeds = life?.me.bag.seeds;
   const pouch = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && plantable(c));
   const offSeason = CROPS.filter((c) => (seeds?.[c] ?? 0) > 0 && !plantable(c));
@@ -156,7 +158,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const thirstyOf = (p: Plot) => !!p.crop && stageOf(p) < 3 && p.wateredAt === null && !p.rained;
   const thirsty = farm.filter(thirstyOf).length;
   const farmLv = life?.growth?.skills.find((s) => s.id === 'farm')?.level ?? 1;
-  const needLv = nextSize ? FARM_EXPAND_LEVEL[nextSize as 48 | 80] : 0;
+  const needLv = nextSize ? FARM_EXPAND_LEVEL[nextSize as ExpandSize] : 0;
   const inv = life?.me.inv ?? {};
   /** Growing plots a soil item would still help (quality levels 1–3, 성장 촉진제, 보습 흙; lounge-life-ui soilOpen). */
   const soilOpen = (p: Plot, item: SoilItem) => soilHelps(p, item, now);
@@ -176,6 +178,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
   const sown = chosen && fitsOn(plot, chosen) ? chosen : (pouch.find((c) => fitsOn(plot, c)) ?? null);
 
   const fixtures = life?.farmx?.fixtures ?? [];
+  const improved = life?.farmx?.improved ?? [];
   const fixtureAt = (i: number) => fixtures.find((f) => f.tile === i) ?? null;
   const friends = useMemo(() => {
     if (!life) return [];
@@ -221,6 +224,9 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
     rememberSeed(crop);
     void run({ kind: 'plant', plot: i, crop }, `${bedName(i)}에 ${josa(CROP_INFO[crop].name, '을/를')} 심었어요.`, 'plant');
   };
+  /** F5: an improved seed from the 품종 개량소 on this tile (and its reach). */
+  const plantImproved = (i: number, crop: Crop) =>
+    void run({ kind: 'plant', plot: i, crop, improved: true }, `${bedName(i)}에 개량 ${josa(CROP_INFO[crop].name, '을/를')} 심었어요.`, 'plant');
   const plantAll = (crop: Crop) => {
     const n = Math.min(empty, seeds?.[crop] ?? 0);
     rememberSeed(crop);
@@ -313,9 +319,9 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
             </span>
           </header>
           <div className="l-ledger-yard" role="grid" aria-label={`밭 ${size}칸 (방향키로 고르기)`}>
-            <div className="l-ledger-bed l-ledger-field" data-part="field" data-size={size}>
+            <div className="l-ledger-bed l-ledger-field" data-part="field" data-size={size} data-wide={size >= 120 || undefined}>
               <span className="l-ledger-bedname">집 앞 밭 · {size}칸</span>
-              {PAGE_ROWS.map((row, r) => (
+              {pageRows.map((row, r) => (
                 <div key={r} className="l-ledger-row" role="row">
                   {row.map((i) => {
                     const p = farm[i];
@@ -337,6 +343,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                         data-state={state}
                         data-wet={(p.crop && (p.wateredAt !== null || p.rained)) || undefined}
                         data-trellis={p.trellis !== undefined || undefined}
+                        data-frost={p.frost || undefined}
                         aria-selected={current === i}
                         aria-label={`${bedName(i)} · ${fixture ? FIXTURE_BY_ID[fixture.kind].name : p.crop ? `${CROP_INFO[p.crop].name} ${STAGE_NAME[s]}` : p.dead ? '시든 작물' : state === 'grass' ? '풀밭' : '갈아 둔 빈 칸'}${state === 'thirsty' ? ' · 목말라요' : ''}${p.trellis !== undefined ? ' · 덩굴 시렁' : ''}`}
                         data-testid={`plot-${i}`}
@@ -372,7 +379,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                 <span>
                   바깥은 아직 풀밭이에요
                   <small>
-                    {nextBlock.cols}×{nextBlock.rows} = {nextSize}칸으로 넓히면 괭이로 갈아 쓸 수 있어요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}
+                    {nextBlock.cols}×{nextBlock.rows} = {nextSize}칸으로 넓히면 괭이로 갈아 쓸 수 있어요 · {formatBeom(FARM_EXPAND_PRICE[nextSize as ExpandSize])}
                     {farmLv < needLv ? ` · 농사 Lv${needLv}부터` : ''}
                   </small>
                 </span>
@@ -650,6 +657,23 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
                       {offSeason.map((c) => `${CROP_INFO[c].name} ${seeds?.[c]}`).join(', ')}
                     </p>
                   )}
+                  {improved.length > 0 && (
+                    <p className="l-ledger-aside" data-testid="farm-improved">
+                      <Glyph name="spark" size={12} /> 개량 씨앗 (금별 잘 나와요) ·{' '}
+                      {improved.map((x) => (
+                        <button
+                          key={x.crop}
+                          type="button"
+                          className="l-ink"
+                          disabled={busy || !fitsOn(plot, x.crop) || !(plantable(x.crop) || plot?.frost)}
+                          onClick={() => plantImproved(current, x.crop)}
+                          data-testid={`farm-improved-${x.crop}`}
+                        >
+                          {CROP_INFO[x.crop].name} {x.n}
+                        </button>
+                      ))}
+                    </p>
+                  )}
                 </div>
               )}
             </article>
@@ -709,7 +733,7 @@ export function FarmLedgerBody({ room, view, notify, onClose, onShop, onBag, onF
           title="밭을 넓힐까요?"
           body={
             <>
-              밭을 더 갈아 <b>{nextBlock.cols}×{nextBlock.rows} = {nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as 48 | 80])}</b>이 들어요. 지갑에{' '}
+              밭을 더 갈아 <b>{nextBlock.cols}×{nextBlock.rows} = {nextSize}칸</b>이 돼요. <b>{formatBeom(FARM_EXPAND_PRICE[nextSize as ExpandSize])}</b>이 들어요. 지갑에{' '}
               {formatBeom(view.wallet.balance)}이 있어요.
             </>
           }

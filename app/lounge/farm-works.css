@@ -403,7 +403,7 @@
   gap: var(--sp-2);
   align-items: flex-start;
 }
-/* 우리 농장: the whole 10 × 8 field in small tiles. */
+/* 우리 농장: the 10 × 8 field in small tiles (12 × 10 at stage 4, below). */
 .l-fw-field .l-fw-row {
   grid-template-columns: repeat(10, 34px);
   gap: 3px;
@@ -420,6 +420,24 @@
   .l-fw-field .l-fw-tile {
     width: 27px;
     height: 27px;
+  }
+}
+/* F5: a stage-4 field is 12 tiles across (a little smaller so the page keeps its width). */
+.l-fw-field[data-wide] .l-fw-row {
+  grid-template-columns: repeat(12, 29px);
+  gap: 2px;
+}
+.l-fw-field[data-wide] .l-fw-tile {
+  width: 29px;
+  height: 29px;
+}
+@media (width <= 560px) {
+  .l-fw-field[data-wide] .l-fw-row {
+    grid-template-columns: repeat(12, 23px);
+  }
+  .l-fw-field[data-wide] .l-fw-tile {
+    width: 23px;
+    height: 23px;
   }
 }
 /* 우리 농장 F2: grass not yet tilled, the front-yard spots, the 덩굴 시렁. */

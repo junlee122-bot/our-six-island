@@ -179,13 +179,16 @@ import { companionPrice } from './lounge-companion-effects.ts';
 const rerollMax = (life: LifeState) => SHOP_REROLL_MAX + furnitureBonus(life).rerolls;
 
 // ---------------------------------------------------------------- constants
-/** 우리 농장 field tiers: 24 → 48 (8 × 6) and 48 → 80 (10 × 8) tiles (design-our-farm.md §3-1). */
-export const FARM_EXPAND_PRICE: Record<48 | 80, number> = { 48: 150_000, 80: 400_000 };
+/** 우리 농장 field tiers: 24 → 48 (8 × 6), 48 → 80 (10 × 8) and (F5) 80 → 120 (12 × 10) tiles (design-our-farm.md §3-1, §11-4). */
+export type ExpandSize = 48 | 80 | 120;
+export const FARM_EXPAND_PRICE: Record<ExpandSize, number> = { 48: 150_000, 80: 400_000, 120: 900_000 };
 /**
  * 농사 레벨 (design-our-farm.md §11-4): the farming level a field stage needs
  * before it can be bought. A stage already bought stays, whatever the level.
  */
-export const FARM_EXPAND_LEVEL: Record<48 | 80, number> = { 48: 3, 80: 6 };
+export const FARM_EXPAND_LEVEL: Record<ExpandSize, number> = { 48: 3, 80: 6, 120: 10 };
+/** The next field stage after `size` (null at the last one). */
+export const nextFieldSize = (size: number): ExpandSize | null => (size === 24 ? 48 : size === 48 ? 80 : size === 80 ? 120 : null);
 export const ROD_PRICE: Record<2 | 3, number> = { 2: 30_000, 3: 120_000 };
 /** Bite window multiplier per rod level (rod 3 also makes rare fish 1.5× likelier). */
 export const ROD_WINDOW: Record<1 | 2 | 3, number> = { 1: 1, 2: 1.25, 3: 1.5 };
@@ -280,7 +283,7 @@ export type UserExt = {
   /** 의뢰 게시판 progress today (lounge-npc-requests.ts). */
   npcBoard?: NpcBoardState;
   /** Field tier paid for (24 is the free start; old saves held 9 / 12, read as 48 / 80). */
-  plots?: 48 | 80;
+  plots?: ExpandSize;
   inv?: Record<string, number>;
   q1?: Partial<Record<Crop, number>>;
   q2?: Partial<Record<Crop, number>>;
@@ -545,7 +548,7 @@ function readUserExt(v: unknown): UserExt | undefined {
     out: UserExt = {};
   // Old yard tiers (9 / 12 plots) carry over to the same field tier (48 / 80 tiles).
   const plots = x.plots === 9 ? 48 : x.plots === 12 ? 80 : x.plots;
-  if (plots === 48 || plots === 80) out.plots = plots;
+  if (plots === 48 || plots === 80 || plots === 120) out.plots = plots;
   const inv = counts(x.inv, isItemId);
   if (nonEmpty(inv)) out.inv = inv as Record<string, number>;
   const q1 = counts<Crop>(x.q1, isCropId),
@@ -1541,14 +1544,15 @@ export function plusAction(
       break;
     }
     case 'expandFarm': {
-      const size = farmSizeOf(life, uid),
-        to = size === 24 ? 48 : size === 48 ? 80 : 0;
+      const to = nextFieldSize(farmSizeOf(life, uid));
       if (!to) fail(PLUS_REJECT.farmMax);
-      const need = FARM_EXPAND_LEVEL[to as 48 | 80];
+      const need = FARM_EXPAND_LEVEL[to!];
       if (skillLevel(life, uid, 'farm') < need) fail(`농사 Lv${need}부터 밭을 ${to}칸으로 넓힐 수 있어요.`);
-      next = spend(next, life, uid, FARM_EXPAND_PRICE[to as 48 | 80], 'farm-' + to, now);
+      next = spend(next, life, uid, FARM_EXPAND_PRICE[to!], 'farm-' + to, now);
       // The field is always the full grid in memory; the tier opens more of it.
-      x.plots = to as 48 | 80;
+      x.plots = to!;
+      // F5: the last stage puts up the 명인 표지판 in front of the field.
+      if (to === 120) addNews(life, now, `master:${actor}`, 'farm', `${nameOf(actor)}의 밭이 12×10 = 120칸이 됐어요. 밭 앞에 명인 표지판이 섰어요`, [actor]);
       break;
     }
     case 'waterFriend': {

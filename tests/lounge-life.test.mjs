@@ -85,11 +85,12 @@ function invariant(ledger) {
 test('new members start with 3 carrot + 2 tomato seeds and a 24-tile field', () => {
   const { members, life } = world(1);
   const v = lifeView(life, members[0].id, 0, T0);
-  // The whole 10 × 8 grid; the 6 × 4 block is tilled.
-  assert.equal(v.me.farm.length, 80);
+  // The whole 12 × 10 grid (F5); the 6 × 4 block is open, the rest only marked locked.
+  assert.equal(v.me.farm.length, 120);
+  assert.deepEqual(v.me.farm[119], { crop: null, plantedAt: 0, locked: true });
   assert.equal(v.me.farm.filter((p) => !p.locked).length, PLOTS_PER_USER);
   assert.equal(v.me.plots, PLOTS_PER_USER);
-  assert.ok(v.me.farm.every((p) => p.crop === null && p.stage === 0));
+  assert.ok(v.me.farm.every((p) => p.crop === null && (p.locked || p.stage === 0)));
   assert.deepEqual(v.me.bag.seeds, {
     carrot: 3,
     tomato: 2,
@@ -475,7 +476,7 @@ test('readLife: old worlds load empty, hostile data is bounded and cleaned', () 
   assert.equal(Object.keys(life.farms).length, 1);
   // An old 2-plot array reads as a 6-plot yard moved onto the field (old tile 0 → 20),
   // tilled and already watered (F2): wet until the old rules had it ripe.
-  assert.equal(life.farms[id].length, 80);
+  assert.equal(life.farms[id].length, 120);
   assert.deepEqual(life.farms[id][20], { crop: 'carrot', plantedAt: 5, t: 1, wetMs: CROP_INFO.carrot.growMs, wetUntil: 5 + CROP_INFO.carrot.growMs });
   assert.equal(life.farms[id][21].crop, null);
   assert.equal(life.bag[id].seeds.carrot, 0);
@@ -510,14 +511,16 @@ test('crop and shop catalog match the contract', () => {
       // 텃밭 확장 (design-farming-upgrade.md §4-1): 16 seasonal crops appended.
       ['garlic', 240, 500, 1900],
       ['pea', 300, 900, 1300],
-      ['lettuce', 90, 400, 380],
+      // 우리 농장 F5: 상추 cost too little for what it gave back (seed 700, four harvests).
+      ['lettuce', 90, 700, 450],
       ['tulip', 180, 300, 900],
       ['onion', 360, 700, 2800],
       ['pepper', 360, 1000, 1100],
       ['cucumber', 240, 800, 900],
       ['blueberry', 480, 1500, 1800],
-      ['chamoe', 420, 1200, 4400],
-      ['zinnia', 300, 500, 1500],
+      // F5: 참외 and 백일홍 regrow now (each melon / bunch is worth less).
+      ['chamoe', 420, 1200, 2600],
+      ['zinnia', 300, 500, 1100],
       ['grape', 480, 1500, 1900],
       ['radish', 240, 400, 1500],
       ['eggplant', 300, 800, 1000],
@@ -526,6 +529,30 @@ test('crop and shop catalog match the contract', () => {
       ['insam', 1440, 5000, 18000],
       // 우리 농장 F2: the third vine under the 덩굴 시렁.
       ['hop', 420, 1200, 1500],
+      // 우리 농장 F5: a flower for every season (bee houses) and 깻잎.
+      ['rapeseed', 240, 400, 1300],
+      ['lavender', 360, 700, 2000],
+      ['buckwheat', 240, 400, 1250],
+      ['narcissus', 480, 1000, 2600],
+      ['perilla', 240, 600, 560],
+    ],
+  );
+  assert.deepEqual(
+    CROPS.filter((c) => CROP_INFO[c].regrow).map((c) => [c, CROP_INFO[c].regrow.harvests]),
+    [
+      ['corn', 3],
+      ['pea', 4],
+      ['lettuce', 4],
+      ['pepper', 5],
+      ['cucumber', 4],
+      ['blueberry', 4],
+      ['chamoe', 3],
+      ['zinnia', 3],
+      ['grape', 4],
+      ['eggplant', 4],
+      ['greenonion', 3],
+      ['hop', 4],
+      ['perilla', 5],
     ],
   );
   // Longer base crops earn more per hour (watered, all six plots), so the

@@ -1,12 +1,13 @@
 // 우리 농장 in three.js, on the district kit (lounge-district-kit.ts, 구역 공통
 // 규격): the seven friends' kArchive houses in a row along the north edge
 // (the hub's house models, door height as before; 자료: kArchive · 출처: 쓰레드
-// dogfooter), each friend's 10 × 8 field right in front, the lane and the
+// dogfooter), each friend's 12 × 10 field right in front (F5: a 명인 표지판 before
+// a full one, a plastic tunnel over the 서리 덮개's quarter), the lane and the
 // paths between the fields, the central yard (shipping bin, mailbox, farm
 // board), F3's facility sites and the 공동 밭 (lounge-farm-sites-3d.ts), and
 // the road south to the hub. Tilled tiles and
 // crops are instanced (the hub's crop shapes, lounge-village-life-3d.ts), so
-// all 560 tiles cost a handful of draw calls. Layout: lounge-farm-layout.ts;
+// all 840 tiles cost a handful of draw calls. Layout: lounge-farm-layout.ts;
 // what to draw comes from lounge-farm-view.ts (farmSceneState). No React.
 import * as THREE from 'three';
 import {
@@ -28,16 +29,19 @@ import {
   HOME_ROOFS,
   farmHouse,
   farmWorkSlot,
+  fieldCellCenter,
   fieldOpenRect,
   fieldTileCenter,
+  isMasterField,
+  masterSign,
 } from './lounge-farm-layout';
 import { FARM_MODEL_URLS } from './lounge-district-models';
 import { DistrictSet, PAVING, districtMat, shadowed, type DistrictUpdate } from './lounge-district-kit';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale } from './lounge-village-layout';
 import { Batches, GEO, MAT, SOIL_TOP, cropInstances, matrix, type Instance } from './lounge-village-life-3d';
-import { deadShapes, fixtureShapes, giantShapes, machineShapes, trellisShapes } from './lounge-farm-3d';
-import { GRID_COLS, bedTiles, tileOpen } from './lounge-farm-data';
-import { YARD_SPOTS } from './lounge-farm-soil';
+import { FROST_MAT, deadShapes, fixtureShapes, giantShapes, machineShapes, trellisShapes } from './lounge-farm-3d';
+import { GRID_TILES, bedTiles, frostTiles, tileOpen } from './lounge-farm-data';
+import { trellisTiles, yardSpots } from './lounge-farm-soil';
 import type { FarmSceneState } from './lounge-farm-view';
 import type { Crop } from './lounge-life';
 import { SiteDecor, machineYardSite, siteInstances } from './lounge-farm-sites-3d';
@@ -47,6 +51,8 @@ import { kstDay } from './lounge-economy';
 
 const SIGN_ROAD = { bg: '#c49a62', ink: '#3c2716', line: '#7d5a36' };
 const SIGN_FARM = { bg: '#f6e7cf', ink: '#6a3a1e', line: '#b4763f' };
+/** 명인 표지판: gold on dark wood. */
+const SIGN_MASTER = { bg: '#f3d27a', ink: '#4a2c12', line: '#8a5a22' };
 const FIELD_GRASS = '#8eac5c';
 const SOIL_SIZE = FIELD_TILE * 0.9;
 
@@ -61,6 +67,8 @@ export class FarmSet extends DistrictSet {
   private mine = new THREE.Group();
   /** 우리 농장 F3: the facility sites' models and signs. */
   private sites: SiteDecor;
+  /** F5: 명인 표지판 per friend (made the first time their field reaches 120 tiles). */
+  private masters = new Map<number, THREE.Object3D[]>();
 
   constructor(look: { ground: string; groundFar: string }) {
     super('farm', FARM_MODEL_URLS);
@@ -217,7 +225,7 @@ export class FarmSet extends DistrictSet {
         const place = new THREE.Matrix4().makeTranslation((a.x + b.x) / 2, SOIL_TOP, (a.z + b.z) / 2).multiply(new THREE.Matrix4().makeScale(1.25, 1.25, 1.25));
         for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
       }
-      for (let tile = 0; tile < 80; tile++) {
+      for (let tile = 0; tile < GRID_TILES; tile++) {
         if (!tileOpen(field.size, tile)) continue;
         const at = fieldTileCenter(f, tile),
           p = plots.get(tile);
@@ -246,22 +254,31 @@ export class FarmSet extends DistrictSet {
       }
       // F2: scarecrows and bee houses on the field's front-yard spots (just off its edge).
       for (const [spot, kind] of field.yard) {
-        const s = YARD_SPOTS[spot];
+        const s = yardSpots(field.size)[spot];
         if (!s) continue;
-        const place = new THREE.Matrix4().makeTranslation(f.x0 + (s.c + 0.5) * FIELD_TILE, 0.02, f.z0 + (s.r + 0.5) * FIELD_TILE);
+        const at = fieldCellCenter(f, s.r, s.c);
+        const place = new THREE.Matrix4().makeTranslation(at.x, 0.02, at.z);
         const local: Instance[] = [];
         fixtureShapes(local, kind);
         for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
       }
       // F2: 덩굴 시렁 over three tiles in a row.
       for (const anchor of field.trellis) {
-        if (anchor % GRID_COLS > GRID_COLS - 3 || !tileOpen(field.size, anchor + 2)) continue;
-        const a = fieldTileCenter(f, anchor + 1);
+        const tiles = trellisTiles(anchor);
+        if (!tiles || !tileOpen(field.size, tiles[2])) continue;
+        const a = fieldTileCenter(f, tiles[1]);
         const place = new THREE.Matrix4().makeTranslation(a.x, SOIL_TOP, a.z).multiply(new THREE.Matrix4().makeScale(FIELD_TILE / 1.4 * 0.95, 1, 1));
         const local: Instance[] = [];
         trellisShapes(local);
         for (const i of local) crops.push({ ...i, m: place.clone().multiply(i.m) });
       }
+      // F5 서리 덮개: a low plastic tunnel over the covered quarter.
+      if (field.frost)
+        for (const tile of frostTiles(field.size)) {
+          const at = fieldTileCenter(f, tile);
+          crops.push({ geo: GEO.box, mat: FROST_MAT, m: matrix(at.x, 0.42, at.z, FIELD_TILE * 0.98, 0.56, FIELD_TILE * 0.98) });
+        }
+      this.showMaster(field.actor, isMasterField(field.size));
       const house = farmHouse(field.actor);
       // 우리 농장 F3: once the machine yard stands, everyone's machines stand there (small).
       if (house)
@@ -275,6 +292,21 @@ export class FarmSet extends DistrictSet {
         }
     }
     this.batches.set([...soil, ...crops, ...siteInstances(state.sites, kstDay(Date.now()))]);
+  }
+
+  /** F5: the 명인 표지판 in front of a 120-tile field (made once, then shown or hidden). */
+  private showMaster(actor: number, on: boolean) {
+    let parts = this.masters.get(actor);
+    if (!parts && on) {
+      const f = FARM_FIELDS.find((x) => x.actor === actor);
+      if (!f) return;
+      const at = masterSign(f),
+        before = this.root.children.length;
+      this.signpost(`명인 ${ACTOR_NAMES[actor] ?? ''}의 밭`, '12×10 · 120칸', SIGN_MASTER, at.x, at.z, { w: 2.1, h: 1.2, name: 'farm-master-' + actor });
+      parts = this.root.children.slice(before);
+      this.masters.set(actor, parts);
+    }
+    for (const o of parts ?? []) o.visible = on;
   }
 
   /** A thin gold outline round my own tilled block. */

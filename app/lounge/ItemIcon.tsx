@@ -251,6 +251,124 @@ const CROP_ART: Record<string, ReactNode> = {
       ))}
     </>
   ),
+  // 우리 농장 F5: 유채꽃 (yellow cross-shaped florets on a tall stem).
+  rapeseed: (
+    <>
+      <path d="M24 44 V14 M24 30 C18 28 14 22 14 18 M24 26 C30 24 34 20 34 16" stroke="#5f9e48" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      {[
+        [24, 10],
+        [15, 15],
+        [33, 13],
+        [19, 7],
+        [29, 6],
+      ].map(([x, y]) => (
+        <g key={`${x}-${y}`} transform={`translate(${x} ${y})`}>
+          <path d="M0 -4 L1.6 0 L0 4 L-1.6 0Z M-4 0 L0 1.6 L4 0 L0 -1.6Z" fill="#f2d43a" stroke="#c9a422" strokeWidth=".6" />
+          <circle r="1" fill="#e8a52a" />
+        </g>
+      ))}
+    </>
+  ),
+  // 라벤더: purple spikes on grey-green stems.
+  lavender: (
+    <>
+      <path d="M24 44 V12 M18 44 C18 32 16 22 14 14 M30 44 C30 32 32 22 34 14" stroke="#7f9a7a" strokeWidth="2" fill="none" strokeLinecap="round" />
+      {[
+        [24, 6],
+        [14, 9],
+        [34, 9],
+      ].map(([x, y]) => (
+        <g key={x}>
+          {[0, 4, 8, 12].map((d) => (
+            <ellipse key={d} cx={x} cy={y + d} rx="2.6" ry="2.2" fill={d % 8 ? '#9a7ad0' : '#b49ae0'} stroke="#6a4ea8" strokeWidth=".6" />
+          ))}
+        </g>
+      ))}
+    </>
+  ),
+  // 메밀꽃: clouds of tiny white flowers with pink centres on red stems.
+  buckwheat: (
+    <>
+      <path d="M24 44 V20 M24 30 L14 18 M24 26 L34 16" stroke="#b05a4a" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <path d="M24 34 C18 34 14 30 14 26 C20 26 24 29 24 34Z" fill="#6a9e4a" />
+      {[
+        [24, 14],
+        [12, 14],
+        [35, 12],
+        [19, 9],
+        [29, 8],
+        [16, 20],
+        [32, 19],
+      ].map(([x, y]) => (
+        <g key={`${x}-${y}`}>
+          <circle cx={x} cy={y} r="3.2" fill="#f8f4ee" stroke="#d9cfc4" strokeWidth=".6" />
+          <circle cx={x} cy={y} r="1" fill="#e89aa8" />
+        </g>
+      ))}
+    </>
+  ),
+  // 수선화: a white star of petals round a yellow trumpet.
+  narcissus: (
+    <>
+      <path d="M24 44 V22 M20 44 C18 34 14 28 10 24 M28 44 C30 36 34 30 38 28" stroke="#5f9e48" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <g transform="translate(24 15)">
+        {[0, 60, 120, 180, 240, 300].map((a) => (
+          <ellipse key={a} cx="0" cy="-6" rx="3.6" ry="6" fill="#fbf6e4" stroke="#d8cfa8" strokeWidth=".7" transform={`rotate(${a})`} />
+        ))}
+        <circle r="4.4" fill="#f2c33a" stroke="#d08a1a" strokeWidth="1" />
+        <circle r="2" fill="#e8962a" />
+      </g>
+    </>
+  ),
+  // 깻잎: a bunch of broad, serrated perilla leaves.
+  perilla: (
+    <>
+      <path d="M24 44 V24" stroke="#3f7a34" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M24 26 C12 28 6 18 10 8 C20 8 26 16 24 26Z" fill="#4f8a3a" stroke="#2f5e26" strokeWidth="1.2" />
+      <path d="M24 26 C36 28 42 18 38 8 C28 8 22 16 24 26Z" fill="#5f9a45" stroke="#2f5e26" strokeWidth="1.2" />
+      <path d="M24 30 C30 22 32 12 24 4 C16 12 18 22 24 30Z" fill="#6aa850" stroke="#2f5e26" strokeWidth="1.2" />
+      <path d="M24 28 V8 M24 24 C18 22 14 18 12 12 M24 24 C30 22 34 18 36 12" stroke="#a6d07a" strokeWidth=".9" fill="none" />
+    </>
+  ),
+  // 양식장 어란: a little dish of amber roe; 철갑상어 알 is dark and glossy.
+  roe: (
+    <>
+      <ellipse cx="24" cy="34" rx="17" ry="7" fill="#e9e2d2" stroke="#b5a88a" strokeWidth="1.4" />
+      {[
+        [16, 30],
+        [21, 28],
+        [26, 28],
+        [31, 30],
+        [19, 33],
+        [24, 32],
+        [29, 33],
+        [24, 27],
+      ].map(([x, y]) => (
+        <g key={`${x}-${y}`}>
+          <circle cx={x} cy={y} r="3" fill="#f2903a" stroke="#c0601e" strokeWidth=".6" />
+          <circle cx={x - 1} cy={y - 1} r=".9" fill="#ffd9a8" />
+        </g>
+      ))}
+    </>
+  ),
+  sturgeonroe: (
+    <>
+      <path d="M10 22 h28 v14 C38 42 10 42 10 36Z" fill="#c9d2dc" stroke="#7f8a96" strokeWidth="1.4" />
+      <ellipse cx="24" cy="22" rx="14" ry="5" fill="#2a2e34" stroke="#7f8a96" strokeWidth="1.4" />
+      {[
+        [17, 21],
+        [21, 23],
+        [25, 21],
+        [29, 23],
+        [31, 20],
+        [20, 19],
+        [27, 18],
+      ].map(([x, y]) => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="#4a525c" stroke="#9aa6b2" strokeWidth=".4" />
+      ))}
+      <path d="M12 30 h24" stroke="#a8b2bc" strokeWidth="1.2" />
+    </>
+  ),
   fruit: (
     <>
       <path d="M24 16 C14 8 6 18 8 28 C10 38 18 44 24 40 C30 44 38 38 40 28 C42 18 34 8 24 16Z" fill="#d9412e" stroke="#9e2a1c" strokeWidth="1.5" />
@@ -1199,6 +1317,16 @@ const TOOL_ART: Record<string, ReactNode> = {
       <path d="M24 20 C20 26 18 30 18 33 C18 37 30 37 30 33 C30 30 28 26 24 20Z" fill="#bfe8f2" />
     </>
   ),
+  // 우리 농장 F5 서리 덮개: a rolled sheet of milky plastic with two hoops.
+  frostcover: (
+    <>
+      <path d="M8 38 C8 18 40 18 40 38" stroke="#9aa6b2" strokeWidth="2.4" fill="none" />
+      <path d="M14 38 C14 24 34 24 34 38" stroke="#9aa6b2" strokeWidth="2" fill="none" />
+      <path d="M6 38 C6 14 42 14 42 38 Z" fill="#eef5f7" opacity=".7" stroke="#c6d4dc" strokeWidth="1.2" />
+      <path d="M12 26 C18 22 30 22 36 26" stroke="#ffffff" strokeWidth="1.6" fill="none" opacity=".8" />
+      <path d="M4 38 h40" stroke="#8a6242" strokeWidth="2.4" strokeLinecap="round" />
+    </>
+  ),
 };
 
 /** The painted icon for any life item id (crops, 'seed-*', fish, bugs, forage, dishes, tools). */
@@ -1353,6 +1481,11 @@ const CROP_LEAF: Record<string, { leaf: Leaf; tone: string; dark: string; hint: 
   greenonion: { leaf: 'stalk', tone: '#4f9a3c', dark: '#3a7a2e', hint: '#f4f1e6' },
   insam: { leaf: 'feather', tone: '#5f9e48', dark: '#3f7a34', hint: '#d8352a' },
   hop: { leaf: 'vine', tone: '#5f9a45', dark: '#3f7a34', hint: '#c6dd84' },
+  rapeseed: { leaf: 'stalk', tone: '#6aa54c', dark: '#4a8238', hint: '#f2d43a' },
+  lavender: { leaf: 'stalk', tone: '#8faa88', dark: '#6a8464', hint: '#9a7ad0' },
+  buckwheat: { leaf: 'bush', tone: '#7aa85a', dark: '#b05a4a', hint: '#f8f4ee' },
+  narcissus: { leaf: 'stalk', tone: '#5f9e48', dark: '#3f7a34', hint: '#f6e27a' },
+  perilla: { leaf: 'rosette', tone: '#5f9a45', dark: '#3f7a34', hint: '#a6d07a' },
 };
 function leaves(kind: Leaf, tone: string, dark: string, grow: number) {
   const s = 0.55 + grow * 0.45;

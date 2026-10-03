@@ -1,8 +1,9 @@
 // 우리 농장 F3: where the facility sites and the 공동 밭 lie (design-our-farm.md
 // §3-5, §10-1). Pure data. The shared sites take the empty ground F1 left on
 // the farm's east and south sides (two large 10 × 8, four medium 6 × 6, six
-// small 4 × 4); every friend's small personal site sits just under their own
-// field, across the lane (the house row has no room between the houses).
+// small 4 × 4); every friend's two small personal sites sit just under their
+// own field, across the lane, either side of its middle (the house row has no
+// room between the houses; the middle field's two flank the road).
 // The 공동 밭 (6 × 6) lies west of the central yard. Sites are walkable ground
 // like the fields; what stands on them is drawn by lounge-farm-sites-3d.ts.
 import type { WalkPoint } from './lounge-walk-world.ts';
@@ -31,12 +32,12 @@ const site = (id: string, size: SiteSize, x: number, z: number, actor?: number):
   w: SITE_TILES[size].cols,
   d: SITE_TILES[size].rows,
 });
-/** Personal sites: under each field, across the lane (도원 … 호현); the middle one steps east of the road. */
-const PERSONAL_Z = -6.4;
-const personalX = (actor: number) => {
+/** Personal sites: under each field, across the lane (도원 … 호현), P west and Q east of its middle. */
+const PERSONAL_Z = -5.3;
+const PERSONAL_DX = 3.5;
+const personalX = (actor: number, side: -1 | 1) => {
   const f = FARM_FIELDS.find((x) => x.actor === actor)!;
-  const cx = f.x0 + f.w / 2;
-  return Math.abs(cx) < 4 ? 4.5 : round(cx);
+  return round(f.x0 + f.w / 2 + side * PERSONAL_DX);
 };
 export const FARM_SITES: readonly FarmSite[] = [
   site('L1', 'large', -31, 8),
@@ -51,10 +52,12 @@ export const FARM_SITES: readonly FarmSite[] = [
   site('S4', 'small', -22, 27),
   site('S5', 'small', 12, 27),
   site('S6', 'small', 24, 27),
-  ...[0, 1, 2, 3, 4, 5, 6].map((a) => site(`P${a}`, 'small', personalX(a), PERSONAL_Z, a)),
+  ...[0, 1, 2, 3, 4, 5, 6].flatMap((a) => [site(`P${a}`, 'small', personalX(a, -1), PERSONAL_Z, a), site(`Q${a}`, 'small', personalX(a, 1), PERSONAL_Z, a)]),
 ];
 export const farmSite = (id: string) => FARM_SITES.find((s) => s.id === id) ?? null;
 export const personalSite = (actor: number) => FARM_SITES.find((s) => s.actor === actor) ?? null;
+/** Both personal sites of a friend (P then Q). */
+export const personalSites = (actor: number) => FARM_SITES.filter((s) => s.actor === actor);
 /** How far from a site's edge E still reaches it. */
 export const SITE_REACH = 0.6;
 /** Distance from `p` to a site (0 inside). */
