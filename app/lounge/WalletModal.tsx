@@ -29,26 +29,24 @@ export function DailyButton({
   room,
   view,
   notify,
-  compact = false,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
   notify: Notify;
-  compact?: boolean;
 }) {
   const daily = dailyOf(view);
   const [busy, setBusy] = useState(false);
   const now = useNow(!!daily && !daily.available, 30000);
   if (!daily) return null;
   if (!daily.available)
-    return compact ? null : (
+    return (
       <p className="l-daily-wait">
         다음 오늘의 범까지 {wait(daily.nextAt - (now + view.clockOffset))}
       </p>
     );
   return (
     <button
-      className={compact ? 'l-daily-chip' : 'l-primary l-daily'}
+      className="l-primary l-daily"
       disabled={busy}
       onClick={async () => {
         setBusy(true);
@@ -62,12 +60,10 @@ export function DailyButton({
         }
       }}
     >
-      <Gift size={compact ? 15 : 17} aria-hidden="true" />
-      {compact
-        ? '오늘의 범'
-        : daily.amount > 3000
-          ? `긴급 지원 받기 · +${formatBeom(daily.amount)}`
-          : `오늘의 범 받기 · +${formatBeom(daily.amount)}`}
+      <Gift size={17} aria-hidden="true" />
+      {daily.amount > 3000
+        ? `긴급 지원 받기 · +${formatBeom(daily.amount)}`
+        : `오늘의 범 받기 · +${formatBeom(daily.amount)}`}
     </button>
   );
 }

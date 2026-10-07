@@ -185,7 +185,11 @@ async function runView(mobile = false) {
     });
     const directory = async (district) => {
       await closeDialogs();
-      if (!(await page.locator('.hv-directory').count())) await click('.hv-top-tools button');
+      if (!(await page.locator('.hv-directory').count())) {
+        // The place list opens from the one map (HUD 다이어트: the map starts folded).
+        if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
+        await click('[data-testid=minimap-places]');
+      }
       await click(`.hv-directory [data-district="${district}"]`);
       await runTo(async () => { await sleep(400); await stationary(); });
     };
@@ -302,9 +306,12 @@ async function runView(mobile = false) {
     // camera contract + its observable data attributes; it never teleports.
     const walkPoint = async (point) => {
       await closeDialogs();
-      if (await page.locator('#hv-minimap-body').count()) await click('[data-testid=minimap-toggle]');
-      await click('[aria-label="마을 전체 보기"]');
+      // The overview is the map's own click (the camera column has no map button);
+      // then the map folds so the ground under it is clickable.
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
+      await click('[aria-label="미니맵으로 전체 보기"]');
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.overview === 'true');
+      await click('[data-testid=minimap-toggle]');
       await sleep(650);
       const view = await js(() => {
         const el = document.querySelector('[data-testid=village-3d]'), rect = el.getBoundingClientRect(), d = el.dataset;
@@ -369,6 +376,8 @@ async function runView(mobile = false) {
       res.winterVisualReview = 'Screenshot requires visual review of leaf/bark texture; this test asserts season and loaded model state only.';
     });
     await step('minimap-friends-museum-resize', async () => {
+      // The map starts folded (HUD 다이어트); open it for the friend pins.
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
       await click('[data-minimap-cluster]');
       assert.equal(await page.locator('#hv-minimap-peers [data-minimap-friend]').count(), 3);
       for (const button of await page.locator('#hv-minimap-peers [data-minimap-friend]').all()) {

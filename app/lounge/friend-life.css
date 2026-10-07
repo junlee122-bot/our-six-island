@@ -483,10 +483,11 @@
   position: fixed;
   z-index: var(--z-hud);
   left: 20px;
-  top: 150px;
+  /* Right under the brand sign (the 마을 안내 button that sat here is now the map's 장소). */
+  top: 84px;
   width: 290px;
-  /* Never taller than the room left above the minimap stack (bottom-left). */
-  max-height: calc(100dvh - 150px - 96px);
+  /* Never taller than the room left above the folded map, 수다 and stickers (bottom-left). */
+  max-height: calc(100dvh - 84px - 150px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 14px 16px 12px;
@@ -627,10 +628,11 @@
   font-size: 12px;
 }
 
-/* Short screens with the minimap open: stop above it and scroll inside. */
+/* Short screens with the minimap open: stop above it and scroll inside (the
+   open map, its toggle and 수다 reach 472px up from the bottom at 1280×720). */
 @media (max-height: 820px) {
-  .l-app:has(.hv-minimap.is-open) .l-adapt {
-    max-height: max(120px, calc(100dvh - 150px - 412px));
+  .l-app:has(.hv-minimap.is-open:not(.is-expanded)) .l-adapt {
+    max-height: max(120px, calc(100dvh - 84px - 484px));
   }
 }
 @media (max-width: 900px) {

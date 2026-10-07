@@ -5,7 +5,7 @@
 // and runs the region's actions (nodes, mine rocks, ladder, lift, the log
 // gate, exits). lounge-game.tsx only mounts it; the scene is lounge-area-3d.
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Backpack, MessageCircle } from '../ui/icons';
+import { MessageCircle } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungePlayer } from '../lounge-room';
 import type { Look } from '../lounge-look';
@@ -302,7 +302,6 @@ export function useOutdoor({
     paused,
     fishing,
     onChat,
-    onBag,
     axeTier,
     farmTool,
   }: {
@@ -313,7 +312,6 @@ export function useOutdoor({
     paused: boolean;
     fishing?: FishingFramePhase | null;
     onChat: () => void;
-    onBag: () => void;
     axeTier: number;
     /** 우리 농장 F2: the hotbar item in hand (what E does on the tile I face). */
     farmTool?: string;
@@ -370,10 +368,6 @@ export function useOutdoor({
           <button className="l-world-chat-button" aria-label="마을 수다 열기" onClick={onChat}>
             <MessageCircle size={19} />
             <span>수다</span>
-          </button>
-          <button className="l-world-chat-button" aria-label="가방 열기" onClick={onBag} data-bind="inventory">
-            <Backpack size={19} />
-            <span>가방</span>
           </button>
         </div>
         {liftOpen && m && (

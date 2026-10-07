@@ -720,9 +720,6 @@ export function Village3D(props: Props) {
       if (p && Number.isFinite(p.x) && Number.isFinite(p.z)) controls.current?.visit(p);
     };
     window.addEventListener('bumtadew:go', go);
-    // M (마을 안내) from the app-wide keys.
-    const directoryKey = () => setDirectory((open) => !open);
-    window.addEventListener('bumtadew:directory', directoryKey);
     // Esc closes an open panel here before the Esc menu opens.
     const escape = (e: Event) => {
       const open = panels.current;
@@ -736,7 +733,6 @@ export function Village3D(props: Props) {
       window.removeEventListener('bumtadew:escape', escape);
       window.removeEventListener('bumtadew:guide-farm', guide);
       window.removeEventListener('bumtadew:go', go);
-      window.removeEventListener('bumtadew:directory', directoryKey);
     };
   }, []);
   // The door prompt ("회관 · 안에 2명") and the action button's context.
@@ -1836,7 +1832,7 @@ export function Village3D(props: Props) {
       const origin = host.getBoundingClientRect();
       hud = [
         ...document.querySelectorAll(
-          '.hv-top-tools, .hv-camera, .hv-minimap, .l-world-social, .l-village-hotbar',
+          '.hv-camera, .hv-minimap, .l-world-social, .l-village-hotbar, .l-pocket-dock',
         ),
       ]
         .map((element) => element.getBoundingClientRect())
@@ -2832,16 +2828,6 @@ export function Village3D(props: Props) {
             </section>
           )}
         </div>
-        <div className="hv-top-tools">
-          <button
-            onClick={() => setDirectory(!directory)}
-            aria-expanded={directory}
-          >
-            <MapIcon size={18} />
-            마을 안내
-            <KeyHint action="map" />
-          </button>
-        </div>
         <nav
           aria-label="친구와 마을 지도"
           className={`hv-minimap${miniOpen ? ' is-open' : ''}${miniExpanded ? ' is-expanded' : ''}`}
@@ -2857,13 +2843,19 @@ export function Village3D(props: Props) {
             aria-label={miniOpen ? '미니맵 접기' : '미니맵 펼치기'}
           >
             <Compass size={17} aria-hidden="true" />
-            <span>{miniOpen ? '지도 접기' : '지도 펼치기'}</span>
-            {miniOpen && <X size={14} aria-hidden="true" />}
+            <span>{miniOpen ? '지도 접기' : '지도'}</span>
+            {miniOpen ? <X size={14} aria-hidden="true" /> : <KeyHint action="map" />}
           </button>
           {miniOpen && (
             <div id="hv-minimap-body" className="hv-minimap-body">
               <div className="hv-minimap-tools">
                 <strong>범타듀 밸리</strong>
+                {/* HUD 다이어트 (D2): the place list (마을 안내) opens from the one map. */}
+                <button type="button" onClick={() => { setSelected(null); setDirectory(true); setFriendGroup(null); }}
+                  aria-expanded={directory} data-testid="minimap-places">
+                  <MapIcon size={14} aria-hidden="true" />
+                  장소
+                </button>
                 <button type="button" onClick={() => { setMiniExpanded(!miniExpanded); setFriendGroup(null); }}
                   aria-expanded={miniExpanded} aria-label={miniExpanded ? '미니맵 축소' : '미니맵 확대'}
                   data-testid="minimap-resize">
@@ -3309,12 +3301,6 @@ export function Village3D(props: Props) {
             aria-label="내 위치 보기"
           >
             <LocateFixed size={18} />
-          </button>
-          <button
-            onClick={() => controls.current?.overview()}
-            aria-label="마을 전체 보기"
-          >
-            <MapIcon size={18} />
           </button>
         </div>
         {district && !nearby && !action && (

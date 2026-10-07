@@ -2953,40 +2953,6 @@ button.g-card:focus-visible {
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
 }
-.l-wallet-group {
-  /* Wallet + today's grant read as one sign. */
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  border-radius: var(--r-m);
-  background: var(--surface-raised);
-  color: var(--text);
-  box-shadow: var(--edge-line), var(--lift-1);
-  overflow: hidden;
-}
-.l-app .l-wallet-button {
-  min-height: var(--hit);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  color: var(--text);
-  font-weight: var(--fw-bold);
-}
-.l-app .l-daily-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--hit);
-  padding: 0 12px;
-  border: 0;
-  border-left: 2px dotted var(--line);
-  border-radius: 0;
-  background: transparent;
-  color: var(--text);
-  font-size: var(--fs-body-s);
-  font-weight: var(--fw-bold);
-}
 .l-app .l-daily {
   width: 100%;
   margin: 4px 0 12px;

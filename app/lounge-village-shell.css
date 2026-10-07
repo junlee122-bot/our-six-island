@@ -22,11 +22,6 @@
   border-color: var(--pal-lime-51);
 }
 
-.l-app .l-wallet-button {
-  background: var(--leaf-100);
-  border-color: var(--leaf-100);
-  color: var(--leaf-800);
-}
 
 .l-village {
   width: min(100%, 1680px);

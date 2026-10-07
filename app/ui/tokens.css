@@ -306,6 +306,34 @@
   --dur-ui: 200ms; /* windows, tabs */
   --dur-scene: 450ms; /* scene changes, banners */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* ---- season: the date sign's ribbon and the hotbar rail follow the game
+     season (data-season on .l-app, from the calendar). Light pastels on the
+     wood frame (≥ 4.5:1 against --frame) with --season-accent-ink on top. */
+  --season-accent: #fbcad8; /* spring: cherry blossom */
+  --season-accent-ink: var(--ink-900);
+  --edge-season: inset 0 -4px 0 var(--season-accent); /* the date sign's ribbon */
+  --ring-season: 0 0 0 3px var(--season-accent); /* the hotbar rail's rim */
+}
+
+/* ---- seasons: same two names, one tint per season ------------------------- */
+/* The season shadows are re-read where data-season is set (a var() inside a
+   custom property resolves where it is declared, not where it is used). */
+[data-season] {
+  --edge-season: inset 0 -4px 0 var(--season-accent);
+  --ring-season: 0 0 0 3px var(--season-accent);
+}
+[data-season='spring'] {
+  --season-accent: #fbcad8; /* cherry blossom */
+}
+[data-season='summer'] {
+  --season-accent: #9fe0d4; /* sea glass */
+}
+[data-season='autumn'] {
+  --season-accent: #fad08f; /* ginkgo */
+}
+[data-season='winter'] {
+  --season-accent: #cfe6f5; /* frost */
 }
 
 /* ---- venues: same names, different wood / cloth ------------------------------ */

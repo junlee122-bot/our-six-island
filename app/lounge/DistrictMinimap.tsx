@@ -11,6 +11,7 @@ import type { WalkPoint } from '../lounge-walk-world';
 import { ACTORS } from '../lounge-roster';
 import { NPCS, type NpcId } from '../lounge-npc-data';
 import { useMinimapOpen } from '../lounge-minimap-state';
+import { KeyHint } from '../ui/KeyHint';
 import '../lounge-minimap.css';
 
 /** The hub minimap's colours (lounge-village.tsx), by what a shape is. */
@@ -156,8 +157,8 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
         aria-label={open ? '미니맵 접기' : '미니맵 펼치기'}
       >
         <Compass size={17} aria-hidden="true" />
-        <span>{open ? '지도 접기' : '지도 펼치기'}</span>
-        {open && <X size={14} aria-hidden="true" />}
+        <span>{open ? '지도 접기' : '지도'}</span>
+        {open ? <X size={14} aria-hidden="true" /> : <KeyHint action="map" />}
       </button>
       {open && (
         <div id="hv-district-minimap-body" className="hv-minimap-body">

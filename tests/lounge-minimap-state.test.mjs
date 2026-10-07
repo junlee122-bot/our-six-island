@@ -4,16 +4,25 @@ import fs from 'node:fs';
 
 const store = new Map();
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
-const { MINIMAP_OPEN_KEY, minimapOpen, setMinimapOpen } = await import('../app/lounge-minimap-state.ts');
+const { MINIMAP_OPEN_KEY, minimapOpen, setMinimapOpen, toggleMinimap } = await import('../app/lounge-minimap-state.ts');
 
-test('the minimap starts open and a fold is saved until the player opens it again', () => {
-  assert.equal(minimapOpen(), true);
-  setMinimapOpen(false);
-  assert.equal(store.get(MINIMAP_OPEN_KEY), '0');
+test('the minimap starts folded and an open map is saved until the player folds it again', () => {
   assert.equal(minimapOpen(), false);
   setMinimapOpen(true);
   assert.equal(store.get(MINIMAP_OPEN_KEY), '1');
   assert.equal(minimapOpen(), true);
+  setMinimapOpen(false);
+  assert.equal(store.get(MINIMAP_OPEN_KEY), '0');
+  assert.equal(minimapOpen(), false);
+});
+
+test('M toggles the shared map both ways', () => {
+  setMinimapOpen(false);
+  toggleMinimap();
+  assert.equal(minimapOpen(), true);
+  toggleMinimap();
+  assert.equal(minimapOpen(), false);
+  assert.equal(store.get(MINIMAP_OPEN_KEY), '0');
 });
 
 test('hub and district maps share the saved choice instead of a fresh open state per mount', () => {

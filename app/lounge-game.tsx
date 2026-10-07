@@ -153,6 +153,8 @@ import {
 } from './desktop-bridge';
 import { CreditsModal } from './lounge/CreditsModal';
 import { WorldHeader, type Tab } from './lounge/WorldHeader';
+import { PocketDock } from './lounge/PocketDock';
+import { setMinimapOpen, toggleMinimap } from './lounge-minimap-state';
 import { GameScreen, myTurn } from './lounge/GameScreen';
 import {
   Onboarding,
@@ -1758,7 +1760,7 @@ function AccountLounge({
   }, [connected]);
   // PC keys (설정 → 조작, lounge-keybinds.ts) in the village, my room, the hall and the casino:
   // Esc 메뉴, F1 조작 안내, I 가방, K 도감, L 친구 사이, J 오늘의 부탁,
-  // M 마을 안내, B 게시판. 1–9 (핫바) and moving are the scenes' own.
+  // M 마을 안내(지도), B 게시판. 1–9 (핫바) and moving are the scenes' own.
   const pcKeys = useRef<{ run: (a: BindAction) => boolean }>({ run: () => false });
   useLayoutEffect(() => {
     pcKeys.current = {
@@ -1798,13 +1800,11 @@ function AccountLounge({
             return true;
           }
           case 'map':
+            // HUD 다이어트 (D2): M folds and opens the one map (hub and districts);
+            // from a room it walks out and opens it.
             if (settings.simpleGraphics) return false;
-            if (place === 'village' && visiting === null)
-              window.dispatchEvent(new Event('bumtadew:directory'));
-            else
-              enter('village', undefined, undefined, () =>
-                setTimeout(() => window.dispatchEvent(new Event('bumtadew:directory')), 600),
-              );
+            if (place === 'village' && visiting === null) toggleMinimap();
+            else enter('village', undefined, undefined, () => setMinimapOpen(true));
             return true;
           case 'board':
             if (settings.simpleGraphics) setModal('board');
@@ -2211,6 +2211,8 @@ function AccountLounge({
             }`
       }
       data-space={inGame ? 'game' : visiting === null ? tab : 'visit'}
+      // 계절 UI 색 (D14): the date sign and the hotbar rail take the season's tint (app/ui/tokens.css).
+      data-season={view.life?.calendar?.season}
       onScroll={
         inGame
           ? undefined
@@ -2238,7 +2240,6 @@ function AccountLounge({
         save={save}
         room={room}
         view={view}
-        notify={notify}
         onBrand={() =>
           visiting !== null ? leaveVisit() : tab === 'village' ? setModal('menu') : leaveInterior()
         }
@@ -2249,8 +2250,6 @@ function AccountLounge({
         onWallet={() => setModal('wallet')}
         onAccount={() => setModal('account')}
         onMenu={() => setModal('menu')}
-        onMail={() => openMail()}
-        onBag={() => setModal('bag')}
         mood={
           connected && !inGame ? (
             <MoodHud life={view.life} clockOffset={view.clockOffset} onOpen={() => setModal('mood')} />
@@ -2375,6 +2374,10 @@ function AccountLounge({
           <Hotbar hotbar={hotbar} life={view.life} onUse={eatFromSlot} />
         </div>
       )}
+      {!inGame && tab !== 'wardrobe' && connected && (
+        // HUD 다이어트 (D2): 가방 · 우편 beside the hotbar, the same spot in every space.
+        <PocketDock unread={view.life?.me.mailUnread ?? 0} onBag={() => setModal('bag')} onMail={() => openMail()} />
+      )}
       {fishing && tab === 'village' && visiting === null && !inGame && (
         <Suspense fallback={null}>
         <FishingOverlay
@@ -2441,7 +2444,6 @@ function AccountLounge({
                 paused: !!modal || !!coach || !!talk || !!residentTalk || !!townPlace || !!siteTarget || !!fishing,
                 fishing: fishing?.phase ?? null,
                 onChat: () => setModal('chat'),
-                onBag: () => setModal('bag'),
                 axeTier: view.life?.growth?.tools.find((t) => t.id === 'axe')?.tier ?? 1,
                 farmTool: hotbar.tool,
               })

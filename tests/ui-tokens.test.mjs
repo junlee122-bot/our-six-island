@@ -62,6 +62,18 @@ for (const v of [null, 'hall', 'casino', 'tavern', 'broker']) {
   });
 }
 
+for (const season of ['spring', 'summer', 'autumn', 'winter']) {
+  test(`${season} accent stays readable on the HUD wood and under its ink`, () => {
+    const vars = { ...ROOT, ...block(`[data-season='${season}']`) };
+    const accent = resolve(vars, vars['--season-accent']);
+    // The date sign's ribbon and the hotbar rail sit on the village frame; the ribbon's text is the accent ink.
+    const onFrame = contrast(accent, resolve(vars, vars['--frame']));
+    const ink = contrast(resolve(vars, vars['--season-accent-ink']), accent);
+    assert.ok(onFrame >= 4.5, `${season} accent on --frame: ${onFrame.toFixed(2)} < 4.5`);
+    assert.ok(ink >= 4.5, `${season} ink on accent: ${ink.toFixed(2)} < 4.5`);
+  });
+}
+
 test('type scale has six steps and none below 12px', () => {
   const steps = Object.entries(ROOT).filter(([k]) => k.startsWith('--fs-'));
   assert.equal(steps.length, 6);
