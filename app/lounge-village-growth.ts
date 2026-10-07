@@ -34,3 +34,24 @@ export function nearestNode<T extends { id: string; kind: NodeKind; x: number; z
 }
 /** A walkable point beside a node (the directory's "가 보기"). */
 export const nodeFront = (n: { x: number; z: number }): VillagePoint => walkableNear({ x: n.x, z: n.z + 0.9 });
+
+/**
+ * 성장 수첩 "오늘의 재료": one row per kind instead of one per node — how many
+ * are left, how many there were, and the untaken one nearest `from` (the
+ * avatar, or the village start). Kinds keep the order they first appear in.
+ */
+export function groupNodes<T extends { id: string; kind: NodeKind; x: number; z: number; taken: boolean }>(
+  nodes: readonly T[],
+  from: VillagePoint,
+): { kind: NodeKind; total: number; left: number; nearest: T | null }[] {
+  const out = new Map<NodeKind, { kind: NodeKind; total: number; left: number; nearest: T | null }>();
+  for (const n of nodes) {
+    const g = out.get(n.kind) ?? { kind: n.kind, total: 0, left: 0, nearest: null };
+    out.set(n.kind, g);
+    g.total += 1;
+    if (n.taken) continue;
+    g.left += 1;
+    if (!g.nearest || Math.hypot(from.x - n.x, from.z - n.z) < Math.hypot(from.x - g.nearest.x, from.z - g.nearest.z)) g.nearest = n;
+  }
+  return [...out.values()];
+}

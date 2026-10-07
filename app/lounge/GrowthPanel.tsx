@@ -34,8 +34,8 @@ import { ITEM_BY_ID } from '../lounge-items';
 import { ROD_PRICE } from '../lounge-life-plus';
 import { formatBeom, josa } from '../lounge-text';
 import { lifeSfx } from '../lounge-audio-life';
-import { FORGE_FRONT, nodeFront } from '../lounge-village-growth';
-import type { VillagePoint } from '../lounge-village-layout';
+import { FORGE_FRONT, groupNodes, nodeFront } from '../lounge-village-growth';
+import { VILLAGE_START, type VillagePoint } from '../lounge-village-layout';
 import { Modal } from './Modal';
 import { Glyph, type GlyphName } from './field-glyphs';
 import { ItemIcon } from './ItemIcon';
@@ -67,7 +67,7 @@ function untilText(ms: number) {
 }
 
 /** A skill view as a tree (older servers send no talents). */
-const treeOf = (s: SkillView): TreeSkill => ({
+const treeOf = (s: SkillView, cap = SOFT_CAP): TreeSkill => ({
   id: s.id,
   level: s.level,
   prof: s.prof,
@@ -76,7 +76,7 @@ const treeOf = (s: SkillView): TreeSkill => ({
   choice: s.choice,
   progress: [
     s.next === null ? '최고 레벨' : `${Math.floor(s.xp - s.from)} / ${s.next - s.from} XP`,
-    `오늘 ${Math.min(SOFT_CAP, Math.round(s.today))}/${SOFT_CAP}`,
+    `오늘 ${Math.min(cap, Math.round(s.today))}/${cap}${cap > SOFT_CAP ? ' (기분 좋아서 +20%)' : ''}`,
     ...(s.rest > 0 ? [`휴식 +${Math.round(s.rest)}`] : []),
     ...(s.behind ? ['선배의 가르침 ×1.5'] : []),
   ].join(' · '),
@@ -92,7 +92,7 @@ export function growthTodos(g: GrowthView, now: number) {
       text: `${SKILL_INFO[pick.id].name} 전문가를 고를 수 있어요`,
       key: 'prof',
     });
-  const points = g.skills.find((s) => (s.left ?? 0) > 0 && canPickTalent(treeOf(s)));
+  const points = g.skills.find((s) => (s.left ?? 0) > 0 && canPickTalent(treeOf(s, g.softCap)));
   if (points)
     out.push({
       glyph: 'spark',
@@ -305,7 +305,7 @@ export function GrowthPanel({
             <section className="l-growth-page l-growth-wide" aria-label="기술 트리">
               <SkillTreeBoard
                 key={skill.id}
-                skills={g.skills.map(treeOf)}
+                skills={g.skills.map((s) => treeOf(s, g.softCap))}
                 initial={skill.id}
                 busy={busy}
                 onChooseProf={(id) => setChoose(id)}
@@ -658,6 +658,14 @@ function NodesStrip({
   onWalk: (p: VillagePoint) => void;
   onGather: (id: string, kind: NodeKind) => void;
 }) {
+  // Where "가장 가까운 곳" is measured from: the avatar in the village, else the village start.
+  const [from] = useState<VillagePoint>(() => {
+    const d = typeof document === 'undefined' ? undefined : (document.querySelector('[data-testid=village-3d]') as HTMLElement | null)?.dataset;
+    const x = Number(d?.avatarX),
+      z = Number(d?.avatarZ);
+    return d && Number.isFinite(x) && Number.isFinite(z) ? { x, z } : VILLAGE_START;
+  });
+  const rows = useMemo(() => groupNodes(g.nodes, from), [g.nodes, from]);
   if (!g.nodes.length) return null;
   return (
     <section className="l-growth-nodes" aria-label="오늘의 재료">
@@ -666,34 +674,42 @@ function NodesStrip({
         <small>마을 가장자리 · 매일 새로 자라요 · 바위에서는 가끔 구리</small>
       </h4>
       <ul>
-        {g.nodes.map((n) => (
-          <li key={n.id} data-taken={n.taken || undefined}>
-            <Glyph name={NODE_GLYPH[n.kind]} size={20} />
-            <span>{NODE_INFO[n.kind].name}</span>
-            {n.taken ? (
-              <small>오늘 거뒀어요</small>
-            ) : simple ? (
-              <button
-                type="button"
-                className="l-ink l-small"
-                disabled={busy}
-                onClick={() => onGather(n.id, n.kind)}
-                data-testid={`node-${n.id}`}
-              >
-                {NODE_INFO[n.kind].verb}
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="l-ink l-small"
-                onClick={() => onWalk(nodeFront(n))}
-                data-testid={`node-${n.id}`}
-              >
-                <Glyph name="walk" size={14} /> 가 보기
-              </button>
-            )}
-          </li>
-        ))}
+        {rows.map(({ kind, total, left, nearest }) => {
+          const name = NODE_INFO[kind].name;
+          return (
+            <li key={kind} data-taken={!nearest || undefined} data-testid={`node-kind-${kind}`}>
+              <Glyph name={NODE_GLYPH[kind]} size={20} />
+              <span>
+                {name} <b>×{left}</b>
+                {left < total ? <small> · 거둔 {total - left}</small> : null}
+              </span>
+              {!nearest ? (
+                <small>오늘 다 거뒀어요</small>
+              ) : simple ? (
+                <button
+                  type="button"
+                  className="l-ink l-small"
+                  disabled={busy}
+                  aria-label={`${name} 하나 ${NODE_INFO[kind].verb}`}
+                  onClick={() => onGather(nearest.id, kind)}
+                  data-testid={`node-${nearest.id}`}
+                >
+                  {NODE_INFO[kind].verb}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="l-ink l-small"
+                  aria-label={`${name} 가장 가까운 곳으로 가 보기`}
+                  onClick={() => onWalk(nodeFront(nearest))}
+                  data-testid={`node-${nearest.id}`}
+                >
+                  <Glyph name="walk" size={14} /> 가장 가까운 곳
+                </button>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

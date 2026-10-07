@@ -86,9 +86,13 @@ dialog.l-modal.l-growth > .ui-dialog-keys {
   outline: none;
   box-shadow: var(--lift-1);
 }
-.l-growth-book:focus-visible {
-  box-shadow:
-    var(--ring-focus), var(--lift-1);
+/* The book takes focus only from script (tabIndex -1, never a Tab stop) so
+   its keys work at once: no ring (lounge.css rings every [tabindex]), it read
+   as a second frame inside the wooden one (D10). The ribbons, rows and
+   buttons inside keep their own rings. */
+dialog.l-growth .l-growth-book:focus-visible {
+  outline: none;
+  box-shadow: var(--lift-1);
 }
 .l-growth-ribbons {
   grid-column: 1 / -1;
@@ -645,7 +649,7 @@ dialog.l-modal.l-growth > .ui-dialog-keys {
 }
 .l-growth-nodes ul {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -667,10 +671,11 @@ dialog.l-modal.l-growth > .ui-dialog-keys {
 }
 .l-growth-nodes li[data-taken] {
   color: var(--text-soft);
-  text-decoration: line-through;
-  text-decoration-color: var(--line-strong);
   background: transparent;
   box-shadow: var(--edge-line);
+}
+.l-growth-nodes li > span b {
+  font-variant-numeric: tabular-nums;
 }
 .l-growth-nodes li small {
   font-size: var(--fs-cap);

@@ -9,6 +9,7 @@ import type { LifeAction } from '../lounge-life';
 import { MANURE_PER_FERT } from '../lounge-farm-barn-data';
 import { ANIMALS } from '../lounge-stage3-data';
 import { GameButton } from '../ui/GameButton';
+import { MoreActions } from '../ui/MoreActions';
 
 type Run = (a: LifeAction, done: string) => void;
 
@@ -23,6 +24,7 @@ export function FarmBarn({ view, act, busy, kind }: { view: CloudRoomView; act: 
   const manure = inv.manure ?? 0;
   const hay = inv.hay ?? 0;
   const todo = here.filter(({ a }) => a.farm && !a.cared).length;
+  const sideJobs = [!!barn?.manure, manure >= MANURE_PER_FERT, kind === 'barn' && !!barn?.grass].filter(Boolean).length;
   return (
     <>
       <section className="l-town-notice" aria-label={kind === 'barn' ? '축사' : '닭장'} data-testid={`farm-${kind}`}>
@@ -56,31 +58,40 @@ export function FarmBarn({ view, act, busy, kind }: { view: CloudRoomView; act: 
           </GameButton>
         </span>
       </section>
-      <section className="l-town-notice" aria-label="거름과 비료">
-        <strong>거름 {barn?.manure ?? 0}개가 쌓였어요 · 가방 {manure}개</strong>
-        <p>거름 {MANURE_PER_FERT}개로 비료 1개를 만들어요. 비료는 밭에 뿌려 품질을 올려요.</p>
-        <span className="l-town-buttons">
-          <GameButton size="s" disabled={busy || !barn?.manure} onClick={() => act({ kind: 'manureTake' }, `거름 ${barn?.manure ?? 0}개를 챙겼어요.`)}>
-            거름 챙기기
-          </GameButton>
-          <GameButton
-            size="s"
-            disabled={busy || manure < MANURE_PER_FERT}
-            onClick={() => act({ kind: 'compost', n: Math.floor(manure / MANURE_PER_FERT) }, `비료 ${Math.floor(manure / MANURE_PER_FERT)}개를 만들었어요.`)}
-          >
-            퇴비 만들기 ({Math.floor(manure / MANURE_PER_FERT)}개)
-          </GameButton>
-        </span>
-      </section>
-      {kind === 'barn' && (
-        <section className="l-town-notice" aria-label="사일로" data-testid="farm-silo">
-          <strong>사일로 · 내 밭의 풀 {barn?.grass ?? 0}칸</strong>
-          <p>갈지 않은 풀밭을 베어 건초를 만들어요. 풀은 나의 하루마다 다시 자라요.</p>
-          <GameButton size="s" disabled={busy || !barn?.grass} onClick={() => act({ kind: 'siloCut', tile: -1 }, `풀을 베어 건초 ${barn?.grass ?? 0}개를 만들었어요.`)}>
-            풀 베기
-          </GameButton>
+      {/* D10: 돌보기 is the window's main action; 거름·퇴비 and the 사일로 fold under 더 보기. */}
+      <MoreActions
+        label={kind === 'barn' ? '거름 · 퇴비 · 사일로' : '거름 · 퇴비'}
+        hint={sideJobs ? `할 수 있는 일 ${sideJobs}` : undefined}
+        open={!todo && sideJobs > 0}
+        className="l-farm-site-more l-farm-barn-more"
+        data-testid={`farm-${kind}-more`}
+      >
+        <section className="l-town-notice" aria-label="거름과 비료">
+          <strong>거름 {barn?.manure ?? 0}개가 쌓였어요 · 가방 {manure}개</strong>
+          <p>거름 {MANURE_PER_FERT}개로 비료 1개를 만들어요. 비료는 밭에 뿌려 품질을 올려요.</p>
+          <span className="l-town-buttons">
+            <GameButton size="s" disabled={busy || !barn?.manure} onClick={() => act({ kind: 'manureTake' }, `거름 ${barn?.manure ?? 0}개를 챙겼어요.`)}>
+              거름 챙기기
+            </GameButton>
+            <GameButton
+              size="s"
+              disabled={busy || manure < MANURE_PER_FERT}
+              onClick={() => act({ kind: 'compost', n: Math.floor(manure / MANURE_PER_FERT) }, `비료 ${Math.floor(manure / MANURE_PER_FERT)}개를 만들었어요.`)}
+            >
+              퇴비 만들기 ({Math.floor(manure / MANURE_PER_FERT)}개)
+            </GameButton>
+          </span>
         </section>
-      )}
+        {kind === 'barn' && (
+          <section className="l-town-notice" aria-label="사일로" data-testid="farm-silo">
+            <strong>사일로 · 내 밭의 풀 {barn?.grass ?? 0}칸</strong>
+            <p>갈지 않은 풀밭을 베어 건초를 만들어요. 풀은 나의 하루마다 다시 자라요.</p>
+            <GameButton size="s" disabled={busy || !barn?.grass} onClick={() => act({ kind: 'siloCut', tile: -1 }, `풀을 베어 건초 ${barn?.grass ?? 0}개를 만들었어요.`)}>
+              풀 베기
+            </GameButton>
+          </section>
+        )}
+      </MoreActions>
     </>
   );
 }

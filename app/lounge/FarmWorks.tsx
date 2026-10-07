@@ -40,6 +40,7 @@ import { loungeAudio } from '../lounge-audio';
 import { Panel } from '../ui/Panel';
 import { GameButton } from '../ui/GameButton';
 import { EmptyState } from '../ui/EmptyState';
+import { MoreActions } from '../ui/MoreActions';
 import { KeyHintBar } from '../ui/KeyHint';
 import { Glyph } from '../ui/Glyph';
 import { CropStageArt, ItemIcon } from './ItemIcon';
@@ -437,6 +438,24 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
     [...stockRows(life, now, false), ...orchard]
       .filter((r) => (kind === 'seedmaker' ? (CROPS as readonly string[]).includes(r.id) : !!productOf(kind, r.id)))
       .filter((r) => r.n >= MACHINE_BY_ID[kind].per);
+  const slotIds = Array.from({ length: Math.max(slots, ...machines.map((m) => m.slot + 1)) }, (_, slot) => slot);
+  const laterEmpty = slotIds.filter((slot) => !machines.some((x) => x.slot === slot)).slice(1);
+  const emptySlot = (slot: number) => (
+    <li key={slot} className="l-fw-slot" data-state="empty">
+      <span className="l-fw-slot-name">{slot + 1}번 자리 · 비어 있음</span>
+      {ownedMachines.length ? (
+        <span className="l-fw-actions">
+          {ownedMachines.map((d) => (
+            <GameButton key={d.id} size="s" disabled={busy} onClick={() => void run({ kind: 'farmPlace', item: d.id, slot }, `${slot + 1}번 자리에 ${josa(d.name, '을/를')} 놓았어요.`)} data-testid={`farm-slot-${slot}-${d.id}`}>
+              <ItemIcon id={d.id} size={22} /> {d.name}
+            </GameButton>
+          ))}
+        </span>
+      ) : (
+        <small className="l-fw-hint">오른쪽에서 기계를 만들면 여기 놓을 수 있어요.</small>
+      )}
+    </li>
+  );
   return (
     <div className="l-fw-cols">
       <section className="l-fw-yard" aria-label="작업 마당">
@@ -456,25 +475,9 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
           </GameButton>
         </header>
         <ol className="l-fw-slots">
-          {Array.from({ length: Math.max(slots, ...machines.map((m) => m.slot + 1)) }, (_, slot) => {
+          {slotIds.filter((slot) => !laterEmpty.includes(slot)).map((slot) => {
             const m = machines.find((x) => x.slot === slot);
-            if (!m)
-              return (
-                <li key={slot} className="l-fw-slot" data-state="empty">
-                  <span className="l-fw-slot-name">{slot + 1}번 자리 · 비어 있음</span>
-                  {ownedMachines.length ? (
-                    <span className="l-fw-actions">
-                      {ownedMachines.map((d) => (
-                        <GameButton key={d.id} size="s" disabled={busy} onClick={() => void run({ kind: 'farmPlace', item: d.id, slot }, `${slot + 1}번 자리에 ${josa(d.name, '을/를')} 놓았어요.`)} data-testid={`farm-slot-${slot}-${d.id}`}>
-                          <ItemIcon id={d.id} size={22} /> {d.name}
-                        </GameButton>
-                      ))}
-                    </span>
-                  ) : (
-                    <small className="l-fw-hint">오른쪽에서 기계를 만들면 여기 놓을 수 있어요.</small>
-                  )}
-                </li>
-              );
+            if (!m) return emptySlot(slot);
             const def = MACHINE_BY_ID[m.kind],
               done = !!m.out && (m.doneAt ?? Infinity) <= now,
               working = !!m.out && !done;
@@ -538,6 +541,12 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
             );
           })}
         </ol>
+        {laterEmpty.length > 0 && (
+          // D10: one empty spot offers the machines; the other empty spots (same buttons again) fold away.
+          <MoreActions label={`빈 자리 ${laterEmpty.length}곳 더`} className="l-fw-more" data-testid="farm-slots-more">
+            <ol className="l-fw-slots">{laterEmpty.map(emptySlot)}</ol>
+          </MoreActions>
+        )}
         <Panel variant="note" title="저장고" className="l-fw-card">
           {goods.length ? (
             <ul className="l-fw-goods">

@@ -70,3 +70,53 @@
 .l-farm-site-tile.is-grass {
   background: var(--leaf-600);
 }
+/* D10: the game's crop art in the tiles; a withered crop greys and tips over. */
+.l-farm-site-tile > span {
+  display: grid;
+  place-items: center;
+}
+.l-farm-site-dead {
+  filter: grayscale(0.85) sepia(0.6);
+  opacity: 0.75;
+  transform: rotate(-12deg);
+}
+/* The 공동 밭: grid left, goal and the next job right. */
+.l-farm-site-split {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+.l-farm-site-split > .l-farm-site-grid {
+  margin: 0;
+}
+.l-farm-site-side {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.l-farm-site-side > .l-town-notice,
+.l-farm-site-side > .l-farm-site-note,
+.l-farm-site-side .l-farm-site-seeds,
+.l-farm-site-side .l-farm-site-actions,
+.l-farm-site-side .ui-more {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .l-farm-site-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Folded lists and notices (locked facilities, 넓히기, 거름) span the disclosure's width. */
+.l-farm-site-more .ui-more-body > ul,
+.l-farm-site-more .ui-more-body > section {
+  flex: 1 1 100%;
+}
+.l-town-row > .ui-more {
+  margin: 0;
+}
+/* A glyph inside a notice title stays on the title's line. */
+.l-farm-site .l-town-notice strong .ui-glyph {
+  display: inline-block;
+  margin-right: var(--sp-1);
+}

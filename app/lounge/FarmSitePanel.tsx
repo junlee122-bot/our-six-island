@@ -7,7 +7,7 @@
 // 양식장's fish and requests, the 품종 개량소's batches), its upgrade and
 // demolishing. Every change is a server action
 // (lounge-farm-sites.ts); this only shows the view and sends the choice.
-import { useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROPS, CROP_INFO, QUALITY_NAME, cropInSeason, type Crop, type LifeAction } from '../lounge-life';
 import {
@@ -42,6 +42,9 @@ import { ACTORS } from '../lounge-roster';
 import { formatBeom, josa } from '../lounge-text';
 import { GameButton } from '../ui/GameButton';
 import { EmptyState } from '../ui/EmptyState';
+import { Glyph } from '../ui/Glyph';
+import { MoreActions } from '../ui/MoreActions';
+import { CropStageArt, ItemIcon } from './ItemIcon';
 import { Modal, ConfirmModal } from './Modal';
 import { useLifeAction } from './LifePanels';
 import { useNow } from './use-now';
@@ -57,9 +60,63 @@ type Run = (a: LifeAction, done: string) => void;
 
 const plotLabel = (p: SitePlotView | undefined) =>
   !p ? '빈 칸' : p.c ? `${CROP_INFO[p.c].name}${p.r ? ' · 다 자람' : p.w ? ' · 촉촉' : ' · 목말라요'}` : p.d ? `시든 ${CROP_INFO[p.d].name}` : '빈 칸';
-const plotFace = (p: SitePlotView | undefined) => (p?.c ? (p.r || p.g >= 3 ? CROP_INFO[p.c].emoji : p.g >= 1 ? '🌱' : '·') : p?.d ? '🥀' : '');
+/** The game's own crop art (the 텃밭 장부's stages), not emoji (D10). Growth 0–4 → 씨앗·새싹·자라는 중·다 자람. */
+function PlotFace({ p }: { p: SitePlotView | undefined }) {
+  if (p?.c) return <CropStageArt crop={p.c} stage={p.r ? 3 : Math.min(2, p.g)} size={30} />;
+  if (p?.d)
+    return (
+      <span className="l-farm-site-dead">
+        <CropStageArt crop={p.d} stage={1} size={24} />
+      </span>
+    );
+  return null;
+}
 const costText = (c: FacilityCost) =>
   [c.beom ? formatBeom(c.beom) : '', ...Object.entries(c.mats).map(([id, n]) => `${itemName(id)} ${n}`)].filter(Boolean).join(' · ');
+
+/** One thing a site window can do; `todo` counts what is waiting for it (ripe tiles, thirsty tiles…). */
+type SiteAct = { id: string; label: ReactNode; todo: number; disabled?: boolean; onClick: () => void; before?: ReactNode; ghost?: boolean };
+
+/**
+ * D10: a big window shows one main action — the first in `acts` with
+ * something to do (else the first that can run) — and folds the rest under
+ * 더 보기, which says how many of them have work waiting.
+ */
+function ActionSet({ acts, busy }: { acts: readonly SiteAct[]; busy: boolean }) {
+  const main = acts.find((a) => a.todo > 0) ?? acts.find((a) => !a.disabled) ?? acts[0];
+  if (!main) return null;
+  const rest = acts.filter((a) => a !== main);
+  const waiting = rest.filter((a) => a.todo > 0).length;
+  return (
+    <>
+      {main.before}
+      <span className="l-town-buttons l-farm-site-actions">
+        <GameButton variant="primary" disabled={busy || !!main.disabled} onClick={main.onClick} data-testid={`site-act-${main.id}`}>
+          {main.label}
+        </GameButton>
+      </span>
+      {rest.length > 0 && (
+        <MoreActions hint={waiting ? `할 수 있는 일 ${waiting}` : undefined} data-testid="site-more">
+          {rest.map((a) => (
+            <Fragment key={a.id}>
+              {a.before}
+              <GameButton size="s" variant={a.ghost ? 'ghost' : undefined} disabled={busy || !!a.disabled} onClick={a.onClick} data-testid={`site-act-${a.id}`}>
+                {a.label}
+              </GameButton>
+            </Fragment>
+          ))}
+        </MoreActions>
+      )}
+    </>
+  );
+}
+
+/** Seeds I hold that may go in now (any season inside a greenhouse; in season on the shared field). */
+const seedsFor = (view: CloudRoomView, anySeason: boolean) => {
+  const seeds = view.life!.me.bag.seeds,
+    season = view.life!.calendar?.season ?? 'spring';
+  return CROPS.filter((c) => (seeds[c] ?? 0) > 0 && (anySeason || cropInSeason(c, season)));
+};
 
 export function FarmSitePanel({ room, view, notify, target, onClose }: Props) {
   const life = view.life;
@@ -116,6 +173,50 @@ function BuildList({ view, act, busy, me, id }: Ctx & { id: string }) {
   const inv = life.me.inv ?? {},
     balance = view.wallet.balance;
   const built = new Set((life.farmSites?.sites ?? []).map((s) => s.k));
+  const rows = facilitiesFor(id).map((def) => {
+    const lock = unlockBlock(def, ctx as Parameters<typeof unlockBlock>[1]) ?? (def.owner === 'shared' && built.has(def.id) ? '이미 농장에 있어요' : null);
+    const short =
+      def.owner === 'personal' && !lock
+        ? balance < def.build.beom
+          ? '범이 모자라요'
+          : Object.entries(def.build.mats).find(([m, n]) => (inv[m] ?? 0) < n)
+            ? '재료가 모자라요'
+            : null
+        : null;
+    return { def, lock, short };
+  });
+  const row = ({ def, lock, short }: (typeof rows)[number]) => (
+    <li key={def.id} className="l-town-row" data-testid={`site-build-${def.id}`}>
+      <span className="l-town-art" aria-hidden="true">
+        <Glyph name={lock ? 'lock' : def.live ? 'construction' : 'lock'} size={24} />
+      </span>
+      <div>
+        <strong>{def.name}</strong>
+        <small>{def.note}</small>
+        <small>
+          {unlockText(def) ? `열림: ${unlockText(def)} · ` : '처음부터 · '}
+          {costText(def.build)}
+          {def.upgrades?.length ? ` · ${maxTier(def)}단계까지` : ''}
+        </small>
+      </div>
+      <GameButton
+        size="s"
+        variant={lock || short ? undefined : 'primary'}
+        disabled={busy || !!lock || !!short}
+        onClick={() =>
+          act(
+            { kind: 'siteBuild', site: id, facility: def.id },
+            def.owner === 'personal' ? `${josa(def.name, '을/를')} 지었어요!` : `${def.name} 공사를 시작했어요. 친구들과 범과 재료를 보태 주세요.`,
+          )
+        }
+      >
+        {lock ?? short ?? (def.owner === 'personal' ? '짓기' : '공사 시작')}
+      </GameButton>
+    </li>
+  );
+  // D10: what can be built now stays in view; locked ones fold under 더 보기.
+  const open = rows.filter((r) => !r.lock),
+    locked = rows.filter((r) => r.lock);
   return (
     <>
       <p className="l-farm-site-note">
@@ -123,48 +224,20 @@ function BuildList({ view, act, busy, me, id }: Ctx & { id: string }) {
           ? '내 집 밭 아래의 작은 부지예요. 개인 시설은 혼자 짓고, 헐면 재료 절반을 돌려받아요.'
           : '공용 시설은 친구들이 범과 재료를 나눠 내서 지어요(마을 개척처럼). 헐면 낸 재료의 절반이 낸 사람에게 돌아가요.'}
       </p>
-      <ul className="l-town-list" aria-label="지을 수 있는 시설">
-        {facilitiesFor(id).map((def) => {
-          const lock = unlockBlock(def, ctx as Parameters<typeof unlockBlock>[1]) ?? (def.owner === 'shared' && built.has(def.id) ? '이미 농장에 있어요' : null);
-          const short =
-            def.owner === 'personal' && !lock
-              ? balance < def.build.beom
-                ? '범이 모자라요'
-                : Object.entries(def.build.mats).find(([m, n]) => (inv[m] ?? 0) < n)
-                  ? '재료가 모자라요'
-                  : null
-              : null;
-          return (
-            <li key={def.id} className="l-town-row" data-testid={`site-build-${def.id}`}>
-              <span className="l-town-art" aria-hidden="true">
-                {def.live ? '🏗️' : '🔒'}
-              </span>
-              <div>
-                <strong>{def.name}</strong>
-                <small>{def.note}</small>
-                <small>
-                  {unlockText(def) ? `열림: ${unlockText(def)} · ` : '처음부터 · '}
-                  {costText(def.build)}
-                  {def.upgrades?.length ? ` · ${maxTier(def)}단계까지` : ''}
-                </small>
-              </div>
-              <GameButton
-                size="s"
-                variant={lock || short ? undefined : 'primary'}
-                disabled={busy || !!lock || !!short}
-                onClick={() =>
-                  act(
-                    { kind: 'siteBuild', site: id, facility: def.id },
-                    def.owner === 'personal' ? `${josa(def.name, '을/를')} 지었어요!` : `${def.name} 공사를 시작했어요. 친구들과 범과 재료를 보태 주세요.`,
-                  )
-                }
-              >
-                {lock ?? short ?? (def.owner === 'personal' ? '짓기' : '공사 시작')}
-              </GameButton>
-            </li>
-          );
-        })}
-      </ul>
+      {open.length ? (
+        <ul className="l-town-list" aria-label="지을 수 있는 시설">
+          {open.map(row)}
+        </ul>
+      ) : (
+        <p className="l-farm-site-note">아직 지을 수 있는 시설이 없어요.</p>
+      )}
+      {locked.length > 0 && (
+        <MoreActions label="아직 못 짓는 시설" hint={`${locked.length}곳`} open={!open.length} className="l-farm-site-more">
+          <ul className="l-town-list" aria-label="아직 못 짓는 시설">
+            {locked.map(row)}
+          </ul>
+        </MoreActions>
+      )}
     </>
   );
 }
@@ -250,6 +323,29 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
   const life = view.life!;
   // F5: a tier may need a level (양식장 중간 연못: 낚시 Lv8).
   const tierLock = next ? upgradeBlock(def, v.t + 1, { flags: life.flags ?? [], level: (s) => life.growth?.skills.find((x) => x.id === s)?.level ?? 1 }) : null;
+  // Facilities with a page of their own keep its action as the main one.
+  const pond = def.id === 'fishPond' ? v.pond : undefined;
+  const ownPage = ['greenhouse', 'greenhouseMini', 'orchardPlot', 'barn', 'coop', 'fishPond', 'seedLab'].includes(def.id);
+  const upgrade = (main: boolean) =>
+    next && (
+      <section className="l-town-notice" aria-label="넓히기">
+        <strong>
+          {v.t + 1}단계 · {def.upgrades?.find((u) => u.tier === v.t + 1)?.effect}
+        </strong>
+        <p>
+          {costText(next)}
+          {need && ` · ${need.label}`}
+        </p>
+        <GameButton
+          size="s"
+          variant={main ? 'primary' : undefined}
+          disabled={busy || !!tierLock || !!need?.short || (def.owner === 'personal' && !canPay)}
+          onClick={() => act({ kind: 'siteUpgrade', site: id }, def.owner === 'personal' ? '넓혔어요!' : '넓히는 공사를 시작했어요. 친구들과 보태 주세요.')}
+        >
+          {tierLock ?? (need?.short ? `${need.label} 넓힐 수 있어요` : def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작')}
+        </GameButton>
+      </section>
+    );
   return (
     <>
       {def.id === 'greenhouse' || def.id === 'greenhouseMini' ? (
@@ -273,29 +369,21 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
         <p className="l-farm-site-note">{def.note}</p>
       )}
       {mine && v.fund && <FundBox {...props} />}
-      {mine && !v.fund && next && (
-        <section className="l-town-notice" aria-label="넓히기">
-          <strong>
-            {v.t + 1}단계 · {def.upgrades?.find((u) => u.tier === v.t + 1)?.effect}
-          </strong>
-          <p>
-            {costText(next)}
-            {need && ` · ${need.label}`}
-          </p>
-          <GameButton
-            size="s"
-            variant="primary"
-            disabled={busy || !!tierLock || !!need?.short || (def.owner === 'personal' && !canPay)}
-            onClick={() => act({ kind: 'siteUpgrade', site: id }, def.owner === 'personal' ? '넓혔어요!' : '넓히는 공사를 시작했어요. 친구들과 보태 주세요.')}
-          >
-            {tierLock ?? (need?.short ? `${need.label} 넓힐 수 있어요` : def.owner === 'personal' ? (canPay ? '넓히기' : '범이나 재료가 모자라요') : '넓히는 공사 시작')}
-          </GameButton>
-        </section>
-      )}
+      {mine && !v.fund && next && !ownPage && upgrade(true)}
       {mine && (
-        <GameButton size="s" variant="ghost" disabled={busy} onClick={() => setDemolish(true)}>
-          헐기
-        </GameButton>
+        // D10: the facility's own page (or 넓히기) is the main action; managing it folds away.
+        <MoreActions label={[ownPage && !v.fund && next ? '넓히기' : '', pond ? '비우기' : '', '헐기'].filter(Boolean).join(' · ')} className="l-farm-site-more" data-testid="site-manage">
+          {ownPage && !v.fund && next && upgrade(false)}
+          {pond && (
+            // 양식장: emptying it lives with the other ways of managing the site.
+            <GameButton size="s" variant="ghost" disabled={busy || pond.o.length > 0} onClick={() => act({ kind: 'pondEmpty', site: id }, `양식장을 비웠어요. 처음 넣은 ${itemName(pond.f)}은 가방으로 돌아왔어요.`)}>
+              비우기
+            </GameButton>
+          )}
+          <GameButton size="s" variant="ghost" disabled={busy} onClick={() => setDemolish(true)}>
+            헐기
+          </GameButton>
+        </MoreActions>
       )}
       {demolish && (
         <ConfirmModal
@@ -317,15 +405,14 @@ function Built(props: Ctx & { id: string; v: SiteView; def: FacilityDef; onClose
 
 /** Seeds I hold (any season inside a greenhouse; in season on the shared field). */
 function SeedPick({ view, anySeason, value, onChange }: { view: CloudRoomView; anySeason: boolean; value: Crop | null; onChange: (c: Crop) => void }) {
-  const seeds = view.life!.me.bag.seeds,
-    season = view.life!.calendar?.season ?? 'spring';
-  const have = CROPS.filter((c) => (seeds[c] ?? 0) > 0 && (anySeason || cropInSeason(c, season)));
+  const seeds = view.life!.me.bag.seeds;
+  const have = seedsFor(view, anySeason);
   if (!have.length) return <p className="l-farm-site-note">심을 씨앗이 없어요. 시장 거리 등불 잡화점에서 사 와요.</p>;
   return (
     <span className="l-farm-site-seeds" role="radiogroup" aria-label="씨앗">
       {have.map((c) => (
         <GameButton key={c} size="s" variant={value === c ? 'primary' : undefined} aria-pressed={value === c} onClick={() => onChange(c)}>
-          {CROP_INFO[c].emoji} {CROP_INFO[c].name} {seeds[c]}
+          <ItemIcon id={c} size={20} /> {CROP_INFO[c].name} {seeds[c]}
         </GameButton>
       ))}
     </span>
@@ -343,7 +430,9 @@ function PlotGrid({ cols, n, plots, me, owners = false, tilled }: { cols: number
         const grass = !!tilled && !tilled.has(t);
         return (
           <li key={t} className={`l-farm-site-tile${p?.r ? ' is-ready' : ''}${owners && p?.o === me ? ' is-mine' : ''}${grass ? ' is-grass' : ''}`} title={`${t + 1}번 칸 · ${grass ? '아직 갈지 않았어요' : plotLabel(p)}${who ? ` · ${who}` : ''}`}>
-            <span aria-hidden="true">{plotFace(p)}</span>
+            <span aria-hidden="true">
+              <PlotFace p={p} />
+            </span>
             {who && <small>{who}</small>}
           </li>
         );
@@ -361,6 +450,7 @@ function Greenhouse({ view, act, busy, me, id, v, def, mine }: Ctx & { id: strin
   const ripe = plots.filter((p) => p.r && (!shared || p.o === undefined || p.o === me)).length;
   const thirsty = plots.filter((p) => p.c && !p.w && !p.r).length;
   const empty = n - plots.filter((p) => p.c).length;
+  const canSow = seedsFor(view, true).length > 0;
   return (
     <>
       <p className="l-farm-site-note">
@@ -370,30 +460,32 @@ function Greenhouse({ view, act, busy, me, id, v, def, mine }: Ctx & { id: strin
       </p>
       <PlotGrid cols={shared ? 6 : 4} n={n} plots={plots} me={me} owners={shared} />
       {mine ? (
-        <>
-          <SeedPick view={view} anySeason value={seed} onChange={setSeed} />
-          <span className="l-town-buttons l-farm-site-actions">
-            <GameButton
-              size="s"
-              variant="primary"
-              disabled={busy || !seed || !empty || (shared && myCount >= GREENHOUSE_PER_FRIEND)}
-              onClick={() => seed && act({ kind: 'sitePlant', site: id, tile: -1, crop: seed }, `${CROP_INFO[seed].name}을 심었어요.`)}
-            >
-              {shared ? '내 칸에 심기' : '빈 칸 모두 심기'}
-            </GameButton>
-            {shared && (
-              <GameButton size="s" disabled={busy || !seed || !empty} onClick={() => seed && act({ kind: 'sitePlant', site: id, tile: -1, crop: seed, shared: true }, `공용으로 ${CROP_INFO[seed].name}을 심었어요.`)}>
-                공용으로 심기
-              </GameButton>
-            )}
-            <GameButton size="s" disabled={busy || !thirsty} onClick={() => act({ kind: 'siteWater', site: id, tile: -1 }, '온실에 물을 줬어요.')}>
-              물 주기 {thirsty ? `(${thirsty})` : ''}
-            </GameButton>
-            <GameButton size="s" disabled={busy || !ripe} onClick={() => act({ kind: 'siteHarvest', site: id, tile: -1 }, '온실 작물을 거뒀어요.')}>
-              거두기 {ripe ? `(${ripe})` : ''}
-            </GameButton>
-          </span>
-        </>
+        <ActionSet
+          busy={busy}
+          acts={[
+            { id: 'harvest', label: `거두기${ripe ? ` (${ripe})` : ''}`, todo: ripe, disabled: !ripe, onClick: () => act({ kind: 'siteHarvest', site: id, tile: -1 }, '온실 작물을 거뒀어요.') },
+            { id: 'water', label: `물 주기${thirsty ? ` (${thirsty})` : ''}`, todo: thirsty, disabled: !thirsty, onClick: () => act({ kind: 'siteWater', site: id, tile: -1 }, '온실에 물을 줬어요.') },
+            {
+              id: 'plant',
+              label: shared ? '내 칸에 심기' : '빈 칸 모두 심기',
+              todo: canSow && !(shared && myCount >= GREENHOUSE_PER_FRIEND) ? empty : 0,
+              disabled: !seed || !empty || (shared && myCount >= GREENHOUSE_PER_FRIEND),
+              before: <SeedPick view={view} anySeason value={seed} onChange={setSeed} />,
+              onClick: () => seed && act({ kind: 'sitePlant', site: id, tile: -1, crop: seed }, `${CROP_INFO[seed].name}을 심었어요.`),
+            },
+            ...(shared
+              ? [
+                  {
+                    id: 'plant-shared',
+                    label: '공용으로 심기',
+                    todo: 0,
+                    disabled: !seed || !empty,
+                    onClick: () => seed && act({ kind: 'sitePlant', site: id, tile: -1, crop: seed, shared: true }, `공용으로 ${CROP_INFO[seed].name}을 심었어요.`),
+                  },
+                ]
+              : []),
+          ]}
+        />
       ) : null}
     </>
   );
@@ -415,7 +507,7 @@ function Orchard({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: S
           return (
             <li key={slot} className="l-town-row" data-testid={`orchard-slot-${slot}`}>
               <span className="l-town-art" aria-hidden="true">
-                {t ? (today >= t.from ? '🌳' : '🌱') : '·'}
+                {t ? <Glyph name={today >= t.from ? 'tree' : 'sprout'} size={24} /> : <Glyph name="pin" size={16} />}
               </span>
               <div>
                 <strong>{t ? SAPLINGS[t.f].name : `${slot + 1}번 자리 · 비어 있어요`}</strong>
@@ -435,13 +527,14 @@ function Orchard({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: S
                     베기
                   </GameButton>
                 ) : (
-                  <span className="l-farm-site-seeds">
+                  // D10: the sapling choices fold per empty spot (was every kind × every spot in view).
+                  <MoreActions label="묘목 심기" className="l-farm-site-more">
                     {FRUIT_TREE_KINDS.map((k: FruitTreeKind) => (
                       <GameButton key={k} size="s" disabled={busy || view.wallet.balance < SAPLINGS[k].price} onClick={() => act({ kind: 'siteTree', site: id, slot, tree: k }, `${josa(SAPLINGS[k].name, '을/를')} 심었어요.`)}>
                         {itemName(k)} {formatBeom(SAPLINGS[k].price)}
                       </GameButton>
                     ))}
-                  </span>
+                  </MoreActions>
                 ))}
             </li>
           );
@@ -497,7 +590,7 @@ function Pond({ view, act, busy, id, v, mine }: Ctx & { id: string; v: SiteView;
       {p.want && (
         <section className="l-town-notice" aria-label="양식장이 바라는 것">
           <strong>
-            💬 {p.want.name} {p.want.n}개가 있으면 좋겠어요
+            <Glyph name="chat" size={16} /> {p.want.name} {p.want.n}개가 있으면 좋겠어요
           </strong>
           <p>가져다주면 물고기를 한 마리 더 키울 수 있어요.</p>
           {mine && (
@@ -511,9 +604,6 @@ function Pond({ view, act, busy, id, v, mine }: Ctx & { id: string; v: SiteView;
         <span className="l-town-buttons l-farm-site-actions">
           <GameButton variant="primary" disabled={busy || !p.o.length} onClick={() => act({ kind: 'pondCollect', site: id }, `${p.o.map((o) => itemName(o)).join(', ')}을(를) 거뒀어요.`)}>
             {p.o.length ? `거두기 (${p.o.map((o) => (isRoeId(o) ? itemName(o) : '물고기')).join(' · ')})` : '아직 거둘 게 없어요'}
-          </GameButton>
-          <GameButton size="s" variant="ghost" disabled={busy || p.o.length > 0} onClick={() => act({ kind: 'pondEmpty', site: id }, `양식장을 비웠어요. 처음 넣은 ${name}은 가방으로 돌아왔어요.`)}>
-            비우기
           </GameButton>
         </span>
       )}
@@ -531,6 +621,17 @@ function SeedLab({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: S
   const full = lab.q.length >= slotsAt(def, v.t) || lab.today >= lab.perDay;
   const crops = CROPS.filter((c) => (produce[c] ?? 0) >= lab.input);
   const improved = life.farmx?.improved ?? [];
+  const loadList = crops.length ? (
+    <span className="l-farm-site-seeds" aria-label="넣을 작물">
+      {crops.map((c) => (
+        <GameButton key={c} size="s" disabled={busy || full} onClick={() => act({ kind: 'labLoad', site: id, crop: c }, `${CROP_INFO[c].name} ${lab.input}개를 넣었어요.`)}>
+          <ItemIcon id={c} size={20} /> {CROP_INFO[c].name} {produce[c]}
+        </GameButton>
+      ))}
+    </span>
+  ) : (
+    <p className="l-farm-site-note">같은 작물이 {lab.input}개 이상 있어야 해요.</p>
+  );
   return (
     <>
       <p className="l-farm-site-note">
@@ -544,20 +645,21 @@ function SeedLab({ view, act, busy, id, v, def, mine }: Ctx & { id: string; v: S
       </section>
       {mine && (
         <>
-          {crops.length ? (
-            <span className="l-farm-site-seeds" aria-label="넣을 작물">
-              {crops.map((c) => (
-                <GameButton key={c} size="s" disabled={busy || full} onClick={() => act({ kind: 'labLoad', site: id, crop: c }, `${CROP_INFO[c].name} ${lab.input}개를 넣었어요.`)}>
-                  {CROP_INFO[c].emoji} {CROP_INFO[c].name} {produce[c]}
-                </GameButton>
-              ))}
+          {ready > 0 && (
+            <span className="l-town-buttons l-farm-site-actions">
+              <GameButton variant="primary" disabled={busy} onClick={() => act({ kind: 'labCollect', site: id }, `개량 씨앗 ${ready}개를 거뒀어요.`)}>
+                개량 씨앗 거두기 ({ready})
+              </GameButton>
             </span>
-          ) : (
-            <p className="l-farm-site-note">같은 작물이 {lab.input}개 이상 있어야 해요.</p>
           )}
-          <GameButton variant="primary" disabled={busy || !ready} onClick={() => act({ kind: 'labCollect', site: id }, `개량 씨앗 ${ready}개를 거뒀어요.`)}>
-            {ready ? `개량 씨앗 거두기 (${ready})` : '아직 다 된 씨앗이 없어요'}
-          </GameButton>
+          {/* D10: with seeds to collect that is the main action and loading folds away; otherwise loading is it. */}
+          {ready > 0 ? (
+            <MoreActions label="작물 넣기" hint={crops.length ? `${crops.length}가지` : undefined} className="l-farm-site-more">
+              {loadList}
+            </MoreActions>
+          ) : (
+            loadList
+          )}
         </>
       )}
       {improved.length > 0 && <p className="l-farm-site-note">가진 개량 씨앗: {improved.map((x) => `${CROP_INFO[x.crop].name} ${x.n}`).join(' · ')} (텃밭 장부에서 심어요)</p>}
@@ -574,36 +676,41 @@ function CommonPage({ view, act, busy, me, sites }: Ctx) {
   const openTilled = [...till].filter((t) => !planted.has(t)).length;
   const ripe = field.p.filter((p) => p.r).length,
     thirsty = field.p.filter((p) => p.c && !p.w && !p.r).length;
+  const canSow = seedsFor(view, false).length > 0;
+  // D10: the grid on the left, the goal and the one next job on the right (the right half was empty).
   return (
-    <>
-      <section className="l-town-notice" aria-label="마을 대형 작물" data-testid="common-goal">
-        <strong>
-          이번 계절 마을 대형 작물 · {goal?.crop ?? '대형 작물'} {goal?.n ?? 0}/{goal?.need ?? COMMON_GOAL_GIANTS}
-          {goal?.done ? ' · 이뤘어요!' : ''}
-        </strong>
-        <p>
-          호박·수박·양배추를 3×2 묶음으로 한꺼번에 심으면 공동 밭에서는 대형 작물이 더 잘 나와요. 목표를 이루면 함께한 친구 모두 마을 공사 현판과 농사 경험치를 받아요.
-          {goal?.by.length ? ` 함께한 친구: ${goal.by.map((a) => ACTORS[a] ?? '친구').join(', ')}` : ''}
-        </p>
-      </section>
-      <p className="l-farm-site-note">누구나 갈고 심고 물 주고 거둘 수 있어요. 거둔 것은 공동 창고로 가서 꾸러미와 축제 기금에 써요. 씨앗은 심는 사람이 내요.</p>
+    <div className="l-farm-site-split">
       <PlotGrid cols={6} n={36} plots={field.p} me={me} tilled={till} />
-      <SeedPick view={view} anySeason={false} value={seed} onChange={setSeed} />
-      <span className="l-town-buttons l-farm-site-actions">
-        <GameButton size="s" disabled={busy || till.size >= 36} onClick={() => act({ kind: 'commonTill', tile: -1 }, '공동 밭을 갈았어요.')}>
-          모두 갈기 {till.size < 36 ? `(${36 - till.size})` : ''}
-        </GameButton>
-        <GameButton size="s" variant="primary" disabled={busy || !seed || !openTilled} onClick={() => seed && act({ kind: 'commonPlant', tile: -1, crop: seed }, `공동 밭에 ${CROP_INFO[seed].name}을 심었어요.`)}>
-          빈 칸 심기 {openTilled ? `(${openTilled})` : ''}
-        </GameButton>
-        <GameButton size="s" disabled={busy || !thirsty} onClick={() => act({ kind: 'commonWater', tile: -1 }, '공동 밭에 물을 줬어요.')}>
-          물 주기 {thirsty ? `(${thirsty})` : ''}
-        </GameButton>
-        <GameButton size="s" disabled={busy || !ripe} onClick={() => act({ kind: 'commonHarvest', tile: -1 }, '공동 밭을 거뒀어요. 공동 창고에 넣었어요.')}>
-          거두기 {ripe ? `(${ripe})` : ''}
-        </GameButton>
-      </span>
-    </>
+      <div className="l-farm-site-side">
+        <section className="l-town-notice" aria-label="마을 대형 작물" data-testid="common-goal">
+          <strong>
+            이번 계절 마을 대형 작물 · {goal?.crop ?? '대형 작물'} {goal?.n ?? 0}/{goal?.need ?? COMMON_GOAL_GIANTS}
+            {goal?.done ? ' · 이뤘어요!' : ''}
+          </strong>
+          <p>
+            호박·수박·양배추를 3×2 묶음으로 한꺼번에 심으면 공동 밭에서는 대형 작물이 더 잘 나와요. 목표를 이루면 함께한 친구 모두 마을 공사 현판과 농사 경험치를 받아요.
+            {goal?.by.length ? ` 함께한 친구: ${goal.by.map((a) => ACTORS[a] ?? '친구').join(', ')}` : ''}
+          </p>
+        </section>
+        <p className="l-farm-site-note">누구나 갈고 심고 물 주고 거둘 수 있어요. 거둔 것은 공동 창고로 가서 꾸러미와 축제 기금에 써요. 씨앗은 심는 사람이 내요.</p>
+        <ActionSet
+          busy={busy}
+          acts={[
+            { id: 'harvest', label: `거두기${ripe ? ` (${ripe})` : ''}`, todo: ripe, disabled: !ripe, onClick: () => act({ kind: 'commonHarvest', tile: -1 }, '공동 밭을 거뒀어요. 공동 창고에 넣었어요.') },
+            { id: 'water', label: `물 주기${thirsty ? ` (${thirsty})` : ''}`, todo: thirsty, disabled: !thirsty, onClick: () => act({ kind: 'commonWater', tile: -1 }, '공동 밭에 물을 줬어요.') },
+            {
+              id: 'plant',
+              label: `빈 칸 심기${openTilled ? ` (${openTilled})` : ''}`,
+              todo: canSow ? openTilled : 0,
+              disabled: !seed || !openTilled,
+              before: <SeedPick view={view} anySeason={false} value={seed} onChange={setSeed} />,
+              onClick: () => seed && act({ kind: 'commonPlant', tile: -1, crop: seed }, `공동 밭에 ${CROP_INFO[seed].name}을 심었어요.`),
+            },
+            { id: 'till', label: `모두 갈기${till.size < 36 ? ` (${36 - till.size})` : ''}`, todo: 36 - till.size, disabled: till.size >= 36, onClick: () => act({ kind: 'commonTill', tile: -1 }, '공동 밭을 갈았어요.') },
+          ]}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -631,7 +738,7 @@ function StorePage({ view, act, busy, sites }: Ctx) {
         {store.map((s) => (
           <li key={`${s.id}@${s.q}`} className="l-town-row">
             <span className="l-town-art" aria-hidden="true">
-              {CROP_INFO[s.id as Crop]?.emoji ?? '📦'}
+              <ItemIcon id={s.id} size={32} />
             </span>
             <div>
               <strong>

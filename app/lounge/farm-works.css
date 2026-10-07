@@ -264,6 +264,13 @@
   padding: 0;
   list-style: none;
 }
+/* D10: the other empty spots fold under one "빈 자리 N곳 더". */
+.l-fw-more {
+  margin: 0;
+}
+.l-fw-more .ui-more-body > .l-fw-slots {
+  flex: 1 1 100%;
+}
 .l-fw-slot {
   display: grid;
   gap: var(--sp-2);
