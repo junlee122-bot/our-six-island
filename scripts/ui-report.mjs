@@ -8,7 +8,7 @@ const GROUPS = {
   'bank-rob': ['bank-rob'], npc: ['npc'],
   village: ['village'], map: ['map'], bag: ['bag'], shop: ['shop'], ledger: ['ledger'],
   'farm-layout': ['farm-layout'], 'farm-works': ['farm-works'], 'farm-market': ['farm-market'],
-  growth: ['growth', 'growth-research'], bonds: ['bonds'], collection: ['collection'],
+  growth: ['growth', 'growth-research'], bonds: ['bonds'], tastes: ['tastes'], collection: ['collection'],
   'ui-kit': ['ui-kit', 'ui-kit-panels', 'ui-kit-glyphs'],
 };
 export const UI_METRICS = ['lowCount', 'smallCount', 'narrowCount', 'cutCount', 'overlapCount', 'coveredCount'];
