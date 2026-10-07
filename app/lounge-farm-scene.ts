@@ -7,7 +7,9 @@
 // board), F3's facility sites and the 공동 밭 (lounge-farm-sites-3d.ts), and
 // the road south to the hub. Tilled tiles and
 // crops are instanced (the hub's crop shapes, lounge-village-life-3d.ts), so
-// all 840 tiles cost a handful of draw calls. Layout: lounge-farm-layout.ts;
+// all 840 tiles cost a handful of draw calls. I2-world D3: the field and the
+// fallow tiles are patterned grass (they turn with the season like the
+// meadow), tilled tiles are soil with furrows. Layout: lounge-farm-layout.ts;
 // what to draw comes from lounge-farm-view.ts (farmSceneState). No React.
 import * as THREE from 'three';
 import {
@@ -37,6 +39,7 @@ import {
 } from './lounge-farm-layout';
 import { FARM_MODEL_URLS } from './lounge-district-models';
 import { DistrictSet, PAVING, districtMat, shadowed, type DistrictUpdate } from './lounge-district-kit';
+import { PATTERN_SPAN, groundPattern } from './lounge-season-world';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale } from './lounge-village-layout';
 import { Batches, GEO, MAT, SOIL_TOP, cropInstances, matrix, type Instance } from './lounge-village-life-3d';
 import { FROST_MAT, deadShapes, fixtureShapes, giantShapes, machineShapes, trellisShapes } from './lounge-farm-3d';
@@ -58,6 +61,14 @@ const SOIL_SIZE = FIELD_TILE * 0.9;
 
 export type FarmUpdate = DistrictUpdate & { farm?: FarmSceneState; me?: number };
 
+/** A unit box with its UVs scaled by `uv` (a pattern keeps its world size on a small tile). */
+function tileBox(uv: number) {
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const a = geo.getAttribute('uv') as THREE.BufferAttribute;
+  for (let i = 0; i < a.count; i++) a.setXY(i, a.getX(i) * uv, a.getY(i) * uv);
+  return geo;
+}
+
 export class FarmSet extends DistrictSet {
   private readonly dynamic = new THREE.Group();
   private readonly batches: Batches;
@@ -69,9 +80,18 @@ export class FarmSet extends DistrictSet {
   private sites: SiteDecor;
   /** F5: 명인 표지판 per friend (made the first time their field reaches 120 tiles). */
   private masters = new Map<number, THREE.Object3D[]>();
+  /** Field tiles: furrowed soil (dry, watered) and fallow grass (seasonal, like the meadow). */
+  private tileMat = {
+    soil: this.own(districtMat('#8c6040', { map: groundPattern('furrow') })),
+    wet: this.own(districtMat('#5c3d27', { map: groundPattern('furrow'), roughness: 0.7 })),
+    fallow: this.own(districtMat('#9ab470', { map: groundPattern('grass') })),
+  };
+  /** A unit box whose top shows a tile-sized piece of the grass pattern (not the whole 7-unit tile squeezed in). */
+  private fallowGeo = this.own(tileBox(SOIL_SIZE / PATTERN_SPAN.grass));
 
   constructor(look: { ground: string; groundFar: string }) {
     super('farm', FARM_MODEL_URLS);
+    this.palette.add(this.tileMat.fallow, 'grass');
     this.ground(FARM_W, FARM_D, look);
     for (const p of FARM_PAVING) this.pave(p, p.tone === 'yard' ? PAVING.plaza : p.tone === 'lane' ? PAVING.lane : PAVING.road);
     for (const f of FARM_FIELDS) this.buildFieldBase(f.x0, f.z0, f.w, f.d, f.actor);
@@ -82,7 +102,8 @@ export class FarmSet extends DistrictSet {
       {
         place: (model, x, z, size, rot, name) => this.place(model, x, z, size, rot, name),
         signpost: (text, sub, colors, x, z, opts) => this.signpost(text, sub, colors, x, z, opts),
-        plane: (w, d, color, y) => this.plane(w, d, color, y),
+        // The 공동 밭's grass is the fields' patterned, seasonal grass.
+        plane: (w, d, color, y) => (color === FIELD_GRASS ? this.floor({ x: 0, z: 0, w, d }, color, y, 'grass', 'grass') : this.plane(w, d, color, y)),
         box: (w, h, d, color) => this.box(w, h, d, color),
       },
       ACTOR_NAMES,
@@ -99,8 +120,7 @@ export class FarmSet extends DistrictSet {
 
   /** The grass under a field and a low timber edge (the tilled block is drawn per update). */
   private buildFieldBase(x0: number, z0: number, w: number, d: number, actor: number) {
-    const base = this.plane(w, d, FIELD_GRASS, 0.008);
-    base.position.set(x0 + w / 2, 0.008, z0 + d / 2);
+    const base = this.floor({ x: x0 + w / 2, z: z0 + d / 2, w, d }, FIELD_GRASS, 0.008, 'grass', 'grass');
     base.name = 'farm-field-' + actor;
     this.root.add(base);
     const rim = (x: number, z: number, rw: number, rd: number) => {
@@ -231,10 +251,10 @@ export class FarmSet extends DistrictSet {
           p = plots.get(tile);
         // F2: only tilled tiles are soil; the rest of the open block is short grass (fallow).
         if (!p?.tilled) {
-          soil.push({ geo: GEO.box, mat: MAT.fallow, m: matrix(at.x, 0.03, at.z, SOIL_SIZE, 0.04, SOIL_SIZE) });
+          soil.push({ geo: this.fallowGeo, mat: this.tileMat.fallow, m: matrix(at.x, 0.03, at.z, SOIL_SIZE, 0.04, SOIL_SIZE) });
           continue;
         }
-        soil.push({ geo: GEO.box, mat: p.wet ? MAT.soilWet : MAT.soil, m: matrix(at.x, 0.14, at.z, SOIL_SIZE, 0.12, SOIL_SIZE) });
+        soil.push({ geo: GEO.box, mat: p.wet ? this.tileMat.wet : this.tileMat.soil, m: matrix(at.x, 0.14, at.z, SOIL_SIZE, 0.12, SOIL_SIZE) });
         const seed = field.actor * 1.7 + tile;
         if (!p.crop && p.dead) {
           const local: Instance[] = [];

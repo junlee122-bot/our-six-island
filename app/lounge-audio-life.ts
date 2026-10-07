@@ -1,6 +1,9 @@
 // Life-expansion sound cues (fishing, foraging, cooking, museum, bundles) on
 // the shared lounge audio engine's sfx bus (loungeAudio.cue / table): no second
-// AudioContext, silent when sound is off or before the first gesture.
+// AudioContext, silent when sound is off or before the first gesture. The hoe
+// and the splashes are recorded samples (loungeAudio.sample, CC0, see
+// public/assets/lounge/sfx/life-sources.json); their oscillator cues below
+// play until the file has loaded or when it cannot be decoded.
 import { loungeAudio } from './lounge-audio';
 import { getSettings } from './lounge-settings';
 
@@ -11,7 +14,9 @@ type LifeSfx =
   // 성장 P1: a level-up flourish, chopping, breaking rock, the blacksmith's anvil.
   | 'levelup' | 'chop' | 'smash' | 'anvil'
   // 무드: an inspiration (a rising music-box run), a cheer, a sip or a bite of a snack.
-  | 'inspire' | 'cheer' | 'sip';
+  | 'inspire' | 'cheer' | 'sip'
+  // I2-world D6: the hoe biting into a field tile.
+  | 'hoe';
 
 const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorType; peak?: number }> = {
   // A soft whoosh-plop: falling triangle notes.
@@ -37,14 +42,22 @@ const NOTES: Record<LifeSfx, { notes: number[]; step: number; type: OscillatorTy
   inspire: { notes: [783.99, 987.77, 1174.66, 1567.98, 1975.53, 2349.32, 3135.96], step: 0.085, type: 'sine', peak: 0.07 },
   cheer: { notes: [659.25, 880, 1108.73], step: 0.07, type: 'triangle', peak: 0.06 },
   sip: { notes: [523.25, 440, 587.33], step: 0.08, type: 'sine', peak: 0.05 },
+  hoe: { notes: [196, 164.81], step: 0.04, type: 'triangle', peak: 0.06 },
 };
 
 /** Plays one life cue (quietly does nothing when sound is off). */
 export function lifeSfx(kind: LifeSfx) {
   if (!getSettings().sound) return;
   const n = NOTES[kind];
-  loungeAudio.cue(n.notes, n.step, n.type, n.peak);
-  // A short paper-snap stands in for the splash of a cast or a bite.
-  if (kind === 'cast' || kind === 'bite' || kind === 'splash') loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05);
+  const tone = () => loungeAudio.cue(n.notes, n.step, n.type, n.peak);
+  if (kind === 'hoe') return loungeAudio.sample('hoe', tone);
+  if (kind === 'splash')
+    return loungeAudio.sample('splash', () => {
+      tone();
+      loungeAudio.table('flip', 1, 0.05);
+    });
+  tone();
+  // The float lands with a small splash (a paper snap until the file loads).
+  if (kind === 'cast' || kind === 'bite') loungeAudio.sample('splash', () => loungeAudio.table('flip', kind === 'bite' ? 2 : 1, 0.05), 0.55);
   if (kind === 'chop' || kind === 'smash') loungeAudio.table('flip', kind === 'smash' ? 2 : 1, 0.06);
 }

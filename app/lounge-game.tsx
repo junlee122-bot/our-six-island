@@ -1102,6 +1102,8 @@ function AccountLounge({
       setModal(null);
       setSheet(null);
       setTab(destination);
+      // A door between the village and a house, a shop or a hall (CC0 sample).
+      if (destination !== from && (isInteriorArea(destination) || isInteriorArea(from))) loungeAudio.door();
       if (destination !== from || visiting !== null) sendArea(destination, at);
       else if (at) move(at.x, at.y);
       then?.();
@@ -1249,7 +1251,7 @@ function AccountLounge({
     if (quick.kind === 'water')
       void lifeRun({ kind: 'water', plot: -1 }, `${quick.n}칸에 물을 줬어요. 내일 아침까지 촉촉해요!`).then((ok) => ok && loungeAudio.chime('water'));
     else if (quick.kind === 'till')
-      void lifeRun({ kind: 'till', plot: -1 }, `풀밭 ${quick.n}칸을 괭이로 갈았어요. 이제 씨앗을 심어요.`, 'pickup');
+      void lifeRun({ kind: 'till', plot: -1 }, `풀밭 ${quick.n}칸을 괭이로 갈았어요. 이제 씨앗을 심어요.`, 'hoe');
     else if (quick.kind === 'plant') {
       const crop = hotbar.tool.slice(5) as Crop;
       void lifeRun({ kind: 'plant', plot: -1, crop }, `${itemName(crop)} ${quick.n}칸을 심었어요.`).then(
@@ -1283,7 +1285,7 @@ function AccountLounge({
         const got = after ? Object.entries(after).reduce((n, [c, k]) => n + Math.max(0, k - (before[c as Crop] ?? 0)), 0) : 0;
         if (got) notify(`${got}개를 거뒀어요. 가방에 담았어요.`);
       });
-    } else if (act.kind === 'till') void lifeRun({ kind: 'till', plot: i }, '', 'pickup');
+    } else if (act.kind === 'till') void lifeRun({ kind: 'till', plot: i }, '', 'hoe');
     else if (act.kind === 'plant') void lifeRun({ kind: 'plant', plot: i, crop: tool.slice(5) as Crop }, '').then((ok) => ok && loungeAudio.chime('plant'));
     else if (act.kind === 'fertilize') void lifeRun({ kind: 'fertilize', plot: i, item: tool }, '', 'pickup');
     else if (act.kind === 'water') void lifeRun({ kind: 'water', plot: i }, '').then((ok) => ok && loungeAudio.chime('water'));

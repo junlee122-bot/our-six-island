@@ -19,7 +19,9 @@ import {
 import { VILLAGE_SEASON_MATERIALS, batchDirectMeshes } from './lounge-village-world';
 import { SPAWN_POINTS } from './lounge-village-spots';
 import { BIRTHDAY_CAKE_POINT } from './lounge-birthday';
-import { SEASON_TINT, ambienceOf } from './lounge-life-ui';
+import { SEASON_TINT } from './lounge-life-ui';
+// I2-world: the season mix and the weather particles are shared with the districts.
+import { WeatherParticles, seasonMix } from './lounge-season-world';
 import type { Season, Weather } from './lounge-calendar';
 
 const mat = (color: string, extra: Partial<THREE.MeshStandardMaterialParameters> = {}) =>
@@ -156,41 +158,6 @@ function markerTexture(kind: 'forage' | 'bug') {
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
-function particleTexture(kind: 'rain' | 'snow' | 'leaves' | 'petals') {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 32;
-  const c = canvas.getContext('2d')!;
-  if (kind === 'rain') {
-    const g = c.createLinearGradient(16, 0, 16, 32);
-    g.addColorStop(0, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(255,255,255,1)');
-    c.fillStyle = g;
-    c.fillRect(14.5, 0, 3, 32);
-  } else if (kind === 'snow') {
-    const g = c.createRadialGradient(16, 16, 1, 16, 16, 12);
-    g.addColorStop(0, 'rgba(255,255,255,1)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 32, 32);
-  } else {
-    c.fillStyle = '#ffffff';
-    c.beginPath();
-    if (kind === 'leaves') {
-      c.moveTo(16, 3);
-      c.bezierCurveTo(28, 10, 26, 24, 16, 29);
-      c.bezierCurveTo(6, 24, 4, 10, 16, 3);
-    } else c.ellipse(16, 16, 9, 6, 0.6, 0, Math.PI * 2);
-    c.fill();
-  }
-  const t = new THREE.CanvasTexture(canvas);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-type Ambience = 'rain' | 'snow' | 'leaves' | 'petals';
-const AMBIENCE_COUNT: Record<Ambience, number> = { rain: 700, snow: 420, leaves: 90, petals: 110 };
-const AREA = { x: 64, y: 22, z: 64 };
-
 export type SeasonUpdate = {
   season: Season;
   weather: Weather;
@@ -230,7 +197,7 @@ export class VillageSeasonLayer {
   private bite: THREE.Sprite;
   private fishing: FishingState = { phase: 'none', from: { x: 0, z: 0 }, to: { x: 0, z: 0 } };
   private fishingSince = 0;
-  private particles: { kind: Ambience; points: THREE.Points; speed: Float32Array; phase: Float32Array } | null = null;
+  private weather: WeatherParticles;
   private lastKey = '';
   private lastTick = 0;
   private effects = true;
@@ -241,6 +208,7 @@ export class VillageSeasonLayer {
   constructor(parent: THREE.Object3D) {
     this.root.name = 'village-season';
     parent.add(this.root);
+    this.weather = new WeatherParticles(this.root);
     const m = VILLAGE_SEASON_MATERIALS;
     this.base = {
       grass: m.grass.color.clone(),
@@ -919,12 +887,12 @@ export class VillageSeasonLayer {
     const m = VILLAGE_SEASON_MATERIALS;
     const blend = (target: THREE.MeshStandardMaterial, base: THREE.Color, color: string, k: number) =>
       target.color.copy(base).lerp(new THREE.Color(color), k);
-    const k = u.season === 'summer' ? 0.25 : u.season === 'winter' ? (u.weather === 'snow' ? 0.8 : 0.55) : 0.5;
-    blend(m.grass, this.base.grass, tint.grass, k);
-    blend(m.grassLight, this.base.grassLight, tint.grassLight, k);
-    blend(m.leaf, this.base.leaf, tint.leaf, u.season === 'summer' ? 0.2 : 0.55);
-    blend(m.leafLight, this.base.leafLight, tint.leafLight, u.season === 'summer' ? 0.2 : 0.6);
-    blend(m.leafDark, this.base.leafDark, tint.leaf, u.season === 'summer' ? 0.1 : 0.4);
+    const mix = seasonMix(u.season, u.weather);
+    blend(m.grass, this.base.grass, tint.grass, mix.grass);
+    blend(m.grassLight, this.base.grassLight, tint.grassLight, mix.grass);
+    blend(m.leaf, this.base.leaf, tint.leaf, mix.leaf);
+    blend(m.leafLight, this.base.leafLight, tint.leafLight, mix.leafLight);
+    blend(m.leafDark, this.base.leafDark, tint.leaf, mix.leafDark);
     MAT.pond.color.set(u.season === 'winter' ? '#cfe6ec' : '#79c3c8');
     // Flags.
     for (const [flag, objects] of this.flagged) for (const o of objects) o.visible = u.flags.includes(flag);
@@ -957,51 +925,9 @@ export class VillageSeasonLayer {
       points.visible = list.length > 0;
       this.markerCount += list.length;
     }
-    // Ambience particles.
-    const want = this.effects ? ambienceOf(u.season, u.weather) : null;
-    if (this.particles?.kind !== want) {
-      if (this.particles) {
-        this.root.remove(this.particles.points);
-        this.particles.points.geometry.dispose();
-        (this.particles.points.material as THREE.PointsMaterial).map?.dispose();
-        (this.particles.points.material as THREE.PointsMaterial).dispose();
-        this.particles = null;
-      }
-      if (want) this.particles = this.buildParticles(want, tint.particle);
-    }
+    // Ambience particles (shared with the districts, lounge-season-world.ts).
+    this.weather.setFor(u.season, u.weather, this.effects);
     return true;
-  }
-
-  private buildParticles(kind: Ambience, color: string) {
-    const n = AMBIENCE_COUNT[kind];
-    const positions = new Float32Array(n * 3),
-      speed = new Float32Array(n),
-      phase = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * AREA.x;
-      positions[i * 3 + 1] = Math.random() * AREA.y;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * AREA.z;
-      speed[i] = kind === 'rain' ? 16 + Math.random() * 6 : kind === 'snow' ? 1.2 + Math.random() * 1 : 1 + Math.random() * 0.8;
-      phase[i] = Math.random() * Math.PI * 2;
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const material = new THREE.PointsMaterial({
-      map: particleTexture(kind),
-      color: kind === 'rain' ? '#b9d3e6' : color,
-      size: kind === 'rain' ? 22 : kind === 'snow' ? 7 : 10,
-      sizeAttenuation: false,
-      transparent: true,
-      depthWrite: false,
-      opacity: kind === 'rain' ? 0.75 : 0.95,
-      toneMapped: false,
-    });
-    const points = new THREE.Points(geometry, material);
-    points.frustumCulled = false;
-    points.renderOrder = 30;
-    points.name = 'village-ambience-' + kind;
-    this.root.add(points);
-    return { kind, points, speed, phase };
   }
 
   /** The fishing bobber: cast from `from` to `to`, waiting / biting / caught. */
@@ -1029,39 +955,15 @@ export class VillageSeasonLayer {
   /** Animates particles, markers and the bobber; true when a frame should render. */
   tick(now: number, dt: number, center: THREE.Vector3): boolean {
     // Reduced motion: nothing moves on its own (phase changes still render once).
-    if (this.reduced) {
-      if (this.particles) this.particles.points.visible = false;
-      return false;
-    }
-    if (this.particles) this.particles.points.visible = true;
-    const animated = !!this.particles || this.fishing.phase !== 'none' || this.markerCount > 0;
-    if (!animated) return false;
-    // ~30 fps is plenty for ambience; markers alone only need ~8 fps.
-    const interval = this.particles || this.fishing.phase !== 'none' ? 33 : 125;
-    if (now - this.lastTick < interval) return false;
-    const step = Math.min(0.1, this.lastTick ? (now - this.lastTick) / 1000 : dt);
+    const weatherMoved = this.weather.tick(now, dt, center);
+    if (this.reduced) return false;
+    const animated = this.fishing.phase !== 'none' || this.markerCount > 0;
+    if (!animated) return weatherMoved;
+    // ~30 fps is plenty for the bobber; markers alone only need ~8 fps.
+    const interval = this.weather.kind || this.fishing.phase !== 'none' ? 33 : 125;
+    if (now - this.lastTick < interval) return weatherMoved;
     this.lastTick = now;
     const t = now / 1000;
-    if (this.particles) {
-      const { kind, points, speed, phase } = this.particles;
-      const attr = points.geometry.getAttribute('position') as THREE.BufferAttribute;
-      const a = attr.array as Float32Array;
-      for (let i = 0; i < speed.length; i++) {
-        const j = i * 3;
-        a[j + 1] -= speed[i] * step;
-        if (kind !== 'rain') {
-          a[j] += Math.sin(t * 1.3 + phase[i]) * step * (kind === 'snow' ? 0.4 : 1.1) + (kind === 'leaves' ? step * 0.5 : 0);
-          a[j + 2] += Math.cos(t * 0.9 + phase[i]) * step * 0.3;
-        } else a[j] += step * 1.5;
-        if (a[j + 1] < 0) {
-          a[j + 1] += AREA.y;
-          a[j] = (Math.random() - 0.5) * AREA.x;
-          a[j + 2] = (Math.random() - 0.5) * AREA.z;
-        }
-      }
-      attr.needsUpdate = true;
-      points.position.set(center.x, 0, center.z);
-    }
     if (this.markers)
       for (const { points, base } of Object.values(this.markers)) {
         if (!points.visible) continue;

@@ -1,0 +1,14 @@
+{
+  "note": "생활·UI 효과음 샘플 (I2-world D6). 원본을 잘라 모노 32 kHz Ogg Vorbis(q2)로 다시 담고, Safari용 AAC(m4a, 64 kbit/s) 사본을 만들었습니다(ffmpeg). 모두 CC0이라 출처 표기는 의무가 아니지만 기록해 둡니다.",
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "files": {
+    "life-harvest": { "use": "수확", "source": "Kenney · Impact Sounds 1.0 · impactSoft_medium_000.ogg", "url": "https://kenney.nl/assets/impact-sounds", "author": "Kenney (kenney.nl)", "license": "CC0-1.0", "edit": "앞 무음 제거" },
+    "life-water": { "use": "물 주기", "source": "rubberduck · 40 CC0 water / splash / slime SFX · loop_water_01.ogg", "url": "https://opengameart.org/content/40-cc0-water-splash-slime-sfx", "author": "rubberduck (OpenGameArt)", "license": "CC0-1.0", "edit": "0.2초부터 0.9초 잘라 +10 dB, 앞뒤 페이드" },
+    "life-hoe": { "use": "괭이질", "source": "Kenney · Impact Sounds 1.0 · footstep_grass_000.ogg", "url": "https://kenney.nl/assets/impact-sounds", "author": "Kenney (kenney.nl)", "license": "CC0-1.0", "edit": "앞 무음 제거" },
+    "life-splash": { "use": "물보라 (낚시 던지기·입질·큰 물고기)", "source": "rubberduck · 40 CC0 water / splash / slime SFX · splash_06.ogg", "url": "https://opengameart.org/content/40-cc0-water-splash-slime-sfx", "author": "rubberduck (OpenGameArt)", "license": "CC0-1.0", "edit": "앞 무음 제거" },
+    "life-coin": { "use": "동전 (판매·보상)", "source": "Kenney · RPG Audio 1.0 · handleCoins.ogg", "url": "https://kenney.nl/assets/rpg-audio", "author": "Kenney (kenney.nl)", "license": "CC0-1.0", "edit": "앞 무음 제거" },
+    "life-door": { "use": "문 (집·가게 드나들기)", "source": "Kenney · RPG Audio 1.0 · doorOpen_1.ogg", "url": "https://kenney.nl/assets/rpg-audio", "author": "Kenney (kenney.nl)", "license": "CC0-1.0", "edit": "앞 무음 제거" },
+    "ui-click": { "use": "UI 클릭 (탭 넘기기)", "source": "Kenney · Interface Sounds 1.0 · click_001.ogg", "url": "https://kenney.nl/assets/interface-sounds", "author": "Kenney (kenney.nl)", "license": "CC0-1.0", "edit": "앞 무음 제거" }
+  }
+}

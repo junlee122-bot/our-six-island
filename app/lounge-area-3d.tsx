@@ -50,7 +50,9 @@ import { companionBubbles, companionSpots, companionStep } from './lounge-compan
 import { isCompanionPlace } from './lounge-npc-companion-line-types';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { districtProgress } from './lounge-district-models';
-import { weatherOf } from './lounge-calendar';
+import { seasonOfDay, weatherOf } from './lounge-calendar';
+// I2-world D1: rain, snow, leaves and petals on every outdoor map (shared with the hub).
+import { WeatherParticles } from './lounge-season-world';
 import { districtCounters, type DistrictCounter } from './lounge-district-counters';
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
@@ -404,7 +406,15 @@ export function AreaScene({
     let lastDay = -1e9,
       night = false,
       weather = weatherOf(kstDayOf(Date.now() + latest.current.clockOffset)),
+      season = seasonOfDay(kstDayOf(Date.now() + latest.current.clockOffset)),
       tint = new THREE.Color('#ffffff');
+    // Weather particles over every outdoor map but the mine (the 먼바다 boat has its own rain).
+    const ambience = area !== 'mine' && area !== 'offshore' ? new WeatherParticles(scene) : null;
+    /** Particles follow 설정 → 계절 효과 and the graphics quality (none on 낮음, fewer on 중간). */
+    const applyAmbience = () => {
+      const st = getSettings();
+      return !!ambience?.setFor(season, weather, st.seasonFx && st.quality !== 'low', st.quality === 'high' ? 1 : 0.7);
+    };
     const applyDay = (t: number) => {
       if (!light?.dayCycle || t - lastDay < 2000) return false;
       lastDay = t;
@@ -415,6 +425,8 @@ export function AreaScene({
       night = pal.lamps > 0.5;
       tint = villageFigureTint(pal.lamps);
       weather = weatherOf(kstDayOf(now));
+      season = seasonOfDay(kstDayOf(now));
+      applyAmbience();
       set.offshore?.setLook({ sky: pal.sky, sun: pal.sun, lamps: pal.lamps, phase: pal.phase, weather, low: !quality.effects, swell: SWELL_AMP[weather] });
       // The district's piece and bed follow its own clock (night variant, crickets).
       loungeAudio.setScene({ village: false, night });
@@ -445,11 +457,14 @@ export function AreaScene({
         night,
         boatOut: s.boatOut,
         captain: s.captainHere,
+        season,
+        weather,
         ...(s.farm ? { farm: s.farm, me: s.me.actor } : {}),
       });
       dirty = true;
     };
     applyDay(performance.now());
+    applyAmbience();
     applyState();
     // Residents walking about here (the district's shops, their errands).
     // 주민 동행: every outdoor map draws the companion beside its friend.
@@ -669,6 +684,7 @@ export function AreaScene({
     const offSettings = onSettingsChange(() => {
       const q = qualityProfile(getSettings().quality);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatio));
+      if (applyAmbience()) dirty = true;
       resize();
     });
 
@@ -709,7 +725,7 @@ export function AreaScene({
         for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
         residents?.setTint(tint);
       }
-      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere, s.farm]);
+      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere, s.farm, season, weather]);
       if (key !== stateKey) {
         stateKey = key;
         applyState();
@@ -891,6 +907,8 @@ export function AreaScene({
         setAction(a);
         host.dataset.action = a ? (a.kind === 'exit' ? `exit:${a.to}` : a.kind) : '';
       }
+      // Rain, snow, leaves or petals drifting (about 30 frames a second).
+      if (ambience?.tick(t, dt, look)) dirty = true;
       // Redraw when something changed; otherwise ~4 times a second (the node marks bob).
       if (!dirty && t - lastRender < 250) return;
       lastRender = t;
@@ -919,6 +937,7 @@ export function AreaScene({
       residents?.dispose();
       residentsRef.current = [];
       set.dispose();
+      ambience?.dispose();
       figureGeo.dispose();
       shadowGeo.dispose();
       shadowMat.dispose();
