@@ -180,6 +180,9 @@ test('crops grow exactly 12 hours of wet growth; dry ones wait', () => {
   assert.equal(plotGrowth(s.life.farms[m.id][wet], t), g0 + SLEEP_GROW_MS);
   assert.equal(plotGrowth(s.life.farms[m.id][dry], t), 0, 'a dry crop waits');
   assert.equal(s.life.myday[m.id].r.grew, 1);
+  // 내일 예고: the wet crop counts when one more watered night ripens it; the dry one (>12 h left) never.
+  const leftMs = plotGrowMs(s.life.farms[m.id][wet]) - plotGrowth(s.life.farms[m.id][wet], t);
+  assert.equal(s.life.myday[m.id].r.soon ?? 0, leftMs <= SLEEP_GROW_MS ? 1 : 0);
   // It keeps the extra after a save (wet soil fields, no wateredAt).
   const back = readLife(JSON.parse(JSON.stringify(s.life)));
   assert.equal(plotGrowth(back.farms[m.id][wet], t), g0 + SLEEP_GROW_MS);

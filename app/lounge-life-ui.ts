@@ -379,7 +379,17 @@ export function farmTileAction(
   }
   if (isSoilItem(tool) && (me.inv?.[tool] ?? 0) > 0 && soilOpen(p, tool, now)) return { kind: 'fertilize', label: `${itemName(tool)} 주기` };
   if (p.thirsty) return { kind: 'water', label: '물 주기' };
-  return { kind: null, label: `${CROP_INFO[p.crop].name} · 자라는 중` };
+  return { kind: null, label: `${CROP_INFO[p.crop].name} · ${wetWord(p)}` };
+}
+/**
+ * G11 (시계 두 개 안내): how long a growing crop's soil stays wet, in real time
+ * (the game day is one real hour, but hand watering lasts until real 06:00).
+ */
+export function wetWord(p: Pick<Plot, 'wateredAt' | 'rained' | 'rs' | 'sprinkled'>): string {
+  if (p.rs || p.sprinkled) return '늘 촉촉해요';
+  if (p.rained) return '비 덕분에 실제 아침 6시까지 촉촉';
+  if (p.wateredAt !== null && p.wateredAt !== undefined) return '실제 아침 6시까지 촉촉';
+  return '자라는 중';
 }
 
 /* ------------------------------------------------------------ fishing */

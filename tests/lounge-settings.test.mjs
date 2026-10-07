@@ -48,3 +48,17 @@ test('quality presets map to pixel ratio, shadows and effects',()=>{
  assert.equal(qualityProfile('mid').pixelRatio,1.5);
  assert.deepEqual(qualityProfile('high'),{pixelRatio:2,shadows:true,effects:true});
 });
+import {WALK_HINTS_FOLD_MS,readPlayMs,walkHintsFolded} from '../app/ui/walk-hints-play.ts';
+
+test('walk hints (D16): fold after 30 minutes of play on auto; the setting keeps them open or folded',()=>{
+ assert.equal(DEFAULT_SETTINGS.walkHints,'auto');
+ assert.equal(readSettings(JSON.stringify({version:2,walkHints:'fold'})).walkHints,'fold');
+ assert.equal(readSettings(JSON.stringify({version:2,walkHints:'nope'})).walkHints,'auto');
+ assert.equal(WALK_HINTS_FOLD_MS,30*60_000);
+ assert.equal(walkHintsFolded('auto',0),false);
+ assert.equal(walkHintsFolded('auto',WALK_HINTS_FOLD_MS-1),false);
+ assert.equal(walkHintsFolded('auto',WALK_HINTS_FOLD_MS),true);
+ assert.equal(walkHintsFolded('show',WALK_HINTS_FOLD_MS*9),false);
+ assert.equal(walkHintsFolded('fold',0),true);
+ assert.equal(readPlayMs('abc'),0);assert.equal(readPlayMs('-5'),0);assert.equal(readPlayMs('1200'),1200);
+});

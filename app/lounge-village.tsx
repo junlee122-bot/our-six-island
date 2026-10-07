@@ -65,6 +65,8 @@ import { VillageLifeLayer } from './lounge-village-life-3d';
 import { VillageWatersLayer } from './lounge-village-waters';
 import { VillageValleyLayer } from './lounge-village-valley';
 import { VillageSeasonLayer } from './lounge-village-season-3d';
+import { VillageBackdrop } from './lounge-village-backdrop';
+import { wetWord } from './lounge-life-ui';
 import { VillageKarchiveLayer } from './lounge-village-karchive';
 import { VillageGrowthLayer } from './lounge-village-growth-3d';
 import { VillageShopsLayer } from './lounge-village-shops';
@@ -193,10 +195,9 @@ import './lounge-village.css';
 import './lounge/birthday.css';
 import './lounge/day-end.css';
 import { ZZZ_MS } from './lounge-myday';
+import { WorldPops, useWorldPops, type WorldPopBirth } from './lounge/WorldPops';
 
 type ChatLine = { id: string; actor: number; text: string };
-/** A harvested crop rising from its plot (screen px in the scene). */
-type HarvestPop = { id: string; crop: Crop; quality: Quality; x: number; y: number; delay: number };
 
 /** Forage spots by id (재능 산나물 눈 minimap markers). */
 const SPAWN_BY_ID = Object.fromEntries(SPAWN_SPOTS.map((s) => [s.id, s]));
@@ -370,6 +371,8 @@ type WorldState = {
   growth: VillageGrowthLayer;
   /** 허풍 주점 · 범마을 부동산 · 나무결 가구점 buildings. */
   shops: VillageShopsLayer;
+  /** D17: forest floor, pines and hills past the rim (no sky band at the top). */
+  backdrop: VillageBackdrop;
   /** The five district gates on the rim (2026-09-30). */
   gates: VillageDistrictGates;
 };
@@ -448,6 +451,7 @@ function getVillageWorld(): WorldState {
   sun.shadow.normalBias = 0.06;
   root.add(sun);
   const world = buildVillageWorld(root);
+  const backdrop = new VillageBackdrop(root);
   const life = new VillageLifeLayer(root);
   life.setLampGlowMaterial(VILLAGE_LAMP_GLOW);
   const season = new VillageSeasonLayer(root);
@@ -556,6 +560,7 @@ function getVillageWorld(): WorldState {
     growth,
     shops,
     gates,
+    backdrop,
   };
   return villageWorld;
 }
@@ -680,8 +685,8 @@ export function Village3D(props: Props) {
   /** The plot under the mouse (wooden tag) and the harvest pops (VILL-2). */
   const [plotTag, setPlotTag] = useState<{ actor: number; index: number } | null>(null);
   const plotTagRef = useRef<HTMLDivElement>(null);
-  const [pops, setPops] = useState<HarvestPop[]>([]);
-  const uiFns = useRef({ setPlotTag, setPops });
+  const [pops, pushPops] = useWorldPops();
+  const uiFns = useRef({ setPlotTag, pushPops });
   const [{ keys }] = useSettings();
   const actionKey = keyLabel(keys.action);
   /** Nearest building (minimap highlight), updated only when it changes. */
@@ -1124,7 +1129,8 @@ export function Village3D(props: Props) {
           : {},
       );
       world.gates.setNight(night);
-      if (gatesChanged) needsRender = true;
+      const backdropChanged = world.backdrop.setSeason(life?.calendar?.season ?? null);
+      if (gatesChanged || backdropChanged) needsRender = true;
       if ((civicChanged || growthChanged || shopsChanged) && !seasonChanged) {
         renderer.shadowMap.needsUpdate = true;
         needsRender = true;
@@ -1138,7 +1144,7 @@ export function Village3D(props: Props) {
       }
       // Harvest pops: a ripe plot of mine that is gone since the last update.
       if (life?.me.farm) {
-        const born: HarvestPop[] = [];
+        const born: WorldPopBirth[] = [];
         const yard = villageYard(me);
         for (const [i, was] of lastRipe) {
           const now = life.me.farm[i];
@@ -1148,23 +1154,18 @@ export function Village3D(props: Props) {
           const v = new THREE.Vector3(c.x, 0.7, c.z).project(camera);
           if (Math.abs(v.x) > 1.1 || Math.abs(v.y) > 1.1) continue;
           born.push({
-            id: `${Date.now()}-${i}`,
+            kind: 'harvest',
             crop: was.crop,
             quality: was.quality,
             x: ((v.x + 1) / 2) * host.clientWidth,
             y: ((1 - v.y) / 2) * host.clientHeight,
-            delay: born.length * 70,
           });
         }
         lastRipe.clear();
         life.me.farm.forEach((plot, i) => {
           if (plot.crop && plotStage(plot, at) === 3) lastRipe.set(i, { crop: plot.crop, quality: plot.quality });
         });
-        if (born.length) {
-          uiFns.current.setPops((list) => [...list.slice(-12), ...born]);
-          const ids = new Set(born.map((b) => b.id));
-          setTimeout(() => uiFns.current.setPops((list) => list.filter((b) => !ids.has(b.id))), 1500 + born.length * 70);
-        }
+        if (born.length) uiFns.current.pushPops(born);
       }
       const sizes: Record<number, number> = {};
       for (const [a, list] of Object.entries(plots)) sizes[Number(a)] = list.length;
@@ -2706,19 +2707,7 @@ export function Village3D(props: Props) {
               />
             )}
           </div>
-          <div className="hv-pops" aria-hidden="true">
-            {pops.map((p) => (
-              <span
-                key={p.id}
-                className="hv-pop"
-                data-q={p.quality}
-                style={{ left: p.x, top: p.y, animationDelay: `${p.delay}ms` }}
-              >
-                <ItemIcon id={p.crop} size={44} quality={p.quality || undefined} />
-                <b>+1</b>
-              </span>
-            ))}
-          </div>
+          <WorldPops pops={pops} />
           <div ref={labelsRef} className="hv-labels" style={moodTagStyle(props.life?.mood?.faces)}>
             {VILLAGE_PLACES.map((place) => (
               <button
@@ -3886,8 +3875,8 @@ function PlotTag({
             ? mine
               ? '목말라요 · 클릭해서 물 주기'
               : '목말라요 · 가까이서 물 줄 수 있어요'
-            : full?.rained
-              ? '비가 물을 줬어요'
+            : full
+              ? wetWord(full)
               : '오늘 물 먹었어요'}
       </em>
     </div>

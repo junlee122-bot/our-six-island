@@ -507,6 +507,12 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
+/* Letter bodies are handwritten (D13: Gaegu only for letter and note bodies). */
+.l-mail-list p:not(.l-mail-extra) {
+  font-family: var(--font-hand);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+}
 .l-mail-extra {
   display: flex;
   flex-wrap: wrap;

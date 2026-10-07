@@ -21,7 +21,7 @@
 // functions only. myDay itself reads nothing but the record.
 import { kstDay, type LoungeLedger } from './lounge-economy.ts';
 import { gameHour, seasonOfDay } from './lounge-calendar.ts';
-import { LifeError, plotReadyAt, type LifeState, type Plot } from './lounge-life.ts';
+import { LifeError, plotGrowMs, plotGrowth, plotReadyAt, type LifeState, type Plot } from './lounge-life.ts';
 import type { SkillId } from './lounge-growth-data.ts';
 import { soilAdvance } from './lounge-farm-soil.ts';
 import { settleBin } from './lounge-farm.ts';
@@ -82,6 +82,8 @@ export type DayEndReport = {
   rest?: 1;
   /** It used a 밀린 기회 day. */
   mk?: 1;
+  /** 내일 예고: my crops one more watered night from ripe. */
+  soon?: number;
 };
 export type MyDayUser = {
   /** 하루 마감 so far (pday − kstDay). */
@@ -126,6 +128,7 @@ function readReport(v: unknown): DayEndReport | undefined {
     ...(typeof x.mood === 'string' && /^[a-z]{1,12}$/.test(x.mood) ? { mood: x.mood } : {}),
     ...(x.rest === 1 ? { rest: 1 as const } : {}),
     ...(x.mk === 1 ? { mk: 1 as const } : {}),
+    ...(n('soon', 999) ? { soon: n('soon', 999) } : {}),
   };
 }
 /** Normalizes `world.life.myday` (absent in older worlds → omitted). */
@@ -201,6 +204,11 @@ export function noteActive(life: LifeState, uid: string, now: number) {
 }
 
 // ---------------------------------------------------------------- 하루 마감
+/** Not ripe, and one more 하루 마감 of wet growth would ripen it (내일 예고). */
+function ripeSoon(p: Plot, now: number) {
+  if (!p.crop || now >= plotReadyAt(p, now)!) return false;
+  return plotGrowMs(p) - plotGrowth(p, now) <= SLEEP_GROW_MS;
+}
 /** One crop: SLEEP_GROW_MS more if its soil is wet and it is not ripe yet. Returns [grew, ripe after]. */
 function sleepPlot(p: Plot, now: number): [boolean, boolean] {
   if (!p.crop) return [false, false];
@@ -233,19 +241,22 @@ export function endDayAction(
   u.b = (u.b ?? 0) + 1;
   // My crops: 12 hours of wet growth (field, my greenhouse tiles).
   let grew = 0,
-    ripe = 0;
-  const count = ([g, r]: [boolean, boolean]) => {
+    ripe = 0,
+    soon = 0;
+  const count = (p: Plot) => {
+    const [g, r] = sleepPlot(p, now);
     if (g) grew++;
     if (r) ripe++;
+    else if (ripeSoon(p, now)) soon++;
   };
-  for (const p of life.farms[uid] ?? []) count(sleepPlot(p, now));
+  for (const p of life.farms[uid] ?? []) count(p);
   let fruit = 0;
   for (const site of Object.values(life.farm?.sites ?? {})) {
     if (site.tier < 1) continue;
     if (site.kind === 'greenhouse') {
-      for (const p of Object.values(site.state.plots ?? {})) if (p.o === actor) count(sleepPlot(p, now));
+      for (const p of Object.values(site.state.plots ?? {})) if (p.o === actor) count(p);
     } else if (site.kind === 'greenhouseMini' && site.owner === uid) {
-      for (const p of Object.values(site.state.plots ?? {})) count(sleepPlot(p, now));
+      for (const p of Object.values(site.state.plots ?? {})) count(p);
     } else if (site.kind === 'orchardPlot' && site.owner === uid) {
       // My 과일나무 자리: the saplings age, and a grown tree in season bears one more.
       for (const t of Object.values(site.state.trees ?? {})) {
@@ -283,6 +294,7 @@ export function endDayAction(
     mood: moodView(life, uid, now).tier,
     ...(rest ? { rest: 1 as const } : {}),
     ...(daily ? {} : { mk: 1 as const }),
+    ...(soon ? { soon } : {}),
   };
   return { life, ledger: next };
 }

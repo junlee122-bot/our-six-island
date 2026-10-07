@@ -62,6 +62,11 @@ function hoursLeft(until: number, now: number) {
   return h >= 24 ? `${Math.ceil(h / 24)}일` : `${h}시간`;
 }
 
+/** 'YYYY-MM-DD' → 'M월 D일'. */
+const realDateText = (date: string) => {
+  const [, m, d] = date.split('-').map(Number);
+  return `${m}월 ${d}일`;
+};
 /**
  * Top HUD chip: the game clock "오후 3:20" over "가을 5일 · 금요일", the weather,
  * and today/tomorrow's forecast. The clock is the game's (게임 하루 = 실제 1시간);
@@ -118,6 +123,8 @@ export function CalendarChip({
           <small>
             {SEASON_INFO[cal.season].name} {cal.seasonDay}일 · {calendarLine(cal).split(' · ')[1]}
           </small>
+          {/* G11 시계 두 개 안내: the real date (growth, weather and watering follow it). */}
+          <small data-testid="hud-real-date">실제 {realDateText(cal.date)}</small>
         </span>
         <span className="l-hud-weather" data-weather={life.weather.today}>
           <TodayIcon size={17} aria-hidden="true" />

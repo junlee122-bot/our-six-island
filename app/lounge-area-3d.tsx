@@ -67,6 +67,10 @@ import { SWELL_AMP, boatMotion } from './lounge-boat-model';
 // 우리 농장 (design-our-farm.md): friends' fields and houses, what E reaches there.
 import { farmReach, farmSceneState, type FarmTouch } from './lounge-farm-view';
 import type { LifeView } from './lounge-life';
+// 우리 농장 손맛 (D4): hoe dust, watering drops and harvest pops on my field.
+import { farmField, fieldTileCenter } from './lounge-farm-layout';
+import { farmFxDiff, type FarmFxPlot } from './lounge-world-pops';
+import { WorldPops, useWorldPops } from './lounge/WorldPops';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -187,6 +191,8 @@ export function AreaScene({
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [action, setAction] = useState<AreaAction | null>(null);
+  const [pops, pushPops] = useWorldPops();
+  const pushPopsRef = useRef(pushPops);
   const region = REGIONS[area];
   const [day, setDay] = useState(() => kstDayOf(Date.now() + clockOffset));
   useEffect(() => {
@@ -687,6 +693,9 @@ export function AreaScene({
       lastAction = '',
       lastWalkInto = -1e9,
       stateKey = '';
+    /** My field as last seen (우리 농장 손맛: what changed since becomes a pop). */
+    let fxFarm: readonly FarmFxPlot[] | null = null;
+    const fxAt = new THREE.Vector3();
     const drawCost = new FrameCost();
     let fishKey: FishingFramePhase | null = null;
     const animate = (t: number) => {
@@ -877,6 +886,21 @@ export function AreaScene({
         if (residents.update(frames, t, dt, camera)) dirty = true;
         residentsRef.current = residents.positions();
       }
+      // 우리 농장 손맛 (D4): what changed on my field since the last snapshot pops at its tile.
+      const myFarm = s.area === 'farm' ? (s.life?.me.farm ?? null) : null;
+      if (myFarm !== fxFarm) {
+        const field = fxFarm && myFarm ? farmField(s.me.actor) : null;
+        if (field && fxFarm && myFarm) {
+          const born = farmFxDiff(fxFarm, myFarm, Date.now() + s.clockOffset).flatMap((fx) => {
+            const c = fieldTileCenter(field, fx.tile);
+            fxAt.set(c.x, fx.kind === 'harvest' ? 0.7 : 0.15, c.z).project(camera);
+            if (Math.abs(fxAt.x) > 1.1 || Math.abs(fxAt.y) > 1.1) return [];
+            return [{ ...fx, x: ((fxAt.x + 1) / 2) * host.clientWidth, y: ((1 - fxAt.y) / 2) * host.clientHeight }];
+          });
+          if (born.length) pushPopsRef.current(born);
+        }
+        fxFarm = myFarm;
+      }
       // What E does here.
       const a = findActionRef.current(l.point);
       // 우리 농장 F2: E held while walking works each new field tile I face.
@@ -982,6 +1006,7 @@ export function AreaScene({
           </span>
         ))}
       </div>
+      <WorldPops pops={pops} />
       <div className="ar-plate" data-testid="area-plate">
         <strong>{area === 'mine' ? `광산 ${floorNo}층` : region.name}</strong>
         <span>

@@ -28,10 +28,11 @@ import {
   moodHarvestQuality,
   moodTarget,
   moodTouch,
+  moodXpCapMult,
   moodXpMult,
   readMood,
 } from '../app/lounge-mood.ts';
-import { gainXp, xpMultiplier } from '../app/lounge-growth.ts';
+import { gainXp, xpMultiplier, xpSoftCap } from '../app/lounge-growth.ts';
 import { SOFT_CAP, OVER_CAP_RATE } from '../app/lounge-growth-data.ts';
 import { LifeError, emptyLife, ensureLifeMember, lifeAction, lifeView, readLife, cloneLife } from '../app/lounge-life.ts';
 import { INITIAL_BEOM, grantBeom, spendBeom, kstDay, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
@@ -264,7 +265,7 @@ test('festival and talk raise the target; the shown mood follows one point a min
 });
 
 // ------------------------------------------------------------ XP multiplier
-test('XP multiplier: +15% / +10% / ×1 / −10% by tier, before the soft cap (reached sooner, never raised)', () => {
+test('XP multiplier: +15% / +10% / ×1 / −10% by tier, before the soft cap; a good mood raises the cap 20%', () => {
   const s = world(1);
   const [m] = s.members;
   s.act(m, { kind: 'status', text: '' }, T0);
@@ -289,14 +290,25 @@ test('XP multiplier: +15% / +10% / ×1 / −10% by tier, before the soft cap (re
   near(run(90, [small]).xp, small * 1.15, 0.11);
   near(run(50, [small]).xp, small, 0.11);
   near(run(17, [small]).xp, small * 0.9, 0.11);
-  // Reaching the cap: everyone ends at the same cap; a good mood gets there with less play.
+  // Reaching the cap: a good mood's cap is 20% higher (기분의 의미); 괜찮아요 and below keep SOFT_CAP.
+  const BIG = SOFT_CAP * 1.2;
+  assert.equal(moodXpCapMult(s.life, m.id, T0), 1);
+  u.v = 70;
+  assert.equal(moodXpCapMult(s.life, m.id, T0), 1.2);
+  assert.equal(xpSoftCap(s.life, m.id, T0), BIG);
+  u.v = 50;
+  assert.equal(xpSoftCap(s.life, m.id, T0), SOFT_CAP);
   const hi = run(90, [SOFT_CAP, SOFT_CAP]),
-    mid = run(50, [SOFT_CAP, SOFT_CAP]);
-  assert.ok(hi.dxp >= SOFT_CAP && mid.dxp >= SOFT_CAP);
-  near(hi.xp - (hi.dxp - SOFT_CAP) * OVER_CAP_RATE, SOFT_CAP, 0.2);
+    good = run(70, [SOFT_CAP, SOFT_CAP]),
+    mid = run(50, [SOFT_CAP, SOFT_CAP]),
+    low = run(17, [SOFT_CAP, SOFT_CAP]);
+  assert.ok(hi.dxp >= BIG && good.dxp >= BIG && mid.dxp >= SOFT_CAP && low.dxp >= SOFT_CAP);
+  near(hi.xp - (hi.dxp - BIG) * OVER_CAP_RATE, BIG, 0.2);
+  near(good.xp - (good.dxp - BIG) * OVER_CAP_RATE, BIG, 0.2);
   near(mid.xp - (mid.dxp - SOFT_CAP) * OVER_CAP_RATE, SOFT_CAP, 0.2);
+  near(low.xp - (low.dxp - SOFT_CAP) * OVER_CAP_RATE, SOFT_CAP, 0.2);
   // Past the cap: capped XP gets no bonus (the same trickle at any mood).
-  const after = (v) => run(v, [SOFT_CAP * 2, 50]).got[1];
+  const after = (v) => run(v, [SOFT_CAP * 3, 50]).got[1];
   near(after(90), 50 * OVER_CAP_RATE, 0.11);
   near(after(50), 50 * OVER_CAP_RATE, 0.11);
   near(after(17), 50 * OVER_CAP_RATE, 0.11);

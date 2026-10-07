@@ -6,8 +6,8 @@
 // Pure and `now`-injected like the rest of the life engine; state lives in
 // `world.life.mood` (bounded: ≤ 16 friends, ≤ 24 moodlets each, ~5 KB for 7).
 // Mood never touches 범 (prices, rewards, stakes) and never blocks an action:
-// its only effects are the skill XP multiplier (the daily cap unchanged) and
-// the inspirations, which go through the normal harvest/fishing/cooking paths.
+// its only effects are the skill XP multiplier, a good mood's +20% daily XP
+// cap (기분의 의미) and the inspirations, which go through the normal harvest/fishing/cooking paths.
 // The one ledger movement is the optional paid bar drink (a spendBeom sink).
 //
 // Writes piggyback on commands that write the world row anyway (life actions,
@@ -84,6 +84,7 @@ import {
   moodWeekOf,
   needWord,
   tierOf,
+  xpCapMultOf,
   xpMultOf,
   type CheerHow,
   type InspirationKind,
@@ -702,13 +703,18 @@ function held(life: LifeState, uid: string, kind: InspirationKind, now: number) 
 }
 /**
  * Skill XP multiplier (lounge-growth xpMultiplier → gainXp): 신나요 ×1.15,
- * 기분 좋아요 ×1.1, 지쳤어요 ×0.9, 배움 영감 ×1.2 more. The daily soft cap is
- * counted on the unmultiplied XP, so it never moves.
+ * 기분 좋아요 ×1.1, 지쳤어요 ×0.9, 배움 영감 ×1.2 more. It scales the XP under
+ * the daily soft cap (the cap fills sooner); moodXpCapMult moves the cap.
  */
 export function moodXpMult(life: LifeState, uid: string, now: number) {
   const u = life.mood?.[uid];
   if (!u) return 1;
   return xpMultOf(u.v) * (held(life, uid, 'learn', now) ? LEARN_INSPIRATION_XP : 1);
+}
+/** 기분의 의미 (G9): 기분 좋아요 · 신나요 raise the daily XP soft cap ×1.2. */
+export function moodXpCapMult(life: LifeState, uid: string, _now: number) {
+  const u = life.mood?.[uid];
+  return u ? xpCapMultOf(u.v) : 1;
 }
 /** 풍작 영감: one plot's harvest quality, one step better (gold at most); uses a charge. */
 export function moodHarvestQuality(life: LifeState, uid: string, quality: Quality, now: number): Quality {
@@ -919,6 +925,8 @@ export type MoodView = {
   lets: MoodletView[];
   cozy: { score: number; name: string; value: number } | null;
   xp: number;
+  /** Daily XP soft cap multiplier (1.2 in a good mood; absent from older servers). */
+  xpCap?: number;
   gauge: number;
   gaugeMax: number;
   week: number;
@@ -1006,6 +1014,7 @@ export function moodView(life: LifeState, uid: string, now: number): MoodView {
     lets: letsOf(u, now),
     cozy: u.room !== undefined ? { score: u.room, name: cozyOf(u.room).name, value: cozyOf(u.room).value } : null,
     xp: moodXpMult({ ...life, mood: { [uid]: u } } as LifeState, uid, now),
+    xpCap: xpCapMultOf(u.v),
     gauge: Math.floor(u.g ?? 0),
     gaugeMax: INSPIRATION_GAUGE,
     week: weekCount(u, day),

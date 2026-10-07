@@ -79,7 +79,7 @@ import { LIFT_EVERY, LIFT_FROM_FLOOR, MINE_FLOORS_P2, floorOre, floorPick, mineD
 import { MINE_BUFF_EVERY, MINE_BUFF_VEIN, buffBoost, hasBuff, learnMult } from './lounge-food-data.ts';
 import { addInv, addMemory, addNews, invCount } from './lounge-life-plus.ts';
 // 무드: the XP multiplier of the current mood (functions only, same cycle rule).
-import { moodXpMult } from './lounge-mood.ts';
+import { moodXpCapMult, moodXpMult } from './lounge-mood.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
 // 주민 동행: 럭스·무잔·잔나·메르시 (XP) and 볼리바스 (the ladder), lounge-companion-effects.ts.
 import { companionLadderEarly, companionXpMult } from './lounge-companion-effects.ts';
@@ -436,15 +436,19 @@ export const behindVillage = (life: LifeState, uid: string, skill: SkillId) =>
 /**
  * The one hook other systems use to scale skill XP (e.g. the mood system's
  * +10/+15% and −10% at 지쳤어요). Applied to the raw gain before the daily
- * soft cap, so a good mood only reaches the cap sooner (capped XP gets no
- * bonus); the cap itself is unchanged. 1 = no change.
+ * soft cap, so a good mood reaches the cap sooner (capped XP gets no bonus).
+ * 1 = no change. The cap itself moves with xpSoftCap.
  */
 export function xpMultiplier(life: LifeState, uid: string, _skill: SkillId, now: number): number {
   return moodXpMult(life, uid, now) * learnMult(life, uid, now) * companionXpMult(life, uid, _skill, now);
 }
+/** Today's daily XP soft cap: SOFT_CAP, +20% in a good mood (기분의 의미, G9). */
+export function xpSoftCap(life: LifeState, uid: string, now: number) {
+  return Math.round(SOFT_CAP * moodXpCapMult(life, uid, now));
+}
 /**
  * Adds XP from a life action: ×CATCH_UP when behind the village median, the
- * daily soft cap (SOFT_CAP in full, the rest at OVER_CAP_RATE), then rested XP
+ * daily soft cap (xpSoftCap in full, the rest at OVER_CAP_RATE), then rested XP
  * doubles what is left of the gain. Records level-ups (news + banner).
  */
 export function gainXp(life: LifeState, uid: string, skill: SkillId, base: number, now: number) {
@@ -455,7 +459,7 @@ export function gainXp(life: LifeState, uid: string, skill: SkillId, base: numbe
   // Multipliers from other systems (mood…) scale only the part under the soft
   // cap (it fills sooner); what spills over counts unmultiplied.
   const mult = xpMultiplier(life, uid, skill, now);
-  const full = Math.max(0, Math.min(raw * mult, SOFT_CAP - used));
+  const full = Math.max(0, Math.min(raw * mult, xpSoftCap(life, uid, now) - used));
   const over = Math.max(0, raw - full / mult);
   let gain = full + over * OVER_CAP_RATE;
   (u.dxp ??= {})[skill] = tenth(Math.min(XP_MAX, used + full + over));
@@ -1146,7 +1150,7 @@ export function growthView(state: LifeState, uid: string, now: number): GrowthVi
     ups: [...(u.ups ?? [])],
     retroAt: u.retro ?? null,
     respecPrice: respecPrice(0),
-    softCap: SOFT_CAP,
+    softCap: ok ? xpSoftCap(life, uid, now) : SOFT_CAP,
     regions: regionsView(life, uid, u, taken, now),
     friends: friendTrees(life, uid),
   };

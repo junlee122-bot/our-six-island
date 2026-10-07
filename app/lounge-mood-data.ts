@@ -90,8 +90,11 @@ export const MOOD_TIER_BY_ID = Object.fromEntries(MOOD_TIERS.map((t) => [t.id, t
   (typeof MOOD_TIERS)[number]
 >;
 export const tierOf = (v: number): MoodTier => MOOD_TIERS.find((t) => v >= t.min)!.id;
-/** Skill XP multiplier of a mood (the daily cap is untouched, see lounge-growth gainXp). */
+/** Skill XP multiplier of a mood (scales the XP under the daily cap, see lounge-growth gainXp). */
 export const xpMultOf = (v: number) => MOOD_TIER_BY_ID[tierOf(v)].xp;
+/** 기분의 의미 (G9): a good mood (기분 좋아요 · 신나요) raises the daily XP soft cap by 20%. */
+export const GOOD_MOOD_CAP_BONUS = 0.2;
+export const xpCapMultOf = (v: number) => (MOOD_TIER_BY_ID[tierOf(v)].xp > 1 ? 1 + GOOD_MOOD_CAP_BONUS : 1);
 
 // ---------------------------------------------------------------- moodlets
 export type MoodIcon =

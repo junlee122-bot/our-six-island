@@ -9,6 +9,9 @@ export const FPS_CAPS = [0, 30, 60, 144] as const;
 export type FpsCap = (typeof FPS_CAPS)[number];
 export const UI_SCALES = [90, 100, 110, 125] as const;
 export const TEXT_SCALES = [100, 115, 130] as const;
+/** 걷기 키 안내 (D16): fold after the first 30 minutes of play, always show, or always fold. */
+export const WALK_HINT_MODES = ['auto', 'show', 'fold'] as const;
+export type WalkHintMode = (typeof WALK_HINT_MODES)[number];
 
 export type LoungeSettings = {
   /** Storage shape version (2 = PC settings: channels, graphics, keys). */
@@ -51,6 +54,8 @@ export type LoungeSettings = {
   textScale: (typeof TEXT_SCALES)[number];
   /** 무드: the mood face and moodles beside the wallet. */
   moodHud: boolean;
+  /** The walking scenes' key strip (WalkHints). */
+  walkHints: WalkHintMode;
   /** Rebindable keys for the village and my room. */
   keys: Keybinds;
 };
@@ -77,6 +82,7 @@ export const DEFAULT_SETTINGS: LoungeSettings = Object.freeze({
   uiScale: 100,
   textScale: 100,
   moodHud: true,
+  walkHints: 'auto',
   keys: DEFAULT_KEYBINDS,
 }) as LoungeSettings;
 
@@ -136,6 +142,7 @@ export function readSettings(raw: string | null | undefined): LoungeSettings {
     uiScale: oneOf('uiScale', UI_SCALES),
     textScale: oneOf('textScale', TEXT_SCALES),
     moodHud: bool('moodHud'),
+    walkHints: oneOf('walkHints', WALK_HINT_MODES),
     keys: readKeybinds(value.keys),
   };
 }

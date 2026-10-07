@@ -1265,69 +1265,6 @@ dialog.l-modal.l-ledger > header .l-icon {
 .hv-plot-tag[data-thirsty] em {
   color: var(--ff-water);
 }
-.hv-pops {
-  position: absolute;
-  inset: 0;
-  z-index: var(--z-hud-map);
-  pointer-events: none;
-  overflow: hidden;
-}
-.hv-pop {
-  position: absolute;
-  display: grid;
-  justify-items: center;
-  transform: translate(-50%, -50%);
-  animation: hv-pop-rise 1.25s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
-}
-.hv-pop b {
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--paper-50);
-  text-shadow: 0 1px 0 rgb(0 0 0 / 0.5);
-}
-.hv-pop[data-q='2']::after,
-.hv-pop[data-q='1']::after {
-  content: '';
-  position: absolute;
-  inset: -14px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, var(--ink-on-wood) 0 2px, transparent 3px) 8px 10px / 22px 22px,
-    radial-gradient(circle, var(--pal-amber-84) 0 2px, transparent 3px) 0 0 / 18px 18px;
-  animation: hv-sparkle 1.1s ease-out forwards;
-}
-.hv-pop[data-q='1']::after {
-  background: radial-gradient(circle, var(--pal-grey-96) 0 2px, transparent 3px) 0 0 / 18px 18px;
-}
-@keyframes hv-pop-rise {
-  0% {
-    transform: translate(-50%, -30%) scale(0.4);
-    opacity: 0;
-  }
-  18% {
-    transform: translate(-50%, -80%) scale(1.15);
-    opacity: 1;
-  }
-  70% {
-    transform: translate(-50%, -150%) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-50%, -190%) scale(0.9);
-    opacity: 0;
-  }
-}
-@keyframes hv-sparkle {
-  from {
-    transform: scale(0.4) rotate(0deg);
-    opacity: 1;
-  }
-  to {
-    transform: scale(1.5) rotate(40deg);
-    opacity: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .l-ledger-plot[data-state='ready'] .l-stage-art,
   .l-ledger-thirst,
@@ -1338,16 +1275,11 @@ dialog.l-modal.l-ledger > header .l-icon {
   .l-angler-bang,
   .l-catch-art,
   .l-stamp,
-  .l-reel-spin,
-  .hv-pop,
-  .hv-pop::after {
+  .l-reel-spin {
     animation: none !important;
   }
   .l-reelbar-mark {
     display: none;
-  }
-  .hv-pop {
-    transform: translate(-50%, -120%);
   }
 }
 

@@ -512,9 +512,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-hand);
+  font-family: var(--font-body);
   font-size: var(--fs-title-s);
-  font-weight: var(--fw-bold);
+  font-weight: var(--fw-semi);
 }
 .l-adapt header small {
   color: var(--text-soft);
@@ -568,10 +568,10 @@
   min-width: 0;
 }
 .l-adapt-text b {
-  font-family: var(--font-hand);
-  font-size: var(--fs-title-s);
-  font-weight: var(--fw-bold);
-  line-height: 1.1;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semi);
+  line-height: 1.25;
 }
 .l-adapt-text small {
   font-size: var(--fs-cap);

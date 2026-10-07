@@ -31,6 +31,73 @@
 .l-dayend-lines span {
   color: var(--text-soft);
 }
+/* 결산 lines arrive one by one while their numbers count up (DayEnd.tsx useCountUp). */
+.l-dayend-card .l-dayend-lines li {
+  animation: l-dayend-line 0.32s ease-out both;
+}
+.l-dayend-card .l-dayend-lines li:nth-child(2) {
+  animation-delay: 0.22s;
+}
+.l-dayend-card .l-dayend-lines li:nth-child(3) {
+  animation-delay: 0.44s;
+}
+.l-dayend-card .l-dayend-lines li:nth-child(4) {
+  animation-delay: 0.66s;
+}
+.l-dayend-card .l-dayend-lines li:nth-child(5) {
+  animation-delay: 0.88s;
+}
+@keyframes l-dayend-line {
+  from {
+    opacity: 0;
+    transform: translateY(var(--sp-1));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.l-dayend-lines .l-dayend-num {
+  color: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.l-dayend-effect {
+  display: block;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+  font-weight: 400;
+}
+/* 내일 예고: tomorrow's weather, birthdays, crops one watering from ripe, 장날 and events. */
+.l-dayend-tomorrow {
+  margin: 0 0 var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+}
+.l-dayend-tomorrow h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: 0 0 var(--sp-1);
+  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+}
+.l-dayend-tomorrow ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: var(--fs-body-s);
+}
+.l-dayend-tomorrow li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
 .l-dayend-fade {
   position: fixed;
   inset: 0;
@@ -55,6 +122,9 @@
   .l-dayend-fade {
     animation: none;
     opacity: 0.8;
+  }
+  .l-dayend-card .l-dayend-lines li {
+    animation: none;
   }
 }
 /* HUD: 나의 하루 +n beside the game clock. */

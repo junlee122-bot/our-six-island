@@ -58,6 +58,37 @@ kbd.ui-key {
 .ui-keybar-sep {
   color: inherit;
 }
+/* WalkHints (D16): folded to one small button after the first 30 minutes of play. */
+.ui-walkhints-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.ui-walkhints-fold,
+.ui-walkhints-close {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-height: 28px;
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-radius: var(--r-round);
+  background: var(--surface-raised);
+  color: var(--text-soft);
+  box-shadow: var(--edge-soft);
+  font: var(--fw-semi) var(--fs-cap) / 1 var(--font-body);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.ui-walkhints-fold:hover,
+.ui-walkhints-close:hover {
+  color: var(--text);
+}
+.ui-walkhints-fold:focus-visible,
+.ui-walkhints-close:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 
 /* ---------------------------------------------------------------- <GameButton> */
 .ui-btn {
@@ -244,9 +275,10 @@ dialog.ui-dialog[data-panel='note'] {
   color: var(--text);
   box-shadow: var(--lift-2);
 }
+/* Note titles read as list/window titles: Pretendard 600 (D13); Gaegu stays for letter and note bodies. */
 dialog.ui-dialog[data-panel='note'] > header h2 {
-  font-family: var(--font-hand);
-  font-weight: var(--fw-bold);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semi);
 }
 
 /* ---------------------------------------------------------------- <Panel> */
@@ -347,8 +379,8 @@ dialog.ui-dialog[data-panel='note'] > header h2 {
   transform: rotate(2deg);
 }
 .ui-panel[data-panel='note'] .ui-panel-title {
-  font-family: var(--font-hand);
-  font-weight: var(--fw-bold);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semi);
   font-size: var(--fs-title);
 }
 /* felt / hanji carry data-venue (casino / hall), so --surface is cloth or hanji. */

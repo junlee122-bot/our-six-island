@@ -148,6 +148,10 @@ test('F2: E on the tile I face — ripe → harvest, grass → till, tilled + se
   assert.equal(act(plot('carrot', { t: 1, thirsty: true })).kind, 'water');
   assert.equal(act(plot('carrot', { t: 1, thirsty: true }), 'fertilizer').kind, 'fertilize');
   assert.equal(act(plot('carrot', { t: 1, wateredAt: now })).kind, null);
+  // G11: the wet tile says it stays wet until real 06:00 (the game day is one real hour).
+  assert.match(act(plot('carrot', { t: 1, wateredAt: now })).label, /실제 아침 6시까지 촉촉/);
+  assert.match(act(plot('carrot', { t: 1, wateredAt: now, rained: true })).label, /비 덕분에/);
+  assert.match(act(plot('carrot', { t: 1, wateredAt: now, sprinkled: true })).label, /늘 촉촉/);
   assert.equal(act(plot(null, { locked: true })).kind, null);
   assert.equal(act(plot(null, { fixture: 'sprinkler' })).kind, null);
   // 덩굴 시렁: vines only under one, nothing else there.

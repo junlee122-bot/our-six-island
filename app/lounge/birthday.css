@@ -39,7 +39,8 @@
   border-radius: var(--r-round);
   background: var(--highlight-soft);
   color: var(--text);
-  font-family: var(--font-hand);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semi);
   font-size: var(--fs-body);
 }
 .l-bday-sticker {

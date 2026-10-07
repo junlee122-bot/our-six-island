@@ -397,6 +397,18 @@ export function SettingsModal({
                 checked={settings.moodHud}
                 onChange={(moodHud) => update({ moodHud })}
               />
+              <Choice
+                name="walkHints"
+                label="걷기 키 안내"
+                hint="걸을 때 화면 구석의 키 안내예요. 처음 30분이 지나면 작은 '키 안내' 단추로 접혀요."
+                value={settings.walkHints}
+                options={[
+                  { value: 'auto', label: '30분 뒤 접기' },
+                  { value: 'show', label: '늘 펼치기' },
+                  { value: 'fold', label: '늘 접기' },
+                ]}
+                onChange={(walkHints) => update({ walkHints })}
+              />
               {moodShare}
             </Section>
           )}

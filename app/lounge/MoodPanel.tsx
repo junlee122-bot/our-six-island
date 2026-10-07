@@ -162,7 +162,7 @@ export function MoodPanel({
           <span className="l-mood-xp" data-up={m.xp > 1 || undefined} data-down={m.xp < 1 || undefined}>
             기술 XP
             <b>{m.xp === 1 ? '보통' : `${m.xp > 1 ? '+' : '−'}${Math.round(Math.abs(m.xp - 1) * 100)}%`}</b>
-            <small>범에는 영향 없어요</small>
+            <small>{(m.xpCap ?? 1) > 1 ? `하루 XP 한도 +${Math.round(((m.xpCap ?? 1) - 1) * 100)}% · 범은 그대로` : '범에는 영향 없어요'}</small>
           </span>
         </header>
 

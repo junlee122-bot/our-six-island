@@ -5,10 +5,11 @@
 // a music-box jingle plays and the 결산 card shows what the day brought; any
 // key closes it. The rules live in lounge-myday.ts (the server checks again).
 import { useEffect, useRef, useState } from 'react';
-import { Coins, Moon, Sparkles, Sprout, Sun } from '../ui/icons';
+import { CalendarDays, Cloud, CloudLightning, CloudRain, Coins, Gift, Moon, PartyPopper, Snowflake, Sparkles, Sprout, Store, Sun } from '../ui/icons';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { EXTRA_DAYS_PER_REAL_DAY, MYDAY_REJECT, NIGHT_FROM, SLEEP_GROW_MS, isGameNight, type DayEndReport } from '../lounge-myday';
-import { MOOD_TIER_BY_ID, REST_GAIN } from '../lounge-mood-data';
+import { GOOD_MOOD_CAP_BONUS, MOOD_TIER_BY_ID, REST_GAIN } from '../lounge-mood-data';
+import { forecastOf } from '../lounge-forecast';
 import { SKILL_INFO } from '../lounge-growth-data';
 import { formatBeom } from '../lounge-text';
 import { loungeAudio } from '../lounge-audio';
@@ -56,7 +57,7 @@ export function DayEndPanel({ room, view, notify, onClose }: { room: CloudRoom; 
     }
   };
   if (phase === 'fade') return <div className="l-dayend-fade" data-testid="dayend-fade" aria-hidden="true" />;
-  if (phase === 'card' && md?.r) return <DayEndCard report={md.r} left={left} onClose={onClose} />;
+  if (phase === 'card' && md?.r) return <DayEndCard report={md.r} left={left} onClose={onClose} now={now} />;
   const why = !night ? `밤 ${NIGHT_FROM - 12}시부터 할 수 있어요` : left <= 0 ? MYDAY_REJECT.enough : undefined;
   return (
     <Modal title="포근한 침대" onClose={onClose} className="l-life-modal l-dayend" panel="note">
@@ -89,9 +90,42 @@ export function DayEndPanel({ room, view, notify, onClose }: { room: CloudRoom; 
   );
 }
 
+/** Count-up (Stardew-style): each line rolls from 0 after `delay`; reduced motion shows it at once. */
+const COUNT_MS = 650,
+  LINE_GAP_MS = 220;
+const reducedMotion = () => {
+  try {
+    return matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+};
+function useCountUp(target: number, delay: number, instant: boolean) {
+  const still = instant || target <= 0;
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    if (still) return;
+    let raf = 0;
+    const t0 = performance.now() + delay;
+    const tick = (t: number) => {
+      const k = Math.min(1, Math.max(0, (t - t0) / COUNT_MS));
+      setV(Math.round(target * (1 - (1 - k) ** 3)));
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, delay, still]);
+  return still ? target : v;
+}
+function Num({ n, i, instant, fmt = String }: { n: number; i: number; instant: boolean; fmt?: (n: number) => string }) {
+  return <span className="l-dayend-num">{fmt(useCountUp(n, i * LINE_GAP_MS, instant))}</span>;
+}
+const WEATHER_ICON = { sunny: Sun, cloudy: Cloud, rain: CloudRain, storm: CloudLightning, snow: Snowflake } as const;
+
 /** The 결산 card (any key or click closes it). */
-export function DayEndCard({ report, left, onClose }: { report: DayEndReport; left: number; onClose: () => void }) {
+export function DayEndCard({ report, left, onClose, now }: { report: DayEndReport; left: number; onClose: () => void; now: number }) {
   const opened = useRef(0);
+  const [instant] = useState(reducedMotion);
   useEffect(() => {
     opened.current = Date.now();
     const key = () => {
@@ -102,6 +136,15 @@ export function DayEndCard({ report, left, onClose }: { report: DayEndReport; le
     return () => window.removeEventListener('keydown', key);
   }, [onClose]);
   const mood = report.mood && Object.hasOwn(MOOD_TIER_BY_ID, report.mood) ? MOOD_TIER_BY_ID[report.mood as keyof typeof MOOD_TIER_BY_ID] : null;
+  const moodEffect = !mood
+    ? ''
+    : mood.xp > 1
+      ? `XP ×${mood.xp} · 하루 XP 한도 +${Math.round(GOOD_MOOD_CAP_BONUS * 100)}%`
+      : mood.xp < 1
+        ? `XP ×${mood.xp} · 푹 쉬면 나아져요`
+        : `기분이 좋으면 하루 XP 한도 +${Math.round(GOOD_MOOD_CAP_BONUS * 100)}%`;
+  const fc = forecastOf(now),
+    WeatherIcon = WEATHER_ICON[fc.weather];
   return (
     <Modal title="하루 결산" onClose={onClose} className="l-life-modal l-dayend-card" panel="note">
       <p className="l-modal-intro" data-testid="dayend-card">
@@ -111,31 +154,94 @@ export function DayEndCard({ report, left, onClose }: { report: DayEndReport; le
         <li>
           <Coins size={16} aria-hidden="true" />
           <span>출하 수입</span>
-          <b>{report.ship ? `${formatBeom(report.ship)} · ${report.sold}개` : '없어요'}</b>
+          <b>
+            {report.ship ? (
+              <>
+                <Num n={report.ship} i={0} instant={instant} fmt={formatBeom} /> · <Num n={report.sold} i={0} instant={instant} />개
+              </>
+            ) : (
+              '없어요'
+            )}
+          </b>
         </li>
-        <li>
+        <li style={{ animationDelay: `${LINE_GAP_MS}ms` }}>
           <Sprout size={16} aria-hidden="true" />
           <span>자란 작물</span>
-          <b>{report.grew ? `${report.grew}칸이 자랐어요 · 다 자란 칸 ${report.ripe}` : report.ripe ? `다 자란 칸 ${report.ripe}` : '촉촉한 작물이 없었어요'}</b>
+          <b>
+            {report.grew ? (
+              <>
+                <Num n={report.grew} i={1} instant={instant} />칸이 자랐어요 · 다 자란 칸 <Num n={report.ripe} i={1} instant={instant} />
+              </>
+            ) : report.ripe ? (
+              <>
+                다 자란 칸 <Num n={report.ripe} i={1} instant={instant} />
+              </>
+            ) : (
+              '촉촉한 작물이 없었어요'
+            )}
+          </b>
         </li>
         {(report.fruit || report.manure) && (
-          <li>
+          <li style={{ animationDelay: `${LINE_GAP_MS * 2}ms` }}>
             <Sprout size={16} aria-hidden="true" />
             <span>농장</span>
-            <b>{[report.fruit ? `과일 ${report.fruit}개` : '', report.manure ? `거름 ${report.manure}개` : ''].filter(Boolean).join(' · ')}</b>
+            <b>
+              {report.fruit ? (
+                <>
+                  과일 <Num n={report.fruit} i={2} instant={instant} />개
+                </>
+              ) : null}
+              {report.fruit && report.manure ? ' · ' : null}
+              {report.manure ? (
+                <>
+                  거름 <Num n={report.manure} i={2} instant={instant} />개
+                </>
+              ) : null}
+            </b>
           </li>
         )}
-        <li>
+        <li style={{ animationDelay: `${LINE_GAP_MS * 3}ms` }}>
           <Sparkles size={16} aria-hidden="true" />
           <span>오른 기술</span>
           <b>{report.lv?.length ? report.lv.map((u) => `${SKILL_INFO[u.s]?.name ?? u.s} Lv${u.lv}`).join(' · ') : '오늘은 차곡차곡 쌓았어요'}</b>
         </li>
-        <li>
+        <li style={{ animationDelay: `${LINE_GAP_MS * 4}ms` }}>
           <Moon size={16} aria-hidden="true" />
           <span>오늘의 기분</span>
-          <b>{mood?.name ?? '평온해요'}</b>
+          <b>
+            {mood?.name ?? '평온해요'}
+            {moodEffect && (
+              <small className="l-dayend-effect" data-testid="dayend-mood-effect">
+                {moodEffect}
+              </small>
+            )}
+          </b>
         </li>
       </ul>
+      <section className="l-dayend-tomorrow" aria-label="내일 예고" data-testid="dayend-tomorrow">
+        <h3>
+          <CalendarDays size={15} aria-hidden="true" /> 내일 · {fc.date}
+        </h3>
+        <ul>
+          <li>
+            <WeatherIcon size={15} aria-hidden="true" />
+            {fc.weatherName}
+            {fc.waters ? ' · 밭에 물을 안 줘도 돼요' : ''}
+          </li>
+          {report.soon ? (
+            <li>
+              <Sprout size={15} aria-hidden="true" />
+              물 주면 익을 작물 {report.soon}칸
+            </li>
+          ) : null}
+          {fc.events.map((e) => (
+            <li key={e.id}>
+              {e.kind === 'birthday' ? <Gift size={15} aria-hidden="true" /> : e.kind === 'stall' || e.kind === 'weekly' ? <Store size={15} aria-hidden="true" /> : <PartyPopper size={15} aria-hidden="true" />}
+              {e.name}
+            </li>
+          ))}
+        </ul>
+      </section>
       {report.rest && <p className="l-help-text">푹 쉬고 왔어요: 다음 XP 2배</p>}
       {report.mk && <p className="l-help-text">이번 주 밀린 기회를 하루 썼어요.</p>}
       <p className="l-help-text">
