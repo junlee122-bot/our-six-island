@@ -31,12 +31,16 @@ export const VEIN_MULT = 3;
  * it is every floor. `pick` is the pickaxe tier a floor needs when mine is
  * lower: the lift will not stop there; the pass goes anyway (the rocks stay hard).
  */
-export function mineStops(m: { deep: number; pickaxe: number }, pass = false, plus = 0): { floor: number; pick: number | null }[] {
+export function mineStops(m: { deep: number; pickaxe: number }, pass = false, plus = 0, deepStop = false): { floor: number; pick: number | null }[] {
   const stops = Array.from({ length: Math.floor(Math.min(m.deep, MINE_FLOORS_P2) / LIFT_EVERY) }, (_, i) => (i + 1) * LIFT_EVERY);
   const floors = pass
     ? Array.from({ length: MINE_FLOORS_P2 }, (_, i) => i + 1)
     : // 재능 깊은 숨: each stop also goes `plus` floors deeper.
       [1, ...stops.flatMap((f) => (plus > 0 && f + plus <= MINE_FLOORS_P2 ? [f, f + plus] : [f]))];
+  // 광업 Lv9: one more stop at my deepest floor (in order, once).
+  const deep = Math.min(m.deep, MINE_FLOORS_P2);
+  if (!pass && deepStop && deep > 1 && !floors.includes(deep)) floors.push(deep);
+  floors.sort((a, b) => a - b);
   return floors.map((floor) => ({ floor, pick: floorPick(floor) > m.pickaxe ? floorPick(floor) : null }));
 }
 /** Rocks broken on a floor today before its ladder down shows (4–6). */

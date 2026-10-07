@@ -244,7 +244,7 @@ export function townAction(
       const n = a.n;
       if (!safe(n) || n < 1) fail(TOWN_REJECT.auctionUnits);
       if ((townRead(life, uid, now).aucN ?? 0) + n > AUCTION_UNITS_MAX) fail(TOWN_REJECT.auctionUnits);
-      // Fish sales stay out of life.sold (no daily cap), so the sale is read off the wallet.
+      // Fish sales stay out of life.sold (their own tally, no hard cap), so the sale is read off the wallet.
       const before = ledger.accounts[wallet] ?? 0;
       // The auction is at the 어시장, so the fish fetch their full price before the premium.
       const base = sell(life, ledger, { kind: 'sellItem', item: a.item, n, at: 'fishmarket' });

@@ -10,7 +10,7 @@ import { useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { CROPS, CROP_INFO, FRUIT_SELL, SHOP_BY_ID, shopLock, type Crop, type LifeAction, type LifeView } from '../lounge-life';
 import { BUFF_INFO, DISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
-import { FISH_DEMAND_FREE, isFishSale, itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
+import { FISH_DEMAND_FREE, FISH_FULL_PER_DAY, fishCapNote, isFishSale, itemName, sellQuote, ROD_PRICE } from '../lounge-life-plus';
 import { SELL_AWAY, SHOP_INFO, buyerOf, shopOffer, type ShopId } from '../lounge-shops';
 import { sellCapAllows, stockName, stockUnit } from '../lounge-farm';
 import {
@@ -74,6 +74,7 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
   if (!life) return null;
   const rows = sellRows(life, at);
   const cap = life.sellCapLeft;
+  const fishSold = life.me.fishSold ?? 0;
   const week = new Set<string>(coopWeek);
   const total = (r: SellRow, n: number) =>
     r.goods ? Math.round(stockUnit(r.id, r.q ?? 0, now, life.flags ?? []) * n) : sellQuote(life, r.id, 0, n, now, 1).total;
@@ -92,13 +93,17 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
   return (
     <>
       <p className="l-town-sub" data-testid="shop-sell-note">
-        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. {at === 'fishmarket' ? `물고기는 하루 한도 없이 팔 수 있고, 같은 물고기는 하루 ${FISH_DEMAND_FREE}마리까지 제값이에요.` : `오늘 더 팔 수 있어요 ${formatBeom(cap)}`}
+        여기서는 제값(100%)을 받아요. 가방이나 출하 상자에서 팔면 {pct}%예요. {at === 'fishmarket'
+          ? `물고기는 하루 ${FISH_FULL_PER_DAY / 10_000}만 범어치까지 제값이고(오늘 남은 ${formatBeom(Math.max(0, FISH_FULL_PER_DAY - fishSold))}), 그 뒤로는 조금씩 값이 내려가요. 같은 물고기는 하루 ${FISH_DEMAND_FREE}마리까지 제값이에요.`
+          : `오늘 더 팔 수 있어요 ${formatBeom(cap)}`}
         {life.me.haggleLeft ? ` · 흥정 +5% (남은 ${formatBeom(life.me.haggleLeft)})` : ''}
       </p>
       <ul className="l-town-list">
         {rows.map((r) => {
-          // Fish are outside the daily cap (lounge-life-plus isFishSale).
-          const limit = r.goods || !isFishSale(r.id) ? cap : Infinity;
+          // Fish are outside the daily cap; past FISH_FULL_PER_DAY they only taper (lounge-life-plus isFishSale).
+          const fish = !r.goods && isFishSale(r.id);
+          const limit = fish ? Infinity : cap;
+          const note = (n: number) => (fish ? fishCapNote(fishSold, total(r, n)) : '');
           let most = Math.min(r.have, 999);
           while (most > 1 && total(r, most) > limit) most--;
           const one = total(r, 1);
@@ -116,11 +121,11 @@ export function ShopSell({ room, view, notify, at, coopWeek = [] }: Base & { at:
               </div>
               <span className="l-town-buttons">
                 {/* A good worth more than today's cap still sells one at a time (lounge-farm sellCapAllows). */}
-                <GameButton size="s" disabled={busy || (r.goods ? !sellCapAllows(one, 1, limit) : one > limit)} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.`, 'coin')}>
+                <GameButton size="s" disabled={busy || (r.goods ? !sellCapAllows(one, 1, limit) : one > limit)} onClick={() => void run(act(r, 1), `${r.name} 1개를 팔았어요.${note(1)}`, 'coin')}>
                   1개
                 </GameButton>
                 {most > 1 && (
-                  <GameButton size="s" variant="primary" disabled={busy} onClick={() => void run(act(r, most), `${r.name} ${most}개를 팔았어요.`, 'coin')}>
+                  <GameButton size="s" variant="primary" disabled={busy} onClick={() => void run(act(r, most), `${r.name} ${most}개를 팔았어요.${note(most)}`, 'coin')}>
                     {most < r.have ? `${most}개` : '모두'}
                   </GameButton>
                 )}

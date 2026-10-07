@@ -33,9 +33,11 @@ import {
 import {
   DEMAND_FLOOR,
   FISH_DEMAND_FREE,
+  FISH_FULL_PER_DAY,
   MARKET_HALF,
   MARKET_SOFT,
   demandMult,
+  fishCapNote,
   marketMult,
   sellQuote,
   sellUnit,
@@ -296,7 +298,7 @@ test('market saturation tapers very long selling days; the safety ceiling still 
   invariant(s.ledger);
 });
 
-test('fish: 4 of a species a day at the full price, then the curve; no saturation, no cap', () => {
+test('fish: 4 of a species a day at the full price, then the curve; no crop saturation, no cap', () => {
   // Fish skip the first FISH_DEMAND_FREE units, then sag on their half-life.
   assert.equal(FISH_DEMAND_FREE, 4);
   for (const k of [0, 1, 2, 3]) assert.equal(demandMult('koi', k), 1);
@@ -332,6 +334,50 @@ test('fish: 4 of a species a day at the full price, then the curve; no saturatio
   assert.equal(view().soldToday, SELL_CAP_PER_DAY - 100);
   assert.equal(view().sellCapLeft, 100);
   assert.equal(view().me.demand.koi, 20);
+  invariant(s.ledger);
+});
+
+test('fish: 15만 범 a day at the full price, then the crops\' market curve (G4)', () => {
+  assert.equal(FISH_FULL_PER_DAY, 150_000);
+  assert.equal(marketMult(FISH_FULL_PER_DAY, FISH_FULL_PER_DAY), 1);
+  assert.equal(marketMult(FISH_FULL_PER_DAY + MARKET_HALF, FISH_FULL_PER_DAY), 0.5);
+  assert.equal(fishCapNote(0, 1_000), '');
+  assert.equal(fishCapNote(FISH_FULL_PER_DAY - 1_000, 1_000), '');
+  assert.match(fishCapNote(FISH_FULL_PER_DAY - 10, 100), /오늘 물고기는 15만 범까지 제값이에요/);
+  const s = world(1),
+    [m] = s.members;
+  s.life.ext = { [m.id]: { inv: { koi: 8, carp: 4 } } };
+  const view = () => lifeView(s.life, m.id, 0, T0);
+  const unit = sellUnit('koi', 0, T0);
+  // Under the tally: full price, and each sale adds to it (not to life.sold).
+  assert.equal(view().me.fishSold, 0);
+  let before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 2, at: 'general' }, T0);
+  assert.equal(s.balance(m) - before, unit * 2);
+  assert.equal(view().me.fishSold, unit * 2);
+  assert.equal(view().soldToday, 0);
+  // At the tally (a long fishing day), the same curve as crops past MARKET_SOFT.
+  s.life.ext[m.id].fsb = FISH_FULL_PER_DAY + MARKET_HALF;
+  const two = sellQuote(view(), 'koi', 0, 2, T0);
+  assert.equal(two.next, Math.round(unit * 0.5));
+  assert.ok(two.total < unit, String(two.total));
+  before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 2, at: 'general' }, T0);
+  assert.equal(s.balance(m) - before, two.total);
+  assert.equal(view().me.fishSold, FISH_FULL_PER_DAY + MARKET_HALF + two.total);
+  // No hard stop: fish still sell, just for less.
+  s.act(m, { kind: 'sellItem', item: 'koi', n: 4, at: 'general' }, T0);
+  assert.equal(view().soldToday, 0);
+  // The tally survives a save and resets the next KST day.
+  const saved = readLife(JSON.parse(JSON.stringify(s.life)));
+  assert.equal(saved.ext[m.id].fsb, s.life.ext[m.id].fsb);
+  assert.equal(readLife({ ...JSON.parse(JSON.stringify(s.life)), ext: { [m.id]: { day: kstDay(T0), fsb: -5 } } }).ext?.[m.id]?.fsb, undefined);
+  const tomorrow = Date.UTC(2026, 8, 24, 15, 0, 0);
+  assert.equal(lifeView(s.life, m.id, 0, tomorrow).me.fishSold, 0);
+  before = s.balance(m);
+  s.act(m, { kind: 'sellItem', item: 'carp', n: 1, at: 'general' }, tomorrow);
+  assert.equal(s.balance(m) - before, sellUnit('carp', 0, tomorrow));
+  assert.equal(lifeView(s.life, m.id, 0, tomorrow).me.fishSold, sellUnit('carp', 0, tomorrow));
   invariant(s.ledger);
 });
 

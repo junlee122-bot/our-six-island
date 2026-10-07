@@ -14,6 +14,9 @@ import {
   BEE_MS,
   BIN_MAX,
   CROP_CAT,
+  DAIRY_BIG,
+  DAIRY_BIG_Q,
+  DAIRY_INPUTS,
   CROW_CHANCE,
   CROW_HOUR,
   CROW_MIN_CROPS,
@@ -43,6 +46,7 @@ import {
   buildGoods,
   isGoodId,
   legacyTile,
+  isRanchGoodId,
   productOf,
   sprinklerCovers,
   tileBed,
@@ -134,8 +138,10 @@ const isCropId = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as s
 const COUNT_MAX = 99_999;
 /** 과수원 fruit (bag items, normal quality only) that the jar, keg and dryer take. */
 const isOrchard = (id: unknown): id is Stage3ItemId => typeof id === 'string' && ORCHARD_FRUITS.includes(id);
-/** Bag items (not crops) the machines take: 과수원 fruit and 양식장 roe (normal quality only). */
-const isBagInput = (id: unknown): id is string => isOrchard(id) || isRoeId(id);
+/** 우리 농장 축사·닭장 products the jar and keg take (달걀 → 마요네즈, 우유 → 치즈). */
+const isDairy = (id: unknown): id is Stage3ItemId => typeof id === 'string' && DAIRY_INPUTS.includes(id);
+/** Bag items (not crops) the machines take: 과수원 fruit, 양식장 roe and 달걀·우유 (normal quality only). */
+const isBagInput = (id: unknown): id is string => isOrchard(id) || isRoeId(id) || isDairy(id);
 /**
  * Whether a sale of `n` units worth `amount` fits today's sell cap (`left`
  * still open). One unit worth more than what is left (a 별빛 인삼주 is worth
@@ -244,8 +250,8 @@ let goodsMemo: Readonly<Record<string, GoodDef>> | null = null;
 export function goodsById(): Readonly<Record<string, GoodDef>> {
   goodsMemo ??= Object.fromEntries(
     buildGoods(
-      (id) => (id === 'fruit' ? '과일' : isOrchard(id) ? STAGE3_ITEMS[id].name : isRoeId(id) ? ROE_ITEMS[id].name : CROP_INFO[id as Crop].name),
-      (id) => (id === 'fruit' ? FRUIT_SELL : isOrchard(id) ? STAGE3_ITEMS[id].sell : isRoeId(id) ? ROE_ITEMS[id].sell : CROP_INFO[id as Crop].sell),
+      (id) => (id === 'fruit' ? '과일' : isOrchard(id) || isDairy(id) ? STAGE3_ITEMS[id].name : isRoeId(id) ? ROE_ITEMS[id].name : CROP_INFO[id as Crop].name),
+      (id) => (id === 'fruit' ? FRUIT_SELL : isOrchard(id) || isDairy(id) ? STAGE3_ITEMS[id].sell : isRoeId(id) ? ROE_ITEMS[id].sell : CROP_INFO[id as Crop].sell),
     ).map((g) => [g.id, g]),
   );
   return goodsMemo;
@@ -254,7 +260,7 @@ export function goodsById(): Readonly<Record<string, GoodDef>> {
 export function stockName(id: string) {
   if (id === 'fruit') return '과일';
   if (isCropId(id)) return CROP_INFO[id].name;
-  if (isOrchard(id)) return STAGE3_ITEMS[id].name;
+  if (isOrchard(id) || isDairy(id)) return STAGE3_ITEMS[id].name;
   if (isRoeId(id)) return ROE_ITEMS[id].name;
   return goodsById()[id]?.name ?? id;
 }
@@ -1085,14 +1091,21 @@ export function farmAction(
         }
       }
       const seeds = m!.k === 'seedmaker',
-        mods = growthMods(life, uid);
+        mods = growthMods(life, uid),
+        ranch = isRanchGoodId(out);
+      // 축산 가공품: 큰 달걀 · 진한 우유 make an 은별 good; 장인 손맛 (and 목축 Lv4) may lift it one star more.
+      if (ranch) {
+        if (Object.hasOwn(DAIRY_BIG, item)) q = Math.max(q, DAIRY_BIG_Q) as Quality;
+        if (growthChance(life, uid, `rstar:${slot}`, mods.ranchStar / 100, now)) q = Math.min(2, q + 1) as Quality;
+      }
       m!.out = out!;
       // 재능 수리공: my machine sometimes makes two; 손이 빠른: a little faster.
       m!.n = seeds ? 1 + (hash32(`seed:${uid}:${slot}:${now}:${life.seq}`) % 2) : 1 + (growthChance(life, uid, `mach:${slot}`, mods.machineDouble, now) ? 1 : 0);
       if (!seeds && q > 0) m!.q = q;
       else delete m!.q;
       m!.at = now;
-      m!.done = now + Math.round(def.ms * (1 - Math.min(0.9, mods.machineFast)));
+      // 숙성 장인: ranch goods a quarter faster still.
+      m!.done = now + Math.round(def.ms * (1 - Math.min(0.9, mods.machineFast + (ranch ? mods.ranchFast : 0))));
       break;
     }
     case 'farmCollect': {

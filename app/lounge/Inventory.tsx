@@ -28,7 +28,7 @@ import type { Notify } from './Toast';
 import { ItemIcon, QualityStar } from './ItemIcon';
 import { Hotbar, HOTBAR_DRAG_TYPE, type HotbarState } from './LifeHud';
 import { useLifeAction } from './LifePanels';
-import { isFishSale, sellQuote } from '../lounge-life-plus';
+import { fishCapNote, isFishSale, sellQuote } from '../lounge-life-plus';
 import { useServerClock } from './use-server-clock';
 import { PILL } from '../lounge-voyage-data';
 import './life-plus.css';
@@ -113,8 +113,9 @@ export function InventoryPanel({
   const total = quote(count);
   // "최대": as many as can be sold right now — the bag, the per-sale limit and
   // what today's cap still allows at the quoted (demand-adjusted) price.
-  // Fish are outside the daily cap (lounge-life-plus isFishSale).
-  const limit = entry && isFishSale(entry.id) ? Infinity : cap;
+  // Fish are outside the daily cap; past FISH_FULL_PER_DAY they only taper (lounge-life-plus isFishSale).
+  const fish = !!entry && isFishSale(entry.id);
+  const limit = fish ? Infinity : cap;
   let most = price > 0 ? Math.min(have, SELL_MAX_N) : 0;
   while (most > 0 && quote(most) > limit) most--;
   const donated = !!(entry && life.museum?.[entry.id]);
@@ -124,7 +125,11 @@ export function InventoryPanel({
       ? await run({ kind: 'sell', crop, n: count, quality: q }, `${QUALITY_LABEL[q] === '보통' ? '' : QUALITY_LABEL[q] + ' '}${entry.name} ${count}개를 ${formatBeom(total)}에 팔았어요.`, 'coin')
       : entry.id === 'fruit'
         ? await run({ kind: 'sell', crop: 'fruit', n: count }, `과일 ${count}개를 ${formatBeom(total)}에 팔았어요.`, 'coin')
-        : await run({ kind: 'sellItem', item: entry.id, n: count }, `${entry.name} ${count}개를 ${formatBeom(total)}에 팔았어요.`, 'coin');
+        : await run(
+            { kind: 'sellItem', item: entry.id, n: count },
+            `${entry.name} ${count}개를 ${formatBeom(total)}에 팔았어요.${fish ? fishCapNote(life.me.fishSold ?? 0, total) : ''}`,
+            'coin',
+          );
     if (ok) setN(1);
   };
   const dish = entry ? DISH_BY_ID[entry.id] : undefined;

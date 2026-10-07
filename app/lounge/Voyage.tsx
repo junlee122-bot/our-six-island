@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { FISH_BY_ID, ITEM_BY_ID } from '../lounge-items';
+import { fishCapNote } from '../lounge-life-plus';
 import { formatBeom, josa } from '../lounge-text';
 import { ACTORS } from '../lounge-roster';
 import { WEATHER_INFO, gameClockText, weatherOf } from '../lounge-calendar';
@@ -262,7 +263,8 @@ export function VoyageSummary({ room, view, notify, onClose }: { room: CloudRoom
     setBusy(true);
     try {
       let got = 0;
-      const before = view.wallet?.balance ?? 0;
+      const before = view.wallet?.balance ?? 0,
+        fishBefore = view.life?.me.fishSold ?? 0;
       for (const r of rows) {
         const n = Math.min(r.n, inv[r.id] ?? 0);
         if (n > 0 && (await room.life({ kind: 'sellItem', item: r.id, n, at: 'fishmarket' }))) got += n;
@@ -270,7 +272,8 @@ export function VoyageSummary({ room, view, notify, onClose }: { room: CloudRoom
       const after = room.snapshot().wallet?.balance ?? before;
       setSold(got);
       if (got) {
-        notify(`럭스에게 ${got}마리를 팔았어요. ${formatBeom(Math.max(0, after - before))}!`);
+        const paid = Math.max(0, after - before);
+        notify(`럭스에게 ${got}마리를 팔았어요. ${formatBeom(paid)}!${fishCapNote(fishBefore, paid)}`);
         lifeSfx('fanfare');
       }
     } finally {

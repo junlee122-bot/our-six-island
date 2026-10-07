@@ -21,8 +21,9 @@
 //
 // Selling the same goods from the bag or the shipping bin pays SELL_AWAY
 // (85%); the daily 100,000범 cap (lounge-life.ts SELL_CAP_PER_DAY) and the
-// demand curves are unchanged, except that fish skip the cap and the market
-// saturation (lounge-life-plus.ts isFishSale, 2026-10-02). Until
+// demand curves are unchanged, except that fish skip the cap and taper on
+// their own tally past 15만 범 a day (lounge-life-plus.ts isFishSale,
+// 2026-10-02; FISH_FULL_PER_DAY, 2026-10-07). Until
 // the 항구 구역 opens for a friend, the 잡화점 keeps the fishing goods and buys
 // fish for 럭스.
 //

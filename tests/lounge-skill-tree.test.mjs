@@ -131,7 +131,8 @@ test('talent points: one at Lv2·4·6·8·10, at most 5; free = floor(level/2) �
   // The talents' effects add up with the rest.
   const mods = growthMods(s.life, m.id);
   assert.equal(mods.reelEase, 0.1);
-  assert.equal(mods.trapExtra, 0.2);
+  // 낚시 Lv3 통발 손질 (+10%) and 재능 통발 장인 (+20%).
+  assert.equal(mods.trapExtra, 0.1 + 0.2);
   assert.equal(mods.nightRare, 0.15);
   assert.equal(mods.treasure, 0.5);
   assert.equal(mods.bigFish, 0.1);
@@ -179,9 +180,10 @@ test('ⓕ talents and other locked nodes show but cannot be taken; locked profes
   // 단단한 손목 sits after a locked one but is itself locked too.
   s.fails(m, { kind: 'pickTalent', skill: 'farm', talent: 'farm-t3' }, FARM_LOCK);
   assert.equal(talentBlock(s.life, m.id, TALENT_BY_ID['craft-t4']), FARM_LOCK);
-  // 목축: 치즈 장인 needs animal artisan goods (우리 농장).
+  // 목축: 치즈 장인 is open since 축산 가공품 (치즈·마요네즈) came with the farm barn; no profession is locked.
   setLevel(s, m, 'ranch', 10);
-  s.fails(m, { kind: 'chooseProf', skill: 'ranch', prof: 'ranch-b' }, PROF_BY_ID['ranch-b'].lock);
+  assert.ok(PROFESSIONS.every((p) => !p.lock));
+  assert.equal(PROF_BY_ID['ranch-b'].lock, undefined);
   s.act(m, { kind: 'chooseProf', skill: 'ranch', prof: 'ranch-a' });
   // Locked talents never count, even if a save carried one.
   s.life.growth.u[m.id].tal = ['farm-t2'];

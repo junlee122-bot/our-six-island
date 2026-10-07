@@ -145,7 +145,7 @@ import { CO_DONATION_GRANT } from './lounge-social-defs.ts';
 // 성장 P1: XP and skill/tool effects (functions only; see the cycle note above).
 import { XP, fishXp } from './lounge-growth-data.ts';
 // 텃밭 확장: leaf data, and the farm engine (functions only; see the cycle note above).
-import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId, tileOpen } from './lounge-farm-data.ts';
+import { GOOD_HALF_LIFE, GOOD_HALF_LIFE_BY_ID, NEW_CROP_HALF_LIFE, SPEED_GRO, isGoodId, isRanchGoodId, tileOpen } from './lounge-farm-data.ts';
 import { farmGoodsWealth, fixtureAt, settleFarmPlots } from './lounge-farm.ts';
 import { soilCheckpoint, soilWater } from './lounge-farm-soil.ts';
 import { greenhouseBuilt, storeCount, storeStock, storeValue, takeStore } from './lounge-farm-sites.ts';
@@ -323,6 +323,8 @@ export type UserExt = {
   eatAt?: { at: number; w: EatPlace };
   /** 흥정 범 added today (daily). */
   hag?: number;
+  /** 범 of fish sold today (daily; past FISH_FULL_PER_DAY they taper, G4). */
+  fsb?: number;
   /** Mine rocks broken under 광부의 힘 (every third gives one more ore). */
   mrk?: number;
   /** 행상인 this KST week: rarities bought and the 계약 done. */
@@ -611,6 +613,7 @@ function readUserExt(v: unknown): UserExt | undefined {
     if (nonEmpty(dem)) out.dem = dem as Record<string, number>;
     if (safe(x.reroll) && x.reroll > 0) out.reroll = Math.min(SHOP_REROLL_MAX, x.reroll);
     if (safe(x.hag) && x.hag > 0) out.hag = Math.min(HAGGLE_CAP, x.hag);
+    if (safe(x.fsb) && x.fsb > 0) out.fsb = x.fsb;
     if (safe(x.rqn) && x.rqn > 0) out.rqn = Math.min(REQUESTS_PER_DAY, x.rqn);
   }
   const sn = obj(x.snack);
@@ -784,6 +787,7 @@ function todayExt(life: LifeState, uid: string, now: number): UserExt {
     delete x.dem;
     delete x.reroll;
     delete x.hag;
+    delete x.fsb;
     delete x.rqn;
   }
   if (was !== pday) {
@@ -868,8 +872,11 @@ export function demandHalfLife(id: string): number {
 /**
  * Fish and crab-pot catches (item kind 'fish'). They have their own selling
  * rules (decided 2026-10-02): FISH_DEMAND_FREE of a species a day at the full
- * price, and no market saturation or daily sell cap (their 범 never counts in
- * life.sold, so they do not tire the market for crops and goods either).
+ * price, and no hard daily sell cap (their 범 never counts in life.sold, so
+ * they do not tire the market for crops and goods either). Since 2026-10-07
+ * (G4) they have their own daily tally instead (UserExt.fsb): the first
+ * FISH_FULL_PER_DAY 범 of fish a KST day pay the full price, then they taper
+ * on the crops' market curve (marketMult).
  */
 export const isFishSale = (id: string) => ITEM_BY_ID[id]?.kind === 'fish';
 /** Units of the same fish a day that still fetch the full price. */
@@ -891,26 +898,30 @@ export function demandSoft(mods: { demandCrop?: number; demandFish?: number; dem
   if (!mods) return 0;
   if (isCropId(id)) return mods.demandCrop ?? 0;
   if (isFishSale(id)) return mods.demandFish ?? 0;
-  return RANCH_GOODS.includes(id) ? (mods.demandRanch ?? 0) : 0;
+  return RANCH_GOODS.includes(id) || isRanchGoodId(id) ? (mods.demandRanch ?? 0) : 0;
 }
 /**
  * Market saturation: once a friend has sold MARKET_SOFT범 today (all goods
  * together, fish aside), each further 범 of sales pays 0.5^(over / MARKET_HALF).
  * Casual days never reach it; it only tapers very long selling days (no hard stop).
+ * Fish use the same curve from FISH_FULL_PER_DAY (`free`) on their own tally.
  */
 export const MARKET_SOFT = 30_000;
 export const MARKET_HALF = 20_000;
-export const marketMult = (soldBeom: number) =>
-  soldBeom <= MARKET_SOFT ? 1 : 0.5 ** ((soldBeom - MARKET_SOFT) / MARKET_HALF);
+export const marketMult = (soldBeom: number, free = MARKET_SOFT) =>
+  soldBeom <= free ? 1 : 0.5 ** ((soldBeom - free) / MARKET_HALF);
+/** 범 of fish a friend sells at the full price each KST day (G4, decided 2026-10-07). */
+export const FISH_FULL_PER_DAY = 150_000;
 /**
  * 범 for selling n more units at `unit` each after `sold` units of the same
- * thing and `soldBeom` 범 of everything today (ignored for fish).
+ * thing and `soldBeom` 범 sold today: everything but fish for goods and crops,
+ * fish only for fish (saleBeomToday picks the right one).
  */
 export function sellTotal(id: string, unit: number, sold: number, n: number, soldBeom = 0, soft = 0) {
-  const fish = isFishSale(id);
+  const free = isFishSale(id) ? FISH_FULL_PER_DAY : MARKET_SOFT;
   let total = 0;
   for (let i = 0; i < n; i++)
-    total += Math.max(1, Math.round(unit * demandMult(id, sold + i, soft) * (fish ? 1 : marketMult(soldBeom + total))));
+    total += Math.max(1, Math.round(unit * demandMult(id, sold + i, soft) * marketMult(soldBeom + total, free)));
   return total;
 }
 /**
@@ -921,7 +932,7 @@ export function sellTotal(id: string, unit: number, sold: number, n: number, sol
  */
 export function sellQuote(
   view: {
-    me: { demand?: Record<string, number> };
+    me: { demand?: Record<string, number>; fishSold?: number };
     soldToday?: number;
     flags?: readonly string[];
     growth?: { mods: SellMods };
@@ -935,7 +946,7 @@ export function sellQuote(
 ) {
   const unit = Math.round(sellUnit(id, q, now, view.flags ?? []) * share),
     sold = view.me.demand?.[id] ?? 0,
-    soldBeom = view.soldToday ?? 0,
+    soldBeom = (isFishSale(id) ? view.me.fishSold : view.soldToday) ?? 0,
     bonus = view.growth ? sellBonus(view.growth.mods, id, q) : 0,
     soft = demandSoft(view.growth?.mods, id);
   return {
@@ -955,6 +966,8 @@ export type SellMods = {
   woodSell?: number;
   gemSell?: number;
   artisanSell?: number;
+  /** 치즈 장인 · 장인 공방: ranch artisan goods (치즈·마요네즈) only. */
+  ranchArtisan?: number;
   demandCrop?: number;
   demandFish?: number;
   demandRanch?: number;
@@ -962,16 +975,37 @@ export type SellMods = {
 /** 성장 sale bonus share for an item (crops by star, fish, dishes; 재능: wood, gems, artisan goods). */
 export function sellBonus(mods: SellMods, id: string, q: Quality = 0) {
   if (isCropId(id)) return mods.cropSell + (q > 0 ? mods.starSell : 0);
-  if (isGoodId(id)) return mods.artisanSell ?? 0;
+  if (isGoodId(id)) return (mods.artisanSell ?? 0) + (isRanchGoodId(id) ? (mods.ranchArtisan ?? 0) : 0);
   if (id === 'wood' || id === 'hardwood') return mods.woodSell ?? 0;
   if (id === 'gem') return mods.gemSell ?? 0;
   const kind = ITEM_BY_ID[id]?.kind;
   return kind === 'fish' ? mods.fishSell : kind === 'dish' ? mods.dishSell : 0;
 }
-/** 범 this friend has sold today (all goods). */
+/** 범 this friend has sold today (all goods but fish). */
 export function soldBeomToday(life: LifeState, uid: string, now: number) {
   const s = life.sold[uid];
   return s && s.day === kstDay(now) ? s.amount : 0;
+}
+/** 범 of fish this friend has sold today (their own tally, see FISH_FULL_PER_DAY). */
+export function fishBeomToday(life: LifeState, uid: string, now: number) {
+  const x = life.ext?.[uid];
+  return x?.day === kstDay(now) ? (x.fsb ?? 0) : 0;
+}
+/** The day's tally a sale of `id` tapers on (sellTotal's `soldBeom`). */
+export const saleBeomToday = (life: LifeState, uid: string, now: number, id: string) =>
+  isFishSale(id) ? fishBeomToday(life, uid, now) : soldBeomToday(life, uid, now);
+/** Adds a fish sale's 범 to today's fish tally. */
+function noteFishBeom(life: LifeState, uid: string, now: number, amount: number) {
+  const x = todayExt(life, uid, now);
+  x.fsb = Math.min(Number.MAX_SAFE_INTEGER, (x.fsb ?? 0) + Math.max(0, amount));
+}
+/**
+ * A friendly line for a fish sale that went past today's full-price 범
+ * (empty otherwise). `before`: fish 범 sold today before it, `amount`: the sale.
+ */
+export function fishCapNote(before: number, amount: number) {
+  if (before + amount <= FISH_FULL_PER_DAY) return '';
+  return ` 오늘 물고기는 ${FISH_FULL_PER_DAY / 10_000}만 범까지 제값이에요. 그 뒤로는 값이 조금씩 내려가요.`;
 }
 /**
  * Full (undamped) price of one unit: crops by quality (+SEASON_PREMIUM in
@@ -1911,7 +1945,8 @@ export function plusAction(
             sellUnit(def!.id, 0, now, life.flags ?? []),
             demandSold(life, uid, now, def!.id),
             a.n,
-            soldBeomToday(life, uid, now),
+            // Fish taper on their own tally past FISH_FULL_PER_DAY; everything else on life.sold.
+            saleBeomToday(life, uid, now, def!.id),
             demandSoft(mods, def!.id),
           ) *
             (1 + sellBonus(mods, def!.id)) *
@@ -1921,13 +1956,14 @@ export function plusAction(
         amount = shopSaleAmount(life, uid, actor, a.at, def!.id, base, now),
         fish = def!.kind === 'fish',
         left = sellCapLeft(life, uid, now);
-      // Fish are outside the daily cap and the market saturation (see isFishSale).
+      // Fish are outside the daily cap; they taper on their own tally (see isFishSale).
       if (!fish && amount > left)
         fail(`오늘은 ${Math.max(0, left).toLocaleString('en-US')}범어치까지만 더 팔 수 있어요.`);
       if (fish) takeSoldFishQuality(life, uid, def!.id, a.n);
       addInv(life, uid, def!.id, -a.n);
       noteDemand(life, uid, now, def!.id, a.n);
-      if (!fish) {
+      if (fish) noteFishBeom(life, uid, now, amount);
+      else {
         const day = kstDay(now),
           prev = life.sold[uid];
         life.sold[uid] = { day, amount: (prev?.day === day ? prev.amount : 0) + amount };
@@ -2271,6 +2307,8 @@ export type PlusMe = {
   waterFriend: number[];
   /** Units sold today per crop/fruit/item id (demand curves). */
   demand: Record<string, number>;
+  /** 범 of fish sold today (full price up to FISH_FULL_PER_DAY; absent from older servers). */
+  fishSold?: number;
   /** House tier (0 = the starting house). */
   house: number;
 };
@@ -2389,6 +2427,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     claimed: [...(raw.claimed ?? [])],
     waterFriend: mine ? [...(raw.wf ?? [])] : [],
     demand: fresh ? { ...raw.dem } : {},
+    fishSold: fresh ? (raw.fsb ?? 0) : 0,
     house: raw.house ?? 0,
   };
   const week = weekOfDay(day),

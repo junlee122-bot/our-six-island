@@ -20,6 +20,7 @@ import {
   FROST_COVER_RECIPE,
   STAR_FERT_RECIPE,
   WORK_SLOTS,
+  DAIRY_INPUTS,
   productOf,
   sprinklerCovers,
   fieldViewRows,
@@ -430,7 +431,8 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
   const readyMachines = machines.filter((m) => m.out && (m.doneAt ?? Infinity) <= now).length,
     readyBees = (life.farmx?.fixtures ?? []).filter((f) => f.kind === 'beehouse' && (f.readyAt ?? Infinity) <= now).length;
   // 과수원 fruit (bag items) go in the jar, keg and dryer like other fruit.
-  const orchard: StockRow[] = ORCHARD_FRUITS.flatMap((id) => ((life.me.inv[id] ?? 0) > 0 ? [{ id, q: 0 as Quality, n: life.me.inv[id] }] : []));
+  // 축산 가공품: 달걀 → 옹기 마요네즈, 우유 → 숙성통 치즈 (큰 달걀 · 진한 우유는 은별).
+  const orchard: StockRow[] = [...ORCHARD_FRUITS, ...DAIRY_INPUTS].flatMap((id) => ((life.me.inv[id] ?? 0) > 0 ? [{ id, q: 0 as Quality, n: life.me.inv[id] }] : []));
   const inputs = (kind: (typeof MACHINES)[number]['id']) =>
     [...stockRows(life, now, false), ...orchard]
       .filter((r) => (kind === 'seedmaker' ? (CROPS as readonly string[]).includes(r.id) : !!productOf(kind, r.id)))

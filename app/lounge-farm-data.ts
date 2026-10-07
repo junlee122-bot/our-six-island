@@ -8,8 +8,8 @@ const MIN = 60_000,
   HOUR = 3_600_000;
 
 // ---------------------------------------------------------------- crops
-/** What a crop becomes in the machines (jar: pickles/jam, keg: juice/wine…). */
-export type CropCat = 'veg' | 'fruit' | 'flower' | 'herb' | 'roe';
+/** What a crop becomes in the machines (jar: pickles/jam, keg: juice/wine…; dairy: 달걀 → 마요네즈, 우유 → 치즈). */
+export type CropCat = 'veg' | 'fruit' | 'flower' | 'herb' | 'roe' | 'dairy';
 /** The crops of the farming upgrade and 우리 농장 (appended after the 10 original ones). */
 export const NEW_CROP_IDS = [
   'garlic',
@@ -241,7 +241,19 @@ export const CROP_CAT: Readonly<Record<string, CropCat>> = {
   // 양식장 roe (F5, lounge-farm-pond-data.ts): the jar makes 젓갈 / 캐비아 of it.
   roe: 'roe',
   sturgeonroe: 'roe',
+  // 축산 가공품 (우리 농장 축사·닭장, 치즈 장인 갈래): 달걀 → 옹기 마요네즈, 우유 → 숙성통 치즈.
+  egg: 'dairy',
+  milk: 'dairy',
 };
+/** 큰 달걀 · 진한 우유 make the same good as 달걀 · 우유, one star better (은별). */
+export const DAIRY_BIG: Readonly<Record<string, string>> = { 'egg-big': 'egg', 'milk-big': 'milk' };
+/** Ranch products (bag items, no quality of their own) the jar and keg take. */
+export const DAIRY_INPUTS: readonly string[] = ['egg', 'egg-big', 'milk', 'milk-big'];
+/** Quality a 큰 달걀 / 진한 우유 gives its good (은별). */
+export const DAIRY_BIG_Q = 1;
+/** 축산 가공품: the goods 치즈 장인's bonuses (판매가 · 시간 · 별) apply to. */
+export const RANCH_ARTISAN_GOODS: readonly string[] = ['jar-egg', 'keg-milk'];
+export const isRanchGoodId = (id: unknown): id is string => typeof id === 'string' && RANCH_ARTISAN_GOODS.includes(id);
 /** Crops that may merge into one giant crop when a whole bed (3 × 2) ripens together. */
 export const GIANT_CROPS: readonly string[] = ['pumpkin', 'cabbage', 'watermelon'];
 /** Chance (%) a full bed of one giant-capable crop, planted together, turns giant. */
@@ -527,7 +539,7 @@ export const MACHINES: readonly MachineDef[] = [
   {
     id: 'jar',
     name: '옹기',
-    note: '채소는 장아찌·김치, 과일은 잼, 어란은 젓갈·캐비아. 16시간. 값은 2배 + 50.',
+    note: '채소는 장아찌·김치, 과일은 잼, 어란은 젓갈·캐비아, 달걀은 마요네즈. 16시간. 값은 2배 + 50.',
     recipe: { beom: 8_000, mats: { stone: 20, wood: 10 }, skill: 'farm', level: 4 },
     ms: 16 * HOUR,
     per: 1,
@@ -535,7 +547,7 @@ export const MACHINES: readonly MachineDef[] = [
   {
     id: 'keg',
     name: '숙성통',
-    note: '과일·인삼은 술(3배), 채소는 즙(2.25배). 24시간.',
+    note: '과일·인삼은 술(3배), 채소는 즙(2.25배), 우유는 치즈(2.25배). 24시간.',
     recipe: { beom: 20_000, mats: { wood: 30, iron: 2 }, skill: 'craft', level: 4 },
     ms: 24 * HOUR,
     per: 1,
@@ -578,8 +590,9 @@ const JAR_NAME: Readonly<Record<string, string>> = {
   perilla: '깻잎장아찌',
   roe: '젓갈',
   sturgeonroe: '캐비아',
+  egg: '마요네즈',
 };
-const KEG_NAME: Readonly<Record<string, string>> = { insam: '인삼주', grape: '포도주', hop: '맥주', fruit: '과일주' };
+const KEG_NAME: Readonly<Record<string, string>> = { insam: '인삼주', grape: '포도주', hop: '맥주', fruit: '과일주', milk: '치즈' };
 const DRY_NAME: Readonly<Record<string, string>> = { pepper: '고춧가루', chrysanthemum: '국화차', lavender: '라벤더차', fruit: '말린 과일' };
 /** Flower honey with its own name (the rest: '<flower> 꿀'). */
 const HONEY_NAME: Readonly<Record<string, string>> = { rapeseed: '유채꿀', buckwheat: '메밀꿀', lavender: '라벤더꿀', narcissus: '수선화꿀' };
@@ -587,15 +600,19 @@ const HONEY_NAME: Readonly<Record<string, string>> = { rapeseed: '유채꿀', bu
 const DRY_EXTRA: readonly string[] = ['pepper', 'chrysanthemum', 'lavender'];
 /** Artisan product of `crop` in `machine` (null: the machine does not take it). */
 export function productOf(machine: MachineKind, crop: string): string | null {
-  const cat = CROP_CAT[crop];
+  const big = Object.hasOwn(DAIRY_BIG, crop) ? DAIRY_BIG[crop] : undefined;
+  if (big) return productOf(machine, big);
+  const cat = Object.hasOwn(CROP_CAT, crop) ? CROP_CAT[crop] : undefined;
   if (!cat) return null;
+  // 축산 가공품: 달걀 only in the jar (마요네즈), 우유 only in the keg (치즈).
+  if (cat === 'dairy') return (machine === 'jar' && crop === 'egg') || (machine === 'keg' && crop === 'milk') ? `${machine}-${crop}` : null;
   if (machine === 'jar') return cat === 'veg' || cat === 'fruit' || cat === 'roe' ? `jar-${crop}` : null;
   if (machine === 'keg') return cat === 'flower' || cat === 'roe' ? null : `keg-${crop}`;
   if (machine === 'dehydrator') return cat === 'fruit' || DRY_EXTRA.includes(crop) ? `dry-${crop}` : null;
   return null;
 }
 /**
- * Every artisan good: `jar-*` 2b + 50, `keg-*` 3b (fruit, herb) or 2.25b (veg),
+ * Every artisan good: `jar-*` 2b + 50, `keg-*` 3b (fruit, herb) or 2.25b (veg, 치즈),
  * `dry-*` 7.5b + 25 from five, honey 400 (+2× the flower). `b` = the crop's
  * base price, filled in by `buildGoods` from the crop catalog.
  */
@@ -611,7 +628,7 @@ export function buildGoods(cropName: (id: string) => string, cropSell: (id: stri
       out.push({
         id: `keg-${crop}`,
         name: KEG_NAME[crop] ?? (cat === 'veg' ? `${name}즙` : `${name}주`),
-        base: Math.round((cat === 'veg' ? 2.25 : 3) * b),
+        base: Math.round((cat === 'veg' || cat === 'dairy' ? 2.25 : 3) * b),
         machine: 'keg',
         from: crop,
       });

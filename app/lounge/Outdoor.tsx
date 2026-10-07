@@ -323,7 +323,7 @@ export function useOutdoor({
     const m = r?.mine;
     // 승준's explorer pass: every floor, even past the pickaxe (lounge-explorer-pass.ts).
     const pass = !!r?.pass;
-    const stops = m ? mineStops(m, pass, view.life?.growth?.mods.liftPlus ?? 0) : [];
+    const stops = m ? mineStops(m, pass, view.life?.growth?.mods.liftPlus ?? 0, m.lift && !!view.life?.growth?.mods.liftDeep) : [];
     // 먼바다 낚싯배: the deck holds still after a 멀미약; the harbor's boat is out while anyone sails.
     const voyage = view.life?.voyage;
     // 샹크스 is at the pier through the game day's sailings (game 05–19).

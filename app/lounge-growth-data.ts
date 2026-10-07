@@ -219,6 +219,17 @@ export type GrowthMods = {
   pondCap: number;
   /** 양식장: roe chance +%p per output (재능 알 받기). */
   pondRoe: number;
+  // ---- 축산 가공품 (치즈·마요, 치즈 장인 갈래) and level perks opened with their regions
+  /** Sale price bonus for ranch artisan goods (치즈·마요네즈), on top of artisanSell. */
+  ranchArtisan: number;
+  /** Ranch artisan goods machine time ×(1 − x), on top of machineFast. */
+  ranchFast: number;
+  /** Chance +%p a ranch artisan good comes out one star better (보통 → 은별, 큰 알·진한 우유 은별 → 금별). */
+  ranchStar: number;
+  /** 숲 깊은 곳 mushroom logs: 영지 chance +%p (else 송이). */
+  yeongjiPts: number;
+  /** The lift also stops at my deepest floor. */
+  liftDeep: boolean;
 };
 export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   growSpeed: 0,
@@ -296,11 +307,21 @@ export const NO_MODS: Readonly<GrowthMods> = Object.freeze({
   animalCheap: 0,
   pondCap: 0,
   pondRoe: 0,
+  ranchArtisan: 0,
+  ranchFast: 0,
+  ranchStar: 0,
+  yeongjiPts: 0,
+  liftDeep: false,
 });
 type ModPatch = Partial<GrowthMods>;
 
 // ---------------------------------------------------------------- level perks
-/** One small unlock per level (numbers stay small; `soon` = arrives with a later region). */
+/**
+ * One small unlock per level (numbers stay small). `soon` = arrives with a
+ * later region: none is left since 잠긴 레벨 보상 정리 (2026-10-07) opened
+ * the ones whose region exists and swapped the rest for small effects
+ * usable today; the field stays for a future region's perk.
+ */
 export type LevelPerk = { level: number; text: string; mods?: ModPatch; soon?: string };
 export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   farm: [
@@ -316,35 +337,35 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
   ],
   fish: [
     { level: 2, text: '미끼 제작 3→4개', mods: { baitExtra: 1 } },
-    { level: 3, text: '통발 레시피', soon: '광산 승강기' },
+    { level: 3, text: '통발 손질 · 통발에서 10% 확률로 하나 더', mods: { trapExtra: 0.1 } },
     { level: 4, text: '입질 창 +5%', mods: { biteWindow: 0.05 } },
     { level: 5, text: '전문가 선택 ① · 양식장(내 부지, 작은 연못 5마리)' },
-    { level: 6, text: '통발 +1', soon: '광산 승강기' },
+    { level: 6, text: '통발 한 개 더 놓기 (3→4개)' },
     { level: 7, text: '입질 창 +5% 더', mods: { biteWindow: 0.05 } },
     { level: 8, text: '양식장 중간 연못(10마리) · 희귀 물고기 알림은 기상 관측소 뒤' },
-    { level: 9, text: '전설 물고기 힌트 편지', soon: '여섯섬 항로' },
+    { level: 9, text: '전설 물고기 확률 ×1.1', mods: { legend: 0.1 } },
     { level: 10, text: '전문가 선택 ②' },
   ],
   forage: [
-    { level: 2, text: '나무 바구니 가구', soon: '과수원 언덕' },
+    { level: 2, text: '과일 따기 손 · 과일나무 재수확 대기 −10%', mods: { fruitFast: 0.1 } },
     { level: 3, text: '잡목 1곳 더 (매일)', mods: { extraBush: 1 } },
     { level: 4, text: '벌통 레시피' },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '채집할 때 10% 확률로 하나 더', mods: { forageDouble: 0.1 } },
-    { level: 7, text: '계절 씨앗 제작', soon: '과수원 언덕' },
+    { level: 7, text: '벌레를 잡을 때 10% 확률로 하나 더', mods: { bugExtra: 0.1 } },
     { level: 8, text: '잡목에서 나무 +1', mods: { woodBonus: 1 } },
-    { level: 9, text: '산삼 표시', soon: '숲 깊은 곳' },
+    { level: 9, text: '숲 깊은 곳 버섯 통나무에서 영지 확률 +10%p', mods: { yeongjiPts: 10 } },
     { level: 10, text: '전문가 선택 ②' },
   ],
   mine: [
-    { level: 2, text: '돌 계단 장식', soon: '산길 정비' },
+    { level: 2, text: '화석 확률 ×1.2', mods: { fossil: 0.2 } },
     { level: 3, text: '광석 확률 +3%p', mods: { copperPts: 3 } },
     { level: 4, text: '바위 1곳 더 (매일)', mods: { extraRock: 1 } },
     { level: 5, text: '전문가 선택 ①' },
-    { level: 6, text: '보석 판독', soon: '광산 승강기' },
-    { level: 7, text: '큰 망치 (바위 3×3)', soon: '산길 정비' },
+    { level: 6, text: '보석 감정 · 보석 원석 판매가 +10%', mods: { gemSell: 0.1 } },
+    { level: 7, text: '큰 망치질 · 광산에서 바위 1개 덜 깨도 사다리가 나와요', mods: { ladderEarly: 1 } },
     { level: 8, text: '광석 확률 +3%p 더', mods: { copperPts: 3 } },
-    { level: 9, text: '승강기로 가장 깊은 층', soon: '광산 승강기' },
+    { level: 9, text: '승강기로 내가 간 가장 깊은 층까지', mods: { liftDeep: true } },
     { level: 10, text: '전문가 선택 ②' },
   ],
   craft: [
@@ -352,21 +373,21 @@ export const LEVEL_PERKS: Record<SkillId, readonly LevelPerk[]> = {
     { level: 3, text: '제작 재료 −10%', mods: { craftDiscount: 0.1 } },
     { level: 4, text: '숙성통 레시피' },
     { level: 5, text: '전문가 선택 ①' },
-    { level: 6, text: '베틀', soon: '목장 초원' },
-    { level: 7, text: '새 요리 3종', soon: '온천 발굴' },
-    { level: 8, text: '원목 가구 레시피 4종', soon: '산길 정비' },
-    { level: 9, text: '자개 가구 레시피 4종', soon: '깊은 굴' },
+    { level: 6, text: '가공 기계 시간 −5%', mods: { machineFast: 0.05 } },
+    { level: 7, text: '요리 효과 시간 +10%', mods: { buffLong: 0.1 } },
+    { level: 8, text: '원목 가구 제작 나무 −10%', mods: { furnCheap: 0.1 } },
+    { level: 9, text: '내 가공 기계가 5% 확률로 2개를 만들어요', mods: { machineDouble: 0.05 } },
     { level: 10, text: '전문가 선택 ②' },
   ],
   ranch: [
     { level: 2, text: '돌볼 때 10% 확률로 애정 +1 더', mods: { loveExtra: 0.1 } },
     { level: 3, text: '건초 값 −10% · 농장 닭장 증축(닭 칸 +4) 열림', mods: { hayCheap: 0.1 } },
-    { level: 4, text: '알·우유 은별 확률 +5%p', soon: '우리 농장' },
+    { level: 4, text: '치즈·마요네즈 한 단계 좋은 별 확률 +5%p', mods: { ranchStar: 5 } },
     { level: 5, text: '전문가 선택 ①' },
     { level: 6, text: '하루 못 와도 애정이 줄지 않아요 (한 번 봐줌)', mods: { loveGrace: 1 } },
     { level: 7, text: '털 깎기 솜씨 · 양털 +1 · 농장 축사 2층(소·양 칸 +4) 열림', mods: { woolExtra: 1 } },
     { level: 8, text: '큰 알·진한 우유 확률 +5%p', mods: { bigPts: 5 } },
-    { level: 9, text: '동물 이름표 가구', soon: '우리 농장' },
+    { level: 9, text: '건초를 먹일 때 10% 확률로 건초가 줄지 않아요', mods: { hayKeep: 0.1 } },
     { level: 10, text: '전문가 선택 ②' },
   ],
 };
@@ -381,7 +402,7 @@ export type ProfDef = {
   name: string;
   text: string;
   mods: ModPatch;
-  /** Shown but not choosable yet, and why (치즈 장인: no animal artisan goods yet). */
+  /** Shown but not choosable yet, and why. */
   lock?: string;
 };
 const prof = (id: string, skill: SkillId, level: 5 | 10, name: string, text: string, mods: ModPatch, parent?: string, lock?: string): ProfDef => ({
@@ -394,8 +415,6 @@ const prof = (id: string, skill: SkillId, level: 5 | 10, name: string, text: str
   ...(parent ? { parent } : {}),
   ...(lock ? { lock } : {}),
 });
-/** 축산 가공품 (치즈·마요) need milk and eggs in the jar and keg: they come with 우리 농장's barn (F4). */
-export const RANCH_ARTISAN_LOCK = '축산 가공품(치즈)은 우리 농장 축사와 함께 열려요';
 export const PROFESSIONS: readonly ProfDef[] = [
   prof('farm-a', 'farm', 5, '정원사', '새로 심는 작물이 10% 빨리 자라요', { growSpeed: 10 }),
   prof('farm-b', 'farm', 5, '장터 농부', '작물 판매가 +10%', { cropSell: 0.1 }),
@@ -429,11 +448,12 @@ export const PROFESSIONS: readonly ProfDef[] = [
   prof('craft-b2', 'craft', 10, '대장간 단골', '도구 업그레이드 범 −20%', { toolBeom: 0.2 }, 'craft-b'),
   // 목축 (design-skill-tree.md §6).
   prof('ranch-a', 'ranch', 5, '목동', '돌볼 때 50% 확률로 애정 +1 더', { loveExtra: 0.5 }),
-  prof('ranch-b', 'ranch', 5, '치즈 장인', '축산 가공품 판매가 +20%', {}, undefined, RANCH_ARTISAN_LOCK),
+  // 치즈 장인: 축산 가공품 = 치즈 (우유 → 숙성통) and 마요네즈 (달걀 → 옹기), lounge-farm-data.ts RANCH_ARTISAN_GOODS.
+  prof('ranch-b', 'ranch', 5, '치즈 장인', '축산 가공품(치즈·마요네즈) 판매가 +20%', { ranchArtisan: 0.2 }),
   prof('ranch-a1', 'ranch', 10, '동물 친구', '애정 10인 동물이 하루 한 번 축산물 하나 더', { bondExtra: 1 }, 'ranch-a'),
   prof('ranch-a2', 'ranch', 10, '목장 주인', '동물 값 −25%', { animalCheap: 0.25 }, 'ranch-a'),
-  prof('ranch-b1', 'ranch', 10, '숙성 장인', '축산 가공품 시간 −25%', {}, 'ranch-b', RANCH_ARTISAN_LOCK),
-  prof('ranch-b2', 'ranch', 10, '장인 공방', '축산 가공품 판매가 +15% 더', {}, 'ranch-b', RANCH_ARTISAN_LOCK),
+  prof('ranch-b1', 'ranch', 10, '숙성 장인', '축산 가공품 시간 −25%', { ranchFast: 0.25 }, 'ranch-b'),
+  prof('ranch-b2', 'ranch', 10, '장인 공방', '축산 가공품 판매가 +15% 더', { ranchArtisan: 0.15 }, 'ranch-b'),
 ];
 export const PROF_BY_ID: Readonly<Record<string, ProfDef>> = Object.fromEntries(PROFESSIONS.map((p) => [p.id, p]));
 export const isProfId = (id: unknown): id is string =>

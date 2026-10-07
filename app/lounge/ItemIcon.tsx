@@ -1409,7 +1409,8 @@ export function itemArt(id: string): ReactNode {
 function goodArt(id: string): ReactNode {
   const m = /^(jar|keg|dry|honey)(?:-([a-z]+))?$/.exec(id);
   if (!m || (m[1] !== 'honey' && !m[2])) return null;
-  const crop = m[2] ? CROP_ART[m[2]] : null;
+  // 마요네즈 · 치즈 wear the egg / milk bottle on their label.
+  const crop = m[2] ? (CROP_ART[m[2]] ?? STAGE3_ART[m[2]] ?? null) : null;
   const label = crop ? <g transform="translate(16 22) scale(.34)">{crop}</g> : null;
   switch (m[1]) {
     case 'jar':

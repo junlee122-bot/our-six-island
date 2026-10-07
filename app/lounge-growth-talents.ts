@@ -10,7 +10,7 @@
 // `farm` need 우리 농장 (tilling, wet soil, machine yard, hay from grass) and
 // show locked until it ships; `lock` is the honest reason a talent cannot be
 // taken yet. Effects are GrowthMods patches added by lounge-growth.ts.
-import { MAX_LEVEL, RANCH_ARTISAN_LOCK, type GrowthMods, type SkillId } from './lounge-growth-data.ts';
+import { MAX_LEVEL, type GrowthMods, type SkillId } from './lounge-growth-data.ts';
 
 export type TalentDef = {
   id: string;
@@ -108,8 +108,8 @@ export const TALENTS: readonly TalentDef[] = [
   t('ranch-t4', 'ranch', 4, '부지런한 아침', '게임 시각 05~09시에 돌보면 XP ×1.5', { ranchMorning: 0.5 }, { after: 'ranch-t2' }),
   t('ranch-a-t1', 'ranch', 6, '동물 말', '동물 기분 말풍선 (무엇을 원하는지)', { animalTalk: true }, { branch: 'ranch-a' }),
   t('ranch-a-t2', 'ranch', 8, '목장 축제', '목장 대회(닐라) 점수 +10%', null, { branch: 'ranch-a', after: 'ranch-a-t1', lock: '닐라의 목장 대회가 생기면 열려요' }),
-  t('ranch-b-t1', 'ranch', 6, '장인 손맛', '축산 가공품 은별 이상 확률 +10%p', null, { branch: 'ranch-b', lock: RANCH_ARTISAN_LOCK }),
-  t('ranch-b-t2', 'ranch', 8, '납품 단골', '축산물 판매 수요가 덜 빨리 줄어요', { demandRanch: 1 }, { branch: 'ranch-b', after: 'ranch-b-t1', lock: RANCH_ARTISAN_LOCK }),
+  t('ranch-b-t1', 'ranch', 6, '장인 손맛', '축산 가공품 한 단계 좋은 별 확률 +10%p', { ranchStar: 10 }, { branch: 'ranch-b' }),
+  t('ranch-b-t2', 'ranch', 8, '납품 단골', '축산물·축산 가공품 판매 수요가 덜 빨리 줄어요', { demandRanch: 1 }, { branch: 'ranch-b', after: 'ranch-b-t1' }),
 ];
 export const TALENT_BY_ID: Readonly<Record<string, TalentDef>> = Object.fromEntries(TALENTS.map((d) => [d.id, d]));
 export const isTalentId = (id: unknown): id is string => typeof id === 'string' && Object.prototype.hasOwnProperty.call(TALENT_BY_ID, id);

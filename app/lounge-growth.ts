@@ -637,9 +637,12 @@ export function mineCanGo(life: LifeState, uid: string, floor: number, now: numb
     deep = u?.mine?.deep ?? 0;
   if (lift && floor % LIFT_EVERY === 0 && floor <= deep) return null;
   // 재능 깊은 숨: the lift also stops `liftPlus` floors below each stop I reached.
-  const plus = growthMods(life, uid).liftPlus,
+  const mods = growthMods(life, uid),
+    plus = mods.liftPlus,
     stop = floor - plus;
   if (lift && plus > 0 && stop >= LIFT_EVERY && stop % LIFT_EVERY === 0 && stop <= deep) return null;
+  // 광업 Lv9: the lift also stops at my deepest floor.
+  if (lift && mods.liftDeep && floor === deep) return null;
   if (floor === at + 1 && ladderFound(life, uid, at, now)) return null;
   if (floor <= at && floor >= 1 && at > 0 && floor === at) return null;
   return floor === at + 1 ? GROWTH_REJECT.mineLadder : GROWTH_REJECT.mineFloor;
@@ -851,8 +854,8 @@ export function growthAction(
         u.rocks = Math.min(1_000_000, (u.rocks ?? 0) + 1);
         gainXp(life, uid, 'mine', XP.rock + (copper ? XP.ore : 0), now);
       } else if (node!.kind === 'shroom') {
-        // 송이 or 영지 (영지 1 in 3); 약초꾼's double chance applies.
-        const item = roll(`shroom:${uid}:${node!.id}:${seq}`) < 34 ? 'yeongji' : 'songi';
+        // 송이 or 영지 (영지 1 in 3, 채집 Lv9 +10%p); 약초꾼's double chance applies.
+        const item = roll(`shroom:${uid}:${node!.id}:${seq}`) < 34 + mods.yeongjiPts ? 'yeongji' : 'songi';
         // 채집 바구니 (오른's range upgrade, lounge-stage3-data.ts) may add one more.
         addInv(life, uid, item, NODE_YIELD.shroom + (growthChance(life, uid, 'shroom', mods.forageDouble, now) ? 1 : 0) + basketExtra(life, uid, `shroom:${node!.id}:${seq}`));
         gainXp(life, uid, 'forage', NODE_XP.shroom, now);
