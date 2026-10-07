@@ -27,7 +27,7 @@ import {
 } from '../lounge-life';
 import { itemName } from '../lounge-life-plus';
 import { ITEM_BY_ID } from '../lounge-items';
-import { giftTaste, tastesKnown } from '../lounge-life-ui';
+import { giftTaste } from '../lounge-life-ui';
 import { REACTIONS, reactionInfo } from '../lounge-reactions';
 import { ACTORS } from '../lounge-roster';
 import { josa } from '../lounge-text';
@@ -260,13 +260,14 @@ export function MailModal({
   const giftItems = Object.entries(life.me.inv ?? {}).filter(
     ([id, n]) => n > 0 && ITEM_BY_ID[id] && ITEM_BY_ID[id].kind !== 'tool',
   );
-  const myBond = life.me.bonds?.find((b) => b.actor === to);
-  const known = tastesKnown(myBond?.level ?? 0);
+  // 내 취향: friends' tastes are open; the picker marks what they love or dislike.
+  const tastes = life.tastes?.all;
+  const tasteSet = !!tastes?.[to]?.set;
   const tasteMark = (id: string) => {
-    if (!known) return '';
-    const t = giftTaste(to, id);
-    return t === 'like' ? ' · 좋아해요' : t === 'dislike' ? ' · 별로예요' : '';
+    const t = giftTaste(to, id, tastes);
+    return t === 'love' ? ' · 아주 좋아해요' : t === 'like' ? ' · 좋아해요' : t === 'dislike' ? ' · 싫어해요' : '';
   };
+  const giftT = giftKind !== 'none' ? giftTaste(to, giftKind, tastes) : null;
   const send = async () => {
     const n = Math.min(giftN, giftMax);
     const gift: LifeGift | undefined =
@@ -498,15 +499,16 @@ export function MailModal({
             </select>
           </label>
           <p className="l-help-text" data-testid="mail-tastes">
-            {known
-              ? `${josa(ACTORS[to], '은/는')} ${
-                  giftKind !== 'none' && giftTaste(to, giftKind) === 'like'
-                    ? '이 선물을 좋아해요. 추억이 두 배로 쌓여요.'
-                    : giftKind !== 'none' && giftTaste(to, giftKind) === 'dislike'
-                      ? '이 선물은 별로 안 좋아해요.'
-                      : '어떤 선물을 좋아할까요? 좋아하는 선물은 추억이 두 배예요.'
-                }`
-              : `${ACTORS[to]}의 취향은 하트가 하나 생기면 알 수 있어요.`}
+            {`${josa(ACTORS[to], '은/는')} ${
+              giftT === 'love'
+                ? '이 선물을 아주 좋아해요. 추억이 두 배로 쌓여요.'
+                : giftT === 'like'
+                  ? '이런 선물을 좋아해요. 추억이 두 배로 쌓여요.'
+                  : giftT === 'dislike'
+                    ? '이 선물은 싫어해요. 추억이 조금만 쌓여요.'
+                    : '어떤 선물을 좋아할까요? 좋아하는 선물은 추억이 두 배예요.'
+            }`}
+            {!tasteSet && ` (${ACTORS[to]}의 취향은 아직 안 정했어요)`}
           </p>
           {giftKind !== 'none' && giftMax > 0 && (
             <Stepper label="선물 개수" value={Math.min(giftN, giftMax)} max={Math.min(99, giftMax)} onChange={setGiftN} />

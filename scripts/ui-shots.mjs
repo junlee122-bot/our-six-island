@@ -112,6 +112,12 @@ function seedLife(life, uid) {
     d: day,
     gm: now - DAY,
   };
+  // 내 취향: mine (changeable today) and two friends'; the rest read as not chosen yet.
+  const me = life.actors?.[uid];
+  life.tastes = { ...(life.tastes ?? {}) };
+  if (me !== undefined) life.tastes[me] = { l: ['crucian', '#dish', 'strawberry'], d: ['#bug', 'mugwort'], n: '달달한 건 뭐든 좋아요', day: day - 1 };
+  for (const a of [0, 1, 2, 3, 4, 5, 6].filter((a) => a !== me).slice(0, 2))
+    life.tastes[a] = { l: ['#fish', 'carp'], d: ['#flower'], ...(a % 2 ? {} : { n: '큰 물고기 환영!' }), day: day - 2 };
   // --stage3: the two stage-3 districts are open (design-npcs-stage3.md).
   if (flag('stage3')) life.flags = [...new Set([...(life.flags ?? []), 'district-ranch', 'district-foothill'])];
 }
@@ -371,6 +377,13 @@ async function runView(browser, base, view, report) {
     await snap('growth-research');
   });
   await step('bonds', async () => { await focusScene(); await page.keyboard.press('KeyL'); await sleep(1000); await snap('bonds'); });
+  // 내 취향 (☰ → 내 취향): my slots, the searchable picker, the next-change line.
+  await step('tastes', async () => {
+    if (!(await menu(/내 취향/))) throw new Error('메뉴에서 내 취향을 찾지 못했습니다.');
+    assert.notEqual(await until(() => !!document.querySelector('[data-testid=tastes-window]'), 8000), -1, '내 취향 창이 열리지 않았습니다.');
+    await sleep(600);
+    await snap('tastes');
+  });
   await step('collection', async () => { await focusScene(); await page.keyboard.press('KeyK'); await sleep(1000); await snap('collection'); });
   // A walk across the hub (bumtadew:go, Shift held). A walk that stops short
   // (the avatar has not moved for `stallMs`) or runs past `maxMs` fails with

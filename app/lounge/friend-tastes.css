@@ -1,0 +1,296 @@
+/* 내 취향 (FriendTastes.tsx): my slots, the item picker, and friends' tastes on their card. */
+.l-tastes-body {
+  display: grid;
+  grid-template-columns: minmax(230px, 280px) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+.l-tastes-mine,
+.l-tastes-pick {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.l-tastes-mine h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+}
+.l-tastes-mine h3 small {
+  margin-left: auto;
+  color: var(--text-soft);
+  font-family: var(--font-body);
+  font-size: var(--fs-cap);
+}
+.l-taste-slots {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-taste-slots li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 4px 4px 4px 8px;
+  border: 2px solid var(--accent-edge);
+  border-radius: var(--r-m);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.l-taste-slots[data-tone='dislike'] li {
+  border-color: var(--danger-edge);
+  background: var(--danger-soft);
+}
+.l-taste-slots li[data-empty] {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  background: var(--surface-sunken);
+  color: var(--text-soft);
+}
+.l-taste-slot-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--fs-body-s);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.l-taste-remove {
+  flex: none;
+}
+.l-taste-cat {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-soft);
+}
+.l-taste-note-field {
+  display: grid;
+  gap: 4px;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-taste-note-field input,
+.l-taste-filters input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-s);
+}
+.l-taste-note-field input::placeholder,
+.l-taste-filters input::placeholder {
+  color: var(--text-soft);
+}
+.l-taste-note-field input:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-text);
+}
+/* The life windows fade disabled buttons; here they keep their own readable colours. */
+.l-tastes.l-life-modal button:disabled {
+  opacity: 1;
+}
+.l-taste-next {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+
+.l-tastes-panel {
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+.l-taste-filters {
+  display: grid;
+  gap: 6px;
+}
+.l-taste-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.l-taste-cats button,
+.l-taste-whole {
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-round);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  cursor: pointer;
+}
+.l-taste-cats button[aria-pressed='true'] {
+  border-color: var(--accent-edge);
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.l-taste-catalog {
+  display: grid;
+  gap: var(--sp-3);
+  max-height: min(48vh, 380px);
+  padding: 2px 6px 6px 2px;
+  overflow-y: auto;
+}
+.l-taste-group h4 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-bold);
+}
+.l-taste-whole {
+  margin-left: auto;
+}
+.l-taste-group ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-taste-group li button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  text-align: left;
+  cursor: pointer;
+}
+.l-taste-group li button span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.l-taste-group li button em,
+.l-taste-whole[data-mark] {
+  font-style: normal;
+}
+.l-taste-group li button em {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--r-round);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--fs-cap);
+}
+.l-taste-group li button[data-mark='like'],
+.l-taste-whole[data-mark='like'] {
+  border: 2px solid var(--accent-edge);
+  background: var(--accent-soft);
+}
+.l-taste-group li button[data-mark='dislike'],
+.l-taste-whole[data-mark='dislike'] {
+  border: 2px solid var(--danger-edge);
+  background: var(--danger-soft);
+}
+.l-taste-group li button[data-mark='dislike'] em {
+  background: var(--danger);
+}
+.l-taste-group li button:disabled,
+.l-taste-whole:disabled {
+  color: var(--text);
+  cursor: default;
+}
+.l-taste-group li button:focus-visible,
+.l-taste-cats button:focus-visible,
+.l-taste-whole:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* A friend's tastes on their card (Bonds.tsx). */
+.l-taste-summary {
+  display: grid;
+  gap: 4px;
+}
+.l-taste-summary dl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  margin: 0;
+}
+.l-taste-summary dt {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.l-taste-summary dd {
+  margin: 0;
+}
+.l-taste-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.l-taste-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 2px;
+  border: 1px solid var(--accent-edge);
+  border-radius: var(--r-round);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: var(--fs-body-s);
+}
+.l-taste-chips[data-tone='dislike'] li {
+  border-color: var(--danger-edge);
+  background: var(--danger-soft);
+}
+.l-taste-none,
+.l-taste-unset {
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.l-taste-unset {
+  margin: 0;
+}
+.l-taste-note {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-hand);
+  font-size: var(--fs-body);
+}
+
+@media (max-width: 760px) {
+  .l-tastes-body {
+    grid-template-columns: 1fr;
+  }
+}

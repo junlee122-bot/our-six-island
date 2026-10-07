@@ -215,6 +215,8 @@ const DigestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.DigestC
 const RequestCard = lazyRetry(() => loadBonds().then((m) => ({ default: m.RequestCard })));
 // Friend-life (C-3..C-10): NPC talk box and the festival panel.
 const FriendDialog = lazyRetry(() => import('./lounge/FriendDialog').then((m) => ({ default: m.FriendDialog })));
+// 내 취향 (lounge-friend-tastes.ts): my gift likes and dislikes.
+const TastesWindow = lazyRetry(() => import('./lounge/FriendTastes').then((m) => ({ default: m.TastesWindow })));
 const BirthdayCakePanel = lazyRetry(() => import('./lounge/BirthdayCake').then((m) => ({ default: m.BirthdayCakePanel })));
 const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({ default: m.FestivalPanel })));
 // 성장 P1: the growth journal (T), the blacksmith and the level-up banner.
@@ -228,6 +230,7 @@ const TavernUpgrades = lazyRetry(() => loadCounter().then((m) => ({ default: m.T
 const GrowthNotices = lazyRetry(() => import('./lounge/GrowthNotices').then((m) => ({ default: m.GrowthNotices })));
 // 무드 (U): the HUD chip rides in the header; the panel loads when opened.
 import { MoodHud, MoodNotices, MoodShareToggle } from './lounge/MoodHud';
+import { useTastesPrompt } from './lounge/tastes-prompt';
 import { WalkHints } from './ui/WalkHints';
 // 먼바다 낚싯배 (design-sea-fishing.md): boarding window, deck timer, sail-out, catch summary, dawn knock.
 import { DawnKnock, SailOut, VoyageBoard, VoyageHud, VoyageSummary, useVoyageFlow } from './lounge/Voyage';
@@ -403,6 +406,8 @@ type ModalName =
   | 'fete'
   // 생일 잔치: the plaza cake's 축하 방명록.
   | 'cake'
+  // 내 취향: my gift likes and dislikes (lounge/FriendTastes.tsx).
+  | 'tastes'
   // 성장 P1 (T): the growth journal and the blacksmith.
   | 'growth'
   | 'forge'
@@ -1739,6 +1744,9 @@ function AccountLounge({
     }, 900);
     return () => clearTimeout(timer);
   }, [connected, room, pushBanner, notify, coach]);
+  // 내 취향: once per device, a gentle nudge for a friend who has not chosen yet.
+  const openTastes = useCallback(() => setModal('tastes'), []);
+  useTastesPrompt(view, save.actor, !connected || !!coach, pushBanner, openTastes);
   // Warm the life panels' chunks shortly after connecting, so I / K / L and
   // the first cast open without a wait.
   useEffect(() => {
@@ -2887,6 +2895,7 @@ function AccountLounge({
               items: [
                 { id: 'friends', label: '마을 친구들', glyph: 'people', onClick: () => setModal('friends') },
                 { id: 'bonds', label: '친구 사이', glyph: 'heart', kbd: keyLabel(settings.keys.bonds), onClick: () => setModal('bonds') },
+                { id: 'tastes', label: '내 취향', glyph: 'gift', onClick: () => setModal('tastes') },
                 { id: 'npc', label: '주민 수첩', glyph: 'heart', onClick: () => { setNpcBookAt(undefined); setModal('npc'); } },
                 { id: 'invite', label: '게임 초대', glyph: 'dice', onClick: () => requestGame(null) },
                 { id: 'status', label: '오늘의 한마디', glyph: 'quote', onClick: () => setModal('status') },
@@ -3278,8 +3287,12 @@ function AccountLounge({
           initial={bondsInitial}
           onGift={giftTo}
           onVisit={visitHouse}
+          onTastes={() => setModal('tastes')}
           onClose={() => setModal(null)}
         />
+      )}
+      {modal === 'tastes' && (
+        <TastesWindow room={room} view={view} notify={notify} selfActor={save.actor} onClose={() => setModal(null)} />
       )}
       {modal === 'memories' && (
         <MemoriesAlbum view={view} selfActor={save.actor} onClose={() => setModal(null)} />

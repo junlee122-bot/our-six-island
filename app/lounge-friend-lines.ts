@@ -36,7 +36,7 @@
  *    먼저, 자주 나와요. 이 파일을 고치지 않아도 친구들이 직접 채울 수 있어요.
  *
  *  순서: 0 도원, 1 강재, 2 민서, 3 승준, 4 민재, 5 재민, 6 호현
- *  (선물·생일 같은 취향은 lounge-calendar.ts의 FRIEND_PROFILES에 있어요.)
+ *  (생일은 lounge-calendar.ts의 FRIEND_PROFILES에, 선물 취향은 게임 안 "내 취향" 창에서 친구들이 직접 정해요.)
  * ============================================================================
  */
 import type { Season, TimeOfDay, Weather } from './lounge-calendar.ts';
