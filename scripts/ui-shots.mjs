@@ -366,7 +366,7 @@ async function runView(browser, base, view, report) {
     const t0 = Date.now();
     (w.life.companions ??= {})[H.uid] = { out: { npc: 'frieren', at: t0, until: t0 + 40 * 60_000, end: 'time', h: 0 }, met: ['frieren'] };
     const x = ((w.life.ext ??= {})[H.uid] ??= {});
-    x.npcRelations = { ...(x.npcRelations ?? {}), frieren: { points: 26, ch: 1, tc: 3, mem: ['sweet-tooth', 'odd-recipe'] } };
+    x.npcRelations = { ...x.npcRelations, frieren: { points: 26, ch: 1, tc: 3, mem: ['sweet-tooth', 'odd-recipe'] } };
     try {
       assert.notEqual(await until(() => !!document.querySelector('[data-testid=companion-hud] .l-companion-chip'), 60000), -1, '동행 칸이 보이지 않습니다.');
       await H.clickSel('[data-testid=companion-hud] .l-companion-chip');
