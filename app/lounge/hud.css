@@ -139,6 +139,19 @@ body:has(.b3-room[data-editing]) .l-pocket-row {
   }
 }
 
+/* Narrow windows: a long bottom-right action ("미스 포츈와 대출 상담 E") would
+   run under the dock (it ends about 50vw + 425px from the left), so the
+   district, interior and room action buttons step up above the dock row. */
+@media (max-width: 1500px) {
+  .l-app .ar-action,
+  .l-app .ih-action {
+    bottom: 104px;
+  }
+  .l-app .b3-action {
+    bottom: 150px;
+  }
+}
+
 /* ------------------------------------------------------------ season accent */
 /* The date sign: a season ribbon along its foot and a season badge on its icon. */
 .l-app .l-life-hud .l-hud-chip {
