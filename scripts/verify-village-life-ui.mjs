@@ -410,6 +410,7 @@ async function runView(mobile = false) {
       await click('[data-testid=minimap-toggle]'); await click('[data-testid=minimap-resize]');
     });
     await step('museum-walk-and-open', async () => {
+      if (!(await page.locator('#hv-minimap-body').count())) await click('[data-testid=minimap-toggle]');
       await click('[data-minimap-place=museum]');
       await runTo(async () => { await sleep(400); await stationary(); });
       await wait(() => document.querySelector('[data-testid=village-3d]')?.dataset.spot === 'museum');
