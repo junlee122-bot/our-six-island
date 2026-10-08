@@ -50,7 +50,7 @@ test('gift validation refuses absent or non-gift items without consuming or awar
 });
 test('home invitation lasts 20 minutes without refresh extension; another guest needs a farewell', () => {
   const s = world();
-  assert.throws(() => s.act('invite'), /친밀도 20/);
+  assert.throws(() => s.act('invite'), /조금 더 친해지면/);
   for (let d = 0; d < 4; d++) {
     s.act('talk', T0 + d * DAY);
     s.act('gift', T0 + d * DAY, 'lumi', { item: flower });

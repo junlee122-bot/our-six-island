@@ -523,6 +523,25 @@ export function cloudTransition(
               companion: companionNow(life, member.id, now),
             }, now);
           }
+          if ((command.action as { kind?: string }).kind === 'npcChat') {
+            // 주민과 진짜 대화: a talk or a chapter beside the resident (like talking); a visit where I really stand.
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player) throw new CloudError('마을에 먼저 접속한 뒤 주민을 만나 주세요.', 409);
+            const act = command.action as { op?: unknown; npc?: unknown; where?: unknown };
+            if (act.op === 'visit') act.where = player.area ?? 'village';
+            else {
+              const life = readLife(g.life);
+              assertNpcSocialContext({ kind: 'npcSocial', npc: act.npc as NpcId, op: 'talk' }, life.ext?.[member.id]?.npcRelations, {
+                area: player.area ?? 'village', home: player.home, actor: member.actor,
+                fishing: (life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now,
+                x: player.x, y: player.y,
+                hill: (life.flags ?? []).includes('district-hillside'),
+                ranch: (life.flags ?? []).includes('district-ranch'),
+                foothill: (life.flags ?? []).includes('district-foothill'),
+                companion: companionNow(life, member.id, now),
+              }, now);
+            }
+          }
           if ((command.action as { kind?: string }).kind === 'birthdayCheer') {
             // 생일 케이크: in the village plaza, by the cake (the authoritative player, not client coordinates).
             const player = entry?.snapshot.players.find((p) => p.id === member.id);

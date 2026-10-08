@@ -135,7 +135,7 @@ test('the box refuses exactly when the server would, for the same reason', () =>
   w.give(w.m, 'bouquet');
   let r = ask(w, 'gwen');
   assert.equal(r.refusal, 'ask-decline');
-  assert.match(r.server, /8하트/);
+  assert.match(r.server, /조금 더 가까워지면/);
   // During my breakup cooldown: the resident tells me to rest first.
   w = world();
   w.set(w.m, 'lux', { points: NPC_DATING_POINTS });
@@ -168,7 +168,7 @@ test('the box refuses exactly when the server would, for the same reason', () =>
   };
   r = propose(NPC_PROPOSE_POINTS - 1, day - 9, at(0));
   assert.equal(r.refusal, 'propose-decline');
-  assert.match(r.server, /10하트/);
+  assert.match(r.server, /마음이 더 깊어지면/);
   r = propose(NPC_PROPOSE_POINTS, day, at(NPC_DATING_DAYS - 1));
   assert.equal(r.refusal, 'propose-decline');
   assert.match(r.server, /사귄 지/);

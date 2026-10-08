@@ -236,7 +236,7 @@ const actorName = (life: LifeState, uid: string) => ACTORS[life.actors?.[uid] ??
 /** Adds relation points the way talks do: without dating, they stop at 8 hearts. */
 function addPoints(life: LifeState, uid: string, npc: NpcId, n: number) {
   const user = ((life.ext ??= {})[uid] ??= {});
-  const rel = ((user.npcRelations ??= {})[npc] ??= { points: 0 });
+  const rel = ((user.npcRelations ??= {})[npc] ??= { points: 0, ch: 0 });
   const cap = rel.love ? NPC_POINTS_MAX : Math.min(NPC_POINTS_MAX, Math.max(NPC_DATING_POINTS, rel.points));
   const before = rel.points;
   rel.points = Math.max(0, Math.min(cap, rel.points + n));
@@ -544,7 +544,7 @@ export function companionAfterAction(before: LifeState, after: LifeState, member
       break;
     case 'himmel':
       // Everyone likes a hero: a resident I talk to or give to gets +1 more.
-      if (kind === 'npcSocial' && isNpcId(a.npc) && a.npc !== 'himmel' && ['talk', 'gift', 'join'].includes(a.op as string)) {
+      if ((kind === 'npcSocial' || kind === 'npcChat') && isNpcId(a.npc) && a.npc !== 'himmel' && ['talk', 'gift', 'join'].includes(a.op as string)) {
         const pts = (r: LifeState) => r.ext?.[uid]?.npcRelations?.[a.npc as NpcId]?.points ?? 0;
         if (pts(after) !== pts(before) || a.op === 'talk') addPoints(after, uid, a.npc, COMPANION_NUMBERS.socialPoints);
       }

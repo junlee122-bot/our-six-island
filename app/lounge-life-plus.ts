@@ -16,6 +16,7 @@ import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lo
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
 import { RANCH_GOODS, itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
+import { npcTalkAction, type NpcTalkAction } from './lounge-npc-talk-life.ts';
 import { giftTasteMult, likedCategories, readTastes, setTastes, tastesView, type TastesAction, type TastesBook, type TastesView } from './lounge-friend-tastes.ts';
 import { birthdayCheer, birthdayPastText, birthdayView, readBdayBook, type BirthdayAction, type BirthdayBook, type BirthdayView } from './lounge-birthday.ts';
 import {
@@ -379,6 +380,8 @@ export type LifeExt = {
 };
 export type PlusAction =
   | NpcSocialAction
+  /** 주민과 진짜 대화: today's choice talk, a story chapter, a promised visit (lounge-npc-talk-life.ts). */
+  | NpcTalkAction
   /** 생일 케이크 앞에서 축하하기 (lounge-birthday.ts). */
   | BirthdayAction
   /** 내 취향 정하기 (lounge-friend-tastes.ts). */
@@ -1523,6 +1526,10 @@ export function plusAction(
   switch (a.kind) {
     case 'npcSocial': {
       npcSocialAction(life, uid, a, now);
+      break;
+    }
+    case 'npcChat': {
+      npcTalkAction(life, uid, a, now);
       break;
     }
     case 'birthdayCheer': {
