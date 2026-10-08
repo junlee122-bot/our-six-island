@@ -99,6 +99,8 @@ export type VillageAction = {
   disabled?: boolean;
 };
 
+/** Closer than this share of a door's reach, the door wins over a resident in front of it. */
+export const DOORSTEP = 0.5;
 export function villageAction(
   point: VillagePoint,
   actor: number,
@@ -333,7 +335,13 @@ export function villageAction(
       target: { type: 'spot', spot: { kind: 'district', id } },
     });
   }
-  const best = pickAction(candidates);
+  // A resident standing on a doorstep must not block the door: right at a door
+  // (within half its reach) the door or building wins over talking. A step
+  // back and talking works again.
+  const atDoor = candidates.some(
+    (c) => !!c && (c.door || c.kind === 'museum') && Number.isFinite(c.distance) && c.distance <= c.reach * DOORSTEP,
+  );
+  const best = pickAction(atDoor ? candidates.filter((c) => !c || c.kind !== 'talk') : candidates);
   if (!best?.target) return null;
   const t = best.target;
   const key =

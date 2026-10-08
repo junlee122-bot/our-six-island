@@ -283,3 +283,17 @@ test('my room: 요리·만들기 at a table, and a walkable spot beside it', () 
   assert.equal(action?.kind, 'cook');
   assert.notEqual(roomAction(spot, room, { own: true })?.kind, 'cook');
 });
+
+test('a resident on the museum doorstep does not block the museum (a step back, talking works)', async () => {
+  const { villageAction, DOORSTEP } = await import('../app/lounge-village-actions.ts');
+  const { museumDistance, MUSEUM_REACH, MUSEUM_FRONT } = await import('../app/lounge-village-spots.ts');
+  // Where the minimap's 박물관 pin walks me; 잔나 stands right there.
+  const door = MUSEUM_FRONT;
+  assert.ok(museumDistance(door) <= MUSEUM_REACH * DOORSTEP);
+  const residents = [{ id: 'janna', x: door.x + 0.05, z: door.z }];
+  assert.equal(villageAction(door, 3, { now: 0, residents })?.target.spot?.kind, 'museum');
+  // A step back from the door, past the doorstep, she is the one to talk to.
+  const back = { x: door.x, z: door.z + 0.9 };
+  assert.ok(museumDistance(back) > MUSEUM_REACH * DOORSTEP);
+  assert.equal(villageAction(back, 3, { now: 0, residents: [{ id: 'janna', x: back.x, z: back.z - 0.3 }] })?.target.spot?.kind, 'resident');
+});
