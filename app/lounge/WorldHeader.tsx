@@ -1,9 +1,8 @@
 'use client';
 import {
   ArrowLeft,
-  Backpack,
   Coins,
-  Mail,
+  Gift,
   Menu,
   Send,
   Trees,
@@ -15,10 +14,9 @@ import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import type { LoungeSave } from '../lounge-look';
 import { ACTORS } from '../lounge-roster';
 import { formatBeom, NAMES, josa } from '../lounge-text';
-import { DailyButton } from './WalletModal';
+import { dailyOf } from './WalletModal';
 import { linkLabel, offlineReason, retryDelay } from '../lounge-connection';
 import { useNow } from './use-now';
-import type { Notify } from './Toast';
 import { SHOP_INTERIORS, type ShopArea } from '../lounge-shop-interiors';
 
 export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom' | ShopArea;
@@ -125,15 +123,12 @@ export function WorldHeader({
   save,
   room,
   view,
-  notify,
   onBrand,
   onPresence,
   onInvite,
   onWallet,
   onAccount,
   onMenu,
-  onMail,
-  onBag,
   backTo = NAMES.village,
   visiting,
   mood,
@@ -142,24 +137,22 @@ export function WorldHeader({
   save: LoungeSave;
   room: CloudRoom;
   view: CloudRoomView;
-  notify: Notify;
   onBrand: () => void;
   onPresence: () => void;
   onInvite: () => void;
   onWallet: () => void;
   onAccount: () => void;
   onMenu: () => void;
-  onMail?: () => void;
-  onBag?: () => void;
   /** Where the interior's 나가기 leads (마을, or 내 방 from the wardrobe). */
   backTo?: string;
   /** In a friend's room: whose (the brand becomes 나가기 · 마을로). */
   visiting?: string;
-  /** 무드: the mood face chip beside the wallet (lounge/MoodHud.tsx). */
+  /** 무드: the one mood face chip beside the wallet (lounge/MoodHud.tsx). */
   mood?: ReactNode;
 }) {
   const village = tab === 'village' && !visiting;
-  const unread = view.life?.me.mailUnread ?? 0;
+  const daily = dailyOf(view);
+  const dailyReady = !!daily?.available;
   // Tables need the server; the picker still opens (solo things to do).
   const inviteOff = offlineReason(view.link.state, view.status);
   return (
@@ -206,45 +199,25 @@ export function WorldHeader({
           <Send size={17} aria-hidden="true" />
           <span>게임 초대</span>
         </button>
-        <span className="l-wallet-group">
-          <button
-            className="l-wallet-button"
-            onClick={onWallet}
-            aria-label={`내 범 지갑 ${formatBeom(view.wallet.balance)}`}
-          >
-            <Coins size={16} aria-hidden="true" />
-            {formatBeom(view.wallet.balance)}
-          </button>
-          <DailyButton room={room} view={view} notify={notify} compact />
-        </span>
+        {/* HUD 다이어트 (D2): the wallet and 오늘의 범 are one sign; the grant
+            shows as a stamp on it while it waits, and the wallet window claims it. */}
+        <button
+          className="l-wallet-sign"
+          onClick={onWallet}
+          data-testid="wallet-sign"
+          data-daily={dailyReady || undefined}
+          aria-label={`내 범 지갑 ${formatBeom(view.wallet.balance)}${dailyReady ? ' · 오늘의 범을 받을 수 있어요' : ''}`}
+        >
+          <Coins size={16} aria-hidden="true" />
+          <span className="l-wallet-amount">{formatBeom(view.wallet.balance)}</span>
+          {dailyReady && (
+            <span className="l-wallet-daily" aria-hidden="true">
+              <Gift size={14} />
+              오늘의 범
+            </span>
+          )}
+        </button>
         {mood}
-        {onBag && (
-          <button
-            className="l-header-icon l-bag-button"
-            onClick={onBag}
-            aria-label="가방 열기"
-            data-bind="inventory"
-            data-coach="life"
-          >
-            <Backpack size={19} aria-hidden="true" />
-          </button>
-        )}
-        {onMail && (
-          <button
-            className="l-header-icon l-mail-button"
-            onClick={onMail}
-            aria-label={unread ? `우편함, 읽지 않은 편지 ${unread}통` : '우편함'}
-            data-tip={unread ? `우편함 · 읽지 않은 편지 ${unread}통` : '우편함'}
-            data-testid="header-mail"
-          >
-            <Mail size={19} aria-hidden="true" />
-            {unread > 0 && (
-              <b className="l-header-badge" aria-hidden="true">
-                {unread > 9 ? '9+' : unread}
-              </b>
-            )}
-          </button>
-        )}
         <button
           className="l-profile"
           onClick={onAccount}

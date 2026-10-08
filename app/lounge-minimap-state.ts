@@ -2,7 +2,8 @@
 // and the district maps (lounge/DistrictMinimap.tsx). It changes only when
 // the player presses the map's own toggle: leaving a house, entering a
 // district or an interior and reloading the page keep it as it was (saved in
-// localStorage; blocked storage just falls back to "open").
+// localStorage). HUD 다이어트 (D2): it starts folded (the toggle and M open
+// it), so a new player or blocked storage sees the folded map.
 import { useSyncExternalStore } from 'react';
 
 export const MINIMAP_OPEN_KEY = 'beomdew:minimap-open';
@@ -17,7 +18,7 @@ export function minimapOpen(): boolean {
   } catch {
     raw = null;
   }
-  cached = raw !== '0';
+  cached = raw === '1';
   return cached;
 }
 export function setMinimapOpen(open: boolean) {
@@ -35,8 +36,12 @@ function subscribe(listener: () => void) {
     listeners.delete(listener);
   };
 }
+/** M (지도): opens the folded map, folds the open one. */
+export function toggleMinimap() {
+  setMinimapOpen(!minimapOpen());
+}
 /** [open, setOpen] backed by the shared, saved choice. */
 export function useMinimapOpen(): [boolean, (open: boolean) => void] {
-  const open = useSyncExternalStore(subscribe, minimapOpen, () => true);
+  const open = useSyncExternalStore(subscribe, minimapOpen, () => false);
   return [open, setMinimapOpen];
 }

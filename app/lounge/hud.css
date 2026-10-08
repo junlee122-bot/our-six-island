@@ -1,0 +1,170 @@
+/*
+ * HUD 다이어트 (D2) and 계절 UI 색 (D14).
+ *   - the wallet sign (지갑 + 오늘의 범 as one sign, top right)
+ *   - the pocket dock (가방 · 우편 beside the hotbar, the same spot everywhere)
+ *   - the season accent on the date sign's ribbon and the hotbar rail
+ * The season tint comes from data-season on .l-app (app/ui/tokens.css).
+ */
+
+/* ------------------------------------------------------------ wallet sign */
+.l-app .l-wallet-sign {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--hit);
+  padding: 0 var(--sp-2) 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--surface-raised);
+  box-shadow: var(--edge-line), var(--lift-1);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.l-app .l-wallet-sign:not([data-daily]) {
+  padding-right: var(--sp-3);
+}
+.l-app .l-wallet-sign:hover {
+  background: var(--surface-sunken);
+}
+.l-wallet-daily {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 3px var(--sp-2);
+  border-radius: var(--r-s);
+  background: var(--highlight-soft);
+  box-shadow: var(--edge-highlight);
+  color: var(--text-on-highlight);
+  font-family: var(--font-body);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-bold);
+}
+
+/* ------------------------------------------------------------ pocket dock */
+/* A full-width row with the hotbar's width held in the middle column
+   (9 slots: 9×54 + 8×6 + 2×10 = 554px), so the dock sits right of the hotbar
+   in every space, with or without a hotbar, and scales with --hud-zoom. */
+.l-pocket-row {
+  position: fixed;
+  z-index: var(--z-hud);
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: grid;
+  grid-template-columns: 1fr 554px 1fr;
+  pointer-events: none;
+  zoom: var(--hud-zoom, 1);
+}
+.l-pocket-dock {
+  grid-column: 3;
+  justify-self: start;
+  display: flex;
+  gap: 6px;
+  margin-left: var(--sp-3);
+  padding: 8px 10px;
+  border-radius: var(--r-l);
+  background-color: var(--frame);
+  background-image: repeating-linear-gradient(92deg, rgb(255 255 255 / 0.04) 0 2px, transparent 2px 9px);
+  box-shadow: var(--edge-frame), var(--ring-season), var(--lift-2);
+  pointer-events: auto;
+}
+/* My room and a friend's: the walk-key strip owns the bottom 50px. */
+.l-room-full .l-pocket-row {
+  bottom: 64px;
+}
+/* Decorate mode owns the window (like the header). */
+body:has(.b3-room[data-editing]) .l-pocket-row {
+  display: none;
+}
+.l-pocket-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-s);
+  background: var(--surface);
+  box-shadow: var(--edge-line);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--dur-quick) ease;
+}
+.l-pocket-button:hover {
+  transform: translateY(-2px);
+}
+.l-pocket-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+/* The key sits on the frame's corner like the hotbar's slot keys. */
+.l-app .l-pocket-button kbd {
+  position: absolute;
+  left: -6px;
+  top: -8px;
+  min-width: 20px;
+  padding: 0 5px;
+  line-height: 1.5;
+}
+.l-pocket-badge {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: var(--r-round);
+  background: var(--danger);
+  color: var(--text-on-accent);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-bold);
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-pocket-button {
+    transition: none;
+  }
+}
+
+/* Narrow windows: a long bottom-right action ("미스 포츈와 대출 상담 E") would
+   run under the dock (it ends about 50vw + 425px from the left), so the
+   district, interior and room action buttons step up above the dock row. */
+@media (max-width: 1500px) {
+  .l-app .ar-action,
+  .l-app .ih-action {
+    bottom: 104px;
+  }
+  .l-app .b3-action {
+    bottom: 150px;
+  }
+}
+
+/* ------------------------------------------------------------ season accent */
+/* The date sign: a season ribbon along its foot and a season badge on its icon. */
+.l-app .l-life-hud .l-hud-chip {
+  box-shadow: var(--edge-season), var(--edge-frame), var(--lift-1);
+}
+.l-app .l-hud-calendar[data-season] .l-hud-season {
+  box-sizing: content-box;
+  padding: 4px;
+  border-radius: var(--r-round);
+  background: var(--season-accent);
+  color: var(--season-accent-ink);
+}
+/* The hotbar rail: a season rim around the wood. */
+.l-app .l-village-hotbar .l-hotbar {
+  box-shadow: var(--edge-frame), var(--ring-season), var(--lift-2);
+}

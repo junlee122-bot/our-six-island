@@ -1,6 +1,7 @@
 'use client';
-// 무드 HUD: the round face beside the wallet with up to three moodle squares
-// (hover or focus for the tooltip, click or U for the panel), the
+// 무드 HUD: one round face beside the wallet (HUD 다이어트: the three moodle
+// squares moved into the tooltip and the panel; hover or focus for the
+// tooltip, click or U for the panel), the
 // inspiration ribbon with its chime, quiet toasts for cheers and the 촌장님
 // 찻잔, the small face badge on friends' portraits, and the 내 기분 자세히
 // 보여 주기 switch for the settings.
@@ -20,7 +21,7 @@ import { useNow } from './use-now';
 import type { Notify } from './Toast';
 import './mood.css';
 
-/** The HUD chip: face + three moodles + tooltip. */
+/** The HUD chip: one face; the thoughts are in its tooltip and the mood panel. */
 export function MoodHud({ life, clockOffset, onOpen }: { life: LifeView | null | undefined; clockOffset: number; onOpen: () => void }) {
   const [settings] = useSettings();
   const now = useNow(true, 30_000) + clockOffset;
@@ -52,13 +53,6 @@ export function MoodHud({ life, clockOffset, onOpen }: { life: LifeView | null |
           )}
           {m.cup && <i className="l-mood-chip-dot" aria-hidden="true" />}
         </span>
-        <span className="l-mood-moodles" aria-hidden="true">
-          {list.map((x) => (
-            <span key={x.key} className="l-mood-moodle" data-sign={x.value < 0 ? 'neg' : 'pos'} data-level={x.level}>
-              <MoodGlyph name={x.icon} size={16} />
-            </span>
-          ))}
-        </span>
       </button>
       <span role="tooltip" id={tipId} className="l-mood-tip">
         <strong>
@@ -67,7 +61,7 @@ export function MoodHud({ life, clockOffset, onOpen }: { life: LifeView | null |
         </strong>
         {list.map((x) => (
           <span key={x.key} data-sign={x.value < 0 ? 'neg' : 'pos'}>
-            {x.label} <b>{signed(x.value)}</b>
+            <MoodGlyph name={x.icon} size={14} /> {x.label} <b>{signed(x.value)}</b>
             {x.until ? <small> · {timeLeft(x.until, now)}</small> : null}
           </span>
         ))}

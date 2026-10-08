@@ -53,20 +53,6 @@
   color: var(--pal-red-41);
   transform: rotate(13deg) translateY(2px);
 }
-.l-wallet-button {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid var(--paper-300);
-  background: var(--paper-100);
-  border-radius: var(--r-round);
-  padding: 9px 13px;
-  color: var(--pal-amber-38);
-  font-weight: 750;
-  font-size: 13px;
-  white-space: nowrap;
-}
 .l-wallet-info {
   background: var(--paper-50);
   border-radius: var(--r-l);

@@ -47,12 +47,6 @@
 .l-app .l-header-right {
   gap: 14px;
 }
-.l-app .l-wallet-button {
-  background: var(--surface-raised);
-  border-color: var(--line);
-  color: var(--text);
-  border-radius: var(--r-s);
-}
 .l-app .l-profile .avatar-view {
   background: var(--surface-sunken);
 }

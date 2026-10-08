@@ -309,6 +309,8 @@ async function runView(browser, base, view, report) {
     await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
     await sleep(6000);
     await snap('farm');
+    // The map starts folded (HUD 다이어트); open it to read its pins.
+    if (!(await page.locator('[data-minimap-area="farm"] .hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
     const pins = await js(() => [...document.querySelectorAll('[data-minimap-area="farm"] [data-minimap-place]')].map((e) => e.getAttribute('data-minimap-place')));
     for (const id of ['home-0', 'home-3', 'bin', 'board', 'common', 'exit-village'])
       assert.ok(pins.includes(id), `우리 농장 미니맵에 ${id} 자리가 없습니다.`);
@@ -419,7 +421,11 @@ async function runView(browser, base, view, report) {
   const openFishing = async () => {
     await closeAll();
     if (await js(() => !!document.querySelector('[data-testid=fishing]'))) return;
-    if (!(await page.locator('.hv-directory').count())) await H.clickSel('.hv-top-tools button');
+    // The place list opens from the one map (HUD 다이어트: the map starts folded).
+    if (!(await page.locator('.hv-directory').count())) {
+      if (!(await page.locator('#hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
+      await H.clickSel('[data-testid=minimap-places]');
+    }
     await sleep(500);
     await H.clickSel('.hv-directory [data-district="fish-river"]');
     await focusScene();
@@ -494,7 +500,8 @@ async function runView(browser, base, view, report) {
       await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
       await sleep(6000);
       await snap('market');
-      // The district's own minimap: its shops, the board and the road home; a click walks to the board.
+      // The district's own minimap (folded at first): its shops, the board and the road home; a click walks to the board.
+      if (!(await page.locator('[data-minimap-area="market"] .hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
       const pins = await js(() => [...document.querySelectorAll('[data-minimap-area="market"] [data-minimap-place]')].map((e) => e.getAttribute('data-minimap-place')));
       for (const id of ['coop', 'general', 'bakery', 'newspaper', 'post', 'police', 'board', 'exit-village'])
         assert.ok(pins.includes(id), `시장 거리 미니맵에 ${id} 자리가 없습니다.`);
@@ -549,6 +556,7 @@ async function runView(browser, base, view, report) {
           await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
           await sleep(6000);
           await snap(area);
+          if (!(await page.locator(`[data-minimap-area="${area}"] .hv-minimap-body`).count())) await H.clickSel('[data-testid=minimap-toggle]');
           const have = await js((a) => [...document.querySelectorAll(`[data-minimap-area="${a}"] [data-minimap-place]`)].map((e) => e.getAttribute('data-minimap-place')), area);
           for (const id of pins) assert.ok(have.includes(id), `${area} 미니맵에 ${id} 자리가 없습니다.`);
         } finally {
@@ -619,8 +627,10 @@ async function runView(browser, base, view, report) {
       await step('game-' + game, async () => {
         for (const b of H.bots) await H.run(b, 'action', { action: { kind: 'area', area } }).catch(() => {});
         await focusScene();
-        await page.keyboard.press('KeyM');
+        // M opens the map; its 장소 button opens the place list.
+        if (!(await page.locator('#hv-minimap-body').count())) await page.keyboard.press('KeyM');
         await sleep(700);
+        await H.clickSel('[data-testid=minimap-places]');
         await H.clickText(new RegExp(PLACE[area]), '.hv-directory button');
         await until((a) => { const d = document.querySelector('[data-testid=village-3d]')?.dataset; return d?.nearbyPlace === a && d?.walking === 'false'; }, 180000, area === 'casino' ? 'casino' : 'hall');
         await page.keyboard.press('KeyE');
