@@ -432,9 +432,24 @@ async function runView(browser, base, view, report) {
   const openFishing = async () => {
     await closeAll();
     if (await js(() => !!document.querySelector('[data-testid=fishing]'))) return;
-    if (!(await page.locator('.hv-directory').count())) await H.clickSel('.hv-top-tools button');
-    await sleep(500);
-    await H.clickSel('.hv-directory [data-district="fish-river"]');
+    // On a slow software GPU (1–2 fps) a click can land while a lazily loaded
+    // window or the directory is still settling and do nothing: retry until
+    // the walk has actually started.
+    let started = false;
+    for (let i = 0; i < 4 && !started; i++) {
+      await closeAll();
+      if (!(await page.locator('.hv-directory').count())) {
+        await H.clickSel('.hv-top-tools button');
+        await until(() => !!document.querySelector('.hv-directory [data-district="fish-river"]'), 15000);
+      }
+      await sleep(500);
+      await H.clickSel('.hv-directory [data-district="fish-river"]');
+      started = (await until(() => {
+        const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+        return d?.walking === 'true' || d?.fishSpot === 'river';
+      }, 20000)) !== -1;
+    }
+    assert.ok(started, '강 낚시터로 출발하지 못했습니다(마을 안내 클릭이 먹지 않음).');
     await focusScene();
     await page.keyboard.down('Shift');
     try {
