@@ -22,6 +22,7 @@ import { FACE_POSE, FACE_WORD, asLines, nextChapter, npcTalkBook, pickTalk, repl
 import { hash32 } from '../lounge-calendar';
 import type { LifeAction } from '../lounge-life';
 import { talkSceneOf } from './npc-talk-facts';
+import { useTalkBooks } from './npc-talk-books';
 import { kstDay } from '../lounge-economy';
 import { ACTORS } from '../lounge-roster';
 import { actionForCode } from '../lounge-keybinds';
@@ -85,8 +86,17 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const said = useRef(pages);
   // 주민과 진짜 대화 (lounge-npc-talk.ts): their book, today's scene, and the
   // reply buttons while a talk or a chapter waits for my answer.
+  // The book is its own chunk (npc-talk-books.ts), loading since I came near:
+  // the talk waits for it; a book that fails to load gives the old one-line talk.
+  const bookWaits = useTalkBooks([npc]).has(npc);
   const book = npcTalkBook(npc);
-  const [scene] = useState(() => (view.life ? talkSceneOf(view, npc, opened, myName) : null));
+  const [scene, setScene] = useState(() => (view.life ? talkSceneOf(view, npc, opened, myName) : null));
+  const [sceneHasBook, setSceneHasBook] = useState(!!book);
+  if (book && !sceneHasBook) {
+    // The book came after the box opened: today's scene again, now with its chapters.
+    setSceneHasBook(true);
+    setScene(view.life ? talkSceneOf(view, npc, opened, myName) : null);
+  }
   const [asking, setAsking] = useState<{ kind: 'talk'; entry: NpcTalkEntry } | { kind: 'story'; chapter: NpcChapter; n: number } | null>(null);
   const [face, setFace] = useState<TalkFace | null>(null);
   const [picking, setPicking] = useState(false);
@@ -150,7 +160,8 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
     story: story?.open && story.chapter ? { label: `이야기 ${story.n}장 · ${story.chapter.title}` } : null,
     talked: row.talked,
     gifted: row.gifted,
-    busy,
+    // "이야기하기" waits the moment its book is on the way.
+    busy: busy || bookWaits,
     blocked: talkBlock,
     request: request && !requestDone && onBoard ? `${itemName(request.item)} ${request.n}개` : null,
     love,

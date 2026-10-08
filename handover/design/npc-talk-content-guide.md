@@ -9,12 +9,16 @@
 | 파일 | 할 일 |
 |---|---|
 | `app/npc-talk/<id>.ts` | 새로 만듭니다. `export const <ID>_TALK: NpcTalkBook = { ... }` |
-| `app/npc-talk/index.ts` | `import { <ID>_TALK } from './<id>.ts';` 한 줄, `NPC_TALK`에 `<id>: <ID>_TALK,` 한 줄 |
+| `app/npc-talk/index.ts` | `import { <ID>_TALK } from './<id>.ts';` 한 줄, `NPC_TALK`에 `<id>: <ID>_TALK,` 한 줄(서버용) |
 | `app/npc-talk/types.ts` | 형식(읽기만). 바꾸지 않습니다 |
 
 - `<id>`는 `app/lounge-npc-data.ts`의 `NPC_IDS` 그대로입니다(예: `himmel`, `beatrice`, `realtor`).
 - 서버용 코드도 이 파일을 읽으니 import 경로에 **`.ts`를 꼭** 붙입니다(`'./types.ts'`).
 - 목록에 넣는 순간 그 주민은 새 대화로 바뀝니다. 넣기 전까지는 예전처럼 한 줄 대화입니다.
+- **지연 로딩**: 화면(클라이언트)은 책을 첫 번들에 넣지 않습니다. `app/lounge/npc-talk-books.ts`가
+  `import.meta.glob('../npc-talk/*.ts')`로 **파일 이름**(`<id>.ts`)을 보고 주민마다 따로 불러옵니다(곁에 가거나 말을 걸 때).
+  그래서 화면 쪽에는 등록할 것이 없습니다. 서버(`app/lounge-cloud-engine.ts`)는 판정을 하므로 `index.ts`의 목록 전부를 정적으로 씁니다.
+  파일 이름은 꼭 주민 id와 같게, 책은 그 파일에서 `export`합니다. 불러오는 동안 "이야기 나누기"가 잠깐 기다리고, 실패하면 예전 한 줄 대화입니다.
 - 세션 셋이 `index.ts`를 동시에 고치면 합칠 때 그 파일만 겹칩니다. 줄 단위로 더하기만 하면 쉽게 합쳐집니다.
 
 ## 2. 형식 (`NpcTalkBook`)
@@ -25,11 +29,11 @@ import type { NpcTalkBook } from './types.ts';
 export const HIMMEL_TALK: NpcTalkBook = {
   npc: 'himmel',
   memories: { 'hero-yes': '용사 이야기를 좋아한다고 했어요', /* 모든 기억 태그의 수첩 문장 */ },
-  talks: [ /* 평소 고르는 대화 12개 이상 */ ],
-  openers: [ /* 지금 상황 첫마디 10개 이상 */ ],
-  callbacks: [ /* 기억 꺼내기 6개 이상 */ ],
-  chapters: [ /* 이야기 5~6장 */ ],
-  after: [ /* 오늘 대화를 마친 뒤 다시 말 걸면 하는 한마디 2개 이상 */ ],
+  talks: [ /* 평소 고르는 대화 30개 이상(테스트 하한 12) */ ],
+  openers: [ /* 지금 상황 첫마디 25개 이상(테스트 하한 10) */ ],
+  callbacks: [ /* 기억 꺼내기 15개 이상(테스트 하한 6) */ ],
+  chapters: [ /* 이야기 6장(테스트: 5~6장) */ ],
+  after: [ /* 오늘 대화를 마친 뒤 다시 말 걸면 하는 한마디 5개 이상(테스트 하한 2) */ ],
 };
 ```
 
@@ -52,7 +56,7 @@ export const HIMMEL_TALK: NpcTalkBook = {
 - `say`: 플레이어가 누르는 대답(30자 이하). 키보드 1·2·3으로도 고릅니다.
 - `tier`: 그 캐릭터다운 대답일수록 `great`, 무난하면 `good`, 안 맞으면 `meh`. **정답 표시는 없습니다.**
   안쪽 점수는 great 8 · good 6 · meh 3(오늘 첫 대화만, 깎이는 일 없음). 대화마다 `great`가 적어도 하나 있어야 합니다.
-- `answer`: 주민 대답. 한 줄이나 몇 쪽(배열).
+- `answer`: 주민 대답. 한 줄이나 몇 쪽(배열). 한 줄로 끝내지 말고 자주 2~3쪽으로 씁니다.
 - `face`(선택): 대답할 때 표정. `smile · laugh · wow · shy · calm · think · sorry`.
   안 쓰면 great→laugh, good→smile, meh→calm. 포즈 시트가 있는 주민(미쿠 등)은 그 칸으로, 나머지는 초상 옆 작은 말풍선("하하", "끄덕")으로 보입니다.
 - `remember`(선택): 고르면 그 주민이 기억하는 태그. 주민마다 20개까지, 오래된 것부터 지워집니다.
@@ -64,7 +68,7 @@ export const HIMMEL_TALK: NpcTalkBook = {
   title: '뒷산의 노을',                          // 수첩: "이야기 2장 · 뒷산의 노을"
   hint: '저녁 무렵(게임 시각 오후 다섯 시부터 아홉 시) 뒷산에 올라가 보세요.', // 아직 안 열렸을 때 수첩에 보이는 실마리(80자 이하)
   need: { days: 3, points: 20, visit: { area: 'hill', from: 17, to: 21 } },
-  scene: ['…', '…', '…'],                        // 3~8줄
+  scene: ['…', '…', '…'],                        // 8~15줄 권장(테스트: 3~15줄)
   replies: [ /* 선택 한 번, 2~3개 (대화와 같은 모양) */ ],
 }
 ```
@@ -169,12 +173,14 @@ export const HIMMEL_TALK: NpcTalkBook = {
 ## 6. 주민별 체크리스트
 
 - [ ] `app/npc-talk/<id>.ts`를 만들고 `index.ts`에 등록
-- [ ] talks 12개 이상 · openers 10개 이상 · callbacks 6개 이상 · chapters 5~6개 · after 2개 이상
+- [ ] talks 30개 이상 · openers 25개 이상 · callbacks 15개 이상 · chapters 6장 · after 5개 이상
+      (테스트 하한은 12 · 10 · 6 · 5~6 · 2로, 아직 늘리지 않은 주민도 통과합니다)
 - [ ] 대화마다 대답 2~3개, `great` 하나 이상, 대부분은 세 등급이 고루
 - [ ] openers에 날씨(비·눈), 시간대, 축제, 낚시·수확·금별, 기분, 마을 소식, 관계 주민(`bond`)이 골고루
 - [ ] callbacks에 평소 대화에서 남긴 기억 넷 이상 + `@taste` · `@outing` · `@bday-soon` · `@date` 중 둘 이상
 - [ ] 장: 1장 조건 없음, 2장 `visit`, 3장 `bring`, 4장 `mem`(talks에서 얻는 것), 5장 `points: 96`, 마지막 장 `love`
-- [ ] 장면 3~8줄, 실마리 문장에 장소·시간·물건을 플레이어가 알 수 있게
+- [ ] 장면 8~15줄(테스트 상한 15줄), 실마리 문장에 장소·시간·물건을 플레이어가 알 수 있게
+- [ ] 대답(`answer`)은 자주 2~3쪽, 장의 대답은 2~4쪽. 표정(`face`)도 상황에 맞게 고루
 - [ ] 숫자·이모지·영어 없음, 60자, 채우기 뒤 조사 없음
 - [ ] 원작 대사 그대로 옮기지 않음, 말투는 지금 대사 파일(`app/lounge-npc-lines-<id>.ts`, `-extra-`, `-love-`)과 이어지게
 - [ ] `npm run check` 통과(아래)

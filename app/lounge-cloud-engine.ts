@@ -64,6 +64,12 @@ import { isVoyageAction } from './lounge-voyage-data.ts';
 import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
 import { regionToNetwork } from './lounge-areas.ts';
 import { HARBOR_VOYAGE } from './lounge-harbor-layout.ts';
+import { registerTalkBooks } from './lounge-npc-talk.ts';
+import { NPC_TALK } from './npc-talk/index.ts';
+
+// 주민과 진짜 대화: the server judges every talk, so it holds every book (the
+// client loads them one by one, app/lounge/npc-talk-books.ts).
+registerTalkBooks(NPC_TALK);
 /** A voyage's deck accepts me a few seconds before the departure (clock slack). */
 const DECK_EARLY_MS = 5_000;
 /** The life state without the reset's done-mark (for the "did anything change" check). */

@@ -15,7 +15,6 @@
 import { FRIEND_PROFILES, hash32, type Season, type TimeOfDay, type Weather } from './lounge-calendar.ts';
 import { NPC_TALK_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
 import type { NpcRecentKind } from './lounge-npc-extra-types.ts';
-import { NPC_TALK } from './npc-talk/index.ts';
 import type { ChapterNeed, NpcChapter, NpcTalkBook, NpcTalkEntry, OneOrMore, TalkCond, TalkFace, TalkReply, TalkTier } from './npc-talk/types.ts';
 
 export type { ChapterNeed, NpcChapter, NpcTalkBook, NpcTalkEntry, TalkCond, TalkFace, TalkReply, TalkTier };
@@ -30,8 +29,18 @@ export const isMemoryTag = (t: unknown): t is string => typeof t === 'string' &&
 /** Memory tags read from the game rather than stored: 내 취향, my birthday soon, an outing together, a date. */
 export const VIRTUAL_MEMORIES = ['@taste', '@bday-soon', '@outing', '@date'] as const;
 
-export const npcTalkBook = (npc: NpcId): NpcTalkBook | undefined => NPC_TALK[npc];
-export const hasTalkBook = (npc: NpcId) => !!NPC_TALK[npc];
+// The books are not imported here, so the client's first bundle stays small:
+// the server (lounge-cloud-engine.ts) and the tests register every book from
+// app/npc-talk/index.ts; the client loads a resident's book when it is
+// needed (app/lounge/npc-talk-books.ts) and registers it the same way.
+const BOOKS: Partial<Record<NpcId, NpcTalkBook>> = {};
+/** Makes these books readable by npcTalkBook (the server: all of them, at start). */
+export function registerTalkBooks(books: Partial<Record<NpcId, NpcTalkBook>>) {
+  Object.assign(BOOKS, books);
+}
+/** A resident's book, once registered (on the client: once loaded). */
+export const npcTalkBook = (npc: NpcId): NpcTalkBook | undefined => BOOKS[npc];
+export const hasTalkBook = (npc: NpcId) => !!BOOKS[npc];
 
 /** What a resident's talk can see. `undefined` = not known (the server's view): such a condition holds. */
 export type TalkFacts = {

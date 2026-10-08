@@ -13,6 +13,7 @@ import { kstDay } from '../lounge-economy';
 import { josa } from '../lounge-text';
 import { npcSpouseOf } from '../lounge-npc-data';
 import { chapterLabel, chaptersDone, memoryLines, nextChapter, npcTalkBook } from '../lounge-npc-talk';
+import { talkBookExists, useTalkBooks } from './npc-talk-books';
 import { npcHearts } from '../lounge-npc-speech';
 import { Hearts } from './Hearts';
 import { npcSpot } from '../lounge-npc-schedule';
@@ -92,6 +93,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const loveSay = (line: string, vars: Record<string, string> = {}) => fillLoveLine(line, { me: myName, ...vars }, selected);
   const loveKey = `${who}:${day}`;
   const loveStatus = npcLoveStatus(row, day);
+  useTalkBooks([selected]);
   const hasBook = !!npcTalkBook(selected);
   const button = (label: string, op: 'talk' | 'date' | 'invite' | 'dismiss', off = false) => (
     <GameButton
@@ -191,8 +193,9 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
 /** The list's small word: the chapter reached (a book), else the level ("단골"). */
 function storyShort(npc: NpcId, r: { points: number; ch?: number; level?: string } | undefined) {
   const book = npcTalkBook(npc);
-  if (!book) return r?.level ?? '인사하는 사이';
-  const done = chaptersDone(book, r ?? { points: 0, ch: 0 });
+  // A book not loaded yet: the chapters saved with me (an old save without them shows the level).
+  if (!book && (!talkBookExists(npc) || r?.ch === undefined)) return r?.level ?? '인사하는 사이';
+  const done = book ? chaptersDone(book, r ?? { points: 0, ch: 0 }) : (r?.ch ?? 0);
   return done ? `이야기 ${done}장` : '이야기 전';
 }
 

@@ -10,6 +10,7 @@ import { NPCS } from '../lounge-npc-data';
 import { chaptersDone, npcTalkBook, visitDue } from '../lounge-npc-talk';
 import { josa } from '../lounge-text';
 import type { Notify } from './Toast';
+import { useTalkBooks } from './npc-talk-books';
 import { useNow } from './use-now';
 
 export function NpcTalkVisits({ room, view, notify }: { room: CloudRoom; view: CloudRoomView; notify: Notify }) {
@@ -19,6 +20,8 @@ export function NpcTalkVisits({ room, view, notify }: { room: CloudRoom; view: C
   const area = me?.area ?? '';
   const hour = gameHour(now);
   const rows = view.life?.me.npcRelations;
+  // Only the books of residents I have talked with can be waiting for a visit.
+  const waits = useTalkBooks((rows ?? []).filter((r) => r.points > 0).map((r) => r.npc));
   useEffect(() => {
     if (!area || !rows) return;
     for (const row of rows) {
@@ -32,6 +35,6 @@ export function NpcTalkVisits({ room, view, notify }: { room: CloudRoom; view: C
         if (ok) notify(`${josa(NPCS[row.npc].name, '이/가')} 말한 곳에 와 봤어요. 다음에 만나면 이야기를 이어 갈 수 있어요.`, 'info');
       });
     }
-  }, [area, hour, rows, room, notify]);
+  }, [area, hour, rows, room, notify, waits.size]);
   return null;
 }

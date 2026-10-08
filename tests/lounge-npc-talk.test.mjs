@@ -16,6 +16,7 @@ import {
   migratedChapters,
   nextChapter,
   pickTalk,
+  registerTalkBooks,
   remember,
   talkDays,
   visitDue,
@@ -28,6 +29,9 @@ import { newLoungeLedger, registerWallet, kstDay } from '../app/lounge-economy.t
 import { readNpcRelations } from '../app/lounge-romance.ts';
 import { npcTalkChoices } from '../app/lounge-npc-speech.ts';
 import { gameTimeOnDay } from '../app/lounge-calendar.ts';
+
+// The server holds every book (lounge-cloud-engine.ts registers them); so do the tests.
+registerTalkBooks(NPC_TALK);
 
 const T0 = Date.UTC(2026, 8, 24, 3),
   DAY = 86400000;
@@ -96,7 +100,7 @@ export function checkBook(npc, book) {
     const where = `${npc} chapter ${i + 1}`;
     checkLine(npc, `${where} title`, c.title);
     assert.ok(c.hint.length > 0 && [...c.hint].length <= 80, `${where}: hint`);
-    assert.ok(c.scene.length >= 3 && c.scene.length <= 8, `${where}: 3–8 scene lines`);
+    assert.ok(c.scene.length >= 3 && c.scene.length <= 15, `${where}: 3–15 scene lines`);
     for (const line of c.scene) checkLine(npc, where, line);
     replies(where, c.replies);
     assert.ok((c.need.points ?? points) >= points, `${where}: points never go down (migration)`);

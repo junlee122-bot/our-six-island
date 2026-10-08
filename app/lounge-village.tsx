@@ -131,6 +131,7 @@ import {
   type VillageAction,
   type VillageSpot,
 } from './lounge-village-actions';
+import { TalkBookPreload } from './lounge/npc-talk-books';
 import { ActionButton } from './lounge/ActionButton';
 import { CropStageArt, ItemIcon, QualityStar } from './lounge/ItemIcon';
 import { Glyph } from './lounge/field-glyphs';
@@ -3743,6 +3744,7 @@ function SpotPrompt({
     const s = life ? npcSpot(spot.npc, life.serverNow) : null;
     return (
       <div>
+        <TalkBookPreload npc={spot.npc} />
         <strong>
           <MessageCircle size={14} /> {NPCS[spot.npc].name}
         </strong>
