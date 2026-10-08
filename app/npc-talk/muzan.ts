@@ -292,7 +292,7 @@ export const MUZAN_TALK: NpcTalkBook = {
       open: '제 집이 어디냐고들 묻더군요. 신형만 씨는 특히 끈질기게 묻습니다.',
       replies: [
         { say: '볕 안 드는 북향 집이겠죠', tier: 'great', face: 'laugh', answer: ['…부동산 감정보다 정확하군요.', '창이 작고 커튼이 두꺼운 집입니다. 그 이상은 영업 비밀이지요.'] },
-        { say: '객장에서 주무세요?', tier: 'good', face: 'think', answer: '가끔 소파에서 날을 새긴 합니다. 바다 건너 장이 열리는 밤이면요.' },
+        { say: '객장에서 주무세요?', tier: 'good', face: 'think', answer: '가끔 소파에서 밤을 새우긴 합니다. 바다 건너 장이 열리는 밤이면요.' },
         { say: '집 사실 생각은요?', tier: 'meh', face: 'calm', answer: '땅은 도망가지 않지요. 그래서 서두르지 않습니다. 신형만 씨께는 비밀로.' },
       ],
     },
@@ -656,7 +656,7 @@ export const MUZAN_TALK: NpcTalkBook = {
       replies: [
         { say: '밤낚시도 해요', tier: 'great', face: 'smile', answer: '…밤낚시라. 다음엔 제게도 알려 주시지요. 밤바다는 제 시간이니까요.' },
         { say: '손맛이 좋아서요', tier: 'good', face: 'think', answer: '체결의 손맛과 비슷하겠군요. 기다림 끝에 한 번에 오는 것.' },
-        { say: '잘 안 잡혀요', tier: 'meh', face: 'calm', answer: '횡보장이로군요. 미끼를 바꾸든 자리를 바꾸든, 감정만은 바꾸지 마십시오.' },
+        { say: '잘 안 잡혀요', tier: 'meh', face: 'calm', answer: '횡보장이군요. 미끼를 바꾸든 자리를 바꾸든, 감정만은 바꾸지 마십시오.' },
       ],
     },
     {
@@ -993,7 +993,7 @@ export const MUZAN_TALK: NpcTalkBook = {
         '그가 시계를 당신 쪽으로 내민다. "감아 보시겠습니까. 천천히."',
       ],
       replies: [
-        { say: '천천히, 일정하게 감을게요', tier: 'great', face: 'shy', answer: '…잘 하시는군요. 원칙에 예외를 하나 적어 두어야겠습니다.' },
+        { say: '천천히, 일정하게 감을게요', tier: 'great', face: 'shy', answer: '…잘하시는군요. 원칙에 예외를 하나 적어 두어야겠습니다.' },
         { say: '망가뜨리면 어떡해요', tier: 'good', face: 'smile', answer: '그럼 같이 고치면 되지요. 혼자 고치는 것보다 오래 걸리겠지만요.' },
         { say: '시계는 잘 몰라요', tier: 'meh', face: 'calm', answer: '괜찮습니다. 제 손 위에 손을 얹으시지요. 감는 건 제가 하겠습니다.' },
       ],
@@ -1041,7 +1041,7 @@ export const MUZAN_TALK: NpcTalkBook = {
         '"반지라도 들고 오신다면… 그날은 장을 닫겠습니다. 하루 종일."',
       ],
       replies: [
-        { say: '평생 같이 걸어요', tier: 'great', face: 'shy', answer: '…약속입니다. 볕이 드는 날엔 망토를 함께 쓰지요. 그늘이 둘이 됩니다.' },
+        { say: '평생 같이 걸어요', tier: 'great', face: 'shy', answer: '…약속입니다. 볕이 드는 날엔 망토를 함께 쓰지요. 한 그늘에 둘이 드는 겁니다.' },
         { say: '장부엔 뭐라고 적어요?', tier: 'good', face: 'laugh', answer: '적지 않습니다. 영업 비밀이니까요. 당신과 저만 아는.' },
         { say: '조금 더 천천히요', tier: 'meh', face: 'smile', answer: '좋습니다. 장기 보유는 서두르지 않는 법이지요.' },
       ],
