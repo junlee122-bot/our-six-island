@@ -127,11 +127,11 @@ export function groundPattern(kind: GroundPattern): THREE.CanvasTexture | null {
     }
   } else {
     // Gravel: small stones and a few cracks.
-    for (let i = 0; i < 1100; i++) {
+    for (let i = 0; i < 800; i++) {
       const x = r() * size,
         y = r() * size,
         s = 1 + r() * 3;
-      c.fillStyle = `rgba(40, 30, 20, ${0.07 + r() * 0.13})`;
+      c.fillStyle = `rgba(40, 30, 20, ${0.05 + r() * 0.08})`;
       wrap((dx, dy) => {
         c.beginPath();
         c.ellipse(x + dx, y + dy, s, s * (0.6 + r() * 0.4), r() * 3, 0, Math.PI * 2);
