@@ -3,7 +3,8 @@
 브랜치 `claude/lighthouse-inside`. 항구 바위곶의 등대에 들어갈 수 있게 했다. 엔드게임 "여섯섬의 등대"([시간 체계·엔드게임 설계 2부](design-time-and-endgame.md))가 나중에 이 등대를 쓰도록 데이터 자리만 마련했고, 이야기는 만들지 않았다.
 
 ![1층 등대지기의 방](img/lighthouse/lighthouse-ground.webp)
-![꼭대기 등명실](img/lighthouse/lighthouse-top.webp)
+![꼭대기 등명실 (밤, 등불이 켜져 빛줄기가 돌아요)](img/lighthouse/lighthouse-top.webp)
+![등대 일지](img/lighthouse/lighthouse-logbook.webp)
 
 ## 1. 무엇이 생겼나
 
