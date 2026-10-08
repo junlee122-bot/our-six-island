@@ -30,6 +30,16 @@ export const CARPENTER_TALK: NpcTalkBook = {
     'taste-heard': '내 취향을 기억해 줬어요',
     'outing-heard': '같이 나무 시찰 다닌 날을 이야기했어요',
     'bday-heard': '생일 선물로 뭘 짜 줄지 물어봤어요',
+    'date-heard': '내 방 선반 각이 밤새 생각났대요',
+    'clan-past': '옛날엔 성벽을 부쉈고 지금은 짓는다고 들었어요',
+    'bitter-tea': '진한 보리차가 좋다고 했어요',
+    'kimchi-share': '김장하면 김치 한 통 갖다주기로 했어요',
+    'hammer-try': '못 박는 법을 배워 봤어요',
+    'orchard-walk': '저녁 과수원은 나뭇결 보러 가는 거래요',
+    'candle-tip': '뻑뻑한 서랍엔 양초를 문지른다고 했어요',
+    'knot-love': '옹이도 결이라고 했어요',
+    'rough-hands': '굳은살 박인 손이 멋있다고 했어요',
+    'oak-name': '숲 참나무 이름이 할배라는 걸 들었어요',
   },
   talks: [
     {
@@ -167,6 +177,180 @@ export const CARPENTER_TALK: NpcTalkBook = {
         { say: '완벽해. 떡볶이는 내가 살게', tier: 'great', face: 'shy', answer: '…니가 산다꼬? 오늘 톱밥 먼지가 와 이래 많노.' },
         { say: '목재소는 왜 들러?', tier: 'good', face: 'think', answer: '좋은 결 들어왔나 봐야지. 니 것도 볼 끼다. 그래서 간다.' },
         { say: '꽃집도 들르자', tier: 'meh', face: 'calm', answer: '…생각해 보께. 니니까 생각만 해 보는 기다.' },
+      ],
+    },
+    {
+      id: 'clan-past',
+      open: ['누나야가 옛날에 뭐 했는지 아나.', '클랜 마을에서 성벽 부수는 일 했다. 도끼 하나 들고.'],
+      replies: [
+        { say: '지금은 짓는 쪽이네', tier: 'great', remember: 'clan-past', face: 'smile', answer: ['…그래. 부수는 거보다 짓는 게 낫다.', '부순 건 하루면 끝나는데 지은 건 백 년 간다.'] },
+        { say: '그때가 그립지 않아?', tier: 'good', face: 'think', answer: ['쪼매. 시끄럽고 신났다. 근데 의자가 없었다.', '앉을 데 없는 동네는 정이 안 간다.'] },
+        { say: '그래서 그렇게 무섭구나', tier: 'meh', face: 'calm', answer: '무서븐 거 아이다. 말투가 그런 기다. 헷갈리지 마래이.' },
+      ],
+    },
+    {
+      id: 'barbarian',
+      open: '클랜 마을 바바리안 아재들 알제? 수염만 길고 의자 하나 몬 짜는 거.',
+      replies: [
+        { say: '그래서 한남이 싫어졌어?', tier: 'great', face: 'laugh', answer: ['정. 답. 그 아재들 의자에 앉으믄 다 부순다.', '이 마을 한남들 보믄 그 아재들 생각난다. 판박이다.'] },
+        { say: '수염은 멋있던데', tier: 'good', face: 'think', answer: '수염 멋있으믄 뭐 하노. 망치 쥐는 법도 모른다.' },
+        { say: '그 사람들도 착하잖아', tier: 'meh', face: 'calm', answer: '착하다. 그래서 더 답답하다. 착한데 다 부순다 아이가.' },
+      ],
+    },
+    {
+      id: 'spin',
+      open: '내 이름이 와 발키리냐꼬 묻는 사람 많다. 니도 궁금하제?',
+      replies: [
+        { say: '도끼 한 바퀴 돌려서?', tier: 'great', face: 'laugh', answer: ['어. 우. 째. 알. 았. 노.', '한 바퀴 돌리믄 통나무가 장작 된다. 사람한텐 안 한다.'] },
+        { say: '이름이 멋있어서', tier: 'good', face: 'shy', answer: '…멋있다꼬? 그런 말 첨 듣는다. 칭찬 아이제? 칭찬이믄 됐다.' },
+        { say: '별로 안 궁금한데', tier: 'meh', face: 'calm', answer: '안 궁금해도 들어라. 누나야가 말하고 싶은 날이다.' },
+      ],
+    },
+    {
+      id: 'bitter-tea',
+      open: '공방에서 차 한 잔 줄까. 달달한 거는 없다. 쓴 것만 있다.',
+      replies: [
+        { say: '진한 보리차 좋아', tier: 'great', remember: 'bitter-tea', answer: ['오. 니 입맛 쓸 만하네.', '누나야 보리차는 장작불에 끓인다. 맛이 다르다.'] },
+        { say: '물이면 충분해', tier: 'good', answer: '물이 제일 정직하다. 컵은 누나야가 깎은 기다. 조심해라.' },
+        { say: '꿀 좀 넣어 줘', tier: 'meh', face: 'calm', answer: '꿀은 ㄴㄴ. 달달한 차는 공방 출입 금지다. 규칙이다.' },
+      ],
+    },
+    {
+      id: 'kimchi',
+      open: '{me}, 니 집은 김장하나? 누나야는 김치 없으믄 밥을 몬 묵는다.',
+      replies: [
+        { say: '하면 한 통 갖다줄게', tier: 'great', remember: 'kimchi-share', face: 'shy', answer: ['…진짜가. 말로만 하믄 헐리 가요.', '김치 통 받침은 누나야가 짜 주께. 거래다.'] },
+        { say: '같이 담그자', tier: 'good', face: 'laugh', answer: '배추 절이는 건 누나야가 한다. 팔뚝이 다르다. 니는 양념.' },
+        { say: '김치는 사 먹어', tier: 'meh', face: 'calm', answer: '사 묵는 김치는 결이 없다. …김치에 결이 있다꼬. 있다.' },
+      ],
+    },
+    {
+      id: 'hammer',
+      open: '못 하나에도 각도가 있다. 니 망치질 함 해 볼래? 쪼매만.',
+      replies: [
+        { say: '해 볼게. 갈켜 줘', tier: 'great', remember: 'hammer-try', answer: ['좋다. 손목으로 치지 말고 팔꿈치로 쳐라.', '…오. 한 번에 들어갔네. 칭찬 아이다. 운이다.'] },
+        { say: '손가락 찧으면 어떡해', tier: 'good', face: 'think', answer: '찧으믄 누나야가 호 해 주께. 아 아이다, 약 발라 주께.' },
+        { say: '망치는 무거워', tier: 'meh', face: 'calm', answer: '그 망치가 젤 가벼운 기다. 니 팔이 무거운 기다.' },
+      ],
+    },
+    {
+      id: 'orchard',
+      open: '저녁마다 과수원 가는 거 봤제? 사과 따러 가는 거 아이다.',
+      replies: [
+        { say: '나뭇결 보러 가는 거지?', tier: 'great', remember: 'orchard-walk', face: 'smile', answer: ['맞다. 열매 다 따고 나믄 가지 결이 보인다.', '그거 보고 나믄 대패질이 잘 된다. 비밀이다.'] },
+        { say: '사과 하나만 얻어 와', tier: 'good', face: 'laugh', answer: '하쿠한테 말해라. 누나야는 나무만 본다. …하나만 얻어 오께.' },
+        { say: '산책 아니야?', tier: 'meh', face: 'calm', answer: '산책 아이다. 시찰이다. 몇 번을 말하노.' },
+      ],
+    },
+    {
+      id: 'candle',
+      open: '비 오고 나믄 서랍 뻑뻑하다꼬 다들 들고 온다. 니는 우째 하노.',
+      replies: [
+        { say: '양초 문질러 볼까?', tier: 'great', remember: 'candle-tip', face: 'wow', answer: ['…니 그거 어디서 배웠노.', '맞다. 서랍 옆구리에 양초 문지르믄 술술 나간다.'] },
+        { say: '누나야한테 들고 오지', tier: 'good', answer: '들고 와라. 근데 다음엔 니가 고쳐 봐라. 쉽다.' },
+        { say: '힘으로 당기면 돼', tier: 'meh', face: 'sorry', answer: '그라다 손잡이 빠진다. 손잡이도 누나야가 달았다. 울고 싶다.' },
+      ],
+    },
+    {
+      id: 'knot',
+      open: '판자에 옹이 박힌 거 있제. 이 마을 한남들은 그거 흠이라꼬 버린다.',
+      replies: [
+        { say: '옹이도 결이잖아', tier: 'great', remember: 'knot-love', face: 'shy', answer: ['…니 진짜 뭘 좀 아는구나.', '옹이는 가지가 살았던 자리다. 살아온 흔적을 와 버리노.'] },
+        { say: '튼튼하면 상관없지', tier: 'good', answer: '튼튼하다. 쪼매 깎기 힘들 뿐이다. 그 정도는 누나야가 한다.' },
+        { say: '매끈한 게 예쁘던데', tier: 'meh', face: 'calm', answer: '매끈한 건 지루하다. 사람도 쪼매 울퉁불퉁해야 정이 간다.' },
+      ],
+    },
+    {
+      id: 'shop-name',
+      open: '가게 이름이 와 나무결 가구점인지 아나. 대충 지은 거 아이다.',
+      replies: [
+        { say: '결을 살리는 가게라서?', tier: 'great', face: 'smile', answer: ['그래. 칠로 덮지 않고 결 그대로 보여 준다.', '나무가 살아온 대로 쓰는 기다. 그게 예의다.'] },
+        { say: '부르기 좋아서?', tier: 'good', face: 'laugh', answer: '그것도 있다. 발키리 도끼점은 손님이 무서버하더라.' },
+        { say: '그냥 지은 거 아니야?', tier: 'meh', face: 'calm', answer: '대충은 ㄴㄴ. 간판 하나도 사흘 고민했다.' },
+      ],
+    },
+    {
+      id: 'hands',
+      open: '누나야 손 봐라. 굳은살 투성이다. 니는 이런 손 싫제?',
+      replies: [
+        { say: '일하는 손이라 멋있어', tier: 'great', remember: 'rough-hands', face: 'shy', answer: ['…멋있다꼬. 손을 와 쳐다보노.', '톱밥 먼지다. 얼굴 말고 손만 봐라. 아 손도 보지 마라.'] },
+        { say: '핸드크림 하나 줄까?', tier: 'good', face: 'think', answer: '…발라 보께. 냄새 달달하믄 돌려준다.' },
+        { say: '좀 거칠긴 하다', tier: 'meh', face: 'calm', answer: '거칠다. 대패가 부드럽게 해 주는 건 나무뿐이다.' },
+      ],
+    },
+    {
+      id: 'praise',
+      open: '{me}, 니는 칭찬 받으믄 우째 하노. 누나야는 우째 할지 모르겠다.',
+      replies: [
+        { say: '고맙다고 하면 되지', tier: 'great', face: 'shy', answer: ['…고맙다. 됐나. 연습한 기다.', '칭찬 아이고 연습이다. 진짜 고마운 거 아이다. 쪼매.'] },
+        { say: '칭찬 아이다, 하던데?', tier: 'good', face: 'laugh', answer: '그건 누나야 말이다. 따라 하지 마라. 웃기다.' },
+        { say: '모른 척 넘기지', tier: 'meh', face: 'think', answer: '그게 되나. 누나야는 귀부터 빨개진다. 톱밥 먼지 때문에.' },
+      ],
+    },
+    {
+      id: 'tsunade',
+      open: '츠나데 언니 알제. 텃밭 울타리 고쳐 주믄 약초 한 줌 준다.',
+      replies: [
+        { say: '언니라고 부르네?', tier: 'great', face: 'laugh', answer: ['언니는 언니다. 누나야도 누나야가 있다.', '술 마시믄 카지노 가는 게 흠이다. 비밀이다.'] },
+        { say: '약초는 어디 써?', tier: 'good', answer: '손에 굳은살 터지믄 바른다. 언니 약초가 제일 잘 듣는다.' },
+        { say: '그 언니 좀 무섭던데', tier: 'meh', face: 'think', answer: '무섭다. 누나야보다 무섭다. 그래서 좋다.' },
+      ],
+    },
+    {
+      id: 'realtor',
+      open: '신형만 씨가 또 집 확장 공사 잡아 왔다. 그 사람 영업은 인정한다.',
+      replies: [
+        { say: '둘이 손발이 잘 맞네', tier: 'great', answer: ['그 사람이 팔고 누나야가 짓는다.', '말은 많아도 공사비 계산은 정확하다. 미선 씨가 깎아서 문제지.'] },
+        { say: '미선 씨는 뭐래?', tier: 'good', face: 'laugh', answer: '공사비 깎아 달라 카지. 매번. 흥정ㄴㄴ, 매번.' },
+        { say: '일이 많아서 힘들겠다', tier: 'meh', face: 'calm', answer: '누나야 바빠요. 그래도 일 없는 거보다 낫다.' },
+      ],
+    },
+    {
+      id: 'night-bed',
+      open: '어젯밤 침대 짜다가 그 위에서 잠들었다. 시험해 본 기다. 진짜다.',
+      replies: [
+        { say: '잘 짰나 보네', tier: 'great', face: 'laugh', answer: ['당연하다. 누나야가 누워도 안 삐걱댄다.', '그 침대는 백 년 간다. 주인 손주까지 잔다.'] },
+        { say: '집에 가서 자야지', tier: 'good', face: 'sorry', answer: '…알지. 공방이 집보다 편한 걸 우짜노.' },
+        { say: '그거 팔 거야?', tier: 'meh', face: 'think', answer: '판다. 누나야가 잤다꼬는 말 안 한다. 니도 하지 마래이.' },
+      ],
+    },
+    {
+      id: 'rocking',
+      open: '흔들의자 하나 짜는 중이다. 마을 할매가 손주 재울 거라 카더라.',
+      replies: [
+        { say: '제일 부드럽게 짜 줘', tier: 'great', face: 'smile', answer: ['그럴 끼다. 다리 곡선을 사흘 깎았다.', '얼라가 흔들흔들하다 자믄 그게 누나야 상이다.'] },
+        { say: '나도 하나 갖고 싶다', tier: 'good', face: 'think', answer: '니는 줄 서라. …아니, 할매 다음이다. 두 번째다.' },
+        { say: '흔들의자는 위험해', tier: 'meh', face: 'calm', answer: '한남들이 뒤로 젖히니까 위험한 기다. 의자는 죄 없다.' },
+      ],
+    },
+    {
+      id: 'fav-tree',
+      when: { ch: 2 },
+      open: '숲에서 본 그 큰 참나무 있제. 누나야가 몰래 이름 붙였다.',
+      replies: [
+        { say: '뭐라고 지었는데?', tier: 'great', remember: 'oak-name', face: 'shy', answer: ['…할배. 백 년 넘게 서 있어서 할배다.', '웃지 마라. 니한테만 말한 기다.'] },
+        { say: '나무한테 이름도 붙여?', tier: 'good', face: 'think', answer: '안 벨 나무한테만 붙인다. 벨 나무한텐 정 주믄 안 된다.' },
+        { say: '나무는 나무지', tier: 'meh', face: 'calm', answer: '…또 그 소리. 이. 결. 봐. 라. 다시 가서 봐라.' },
+      ],
+    },
+    {
+      id: 'dating-spoon',
+      when: { love: 'dating' },
+      open: '{me}, 니 집 숟가락 젓가락 다 누나야가 깎아 주께. 밥 같이 묵을 거니까.',
+      replies: [
+        { say: '두 벌로 해 줘', tier: 'great', face: 'shy', answer: ['…두 벌. 알았다. 한 벌은 굵게, 한 벌은 얇게.', '누구 게 굵은지는 묻지 마라.'] },
+        { say: '그럼 밥은 내가 할게', tier: 'good', face: 'laugh', answer: '맵게 해라. 맵게. 안 그라믄 숟가락 회수한다.' },
+        { say: '그냥 사서 쓰자', tier: 'meh', face: 'calm', answer: '…사서 쓰는 숟가락엔 이름이 없다. 그게 싫다.' },
+      ],
+    },
+    {
+      id: 'engaged-list',
+      when: { love: 'engaged' },
+      open: '혼수 목록 짰다. 장롱, 식탁, 의자 둘, 신발장. 빠진 거 있나?',
+      replies: [
+        { say: '흔들의자 하나 더', tier: 'great', face: 'shy', answer: ['…늙어서 앉을 거? 알았다. 넣는다.', '둘이 흔들흔들. 아 상상하지 마라.'] },
+        { say: '책장도 있으면 좋겠다', tier: 'good', answer: '책장. 좋다. 각 맞게 짠다. 니 책은 각 맞게 꽂아라.' },
+        { say: '그거면 충분해', tier: 'meh', face: 'calm', answer: '충분한 건 없다. 누나야는 평생 더 짤 끼다.' },
       ],
     },
   ],
@@ -355,6 +539,205 @@ export const CARPENTER_TALK: NpcTalkBook = {
         { say: '사진은 잘 나왔대?', tier: 'good', answer: '도끼 든 사진이다. 무섭다꼬 했는데 손님은 늘었다. 이상하제.' },
       ],
     },
+    {
+      id: 'op-tsunade',
+      when: { bond: 'tsunade' },
+      open: '{other} 언니 만났나. 텃밭 울타리 또 누가 밟았다 카더나?',
+      replies: [
+        { say: '고쳐 달래. 누나야한테', tier: 'great', answer: ['알았다. 오늘 저녁에 간다.', '언니 부탁은 ㄴㄴ 안 한다. 언니니까.'] },
+        { say: '약초 선반도 필요하대', tier: 'good', face: 'think', answer: '선반? 짜 주께. 언니 거는 정가 아이다. 공짜도 아이고.' },
+        { say: '술 냄새 나던데', tier: 'meh', face: 'sorry', answer: '…또 마셨나. 카지노는 안 갔제? 갔으믄 말하지 마라.' },
+      ],
+    },
+    {
+      id: 'op-sunny',
+      when: { weather: 'sunny' },
+      open: '날 좋다. 판자 다 내다 말리는 중이다. 밟지 마래이.',
+      replies: [
+        { say: '판자 나르는 거 도울게', tier: 'great', answer: ['…니가? 무겁다. 끝을 잡아라. 끝을.', '오. 쓸 만하네. 품삯은 보리차 한 잔이다.'] },
+        { say: '해 좋아서 나무도 좋겠다', tier: 'good', face: 'smile', answer: '천천히 말려야 안 갈라진다. 사람도 그렇다.' },
+        { say: '그늘에 있을래', tier: 'meh', face: 'calm', answer: '그래라. 그 그늘 평상도 누나야가 짰다.' },
+      ],
+    },
+    {
+      id: 'op-cloudy',
+      when: { weather: 'cloudy' },
+      open: '흐리네. 이런 날은 나뭇결이 잘 보인다. 니 속셈도 잘 보인다.',
+      replies: [
+        { say: '속셈은 결 구경이야', tier: 'great', face: 'laugh', answer: ['…말은 잘하네. 들어온나. 이. 결. 봐. 라.', '흐린 날 결이 진짜 결이다. 해가 거짓말을 안 한다.'] },
+        { say: '비 올 것 같아?', tier: 'good', face: 'think', answer: '쪼매 있다 온다. 판자 걷어야 된다. 거들어라.' },
+        { say: '속셈 같은 거 없어', tier: 'meh', face: 'calm', answer: '다 있다. 니 눈빛이 깎아 달라 카는데.' },
+      ],
+    },
+    {
+      id: 'op-evening',
+      when: { time: 'evening' },
+      open: '해 지네. 오늘 대패질 마감. 과수원 갈 시간인데 니는 와 왔노.',
+      replies: [
+        { say: '같이 과수원 가려고', tier: 'great', face: 'shy', answer: ['…따라올 거면 조용히. 나무만 보는 기다.', '나무만. 오해ㄴㄴ.'] },
+        { say: '오늘 하루 수고했어', tier: 'good', face: 'smile', answer: '…그런 말은 안 해도 된다. 들었다. 됐다.' },
+        { say: '그냥 지나가다', tier: 'meh', face: 'calm', answer: '그럼 지나가라. 누나야도 지나간다. 같은 길로.' },
+      ],
+    },
+    {
+      id: 'op-night',
+      when: { time: 'night' },
+      open: '이 밤에 머하노. 문 닫았다. 닫았다꼬. …한 개만 봐라.',
+      replies: [
+        { say: '공방 불빛 보고 왔어', tier: 'great', face: 'shy', answer: ['…불 켜 놓은 거 니 땜에 아이다.', '의자 하나 마무리하는 중이다. 구경은 조용히.'] },
+        { say: '잠이 안 와서', tier: 'good', answer: '대패 소리 들어라. 사각사각. 금방 졸린다.' },
+        { say: '내일 다시 올게', tier: 'meh', face: 'calm', answer: '그래라. 가로등 밑으로만 다니고.' },
+      ],
+    },
+    {
+      id: 'op-spring',
+      when: { season: 'spring' },
+      open: '봄이라꼬 다들 이사한다. 장롱 옮길 사람 없으믄 누나야 불러라.',
+      replies: [
+        { say: '누나야 팔뚝이면 혼자 되지', tier: 'great', face: 'laugh', answer: ['당연하다. 한. 국. 아. 지. 매. 무시하지 마라.', '…니 거는 공짜로 옮겨 주께. 한 번만.'] },
+        { say: '꽃놀이는 안 가?', tier: 'good', face: 'think', answer: '꽃 말고 벚나무 결 보러 간다. 꽃은 니가 봐라.' },
+        { say: '이사는 귀찮아', tier: 'meh', face: 'calm', answer: '귀찮으믄 가구를 단단한 걸로 사라. 한 번 사믄 끝이다.' },
+      ],
+    },
+    {
+      id: 'op-summer',
+      when: { season: 'summer' },
+      open: '더버 죽겠다. 평상 주문이 터졌다. 니 거는 맨 뒤다. 새치기ㄴㄴ.',
+      replies: [
+        { say: '매운 냉면 사 올게', tier: 'great', face: 'laugh', answer: ['…니 순서 하나 당긴다. 하나만.', '고추 마이 넣은 걸로. 마이.'] },
+        { say: '평상에서 낮잠 자고 싶다', tier: 'good', face: 'smile', answer: '평상은 낮잠 자라꼬 짜는 기다. 침 흘리지 말고.' },
+        { say: '선풍기가 낫지 않아?', tier: 'meh', face: 'calm', answer: '선풍기 받침도 누나야가 짰다. 어디 가도 누나야 손이다.' },
+      ],
+    },
+    {
+      id: 'op-autumn',
+      when: { season: 'autumn' },
+      open: '가을 나무가 젤 좋다. 결이 촘촘하다. 장작 패는 소리 들리제?',
+      replies: [
+        { say: '마을 노래 같아', tier: 'great', face: 'smile', answer: ['…맞다. 가을엔 장작 소리가 노래다.', '가수는 누나야다. 박수는 됐다.'] },
+        { say: '도토리 주우러 갈래?', tier: 'good', face: 'laugh', answer: '다람쥐랑 싸우믄 니가 진다. 그래도 가자.' },
+        { say: '가을은 쓸쓸해', tier: 'meh', face: 'think', answer: '쓸쓸하믄 장작 패라. 그런 생각 할 틈이 없다.' },
+      ],
+    },
+    {
+      id: 'op-winter',
+      when: { season: 'winter' },
+      open: '겨울 나무는 단단하다. 깎기 힘들어도 오래 간다. 난로 쬐고 가라.',
+      replies: [
+        { say: '사람도 그렇지?', tier: 'great', face: 'shy', answer: ['…니가 그 말을 와 아노.', '오 분만 쬐고 가라. 딱 오 분. …십 분.'] },
+        { say: '썰매 주문 많아?', tier: 'good', answer: '얼라들 줄 섰다. 손이 열 개라도 모자란다.' },
+        { say: '추워서 집에 있을래', tier: 'meh', face: 'calm', answer: '그래라. 장작은 있나? 없으믄 갖다 놓으께.' },
+      ],
+    },
+    {
+      id: 'op-with-ornn',
+      when: { with: 'ornn' },
+      open: '{other} 영감이 내 도끼 손잡이를 흠 잡는다. 니가 봐도 흠 있나?',
+      replies: [
+        { say: '손잡이 결이 완벽한데', tier: 'great', face: 'laugh', answer: ['봐라, 영감. 들었제.', '…날은 잘 벼렸다. 그건 고맙다. 한남치고는.'] },
+        { say: '둘 다 투덜대는 게 닮았어', tier: 'good', face: 'think', answer: '…닮았다꼬. 감히 그런 소리를. 쪼매 닮긴 했다.' },
+        { say: '난 잘 모르겠어', tier: 'meh', face: 'calm', answer: '모르믄 결부터 봐라. 영감 말고 니 말이다.' },
+      ],
+    },
+    {
+      id: 'op-with-volibas',
+      when: { with: 'volibas' },
+      open: '{other} 순경이 또 검문이다. {me}, 이거 연장 맞제? 말해 줘라.',
+      replies: [
+        { say: '연장 맞아요, 순경님', tier: 'great', face: 'laugh', answer: ['들었제. 목격자 있다. 영장 갖고 온나.', '…벤치 다리 고친 건 고맙다 캤다메. 그것만 받는다.'] },
+        { say: '등에 지고 다니면?', tier: 'good', face: 'think', answer: '그래 해 봤다. 그래도 검문하더라. 등도 검문하더라.' },
+        { say: '좀 무섭긴 해요', tier: 'meh', face: 'calm', answer: '니까지 와 이라노. 도끼는 착하다. 누나야도. 아마.' },
+      ],
+    },
+    {
+      id: 'op-with-janna',
+      when: { with: 'janna' },
+      open: '{other} 기자가 인터뷰 하자 칸다. 독점ㄴㄴ 나빠요. 니도 같이 나와라.',
+      replies: [
+        { say: '단골 손님 인터뷰 할게', tier: 'great', face: 'shy', answer: ['…좋게 말해라. 사실대로. 좋게.', '흥정 안 하는 손님이라꼬 꼭 넣어라.'] },
+        { say: '도끼 들고 사진 찍자', tier: 'good', face: 'laugh', answer: '손님 늘었다메. 그 사진. 또 찍는다.' },
+        { say: '난 사진 싫어', tier: 'meh', face: 'calm', answer: '그럼 뒤통수만 나오게 해 주께. 의자에 앉아 있어라.' },
+      ],
+    },
+    {
+      id: 'op-sulk',
+      when: { sulk: true },
+      open: '{other}, 그 사람 어제 내 판자 밟았다. 사과 받기 전엔 의자 안 고쳐 준다.',
+      replies: [
+        { say: '내가 대신 사과할게', tier: 'great', face: 'sorry', answer: ['…니가 와 하노. 니가 밟았나.', '됐다. 니 봐서 의자는 고쳐 준다. 판자 값은 받는다.'] },
+        { say: '일부러 그런 건 아닐 거야', tier: 'good', face: 'think', answer: '…알지. 그래도 밟았다. 판자는 아프다.' },
+        { say: '판자 하나쯤이야', tier: 'meh', face: 'calm', answer: '하나쯤? 그 판자 사흘 말린 기다. 니도 밟지 마래이.' },
+      ],
+    },
+    {
+      id: 'op-casino-lose',
+      when: { recent: 'casinoLose' },
+      open: '카지노서 털렸다메. 느그 어마이가 그래 갈키드나? …밥은 뭇나.',
+      replies: [
+        { say: '매운탕 사 줘…', tier: 'great', face: 'smile', answer: ['…이번만이다. 장작 패고 품삯 받아 가라.', '노름보다 도끼질이 정직하다. 배워 둬라.'] },
+        { say: '다음엔 딸 거야', tier: 'good', face: 'think', answer: '니 너무 욕심부린데이. 언니도 그 소리 하다 다 털렸다.' },
+        { say: '괜찮아. 재밌었어', tier: 'meh', face: 'calm', answer: '재밌었으믄 됐다. 그 돈이믄 의자 세 개다. 됐다꼬.' },
+      ],
+    },
+    {
+      id: 'op-stock-up',
+      when: { recent: 'stockUp' },
+      open: '증권에서 벌었다메. 어깨 올라갔네. 문틀에 부딪힌다. 숙이라.',
+      replies: [
+        { say: '정가로 의자 하나 살게', tier: 'great', face: 'laugh', answer: ['오. 돈 버는 법도 알고 쓰는 법도 아네.', '흥정 안 하는 부자. 장부 맨 위다.'] },
+        { say: '누나야도 해 볼래?', tier: 'good', face: 'think', answer: '누나야는 나무만 믿는다. 나무는 안 떨어진다.' },
+        { say: '다 다시 넣을 거야', tier: 'meh', face: 'calm', answer: '…그래라. 떨어지믄 장작 패러 온나.' },
+      ],
+    },
+    {
+      id: 'op-voyage',
+      when: { recent: 'voyage' },
+      open: '먼바다 다녀왔다메. 샹크스 배 갑판 삐걱대더나? 말만 해라.',
+      replies: [
+        { say: '삐걱대더라. 고쳐 줘', tier: 'great', face: 'laugh', answer: ['내 그럴 줄 알았다. 그 사람들 갑판에서 춤춘다.', '이번엔 선불이다. 우유로 때우믄 안대요.'] },
+        { say: '바다 나무 냄새 좋더라', tier: 'good', face: 'think', answer: '소금 먹은 나무는 결이 독하다. 누나야 닮았다.' },
+        { say: '배멀미만 했어', tier: 'meh', face: 'sorry', answer: '…매운 거 묵어라. 속 뚫린다. 누나야 처방이다.' },
+      ],
+    },
+    {
+      id: 'op-legend',
+      when: { news: 'legend' },
+      open: '마을 소식에 전설 나왔다메. 그 진열장 받침 누나야가 짜야겠네.',
+      replies: [
+        { say: '제일 단단한 나무로', tier: 'great', answer: ['당연하다. 전설한테 소나무는 ㄴㄴ.', '이. 결. 좋. 은. 걸. 로. 짠다.'] },
+        { say: '누가 잡았대?', tier: 'good', face: 'think', answer: '몰라도 된다. 받침이 튼튼하믄 누가 잡든 빛난다.' },
+      ],
+    },
+    {
+      id: 'op-festival-news',
+      when: { news: 'festival' },
+      open: '축제 소식 들었나. 무대 다리 점검하러 가야 된다. 누나야 바빠요.',
+      replies: [
+        { say: '못 하나 들어 줄게', tier: 'great', face: 'smile', answer: ['…들어라. 떨어뜨리지 말고.', '각도는 누나야가 본다. 니는 박수나 쳐라.'] },
+        { say: '무대 위에서 춤춰도 돼?', tier: 'good', face: 'laugh', answer: '뛰어도 된다. 니는 살살 뛰라. 한남들은 세게 뛴다.' },
+        { say: '축제는 시끄러워', tier: 'meh', face: 'calm', answer: '시끄럽다. 그래도 떡은 좀 주라. 달달한 거 말고.' },
+      ],
+    },
+    {
+      id: 'op-friend-wedding',
+      when: { friendNews: 'wedding' },
+      open: '니 친구 결혼한다메. 혼수 장롱 주문 들어왔다. 니가 말해 줬나?',
+      replies: [
+        { say: '누나야 솜씨 소문냈지', tier: 'great', face: 'shy', answer: ['…쓸데없이. 고맙다꼬는 안 한다.', '장롱 문에 그 집 이름 새겨 줄 끼다. 백 년 간다.'] },
+        { say: '축하 의자도 짜 줘', tier: 'good', answer: '의자 둘. 나란히. 그건 누나야 전문이다.' },
+        { say: '결혼 같은 건 몰라', tier: 'meh', face: 'think', answer: '…누나야도 그래 말하고 다녔다. 세상 일 모른다.' },
+      ],
+    },
+    {
+      id: 'op-breakup',
+      when: { news: 'breakup' },
+      open: '마을에 헤어진 사람 있다메. 그 집 의자 하나가 비겠네.',
+      replies: [
+        { say: '의자 치우지 말라고 할게', tier: 'great', face: 'smile', answer: ['…그래. 빈 의자도 쓸모가 있다.', '언젠가 또 누가 앉는다. 의자는 기다릴 줄 안다.'] },
+        { say: '마음 아프겠다', tier: 'good', face: 'sorry', answer: '아프겠지. 매운 거 한 그릇 갖다주라. 누나야가 사께.' },
+        { say: '잘된 일일 수도', tier: 'meh', face: 'think', answer: '그럴 수도. 삐걱대는 의자는 고치든가 바꾸든가 한다.' },
+      ],
+    },
   ],
   callbacks: [
     {
@@ -445,6 +828,146 @@ export const CARPENTER_TALK: NpcTalkBook = {
         { say: '작은 나무 상자!', tier: 'good', remember: 'bday-heard', answer: '상자? 좋다. 뚜껑에 니 이름 새겨 주께. 비밀 넣어 둬라.' },
       ],
     },
+    {
+      id: 'cb-date',
+      when: { mem: '@date', noMem: 'date-heard' },
+      open: '니 방 갔을 때 말이다. 선반 각이 안 맞더라. 밤새 그 생각만 났다.',
+      replies: [
+        { say: '선반 생각만 했어?', tier: 'great', remember: 'date-heard', face: 'shy', answer: ['…선반 생각이다. 선반. 니 생각 아이다.', '톱밥 먼지다. 쳐다보지 마라.'] },
+        { say: '고치러 또 와 줘', tier: 'good', remember: 'date-heard', face: 'smile', answer: '간다. 연장 챙겨서. 차는 쓴 걸로 내놔라.' },
+        { say: '선반은 괜찮은데', tier: 'meh', remember: 'date-heard', face: 'calm', answer: '안 괜찮다. 누나야 눈은 정확하다. 고친다.' },
+      ],
+    },
+    {
+      id: 'cb-firewood',
+      when: { mem: 'firewood-lesson' },
+      use: 'firewood-lesson',
+      open: '장작 패는 거 배우고 싶다 캤제. 오늘 통나무 남았다. 도끼 잡아 봐라.',
+      replies: [
+        { say: '결 따라 가르는 거지?', tier: 'great', face: 'wow', answer: ['…기억하고 있었나. 그래, 결 따라.', '오. 한 번에 쪼개졌다. 이. 거. 인. 정.'] },
+        { say: '도끼 너무 무거워', tier: 'good', face: 'laugh', answer: '자루 끝을 잡아라. 무게가 대신 친다. 니는 방향만.' },
+      ],
+    },
+    {
+      id: 'cb-viral',
+      when: { mem: 'viral-help' },
+      use: 'viral-help',
+      open: '소문 내 준다 캤던 거. 요새 손님이 니 이름 대고 온다. 니 짓이제.',
+      replies: [
+        { say: '흥정 안 하는 가게라고 했어', tier: 'great', face: 'laugh', answer: ['잘했다! 그 말이 젤 중요하다.', '약속대로 의자 다리 하나 봐준다. 하나만.'] },
+        { say: '잔나가 도와줬어', tier: 'good', answer: '잔나랑 니랑 둘이 바이럴 마이 태아줬네. …고맙다. 한 번만.' },
+      ],
+    },
+    {
+      id: 'cb-fixit',
+      when: { mem: 'fix-it' },
+      use: 'fix-it',
+      open: '부서진 건 고쳐 쓴다 캤제. 니 집 의자 다리 흔들리믄 갖고 온나.',
+      replies: [
+        { say: '내가 직접 고쳐 볼래', tier: 'great', face: 'smile', answer: ['좋다. 아교랑 쐐기 줄게. 하루 기다려라.', '서두르믄 삐걱댄다. 사람도 그렇다.'] },
+        { say: '누나야가 고쳐 줘', tier: 'good', face: 'laugh', answer: '알았다. 반값. 아 됐다, 니 거는 그냥 해 주께.' },
+      ],
+    },
+    {
+      id: 'cb-signature',
+      when: { mem: 'signature' },
+      use: 'signature',
+      open: '가구 밑에 이름 새기는 이유 말해 줬제. 니 것도 새겨 놨다. 뒤집어 봐라.',
+      replies: [
+        { say: '내 이름도 같이 있네?', tier: 'great', face: 'shy', answer: ['…실수다. 손이 미끄러졌다.', '안 지운다. 지우믄 나무가 상한다. 그래서다.'] },
+        { say: '평생 책임지는 거야?', tier: 'good', face: 'think', answer: '삐걱대믄 찾아온나. 그게 누나야 책임이다.' },
+      ],
+    },
+    {
+      id: 'cb-softwood',
+      when: { mem: 'soft-wood' },
+      use: 'soft-wood',
+      open: '무른 나무 좋다 캤제. 오동나무 들어왔다. 가볍다. 니 취향이다.',
+      replies: [
+        { say: '그걸로 상자 짜 줘', tier: 'great', face: 'smile', answer: ['오동나무 상자는 습기를 안 먹는다.', '좋은 거 넣어 둬라. 비밀이든 뭐든.'] },
+        { say: '단단한 것도 보여 줘', tier: 'good', face: 'laugh', answer: '그래. 결국 다들 참나무로 온다. 이. 결. 봐. 라.' },
+      ],
+    },
+    {
+      id: 'cb-woods',
+      when: { mem: 'woods-morning' },
+      use: 'woods-morning',
+      open: '아침 숲에 같이 간 거. 그 참나무 아직 잘 서 있더라. 확인했다.',
+      replies: [
+        { say: '또 같이 보러 가자', tier: 'great', face: 'shy', answer: ['…아침 일찍이다. 늦으믄 두고 간다.', '두고 가도 기다리긴 한다. 쪼매.'] },
+        { say: '다행이다', tier: 'good', face: 'smile', answer: '다행이지. 백 년 더 서 있을 끼다. 누나야보다 오래.' },
+      ],
+    },
+    {
+      id: 'cb-spoon',
+      when: { mem: 'first-carve' },
+      use: 'first-carve',
+      open: '그 숟가락 아직 쓰나. 삐걱대진 않제? 숟가락은 안 삐걱대지.',
+      replies: [
+        { say: '매일 써. 손에 딱 맞아', tier: 'great', face: 'shy', answer: ['…니 손 크기 재고 깎은 거 아이다.', '눈대중이다. 눈대중이 정확했을 뿐이다.'] },
+        { say: '아까워서 걸어 놨어', tier: 'good', face: 'think', answer: '걸어 두믄 나무가 섭섭하다. 써라. 닳으믄 또 깎아 주께.' },
+      ],
+    },
+    {
+      id: 'cb-spicy-night',
+      when: { mem: 'spicy-night' },
+      use: 'spicy-night',
+      open: '그날 매운탕 생각나나. 누나야는 아직 혀가 얼얼하다. 또 할래?',
+      replies: [
+        { say: '이번엔 더 맵게!', tier: 'great', face: 'laugh', answer: ['진짜가. 니 간 크다.', '고추 두 배다. 도망가믄 안대요.'] },
+        { say: '물은 많이 준비해 줘', tier: 'good', face: 'smile', answer: '물 말고 밥이다. 밥 두 공기 해 놓으께.' },
+      ],
+    },
+    {
+      id: 'cb-measured',
+      when: { mem: 'measured' },
+      use: 'measured',
+      open: '키 잰 거 기억나제. 의자 다 됐다. 앉아 봐라. 발 닿나?',
+      replies: [
+        { say: '딱 맞아. 신기하다', tier: 'great', face: 'shy', answer: ['당연하다. 재고 짰다.', '…니 자리다. 딴 사람은 몬 앉는다.'] },
+        { say: '쪼매 높은데?', tier: 'good', face: 'laugh', answer: '사투리 따라 하지 마라. …쪼매 깎아 주께. 쪼. 매.' },
+      ],
+    },
+    {
+      id: 'cb-kimchi',
+      when: { mem: 'kimchi-share' },
+      use: 'kimchi-share',
+      open: '김치 한 통 갖다준다 캤제. 김치 통 받침 다 짜 놨다. 기다리는 거 아이다.',
+      replies: [
+        { say: '오늘 갖고 왔어', tier: 'great', face: 'wow', answer: ['…진짜 갖고 왔나. 말로만 할 줄 알았다.', '맵네. 좋다. 이. 거. 인. 정.'] },
+        { say: '조금만 기다려 줘', tier: 'good', face: 'calm', answer: '기다리는 거 아이라 캤다. …받침은 그대로 둔다.' },
+      ],
+    },
+    {
+      id: 'cb-clan',
+      when: { mem: 'clan-past' },
+      use: 'clan-past',
+      open: '성벽 부수던 얘기 했제. 어젯밤 꿈에 그때 나왔다. 근데 의자를 짜고 있더라.',
+      replies: [
+        { say: '꿈에서도 목수네', tier: 'great', face: 'laugh', answer: ['그래. 바바리안 아재들 앉혀 놓고.', '꿈에서도 다 부수더라. 웃기제.'] },
+        { say: '그때가 그리워?', tier: 'good', face: 'think', answer: '아니. 지금이 낫다. 지금은 니도 있고. …손님이 있다꼬.' },
+      ],
+    },
+    {
+      id: 'cb-hands',
+      when: { mem: 'rough-hands' },
+      use: 'rough-hands',
+      open: '손 멋있다 캤던 거. 그 뒤로 장갑을 덜 낀다. 니 땜에 아이다.',
+      replies: [
+        { say: '그 손 좋아', tier: 'great', face: 'shy', answer: ['…두 번 말하지 마라.', '귀 빨간 거 톱밥 먼지다. 알제.'] },
+        { say: '그래도 다치면 안 돼', tier: 'good', face: 'smile', answer: '안 다친다. 츠나데 언니 약초 있다. 걱정 고맙다.' },
+      ],
+    },
+    {
+      id: 'cb-chair-promise',
+      when: { mem: 'chair-promise', love: 'any' },
+      use: 'chair-promise',
+      open: '두 번째 의자 다 짰다. 니 의자 옆에 놨다. 나란히. 봐라.',
+      replies: [
+        { say: '둘이 앉아 보자', tier: 'great', face: 'shy', answer: ['…앉아라. 니 먼저.', '이거 평생 쓸 거다. 삐걱대믄 누나야가 고친다.'] },
+        { say: '등받이에 뭐 새겼어?', tier: 'good', face: 'laugh', answer: '니 이름이랑 누나야 이름. 크게는 안 새겼다. 작게.' },
+      ],
+    },
   ],
   chapters: [
     {
@@ -452,11 +975,17 @@ export const CARPENTER_TALK: NpcTalkBook = {
       hint: '한 번 이야기를 나누면 발키리가 자기 이름을 외우라고 해요.',
       need: { days: 1 },
       scene: [
-        '나무결 가구점. 대패를 밀던 발키리가 고개도 안 들고 말한다.',
+        '나무결 가구점. 문을 열자 톱밥이 햇빛 속에 확 날린다.',
+        '대패를 밀던 발키리가 고개도 안 들고 말한다.',
         '"니 누고? 손님이믄 손님답게 지갑부터 꺼내라."',
+        '벽에는 의자 다리, 서랍, 반쯤 깎인 숟가락이 줄지어 걸려 있다.',
+        '그 한가운데, 날이 시퍼런 도끼 한 자루가 반짝인다.',
+        '"그거 장식 아이다. 연장이다. 장롱도 그거 하나로 짠다."',
+        '그녀가 대패를 내려놓고 팔짱을 낀다. 팔뚝이 통나무만 하다.',
         '"발키리. 나무결 가구점 목수. 이. 름. 외. 아. 라."',
-        '도끼를 벽에 걸면서 한 번 더 노려본다.',
-        '"가구는 눈으로 봐라. 만지는 건 ㄴㄴ. 흥정도 ㄴㄴ."',
+        '"가격은 다 써 붙여 놨다. 정가다. 흥정은 ㄴㄴ."',
+        '"가구는 눈으로 봐라. 만지는 건 ㄴㄴ. …앉아 보는 건 된다."',
+        '말끝을 흐리며 그녀가 의자 하나를 슬쩍 밀어 준다.',
       ],
       replies: [
         { say: '발키리. 외웠어', tier: 'great', answer: ['…맞나. 한 번에 외운 손님은 처음이다.', '칭찬 아이다. 그냥 그렇다꼬.'] },
@@ -471,9 +1000,15 @@ export const CARPENTER_TALK: NpcTalkBook = {
       scene: [
         '아침 숲. 이슬 맺힌 나무 사이로 도끼를 멘 발키리가 걷고 있다.',
         '"…진짜 왔네. 산책 아이다. 나무 시찰이다. 헷갈리지 마래이."',
-        '그녀가 큰 참나무 껍질을 손바닥으로 쓸어 본다.',
+        '그녀는 나무마다 멈춰 서서 껍질에 귀를 대 본다.',
+        '"속이 비었는지 소리로 안다. 이놈은 꽉 찼다. 이놈은 아프다."',
+        '아픈 나무 밑동에 분필로 작은 표시를 한다. 벨 나무다.',
+        '그러다 숲 한가운데, 유난히 큰 참나무 앞에서 걸음이 멎는다.',
+        '그녀가 큰 참나무 껍질을 손바닥으로 천천히 쓸어 본다.',
         '"이놈은 아직 안 벤다. 백 년은 더 서 있어야 된다."',
         '"좋은 목수는 벨 나무보다 안 벨 나무를 먼저 고르는 기다."',
+        '"옛날엔 뭐든 부쉈다. 성벽이고 뭐고. 지금은 이래 고른다."',
+        '그녀가 도끼를 땅에 세우고 나무 그늘에 잠깐 기대앉는다.',
         '"따라올 거면 조용히 따라와라. 숨소리도 쪼매만."',
       ],
       replies: [
@@ -487,12 +1022,18 @@ export const CARPENTER_TALK: NpcTalkBook = {
       hint: '발키리가 단단한 나무 이야기를 했어요. 단단한 나무 하나를 가지고 가 보세요.',
       need: { days: 6, points: 40, bring: { item: 'hardwood', take: true } },
       scene: [
-        '단단한 나무를 내밀자 발키리의 손이 멈춘다.',
+        '단단한 나무를 내밀자 대패를 밀던 발키리의 손이 멈춘다.',
         '"이. 거. 단. 단. 한. 나. 무. 니 이거 숲 깊은 데서 캤나?"',
-        '그녀가 나이테를 손끝으로 하나하나 센다.',
+        '그녀가 토막을 창가로 들고 가 햇빛에 비춰 본다.',
+        '나이테를 손끝으로 하나하나 센다. 입술이 조용히 움직인다.',
         '"이 결은 거짓말을 안 한다. 비 많이 온 해, 가문 해, 다 보인다."',
-        '말없이 칼을 들더니 작은 숟가락 하나를 깎기 시작한다.',
+        '"이 촘촘한 데는 추운 겨울이다. 그래도 안 죽고 버텼네."',
+        '말없이 작은 칼을 들더니 토막 한쪽을 쪼개 낸다.',
+        '사각, 사각. 공방에 칼 소리만 한참 이어진다.',
+        '작은 숟가락 하나가 모양을 갖춘다. 손잡이에 결이 살아 있다.',
+        '그녀가 숟가락을 뒤집어 손잡이 끝에 무언가를 새긴다.',
         '"…니 끼다. 남는 토막으로 깎은 기다. 그렇다꼬."',
+        '"밑에 누나야 이름 있다. 삐걱대믄 누가 깎았는지 알라꼬."',
       ],
       replies: [
         { say: '평생 아껴 쓸게', tier: 'great', remember: 'first-carve', face: 'shy', answer: '평생은 무슨. …삐걱대믄 갖고 온나. 그것도 평생 봐준다.' },
@@ -505,11 +1046,17 @@ export const CARPENTER_TALK: NpcTalkBook = {
       hint: '평소에 매운 음식 이야기가 나오면, 매운 거 잘 먹는다고 해 보세요.',
       need: { days: 9, points: 60, mem: 'spicy-pal' },
       scene: [
-        '공방 문을 닫은 저녁. 발키리가 큰 냄비를 탁 내려놓는다.',
+        '공방 문을 닫은 저녁. 발키리가 큰 냄비를 작업대에 탁 놓는다.',
         '"매운 거 잘 묵는다 캤제. 오늘 그 말 검증한다."',
         '빨간 국물이 끓는다. 고추가 쪼매가 아니라 마이 들어갔다.',
+        '숟가락은 그녀가 깎은 나무 숟가락이다. 둘 다.',
         '"이 마을 한남들은 한 숟갈 묵고 다 도망갔다."',
-        '둘이서 말없이 땀을 뻘뻘 흘리며 한 그릇을 비운다.',
+        '둘이서 말없이 땀을 뻘뻘 흘리며 국물을 떠먹는다.',
+        '한참 뒤, 그녀가 숟가락을 내려놓고 창밖을 본다.',
+        '"클랜 마을 살 때는 다 같이 둘러앉아 이래 묵었다."',
+        '"성벽 부수고 오믄 배가 고팠거든. 시끄럽고, 매웠다."',
+        '"이 마을 와서는 혼자 묵었다. 의자는 많은데 앉을 사람이 없더라."',
+        '그녀가 헛기침을 하고 냄비를 박박 긁는다.',
         '"…니는 안 도망가네. 누나야 쪼매 놀랐다."',
       ],
       replies: [
@@ -523,12 +1070,18 @@ export const CARPENTER_TALK: NpcTalkBook = {
       hint: '발키리와 아주 가까워지면 그녀가 한 가지 판정을 바꿔요. 그 뒤엔 꽃다발 이야기도 달라질지 몰라요.',
       need: { days: 13, points: 96 },
       scene: [
-        '늦은 밤 공방. 발키리가 대패를 내려놓고 한참 말이 없다.',
+        '늦은 밤 공방. 불은 작업대 위 등불 하나뿐이다.',
+        '발키리가 대패를 내려놓고 한참 말이 없다.',
+        '작업대 위에는 다리 하나가 덜 깎인 의자가 놓여 있다.',
+        '"이거 서른한 번째 의자다. 사흘째 다리 하나를 몬 깎고 있다."',
         '"{me}. 누나야가 한남 싫다 캤제. 그건 아직도 맞다."',
         '"근데 니 오면 대패가 멈춘다. 손이 와 이라노 진짜."',
         '그녀가 얼굴을 손등으로 문지른다. "…톱밥 먼지다."',
+        '"판정 보류라 캤던 거. 오늘 판정 바꾼다. 잘 들어라."',
+        '"니는 한남 목록에서 뺀다. 아직 딴 목록에 넣은 건 아이다."',
         '"꽃다발 들고 오는 한남이 젤 싫다 캤는데… 니는 생각해 보께."',
         '"생각만 해 본다꼬. 들고 온다꼬 다 받는 거 아이다."',
+        '그녀가 고개를 홱 돌려 덜 깎인 의자 다리를 다시 잡는다.',
       ],
       replies: [
         { say: '그럼 언젠가 들고 올게', tier: 'great', face: 'shy', answer: ['…어디 안전이라고. 아이다, 그 말 아이다.', '오믄 받아 볼 수도 있다. 쪼. 매.'] },
@@ -541,11 +1094,17 @@ export const CARPENTER_TALK: NpcTalkBook = {
       hint: '발키리와 연인이 되면 마지막 이야기가 열려요.',
       need: { days: 16, love: 'dating' },
       scene: [
-        '공방 한가운데 천을 덮은 무언가가 있다. 발키리가 천을 걷는다.',
+        '공방 한가운데 천을 덮은 무언가가 있다.',
+        '발키리가 앞치마에 손을 몇 번이나 닦고 나서 천을 걷는다.',
+        '사흘 동안 몬 깎던 그 다리가 매끈하게 붙은 의자다.',
         '"{me}. 니 이름 새긴 의자다. 앉아 봐라. 빨리. 부끄럽다꼬."',
+        '등받이 뒤에 작은 글씨가 있다. 니 이름, 그리고 그녀 이름.',
+        '"서른한 번째 의자 누구 건지 비밀이라 캤제. 이제 안다."',
         '"이건 시작이다. 장롱, 식탁, 의자 하나 더. 평생 쓸 가구 한 세트."',
         '"혼수란 말 아이다. …맞다. 혼수다. 됐나."',
         '"내가 한남이랑 연애를 하다니 했는데, 이젠 그 다음 생각까지 한다."',
+        '"옛날엔 부수는 게 일이었다. 이젠 니랑 쓸 걸 짓는 게 일이다."',
+        '그녀가 도끼를 벽에 걸고, 그 옆 의자에 털썩 앉는다.',
         '"반지는 누나야가 몬 짠다. 그건 니가 알아서 해라."',
       ],
       replies: [
@@ -561,5 +1120,10 @@ export const CARPENTER_TALK: NpcTalkBook = {
     '할 말 다 했다. 헐리 가요. …조심히 가고.',
     '또 왔나. 대패 소리나 듣고 가라. 말은 내일.',
     '가라. 또 온나. 아 오지 마라. …온나.',
+    '오늘 몫은 끝났다. 의자는 내일 봐라. 도망 안 간다.',
+    '또 말 걸믄 대패 소리로 대답한다. 사각사각. 알아들었제.',
+    '니 너무 욕심부린데이. 오늘 이야기는 여까지다.',
+    '문 살살 닫고 가라. 경첩 새로 단 기다.',
+    '누나야도 할 말 남았다. 내일 한다. 그래야 니가 또 오지.',
   ],
 };
