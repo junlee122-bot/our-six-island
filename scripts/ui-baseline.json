@@ -2,7 +2,7 @@
  "label": "current",
  "commit": "ccec5a7",
  "summary": {
-  "screens": 91,
+  "screens": 97,
   "low": 0,
   "small": 0,
   "narrow": 0,
@@ -426,6 +426,38 @@
        "h": 44
       }
      }
+    },
+    "lighthouse": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "lighthouse-logbook": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "lighthouse-top": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     }
    }
   },
@@ -1226,6 +1258,38 @@
        "h": 44
       }
      }
+    },
+    "lighthouse": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "lighthouse-logbook": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "lighthouse-top": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
     }
    }
   }
