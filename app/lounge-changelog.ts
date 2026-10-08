@@ -14,6 +14,12 @@ export type ChangeEntry = {
 
 export const CHANGELOG: readonly ChangeEntry[] = [
   {
+    id: '2026-10-08-c2',
+    date: '10월 8일',
+    title: '주민 여덟 명과도 진짜로 이야기해요',
+    items: ['신형만, 봉미선, 발키리, 나모, 그웬, 나세라, 쓰레쉬, 신짜장도 이제 먼저 말을 걸고, 내 대답을 기억하고, 저마다 이야기 장이 생겼어요.'],
+  },
+  {
     id: '2026-10-08-c1',
     date: '10월 8일',
     title: '주민과 진짜로 이야기해요',
