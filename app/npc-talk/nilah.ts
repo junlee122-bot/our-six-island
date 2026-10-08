@@ -103,7 +103,7 @@ export const NILAH_TALK: NpcTalkBook = {
       open: '배고프다! {me}, 매운탕 좋아해? 나는 국물까지 다 마셔!',
       replies: [
         { say: '얼큰한 거 최고지!', tier: 'great', remember: 'spicy-stew', answer: '하하하! 통했다! 다음엔 같이 끓이자. 고기는 럭스한테 졸라 보고!' },
-        { say: '맵기만 조금 줄이면', tier: 'good', answer: '좋아, 네 그릇엔 우유 한 잔 곁들여 줄게. 매운 데 딱이야!' },
+        { say: '맵기만 조금 줄이면', tier: 'good', answer: '좋아, 네 그릇엔 우유 한 잔 곁들여 줄게. 매운 데엔 딱이야!' },
         { say: '매운 건 못 먹어', tier: 'meh', face: 'sorry', answer: '에이, 아깝다! 그럼 달걀찜 해 줄게. 큰 달걀로!' },
       ],
     },
@@ -131,7 +131,7 @@ export const NILAH_TALK: NpcTalkBook = {
       replies: [
         { say: '그래서 누가 이겼어?', tier: 'great', remember: 'monster-tale', answer: ['결과? 나 지금 웃고 있잖아! 하하하!', '…사실 그 녀석 이마에 올라타서 실컷 웃어 줬지.'] },
         { say: '무섭지 않았어?', tier: 'good', face: 'think', answer: '조금! 근데 무서울 때 웃으면 그게 이기는 길이더라.' },
-        { say: '허풍 아니야?', tier: 'meh', face: 'laugh', answer: '하하하! 샹크스 같은 소리 하네! 믿든 말든 진짜야!' },
+        { say: '허풍 아니야?', tier: 'meh', face: 'laugh', answer: '하하하! 의심이 많구나! 믿든 말든 진짜야!' },
       ],
     },
     {
@@ -771,7 +771,7 @@ export const NILAH_TALK: NpcTalkBook = {
     {
       id: 'op-sulk',
       when: { sulk: true },
-      open: ['…{other}. 오늘 그 친구랑 좀 어색해졌어.', '하하, 나 이런 거 처음이라 어떻게 할지 모르겠어.'],
+      open: ['…{other} 말이야. 오늘 좀 어색해졌어.', '하하, 나 이런 거 처음이라 어떻게 할지 모르겠어.'],
       replies: [
         { say: '먼저 웃으며 말 걸어', tier: 'great', face: 'think', answer: ['먼저… 그래, 내가 제일 잘하는 거잖아!', '근데 그냥 웃지 말고, 미안하다고도 해 볼게.'] },
         { say: '시간이 지나면 풀려', tier: 'good', face: 'calm', answer: '그럴까? 그럼 오늘은 소들이랑 있을게. 내일 다시 가 볼래.' },
@@ -791,7 +791,7 @@ export const NILAH_TALK: NpcTalkBook = {
     {
       id: 'op-with-haku',
       when: { with: 'haku' },
-      open: ['{other}, 이 친구랑 우유 과일 맞바꾸는 중이야!', '오늘은 복숭아 세 개! {me}, 하나 먹어!'],
+      open: ['{me}, 마침 왔다! {other}, 인사해! 우리 지금 우유랑 과일 맞바꾸는 중이야!', '오늘은 복숭아 세 개! {me}, 하나 먹어!'],
       replies: [
         { say: '고마워! 달다', tier: 'great', answer: '그치! 하쿠네 복숭아는 물을 잘 머금었대. 물은 역시 최고야!' },
         { say: '하쿠가 웃었다', tier: 'good', face: 'wow', answer: '진짜? 어디어디? 하하, 놓쳤다! 너 덕분이야!' },
@@ -894,7 +894,7 @@ export const NILAH_TALK: NpcTalkBook = {
       when: { mem: '@outing', noMem: 'outing-talk' },
       open: '저번에 같이 돌아다닌 거 진짜 신났어! 너랑이면 어디든 모험이야!',
       replies: [
-        { say: '다음엔 더 멀리 가자', tier: 'great', remember: 'outing-talk', answer: '하하하! 좋아! 먼바다까지! 노는 내가 저을게!' },
+        { say: '다음엔 더 멀리 가자', tier: 'great', remember: 'outing-talk', answer: '하하하! 좋아! 먼바다까지! 노 젓는 건 내가 할게!' },
         { say: '너 계속 뛰었잖아', tier: 'good', face: 'laugh', remember: 'outing-talk', answer: '신나니까 그렇지! 다음엔 너 손 잡고 뛸게!' },
       ],
     },
@@ -979,7 +979,7 @@ export const NILAH_TALK: NpcTalkBook = {
       id: 'cb-song',
       when: { mem: 'boat-song' },
       use: 'boat-song',
-      open: '배 노래 기억나? 가사 새로 지었어! 이번엔 너 이름도 들어가!',
+      open: '배 노래 기억나? 가사 새로 지었어! 이번엔 네 이름도 들어가!',
       replies: [
         { say: '불러 줘! 듣고 싶어', tier: 'great', face: 'shy', answer: ['출렁출렁, {me} 노를 저어라!', '…하하하! 부르다 보니 좀 부끄럽다!'] },
         { say: '내 이름 빼 줘', tier: 'good', face: 'laugh', answer: '안 돼! 이미 닭들이 외웠어, 하하!' },
@@ -1182,13 +1182,13 @@ export const NILAH_TALK: NpcTalkBook = {
         '"물결 춤 말이야. 사실 이거 싸우는 법이었어. 바다 건널 때 배운."',
         '"근데 웃으면서 추다 보니까 그냥 춤이 됐어. 신기하지?"',
         '그녀가 물을 한 줌 떠서 노을에 비춰 본다.',
-        '"나 가르쳐 준 스승님이 그랬어. 물은 뭐든 담는다고."',
+        '"나를 가르쳐 준 스승님이 그랬어. 물은 뭐든 담는다고."',
         '"기쁨도 담고, 슬픔도 담고. 그래서 물은 안 깨진대."',
         '"난 그 말 반만 배웠나 봐. 기쁜 걸 담는 법만 알거든, 하하."',
         '"파도가 기운 없는 걸 보면 어떻게 할지 몰라서 웃기만 해."',
         '물방울이 그녀 손가락 사이로 반짝이며 떨어진다.',
         '"…이런 얘기, 너한테 처음 해. 이상하게 너한테는 돼."',
-        '그녀가 손을 내민다. 물방울이 노을에 반짝인다.',
+        '그녀가 젖은 손을 내민다.',
         '"오늘은 겨루지 말고, 그냥 같이 추자. 너랑은 그게 더 좋아."',
       ],
       replies: [
