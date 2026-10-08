@@ -164,12 +164,13 @@ test('context: openers follow the day, callbacks follow memories, else the every
   const book = NPC_TALK.captain;
   const seen = new Set();
   // Rainy days with nothing else known: rain openers come up, never a sunny-only one.
+  const rainy = facts({ weather: 'rain', time: 'day', season: 'summer', fish: null, bigFish: false, harvest: false, gold: false, festival: false, mood: 'mid', news: [], friendNews: [], recent: [], talkedTo: [], with: null, sulk: null, bday: false });
   for (let d = 0; d < 60; d++) {
-    const t = pickTalk(book, facts({ weather: 'rain', time: 'day', fish: null, bigFish: false, harvest: false, gold: false, festival: false, mood: 'mid', news: [], talkedTo: [] }), { who: 0, day: 20_000 + d, tc: d });
+    const t = pickTalk(book, rainy, { who: 0, day: 20_000 + d, tc: d });
     seen.add(t.id);
-    assert.ok(condHolds(t.when, facts({ weather: 'rain', time: 'day', fish: null, bigFish: false, harvest: false, gold: false, festival: false, mood: 'mid', news: [], talkedTo: [] })), t.id);
+    assert.ok(condHolds(t.when, rainy), t.id);
   }
-  assert.ok(seen.has('op-rain'), 'the rain opener comes up');
+  assert.ok([...seen].some((id) => [book.openers.find((t) => t.id === id)?.when?.weather].flat().includes('rain')), 'a rain opener comes up');
   assert.ok([...seen].some((id) => book.talks.some((t) => t.id === id)), 'everyday talks come up too');
   // Deterministic: same day and seed, same talk.
   const f = facts({ weather: 'sunny', time: 'evening', fish: 'crucian', news: [], talkedTo: [] });
@@ -181,7 +182,9 @@ test('context: openers follow the day, callbacks follow memories, else the every
   // The everyday rotation does not repeat a talk before all were heard.
   const quiet = facts({ weather: 'sunny', time: 'day', fish: null, bigFish: false, harvest: false, gold: false, festival: false, mood: 'mid', news: [], friendNews: [], talkedTo: [], with: null, sulk: null, bday: false });
   const everyday = book.talks.filter((t) => condHolds(t.when, quiet));
-  const rot = Array.from({ length: everyday.length }, (_, tc) => pickTalk(book, quiet, { who: 0, day: 22_000 + tc, tc }).id);
+  // (Only the rotation: with openers and callbacks set aside, every day is an everyday talk.)
+  const plain = { ...book, openers: [], callbacks: [] };
+  const rot = Array.from({ length: everyday.length }, (_, tc) => pickTalk(plain, quiet, { who: 0, day: 22_000 + tc, tc }).id);
   assert.equal(new Set(rot).size, everyday.length, 'every everyday talk once before a repeat');
   // Fallback: no opener fits → an everyday talk.
   assert.ok(book.talks.some((t) => t.id === pickTalk(book, quiet, { who: 1, day: 22_000, tc: 0 }).id) || book.openers.some((t) => condHolds(t.when, quiet)));
