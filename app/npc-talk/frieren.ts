@@ -1,7 +1,11 @@
 // 프리렌 — 시장 거리 빵집 카페 사장, 천 살 엘프. 느긋하고 무심한 반말. 아침잠이
-// 많아 늘 늦게 연다. 쓸모없어 보이는 옛 레시피(마도서 귀퉁이의 빵 굽는 법) 수집,
-// 상자만 보면 머리부터 넣는 버릇, 엘프의 시간 감각(십 년은 잠깐), 멀리 사는 옛
-// 동료들의 편지. 알바생 힘멜의 마음은 모른다. 원작 대사는 쓰지 않는다.
+// 많아 늘 늦게 연다. 쓸모없어 보이는 옛 마법과 이상한 빵 레시피 수집, 상자만 보면
+// 머리부터 넣는 버릇, 엘프의 시간 감각(십 년은 잠깐), 멀리 사는 옛 동료들의 편지.
+// 원작의 결: 오래전 함께 여행한 용사(이름이 지금 알바생 힘멜과 같다)가 남긴 것들 —
+// 동상, 꽃밭 마법을 좋아해 준 박수, 꽃말을 몰랐던 반지 — 를 그가 떠난 뒤에야 알게 된
+// 마음. 그래서 이번엔 '짧은 사람의 시간'을 일부러 세어 본다(이야기 줄기, 공책의 동그라미).
+// 마을의 힘멜은 살아 있는 알바생이고 프리렌을 짝사랑하지만 프리렌은 모른다.
+// 원작 대사는 쓰지 않는다.
 import type { NpcTalkBook } from './types.ts';
 
 export const FRIEREN_TALK: NpcTalkBook = {
@@ -26,14 +30,26 @@ export const FRIEREN_TALK: NpcTalkBook = {
     'taste-heard': '내 취향을 기억해 줬어요',
     'outing-talk': '함께 걸은 날을 이야기했어요',
     'bday-plan': '생일 케이크를 구워 준대요',
+    'statue': '용사의 동상 이야기를 들었어요',
+    'sour-grape': '포도를 시게 만드는 마법을 재밌다고 했어요',
+    'fern-letter': '페른의 잔소리 편지 이야기를 들었어요',
+    'fossil': '옛 화석을 찾아 주기로 했어요',
+    'new-flower': '처음 보는 꽃을 가져다주기로 했어요',
+    'count-days': '나와 만난 날을 세고 있대요',
+    'know-trip': '사람을 알려는 여행 이야기를 들었어요',
+    'bread-box': '수상한 빵 상자를 같이 지켜보기로 했어요',
+    'grimoire': '마도서 보수 이야기를 들었어요',
+    'bitter-no': '쓴 나물은 빼 주기로 했어요',
+    'date-talk': '내 방에서 보낸 날을 이야기했어요',
+    'ring-talk': '반지 이야기를 들었어요',
   },
   talks: [
     {
       id: 'morning',
       open: '{me}, 너는 아침에 잘 일어나? …난 못 일어나. 천 년째.',
       replies: [
-        { say: '나도 늦잠 좋아해', tier: 'great', remember: 'sleepyhead', face: 'smile', answer: '…동지네. 그럼 가게 문 늦게 여는 거 이해해 주겠지. 다행이다.' },
-        { say: '난 일찍 일어나', tier: 'good', remember: 'morning-person', face: 'wow', answer: '대단하다. 그럼 아침에 가게 문 좀 두드려 줘. 세 번은 두드려야 해.' },
+        { say: '나도 늦잠 좋아해', tier: 'great', remember: 'sleepyhead', face: 'smile', answer: ['…동지네. 그럼 가게 문 늦게 여는 거 이해해 주겠지.', '다행이다. 오늘부터 너는 늦잠 동맹이야.'] },
+        { say: '난 일찍 일어나', tier: 'good', remember: 'morning-person', face: 'wow', answer: ['대단하다. 그럼 아침에 가게 문 좀 두드려 줘.', '세 번은 두드려야 해. 두 번까지는 꿈인 줄 알거든.'] },
         { say: '사장이 그러면 안 되지', tier: 'meh', face: 'calm', answer: '…알아. 힘멜도 그렇게 말해. 근데 졸린 건 졸린 거야.' },
       ],
     },
@@ -41,8 +57,8 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'odd-recipe',
       open: '오래된 책 귀퉁이에서 이상한 빵 레시피를 찾았어. 구우면 빵이 살짝 떠.',
       replies: [
-        { say: '그런 거 더 모으자', tier: 'great', remember: 'odd-recipe', face: 'wow', answer: '…같이? 좋아. 쓸모없는 레시피일수록 재밌어. 찾으면 알려 줘.' },
-        { say: '뜨는 빵은 어디에 써?', tier: 'good', face: 'think', answer: '아무 데도. 그냥 뜨는 거야. 그게 좋은 거야.' },
+        { say: '그런 거 더 모으자', tier: 'great', remember: 'odd-recipe', face: 'wow', answer: ['…같이? 좋아. 쓸모없는 레시피일수록 재밌어.', '찾으면 알려 줘. 보수는 갓 구운 빵. 떠다니는 걸로.'] },
+        { say: '뜨는 빵은 어디에 써?', tier: 'good', face: 'think', answer: ['아무 데도. 그냥 뜨는 거야.', '쓸모없는 게 좋은 거야. 천 년 살아 보면 알아.'] },
         { say: '그냥 평범한 빵이 좋아', tier: 'meh', face: 'calm', answer: '…그래. 평범한 빵도 굽긴 해. 가끔.' },
       ],
     },
@@ -50,7 +66,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'sweet',
       open: '시식용 빵 두 개. 하나는 달고 하나는 짜. 뭐 먹을래?',
       replies: [
-        { say: '단 거!', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: '역시. 단 걸 고르는 사람은 믿을 수 있어. 내 기준이야.' },
+        { say: '단 거!', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: ['역시. 단 걸 고르는 사람은 믿을 수 있어.', '내 기준이야. 천 년 동안 틀린 적 없어. 아마.'] },
         { say: '둘 다 반씩', tier: 'good', answer: '욕심쟁이. 근데 괜찮아. 나도 늘 그렇게 먹어.' },
         { say: '짠 거', tier: 'meh', face: 'think', answer: '…그건 실험작이야. 맛 평가 부탁해. 솔직하게.' },
       ],
@@ -59,25 +75,25 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'chest',
       open: '창고에 낡은 상자가 하나 있어. 열어 보고 싶은데… 열어도 될까?',
       replies: [
-        { say: '물리면 어떡해. 조심해', tier: 'great', remember: 'chest-warn', face: 'wow', answer: '…어떻게 알았어. 옛날에 몇 번 물렸어. 머리부터. 이번엔 조심할게.' },
-        { say: '같이 열어 보자', tier: 'good', remember: 'chest-dive', face: 'smile', answer: '좋아. 네가 뚜껑 잡아. 나는 머리 넣을게. …농담이야. 반쯤.' },
+        { say: '물리면 어떡해. 조심해', tier: 'great', remember: 'chest-warn', face: 'wow', answer: ['…어떻게 알았어. 옛날에 몇 번 물렸어. 머리부터.', '보물 상자인 척하는 상자가 있거든. 이번엔 조심할게.'] },
+        { say: '같이 열어 보자', tier: 'good', remember: 'chest-dive', face: 'smile', answer: ['좋아. 네가 뚜껑 잡아. 나는 머리 넣을게.', '…농담이야. 반쯤.'] },
         { say: '그냥 버려', tier: 'meh', face: 'sorry', answer: '…안에 뭐가 있을지 모르잖아. 쓸모없는 마도서일지도.' },
       ],
     },
     {
       id: 'old-friends',
-      open: '오늘 편지가 왔어. 옛날에 같이 여행하던 녀석들. 아직 잘 지낸대.',
+      open: '오늘 편지가 왔어. 옛날에 같이 여행하던 전사한테서. 아직 정정하대.',
       replies: [
-        { say: '어떤 사람들이었어?', tier: 'great', remember: 'old-friends', face: 'think', answer: ['시끄러운 녀석, 술 좋아하는 녀석, 무뚝뚝한 녀석.', '…그리고 탄 빵도 맛있다고 해 주던 녀석. 다 좋은 사람들이었어.'] },
-        { say: '답장 쓸 거야?', tier: 'good', remember: 'letter', answer: '…써야지. 근데 쓰다 보면 십 년이 지나 있어. 이번엔 빨리 써 볼게.' },
-        { say: '부럽다', tier: 'meh', face: 'calm', answer: '너도 친구 있잖아. 일곱 명이나. 그게 더 대단해.' },
+        { say: '어떤 일행이었어?', tier: 'great', remember: 'old-friends', face: 'think', answer: ['용사, 스님, 전사. 그리고 나. 넷이서 십 년쯤 걸었어.', '…탄 빵도 맛있다고 해 주던 게 그 용사였어.', '다 좋은 사람들이었어. 그땐 그걸 잘 몰랐지만.'] },
+        { say: '답장 쓸 거야?', tier: 'good', remember: 'letter', answer: ['…써야지. 근데 쓰다 보면 십 년이 지나 있어.', '이번엔 빨리 써 볼게. 네가 옆에서 재촉해 줘.'] },
+        { say: '부럽다', tier: 'meh', face: 'calm', answer: '너도 마을에 친구 많잖아. 그게 더 대단해. 사람은 금방 친해지더라.' },
       ],
     },
     {
       id: 'burnt',
       open: '오늘 빵 좀 탔어. 그래도 맛은 괜찮아. …아마.',
       replies: [
-        { say: '탄 빵도 맛있어', tier: 'great', remember: 'burnt-bread', face: 'shy', answer: '…예전에 똑같은 말 한 사람이 있었어. 그래서 탄 빵은 안 버려.' },
+        { say: '탄 빵도 맛있어', tier: 'great', remember: 'burnt-bread', face: 'shy', answer: ['…예전에 똑같은 말 한 사람이 있었어.', '그래서 탄 빵은 안 버려. 버리면 그 말까지 버리는 것 같아서.'] },
         { say: '하나만 줘 봐', tier: 'good', answer: '용감하네. 여기. 솔직한 맛 평가 부탁해.' },
         { say: '새로 구워 줘', tier: 'meh', face: 'calm', answer: '…알았어. 한 시간만 기다려. 아니, 두 시간.' },
       ],
@@ -86,8 +102,8 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'time',
       open: '십 년은 잠깐이야. 근데 요즘은 하루가 좀 길게 느껴져. 이상하지.',
       replies: [
-        { say: '즐거운 일이 생겨서 그래', tier: 'great', remember: 'time-talk', face: 'think', answer: '…그런가. 그럼 그 즐거운 일이 뭔지 알아봐야겠다. 천천히.' },
-        { say: '십 년이 잠깐이라고?', tier: 'good', face: 'laugh', answer: '응. 낮잠 한 번 자면 지나가. 너한텐 이상하게 들리겠지.' },
+        { say: '즐거운 일이 생겨서 그래', tier: 'great', remember: 'time-talk', face: 'think', answer: ['…그런가. 그럼 그 즐거운 일이 뭔지 알아봐야겠다.', '천천히. 아니, 너무 천천히는 말고.'] },
+        { say: '십 년이 잠깐이라고?', tier: 'good', face: 'laugh', answer: ['응. 낮잠 한 번 자면 지나가.', '너한텐 이상하게 들리겠지. 나도 요즘은 좀 이상해.'] },
         { say: '그냥 피곤해서야', tier: 'meh', face: 'calm', answer: '…그럴지도. 자야겠다.' },
       ],
     },
@@ -95,8 +111,8 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'flower-field',
       open: '꽃밭을 피우는 마법이 있어. 하나도 쓸모없는데 제일 좋아하는 마법이야.',
       replies: [
-        { say: '보여 줄 수 있어?', tier: 'great', remember: 'flower-field', face: 'smile', answer: '…여기선 안 돼. 가게가 꽃집이 되거든. 언젠가 넓은 데서 보여 줄게.' },
-        { say: '왜 제일 좋아해?', tier: 'good', face: 'think', answer: '옛날에 그걸 좋아해 준 사람이 있었어. 그것뿐이야. 충분하지.' },
+        { say: '보여 줄 수 있어?', tier: 'great', remember: 'flower-field', face: 'smile', answer: ['…여기선 안 돼. 가게가 꽃집이 되거든.', '언젠가 넓은 데서 보여 줄게. 약속은 잘 안 하는데, 이건 할게.'] },
+        { say: '왜 제일 좋아해?', tier: 'good', remember: 'flower-field', face: 'think', answer: ['옛날에 그걸 좋아해 준 사람이 있었어.', '그것뿐이야. 충분하지.'] },
         { say: '쓸모없으면 왜 배워?', tier: 'meh', face: 'calm', answer: '쓸모 있는 것만 배우면 재미없어. 천 년은 길거든.' },
       ],
     },
@@ -104,7 +120,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'stars',
       open: '큰 유성우는 오십 년에 한 번 와. …아, 숫자는 됐고. 아무튼 드물어.',
       replies: [
-        { say: '그때 같이 보자', tier: 'great', remember: 'stars', face: 'shy', answer: '…오십 년 뒤라도? 사람한텐 긴 약속인데. 좋아. 기억해 둘게.' },
+        { say: '그때 같이 보자', tier: 'great', remember: 'stars', face: 'shy', answer: ['…오십 년 뒤라도? 사람한텐 긴 약속인데.', '좋아. 기억해 둘게. 이번엔 진짜로.'] },
         { say: '그냥 별도 예뻐', tier: 'good', answer: '맞아. 유성우 안 와도 별은 매일 있어. 그것도 괜찮지.' },
         { say: '그걸 어떻게 기다려', tier: 'meh', face: 'think', answer: '낮잠 몇 번 자면 와. 나한텐.' },
       ],
@@ -113,7 +129,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'himmel',
       open: '알바생 힘멜 말이야. 요즘 자꾸 꽃을 가게에 꽂아 둬. 왜 그러는지 모르겠어.',
       replies: [
-        { say: '…정말 몰라?', tier: 'great', face: 'think', answer: '…몰라. 뭔데? 알면 알려 줘. 아니, 됐어. 힘멜한테 직접 물어볼게.' },
+        { say: '…정말 몰라?', tier: 'great', face: 'think', answer: ['…몰라. 뭔데? 알면 알려 줘.', '아니, 됐어. 힘멜한테 직접 물어볼게. 걔는 빨개지기만 하겠지만.'] },
         { say: '가게가 예뻐지잖아', tier: 'good', answer: '그건 그래. 손님들도 좋아해. 그래서 안 치우고 있어.' },
         { say: '꽃가루 날리겠다', tier: 'meh', face: 'calm', answer: '…그 생각은 못 했네. 근데 그냥 둘래.' },
       ],
@@ -122,7 +138,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'bread-name',
       open: '새 빵 이름을 못 정했어. 동그랗고, 안에 잼 있고, 가끔 떠.',
       replies: [
-        { say: '떠오르는 잼빵', tier: 'great', face: 'smile', answer: '…좋다. 쓸모없이 정확해. 그걸로 할게.' },
+        { say: '떠오르는 잼빵', tier: 'great', face: 'smile', answer: ['…좋다. 쓸모없이 정확해.', '그걸로 할게. 간판엔 작게 쓸 거야. 붙잡을 수 있으면 사세요.'] },
         { say: '프리렌빵', tier: 'good', face: 'shy', answer: '…내 이름은 좀. 근데 힘멜이 좋아하겠다.' },
         { say: '그냥 잼빵', tier: 'meh', answer: '그것도 맞는 말이야. 재미는 없지만.' },
       ],
@@ -131,7 +147,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       id: 'nap',
       open: '…음. 아, {me}. 미안, 카운터에서 졸았어. 무슨 일이야?',
       replies: [
-        { say: '더 자. 내가 볼게', tier: 'great', face: 'shy', answer: '…진짜? 그럼 오 분만. 손님 오면 깨워. 아니, 안 깨워도 돼.' },
+        { say: '더 자. 내가 볼게', tier: 'great', face: 'shy', answer: ['…진짜? 그럼 오 분만.', '손님 오면 깨워. 아니, 안 깨워도 돼. 너라면 계산 잘하겠지.'] },
         { say: '빵 사러 왔어', tier: 'good', answer: '아, 응. 골라. 계산은 대충 해도 돼. 나도 대충 받아.' },
         { say: '사장이 졸면 어떡해', tier: 'meh', face: 'calm', answer: '…괜찮아. 빵은 내가 졸아도 부풀어.' },
       ],
@@ -141,9 +157,227 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { ch: 3 },
       open: '요즘 사람에 대해 더 알고 싶어졌어. 그래서 말인데… 우선 너부터 알려 줘.',
       replies: [
-        { say: '뭐든 물어봐', tier: 'great', face: 'shy', answer: '…그럼 하나씩. 천천히 물어볼게. 시간은 많으니까. 나는.' },
+        { say: '뭐든 물어봐', tier: 'great', face: 'shy', answer: ['…그럼 하나씩. 천천히 물어볼게.', '시간은 많으니까. 나는. …너는 아니니까, 너무 천천히는 말고.'] },
         { say: '왜 나부터야?', tier: 'good', face: 'think', answer: '…모르겠어. 그냥 제일 먼저 떠올랐어. 그게 이유야.' },
         { say: '나는 평범해', tier: 'meh', face: 'calm', answer: '평범한 게 제일 알기 어려워. 천 년 살아도.' },
+      ],
+    },
+    {
+      id: 'statue',
+      open: '힘멜이 또 광장 동상 청원서 들고 나갔어. …옛날에도 동상 좋아하는 사람이 있었어.',
+      replies: [
+        { say: '누구였는데?', tier: 'great', remember: 'statue', face: 'think', answer: ['같이 여행하던 용사. 가는 마을마다 동상을 세웠어.', '앞머리 모양까지 조각가한테 따졌지. 그때는 그냥 웃겼어.', '…지금 보면, 그게 다 나 혼자 안 남게 하려던 거였더라.'] },
+        { say: '힘멜 동상 세워 줘', tier: 'good', face: 'laugh', answer: ['…그럼 걔 하루 종일 광장에서 포즈 잡을 거야.', '가게 문은 누가 열고. 생각 좀 해 볼게.'] },
+        { say: '동상은 좀 촌스러워', tier: 'meh', face: 'calm', answer: '그 말, 그 용사한테 했으면 사흘은 앓아누웠을 거야.' },
+      ],
+    },
+    {
+      id: 'same-name',
+      open: '알바생 이름이 힘멜이잖아. 옛날 그 용사도 이름이 힘멜이었어.',
+      replies: [
+        { say: '닮은 데가 있어?', tier: 'great', face: 'think', answer: ['앞머리 자꾸 만지는 거. 꽃 들고 다니는 거.', '…그리고 내가 늦잠 자면 먼저 문 열어 두는 거. 그건 똑같아.'] },
+        { say: '우연이겠지', tier: 'good', face: 'calm', answer: ['응. 흔한 이름은 아닌데. 우연이야. 아마.', '처음 면접 볼 때 좀 오래 쳐다봤어. 걔는 왜 그런지 몰라.'] },
+        { say: '헷갈리겠다', tier: 'meh', face: 'sorry', answer: '…안 헷갈려. 그 용사는 설거지를 이렇게 잘하지 않았거든.' },
+      ],
+    },
+    {
+      id: 'sour-grape',
+      open: '오늘 배운 마법. 달콤한 포도를 시큼하게 만드는 마법이야.',
+      replies: [
+        { say: '그거 진짜 재밌다', tier: 'great', remember: 'sour-grape', face: 'wow', answer: ['…알아봐 주는구나. 다들 왜 배웠냐고만 해.', '신 포도로 잼을 만들면, 설탕을 더 넣을 핑계가 생겨. 그게 핵심이야.'] },
+        { say: '되돌리는 마법은?', tier: 'good', face: 'think', answer: ['그건 아직 못 찾았어. 백 년쯤 찾아볼게.', '그동안 포도는 그냥 먹어.'] },
+        { say: '완전 손해잖아', tier: 'meh', face: 'calm', answer: '손해 보는 마법이 제일 기억에 남아. 이상하지.' },
+      ],
+    },
+    {
+      id: 'fern',
+      open: '제자한테서 편지가 왔어. 페른. 첫 줄이 또 일어나셨어요, 야.',
+      replies: [
+        { say: '좋은 제자네', tier: 'great', remember: 'fern-letter', face: 'smile', answer: ['응. 잔소리가 많은 만큼 좋은 애야.', '요즘은 슈타르크랑 같이 다닌대. 둘이 아직도 티격태격.', '…편지 끝엔 늘 밥 챙겨 드세요, 래. 빵 굽는 사람한테.'] },
+        { say: '오후에 읽었지?', tier: 'good', face: 'laugh', answer: ['…들켰네. 오후 세 시쯤.', '페른한테는 비밀이야. 아침에 읽었다고 답장할 거야.'] },
+        { say: '제자가 있었어?', tier: 'meh', face: 'calm', answer: '응. 마법은 내가 가르쳤고, 아침에 일어나는 건 그 애가 가르쳤어. 실패했지만.' },
+      ],
+    },
+    {
+      id: 'party-cleric',
+      open: '선장네 주점 갈 때마다 옛 일행의 스님 생각이 나. 술 좋아하던 땡중.',
+      replies: [
+        { say: '스님이 술을?', tier: 'great', face: 'laugh', answer: ['응. 해장도 술로 하던 스님이야. 그런데 기도는 진짜였어.', '그 사람이 날 보고 늘 하던 말이 있어. 천천히 해도 된다고.', '…나한텐 그게 제일 쓸모 있는 말이었어.'] },
+        { say: '그래서 우유를 시켜?', tier: 'good', face: 'think', answer: '응. 그 스님 몫까지 마시면 큰일 나거든. 우유가 안전해.' },
+        { say: '주점은 별로야', tier: 'meh', face: 'calm', answer: '…나도 시끄러운 건 별로야. 근데 거긴 옛날 소리가 나.' },
+      ],
+    },
+    {
+      id: 'fossil',
+      open: '이 돌 봐. 잎 모양이 박혀 있어. 화석이야. 몇만 년 됐을걸.',
+      replies: [
+        { say: '이런 거 찾아다 줄게', tier: 'great', remember: 'fossil', face: 'wow', answer: ['…정말? 광산이나 숲 바닥에서 가끔 나와.', '잎 모양이면 제일 좋아. 나보다 오래 산 걸 보면 마음이 편해져.'] },
+        { say: '몇만 년이면 선배네', tier: 'good', face: 'laugh', answer: '응. 이 앞에선 나도 꼬맹이야. 그래서 좋아.' },
+        { say: '그냥 돌 같은데', tier: 'meh', face: 'calm', answer: '…돌이긴 해. 기억을 품은 돌이지만.' },
+      ],
+    },
+    {
+      id: 'bitter',
+      open: '하쿠가 쑥을 덤으로 줬어. …나 쓴 거 못 먹는데.',
+      replies: [
+        { say: '그건 내가 먹을게', tier: 'great', remember: 'bitter-no', face: 'smile', answer: ['…고마워. 너는 생명의 은인이야.', '대신 딸기 들어간 건 전부 너한테 먼저 보여 줄게.'] },
+        { say: '쑥떡은 달잖아', tier: 'good', face: 'think', answer: ['설탕 넣으면 그렇지. 근데 끝맛이 남아.', '천 년이 지나도 그 끝맛은 못 친해지겠어.'] },
+        { say: '편식하면 안 돼', tier: 'meh', face: 'sorry', answer: '…페른이랑 똑같은 소리 하네. 들은 걸로 할게.' },
+      ],
+    },
+    {
+      id: 'thresh-rival',
+      open: '쓰레쉬가 또 낡은 마도서를 먼저 사 갔어. 내가 일어나기 전에.',
+      replies: [
+        { say: '다음엔 내가 줄 서 줄게', tier: 'great', face: 'wow', answer: ['…새벽에? 그럼 넌 진짜 내 편이야.', '보수는 그 책에 적힌 레시피로 구운 빵. 첫 판.'] },
+        { say: '일찍 일어나면 되잖아', tier: 'good', face: 'calm', answer: '그게 되면 천 년 동안 했겠지.' },
+        { say: '쓰레쉬가 부지런하네', tier: 'meh', face: 'sorry', answer: '…그건 인정. 그래서 더 얄미워.' },
+      ],
+    },
+    {
+      id: 'nasera-library',
+      open: '도서관에서 나세라를 또 만났어. 같은 책을 동시에 집었어.',
+      replies: [
+        { say: '무슨 책이었어?', tier: 'great', face: 'smile', answer: ['오래된 농사 책. 부록에 빵 굽는 법이 있었어.', '나세라는 비료 장을, 나는 부록을 읽었어. 사이좋게.'] },
+        { say: '누가 빌렸어?', tier: 'good', face: 'think', answer: '나세라. 나는 반납일을 백 년쯤 착각하거든. 그래서 양보했어.' },
+        { say: '그냥 사서 보지', tier: 'meh', face: 'calm', answer: '…그런 책은 안 팔아. 도서관 구석에만 있어. 그게 좋은 거야.' },
+      ],
+    },
+    {
+      id: 'volibas-morning',
+      open: '볼리바스는 아침마다 가게 앞에서 기다려. 내가 문을 열 때까지.',
+      replies: [
+        { say: '의리 있는 단골이네', tier: 'great', face: 'smile', answer: ['응. 순찰 돌고 와서 또 기다려. 두 바퀴째.', '그래서 그 사람 몫 빵은 전날 밤에 미리 싸 둬.'] },
+        { say: '좀 일찍 열어 줘', tier: 'good', face: 'sorry', answer: '…노력은 해. 힘멜이 먼저 열어 주고 있어. 다행이지.' },
+        { say: '기다리게 하면 미안하지', tier: 'meh', face: 'calm', answer: '…알아. 그래서 덤을 줘. 늦은 만큼.' },
+      ],
+    },
+    {
+      id: 'janna-tasting',
+      open: '잔나가 신메뉴 시식회 취재하러 온대. 무슨 빵을 내야 할까.',
+      replies: [
+        { say: '떠오르는 잼빵!', tier: 'great', face: 'laugh', answer: ['…좋아. 사진 찍다가 빵이 날아가면 기사거리도 되고.', '내일 예보도 같이 물어볼게. 빵이 바람에 날릴지.'] },
+        { say: '제일 맛있는 걸로', tier: 'good', face: 'think', answer: '그럼 딸기 타르트. 평범한데 실패를 안 해. 가끔은 그게 필요해.' },
+        { say: '취재는 귀찮겠다', tier: 'meh', face: 'calm', answer: '응. 근데 잔나는 빵을 진짜 맛있게 먹어. 그래서 괜찮아.' },
+      ],
+    },
+    {
+      id: 'misun-discount',
+      open: '마감 십 분 전이면 꼭 미선 씨가 와. 남은 빵 다 싸게 달래.',
+      replies: [
+        { say: '알뜰하시네', tier: 'great', face: 'smile', answer: ['응. 근데 이상하게 기분 나쁘지 않아.', '남은 빵이 버려지는 것보다 미선 씨 가방이 나아.'] },
+        { say: '깎아 줘?', tier: 'good', face: 'think', answer: '반쯤. 나머지 반은 내일 아침 내 몫이거든.' },
+        { say: '너무하시네', tier: 'meh', face: 'calm', answer: '…괜찮아. 나는 셈이 느려서 흥정에서 늘 져. 천 년째.' },
+      ],
+    },
+    {
+      id: 'bocchi-concert',
+      open: '어제 봇치 공연 보러 갔어. …또 졸았어. 미안하게.',
+      replies: [
+        { say: '편한 음악이라 그래', tier: 'great', face: 'shy', answer: ['…그런가. 좋은 소리 들으면 눈이 감겨.', '다음엔 끝나고 박수는 꼭 칠게. 크게. 봇치가 놀라지 않게 작게.'] },
+        { say: '봇치가 봤을까?', tier: 'good', face: 'sorry', answer: '…봤을 거야. 그래서 사과 빵 하나 구워서 보냈어.' },
+        { say: '공연 중에 자다니', tier: 'meh', face: 'calm', answer: '…알아. 천 년 동안 연주회에서 깨어 있던 적이 별로 없어.' },
+      ],
+    },
+    {
+      id: 'sinjjajang-bag',
+      open: '신짱아 배달 가방에 몰래 빵을 하나씩 넣어 둬. 걔는 아직 몰라.',
+      replies: [
+        { say: '다정한 몰래 선물이네', tier: 'great', face: 'smile', answer: ['…다정한 건 아니고. 점심 거르는 거 같아서.', '배달하는 사람은 자기 밥을 제일 늦게 먹어. 오래 살면 보여.'] },
+        { say: '알면 좋아하겠다', tier: 'good', face: 'shy', answer: '말하지 마. 들키면 재미없어.' },
+        { say: '가방 무겁겠다', tier: 'meh', face: 'calm', answer: '빵은 가벼워. 떠오르는 빵이면 더 가볍고.' },
+      ],
+    },
+    {
+      id: 'haku-fruit',
+      open: '하쿠가 과수원 첫 딸기를 가져왔어. 아직 이슬이 묻어 있었어.',
+      replies: [
+        { say: '하나 맛보고 싶다', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: ['여기. 제일 빨간 거. 아까부터 너 주려고 빼 놨어.', '하쿠 과일은 손이 닿은 자리부터 달아. 정성 맛이야.'] },
+        { say: '그날은 일찍 일어났지?', tier: 'good', face: 'laugh', answer: '응. 첫 딸기 오는 날만. 일 년에 하루. 기록이야.' },
+        { say: '딸기 흔하잖아', tier: 'meh', face: 'calm', answer: '첫 딸기는 하나도 안 흔해. 일 년에 한 번이야.' },
+      ],
+    },
+    {
+      id: 'count-days',
+      open: '요즘 공책에 동그라미를 그려. 너랑 이야기한 날마다 하나씩.',
+      replies: [
+        { say: '왜 세는 거야?', tier: 'great', remember: 'count-days', face: 'think', answer: ['옛날엔 사람이랑 지낸 날을 안 셌어. 너무 짧아서 셀 생각을 못 했지.', '그 사람들이 떠나고 나서 세어 보려니까, 기억이 모자랐어.', '…그래서 이번엔 지금 세. 하나도 안 흘리게.'] },
+        { say: '몇 개나 됐어?', tier: 'good', remember: 'count-days', face: 'shy', answer: ['비밀. 생각보다 많고, 생각보다 적어.', '천 년에 비하면 한 줄도 안 돼. 그래서 더 소중해.'] },
+        { say: '좀 부끄러운데', tier: 'meh', face: 'calm', answer: '…괜찮아. 공책은 서랍 깊숙이 둘 거야. 상자 말고. 상자는 물거든.' },
+      ],
+    },
+    {
+      id: 'know-trip',
+      open: '옛날 여행을 끝내고 한참 뒤에 또 여행을 했어. 이번엔 사람을 알려고.',
+      replies: [
+        { say: '뭘 알게 됐어?', tier: 'great', remember: 'know-trip', face: 'think', answer: ['사람은 작은 걸 오래 기억한다는 거.', '빵 한 조각, 꽃 한 송이, 무심코 한 말 같은 것.', '…나는 큰 것만 기억하고 있었더라. 그래서 이번엔 작은 걸 모아.'] },
+        { say: '그래서 빵집을 연 거야?', tier: 'good', face: 'smile', answer: ['응. 빵집엔 사람이 와. 매일 조금씩 달라진 얼굴로.', '여행보다 느리지만, 더 잘 보여.'] },
+        { say: '여행은 피곤하잖아', tier: 'meh', face: 'calm', answer: '응. 그래서 이번엔 앉아서 해. 카운터에서. 졸면서.' },
+      ],
+    },
+    {
+      id: 'bread-box',
+      open: '새로 산 빵 보관 상자가 좀 수상해. 뚜껑이 혼자 들썩거려.',
+      replies: [
+        { say: '같이 지켜보자', tier: 'great', remember: 'bread-box', face: 'wow', answer: ['…좋아. 네가 망 봐. 나는 막대기 들고 있을게.', '열면 빵이 있어야 정상이야. 이빨이 있으면 비정상이고.'] },
+        { say: '빵이 부푸는 거 아냐?', tier: 'good', face: 'think', answer: ['…그런가. 그럼 반죽이 상자를 연 거네.', '그래도 머리는 안 넣을게. 일단은.'] },
+        { say: '그냥 열어 봐', tier: 'meh', face: 'sorry', answer: '…옛날에 그 말 듣고 열었다가 머리부터 물렸어. 일행이 다리 잡고 꺼내 줬지.' },
+      ],
+    },
+    {
+      id: 'grimoire-pay',
+      open: '옛날엔 일을 해 주면 보수로 마도서를 받았어. 돈보다 그게 좋았어.',
+      replies: [
+        { say: '나도 마도서로 줄까?', tier: 'great', remember: 'grimoire', face: 'wow', answer: ['…진짜? 아무리 쓸모없는 거라도 좋아.', '아니, 쓸모없을수록 좋아. 옷을 깨끗하게 하는 마법 같은 거.'] },
+        { say: '돈이 더 쓸모 있잖아', tier: 'good', face: 'calm', answer: ['돈은 쓰면 없어져. 마법은 써도 남아.', '…빵값은 돈으로 받지만.'] },
+        { say: '마도서 무거워', tier: 'meh', face: 'think', answer: '응. 그래서 일행 중 전사가 늘 들어 줬어. 투덜대면서.' },
+      ],
+    },
+    {
+      id: 'seasons-bakery',
+      open: '빵집 달력 만들었어. 봄엔 딸기, 여름엔 수박, 가을엔 호박, 겨울엔 꿀.',
+      replies: [
+        { say: '계절마다 꼭 올게', tier: 'great', face: 'smile', answer: ['…응. 그럼 달력에 네 칸도 만들어 둘게.', '계절은 나한테 눈 깜빡하는 사이인데, 칸이 있으면 덜 흘려.'] },
+        { say: '어느 계절이 제일 좋아?', tier: 'good', face: 'think', answer: '가을. 빵집의 계절이야. 오븐 열기가 반가워지거든.' },
+        { say: '빵은 다 똑같지 않아?', tier: 'meh', face: 'calm', answer: '…천 년 동안 같은 빵을 두 번 구운 적 없어. 맛은 비슷했지만.' },
+      ],
+    },
+    {
+      id: 'new-flower',
+      open: '이 마을 꽃 중에 아직 이름 모르는 게 있어. 처음 보는 꽃은 드물거든.',
+      replies: [
+        { say: '찾으면 가져올게', tier: 'great', remember: 'new-flower', face: 'smile', answer: ['…응. 꽃 이름은 같이 지어도 돼.', '천 년 동안 꽃은 꽤 봤는데, 누가 가져다준 건 기억이 오래 가.'] },
+        { say: '꽃밭 마법으로 피우면?', tier: 'good', face: 'think', answer: '내가 아는 꽃만 피어. 모르는 꽃은 직접 만나야 해. 사람처럼.' },
+        { say: '꽃은 다 비슷해', tier: 'meh', face: 'calm', answer: '…천 살한테도 안 비슷해. 너도 그럴 거야. 언젠가.' },
+      ],
+    },
+    {
+      id: 'faces',
+      open: '옛날에 만난 사람들 얼굴이 가끔 흐려져. 이름은 남는데.',
+      replies: [
+        { say: '내 얼굴은 기억해 줘', tier: 'great', face: 'shy', answer: ['…그래서 요즘 너를 자주 봐. 계산할 때도.', '눈 색, 웃을 때 입 모양. 공책에도 적었어. 글로.'] },
+        { say: '그림을 그려 두면?', tier: 'good', face: 'think', answer: '그림 마법은 서툴러. 동상이 그래서 좋은 거였나 봐. 이제 좀 알겠어.' },
+        { say: '잊는 게 편할 때도 있어', tier: 'meh', face: 'calm', answer: '…그럴지도. 근데 나는 안 편했어.' },
+      ],
+    },
+    {
+      id: 'ring-memory',
+      when: { love: 'dating' },
+      open: '옛날에 반지를 하나 받은 적 있어. 그때는 그냥 예쁜 반지인 줄 알았어.',
+      replies: [
+        { say: '그게 무슨 반지였는데?', tier: 'great', remember: 'ring-talk', face: 'think', answer: ['꽃이 새겨진 반지. 그 꽃말을 한참 뒤에야 알았어.', '…고른 사람은 알고 골랐겠지. 나만 몰랐던 거야.', '이번엔 몰랐다고 하기 싫어.'] },
+        { say: '지금도 갖고 있어?', tier: 'good', remember: 'ring-talk', face: 'calm', answer: ['응. 빵 반죽할 땐 빼 둬. 상자 말고 서랍에.', '그 반지 덕분에 알았어. 마음은 늦게 와도 사라지진 않는다는 거.'] },
+        { say: '질투 나는데', tier: 'meh', remember: 'ring-talk', face: 'shy', answer: '…질투? 그건 처음 받아 보는 반응이네. 공책에 적어 둘게.' },
+      ],
+    },
+    {
+      id: 'short-time',
+      when: { love: 'dating' },
+      open: '{me}, 너는 나보다 훨씬 빨리 나이 들어. 그거 알고 있어.',
+      replies: [
+        { say: '그래도 매일 같이 있자', tier: 'great', face: 'shy', answer: ['…응. 그래서 늦잠을 줄였어. 조금.', '너랑 있는 하루는 십 년보다 길게 쓸 거야.'] },
+        { say: '슬퍼?', tier: 'good', face: 'think', answer: ['슬픈 건 나중에. 지금은 아까운 쪽이야.', '아까워서 하나도 안 흘리려고 해.'] },
+        { say: '그런 말 하지 마', tier: 'meh', face: 'sorry', answer: '…미안. 엘프는 이런 말을 너무 담담하게 해. 고칠게.' },
       ],
     },
   ],
@@ -153,9 +387,29 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { time: 'dawn' },
       open: '…지금 몇 시야. 새벽이면 아직 밤이지. {me}, 왜 깨어 있어?',
       replies: [
-        { say: '프리렌 보러 왔지', tier: 'great', face: 'shy', answer: '…이 시간에? 이상한 사람. 근데 싫진 않아. 들어와. 빵은 아직이야.' },
+        { say: '프리렌 보러 왔지', tier: 'great', face: 'shy', answer: ['…이 시간에? 이상한 사람. 근데 싫진 않아.', '들어와. 빵은 아직이야. 나도 아직이고.'] },
         { say: '잠이 안 와서', tier: 'good', answer: '그럼 따뜻한 우유. 꿀 넣어서. 그거 마시면 나는 바로 자.' },
         { say: '가게 문 열 시간이야', tier: 'meh', face: 'sorry', answer: '…아직 아니야. 열 시. 열 시쯤. 대략.' },
+      ],
+    },
+    {
+      id: 'op-day',
+      when: { time: 'day', weather: ['sunny', 'cloudy'] },
+      open: '점심때 손님이 몰려서 빵이 다 나갔어. 남은 건 이상한 빵 하나.',
+      replies: [
+        { say: '그 이상한 빵 줘', tier: 'great', face: 'laugh', answer: ['…역시 너야. 이건 씹으면 종소리가 나.', '아주 작게. 귀 기울여야 들려.'] },
+        { say: '내일 일찍 올게', tier: 'good', face: 'smile', answer: '일찍은 오지 마. 내가 없어. 점심 전쯤.' },
+        { say: '빵집에 빵이 없어?', tier: 'meh', face: 'calm', answer: '…있어. 이상한 빵도 빵이야.' },
+      ],
+    },
+    {
+      id: 'op-evening',
+      when: { time: 'evening' },
+      open: '노을이 반죽 색이랑 비슷해. 오늘 하루도 금방 갔네.',
+      replies: [
+        { say: '오늘 하루 어땠어?', tier: 'great', face: 'think', answer: ['…그런 거 물어보는 사람 오랜만이야.', '빵 세 판, 낮잠 한 번, 그리고 너. 괜찮은 하루였어.'] },
+        { say: '노을 같이 보자', tier: 'good', face: 'smile', answer: '응. 벤치 끝 자리. 해가 거기서 제일 오래 남아.' },
+        { say: '벌써 닫아?', tier: 'meh', face: 'calm', answer: '늦게 열었으니까 일찍 닫는 거야. 공평하지.' },
       ],
     },
     {
@@ -163,8 +417,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { weather: ['rain', 'storm'] },
       open: '비 오는 날은 반죽이 안 부풀어. 그래서 오늘 빵은 납작해.',
       replies: [
-        { say: '납작한 빵도 좋아', tier: 'great', face: 'smile', answer: '…그럼 이거. 납작한 김에 이름도 붙였어. 비 오는 날 빵.' },
+        { say: '납작한 빵도 좋아', tier: 'great', face: 'smile', answer: ['…그럼 이거. 납작한 김에 이름도 붙였어.', '비 오는 날 빵. 빗소리 들으면서 먹으면 맛이 나아져.'] },
         { say: '책 읽기 좋은 날이네', tier: 'good', remember: 'odd-recipe', answer: '응. 오늘은 옛 레시피 책 읽을 거야. 같이 찾아볼래?' },
+        { say: '비 싫어', tier: 'meh', face: 'calm', answer: '…나는 좋아. 늦잠에 핑계가 생기거든.' },
       ],
     },
     {
@@ -172,8 +427,29 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { weather: 'snow' },
       open: '눈이다. 천 번쯤 봤는데 아직 좋아. 따뜻한 우유에 꿀, 그게 규칙이야.',
       replies: [
-        { say: '나도 한 잔', tier: 'great', face: 'smile', answer: '좋아. 두 잔. …천 번 봐도 둘이 보는 눈은 처음일지도.' },
+        { say: '나도 한 잔', tier: 'great', face: 'smile', answer: ['좋아. 두 잔.', '…천 번 봐도 둘이 보는 눈은 처음일지도.'] },
         { say: '천 번이나?', tier: 'good', face: 'think', answer: '대충. 세다가 잠들었어. 늘.' },
+        { say: '추워서 싫다', tier: 'meh', face: 'calm', answer: '그럼 오븐 옆. 거기는 겨울이 안 와.' },
+      ],
+    },
+    {
+      id: 'op-sunny',
+      when: { weather: 'sunny', time: ['day', 'evening'] },
+      open: '햇볕이 너무 좋아. 광장 벤치에서 낮잠 자기 딱 좋은 날이야.',
+      replies: [
+        { say: '내가 깨워 줄게', tier: 'great', face: 'shy', answer: ['…그럼 마음 놓고 잘게.', '해가 시계탑 뒤로 넘어가면 깨워. 아니, 조금 더 뒤에.'] },
+        { say: '가게는?', tier: 'good', face: 'think', answer: '힘멜이 봐. 걔는 햇볕보다 손님을 더 좋아해.' },
+        { say: '일해야지', tier: 'meh', face: 'sorry', answer: '…응. 오 분만 일하고 올게.' },
+      ],
+    },
+    {
+      id: 'op-cloudy',
+      when: { weather: 'cloudy' },
+      open: '구름 낀 날은 시간이 느리게 가. 나랑 속도가 맞아.',
+      replies: [
+        { say: '그럼 천천히 얘기하자', tier: 'great', face: 'smile', answer: ['…좋아. 오늘은 서두를 일 없어.', '구름이 다 지나갈 때까지. 대략 반나절.'] },
+        { say: '비 오려나?', tier: 'good', face: 'think', answer: '잔나한테 물어봐. 걔 예보는 반쯤 맞아. 나보다 나아.' },
+        { say: '우중충해', tier: 'meh', face: 'calm', answer: '…빛이 부드러워서 좋은데. 눈이 덜 부셔.' },
       ],
     },
     {
@@ -181,8 +457,49 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { season: 'spring', weather: ['sunny', 'cloudy'] },
       open: '봄이야. 딸기가 제일 달 때. 딸기 타르트 굽는 계절이지.',
       replies: [
-        { say: '첫 조각은 나 줘', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: '…예약 받았어. 가게 연 이래 처음 받는 예약이야.' },
+        { say: '첫 조각은 나 줘', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: ['…예약 받았어.', '가게 연 이래 처음 받는 예약이야. 공책에 적어 둘게.'] },
         { say: '딸기 가져다줄까?', tier: 'good', answer: '응. 제일 단 걸로. 하쿠네 과일도 좋은데 네가 가져오면 더 좋아.' },
+        { say: '꽃가루 때문에 싫어', tier: 'meh', face: 'calm', answer: '…그럼 꽃밭 마법은 다른 계절에 보여 줘야겠다.' },
+      ],
+    },
+    {
+      id: 'op-summer',
+      when: { season: 'summer' },
+      open: '여름이야. 버터가 녹고, 반죽도 녹고, 나도 녹아.',
+      replies: [
+        { say: '수박 빙수 먹자', tier: 'great', face: 'laugh', answer: ['…좋아. 빵집에서 제일 잘 팔리는 게 빙수야.', '사장으로서 좀 복잡한 기분이지만, 맛있으니까.'] },
+        { say: '시원한 데로 가자', tier: 'good', face: 'think', answer: '숲 그늘. 거기선 시간도 시원하게 흘러.' },
+        { say: '여름이 제일 좋아', tier: 'meh', face: 'calm', answer: '…밤이 길어서 별 보기엔 좋아. 낮은 별로야.' },
+      ],
+    },
+    {
+      id: 'op-autumn',
+      when: { season: 'autumn' },
+      open: '가을이야. 호박파이랑 밤빵. 가을은 빵집의 계절이야.',
+      replies: [
+        { say: '호박파이 한 판!', tier: 'great', face: 'smile', answer: ['한 판? …좋아. 네 몫으로 하나 따로 구울게.', '가을엔 오븐 앞이 제일 좋은 자리야.'] },
+        { say: '낙엽 밟으러 가자', tier: 'good', face: 'think', answer: '응. 백 년 전에도 좋아했어. 그 소리는 안 바뀌어.' },
+        { say: '금방 추워지겠다', tier: 'meh', face: 'calm', answer: '응. 그래서 가을엔 일부러 천천히 굽는 거야.' },
+      ],
+    },
+    {
+      id: 'op-winter',
+      when: { season: 'winter', weather: ['sunny', 'cloudy'] },
+      open: '겨울엔 이불이 나를 안 놔줘. 오늘도 겨우 탈출했어.',
+      replies: [
+        { say: '수고했어, 진심으로', tier: 'great', face: 'laugh', answer: ['…알아주는구나. 오늘의 제일 큰 일이었어.', '포상으로 꿀 우유. 너도 한 잔.'] },
+        { say: '오븐 옆에 앉아', tier: 'good', face: 'smile', answer: '응. 자리 하나 비워 둘게. 그 옆자리.' },
+        { say: '그건 핑계야', tier: 'meh', face: 'calm', answer: '…천 년째 쓰는 핑계야. 잘 닳지도 않아.' },
+      ],
+    },
+    {
+      id: 'op-festival',
+      when: { festival: true },
+      open: '축제야. 오늘은 일찍 일어났어. 놀랐지? 가게 앞에서 빵 나눠 줘.',
+      replies: [
+        { say: '같이 나눠 줄게', tier: 'great', face: 'smile', answer: ['…좋아. 너는 웃는 담당, 나는 건네는 담당.', '힘멜은 서명 받는 담당이래. 축제에도.'] },
+        { say: '진짜 일찍 일어났어?', tier: 'good', face: 'laugh', answer: '열 시 오 분. 축제 날 기록이야.' },
+        { say: '사람 많아서 피곤해', tier: 'meh', face: 'calm', answer: '…나도. 그래도 오늘은 괜찮아. 다들 웃으니까.' },
       ],
     },
     {
@@ -190,8 +507,28 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { fish: true },
       open: '{fish}? 오늘 낚은 거야? …빵에 넣어 볼까. 옛날에 생선 빵 레시피가 있었어.',
       replies: [
-        { say: '해 보자! 실험이야', tier: 'great', remember: 'odd-recipe', face: 'wow', answer: '…좋아. 실패하면 같이 먹자. 실패작도 반은 성공이야.' },
+        { say: '해 보자! 실험이야', tier: 'great', remember: 'odd-recipe', face: 'wow', answer: ['…좋아. 실패하면 같이 먹자.', '실패작도 반은 성공이야.'] },
         { say: '그건 좀…', tier: 'good', face: 'laugh', answer: '…그치. 나도 그때 실패했어. 그래도 기억에 남는 맛이었어.' },
+      ],
+    },
+    {
+      id: 'op-bigfish',
+      when: { bigFish: true },
+      open: '그거 오늘 잡은 거야? 크다. 빵 열 개쯤.',
+      replies: [
+        { say: '기록이래!', tier: 'great', face: 'wow', answer: ['…축하해. 공책에 적어 둘게. 너 기록의 날.', '이런 날은 사람이 금방 잊어. 내가 대신 기억해 줄게.'] },
+        { say: '빵 열 개가 단위야?', tier: 'good', face: 'laugh', answer: '응. 빵집 단위야. 다른 단위는 잘 몰라.' },
+        { say: '운이 좋았어', tier: 'meh', face: 'calm', answer: '운도 기다린 사람한테 와. 오래 기다렸겠지.' },
+      ],
+    },
+    {
+      id: 'op-harvest',
+      when: { harvest: true },
+      open: '흙냄새 나. 오늘 밭일 했구나. 부지런한 사람 냄새야.',
+      replies: [
+        { say: '딸기도 심었어', tier: 'great', face: 'wow', answer: ['…딸기? 진짜?', '익으면 제일 먼저 알려 줘. 그날은 일찍 일어날게.'] },
+        { say: '빵 하나 줘, 배고파', tier: 'good', face: 'smile', answer: '여기. 일한 사람 몫. 제일 큰 거야.' },
+        { say: '힘들어 죽겠어', tier: 'meh', face: 'calm', answer: '…그럼 오늘은 단 거. 그게 제일 빨라.' },
       ],
     },
     {
@@ -199,8 +536,167 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { gold: true },
       open: '금별 작물? 반짝이네. 옛날 마법 재료 같아. 쓸모없는 마법에 딱이야.',
       replies: [
-        { say: '그걸로 빵 구워 줘', tier: 'great', face: 'smile', answer: '…좋아. 금빛 빵. 이름은 아직 없어. 같이 지어 줘.' },
+        { say: '그걸로 빵 구워 줘', tier: 'great', face: 'smile', answer: ['…좋아. 금빛 빵.', '이름은 아직 없어. 같이 지어 줘.'] },
         { say: '팔 거야', tier: 'meh', face: 'calm', answer: '…그것도 맞는 선택이야. 현명해.' },
+      ],
+    },
+    {
+      id: 'op-high',
+      when: { mood: 'high' },
+      open: '오늘 얼굴이 밝네. 무슨 좋은 일 있었어?',
+      replies: [
+        { say: '프리렌 봐서', tier: 'great', face: 'shy', answer: ['…그런 말은 미리 예고하고 해.', '빵 떨어뜨릴 뻔했잖아. 힘멜처럼.'] },
+        { say: '그냥 기분이 좋아', tier: 'good', face: 'smile', answer: '그냥 좋은 날이 제일 좋아. 이유 있는 날은 금방 잊혀.' },
+        { say: '비밀', tier: 'meh', face: 'calm', answer: '…그래. 백 년 뒤에 알려 줘. 나는 기다릴 수 있어.' },
+      ],
+    },
+    {
+      id: 'op-low',
+      when: { mood: 'low' },
+      open: '{me}, 오늘 얼굴이 좀 지쳐 보여. …빵 먹을래? 단 거. 그게 제일 빨라.',
+      replies: [
+        { say: '고마워. 먹을게', tier: 'great', face: 'smile', answer: ['응. 다 먹을 때까지 아무 말 안 할게.', '그냥 옆에 있을게. 그건 잘해.'] },
+        { say: '괜찮아', tier: 'good', answer: '…괜찮다는 말은 대체로 안 괜찮을 때 해. 천 년 동안 배운 거야.' },
+      ],
+    },
+    {
+      id: 'op-wedding',
+      when: { news: 'wedding' },
+      open: '마을에 결혼식 소식 있대. …결혼식은 왜 다들 아침에 할까.',
+      replies: [
+        { say: '저녁에 하면 되지', tier: 'great', face: 'think', answer: ['…그런 방법이 있었네.', '천 년 동안 아침 결혼식만 졸면서 봤어. 다음엔 깨어 있을래.'] },
+        { say: '축하 빵 구워 줄 거야?', tier: 'good', face: 'smile', answer: '응. 딸기 듬뿍. 이상한 건 안 넣어. 결혼식이니까.' },
+        { say: '부럽다', tier: 'meh', face: 'calm', answer: '…그래? 사람은 그런 걸 부러워하는구나. 적어 둘게.' },
+      ],
+    },
+    {
+      id: 'op-birthday-news',
+      when: { news: 'birthday' },
+      open: '오늘 생일인 사람이 있대. 케이크 주문이 들어왔어. 아침에.',
+      replies: [
+        { say: '같이 굽자', tier: 'great', face: 'smile', answer: ['…좋아. 너는 딸기 올리는 담당.', '생일은 일 년에 한 번이니까. 사람한텐 꽤 드문 날이야.'] },
+        { say: '아침 주문이라니', tier: 'good', face: 'laugh', answer: '응. 힘멜이 받아 놨어. 나는 점심에 봤어.' },
+        { say: '생일이 뭐 대수야', tier: 'meh', face: 'think', answer: '…나도 그렇게 생각했었어. 엘프는 천 번이나 있으니까. 사람은 달라.' },
+      ],
+    },
+    {
+      id: 'op-festival-news',
+      when: { news: 'festival' },
+      open: '축제 소식 들었어? 좌판 자리 맡아야 하는데. 아침 일찍.',
+      replies: [
+        { say: '내가 맡아 줄게', tier: 'great', face: 'wow', answer: ['…너는 진짜 좋은 사람이야.', '보수는 축제 한정 빵. 떠오르는 걸로.'] },
+        { say: '힘멜한테 부탁해', tier: 'good', face: 'think', answer: '이미 했어. 걔는 해 뜨기 전부터 가 있을 거래. 왜 그렇게 신났을까.' },
+        { say: '늦게 가도 되잖아', tier: 'meh', face: 'calm', answer: '…작년엔 그랬다가 화장실 옆자리였어.' },
+      ],
+    },
+    {
+      id: 'op-legend',
+      when: { news: 'legend' },
+      open: '전설의 물고기 소식 들었어. 옛날 같으면 전설은 백 년에 한 번이었는데.',
+      replies: [
+        { say: '이 마을은 전설이 잦아', tier: 'great', face: 'laugh', answer: ['…그러게. 사람들이 부지런해서 그래.', '전설도 부지런한 사람한텐 자주 오나 봐.'] },
+        { say: '전설 빵 만들어 봐', tier: 'good', face: 'think', answer: '…모양만 물고기로. 맛은 딸기로. 그래야 팔려.' },
+        { say: '그냥 큰 물고기지', tier: 'meh', face: 'calm', answer: '전설은 다 그렇게 시작해. 그냥 큰 거에서.' },
+      ],
+    },
+    {
+      id: 'op-record',
+      when: { news: 'record' },
+      open: '누가 기록을 세웠대. 기록은 깨지려고 있는 거라던데.',
+      replies: [
+        { say: '언젠가 내가 깰 거야', tier: 'great', face: 'smile', answer: ['…그날 알려 줘. 공책에 동그라미 두 개 그릴게.', '내 기록은 늦잠 시간뿐이야. 그건 아무도 못 깨.'] },
+        { say: '프리렌 기록은?', tier: 'good', face: 'think', answer: '정오 넘어서까지 자기. 그 기록은 지키고 싶어.' },
+        { say: '관심 없어', tier: 'meh', face: 'calm', answer: '…나도. 근데 축하는 해 주자. 사람한텐 큰일이야.' },
+      ],
+    },
+    {
+      id: 'op-museum-news',
+      when: { news: 'museum' },
+      open: '박물관에 새 화석이 들어왔대. 잎 모양이면 좋겠다.',
+      replies: [
+        { say: '같이 보러 가자', tier: 'great', remember: 'fossil', face: 'wow', answer: ['…응. 진열장에 머리 넣지 않게 잡아 줘.', '보물 상자처럼 생겼거든. 위험해.'] },
+        { say: '물고기 화석이래', tier: 'good', face: 'think', answer: '그것도 좋아. 몇만 년 전에 헤엄치던 녀석이야. 대단하지.' },
+        { say: '돌 보러 가?', tier: 'meh', face: 'calm', answer: '…그 돌이 나보다 오래 살았어. 존경해야지.' },
+      ],
+    },
+    {
+      id: 'op-friend-news',
+      when: { friendNews: 'birthday' },
+      open: '네 친구 생일이라며. 빵 하나 가져가. 축하는 갓 구운 걸로 해야지.',
+      replies: [
+        { say: '고마워, 전해 줄게', tier: 'great', face: 'smile', answer: ['응. 내가 구웠다는 말은 안 해도 돼.', '…아니, 해도 돼. 조금.'] },
+        { say: '같이 축하하러 가자', tier: 'good', face: 'think', answer: '사람 많으면 졸려. 빵만 보낼게. 마음은 같이 가.' },
+        { say: '나중에 할게', tier: 'meh', face: 'sorry', answer: '…나중은 생각보다 빨리 지나가. 오늘 해.' },
+      ],
+    },
+    {
+      id: 'op-recent-fishing',
+      when: { recent: 'fishing' },
+      open: '요즘 낚시 자주 하네. 물가에 오래 앉아 있으면 졸리지 않아?',
+      replies: [
+        { say: '그 맛에 하는 거야', tier: 'great', face: 'laugh', answer: ['…알 것 같아. 기다리는 게 좋은 거지.', '나도 오십 년짜리 유성우를 기다려. 비슷해.'] },
+        { say: '물고기 빵 만들어 줘', tier: 'good', face: 'smile', answer: '모양만 물고기. 안에는 팥. 생선은 안 넣어.' },
+        { say: '졸려서 놓쳤어', tier: 'meh', face: 'calm', answer: '…나 같네. 다음엔 내가 옆에서 깨워 줄게. 못 깨면 같이 자고.' },
+      ],
+    },
+    {
+      id: 'op-recent-voyage',
+      when: { recent: 'voyage' },
+      open: '먼바다 다녀왔다며. 바람 냄새가 아직 남아 있어.',
+      replies: [
+        { say: '같이 갈래, 다음엔?', tier: 'great', face: 'think', answer: ['…배는 흔들려서 못 자. 그게 문제야.', '그래도 너랑이면 한 번쯤. 깨어 있는 연습 할게.'] },
+        { say: '소금빵 구워 줘', tier: 'good', face: 'smile', answer: '응. 바다 냄새 나는 빵. 오늘 저녁에.' },
+        { say: '멀미 났어', tier: 'meh', face: 'sorry', answer: '…나도 옛날에 배에서 계속 누워 있었어. 일행이 다 놀렸지.' },
+      ],
+    },
+    {
+      id: 'op-stock-up',
+      when: { recent: 'stockUp' },
+      open: '주식이 올랐다며. 그럼 빵값은 그대로야. 나는 그런 거 몰라.',
+      replies: [
+        { say: '마도서 하나 사 줄게', tier: 'great', remember: 'grimoire', face: 'wow', answer: ['…진짜? 쓰레쉬네 가게에 있는 거.', '쓸모없는 걸로 골라. 그게 제일 좋아.'] },
+        { say: '빵 다 살게', tier: 'good', face: 'smile', answer: '그럼 미선 씨가 슬퍼할 거야. 반만 사.' },
+        { say: '운이 좋았지', tier: 'meh', face: 'calm', answer: '응. 운은 금방 바뀌어. 빵은 안 바뀌고.' },
+      ],
+    },
+    {
+      id: 'op-stock-down',
+      when: { recent: 'stockDown' },
+      open: '주식이 내렸다며. …괜찮아. 백 년 지나면 아무도 기억 안 해.',
+      replies: [
+        { say: '그 말이 위로가 돼', tier: 'great', face: 'smile', answer: ['…다행이다. 엘프식 위로야.', '사람한텐 백 년이 길지. 그럼 빵 하나 더 줄게.'] },
+        { say: '백 년은 너무 길어', tier: 'good', face: 'think', answer: '…그렇네. 그럼 내일까지. 내일이면 좀 나아져.' },
+        { say: '위로가 이상해', tier: 'meh', face: 'sorry', answer: '…미안. 위로는 아직 연습 중이야.' },
+      ],
+    },
+    {
+      id: 'op-casino-win',
+      when: { recent: 'casinoWin' },
+      open: '카지노에서 땄다며. 운도 반죽처럼 부풀 때가 있지.',
+      replies: [
+        { say: '이제 그만할 거야', tier: 'great', face: 'smile', answer: ['…현명해. 부푼 반죽은 바로 구워야 해.', '더 두면 꺼져. 운도 그래.'] },
+        { say: '빵 쏠게!', tier: 'good', face: 'laugh', answer: '그럼 떠오르는 잼빵 열 개. 날아가기 전에 먹어.' },
+        { say: '한 판 더 하러 가', tier: 'meh', face: 'calm', answer: '…나라면 그만하고 잤어. 근데 넌 나보다 부지런하니까.' },
+      ],
+    },
+    {
+      id: 'op-casino-lose',
+      when: { recent: 'casinoLose' },
+      open: '잃었어? …그 돈이면 빵이 몇 개인데. 세지 말자.',
+      replies: [
+        { say: '응, 세지 말자', tier: 'great', face: 'smile', answer: ['응. 대신 이거. 위로 빵.', '이건 공짜야. 운이 돌아올 때까지 외상으로 해 둘게.'] },
+        { say: '다음엔 딸 거야', tier: 'good', face: 'think', answer: '운은 돌아와. 늦게 오지만. 나처럼.' },
+        { say: '빵이 무슨 상관이야', tier: 'meh', face: 'calm', answer: '…빵집 사장한텐 모든 게 빵으로 보여.' },
+      ],
+    },
+    {
+      id: 'op-recent-museum',
+      when: { recent: 'museum' },
+      open: '박물관에 뭘 냈다며. 화석이었어? 화석이었으면 좋겠다.',
+      replies: [
+        { say: '화석 맞아!', tier: 'great', remember: 'fossil', face: 'wow', answer: ['…좋다. 이번 주 안에 보러 갈게.', '아니, 이번 달. 아니, 내일. 내일 갈게.'] },
+        { say: '물고기였어', tier: 'good', face: 'smile', answer: '그것도 좋아. 진열장에서 오래 기억되겠네.' },
+        { say: '그냥 돌이야', tier: 'meh', face: 'calm', answer: '…그 돌도 언젠가 화석이 돼. 천천히.' },
       ],
     },
     {
@@ -208,8 +704,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { bond: 'himmel' },
       open: '힘멜 만났어? 오늘 출근하자마자 꽃 사러 갔대. 또야.',
       replies: [
-        { say: '누구 주려나 보다', tier: 'great', face: 'think', answer: '…누구? 손님? 아, 가게에 꽂겠지. 늘 그러니까.' },
+        { say: '누구 주려나 보다', tier: 'great', face: 'think', answer: ['…누구? 손님? 아, 가게에 꽂겠지.', '늘 그러니까. 꽃병이 벌써 일곱 개야.'] },
         { say: '힘멜 착하던데', tier: 'good', answer: '응. 너무 착해서 가끔 걱정돼. 근데 그게 걔야.' },
+        { say: '일은 안 하고?', tier: 'meh', face: 'calm', answer: '…문은 매일 열어 줘. 나보다 일 많이 해.' },
       ],
     },
     {
@@ -217,7 +714,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { bond: 'captain' },
       open: '주점 다녀왔구나. 선장이 또 우유를 가득 따라 줬지? 나한테도 그래.',
       replies: [
-        { say: '프리렌도 우유 파구나', tier: 'great', face: 'smile', answer: '응. 주점에서 우유 시키는 사람 둘이 있으면 덜 이상해 보여.' },
+        { say: '프리렌도 우유 파구나', tier: 'great', face: 'smile', answer: ['응. 주점에서 우유 시키는 사람 둘이 있으면 덜 이상해 보여.', '옛 일행의 스님이 보면 혀를 찼겠지만.'] },
         { say: '허풍 카드는 해?', tier: 'good', face: 'laugh', answer: '안 해. 표정을 너무 안 바꿔서 다들 싫어해.' },
       ],
     },
@@ -226,8 +723,118 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { bond: 'thresh' },
       open: '잡화점 다녀왔어? 쓰레쉬가 오래된 마도서 들여왔다던데. 얼마래?',
       replies: [
-        { say: '대신 흥정해 줄게', tier: 'great', face: 'wow', answer: '…진짜? 그 사람 나한텐 절대 안 깎아 줘. 너라면 될지도.' },
+        { say: '대신 흥정해 줄게', tier: 'great', face: 'wow', answer: ['…진짜? 그 사람 나한텐 절대 안 깎아 줘.', '너라면 될지도. 웃으면서 가. 그 사람 웃는 손님한테 약해.'] },
         { say: '비싸던데', tier: 'good', answer: '역시. 그래도 갖고 싶어. 빵 백 개 팔면 되려나. 오십 년쯤 걸리겠다.' },
+      ],
+    },
+    {
+      id: 'op-nasera',
+      when: { bond: 'nasera' },
+      open: '나세라 만났구나. 도서관에 새 책 들어왔다고 안 했어?',
+      replies: [
+        { say: '옛날 요리책이래', tier: 'great', face: 'wow', answer: ['…요리책. 부록이 있을까.', '오늘 가게 일찍 닫아야겠다. 아니, 늦게 열었으니까 괜찮아.'] },
+        { say: '농사 얘기만 했어', tier: 'good', face: 'think', answer: '나세라답네. 그 사람 말투는 비료처럼 꾸준해. 칭찬이야.' },
+        { say: '별말 없었어', tier: 'meh', face: 'calm', answer: '…그럼 내가 직접 가 볼게. 내일. 아마.' },
+      ],
+    },
+    {
+      id: 'op-volibas',
+      when: { bond: 'volibas' },
+      open: '볼리바스 봤어? 오늘도 아침에 가게 앞에서 기다렸대. 두 시간.',
+      replies: [
+        { say: '덤 많이 줘', tier: 'great', face: 'smile', answer: ['응. 기다린 시간만큼. 오늘은 빵 세 개 더.', '그 사람 웃는 건 처음 봤어. 크게 웃더라.'] },
+        { say: '순경이 성실하네', tier: 'good', face: 'think', answer: '응. 마을이 조용한 건 그 사람 덕이야. 내가 늦잠 잘 수 있는 것도.' },
+        { say: '두 시간은 너무했다', tier: 'meh', face: 'sorry', answer: '…알아. 내일은 한 시간 반으로 줄일게.' },
+      ],
+    },
+    {
+      id: 'op-janna',
+      when: { bond: 'janna' },
+      open: '잔나 만났어? 내일 날씨 뭐래? 반죽 계획 세워야 해서.',
+      replies: [
+        { say: '맑대!', tier: 'great', face: 'smile', answer: ['…좋아. 그럼 러스크. 맑은 날엔 빵이 잘 말라.', '틀리면 비 오는 날 빵으로 바꾸면 돼.'] },
+        { say: '잔나 예보 믿어?', tier: 'good', face: 'think', answer: '반쯤. 나머지 반은 내 무릎을 믿어. 천 살 무릎은 정확해.' },
+        { say: '안 물어봤어', tier: 'meh', face: 'calm', answer: '…그럼 오늘은 평범한 빵. 날씨를 모를 땐 평범한 게 안전해.' },
+      ],
+    },
+    {
+      id: 'op-haku',
+      when: { bond: 'haku' },
+      open: '하쿠 만났어? 다음 과일이 뭐래? 딸기? 딸기라고 해 줘.',
+      replies: [
+        { say: '딸기래', tier: 'great', face: 'wow', answer: ['…좋아. 그날은 일찍 일어날 거야. 진짜로.', '알람 두 개. 아니, 세 개.'] },
+        { say: '사과래', tier: 'good', face: 'think', answer: '사과도 좋아. 사과 파이. 겉은 바삭, 속은 천천히.' },
+        { say: '쑥이래', tier: 'meh', face: 'sorry', answer: '…못 들은 걸로 할게.' },
+      ],
+    },
+    {
+      id: 'op-bocchi',
+      when: { bond: 'bocchi' },
+      open: '봇치 봤어? …나 어제 공연에서 졸았다고 안 했어?',
+      replies: [
+        { say: '좋았다고만 하던데', tier: 'great', face: 'shy', answer: ['…착한 애야. 다음엔 맨 앞줄에 앉아서 끝까지 볼게.', '졸면 꼬집어 줘.'] },
+        { say: '좀 서운해 보였어', tier: 'good', face: 'sorry', answer: '…그럴 줄 알았어. 사과 빵 하나 더 구울게. 기타 모양으로.' },
+        { say: '아무 말 없었어', tier: 'meh', face: 'calm', answer: '…말 안 하는 게 더 무서워. 내일 가 볼게.' },
+      ],
+    },
+    {
+      id: 'op-misun',
+      when: { bond: 'misun' },
+      open: '미선 씨 만났어? 오늘 마감에 또 오신대. 빵 다 남겨 두래.',
+      replies: [
+        { say: '하나만 내 몫 빼 둬', tier: 'great', face: 'smile', answer: ['…응. 제일 좋은 거 하나는 원래 빼 둬. 네 몫으로.', '미선 씨한테는 비밀이야.'] },
+        { say: '다 남으면 손해잖아', tier: 'good', face: 'think', answer: '버리는 것보다 나아. 미선 씨는 그걸 동네에 나눠 줘. 알고 있어.' },
+        { say: '미선 씨 무서워', tier: 'meh', face: 'calm', answer: '…흥정할 땐 좀 무섭지. 웃을 땐 안 무서워.' },
+      ],
+    },
+    {
+      id: 'op-sinjjajang',
+      when: { bond: 'sinjjajang' },
+      open: '신짱아 봤어? 배달 가방에 넣어 둔 빵, 먹었대?',
+      replies: [
+        { say: '맛있었대', tier: 'great', face: 'shy', answer: ['…그래? 누가 넣었는지는 말 안 했지?', '다행이다. 내일도 넣어야겠다.'] },
+        { say: '누가 넣었는지 궁금해해', tier: 'good', face: 'laugh', answer: '…비밀이야. 엘프의 비밀은 오래가.' },
+        { say: '바빠서 못 물어봤어', tier: 'meh', face: 'calm', answer: '그 애는 늘 바빠. 그래서 빵을 넣는 거야.' },
+      ],
+    },
+    {
+      id: 'op-with-himmel',
+      when: { with: 'himmel' },
+      open: '{other}, 또 앞머리 만진다. …아, {me}. 왔구나. 빵 굽는 중이야.',
+      replies: [
+        { say: '둘이 사이좋네', tier: 'great', face: 'think', answer: ['…그래? 사장이랑 알바생이야.', '근데 힘멜은 왜 지금 빨개졌을까.'] },
+        { say: '힘멜 멋있다', tier: 'good', face: 'smile', answer: '…본인이 제일 잘 알고 있어. 하루에 열 번은 말해.' },
+        { say: '일 안 해?', tier: 'meh', face: 'calm', answer: '하고 있어. 힘멜은 일하고, 나는 지켜보고.' },
+      ],
+    },
+    {
+      id: 'op-with-thresh',
+      when: { with: 'thresh' },
+      open: '{other}, 그 마도서 내가 먼저 봤어. …{me}, 증인 좀 서 줘.',
+      replies: [
+        { say: '프리렌이 먼저 봤어', tier: 'great', face: 'laugh', answer: ['…들었지? 증인이 있어.', '값은 내일 치를게. 아니, 다음 달.'] },
+        { say: '반씩 나눠 봐', tier: 'good', face: 'think', answer: '…책을 반으로? 레시피 쪽만 나 주면 괜찮을지도.' },
+        { say: '난 모르는 일이야', tier: 'meh', face: 'sorry', answer: '…중립이구나. 그럼 빵으로 매수할게. 나중에.' },
+      ],
+    },
+    {
+      id: 'op-sulk',
+      when: { sulk: true },
+      open: '{other}, 내 레시피를 비웃었어. …백 년쯤 기억할 거야.',
+      replies: [
+        { say: '내일이면 잊을걸', tier: 'great', face: 'think', answer: ['…그럴지도. 사람이랑 다투면 금방 풀려.', '사람의 하루는 길거든. 화도 오래 못 가.'] },
+        { say: '어떤 레시피였어?', tier: 'good', face: 'calm', answer: '구름 맛 빵. …실패하긴 했어. 그래도 비웃을 건 아니잖아.' },
+        { say: '비웃을 만했나 보다', tier: 'meh', face: 'sorry', answer: '…너까지. 이백 년으로 늘릴게.' },
+      ],
+    },
+    {
+      id: 'op-bday',
+      when: { bday: true },
+      open: '{me}, 오늘 생일이지. 딸기 타르트 구워 놨어. 늦지 않게. 진짜로.',
+      replies: [
+        { say: '고마워, 감동이야', tier: 'great', face: 'shy', answer: ['…공책에 적었어. 네 생일. 큰 동그라미로.', '내년에도, 그다음 해에도 구울게. 하나도 안 빼고.'] },
+        { say: '진짜 일찍 일어났어?', tier: 'good', face: 'laugh', answer: '…새벽에. 이건 천 년 중에 손꼽히는 일이야.' },
+        { say: '케이크가 더 좋은데', tier: 'meh', face: 'calm', answer: '…타르트도 케이크야. 내 기준엔.' },
       ],
     },
     {
@@ -235,18 +842,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { time: 'night', weather: ['sunny', 'cloudy'] },
       open: '밤하늘은 천 년 전이랑 거의 똑같아. 별 하나가 좀 옮겨 갔나.',
       replies: [
-        { say: '어느 별이 옮겨 갔어?', tier: 'great', remember: 'stars', face: 'think', answer: '저기, 저 작은 거. …아니 저거였나. 아무튼 옮겨 갔어. 아마.' },
+        { say: '어느 별이 옮겨 갔어?', tier: 'great', remember: 'stars', face: 'think', answer: ['저기, 저 작은 거. …아니 저거였나.', '아무튼 옮겨 갔어. 아마.'] },
         { say: '별 보는 거 좋아?', tier: 'good', answer: '응. 별은 안 서두르잖아. 나랑 비슷해.' },
         { say: '졸려 보여', tier: 'meh', face: 'calm', answer: '…졸려. 들어갈게. 너도 자.' },
-      ],
-    },
-    {
-      id: 'op-low',
-      when: { mood: 'low' },
-      open: '{me}, 오늘 얼굴이 좀 지쳐 보여. …빵 먹을래? 단 거. 그게 제일 빨라.',
-      replies: [
-        { say: '고마워. 먹을게', tier: 'great', face: 'smile', answer: '응. 다 먹을 때까지 아무 말 안 할게. 그냥 옆에 있을게.' },
-        { say: '괜찮아', tier: 'good', answer: '…괜찮다는 말은 대체로 안 괜찮을 때 해. 천 년 동안 배운 거야.' },
       ],
     },
   ],
@@ -257,8 +855,19 @@ export const FRIEREN_TALK: NpcTalkBook = {
       use: 'sleepyhead',
       open: '늦잠 동지. 오늘 몇 시에 일어났어? 난 열한 시. 이겼다.',
       replies: [
-        { say: '정오에 일어났어', tier: 'great', face: 'wow', answer: '…졌다. 너 진짜 대단하다. 오늘은 네가 사장 해.' },
+        { say: '정오에 일어났어', tier: 'great', face: 'wow', answer: ['…졌다. 너 진짜 대단하다.', '오늘은 네가 사장 해.'] },
         { say: '오늘은 일찍 일어났어', tier: 'good', remember: 'morning-person', face: 'think', answer: '…배신자. 그래도 아침에 가게 문 두드려 줄 수 있겠네.' },
+      ],
+    },
+    {
+      id: 'cb-morning',
+      when: { mem: 'morning-person', time: 'dawn' },
+      use: 'morning-person',
+      open: '…똑똑, 세 번. 너구나. 정말 두드렸네.',
+      replies: [
+        { say: '약속했잖아', tier: 'great', face: 'shy', answer: ['…응. 약속 지키는 사람은 오랜만이야.', '들어와. 반죽은 아직이지만, 우유는 있어.'] },
+        { say: '한 번 더 두드릴까?', tier: 'good', face: 'laugh', answer: '아니. 세 번이면 깼어. 네 번이면 화나.' },
+        { say: '그냥 지나가던 길이야', tier: 'meh', face: 'calm', answer: '…지나가던 길에 세 번이나 두드려? 이상한 사람.' },
       ],
     },
     {
@@ -266,7 +875,7 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { mem: 'odd-recipe', noMem: 'recipe-found' },
       open: '이상한 레시피 같이 모으기로 했잖아. 오늘 하나 찾았어. 구우면 빵이 노래해.',
       replies: [
-        { say: '미쿠한테 들려주자', tier: 'great', remember: 'recipe-found', face: 'smile', answer: '…좋은 생각이야. 음이 맞을지는 모르겠지만. 빵이니까.' },
+        { say: '미쿠한테 들려주자', tier: 'great', remember: 'recipe-found', face: 'smile', answer: ['…좋은 생각이야.', '음이 맞을지는 모르겠지만. 빵이니까.'] },
         { say: '어디에 써?', tier: 'good', remember: 'recipe-found', face: 'think', answer: '아무 데도. 그래서 좋은 거라고 했잖아.' },
       ],
     },
@@ -276,18 +885,216 @@ export const FRIEREN_TALK: NpcTalkBook = {
       use: 'chest-warn',
       open: '창고 상자, 네 말 듣고 막대기로 열어 봤어. …물렸어. 막대기가.',
       replies: [
-        { say: '머리 안 넣어서 다행이야', tier: 'great', face: 'laugh', answer: '…응. 네 덕분이야. 처음으로 머리 무사했어.' },
+        { say: '머리 안 넣어서 다행이야', tier: 'great', face: 'laugh', answer: ['…응. 네 덕분이야.', '처음으로 머리 무사했어. 공책에 적었어.'] },
         { say: '안에 뭐 있었어?', tier: 'good', face: 'think', answer: '아무것도. 상자가 배고팠던 것 같아. 빵 하나 줬어.' },
+      ],
+    },
+    {
+      id: 'cb-chest-dive',
+      when: { mem: 'chest-dive' },
+      use: 'chest-dive',
+      open: '같이 상자 열자고 했지. 오늘 열었어. 혼자. …머리부터.',
+      replies: [
+        { say: '괜찮아? 다친 데는?', tier: 'great', face: 'sorry', answer: ['…괜찮아. 힘멜이 다리 잡고 꺼내 줬어.', '옛날에도 이랬어. 꺼내 주는 사람은 늘 있었네.'] },
+        { say: '같이 열자니까!', tier: 'good', face: 'shy', answer: '…못 참았어. 다음엔 기다릴게. 아마.' },
+        { say: '안에 보물 있었어?', tier: 'meh', face: 'calm', answer: '이빨이 있었어. 보물은 아니었어.' },
       ],
     },
     {
       id: 'cb-friends',
       when: { mem: 'old-friends' },
       use: 'old-friends',
-      open: '전에 옛 동료 얘기 했지. 답장 썼어. 너 얘기도 조금 썼어.',
+      open: '전에 옛 동료 얘기 했지. 전사한테 답장 썼어. 너 얘기도 조금 썼어.',
       replies: [
-        { say: '뭐라고 썼어?', tier: 'great', face: 'shy', answer: '…빵을 잘 먹는 사람이 있다고. 그리고 같이 있으면 시간이 빨리 간다고.' },
-        { say: '부끄러운데', tier: 'good', face: 'smile', answer: '괜찮아. 걔들 답장 오려면 몇 년 걸려. 그때쯤엔 안 부끄러울 거야.' },
+        { say: '뭐라고 썼어?', tier: 'great', face: 'shy', answer: ['…빵을 잘 먹는 사람이 있다고.', '그리고 같이 있으면 시간이 빨리 간다고. 그건 지울까 하다가 뒀어.'] },
+        { say: '부끄러운데', tier: 'good', face: 'smile', answer: '괜찮아. 답장 오려면 몇 년 걸려. 그때쯤엔 안 부끄러울 거야.' },
+      ],
+    },
+    {
+      id: 'cb-letter',
+      when: { mem: 'letter' },
+      use: 'letter',
+      open: '답장 다 썼어. …네가 재촉해 준 덕분에 이번엔 한 달 만이야.',
+      replies: [
+        { say: '기록이네!', tier: 'great', face: 'laugh', answer: ['응. 전사가 놀라서 심장 멎겠다.', '드워프는 튼튼하니까 괜찮겠지만.'] },
+        { say: '뭐라고 썼어?', tier: 'good', face: 'think', answer: '잘 지낸다고. 빵집 한다고. 그리고 아침에 못 일어난다고. 전부 사실이야.' },
+        { say: '한 달이면 느린데', tier: 'meh', face: 'calm', answer: '…엘프한텐 번개야.' },
+      ],
+    },
+    {
+      id: 'cb-sweet',
+      when: { mem: 'sweet-tooth' },
+      use: 'sweet-tooth',
+      open: '단 거 좋아한다고 했지. 새로 만든 거, 너한테 제일 먼저 줄게. 꿀 딸기 빵.',
+      replies: [
+        { say: '최고야!', tier: 'great', face: 'laugh', answer: ['…그 표정 보려고 만든 거야.', '공책에 적어 둘게. 꿀 딸기 빵에 웃은 날.'] },
+        { say: '너무 달지 않아?', tier: 'good', face: 'think', answer: '단 건 너무 달아야 해. 그게 예의야.' },
+        { say: '요즘 단 거 줄이는 중', tier: 'meh', face: 'sorry', answer: '…그래? 그럼 반만. 반은 내가 먹을게. 기꺼이.' },
+      ],
+    },
+    {
+      id: 'cb-burnt',
+      when: { mem: 'burnt-bread' },
+      use: 'burnt-bread',
+      open: '오늘 또 탔어. …탄 빵도 맛있다고 했지? 그 말 믿고 남겨 뒀어.',
+      replies: [
+        { say: '응, 줘 봐', tier: 'great', face: 'shy', answer: ['…여기. 같은 말 두 번 들은 건 오랜만이야.', '그 용사 말고는 너가 처음이야.'] },
+        { say: '오늘 건 많이 탔네', tier: 'good', face: 'sorry', answer: '…응. 낮잠이 좀 길었어. 탄 쪽은 내가 먹을게.' },
+        { say: '그건 예의상 한 말이야', tier: 'meh', face: 'calm', answer: '…알아. 그래도 믿기로 했어. 그쪽이 맛있으니까.' },
+      ],
+    },
+    {
+      id: 'cb-stars',
+      when: { mem: 'stars', time: 'night' },
+      use: 'stars',
+      open: '유성우 약속 기억해? 오늘 밤엔 안 오지만, 연습으로 별 보자.',
+      replies: [
+        { say: '연습 좋다', tier: 'great', face: 'smile', answer: ['…응. 오십 년 뒤를 위한 연습.', '그때 네가 지금 얼굴을 하고 있진 않겠지. 그래서 지금 봐 둘래.'] },
+        { say: '오십 년 진짜 기다려?', tier: 'good', face: 'think', answer: '나한텐 금방이야. 너한텐 긴 약속이니까, 내가 기억할게.' },
+        { say: '졸린데', tier: 'meh', face: 'calm', answer: '…나도. 그럼 별 하나만 보고 자자.' },
+      ],
+    },
+    {
+      id: 'cb-flower',
+      when: { mem: 'flower-field', season: ['spring', 'summer'] },
+      use: 'flower-field',
+      open: '꽃밭 마법 얘기 했었지. 오늘 아침에 가게 화분에 몰래 한 송이 피웠어.',
+      replies: [
+        { say: '어디? 보여 줘', tier: 'great', face: 'smile', answer: ['…저기, 창가. 힘멜이 보고 한참 서 있었어.', '왜 그렇게 오래 봤는지는 모르겠어. 좋아하나 봐, 꽃.'] },
+        { say: '몰래 왜 피워?', tier: 'good', face: 'shy', answer: '…들키면 쑥스러워. 쓸모없는 마법이라.' },
+        { say: '화분이 놀랐겠다', tier: 'meh', face: 'calm', answer: '…화분은 원래 놀라지 않아. 아마.' },
+      ],
+    },
+    {
+      id: 'cb-statue',
+      when: { mem: 'statue' },
+      use: 'statue',
+      open: '용사 동상 얘기 기억해? 오늘 힘멜 청원서에 서명했어. 처음으로.',
+      replies: [
+        { say: '왜 마음이 바뀌었어?', tier: 'great', face: 'think', answer: ['…먼 훗날 광장을 지나갈 때 아는 얼굴이 있으면 좋잖아.', '누구 동상인지는 걔가 끝까지 안 알려 주지만.'] },
+        { say: '힘멜 엄청 좋아했겠다', tier: 'good', face: 'smile', answer: '응. 서명판을 들고 세 바퀴 돌았어. 광장을.' },
+        { say: '동상 세워지면 볼래', tier: 'meh', face: 'calm', answer: '…응. 그때 같이 가. 백 년 뒤에도.' },
+      ],
+    },
+    {
+      id: 'cb-sour',
+      when: { mem: 'sour-grape' },
+      use: 'sour-grape',
+      open: '포도 시게 만드는 마법 재밌다고 했지. 그걸로 잼 만들었어. 시큼달콤.',
+      replies: [
+        { say: '한 숟갈만!', tier: 'great', face: 'laugh', answer: ['여기. 처음엔 시고, 끝엔 달아.', '…사람 사귀는 거랑 비슷한 맛이야. 방금 생각났어.'] },
+        { say: '그냥 포도잼이 낫지 않아?', tier: 'good', face: 'think', answer: '그건 어디서나 팔아. 이건 여기서만. 그게 차이야.' },
+        { say: '시어서 싫어', tier: 'meh', face: 'sorry', answer: '…그럼 설탕 한 숟갈 더. 쓸모없는 마법의 뒷수습이야.' },
+      ],
+    },
+    {
+      id: 'cb-fern',
+      when: { mem: 'fern-letter' },
+      use: 'fern-letter',
+      open: '페른한테 답장 썼어. 아침에 읽었다고. …거짓말인 거 들킬까?',
+      replies: [
+        { say: '분명 들킬걸', tier: 'great', face: 'laugh', answer: ['…응. 그 애는 늘 알아.', '그래서 끝에 한 줄 더 썼어. 사실 오후였어, 하고.'] },
+        { say: '내가 증인 서 줄게', tier: 'good', face: 'smile', answer: '…고마워. 근데 페른은 증인도 꿰뚫어 봐. 무서운 애야.' },
+        { say: '거짓말은 나빠', tier: 'meh', face: 'sorry', answer: '…알아. 고쳐 쓸게. 오후 세 시라고.' },
+      ],
+    },
+    {
+      id: 'cb-fossil',
+      when: { mem: 'fossil' },
+      use: 'fossil',
+      open: '화석 찾아 준다고 했지. …기대하고 있어. 잎 모양이면 더 좋고.',
+      replies: [
+        { say: '광산에서 꼭 찾을게', tier: 'great', face: 'smile', answer: ['…응. 찾으면 진열장 맨 앞에 둘게.', '네가 찾아 준 거라고 쪽지도 붙이고.'] },
+        { say: '물고기 화석은?', tier: 'good', face: 'think', answer: '그것도 좋아. 옛날에 헤엄치던 걸 지금 들고 있는 거잖아. 좋은 일이야.' },
+        { say: '찾기 어려워', tier: 'meh', face: 'calm', answer: '…괜찮아. 나는 기다리는 거 잘해. 천 년 단위로.' },
+      ],
+    },
+    {
+      id: 'cb-new-flower',
+      when: { mem: 'new-flower' },
+      use: 'new-flower',
+      open: '처음 보는 꽃 가져다준다고 했지. …아직 못 찾았어도 괜찮아. 물어본 거야.',
+      replies: [
+        { say: '숲 깊은 데 있었어', tier: 'great', face: 'wow', answer: ['…진짜? 내일 같이 가 줘.', '이름은 우리가 짓자. 공책 꽃 칸에 적어 둘게.'] },
+        { say: '계속 찾는 중이야', tier: 'good', face: 'smile', answer: '응. 찾는 동안이 제일 재밌어. 여행도 그랬어.' },
+        { say: '잊어버렸어', tier: 'meh', face: 'calm', answer: '…괜찮아. 사람은 잘 잊어. 내가 기억하고 있었으니까 됐어.' },
+      ],
+    },
+    {
+      id: 'cb-count',
+      when: { mem: 'count-days', ch: 2 },
+      use: 'count-days',
+      open: '공책 동그라미, 오늘 한 장을 다 채웠어. 새 장 넘겼어.',
+      replies: [
+        { say: '계속 채우자', tier: 'great', face: 'shy', answer: ['…응. 새 장은 빈칸이 많아서 좋아.', '천 년 동안 공책 한 장 채운 사람은 몇 없어.'] },
+        { say: '한 장에 몇 개 들어가?', tier: 'good', face: 'think', answer: '비밀. 대신 이것만. 생각보다 빨리 찼어.' },
+        { say: '그걸 아직도 해?', tier: 'meh', face: 'calm', answer: '…응. 그만두면 나중에 후회해. 그건 해 봐서 알아.' },
+      ],
+    },
+    {
+      id: 'cb-night-flower',
+      when: { mem: 'night-flower', time: 'night' },
+      use: 'night-flower',
+      open: '숲에서 밤에 피는 꽃 같이 봤잖아. …그날 공책에 별표 쳤어.',
+      replies: [
+        { say: '나도 기억해', tier: 'great', face: 'shy', answer: ['…다행이다. 그럼 둘이 기억하는 거네.', '혼자 기억하는 것보다 훨씬 오래가.'] },
+        { say: '십 년 뒤에도 보러 가자', tier: 'good', face: 'smile', answer: '응. 고작 십 년이야. 금방 와. 너한텐 아닐지도 모르지만.' },
+        { say: '모기 많았던 거?', tier: 'meh', face: 'calm', answer: '…그것도 기억났네. 그건 별표 안 쳤어.' },
+      ],
+    },
+    {
+      id: 'cb-jam',
+      when: { mem: 'jam-jar' },
+      use: 'jam-jar',
+      open: '네가 준 딸기잼, 다 먹었어. …같이 먹자더니 혼자 다 먹은 건 아니야. 반쯤.',
+      replies: [
+        { say: '또 가져다줄게', tier: 'great', face: 'smile', answer: ['…응. 빈 병은 씻어서 창가에 뒀어.', '햇빛 받으면 아직 붉게 빛나.'] },
+        { say: '반이나 혼자?', tier: 'good', face: 'laugh', answer: '…밤에 배고팠어. 엘프도 배는 고파.' },
+        { say: '아껴 먹지', tier: 'meh', face: 'calm', answer: '아끼면 같이 먹을 사람이 없어진다니까. 그래서 안 아꼈어.' },
+      ],
+    },
+    {
+      id: 'cb-bread-box',
+      when: { mem: 'bread-box' },
+      use: 'bread-box',
+      open: '수상한 빵 상자 말이야. 오늘 결과가 나왔어.',
+      replies: [
+        { say: '이빨 있었어?', tier: 'great', face: 'laugh', answer: ['…없었어. 반죽이 부풀어서 뚜껑을 민 거였어.', '그래도 안 넣었어. 머리. 네 덕분이야.'] },
+        { say: '빵은 무사해?', tier: 'good', face: 'smile', answer: '응. 상자 모양으로 부풀었어. 네모난 빵. 의외로 팔려.' },
+        { say: '별일 아니었네', tier: 'meh', face: 'calm', answer: '…응. 별일 아닌 게 제일 좋은 결과야.' },
+      ],
+    },
+    {
+      id: 'cb-grimoire',
+      when: { mem: 'grimoire' },
+      use: 'grimoire',
+      open: '마도서로 보수 준다던 거, 농담이었지? …농담이어도 기다리고 있어.',
+      replies: [
+        { say: '진짜 구해 올게', tier: 'great', face: 'wow', answer: ['…진짜? 쓰레쉬네 가게 맨 위 칸.', '커튼을 뽀송하게 하는 마법. 그게 제일 갖고 싶어.'] },
+        { say: '빵으로 대신하면?', tier: 'good', face: 'think', answer: '…내가 굽는 건데 내가 받아? 좀 이상하지만 괜찮아.' },
+        { say: '농담이었어', tier: 'meh', face: 'sorry', answer: '…알아. 그래도 백 년쯤은 기다려 볼게.' },
+      ],
+    },
+    {
+      id: 'cb-bitter',
+      when: { mem: 'bitter-no' },
+      use: 'bitter-no',
+      open: '쑥 대신 먹어 준다던 거. 오늘 하쿠가 또 덤으로 줬어. 한 봉지.',
+      replies: [
+        { say: '이리 줘, 내가 먹을게', tier: 'great', face: 'smile', answer: ['…고마워. 쑥떡으로 만들어서 줄게.', '나는 옆에서 딸기만 먹을게.'] },
+        { say: '하쿠한테 말해 봐', tier: 'good', face: 'think', answer: '…마음이 상할까 봐 못 해. 덤은 마음이니까.' },
+        { say: '이번엔 너가 먹어', tier: 'meh', face: 'sorry', answer: '…천 년 만에 도전해 볼까. 아니, 다음 천 년에.' },
+      ],
+    },
+    {
+      id: 'cb-know-trip',
+      when: { mem: 'know-trip' },
+      use: 'know-trip',
+      open: '사람을 알려는 여행 얘기 했었지. 요즘 너에 대해 알게 된 거 하나 말해 줄까?',
+      replies: [
+        { say: '응, 뭔데?', tier: 'great', face: 'shy', answer: ['…빵 고를 때 꼭 두 번 망설여.', '그리고 결국 처음 본 걸 골라. 그거 좋아.'] },
+        { say: '무서운데', tier: 'good', face: 'laugh', answer: '나쁜 건 아니야. 천 년 동안 좋은 것만 적는 연습을 했어.' },
+        { say: '나도 너 알아', tier: 'meh', face: 'calm', answer: '…그래? 늦잠 말고 뭐? 그거 말고는 없잖아.' },
       ],
     },
     {
@@ -295,8 +1102,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { mem: '@taste', noMem: 'taste-heard' },
       open: '{me}, 좋아하는 게 {taste}라며. 그걸로 빵 만들어 볼까 생각 중이야.',
       replies: [
-        { say: '기대할게', tier: 'great', remember: 'taste-heard', face: 'smile', answer: '…응. 실패해도 먹어 줘. 그게 조건이야.' },
+        { say: '기대할게', tier: 'great', remember: 'taste-heard', face: 'smile', answer: ['…응. 실패해도 먹어 줘.', '그게 조건이야.'] },
         { say: '빵이 될까?', tier: 'good', remember: 'taste-heard', face: 'think', answer: '뭐든 빵이 돼. 맛있을지는 모르지만.' },
+        { say: '빵 말고 그냥 줘', tier: 'meh', remember: 'taste-heard', face: 'calm', answer: '…빵집 사장한테 그건 어려운 부탁이야.' },
       ],
     },
     {
@@ -304,8 +1112,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { mem: '@outing', noMem: 'outing-talk' },
       open: '같이 다닌 날, 네가 걷는 속도에 맞추느라 좀 빨리 걸었어. 오랜만이었어.',
       replies: [
-        { say: '다음엔 내가 맞출게', tier: 'great', remember: 'outing-talk', face: 'shy', answer: '…그럼 엄청 느려질 거야. 괜찮아? 꽃 보다 멈추고, 상자 보다 멈추고.' },
+        { say: '다음엔 내가 맞출게', tier: 'great', remember: 'outing-talk', face: 'shy', answer: ['…그럼 엄청 느려질 거야. 괜찮아?', '꽃 보다 멈추고, 상자 보다 멈추고.'] },
         { say: '힘들었어?', tier: 'good', remember: 'outing-talk', answer: '조금. 그래도 재밌었어. 다음에도 가자.' },
+        { say: '빨리 걸은 거였어?', tier: 'meh', remember: 'outing-talk', face: 'calm', answer: '…응. 나한텐 그게 전력 질주야.' },
       ],
     },
     {
@@ -313,8 +1122,18 @@ export const FRIEREN_TALK: NpcTalkBook = {
       when: { mem: '@bday-soon', noMem: 'bday-plan' },
       open: '곧 네 생일이지? 케이크 구울게. 떠오르는 케이크는 위험하니까 평범한 걸로.',
       replies: [
-        { say: '떠도 좋아!', tier: 'great', remember: 'bday-plan', face: 'laugh', answer: '…그럼 끈 달아 둘게. 날아가면 곤란하니까.' },
+        { say: '떠도 좋아!', tier: 'great', remember: 'bday-plan', face: 'laugh', answer: ['…그럼 끈 달아 둘게.', '날아가면 곤란하니까. 촛불도 같이 날아가.'] },
         { say: '딸기 많이!', tier: 'good', remember: 'bday-plan', face: 'smile', answer: '알았어. 딸기 산더미. 그건 자신 있어.' },
+      ],
+    },
+    {
+      id: 'cb-date',
+      when: { mem: '@date', noMem: 'date-talk' },
+      open: '네 방 갔던 날. 솔직히 말하면, 거기서 좀 졸았어. 너무 편해서.',
+      replies: [
+        { say: '또 졸러 와', tier: 'great', remember: 'date-talk', face: 'shy', answer: ['…그래도 돼? 그럼 베개는 내가 가져갈게.', '편한 곳은 천 년 동안 몇 군데 없었어.'] },
+        { say: '알고 있었어', tier: 'good', remember: 'date-talk', face: 'laugh', answer: '…깨우지 그랬어. 아니, 안 깨워 줘서 고마워.' },
+        { say: '서운했어', tier: 'meh', remember: 'date-talk', face: 'sorry', answer: '…미안. 다음엔 알람 두 개. 네 방에서도.' },
       ],
     },
   ],
@@ -324,15 +1143,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '한 번 이야기를 나누면 프리렌이 시식용 빵을 하나 내밀어요.',
       need: { days: 1 },
       scene: [
-        '프리렌이 하품을 하며 오븐에서 빵 하나를 꺼낸다.',
+        '해가 꽤 높이 뜬 뒤에야 빵집 문 안쪽 커튼이 걷힌다.',
+        '카운터 너머, 프리렌이 부스스한 머리로 하품을 삼킨다.',
+        '"아, 손님이구나. 문은 힘멜이 열어 뒀지. 나는 방금 일어났어."',
+        '오븐 문이 열리자 버터와 살짝 탄 설탕 냄새가 확 번진다.',
+        '그녀가 장갑도 없이 동그란 빵 하나를 집어 접시에 올린다.',
         '"이거. 시식용. 처음 온 손님한테 주는 거야. 가끔."',
-        '"삼백 년 전 레시피야. 맛이 이상하면 레시피 탓이야. 내 탓 아니고."',
-        '그녀가 무심한 얼굴로 내 반응을 기다린다.',
+        '"삼백 년 전 레시피야. 맛이 이상하면 레시피 탓이고."',
+        '빵을 건네고 나서, 그녀가 카운터 밑에서 얇은 공책을 꺼낸다.',
+        '펜촉이 사각거린다. 오늘 날짜 옆에 작은 동그라미가 하나 생긴다.',
+        '"…아, 이거? 사람 손님이 처음 온 날은 적어 두기로 했어."',
+        '"옛날엔 안 적었거든. 그래서 나중에 좀 곤란했어."',
+        '그녀가 펜을 내려놓고, 무심한 얼굴로 내 입가를 본다.',
+        '"그래서. 맛은?"',
       ],
       replies: [
-        { say: '맛있어! 또 먹고 싶다', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: '…그래? 다행이다. 그럼 또 와. 늦게 열지만.' },
-        { say: '독특한 맛이야', tier: 'good', face: 'think', answer: '정직하네. 맞아, 독특해. 그게 이 레시피의 좋은 점이야.' },
-        { say: '좀 탔는데', tier: 'meh', face: 'calm', answer: '…알아. 그래도 맛은 괜찮지? 아마.' },
+        { say: '맛있어! 또 먹고 싶다', tier: 'great', remember: 'sweet-tooth', face: 'smile', answer: ['…그래? 다행이다.', '그럼 또 와. 늦게 열지만. 동그라미 하나 더 그릴 수 있게.'] },
+        { say: '독특한 맛이야', tier: 'good', face: 'think', answer: ['정직하네. 맞아, 독특해.', '그게 이 레시피의 좋은 점이야. 다음엔 더 독특한 걸로 줄게.'] },
+        { say: '좀 탔는데', tier: 'meh', face: 'calm', answer: ['…알아. 그래도 맛은 괜찮지? 아마.', '공책엔 탄 빵 손님이라고 적을게. 농담이야. 반쯤.'] },
       ],
     },
     {
@@ -340,16 +1168,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '밤(게임 시각 저녁 여덟 시부터 자정) 숲에 가 보세요. 프리렌이 꽃을 찾고 있대요.',
       need: { days: 3, points: 20, visit: { area: 'woods', from: 20, to: 24 } },
       scene: [
-        '어두운 숲, 프리렌이 쪼그려 앉아 땅을 보고 있다.',
-        '"쉿. 여기. 밤에만 피는 꽃이야. 이 숲엔 없을 줄 알았는데."',
-        '작은 꽃이 달빛을 받아 천천히 벌어진다.',
-        '"이 꽃 보려고 옛날에 몇 년을 걸었어. 여기선 걸어서 오 분이네."',
-        '"…같이 봐서 다행이야. 혼자 보면 금방 잊어버리거든."',
+        '달빛이 나뭇잎 사이로 얇게 떨어지는 밤의 숲.',
+        '풀벌레 소리 사이로, 누가 낮게 중얼거리는 소리가 들린다.',
+        '"…여기도 아니고. 저기도 아니고. 아, {me}. 왔구나."',
+        '프리렌이 등불도 없이 쪼그려 앉아, 손끝 빛으로 땅을 비춘다.',
+        '"쉿. 여기. 십 년에 한 번, 밤에만 피는 꽃이야."',
+        '작은 봉오리가 달빛을 받아 아주 천천히 꽃잎을 연다.',
+        '은빛 꽃가루가 그녀 손등 위로 소리 없이 내려앉는다.',
+        '"옛날엔 이 꽃 보려고 몇 년을 걸었어. 일행 넷이서."',
+        '"용사가 제일 신났었어. 꽃 하나에 그렇게 웃는 사람은 처음이었지."',
+        '"그땐 그냥 꽃이라고 생각했는데. 지금은 그 얼굴이 먼저 떠올라."',
+        '그녀가 무릎을 털고 일어나, 주머니에서 얇은 공책을 꺼낸다.',
+        '"여기선 걸어서 오 분이네. 그래도 적어 둘래. 너랑 본 날."',
+        '"…고작 십 년에 한 번인데. 다음엔 네가 먼저 기억해 줘."',
       ],
       replies: [
-        { say: '이제 안 잊겠다', tier: 'great', remember: 'night-flower', face: 'shy', answer: '…응. 너랑 본 거니까. 그건 오래 기억할게. 천 년쯤.' },
-        { say: '예쁘다', tier: 'good', remember: 'night-flower', face: 'smile', answer: '응. 쓸모는 없어. 그래서 좋아.' },
-        { say: '벌레 많다…', tier: 'meh', remember: 'night-flower', face: 'calm', answer: '…밤 숲이니까. 금방 갈게. 조금만 더.' },
+        { say: '이제 안 잊겠다', tier: 'great', remember: 'night-flower', face: 'shy', answer: ['…응. 너랑 본 거니까.', '그건 오래 기억할게. 천 년쯤.', '십 년 뒤에 내가 늦잠 자면, 네가 깨워서 데려와.'] },
+        { say: '예쁘다', tier: 'good', remember: 'night-flower', face: 'smile', answer: ['응. 쓸모는 없어. 그래서 좋아.', '쓸모없는 걸 같이 봐 주는 사람은 드물어.'] },
+        { say: '벌레 많다…', tier: 'meh', remember: 'night-flower', face: 'calm', answer: ['…밤 숲이니까. 금방 갈게. 조금만 더.', '그 용사도 꼭 그 말을 했어. 그러고는 제일 오래 있었지.'] },
       ],
     },
     {
@@ -357,16 +1193,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '프리렌이 딸기잼 이야기를 했어요. 딸기잼을 가지고 빵집에 가 보세요.',
       need: { days: 6, points: 40, bring: { item: 'jam', take: true } },
       scene: [
-        '딸기잼 병을 내밀자 프리렌의 눈이 조금 커진다.',
+        '오후의 빵집. 식어 가는 오븐이 딱, 딱 작은 소리를 낸다.',
+        '딸기잼 병을 카운터에 올려놓자 프리렌의 손이 멈춘다.',
         '"…이거, 내가 제일 좋아하는 거. 어떻게 알았어?"',
-        '그녀가 병을 햇빛에 비춰 본다. 붉은빛이 카운터에 번진다.',
-        '"옛날에 여행할 때, 잼 한 병이면 일주일을 버텼어. 아껴 먹으면서."',
-        '"이건 아껴 먹지 말아야겠다. 너랑 같이 먹을래."',
+        '그녀가 병을 창으로 들어 올린다. 붉은빛이 밀가루 위로 번진다.',
+        '"옛날 여행 땐 잼 한 병으로 일주일을 버텼어. 아껴 먹으면서."',
+        '"전사는 몰래 손가락으로 찍어 먹고, 스님은 술에 탔지."',
+        '그녀가 벽에 걸린 손글씨 달력을 손가락으로 짚는다.',
+        '봄 딸기 타르트, 여름 수박 빙수, 가을 호박파이, 겨울 꿀 우유.',
+        '"빵집의 계절이야. 가게 열고 처음으로 사계절을 다 세어 봤어."',
+        '"예전엔 계절이 그냥 지나갔거든. 세기 전에 벌써 다음 해였어."',
+        '그녀가 잼 뚜껑을 비튼다. 퐁, 하고 달콤한 냄새가 터진다.',
+        '"이건 아껴 먹지 말아야겠다. 아끼다 보면 같이 먹을 사람이 없어."',
+        '갓 구운 빵 두 조각이 접시 위에 나란히 놓인다.',
       ],
       replies: [
-        { say: '빵에 듬뿍 발라 먹자', tier: 'great', remember: 'jam-jar', face: 'laugh', answer: '…듬뿍. 좋은 단어야. 오늘은 사장이 허락할게.' },
-        { say: '아껴 먹어도 돼', tier: 'good', remember: 'jam-jar', face: 'smile', answer: '아니야. 맛있는 건 같이 먹을 때 먹어야 해. 그것도 배운 거야.' },
-        { say: '그냥 남아서 줬어', tier: 'meh', remember: 'jam-jar', face: 'think', answer: '…그래도 고마워. 남는 걸 나한테 준 거잖아.' },
+        { say: '빵에 듬뿍 발라 먹자', tier: 'great', remember: 'jam-jar', face: 'laugh', answer: ['…듬뿍. 좋은 단어야.', '오늘은 사장이 허락할게.', '달력에 적어 둘게. 잼을 듬뿍 바른 날. 계절은 상관없이.'] },
+        { say: '아껴 먹어도 돼', tier: 'good', remember: 'jam-jar', face: 'smile', answer: ['아니야. 맛있는 건 같이 먹을 때 먹어야 해.', '그것도 늦게 배운 거야.'] },
+        { say: '그냥 남아서 줬어', tier: 'meh', remember: 'jam-jar', face: 'think', answer: ['…그래도 고마워. 남는 걸 나한테 준 거잖아.', '남는 게 생기면 떠오르는 사람이 있다는 거니까.'] },
       ],
     },
     {
@@ -374,16 +1218,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '프리렌과 이상한 레시피를 같이 모으기로 하면 다음 이야기가 열려요.',
       need: { days: 9, points: 60, mem: 'odd-recipe' },
       scene: [
-        '가게 문을 닫은 뒤, 프리렌이 낡은 공책을 펼친다.',
-        '"모아 둔 레시피들이야. 대부분 쓸모없어. 빵이 뜨거나, 노래하거나."',
-        '"근데 이 페이지는 비어 있어. 마지막에 넣을 걸 아직 못 정했거든."',
-        '그녀가 손끝을 튕기자 공책 위에 작은 꽃 한 송이가 피어난다.',
-        '"…이게 제일 쓸모없는 마법. 너한테 처음 보여 주는 거야."',
+        '가게 문을 닫은 저녁. 창밖 시장 거리에 등불이 하나씩 켜진다.',
+        '프리렌이 카운터에 낡은 가죽 공책을 펼친다. 모서리가 다 닳았다.',
+        '"모아 둔 레시피들이야. 대부분 쓸모없어. 빵이 뜨거나 노래하거나."',
+        '"이건 포도를 시게 만드는 마법을 쓴 잼. 아무도 안 사."',
+        '책장을 넘기던 손이, 텅 빈 마지막 장에서 멈춘다.',
+        '"이 장은 비워 뒀어. 마지막에 넣을 걸 아직 못 정했거든."',
+        '"옛날에, 쓸모없는 마법을 제일 좋아해 준 사람이 있었어. 용사."',
+        '"꽃 한 송이 피우면 무슨 대단한 일처럼 손뼉을 쳤어."',
+        '"그 사람이 떠나고 한참 뒤에야 알았어. 그 손뼉이 좋았다는 거."',
+        '그녀가 손끝을 가볍게 튕긴다. 공책 위에 작은 꽃이 하나 핀다.',
+        '꽃잎에서 희미한 흙냄새와 봄 냄새가 동시에 올라온다.',
+        '"…제일 쓸모없는 마법. 이 마을에선 너한테 처음 보여 줘."',
+        '"이번엔 늦기 전에 말해 둘래. 봐 줘서 고마워."',
       ],
       replies: [
-        { say: '제일 좋은 마법이네', tier: 'great', remember: 'useless-magic', face: 'shy', answer: '…그렇게 말해 줄 줄 알았어. 그래서 보여 준 거야.' },
-        { say: '나도 배울 수 있어?', tier: 'good', remember: 'useless-magic', face: 'smile', answer: '음… 백 년쯤 걸릴 거야. 그래도 하고 싶으면 알려 줄게.' },
-        { say: '빵이랑 무슨 상관이야?', tier: 'meh', remember: 'useless-magic', face: 'think', answer: '상관없어. 그냥 보여 주고 싶었어.' },
+        { say: '제일 좋은 마법이네', tier: 'great', remember: 'useless-magic', face: 'shy', answer: ['…그렇게 말해 줄 줄 알았어. 그래서 보여 준 거야.', '마지막 장, 이 꽃으로 할까. 아직 정하진 않을래.', '정하는 것도 천천히. 너랑.'] },
+        { say: '나도 배울 수 있어?', tier: 'good', remember: 'useless-magic', face: 'smile', answer: ['음… 백 년쯤 걸릴 거야.', '그래도 하고 싶으면 알려 줄게. 첫 장부터. 손 이리 줘.'] },
+        { say: '빵이랑 무슨 상관이야?', tier: 'meh', remember: 'useless-magic', face: 'think', answer: ['상관없어. 그냥 보여 주고 싶었어.', '쓸모없는 일을 같이 하는 게, 나한텐 꽤 큰일이야.'] },
       ],
     },
     {
@@ -391,16 +1243,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '프리렌과 아주 가까워지면 그녀가 시간 이야기를 꺼내요. 그 뒤엔 꽃다발도 받아 줄지 몰라요.',
       need: { days: 13, points: 96 },
       scene: [
-        '저녁, 가게 앞 벤치. 프리렌이 해 지는 쪽을 본다.',
-        '"예전엔 사람이랑 지낸 시간을 금방 잊었어. 십 년이 잠깐이라서."',
-        '"그래서 후회한 적이 있어. 더 알아 둘걸, 하고."',
-        '"…이번엔 그러기 싫어. 너에 대해선."',
-        '그녀가 고개를 돌려 나를 본다. 무심한 얼굴인데, 조금 다르다.',
+        '해 질 녘, 빵집 앞 벤치. 시장 거리 좌판들이 하나둘 천을 덮는다.',
+        '프리렌이 식은 빵 하나를 반으로 갈라 내게 큰 쪽을 내민다.',
+        '광장 쪽에서 힘멜이 청원 서명판을 들고 뛰어가는 게 보인다.',
+        '"또 동상 청원이네. 누구 동상인지는 끝까지 안 알려 줘."',
+        '"…옛날 그 용사도 가는 마을마다 동상을 세웠어. 앞머리까지."',
+        '"왜 그러냐고 물었더니, 내가 먼 훗날 혼자가 안 되게 하려고래."',
+        '"그땐 웃었는데. 백 년쯤 지나 그 동상 앞을 지날 때 알았어."',
+        '그녀가 주머니에서 그 얇은 공책을 꺼내 펼친다. 동그라미가 빼곡하다.',
+        '"이거, 너랑 이야기한 날들. 세어 봤어. 생각보다 많고, 적더라."',
+        '"예전엔 사람이랑 지낸 날을 세 본 적이 없어. 십 년이 잠깐이라서."',
+        '"…이번엔 그러기 싫어. 너에 대해선 하나도 안 흘리고 싶어."',
+        '그녀가 고개를 돌려 나를 본다. 무심한 얼굴인데, 귀 끝이 조금 붉다.',
+        '"그런데 이런 날엔 사람들이 보통 뭘 주고받더라. 꽃이었나."',
       ],
       replies: [
-        { say: '천천히 알아 가자', tier: 'great', face: 'shy', answer: '…응. 꽃밭 마법은 꽃다발 받으면 보여 줄게. 그게 순서인 것 같아.' },
-        { say: '다 알려 줄게', tier: 'good', face: 'smile', answer: '다는 말고. 조금씩. 그래야 오래 알 수 있잖아.' },
-        { say: '잊어도 괜찮아', tier: 'meh', face: 'think', answer: '…싫어. 이번엔.' },
+        { say: '천천히 알아 가자', tier: 'great', face: 'shy', answer: ['…응. 천천히. 근데 너무 천천히는 말고.', '꽃밭 마법은 꽃다발 받으면 보여 줄게.', '그게 순서인 것 같아. 사람들 순서.'] },
+        { say: '다 알려 줄게', tier: 'good', face: 'smile', answer: ['다는 말고. 조금씩.', '그래야 오래 알 수 있잖아. 동그라미도 오래 그리고.'] },
+        { say: '잊어도 괜찮아', tier: 'meh', face: 'think', answer: ['…싫어. 이번엔.', '잊어도 괜찮다는 말, 옛날에 들었어. 그래서 더 싫어.'] },
       ],
     },
     {
@@ -408,15 +1268,24 @@ export const FRIEREN_TALK: NpcTalkBook = {
       hint: '프리렌과 연인이 되면 마지막 이야기가 열려요.',
       need: { days: 16, love: 'dating' },
       scene: [
-        '넓은 들판. 프리렌이 손을 들자 발밑부터 꽃이 번져 나간다.',
+        '이슬이 채 마르지 않은 이른 아침, 뒷산 아래 넓은 들판.',
+        '프리렌이 하품을 하며 따라온다. "이른 아침은 싫은데. 오늘만."',
+        '그녀가 두 손을 땅에 대자, 발밑부터 꽃이 물결처럼 번져 나간다.',
+        '흰 꽃, 노란 꽃, 처음 보는 푸른 꽃. 바람에 꽃 냄새가 쏟아진다.',
         '"약속한 꽃밭. 쓸모없는 마법 중에 제일 큰 거야."',
-        '"사람의 백 년은 나한텐 짧아. 그래도 그 백 년, 전부 기억할 거야."',
-        '"하루도 안 빼고. 그게 이번의 내 다짐이야."',
+        '"옛날에 반지를 하나 받은 적 있어. 그 용사한테서."',
+        '"꽃이 새겨져 있었는데, 그 꽃말을 나는 한참 뒤에야 알았어."',
+        '"그 사람은 무릎까지 꿇고 끼워 줬는데, 나는 예쁘다고만 했지."',
+        '그녀가 손바닥을 편다. 반지 모양으로 구운 작은 빵이 놓여 있다.',
+        '"…이건 연습용. 빵 반지. 진짜는 아직 안 골랐어."',
+        '"이번엔 뜻을 알고 받고 싶어. 고르는 마음도, 끼워 주는 손도."',
+        '"사람의 백 년은 나한텐 짧아. 그러니까 하루도 안 빼고 셀 거야."',
+        '"반지는… 네가 골라 와. 그날은 늦잠 안 잘게. 진짜로."',
       ],
       replies: [
-        { say: '하루하루 같이 보내자', tier: 'great', face: 'shy', answer: '…응. 늦잠은 자도 돼? 그것만 허락해 줘.' },
-        { say: '꽃밭이 끝이 없네', tier: 'good', face: 'smile', answer: '응. 백 년치야. 다 걸으려면 오래 걸릴 거야. 같이 걸어.' },
-        { say: '백 년은 너무 길어', tier: 'meh', face: 'think', answer: '…나한텐 짧아. 그러니까 하루도 아깝지 않게.' },
+        { say: '하루하루 같이 보내자', tier: 'great', face: 'shy', answer: ['…응. 공책은 새로 한 권 샀어. 두꺼운 걸로.', '늦잠은 자도 돼? 그것만 허락해 줘.', '반지 받는 날만은 일찍 일어날게.'] },
+        { say: '꽃밭이 끝이 없네', tier: 'good', face: 'smile', answer: ['응. 백 년치야.', '다 걸으려면 오래 걸릴 거야. 같이 걸어. 반지 고르러 가는 길도.'] },
+        { say: '백 년은 너무 길어', tier: 'meh', face: 'think', answer: ['…나한텐 짧아.', '그러니까 하루도 아깝지 않게. 빵 반지는 일단 먹어. 진짜는 나중에.'] },
       ],
     },
   ],
@@ -425,5 +1294,9 @@ export const FRIEREN_TALK: NpcTalkBook = {
     '…또 왔네. 빵 하나 가져가. 그냥.',
     '할 말 다 했어. 내일 또 와. 늦게 열지만.',
     '응. 잘 가. 다음엔 더 안 탄 빵 구워 둘게. 아마.',
+    '공책에 오늘 동그라미는 벌써 그렸어. 두 번은 안 그려. …그려도 되나.',
+    '또 얼굴 보네. 좋아. 이번엔 할 말은 없고, 빵만 있어.',
+    '…상자 근처엔 가지 마. 나 말고 너도.',
+    '오늘은 여기까지. 남은 하루는 천천히 써.',
   ],
 };
