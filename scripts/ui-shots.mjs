@@ -434,13 +434,26 @@ async function runView(browser, base, view, report) {
   const openFishing = async () => {
     await closeAll();
     if (await js(() => !!document.querySelector('[data-testid=fishing]'))) return;
-    // The place list opens from the one map (HUD 다이어트: the map starts folded).
-    if (!(await page.locator('.hv-directory').count())) {
-      if (!(await page.locator('#hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
-      await H.clickSel('[data-testid=minimap-places]');
+    // On a slow software GPU (1–2 fps) a click can land while a lazily loaded
+    // window or the directory is still settling and do nothing: retry until
+    // the walk has actually started. The place list opens from the one map
+    // (HUD 다이어트: the map starts folded).
+    let started = false;
+    for (let i = 0; i < 4 && !started; i++) {
+      await closeAll();
+      if (!(await page.locator('.hv-directory').count())) {
+        if (!(await page.locator('#hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
+        await H.clickSel('[data-testid=minimap-places]');
+        await until(() => !!document.querySelector('.hv-directory [data-district="fish-river"]'), 15000);
+      }
+      await sleep(500);
+      await H.clickSel('.hv-directory [data-district="fish-river"]');
+      started = (await until(() => {
+        const d = document.querySelector('[data-testid=village-3d]')?.dataset;
+        return d?.walking === 'true' || d?.fishSpot === 'river';
+      }, 20000)) !== -1;
     }
-    await sleep(500);
-    await H.clickSel('.hv-directory [data-district="fish-river"]');
+    assert.ok(started, '강 낚시터로 출발하지 못했습니다(장소 목록 클릭이 먹지 않음).');
     await focusScene();
     await page.keyboard.down('Shift');
     try {
