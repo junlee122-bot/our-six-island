@@ -26,6 +26,7 @@ import { ITEM_BY_ID } from '../app/lounge-items.ts';
 import { CROPS, emptyLife, ensureLifeMember, lifeAction, lifeView, readLife } from '../app/lounge-life.ts';
 import { newLoungeLedger, registerWallet, kstDay } from '../app/lounge-economy.ts';
 import { readNpcRelations } from '../app/lounge-romance.ts';
+import { NPC_LOVE_MARRIED } from '../app/lounge-npc-love.ts';
 import { npcTalkChoices } from '../app/lounge-npc-speech.ts';
 import { gameTimeOnDay } from '../app/lounge-calendar.ts';
 
@@ -112,7 +113,9 @@ export function checkBook(npc, book) {
   assert.ok(book.chapters.some((c) => c.need.bring), `${npc}: one chapter asks for an item`);
   // The 꽃다발 fits the flow: a chapter at 8 hearts, and the last one after dating.
   assert.ok(book.chapters.some((c) => c.need.points === NPC_DATING_POINTS), `${npc}: a chapter at the 꽃다발 hearts`);
-  assert.ok(book.chapters.at(-1).need.love, `${npc}: the last chapter follows the 꽃다발`);
+  // The married realty couple (NPC_LOVE_MARRIED) never date me: their last chapter is a friend's.
+  if (NPC_LOVE_MARRIED[npc]) assert.ok(!book.chapters.some((c) => c.need.love), `${npc}: a married resident's chapters open as friends`);
+  else assert.ok(book.chapters.at(-1).need.love, `${npc}: the last chapter follows the 꽃다발`);
   // Every memory a line needs can be earned, and has words for the notebook.
   for (const t of all) for (const m of [...list(t.when?.mem), ...list(t.use)]) if (!m.startsWith('@')) assert.ok(remembered.has(m), `${npc} ${t.id}: memory ${m} is never kept`);
   for (const c of book.chapters)
