@@ -20,6 +20,7 @@ import { FarmSet } from './lounge-farm-scene';
 import type { FarmSceneState } from './lounge-farm-view';
 import { OffshoreSet } from './lounge-offshore-scene';
 import type { DistrictSet } from './lounge-district-kit';
+import type { Season, Weather } from './lounge-calendar';
 
 let loader: GLTFLoader | null = null;
 const cache = new Map<string, Promise<THREE.Group>>();
@@ -91,6 +92,9 @@ export type RegionUpdate = {
   /** 우리 농장: every friend's field and house tier (lounge-farm-view.ts), and me. */
   farm?: FarmSceneState;
   me?: number;
+  /** Districts: today's season and weather (grass, paving and leaves follow them). */
+  season?: Season;
+  weather?: Weather;
 };
 
 export class RegionSet {
@@ -508,7 +512,14 @@ export class RegionSet {
 
   update(u: RegionUpdate) {
     this.state = u;
-    this.district?.update({ marketDay: !!u.marketDay, night: !!u.night, boatOut: !!u.boatOut, captain: !!u.captain, ...(u.farm ? { farm: u.farm, me: u.me } : {}) });
+    this.district?.update({
+      marketDay: !!u.marketDay,
+      night: !!u.night,
+      boatOut: !!u.boatOut,
+      captain: !!u.captain,
+      ...(u.season && u.weather ? { season: u.season, weather: u.weather } : {}),
+      ...(u.farm ? { farm: u.farm, me: u.me } : {}),
+    });
     const up = new Set(u.nodes.filter((n) => !n.taken).map((n) => n.id));
     for (const n of u.nodes) this.nodeObject(n);
     for (const [id, e] of this.nodes) {

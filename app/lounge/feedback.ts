@@ -43,6 +43,15 @@ export function playCue(cue: Cue) {
   } catch {}
 }
 
+/** A UI click (tab turned): a recorded tap, the synthesized blip as fallback. Never throws. */
+export function uiClick() {
+  const settings = getSettings();
+  if (!settings.sound || settings.volume <= 0) return;
+  try {
+    loungeAudio.click();
+  } catch {}
+}
+
 /** Kept for callers; the shared engine closes itself when the app unmounts. */
 export function closeAudio() {}
 

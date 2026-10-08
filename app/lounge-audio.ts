@@ -736,8 +736,11 @@ class LoungeAudio {
       o.stop(now + decay + 0.02);
     }
   }
-  /** A soft UI click. */
+  /** A UI click (the recorded tap; the soft synthesized blip until it loads). */
   click() {
+    this.sample('click', () => this.clickTone(), 1, 'ui');
+  }
+  private clickTone() {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const t = ctx.currentTime,
@@ -751,6 +754,10 @@ class LoungeAudio {
     o.connect(g).connect(this.ui!);
     o.start(t);
     o.stop(t + 0.06);
+  }
+  /** A door opening (going into a house, a shop or back out); a low wooden knock until the file loads. */
+  door() {
+    this.sample('door', () => this.cue([196, 147], 0.07, 'triangle', 0.05));
   }
   /**
    * A short cue on the shared engine: world sounds on the sfx bus, UI cues
@@ -904,20 +911,22 @@ class LoungeAudio {
   /**
    * Plays a recorded effect on the sfx channel. Until it has loaded (the first
    * call starts the download), or when no file decodes (e.g. no Vorbis and no
-   * AAC), `fallback` plays the synthesized cue instead.
+   * AAC), `fallback` plays the synthesized cue instead. UI sounds go on the
+   * UI channel (`bus: 'ui'`), so both volume sliders apply as before.
    */
-  sample(id: SfxId, fallback?: () => void, level = 1) {
+  sample(id: SfxId, fallback?: () => void, level = 1, bus: 'sfx' | 'ui' = 'sfx') {
     if (!getSettings().sound) return;
     this.ensure();
     const ctx = this.ctx;
-    if (!ctx || !this.sfx || ctx.state !== 'running') return;
+    const out = bus === 'ui' ? this.ui : this.sfx;
+    if (!ctx || !out || ctx.state !== 'running') return;
     const state = this.samples.get(id);
     if (state instanceof AudioBuffer) {
       const source = ctx.createBufferSource(),
         g = ctx.createGain();
       source.buffer = state;
       g.gain.value = SFX_FILES[id].gain * level;
-      source.connect(g).connect(this.sfx);
+      source.connect(g).connect(out);
       source.start();
       return;
     }
@@ -941,8 +950,22 @@ class LoungeAudio {
       this.samples.set(id, 'missing');
     })();
   }
-  /** Little rewards: plant, water, harvest, coin. */
+  /**
+   * Little rewards: plant, water, harvest, coin. Water, harvest and coin are
+   * recorded (life-sources.json); the music box plays until they load.
+   */
   chime(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail' | 'dayEnd') {
+    const ctx = this.ctx;
+    if (!ctx || ctx.state !== 'running') return;
+    if (kind === 'water' || kind === 'harvest' || kind === 'coin') {
+      this.sample(kind, () => this.chimeNotes(kind));
+      // A harvest still ends on its little music-box rise, under the pluck.
+      if (kind === 'harvest' && this.samples.get('harvest') instanceof AudioBuffer) this.chimeNotes(kind, 0.035, 0.09);
+      return;
+    }
+    this.chimeNotes(kind);
+  }
+  private chimeNotes(kind: 'plant' | 'water' | 'harvest' | 'coin' | 'mail' | 'dayEnd', peak = 0.06, delay = 0) {
     const ctx = this.ctx;
     if (!ctx || ctx.state !== 'running') return;
     const sets = {
@@ -956,7 +979,7 @@ class LoungeAudio {
     } as const;
     const step = kind === 'dayEnd' ? 0.22 : 0.08;
     sets[kind].forEach((f, i) =>
-      this.musicBoxTo(this.sfx!, ctx.currentTime + i * step, f, 0.06, kind === 'dayEnd' ? 1.1 : 0.6),
+      this.musicBoxTo(this.sfx!, ctx.currentTime + delay + i * step, f, peak, kind === 'dayEnd' ? 1.1 : 0.6),
     );
   }
   private musicBoxTo(

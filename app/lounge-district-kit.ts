@@ -10,12 +10,17 @@
 //   trees    kArchive broadleaf / pine models, a ring just outside the map
 //   signs    hand-lettered canvas boards on posts, tipped toward the camera
 //   night    lantern glows brighten and a few warm point lights come on
+//   season   grass, far ground, paving and tree leaves follow the calendar
+//            (lounge-season-world.ts, shared with the hub); the floor has
+//            soft colour patches and a grass / gravel pattern (I2-world)
 //
 // The camera, figures, walking and light rig are lounge-village-camera.ts /
 // lounge-village-view.ts (used by lounge-area-3d.tsx and the hub alike).
 import * as THREE from 'three';
 import { districtModel } from './lounge-district-models';
 import type { DistrictId } from './lounge-districts';
+import type { Season, Weather } from './lounge-calendar';
+import { PATTERN_SPAN, SeasonPalette, groundPattern, mottledPlane, type GroundPattern, type PaletteRole } from './lounge-season-world';
 
 /** Height between stacked paving strips (well above the depth buffer's step at the area cameras' range). */
 const PAVE_STEP = 0.002;
@@ -68,11 +73,22 @@ export function signTexture(text: string, sub: string, colors: SignColors) {
   return t;
 }
 
-/** Paving tones (canvas colours for flat strips; tokens are CSS-only). */
-export const PAVING = { road: '#b8a07c', plaza: '#d2bf98', stone: '#a59a88', quay: '#c8b894', wood: '#9c7550', lane: '#c9b58f' } as const;
+/**
+ * Paving tones (canvas colours for flat strips; tokens are CSS-only). Roads
+ * and lanes are a step darker than the yards and plazas they cross, so the
+ * way through reads at a glance (I2-world D3).
+ */
+export const PAVING = { road: '#9f8664', plaza: '#d2bf98', stone: '#a59a88', quay: '#c8b894', wood: '#9c7550', lane: '#ae9773' } as const;
+/** Gravel pattern on the strips that are walked along (roads, lanes, stone, quays). */
+const GRAVEL = new Set<string>([PAVING.road, PAVING.lane, PAVING.stone, PAVING.quay]);
+/** The kArchive models that are trees (their leaves follow the season). */
+const TREE_MODELS = new Set(['broadleafTree', 'smallPine']);
 export type DistrictUpdate = {
   marketDay: boolean;
   night: boolean;
+  /** The calendar (grass, paving and leaves re-tint; unset: as built). */
+  season?: Season;
+  weather?: Weather;
   /** 항구: 샹크스's boat is out at sea; he stands at the pier in sailing hours. */
   boatOut?: boolean;
   captain?: boolean;
@@ -85,6 +101,8 @@ export class DistrictSet {
   protected lights: THREE.PointLight[] = [];
   protected state: DistrictUpdate = { marketDay: false, night: false };
   protected water: THREE.Texture[] = [];
+  /** Seasonal colours of this set's grass, paving and trees. */
+  protected palette = new SeasonPalette();
   onChange: () => void = () => {};
 
   constructor(
@@ -108,10 +126,31 @@ export class DistrictSet {
   protected box(w: number, h: number, d: number, color: string, extra: THREE.MeshStandardMaterialParameters = {}) {
     return new THREE.Mesh(this.own(new THREE.BoxGeometry(w, h, d)), this.own(districtMat(color, extra)));
   }
+  /**
+   * A flat floor lying at height `y`: soft colour patches in its vertex
+   * colours and a tiling pattern (UVs in world units, so one shared texture
+   * serves every size), its colour following the season as `role`.
+   */
+  protected floor(p: { x: number; z: number; w: number; d: number }, color: string, y: number, role: PaletteRole, pattern: GroundPattern | null) {
+    const geo = this.own(mottledPlane(p.w, p.d, p, role === 'grassFar' ? 6 : 2.5, role === 'paving' ? 5 : 1));
+    const map = pattern ? groundPattern(pattern) : null;
+    if (map) {
+      const uv = geo.getAttribute('uv') as THREE.BufferAttribute,
+        span = PATTERN_SPAN[pattern!];
+      for (let i = 0; i < uv.count; i++) uv.setXY(i, (uv.getX(i) * p.w + p.x) / span, (uv.getY(i) * p.d - p.z) / span);
+    }
+    const mat = this.own(districtMat(color, { vertexColors: true, ...(map ? { map } : {}) }));
+    this.palette.add(mat, role);
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(p.x, y, p.z);
+    m.receiveShadow = true;
+    return m;
+  }
   /** Grass on a far ground (the market's). */
   protected ground(w: number, d: number, look: { ground: string; groundFar: string }) {
-    this.root.add(this.plane(w + 70, d + 70, look.groundFar, -0.02));
-    this.root.add(this.plane(w, d, look.ground, 0));
+    this.root.add(this.floor({ x: 0, z: 0, w: w + 70, d: d + 70 }, look.groundFar, -0.02, 'grassFar', 'grass'));
+    this.root.add(this.floor({ x: 0, z: 0, w, d }, look.ground, 0, 'grass', 'grass'));
   }
   /**
    * Paving strips laid so far: each later strip sits a hair higher, so where
@@ -121,8 +160,7 @@ export class DistrictSet {
   /** A flat paving strip (later strips draw on top of earlier ones). */
   protected pave(p: { x: number; z: number; w: number; d: number }, color: string, y = 0.012) {
     const at = y + Math.min(this.paved++, 40) * PAVE_STEP;
-    const m = this.plane(p.w, p.d, color, at);
-    m.position.set(p.x, at, p.z);
+    const m = this.floor(p, color, at, 'paving', GRAVEL.has(color) ? 'gravel' : null);
     this.root.add(m);
     return m;
   }
@@ -180,6 +218,7 @@ export class DistrictSet {
         o.position.x -= c.x;
         o.position.z -= c.z;
         o.position.y -= b2.min.y - 0.02;
+        if (TREE_MODELS.has(model)) this.palette.foliageOf(o, (m) => this.own(m));
         holder.add(shadowed(o));
         this.onChange();
       },
@@ -254,6 +293,7 @@ export class DistrictSet {
 
   update(u: DistrictUpdate) {
     this.state = u;
+    if (u.season && u.weather) this.palette.apply(u.season, u.weather);
     for (const g of this.glows) (g.mesh.material as THREE.MeshBasicMaterial).color.copy(g.base).multiplyScalar(u.night ? 1 : 0.6);
     for (const l of this.lights) l.intensity = u.night ? 1.3 : 0;
   }

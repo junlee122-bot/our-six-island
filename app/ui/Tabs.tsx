@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useId, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Glyph, type GlyphName } from './Glyph';
+import { uiClick } from '../lounge/feedback';
 
 export type TabItem<T extends string> = { id: T; label: ReactNode; glyph?: GlyphName; badge?: ReactNode };
 
@@ -70,7 +71,10 @@ export function Tabs<T extends string>({
           aria-selected={t.id === value}
           tabIndex={t.id === value ? 0 : -1}
           className="ui-tab"
-          onClick={() => onChange(t.id)}
+          onClick={() => {
+            if (t.id !== value) uiClick();
+            onChange(t.id);
+          }}
           onKeyDown={(e) => {
             const dir = ({ ArrowRight: 1, ArrowLeft: -1, Home: 'home', End: 'end' } as const)[e.key as 'Home'];
             if (dir === undefined) return;
