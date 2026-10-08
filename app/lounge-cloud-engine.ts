@@ -51,6 +51,8 @@ import { DISH_BY_ID } from './lounge-items.ts';
 import { weekdayOf } from './lounge-calendar.ts';
 import { kstDay } from './lounge-economy.ts';
 import { SHOP_INTERIORS, isShopArea, townActionShop } from './lounge-shop-interiors.ts';
+import { isLighthouseArea } from './lounge-lighthouse.ts';
+import { nearBalcony } from './lounge-lighthouse-layout.ts';
 import { recordDistrictVisit } from './lounge-town.ts';
 import type { LoginGift } from './lounge-login-gifts.ts';
 import { readTableStats, recordTableStats, tableStatsView, type TableStats } from './lounge-table-stats.ts';
@@ -626,6 +628,12 @@ export function cloudTransition(
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
             if (!lease || !player || player.area !== 'home' || (player.home ?? member.actor) !== member.actor) throw new CloudError(MYDAY_REJECT.bed, 409);
           }
+          if (command.action.kind === 'seaView') {
+            // 바다 바라보기: at the balcony rail of 범마을 등대's lamp room (lounge-lighthouse-layout.ts).
+            const player = entry?.snapshot.players.find((p) => p.id === member.id);
+            if (!lease || !player || player.area !== 'lighthouseTop' || !nearBalcony(player, player.area))
+              throw new CloudError('등대 꼭대기 난간에서 바다를 바라볼 수 있어요.', 409);
+          }
           if (command.action.kind === 'npcRequest') {
             // 의뢰 게시판 stands in 시장 거리 (lounge-market-layout.ts MARKET_BOARD).
             const player = entry?.snapshot.players.find((p) => p.id === member.id);
@@ -727,7 +735,9 @@ export function cloudTransition(
                 ? action.area
                 : isShopArea(action.area) && SHOP_INTERIORS[action.area].district !== 'market'
                   ? SHOP_INTERIORS[action.area].district
-                  : null;
+                  : isLighthouseArea(action.area)
+                    ? 'harbor'
+                    : null;
           if (gated) {
             const flags = readLife(g.life).flags ?? [];
             if (!districtOpen(gated, { flags, pass: hasExplorerPass(member.actor, now) })) throw new CloudError(DISTRICTS[gated].hint, 403);

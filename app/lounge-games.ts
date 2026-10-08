@@ -3,6 +3,7 @@
 // chunk does not pull in chess.js and every rules engine.
 import type { LoungeView } from './lounge-room.ts';
 import { SHOP_AREAS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
+import { LIGHTHOUSE_AREAS, isLighthouseArea, type LighthouseArea } from './lounge-lighthouse.ts';
 /** Must equal CHESS_MOVE_MS in lounge-chess.ts (checked by a test). */
 const CHESS_MOVE_LIMIT_MS = 120_000;
 export type GameKind =
@@ -177,8 +178,10 @@ export const LOOK_THROTTLE_MS = 300;
 // (lounge-farm-layout.ts), open to everyone.
 // 'offshore': 샹크스's boat out at sea (먼바다, lounge-voyage.ts); the cloud
 // engine lets you onto its deck only while your voyage is on.
-export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore' | 'farm' | ShopArea;
-export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore', 'farm', ...SHOP_AREAS];
+// 'lighthouse' | 'lighthouseTop': 범마을 등대's two floors, entered from the
+// harbor (lounge-lighthouse.ts); the cloud engine lets you in once the harbor is open.
+export type Area = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | 'wardrobe' | 'home' | 'hill' | 'woods' | 'mine' | 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'offshore' | 'farm' | ShopArea | LighthouseArea;
+export const AREAS: Area[] = ['village', 'lounge', 'casino', 'tavern', 'bank', 'salon', 'wardrobe', 'home', 'hill', 'woods', 'mine', 'market', 'harbor', 'hillside', 'ranch', 'foothill', 'offshore', 'farm', ...SHOP_AREAS, ...LIGHTHOUSE_AREAS];
 /** Where a member stands when they enter an area without coordinates. */
 export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   village: { x: 50, y: 60 },
@@ -198,6 +201,9 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
   smithy: { x: 27, y: 82 },
   clinic: { x: 27, y: 82 },
   broker: { x: 27, y: 82 },
+  // 범마을 등대: a step in from the door (1층), beside the stair's foot (등명실).
+  lighthouse: { x: 27, y: 82 },
+  lighthouseTop: { x: 63.9, y: 61.9 },
   // Front left by the door, clear of the 허풍 카드 table (middle).
   tavern: { x: 26, y: 84 },
   wardrobe: { x: 50, y: 79 },
@@ -225,7 +231,7 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
  * and each friend's room ('home' + owner actor) has its own chat.
  */
 export type HomeScope = `home-${number}`;
-export type ChatScope = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea | HomeScope;
+export type ChatScope = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea | LighthouseArea | HomeScope;
 export const homeScope = (owner: number): HomeScope => `home-${owner}`;
 export const validHomeOwner = (owner: unknown): owner is number =>
   Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
@@ -233,7 +239,7 @@ export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
   area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside' || area === 'ranch' || area === 'foothill' || area === 'offshore' || area === 'farm'
     ? 'village'
-    : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon' || isShopArea(area)
+    : area === 'casino' || area === 'tavern' || area === 'bank' || area === 'salon' || isShopArea(area) || isLighthouseArea(area)
       ? area
       : area === 'home' && validHomeOwner(home)
         ? homeScope(home)

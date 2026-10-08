@@ -38,10 +38,14 @@ import { VIEW_PITCH, VILLAGE_FIGURE_HEIGHT } from './lounge-village-camera';
 const CHIBI_CANVAS_H = 640,
   CHIBI_BODY_H = 540;
 import { DistrictSet, PAVING, districtMat, rnd, shadowed, type DistrictUpdate } from './lounge-district-kit';
+import { lighthouseBeamAngle } from './lounge-lighthouse';
 
 export class HarborSet extends DistrictSet {
   private auctionGoods = new THREE.Group();
-  private beam: THREE.Mesh | null = null;
+  /** 범마을 등대's two beams (lit with its lamp, lounge-lighthouse.ts) and the lamp glow. */
+  private beams: THREE.Mesh[] = [];
+  private beamPivot: THREE.Group | null = null;
+  private lamp: THREE.MeshBasicMaterial | null = null;
   private boat: FishingBoat | null = null;
   private captain: THREE.Mesh | null = null;
 
@@ -250,19 +254,23 @@ export class HarborSet extends DistrictSet {
     door.position.set(0, 1.3, L.r * 0.9);
     door.rotation.x = -0.12;
     g.add(deck, room, lamp, roof, door);
-    // The beam: a soft cone swept round at night.
-    const beam = new THREE.Mesh(
-      this.own(new THREE.ConeGeometry(1.4, 9, 20, 1, true)),
-      this.own(new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })),
-    );
-    beam.rotation.z = Math.PI / 2;
-    beam.position.set(4.6, top + 0.8, 0);
+    // The beams: two soft cones swept round while the lamp burns (game night), in step with the lamp room's lens.
+    const beamGeo = this.own(new THREE.ConeGeometry(1.5, 11, 20, 1, true));
+    const beamMat = this.own(new THREE.MeshBasicMaterial({ color: '#fff3c4', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
     const pivot = new THREE.Group();
-    pivot.position.y = 0;
-    pivot.add(beam);
     pivot.name = 'harbor-lighthouse-beam';
+    pivot.position.y = top + 0.8;
+    this.beams = [1, -1].map((side) => {
+      const beam = new THREE.Mesh(beamGeo, beamMat);
+      beam.rotation.z = (side * Math.PI) / 2;
+      beam.position.set(side * 5.6, 0, 0);
+      beam.visible = false;
+      pivot.add(beam);
+      return beam;
+    });
     g.add(shadowed(pivot, false));
-    this.beam = beam;
+    this.beamPivot = pivot;
+    this.lamp = lamp.material as THREE.MeshBasicMaterial;
     this.root.add(shadowed(g));
     this.pointLight(L.x, top + 0.8, L.z + 1.5, '#ffe2a0');
     this.signpost('등대', '가붕의 불빛', { bg: '#eef2f4', ink: '#27465a', line: '#6f8ea4' }, L.door.x + 1.9, L.door.z + 0.1, { w: 1.6, h: 1.6, name: 'harbor-lighthouse-sign' });
@@ -284,7 +292,12 @@ export class HarborSet extends DistrictSet {
       this.boat.setNight(u.night);
     }
     if (this.captain) this.captain.visible = !!u.captain;
-    if (this.beam) (this.beam.material as THREE.MeshBasicMaterial).opacity = u.night ? 0.16 : 0;
+    const lit = u.lamp ?? u.night;
+    for (const b of this.beams) {
+      b.visible = lit;
+      (b.material as THREE.MeshBasicMaterial).opacity = lit ? 0.2 : 0;
+    }
+    if (lit && this.lamp) this.lamp.color.set('#fff6d0');
   }
   override tick(t: number) {
     super.tick(t);
@@ -292,6 +305,6 @@ export class HarborSet extends DistrictSet {
       this.boat.group.position.y = 0.45 + Math.sin(t / 1300) * 0.04;
       this.boat.group.rotation.z = Math.sin(t / 1700) * 0.015;
     }
-    if (this.beam?.parent && this.state.night) this.beam.parent.rotation.y = (t / 4000) % (Math.PI * 2);
+    if (this.beamPivot && (this.state.lamp ?? this.state.night)) this.beamPivot.rotation.y = lighthouseBeamAngle(Date.now());
   }
 }

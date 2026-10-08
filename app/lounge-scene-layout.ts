@@ -4,6 +4,8 @@ import { CASINO_LENDER_SPOT, CASINO_LENDER_RADIUS } from './lounge-casino-lender
 import { bankCanWalk } from './lounge-bank-layout.ts';
 import { salonCanWalk } from './lounge-salon-layout.ts';
 import { isShopArea, shopCanWalk } from './lounge-shop-interiors.ts';
+import { isLighthouseArea } from './lounge-lighthouse.ts';
+import { lighthouseCanWalk } from './lounge-lighthouse-layout.ts';
 
 /** Every interior with tables (lounge-venues.ts). */
 export type SceneArea = InteriorArea;
@@ -37,6 +39,8 @@ export const SCENE_LAYOUT: Record<
   smithy: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   clinic: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   broker: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  lighthouse: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
+  lighthouseTop: { floor: { left: 12, right: 88, back: 57, front: 90 }, tables: [] },
   lounge: {
     floor: { left: 12, right: 88, back: 58, front: 90 },
     tables: [
@@ -159,6 +163,7 @@ export function sceneCanWalk(point: ScenePoint, area: SceneArea): boolean {
   if (area === 'bank' && !bankCanWalk(point, SCENE_PLAYER_RADIUS)) return false;
   if (area === 'salon' && !salonCanWalk(point, SCENE_PLAYER_RADIUS)) return false;
   if (isShopArea(area) && !shopCanWalk(point, area, SCENE_PLAYER_RADIUS)) return false;
+  if (isLighthouseArea(area) && !lighthouseCanWalk(point, area, SCENE_PLAYER_RADIUS)) return false;
   if (area === 'casino' && Math.hypot(point.x - CASINO_LENDER_SPOT.x, point.y - CASINO_LENDER_SPOT.y)
     < CASINO_LENDER_RADIUS + SCENE_PLAYER_RADIUS * 0.7) return false;
   return !sceneColliders(area).some(

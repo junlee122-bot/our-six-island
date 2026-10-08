@@ -3,6 +3,7 @@ import { IslandRoom } from "./multiplayer-transport.ts";
 import { PEER_PREFIX, roomCode } from "./multiplayer-protocol.ts";
 import { isInteriorArea } from "./lounge-venues.ts";
 import { isShopArea } from "./lounge-shop-interiors.ts";
+import { isLighthouseArea } from "./lounge-lighthouse.ts";
 import { readLook, type Look } from "./lounge-look.ts";
 import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
 import { ACTORS } from "./lounge-roster.ts";
@@ -2138,6 +2139,7 @@ export class LoungeRoom {
         a.scope === "bank" ||
         a.scope === "salon" ||
         isShopArea(a.scope) ||
+        isLighthouseArea(a.scope) ||
         a.scope === "home"
       ) {
         // Out in a district or region the client's scope is 'village' (they

@@ -1,5 +1,6 @@
 import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-village-layout.ts';
 import { SHOP_INTERIORS, isShopArea } from './lounge-shop-interiors.ts';
+import { LIGHTHOUSE_FLOOR, isLighthouseArea } from './lounge-lighthouse.ts';
 import { VILLAGE_GATE } from './lounge-areas.ts';
 import { DISTRICTS, isDistrictId } from './lounge-districts.ts';
 import { FARM_HOUSES } from './lounge-farm-layout.ts';
@@ -56,6 +57,9 @@ export function villageFriendPins(players: readonly Presence[], self: string): V
     const district = p.area === 'offshore' ? 'harbor' : p.area;
     if (isDistrictId(district))
       return [{ id: p.id, actor: p.actor, point: DISTRICTS[district].gate.stand, indoor: false, location: p.area === 'offshore' ? '먼바다' : DISTRICTS[district].name }];
+    // In 범마을 등대: at the harbor's gate.
+    if (isLighthouseArea(p.area))
+      return [{ id: p.id, actor: p.actor, point: DISTRICTS.harbor.gate.stand, indoor: true, location: `범마을 등대 ${LIGHTHOUSE_FLOOR[p.area].short}` }];
     // In a shop's room (가게 실내): at its district's gate, named after the shop.
     if (isShopArea(p.area)) {
       const d = DISTRICTS[SHOP_INTERIORS[p.area].district];

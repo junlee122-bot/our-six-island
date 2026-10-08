@@ -38,7 +38,7 @@
   font-weight: 400;
   font-display: swap;
   src: url('./fonts/jua-400-core.woff2') format('woff2');
-  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
+  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26A0, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
 }
 @font-face {
   font-family: 'Gaegu';
@@ -54,7 +54,7 @@
   font-weight: 400;
   font-display: swap;
   src: url('./fonts/gaegu-400-core.woff2') format('woff2');
-  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
+  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26A0, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
 }
 @font-face {
   font-family: 'Gaegu';
@@ -70,5 +70,5 @@
   font-weight: 700;
   font-display: swap;
   src: url('./fonts/gaegu-700-core.woff2') format('woff2');
-  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
+  unicode-range: U+20-7E, U+A0-FF, U+109, U+2010-2027, U+2030-203A, U+20A9, U+2190-2199, U+2212, U+2264, U+2460-2473, U+25A0-2667, U+2697, U+26A0, U+26C8, U+26F0, U+2709, U+2713, U+2728, U+2744, U+3000-3015, U+3131-318E, U+AC00-D7A3;
 }

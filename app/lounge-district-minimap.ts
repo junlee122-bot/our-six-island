@@ -66,6 +66,7 @@ import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_PAVING } from './l
 import { FARM_COMMON, FARM_SITES } from './lounge-farm-sites-layout.ts';
 import { ACTORS } from './lounge-roster.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
+import { LIGHTHOUSE_FLOOR, LIGHTHOUSE_NAME, isLighthouseArea } from './lounge-lighthouse.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 
@@ -192,6 +193,7 @@ const COUNTER_SHORT: Record<string, string> = {
   fortune: '점집',
   broker: '증권사',
   voyage: '먼바다 배',
+  lighthouse: '등대',
 };
 
 /** " (지점장 무잔)": who keeps a shop room, for its door pin's title. */
@@ -253,6 +255,7 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
       FOOTHILL_BUILDINGS.find((b) => b.id === place);
     if (shop) return { x: shop.x, z: shop.z };
     if (place === 'library') return { x: HILL_LIBRARY.x, z: HILL_LIBRARY.z };
+    if (place === 'lighthouse') return { x: HARBOR_LIGHTHOUSE.x, z: HARBOR_LIGHTHOUSE.z };
     return null;
   };
   let stalls = 0,
@@ -293,12 +296,17 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
       continue;
     }
     const lot = buildingAt(place);
-    const enter = a.enter as ShopArea | undefined;
+    const enter = a.enter;
     const label = COUNTER_SHORT[place] ?? COUNTER_NAME[place];
     out.push({
       id: place,
       label,
-      title: enter ? `${SHOP_INTERIORS[enter].name}${keeperOf(enter)} 문 앞으로 걸어가기` : `${COUNTER_NAME[place]} 앞으로 걸어가기`,
+      title:
+        enter === 'lighthouse'
+          ? `${LIGHTHOUSE_NAME} · 안으로 들어갈 수 있어요 (1층 ${LIGHTHOUSE_FLOOR.lighthouse.name}, 꼭대기 ${LIGHTHOUSE_FLOOR.lighthouseTop.name}) · 문 앞으로 걸어가기`
+          : enter
+            ? `${SHOP_INTERIORS[enter].name}${keeperOf(enter)} 문 앞으로 걸어가기`
+            : `${COUNTER_NAME[place]} 앞으로 걸어가기`,
       kind: enter ? 'door' : lot ? 'shop' : 'place',
       x: lot?.x ?? go.x,
       z: lot?.z ?? go.z,
@@ -356,6 +364,13 @@ export function districtFriendPins(players: readonly Presence[], self: string | 
       if (!door) return [];
       ids.add(p.id);
       return [{ id: p.id, actor: p.actor, point: { x: door.x, z: door.z + 1 }, indoor: true, location: SHOP_INTERIORS[p.area].name }];
+    }
+    // 범마을 등대 (either floor): at the tower's door.
+    if (isLighthouseArea(p.area) && area === 'harbor') {
+      const door = map.places.find((pl) => pl.id === 'lighthouse');
+      if (!door) return [];
+      ids.add(p.id);
+      return [{ id: p.id, actor: p.actor, point: { x: door.x, z: door.z + 1 }, indoor: true, location: `${LIGHTHOUSE_NAME} ${LIGHTHOUSE_FLOOR[p.area].short}` }];
     }
     return [];
   });

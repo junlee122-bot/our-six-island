@@ -104,7 +104,11 @@ import { formatBeom, josa, NAMES } from './lounge-text';
 import { VENUES, isInteriorArea, type InteriorArea } from './lounge-venues';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors';
 import { atHubCounter, hubCounterDoor } from './lounge-hub-counters';
-import { shopDoorOutside } from './lounge-district-counters';
+import { lighthouseDoorOutside, shopDoorOutside, type EnterArea } from './lounge-district-counters';
+import { SEA_VIEW_MS, isLighthouseArea, lampLine, seaViewLine, type LighthouseArea } from './lounge-lighthouse';
+import { BALCONY_FRONT, LAMP_FRONT, LOGBOOK_FRONT, stairArrival, type LighthouseTouch } from './lounge-lighthouse-layout';
+import { LighthouseLogbook, SeaViewCaption } from './lounge/LighthouseLogbook';
+import { kstDay } from './lounge-economy';
 import { DISTRICTS } from './lounge-districts';
 import { venueLook, venuesFromView } from './lounge-venue-data';
 import {
@@ -448,6 +452,8 @@ const TAB_AREA: Record<Tab, Area> = {
   smithy: 'smithy',
   clinic: 'clinic',
   broker: 'broker',
+  lighthouse: 'lighthouse',
+  lighthouseTop: 'lighthouseTop',
 };
 
 const VILLAGE_HINT_KEY = 'bumtadew-village-hint-v1';
@@ -585,6 +591,8 @@ function AccountLounge({
       smithy: AREA_DEFAULTS.smithy,
       clinic: AREA_DEFAULTS.clinic,
       broker: AREA_DEFAULTS.broker,
+      lighthouse: AREA_DEFAULTS.lighthouse,
+      lighthouseTop: AREA_DEFAULTS.lighthouseTop,
     }),
     [visiting, setVisiting] = useState<number | null>(null),
     [mailTo, setMailTo] = useState<number | undefined>(undefined),
@@ -602,6 +610,10 @@ function AccountLounge({
     [talk, setTalk] = useState<{ script: DialogScript; hearts: number } | null>(null),
     [fishing, setFishing] = useState<{ spot: Spot; phase: FishingPhase } | null>(null),
     [voyageOpen, setVoyageOpen] = useState(false),
+    // 범마을 등대: the logbook window and the 바다 바라보기 moment (lounge-lighthouse.ts).
+    /** The KST day the logbook opened on (null: closed). */
+    [logbookDay, setLogbookDay] = useState<number | null>(null),
+    [seaView, setSeaView] = useState<{ at: number; line: string; calm: boolean } | null>(null),
     [knockShut, setKnockShut] = useState(false);
   const hotbar = useHotbar();
   const villagePosition = useRef<VillagePoint | undefined>(undefined),
@@ -617,7 +629,7 @@ function AccountLounge({
   // 성장 P2: 뒷산 / 숲 깊은 곳 / 광산 replace the village scene while I am out.
   const [townPlace, setTownPlace] = useState<TownPlace | null>(null);
   /** Set below once enter() exists; the district's shop doors call it. */
-  const enterShopRef = useRef<(area: ShopArea) => void>(() => {});
+  const enterShopRef = useRef<(area: EnterArea) => void>(() => {});
   /** A shop room's counter: its town window, or the stock window at 범마을 증권. */
   const openShopCounter = (place: Exclude<TownPlace, 'signpost' | 'tavern'> | 'broker') => (place === 'broker' ? setModal('stocks') : setTownPlace(place));
   /** 우리 농장's E actions (set below once the handlers exist). */
@@ -643,6 +655,7 @@ function AccountLounge({
         setModal('mail');
       } else if (place === 'broker') setModal('stocks');
       else if (place === 'voyage') setVoyageOpen(true);
+      else if (place === 'lighthouse') enterShopRef.current('lighthouse');
       else setTownPlace(place);
     },
     onFish: (spot) => startFishing(spot),
@@ -929,7 +942,8 @@ function AccountLounge({
   // outdoor bed; its shop rooms hear the same piece through the wall.
   const outdoorArea = outdoorApi.outdoor?.area ?? null;
   const districtSound = !inGame && !isInteriorArea(tab) ? areaSound(outdoorArea) : null;
-  const shopRoom = !inGame && visiting === null && isShopArea(tab);
+  // 범마을 등대 hears the harbor's piece through its walls too.
+  const shopRoom = !inGame && visiting === null && (isShopArea(tab) || isLighthouseArea(tab));
   const musicPlace =
     inGame && gameScreen
       ? VENUES[TABLE_AREA[gameScreen]].music
@@ -1125,7 +1139,7 @@ function AccountLounge({
    * 가게 실내: into a shop's room from its door in 시장 거리 / 항구 (standing
    * just inside the door), and back out to the same door.
    */
-  const enterShop = (area: ShopArea) => {
+  const enterShop = (area: EnterArea) => {
     if (fishing) {
       notify('낚시를 마치거나 취소한 뒤 이동해 주세요.');
       return;
@@ -1156,9 +1170,50 @@ function AccountLounge({
       outdoorApi.enterAt({ area: out.district, spawn: out.at });
     });
   };
-  /** 나가기 from an interior: the wardrobe opened from my room goes back there; a shop to its street. */
+  /** 범마을 등대: out of its door onto the harbor (from either floor). */
+  const leaveLighthouse = () => {
+    const out = lighthouseDoorOutside();
+    preloadTab('village', save);
+    playFade(() => {
+      setModal(null);
+      setSheet(null);
+      setTownPlace(null);
+      setLogbookDay(null);
+      setSeaView(null);
+      setTab('village');
+      outdoorApi.enterAt({ area: out.district, spawn: out.at });
+    });
+  };
+  /** 범마을 등대's spiral stair: to the other floor, arriving beside the stair. */
+  const climb = (to: LighthouseArea) => {
+    preloadTab(to, save);
+    playFade(() => {
+      setModal(null);
+      setSheet(null);
+      setLogbookDay(null);
+      setSeaView(null);
+      setTab(to);
+      sendArea(to, stairArrival(to));
+    });
+  };
+  const seaViewTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(seaViewTimer.current), []);
+  /** The lighthouse's E touches (the stair, the logbook, the lamp, the balcony rail). */
+  const onLighthouse = (touch: LighthouseTouch) => {
+    if (touch.kind === 'stair') return climb(touch.to);
+    const now = Date.now() + view.clockOffset;
+    if (touch.kind === 'logbook') return setLogbookDay(kstDay(now));
+    if (touch.kind === 'lamp') return notify(lampLine(now), 'info');
+    // 바다 바라보기: the camera pans over the sea with a calm line; once a day it also calms the mood a little (server-checked).
+    const first = connected && !!view.life?.mood && !view.life.mood.seaView;
+    setSeaView({ at: Date.now(), line: seaViewLine(kstDay(now)), calm: false });
+    if (first) void room.life({ kind: 'seaView' }).then((ok) => ok && setSeaView((v) => (v ? { ...v, calm: true } : v)));
+    window.clearTimeout(seaViewTimer.current);
+    seaViewTimer.current = window.setTimeout(() => setSeaView(null), SEA_VIEW_MS + 400);
+  };
+  /** 나가기 from an interior: the wardrobe opened from my room goes back there; a shop to its street; the lighthouse to the harbor. */
   const leaveInterior = () =>
-    isShopArea(tab) ? leaveShop(tab) : enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
+    isShopArea(tab) ? leaveShop(tab) : isLighthouseArea(tab) ? leaveLighthouse() : enter(tab === 'wardrobe' ? wardrobeFrom : 'village');
   const backTo =
     tab === 'wardrobe' && wardrobeFrom === 'bedroom'
       ? NAMES.home
@@ -1166,7 +1221,9 @@ function AccountLounge({
         ? '미용실'
         : isShopArea(tab)
           ? DISTRICTS[SHOP_INTERIORS[tab].district].name
-          : NAMES.village;
+          : isLighthouseArea(tab)
+            ? DISTRICTS.harbor.name
+            : NAMES.village;
   const moveInVillage = useCallback(
     (x: number, y: number) => {
       if (fishing) return;
@@ -2679,10 +2736,12 @@ function AccountLounge({
                 onBanker={() => { setFinanceMode('bank'); setFinancePage('bank'); setModal('bank'); }}
                 onSalon={() => enter('wardrobe')}
                 onCounter={isShopArea(interior) ? () => openShopCounter(SHOP_INTERIORS[interior].counter) : undefined}
+                onLighthouse={isLighthouseArea(interior) ? onLighthouse : undefined}
+                seaViewAt={seaView?.at ?? 0}
                 onResident={setResidentTalk}
                 onNearDoor={() => preloadTab('village')}
                 seatedAt={tableSheet?.mode === 'seated' ? tableSheet.game : null}
-                sheetOpen={!!tableSheet || !!modal || !!residentTalk || !!townPlace}
+                sheetOpen={!!tableSheet || !!modal || !!residentTalk || !!townPlace || logbookDay !== null || !!seaView}
                 vip={!!view.life?.flags?.includes(VIP_FLAG)}
                 props={interior === 'tavern' ? tavernProps : undefined}
                 onUnavailable={() => {
@@ -2693,6 +2752,7 @@ function AccountLounge({
             </Suspense>
           </ScreenBoundary>
           {sheetNode}
+          {seaView && interior === 'lighthouseTop' && <SeaViewCaption line={seaView.line} calm={seaView.calm} />}
           <div className="l-world-social">
             {interior === 'casino' && <button className="l-world-chat-button" data-testid="casino-lumi-ledger" onClick={() => { setFinanceMode('casino'); setModal('bank'); }} aria-label="미쿠 장부 열기"><Glyph name="coin" size={19} /><span>미쿠 장부</span></button>}
             <button
@@ -2774,6 +2834,23 @@ function AccountLounge({
               />
             </div>
             <aside className="l-lounge-sidebar">
+              {isLighthouseArea(flatArea) && (
+                <div className="l-play-list" data-testid="lighthouse-flat">
+                  <h2>{flatArea === 'lighthouse' ? '등대지기의 방' : '등명실'}</h2>
+                  {flatArea === 'lighthouse' ? (
+                    <button onClick={() => { placeIn(LOGBOOK_FRONT); onLighthouse({ kind: 'logbook' }); }}>등대 일지 읽기</button>
+                  ) : (
+                    <>
+                      <button onClick={() => { placeIn(LAMP_FRONT); onLighthouse({ kind: 'lamp' }); }}>큰 등불 살펴보기</button>
+                      <button onClick={() => { placeIn(BALCONY_FRONT); onLighthouse({ kind: 'seaView' }); }}>바다 바라보기</button>
+                    </>
+                  )}
+                  <button onClick={() => climb(flatArea === 'lighthouse' ? 'lighthouseTop' : 'lighthouse')}>
+                    {flatArea === 'lighthouse' ? '나선 계단으로 꼭대기에 올라가기' : '나선 계단으로 1층에 내려가기'}
+                  </button>
+                  {seaView && <p className="l-muted" aria-live="polite">{seaView.line}{seaView.calm ? ' · 마음이 잔잔해졌어요' : ''}</p>}
+                </div>
+              )}
               {flatGames.length > 0 && <div className="l-play-list">
                 <h2>오늘의 한 판</h2>
                 {flatGames.map((kind) => (
@@ -3010,6 +3087,15 @@ function AccountLounge({
       )}
       {voyageFlow.sailing && <SailOut back={voyageFlow.sailing === 'back'} />}
       {voyageOpen && !modal && <VoyageBoard room={room} view={view} notify={notify} onClose={() => setVoyageOpen(false)} />}
+      {logbookDay !== null && !modal && isLighthouseArea(tab) && (
+        <LighthouseLogbook
+          today={logbookDay}
+          catches={view.life?.angling?.cup.standings}
+          sailing={view.life?.voyage?.sailing}
+          flags={view.life?.flags}
+          onClose={() => setLogbookDay(null)}
+        />
+      )}
       {voyageFlow.summaryOpen && !modal && !voyageOpen && !inGame && (
         <VoyageSummary room={room} view={view} notify={notify} onClose={voyageFlow.closeSummary} />
       )}
@@ -3177,6 +3263,12 @@ function AccountLounge({
                       setModal(null);
                       leaveShop(tab);
                     }
+                  : isLighthouseArea(tab)
+                  ? () => {
+                      // 범마을 등대 (either floor): out of its door onto the harbor.
+                      setModal(null);
+                      leaveLighthouse();
+                    }
                   : tab === 'bedroom' || isInteriorArea(tab)
                   ? () => {
                       setModal(null);
@@ -3194,7 +3286,9 @@ function AccountLounge({
               ? `${josa(backTo, '으로/로')} 나가기`
               : isShopArea(tab) && visiting === null && !inGame
                 ? `${josa(DISTRICTS[SHOP_INTERIORS[tab].district].name, '으로/로')} 나가기`
-                : undefined
+                : isLighthouseArea(tab) && visiting === null && !inGame
+                  ? `${josa(DISTRICTS.harbor.name, '으로/로')} 나가기`
+                  : undefined
           }
           onLogout={() => {
             setModal(null);

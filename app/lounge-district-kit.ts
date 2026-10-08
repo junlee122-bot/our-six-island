@@ -92,6 +92,8 @@ export type DistrictUpdate = {
   /** 항구: 샹크스's boat is out at sea; he stands at the pier in sailing hours. */
   boatOut?: boolean;
   captain?: boolean;
+  /** 항구: 범마을 등대's lamp burns (game night, lounge-lighthouse.ts). */
+  lamp?: boolean;
 };
 
 export class DistrictSet {

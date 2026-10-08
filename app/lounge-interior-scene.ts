@@ -27,10 +27,13 @@ import { buildBank } from './lounge-bank-interior';
 import { buildSalon } from './lounge-salon-interior';
 import { buildShop } from './lounge-shop-interior';
 import { isShopArea } from './lounge-shop-interiors';
+import { isLighthouseArea } from './lounge-lighthouse';
+import { buildLighthouse } from './lounge-lighthouse-interior';
 import { VIEW_LIGHT } from './lounge-village-camera';
 import {
   INTERIOR_DOOR_Z,
   INTERIOR_ROOM,
+  hasDoor,
   interiorTables,
   seatChair,
   type InteriorTable,
@@ -160,6 +163,25 @@ const PALETTE: Record<SceneArea, Palette> = {
     outside: '#dcecc4', mat: '#cfe0dc', dark: false, wood: '#b8a27a',
     lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 6, lampReach: 11,
   },
+  // 범마을 등대: whitewashed stone and navy panelling (1층), the iron and glass lamp room (꼭대기).
+  lighthouse: {
+    wall: '#eef0ea', wainscot: '#2f4a6a', rail: '#f6f1e4',
+    floor: ['#b8a07c', '#b09874', '#c0a984', '#a8906c'],
+    trim: '#5a4632', chair: '#6b4b33', cushion: '#c4513d',
+    hemi: ['#fff6e6', '#8f9a98', 1.9], sun: ['#fff0d8', 2.1],
+    lamp: '#ffd894', background: '#dfe7e6', fill: '#eaf2f4',
+    outside: '#d8ecf2', mat: '#2f4a6a', dark: false, wood: '#7a5634',
+    lamps: [[-3.4, 3.0, -1.4], [3.2, 3.0, 0.4]], lampPower: 6, lampReach: 11,
+  },
+  lighthouseTop: {
+    wall: '#e9eff0', wainscot: '#3b4f5e', rail: '#d8dee0',
+    floor: ['#8e9496', '#878d8f', '#959b9d', '#80868a'],
+    trim: '#34444f', chair: '#4a5560', cushion: '#c4513d',
+    hemi: ['#f4fbff', '#7c8a92', 2.0], sun: ['#fff4e2', 2.0],
+    lamp: '#ffe6a8', background: '#cfe3ea', fill: '#e6f4fa',
+    outside: '#d8ecf2', mat: '#3b4f5e', dark: false, wood: '#6b5a48',
+    lamps: [[-4, 3.1, -0.6], [4, 3.1, -0.6]], lampPower: 5, lampReach: 11,
+  },
   salon: {
     wall: '#f3e5df', wainscot: '#9eb6aa', rail: '#f8ead8',
     floor: ['#d8bd99', '#d0b28e', '#dfc6a6', '#cbaa85'],
@@ -279,6 +301,8 @@ export const INTERIOR_FIGURE_TINT: Record<SceneArea, string> = {
   clinic: '#ffffff',
   // The forge is lit by its fire.
   smithy: '#f6e6d6',
+  lighthouse: '#ffffff',
+  lighthouseTop: '#ffffff',
   casino: '#f6e8dc',
   tavern: '#f0dcc6',
 };
@@ -349,6 +373,10 @@ export function createInteriorScene(
   let bank: ReturnType<typeof buildBank> | null = null;
   let salon: ReturnType<typeof buildSalon> | null = null;
   let shop: ReturnType<typeof buildShop> | null = null;
+  /** 범마을 등대's furnishings, stair and lamp (lounge-lighthouse-interior.ts). */
+  let lighthouse: ReturnType<typeof buildLighthouse> | null = null;
+  /** The lamp room's back wall is glass (built with its sea view). */
+  const glassBack = area === 'lighthouseTop';
   /** Loaded kArchive models (shared by their clones in this scene). */
   const models: Partial<Record<ClubModel, THREE.Group>> = {};
   /** Set when a model arrived; refresh() reports it so the view re-renders. */
@@ -533,19 +561,26 @@ export function createInteriorScene(
     root.add(floor);
   }
   const wall = surface(pal.wall, { roughness: 1 });
-  box(width + 0.3, wallHeight, 0.18, 0, wallHeight / 2, minZ - 0.09, wall);
-  // Side walls, with the door opening on the left.
+  if (!glassBack) box(width + 0.3, wallHeight, 0.18, 0, wallHeight / 2, minZ - 0.09, wall);
+  // Side walls, with the door opening on the left (a solid wall where there is no door).
+  if (!hasDoor(area)) box(0.18, wallHeight, depth, minX - 0.09, wallHeight / 2, (minZ + maxZ) / 2, wall);
+  else {
   box(0.18, wallHeight, INTERIOR_DOOR_Z.z0 - minZ, minX - 0.09, wallHeight / 2, (minZ + INTERIOR_DOOR_Z.z0) / 2, wall);
   box(0.18, wallHeight, maxZ - INTERIOR_DOOR_Z.z1, minX - 0.09, wallHeight / 2, (INTERIOR_DOOR_Z.z1 + maxZ) / 2, wall);
+  }
   // (No wall piece over the opening: from the straight-on camera the left
   // wall is an edge-on strip and the doorway stands outside it, below.)
   // Only a low half wall on the right: the camera looks in from the front-right.
   box(0.18, 0.95, depth, maxX + 0.09, 0.475, (minZ + maxZ) / 2, pal.wainscot);
   box(0.26, 0.07, depth + 0.1, maxX + 0.09, 0.98, (minZ + maxZ) / 2, pal.rail);
   // Wainscot and rails.
-  box(width, 0.9, 0.04, 0, 0.45, minZ + 0.02, pal.wainscot);
+  if (!glassBack) box(width, 0.9, 0.04, 0, 0.45, minZ + 0.02, pal.wainscot);
+  if (!hasDoor(area)) box(0.04, 0.9, depth, minX + 0.02, 0.45, (minZ + maxZ) / 2, pal.wainscot);
+  else {
   box(0.04, 0.9, INTERIOR_DOOR_Z.z0 - minZ, minX + 0.02, 0.45, (minZ + INTERIOR_DOOR_Z.z0) / 2, pal.wainscot);
   box(0.04, 0.9, maxZ - INTERIOR_DOOR_Z.z1, minX + 0.02, 0.45, (INTERIOR_DOOR_Z.z1 + maxZ) / 2, pal.wainscot);
+  }
+  if (!glassBack)
   for (const y of [0.92, wallHeight - 0.25]) {
     box(width, 0.07, 0.07, 0, y, minZ + 0.04, pal.rail);
   }
@@ -555,21 +590,27 @@ export function createInteriorScene(
   const doorZ = (INTERIOR_DOOR_Z.z0 + INTERIOR_DOOR_Z.z1) / 2,
     doorW = INTERIOR_DOOR_Z.z1 - INTERIOR_DOOR_Z.z0;
   const doorX = minX - 0.86;
+  if (hasDoor(area)) {
   box(1.5, 0.05, doorW, minX - 0.75, -0.005, doorZ, pal.mat, root, false);
   box(1.5, 0.16, 0.16, doorX, 2.2, doorZ, pal.trim);
   for (const x of [doorX - 0.67, doorX + 0.67]) box(0.16, 2.2, 0.16, x, 1.1, doorZ, pal.trim);
-  const outside = new THREE.Mesh(
+  }
+  const outside: THREE.Mesh | null = !hasDoor(area) ? null : new THREE.Mesh(
     new THREE.PlaneGeometry(1.18, 2.12),
     new THREE.MeshBasicMaterial({ color: pal.outside, toneMapped: false }),
   );
+  if (outside) {
   outside.position.set(doorX, 1.06, doorZ - 0.02);
   outside.userData.door = true;
   root.add(outside);
+  }
+  if (hasDoor(area)) {
   const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.1, doorW - 0.1), surface(pal.mat));
   mat.rotation.x = -Math.PI / 2;
   mat.position.set(minX + 0.6, 0.02, doorZ);
   mat.receiveShadow = true;
   root.add(mat);
+  }
 
   // Back wall: windows (hall) or the lit sign (casino), plus a name banner.
   const banner = canvasTexture(640, 150, (c) => {
@@ -597,7 +638,12 @@ export function createInteriorScene(
     }),
   );
   bannerMesh.position.set(0, 2.72, minZ + 0.06);
-  root.add(bannerMesh);
+  // The lamp room's glass wall carries no banner (its sign hangs by the stair).
+  if (!glassBack) root.add(bannerMesh);
+  else {
+    bannerMesh.geometry.dispose();
+    (bannerMesh.material as THREE.Material).dispose();
+  }
   if (area === 'lounge' || area === 'bank' || area === 'salon' || isShopArea(area)) {
     const glass = new THREE.MeshBasicMaterial({ color: '#f6e7b8', toneMapped: false });
     for (const x of [-5.2, 5.2]) {
@@ -632,6 +678,8 @@ export function createInteriorScene(
     }
   } else if (area === 'tavern') {
     // Built with its kArchive props below (buildTavern), after the tables.
+  } else if (isLighthouseArea(area)) {
+    // 범마을 등대: its own walls' things (lounge-lighthouse-interior.ts, below).
   } else {
     // Gold wall sconces and a bar counter along the back wall.
     const glow = surface('#fff4d6', { emissive: '#ffd27a', emissiveIntensity: 1.2 });
@@ -658,7 +706,7 @@ export function createInteriorScene(
     }
   }
   // Potted plants in the corners (the tavern has its own corners).
-  if (area !== 'tavern' && area !== 'bank' && area !== 'salon' && !isShopArea(area))
+  if (area !== 'tavern' && area !== 'bank' && area !== 'salon' && !isShopArea(area) && !isLighthouseArea(area))
   for (const [x, z] of [[minX + 0.6, minZ + 0.6], [maxX - 0.6, minZ + 0.6], [maxX - 0.6, maxZ - 0.6]] as const) {
     if (area === 'casino' && x > 0 && z < 0) continue;
     cylinder(0.3, 0.24, 0.5, x, 0.25, z, area === 'casino' ? '#c9a24a' : '#b5673f');
@@ -1186,6 +1234,7 @@ export function createInteriorScene(
   if (area === 'bank') bank = buildBank(root, () => { modelsChanged = true; });
   if (area === 'salon') salon = buildSalon(root, () => { modelsChanged = true; });
   if (isShopArea(area)) shop = buildShop(root, area, () => { modelsChanged = true; });
+  if (isLighthouseArea(area)) lighthouse = buildLighthouse(root, area, () => { modelsChanged = true; }, { lights: options.lights });
   /** 허풍 주점: the café table model under the 허풍 카드 felt (stretched to the table). */
   function placeTavernTable() {
     const node = nodes.get('liarsbar'),
@@ -1360,7 +1409,14 @@ export function createInteriorScene(
     },
 
     /** Invisible table boxes (pointer hits carry `userData.game`). */
-    hits: () => [...nodes.values()].map((n) => n.hit as THREE.Object3D).concat(outside),
+    hits: () => [...nodes.values()].map((n) => n.hit as THREE.Object3D).concat(outside ? [outside] : []),
+    /** 범마을 등대: models placed / wanted, and whether its lamp burns. */
+    lighthouseModels: () => (lighthouse ? `${lighthouse.loaded()}/${lighthouse.wanted}` : ''),
+    lampLit: () => !!lighthouse?.lit(),
+    /** Time-driven life at server time `now` (the lighthouse's lamp); true when the view should re-render. */
+    animate(now: number) {
+      return !!lighthouse?.animate(now);
+    },
     setLights(on: boolean) {
       for (const lamp of lamps) lamp.visible = on;
     },
@@ -1375,6 +1431,7 @@ export function createInteriorScene(
       bank?.dispose();
       salon?.dispose();
       shop?.dispose();
+      lighthouse?.dispose();
       scene.remove(root, hemi, sun, fill, ...lamps);
       if (hearth) {
         scene.remove(hearth);

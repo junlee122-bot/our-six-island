@@ -22,6 +22,8 @@ import { CASINO_LENDER_SPOT, CASINO_LENDER_RADIUS, nearCasinoLender } from './lo
 import { BANK_OBSTACLES, BANKER_SPOT, nearBanker } from './lounge-bank-layout.ts';
 import { SALON_OBSTACLES, nearSalon } from './lounge-salon-layout.ts';
 import { SHOP_INTERIORS, isShopArea, nearShopCounter, nearShopSeat, shopObstacles, shopSeatAt } from './lounge-shop-interiors.ts';
+import { isLighthouseArea } from './lounge-lighthouse.ts';
+import { lighthouseHover, lighthouseTouch, lighthouseWaypoints, stairArrival, type LighthouseTouch } from './lounge-lighthouse-layout.ts';
 
 export type InteriorWorld = { x: number; z: number };
 
@@ -64,6 +66,8 @@ export const INTERIOR_DOOR_REACH = 5.5;
  * its "나가기" reach (lounge-map-doors.ts), on walkable floor of that room.
  */
 export function interiorArrival(area: SceneArea): ScenePoint {
+  // 범마을 등대's lamp room has no door: you come up the stair.
+  if (area === 'lighthouseTop') return stairArrival(area);
   for (let d = 10; d >= INTERIOR_DOOR_REACH + 1; d -= 0.5)
     for (const deg of [0, -20, 20, -40, 40, -60]) {
       const r = (deg * Math.PI) / 180;
@@ -181,8 +185,10 @@ export function interiorStep(
   return point;
 }
 
-export const nearDoor = (p: ScenePoint) =>
-  Math.hypot(p.x - INTERIOR_DOOR.x, p.y - INTERIOR_DOOR.y) <= INTERIOR_DOOR_REACH;
+/** Whether a room has the shared door on its left wall (the lighthouse's lamp room has none). */
+export const hasDoor = (area: SceneArea) => area !== 'lighthouseTop';
+export const nearDoor = (p: ScenePoint, area?: SceneArea) =>
+  (!area || hasDoor(area)) && Math.hypot(p.x - INTERIOR_DOOR.x, p.y - INTERIOR_DOOR.y) <= INTERIOR_DOOR_REACH;
 
 /**
  * 허풍 주점: where you stand to talk to 샹크스 across the bar (network units;
@@ -207,8 +213,14 @@ export type InteriorAction =
   | { kind: 'salon' }
   | { kind: 'counter' }
   | { kind: 'seat'; seat: string }
-  | { kind: 'stand' };
+  | { kind: 'stand' }
+  /** 범마을 등대: the stair, the logbook, the lamp, the balcony (lounge-lighthouse-layout.ts). */
+  | { kind: 'lighthouse'; touch: LighthouseTouch };
 export function interiorAction(p: ScenePoint, area: SceneArea, taken: readonly ScenePoint[] = []): InteriorAction | null {
+  if (isLighthouseArea(area)) {
+    const touch = lighthouseTouch(p, area);
+    if (touch) return { kind: 'lighthouse', touch };
+  }
   if (isShopArea(area)) {
     if (shopSeatAt(p, area)) return { kind: 'stand' };
     if (nearShopCounter(p, area)) return { kind: 'counter' };
@@ -221,11 +233,15 @@ export function interiorAction(p: ScenePoint, area: SceneArea, taken: readonly S
   const table = sceneNearestTable(p, area);
   if (table) return { kind: 'table', game: table.game };
   if (nearBar(p, area)) return { kind: 'host' };
-  return nearDoor(p) ? { kind: 'door' } : null;
+  return nearDoor(p, area) ? { kind: 'door' } : null;
 }
 
 /** What the mouse points at on the floor (for the cursor and for clicks). */
 export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | null {
+  if (isLighthouseArea(area)) {
+    const hover = lighthouseHover(p, area);
+    if (hover) return { kind: 'lighthouse', touch: hover.touch };
+  }
   if (area === 'salon' && p.x >= 37 && p.x <= 67 && p.y >= 42 && p.y <= 58) return { kind: 'salon' };
   if (isShopArea(area)) {
     const d = SHOP_INTERIORS[area].desk;
@@ -237,7 +253,7 @@ export function interiorHover(p: ScenePoint, area: SceneArea): InteriorAction | 
   for (const c of sceneColliders(area))
     if (((p.x - c.x) / (c.rx + 1)) ** 2 + ((p.y - c.y) / (c.ry + 1)) ** 2 <= 1)
       return { kind: 'table', game: c.game };
-  if (p.x < 15.5 && Math.abs(p.y - INTERIOR_DOOR.y) < 5) return { kind: 'door' };
+  if (hasDoor(area) && p.x < 15.5 && Math.abs(p.y - INTERIOR_DOOR.y) < 5) return { kind: 'door' };
   // The tavern's bar (샹크스 behind it).
   if (area === 'tavern' && p.y < 44.5 && p.x > 20 && p.x < 44) return { kind: 'host' };
   return null;
@@ -425,6 +441,7 @@ export function interiorWaypoints(area: SceneArea): ScenePoint[] {
     for (const o of area === 'bank' ? BANK_OBSTACLES : area === 'salon' ? SALON_OBSTACLES : shopObstacles(area).filter((q) => !q.staff))
       for (const x of [-1, 1]) for (const y of [-1, 1])
         push({ x: o.x + x * (o.rx + SCENE_PLAYER_RADIUS + 1), y: o.y + y * (o.ry + SCENE_PLAYER_RADIUS + 1) });
+  if (isLighthouseArea(area)) for (const q of lighthouseWaypoints(area)) push(q);
   waypointCache.set(area, list);
   return list;
 }

@@ -89,6 +89,8 @@ export type RegionUpdate = {
   /** 항구: 샹크스's boat is out (a voyage is on) and whether he waits at the pier. */
   boatOut?: boolean;
   captain?: boolean;
+  /** 항구: 범마을 등대's lamp burns (lounge-lighthouse.ts). */
+  lamp?: boolean;
   /** 우리 농장: every friend's field and house tier (lounge-farm-view.ts), and me. */
   farm?: FarmSceneState;
   me?: number;
@@ -517,6 +519,7 @@ export class RegionSet {
       night: !!u.night,
       boatOut: !!u.boatOut,
       captain: !!u.captain,
+      lamp: !!u.lamp,
       ...(u.season && u.weather ? { season: u.season, weather: u.weather } : {}),
       ...(u.farm ? { farm: u.farm, me: u.me } : {}),
     });

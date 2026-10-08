@@ -194,6 +194,8 @@ export const MOODLETS = {
   rain: ml('비 맞았어요', -3, 2, 1, 'rain'),
   storm: ml('폭풍우 소리가 무서워요', -2, 2, 1, 'rain', 2),
   snow: ml('첫눈이에요!', 6, 24, 1, 'cloud', 2),
+  // 범마을 등대: 바다 바라보기 at the lamp room's balcony rail (once a day, lounge-lighthouse.ts).
+  seaView: ml('등대에서 바다를 바라봤어요', 3, 6, 1, 'wave'),
   // 영감을 들고 있는 동안 (not stored; added by the engine).
   inspired: ml('영감이 샘솟아요', 3, 24, 1, 'spark'),
 } as const satisfies Record<string, MoodletDef>;
@@ -323,7 +325,7 @@ export const FILL = {
 export const BIG_RESULT = 20_000;
 
 /** Life actions of the mood module (names must not collide with room actions). */
-export const MOOD_ACTION_KINDS = ['snack', 'bedRest', 'barDrink', 'moodTea', 'moodShare', 'cheer'] as const;
+export const MOOD_ACTION_KINDS = ['snack', 'bedRest', 'barDrink', 'moodTea', 'moodShare', 'cheer', 'seaView'] as const;
 export type MoodActionKind = (typeof MOOD_ACTION_KINDS)[number];
 
 export const MOOD_REJECT = {
@@ -333,6 +335,7 @@ export const MOOD_REJECT = {
   restWait: '방금 쉬었어요. 조금 뒤에 다시 누워 봐요.',
   drinkMax: `바 음료는 하루 ${DRINKS_PER_DAY}잔까지예요.`,
   balance: '잔액이 부족해요.',
+  seaViewDone: '오늘은 이미 바다를 실컷 바라봤어요. 내일 또 와요.',
   noCup: '받은 찻잔이 없어요.',
   friend: '응원할 친구를 확인해 주세요.',
   self: '나를 응원할 수는 없어요. 대신 간식 어때요?',

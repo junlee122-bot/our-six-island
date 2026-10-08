@@ -272,6 +272,8 @@ const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tag
   smithy: shopArt('smithy'),
   clinic: shopArt('clinic'),
   broker: shopArt('broker'),
+  lighthouse: { src: LOUNGE_ASSETS.room, alt: '범마을 등대 1층, 등대지기의 방', short: '등대', tagline: VENUES.lighthouse.tagline, title: VENUES.lighthouse.name },
+  lighthouseTop: { src: LOUNGE_ASSETS.room, alt: '범마을 등대 꼭대기, 큰 등불이 있는 등명실', short: '등명실', tagline: VENUES.lighthouseTop.tagline, title: VENUES.lighthouseTop.name },
   salon: { src: LOUNGE_ASSETS.wardrobe, alt: '그웬의 미용실', short: '미용실', tagline: '그웬과 오늘의 모습을 골라요', title: '미용실' },
   bank: {
     src: LOUNGE_ASSETS.room, alt: '범마을 은행', short: '은행',

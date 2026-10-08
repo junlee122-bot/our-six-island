@@ -30,6 +30,8 @@ import {
 } from './lounge-shop-interiors';
 import { NPCS, type NpcId } from './lounge-npc-data';
 import { DISTRICTS } from './lounge-districts';
+import { LIGHTHOUSE_FLOOR, LIGHTHOUSE_NAME, SEA_VIEW_MS, isLighthouseArea, lighthouseLampLit } from './lounge-lighthouse';
+import { BALCONY_FRONT, LAMP_FRONT, LOGBOOK_FRONT, STAIR_FRONT, lighthouseHover, walksIntoStair, type LighthouseTouch } from './lounge-lighthouse-layout';
 import { GAME_KINDS } from './lounge-games';
 
 /** The residents who work here (their scene draws them), as spots for their bubbles. */
@@ -69,6 +71,7 @@ import {
 import { sceneTableSide, type SceneArea, type ScenePoint } from './lounge-scene-layout';
 import {
   INTERIOR_DOOR,
+  INTERIOR_ROOM,
   interiorArrival,
   INTERIOR_PLACE_EVENT,
   nearDoor,
@@ -197,6 +200,10 @@ type Props = {
   onSalon?: () => void;
   /** A shop room's counter: the shop's window (the old outdoor counter's). */
   onCounter?: () => void;
+  /** 범마을 등대: the stair, the logbook, the lamp, the balcony (lounge-lighthouse-layout.ts). */
+  onLighthouse?: (touch: LighthouseTouch) => void;
+  /** 바다 바라보기 started at this time (Date.now()): the camera pans over the sea for SEA_VIEW_MS. */
+  seaViewAt?: number;
   /** 허풍 주점 evenings: talk to a visiting resident (프리렌, 쓰레쉬, 볼리바스). */
   onResident?: (npc: NpcId) => void;
   /** I am near the door: preload the village. */
@@ -249,6 +256,8 @@ export function Interior3D({
   onBanker,
   onSalon,
   onCounter,
+  onLighthouse,
+  seaViewAt = 0,
   onResident,
   onNearDoor,
   seatedAt = null,
@@ -328,10 +337,14 @@ export function Interior3D({
   };
 
   // ------------------------------------------------------------ latest values
-  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onResident, onNearDoor, onUnavailable, sheetOpen });
+  const latest = useRef({ here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onLighthouse, onResident, onNearDoor, onUnavailable, sheetOpen });
   useLayoutEffect(() => {
-    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onResident, onNearDoor, onUnavailable, sheetOpen };
+    latest.current = { here, self, me, meHere, seatedPoint, seatedChair, tables, onMove, onTable, onExit, onHost, onLender, onBanker, onSalon, onCounter, onLighthouse, onResident, onNearDoor, onUnavailable, sheetOpen };
   });
+  const seaViewRef = useRef(seaViewAt);
+  useLayoutEffect(() => {
+    seaViewRef.current = seaViewAt;
+  }, [seaViewAt]);
   const live = useRef({
     point: meHere ? { x: meHere.x, y: meHere.y } : interiorArrival(area),
     adopted: !!meHere,
@@ -347,6 +360,8 @@ export function Interior3D({
     /** Clicked the door: 나가기 runs once I reach it. */
     exitIntent: false,
     approach: null as GameKind | null,
+    /** 범마을 등대: clicked the stair, the desk, the lamp or the rail: its action runs on arrival. */
+    touch: null as LighthouseTouch | null,
     locked: false,
     paused: false,
   });
@@ -414,6 +429,18 @@ export function Interior3D({
         window.dispatchEvent(new CustomEvent(INTERIOR_PLACE_EVENT, { detail: off }));
         latest.current.onMove(off.x, off.y);
       }
+    } else if (next.kind === 'lighthouse') {
+      const l = live.current;
+      // The stair is a doorway: not right after arriving, and only once.
+      if (next.touch.kind === 'stair' && (exited.current || !doors.current.ready())) return;
+      if (next.touch.kind === 'stair') exited.current = true;
+      l.held.clear();
+      l.target = l.goal = null;
+      l.route = [];
+      l.approach = null;
+      l.touch = null;
+      latest.current.onMove(l.point.x, l.point.y);
+      latest.current.onLighthouse?.(next.touch);
     } else if (next.kind === 'host') latest.current.onHost?.();
     else latest.current.onTable(next.game);
   };
@@ -448,6 +475,7 @@ export function Interior3D({
   const walkTo = (goal: ScenePoint, exit = false) => {
     const l = live.current;
     l.exitIntent = exit;
+    l.touch = null;
     l.route = interiorPath(l.point, goal, area);
     l.target = l.route.shift() ?? null;
     l.goal = goal;
@@ -565,6 +593,26 @@ export function Interior3D({
       const w = interiorToWorld(p);
       const a = interiorCameraAim(w, camera.top, viewAspect, topShare);
       aim.set(a.x, 0, -a.u / Math.sin(VIEW_PITCH));
+      // 바다 바라보기: a slow pan along the lamp room's windows, a little closer, then back to me.
+      const since = Date.now() - seaViewRef.current;
+      const panning = area === 'lighthouseTop' && seaViewRef.current > 0 && since >= 0 && since < SEA_VIEW_MS;
+      const zoom = panning ? 1.45 : 1;
+      if (camera.zoom !== zoom) {
+        camera.zoom = zoom;
+        camera.updateProjectionMatrix();
+      }
+      if (panning) {
+        const k = since / SEA_VIEW_MS,
+          e = k * k * (3 - 2 * k);
+        // Screen-up of the windows' middle (2.1 high on the back wall).
+        const u = 2.1 * Math.cos(VIEW_PITCH) - (INTERIOR_ROOM.minZ - 0.6) * Math.sin(VIEW_PITCH);
+        aim.set(-5 + 10 * e, 0, -u / Math.sin(VIEW_PITCH));
+        look.lerp(aim, followEase(dt || 0.016));
+        camera.position.copy(look).add(cameraOffset);
+        camera.lookAt(look);
+        camera.updateMatrixWorld();
+        return true;
+      }
       const far = look.distanceTo(aim);
       if (snap || far < 0.003) look.copy(aim);
       else look.lerp(aim, followEase(dt));
@@ -845,6 +893,17 @@ export function Interior3D({
         showMarker(l.goal);
         return;
       }
+      if (hover?.kind === 'lighthouse' && at.floor && isLighthouseArea(area)) {
+        const spot = lighthouseHover(at.floor, area);
+        if (spot) {
+          l.held.clear();
+          l.approach = null;
+          walkToRef.current(spot.go);
+          l.touch = spot.touch;
+          showMarker(l.goal);
+          return;
+        }
+      }
       if (!at.floor && hover?.kind !== 'door') return;
       if (at.floor && hover?.kind !== 'door' && (at.floor.y < 36 || at.floor.x < 8 || at.floor.x > 92 || at.floor.y > 96)) return;
       l.held.clear();
@@ -1062,8 +1121,11 @@ export function Interior3D({
         l.approach = null;
         l.exitIntent = false;
         // Walking on into the door (left wall) takes it, like 나가기.
-        if (nearDoor(l.point) && l.point.x <= INTERIOR_DOOR.x + 4 && dx / Math.hypot(dx, dy) < -0.6 && doors.current.ready())
+        if (nearDoor(l.point, area) && l.point.x <= INTERIOR_DOOR.x + 4 && dx / Math.hypot(dx, dy) < -0.6 && doors.current.ready())
           queueMicrotask(() => runRef.current({ kind: 'door' }));
+        // 범마을 등대: walking on into the stairwell takes the stair.
+        if (isLighthouseArea(area) && doors.current.ready() && walksIntoStair(l.point, { x: dx, y: dy }))
+          queueMicrotask(() => runRef.current({ kind: 'lighthouse', touch: { kind: 'stair', to: area === 'lighthouse' ? 'lighthouseTop' : 'lighthouse' } }));
       } else if (l.target && !l.locked && !l.paused) {
         dx = l.target.x - l.point.x;
         dy = l.target.y - l.point.y;
@@ -1124,6 +1186,13 @@ export function Interior3D({
         l.approach = null;
         const a = interiorAction(l.point, area);
         if (a?.kind === 'table' && a.game === game) current.onTable(game);
+      }
+      // 범마을 등대: a clicked stair, desk, lamp or rail runs once I get there.
+      if (!l.target && l.touch) {
+        const want = l.touch;
+        l.touch = null;
+        const a = interiorAction(l.point, area);
+        if (a?.kind === 'lighthouse' && a.touch.kind === want.kind) queueMicrotask(() => runRef.current(a));
       }
       // Friends glide to their latest spot (seated ones to their seat).
       const wanted = current.here.filter((p) => p.id !== current.self);
@@ -1205,7 +1274,8 @@ export function Interior3D({
         if (
           next?.kind !== prev?.kind ||
           (next?.kind === 'table' && prev?.kind === 'table' && next.game !== prev.game) ||
-          (next?.kind === 'seat' && prev?.kind === 'seat' && next.seat !== prev.seat)
+          (next?.kind === 'seat' && prev?.kind === 'seat' && next.seat !== prev.seat) ||
+          (next?.kind === 'lighthouse' && prev?.kind === 'lighthouse' && next.touch.kind !== prev.touch.kind)
         ) {
           actionRef.current = next;
           setAction(next);
@@ -1247,6 +1317,11 @@ export function Interior3D({
         if (area === 'bank') host.dataset.bankModels = String(studio.bankModels());
         host.dataset.nearSalon = String(nearSalon(l.point, area));
         if (area === 'salon') host.dataset.salonModels = String(studio.salonModels());
+        if (isLighthouseArea(area)) {
+          host.dataset.lighthouseModels = studio.lighthouseModels();
+          host.dataset.lampLit = String(studio.lampLit());
+          host.dataset.touch = next?.kind === 'lighthouse' ? next.touch.kind : '';
+        }
         if (isShopArea(area)) {
           host.dataset.shopModels = studio.shopModels();
           host.dataset.nearCounter = String(nearShopCounter(l.point, area));
@@ -1264,6 +1339,8 @@ export function Interior3D({
       }
       // kArchive furniture arriving, or the VIP project finishing.
       studio.tick(t / 1000);
+      // 범마을 등대's lamp: lit through the game night, turning with the harbor's beam.
+      if (studio.animate(Date.now() + clockRef.current)) dirty = true;
       if (studio.refresh(vipRef.current, propsRef.current)) {
         renderer.shadowMap.needsUpdate = true;
         dirty = true;
@@ -1356,6 +1433,28 @@ export function Interior3D({
     walkToRef.current({ ...shop.front });
     hostRef.current?.focus({ preventScroll: true });
   };
+  /** 범마을 등대: walk to the stair, the desk, the lamp or the rail; its action runs on arrival. */
+  const lighthouse = isLighthouseArea(area) ? area : null;
+  const approachTouch = (touch: LighthouseTouch, go: ScenePoint) => {
+    const l = live.current;
+    if (!lighthouse || l.locked || l.paused || latest.current.sheetOpen) return;
+    l.held.clear();
+    l.approach = null;
+    walkToRef.current({ ...go });
+    l.touch = touch;
+    hostRef.current?.focus({ preventScroll: true });
+  };
+  const lampLit = lighthouseLampLit(dutyAt);
+  const touchLabel = (t: LighthouseTouch) =>
+    t.kind === 'stair'
+      ? t.to === 'lighthouseTop'
+        ? '계단으로 꼭대기에 올라가기'
+        : '계단으로 1층에 내려가기'
+      : t.kind === 'logbook'
+        ? '등대 일지 읽기'
+        : t.kind === 'lamp'
+          ? '큰 등불 살펴보기'
+          : '바다 바라보기';
   const others = here.filter((p) => p.id !== self);
   const myPlayer = meHere;
   const actionState = action?.kind === 'table' ? tableState(view, action.game) : null;
@@ -1366,7 +1465,7 @@ export function Interior3D({
       className={`ih-scene ih-${area}`}
       tabIndex={0}
       role="application"
-      aria-label={`${placeName} 안. 바닥을 클릭하거나 방향키와 ${[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')}로 걸어요. ${area === 'bank' || area === 'salon' ? `${area === 'bank' ? BANKER_NAME : SALON_STYLIST_NAME}의 이름을 클릭하면 앞으로 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 이야기해요.` : `테이블을 클릭하면 그 앞까지 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 앉거나 구경해요.`} Esc로 메뉴를 열어요.`}
+      aria-label={`${placeName} 안. 바닥을 클릭하거나 방향키와 ${[keys.up, keys.left, keys.down, keys.right].map(keyLabel).join('')}로 걸어요. ${lighthouse ? `계단 앞에서 ${keyLabel(keys.action)}를 누르거나 계단으로 걸어 들어가면 ${lighthouse === 'lighthouse' ? '꼭대기로 올라가요' : '1층으로 내려가요'}.` : area === 'bank' || area === 'salon' ? `${area === 'bank' ? BANKER_NAME : SALON_STYLIST_NAME}의 이름을 클릭하면 앞으로 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 이야기해요.` : `테이블을 클릭하면 그 앞까지 걸어가고, 가까이에서 ${keyLabel(keys.action)}를 누르면 앉거나 구경해요.`} Esc로 메뉴를 열어요.`}
       data-testid="interior-3d"
       data-area={area}
       data-load-state={state}
@@ -1476,8 +1575,47 @@ export function Interior3D({
           />
         ))}
       </div>
-      <nav className="ih-tables" aria-label={`${placeName} ${area === 'bank' || area === 'salon' || shop ? '이동 안내' : '테이블'}`}>
-        <strong>{placeName}</strong>
+      <nav className="ih-tables" aria-label={`${placeName} ${area === 'bank' || area === 'salon' || shop || lighthouse ? '이동 안내' : '테이블'}`}>
+        <strong>{lighthouse ? LIGHTHOUSE_NAME : placeName}</strong>
+        {lighthouse && (
+          <ol className="ih-floors" aria-label="등대 층" data-testid="lighthouse-floors">
+            {(['lighthouseTop', 'lighthouse'] as const).map((f) => (
+              <li key={f} className={f === lighthouse ? 'is-here' : ''} aria-current={f === lighthouse ? 'location' : undefined}>
+                <b>{LIGHTHOUSE_FLOOR[f].short}</b>
+                <span>{LIGHTHOUSE_FLOOR[f].name}</span>
+                {f === lighthouse && <em>지금 여기</em>}
+              </li>
+            ))}
+          </ol>
+        )}
+        {lighthouse === 'lighthouse' && (
+          <button type="button" data-testid="lighthouse-logbook-route" onClick={() => approachTouch({ kind: 'logbook' }, LOGBOOK_FRONT)}>
+            <span>등대 일지</span>
+            <small>오늘의 바다 기록 · 걸어가기</small>
+          </button>
+        )}
+        {lighthouse === 'lighthouseTop' && (
+          <>
+            <button type="button" data-testid="lighthouse-lamp-route" onClick={() => approachTouch({ kind: 'lamp' }, LAMP_FRONT)}>
+              <span>큰 등불</span>
+              <small>{lampLit ? '불이 켜져 있어요' : '18시에 켜져요'} · 걸어가기</small>
+            </button>
+            <button type="button" data-testid="lighthouse-view-route" onClick={() => approachTouch({ kind: 'seaView' }, BALCONY_FRONT)}>
+              <span>바다 바라보기</span>
+              <small>난간으로 걸어가기</small>
+            </button>
+          </>
+        )}
+        {lighthouse && (
+          <button
+            type="button"
+            data-testid="lighthouse-stair-route"
+            onClick={() => approachTouch({ kind: 'stair', to: lighthouse === 'lighthouse' ? 'lighthouseTop' : 'lighthouse' }, STAIR_FRONT)}
+          >
+            <span>나선 계단</span>
+            <small>{lighthouse === 'lighthouse' ? '꼭대기로 올라가기' : '1층으로 내려가기'}</small>
+          </button>
+        )}
         {tables.map((t) => (
           <button
             type="button"
@@ -1552,6 +1690,12 @@ export function Interior3D({
           kind={
             action.kind === 'door'
               ? 'exit'
+              : action.kind === 'lighthouse'
+                ? action.touch.kind === 'stair'
+                  ? 'enter'
+                  : action.touch.kind === 'logbook'
+                    ? 'board'
+                    : 'look'
               : action.kind === 'seat'
                 ? 'sit'
                 : action.kind === 'stand'
@@ -1562,7 +1706,9 @@ export function Interior3D({
           }
           label={
             action.kind === 'door'
-              ? `${josa(shop ? DISTRICTS[shop.district].name : NAMES.village, '으로/로')} 나가기`
+              ? `${josa(shop ? DISTRICTS[shop.district].name : lighthouse ? DISTRICTS.harbor.name : NAMES.village, '으로/로')} 나가기`
+              : action.kind === 'lighthouse'
+                ? touchLabel(action.touch)
               : action.kind === 'counter' && shop
                 ? `${shop.short} 이용하기`
                 : action.kind === 'seat'
@@ -1584,6 +1730,8 @@ export function Interior3D({
           detail={
             actionState
               ? tableLabel(actionState).text
+              : action.kind === 'lighthouse' && action.touch.kind === 'lamp'
+                ? lampLit ? '불이 켜져 있어요' : '해 질 녘에 켜져요'
               : action.kind === 'counter' && shop
                 ? shop.owner && staffIds.includes(shop.owner)
                   ? `${NPCS[shop.owner].name} · ${shop.name}`
@@ -1603,7 +1751,7 @@ export function Interior3D({
           onPress={() => onResident?.(residentNear)}
         />
       )}
-      <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : shop ? '이용' : '앉기'} className="ih-hint" />
+      <WalkHints act={area === 'bank' || area === 'salon' ? '이야기' : shop ? '이용' : lighthouse ? '살펴보기' : '앉기'} className="ih-hint" />
     </div>
   );
 }

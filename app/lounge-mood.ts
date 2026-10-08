@@ -144,6 +144,8 @@ export type MoodUser = {
   sd?: number;
   /** KST day of the last 첫눈 moodlet. */
   fs?: number;
+  /** KST day of the last 바다 바라보기 at the lighthouse. */
+  sv?: number;
 };
 export type MoodState = Record<string, MoodUser>;
 export type MoodExt = { mood?: MoodState };
@@ -153,7 +155,9 @@ export type MoodAction =
   | { kind: 'barDrink' }
   | { kind: 'moodTea' }
   | { kind: 'moodShare'; on: boolean }
-  | { kind: 'cheer'; to: number | string; how: CheerHow; item?: string };
+  | { kind: 'cheer'; to: number | string; how: CheerHow; item?: string }
+  /** 바다 바라보기 at the lighthouse's balcony (the cloud engine checks I stand there). */
+  | { kind: 'seaView' };
 
 // ---------------------------------------------------------------- reading
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -191,7 +195,7 @@ function readUser(value: unknown): MoodUser | null {
     u.i = { k: i.k, at: time(i.at), until: time(i.until), left: int(i.left, 0, 99) ?? 0 };
   if (Array.isArray(x.iw) && int(x.iw[0], 0, 1e7) !== undefined && int(x.iw[1], 0, 99) !== undefined)
     u.iw = [x.iw[0] as number, x.iw[1] as number];
-  for (const k of ['id', 'd', 'care', 'wx', 'sd', 'fs'] as const) {
+  for (const k of ['id', 'd', 'care', 'wx', 'sd', 'fs', 'sv'] as const) {
     const d = int(x[k], 0, 1e7);
     if (d !== undefined) u[k] = d;
   }
@@ -820,6 +824,14 @@ export function moodAction(
       addLet(me, 'tea', now);
       break;
     }
+    case 'seaView': {
+      // A small calm once a real day; no needs, no 범.
+      const day = kstDay(now);
+      if (me.sv === day) fail(MOOD_REJECT.seaViewDone);
+      me.sv = day;
+      addLet(me, 'seaView', now);
+      break;
+    }
     case 'moodShare': {
       if (typeof a.on !== 'boolean') fail(LIFE_REJECT.invalid);
       if (a.on) me.pub = 1;
@@ -933,6 +945,8 @@ export type MoodView = {
   weekMax: number;
   /** An inspiration already came today. */
   todayDone: boolean;
+  /** 바다 바라보기 at the lighthouse already counted today (absent from older servers). */
+  seaView?: boolean;
   insp: (MoodInspiration & { name: string; text: string }) | null;
   snacksLeft: number;
   drinks: number;
@@ -1020,6 +1034,7 @@ export function moodView(life: LifeState, uid: string, now: number): MoodView {
     week: weekCount(u, day),
     weekMax: INSPIRATIONS_PER_WEEK,
     todayDone: u.id === day,
+    seaView: u.sv === day,
     insp: u.i ? { ...u.i, name: INSPIRATIONS[u.i.k].name, text: INSPIRATIONS[u.i.k].text } : null,
     snacksLeft: Math.max(0, SNACKS_PER_DAY - (u.sn ?? 0)),
     drinks: u.dr ?? 0,

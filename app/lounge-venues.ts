@@ -6,13 +6,14 @@
 import { NAMES } from './lounge-text.ts';
 import { SHOP_AREAS, SHOP_INTERIORS, type ShopArea } from './lounge-shop-interiors.ts';
 import type { MusicPlace } from './lounge-music-tracks.ts';
+import { LIGHTHOUSE_AREAS, LIGHTHOUSE_FLOOR, LIGHTHOUSE_NAME, type LighthouseArea } from './lounge-lighthouse.ts';
 
 /**
  * Server areas that are walkable interiors ('lounge' is the hall). The shops
  * (lounge-shop-interiors.ts) are entered from their district, not the hub.
  */
-export type InteriorArea = 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea;
-export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern', 'bank', 'salon', ...SHOP_AREAS];
+export type InteriorArea = 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea | LighthouseArea;
+export const INTERIOR_AREAS: readonly InteriorArea[] = ['lounge', 'casino', 'tavern', 'bank', 'salon', ...SHOP_AREAS, ...LIGHTHOUSE_AREAS];
 export const isInteriorArea = (a: unknown): a is InteriorArea =>
   typeof a === 'string' && (INTERIOR_AREAS as readonly string[]).includes(a);
 
@@ -32,7 +33,7 @@ export type Venue = {
   /** Short name for banners ("회관"). */
   short: string;
   /** Its VILLAGE_PLACES id (the door you walk through), or the shop's own id for the district shops. */
-  place: 'hall' | 'casino' | 'tavern' | 'bank' | 'wardrobe' | ShopArea;
+  place: 'hall' | 'casino' | 'tavern' | 'bank' | 'wardrobe' | ShopArea | LighthouseArea;
   music: VenueMusic;
   venue: TableVenue;
   /** Its own chat ("회관 수다"). */
@@ -48,7 +49,22 @@ const shopVenue = (area: ShopArea): Venue => {
   return { area, name: s.name, short: s.short, place: area, music: s.district, venue: 'hall', chat: s.chat, exposure: 1.08, tagline: s.tagline };
 };
 
+/** 범마을 등대's floors (lounge-lighthouse.ts): the harbor's piece, heard muffled. */
+const lighthouseVenue = (area: LighthouseArea): Venue => ({
+  area,
+  name: `${LIGHTHOUSE_NAME} ${LIGHTHOUSE_FLOOR[area].short}`,
+  short: '등대',
+  place: area,
+  music: 'harbor',
+  venue: 'hall',
+  chat: '등대 수다',
+  exposure: area === 'lighthouseTop' ? 1.04 : 1.08,
+  tagline: area === 'lighthouseTop' ? '바다를 비추는 큰 등불' : '가붕의 등대 일지',
+});
+
 export const VENUES: Record<InteriorArea, Venue> = {
+  lighthouse: lighthouseVenue('lighthouse'),
+  lighthouseTop: lighthouseVenue('lighthouseTop'),
   bakery: shopVenue('bakery'),
   coop: shopVenue('coop'),
   general: shopVenue('general'),

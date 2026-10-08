@@ -118,12 +118,16 @@ function seedLife(life, uid) {
   if (me !== undefined) life.tastes[me] = { l: ['crucian', '#dish', 'strawberry'], d: ['#bug', 'mugwort'], n: '달달한 건 뭐든 좋아요', day: day - 1 };
   for (const a of [0, 1, 2, 3, 4, 5, 6].filter((a) => a !== me).slice(0, 2))
     life.tastes[a] = { l: ['#fish', 'carp'], d: ['#flower'], ...(a % 2 ? {} : { n: '큰 물고기 환영!' }), day: day - 2 };
+  // ② 항구 is open (범마을 등대, the lighthouse step).
+  life.flags = [...new Set([...(life.flags ?? []), 'district-harbor'])];
   // --stage3: the two stage-3 districts are open (design-npcs-stage3.md).
   if (flag('stage3')) life.flags = [...new Set([...(life.flags ?? []), 'district-ranch', 'district-foothill'])];
 }
 
 async function runView(browser, base, view, report) {
-  const H = await setup({ browser, base, view, seedLife });
+  // The mock server's clock can run ahead (the lighthouse lamp room is shot at game night).
+  let skew = 0;
+  const H = await setup({ browser, base, view, seedLife, serverSkew: () => skew });
   const { page, js, sleep, until } = H;
   const res = (report.views[view] = { screens: {}, notes: [] });
   if (lowGraphics) {
@@ -186,7 +190,7 @@ async function runView(browser, base, view, report) {
   const leaveDistrict = async () => {
     const area = await js(() => document.querySelector('[data-testid=area-3d]')?.dataset.area ?? '');
     if (!area) return;
-    const exits = { farm: { x: 0, z: 30 }, market: { x: -26, z: -3 } };
+    const exits = { farm: { x: 0, z: 30 }, market: { x: -26, z: -3 }, harbor: { x: -28, z: -10 } };
     const at = exits[area];
     if (!at) return;
     await closeAll();
@@ -558,6 +562,74 @@ async function runView(browser, base, view, report) {
           return !!s && s !== 'loading';
         }, 180000);
         await sleep(1500);
+      }
+      await returnToVillage();
+    }
+  });
+
+  // 범마을 등대: down the 둑길 to the harbor, in at the lighthouse door, the logbook on 1층, up the stair to the lamp room.
+  await step('lighthouse', async () => {
+    const interior = (area) =>
+      until((a) => {
+        const d = document.querySelector('[data-testid=interior-3d]')?.dataset;
+        return d?.area === a && d.loadState === 'ready' && !document.querySelector('[data-testid=scene-fade].is-active');
+      }, 180000, area);
+    try {
+      await closeAll();
+      await focusScene();
+      await walkTo({ x: 46, z: 42.2 }, '항구 입구까지 걷지 못했습니다', { maxMs: 300000 });
+      await focusScene();
+      await page.keyboard.press('KeyE');
+      assert.notEqual(await until(() => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.area === 'harbor' && d.loadState === 'ready';
+      }, 180000), -1, '항구를 불러오지 못했습니다.');
+      await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+      // The harbor minimap's lighthouse pin says it can be entered.
+      if (!(await page.locator('[data-minimap-area="harbor"] .hv-minimap-body').count())) await H.clickSel('[data-testid=minimap-toggle]');
+      const pin = await js(() => document.querySelector('[data-minimap-area="harbor"] [data-minimap-place="lighthouse"]')?.getAttribute('title') ?? document.querySelector('[data-minimap-area="harbor"] [data-minimap-place="lighthouse"]')?.getAttribute('aria-label') ?? '');
+      assert.match(pin, /들어갈 수 있어요/, '항구 미니맵의 등대 자리가 들어갈 수 있다고 알려 주지 않습니다.');
+      const door = { x: 23, z: -4 };
+      await js((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), door);
+      assert.notEqual(await until((p) => {
+        const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+        return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 1;
+      }, 180000, door), -1, '등대 문까지 걷지 못했습니다.');
+      await js(() => document.querySelector('[data-testid=area-3d]')?.focus({ preventScroll: true }));
+      await page.keyboard.press('KeyE');
+      assert.notEqual(await interior('lighthouse'), -1, '등대 1층을 불러오지 못했습니다.');
+      await sleep(5000);
+      await snap('lighthouse');
+      // 등대 일지: walk to the desk; the page opens on arrival.
+      await H.clickSel('[data-testid=lighthouse-logbook-route]');
+      assert.notEqual(await until(() => !!document.querySelector('dialog[open] [data-testid=lighthouse-logbook]'), 120000), -1, '등대 일지가 열리지 않았습니다.');
+      await sleep(800);
+      await snap('lighthouse-logbook');
+      await closeAll();
+      // Up the spiral stair to the lamp room, shot at game 21:00 so the big lamp burns (and reads the same every run).
+      const hourMs = 3_600_000 / 24;
+      skew = (21 * hourMs - (Date.now() % 3_600_000) + 3_600_000) % 3_600_000;
+      await H.clickSel('[data-testid=lighthouse-stair-route]');
+      assert.notEqual(await interior('lighthouseTop'), -1, '등대 꼭대기에 올라가지 못했습니다.');
+      assert.notEqual(await until(() => document.querySelector('[data-testid=interior-3d]')?.dataset.lampLit === 'true', 60000), -1, '등명실 등불이 켜지지 않았습니다.');
+      await sleep(5000);
+      await snap('lighthouse-top');
+      skew = 0;
+    } finally {
+      skew = 0;
+      await closeAll();
+      // Out of the lighthouse (either floor) to its door, then home along the 둑길.
+      if (await js(() => !!document.querySelector('[data-testid=interior-3d]'))) {
+        await focusScene();
+        await page.keyboard.press('Escape');
+        await sleep(700);
+        await H.clickText(/항구로 나가기/, 'dialog[open] button');
+        await until(() => {
+          const d = document.querySelector('[data-testid=area-3d]')?.dataset;
+          return d?.area === 'harbor' && d.loadState === 'ready';
+        }, 180000);
+        await until(() => !document.querySelector('[data-testid=scene-fade].is-active'), 15000);
+        await sleep(3000);
       }
       await returnToVillage();
     }

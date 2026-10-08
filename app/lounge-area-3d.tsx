@@ -53,12 +53,12 @@ import { districtProgress } from './lounge-district-models';
 import { seasonOfDay, weatherOf } from './lounge-calendar';
 // I2-world D1: rain, snow, leaves and petals on every outdoor map (shared with the hub).
 import { WeatherParticles } from './lounge-season-world';
-import { districtCounters, type DistrictCounter } from './lounge-district-counters';
+import { districtCounters, type DistrictCounter, type EnterArea } from './lounge-district-counters';
+import { lighthouseLampLit } from './lounge-lighthouse';
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
-import type { ShopArea } from './lounge-shop-interiors';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
 import { loungeAudio } from './lounge-audio';
 import { areaSurface } from './lounge-footsteps';
@@ -103,7 +103,7 @@ export type AreaAction =
   /** 시장 거리's request board. */
   | { kind: 'board'; label: string }
   /** A district counter (E at the door): 농협, 잡화점, 빵집, 신문사, 우체국, 파출소, 어시장, 낚시조합, 도서관, 좌판. */
-  | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean; enter?: ShopArea }
+  | { kind: 'counter'; place: DistrictCounter; label: string; disabled?: boolean; enter?: EnterArea }
   /** 방파제 / 큰 선착장: the fishing engine's harbor spots (rod and crab pot); 먼바다: the boat's rails. */
   | { kind: 'fish'; spot: 'breakwater' | 'pier' | 'offshore'; label: string }
   /** 친구에게 가기 signpost by each district's road out. */
@@ -461,6 +461,8 @@ export function AreaScene({
         lift: !!s.regions?.mine.lift,
         marketDay: marketDayNow(),
         night,
+        // 범마을 등대's lamp follows the game night (none while 낮밤 is off).
+        lamp: area === 'harbor' && latest.current.dayNight !== false && lighthouseLampLit(Date.now() + latest.current.clockOffset),
         boatOut: s.boatOut,
         captain: s.captainHere,
         season,
@@ -734,7 +736,8 @@ export function AreaScene({
         for (const f of [mineFig, ...others.values()]) (f.mesh.material as THREE.MeshBasicMaterial).color.copy(tint);
         residents?.setTint(tint);
       }
-      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere, s.farm, season, weather]);
+      const lampOn = area === 'harbor' && s.dayNight !== false && lighthouseLampLit(Date.now() + s.clockOffset);
+      const key = JSON.stringify([s.nodes.map((n) => n.id + +n.taken), s.broken, s.floor?.floor, s.regions?.mine.ladder, s.regions?.mine.lift, s.logCleared, night, area === 'market' && marketDayNow(), s.boatOut, s.captainHere, s.farm, season, weather, lampOn]);
       if (key !== stateKey) {
         stateKey = key;
         applyState();
@@ -933,8 +936,9 @@ export function AreaScene({
       }
       // Rain, snow, leaves or petals drifting (about 30 frames a second).
       if (ambience?.tick(t, dt, look)) dirty = true;
-      // Redraw when something changed; otherwise ~4 times a second (the node marks bob).
-      if (!dirty && t - lastRender < 250) return;
+      // Redraw when something changed; otherwise ~4 times a second (the node marks bob),
+      // ~10 while the lighthouse beam sweeps the harbor at night.
+      if (!dirty && t - lastRender < (lampOn ? 100 : 250)) return;
       lastRender = t;
       set.tick(t);
       for (const [id, f] of others) project(id, f.pos);

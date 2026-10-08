@@ -1,0 +1,20 @@
+/* 범마을 등대 (LighthouseLogbook.tsx): tokens only. */
+.l-logbook { display: grid; gap: var(--sp-3); }
+.l-logbook header { display: grid; gap: var(--sp-1); }
+.l-logbook h3 { margin: 0; color: var(--text); font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; }
+.l-logbook header small { color: var(--text-soft); font-size: var(--fs-body-s); }
+.l-logbook ul { display: grid; gap: var(--sp-2); margin: 0; padding: 0; list-style: none; }
+.l-logbook li { padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--surface-raised); box-shadow: var(--edge-line); color: var(--text); font-size: var(--fs-body); line-height: 1.5; }
+.l-logbook li[data-kind='storm'] { color: var(--stamp-800); }
+.l-logbook li[data-kind='note'] { background: var(--surface-sunken); font-family: var(--font-display); }
+.l-logbook li[data-kind='story'] { background: var(--accent-soft); }
+.l-logbook-pages { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); color: var(--text-soft); font-size: var(--fs-body-s); }
+
+/* 바다 바라보기: a calm line under the panning view. */
+.l-seaview { position: absolute; left: 50%; bottom: 92px; z-index: var(--z-hud-bar); display: grid; justify-items: center; gap: var(--sp-1); max-width: min(560px, 86vw); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-l); background: var(--surface-raised); box-shadow: var(--lift-2); color: var(--text); font-size: var(--fs-body); text-align: center; transform: translateX(-50%); pointer-events: none; animation: l-seaview-in 0.6s ease-out; }
+.l-seaview strong { font-family: var(--font-display); font-size: var(--fs-title-s); font-weight: 400; color: var(--water-600); }
+.l-seaview small { color: var(--leaf-800); font-size: var(--fs-cap); font-weight: var(--fw-semi); }
+@keyframes l-seaview-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .l-seaview { animation: none; }
+}

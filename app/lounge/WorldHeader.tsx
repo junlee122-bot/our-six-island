@@ -18,8 +18,9 @@ import { dailyOf } from './WalletModal';
 import { linkLabel, offlineReason, retryDelay } from '../lounge-connection';
 import { useNow } from './use-now';
 import { SHOP_INTERIORS, type ShopArea } from '../lounge-shop-interiors';
+import type { LighthouseArea } from '../lounge-lighthouse';
 
-export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom' | ShopArea;
+export type Tab = 'village' | 'lounge' | 'wardrobe' | 'casino' | 'tavern' | 'bank' | 'salon' | 'bedroom' | ShopArea | LighthouseArea;
 
 export const TAB_TITLES: Record<Tab, string> = {
   village: NAMES.village,
@@ -39,6 +40,8 @@ export const TAB_TITLES: Record<Tab, string> = {
   smithy: SHOP_INTERIORS.smithy.name,
   clinic: SHOP_INTERIORS.clinic.name,
   broker: SHOP_INTERIORS.broker.name,
+  lighthouse: '등대 1층',
+  lighthouseTop: '등대 꼭대기',
 };
 
 /**

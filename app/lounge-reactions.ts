@@ -56,6 +56,9 @@ export type ReactionScope =
   | 'smithy'
   | 'clinic'
   | 'broker'
+  /** 범마을 등대's two floors (lounge-lighthouse.ts). */
+  | 'lighthouse'
+  | 'lighthouseTop'
   /** Someone's room (visitors and owner in the same 'home'). */
   | 'home'
   | 'chess'
@@ -102,6 +105,8 @@ export function readReaction(value: unknown): Reaction | undefined {
       'smithy',
       'clinic',
       'broker',
+      'lighthouse',
+      'lighthouseTop',
       'home',
       'chess',
       'gostop',
@@ -130,6 +135,8 @@ export function readReaction(value: unknown): Reaction | undefined {
     r.scope !== 'smithy' &&
     r.scope !== 'clinic' &&
     r.scope !== 'broker' &&
+    r.scope !== 'lighthouse' &&
+    r.scope !== 'lighthouseTop' &&
     r.scope !== 'home';
   if (
     game &&

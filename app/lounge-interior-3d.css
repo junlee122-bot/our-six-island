@@ -283,6 +283,38 @@
   border-color: var(--pal-red-63);
   background: var(--paper-50);
 }
+/* 범마을 등대: the floors, top first, the one I am on lit. */
+.ih-floors {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ih-floors li {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--paper-200);
+  border-radius: var(--r-m);
+  color: var(--ink-600);
+  font-size: var(--fs-cap);
+}
+.ih-floors li b {
+  color: var(--ink-700);
+}
+.ih-floors li em {
+  grid-column: 2;
+  font-style: normal;
+  font-weight: 700;
+}
+.ih-floors li.is-here {
+  border-color: var(--gold-400);
+  background: var(--note-50);
+  color: var(--ink-700);
+}
 
 .ih-action {
   right: 20px;

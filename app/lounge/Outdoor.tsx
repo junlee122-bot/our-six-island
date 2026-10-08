@@ -24,7 +24,7 @@ import type { WalkPoint } from '../lounge-walk-world';
 import type { AreaAction, DistrictCounter } from '../lounge-area-3d';
 import type { FishingFramePhase } from '../lounge-fishing-frames';
 import type { FarmTouch } from '../lounge-farm-view';
-import type { ShopArea } from '../lounge-shop-interiors';
+import type { EnterArea } from '../lounge-district-counters';
 import { HARBOR_VOYAGE } from '../lounge-harbor-layout';
 import { gameHourOf } from '../lounge-voyage-data';
 import { FISH_BY_ID } from '../lounge-items';
@@ -79,7 +79,7 @@ export function useOutdoor({
   /** 시장 거리's request board. */
   onRequests?: () => void;
   /** A district counter (E at a shop door, a board or a stall); `enter`: walk into the shop's room. */
-  onCounter?: (place: DistrictCounter, enter?: ShopArea) => void;
+  onCounter?: (place: DistrictCounter, enter?: EnterArea) => void;
   /** The harbor's fishing and crab-pot spots. */
   onFish?: (spot: 'breakwater' | 'pier' | 'offshore') => void;
   /** 친구에게 가기. */
