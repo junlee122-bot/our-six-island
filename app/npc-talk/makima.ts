@@ -27,6 +27,26 @@ export const MAKIMA_TALK: NpcTalkBook = {
     'taste-heard': '내 취향을 기억해 줬어요',
     'outing-heard': '함께 걸은 날을 이야기했어요',
     'date-heard': '내 방에서 보낸 날을 이야기했어요',
+    'bday-heard': '곧 다가올 내 생일을 먼저 알아챘어요',
+    'auction-side': '항구 경매 날 마키마 편을 들기로 했어요',
+    'tea-volibas': '뒤따라오는 순경 씨에게 차를 건네자고 했어요',
+    'clue-jam': '신이치의 수첩에 적을 단서로 잼을 골랐어요',
+    'trust-promise': '돈 대신 약속을 맡기겠다고 했어요',
+    'one-scene': '노을 지는 밭이 마음에 남은 장면이라고 했어요',
+    'route-secret': '장날 아닌 날의 행방을 비밀로 지켜 주기로 했어요',
+    'eyes-pretty': '동그란 무늬 눈이 예쁘다고 말했어요',
+    'side-by-side': '마키마를 옆에서 본다고 했어요',
+    'stamp-gift': '개 발바닥 모양 도장을 파 주기로 했어요',
+    'small-dream': '잼 바른 빵을 매일 먹는 게 소원이라고 했어요',
+    'honest': '오늘 거짓말은 하나도 안 했다고 했어요',
+    'please-yes': '부탁이라면 들어주겠다고 했어요',
+    'praise-me': '칭찬을 한 번 더 해 달라고 졸랐어요',
+    'call-free': '부르는 말은 편하게 정하라고 했어요',
+    'autumn-pal': '가을을 제일 좋아한다고 했어요',
+    'cook-for': '마키마에게 요리를 해 주기로 했어요',
+    'no-ask': '물건의 출처는 묻지 않는 손님이라고 했어요',
+    'hand-hold': '연인이니까 손을 잡자고 했어요',
+    'future-dogs': '나중에 마당 가득 개를 키우자고 했어요',
   },
   talks: [
     {
@@ -145,6 +165,189 @@ export const MAKIMA_TALK: NpcTalkBook = {
         { say: '조건은 같이 정해요', tier: 'great', face: 'wow', answer: ['…같이요? 그런 계약은 해 본 적이 없어요.', '좋아요. 첫 줄은 맛있는 저녁으로 할게요.'] },
         { say: '마키마 씨라면 괜찮아요', tier: 'good', face: 'smile', answer: '믿어 주는 건 좋아요. 그래도 읽지 않고 서명하면 안 돼요. 저한테도요.' },
         { say: '조금 무서운데요', tier: 'meh', face: 'calm', answer: '무서우면 기다릴게요. 서두르는 계약은 좋은 계약이 아니에요.' },
+      ],
+    },
+    {
+      id: 'thresh-auction',
+      open: ['다음 항구 경매에 오래된 오르골이 나온대요.', '쓰레쉬 씨도 노리고 있어요. {me} 씨는 누구 편이에요?'],
+      replies: [
+        { say: '마키마 씨 편이요', tier: 'great', face: 'smile', remember: 'auction-side', answer: ['착해요. 편을 고르는 건 계약의 시작이에요.', '경매 날엔 제 옆자리에 앉아요. 손은 들지 말고요.'] },
+        { say: '둘 다 응원할래요', tier: 'good', face: 'think', answer: ['공평하네요. 쓰레쉬 씨도 그런 사람을 좋아해요.', '후후, 하고 웃겠죠. 그분 웃음은 값이 안 매겨져요.'] },
+        { say: '오르골은 관심 없어요', tier: 'meh', face: 'calm', answer: '괜찮아요. 사실 저도 소리보다 누가 이길지가 더 궁금해요.' },
+      ],
+    },
+    {
+      id: 'volibas-tail',
+      open: '볼리바스 씨가 또 제 뒤를 따라와요. {me} 씨라면 어떻게 할 것 같아요?',
+      replies: [
+        { say: '따뜻한 차를 건네요', tier: 'great', face: 'smile', remember: 'tea-volibas', answer: ['좋은 생각이에요. 따라오는 사람도 목이 마르니까요.', '다음엔 두 잔 들고 갈게요. 그분 얼굴이 볼만할 거예요.'] },
+        { say: '모른 척해요', tier: 'good', face: 'calm', answer: '저도 그래요. 그분은 들키면 더 열심히 숨거든요. 성실한 분이에요.' },
+        { say: '신고할래요', tier: 'meh', face: 'think', answer: ['순경 씨를 순경 씨한테요? 재밌네요.', '그분이 제일 곤란해할 거예요. 한 번 보고 싶긴 해요.'] },
+      ],
+    },
+    {
+      id: 'shinichi-file',
+      open: ['신이치 씨가 제 수첩을 만들었대요. 제목이 수상한 행상인이래요.', '{me} 씨라면 그 수첩에 뭐라고 적을 거예요?'],
+      replies: [
+        { say: '잼을 아주 좋아함', tier: 'great', face: 'smile', remember: 'clue-jam', answer: ['…정확해요. 그 단서 하나로 꽤 멀리 갈 수 있어요.', '신이치 씨에게는 비밀로 해 줘요. 부탁이에요.'] },
+        { say: '개를 좋아함', tier: 'good', face: 'think', answer: '그건 이미 적혀 있대요. 첫 장 첫 줄에요. 그분 눈이 좋아요.' },
+        { say: '아무것도 모름', tier: 'meh', face: 'calm', answer: '그게 제일 정확한 기록이에요. 신이치 씨도 아직 그 줄이에요.' },
+      ],
+    },
+    {
+      id: 'muzan-deposit',
+      open: ['무잔 씨는 돈을 맡기라고 하고, 저는 약속을 맡기라고 해요.', '{me} 씨는 어느 쪽에 뭘 맡길래요?'],
+      replies: [
+        { say: '약속은 마키마 씨한테요', tier: 'great', face: 'smile', remember: 'trust-promise', answer: ['좋아요. 약속엔 이자가 안 붙지만, 잃어버리지도 않아요.', '무잔 씨에겐 비밀이에요. 그분은 지는 걸 싫어하니까요.'] },
+        { say: '돈은 은행에 둘래요', tier: 'good', face: 'think', answer: '현명해요. 돈은 그분이 저보다 잘 지켜요. 웃는 얼굴로요.' },
+        { say: '아무것도 안 맡겨요', tier: 'meh', face: 'calm', answer: '조심성 많은 손님이네요. 그런 사람이 결국 큰 계약을 해요.' },
+      ],
+    },
+    {
+      id: 'one-scene',
+      open: ['저는 재미없는 영화도 좋아해요. 한 장면만 좋으면 그날은 좋은 날이에요.', '{me} 씨는 요즘 마음에 남은 장면이 있어요?'],
+      replies: [
+        { say: '노을 지는 밭이요', tier: 'great', face: 'smile', remember: 'one-scene', answer: ['좋은 장면이에요. 그건 {me} 씨만 볼 수 있는 영화네요.', '언젠가 저도 그 자리에 앉혀 줘요. 끝까지 볼게요.'] },
+        { say: '지금 이 대화요', tier: 'good', face: 'shy', answer: '…그런 대답은 반칙이에요. 그래도 기록해 둘게요.' },
+        { say: '딱히 없어요', tier: 'meh', face: 'think', answer: '그럼 아직 상영 전인 거예요. 기다리면 와요. 저도 기다려요.' },
+      ],
+    },
+    {
+      id: 'route-week',
+      open: '일요일엔 시장, 수요일과 토요일엔 항구에 있어요. 나머지 날엔 어디 있을까요?',
+      replies: [
+        { say: '비밀이라고 할 거죠?', tier: 'great', face: 'smile', remember: 'route-secret', answer: ['맞아요. 잘 아네요. 비밀은 같이 지키면 약속이 돼요.', '이제 {me} 씨는 그 약속의 반쪽이에요.'] },
+        { say: '영화관이요?', tier: 'good', face: 'think', answer: '반은 맞았어요. 나머지 반은 맛있는 집이에요. 그게 다예요. 아마도요.' },
+        { say: '궁금하지 않아요', tier: 'meh', face: 'calm', answer: '좋아요. 그래도 찾고 싶으면 장날에 와요. 저는 늘 거기 있어요.' },
+      ],
+    },
+    {
+      id: 'my-eyes',
+      open: '{me} 씨, 제 눈을 오래 보네요. 동그란 무늬가 신기해요?',
+      replies: [
+        { say: '예뻐서 봤어요', tier: 'great', face: 'shy', remember: 'eyes-pretty', answer: ['…그런 말은 처음 들어요. 다들 금방 눈을 피하거든요.', '그럼 {me} 씨는 피하지 않기로 해요. 약속이에요.'] },
+        { say: '빨려 들어갈 것 같아요', tier: 'good', face: 'smile', answer: '그런 일은 없어요. 그런 건 영화에만 있어요. 아마도요.' },
+        { say: '조금 무서워요', tier: 'meh', face: 'sorry', answer: '그래요. 그럼 오늘은 제가 먼저 다른 곳을 볼게요. 괜찮아요.' },
+      ],
+    },
+    {
+      id: 'side-by-side',
+      open: ['사람들은 저를 올려다보거나 내려다봐요. 옆에서 보는 사람은 드물어요.', '{me} 씨는 어느 쪽에서 저를 봐요?'],
+      replies: [
+        { say: '옆에서요', tier: 'great', face: 'shy', remember: 'side-by-side', answer: ['…옆이요. 그 자리는 어느 계약서에도 없는 자리예요.', '그래도 비워 둘게요. {me} 씨 몫으로요.'] },
+        { say: '조금 올려다봐요', tier: 'good', face: 'think', answer: '정직하네요. 괜찮아요. 언젠가 제가 내려가서 옆에 서 볼게요.' },
+        { say: '딱히 안 봤어요', tier: 'meh', face: 'calm', answer: '그렇군요. 보지 않는 사람도 있어야 해요. 그래야 저도 쉬어요.' },
+      ],
+    },
+    {
+      id: 'stamp',
+      open: '저는 서류를 좋아해요. 도장 찍는 소리가 좋거든요. 예전 일 버릇이에요.',
+      replies: [
+        { say: '도장 하나 파 드릴까요?', tier: 'great', face: 'wow', remember: 'stamp-gift', answer: ['…제 도장이요? 그럼 첫 도장은 {me} 씨 계약서에 찍을게요.', '모양은 개 발바닥으로 해 줘요. 부탁이에요.'] },
+        { say: '저는 서류가 싫어요', tier: 'good', face: 'smile', answer: '그럼 제가 천천히 읽어 줄게요. 서명은 {me} 씨가 직접 해요.' },
+        { say: '무슨 일이었는데요?', tier: 'meh', face: 'calm', answer: '서류로 하는 일이었어요. 그 이상은 서류 밖의 이야기예요.' },
+      ],
+    },
+    {
+      id: 'small-dream',
+      open: ['{me} 씨, 작은 소원이 있어요? 크지 않은 걸로요.', '저는 큰 소원보다 작은 소원을 이뤄 주는 걸 좋아해요.'],
+      replies: [
+        { say: '잼 바른 빵 매일 먹기', tier: 'great', face: 'smile', remember: 'small-dream', answer: ['좋은 소원이에요. 작고, 진짜예요.', '그건 제가 이뤄 줄 수 있어요. 조건은 매일 오는 거예요.'] },
+        { say: '마을 모두 행복하기', tier: 'good', face: 'think', answer: '좋아요. 조금 크지만, 나눠서 이루면 작아져요.' },
+        { say: '소원 같은 건 없어요', tier: 'meh', face: 'calm', answer: '그럼 하나 생길 때까지 기다릴게요. 생기면 바로 알 거예요.' },
+      ],
+    },
+    {
+      id: 'lie-smell',
+      open: '거짓말에도 냄새가 있어요. {me} 씨는 오늘 거짓말을 했어요?',
+      replies: [
+        { say: '하나도 안 했어요', tier: 'great', face: 'smile', remember: 'honest', answer: ['알아요. 물어본 건 대답하는 얼굴이 보고 싶어서였어요.', '착해요. 정직한 사람은 대답이 빨라요.'] },
+        { say: '작은 건 했어요', tier: 'good', face: 'think', answer: '정직하네요. 작은 거짓말은 덜 익은 과일 냄새가 나요. 괜찮아요.' },
+        { say: '마키마 씨는요?', tier: 'meh', face: 'calm', answer: '저는 거짓말을 안 해요. 말하지 않을 뿐이에요. 그건 다른 거예요.' },
+      ],
+    },
+    {
+      id: 'please-order',
+      open: '제가 부탁하면 다들 들어줘요. 이상하죠. {me} 씨도 그래요?',
+      replies: [
+        { say: '부탁이면 들어줘요', tier: 'great', face: 'smile', remember: 'please-yes', answer: ['착해요. 그럼 첫 부탁이에요. 오늘 저녁 맛있게 먹기.', '그게 다예요. 어렵지 않죠?'] },
+        { say: '내용 들어 보고요', tier: 'good', face: 'think', answer: '좋아요. 그런 사람이 있어야 저도 부탁을 고르게 돼요. 고마워요.' },
+        { say: '명령 같아서 싫어요', tier: 'meh', face: 'sorry', answer: '…그렇게 들렸군요. 그럼 다음엔 정말로 물어볼게요.' },
+      ],
+    },
+    {
+      id: 'praise',
+      open: '칭찬받는 거 좋아해요? 저는 칭찬을 짧게 해요. 착해요, 이렇게요.',
+      replies: [
+        { say: '한 번 더 해 주세요', tier: 'great', face: 'smile', remember: 'praise-me', answer: ['착해요. 이건 덤이에요. 두 번은 잘 안 해요.', '…{me} 씨는 칭찬을 들으면 귀가 빨개지네요.'] },
+        { say: '개한테 하는 말 같아요', tier: 'good', face: 'think', answer: '맞아요. 개한테 하는 말이 제일 진심이거든요. 칭찬이에요.' },
+        { say: '칭찬은 부끄러워요', tier: 'meh', face: 'calm', answer: '그럼 몰래 할게요. 들리지 않게요. 그래도 알 거예요.' },
+      ],
+    },
+    {
+      id: 'call-name',
+      open: '{me} 씨라고 부르는 게 좋아요? 가끔은 군이라고 불러 볼까 해요.',
+      replies: [
+        { say: '편하게 불러 주세요', tier: 'great', face: 'smile', remember: 'call-free', answer: ['그럼 그날 기분대로 할게요. 대신 대답은 늘 해 줘요.', '부르면 오는 것. 그게 조건이에요.'] },
+        { say: '씨가 좋아요', tier: 'good', face: 'calm', answer: '알았어요, {me} 씨. 이 부름은 바꾸지 않을게요.' },
+        { say: '이름만 불러 주세요', tier: 'meh', face: 'think', answer: '…그건 아직이에요. 이름만 부르는 건 꽤 큰 계약이거든요.' },
+      ],
+    },
+    {
+      id: 'fav-season',
+      open: '{me} 씨는 어느 계절이 좋아요? 저는 맛있는 게 많은 계절이요. 그러니까 전부요.',
+      replies: [
+        { say: '가을이요', tier: 'great', face: 'smile', remember: 'autumn-pal', answer: ['좋은 계절이에요. 군고구마와 긴 밤. 영화가 늘어나요.', '가을 장날엔 {me} 씨 몫을 따로 남길게요.'] },
+        { say: '봄이요', tier: 'good', face: 'smile', answer: '딸기 계절이네요. 잼이 맛있어지죠. 좋은 선택이에요.' },
+        { say: '여름이요', tier: 'meh', face: 'calm', answer: '여름엔 음식이 빨리 상해요. 그래서 빨리 먹어요. 나쁘지 않아요.' },
+      ],
+    },
+    {
+      id: 'cooking',
+      open: '저는 요리는 잘 안 해요. 먹는 건 잘하는데요. {me} 씨는 요리해요?',
+      replies: [
+        { say: '제가 해 드릴게요', tier: 'great', face: 'wow', remember: 'cook-for', answer: ['…저한테요? 그럼 계약이에요. 메뉴는 {me} 씨가 정해요.', '남김없이 먹을게요. 그건 약속할 수 있어요.'] },
+        { say: '같이 배워요', tier: 'good', face: 'smile', answer: '좋아요. 칼은 {me} 씨가 들고, 간은 제가 볼게요. 혀는 정확해요.' },
+        { say: '저도 못 해요', tier: 'meh', face: 'calm', answer: '그럼 둘 다 사 먹으면 돼요. 맛있는 가게를 아는 건 제 일이에요.' },
+      ],
+    },
+    {
+      id: 'stall-goods',
+      open: '좌판 물건을 어디서 구해 오냐고 다들 물어요. {me} 씨도 궁금하죠?',
+      replies: [
+        { say: '좋은 물건이면 돼요', tier: 'great', face: 'smile', remember: 'no-ask', answer: ['좋은 손님이에요. 출처보다 쓰임이 중요하죠.', '그래서 {me} 씨에게는 좋은 것만 보여 줄게요.'] },
+        { say: '조금 궁금해요', tier: 'good', face: 'think', answer: '여러 곳에서요. 약속을 지킨 사람들이 맡기고 가요. 그 정도만요.' },
+        { say: '혹시 수상한 데서요?', tier: 'meh', face: 'calm', answer: ['볼리바스 씨도 똑같이 물었어요.', '영수증은 전부 있어요. 한 장씩 보여 줄까요? 오래 걸려요.'] },
+      ],
+    },
+    {
+      id: 'old-job-more',
+      when: { mem: 'old-job', ch: 4 },
+      open: ['약속했죠. 말하고 싶을 때 들려주기로요. 조금만 할게요.', '예전엔 사람들을 알맞은 자리에 앉히는 일을 했어요. 서류로요.'],
+      replies: [
+        { say: '그래서 의자를 권하는군요', tier: 'great', face: 'think', answer: ['…그러네요. 버릇이었어요. 지금은 그냥 쉬라는 뜻이에요.', '{me} 씨 의자만큼은 일이 아니에요. 정말로요.'] },
+        { say: '힘든 일이었어요?', tier: 'good', face: 'sorry', answer: ['힘든지도 몰랐어요. 다들 앉으라면 앉았으니까요.', '이 마을엔 안 앉는 사람도 있어서 좋아요.'] },
+        { say: '이제 그만 들을게요', tier: 'meh', face: 'calm', answer: '좋아요. 오늘은 여기까지가 딱 좋아요. 들어 줘서 고마워요.' },
+      ],
+    },
+    {
+      id: 'hold-hand',
+      when: { love: 'dating' },
+      open: '연인은 손을 잡는다고 들었어요. 계약서엔 없는 조항이에요. 어떻게 할래요?',
+      replies: [
+        { say: '지금 잡을게요', tier: 'great', face: 'shy', remember: 'hand-hold', answer: ['…따뜻하네요. 냄새보다 이게 더 정확해요.', '놓는 건 {me} 씨가 정해요. 저는 안 놓을 거니까요.'] },
+        { say: '조항에 넣어요', tier: 'good', face: 'smile', answer: '좋아요. 제일 첫 줄에 넣을게요. 매일 이행해야 해요.' },
+        { say: '사람 많은 데선 싫어요', tier: 'meh', face: 'calm', answer: '그럼 영화관 어둠 속에서요. 거긴 아무도 안 봐요.' },
+      ],
+    },
+    {
+      id: 'future-dogs',
+      when: { love: 'dating' },
+      open: '나중에 개를 키운다면 {me} 씨는 몇 마리가 좋아요? 저는 많을수록 좋아요.',
+      replies: [
+        { say: '마당 가득이요', tier: 'great', face: 'smile', remember: 'future-dogs', answer: ['좋아요. 이름은 같이 지어요. 한 마리씩 천천히요.', '계약서 둘째 줄이 정해졌네요.'] },
+        { say: '한 마리면 충분해요', tier: 'good', face: 'think', answer: '한 마리를 오래요. 그것도 좋아요. 그 아이는 행복하겠네요.' },
+        { say: '털 청소는 누가 해요?', tier: 'meh', face: 'calm', answer: '…그건 계약서에서 빼 둘게요. 나중에 다시 이야기해요.' },
       ],
     },
   ],
@@ -287,6 +490,256 @@ export const MAKIMA_TALK: NpcTalkBook = {
         { say: '둘 다 이상해요', tier: 'meh', face: 'laugh', answer: '맞아요. 이상한 사람 둘이 사이좋은 마을은 좋은 마을이에요.' },
       ],
     },
+    {
+      id: 'op-storm',
+      when: { weather: 'storm' },
+      open: '폭풍이네요. 오늘 항구엔 배가 안 들어와요. 그래서 {me} 씨를 기다렸어요.',
+      replies: [
+        { say: '같이 있어 드릴게요', tier: 'great', face: 'smile', answer: ['착해요. 폭풍이 지나갈 때까지만요.', '…아니, 조금 더 있어도 돼요. 그건 조건에 없으니까요.'] },
+        { say: '천막은 묶었어요?', tier: 'good', face: 'think', answer: '두 번 묶었어요. 걱정해 주는 냄새, 좋네요. 기억해 둘게요.' },
+        { say: '무서운 날이에요', tier: 'meh', face: 'calm', answer: '무서울 땐 천둥 사이를 세어 봐요. 세다 보면 멀어져요.' },
+      ],
+    },
+    {
+      id: 'op-sunny',
+      when: { weather: 'sunny', time: ['day', 'evening'] },
+      open: '맑네요. 이런 날은 개들이 꼬리를 제일 높이 들어요. {me} 씨도 기분 좋죠?',
+      replies: [
+        { say: '산책 가요', tier: 'great', face: 'smile', answer: ['좋아요. 목줄은 필요 없어요.', '옆에서 걸으면 돼요. {me} 씨는 그걸 잘하니까요.'] },
+        { say: '조금 덥네요', tier: 'good', face: 'calm', answer: '그럼 그늘로 와요. 제 천막 아래가 마을에서 제일 시원해요.' },
+        { say: '그냥 그래요', tier: 'meh', face: 'think', answer: '그런가요. 냄새는 아니라고 하는데요. 뭐, 믿어 줄게요.' },
+      ],
+    },
+    {
+      id: 'op-cloudy',
+      when: { weather: 'cloudy' },
+      open: '흐리네요. 이런 날 영화관은 붐벼요. 저는 제일 앞자리를 맡아 뒀어요.',
+      replies: [
+        { say: '저도 갈래요', tier: 'great', face: 'smile', answer: ['그럴 줄 알았어요. {me} 씨 자리도 맡았어요. 바로 옆이에요.', '앞자리는 목이 아파요. 그래도 화면밖에 안 보여서 좋아요.'] },
+        { say: '뒷자리가 편한데요', tier: 'good', face: 'calm', answer: '그럼 저는 앞에서, {me} 씨는 뒤에서 봐요. 끝나고 만나요.' },
+        { say: '흐린 날은 졸려요', tier: 'meh', face: 'calm', answer: '자도 돼요. 영화관은 자는 사람에게도 열려 있어요.' },
+      ],
+    },
+    {
+      id: 'op-dawn',
+      when: { time: 'dawn' },
+      open: '이른 새벽이네요. 저는 항구 떠돌이 개한테 밥을 주러 가는 길이에요.',
+      replies: [
+        { say: '저도 따라갈게요', tier: 'great', face: 'smile', answer: ['착해요. 그 아이는 새벽에 오는 사람을 제일 반겨요.', '밥그릇은 {me} 씨가 들어요. 부탁이에요.'] },
+        { say: '부지런하시네요', tier: 'good', face: 'calm', answer: '맛있는 걸 기다리는 쪽은 늘 일찍 일어나요. 개도, 저도요.' },
+        { say: '너무 졸려요', tier: 'meh', face: 'calm', answer: '그럼 들어가서 자요. 그 아이한테는 {me} 씨 안부를 전해 둘게요.' },
+      ],
+    },
+    {
+      id: 'op-evening',
+      when: { time: 'evening' },
+      open: '저녁 장이 파할 시간이에요. 남은 물건은 싸게 줄게요. 오늘만이요.',
+      replies: [
+        { say: '정리 도와드릴까요?', tier: 'great', face: 'smile', answer: ['좋아요. 천막 끝을 잡아 줘요. 둘이면 금방이에요.', '다 끝나면 붕어빵 반 봉지. 그게 품삯이에요.'] },
+        { say: '하나 사 갈게요', tier: 'good', face: 'smile', answer: '착해요. 마지막 손님은 늘 기억해요. 좋은 쪽으로요.' },
+        { say: '저녁 먹으러 가요', tier: 'meh', face: 'calm', answer: '그래요. 맛있게 먹어요. 무엇을 먹었는지는 내일 냄새로 알 거예요.' },
+      ],
+    },
+    {
+      id: 'op-spring',
+      when: { season: 'spring' },
+      open: '봄이에요. 딸기가 나오면 잼을 만들 거예요. {me} 씨도 한 병 계약할래요?',
+      replies: [
+        { say: '두 병이요', tier: 'great', face: 'smile', answer: '욕심이 좋네요. 한 병은 {me} 씨, 한 병은 같이 나눠 먹는 걸로요.' },
+        { say: '만드는 거 도울게요', tier: 'good', face: 'smile', answer: '좋아요. 딸기 꼭지는 {me} 씨가 따요. 맛보기는 제가 할게요.' },
+        { say: '잼은 너무 달아요', tier: 'meh', face: 'calm', answer: '그럼 덜 단 걸로 하나 따로 만들게요. 계약은 맞춰 가는 거예요.' },
+      ],
+    },
+    {
+      id: 'op-summer',
+      when: { season: 'summer' },
+      open: '여름밤엔 광장에서 야외 영화를 틀었으면 좋겠어요. {me} 씨도 그렇죠?',
+      replies: [
+        { say: '돗자리 챙길게요', tier: 'great', face: 'smile', answer: ['좋아요. 수박도요.', '끝까지 보는 사람에겐 제일 단 조각을 줄게요. {me} 씨 몫이에요.'] },
+        { say: '모기가 많을 텐데요', tier: 'good', face: 'think', answer: '모기도 영화를 좋아해요. 그 정도는 같이 보는 값이에요.' },
+        { say: '더워서 싫어요', tier: 'meh', face: 'calm', answer: '그럼 밤바람 부는 날로 할게요. 날짜는 제가 정할게요.' },
+      ],
+    },
+    {
+      id: 'op-autumn',
+      when: { season: 'autumn' },
+      open: '가을이네요. 군고구마 냄새를 따라 걷다 보면 늘 맛있는 게 있어요.',
+      replies: [
+        { say: '같이 따라가 봐요', tier: 'great', face: 'smile', answer: '좋아요. 오늘은 냄새가 두 갈래예요. 둘 다 가 볼 거예요.' },
+        { say: '군밤이 더 좋아요', tier: 'good', face: 'think', answer: '그것도 좋아요. 고구마는 저, 밤은 {me} 씨. 공평하죠.' },
+        { say: '배가 안 고파요', tier: 'meh', face: 'calm', answer: '가을엔 금방 고파져요. 기다릴게요. 오래 걸리지 않아요.' },
+      ],
+    },
+    {
+      id: 'op-winter',
+      when: { season: 'winter' },
+      open: '겨울엔 좌판 옆에 화로를 둬요. {me} 씨, 손 녹이고 가요.',
+      replies: [
+        { say: '고마워요, 따뜻해요', tier: 'great', face: 'smile', answer: ['착해요. 손을 이렇게 펴요. 그래야 빨리 녹아요.', '…{me} 씨 손은 차가운데 냄새는 따뜻하네요.'] },
+        { say: '고구마도 구워요?', tier: 'good', face: 'think', answer: '구울 수 있어요. 하나는 제 거, 하나는 {me} 씨 거예요. 계약 끝.' },
+        { say: '금방 갈게요', tier: 'meh', face: 'calm', answer: '그래요. 그래도 장갑은 끼고 가요. 오늘 제 부탁은 그거예요.' },
+      ],
+    },
+    {
+      id: 'op-bday',
+      when: { bday: true },
+      open: ['오늘 {me} 씨 생일이죠. 냄새가 아니라 달력으로 알았어요.', '원하는 걸 하나 말해 봐요. 오늘은 제가 들어줄 차례예요.'],
+      replies: [
+        { say: '같이 영화 봐요', tier: 'great', face: 'shy', answer: ['…그건 제 소원이기도 한데요. 좋아요. 오늘은 {me} 씨가 골라요.', '생일 축하해요, {me} 씨. 진심이에요.'] },
+        { say: '잼 바른 빵이요', tier: 'good', face: 'smile', answer: '착한 소원이에요. 오늘은 반 조각 말고 한 장 통째로요.' },
+        { say: '마키마 씨 생일은요?', tier: 'meh', face: 'think', answer: '비밀이에요. 오늘은 {me} 씨 날로 충분해요.' },
+      ],
+    },
+    {
+      id: 'op-news-bday',
+      when: { news: 'birthday' },
+      open: '오늘 마을에 생일인 사람이 있대요. 선물은 먹을 걸로 고르면 실패가 없어요.',
+      replies: [
+        { say: '뭐가 좋을까요?', tier: 'great', face: 'think', answer: ['케이크요. 나눌 수 있는 거요.', '나누는 선물은 기억에 오래 남아요. 계약처럼요.'] },
+        { say: '마키마 씨도 축하해요?', tier: 'good', face: 'smile', answer: '그럼요. 생일은 한 해짜리 계약을 갱신하는 날이에요. 축하해야죠.' },
+        { say: '저랑은 상관없어요', tier: 'meh', face: 'calm', answer: '그래요. 그래도 축하는 공짜예요. 남는 장사죠.' },
+      ],
+    },
+    {
+      id: 'op-legend',
+      when: { news: 'legend' },
+      open: '항구가 술렁여요. 누가 전설의 물고기를 낚았대요. 회 맛이 궁금하네요.',
+      replies: [
+        { say: '구경 가요', tier: 'great', face: 'smile', answer: '좋아요. 저는 냄새부터 맡아 볼게요. {me} 씨는 낚은 사람 표정을 봐요.' },
+        { say: '먹으면 안 될걸요', tier: 'good', face: 'think', answer: '그렇죠. 전설은 박물관 몫이에요. 그래도 궁금한 건 어쩔 수 없어요.' },
+        { say: '부럽네요', tier: 'meh', face: 'calm', answer: '{me} 씨 차례도 와요. 그날은 제가 제일 먼저 알 거예요.' },
+      ],
+    },
+    {
+      id: 'op-museum',
+      when: { recent: 'museum' },
+      open: '오래된 종이와 나무 냄새가 나요. {me} 씨, 박물관에 기증했군요.',
+      replies: [
+        { say: '모두 볼 수 있게요', tier: 'great', face: 'smile', answer: '착해요. 혼자 갖는 것보다 나누는 쪽이 오래가요. 약속도요.' },
+        { say: '어떻게 알았어요?', tier: 'good', face: 'think', answer: '소매에 먼지가 묻었어요. 그리고 얼굴이 뿌듯해 보여요.' },
+        { say: '둘 데가 없어서요', tier: 'meh', face: 'calm', answer: '이유는 상관없어요. 결과가 좋으면 좋은 거예요.' },
+      ],
+    },
+    {
+      id: 'op-friend-wedding',
+      when: { friendNews: 'wedding' },
+      open: '{me} 씨 친구가 결혼한대요. 평생 계약의 증인이 되는 날이네요.',
+      replies: [
+        { say: '축하하러 갈 거예요', tier: 'great', face: 'smile', answer: '좋아요. 축하는 직접 가서 하는 게 제일이에요. 잼 한 병 들고 가요.' },
+        { say: '조금 쓸쓸해요', tier: 'good', face: 'sorry', answer: ['알아요. 친구가 새 계약을 하면 그래요.', '그래도 {me} 씨와의 옛 약속은 그대로 남아요.'] },
+        { say: '선물을 못 골랐어요', tier: 'meh', face: 'think', answer: '먹을 걸로 해요. 실패가 없어요. 제 좌판에 좋은 게 있어요.' },
+      ],
+    },
+    {
+      id: 'op-high',
+      when: { mood: 'high' },
+      open: '{me} 씨, 오늘 기분 좋은 냄새가 나요. 무슨 좋은 일이 있었어요?',
+      replies: [
+        { say: '마키마 씨 만나서요', tier: 'great', face: 'shy', answer: '…그건 계산에 없던 대답이에요. 좋아요. 받아 둘게요.' },
+        { say: '날씨가 좋아서요', tier: 'good', face: 'smile', answer: '단순한 이유가 제일 오래가요. 좋은 하루예요.' },
+        { say: '비밀이에요', tier: 'meh', face: 'calm', answer: '그래요. 저도 비밀은 좋아해요. 그래도 곧 알게 될 거예요.' },
+      ],
+    },
+    {
+      id: 'op-voyage',
+      when: { recent: 'voyage' },
+      open: '먼바다 냄새가 나요. 큰 배를 탔군요. 무사히 돌아온 것, 잘했어요.',
+      replies: [
+        { say: '돌아온다고 했잖아요', tier: 'great', face: 'smile', answer: ['…그랬죠. 지켰네요. 착해요.', '돌아오는 사람은 제일 좋은 계약 상대예요.'] },
+        { say: '바다엔 냄새가 없죠?', tier: 'good', face: 'think', answer: '맞아요. 그래서 바다 위는 불편해요. {me} 씨가 거기 있으면 더요.' },
+        { say: '배멀미 했어요', tier: 'meh', face: 'sorry', answer: '그럼 따뜻한 국물 먹어요. 제가 아는 집이 있어요. 오늘은 거기예요.' },
+      ],
+    },
+    {
+      id: 'op-stock-up',
+      when: { recent: 'stockUp' },
+      open: '{me} 씨, 주식으로 벌었군요. 무잔 씨가 웃으면서 장부를 보고 있었어요.',
+      replies: [
+        { say: '맛있는 거 살게요', tier: 'great', face: 'smile', answer: '착해요. 번 날 나누는 사람은 다음에도 벌어요. 제 생각이에요.' },
+        { say: '운이 좋았어요', tier: 'good', face: 'think', answer: '무잔 씨는 실력이라고 하겠죠. 저는 냄새라고 하겠지만요.' },
+        { say: '더 넣어 볼래요', tier: 'meh', face: 'calm', answer: '좋아요. 그런데 오늘 번 건 반만 넣어요. 부탁이에요.' },
+      ],
+    },
+    {
+      id: 'op-stock-down',
+      when: { recent: 'stockDown' },
+      open: '{me} 씨, 주식으로 잃었군요. 얼굴에 다 써 있어요. 이리 와서 앉아요.',
+      replies: [
+        { say: '위로해 주세요', tier: 'great', face: 'smile', answer: ['잃은 건 잊어요. 남은 건 {me} 씨예요. 그게 더 커요.', '여기, 잼 바른 빵이에요. 오늘은 값을 안 받아요.'] },
+        { say: '다음엔 오르겠죠', tier: 'good', face: 'think', answer: '그럴 수도 있어요. 기다릴 줄 아는 사람에게는 오니까요.' },
+        { say: '말 걸지 마세요', tier: 'meh', face: 'calm', answer: '그래요. 옆에 조용히 앉아만 있을게요.' },
+      ],
+    },
+    {
+      id: 'op-casino-win',
+      when: { recent: 'casinoWin' },
+      open: '이긴 사람 냄새가 나요. {me} 씨, 카지노에서 이겼죠? 오늘 저녁은 정해졌네요.',
+      replies: [
+        { say: '제가 살게요', tier: 'great', face: 'smile', answer: '착해요. 계약 성립이에요. 저는 두 그릇 먹을 거예요.' },
+        { say: '운이었어요', tier: 'good', face: 'calm', answer: '운은 계약할 수 없어요. 그러니 오늘 쓰는 게 맞아요.' },
+        { say: '비밀로 해 주세요', tier: 'meh', face: 'think', answer: '좋아요. 비밀 값은 후식 하나예요.' },
+      ],
+    },
+    {
+      id: 'op-casino-lose',
+      when: { recent: 'casinoLose' },
+      open: '{me} 씨, 카지노에서 졌군요. 괜찮아요. 저는 진 사람도 좋아해요.',
+      replies: [
+        { say: '맛있는 거 먹으러 가요', tier: 'great', face: 'smile', answer: '그게 제일 빨리 낫는 방법이에요. 오늘은 제가 살게요. 특별히요.' },
+        { say: '다음엔 이길 거예요', tier: 'good', face: 'think', answer: '그 말, 기억해 둘게요. 다음엔 이긴 냄새로 와요.' },
+        { say: '다시는 안 가요', tier: 'meh', face: 'calm', answer: '좋은 약속이에요. 지키면 착한 거예요. 지켜볼게요.' },
+      ],
+    },
+    {
+      id: 'op-sulk',
+      when: { sulk: true },
+      open: '오늘은 {other} 씨 이야기는 하지 않을래요. 약속을 하나 어겼거든요.',
+      replies: [
+        { say: '화해하면 좋겠어요', tier: 'great', face: 'think', answer: ['…그래요. 내일은 제가 먼저 의자를 내밀어 볼게요.', '{me} 씨가 그렇게 말하면 그래야 할 것 같아요.'] },
+        { say: '무슨 약속이었어요?', tier: 'good', face: 'calm', answer: '작은 거예요. 제 몫 빵을 먹었어요. 작아도 계약은 계약이에요.' },
+        { say: '저는 모르는 일이에요', tier: 'meh', face: 'calm', answer: '맞아요. {me} 씨는 몰라도 돼요. 오늘은 그냥 옆에 있어 줘요.' },
+      ],
+    },
+    {
+      id: 'op-with-volibas',
+      when: { with: 'volibas' },
+      open: '{other} 씨와 순찰 중이에요. 정확히는, 제가 순찰을 받는 중이에요.',
+      replies: [
+        { say: '사이좋아 보여요', tier: 'great', face: 'smile', answer: '그분이 들으면 펄쩍 뛸 거예요. 그래서 좋아요. 한 번 더 말해 줄래요?' },
+        { say: '수고하시네요', tier: 'good', face: 'calm', answer: '{other} 씨한테 하는 말이죠? 전해 둘게요. 벌써 귀가 빨개요.' },
+        { say: '방해 안 할게요', tier: 'meh', face: 'calm', answer: '방해가 아니에요. 증인이 하나 더 있으면 그분이 안심해요.' },
+      ],
+    },
+    {
+      id: 'op-with-thresh',
+      when: { with: 'thresh' },
+      open: '{other} 씨와 경매 물건을 미리 보는 중이에요. 서로 모른 척하면서요.',
+      replies: [
+        { say: '누가 이길 것 같아요?', tier: 'great', face: 'think', answer: '…모르겠어요. 그래서 재밌어요. 결과를 아는 거래는 심심하거든요.' },
+        { say: '저도 구경할래요', tier: 'good', face: 'smile', answer: '좋아요. 대신 표정 관리는 해요. 쓰레쉬 씨는 표정을 모아요.' },
+        { say: '둘 다 무서워요', tier: 'meh', face: 'calm', answer: '무서울 것 없어요. 우리는 값만 겨뤄요. 웃음은 덤이에요.' },
+      ],
+    },
+    {
+      id: 'op-with-shinichi',
+      when: { with: 'shinichi' },
+      open: '{other} 씨가 옆에서 수첩을 펴고 있어요. 오늘은 추리를 직접 들려준대요.',
+      replies: [
+        { say: '저도 같이 들을래요', tier: 'great', face: 'smile', answer: '좋아요. 셋이면 영화 같아요. 탐정과 수상한 사람과 손님.' },
+        { say: '정답이 뭐예요?', tier: 'good', face: 'think', answer: '{other} 씨 앞에선 안 돼요. 그분 재미를 뺏는 건 계약 위반이에요.' },
+        { say: '탐정이 불쌍해요', tier: 'meh', face: 'calm', answer: '괜찮아요. 그분은 모르는 걸 좋아해요. 저처럼요.' },
+      ],
+    },
+    {
+      id: 'op-with-muzan',
+      when: { with: 'muzan' },
+      open: '{other} 씨와 차를 마시는 중이에요. 둘 다 웃고 있지만, 계산은 따로예요.',
+      replies: [
+        { say: '누가 내요?', tier: 'great', face: 'think', answer: '그게 오늘의 거래예요. 아직 아무도 계산서를 안 봤어요.' },
+        { say: '같이 앉아도 돼요?', tier: 'good', face: 'smile', answer: '좋아요. 셋이면 계산서가 {me} 씨 앞에 놓일 거예요. 농담이에요.' },
+        { say: '저는 갈게요', tier: 'meh', face: 'calm', answer: '그래요. 다음엔 우리 둘이서만 마셔요. {other} 씨에겐 비밀이에요.' },
+      ],
+    },
   ],
   callbacks: [
     {
@@ -367,6 +820,127 @@ export const MAKIMA_TALK: NpcTalkBook = {
         { say: '개는 아직 없어요', tier: 'good', face: 'laugh', remember: 'date-heard', answer: '그럼 제가 자주 가면 되겠네요. 비슷한 거예요.' },
       ],
     },
+    {
+      id: 'cb-bday-soon',
+      when: { mem: '@bday-soon', noMem: 'bday-heard' },
+      open: '{me} 씨, 곧 생일이죠. 말한 적 없는데 왜 아냐고요? 비밀이에요.',
+      replies: [
+        { say: '기억해 줘서 고마워요', tier: 'great', face: 'shy', remember: 'bday-heard', answer: ['…고맙다는 말은 생일에 들을게요. 지금은 미리 받은 걸로요.', '선물은 이미 골라 뒀어요. 먹는 거예요.'] },
+        { say: '선물은 뭐예요?', tier: 'good', face: 'smile', remember: 'bday-heard', answer: '먹는 거예요. 그 이상 말하면 계약 위반이에요.' },
+        { say: '생일은 그냥 그래요', tier: 'meh', face: 'calm', remember: 'bday-heard', answer: '그럼 제가 대신 좋아해 둘게요. 그날 꼭 들러요.' },
+      ],
+    },
+    {
+      id: 'cb-smell',
+      when: { mem: 'smell-me' },
+      use: 'smell-me',
+      open: '전에 {me} 씨 냄새 이야기를 했죠. 요즘은 거기에 잼 냄새가 하나 더 섞였어요.',
+      replies: [
+        { say: '마키마 씨 탓이에요', tier: 'great', face: 'smile', answer: '맞아요. 제가 준 상이니까요. 그 냄새, 마음에 들어요.' },
+        { say: '좋은 냄새예요?', tier: 'good', face: 'calm', answer: '좋은 냄새예요. 이제 멀리서도 찾을 수 있어요.' },
+        { say: '씻고 올게요', tier: 'meh', face: 'think', answer: '안 돼요. 그건 부탁이 아니라 명령이에요. 농담이에요. 반만요.' },
+      ],
+    },
+    {
+      id: 'cb-sit',
+      when: { mem: 'sit-yes' },
+      use: 'sit-yes',
+      open: '{me} 씨 의자, 아무도 안 앉혔어요. 오늘도 비어 있어요.',
+      replies: [
+        { say: '오늘도 앉을게요', tier: 'great', face: 'smile', answer: '착해요. 의자도 기다리는 걸 잘해요. 저처럼요.' },
+        { say: '다른 분 앉혀도 돼요', tier: 'meh', face: 'think', answer: '안 돼요. 계약한 자리는 계약한 사람 거예요.' },
+      ],
+    },
+    {
+      id: 'cb-jam',
+      when: { mem: 'jam-bread' },
+      use: 'jam-bread',
+      open: '저번에 잼 빵을 상으로 줬죠. 오늘은 잼을 두 겹 발랐어요. 이유는 알죠?',
+      replies: [
+        { say: '착하게 굴어서요', tier: 'great', face: 'smile', answer: '맞아요. 기억력도 착하네요. 여기요.' },
+        { say: '잘 모르겠어요', tier: 'good', face: 'think', answer: '계속 와 줘서요. 그거면 충분해요.' },
+      ],
+    },
+    {
+      id: 'cb-cat',
+      when: { mem: 'cat-person' },
+      use: 'cat-person',
+      open: '고양이 쪽이라고 했죠. 항구에 고양이가 한 마리 새로 왔어요. 개랑 사이가 좋아요.',
+      replies: [
+        { say: '보고 싶어요', tier: 'great', face: 'smile', answer: '같이 가요. 둘이 나란히 앉아 있어요. 계약 없이도 사이가 좋대요.' },
+        { say: '개가 이긴 거네요', tier: 'good', face: 'think', answer: '이긴 건 아니에요. 그냥 같이 있는 거예요. 그것도 좋아요.' },
+      ],
+    },
+    {
+      id: 'cb-stay',
+      when: { mem: 'stay-here' },
+      use: 'stay-here',
+      open: '이 마을이 돌아올 곳이면 좋겠다고 했죠. 저도 요즘 돌아오는 날을 세요.',
+      replies: [
+        { say: '마키마 씨 자리도 있어요', tier: 'great', face: 'shy', answer: ['…있어요? 그럼 짐을 조금 덜어 둘게요.', '떠돌이가 짐을 줄이는 건 큰 계약이에요.'] },
+        { say: '장날마다 기다릴게요', tier: 'good', face: 'smile', answer: '좋아요. 기다리는 사람이 있으면 길이 짧아져요.' },
+      ],
+    },
+    {
+      id: 'cb-market-dusk',
+      when: { mem: 'market-dusk' },
+      use: 'market-dusk',
+      open: '저녁 장터에서 좌판을 같이 지킨 날, 기억해요? 그날 매상이 제일 좋았어요.',
+      replies: [
+        { say: '또 지켜 드릴게요', tier: 'great', face: 'smile', answer: '좋아요. 몫은 반반이에요. 아니, {me} 씨가 조금 더요.' },
+        { say: '제 덕분이에요?', tier: 'good', face: 'think', answer: '그렇다고 해 둘게요. 사실이니까요.' },
+      ],
+    },
+    {
+      id: 'cb-jam-night',
+      when: { mem: 'jam-night' },
+      use: 'jam-night',
+      open: '딸기잼 식빵 말이에요. 그 뒤로 혼자 먹으면 맛이 덜해요. 이상하죠.',
+      replies: [
+        { say: '또 같이 먹어요', tier: 'great', face: 'shy', answer: '…좋아요. 잼은 제가, 식빵은 {me} 씨가요. 계약이에요.' },
+        { say: '잼이 달라졌나 봐요', tier: 'meh', face: 'calm', answer: '아니에요. 같은 잼이었어요. 달라진 건 옆자리였어요.' },
+      ],
+    },
+    {
+      id: 'cb-auction',
+      when: { mem: 'auction-side' },
+      use: 'auction-side',
+      open: '경매 날 제 편 해 주기로 했죠. 결과는 비겼어요. 쓰레쉬 씨도 웃었어요.',
+      replies: [
+        { say: '다음엔 이겨요', tier: 'great', face: 'smile', answer: '좋아요. 다음 경매도 제 옆에 앉아요. 그게 이기는 조건이에요.' },
+        { say: '비긴 게 좋네요', tier: 'good', face: 'think', answer: '…그러네요. 둘 다 졌다고 생각하지 않으니까요. 좋은 결과예요.' },
+      ],
+    },
+    {
+      id: 'cb-small-dream',
+      when: { mem: 'small-dream' },
+      use: 'small-dream',
+      open: '잼 바른 빵을 매일 먹는 게 소원이라고 했죠. 그래서, 오늘 치예요.',
+      replies: [
+        { say: '정말 매일이에요?', tier: 'great', face: 'wow', answer: ['계약했잖아요. 매일 오면 매일 있어요.', '간단하죠. 어려운 건 오는 쪽이에요.'] },
+        { say: '고마워요', tier: 'good', face: 'smile', answer: '착해요. 내일 치도 남겨 둘게요.' },
+      ],
+    },
+    {
+      id: 'cb-stamp',
+      when: { mem: 'stamp-gift' },
+      use: 'stamp-gift',
+      open: '개 발바닥 도장 말이에요. 쓰레쉬 씨가 귀엽다고 했어요. 처음 이겼어요.',
+      replies: [
+        { say: '첫 도장 찍어 주세요', tier: 'great', face: 'smile', answer: ['좋아요. {me} 씨 손등에요. 꾹.', '오늘 하루는 지우지 마요. 부탁이에요.'] },
+        { say: '그게 이긴 거예요?', tier: 'good', face: 'think', answer: '그분이 제 물건을 칭찬한 건 처음이에요. 그러니 이긴 거예요.' },
+      ],
+    },
+    {
+      id: 'cb-cook',
+      when: { mem: 'cook-for' },
+      use: 'cook-for',
+      open: '요리해 준다고 했죠. 저는 아직 기다리고 있어요. 배를 비워 두고요.',
+      replies: [
+        { say: '오늘 해 드릴게요', tier: 'great', face: 'smile', answer: '착해요. 남김없이 먹을게요. 그게 제 답례예요.' },
+        { say: '뭐 드시고 싶어요?', tier: 'good', face: 'think', answer: '{me} 씨가 제일 잘하는 거요. 그게 제일 맛있어요.' },
+      ],
+    },
   ],
   chapters: [
     {
@@ -374,11 +948,16 @@ export const MAKIMA_TALK: NpcTalkBook = {
       hint: '한 번 이야기를 나누면 마키마가 작은 계약서 한 장을 내밀어요.',
       need: { days: 1 },
       scene: [
+        '장날 아침, 시장 거리 끝 좌판에 붉은빛 머리의 행상인이 앉아 있다.',
+        '"어서 와요, {me} 씨. 이름은 묻지 않아도 알아요. 냄새로요."',
+        '좌판 위에는 낡은 영화 표, 잼 병, 개 목걸이 방울이 가지런하다.',
         '마키마가 좌판 아래에서 손바닥만 한 종이 한 장을 꺼낸다.',
-        '"{me} 씨. 이건 계약서예요. 아주 작은 거요."',
+        '"이건 계약서예요. 아주 작은 거요. 겁먹지 않아도 돼요."',
         '"조건은 하나예요. 다음 장날에도 제 좌판에 들르는 것."',
         '"어기면 어떻게 되냐고요? 아무 일도 없어요. 제가 기억할 뿐이에요."',
         '그녀가 평소처럼 조용히 웃는다. 펜 끝이 이쪽을 향해 있다.',
+        '"서명하든 안 하든 {me} 씨는 다시 올 거예요. 그래도 묻는 거예요."',
+        '"고르는 건 {me} 씨예요. 정말로요. 적어도 오늘은요."',
       ],
       replies: [
         { say: '서명할게요', tier: 'great', remember: 'keep-promise', face: 'smile', answer: '착해요. 첫 계약 기념으로 잼 바른 빵 반 조각이에요.' },
@@ -391,12 +970,17 @@ export const MAKIMA_TALK: NpcTalkBook = {
       hint: '저녁 무렵(게임 시각 오후 다섯 시부터 아홉 시) 시장 거리로 와 달래요. 좌판을 같이 지키재요.',
       need: { days: 3, points: 20, visit: { area: 'market', from: 17, to: 21 } },
       scene: [
-        '해 질 녘 시장 거리. 마키마가 좌판 옆 빈 의자를 손끝으로 가리킨다.',
+        '해 질 녘 시장 거리. 등불이 하나둘 켜지고 좌판들이 붉게 물든다.',
+        '마키마가 좌판 옆 빈 의자를 손끝으로 가리킨다.',
         '"왔네요. 시간 맞춰 올 줄 알았어요. 앉아요."',
         '손님이 지나갈 때마다 그녀가 작게 말한다. "저 사람은 오늘 살 거예요."',
         '정말로 그 손님이 돌아와 물건을 산다. 세 번 연속이다.',
         '"신기하죠? 냄새예요. 원하는 게 있는 사람은 걸음이 달라요."',
+        '건너편 등불 가게에서 쓰레쉬가 후후 웃으며 이쪽을 넘겨다본다.',
+        '"맞수도 저녁엔 다정해 보여요. 배가 부르면 다 그래요."',
+        '그녀가 붕어빵 한 봉지를 반으로 나눠 이쪽 무릎에 올려놓는다.',
         '"{me} 씨는 처음부터 걸음이 똑같았어요. 그래서 편해요."',
+        '"원하는 게 없는 걸음인지, 숨기는 걸음인지. 그건 아직 몰라요."',
       ],
       replies: [
         { say: '저는 뭘 원하는 걸음이에요?', tier: 'great', remember: 'market-dusk', face: 'smile', answer: '…그건 저도 아직 몰라요. 처음이에요. 그래서 계속 보고 싶어요.' },
@@ -409,11 +993,17 @@ export const MAKIMA_TALK: NpcTalkBook = {
       hint: '마키마가 잼 바른 빵 이야기를 했어요. 딸기잼 하나를 가지고 찾아가 보세요.',
       need: { days: 6, points: 40, bring: { item: 'jam', take: true } },
       scene: [
+        '해가 기운 오후, 마키마의 좌판 앞에 손님이 끊겼다.',
         '딸기잼 병을 내밀자 마키마가 잠깐 말을 멈춘다.',
         '"…이건 제가 주는 상이에요. 받는 건 처음이네요."',
-        '그녀가 식빵 두 장을 꺼내 잼을 끝까지 듬뿍 바른다.',
+        '그녀가 병을 햇빛에 비춰 보더니, 뚜껑을 아주 천천히 연다.',
+        '식빵 두 장을 꺼내 잼을 가장자리 끝까지 듬뿍 바른다.',
         '"예전 일터에서는 아무도 저한테 상을 주지 않았어요. 줄 사람만 있었죠."',
+        '"착하다는 말도 늘 제가 하는 쪽이었어요."',
         '빵을 반으로 나누는 손이 평소보다 조금 느리다.',
+        '한 입 베어 문 그녀가 눈을 감는다. 무언가를 기억해 두려는 얼굴이다.',
+        '"맛있어요. 같은 잼인데, 제가 산 것보다 달아요. 이상하죠."',
+        '"이 병은 다 먹지 않을래요. 조금은 남겨 두고 싶어요."',
       ],
       replies: [
         { say: '착하게 굴었으니까요', tier: 'great', remember: 'jam-night', face: 'laugh', answer: '…제 말을 저한테 돌려주네요. 좋아요. 착해요, {me} 씨.' },
@@ -428,9 +1018,15 @@ export const MAKIMA_TALK: NpcTalkBook = {
       scene: [
         '장이 끝난 밤, 마키마가 영화 표 두 장을 펼쳐 보인다.',
         '"약속했죠. 오늘은 처음부터 끝까지, 자막까지 볼 거예요."',
+        '작은 상영관. 손님은 둘뿐인데 그녀는 맨 앞줄 가운데에 앉는다.',
+        '"앞자리는 목이 아파요. 그래도 화면 말고는 아무것도 안 보여요."',
+        '불이 꺼지자 그녀가 팝콘을 둘 사이에 놓는다. 손은 거의 그녀 쪽이다.',
         '화면 속 개 한 마리가 비를 맞으며 주인을 기다린다.',
         '옆을 보니 그녀가 웃지 않고 화면만 보고 있다. 처음 보는 얼굴이다.',
-        '불이 켜지자 그녀가 먼저 이쪽을 본다. "재미없었죠? 저는 좋았어요."',
+        '개가 마침내 주인 품에 뛰어드는 장면에서, 팝콘을 쥔 손이 멈춘다.',
+        '자막이 끝까지 올라간 뒤에야 불이 켜진다. 그녀는 일어나지 않는다.',
+        '"재미없었죠? 저는 좋았어요. 그 한 장면만으로요."',
+        '"혼자 볼 때는 몰랐어요. 옆에 누가 있으면 장면이 길어져요."',
       ],
       replies: [
         { say: '저도 좋았어요', tier: 'great', face: 'shy', answer: '…그럼 다음 표도 두 장 살게요. 그건 묻지 않고 정할게요.' },
@@ -443,11 +1039,17 @@ export const MAKIMA_TALK: NpcTalkBook = {
       hint: '마키마와 아주 가까워지면 그녀가 계약서 밖의 이야기를 꺼내요. 그 뒤엔 꽃다발 냄새도 반길지 몰라요.',
       need: { days: 13, points: 96 },
       scene: [
-        '새벽 선착장. 항구 개가 마키마 발치에 엎드려 있다.',
+        '새벽 선착장. 바다 위로 옅은 안개가 깔려 있다.',
+        '항구 떠돌이 개가 마키마 발치에 엎드려 꼬리를 느리게 흔든다.',
         '"이 아이는 목줄이 없어요. 그런데 매일 여기로 와요."',
+        '"처음엔 밥 때문인 줄 알았어요. 이제는 밥을 안 줘도 와요."',
         '"저는 늘 사람들을 계약으로 묶었어요. 그래야 곁에 남는 줄 알았죠."',
+        '"예전 일터에서도요. 줄을 세우고, 자리를 정하고, 도장을 찍었어요."',
         '"그런데 {me} 씨는 조건 없이 와요. 매번요. 그게 계산이 안 돼요."',
         '그녀가 개의 머리를 쓰다듬다가, 아주 조금 웃는다. 평소와 다른 웃음이다.',
+        '"계산이 안 되는 건 불안한 일이었어요. 지금은… 잘 모르겠어요."',
+        '개가 일어나 이쪽 발치로 옮겨 와 다시 눕는다.',
+        '"봐요. 이 아이도 알아요. 누가 옆에 있어 주는 사람인지."',
       ],
       replies: [
         { say: '오고 싶어서 오는 거예요', tier: 'great', face: 'shy', answer: ['…그런 계약은 서류가 없어서 불안해요.', '꽃 냄새가 나는 날이 오면, 그때는 받을게요.'] },
@@ -460,11 +1062,17 @@ export const MAKIMA_TALK: NpcTalkBook = {
       hint: '마키마와 연인이 되면 마지막 이야기가 열려요. 손가락에 맞는 무언가를 기다린대요.',
       need: { days: 16, love: 'dating' },
       scene: [
-        '장날이 끝난 좌판. 마키마가 하얀 종이 한 장을 펼친다. 아무것도 적혀 있지 않다.',
+        '장날이 끝난 좌판. 천막 너머로 저녁 노을이 길게 들어온다.',
+        '마키마가 하얀 종이 한 장을 펼친다. 아무것도 적혀 있지 않다.',
         '"{me} 씨와의 계약서예요. 조건은 아직 비어 있어요."',
+        '"지금까지 쓴 계약서는 전부 제가 조건을 먼저 적었어요."',
+        '"이번엔 아니에요. 펜이 두 자루예요. 한 줄씩 번갈아 써요."',
         '"처음으로 해지 조항을 넣지 않을 거예요. 그러니 천천히 채워요."',
         '"첫 줄은 이거예요. 맛있는 건 같이 먹을 것. 영화는 끝까지 볼 것."',
+        '좌판 아래에서 항구 개가 고개를 내밀고, 그녀가 그 머리에 손을 얹는다.',
+        '"이 아이 이름도 같이 지어요. 이제는 떠나지 않아도 되니까요."',
         '그녀가 자기 약지를 한 번 쓰다듬는다. "크기는 이미 알고 있죠?"',
+        '"…예, 아니면 멍? 이번 질문만은 정말로 {me} 씨가 골라요."',
       ],
       replies: [
         { say: '둘째 줄은 제가 쓸게요', tier: 'great', face: 'laugh', answer: '좋아요. 무엇을 쓰든 서명할게요. …이런 말, 처음 해 봐요.' },
@@ -478,5 +1086,9 @@ export const MAKIMA_TALK: NpcTalkBook = {
     '또 왔네요. 올 줄 알았어요. 그래도 오늘 계약은 끝났어요.',
     '{me} 씨, 앉아서 구경만 하다 가요. 그건 공짜예요.',
     '영화 시간이에요. 내일 다시 와 볼래요? 예, 아니면 멍?',
+    '계약은 하루에 하나예요. 대신 구경은 얼마든지요.',
+    '{me} 씨, 또 온 걸 보니 착하네요. 그래도 오늘 이야기는 끝났어요.',
+    '개들 밥 줄 시간이에요. 같이 가도 되지만, 이야기는 내일 해요.',
+    '할 말이 남은 얼굴이네요. 괜찮아요. 내일까지 기억해 둘게요.',
   ],
 };
