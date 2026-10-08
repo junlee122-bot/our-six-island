@@ -299,7 +299,7 @@ export const HAKU_TALK: NpcTalkBook = {
       replies: [
         { say: '그분은 어떤 분이었어요?', tier: 'great', remember: 'kind-elder', face: 'calm', answer: ['얼굴은 똑같은데 눈이 달랐어요.', '차를 따라 주면서 이름을 물어 주는 분이었어요. 그게 고마웠어요.'] },
         { say: '같은 얼굴에 다른 마음이네요', tier: 'good', face: 'think', answer: '네. 그래서 얼굴보다 목소리를 기억해요.' },
-        { say: '털실 별로예요', tier: 'meh', face: 'calm', answer: '그 털실은 반짝였어요. 머리끈이었어요. 아마도요.' },
+        { say: '털실 별로예요', tier: 'meh', face: 'calm', answer: '그 털실로 뜬 머리끈은 반짝였어요. 아직도 눈에 선해요.' },
       ],
     },
     {
@@ -477,7 +477,7 @@ export const HAKU_TALK: NpcTalkBook = {
       when: { fish: true },
       open: '{me} 님, 손에서 물 냄새가 나요. 오늘 {fish}, 낚았군요.',
       replies: [
-        { say: '물고기한테 고맙다고 했어요', tier: 'great', face: 'smile', answer: '잘했어요. 물이 기억해요. 다음에도 좋은 날일 거예요.' },
+        { say: '물고기한테 고맙다고 했어요', tier: 'great', face: 'smile', answer: '잘했어요. 물이 기억해요. 다음에도 좋은 날이 올 거예요.' },
         { say: '하쿠도 하나 드릴까요?', tier: 'good', face: 'shy', answer: '마음만요. 은어라면… 조금 흔들리겠지만요.' },
         { say: '팔 거예요', tier: 'meh', face: 'calm', answer: '그것도 좋아요. 손은 개울에 한 번 씻고 가요.' },
       ],
@@ -776,7 +776,7 @@ export const HAKU_TALK: NpcTalkBook = {
       open: '하늘 나는 꿈 얘기, 아무한테도 안 했죠? 닐라 님이 놀릴 거예요.',
       replies: [
         { say: '우리 둘만 알아요', tier: 'great', face: 'shy', answer: ['…고마워요.', '그럼 언젠가 꿈속에서 {me} 님도 태워 줄게요. 꿈속에서요.'] },
-        { say: '벌써 말했는데요', tier: 'meh', face: 'sorry', answer: '…그래서 아까 날개 펴 보라고 하셨구나.' },
+        { say: '벌써 말했는데요', tier: 'meh', face: 'sorry', answer: '…그래서 아까 닐라 님이 날개 펴 보라고 했군요.' },
       ],
     },
     {
@@ -1002,12 +1002,12 @@ export const HAKU_TALK: NpcTalkBook = {
         '"…이건 {me} 님한테만 들려줄게요. 다른 데선 하쿠예요."',
         '개울이 한순간 반짝인다. 흰 비늘 같은 빛이 물 위로 흐른다.',
         '"이름을 찾았는데, 이상하게 떠나고 싶지가 않아요."',
-        '"이름을 돌려준 사람 곁에 있는 게, 강이 바다에 닿는 거래요."',
+        '"이름을 돌려준 사람 곁에 있는 게, 강이 바다에 닿는 일 같아요."',
         '"…반지처럼 둥근 약속이면, 물도 잊지 않을 거예요."',
         '"평생 {me} 님 이름을 부르고 싶어요. 매일 아침, 처음으로요."',
       ],
       replies: [
-        { say: '평생 불러 줄게요', tier: 'great', face: 'shy', answer: ['…네.', '그럼 저는 평생 대답할게요. 매일요. 두 이름 다로요.'] },
+        { say: '평생 불러 줄게요', tier: 'great', face: 'shy', answer: ['…네.', '그럼 저는 평생 대답할게요. 매일요. 어느 이름으로 불러도요.'] },
         { say: '천천히 같이 걸어요', tier: 'good', face: 'smile', answer: '네. 물은 서두르지 않아요. 우리도요.' },
         { say: '그래도 하쿠가 좋아요', tier: 'meh', face: 'think', answer: '…{me} 님이 그렇게 부르면, 그게 제 이름이에요.' },
       ],
