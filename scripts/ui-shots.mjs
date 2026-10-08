@@ -623,7 +623,7 @@ async function runView(browser, base, view, report) {
         await focusScene();
         await page.keyboard.press('Escape');
         await sleep(700);
-        await H.clickText(/항구로 나가기/, 'dialog[open] button');
+        await H.clickText(/항구 구역으로 나가기/, 'dialog[open] button');
         await until(() => {
           const d = document.querySelector('[data-testid=area-3d]')?.dataset;
           return d?.area === 'harbor' && d.loadState === 'ready';
