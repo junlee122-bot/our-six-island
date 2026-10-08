@@ -778,7 +778,9 @@ export function AreaScene({
           for (const c of districtCounters(s.area, 1)) {
             if (c.a.kind !== 'counter' || !c.a.enter || t - lastWalkInto <= LOCKED_NOTICE_MS) continue;
             const doorway = { x: c.x, z: c.z - 1, stand: { x: c.x, z: c.z }, reach: c.reach };
-            if (!walksInto(l.point, { x: dx, z: dz }, doorway) || (!keyed && !routeGoesThrough(goal, doorway))) continue;
+            // A clicked route goes in only when it ends at the door itself (not anywhere behind its line).
+            const atDoor = !!goal && Math.abs(goal.x - c.x) <= c.reach + 0.5;
+            if (!walksInto(l.point, { x: dx, z: dz }, doorway) || (!keyed && (!routeGoesThrough(goal, doorway) || !atDoor))) continue;
             lastWalkInto = t;
             l.held.clear();
             l.route = [];
