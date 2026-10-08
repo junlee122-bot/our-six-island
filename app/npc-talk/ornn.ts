@@ -351,7 +351,7 @@ export const ORNN_TALK: NpcTalkBook = {
       when: { love: 'dating' },
       open: '밤에 망치 소리가 멈추면. 네 생각 하는 중이다. 흠. 알아 둬.',
       replies: [
-        { say: '나도 그 소리 기다려', tier: 'great', remember: 'night-think', face: 'shy', answer: ['…그럼 오늘은 늦게까지 두드린다.', '멈추는 데도 있다. 거기서 내 이름 불러.'] },
+        { say: '나도 그 소리 기다려', tier: 'great', remember: 'night-think', face: 'shy', answer: ['…그럼 오늘은 늦게까지 두드린다.', '중간에 한 번 멈출 거다. 그때 내 이름 불러.'] },
         { say: '그럼 일은 언제 해?', tier: 'good', face: 'laugh', answer: '흠. 요즘 좀 밀렸다. 네 탓이다. 좋은 쪽으로.' },
         { say: '잠은 자야지', tier: 'meh', face: 'calm', answer: '…잔다. 네 생각 다 하고 나서.' },
       ],
@@ -624,7 +624,7 @@ export const ORNN_TALK: NpcTalkBook = {
       open: '혼례 소식 들었나. 반지 틀 주문이 들어왔다. 밤새 했다.',
       replies: [
         { say: '네 반지면 평생 가겠다', tier: 'great', face: 'shy', answer: '…간다. 그렇게 만들었다. 흠. 헛기침이다.' },
-        { say: '밤새면 안 피곤해?', tier: 'good', face: 'calm', answer: '피곤하다. 반지는 서두르면 안 된다. 그래서 밤새다.' },
+        { say: '밤새면 안 피곤해?', tier: 'good', face: 'calm', answer: '피곤하다. 반지는 서두르면 안 된다. 그래서 밤샜다.' },
         { say: '난 반지 관심 없어', tier: 'meh', face: 'think', answer: '…흠. 지금은. 쇠도 처음엔 관심 없다.' },
       ],
     },
@@ -950,7 +950,7 @@ export const ORNN_TALK: NpcTalkBook = {
       id: 'cb-build',
       when: { mem: 'build-with' },
       use: 'build-with',
-      open: '대장간 처마 고친다. 같이 하자고 했지. …못 들어.',
+      open: '대장간 처마 고친다. 같이 하자고 했지. …못 상자 들어.',
       replies: [
         { say: '박자 맞춰 박을게', tier: 'great', face: 'smile', answer: ['흠. 비뚤다. 아니, 됐다. 그대로 둬.', '네가 박은 자리는 네 자리다. 표시해 둔다.'] },
         { say: '사다리 잡아 줄게', tier: 'good', face: 'shy', answer: '…그건 혼자 못 한다. 흠. 잡아.' },
@@ -1091,7 +1091,7 @@ export const ORNN_TALK: NpcTalkBook = {
         '"모루 앞엔 늘 혼자였다. 이제 둘이 앉는다. 그렇게 정했다."',
         '그가 손바닥을 편다. 작은 쇠고리 하나. 아직 다듬지 않았다.',
         '"그 불 먹은 돌. 네 망치 만들고 조금 남았다. 안 버렸다."',
-        '"반지 쇠다. 산 밑 제일 뜨거운 불로 녹일 거다. 안 식게."',
+        '"반지 쇠다. 산 밑 제일 뜨거운 불로 녹일 거다. 오래 안 식게."',
         '"남이 만든 건 못 믿는다. 네 손가락에 맞는 건 내가 안다."',
         '그가 말을 멈추고, 벽에서 네 망치를 내려 네 앞에 놓는다.',
         '"…아니. 정정한다. 이번엔 혼자 안 한다."',
