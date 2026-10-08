@@ -96,7 +96,7 @@ export function checkBook(npc, book) {
     const where = `${npc} chapter ${i + 1}`;
     checkLine(npc, `${where} title`, c.title);
     assert.ok(c.hint.length > 0 && [...c.hint].length <= 80, `${where}: hint`);
-    assert.ok(c.scene.length >= 3 && c.scene.length <= 8, `${where}: 3–8 scene lines`);
+    assert.ok(c.scene.length >= 3 && c.scene.length <= 15, `${where}: 3–15 scene lines`);
     for (const line of c.scene) checkLine(npc, where, line);
     replies(where, c.replies);
     assert.ok((c.need.points ?? points) >= points, `${where}: points never go down (migration)`);

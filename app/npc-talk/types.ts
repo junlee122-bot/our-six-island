@@ -105,7 +105,7 @@ export type ChapterNeed = {
   love?: NpcLove;
 };
 
-/** A story chapter: a short scene (3–8 lines) and one choice. */
+/** A story chapter: a scene (3–15 lines) and one choice. */
 export type NpcChapter = {
   title: string;
   /** Shown in the notebook while it is not open yet ("노을 무렵 선착장에서 보자고 했어요"). */
