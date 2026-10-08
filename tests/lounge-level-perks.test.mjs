@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { LEVEL_PERKS, LEVEL_XP, NO_MODS, PROFESSIONS, PROF_BY_ID, SKILLS } from '../app/lounge-growth-data.ts';
 import { TALENT_BY_ID, talentsOf } from '../app/lounge-growth-talents.ts';
 import { growthMods, mineCanGo } from '../app/lounge-growth.ts';
-import { LifeError, emptyLife, ensureLifeMember, lifeAction, readLife } from '../app/lounge-life.ts';
+import { LifeError, QUALITY_MULT, emptyLife, ensureLifeMember, lifeAction, readLife } from '../app/lounge-life.ts';
 import { INITIAL_BEOM, newLoungeLedger, registerWallet, validateLedger } from '../app/lounge-economy.ts';
 import { MACHINE_BY_ID, RANCH_ARTISAN_GOODS, isGoodId, isRanchGoodId, productOf } from '../app/lounge-farm-data.ts';
 import { FARM_REJECT, goodsById, stockName } from '../app/lounge-farm.ts';
@@ -214,10 +214,12 @@ test('축산 가공품 in the machines: big products make 은별, 숙성 장인 
   s.act(m, { kind: 'farmLoad', slot: 0, item: 'egg' }, T + DAY);
   assert.equal(s.life.farmx[m.id].mach[1].done, T + DAY + Math.round(MACHINE_BY_ID.keg.ms * 0.75));
   assert.equal(s.life.farmx[m.id].mach[0].done, T + DAY + Math.round(MACHINE_BY_ID.jar.ms * 0.75));
+  // 목축 Lv4 may lift the 마요네즈 one star (a 5%p roll), so sell the star it came out at.
+  const q = s.life.farmx[m.id].mach[0].q ?? 0;
   s.act(m, { kind: 'farmCollect', slot: -1 }, T + 2 * DAY);
   b = s.balance(m);
-  s.act(m, { kind: 'sellGoods', item: 'jar-egg', q: 0, n: 1, at: 'coop' }, T + 2 * DAY);
-  assert.equal(s.balance(m) - b, Math.round(goodsById()['jar-egg'].base * 1.2));
+  s.act(m, { kind: 'sellGoods', item: 'jar-egg', q, n: 1, at: 'coop' }, T + 2 * DAY);
+  assert.equal(s.balance(m) - b, Math.round(Math.round(goodsById()['jar-egg'].base * QUALITY_MULT[q]) * 1.2));
 });
 
 test('장인 손맛: a ranch good sometimes comes out one star better, never past 금별', () => {
