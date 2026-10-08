@@ -11,13 +11,17 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
 import { NPCS, assertNpcSocialContext, birthdayGiftOf, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
-import { NPC_TALK_POINTS, npcSpouseOf } from '../lounge-npc-data';
+import { npcSpouseOf } from '../lounge-npc-data';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcSpot } from '../lounge-npc-schedule';
 import { npcBirthdayGiftLine } from '../lounge-npc-birthday';
 import { npcGiftLine, npcTalk, npcTalkReply } from '../lounge-npc-dialog';
 import { npcRequestsOn } from '../lounge-npc-requests';
 import { npcHearts, npcLoveChoices, npcLoveRefusal, npcLoveStatus, npcLoveTalk, npcTalkChoices, npcTalkFocus, npcTalkStatus, type NpcLoveChoice } from '../lounge-npc-speech';
+import { FACE_POSE, FACE_WORD, asLines, nextChapter, npcTalkBook, pickTalk, replyFace, talkDays, type NpcChapter, type NpcTalkEntry, type TalkFace, type TalkReply } from '../lounge-npc-talk';
+import { hash32 } from '../lounge-calendar';
+import type { LifeAction } from '../lounge-life';
+import { talkSceneOf } from './npc-talk-facts';
 import { kstDay } from '../lounge-economy';
 import { ACTORS } from '../lounge-roster';
 import { actionForCode } from '../lounge-keybinds';
@@ -79,6 +83,12 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const [page, setPage] = useState(0);
   // Everything said so far, so the talk's answer never repeats a page.
   const said = useRef(pages);
+  // 주민과 진짜 대화 (lounge-npc-talk.ts): their book, today's scene, and the
+  // reply buttons while a talk or a chapter waits for my answer.
+  const book = npcTalkBook(npc);
+  const [scene] = useState(() => (view.life ? talkSceneOf(view, npc, opened, myName) : null));
+  const [asking, setAsking] = useState<{ kind: 'talk'; entry: NpcTalkEntry } | { kind: 'story'; chapter: NpcChapter; n: number } | null>(null);
+  const [face, setFace] = useState<TalkFace | null>(null);
   const [picking, setPicking] = useState(false);
   const [focusAfter, setFocusAfter] = useState<'open' | 'reply' | 'picker'>('open');
   const [busy, setBusy] = useState(false);
@@ -94,7 +104,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       return e instanceof Error ? e.message : '지금은 할 수 없어요.';
     }
   };
-  const run = async (action: NpcSocialAction, say: string[]) => {
+  const run = async (action: LifeAction, say: string[]) => {
     if (busyRef.current) return false;
     busyRef.current = true;
     setBusy(true);
@@ -134,7 +144,10 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const companionWhy = companions
     ? companionWhyNot({ npc, points: row.points, mine, holder, now, world: { hill: flags.includes('district-hillside'), ranch: flags.includes('district-ranch'), foothill: flags.includes('district-foothill') } })
     : '';
+  const inventory = view.life?.me.inv ?? {};
+  const story = book && view.life ? nextChapter(book, row, (item) => inventory[item] ?? 0) : null;
   const choices = npcTalkChoices({
+    story: story?.open && story.chapter ? { label: `이야기 ${story.n}장 · ${story.chapter.title}` } : null,
     talked: row.talked,
     gifted: row.gifted,
     busy,
@@ -168,9 +181,49 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       setBusy(false);
     }
   };
+  // While they wait for my answer, the choices are my replies (keys 1·2·3).
+  const replies: readonly TalkReply[] = asking ? (asking.kind === 'talk' ? asking.entry.replies : asking.chapter.replies) : [];
+  const fill = (text: string, entry?: NpcTalkEntry) => (scene ? scene.fill(text, entry) : text);
   const talk = () => {
-    const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points + NPC_TALK_POINTS, spot, lastGiftName, recent, ...loveTalk }, said.current);
-    void run(talkAction, [reply]);
+    // Later the same day: one line, nothing sent (today's talk already counted).
+    if (row.talked) {
+      const pool = book?.after;
+      const line = pool?.length ? fill(pool[hash32(`${npc}:${who}:${today}:after:${said.current.length}`) % pool.length]) : npcTalkReply({ npc, me: myName, who, now, points: row.points, spot, lastGiftName, recent, ...loveTalk }, said.current);
+      setFace(null);
+      return answer([line]);
+    }
+    if (!book || !scene) {
+      const reply = npcTalkReply({ npc, me: myName, who, now, points: row.points, spot, lastGiftName, recent, ...loveTalk }, said.current);
+      return void run(talkAction, [reply]);
+    }
+    // They open; my reply buttons come after their last page.
+    const entry = pickTalk(book, scene.facts, { who: view.self ?? who, day: today, tc: talkDays(row) });
+    const lines = asLines(entry.open).map((l) => fill(l, entry));
+    said.current = [...said.current, ...lines];
+    setFace(null);
+    setAsking({ kind: 'talk', entry });
+    setPages(lines);
+    setPage(0);
+  };
+  const playStory = () => {
+    if (!story?.chapter || !story.n) return;
+    const lines = story.chapter.scene.map((l) => fill(l));
+    said.current = [...said.current, ...lines];
+    setFace(null);
+    setAsking({ kind: 'story', chapter: story.chapter, n: story.n });
+    setPages(lines);
+    setPage(0);
+  };
+  const reply = async (i: number) => {
+    if (!asking || busyRef.current) return;
+    const r = replies[i];
+    if (!r) return;
+    const action: LifeAction = asking.kind === 'talk' ? { kind: 'npcChat', npc, op: 'talk', id: asking.entry.id, pick: i } : { kind: 'npcChat', npc, op: 'story', pick: i };
+    const lines = asLines(r.answer).map((l) => fill(l, asking.kind === 'talk' ? asking.entry : undefined));
+    const ok = await run(action, lines);
+    // Either way the box is back on the usual choices (a refusal shows the server's reason as a toast).
+    setAsking(null);
+    if (ok) setFace(replyFace(r));
   };
   const say = (line: string, vars: Record<string, string | number> = {}) => fillLoveLine(line, { me: myName, ...vars }, npc);
   // Their answer to a 꽃다발 or a ring shows either way; only a yes goes to the server (and takes the item).
@@ -234,8 +287,11 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       });
   };
   const choose = (index: number) => {
+    if (asking) return void reply(index);
     const choice = choices[index];
     if (!choice || choice.disabled) return;
+    setFace(null);
+    if (choice.id === 'story') return playStory();
     if (choice.id === 'companion') return invite();
     if (choice.id === 'talk') talk();
     else if (choice.id === 'gift') setPicking(true);
@@ -253,7 +309,7 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       label={`${josa(info.name, '과/와')} 이야기`}
       testId="npc-dialog"
       textTestId="npc-dialog-text"
-      portrait={<NpcFigure npc={npc} mood="smile" />}
+      portrait={<TalkPortrait npc={npc} face={face} />}
       tall
       name={info.name}
       hearts={npcHearts(row.points)}
@@ -261,9 +317,13 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
       status={npcTalkStatus(npc, spot)}
       pages={pages}
       page={page}
-      choices={choices.map((c) => ({ label: c.label, kind: c.id, disabled: c.disabled, testId: `npc-choice-${c.id}` }))}
-      choicesLabel="할 일 고르기"
-      focusChoice={npcTalkFocus(choices, focusAfter)}
+      choices={
+        asking
+          ? replies.map((r, i) => ({ label: fill(r.say, asking.kind === 'talk' ? asking.entry : undefined), kind: 'reply', disabled: busy, testId: `npc-reply-${i}` }))
+          : choices.map((c) => ({ label: c.label, kind: c.id, disabled: c.disabled, testId: `npc-choice-${c.id}` }))
+      }
+      choicesLabel={asking ? '대답 고르기' : '할 일 고르기'}
+      focusChoice={asking ? 0 : npcTalkFocus(choices, focusAfter)}
       note={talkBlock}
       onChoose={choose}
       onNext={() => setPage((p) => Math.min(p + 1, pages.length - 1))}
@@ -282,6 +342,25 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
         />
       )}
     </SpeechBox>
+  );
+}
+
+/**
+ * Their portrait with the face of their answer: the pose sheet's cell where
+ * they have one (미쿠), otherwise the tall art with a small word bubble
+ * ("하하", "끄덕") beside it.
+ */
+function TalkPortrait({ npc, face }: { npc: NpcId; face: TalkFace | null }) {
+  const sheet = NPCS[npc].art.kind === 'sheet';
+  return (
+    <>
+      <NpcFigure npc={npc} mood={face ? FACE_POSE[face] : 'smile'} />
+      {face && !sheet && (
+        <span className="l-talk-emote" data-face={face} data-testid="npc-emote">
+          {FACE_WORD[face]}
+        </span>
+      )}
+    </>
   );
 }
 

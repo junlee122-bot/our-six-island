@@ -6,12 +6,15 @@
 import { useRef, useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
-import { NPCS, NPC_IDS, NPC_INVITE_POINTS, NPC_DATE_POINTS, NPC_POINTS_MAX, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, NPC_DATING_DAYS, NPC_BREAKUP, NPC_DIVORCE, assertNpcSocialContext, npcGiftReaction, npcReply, spouseGiftOf, type NpcId, type NpcLove, type NpcSocialAction, type NpcRelations } from '../lounge-romance';
+import { NPCS, NPC_IDS, NPC_INVITE_POINTS, NPC_DATE_POINTS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, NPC_DATING_DAYS, NPC_BREAKUP, NPC_DIVORCE, assertNpcSocialContext, npcGiftReaction, npcReply, spouseGiftOf, type NpcId, type NpcLove, type NpcSocialAction, type NpcRelations, type NpcRelationView } from '../lounge-romance';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcLoveStatus, npcLoveTalk } from '../lounge-npc-speech';
 import { kstDay } from '../lounge-economy';
 import { josa } from '../lounge-text';
-import { NPC_REGULAR_POINTS, NPC_SPECIAL_POINTS, npcSpouseOf } from '../lounge-npc-data';
+import { npcSpouseOf } from '../lounge-npc-data';
+import { chapterLabel, chaptersDone, memoryLines, nextChapter, npcTalkBook } from '../lounge-npc-talk';
+import { npcHearts } from '../lounge-npc-speech';
+import { Hearts } from './Hearts';
 import { npcSpot } from '../lounge-npc-schedule';
 import { npcGiftLine, npcTalk, npcVisitLine } from '../lounge-npc-dialog';
 import { ACTORS } from '../lounge-roster';
@@ -89,6 +92,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const loveSay = (line: string, vars: Record<string, string> = {}) => fillLoveLine(line, { me: myName, ...vars }, selected);
   const loveKey = `${who}:${day}`;
   const loveStatus = npcLoveStatus(row, day);
+  const hasBook = !!npcTalkBook(selected);
   const button = (label: string, op: 'talk' | 'date' | 'invite' | 'dismiss', off = false) => (
     <GameButton
       disabled={busy || off || !!blocked(action(op))}
@@ -116,7 +120,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
                     <strong>{NPCS[id].name}</strong>
                     <small>{s.label}</small>
                   </span>
-                  <em>{r?.points ?? 0}</em>
+                  <em>{storyShort(id, r)}</em>
                 </button>
               </li>
             );
@@ -133,24 +137,25 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
           <p>{info.intro}</p>
           {loveStatus && <p className="l-npc-love" data-testid="npc-love-status">{loveStatus}</p>}
           <NpcTiesSection npc={selected} now={now} me={myName} seen={seenTies} points={(id) => byId[id]?.points ?? 0} onPick={setSelected} />
-          <label className="l-npc-progress">{row.level} · {Math.floor(row.points / 12)}하트 <strong>{row.points}/{NPC_POINTS_MAX}</strong><progress max={NPC_POINTS_MAX} value={row.points} aria-label={`${info.name} 친밀도`} /></label>
+          <NpcStory npc={selected} row={row} inv={view.life?.me.inv ?? {}} />
           <small>좋아하는 것: {info.likesText} · 싫어하는 것: {info.dislikesText}</small>
-          <small>초대 {NPC_INVITE_POINTS} · 단골 선물 {NPC_REGULAR_POINTS} · 데이트 {NPC_DATE_POINTS} · 꽃다발 {NPC_DATING_POINTS}(8하트, 사귀기 전엔 여기까지) · 청혼 {NPC_PROPOSE_POINTS} · 특별한 선물 {NPC_SPECIAL_POINTS}{row.lastGift ? ` · 지난 선물: ${itemName(row.lastGift)}` : ''}</small>
+          <small>친해지면 내 방에 초대하고, 더 가까워지면 데이트와 꽃다발을 건넬 수 있어요.{row.lastGift ? ` 지난 선물: ${itemName(row.lastGift)}` : ''}</small>
           {shown.length > 0 && <blockquote aria-live="polite">{shown.map((line, i) => <span key={i}>{line}</span>)}</blockquote>}
           {location && <p className="l-npc-location">{location}</p>}
           <div className="l-npc-actions">
-            {button(row.talked ? '오늘 대화 완료' : '이야기 나누기 · +6', 'talk', row.talked)}
+            {/* A resident with a talk book is talked to where they stand (the choice talk). */}
+            {button(hasBook ? '곁에서 말을 걸면 이야기해요' : row.talked ? '오늘 대화 완료' : '이야기 나누기', 'talk', row.talked || hasBook)}
             {button(visiting ? '방문 중' : '내 방에 초대하기', 'invite', row.points < NPC_INVITE_POINTS || visiting)}
             {visiting && button('배웅하기', 'dismiss')}
-            {button(row.dated ? '오늘 데이트 완료' : '데이트 제안하기 · +10', 'date', row.points < NPC_DATE_POINTS || row.dated || !visiting)}
+            {button(row.dated ? '오늘 데이트 완료' : '데이트 제안하기', 'date', row.points < NPC_DATE_POINTS || row.dated || !visiting)}
           </div>
           <NpcLoveActions
             love={row.love}
             parting={parting === selected}
             busy={busy}
             reasons={{
-              ask: wed || (partner ? `${josa(NPCS[partner.npc].name, '과/와')} 함께하는 중이에요.` : taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv.bouquet ? '꽃다발은 등불 잡화점에서 팔아요.' : row.points < NPC_DATING_POINTS ? '8하트부터 꽃다발을 받아 줘요.' : blocked(action('ask'))),
-              propose: wed || (taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv['pledge-ring'] ? '청혼 반지는 등불 잡화점에서 팔아요.' : row.points < NPC_PROPOSE_POINTS ? '10하트가 되면 청혼할 수 있어요.' : day - (row.since ?? day) < NPC_DATING_DAYS ? `사귄 지 ${NPC_DATING_DAYS}일이 지나면 청혼할 수 있어요.` : blocked(action('propose'))),
+              ask: wed || (partner ? `${josa(NPCS[partner.npc].name, '과/와')} 함께하는 중이에요.` : taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv.bouquet ? '꽃다발은 등불 잡화점에서 팔아요.' : row.points < NPC_DATING_POINTS ? '조금 더 가까워지면 꽃다발을 받아 줘요.' : blocked(action('ask'))),
+              propose: wed || (taken ? '이미 다른 친구와 약속한 주민이에요.' : !inv['pledge-ring'] ? '청혼 반지는 등불 잡화점에서 팔아요.' : row.points < NPC_PROPOSE_POINTS ? '마음이 더 깊어지면 청혼할 수 있어요.' : day - (row.since ?? day) < NPC_DATING_DAYS ? `사귄 지 ${NPC_DATING_DAYS}일이 지나면 청혼할 수 있어요.` : blocked(action('propose'))),
               wedding: day < (row.weddingDay ?? day) ? `결혼식은 ${(row.weddingDay ?? day) - day}일 뒤예요.` : blocked(action('wedding')),
               homeGift: row.homeGifted ? '내일 아침에 또 챙겨 줘요.' : !row.atHome ? '배우자가 일하러 나갔어요. 밤이나 아침에 집에서 받아요.' : blocked(action('homeGift')),
               breakup: '',
@@ -183,6 +188,53 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   );
 }
 
+/** The list's small word: the chapter reached (a book), else the level ("단골"). */
+function storyShort(npc: NpcId, r: { points: number; ch?: number; level?: string } | undefined) {
+  const book = npcTalkBook(npc);
+  if (!book) return r?.level ?? '인사하는 사이';
+  const done = chaptersDone(book, r ?? { points: 0, ch: 0 });
+  return done ? `이야기 ${done}장` : '이야기 전';
+}
+
+/**
+ * 주민과 진짜 대화: "이야기 2장 · 뒷산의 노을", what opens the next chapter,
+ * and the newest memories they keep of me. Hearts only under 자세히.
+ */
+function NpcStory({ npc, row, inv }: { npc: NpcId; row: NpcRelationView | { npc: NpcId; points: number; level: string }; inv: Record<string, number> }) {
+  const book = npcTalkBook(npc);
+  const hearts = (
+    <details className="l-npc-details">
+      <summary>자세히</summary>
+      <span className="l-npc-hearts">
+        {row.level} <Hearts level={npcHearts(row.points)} size={12} />
+      </span>
+    </details>
+  );
+  if (!book) return <section className="l-npc-story" data-testid="npc-story">{hearts}</section>;
+  const label = chapterLabel(book, row);
+  const next = nextChapter(book, row, (item) => inv[item] ?? 0);
+  const memories = memoryLines(book, (row as { mem?: string[] }).mem, 3);
+  return (
+    <section className="l-npc-story" aria-label={`${josa(NPCS[npc].name, '과/와')}의 이야기`} data-testid="npc-story">
+      <h4>{label ?? '아직 이야기 전'}</h4>
+      {next.chapter && (
+        <p className="l-npc-next">
+          {next.open ? `다음 이야기 「${next.chapter.title}」. 곁에서 말을 걸면 들을 수 있어요.` : next.chapter.hint}
+        </p>
+      )}
+      {!next.chapter && <p className="l-npc-next">함께한 이야기를 모두 봤어요.</p>}
+      {memories.length > 0 && (
+        <ul className="l-npc-memories" aria-label="기억하는 것">
+          {memories.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
+      {hearts}
+    </section>
+  );
+}
+
 type LoveOp = 'ask' | 'propose' | 'wedding' | 'homeGift' | 'breakup';
 /** 연애·결혼 buttons of the notebook card; a disabled button says why in its tooltip. */
 function NpcLoveActions({ love, parting, busy, reasons, homeGifted, onPart, onLove }: {
@@ -208,8 +260,8 @@ function NpcLoveActions({ love, parting, busy, reasons, homeGifted, onPart, onLo
       {parting && love && (
         <p className="l-npc-location">
           {love === 'dating'
-            ? `헤어지면 친밀도가 ${NPC_BREAKUP.points}까지 내려가고 ${NPC_BREAKUP.days}일 동안 꽃다발을 건넬 수 없어요.`
-            : `친밀도가 ${NPC_DIVORCE.points}까지 내려가고 ${NPC_DIVORCE.days}일 동안 꽃다발을 건넬 수 없어요. 반지는 돌아오지 않아요.`}
+            ? `헤어지면 사이가 꽤 멀어지고 ${NPC_BREAKUP.days}일 동안 꽃다발을 건넬 수 없어요.`
+            : `사이가 많이 멀어지고 ${NPC_DIVORCE.days}일 동안 꽃다발을 건넬 수 없어요. 반지는 돌아오지 않아요.`}
         </p>
       )}
     </>

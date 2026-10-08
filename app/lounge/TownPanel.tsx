@@ -200,7 +200,7 @@ export function TownPanel({ room, view, notify, place, onClose, onTravel, onOpen
               <ShopBuy {...base} at="general" items={SEEDS} title="씨앗 · 꾸러미" />
               <ShopBuy {...base} at="general" items={SOIL} title="비료 · 흙" />
               <ShopBuy {...base} at="general" items={TACKLE} title="낚시 도구" />
-              <ShopBuy {...base} at="general" items={[...LOVE]} title="마음 전하기" hint="꽃다발은 8하트 주민에게, 청혼 반지는 10하트 연인에게 건네요." />
+              <ShopBuy {...base} at="general" items={[...LOVE]} title="마음 전하기" hint="꽃다발은 아주 가까워진 주민에게, 청혼 반지는 마음이 깊어진 연인에게 건네요." />
               <ShopBuy {...base} at="general" items={UNLOCKS} title="희귀 소품 · 머리색 팔레트" hint="소품은 수확 목표를 채우면, 팔레트는 한 단계씩 열려요." />
             </>
           ),

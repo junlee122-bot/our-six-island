@@ -9,7 +9,7 @@
 // 8-heart cap without dating), so hearts, presents and love stages are as before.
 import { myDay } from './lounge-myday.ts';
 import { kstDay } from './lounge-economy.ts';
-import { FRIEND_PROFILES, gameHour, holidaysOn, seasonOf, timeOfDay, weatherOf } from './lounge-calendar.ts';
+import { gameHour } from './lounge-calendar.ts';
 import { LifeError, type LifeState } from './lounge-life.ts';
 import { itemCount, takeItem } from './lounge-life-plus.ts';
 import { isNpcId, type NpcId } from './lounge-npc-data.ts';
@@ -25,6 +25,8 @@ import {
   remember,
   talkDays,
   talkEntry,
+  birthdaySoon,
+  virtualMemories,
   visitDue,
   type TalkFacts,
   type TalkTier,
@@ -41,31 +43,17 @@ const fail = (text: string): never => {
   throw new LifeError(text);
 };
 
-/** My birthday is today or within the next week (FRIEND_PROFILES month-day). */
-export function birthdaySoon(actor: number | undefined, day: number) {
-  const md = FRIEND_PROFILES[actor ?? -1]?.birthday;
-  if (!md) return false;
-  for (let d = 0; d <= 7; d++) {
-    const date = new Date((day + d) * 86_400_000);
-    if (`${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}` === md) return true;
-  }
-  return false;
-}
-/** The '@' memories (lounge-npc-talk.ts VIRTUAL_MEMORIES) from what the game already keeps. */
-export function virtualMemories(o: { tastes: boolean; bdaySoon: boolean; outing: boolean; dates: number }): string[] {
-  return [o.tastes && '@taste', o.bdaySoon && '@bday-soon', o.outing && '@outing', o.dates > 0 && '@date'].filter((t): t is string => !!t);
-}
-
-/** What the server knows for a talk's conditions (the rest is left unknown, so it holds). */
+/**
+ * What the server checks of a talk's conditions: the state it keeps (memories,
+ * chapters, love, the '@' memories). The moment (time of day, weather, what I
+ * caught…) is left unknown so it holds: the opener was picked when the box
+ * opened, and the game clock may roll over before I answer.
+ */
 export function serverTalkFacts(life: LifeState, uid: string, npc: NpcId, relation: NpcRelation, now: number): TalkFacts {
   const book = npcTalkBook(npc);
   const day = kstDay(now);
   const actor = life.actors?.[uid];
   return {
-    time: timeOfDay(now),
-    season: seasonOf(now),
-    weather: weatherOf(day),
-    festival: holidaysOn(day).some((h) => !!h.claim),
     love: relation.love ?? null,
     ch: book ? chaptersDone(book, relation) : 0,
     mem: relation.mem ?? [],

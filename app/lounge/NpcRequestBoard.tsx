@@ -47,7 +47,7 @@ export function NpcRequestBoard({ room, view, notify, onClose }: { room: CloudRo
   return (
     <Modal title="의뢰 게시판" wide onClose={onClose} className="l-npc-board">
       <p>
-        시장 거리 주민들이 오늘 붙인 부탁이에요. 끝내면 범과 친밀도를 받아요. 오늘 받은 의뢰 범 {formatBeom(board?.beomToday ?? 0)} / {formatBeom(board?.beomCap ?? 0)}.
+        시장 거리 주민들이 오늘 붙인 부탁이에요. 끝내면 범을 받고 그 주민과 더 가까워져요. 오늘 받은 의뢰 범 {formatBeom(board?.beomToday ?? 0)} / {formatBeom(board?.beomCap ?? 0)}.
       </p>
       {!board?.requests.length ? (
         <EmptyState glyph="news" title="오늘은 붙은 의뢰가 없어요" />
@@ -64,7 +64,7 @@ export function NpcRequestBoard({ room, view, notify, onClose }: { room: CloudRo
                   </strong>
                   <p>{npcRequestLine(r.npc, 'post', { item: itemName(r.item), n: r.n, key: r.id })}</p>
                   <small>
-                    <ItemIcon id={r.item} size={20} /> {itemName(r.item)} {Math.min(n, r.n)}/{r.n} · {formatBeom(r.beom)} · 친밀도 +{r.points}
+                    <ItemIcon id={r.item} size={20} /> {itemName(r.item)} {Math.min(n, r.n)}/{r.n} · {formatBeom(r.beom)} · 주민이 고마워해요
                     {r.bonus ? ` · ${itemName(r.bonus[0])} ${r.bonus[1]}개` : ''}
                     {r.friends ? ` · 친구 ${r.friends}명이 해결 · 같이 하면 +${NPC_REQUEST_COOP_POINTS}` : ''}
                   </small>

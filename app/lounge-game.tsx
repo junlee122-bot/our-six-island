@@ -128,6 +128,7 @@ import { CasinoLenderPanel } from './lounge/CasinoLenderPanel';
 import { NpcRelationsPanel } from './lounge/NpcRelationsPanel';
 import { NpcTalkDialog } from './lounge/NpcTalkDialog';
 import { CompanionHud } from './lounge/CompanionHud';
+import { NpcTalkVisits } from './lounge/NpcTalkVisits';
 import { CompanionTalk } from './lounge/CompanionTalk';
 import { migrateNpcTiesSeen } from './lounge/npc-ties-seen';
 import { NpcRequestBoard } from './lounge/NpcRequestBoard';
@@ -2273,6 +2274,7 @@ function AccountLounge({
       {connected && !inGame && (
         // 주민 동행: the companion chip (face, effect, time left, 보내기) under the camera buttons.
         <div className="l-companion-dock">
+          <NpcTalkVisits room={room} view={view} notify={notify} />
           <CompanionHud
             room={room}
             view={view}

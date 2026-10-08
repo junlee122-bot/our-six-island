@@ -12,7 +12,7 @@
 //   ch   chapters done (absent on old rows: placed by points, below)
 //   mem  memory tags, oldest first, at most TALK_MEMORY_MAX
 //   vis  the chapter whose place-and-time visit is done
-import { hash32, type Season, type TimeOfDay, type Weather } from './lounge-calendar.ts';
+import { FRIEND_PROFILES, hash32, type Season, type TimeOfDay, type Weather } from './lounge-calendar.ts';
 import { NPC_TALK_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
 import type { NpcRecentKind } from './lounge-npc-extra-types.ts';
 import { NPC_TALK } from './npc-talk/index.ts';
@@ -62,6 +62,21 @@ export type TalkFacts = {
   /** The '@' memories that hold (VIRTUAL_MEMORIES). */
   virtual: readonly string[];
 };
+
+/** My birthday is today or within the next week (FRIEND_PROFILES month-day; KST days). */
+export function birthdaySoon(actor: number | undefined, day: number) {
+  const md = FRIEND_PROFILES[actor ?? -1]?.birthday;
+  if (!md) return false;
+  for (let d = 0; d <= 7; d++) {
+    const date = new Date((day + d) * 86_400_000);
+    if (`${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}` === md) return true;
+  }
+  return false;
+}
+/** The '@' memories (VIRTUAL_MEMORIES) from what the game already keeps. */
+export function virtualMemories(o: { tastes: boolean; bdaySoon: boolean; outing: boolean; dates: number }): string[] {
+  return [o.tastes && '@taste', o.bdaySoon && '@bday-soon', o.outing && '@outing', o.dates > 0 && '@date'].filter((t): t is string => !!t);
+}
 
 const list = <T>(v: OneOrMore<T> | undefined): readonly T[] => (v === undefined ? [] : Array.isArray(v) ? (v as readonly T[]) : [v as T]);
 const LOVE_ORDER: Record<NpcLove, number> = { dating: 1, engaged: 2, married: 3 };

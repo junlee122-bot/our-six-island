@@ -367,3 +367,12 @@ test('no visible numbers: talk, gift and join labels carry no points', () => {
   assert.ok(!done.find((c) => c.id === 'talk').disabled, 'later talks that day are a single line, still offered');
   assert.equal(choices.find((c) => c.id === 'story')?.label, '이야기 2장 · 뒷산의 노을');
 });
+
+test('the server checks memories and story, not the moment (the clock may roll over before I answer)', () => {
+  const s = world();
+  // A snow opener is accepted on any day: the box picked it when it opened.
+  s.act({ kind: 'npcChat', npc: 'captain', op: 'talk', id: 'op-snow', pick: 0 });
+  assert.equal(s.rel().tc, 1);
+  // A talk waiting for chapter three is refused before it.
+  assert.throws(() => s.act({ kind: 'npcChat', npc: 'captain', op: 'talk', id: 'promise-sail', pick: 0 }, T0 + DAY), /그 이야기를 꺼낼 때/);
+});
