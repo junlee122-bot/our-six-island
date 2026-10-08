@@ -382,7 +382,8 @@ async function runView(browser, base, view, report) {
   // 내 취향 (☰ → 내 취향): my slots, the searchable picker, the next-change line.
   await step('tastes', async () => {
     if (!(await menu(/내 취향/))) throw new Error('메뉴에서 내 취향을 찾지 못했습니다.');
-    assert.notEqual(await until(() => !!document.querySelector('[data-testid=tastes-window]'), 8000), -1, '내 취향 창이 열리지 않았습니다.');
+    // The window's chunk loads on first open (~3 s locally, longer on CI).
+    assert.notEqual(await until(() => !!document.querySelector('[data-testid=tastes-window]'), 30000), -1, '내 취향 창이 열리지 않았습니다.');
     await sleep(600);
     await snap('tastes');
   });
