@@ -2,7 +2,7 @@
  "label": "current",
  "commit": "ccec5a7",
  "summary": {
-  "screens": 88,
+  "screens": 91,
   "low": 0,
   "small": 0,
   "narrow": 0,
@@ -243,6 +243,20 @@
      }
     },
     "bonds": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "tastes": {
      "lowCount": 0,
      "smallCount": 0,
      "narrowCount": 0,
@@ -658,6 +672,20 @@
       }
      }
     },
+    "tastes": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
     "collection": {
      "lowCount": 0,
      "smallCount": 0,
@@ -1015,6 +1043,20 @@
      }
     },
     "bonds": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": {
+      "close": {
+       "w": 44,
+       "h": 44
+      }
+     }
+    },
+    "tastes": {
      "lowCount": 0,
      "smallCount": 0,
      "narrowCount": 0,
