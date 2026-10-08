@@ -9,6 +9,14 @@ import { FRIEREN_TALK } from './frieren.ts';
 import { LUMI_TALK } from './lumi.ts';
 import { MAEHWA_TALK } from './maehwa.ts';
 import { ROSE_TALK } from './rose.ts';
+import { VOLIBAS_TALK } from './volibas.ts';
+import { JANNA_TALK } from './janna.ts';
+import { GABUNG_TALK } from './gabung.ts';
+import { LUX_TALK } from './lux.ts';
+import { HIMMEL_TALK } from './himmel.ts';
+import { BEATRICE_TALK } from './beatrice.ts';
+import { BOCCHI_TALK } from './bocchi.ts';
+import { TSUNADE_TALK } from './tsunade.ts';
 
 export const NPC_TALK: Partial<Record<NpcId, NpcTalkBook>> = {
   captain: CAPTAIN_TALK,
@@ -16,4 +24,12 @@ export const NPC_TALK: Partial<Record<NpcId, NpcTalkBook>> = {
   lumi: LUMI_TALK,
   rose: ROSE_TALK,
   frieren: FRIEREN_TALK,
+  volibas: VOLIBAS_TALK,
+  janna: JANNA_TALK,
+  gabung: GABUNG_TALK,
+  lux: LUX_TALK,
+  himmel: HIMMEL_TALK,
+  beatrice: BEATRICE_TALK,
+  bocchi: BOCCHI_TALK,
+  tsunade: TSUNADE_TALK,
 };
