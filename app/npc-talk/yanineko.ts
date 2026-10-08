@@ -267,7 +267,7 @@ export const YANINEKO_TALK: NpcTalkBook = {
       open: '귀가 좋아서 동네 소리가 다 들려. 근데 들은 걸 다 말하진 않아.',
       replies: [
         { say: '그럼 안 말한 건 어디 둬?', tier: 'great', face: 'think', answer: ['…좋은 질문이네. 상자에 넣어.', '진짜 상자 말고 머릿속에. 꽉 차면 낮잠 자면서 정리해.'] },
-        { say: '내 소리도 들려?', tier: 'good', face: 'shy', answer: '…응. 너 발소리는 멀리서도 알아. 신경 쓴 건 아니고. 귀가 좋아서야.' },
+        { say: '내 소리도 들려?', tier: 'good', face: 'shy', answer: '…응. 네 발소리는 멀리서도 알아. 신경 쓴 건 아니고. 귀가 좋아서야.' },
         { say: '엿듣는 거 아냐?', tier: 'meh', face: 'calm', answer: '…들리는 거랑 듣는 건 달라. 난 귀를 접을 수도 없어.' },
       ],
     },
@@ -792,7 +792,7 @@ export const YANINEKO_TALK: NpcTalkBook = {
       id: 'cb-exam',
       when: { mem: 'exam-help' },
       use: 'exam-help',
-      open: '시험 끝났어. 같이 공부한 거, 나왔어. 거의 다. 너 감시자 재능 있어.',
+      open: '시험 끝났어. 같이 공부한 거, 나왔어. 거의 다. 너, 감시자 재능 있어.',
       replies: [
         { say: '잘 봤구나! 축하해', tier: 'great', face: 'laugh', answer: ['…응. 아마 잘 봤어.', '보답으로 낮잠 강의 한 번 해 줄게. 공짜로. 실습 위주로.'] },
         { say: '넌 원래 잘하잖아', tier: 'good', face: 'shy', answer: '…원래 잘하는 건 비밀이라고 했잖아. 근데 이번엔 너 덕분이 조금 섞였어.' },
@@ -903,7 +903,7 @@ export const YANINEKO_TALK: NpcTalkBook = {
         '야니네코가 눈을 감는다. 그래도 귀는 이쪽을 향해 있다.',
       ],
       replies: [
-        { say: '고마워. 조용히 앉을게', tier: 'great', face: 'smile', answer: ['…좋아. 너 첫인상 괜찮다.', '소문으로 내 줄게. 좋은 쪽으로. 공짜로.'] },
+        { say: '고마워. 조용히 앉을게', tier: 'great', face: 'smile', answer: ['…좋아. 네 첫인상 괜찮다.', '소문으로 내 줄게. 좋은 쪽으로. 공짜로.'] },
         { say: '볕이 놀란다고?', tier: 'good', face: 'think', answer: '시끄러우면 구름이 와. 내 경험이야. 과학은 아니고.' },
         { say: '서서 있을게', tier: 'meh', face: 'calm', answer: '…그래. 다리 아프면 앉아. 자리는 안 도망가.' },
       ],
@@ -997,7 +997,7 @@ export const YANINEKO_TALK: NpcTalkBook = {
       replies: [
         { say: '그 소문, 나도 알 것 같아', tier: 'great', face: 'shy', answer: ['…알면 됐어. 말로 하는 건 귀찮으니까.', '꼬리 보지 마. 진짜로.'] },
         { say: '누구 얘긴데?', tier: 'good', face: 'laugh', answer: '…너 머리 나쁜 척하는 거지. 나랑 똑같네. 라면 불어.' },
-        { say: '라면 다 먹었어?', tier: 'meh', face: 'calm', answer: '…응. 다 먹었어. 너는 이야기를 안 먹었네. 다음에 다시 줄게.' },
+        { say: '라면 다 먹었어?', tier: 'meh', face: 'calm', answer: '…응. 다 먹었어. 이야기는 네가 안 받았네. 다음에 다시 꺼낼게.' },
       ],
     },
     {
@@ -1033,6 +1033,6 @@ export const YANINEKO_TALK: NpcTalkBook = {
     '…아까부터 있었어. 너 다시 올 것 같아서. 우연이야.',
     '오늘 할 말은 다 했어. 이제 꼬리만 말할 거야. 보지 마.',
     '컵라면 물 부어 놨어. 삼 분 동안은 말 걸어도 돼.',
-    '하아암… 너 목소리 들으면 졸려. 칭찬이야. 좋은 쪽으로.',
+    '하아암… 네 목소리 들으면 졸려. 칭찬이야. 좋은 쪽으로.',
   ],
 };

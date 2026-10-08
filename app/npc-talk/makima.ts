@@ -455,7 +455,7 @@ export const MAKIMA_TALK: NpcTalkBook = {
       when: { bond: 'muzan' },
       open: '{other} 씨를 만났군요. 그분 냄새가 조금 묻어 있어요. 무슨 값을 불렀어요?',
       replies: [
-        { say: '마키마 씨 이야기를 했어요', tier: 'great', face: 'smile', answer: '그렇겠죠. 그분은 저를 읽고 싶어 해요. 저도 그분을 못 읽어요. 공평하죠.' },
+        { say: '마키마 씨 이야기를 했어요', tier: 'great', face: 'smile', answer: '그렇겠죠. 그분은 저를 읽고 싶어 해요. 못 읽지만요. 저도 그분을 못 읽어요. 공평하죠.' },
         { say: '주식 이야기만 했어요', tier: 'good', answer: '그분 웃음은 저도 계산이 안 돼요. 그래서 거래할 때마다 재밌어요.' },
         { say: '아무 말도 안 할래요', tier: 'meh', face: 'calm', answer: '좋아요. 입이 무거운 사람은 좋은 손님이에요. 어느 쪽에게나요.' },
       ],
@@ -1076,7 +1076,7 @@ export const MAKIMA_TALK: NpcTalkBook = {
       ],
       replies: [
         { say: '둘째 줄은 제가 쓸게요', tier: 'great', face: 'laugh', answer: '좋아요. 무엇을 쓰든 서명할게요. …이런 말, 처음 해 봐요.' },
-        { say: '반지 이야기예요?', tier: 'good', face: 'shy', answer: '냄새로 다 알면서 묻는 건 반칙이에요. 기다릴게요. 오래는 말고요.' },
+        { say: '반지 이야기예요?', tier: 'good', face: 'shy', answer: '다 알면서 묻는 건 반칙이에요. 기다릴게요. 오래는 말고요.' },
         { say: '아직은 천천히요', tier: 'meh', face: 'smile', answer: '좋아요. 이 계약은 기한이 없으니까요. 저는 기다릴 수 있어요.' },
       ],
     },

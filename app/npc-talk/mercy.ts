@@ -197,7 +197,7 @@ export const MERCY_TALK: NpcTalkBook = {
       open: '츠나데 씨는 약초파, 저는 수액파래요. {me} 씨는 어느 쪽 편이에요?',
       replies: [
         { say: '둘 다 쓰면 되죠', tier: 'great', face: 'laugh', answer: ['정답이에요! 사실 그 사람도 같은 생각이에요.', '앞에선 절대 인정 안 하지만요. 그게 그 사람 매력이에요.'] },
-        { say: '선생님 편이요', tier: 'good', face: 'shy', answer: '어머, 고마워요. 근데 츠나데 씨한텐 비밀로 해요. 술 사 달래요.' },
+        { say: '선생님 편이요', tier: 'good', face: 'shy', answer: '어머, 고마워요. 근데 츠나데 씨한텐 비밀로 해요. 알면 술 사 달라고 할 거예요.' },
         { say: '저는 그냥 참아요', tier: 'meh', face: 'sorry', answer: '그건 어느 쪽도 아니에요. 그러다 둘한테 동시에 혼나요.' },
       ],
     },
@@ -867,7 +867,7 @@ export const MERCY_TALK: NpcTalkBook = {
       id: 'cb-oldteam',
       when: { mem: 'old-team' },
       use: 'old-team',
-      open: '옛 팀 얘기 들어 줬었죠? 어제 그때 동료한테 편지가 왔어요. 아직 다쳐 있대요.',
+      open: '옛 팀 얘기 들어 줬었죠? 어제 그때 동료한테 편지가 왔어요. 또 다쳤대요.',
       replies: [
         { say: '답장에 처방 적어 줘요', tier: 'great', face: 'laugh', answer: ['그럴 거예요! 첫 줄은 무리 금지, 둘째 줄도 무리 금지요.', '셋째 줄엔 이 마을 이야기를 쓸래요. {me} 씨 이야기도요.'] },
         { say: '보고 싶겠어요', tier: 'good', face: 'calm', answer: '조금요. 그래도 편지가 오니까 괜찮아요. 다들 살아 있어요.' },
@@ -937,7 +937,7 @@ export const MERCY_TALK: NpcTalkBook = {
       id: 'cb-cut',
       when: { mem: 'cut-hand' },
       use: 'cut-hand',
-      open: '{me} 씨, 낫질하다 베였던 손 좀 봐요. …응, 흉도 거의 없네요. 요즘 조심해요?',
+      open: '{me} 씨, 낫질하다 베였던 손 좀 봐요. …음, 흉도 거의 없네요. 요즘 조심해요?',
       replies: [
         { say: '바깥쪽으로 당겨요', tier: 'great', face: 'laugh', answer: ['제가 가르친 거 기억하네요! 합격이에요.', '이 손은 이제 제가 기억하는 손이에요. 다치면 바로 알아요.'] },
         { say: '장갑도 껴요', tier: 'good', face: 'smile', answer: '더 좋네요. 오른 씨한테도 그 말 좀 해 줘요.' },
@@ -1010,7 +1010,7 @@ export const MERCY_TALK: NpcTalkBook = {
       open: '의원 종 세 번 약속 기억하죠? 어젯밤엔 종이 한 번도 안 울렸어요. 푹 잤어요.',
       replies: [
         { say: '선생님이 푹 자서 좋아요', tier: 'great', face: 'shy', answer: ['…저 잘 잔 걸로 기뻐해 주는 사람, 처음이에요.', '오늘도 종 안 울리게 다들 조심해 줘요.'] },
-        { say: '종 소리 듣고 싶었는데', tier: 'good', face: 'laugh', answer: '장난으로 치면 무릎 검사라고 했죠? 아직 유효해요.' },
+        { say: '종소리 듣고 싶었는데', tier: 'good', face: 'laugh', answer: '장난으로 치면 무릎 검사라고 했죠? 아직 유효해요.' },
       ],
     },
     {
@@ -1166,7 +1166,7 @@ export const MERCY_TALK: NpcTalkBook = {
         '"서로의 의사가 되는 거예요. 어때요?"',
       ],
       replies: [
-        { say: '좋아요. 서로의 의사예요', tier: 'great', face: 'shy', answer: ['…고마워요. 그럼 첫 처방은 {me} 씨가 내려요.', '네, 알아요. 지금 당장 불 끄고 자기요. 따를게요.'] },
+        { say: '좋아요. 서로의 의사예요', tier: 'great', face: 'shy', answer: ['…고마워요. 그럼 첫 처방은 {me} 씨가 내려요.', '…벌써 표정에 쓰여 있네요. 지금 당장 불 끄고 자기. 따를게요.'] },
         { say: '저 잔소리 잘해요', tier: 'good', face: 'laugh', answer: ['기대할게요! 제 잔소리보다 세면 인정해 줄게요.', '…그래도 오늘은 살살 해 줘요. 진짜 지쳤거든요.'] },
         { say: '선생님은 괜찮잖아요', tier: 'meh', face: 'calm', answer: ['그렇게 보이죠. 다들 그렇게 봐요.', '의사가 제일 자기 몸을 몰라요. 그래서 부탁하는 거예요.'] },
       ],
