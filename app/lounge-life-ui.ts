@@ -28,7 +28,6 @@ import {
   type RecipeDef,
 } from './lounge-items.ts';
 import {
-  FRIEND_PROFILES,
   SEASON_INFO,
   WEATHER_INFO,
   type ItemCategory,
@@ -36,6 +35,7 @@ import {
   type Weather,
 } from './lounge-calendar.ts';
 import { itemName } from './lounge-life-plus.ts';
+import { tasteFor, tastesOf, type GiftTaste, type TasteView } from './lounge-friend-tastes.ts';
 import { REGION_ITEMS } from './lounge-growth-data.ts';
 
 export type LifeMe = LifeView['me'];
@@ -439,8 +439,6 @@ export const SEASON_TINT: Record<Season, { grass: string; grassLight: string; le
 /* ------------------------------------------------------------ friendship */
 
 export const bondHearts = (level: number) => Math.max(0, Math.min(10, level));
-/** Friend gift tastes are shown once you share a heart (placeholder data). */
-export const tastesKnown = (level: number) => level >= 1;
 const CAT_KO: Record<ItemCategory, string> = {
   crop: '작물',
   fruit: '과일',
@@ -458,14 +456,12 @@ export function giftCategory(id: string): ItemCategory | null {
   const cat = ITEM_BY_ID[id]?.cat;
   return cat && cat !== 'tool' ? cat : null;
 }
-/** 'like' | 'dislike' | null for a gift to a friend. */
-export function giftTaste(actor: number, id: string): 'like' | 'dislike' | null {
-  const cat = giftCategory(id),
-    p = FRIEND_PROFILES[actor];
-  if (!cat || !p) return null;
-  if (p.likes.includes(cat)) return 'like';
-  if (p.dislikes.includes(cat)) return 'dislike';
-  return null;
+/**
+ * 'love' | 'like' | 'dislike' | null for a gift to a friend: their saved
+ * tastes from the view (내 취향), else the placeholder table.
+ */
+export function giftTaste(actor: number, id: string, tastes?: Record<number, TasteView>): GiftTaste {
+  return tasteFor(tastes?.[actor] ?? tastesOf(undefined, actor), id);
 }
 
 /* ------------------------------------------------------------ collection */

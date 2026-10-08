@@ -136,7 +136,7 @@ export type ItemCategory =
 export type FriendProfile = {
   /** 'MM-DD' (KST) only, never a year. null = no birthday event. */
   birthday: string | null;
-  /** Gift tastes by item category. PLACEHOLDERS for the user to edit. */
+  /** Placeholder gift tastes by item category: used only until the friend picks their own in 내 취향 (lounge-friend-tastes.ts). */
   likes: ItemCategory[];
   dislikes: ItemCategory[];
 };
@@ -147,10 +147,11 @@ export type FriendProfile = {
  *  birthday: the real day, 'MM-DD' only (owner-provided 2026-10-03;
  *  the repo is public, so no years or anything else). 도원 and 민서
  *  share 08-02: one cake, one news line, one banner.
- *  likes / dislikes: STILL PLACEHOLDERS for the user to fill in — gift
- *  categories (crop, fruit, fish, bug, forage, flower, material, dish).
- *  Liked gifts give 2× friendship, disliked 0.2×. The values below are
- *  NOT real preferences; they only vary the game.
+ *  likes / dislikes: PLACEHOLDERS — gift categories (crop, fruit, fish,
+ *  bug, forage, flower, material, dish). Each friend now picks their own
+ *  in the 내 취향 window (life.tastes, lounge-friend-tastes.ts); these
+ *  only stand in, read-time, for a friend who has not chosen yet. The
+ *  values below are NOT real preferences; they only vary the game.
  * ============================================================
  */
 export const FRIEND_PROFILES: readonly FriendProfile[] = [

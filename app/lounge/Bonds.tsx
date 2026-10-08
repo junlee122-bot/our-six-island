@@ -27,7 +27,9 @@ import { ACTORS } from '../lounge-roster';
 import { AvatarView } from '../avatar-view';
 import { formatBeom, josa } from '../lounge-text';
 import { itemName } from '../lounge-life-plus';
-import { categoryName, needHave, tastesKnown } from '../lounge-life-ui';
+import { needHave } from '../lounge-life-ui';
+import { tastesOf } from '../lounge-friend-tastes';
+import { TasteSummary } from './FriendTastes';
 import { lifeSfx } from '../lounge-audio-life';
 import { Modal } from './Modal';
 import type { Notify } from './Toast';
@@ -72,7 +74,8 @@ export function FriendsLife({
   initial,
   onGift,
   onVisit,
-}: Base & { selfActor: number; initial?: number; onGift: (actor: number) => void; onVisit: (actor: number) => void }) {
+  onTastes,
+}: Base & { selfActor: number; initial?: number; onGift: (actor: number) => void; onVisit: (actor: number) => void; onTastes?: () => void }) {
   const life = view.life;
   const others = ACTORS.map((_, a) => a).filter((a) => a !== selfActor);
   const [actor, setActor] = useState(initial ?? others[0]);
@@ -88,7 +91,9 @@ export function FriendsLife({
   const bond = life.me.bonds?.find((b) => b.actor === actor);
   const level = bond?.level ?? 0;
   const profile = FRIEND_PROFILES[actor];
-  const known = tastesKnown(level);
+  // 내 취향: shown openly (a group of friends); unset friends read as the placeholder table.
+  const tastes = life.tastes?.all[actor] ?? tastesOf(undefined, actor);
+  const mineSet = !!life.tastes?.all[selfActor]?.set;
   const status = Object.values(life.statuses ?? {}).find((s) => s.actor === actor);
   const request = life.me.requests?.find((r) => r.from === actor);
   const have = request ? needHave(life.me, { item: request.item }) : 0;
@@ -116,6 +121,19 @@ export function FriendsLife({
               </span>
             </button>
           </li>
+          {onTastes && (
+            <li>
+              <button type="button" onClick={onTastes} data-testid="bond-my-tastes">
+                <span className="l-bond-face is-icon" aria-hidden="true">
+                  <Gift size={18} />
+                </span>
+                <span>
+                  <strong>내 취향</strong>
+                  <small>{mineSet ? '친구들이 보고 있어요' : '아직 안 정했어요'}</small>
+                </span>
+              </button>
+            </li>
+          )}
           {others.map((a) => {
             const b = life.me.bonds?.find((x) => x.actor === a);
             const req = life.me.requests?.find((r) => r.from === a && !r.done);
@@ -170,11 +188,8 @@ export function FriendsLife({
               {status?.text && <p className="l-bond-status">“{status.text}”</p>}
             </div>
           </header>
+          <TasteSummary tastes={tastes} compact />
           <dl className="l-bond-tastes">
-            <dt>좋아하는 선물</dt>
-            <dd>{known ? profile.likes.map(categoryName).join(', ') : '하트 하나를 모으면 알 수 있어요'}</dd>
-            <dt>별로인 선물</dt>
-            <dd>{known ? profile.dislikes.map(categoryName).join(', ') || '없어요' : '???'}</dd>
             <dt>생일</dt>
             <dd>{profile.birthday ? profile.birthday.replace('-', '월 ') + '일' : '아직 몰라요'}</dd>
           </dl>
@@ -504,6 +519,7 @@ const DIGEST_ICON: Record<string, IconComponent> = {
   festival: PartyPopper,
   birthday: PartyPopper,
   breakup: Heart,
+  tastes: Gift,
 };
 /** "어제 마을 소식": yesterday's village lines, shown once a day on the first login. */
 export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: () => void }) {

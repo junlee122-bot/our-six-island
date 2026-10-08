@@ -16,6 +16,7 @@ import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lo
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
 import { RANCH_GOODS, itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
+import { giftTasteMult, likedCategories, readTastes, setTastes, tastesView, type TastesAction, type TastesBook, type TastesView } from './lounge-friend-tastes.ts';
 import { birthdayCheer, birthdayPastText, birthdayView, readBdayBook, type BirthdayAction, type BirthdayBook, type BirthdayView } from './lounge-birthday.ts';
 import {
   grantBeom,
@@ -30,7 +31,6 @@ import {
   dayStart,
   CASINO_NIGHT_BONUS,
   FISH_DAY_BONUS,
-  FRIEND_PROFILES,
   MARKET_DISCOUNT,
   MARKET_EXTRA,
   birthdayActors,
@@ -374,11 +374,15 @@ export type LifeExt = {
   roomsReset?: RoomsReset;
   /** 생일 축하 방명록: 'actor-YYYY' → signers (lounge-birthday.ts). */
   bdayBook?: BirthdayBook;
+  /** 내 취향: each friend's gift likes and dislikes, by actor (lounge-friend-tastes.ts). */
+  tastes?: TastesBook;
 };
 export type PlusAction =
   | NpcSocialAction
   /** 생일 케이크 앞에서 축하하기 (lounge-birthday.ts). */
   | BirthdayAction
+  /** 내 취향 정하기 (lounge-friend-tastes.ts). */
+  | TastesAction
   /** 주민 관계도: pairs noted in this browser before they were kept with the account (sent once). */
   | { kind: 'npcTies'; pairs: string[] }
   | { kind: 'fertilize'; plot: number; item: string }
@@ -678,6 +682,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
   if (roomsReset) out.roomsReset = roomsReset;
   const bdayBook = readBdayBook(v.bdayBook);
   if (bdayBook) out.bdayBook = bdayBook;
+  const tastes = readTastes(v.tastes);
+  if (tastes) out.tastes = tastes;
   const museum: LifeExt['museum'] = {};
   for (const [id, m] of Object.entries(obj(v.museum)).slice(0, 400)) {
     const x = obj(m);
@@ -1463,7 +1469,7 @@ export function requestsFor(life: LifeState, actor: number, day: number): Omit<R
     .slice(0, REQUESTS_PER_DAY)
     .sort((a, b) => a - b);
   return friends.map((from) => {
-    const likes = FRIEND_PROFILES[from]?.likes ?? [];
+    const likes = likedCategories(life, from);
     const cats: ItemCategory[] = likes.length ? likes : ['crop'];
     const key = `req:${day}:${actor}:${from}`;
     let list: string[] = [];
@@ -1521,6 +1527,10 @@ export function plusAction(
     }
     case 'birthdayCheer': {
       birthdayCheer(life, member, a, now);
+      break;
+    }
+    case 'setTastes': {
+      setTastes(life, member, a, now);
       break;
     }
     case 'npcTies': {
@@ -2166,16 +2176,8 @@ export const festivalSouvenir = (week: number) => FESTIVAL_SOUVENIRS[((week % 4)
 export function onGift(life: LifeState, member: { id: string; actor: number }, to: string, gift: Gift, now: number) {
   const toActor = life.actors[to];
   if (!actorValid(toActor)) return;
-  const cat: ItemCategory | null =
-    gift.kind === 'produce'
-      ? 'crop'
-      : gift.kind === 'fruit'
-        ? 'fruit'
-        : ITEM_BY_ID[gift.item]?.cat === 'tool'
-          ? null
-          : (ITEM_BY_ID[gift.item]?.cat as ItemCategory);
-  const profile = FRIEND_PROFILES[toActor];
-  const taste = cat && profile?.likes.includes(cat) ? 2 : cat && profile?.dislikes.includes(cat) ? 0.2 : 1;
+  // 내 취향: an item they picked ×2, else a liked category ×2 / disliked ×0.2.
+  const taste = giftTasteMult(life, toActor, gift);
   const birthday = birthdayActors(kstDay(now)).includes(toActor) ? BIRTHDAY_GIFT_BONUS : 1;
   bump(life, member.id, 'gift', 1);
   if (bondGate(life, `g:${member.actor}>${toActor}`, now))
@@ -2327,6 +2329,8 @@ export type PlusView = {
   digest: { day: number; date: string; lines: { kind: string; text: string; actors: number[] }[] };
   /** 생일 잔치: today's birthday friends, their 축하 방명록, and who signed mine this year. */
   birthday: BirthdayView;
+  /** 내 취향: every friend's gift tastes (open to all) and when I may change mine. */
+  tastes: TastesView;
   records: Record<string, { actor: number; cm: number; at: number }>;
   /** Friendship between every pair of the seven ('a-b', a < b). */
   bondsAll: Record<string, number>;
@@ -2463,6 +2467,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
       lines: (yesterday?.lines ?? []).slice(-DIGEST_LINES).map((l) => ({ kind: l.kind, text: l.kind === 'birthday' && l.actors.length ? birthdayPastText(l.actors) : l.text, actors: [...l.actors] })),
     },
     birthday: birthdayView(life, actor, now),
+    tastes: tastesView(life, actor, now),
     records: Object.fromEntries(Object.entries(life.records ?? {}).map(([k, r]) => [k, { ...r }])),
     bondsAll: { ...life.bonds },
     projects: PROJECTS.map((p) => {

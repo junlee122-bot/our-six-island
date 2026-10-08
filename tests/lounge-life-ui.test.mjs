@@ -24,7 +24,6 @@ import {
   readHotbar,
   recipeMax,
   reelTiming,
-  tastesKnown,
   whereFrom,
 } from '../app/lounge-life-ui.ts';
 import { DISH_BY_ID, CRAFT_BY_ID, FURNITURE, SPAWN_SPOTS } from '../app/lounge-items.ts';
@@ -185,12 +184,15 @@ test('recipes: what I have (quality floors, categories) and how many I can make'
   assert.equal(recipeMax(m, CRAFT_BY_ID['furn-chair']), 0);
 });
 
-test('friend tastes are placeholders shown after one heart', () => {
-  assert.equal(tastesKnown(0), false);
-  assert.equal(tastesKnown(1), true);
+test('friend tastes: the placeholder table until a friend picks, then their picks', () => {
   assert.equal(giftTaste(1, 'crucian'), 'like'); // 강재 likes fish (placeholder table)
   assert.equal(giftTaste(3, 'mugwort'), 'dislike'); // 승준 dislikes forage
   assert.equal(giftTaste(0, 'fertilizer'), null);
+  const tastes = { 1: { l: ['crucian', '#dish'], d: ['#fish'], set: true } };
+  assert.equal(giftTaste(1, 'crucian', tastes), 'love'); // the item beats the disliked category
+  assert.equal(giftTaste(1, 'carp', tastes), 'dislike');
+  assert.equal(giftTaste(1, 'jam', tastes), 'like');
+  assert.equal(giftTaste(3, 'mugwort', tastes), 'dislike'); // others keep the placeholder
 });
 
 test('seasonal ambience', () => {
