@@ -318,7 +318,8 @@ export function AreaScene({
       const weekday = new Date(now + 9 * 3_600_000).getUTCDay();
       for (const c of districtCounters(s.area, weekday)) {
         const d = Math.hypot(p.x - c.x, p.z - c.z);
-        if (d <= c.reach) found.push({ d: d + (c.a.kind === 'counter' ? 0.15 : 0), a: c.a });
+        // A door into a room wins over a resident on its doorstep (as in the hub); other counters yield a little.
+        if (d <= c.reach) found.push({ d: d + (c.a.kind === 'counter' ? (c.a.enter ? -0.45 : 0.15) : 0), a: c.a });
       }
     }
     if (s.area === 'farm')
