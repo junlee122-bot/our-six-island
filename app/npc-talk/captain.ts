@@ -9,6 +9,8 @@ import type { NpcTalkBook } from './types.ts';
 export const CAPTAIN_TALK: NpcTalkBook = {
   npc: 'captain',
   memories: {
+    'lighthouse-walk': '노을 질 때 등대까지 같이 걷자고 했어요',
+    'lighthouse-keeper': '등대 불을 지키는 일이 멋지다고 했어요',
     'sea-lover': '바다가 좋다고 했어요',
     'land-lover': '흔들리지 않는 땅이 편하다고 했어요',
     'party-yes': '시끌벅적한 잔치를 좋아한다고 했어요',
@@ -44,6 +46,33 @@ export const CAPTAIN_TALK: NpcTalkBook = {
     'my-port': '샹크스의 돌아올 항구가 되기로 했어요',
   },
   talks: [
+    {
+      id: 'lighthouse-light',
+      open: ['항구 끝 등대 말이야. 밤마다 불이 도는 거 봤어?', '뱃사람한텐 저게 제일 반가운 불빛이다. 집이 저쪽이라고 알려 주거든.'],
+      replies: [
+        { say: '노을 때 같이 걸어 보자', tier: 'great', remember: 'lighthouse-walk', face: 'laugh', answer: ['다하하! 좋지. 노을은 내가 보장한다고 했잖아.', '등대 아래 돌계단에 앉으면 바다가 통째로 보여. 우유는 내가 챙긴다.'] },
+        { say: '불 지키는 사람 멋지다', tier: 'good', remember: 'lighthouse-keeper', face: 'smile', answer: ['그렇지? 아무도 안 보는 밤에 남의 귀갓길을 밝히는 일이야.', '난 그런 녀석들한테 늘 한 잔 빚진 기분이다.'] },
+        { say: '그냥 불빛이잖아', tier: 'meh', face: 'calm', answer: ['하하, 뭍에선 그렇게 보일 수도 있지.', '언젠가 밤바다에서 저 불을 보면 말이 달라질 거다.'] },
+      ],
+    },
+    {
+      id: 'lighthouse-inside',
+      open: ['등대 안에 들어가 본 적 있어? 계단이 빙글빙글 끝도 없지.', '꼭대기 창에서 내려다보면 우리 마을이 배 한 척처럼 보여.'],
+      replies: [
+        { say: '꼭대기까지 가 보고 싶어', tier: 'great', face: 'wow', answer: ['그럼 언제 같이 오르자. 숨 차면 내가 기다려 줄게.', '꼭대기에 서면 출항하는 기분이 들 거다. 발은 땅에 있는데.'] },
+        { say: '계단 많으면 힘든데', tier: 'good', face: 'laugh', answer: ['하하하! 정직하다. 쉬엄쉬엄 오르면 돼.', '중간 창마다 바다가 조금씩 넓어지거든. 그 맛에 오르는 거야.'] },
+        { say: '높은 데는 별로야', tier: 'meh', face: 'sorry', answer: '그럼 아래서 같이 올려다보자. 그것도 꽤 괜찮은 구경이다.' },
+      ],
+    },
+    {
+      id: 'set-sail-morning',
+      open: ['출항하는 날 아침엔 다들 말이 없어. 이상하지?', '설레서 그래. 입을 열면 들뜬 게 다 들킬까 봐.'],
+      replies: [
+        { say: '샹크스도 그래?', tier: 'great', face: 'shy', answer: ['나? 하하… 난 반대로 너무 떠들어서 혼났지.', '돛 올리기 전에 벌써 잔치 계획을 세우고 있었거든.'] },
+        { say: '나도 설레면 조용해져', tier: 'good', face: 'smile', answer: '그럼 우리 출항하는 날은 꽤 조용하겠네. 등대만 웃고 있겠다.' },
+        { say: '난 늘 시끄러운데', tier: 'meh', face: 'laugh', answer: '다하하! 그것도 좋다. 배엔 그런 녀석도 하나 있어야 해.' },
+      ],
+    },
     {
       id: 'sea-or-land',
       open: '{me}, 너는 바다가 좋아, 땅이 좋아? 대답 따라 잔 크기가 달라진다. 하하!',
@@ -400,6 +429,24 @@ export const CAPTAIN_TALK: NpcTalkBook = {
     },
   ],
   openers: [
+    {
+      id: 'op-lighthouse-dusk',
+      when: { time: 'evening', weather: ['sunny', 'cloudy'] },
+      open: ['저기 봐, 등대에 막 불이 들어왔다.', '하루가 정박하는 신호지. 이 시간 바다가 제일 순하거든.'],
+      replies: [
+        { say: '예쁘다, 잠깐 보고 갈래', tier: 'great', face: 'smile', answer: ['그래, 서두를 거 없다. 불빛 한 바퀴 돌 때까지만.', '…좋네. 친구랑 보는 등대는 혼자 볼 때보다 밝다.'] },
+        { say: '오늘 하루 길었어', tier: 'good', face: 'calm', answer: '그럼 잘 들어왔네. 저 불이 너 수고했다고 하는 거다.' },
+      ],
+    },
+    {
+      id: 'op-lighthouse-storm',
+      when: { weather: 'storm' },
+      open: ['이런 날은 등대지기가 제일 바쁘지.', '배는 묶어 뒀다. 오늘은 저 불빛을 믿고 기다리는 날이야.'],
+      replies: [
+        { say: '등대지기한테 뭐 갖다줄까?', tier: 'great', face: 'wow', answer: ['오, 좋은 생각이다! 따뜻한 우유 한 병 챙겨 줄게.', '바람 그치면 같이 가자. 오늘은 창가에서 응원만 하고.'] },
+        { say: '바다가 무섭다', tier: 'good', face: 'sorry', answer: '무서운 게 맞아. 그걸 아는 놈이 오래 바다에 나가지. 걱정 마.' },
+      ],
+    },
     {
       id: 'op-rain',
       when: { weather: ['rain', 'storm'] },
@@ -857,6 +904,26 @@ export const CAPTAIN_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'cb-lighthouse-walk',
+      when: { mem: 'lighthouse-walk', time: 'evening' },
+      use: 'lighthouse-walk',
+      open: ['노을이다. 등대까지 걷자던 약속, 오늘 지킬까?', '우유 두 병 챙겨 왔다. 하하, 미리 준비했지.'],
+      replies: [
+        { say: '좋아, 지금 가자', tier: 'great', face: 'laugh', answer: ['다하하! 그래야 내 항해 동료지.', '돌계단에 앉아서 불 켜지는 거 같이 보자. 오늘은 내가 조용히 있을게.'] },
+        { say: '기억하고 있었구나', tier: 'good', face: 'shy', answer: '친구랑 한 약속은 모자처럼 잘 걸어 두거든. 하하.' },
+      ],
+    },
+    {
+      id: 'cb-lighthouse-keeper',
+      when: { mem: 'lighthouse-keeper' },
+      use: 'lighthouse-keeper',
+      open: ['등대지기한테 네 얘길 했다. 불 지키는 일이 멋지다고 했다고.', '쑥스러워하더니 오늘 불빛이 유난히 밝더라.'],
+      replies: [
+        { say: '정말? 다행이다', tier: 'great', face: 'smile', answer: ['그래. 말 한마디가 등불 기름보다 오래 간다니까.', '다음엔 네가 직접 말해 줘. 더 밝아질 거다.'] },
+        { say: '부끄럽게 왜 말했어', tier: 'good', face: 'laugh', answer: '하하하! 좋은 말은 퍼뜨려야 맛이지. 그게 주점 주인 일이야.' },
+      ],
+    },
     {
       id: 'cb-sea',
       when: { mem: 'sea-lover' },
