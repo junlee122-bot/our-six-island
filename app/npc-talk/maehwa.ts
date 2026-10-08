@@ -28,7 +28,7 @@ export const MAEHWA_TALK: NpcTalkBook = {
     'outing-talk': '함께 걸은 날을 이야기했어요',
     'bday-plan': '생일상 이야기를 나눴어요',
     'date-talk': '데이트한 날을 이야기했어요',
-    'plum-name': '판에서 쓰던 옛 이름이 매화였다고 들었어요',
+    'plum-name': '판에서 쓰던 옛 이름이 홍매였다고 들었어요',
     'eye-first': '눈이 손보다 먼저라는 판 예의를 배웠어요',
     'old-road': '큰 판을 떠돌던 시절 이야기를 들었어요',
     'fav-month': '좋아하는 화투 달 이야기를 나눴어요',
@@ -159,10 +159,10 @@ export const MAEHWA_TALK: NpcTalkBook = {
     },
     {
       id: 'plum-name',
-      open: ['이월 매조 알지? 매화 가지에 새 한 마리 앉은 패.', '옛날 큰 판에선 다들 날 매화라고 불렀어. 진짜 이름 대신.'],
+      open: ['이월 매조 알지? 홍매 가지에 새 한 마리 앉은 패.', '옛날 큰 판에선 다들 날 홍매라고 불렀어. 진짜 이름 대신.'],
       replies: [
         { say: '어울리는 이름이네', tier: 'good', remember: 'plum-name', face: 'smile', answer: ['그래? 추울 때 제일 먼저 피는 꽃이라서 붙었대.', '난 그냥 손이 차가워서 그런 줄 알았어.'] },
-        { say: '난 예림이가 더 좋아', tier: 'great', remember: 'plum-name', face: 'shy', answer: ['…그래? 그 이름 불러 주는 사람이 이 마을에서 생겼네.', '매화는 판에 두고 왔어. 여기선 예림이야.'] },
+        { say: '난 예림이가 더 좋아', tier: 'great', remember: 'plum-name', face: 'shy', answer: ['…그래? 그 이름 불러 주는 사람이 이 마을에서 생겼네.', '홍매는 판에 두고 왔어. 여기선 예림이야.'] },
         { say: '별명이 왜 필요해?', tier: 'meh', face: 'think', answer: '진짜 이름을 판에 걸면 안 되거든. 잃으면 못 찾아.' },
       ],
     },
@@ -205,7 +205,7 @@ export const MAEHWA_TALK: NpcTalkBook = {
     },
     {
       id: 'fav-month',
-      open: '화투는 열두 달이야. 솔, 매화, 벚꽃… 넌 무슨 달 패가 좋아?',
+      open: '화투는 열두 달이야. 솔, 매조, 벚꽃… 넌 무슨 달 패가 좋아?',
       replies: [
         { say: '팔월 공산, 달 뜬 패', tier: 'great', remember: 'fav-month', face: 'shy', answer: ['…너도? 나도 그 패가 제일 좋아.', '혼자 보던 달이라서. 이유는 묻지 마. 아직은.'] },
         { say: '삼월 벚꽃이 예뻐', tier: 'good', remember: 'fav-month', face: 'smile', answer: ['벚꽃 광은 들어오면 판이 환해지지.', '대신 금방 져. 예쁜 건 다 그래.'] },
@@ -931,7 +931,7 @@ export const MAEHWA_TALK: NpcTalkBook = {
       id: 'cb-plum',
       when: { mem: 'plum-name' },
       use: 'plum-name',
-      open: '매화 얘기 기억해? 회관 뒤에 매화나무 심었어. 내 옛 이름 거기 묻으려고.',
+      open: '홍매 얘기 기억해? 회관 뒤에 홍매나무 심었어. 내 옛 이름 거기 묻으려고.',
       replies: [
         { say: '꽃 피면 같이 보자', tier: 'great', face: 'shy', answer: ['…그래. 추울 때 피니까, 늦겨울쯤.', '그때도 날 예림이라고 불러 줘.'] },
         { say: '이름을 왜 묻어?', tier: 'good', face: 'think', answer: '판에서 쓰던 이름은 판에 두는 거야. 이제 안 쓸 거니까.' },
