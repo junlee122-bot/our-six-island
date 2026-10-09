@@ -17,6 +17,14 @@ import { GWEN_TALK } from './gwen.ts';
 import { NASERA_TALK } from './nasera.ts';
 import { THRESH_TALK } from './thresh.ts';
 import { SINJJAJANG_TALK } from './sinjjajang.ts';
+import { VOLIBAS_TALK } from './volibas.ts';
+import { JANNA_TALK } from './janna.ts';
+import { GABUNG_TALK } from './gabung.ts';
+import { LUX_TALK } from './lux.ts';
+import { HIMMEL_TALK } from './himmel.ts';
+import { BEATRICE_TALK } from './beatrice.ts';
+import { BOCCHI_TALK } from './bocchi.ts';
+import { TSUNADE_TALK } from './tsunade.ts';
 
 export const NPC_TALK: Partial<Record<NpcId, NpcTalkBook>> = {
   captain: CAPTAIN_TALK,
@@ -32,4 +40,12 @@ export const NPC_TALK: Partial<Record<NpcId, NpcTalkBook>> = {
   nasera: NASERA_TALK,
   thresh: THRESH_TALK,
   sinjjajang: SINJJAJANG_TALK,
+  volibas: VOLIBAS_TALK,
+  janna: JANNA_TALK,
+  gabung: GABUNG_TALK,
+  lux: LUX_TALK,
+  himmel: HIMMEL_TALK,
+  beatrice: BEATRICE_TALK,
+  bocchi: BOCCHI_TALK,
+  tsunade: TSUNADE_TALK,
 };
