@@ -192,6 +192,40 @@
   color: var(--text-soft);
   white-space: nowrap;
 }
+/* 주민과 진짜 대화: the face of their answer as a small word bubble on the
+   portrait (residents without a pose for it). Dark text on the paper note,
+   well above 4.5:1. */
+.l-talk-portrait.is-tall {
+  position: relative;
+}
+.l-talk-portrait > .l-talk-emote {
+  position: absolute;
+  left: var(--sp-1);
+  bottom: var(--sp-1);
+  width: auto;
+  height: auto;
+  padding: 2px var(--sp-2);
+  border-radius: var(--r-m);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-size: var(--fs-cap);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+  animation: l-talk-emote-pop 0.24s ease-out;
+}
+@keyframes l-talk-emote-pop {
+  from {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .l-talk-portrait > .l-talk-emote {
+    animation: none;
+  }
+}
 /* A resident's portrait fills the same frame as a friend's. */
 .l-talk-portrait .l-npc-face {
   width: 100%;

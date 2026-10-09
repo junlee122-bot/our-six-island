@@ -360,6 +360,55 @@ async function runView(browser, base, view, report) {
   // village
   await returnToVillage();
   await step('village', () => snap('village'));
+  // 주민과 진짜 대화: 프리렌 walks with me for this step only (set in the mock
+  // world, so other screens keep their HUD). Her chip opens the speech box:
+  // 이야기 나누기 (no points on it) → her opener → my reply buttons (1·2·3) →
+  // her answer with a face.
+  await step('npc-talk', async () => {
+    await closeAll();
+    const w = H.world();
+    const t0 = Date.now();
+    (w.life.companions ??= {})[H.uid] = { out: { npc: 'frieren', at: t0, until: t0 + 40 * 60_000, end: 'time', h: 0 }, met: ['frieren'] };
+    const x = ((w.life.ext ??= {})[H.uid] ??= {});
+    x.npcRelations = { ...x.npcRelations, frieren: { points: 26, ch: 1, tc: 3, mem: ['sweet-tooth', 'odd-recipe'] } };
+    try {
+      assert.notEqual(await until(() => !!document.querySelector('[data-testid=companion-hud] .l-companion-chip'), 60000), -1, '동행 칸이 보이지 않습니다.');
+      await H.clickSel('[data-testid=companion-hud] .l-companion-chip');
+      // E goes through their pages until `sel` is offered.
+      const pagesTo = async (sel) => {
+        for (let i = 0; i < 16 && !(await js((q) => !!document.querySelector(q), sel)); i++) {
+          await page.keyboard.press('KeyE');
+          await sleep(350);
+        }
+        return js((q) => !!document.querySelector(q), sel);
+      };
+      // A companion first answers in her outing voice; "평소처럼 이야기하기" opens the usual box.
+      assert.notEqual(await until(() => !!document.querySelector('[data-testid=companion-dialog], [data-testid=npc-dialog]'), 30000), -1, '동행 대화창이 열리지 않았습니다.');
+      if (!(await js(() => !!document.querySelector('[data-testid=npc-dialog]')))) {
+        assert.ok(await pagesTo('[data-testid=companion-choice-usual]'), '평소처럼 이야기하기가 나오지 않았습니다.');
+        await H.clickSel('[data-testid=companion-choice-usual]');
+      }
+      assert.notEqual(await until(() => !!document.querySelector('[data-testid=npc-dialog]'), 30000), -1, '주민 대화창이 열리지 않았습니다.');
+      assert.ok(await pagesTo('[data-testid=npc-choice-talk]'), '할 일 고르기가 나오지 않았습니다.');
+      const label = await js(() => document.querySelector('[data-testid=npc-choice-talk]')?.textContent ?? '');
+      assert.doesNotMatch(label, /[+＋]\s*\d/, `이야기 나누기에 점수 숫자가 보입니다: ${label}`);
+      await H.clickSel('[data-testid=npc-choice-talk]');
+      assert.ok(await pagesTo('[data-testid=npc-reply-0]'), '대답 고르기가 나오지 않았습니다.');
+      await sleep(400);
+      await snap('npc-talk');
+      await page.keyboard.press('Digit1');
+      assert.notEqual(await until(() => !document.querySelector('[data-testid=npc-reply-0]'), 30000), -1, '대답을 고르지 못했습니다.');
+      assert.ok(await pagesTo('[data-testid=npc-choice-talk]'), '대답 뒤 할 일 고르기가 나오지 않았습니다.');
+      await sleep(400);
+      await snap('npc-talk-answer');
+      res.screens['npc-talk-answer'].emote = await js(() => document.querySelector('[data-testid=npc-emote]')?.textContent ?? null);
+    } finally {
+      // She goes home again before the next screens.
+      await closeAll();
+      delete H.world().life.companions?.[H.uid]?.out;
+      await until(() => !document.querySelector('[data-testid=companion-hud]'), 30000);
+    }
+  });
   await step('map', async () => { await focusScene(); await page.keyboard.press('KeyM'); await sleep(1000); await snap('map'); await focusScene(); await page.keyboard.press('KeyM'); await sleep(400); });
   await step('bag', async () => { await focusScene(); await page.keyboard.press('KeyI'); await sleep(1000); await snap('bag'); });
   await step('shop', async () => { await menu(/가게 안내/); await snap('shop'); });

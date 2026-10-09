@@ -16,6 +16,7 @@ import { isStockShop, readShopSales, recordShopSale, type ShopSales } from './lo
 import { readStage3User, type Stage3User } from './lounge-stage3-state.ts';
 import { RANCH_GOODS, itemSaleReason } from './lounge-stage3-data.ts';
 import { readRoomsReset, type RoomsReset } from './lounge-rooms-reset.ts';
+import { npcTalkAction, type NpcTalkAction } from './lounge-npc-talk-life.ts';
 import { giftTasteMult, likedCategories, readTastes, setTastes, tastesView, type TastesAction, type TastesBook, type TastesView } from './lounge-friend-tastes.ts';
 import { birthdayCheer, birthdayPastText, birthdayView, readBdayBook, type BirthdayAction, type BirthdayBook, type BirthdayView } from './lounge-birthday.ts';
 import {
@@ -379,6 +380,8 @@ export type LifeExt = {
 };
 export type PlusAction =
   | NpcSocialAction
+  /** 주민과 진짜 대화: today's choice talk, a story chapter, a promised visit (lounge-npc-talk-life.ts). */
+  | NpcTalkAction
   /** 생일 케이크 앞에서 축하하기 (lounge-birthday.ts). */
   | BirthdayAction
   /** 내 취향 정하기 (lounge-friend-tastes.ts). */
@@ -1201,6 +1204,14 @@ export function addNews(life: LifeState, now: number, key: string, kind: string,
     today.lines.push({ key, kind, text: clipText(text, 80), actors });
   life.news = news;
 }
+/** Today's news kinds, deduplicated: all of them, and those about other friends (not me). */
+function newsKindsToday(life: LifeState, actor: number, day: number) {
+  const lines = life.news?.find((d) => d.day === day)?.lines ?? [];
+  return {
+    all: [...new Set(lines.map((l) => l.kind))],
+    others: [...new Set(lines.filter((l) => l.actors.length > 0 && !l.actors.includes(actor)).map((l) => l.kind))],
+  };
+}
 export function addMemory(life: LifeState, now: number, kind: string, actors: number[], text: string) {
   life.memories = [
     ...(life.memories ?? []),
@@ -1523,6 +1534,10 @@ export function plusAction(
   switch (a.kind) {
     case 'npcSocial': {
       npcSocialAction(life, uid, a, now);
+      break;
+    }
+    case 'npcChat': {
+      npcTalkAction(life, uid, a, now);
       break;
     }
     case 'birthdayCheer': {
@@ -2327,6 +2342,8 @@ export type PlusView = {
   flags: string[];
   memories: Memory[];
   digest: { day: number; date: string; lines: { kind: string; text: string; actors: number[] }[] };
+  /** 주민과 진짜 대화: the kinds of today's village news, all and about other friends only (residents bring them up). */
+  newsToday: { all: string[]; others: string[] };
   /** 생일 잔치: today's birthday friends, their 축하 방명록, and who signed mine this year. */
   birthday: BirthdayView;
   /** 내 취향: every friend's gift tastes (open to all) and when I may change mine. */
@@ -2466,6 +2483,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
       // Yesterday's birthday line said "오늘은 …"; the digest tells it in the past.
       lines: (yesterday?.lines ?? []).slice(-DIGEST_LINES).map((l) => ({ kind: l.kind, text: l.kind === 'birthday' && l.actors.length ? birthdayPastText(l.actors) : l.text, actors: [...l.actors] })),
     },
+    newsToday: newsKindsToday(life, actor, day),
     birthday: birthdayView(life, actor, now),
     tastes: tastesView(life, actor, now),
     records: Object.fromEntries(Object.entries(life.records ?? {}).map(([k, r]) => [k, { ...r }])),

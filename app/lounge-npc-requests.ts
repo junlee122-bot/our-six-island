@@ -145,7 +145,7 @@ export function npcRequestAction(life: LifeState, ledger: LoungeLedger, uid: str
   board.beom += beom;
   user.npcBoard = board;
   const relations = (user.npcRelations ??= {});
-  const rel = (relations[r.npc] ??= { points: 0 });
+  const rel = (relations[r.npc] ??= { points: 0, ch: 0 });
   const points = r.points + (coop ? NPC_REQUEST_COOP_POINTS : 0);
   rel.points = Math.min(NPC_POINTS_MAX, rel.points + points);
   if (r.bonus) addInv(life, uid, r.bonus[0], r.bonus[1]);

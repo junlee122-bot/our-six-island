@@ -319,8 +319,9 @@ async function runView(view) {
       res.giftReply = await js(() => document.querySelector('[data-testid=npc-dialog-text]')?.textContent ?? '');
       res.giftChoice = await js(() => document.querySelector('[data-testid=npc-choice-gift]')?.textContent?.trim());
       res.focusAfterReply = await js(() => document.activeElement?.getAttribute('data-testid'));
-      // 1 → today's talk (+6); their answer (never a line already said), then
-      // both choices locked for today.
+      // 1 → today's talk: a resident with a talk book (lounge-npc-talk.ts)
+      // opens and waits for my reply buttons; the rest answer with one line
+      // (never a line already said). Gifts stay locked for today.
       const beforeTalk = await js(() => document.querySelector('[data-testid=npc-dialog-text]')?.textContent ?? '');
       res.talkTries = await tryKey('Digit1', (b) => (document.querySelector('[data-testid=npc-dialog-text]')?.textContent ?? '') !== b, beforeTalk);
       assert.ok(res.talkTries > 0, '이야기 나누기 대답이 나오지 않았습니다.');

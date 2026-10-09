@@ -97,7 +97,7 @@ test('friend → 연인 → 약혼 → 결혼, with the ceremony in the news and
   s.set(m, 'janna', { points: NPC_DATING_POINTS - 12 });
   s.fails(m, { npc: 'janna', op: 'ask' }, /꽃다발이 없어요/);
   s.give(m, 'bouquet', 2);
-  s.fails(m, { npc: 'janna', op: 'ask' }, /8하트/);
+  s.fails(m, { npc: 'janna', op: 'ask' }, /조금 더 가까워지면/);
   assert.equal(s.view(m).me.inv.bouquet, 2, 'a refusal keeps the bouquet');
   s.rel(m, 'janna').points = NPC_DATING_POINTS;
   s.act(m, { npc: 'janna', op: 'ask' });

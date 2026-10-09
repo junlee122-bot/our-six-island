@@ -867,6 +867,7 @@ export const PLUS_ACTION_KINDS = [
   'buyRoomStyle',
   'birthdayCheer',
   'setTastes',
+  'npcChat',
 ] as const;
 export type PlusActionKind = (typeof PLUS_ACTION_KINDS)[number];
 

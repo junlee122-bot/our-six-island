@@ -3,7 +3,7 @@
 // and the choices offered after the lines. The rules themselves (one talk
 // and one gift a day, where they can be met) stay in lounge-romance.ts;
 // this only says what the box shows.
-import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_POINTS_MAX, NPC_PROPOSE_POINTS, NPC_TALK_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
+import { NPCS, NPC_DATING_DAYS, NPC_DATING_POINTS, NPC_POINTS_MAX, NPC_PROPOSE_POINTS, type NpcId, type NpcLove } from './lounge-npc-data.ts';
 import type { NpcSpot } from './lounge-npc-schedule.ts';
 
 /** Relation points (0–120) as the ten hearts a friend shows: one heart per 12 points. */
@@ -25,13 +25,15 @@ export function npcTalkStatus(npc: NpcId, spot: Pick<NpcSpot, 'label' | 'activit
   return spot.activity === 'work' || spot.activity === 'stall' ? `${role} · 일하는 중` : role;
 }
 
-export type NpcTalkChoiceId = 'talk' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'bdayGift' | 'companion' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
-export type NpcTalkChoice = { id: NpcTalkChoiceId; label: string; disabled: boolean };
+export type NpcTalkChoiceId = 'talk' | 'story' | 'gift' | 'overhear' | 'join' | 'ask' | 'propose' | 'wedding' | 'homeGift' | 'bdayGift' | 'companion' | 'book' | 'request' | 'shop' | 'pill' | 'bye';
+export type NpcTalkChoice = { id: NpcTalkChoiceId; label: string; disabled: boolean; /** Today's talk is done (a later one is a single line). */ done?: boolean };
 
 /**
- * The choices after the lines, in this order: talk, gift, 주민 수첩, today's
- * request (only where the board can be opened), leave. Talk and gift stay
- * listed once done or out of reach, but cannot be picked.
+ * The choices after the lines, in this order: the next story chapter (when it
+ * is open), talk, gift, 주민 수첩, today's request (only where the board can
+ * be opened), leave. Once today's talk is done, talking again is a single
+ * line ("가볍게 한마디", it does not count again); a gift stays listed but
+ * cannot be picked. No label shows points (주민과 진짜 대화).
  */
 export function npcTalkChoices(o: {
   talked: boolean;
@@ -59,16 +61,19 @@ export function npcTalkChoices(o: {
    * their answer (the reason), so it stays pickable unless out of reach.
    */
   companion?: { why: string } | null;
+  /** 주민과 진짜 대화: the next chapter is open ("이야기 2장 · 뒷산의 노을"). */
+  story?: { label: string } | null;
 }): NpcTalkChoice[] {
   const off = o.busy || !!o.blocked;
   const loveLabel: Record<NpcLoveChoice, string> = { ask: '꽃다발 건네기', propose: '청혼 반지 건네기', wedding: '결혼식 올리기', homeGift: '아침 선물 받기', bdayGift: '생일 선물 받기' };
   return [
-    { id: 'talk', label: o.talked ? '오늘 대화 완료' : `이야기 나누기 · +${NPC_TALK_POINTS}`, disabled: off || o.talked },
+    ...(o.story ? [{ id: 'story' as const, label: o.story.label, disabled: off }] : []),
+    { id: 'talk', label: o.talked ? '가볍게 한마디' : '이야기 나누기', disabled: off, ...(o.talked ? { done: true } : {}) },
     { id: 'gift', label: o.gifted ? '오늘 선물 완료' : '선물 주기', disabled: off || o.gifted },
     ...(o.social
       ? [
           { id: 'overhear' as const, label: `${o.social.other} 나누는 이야기 엿듣기`, disabled: false },
-          { id: 'join' as const, label: o.social.joined ? '오늘 함께 이야기함' : '둘 이야기에 끼어들기 · 둘 다 +2', disabled: o.busy || o.social.joined || !!o.social.joinOff },
+          { id: 'join' as const, label: o.social.joined ? '오늘 함께 이야기함' : '둘 이야기에 끼어들기', disabled: o.busy || o.social.joined || !!o.social.joinOff },
         ]
       : []),
     ...(o.love ?? []).map((id) => ({ id, label: loveLabel[id], disabled: o.busy || (id !== 'wedding' && !!o.blocked) })),
@@ -89,8 +94,9 @@ export function npcTalkChoices(o: {
  * from the gift picker it returns to "선물 주기".
  */
 export function npcTalkFocus(choices: readonly NpcTalkChoice[], after: 'open' | 'reply' | 'picker' = 'open') {
-  const at = (id: NpcTalkChoiceId) => choices.findIndex((c) => c.id === id && !c.disabled);
+  const at = (id: NpcTalkChoiceId) => choices.findIndex((c) => c.id === id && !c.disabled && !c.done);
   if (after === 'picker' && at('gift') >= 0) return at('gift');
+  if (after === 'open' && at('story') >= 0) return at('story');
   if (after === 'open' && at('talk') >= 0) return at('talk');
   return choices.findIndex((c) => c.id === 'bye');
 }

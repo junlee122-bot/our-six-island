@@ -1,0 +1,1182 @@
+// 미스 포츈 — 별빛 카지노 대부 창구. 고향 항구 출신, 붉은 돛 배의 옛 선장.
+// 짧고 단호한 반말에 매혹적인 여유. 조건은 짧게, 이자는 정확하게, 바다 이야기엔
+// 말이 길어진다. 옛날 쌍권총 대신 '두 개의 장부'와 '쌍둥이 동전', 수배서 대신
+// '연체 장부', 빗발치는 탄환 대신 비 오는 갑판. 가족을 잃은 과거는 아주 넌지시,
+// 복수 대신 '빚은 반드시 받는다, 약속은 지킨다'. 샹크스와 느긋한 맞수, 나모·무잔과
+// 이자 경쟁, 쓰레쉬와 보석 흥정, 츠나데의 외상, 미쿠는 카지노 동료.
+// 장 줄기: 빚과 약속의 장부를 쥔 사람이 장부에 적을 수 없는 것(너와의 시간)을
+// 알게 되는 이야기 — 항구, 오래된 배, 행운 동전. 원작 대사는 쓰지 않는다.
+import type { NpcTalkBook } from './types.ts';
+
+export const ROSE_TALK: NpcTalkBook = {
+  npc: 'rose',
+  memories: {
+    'skill-over-luck': '운보다 실력을 믿는다고 했어요',
+    'luck-lover': '운도 실력이라고 우겼어요',
+    'pay-on-time': '빌리면 제때 갚겠다고 했어요',
+    'sea-born': '바다 냄새가 좋다고 했어요',
+    'ship-name': '붉은 돛 배 이야기를 들었어요',
+    'bounty-help': '연체 장부 공고 붙이는 걸 돕겠다고 했어요',
+    'two-pistols': '두 개의 장부 이야기를 들었어요',
+    'smile-face': '웃는 얼굴이 좋다는 말을 들었어요',
+    'red-fish': '참돔의 붉은빛이 좋다고 했어요',
+    'nyamo-rival': '은행과의 이자 경쟁 이야기를 들었어요',
+    'old-debt': '갚아야 할 묵은 빚 이야기를 들었어요',
+    'calm-sea': '잔잔한 바다를 믿지 말라고 배웠어요',
+    'dawn-sea': '새벽 수평선을 함께 봤어요',
+    'seabream': '참돔을 대접했어요',
+    'new-flag': '새 깃발 이야기를 나눴어요',
+    'bounty-done': '연체 공고를 함께 붙였어요',
+    'taste-heard': '내 취향을 장부에 적어 뒀대요',
+    'outing-talk': '함께 걸은 날을 이야기했어요',
+    'date-talk': '데이트한 날을 이야기했어요',
+    'twin-coin': '쌍둥이 동전 이야기를 들었어요',
+    'gem-eye': '보석 보는 눈을 칭찬받았어요',
+    'crew-letter': '옛 선원들의 편지 이야기를 들었어요',
+    'star-route': '별 보고 길 찾는 법을 배웠어요',
+    'promise-kept': '약속은 지킨다고 서로 말했어요',
+    'no-greens': '채소 요리는 안 권하기로 했어요',
+    'knot-learn': '선원 매듭을 배웠어요',
+    'rain-deck': '비 오는 갑판 이야기를 들었어요',
+    'hat-story': '선장 모자 이야기를 들었어요',
+    'bday-heard': '생일 이야기를 나눴어요',
+  },
+  talks: [
+    {
+      id: 'luck-or-skill',
+      open: '{me}, 하나 묻지. 운을 믿어, 실력을 믿어?',
+      replies: [
+        { say: '실력. 운은 따라오는 거고', tier: 'great', remember: 'skill-over-luck', face: 'smile', answer: ['…좋은 대답이야.', '그런 사람한텐 한도를 올려 줘도 돼. 장부가 증명하니까.'] },
+        { say: '운도 실력이야', tier: 'good', remember: 'luck-lover', face: 'laugh', answer: ['하, 건방지네. 마음에 들어.', '근데 그 운, 장부엔 안 적혀. 숫자만 적혀.'] },
+        { say: '둘 다 없어…', tier: 'meh', face: 'calm', answer: '그럼 오늘은 빌리지 마. 그게 제일 실력 있는 선택이야.' },
+      ],
+    },
+    {
+      id: 'pay-on-time',
+      open: '내 창구 규칙은 하나야. 빌린 건 제때. 지킬 수 있어?',
+      replies: [
+        { say: '하루도 안 늦을게', tier: 'great', remember: 'pay-on-time', face: 'smile', answer: ['말은 쉽지.', '근데 네 눈은 거짓말을 안 하네. 믿어 보지.'] },
+        { say: '늦으면 어떻게 돼?', tier: 'good', face: 'think', answer: ['연체 장부에 네 이름. 광장 게시판에도.', '이름은 작게, 금액은 크게. 그게 내 예의야.'] },
+        { say: '지금은 안 빌려', tier: 'meh', answer: '현명하네. 빌리지 않는 손님이 제일 좋은 손님이야. 장사는 안 되지만.' },
+      ],
+    },
+    {
+      id: 'ship',
+      open: '내 옛날 배 얘기 해 줄까. 돛이 붉었어. 바다에서 제일 빨랐지.',
+      replies: [
+        { say: '그 배 이야기 들려줘', tier: 'great', remember: 'ship-name', face: 'smile', answer: ['붉은 돛, 검은 선체. 폭풍도 앞질렀어.', '선원들은 그 배를 이름 대신 "우리 집"이라 불렀지.', '…아무한테나 하는 얘기 아니야. 넌 들을 자격 있어.'] },
+        { say: '샹크스 배보다 빨라?', tier: 'good', face: 'laugh', answer: ['당연하지. 그 사람은 아니라고 우기겠지만.', '다음에 둘이 있을 때 물어봐. 표정 볼만할 거야.'] },
+        { say: '배는 잘 몰라', tier: 'meh', face: 'calm', answer: '그래. 뭍사람한테 배 얘긴 지루하지. 장부 얘기나 할까?' },
+      ],
+    },
+    {
+      id: 'bounty',
+      open: '이번 주 연체 장부 공고 붙일 거야. 안 갚고 숨은 손님이 셋이나 돼.',
+      replies: [
+        { say: '내가 붙이는 거 도울게', tier: 'great', remember: 'bounty-help', face: 'wow', answer: ['…의외네. 좋아.', '대신 풀은 꼼꼼히. 바람에 날아가면 숨은 손님이 웃거든.'] },
+        { say: '연체 이자는 얼마야?', tier: 'good', face: 'think', answer: ['하루에 동전 한 닢. 정확하게.', '더 받지도, 덜 받지도 않아. 그게 내 계산법이야.'] },
+        { say: '좀 무섭다', tier: 'meh', answer: '무서우라고 붙이는 거야. 제때 갚는 너는 걱정할 거 없어.' },
+      ],
+    },
+    {
+      id: 'two-pistols',
+      open: '난 장부를 두 권 써. 빌려준 장부, 그리고 받을 장부. 뭐가 더 무서울까?',
+      replies: [
+        { say: '받을 장부. 안 빗나가니까', tier: 'great', remember: 'two-pistols', face: 'laugh', answer: ['하, 정답.', '펜 끝은 한 번 적으면 지워지지 않아. 양손에 하나씩이야.'] },
+        { say: '빌려준 장부가 더 무서워', tier: 'good', face: 'smile', answer: ['왜? 아, 거기 네 이름이 있어서?', '걱정 마. 그 장부는 갚으면 줄이 그어져. 깨끗하게.'] },
+        { say: '둘 다 안 무서워', tier: 'meh', face: 'think', answer: '…그건 아직 둘 다 펼쳐 본 적이 없어서 그래.' },
+      ],
+    },
+    {
+      id: 'smile',
+      open: '빌리러 오는 사람들, 왜 다 죽상일까. 넌 웃어 봐. …그래, 그 얼굴.',
+      replies: [
+        { say: '포츈도 웃어 봐', tier: 'great', remember: 'smile-face', face: 'shy', answer: ['…내가?', '하, 오랜만에 시켜 보는 사람이네. 됐어, 한 번만이야.'] },
+        { say: '돈 빌리는데 어떻게 웃어', tier: 'good', answer: '그러니까 웃으라는 거야. 웃는 사람은 갚을 계획이 있거든.' },
+        { say: '웃기 싫어', tier: 'meh', face: 'calm', answer: '그럼 오늘은 거래 없음. 다음에 웃을 수 있을 때 와.' },
+      ],
+    },
+    {
+      id: 'red-fish',
+      open: '어시장 참돔 봤어? 그 붉은빛. 내 배 돛이랑 똑같아.',
+      replies: [
+        { say: '그래서 참돔을 좋아하는구나', tier: 'great', remember: 'red-fish', face: 'smile', answer: ['…들켰네. 맞아. 맛보다 색이야.', '아무한테도 말하지 마. 특히 샹크스.'] },
+        { say: '맛은 어때?', tier: 'good', answer: ['최고지. 구워도, 회로도.', '뭍 음식이 입에 안 맞는 나도 그건 먹어.'] },
+        { say: '생선은 다 똑같던데', tier: 'meh', face: 'think', answer: '…바다를 모르는 소리네. 언제 한 번 데려가서 가르쳐 줘야겠어.' },
+      ],
+    },
+    {
+      id: 'nyamo',
+      open: '은행 나모가 또 금리를 내렸대. 나랑 경쟁하겠다는 거지. 넌 어디서 빌릴래?',
+      replies: [
+        { say: '조건 보고 정해야지', tier: 'great', remember: 'nyamo-rival', face: 'laugh', answer: ['하, 그게 맞아.', '정에 끌려 빌리는 손님은 결국 둘 다 손해야.'] },
+        { say: '당연히 포츈한테', tier: 'good', face: 'smile', answer: '말은 고맙네. 근데 조건은 읽고 와. 아첨은 이자에서 안 빼 줘.' },
+        { say: '나모가 더 친절하던데', tier: 'meh', face: 'think', answer: '…친절은 이자에 안 붙지. 기억해 둬.' },
+      ],
+    },
+    {
+      id: 'calm-sea',
+      open: '잔잔한 바다랑 거친 바다. 어느 쪽이 더 위험할 것 같아?',
+      replies: [
+        { say: '잔잔한 쪽', tier: 'great', remember: 'calm-sea', face: 'wow', answer: ['…너, 바다 좀 아네.', '잔잔할 때 다들 방심하지. 사람도 그래. 장부도.'] },
+        { say: '당연히 거친 쪽', tier: 'good', answer: '보통은 그렇게 말해. 틀린 건 아니야. 근데 반만 맞았어.' },
+        { say: '둘 다 안 갈래', tier: 'meh', face: 'laugh', answer: '하, 제일 안전한 대답이네. 재미는 없지만.' },
+      ],
+    },
+    {
+      id: 'old-debt',
+      open: '나도 받을 빚이 하나 있어. 범이 아니라… 옛날 바다에 두고 온 거.',
+      replies: [
+        { say: '언젠가 꼭 받아 내', tier: 'great', remember: 'old-debt', face: 'smile', answer: ['…응. 빚은 반드시 받아. 그게 내 약속이야.', '그날이 오면 너한테 제일 먼저 말할게.'] },
+        { say: '무슨 빚인데?', tier: 'good', face: 'think', answer: '…지금은 장부 맨 뒷장에 적어 둔 거라고만 해 둘게.' },
+        { say: '잊는 게 낫지 않아?', tier: 'meh', face: 'calm', answer: ['잊으면 편하겠지.', '근데 난 계산이 안 끝난 장부는 못 덮어.'] },
+      ],
+    },
+    {
+      id: 'sea-smell',
+      open: '뭍에 산 지 꽤 됐는데 아직도 짠내가 그리워. 넌 바다 냄새 어때?',
+      replies: [
+        { say: '좋아. 살아 있는 냄새야', tier: 'great', remember: 'sea-born', face: 'wow', answer: ['…살아 있는 냄새. 좋은 말이네.', '장부 첫 장에 적어 둘까. 이자 대신.'] },
+        { say: '비린내 아냐?', tier: 'good', face: 'laugh', answer: '하, 뭍사람 티 난다. 그래도 솔직해서 좋아.' },
+        { say: '잘 모르겠어', tier: 'meh', answer: '그럼 다음에 항구 끝에 서 봐. 바람이 알려 줄 거야.' },
+      ],
+    },
+    {
+      id: 'shanks-tab',
+      open: '샹크스 외상 장부가 또 한 장 늘었어. 그 사람 웃으면서 안 갚아.',
+      replies: [
+        { say: '대신 받아다 줄까?', tier: 'great', face: 'laugh', answer: ['하! 너라면 받아 올지도.', '웃는 얼굴엔 웃는 얼굴로 받는 거야. 가 봐.'] },
+        { say: '둘이 친하잖아', tier: 'good', face: 'shy', answer: '…친한 거랑 장부는 별개야. 바다 사람끼리도 셈은 정확하게.' },
+        { say: '받을 생각 없지?', tier: 'meh', face: 'think', answer: '…시끄러워. 받을 거야. 언젠가.' },
+      ],
+    },
+    {
+      id: 'new-ship',
+      when: { ch: 3 },
+      open: '{me}, 내가 배를 다시 띄우면… 선원 명단 첫 줄에 누굴 쓸 것 같아?',
+      replies: [
+        { say: '나였으면 좋겠다', tier: 'great', face: 'shy', answer: ['…하. 그걸 대놓고 말하네.', '펜은 이미 들었어. 지우지 않을 거야.'] },
+        { say: '샹크스?', tier: 'good', face: 'laugh', answer: '그 사람은 자기 배 있어. 그리고 외상부터 갚아야 태워.' },
+        { say: '난 뱃멀미 해', tier: 'meh', answer: '멀미엔 생강이래. 츠나데 할머니 텃밭에 있어. 난 안 가지만.' },
+      ],
+    },
+    {
+      id: 'twin-coin',
+      open: ['동전 하나 던져 볼게. 앞면, 뒷면?', '…이거 원래 두 개였어. 쌍둥이 동전. 하나는 바다에 있어.'],
+      replies: [
+        { say: '나머지 하나는 어디 있어?', tier: 'great', remember: 'twin-coin', face: 'calm', answer: ['고향 항구 앞바다. 아주 옛날에.', '…그래서 하나만 던져. 그래도 늘 맞아.'] },
+        { say: '앞면!', tier: 'good', face: 'laugh', answer: ['앞면. 맞았네.', '하, 운 좋은 손님. 근데 이건 운이 아니야. 내가 던졌거든.'] },
+        { say: '동전 던지기는 유치해', tier: 'meh', face: 'think', answer: '유치하지. 근데 선원들은 이걸로 목숨 걸린 내기도 했어.' },
+      ],
+    },
+    {
+      id: 'fortune-name',
+      open: '내 이름, 행운이라는 뜻이야. 웃기지? 운을 제일 안 믿는 사람이.',
+      replies: [
+        { say: '행운이 포츈을 믿는 거지', tier: 'great', face: 'wow', answer: ['…하. 그 말, 좀 훔쳐 가도 돼?', '창구 위에 걸어 두고 싶네. 손님들 겁먹게.'] },
+        { say: '이름이 예뻐', tier: 'good', face: 'shy', answer: '…이름 칭찬은 처음이야. 이자 칭찬만 들었지.' },
+        { say: '그럼 이름 바꿔', tier: 'meh', face: 'laugh', answer: '하, 싫어. 이름은 약속이야. 한 번 걸면 끝까지 가.' },
+      ],
+    },
+    {
+      id: 'thresh-gems',
+      open: '쓰레쉬 잡화점에 청옥이 들어왔어. 값을 두 배로 불렀지. 등불 들고 웃으면서.',
+      replies: [
+        { say: '반값부터 부르자', tier: 'great', remember: 'gem-eye', face: 'laugh', answer: ['하! 너 흥정 좀 하네.', '그 등불 영감은 반값에서 시작해야 제값에 끝나.'] },
+        { say: '보석 보는 법 알려 줘', tier: 'good', face: 'smile', answer: ['빛에 비춰서 안쪽을 봐.', '흠이 없으면 가짜야. 진짜는 바다처럼 속에 뭐가 있어.'] },
+        { say: '그냥 사면 안 돼?', tier: 'meh', face: 'calm', answer: '안 돼. 부른 값에 사는 건 상대한테 이자를 주는 거야.' },
+      ],
+    },
+    {
+      id: 'tsunade-tab',
+      open: '츠나데 할머니가 또 외상 달았어. 갚으러 올 땐 쑥떡을 들고 와. 꼭.',
+      replies: [
+        { say: '쑥떡 대신 생선으로 받아', tier: 'great', remember: 'no-greens', face: 'laugh', answer: ['하! 그 말 할머니한테 해 봐.', '…난 못 해. 그 할머니 손힘이 무섭거든.'] },
+        { say: '쑥떡 맛있잖아', tier: 'meh', face: 'sorry', answer: ['…쑥은 뭍 냄새가 너무 나.', '미안. 그건 장부로도 못 바꿔.'] },
+        { say: '둘이 사실 친하지?', tier: 'good', face: 'shy', answer: '…맞수야. 화투 패 읽는 눈은 인정해. 거기까지.' },
+      ],
+    },
+    {
+      id: 'muzan-credit',
+      open: '무잔 지점장이 신용 창구를 넓혔어. 해가 지면 장사가 더 잘된대. 이상한 사람이야.',
+      replies: [
+        { say: '포츈이 더 정확하잖아', tier: 'great', face: 'smile', answer: ['정확은 내가 더 해.', '근데 그 사람, 큰손 앞에선 나랑 손잡아. 셈이 맞으니까.'] },
+        { say: '둘 중 누가 더 무서워?', tier: 'good', face: 'think', answer: ['웃는 쪽이 더 무섭지.', '…둘 다 웃는다고? 그럼 펜 쥔 쪽이야. 나.'] },
+        { say: '난 관심 없어', tier: 'meh', face: 'calm', answer: '그래. 돈 얘기 지루한 사람이 제일 오래 부자로 살아.' },
+      ],
+    },
+    {
+      id: 'lumi-dealer',
+      open: '미쿠가 오늘 테이블 열 개를 돌렸대. 노래까지 하면서. 같은 카지노지만 난 못 따라가.',
+      replies: [
+        { say: '포츈은 장부를 돌리잖아', tier: 'great', face: 'laugh', answer: ['하, 맞네. 미쿠는 카드, 난 숫자.', '잃은 손님이 미쿠한테 울면 나한테 와. 일 분담이야.'] },
+        { say: '미쿠랑 친해?', tier: 'good', face: 'smile', answer: ['동료야. 퇴근길에 같이 걸어.', '그 애는 노래하고, 난 바다 얘기 하고. 서로 반만 들어.'] },
+        { say: '카지노는 별로야', tier: 'meh', face: 'calm', answer: '별로라고 생각하는 손님이 제일 덜 잃어. 그대로 있어.' },
+      ],
+    },
+    {
+      id: 'hwatu-room',
+      open: '회관 화투방 예림이, 패 섞는 손이 꽤 빨라. 선원 해도 되겠어.',
+      replies: [
+        { say: '포츈 손보다 빨라?', tier: 'great', face: 'laugh', answer: ['하. 동전 넘기는 건 내가 빨라.', '…패 섞는 건 진 걸로 해 둘게. 이번만.'] },
+        { say: '화투도 쳐?', tier: 'good', face: 'think', answer: '가끔. 돈은 안 걸어. 장부 쓰는 사람이 판에 끼면 안 되거든.' },
+        { say: '화투는 몰라', tier: 'meh', answer: '몰라도 돼. 모르는 판엔 안 앉는 게 실력이야.' },
+      ],
+    },
+    {
+      id: 'no-greens',
+      open: '솔직히 말할게. 나물이니 쑥이니, 그런 건 내 입이 거절해.',
+      replies: [
+        { say: '알았어. 생선만 줄게', tier: 'great', remember: 'no-greens', face: 'smile', answer: ['…말이 통하네.', '그 대신 너한텐 생선 손질하는 법 가르쳐 줄게. 공짜로.'] },
+        { say: '편식은 안 좋아', tier: 'meh', face: 'sorry', answer: '알아. 근데 바다에서 자란 입은 바다만 기억해. 미안.' },
+        { say: '그럼 뭘 좋아해?', tier: 'good', face: 'think', answer: '참돔, 방어. 그리고 반짝이는 거. 단순하지?' },
+      ],
+    },
+    {
+      id: 'crew-letter',
+      open: '옛 선원한테 편지가 왔어. 짠물에 번진 글씨로. 다들 아직 바다에 있대.',
+      replies: [
+        { say: '답장 쓰는 거 도울게', tier: 'great', remember: 'crew-letter', face: 'smile', answer: ['…좋아. 근데 글씨는 내가 써.', '선원들은 내 글씨 아니면 안 믿어. 장부 글씨거든.'] },
+        { say: '보고 싶겠다', tier: 'good', face: 'calm', answer: ['보고 싶지.', '근데 다들 각자 바다에서 잘 버티는 중이야. 그거면 됐어.'] },
+        { say: '뭐라고 써 있어?', tier: 'meh', face: 'laugh', answer: '대부분 돈 빌려 달래. 하, 바다 사람들이 다 그렇지.' },
+      ],
+    },
+    {
+      id: 'rain-deck',
+      open: '비 오는 날 갑판, 생각해 본 적 있어? 빗줄기가 옆으로 날아와.',
+      replies: [
+        { say: '그 얘기 더 해 줘', tier: 'great', remember: 'rain-deck', face: 'smile', answer: ['비가 옆으로 오면 키를 꽉 잡아. 손이 얼어도.', '그때 선원들이 내 이름을 불렀어. 그 소리로 버텼지.', '…말이 길어졌네. 바다 얘기만 하면 이래.'] },
+        { say: '추웠겠다', tier: 'good', face: 'calm', answer: '추웠지. 근데 젖은 갑판에서 웃는 법을 거기서 배웠어.' },
+        { say: '난 비 싫어', tier: 'meh', face: 'think', answer: '뭍에선 피하면 되지. 바다에선 피할 데가 없어.' },
+      ],
+    },
+    {
+      id: 'interest-exact',
+      open: '이자 계산은 반올림 안 해. 동전 반 닢까지 정확하게. 너무하다고 생각해?',
+      replies: [
+        { say: '정확한 게 공평한 거지', tier: 'great', face: 'smile', answer: ['그거야.', '내가 덜 받으면 누군가는 더 내. 장부는 결국 맞아야 해.'] },
+        { say: '조금은 봐주지', tier: 'good', face: 'think', answer: ['봐주는 건 해. 기한은.', '근데 숫자는 안 봐줘. 숫자를 봐주면 약속이 흐려져.'] },
+        { say: '너무해', tier: 'meh', face: 'laugh', answer: '하, 그래서 다들 나모한테 가지. 그리고 다시 나한테 와.' },
+      ],
+    },
+    {
+      id: 'promise',
+      open: '난 약속 하나는 지켜. 빚은 반드시 받는다. 그 대신 내 말도 반드시 지켜.',
+      replies: [
+        { say: '나도 약속은 지켜', tier: 'great', remember: 'promise-kept', face: 'smile', answer: ['…그럼 우린 같은 장부를 쓰는 사람이네.', '지켜 봐. 나도 지켜볼게.'] },
+        { say: '어긴 적 한 번도 없어?', tier: 'good', face: 'think', answer: '한 번. 아주 어릴 때. 그래서 그 뒤로는 한 번도 안 어겼어.' },
+        { say: '약속은 깨라고 있는 거래', tier: 'meh', face: 'calm', answer: '그 말 한 사람, 지금 연체 장부에 있어.' },
+      ],
+    },
+    {
+      id: 'star-route',
+      open: '밤에 별 보고 길 찾을 줄 알아? 뭍에선 다들 표지판만 봐.',
+      replies: [
+        { say: '가르쳐 줘', tier: 'great', remember: 'star-route', face: 'wow', answer: ['북쪽에 안 움직이는 별 하나. 그것만 찾아.', '나머진 다 돌아. 사람처럼. 그 하나만 믿으면 돼.'] },
+        { say: '지도 있으면 되잖아', tier: 'good', face: 'laugh', answer: '지도는 젖어. 별은 안 젖어. 하, 바다 사람 논리지.' },
+        { say: '별은 다 비슷해 보여', tier: 'meh', face: 'calm', answer: '그래 보이지. 오래 보면 하나하나 얼굴이 생겨.' },
+      ],
+    },
+    {
+      id: 'knot',
+      open: '손 줘 봐. 선원 매듭 하나 가르쳐 줄게. 풀리라고 묶는 매듭이야.',
+      replies: [
+        { say: '풀리라고 묶는다고?', tier: 'great', remember: 'knot-learn', face: 'smile', answer: ['당길 땐 단단하고, 풀 땐 한 번에 풀려.', '좋은 계약도 그래. 묶일 때 묶이고, 끝날 땐 깨끗하게.'] },
+        { say: '이렇게? 꼬였는데', tier: 'good', face: 'laugh', answer: '하, 엉망이네. 다시. 내 손 보고 따라 해.' },
+        { say: '매듭은 귀찮아', tier: 'meh', face: 'think', answer: '귀찮은 걸 한 번 배워 두면, 폭풍 때 덜 귀찮아.' },
+      ],
+    },
+    {
+      id: 'captain-hat',
+      open: '창구 뒤 못에 걸린 모자 봤어? 선장 모자야. 이젠 안 써. 그래도 매일 먼지 털어.',
+      replies: [
+        { say: '한 번 써 봐', tier: 'great', remember: 'hat-story', face: 'shy', answer: ['…지금? 손님 보는데?', '하. 좋아, 잠깐만. …어때. 아직 어울려?'] },
+        { say: '왜 이젠 안 써?', tier: 'good', face: 'calm', answer: '모자는 배가 있을 때 쓰는 거야. 지금은 창구가 내 배지.' },
+        { say: '그냥 모자네', tier: 'meh', face: 'think', answer: '…그래, 그냥 모자. 근데 소금기는 아직 안 빠졌어.' },
+      ],
+    },
+    {
+      id: 'wink',
+      open: '창구에서 윙크 한 번 하면 손님이 조건을 덜 읽어. 그래서 안 해. 공정하게.',
+      replies: [
+        { say: '나한텐 해 줘도 돼', tier: 'great', face: 'laugh', answer: ['하, 넌 조건을 꼼꼼히 읽으니까?', '좋아. 한 번. …봤지? 이자는 그대로야.'] },
+        { say: '양심적이네', tier: 'good', face: 'smile', answer: '장사꾼한테 양심은 장부 정리야. 꼼꼼히.' },
+        { say: '윙크 못하는 거 아냐?', tier: 'meh', face: 'think', answer: '…시험해 보고 싶어? 대가는 비쌀 텐데.' },
+      ],
+    },
+    {
+      id: 'harbor-lantern',
+      open: '항구 등불이 몇 개인지 알아? 난 알아. 밤마다 세거든. 버릇이야.',
+      replies: [
+        { say: '왜 세는데?', tier: 'great', face: 'calm', answer: ['고향 항구에선 등불 하나 꺼지면 배 하나가 안 돌아온 거였어.', '…그래서 세. 다 켜져 있으면 잠이 와.'] },
+        { say: '나도 같이 세 볼래', tier: 'good', face: 'smile', answer: '좋아. 틀리면 처음부터. 장부랑 똑같아.' },
+        { say: '그냥 등불이잖아', tier: 'meh', face: 'think', answer: '뭍에선 그렇지. 바다에선 그게 집이야.' },
+      ],
+    },
+    {
+      id: 'tavern-bet',
+      open: '어젯밤 허풍 주점에서 샹크스랑 내기했어. 누가 먼저 취하나. 결과 궁금해?',
+      replies: [
+        { say: '포츈이 이겼지?', tier: 'great', face: 'laugh', answer: ['당연하지. 그 사람은 우유만 마셨는데도 졌어.', '…아니, 그건 반칙 아닌가. 장부에 물음표 쳐 뒀어.'] },
+        { say: '둘 다 안 취했지?', tier: 'good', face: 'smile', answer: '하, 맞아. 바다 사람 둘이면 술이 먼저 지쳐.' },
+        { say: '술 내기는 별로야', tier: 'meh', face: 'calm', answer: '그래. 넌 그런 거 안 했으면 좋겠어. 이건 진심.' },
+      ],
+    },
+    {
+      id: 'sailor-luck',
+      open: '선원들은 미신이 많아. 배에서 휘파람 불면 폭풍이 온다나. 넌 그런 거 믿어?',
+      replies: [
+        { say: '믿는 척은 해 줘야지', tier: 'great', face: 'laugh', answer: ['하, 정답. 선원이랑 사는 법을 아네.', '난 안 믿어. 근데 갑판에선 휘파람 안 불었어.'] },
+        { say: '안 믿어', tier: 'good', face: 'smile', answer: '나랑 같네. 근데 남이 믿는 건 비웃지 마. 그게 선장 일이야.' },
+        { say: '다 믿어', tier: 'meh', face: 'think', answer: '…그럼 너는 배 타면 피곤하겠다. 금지된 게 백 가지야.' },
+      ],
+    },
+    {
+      id: 'coin-teacher',
+      when: { mem: 'twin-coin' },
+      open: '그 쌍둥이 동전, 던지는 법 누가 가르쳐 줬는지 말 안 했지.',
+      replies: [
+        { say: '말하고 싶으면 들을게', tier: 'great', face: 'calm', answer: ['…어릴 때, 항구에서. 손이 아주 따뜻한 사람이.', '거기까지. 나머진 장부 맨 뒷장에 있어.'] },
+        { say: '선원 누구?', tier: 'good', face: 'think', answer: '아니. 배보다 먼저 만난 사람이야. …오늘은 그것만.' },
+        { say: '안 궁금해', tier: 'meh', face: 'smile', answer: '그래. 안 물어 주는 것도 고마운 거야.' },
+      ],
+    },
+    {
+      id: 'ledger-blank',
+      when: { ch: 5 },
+      open: '{me}, 너랑 보낸 시간, 장부에 적으려고 했어. 칸이 없더라.',
+      replies: [
+        { say: '그럼 새 장부를 만들자', tier: 'great', face: 'shy', answer: ['…새 장부. 이자도 기한도 없는.', '그런 장부는 처음 써 봐. 같이 써.'] },
+        { say: '안 적어도 기억하잖아', tier: 'good', face: 'smile', answer: '…맞아. 이상하게 그건 안 잊혀. 펜으로 적지도 않았는데.' },
+        { say: '적을 게 그렇게 많아?', tier: 'meh', face: 'laugh', answer: '하, 많아. 그래서 문제야.' },
+      ],
+    },
+    {
+      id: 'love-ledger',
+      when: { love: 'dating' },
+      open: '손님들이 요즘 내가 덜 무섭대. 누구 때문인 줄 알아?',
+      replies: [
+        { say: '나 때문이지', tier: 'great', face: 'shy', answer: ['…알면서 묻게 하네.', '책임져. 이자 대신 매일 얼굴 보여 주는 걸로.'] },
+        { say: '날씨 때문?', tier: 'good', face: 'laugh', answer: '하, 그래. 날씨 때문이라고 해 두자. 네 이름의 날씨.' },
+        { say: '그래도 무서워', tier: 'meh', face: 'think', answer: '…좋아. 손님들한텐 계속 무섭게 할게. 너한테만 빼고.' },
+      ],
+    },
+  ],
+  openers: [
+    {
+      id: 'op-storm',
+      when: { weather: 'storm' },
+      open: '폭풍이네. 고향 바다 폭풍에 비하면 재채기야. 창구 문만 단단히 닫아.',
+      replies: [
+        { say: '포츈은 하나도 안 무섭지?', tier: 'great', face: 'smile', answer: ['안 무서워. 대신 존중해.', '바다를 얕보는 사람은 바다가 가르쳐. 아주 비싸게.'] },
+        { say: '들어와서 쉬어', tier: 'good', answer: '…고맙네. 잠깐만. 장부 젖으면 큰일이거든.' },
+        { say: '오늘 문 닫아?', tier: 'meh', face: 'laugh', answer: '닫을 리가. 폭풍 날 오는 손님이 제일 급해.' },
+      ],
+    },
+    {
+      id: 'op-rain',
+      when: { weather: 'rain' },
+      open: '비 오는 날엔 항구 생각이 나. 갑판에서 맞는 비는 짰거든.',
+      replies: [
+        { say: '그 비 맞아 보고 싶다', tier: 'great', remember: 'sea-born', face: 'wow', answer: ['…뭍사람치곤 별난 소원이네.', '언젠가 배 띄우면 맞게 해 줄게. 감기는 책임 안 져.'] },
+        { say: '감기 걸려', tier: 'good', face: 'laugh', answer: '하, 걱정은. 바다 사람은 비에 안 아파. 대신 장부가 아파.' },
+        { say: '우산 빌려줄까?', tier: 'meh', face: 'calm', answer: '빌리는 건 내 쪽이 아니야. 마음만 받을게.' },
+      ],
+    },
+    {
+      id: 'op-snow',
+      when: { weather: 'snow' },
+      open: '눈이네. 눈 오는 날엔 독촉 안 해. 내 규칙이야. 빚도 하루쯤 쉬어야지.',
+      replies: [
+        { say: '포츈 다정하네', tier: 'great', face: 'shy', answer: ['…다정은 무슨. 규칙이라니까.', '하루 쉰 빚은 내일 더 정확하게 받을 거야.'] },
+        { say: '바다에도 눈 와?', tier: 'good', face: 'calm', answer: ['와. 소리 없이 물에 녹아.', '갑판에 쌓인 눈을 선원들이랑 쓸었지. 손이 얼어도 웃었어.'] },
+        { say: '추워서 싫어', tier: 'meh', answer: '그럼 따뜻한 데로 가. 카지노 안은 늘 덥잖아.' },
+      ],
+    },
+    {
+      id: 'op-sunny',
+      when: { weather: 'sunny' },
+      open: '맑은 날이야. 이런 날 바다는 금화를 뿌려 놓은 것 같지.',
+      replies: [
+        { say: '포츈 눈엔 다 돈이구나', tier: 'great', face: 'laugh', answer: ['하! 들켰네.', '근데 그 금화는 못 주워. 그래서 더 좋아.'] },
+        { say: '항구 가 보자', tier: 'good', face: 'smile', answer: '일 끝나면. 해 질 때 가. 그때가 제일 반짝여.' },
+        { say: '그냥 더워', tier: 'meh', face: 'calm', answer: '뭍사람은 꼭 날씨를 온도로만 봐.' },
+      ],
+    },
+    {
+      id: 'op-cloudy',
+      when: { weather: 'cloudy' },
+      open: '흐리네. 흐린 날 바다는 속을 안 보여 줘. 손님 얼굴도 그렇고.',
+      replies: [
+        { say: '내 얼굴은 읽혀?', tier: 'great', face: 'smile', answer: ['읽혀. 넌 맑은 날 바다야.', '…칭찬이야. 장부에 적진 않을게.'] },
+        { say: '흐린 날 운이 나빠?', tier: 'good', face: 'think', answer: '운 같은 건 없어. 흐린 날엔 조건을 한 번 더 읽어. 그뿐이야.' },
+        { say: '비 오려나', tier: 'meh', answer: '오겠지. 하늘은 갚을 건 꼭 갚아.' },
+      ],
+    },
+    {
+      id: 'op-dawn',
+      when: { time: 'dawn' },
+      open: '새벽에 오는 손님은 급한 손님이지. 아니면 잠 못 드는 손님. 넌 어느 쪽?',
+      replies: [
+        { say: '포츈 보러 온 손님', tier: 'great', face: 'shy', answer: ['…그런 칸은 장부에 없어.', '새로 만들어야겠네. 맨 위에.'] },
+        { say: '잠이 안 와서', tier: 'good', answer: ['그럼 앉아. 고향에선 이 시간에 닻을 올렸어.', '같이 깨어 있어 줄게. 이자 없이.'] },
+        { say: '급하게 빌리러', tier: 'meh', face: 'think', answer: '새벽에 빌리는 범은 아침에 후회해. 해 뜨고 다시 와.' },
+      ],
+    },
+    {
+      id: 'op-day',
+      when: { time: 'day', season: ['spring', 'autumn'] },
+      open: '낮엔 손님이 몰려. 짧게 말해. …아니, 너는 좀 길게 해도 돼.',
+      replies: [
+        { say: '그럼 길게 있을게', tier: 'great', face: 'laugh', answer: ['하, 진짜로 길게 있으면 곤란한데.', '…저 의자에 앉아. 손님들이 너 보고 덜 떨더라.'] },
+        { say: '바쁘면 갈게', tier: 'good', face: 'smile', answer: '눈치 있네. 저녁에 다시 와. 그땐 한가해.' },
+        { say: '심심해서 왔어', tier: 'meh', face: 'calm', answer: '심심하면 카지노 말고 바다로 가. 거긴 공짜야.' },
+      ],
+    },
+    {
+      id: 'op-evening',
+      when: { time: 'evening' },
+      open: '노을 지면 칩 소리가 커져. 다들 행운 타령이지. 넌 오늘 운 어땠어?',
+      replies: [
+        { say: '운 말고 할 일 했어', tier: 'great', face: 'smile', answer: ['그 대답 좋아.', '그런 날이 쌓이면, 남들이 너보고 운이 좋대.'] },
+        { say: '운이 좋았어', tier: 'good', face: 'laugh', answer: '하, 오늘은 그렇게 말해도 봐줄게. 노을이 예쁘니까.' },
+        { say: '최악이었어', tier: 'meh', face: 'calm', answer: '그럼 오늘 장부는 덮어. 내일 새 장 넘기면 돼.' },
+      ],
+    },
+    {
+      id: 'op-night',
+      when: { time: 'night' },
+      open: '밤이 깊었어. 이 시간엔 다들 판을 키우지. 넌 키우지 마.',
+      replies: [
+        { say: '포츈 얼굴 보러 온 거야', tier: 'great', face: 'shy', answer: ['…밤에 그런 말 하면 반칙이야.', '좋아. 별 하나 같이 보고 가.'] },
+        { say: '안 키울게', tier: 'good', face: 'smile', answer: '약속했다. 장부에 적었어. 지워지지 않아.' },
+        { say: '딱 한 판만', tier: 'meh', face: 'think', answer: '한 판이 열 판 돼. 바다에선 그걸 소용돌이라고 불렀어.' },
+      ],
+    },
+    {
+      id: 'op-spring',
+      when: { season: 'spring' },
+      open: '봄 바다는 믿으면 안 돼. 잔잔해 보여도 밑은 아직 겨울이야.',
+      replies: [
+        { say: '사람도 그래?', tier: 'great', face: 'wow', answer: ['…너 오늘 날카롭네.', '응. 웃는 손님 장부를 더 꼼꼼히 봐. 봄이니까.'] },
+        { say: '봄엔 뭐가 잡혀?', tier: 'good', face: 'smile', answer: '도다리. 작지만 정직한 생선이야. 속임수가 없어.' },
+        { say: '봄은 따뜻하던데', tier: 'meh', answer: '뭍은 그렇지. 바다는 늘 한 계절 늦어.' },
+      ],
+    },
+    {
+      id: 'op-summer',
+      when: { season: 'summer' },
+      open: '여름이야. 참돔이 제철이지. 그 붉은빛 보면 출항하고 싶어져.',
+      replies: [
+        { say: '참돔 잡아 올게', tier: 'great', face: 'laugh', answer: ['하, 말만으로도 이자 하루 면제야.', '진짜로 가져오면… 그건 그때 정해.'] },
+        { say: '같이 출항하자', tier: 'good', face: 'shy', answer: '…배도 없는데 그런 말 하지 마. 진짜로 사고 싶어지잖아.' },
+        { say: '여름은 너무 더워', tier: 'meh', face: 'calm', answer: '갑판 위 여름은 더 더워. 그래도 바람이 있었지.' },
+      ],
+    },
+    {
+      id: 'op-autumn',
+      when: { season: 'autumn' },
+      open: '가을엔 빚 갚는 손님이 늘어. 수확철이니까. 내 장부도 가을엔 가벼워.',
+      replies: [
+        { say: '나도 갚을 거 갚을게', tier: 'great', face: 'smile', answer: ['좋아. 가을다운 손님이네.', '…다 갚으면 와. 방어 한 점 사 줄게.'] },
+        { say: '포츈도 수확철이네', tier: 'good', face: 'laugh', answer: '하, 맞아. 난 숫자를 거둬. 밭은 안 갈지만.' },
+        { say: '난 아직 못 갚아', tier: 'meh', face: 'calm', answer: '기한만 지켜. 다 못 갚는 건 괜찮아. 숨는 게 안 괜찮지.' },
+      ],
+    },
+    {
+      id: 'op-winter',
+      when: { season: 'winter' },
+      open: '겨울 항구는 배가 다 묶여 있어. 나도 좀 묶여 있는 기분이야.',
+      replies: [
+        { say: '봄 되면 풀리잖아', tier: 'great', face: 'smile', answer: ['…그래. 매듭은 풀리라고 묶는 거지.', '네 말 들으니 봄이 좀 가까워졌어.'] },
+        { say: '같이 항구 걷자', tier: 'good', face: 'shy', answer: '추운데? …좋아. 목도리는 네가 챙겨.' },
+        { say: '겨울은 쉬는 계절이지', tier: 'meh', answer: '쉬는 건 좋아. 근데 이자는 겨울에도 붙어.' },
+      ],
+    },
+    {
+      id: 'op-festival',
+      when: { festival: true },
+      open: '축제날엔 창구를 닫아. 오늘은 빌려주는 거 없어. 대신 술 한 잔은 살게.',
+      replies: [
+        { say: '포츈이 산다고?', tier: 'great', face: 'laugh', answer: ['하, 놀라기는.', '일 년에 몇 번 없는 일이니까 즐겨. 장부엔 안 적어.'] },
+        { say: '난 우유로', tier: 'good', answer: '샹크스한테 물든 거야? 좋아, 우유로 건배.' },
+        { say: '축제도 시끄러워', tier: 'meh', face: 'calm', answer: '항구 축제에 비하면 자장가야. 그래도 조용한 데 원하면 따라와.' },
+      ],
+    },
+    {
+      id: 'op-fish',
+      when: { fish: ['seabream', 'yellowtail'] },
+      open: '{fish}? 오늘 그걸 낚았어? …좋은 눈이네. 그 녀석들 아무한테나 안 잡혀.',
+      replies: [
+        { say: '포츈 주려고 낚았어', tier: 'great', face: 'shy', answer: ['…말만으로도 이자 하루 면제야.', '진짜로 가져오면 한 달.'] },
+        { say: '손맛이 좋았어', tier: 'good', face: 'smile', answer: '그 손맛 잊지 마. 바다가 너를 인정한 거야.' },
+        { say: '운이 좋았어', tier: 'meh', face: 'think', answer: '운이라고? 또 그 소리. 실력이라고 해. 그래야 다음에도 잡혀.' },
+      ],
+    },
+    {
+      id: 'op-fish-any',
+      when: { fish: true },
+      open: '손에서 바다 냄새 나. 오늘 낚시했지? {fish}, 맞지?',
+      replies: [
+        { say: '냄새로 알아?', tier: 'great', face: 'laugh', answer: ['하, 바다에서 자란 코야.', '물고기 종류까진 몰라. 표정 보고 찍었어.'] },
+        { say: '포츈한테 줄까?', tier: 'good', face: 'smile', answer: '참돔이나 방어면 받을게. 아니면 샹크스 주점에 줘.' },
+        { say: '씻고 올게', tier: 'meh', face: 'calm', answer: '씻지 마. 그 냄새, 나쁘지 않아.' },
+      ],
+    },
+    {
+      id: 'op-bigfish',
+      when: { bigFish: true },
+      open: '오늘 큰 놈 낚았다며. 소문이 창구까지 왔어. …손 좀 보자. 물집 잡혔네.',
+      replies: [
+        { say: '포츈한테 배운 끈기야', tier: 'great', face: 'laugh', answer: ['하! 가르친 적 없는데.', '좋아, 그 말 장부 이자로 쳐 줄게.'] },
+        { say: '별거 아니야', tier: 'good', answer: '별거야. 바다는 아무한테나 큰 놈을 안 줘. 축하해.' },
+        { say: '팔면 얼마 받을까?', tier: 'meh', face: 'think', answer: '…값부터 묻다니. 내 손님 다 됐네. 근데 오늘은 그냥 자랑해.' },
+      ],
+    },
+    {
+      id: 'op-harvest',
+      when: { harvest: true },
+      open: '밭일 했구나. 흙 냄새 나. …나쁘단 건 아니야. 그냥 낯설어.',
+      replies: [
+        { say: '수확은 정확히 셌어', tier: 'great', face: 'smile', answer: ['그거면 됐어.', '흙이든 바다든 세는 사람이 손해 안 봐.'] },
+        { say: '채소 좀 줄까?', tier: 'meh', face: 'sorry', answer: '…미안. 채소는 나모 줘. 난 마음만.' },
+        { say: '포츈도 밭 해 봐', tier: 'good', face: 'laugh', answer: '하, 내가? 쑥이라도 나면 그날로 밭을 팔 거야.' },
+      ],
+    },
+    {
+      id: 'op-gold',
+      when: { gold: true },
+      open: '금별 작물을 거뒀다며. 뭍에서도 금이 나는구나. 인정할게.',
+      replies: [
+        { say: '포츈한테 감정받고 싶어', tier: 'great', remember: 'gem-eye', face: 'wow', answer: ['…좋아. 빛에 비춰 봐.', '흠 하나 없네. 이건 운이 아니야. 네 손이야.'] },
+        { say: '운이 좋았지', tier: 'good', face: 'think', answer: '운이 좋은 사람은 매일 밭에 안 나가. 넌 나갔잖아.' },
+        { say: '그냥 작물이야', tier: 'meh', face: 'calm', answer: '겸손은 장부에 안 적혀. 자랑해도 돼.' },
+      ],
+    },
+    {
+      id: 'op-high',
+      when: { mood: 'high' },
+      open: '오늘 얼굴 좋네. 순풍 받은 돛 같아. 무슨 좋은 일?',
+      replies: [
+        { say: '포츈 만나서', tier: 'great', face: 'shy', answer: ['…하. 그런 대답은 이자 대신 받아 둘게.', '근데 이자보다 비싸.'] },
+        { say: '그냥 날이 좋아서', tier: 'good', face: 'smile', answer: '그런 날도 있어야지. 순풍은 이유 없이 불어.' },
+        { say: '빌리러 온 거야', tier: 'meh', face: 'laugh', answer: '기분 좋은 날 빌리는 범은 커져. 조심해.' },
+      ],
+    },
+    {
+      id: 'op-low',
+      when: { mood: 'low' },
+      open: '{me}. 얼굴에 폭풍이 지나간 흔적이 있네. 무슨 일이야?',
+      replies: [
+        { say: '그냥 지쳤어', tier: 'great', face: 'smile', answer: ['…그럼 오늘은 닻 내려.', '지친 날 항해하면 배가 상해. 쉬어. 여기 앉아도 돼.'] },
+        { say: '빌린 거 걱정돼', tier: 'good', answer: ['갚는 날은 조정해 줄 수 있어.', '숨기지만 마. 숨기는 게 제일 비싸.'] },
+        { say: '말하기 싫어', tier: 'meh', face: 'calm', answer: '그래. 말 안 해도 돼. 옆에 있는 건 공짜야.' },
+      ],
+    },
+    {
+      id: 'op-news-wedding',
+      when: { news: 'wedding' },
+      open: '마을에 결혼 소식이 있대. 결혼은 평생 계약이지. 해지 조항 없는.',
+      replies: [
+        { say: '포츈은 그런 계약 어때?', tier: 'great', face: 'shy', answer: ['…갑자기 그런 걸 묻네.', '조건만 맞으면. 그 조건은 아직 비밀이야.'] },
+        { say: '축하해 주자', tier: 'good', face: 'smile', answer: '축하하지. 축의금은 정확하게. 하, 농담이야. 반쯤.' },
+        { say: '결혼은 무서워', tier: 'meh', face: 'calm', answer: '무서운 계약일수록 꼼꼼히 읽으면 돼.' },
+      ],
+    },
+    {
+      id: 'op-news-birthday',
+      when: { news: 'birthday' },
+      open: '오늘 누구 생일이래. 난 생일 같은 건 장부에 안 적어. …사실 다 적어.',
+      replies: [
+        { say: '내 생일도 적었어?', tier: 'great', face: 'shy', answer: ['…당연하지.', '빨간 펜으로. 연체 날짜 말고 빨간 건 그거 하나야.'] },
+        { say: '선물 뭐 줄 거야?', tier: 'good', face: 'think', answer: '동전 한 닢. 행운의 동전. 내가 주면 진짜 행운이야.' },
+        { say: '생일 별거 아냐', tier: 'meh', face: 'calm', answer: '별거야. 하루라도 장부가 축하할 일이 있어야지.' },
+      ],
+    },
+    {
+      id: 'op-news-festival',
+      when: { news: 'festival' },
+      open: '축제 준비 소식 들었어. 손님들이 다들 축제 전에 빌려 가. 축제 뒤엔 울고.',
+      replies: [
+        { say: '난 미리 모아 뒀어', tier: 'great', face: 'smile', answer: ['그래서 내가 너를 좋아하는 거야.', '…손님으로서. 손님으로서 말이야.'] },
+        { say: '포츈도 축제 가?', tier: 'good', face: 'laugh', answer: '가지. 창구 닫고. 그날은 장부 대신 등불을 볼 거야.' },
+        { say: '조금만 빌려줘', tier: 'meh', face: 'think', answer: '축제용 대출은 이자가 두 배야. 그래도 할래? …안 하는 게 좋아.' },
+      ],
+    },
+    {
+      id: 'op-news-legend',
+      when: { news: 'legend' },
+      open: '전설의 물고기가 나왔대. 선원들은 그런 걸 보면 배를 돌려. 운을 다 썼다고.',
+      replies: [
+        { say: '포츈은 계속 가지?', tier: 'great', face: 'laugh', answer: ['당연하지. 운을 안 쓰니까 다 쓸 일도 없어.', '하, 그게 내 방식이야.'] },
+        { say: '나도 보고 싶다', tier: 'good', face: 'smile', answer: '보게 될 거야. 바다는 끈질긴 사람한테 결국 보여 줘.' },
+        { say: '전설은 지어낸 거지', tier: 'meh', face: 'think', answer: '지어낸 거라도 사람을 바다로 부르면 진짜야.' },
+      ],
+    },
+    {
+      id: 'op-news-record',
+      when: { news: 'record' },
+      open: '마을 기록이 새로 나왔대. 숫자는 거짓말을 안 해. 그래서 좋아.',
+      replies: [
+        { say: '다음 기록은 내가 깰게', tier: 'great', face: 'smile', answer: ['좋아. 장부에 미리 적어 둘게.', '못 지키면 연체야. 하.'] },
+        { say: '누가 깼대?', tier: 'good', face: 'think', answer: '이름은 잔나 신문에 있어. 난 숫자만 봤어.' },
+        { say: '기록은 관심 없어', tier: 'meh', face: 'calm', answer: '관심 없는 사람이 가끔 기록을 깨더라.' },
+      ],
+    },
+    {
+      id: 'op-news-museum',
+      when: { news: 'museum' },
+      open: '박물관에 새 기증품이 들어왔대. 값으로 못 세는 것들. 그런 게 제일 무서워.',
+      replies: [
+        { say: '왜 무서워?', tier: 'great', face: 'calm', answer: ['장부에 못 적으니까.', '…요즘 그런 게 하나 더 생겼어. 말은 안 할게.'] },
+        { say: '바다 물건도 있어?', tier: 'good', face: 'smile', answer: '조개껍데기 몇 개. 내가 감정해 주고 싶었는데 안 불렀어.' },
+        { say: '박물관은 지루해', tier: 'meh', face: 'laugh', answer: '하, 셀 게 없어서? 나도 그래.' },
+      ],
+    },
+    {
+      id: 'op-friendnews',
+      when: { friendNews: 'birthday' },
+      open: '네 친구 생일이라며. 선물은 정했어? 값 말고 마음 쪽으로.',
+      replies: [
+        { say: '포츈한테 물어보려고', tier: 'great', face: 'laugh', answer: ['하, 나한테? 그럼 보석.', '…농담이야. 그 친구가 좋아하는 걸 기억해 둔 게 제일이야.'] },
+        { say: '이미 준비했어', tier: 'good', face: 'smile', answer: '정확하네. 그런 친구 둔 사람이 부러워.' },
+        { say: '깜빡했어', tier: 'meh', face: 'think', answer: '지금이라도 가. 늦은 약속도 안 지킨 약속보단 나아.' },
+      ],
+    },
+    {
+      id: 'op-voyage',
+      when: { recent: 'voyage' },
+      open: '먼바다 다녀왔다며. 수평선 어땠어? 길게 말해도 돼. 오늘은 들을게.',
+      replies: [
+        { say: '포츈 생각났어', tier: 'great', remember: 'sea-born', face: 'shy', answer: ['…하. 바다 한가운데서?', '그건 선원이 할 소리야. 넌 이제 선원이네.'] },
+        { say: '파도가 엄청났어', tier: 'good', face: 'laugh', answer: ['그렇지? 몸이 기억할 거야.', '며칠은 땅이 흔들려. 그게 바다가 남긴 인사야.'] },
+        { say: '멀미만 했어', tier: 'meh', face: 'calm', answer: '처음엔 다 그래. 나도 처음 배 탔을 때 울었어. 비밀이야.' },
+      ],
+    },
+    {
+      id: 'op-fishing',
+      when: { recent: 'fishing' },
+      open: '요즘 낚시 자주 하더라. 선착장에서 봤어. 줄 던지는 폼이 좋아졌어.',
+      replies: [
+        { say: '포츈한테 보여 주려고', tier: 'great', face: 'shy', answer: ['…그런 건 말 안 해도 돼.', '말해도 되고. 좋네.'] },
+        { say: '요령 좀 알려 줘', tier: 'good', face: 'smile', answer: '물때를 봐. 바다도 장부처럼 들어오고 나가는 때가 있어.' },
+        { say: '하나도 못 잡았어', tier: 'meh', face: 'calm', answer: '못 잡은 날도 바다는 너를 기억해. 다음에 갚아.' },
+      ],
+    },
+    {
+      id: 'op-stock',
+      when: { recent: 'stockUp' },
+      open: '증권에서 좀 벌었다며? 무잔 지점장 표정이 볼만했겠네.',
+      replies: [
+        { say: '포츈 덕분에 계산 배웠지', tier: 'great', face: 'laugh', answer: ['하! 맞는 말이네.', '숫자를 믿는 사람이 이기는 거야.'] },
+        { say: '운이 좋았어', tier: 'good', face: 'think', answer: '…또 운. 운은 다음 주에 배신해. 오늘 번 건 반은 묶어 둬.' },
+        { say: '더 넣어 볼까?', tier: 'meh', face: 'calm', answer: '번 날 판 키우는 건 금지야. 내 규칙이 아니라 바다 규칙.' },
+      ],
+    },
+    {
+      id: 'op-stockdown',
+      when: { recent: 'stockDown' },
+      open: '증권에서 잃었다며. 잃은 숫자 쫓지 마. 그게 제일 비싼 이자야.',
+      replies: [
+        { say: '알아. 쉬어 갈게', tier: 'great', face: 'smile', answer: ['그래. 닻 내리고 기다리는 것도 항해야.', '…잘 참았네.'] },
+        { say: '빌려서 다시 할래', tier: 'meh', face: 'sorry', answer: '그건 안 돼. 미안하지만 내 창구가 거절해.' },
+        { say: '무잔한테 따질까', tier: 'good', face: 'laugh', answer: '하, 그 사람은 웃으면서 들어 줄 거야. 아무것도 안 바뀌고.' },
+      ],
+    },
+    {
+      id: 'op-casino-win',
+      when: { recent: 'casinoWin' },
+      open: '이번 주 테이블에서 땄다며. 봤어. 딴 날 일어나는 게 실력이야.',
+      replies: [
+        { say: '바로 일어났어', tier: 'great', face: 'smile', answer: ['좋아. 그게 제일 어려운 거야.', '미쿠도 그런 손님은 좋아해.'] },
+        { say: '한 판 더 할까?', tier: 'meh', face: 'think', answer: '…한 판 더가 연체 장부의 첫 줄이야. 가지 마.' },
+        { say: '포츈 덕이야', tier: 'good', face: 'laugh', answer: '내가 뭘 했다고. 판은 네가 읽었어.' },
+      ],
+    },
+    {
+      id: 'op-casino-lose',
+      when: { recent: 'casinoLose' },
+      open: '이번 주 테이블에서 좀 잃었다며. 빌리러 온 거면 돌아가. 오늘은 안 빌려줘.',
+      replies: [
+        { say: '알아. 그냥 얼굴 보러 왔어', tier: 'great', face: 'smile', answer: ['…그럼 앉아. 장부는 덮을게.', '오늘은 차 한 잔이야.'] },
+        { say: '다음엔 안 잃을 거야', tier: 'good', face: 'think', answer: '다음이 없어야 안 잃어. 한동안 테이블 근처 가지 마.' },
+        { say: '조금만 빌려줘', tier: 'meh', face: 'calm', answer: '안 돼. 잃은 날 빌리는 범은 바닥이 없는 배야. 내일 와.' },
+      ],
+    },
+    {
+      id: 'op-museum',
+      when: { recent: 'museum' },
+      open: '박물관에 뭘 내놨다며. 숫자로 못 세는 걸 내놓는 사람, 드물어.',
+      replies: [
+        { say: '모두가 보면 좋잖아', tier: 'great', face: 'wow', answer: ['…그런 마음은 장부에 칸이 없어.', '멋있네. 진심이야.'] },
+        { say: '팔 걸 그랬나', tier: 'meh', face: 'laugh', answer: '하, 늦었어. 그래도 그 고민 하는 거 보니 내 손님 맞네.' },
+        { say: '바다에서 주운 거야', tier: 'good', face: 'smile', answer: '그럼 바다가 빌려준 거네. 박물관이 이자 없이 맡아 주는 거야.' },
+      ],
+    },
+    {
+      id: 'op-captain',
+      when: { bond: 'captain' },
+      open: '샹크스 만났지? 그 사람이 또 내 배가 느렸다고 했을걸.',
+      replies: [
+        { say: '포츈 배가 빨랐다던데?', tier: 'great', face: 'wow', answer: ['…그 사람이? 하.', '오늘따라 외상이 조금 덜 미워지네.'] },
+        { say: '외상 얘기만 하던데', tier: 'good', face: 'laugh', answer: '그 얘기 꺼낼 정도면 양심은 있네. 갚을 생각은 없어도.' },
+        { say: '포츈 얘기는 없었어', tier: 'meh', face: 'think', answer: '…그래? 다음 외상 이자는 좀 올려야겠네.' },
+      ],
+    },
+    {
+      id: 'op-nyamo',
+      when: { bond: 'nyamo' },
+      open: '은행 다녀왔구나. 나모가 내 흉 안 봤어?',
+      replies: [
+        { say: '서로 인정하던데', tier: 'great', face: 'smile', answer: ['…그래? 그럼 나도 인정해 주지.', '이자만 빼고.'] },
+        { say: '포츈 이자가 비싸대', tier: 'good', face: 'laugh', answer: '하, 비싸지. 대신 빠르고 정확해. 그게 내 가게야.' },
+        { say: '은행이 더 좋던데', tier: 'meh', face: 'calm', answer: '그럼 거기 맡겨. 급할 때만 와. 난 급한 사람 전문이야.' },
+      ],
+    },
+    {
+      id: 'op-thresh',
+      when: { bond: 'thresh' },
+      open: '쓰레쉬 가게 갔지? 등불 영감이 보석 값 또 올렸어?',
+      replies: [
+        { say: '포츈 오면 깎아 준대', tier: 'great', face: 'laugh', answer: ['하! 거짓말. 그 영감은 나만 보면 값을 올려.', '…그래도 그 말, 고마워.'] },
+        { say: '진열장이 반짝였어', tier: 'good', face: 'smile', answer: '그 영감 눈은 인정해. 보석 고르는 눈은 나랑 비슷해.' },
+        { say: '좀 으스스했어', tier: 'meh', face: 'calm', answer: '그 가게는 원래 그래. 장부는 의외로 깔끔하던데.' },
+      ],
+    },
+    {
+      id: 'op-tsunade',
+      when: { bond: 'tsunade' },
+      open: '츠나데 할머니 만났어? 외상 얘기 했어? …아니, 하지 마. 쑥 들고 올 거야.',
+      replies: [
+        { say: '대신 갚으러 온대', tier: 'great', face: 'wow', answer: ['…진짜? 날짜는?', '하, 날짜 없는 약속은 안 믿어. 그래도 기대는 할게.'] },
+        { say: '할머니 기운 좋던데', tier: 'good', face: 'laugh', answer: '좋지. 그 손으로 화투 패를 내리치면 테이블이 울려.' },
+        { say: '쑥떡 받았어', tier: 'meh', face: 'sorry', answer: '…그거 나한테 주지 마. 부탁이야.' },
+      ],
+    },
+    {
+      id: 'op-lumi',
+      when: { bond: 'lumi' },
+      open: '미쿠랑 얘기했구나. 오늘 테이블은 어땠대? 그 애 웃음이면 대충 알아.',
+      replies: [
+        { say: '포츈 칭찬하던데', tier: 'great', face: 'shy', answer: ['…미쿠가? 또 노래 가사 같은 말 했겠지.', '그래도 좋네. 동료 칭찬은 이자보다 남아.'] },
+        { say: '바쁘다던데', tier: 'good', face: 'smile', answer: '그럼 오늘은 잃은 손님이 많겠네. 내 창구도 바빠지겠어.' },
+        { say: '노래만 들었어', tier: 'meh', face: 'laugh', answer: '하, 그 애는 그게 대화야.' },
+      ],
+    },
+    {
+      id: 'op-muzan',
+      when: { bond: 'muzan' },
+      open: '무잔 지점장 만났어? 그 사람 차양 밑에서 웃으며 숫자 세는 거, 좀 무섭지.',
+      replies: [
+        { say: '포츈이 더 무서워', tier: 'great', face: 'laugh', answer: ['하! 칭찬으로 들을게.', '무서운 쪽이 이겨. 장부 싸움에선.'] },
+        { say: '친절하던데', tier: 'good', face: 'think', answer: '친절한 신용 창구는 조건을 두 번 읽어. 내 조언이야.' },
+        { say: '관심 없어', tier: 'meh', face: 'calm', answer: '그게 제일 안전한 태도야.' },
+      ],
+    },
+    {
+      id: 'with-captain',
+      when: { with: 'captain' },
+      open: '{other}, 마침 잘 왔네. 지난번 외상 얘기 좀 하자. …{me}, 너도 증인이야.',
+      replies: [
+        { say: '내가 증인 설게', tier: 'great', face: 'laugh', answer: ['좋아. 증인 있으면 그 사람도 못 웃고 넘어가.', '…웃네. 역시 안 되나.'] },
+        { say: '둘이 사이좋네', tier: 'good', face: 'shy', answer: '…사이좋은 게 아니라 바다 사람끼리 셈하는 거야.' },
+        { say: '난 빠질게', tier: 'meh', face: 'calm', answer: '현명해. 바다 사람 둘 사이에 끼면 술값 낸다.' },
+      ],
+    },
+    {
+      id: 'with-lumi',
+      when: { with: 'lumi' },
+      open: '퇴근길에 {other} 만났어. 카지노 얘기 하던 참이야. 넌 테이블 근처 오지 마.',
+      replies: [
+        { say: '포츈 보러만 올게', tier: 'great', face: 'shy', answer: ['…동료 앞에서 그런 말 하지 마.', '봐, 웃잖아. 내일 놀림받겠네.'] },
+        { say: '둘이 무슨 얘기 해?', tier: 'good', face: 'smile', answer: '잃은 손님 위로하는 법. 미쿠는 노래, 난 기한 연장.' },
+        { say: '오늘 한 판 할까', tier: 'meh', face: 'think', answer: '딜러 앞에서 그 말 하면 안 말려 줄 거야. 난 말리지만.' },
+      ],
+    },
+    {
+      id: 'with-maehwa',
+      when: { with: 'maehwa' },
+      open: '{other}, 화투방 손님 몇이 내 창구로 오더라. 잃은 판은 거기서 끝내라고 해 줘.',
+      replies: [
+        { say: '둘 다 손님 걱정하네', tier: 'great', face: 'smile', answer: ['…걱정이라기보다 장부 걱정이야.', '그래도 그렇게 봐 주면, 그런 걸로 할게.'] },
+        { say: '화투방 재밌어?', tier: 'good', face: 'laugh', answer: '패 섞는 소리는 좋아. 파도 소리랑 조금 닮았어.' },
+        { say: '나도 화투 칠래', tier: 'meh', face: 'think', answer: '치는 건 좋아. 돈은 걸지 마. 그건 약속해.' },
+      ],
+    },
+    {
+      id: 'with-thresh',
+      when: { with: 'thresh' },
+      open: '{other}, 그 진열장 청옥 말이야. 반값. …{me}, 너도 거들어.',
+      replies: [
+        { say: '반값도 비싸 보여', tier: 'great', remember: 'gem-eye', face: 'laugh', answer: ['하! 들었지? 손님 눈도 정확해.', '…영감이 웃네. 오늘은 무승부야.'] },
+        { say: '둘이 싸우지 마', tier: 'good', face: 'smile', answer: '싸움 아니야. 흥정이야. 바다에선 이게 인사야.' },
+        { say: '난 그냥 구경할게', tier: 'meh', face: 'calm', answer: '그래. 흥정판 구경도 공부야.' },
+      ],
+    },
+    {
+      id: 'op-sulk',
+      when: { sulk: true },
+      open: '{other}랑 좀 틀어졌어. 장부 얘기로. 한쪽이 맞으면 한쪽은 틀린 거잖아.',
+      replies: [
+        { say: '먼저 손 내밀어 봐', tier: 'great', face: 'think', answer: ['…내가 먼저? 계산이 안 맞는데.', '근데 네 말이면 해 볼게. 내일쯤.'] },
+        { say: '포츈이 맞을 거야', tier: 'good', face: 'smile', answer: '고마워. 근데 맞는 것만으론 사이가 안 메워져.' },
+        { say: '그냥 둬', tier: 'meh', face: 'calm', answer: '그래. 바다처럼 하루 지나면 잔잔해지겠지.' },
+      ],
+    },
+    {
+      id: 'op-bday',
+      when: { bday: true },
+      open: ['{me}, 오늘 생일이지. 알아. 장부에 빨간 펜으로 적어 뒀거든.', '오늘은 빌려주는 것도 받는 것도 없어. 그냥 축하해.'],
+      replies: [
+        { say: '포츈한테 축하받으니 좋다', tier: 'great', remember: 'bday-heard', face: 'shy', answer: ['…그런 표정 하면 곤란해.', '자, 이거. 동전 한 닢. 행운이 아니라 약속이야.'] },
+        { say: '선물은?', tier: 'good', remember: 'bday-heard', face: 'laugh', answer: '하, 정직하네. 오늘 하루 이자 없음. 평생 처음 하는 일이야.' },
+        { say: '생일 별로 안 좋아해', tier: 'meh', remember: 'bday-heard', face: 'calm', answer: '그래도 내 장부엔 적혀 있어. 올해도, 내년에도.' },
+      ],
+    },
+  ],
+  callbacks: [
+    {
+      id: 'cb-skill',
+      when: { mem: 'skill-over-luck' },
+      use: 'skill-over-luck',
+      open: '운보다 실력이라고 했던 거 기억해. 요즘 네 장부 보면 그 말이 맞더라.',
+      replies: [
+        { say: '포츈한테 배운 거야', tier: 'great', face: 'smile', answer: ['…자꾸 그런 말 하면 이자를 깎아 주고 싶어지잖아.', '곤란해.'] },
+        { say: '장부 몰래 봤어?', tier: 'good', face: 'laugh', answer: '내 장부야. 몰래가 아니라 당연히 보지.' },
+        { say: '요즘은 운도 믿어', tier: 'meh', face: 'think', answer: '…흔들렸네. 괜찮아. 장부가 다시 붙잡아 줄 거야.' },
+      ],
+    },
+    {
+      id: 'cb-luck',
+      when: { mem: 'luck-lover' },
+      use: 'luck-lover',
+      open: '운도 실력이라던 건방진 손님. 요즘도 그 운 믿어?',
+      replies: [
+        { say: '요즘은 실력도 믿어', tier: 'great', remember: 'skill-over-luck', face: 'wow', answer: ['하, 컸네.', '둘 다 믿는 사람이 제일 무서워. 좋아.'] },
+        { say: '여전히 운!', tier: 'good', face: 'laugh', answer: '고집은. 그래도 그 고집, 바다에선 쓸모 있어.' },
+        { say: '이젠 아무것도 안 믿어', tier: 'meh', face: 'calm', answer: '그럼 나를 믿어. 장부는 거짓말 안 하니까.' },
+      ],
+    },
+    {
+      id: 'cb-bounty',
+      when: { mem: 'bounty-help', noMem: 'bounty-done' },
+      open: '공고 붙이는 거 돕겠다고 했지? 오늘 한 장 남았어. 광장 게시판.',
+      replies: [
+        { say: '반듯하게 붙일게', tier: 'great', remember: 'bounty-done', face: 'smile', answer: ['좋아. …너 손 정확하네.', '선원이었으면 돛 담당이야.'] },
+        { say: '이번엔 누군데?', tier: 'good', remember: 'bounty-done', face: 'think', answer: ['외상 석 달째인 손님. 이름은 비밀.', '빨간 머리라는 것만 말해 둘게.'] },
+        { say: '오늘은 바쁜데', tier: 'meh', remember: 'bounty-done', face: 'calm', answer: '그래. 내가 붙일게. 약속은 다음에 갚아.' },
+      ],
+    },
+    {
+      id: 'cb-ship',
+      when: { mem: 'ship-name' },
+      use: 'ship-name',
+      open: '붉은 돛 배 얘기 해 줬잖아. 어젯밤 꿈에 그 배가 나왔어. 너도 타 있더라.',
+      replies: [
+        { say: '난 무슨 일을 했어?', tier: 'great', face: 'laugh', answer: ['갑판 청소. 하, 농담이야.', '키 옆에 서 있었어. 그게 다야. …그게 좋았어.'] },
+        { say: '좋은 꿈이네', tier: 'good', face: 'smile', answer: '…응. 깨고 나서 좀 아쉬웠어. 그 정도야.' },
+        { say: '난 멀미했겠다', tier: 'meh', face: 'calm', answer: '꿈에선 안 했어. 꿈은 공짜니까.' },
+      ],
+    },
+    {
+      id: 'cb-two-books',
+      when: { mem: 'two-pistols' },
+      use: 'two-pistols',
+      open: '두 권 장부 얘기 했었지. 요즘 받을 장부는 덜 펼쳐. 이상하지?',
+      replies: [
+        { say: '좋은 일 아니야?', tier: 'great', face: 'smile', answer: ['…그런가. 손이 덜 무거워.', '대신 빈 공책을 하나 더 샀어. 뭐 쓸지는 아직.'] },
+        { say: '손님들이 잘 갚나 봐', tier: 'good', face: 'laugh', answer: '하, 그것도 있지. 요즘 마을이 착해졌어.' },
+        { say: '일 대충 하는 거야?', tier: 'meh', face: 'think', answer: '…내가? 숫자는 한 줄도 안 틀렸어. 마음이 딴 데 갔을 뿐.' },
+      ],
+    },
+    {
+      id: 'cb-red-fish',
+      when: { mem: 'red-fish' },
+      use: 'red-fish',
+      open: '참돔 붉은빛 얘기, 아무한테도 안 했지? …샹크스가 알던데.',
+      replies: [
+        { say: '난 말 안 했어', tier: 'great', face: 'think', answer: ['…알아. 네 눈 보면 알아.', '그 사람은 그냥 오래 봐서 아는 거야. 바다 사람끼리.'] },
+        { say: '조금 흘렸을지도', tier: 'good', face: 'laugh', answer: '하, 정직하네. 그럼 벌로 참돔 한 마리. 장부에 적어 둘게.' },
+        { say: '비밀이었어?', tier: 'meh', face: 'calm', answer: '…이제 아니게 됐네. 괜찮아.' },
+      ],
+    },
+    {
+      id: 'cb-calm-sea',
+      when: { mem: 'calm-sea' },
+      use: 'calm-sea',
+      open: '잔잔한 바다 조심하라고 했지. 요즘 마을이 너무 잔잔해. 그래서 장부를 더 봐.',
+      replies: [
+        { say: '가끔은 잔잔해도 돼', tier: 'great', face: 'smile', answer: ['…그런가.', '네가 옆에 있으면 잔잔해도 덜 불안해. 이상하지.'] },
+        { say: '같이 지켜볼게', tier: 'good', face: 'calm', answer: '좋아. 망보는 선원 하나 생겼네.' },
+        { say: '걱정이 많네', tier: 'meh', face: 'laugh', answer: '선장 버릇이야. 못 고쳐.' },
+      ],
+    },
+    {
+      id: 'cb-old-debt',
+      when: { mem: 'old-debt' },
+      use: 'old-debt',
+      open: '그 묵은 빚 말이야. 요즘 생각해 봤어. 받아 내는 날, 누구랑 축배 들지.',
+      replies: [
+        { say: '나랑 들자', tier: 'great', face: 'shy', answer: ['…하. 묻기도 전에.', '좋아. 그날 잔은 두 개 준비할게.'] },
+        { say: '서두르지 마', tier: 'good', face: 'calm', answer: '안 서둘러. 빚은 도망 안 가. 약속도.' },
+        { say: '아직 그 생각 해?', tier: 'meh', face: 'think', answer: '…해. 근데 예전만큼 자주는 아니야.' },
+      ],
+    },
+    {
+      id: 'cb-coin',
+      when: { mem: 'twin-coin' },
+      use: 'twin-coin',
+      open: '쌍둥이 동전 얘기 해 줬지. 어제 던져 봤어. 네 생각 하면서. 뭐 나왔게?',
+      replies: [
+        { say: '앞면', tier: 'great', face: 'laugh', answer: ['정답. 근데 뒷면이었어도 앞면이라고 했을 거야.', '…내가 던졌으니까.'] },
+        { say: '뒷면', tier: 'good', face: 'smile', answer: '틀렸어. 하, 그래도 괜찮아. 동전은 원래 반만 맞아.' },
+        { say: '모서리로 섰어', tier: 'meh', face: 'wow', answer: '…그런 일은 바다에서도 한 번 봤어. 너 은근히 무서워.' },
+      ],
+    },
+    {
+      id: 'cb-crew',
+      when: { mem: 'crew-letter' },
+      use: 'crew-letter',
+      open: '선원들 답장 왔어. 네가 도와준 편지. "선장님 글씨가 부드러워졌다"래.',
+      replies: [
+        { say: '내 덕분이네', tier: 'great', face: 'shy', answer: ['…하. 그렇다고 해 두지.', '다음 편지엔 네 이름도 적을까 봐. 선원들이 궁금해해.'] },
+        { say: '다들 잘 지낸대?', tier: 'good', face: 'smile', answer: '잘 지내. 아직도 빌려 달래. 하, 변한 게 없어.' },
+        { say: '글씨가 왜 변해', tier: 'meh', face: 'think', answer: '…모르겠어. 펜 탓이겠지.' },
+      ],
+    },
+    {
+      id: 'cb-star',
+      when: { mem: 'star-route' },
+      use: 'star-route',
+      open: '그 안 움직이는 별, 찾아봤어? 어젯밤 하늘 맑았는데.',
+      replies: [
+        { say: '찾았어. 포츈 생각났어', tier: 'great', face: 'shy', answer: ['…별 보고 내 생각을 하면 길을 잃어.', '농담이야. 그 별은 맞게 찾은 거야.'] },
+        { say: '다른 별인 것 같아', tier: 'good', face: 'laugh', answer: '하, 그럼 다음에 같이 봐. 손가락으로 찍어 줄게.' },
+        { say: '까먹었어', tier: 'meh', face: 'calm', answer: '괜찮아. 그 별은 내일도 거기 있어. 안 도망가.' },
+      ],
+    },
+    {
+      id: 'cb-knot',
+      when: { mem: 'knot-learn' },
+      use: 'knot-learn',
+      open: '그때 가르쳐 준 매듭, 아직 할 줄 알아? 손 줘 봐. 시험이야.',
+      replies: [
+        { say: '이렇게. 한 번에 풀리지?', tier: 'great', face: 'wow', answer: ['…완벽해. 내 선원들보다 낫네.', '이 손은 장부에 따로 적어 둘게.'] },
+        { say: '반쯤 기억나', tier: 'good', face: 'smile', answer: '반이면 충분해. 나머진 내가 잡아 줄게.' },
+        { say: '다 까먹었어', tier: 'meh', face: 'laugh', answer: '하, 그럼 다시. 이자 없이 두 번째 수업.' },
+      ],
+    },
+    {
+      id: 'cb-hat',
+      when: { mem: 'hat-story' },
+      use: 'hat-story',
+      open: '그 모자 말이야. 네가 써 보라고 해서 쓴 뒤로, 가끔 써. 창구 닫고.',
+      replies: [
+        { say: '잘 어울렸어', tier: 'great', face: 'shy', answer: ['…알아. 거울이 그러더라.', '네가 말하니까 더 믿게 되네.'] },
+        { say: '보러 가도 돼?', tier: 'good', face: 'laugh', answer: '하, 창구 닫은 뒤에. 표 끊고 와.' },
+        { say: '모자 먼지 날리겠다', tier: 'meh', face: 'calm', answer: '털었어. 매일. 말했잖아.' },
+      ],
+    },
+    {
+      id: 'cb-promise',
+      when: { mem: 'promise-kept' },
+      use: 'promise-kept',
+      open: '약속은 지킨다고 서로 말했지. 넌 지금까지 하나도 안 어겼어. 세어 봤어.',
+      replies: [
+        { say: '포츈도 안 어겼잖아', tier: 'great', face: 'smile', answer: ['…그러네. 둘 다 장부가 깨끗해.', '이런 거래 상대, 평생 처음이야.'] },
+        { say: '그걸 셌어?', tier: 'good', face: 'laugh', answer: '내가 뭐든 세는 거 알잖아. 하.' },
+        { say: '하나쯤 어겼을걸', tier: 'meh', face: 'think', answer: '…그럼 내가 못 본 거네. 못 본 건 없는 거야. 이번만.' },
+      ],
+    },
+    {
+      id: 'cb-taste',
+      when: { mem: '@taste', noMem: 'taste-heard' },
+      open: '{me}, 좋아하는 게 {taste}라며. 장부 구석에 적어 뒀어. 왜냐고 묻지 마.',
+      replies: [
+        { say: '포츈 장부에 내가 있네', tier: 'great', remember: 'taste-heard', face: 'shy', answer: ['…빚 말고 다른 걸로 장부에 적힌 건', '네가 처음이야.'] },
+        { say: '그걸 왜 적어?', tier: 'good', remember: 'taste-heard', face: 'laugh', answer: '묻지 말랬지. …언젠가 쓸 데가 있을지도 모르잖아.' },
+        { say: '틀리게 적었으면 어떡해', tier: 'meh', remember: 'taste-heard', face: 'think', answer: '내 장부는 안 틀려. 틀리면 네 취향이 바뀐 거야.' },
+      ],
+    },
+    {
+      id: 'cb-outing',
+      when: { mem: '@outing', noMem: 'outing-talk' },
+      open: '같이 다닌 날 말이야. 네가 앞장서서 걸을 때, 꼭 갑판 위 같았어.',
+      replies: [
+        { say: '포츈이 선장이지', tier: 'great', remember: 'outing-talk', face: 'smile', answer: ['하, 당연하지.', '근데 그날은 네 뒤를 따라가는 것도 괜찮았어.'] },
+        { say: '길을 몰라서 그랬어', tier: 'good', remember: 'outing-talk', face: 'laugh', answer: '알아. 그래서 더 웃겼어. 오랜만에 웃었네.' },
+        { say: '다리 아팠어', tier: 'meh', remember: 'outing-talk', face: 'calm', answer: '뭍길은 딱딱하지. 다음엔 바다 쪽으로 걷자. 모래는 부드러워.' },
+      ],
+    },
+    {
+      id: 'cb-date',
+      when: { mem: '@date', noMem: 'date-talk' },
+      open: '네 방, 생각보다 정리가 잘 돼 있더라. 장부처럼. 마음에 들었어.',
+      replies: [
+        { say: '포츈 오는 날이라 치웠지', tier: 'great', remember: 'date-talk', face: 'shy', answer: ['…그 정성은 이자로 못 셈해.', '그러니까 그냥 받아 둘게.'] },
+        { say: '평소엔 엉망이야', tier: 'good', remember: 'date-talk', face: 'laugh', answer: '하, 정직하네. 다음엔 엉망일 때 가 볼까.' },
+        { say: '다음엔 포츈 집', tier: 'meh', remember: 'date-talk', face: 'think', answer: '…내 집엔 장부밖에 없어. 그래도 오고 싶으면.' },
+      ],
+    },
+    {
+      id: 'cb-bday-soon',
+      when: { mem: '@bday-soon', noMem: 'bday-heard' },
+      open: '{me}, 곧 생일이지. 장부 날짜가 다가와서 알았어. 갖고 싶은 거 있어?',
+      replies: [
+        { say: '포츈 시간 조금', tier: 'great', remember: 'bday-heard', face: 'shy', answer: ['…시간은 장부에 없는 품목인데.', '좋아. 그날 창구 일찍 닫을게. 약속.'] },
+        { say: '참돔 구이', tier: 'good', remember: 'bday-heard', face: 'laugh', answer: '하, 내가 좋아하는 거잖아. 그래, 반은 네 거.' },
+        { say: '아무것도 필요 없어', tier: 'meh', remember: 'bday-heard', face: 'calm', answer: '그런 사람한테 주는 게 제일 어려워. 그래도 준비할게.' },
+      ],
+    },
+  ],
+  chapters: [
+    {
+      title: '조건은 짧게',
+      hint: '한 번 이야기를 나누면 미스 포츈이 장부를 펼쳐요.',
+      need: { days: 1 },
+      scene: [
+        '별빛 카지노 구석, 대부 창구. 칩 소리가 멀리서 파도처럼 밀려온다.',
+        '미스 포츈이 두꺼운 장부 두 권 중 한 권을 밀어 두고, 얇은 공책을 꺼낸다.',
+        '"이름. 아, 알아. {me}. 빚 칸 말고, 여기 적을 거야."',
+        '"손님 장부야. 믿을 만한 사람만 따로 적는 거. 지금까지 몇 줄 안 돼."',
+        '그녀가 펜 뚜껑을 이로 물어 연다. 잉크 냄새에 희미한 짠내가 섞인다.',
+        '책상 위에서 낡은 동전 하나가 그녀 손가락 사이를 빙글 돈다.',
+        '"이거? 버릇이야. 생각할 때 돌려. 원래 두 개였는데, 하나만 남았어."',
+        '동전이 멈춘다. 그녀가 펜 끝을 종이에 댄 채 나를 올려다본다.',
+        '"조건은 하나. 나한테 거짓말 하지 않기. 짧지? 지키기는 길어."',
+        '"할 수 있어?"',
+      ],
+      replies: [
+        { say: '할 수 있어', tier: 'great', face: 'smile', answer: ['좋아. 적었다.', '펜으로 적은 건 안 지워져. 기억해.', '…동전도 앞면이네. 운은 안 믿지만, 기분은 좋아.'] },
+        { say: '빚 칸이 아니라 다행이다', tier: 'good', face: 'laugh', answer: ['하, 솔직하네.', '그 칸은 비워 두는 게 서로 편하지. 계속 비워 둬.'] },
+        { say: '왜 날 적어?', tier: 'meh', face: 'think', answer: ['눈이 정직해 보여서.', '틀리면 그때 지우지. …안 틀렸으면 좋겠네.'] },
+      ],
+    },
+    {
+      title: '새벽의 수평선',
+      hint: '새벽(게임 시각 새벽 네 시부터 일곱 시) 뒷산에 올라 보세요. 미스 포츈이 바다를 보러 온대요.',
+      need: { days: 3, points: 20, visit: { area: 'hill', from: 4, to: 7 } },
+      scene: [
+        '뒷산 위, 해가 뜨기 직전. 이슬 젖은 풀 냄새 사이로 바닷바람이 올라온다.',
+        '미스 포츈이 외투 깃을 세우고 바다 쪽을 보고 서 있다. 장부는 없다.',
+        '"…일찍 왔네. 고향 항구에선 이 시간에 닻을 올렸어."',
+        '"선원들이 밧줄 감는 소리, 갈매기, 누가 늦잠 자서 내가 소리 지르는 소리."',
+        '그녀가 작게 웃는다. 창구에서 듣던 웃음보다 낮고 짧다.',
+        '"수평선 위로 해가 올라오면, 그날 항로가 다 보였지."',
+        '그녀가 손을 들어 바다 끝을 가리킨다. 펜도 동전도 없는 빈손이다.',
+        '"뭍에서는 이게 다야. 보기만 하는 거. 적을 것도, 셀 것도 없어."',
+        '바다 끝이 붉게 갈라지고, 그녀의 붉은 머리칼이 같은 색으로 물든다.',
+        '"…이상하네. 셀 게 없는데 손해 본 기분이 안 들어."',
+        '"혼자 볼 땐 들었거든. 오늘은 아니야."',
+      ],
+      replies: [
+        { say: '언젠가 저기로 가자', tier: 'great', remember: 'dawn-sea', face: 'wow', answer: ['…하. 쉽게 말하네.', '근데 이상하게 믿고 싶어져. 장부에 적어도 돼?'] },
+        { say: '해 뜬다!', tier: 'good', remember: 'dawn-sea', face: 'smile', answer: ['그래. 오늘도 제시간에.', '바다는 약속을 안 어겨. 너도 그렇네. 왔으니까.'] },
+        { say: '졸려…', tier: 'meh', remember: 'dawn-sea', face: 'laugh', answer: ['하, 뭍사람.', '그래도 왔으니 됐어. 내려가서 자. 이자 없이.'] },
+      ],
+    },
+    {
+      title: '붉은 돛',
+      hint: '미스 포츈이 참돔 이야기를 했어요. 참돔 한 마리를 가지고 찾아가 보세요.',
+      need: { days: 6, points: 40, bring: { item: 'seabream', take: true } },
+      scene: [
+        '창구 마감 무렵. 참돔을 내밀자 미스 포츈의 펜이 허공에서 멈춘다.',
+        '"…이 색."',
+        '그녀가 장부를 덮고, 생선 비늘을 손끝으로 천천히 쓸어 본다.',
+        '"내 배 돛이랑 똑같아. 해 질 녘에 보면 꼭 이랬어."',
+        '"선원들이 그 돛을 기워 가며 썼지. 기운 자국마다 이야기가 하나씩 있었고."',
+        '창밖에서 빗방울이 한두 개 떨어진다. 그녀가 고개를 돌려 본다.',
+        '"그 돛은 마지막 항해에서 찢겼어. 비 오는 갑판에서. 그날 많은 걸 잃었지."',
+        '말은 거기서 끊긴다. 동전 하나가 책상 위에서 빙글 돌다가 눕는다.',
+        '"…빚은 반드시 받아. 바다가 가져간 것도. 그게 내 약속이었어."',
+        '그녀가 참돔을 조심스레 신문지에 싼다. 장부보다 더 꼼꼼한 손길이다.',
+        '"근데 오늘은 이 색을 선물로 받네. 바다가 장부를 맞춰 주는 건가."',
+      ],
+      replies: [
+        { say: '새 돛도 붉은색으로 하자', tier: 'great', remember: 'seabream', face: 'shy', answer: ['…그래. 붉은색.', '이번엔 안 찢기게. 같이 지키는 걸로. 약속이야.'] },
+        { say: '같이 구워 먹자', tier: 'good', remember: 'seabream', face: 'laugh', answer: ['하! 감상 깨는 데는 선수네.', '좋아, 구워 먹자. 갑판 식으로, 손으로 뜯어서.'] },
+        { say: '그냥 생선이야', tier: 'meh', remember: 'seabream', face: 'calm', answer: ['…그래, 그냥 생선이지.', '고마워. 그래도 오늘은 그냥이 아니었어.'] },
+      ],
+    },
+    {
+      title: '현상금 전단',
+      hint: '미스 포츈의 연체 장부 공고 붙이는 걸 돕겠다고 해 보세요. 다음 이야기가 열려요.',
+      need: { days: 9, points: 60, mem: 'bounty-help' },
+      scene: [
+        '광장 게시판에 연체 공고를 다 붙이고 돌아오는 길. 손끝에 풀이 말라붙었다.',
+        '창구에 돌아오자 미스 포츈이 서랍에서 누렇게 바랜 종이 한 장을 꺼낸다.',
+        '"이건 안 붙여. 받을 장부 맨 뒷장이야. 바다에 두고 온 빚."',
+        '종이에는 이름도, 얼굴도, 금액도 없다. 빈칸 위에 작은 동전 자국만 눌려 있다.',
+        '"셀 수가 없어서 비워 뒀어. 세기 시작하면 멈출 수가 없거든."',
+        '"…예전엔 이 종이만 보고 살았어. 받아 낼 날만. 고향 항구에서도, 배에서도."',
+        '그녀가 남은 동전 하나를 빈칸 위에 올려놓는다. 딱 들어맞는다.',
+        '"쌍둥이 동전 다른 하나는 이 빚이랑 같이 바다에 있어. 그건 꼭 찾아올 거야."',
+        '잠깐의 침묵. 카지노 쪽에서 미쿠의 노랫소리가 희미하게 들린다.',
+        '"근데 요즘은 다른 장부를 더 자주 펼쳐. 네 이름이 적힌 거."',
+        '"이상하지. 그 장부엔 받을 것도 줄 것도 없는데."',
+      ],
+      replies: [
+        { say: '둘 다 같이 들여다보자', tier: 'great', face: 'smile', answer: ['…같이. 그 단어 오랜만이네.', '좋아. 이 종이는 같이 지켜봐. 서두르지 말고.'] },
+        { say: '빚은 꼭 받아 내', tier: 'good', face: 'laugh', answer: ['물론이지. 약속이니까.', '근데 서두르진 않을 거야. 이젠 기다릴 이유가 생겼거든.'] },
+        { say: '그 빚, 잊으면 안 돼?', tier: 'meh', face: 'calm', answer: ['…잊는 건 못 해.', '대신 덜 들여다보는 건 배우는 중이야. 네 덕에.'] },
+      ],
+    },
+    {
+      title: '사이렌호의 깃발',
+      hint: '미스 포츈과 아주 가까워지면 그녀가 낡은 깃발을 꺼내요. 그 뒤엔 꽃다발도 받아 줄지 몰라요.',
+      need: { days: 13, points: 96 },
+      scene: [
+        '비 오는 저녁, 창구는 닫혔다. 빗소리가 지붕을 갑판처럼 두드린다.',
+        '미스 포츈이 서랍 깊숙이서 접힌 천을 꺼낸다. 붉은 깃발, 귀퉁이가 그을렸다.',
+        '"내 배에서 건진 유일한 거야. 아무한테도 안 보여 줬어. 샹크스도 몰라."',
+        '그녀가 깃발을 책상 위에 펼친다. 소금기 냄새가 아직 남아 있다.',
+        '"다시 배를 띄우면 이걸 올릴 거야. 그때 옆에 누가 있을지…"',
+        '그녀가 말을 끊고 손님 장부를 펼친다. 내 이름 아래로 빈 줄이 길다.',
+        '"너랑 보낸 날을 적어 보려고 했어. 새벽 언덕, 참돔, 게시판."',
+        '"근데 칸이 안 맞아. 금액도 기한도 이자도 없는 걸 어디에 적어."',
+        '펜이 종이 위에서 한참 머문다. 잉크가 작은 점으로 번진다.',
+        '"…계산이 자꾸 틀려. 너 때문에. 이런 적 없었는데."',
+        '그녀가 깃발을 다시 접는다. 이번엔 아주 천천히.',
+      ],
+      replies: [
+        { say: '그 계산, 같이 맞춰 보자', tier: 'great', remember: 'new-flag', face: 'shy', answer: ['…하.', '꽃이라도 한 다발 들고 오면, 그때 장부를 새로 쓰지.', '조건은 그거 하나야. 짧지?'] },
+        { say: '적지 말고 기억해', tier: 'good', remember: 'new-flag', face: 'smile', answer: ['…적지 않고 기억하는 거.', '해 본 적 없어. 근데 너라면 할 수 있을 것 같아.'] },
+        { say: '계산 실수야?', tier: 'meh', remember: 'new-flag', face: 'laugh', answer: ['하, 그래. 실수라고 해 둬.', '지금은. 꽃 한 다발이면 실수가 아니게 될지도.'] },
+      ],
+    },
+    {
+      title: '새 항해일지',
+      hint: '미스 포츈과 연인이 되면 마지막 이야기가 열려요.',
+      need: { days: 16, love: 'dating' },
+      scene: [
+        '맑은 저녁, 항구 끝 선착장. 미스 포츈이 낡은 배 한 척 옆에 서 있다.',
+        '"샀어. 오래된 배야. 돛은 없고, 갑판은 삐걱대. 그래도 물에 떠."',
+        '그녀가 장부 대신 새 공책을 펼친다. 표지에 소금기 하나 없는 새것이다.',
+        '"항해일지야. 그 배 이후로 처음 쓰는 거."',
+        '"첫 줄은 늘 선장이 써. 날짜, 날씨, 그리고 함께 탄 사람."',
+        '그녀가 펜을 들어 내 이름을 적는다. 또박또박, 장부 글씨보다 둥글게.',
+        '"이제 지울 수 없어. 펜으로 적었으니까. 알지?"',
+        '그녀가 주머니에서 쌍둥이 동전 남은 하나를 꺼내 내 손바닥에 올린다.',
+        '"이거 네가 가져. 던질 필요 없어. 앞면이 너고, 뒷면도 너야."',
+        '"짝 잃은 동전이 이제 짝을 찾았네. 바다가 빚을 갚은 거야."',
+        '파도가 선체를 두드린다. 그녀가 내 손을 동전째 감싼다.',
+        '"…동그란 건 동전 하나로 충분하다고 생각했는데. 아닌가 봐."',
+      ],
+      replies: [
+        { say: '지우지 마. 평생', tier: 'great', face: 'shy', answer: ['…평생이라. 이자보다 긴 계약이네.', '좋아. 서명해. 이 동그란 것 말고, 더 동그란 걸로.'] },
+        { say: '날씨는 뭐라고 썼어?', tier: 'good', face: 'laugh', answer: ['맑음.', '오늘은 그렇게 쓰고 싶었어. 비가 와도 그렇게 썼을 거야.'] },
+        { say: '천천히 쓰자', tier: 'meh', face: 'smile', answer: ['그래. 긴 항해일수록 천천히 쓰는 거야.', '…그래도 너무 천천히는 말고.'] },
+      ],
+    },
+  ],
+  after: [
+    '오늘 용건은 끝났어. 장부 덮을게.',
+    '또 왔네. 빌리러 온 거 아니면 앉아 있다 가.',
+    '할 말 다 했잖아. 바다나 보고 와.',
+    '조건은 짧게, 인사는 더 짧게. 내일 봐.',
+    '…동전 던져 봤어. 앞면. 너 또 올 거래.',
+    '오늘 이자는 이미 받았어. 네 얼굴로.',
+    '창구 앞에 서 있으면 손님들이 겁먹어. 저쪽 의자에 앉아.',
+    '내일 오면 바다 얘기 하나 더 해 줄게. 약속.',
+  ],
+};

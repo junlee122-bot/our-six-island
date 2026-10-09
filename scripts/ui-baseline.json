@@ -163,6 +163,24 @@
      "coveredCount": 0,
      "dialog": null
     },
+    "npc-talk": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "npc-talk-answer": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
     "map": {
      "lowCount": 0,
      "smallCount": 0,
@@ -611,6 +629,24 @@
      "coveredCount": 0,
      "dialog": null
     },
+    "npc-talk": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "npc-talk-answer": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
     "map": {
      "lowCount": 0,
      "smallCount": 0,
@@ -987,6 +1023,24 @@
      }
     },
     "village": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "npc-talk": {
+     "lowCount": 0,
+     "smallCount": 0,
+     "narrowCount": 0,
+     "cutCount": 0,
+     "overlapCount": 0,
+     "coveredCount": 0,
+     "dialog": null
+    },
+    "npc-talk-answer": {
      "lowCount": 0,
      "smallCount": 0,
      "narrowCount": 0,

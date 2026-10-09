@@ -6,7 +6,7 @@ const GROUPS = {
   controls: ['controls'], credits: ['credits'], friends: ['friends'], invite: ['invite'],
   bank: ['bank', 'bank-portrait'], 'bank-notes': ['bank-notes'], 'bank-casino': ['bank-casino'],
   'bank-rob': ['bank-rob'], npc: ['npc'],
-  village: ['village'], map: ['map'], bag: ['bag'], shop: ['shop'], ledger: ['ledger'],
+  village: ['village'], 'npc-talk': ['npc-talk', 'npc-talk-answer'], map: ['map'], bag: ['bag'], shop: ['shop'], ledger: ['ledger'],
   'farm-layout': ['farm-layout'], 'farm-works': ['farm-works'], 'farm-market': ['farm-market'],
   growth: ['growth', 'growth-research'], bonds: ['bonds'], tastes: ['tastes'], collection: ['collection'],
   'ui-kit': ['ui-kit', 'ui-kit-panels', 'ui-kit-glyphs'],

@@ -55,6 +55,12 @@ import { isDistrictArea, regionFromNetwork } from './lounge-areas.ts';
 import { villageFromNetwork, VILLAGE_PLACES } from './lounge-village-layout.ts';
 import { josa } from './lounge-text.ts';
 import { SHOP_AREAS, SHOP_INTERIORS, isShopArea, shopWorld } from './lounge-shop-interiors.ts';
+import { readMemories, talkDays } from './lounge-npc-talk.ts';
+
+/** More chapters than any resident has (a saved `ch` / `vis` above this is clipped). */
+const TALK_CHAPTERS_MAX = 8;
+/** A relation row made now: the story starts at its first chapter (old rows without `ch` are placed by points). */
+export const newNpcRelation = (): NpcRelation => ({ points: 0, ch: 0 });
 
 export { NPCS, NPC_IDS, NPC_INVITE_POINTS, NPC_DATE_POINTS, NPC_POINTS_MAX, isNpcId, npcLevel };
 export type { NpcId, NpcLove };
@@ -100,6 +106,14 @@ export type NpcRelation = {
   bdayGiftDay?: number;
   /** After a breakup: no new 꽃다발 (for anyone) before this KST day. */
   coolUntil?: number;
+  /** 주민과 진짜 대화 (lounge-npc-talk.ts): talks on different days (absent on old rows: points / 6). */
+  tc?: number;
+  /** Story chapters done (absent on old rows: placed by points). */
+  ch?: number;
+  /** Memory tags, oldest first (≤ 20). */
+  mem?: string[];
+  /** The chapter whose place-and-time visit is done. */
+  vis?: number;
 };
 export type NpcRelations = Partial<Record<NpcId, NpcRelation>>;
 export type NpcGuest = { npc: NpcId; until: number; /** My spouse, at home (not an invitation). */ spouse?: true };
@@ -143,6 +157,10 @@ export function readNpcRelations(value: unknown): NpcRelations | undefined {
       for (const field of ['since', 'weddingDay', 'homeGiftDay', 'bdayGiftDay'] as const) if (safe(v[field])) relation[field] = v[field];
     }
     if (safe(v.coolUntil)) relation.coolUntil = v.coolUntil;
+    if (safe(v.tc)) relation.tc = Math.min(100_000, v.tc);
+    for (const field of ['ch', 'vis'] as const) if (safe(v[field])) relation[field] = Math.min(TALK_CHAPTERS_MAX, v[field]);
+    const mem = readMemories(v.mem);
+    if (mem) relation.mem = mem;
     out[npc] = relation;
   }
   return Object.keys(out).length ? out : undefined;
@@ -330,16 +348,11 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
   if (action.op === 'overhear' || action.op === 'join') noteTieSeen(user, action.npc, action.with);
   if (action.op === 'overhear') return { reaction: undefined as GiftReaction | undefined, presents: [] as [string, number][] };
   const relations = (user.npcRelations ??= {});
-  const relation = (relations[action.npc] ??= { points: 0 });
+  const relation = (relations[action.npc] ??= newNpcRelation());
   const day = kstDay(now),
     // 나의 하루 (lounge-myday.ts): a talk, a gift, a date and a join a day are mine.
     pday = myDay(life, uid, now);
-  // 친화력 (food buff): talks and gifts count half again.
-  // Without dating, points stop at 8 hearts (older rows above it keep what they have).
-  const add = (n: number) => {
-    const cap = relation.love ? NPC_POINTS_MAX : Math.min(NPC_POINTS_MAX, Math.max(NPC_DATING_POINTS, relation.points));
-    relation.points = Math.max(0, Math.min(cap, relation.points + charmPoints(life, uid, now, n)));
-  };
+  const add = (n: number) => npcAddPoints(life, uid, relation, n, now);
   // An engaged or married resident belongs to one friend.
   const takenBy = () => Object.entries(life.ext ?? {}).find(([id, ext]) => id !== uid && ['engaged', 'married'].includes(ext?.npcRelations?.[action.npc]?.love ?? ''));
   const partner = npcPartnerOf(relations);
@@ -354,11 +367,12 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
     case 'talk':
       if (relation.talkedDay === pday) fail('오늘 이야기는 나눴어요. 내일 또 만나 주세요.');
       relation.talkedDay = pday;
+      relation.tc = talkDays(relation) + 1;
       add(NPC_TALK_POINTS);
       break;
     case 'join': {
       // Both of them: a little each, once a KST day each (assertNpcSocialContext checked they are together).
-      const other = (relations[action.with] ??= { points: 0 });
+      const other = (relations[action.with] ??= newNpcRelation());
       const fresh = [relation, other].filter((r) => r.joinedDay !== pday);
       if (!fresh.length) fail('오늘은 두 사람 이야기에 이미 끼어들었어요. 내일 또 함께해요.');
       for (const r of fresh) {
@@ -383,7 +397,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       break;
     }
     case 'invite': {
-      if (relation.points < NPC_INVITE_POINTS) fail('친밀도 20부터 내 방에 초대할 수 있어요.');
+      if (relation.points < NPC_INVITE_POINTS) fail('조금 더 친해지면 내 방에 초대할 수 있어요.');
       const guest = npcGuestOf(relations, now);
       if (guest && guest.npc !== action.npc) fail('지금 방문한 주민을 배웅한 뒤 초대해 주세요.');
       if (!guest) relation.invitedUntil = now + NPC_INVITE_MS;
@@ -391,7 +405,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
     }
     case 'date':
       if ((relation.invitedUntil ?? 0) <= now && !(relation.love === 'married' && spouseAtHome(action.npc, now))) fail('내 방에 초대한 주민과 시간을 보내 주세요.');
-      if (relation.points < NPC_DATE_POINTS) fail('친밀도 60부터 데이트를 제안할 수 있어요.');
+      if (relation.points < NPC_DATE_POINTS) fail('더 가까워지면 데이트를 제안할 수 있어요.');
       if (relation.datedDay === pday) fail('오늘 데이트는 함께했어요. 다음 약속은 내일 잡아요.');
       relation.datedDay = pday;
       relation.dates = Math.min(10000, (relation.dates ?? 0) + 1);
@@ -407,7 +421,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       if (cool > day) fail(`마음을 추스르는 중이에요. ${cool - day}일 뒤에 다시 꽃다발을 건넬 수 있어요.`);
       if (itemCount(life, uid, 'bouquet') < 1) fail('꽃다발이 없어요. 등불 잡화점에서 살 수 있어요.');
       if (takenBy()) fail(`${josa(name, '은/는')} 이미 다른 친구와 약속한 사이예요.`);
-      if (relation.points < NPC_DATING_POINTS) fail(`아직은 이른가 봐요. 8하트부터 꽃다발을 받아 줘요(지금 ${npcHeartsOf(relation.points)}하트).`);
+      if (relation.points < NPC_DATING_POINTS) fail('아직은 이른가 봐요. 조금 더 가까워지면 꽃다발을 받아 줄 거예요.');
       takeItem(life, uid, 'bouquet', 1);
       relation.love = 'dating';
       relation.since = day;
@@ -418,7 +432,7 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       if (relation.love !== 'dating') fail(relation.love ? '이미 약속한 사이예요.' : '먼저 꽃다발을 건네 연인이 되어 주세요.');
       if (itemCount(life, uid, 'pledge-ring') < 1) fail('청혼 반지가 없어요. 등불 잡화점에서 살 수 있어요.');
       if (takenBy()) fail(`${josa(name, '은/는')} 이미 다른 친구와 약속한 사이예요.`);
-      if (relation.points < NPC_PROPOSE_POINTS) fail(`아직은 이른가 봐요. 10하트가 되면 청혼해 주세요(지금 ${npcHeartsOf(relation.points)}하트).`);
+      if (relation.points < NPC_PROPOSE_POINTS) fail('아직은 이른가 봐요. 마음이 더 깊어지면 청혼해 주세요.');
       if (day - (relation.since ?? day) < NPC_DATING_DAYS) fail(`사귄 지 ${NPC_DATING_DAYS}일이 지나면 청혼할 수 있어요.`);
       takeItem(life, uid, 'pledge-ring', 1);
       relation.love = 'engaged';
@@ -471,16 +485,27 @@ export function npcSocialAction(life: LifeState, uid: string, action: NpcSocialA
       break;
     }
   }
-  // Level presents: once each, the first time the points reach the tier.
+  return { reaction, presents: npcLevelPresents(life, uid, action.npc, relation) };
+}
+/**
+ * Adds relation points: 친화력 (food buff) counts talks and gifts half again,
+ * and without dating they stop at 8 hearts (older rows above it keep theirs).
+ */
+export function npcAddPoints(life: LifeState, uid: string, relation: NpcRelation, n: number, now: number) {
+  const cap = relation.love ? NPC_POINTS_MAX : Math.min(NPC_POINTS_MAX, Math.max(NPC_DATING_POINTS, relation.points));
+  relation.points = Math.max(0, Math.min(cap, relation.points + charmPoints(life, uid, now, n)));
+}
+/** Level presents: once each, the first time the points reach the tier. */
+export function npcLevelPresents(life: LifeState, uid: string, npc: NpcId, relation: NpcRelation) {
   const presents: [string, number][] = [];
   for (const [points, bit, tier] of LEVEL_REWARDS)
     if (relation.points >= points && !((relation.rw ?? 0) & bit)) {
       relation.rw = (relation.rw ?? 0) | bit;
-      const [item, n] = NPCS[action.npc].rewards[tier];
+      const [item, n] = NPCS[npc].rewards[tier];
       addInv(life, uid, item, n);
       presents.push([item, n]);
     }
-  return { reaction, presents };
+  return presents;
 }
 /** The village news line of a breakup (연인 · 약혼 · 결혼): light, never mean. */
 export function breakupNewsText(love: NpcLove, me: string, name: string) {

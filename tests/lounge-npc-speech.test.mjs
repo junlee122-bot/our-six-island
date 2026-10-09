@@ -73,7 +73,7 @@ test('choices: talk, gift, notebook, today’s request, leave; done or unreachab
   const base = { talked: false, gifted: false, busy: false, blocked: '' };
   const open = npcTalkChoices(base);
   assert.deepEqual(open.map((c) => c.id), ['talk', 'gift', 'book', 'bye']);
-  assert.deepEqual(open.map((c) => c.label), [`이야기 나누기 · +${NPC_TALK_POINTS}`, '선물 주기', '주민 수첩', '그만 가기']);
+  assert.deepEqual(open.map((c) => c.label), ['이야기 나누기', '선물 주기', '주민 수첩', '그만 가기']);
   assert.ok(open.every((c) => !c.disabled));
 
   const withRequest = npcTalkChoices({ ...base, request: '당근 3개' });
@@ -83,7 +83,8 @@ test('choices: talk, gift, notebook, today’s request, leave; done or unreachab
 
   const done = npcTalkChoices({ ...base, talked: true, gifted: true });
   assert.deepEqual(done.map((c) => [c.label, c.disabled]), [
-    ['오늘 대화 완료', true],
+    // Later talks that day are a single line (no points, not counted again).
+    ['가볍게 한마디', false],
     ['오늘 선물 완료', true],
     ['주민 수첩', false],
     ['그만 가기', false],
@@ -92,7 +93,7 @@ test('choices: talk, gift, notebook, today’s request, leave; done or unreachab
   // Out of reach (the server would refuse): talk and gift locked, the rest open.
   const far = npcTalkChoices({ ...base, blocked: '나세라에게 조금 더 가까이 가서 말을 걸어 주세요.' });
   assert.deepEqual(far.map((c) => c.disabled), [true, true, false, false]);
-  assert.equal(far[0].label, `이야기 나누기 · +${NPC_TALK_POINTS}`);
+  assert.equal(far[0].label, '이야기 나누기');
 
   // While a talk or gift is on its way, neither can be sent again.
   const busy = npcTalkChoices({ ...base, busy: true });
@@ -100,6 +101,7 @@ test('choices: talk, gift, notebook, today’s request, leave; done or unreachab
 
   for (const list of [open, withRequest, done, far, busy]) {
     assert.equal(new Set(list.map((c) => c.id)).size, list.length);
+    for (const c of list) assert.ok(!/[+＋]\s*\d|\d+\s*(점|포인트)|친밀도\s*\d/.test(c.label), `no points on screen: ${c.label}`);
     assert.equal(list.at(-1).id, 'bye');
     for (const c of list) assert.ok(!EMOJI.test(c.label) && !LATIN.test(c.label), c.label);
   }

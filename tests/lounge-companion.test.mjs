@@ -396,7 +396,7 @@ test('companion line files: all residents, every key, short bubbles, places matc
     for (const k of COMPANION_REACTS) lines(set.react[k], 20, `react.${k}`);
     for (const k of COMPANION_MOMENTS) lines(set.moment[k], 60, `moment.${k}`);
     for (const k of ['accept', 'chat', 'part']) lines(set.love[k], 60, `love.${k}`);
-    assert.ok(n >= 40 && n <= 70, `${npc}: ${n} lines`);
+    assert.ok(n >= 40 && n <= 220, `${npc}: ${n} lines`);
     assert.ok(set.suggest.fish.every((l) => l.includes('{spot}')) && set.suggest.forage.every((l) => l.includes('{spot}')), npc);
   }
   // Companion views of an older world (no companions) are empty and nothing is written.
