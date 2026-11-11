@@ -112,6 +112,10 @@
 .l-farm-site-more .ui-more-body > section {
   flex: 1 1 100%;
 }
+.l-farm-site-build-actions {
+  display: grid;
+  gap: var(--sp-1);
+}
 .l-town-row > .ui-more {
   margin: 0;
 }

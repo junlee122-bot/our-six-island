@@ -10,6 +10,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
+import { needHave } from '../lounge-life-ui';
 import { NPCS, assertNpcSocialContext, birthdayGiftOf, npcGiftReaction, spouseGiftOf, type NpcId, type NpcRelations, type NpcSocialAction } from '../lounge-romance';
 import { npcSpouseOf } from '../lounge-npc-data';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
@@ -154,8 +155,8 @@ export function NpcTalkDialog({ npc, room, view, onClose, onBook, onBoard, shop 
   const companionWhy = companions
     ? companionWhyNot({ npc, points: row.points, mine, holder, now, world: { hill: flags.includes('district-hillside'), ranch: flags.includes('district-ranch'), foothill: flags.includes('district-foothill') } })
     : '';
-  const inventory = view.life?.me.inv ?? {};
-  const story = book && view.life ? nextChapter(book, row, (item) => inventory[item] ?? 0) : null;
+  const storyMe = view.life?.me;
+  const story = book && storyMe ? nextChapter(book, row, (item) => needHave(storyMe, { item })) : null;
   const choices = npcTalkChoices({
     story: story?.open && story.chapter ? { label: `이야기 ${story.n}장 · ${story.chapter.title}` } : null,
     talked: row.talked,

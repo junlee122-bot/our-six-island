@@ -47,11 +47,13 @@ import { CropStageArt, ItemIcon } from './ItemIcon';
 import type { Notify } from './Toast';
 import { useServerClock } from './use-server-clock';
 import './farm-works.css';
+import { TrackGoalButton } from './TrackGoalButton';
 
 export type FarmPage = 'ledger' | 'layout' | 'works' | 'market';
 type Life = LifeView;
 type Run = (action: LifeAction, done: string, chime?: 'plant' | 'water' | 'harvest') => Promise<boolean>;
 type StockRow = { id: string; q: Quality; n: number };
+type GoalTools = { room: CloudRoom; view: CloudRoomView; notify: Notify };
 
 /** Field rows as the field lies on 우리 농장: north (the house) on top. */
 const tileName = (tile: number) => `${tileRC(tile).r + 1}줄 ${tileRC(tile).c + 1}칸`;
@@ -118,7 +120,7 @@ function RecipeLine({ recipe }: { recipe: Recipe }) {
     </small>
   );
 }
-function BuildList({ life, items, run, busy, balance }: { life: Life; items: readonly { id: string; name: string; note: string; recipe: Recipe }[]; run: Run; busy: boolean; balance: number }) {
+function BuildList({ life, items, run, busy, balance, tracker }: { life: Life; items: readonly { id: string; name: string; note: string; recipe: Recipe }[]; run: Run; busy: boolean; balance: number; tracker: GoalTools }) {
   return (
     <ul className="l-fw-build">
       {items.map((it) => {
@@ -135,7 +137,7 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
               <small>{it.note}</small>
               <RecipeLine recipe={it.recipe} />
             </span>
-            <GameButton
+            <span className="l-fw-build-actions"><GameButton
               size="s"
               disabled={!!why || busy}
               disabledReason={why ?? undefined}
@@ -144,6 +146,8 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
             >
               만들기
             </GameButton>
+            <TrackGoalButton {...tracker} kind="farm" id={it.id} />
+            </span>
           </li>
         );
       })}
@@ -155,7 +159,7 @@ function BuildList({ life, items, run, busy, balance }: { life: Life; items: rea
 /** A place on the layout page: a field tile (≥ 0) or a front-yard spot (−1 − spot). */
 const spotSel = (spot: number) => -1 - spot;
 const spotName = (spot: number) => `${yardSpots()[spot].r < 0 ? '집 쪽' : '길 쪽'} 앞마당 ${spot + 1}`;
-function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; busy: boolean; balance: number; now: number }) {
+function LayoutPage({ life, run, busy, balance, now, tracker }: { life: Life; run: Run; busy: boolean; balance: number; now: number; tracker: GoalTools }) {
   const farm = life.me.farm,
     size = life.me.plots,
     open = (tile: number) => tileOpen(size, tile),
@@ -386,6 +390,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
         </Panel>
         <Panel variant="note" title="설비 만들기" className="l-fw-card">
           <BuildList
+            tracker={tracker}
             life={life}
             run={run}
             busy={busy}
@@ -422,7 +427,7 @@ function LayoutPage({ life, run, busy, balance, now }: { life: Life; run: Run; b
 }
 
 // ---------------------------------------------------------------- 가공
-function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; busy: boolean; balance: number; now: number }) {
+function WorksPage({ life, run, busy, balance, now, tracker }: { life: Life; run: Run; busy: boolean; balance: number; now: number; tracker: GoalTools }) {
   const machines = life.farmx?.machines ?? [],
     ownedMachines = MACHINES.filter((m) => (life.me.inv[m.id] ?? 0) > 0),
     goods = life.farmx?.goods ?? [],
@@ -565,6 +570,7 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
                       </small>
                     </span>
                     <span className="l-fw-actions">
+                      <TrackGoalButton {...tracker} kind="good" id={g.id} />
                       <GameButton size="s" disabled={busy} onClick={() => void run({ kind: 'sellGoods', item: g.id, q: g.q, n: 1 }, `${stockName(g.id)} 하나를 팔았어요.`)}>
                         하나 팔기
                       </GameButton>
@@ -583,7 +589,7 @@ function WorksPage({ life, run, busy, balance, now }: { life: Life; run: Run; bu
       </section>
       <section className="l-fw-side">
         <Panel variant="note" title="기계 만들기" className="l-fw-card">
-          <BuildList life={life} run={run} busy={busy} balance={balance} items={MACHINES} />
+          <BuildList life={life} run={run} busy={busy} balance={balance} items={MACHINES} tracker={tracker} />
         </Panel>
       </section>
     </div>
@@ -777,7 +783,7 @@ export function FarmWorks({ page, room, view, notify }: { page: Exclude<FarmPage
   if (!life?.farmx)
     return <EmptyState glyph="sprout" title="마을에 연결되면 농장 설비를 볼 수 있어요" hint="잠시 뒤에 다시 열어 주세요." />;
   const balance = view.wallet.balance;
-  const props = { life, run, busy, balance, now };
+  const props = { life, run, busy, balance, now, tracker: { room, view, notify } };
   return (
     <div className="l-fw" aria-busy={busy} data-testid={`farm-works-${page}`}>
       {page === 'layout' ? <LayoutPage {...props} /> : page === 'works' ? <WorksPage {...props} /> : <MarketPage {...props} />}

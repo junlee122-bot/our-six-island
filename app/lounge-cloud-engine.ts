@@ -678,7 +678,7 @@ export function cloudTransition(
         // Farms, statuses, guestbooks and mail are visible to friends. Watering
         // does not change a stage right away, so friends pick it up on their
         // next read instead of a broadcast; batch plant/water is one hint.
-        if (!['sell', 'buy', 'pick', 'readMail', 'readGuestbook', 'water'].includes(command.action.kind))
+        if (!['sell', 'buy', 'pick', 'readMail', 'readGuestbook', 'water', 'craftTarget'].includes(command.action.kind))
           for (const c of Object.keys(g.rooms)) notifications.add(c);
         if (command.action.kind === 'room') {
           // Closing my room moves visitors out in this same transition.

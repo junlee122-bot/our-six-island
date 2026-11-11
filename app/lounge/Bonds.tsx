@@ -2,7 +2,7 @@
 // Friendship (LIFE-B): friend profiles with hearts per pair, gift tastes once
 // known, today's requests from offline friends (talk → request card →
 // deliver), the memories album (L) and "어제 마을 소식" (the daily digest).
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   CalendarClock,
   CalendarHeart,
@@ -522,7 +522,7 @@ const DIGEST_ICON: Record<string, IconComponent> = {
   tastes: Gift,
 };
 /** "어제 마을 소식": yesterday's village lines, shown once a day on the first login. */
-export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: () => void }) {
+export function DigestCard({ view, onClose, children }: { view: CloudRoomView; onClose: () => void; children?: ReactNode }) {
   const life = view.life;
   const digest = life?.digest;
   const d = digest ? new Date(digest.date + 'T00:00:00Z') : null;
@@ -553,6 +553,7 @@ export function DigestCard({ view, onClose }: { view: CloudRoomView; onClose: ()
           })}
         </ul>
       )}
+      {children}
       {residents.length > 0 && (
         <section className="l-digest-tomorrow" aria-label="주민 소식" data-testid="digest-residents">
           <h3>

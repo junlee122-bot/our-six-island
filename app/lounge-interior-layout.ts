@@ -54,6 +54,8 @@ export const INTERIOR_ROOM = {
  * somewhere in the hall / casino (a seat, beside a table after a game).
  */
 export const INTERIOR_PLACE_EVENT = 'bumtadew:interior-place';
+/** A navigation request follows the normal walking path; it never sets position. */
+export const INTERIOR_GO_EVENT = 'bumtadew:interior-go';
 
 /** Just inside the door on the left wall, where I appear after walking in. */
 export const INTERIOR_DOOR: ScenePoint = { x: 17, y: 82 };

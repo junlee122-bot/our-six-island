@@ -6,6 +6,8 @@
 import { useRef, useState } from 'react';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
 import { itemName } from '../lounge-life-plus';
+import { needHave } from '../lounge-life-ui';
+import type { LifeView } from '../lounge-life';
 import { NPCS, NPC_IDS, NPC_INVITE_POINTS, NPC_DATE_POINTS, NPC_DATING_POINTS, NPC_PROPOSE_POINTS, NPC_DATING_DAYS, NPC_BREAKUP, NPC_DIVORCE, assertNpcSocialContext, npcGiftReaction, npcReply, spouseGiftOf, type NpcId, type NpcLove, type NpcSocialAction, type NpcRelations, type NpcRelationView } from '../lounge-romance';
 import { fillLoveLine, npcLoveLine, npcWeddingLines } from '../lounge-npc-love';
 import { npcLoveStatus, npcLoveTalk } from '../lounge-npc-speech';
@@ -139,7 +141,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
           <p>{info.intro}</p>
           {loveStatus && <p className="l-npc-love" data-testid="npc-love-status">{loveStatus}</p>}
           <NpcTiesSection npc={selected} now={now} me={myName} seen={seenTies} points={(id) => byId[id]?.points ?? 0} onPick={setSelected} />
-          <NpcStory npc={selected} row={row} inv={view.life?.me.inv ?? {}} />
+          <NpcStory npc={selected} row={row} me={view.life?.me} />
           <small>좋아하는 것: {info.likesText} · 싫어하는 것: {info.dislikesText}</small>
           <small>친해지면 내 방에 초대하고, 더 가까워지면 데이트와 꽃다발을 건넬 수 있어요.{row.lastGift ? ` 지난 선물: ${itemName(row.lastGift)}` : ''}</small>
           {shown.length > 0 && <blockquote aria-live="polite">{shown.map((line, i) => <span key={i}>{line}</span>)}</blockquote>}
@@ -203,7 +205,7 @@ function storyShort(npc: NpcId, r: { points: number; ch?: number; level?: string
  * 주민과 진짜 대화: "이야기 2장 · 뒷산의 노을", what opens the next chapter,
  * and the newest memories they keep of me. Hearts only under 자세히.
  */
-function NpcStory({ npc, row, inv }: { npc: NpcId; row: NpcRelationView | { npc: NpcId; points: number; level: string }; inv: Record<string, number> }) {
+function NpcStory({ npc, row, me }: { npc: NpcId; row: NpcRelationView | { npc: NpcId; points: number; level: string }; me: LifeView['me'] | undefined }) {
   const book = npcTalkBook(npc);
   const hearts = (
     <details className="l-npc-details">
@@ -215,7 +217,7 @@ function NpcStory({ npc, row, inv }: { npc: NpcId; row: NpcRelationView | { npc:
   );
   if (!book) return <section className="l-npc-story" data-testid="npc-story">{hearts}</section>;
   const label = chapterLabel(book, row);
-  const next = nextChapter(book, row, (item) => inv[item] ?? 0);
+  const next = nextChapter(book, row, (item) => me ? needHave(me, { item }) : 0);
   const memories = memoryLines(book, (row as { mem?: string[] }).mem, 3);
   return (
     <section className="l-npc-story" aria-label={`${josa(NPCS[npc].name, '과/와')}의 이야기`} data-testid="npc-story">

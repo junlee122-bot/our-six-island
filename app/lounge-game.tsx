@@ -82,6 +82,9 @@ import { timeOfDay } from './lounge-calendar';
 import { farmField, farmHomePlace, farmHouse, houseOutside } from './lounge-farm-layout';
 import type { FarmTouch } from './lounge-farm-view';
 import type { FarmPage } from './lounge/FarmWorks';
+import type { GrowthTab } from './lounge/GrowthPanel';
+import type { ReturnBoardDestination, ReturnBoardOpen } from './lounge-return-board';
+import { returnBoardNavigation } from './lounge-return-navigation';
 import type { SiteTarget } from './lounge/FarmSitePanel';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
@@ -118,7 +121,7 @@ import {
   remember,
   useSettings,
 } from './lounge-settings';
-import { INTERIOR_PLACE_EVENT, interiorArrival } from './lounge-interior-layout';
+import { INTERIOR_GO_EVENT, INTERIOR_PLACE_EVENT, interiorArrival } from './lounge-interior-layout';
 import { Modal, ConfirmModal } from './lounge/Modal';
 import { Toast, useBanners } from './lounge/Toast';
 import { dailyOf } from './lounge/WalletModal';
@@ -228,6 +231,7 @@ const BirthdayCakePanel = lazyRetry(() => import('./lounge/BirthdayCake').then((
 const FestivalPanel = lazyRetry(() => import('./lounge/Festival').then((m) => ({ default: m.FestivalPanel })));
 // 성장 P1: the growth journal (T), the blacksmith and the level-up banner.
 const GrowthPanel = lazyRetry(() => import('./lounge/GrowthPanel').then((m) => ({ default: m.GrowthPanel })));
+const ReturnBoard = lazyRetry(() => import('./lounge/ReturnBoard').then((m) => ({ default: m.ReturnBoard })));
 const ForgePanel = lazyRetry(() => import('./lounge/Forge').then((m) => ({ default: m.ForgePanel })));
 // 부동산 · 가구점 counters and the shop upgrade board (lounge/ShopCounter.tsx).
 const loadCounter = () => import('./lounge/ShopCounter');
@@ -549,6 +553,7 @@ function AccountLounge({
     [wardrobeFrom, setWardrobeFrom] = useState<'village' | 'bedroom' | 'salon'>('village'),
     // 성장 수첩: the skill a level-up banner opens it on.
     [growthSkill, setGrowthSkill] = useState<SkillId | undefined>(undefined),
+    [growthTab, setGrowthTab] = useState<GrowthTab>('skills'),
     [modal, setModal] = useState<ModalName | null>(null),
     // Talking to a resident where they stand (hub / 시장 거리), and the notebook's first page.
     [residentTalk, setResidentTalk] = useState<NpcId | null>(null),
@@ -1511,6 +1516,61 @@ function AccountLounge({
     if (tabRef.current === 'village' && visiting === null) go();
     else enter('village', undefined, undefined, () => setTimeout(go, 600));
   };
+  const guideReturnItem = (target: ReturnBoardDestination) => {
+    if (fishing || inGame) {
+      notify('지금 하던 낚시나 게임을 마친 뒤 길을 안내할게요.', 'info');
+      return;
+    }
+    const life = room.snapshot().life;
+    if (!life) return;
+    setModal(null);
+    setTownPlace(null);
+    setSiteTarget(null);
+    setResidentTalk(null);
+    if (target.kind === 'bed') {
+      const go = () => {
+        if (settings.simpleGraphics) { setModal('dayEnd'); return; }
+        const navigation = returnBoardNavigation(target, room.snapshot().life ?? life, save.bedroom, Date.now() + view.clockOffset);
+        if (navigation.kind !== 'bed') {
+          if (navigation.kind === 'unavailable') notify(navigation.message, 'info');
+          return;
+        }
+        window.dispatchEvent(new CustomEvent('bumtadew:room-go', { detail: navigation.point }));
+        notify(`${navigation.label}으로 걸어가요. 도착하면 E로 침대를 사용해요.`, 'info');
+      };
+      if (tabRef.current === 'bedroom' && visiting === null) go();
+      else enter('bedroom', farmHomePlace(save.actor) ?? undefined, undefined, () => setTimeout(go, 900));
+      return;
+    }
+    const navigation = returnBoardNavigation(target, life, save.bedroom, Date.now() + view.clockOffset);
+    if (navigation.kind === 'unavailable') { notify(navigation.message, 'info'); return; }
+    if (navigation.kind === 'bed') return;
+    if (navigation.kind === 'interior') {
+      const go = () => window.dispatchEvent(new CustomEvent(INTERIOR_GO_EVENT, { detail: navigation.point }));
+      if (tabRef.current === navigation.area && visiting === null) setTimeout(go, 80);
+      else if (isShopArea(navigation.area)) { enterShop(navigation.area); setTimeout(go, 1_000); }
+      else enter(navigation.area, undefined, undefined, () => setTimeout(go, 900));
+    } else {
+      const walk = () => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: navigation.point }));
+      const into = () => {
+        if (navigation.area === 'village') {
+          if (outdoorRef.current) { outdoorApi.travel('village'); setTimeout(walk, 900); }
+          else setTimeout(walk, 80);
+        } else if (outdoorRef.current?.area === navigation.area) setTimeout(walk, 80);
+        else { outdoorApi.toDistrict(navigation.area); setTimeout(walk, 900); }
+      };
+      if (tabRef.current === 'village' && visiting === null) into();
+      else enter('village', undefined, undefined, () => setTimeout(into, 600));
+    }
+    notify(`${navigation.label} 쪽으로 길을 안내해요. 도착하면 E로 살펴보세요.`, 'info');
+  };
+  const openReturnItem = (target: ReturnBoardOpen) => {
+    if (target.kind === 'farm') { setFarmPage(target.page); setModal('farm'); }
+    else if (target.kind === 'site') { setModal(null); setSiteTarget({ kind: 'site', id: target.site }); }
+    else if (target.kind === 'commonField') { setModal(null); setSiteTarget({ kind: 'common' }); }
+    else if (target.kind === 'npc') { setNpcBookAt(target.npc); setModal('npc'); }
+    else guideReturnItem({ kind: 'bed', actor: save.actor });
+  };
   const lifeEvents = useLifeEvents({
     view,
     room,
@@ -1880,6 +1940,7 @@ function AccountLounge({
             return true;
           case 'growth':
             setGrowthSkill(undefined);
+            setGrowthTab('skills');
             setModal((m) => (m === 'growth' ? null : 'growth'));
             return true;
           case 'mood':
@@ -2474,6 +2535,7 @@ function AccountLounge({
             paused={inGame || !!fishing}
             onOpen={(skill) => {
               setGrowthSkill(skill);
+              setGrowthTab('skills');
               setModal('growth');
             }}
           />
@@ -2970,6 +3032,7 @@ function AccountLounge({
                 { id: 'growth', label: '성장 수첩', glyph: 'spark', kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
                 { id: 'mood', label: '기분', glyph: 'sticker', kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
                 { id: 'digest', label: '어제 마을 소식', glyph: 'news', onClick: () => setModal('digest') },
+                { id: 'today', label: '돌아온 오늘 · 할 일', glyph: 'checklist', onClick: () => setModal('digest') },
                 { id: 'memories', label: '추억 앨범', glyph: 'camera', onClick: () => setModal('memories') },
               ],
             },
@@ -3397,7 +3460,9 @@ function AccountLounge({
       {modal === 'memories' && (
         <MemoriesAlbum view={view} selfActor={save.actor} onClose={() => setModal(null)} />
       )}
-      {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)} />}
+      {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)}>
+        <ReturnBoard life={view.life} actor={save.actor} clockOffset={view.clockOffset} onOpen={openReturnItem} onNavigate={settings.simpleGraphics ? undefined : guideReturnItem} onTargets={() => { setGrowthTab('targets'); setGrowthSkill(undefined); setModal('growth'); }} />
+      </DigestCard>}
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />
       )}
@@ -3412,6 +3477,7 @@ function AccountLounge({
           notify={notify}
           simple={settings.simpleGraphics}
           initialSkill={growthSkill}
+          initialTab={growthTab}
           onWalk={settings.simpleGraphics ? undefined : walkTo}
           onClose={() => setModal(null)}
         />

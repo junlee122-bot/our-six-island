@@ -14,6 +14,7 @@ import { isActor } from './lounge-roster.ts';
 import { GROW_WET, legacyWet, soilGrowth, soilReadyAt, soilWetBy, tilledMask } from './lounge-farm-soil.ts';
 import { cleanText, hasUnsafeText, textLength } from './text-clean.ts';
 import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
+import { craftTargetKey, readCraftTargets, type CraftTarget } from './lounge-craft-tracker.ts';
 // Cycle-safe: lounge-life-plus.ts imports this module back, so neither module
 // may use the other's bindings at the top level (only inside functions).
 import {
@@ -640,6 +641,8 @@ export type LifeAction =
   | { kind: 'room'; access?: RoomAccess }
   /** The owner looked at their guestbook (clears the unread badge). */
   | { kind: 'readGuestbook' }
+  /** Personal goals: update the server's current list atomically, without consuming anything. */
+  | { kind: 'craftTarget'; op: 'pin' | 'remove' | 'quantity'; target: CraftTarget }
   | PlusAction
   /** Friend NPC talk, my NPC lines, festivals, 마을 적응하기 (lounge-life-social.ts). */
   | SocialAction
@@ -680,6 +683,7 @@ export const LIFE_ACTION_KINDS = [
   'status',
   'room',
   'readGuestbook',
+  'craftTarget',
   ...PLUS_ACTION_KINDS,
   ...SOCIAL_ACTION_KINDS,
   ...GROWTH_ACTION_KINDS,
@@ -1167,6 +1171,48 @@ export function cloneLife(life: LifeState): LifeState {
         : value;
   return out as LifeState;
 }
+/** A preference update must not settle farming, award XP or spend materials. */
+function craftTargetAction(
+  original: LifeState,
+  member: { id: string; actor: number },
+  action: Extract<LifeAction, { kind: 'craftTarget' }>,
+): LifeState {
+  const invalid = '제작 목표를 확인한 뒤 다시 골라 주세요.';
+  if (
+    !UUID.test(member.id) || !actorValid(member.actor) ||
+    Object.keys(action).some((key) => !['kind', 'op', 'target'].includes(key)) ||
+    !['pin', 'remove', 'quantity'].includes(action.op) ||
+    !action.target || typeof action.target !== 'object' || Array.isArray(action.target) ||
+    Object.keys(action.target).length !== 3 ||
+    Object.keys(action.target).some((key) => !['kind', 'id', 'quantity'].includes(key))
+  ) fail(invalid);
+  // Save recovery is deliberately tolerant. A new request must match its
+  // normalized form exactly, so malformed quantities/ids are never clamped.
+  const [target] = readCraftTargets([action.target]);
+  if (!target || target.kind !== action.target.kind || target.id !== action.target.id || target.quantity !== action.target.quantity) fail(invalid);
+  const base = ensureLifeMember(original, member.id, member.actor);
+  const current = readCraftTargets(base.ext?.[member.id]?.craftTargets);
+  const key = craftTargetKey(target), index = current.findIndex((x) => craftTargetKey(x) === key);
+  let targets: CraftTarget[];
+  if (action.op === 'pin') {
+    if (index >= 0) return base;
+    if (current.length >= 3) fail('제작 목표는 세 개까지 고정할 수 있어요. 먼저 목표 하나를 해제해 주세요.');
+    targets = [...current, target];
+  } else {
+    // A delayed quantity request cannot recreate a goal another device removed.
+    if (index < 0) return base;
+    if (action.op === 'remove') targets = current.filter((_, i) => i !== index);
+    else {
+      if (current[index].quantity === target.quantity) return base;
+      targets = current.map((x, i) => i === index ? target : x);
+    }
+  }
+  const life = cloneLife(base);
+  const user = ((life.ext ??= {})[member.id] ??= {});
+  if (targets.length) user.craftTargets = targets;
+  else delete user.craftTargets;
+  return life;
+}
 /**
  * Applies one life action for `member`. Returns new state and ledger (inputs
  * are not mutated). Throws LifeError with a Korean message on rejection.
@@ -1178,6 +1224,8 @@ export function lifeAction(
   action: LifeAction,
   now: number,
 ): { life: LifeState; ledger: LoungeLedger } {
+  if (isLifeAction(action) && action.kind === 'craftTarget')
+    return { life: craftTargetAction(original, member, action), ledger };
   // Closing a finished/already-cancelled cast is an idempotent acknowledgement,
   // not a new activity that changes mood, growth or daily state.
   if (isLifeAction(action) && action.kind === 'cancelCast' && original.actors[member.id] === member.actor && !original.ext?.[member.id]?.pending) {

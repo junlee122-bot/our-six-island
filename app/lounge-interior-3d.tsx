@@ -74,6 +74,7 @@ import {
   INTERIOR_ROOM,
   interiorArrival,
   INTERIOR_PLACE_EVENT,
+  INTERIOR_GO_EVENT,
   nearDoor,
   TAVERN_BAR_FRONT,
   interiorAction,
@@ -998,6 +999,12 @@ export function Interior3D({
       showMarker(null);
     };
     window.addEventListener(INTERIOR_PLACE_EVENT, place);
+    const guide = (event: Event) => {
+      const point = (event as CustomEvent<ScenePoint>).detail;
+      if (l.locked || l.paused || !point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+      walkToRef.current(point);
+    };
+    window.addEventListener(INTERIOR_GO_EVENT, guide);
 
     const contextLost = (event: Event) => {
       event.preventDefault();
@@ -1397,6 +1404,7 @@ export function Interior3D({
       window.removeEventListener('blur', release);
       window.removeEventListener('bumtadew:pause', pause);
       window.removeEventListener(INTERIOR_PLACE_EVENT, place);
+      window.removeEventListener(INTERIOR_GO_EVENT, guide);
       document.removeEventListener('visibilitychange', visibilityChanged);
       dropFigure(mine);
       for (const f of others.values()) dropFigure(f);

@@ -53,6 +53,7 @@ import './town.css';
 import './farm-sites.css';
 import { FarmBarn } from './FarmBarn';
 import { SKILL_INFO } from '../lounge-growth-data';
+import { TrackGoalButton } from './TrackGoalButton';
 
 export type SiteTarget = { kind: 'site'; id: string } | { kind: 'common' } | { kind: 'store' };
 type Props = { room: CloudRoom; view: CloudRoomView; notify: Notify; target: SiteTarget; onClose: () => void };
@@ -162,10 +163,10 @@ export function FarmSitePanel({ room, view, notify, target, onClose }: Props) {
   );
 }
 
-type Ctx = { view: CloudRoomView; act: Run; busy: boolean; me: number; sites: FarmSitesView | undefined };
+type Ctx = { room: CloudRoom; view: CloudRoomView; notify: Notify; act: Run; busy: boolean; me: number; sites: FarmSitesView | undefined };
 
 /** What can stand on an empty site: unlock, cost, and the button that builds or starts the funding. */
-function BuildList({ view, act, busy, me, id }: Ctx & { id: string }) {
+function BuildList({ room, view, notify, act, busy, me, id }: Ctx & { id: string }) {
   const life = view.life!;
   const owner = siteActor(id);
   if (owner !== null && owner !== me) return <EmptyState glyph="house" title={`${ACTORS[owner] ?? '친구'}의 부지예요`} hint="친구가 직접 시설을 지을 수 있어요." />;
@@ -199,7 +200,7 @@ function BuildList({ view, act, busy, me, id }: Ctx & { id: string }) {
           {def.upgrades?.length ? ` · ${maxTier(def)}단계까지` : ''}
         </small>
       </div>
-      <GameButton
+      <span className="l-farm-site-build-actions"><GameButton
         size="s"
         variant={lock || short ? undefined : 'primary'}
         disabled={busy || !!lock || !!short}
@@ -212,6 +213,8 @@ function BuildList({ view, act, busy, me, id }: Ctx & { id: string }) {
       >
         {lock ?? short ?? (def.owner === 'personal' ? '짓기' : '공사 시작')}
       </GameButton>
+      {def.live && <TrackGoalButton room={room} view={view} notify={notify} kind="facility" id={def.id} />}
+      </span>
     </li>
   );
   // D10: what can be built now stays in view; locked ones fold under 더 보기.

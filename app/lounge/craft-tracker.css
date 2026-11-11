@@ -1,0 +1,32 @@
+.l-craft-tracker { min-width: 0; color: var(--text); }
+.l-craft-heading h3 { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-2); font-size: var(--fs-title-s); }
+.l-craft-heading p, .l-craft-note { color: var(--text-soft); font-size: var(--fs-body-s); line-height: 1.6; }
+.l-craft-heading small { font-size: var(--fs-body-s); }
+.l-craft-add, .l-craft-quantity { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--sp-2); margin-block: var(--sp-3); }
+.l-craft-add label, .l-craft-quantity label { display: grid; gap: var(--sp-1); font-size: var(--fs-body-s); }
+.l-craft-add label:first-child { flex: 1 1 250px; min-width: 0; }
+.l-craft-add select { width: 100%; min-width: 0; max-width: 100%; }
+.l-craft-add input, .l-craft-quantity input { width: 110px; }
+.l-craft-add input, .l-craft-add select, .l-craft-quantity input { min-height: 44px; font: inherit; font-size: var(--fs-body); color: var(--text); background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--sp-2); }
+.l-craft-totals, .l-craft-expand { margin-block: var(--sp-3); }
+.l-craft-totals > summary, .l-craft-expand > summary { padding-block: var(--sp-2); font-weight: 600; line-height: 1.5; }
+.l-craft-goals { display: grid; gap: var(--sp-3); }
+.l-craft-goal { min-width: 0; }
+.l-craft-goal-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--sp-2); }
+.l-craft-goal-head p { margin: var(--sp-1) 0; font-size: var(--fs-body-s); line-height: 1.6; }
+.l-craft-table-wrap { max-width: 100%; overflow-x: auto; }
+.l-craft-table { width: 100%; border-collapse: collapse; font-size: var(--fs-body-s); line-height: 1.5; }
+.l-craft-table th, .l-craft-table td { padding: var(--sp-2); text-align: right; border-bottom: 1px solid var(--line); vertical-align: top; }
+.l-craft-table th:first-child { text-align: left; overflow-wrap: anywhere; }
+.l-craft-table td { font-variant-numeric: tabular-nums; }
+.l-craft-table small { display: block; font-size: var(--fs-cap); color: var(--text-soft); }
+.l-craft-tree { padding-left: var(--sp-4); font-size: var(--fs-body-s); line-height: 1.7; }
+.l-craft-tree small { display: block; color: var(--text-soft); font-size: var(--fs-cap); }
+.l-craft-production { display: grid; list-style: none; gap: var(--sp-2); padding: 0; font-size: var(--fs-body-s); }
+.l-craft-production li { display: flex; align-items: flex-start; gap: var(--sp-2); line-height: 1.5; }
+.l-craft-production svg { flex: none; margin-top: var(--sp-1); }
+@media (max-width: 640px) {
+  .l-craft-table th, .l-craft-table td { padding-inline: var(--sp-1); }
+  .l-craft-add { align-items: stretch; }
+  .l-craft-add label:first-child { flex-basis: 100%; }
+}

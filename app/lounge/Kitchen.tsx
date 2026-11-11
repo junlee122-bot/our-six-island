@@ -16,6 +16,8 @@ import { useLifeAction } from './LifePanels';
 import { useNow } from './use-now';
 import './life-plus.css';
 import { TasteDex } from './ShopGoods';
+import { TrackGoalButton } from './TrackGoalButton';
+import { craftOutputCount } from '../lounge-craft-tracker';
 
 type Mode = 'cook' | 'craft';
 const madeName = (r: RecipeDef) => FURNITURE_BY_REF[r.makes]?.name ?? r.name;
@@ -177,6 +179,7 @@ export function KitchenPanel({
               );
             })}
           </ul>
+          <TrackGoalButton room={room} view={view} notify={notify} kind={mode} id={recipe.id} quantity={craftOutputCount(life, mode, recipe.id, count)} />
           {locked ? (
             <p className="l-why">
               <Lock size={13} aria-hidden="true" /> {VILLAGE_FLAGS[recipe.flag!] ?? '마을 복원'}이 필요해요. 마을 게시판의 꾸러미를 채워 주세요.

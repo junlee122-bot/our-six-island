@@ -8,6 +8,7 @@ import { ACTOR_COUNT, ACTOR_IDS, isActor, isActorKey } from './lounge-roster.ts'
 // Cycle-safe: lounge-life.ts imports this module and this module imports it
 // back, so neither may use the other's bindings at the top level.
 import { myDay } from './lounge-myday.ts';
+import { readCraftTargets, type CraftTarget } from './lounge-craft-tracker.ts';
 import { cleanText, clipText } from './text-clean.ts';
 import { readNpcRelations, npcRelationsView, npcGuestOf, npcSocialAction, npcSpouses, type NpcId, type NpcRelations, type NpcRelationView, type NpcGuest, type NpcSocialAction } from './lounge-romance.ts';
 import { npcBoardView, npcRequestAction, readNpcBoard, type NpcBoardState, type NpcBoardView, type NpcRequestAction } from './lounge-npc-requests.ts';
@@ -275,6 +276,8 @@ export type FishLast = {
   reason?: 'early' | 'late' | 'timing';
 };
 export type UserExt = {
+  /** Personal crafting goals, kept with this account across devices. */
+  craftTargets?: CraftTarget[];
   /** Refs whose room placements must obey current ownership after a theft. */
   furnStrict?: Record<string, true>;
   npcRelations?: NpcRelations;
@@ -597,6 +600,8 @@ function readUserExt(v: unknown): UserExt | undefined {
   if (npcRelations) out.npcRelations = npcRelations;
   const npcTiesSeen = readTiesSeen(x.npcTiesSeen);
   if (npcTiesSeen) out.npcTiesSeen = npcTiesSeen;
+  const craftTargets = readCraftTargets(x.craftTargets);
+  if (craftTargets.length) out.craftTargets = craftTargets;
   if (x.npcTiesImported === true) out.npcTiesImported = true;
   const npcBoard = readNpcBoard(x.npcBoard);
   if (npcBoard) out.npcBoard = npcBoard;
@@ -2284,6 +2289,8 @@ export function recordTables(
 
 // ---------------------------------------------------------------- views
 export type PlusMe = {
+  /** Only my pinned crafting goals; older worlds have none. */
+  craftTargets: CraftTarget[];
   npcRelations: NpcRelationView[];
   /** 주민 관계도: the pairs I overheard or joined (pair keys). */
   npcTiesSeen: string[];
@@ -2395,6 +2402,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
   const pending = raw.pending && now <= raw.pending.expiresAt ? raw.pending : null;
   const yesterday = life.news?.find((d) => d.day === day - 1);
   const me: PlusMe = {
+    craftTargets: readCraftTargets(raw.craftTargets),
     npcRelations: npcRelationsView(raw.npcRelations, now, myDay(life, uid, now)),
     npcTiesSeen: [...(raw.npcTiesSeen ?? [])],
     npcBoard: npcBoardView(life, uid, now),

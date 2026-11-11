@@ -46,14 +46,16 @@ import { ResearchBoard } from './GrowthResearch';
 import { SkillTreeBoard, canPickTalent, type TreeSkill } from './GrowthSkillTree';
 import { TALENT_BY_ID } from '../lounge-growth-talents';
 import { SKILL_GLYPH, TOOL_GLYPH, profGlyph } from './growth-glyphs';
+import { CraftTracker } from './CraftTracker';
 import './farm-fish.css';
 import './growth.css';
 
-export type GrowthTab = 'skills' | 'tools' | 'research';
+export type GrowthTab = 'skills' | 'tools' | 'research' | 'targets';
 const TABS: { id: GrowthTab; label: string; glyph: GlyphName }[] = [
   { id: 'skills', label: '기술', glyph: 'spark' },
   { id: 'tools', label: '도구', glyph: 'anvil' },
   { id: 'research', label: '마을 개척', glyph: 'sign' },
+  { id: 'targets', label: '제작 목표', glyph: 'bookmark' },
 ];
 const NODE_GLYPH: Record<NodeKind, GlyphName> = { bush: 'bush', log: 'log', rock: 'rock', tree: 'tree', stump: 'log', shroom: 'mushroom' };
 
@@ -214,6 +216,7 @@ export function GrowthPanel({
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     const target = e.target as HTMLElement;
+    if (target.closest('input, select, textarea, [contenteditable="true"]')) return;
     const onRoot = target === e.currentTarget;
     if (
       !onRoot &&
@@ -221,15 +224,15 @@ export function GrowthPanel({
       (e.key === 'Enter' || e.key === ' ')
     )
       return;
-    if (target.closest('.l-research') || target.closest('.l-tree')) {
-      if (/^[123]$/.test(e.key)) {
+    if (target.closest('.l-research') || target.closest('.l-tree') || target.closest('.l-craft-tracker')) {
+      if (/^[1234]$/.test(e.key)) {
         setTab(TABS[Number(e.key) - 1].id);
         e.preventDefault();
       }
       return;
     }
     let handled = true;
-    if (/^[123]$/.test(e.key)) setTab(TABS[Number(e.key) - 1].id);
+    if (/^[1234]$/.test(e.key)) setTab(TABS[Number(e.key) - 1].id);
     else if (e.key === 'Tab' && onRoot) {
       const i = TABS.findIndex((t) => t.id === tab);
       setTab(TABS[(i + (e.shiftKey ? -1 : 1) + TABS.length) % TABS.length].id);
@@ -258,10 +261,10 @@ export function GrowthPanel({
         panel="plain"
         wide
         keyHints={[
-          { keys: [{ label: '1–3' }], does: '쪽 넘기기' },
+          { keys: [{ label: '1–4' }], does: '쪽 넘기기' },
           { keys: [{ label: tab === 'tools' ? '↑↓' : '←↑→↓' }], does: '고르기' },
           ...(tab === 'skills' ? [{ keys: [{ label: 'Q' }, { label: 'E' }], does: '기술 넘기기' }] : []),
-          ...(tab === 'research' ? [] : [{ keys: [{ code: 'Enter' }], does: tab === 'skills' ? '찍기 · 고르기' : '대장간 가기' }]),
+          ...(tab === 'research' || tab === 'targets' ? [] : [{ keys: [{ code: 'Enter' }], does: tab === 'skills' ? '찍기 · 고르기' : '대장간 가기' }]),
         ]}
       >
         {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- 1–3, Tab, arrows and Enter move and act inside the journal. */}
@@ -294,7 +297,11 @@ export function GrowthPanel({
               </button>
             ))}
           </div>
-          {tab === 'research' ? (
+          {tab === 'targets' ? (
+            <section className="l-growth-page l-growth-wide" aria-label="제작 목표">
+              <CraftTracker room={room} view={view} notify={notify} />
+            </section>
+          ) : tab === 'research' ? (
             <section
               className="l-growth-page l-growth-wide"
               aria-label="마을 개척"

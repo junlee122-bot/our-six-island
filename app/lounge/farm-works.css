@@ -224,6 +224,10 @@
   gap: 2px;
   min-width: 0;
 }
+.l-fw-build-actions {
+  display: grid;
+  gap: var(--sp-1);
+}
 .l-fw-build-text em {
   font-style: normal;
   color: var(--accent);

@@ -1,0 +1,74 @@
+.l-return-board {
+  margin-block: var(--sp-3);
+}
+.l-return-board .ui-panel-head {
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.l-return-board output {
+  display: block;
+}
+.l-return-board .ui-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.l-return-board-intro {
+  margin: 0 0 var(--sp-3);
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.l-return-board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.l-return-board-list > li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding-block: var(--sp-3);
+  border-top: 1px solid var(--line);
+}
+.l-return-board-glyph {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-m);
+  background: var(--surface-sunken);
+}
+.l-return-board-copy {
+  min-width: 0;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.l-return-board-copy strong {
+  font-size: 16px;
+  line-height: 1.5;
+}
+.l-return-board-copy p {
+  margin: var(--sp-1) 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+.l-return-board-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--sp-1);
+}
+@media (max-width: 640px) {
+  .l-return-board-list > li {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--sp-2);
+  }
+  .l-return-board-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

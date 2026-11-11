@@ -107,8 +107,15 @@ jobs:
     # Screens at 1920×1080 and 1280×720 against a mocked cloud (never the real
     # Supabase): fails when contrast, small text, wrapping, clipping, HUD
     # overlap or covered controls get worse than scripts/ui-baseline.json.
+    # Each viewport keeps its full strict capture list and baseline checks;
+    # separate runners avoid serial captures approaching the job timeout.
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        view: [fhd, s]
+    name: ui-regression (${{ matrix.view }})
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -121,10 +128,10 @@ jobs:
       - name: Pages build with the UI kit page
         run: UI_KIT=1 node scripts/build-standalone.mjs --out /tmp/pages --site-url /
       - name: UI regression (strict)
-        run: npm run ui:shots -- --pages /tmp/pages --views fhd,s --out /tmp/ui-shots --baseline scripts/ui-baseline.json --strict
+        run: npm run ui:shots -- --pages /tmp/pages --views ${{ matrix.view }} --out /tmp/ui-shots --baseline scripts/ui-baseline.json --strict
       - name: Keep the screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ui-shots
+          name: ui-shots-${{ matrix.view }}
           path: /tmp/ui-shots
