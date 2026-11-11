@@ -64,7 +64,7 @@ import {
 } from './lounge-foothill-layout.ts';
 import { FARM_BIN, FARM_BOARD, FARM_FIELDS, FARM_HOUSES, FARM_PAVING } from './lounge-farm-layout.ts';
 import { FARM_COMMON, FARM_SITES } from './lounge-farm-sites-layout.ts';
-import { ACTORS } from './lounge-roster.ts';
+import { ACTORS, isActor } from './lounge-roster.ts';
 import { SHOP_INTERIORS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { LIGHTHOUSE_FLOOR, LIGHTHOUSE_NAME, isLighthouseArea } from './lounge-lighthouse.ts';
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
@@ -354,7 +354,7 @@ export function districtFriendPins(players: readonly Presence[], self: string | 
   if (!map) return [];
   const ids = new Set<string>();
   return players.flatMap((p): DistrictFriendPin[] => {
-    if (p.id === self || p.id.startsWith('friend-') || ids.has(p.id) || !Number.isInteger(p.actor) || p.actor < 0 || p.actor > 6) return [];
+    if (p.id === self || p.id.startsWith('friend-') || ids.has(p.id) || !isActor(p.actor)) return [];
     if (p.area === area) {
       ids.add(p.id);
       return [{ id: p.id, actor: p.actor, point: regionFromNetwork(area, p), indoor: false, location: map.name }];

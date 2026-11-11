@@ -48,7 +48,7 @@ export { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
 import { WALL_NAMES, FLOOR_NAMES } from './lounge-bedroom-styles';
 export const ACCESS_NAMES: Record<RoomAccess, [string, string]> = {
   public: ['활짝 열기', '누구나 편하게 놀러 와요. 친구 목록에 “놀러 오세요”가 떠요.'],
-  friends: ['친구만', '일곱 친구 모두 놀러 올 수 있어요.'],
+  friends: ['친구만', '여덟 친구 모두 놀러 올 수 있어요.'],
   closed: ['닫기', '지금은 아무도 들어올 수 없어요.'],
 };
 

@@ -60,7 +60,7 @@ import { ROOMS_RESET_ID, applyRoomsReset } from './lounge-rooms-reset.ts';
 import { atHubCounter, hubCounterFor, hubCounterReject } from './lounge-hub-counters.ts';
 import { listStocks, materializeStocks, stocksAction, stocksView, stockWealth, type StockNews, type StockState } from './lounge-stocks.ts';
 import { addNews } from './lounge-life-plus.ts';
-import { ACTORS } from './lounge-roster.ts';
+import { ACTORS, isActor } from './lounge-roster.ts';
 // 먼바다 낚싯배 (design-sea-fishing.md): the deck only while a voyage is on; boarding at the pier.
 import { isVoyageAction } from './lounge-voyage-data.ts';
 import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
@@ -292,9 +292,7 @@ export function cloudTransition(
   validateLedger(original.ledger);
   if (
     !UUID.test(member.id) ||
-    !Number.isInteger(member.actor) ||
-    member.actor < 0 ||
-    member.actor > 6
+    !isActor(member.actor)
   )
     throw new CloudError('등록된 계정이 아닙니다.', 403);
   if (command.code !== undefined && typeof command.code !== 'string')

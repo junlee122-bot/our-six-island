@@ -175,7 +175,7 @@ export const VILLAGE_SCENIC_TREES = [
   { x: 24, z: 26, radius: 0.8, scale: 0.86 },
 ] as const;
 
-// 우리 농장 (design-our-farm.md §5, 2026-10-03): the seven houses and their
+// 우리 농장 (design-our-farm.md §5, 2026-10-03): the friends' houses and their
 // front-yard beds moved from the row at z −22 to the farm behind the north
 // gate (lounge-farm-layout.ts). The hub keeps the plaza, the civic buildings
 // and the shops; the old row is a tree-lined lane up to the farm gate, a small

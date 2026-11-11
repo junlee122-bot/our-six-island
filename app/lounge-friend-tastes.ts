@@ -1,4 +1,4 @@
-// 내 취향: each of the seven friends picks what they like and dislike as a
+// 내 취향: each friend picks what they like and dislike as a
 // gift — up to 3 좋아하는 것 and 2 싫어하는 것, each a gift category ('#fish')
 // or one giftable item ('crucian') — plus an optional one-line note. Friends
 // see each other's tastes openly (a group of friends), and gifts follow them:
@@ -86,12 +86,12 @@ function readOne(v: unknown): FriendTastes | null {
   if (!l.length && !d.length && !n) return null;
   return { l, d, ...(n ? { n } : {}), day };
 }
-/** Validates the saved book: actors 0–6 only. */
+/** Validates the saved book against the current friend roster. */
 export function readTastes(v: unknown): TastesBook | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const out: TastesBook = {};
   for (const [key, t] of Object.entries(v as Record<string, unknown>)) {
-    if (!/^[0-6]$/.test(key)) continue;
+    if (!/^(0|[1-9]\d*)$/.test(key) || !actorOk(Number(key))) continue;
     const one = readOne(t);
     if (one) out[key] = one;
   }

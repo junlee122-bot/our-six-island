@@ -541,7 +541,7 @@ export function AccountGate({
                 ? selected.username === 'seungjun'
                   ? '관리자 계정은 직접 발급한 활성화 코드를 써 주세요.'
                   : '개인 코드는 관리자 승준에게 받아 주세요.'
-                : '일곱 친구의 고정 계정 · 다른 기기에서도 이어서'}
+                : '여덟 친구의 고정 계정 · 다른 기기에서도 이어서'}
             </p>
           </>
         )}
@@ -554,7 +554,7 @@ export function AccountGate({
           <Armchair size={26} />
           <b>{NAMES.app}</b>
         </div>
-        <span className="l-kicker">일곱 친구의 마을</span>
+        <span className="l-kicker">여덟 친구의 마을</span>
         <h1>
           같이 한 판,
           <br />

@@ -1,3 +1,4 @@
+import { isActor } from './lounge-roster.ts';
 // Server-only login hook. Pending gifts are armed by a trusted administrator in
 // the private world row; no request field or public game action creates one.
 import type { CloudWorld } from './lounge-cloud-engine.ts';
@@ -52,7 +53,7 @@ export function applyLoginGifts(
   member: LoginGiftMember,
   now: number,
 ): { state: CloudWorld; changed: boolean; delivered: string[] } {
-  if (!UUID.test(member.id) || !Number.isInteger(member.actor) || member.actor < 0 || member.actor > 6)
+  if (!UUID.test(member.id) || !isActor(member.actor))
     fail('invalid_member');
   if (!positiveInteger(now) || original?.schema !== 1) fail('invalid_world');
   const records = original.loginGifts;

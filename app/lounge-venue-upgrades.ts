@@ -3,7 +3,7 @@
 import { spendBeom, type LoungeLedger } from './lounge-economy.ts';
 import { LifeError, type LifeState } from './lounge-life.ts';
 import { addMemory, addNews } from './lounge-life-plus.ts';
-import { ACTORS } from './lounge-roster.ts';
+import { ACTORS, isActor } from './lounge-roster.ts';
 import { josa } from './lounge-text.ts';
 import {
   VENUE_NAME,
@@ -51,7 +51,7 @@ export function venueAction(
     state.doneAt = now;
     const helpers = Object.keys(state.by)
       .map(Number)
-      .filter((n) => Number.isInteger(n) && n >= 0 && n < 7)
+      .filter(isActor)
       .sort((p, q) => p - q);
     const text = `${VENUE_NAME[def.venue]} “${def.name}” 완성! ${def.note}`;
     addMemory(life, now, 'project', helpers, text);

@@ -1,6 +1,7 @@
 import { buyerOf } from '../app/lounge-shops.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTOR_COUNT } from '../app/lounge-roster.ts';
 import {
   CALENDAR_ANCHOR_DAY,
   FRIEND_PROFILES,
@@ -188,9 +189,10 @@ test('calendar: Korean holidays 2026–2028, weekly events, the friends\' birthd
   assert.equal(calendarOf(kst(2026, 9, 25, 3)).events.find((e) => e.id === 'weekly-casino').active, true, 'game 03:00 is still the casino night');
   assert.equal(calendarOf(kst(2026, 9, 24, 20)).events.find((e) => e.id === 'weekly-casino'), undefined, 'Thursday (real) has none');
   assert.ok(ids(2026, 9, 27).includes('weekly-market'));
-  // Birthdays are month-day only (filled 2026-10-03): seven friends on six days a year (도원·민서 share one).
-  assert.equal(FRIEND_PROFILES.length, 7);
-  assert.ok(FRIEND_PROFILES.every((p) => /^\d{2}-\d{2}$/.test(p.birthday)));
+  // Original birthdays stay month-day only; Yuchan's is unset until supplied.
+  assert.equal(FRIEND_PROFILES.length, ACTOR_COUNT);
+  assert.ok(FRIEND_PROFILES.slice(0, 7).every((p) => /^\d{2}-\d{2}$/.test(p.birthday)));
+  assert.equal(FRIEND_PROFILES[7].birthday, null);
   let days = 0;
   for (let d = 0; d < 365; d++) if (birthdayActors(kstDay(T0) + d).length) days++;
   assert.equal(days, 6);
@@ -470,7 +472,7 @@ test('room save validator: every piece only up to owned copies; one bed is free'
   const save = { ...freshLounge(0), bedroom: one };
   assert.doesNotThrow(() => accountSave(save, 0, null, { unlocks }));
   assert.throws(() => accountSave(save, 0, null, { unlocks: [] }));
-  assert.equal(ACCOUNT_IDS.length, 7);
+  assert.equal(ACCOUNT_IDS.length, ACTOR_COUNT);
 });
 
 // ------------------------------------------------------------ fishing

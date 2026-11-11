@@ -71,6 +71,7 @@ export const FRIEND_GIFTS: readonly { dish: string; furniture: string; room: str
   { dish: 'dotorimuk', furniture: 'furn-bookshelf', room: 'furn-rocking-chair', signature: 'furn-mother-pearl' }, // 4 민재
   { dish: 'hwachae', furniture: 'furn-table', room: 'furn-sofa-rose', signature: 'furn-grand-piano' }, // 5 재민
   { dish: 'kimchi', furniture: 'furn-fireplace', room: 'furn-armchair-navy', signature: 'furn-gold-mirror' }, // 6 호현
+  { dish: 'salad', furniture: 'furn-table', room: 'furn-plant', signature: 'furn-bookshelf' }, // 7 유찬: neutral welcome rewards
 ];
 /** Dishes that come with a ♥2 recipe letter. */
 export const RECIPE_GIFT_N = 2;

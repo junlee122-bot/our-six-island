@@ -133,7 +133,7 @@ const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 const nonEmpty = (o: object) => Object.keys(o).length > 0;
 const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
-const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < ACTOR_NAMES.length;
 const isCropId = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as string[]).includes(c);
 const COUNT_MAX = 99_999;
 /** 과수원 fruit (bag items, normal quality only) that the jar, keg and dryer take. */
@@ -379,7 +379,7 @@ function readFarmX(v: unknown, legacy = false): FarmX | undefined {
   if (safe(x.st) && x.st > 0) out.st = x.st;
   const hf = obj(x.hf);
   if (safe(hf.day) && hf.day > 0 && Array.isArray(hf.actors)) {
-    const actors = [...new Set(hf.actors.filter(actorValid))].slice(0, 7);
+    const actors = [...new Set(hf.actors.filter(actorValid))].slice(0, ACTOR_NAMES.length);
     if (actors.length) out.hf = { day: hf.day, actors };
   }
   const log = Array.isArray(x.log)

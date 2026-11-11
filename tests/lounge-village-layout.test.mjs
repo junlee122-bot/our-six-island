@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTORS } from '../app/lounge-roster.ts';
 import fs from 'node:fs';
 import { FARM_HOME_PLACES } from '../app/lounge-farm-layout.ts';
 import {
@@ -184,7 +185,7 @@ test('home colliders come from the real model bounds at door scale', () => {
   }
   // The houses stand on 우리 농장 now, at the same scale (lounge-farm-layout.ts).
   assert.equal(VILLAGE_PLACES.filter((item) => item.kind === 'home').length, 0);
-  assert.equal(FARM_HOME_PLACES.length, 7);
+  assert.equal(FARM_HOME_PLACES.length, ACTORS.length);
   for (const place of FARM_HOME_PLACES) {
     const spec = VILLAGE_HOUSE_MODELS[place.model],
       scale = villageHouseScale(place.model);

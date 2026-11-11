@@ -13,6 +13,7 @@ import {
   type Bedroom,
 } from './lounge-bedroom-data.ts';
 import { readColorHex } from './lounge-color.ts';
+import { ACTOR_COUNT, isActor } from './lounge-roster.ts';
 export { HAIR_COLORS, TOP_COLORS, GLASSES };
 /**
  * Headwear is only 도원's 응원 머리띠 now. The cap, straw hat, bucket hat,
@@ -100,7 +101,7 @@ export const defaultLook = (actor: number): Look => ({
   hairstyle: 'signature',
   hair: actor === 0 ? 'wine' : 'ink',
   top:
-    actor === 2 || actor === 3 ? 'cream' : actor === 6 ? 'ocean' : 'charcoal',
+    actor === 2 || actor === 3 || actor === 7 ? 'cream' : actor === 6 ? 'ocean' : 'charcoal',
   hat: 'none',
   glasses:
     actor === 1 || actor === 4 ? 'round' : actor === 2 ? 'silver' : 'none',
@@ -135,12 +136,11 @@ export type LoungeSave = {
   bedroom: Bedroom;
 };
 export function freshLounge(actor = 6): LoungeSave {
-  const identity =
-    Number.isInteger(actor) && actor >= 0 && actor < 7 ? actor : 6;
+  const identity = isActor(actor) ? actor : 6;
   return {
     version: 1,
     actor: identity,
-    looks: Array.from({ length: 7 }, (_, i) => defaultLook(i)),
+    looks: Array.from({ length: ACTOR_COUNT }, (_, i) => defaultLook(i)),
     saved: [],
     visits: 0,
     bedroom: defaultBedroom(identity),
@@ -197,9 +197,7 @@ const isSavedEntry = (x: RawSaved | null | undefined): x is CheckedSaved =>
   !!x &&
   typeof x.id === 'string' &&
   typeof x.name === 'string' &&
-  Number.isInteger(x.actor) &&
-  (x.actor as number) >= 0 &&
-  (x.actor as number) < 7;
+  isActor(x.actor);
 function normalizeLounge(
   s: Record<string, unknown>,
   trustedActor: number | undefined,
@@ -209,13 +207,11 @@ function normalizeLounge(
     looks = Array.isArray(s.looks) ? (s.looks as unknown[]) : [];
   const actor =
     trustedActor ??
-    (Number.isInteger(rawActor) && (rawActor as number) >= 0 && (rawActor as number) < 7
-      ? (rawActor as number)
-      : 6);
+    (isActor(rawActor) ? rawActor : 6);
   return {
     version: 1,
     actor,
-    looks: Array.from({ length: 7 }, (_, i) => readLook(looks[i], i)),
+    looks: Array.from({ length: ACTOR_COUNT }, (_, i) => readLook(looks[i], i)),
     saved: Array.isArray(s.saved)
       ? (s.saved as (RawSaved | null)[])
           .filter(isSavedEntry)
@@ -234,7 +230,7 @@ function normalizeLounge(
   };
 }
 const trusted = (accountActor?: number) =>
-  Number.isInteger(accountActor) && accountActor! >= 0 && accountActor! < 7
+  isActor(accountActor)
     ? accountActor
     : undefined;
 /**

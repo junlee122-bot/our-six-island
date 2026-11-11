@@ -108,7 +108,7 @@ export function NpcRelationsPanel({ room, view, notify, onClose, initial }: {
   const shown = reply[selected] ?? (visiting ? [npcVisitLine(selected, 'invite', { me: myName, who, now })] : row.talked ? [] : []);
   return (
     <Modal title="주민 수첩" wide onClose={onClose} className="l-npc-relations">
-      <p>마을 주민 {NPC_IDS.length}명과의 사이예요. 일곱 친구와의 우정과 따로, 나만의 관계가 저장돼요. 이야기와 선물은 주민이 있는 곳에서 해요.</p>
+      <p>마을 주민 {NPC_IDS.length}명과의 사이예요. 여덟 친구와의 우정과 따로, 나만의 관계가 저장돼요. 이야기와 선물은 주민이 있는 곳에서 해요.</p>
       <div className="l-npc-book" aria-busy={busy}>
         <ul className="l-npc-list" aria-label="주민 목록">
           {NPC_IDS.map((id) => {

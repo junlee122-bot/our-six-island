@@ -768,3 +768,11 @@ Higgsfield GPT Image 2.5(high, 2K, 2:3)로 항구·언덕 주민 8명(가붕·�
 - 원본: `public/assets/lounge/_originals/furniture/furniture-sheet-0..5.png` (Higgsfield GPT Image 2.5, 2048² 마젠타 배경, 0~2는 3×3·3~5는 2×2). 칸 순서·해시·작업 번호는 `public/assets/lounge/furniture-art-generation.json`.
 - 웹 사본: `node scripts/optimize-assets.mjs furniture`가 만듭니다. 원본 해시를 확인하고, keyMagenta(둘러싼 바탕 시드 90) + defringeMagenta로 배경을 빼고, 칸마다 자기 그림 조각만 남겨(옆 칸에서 넘어온 조각 제거) 카탈로그 비율(세워 두는 것·벽걸이 h/w, 러그 d/w 위에서 본 모양) 캔버스에 넣습니다. 긴 변 768px 이하 `lounge/furniture/<이름>.webp` 39장(합계 약 2.6MB) + 256² 썸네일 `lounge/furniture/thumbs/`. 크기와 SHA-256은 같은 json의 `web`에 스크립트가 적습니다(`tests/lounge-furniture-art.test.mjs`가 확인).
 - `app/lounge-assets.ts`의 `furniture_*` 항목이 빌드에 들어가는 목록입니다. 만들기 가구 16종은 아직 그림이 없어 SVG를 씁니다.
+
+## 2026-11-11 유찬 플레이어 그림
+
+- 제작: Higgsfield gpt_image_2_6, job 643dc77a-43c3-48d7-b39c-c29b032069dc.
+- 사진은 사용자 제공 참조이며 원본 사진은 저장소에 포함하지 않습니다. 기존 친구 classic 그림을 스타일 참조로 사용했습니다.
+- 유찬 전용 여섯 칸 전신 시트 중 다섯 의상 사용: 기본 운동복, 주말복, 약속복, 아카츠키, 메이드.
+- public/assets/lounge/yuchan-generation.json 및 yuchan-atlas.prompt.txt에 제작 기록과 프롬프트를 보관합니다.
+- build-yuchan-assets.mjs: 무손실 WebP 및 투명 로그인 그림. build-lounge-rig.mjs: 의상별 기존 공통 걷기 리그 생성.

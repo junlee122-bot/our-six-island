@@ -16,7 +16,7 @@ export type BirthdayAction = { kind: 'birthdayCheer'; to: number };
 /** Friendship for signing a birthday friend's 방명록 (a gift is 20, a visit 8). */
 export const BIRTHDAY_SIGN_BOND = 10;
 /** How many books (birthday person × year) stay saved: every friend, about three years. */
-export const BDAY_BOOK_KEEP = 21;
+export const BDAY_BOOK_KEEP = ACTOR_NAMES.length * 3;
 /** The plaza cake (village world units): south-west of the fountain, clear of the festival booth and the board. */
 export const BIRTHDAY_CAKE_POINT = { x: -4.2, z: 3.4 } as const;
 /** Where to stand to use the cake (the banner's "축하하러 가기" walks here). */
@@ -32,13 +32,13 @@ const fail = (text: string): never => {
 /** 'actor-YYYY' of the birthday friend's book for the KST year of `day`. */
 export const bdayBookKey = (actor: number, day: number) => `${actor}-${kstDate(day).slice(0, 4)}`;
 
-/** Validates a saved book: known keys, signers 0–6 once each, never the birthday friend. */
+/** Validates a saved book: known keys, each registered signer once, never the birthday friend. */
 export function readBdayBook(v: unknown): BirthdayBook | undefined {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const out: BirthdayBook = {};
   for (const [key, list] of Object.entries(v as Record<string, unknown>).slice(-BDAY_BOOK_KEEP * 2)) {
-    const m = /^([0-6])-(\d{4})$/.exec(key);
-    if (!m || !Array.isArray(list)) continue;
+    const m = /^(0|[1-9]\d*)-(\d{4})$/.exec(key);
+    if (!m || !actorOk(Number(m[1])) || !Array.isArray(list)) continue;
     const owner = Number(m[1]);
     const signers = [...new Set(list.filter((a): a is number => actorOk(a) && a !== owner))].slice(0, ACTOR_NAMES.length - 1);
     if (signers.length) out[key] = signers;

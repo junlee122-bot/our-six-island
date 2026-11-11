@@ -26,11 +26,13 @@ test('forecast lists holidays, friend birthdays, 장날 and weekly events from t
   assert.ok(hangeul.events.some((e) => e.kind === 'holiday' && e.name === '한글날'));
   // Every friend's birthday shows the evening before.
   for (const [actor, p] of FRIEND_PROFILES.entries()) {
+    if (p.birthday === null) continue;
     const [mm, dd] = p.birthday.split('-').map(Number);
     const eve = Date.UTC(2027, mm - 1, dd, 13) - 24 * HOUR;
     const f = forecastOf(eve);
     assert.ok(birthdayActors(f.day).includes(actor));
     assert.ok(f.events.some((e) => e.kind === 'birthday' && e.name.includes(ACTOR_NAMES[actor])), ACTOR_NAMES[actor]);
+    assert.ok(!birthdayActors(f.day).includes(7), 'an unspecified birthday creates no forecast event');
   }
   // A Saturday evening: tomorrow is Sunday's 일요 장터.
   let t = EVENING;

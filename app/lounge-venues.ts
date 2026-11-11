@@ -93,7 +93,7 @@ export const VENUES: Record<InteriorArea, Venue> = {
     venue: 'hall',
     chat: NAMES.chatHall,
     exposure: 1.05,
-    tagline: '일곱 친구의 아지트',
+    tagline: '여덟 친구의 아지트',
   },
   casino: {
     area: 'casino',

@@ -2,6 +2,7 @@
 // engine. Import from here (not lounge-room.ts) in client code so the entry
 // chunk does not pull in chess.js and every rules engine.
 import type { LoungeView } from './lounge-room.ts';
+import { isActor } from './lounge-roster.ts';
 import { SHOP_AREAS, isShopArea, type ShopArea } from './lounge-shop-interiors.ts';
 import { LIGHTHOUSE_AREAS, isLighthouseArea, type LighthouseArea } from './lounge-lighthouse.ts';
 /** Must equal CHESS_MOVE_MS in lounge-chess.ts (checked by a test). */
@@ -233,8 +234,7 @@ export const AREA_DEFAULTS: Record<Area, { x: number; y: number }> = {
 export type HomeScope = `home-${number}`;
 export type ChatScope = 'village' | 'lounge' | 'casino' | 'tavern' | 'bank' | 'salon' | ShopArea | LighthouseArea | HomeScope;
 export const homeScope = (owner: number): HomeScope => `home-${owner}`;
-export const validHomeOwner = (owner: unknown): owner is number =>
-  Number.isInteger(owner) && (owner as number) >= 0 && (owner as number) < 7;
+export const validHomeOwner = isActor;
 export const chatScope = (area: Area, home?: number): ChatScope =>
   // The outdoor regions share the village chat (you are still "outside").
   area === 'village' || area === 'hill' || area === 'woods' || area === 'mine' || area === 'market' || area === 'harbor' || area === 'hillside' || area === 'ranch' || area === 'foothill' || area === 'offshore' || area === 'farm'

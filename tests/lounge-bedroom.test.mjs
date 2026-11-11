@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTOR_COUNT } from '../app/lounge-roster.ts';
 import {
   BEDROOM_LIMITS,
   BEDROOM_INVALID,
@@ -212,7 +213,7 @@ test('explicit reset changes only bedroom; malicious saved actor does not alter 
   assert.equal(saved.visits, 23);
   assert.deepEqual(saved.saved.map((i) => i.id), ['mine']);
   assert.equal(Object.hasOwn(saved, 'balance'), false);
-  for (const actor of [-1, 7, NaN, Infinity, 0.5, '0'])
+  for (const actor of [-1, ACTOR_COUNT, NaN, Infinity, 0.5, '0'])
     assert.throws(() => accountSave(previous, actor), /Unknown account actor/);
 });
 

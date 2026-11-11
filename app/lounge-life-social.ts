@@ -1,3 +1,4 @@
+import { ACTOR_COUNT, ACTOR_IDS, isActor, isActorKey } from './lounge-roster.ts';
 // Friend-life engine (design audit C-3..C-7, C-10): small talk with friends'
 // NPCs and the lines friends write for their own NPC, heart-level rewards,
 // museum co-donation stamps and shared milestones, participatory festivals
@@ -144,17 +145,16 @@ function fail(message: string): never {
 
 // ---------------------------------------------------------------- reading
 const safe = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n);
-const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+const actorValid = isActor;
 const obj = (v: unknown): Record<string, unknown> =>
   v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
-const ACTOR_KEY = /^[0-6]$/;
 const museumOk = (id: string) => isItemId(id) ? !!ITEM_BY_ID[id].museum : own(CROP_INFO, id);
-const actorList = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter(actorValid))].slice(0, 7) : []);
+const actorList = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter(actorValid))].slice(0, ACTOR_COUNT) : []);
 function byActor<T>(v: unknown, read: (x: unknown) => T | undefined): Record<string, T> {
   const out: Record<string, T> = {};
   for (const [k, x] of Object.entries(obj(v)).slice(0, 16)) {
-    if (!ACTOR_KEY.test(k)) continue;
+    if (!isActorKey(k)) continue;
     const r = read(x);
     if (r !== undefined) out[k] = r;
   }
@@ -177,7 +177,7 @@ function readFete(v: unknown): FeteState | undefined {
   if (joined.length) out.joined = joined;
   const lanterns = Array.isArray(f.lanterns)
     ? f.lanterns
-        .slice(0, 7)
+        .slice(0, ACTOR_COUNT)
         .map((l) => {
           const x = obj(l),
             text = cleanText(x.text, LANTERN_TEXT_MAX);
@@ -212,14 +212,14 @@ export function readSocial(value: unknown): SocialState | undefined {
   if (nonEmpty(lines)) out.lines = lines;
   const hr: Record<string, number> = {};
   for (const [k, n] of Object.entries(obj(v.hr)).slice(0, 64)) {
-    const m = /^([0-6])>([0-6])$/.exec(k);
-    if (m && m[1] !== m[2] && safe(n) && n > 0 && n <= 10) hr[k] = n;
+    const m = /^(\d+)>(\d+)$/.exec(k);
+    if (m && isActorKey(m[1]) && isActorKey(m[2]) && m[1] !== m[2] && safe(n) && n > 0 && n <= 10) hr[k] = n;
   }
   if (nonEmpty(hr)) out.hr = hr;
   const bondAt: Record<string, number> = {};
   for (const [k, d] of Object.entries(obj(v.bondAt)).slice(0, 32)) {
-    const m = /^([0-6])-([0-6])$/.exec(k);
-    if (m && Number(m[1]) < Number(m[2]) && safe(d) && d > 0) bondAt[k] = d;
+    const m = /^(\d+)-(\d+)$/.exec(k);
+    if (m && isActorKey(m[1]) && isActorKey(m[2]) && Number(m[1]) < Number(m[2]) && safe(d) && d > 0) bondAt[k] = d;
   }
   if (nonEmpty(bondAt)) out.bondAt = bondAt;
   const stamps = byActor(v.stamps, (l) => {
@@ -378,7 +378,7 @@ export function grantHeartRewards(life: LifeState, to: number, from: number, now
 }
 /** Titles earned from ♥10 friends (lounge-friend-lines.ts FriendLineSet.title). */
 export const titlesOf = (life: LifeState, actor: number, now: number) =>
-  [0, 1, 2, 3, 4, 5, 6]
+  ACTOR_IDS
     .filter((b) => b !== actor && bondLevel(bondPoints(life, actor, b, now)) >= 10)
     .map((b) => FRIEND_LINES[b]?.title ?? `${nameOf(b)}의 단짝`);
 
@@ -649,7 +649,7 @@ export function socialAction(
 export function settleSocial(life: LifeState, ledger: LoungeLedger, member: { id: string; actor: number }, now: number) {
   if (!actorValid(member.actor)) return ledger;
   if (life.bonds && nonEmpty(life.bonds)) migrateBonds(life);
-  for (let b = 0; b < 7; b++) if (b !== member.actor) grantHeartRewards(life, member.actor, b, now);
+  for (let b = 0; b < ACTOR_COUNT; b++) if (b !== member.actor) grantHeartRewards(life, member.actor, b, now);
   let next = settleFete(life, ledger, now);
   if (MUSEUM_MILESTONES.some((m) => Object.keys(life.museum ?? {}).length >= m.n)) next = settleMuseum(life, next, now);
   return next;
@@ -768,11 +768,11 @@ export function socialView(life: LifeState, uid: string, actor: number, now: num
   const lines: Record<number, string[]> = {};
   for (const [a, l] of Object.entries(social.lines ?? {})) lines[Number(a)] = [...l];
   const talked = (life.bondDay?.day === day ? life.bondDay.keys : [])
-    .map((k) => /^c:([0-6])>([0-6])$/.exec(k))
-    .filter((m): m is RegExpExecArray => !!m && Number(m[1]) === actor)
+    .map((k) => /^c:(\d+)>(\d+)$/.exec(k))
+    .filter((m): m is RegExpExecArray => !!m && isActorKey(m[1]) && isActorKey(m[2]) && Number(m[1]) === actor)
     .map((m) => Number(m[2]));
   const hearts: SocialView['hearts'] = {};
-  for (let b = 0; b < 7; b++) {
+  for (let b = 0; b < ACTOR_COUNT; b++) {
     if (b === actor) continue;
     const pair = actor < b ? `${actor}-${b}` : `${b}-${actor}`,
       last = social.bondAt?.[pair];
@@ -789,7 +789,7 @@ export function socialView(life: LifeState, uid: string, actor: number, now: num
   for (const [a, list] of Object.entries(social.stamps ?? {}))
     for (const id of list) if (donors[id] && !donors[id].includes(Number(a))) donors[id].push(Number(a));
   const count = Object.keys(life.museum ?? {}).length;
-  const stats = [0, 1, 2, 3, 4, 5, 6].map((a) => {
+  const stats = ACTOR_IDS.map((a) => {
     const first = Object.values(life.museum ?? {}).filter((m) => m.actor === a).length;
     return { actor: a, first, total: first + (social.stamps?.[String(a)]?.filter((id) => life.museum?.[id]).length ?? 0) };
   });

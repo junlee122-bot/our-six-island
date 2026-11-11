@@ -1,3 +1,4 @@
+import { ACTOR_COUNT, isActor } from './lounge-roster.ts';
 // 무드(기분) engine: needs that drain only while playing, moodlets (thoughts
 // with a value, a real-time lifetime and a stack limit), the shown mood that
 // eases toward its target, inspirations (풍작 · 입질 · 요리 · 배움), the
@@ -167,7 +168,7 @@ const num = (v: unknown, lo: number, hi: number, fallback: number) =>
   typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v * 10) / 10)) : fallback;
 const int = (v: unknown, lo: number, hi: number) =>
   typeof v === 'number' && Number.isSafeInteger(v) && v >= lo && v <= hi ? v : undefined;
-const actorOk = (a: unknown): a is number => typeof a === 'number' && Number.isInteger(a) && a >= 0 && a < 7;
+const actorOk = isActor;
 const tenth = (x: number) => Math.round(x * 10) / 10;
 const clampNeed = (x: number) => Math.max(0, Math.min(100, tenth(x)));
 
@@ -206,7 +207,7 @@ function readUser(value: unknown): MoodUser | null {
   if (time(x.rs)) u.rs = time(x.rs);
   if (time(x.cup)) u.cup = time(x.cup);
   if (Array.isArray(x.ch)) {
-    const ch = [...new Set(x.ch.filter(actorOk))].slice(0, 7);
+    const ch = [...new Set(x.ch.filter(actorOk))].slice(0, ACTOR_COUNT);
     if (ch.length) u.ch = ch;
   }
   if (Array.isArray(x.cb)) {
@@ -572,7 +573,7 @@ export function moodAfterLifeAction(
     if (them) addLet(them, 'birthdayCheer', now);
   }
   // Hearts that went up with this action (me and the friend).
-  for (let f = 0; f < 7; f++) {
+  for (let f = 0; f < ACTOR_COUNT; f++) {
     if (f === actor) continue;
     if (bondLevel(bondPoints(life, actor, f, now)) > bondLevel(bondPoints(before, actor, f, now))) {
       addLet(u, 'heartUp', now);

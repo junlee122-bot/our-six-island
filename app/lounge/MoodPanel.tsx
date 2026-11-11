@@ -144,7 +144,7 @@ export function MoodPanel({
     if (tip.action === 'cheer' && tip.actor !== undefined) return setCheering(tip.actor);
     onTip?.(tip);
   };
-  const others = [0, 1, 2, 3, 4, 5, 6].filter((a) => a !== me?.actor && a !== (life.actors[view.self] ?? -1));
+  const others = ACTORS.map((_, a) => a).filter((a) => a !== me?.actor && a !== (life.actors[view.self] ?? -1));
   return (
     <Modal title="기분" onClose={onClose} className="l-mood-modal" wide>
       <div ref={body} className="l-mood-panel" data-testid="mood-panel" data-tier={m.tier} style={{ ['--mood-c' as string]: tier.color }}>

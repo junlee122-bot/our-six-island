@@ -1,0 +1,25 @@
+{
+  "created": "2026-11-11",
+  "provider": "Higgsfield",
+  "model": "gpt_image_2_6",
+  "jobId": "643dc77a-43c3-48d7-b39c-c29b032069dc",
+  "purpose": "Eighth playable friend Yuchan; style-matched to existing friend sprites.",
+  "references": {
+    "identity": "User-provided private photograph; original photograph is not stored in this repository.",
+    "style": "club-friends-classic.webp"
+  },
+  "layout": {
+    "columns": 3,
+    "rows": 2,
+    "cells": [
+      "classic",
+      "street",
+      "smart",
+      "akatsuki",
+      "maid",
+      "classic-smile-unused"
+    ]
+  },
+  "runtime": "lossless WebP; magenta keying; existing cut-out locomotion rig",
+  "promptFile": "yuchan-atlas.prompt.txt"
+}

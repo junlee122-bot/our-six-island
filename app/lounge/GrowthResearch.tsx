@@ -1,7 +1,7 @@
 'use client';
 // 마을 개척 (성장 P1): the shared research map drawn as a surveyor's chart —
 // nine sites linked by their prerequisites, the open one with its 범 purse,
-// material crates and the seven friends' seals. Used by the 성장 창 (T, tab 3)
+// material crates and the friends' seals. Used by the 성장 창 (T, tab 3)
 // and the village board's “개척” tab. Only “대장간 재건” is live in P1; later
 // sites show their region preview as 준비 중.
 import { useMemo, useState, type KeyboardEvent } from 'react';

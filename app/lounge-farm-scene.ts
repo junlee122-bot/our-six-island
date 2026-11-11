@@ -1,5 +1,5 @@
 // 우리 농장 in three.js, on the district kit (lounge-district-kit.ts, 구역 공통
-// 규격): the seven friends' kArchive houses in a row along the north edge
+// 규격): the friends' kArchive houses in a row along the north edge
 // (the hub's house models, door height as before; 자료: kArchive · 출처: 쓰레드
 // dogfooter), each friend's 12 × 10 field right in front (F5: a 명인 표지판 before
 // a full one, a plastic tunnel over the 서리 덮개's quarter), the lane and the

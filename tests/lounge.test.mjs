@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTOR_COUNT } from '../app/lounge-roster.ts';
 import { LoungeRoom } from '../app/lounge-room.ts';
 import {
   defaultLook,
@@ -134,7 +135,7 @@ test('failed reservation storage leaves pending invitation and game untouched', 
 });
 test('lounge storage validates identity, collection and accessories without touching other saves', () => {
   const fresh = freshLounge();
-  assert.equal(fresh.looks.length, 7);
+  assert.equal(fresh.looks.length, ACTOR_COUNT);
   assert.equal(fresh.actor, 6);
   assert.equal(defaultLook(1).glasses, 'round');
   assert.equal(defaultLook(5).hat, 'none');

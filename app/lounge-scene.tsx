@@ -283,7 +283,7 @@ const FLAT_ART: Record<SceneArea, { src: string; alt: string; short: string; tag
     src: LOUNGE_ASSETS.room,
     alt: '햇살과 생활감이 가득한 범타듀 밸리의 마을 회관',
     short: '회관',
-    tagline: '일곱 친구의 아지트',
+    tagline: '여덟 친구의 아지트',
     title: '범마을 회관',
   },
   casino: {

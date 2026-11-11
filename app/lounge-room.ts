@@ -6,7 +6,7 @@ import { isShopArea } from "./lounge-shop-interiors.ts";
 import { isLighthouseArea } from "./lounge-lighthouse.ts";
 import { readLook, type Look } from "./lounge-look.ts";
 import { channelIdentity, channelKey, seal, unseal } from "./lounge-crypto.ts";
-import { ACTORS } from "./lounge-roster.ts";
+import { ACTOR_COUNT, ACTORS, isActor } from "./lounge-roster.ts";
 import {
   reactionId,
   reactionInfo,
@@ -305,8 +305,7 @@ export type LoungeView = LoungeWorld & {
   claiming: number | null;
 };
 export { empty as emptyLoungeView };
-const actorValid = (v: unknown): v is number =>
-  Number.isInteger(v) && Number(v) >= 0 && Number(v) < 7;
+const actorValid = isActor;
 const player = (id: string, actor: number, look: Look): LoungePlayer => ({
   id,
   actor,
@@ -319,7 +318,7 @@ const player = (id: string, actor: number, look: Look): LoungePlayer => ({
   area: "lounge",
 });
 function playersRead(value: unknown): LoungePlayer[] | null {
-  if (!Array.isArray(value) || value.length > 7) return null;
+  if (!Array.isArray(value) || value.length > ACTOR_COUNT) return null;
   const ids = new Set(),
     actors = new Set();
   const out: LoungePlayer[] = [];
@@ -687,7 +686,7 @@ export class LoungeRoom {
       return;
     }
     if (
-      this.members.size >= 7 ||
+      this.members.size >= ACTOR_COUNT ||
       [...this.members.values()].some((p) => p.actor === actor)
     )
       throw new Error("이미 접속한 계정이거나 방이 가득 찼습니다.");
@@ -3094,8 +3093,8 @@ export class LoungeRoom {
           );
           return;
         }
-        if (this.members.size >= 7) {
-          this.lobby(from, "일곱 자리가 모두 찼어요.");
+        if (this.members.size >= ACTOR_COUNT) {
+          this.lobby(from, "친구 자리가 모두 찼어요.");
           return;
         }
         const wallet = await verifyWallet(

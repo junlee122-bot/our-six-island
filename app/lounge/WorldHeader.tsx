@@ -179,7 +179,7 @@ export function WorldHeader({
           </strong>
           <small>
             {village
-              ? '일곱 친구가 사는 마을'
+              ? '여덟 친구가 사는 마을'
               : visiting
                 ? `${visiting}의 집 → ${NAMES.village}`
                 : `${tab === 'bedroom' ? `${ACTORS[save.actor]}의 집` : TAB_TITLES[tab]} → ${backTo}`}

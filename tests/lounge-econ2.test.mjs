@@ -3,6 +3,7 @@
 // flow totals, high-roller / VIP stakes and old-save migration.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTOR_COUNT } from '../app/lounge-roster.ts';
 import {
   LifeError,
   emptyLife,
@@ -195,7 +196,7 @@ test('집 확장: tiers in order with rising cost; styles unlock for the room sa
   for (let t = 2; t <= 4; t++) s.act(m, { kind: 'upgradeHouse' }, T0 + t);
   assert.equal(s.view(m, T0).me.house, 4);
   s.fails(m, { kind: 'upgradeHouse' }, T0 + 9, PLUS_REJECT.houseMax);
-  assert.equal(ACCOUNT_IDS.length, 7);
+  assert.equal(ACCOUNT_IDS.length, ACTOR_COUNT);
 });
 
 test('이번 주 명품 가구: weekly rotation, one copy per friend per week; 새로고침 fee doubles', () => {

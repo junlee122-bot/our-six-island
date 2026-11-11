@@ -9,7 +9,7 @@
 // lounge-areas.ts.
 //
 // 우리 농장 (design-our-farm.md, F1) is the friends' own farm behind the north
-// gate: the seven houses and their fields. Open from the start, no number.
+// gate: the friends' houses and their fields. Open from the start, no number.
 
 export type DistrictId = 'market' | 'harbor' | 'hillside' | 'ranch' | 'foothill' | 'farm';
 export const DISTRICT_IDS: readonly DistrictId[] = ['farm', 'market', 'harbor', 'hillside', 'ranch', 'foothill'];
@@ -66,7 +66,7 @@ export const DISTRICTS: Record<DistrictId, District> = {
     id: 'farm',
     no: 0,
     name: '우리 농장',
-    tagline: '일곱 친구의 집 · 집 앞 밭 · 출하함',
+    tagline: '여덟 친구의 집 · 집 앞 밭 · 출하함',
     size: { w: 84, d: 64 },
     stage: 1,
     // The middle of the north edge, where the house row's lane used to lead (§9-1).

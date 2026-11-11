@@ -55,9 +55,10 @@ const cheer = (to) => ({ kind: 'birthdayCheer', to });
 test('the friends\' birthdays: month-day only, 도원 and 민서 share 08-02', () => {
   assert.deepEqual(
     FRIEND_PROFILES.map((p) => p.birthday),
-    ['08-02', '10-06', '08-02', '01-22', '11-12', '06-15', '07-10'],
+    ['08-02', '10-06', '08-02', '01-22', '11-12', '06-15', '07-10', null],
   );
-  for (const p of FRIEND_PROFILES) assert.match(p.birthday, /^\d{2}-\d{2}$/);
+  for (const p of FRIEND_PROFILES) if (p.birthday !== null) assert.match(p.birthday, /^\d{2}-\d{2}$/);
+  assert.equal(FRIEND_PROFILES[7].birthday, null, '유찬 has no invented birthday');
   assert.deepEqual(birthdayActors(kstDay(SHARED)), [0, 2]);
   assert.deepEqual(birthdayActors(kstDay(GANGJAE)), [1]);
   assert.deepEqual(birthdayActors(kstDay(PLAIN)), []);

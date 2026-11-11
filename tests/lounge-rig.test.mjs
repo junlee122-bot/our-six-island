@@ -5,6 +5,7 @@ import { RIG_CELLS } from '../app/lounge-rig-data.ts';
 // Every static figure lounge-sprites.ts can show while moving (except the
 // hand-drawn classic/signature strips) must have a cut-out rig.
 const expected = [
+  ...Array.from({ length: 5 }, (_, i) => `yuchan:${i}`),
   ...Array.from({ length: 6 }, (_, i) => `original:${i}`),
   'hohyeon:0',
   ...['classic', 'street', 'smart'].flatMap((k) =>
@@ -37,6 +38,8 @@ test('every atlas cell has a rig with two legs or a hem-only split', () => {
       key.startsWith('ladies') ||
       key.startsWith('maid') ||
       key.startsWith('shampoo') ||
+      key === 'yuchan:3' ||
+      key === 'yuchan:4' ||
       key === 'outfits:2' ||
       key === 'outfits:5';
     assert.equal(cell.mode === 'hem', costume, key);

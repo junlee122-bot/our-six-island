@@ -1,6 +1,7 @@
 // 범타듀 밸리 calendar: seasons, KST days, deterministic weather, Korean
-// holidays, the seven friends' birthdays and weekly village events. Pure and
+// holidays, the friends' birthdays and weekly village events. Pure and
 // `now`-injected; safe to import in the client and the hohyeon-api Edge function.
+import { ACTORS } from './lounge-roster.ts';
 import { kstDay } from './lounge-economy.ts';
 
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -143,7 +144,7 @@ export type FriendProfile = {
 /**
  * ============================================================
  *  FRIENDS TABLE. Index = actor (0 도원, 1 강재, 2 민서, 3 승준,
- *  4 민재, 5 재민, 6 호현).
+ *  4 민재, 5 재민, 6 호현, 7 유찬).
  *  birthday: the real day, 'MM-DD' only (owner-provided 2026-10-03;
  *  the repo is public, so no years or anything else). 도원 and 민서
  *  share 08-02: one cake, one news line, one banner.
@@ -162,8 +163,9 @@ export const FRIEND_PROFILES: readonly FriendProfile[] = [
   { birthday: '11-12', likes: ['crop', 'forage'], dislikes: ['fish'] }, // 4 민재 (tastes: placeholder)
   { birthday: '06-15', likes: ['dish', 'fruit'], dislikes: ['bug'] }, // 5 재민 (tastes: placeholder)
   { birthday: '07-10', likes: ['material', 'crop'], dislikes: ['dish'] }, // 6 호현 (tastes: placeholder)
+  { birthday: null, likes: [], dislikes: [] }, // 7 유찬: birthday and tastes have not been provided
 ];
-export const ACTOR_NAMES = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'] as const;
+export const ACTOR_NAMES = ACTORS;
 /** Birthday bonus the birthday person may claim once on the day. */
 export const BIRTHDAY_CLAIM = 10_000;
 /** Friendship multiplier for gifts sent on the receiver's birthday. */

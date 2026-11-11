@@ -6,6 +6,7 @@
 // room between the houses; the middle field's two flank the road).
 // The 공동 밭 (6 × 6) lies west of the central yard. Sites are walkable ground
 // like the fields; what stands on them is drawn by lounge-farm-sites-3d.ts.
+import { ACTORS } from './lounge-roster.ts';
 import type { WalkPoint } from './lounge-walk-world.ts';
 import { FARM_FIELDS } from './lounge-farm-layout.ts';
 import { COMMON_COLS, COMMON_ROWS, SITE_TILES, siteActor, type SiteSize } from './lounge-farm-sites-data.ts';
@@ -52,7 +53,7 @@ export const FARM_SITES: readonly FarmSite[] = [
   site('S4', 'small', -22, 27),
   site('S5', 'small', 12, 27),
   site('S6', 'small', 24, 27),
-  ...[0, 1, 2, 3, 4, 5, 6].flatMap((a) => [site(`P${a}`, 'small', personalX(a, -1), PERSONAL_Z, a), site(`Q${a}`, 'small', personalX(a, 1), PERSONAL_Z, a)]),
+  ...ACTORS.flatMap((_, a) => [site(`P${a}`, 'small', personalX(a, -1), PERSONAL_Z, a), site(`Q${a}`, 'small', personalX(a, 1), PERSONAL_Z, a)]),
 ];
 export const farmSite = (id: string) => FARM_SITES.find((s) => s.id === id) ?? null;
 export const personalSite = (actor: number) => FARM_SITES.find((s) => s.actor === actor) ?? null;
@@ -109,10 +110,10 @@ export const COMMON_SIGN = { x: -16, z: 3.4 } as const;
 export const YARD_BACK = 1.4;
 /**
  * Where a friend's machines stand once the machine yard is built: one row per
- * friend (actor order), one column per slot, small (up to 12 × 7 in front of the shed).
+ * friend (actor order), one column per slot, small (up to 12 columns, with one row per friend in front of the shed).
  */
 export function yardMachineAt(s: { x: number; z: number; w: number; d: number }, actor: number, slot: number): WalkPoint {
   const pitchX = (s.w - 0.4) / 12,
-    pitchZ = (s.d - YARD_BACK - 0.2) / 7;
+    pitchZ = (s.d - YARD_BACK - 0.2) / ACTORS.length;
   return { x: round(s.x - s.w / 2 + 0.2 + (slot + 0.5) * pitchX), z: round(s.z - s.d / 2 + YARD_BACK + (actor + 0.5) * pitchZ) };
 }

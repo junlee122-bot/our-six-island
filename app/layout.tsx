@@ -10,14 +10,14 @@ import './lounge-club.css';
 import './ui/ui.css';
 // Keep in sync with the Pages <head> in scripts/build-standalone.mjs.
 export const metadata: Metadata = {
-  title: '범타듀 밸리 · 일곱 친구의 마을',
+  title: '범타듀 밸리 · 여덟 친구의 마을',
   description:
-    '일곱 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.',
+    '여덟 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.',
   icons: { icon: '/favicon.svg' },
   openGraph: {
     title: '범타듀 밸리',
     description:
-      '일곱 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.',
+      '여덟 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.',
     images: ['/og-image.webp'],
     locale: 'ko_KR',
     type: 'website',

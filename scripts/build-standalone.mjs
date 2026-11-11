@@ -36,9 +36,9 @@ const siteUrl = (option('--site-url') ?? pkg.homepage ?? '').replace(/\/?$/, '/'
 const assetDirectory = path.join(outDirectory, 'assets');
 fs.mkdirSync(assetDirectory, { recursive: true });
 
-const TITLE = '범타듀 밸리 · 일곱 친구의 마을';
+const TITLE = '범타듀 밸리 · 여덟 친구의 마을';
 const DESCRIPTION =
-  '일곱 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.';
+  '여덟 친구가 사는 호현지방의 3D 마을, 범타듀 밸리. 골목을 산책하고 회관·카지노·분장실·내 방에서 함께 놀아요.';
 const THEME_COLOR = '#5f8a55';
 
 // ---- budgets -------------------------------------------------------------
@@ -317,7 +317,7 @@ ${siteUrl !== '/' ? `<meta property="og:url" content="${escapeAttribute(siteUrl)
 <meta property="og:image:type" content="image/webp">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="범타듀 밸리의 일곱 친구">
+<meta property="og:image:alt" content="범타듀 밸리의 여덟 친구">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="./${bodyFont.fileName}" as="font" type="font/woff2" crossorigin>
 ${[...initialCss].map((css) => `<link rel="stylesheet" href="./${css}">`).join('\n')}

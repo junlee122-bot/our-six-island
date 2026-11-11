@@ -92,7 +92,7 @@ const safe = (n: unknown): n is number => typeof n === 'number' && Number.isSafe
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
 const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 const nonEmpty = (o: object) => Object.keys(o).length > 0;
-const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < ACTOR_NAMES.length;
 const isCrop = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as string[]).includes(c);
 const COUNT_MAX = 99_999;
 const walletOf = (uid: string) => 'wallet-' + uid;
@@ -248,13 +248,13 @@ function readState(def: FacilityDef, tier: number, v: unknown): SiteFacilityStat
     if (nonEmpty(trees)) out.trees = trees;
   } else if (def.id === 'barn' || def.id === 'coop') {
     const mn: Record<string, number> = {};
-    for (const [a, n] of Object.entries(obj(x.mn))) if (/^[0-6]$/.test(a) && safe(n) && n > 0) mn[a] = Math.min(MANURE_HOLD, n);
+    for (const [a, n] of Object.entries(obj(x.mn))) if (/^(0|[1-9]\d*)$/.test(a) && actorValid(Number(a)) && safe(n) && n > 0) mn[a] = Math.min(MANURE_HOLD, n);
     if (nonEmpty(mn)) out.mn = mn;
     const cut: Record<string, { d: number; t: number[] }> = {};
     if (def.id === 'barn')
       for (const [a, c] of Object.entries(obj(x.cut))) {
         const v = obj(c);
-        if (!/^[0-6]$/.test(a) || !safe(v.d) || v.d <= 0 || !Array.isArray(v.t)) continue;
+        if (!(/^(0|[1-9]\d*)$/.test(a) && actorValid(Number(a))) || !safe(v.d) || v.d <= 0 || !Array.isArray(v.t)) continue;
         const t = [...new Set(v.t.filter((i): i is number => safe(i) && i >= 0 && i < GRID_TILES))].sort((i, j) => i - j);
         if (t.length) cut[a] = { d: v.d, t };
       }
@@ -280,14 +280,14 @@ function readFund(def: FacilityDef, tier: number, v: unknown): SiteFund | undefi
     if (safe(n) && n > 0) mat[id] = Math.min(need, n);
   }
   const by: Record<string, number> = {};
-  for (const [a, n] of Object.entries(obj(x.by))) if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = Math.min(COUNT_MAX, n);
+  for (const [a, n] of Object.entries(obj(x.by))) if (/^(0|[1-9]\d*)$/.test(a) && actorValid(Number(a)) && safe(n) && n > 0) by[a] = Math.min(COUNT_MAX, n);
   return { to: x.to, got: safe(x.got) && x.got > 0 ? Math.min(cost.beom, x.got) : 0, mat, by };
 }
 function readPaid(def: FacilityDef, v: unknown) {
   const keys = matKeys(def),
     out: Record<string, Record<string, number>> = {};
   for (const [a, m] of Object.entries(obj(v))) {
-    if (!/^[0-6]$/.test(a)) continue;
+    if (!(/^(0|[1-9]\d*)$/.test(a) && actorValid(Number(a)))) continue;
     const mats: Record<string, number> = {};
     for (const [id, n] of Object.entries(obj(m))) if (keys.has(id) && safe(n) && n > 0) mats[id] = Math.min(1_000_000, n);
     if (nonEmpty(mats)) out[a] = mats;

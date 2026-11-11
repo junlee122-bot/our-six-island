@@ -1,3 +1,4 @@
+import { isActor } from './lounge-roster.ts';
 import { VILLAGE_PLACES, villageFromNetwork, type VillagePoint } from './lounge-village-layout.ts';
 import { SHOP_INTERIORS, isShopArea } from './lounge-shop-interiors.ts';
 import { LIGHTHOUSE_FLOOR, isLighthouseArea } from './lounge-lighthouse.ts';
@@ -41,7 +42,7 @@ export function villageFriendGroups(pins: readonly VillageFriendPin[], pixelsPer
 export function villageFriendPins(players: readonly Presence[], self: string): VillageFriendPin[] {
   const ids = new Set<string>();
   return players.flatMap((p): VillageFriendPin[] => {
-    if (p.id === self || p.id.startsWith('friend-') || ids.has(p.id) || !Number.isInteger(p.actor) || p.actor < 0 || p.actor > 6) return [];
+    if (p.id === self || p.id.startsWith('friend-') || ids.has(p.id) || !isActor(p.actor)) return [];
     ids.add(p.id);
     if (p.area === 'village')
       return [{ id: p.id, actor: p.actor, point: villageFromNetwork(p), indoor: false, location: '마을' }];

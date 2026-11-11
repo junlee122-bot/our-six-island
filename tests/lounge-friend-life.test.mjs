@@ -4,6 +4,7 @@
 // festivals, the calendar drift fix and the 마을 적응하기 checklist.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTORS } from '../app/lounge-roster.ts';
 import { gameTimeOnDay, kstDate, seasonOfDay, cycleSeasonOfDay, weatherOf, calendarOf, SEASONS } from '../app/lounge-calendar.ts';
 import { DISH_BY_ID, FURNITURE_BY_REF, ITEM_BY_ID } from '../app/lounge-items.ts';
 import { LifeError, emptyLife, ensureLifeMember, isLifeAction, lifeAction, lifeView, readLife } from '../app/lounge-life.ts';
@@ -103,7 +104,7 @@ const baseCtx = (over = {}) => ({
 
 // ------------------------------------------------------------ lines data
 test('friend lines: every friend has every situation, placeholders are known, no emoji, short lines', () => {
-  assert.equal(FRIEND_LINES.length, 7);
+  assert.equal(FRIEND_LINES.length, ACTORS.length);
   const EMOJI = /\p{Extended_Pictographic}/u;
   const known = /\{(me|name|season|item|friend|news|holiday)\}/g;
   for (const [actor, set] of FRIEND_LINES.entries()) {
@@ -526,7 +527,7 @@ test('festival state and social data read back bounded from a hostile world', ()
     },
     hr: { '0>1': 4, '0>0': 2, '1>2': 99 },
     bondAt: { '0-1': 5, '1-0': 3 },
-    stamps: { 0: ['crucian', 'nope', 'crucian'], 7: ['carp'] },
+    stamps: { 0: ['crucian', 'nope', 'crucian'], 8: ['carp'] },
     adapt: { 0: ['sell', 'bogus', 'sell'] },
     mm: { 0: 99 },
   });

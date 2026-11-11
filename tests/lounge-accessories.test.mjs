@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTORS } from '../app/lounge-roster.ts';
 import { figureFrame } from '../app/lounge-figure-frame.ts';
 import { COLLECTIONS, GLASSES, HATS, collectionsFor, defaultLook, hatsFor, readLook, freshLounge, readLounge } from '../app/lounge-look.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
@@ -95,19 +96,19 @@ function allLooks(actor) {
 test('every current headband, glasses, clip, collection and colour is on the allowlist', () => {
   assert.deepEqual(HATS.map((h) => h.id), ['none', 'hachimaki']);
   assert.equal(COLLECTIONS.length, 12);
-  for (let actor = 0; actor < 7; actor++)
+  for (let actor = 0; actor < ACTORS.length; actor++)
     for (const look of allLooks(actor)) assert.deepEqual(readLook(look, actor), look, JSON.stringify([actor, look]));
   // The headband belongs to 도원's wardrobe only; others read it as bare-headed.
   assert.equal(readLook({ hat: 'hachimaki' }, 1).hat, 'none');
   assert.equal(readLook({ hat: 'hachimaki' }, 5).hat, 'none');
   assert.deepEqual(hatsFor(0).map((h) => h.id), ['none', 'hachimaki']);
-  for (let actor = 1; actor < 7; actor++) assert.deepEqual(hatsFor(actor).map((h) => h.id), ['none']);
+  for (let actor = 1; actor < ACTORS.length; actor++) assert.deepEqual(hatsFor(actor).map((h) => h.id), ['none']);
 });
 
 const REMOVED_HATS = ['cap', 'straw', 'bucket', 'beanie'];
 
 test('removed hats read as bare-headed for every friend (saves, remote looks, old clients)', () => {
-  for (let actor = 0; actor < 7; actor++) {
+  for (let actor = 0; actor < ACTORS.length; actor++) {
     assert.equal(defaultLook(actor).hat, 'none', `actor ${actor} default`);
     // A look with no hat field at all (never a fallback to 재민's old cap).
     assert.equal(readLook({ collection: 'classic' }, actor).hat, 'none');
@@ -124,7 +125,9 @@ test('removed hats read as bare-headed for every friend (saves, remote looks, ol
   old.looks = old.looks.map((l, i) => ({ ...l, hat: i === 0 ? 'hachimaki' : REMOVED_HATS[i % 4] }));
   old.saved = [{ id: 's', actor: 5, name: '모자', look: { ...old.looks[5], hat: 'cap' } }];
   const back = readLounge(JSON.stringify(old), 5);
-  assert.deepEqual(back.looks.map((l) => l.hat), ['hachimaki', 'none', 'none', 'none', 'none', 'none', 'none']);
+  assert.deepEqual(back.looks.map((l) => l.hat), ACTORS.map((_, actor) => actor === 0 ? 'hachimaki' : 'none'));
+  assert.deepEqual(back.looks.slice(0, 7).map((l) => l.hat), ['hachimaki', 'none', 'none', 'none', 'none', 'none', 'none']);
+  assert.equal(back.looks[7].hat, 'none');
   assert.equal(back.saved[0].look.hat, 'none');
 });
 
@@ -146,7 +149,7 @@ test('the room server stores none when an old client sends a removed hat', async
 });
 
 test('saves and friend-visit views keep every accessory', () => {
-  for (let actor = 0; actor < 7; actor++)
+  for (let actor = 0; actor < ACTORS.length; actor++)
     for (const look of allLooks(actor)) {
       const save = freshLounge(actor);
       save.looks[actor] = look;

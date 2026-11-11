@@ -13,6 +13,7 @@
 // functions, never at the top level.
 import { grantBeom, kstDay, nextKstMidnight, spendBeom, type LoungeLedger } from './lounge-economy.ts';
 import { ACTOR_NAMES, GAME_HOUR_MS, weatherOf, type Weather } from './lounge-calendar.ts';
+import { isActor, isActorKey } from './lounge-roster.ts';
 import { companionNow } from './lounge-companion-effects.ts';
 import { districtFlagsFor } from './lounge-districts.ts';
 import { hasExplorerPass } from './lounge-explorer-pass.ts';
@@ -117,12 +118,16 @@ export type VoyageExt = { voyage?: VoyageState };
 
 // ---------------------------------------------------------------- reading
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const ID = /^[sd][0-9]{1,12}(a[0-6])?$/;
+const validTripId = (value: unknown): value is string => {
+  if (typeof value !== 'string') return false;
+  const match = /^[sd][0-9]{1,12}(?:a([0-9]+))?$/.exec(value);
+  return !!match && (match[1] === undefined || isActorKey(match[1]));
+};
 const nat = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0;
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
 function readTrip(v: unknown): VoyageTrip | undefined {
   const t = obj(v);
-  if (typeof t.id !== 'string' || !ID.test(t.id) || !nat(t.dep) || !nat(t.fare) || t.fare > 1_000_000) return;
+  if (!validTripId(t.id) || !nat(t.dep) || !nat(t.fare) || t.fare > 1_000_000) return;
   const out: VoyageTrip = { id: t.id, dep: t.dep, fare: t.fare };
   if (t.dawn === true) out.dawn = true;
   if (nat(t.left)) out.left = t.left;
@@ -147,7 +152,7 @@ function readUser(v: unknown): VoyageUser | undefined {
   const p = obj(x.pill);
   if (p.kind === 'steady' && p.food === PILL && nat(p.until)) out.pill = { kind: 'steady', food: PILL, until: p.until };
   const g = obj(x.guestOf);
-  if (typeof g.id === 'string' && ID.test(g.id) && nat(g.dep) && nat(g.from) && g.from < 7) out.guestOf = { id: g.id, dep: g.dep, from: g.from };
+  if (validTripId(g.id) && nat(g.dep) && isActor(g.from)) out.guestOf = { id: g.id, dep: g.dep, from: g.from };
   return Object.keys(out).length ? out : undefined;
 }
 /** Normalizes `world.life.voyage` (every key omitted when empty, so older worlds read as before). */

@@ -2,7 +2,7 @@
   "name": "beomdew-valley",
   "version": "0.1.0",
   "private": true,
-  "description": "범타듀 밸리 · 일곱 친구의 마을 — 친구 7명이 함께 노는 브라우저 마을 게임",
+  "description": "범타듀 밸리 · 여덟 친구의 마을 — 친구 8명이 함께 노는 브라우저 마을 게임",
   "homepage": "https://junlee122-bot.github.io/our-six-island/",
   "engines": {
     "node": ">=22.13.0"

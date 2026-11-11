@@ -1,3 +1,4 @@
+import { isActor } from './lounge-roster.ts';
 // 새 방 가구 초기화 (2026-10-02, handover/design/design-rooms-v2.md 결정 2):
 // the one-time, server-side furniture reset that comes with the new rooms.
 //
@@ -48,7 +49,7 @@ export function readRoomsReset(value: unknown): RoomsReset | undefined {
   for (const [uid, raw] of Object.entries(isRecord(value.backup) ? value.backup : {}).slice(0, 32)) {
     if (!UUIDISH.test(uid) || !isRecord(raw)) continue;
     const entry: RoomsResetBackup = {};
-    if (Number.isInteger(raw.actor) && (raw.actor as number) >= 0 && (raw.actor as number) <= 6) entry.actor = raw.actor as number;
+    if (isActor(raw.actor)) entry.actor = raw.actor;
     const furn: Record<string, number> = {};
     for (const [ref, n] of Object.entries(isRecord(raw.furn) ? raw.furn : {}).slice(0, 200))
       if (REF.test(ref) && Number.isSafeInteger(n) && (n as number) > 0) furn[ref] = n as number;

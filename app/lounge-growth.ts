@@ -1,3 +1,4 @@
+import { isActor, isActorKey } from './lounge-roster.ts';
 // 성장 engine (tech tree P1): personal skills (XP, levels, daily cap, rested
 // XP, catch-up, retro XP, professions, respec), the blacksmith (drop a tool off,
 // pick it up at 06:00 KST the next day, keep using the old one meanwhile), the
@@ -314,7 +315,7 @@ function readResearch(def: (typeof RESEARCH)[number], v: unknown): ResearchState
     if (safe(n) && n > 0) mat[id] = Math.min(need, n);
   }
   const by: Record<string, number> = {};
-  for (const [a, n] of Object.entries(obj(x.by))) if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = Math.min(1_000_000, n);
+  for (const [a, n] of Object.entries(obj(x.by))) if (isActorKey(a) && safe(n) && n > 0) by[a] = Math.min(1_000_000, n);
   const out: ResearchState = { got: safe(x.got) && x.got > 0 ? Math.min(def.beom, x.got) : 0, mat, by, start: x.start };
   if (safe(x.fullAt) && x.fullAt > 0) out.fullAt = x.fullAt;
   if (safe(x.doneAt) && x.doneAt > 0) out.doneAt = x.doneAt;
@@ -337,7 +338,7 @@ export function readGrowth(value: unknown): GrowthExt {
   const c: NonNullable<GrowthState['c']> = {};
   for (const id of Object.keys(GATES)) {
     const g = obj(obj(v.c)[id]);
-    if (safe(g.actor) && g.actor >= 0 && g.actor < 7 && safe(g.at) && g.at > 0) c[id] = { actor: g.actor, at: g.at };
+    if (isActor(g.actor) && safe(g.at) && g.at > 0) c[id] = { actor: g.actor, at: g.at };
   }
   const out: GrowthState = {};
   if (Object.keys(u).length) out.u = u;
@@ -576,7 +577,7 @@ export function settleResearch(life: LifeState, now: number) {
     if (!s?.doneAt || s.doneAt > now || life.flags?.includes(def.flag)) continue;
     (life.flags ??= []).push(def.flag);
     changed = true;
-    const helpers = Object.keys(s.by).map(Number).filter((a) => a >= 0 && a < 7).sort((p, q) => p - q);
+    const helpers = Object.keys(s.by).map(Number).filter(isActor).sort((p, q) => p - q);
     for (const helper of helpers) {
       const helperUid = uidOf(life, helper);
       if (!helperUid) continue;

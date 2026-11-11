@@ -900,7 +900,7 @@ function planOf(id: NpcId, k: DayKind): Seg[] {
     }
     case 'sinjjajang': {
       // The morning round visits the friends' houses on 우리 농장 in a daily order, then the harbor.
-      const order = [0, 1, 2, 3, 4, 5, 6].sort((a, b) => hash32(`mail:${k.day}:${a}`) - hash32(`mail:${k.day}:${b}`)).slice(0, 4);
+      const order = FARM_HOUSES.map((h) => h.actor).sort((a, b) => hash32(`mail:${k.day}:${a}`) - hash32(`mail:${k.day}:${b}`)).slice(0, 4);
       const round: Seg[] = order.map((a, i) => [hm(9) + i * 22, `fa.door-${a}`, 'deliver', `${FARM_HOUSES.find((h) => h.actor === a)?.name ?? '친구 집'}에 편지 배달 중`] as Seg);
       const plan: Seg[] = [
         [0, 'home', 'sleep'],

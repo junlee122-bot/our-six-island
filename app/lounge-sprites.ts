@@ -8,6 +8,7 @@ import {
   type RigParts,
 } from './lounge-rig';
 import { RIG_CELLS } from './lounge-rig-data';
+import { YUCHAN_ACTOR, YUCHAN_ATLAS, YUCHAN_OUTFIT_CELL } from './lounge-yuchan';
 import { motionSheetFor, type MotionSheet } from './lounge-rig-frames';
 import {
   dyePixel,
@@ -466,6 +467,7 @@ let pending: Promise<Awaited<ReturnType<typeof prepare>>> | null = null;
 const LADIES_EYES = [133, 132, 130, 134, 132, 130];
 const MAID_EYES = [133, 129, 131, 135, 134, 137, 137, 134];
 type AtlasKey =
+  | 'yuchan'
   | 'original'
   | 'hohyeon'
   | 'classic'
@@ -490,7 +492,8 @@ export function spriteAtlasesFor(actor: number, input: Look): AtlasKey[] {
     akatsuki = look.collection === 'akatsuki',
     special = actor === 0 && (bun || newOutfit >= 0 || shampoo);
   const keys = new Set<AtlasKey>();
-  if (look.collection === 'maid') keys.add('maid');
+  if (actor === YUCHAN_ACTOR) keys.add('yuchan');
+  else if (look.collection === 'maid') keys.add('maid');
   else if (look.collection === 'gold-braid' || look.collection === 'cape-coat')
     keys.add('ladies');
   else if (akatsuki) keys.add('akatsuki');
@@ -515,7 +518,8 @@ async function prepare() {
     shampooFigures: Figure[] = [],
     akatsukiFigures: Figure[] = [],
     ladiesFigures: Figure[] = [],
-    maidFigures: Figure[] = [];
+    maidFigures: Figure[] = [],
+    yuchanFigures: Figure[] = [];
   const original: Figure[][] = [];
   const collections: Figure[][] = [];
   const pieces: Piece[] = [];
@@ -551,6 +555,14 @@ async function prepare() {
     return f;
   };
   const builders: Record<AtlasKey, () => Promise<void>> = {
+    async yuchan() {
+      const sheet = await image(a.yuchan);
+      yuchanFigures = Array.from({ length: YUCHAN_ATLAS.outfits }, (_, i) => {
+        const f = sheetFigure(sheet, YUCHAN_ATLAS.columns, YUCHAN_ATLAS.rows, i, undefined, false, false, true);
+        f.rig = `yuchan:${i}`;
+        return f;
+      });
+    },
     async original() {
       const motion = await image(a.motion);
       const rows = [
@@ -965,6 +977,7 @@ async function prepare() {
   >();
   /** The static figure a look shows (standing pose unless `frame` picks a legacy step). */
   function staticFigure(actor: number, look: Look, frame: number) {
+    if (actor === YUCHAN_ACTOR) return yuchanFigures[YUCHAN_OUTFIT_CELL[look.collection] ?? 0];
     const index = ['classic', 'street', 'smart'].indexOf(look.collection),
       newOutfit = ['wide-pants', 'denim', 'miku'].indexOf(look.collection),
       bun = actor === 0 && look.hairstyle === 'buns',

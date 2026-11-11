@@ -1,4 +1,5 @@
-import { ACTORS } from './lounge-roster.ts';
+import { ACCOUNT_IDS, ACTORS, isActor } from './lounge-roster.ts';
+export { ACCOUNT_IDS } from './lounge-roster.ts';
 import {
   LoungeSaveError,
   readLounge,
@@ -26,15 +27,6 @@ import {
 } from './lounge-life.ts';
 import { furnitureOf, houseUnlocksOf } from './lounge-life-plus.ts';
 import { maskBedroomFurniture, maskFurnitureSave, type FurniturePolicy } from './lounge-furniture-protection.ts';
-export const ACCOUNT_IDS = [
-  'dowon',
-  'gangjae',
-  'minseo',
-  'seungjun',
-  'minjae',
-  'jaemin',
-  'hohyeon',
-] as const;
 export const ACCOUNTS = ACCOUNT_IDS.map((username, actor) => ({
   username,
   actor,
@@ -118,7 +110,7 @@ export function accountSave(
   previousSave?: unknown,
   options: { strict?: boolean; unlocks?: readonly string[]; furniture?: FurniturePolicy } = {},
 ): LoungeSave {
-  if (!Number.isInteger(actor) || actor < 0 || actor >= ACCOUNT_IDS.length)
+  if (!isActor(actor))
     throw new RangeError('Unknown account actor');
   let raw: string | null = null;
   try {

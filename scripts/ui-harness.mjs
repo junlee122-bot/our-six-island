@@ -10,6 +10,7 @@ import path from 'node:path';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import { newLoungeLedger } from '../app/lounge-economy.ts';
 import { friendVisitView, serverAccountSave, lifeUnlocksOf } from '../app/lounge-accounts.ts';
+import { ACCOUNT_IDS, isActor } from '../app/lounge-roster.ts';
 
 export const VIEWS = {
   fhd: { width: 1920, height: 1080 },
@@ -70,18 +71,19 @@ export async function launchBrowser() {
  * client clock that runs ahead (+) or behind (−) the server's, the way a slow
  * response skews it); the engine itself still runs on Date.now().
  */
-export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, onboard = false, serverSkew }) {
+export async function setup({ browser, base, view = 'fhd', actor = 3, seedLife, seedSave, onboard = false, serverSkew }) {
+  if (!isActor(actor)) throw new Error('Unknown synthetic actor');
   const VW = VIEWS[view];
-  const uid = '11111111-2222-4333-8444-555555555553';
-  const me = { id: uid, actor: 3, username: 'seungjun' };
+  const uid = '11111111-2222-4333-8444-' + String(actor).padStart(12, '5');
+  const me = { id: uid, actor, username: ACCOUNT_IDS[actor] };
   let world = { schema: 1, ledger: newLoungeLedger(), rooms: {}, receipts: {} };
   let revision = 1;
   const saves = {};
   // A stored profile save for me (e.g. a furnished room), as the server would hold it.
-  if (seedSave) saves[3] = JSON.parse(JSON.stringify(seedSave));
+  if (seedSave) saves[actor] = JSON.parse(JSON.stringify(seedSave));
   const errors = [];
   const mk = (actor, username) => ({ id: crypto.randomUUID(), actor, username, connection: crypto.randomUUID(), sequence: 0, epoch: 0, code: '' });
-  const bots = [mk(0, 'dowon'), mk(6, 'hohyeon'), mk(2, 'minseo')];
+  const bots = [0, 6, 2].filter((a) => a !== actor).map((a) => mk(a, ACCOUNT_IDS[a]));
   async function run(p, op, extra = {}) {
     const command = {
       op,
@@ -126,8 +128,8 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
         if (p.wetUntil) p.wetUntil -= 3 * 3600e3;
       }
     await run(meC, 'leave');
-    await run(bots[0], 'action', { action: { kind: 'mail', to: 3, text: '어제 고스톱 재밌었어! 오늘 저녁에 또 하자', sticker: 'heart' } });
-    await run(bots[0], 'action', { action: { kind: 'guestbook', owner: 3, text: '방 너무 예쁘다~ 다녀감!' } });
+    await run(bots[0], 'action', { action: { kind: 'mail', to: actor, text: '어제 고스톱 재밌었어! 오늘 저녁에 또 하자', sticker: 'heart' } });
+    await run(bots[0], 'action', { action: { kind: 'guestbook', owner: actor, text: '방 너무 예쁘다~ 다녀감!' } });
   }
   seedLife?.(world.life, uid);
 
@@ -135,7 +137,7 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
   const exp = Math.floor(Date.now() / 1000) + 86400;
   const jwt = b64({ alg: 'HS256', typ: 'JWT' }) + '.' + b64({ sub: uid, exp, role: 'authenticated', aud: 'authenticated', session_id: 's1' }) + '.sig';
   const user = { id: uid, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
-  const profile = () => ({ id: uid, username: 'seungjun', actor: 3, save: saves[3] ?? null, revision: saves[3] ? 1 : 0, updatedAt: '' });
+  const profile = () => ({ id: uid, username: me.username, actor, save: saves[actor] ?? null, revision: saves[actor] ? 1 : 0, updatedAt: '' });
 
   const ctx = await browser.newContext({ viewport: VW, deviceScaleFactor: 1, locale: 'ko-KR' });
   await ctx.addInitScript((onboard) => {
@@ -163,6 +165,8 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
     if (u.includes('/auth/v1/user')) return json(user);
     if (u.includes('/functions/v1/hohyeon-auth')) {
       const body = JSON.parse(r.request().postData() || '{}');
+      if (body.op === 'login' && body.username !== me.username)
+        return json({ error: 'Synthetic login does not match the chosen fixture actor.' }, 401);
       return json({ session: { access_token: jwt, refresh_token: 'r', expires_in: 86400, expires_at: exp, token_type: 'bearer', user }, profile: profile(), ...(body.op !== 'login' ? { recoveryCode: 'HR-ABCD-EFGH-IJKL' } : {}) });
     }
     if (u.includes('/functions/v1/hohyeon-api')) {
@@ -170,8 +174,8 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
       if (body.op === 'profile') return json({ profile: profile() });
       if (body.op === 'save') {
         try {
-          const saved = serverAccountSave(body.save, 3, saves[3], lifeUnlocksOf(world.life, uid));
-          saves[3] = JSON.parse(JSON.stringify(saved));
+          const saved = serverAccountSave(body.save, actor, saves[actor], lifeUnlocksOf(world.life, uid));
+          saves[actor] = JSON.parse(JSON.stringify(saved));
           return json({ conflict: false, save: saved, revision: (body.revision ?? 0) + 1, updatedAt: '' });
         } catch (e) {
           return json({ error: e.message }, e.status ?? 409);
@@ -267,13 +271,13 @@ export async function setup({ browser, base, view = 'fhd', seedLife, seedSave, o
     clearInterval(hb);
     await ctx.close().catch(() => {});
   };
-  return { page, ctx, js, jsWithin, sleep, until, clickSel, clickText, run, bots, uid, VW, errors, external, world: () => world, close };
+  return { page, ctx, js, jsWithin, sleep, until, clickSel, clickText, run, bots, uid, member: me, VW, errors, external, world: () => world, saved: () => saves[actor] ? JSON.parse(JSON.stringify(saves[actor])) : null, close };
 }
 
-export async function login(H, base) {
-  await H.page.goto(base);
+export async function login(H, base, { navigate = true } = {}) {
+  if (navigate) await H.page.goto(base, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await H.page.waitForSelector('.l-auth-card', { timeout: 90000 });
-  await H.clickSel('[data-username=seungjun]');
+  await H.clickSel(`[data-username=${H.member?.username ?? 'seungjun'}]`);
   await H.sleep(300);
   const inputs = await H.page.$$('.l-account-form input:not([readonly])');
   await inputs[0].fill('password1234');

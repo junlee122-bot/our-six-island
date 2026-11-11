@@ -34,6 +34,7 @@ const LOGIN_FIGURES = [
   LOUNGE_ASSETS.loginMinjae,
   LOUNGE_ASSETS.loginJaemin,
   LOUNGE_ASSETS.loginHohyeon,
+  LOUNGE_ASSETS.loginYuchan,
 ];
 
 export function LoginPortrait({ actor }: { actor: number }) {

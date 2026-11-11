@@ -1,3 +1,4 @@
+import { ACTOR_COUNT, isActor, isActorKey } from './lounge-roster.ts';
 // 낚시 업그레이드 engine (handover/design/design-fishing-upgrade.md).
 // Cast → bite → hook (reaction grade) → 손맛 fight (lounge-fish-minigame,
 // replayed here from the stored seed) → catch with size, weight, quality,
@@ -394,7 +395,7 @@ export function readAngling(value: unknown): AnglingExt {
     const e: Record<string, CupCatch[]> = {};
     for (const [a, list] of Object.entries(obj(cup.e))) {
       const catches = readCatches(list);
-      if (/^[0-6]$/.test(a) && catches.length) e[a] = catches;
+      if (isActorKey(a) && catches.length) e[a] = catches;
     }
     out.cup = { week: cup.week, e };
   }
@@ -405,13 +406,13 @@ export function readAngling(value: unknown): AnglingExt {
       .filter((h) => nat(h.week) && nat(h.players))
       .map((h) => ({
         week: h.week as number,
-        players: Math.min(7, h.players as number),
+        players: Math.min(ACTOR_COUNT, h.players as number),
         ranks: (Array.isArray(h.ranks) ? h.ranks : [])
           .slice(0, 3)
           .map(obj)
-          .filter((r) => nat(r.actor) && r.actor < 7 && nat(r.score))
+          .filter((r) => isActor(r.actor) && nat(r.score))
           .map((r) => ({ actor: r.actor as number, score: r.score as number })),
-        claimed: (Array.isArray(h.claimed) ? [...new Set(h.claimed)] : []).filter((a): a is number => nat(a) && a < 7),
+        claimed: (Array.isArray(h.claimed) ? [...new Set(h.claimed)] : []).filter(isActor),
       }));
     if (hist.length) out.cupHistory = hist;
   }

@@ -2662,7 +2662,7 @@ export function Village3D(props: Props) {
             <Trees size={15} /> 우리들의 마을
           </span>
           <h1>범타듀 밸리</h1>
-          <p>일곱 친구의 골목에서 숲과 강 너머까지.</p>
+          <p>여덟 친구의 골목에서 숲과 강 너머까지.</p>
         </div>
         <span className="hv-weather" data-phase={phase}>
           {phase === 'night' ? (

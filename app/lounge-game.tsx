@@ -2912,7 +2912,7 @@ function AccountLounge({
         </section>
       )}
       <footer className="l-footer">
-        <span>{NAMES.app} · 일곱 친구가 사는 마을</span>
+        <span>{NAMES.app} · 여덟 친구가 사는 마을</span>
         <div>
           <button
             onClick={() => {

@@ -3,7 +3,7 @@
 //
 //   SUPABASE_URL=https://<ref>.supabase.co \
 //   SUPABASE_SERVICE_ROLE_KEY=<service role key> \
-//   node supabase/admin/rotate-activation-code.mjs <username> [--reset] [--days=7]
+//   node --experimental-strip-types supabase/admin/rotate-activation-code.mjs <username> [--reset] [--days=7]
 //
 // 1. generates a new HH-<48 hex> code locally (crypto random, 192 bits);
 // 2. hh_admin_rotate_activation: stores its SHA-256, sets activation_expires_at
@@ -24,8 +24,8 @@
 // service role key; pass it through the environment only.
 import { createHash, randomBytes } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
+import { ACCOUNT_IDS } from '../../app/lounge-roster.ts';
 
-const ACCOUNT_IDS = ['dowon', 'gangjae', 'minseo', 'seungjun', 'minjae', 'jaemin', 'hohyeon'];
 const args = process.argv.slice(2);
 const username = args.find((a) => !a.startsWith('--'))?.trim().toLowerCase();
 const reset = args.includes('--reset');

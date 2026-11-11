@@ -10,6 +10,7 @@ import {
   type LoungeLedger,
 } from './lounge-economy.ts';
 import { hash32, seasonOf, type Season } from './lounge-calendar.ts';
+import { isActor } from './lounge-roster.ts';
 import { GROW_WET, legacyWet, soilGrowth, soilReadyAt, soilWetBy, tilledMask } from './lounge-farm-soil.ts';
 import { cleanText, hasUnsafeText, textLength } from './text-clean.ts';
 import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
@@ -760,7 +761,7 @@ const time = (n: unknown) => (safe(n) && n >= 0 ? n : 0);
 const count = (n: unknown) =>
   safe(n) && n >= 0 ? Math.min(n, BAG_MAX) : 0;
 const isCrop = (c: unknown): c is Crop => CROPS.includes(c as Crop);
-const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+const actorValid = isActor;
 const cropCounts = (): Record<Crop, number> =>
   Object.fromEntries(CROPS.map((c) => [c, 0])) as Record<Crop, number>;
 const emptyPlot = (): Plot => ({ crop: null, plantedAt: 0 });

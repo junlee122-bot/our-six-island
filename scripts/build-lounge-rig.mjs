@@ -11,10 +11,11 @@
 // without per-frame pixel work. `--debug` also writes overlay PNGs.
 import sharp from 'sharp';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { removeConnectedBackdrop } from '../app/character-style.ts';
 
 const root = new URL('../', import.meta.url);
-const asset = (path) => new URL(`public${path}`, root).pathname;
+const asset = (path) => fileURLToPath(new URL(`public${path}`, root));
 const debugAt = process.argv.indexOf('--debug');
 const debugDir = debugAt > 0 ? process.argv[debugAt + 1] : null;
 if (debugDir) mkdirSync(debugDir, { recursive: true });
@@ -485,6 +486,7 @@ async function hohyeonCell() {
 }
 
 const atlases = [
+  ['yuchan', () => sheetCells('/assets/lounge/yuchan-atlas.webp', 3, 2, 5), (i) => i >= 3 ? 'hem' : 'legs', (i) => i >= 3 ? 'none' : undefined],
   ['original', originalCells, 'legs'],
   ['hohyeon', async () => [await hohyeonCell()], 'legs'],
   ['classic', () => sheetCells('/assets/lounge/club-friends-classic.webp', 4, 2, 7), 'legs'],

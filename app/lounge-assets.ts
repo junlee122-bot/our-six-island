@@ -2,6 +2,7 @@
 // WebP copies (exact RGB for dye/keying) and reactions to 256px WebP, both made by
 // scripts/optimize-assets.mjs from the PNG originals kept next to them.
 export const LOUNGE_ASSETS = {
+  yuchan: '/assets/lounge/yuchan-atlas.webp',
   locomotionDowon: '/assets/lounge/motion/dowon.webp',
   locomotionGangjae: '/assets/lounge/motion/gangjae.webp',
   locomotionMinseo: '/assets/lounge/motion/minseo.webp',
@@ -146,6 +147,7 @@ export const LOUNGE_ASSETS = {
   loginMinjae: '/assets/lounge/login/minjae.webp',
   loginJaemin: '/assets/lounge/login/jaemin.webp',
   loginHohyeon: '/assets/lounge/login/hohyeon.webp',
+  loginYuchan: '/assets/lounge/login/yuchan.webp',
   reaction_laugh: '/assets/lounge/reactions/laugh.webp',
   reaction_wow: '/assets/lounge/reactions/wow.webp',
   reaction_cry: '/assets/lounge/reactions/cry.webp',

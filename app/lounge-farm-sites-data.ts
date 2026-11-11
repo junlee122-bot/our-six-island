@@ -8,6 +8,7 @@
 //
 // A leaf module (growth ids and calendar types only), so lounge-life.ts can
 // list the action kinds at load time and the UI can read the table.
+import { ACTORS, isActor } from './lounge-roster.ts';
 import type { Season } from './lounge-calendar.ts';
 import type { SkillId } from './lounge-growth-data.ts';
 
@@ -29,13 +30,16 @@ export const SHARED_SITE_IDS = ['L1', 'L2', 'M1', 'M2', 'M3', 'M4', 'S1', 'S2', 
 export const personalSiteId = (actor: number) => `P${actor}`;
 /** A friend's second personal site (F5). */
 export const secondSiteId = (actor: number) => `Q${actor}`;
-export const PERSONAL_SITE_IDS = [0, 1, 2, 3, 4, 5, 6].flatMap((a) => [personalSiteId(a), secondSiteId(a)]);
+export const PERSONAL_SITE_IDS = ACTORS.flatMap((_, a) => [personalSiteId(a), secondSiteId(a)]);
 export const SITE_IDS: readonly string[] = [...SHARED_SITE_IDS, ...PERSONAL_SITE_IDS];
 /** Size of a site by id (L = large, M = medium, S / P / Q = small). */
 export const siteSize = (id: string): SiteSize | null =>
   !SITE_IDS.includes(id) ? null : id[0] === 'L' ? 'large' : id[0] === 'M' ? 'medium' : 'small';
 /** The actor a personal site belongs to, or null for a shared site. */
-export const siteActor = (id: string): number | null => (/^[PQ][0-6]$/.test(id) ? Number(id[1]) : null);
+export const siteActor = (id: string): number | null => {
+  const actor = /^[PQ](0|[1-9]\d*)$/.test(id) ? Number(id.slice(1)) : -1;
+  return isActor(actor) ? actor : null;
+};
 
 // ---------------------------------------------------------------- facilities
 export type FacilityId =

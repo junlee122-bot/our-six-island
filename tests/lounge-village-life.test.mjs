@@ -3,6 +3,7 @@ import { FARM_FIELDS } from '../app/lounge-farm-layout.ts';
 import { DISTRICTS } from '../app/lounge-districts.ts';
 import { VILLAGE_STALL_SPOTS } from '../app/lounge-village-layout.ts';
 import assert from 'node:assert/strict';
+import { ACTORS } from '../app/lounge-roster.ts';
 import {
   FARM_BEDS,
   FRUIT_TREE_POINTS,
@@ -74,7 +75,7 @@ test('우리 농장: the hub has no yards any more; every friend has a field in 
   assert.equal(VILLAGE_YARDS.length, 0);
   assert.equal(FARM_BEDS.length, 0);
   assert.equal(VILLAGE_PLACES.filter((p) => p.kind === 'home').length, 0);
-  assert.deepEqual(FARM_FIELDS.map((f) => f.actor).sort((a, b) => a - b), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(FARM_FIELDS.map((f) => f.actor).sort((a, b) => a - b), [...ACTORS.keys()]);
   // The old row is open ground now: the lane to the farm gate is walkable and reachable.
   for (const p of [{ x: 0, z: -20 }, { x: 0, z: -30 }, DISTRICTS.farm.gate.stand]) assert.ok(reachable(p), JSON.stringify(p));
   // The park and the stall spots are reachable too.

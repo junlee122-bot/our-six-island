@@ -1,3 +1,4 @@
+import { ACTOR_COUNT, ACTOR_IDS, isActor, isActorKey } from './lounge-roster.ts';
 // Life expansion engine: farm depth (fertilizer, expansion, friend watering),
 // fishing, foraging and bugs, museum, cooking and crafting, village bundles,
 // furniture shop, friendship, requests, calendar events, memories and the
@@ -480,7 +481,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const safe = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n);
 const time = (n: unknown) => (safe(n) && n >= 0 ? n : 0);
 const count = (n: unknown) => (safe(n) && n > 0 ? Math.min(n, COUNT_MAX) : 0);
-const actorValid = (a: unknown): a is number => safe(a) && a >= 0 && a < 7;
+const actorValid = isActor;
 const isCropId = (c: unknown): c is Crop => typeof c === 'string' && (CROPS as string[]).includes(c);
 const own = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 const obj = (v: unknown): Record<string, unknown> =>
@@ -495,7 +496,7 @@ const counts = <K extends string>(v: unknown, ok: (k: string) => boolean, limit 
   return out as Partial<Record<K, number>>;
 };
 const actorList = (v: unknown) =>
-  Array.isArray(v) ? [...new Set(v.filter(actorValid))].slice(0, 7) : [];
+  Array.isArray(v) ? [...new Set(v.filter(actorValid))].slice(0, ACTOR_COUNT) : [];
 const idList = (v: unknown, max: number, ok: (s: string) => boolean = () => true) =>
   Array.isArray(v)
     ? [...new Set(v.filter((s): s is string => typeof s === 'string' && s.length <= 48 && ok(s)))].slice(0, max)
@@ -506,7 +507,7 @@ const isDemandId = (id: string) => isCropId(id) || id === 'fruit' || isGoodId(id
 const readActorAmounts = (v: unknown) => {
   const by: Record<string, number> = {};
   for (const [a, n] of Object.entries(obj(v)))
-    if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = n;
+    if (isActorKey(a) && safe(n) && n > 0) by[a] = n;
   return by;
 };
 
@@ -703,7 +704,7 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
     });
     const by: Record<string, number> = {};
     for (const [a, n] of Object.entries(obj(b.by)))
-      if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = n;
+      if (isActorKey(a) && safe(n) && n > 0) by[a] = n;
     const state: BundleState = { got, by };
     if (safe(b.doneAt) && b.doneAt > 0) state.doneAt = b.doneAt;
     if (got.some((n) => n > 0) || state.doneAt) bundles[def.id] = state;
@@ -763,8 +764,8 @@ export function readLifeExt(v: Record<string, unknown>): LifeExt {
   if (nonEmpty(records)) out.records = records;
   const bonds: Record<string, number> = {};
   for (const [k, n] of Object.entries(obj(v.bonds)).slice(0, 64)) {
-    const m = /^([0-6])-([0-6])$/.exec(k);
-    if (m && Number(m[1]) < Number(m[2]) && safe(n) && n > 0) bonds[k] = Math.min(BOND_MAX, n);
+    const m = /^(\d+)-(\d+)$/.exec(k);
+    if (m && isActorKey(m[1]) && isActorKey(m[2]) && Number(m[1]) < Number(m[2]) && safe(n) && n > 0) bonds[k] = Math.min(BOND_MAX, n);
   }
   if (nonEmpty(bonds)) out.bonds = bonds;
   const social = readSocial(v.social);
@@ -1474,7 +1475,7 @@ function requestCandidates(life: LifeState, cat: ItemCategory, season: Season): 
 /** Today's requests to `actor` from three friends (deterministic, offline-friend NPCs). */
 export function requestsFor(life: LifeState, actor: number, day: number): Omit<RequestView, 'done'>[] {
   const season = seasonOfDay(day);
-  const friends = [0, 1, 2, 3, 4, 5, 6]
+  const friends = ACTOR_IDS
     .filter((f) => f !== actor)
     .sort((a, b) => hash32(`req:${day}:${actor}:${a}`) - hash32(`req:${day}:${actor}:${b}`))
     .slice(0, REQUESTS_PER_DAY)
@@ -2430,7 +2431,7 @@ export function plusView(life: LifeState, uid: string, actor: number, now: numbe
     requests: actorValid(actor)
       ? requestsFor(life, actor, myDay(life, uid, now)).map((r) => ({ ...r, done: mine && !!raw.req?.includes(r.from), ...(fresh && (raw.rqn ?? 0) >= REQUESTS_PER_DAY ? { reward: 0 } : {}) }))
       : [],
-    bonds: [0, 1, 2, 3, 4, 5, 6]
+    bonds: ACTOR_IDS
       .filter((f) => f !== actor)
       .map((f) => {
         const points = bondPoints(life, actor, f, now),

@@ -1,5 +1,5 @@
-// 우리 농장 (design-our-farm.md §2): the friends' farm, 100 × 64, up the 농장 길
-// from the hub's north gate. Pure data: the seven houses in one row along the
+// 우리 농장 (design-our-farm.md §2): the friends' farm, 128 × 64, up the 농장 길
+// from the hub's north gate. Pure data: the friends' houses in one row along the
 // north edge (the same kArchive houses that stood in the hub; rooms and doors
 // unchanged, only where the door is), each friend's 12 × 10 field right in
 // front of their house (F5's stage 4; smaller stages open its top-left block),
@@ -9,13 +9,14 @@
 // set is lounge-farm-scene.ts; walking uses lounge-areas.ts (regionWalk).
 //
 // Coordinates: x to the right, z toward the camera, (0, 0) in the middle.
+import { ACTORS } from './lounge-roster.ts';
 import type { WalkCollider, WalkPoint } from './lounge-walk-world.ts';
 import { arrivalPoint } from './lounge-map-doors.ts';
 import { GRID_COLS, GRID_ROWS, MASTER_FIELD, fieldBlock, tileAt, tileOpen, tileRC } from './lounge-farm-data.ts';
 import { VILLAGE_HOUSE_MODELS, villageHouseScale, type VillageHouseModel, type VillagePlace } from './lounge-village-layout.ts';
 
-/** F5 widened the farm from 84 to 100 so seven 12-tile fields fit (houses and the road keep their places along z). */
-export const FARM_W = 100,
+/** More ground for the eighth home on the east; the original houses and fields keep every coordinate. */
+export const FARM_W = 128,
   FARM_D = 64;
 
 /** Models the farm uses (kArchive and CC0, already in the manifest). */
@@ -49,13 +50,13 @@ export const FIELD_TOP_Z = -20.6;
 export const FARM_LANE_Z = -8.8;
 /** Slot pitch: a field (12) and a 1.6 path between neighbours. */
 const PITCH = 13.6;
-/** Left-to-right house order, the hub's old row (west end 재민, east end 호현). */
-export const FARM_ORDER: readonly number[] = [5, 0, 1, 2, 3, 4, 6];
-const HOME_NAMES = ['도원', '강재', '민서', '승준', '민재', '재민', '호현'];
-const HOME_MODELS: readonly VillageHouseModel[] = ['cornerHouse', 'cottage', 'cornerHouse', 'cottage', 'cornerHouse', 'courtyardHouse', 'courtyardHouse'];
+/** Original row, west to east, with 유찬 appended beyond 호현; existing slots stay put. */
+export const FARM_ORDER: readonly number[] = [5, 0, 1, 2, 3, 4, 6, 7];
+const HOME_NAMES = ACTORS;
+const HOME_MODELS: readonly VillageHouseModel[] = ['cornerHouse', 'cottage', 'cornerHouse', 'cottage', 'cornerHouse', 'courtyardHouse', 'courtyardHouse', 'cottage'];
 /** Sign colours per friend (the hub's house colours). */
-export const HOME_COLORS = ['#f2c789', '#e9b9a7', '#b7d4b1', '#e7d58e', '#a9c8da', '#d0b0dc', '#dfaa9c'];
-export const HOME_ROOFS = ['#9d5946', '#557a74', '#927047', '#526c8b', '#9a604e', '#75608c', '#a56851'];
+export const HOME_COLORS = ['#f2c789', '#e9b9a7', '#b7d4b1', '#e7d58e', '#a9c8da', '#d0b0dc', '#dfaa9c', '#b9d2d4'];
+export const HOME_ROOFS = ['#9d5946', '#557a74', '#927047', '#526c8b', '#9a604e', '#75608c', '#a56851', '#527b80'];
 
 const round = (n: number) => Math.round(n * 1000) / 1000;
 
@@ -81,7 +82,8 @@ export type FarmField = {
   w: number;
   d: number;
 };
-const slotX = (i: number) => round((i - (FARM_ORDER.length - 1) / 2) * PITCH);
+// The first seven slots were centred on slot 3. Keep that anchor when appending a friend.
+const slotX = (i: number) => round((i - 3) * PITCH);
 
 export const FARM_HOUSES: readonly FarmHouse[] = FARM_ORDER.map((actor, i) => {
   const model = HOME_MODELS[actor],

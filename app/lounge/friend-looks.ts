@@ -2,6 +2,7 @@
 // room visit), so NPCs, mail and simple-mode avatars wear the friend's own
 // outfit instead of the default. Per-device convenience only: storage can be
 // missing or throw, and everything falls back to defaultLook.
+import { isActor } from '../lounge-roster';
 import { defaultLook, readLook, type Look } from '../lounge-look';
 
 const KEY = 'bumtadew-friend-looks-v1';
@@ -16,7 +17,7 @@ function load(): Record<number, Look> {
     if (raw && typeof raw === 'object')
       for (const [k, v] of Object.entries(raw)) {
         const actor = Number(k);
-        if (Number.isInteger(actor) && actor >= 0 && actor < 7)
+        if (isActor(actor))
           cache[actor] = readLook(v, actor);
       }
   } catch {}
@@ -25,7 +26,7 @@ function load(): Record<number, Look> {
 
 /** Remembers `look` for `actor` (no-op when unchanged). */
 export function rememberLook(actor: number, look: Look | undefined | null) {
-  if (!look || !Number.isInteger(actor) || actor < 0 || actor >= 7) return;
+  if (!look || !isActor(actor)) return;
   const all = load();
   const clean = readLook(look, actor);
   if (JSON.stringify(all[actor]) === JSON.stringify(clean)) return;

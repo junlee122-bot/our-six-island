@@ -1,3 +1,4 @@
+import { isActorKey } from './lounge-roster.ts';
 // 가게 업그레이드 (pure data; the action is in lounge-venue-upgrades.ts):
 // shared village purchases for 허풍 주점, 범마을 부동산 and
 // 나무결 가구점 (like the 마을 공사 board). Every upgrade belongs to one shop and
@@ -152,7 +153,7 @@ export function readVenues(value: unknown): VenueExt {
     const p = obj(obj(value)[def.id]);
     const got = safe(p.got) && p.got > 0 ? Math.min(def.cost, p.got) : 0;
     const by: Record<string, number> = {};
-    for (const [a, n] of Object.entries(obj(p.by))) if (/^[0-6]$/.test(a) && safe(n) && n > 0) by[a] = n;
+    for (const [a, n] of Object.entries(obj(p.by))) if (isActorKey(a) && safe(n) && n > 0) by[a] = n;
     const state: VenueUpgradeState = { got, by };
     if (safe(p.doneAt) && p.doneAt > 0) state.doneAt = p.doneAt;
     if (got > 0 || state.doneAt) out[def.id] = state;

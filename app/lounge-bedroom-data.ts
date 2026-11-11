@@ -142,7 +142,7 @@ export type Bedroom = {
   theme: BedroomThemeId;
   wall: (typeof WALL_COLORS)[number];
   floor: (typeof FLOOR_KINDS)[number];
-  /** Who may walk in (default 'friends' = all seven friends). */
+  /** Who may walk in (default 'friends' = everyone in the friend roster). */
   access?: RoomAccess;
   items: RoomItem[];
 };

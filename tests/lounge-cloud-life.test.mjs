@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { ACTOR_COUNT } from '../app/lounge-roster.ts';
 import { cloudTransition, commandHash } from '../app/lounge-cloud-engine.ts';
 import {
   INITIAL_BEOM,
@@ -206,7 +207,8 @@ test('sell and mail gifts through the cloud keep the ledger valid', async () => 
 });
 
 test('friend visit view: bedroom and look from the save, guestbook from the world', async () => {
-  assert.equal(visitOwnerValid(7), false);
+  assert.equal(visitOwnerValid(7), true);
+  assert.equal(visitOwnerValid(ACTOR_COUNT), false);
   assert.equal(visitOwnerValid(-1), false);
   assert.equal(visitOwnerValid('1'), false);
   assert.throws(() => friendVisitView(9, null, null));
