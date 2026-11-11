@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { GatheringPlaceId } from '../lounge-gatherings-data';
 import { gatheringNavigation } from '../lounge-gatherings-navigation';
 import { INTERIOR_GO_EVENT } from '../lounge-interior-layout';
-import { boundDirection } from '../lounge-scene-keys';
+import { boundAction, boundDirection } from '../lounge-scene-keys';
 import type { Notify } from './Toast';
 
 /** Follow existing doors one walking step at a time; never changes area or seats. */
@@ -46,14 +46,15 @@ export function useGatheringGuide({
         : `${next.label} 쪽으로 걸어가요. 도착하면 E로 이동해요. 문을 지나면 다음 길을 안내해요.`, 'info');
       if (next.final) setTarget(null);
     };
-    timer = setTimeout(step, 600);
+    timer = setTimeout(step, blockedReason || paused ? 0 : 600);
     return () => clearTimeout(timer);
   }, [target, area, blockedReason, paused, notify]);
 
   useEffect(() => {
     if (!target) return;
     const key = (event: KeyboardEvent) => {
-      if (boundDirection(event) || event.code === 'Escape') setTarget(null);
+      const action = boundAction(event);
+      if (boundDirection(event) || event.code === 'Escape' || (action && action !== 'action')) setTarget(null);
     };
     const pointer = (event: PointerEvent) => {
       if (event.target instanceof HTMLCanvasElement) setTarget(null);

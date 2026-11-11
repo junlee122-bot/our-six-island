@@ -168,6 +168,64 @@ async function run(actor, view) {
       await wait(() => !document.querySelector('dialog[open]'));
       await wait((point) => { const d = document.querySelector('[data-testid=village-3d]')?.dataset; return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - point.x, Number(d.avatarZ) - point.z) < 1; }, FISH_STAND.pond, 120_000);
       assert.equal(selfArea(), 'village', 'same-area directions do not teleport to a different area'); await shot('pond-directions');
+      // The guide starts after a short scene handoff. A newer keyboard or
+      // menu destination must win even during that pending interval.
+      await page.evaluate((id) => {
+        const audit = window.__gatheringGuideAudit = { guideAt: 0, boardKeyAt: 0, menuAt: 0, boardMenuAt: 0, go: [] };
+        document.addEventListener('click', (event) => {
+          const button = event.target instanceof Element ? event.target.closest('button') : null;
+          if (button?.dataset.testid === `gathering-guide-${id}`) {
+            audit.guideAt = performance.now(); audit.boardKeyAt = 0; audit.menuAt = 0; audit.boardMenuAt = 0; audit.go = [];
+          }
+          if (button?.classList.contains('l-world-menu-button')) audit.menuAt = performance.now();
+          if (button?.dataset.testid === 'menu-board') audit.boardMenuAt = performance.now();
+        }, true);
+        window.addEventListener('keydown', (event) => { if (event.code === 'KeyB') audit.boardKeyAt = performance.now(); }, true);
+        window.addEventListener('bumtadew:go', (event) => audit.go.push({ ...event.detail, at: performance.now() }));
+      }, scheduledId);
+      const boardWins = async (reason) => {
+        await H.sleep(1100);
+        const commands = await page.evaluate(() => window.__gatheringGuideAudit.go);
+        assert.ok(commands.length > 0 && commands.every((point) => Math.hypot(point.x - BOARD_FRONT.x, point.z - BOARD_FRONT.z) < 1), `${reason}: no stale market-gate command is dispatched`);
+        // data-target-x/z describe the camera look-at, not the walking goal.
+        // Observe the actual navigation commands and then the avatar arrival.
+        const { x, z } = commands.at(-1), target = { x, z };
+        await wait((point) => { const d = document.querySelector('[data-testid=village-3d]')?.dataset; return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - point.x, Number(d.avatarZ) - point.z) < 1; }, BOARD_FRONT, 120_000);
+        assert.equal(selfArea(), 'village', `${reason}: the player walks to the board in the same area`);
+        return { target, commands: commands.map(({ x, z }) => ({ x, z })), arrived: true };
+      };
+      // Keep the interruption inside one browser task sequence: a slow CDP
+      // round trip after click can otherwise consume the entire 600ms window.
+      // These DOM events still use the application's normal click/key paths.
+      const interruptGuide = async (mode) => page.evaluate(async ([id, mode]) => {
+        const tick = () => new Promise((resolve) => setTimeout(resolve, 25));
+        document.querySelector(`[data-testid="gathering-guide-${id}"]`).click();
+        await tick();
+        if (document.querySelector('dialog[open]')) throw new Error('The gathering dialog must close before the interrupting action.');
+        if (mode === 'keyboard') {
+          document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', bubbles: true, cancelable: true }));
+          document.body.dispatchEvent(new KeyboardEvent('keyup', { key: 'b', code: 'KeyB', bubbles: true, cancelable: true }));
+        } else {
+          document.querySelector('.l-world-menu-button').click();
+          if (mode === 'quick-menu') { await tick(); document.querySelector('[data-testid="menu-board"]').click(); }
+        }
+      }, [scheduledId, mode]);
+      await openGatherings(); await interruptGuide('keyboard');
+      const keyDelay = await page.evaluate(() => window.__gatheringGuideAudit.boardKeyAt - window.__gatheringGuideAudit.guideAt);
+      assert.ok(keyDelay >= 0 && keyDelay < 600, `B interrupts the pending guide within 600ms (${keyDelay}ms)`);
+      const keyboardOverride = { delayMs: Math.round(keyDelay), ...await boardWins('B shortcut') };
+      await openGatherings(); await interruptGuide('quick-menu');
+      const quickMenuDelay = await page.evaluate(() => window.__gatheringGuideAudit.boardMenuAt - window.__gatheringGuideAudit.guideAt);
+      assert.ok(quickMenuDelay >= 0 && quickMenuDelay < 600, `guide → mouse menu → board selection finishes within 600ms (${quickMenuDelay}ms)`);
+      const quickMouseMenuOverride = { delayMs: Math.round(quickMenuDelay), ...await boardWins('Quick mouse menu board') };
+      await openGatherings(); await interruptGuide('held-menu'); await page.getByTestId('village-menu').waitFor();
+      const menuDelay = await page.evaluate(() => window.__gatheringGuideAudit.menuAt - window.__gatheringGuideAudit.guideAt);
+      assert.ok(menuDelay >= 0 && menuDelay < 600, `the mouse menu interrupts the pending guide within 600ms (${menuDelay}ms)`);
+      await H.sleep(1100);
+      assert.deepEqual(await page.evaluate(() => window.__gatheringGuideAudit.go), [], 'opening a modal cancels the pending guide without dispatching it');
+      await page.getByTestId('menu-board').click();
+      const mouseMenuOverride = { delayMs: Math.round(menuDelay), heldMenuMs: 1100, ...await boardWins('Mouse menu board') };
+      await shot('board-directions-override');
       await openGatherings(); await page.getByTestId(`gathering-guide-${scheduledId}`).click(); await wait(() => !document.querySelector('dialog[open]'));
       const stage = async (area) => {
         const next = gatheringNavigation('bakery-meal', area); assert.notEqual(next.kind, 'unavailable');
@@ -183,7 +241,7 @@ async function run(actor, view) {
       await stage('bakery'); await shot('bakery-counter-directions');
       const guided = row.actions.slice(guideStart); const forbidden = new Set(['cast', 'anglerCast', 'eat', 'snack', 'shopFood', 'bakeryBuy', 'party', 'join', 'sit', 'start']);
       assert.deepEqual(guided.filter((a) => forbidden.has(a.kind)), [], 'directions never fish, eat, spend on food or reserve a seat');
-      row.guideEvidence = { pond: true, bakery: true, explicitDoorActions: 2, actionKinds: [...new Set(guided.map((a) => a.kind))] };
+      row.guideEvidence = { pond: true, bakery: true, keyboardOverride, quickMouseMenuOverride, mouseMenuOverride, explicitDoorActions: 2, actionKinds: [...new Set(guided.map((a) => a.kind))] };
     });
     await Promise.all(responseReads); row.pageErrors = [...H.errors]; row.blockedExternalHosts = [...H.external];
     assert.deepEqual(row.pageErrors, []); assert.deepEqual(row.consoleErrors, []); assert.deepEqual(row.failedResources, []); assert.deepEqual(row.apiFailures, []);
