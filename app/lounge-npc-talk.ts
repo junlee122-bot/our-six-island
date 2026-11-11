@@ -128,7 +128,9 @@ export function talkEntry(book: NpcTalkBook, id: string): NpcTalkEntry | undefin
 
 export type TalkSeed = { who: string | number; /** 나의 하루. */ day: number; /** Talks so far (tc). */ tc: number };
 /**
- * Today's talk: a memory callback on about two days in three when one fits,
+ * With a partner, every other talk is a stage-specific choice scene. The
+ * other talks keep memory callbacks and everyday life in the relationship.
+ * Otherwise: a memory callback on about two days in three when one fits,
  * else an opener about the moment on about two days in three, else the next
  * everyday talk in turn (a rotation by talk count, so they do not repeat).
  * The same person, resident, day and facts always give the same talk.
@@ -136,6 +138,14 @@ export type TalkSeed = { who: string | number; /** 나의 하루. */ day: number
 export function pickTalk(book: NpcTalkBook, f: TalkFacts, seed: TalkSeed): NpcTalkEntry {
   const key = (k: string) => `${book.npc}:${seed.who}:${seed.day}:${k}`;
   const ok = (t: NpcTalkEntry) => condHolds(t.when, f);
+  const partner = f.love
+    ? book.talks.filter((t) => t.when?.love && t.when.love !== 'none' && ok(t))
+    : [];
+  if (partner.length && seed.tc % 2 === 0) {
+    // Rotate only on partner turns: a held life/day seed cannot keep picking
+    // the same romantic scene, and later stages never leak into dating.
+    return partner[(hash32(`${book.npc}:${seed.who}:love:${f.love}`) + Math.floor(seed.tc / 2)) % partner.length];
+  }
   const callbacks = book.callbacks.filter(ok);
   if (callbacks.length && hash32(key('cb')) % 3 !== 0) return callbacks[hash32(key('cb-pick')) % callbacks.length];
   const openers = book.openers.filter(ok);

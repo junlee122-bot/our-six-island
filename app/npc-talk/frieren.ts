@@ -11,6 +11,8 @@ import type { NpcTalkBook } from './types.ts';
 export const FRIEREN_TALK: NpcTalkBook = {
   npc: 'frieren',
   memories: {
+    'lv-not-later': '프리렌에게 하고 싶은 말을 오늘 듣고 싶다고 했어요',
+    'lv-sleep-space': '같이 사는 날에도 각자 쉬는 자리를 남기기로 했어요',
     'morning-person': '아침형이라고 했어요',
     'sleepyhead': '늦잠을 좋아한다고 했어요',
     'odd-recipe': '이상한 레시피 모으기를 돕기로 했어요',
@@ -44,6 +46,170 @@ export const FRIEREN_TALK: NpcTalkBook = {
     'ring-talk': '반지 이야기를 들었어요',
   },
   talks: [
+    {
+      id: 'lv-date-today',
+      when: {
+        love: 'dating',
+      },
+      open: ['재미있는 빵을 만들었어. 너 오면 주려고 반은 남겼는데.', '또 다음에라고 했다가, 오늘 주고 싶어서 들고 나왔어.'],
+      replies: [
+        {
+          say: '오늘 만나러 와 줘서 좋아',
+          tier: 'great',
+          remember: 'lv-not-later',
+          face: 'shy',
+          answer: ['응. 다음에 만나도 같은 마음일 줄 알았는데.', '오늘 네 얼굴은 오늘 봐야 하는 거였네.'],
+        },
+        {
+          say: '맛은 조금 이상해도 괜찮아',
+          tier: 'great',
+          face: 'laugh',
+          answer: '이상하다고는 안 했어. …조금은 이상해. 같이 먹으면 덜할 거야.',
+        },
+        {
+          say: '다 먹기 힘들면 나눠 보관하자',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋아. 오늘을 남기는 방법이 꼭 다 먹는 건 아니구나.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-clock',
+      when: {
+        love: 'dating',
+      },
+      open: ['기다리는 동안 시계를 세 번 봤어. 별일도 아니었는데.', '너랑 만나는 시간만 다른 속도로 가는 것 같아. 좀 낯설어.', '손 내밀면 닿을 데 앉아도 돼? 기다릴 땐 그 정도 거리였으면 했어.'],
+      replies: [
+        {
+          say: '그 낯선 기분을 같이 알아보자',
+          tier: 'great',
+          face: 'shy',
+          answer: ['응. 이름부터 정하지 말고.', '네가 오니까 기다린 시간도 좀 괜찮아졌어.'],
+        },
+        {
+          say: '약속 시간은 더 분명히 정하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋네. 알람 탓하지 않고 내가 기다린다고 말해 볼게.',
+        },
+        {
+          say: '피곤하면 기다리지 말고 쉬어',
+          tier: 'good',
+          face: 'smile',
+          answer: '알았어. 졸음 참는 게 마음의 크기는 아니겠지.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-duration',
+      when: {
+        love: 'engaged',
+      },
+      open: ['너랑 지낼 시간을 세다가, 자꾸 끝에서부터 셌어.', '아직 같이 시작하지도 않았는데. 이상하지.'],
+      replies: [
+        {
+          say: '오늘 같이 할 일부터 고르자',
+          tier: 'great',
+          face: 'calm',
+          answer: ['응. 오늘 저녁 빵 고르기. 그다음 네 얘기 듣기.', '멀리 보느라 바로 앞을 놓치진 않을래.'],
+        },
+        {
+          say: '무서우면 무섭다고 해도 돼',
+          tier: 'great',
+          face: 'shy',
+          answer: '조금 무서워. 그런데 피하고 싶진 않아. 둘 다 처음이네.',
+        },
+        {
+          say: '답을 지금 정하지 않아도 돼',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럴게. 모르는 채로 네 옆에 서는 것도 선택일 테니까.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-room',
+      when: {
+        love: 'engaged',
+      },
+      open: ['같이 쓸 방에 의자를 하나만 두려 했어.', '계속 붙어 있으면 좋을 줄 알았는데, 네가 쉬고 싶은 때는 다를 수도 있지.'],
+      replies: [
+        {
+          say: '각자 쉴 의자도 하나씩 두자',
+          tier: 'great',
+          remember: 'lv-sleep-space',
+          face: 'smile',
+          answer: ['좋아. 멀어지려고 두는 게 아니구나.', '같은 방에서 각자 편한 얼굴로 있는 것도 해 보고 싶어.'],
+        },
+        {
+          say: '붙어 앉고 싶을 때 물어보자',
+          tier: 'great',
+          face: 'shy',
+          answer: '그럼 지금 물어볼게. 잠깐 네 옆에 앉아도 돼?',
+        },
+        {
+          say: '살아 보면서 천천히 정하자',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 천천히를 미루자는 뜻으로 쓰지 않도록 해 볼게.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-note',
+      when: {
+        love: 'married',
+      },
+      open: ['네가 두고 간 쪽지를 또 읽었어. 평범한 심부름 메몬데.', '뭘 사 올지보다 네 글씨를 먼저 보고 있더라.'],
+      replies: [
+        {
+          say: '내일도 한 줄 남겨 둘게',
+          tier: 'great',
+          face: 'shy',
+          answer: ['응. 자주 쓰는 말이어도 좋아.', '네 글씨 따라 써 봤는데 닮진 않더라. 그래서 쪽지를 또 펼쳤어.'],
+        },
+        {
+          say: '나도 프리렌 글씨 좋아해',
+          tier: 'great',
+          face: 'laugh',
+          answer: '그럼 읽을 수 있게 쓸게. 밀가루 묻은 손으로 쓴 건 좀 어렵지.',
+        },
+        {
+          say: '직접 말하는 날도 있겠지',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 쪽지 없는 날엔 없어졌다고 걱정 말고 네 목소릴 들을게.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-forget',
+      when: {
+        love: 'married',
+      },
+      open: ['어제 네가 부탁한 걸 잊었어. 미안해.', '같이 사는 게 익숙해졌다고, 네 말까지 익숙한 소리로 들었나 봐.'],
+      replies: [
+        {
+          say: '다시 같이 확인하자',
+          tier: 'great',
+          face: 'sorry',
+          answer: ['알았어. 이번엔 끝까지 듣고 적을게.', '오래 기억한다고 잘 듣는 건 아니었네.'],
+        },
+        {
+          say: '다음엔 못 할 때도 말해 줘',
+          tier: 'great',
+          face: 'smile',
+          answer: '응. 할 수 있다고 빨리 대답하는 대신 생각해 볼게.',
+        },
+        {
+          say: '나도 잊는 날이 있어',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 둘 다 잊기 전에 부탁할 수 있는 자리를 만들자. 냉장고 옆 어때?',
+        },
+      ],
+    },
     {
       id: 'morning',
       open: '{me}, 너는 아침에 잘 일어나? …난 못 일어나. 천 년째.',
@@ -849,6 +1015,64 @@ export const FRIEREN_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-today',
+      when: {
+        love: 'any',
+        mem: 'lv-not-later',
+      },
+      use: 'lv-not-later',
+      open: ['오늘 만나러 와서 좋다고 했던 거, 기억해.', '너한테 할 말을 생각했다가 나중으로 미루지 않고 왔어.'],
+      replies: [
+        {
+          say: '어떤 말이었어?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['오늘 같이 빵 먹을 때 네가 웃었잖아.', '그걸 보고 기뻤다고. 사소해서 미루려던 말이야.'],
+        },
+        {
+          say: '그 말 들으니 오늘이 달라졌어',
+          tier: 'great',
+          face: 'smile',
+          answer: '나도. 말하기 전까지는 혼자만 아는 날이었는데.',
+        },
+        {
+          say: '바로 못 오는 날도 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 급해지자는 건 아니야. 소중하다고 미뤄 두진 말자는 거지.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-room',
+      when: {
+        love: 'any',
+        mem: 'lv-sleep-space',
+      },
+      use: 'lv-sleep-space',
+      open: ['각자 쉬는 자리를 남겨 두기로 했잖아.', '네가 혼자 책 읽는 걸 봐도, 이젠 날 피하는 건가부터 생각하진 않아.'],
+      replies: [
+        {
+          say: '다 읽으면 먼저 이야기하러 갈게',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 그럼 내 것도 읽고 있을게.', '다가오길 기다리는 동안 내 시간이 멈추진 않아도 되네.'],
+        },
+        {
+          say: '같이 앉고 싶은 날엔 물어봐',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럴게. 안 된다는 날에도 내일 물어볼 마음은 남겨 둘래.',
+        },
+        {
+          say: '오늘은 나란히 읽고 싶어',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋아. 페이지 넘기는 소리만 같이 듣자.',
+        },
+      ],
+    },
     {
       id: 'cb-sleepy',
       when: { mem: 'sleepyhead', time: ['day', 'evening'] },

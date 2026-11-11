@@ -193,6 +193,39 @@ test('context: openers follow the day, callbacks follow memories, else the every
   assert.ok(book.talks.some((t) => t.id === pickTalk(book, quiet, { who: 1, day: 22_000, tc: 0 }).id) || book.openers.some((t) => condHolds(t.when, quiet)));
 });
 
+test('partner scenes rotate on alternate talks, respect stages and keep callback turns', () => {
+  const entry = (id, when) => ({ id, when, open: '안녕.', replies: [] });
+  const book = {
+    ...NPC_TALK.captain,
+    talks: [entry('ordinary'), entry('dating-a', { love: 'dating' }), entry('dating-b', { love: 'dating' }),
+      entry('engaged', { love: 'engaged' }), entry('married', { love: 'married' })],
+    openers: [entry('rain', { weather: 'rain' })],
+    callbacks: [entry('remember-us', { love: 'any', mem: 'together' })],
+  };
+  for (const stage of ['dating', 'engaged', 'married']) {
+    const f = facts({ love: stage, weather: 'rain', mem: ['together'] });
+    const seen = [];
+    for (let tc = 0; tc < 12; tc++) {
+      const seed = { who: 2, day: 23000 + tc, tc };
+      const talk = pickTalk(book, f, seed);
+      assert.ok(condHolds(talk.when, f), `${stage}: ${talk.id}`);
+      assert.equal(pickTalk(book, f, seed).id, talk.id, 'deterministic');
+      if (tc % 2 === 0) {
+        assert.equal(talk.when?.love, stage, 'partner turn uses the current stage');
+        seen.push(talk.id);
+      }
+    }
+    if (stage === 'dating') assert.notEqual(seen[0], seen[1], 'partner scenes rotate before repeating');
+    const callbacks = Array.from({ length: 30 }, (_, n) =>
+      pickTalk(book, f, { who: 2, day: 24000 + n, tc: n * 2 + 1 }).id);
+    assert.ok(callbacks.includes('remember-us'), 'memory callbacks still have turns');
+  }
+  for (let tc = 0; tc < 30; tc++) {
+    const talk = pickTalk(book, facts({ weather: 'rain' }), { who: 2, day: 25000 + tc, tc });
+    assert.ok(['ordinary', 'rain'].includes(talk.id), 'friendship never gets romantic scenes');
+  }
+});
+
 test('memories: at most 20, oldest dropped, a repeat moves to the end; text fill-ins', () => {
   let mem = [];
   for (let i = 0; i < 25; i++) mem = remember(mem, `m${i}`);

@@ -9,6 +9,8 @@ import type { NpcTalkBook } from './types.ts';
 export const CAPTAIN_TALK: NpcTalkBook = {
   npc: 'captain',
   memories: {
+    'lv-plain-return': '샹크스가 무서웠던 항해도 이야기해 주기로 했어요',
+    'lv-own-shore': '서로 다른 곳에 있어도 각자 하루를 챙기기로 했어요',
     'lighthouse-walk': '노을 질 때 등대까지 같이 걷자고 했어요',
     'lighthouse-keeper': '등대 불을 지키는 일이 멋지다고 했어요',
     'sea-lover': '바다가 좋다고 했어요',
@@ -46,6 +48,170 @@ export const CAPTAIN_TALK: NpcTalkBook = {
     'my-port': '샹크스의 돌아올 항구가 되기로 했어요',
   },
   talks: [
+    {
+      id: 'lv-date-no-boast',
+      when: {
+        love: 'dating',
+      },
+      open: ['네 앞에선 자꾸 큰 고기 잡은 얘기만 하게 된다.', '사실 제일 먼저 떠오른 건, 폭풍 밤에 무서웠던 일이었는데.', '네가 내 쪽으로 의자 당기는 소리만 나도 말이 달라진다. 신기하지.'],
+      replies: [
+        {
+          say: '그 이야기도 듣고 싶어',
+          tier: 'great',
+          remember: 'lv-plain-return',
+          face: 'calm',
+          answer: ['…그래. 나도 겁먹는다. 웃는다고 없는 건 아니지.', '그날은 등대 불이 보이고서야 다리에 힘이 풀렸어.'],
+        },
+        {
+          say: '지금 말하기 어렵다면 나중에 해',
+          tier: 'great',
+          face: 'smile',
+          answer: '하하, 오늘은 그 말 듣고 싶었던 모양이다. 목이 좀 풀리네.',
+        },
+        {
+          say: '멋있는 얘기 안 해도 좋아',
+          tier: 'good',
+          face: 'laugh',
+          answer: '그러냐. 그럼 오늘은 생선 태운 얘기부터 할까. 꽤 참혹하다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-distance',
+      when: {
+        love: 'dating',
+      },
+      open: ['출항하고 나면 네가 뭘 하는지 자꾸 궁금하더라.', '걱정이란 핑계로 네 발목까지 잡고 싶진 않은데.'],
+      replies: [
+        {
+          say: '각자 하루 잘 보내고 만나자',
+          tier: 'great',
+          remember: 'lv-own-shore',
+          face: 'smile',
+          answer: ['좋다. 네 하루는 네가 잘 항해해.', '돌아와서 들을 이야기가 있으면 기다리는 것도 괜찮겠지.'],
+        },
+        {
+          say: '보고 싶으면 그냥 말해도 돼',
+          tier: 'great',
+          face: 'laugh',
+          answer: '…보고 싶다! 하하, 이건 금방 나오네. 명령은 아니고 내 소식이다.',
+        },
+        {
+          say: '배에 같이 가는 날도 만들자',
+          tier: 'good',
+          face: 'smile',
+          answer: '그래. 네가 타고 싶은 날로 고르자. 안 타는 날도 당연히 있고.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-vow',
+      when: {
+        love: 'engaged',
+      },
+      open: ['혼인 서약을 써 봤는데, 주점 건배사처럼 됐다.', '다들 웃겨 줄 순 있어도, 너한테 하고 싶은 말은 자꾸 짧아져.'],
+      replies: [
+        {
+          say: '짧아도 직접 들려줘',
+          tier: 'great',
+          face: 'shy',
+          answer: ['돌아오면 너한테 먼저 인사하고 싶다.', '그걸 오래 할 수 있으면 좋겠다. …이 정도로도 되냐?'],
+        },
+        {
+          say: '웃다가 진심도 말하면 되지',
+          tier: 'great',
+          face: 'smile',
+          answer: '그렇지. 떨린다고 내 웃음까지 두고 올 필요는 없겠구나.',
+        },
+        {
+          say: '식장에서 처음 들어도 좋아',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋다. 그럼 종이는 접어 두겠다. 그날 네 눈 보고 말할게.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-map',
+      when: {
+        love: 'engaged',
+      },
+      open: ['집 벽에 바다 지도를 걸까 했어.', '근데 우리 집인데 내 항로로만 꽉 채우려 했더라. 넌 뭘 놓고 싶어?'],
+      replies: [
+        {
+          say: '우리 둘이 가 본 길을 남기자',
+          tier: 'great',
+          face: 'laugh',
+          answer: ['오, 그건 빈 곳이 많겠는데!', '괜찮지. 같이 채울 자리가 남았다는 거니까.'],
+        },
+        {
+          say: '각자 아끼는 자리 하나씩 두자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋다. 내 지도 옆에 네 세상이 있으면 길도 덜 지루하겠다.',
+        },
+        {
+          say: '살면서 천천히 골라 보자',
+          tier: 'good',
+          face: 'smile',
+          answer: '그래. 배도 처음 띄울 때부터 흠집까지 정하진 않지.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-late',
+      when: {
+        love: 'married',
+      },
+      open: ['어제 늦게 돌아와서 문고리를 한참 잡고 있었어.', '안 깨우고 싶었는데, 다녀왔다고 네 얼굴 보고 말하고도 싶었거든.'],
+      replies: [
+        {
+          say: '깨어 있으면 꼭 인사해 줘',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그러마. 무사히 왔다고 작게 말할게.', '네가 눈 비비며 날 보면, 한 번 더 안아도 되냐고 묻게 되겠지만.'],
+        },
+        {
+          say: '자고 있으면 아침에 들려줘',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋다. 잠든 얼굴엔 마음으로만 인사하고, 아침에 실컷 떠들자.',
+        },
+        {
+          say: '늦으면 걱정 안 하게 알려 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '맞다. 돌아오는 길 안다고 기다리는 마음까지 아는 건 아니었네.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-alone',
+      when: {
+        love: 'married',
+      },
+      open: ['오늘은 혼자 부두에 앉아 있고 싶어.', '너랑 있는 게 싫어서가 아닌데, 그런 말도 잘 전하고 싶더라.'],
+      replies: [
+        {
+          say: '다녀와. 나도 내 일 하고 있을게',
+          tier: 'great',
+          face: 'smile',
+          answer: ['고맙다. 바람 좀 맞고 올게.', '함께 산다고 혼자 있는 법을 잊을 필욘 없겠지.'],
+        },
+        {
+          say: '말해 줘서 고마워',
+          tier: 'great',
+          face: 'smile',
+          answer: '다녀와서는 네 얘기도 들을게. 오늘은 서로 어디쯤 있었는지.',
+        },
+        {
+          say: '나중에 같이 산책할래?',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋지. 잠깐 쉬고 와서 내가 먼저 물을게. 네가 괜찮을 때.',
+        },
+      ],
+    },
     {
       id: 'lighthouse-light',
       open: ['항구 끝 등대 말이야. 밤마다 불이 도는 거 봤어?', '뱃사람한텐 저게 제일 반가운 불빛이다. 집이 저쪽이라고 알려 주거든.'],
@@ -904,6 +1070,64 @@ export const CAPTAIN_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-no-boast',
+      when: {
+        love: 'any',
+        mem: 'lv-plain-return',
+      },
+      use: 'lv-plain-return',
+      open: ['그때 폭풍 얘기, 끝까지 들어 줬지.', '오늘은 선원들 앞에서도 겁났다고 말했다. 배가 작아지진 않더군.'],
+      replies: [
+        {
+          say: '혼자 다 버티지 않아도 되지',
+          tier: 'great',
+          face: 'smile',
+          answer: ['그러게. 다들 자기도 그랬다고 하더라.', '네 앞에서 처음 꺼내 본 덕이다. 다음엔 내가 들어 줄게.'],
+        },
+        {
+          say: '샹크스가 직접 말한 거잖아',
+          tier: 'great',
+          face: 'smile',
+          answer: '맞다. 네가 대신 해 준 게 아니지. 그걸 믿어 줘서 고맙다.',
+        },
+        {
+          say: '오늘은 재미있는 이야기 해 줘',
+          tier: 'good',
+          face: 'laugh',
+          answer: '하하하! 그럼 겁쟁이 선장의 생선구이 참사부터 간다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-own-shore',
+      when: {
+        love: 'any',
+        mem: 'lv-own-shore',
+      },
+      use: 'lv-own-shore',
+      open: ['각자 하루 잘 보내고 만나자고 했잖아.', '오늘 네 생각이 날 때마다, 돌아가서 물어볼 걸 하나씩 모았어.'],
+      replies: [
+        {
+          say: '첫 번째 질문부터 해 봐',
+          tier: 'great',
+          face: 'laugh',
+          answer: ['오늘 가장 웃었던 때가 언제냐?', '나는 지금이다. 대답 기다리는 게 이렇게 좋은 줄 몰랐네.'],
+        },
+        {
+          say: '나는 오늘 별일 없었어',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 별일 없는 날을 잘 보낸 거지. 아무것도 증명 안 해도 돼.',
+        },
+        {
+          say: '오늘은 쉬고 내일 얘기하자',
+          tier: 'good',
+          face: 'smile',
+          answer: '그래. 질문은 도망 안 간다. 잘 쉬고 와.',
+        },
+      ],
+    },
     {
       id: 'cb-lighthouse-walk',
       when: { mem: 'lighthouse-walk', time: 'evening' },

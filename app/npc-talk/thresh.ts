@@ -9,6 +9,8 @@ import type { NpcTalkBook } from './types.ts';
 export const THRESH_TALK: NpcTalkBook = {
   npc: 'thresh',
   memories: {
+    'lv-no-price': '쓰레쉬에게 칭찬을 흥정으로 바꾸지 않아도 된다고 했어요',
+    'lv-empty-shelf': '추억을 남길지 말지는 함께 고르기로 했어요',
     'night-owl': '밤이 좋다고 했어요',
     'day-person': '낮이 더 좋다고 했어요',
     'regular': '단골 명단에 이름을 올리기로 했어요',
@@ -45,6 +47,170 @@ export const THRESH_TALK: NpcTalkBook = {
     'date-heard': '내 방에서 보낸 밤을 수집했대요',
   },
   talks: [
+    {
+      id: 'lv-date-no-price',
+      when: {
+        love: 'dating',
+      },
+      open: ['당신한테 예쁘다는 말을 들으면 자꾸 물건을 더 얹어 드리네요.', '맨손으로 고맙다고 하는 게, 이상하게 더 낯설어요.'],
+      replies: [
+        {
+          say: '오늘은 말만 받아도 좋아',
+          tier: 'great',
+          remember: 'lv-no-price',
+          face: 'shy',
+          answer: ['…고마워요. 후후, 웃음부터 나왔네요.', '이건 단골에게 하는 인사랑 조금 달라요. 알아줘요.'],
+        },
+        {
+          say: '내 칭찬엔 값을 안 매겨도 돼',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 돌려드릴 말도 천천히 고를게요. 서두른 흥정 말고요.',
+        },
+        {
+          say: '주고 싶을 때 주는 건 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '네. 갚아야 해서 꺼내는 물건인지만 먼저 볼게요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-lantern',
+      when: {
+        love: 'dating',
+      },
+      open: ['등불을 좀 낮췄어요. 당신 얼굴이 잘 보여서요.', '그런데 너무 오래 보고 있었나 봐요. 불편했으면 말해 줘요.', '당신이 눈 마주쳐 주면, 제가 먼저 피하게 될 줄은 몰랐네요.'],
+      replies: [
+        {
+          say: '조금 쑥스럽지만 싫진 않아',
+          tier: 'great',
+          face: 'shy',
+          answer: ['어머. 저만 그런 줄 알았어요.', '그럼 잠깐만 더 봐도 돼요? 대답하실 때까진 등불만 볼게요.'],
+        },
+        {
+          say: '오늘은 나란히 바다 볼래?',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 얼굴을 마주 보지 않아도 가까울 수 있겠죠.',
+        },
+        {
+          say: '먼저 말해 줘서 편해졌어',
+          tier: 'good',
+          face: 'smile',
+          answer: '눈치만 기다리는 장사는 안 하려고요. 당신한테는 특히요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-shelf',
+      when: {
+        love: 'engaged',
+      },
+      open: ['우리 추억 선반을 만들다가 빈칸을 전부 재 버렸어요.', '어떤 날은 물건 안 남기고 그냥 보내도 될 텐데요.'],
+      replies: [
+        {
+          say: '남기고 싶은 날엔 같이 고르자',
+          tier: 'great',
+          remember: 'lv-empty-shelf',
+          face: 'smile',
+          answer: ['좋아요. 수집 목록에 없는 저녁도 살아 보죠.', '아무것도 안 올린 칸이 실패는 아닐 테니까요.'],
+        },
+        {
+          say: '빈 선반도 우리 자리야',
+          tier: 'great',
+          face: 'think',
+          answer: '…빈 곳도 제 것이라고 할 수 있군요. 아니, 우리 것이군요.',
+        },
+        {
+          say: '일단 작은 칸 하나면 어때?',
+          tier: 'good',
+          face: 'smile',
+          answer: '네. 많다고 더 소중해지는 건 아니라는 걸 연습해 볼게요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-promise',
+      when: {
+        love: 'engaged',
+      },
+      open: ['반지 감정서를 쓰려다 그만뒀어요.', '흠 하나 없는 걸 골랐다는 증거가 있어야 안심할 줄 알았거든요.'],
+      replies: [
+        {
+          say: '내가 고른 마음은 여기 있어',
+          tier: 'great',
+          face: 'shy',
+          answer: ['알아요. 그런데 제가 겁이 좀 많네요.', '귀한 물건을 다뤄도 이런 약속은 처음이라서요.'],
+        },
+        {
+          say: '불안한 것도 같이 이야기하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 오늘은 놓칠까 무섭다는 말부터 할게요. 붙잡겠다는 뜻은 아니고요.',
+        },
+        {
+          say: '감정서를 써도 마음은 그대로야',
+          tier: 'good',
+          face: 'smile',
+          answer: '맞아요. 종이를 버리는 것까지 증명할 필요는 없겠죠. 조금 놓이네요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-drawer',
+      when: {
+        love: 'married',
+      },
+      open: ['서랍을 정리하다 당신 물건은 손대지 않고 뒀어요.', '다 보관해 주는 게 다정한 줄 알았는데, 버리고 싶은 것도 있겠지요.'],
+      replies: [
+        {
+          say: '같이 하나씩 골라 보자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['좋아요. 사연을 모른다고 제가 마음대로 붙이진 않을게요.', '남길 것도 버릴 것도 당신 목소리로 듣고 싶어요.'],
+        },
+        {
+          say: '내 서랍은 내가 정리할게',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 같은 집에 살아도 혼자 열 서랍이 있는 건 괜찮죠.',
+        },
+        {
+          say: '나는 정리보다 쉬는 게 먼저야',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 닫아 둘게요. 서랍은 내일도 여기 있어요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-morning',
+      when: {
+        love: 'married',
+      },
+      open: ['당신이 일어난 뒤에는 집 안 소리가 달라져요.', '컵 놓는 소리, 발걸음, 문 닫는 소리. 전엔 모으려 했을 텐데요.'],
+      replies: [
+        {
+          say: '이제는 그냥 듣고 있어?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['네. 지나간 소리도 괜찮아졌어요.', '다만 당신이 제 이름 부르는 건, 한 번만 더 듣고 싶어요. 지금요.'],
+        },
+        {
+          say: '쓰레쉬 소리도 나한텐 익숙해',
+          tier: 'great',
+          face: 'laugh',
+          answer: '제가 열쇠를 두 번 확인하는 소리까지요? 후후, 들켰네요.',
+        },
+        {
+          say: '조용히 있고 싶은 날도 말해 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럴게요. 익숙한 소리라고 늘 반가워해야 하는 건 아니겠죠.',
+        },
+      ],
+    },
     {
       id: 'night-or-day',
       open: '{me}, 하나 여쭤봐도 돼요? 밤이 좋아요, 낮이 좋아요?',
@@ -818,6 +984,64 @@ export const THRESH_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-no-price',
+      when: {
+        love: 'any',
+        mem: 'lv-no-price',
+      },
+      use: 'lv-no-price',
+      open: ['칭찬받고 말만 드려도 좋다고 하셨지요.', '아까 칭찬 한마디 들었는데 이번엔 선반으로 손이 안 갔어요.'],
+      replies: [
+        {
+          say: '그때 어떤 마음이었어?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['기뻤어요. 아주 단순한 말인데요.', '당신 앞에서는 그걸 길게 꾸미지 않아도 되더라고요.'],
+        },
+        {
+          say: '그 기분을 기억하면 좋겠다',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 물건으로 남기지 않아도 제 안에 남는 게 있었네요.',
+        },
+        {
+          say: '나한테도 편하게 말해 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 오늘 당신이 와서 기뻐요. 다른 뜻도 덤도 없이요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-shelf',
+      when: {
+        love: 'any',
+        mem: 'lv-empty-shelf',
+      },
+      use: 'lv-empty-shelf',
+      open: ['함께 고른 날만 선반에 남기자고 했잖아요.', '어제는 아무것도 안 주웠어요. 당신 얘기 듣느라요.'],
+      replies: [
+        {
+          say: '그 저녁은 나도 기억해',
+          tier: 'great',
+          face: 'smile',
+          answer: ['그럼 놓친 게 없군요.', '주머니는 비었는데 집에 와서 허전하지 않았어요.'],
+        },
+        {
+          say: '다음엔 예쁜 걸 함께 찾아보자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 꼭 건져야 할 목록 없이 걸어 보고 싶어요.',
+        },
+        {
+          say: '가끔은 잊는 날도 있겠지',
+          tier: 'good',
+          face: 'calm',
+          answer: '그렇겠죠. 잊지 않으려고 하루를 전부 묶어 둘 순 없으니까요.',
+        },
+      ],
+    },
     {
       id: 'cb-regular',
       when: { mem: 'regular' },

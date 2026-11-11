@@ -8,6 +8,8 @@ import type { NpcTalkBook } from './types.ts';
 export const NASERA_TALK: NpcTalkBook = {
   npc: 'nasera',
   memories: {
+    'lv-unwritten': '나세라가 정리하지 못한 마음도 들어 주기로 했어요',
+    'lv-leave-margin': '함께할 계획에 각자의 빈 시간을 남기기로 했어요',
     'stack-daily': '매일 조금씩 쌓는 게 좋다고 했어요',
     'book-friend': '오래된 책을 좋아한다고 했어요',
     'brother-letter': '동생 편지에 답장하라고 권했어요',
@@ -33,6 +35,170 @@ export const NASERA_TALK: NpcTalkBook = {
     'letter-sent': '동생에게 보낼 편지를 함께 부쳤어요',
   },
   talks: [
+    {
+      id: 'lv-date-unfinished',
+      when: {
+        love: 'dating',
+      },
+      open: ['당신에게 할 말을 적어 왔습니다. 그런데 읽지 않겠습니다.', '정리한 문장 뒤로 숨는 버릇이 생긴 것 같아서입니다.', '종이 귀퉁이가 구겨졌군요. 당신이 웃을 때마다 손에 힘이 들어갔습니다.'],
+      replies: [
+        {
+          say: '정리 안 된 말도 듣고 싶어요',
+          tier: 'great',
+          remember: 'lv-unwritten',
+          face: 'shy',
+          answer: ['오늘 당신이 오지 않을까 걱정했습니다. 약속한 것도 아닌데.', '이 말은 기록보다 부끄럽습니다. 그래도 직접 하겠습니다.'],
+        },
+        {
+          say: '종이를 보고 말해도 괜찮아요',
+          tier: 'great',
+          face: 'smile',
+          answer: '고맙습니다. 잘 전하고 싶다는 마음까지 부끄러워할 필요는 없겠군요.',
+        },
+        {
+          say: '말없이 잠깐 걸어도 좋아요',
+          tier: 'good',
+          face: 'smile',
+          answer: '그러겠습니다. 걸음을 함께하는 데 서문이 필요하진 않으니까요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-seed',
+      when: {
+        love: 'dating',
+      },
+      open: ['당신에게 줄 묘목을 골랐다가 내려놓았습니다.', '돌보는 일을 하나 더 맡기는 것이 선물인지 생각하게 됐습니다.'],
+      replies: [
+        {
+          say: '같이 돌볼 묘목이면 좋아요',
+          tier: 'great',
+          face: 'smile',
+          answer: ['그럼 자리부터 함께 고르겠습니다.', '뿌리내리는 데 걸리는 시간도 당신과 보고 싶습니다.'],
+        },
+        {
+          say: '오늘은 나세라와 걷는 걸로 충분해요',
+          tier: 'great',
+          face: 'shy',
+          answer: '알겠습니다. 빈손으로 온 날의 저도 반겨 주시는군요.',
+        },
+        {
+          say: '돌볼 여유가 생기면 부탁할게요',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋습니다. 거절을 설명할 일을 더 보태진 않겠습니다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-margin',
+      when: {
+        love: 'engaged',
+      },
+      open: ['함께할 날의 계획을 쓰다가 빈칸이 없어졌습니다.', '당신은 쉬는 날에도 제 일정 안에 있어야 할 이유가 없는데요.'],
+      replies: [
+        {
+          say: '각자 비워 둘 시간도 남겨요',
+          tier: 'great',
+          remember: 'lv-leave-margin',
+          face: 'smile',
+          answer: ['좋습니다. 비어 있다고 누락된 것은 아니겠지요.', '당신을 기다리는 동안 저도 제 책을 읽겠습니다.'],
+        },
+        {
+          say: '계획 없는 하루부터 살아 봐요',
+          tier: 'great',
+          face: 'think',
+          answer: '…익숙하지 않습니다. 그래도 함께라면 한번 해 보고 싶습니다.',
+        },
+        {
+          say: '그 계획을 같이 고쳐 볼까요?',
+          tier: 'good',
+          face: 'smile',
+          answer: '예. 결재받듯 내밀지 않고, 첫 줄부터 함께 보겠습니다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-letter',
+      when: {
+        love: 'engaged',
+      },
+      open: ['동생에게 혼인 소식을 썼습니다. 네 번 고쳤습니다.', '당신이 어떤 분인지 설명하다가 제가 얼마나 기쁜지만 적었더군요.'],
+      replies: [
+        {
+          say: '그대로 보내도 좋겠어요',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그렇습니까. 사적인 기쁨이 너무 길어 보였습니다.', '…그럼 줄이지 않겠습니다. 이번만은요.'],
+        },
+        {
+          say: '동생에게 직접 인사하고 싶어요',
+          tier: 'great',
+          face: 'smile',
+          answer: '그러면 같이 만나자고 쓰겠습니다. 낯설면 제 옆에 계셔도 됩니다.',
+        },
+        {
+          say: '나세라가 편한 만큼만 전해요',
+          tier: 'good',
+          face: 'smile',
+          answer: '알겠습니다. 당신 이야기를 제 허락만으로 다 쓰려 하진 않겠습니다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-rest',
+      when: {
+        love: 'married',
+      },
+      open: ['아무것도 하지 않고 앉아 있으니 해야 할 일이 먼저 떠오릅니다.', '당신 곁에서 쉬는 일에도 이유를 대려고 합니다. 이상하지요.'],
+      replies: [
+        {
+          say: '곁에 있고 싶다는 이유면 돼요',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그렇다면 오늘은 곁에 있고 싶습니다.', '책은 이쪽에 내려놓겠습니다. 당신 얼굴을 보려면 자꾸 닫게 돼서요.'],
+        },
+        {
+          say: '책 읽는 나세라 옆에 있어도 돼요?',
+          tier: 'great',
+          face: 'smile',
+          answer: '물론입니다. 읽은 대목을 전부 설명하진 않겠습니다. 원하실 때만.',
+        },
+        {
+          say: '혼자 쉬는 것도 괜찮아요',
+          tier: 'good',
+          face: 'smile',
+          answer: '고맙습니다. 혼자 있는 시간도 돌아올 곳이 있어서 편해졌습니다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-salt',
+      when: {
+        love: 'married',
+      },
+      open: ['당신이 음식을 조금 남겼을 때 서운했습니다.', '간이 맞았는지 묻지도 않고 제 정성부터 헤아렸군요. 사과합니다.'],
+      replies: [
+        {
+          say: '다음엔 같이 간을 맞춰요',
+          tier: 'great',
+          face: 'sorry',
+          answer: ['그러겠습니다. 잘해 주고 싶은 마음이 듣는 귀를 가려선 안 되지요.', '오늘은 어떤 맛이 편하십니까?'],
+        },
+        {
+          say: '고마운 것과 입맛은 다를 수 있죠',
+          tier: 'great',
+          face: 'smile',
+          answer: '맞습니다. 마음을 받았다는 증거로 다 드실 필요는 없습니다.',
+        },
+        {
+          say: '당장은 입맛이 없었어요',
+          tier: 'good',
+          face: 'smile',
+          answer: '알려 주셔서 감사합니다. 남은 것은 두고, 먼저 쉬십시오.',
+        },
+      ],
+    },
     {
       id: 'stack-daily',
       open: ['{me}, 하나 묻겠습니다.', '한 번에 크게 하는 것과 매일 조금씩 하는 것. 어느 쪽입니까.'],
@@ -727,6 +893,64 @@ export const NASERA_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-unwritten',
+      when: {
+        love: 'any',
+        mem: 'lv-unwritten',
+      },
+      use: 'lv-unwritten',
+      open: ['정리하지 못한 말도 들려 달라고 하셨지요.', '오늘은 종이를 가져오지 않았습니다. 당신을 만나고 싶었습니다.'],
+      replies: [
+        {
+          say: '저도 만나고 싶었어요',
+          tier: 'great',
+          face: 'shy',
+          answer: ['…그렇군요. 더 설명하지 않아도 전해지는 말이 있군요.', '잠깐만 이대로 서 있어도 되겠습니까?'],
+        },
+        {
+          say: '말이 끊겨도 기다릴게요',
+          tier: 'great',
+          face: 'smile',
+          answer: '고맙습니다. 서두르지 않고 제 말을 찾아보겠습니다.',
+        },
+        {
+          say: '산책하면서 이야기할까요?',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋습니다. 오늘 기록할 것은 길 이름보다 당신의 대답이겠군요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-margin',
+      when: {
+        love: 'any',
+        mem: 'lv-leave-margin',
+      },
+      use: 'lv-leave-margin',
+      open: ['계획의 빈칸을 남겨 두었습니다.', '처음엔 자꾸 채우려다, 그 옆에 제 독서 시간을 적었습니다.'],
+      replies: [
+        {
+          say: '각자 보낸 이야기도 나눠요',
+          tier: 'great',
+          face: 'smile',
+          answer: ['예. 같은 시간을 전부 함께 보내지 않아도 나눌 것은 늘어나는군요.', '오늘 당신이 본 것은 무엇입니까?'],
+        },
+        {
+          say: '비워 두는 게 편해졌어요?',
+          tier: 'great',
+          face: 'smile',
+          answer: '아직 연습 중입니다. 하지만 빈칸을 실수라고 보지는 않습니다.',
+        },
+        {
+          say: '같이 쉴 빈칸도 하나 남겨요',
+          tier: 'good',
+          face: 'smile',
+          answer: '남겨 두겠습니다. 해야 할 일 목록과는 다른 쪽에요.',
+        },
+      ],
+    },
     {
       id: 'cb-book',
       when: { mem: 'book-friend' },

@@ -11,6 +11,8 @@ import type { NpcTalkBook } from './types.ts';
 export const LUMI_TALK: NpcTalkBook = {
   npc: 'lumi',
   memories: {
+    'lv-plain-voice': '노래하지 않는 미쿠의 목소리도 듣고 싶다고 했어요',
+    'lv-quiet-rest': '지친 날에는 노래 없이 함께 쉬기로 했어요',
     'sing-along': '노래를 같이 부르자고 했어요',
     'listen-only': '노래는 듣는 쪽이 좋다고 했어요',
     'leek-fan': '파를 좋아한다고 했어요',
@@ -41,6 +43,170 @@ export const LUMI_TALK: NpcTalkBook = {
     'festival-stage': '축제 무대에 서기로 했어요',
   },
   talks: [
+    {
+      id: 'lv-date-plain',
+      when: {
+        love: 'dating',
+      },
+      open: ['아까 네 이름 부르려다 손님들 인사하는 목소리가 나왔어.', '한 번만 다시 할래. 공연 끝난 뒤의 나로. {me}, 왔어?', '너한텐 웃어 보이려 안 해도 웃게 돼. 그게 좀 들켜서 부끄러워.'],
+      replies: [
+        {
+          say: '응, 그 목소리 듣고 싶었어',
+          tier: 'great',
+          remember: 'lv-plain-voice',
+          face: 'shy',
+          answer: ['…이상하다. 늘 하던 인산데 더 떨려.', '이번엔 박수 안 쳐도 돼. 대답해 준 걸로 충분해.'],
+        },
+        {
+          say: '지쳤으면 옆에서 조용히 쉴까?',
+          tier: 'great',
+          remember: 'lv-quiet-rest',
+          face: 'smile',
+          answer: '응. 오늘은 아무것도 안 불러도 되는 자리, 네 옆에 있을래.',
+        },
+        {
+          say: '지금 목소리도 미쿠잖아',
+          tier: 'good',
+          face: 'smile',
+          answer: '그렇게 들어 주는구나. 잘하려고 목에 힘주고 있었는데.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-offbeat',
+      when: {
+        love: 'dating',
+      },
+      open: ['너 만나러 갈 땐 거울 앞에서 인사를 연습해.', '막상 만나면 다른 말만 해. 오늘도 머리핀 얘기부터 했잖아.'],
+      replies: [
+        {
+          say: '다른 말이어도 오래 듣고 싶어',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그럼 인사 다음도 연습 안 할래.', '네 앞에선 조금 엉망이어도 괜찮을 것 같아.'],
+        },
+        {
+          say: '나도 무슨 말 할지 잊었어',
+          tier: 'great',
+          face: 'laugh',
+          answer: '진짜? 그럼 우리 둘 다 첫 소절에서 길 잃은 거네. 같이 찾자.',
+        },
+        {
+          say: '준비 안 하고 와도 좋아',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 내일은 거울한테 말하지 말고 너한테 먼저 말할게.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-guests',
+      when: {
+        love: 'engaged',
+      },
+      open: ['결혼식 축가 신청이 잔뜩 왔어. 기쁘긴 한데…', '난 네 말도 잘 들리는 식이었으면 좋겠어.'],
+      replies: [
+        {
+          say: '우리 목소리가 들릴 만큼만',
+          tier: 'great',
+          face: 'shy',
+          answer: ['응. 무대보다 가까이 서자.', '나, 결혼하는 날까지 가수로만 기억되고 싶진 않아.'],
+        },
+        {
+          say: '큰 무대여도 잠깐 둘이 빠져나오자',
+          tier: 'great',
+          face: 'smile',
+          answer: '그거 좋다! 축가 끝나고 바깥에서 숨 돌리는 시간도 적어 둘게.',
+        },
+        {
+          say: '조금 더 생각해 보고 정하자',
+          tier: 'good',
+          face: 'think',
+          answer: '응. 즐거워야 하는데 벌써 공연 일정처럼 짜고 있었네.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-worry',
+      when: {
+        love: 'engaged',
+      },
+      open: ['같이 살면 내 리허설 소리도 매일 듣겠지.', '넌 괜찮다는데, 내가 그 말을 너무 편하게 믿을까 봐 걱정돼.'],
+      replies: [
+        {
+          say: '불편한 날엔 서로 말하자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 웃으면서 참는 건 테이블에서만 할게.', '우리 집에서는 싫은 것도 말할 수 있으면 좋겠어.'],
+        },
+        {
+          say: '조용히 쉴 시간도 같이 정하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아. 노래 없는 시간도 우리 하루에 들어가는 거네.',
+        },
+        {
+          say: '살면서 조금씩 맞춰 가도 돼',
+          tier: 'good',
+          face: 'shy',
+          answer: '아직 모르는 게 많아도 되는 거지? 그 말 들으니 좀 놓인다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-burnt',
+      when: {
+        love: 'married',
+      },
+      open: ['국에 파를 두 번 넣었어. 너 오면 얘기할 게 생각나서.', '냄비 앞에서 혼자 얘기하다가 그만. 웃어도 돼.'],
+      replies: [
+        {
+          say: '무슨 얘기였는데?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['오늘 네가 문 닫고 나갈 때 뒤돌아봤잖아.', '다시 들어올 줄 알고 나도 한 걸음 갔어. 맨날 보는 얼굴인데도.'],
+        },
+        {
+          say: '건져서 나눠 먹으면 되지',
+          tier: 'great',
+          face: 'laugh',
+          answer: '내가 건질게! 파보다 우리 얘기가 많아지는 저녁이네.',
+        },
+        {
+          say: '오늘은 다른 걸 먹어도 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 실패한 국은 실패한 국이고, 저녁은 아직 안 끝났으니까.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-doorstep',
+      when: {
+        love: 'married',
+      },
+      open: ['오늘은 각자 하고 싶은 걸 하다가 집에서 만날래?', '전엔 빈 객석이 싫었는데, 이제 혼자 연습해도 덜 외로워.'],
+      replies: [
+        {
+          say: '끝나면 제일 먼저 들려줘',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 잘했는지보다 오늘 어땠는지부터 말할게.', '너도 네 하루 챙겨 와. 저녁에 교환하자.'],
+        },
+        {
+          say: '나도 혼자 할 일이 있었어',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아! 각자 신나게 보내고 오자. 보고 싶었다는 말도 모아 두고.',
+        },
+        {
+          say: '오늘은 같이 있고 싶은데',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 연습실 의자 하나 더 꺼낼게. 듣기 싫어지면 쉬러 가도 돼.',
+        },
+      ],
+    },
     {
       id: 'sing-or-listen',
       open: '{me}! 노래는 부르는 게 좋아, 듣는 게 좋아? 난 둘 다!',
@@ -393,7 +559,7 @@ export const LUMI_TALK: NpcTalkBook = {
       replies: [
         { say: '제목이 뭐야?', tier: 'great', face: 'laugh', answer: ['아직 없어. 매일 가사가 조금씩 바뀌거든.', '오늘 저녁 메뉴가 들어갈 때도 있어. 그래서 제목은 "오늘".'] },
         { say: '매일 들을 수 있어서 좋아', tier: 'good', face: 'shy', answer: '나도 매일 부를 수 있어서 좋아. 관객이 늘 같은 자리에 있으니까.' },
-        { say: '가끔은 조용히 있고 싶어', tier: 'meh', face: 'calm', answer: '그럼 흥얼거림 버전으로. 차 끓는 소리보다 작게.' },
+        { say: '가끔은 조용히 있고 싶어', tier: 'good', face: 'calm', answer: '그럼 오늘은 노래 쉬자. 차 끓는 소리만 같이 들어도 좋겠다.' },
       ],
     },
   ],
@@ -841,6 +1007,64 @@ export const LUMI_TALK: NpcTalkBook = {
   ],
   callbacks: [
     {
+      id: 'lv-cb-plain',
+      when: {
+        love: 'any',
+        mem: 'lv-plain-voice',
+      },
+      use: 'lv-plain-voice',
+      open: ['노래 안 하는 내 목소리도 듣고 싶댔지.', '녹음하다가 그 말 생각나서, 숨 고르는 소릴 안 지웠어.'],
+      replies: [
+        {
+          say: '숨 쉬는 미쿠까지 듣는 거네',
+          tier: 'great',
+          face: 'shy',
+          answer: ['응. 완벽한 한 곡 말고, 내가 여기 있다는 소리.', '너한텐 그걸 들려주고 싶었나 봐.'],
+        },
+        {
+          say: '녹음은 미쿠 마음대로 해',
+          tier: 'great',
+          face: 'smile',
+          answer: '그치. 네 말이 정답이라서가 아니라, 내가 남기고 싶어서 남겼어.',
+        },
+        {
+          say: '나중에 편할 때 들려줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 듣는 날 서두르지 않을게. 같이 고른 마음은 남았으니까.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-quiet',
+      when: {
+        love: 'any',
+        mem: 'lv-quiet-rest',
+      },
+      use: 'lv-quiet-rest',
+      open: ['지친 날엔 노래 없이 쉬기로 했잖아.', '어제 처음으로 흥얼거리지 않고 차를 마셨어. 생각보다 좋더라.'],
+      replies: [
+        {
+          say: '내 옆에서도 그래도 돼',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 오늘은 잔 부딪히는 소리만 내자.', '나를 즐겁게 만들어야 할 손님처럼 안 대해 줘서 고마워.'],
+        },
+        {
+          say: '혼자 쉬는 시간도 잘 챙겨',
+          tier: 'great',
+          face: 'smile',
+          answer: '알았어. 너 오기 전에도 내가 나를 좀 챙겨 볼게.',
+        },
+        {
+          say: '오늘은 노래가 듣고 싶어',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋아. 쉬었더니 부르고 싶어졌어. 내가 고른 노래 하나만.',
+        },
+      ],
+    },
+    {
       id: 'cb-leek',
       when: { mem: 'leek-fan' },
       use: 'leek-fan',
@@ -888,7 +1112,7 @@ export const LUMI_TALK: NpcTalkBook = {
       open: '{me}, 좋아하는 게 {taste}라며? 그거로 짧은 노래 하나 만들어 봤어!',
       replies: [
         { say: '불러 줘!', tier: 'great', remember: 'taste-heard', face: 'laugh', answer: ['흠흠… 좋아하는 걸 좋아하는 너가 좋아~', '헤헤, 아직 일 절뿐이야. 이 절은 네가 써.'] },
-        { say: '부끄러운데', tier: 'good', remember: 'taste-heard', face: 'shy', answer: '헤헤, 그럼 너 없을 때만 부를게. 아니다, 있을 때 부를래.' },
+        { say: '부끄러운데', tier: 'good', remember: 'taste-heard', face: 'shy', answer: '그럼 아직은 혼자 연습할게. 듣고 싶어지는 날 알려 줘.' },
       ],
     },
     {

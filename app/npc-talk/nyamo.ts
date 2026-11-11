@@ -11,6 +11,8 @@ import type { NpcTalkBook } from './types.ts';
 export const NYAMO_TALK: NpcTalkBook = {
   npc: 'nyamo',
   memories: {
+    'lv-tail-permission': '나모가 먼저 괜찮다고 할 때만 귀를 만지기로 했어요',
+    'lv-draft-page': '나모의 다 쓰지 않은 이야기도 읽어 주기로 했어요',
     'novel-pal': '소설 이야기를 같이 했어요',
     'mackerel-fan': '고등어가 제일이라고 맞장구쳤어요',
     'no-spicy': '매운 걸 못 먹는 걸 알아줬어요',
@@ -43,6 +45,170 @@ export const NYAMO_TALK: NpcTalkBook = {
     'frieren-calc': '프리렌 통장 이자 이야기에 웃었어요',
   },
   talks: [
+    {
+      id: 'lv-date-tail',
+      when: {
+        love: 'dating',
+      },
+      open: ['아까 귀에 손이 닿았을 때, 싫진 않았는데 놀랐어요.', '좋아하는 사람한테도 이런 말은 해야 하나 한참 생각했네요.'],
+      replies: [
+        {
+          say: '먼저 물어볼게. 말해 줘서 고마워',
+          tier: 'great',
+          remember: 'lv-tail-permission',
+          face: 'shy',
+          answer: ['네. 제가 괜찮다고 할 때요.', '이런 얘기 해도 멀어지지 않는 거군요. 귀가 또 움직이네요.'],
+        },
+        {
+          say: '그럼 오늘은 손만 잡을까?',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 손은 괜찮아요. 아, 이것도 제가 먼저 고른 거예요.',
+        },
+        {
+          say: '놀랐으면 조금 떨어져 쉴래?',
+          tier: 'good',
+          face: 'smile',
+          answer: '잠깐만요. 쉬고 나면 제가 옆으로 갈게요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-draft',
+      when: {
+        love: 'dating',
+      },
+      open: ['쓰다 만 소설을 보여 드리고 싶다가도 접게 돼요.', '멋있는 주인공 옆에 있으면, 제 평범한 하루가 초라해 보여서요.', '그런데 당신이 제 옆자리 끌어올 때마다, 다음 장이 궁금해져요.'],
+      replies: [
+        {
+          say: '완성 안 된 나모 이야기도 좋아',
+          tier: 'great',
+          remember: 'lv-draft-page',
+          face: 'shy',
+          answer: ['…그럼 첫 장만 읽어 줄래요?', '고칠 곳보다 마음에 남은 걸 먼저 말해 주면 좋겠어요.'],
+        },
+        {
+          say: '지금은 보여 주지 않아도 괜찮아',
+          tier: 'great',
+          face: 'smile',
+          answer: '고마워요. 숨기고 싶은 게 아니라, 제 속도로 꺼내 보고 싶어요.',
+        },
+        {
+          say: '평범한 하루부터 들려줘',
+          tier: 'good',
+          face: 'laugh',
+          answer: '오늘은 도장을 세 번 떨어뜨렸어요. 마지막엔 제가 웃었고요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-budget',
+      when: {
+        love: 'engaged',
+      },
+      open: ['결혼 준비 비용은 다 맞췄는데, 표를 볼수록 마음이 이상해요.', '뭘 좋아할지 묻는 대신 효율 좋은 것만 고르고 있었어요.'],
+      replies: [
+        {
+          say: '꼭 하고 싶은 거 하나씩 고르자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['전 작은 꽃이 있는 식탁이요. 계산표엔 없던 칸이네요.', '당신은요? 비싸지 않아도 중요한 걸 듣고 싶어요.'],
+        },
+        {
+          say: '힘들면 준비부터 좀 쉬자',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 빈칸이 생겼다고 바로 채우지 않아도 되겠죠.',
+        },
+        {
+          say: '예산도 같이 다시 봐 줄게',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 옆에 앉아 줘요. 이번엔 숫자만 보지 않을게요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-ordinary',
+      when: {
+        love: 'engaged',
+      },
+      open: ['한집에 살면 제가 책 읽다 우는 것도 다 보겠네요.', '지금은 멋있는 장면만 골라서 말할 수 있는데요.'],
+      replies: [
+        {
+          say: '울고 싶은 장면도 같이 있을래',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그럼 휴지통은 소파 가까이 둘게요.', '감상문 쓰듯 설명 안 해도 괜찮을 것 같아요.'],
+        },
+        {
+          say: '혼자 읽고 싶을 땐 방해 안 할게',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 같은 집에 제 혼자만의 한 장도 남는 거네요.',
+        },
+        {
+          say: '나도 안 보여 준 모습이 많아',
+          tier: 'good',
+          face: 'smile',
+          answer: '우리 둘 다 미완성 초고였네요. 급히 결말부터 내지 말아요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-cup',
+      when: {
+        love: 'married',
+      },
+      open: ['어제 컵 때문에 말투가 차가웠죠. 미안해요.', '컵은 핑계였어요. 피곤한 걸 알아주길 바라면서 말은 안 했어요.'],
+      replies: [
+        {
+          say: '피곤하다고 먼저 말해 줘',
+          tier: 'great',
+          face: 'sorry',
+          answer: ['네. 눈치로 맞히게 하지 않을게요.', '오늘은 피곤해요. 같이 잠깐 앉아 줄 수 있어요?'],
+        },
+        {
+          say: '나도 날카롭게 대답했어',
+          tier: 'great',
+          face: 'smile',
+          answer: '서로 잘못한 걸 갚아 내듯 세지 말아요. 오늘은 다시 이야기해요.',
+        },
+        {
+          say: '지금은 쉬고 나중에 얘기하자',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋아요. 쉬자는 말이 대화를 없애자는 건 아닌 걸 알아요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-weekend',
+      when: {
+        love: 'married',
+      },
+      open: ['쉬는 날 계획이 없어서 괜히 일정표를 폈어요.', '그냥 옆에 누워 책 읽는 날도, 당신한테 괜찮은 하루일까요?'],
+      replies: [
+        {
+          say: '각자 책 읽다가 눈 마주치면 좋겠다',
+          tier: 'great',
+          face: 'shy',
+          answer: ['…그 장면 좋네요. 소설에 넣으려다 말았어요.', '책보다 당신 얼굴을 오래 봐도, 오늘만은 모른 척해 줘요.'],
+        },
+        {
+          say: '나는 잠깐 나갔다 올게',
+          tier: 'great',
+          face: 'smile',
+          answer: '다녀와요. 오면 자리 비켜 드릴게요. 쿠션만 조금 차지할게요.',
+        },
+        {
+          say: '책 덮고 같이 낮잠 잘래?',
+          tier: 'good',
+          face: 'laugh',
+          answer: '좋아요. 알람은 하나만 맞춰요. 두 개면 둘 다 끄고 잘 것 같아서요.',
+        },
+      ],
+    },
     {
       id: 'novel',
       open: '{me} 님, 요즘 무슨 책 읽어요? 저는 어젯밤 소설 한 권을 끝냈어요.',
@@ -698,6 +864,64 @@ export const NYAMO_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-tail',
+      when: {
+        love: 'any',
+        mem: 'lv-tail-permission',
+      },
+      use: 'lv-tail-permission',
+      open: ['먼저 물어보겠다고 해 준 뒤로 덜 긴장해요.', '싫다고 하면 실망할까 봐 대답을 서두르곤 했거든요.'],
+      replies: [
+        {
+          say: '천천히 대답해도 돼',
+          tier: 'great',
+          face: 'shy',
+          answer: ['네. 오늘은 손부터 내밀고 싶어요.', '꼬리 말고 제 대답을 기다려 줘서 고마워요.'],
+        },
+        {
+          say: '싫은 날도 솔직히 말해 줘',
+          tier: 'great',
+          face: 'smile',
+          answer: '알겠어요. 괜찮은 척하는 것보다 그게 더 믿는 거겠죠.',
+        },
+        {
+          say: '다른 불편한 것도 있으면 말해',
+          tier: 'good',
+          face: 'smile',
+          answer: '지금 당장은 없어요. 생기면 혼자 오래 재지 않고 말할게요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-draft',
+      when: {
+        love: 'any',
+        mem: 'lv-draft-page',
+      },
+      use: 'lv-draft-page',
+      open: ['미완성 원고 읽어 준 뒤로 다음 장이 조금씩 나와요.', '칭찬받아서만은 아니에요. 못 쓴 날에도 보여 줄 곳이 생겨서요.'],
+      replies: [
+        {
+          say: '오늘은 어떤 장면을 썼어?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['주인공이 문밖에서 고민하다가 그냥 들어가는 장면이요.', '맞는 말을 준비 못 했어도 만나러 가는 거요.'],
+        },
+        {
+          say: '쉬는 날엔 안 써도 괜찮아',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 빈 페이지를 당신한테 미안해하진 않을게요.',
+        },
+        {
+          say: '이번엔 내 이야기도 들어 줄래?',
+          tier: 'good',
+          face: 'smile',
+          answer: '물론이죠. 결말은 맞히지 않을게요. 끝까지 듣고 싶어요.',
+        },
+      ],
+    },
     {
       id: 'cb-mackerel',
       when: { mem: 'mackerel-fan' },

@@ -8,6 +8,8 @@ import type { NpcTalkBook } from './types.ts';
 export const GWEN_TALK: NpcTalkBook = {
   npc: 'gwen',
   memories: {
+    'lv-not-pretty': '예쁘게 웃지 못하는 날의 그웬도 만나고 싶다고 했어요',
+    'lv-own-ribbon': '서로 다른 취향의 리본을 그대로 두기로 했어요',
     'scissors-name': '가위 싹둑이에게 인사했어요',
     'new-wonder': '처음 보는 것이 신기하다고 했어요',
     'thread-ok': '실밥을 떼어 줘서 고맙다고 했어요',
@@ -47,6 +49,170 @@ export const GWEN_TALK: NpcTalkBook = {
     'quilt-done': '마을 조각보의 마지막 조각이 됐어요',
   },
   talks: [
+    {
+      id: 'lv-date-face',
+      when: {
+        love: 'dating',
+      },
+      open: ['오늘 거울 앞에서 웃는 얼굴을 고치고 있었어요.', '당신 만나는데 기운 없는 얼굴이면 안 될 것 같아서요.'],
+      replies: [
+        {
+          say: '안 웃는 그웬도 만나러 왔어',
+          tier: 'great',
+          remember: 'lv-not-pretty',
+          face: 'calm',
+          answer: ['…그럼 잠깐 표정 안 골라도 돼요?', '오늘은 그냥 피곤해요. 그래도 당신 오는 건 기다렸어요.'],
+        },
+        {
+          say: '오늘은 쉬었다 만나도 괜찮아',
+          tier: 'great',
+          face: 'smile',
+          answer: '고마워요. 싫어진 게 아니라는 걸 말해 주니 마음이 놓여요.',
+        },
+        {
+          say: '내 앞에서 고치지 않아도 돼',
+          tier: 'good',
+          face: 'smile',
+          answer: '네. 실밥처럼 마음까지 다 매끈하게 만들려고 했나 봐요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-ribbon',
+      when: {
+        love: 'dating',
+      },
+      open: ['같은 색 리본을 고르려다 당신 취향을 잊을 뻔했어요.', '연인이면 좋아하는 것도 닮아야 하는 줄 알았거든요.', '당신 손목에 대 보느라 가까이 갔는데, 색깔보다 얼굴을 봤네요.'],
+      replies: [
+        {
+          say: '다른 색으로 나란히 달자',
+          tier: 'great',
+          remember: 'lv-own-ribbon',
+          face: 'smile',
+          answer: ['좋아요! 안 맞는 색이라도 우리한텐 이유가 있겠죠.', '맞춰 주느라 당신 색을 숨기진 말아요.'],
+        },
+        {
+          say: '오늘은 같은 색도 좋아',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 오늘의 선택인 거예요. 앞으로도 늘 같아야 하는 건 아니고요.',
+        },
+        {
+          say: '나는 리본 없이 갈래',
+          tier: 'good',
+          face: 'laugh',
+          answer: '그것도 예쁜 선택이에요. 아, 꼭 예쁘다고 안 해도 되는 건데. 좋아요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-dress',
+      when: {
+        love: 'engaged',
+      },
+      open: ['혼례 옷 실밥을 자꾸 다시 뜯어요. 작은 데가 계속 보여서요.', '사실 옷보다, 그날 제가 어떻게 서 있을지가 더 떨려요.'],
+      replies: [
+        {
+          say: '떨리면 내 쪽을 봐',
+          tier: 'great',
+          face: 'shy',
+          answer: ['네. 옷자락보다 당신 얼굴을 먼저 볼게요.', '삐뚤어진 바느질이 하나쯤 있어도 그날은 남겠죠.'],
+        },
+        {
+          say: '완성하는 날을 같이 정하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 끝없이 고치는 대신 기뻐할 시간도 남겨 둬요.',
+        },
+        {
+          say: '오늘은 바늘 내려놓을래?',
+          tier: 'good',
+          face: 'smile',
+          answer: '네. 손가락은 쉬고 싶은데 마음만 계속 꿰매고 있었어요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-home',
+      when: {
+        love: 'engaged',
+      },
+      open: ['같이 살 집에 제 작업 상자를 어디 둘지 재 봤어요.', '당신 자리도 남겨야 하는데 신나서 방을 다 재 버렸네요.'],
+      replies: [
+        {
+          say: '서로 아끼는 자리를 골라 보자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['저는 창가 끝이면 좋아요. 빛이 잘 드니까요.', '당신은요? 그 자리엔 제가 먼저 물건 놓지 않을게요.'],
+        },
+        {
+          say: '당장 정하지 않고 살아 볼까?',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 집도 몸에 맞춰 조금씩 줄이고 늘리는 거네요.',
+        },
+        {
+          say: '나는 같이 쓰는 큰 책상이 좋아',
+          tier: 'good',
+          face: 'shy',
+          answer: '그럼 중간은 비워 둘까요? 마주 앉고 싶은 날을 위해서요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-mend',
+      when: {
+        love: 'married',
+      },
+      open: ['당신 옷을 고쳐 놓으려다 멈췄어요.', '좋아하는 낡음도 있을 텐데, 제 마음대로 새것처럼 만들려 했네요.'],
+      replies: [
+        {
+          say: '이 자국은 남겨 두고 싶어',
+          tier: 'great',
+          face: 'smile',
+          answer: ['알겠어요. 천이 해지지 않게 안쪽만 받쳐 둘까요?', '모든 흔적이 고칠 데는 아니라는 걸 자꾸 배워요.'],
+        },
+        {
+          say: '이번엔 같이 고쳐 보자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아요. 바늘 잡는 쪽은 당신이 골라요. 전 실부터 꿸게요.',
+        },
+        {
+          say: '고치고 싶을 때 부탁할게',
+          tier: 'good',
+          face: 'smile',
+          answer: '네. 옆에 있겠다고 옷자락까지 붙잡을 필요는 없죠.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-first',
+      when: {
+        love: 'married',
+      },
+      open: ['예전엔 처음 보는 건 전부 신기했어요.', '요즘은 당신이 늘 두는 컵 자리처럼, 익숙해진 걸 찾는 게 좋아요.'],
+      replies: [
+        {
+          say: '내일도 같은 자리에 둘게',
+          tier: 'great',
+          face: 'shy',
+          answer: ['꼭 같지 않아도 돼요. 없으면 오늘은 어디 뒀나 궁금할 거예요.', '컵 옆에 당신 손까지 있으면, 저는 괜히 제 손도 나란히 놓고요.'],
+        },
+        {
+          say: '우리가 바뀌는 것도 같이 보자',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 익숙하다고 다 안다고 생각하진 않을게요.',
+        },
+        {
+          say: '그런 걸 보고 있는 줄 몰랐어',
+          tier: 'good',
+          face: 'smile',
+          answer: '거울 앞 표정 말고도 당신 얼굴을 알아볼 곳이 많아졌거든요.',
+        },
+      ],
+    },
     {
       id: 'scissors-name',
       open: ['{me} 님, 인사해요. 제 가위 싹둑이예요!', '이름 불러 주면 더 잘 잘려요. 진짜예요.'],
@@ -779,6 +945,64 @@ export const GWEN_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-face',
+      when: {
+        love: 'any',
+        mem: 'lv-not-pretty',
+      },
+      use: 'lv-not-pretty',
+      open: ['안 웃는 얼굴도 만나러 왔다고 했잖아요.', '오늘은 문 열기 전에 거울을 안 봤어요. 조금 용기가 났거든요.'],
+      replies: [
+        {
+          say: '지금 기분은 어때?',
+          tier: 'great',
+          face: 'smile',
+          answer: ['아직 조금 피곤하고, 당신 보니 반가워요.', '둘 다여도 되네요. 하나만 골라 보여 주지 않아도요.'],
+        },
+        {
+          say: '웃고 싶을 때만 웃어 줘',
+          tier: 'great',
+          face: 'smile',
+          answer: '네. 그럼 웃는 날엔, 그 웃음도 정말 제 걸 거예요.',
+        },
+        {
+          say: '말없이 쉬고 싶으면 말해',
+          tier: 'good',
+          face: 'smile',
+          answer: '오늘은 잠깐 앉고 싶어요. 드라이어도 끄고요.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-ribbon',
+      when: {
+        love: 'any',
+        mem: 'lv-own-ribbon',
+      },
+      use: 'lv-own-ribbon',
+      open: ['다른 색 리본을 나란히 두기로 했죠.', '실 상자에 두 칸 만들었어요. 같은 색으로 섞이지 않게요.'],
+      replies: [
+        {
+          say: '다른 것도 같이 놓으니 좋네',
+          tier: 'great',
+          face: 'smile',
+          answer: ['네. 하나로 녹아야만 가까운 건 아니네요.', '제 칸도 당신 칸도, 꺼내기 쉽게 둘게요.'],
+        },
+        {
+          say: '내 취향이 바뀌면 알려 줄게',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 그때 다시 고르면 되죠. 예전 선택에 묶어 두진 않을게요.',
+        },
+        {
+          say: '서로 골라 주는 날도 만들자',
+          tier: 'good',
+          face: 'laugh',
+          answer: '좋아요. 마음에 안 들면 바꾸기까지 약속이에요.',
+        },
+      ],
+    },
     {
       id: 'cb-scissors',
       when: { mem: 'scissors-name' },

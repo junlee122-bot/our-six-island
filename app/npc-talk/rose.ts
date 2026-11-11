@@ -11,6 +11,8 @@ import type { NpcTalkBook } from './types.ts';
 export const ROSE_TALK: NpcTalkBook = {
   npc: 'rose',
   memories: {
+    'lv-no-ledger': '포츈의 마음을 빚으로 갚지 않아도 된다고 했어요',
+    'lv-open-door': '서로의 시간을 허락받는 사이로 지내기로 했어요',
     'skill-over-luck': '운보다 실력을 믿는다고 했어요',
     'luck-lover': '운도 실력이라고 우겼어요',
     'pay-on-time': '빌리면 제때 갚겠다고 했어요',
@@ -42,6 +44,171 @@ export const ROSE_TALK: NpcTalkBook = {
     'bday-heard': '생일 이야기를 나눴어요',
   },
   talks: [
+    {
+      id: 'lv-date-unpriced',
+      when: {
+        love: 'dating',
+      },
+      open: ['네가 챙겨 준 걸 자꾸 기억해 뒀다가 돌려주게 돼.', '아무것도 빚지지 않으면 편할 줄 알았는데. 너까지 멀리 세워 놨네.'],
+      replies: [
+        {
+          say: '내 마음은 갚을 필요 없어',
+          tier: 'great',
+          remember: 'lv-no-ledger',
+          face: 'shy',
+          answer: ['…알았어. 오늘은 고맙다는 말만 받을래?', '쉬운 말인데, 장부 덮고 하려니 좀 걸린다.'],
+        },
+        {
+          say: '서로 해 주고 싶을 때 해 주자',
+          tier: 'great',
+          face: 'smile',
+          answer: '기한도 이자도 없이. 좋네. 이런 거래는 아직 서툴러.',
+        },
+        {
+          say: '받기 부담스러우면 말해 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럴게. 싫은 걸 웃으며 받지 않는 것부터 믿어 볼까.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-door',
+      when: {
+        love: 'dating',
+      },
+      open: ['쉬는 날 네가 올 줄 알고 창구를 빨리 닫았어.', '기다렸다고 말하면 널 붙잡는 말이 될까 봐 그냥 우연인 척했지.', '옷깃도 고쳤다. 네 발소리 들리고서. …이건 못 본 척해.'],
+      replies: [
+        {
+          say: '다음엔 먼저 만나자고 해 줘',
+          tier: 'great',
+          remember: 'lv-open-door',
+          face: 'smile',
+          answer: ['그럼 지금 묻지. 나랑 잠깐 걸을래?', '바쁘면 다음에. 기다렸다고 네 시간을 산 건 아니니까.'],
+        },
+        {
+          say: '오늘은 어렵지만 다른 날은 좋아',
+          tier: 'great',
+          remember: 'lv-open-door',
+          face: 'smile',
+          answer: '좋아. 거절 뒤에도 다음 약속이 남는 거네. 그건 꽤 좋다.',
+        },
+        {
+          say: '기다렸다는 말은 해도 괜찮아',
+          tier: 'good',
+          face: 'shy',
+          answer: '…기다렸어. 네 얼굴 보고 싶어서. 오늘 용건은 그거야.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-paper',
+      when: {
+        love: 'engaged',
+      },
+      open: ['혼인 서약 초안에 약속을 너무 많이 적었어.', '못 지킬 날이 올까 봐 읽을수록 겁나. 난 빈말은 싫거든.'],
+      replies: [
+        {
+          say: '틀렸을 때 다시 이야기하겠다고 하자',
+          tier: 'great',
+          face: 'calm',
+          answer: ['도망치지 않고 다시 앉기. 그건 지키고 싶어.', '흠 하나 없는 약속보다 어렵겠지만.'],
+        },
+        {
+          say: '우리 둘이 지킬 만큼만 남기자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아. 남한테 보여 줄 조건은 지울게. 우리만 아는 문장으로.',
+        },
+        {
+          say: '지금은 떨린다고 적어도 돼',
+          tier: 'good',
+          face: 'shy',
+          answer: '그걸 서약에? …이상하네. 제일 정직한 첫 줄이 됐다.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-key',
+      when: {
+        love: 'engaged',
+      },
+      open: ['집 열쇠를 받고 나니까 익숙한 항구가 달라 보여.', '돌아갈 곳이 생기면 잃을 것도 생기잖아. 그게 좀 무서워.'],
+      replies: [
+        {
+          say: '무섭다고 숨기지 않아도 돼',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 네 앞에서 괜히 센 척했네.', '지킬 수 있는 것부터 같이 지키자. 오늘 약속 같은 거.'],
+        },
+        {
+          say: '걱정될 때 내 손 잡을래?',
+          tier: 'great',
+          face: 'shy',
+          answer: '…지금 괜찮아? 그럼 잠깐만. 힘줘서 잡진 않을게.',
+        },
+        {
+          say: '천천히 익숙해져도 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '그래. 집이 생겼다고 처음부터 편해져야 하는 건 아니겠지.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-separate',
+      when: {
+        love: 'married',
+      },
+      open: ['집에 와서까지 장부를 펴는 날이 많았지.', '네가 기다리는 얼굴을 봤는데, 모른 척한 날도 있어. 미안해.'],
+      replies: [
+        {
+          say: '일 끝난 뒤엔 나도 좀 봐 줘',
+          tier: 'great',
+          face: 'sorry',
+          answer: ['그럴게. 그냥 덮겠다고 해 놓고 다시 펴지 않도록.', '오늘 남은 일부터 정리하고, 널 기다리게 한 얘기도 듣고 싶어.'],
+        },
+        {
+          say: '집에서 일하는 시간을 정하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '좋아. 네가 쉬는 자리까지 내 창구가 되면 안 되니까.',
+        },
+        {
+          say: '바쁜 날은 먼저 알려 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '알았어. 말 안 해도 알아주길 바라는 버릇, 고칠게.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-window',
+      when: {
+        love: 'married',
+      },
+      open: ['창가에 네가 둔 작은 물건 있지. 어제 옮겼다가 다시 놨어.', '쓸모부터 따지던 집에, 그냥 네가 좋아서 둔 게 생겼네.', '아까는 그 앞에 네가 서 있어서, 부르려던 말도 잊었다.'],
+      replies: [
+        {
+          say: '포츈이 좋아하는 것도 놓자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['옛 배에서 가져온 동전 하나면 돼.', '혼자 보관하던 걸 같이 보는 데 놓고 싶어졌어.'],
+        },
+        {
+          say: '그 자리가 마음에 들었어',
+          tier: 'great',
+          face: 'smile',
+          answer: '그랬구나. 내 눈에 비어 보여도 네 자리는 있었네.',
+        },
+        {
+          say: '불편하면 같이 옮겨도 돼',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 물어보고 옮기면 되겠지. 집 주인은 나 혼자가 아니니까.',
+        },
+      ],
+    },
     {
       id: 'luck-or-skill',
       open: '{me}, 하나 묻지. 운을 믿어, 실력을 믿어?',
@@ -835,6 +1002,64 @@ export const ROSE_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-unpriced',
+      when: {
+        love: 'any',
+        mem: 'lv-no-ledger',
+      },
+      use: 'lv-no-ledger',
+      open: ['갚지 않아도 된다는 말, 자꾸 생각났어.', '어제 네 선물 값부터 찾아보다가 그만뒀다. 그냥 한참 봤어.'],
+      replies: [
+        {
+          say: '뭐가 제일 마음에 들었어?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['네가 이걸 고르는 동안 날 생각했겠지 싶어서.', '그 시간엔 값을 붙일 수가 없더라.'],
+        },
+        {
+          say: '나도 받을 때 기쁘면 좋겠어',
+          tier: 'great',
+          face: 'smile',
+          answer: '그래. 앞으로는 정산 말고, 기뻤다고 먼저 말해 볼게.',
+        },
+        {
+          say: '꼭 선물이 없어도 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '알아. 오늘 빈손으로 널 보러 온 것도 그래서야.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-door',
+      when: {
+        love: 'any',
+        mem: 'lv-open-door',
+      },
+      use: 'lv-open-door',
+      open: ['오늘도 네 시간 빌려도 되는지 먼저 물으러 왔어.', '만나자고 말하는 게, 거절당할 틈까지 내주는 거였네.'],
+      replies: [
+        {
+          say: '오늘은 같이 걸을 수 있어',
+          tier: 'great',
+          face: 'smile',
+          answer: ['좋아. 네가 고른 방향으로 가자.', '우연인 척 안 하니까 이렇게 편하구나.'],
+        },
+        {
+          say: '오늘은 혼자 쉬고 싶어',
+          tier: 'great',
+          face: 'smile',
+          answer: '그럼 푹 쉬어. 솔직하게 말해 줘서 고맙다. 다른 날 보자.',
+        },
+        {
+          say: '잠깐만 이야기하고 가면 어때?',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋지. 짧다고 적게 만난 건 아닐 테니까.',
+        },
+      ],
+    },
     {
       id: 'cb-skill',
       when: { mem: 'skill-over-luck' },

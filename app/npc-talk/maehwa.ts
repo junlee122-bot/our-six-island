@@ -9,6 +9,8 @@ import type { NpcTalkBook } from './types.ts';
 export const MAEHWA_TALK: NpcTalkBook = {
   npc: 'maehwa',
   memories: {
+    'lv-no-reading': '예림이의 마음을 짐작하지 않고 물어보기로 했어요',
+    'lv-wait-tea': '말하기 어려운 날에는 차를 마시며 기다리기로 했어요',
     'honest-hand': '정직하게 치는 게 좋다고 했어요',
     'go-player': '늘 고를 외치는 쪽이라고 했어요',
     'stop-player': '적당히 멈출 줄 안다고 했어요',
@@ -39,6 +41,170 @@ export const MAEHWA_TALK: NpcTalkBook = {
     'lose-well': '잘 지는 법을 이야기했어요',
   },
   talks: [
+    {
+      id: 'lv-date-unread',
+      when: {
+        love: 'dating',
+      },
+      open: ['사람 얼굴 읽는 건 자신 있었는데, 너 앞에선 자꾸 틀리네.', '네가 조용하면 내가 뭘 잘못했나부터 세고 있더라.'],
+      replies: [
+        {
+          say: '짐작 말고 나한테 물어봐',
+          tier: 'great',
+          remember: 'lv-no-reading',
+          face: 'shy',
+          answer: ['…그러면 되겠구나. 패를 훔쳐볼 궁리만 했네.', '자기, 오늘은 나랑 있어서 어땠니? 듣고 싶어서 묻는 거야.'],
+        },
+        {
+          say: '말 어려운 날은 차부터 마시자',
+          tier: 'great',
+          remember: 'lv-wait-tea',
+          face: 'smile',
+          answer: '좋아. 대답 안 나오는 시간도 같이 앉아 있을 수 있으면 되지.',
+        },
+        {
+          say: '조용해도 불편한 건 아니야',
+          tier: 'good',
+          face: 'smile',
+          answer: '응. 침묵을 이긴 패나 진 패로 나누지 말아야겠네.',
+        },
+      ],
+    },
+    {
+      id: 'lv-date-sleeve',
+      when: {
+        love: 'dating',
+      },
+      open: ['아까 네 소매를 잡으려다 손을 거뒀어.', '판에선 손이 먼저 움직이면 안 되잖니. 여기서도 묻는 게 낫겠지.', '…자기, 오늘은 보내기가 좀 싫네. 차 한 잔만 더 하고 갈래?'],
+      replies: [
+        {
+          say: '잡아도 돼. 나도 그러고 싶었어',
+          tier: 'great',
+          face: 'shy',
+          answer: ['그래? …그럼 잠깐만.', '이건 오래 쥐어 봐도 익숙해질 것 같지가 않네.'],
+        },
+        {
+          say: '오늘은 나란히 걷기만 하자',
+          tier: 'great',
+          face: 'smile',
+          answer: '응. 오늘 마음은 오늘 말해 주면 돼. 섭섭하게 계산 안 해.',
+        },
+        {
+          say: '내가 먼저 손 내밀게',
+          tier: 'good',
+          face: 'smile',
+          answer: '후후. 그럼 난 기다릴 줄도 배워야겠구나.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-table',
+      when: {
+        love: 'engaged',
+      },
+      open: ['결혼 잔치에 상을 몇 개 펴야 하나 세고 있었어.', '사람들 앞에서는 안 떨린 척하겠지만, 네 앞에선 좀 떨어도 되니?'],
+      replies: [
+        {
+          say: '식 전에 나한테 와',
+          tier: 'great',
+          face: 'shy',
+          answer: ['응. 차 한 모금 마시고 네 얼굴부터 볼게.', '어디 서야 하는지 잊어도, 너 서 있는 덴 찾을 테니까.'],
+        },
+        {
+          say: '둘이서만 조용히 해도 좋아',
+          tier: 'great',
+          face: 'smile',
+          answer: '그것도 좋지. 크게 벌이는 게 진심의 크기는 아니니까.',
+        },
+        {
+          say: '준비를 좀 나눠 맡을까?',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 그릇은 네가 골라 줘. 남의 잔치처럼 혼자 다 하고 있었네.',
+        },
+      ],
+    },
+    {
+      id: 'lv-engage-saved-card',
+      when: {
+        love: 'engaged',
+      },
+      open: ['옛날 판 기록은 작은 상자에 남겨 두려고.', '앞으로 같이 살 집인데, 내 지난날을 어디까지 펼칠지 모르겠네.'],
+      replies: [
+        {
+          say: '말하고 싶은 것부터 들려줘',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 궁금하다고 다 뒤집어 보지 않는구나.', '그럼 오늘은, 그때 내가 얼마나 겁났는지부터 얘기할게.'],
+        },
+        {
+          say: '상자는 예림이 자리로 남겨 두자',
+          tier: 'great',
+          face: 'smile',
+          answer: '내 자리도 따로 있는 우리 집. 그 말, 기억하고 싶네.',
+        },
+        {
+          say: '지금은 안 열어도 괜찮아',
+          tier: 'good',
+          face: 'smile',
+          answer: '고맙다. 숨겨야 해서가 아니라 준비할 시간이 필요했거든.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-cold-tea',
+      when: {
+        love: 'married',
+      },
+      open: ['차가 다 식었네. 기다리다 먼저 마시려던 건데.', '기다렸다는 말이 짐처럼 들릴까 봐, 그냥 다시 데우려 했어.'],
+      replies: [
+        {
+          say: '보고 싶었다고 말해 줘',
+          tier: 'great',
+          face: 'shy',
+          answer: ['…보고 싶었어. 오늘은 좀 많이.', '식은 잔 만지다가 네 손을 보니, 괜히 잡아 보고 싶네. 괜찮니?'],
+        },
+        {
+          say: '다음엔 먼저 마셔도 돼',
+          tier: 'great',
+          face: 'smile',
+          answer: '그래. 내 저녁도 내가 챙길게. 네 잔은 돌아왔을 때 새로 따르고.',
+        },
+        {
+          say: '앉아서 같이 다시 데우자',
+          tier: 'good',
+          face: 'smile',
+          answer: '좋아. 이미 식은 차 탓하느니 지금 따뜻한 걸 마시자.',
+        },
+      ],
+    },
+    {
+      id: 'lv-marry-small-loss',
+      when: {
+        love: 'married',
+      },
+      open: ['오늘 반찬 간을 세게 했어. 네가 말하기 전에 내가 알았다.', '잘하는 것만 보여 주고 살긴 어렵네. 생각보다.'],
+      replies: [
+        {
+          say: '내일은 내가 해 볼게',
+          tier: 'great',
+          face: 'smile',
+          answer: ['그러자. 잘 안되면 둘이 웃고 말자.', '나, 이 집에서는 실수해도 자리 잃을 걱정이 없구나.'],
+        },
+        {
+          say: '조금 싱거운 거랑 같이 먹자',
+          tier: 'great',
+          face: 'smile',
+          answer: '해결은 간단하네. 내가 혼자 민망해하느라 못 봤어.',
+        },
+        {
+          say: '오늘 속상한 일이 있었어?',
+          tier: 'good',
+          face: 'calm',
+          answer: '응. 그릇보다 그걸 먼저 봤구나. 밥 먹고 얘기 좀 하자.',
+        },
+      ],
+    },
     {
       id: 'go-or-stop',
       open: '{me}, 하나 묻자. 판이 잘 풀릴 때 너는 고야, 스톱이야?',
@@ -793,6 +959,64 @@ export const MAEHWA_TALK: NpcTalkBook = {
     },
   ],
   callbacks: [
+    {
+      id: 'lv-cb-unread',
+      when: {
+        love: 'any',
+        mem: 'lv-no-reading',
+      },
+      use: 'lv-no-reading',
+      open: ['짐작 말고 물어보라던 말, 해 봤어.', '아까 네 표정 보고 혼자 결론 내려다가 멈췄거든.'],
+      replies: [
+        {
+          say: '그래서 지금 궁금한 건?',
+          tier: 'great',
+          face: 'shy',
+          answer: ['나랑 있는 시간이 요즘도 좋니?', '답을 정해 두고 묻는 건 아니야. 네 말을 듣고 싶어.'],
+        },
+        {
+          say: '나도 어려울 땐 물어볼게',
+          tier: 'great',
+          face: 'smile',
+          answer: '그래. 눈치 시험은 판에서 충분히 했잖니.',
+        },
+        {
+          say: '말하기 어렵다면 기다릴게',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럼 잠깐만. 잘 묻고 싶은 것도 꽤 떨리는 일이네.',
+        },
+      ],
+    },
+    {
+      id: 'lv-cb-tea',
+      when: {
+        love: 'any',
+        mem: 'lv-wait-tea',
+      },
+      use: 'lv-wait-tea',
+      open: ['말 어려운 날은 차부터 마시기로 했잖니.', '찻잎 새로 샀어. 오늘은 무슨 말 할지 준비 안 해도 돼.'],
+      replies: [
+        {
+          say: '그럼 향부터 같이 맡자',
+          tier: 'great',
+          face: 'smile',
+          answer: ['응. 천천히.', '대답 없는 시간이 이렇게 편한 줄은 몰랐네.'],
+        },
+        {
+          say: '오늘은 내 얘기를 해도 될까?',
+          tier: 'great',
+          face: 'smile',
+          answer: '물론이지. 네 잔 비면 내가 채울게. 넌 말만 해.',
+        },
+        {
+          say: '혼자 마시고 싶을 때도 말해 줘',
+          tier: 'good',
+          face: 'smile',
+          answer: '그럴게. 곁을 내준다고 늘 앉아 있어야 하는 건 아니니까.',
+        },
+      ],
+    },
     {
       id: 'cb-honest',
       when: { mem: ['honest-hand', 'face-read'] },
