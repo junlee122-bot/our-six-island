@@ -16,6 +16,12 @@ jobs:
   casino-lender:
     # playwright-core 1.56.1 supports Ubuntu 24.04, not ubuntu-latest's 26.04.
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -24,8 +30,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Chromium for playwright-core
-        run: bash .github/scripts/install-playwright.sh
+      - name: Verify bundled Chromium
+        run: |
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import { launchBrowser } from './scripts/ui-harness.mjs';
+          const browser = await launchBrowser();
+          try {
+            const version = browser.version();
+            if (version !== '141.0.7390.37') throw new Error(`Unexpected Chromium version: ${version}`);
+            console.log(`Bundled Chromium ${version} started successfully.`);
+          } finally {
+            await browser.close();
+          }
+          NODE
       - name: Pages build (scratch output)
         run: node scripts/build-standalone.mjs --out /tmp/lender-pages --site-url /
       - name: Casino lender interactions
@@ -51,6 +68,12 @@ jobs:
     # parallel; together they list every step in verify-village-life-ui.mjs
     # (login-and-winter-world always runs first).
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -68,8 +91,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Chromium for playwright-core
-        run: bash .github/scripts/install-playwright.sh
+      - name: Verify bundled Chromium
+        run: |
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import { launchBrowser } from './scripts/ui-harness.mjs';
+          const browser = await launchBrowser();
+          try {
+            const version = browser.version();
+            if (version !== '141.0.7390.37') throw new Error(`Unexpected Chromium version: ${version}`);
+            console.log(`Bundled Chromium ${version} started successfully.`);
+          } finally {
+            await browser.close();
+          }
+          NODE
       - name: Pages build (scratch output)
         run: node scripts/build-standalone.mjs --out /tmp/village-pages --site-url /
       - name: Village life interactions
@@ -113,6 +147,12 @@ jobs:
     # Each viewport keeps its full strict capture list and baseline checks;
     # separate runners avoid serial captures approaching the job timeout.
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -126,8 +166,19 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Chromium for playwright-core
-        run: bash .github/scripts/install-playwright.sh
+      - name: Verify bundled Chromium
+        run: |
+          node --experimental-strip-types --input-type=module <<'NODE'
+          import { launchBrowser } from './scripts/ui-harness.mjs';
+          const browser = await launchBrowser();
+          try {
+            const version = browser.version();
+            if (version !== '141.0.7390.37') throw new Error(`Unexpected Chromium version: ${version}`);
+            console.log(`Bundled Chromium ${version} started successfully.`);
+          } finally {
+            await browser.close();
+          }
+          NODE
       - name: Pages build with the UI kit page
         run: UI_KIT=1 node scripts/build-standalone.mjs --out /tmp/pages --site-url /
       - name: UI regression (strict)
