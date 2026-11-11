@@ -436,6 +436,7 @@ export function RequestCard({ room, view, notify, onClose, from }: Base & { from
 }
 
 const MEMORY_ICON: Record<string, IconComponent> = {
+  'community-order': Gift,
   bond: Heart,
   bundle: Landmark,
   legend: Trophy,
@@ -506,6 +507,7 @@ export function MemoriesAlbum({ view, onClose, selfActor }: { view: CloudRoomVie
 }
 
 const DIGEST_ICON: Record<string, IconComponent> = {
+  'community-order': Gift,
   water: Droplets,
   gift: Gift,
   visit: Users,

@@ -218,6 +218,7 @@ const CollectionBook = lazyRetry(() => import('./lounge/Collection').then((m) =>
 const KitchenPanel = lazyRetry(() => import('./lounge/Kitchen').then((m) => ({ default: m.KitchenPanel })));
 const DayEndPanel = lazyRetry(() => import('./lounge/DayEnd').then((m) => ({ default: m.DayEndPanel })));
 const BundleBoard = lazyRetry(() => import('./lounge/Bundles').then((m) => ({ default: m.BundleBoard })));
+const CommunityOrdersPanel = lazyRetry(() => import('./lounge/CommunityOrders').then((m) => ({ default: m.CommunityOrdersPanel })));
 const loadBonds = () => import('./lounge/Bonds');
 const FriendsLife = lazyRetry(() => loadBonds().then((m) => ({ default: m.FriendsLife })));
 const MemoriesAlbum = lazyRetry(() => loadBonds().then((m) => ({ default: m.MemoriesAlbum })));
@@ -410,6 +411,7 @@ type ModalName =
   | 'collection'
   | 'kitchen'
   | 'board'
+  | 'communityOrders'
   | 'bonds'
   | 'memories'
   | 'digest'
@@ -3029,6 +3031,7 @@ function AccountLounge({
                 { id: 'kitchen', label: '요리·만들기', glyph: 'pot', onClick: openKitchen },
                 { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
                 { id: 'board', label: '마을 게시판', glyph: 'board', kbd: keyLabel(settings.keys.board), badge: newsUnseen, onClick: () => walkTo(BOARD_FRONT) },
+                { id: 'communityOrders', label: '친구 공동 주문서', glyph: 'checklist', onClick: () => setModal('communityOrders') },
                 { id: 'growth', label: '성장 수첩', glyph: 'spark', kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
                 { id: 'mood', label: '기분', glyph: 'sticker', kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
                 { id: 'digest', label: '어제 마을 소식', glyph: 'news', onClick: () => setModal('digest') },
@@ -3441,6 +3444,7 @@ function AccountLounge({
       {modal === 'board' && (
         <BundleBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />
       )}
+      {modal === 'communityOrders' && <CommunityOrdersPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'bonds' && (
         <FriendsLife
           room={room}
@@ -3461,7 +3465,7 @@ function AccountLounge({
         <MemoriesAlbum view={view} selfActor={save.actor} onClose={() => setModal(null)} />
       )}
       {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)}>
-        <ReturnBoard life={view.life} actor={save.actor} clockOffset={view.clockOffset} onOpen={openReturnItem} onNavigate={settings.simpleGraphics ? undefined : guideReturnItem} onTargets={() => { setGrowthTab('targets'); setGrowthSkill(undefined); setModal('growth'); }} />
+        <ReturnBoard life={view.life} actor={save.actor} clockOffset={view.clockOffset} onOpen={openReturnItem} onNavigate={settings.simpleGraphics ? undefined : guideReturnItem} onTargets={() => { setGrowthTab('targets'); setGrowthSkill(undefined); setModal('growth'); }} onOrders={() => setModal('communityOrders')} />
       </DigestCard>}
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />

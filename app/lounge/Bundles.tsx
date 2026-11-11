@@ -28,11 +28,12 @@ import { WhatsNew, WHATS_NEW_KEY } from './WhatsNew';
 import { unseenChanges } from '../lounge-changelog';
 import { recall } from '../lounge-settings';
 import './life-plus.css';
+import { CommunityOrdersBody } from './CommunityOrders';
 
 const BEOM_STEPS = [1_000, 10_000, 50_000];
 /** 마을 공사 / 축제 기금 give steps. */
 const GIVE_STEPS = [10_000, 50_000, 100_000];
-type BoardTab = 'news' | 'bundles' | 'projects' | 'festival' | 'research';
+type BoardTab = 'news' | 'bundles' | 'projects' | 'festival' | 'research' | 'orders';
 const stepLabel = (v: number) => (v >= 10_000 ? `${v / 10_000}만` : `${v / 1_000}천`);
 const flagName = (flag: string) => VILLAGE_FLAGS[flag]?.split(' · ')[0] ?? flag;
 const byAmount = (by: Record<string, number>) =>
@@ -69,6 +70,9 @@ export function BundleBoard(props: {
         <button role="tab" aria-selected={tab === 'bundles'} onClick={() => setTab('bundles')} data-testid="board-tab-bundles">
           <ClipboardList size={15} /> 꾸러미
         </button>
+        <button role="tab" aria-selected={tab === 'orders'} onClick={() => setTab('orders')} data-testid="board-tab-orders">
+          <Users size={15} /> 공동 주문서
+        </button>
         <button role="tab" aria-selected={tab === 'projects'} onClick={() => setTab('projects')} data-testid="board-tab-projects">
           <Construction size={15} /> 마을 공사
         </button>
@@ -83,6 +87,8 @@ export function BundleBoard(props: {
         <WhatsNew />
       ) : tab === 'bundles' ? (
         <BundlePanel {...props} />
+      ) : tab === 'orders' ? (
+        <CommunityOrdersBody room={props.room} view={props.view} notify={props.notify} />
       ) : tab === 'projects' ? (
         <ProjectPanel {...props} />
       ) : tab === 'festival' ? (

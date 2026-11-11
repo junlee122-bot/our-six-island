@@ -42,6 +42,7 @@ export type ReturnBoardProps = {
   onOpen: (target: ReturnBoardOpen) => void;
   onNavigate?: (target: ReturnBoardDestination) => void;
   onTargets?: () => void;
+  onOrders?: () => void;
 };
 
 /** Personal tasks beside the welcome-back news; all actions stay in their original UI. */
@@ -52,13 +53,14 @@ export function ReturnBoard({
   onOpen,
   onNavigate,
   onTargets,
+  onOrders,
 }: ReturnBoardProps) {
   const titleId = useId();
   const [expanded, setExpanded] = useState(false);
   const waiting = useTalkBooks(returnBoardStoryNpcs(life));
   const now = useServerClock(
     clockOffset,
-    life?.farmx?.machines.map((m) => m.doneAt) ?? [],
+    [...(life?.farmx?.machines.map((m) => m.doneAt) ?? []), life?.communityOrders?.endsAt],
     5_000,
   );
   const items = returnBoardItems(life, actor, now).sort(
@@ -66,6 +68,10 @@ export function ReturnBoard({
   );
   const shown = expanded ? items : items.slice(0, 6);
   const hidden = Math.max(0, items.length - 6);
+  const orders = life?.communityOrders;
+  const currentOrder = orders?.active;
+  const claimable = orders ? [orders.active, ...orders.previous].filter((order) => order?.canClaim).length : 0;
+  const finishedLines = currentOrder?.lines.filter((line) => line.remaining === 0).length ?? 0;
   return (
     <Panel
       variant="note"
@@ -76,7 +82,8 @@ export function ReturnBoard({
       }
       titleId={titleId}
       actions={
-        onTargets ? (
+        onTargets || onOrders ? <div className="l-return-board-links">
+        {onTargets && (
           <GameButton
             size="s"
             glyph="bookmark"
@@ -85,7 +92,9 @@ export function ReturnBoard({
           >
             제작 목표 보기
           </GameButton>
-        ) : undefined
+        )}
+        {onOrders && <GameButton size="s" glyph="people" onClick={onOrders} data-testid="return-board-orders">친구 공동 주문서{claimable > 0 ? ` · 기념품 ${claimable}` : ''}</GameButton>}
+        </div> : undefined
       }
       className="l-return-board"
       data-testid="return-board"
@@ -94,6 +103,10 @@ export function ReturnBoard({
         하고 싶은 일부터 골라 보세요. 수확과 수령, 대화가 끝나면 목록도
         바뀌어요.
       </p>
+      {onOrders && orders && <p className="l-return-board-community" data-testid="return-board-community">
+        <strong>친구들과 함께</strong>{' '}
+        {claimable > 0 ? `받을 기념품이 ${claimable}개 있어요.` : currentOrder?.completedAt ? `‘${currentOrder.order.title}’ 주문을 함께 마쳤어요.` : currentOrder && now < orders.endsAt ? `‘${currentOrder.order.title}’ · ${finishedLines}/${currentOrder.lines.length}품목을 모았어요.` : '이번 주에 함께 준비할 주문을 골라 보세요.'}
+      </p>}
       {waiting.size > 0 ? (
         <output className="l-help-text">
           이어갈 이야기를 확인하고 있어요.

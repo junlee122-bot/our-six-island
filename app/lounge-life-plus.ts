@@ -1177,6 +1177,13 @@ const josaGa = (name: string) => {
 };
 export const itemName = (id: string) =>
   isCropId(id) ? CROP_INFO[id].name : id === 'fruit' ? '과일' : (ITEM_BY_ID[id]?.name ?? FURNITURE_BY_REF[id]?.name ?? id);
+/** A non-cash keepsake uses the same owned furniture inventory as the shop. */
+export function grantFurniture(life: LifeState, uid: string, ref: string): void {
+  if (!Object.hasOwn(FURNITURE_BY_REF, ref)) fail('기념품을 확인할 수 없어요.');
+  const furn = (extOf(life, uid).furn ??= {});
+  if ((furn[ref] ?? 0) >= COUNT_MAX) fail('이 기념품을 더 보관할 수 없어요. 소지 수량을 먼저 확인해 주세요.');
+  furn[ref] = (furn[ref] ?? 0) + 1;
+}
 const round10 = (n: number) => Math.round(n / 10) * 10;
 const seqId = (life: LifeState, prefix: string, uid: string) => `${prefix}-${uid}-${++life.seq}`;
 const walletOf = (uid: string) => 'wallet-' + uid;

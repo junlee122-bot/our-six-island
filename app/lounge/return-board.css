@@ -1,6 +1,22 @@
 .l-return-board {
   margin-block: var(--sp-3);
 }
+.l-return-board > .ui-panel-head {
+  flex-wrap: wrap;
+}
+.l-return-board-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.l-return-board-community {
+  margin: var(--sp-2) 0 var(--sp-3);
+  padding-block: var(--sp-2);
+  border-block: 1px solid var(--line);
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+  color: var(--text-soft);
+}
 .l-return-board .ui-panel-head {
   flex-wrap: wrap;
   gap: var(--sp-2);
