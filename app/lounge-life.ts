@@ -16,6 +16,7 @@ import { cleanText, hasUnsafeText, textLength } from './text-clean.ts';
 import { ITEM_BY_ID, isItemId, PLUS_ACTION_KINDS } from './lounge-items.ts';
 import { craftTargetKey, readCraftTargets, type CraftTarget } from './lounge-craft-tracker.ts';
 import { communityOrderAction, communityOrdersView, readCommunityOrders, type CommunityOrderAction, type CommunityOrdersExt, type CommunityOrdersView } from './lounge-community-orders.ts';
+import { gatheringAction, gatheringsView, readGatherings, type GatheringAction, type GatheringsExt, type GatheringsView } from './lounge-gatherings.ts';
 // Cycle-safe: lounge-life-plus.ts imports this module back, so neither module
 // may use the other's bindings at the top level (only inside functions).
 import {
@@ -613,7 +614,8 @@ export type LifeState = {
   FarmSitesExt &
   MyDayExt &
   CompanionExt &
-  CommunityOrdersExt;
+  CommunityOrdersExt &
+  GatheringsExt;
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS_VALUES: readonly RoomAccess[] = ['public', 'friends', 'closed'];
 export type RoomState = { access: RoomAccess; rev: number };
@@ -646,6 +648,7 @@ export type LifeAction =
   /** Personal goals: update the server's current list atomically, without consuming anything. */
   | { kind: 'craftTarget'; op: 'pin' | 'remove' | 'quantity'; target: CraftTarget }
   | CommunityOrderAction
+  | GatheringAction
   | PlusAction
   /** Friend NPC talk, my NPC lines, festivals, 마을 적응하기 (lounge-life-social.ts). */
   | SocialAction
@@ -688,6 +691,7 @@ export const LIFE_ACTION_KINDS = [
   'readGuestbook',
   'craftTarget',
   'communityOrder',
+  'gathering',
   ...PLUS_ACTION_KINDS,
   ...SOCIAL_ACTION_KINDS,
   ...GROWTH_ACTION_KINDS,
@@ -1100,6 +1104,7 @@ export function readLife(value: unknown): LifeState {
     ...readMyDay(v.myday),
     ...readCompanions(v.companions),
     ...readCommunityOrders(v.communityOrders),
+    ...readGatherings(v.gatherings),
   };
 }
 function harvestedOf(value: unknown): Pick<LifeState, 'harvested'> {
@@ -1231,6 +1236,13 @@ export function lifeAction(
 ): { life: LifeState; ledger: LoungeLedger } {
   if (isLifeAction(action) && action.kind === 'craftTarget')
     return { life: craftTargetAction(original, member, action), ledger };
+  if (isLifeAction(action) && action.kind === 'gathering') {
+    // RSVP is metadata: no farming settlement, activity day, XP or rewards.
+    if (original.actors[member.id] !== undefined && original.actors[member.id] !== member.actor) fail(LIFE_REJECT.invalid);
+    const life = cloneLife(ensureLifeMember(original, member.id, member.actor));
+    gatheringAction(life, member, action, now);
+    return { life, ledger };
+  }
   if (isLifeAction(action) && action.kind === 'communityOrder') {
     // Order bookkeeping/donations have no wallet, XP, farm-settlement or
     // daily-reward side effects. The outer cloud transaction supplies CAS.
@@ -1763,6 +1775,8 @@ export type PublicPlotView = {
 export type LifeView = {
   /** Shared weekly choice/progress; stock and reward eligibility are personal. */
   communityOrders?: CommunityOrdersView;
+  /** Shared plans; participants are RSVP, not live presence or reserved seats. */
+  gatherings?: GatheringsView;
   me: {
     farm: PlotView[];
     bag: Bag;
@@ -1965,6 +1979,7 @@ export function lifeView(
     ...(UUID.test(uid) && actorValid(actor) ? { myday: myDayView(life, uid, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) && barnView(life, uid, now) ? { barn: barnView(life, uid, now) } : {}),
     ...(UUID.test(uid) && actorValid(actor) ? { communityOrders: communityOrdersView(life, uid, actor, now) } : {}),
+    ...(UUID.test(uid) && actorValid(actor) ? { gatherings: gatheringsView(life, uid, actor, now) } : {}),
   };
 }
 /** Read-only parts of a friend's life shown when visiting their room. */

@@ -18,6 +18,8 @@ import { GameButton } from '../ui/GameButton';
 import { Glyph } from '../ui/Glyph';
 import './friends.css';
 import './birthday.css';
+import { gatheringPlace } from '../lounge-gatherings-data';
+import { useServerClock } from './use-server-clock';
 
 const BdayBadge = () => (
   <em className="l-bday-badge" data-testid="friends-bday">
@@ -37,6 +39,7 @@ export function FriendsModal({
   onVisit,
   onMail,
   selfActor,
+  onGatherings,
 }: {
   room: CloudRoom;
   view: CloudRoomView;
@@ -54,6 +57,7 @@ export function FriendsModal({
   onMail?: (actor: number) => void;
   /** My own actor, so the resting list leaves me out. */
   selfActor?: number;
+  onGatherings?: () => void;
 }) {
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -64,6 +68,18 @@ export function FriendsModal({
   const bday = view.life?.birthday?.today ?? [];
   const me = selfActor ?? view.players.find((p) => p.id === view.self)?.actor;
   const canOpenRobbery = connected && view.players.some((p) => p.id === view.self && p.area === 'village');
+  const gatherings = view.life?.gatherings?.open ?? [];
+  const now = useServerClock(view.clockOffset, gatherings.flatMap((g) => [g.startsAt, g.endsAt]), 5_000);
+  const openGatherings = gatherings.filter((g) => g.endsAt > now);
+  const running = openGatherings.filter((g) => g.startsAt <= now).length;
+  const gatheringLine = (actor: number) => {
+    const own = openGatherings.filter((g) => g.host === actor || g.participants.includes(actor));
+    const next = own.find((g) => g.startsAt <= now) ?? own[0];
+    if (!next) return null;
+    return <span className="fr-gathering" data-testid={`friend-gathering-${actor}`}>
+      {next.host === actor ? '연 모임' : '신청한 모임'} · {gatheringPlace(next.place)?.label} · {next.startsAt <= now ? '진행 중' : '예정'}
+    </span>;
+  };
   // Friends who are not logged in: they walk their daily round in the village
   // as "쉬는 중" figures. Letters and room visits work; games do not.
   const resting = ACTORS.map((_, actor) => actor).filter(
@@ -106,6 +122,7 @@ export function FriendsModal({
             <span className="fr-who">
               <strong>{ACTORS[actor]}{bday.includes(actor) && <BdayBadge />}</strong>
               <span>쉬는 중 · 마을을 산책해요</span>
+              {gatheringLine(actor)}
             </span>
             <span className="fr-actions">
               {onMail && (
@@ -154,6 +171,13 @@ export function FriendsModal({
             로그인한 친구는 모두 같은 마을에서 만나요. 게임은 회관과 카지노의
             테이블에 앉아서 시작해요.
           </p>
+          {onGatherings && <section className="fr-section fr-meetings" aria-label="친구가 여는 모임">
+            <div>
+              <h3 className="fr-heading">친구가 여는 모임</h3>
+              <p className="fr-note">{openGatherings.length ? `지금 열린 모임 ${running}개 · 예정 ${openGatherings.length - running}개` : '함께할 시간과 장소를 정해 보세요.'}</p>
+            </div>
+            <GameButton glyph="people" onClick={onGatherings} data-testid="friends-gatherings">모임 보기·열기</GameButton>
+          </section>}
           <section className="fr-section" aria-labelledby="l-online-title">
             <h3 id="l-online-title" className="fr-heading">
               <i className="fr-dot" aria-hidden="true" /> 지금 접속{' '}
@@ -175,6 +199,7 @@ export function FriendsModal({
                     <span>
                       {p.id === view.self ? '나' : `접속 중 · ${presenceLine(p, me)}`}
                     </span>
+                    {gatheringLine(p.actor)}
                   </span>
                   {onVisit &&
                     p.id !== view.self &&

@@ -109,3 +109,16 @@
 .fr-modal .l-advanced {
   border-top-color: var(--line);
 }
+.fr-meetings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+.fr-who > .fr-gathering {
+  color: var(--text);
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}

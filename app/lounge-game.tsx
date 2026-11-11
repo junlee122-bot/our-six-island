@@ -85,6 +85,8 @@ import type { FarmPage } from './lounge/FarmWorks';
 import type { GrowthTab } from './lounge/GrowthPanel';
 import type { ReturnBoardDestination, ReturnBoardOpen } from './lounge-return-board';
 import { returnBoardNavigation } from './lounge-return-navigation';
+import type { GatheringPlaceId } from './lounge-gatherings-data';
+import { useGatheringGuide } from './lounge/use-gathering-guide';
 import type { SiteTarget } from './lounge/FarmSitePanel';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
@@ -219,6 +221,7 @@ const KitchenPanel = lazyRetry(() => import('./lounge/Kitchen').then((m) => ({ d
 const DayEndPanel = lazyRetry(() => import('./lounge/DayEnd').then((m) => ({ default: m.DayEndPanel })));
 const BundleBoard = lazyRetry(() => import('./lounge/Bundles').then((m) => ({ default: m.BundleBoard })));
 const CommunityOrdersPanel = lazyRetry(() => import('./lounge/CommunityOrders').then((m) => ({ default: m.CommunityOrdersPanel })));
+const FriendGatheringsPanel = lazyRetry(() => import('./lounge/FriendGatherings').then((m) => ({ default: m.FriendGatheringsPanel })));
 const loadBonds = () => import('./lounge/Bonds');
 const FriendsLife = lazyRetry(() => loadBonds().then((m) => ({ default: m.FriendsLife })));
 const MemoriesAlbum = lazyRetry(() => loadBonds().then((m) => ({ default: m.MemoriesAlbum })));
@@ -412,6 +415,7 @@ type ModalName =
   | 'kitchen'
   | 'board'
   | 'communityOrders'
+  | 'gatherings'
   | 'bonds'
   | 'memories'
   | 'digest'
@@ -1004,6 +1008,25 @@ function AccountLounge({
       ) ?? null)
     : null;
   const seat = connected ? mySeat(view) : null;
+  const gatheringBlockedReason = !connected || view.link.state === 'offline'
+    ? '마을에 다시 연결되면 모임 장소를 안내할게요.'
+    : fishing ? '지금 하던 낚시를 마친 뒤 모임 장소로 가요.'
+      : seat || inGame ? '테이블에서 일어난 뒤 모임 장소로 가요.'
+        : settings.simpleGraphics ? '간편 화면에서는 모임에 적힌 장소로 직접 이동해 주세요.' : undefined;
+  const startGatheringGuide = useGatheringGuide({
+    area: visiting !== null || tab === 'bedroom' ? 'home' : tab === 'village' ? outdoorApi.outdoor?.area ?? 'village' : tab,
+    blockedReason: gatheringBlockedReason,
+    paused: !!modal || !!townPlace || !!siteTarget || !!residentTalk || !!sheet,
+    notify,
+  });
+  const guideGatheringPlace = (place: GatheringPlaceId) => {
+    if (gatheringBlockedReason) { notify(gatheringBlockedReason, 'info'); return; }
+    setModal(null);
+    setTownPlace(null);
+    setSiteTarget(null);
+    setResidentTalk(null);
+    startGatheringGuide(place);
+  };
 
   // Contract #1: tell the server where I am whenever the tab changes.
   const sendArea = useCallback(
@@ -3032,6 +3055,7 @@ function AccountLounge({
                 { id: 'book', label: '도감 · 박물관', glyph: 'book', kbd: keyLabel(settings.keys.collection), onClick: () => openBook('fish') },
                 { id: 'board', label: '마을 게시판', glyph: 'board', kbd: keyLabel(settings.keys.board), badge: newsUnseen, onClick: () => walkTo(BOARD_FRONT) },
                 { id: 'communityOrders', label: '친구 공동 주문서', glyph: 'checklist', onClick: () => setModal('communityOrders') },
+                { id: 'gatherings', label: '친구가 여는 모임', glyph: 'people', onClick: () => setModal('gatherings') },
                 { id: 'growth', label: '성장 수첩', glyph: 'spark', kbd: keyLabel(settings.keys.growth), onClick: () => setModal('growth') },
                 { id: 'mood', label: '기분', glyph: 'sticker', kbd: keyLabel(settings.keys.mood), onClick: () => setModal('mood') },
                 { id: 'digest', label: '어제 마을 소식', glyph: 'news', onClick: () => setModal('digest') },
@@ -3130,6 +3154,7 @@ function AccountLounge({
           onVisit={visitHouse}
           onMail={(actor) => openMail(actor)}
           selfActor={save.actor}
+          onGatherings={() => setModal('gatherings')}
         />
       )}
       {modal === 'bank' && <FinancePanel key={`${financeMode}:${financePage ?? 'bank'}`} room={room} view={view} mode={financeMode} onClose={() => { setModal(null); setFinancePage(undefined); }} initial={financePage ?? 'bank'} />}
@@ -3442,9 +3467,10 @@ function AccountLounge({
         <KitchenPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />
       )}
       {modal === 'board' && (
-        <BundleBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} />
+        <BundleBoard room={room} view={view} notify={notify} onClose={() => setModal(null)} onGatheringNavigate={settings.simpleGraphics ? undefined : guideGatheringPlace} />
       )}
       {modal === 'communityOrders' && <CommunityOrdersPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
+      {modal === 'gatherings' && <FriendGatheringsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} onNavigate={settings.simpleGraphics ? undefined : guideGatheringPlace} />}
       {modal === 'bonds' && (
         <FriendsLife
           room={room}
@@ -3465,7 +3491,7 @@ function AccountLounge({
         <MemoriesAlbum view={view} selfActor={save.actor} onClose={() => setModal(null)} />
       )}
       {modal === 'digest' && <DigestCard view={view} onClose={() => setModal(null)}>
-        <ReturnBoard life={view.life} actor={save.actor} clockOffset={view.clockOffset} onOpen={openReturnItem} onNavigate={settings.simpleGraphics ? undefined : guideReturnItem} onTargets={() => { setGrowthTab('targets'); setGrowthSkill(undefined); setModal('growth'); }} onOrders={() => setModal('communityOrders')} />
+        <ReturnBoard life={view.life} actor={save.actor} clockOffset={view.clockOffset} onOpen={openReturnItem} onNavigate={settings.simpleGraphics ? undefined : guideReturnItem} onTargets={() => { setGrowthTab('targets'); setGrowthSkill(undefined); setModal('growth'); }} onOrders={() => setModal('communityOrders')} onGatherings={() => setModal('gatherings')} />
       </DigestCard>}
       {modal === 'lifeRequest' && requestFrom !== null && (
         <RequestCard room={room} view={view} notify={notify} from={requestFrom} onClose={() => setModal(null)} />

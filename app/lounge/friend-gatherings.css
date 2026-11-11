@@ -1,0 +1,194 @@
+.l-friend-gatherings {
+  color: var(--text);
+}
+.l-friend-gatherings .ui-btn:disabled {
+  opacity: 1;
+}
+.l-gatherings-intro,
+.l-gatherings-note {
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+  color: var(--text-soft);
+}
+.l-gatherings-intro {
+  margin-block: var(--sp-2);
+}
+.l-gatherings-live {
+  display: block;
+  min-height: var(--sp-4);
+  margin-block: var(--sp-2);
+  color: var(--text-soft);
+  font-size: var(--fs-body-s);
+}
+.l-gatherings-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+.l-gathering-card {
+  min-width: 0;
+}
+.l-gathering-card .ui-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-title-s);
+}
+.l-gathering-card-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-block: var(--sp-2);
+  font-size: var(--fs-body-s);
+}
+.l-gathering-status {
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surface-sunken);
+  color: var(--text);
+}
+.l-gathering-own {
+  font-size: var(--fs-body-s);
+}
+.l-gathering-place {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-block: var(--sp-2);
+  font-size: var(--fs-body);
+}
+.l-gathering-time {
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+}
+.l-gathering-time small {
+  display: block;
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-gathering-memo {
+  margin-block: var(--sp-3);
+  padding: var(--sp-2);
+  border-left: 3px solid var(--line);
+  overflow-wrap: anywhere;
+  background: var(--surface-raised);
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+}
+.l-gathering-participants {
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+}
+.l-gathering-participants ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  padding: 0;
+  list-style: none;
+  margin-block: var(--sp-2);
+}
+.l-gathering-participants li {
+  display: grid;
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+}
+.l-gathering-participants small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-gathering-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+.l-gathering-create {
+  display: grid;
+  gap: var(--sp-3);
+}
+.l-gathering-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+.l-gathering-create label {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+  font-size: var(--fs-body-s);
+  line-height: 1.6;
+}
+.l-gathering-create select,
+.l-gathering-create input[type='datetime-local'],
+.l-gathering-create textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  font: inherit;
+  font-size: var(--fs-body);
+  color: var(--text);
+  background: var(--surface-raised);
+}
+.l-gathering-create textarea {
+  resize: vertical;
+}
+.l-gathering-create select {
+  max-width: 100%;
+}
+.l-gathering-when {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+}
+.l-gathering-when legend {
+  padding-inline: var(--sp-1);
+  font-size: var(--fs-body-s);
+}
+.l-gathering-when label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  cursor: pointer;
+}
+.l-gathering-when input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.l-gathering-note-label span {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}
+.l-gathering-preview .ui-panel-title {
+  font-size: var(--fs-title-s);
+}
+.l-gathering-preview p {
+  margin-block: var(--sp-2);
+  font-size: var(--fs-body-s);
+  line-height: 1.65;
+}
+.l-gathering-create > .ui-btn {
+  justify-self: start;
+}
+@media (max-width: 760px) {
+  .l-gatherings-list,
+  .l-gathering-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

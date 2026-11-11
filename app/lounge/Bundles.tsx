@@ -29,11 +29,13 @@ import { unseenChanges } from '../lounge-changelog';
 import { recall } from '../lounge-settings';
 import './life-plus.css';
 import { CommunityOrdersBody } from './CommunityOrders';
+import { FriendGatheringsBody } from './FriendGatherings';
+import type { GatheringPlaceId } from '../lounge-gatherings-data';
 
 const BEOM_STEPS = [1_000, 10_000, 50_000];
 /** 마을 공사 / 축제 기금 give steps. */
 const GIVE_STEPS = [10_000, 50_000, 100_000];
-type BoardTab = 'news' | 'bundles' | 'projects' | 'festival' | 'research' | 'orders';
+type BoardTab = 'news' | 'bundles' | 'projects' | 'festival' | 'research' | 'orders' | 'gatherings';
 const stepLabel = (v: number) => (v >= 10_000 ? `${v / 10_000}만` : `${v / 1_000}천`);
 const flagName = (flag: string) => VILLAGE_FLAGS[flag]?.split(' · ')[0] ?? flag;
 const byAmount = (by: Record<string, number>) =>
@@ -47,6 +49,7 @@ export function BundleBoard(props: {
   view: CloudRoomView;
   notify: Notify;
   onClose: () => void;
+  onGatheringNavigate?: (place: GatheringPlaceId) => void;
 }) {
   const life = props.view.life;
   // Unseen 새 소식 open first; otherwise the first unfinished board.
@@ -73,6 +76,9 @@ export function BundleBoard(props: {
         <button role="tab" aria-selected={tab === 'orders'} onClick={() => setTab('orders')} data-testid="board-tab-orders">
           <Users size={15} /> 공동 주문서
         </button>
+        <button role="tab" aria-selected={tab === 'gatherings'} onClick={() => setTab('gatherings')} data-testid="board-tab-gatherings">
+          <Users size={15} /> 친구 모임
+        </button>
         <button role="tab" aria-selected={tab === 'projects'} onClick={() => setTab('projects')} data-testid="board-tab-projects">
           <Construction size={15} /> 마을 공사
         </button>
@@ -89,6 +95,8 @@ export function BundleBoard(props: {
         <BundlePanel {...props} />
       ) : tab === 'orders' ? (
         <CommunityOrdersBody room={props.room} view={props.view} notify={props.notify} />
+      ) : tab === 'gatherings' ? (
+        <FriendGatheringsBody room={props.room} view={props.view} notify={props.notify} onNavigate={props.onGatheringNavigate} />
       ) : tab === 'projects' ? (
         <ProjectPanel {...props} />
       ) : tab === 'festival' ? (

@@ -51,6 +51,8 @@ jobs:
         run: node --experimental-strip-types scripts/verify-tavern-cards-ui.mjs --pages /tmp/lender-pages --out /tmp/tavern-cards
       - name: Friends community orders
         run: node --experimental-strip-types scripts/verify-community-orders-ui.mjs --pages /tmp/lender-pages --out /tmp/community-orders
+      - name: Friend-hosted gatherings
+        run: node --experimental-strip-types scripts/verify-friend-gatherings-ui.mjs --pages /tmp/lender-pages --out /tmp/friend-gatherings
       - name: Keep casino lender evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +62,7 @@ jobs:
             /tmp/casino-lender
             /tmp/tavern-cards
             /tmp/community-orders
+            /tmp/friend-gatherings
 
   village-life:
     # Real UI input against the isolated mock world: no production accounts,

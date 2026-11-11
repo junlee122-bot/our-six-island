@@ -15,6 +15,7 @@ import { Glyph, type GlyphName } from '../ui/Glyph';
 import { useTalkBooks } from './npc-talk-books';
 import { useServerClock } from './use-server-clock';
 import './return-board.css';
+import { gatheringPlace } from '../lounge-gatherings-data';
 
 const GLYPHS: Record<ReturnBoardItem['kind'], GlyphName> = {
   harvest: 'basket',
@@ -43,6 +44,7 @@ export type ReturnBoardProps = {
   onNavigate?: (target: ReturnBoardDestination) => void;
   onTargets?: () => void;
   onOrders?: () => void;
+  onGatherings?: () => void;
 };
 
 /** Personal tasks beside the welcome-back news; all actions stay in their original UI. */
@@ -54,13 +56,15 @@ export function ReturnBoard({
   onNavigate,
   onTargets,
   onOrders,
+  onGatherings,
 }: ReturnBoardProps) {
   const titleId = useId();
   const [expanded, setExpanded] = useState(false);
   const waiting = useTalkBooks(returnBoardStoryNpcs(life));
   const now = useServerClock(
     clockOffset,
-    [...(life?.farmx?.machines.map((m) => m.doneAt) ?? []), life?.communityOrders?.endsAt],
+    [...(life?.farmx?.machines.map((m) => m.doneAt) ?? []), life?.communityOrders?.endsAt,
+      ...(life?.gatherings?.open.flatMap((g) => [g.startsAt, g.endsAt]) ?? [])],
     5_000,
   );
   const items = returnBoardItems(life, actor, now).sort(
@@ -72,6 +76,10 @@ export function ReturnBoard({
   const currentOrder = orders?.active;
   const claimable = orders ? [orders.active, ...orders.previous].filter((order) => order?.canClaim).length : 0;
   const finishedLines = currentOrder?.lines.filter((line) => line.remaining === 0).length ?? 0;
+  const gatherings = life?.gatherings?.open.filter((g) => g.endsAt > now) ?? [];
+  const running = gatherings.filter((g) => g.startsAt <= now).length;
+  const mine = gatherings.filter((g) => g.participants.includes(actor));
+  const nextGathering = mine.find((g) => g.startsAt <= now) ?? mine[0];
   return (
     <Panel
       variant="note"
@@ -82,7 +90,7 @@ export function ReturnBoard({
       }
       titleId={titleId}
       actions={
-        onTargets || onOrders ? <div className="l-return-board-links">
+        onTargets || onOrders || onGatherings ? <div className="l-return-board-links">
         {onTargets && (
           <GameButton
             size="s"
@@ -94,6 +102,7 @@ export function ReturnBoard({
           </GameButton>
         )}
         {onOrders && <GameButton size="s" glyph="people" onClick={onOrders} data-testid="return-board-orders">친구 공동 주문서{claimable > 0 ? ` · 기념품 ${claimable}` : ''}</GameButton>}
+        {onGatherings && <GameButton size="s" glyph="people" onClick={onGatherings} data-testid="return-board-gatherings">친구가 여는 모임{running > 0 ? ` · 진행 ${running}` : ''}</GameButton>}
         </div> : undefined
       }
       className="l-return-board"
@@ -106,6 +115,11 @@ export function ReturnBoard({
       {onOrders && orders && <p className="l-return-board-community" data-testid="return-board-community">
         <strong>친구들과 함께</strong>{' '}
         {claimable > 0 ? `받을 기념품이 ${claimable}개 있어요.` : currentOrder?.completedAt ? `‘${currentOrder.order.title}’ 주문을 함께 마쳤어요.` : currentOrder && now < orders.endsAt ? `‘${currentOrder.order.title}’ · ${finishedLines}/${currentOrder.lines.length}품목을 모았어요.` : '이번 주에 함께 준비할 주문을 골라 보세요.'}
+      </p>}
+      {onGatherings && life?.gatherings && <p className="l-return-board-community" data-testid="return-board-gathering-summary">
+        <strong>친구 모임</strong>{' '}
+        {nextGathering ? `신청한 ‘${gatheringPlace(nextGathering.place)?.label}’ 모임이 ${nextGathering.startsAt <= now ? '열려 있어요.' : '예정돼 있어요.'}`
+          : gatherings.length ? `지금 열린 모임 ${running}개, 예정 모임 ${gatherings.length - running}개가 있어요.` : '함께할 시간과 장소를 정해 보세요.'}
       </p>}
       {waiting.size > 0 ? (
         <output className="l-help-text">
