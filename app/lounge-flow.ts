@@ -76,7 +76,7 @@ export const ACTION_LABEL: Record<ActionKind, string> = {
   forge: '대장간',
   chop: '베기',
   smash: '깨기',
-  sleep: '하루 마감',
+  sleep: '침대 사용',
 };
 
 /** One thing within reach. `distance` and `reach` share a unit (world units). */

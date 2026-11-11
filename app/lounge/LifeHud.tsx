@@ -324,7 +324,8 @@ export function useHotbarKeys(hotbar: HotbarState, enabled: boolean, onUse?: (re
   useEffect(() => {
     if (!enabled) return;
     const key = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      // Holding a slot key must not count as a second press that eats a dish.
+      if (e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
       // Slot keys follow 설정 → 조작 (1–9 by default).
       const i = hotbarIndexForCode(getSettings().keys, e.code);
       if (i < 0) return;
