@@ -16,6 +16,8 @@ const pages = path.resolve(opt('pages', ''));
 assert.ok(args.includes('--pages') && fs.existsSync(path.join(pages, 'index.html')), 'Pass --pages with a completed build; this script never builds or deploys.');
 const out = path.resolve(opt('out', '.ui-shots/friend-gatherings'));
 const actors = opt('actors', '3,7').split(',').map(Number), views = opt('views', 's,fhd').split(',');
+const selectedStep = opt('steps', '');
+assert.ok(!selectedStep || selectedStep === 'village-board-entry-and-native-guides', '--steps supports the independent village-board-entry-and-native-guides stage; omit it for the complete CI flow.');
 assert.ok(actors.length && actors.every((a) => a === 3 || a === 7) && views.every((v) => VIEWS[v]));
 if (!process.env.CHROMIUM_PATH && fs.existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe')) process.env.CHROMIUM_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 fs.mkdirSync(out, { recursive: true });
@@ -71,7 +73,7 @@ async function run(actor, view) {
     for (const key of ['coveredCount', 'lowCount', 'smallCount', 'cutCount']) assert.equal(metrics[key], 0, `${label}: ${key} ${JSON.stringify(metrics)}`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false, 'no page horizontal overflow');
   };
-  const step = async (label, work) => { console.log(`${view} actor ${actor}: ${label}`); const at = performance.now(); try { await work(); row.steps.push({ label, pass: true, ms: Math.round(performance.now() - at) }); } catch (error) { row.steps.push({ label, pass: false, error: error.message }); throw error; } finally { persist(); } };
+  const step = async (label, work) => { if (selectedStep && selectedStep !== label) return; console.log(`${view} actor ${actor}: ${label}`); const at = performance.now(); try { await work(); row.steps.push({ label, pass: true, ms: Math.round(performance.now() - at) }); } catch (error) { row.steps.push({ label, pass: false, error: error.message }); throw error; } finally { persist(); } };
   const closeDialogs = async () => { for (let i = 0; i < 6 && await page.locator('dialog[open]').count(); i++) { await page.keyboard.press('Escape'); await H.sleep(150); } };
   const menu = async (item) => { await closeDialogs(); await page.locator('.l-world-menu-button').click(); await page.getByTestId(`menu-${item}`).click(); };
   const openGatherings = async () => { await menu('gatherings'); await page.getByTestId('friend-gatherings').waitFor(); };
@@ -82,12 +84,13 @@ async function run(actor, view) {
   const selfArea = () => Object.values(H.world().rooms).flatMap((r) => r.snapshot.players).find((p) => p.id === H.uid)?.area;
   let nowId, reservationId, metadataBefore;
   try {
+    await login(H, server.url); await wait(() => !!document.querySelector('.l-world-header'), null, 90_000);
+    await wait(() => document.querySelector('[data-testid=bedroom-3d]')?.dataset.loadState === 'ready', null, 180_000);
+    await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
+    row.entryPoints = { menu: false, friends: false, returnBoard: false, villageBoard: false };
     await step('entry-points-and-three-activities', async () => {
-      await login(H, server.url); await wait(() => !!document.querySelector('.l-world-header'), null, 90_000);
-      await wait(() => document.querySelector('[data-testid=bedroom-3d]')?.dataset.loadState === 'ready', null, 180_000);
-      await wait(() => !document.querySelector('[data-testid=scene-fade].is-active'));
       await openGatherings(); await card(runningId).waitFor(); await card(scheduledId).waitFor();
-      row.entryPoints = { menu: true, friends: false, returnBoard: false, villageBoard: false };
+      row.entryPoints.menu = true;
       await menu('friends'); await page.getByTestId('friends-gatherings').click(); await page.getByTestId('friend-gatherings').waitFor(); row.entryPoints.friends = true;
       await menu('digest'); await page.getByTestId('return-board-gatherings').click(); await page.getByTestId('friend-gatherings').waitFor(); row.entryPoints.returnBoard = true;
       assert.equal(await page.locator('dialog[open]').count(), 1, 'the entry swaps dialogs');
@@ -175,7 +178,7 @@ async function run(actor, view) {
         document.addEventListener('click', (event) => {
           const button = event.target instanceof Element ? event.target.closest('button') : null;
           if (button?.dataset.testid === `gathering-guide-${id}`) {
-            audit.guideAt = performance.now(); audit.boardKeyAt = 0; audit.menuAt = 0; audit.boardMenuAt = 0; audit.go = [];
+            audit.guideAt = performance.now(); audit.boardKeyAt = 0; audit.menuAt = 0; audit.boardMenuAt = 0; audit.beforeInterruptGo = undefined; audit.beforeMenuSelectionGo = undefined; audit.go = [];
           }
           if (button?.classList.contains('l-world-menu-button')) audit.menuAt = performance.now();
           if (button?.dataset.testid === 'menu-board') audit.boardMenuAt = performance.now();
@@ -183,8 +186,9 @@ async function run(actor, view) {
         window.addEventListener('keydown', (event) => { if (event.code === 'KeyB') audit.boardKeyAt = performance.now(); }, true);
         window.addEventListener('bumtadew:go', (event) => audit.go.push({ ...event.detail, at: performance.now() }));
       }, scheduledId);
+      const browserWait = async (ms) => page.evaluate((ms) => new Promise((resolve) => setTimeout(resolve, ms)), ms);
       const boardWins = async (reason) => {
-        await H.sleep(1100);
+        await browserWait(1100);
         const commands = await page.evaluate(() => window.__gatheringGuideAudit.go);
         assert.ok(commands.length > 0 && commands.every((point) => Math.hypot(point.x - BOARD_FRONT.x, point.z - BOARD_FRONT.z) < 1), `${reason}: no stale market-gate command is dispatched`);
         // data-target-x/z describe the camera look-at, not the walking goal.
@@ -194,37 +198,52 @@ async function run(actor, view) {
         assert.equal(selfArea(), 'village', `${reason}: the player walks to the board in the same area`);
         return { target, commands: commands.map(({ x, z }) => ({ x, z })), arrived: true };
       };
-      // Keep the interruption inside one browser task sequence: a slow CDP
-      // round trip after click can otherwise consume the entire 600ms window.
-      // These DOM events still use the application's normal click/key paths.
+      // Observe ordering rather than click-to-key wall time: rendering the
+      // closed dialog can delay the effect that starts the real guide timer.
+      // The interrupt must precede its first go command. These DOM events use
+      // the application's normal click/key paths.
       const interruptGuide = async (mode) => page.evaluate(async ([id, mode]) => {
         const tick = () => new Promise((resolve) => setTimeout(resolve, 25));
         document.querySelector(`[data-testid="gathering-guide-${id}"]`).click();
         await tick();
         if (document.querySelector('dialog[open]')) throw new Error('The gathering dialog must close before the interrupting action.');
+        const audit = window.__gatheringGuideAudit;
+        audit.beforeInterruptGo = audit.go.length;
+        if (audit.beforeInterruptGo !== 0) throw new Error('The interrupt must occur before the first guide go command.');
         if (mode === 'keyboard') {
           document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', code: 'KeyB', bubbles: true, cancelable: true }));
           document.body.dispatchEvent(new KeyboardEvent('keyup', { key: 'b', code: 'KeyB', bubbles: true, cancelable: true }));
         } else {
           document.querySelector('.l-world-menu-button').click();
-          if (mode === 'quick-menu') { await tick(); document.querySelector('[data-testid="menu-board"]').click(); }
+          for (let n = 0; !document.querySelector('[data-testid="village-menu"]'); n++) {
+            if (n > 200) throw new Error('The mouse menu did not commit.');
+            await tick();
+          }
+          if (mode === 'quick-menu') {
+            await tick();
+            audit.beforeMenuSelectionGo = audit.go.length;
+            if (audit.beforeMenuSelectionGo !== 0) throw new Error('No guide go command may run before the quick menu selection.');
+            document.querySelector('[data-testid="menu-board"]').click();
+          }
         }
       }, [scheduledId, mode]);
       await openGatherings(); await interruptGuide('keyboard');
-      const keyDelay = await page.evaluate(() => window.__gatheringGuideAudit.boardKeyAt - window.__gatheringGuideAudit.guideAt);
-      assert.ok(keyDelay >= 0 && keyDelay < 600, `B interrupts the pending guide within 600ms (${keyDelay}ms)`);
-      const keyboardOverride = { delayMs: Math.round(keyDelay), ...await boardWins('B shortcut') };
+      const keyAudit = await page.evaluate(() => { const a = window.__gatheringGuideAudit; return { delayMs: Math.round(a.boardKeyAt - a.guideAt), beforeInterruptGo: a.beforeInterruptGo }; });
+      assert.equal(keyAudit.beforeInterruptGo, 0, 'B interrupts before the first guide command');
+      const keyboardOverride = { ...keyAudit, ...await boardWins('B shortcut') };
+      console.log(`${view} actor ${actor}: guide-keyboard-override ${JSON.stringify(keyboardOverride)}`);
       await openGatherings(); await interruptGuide('quick-menu');
-      const quickMenuDelay = await page.evaluate(() => window.__gatheringGuideAudit.boardMenuAt - window.__gatheringGuideAudit.guideAt);
-      assert.ok(quickMenuDelay >= 0 && quickMenuDelay < 600, `guide → mouse menu → board selection finishes within 600ms (${quickMenuDelay}ms)`);
-      const quickMouseMenuOverride = { delayMs: Math.round(quickMenuDelay), ...await boardWins('Quick mouse menu board') };
+      const quickMenuAudit = await page.evaluate(() => { const a = window.__gatheringGuideAudit; return { delayMs: Math.round(a.boardMenuAt - a.guideAt), beforeInterruptGo: a.beforeInterruptGo, beforeMenuSelectionGo: a.beforeMenuSelectionGo }; });
+      assert.equal(quickMenuAudit.beforeInterruptGo, 0); assert.equal(quickMenuAudit.beforeMenuSelectionGo, 0);
+      const quickMouseMenuOverride = { ...quickMenuAudit, ...await boardWins('Quick mouse menu board') };
+      console.log(`${view} actor ${actor}: guide-quick-menu-override ${JSON.stringify(quickMouseMenuOverride)}`);
       await openGatherings(); await interruptGuide('held-menu'); await page.getByTestId('village-menu').waitFor();
       const menuDelay = await page.evaluate(() => window.__gatheringGuideAudit.menuAt - window.__gatheringGuideAudit.guideAt);
-      assert.ok(menuDelay >= 0 && menuDelay < 600, `the mouse menu interrupts the pending guide within 600ms (${menuDelay}ms)`);
-      await H.sleep(1100);
+      await browserWait(1100);
       assert.deepEqual(await page.evaluate(() => window.__gatheringGuideAudit.go), [], 'opening a modal cancels the pending guide without dispatching it');
       await page.getByTestId('menu-board').click();
       const mouseMenuOverride = { delayMs: Math.round(menuDelay), heldMenuMs: 1100, ...await boardWins('Mouse menu board') };
+      console.log(`${view} actor ${actor}: guide-held-menu-override ${JSON.stringify(mouseMenuOverride)}`);
       await shot('board-directions-override');
       await openGatherings(); await page.getByTestId(`gathering-guide-${scheduledId}`).click(); await wait(() => !document.querySelector('dialog[open]'));
       const stage = async (area) => {
@@ -242,11 +261,12 @@ async function run(actor, view) {
       const guided = row.actions.slice(guideStart); const forbidden = new Set(['cast', 'anglerCast', 'eat', 'snack', 'shopFood', 'bakeryBuy', 'party', 'join', 'sit', 'start']);
       assert.deepEqual(guided.filter((a) => forbidden.has(a.kind)), [], 'directions never fish, eat, spend on food or reserve a seat');
       row.guideEvidence = { pond: true, bakery: true, keyboardOverride, quickMouseMenuOverride, mouseMenuOverride, explicitDoorActions: 2, actionKinds: [...new Set(guided.map((a) => a.kind))] };
+      console.log(`${view} actor ${actor}: guide-door-continuation ${JSON.stringify({ pond: true, bakery: true, explicitDoorActions: 2, actionKinds: row.guideEvidence.actionKinds })}`);
     });
     await Promise.all(responseReads); row.pageErrors = [...H.errors]; row.blockedExternalHosts = [...H.external];
     assert.deepEqual(row.pageErrors, []); assert.deepEqual(row.consoleErrors, []); assert.deepEqual(row.failedResources, []); assert.deepEqual(row.apiFailures, []);
     row.status = 'passed';
-  } catch (error) { row.status = 'failed'; row.error = error.stack ?? error.message; row.pageErrors = [...H.errors]; await shot('failure').catch(() => {}); throw error; }
+  } catch (error) { row.status = 'failed'; row.error = error.stack ?? error.message; row.pageErrors = [...H.errors]; row.guideAudit = await page.evaluate(() => window.__gatheringGuideAudit ?? null).catch(() => null); await shot('failure').catch(() => {}); throw error; }
   finally { persist(); await H.close(); }
 }
 try { server = await serve(pages); browser = await launchBrowser(); for (let i = 0; i < actors.length; i++) await run(actors[i], views[i % views.length]); report.status = 'passed'; }
