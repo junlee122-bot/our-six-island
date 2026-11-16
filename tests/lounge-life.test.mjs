@@ -581,6 +581,7 @@ test('crop and shop catalog match the contract', () => {
       ['buckwheat', 240, 400, 1250],
       ['narcissus', 480, 1000, 2600],
       ['perilla', 240, 600, 560],
+      ['legendarytomato', 1440, 4000, 10000],
     ],
   );
   assert.deepEqual(

@@ -41,7 +41,8 @@ export function BedroomEditor(props: {
   onNearDoor?: () => void;
 }) {
   const owned = props.view?.life?.me.furniture, strict = props.view?.life?.me.furnitureStrict;
-  const policy = useMemo(() => ({ owned, strict }), [owned, strict]);
+  const roomActor = props.save.actor;
+  const policy = useMemo(() => ({ owned, strict, roomActor }), [owned, strict, roomActor]);
   const save = useMemo(() => maskFurnitureSave(props.save, policy), [props.save, policy]);
   // The room grows with 집 확장 (범마을 부동산).
   const house = props.view?.life?.me.house ?? 0;

@@ -9,7 +9,9 @@
  * an empty room with one bed. The old themed layouts live on as 범마을
  * 부동산's model houses (legacyThemeRoom).
  */
-import { BEDROOM_THEMES, bedroomTheme } from './lounge-bedroom-themes.ts';
+import { ROOM_THEMES, bedroomTheme } from './lounge-bedroom-themes.ts';
+import { yuchanBedroom, withYuchanRoomUnlocks } from './lounge-yuchan-room.ts';
+import { YUCHAN_ACTOR } from './lounge-yuchan.ts';
 import {
   ROOM,
   LEGACY_ITEM_KIND,
@@ -136,7 +138,7 @@ export function lockedRoomStyle(
 }
 export type RoomAccess = 'public' | 'friends' | 'closed';
 export const ROOM_ACCESS: readonly RoomAccess[] = ['public', 'friends', 'closed'];
-export type BedroomThemeId = (typeof BEDROOM_THEMES)[number]['id'];
+export type BedroomThemeId = (typeof ROOM_THEMES)[number]['id'];
 export type Bedroom = {
   version: 4;
   theme: BedroomThemeId;
@@ -166,8 +168,9 @@ export const DEFAULT_BED: RoomItem = {
   rotY: 0,
   scale: 1,
 };
-/** Every friend's starting room: the same empty room with one bed. */
+/** The original seven keep their empty starting rooms; Yuchan has a starter set. */
 export function defaultBedroom(actor = 0): Bedroom {
+  if (actor === YUCHAN_ACTOR) return yuchanBedroom();
   return {
     version: 4,
     theme: bedroomTheme(actor).id,
@@ -233,6 +236,7 @@ export const roomOfHouse = (house: number | undefined) => roomShape(house ?? 0);
  * Shared by the room editor and the server's save check (lounge-accounts).
  */
 export function roomUnlocks(input: {
+  actor?: number;
   unlocks?: readonly string[];
   house?: number;
   styles?: readonly string[];
@@ -244,7 +248,7 @@ export function roomUnlocks(input: {
   for (const [ref, n] of Object.entries(input.furniture ?? {}))
     if (Number.isSafeInteger(n) && n > 0) for (let i = 0; i < Math.min(n, 40); i++) out.push(ref);
   out.push(DEFAULT_BED.ref);
-  return out;
+  return withYuchanRoomUnlocks(out, input.actor ?? -1);
 }
 
 // ------------------------------------------------------------- geometry
@@ -495,7 +499,7 @@ function readRoom(value: unknown, actor: number, strict: boolean): Bedroom {
   };
   const pick = <T extends string>(v: unknown, list: readonly T[], def: T, name: string): T =>
     list.includes(v as T) ? (v as T) : strict ? bad(name) : def;
-  const theme = pick(source.theme, BEDROOM_THEMES.map((t) => t.id), fallback.theme, 'theme');
+  const theme = pick(source.theme, ROOM_THEMES.map((t) => t.id), fallback.theme, 'theme');
   const wall = pick(source.wall, WALL_COLORS, fallback.wall, 'wall');
   const floor = pick(source.floor, FLOOR_KINDS, fallback.floor, 'floor');
   const access =

@@ -211,7 +211,7 @@ test('profile, save and visit paths read the counts as reset even before the mar
   assert.equal(life.roomsReset, undefined);
   // Old counts no longer allow placements…
   assert.deepEqual(lifeUnlocksOf(life, a.id), ['house-1', 'house-2', 'bed']);
-  assert.deepEqual(furniturePolicyOf(life, a.id), { owned: undefined, strict: undefined });
+  assert.deepEqual(furniturePolicyOf(life, a.id), { owned: undefined, strict: undefined, roomActor: 0 });
   assert.deepEqual(afterRoomsReset(readLife(life)).ext[a.id].furn, undefined);
   // …so an old themed room cannot be saved back as a v4 room with old pieces.
   const oldRoom = { ...defaultBedroom(0), items: legacyRoomItems(0).filter((i) => !i.wall).slice(0, 4) };

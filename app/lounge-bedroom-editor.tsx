@@ -3,6 +3,7 @@
 /* eslint-disable next/no-img-element */
 import { useEffect, useId, useRef, useState } from 'react';
 import {
+  Armchair,
   Check,
   Copy,
   FlipHorizontal2,
@@ -27,7 +28,7 @@ import {
   type RoomCategory,
   type RoomItem,
 } from './lounge-bedroom-data';
-import { BEDROOM_THEMES } from './lounge-bedroom-themes';
+import { ROOM_THEMES } from './lounge-bedroom-themes';
 import { THUMBNAILS } from './lounge-bedroom-art';
 import { BEDROOM_FLOOR_COLOR, BEDROOM_WALL_COLOR } from './lounge-bedroom-styles';
 import { scaleRange } from './lounge-bedroom-edit';
@@ -321,12 +322,14 @@ export function RoomSettings({
   unlocks = [],
   onChange,
   onReset,
+  onRoomSet,
   onClose,
 }: {
   room: Bedroom;
   unlocks?: readonly string[];
   onChange: (next: Bedroom, message: string) => void;
   onReset: () => void;
+  onRoomSet?: () => void;
   onClose: () => void;
 }) {
   return (
@@ -381,11 +384,11 @@ export function RoomSettings({
           value={room.theme}
           aria-label="방 테마"
           onChange={(e) => {
-            const theme = BEDROOM_THEMES.find((t) => t.id === e.currentTarget.value);
+            const theme = ROOM_THEMES.find((t) => t.id === e.currentTarget.value);
             if (theme) onChange({ ...room, theme: theme.id }, `방 이름표를 ‘${theme.title}’${particle(theme.title, '으로/로')} 바꿨어요.`);
           }}
         >
-          {BEDROOM_THEMES.map((t) => (
+          {ROOM_THEMES.map((t) => (
             <option key={t.id} value={t.id}>
               {t.title}
             </option>
@@ -412,6 +415,7 @@ export function RoomSettings({
           ))}
         </div>
       </fieldset>
+      {onRoomSet && <button type="button" className="b3-reset" onClick={onRoomSet} data-testid="room-set-yuchan"><Armchair size={15} /> 유찬의 방 꾸미기</button>}
       <button type="button" className="b3-reset" onClick={onReset}>
         <RotateCcw size={15} /> 가구 모두 치우기
       </button>

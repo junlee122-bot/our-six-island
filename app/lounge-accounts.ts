@@ -27,6 +27,7 @@ import {
 } from './lounge-life.ts';
 import { furnitureOf, houseUnlocksOf } from './lounge-life-plus.ts';
 import { maskBedroomFurniture, maskFurnitureSave, type FurniturePolicy } from './lounge-furniture-protection.ts';
+import { yuchanRoomCopiesAllowed, withYuchanRoomUnlocks } from './lounge-yuchan-room.ts';
 export const ACCOUNTS = ACCOUNT_IDS.map((username, actor) => ({
   username,
   actor,
@@ -79,8 +80,8 @@ export const serverAccountSave = (
 
 export function furniturePolicyOf(life: unknown, uid: string): FurniturePolicy {
   // Before the one-time 새 방 reset is stored, the old counts no longer count.
-  const x = afterRoomsReset(readLife(life)).ext?.[uid];
-  return { owned: x?.furn, strict: x?.furnStrict };
+  const state = afterRoomsReset(readLife(life)), x = state.ext?.[uid];
+  return { owned: x?.furn, strict: x?.furnStrict, roomActor: state.actors[uid] };
 }
 export const protectProfileFurniture = <T>(save: T, life: unknown, uid: string): T =>
   maskFurnitureSave(save, furniturePolicyOf(life, uid));
@@ -92,6 +93,7 @@ export const protectProfileFurniture = <T>(save: T, life: unknown, uid: string):
 export const lifeUnlocksOf = (life: unknown, uid: string): string[] => {
   const state = afterRoomsReset(readLife(life));
   return roomUnlocks({
+    actor: state.actors[uid],
     unlocks: state.unlocks[uid] ?? [],
     house: houseUnlocksOf(state, uid).length,
     styles: state.ext?.[uid]?.styles ?? [],
@@ -159,18 +161,22 @@ export function accountSave(
         Object.prototype.hasOwnProperty.call(previous, 'bedroom')))
       ? readBedroom(previous.bedroom, actor)
       : s.bedroom;
-  const bedroom = maskBedroomFurniture(parsedBedroom, options.furniture?.owned, options.furniture?.strict);
+  const bedroom = maskBedroomFurniture(parsedBedroom, options.furniture?.owned, options.furniture?.strict, actor);
   // Shop rarities need ownership. Only checked when the caller knows the
   // saver's unlocks (the server); what the stored room already had is kept.
   const priorBedroom =
     options.unlocks && previous?.bedroom
-      ? maskBedroomFurniture(readBedroom(previous.bedroom, actor), options.furniture?.owned, options.furniture?.strict)
+      ? maskBedroomFurniture(readBedroom(previous.bedroom, actor), options.furniture?.owned, options.furniture?.strict, actor)
       : null;
+  const roomPermissions = options.unlocks ? withYuchanRoomUnlocks(options.unlocks, actor) : undefined;
+  // serverAccountSave can be called without a world (new accounts/tests). The
+  // authenticated actor grants room-bound starter copies, never inventory.
   if (
-    options.unlocks &&
+    roomPermissions &&
     bedroom !== null &&
-    (lockedRoomItems(bedroom, options.unlocks, priorBedroom).length ||
-      lockedRoomStyle(bedroom, options.unlocks, priorBedroom).length)
+    (lockedRoomItems(bedroom, roomPermissions, priorBedroom).length ||
+      lockedRoomStyle(bedroom, roomPermissions, priorBedroom).length ||
+      !yuchanRoomCopiesAllowed(bedroom, actor, roomPermissions, priorBedroom))
   )
     throw new AccountSaveError(ROOM_ITEM_LOCKED, 400);
   return {
@@ -356,7 +362,7 @@ export function friendVisitView(
     look = defaultLook(owner);
   if (save && typeof save === 'object') {
     const s = readLounge(JSON.stringify(save), owner);
-    bedroom = maskBedroomFurniture(s.bedroom, owned?.furn, owned?.furnStrict);
+    bedroom = maskBedroomFurniture(s.bedroom, owned?.furn, owned?.furnStrict, owner);
     look = readLook(s.looks[owner], owner);
   }
   return {

@@ -30,7 +30,9 @@ import {
   type RoomAccess,
   type RoomItem,
 } from './lounge-bedroom-data';
-import { bedroomTheme, BEDROOM_THEMES } from './lounge-bedroom-themes';
+import { bedroomTheme, ROOM_THEMES } from './lounge-bedroom-themes';
+import { applyYuchanRoom, canApplyYuchanRoom, withYuchanRoomUnlocks, yuchanRoomSpotAt, yuchanRoomSpots, type YuchanRoomSpotId } from './lounge-yuchan-room';
+import { YuchanRoomSet, YuchanRoomStory } from './lounge/YuchanRoom';
 import { createBedroomScene, ROOM_LIGHT, type RoomScene } from './lounge-bedroom-scene';
 import { FIGURE_CANVAS_RATIO, ROOM_VIEW_HALF, VIEW_DIR, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
 import {
@@ -165,7 +167,7 @@ export function Bedroom3D({
   guest,
   clockOffset = 0,
   onNpcTalk,
-  unlocks = [],
+  unlocks: baseUnlocks = [],
   notice,
   onExit,
   onDress,
@@ -231,6 +233,7 @@ export function Bedroom3D({
     [visit, save.bedroom, save.actor],
   );
   const canEdit = !visit && !!onChange;
+  const unlocks = useMemo(() => withYuchanRoomUnlocks(baseUnlocks, visit ? -1 : save.actor), [baseUnlocks, visit, save.actor]);
   const canEditRef = useRef(canEdit);
   useLayoutEffect(() => {
     canEditRef.current = canEdit;
@@ -242,6 +245,8 @@ export function Bedroom3D({
   const [panel, setPanel] = useState<'catalog' | 'settings' | null>(null);
   const wideEdit = useSyncExternalStore(subscribeWide, wideNow, () => false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [roomSetOpen, setRoomSetOpen] = useState(false);
+  const [roomStory, setRoomStory] = useState<YuchanRoomSpotId | null>(null);
   const [history, setHistory] = useState<History>({ past: [], future: [] });
   const [announcement, setAnnouncement] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'partial' | 'unavailable'>('loading');
@@ -279,6 +284,10 @@ export function Bedroom3D({
     } else if (kind === 'dress') flow.current.onDress?.();
     else if (kind === 'cook') flow.current.onCook?.();
     else if (kind === 'sleep') flow.current.onSleep?.();
+    else if (kind === 'look') {
+      const spot = yuchanRoomSpotAt(latest.current.room, roomActor, positionRef.current);
+      if (spot && spot.item === actionRef.current?.item) setRoomStory(spot.id);
+    }
     else if (kind === 'decorate' && canEditRef.current) {
       setEditing(true);
       hostRef.current?.focus({ preventScroll: true });
@@ -751,7 +760,7 @@ export function Bedroom3D({
       const id = studio.pick(ray, null);
       const ref = id ? current.room.items.find((i) => i.id === id)?.ref : undefined;
       if (!current.visit && hit && shape.fixtures.some((f) => hit.x > f.x0 - 0.3 && hit.x < f.x1 + 0.3 && hit.z > f.z0 - 0.3 && hit.z < f.z1 + 0.5)) return 'spot';
-      return ref && !current.visit && roomItemUsable(ref) ? 'spot' : '';
+      return (ref && !current.visit && roomItemUsable(ref)) || (id && yuchanRoomSpots(current.room, roomActor).some((s) => s.item === id)) ? 'spot' : '';
     };
     const onPointerMove = (event: PointerEvent) => {
       if (drag && event.pointerId === drag.pointer) {
@@ -1103,7 +1112,7 @@ export function Bedroom3D({
           top.project(camera);
           host.dataset.selectedAt = `${Math.round(((top.x + 1) / 2) * host.clientWidth)},${Math.round(((1 - top.y) / 2) * host.clientHeight)}`;
         } else delete host.dataset.selectedAt;
-        const nextAction = latest.current.editing
+        let nextAction = latest.current.editing
           ? null
           : roomAction(position, latest.current.room, {
               own: canEditRef.current,
@@ -1112,6 +1121,10 @@ export function Bedroom3D({
               canCook: !!flow.current.onCook,
               canSleep: !!flow.current.onSleep,
             });
+        if (!latest.current.editing && !['exit', 'sleep', 'dress'].includes(nextAction?.kind ?? '')) {
+          const spot = yuchanRoomSpotAt(latest.current.room, roomActor, position);
+          if (spot) nextAction = { kind: 'look', item: spot.item };
+        }
         if (
           nextAction?.kind !== actionRef.current?.kind ||
           nextAction?.item !== actionRef.current?.item
@@ -1121,6 +1134,7 @@ export function Bedroom3D({
           setAction(nextAction);
         }
         host.dataset.action = nextAction?.kind ?? '';
+        host.dataset.roomSpot = nextAction?.kind === 'look' ? yuchanRoomSpots(latest.current.room, roomActor).find((s) => s.item === nextAction.item)?.id ?? '' : '';
         host.dataset.avatarX = position.x.toFixed(3);
         host.dataset.avatarZ = position.z.toFixed(3);
         host.dataset.walking = String(walking);
@@ -1180,14 +1194,14 @@ export function Bedroom3D({
       renderer.forceContextLoss();
       canvas.remove();
     };
-  }, [attempt, shape]);
+  }, [attempt, shape, roomActor]);
 
   useEffect(() => {
     const host = hostRef.current;
     if (host) host.dataset.editing = String(editing);
   }, [editing, attempt, state]);
 
-  const theme = BEDROOM_THEMES.find((t) => t.id === room.theme) ?? bedroomTheme(roomActor);
+  const theme = ROOM_THEMES.find((t) => t.id === room.theme) ?? bedroomTheme(roomActor);
   const ownerName = ACTORS[roomActor];
   const closed = (room.access ?? 'friends') === 'closed';
   const bubbleFor = (actor: number, reaction?: LoungePlayer['reaction']) => {
@@ -1200,6 +1214,7 @@ export function Bedroom3D({
   const selfPlayer = players.find((p) => p.id === presence?.self);
   const selfBubble = bubbleFor(save.actor, selfPlayer?.reaction);
   const visitors = occupants.filter((o) => !o.npc);
+  const activeRoomStory = yuchanRoomSpots(room, roomActor).find((s) => s.id === roomStory);
 
   // The open catalog / wall-and-floor panel: over the room on small screens,
   // in the side dock on desktop (so it never covers the room).
@@ -1212,6 +1227,7 @@ export function Bedroom3D({
         unlocks={unlocks}
         onChange={commit}
         onReset={() => setResetOpen(true)}
+        onRoomSet={roomActor === 7 && canEdit ? () => setRoomSetOpen(true) : undefined}
         onClose={() => setPanel(null)}
       />
     ) : null;
@@ -1230,6 +1246,7 @@ export function Bedroom3D({
                 ? `${ownerName}의 방에 놀러 왔어요. 함께 있는 친구와 이야기해 보세요.`
                 : theme.description}
           </p>
+          {yuchanRoomSpots(room, roomActor).length > 0 && <p>사진·차 자리·책상 메모 가까이에서 {keyLabel(keys.action)}로 둘러봐요.</p>}
         </div>
         <div className="b3-heading-side">
           <span className="b3-mode-label">
@@ -1422,6 +1439,7 @@ export function Bedroom3D({
           <ActionButton
             className="b3-action"
             kind={action?.kind ?? null}
+            label={action?.kind === 'look' ? yuchanRoomSpots(room, roomActor).find((s) => s.item === action.item)?.title : undefined}
             shortcut={keyLabel(keys.action)}
             onPress={() => runAction(action?.kind)}
           />
@@ -1455,6 +1473,15 @@ export function Bedroom3D({
           }}
         />
       )}
+      {roomSetOpen && canEdit && roomActor === 7 && (
+        <YuchanRoomSet room={room} canApply={canApplyYuchanRoom(room, roomActor)} onClose={() => setRoomSetOpen(false)} onApply={() => {
+          const next = applyYuchanRoom(latest.current.room, roomActor);
+          if (!next) { notice?.('이미 꾸민 방은 그대로 간직해요. 소품을 하나씩 골라 놓아 보세요.'); return; }
+          commit(next, '유찬의 방 가구를 놓았어요. 실행 취소로 이전 방으로 돌아갈 수 있어요.');
+          setSelectedId(null); setRoomSetOpen(false); setPanel(null);
+        }} />
+      )}
+      {activeRoomStory && <YuchanRoomStory key={`${activeRoomStory.item}-${activeRoomStory.id}`} spot={activeRoomStory} own={!visit} onClose={() => setRoomStory(null)} />}
     </section>
   );
 }

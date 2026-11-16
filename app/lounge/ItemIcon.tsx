@@ -33,6 +33,15 @@ const CROP_ART: Record<string, ReactNode> = {
       <path d="M24 12 l-7 -3 4 6 -8 1 9 1 -3 6 5 -5 5 5 -3 -6 9 -1 -8 -1 4 -6z" fill="#3f8a34" />
     </>
   ),
+  legendarytomato: (
+    <>
+      <circle cx="24" cy="28" r="16" fill="#bf352c" stroke="#d6ad50" strokeWidth="2" />
+      <path d="M24 13 C17 17 17 38 24 43 M24 13 C31 17 31 38 24 43" fill="none" stroke="#e45f43" strokeWidth="1.5" />
+      <ellipse cx="17" cy="23" rx="3.5" ry="4" fill="#ffad80" opacity=".7" />
+      <path d="M24 13 l-8 -4 4 7 -8 2 10 1 2 5 3 -5 10 -1 -8 -2 4 -7z" fill="#e5c768" stroke="#997632" strokeWidth="1" />
+      <path d="M24 13 C23 7 26 5 29 5" stroke="#b2943f" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+    </>
+  ),
   pumpkin: (
     <>
       <ellipse cx="24" cy="29" rx="18" ry="14" fill="#ee8a2c" stroke="#b85f14" strokeWidth="1.5" />
@@ -1457,6 +1466,7 @@ type Leaf = 'feather' | 'vine' | 'rosette' | 'stalk' | 'bush';
 const CROP_LEAF: Record<string, { leaf: Leaf; tone: string; dark: string; hint: string }> = {
   carrot: { leaf: 'feather', tone: '#6fae4f', dark: '#4f8a3a', hint: '#f28c28' },
   tomato: { leaf: 'vine', tone: '#5f9e48', dark: '#3f7a34', hint: '#9bc45a' },
+  legendarytomato: { leaf: 'bush', tone: '#668d45', dark: '#8e7739', hint: '#e5c768' },
   pumpkin: { leaf: 'vine', tone: '#6aa54c', dark: '#4a8238', hint: '#f5c542' },
   strawberry: { leaf: 'rosette', tone: '#4f9444', dark: '#357a35', hint: '#fff6d8' },
   potato: { leaf: 'bush', tone: '#6aa54c', dark: '#4a8238', hint: '#f3eefc' },

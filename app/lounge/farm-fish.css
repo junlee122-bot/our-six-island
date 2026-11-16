@@ -461,12 +461,10 @@ dialog.l-modal.l-ledger > header .l-icon {
   width: 64px;
   padding: 3px 0 2px;
   border-radius: var(--r-s);
+}
+.l-ledger-stages li:not([data-on]) svg {
   opacity: 0.38;
   filter: grayscale(0.7);
-}
-.l-ledger-stages li[data-on] {
-  opacity: 1;
-  filter: none;
 }
 .l-ledger-stages li[data-now] {
   background: var(--paper-100);

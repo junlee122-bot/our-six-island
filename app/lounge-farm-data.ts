@@ -36,6 +36,8 @@ export const NEW_CROP_IDS = [
   'buckwheat',
   'narcissus',
   'perilla',
+  // A separate, slow-growing tomato; old tomato seeds, recipes and saves stay unchanged.
+  'legendarytomato',
 ] as const;
 export type NewCrop = (typeof NEW_CROP_IDS)[number];
 /** Same shape as lounge-life CropInfo (kept structural so this stays a leaf). */
@@ -196,6 +198,14 @@ export const NEW_CROP_INFO: Record<NewCrop, NewCropInfo> = {
     seasons: ['summer', 'autumn'],
     regrow: { ms: 2 * HOUR, harvests: 5 },
   },
+  legendarytomato: {
+    name: '전설의 토마토',
+    growMs: 24 * HOUR,
+    seed: 4_000,
+    sell: 10_000,
+    emoji: '🍅',
+    seasons: ['spring', 'summer', 'autumn', 'winter'],
+  },
 };
 /** Machine category of every crop (the 10 original ones included), village fruit and orchard fruit. */
 export const CROP_CAT: Readonly<Record<string, CropCat>> = {
@@ -231,6 +241,7 @@ export const CROP_CAT: Readonly<Record<string, CropCat>> = {
   buckwheat: 'flower',
   narcissus: 'flower',
   perilla: 'veg',
+  legendarytomato: 'veg',
   fruit: 'fruit',
   // 과수원 fruit (bag items from 하쿠's orchard, lounge-stage3-data ORCHARD_FRUITS).
   apricot: 'fruit',
@@ -286,6 +297,7 @@ export const NEW_CROP_HALF_LIFE: Readonly<Record<NewCrop, number>> = {
   buckwheat: 8,
   narcissus: 6,
   perilla: 10,
+  legendarytomato: 3,
 };
 
 // ---------------------------------------------------------------- quality
@@ -587,6 +599,7 @@ const JAR_NAME: Readonly<Record<string, string>> = {
   garlic: '마늘장아찌',
   pepper: '고추장아찌',
   tomato: '토마토 절임',
+  legendarytomato: '전설의 토마토 절임',
   perilla: '깻잎장아찌',
   roe: '젓갈',
   sturgeonroe: '캐비아',

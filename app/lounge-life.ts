@@ -415,7 +415,7 @@ export const SHOP: ShopItem[] = [
       description: `물 준 흙에서 ${growText(crop)} 뒤 수확 · ${beom(CROP_INFO[crop].sell)}에 팔려요${CROP_INFO[crop].vine ? ' · 덩굴 시렁 아래에 심어요' : ''}`,
     }),
   ),
-  ...(['pumpkin', 'strawberry'] as const).map(
+  ...(['pumpkin', 'strawberry', 'legendarytomato'] as const).map(
     (crop): ShopItem => ({
       id: 'bundle-' + crop,
       name: CROP_INFO[crop].name + ' 씨앗 꾸러미',

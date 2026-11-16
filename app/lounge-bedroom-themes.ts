@@ -83,5 +83,15 @@ export const BEDROOM_THEMES = [
   floor: FloorKind;
 }[];
 
+/** Separate from the seven historical model houses; no legacy layout is reused. */
+export const YUCHAN_BEDROOM_THEME = {
+  id: 'basecamp',
+  title: '느긋한 베이스캠프',
+  tag: '다녀와서 쉬는 자리',
+  description: '포근한 나무 가구와 작은 차 자리, 마을의 하루를 적는 방.',
+  accent: '#698c87', paper: '#e8e0ce', wall: 'cream', floor: 'oak',
+} as const;
+export const ROOM_THEMES = [...BEDROOM_THEMES, YUCHAN_BEDROOM_THEME] as const;
+
 export const bedroomTheme = (actor: number) =>
-  BEDROOM_THEMES[actor] ?? BEDROOM_THEMES[0];
+  actor === 7 ? YUCHAN_BEDROOM_THEME : BEDROOM_THEMES[actor] ?? BEDROOM_THEMES[0];

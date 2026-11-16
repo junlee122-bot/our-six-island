@@ -128,8 +128,8 @@ function world(n = 2) {
 }
 
 // ------------------------------------------------------------ catalog
-test('32 crops: the ten originals unchanged, the new ones seasonal; goods ids round-trip', () => {
-  assert.equal(CROPS.length, 32);
+test('33 crops: the ten originals unchanged, the new ones have seasons; goods ids round-trip', () => {
+  assert.equal(CROPS.length, 33);
   assert.deepEqual(CROPS.slice(10), [...NEW_CROP_IDS]);
   // Crop ids never collide with bag items (forage 해바라기 / 산삼 exist as items).
   for (const c of CROPS) assert.equal(ITEM_BY_ID[c], undefined, c);

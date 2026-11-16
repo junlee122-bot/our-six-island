@@ -67,6 +67,7 @@ const LOOK: Record<NewCrop, { form: Form; leaf: string; fruit: string; green?: s
   buckwheat: { form: 'flower', leaf: '#7aa85a', fruit: '#f6f2ea' },
   narcissus: { form: 'flower', leaf: '#5f9e48', fruit: '#f6e27a' },
   perilla: { form: 'leafy', leaf: '#4f8a3a', fruit: '#6fa850' },
+  legendarytomato: { form: 'bush', leaf: '#668d45', fruit: '#bf352c' },
 };
 /** F5 서리 덮개: milky plastic over the covered tiles (see-through, no shadow). */
 export const FROST_MAT = new THREE.MeshStandardMaterial({ color: '#eef5f7', transparent: true, opacity: 0.38, roughness: 0.35, depthWrite: false });
@@ -114,7 +115,19 @@ export function newCropShapes(out: Instance[], crop: NewCrop, g: number, seed: n
       break;
     case 'bush':
       out.push({ geo: G.sphere, mat: leaf, m: matrix(0, h * 0.55, 0, 0.07 + g * 0.025, h * 0.55, 0.07 + g * 0.025) });
-      out.push({ geo: G.cylinder, mat: tone(STAKE), m: matrix(0, h * 0.2, 0, 0.012, h * 0.4, 0.012) });
+      out.push({ geo: G.cylinder, mat: tone(crop === 'legendarytomato' ? '#b2943f' : STAKE), m: matrix(0, h * 0.2, 0, 0.012, h * 0.4, 0.012) });
+      if (crop === 'legendarytomato') {
+        if (g >= 3) ring(ripe ? 3 : 2, 0.12, (a, x, z, i) => {
+          const y = h * (0.38 + (i % 2) * 0.26), radius = ripe ? 0.06 : 0.045;
+          out.push({ geo: G.sphere, mat: fruitMat, m: matrix(x, y, z, radius, radius * 0.85, radius) });
+          for (let k = 0; k < 5; k++) {
+            const angle = a + k * Math.PI * 2 / 5;
+            out.push({ geo: G.sphere, mat: tone(ripe ? '#e5c768' : '#8e9e48'),
+              m: matrix(x + Math.cos(angle) * 0.018, y + radius * 0.83, z + Math.sin(angle) * 0.018, 0.032, 0.007, 0.01, -angle) });
+          }
+        });
+        break;
+      }
       if (g >= 3)
         ring(ripe ? 5 : 3, 0.09 + g * 0.01, (_a, x, z, i) =>
           out.push({ geo: crop === 'pepper' || crop === 'eggplant' ? G.cone : G.sphere, mat: fruitMat, m: matrix(x, h * (0.35 + (i % 2) * 0.25), z, 0.03, crop === 'eggplant' ? 0.07 : crop === 'pepper' ? 0.06 : 0.03, 0.03, 0, crop === 'blueberry' ? 0 : Math.PI) }),
