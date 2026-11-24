@@ -66,6 +66,8 @@ import { isVoyageAction } from './lounge-voyage-data.ts';
 import { voyageActionArea, voyageAt } from './lounge-voyage.ts';
 import { regionToNetwork } from './lounge-areas.ts';
 import { HARBOR_VOYAGE } from './lounge-harbor-layout.ts';
+import { isPortalArea, nearPortal, portalHint, portalNetwork, portalOpen } from './lounge-portals.ts';
+import { areaOpen } from './lounge-growth.ts';
 import { registerTalkBooks } from './lounge-npc-talk.ts';
 import { NPC_TALK } from './npc-talk/index.ts';
 
@@ -739,7 +741,23 @@ export function cloudTransition(
         if (command.op === 'action') {
           if (!command.action || typeof command.action !== 'object')
             throw new CloudError('요청 정보를 확인해 주세요.');
-          const action = command.action as { kind?: unknown; area?: unknown; home?: unknown };
+          let resolvedAction = command.action;
+          if (resolvedAction.kind === 'portal') {
+            const player = r.hostedPlayer(member.id), life = readLife(g.life);
+            if (!player || !nearPortal(player)) throw new CloudError('포탈 앞에서 이용해 주세요.', 409);
+            if ((life.ext?.[member.id]?.pending?.expiresAt ?? 0) > now)
+              throw new CloudError('낚시를 마치거나 취소한 뒤 움직일 수 있어요.', 409);
+            if (Object.values(entry.snapshot.seats).some((seats) => seats.includes(member.id)))
+              throw new CloudError('자리에서 일어난 뒤 포탈을 이용해 주세요.', 409);
+            const to = resolvedAction.to;
+            if (!isPortalArea(to)) throw new CloudError('갈 수 없는 포탈이에요.', 400);
+            if (to === player.area) throw new CloudError('지금 있는 구역이에요.', 409);
+            const pass = hasExplorerPass(member.actor, now);
+            const regions = { hill: { open: areaOpen(life, 'hill', now, member.id) }, woods: { open: areaOpen(life, 'woods', now, member.id) } };
+            if (!portalOpen(to, { flags: life.flags, pass, regions })) throw new CloudError(portalHint(to), 403);
+            resolvedAction = { kind: 'area', area: to, ...portalNetwork(to) };
+          }
+          const action = resolvedAction as { kind?: unknown; area?: unknown; home?: unknown };
           if ((action.kind === 'move' || action.kind === 'area') && (g.life?.ext?.[member.id]?.pending?.expiresAt ?? 0) > now)
             throw new CloudError('낚시를 마치거나 취소한 뒤 움직일 수 있어요.', 409);
           // Walking into a friend's room ('home' + owner) honours their access setting.
@@ -777,7 +795,7 @@ export function cloudTransition(
               throw new CloudError(PARTY_REJECT.bag(item), 409);
             eat = item;
           }
-          const reason = r.hostedAttempt(member.id, command.action, now);
+          const reason = r.hostedAttempt(member.id, resolvedAction, now);
           if (reason) throw new CloudError(reason, 409);
           if (eat) {
             const life = readLife(g.life);

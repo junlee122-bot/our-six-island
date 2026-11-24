@@ -87,6 +87,8 @@ import type { ReturnBoardDestination, ReturnBoardOpen } from './lounge-return-bo
 import { returnBoardNavigation } from './lounge-return-navigation';
 import type { GatheringPlaceId } from './lounge-gatherings-data';
 import { useGatheringGuide } from './lounge/use-gathering-guide';
+import { isPortalArea, portalAt, type PortalArea } from './lounge-portals';
+import { PortalPanel } from './lounge/PortalPanel';
 import type { SiteTarget } from './lounge/FarmSitePanel';
 import { othersOnline, SOLO_TABLE_GAME, type SoloKind } from './lounge-solo';
 import { FriendVisitScreen, prefetchVisit } from './lounge/FriendVisit';
@@ -416,6 +418,7 @@ type ModalName =
   | 'board'
   | 'communityOrders'
   | 'gatherings'
+  | 'portal'
   | 'bonds'
   | 'memories'
   | 'digest'
@@ -672,6 +675,7 @@ function AccountLounge({
     },
     onFish: (spot) => startFishing(spot),
     onSignpost: () => setTownPlace('signpost'),
+    onPortal: () => setModal('portal'),
     onFarm: (touch) => farmTouchRef.current(touch),
     onVillage: (at) => {
       setVillageSpawn(at);
@@ -1013,7 +1017,7 @@ function AccountLounge({
     : fishing ? '지금 하던 낚시를 마친 뒤 모임 장소로 가요.'
       : seat || inGame ? '테이블에서 일어난 뒤 모임 장소로 가요.'
         : settings.simpleGraphics ? '간편 화면에서는 모임에 적힌 장소로 직접 이동해 주세요.' : undefined;
-  const startGatheringGuide = useGatheringGuide({
+  const { start: startGatheringGuide, cancel: cancelGatheringGuide } = useGatheringGuide({
     area: visiting !== null || tab === 'bedroom' ? 'home' : tab === 'village' ? outdoorApi.outdoor?.area ?? 'village' : tab,
     blockedReason: gatheringBlockedReason,
     paused: !!modal || !!townPlace || !!siteTarget || !!residentTalk || !!sheet,
@@ -1026,6 +1030,24 @@ function AccountLounge({
     setSiteTarget(null);
     setResidentTalk(null);
     startGatheringGuide(place);
+  };
+  const travelPortal = async (to: PortalArea) => {
+    cancelGatheringGuide();
+    if (!(await room.action({ kind: 'portal', to }))) return false;
+    // The acknowledged portal action already changed area and position on the server.
+    const arrival = portalAt(to)!;
+    await new Promise<void>((resolve) => playFade(() => {
+      setVisiting(null);
+      if (to === 'village') {
+        outdoorApi.reset();
+        setVillageSpawn({ ...arrival.point });
+        villagePosition.current = { ...arrival.point };
+      } else outdoorApi.enterAt({ area: to, spawn: { ...arrival.point } }, { tell: false });
+      setTab('village');
+      setModal(null);
+      resolve();
+    }));
+    return true;
   };
 
   // Contract #1: tell the server where I am whenever the tab changes.
@@ -2666,6 +2688,7 @@ function AccountLounge({
                       onGate={outdoorApi.toHill}
                       onDistrict={outdoorApi.toDistrict}
                       onSignpost={() => setTownPlace('signpost')}
+                      onPortal={() => setModal('portal')}
                       onResident={setResidentTalk}
                       onTalk={talkTo}
                       tool={hotbar.tool}
@@ -3471,6 +3494,11 @@ function AccountLounge({
       )}
       {modal === 'communityOrders' && <CommunityOrdersPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} />}
       {modal === 'gatherings' && <FriendGatheringsPanel room={room} view={view} notify={notify} onClose={() => setModal(null)} onNavigate={settings.simpleGraphics ? undefined : guideGatheringPlace} />}
+      {modal === 'portal' && isPortalArea(outdoorApi.outdoor?.area ?? 'village') && <PortalPanel
+        area={(outdoorApi.outdoor?.area ?? 'village') as PortalArea}
+        context={{ flags: view.life?.flags, pass: view.life?.districts?.pass, regions: view.life?.growth?.regions }}
+        blockedReason={!connected || view.link.state === 'offline' ? '마을에 다시 연결되면 이용할 수 있어요.' : fishing ? '낚시를 마친 뒤 이용해 주세요.' : seat || inGame ? '테이블에서 일어난 뒤 이용해 주세요.' : undefined}
+        onTravel={travelPortal} onClose={() => setModal(null)} />}
       {modal === 'bonds' && (
         <FriendsLife
           room={room}

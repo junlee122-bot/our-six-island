@@ -57,6 +57,7 @@ import { districtCounters, type DistrictCounter, type EnterArea } from './lounge
 import { lighthouseLampLit } from './lounge-lighthouse';
 import { josa } from './lounge-text';
 import { RESIDENT_SCALE, VIEW_DISTANCE, VIEW_PITCH, VIEW_WALK_SPEED, VILLAGE_FIGURE_HEIGHT, followEase, viewHalf } from './lounge-village-camera';
+import { advanceWalkRoute, walkFrameSeconds } from './lounge-walk-route';
 import { applyVillageLight, villageFigureTint } from './lounge-village-view';
 import { FrameCost, fishingFrameDue, type FishingFramePhase } from './lounge-fishing-frames';
 import { DistrictMinimap } from './lounge/DistrictMinimap';
@@ -73,6 +74,8 @@ import type { LifeView } from './lounge-life';
 import { farmField, fieldTileCenter } from './lounge-farm-layout';
 import { farmFxDiff, type FarmFxPlot } from './lounge-world-pops';
 import { WorldPops, useWorldPops } from './lounge/WorldPops';
+import { portalAt } from './lounge-portals';
+import { addPortalStone, disposePortalStone } from './lounge-portal-3d';
 
 /** How close you stand to a resident to talk (E). */
 const RESIDENT_REACH = 1.9;
@@ -92,6 +95,7 @@ const DAY = 86_400_000;
 const kstDayOf = (now: number) => Math.floor((now + 9 * 3_600_000) / DAY);
 
 export type AreaAction =
+  | { kind: 'portal'; label: string }
   | { kind: 'node'; id: string; node: NodeKind; label: string; disabled?: boolean }
   | { kind: 'rock'; rock: number; label: string }
   | { kind: 'ladder'; label: string }
@@ -251,6 +255,12 @@ export function AreaScene({
   const doors = useRef(doorClock());
   /** Runs an action, holding back doorways until they are awake. */
   const act = (a: AreaAction) => {
+    if (a.kind === 'portal') {
+      const portal = portalAt(latest.current.area), p = live.current.point;
+      if (!portal || Math.hypot(p.x - portal.point.x, p.z - portal.point.z) > portal.reach) return;
+      const n = regionToNetwork(latest.current.area, p);
+      latest.current.onMove(n.x, n.y);
+    }
     const doorway = a.kind === 'exit' || a.kind === 'ladder' || (a.kind === 'counter' && !!a.enter) || (a.kind === 'farm' && a.touch.kind === 'home');
     if (doorway && !doors.current.ready()) return;
     latest.current.onAction(a);
@@ -273,6 +283,11 @@ export function AreaScene({
   const findAction = (p: WalkPoint): AreaAction | null => {
     const s = latest.current;
     const found: { d: number; a: AreaAction }[] = [];
+    const portal = portalAt(s.area);
+    if (portal) {
+      const d = Math.hypot(p.x - portal.point.x, p.z - portal.point.z);
+      if (d <= portal.reach) found.push({ d, a: { kind: 'portal', label: '마을 포탈 · 목적지 고르기' } });
+    }
     for (const n of s.nodes) {
       if (n.taken) continue;
       const d = Math.hypot(p.x - n.x, p.z - n.z);
@@ -450,6 +465,7 @@ export function AreaScene({
       dirty = true;
     };
     scene.add(set.root);
+    const portalStone = addPortalStone(scene, area);
     const marketDayNow = () => new Date(Date.now() + latest.current.clockOffset + 9 * 3_600_000).getUTCDay() === 0;
     const applyState = () => {
       const s = latest.current;
@@ -702,6 +718,7 @@ export function AreaScene({
       const el = labelsRef.current.get(id);
       if (!el) return;
       tag.set(p.x, 0, p.z).addScaledVector(cameraUp, FIGURE_HEIGHT + 0.3).project(camera);
+      if (id === 'portal') el.hidden = Math.abs(tag.x) > 0.85 || Math.abs(tag.y) > 0.75 || tag.z > 1;
       el.style.transform = `translate(${((tag.x + 1) / 2) * host.clientWidth}px, ${((1 - tag.y) / 2) * host.clientHeight}px) translate(-50%, -100%)`;
     };
     let previous = performance.now(),
@@ -728,7 +745,7 @@ export function AreaScene({
         dirty = true;
       }
       fishKey = s.fishing;
-      const dt = Math.min((t - previous) / 1000, 0.25);
+      const dt = walkFrameSeconds(t, previous);
       previous = t;
       if (document.hidden || !host.clientWidth) return;
       // State from the server (nodes taken, rocks broken, ladder…).
@@ -751,10 +768,6 @@ export function AreaScene({
       if (!dx && !dz && l.target && !s.paused) {
         dx = l.target.x - l.point.x;
         dz = l.target.z - l.point.z;
-        if (Math.hypot(dx, dz) < 0.12) {
-          l.target = l.route.shift() ?? null;
-          dx = dz = 0;
-        }
       }
       const before = l.point;
       const len = Math.hypot(dx, dz);
@@ -790,8 +803,13 @@ export function AreaScene({
             break;
           }
       }
-      if (len > 0) {
-        const stepLen = l.target ? Math.min(speed, len) : speed;
+      if (l.target && !s.paused) {
+        const next = advanceWalkRoute(before, [l.target, ...l.route], speed, (p, dx, dz) => s.walk.step(p, dx, dz));
+        l.point = next.point;
+        l.target = next.route.shift() ?? null;
+        l.route = next.route;
+      } else if (len > 0) {
+        const stepLen = speed;
         l.point = s.walk.step(before, (dx / len) * stepLen, (dz / len) * stepLen);
         if (l.target && Math.hypot(l.point.x - before.x, l.point.z - before.z) < 0.001) {
           l.target = null;
@@ -946,6 +964,8 @@ export function AreaScene({
       set.tick(t);
       for (const [id, f] of others) project(id, f.pos);
       project('self', l.point);
+      const portal = portalAt(area);
+      if (portal) project('portal', portal.point);
       renderer.render(scene, camera);
       drawCost.drew(t);
       residents?.project(camera, host.clientWidth, host.clientHeight);
@@ -967,6 +987,7 @@ export function AreaScene({
       dropFigure(mineFig);
       residents?.dispose();
       residentsRef.current = [];
+      disposePortalStone(portalStone);
       set.dispose();
       ambience?.dispose();
       figureGeo.dispose();
@@ -982,6 +1003,8 @@ export function AreaScene({
     ? null
     : action.kind === 'farm'
       ? action.act
+      : action.kind === 'portal'
+        ? 'enter'
       : action.kind === 'npc'
       ? 'talk'
       : action.kind === 'board' || action.kind === 'signpost'
@@ -1032,6 +1055,9 @@ export function AreaScene({
           </span>
         ))}
       </div>
+      {portalAt(area) && <button type="button" className="ar-tag ar-portal" data-testid="portal-walk"
+        ref={(el) => { if (el) labelsRef.current.set('portal', el); else labelsRef.current.delete('portal'); }}
+        onClick={() => walkTo(portalAt(area)!.point)} aria-label="마을 포탈까지 걸어가기">포탈</button>}
       <WorldPops pops={pops} />
       <div className="ar-plate" data-testid="area-plate">
         <strong>{area === 'mine' ? `광산 ${floorNo}층` : region.name}</strong>
@@ -1071,7 +1097,7 @@ export function AreaScene({
         />
       )}
       <WalkHints className="ar-hint" />
-      {districtId && (
+      {(districtId || area === 'hill' || area === 'woods') && (
         <DistrictMinimap
           area={area}
           weekday={(day + 4) % 7}

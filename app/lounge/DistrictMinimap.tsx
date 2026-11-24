@@ -191,10 +191,11 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
                 {npcs.map((r) => (
                   <circle key={r.id} cx={r.x} cy={r.z} r={1.1 * scale} fill={RESIDENT} stroke="#fff6dd" strokeWidth={0.4 * scale} />
                 ))}
+                {map.places.filter((p) => p.id === 'portal').map((p) => <circle key={p.id} cx={p.x} cy={p.z} r={2.2 * scale} fill="#dfc68c" stroke="#88623d" strokeWidth={0.7 * scale} />)}
                 <circle ref={selfRef} cx={start.x} cy={start.z} r={2 * scale} fill="#fff6dd" stroke="#536642" strokeWidth={scale} />
               </svg>
             </div>
-            {map.places.map((p) => (
+            {map.places.filter((p) => p.id !== 'portal').map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -253,6 +254,8 @@ export function DistrictMinimap({ area, weekday, players, self, where, residents
               );
             })}
           </div>
+          {map.places.filter((p) => p.id === 'portal').map((p) => <button key={p.id} type="button" className="hv-minimap-portal"
+            data-minimap-place="portal" onClick={() => go(p.go)} aria-label="마을 포탈까지 걸어가기"><Compass size={16} aria-hidden="true" /> 포탈까지 걸어가기</button>)}
           <small className="hv-minimap-note">{near ? `가까운 곳 · ${near.label}` : '장소를 클릭하면 걸어가요'}</small>
           <small className="hv-minimap-legend">
             나: 빈 원 · 친구 {friends.length}명 · 주민 {npcs.length}명

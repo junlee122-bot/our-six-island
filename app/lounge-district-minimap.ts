@@ -8,6 +8,7 @@
 // (REGIONS colliders), its exits and its counters, so adding it to DISTRICTS
 // and REGIONS is enough for a first map.
 import { REGIONS, isDistrictArea, regionFromNetwork, type OutdoorArea } from './lounge-areas.ts';
+import { portalAt } from './lounge-portals.ts';
 import { COUNTER_NAME, districtCounters } from './lounge-district-counters.ts';
 import { DISTRICTS, type DistrictId } from './lounge-districts.ts';
 import {
@@ -330,15 +331,19 @@ function districtPlaces(area: OutdoorArea, weekday: number): MiniPlace[] {
 
 /** The minimap of a district (null for the hub's outdoor areas that are not districts: 뒷산, 숲, 광산). */
 export function districtMinimap(area: OutdoorArea, weekday: number): DistrictMinimap | null {
-  if (!isDistrictArea(area)) return null;
+  if (!isDistrictArea(area) && area !== 'hill' && area !== 'woods') return null;
   const region = REGIONS[area];
   const art = DISTRICT_ART[area as DistrictId];
+  const portal = portalAt(area);
+  const places: MiniPlace[] = isDistrictArea(area) ? districtPlaces(area, weekday)
+    : region.exits.map((e) => ({ id: e.id, label: e.label, title: `${e.label} 입구로 걸어가기`, kind: 'exit', x: e.x, z: e.z, go: { ...e.stand }, named: true }));
+  if (portal) places.push({ id: 'portal', label: '포탈', title: '마을 포탈까지 걸어가기', kind: 'place', ...portal.point, go: { ...portal.point }, named: true });
   return {
     area,
     name: Object.hasOwn(DISTRICTS, area) ? DISTRICTS[area as DistrictId].name : region.name,
     bounds: { ...region.bounds },
     shapes: art ? art() : wallShapes(area),
-    places: districtPlaces(area, weekday),
+    places,
   };
 }
 

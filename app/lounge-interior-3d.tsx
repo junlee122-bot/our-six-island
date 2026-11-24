@@ -97,6 +97,7 @@ import { BANKER_FRONT, BANKER_NAME, nearBanker } from './lounge-bank-layout';
 import { SALON_FRONT, SALON_STYLIST_NAME, nearSalon } from './lounge-salon-layout';
 import type { TablePhase } from './lounge-table-state';
 import { advanceLocomotion, RUN_SPEED_MULTIPLIER, type LocomotionState } from './lounge-locomotion';
+import { advanceWalkRoute, walkFrameSeconds } from './lounge-walk-route';
 import { ActionButton } from './lounge/ActionButton';
 import { DealerAvatar } from './lounge-dealer-host';
 import { HOSTS } from './lounge-dealer-lines';
@@ -1108,7 +1109,7 @@ export function Interior3D({
       const cap = getSettings().fpsCap;
       if (cap && t - lastTick < 1000 / cap - 2) return;
       lastTick = t;
-      const dt = Math.min((t - previous) / 1000, 0.25);
+      const dt = walkFrameSeconds(t, previous);
       previous = t;
       if (!visible || document.hidden || !host.clientWidth) return;
       const current = latest.current;
@@ -1136,17 +1137,21 @@ export function Interior3D({
       } else if (l.target && !l.locked && !l.paused) {
         dx = l.target.x - l.point.x;
         dy = l.target.y - l.point.y;
-        if (Math.hypot(dx, dy) < 0.3) {
-          // Next waypoint, or arrived.
-          l.target = l.route.shift() ?? null;
-          dx = dy = 0;
-          if (!l.target) showMarker(null);
-        }
       }
       const length = Math.hypot(dx, dy);
       const before = l.point;
-      if (length > 0 && dt > 0) {
-        const step = l.target ? Math.min(speed, length) : speed;
+      if (l.target && !l.locked && !l.paused) {
+        const next = advanceWalkRoute(
+          { x: before.x, z: before.y },
+          [l.target, ...l.route].map((p) => ({ x: p.x, z: p.y })), speed,
+          (p, dx, dz) => { const q = interiorStep({ x: p.x, y: p.z }, dx, dz, area); return { x: q.x, z: q.y }; },
+        );
+        l.point = { x: next.point.x, y: next.point.z };
+        l.route = next.route.map((p) => ({ x: p.x, y: p.z }));
+        l.target = l.route.shift() ?? null;
+        if (!l.target) showMarker(null);
+      } else if (length > 0 && dt > 0) {
+        const step = speed;
         const next = interiorStep(before, (dx / length) * step, (dy / length) * step, area);
         if (Math.hypot(next.x - before.x, next.y - before.y) < 0.005 && l.target) {
           l.target = null;

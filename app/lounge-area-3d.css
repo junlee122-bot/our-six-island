@@ -42,6 +42,16 @@
   white-space: nowrap;
   box-shadow: var(--lift-2), var(--lift-1);
 }
+.ar-portal {
+  z-index: var(--z-raised);
+  min-height: 44px;
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  color: var(--text);
+  background: var(--surface-raised);
+  font-size: var(--fs-body-s);
+  cursor: pointer;
+}
 .ar-plate {
   position: absolute;
   z-index: var(--z-lift);

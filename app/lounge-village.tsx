@@ -51,6 +51,7 @@ import {
   RUN_SPEED_MULTIPLIER,
   type LocomotionState,
 } from './lounge-locomotion';
+import { walkFrameSeconds } from './lounge-walk-route';
 import { LOUNGE_MODELS } from './lounge-model-assets';
 import {
   VILLAGE_ACTOR_HEIGHT,
@@ -71,6 +72,8 @@ import { VillageKarchiveLayer } from './lounge-village-karchive';
 import { VillageGrowthLayer } from './lounge-village-growth-3d';
 import { VillageShopsLayer } from './lounge-village-shops';
 import { VillageDistrictGates } from './lounge-village-districts-3d';
+import { portalAt } from './lounge-portals';
+import { addPortalStone } from './lounge-portal-3d';
 import { ResidentLayer } from './lounge-npc-figures';
 import { newBehaviorMemory, residentFrames } from './lounge-npc-behavior';
 import { companionBubbles, companionNpcs, companionSpots, companionStep } from './lounge-companion-scene';
@@ -307,6 +310,7 @@ type Props = {
   onDistrict?: (id: DistrictId) => void;
   /** 친구에게 가기 signpost by the plaza board. */
   onSignpost?: () => void;
+  onPortal?: () => void;
   /** Talking to a resident walking about the hub. */
   onResident?: (npc: NpcId) => void;
   /** Talking to an offline friend: true when they had something to ask (request card). */
@@ -462,6 +466,7 @@ function getVillageWorld(): WorldState {
   const growth = new VillageGrowthLayer(root);
   const shops = new VillageShopsLayer(root);
   const gates = new VillageDistrictGates(root);
+  addPortalStone(root, 'village');
   const listeners = new Set<() => void>();
   const loaded: Record<string, string> = {};
   const changed = (id: string) => {
@@ -1023,6 +1028,13 @@ export function Village3D(props: Props) {
       const target = t.spot;
       if (target.kind === 'district') return current.onDistrict?.(target.id);
       if (target.kind === 'signpost') return current.onSignpost?.();
+      if (target.kind === 'portal') {
+        const portal = portalAt('village')!;
+        if (Math.hypot(position.x - portal.point.x, position.z - portal.point.z) > portal.reach) return;
+        const n = villageToNetwork(position);
+        current.onMove(n.x, n.y);
+        return current.onPortal?.();
+      }
       if (target.kind === 'resident') return current.onResident?.(target.npc);
       if (action.disabled) return;
       if (target.kind === 'fish') current.onFish?.(target.spot);
@@ -1753,6 +1765,13 @@ export function Village3D(props: Props) {
       w: 0,
       h: 0,
     }));
+    const villagePortal = portalAt('village')!;
+    placeLabels.push({
+      id: 'portal', element: labels.querySelector<HTMLElement>('[data-place="portal"]'),
+      x: villagePortal.point.x, z: villagePortal.point.z, hw: 1.3, hd: 1.3,
+      ax: villagePortal.point.x, ay: 1.6, az: villagePortal.point.z,
+      shown: false, w: 0, h: 0,
+    });
     placeLabels.push({
       id: 'museum', element: labels.querySelector<HTMLElement>('[data-place="museum"]'),
       x: VILLAGE_MUSEUM.x, z: VILLAGE_MUSEUM.z,
@@ -1878,7 +1897,7 @@ export function Village3D(props: Props) {
       lastTick = now;
       // Movement is substepped by villageStep, so a long frame (slow phone)
       // moves the right distance instead of slowing the world down.
-      const dt = previous ? Math.min((now - previous) / 1000, 0.25) : 0;
+      const dt = walkFrameSeconds(now, previous);
       previous = now;
       if (!assetsReady || !visible || document.hidden) return;
       // Clear both manual and queued walking throughout the cast, including its result.
@@ -2706,6 +2725,10 @@ export function Village3D(props: Props) {
           </div>
           <WorldPops pops={pops} />
           <div ref={labelsRef} className="hv-labels" style={moodTagStyle(props.life?.mood?.faces)}>
+            <button type="button" data-place="portal" data-show="false" className="hv-place hv-place-museum"
+              aria-label="마을 포탈까지 걸어가기" onClick={() => controls.current?.visit(portalAt('village')!.point)}>
+              <Glyph name="compass" size={18} /><span>포탈</span>
+            </button>
             {VILLAGE_PLACES.map((place) => (
               <button
                 key={place.id}
@@ -2982,6 +3005,7 @@ export function Village3D(props: Props) {
                             <circle key={'forage-' + sp.spot} cx={at.x} cy={at.z} r="1.1" fill="#7fae4f" stroke="#fff7d6" strokeWidth="0.4" data-testid="minimap-forage" />
                           ) : null;
                         })}
+                    <circle cx={portalAt('village')!.point.x} cy={portalAt('village')!.point.z} r="2.2" fill="#dfc68c" stroke="#88623d" strokeWidth="0.7" />
                     <circle
                       ref={miniSelfRef}
                       cx={VILLAGE_START.x}
@@ -3064,6 +3088,9 @@ export function Village3D(props: Props) {
                   </button>;
                 })}
               </div>
+              <button type="button" className="hv-minimap-portal" data-minimap-place="portal"
+                onClick={() => { controls.current?.visit(portalAt('village')!.point); if (miniExpanded) setMiniExpanded(false); }}
+                aria-label="마을 포탈까지 걸어가기"><Glyph name="compass" size={16} /> 포탈까지 걸어가기</button>
               <small className="hv-minimap-note">
                 {nearestPlace
                   ? `가까운 곳 · ${nearestPlace === 'museum' ? '마을 박물관' : (VILLAGE_PLACES.find((p) => p.id === nearestPlace)?.name ?? '내 텃밭')}`
@@ -3756,6 +3783,7 @@ function SpotPrompt({
       </div>
     );
   }
+  if (spot.kind === 'portal') return <div><strong><Glyph name="compass" size={16} /> 마을 포탈</strong><small>열린 구역의 포탈로 무료 이동{key}</small></div>;
   if (spot.kind === 'fete') {
     const fete = life?.social?.fete;
     return (

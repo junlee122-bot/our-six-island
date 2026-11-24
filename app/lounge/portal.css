@@ -1,0 +1,12 @@
+.l-portals { color: var(--text); }
+.l-portal-intro { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-body); line-height: 1.65; }
+.l-portal-intro svg { flex-shrink: 0; }
+.l-portal-note { color: var(--text-soft); font-size: var(--fs-body-s); line-height: 1.65; margin-block: var(--sp-2); }
+.l-portal-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); padding: 0; margin-block: var(--sp-3); list-style: none; }
+.l-portal-stop { display: flex; gap: var(--sp-3); align-items: center; justify-content: space-between; padding: var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-s); background: var(--surface-raised); min-width: 0; }
+.l-portal-stop[data-current] { background: var(--surface-sunken); }
+.l-portal-stop strong { display: block; font-size: var(--fs-body); }
+.l-portal-stop > div > span { display: block; margin-top: var(--sp-1); font-size: var(--fs-body-s); color: var(--text-soft); line-height: 1.5; }
+.l-portal-stop .ui-btn { flex-shrink: 0; }
+.l-portals .ui-btn:disabled { opacity: 1; }
+@media (max-width: 700px) { .l-portal-list { grid-template-columns: 1fr; } }

@@ -13,6 +13,33 @@ permissions:
   contents: read
 
 jobs:
+  walking-portals:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Pages build (scratch output)
+        run: node scripts/build-standalone.mjs --out /tmp/walking-portals-pages --site-url /
+      - name: Waystone walking and travel
+        run: node --experimental-strip-types scripts/verify-walking-portals-ui.mjs --pages /tmp/walking-portals-pages --out /tmp/walking-portals
+      - name: Keep walking and portal evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: walking-portals
+          path: /tmp/walking-portals
+
   yuchan-home:
     # Dedicated scope: keep the existing interaction jobs within their budgets.
     runs-on: ubuntu-24.04

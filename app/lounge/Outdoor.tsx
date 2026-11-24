@@ -67,6 +67,7 @@ export function useOutdoor({
   onFish,
   onSignpost,
   onFarm,
+  onPortal,
 }: {
   room: CloudRoom;
   notify: Notify;
@@ -86,6 +87,7 @@ export function useOutdoor({
   onSignpost?: () => void;
   /** 우리 농장: my field, a friend's field, a house door, the bin, the mailbox, the board. */
   onFarm?: (touch: FarmTouch) => void;
+  onPortal?: () => void;
 }) {
   const [outdoor, setOutdoor] = useState<Outdoor | null>(null);
   const [liftOpen, setLiftOpen] = useState(false);
@@ -217,6 +219,7 @@ export function useOutdoor({
   const say = (got: readonly (readonly [string, number])[]) => got.map(([id, n]) => `${itemName(id)} ${n}`).join(' · ');
 
   const onAction = (a: AreaAction) => {
+    if (a.kind === 'portal') { onPortal?.(); return; }
     const o = ref.current;
     if (!o) return;
     switch (a.kind) {
@@ -393,11 +396,11 @@ export function useOutdoor({
   };
   /** Out of a shop's room: straight back to this district spot (the caller fades). */
   const enterAt = useCallback(
-    (o: Outdoor) => {
+    (o: Outdoor, options?: { tell?: boolean }) => {
       preloadAreaScene();
       setOutdoor(o);
       ref.current = o;
-      tell(o);
+      if (options?.tell !== false) tell(o);
     },
     [tell],
   );

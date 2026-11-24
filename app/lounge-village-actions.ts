@@ -49,6 +49,7 @@ import { DISTRICTS, DISTRICT_IDS, HUB_SIGNPOST, districtOpen, gateDistance, type
 import { NPCS, type NpcId } from './lounge-npc-data.ts';
 import { josa } from './lounge-text.ts';
 import { BIRTHDAY_CAKE_POINT } from './lounge-birthday.ts';
+import { portalAt } from './lounge-portals.ts';
 
 /** How close to the plaza cake the action button offers it (world units). */
 export const CAKE_REACH = 1.4;
@@ -83,6 +84,7 @@ export type VillageSpot =
   | { kind: 'district'; id: DistrictId }
   /** 친구에게 가기: fast travel to a friend's district gate (visited districts only). */
   | { kind: 'signpost' }
+  | { kind: 'portal' }
   /** A resident walking about the hub (lounge-npc-schedule.ts). */
   | { kind: 'resident'; npc: NpcId };
 
@@ -324,6 +326,12 @@ export function villageAction(
     distance: Math.hypot(point.x - HUB_SIGNPOST.x, point.z - HUB_SIGNPOST.z),
     reach: HUB_SIGNPOST.reach,
     target: { type: 'spot', spot: { kind: 'signpost' } },
+  });
+  const portal = portalAt('village')!;
+  labels.set('portal', { label: '마을 포탈 · 목적지 고르기' });
+  candidates.push({
+    kind: 'enter', distance: Math.hypot(point.x - portal.point.x, point.z - portal.point.z),
+    reach: portal.reach, target: { type: 'spot', spot: { kind: 'portal' } },
   });
   for (const id of DISTRICT_IDS) {
     const d = DISTRICTS[id];

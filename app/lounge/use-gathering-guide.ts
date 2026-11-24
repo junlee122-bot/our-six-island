@@ -66,5 +66,6 @@ export function useGatheringGuide({
       window.removeEventListener('pointerdown', pointer, true);
     };
   }, [target]);
-  return start;
+  const cancel = useCallback(() => setTarget(null), []);
+  return { start, cancel };
 }

@@ -64,8 +64,13 @@ import type { WalkPoint } from './lounge-walk-world.ts';
 import { josa } from './lounge-text.ts';
 import { fortuneOpenOn } from './lounge-stage3-data.ts';
 
-/** Resident walking speed (world units / s); friends walk 5.2. */
+/** Fastest resident walking speed (world units / s); friends walk 5.2. */
 export const NPC_WALK_SPEED = 2.1;
+/** A resident keeps their own pace on every screen, including the server's interaction check. */
+export const npcWalkSpeed = (id: NpcId) =>
+  NPC_WALK_SPEED * (0.85 + (hash32(`pace:${id}`) / 0xffffffff) * 0.15);
+/** At bedtime residents finish up individually, within eight game minutes of one another. */
+export const NPC_HOME_DEPARTURE_SPREAD_MS = 18_000;
 /** Hidden time through a district gate / a building door. */
 export const GATE_TRANSIT_MS = 20_000;
 export const DOOR_TRANSIT_MS = 5_000;
@@ -594,6 +599,78 @@ export function npcCanStand(area: NpcArea, p: WalkPoint): boolean {
   if (area === 'tavern') return interiorCanWalk(worldToInterior(p), 'tavern');
   if (isShopArea(area)) return shopCanWalk(worldToInterior(p), area, SHOP_STAFF_RADIUS, true);
   return true;
+}
+
+const residentPaths = new Map<string, WalkPoint[]>();
+/** Follow a small walking line on wide paths, rejoining the exact doors and destinations.
+ * This is part of the shared route, not a frame offset: talking and drawing agree.
+ * Narrow passages keep their original line; every added segment is clearance checked.
+ */
+function residentPath(
+  id: NpcId,
+  area: NpcArea,
+  from: WalkPoint,
+  to: WalkPoint,
+): WalkPoint[] {
+  const lane = ((hash32(`lane:${id}`) % 3) - 1) * 0.9;
+  const base = walkPath(area, from, to);
+  if (
+    !lane ||
+    ![
+      'village',
+      'market',
+      'harbor',
+      'hillside',
+      'ranch',
+      'foothill',
+      'farm',
+    ].includes(area)
+  )
+    return base;
+  const key = `${area}:${from.x},${from.z}>${to.x},${to.z}:${lane}`;
+  const hit = residentPaths.get(key);
+  if (hit) return hit;
+  const clear = (a: WalkPoint, b: WalkPoint) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.15));
+    for (let i = 0; i <= n; i++)
+      if (
+        !npcCanStand(area, {
+          x: a.x + ((b.x - a.x) * i) / n,
+          z: a.z + ((b.z - a.z) * i) / n,
+        })
+      )
+        return false;
+    return true;
+  };
+  const out: WalkPoint[] = [base[0]];
+  for (let i = 1; i < base.length; i++) {
+    const a = base[i - 1],
+      b = base[i];
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    if (d < 5) {
+      out.push(b);
+      continue;
+    }
+    const dx = (b.x - a.x) / d,
+      dz = (b.z - a.z) / d;
+    const steps = Math.ceil(d / 1.5);
+    const line: WalkPoint[] = [a];
+    for (let k = 1; k < steps; k++) {
+      const along = (d * k) / steps;
+      const p = { x: a.x + dx * along, z: a.z + dz * along };
+      const shift = lane * Math.min(1, along / 3, (d - along) / 3);
+      const beside = { x: p.x - dz * shift, z: p.z + dx * shift };
+      const prev = line[line.length - 1];
+      line.push(clear(prev, beside) ? beside : p);
+    }
+    line.push(b);
+    if (line.every((p, k) => !k || clear(line[k - 1], p)))
+      out.push(...line.slice(1));
+    else out.push(b);
+  }
+  if (residentPaths.size > 4000) residentPaths.clear();
+  residentPaths.set(key, out);
+  return out;
 }
 
 // ---------------------------------------------------------------- day plans
@@ -1328,7 +1405,7 @@ function withNight(id: NpcId, plan: Seg[], day: number, w: OpenWorld): Seg[] {
 // ---------------------------------------------------------------- timeline
 type Ev =
   | { k: 'stay'; t0: number; t1: number; place: string; act: NpcActivity; label: string }
-  | { k: 'walk'; t0: number; t1: number; area: NpcArea; pts: WalkPoint[]; cum: number[]; to: string; label: string; act: NpcActivity }
+  | { k: 'walk'; t0: number; t1: number; area: NpcArea; pts: WalkPoint[]; cum: number[]; speed: number; to: string; label: string; act: NpcActivity }
   | { k: 'hide'; t0: number; t1: number; area: NpcArea; at: string; to: string; label: string };
 
 const destLabel = (p: string) => NPC_PLACES[p]?.name ?? '';
@@ -1337,17 +1414,17 @@ const goingLabel = (to: string, label?: string) => {
   const name = destLabel(to);
   return name ? `${josa(name, '으로/로')} 가는 중` : '걸어가는 중';
 };
-function legWalk(area: NpcArea, from: string, to: string, t0: number, label: string, act: NpcActivity): Ev & { k: 'walk' } {
+function legWalk(id: NpcId, area: NpcArea, from: string, to: string, t0: number, label: string, act: NpcActivity, speed: number): Ev & { k: 'walk' } {
   const a = NPC_PLACES[from],
     b = NPC_PLACES[to];
-  const pts = walkPath(area, a, b);
+  const pts = residentPath(id, area, a, b);
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].z - pts[i - 1].z));
-  const ms = Math.ceil((cum[cum.length - 1] / NPC_WALK_SPEED) * 1000);
-  return { k: 'walk', t0, t1: t0 + ms, area, pts, cum, to, label, act };
+  const ms = Math.ceil((cum[cum.length - 1] / speed) * 1000);
+  return { k: 'walk', t0, t1: t0 + ms, area, pts, cum, speed, to, label, act };
 }
 /** The moves from place A to place B starting at t (walk legs and hidden hops). */
-function route(from: string, to: string, t: number, label: string): Ev[] {
+function route(id: NpcId, from: string, to: string, t: number, label: string, speed: number): Ev[] {
   const A = NPC_PLACES[from],
     B = NPC_PLACES[to];
   const hops = areaRoute(A.area, B.area);
@@ -1359,7 +1436,7 @@ function route(from: string, to: string, t: number, label: string): Ev[] {
     const area = NPC_PLACES[at].area;
     if (at === target) return;
     if (NPC_WALK_AREAS.includes(area)) {
-      const leg = legWalk(area, at, target, now, label, act);
+      const leg = legWalk(id, area, at, target, now, label, act, speed);
       out.push(leg);
       now = leg.t1;
     }
@@ -1367,8 +1444,12 @@ function route(from: string, to: string, t: number, label: string): Ev[] {
   };
   for (const hop of hops) {
     walkTo(hop.from);
-    out.push({ k: 'hide', t0: now, t1: now + hop.ms, area: hop.b, at: hop.from, to: hop.to, label });
-    now += hop.ms;
+    // People use a doorway / gate at their own pace. With an identical hidden
+    // duration, two staff due at the same counter also reached its entire
+    // approach path at the same instant, even when they came from elsewhere.
+    const transitMs = hop.ms + (hash32(`transit:${id}:${hop.from}:${hop.to}`) % 6_000);
+    out.push({ k: 'hide', t0: now, t1: now + transitMs, area: hop.b, at: hop.from, to: hop.to, label });
+    now += transitMs;
     at = hop.to;
   }
   walkTo(to);
@@ -1408,6 +1489,7 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
   const plan = dayPlan(id, day, w);
   const start = gameDayStart(day);
   const end = start + GAME_DAY_MS;
+  const speed = npcWalkSpeed(id);
   const ev: Ev[] = [];
   let cur = plan[0][1],
     curAct = plan[0][2],
@@ -1427,12 +1509,12 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
     // which are game minutes (a district gate alone is 8), so a resident who
     // only set off at hh:mm would arrive a game hour late.
     const going = goingLabel(to, label);
-    const trip = route(cur, to, 0, going),
+    const trip = route(id, cur, to, 0, going, speed),
       tripMs = trip.length ? trip[trip.length - 1].t1 : 0;
     // Bedtime is the exception: they stay out until then and walk home after.
-    const depart = act === 'sleep' ? at : Math.max(t, at - tripMs);
+    const depart = act === 'sleep' ? at + (hash32(`home:${id}:${day}`) % NPC_HOME_DEPARTURE_SPREAD_MS) : Math.max(t, at - tripMs);
     ev.push({ k: 'stay', t0: t, t1: depart, place: cur, act: curAct, label: curLabel });
-    const moves = route(cur, to, depart, going);
+    const moves = route(id, cur, to, depart, going, speed);
     ev.push(...moves);
     t = moves.length ? moves[moves.length - 1].t1 : at;
     cur = to;
@@ -1446,7 +1528,7 @@ export function npcTimeline(id: NpcId, day: number, world: NpcWorld = worldDefau
 }
 
 function interp(e: Ev & { k: 'walk' }, now: number) {
-  const d = Math.min(e.cum[e.cum.length - 1], ((now - e.t0) / 1000) * NPC_WALK_SPEED);
+  const d = Math.min(e.cum[e.cum.length - 1], ((now - e.t0) / 1000) * e.speed);
   for (let i = 1; i < e.pts.length; i++) {
     if (d <= e.cum[i] || i === e.pts.length - 1) {
       const seg = e.cum[i] - e.cum[i - 1] || 1;

@@ -371,6 +371,8 @@ export type LoungeAction =
       bots?: number;
     }
   | { kind: "area"; area: Area; x?: number; y?: number; home?: number }
+  /** Cloud-authorized waystone travel; resolved to a canonical area arrival. */
+  | { kind: "portal"; to: import('./lounge-portals.ts').PortalArea }
   | { kind: "draw"; id: string; op: "offer" | "accept" | "decline" }
   | { kind: "daily" }
   | { kind: "poker"; id: string; revision: number; action: PokerAction }

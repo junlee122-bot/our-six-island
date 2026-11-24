@@ -118,7 +118,11 @@ export class CloudRoom {
   private stopped = false;
   private movement: LoungeAction | null = null;
   private moveTimer: ReturnType<typeof setTimeout> | null = null;
-  private moving = false;
+  private moveTasks = 0;
+  private moveEpoch = 0;
+  private moveVersion = 0;
+  private predictedMove: { version: number; area: Area; home?: number; x: number; y: number } | null = null;
+  private portalPending = false;
   private look: Look | null = null;
   private detach: (() => void) | null = null;
   activeRoom: string | null = null;
@@ -181,7 +185,7 @@ export class CloudRoom {
     this.stopped = true;
     this.generation++;
     if (this.timer) clearTimeout(this.timer);
-    if (this.moveTimer) clearTimeout(this.moveTimer);
+    this.cancelMovement();
     if (this.hintTimer) clearTimeout(this.hintTimer);
     this.detach?.();
     this.detach = null;
@@ -289,13 +293,19 @@ export class CloudRoom {
     void this.channel?.unsubscribe();
     this.channel = null;
   }
-  private apply(r: Response, generation: number) {
+  private apply(r: Response, generation: number, command: CloudCommand, moveVersion?: number) {
     if (
       this.stopped ||
       generation !== this.generation ||
       r.revision < this.revision
     )
       return;
+    const moveReply = command.op === 'action' && command.action?.kind === 'move';
+    if (moveReply && !r.ok) this.cancelMovement();
+    else if (moveReply && this.predictedMove && (moveVersion ?? 0) >= this.predictedMove.version)
+      this.predictedMove = null;
+    else if (!r.ok || (command.op !== 'read' && command.op !== 'wallet' && !moveReply))
+      this.predictedMove = null;
     this.revision = r.revision;
     this.epoch = r.epoch;
     this.lastOk = Date.now();
@@ -326,6 +336,10 @@ export class CloudRoom {
       const localNow = Date.now();
       const players = packet.players.map((p) => ({
         ...p,
+        ...(p.id === this.account.id && this.predictedMove && r.ok &&
+          (p.area ?? 'village') === this.predictedMove.area &&
+          ((p.area ?? 'village') !== 'home' || (p.home ?? p.actor) === this.predictedMove.home)
+          ? { x: this.predictedMove.x, y: this.predictedMove.y } : {}),
         reaction: receiveReaction(
           p.reaction,
           this.view.code === r.code
@@ -403,7 +417,7 @@ export class CloudRoom {
       ...(this.view.stocks && this.stocksHash ? { stocksHash: this.stocksHash } : {}),
     };
   }
-  private async send(command: CloudCommand, generation: number, background = false) {
+  private async send(command: CloudCommand, generation: number, background = false, moveVersion?: number) {
     let result: Response | undefined;
     // Reads carry it; queued actions carry it from when they were queued (the
     // retry below reuses the same body, so its request hash stays the same).
@@ -431,7 +445,7 @@ export class CloudRoom {
       }
     }
     if (!result) throw new Error('서버 응답이 없습니다.');
-    this.apply(result, generation);
+    this.apply(result, generation, command, moveVersion);
     return result;
   }
   /** "다시 연결" in the header: try right away instead of waiting for the countdown. */
@@ -474,6 +488,7 @@ export class CloudRoom {
   private enqueue(
     command: Omit<CloudCommand, 'requestId' | 'sequence' | 'connection'>,
     onSend?: (at: number) => void,
+    prepare?: (body: CloudCommand) => number | false | void,
   ) {
     const g = this.generation,
       body: CloudCommand = {
@@ -486,9 +501,11 @@ export class CloudRoom {
     this.update({ pending: this.view.pending + 1 });
     const task = this.queue.then(async () => {
       if (this.stopped || g !== this.generation) return false;
+      const moveVersion = prepare?.(body);
+      if (moveVersion === false) return false;
       onSend?.(performance.now());
       try {
-        return (await this.send(body, g)).ok;
+        return (await this.send(body, g, false, typeof moveVersion === 'number' ? moveVersion : undefined)).ok;
       } catch (e) {
         if (g !== this.generation) return false;
         if (isNetworkFailure(e)) {
@@ -615,7 +632,7 @@ export class CloudRoom {
   area(area: Area, x?: number, y?: number, home?: number) {
     // A move still waiting for its (debounced) send belongs to the place I am
     // leaving: sent after this, it would put me at village coordinates inside.
-    this.movement = null;
+    this.cancelMovement();
     const action = {
       kind: 'area',
       area,
@@ -656,33 +673,66 @@ export class CloudRoom {
   action(action: LoungeAction, onSend?: (at: number) => void): Promise<boolean> {
     if (this.view.status !== 'connected') return Promise.resolve(false);
     if (action.kind === 'move') {
+      if (this.portalPending) return Promise.resolve(false);
       this.movement = action;
+      const self = this.view.players.find((p) => p.id === this.account.id);
+      if (self) this.predictedMove = { version: ++this.moveVersion, area: self.area ?? 'village',
+        ...((self.area ?? 'village') === 'home' ? { home: self.home ?? self.actor } : {}),
+        ...moveClamp(self.area, action.x, action.y) };
       this.update({
         players: this.view.players.map((p) =>
           p.id === this.account.id ? { ...p, ...moveClamp(p.area, action.x, action.y) } : p,
         ),
       });
-      if (!this.moveTimer && !this.moving)
-        this.moveTimer = setTimeout(async () => {
-          this.moveTimer = null;
-          this.moving = true;
-          const move = this.movement;
-          this.movement = null;
-          if (move && this.view.status === 'connected')
-            await this.enqueue({
-              op: 'action',
-              code: this.view.code,
-              action: move,
-            });
-          this.moving = false;
-          if (this.movement && this.view.status === 'connected')
-            void this.action(this.movement);
-        }, 500);
+      this.scheduleMovement();
       return Promise.resolve(true);
     }
+    if (action.kind === 'portal') {
+      if (this.portalPending) return Promise.resolve(false);
+      this.portalPending = true;
+      // E at a pad must be checked against the final real walking position.
+      // Both requests stay on the existing ordered queue, never in parallel.
+      if (this.movement || this.moveTasks) void this.queueMovement();
+      return this.enqueue({ op: 'action', code: this.view.code, action }, onSend, () => {
+        this.cancelMovement();
+      }).finally(() => { this.portalPending = false; });
+    }
+    if (action.kind === 'area') this.cancelMovement();
     return this.enqueue({ op: 'action', code: this.view.code, action }, onSend);
   }
+  private cancelMovement() {
+    this.movement = null;
+    this.predictedMove = null;
+    this.moveEpoch++;
+    if (this.moveTimer) clearTimeout(this.moveTimer);
+    this.moveTimer = null;
+  }
+  private scheduleMovement() {
+    if (this.moveTimer || this.moveTasks || !this.movement || this.stopped || this.view.status !== 'connected') return;
+    this.moveTimer = setTimeout(() => { this.moveTimer = null; void this.queueMovement(); }, 500);
+  }
+  private queueMovement() {
+    if (this.moveTimer) clearTimeout(this.moveTimer);
+    this.moveTimer = null;
+    const epoch = this.moveEpoch;
+    this.moveTasks++;
+    const task = this.enqueue({ op: 'action', code: this.view.code }, undefined, (body) => {
+      // A slow earlier action may have held this queue slot for seconds.
+      // Choose the latest sample now, before the first send/hash, then freeze
+      // that body for any retry. Area/portal changes invalidate old slots.
+      if (epoch !== this.moveEpoch || !this.movement || this.view.status !== 'connected') return false;
+      body.action = this.movement;
+      this.movement = null;
+      return this.predictedMove?.version ?? 0;
+    });
+    void task.finally(() => {
+      this.moveTasks--;
+      if (!this.moveTasks) this.scheduleMovement();
+    });
+    return task;
+  }
   async leave() {
+    this.cancelMovement();
     // Keep a pending join in the same queue, then leave its acknowledged room.
     await this.queue;
     if (this.view.code && this.view.status === 'connected') {

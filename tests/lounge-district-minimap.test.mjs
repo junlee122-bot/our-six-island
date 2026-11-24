@@ -8,12 +8,14 @@ import { DISTRICT_AREAS, REGIONS, regionToNetwork, regionWalk } from '../app/lou
 import { BUILT_DISTRICTS } from '../app/lounge-districts.ts';
 import { districtCounters } from '../app/lounge-district-counters.ts';
 import { SHOP_AREAS, SHOP_INTERIORS } from '../app/lounge-shop-interiors.ts';
+import { PORTALS } from '../app/lounge-portals.ts';
+import { villageAction } from '../app/lounge-village-actions.ts';
 
 const THURSDAY = 4,
   SUNDAY = 0,
   WEDNESDAY = 3;
 
-test('every built district has a minimap; the hub’s own outdoor areas do not', () => {
+test('every built district has a minimap; only the mine and offshore deck omit it', () => {
   assert.deepEqual([...DISTRICT_AREAS].sort(), [...BUILT_DISTRICTS].sort(), 'a district added to DISTRICTS and built gets a map');
   for (const area of DISTRICT_AREAS) {
     const map = districtMinimap(area, THURSDAY);
@@ -22,7 +24,22 @@ test('every built district has a minimap; the hub’s own outdoor areas do not',
     assert.ok(map.shapes.length > 4, `${area} draws its streets and buildings`);
     assert.equal(new Set(map.places.map((p) => p.id)).size, map.places.length, `${area}: place ids are unique`);
   }
-  for (const area of ['hill', 'woods', 'mine']) assert.equal(districtMinimap(area, THURSDAY), null);
+  for (const area of ['mine', 'offshore']) assert.equal(districtMinimap(area, THURSDAY), null);
+});
+
+test('every outdoor portal has an exact walking pin; the village pad offers E', () => {
+  for (const portal of PORTALS) {
+    if (portal.area === 'village') continue;
+    const map = districtMinimap(portal.area, THURSDAY);
+    const pins = map.places.filter((p) => p.id === 'portal');
+    assert.equal(pins.length, 1, portal.area);
+    assert.deepEqual(pins[0].go, portal.point);
+    const walk = regionWalk(portal.area);
+    assert.equal(walk.canWalk(pins[0].go), true, portal.area);
+    assert.ok(walk.path(REGIONS[portal.area].arrive.village ?? REGIONS[portal.area].arrive.hill, pins[0].go).length > 0, portal.area);
+  }
+  const p = PORTALS.find((p) => p.area === 'village');
+  assert.equal(villageAction(p.point, 3, { now: 0 })?.target.spot?.kind, 'portal');
 });
 
 test('places: inside the map and their walk-to point is walkable', () => {

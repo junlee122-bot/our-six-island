@@ -235,6 +235,7 @@ export function VillageSimple({
         <div>
           <h1 id="l-simple-village-title">{NAMES.app} 안내판</h1>
           <p>가고 싶은 곳을 클릭하면 바로 들어가요.</p>
+          <p data-testid="simple-portal-help">마을 포탈은 3D 화면의 지도에서 ‘포탈’을 누르고, 바닥돌 앞에서 E로 이용해요.</p>
         </div>
       </header>
       <div className="l-simple-places">

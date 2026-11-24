@@ -96,6 +96,7 @@ import { loungeAudio } from './lounge-audio';
 import { INTERIOR_SURFACE } from './lounge-footsteps';
 import { doorClock } from './lounge-map-doors';
 import { createBedroomNpc } from './lounge-bedroom-npc';
+import { advanceWalkRoute, walkFrameSeconds } from './lounge-walk-route';
 import { NPCS, type NpcGuest } from './lounge-romance';
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -1000,7 +1001,7 @@ export function Bedroom3D({
       const cap = getSettings().fpsCap;
       if (cap && t - lastTick < 1000 / cap - 2) return;
       lastTick = t;
-      const dt = Math.min((t - previous) / 1000, 0.25);
+      const dt = walkFrameSeconds(t, previous);
       previous = t;
       if (!visible || document.hidden) return;
       const guest = latest.current.guest;
@@ -1025,13 +1026,9 @@ export function Bedroom3D({
           if (leavingThroughDoor(position, stepZ) && flow.current.onExit)
             queueMicrotask(() => runActionRef.current('exit'));
         } else if (path.length) {
-          const next = path[0],
-            dx = next.x - position.x,
-            dz = next.z - position.z,
-            distance = Math.hypot(dx, dz),
-            step = Math.min(distance, speed * dt);
-          if (distance < 0.025) path.shift();
-          else position = walkStep(position, (dx / distance) * step, (dz / distance) * step);
+          const next = advanceWalkRoute(position, path, speed * dt, walkStep);
+          position = next.point;
+          path = next.route;
           if (!path.length) destination.visible = false;
         }
       } else if (path.length) {
