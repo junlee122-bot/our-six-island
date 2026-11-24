@@ -15,6 +15,7 @@ const args = process.argv.slice(2), opt = (name, fallback) => { const i = args.i
 const pages = path.resolve(opt('pages', '')), out = path.resolve(opt('out', '.ui-shots/walking-portals'));
 assert.ok(args.includes('--pages') && fs.existsSync(path.join(pages, 'index.html')), 'Pass an existing Pages build with --pages. This script never builds or deploys.');
 const actors = opt('actors', '3,7').split(',').map(Number), views = opt('views', 's,fhd').split(',');
+const forcePendingRetry = args.includes('--force-pending-retry');
 assert.ok(actors.every((a) => a === 3 || a === 7) && views.every((v) => VIEWS[v]));
 if (!process.env.CHROMIUM_PATH && fs.existsSync('C:/Program Files/Google/Chrome/Application/chrome.exe')) process.env.CHROMIUM_PATH = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 fs.mkdirSync(out, { recursive: true });
@@ -24,7 +25,7 @@ const persist = () => fs.writeFileSync(path.join(out, 'summary.json'), JSON.stri
 let browser, server;
 
 async function run(actor, view) {
-  const row = { actor, view, viewport: VIEWS[view], status: 'running', steps: [], screenshots: [], actions: [], expectedRejections: [], expectedConsoleErrors: [], consoleErrors: [], pageErrors: [], failedResources: [], apiFailures: [] };
+  const row = { actor, view, viewport: VIEWS[view], status: 'running', steps: [], screenshots: [], actions: [], portalRequests: [], expectedRejections: [], expectedConsoleErrors: [], consoleErrors: [], pageErrors: [], failedResources: [], apiFailures: [] };
   report.runs.push(row); persist();
   const H = await setup({ browser, base: server.url, actor, view,
     seedSave: { ...freshLounge(actor), bedroom: { version: 4, theme: 'friends', items: [{ ...DEFAULT_BED }] } },
@@ -36,11 +37,22 @@ async function run(actor, view) {
     },
   });
   const { page, ctx } = H, reads = [];
-  let holdNext = false, held = false, release, rejectNext = false, rejectedRequestId;
+  let holdNext = false, held = false, release, rejectNext = false, rejectedRequestId, portalGate;
   await ctx.route('**/functions/v1/hohyeon-api', async (route) => {
     const c = route.request().postDataJSON()?.command;
     if (c?.action?.kind === 'portal') {
-      if (holdNext) { holdNext = false; held = true; await new Promise((resolve) => { release = resolve; }); }
+      if (holdNext) {
+        holdNext = false;
+        const promise = new Promise((resolve) => { release = () => { portalGate.released = true; resolve(); }; });
+        portalGate = { requestId: c.requestId, promise, released: false, attempts: [] };
+      }
+      // cloudCall legitimately retries a timed-out action with the same ID.
+      // Hold every transport attempt of that logical request until release.
+      if (portalGate?.requestId === c.requestId && !portalGate.released) {
+        portalGate.attempts.push({ requestId: c.requestId, sequence: c.sequence, at: Date.now() });
+        held = true;
+        await portalGate.promise;
+      }
       if (rejectNext) {
         rejectNext = false; rejectedRequestId = c.requestId;
         // A server-side activity started after the panel opened. The real
@@ -59,7 +71,11 @@ async function run(actor, view) {
     else row.consoleErrors.push(text);
   });
   page.on('requestfailed', (r) => { if (r.url().startsWith(server.url) && r.failure()?.errorText !== 'net::ERR_ABORTED') row.failedResources.push({ path: r.url().replace(server.url, '/'), error: r.failure()?.errorText }); });
-  page.on('request', (r) => { if (r.url().includes('/functions/v1/hohyeon-api')) { try { const a = r.postDataJSON()?.command?.action; if (a) row.actions.push(a); } catch {} } });
+  page.on('request', (r) => { if (r.url().includes('/functions/v1/hohyeon-api')) { try {
+    const c = r.postDataJSON()?.command, a = c?.action;
+    if (a) row.actions.push(a);
+    if (a?.kind === 'portal') row.portalRequests.push({ requestId: c.requestId, sequence: c.sequence, to: a.to, at: Date.now() });
+  } catch {} } });
   page.on('response', (r) => {
     if (r.status() >= 400 && r.url().startsWith(server.url)) row.failedResources.push({ path: r.url().replace(server.url, '/'), status: r.status() });
     if (r.status() < 400 || !r.url().includes('/functions/v1/')) return;
@@ -104,16 +120,32 @@ async function run(actor, view) {
       assert.equal(await page.getByTestId('portal-panel').count(), 0); await shot('farm-waystone');
     });
     await step('pending-input-guard-and-authoritative-arrival', async () => {
-      await openPortal('farm'); holdNext = true; const begin = row.actions.length;
+      await openPortal('farm'); holdNext = true; const begin = row.actions.length, requestBegin = row.portalRequests.length;
       await page.getByTestId('portal-to-village').click(); await waitState(() => held, 'the real portal request is held by the local test transport');
       assert.equal(await page.getByTestId('portal-panel').getAttribute('aria-busy'), 'true');
       assert.equal(await page.locator('[data-testid^=portal-to-]:enabled').count(), 0);
       await page.keyboard.press('Escape'); await page.keyboard.press('ArrowRight');
       await page.getByTestId('portal-to-market').evaluate((el) => el.click());
       assert.equal(await page.getByTestId('portal-panel').count(), 1, 'Escape cannot expose the old scene during travel');
-      await shot('pending-travel'); assert.equal(self().area, 'farm');
+      // A screenshot can take longer than the real 12s action timeout on a
+      // busy FHD software renderer. Check the pending DOM and layout directly,
+      // then release promptly; captures resume after the real arrival.
+      const metrics = await page.evaluate(measureInPage);
+      for (const key of ['lowCount', 'smallCount', 'cutCount', 'coveredCount', 'overlapCount']) assert.equal(metrics[key], 0, `pending-travel: ${key} ${JSON.stringify(metrics)}`);
+      assert.equal(metrics.overflowX, false, 'pending-travel: no horizontal page overflow');
+      if (forcePendingRetry) {
+        await waitState(() => portalGate.attempts.length >= 2, 'the actual 12s timeout retries the held logical request');
+        assert.equal(await page.getByTestId('portal-panel').getAttribute('aria-busy'), 'true');
+        assert.equal(await page.locator('[data-testid^=portal-to-]:enabled').count(), 0);
+      }
+      assert.equal(self().area, 'farm', 'no held transport attempt reaches the engine before release');
+      row.pendingChecks = { metrics, forcedRetry: forcePendingRetry, heldAttempts: structuredClone(portalGate.attempts), sourceArea: self().area };
       release(); await padSync('village');
-      const travel = row.actions.slice(begin); assert.equal(travel.filter((a) => a.kind === 'portal').length, 1, 'pending clicks do not enqueue a second trip');
+      const requests = row.portalRequests.slice(requestBegin);
+      assert.equal(new Set(requests.map((r) => r.requestId)).size, 1, 'pending clicks do not enqueue a second logical trip; HTTP retries reuse its ID');
+      assert.equal(new Set(requests.map((r) => r.sequence)).size, 1, 'all transport retries preserve the action sequence');
+      row.pendingChecks.requests = structuredClone(requests);
+      const travel = row.actions.slice(begin);
       assert.equal(travel.filter((a) => a.kind === 'area').length, 0, 'the UI applies the approved arrival without another area command');
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 700)));
       await padSync('village'); await shot('village-waystone');
@@ -181,6 +213,7 @@ finally {
     unexpectedErrors: report.runs.reduce((n, r) => n + r.pageErrors.length + r.consoleErrors.length + r.failedResources.length + r.apiFailures.length, 0),
     expectedServerRejections: report.runs.reduce((n, r) => n + r.expectedRejections.length, 0),
     guideAudits: report.runs.map((r) => ({ actor: r.actor, ...r.guideAudit })),
+    pendingChecks: report.runs.map((r) => ({ actor: r.actor, heldAttempts: r.pendingChecks?.heldAttempts, requests: r.pendingChecks?.requests })),
   }, null, 2));
   await browser?.close().catch(() => {}); await server?.close();
 }
