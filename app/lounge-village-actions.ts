@@ -331,7 +331,7 @@ export function villageAction(
   labels.set('portal', { label: '마을 포탈 · 목적지 고르기' });
   candidates.push({
     kind: 'enter', distance: Math.hypot(point.x - portal.point.x, point.z - portal.point.z),
-    reach: portal.reach, target: { type: 'spot', spot: { kind: 'portal' } },
+    reach: portal.reach, door: true, target: { type: 'spot', spot: { kind: 'portal' } },
   });
   for (const id of DISTRICT_IDS) {
     const d = DISTRICTS[id];
@@ -343,13 +343,16 @@ export function villageAction(
       target: { type: 'spot', spot: { kind: 'district', id } },
     });
   }
-  // A resident standing on a doorstep must not block the door: right at a door
-  // (within half its reach) the door or building wins over talking. A step
-  // back and talking works again.
-  const atDoor = candidates.some(
-    (c) => !!c && (c.door || c.kind === 'museum') && Number.isFinite(c.distance) && c.distance <= c.reach * DOORSTEP,
-  );
-  const best = pickAction(atDoor ? candidates.filter((c) => !c || c.kind !== 'talk') : candidates);
+  // Residents must not cover a doorway, waystone or the board's reading spot.
+  // The board allows the walker's 6cm arrival margin at BOARD_FRONT; a step
+  // back still offers conversation, and non-talk activities retain their rank.
+  const atFixture = candidates.some((c) => {
+    if (!c || !Number.isFinite(c.distance)) return false;
+    const board = c.target?.type === 'spot' && c.target.spot.kind === 'board';
+    return ((c.door || c.kind === 'museum') && c.distance <= c.reach * DOORSTEP)
+      || (board && c.distance <= c.reach * 0.6);
+  });
+  const best = pickAction(atFixture ? candidates.filter((c) => !c || c.kind !== 'talk') : candidates);
   if (!best?.target) return null;
   const t = best.target;
   const key =

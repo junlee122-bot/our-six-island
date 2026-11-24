@@ -10,6 +10,7 @@ import { readLife } from '../app/lounge-life.ts';
 import { PORTALS, portalAt, portalNetwork } from '../app/lounge-portals.ts';
 import { BOARD_FRONT } from '../app/lounge-village-spots.ts';
 import { hasExplorerPass } from '../app/lounge-explorer-pass.ts';
+import { npcSpot } from '../app/lounge-npc-schedule.ts';
 
 const args = process.argv.slice(2), opt = (name, fallback) => { const i = args.indexOf('--' + name); return i < 0 ? fallback : args[i + 1]; };
 const pages = path.resolve(opt('pages', '')), out = path.resolve(opt('out', '.ui-shots/walking-portals'));
@@ -193,8 +194,37 @@ async function run(actor, view) {
       await scene('market').focus(); await page.keyboard.down('ArrowRight'); await H.sleep(500); await page.keyboard.up('ArrowRight');
       const pin = page.locator('[data-minimap-place=portal]'); if (!await pin.isVisible()) await page.getByTestId('minimap-toggle').click(); await pin.click(); await arrived('market', portalAt('market').point);
       await openPortal('market'); await page.getByTestId('portal-to-village').click(); await padSync('village');
+      if (actor === 7) {
+        // Replay the CI collision rather than waiting for the live schedule:
+        // at this real date/game hour, Frieren stands immediately in front of
+        // the board in a world whose hillside remains closed. No position,
+        // server clock, unlock or resident behavior is overwritten.
+        const replayAt = Date.parse('2026-11-24T18:50:00Z'), resident = npcSpot('frieren', replayAt, {});
+        assert.equal(resident.place, 'v.board'); assert.equal(resident.visible, true);
+        assert.ok(Math.hypot(resident.x - BOARD_FRONT.x, resident.z - BOARD_FRONT.z) < 0.2);
+        await page.evaluate((target) => window.dispatchEvent(new CustomEvent('bumtadew:npc-clock', { detail: target - Date.now() })), replayAt);
+        await page.locator('[data-testid=village-3d] .rn-tag[data-npc=frieren]').waitFor({ state: 'visible' });
+        row.boardResidentFixture = { replayAt, npc: resident.id, point: { x: resident.x, z: resident.z }, place: resident.place };
+      }
       await scene('village').focus(); await page.keyboard.press('KeyB'); await arrived('village', BOARD_FRONT);
-      await e('village'); await page.getByTestId('board-tab-gatherings').waitFor(); await shot('ordinary-board-after-return');
+      await wait(() => document.querySelector('[data-testid=action-button]')?.getAttribute('data-action') === 'board');
+      row.boardAudit = await scene('village').evaluate((el) => ({
+        point: { x: Number(el.dataset.avatarX), z: Number(el.dataset.avatarZ) },
+        action: document.querySelector('[data-testid=action-button]')?.getAttribute('data-action'),
+        label: document.querySelector('[data-testid=action-button]')?.getAttribute('aria-label'),
+      }));
+      assert.match(row.boardAudit.label, /게시판/);
+      await e('village'); await page.getByTestId('board-tab-gatherings').waitFor(); row.boardAudit.opened = true; await shot('ordinary-board-after-return');
+      if (actor === 7) {
+        await close();
+        const back = { x: BOARD_FRONT.x, z: BOARD_FRONT.z + 0.4 };
+        await page.evaluate((p) => window.dispatchEvent(new CustomEvent('bumtadew:go', { detail: p })), back);
+        await wait((p) => { const d = document.querySelector('[data-testid=village-3d]')?.dataset; return d?.walking === 'false' && Math.hypot(Number(d.avatarX) - p.x, Number(d.avatarZ) - p.z) < 0.12; }, back);
+        await wait(() => { const e = document.querySelector('[data-testid=action-button]'); return e?.getAttribute('data-action') === 'talk' && e.getAttribute('aria-label')?.includes('프리렌'); });
+        row.boardAudit.stepBack = { point: back, action: await page.getByTestId('action-button').getAttribute('data-action'), label: await page.getByTestId('action-button').getAttribute('aria-label') };
+        await e('village'); await page.getByRole('dialog', { name: '프리렌과 이야기', exact: true }).waitFor();
+        row.boardAudit.stepBack.opened = true;
+      }
       assert.equal(self().area, 'village'); assert.deepEqual(resources(), baseline, 'walking and all successful/refused trips preserve money, bags and farms');
     });
     await Promise.all(reads); row.pageErrors = [...H.errors]; row.blockedExternalHosts = [...H.external];
@@ -213,6 +243,7 @@ finally {
     unexpectedErrors: report.runs.reduce((n, r) => n + r.pageErrors.length + r.consoleErrors.length + r.failedResources.length + r.apiFailures.length, 0),
     expectedServerRejections: report.runs.reduce((n, r) => n + r.expectedRejections.length, 0),
     guideAudits: report.runs.map((r) => ({ actor: r.actor, ...r.guideAudit })),
+    boardAudits: report.runs.map((r) => ({ actor: r.actor, residentFixture: r.boardResidentFixture, ...r.boardAudit })),
     pendingChecks: report.runs.map((r) => ({ actor: r.actor, heldAttempts: r.pendingChecks?.heldAttempts, requests: r.pendingChecks?.requests })),
   }, null, 2));
   await browser?.close().catch(() => {}); await server?.close();

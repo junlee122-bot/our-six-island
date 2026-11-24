@@ -284,9 +284,9 @@ export function AreaScene({
     const s = latest.current;
     const found: { d: number; a: AreaAction }[] = [];
     const portal = portalAt(s.area);
+    const portalDistance = portal ? Math.hypot(p.x - portal.point.x, p.z - portal.point.z) : Infinity;
     if (portal) {
-      const d = Math.hypot(p.x - portal.point.x, p.z - portal.point.z);
-      if (d <= portal.reach) found.push({ d, a: { kind: 'portal', label: '마을 포탈 · 목적지 고르기' } });
+      if (portalDistance <= portal.reach) found.push({ d: portalDistance, a: { kind: 'portal', label: '마을 포탈 · 목적지 고르기' } });
     }
     for (const n of s.nodes) {
       if (n.taken) continue;
@@ -320,6 +320,9 @@ export function AreaScene({
       }
     }
     for (const r of residentsRef.current) {
+      // Like a building's doorstep: the pad centre stays usable if a
+      // resident walks across it. A step off the core offers conversation again.
+      if (portal && portalDistance <= portal.reach / 2) continue;
       const d = Math.hypot(p.x - r.x, p.z - r.z);
       if (d <= RESIDENT_REACH) found.push({ d: d - 0.3, a: { kind: 'npc', npc: r.id, label: `${josa(NPCS[r.id].name, '과/와')} 이야기하기` } });
     }

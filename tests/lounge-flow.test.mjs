@@ -17,6 +17,8 @@ import {
 import { villageAction, villageActionKey } from '../app/lounge-village-actions.ts';
 import { VILLAGE_PLACES } from '../app/lounge-village-layout.ts';
 import { FRUIT_TREE_POINTS, walkableNear } from '../app/lounge-village-life.ts';
+import { BOARD_FRONT } from '../app/lounge-village-spots.ts';
+import { portalAt } from '../app/lounge-portals.ts';
 import {
   ROOM_DOOR_REACH,
   besideBed,
@@ -130,6 +132,30 @@ test('village: civic doors enter; a ripe tree is picked; a nearby friend is talk
   assert.equal(picked?.kind, 'pick');
   const npc = { actor: 1, point: { x: nearTree.x + 0.3, z: nearTree.z } };
   assert.equal(villageAction(nearTree, 3, { now: 0, npcs: [npc] })?.kind, 'talk');
+});
+
+test('a resident cannot cover the board reading spot, including the walking arrival margin', () => {
+  for (const offset of [0, 0.055]) {
+    const point = { x: BOARD_FRONT.x, z: BOARD_FRONT.z + offset };
+    const action = villageAction(point, 7, { now: 0, residents: [{ id: 'frieren', ...point }] });
+    assert.equal(action?.kind, 'board');
+    assert.equal(action?.target.spot.kind, 'board');
+  }
+  const point = { x: BOARD_FRONT.x, z: BOARD_FRONT.z + 0.4 };
+  const action = villageAction(point, 7, { now: 0, residents: [{ id: 'frieren', ...point }] });
+  assert.equal(action?.target.spot.kind, 'resident', 'one step back still offers conversation');
+});
+
+test('a waystone stays usable with a resident standing on it, while its rim still offers conversation', () => {
+  const pad = portalAt('village');
+  for (const offset of [0, 0.9]) {
+    const point = { x: pad.point.x, z: pad.point.z + offset };
+    const action = villageAction(point, 7, { now: 0, residents: [{ id: 'frieren', ...point }] });
+    assert.equal(action?.target.spot.kind, 'portal');
+  }
+  const point = { x: pad.point.x, z: pad.point.z + 1.6 };
+  const action = villageAction(point, 7, { now: 0, residents: [{ id: 'frieren', ...point }] });
+  assert.equal(action?.target.spot.kind, 'resident');
 });
 
 /* ------------------------------------------------------------ my room */
