@@ -12,6 +12,7 @@ import {
   yachtAuto,
   yachtBest,
   yachtLegal,
+  yachtRanks,
   yachtRerollOne,
   yachtScore,
   yachtSettlement,
@@ -27,6 +28,13 @@ import {
   newLiar,
 } from '../app/lounge-liar.ts';
 import { LIAR_CATEGORIES } from '../app/lounge-liar-words.ts';
+
+test('yacht results give equal totals the same rank below or at first place', () => {
+  assert.deepEqual(yachtRanks([100, 80, 80, 50]), [1, 2, 2, 4]);
+  assert.deepEqual(yachtRanks([90, 90, 40]), [1, 1, 3]);
+  assert.deepEqual(yachtRanks([40, 90, 40, 60]), [3, 1, 3, 2]);
+  assert.deepEqual(yachtRanks([0, 0]), [1, 1]);
+});
 import {
   PARTY_EXTEND_MS,
   PARTY_REJECT,

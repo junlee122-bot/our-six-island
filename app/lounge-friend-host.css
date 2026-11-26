@@ -57,7 +57,7 @@
   margin-left: 7px;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
 }
 .fh-line {
   margin: 4px 0 0;
@@ -76,7 +76,7 @@
 .fh-table {
   flex-shrink: 0;
   font-size: 12px;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
   text-align: right;
 }
 .fh-table b {

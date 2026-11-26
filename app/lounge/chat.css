@@ -1,3 +1,15 @@
+.l-chat > div:first-child > span {
+  color: var(--text-soft);
+}
+.l-chat .l-chat-messages b {
+  color: var(--text);
+  filter: none;
+  border-inline-start: var(--sp-1) solid var(--accent);
+  padding-inline-start: var(--sp-1);
+}
+.l-chat .l-chat-welcome p {
+  color: var(--text-soft);
+}
 .l-chat-messages .l-chat-sticker {
   display: grid;
   justify-items: start;

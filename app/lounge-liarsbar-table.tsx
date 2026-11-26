@@ -5,6 +5,7 @@
 // push-in overlay. Only the public view is ever shown (lounge-liarsbar.ts).
 // Keys: 1–5 카드 고르기 · Enter 내기 · L 거짓말! · Space/Enter 방아쇠 · Esc 선택 풀기.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { claimTableAction, isTableActionPending, newTableActionLock, releaseTableAction, tableActionKey } from './lounge-table-controls';
 import { BellRing, Check, Crown, Ghost, ShieldCheck, Skull } from './ui/icons';
 import {
   LB_CHAMBERS,
@@ -338,7 +339,7 @@ export function LiarsBarTable({
 }) {
   const over = v.phase === 'over';
   const hand = v.hand ?? [];
-  const version = `${v.id}:${v.revision}`;
+  const version = tableActionKey(v);
   const [pick, setPick] = useState<{ key: string; ids: number[] }>({
     key: '',
     ids: [],
@@ -346,20 +347,20 @@ export function LiarsBarTable({
   const handKey = `${v.id}:${v.round}:${hand.map((c) => c.id).join(',')}`;
   const picked = pick.key === handKey ? pick.ids : [];
   const [sent, setSent] = useState<string | null>(null);
-  const inFlight = useRef<string | null>(null);
+  const inFlight = useRef(newTableActionLock());
   const locked = sent === version;
   const act = (a: LiarsBarAction) => {
-    if (locked || inFlight.current === version) return;
-    inFlight.current = version;
+    if (locked) return;
+    const ticket = claimTableAction(inFlight.current, version);
+    if (!ticket) return;
     setSent(version);
     awaitAnswer(onAction(a), () => {
-      inFlight.current = null;
-      setSent(null);
+      if (releaseTableAction(inFlight.current, ticket)) setSent((key) => key === version ? null : key);
     });
   };
   const toggle = (i: number) => {
     const card = hand[i];
-    if (!card || !v.legal.play || locked) return;
+    if (!card || !v.legal.play || locked || isTableActionPending(inFlight.current, version)) return;
     const has = picked.includes(card.id);
     if (!has && picked.length >= v.legal.max) return;
     loungeAudio.sample('select');
@@ -387,6 +388,7 @@ export function LiarsBarTable({
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
   useEffect(() => {
     keys.current = (e) => {
+      if (locked || isTableActionPending(inFlight.current, version)) return false;
       if (v.legal.trigger && (e.code === 'Space' || e.key === 'Enter')) {
         trigger();
         return true;
@@ -492,6 +494,7 @@ export function LiarsBarTable({
   const line = captainLine(v, names, v.away ?? []);
   const pile = v.plays.reduce((s, p) => s + p.count, 0);
   const lastPlay = v.plays[v.plays.length - 1];
+  const matchingPicked = hand.filter((c) => picked.includes(c.id) && lbTrue(c.face, v.table)).length;
   const actor =
     v.phase === 'play' ? v.turn : v.phase === 'trigger' ? v.shooter : -1;
   const actorName = actor >= 0 ? names[actor] : '';
@@ -503,7 +506,7 @@ export function LiarsBarTable({
     ? '앞사람의 마지막 패를 확인할 차례예요. “거짓말!”을 눌러요.'
     : v.legal.play
       ? picked.length
-        ? `${picked.length}장 선택했어요. Enter를 누르면 “${LB_FACE_NAME[v.table]} ${picked.length}장”이라고 내요.`
+        ? `선택 ${picked.length}장: 일치 ${matchingPicked}장 · 다른 카드 ${picked.length - matchingPicked}장. Enter로 “${LB_FACE_NAME[v.table]} ${picked.length}장”이라고 주장해요.`
         : `내 차례예요. 1~${v.legal.max}장을 골라요.${v.legal.call ? ' 앞사람의 패가 의심되면 “거짓말!”을 눌러도 돼요.' : ''}`
       : v.legal.trigger
         ? '내가 방아쇠를 당길 차례예요. Space를 눌러요.'
@@ -693,6 +696,7 @@ export function LiarsBarTable({
                         onClick={trigger}
                         disabled={locked}
                         data-testid="liarsbar-trigger"
+                        data-table-controls
                         aria-keyshortcuts="Space Enter"
                       >
                         방아쇠 당기기 <kbd>Space</kbd>
@@ -827,7 +831,7 @@ export function LiarsBarTable({
               </li>
             )}
           </ol>
-          <div className="lb-actions">
+          <div className="lb-actions" data-table-controls>
             <button
               type="button"
               className="l-primary lb-play"
@@ -851,6 +855,9 @@ export function LiarsBarTable({
             </button>
             <output className="lb-turn-note" data-testid="liarsbar-turn-help">
               {turnHint}
+              {v.legal.call && lastPlay && <span className="lb-call-context" data-testid="liarsbar-call-context">
+                도전 대상: {names[lastPlay.seat]} 님의 직전 {lastPlay.count}장. 모두 진짜면 내가 당겨요.
+              </span>}
             </output>
           </div>
         </section>

@@ -325,6 +325,14 @@ function nextTurn(g: GoMatch) {
     g.turn = (g.turn + 1) % 3;
   g.phase = 'play';
 }
+/** Public hand counts are sufficient to preview the engine's empty-hand skip. */
+export function goNextSeat(handCounts: number[], turn: number): number | null {
+  for (let offset = 1; offset <= 3; offset++) {
+    const seat = (turn + offset) % 3;
+    if (handCounts[seat] > 0) return seat;
+  }
+  return null;
+}
 function finish(g: GoMatch) {
   const p = g.pending!;
   if (p.captured && g.floor.length === 0) {

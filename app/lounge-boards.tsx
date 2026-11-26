@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Square } from 'chess.js';
 import { LOUNGE_ASSETS } from './lounge-assets';
 import { chessBoard, CHESS_MOVE_MS, type ChessMatch } from './lounge-chess';
@@ -8,6 +8,8 @@ import { AWAY_LABEL, TurnTimer } from './lounge-turn-timer';
 import { formatBeom } from './lounge-text';
 import { DealerHost, useReactionReply } from './lounge-dealer-host';
 import { chessHostLine, type TableReaction } from './lounge-dealer-lines';
+import { claimTableAction, isTableActionPending, newTableActionLock, releaseTableAction } from './lounge-table-controls';
+import './lounge-chess-table.css';
 const art = LOUNGE_ASSETS as Record<string, string>;
 export function ChessBoard({
   match,
@@ -28,9 +30,9 @@ export function ChessBoard({
     to: string,
     promotion?: string,
   ) => Promise<boolean> | void;
-  onResign: () => void;
+  onResign: () => void | Promise<boolean>;
   /** Sends {kind:'draw', id, op}. Buttons are hidden when not provided. */
-  onDraw?: (op: 'offer' | 'accept' | 'decline') => void;
+  onDraw?: (op: 'offer' | 'accept' | 'decline') => void | Promise<boolean>;
   names: string[];
   /** My 범 result for this match once it is settled. */
   settlement?: number;
@@ -49,11 +51,16 @@ export function ChessBoard({
       null,
     ),
     [resign, setResign] = useState(false),
+    [focused, setFocused] = useState(seat === 1 ? 'e7' : 'e2'),
+    [moveProblem, setMoveProblem] = useState(''),
+    [controlPending, setControlPending] = useState<string | null>(null),
     // One move per ply: a second tap before the server answers is ignored.
     [sentPly, setSentPly] = useState<string | null>(null);
   const plyKey = `${match.id}:${match.moves.length}`;
+  const controlKey = `${plyKey}:${match.drawOffer ?? '-'}:${match.drawOfferPly?.join(',') ?? '-'}`;
+  const controlsBusy = sentPly === plyKey || controlPending === controlKey;
   const turn = board.turn() === 'w' ? 0 : 1,
-    canPlay = seat === turn && !match.winner && sentPly !== plyKey,
+    canPlay = seat === turn && !match.winner && !controlsBusy,
     legal =
       selected && canPlay
         ? board.moves({ square: selected as Square, verbose: true })
@@ -65,19 +72,30 @@ export function ChessBoard({
     setSelected(null);
     setPromotion(null);
     setResign(false);
+    setMoveProblem('');
   }
-  const inFlight = useRef<string | null>(null);
+  const actionLock = useRef(newTableActionLock());
+  const latestKeys = useRef({ plyKey, controlKey });
+  useLayoutEffect(() => { latestKeys.current = { plyKey, controlKey }; }, [plyKey, controlKey]);
+  const keyboardHint = useId();
+  const inputClaimed = () => isTableActionPending(actionLock.current, plyKey) || isTableActionPending(actionLock.current, controlKey + ':control');
   const send = (from: string, to: string, promo?: string) => {
-    if (inFlight.current === plyKey) return;
-    inFlight.current = plyKey;
+    if (!canPlay || inputClaimed()) return;
+    const ticket = claimTableAction(actionLock.current, plyKey);
+    if (!ticket) return;
     setSentPly(plyKey);
-    const answer = onMove(from, to, promo);
-    if (answer)
-      void answer.then((ok) => {
-        if (ok) return;
-        if (inFlight.current === plyKey) inFlight.current = null;
+    setMoveProblem('');
+    const refused = () => {
+      if (latestKeys.current.plyKey !== plyKey) return;
+      if (releaseTableAction(actionLock.current, ticket)) {
         setSentPly((value) => (value === plyKey ? null : value));
-      });
+        setMoveProblem('수가 반영되지 않았어요. 기물을 다시 골라 주세요.');
+      }
+    };
+    try {
+      const answer = onMove(from, to, promo);
+      if (answer) void answer.then((ok) => { if (!ok) refused(); }, refused);
+    } catch { refused(); }
   };
   const choose = (sq: string) => {
     if (!canPlay) return;
@@ -89,6 +107,24 @@ export function ChessBoard({
     } else
       setSelected(board.get(sq as Square)?.color === board.turn() ? sq : null);
   };
+  const sendControl = (submit: () => void | Promise<boolean>) => {
+    if (controlsBusy || inputClaimed() || match.winner) return;
+    const ticket = claimTableAction(actionLock.current, controlKey + ':control');
+    if (!ticket) return;
+    setControlPending(controlKey);
+    setMoveProblem('');
+    const refused = () => {
+      if (latestKeys.current.controlKey !== controlKey) return;
+      if (releaseTableAction(actionLock.current, ticket)) {
+        setControlPending((value) => value === controlKey ? null : value);
+        setMoveProblem('요청이 반영되지 않았어요. 다시 선택해 주세요.');
+      }
+    };
+    try {
+      const answer = submit();
+      if (answer) void answer.then((ok) => { if (!ok) refused(); }, refused);
+    } catch { refused(); }
+  };
   // 미쿠 hosts the casino's chess table too: the same strip as the card tables.
   const history = board.history();
   const line = chessHostLine(match, seat, names, history.at(-1), round);
@@ -98,6 +134,11 @@ export function ChessBoard({
     (_, i) =>
       `${'abcdefgh'[flipped ? 7 - (i % 8) : i % 8]}${flipped ? 1 + Math.floor(i / 8) : 8 - Math.floor(i / 8)}`,
   );
+  const checked = board.isCheck(),
+    pending = controlsBusy && !match.winner,
+    status = match.winner ? match.reason : pending ? '선택을 보내고 있어요' : checked
+      ? `${seat === turn ? '내 킹이' : names[turn] + '의 킹이'} 체크 중이에요`
+      : seat === turn ? '내 차례 · 기물을 골라 주세요' : `${names[turn]}의 수를 기다려요`;
   return (
     <div className="l-chess-club">
       <DealerHost
@@ -124,18 +165,39 @@ export function ChessBoard({
       </DealerHost>
     <div className="l-chess-layout">
       <div>
-        <div className="l-chessboard" role="group" aria-label="체스판">
+        <output className={'l-chess-position-status' + (checked && !match.winner ? ' is-check' : '')}>
+          <strong>{status}</strong>
+          <span>{seat < 0 ? '관전' : seat === 0 ? '내 기물 · 백' : '내 기물 · 흑'}{selected && canPlay ? ` · ${selected}에서 ${new Set(legal.map((m) => m.to)).size}곳으로 이동 가능` : ''}</span>
+        </output>
+        <fieldset className="l-chessboard" data-table-controls aria-label="체스판" aria-describedby={keyboardHint} aria-busy={pending}>
           {squares.map((sq, i) => {
             const piece = board.get(sq as Square),
               last = match.moves.at(-1),
-              highlight = legal.some((m) => m.to === sq);
+              highlight = legal.some((m) => m.to === sq),
+              kingInCheck = checked && piece?.type === 'k' && piece.color === board.turn();
             return (
               <button
                 key={sq}
-                aria-label={`${sq}${piece ? ' ' + (piece.color === 'w' ? '백' : '흑') + ' ' + { k: '킹', q: '퀸', r: '룩', b: '비숍', n: '나이트', p: '폰' }[piece.type] : ' 빈 칸'}`}
+                aria-label={`${sq}${piece ? ' ' + (piece.color === 'w' ? '백' : '흑') + ' ' + { k: '킹', q: '퀸', r: '룩', b: '비숍', n: '나이트', p: '폰' }[piece.type] : ' 빈 칸'}${kingInCheck ? ' · 체크' : ''}${highlight ? ' · 이동 가능' : ''}`}
                 aria-pressed={selected === sq}
+                tabIndex={focused === sq ? 0 : -1}
+                onFocus={() => setFocused(sq)}
                 onClick={() => choose(sq)}
-                className={`${(Math.floor(i / 8) + (i % 8)) % 2 ? 'dark' : 'light'} ${highlight ? 'legal' : ''} ${selected === sq ? 'selected' : ''} ${last && (last.slice(0, 2) === sq || last.slice(2, 4) === sq) ? 'last' : ''}`}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && (selected || promotion)) {
+                    event.preventDefault(); event.stopPropagation(); setSelected(null); setPromotion(null); return;
+                  }
+                  const row = Math.floor(i / 8), col = i % 8;
+                  const next = event.key === 'ArrowUp' ? Math.max(0, row - 1) * 8 + col
+                    : event.key === 'ArrowDown' ? Math.min(7, row + 1) * 8 + col
+                      : event.key === 'ArrowLeft' ? row * 8 + Math.max(0, col - 1)
+                        : event.key === 'ArrowRight' ? row * 8 + Math.min(7, col + 1)
+                          : event.key === 'Home' ? row * 8 : event.key === 'End' ? row * 8 + 7 : null;
+                  if (next === null) return;
+                  event.preventDefault(); event.stopPropagation();
+                  event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('button')[next]?.focus();
+                }}
+                className={`${(Math.floor(i / 8) + (i % 8)) % 2 ? 'dark' : 'light'} ${highlight ? 'legal' : ''} ${selected === sq ? 'selected' : ''} ${last && (last.slice(0, 2) === sq || last.slice(2, 4) === sq) ? 'last' : ''} ${kingInCheck ? 'in-check' : ''}`}
               >
                 {i % 8 === 0 && <small className="rank">{sq[1]}</small>}
                 {i >= 56 && <small className="file">{sq[0]}</small>}
@@ -149,11 +211,12 @@ export function ChessBoard({
               </button>
             );
           })}
-        </div>
+        </fieldset>
+        <p className="l-chess-keyboard-hint" id={keyboardHint}>방향키로 칸 이동 · Enter로 선택 · Esc로 선택 취소</p>
+        {moveProblem && <p className="l-chess-move-problem" role="alert">{moveProblem}</p>}
         {promotion && (
-          <div
+          <fieldset
             className="l-promotion"
-            role="group"
             aria-label="승급할 기물 선택"
           >
             <strong>어떤 기물로 승급할까요?</strong>
@@ -176,7 +239,7 @@ export function ChessBoard({
                 <img src={art[board.turn() + p.toUpperCase()]} alt="" />
               </button>
             ))}
-          </div>
+          </fieldset>
         )}
       </div>
       <aside className="l-game-aside">
@@ -193,7 +256,7 @@ export function ChessBoard({
             Array.from(
               { length: Math.ceil(history.length / 2) },
               (_, i) => (
-                <div key={i}>
+                <div key={i} className={i === Math.floor((history.length - 1) / 2) ? 'is-latest' : ''}>
                   <small>{i + 1}.</small>
                   <span>{history[i * 2]}</span>
                   <span>{history[i * 2 + 1] ?? '—'}</span>
@@ -231,16 +294,16 @@ export function ChessBoard({
           (match.drawOffer === 1 - seat ? (
             <div className="l-inline-confirm">
               <span>{names[1 - seat]}의 무승부 제안</span>
-              <button onClick={() => onDraw('accept')}>수락</button>
-              <button onClick={() => onDraw('decline')}>거절</button>
+              <button disabled={controlsBusy} onClick={() => sendControl(() => onDraw('accept'))}>수락</button>
+              <button disabled={controlsBusy} onClick={() => sendControl(() => onDraw('decline'))}>거절</button>
             </div>
           ) : match.drawOffer === seat ? (
             <p className="l-text">무승부를 제안했어요. 답을 기다리는 중…</p>
           ) : (
             <button
               className="l-text"
-              disabled={match.drawOfferPly?.[seat] === match.moves.length}
-              onClick={() => onDraw('offer')}
+              disabled={controlsBusy || match.drawOfferPly?.[seat] === match.moves.length}
+              onClick={() => sendControl(() => onDraw('offer'))}
             >
               무승부 제안
             </button>
@@ -250,11 +313,11 @@ export function ChessBoard({
           (resign ? (
             <div className="l-inline-confirm">
               <span>이번 판을 기권할까요?</span>
-              <button onClick={onResign}>기권</button>
-              <button onClick={() => setResign(false)}>계속</button>
+              <button disabled={controlsBusy} onClick={() => sendControl(onResign)}>기권</button>
+              <button disabled={controlsBusy} onClick={() => setResign(false)}>계속</button>
             </div>
           ) : (
-            <button className="l-text" onClick={() => setResign(true)}>
+            <button className="l-text" disabled={controlsBusy} onClick={() => setResign(true)}>
               기권하기
             </button>
           ))}

@@ -42,6 +42,7 @@
   z-index: -1;
 }
 .p-felt {
+  pointer-events: none;
   position: absolute;
   inset: 15% 8%;
   border: 14px solid var(--ink-700);
@@ -258,7 +259,7 @@
   border: 1px solid color-mix(in srgb, var(--pal-lime-72) 25%, transparent);
   background: color-mix(in srgb, var(--pal-teal-23) 31%, transparent);
   box-shadow: none;
-  color: color-mix(in srgb, var(--pal-grey-62) 19%, transparent);
+  color: var(--text-soft);
   font-size: 25px;
 }
 .p-pot {
@@ -394,11 +395,8 @@
   border-color: var(--pal-green-77);
   background: var(--pal-teal-33);
 }
-.p-seat.folded .p-seat-cards {
+.p-seat.folded .p-seat-cards > .p-card {
   opacity: 0.38;
-}
-.p-seat.folded .p-seat-label {
-  opacity: 0.55;
 }
 .p-fold-stamp {
   position: absolute;
@@ -475,11 +473,19 @@
 }
 .p-turn-copy small {
   font-size: var(--fs-cap);
-  color: var(--pal-grey-62);
+  color: var(--text-soft);
 }
 .p-actions {
   width: 530px;
   max-width: 100%;
+}
+.p-raise-help {
+  display: block;
+  margin-top: var(--sp-2);
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
 .p-raise-control {
   display: flex;

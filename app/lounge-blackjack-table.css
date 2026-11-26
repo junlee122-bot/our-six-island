@@ -10,6 +10,11 @@
   --dh-muted: var(--pal-grey-71);
   --dh-ring: var(--pal-orange-65);
 }
+.l-app .l-table-stage .dh-host.bj-announcement {
+  position: static;
+  top: auto;
+  z-index: auto;
+}
 .bj-felt {
   background: radial-gradient(ellipse at 50% 20%, var(--pal-teal-43), var(--pal-teal-23) 75%);
   padding: 24px 22px 28px;

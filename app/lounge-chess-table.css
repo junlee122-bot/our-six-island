@@ -1,0 +1,48 @@
+/* Table-only state cues; the existing casino board and piece artwork stay shared. */
+.l-app .l-table-stage .l-chess-club > .dh-host.c-host {
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+.l-chessboard { margin: 0; padding: 0; min-inline-size: 0; }
+.l-promotion { margin-inline: 0; border: 0; min-inline-size: 0; }
+.l-chess-position-status {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-s);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.l-chess-position-status strong { font-size: var(--fs-body-s); font-weight: var(--fw-bold); }
+.l-chess-position-status span { font-size: var(--fs-cap); color: var(--text-soft); }
+.l-chess-position-status.is-check { border-color: var(--danger); }
+.l-app .l-game-screen .l-chessboard button.in-check {
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--danger) 62%, transparent), transparent 76%);
+  outline: 3px solid var(--danger);
+  outline-offset: -3px;
+}
+.l-chessboard button:focus-visible { outline: 3px solid var(--focus); outline-offset: calc(-1 * var(--sp-1)); z-index: var(--z-raised); }
+/* Opaque coordinate chips stay readable on either square and over the art. */
+.l-app .l-game-screen .l-chessboard[data-table-controls] button small:is(.rank, .file) {
+  background: var(--surface-raised);
+  color: var(--text);
+  opacity: 1;
+  padding-inline: var(--sp-1);
+  border-radius: var(--r-s);
+  font-size: var(--fs-cap);
+  font-weight: var(--fw-semi);
+  line-height: 1.25;
+}
+.l-chess-keyboard-hint { margin: var(--sp-2) 0 0; font-size: var(--fs-cap); color: var(--text-soft); }
+.l-chess-move-problem { margin: var(--sp-2) 0 0; font-size: var(--fs-cap); color: var(--danger); }
+.l-move-log > div.is-latest { background: var(--accent-soft); color: var(--text); border-radius: var(--r-s); font-weight: var(--fw-bold); }
+.l-app .l-game-screen .l-chess-club .l-game-aside .l-move-log small {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}

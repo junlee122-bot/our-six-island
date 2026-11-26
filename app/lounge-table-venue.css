@@ -178,7 +178,13 @@
   border-bottom-color: var(--venue-line);
 }
 .l-app .l-game-screen[data-venue='hall'] > header small {
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
+}
+.l-app .l-game-screen[data-venue='hall'] .l-game-live {
+  color: var(--text-soft);
+}
+.l-game-screen[data-venue='hall'] :is(.s-host, .g-host) {
+  --dh-muted: var(--text-soft);
 }
 .l-app .l-game-screen[data-venue='hall'] > header .l-game-back {
   background: var(--paper-100);
@@ -360,6 +366,9 @@
   --dh-muted: var(--pal-orange-66);
   --dh-text: var(--paper-100);
   --dh-ring: var(--pal-orange-71);
+}
+.l-game-screen[data-venue='tavern'] .turn-timer {
+  --turn-text: var(--text-on-frame);
 }
 .l-app .l-game-screen[data-venue='tavern'] .l-modal {
   color: var(--ink-900);

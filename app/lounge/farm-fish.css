@@ -794,6 +794,17 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-angler-now li[data-rarity='legend']::after {
   background: var(--pal-violet-54);
 }
+.l-angler-now li[data-rarity='uncommon']::after {
+  content: '';
+  position: absolute;
+  right: var(--sp-3);
+  top: 0;
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--ring-line);
+}
 .l-angler-quiet {
   width: auto !important;
   font-size: 12px !important;
@@ -996,6 +1007,10 @@ dialog.l-modal.l-ledger > header .l-icon {
 .l-catch-rarity[data-rarity='rare'] {
   background: var(--ff-gold);
   color: var(--ff-ink);
+}
+.l-catch-rarity[data-rarity='uncommon'] {
+  background: var(--accent-soft);
+  color: var(--text);
 }
 .l-catch-rarity[data-rarity='legend'] {
   background: var(--pal-violet-54);

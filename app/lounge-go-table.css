@@ -1,0 +1,15 @@
+/* Go-stop's long card surface must not scroll capture controls under its host. */
+.l-app .l-table-stage .g-game > .dh-host.g-host {
+  position: static;
+  top: auto;
+  z-index: auto;
+}
+.l-app .l-game-screen .g-game > .l-go-result b {
+  color: var(--text);
+  font-size: var(--fs-title-s);
+  font-weight: var(--fw-bold);
+}
+.l-app .l-game-screen .g-game .g-table-footer > span {
+  color: var(--text-soft);
+  font-size: var(--fs-cap);
+}

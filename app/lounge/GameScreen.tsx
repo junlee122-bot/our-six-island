@@ -33,6 +33,8 @@ import {
 import { VENUES } from '../lounge-venues';
 import { PartyBar } from '../lounge-party-bar';
 import type { Notify } from './Toast';
+import { useTableFeedback } from './use-table-feedback';
+import './table-feedback.css';
 import '../lounge-game-fit.css';
 import '../lounge-table-venue.css';
 
@@ -43,7 +45,7 @@ const TableGuide = lazyRetry(() =>
 
 /** Each table's action area (the part that must be on screen on my turn). */
 const TABLE_CONTROLS =
-  '.p-controls, .s-controls, .bj-controls, .l-action-bar, .l-go-decision, .l-go-hand';
+  '[data-table-controls]';
 
 /**
  * One table look per venue: the casino's games (holdem, blackjack, chess) are
@@ -163,6 +165,13 @@ export function GameScreen({
     }>({ table: belongs && table ? table : null, dissolved: null }),
     dissolved = seen.dissolved,
     settlement = view.wallet.history.find((h) => h.id === match?.id)?.delta;
+  const actionScope = match
+    ? `${kind}:${match.id}:${'revision' in match ? match.revision : view.chess?.moves.length}:${kind === 'chess' ? view.chess?.drawOffer : ''}:${ended ? 'over' : 'play'}`
+    : `${kind}:waiting`;
+  const { send, feedback } = useTableFeedback(room, actionScope);
+  const controlsPhase = kind === 'gostop'
+    ? displayedGoRevision
+    : match && 'phase' in match ? match.phase : '';
   if (belongs && table) {
     if (
       seen.table?.members !== table.members ||
@@ -216,19 +225,29 @@ export function GameScreen({
   useEffect(() => {
     if (turn && !wasTurn.current) {
       attention('turn', `${GAME_INFO[kind].name} · 내 차례예요.`);
-      // 'nearest': bring the action bar in without pushing the host's line
-      // (and the dealer's cards) off the top at 1440×900. On desktop the
-      // stage scrolls inside itself (if at all), so reveal its controls.
-      const bar = window.matchMedia('(min-width: 1024px)').matches
-        ? stage.current?.querySelector(TABLE_CONTROLS)
-        : null;
-      (bar ?? stage.current)?.scrollIntoView({
-        block: 'nearest',
-        behavior: 'smooth',
-      });
     }
     wasTurn.current = turn;
-  }, [turn, kind]);
+    if (!turn || guide || leave) return;
+    const host = stage.current;
+    if (!host) return;
+    const reveal = () => {
+      if (document.querySelector('dialog[open]')) return false;
+      const bar = [...host.querySelectorAll<HTMLElement>(TABLE_CONTROLS)]
+        .find((el) => el.getClientRects().length > 0);
+      if (!bar) return false;
+      (window.matchMedia('(min-width: 1024px)').matches ? bar : host).scrollIntoView({
+        block: 'nearest',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      });
+      return true;
+    };
+    if (reveal()) return;
+    // Lazy table chunks may arrive after the first turn effect. Observe only
+    // until their controls exist, and never pull focus out of a dialog.
+    const observer = new MutationObserver(() => { if (reveal()) observer.disconnect(); });
+    observer.observe(host, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [turn, kind, controlsPhase, guide, leave]);
   useEffect(() => {
     if (ended && !wasEnded.current && seat >= 0) {
       // This match's own result (the newest history row can be another game).
@@ -241,7 +260,7 @@ export function GameScreen({
     <A,>(build: (a: A) => Parameters<CloudRoom['action']>[0]) =>
     // Returns the Promise so tables can unlock when the server answers.
     (a: A) =>
-      room.action(build(a));
+      send(build(a));
   const dark = DARK.includes(kind);
   const sendReaction = (id: ReactionId) =>
     room.action({ kind: 'reaction', id, scope: kind, matchId: match?.id });
@@ -258,6 +277,8 @@ export function GameScreen({
       className={'l-game-screen ' + kind + (dark ? ' is-dark' : '')}
       data-venue={VENUES[TABLE_AREA[kind]].venue}
       data-my-turn={turn || undefined}
+      data-match-id={match?.id}
+      data-match-revision={match && 'revision' in match ? match.revision : view.chess?.moves.length}
     >
       <header>
         <button
@@ -365,6 +386,11 @@ export function GameScreen({
               : alone
                 ? `딜러와 혼자 치는 판이에요. ${GAME_COPY[kind].moneyRule}`
                 : GAME_COPY[kind].moneyRule}
+            {feedback && <output className="l-table-response" data-testid="table-response" data-state={feedback} aria-live="polite">
+              {feedback === 'queued' ? '앞선 동작이 끝나면 선택을 보낼게요.'
+                : feedback === 'sending' ? '선택을 처리하고 있어요.'
+                  : '선택 결과를 확인하고 다시 눌러 주세요.'}
+            </output>}
           </span>
           <b>
             <Coins size={14} /> {formatBeom(view.wallet.balance)}
@@ -412,7 +438,7 @@ export function GameScreen({
                     round={host.round}
                     reaction={host.reaction}
                     onMove={(from, to, promotion) =>
-                      room.action({
+                      send({
                         kind: 'chess',
                         id: view.chess!.id,
                         ply: view.chess!.moves.length,
@@ -422,10 +448,10 @@ export function GameScreen({
                       })
                     }
                     onResign={() =>
-                      void room.action({ kind: 'resign', id: view.chess!.id })
+                      send({ kind: 'resign', id: view.chess!.id })
                     }
                     onDraw={(op) =>
-                      void room.action({ kind: 'draw', id: view.chess!.id, op })
+                      send({ kind: 'draw', id: view.chess!.id, op })
                     }
                   />
                 ) : kind === 'yacht' ? (

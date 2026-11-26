@@ -688,7 +688,11 @@ async function runView(mobile = false) {
       await perf.start();
       await page.keyboard.down('Space'); await sleep(700);
       const lifted = parseFloat(await zone());
+      await page.keyboard.down('ArrowUp');
+      await page.keyboard.up('ArrowUp');
+      assert.equal(await page.getByTestId('fish-reel').getAttribute('data-pressed'), 'true', 'releasing the auxiliary key keeps Space held');
       await page.keyboard.up('Space');
+      assert.equal(await page.getByTestId('fish-reel').getAttribute('data-pressed'), null, 'releasing the final hold key lowers the zone');
       res.fishingPerf.fight = await perf.stop();
       console.log(`${name} fishing perf ` + JSON.stringify({ ...res.fishingPerf, hooks: res.fishingHooks, misses: res.fishingMisses }));
       assert.ok(lifted > 0, 'holding lifts the catch zone');

@@ -111,19 +111,40 @@ export function chessAnswerDraw(
     ? { ...game, drawOffer: null, winner: 'draw', reason: '무승부 합의' }
     : { ...game, drawOffer: null };
 }
-/** Side to move ran out of time. A lone king (or king + one minor) cannot win. */
+/**
+ * Material-only impossibility, for the side whose opponent ran out of time.
+ * FIDE 6.9 asks whether even a cooperative legal line could end in mate.
+ * The defender's pieces can block its own king, so one minor is not always
+ * insufficient. This intentionally does not solve fortresses or forced lines.
+ */
+export function chessInsufficientFor(c: Chess, color: 'w' | 'b'): boolean {
+  const material = c.board().flat().filter((piece) => piece && piece.type !== 'k'),
+    ours = material.filter((piece) => piece!.color === color);
+  if (!ours.length) return true;
+  if (ours.length === 1 && ours[0]!.type === 'n') {
+    // A defending queen cannot supply the self-blocking help that a pawn,
+    // rook or minor can. More than one attacking knight can still mate.
+    return material.every((piece) => piece!.color === color || piece!.type === 'q');
+  }
+  if (ours.every((piece) => piece!.type === 'b')) {
+    if (material.some((piece) => piece!.type === 'p' || piece!.type === 'n')) return false;
+    const tones = new Set(material.filter((piece) => piece!.type === 'b').map((piece) => {
+      const square = piece!.square;
+      return (square.charCodeAt(0) - 97 + Number(square[1])) % 2;
+    }));
+    // Even promoted bishops on the same square colour cannot provide mate
+    // here; an opposite-colour bishop, pawn or knight can change that.
+    return tones.size === 1;
+  }
+  return false;
+}
+/** Side to move ran out of time; preserve a draw when its opponent cannot mate. */
 export function chessTimeout(game: ChessMatch): ChessMatch | null {
   if (game.winner) return null;
   const c = chessBoard(game),
     loser = c.turn(),
     winner = loser === 'w' ? 'b' : 'w';
-  const pieces = c
-    .board()
-    .flat()
-    .filter((p) => p && p.color === winner && p.type !== 'k');
-  const cannotMate =
-    pieces.length === 0 ||
-    (pieces.length === 1 && ['n', 'b'].includes(pieces[0]!.type));
+  const cannotMate = chessInsufficientFor(c, winner);
   return cannotMate
     ? { ...game, drawOffer: null, winner: 'draw', reason: '시간 초과 · 기물 부족' }
     : { ...game, drawOffer: null, winner, reason: '시간 초과' };

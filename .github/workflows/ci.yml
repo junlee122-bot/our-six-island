@@ -13,6 +13,45 @@ permissions:
   contents: read
 
 jobs:
+  minigames:
+    # Actual table entry, spectator privacy and interactions in both viewports.
+    # Four isolated shards keep screenshots within each runner's time budget.
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble@sha256:f1e7e01021efd65dd1a2c56064be399f3e4de00fd021ac561325f2bfbb2b837a
+      options: --ipc=host
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        view: [fhd, s]
+        group:
+          - name: cards
+            games: poker,blackjack,seotda,liarsbar
+          - name: boards
+            games: chess,gostop,yacht,liar
+    name: minigames (${{ matrix.group.name }}, ${{ matrix.view }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Pages build (scratch output)
+        run: node scripts/build-standalone.mjs --out /tmp/minigames-pages --site-url /
+      - name: Game tables and spectator privacy
+        run: node --experimental-strip-types scripts/verify-minigames-ui.mjs --pages /tmp/minigames-pages --out /tmp/minigames --games ${{ matrix.group.games }} --views ${{ matrix.view }}
+      - name: Keep game table evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minigames-${{ matrix.group.name }}-${{ matrix.view }}
+          path: /tmp/minigames
+
   walking-portals:
     runs-on: ubuntu-24.04
     container:

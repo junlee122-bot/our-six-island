@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import type { CloudRoom, CloudRoomView } from '../lounge-cloud-room';
-import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type FishDef, type Spot } from '../lounge-items';
+import { FISH, FISH_BY_ID, ITEM_BY_ID, SPOT_INFO, type Spot } from '../lounge-items';
 import { REEL_REASON } from '../lounge-life-ui';
 import { sellQuote, itemName } from '../lounge-life-plus';
 import { anglerCandidates, biteDelayMs, fishGrams, gramsText, rarityOf, type AnglerLast, type AnglingView } from '../lounge-fish-engine';
@@ -39,8 +39,8 @@ type Result = Omit<AnglerLast, 'at'> & { isNew?: boolean; pressed?: boolean };
 
 /** An honest-looking weight for a fish of `cm` (display only). */
 export const fishWeight = (id: string, cm: number) => gramsText(fishGrams(id, cm));
-export const fishRarity = (f: FishDef) => (f.weight <= 1 ? 'legend' : f.weight < 10 ? 'rare' : 'common');
-const RARITY_NAME = { legend: '전설', rare: '드묾', common: '흔함' } as const;
+export const fishRarity = rarityOf;
+const RARITY_NAME = { legend: '전설', rare: '드묾', uncommon: '보통', common: '흔함' } as const;
 const QUALITY_NAME = ['보통', '은별', '금별'] as const;
 const BAIT_KEY = 'beomtadew.fishing.bait';
 const readBait = (): BaitId | '' => {

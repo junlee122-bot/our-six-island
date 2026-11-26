@@ -714,34 +714,34 @@
 .l-game-watch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 0 0 14px;
-  border: 1px solid var(--pal-amber-82);
+  gap: var(--sp-2);
+  padding: 0 0 0 var(--sp-3);
+  border: 1px solid var(--line);
   border-radius: var(--r-round);
   background: var(--surface-raised);
-  color: var(--wood-500);
-  font-size: 14px;
-  font-weight: 800;
+  color: var(--text);
+  font-size: var(--fs-body-s);
+  font-weight: var(--fw-bold);
 }
 .l-game-watch > button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--sp-1);
   min-height: 44px;
-  padding: 0 16px;
+  padding: 0 var(--sp-4);
   border: 0;
   border-radius: var(--r-round);
-  background: var(--wood-500);
-  color: var(--note-50);
+  background: var(--frame);
+  color: var(--text-on-frame);
   font: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-body-s);
   cursor: pointer;
 }
 .l-game-watch > button:hover {
-  background: var(--wood-500);
+  background: var(--frame-edge);
 }
 .l-game-watch > button:focus-visible {
-  outline: 3px solid var(--gold-400);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 /* 연습 판 / 혼자 하기 tag next to the game's name (playtest A-3). */

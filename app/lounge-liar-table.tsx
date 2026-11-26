@@ -19,6 +19,7 @@ import { loungeAudio } from './lounge-audio';
 import { FriendHost } from './lounge-friend-host';
 import { SeatPortrait, type SeatFigure } from './lounge-dealer-host';
 import { ChatPanel } from './lounge/ChatPanel';
+import { claimTableAction, newTableActionLock, releaseTableAction, tableActionKey } from './lounge-table-controls';
 import type { CloudRoom, CloudRoomView } from './lounge-cloud-room';
 import { josa } from './lounge-text';
 import './lounge-liar-table.css';
@@ -51,20 +52,24 @@ export function LiarTable({
   reaction?: unknown;
 }) {
   const over = g.phase === 'over';
-  const version = `${g.id}:${g.revision}`;
+  const version = tableActionKey(g);
   const [sent, setSent] = useState<string | null>(null);
-  const inFlight = useRef<string | null>(null);
+  const inFlight = useRef(newTableActionLock());
   const locked = sent === version;
-  const [hint, setHint] = useState('');
+  const [draft, setDraft] = useState({ id: g.id, text: '' });
+  const hint = draft.id === g.id ? draft.text : '';
+  const voteKey = `${g.id}:${g.voteRound}`;
+  const [votePick, setVotePick] = useState<{ key: string; target: number | null }>({ key: '', target: null });
+  const selectedVote = votePick.key === voteKey && votePick.target !== null && g.candidates.includes(votePick.target) ? votePick.target : null;
   const hintRef = useRef<HTMLInputElement>(null);
   const act = (a: LiarAction) => {
-    if (locked || inFlight.current === version) return;
+    if (locked) return;
+    const ticket = claimTableAction(inFlight.current, version);
+    if (!ticket) return;
     if (a.kind === 'vote') loungeAudio.sample('drop');
-    inFlight.current = version;
     setSent(version);
     awaitAnswer(onAction(a), () => {
-      inFlight.current = null;
-      setSent(null);
+      if (releaseTableAction(inFlight.current, ticket)) setSent((key) => key === version ? null : key);
     });
   };
   // Table sounds: the cards go out, a turn passes, the vote opens / closes,
@@ -221,6 +226,7 @@ export function LiarTable({
                     (g.phase === 'hint' && g.turn === i ? 'is-turn ' : '') +
                     (isLiar ? 'is-liar ' : '') +
                     (mineVote ? 'is-my-vote ' : '') +
+                    (g.legal.vote && selectedVote === i ? 'is-selected ' : '') +
                     (away(i) ? 'is-away ' : '')
                   }
                 >
@@ -228,14 +234,15 @@ export function LiarTable({
                     <button
                       type="button"
                       className="lg-vote-target"
-                      onClick={() => act({ kind: 'vote', target: i })}
+                      onClick={() => { if (!locked) setVotePick({ key: voteKey, target: i }); }}
                       disabled={locked}
                       data-testid={`liar-vote-${i}`}
-                      aria-label={`${n} 님을 라이어로 지목`}
+                      aria-label={`${n} 님을 투표 후보로 선택`}
+                      aria-pressed={selectedVote === i}
                     >
                       {content}
                       <span className="lg-vote-cta">
-                        <Vote size={15} aria-hidden="true" /> 지목
+                        <Vote size={15} aria-hidden="true" /> {selectedVote === i ? '선택함' : '선택'}
                       </span>
                     </button>
                   ) : (
@@ -248,19 +255,20 @@ export function LiarTable({
           {g.legal.hint && (
             <form
               className="lg-hint-form"
+              data-table-controls
               onSubmit={(e) => {
                 e.preventDefault();
                 const text = hint.trim();
                 if (!text) return;
                 act({ kind: 'hint', text });
-                setHint('');
               }}
             >
               <input
                 ref={hintRef}
                 value={hint}
                 maxLength={LIAR_HINT_MAX}
-                onChange={(e) => setHint(e.target.value)}
+                onChange={(e) => setDraft({ id: g.id, text: e.target.value })}
+                disabled={locked}
                 placeholder={g.role === 'liar' ? `'${g.category}'에 어울리는 한 줄 (들키지 않게!)` : '제시어를 설명하는 한 줄'}
                 aria-label="내 힌트"
                 data-testid="liar-hint-input"
@@ -271,7 +279,7 @@ export function LiarTable({
             </form>
           )}
           {g.phase === 'discuss' && seat >= 0 && (
-            <div className="lg-bar">
+            <div className="lg-bar" data-table-controls>
               <p>
                 <MessageCircle size={16} aria-hidden="true" /> 오른쪽 채팅으로 토론해요. 모두 &lsquo;투표로&rsquo;를 누르거나 시간이 끝나면 투표해요.
               </p>
@@ -288,16 +296,22 @@ export function LiarTable({
             </div>
           )}
           {g.phase === 'vote' && seat >= 0 && (
-            <p className="lg-bar-note" data-testid="liar-vote-note">
+            <div className="lg-vote-confirm" data-table-controls>
+            <p className="lg-bar-note" data-testid="liar-vote-note" aria-live="polite">
               {g.legal.vote
-                ? '위에서 라이어라고 생각하는 친구를 눌러 지목해요. 한 번 고르면 바꿀 수 없어요.'
+                ? selectedVote === null ? '라이어라고 생각하는 친구를 고른 뒤 투표를 확정해요.' : `${josa(names[selectedVote], '을/를')} 선택했어요. 확정한 표는 바꿀 수 없어요.`
                 : g.myVote !== null && g.myVote >= 0
                   ? `${josa(names[g.myVote], '을/를')} 지목했어요. 다른 친구를 기다려요 (${votedCount}/${g.n}).`
                   : `투표를 기다려요 (${votedCount}/${g.n}).`}
             </p>
+            {g.legal.vote && <button type="button" className="l-primary" data-testid="liar-vote-confirm"
+              disabled={selectedVote === null || locked} onClick={() => { if (selectedVote !== null) act({ kind: 'vote', target: selectedVote }); }}>
+              <Vote size={16} aria-hidden="true" /> {selectedVote === null ? '투표할 친구를 골라요' : `${names[selectedVote]} 님에게 투표 확정`}
+            </button>}
+            </div>
           )}
           {g.phase === 'guess' && (
-            <section className="lg-guess" aria-label="라이어의 마지막 답">
+            <section className="lg-guess" aria-label="라이어의 마지막 답" data-table-controls={g.legal.guess || undefined}>
               <h3>
                 {g.role === 'liar'
                   ? `제시어는 뭘까요? (${g.category})`

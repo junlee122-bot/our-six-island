@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState, type CSSProperties } from 'react';
+import { useId, useRef, useState, type CSSProperties } from 'react';
 import { ChevronDown, Coins, Crown, Spade } from './ui/icons';
 import {
   POKER_RANKS,
@@ -12,6 +12,13 @@ import {
 import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import {
+  claimTableAction,
+  newTableActionLock,
+  releaseTableAction,
+  tableActionKey,
+  tableBetPreview,
+} from './lounge-table-controls';
 import { formatBeom } from './lounge-text';
 import {
   POKER_RANK_TIPS,
@@ -172,30 +179,34 @@ export function PokerTable({
       new Set(contested.map((p) => [...p.eligible].sort((a, b) => a - b).join(','))).size > 1;
   const [raise, setRaise] = useState(g.legal.minTo),
     [rules, setRules] = useState(false),
-    [sent, setSent] = useState<number | null>(null),
-    inFlight = useRef<number | null>(null);
+    [sent, setSent] = useState<string | null>(null),
+    inFlight = useRef(newTableActionLock()),
+    betHelpId = useId();
   // A new revision resets the raise input and the send lock during render
   // (React's "adjust state when a prop changes" pattern, no effect needed).
-  const viewKey = `${g.id}:${g.revision}:${g.legal.minTo}`,
+  const version = tableActionKey(g),
+    viewKey = `${version}:${g.legal.minTo}`,
     [seenKey, setSeenKey] = useState(viewKey);
   if (seenKey !== viewKey) {
     setSeenKey(viewKey);
     setRaise(g.legal.minTo);
     setSent(null);
   }
-  const locked = sent === g.revision,
+  const locked = sent === version,
     legal = g.legal,
+    raisePreview = tableBetPreview(raise, g.bets[seat], g.stacks[seat], legal),
     pot = g.committed.reduce((a, b) => a + b, 0),
     // Settled pot: what was fought over (returned bets are shown apart).
     shownPot = over ? pokerContested(g) : pot,
     act = (a: PokerAction) => {
       // The ref also stops a second tap that lands before React re-renders.
-      if (!legal.enabled || locked || inFlight.current === g.revision) return;
-      inFlight.current = g.revision;
-      setSent(g.revision);
+      if (!legal.enabled || locked) return;
+      const ticket = claimTableAction(inFlight.current, version);
+      if (!ticket) return;
+      setSent(version);
       awaitAnswer(onAction(a), () => {
-        inFlight.current = null;
-        setSent(null);
+        if (releaseTableAction(inFlight.current, ticket))
+          setSent((current) => current === version ? null : current);
       });
     },
     point = (i: number) =>
@@ -222,7 +233,7 @@ export function PokerTable({
       />
       <div className="p-table-wrap">
         <div className="p-table-grain" />
-        <div className="p-felt">
+        <div className="p-felt" aria-hidden="true">
           <span className="p-felt-brand">
             별빛 카지노<span>노 리밋 · 텍사스 홀덤</span>
           </span>
@@ -386,7 +397,7 @@ export function PokerTable({
         </div>
       )}
       {g.phase !== 'over' && (
-        <div className="p-controls">
+        <div className="p-controls" data-table-controls>
           <div className="p-turn-copy">
             <span>
               {seat < 0
@@ -398,11 +409,13 @@ export function PokerTable({
             <strong>
               {seat < 0
                 ? '친구들의 플레이를 관전 중'
-                : legal.enabled
-                  ? '어떻게 플레이할까요?'
-                  : g.turn < 0
-                    ? '미쿠가 다음 카드를 준비해요'
-                    : `${sir(names[g.turn])} 차례`}
+                : locked
+                  ? '선택을 전달하는 중…'
+                  : legal.enabled
+                    ? '어떻게 플레이할까요?'
+                    : g.turn < 0
+                      ? '미쿠가 다음 카드를 준비해요'
+                      : `${sir(names[g.turn])} 차례`}
             </strong>
             <small>
               블라인드 {beom(g.smallBlind)} / {beom(g.bigBlind)}
@@ -433,6 +446,8 @@ export function PokerTable({
                   {g.currentBet === 0 ? '베팅 금액' : '레이즈 총액'}{' '}
                   <input
                     aria-label={g.currentBet === 0 ? '베팅 금액' : '레이즈 총액'}
+                    aria-describedby={legal.canRaise ? betHelpId : undefined}
+                    aria-invalid={legal.canRaise && !raisePreview}
                     type="number"
                     min={legal.minTo}
                     max={legal.maxTo}
@@ -494,9 +509,7 @@ export function PokerTable({
                   disabled={
                     !legal.canRaise ||
                     locked ||
-                    !Number.isInteger(raise) ||
-                    raise < legal.minTo ||
-                    raise > legal.maxTo
+                    !raisePreview
                   }
                   onClick={() => act({ kind: 'raise', to: raise })}
                 >
@@ -510,6 +523,13 @@ export function PokerTable({
                   올인
                 </button>
               </div>
+              {legal.canRaise && (
+                <small id={betHelpId} className="p-raise-help" aria-live="polite" data-testid="poker-bet-preview">
+                  {raisePreview
+                    ? `지금 ${beom(raisePreview.additional)} 추가 · 남을 칩 ${beom(raisePreview.remaining)}${raisePreview.allIn ? ' · 올인' : ''}`
+                    : `총액 ${beom(legal.minTo)}~${beom(legal.maxTo)} 사이의 정수를 입력해 주세요.`}
+                </small>
+              )}
             </div>
           )}
         </div>

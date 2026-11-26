@@ -173,6 +173,11 @@ export function yachtTotals(row: readonly (number | null)[]) {
   return { upper, bonus, total: sum(row.map((n) => n ?? 0)) + bonus };
 }
 
+/** Competition ranks: equal totals share a place, even below the winner. */
+export function yachtRanks(totals: readonly number[]): number[] {
+  return totals.map((total) => 1 + totals.filter((other) => other > total).length);
+}
+
 /** Winner takes the pot; tied winners split it (remainder seat by seat). */
 export function yachtSettlement(totals: readonly number[], stake: number) {
   const best = Math.max(...totals);

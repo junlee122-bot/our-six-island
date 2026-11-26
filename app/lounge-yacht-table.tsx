@@ -13,6 +13,7 @@ import {
   YACHT_ROLLS,
   YACHT_ROUNDS,
   yachtBest,
+  yachtRanks,
   yachtTotals,
   type YachtAction,
   type YachtCategory,
@@ -25,6 +26,7 @@ import { FriendHost } from './lounge-friend-host';
 import { SeatPortrait, type SeatFigure } from './lounge-dealer-host';
 import { loungeAudio } from './lounge-audio';
 import { formatBeom, josa } from './lounge-text';
+import { claimTableAction, isTableActionPending, newTableActionLock, releaseTableAction, tableActionKey } from './lounge-table-controls';
 import './lounge-yacht-table.css';
 
 /** Pip positions (3×3 grid cells) of each face. */
@@ -104,21 +106,21 @@ export function YachtTable({
   const [hold, setHold] = useState({ key: holdKey, held: g.held });
   const held = hold.key === holdKey ? hold.held : g.rolls ? g.held : [false, false, false, false, false];
   const setHeld = (next: boolean[]) => setHold({ key: holdKey, held: next });
-  const version = `${g.id}:${g.revision}`;
+  const version = tableActionKey(g);
   const [sent, setSent] = useState<string | null>(null);
-  const inFlight = useRef<string | null>(null);
+  const inFlight = useRef(newTableActionLock());
   const locked = sent === version;
   const open = YACHT_CATEGORIES.filter((_, i) => seat >= 0 && g.sheet[seat]?.[i] === null);
   const best = mine && g.rolls > 0 && seat >= 0 ? yachtBest(g.dice, g.sheet[seat]) : null;
   const [cursor, setCursor] = useState<{ key: string; cat: YachtCategory | null }>({ key: '', cat: null });
   const cat = cursor.key === holdKey && cursor.cat && open.includes(cursor.cat) ? cursor.cat : best;
   const act = (a: YachtAction) => {
-    if (!mine || locked || inFlight.current === version) return;
-    inFlight.current = version;
+    if (!mine || locked) return;
+    const ticket = claimTableAction(inFlight.current, version);
+    if (!ticket) return;
     setSent(version);
     awaitAnswer(onAction(a), () => {
-      inFlight.current = null;
-      setSent(null);
+      if (releaseTableAction(inFlight.current, ticket)) setSent((key) => key === version ? null : key);
     });
   };
   const roll = () => {
@@ -132,9 +134,14 @@ export function YachtTable({
     act({ kind: 'score', category: c });
   };
   const toggle = (i: number) => {
-    if (!mine || g.rolls === 0 || g.rolls >= YACHT_ROLLS) return;
+    if (!mine || locked || isTableActionPending(inFlight.current, version) || g.rolls === 0 || g.rolls >= YACHT_ROLLS) return;
     loungeAudio.sample('dice-grab', () => loungeAudio.table('flip', 1), 0.8);
     setHeld(held.map((h, j) => (j === i ? !h : h)));
+  };
+  const chooseCategory = (c: YachtCategory) => {
+    if (!mine || locked || isTableActionPending(inFlight.current, version) || g.rolls === 0 || !open.includes(c)) return;
+    setCursor({ key: holdKey, cat: c });
+    loungeAudio.sample('select');
   };
   // Dice sounds: each throw rattles (one die for 당근), a written score clicks.
   const lastRoll = useRef(g.rollCount);
@@ -153,7 +160,7 @@ export function YachtTable({
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
   useEffect(() => {
     keys.current = (e) => {
-      if (!mine) return false;
+      if (!mine || locked || isTableActionPending(inFlight.current, version)) return false;
       if (e.code === 'Space') {
         roll();
         return true;
@@ -193,8 +200,9 @@ export function YachtTable({
   const away = (i: number) => !!g.away?.includes(i);
   const turnName = g.turn >= 0 ? names[g.turn] : '';
   const totals = g.sheet.map((row) => yachtTotals(row));
+  const ranks = yachtRanks(totals.map((t) => t.total));
   const ranking = totals
-    .map((t, i) => ({ seat: i, total: t.total }))
+    .map((t, i) => ({ seat: i, total: t.total, rank: ranks[i] }))
     .sort((a, b) => b.total - a.total || a.seat - b.seat);
   // The 진행 line.
   const line = over
@@ -264,7 +272,7 @@ export function YachtTable({
             ))}
           </ol>
           <div className={'y-tray' + (mine ? ' is-mine' : '')}>
-            <div className="y-dice" role="group" aria-label="주사위 다섯 개">
+            <div className="y-dice">
               {g.dice.map((d, i) => {
                 const keep = mine ? held[i] : g.held[i] && g.rolls > 1;
                 return (
@@ -302,7 +310,19 @@ export function YachtTable({
               </small>
             </div>
             {mine && (
-              <div className="y-actions">
+              <>
+              {g.rolls > 0 && <label className="y-category-select">기록할 칸
+                <select data-testid="yacht-category-select" value={cat ?? ''} disabled={locked}
+                  onChange={(e) => chooseCategory(e.target.value as YachtCategory)}>
+                  {open.map((c) => <option key={c} value={c}>{YACHT_LABEL[c]} · {g.potential[c] ?? 0}점 · {YACHT_HINT[c]}</option>)}
+                </select>
+              </label>}
+              {g.rolls > 0 && cat && <div className="y-score-preview" data-testid="yacht-score-preview" aria-live="polite">
+                <strong>{YACHT_LABEL[cat]} · {g.potential[cat] ?? 0}점 예상</strong>
+                <span>{(g.potential[cat] ?? 0) === 0 ? '0점으로 채우면 이 칸을 다시 쓸 수 없어요.' : '기록할 칸을 고른 뒤 ‘적기’로 확정해요.'}</span>
+                <small>{g.rolls < YACHT_ROLLS ? `다시 굴릴 기회 ${YACHT_ROLLS - g.rolls}번이 남았어요.` : '세 번 모두 굴렸어요. 기록할 칸을 확정해요.'}</small>
+              </div>}
+              <div className="y-actions" data-table-controls>
                 <button
                   type="button"
                   className="l-primary y-roll"
@@ -326,6 +346,7 @@ export function YachtTable({
                   <kbd>Enter</kbd>
                 </button>
               </div>
+              </>
             )}
             {over && (
               <div className="y-result" data-testid="yacht-result">
@@ -333,9 +354,9 @@ export function YachtTable({
                   <Crown size={18} aria-hidden="true" /> 최종 결과
                 </h3>
                 <ol>
-                  {ranking.map((r, place) => (
+                  {ranking.map((r) => (
                     <li key={r.seat} className={g.winners.includes(r.seat) ? 'is-winner' : ''}>
-                      <span>{g.winners.includes(r.seat) ? '1' : place + 1}위</span>
+                      <span>{r.rank}위</span>
                       <strong>{names[r.seat]}</strong>
                       <b>{r.total}점</b>
                       <em>
@@ -389,7 +410,6 @@ export function YachtTable({
                   <tr
                     key={c}
                     className={(cat === c && pickable ? 'is-cursor ' : '') + (pickable ? 'is-pickable' : '')}
-                    onClick={pickable ? () => write(c) : undefined}
                     data-cat={c}
                   >
                     <th scope="row" title={YACHT_HINT[c]}>

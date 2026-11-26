@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { FightSim, FULL, TICK_MS, TRACK, TraceRecorder, type FightResult, type FightSetup } from '../lounge-fish-minigame';
 import { boundAction } from '../lounge-scene-keys';
+import { fishingInput } from '../lounge-fishing-input';
 import { KeyHintBar } from '../ui/KeyHint';
 import { Glyph } from '../ui/Glyph';
 import { lifeSfx } from '../lounge-audio-life';
@@ -30,6 +31,7 @@ export function FishingReel({
   const track = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const hold = useRef(false);
+  const input = useRef(fishingInput());
   const [status, setStatus] = useState('물고기가 걸렸어요. 초록 칸 안에 물고기를 잡아 두세요.');
   const [pressed, setPressed] = useState(false);
   const done = useRef(onDone);
@@ -99,6 +101,7 @@ export function FishingReel({
   // Input: hold keys / the mouse button; letting go anywhere releases.
   useEffect(() => {
     const isHoldKey = (e: KeyboardEvent) => boundAction(e) === 'action' || e.code === 'Space' || e.key === 'Enter' || e.code === 'ArrowUp' || e.code === 'KeyW';
+    const sources = input.current;
     const set = (v: boolean) => {
       hold.current = v;
       setPressed(v);
@@ -107,27 +110,38 @@ export function FishingReel({
       if (!isHoldKey(e)) return;
       e.preventDefault();
       e.stopPropagation();
-      set(true);
+      set(sources.key(e.code || e.key, true));
     };
     const up = (e: KeyboardEvent) => {
       if (!isHoldKey(e)) return;
       e.preventDefault();
       e.stopPropagation();
-      set(false);
+      set(sources.key(e.code || e.key, false));
     };
-    const release = () => set(false);
+    const release = () => set(sources.clear());
+    const pointerUp = (e: PointerEvent) => set(sources.pointer(e.pointerId, false));
+    const pointerMove = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse' && !(e.buttons & 1)) pointerUp(e);
+    };
+    const visibility = () => { if (document.hidden) release(); };
     window.addEventListener('keydown', down, true);
     window.addEventListener('keyup', up, true);
-    window.addEventListener('pointerup', release);
-    window.addEventListener('pointercancel', release);
+    window.addEventListener('pointerup', pointerUp);
+    window.addEventListener('pointercancel', pointerUp);
+    window.addEventListener('pointermove', pointerMove);
     window.addEventListener('blur', release);
+    document.addEventListener('visibilitychange', visibility);
     root.current?.querySelector<HTMLButtonElement>('.l-reel-hold')?.focus({ preventScroll: true });
     return () => {
       window.removeEventListener('keydown', down, true);
       window.removeEventListener('keyup', up, true);
-      window.removeEventListener('pointerup', release);
-      window.removeEventListener('pointercancel', release);
+      window.removeEventListener('pointerup', pointerUp);
+      window.removeEventListener('pointercancel', pointerUp);
+      window.removeEventListener('pointermove', pointerMove);
       window.removeEventListener('blur', release);
+      document.removeEventListener('visibilitychange', visibility);
+      sources.clear();
+      hold.current = false;
     };
   }, []);
 
@@ -141,8 +155,8 @@ export function FishingReel({
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           e.preventDefault();
-          hold.current = true;
-          setPressed(true);
+          hold.current = input.current.pointer(e.pointerId, true);
+          setPressed(hold.current);
         }}
         onClick={(e) => e.preventDefault()}
         onContextMenu={(e) => e.preventDefault()}

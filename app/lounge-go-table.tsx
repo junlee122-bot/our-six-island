@@ -6,6 +6,7 @@ import {
   cardInfo,
   goScore,
   goStopProjection,
+  goNextSeat,
   junkValue,
   MONTHS,
   GO_POINT_BEOM,
@@ -20,6 +21,8 @@ import { formatBeom, josa } from './lounge-text';
 import { loungeAudio } from './lounge-audio';
 import { gostopHostLine, type TableReaction } from './lounge-dealer-lines';
 import { DealerHost, useReactionReply } from './lounge-dealer-host';
+import { claimTableAction, newTableActionLock, releaseTableAction } from './lounge-table-controls';
+import './lounge-go-table.css';
 const groups = [
   ['bright', '광'],
   ['animal', '열끗'],
@@ -247,16 +250,26 @@ export function GoBoard({
   const hostAside = useReactionReply(g.id, reaction, names);
   // One action per server revision: a quick double tap sends only once.
   // (A ref, so even two taps inside one frame send only once.)
-  const sent = useRef<string | null>(null),
+  const actionLock = useRef(newTableActionLock()),
+    [pendingKey, setPendingKey] = useState<string | null>(null),
+    [actionProblem, setActionProblem] = useState<{key: string; text: string} | null>(null),
     sentKey = `${g.id}:${g.revision}`;
   const act = (a: GoAction) => {
-    if (sent.current === sentKey) return;
-    sent.current = sentKey;
-    const answer = onAction(a);
-    if (answer)
-      void answer.then((ok) => {
-        if (!ok && sent.current === sentKey) sent.current = null;
-      });
+    const ticket = claimTableAction(actionLock.current, sentKey);
+    if (!ticket) return;
+    setPendingKey(sentKey);
+    setActionProblem(null);
+    const refused = () => {
+      if (`${latest.current.id}:${latest.current.revision}` !== sentKey) return;
+      if (releaseTableAction(actionLock.current, ticket)) {
+        setPendingKey((value) => value === sentKey ? null : value);
+        setActionProblem({key: sentKey, text: '선택이 반영되지 않았어요. 패나 버튼을 다시 골라 주세요.'});
+      }
+    };
+    try {
+      const answer = onAction(a);
+      if (answer) void answer.then((ok) => { if (!ok) refused(); }, refused);
+    } catch { refused(); }
   };
   const [shown, setShown] = useState(g),
     [playing, setPlaying] = useState(false),
@@ -393,7 +406,8 @@ export function GoBoard({
     left = (anchor + 1) % 3,
     right = (anchor + 2) % 3,
     ready = !playing && shown.revision === g.revision,
-    active = ready && shown.turn === seat && shown.phase !== 'over',
+    awaiting = pendingKey === sentKey,
+    active = ready && !awaiting && shown.turn === seat && shown.phase !== 'over',
     waiting = shown.phase === 'choose',
     picked = shown.pending
       ? [
@@ -420,7 +434,8 @@ export function GoBoard({
         ? goStopProjection(shown.captured, shown.go, seat)
         : null,
     stake = shown.stake;
-  const status = playing
+  const nextSeat = goNextSeat(shown.handCounts, shown.turn);
+  const status = awaiting ? '선택을 보내고 있어요' : playing
     ? actionText || '패를 정리하고 있어요'
     : shown.phase === 'over'
       ? shown.reason
@@ -471,7 +486,7 @@ export function GoBoard({
           />
         )}
       </div>
-      <div className="g-table-shell" ref={stage} aria-busy={playing}>
+      <div className="g-table-shell" ref={stage} aria-busy={playing || awaiting}>
         <div className="g-opponents">
           <Captures
             g={shown}
@@ -549,11 +564,11 @@ export function GoBoard({
             <>
               {eventText}
               <span>
-                {shown.phase !== 'over' && (
+                {shown.phase !== 'over' && nextSeat !== null && (
                   <>
                     {names[shown.turn]}
                     <ArrowRight size={12} />
-                    다음 {names[(shown.turn + 1) % 3]}
+                    다음 {names[nextSeat]}
                   </>
                 )}
               </span>
@@ -561,21 +576,28 @@ export function GoBoard({
           )}
         </div>
         <div className="g-bottom">
-          <div className="g-my-play">
+          <div className="g-my-play" data-table-controls>
             <div className="l-hand-title">
               <strong>
                 {seat >= 0 ? '내 손패' : `${names[anchor]}의 자리 · 관전 중`}
               </strong>
               <span>
-                {playing
+                {awaiting ? '선택을 보내고 있어요' : playing
                   ? '패가 움직이는 중이에요'
+                  : shown.phase === 'over'
+                    ? '이번 판이 끝났어요 · 획득패와 정산을 확인하세요'
+                  : seat < 0
+                    ? '공개 바닥패와 획득패를 살펴볼 수 있어요'
                   : active
                     ? waiting
                       ? '빛나는 바닥패를 선택하세요'
+                      : shown.phase === 'decide'
+                        ? '예상 정산을 보고 고 또는 스톱을 선택하세요'
                       : '낼 패를 골라 주세요'
                     : '친구의 차례를 기다려 주세요'}
               </span>
             </div>
+            {actionProblem?.key === sentKey && <p role="alert">{actionProblem.text}</p>}
             {seat >= 0 ? (
               <div className="l-go-hand g-hand-origin" data-seat={anchor}>
                 {[...shown.hand]
@@ -610,7 +632,7 @@ export function GoBoard({
               </div>
             )}
             {active && shown.phase === 'decide' && (
-              <div className="l-go-decision">
+              <div className="l-go-decision" data-table-controls>
                 <button
                   className="l-primary"
                   onClick={() => act({ kind: 'stop' })}

@@ -10,6 +10,13 @@ import { SEOTDA_CHART, seotdaChartRow } from './lounge-seotda-chart';
 import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
+import {
+  claimTableAction,
+  newTableActionLock,
+  releaseTableAction,
+  tableActionKey,
+  tableBetPreview,
+} from './lounge-table-controls';
 import { seotdaLine, type TableReaction } from './lounge-dealer-lines';
 import { DealerHost, useReactionReply } from './lounge-dealer-host';
 import './lounge-seotda-table.css';
@@ -110,26 +117,29 @@ export function SeotdaTable({
   reaction?: TableReaction | null;
 }) {
   const aside = useReactionReply(g.id, reaction, names);
-  const version = `${g.id}:${g.revision}`;
+  const version = tableActionKey(g);
   const [bet, setBet] = useState({ version, value: g.legal.minTo }),
     [sent, setSent] = useState<string | null>(null),
-    inFlight = useRef<string | null>(null);
+    inFlight = useRef(newTableActionLock());
   const [chartOpen, setChartOpen] = useState(false),
-    chartId = useId();
+    chartId = useId(),
+    betHelpId = useId();
   const raise = bet.version === version ? bet.value : g.legal.minTo;
   const setRaise = (value: number) => setBet({ version, value });
   const legal = g.legal,
+    raisePreview = tableBetPreview(raise, g.bets[seat], g.stacks[seat], legal),
     locked = sent === version,
     pot = g.committed.reduce((a, b) => a + b, 0),
     over = g.phase === 'over';
   const act = (a: SeotdaAction) => {
     // The ref also stops a second tap that lands before React re-renders.
-    if (!legal.enabled || locked || inFlight.current === version) return;
-    inFlight.current = version;
+    if (!legal.enabled || locked) return;
+    const ticket = claimTableAction(inFlight.current, version);
+    if (!ticket) return;
     setSent(version);
     awaitAnswer(onAction(a), () => {
-      inFlight.current = null;
-      setSent(null);
+      if (releaseTableAction(inFlight.current, ticket))
+        setSent((current) => current === version ? null : current);
     });
   };
   const allIn =
@@ -302,7 +312,7 @@ export function SeotdaTable({
         )}
       </div>
       {!over && seat >= 0 && (
-        <div className="s-controls">
+        <div className="s-controls" data-table-controls>
           <output className="s-turn">
             {locked
               ? '선택을 전달하는 중…'
@@ -348,6 +358,8 @@ export function SeotdaTable({
               이번 베팅 라운드 총액
               <input
                 aria-label="섯다 레이즈 총액"
+                aria-describedby={legal.canRaise ? betHelpId : undefined}
+                aria-invalid={legal.canRaise && !raisePreview}
                 type="number"
                 min={legal.minTo}
                 max={legal.maxTo}
@@ -374,9 +386,7 @@ export function SeotdaTable({
               disabled={
                 !legal.canRaise ||
                 locked ||
-                !Number.isSafeInteger(raise) ||
-                raise < legal.minTo ||
-                raise > legal.maxTo
+                !raisePreview
               }
               onClick={() => act({ kind: 'raise', to: raise })}
             >
@@ -384,9 +394,11 @@ export function SeotdaTable({
             </button>
           </div>
           {legal.canRaise && (
-            <small className="s-raise-help">
-              총액 {beom(legal.minTo)}~{beom(legal.maxTo)} · 하프는 콜한 뒤
-              판돈의 절반만큼 올려요.
+            <small id={betHelpId} className="s-raise-help" aria-live="polite" data-testid="seotda-bet-preview">
+              {raisePreview
+                ? `지금 ${beom(raisePreview.additional)} 추가 · 남을 칩 ${beom(raisePreview.remaining)}${raisePreview.allIn ? ' · 올인' : ''}`
+                : `총액 ${beom(legal.minTo)}~${beom(legal.maxTo)} 사이의 정수를 입력해 주세요.`}
+              <span>총액에는 이미 건 칩도 포함돼요. 하프는 콜한 뒤 판돈의 절반만큼 올려요.</span>
             </small>
           )}
         </div>

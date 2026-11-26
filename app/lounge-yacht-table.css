@@ -17,7 +17,7 @@
 .y-round small {
   font-size: var(--fs-cap);
   letter-spacing: 0;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
 }
 .y-round b {
   font-size: 20px;
@@ -66,11 +66,11 @@
   background: var(--paper-300);
   font-size: var(--fs-cap);
   font-style: normal;
-  color: var(--wood-500);
+  color: var(--text);
 }
 .y-players small {
   font-size: 12px;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
 }
 .y-players li > b {
   font-size: 20px;
@@ -298,7 +298,7 @@
 .y-keys {
   margin: 8px 0 0;
   font-size: 12px;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
   text-align: center;
 }
 /* ---------------------------------------------------------- result */
@@ -341,7 +341,7 @@
   font-weight: 700;
 }
 .y-result li span {
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
 }
 .y-result li em {
   font-style: normal;
@@ -351,7 +351,7 @@
 .y-result p {
   margin: 8px 0 0;
   font-size: 12px;
-  color: var(--pal-grey-54);
+  color: var(--text-soft);
 }
 @keyframes y-pop {
   from {
@@ -398,7 +398,7 @@
 .y-sheet tbody th small {
   font-weight: 400;
   font-size: var(--fs-cap);
-  color: var(--pal-grey-63);
+  color: var(--text-soft);
 }
 .y-sheet td {
   position: relative;
@@ -411,11 +411,11 @@
   color: var(--ink-900);
 }
 .y-sheet td.potential {
-  color: var(--pal-orange-55);
+  color: var(--ink-700);
   font-style: italic;
 }
 .y-sheet td.potential.zero {
-  color: var(--pal-orange-76);
+  color: var(--stamp-800);
 }
 .y-sheet td.just {
   animation: y-just 1.2s ease-out;
@@ -425,13 +425,11 @@
     background: var(--pal-amber-89);
   }
 }
-.y-sheet tr.is-pickable {
-  cursor: pointer;
-}
-.y-sheet tr.is-pickable:hover td,
-.y-sheet tr.is-pickable:hover th {
-  background: var(--ink-on-wood);
-}
+.y-category-select { display: grid; gap: var(--sp-1); margin-block: var(--sp-2); font-size: var(--fs-body-s); color: var(--text-on-frame); }
+.y-category-select select { width: 100%; min-height: var(--hit); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-s); color: var(--text); background: var(--surface-raised); font-size: var(--fs-body-s); }
+.y-score-preview { display: grid; gap: var(--sp-1); margin-block: var(--sp-2); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface-raised); color: var(--text); font-size: var(--fs-body-s); line-height: 1.5; }
+.y-score-preview strong { font-size: var(--fs-body); }
+.y-score-preview small { font-size: var(--fs-body-s); color: var(--text-soft); }
 .y-sheet tr.is-cursor td,
 .y-sheet tr.is-cursor th {
   background: var(--pal-amber-91);
@@ -444,7 +442,7 @@
   top: 2px;
   right: 4px;
   font-size: var(--fs-cap);
-  color: var(--pal-orange-71);
+  color: var(--wood-700);
 }
 .y-bonus-row th,
 .y-bonus-row td {

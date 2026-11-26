@@ -43,7 +43,7 @@ export function ChatPanel({
             const sticker = reactionInfo(m.reaction);
             return (
               <p key={m.id}>
-                <b style={{ color: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b>
+                <b style={{ borderInlineStartColor: ACTOR_COLORS[m.actor] }}>{ACTORS[m.actor]}</b>
                 {sticker ? (
                   <span className="l-chat-sticker" data-reaction={sticker.id}>
                     <img

@@ -11,6 +11,12 @@ import { TURN_LIMIT_MS } from './lounge-games';
 import type { TurnTiming } from './lounge-room';
 import { AWAY_LABEL, TurnTimer, awaitAnswer } from './lounge-turn-timer';
 import {
+  claimTableAction,
+  newTableActionLock,
+  releaseTableAction,
+  tableActionKey,
+} from './lounge-table-controls';
+import {
   blackjackHandReports,
   blackjackLine,
   blackjackTotalLabel,
@@ -68,12 +74,12 @@ export function BlackjackTable({
   figures?: SeatFigure[];
 }) {
   const [rules, setRules] = useState(false),
-    [sent, setSent] = useState<number | null>(null),
-    inFlight = useRef<number | null>(null),
+    [sent, setSent] = useState<string | null>(null),
+    inFlight = useRef(newTableActionLock()),
     tips = useDealerTips();
   // A new deal or revision clears the local send lock (reset during render,
   // not in an effect, so the buttons never flash a stale disabled state).
-  const viewKey = `${g.id}:${g.revision}`,
+  const viewKey = tableActionKey(g),
     [seenKey, setSeenKey] = useState(viewKey);
   if (seenKey !== viewKey) {
     setSeenKey(viewKey);
@@ -81,13 +87,13 @@ export function BlackjackTable({
   }
   const act = (kind: BlackjackAction['kind']) => {
     // The ref also stops a second tap that lands before React re-renders.
-    if (!g.legal[kind] || sent === g.revision || inFlight.current === g.revision)
-      return;
-    inFlight.current = g.revision;
-    setSent(g.revision);
+    if (!g.legal[kind] || sent === viewKey) return;
+    const ticket = claimTableAction(inFlight.current, viewKey);
+    if (!ticket) return;
+    setSent(viewKey);
     awaitAnswer(onAction({ kind }), () => {
-      inFlight.current = null;
-      setSent(null);
+      if (releaseTableAction(inFlight.current, ticket))
+        setSent((current) => current === viewKey ? null : current);
     });
   };
   const hidden = g.dealer.some((c) => c === null),
@@ -285,16 +291,18 @@ export function BlackjackTable({
         </div>
       </div>
       {!ended && (
-        <div className={'bj-controls' + (dealerTurn ? ' is-dealer' : '')}>
+        <div className={'bj-controls' + (dealerTurn ? ' is-dealer' : '')} data-table-controls>
           <div className="bj-turn">
             <strong>
-              {myTurn
-                ? '내 차례'
-                : dealerTurn
-                  ? '딜러 진행 중'
-                  : seat < 0
-                    ? '관전 중'
-                    : `${sir(names[g.turn])} 차례`}
+              {sent === viewKey
+                ? '선택을 전달하는 중…'
+                : myTurn
+                  ? '내 차례'
+                  : dealerTurn
+                    ? '딜러 진행 중'
+                    : seat < 0
+                      ? '관전 중'
+                      : `${sir(names[g.turn])} 차례`}
             </strong>
             <span>
               {myTurn
@@ -320,7 +328,7 @@ export function BlackjackTable({
           </div>
           <div className="bj-action-buttons" aria-disabled={!myTurn}>
             <button
-              disabled={!g.legal.hit || sent === g.revision}
+              disabled={!g.legal.hit || sent === viewKey}
               onClick={() => act('hit')}
             >
               <Plus size={19} />
@@ -328,7 +336,7 @@ export function BlackjackTable({
               <small>한 장 더</small>
             </button>
             <button
-              disabled={!g.legal.stand || sent === g.revision}
+              disabled={!g.legal.stand || sent === viewKey}
               onClick={() => act('stand')}
             >
               <Hand size={19} />
@@ -336,7 +344,7 @@ export function BlackjackTable({
               <small>이대로 승부</small>
             </button>
             <button
-              disabled={!g.legal.double || sent === g.revision}
+              disabled={!g.legal.double || sent === viewKey}
               onClick={() => act('double')}
             >
               <ChevronsUp size={19} />
@@ -344,7 +352,7 @@ export function BlackjackTable({
               <small>+{beom(hand?.bet ?? g.stake)} · 한 장</small>
             </button>
             <button
-              disabled={!g.legal.split || sent === g.revision}
+              disabled={!g.legal.split || sent === viewKey}
               onClick={() => act('split')}
             >
               <Layers size={19} />
@@ -352,7 +360,7 @@ export function BlackjackTable({
               <small>+{beom(g.stake)} · 두 손</small>
             </button>
             <button
-              disabled={!g.legal.surrender || sent === g.revision}
+              disabled={!g.legal.surrender || sent === viewKey}
               onClick={() => act('surrender')}
               data-testid="blackjack-surrender"
             >
